@@ -998,3 +998,61 @@ stehen — nicht nur als Floskel sondern mit Beispielen welche Sprach-Fallen ohn
 Skill nicht abgedeckt waeren. Frueher Hinweis "ohne Skill = schlechte Qualitaet"
 verhindert Faulheit.
 
+
+---
+
+## BUG #29 — Worker A (französisch) generierte unescapte Apostrophen → Build-Blocker
+
+**Schweregrad:** 🟥 Hoch — Build bricht ab, App ist nicht baubar
+
+**Symptom (Lauf 2026-05-22):**
+Nach Worker A's französischen Übersetzungen schlug Android Build mit:
+> `values-fr/strings.xml:1454: Failed to flatten XML for resource 'settings_premium_cancelled_desc' with error: Invalid unicode escape sequence in string`
+
+Aktueller Wortlaut (FALSCH):
+```xml
+<string name="settings_premium_cancelled_desc">Tes fonctionnalités Premium restent disponibles jusqu'à la fin...</string>
+<string name="settings_premium_cancelled_until">Abonnement Premium annulé — valable jusqu'au <xliff:g.../></string>
+```
+
+Sollte sein:
+```xml
+<string name="settings_premium_cancelled_desc">Tes fonctionnalités Premium restent disponibles jusqu\'à la fin...</string>
+<string name="settings_premium_cancelled_until">Abonnement Premium annulé — valable jusqu\'au <xliff:g.../></string>
+```
+
+**Root Cause:**
+Android XML in string-resources verlangt für nicht-quote-umschlossene Strings dass
+Apostrophe mit `\'` escaped sind. Worker A hat das in seinem Worker-Prompt zwar
+gesehen ("Apostrophen via `\'` escapen"), aber die Anweisung nicht konsequent
+auf alle Apostrophen angewendet.
+
+**Worker A's eigene Plugin-Beobachtung war:**
+- Pre-Check Pflicht (BUG #21)
+- Aber kein Hinweis auf den eigenen Apostroph-Fehler in französisch
+
+**Verwandte Fehlerquellen geprüft:**
+- Andere Sprachen (en, es, it, nl, pl): keine unescapten Apostrophen in den 11 neuen Strings
+- Worker B (tr): türkische Apostrophen waren ein bekannter Bug (Memory:
+  `feedback_uebersetzung_skill_immer_pflicht.md` Vorfall 2026-05-16). Geprüft: ok.
+- Worker C-E: keine Apostrophen in CJK/RTL/Indisch nötig
+
+**Workaround (dieser Lauf):**
+Python-Script `fix_apostrophes.py` fixt unescapte Apostrophen in NEU eingefügten Strings.
+Build erfolgreich nach Fix (14s).
+
+**Fix-Vorschläge für Plugin:**
+1. **Worker-Post-Validation:** Nach jeder Sprache automatisch checken ob unescapte
+   Apostrophen in neuen Strings sind. `grep -E "[^\\]'" values-XX/strings.xml`.
+2. **Worker-Prompt-Verstärkung:** Apostroph-Regel als CHECKLIST am ENDE des Workers
+   wiederholen: "Bevor du Output schreibst, prüfe nochmal ob ALLE Apostrophe in
+   romanischen Sprachen (fr/it/es/pt/ca) mit \' escaped sind."
+3. **Plugin-Phase-3c-Pre-Check:** Vor dem Re-Audit-Build automatisch das `lint`-Build
+   laufen lassen (oder mindestens `aapt2 compile --no-crunch`) um Translation-Fehler
+   früher zu erkennen.
+4. **uebersetzung-Skill-Validator:** `check_apostrophes.py` existiert bereits im Skill,
+   sollte aber als verbindlicher Post-Step nach jeder romanischen Sprache laufen.
+
+**Empfehlung:** Variante 1 + 4 kombinieren. Skill-Validator ist da, muss nur
+verbindlich aufgerufen werden.
+

@@ -1451,8 +1451,8 @@ Que veux-tu faire ?</string>
     <string name="churn_reason_other_placeholder">Dis-nous brièvement ce qui se passe…</string>
     <string name="churn_renews_on">Se renouvelle le <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">Abonnement Premium annulé</string>
-    <string name="settings_premium_cancelled_desc">Tes fonctionnalités Premium restent disponibles jusqu'à la fin de la période de facturation. Tu peux annuler la résiliation à tout moment via Google Play.</string>
-    <string name="settings_premium_cancelled_until">Abonnement Premium annulé — valable jusqu'au <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled_desc">Tes fonctionnalités Premium restent disponibles jusqu\'à la fin de la période de facturation. Tu peux annuler la résiliation à tout moment via Google Play.</string>
+    <string name="settings_premium_cancelled_until">Abonnement Premium annulé — valable jusqu\'au <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Thème</string>
     <string name="settings_themes_manager">Gestionnaire de thèmes</string>
 </resources>
