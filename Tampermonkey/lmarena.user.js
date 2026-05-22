@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Arena V.1.5.1
+// @name         Arena V.1.5.2
 // @namespace    https://arena.ai/
-// @version      1.5.1
+// @version      1.5.2
 // @description  Speech-to-Text + Gemini-Korrektur (DE) ohne stilles Fallback. Zeigt Output-Preview. Send-Button-Fix via React-Nudge.
 // @match        https://arena.ai/*
 // @match        https://web.arena.ai/*
