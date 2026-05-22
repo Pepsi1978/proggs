@@ -75,6 +75,64 @@ Frank sagt typischerweise Phrasen wie "Lass die BestJournal mal durchleuchten", 
 
 Der Skill wird typischerweise vor einem Marketing-Audit oder vor einem Release ausgefuehrt, oder wenn die Frage aufkommt ob die App das wirklich macht was sie verspricht.
 
+## Optionaler Scope-Parameter (NEU 2026-05-22 — Frank-Direktive für Parallelisierung)
+
+**Standard-Verhalten (UNVERAENDERT — Rueckwaertskompatibilitaet):**
+Ohne Parameter laeuft der Skill in den 7 Schichten KOMPLETT durch. Output ist
+der volle Layer-Bericht (`layer1_manifest` ... `layer7_marketing_claims_matrix`).
+Bestehende Konsumenten (rechtssicherheits-skill, uebersetzungs-skill, finale-Plugin)
+sehen KEINE Veraenderung — die volle Funktionalitaet ist 100% erhalten.
+
+**Neuer optionaler Scope-Parameter:**
+Wenn der Skill von einem PARALLEL-WORKER-Setup aufgerufen wird (z. B. das `finale`-Plugin
+spawnt 15-20 Worker fuer einen Layer-Split), kann ein Scope-Parameter uebergeben werden:
+
+| Scope-Wert | Welche Layer scannt der Skill |
+|------------|-------------------------------|
+| `permissions`     | Nur Layer 1 (Manifest, Permissions, Receiver, Activities) |
+| `dependencies`    | Nur Layer 2 (Gradle-Dependencies, SDK-Versionen) |
+| `architecture`    | Nur Layer 3 (Modul-Struktur, Hilt, Room-Schemas) |
+| `screens`         | Nur Layer 4 + 4b + 4c (Bildschirme, Wortlaute, Translation-Context) |
+| `legal-texts`     | Nur Layer 4d (Privacy/Imprint/AGB/Help-Inventar) |
+| `external-content`| Nur Layer 4e (externe URLs, Webseiten-Referenzen) |
+| `paywall`         | Nur Layer 5 (Paywall-Tiefenanalyse) |
+| `hidden-features` | Nur Layer 6 (Hidden Features, Easter Eggs) |
+| `marketing`       | Nur Layer 7 (Werbeaussagen-vs-Feature-Matrix) |
+| `strings-bulk`    | Spezial-Scope: nur 1:1-Wortlaute aus strings.xml + Compose-Literalen, kein Architektur-Reasoning. Schnellster Scope, ideal fuer Mass-Translation. |
+| `delta`           | Spezial-Scope: nur was sich seit `<previous-report>` geaendert hat (braucht zusaetzlich `--since-report <path>`). |
+| (kein Parameter) | **Default — voller 7-Schichten-Scan wie bisher** |
+
+**Aufruf-Form:**
+```
+# Standard (unveraendert):
+Skill(skill="app-roentgen")  # voller Scan
+
+# Mit Scope (parallel-worker-Modus):
+Skill(skill="app-roentgen", args="--scope=paywall")
+Skill(skill="app-roentgen", args="--scope=permissions")
+# Optionaler Delta-Modus:
+Skill(skill="app-roentgen", args="--scope=delta --since-report .android-shield/roentgen-report.json")
+```
+
+**Output bei Scope-Begrenzung:**
+- Selbes JSON-Schema wie Vollscan, aber nur die betroffenen Layer-Keys sind gefuellt
+- Andere Layer-Keys sind explizit `null` (nicht weggelassen — Konsumenten merken so dass es Teil-Output ist)
+- Pflicht-Feld `_scope: "<scope-name>"` im Output, damit der Synthesizer beim Mergen
+  mehrerer Worker-Outputs sauber zusammenfuehren kann
+- Pflicht-Feld `_partialReport: true` bei Scope-Begrenzung
+
+**Funktionalitaets-Diff (Direktive #3 Pflicht):**
+
+| Bereich          | Vorher    | Nachher (mit Scope-Param) | Ohne Scope-Param |
+|------------------|-----------|---------------------------|-------------------|
+| Voller Layer-Scan| ✅ funktioniert | (nicht relevant)         | ✅ funktioniert (unveraendert) |
+| Schichten-Reihenfolge | ✅ Layer 1→7 erzwungen | ✅ pro Scope einzelne Layer | ✅ Layer 1→7 (unveraendert) |
+| Output-Schema    | ✅ alle Layer-Keys gefuellt | ⚠️ nicht angeforderte Keys = null | ✅ alle Keys gefuellt (unveraendert) |
+| Konsumenten (recht, uebersetzung, finale) | ✅ funktioniert | ✅ funktioniert (sieht null und ignoriert) | ✅ funktioniert (unveraendert) |
+| Parallel-Worker-Setup | ❌ unmoeglich (monolith) | ✅ moeglich (Layer-Split) | (nicht relevant) |
+
+**KEINE bestehende Funktionalitaet wird entfernt oder eingeschraenkt.**
+
 ## Pflicht-Vorgehen: Die 7 Schichten der Durchleuchtung
 
 Reihenfolge ist wichtig. Jede Schicht baut auf der vorherigen auf. KEINE Schicht ueberspringen — sonst entstehen Luecken im Audit und der Roentgen-Effekt geht verloren.

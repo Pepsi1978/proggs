@@ -82,7 +82,127 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 10. **AUDIT-LOG.** Jeder Schritt, jede Entscheidung, jedes verwendete Modell+Effort, jeder Skill-Hash, jedes Finding wird in `.android-shield/audit-log.md` festgehalten. Append-Only.
 11. **INTERRUPT-RESILIENZ.** Bei Nutzer-Stop (Option [7]) Zwischenstand sauber speichern (alle Reports, audit-log mit Eintrag `interrupted-by-user`, `skill-versions.json` mit Status `interrupted`). Beim nächsten Lauf bietest du Wiederaufnahme an.
 12. **SELBSTBEOBACHTUNG.** Bei Zweifel an deiner eigenen Beurteilung (z. B. zwei Vorschläge wirken gleich gut) spawnst du einen zweiten Opus-max-Reviewer via Task tool als Second Opinion.
-13. **UMLAUT-PFLICHT — FIN-011 + FIN-027 (Frank-Direktive 2026-05-18):** In allen deutschen
+13b. **FIN-037 — SUBAGENT-SELBSTBEOBACHTUNGS-PFLICHT (BUG #11 Frank 2026-05-22):**
+
+    Direktive #2 (Selbstbeobachtung) wurde bisher nicht an Subagents propagiert.
+    Der Cross-Lingual-Worker im 2026-05-22-Lauf hatte explizite Anweisung
+    `plugin_bugs_observed` zu fuellen — der Array blieb leer. Das ist nicht
+    "es gab nichts zu beobachten", sondern "der Worker hat nicht beobachtet".
+
+    **Pflicht-Erweiterung jedes Subagent-Prompts (boilerplate-Block):**
+
+    Jeder Subagent-Prompt MUSS am Ende einen "Selbstbeobachtungs-Pflicht-Block"
+    enthalten — bevorzugt als letzter Absatz vor dem "Beginne jetzt" / "DONE: ..."-Hinweis:
+
+    ```
+    ## SELBSTBEOBACHTUNGS-PFLICHT (FIN-037, Direktive #2)
+
+    Bevor du den finalen JSON-Output schreibst, beantworte fuer dich selbst:
+
+    1. Welche 1-3 Beobachtungen hast du beim Arbeiten gemacht die fuer
+       Plugin-Verbesserung relevant sind? (z. B. unklare Spec, fehlende
+       Daten, redundanter Arbeitsschritt, missverstaendliche Anweisung)
+    2. Welche Schema-Felder waren mehrdeutig oder hatten Drift-Potenzial?
+    3. Hat dir ein bestimmter Tool-Aufruf besonders viel Token gekostet
+       der haette geskippt werden koennen?
+
+    Schreibe deine Antworten ins `plugin_bugs_observed`-Array im Output —
+    1 Eintrag pro Beobachtung, jeweils 1-2 Saetze. LEER LASSEN IST NUR OK
+    wenn du WIRKLICH nichts beobachtet hast (selten — fast jeder Lauf hat
+    Beobachtungen). Wenn leer: das wird vom Orchestrator als
+    "self-observation-not-active" Signal interpretiert und im Audit-Log
+    festgehalten.
+    ```
+
+    **Pflicht-Output-Feld:**
+    Jedes Subagent-Output-Schema MUSS ein `plugin_bugs_observed: string[]`-Feld
+    haben (siehe schemas/*.schema.json). Auch wenn leer: das Feld muss vorhanden sein.
+
+    **Auswertung durch Orchestrator:**
+    Nach Worker-Output: Orchestrator liest `plugin_bugs_observed`:
+    - Leer: Audit-Log `worker-self-observation: empty`. Wenn das mehr als 3x
+      pro Lauf passiert: Warning "Subagents beobachten nicht aktiv genug".
+    - 1-5 Eintraege: Einzeln in `RUN-ISSUES-<datum>.md` anhaengen als "Worker-Observed-Bugs".
+    - >5 Eintraege: vermutlich generisches Geschwafel — wahrscheinlich nur die ersten 3
+      anhaengen mit Notiz "Subagent X meldete viele Beobachtungen".
+
+13. **FIN-036 — POST-WORKER-SCHEMA-VALIDATION (PFLICHT, BUG #10 Frank 2026-05-22):**
+
+    Jeder Subagent liefert strukturierten JSON-Output. Worker-LLMs neigen zu
+    Schema-Drift (eigene Feld-Namen, falsche Typen, vergessene Felder).
+    Das ist in DIESEM Lauf 2026-05-22 mehrfach passiert:
+    - Cross-Lingual-Worker schrieb `stringKey`/`currentTranslation`/`issue` statt
+      `key`/`currentText`/`problem` (mein vorgegebenes Schema)
+    - Fix-Applier schrieb `applied: 12` (int) statt `applied: [...]` (array)
+    - `findings`-Array hatte uneinheitliche Feld-Namen
+
+    **Pflicht-Schritt nach JEDEM Subagent-Output:**
+
+    1. **JSON-Schema-Validierung:** Der Orchestrator definiert pro Output-Typ ein
+       JSON-Schema (siehe `${FINALE_PLUGIN_ROOT}/schemas/` — wird in dieser Session
+       als TODO eingerichtet). Konkrete Schemas:
+       - `cross-lingual-findings.schema.json`
+       - `phase2-applied.schema.json`
+       - `recht-report.schema.json`
+       - `roentgen-report-normalized.schema.json`
+
+    2. **Validation-Aufruf:**
+       ```python
+       import jsonschema
+       with open(f"{plugin_root}/schemas/{output_type}.schema.json") as f:
+           schema = json.load(f)
+       try:
+           jsonschema.validate(instance=worker_output, schema=schema)
+           status = "schema-ok"
+       except jsonschema.ValidationError as e:
+           status = "schema-drift"
+           drift_reason = str(e.message)
+       ```
+
+    3. **Bei Schema-Drift:**
+       a) **Auto-Mapping-Layer** versuchen: bekannte Feld-Alias-Mappings
+          (z. B. `stringKey` → `key`, `currentTranslation` → `currentText`,
+          `issue` → `problem`, `suggestedFix` → `suggestedFixes[0].text`).
+       b) Falls Auto-Mapping >80% Felder normalisieren kann: Mapping anwenden,
+          Audit-Log Eintrag `schema-drift-auto-fixed`.
+       c) Falls Auto-Mapping <80%: Worker erneut spawnen mit Korrektur-Prompt:
+          "Dein vorheriger Output hat Schema-Verstoss: <drift_reason>. Bitte
+          mit dem korrekten Schema neu liefern: <embedded schema snippet>."
+       d) Nach 2 Re-Spawn-Versuchen: Hard-Failure, Audit-Log
+          `schema-drift-unrecoverable`, Nutzer-Eingriff anfordern.
+
+    4. **Konkrete Alias-Map (initial, erweiterbar):**
+       ```python
+       FIELD_ALIASES = {
+           "cross-lingual-findings.findings[]": {
+               "stringKey": "key",
+               "currentTranslation": "currentText",
+               "deReference": "deOriginal",
+               "issue": "problem",
+               "norm": "rationale",
+               "suggestedFix": ("suggestedFixes", lambda v: [{"text": v, "rationale": ""}]),
+               "impactIfUnfixed": "impact",
+           },
+           "phase2-applied.applied[]": {
+               "id": "findingId",
+               "locale": "language",
+               "change": ("description", str),
+           },
+       }
+       ```
+
+    5. **Wo es greift:**
+       - Nach Phase 1A (Roentgen-Output) + FIN-034 Schema-Compat
+       - Nach Phase 1B (Recht-Synthesizer)
+       - Nach Phase 1B-cross-lingual
+       - Nach Phase 2 (Fix-Applier-Reports)
+       - Nach Phase 3 (Uebersetzungs-Pläne)
+
+    **Vorteil:** Worker-Halluzinations-Schaden begrenzt. Auch wenn der Worker
+    sich nicht ans Schema haelt, kann der Orchestrator die Daten retten und
+    weiterverarbeiten — keine Pipeline-Stille.
+
+14. **UMLAUT-PFLICHT — FIN-011 + FIN-027 (Frank-Direktive 2026-05-18):** In allen deutschen
     Strings, Texten und Edits ECHTE Umlaute (ä ö ü Ä Ö Ü ß), NIEMALS
     ae/oe/ue/ss. Subagent-Prompts MÜSSEN dies explizit fordern. Nach
     Edits per Grep auf `\b(ae|oe|ue|ss)\b` in neu eingefügtem Text
@@ -304,6 +424,42 @@ Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${CLAUDE_PLUGIN_ROOT}` verw
     bricht zusammen. Beim regulaeren Ende wird die Datei mit `lastRunStatus: "completed"`
     ueberschrieben (siehe Schritt 7).
 
+2c. **FIN-035 — `run-status.json` Heartbeat (PFLICHT, BUG #8 Frank 2026-05-22):**
+    Parallel zu skill-versions.json wird ein eigenes Datei-Heartbeat-System gefuehrt
+    in `<app-root>/.android-shield/run-status.json`. Zweck: ein crashed/interrupted
+    Lauf wird beim naechsten Start eindeutig erkannt, auch wenn der Orchestrator
+    keinen Cleanup machen konnte.
+
+    **Lifecycle:**
+
+    | Moment | Aktion |
+    |--------|--------|
+    | Phase 0 Schritt 2c | `run-status.json` schreiben: `{ currentRun: UUID4, currentPhase: "phase0-done", startedAt: ISO, lastHeartbeat: ISO, mode: <mode>, status: "in_progress" }` |
+    | Beginn jeder Phase | `currentPhase` updaten + `lastHeartbeat` updaten |
+    | Alle ~30 Sekunden waehrend Phase 1/2/3 | `lastHeartbeat` updaten (rate-limited; nicht inflationaer) |
+    | Regulaerer Ende (Phase 5 done) | `status: "completed"`, `completedAt: ISO` |
+    | Interrupt durch Nutzer | `status: "interrupted"`, `interruptedAt: ISO` |
+    | Fehler/Exception | `status: "error"`, `errorMessage: "..."`, `erroredAt: ISO` |
+
+    **Resume-Erkennung beim Lauf-Start (Phase 0 Schritt -1, VOR Skill-Verifikation):**
+    1. `run-status.json` lesen falls vorhanden
+    2. Wenn `status: "in_progress"` UND `lastHeartbeat` aelter als 5 Minuten:
+       Lauf hat gecrasht. Pop-up an Nutzer:
+       ```
+       [1] Vom letzten Stand wieder aufnehmen (Phase: <currentPhase>, gestartet <startedAt>)
+       [2] Vollscan neu starten (alter Status wird ueberschrieben)
+       [3] Abbruch — Status manuell pruefen
+       ```
+    3. Wenn `status: "in_progress"` UND `lastHeartbeat` < 5 Min alt:
+       LAEUFT AKTUELL — kein zweiter Orchestrator starten. Abbruch mit Hinweis.
+    4. Wenn `status: "completed | interrupted | error"`: einfach mit neuem Lauf starten,
+       run-status.json wird ueberschrieben.
+
+    **Wichtig:** Der Heartbeat-Update wird mit Atomic-Write durchgefuehrt (zuerst
+    `.tmp` schreiben, dann `os.replace()`), damit Crashes mitten im Write nicht
+    eine kaputte Datei hinterlassen. Selbe Schutz-Logik wie bei JSON-Read-Robustheit
+    (Wave 3 Hardening).
+
 3. **Vergleich mit `.android-shield/skill-versions.json`** (falls vorhanden). Für jeden Skill:
    - SHA gleich → `unverändert`
    - SHA verschieden → `geändert ✓`
@@ -453,7 +609,9 @@ Lade den Skill `roentgen-skill` aus `${FINALE_PLUGIN_ROOT}/skills/roentgen-skill
 - Modus (`scanMode`: `full` oder `delta`)
 - Erwartetes Output-Schema (siehe unten)
 
-Erwarteter Output: `<app-root>/.android-shield/roentgen-report.json` nach Schema:
+Erwarteter Output: `<app-root>/.android-shield/roentgen-report.json` nach einem von ZWEI akzeptierten Schemas:
+
+**Schema-Variante A (Plugin-Standard, bevorzugt):**
 
 ```json
 {
@@ -481,6 +639,91 @@ Erwarteter Output: `<app-root>/.android-shield/roentgen-report.json` nach Schema
   ]
 }
 ```
+
+**Schema-Variante B (Roentgen-Skill-nativ, Layer-basiert):**
+
+```json
+{
+  "schema_version": "2.x",
+  "audit_date": "...",
+  "app": { "name": "...", "package": "...", "version_name": "...", "version_code": ..., "min_sdk": ..., "target_sdk": ... },
+  "auditor": "...",
+  "effort": "...",
+  "layer1_manifest": {...},
+  "layer2_dependencies": {...},
+  "layer3_architecture": {...},
+  "layer4_screens": [...],
+  "layer4b_wortlaut_mapping": {...},
+  "layer4c_translation_context": {...},
+  "layer4d_legal_text_inventory": {...},
+  "layer5_paywall_deep": {...},
+  "layer6_hidden_features": [...],
+  "layer7_marketing_claims_matrix": [...],
+  "critical_findings": [...],
+  "dont_miss_checklist_summary": {...},
+  "meta": {...}
+}
+```
+
+### FIN-034 — Roentgen-Schema-Compat-Layer (BUG #7, 2026-05-22)
+
+Der Roentgen-Skill produziert in der aktuellen Version Schema-Variante B (Layer-basiert).
+Die Plugin-Spec war urspruenglich auf Variante A ausgelegt. Damit BEIDE Schemas
+nahtlos konsumierbar sind, MUSS der Orchestrator nach dem Roentgen-Subagent
+einen **Schema-Normalisierungs-Schritt** ausfuehren der den Report in ein internes
+Standard-Format mappt das Phase 1B und Phase 2 konsumieren:
+
+```python
+# Pseudo-code Normalisierungs-Funktion (vom Orchestrator aufgerufen)
+def normalize_roentgen(report: dict) -> dict:
+    """Akzeptiert Schema-Variante A oder B, liefert einheitliches internes Schema."""
+    if "structure" in report:
+        # Variante A — direkt durchreichen, nur Metadaten fixen
+        return {
+            "_schemaVariant": "A",
+            "appName":     report.get("appName"),
+            "scanTimestamp": report.get("scanTimestamp"),
+            "modules":     report.get("structure", {}).get("modules", []),
+            "screens":     report.get("structure", {}).get("screens", []),
+            "paywallSteps": report.get("structure", {}).get("paywallSteps", []),
+            "permissions": report.get("structure", {}).get("permissions", []),
+            "hiddenFeatures": report.get("structure", {}).get("hiddenFeatures", []),
+            "strings":     report.get("strings", []),
+            "marketingClaims": [],
+            "criticalFindings": [],
+        }
+    elif "schema_version" in report:
+        # Variante B — Layer-basiert nach internes Schema mappen
+        app = report.get("app", {})
+        return {
+            "_schemaVariant": "B",
+            "appName":     app.get("name"),
+            "scanTimestamp": report.get("audit_date"),
+            "modules":     [],   # Variante B hat das in layer3_architecture
+            "screens":     report.get("layer4_screens", []),
+            "paywallSteps": report.get("layer5_paywall_deep", {}).get("plans", []),
+            "permissions": report.get("layer1_manifest", {}).get("permissions", []),
+            "hiddenFeatures": report.get("layer6_hidden_features", []),
+            "strings":     flatten_layer4b(report.get("layer4b_wortlaut_mapping", {})),
+            "marketingClaims": report.get("layer7_marketing_claims_matrix", []),
+            "criticalFindings": report.get("critical_findings", []),
+        }
+    else:
+        raise ValueError(f"Unbekanntes Roentgen-Schema: keys={list(report.keys())[:10]}")
+```
+
+**Pflicht-Schritt nach Phase 1A:**
+1. `roentgen-report.json` lesen
+2. `normalize_roentgen(report)` aufrufen
+3. Falls Variante A: direkt an Phase 1B uebergeben
+4. Falls Variante B: zusaetzlich `roentgen-report-normalized.json` schreiben mit
+   `_schemaVariant: "B"`. Phase 1B konsumiert die normalisierte Version.
+5. Audit-Log Eintrag: `schema-variant: A | B` damit nachvollziehbar.
+
+**Warum nicht den Skill aendern?** Der Skill liefert reiche Layer-Daten (z. B.
+layer4d_legal_text_inventory) die das Variante-A-Schema gar nicht abbildet. Den
+Skill auf A zu zwingen wuerde Informationen verlieren. Stattdessen: Compat-Layer
+im Orchestrator, beide Welten profitieren.
 
 ### Subagent B — Rechtssicherheits-Skill (über Skill-Aufruf)
 

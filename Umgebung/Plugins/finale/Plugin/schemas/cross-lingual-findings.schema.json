@@ -1,0 +1,79 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://finale-plugin.local/schemas/cross-lingual-findings.schema.json",
+	"title": "Cross-Lingual Findings Output (Phase 1B-cross-lingual)",
+	"description": "Output-Schema fuer den Cross-Lingual-Recht-Worker. Wird per FIN-036 nach jedem Subagent-Output validiert. Auto-Mapping-Layer normalisiert bekannte Alias-Felder.",
+	"type": "object",
+	"required": ["audit_date", "findings", "summary"],
+	"properties": {
+		"audit_date": { "type": "string" },
+		"audit_mode": {
+			"type": "string",
+			"enum": ["cross-lingual-delta", "cross-lingual-full"]
+		},
+		"based_on_run": { "type": "string" },
+		"audited_keys": { "type": "integer", "minimum": 0 },
+		"audited_languages": { "type": "integer", "minimum": 0 },
+		"total_checks": { "type": "integer", "minimum": 0 },
+		"findings": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["findingId", "key", "language", "riskLevel", "category"],
+				"properties": {
+					"findingId": { "type": "string", "pattern": "^CL-\\d+$" },
+					"key": { "type": "string" },
+					"language": { "type": "string" },
+					"riskLevel": {
+						"type": "string",
+						"enum": ["high", "medium", "low", "HIGH", "MEDIUM", "LOW"]
+					},
+					"category": { "type": "string" },
+					"currentText": { "type": ["string", "null"] },
+					"deOriginal": { "type": ["string", "null"] },
+					"problem": { "type": ["string", "null"] },
+					"rationale": { "type": ["string", "null"] },
+					"norm": { "type": ["string", "null"] },
+					"impact": { "type": ["string", "null"] },
+					"impactIfUnfixed": { "type": ["string", "null"] },
+					"suggestedFixes": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"text": { "type": "string" },
+								"rationale": { "type": "string" }
+							}
+						}
+					},
+					"confidence": {
+						"type": ["string", "null"],
+						"enum": ["high", "medium", "low", null]
+					},
+					"stillSafe": { "type": ["boolean", "null"] },
+					"hallucination_detected": { "type": ["boolean", "null"] }
+				}
+			}
+		},
+		"summary": {
+			"type": "object",
+			"properties": {
+				"high": { "type": "integer", "minimum": 0 },
+				"medium": { "type": "integer", "minimum": 0 },
+				"low": { "type": "integer", "minimum": 0 },
+				"languages_with_issues": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
+				"keys_with_issues": { "type": "array", "items": { "type": "string" } }
+			}
+		},
+		"plugin_bugs_observed": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Pflicht-Feld (FIN-037): Selbstbeobachtung des Workers. Leer-Liste ist akzeptabel aber wird als 'Self-Observation nicht aktiv'-Signal interpretiert."
+		},
+		"partial_audit": { "type": ["boolean", "null"] }
+	},
+	"$comment": "Alias-Mapping (FIN-036): stringKey->key, currentTranslation->currentText, deReference->deOriginal, issue->problem, suggestedFix->suggestedFixes[0].text, impactIfUnfixed->impact."
+}

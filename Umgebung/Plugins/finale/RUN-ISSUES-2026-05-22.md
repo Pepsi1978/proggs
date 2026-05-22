@@ -13,25 +13,34 @@ Startzeit: 2026-05-22 ~14:53
 | Bug | Status | Wo umgesetzt |
 |-----|--------|--------------|
 | #1 Symlink-Auto-Repair | **APPLIED** | scripts/verify-skills.sh (Auto-Repair fuer alle Plattformen) + FIN-030 in orchestrator.md |
-| #2 Plugin/skills/ Inkonsistenz | INFO-ONLY | Symlinks werden jetzt auto-repariert (Bug #1 Fix) |
+| #2 Plugin/skills/ Inkonsistenz | **APPLIED** | Plugin/skills/README.md erweitert (Symlink-Pattern + Auto-Repair + manuelle Wiederherstellung) |
 | #3 skill-versions.json Mandatory Write | **APPLIED** | orchestrator.md Phase 0 Schritt 2b — sofort nach Phase 0 schreiben |
 | #4 .gitignore in .android-shield | **APPLIED** | assets/android-shield-gitignore Template + FIN-031 in orchestrator.md |
 | #5 Dynamic Worker Count | **APPLIED** | FIN-029 Direktive — Worker-Count = clamp(N, 4, 20) |
-| #6 Roentgen-Skill-Scope-Split | TODO | Skill selbst muesste Scope-Parameter unterstuetzen — Skill-Aenderung |
-| #7 Roentgen-Schema-Mismatch | TODO | Spec vs. Skill-Output entscheiden — separate Session |
-| #8 Run-Status-Marker | PARTIAL | Schritt 2b deckt das ab; ein run-status.json wird nicht extra erstellt |
+| #6 Roentgen-Skill-Scope-Split | **APPLIED** | ~/.claude/skills/app-roentgen/SKILL.md — optionaler `--scope=`-Parameter (11 Werte), volle Rueckwaertskompatibilitaet erhalten |
+| #7 Roentgen-Schema-Mismatch | **APPLIED** | FIN-034 in orchestrator.md — Schema-Compat-Layer akzeptiert Variante A + B, normalisiert in internes Format |
+| #8 Run-Status-Marker | **APPLIED** | FIN-035 in orchestrator.md Schritt 2c — `run-status.json` mit Heartbeat + Resume-Erkennung |
 | #9 Token-Cap 145k | **APPLIED** | 100k → 145k an allen Stellen in orchestrator.md |
-| #10 Worker-Schema-Strict | PARTIAL | FIN-032 erwaehnt Schema-Pflicht; Hard-Enforcement separate Session |
-| #11 Subagent-Selbstbeobachtung | TODO | Subagent-Template-Erweiterung — separate Session |
+| #10 Worker-Schema-Strict | **APPLIED** | FIN-036 in orchestrator.md + `schemas/cross-lingual-findings.schema.json` + `schemas/phase2-applied.schema.json` + Auto-Mapping-Aliases |
+| #11 Subagent-Selbstbeobachtung | **APPLIED** | FIN-037 in orchestrator.md — Pflicht-Block in jedem Subagent-Prompt + `plugin_bugs_observed`-Feld |
 | #12 Cross-Lingual-Parallelisierung | **APPLIED** | FIN-023+029 — 15-20 Worker fuer Phase 1B-cross-lingual |
 | #13 Worker-Halluzinations-Schutz | **APPLIED** | FIN-033 in orchestrator.md — Read-Verifikation Pflicht |
 | #14 uebersetzung-Skill PFLICHT | **APPLIED** | FIN-032 in orchestrator.md — keine Ausnahmen |
 | #15 Phase 2 Bulk-Parallel | **APPLIED** | Phase 2 Bulk-Mode + 15-20 fix-applier parallel |
 | #16 FIN-029 Parallel-First | **APPLIED** | Zentrale Direktive direkt nach FIN-026 in orchestrator.md |
 
-**8 von 16 Bugs APPLIED, 3 PARTIAL, 5 TODO** — die wichtigsten Performance- und
-Korrektheits-Bugs sind alle umgesetzt. Die TODO-Bugs sind tieferliegende Refactorings
-die separate Sessions verdienen.
+**ALLE 16 Bugs APPLIED** (2026-05-22). Plugin-Verbesserungen Loop 1+2 abgeschlossen.
+
+**Neue Direktiven dieses Hardening-Laufs:**
+- FIN-029 Parallel-First (zentral)
+- FIN-030 Auto-Repair Phase 0
+- FIN-031 .android-shield/.gitignore Template
+- FIN-032 uebersetzung-Skill PFLICHT fuer i18n-Fixes
+- FIN-033 Worker-Halluzinations-Schutz
+- FIN-034 Roentgen-Schema-Compat-Layer
+- FIN-035 run-status.json Heartbeat
+- FIN-036 Post-Worker-Schema-Validation
+- FIN-037 Subagent-Selbstbeobachtungs-Pflicht
 
 **Zusaetzlich:** Intelligenz-Vorschlag 2 umgesetzt:
 - `~/.claude/scripts/bug-doku-collector.sh` + `.ps1` (siehe `bug-doku-collector.README.md`)
