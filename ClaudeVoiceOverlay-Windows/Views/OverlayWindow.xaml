@@ -63,8 +63,13 @@
         </Style>
     </Window.Resources>
 
+    <Grid>
+    <!-- FullView: komplettes Overlay (Standard). CollapsedView: nur der
+         Mic-Button. Auto-Hide schaltet per Code zwischen ihnen um und passt
+         Fensterhoehe + Top an, damit der Mic an gleicher Bildschirmposition
+         bleibt. -->
     <!-- Panel background: pill shape, semi-transparent dark -->
-    <Border CornerRadius="36"
+    <Border x:Name="FullView" CornerRadius="36"
             Background="#B31E1E1E"
             Width="72" Height="480">
         <StackPanel VerticalAlignment="Center"
@@ -177,4 +182,25 @@
 
         </StackPanel>
     </Border>
+
+    <!-- CollapsedView: kompakte Mic-Pille (nur sichtbar im eingeklappten
+         Zustand). Gleiche Breite (72) wie das volle Overlay, Hoehe 64 — so
+         bleibt die horizontale Position identisch. -->
+    <Border x:Name="CollapsedView"
+            Width="72" Height="64"
+            CornerRadius="28"
+            Background="#B31E1E1E"
+            VerticalAlignment="Top"
+            Visibility="Collapsed">
+        <Button x:Name="CollapsedMicButton"
+                Style="{StaticResource MicButton}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Click="CollapsedMicButton_Click"
+                ToolTip="Start / stop recording">
+            <TextBlock Text="&#x1F3A4;" FontSize="20" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Button>
+    </Border>
+    </Grid>
 </Window>
