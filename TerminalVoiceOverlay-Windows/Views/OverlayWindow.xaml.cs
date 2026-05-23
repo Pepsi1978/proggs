@@ -825,7 +825,7 @@ namespace TerminalVoiceOverlay.Views
 
         private bool _isHorizontal;
         private bool _orientationCaptured;
-        private readonly Dictionary<FrameworkElement, (DependencyObject parent, int index, Thickness margin)> _vplace = new();
+        private readonly Dictionary<FrameworkElement, (DependencyObject parent, int index, Thickness margin, double w, double h)> _vplace = new();
         // Zuletzt bekannte Monitor-Arbeitsflaeche (aus OnTerminalActivated),
         // damit der In-Overlay-Umschalter auch ohne frischen Fokuswechsel
         // korrekt positionieren kann.
@@ -880,7 +880,7 @@ namespace TerminalVoiceOverlay.Views
             foreach (var el in ManagedButtons())
             {
                 int index = el.Parent is StackPanel sp ? sp.Children.IndexOf(el) : -1;
-                _vplace[el] = (el.Parent, index, el.Margin);
+                _vplace[el] = (el.Parent, index, el.Margin, el.Width, el.Height);
                 OLog($"CAPTURE {el.Name} parent={el.Parent?.GetType().Name}#{el.Parent?.GetHashCode()}");
             }
             _orientationCaptured = true;
@@ -948,12 +948,14 @@ namespace TerminalVoiceOverlay.Views
             // Zahlen-Reihe mit FESTER Hoehe (32), IMMER vorhanden (auch leer bei
             // Gruppen ohne Profil-Zahlen) — damit ALLE Zahlen exakt auf einer Linie
             // liegen, statt je nach Symbol-Hoehe zu verrutschen.
-            var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 32, Margin = new Thickness(0, 6, 0, 0) };
+            var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 22, Margin = new Thickness(0, 6, 0, 0) };
             if (tiles != null)
             {
                 foreach (var t in tiles)
                 {
-                    try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); t.VerticalAlignment = VerticalAlignment.Center; bot.Children.Add(t); }
+                    // Kacheln liegend (30×22 statt 24×32) → flachere Zahlen-Reihe,
+                    // dadurch wird die ganze horizontale Leiste schmaler.
+                    try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); t.VerticalAlignment = VerticalAlignment.Center; t.Width = 30; t.Height = 22; bot.Children.Add(t); }
                     catch (Exception ex) { OLog($"HBUILD tile {t.Name} FAIL: {ex.Message}"); }
                 }
             }
@@ -979,6 +981,8 @@ namespace TerminalVoiceOverlay.Views
                     OLog($"RESTORE {el.Name} cur={el.Parent?.GetType().Name ?? "NULL"} target={vp.parent?.GetType().Name}#{vp.parent?.GetHashCode()}");
                     DetachFromParent(el);
                     el.Margin = vp.margin;
+                    el.Width  = vp.w;   // Original-Groesse zurueck (Horizontal aendert Kachel-Groesse)
+                    el.Height = vp.h;
                     switch (vp.parent)
                     {
                         // Anhaengen (Add) statt Index-Insert: ManagedButtons() ist in
