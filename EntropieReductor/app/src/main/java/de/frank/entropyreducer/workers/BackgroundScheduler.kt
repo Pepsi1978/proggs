@@ -38,42 +38,16 @@ class BackgroundScheduler @Inject constructor(
 
     /** Plant Calendar + Whoop nightly um 04:30 lokaler Zeit. */
     fun ensureNightlyJobs() {
-        // Frank-Wunsch 2026-05-11: Amazfit/Zepp ist KEIN nightly Job mehr — Zepp
-        // erlaubt nur einen aktiven App-Token pro Account, jeder Re-Login wirft
-        // die Zepp-App auf Frank's Handy raus. Zepp wird ab jetzt ausschliesslich
-        // ueber den manuellen Refresh-Knopf im Biomarker-Bildschirm getriggert.
-        // AmazfitSyncWorker-Cancel entfernt 2026-05-17 (Frank-Wunsch): Worker-
-        // Klasse ist weg, alte Periodic-Jobs sind durch WorkManager-DB-Migration
-        // ohnehin auto-cleanup beim naechsten App-Update.
-
-        val targetMinutes = 4 * 60 + 30 // 04:30
-        val initialDelayMinutes = minutesUntil(targetMinutes)
-
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
-            .build()
-
-        wm.enqueueUniquePeriodicWork(
-            CalendarSyncWorker.UNIQUE_NAME_PERIODIC,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            PeriodicWorkRequestBuilder<CalendarSyncWorker>(24, TimeUnit.HOURS)
-                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build(),
-        )
-        wm.enqueueUniquePeriodicWork(
-            WhoopSyncWorker.UNIQUE_NAME_PERIODIC,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            PeriodicWorkRequestBuilder<WhoopSyncWorker>(24, TimeUnit.HOURS)
-                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build(),
-        )
-        // Frank-Wunsch 2026-05-17: Polar-Periodic-Worker NUR enqueueen wenn
-        // disablePolarSync=false. Default: Polar AUS. Damit ist Frank's Wunsch
-        // Polar-Periodic-Sync entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API
-        // raus. Polar-Workouts kommen nur ueber ZIP-Bulk-Import.
+        // Frank-Wunsch 2026-05-23: KEINE naechtlichen Hintergrund-Syncs mehr fuer Whoop und
+        // Kalender. Beide synchronisieren jetzt NUR noch beim frischen App-Start (zentral im
+        // StartupViewModel) und beim manuellen Aktualisieren-Knopf. Daten-Syncs sollen nur
+        // laufen wenn die App wirklich geoeffnet ist.
+        //
+        // Die frueher angelegten periodischen 24h-Jobs werden hier AKTIV ABBESTELLT —
+        // WorkManager speichert periodische Jobs persistent, sie wuerden sonst auf Geraeten
+        // mit alter App-Version (oder nach diesem Update) weiterlaufen.
+        wm.cancelUniqueWork(CalendarSyncWorker.UNIQUE_NAME_PERIODIC)
+        wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_PERIODIC)
     }
 
     /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */

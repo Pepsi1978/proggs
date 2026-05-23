@@ -281,22 +281,26 @@ constructor(
     }
 
     init {
-        viewModelScope.launch { refreshWeight() }
         // Frank-Wunsch 2026-05-17: Persistenten Footer beim App-Start aus
         // DataStore laden — damit "Letzter Sync: 17.05. 14:32 …" auch nach
-        // Force-Stop oder Geraete-Neustart sichtbar bleibt.
+        // Force-Stop oder Geraete-Neustart sichtbar bleibt. Reine UI-Anzeige, kein Sync.
         viewModelScope.launch {
             val savedFooter = settings.lastRefreshFooterFlow.first()
             if (savedFooter.isNotBlank() && _message.value == null) {
                 _message.value = savedFooter
             }
         }
-        // Frank-Wunsch 2026-05-17: Auto-Sync beim Oeffnen des Biomarker-Screens
-        // damit der Footer immer aktuell ist. Nutzt die gleiche Logik wie der
-        // manuelle Refresh-Button — laeuft parallel, ist idempotent durch die
-        // diversen Cache-Mechanismen der einzelnen Repos.
-        viewModelScope.launch {
-            refreshNow()
+        // Frank-Wunsch 2026-05-23: KEIN refreshNow() mehr beim Oeffnen des Biomarker-Tabs
+        // (Moment 3 raus). Die Daten-APIs (Whoop/Oura/Strava/Kalender) synchronisieren NUR
+        // noch beim frischen App-Start (zentral im StartupViewModel) und beim manuellen
+        // Aktualisieren-Knopf. Der Tab zeigt die bereits in der DB liegenden Daten.
+        //
+        // Ausnahme HealthConnect-Gewicht: das lebt NUR im ViewModel-State (nicht in der DB),
+        // darum laedt es einmal pro App-Leben beim ERSTEN Oeffnen des Tabs. Bei jedem weiteren
+        // Oeffnen wird NICHT erneut gelesen — kein Sync-bei-jedem-Klick.
+        if (!biomarkerStartupLoadDone) {
+            biomarkerStartupLoadDone = true
+            viewModelScope.launch { refreshWeight() }
         }
     }
 
@@ -933,6 +937,15 @@ constructor(
 
     fun clearMessage() {
         _message.value = null
+    }
+
+    companion object {
+        // Frank-Wunsch 2026-05-23: stellt sicher dass HealthConnect-Gewicht nur EINMAL pro
+        // App-Leben (Prozess) geladen wird — beim ersten Oeffnen des Biomarker-Tabs — und
+        // nicht bei jedem weiteren Tab-Wechsel. Statisch, damit es ViewModel-Neuerstellung
+        // (z.B. Tab-Wechsel, Konfigurationsaenderung) ueberlebt.
+        @Volatile
+        private var biomarkerStartupLoadDone = false
     }
 }
 

@@ -2,9 +2,6 @@ package de.frank.entropyreducer
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.frank.entropyreducer.data.health.HealthConnectManager
@@ -17,7 +14,6 @@ import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -311,107 +307,12 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
-        // Whoop-Rate-Limit ist 60 req/min — selbst 50 Foreground-Wechsel/Tag sind
-        // unkritisch, der Worker macht nur 3 paginierte API-Calls pro Sync.
-        //
-        // Performance-Fix Loop 2.1: oauth.loadWhoopAuthState() liest aus
-        // EncryptedSharedPreferences (Hardware-Keystore-Roundtrip + Disk-I/O) und
-        // parsed JSON — bisher synchron auf Main bei jedem onStart. Bei Frank's
-        // Foldable mit haeufigen Foreground-Wechseln war das ein sichtbarer
-        // Stutter im Resume-Pfad. applicationScope laeuft auf Dispatchers.IO,
-        // scheduler.runWhoopSyncNow() ruft thread-safe WorkManager.enqueueUniqueWork
-        // (REPLACE-Policy stellt sicher dass paralleler ON_START keine Doppel-
-        // Worker erzeugt).
-        ProcessLifecycleOwner.get()
-            .lifecycle
-            .addObserver(
-                object : DefaultLifecycleObserver {
-                    override fun onStart(owner: LifecycleOwner) {
-                        applicationScope.launch {
-                            if (oauth.loadWhoopAuthState().isAuthorized) {
-                                scheduler.runWhoopSyncNow()
-                            }
-                        }
-                        // Frank-Wunsch 2026-05-17 / Bugfix 2026-05-23: Strava beim
-                        // App-Foreground synchronisieren — aber mit Mindestabstand.
-                        // Frueher lief bei JEDEM Wechsel ein voller Sync (listActivities
-                        // + 3 Detail-Calls pro Workout). Bei haeufigem App-Wechsel sprengte
-                        // das Stravas Rate-Limit (100/15min, 1000/Tag) -> HTTP 429 -> gar
-                        // keine Aktualisierung mehr (Symptom: "zuletzt vor 6 h"). Jetzt:
-                        // hoechstens alle 5 Minuten ein automatischer Sync. Der manuelle
-                        // Refresh-Button im Biomarker-Screen synct weiterhin sofort.
-                        // Zusaetzlich greifen im StravaRepository ein Dedup-Mutex und ein
-                        // 429-Cooldown (Defense in Depth, 3 unabhaengige Schichten).
-                        applicationScope.launch {
-                            runCatching {
-                                    val minIntervalMs = 5L * 60L * 1000L // 5 Min
-                                    val sinceLastSyncMs =
-                                        System.currentTimeMillis() - secrets.stravaLastSyncEpochMs
-                                    if (sinceLastSyncMs >= minIntervalMs) {
-                                        amazfitRepository.mergeFromStrava(days = 30)
-                                    }
-                                }
-                                .onFailure {
-                                    android.util.Log.w(
-                                        "EntropyReducerApp",
-                                        "Strava-Foreground-Sync fehlgeschlagen",
-                                        it,
-                                    )
-                                }
-                        }
-                        applicationScope.launch {
-                            if (ouraRepository.isTokenConfigured()) {
-                                // Folgesync zieht 7 Tage zurueck — reicht um neue Werte
-                                // zu holen und ist schnell. Der initiale 365-Tage-Pull
-                                // passiert nur beim ersten Token-Speichern.
-                                runCatching { ouraRepository.syncLastDays(7) }
-                                    .onFailure {
-                                        android.util.Log.w(
-                                            "EntropyReducerApp",
-                                            "Oura-Foreground-Sync fehlgeschlagen",
-                                            it,
-                                        )
-                                    }
-                            }
-                        }
-                        // Frank-Wunsch 2026-05-10: bei jedem App-Start auch Health
-                        // Connect refreshen — Smart-Scale-Werte koennen sich aendern
-                        // ohne dass die App im Vordergrund war. Schreibt nach
-                        // erfolgreichem Read den Sync-Zeitstempel in AppSettings.
-                        //
-                        // Performance-Audit Loop 1 (2026-05-10): Cache-Window 4h —
-                        // Foldable-User loest onStart bei jedem Aufklappen aus (20+/Tag).
-                        // Gewichtsdaten aendern sich nicht 20x am Tag, jeder HC-Read ist
-                        // ein Binder-IPC zum HealthData-Prozess. Cache spart 90% der IPC-
-                        // Roundtrips ohne Funktionsverlust.
-                        applicationScope.launch {
-                            runCatching {
-                                    val lastSync = appSettings.lastHealthConnectSyncMsFlow.first()
-                                    val now = System.currentTimeMillis()
-                                    val staleThresholdMs = 4 * 60 * 60 * 1000L // 4h
-                                    if (now - lastSync < staleThresholdMs) {
-                                        // Frische genug — Read ueberspringen.
-                                        return@runCatching
-                                    }
-                                    if (
-                                        healthConnect.isAvailable() &&
-                                            healthConnect.hasWeightReadPermission()
-                                    ) {
-                                        healthConnect.readLatestWeightKg()
-                                        appSettings.setLastHealthConnectSync(now)
-                                    }
-                                }
-                                .onFailure {
-                                    android.util.Log.w(
-                                        "EntropyReducerApp",
-                                        "HealthConnect-Foreground-Sync fehlgeschlagen",
-                                        it,
-                                    )
-                                }
-                        }
-                    }
-                }
-            )
+        // Frank-Wunsch 2026-05-23: Der fruehere ProcessLifecycleOwner-ON_START-Observer
+        // wurde ENTFERNT. Er triggerte bei JEDEM App-Foreground-Wechsel (auch beim kurzen
+        // Zurueckholen aus dem Hintergrund) einen Sync von Whoop, Strava, Oura und Health
+        // Connect. Das ist jetzt unerwuenscht: Daten-Syncs laufen NUR noch beim frischen
+        // App-Start (zentral im StartupViewModel, siehe MainActivity) und beim manuellen
+        // Aktualisieren-Knopf. Beim blossen Zurueckholen der App wird nichts mehr
+        // synchronisiert — kein unnoetiger Datenverbrauch, kein Rate-Limit-Risiko.
     }
 }

@@ -223,6 +223,9 @@ class StartupViewModel @Inject constructor(
     private val whoop: de.frank.entropyreducer.data.repository.WhoopRepository,
     private val oura: de.frank.entropyreducer.data.repository.OuraRepository,
     private val amazfit: de.frank.entropyreducer.data.repository.AmazfitRepository,
+    // Frank-Wunsch 2026-05-23: Kalender-Sync laeuft jetzt direkt beim frischen Start
+    // (nach dem Drive-Backup), nicht mehr ueber den naechtlichen Worker.
+    private val calendar: de.frank.entropyreducer.data.repository.CalendarRepository,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
@@ -270,28 +273,46 @@ class StartupViewModel @Inject constructor(
                 }
             }
             viewModelScope.launch(Dispatchers.IO) {
+                // Frank-Wunsch 2026-05-23: ZENTRALER Start-Sync-Ablauf. Alle Daten-APIs
+                // synchronisieren NUR beim frischen App-Start (hier, einmal pro Prozess) —
+                // nicht mehr beim Zurueckholen aus dem Hintergrund und nicht beim Oeffnen
+                // des Biomarker-Tabs.
+                //
+                // Reihenfolge bewusst: ZUERST Google Drive komplett (1. Restore holt die
+                // gesicherte Historie zurueck, 2. Backup sichert neue lokale Aenderungen) —
+                // beides wird ABGEWARTET. ERST DANN die einzelnen Daten-APIs. So ist die
+                // Historie wiederhergestellt/gesichert bevor neue Daten oben drauf kommen.
                 if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
                     runCatching { syncEntries.restoreFromDrive() }
-                    // Nach dem Restore noch ein Backup, damit lokale Aenderungen,
-                    // die ggf. waehrend Offline-Phase entstanden, hochgeladen werden.
-                    coordinator.requestSync()
+                    // syncNowAndWait() WARTET bis das komplette Backup (Haupt + Workouts +
+                    // Health) durch ist — anders als das fruehere fire-and-forget requestSync().
+                    runCatching { coordinator.syncNowAndWait() }
                 }
-                // Stufe 2: Hintergrund-Sync-Plaene aufsetzen — auch wenn keine Tokens
-                // existieren. Die Worker laufen leer, machen aber kein Schaden.
+
+                // Jetzt die Daten-APIs der Reihe nach. Reihenfolge ist vorlaeufig — Frank
+                // will sie spaeter feinjustieren. Jeweils nur wenn verbunden; Strava prueft
+                // die Auth intern selbst. Jeder Sync defensiv in runCatching.
+                if (oauth.loadWhoopAuthState().isAuthorized) {
+                    runCatching { whoop.syncLastDays(365) }
+                }
+                if (oura.isTokenConfigured()) {
+                    runCatching { oura.syncLastDays(365) }
+                }
+                runCatching { amazfit.mergeFromStrava(days = 30) }
+                if (secrets.calendarAccountEmail != null) {
+                    runCatching { calendar.syncDefaultWindow() }
+                }
+
+                // Hintergrund-Jobs aufsetzen. ensureNightlyJobs() bestellt die alten
+                // naechtlichen Whoop-/Kalender-Jobs jetzt AB (Frank-Wunsch 2026-05-23:
+                // kein automatischer Hintergrund-Sync mehr). Die KI-Worker (Briefing,
+                // Codex, Review, Trigger) bleiben unveraendert.
                 scheduler.ensureNightlyJobs()
                 scheduler.ensureKiQuestionJob()
                 scheduler.ensureCodexJob()
                 scheduler.ensureDailyBriefingJob()
                 scheduler.ensureReviewJobs()
                 scheduler.ensureCorrelationAndTriggerJobs()
-                if (secrets.calendarAccountEmail != null) {
-                    scheduler.runCalendarSyncNow()
-                }
-                if (oauth.loadWhoopAuthState().isAuthorized) {
-                    scheduler.runWhoopSyncNow()
-                }
-                // Polar-Live-Sync entfernt 2026-05-17 (Frank-Wunsch): Polar-Historie
-                // kommt nur noch ueber ZIP-Bulk-Import.
                 scheduler.runKiQuestionCheckNow()
             }
         }

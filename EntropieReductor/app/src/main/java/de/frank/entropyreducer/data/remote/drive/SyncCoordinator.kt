@@ -152,6 +152,19 @@ constructor(
         scope.launch { performUpload() }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-23: Blockierender Backup-Upload fuer den App-Start. Im Gegensatz zu
+     * [requestSync] (debounced, fire-and-forget) WARTET diese Methode bis der komplette Upload
+     * (Haupt + Workouts + Health) durch ist. So kann der Start-Ablauf sicherstellen, dass das
+     * Drive-Backup KOMPLETT abgeschlossen ist, BEVOR die anderen API-Syncs (Whoop/Oura/Strava/
+     * Kalender) starten. Ohne verbundenes Drive-Konto kehrt sie sofort zurueck.
+     */
+    suspend fun syncNowAndWait() {
+        if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
+        pendingJob?.cancel()
+        performUpload()
+    }
+
     private suspend fun performUpload() {
         uploadMutex.withLock {
             _status.value = SyncStatus.Running
