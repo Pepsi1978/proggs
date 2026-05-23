@@ -295,9 +295,14 @@ class StartupViewModel @Inject constructor(
                     runCatching { coordinator.syncNowAndWait() }
                 }
 
-                // Jetzt die Daten-APIs der Reihe nach. Reihenfolge ist vorlaeufig — Frank
-                // will sie spaeter feinjustieren. Jeweils nur wenn verbunden; Strava prueft
-                // die Auth intern selbst. Die Zaehler werden fuer den Footer gesammelt.
+                // Frank-Wunsch 2026-05-23: Reihenfolge nach dem Drive-Backup bewusst gewaehlt —
+                // 1. Health Connect: lokal, schnell, kein Netz/Rate-Limit -> Gewicht sofort da.
+                // 2. + 3. Whoop und Oura: die zentralen Biomarker (Erholung, Schlaf).
+                // 4. Strava: oft rate-limitiert, darum nicht blockierend vorne.
+                // 5. Kalender: laedt am meisten (Jahre im Voraus), am wenigsten zeitkritisch.
+                // Jeweils nur wenn verbunden; Strava prueft die Auth intern selbst. Die Zaehler
+                // werden fuer den Footer gesammelt.
+                val hcCount = runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0)
                 val whoopCount =
                     if (oauth.loadWhoopAuthState().isAuthorized) {
                         whoop.syncLastDays(365).getOrDefault(0)
@@ -317,9 +322,6 @@ class StartupViewModel @Inject constructor(
                 if (secrets.calendarAccountEmail != null) {
                     runCatching { calendar.syncDefaultWindow() }
                 }
-                // Frank-Wunsch 2026-05-23: HealthConnect-Gewicht/Koerperwerte in die DB cachen,
-                // damit der Biomarker-Tab sie beim Oeffnen schnell aus der DB laden kann.
-                val hcCount = runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0)
 
                 // Frank-Bugfix 2026-05-23: Footer-Zeitstempel setzen — genau wie der manuelle
                 // Aktualisieren-Knopf (refreshNow). Behebt die Regression aus #987, wo der

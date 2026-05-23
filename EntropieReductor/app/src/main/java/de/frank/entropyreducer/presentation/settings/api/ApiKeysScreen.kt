@@ -100,6 +100,14 @@ fun ApiKeysScreen(
                     color = cosmos.textSecondary,
                 )
             }
+            // Frank-Wunsch 2026-05-23: "Alles neu laden"-Knopf ganz oben. Laedt die komplette
+            // Historie aller Quellen neu (umgeht den inkrementellen Sync) — nur auf manuellen Druck.
+            item {
+                ReloadAllDataCard(
+                    onReload = oauthVm::reloadAllData,
+                    message = oauthState.message,
+                )
+            }
             // Frank-Wunsch 2026-05-10: Google-Drive-Backup gehoert thematisch zu allen
             // Login/API-relevanten Bereichen — nicht unter Datenexport. Daher ganz oben
             // direkt nach dem Intro-Text. Google Calendar gleich darunter (zweiter
@@ -164,6 +172,48 @@ fun ApiKeysScreen(
                 )
             }
             item { Spacer(Modifier.height(80.dp)) }
+        }
+    }
+}
+
+/**
+ * Frank-Wunsch 2026-05-23: "Alles neu laden"-Knopf ganz oben in den API-Einstellungen.
+ * Loest einen vollstaendigen (nicht-inkrementellen) Sync aller Datenquellen aus — nuetzlich
+ * z.B. nach einem Geraetewechsel. Passiert NUR auf manuellen Druck.
+ */
+@Composable
+private fun ReloadAllDataCard(onReload: () -> Unit, message: String?) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Alles neu laden",
+                style = MaterialTheme.typography.titleMedium,
+                color = CosmosColors.AccentPrimary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Holt die komplette Historie von Whoop, Oura, Strava und Health Connect neu — " +
+                    "statt nur der neuesten Daten. Sinnvoll z.B. nach einem Geraetewechsel. " +
+                    "Laeuft nur, wenn du diesen Knopf drueckst.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.material3.Button(
+                onClick = onReload,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Alle Daten neu laden")
+            }
+            if (!message.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
         }
     }
 }

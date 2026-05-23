@@ -57,6 +57,12 @@ class OAuthViewModel @Inject constructor(
     private val amazfitRepo: de.frank.entropyreducer.data.repository.AmazfitRepository,
     private val workoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     val calendarSignIn: CalendarSignInHelper,
+    // Frank-Wunsch 2026-05-23: fuer den "Alles neu laden"-Knopf.
+    private val whoopRepo: de.frank.entropyreducer.data.repository.WhoopRepository,
+    private val ouraRepo: de.frank.entropyreducer.data.repository.OuraRepository,
+    private val healthConnectRepository:
+        de.frank.entropyreducer.data.repository.HealthConnectRepository,
+    private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(loadInitial())
@@ -82,6 +88,43 @@ class OAuthViewModel @Inject constructor(
                     // UI als nicht-verbunden markieren, damit Frank den Banner versteht.
                     _state.update { it.copy(whoopConnected = false) }
                 }
+        }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-23: "Alles neu laden"-Knopf in den API-Einstellungen. Setzt alle
+     * Sync-Zeitstempel zurueck, sodass der nachfolgende Sync NICHT inkrementell laeuft, sondern
+     * die volle Historie neu holt. Laeuft NUR auf manuellen Knopf-Druck. Reihenfolge wie beim
+     * App-Start (Health Connect -> Whoop -> Oura -> Strava). Jeder Schritt defensiv (runCatching),
+     * damit ein Fehler bei einer Quelle die anderen nicht stoppt.
+     */
+    fun reloadAllData() {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(message = "Lade alle Daten neu — das kann einen Moment dauern …")
+            }
+            // Zeitstempel zuruecksetzen -> die Sync-Methoden laden voll (lastSync == 0).
+            secrets.stravaLastSyncEpochMs = 0L
+            secrets.ouraLastSyncEpochMs = 0L
+            runCatching {
+                appSettings.setLastWhoopSync(0L)
+                appSettings.setLastOuraSync(0L)
+                appSettings.setLastHealthConnectSync(0L)
+                appSettings.setLastAmazfitSync(0L)
+            }
+            // Voll synchronisieren (gleiche Reihenfolge wie der App-Start).
+            runCatching { healthConnectRepository.syncToCache() }
+            runCatching {
+                if (oauth.loadWhoopAuthState().isAuthorized) whoopRepo.syncLastDays(365)
+            }
+            runCatching { if (ouraRepo.isTokenConfigured()) ouraRepo.syncLastDays(365) }
+            runCatching { amazfitRepo.mergeFromStrava(days = 60) }
+            _state.update {
+                it.copy(
+                    message = "Alle Daten wurden neu geladen.",
+                    stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
+                )
+            }
         }
     }
 

@@ -360,24 +360,46 @@ constructor(
             if (mainOk) {
                 try {
                     val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
-                    val workoutBackups = workoutEntities.map { it.toBackup() }
-                    val workoutsPayload =
-                        WorkoutsBackupPayload(
-                            version = 1,
-                            exportedAt = System.currentTimeMillis(),
-                            workouts = workoutBackups,
-                        )
-                    val workoutsText =
-                        json.encodeToString(WorkoutsBackupPayload.serializer(), workoutsPayload)
-                    backupManager
-                        .uploadWorkouts(workoutsText)
-                        .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
-                        .onFailure { ex ->
-                            _status.value =
-                                SyncStatus.Failed(
-                                    "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                                )
-                        }
+                    // Frank-Wunsch 2026-05-23: Das Workouts-Backup ist mit ~6 MB die mit Abstand
+                    // groesste Datei und bremst den App-Start am staerksten. Es wird nur noch
+                    // hochgeladen, wenn sich seit dem letzten Workouts-Backup wirklich etwas
+                    // geaendert hat. Fingerprint = Hash ueber trackId + createdAt + manuelle Edits
+                    // aller Workouts — aendert sich bei neuem, geloeschtem oder editiertem Training.
+                    val fingerprint =
+                        workoutEntities
+                            .joinToString("|") {
+                                "${it.trackId}:${it.createdAt}:${it.manualOverridesMs ?: 0L}"
+                            }
+                            .hashCode()
+                    val lastFingerprint = appSettingsLazy.get().workoutsBackupFingerprintFlow.first()
+                    if (fingerprint == lastFingerprint && lastFingerprint != 0) {
+                        // Keine Aenderung an den Trainings — teuren 6-MB-Upload ueberspringen.
+                        _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                    } else {
+                        val workoutBackups = workoutEntities.map { it.toBackup() }
+                        val workoutsPayload =
+                            WorkoutsBackupPayload(
+                                version = 1,
+                                exportedAt = System.currentTimeMillis(),
+                                workouts = workoutBackups,
+                            )
+                        val workoutsText =
+                            json.encodeToString(WorkoutsBackupPayload.serializer(), workoutsPayload)
+                        backupManager
+                            .uploadWorkouts(workoutsText)
+                            .onSuccess {
+                                // Fingerprint erst NACH erfolgreichem Upload speichern, damit ein
+                                // fehlgeschlagener Upload beim naechsten Mal erneut versucht wird.
+                                appSettingsLazy.get().setWorkoutsBackupFingerprint(fingerprint)
+                                _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                            }
+                            .onFailure { ex ->
+                                _status.value =
+                                    SyncStatus.Failed(
+                                        "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                    )
+                            }
+                    }
                 } catch (oom: OutOfMemoryError) {
                     System.gc()
                     _status.value = SyncStatus.Failed("Workouts-Backup zu gross (OOM)")
