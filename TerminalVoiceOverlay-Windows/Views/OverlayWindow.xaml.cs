@@ -705,7 +705,6 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void ScheduleCollapse()
         {
-            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording) return;
             if (_mouseOverOverlay) return;
@@ -719,16 +718,31 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>Klappt das Overlay sofort wieder zum vollen Pillar auf.</summary>
         private void Expand()
         {
-            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_isCollapsed) return;
             _isCollapsed = false;
             _usedSinceExpand = false;
             _collapseTimer?.Stop();
 
-            CollapsedView.Visibility = Visibility.Collapsed;
-            FullView.Visibility = Visibility.Visible;
-            Height = FullHeight;
-            Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
+            if (_isHorizontal)
+            {
+                // Horizontal: zurueck zur vollen Leiste, kanonisch unten rechts.
+                CollapsedView.Visibility  = Visibility.Collapsed;
+                HorizontalView.Visibility = Visibility.Visible;
+                SizeToContent = SizeToContent.WidthAndHeight;
+                UpdateLayout();
+                if (_waW > 0)
+                {
+                    Left = _waX + _waW - ActualWidth  - 27;
+                    Top  = _waY + _waH - ActualHeight - 40;
+                }
+            }
+            else
+            {
+                CollapsedView.Visibility = Visibility.Collapsed;
+                FullView.Visibility = Visibility.Visible;
+                Height = FullHeight;
+                Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
+            }
             ReassertTopmostIfVisible();
         }
 
@@ -739,14 +753,43 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void CollapseImmediate()
         {
-            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_autoHideEnabled || _isCollapsed) return;
             _collapseTimer?.Stop();
 
-            FullView.Visibility = Visibility.Collapsed;
-            CollapsedView.Visibility = Visibility.Visible;
-            Height = CollapsedHeight;
-            Top   += CollapseTopOffset;
+            if (_isHorizontal)
+            {
+                // Mic-Bildschirmposition messen, BEVOR die Leiste ausgeblendet
+                // wird — damit die kompakte Pille genau dort sitzt wo der Mic war.
+                double micCx, micCy;
+                try
+                {
+                    var p = MicButton.TransformToAncestor(this).Transform(
+                        new Point(MicButton.ActualWidth / 2, MicButton.ActualHeight / 2));
+                    micCx = Left + p.X;
+                    micCy = Top + p.Y;
+                }
+                catch
+                {
+                    micCx = Left + ActualWidth / 2;
+                    micCy = Top + ActualHeight / 2;
+                }
+
+                HorizontalView.Visibility = Visibility.Collapsed;
+                CollapsedView.Visibility  = Visibility.Visible;
+                SizeToContent = SizeToContent.Manual;
+                Width  = 96;
+                Height = CollapsedHeight;
+                // CollapsedView-Mic-Mitte liegt bei (48,32) im 96x64-Fenster.
+                Left = micCx - 48;
+                Top  = micCy - 32;
+            }
+            else
+            {
+                FullView.Visibility = Visibility.Collapsed;
+                CollapsedView.Visibility = Visibility.Visible;
+                Height = CollapsedHeight;
+                Top   += CollapseTopOffset;
+            }
             _isCollapsed = true;
             _usedSinceExpand = false;
             ReassertTopmostIfVisible();
@@ -864,11 +907,13 @@ namespace TerminalVoiceOverlay.Views
                 el.Margin = vp.margin;
                 switch (vp.parent)
                 {
-                    case StackPanel sp:
-                        int idx = vp.index < 0 ? sp.Children.Count : Math.Min(vp.index, sp.Children.Count);
-                        sp.Children.Insert(idx, el);
-                        break;
-                    case Panel p:           p.Children.Add(el); break; // Grid: Grid.Column/Row bleibt am Element
+                    // Anhaengen (Add) statt Index-Insert: ManagedButtons() ist in
+                    // Dokument-Reihenfolge pro Panel, daher ergibt das Anhaengen
+                    // automatisch die Original-Reihenfolge — robuster als
+                    // Index-Mathematik und kann keine Buttons verlieren/verrutschen.
+                    // (StackPanel und Grid sind beide Panel; Grid.Column/Row bleibt
+                    // am Element erhalten.)
+                    case Panel p:           p.Children.Add(el); break;
                     case Border b:          b.Child = el;       break;
                     case ContentControl cc: cc.Content = el;    break;
                     case Decorator d:       d.Child = el;       break;
@@ -931,6 +976,11 @@ namespace TerminalVoiceOverlay.Views
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
         private void PositionForCurrentOrientation()
         {
+            // Umschalten setzt IMMER die kanonische Position — vertikal oben
+            // rechts, horizontal unten rechts. Eine vorherige manuelle
+            // Verschiebung wird zurueckgesetzt (es gibt nur die zwei festen
+            // Plaetze, wie vom Benutzer gewuenscht).
+            _manuallyPositioned = false;
             if (_isHorizontal)
             {
                 SizeToContent = SizeToContent.WidthAndHeight;
@@ -944,8 +994,14 @@ namespace TerminalVoiceOverlay.Views
             else
             {
                 SizeToContent = SizeToContent.Manual;
+                _isCollapsed = false;
                 Width  = 96;
-                Height = _isCollapsed ? CollapsedHeight : FullHeight;
+                Height = FullHeight;
+                if (_waW > 0)
+                {
+                    Left = _waX + _waW - 96 - 27;
+                    Top  = _waY + 57;
+                }
             }
             ReassertTopmostIfVisible();
         }
@@ -1144,7 +1200,6 @@ namespace TerminalVoiceOverlay.Views
             if (_isHorizontal)
             {
                 // Horizontale Leiste: Groesse = Inhalt, Position unten-rechts.
-                // (Auto-Hide ist hier in v1 inaktiv — die Leiste bleibt voll.)
                 if (!_manuallyPositioned)
                 {
                     SizeToContent = SizeToContent.WidthAndHeight;
@@ -1156,6 +1211,15 @@ namespace TerminalVoiceOverlay.Views
                 {
                     Show();
                     Console.WriteLine("Overlay: visible (terminal active, horizontal)");
+                }
+
+                // Frisch eingeblendet → eingeklappt starten (nur Mic). UpdateLayout
+                // vorher, damit CollapseImmediate die Mic-Position messen kann.
+                if (wasHidden && _autoHideEnabled
+                    && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
+                {
+                    UpdateLayout();
+                    CollapseImmediate();
                 }
             }
             else

@@ -149,7 +149,11 @@
             <!-- Section 1: Stern (always-on prefix) + Orientierungs-Umschalter.
                  Stern etwas kleiner (34 statt 40) und leicht nach links, daneben
                  der neue ⇄-Button zum Drehen zwischen vertikal/horizontal. -->
-            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,15,0,6">
+            <!-- Padding so gewaehlt, dass die Sektion exakt 63px hoch bleibt
+                 (21 + 34 Button-Reihe + 8), obwohl der Stern jetzt kleiner ist.
+                 Sonst waere der Gesamt-Inhalt kuerzer als die feste Fensterhoehe
+                 (612) → schwarze Luecke unten + verschobener Mic (Auto-Hide-Versatz). -->
+            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,21,0,8">
                 <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button x:Name="UltrathinkButton"
                             Style="{StaticResource CircleButton}"
@@ -467,9 +471,12 @@
             Background="#FF1A1A1A"
             BorderBrush="#FF000000"
             BorderThickness="2"
+            Padding="14,12,14,12"
             VerticalAlignment="Top"
             HorizontalAlignment="Left"
             Visibility="Collapsed">
+        <!-- Padding gibt der Hover-Vergroesserung (Scale 1.15) Headroom, sonst
+             wird der vergroesserte Mic-Button oben am Fensterrand abgeschnitten. -->
         <StackPanel x:Name="HBar" Orientation="Horizontal" VerticalAlignment="Center"/>
     </Border>
 
