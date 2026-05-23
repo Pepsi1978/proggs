@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -636,6 +637,7 @@ namespace TerminalVoiceOverlay.Views
             // Zeitpunkt bereits initialisiert (siehe App.StartOverlay, der
             // Initialize() VOR new OverlayWindow(config) aufruft). Bei jedem
             // Fehler: Default true — Feature an, exakt wie der Modell-Default.
+            bool startupHorizontal = false;
             try
             {
                 using var scope = PromptBoardHost.Services.CreateScope();
@@ -643,10 +645,12 @@ namespace TerminalVoiceOverlay.Views
                     .GetRequiredService<PromptBoard.Data.PromptBoardDbContext>();
                 var settings = ctx.AppSettings.FirstOrDefault();
                 _autoHideEnabled = settings?.AutoHide ?? true;
+                startupHorizontal = string.Equals(settings?.Orientation, "horizontal",
+                    StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"InitAutoHide: settings read failed, defaulting ON: {ex.Message}");
+                Console.WriteLine($"InitAutoHide: settings read failed, defaulting ON/vertical: {ex.Message}");
                 _autoHideEnabled = true;
             }
 
@@ -683,6 +687,13 @@ namespace TerminalVoiceOverlay.Views
             // Jeder Klick irgendwo im vollen Overlay zaehlt als "benutzt" →
             // schnelleres Einklappen (2 s). Reines Hovern zaehlt NICHT.
             FullView.PreviewMouseDown += (_, _) => _usedSinceExpand = true;
+
+            // Hover-Animation fuer den neuen Orientierungs-Umschalter.
+            AttachHover(OrientationToggleButton);
+
+            // Startup-Orientierung anwenden — nur wenn horizontal (vertikal ist
+            // bereits der XAML-Standard). Position folgt in OnTerminalActivated.
+            if (startupHorizontal) ApplyOrientation(true);
         }
 
         /// <summary>
@@ -694,6 +705,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void ScheduleCollapse()
         {
+            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording) return;
             if (_mouseOverOverlay) return;
@@ -707,6 +719,7 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>Klappt das Overlay sofort wieder zum vollen Pillar auf.</summary>
         private void Expand()
         {
+            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_isCollapsed) return;
             _isCollapsed = false;
             _usedSinceExpand = false;
@@ -726,6 +739,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void CollapseImmediate()
         {
+            if (_isHorizontal) return; // Auto-Hide v1 nur vertikal
             if (!_autoHideEnabled || _isCollapsed) return;
             _collapseTimer?.Stop();
 
@@ -752,6 +766,188 @@ namespace TerminalVoiceOverlay.Views
             Expand();
             _usedSinceExpand = true;
             BtnMic_Click(MicButton, new RoutedEventArgs());
+        }
+
+        // ════════════════════════════════════════════════════════════
+        //  Orientierung: vertikal (Standard) ↔ horizontal
+        //  KEINE doppelten Buttons — dieselben Instanzen werden zwischen
+        //  FullView (vertikal) und HorizontalView/HBar umgehaengt. Dadurch
+        //  bleibt die gesamte Zustands-Logik (SetMicState, Profile, Aufnahme)
+        //  unveraendert. Die vertikale XAML ist und bleibt Standard + Fallback.
+        //  v1: Auto-Hide nur im vertikalen Modus aktiv; horizontal bleibt die
+        //  Leiste sichtbar (horizontale Collapse-Geometrie folgt als Schritt).
+        // ════════════════════════════════════════════════════════════
+
+        private bool _isHorizontal;
+        private bool _orientationCaptured;
+        private readonly Dictionary<FrameworkElement, (DependencyObject parent, int index, Thickness margin)> _vplace = new();
+        // Zuletzt bekannte Monitor-Arbeitsflaeche (aus OnTerminalActivated),
+        // damit der In-Overlay-Umschalter auch ohne frischen Fokuswechsel
+        // korrekt positionieren kann.
+        private double _waX, _waY, _waW, _waH;
+
+        // Alle Buttons die zwischen den Layouts wandern — in Dokument-Reihenfolge
+        // pro Eltern-Panel (aufsteigender Index), damit das Zurueckhaengen in
+        // StackPanels die richtige Reihenfolge ergibt.
+        private FrameworkElement[] ManagedButtons() => new FrameworkElement[]
+        {
+            UltrathinkButton, OrientationToggleButton,
+            MicButton, BtwButton,
+            Profile1Button, Profile2Button, Profile3Button,
+            WButton, GButton,
+            Profile4Button, Profile5Button,
+            XButton, Profile6Button,
+            CopyButton, PasteButton,
+            Profile7Button, Profile8Button,
+            ScreenshotButton, InsertScreenshotButton,
+            Profile9Button, Profile10Button,
+            EnterButton,
+        };
+
+        private void CaptureVerticalPlacement()
+        {
+            if (_orientationCaptured) return;
+            foreach (var el in ManagedButtons())
+            {
+                int index = el.Parent is StackPanel sp ? sp.Children.IndexOf(el) : -1;
+                _vplace[el] = (el.Parent, index, el.Margin);
+            }
+            _orientationCaptured = true;
+        }
+
+        private static void DetachFromParent(FrameworkElement el)
+        {
+            switch (el.Parent)
+            {
+                case Panel p:           p.Children.Remove(el); break;
+                case Border b:          b.Child = null;        break;
+                case ContentControl cc: cc.Content = null;     break;
+                case Decorator d:       d.Child = null;        break;
+            }
+        }
+
+        // Baut die horizontale Leiste (rechts→links). HBar fuellt sich
+        // links→rechts, daher Enter zuerst und der Stern zuletzt (= ganz rechts).
+        private void BuildHorizontalLayout()
+        {
+            HBar.Children.Clear();
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null));
+            HBar.Children.Add(MakeHGroup(new[] { ScreenshotButton, InsertScreenshotButton }, new[] { Profile9Button, Profile10Button }));
+            HBar.Children.Add(MakeHGroup(new[] { CopyButton, PasteButton }, new[] { Profile7Button, Profile8Button }));
+            HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }));
+            HBar.Children.Add(MakeHGroup(new[] { WButton, GButton }, new[] { Profile4Button, Profile5Button }));
+            HBar.Children.Add(MakeHGroup(new[] { MicButton, BtwButton }, new[] { Profile1Button, Profile2Button, Profile3Button }));
+            HBar.Children.Add(MakeHGroup(new[] { UltrathinkButton, OrientationToggleButton }, null));
+        }
+
+        private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles)
+        {
+            var col = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(5, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
+            var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            foreach (var b in symbols) { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); top.Children.Add(b); }
+            col.Children.Add(top);
+            if (tiles != null)
+            {
+                var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
+                foreach (var t in tiles) { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); bot.Children.Add(t); }
+                col.Children.Add(bot);
+            }
+            return col;
+        }
+
+        private void RestoreVerticalLayout()
+        {
+            foreach (var el in ManagedButtons())
+            {
+                if (!_vplace.TryGetValue(el, out var vp)) continue;
+                DetachFromParent(el);
+                el.Margin = vp.margin;
+                switch (vp.parent)
+                {
+                    case StackPanel sp:
+                        int idx = vp.index < 0 ? sp.Children.Count : Math.Min(vp.index, sp.Children.Count);
+                        sp.Children.Insert(idx, el);
+                        break;
+                    case Panel p:           p.Children.Add(el); break; // Grid: Grid.Column/Row bleibt am Element
+                    case Border b:          b.Child = el;       break;
+                    case ContentControl cc: cc.Content = el;    break;
+                    case Decorator d:       d.Child = el;       break;
+                }
+            }
+            HBar.Children.Clear();
+        }
+
+        // Wendet die Orientierung an (Reparenting + Sichtbarkeit). Position +
+        // Groesse setzt PositionForCurrentOrientation bzw. OnTerminalActivated.
+        private void ApplyOrientation(bool horizontal)
+        {
+            CaptureVerticalPlacement();
+            if (horizontal)
+            {
+                BuildHorizontalLayout();
+                FullView.Visibility       = Visibility.Collapsed;
+                CollapsedView.Visibility  = Visibility.Collapsed;
+                HorizontalView.Visibility = Visibility.Visible;
+                _isHorizontal = true;
+                _isCollapsed  = false; // Auto-Hide ist im Horizontal-Modus (v1) inaktiv
+            }
+            else
+            {
+                RestoreVerticalLayout();
+                HorizontalView.Visibility = Visibility.Collapsed;
+                FullView.Visibility       = Visibility.Visible;
+                _isHorizontal = false;
+            }
+            ReassertTopmostIfVisible();
+        }
+
+        private void BtnOrientationToggle_Click(object sender, RoutedEventArgs e)
+        {
+            bool target = !_isHorizontal;
+            ApplyOrientation(target);
+            PositionForCurrentOrientation();
+            PersistOrientation(target);
+        }
+
+        private async void PersistOrientation(bool horizontal)
+        {
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var repo = scope.ServiceProvider
+                    .GetRequiredService<PromptBoard.Core.Repositories.IAppSettingsRepository>();
+                var s = await repo.GetAsync();
+                s.Orientation = horizontal ? "horizontal" : "vertical";
+                await repo.UpdateAsync(s);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PersistOrientation failed: {ex.Message}");
+            }
+        }
+
+        // Setzt Fenstergroesse + Position passend zur Orientierung. Horizontal:
+        // SizeToContent (Leiste umschliesst die HBar), unten-rechts am Monitor.
+        // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
+        private void PositionForCurrentOrientation()
+        {
+            if (_isHorizontal)
+            {
+                SizeToContent = SizeToContent.WidthAndHeight;
+                UpdateLayout();
+                if (_waW > 0)
+                {
+                    Left = _waX + _waW - ActualWidth  - 27;
+                    Top  = _waY + _waH - ActualHeight - 40;
+                }
+            }
+            else
+            {
+                SizeToContent = SizeToContent.Manual;
+                Width  = 96;
+                Height = _isCollapsed ? CollapsedHeight : FullHeight;
+            }
+            ReassertTopmostIfVisible();
         }
 
         // ── Non-activating window setup ──
@@ -940,47 +1136,61 @@ namespace TerminalVoiceOverlay.Views
 
             bool wasHidden = !IsVisible;
 
-            if (!_manuallyPositioned)
+            // Monitor-Arbeitsflaeche immer merken (auch fuer den In-Overlay-
+            // Umschalter, der ohne frischen Fokuswechsel positionieren muss).
+            var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
+            _waX = workArea.X; _waY = workArea.Y; _waW = workArea.Width; _waH = workArea.Height;
+
+            if (_isHorizontal)
             {
-                var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
-                // Frank's exact spec (2026-04-26):
-                //   • 0,7 cm from the right edge → 7 mm × 3,78 ≈ 27 WPF-px
-                //   • 1,5 cm from the top edge   → 15 mm × 3,78 ≈ 57 WPF-px
-                // WPF pixels are device-independent (96 per inch), so these
-                // millimeter targets stay visually constant across DPI
-                // settings. Saved-position path above still wins once the
-                // user drags the pillar manually.
-                Left = workArea.X + workArea.Width - Width - 27;
-                double fullTop = workArea.Y + 57;
-                // Collapse-bewusst: ist das Overlay gerade eingeklappt, liegt
-                // der Fenster-Top um CollapseTopOffset tiefer und die Hoehe ist
-                // die kompakte — sonst wuerde die Re-Positionierung den Mic
-                // beim Terminal-Fokuswechsel nach oben springen lassen.
-                if (_autoHideEnabled && _isCollapsed)
+                // Horizontale Leiste: Groesse = Inhalt, Position unten-rechts.
+                // (Auto-Hide ist hier in v1 inaktiv — die Leiste bleibt voll.)
+                if (!_manuallyPositioned)
                 {
-                    Top    = fullTop + CollapseTopOffset;
-                    Height = CollapsedHeight;
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                    Left = _waX + _waW - ActualWidth  - 27;
+                    Top  = _waY + _waH - ActualHeight - 40;
                 }
-                else
+                if (!IsVisible)
                 {
-                    Top    = fullTop;
-                    Height = FullHeight; // Geometrie an den Zustand koppeln (Defense in Depth)
+                    Show();
+                    Console.WriteLine("Overlay: visible (terminal active, horizontal)");
                 }
             }
-
-            // Frisch eingeblendet (war versteckt) → eingeklappt starten, damit
-            // der Mic-Button aus dem Weg ist und die CLI frei lesbar bleibt.
-            // VOR Show(), sonst blitzt das volle Overlay einen Frame lang auf.
-            if (wasHidden && _autoHideEnabled
-                && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
+            else
             {
-                CollapseImmediate();
-            }
+                if (!_manuallyPositioned)
+                {
+                    // Frank's exact spec (2026-04-26): 27px vom rechten Rand,
+                    // 57px vom oberen Rand. WPF-DIPs sind DPI-unabhaengig.
+                    Left = _waX + _waW - Width - 27;
+                    double fullTop = _waY + 57;
+                    if (_autoHideEnabled && _isCollapsed)
+                    {
+                        Top    = fullTop + CollapseTopOffset;
+                        Height = CollapsedHeight;
+                    }
+                    else
+                    {
+                        Top    = fullTop;
+                        Height = FullHeight; // Geometrie an den Zustand koppeln
+                    }
+                }
 
-            if (!IsVisible)
-            {
-                Show();
-                Console.WriteLine("Overlay: visible (terminal active)");
+                // Frisch eingeblendet (war versteckt) → eingeklappt starten.
+                // VOR Show(), sonst blitzt das volle Overlay einen Frame lang auf.
+                if (wasHidden && _autoHideEnabled
+                    && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
+                {
+                    CollapseImmediate();
+                }
+
+                if (!IsVisible)
+                {
+                    Show();
+                    Console.WriteLine("Overlay: visible (terminal active)");
+                }
             }
 
             // Star toggle is on but the panel was hidden during a previous

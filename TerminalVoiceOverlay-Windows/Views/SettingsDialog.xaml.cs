@@ -14,7 +14,8 @@ public sealed record SettingsEditResult(
     string? GroqApiKey,
     string? GeminiApiKey,
     string SeparatorTemplate,
-    bool AutoHide);
+    bool AutoHide,
+    string Orientation);
 
 public partial class SettingsDialog : Window
 {
@@ -33,6 +34,8 @@ public partial class SettingsDialog : Window
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
         SeparatorBox.Text = current.SeparatorTemplate;
         AutoHideCheck.IsChecked = current.AutoHide;
+        HorizontalCheck.IsChecked = string.Equals(current.Orientation, "horizontal",
+            StringComparison.OrdinalIgnoreCase);
 
         // Google OAuth credentials live in $HOME/SK/PromptBoard/.env per
         // secrets-in-sk-folder.md — they never enter the Drive backup JSON.
@@ -56,7 +59,8 @@ public partial class SettingsDialog : Window
                 NullIfBlank(GroqKeyBox.Text),
                 NullIfBlank(GeminiKeyBox.Text),
                 SeparatorBox.Text ?? " ; ",
-                AutoHideCheck.IsChecked == true);
+                AutoHideCheck.IsChecked == true,
+                HorizontalCheck.IsChecked == true ? "horizontal" : "vertical");
             Close();
         };
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();

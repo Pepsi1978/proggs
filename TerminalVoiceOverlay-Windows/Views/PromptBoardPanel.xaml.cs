@@ -2496,6 +2496,7 @@ public partial class PromptBoardPanel : Window
             latest.GeminiApiKey = result.GeminiApiKey;
             latest.SeparatorTemplate = result.SeparatorTemplate;
             latest.AutoHide = result.AutoHide;
+            latest.Orientation = result.Orientation;
             await repo.UpdateAsync(latest);
         }
         catch (Exception ex)
