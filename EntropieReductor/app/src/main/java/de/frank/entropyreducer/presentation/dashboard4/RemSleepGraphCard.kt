@@ -60,11 +60,11 @@ import java.util.Locale
  * Die Farbgebung folgt SleepStageColors.Rem — damit Graph, Bar-Segment und
  * Beschreibungs-Chip oben in der Schlafphasen-Card visuell zusammengehoeren.
  *
- * Ampel-Logik (Frank-Vorgabe 2026-05-23, wie Tiefschlaf NICHT invers — viel REM
- * ist GUT):
- *   - 0 – 15 %  REM → Rot   (kritisch wenig)
- *   - 15 – 20 % REM → Gelb  (grenzwertig)
- *   - > 20 %    REM → Gruen (gesund)
+ * Ampel-Logik (Frank-Vorgabe 2026-05-23, aktualisiert — wie Tiefschlaf NICHT invers,
+ * viel REM ist GUT):
+ *   - 0 – 17 %  REM → Rot   (kritisch wenig)
+ *   - 17 – 25 % REM → Gelb  (grenzwertig)
+ *   - > 25 %    REM → Gruen (gesund)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -267,15 +267,15 @@ private fun RemSleepBars(values: List<Double>) {
 }
 
 /**
- * Farbe pro Balken im REM-Schlaf-Graph (Frank-Wunsch 2026-05-23):
- *   0 – 15 %  → Rot   (kritisch wenig)
- *   15 – 20 % → Gelb  (grenzwertig)
- *   > 20 %    → Gruen (gesund)
+ * Farbe pro Balken im REM-Schlaf-Graph (Frank-Wunsch 2026-05-23, aktualisiert):
+ *   0 – 17 %  → Rot   (kritisch wenig)
+ *   17 – 25 % → Gelb  (grenzwertig)
+ *   > 25 %    → Gruen (gesund)
  */
 private fun remSleepBarColor(pct: Double): Color =
     when {
-        pct < 15.0 -> CosmosColors.Critical
-        pct < 20.0 -> CosmosColors.Warning
+        pct < 17.0 -> CosmosColors.Critical
+        pct < 25.0 -> CosmosColors.Warning
         else -> CosmosColors.Success
     }
 
