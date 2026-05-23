@@ -278,14 +278,15 @@ private fun DeepSleepBars(values: List<Double>) {
 }
 
 /**
- * Farbe pro Balken im Tiefschlaf-Graph (Frank-Wunsch 2026-05-13): 0 – 10 % → Rot (kritisch wenig)
- * 10 – 20 % → Gelb (grenzwertig) 20 – 30 % → Gruen (gesund)
- * > > 30 % → Gruen (extra viel)
+ * Farbe pro Balken im Tiefschlaf-Graph (Frank-Wunsch 2026-05-23, aktualisiert):
+ *   0 – 17 %  → Rot   (kritisch wenig)
+ *   17 – 30 % → Gelb  (grenzwertig)
+ *   > 30 %    → Gruen (gesund)
  */
 private fun deepSleepBarColor(pct: Double): Color =
     when {
-        pct < 10.0 -> CosmosColors.Critical
-        pct < 20.0 -> CosmosColors.Warning
+        pct < 17.0 -> CosmosColors.Critical
+        pct < 30.0 -> CosmosColors.Warning
         else -> CosmosColors.Success
     }
 
