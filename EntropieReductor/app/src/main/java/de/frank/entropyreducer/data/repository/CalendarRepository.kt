@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
 import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
@@ -41,6 +43,7 @@ class CalendarRepository @Inject constructor(
     private val api: GoogleCalendarApi,
     private val session: CalendarSession,
     private val settings: AppSettings,
+    private val diagnostics: DiagnosticLogger,
 ) {
 
     fun observeDay(date: String): Flow<CalendarDayEntity?> = dao.getDay(date)
@@ -223,7 +226,18 @@ class CalendarRepository @Inject constructor(
         settings.setLastCalendarSync(syncedAt)
         Log.i(TAG, "Calendar-Sync: ${daysByDate.size} Tage + ${collectedEvents.size} Events geschrieben")
         daysByDate.size
-    }.onFailure { Log.e(TAG, "Calendar-Sync fehlgeschlagen", it) }
+    }
+        .onSuccess {
+            diagnostics.success(DiagnosticArea.GOOGLE_CALENDAR, "Sync OK — $it Tage geladen")
+        }
+        .onFailure {
+            Log.e(TAG, "Calendar-Sync fehlgeschlagen", it)
+            diagnostics.error(
+                DiagnosticArea.GOOGLE_CALENDAR,
+                "Sync fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
+                it,
+            )
+        }
         .also { session.end() } // Token-Cache leeren — naechster Sync holt frisch
 
     /**

@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
 import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.dao.OuraActivityDao
 import de.frank.entropyreducer.data.local.dao.OuraDailySleepDao
 import de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao
@@ -57,6 +59,7 @@ class OuraRepository @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val appDatabase: AppDatabase,
+    private val diagnostics: DiagnosticLogger,
 ) {
 
     // Performance-Audit Loop 1 (2026-05-10): distinctUntilChanged auf alle Oura-Flows.
@@ -194,6 +197,20 @@ class OuraRepository @Inject constructor(
             "sleep_detail" to sleepDetailCount,
         )
     }
+        .onSuccess { counts ->
+            val total = counts.values.sum()
+            diagnostics.success(
+                DiagnosticArea.OURA,
+                "Sync OK — $total Datensaetze (Readiness/Schlaf/Aktivitaet/Resilienz)",
+            )
+        }
+        .onFailure {
+            diagnostics.error(
+                DiagnosticArea.OURA,
+                "Sync fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
+                it,
+            )
+        }
 
     private suspend fun pullReadiness(auth: String, start: String, end: String, now: Long): Int {
         val all = mutableListOf<OuraDailyReadiness>()

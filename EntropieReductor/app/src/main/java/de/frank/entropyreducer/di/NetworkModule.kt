@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.BuildConfig
+import de.frank.entropyreducer.data.diagnostics.DiagnosticHttpInterceptor
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
@@ -40,7 +41,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(@ApplicationContext context: Context): OkHttpClient {
+    fun provideOkHttp(
+        @ApplicationContext context: Context,
+        diagnosticInterceptor: DiagnosticHttpInterceptor,
+    ): OkHttpClient {
         // Performance-Audit Loop 2 (2026-05-10): HTTP-Cache 10 MB — vorher hatten
         // alle Clients keinen Cache, jeder Sync-Zyklus aller 4 Biomarker-Quellen
         // schickte vollstaendige HTTP-Requests an externe APIs auch wenn die Daten
@@ -66,6 +70,9 @@ object NetworkModule {
             }
             builder.addInterceptor(logging)
         }
+        // Frank-Wunsch 2026-05-23: zentrales Diagnose-Logging fuer KI-/TTS-API-Fehler
+        // (Groq, Gemini, TTS, Claude). Schreibt nur Code+Pfad, keine Keys/Bodies.
+        builder.addInterceptor(diagnosticInterceptor)
         return builder.build()
     }
 

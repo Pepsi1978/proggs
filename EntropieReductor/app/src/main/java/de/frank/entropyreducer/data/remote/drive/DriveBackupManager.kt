@@ -6,6 +6,8 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.services.drive.model.File as DriveFile
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +31,7 @@ constructor(
     @ApplicationContext private val context: Context,
     private val session: DriveSession,
     private val secrets: EncryptedSecretsStore,
+    private val diagnostics: DiagnosticLogger,
 ) {
 
     /** Haupt-Backup: Aufgaben, Insights, Memories, Hypothesen, Forscher-Sessions etc. */
@@ -69,6 +72,19 @@ constructor(
         withContext(Dispatchers.IO) {
             Log.d(TAG, "upload($label) start, payloadChars=${jsonContent.length}")
             runUploadWithRetry(fileName, jsonContent, retryOn401 = true)
+                .onSuccess {
+                    diagnostics.success(
+                        DiagnosticArea.DRIVE_BACKUP,
+                        "Backup OK ($label) — ${jsonContent.length} Zeichen hochgeladen",
+                    )
+                }
+                .onFailure {
+                    diagnostics.error(
+                        DiagnosticArea.DRIVE_BACKUP,
+                        "Backup fehlgeschlagen ($label): ${it.message ?: it::class.java.simpleName}",
+                        it,
+                    )
+                }
         }
 
     private suspend fun runUploadWithRetry(

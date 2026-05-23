@@ -22,6 +22,8 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,6 +48,7 @@ import javax.inject.Singleton
 @Singleton
 class HealthConnectManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val diagnostics: DiagnosticLogger,
 ) {
     private val weightPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(WeightRecord::class),
@@ -307,7 +310,14 @@ class HealthConnectManager @Inject constructor(
         )
         Log.d(TAG, "Weight read: ${response.records.size} records, latest=${response.records.firstOrNull()?.weight?.inKilograms}")
         response.records.firstOrNull()?.weight?.inKilograms
-    }.onFailure { Log.w(TAG, "readLatestWeightKg failed", it) }.getOrNull()
+    }.onFailure {
+        Log.w(TAG, "readLatestWeightKg failed", it)
+        diagnostics.error(
+            DiagnosticArea.HEALTH_CONNECT,
+            "Gewicht-Lesen fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
+            it,
+        )
+    }.getOrNull()
 
     /**
      * Gewichts-Verlauf der letzten N Tage als (timestampMs, kg)-Paare,

@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
 import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
@@ -45,6 +47,7 @@ constructor(
     private val api: WhoopApi,
     private val oauth: OAuthService,
     private val settings: AppSettings,
+    private val diagnostics: DiagnosticLogger,
 ) {
 
     fun observeLatest(): Flow<BiomarkerSnapshotEntity?> = dao.getLatest()
@@ -181,7 +184,17 @@ constructor(
                 settings.setLastWhoopSync(System.currentTimeMillis())
                 snapshots.size
             }
-            .onFailure { Log.e(TAG, "Whoop-Sync fehlgeschlagen", it) }
+            .onSuccess {
+                diagnostics.success(DiagnosticArea.WHOOP, "Sync OK — $it Snapshots gespeichert")
+            }
+            .onFailure {
+                Log.e(TAG, "Whoop-Sync fehlgeschlagen", it)
+                diagnostics.error(
+                    DiagnosticArea.WHOOP,
+                    "Sync fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
+                    it,
+                )
+            }
 
     /**
      * Voller Initial-Sync seit 2018 (Whoop-Start). Wird einmalig vom Benutzer angestossen damit
