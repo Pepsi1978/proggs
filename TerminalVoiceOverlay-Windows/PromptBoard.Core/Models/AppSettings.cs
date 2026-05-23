@@ -45,6 +45,13 @@ public class AppSettings : BaseEntity
     public bool AutoHide { get; set; } = true;
 
     /// <summary>
+    /// Overlay orientation: "vertical" (default, top-to-bottom pill) or
+    /// "horizontal" (left-to-right bar at the bottom edge). Toggled via the
+    /// settings dialog or the in-overlay ⇄ button.
+    /// </summary>
+    public string Orientation { get; set; } = "vertical";
+
+    /// <summary>
     /// Separator between chained prompts when IsAlwaysOn prompts are
     /// concatenated with the clicked prompt. Default: blank-line, semicolon,
     /// blank-line — chosen so target AIs treat each segment as a separate task.

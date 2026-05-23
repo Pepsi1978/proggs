@@ -114,6 +114,12 @@ public static class PromptBoardHost
             // have it from EnsureCreated via the model property.
             EnsureAutoHideColumn();
 
+            // Overlay orientation (vertical/horizontal). Same idempotent ALTER
+            // pattern: existing DBs get the column with DEFAULT 'vertical', so
+            // prior installs keep the classic vertical pill until the user
+            // switches. First-run installs get it from EnsureCreated.
+            EnsureOrientationColumn();
+
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
 
@@ -325,6 +331,24 @@ public static class PromptBoardHost
             // intended default. Boolean maps to INTEGER 0/1 in SQLite, same
             // as the EF Core convention for the AppSettings.AutoHide property.
             TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN AutoHide INTEGER NOT NULL DEFAULT 1");
+        }
+        catch
+        {
+            // First-run case: EF-Core EnsureCreated will have created
+            // the column from the model already. Never block startup.
+        }
+    }
+
+    private static void EnsureOrientationColumn()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            // TEXT NOT NULL DEFAULT 'vertical' → existing rows keep the classic
+            // vertical layout. EF Core maps the string property to TEXT by
+            // convention (AppSettings.Orientation).
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN Orientation TEXT NOT NULL DEFAULT 'vertical'");
         }
         catch
         {
