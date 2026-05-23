@@ -38,6 +38,13 @@ public class AppSettings : BaseEntity
     public double BarHeight { get; set; } = 140;
 
     /// <summary>
+    /// When true (default), the overlay auto-collapses to just the mic button
+    /// after use / when the mouse leaves it, and expands on hover. When false
+    /// the overlay stays fully visible at all times (legacy behaviour).
+    /// </summary>
+    public bool AutoHide { get; set; } = true;
+
+    /// <summary>
     /// Separator between chained prompts when IsAlwaysOn prompts are
     /// concatenated with the clicked prompt. Default: blank-line, semicolon,
     /// blank-line — chosen so target AIs treat each segment as a separate task.

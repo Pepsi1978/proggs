@@ -107,6 +107,13 @@ public static class PromptBoardHost
             // already have it from EnsureCreated.
             EnsureHotkeyLetterColumn();
 
+            // Overlay auto-hide toggle. Same idempotent ALTER pattern: existing
+            // SQLite files that pre-date the auto-hide feature get the column
+            // added with DEFAULT 1 (auto-hide on), so prior installs upgrade
+            // silently with the feature enabled. First-run installs already
+            // have it from EnsureCreated via the model property.
+            EnsureAutoHideColumn();
+
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
 
@@ -300,6 +307,24 @@ public static class PromptBoardHost
             // lookup, same as HotkeyNumber.
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyLetter TEXT NULL");
             TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyLetter ON Prompts (HotkeyLetter)");
+        }
+        catch
+        {
+            // First-run case: EF-Core EnsureCreated will have created
+            // the column from the model already. Never block startup.
+        }
+    }
+
+    private static void EnsureAutoHideColumn()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            // NOT NULL DEFAULT 1 → existing rows become auto-hide=on, the
+            // intended default. Boolean maps to INTEGER 0/1 in SQLite, same
+            // as the EF Core convention for the AppSettings.AutoHide property.
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN AutoHide INTEGER NOT NULL DEFAULT 1");
         }
         catch
         {
