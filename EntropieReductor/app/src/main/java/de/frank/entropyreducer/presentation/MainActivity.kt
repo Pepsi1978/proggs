@@ -216,6 +216,13 @@ class StartupViewModel @Inject constructor(
     private val entries: de.frank.entropyreducer.data.repository.EntryRepository,
     private val memories: de.frank.entropyreducer.data.repository.MemoryRepository,
     private val balanceBuckets: de.frank.entropyreducer.domain.usecase.BalanceBucketsUseCase,
+    // Frank-Wunsch 2026-05-23: Beim App-Start sollen ALLE Tab-Bereiche schon im
+    // Arbeitsspeicher liegen — auch die Biomarker-Datenquellen. Diese Repos werden
+    // hier beim Start einmal angefasst, damit Room die Tabellen laedt und die Daten
+    // im Speicher gecacht sind, bevor Frank den Biomarker-Tab oeffnet.
+    private val whoop: de.frank.entropyreducer.data.repository.WhoopRepository,
+    private val oura: de.frank.entropyreducer.data.repository.OuraRepository,
+    private val amazfit: de.frank.entropyreducer.data.repository.AmazfitRepository,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
@@ -242,6 +249,24 @@ class StartupViewModel @Inject constructor(
                     // Oeffnen des Aufgaben-Tabs schon die korrekte 5/5/10/Rest-Verteilung
                     // steht und nicht erst durch das ViewModel-Init geladen werden muss.
                     balanceBuckets()
+                }
+            }
+            // Biomarker-Bereich beim Start vorladen (Frank-Wunsch 2026-05-23): Whoop-,
+            // Oura- und Amazfit-Daten einmal lesen, damit Room die Tabellen in den
+            // Speicher laedt und der Biomarker-Tab beim ersten Oeffnen sofort Daten
+            // hat — kein Nachladen beim Reinscrollen. Eigener Launch-Block, damit es
+            // parallel zum Aufgaben-Warmup laeuft (Dispatchers.IO, off-main).
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching {
+                    whoop.observeAll().first()
+                    whoop.observeWorkouts().first()
+                    oura.observeReadiness().first()
+                    oura.observeDailySleep().first()
+                    oura.observeActivity().first()
+                    oura.observeResilience().first()
+                    oura.observeSleepDetails().first()
+                    amazfit.observeAllDaily().first()
+                    amazfit.observeAllWorkouts().first()
                 }
             }
             viewModelScope.launch(Dispatchers.IO) {

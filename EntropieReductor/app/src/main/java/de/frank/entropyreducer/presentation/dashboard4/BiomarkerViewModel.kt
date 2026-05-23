@@ -819,7 +819,10 @@ constructor(
             // Selected-Date-Wechsel war das ein sichtbarer Frame-Drop. Default-Dispatcher
             // ist der richtige fuer CPU-bound Arbeit (sortedBy/filter).
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
+            // Frank-Wunsch 2026-05-23: 60s (wie Tasks/Analyse/Forscher) statt 5s —
+            // beim Tab-Wechsel bleiben die Biomarker-Daten im Speicher und muessen
+            // nicht bei jeder Rueckkehr neu berechnet werden.
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 
     fun selectDate(date: java.time.LocalDate) {
         _selectedDate.value = date
