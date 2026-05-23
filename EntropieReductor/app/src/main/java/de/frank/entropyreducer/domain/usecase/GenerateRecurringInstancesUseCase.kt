@@ -130,10 +130,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         // — verhindert Duplikate bei mehrfachem Aufruf am gleichen Tag.
         val deterministicId = "rec-${template.id}-$occurrenceMs"
 
-        // Faelligkeitszeit aus timeOfDayMinutes ableiten (zur lokalen Mitternacht
-        // des Vorkommens-Tages).
-        val dueAtMs = computeDueTime(occurrenceMs, template.timeOfDayMinutes)
-
+        // Frank-Wunsch 2026-05-23: Loop-Aufgaben kommen OHNE Frist in die Liste.
+        // Die Frist setzt Frank manuell im Detail wenn er sie braucht — sonst gar nicht.
         return EntropyEntryEntity(
             id = deterministicId,
             rawTranscript = "[Wiederkehrend] ${template.title}",
@@ -154,7 +152,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             source = EntrySource.RECURRING_TEMPLATE,
             biomarkerSnapshotId = null,
             durationManuallySet = template.estimatedDurationMinutes != null,
-            dueAtMs = dueAtMs,
+            dueAtMs = null,
         )
     }
 
@@ -236,12 +234,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-        val dueMs = Calendar.getInstance().apply {
-            timeInMillis = midnight
-            set(Calendar.HOUR_OF_DAY, template.timeOfDayMinutes / 60)
-            set(Calendar.MINUTE, template.timeOfDayMinutes % 60)
-        }.timeInMillis
-
+        // Frank-Wunsch 2026-05-23: Loop-Aufgaben kommen OHNE Frist in die Liste.
+        // Frist setzt Frank manuell im Detail, falls noetig.
         return EntropyEntryEntity(
             id = "rec-${template.id}-$midnight",
             rawTranscript = "[Wiederkehrend] ${template.title}",
@@ -262,7 +256,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             source = EntrySource.RECURRING_TEMPLATE,
             biomarkerSnapshotId = null,
             durationManuallySet = template.estimatedDurationMinutes != null,
-            dueAtMs = dueMs,
+            dueAtMs = null,
         )
     }
 
