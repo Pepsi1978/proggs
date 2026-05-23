@@ -339,17 +339,10 @@ fun TasksScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item(key = "briefing", contentType = "briefing") {
+                        // Frank-Wunsch 2026-05-23: BriefingPanel enthaelt jetzt
+                        // auch die KI-Frage des Moments als zweites Dropdown —
+                        // keine separate KiQuestionCard mehr in der LazyColumn.
                         de.frank.entropyreducer.presentation.briefing.BriefingPanel()
-                    }
-                    state.kiQuestion?.let { q ->
-                        item(key = "ki-question", contentType = "ki-question") {
-                            de.frank.entropyreducer.presentation.components.KiQuestionCard(
-                                question = q,
-                                onSubmitAnswer = { answer -> vm.submitKiQuestionAnswer(answer) },
-                                onSnooze = vm::snoozeKiQuestion,
-                                onRefresh = vm::refreshKiQuestion,
-                            )
-                        }
                     }
                     item(key = "category-filter", contentType = "category-filter") {
                         CategoryFilterRow(
