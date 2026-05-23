@@ -7,6 +7,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogDatabase
 import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.ScientistDatabase
 import javax.inject.Singleton
@@ -133,4 +134,19 @@ object DatabaseModule {
     @Provides fun provideHypothesisDao(db: ScientistDatabase) = db.hypothesisDao()
 
     @Provides fun provideHypothesisMessageDao(db: ScientistDatabase) = db.hypothesisMessageDao()
+
+    /**
+     * Diagnose-Log-DB (Frank-Wunsch 2026-05-23): EIGENE DB-Datei nur fuer das interne
+     * Fehler-/Erfolgs-Logging der API-Bereiche. destructiveFallback ist hier voellig
+     * unkritisch — Logs sind Wegwerf-Daten, ein Schema-Reset darf sie loeschen.
+     */
+    @Provides
+    @Singleton
+    fun provideDiagnosticLogDatabase(@ApplicationContext ctx: Context): DiagnosticLogDatabase =
+        Room.databaseBuilder(ctx, DiagnosticLogDatabase::class.java, DiagnosticLogDatabase.DB_NAME)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+
+    @Provides
+    fun provideDiagnosticLogDao(db: DiagnosticLogDatabase) = db.diagnosticLogDao()
 }
