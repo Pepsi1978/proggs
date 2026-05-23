@@ -251,6 +251,8 @@ constructor(
     statusObserver: StatusObserver,
     private val settings: AppSettings,
     private val hcValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
+    private val healthConnectRepository:
+        de.frank.entropyreducer.data.repository.HealthConnectRepository,
 ) : ViewModel() {
 
     private val _refreshing = MutableStateFlow(false)
@@ -295,13 +297,11 @@ constructor(
         // noch beim frischen App-Start (zentral im StartupViewModel) und beim manuellen
         // Aktualisieren-Knopf. Der Tab zeigt die bereits in der DB liegenden Daten.
         //
-        // Ausnahme HealthConnect-Gewicht: das lebt NUR im ViewModel-State (nicht in der DB),
-        // darum laedt es einmal pro App-Leben beim ERSTEN Oeffnen des Tabs. Bei jedem weiteren
-        // Oeffnen wird NICHT erneut gelesen — kein Sync-bei-jedem-Klick.
-        if (!biomarkerStartupLoadDone) {
-            biomarkerStartupLoadDone = true
-            viewModelScope.launch { refreshWeight() }
-        }
+        // Gewicht/Koerperwerte werden jetzt — wie Whoop/Oura — in der DB (hc_value_cache)
+        // gehalten. Beim Tab-Oeffnen laden wir sie NUR aus dem Cache (schnell, kein Health-
+        // Connect-Live-Read, kein Sync). Gefuellt wird der Cache beim frischen App-Start
+        // (HealthConnectRepository.syncToCache) und beim manuellen Aktualisieren-Knopf.
+        viewModelScope.launch { loadWeightFromCache() }
     }
 
     /**
@@ -939,13 +939,55 @@ constructor(
         _message.value = null
     }
 
-    companion object {
-        // Frank-Wunsch 2026-05-23: stellt sicher dass HealthConnect-Gewicht nur EINMAL pro
-        // App-Leben (Prozess) geladen wird — beim ersten Oeffnen des Biomarker-Tabs — und
-        // nicht bei jedem weiteren Tab-Wechsel. Statisch, damit es ViewModel-Neuerstellung
-        // (z.B. Tab-Wechsel, Konfigurationsaenderung) ueberlebt.
-        @Volatile
-        private var biomarkerStartupLoadDone = false
+    /**
+     * Frank-Wunsch 2026-05-23: Laedt Gewicht/Koerperwerte NUR aus dem DB-Cache (hc_value_cache)
+     * in den Anzeige-State — ohne Health-Connect-Live-Read. Schnell genug fuer jedes Tab-Oeffnen.
+     * Der Cache wird beim frischen App-Start (HealthConnectRepository.syncToCache) und beim
+     * manuellen Aktualisieren-Knopf (refreshWeight) gefuellt.
+     */
+    fun loadWeightFromCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val available = runCatching { healthConnect.isAvailable() }.getOrDefault(false)
+            if (!available) {
+                _weight.value = WeightState(healthConnectAvailable = false)
+                return@launch
+            }
+            val permission =
+                runCatching { healthConnect.hasWeightReadPermission() }.getOrDefault(false)
+            if (!permission) {
+                _weight.value = WeightState(healthConnectAvailable = true, permissionGranted = false)
+                return@launch
+            }
+            val kg = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_WEIGHT)
+            val bf = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_BODY_FAT)
+            val lean = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_LEAN)
+            val water = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_WATER)
+            val bone = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_BONE)
+            fun List<Pair<Long, Double>>.avgOrNull(): Double? =
+                takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+            _weight.value =
+                WeightState(
+                    healthConnectAvailable = true,
+                    permissionGranted = true,
+                    latestKg = kg.maxByOrNull { it.first }?.second,
+                    avg30dKg = kg.avgOrNull(),
+                    history30d = kg,
+                    latestBodyFatPercent = bf.maxByOrNull { it.first }?.second,
+                    avg30dBodyFatPercent = bf.avgOrNull(),
+                    bodyFatHistory30d = bf,
+                    latestLeanBodyMassKg = lean.maxByOrNull { it.first }?.second,
+                    avg30dLeanBodyMassKg = lean.avgOrNull(),
+                    leanBodyMassHistory30d = lean,
+                    latestBodyWaterMassKg = water.maxByOrNull { it.first }?.second,
+                    avg30dBodyWaterMassKg = water.avgOrNull(),
+                    bodyWaterMassHistory30d = water,
+                    latestBoneMassKg = bone.maxByOrNull { it.first }?.second,
+                    avg30dBoneMassKg = bone.avgOrNull(),
+                    boneMassHistory30d = bone,
+                    lastReadAtMs = System.currentTimeMillis(),
+                    isLoading = false,
+                )
+        }
     }
 }
 

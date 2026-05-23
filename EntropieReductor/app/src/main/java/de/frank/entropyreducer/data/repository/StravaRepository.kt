@@ -179,14 +179,38 @@ class StravaRepository @Inject constructor(
         if (t is kotlinx.coroutines.CancellationException) return
         val http = t as? retrofit2.HttpException
         if (http?.code() == 429) {
-            secrets.stravaRateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS
-            val usage = http.response()?.headers()?.get("X-RateLimit-Usage")
-            val limit = http.response()?.headers()?.get("X-RateLimit-Limit")
-            Log.e(TAG, "Strava 429 Rate-Limit — Cooldown 16 Min (Usage=$usage Limit=$limit)")
+            val headers = http.response()?.headers()
+            // Frank-Bugfix 2026-05-23 (Iteration 2): Strava hat ZWEI getrennte Limits mit
+            // eigenen Headern:
+            //  - X-RateLimit-*      = Gesamt-Limit (ALLE Requests), Format "15min,Tag"
+            //  - X-ReadRateLimit-*  = separates LESE-Limit (Daten-Abfragen), oft NIEDRIGER
+            // Unsere Sync-Calls sind reine Reads. Frueher lasen wir nur das Gesamt-Limit —
+            // das sah mit z.B. "1035/2000" harmlos aus, waehrend in Wahrheit das Lese-
+            // TAGES-Limit erschoepft war. Ein 16-Min-Cooldown half da nicht: das Tages-Limit
+            // setzt sich erst um Mitternacht UTC zurueck. Darum: bei erschoepftem Tages-Limit
+            // (Lese ODER Gesamt) pausieren wir bis Mitternacht UTC, sonst 16 Min (15-Min-Fenster).
+            val readUsage = headers?.get("X-ReadRateLimit-Usage")
+            val readLimit = headers?.get("X-ReadRateLimit-Limit")
+            val overallUsage = headers?.get("X-RateLimit-Usage")
+            val overallLimit = headers?.get("X-RateLimit-Limit")
+
+            val dailyExhausted =
+                isDailyExhausted(readUsage, readLimit) || isDailyExhausted(overallUsage, overallLimit)
+            val cooldownMs = if (dailyExhausted) msUntilMidnightUtc() else RATE_LIMIT_COOLDOWN_MS
+            secrets.stravaRateLimitedUntilMs = System.currentTimeMillis() + cooldownMs
+
+            val pauseText =
+                if (dailyExhausted) "Tageslimit erschoepft — pausiert bis Mitternacht UTC (~${cooldownMs / 60_000L} Min)"
+                else "15-Min-Limit erreicht — pausiert 16 Min"
+            Log.e(
+                TAG,
+                "Strava 429 — Lese=$readUsage/$readLimit Gesamt=$overallUsage/$overallLimit; $pauseText",
+            )
             diagnostics.error(
                 DiagnosticArea.STRAVA,
-                "Rate-Limit erreicht (HTTP 429) — Sync pausiert 16 Min." +
-                    if (usage != null) " Nutzung $usage von ${limit ?: "?"} (15-Min, Tag)." else "",
+                "Rate-Limit erreicht (HTTP 429). $pauseText. " +
+                    "Lese-Limit ${readUsage ?: "?"} von ${readLimit ?: "?"}, " +
+                    "Gesamt ${overallUsage ?: "?"} von ${overallLimit ?: "?"} (je 15-Min,Tag).",
                 t,
             )
         } else {
@@ -197,6 +221,29 @@ class StravaRepository @Inject constructor(
                 t,
             )
         }
+    }
+
+    /**
+     * Prueft ob der TAGES-Anteil eines Strava-Limit-Headers erschoepft ist. Strava-Header haben
+     * das Format "15min,Tag" (z.B. Usage "12,1850", Limit "200,2000"). Wir vergleichen den
+     * zweiten Wert (Tag). null/unparsebar → false (nicht als erschoepft werten).
+     */
+    private fun isDailyExhausted(usage: String?, limit: String?): Boolean {
+        val u = usage?.split(",")?.getOrNull(1)?.trim()?.toIntOrNull() ?: return false
+        val l = limit?.split(",")?.getOrNull(1)?.trim()?.toIntOrNull() ?: return false
+        return l > 0 && u >= l
+    }
+
+    /** Millisekunden bis zum naechsten Mitternacht UTC — dann setzt Strava seine Tages-Limits zurueck. */
+    private fun msUntilMidnightUtc(): Long {
+        val now = java.time.Instant.now()
+        val nextMidnight =
+            now.atZone(java.time.ZoneOffset.UTC)
+                .toLocalDate()
+                .plusDays(1)
+                .atStartOfDay(java.time.ZoneOffset.UTC)
+                .toInstant()
+        return (nextMidnight.toEpochMilli() - now.toEpochMilli()).coerceAtLeast(RATE_LIMIT_COOLDOWN_MS)
     }
 
     /**

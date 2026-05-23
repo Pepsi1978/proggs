@@ -226,6 +226,12 @@ class StartupViewModel @Inject constructor(
     // Frank-Wunsch 2026-05-23: Kalender-Sync laeuft jetzt direkt beim frischen Start
     // (nach dem Drive-Backup), nicht mehr ueber den naechtlichen Worker.
     private val calendar: de.frank.entropyreducer.data.repository.CalendarRepository,
+    // Frank-Wunsch 2026-05-23: HealthConnect-Werte beim frischen Start in die DB cachen,
+    // damit der Biomarker-Tab sie ohne eigenen Live-Read anzeigen kann.
+    private val healthConnectRepository:
+        de.frank.entropyreducer.data.repository.HealthConnectRepository,
+    // Frank-Bugfix 2026-05-23: fuer den "Zuletzt synchronisiert"-Footer beim frischen Start.
+    private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
@@ -291,17 +297,46 @@ class StartupViewModel @Inject constructor(
 
                 // Jetzt die Daten-APIs der Reihe nach. Reihenfolge ist vorlaeufig — Frank
                 // will sie spaeter feinjustieren. Jeweils nur wenn verbunden; Strava prueft
-                // die Auth intern selbst. Jeder Sync defensiv in runCatching.
-                if (oauth.loadWhoopAuthState().isAuthorized) {
-                    runCatching { whoop.syncLastDays(365) }
-                }
-                if (oura.isTokenConfigured()) {
-                    runCatching { oura.syncLastDays(365) }
-                }
-                runCatching { amazfit.mergeFromStrava(days = 30) }
+                // die Auth intern selbst. Die Zaehler werden fuer den Footer gesammelt.
+                val whoopCount =
+                    if (oauth.loadWhoopAuthState().isAuthorized) {
+                        whoop.syncLastDays(365).getOrDefault(0)
+                    } else {
+                        0
+                    }
+                val ouraCount =
+                    if (oura.isTokenConfigured()) {
+                        oura.syncLastDays(365).getOrNull()?.values?.sum() ?: 0
+                    } else {
+                        0
+                    }
+                val stravaCount =
+                    runCatching { amazfit.mergeFromStrava(days = 30) }
+                        .getOrDefault(-1)
+                        .coerceAtLeast(0)
                 if (secrets.calendarAccountEmail != null) {
                     runCatching { calendar.syncDefaultWindow() }
                 }
+                // Frank-Wunsch 2026-05-23: HealthConnect-Gewicht/Koerperwerte in die DB cachen,
+                // damit der Biomarker-Tab sie beim Oeffnen schnell aus der DB laden kann.
+                val hcCount = runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0)
+
+                // Frank-Bugfix 2026-05-23: Footer-Zeitstempel setzen — genau wie der manuelle
+                // Aktualisieren-Knopf (refreshNow). Behebt die Regression aus #987, wo der
+                // frische Start die Syncs zwar ausfuehrte, aber den "Zuletzt synchronisiert"-
+                // Footer nicht aktualisierte (er blieb auf dem alten Stand stehen).
+                val nowZ = java.time.ZonedDateTime.now()
+                val footerTs =
+                    "%02d.%02d. %02d:%02d".format(
+                        nowZ.dayOfMonth,
+                        nowZ.monthValue,
+                        nowZ.hour,
+                        nowZ.minute,
+                    )
+                val footer =
+                    "✓ $footerTs · Whoop $whoopCount · Strava $stravaCount · " +
+                        "Oura $ouraCount · Health Connect $hcCount"
+                runCatching { appSettings.setLastRefreshFooter(footer, System.currentTimeMillis()) }
 
                 // Hintergrund-Jobs aufsetzen. ensureNightlyJobs() bestellt die alten
                 // naechtlichen Whoop-/Kalender-Jobs jetzt AB (Frank-Wunsch 2026-05-23:
