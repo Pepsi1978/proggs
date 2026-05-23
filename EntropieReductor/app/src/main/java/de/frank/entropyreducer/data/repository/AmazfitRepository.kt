@@ -777,20 +777,18 @@ constructor(
     // Erhaltene Polar-Bulk-Workouts werden in ensureWorkoutDetail uebersprungen.
 
     /**
-     * Frank-Wunsch 2026-05-19: Trainings aelter als 2 Jahre loeschen. Polar-Bulk-Import brachte 957
-     * Trainings auf das Geraet (zurueck bis ~2018), die App wurde dadurch spuerbar langsam. 2 Jahre
-     * Historie reichen fuer alle Charts, Korrelationen und Trend-Analysen. Idempotent: bei jedem
-     * Aufruf laeuft die gleiche Loesch-Abfrage, was nichts mehr zu loeschen findet sobald die DB
-     * sauber ist.
+     * Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Trainings aelter als [TRAINING_RETENTION_DAYS]
+     * Tage loeschen (jetzt 1 Jahr, vorher 2). Polar-Bulk-Import brachte 957 Trainings auf das Geraet
+     * (zurueck bis ~2018), die App wurde dadurch spuerbar langsam. 1 Jahr Historie reicht fuer alle
+     * Charts, Korrelationen und Trend-Analysen. Idempotent: bei jedem Aufruf laeuft die gleiche
+     * Loesch-Abfrage, die nichts mehr findet sobald die DB sauber ist.
      *
-     * Threshold-Berechnung: `System.currentTimeMillis() - 730 Tage` — frisch pro Aufruf damit
-     * ueberhaupt nichts veraltet wenn die App tagelang offen bleibt.
+     * Threshold-Berechnung: `System.currentTimeMillis() - [TRAINING_RETENTION_DAYS] Tage` — frisch
+     * pro Aufruf damit das Fenster rollend bleibt, auch wenn die App tagelang offen ist.
      *
-     * Loescht NUR Workouts; die taeglichen amazfit_daily-Werte bleiben unberuehrt, weil dort nichts
-     * liegt was 957 Eintraege erzeugen koennte und sie eh ueber das normale 365-Tage-Sync-Fenster
-     * begrenzt sind.
+     * Loescht NUR Workouts; die taeglichen amazfit_daily-Werte bleiben unberuehrt.
      */
-    suspend fun pruneTrainingsOlderThan2Years(): Int {
+    suspend fun pruneOldTrainings(): Int {
         val thresholdMs =
             System.currentTimeMillis() - TRAINING_RETENTION_DAYS * 24L * 60L * 60L * 1000L
         val before = workoutDao.observeAll().first().size
@@ -812,10 +810,12 @@ constructor(
     companion object {
         private const val TAG = "AmazfitRepository"
         /**
-         * Frank-Wunsch 2026-05-19: Trainings nur 2 Jahre rueckwirkend halten. Polar-Bulk-Import
-         * (957 Eintraege) machte die App langsam.
+         * Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Trainings nur 1 Jahr rueckwirkend halten
+         * (vorher 2 Jahre = 730 Tage). Frank will Polar-Historie + Amazfit-Trainings auf das letzte
+         * Jahr begrenzen — weniger Daten = schnelleres Scrollen im Biomarker-Bereich. Rollendes
+         * 365-Tage-Fenster, frisch pro Aufruf berechnet.
          */
-        const val TRAINING_RETENTION_DAYS = 730L
+        const val TRAINING_RETENTION_DAYS = 365L
         private val JSON = Json {
             ignoreUnknownKeys = true
             isLenient = true

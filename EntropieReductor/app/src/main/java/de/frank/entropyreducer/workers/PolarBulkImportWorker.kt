@@ -145,11 +145,15 @@ constructor(
                 "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)",
             )
 
-            // Frank-Wunsch 2026-05-19: Sofort 2-Jahres-Retention anwenden — Polar-ZIPs
-            // enthalten typischerweise die GESAMTE Polar-Historie (>5 Jahre). Ohne diesen
-            // Schnitt wuerden sie immer wieder alle alten Trainings reinholen und die App
-            // wird langsam. 730 Tage analog zur Konstante in AmazfitRepository.
-            val retentionThresholdMs = System.currentTimeMillis() - 730L * 24L * 60L * 60L * 1000L
+            // Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Retention direkt nach dem Import
+            // anwenden — Polar-ZIPs enthalten typischerweise die GESAMTE Historie (>5 Jahre).
+            // Wir behalten nur das letzte Jahr (TRAINING_RETENTION_DAYS = 365). Eine einzige
+            // Quelle der Wahrheit in AmazfitRepository — kein dupliziertes Hardcoded-Limit mehr
+            // (Poka-Yoke gegen Auseinanderlaufen der beiden Werte).
+            val retentionThresholdMs =
+                System.currentTimeMillis() -
+                    de.frank.entropyreducer.data.repository.AmazfitRepository
+                        .TRAINING_RETENTION_DAYS * 24L * 60L * 60L * 1000L
             workoutDao.deleteOlderThan(retentionThresholdMs)
 
             // Cache aufraeumen (nur unsere eigene Datei)

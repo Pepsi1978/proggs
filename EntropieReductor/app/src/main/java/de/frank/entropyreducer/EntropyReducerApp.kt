@@ -284,21 +284,22 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Frank-Wunsch 2026-05-19: Permanente 2-Jahres-Retention fuer Trainings.
-        // Polar-Bulk-Import brachte 957 Workouts (zurueck bis 2018), die App wurde
-        // dadurch sichtbar langsam. Im Gegensatz zu V2-Cleanup oben (einmalige
-        // Migration mit Fixdatum) laeuft pruneTrainingsOlderThan2Years() bei JEDEM
-        // Start gegen die aktuelle Uhrzeit minus 730 Tage — damit ist das Fenster
-        // rollierend und Re-Imports koennen die Liste nicht mehr aufblaehen.
+        // Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Permanente 1-Jahres-Retention
+        // fuer Trainings (vorher 2 Jahre). Polar-Bulk-Import brachte 957 Workouts
+        // (zurueck bis 2018), die App wurde dadurch langsam. Im Gegensatz zu V2-Cleanup
+        // oben (einmalige Migration mit Fixdatum) laeuft pruneOldTrainings() bei JEDEM
+        // Start gegen die aktuelle Uhrzeit minus TRAINING_RETENTION_DAYS (365) — damit
+        // ist das Fenster rollend und Re-Imports koennen die Liste nicht mehr aufblaehen.
+        // Trimmt auch die bereits vorhandenen Eintraege beim naechsten Start aufs letzte Jahr.
         // 8-Sekunden-Delay: nach V2-Cleanup (7s), damit V2 zuerst sein Fixdatum-
         // Fenster anwendet und V3 nur noch nachsortiert was V2 stehen liess.
         applicationScope.launch {
             kotlinx.coroutines.delay(8000L)
             runCatching {
-                    val deleted = amazfitRepository.pruneTrainingsOlderThan2Years()
+                    val deleted = amazfitRepository.pruneOldTrainings()
                     android.util.Log.i(
                         "EntropyReducerApp",
-                        "Trainings-Retention (2 Jahre): $deleted Trainings entfernt",
+                        "Trainings-Retention (1 Jahr): $deleted Trainings entfernt",
                     )
                 }
                 .onFailure {
