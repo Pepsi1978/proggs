@@ -315,7 +315,9 @@ fun TasksScreen(
                     )
                 }
             }
-            // Morgen-Icon (gruen) — kein Badge
+            // Morgen-Icon (gruen) — kein Badge. Frank-Wunsch 2026-05-23: exakt
+            // dasselbe Icon wie Heute (Icons.Outlined.Today, Kaestchen oben),
+            // nur in Gruen — nicht mehr das abweichende Event-Icon.
             IconButton(
                 onClick = {
                     val target =
@@ -330,7 +332,7 @@ fun TasksScreen(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Event,
+                    imageVector = Icons.Outlined.Today,
                     contentDescription = "Zu Morgen springen",
                     tint = Color(0xFF22C55E),
                 )
