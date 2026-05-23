@@ -2614,16 +2614,24 @@ namespace TerminalVoiceOverlay.Views
             // Promtboard ohne Inhalt.
             _ = _promptPanel.RefreshAsync();
 
-            // Eingabefenster oeffnen (es dockt zunaechst ans Promtboard an
-            // — egal, wir ueberschreiben gleich auf Pillar-Andock).
-            _promptPanel.EnsureInputWindowOpen();
+            // Board sichtbar machen + positionieren (im Horizontal-Modus OBEN,
+            // im Vertikal-Modus LINKS), damit die Eingabe links ANS BOARD
+            // andocken kann statt ans Overlay.
+            alwaysOnActive = true;
+            UltrathinkStar.Fill = StarGold;
+            PositionPromptPanel();
+            if (!_promptPanel.IsVisible) _promptPanel.Show();
 
+            _promptPanel.EnsureInputWindowOpen();
             var input = _promptPanel.InputWindow;
             if (input is null) return;
 
-            _inputSoloDock = true;
-            input.DockToOverlay(this);
-            input.SetSoloDockState(true);
+            // Eingabe LINKS ANS BOARD andocken: gleiche Hoehe wie das Board,
+            // normale Eingabe-Breite, Board bleibt sichtbar (KEIN Solo-Andock
+            // ans Overlay mehr — das war der duenne Streifen am Pillar).
+            _inputSoloDock = false;
+            input.DockTo(_promptPanel);
+            input.SetSoloDockState(false);
         }
 
         private void HidePromptPanel()
