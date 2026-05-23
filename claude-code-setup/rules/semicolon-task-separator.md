@@ -97,6 +97,33 @@ Aufgabe 1 darauf aufbaut").
 Bei nur 2 unabhängigen, kleinen Aufgaben kann die Sortierung trivial sein — dann reicht
 die Standard-Reihenfolge. Die Prüfung selbst (die drei Fragen) wird trotzdem immer gemacht.
 
+### Konflikt-Warnung — bei gegensätzlichen Aufgaben VORHER nachfragen (PFLICHT)
+
+> Wenn zwei Aufgaben dieselbe Stelle gegensätzlich verändern würden, wird NICHT blind
+> beides nacheinander gebaut. Sonst überschreibt die spätere Aufgabe die frühere, und
+> der Benutzer bekommt am Ende nur ein halbes, widersprüchliches Ergebnis.
+
+Während der Pre-Flight-Prüfung wird aktiv nach solchen Kollisionen gesucht. Ein Konflikt
+liegt vor, wenn zwei (oder mehr) Aufgaben **dieselbe Datei, Funktion, dasselbe UI-Element
+oder dieselbe Einstellung gegensätzlich** anfassen. Typische Fälle:
+
+| Konflikt-Typ | Beispiel |
+|--------------|----------|
+| Gegensätzlicher Wert | Aufgabe 2: "Header blau machen" — Aufgabe 9: "Header grün machen" |
+| Hinzufügen vs. Entfernen | Aufgabe 3: "Button einbauen" — Aufgabe 11: "diesen Button entfernen" |
+| Doppelte, abweichende Änderung am selben Code | Zwei Aufgaben schreiben dieselbe Funktion unterschiedlich um |
+
+**Pflicht-Ablauf bei erkanntem Konflikt:**
+
+1. **STOP** — nicht mit der Abarbeitung beginnen.
+2. Dem Benutzer den Konflikt in 1–2 Sätzen zeigen: welche zwei Aufgaben, welche Stelle, was sich widerspricht.
+3. **Kurz nachfragen**, welche Variante gewünscht ist (oder ob beide in einer bestimmten Reihenfolge gemeint sind).
+4. Erst nach der Antwort weiterarbeiten.
+
+Bei diktierten Multi-Task-Prompts passiert das leicht — der Benutzer spricht spontan ein
+und merkt selbst nicht immer, dass sich zwei Wünsche widersprechen. Genau dafür ist diese
+Warnung da. Lieber 10 Sekunden nachfragen als am Ende das Falsche gebaut zu haben.
+
 ---
 
 ## Schritt 3 — ANZEIGEN (Übersicht + TaskCreate-Liste)
@@ -420,6 +447,7 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 - ❌ Bei 2+ Aufgaben KEINE TaskCreate-Liste anlegen
 - ❌ Subagents für die Abarbeitung der Teilaufgaben starten — der Benutzer will jede Aufgabe sichtbar im Hauptchat sehen
 - ❌ Aufgaben stur in Einsprech-Reihenfolge abarbeiten ohne die Pre-Flight-Sortierung (Schritt 2)
+- ❌ Zwei gegensätzliche Aufgaben (gleiche Stelle, widersprüchliche Änderung) blind nacheinander bauen, statt vorher nachzufragen
 - ❌ Tasks erst am Ende gesammelt abhaken statt in Echtzeit pro Aufgabe
 - ❌ Den sichtbaren Commit-Marker (💾 + Aufgabe N + Beschreibung + "committed und gepusht", eingerahmt) nach einer Aufgabe weglassen oder gesammelt am Ende ausgeben
 - ❌ Den Commit-Marker ohne Disketten-Symbol, ohne Nummer oder ohne die zwei Rahmen-Linien ausgeben
