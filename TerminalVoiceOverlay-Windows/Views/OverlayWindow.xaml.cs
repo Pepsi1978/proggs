@@ -935,23 +935,29 @@ namespace TerminalVoiceOverlay.Views
         private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles, string bgHex, CornerRadius corner)
         {
             var col = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
-            var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            // Symbol-Reihe mit FESTER Hoehe (52): so liegen die Symbol-Mitten
+            // aller Gruppen auf gleicher Hoehe, egal ob 40er- oder 52er-Button.
+            var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 52 };
             foreach (var b in symbols)
             {
-                try { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); top.Children.Add(b); }
+                try { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); b.VerticalAlignment = VerticalAlignment.Center; top.Children.Add(b); }
                 catch (Exception ex) { OLog($"HBUILD sym {b.Name} FAIL: {ex.Message}"); }
             }
             col.Children.Add(top);
+
+            // Zahlen-Reihe mit FESTER Hoehe (32), IMMER vorhanden (auch leer bei
+            // Gruppen ohne Profil-Zahlen) — damit ALLE Zahlen exakt auf einer Linie
+            // liegen, statt je nach Symbol-Hoehe zu verrutschen.
+            var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 32, Margin = new Thickness(0, 6, 0, 0) };
             if (tiles != null)
             {
-                var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
                 foreach (var t in tiles)
                 {
-                    try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); bot.Children.Add(t); }
+                    try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); t.VerticalAlignment = VerticalAlignment.Center; bot.Children.Add(t); }
                     catch (Exception ex) { OLog($"HBUILD tile {t.Name} FAIL: {ex.Message}"); }
                 }
-                col.Children.Add(bot);
             }
+            col.Children.Add(bot);
             return new Border
             {
                 Background = Brush(bgHex),
