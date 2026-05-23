@@ -63,6 +63,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -252,6 +258,21 @@ fun TasksScreen(
         return null
     }
 
+    // Frank-Wunsch 2026-05-23 (Folge-Iteration #2): sanfter Pulse am Heute-Badge.
+    // Alpha pulsiert zwischen 1.0 und 0.4 mit ~1.2s Periode, Reverse-Mode —
+    // unaufdringlich, aber faengt das Auge wenn neue HEUTE-Aufgaben da sind.
+    val badgeAnim = rememberInfiniteTransition(label = "heute-badge-pulse")
+    val badgeAlpha by badgeAnim.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.4f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "heute-badge-alpha",
+    )
+
     CosmosScaffold(
         title = "Aufgaben",
         titleEndContent = {
@@ -259,13 +280,21 @@ fun TasksScreen(
             Box {
                 IconButton(
                     onClick = {
-                        lastSeenHeuteCount = heuteCount
                         val target =
                             bucketHeaderIndex(
                                 de.frank.entropyreducer.domain.model.TimeBucket.HEUTE
                             ) ?: 1
-                        scope.launch {
-                            runCatching { listState.animateScrollToItem(target) }
+                        // Frank-Wunsch 2026-05-23 (Folge-Iteration #2): nicht
+                        // scrollen wenn HEUTE-Header schon im sichtbaren
+                        // Bereich liegt — verhindert "erster Tap nach App-Start
+                        // springt unnoetig" und "ich bin schon bei HEUTE".
+                        val isAlreadyAtHeute =
+                            listState.layoutInfo.visibleItemsInfo.any { it.index == target }
+                        lastSeenHeuteCount = heuteCount
+                        if (!isAlreadyAtHeute) {
+                            scope.launch {
+                                runCatching { listState.animateScrollToItem(target) }
+                            }
                         }
                     },
                 ) {
@@ -282,7 +311,7 @@ fun TasksScreen(
                                 .padding(top = 8.dp, end = 8.dp)
                                 .size(8.dp)
                                 .clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(Color(0xFFFF8C00))
+                                .background(Color(0xFFFF8C00).copy(alpha = badgeAlpha))
                     )
                 }
             }
