@@ -623,7 +623,7 @@ namespace TerminalVoiceOverlay.Views
         private const double FullHeight        = 612;
         private const double CollapseTopOffset = 66;
         private const int    CollapseAfterUseMs  = 2000;
-        private const int    CollapseAfterPeekMs = 5000;
+        private const int    CollapseAfterPeekMs = 3000;
 
         private bool _autoHideEnabled = true;
         private bool _isCollapsed;
@@ -847,6 +847,20 @@ namespace TerminalVoiceOverlay.Views
             EnterButton,
         };
 
+        // Diagnose-Log fuer das Reparenting (findet den Button-Verlust beim
+        // Umschalten). Schreibt nach %TEMP%\TVO-orient.log. Wird nach dem Fix
+        // wieder entfernt.
+        private static void OLog(string msg)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-orient.log"),
+                    $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}");
+            }
+            catch { }
+        }
+
         private void CaptureVerticalPlacement()
         {
             if (_orientationCaptured) return;
@@ -854,8 +868,10 @@ namespace TerminalVoiceOverlay.Views
             {
                 int index = el.Parent is StackPanel sp ? sp.Children.IndexOf(el) : -1;
                 _vplace[el] = (el.Parent, index, el.Margin);
+                OLog($"CAPTURE {el.Name} parent={el.Parent?.GetType().Name}#{el.Parent?.GetHashCode()}");
             }
             _orientationCaptured = true;
+            OLog("CAPTURE done");
         }
 
         private static void DetachFromParent(FrameworkElement el)
@@ -873,26 +889,40 @@ namespace TerminalVoiceOverlay.Views
         // links→rechts, daher Enter zuerst und der Stern zuletzt (= ganz rechts).
         private void BuildHorizontalLayout()
         {
+            OLog("HBUILD start");
             HBar.Children.Clear();
+            // Reihenfolge rechts→links = vertikal oben→unten. HBar fuellt links→
+            // rechts, daher: Enter ganz links, Stern ganz rechts. INNERHALB jeder
+            // Gruppe ist die Reihenfolge ebenfalls gespiegelt (das vertikal obere
+            // Symbol erscheint rechts) — daher die Arrays in umgekehrter Reihenfolge.
             HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null));
-            HBar.Children.Add(MakeHGroup(new[] { ScreenshotButton, InsertScreenshotButton }, new[] { Profile9Button, Profile10Button }));
-            HBar.Children.Add(MakeHGroup(new[] { CopyButton, PasteButton }, new[] { Profile7Button, Profile8Button }));
+            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }));
+            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }));
             HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }));
-            HBar.Children.Add(MakeHGroup(new[] { WButton, GButton }, new[] { Profile4Button, Profile5Button }));
-            HBar.Children.Add(MakeHGroup(new[] { MicButton, BtwButton }, new[] { Profile1Button, Profile2Button, Profile3Button }));
-            HBar.Children.Add(MakeHGroup(new[] { UltrathinkButton, OrientationToggleButton }, null));
+            HBar.Children.Add(MakeHGroup(new[] { GButton, WButton }, new[] { Profile5Button, Profile4Button }));
+            HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }));
+            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null));
+            OLog("HBUILD done");
         }
 
         private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles)
         {
             var col = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(5, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
             var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
-            foreach (var b in symbols) { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); top.Children.Add(b); }
+            foreach (var b in symbols)
+            {
+                try { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); top.Children.Add(b); }
+                catch (Exception ex) { OLog($"HBUILD sym {b.Name} FAIL: {ex.Message}"); }
+            }
             col.Children.Add(top);
             if (tiles != null)
             {
                 var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
-                foreach (var t in tiles) { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); bot.Children.Add(t); }
+                foreach (var t in tiles)
+                {
+                    try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); bot.Children.Add(t); }
+                    catch (Exception ex) { OLog($"HBUILD tile {t.Name} FAIL: {ex.Message}"); }
+                }
                 col.Children.Add(bot);
             }
             return col;
@@ -900,26 +930,30 @@ namespace TerminalVoiceOverlay.Views
 
         private void RestoreVerticalLayout()
         {
+            OLog("RESTORE start");
             foreach (var el in ManagedButtons())
             {
-                if (!_vplace.TryGetValue(el, out var vp)) continue;
-                DetachFromParent(el);
-                el.Margin = vp.margin;
-                switch (vp.parent)
+                if (!_vplace.TryGetValue(el, out var vp)) { OLog($"RESTORE {el.Name}: no vplace"); continue; }
+                try
                 {
-                    // Anhaengen (Add) statt Index-Insert: ManagedButtons() ist in
-                    // Dokument-Reihenfolge pro Panel, daher ergibt das Anhaengen
-                    // automatisch die Original-Reihenfolge — robuster als
-                    // Index-Mathematik und kann keine Buttons verlieren/verrutschen.
-                    // (StackPanel und Grid sind beide Panel; Grid.Column/Row bleibt
-                    // am Element erhalten.)
-                    case Panel p:           p.Children.Add(el); break;
-                    case Border b:          b.Child = el;       break;
-                    case ContentControl cc: cc.Content = el;    break;
-                    case Decorator d:       d.Child = el;       break;
+                    OLog($"RESTORE {el.Name} cur={el.Parent?.GetType().Name ?? "NULL"} target={vp.parent?.GetType().Name}#{vp.parent?.GetHashCode()}");
+                    DetachFromParent(el);
+                    el.Margin = vp.margin;
+                    switch (vp.parent)
+                    {
+                        // Anhaengen (Add) statt Index-Insert: ManagedButtons() ist in
+                        // Dokument-Reihenfolge pro Panel → korrekte Original-Reihenfolge.
+                        case Panel p:           p.Children.Add(el); break;
+                        case Border b:          b.Child = el;       break;
+                        case ContentControl cc: cc.Content = el;    break;
+                        case Decorator d:       d.Child = el;       break;
+                    }
+                    OLog($"  -> ok parentNow={el.Parent?.GetType().Name ?? "NULL"}");
                 }
+                catch (Exception ex) { OLog($"  -> FAIL {el.Name}: {ex.Message}"); }
             }
             HBar.Children.Clear();
+            OLog("RESTORE done");
         }
 
         // Wendet die Orientierung an (Reparenting + Sichtbarkeit). Position +
