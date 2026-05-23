@@ -155,6 +155,22 @@ live, wo der Vorgang gerade steht, und nichts geht in der Mitte einer langen Lis
 **Commit+Push pro Aufgabe:** Jede abgeschlossene Aufgabe wird committed und gepusht, bevor
 die nächste beginnt. Das sind die Rettungspunkte. (Der BUILD kommt erst später — siehe Schritt 5.)
 
+**NUR die eigenen Dateien stagen (KRITISCH bei parallelen Sessions):** Beim Committen werden
+AUSSCHLIESSLICH die Dateien gestaged, die DIESE Aufgabe selbst geändert oder erstellt hat —
+namentlich, einzeln. Andere Sessions (weitere Claude-Fenster, Codex, Gemini) arbeiten oft
+gleichzeitig am selben Repo und hinterlassen dort viele halbfertige Dateien. Diese fremden
+Dateien werden IGNORIERT — niemals mitcommittet, niemals weggeräumt.
+
+| Regel | Detail |
+|-------|--------|
+| Stagen | NUR `git add <pfad1> <pfad2>` mit den eigenen Dateinamen — NIEMALS `git add -A` oder `git add .` |
+| Fremde Dateien | Liegen lassen wie sie sind. Sie gehören einer anderen Session und werden von ihr selbst committed |
+| Pre-Push-Check | Vor dem Push einmal `git status --short` — jede Zeile bewusst zuordnen: eigene Datei (committen) vs. fremd (ignorieren) |
+| Meldung | Wenn fremde Dateien im Working Tree liegen: dem Benutzer in 1 Zeile sagen "X Dateien liegen unstaged, gehören nicht zu dieser Aufgabe" |
+
+Details siehe `~/.claude/rules/parallel-sessions-git.md`. Kurzfassung: nur was man selbst
+gerade gebaut hat, geht in den Commit — alles andere bleibt unberührt.
+
 ### Sichtbarer Commit-Marker pro Aufgabe (PFLICHT)
 
 Direkt nach dem Commit+Push JEDER Aufgabe wird ein klar abgegrenzter Marker ausgegeben,
@@ -407,6 +423,8 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 - ❌ Tasks erst am Ende gesammelt abhaken statt in Echtzeit pro Aufgabe
 - ❌ Den sichtbaren Commit-Marker (💾 + Aufgabe N + Beschreibung + "committed und gepusht", eingerahmt) nach einer Aufgabe weglassen oder gesammelt am Ende ausgeben
 - ❌ Den Commit-Marker ohne Disketten-Symbol, ohne Nummer oder ohne die zwei Rahmen-Linien ausgeben
+- ❌ `git add -A` / `git add .` verwenden und damit fremde Dateien anderer Sessions mitcommitten
+- ❌ Fremde, halbfertige Dateien anderer Sessions wegräumen, überschreiben oder "aufräumen" — nur die eigenen Dateien anfassen
 - ❌ Nach JEDER Aufgabe neu bauen und installieren — Build+Install kommt nur EINMAL am Ende
 - ❌ Build ausführen bevor alle Aufgaben committed+gepusht sind
 - ❌ Status-Meldung nur für eine Teilaufgabe am Ende — es MUSS für ALLE eine Rückmeldung geben
