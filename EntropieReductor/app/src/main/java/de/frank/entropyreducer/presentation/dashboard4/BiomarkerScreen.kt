@@ -105,18 +105,30 @@ fun BiomarkerHostScreen(
         ) { _ ->
             vm.refreshWeight()
         }
-    val onRequestWeightPermission: () -> Unit = {
-        // Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
-        // Permissions in einem Rutsch anfordern, damit zukuenftige Plugins ohne
-        // erneuten Permission-Dialog auskommen. Die Liste kommt direkt aus dem
-        // HealthConnectManager — eine zentrale Stelle, kein Inline-Boilerplate.
-        weightPermissionLauncher.launch(vm.allHealthConnectPermissions())
-    }
+    // Performance 2026-05-23: remember(...) gibt der Lambda eine stabile Identitaet
+    // ueber Recompositions hinweg. Vorher wurde sie bei jeder Screen-Recomposition
+    // neu allokiert und brach damit die Skippability von BiomarkerCardForId — alle
+    // sichtbaren Karten recomponierten mit. Verhalten unveraendert (gleicher Aufruf).
+    val onRequestWeightPermission: () -> Unit =
+        remember(weightPermissionLauncher, vm) {
+            {
+                // Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
+                // Permissions in einem Rutsch anfordern, damit zukuenftige Plugins ohne
+                // erneuten Permission-Dialog auskommen. Die Liste kommt direkt aus dem
+                // HealthConnectManager — eine zentrale Stelle, kein Inline-Boilerplate.
+                weightPermissionLauncher.launch(vm.allHealthConnectPermissions())
+            }
+        }
     // Frank-Wunsch 2026-05-10: Tap auf eine Health-Connect-Mini-Karte triggert
     // einen Refresh des letzten Werts. Wenn Permission fehlt, soll stattdessen
     // der Permission-Dialog kommen — die Karten-Logik unten entscheidet je nach
     // weightState welcher der beiden Handler greift.
-    val onRefreshHealthConnect: () -> Unit = { vm.refreshWeight() }
+    val onRefreshHealthConnect: () -> Unit = remember(vm) { { vm.refreshWeight() } }
+    // Performance 2026-05-23: stabile Identitaet statt Inline-Allokation pro Item
+    // (vorher direkt im LazyGrid-Item erzeugt → brach Card-Skippability).
+    val onSaveWorkoutOverrides:
+        (String, de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides) -> Unit =
+        remember(vm) { { trackId, overrides -> vm.applyWorkoutOverrides(trackId, overrides) } }
 
     CosmosScaffold(
         title = "Biomarker",
@@ -311,9 +323,7 @@ fun BiomarkerHostScreen(
                                 weightState = weightState,
                                 onRequestWeightPermission = onRequestWeightPermission,
                                 onOpenHealthConnectDetail = onOpenHealthConnectDetail,
-                                onSaveWorkoutOverrides = { trackId, overrides ->
-                                    vm.applyWorkoutOverrides(trackId, overrides)
-                                },
+                                onSaveWorkoutOverrides = onSaveWorkoutOverrides,
                             )
                         }
                     }
