@@ -514,17 +514,37 @@ constructor(
                             ouraSleepDetail = ouraSleepDetail,
                             ouraPersonalInfo = ouraPersonalInfo,
                         )
-                    val healthText =
-                        json.encodeToString(HealthBackupPayload.serializer(), healthPayload)
-                    backupManager
-                        .uploadHealth(healthText)
-                        .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
-                        .onFailure { ex ->
-                            _status.value =
-                                SyncStatus.Failed(
-                                    "Health-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                                )
-                        }
+                    // Performance 2026-05-24 (vom Benutzer freigegeben): Health-Backup analog zum
+                    // Haupt-/Workouts-Backup nur hochladen wenn sich der Inhalt geaendert hat.
+                    // Fingerprint = inhaltsbasierter hashCode OHNE exportedAt. Safe-Degradation:
+                    // instabiler Hash -> flackert nur -> wird wie bisher immer hochgeladen.
+                    val healthFingerprint = healthPayload.copy(exportedAt = 0L).hashCode()
+                    val lastHealthFingerprint =
+                        appSettingsLazy.get().healthBackupFingerprintFlow.first()
+                    if (healthFingerprint == lastHealthFingerprint && lastHealthFingerprint != 0) {
+                        diagnostics.info(
+                            de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                            "Health-Backup unveraendert -> Upload uebersprungen",
+                        )
+                        _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                    } else {
+                        val healthText =
+                            json.encodeToString(HealthBackupPayload.serializer(), healthPayload)
+                        backupManager
+                            .uploadHealth(healthText)
+                            .onSuccess {
+                                // Fingerprint erst nach Erfolg speichern -> fehlgeschlagener
+                                // Upload wird beim naechsten Mal erneut versucht.
+                                appSettingsLazy.get().setHealthBackupFingerprint(healthFingerprint)
+                                _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                            }
+                            .onFailure { ex ->
+                                _status.value =
+                                    SyncStatus.Failed(
+                                        "Health-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                    )
+                            }
+                    }
                 } catch (oom: OutOfMemoryError) {
                     System.gc()
                     _status.value = SyncStatus.Failed("Health-Backup zu gross (OOM)")
