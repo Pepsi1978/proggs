@@ -744,6 +744,7 @@ namespace TerminalVoiceOverlay.Views
                 Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
             }
             FadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
+            ShowPromptUiAfterExpand(); // vorher aktives Promptboard/Eingabefeld zurueckholen
             ReassertTopmostIfVisible();
         }
 
@@ -792,6 +793,7 @@ namespace TerminalVoiceOverlay.Views
                 Top   += CollapseTopOffset;
             }
             FadeIn(CollapsedView);
+            HidePromptUiForCollapse(); // Promptboard + Eingabefeld mit einklappen
             _isCollapsed = true;
             _usedSinceExpand = false;
             ReassertTopmostIfVisible();
@@ -872,6 +874,44 @@ namespace TerminalVoiceOverlay.Views
             el.Opacity = 0;
             el.BeginAnimation(UIElement.OpacityProperty,
                 new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(140))) { EasingFunction = HoverEaseOut });
+        }
+
+        // Beim Einklappen das Promptboard + Eingabefeld mit ausblenden. Die
+        // Absicht (alwaysOnActive / _inputSoloDock) bleibt erhalten, damit beim
+        // Aufklappen wiederhergestellt wird was vorher offen war.
+        private void HidePromptUiForCollapse()
+        {
+            try
+            {
+                _promptPanel?.HideTransientChildren();
+                if (_promptPanel is not null && _promptPanel.IsVisible) _promptPanel.Hide();
+                if (_inputSoloDock && _promptPanel?.InputWindow is { IsVisible: true } iw) iw.Hide();
+            }
+            catch (Exception ex) { Console.WriteLine($"HidePromptUiForCollapse: {ex.Message}"); }
+        }
+
+        // Beim Aufklappen das vorher aktive Promptboard / Eingabefeld wieder
+        // einblenden — exakt die gleiche Logik wie OnTerminalActivated.
+        private void ShowPromptUiAfterExpand()
+        {
+            try
+            {
+                if (_inputSoloDock && _promptPanel?.InputWindow is { } soloInput)
+                {
+                    if (!soloInput.IsVisible) soloInput.Show();
+                    soloInput.DockToOverlay(this);
+                }
+                else
+                {
+                    if (alwaysOnActive && _promptPanel is not null && !_promptPanel.IsVisible)
+                    {
+                        PositionPromptPanel();
+                        _promptPanel.Show();
+                    }
+                    _promptPanel?.ShowTransientChildrenIfNeeded();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"ShowPromptUiAfterExpand: {ex.Message}"); }
         }
 
         private void CaptureVerticalPlacement()
