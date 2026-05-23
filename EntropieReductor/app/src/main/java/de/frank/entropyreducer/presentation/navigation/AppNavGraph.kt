@@ -465,5 +465,13 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 }
             )
         }
+        composable(Routes.SETTINGS_DIAGNOSTICS) {
+            de.frank.entropyreducer.presentation.settings.diagnostics.DiagnosticLogScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
     }
 }

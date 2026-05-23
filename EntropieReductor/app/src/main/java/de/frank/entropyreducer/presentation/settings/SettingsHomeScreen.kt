@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material3.Icon
@@ -175,6 +176,13 @@ private val sections = listOf(
         title = "Datenexport / Datenschutz",
         subtitle = "Exportiere deine Daten oder überwache den Datenschutz.",
         route = Routes.SETTINGS_EXPORT,
+    ),
+    SectionDef(
+        icon = Icons.Outlined.MonitorHeart,
+        accent = CosmosColors.AccentSecondary,
+        title = "Diagnose-Protokoll",
+        subtitle = "Fehler und Erfolge aller Verknuepfungen (Strava, Whoop, Oura, Drive, Kalender, KI-Schluessel) — siehst du warum etwas nicht aktualisiert.",
+        route = Routes.SETTINGS_DIAGNOSTICS,
     ),
 )
 

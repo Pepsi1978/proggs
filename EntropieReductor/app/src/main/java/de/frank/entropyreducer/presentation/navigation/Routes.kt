@@ -95,4 +95,5 @@ object Routes {
     const val SETTINGS_TRIGGERS = "settings/triggers"
     const val SETTINGS_ARCHIVE = "settings/archive"
     const val SETTINGS_WIDGET = "settings/widget"
+    const val SETTINGS_DIAGNOSTICS = "settings/diagnostics"
 }
