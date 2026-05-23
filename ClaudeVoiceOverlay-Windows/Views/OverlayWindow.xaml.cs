@@ -187,11 +187,24 @@ namespace ClaudeVoiceOverlay.Views
             btn.MouseLeave += (_, _) => AnimateScale(btn, 1.0,  TimeSpan.FromMilliseconds(150));
         }
 
+        // Geteilte, eingefrorene EasingFunction fuer alle Hover-Scale-Animationen.
+        // Frueher allokierte jeder AnimateScale-Aufruf (Hover-Enter/Leave auf jedem
+        // Button) eine neue QuadraticEase. Mit Auto-Hide hovert der Benutzer das
+        // Overlay viel haeufiger (jedes Aufklappen = Hover), daher lohnt das Teilen
+        // jetzt. Freeze() macht das Objekt thread-safe und ueber alle Animationen
+        // teilbar — spart pro Hover-Event eine Allokation. Mirror der Terminal-App.
+        private static readonly QuadraticEase HoverEaseOut = CreateFrozenEase();
+        private static QuadraticEase CreateFrozenEase()
+        {
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            ease.Freeze();
+            return ease;
+        }
+
         private static void AnimateScale(System.Windows.Controls.Button btn, double to, TimeSpan duration)
         {
-            var ease  = new QuadraticEase { EasingMode = EasingMode.EaseOut };
-            var animX = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
-            var animY = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
+            var animX = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = HoverEaseOut };
+            var animY = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = HoverEaseOut };
 
             if (btn.RenderTransform is ScaleTransform st)
             {
