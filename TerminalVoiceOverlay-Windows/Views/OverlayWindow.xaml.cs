@@ -662,8 +662,14 @@ namespace TerminalVoiceOverlay.Views
                 // Niemals waehrend Aufnahme/Verarbeitung einklappen.
                 if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                     return;
-                // Maus ist doch wieder ueber dem Overlay → offen lassen.
-                if (_mouseOverOverlay) return;
+                // Maus (noch) ueber Overlay, Promptboard ODER Eingabefeld? Dann
+                // NICHT einklappen — erneut warten und pruefen. (Diese sind
+                // eigene Fenster, das Overlay-MouseLeave allein reicht nicht.)
+                if (IsMouseOverAnyPart())
+                {
+                    _collapseTimer!.Start();
+                    return;
+                }
                 CollapseImmediate();
             };
 
@@ -703,6 +709,23 @@ namespace TerminalVoiceOverlay.Views
         /// eingeklappt ist, gerade aufgenommen wird oder die Maus (doch)
         /// drueber ist.
         /// </summary>
+        // True solange die Maus ueber dem Overlay, dem Promptboard ODER dem
+        // Eingabefenster ist. Promptboard + Eingabe sind EIGENE Fenster, daher
+        // feuert das Overlay-MouseLeave beim Hinueberfahren — wir duerfen aber
+        // NICHT einklappen, solange der Benutzer eines dieser Fenster benutzt.
+        private bool IsMouseOverAnyPart()
+        {
+            if (_mouseOverOverlay) return true;
+            try
+            {
+                if (IsMouseOver) return true;
+                if (_promptPanel is { IsVisible: true } p && p.IsMouseOver) return true;
+                if (_promptPanel?.InputWindow is { IsVisible: true } iw && iw.IsMouseOver) return true;
+            }
+            catch { }
+            return false;
+        }
+
         private void ScheduleCollapse()
         {
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
@@ -832,6 +855,10 @@ namespace TerminalVoiceOverlay.Views
         // damit der In-Overlay-Umschalter auch ohne frischen Fokuswechsel
         // korrekt positionieren kann.
         private double _waX, _waY, _waW, _waH;
+        // Normale (vertikale) Promptboard-Breite — gemerkt, damit sie nach einem
+        // Horizontal-Ausflug (wo das Board auf Leistenbreite gesetzt wird) wieder
+        // hergestellt werden kann.
+        private double _boardVerticalWidth;
 
         // Alle Buttons die zwischen den Layouts wandern — in Dokument-Reihenfolge
         // pro Eltern-Panel (aufsteigender Index), damit das Zurueckhaengen in
@@ -2613,15 +2640,31 @@ namespace TerminalVoiceOverlay.Views
         private void PositionPromptPanel()
         {
             if (_promptPanel is null) return;
-            // Dock the panel directly to the LEFT of the pillar with a
-            // 4-pixel seam. The VTO typically sits at the right screen edge,
-            // so docking to the left keeps the panel on-screen. Match the
-            // pillar's HEIGHT exactly so the two floating windows visually
-            // line up — the user asked for a uniform vertical extent so
-            // the panel doesn't look stubby next to the bar (or vice-versa).
-            _promptPanel.Height = Height;
-            _promptPanel.Left = Left - _promptPanel.Width - 4;
-            _promptPanel.Top = Top;
+
+            // Normale (vertikale) Board-Breite einmalig merken, bevor sie im
+            // Horizontal-Modus auf die Leistenbreite gesetzt wird.
+            if (_boardVerticalWidth <= 1 && !double.IsNaN(_promptPanel.Width) && _promptPanel.Width > 1)
+                _boardVerticalWidth = _promptPanel.Width;
+
+            if (_isHorizontal)
+            {
+                // Horizontal: Promptboard OBERHALB der Leiste, gleiche Breite wie
+                // die Leiste. Das Eingabefenster dockt dann links ans Board (auch
+                // oben), weil es dem Board via LocationChanged folgt.
+                const double boardHeight = 360;
+                _promptPanel.Width  = ActualWidth;
+                _promptPanel.Height = boardHeight;
+                _promptPanel.Left   = Left;
+                _promptPanel.Top    = Top - boardHeight - 4;
+            }
+            else
+            {
+                // Vertikal: links neben dem Pillar mit 4px Naht, gleiche Hoehe.
+                if (_boardVerticalWidth > 1) _promptPanel.Width = _boardVerticalWidth;
+                _promptPanel.Height = Height;
+                _promptPanel.Left = Left - _promptPanel.Width - 4;
+                _promptPanel.Top = Top;
+            }
         }
 
         /// <summary>
