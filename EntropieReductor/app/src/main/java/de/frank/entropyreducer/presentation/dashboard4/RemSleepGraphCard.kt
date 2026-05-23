@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -151,6 +152,18 @@ internal fun RemSleepGraphCard(
                     },
                 )
                 Spacer(Modifier.height(12.dp))
+                // Interaktiver Linien-Verlauf wie beim HRV-Verlauf (Frank-Wunsch
+                // 2026-05-23): Werte + Durchschnitts-/Trendlinie, Tap zeigt Tooltip.
+                // REM: mehr ist besser -> lowerIsBetter = false.
+                InteractiveLineChart(
+                    points = derived.chartPoints,
+                    accent = SleepStageColors.Rem,
+                    unit = "%",
+                    height = 200,
+                    valueFormatter = { "%.0f %%".format(it) },
+                    lowerIsBetter = false,
+                )
+                Spacer(Modifier.height(16.dp))
             }
             RemSleepHistorySheetContent(rows = derived.historyRows)
         }
@@ -165,6 +178,9 @@ private data class RemSleepDerived(
     val deltaVsAvg: Double?,
     val last30Percent: List<Double>,
     val historyRows: List<RemSleepRow>,
+    /** Alle Naechte als (epochMs, Prozent) fuer den interaktiven Linien-Chart
+     *  im Detail-Sheet (Frank-Wunsch 2026-05-23, analog zum HRV-Verlauf). */
+    val chartPoints: List<Pair<Long, Double>>,
 )
 
 internal data class RemSleepRow(
@@ -203,12 +219,15 @@ private fun remSleepDerived(
         val deltaPrev = if (prev != null) pct - prev else null
         rows += RemSleepRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
     }
+    val chartPoints =
+        all.map { (date, pct) -> date.atStartOfDay(zone).toInstant().toEpochMilli() to pct }
     return RemSleepDerived(
         currentPercent = current,
         avg30Percent = avg30,
         deltaVsAvg = delta,
         last30Percent = last30,
         historyRows = rows.reversed(),
+        chartPoints = chartPoints,
     )
 }
 

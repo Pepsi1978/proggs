@@ -35,6 +35,7 @@ import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.rememberCardColors
+import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -147,6 +148,19 @@ internal fun WakeTimeGraphCard(
                     },
                 )
                 Spacer(Modifier.height(12.dp))
+                // Interaktiver Linien-Verlauf wie beim HRV-Verlauf (Frank-Wunsch
+                // 2026-05-23): Werte + Durchschnitts-/Trendlinie, Tap zeigt Tooltip.
+                // Wachzeit: weniger ist besser -> lowerIsBetter = true (fallender
+                // Trend wird gruen statt rot eingefaerbt).
+                InteractiveLineChart(
+                    points = derived.chartPoints,
+                    accent = SleepStageColors.Awake,
+                    unit = "%",
+                    height = 200,
+                    valueFormatter = { "%.0f %%".format(it) },
+                    lowerIsBetter = true,
+                )
+                Spacer(Modifier.height(16.dp))
             }
             WakeTimeHistorySheetContent(rows = derived.historyRows)
         }
@@ -161,6 +175,9 @@ private data class WakeTimeDerived(
     val deltaVsAvg: Double?,
     val last30Percent: List<Double>,
     val historyRows: List<WakeTimeRow>,
+    /** Alle Naechte als (epochMs, Prozent) fuer den interaktiven Linien-Chart
+     *  im Detail-Sheet (Frank-Wunsch 2026-05-23, analog zum HRV-Verlauf). */
+    val chartPoints: List<Pair<Long, Double>>,
 )
 
 internal data class WakeTimeRow(
@@ -197,12 +214,15 @@ private fun wakeTimeDerived(
         val deltaPrev = if (prev != null) pct - prev else null
         rows += WakeTimeRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
     }
+    val chartPoints =
+        all.map { (date, pct) -> date.atStartOfDay(zone).toInstant().toEpochMilli() to pct }
     return WakeTimeDerived(
         currentPercent = current,
         avg30Percent = avg30,
         deltaVsAvg = delta,
         last30Percent = last30,
         historyRows = rows.reversed(),
+        chartPoints = chartPoints,
     )
 }
 
