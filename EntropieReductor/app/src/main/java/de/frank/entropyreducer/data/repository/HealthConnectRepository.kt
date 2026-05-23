@@ -8,6 +8,7 @@ import de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity
 import de.frank.entropyreducer.data.settings.AppSettings
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 /**
  * Repository fuer Health-Connect-Koerperwerte (Frank-Wunsch 2026-05-23) — analog zu
@@ -51,13 +52,25 @@ constructor(
             return 0
         }
         val now = System.currentTimeMillis()
+        // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementell. Wurde schon einmal gecached, nur
+        // die Tage seit dem letzten Sync (+ 7 Tage Ueberlapp) lesen statt fix 730. Das spart
+        // beim App-Start viele Binder-IPC-Reads (= schnellerer Start). hc_value_cache nutzt
+        // REPLACE -> der Ueberlapp erzeugt keine Duplikate. Erster Sync: volle 730 Tage.
+        val lastSyncMs = settings.lastHealthConnectSyncMsFlow.first()
+        val days =
+            if (lastSyncMs > 0L) {
+                val elapsedDays = ((now - lastSyncMs) / (24L * 60L * 60L * 1000L)).toInt()
+                (elapsedDays + OVERLAP_DAYS).coerceIn(1, HISTORY_DAYS)
+            } else {
+                HISTORY_DAYS
+            }
         val rows =
             buildList {
-                addMetric(METRIC_WEIGHT, readSafe { hc.readWeightHistory(HISTORY_DAYS) }, now)
-                addMetric(METRIC_BODY_FAT, readSafe { hc.readBodyFatHistory(HISTORY_DAYS) }, now)
-                addMetric(METRIC_LEAN, readSafe { hc.readLeanBodyMassHistory(HISTORY_DAYS) }, now)
-                addMetric(METRIC_WATER, readSafe { hc.readBodyWaterMassHistory(HISTORY_DAYS) }, now)
-                addMetric(METRIC_BONE, readSafe { hc.readBoneMassHistory(HISTORY_DAYS) }, now)
+                addMetric(METRIC_WEIGHT, readSafe { hc.readWeightHistory(days) }, now)
+                addMetric(METRIC_BODY_FAT, readSafe { hc.readBodyFatHistory(days) }, now)
+                addMetric(METRIC_LEAN, readSafe { hc.readLeanBodyMassHistory(days) }, now)
+                addMetric(METRIC_WATER, readSafe { hc.readBodyWaterMassHistory(days) }, now)
+                addMetric(METRIC_BONE, readSafe { hc.readBoneMassHistory(days) }, now)
             }
         if (rows.isNotEmpty()) {
             runCatching { dao.upsertAll(rows) }
@@ -98,5 +111,8 @@ constructor(
         const val METRIC_WATER = "body_water"
         const val METRIC_BONE = "bone_mass"
         private const val HISTORY_DAYS = 730
+
+        /** Sicherheits-Ueberlapp fuer inkrementelle Syncs: 7 Tage vor dem letzten Sync. */
+        private const val OVERLAP_DAYS = 7
     }
 }

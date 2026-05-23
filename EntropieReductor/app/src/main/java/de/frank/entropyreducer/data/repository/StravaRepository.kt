@@ -72,7 +72,10 @@ class StravaRepository @Inject constructor(
      * Bei fehlender Auth liefert es eine leere Liste (kein Fehler — der User hat
      * Strava einfach noch nicht verbunden).
      */
-    suspend fun fetchWorkoutsAsEntities(days: Int = 30): Result<List<AmazfitWorkoutEntity>> {
+    suspend fun fetchWorkoutsAsEntities(
+        days: Int = 30,
+        knownTrackIds: Set<String> = emptySet(),
+    ): Result<List<AmazfitWorkoutEntity>> {
         if (!isAuthenticated()) {
             Log.d(TAG, "Strava: nicht authentifiziert — kein Workout-Sync")
             return Result.success(emptyList())
@@ -97,20 +100,32 @@ class StravaRepository @Inject constructor(
         }
         val result =
             try {
-                runCatchingCancellable { doFetchWorkouts(days) }
+                runCatchingCancellable { doFetchWorkouts(days, knownTrackIds) }
             } finally {
                 syncMutex.unlock()
             }
         return result.onFailure { handleSyncFailure(it) }
     }
 
-    private suspend fun doFetchWorkouts(days: Int): List<AmazfitWorkoutEntity> {
+    private suspend fun doFetchWorkouts(
+        days: Int,
+        knownTrackIds: Set<String>,
+    ): List<AmazfitWorkoutEntity> {
         val accessToken = oauth.freshStravaAccessToken()
             ?: throw IllegalStateException("Strava-Access-Token konnte nicht erfrischt werden")
         val bearer = "Bearer $accessToken"
 
-        val afterEpoch = (System.currentTimeMillis() / 1000L) - (days.toLong() * 24L * 60L * 60L)
-        Log.i(TAG, "Strava: hole Activities der letzten $days Tage (after=$afterEpoch)")
+        // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementell. Wurde schon einmal erfolgreich
+        // synchronisiert, nur Activities seit dem letzten Sync holen — minus 7 Tage Ueberlapp.
+        // Beim ersten Sync das volle [days]-Fenster.
+        val lastSyncMs = secrets.stravaLastSyncEpochMs
+        val afterEpoch =
+            if (lastSyncMs > 0L) {
+                (lastSyncMs - INCREMENTAL_OVERLAP_MS) / 1000L
+            } else {
+                (System.currentTimeMillis() / 1000L) - (days.toLong() * 24L * 60L * 60L)
+            }
+        Log.i(TAG, "Strava: hole Activities ab Unix-Zeit $afterEpoch (inkrementell=${lastSyncMs > 0L})")
 
         val summaries = mutableListOf<StravaActivitySummary>()
         var page = 1
@@ -129,12 +144,20 @@ class StravaRepository @Inject constructor(
         Log.i(TAG, "Strava: ${summaries.size} Activities im ${days}-Tage-Fenster gefunden")
 
         val results = mutableListOf<AmazfitWorkoutEntity>()
-        for ((index, summary) in summaries.withIndex()) {
-            // Rate-Limit-Schutz: 200ms zwischen Activities, plus 15min-Pause nach
-            // 80 Calls (Strava: 100 req/15min — wir lassen Puffer).
-            if (index > 0) delay(200L)
-            if (index > 0 && index % 25 == 0) {
-                Log.d(TAG, "Strava: zusaetzliche 5s-Pause nach $index Activities um Rate-Limit zu schonen")
+        var skipped = 0
+        for (summary in summaries) {
+            // Frank-Wunsch 2026-05-23 (Schritt 4): Die teuren Detail-Calls (Detail + Streams +
+            // Laps = 3 Calls pro Workout) NUR fuer NEUE Workouts. Bereits in der DB vorhandene
+            // ueberspringen — ein abgeschlossenes Strava-Workout aendert sich nicht nachtraeglich.
+            // Das spart die meisten API-Calls und schuetzt vor dem Tages-Lese-Limit.
+            if ("strava_${summary.id}" in knownTrackIds) {
+                skipped++
+                continue
+            }
+            // Rate-Limit-Schutz: 200ms zwischen echten Activity-Calls, plus 5s-Pause nach je 25.
+            if (results.isNotEmpty()) delay(200L)
+            if (results.isNotEmpty() && results.size % 25 == 0) {
+                Log.d(TAG, "Strava: zusaetzliche 5s-Pause nach ${results.size} neuen Activities")
                 delay(5_000L)
             }
 
@@ -160,10 +183,11 @@ class StravaRepository @Inject constructor(
 
         secrets.stravaLastSyncEpochMs = System.currentTimeMillis()
         secrets.stravaRateLimitedUntilMs = 0L // Erfolg -> evtl. bestehenden Cooldown aufheben
-        Log.i(TAG, "Strava-Sync abgeschlossen: ${results.size} Workouts gemappt")
+        Log.i(TAG, "Strava-Sync abgeschlossen: ${results.size} neu, $skipped uebersprungen")
         diagnostics.success(
             DiagnosticArea.STRAVA,
-            "Sync OK — ${summaries.size} Activities geprueft, ${results.size} Workouts geladen",
+            "Sync OK — ${summaries.size} Activities geprueft, ${results.size} neu geladen, " +
+                "$skipped uebersprungen (schon vorhanden)",
         )
         return results
     }
@@ -491,5 +515,8 @@ class StravaRepository @Inject constructor(
         /** 16 Min — etwas mehr als Stravas 15-Min-Rate-Limit-Fenster, damit der naechste Versuch
          * garantiert in einem frischen Fenster landet. */
         private const val RATE_LIMIT_COOLDOWN_MS = 16L * 60L * 1000L
+
+        /** Sicherheits-Ueberlapp fuer inkrementelle Syncs: 7 Tage vor dem letzten Sync. */
+        private const val INCREMENTAL_OVERLAP_MS = 7L * 24L * 60L * 60L * 1000L
     }
 }

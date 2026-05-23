@@ -460,7 +460,18 @@ constructor(
             Log.d(TAG, "Strava: nicht verbunden — kein Strava-Merge")
             return 0
         }
-        val result = repo.fetchWorkoutsAsEntities(days = days)
+        // Frank-Wunsch 2026-05-23 (Schritt 4): Existierende Workouts ZUERST holen — damit der
+        // Strava-Sync die teuren Detail-Calls (GPS/Puls/Splits) NUR fuer NEUE Workouts macht
+        // (inkrementell). Die bekannten trackIds werden an fetchWorkoutsAsEntities uebergeben.
+        val end = System.currentTimeMillis()
+        val start = end - days.toLong() * 24L * 60L * 60L * 1000L
+        val toleranceMs = 5L * 60L * 1000L
+        // Hole alle existierenden Workouts im Range (Liste statt nur startMs damit
+        // wir auch trackId fuer das Loeschen haben).
+        val existingInRange = workoutDao.observeRange(start, end).first()
+        val knownTrackIds = existingInRange.map { it.trackId }.toSet()
+
+        val result = repo.fetchWorkoutsAsEntities(days = days, knownTrackIds = knownTrackIds)
         val stravaEntities = result.getOrDefault(emptyList())
         // Frank-Wunsch 2026-05-17: Sync-Zeitstempel setzen sobald die API
         // erfolgreich antwortet — auch wenn 0 neue Workouts. Damit zeigt der
@@ -471,14 +482,6 @@ constructor(
         if (stravaEntities.isEmpty()) {
             return 0
         }
-        // Existierende Workouts im selben Zeitfenster fuer Dedup/Overwrite.
-        val end = System.currentTimeMillis()
-        val start = end - days.toLong() * 24L * 60L * 60L * 1000L
-        val toleranceMs = 5L * 60L * 1000L
-
-        // Hole alle existierenden Workouts im Range (Liste statt nur startMs damit
-        // wir auch trackId fuer das Loeschen haben).
-        val existingInRange = workoutDao.observeRange(start, end).first()
         val toleranceList = existingInRange.map { it.trackId to it.startMs }
         // Frank-Wunsch 2026-05-17: Map trackId → existing-Entity damit wir bei
         // einem matchByStrava pruefen koennen ob der Benutzer manuelle Edits

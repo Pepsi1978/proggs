@@ -152,7 +152,22 @@ class OuraRepository @Inject constructor(
 
         val today = LocalDate.now()
         val endDate = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val startDate = today.minusDays(days.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementeller Sync. Wurde schon einmal
+        // erfolgreich synchronisiert, nur ab dem letzten Sync laden — minus 7 Tage
+        // Sicherheits-Ueberlapp, weil Oura Werte (z.B. Resilienz) nachtraeglich aktualisiert.
+        // Beim ersten Sync das volle [days]-Fenster. Alle Oura-DAOs nutzen REPLACE -> der
+        // Ueberlapp erzeugt keine Duplikate.
+        val lastOuraSyncMs = secrets.ouraLastSyncEpochMs
+        val startLocalDate =
+            if (lastOuraSyncMs > 0L) {
+                java.time.Instant.ofEpochMilli(lastOuraSyncMs)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                    .minusDays(INCREMENTAL_OVERLAP_DAYS)
+            } else {
+                today.minusDays(days.toLong())
+            }
+        val startDate = startLocalDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val now = System.currentTimeMillis()
 
         Log.i(TAG, "Oura Sync gestartet: $startDate bis $endDate ($days Tage)")
@@ -289,6 +304,9 @@ class OuraRepository @Inject constructor(
 
     companion object {
         private const val TAG = "OuraRepository"
+
+        /** Sicherheits-Ueberlapp fuer inkrementelle Syncs: 7 Tage vor dem letzten Sync. */
+        private const val INCREMENTAL_OVERLAP_DAYS = 7L
     }
 }
 

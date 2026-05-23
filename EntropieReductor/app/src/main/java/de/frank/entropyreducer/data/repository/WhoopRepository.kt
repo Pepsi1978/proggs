@@ -25,6 +25,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 
 /**
@@ -84,7 +85,21 @@ constructor(
                 workoutDao.deleteOlderThan(WHOOP_DATA_START_MS)
 
                 val end = OffsetDateTime.now(ZoneOffset.UTC)
-                val requestedStart = end.minusDays(days.toLong())
+                // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementeller Sync. Wurde schon einmal
+                // erfolgreich synchronisiert, nur seit dem letzten Sync laden — minus 7 Tage
+                // Sicherheits-Ueberlapp, weil Whoop Erholungs-/Schlaf-Werte nachtraeglich neu
+                // berechnet. Beim ersten Sync (lastSync == 0) das volle [days]-Fenster.
+                // dao.upsert nutzt REPLACE -> der Ueberlapp erzeugt keine Duplikate.
+                val lastWhoopSyncMs = settings.lastWhoopSyncMsFlow.first()
+                val requestedStart =
+                    if (lastWhoopSyncMs > 0L) {
+                        OffsetDateTime.ofInstant(
+                            java.time.Instant.ofEpochMilli(lastWhoopSyncMs - INCREMENTAL_OVERLAP_MS),
+                            ZoneOffset.UTC,
+                        )
+                    } else {
+                        end.minusDays(days.toLong())
+                    }
                 // Untergrenze auf Geraete-Kaufdatum clampen: nie davor anfragen.
                 val start =
                     if (requestedStart.toInstant().toEpochMilli() < WHOOP_DATA_START_MS) {
@@ -354,6 +369,13 @@ constructor(
 
     companion object {
         private const val TAG = "WhoopRepository"
+
+        /**
+         * Sicherheits-Ueberlapp fuer inkrementelle Syncs: 7 Tage vor dem letzten Sync, um
+         * nachtraeglich von Whoop neu berechnete Erholungs-/Schlaf-Werte zu erfassen. Dank
+         * REPLACE-upsert entstehen durch den Ueberlapp keine Duplikate.
+         */
+        private const val INCREMENTAL_OVERLAP_MS = 7L * 24L * 60L * 60L * 1000L
         private val ISO: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
         /**
