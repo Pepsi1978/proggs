@@ -231,6 +231,24 @@ fun TasksScreen(
     CosmosScaffold(
         title = "Aufgaben",
         actions = {
+            // Heute-Schnellzugriff (Frank-Wunsch 2026-05-23): wenn Frank
+            // weit nach unten gescrollt ist, springt ein Tap zurueck zum
+            // HEUTE-Bucket. Index 1 ist immer der erste Bucket-Header (HEUTE)
+            // weil Briefing-Item auf Index 0 sitzt und keine Filterleiste
+            // mehr dazwischen liegt.
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        runCatching { listState.animateScrollToItem(1) }
+                    }
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Today,
+                    contentDescription = "Zu Heute springen",
+                    tint = cosmos.textPrimary,
+                )
+            }
             // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
             // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
             // und neue Bewertung aller offenen Aufgaben mit aktuellen
