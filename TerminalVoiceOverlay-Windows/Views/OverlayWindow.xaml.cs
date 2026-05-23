@@ -1096,9 +1096,36 @@ namespace TerminalVoiceOverlay.Views
         private void BtnOrientationToggle_Click(object sender, RoutedEventArgs e)
         {
             bool target = !_isHorizontal;
+            // Wunsch 2026-05-23: Beim Umschalten erst Promtboard + Eingabe
+            // schliessen, damit sich NUR das Overlay dreht. Der Benutzer
+            // oeffnet danach ueber den Stern frisch in der neuen Orientierung.
+            CloseAttachedPanelsForOrientationSwitch();
             ApplyOrientation(target);
             PositionForCurrentOrientation();
             PersistOrientation(target);
+        }
+
+        /// <summary>
+        /// Schliesst beim Orientierungswechsel das Promtboard UND das
+        /// Eingabe-/Historie-Fenster vollstaendig und setzt den Stern-Toggle
+        /// auf "aus". So dreht sich beim Umschalten nur das nackte Overlay;
+        /// der naechste Stern-Klick oeffnet frisch im Board-Normalmodus an der
+        /// kanonischen Position der neuen Orientierung.
+        /// HidePromptPanel() schliesst das Panel (dessen OnClosed nimmt das
+        /// Eingabe- und Historie-Fenster mit) und setzt _inputSoloDock zurueck.
+        /// Den Stern-/Toggle-Zustand setzen wir danach explizit auf "aus" —
+        /// unabhaengig davon ob der Closed-Handler bereits gegriffen hat.
+        /// </summary>
+        private void CloseAttachedPanelsForOrientationSwitch()
+        {
+            if (_promptPanel is not null)
+            {
+                HidePromptPanel();
+            }
+            alwaysOnActive = false;
+            _inputSoloDock = false;
+            UltrathinkButton.Background = ToggleOff;
+            UltrathinkStar.Fill = StarMuted;
         }
 
         private async void PersistOrientation(bool horizontal)
