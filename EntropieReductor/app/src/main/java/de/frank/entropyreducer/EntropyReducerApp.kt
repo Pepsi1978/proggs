@@ -333,14 +333,25 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                                 scheduler.runWhoopSyncNow()
                             }
                         }
-                        // Frank-Wunsch 2026-05-17: Strava bei jedem App-Foreground
-                        // sync — neue Workouts der letzten 30 Tage werden geholt.
-                        // Manuelle Edits sind durch manualOverridesMs geschuetzt
-                        // (siehe AmazfitRepository.mergeFromStrava). Strava-API
-                        // hat 100 Requests/15min Limit — bei 20 App-Wechseln/Tag
-                        // ist das unkritisch.
+                        // Frank-Wunsch 2026-05-17 / Bugfix 2026-05-23: Strava beim
+                        // App-Foreground synchronisieren — aber mit Mindestabstand.
+                        // Frueher lief bei JEDEM Wechsel ein voller Sync (listActivities
+                        // + 3 Detail-Calls pro Workout). Bei haeufigem App-Wechsel sprengte
+                        // das Stravas Rate-Limit (100/15min, 1000/Tag) -> HTTP 429 -> gar
+                        // keine Aktualisierung mehr (Symptom: "zuletzt vor 6 h"). Jetzt:
+                        // hoechstens alle 5 Minuten ein automatischer Sync. Der manuelle
+                        // Refresh-Button im Biomarker-Screen synct weiterhin sofort.
+                        // Zusaetzlich greifen im StravaRepository ein Dedup-Mutex und ein
+                        // 429-Cooldown (Defense in Depth, 3 unabhaengige Schichten).
                         applicationScope.launch {
-                            runCatching { amazfitRepository.mergeFromStrava(days = 30) }
+                            runCatching {
+                                    val minIntervalMs = 5L * 60L * 1000L // 5 Min
+                                    val sinceLastSyncMs =
+                                        System.currentTimeMillis() - secrets.stravaLastSyncEpochMs
+                                    if (sinceLastSyncMs >= minIntervalMs) {
+                                        amazfitRepository.mergeFromStrava(days = 30)
+                                    }
+                                }
                                 .onFailure {
                                     android.util.Log.w(
                                         "EntropyReducerApp",

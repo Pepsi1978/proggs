@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
 import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.remote.strava.StravaActivityDetail
@@ -10,6 +12,7 @@ import de.frank.entropyreducer.data.remote.strava.StravaStream
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -47,7 +50,16 @@ class StravaRepository @Inject constructor(
     private val api: StravaApi,
     private val oauth: OAuthService,
     private val secrets: EncryptedSecretsStore,
+    private val diagnostics: DiagnosticLogger,
 ) {
+
+    /**
+     * Frank-Bugfix 2026-05-23: Nur EIN Strava-Sync gleichzeitig. Frueher feuerten bei jedem
+     * App-Foreground gleich mehrere Syncs (ON_START + BiomarkerViewModel) parallel — jeder
+     * machte eigene API-Calls und sprengte zusammen das Strava-Rate-Limit (HTTP 429). Mit
+     * tryLock() ueberspringt ein paralleler Aufruf einfach, statt zu warten und dann auch zu syncen.
+     */
+    private val syncMutex = Mutex()
 
     /** Sind wir bei Strava authentifiziert? */
     fun isAuthenticated(): Boolean = oauth.loadStravaAuthState().isAuthorized
@@ -60,11 +72,39 @@ class StravaRepository @Inject constructor(
      * Bei fehlender Auth liefert es eine leere Liste (kein Fehler — der User hat
      * Strava einfach noch nicht verbunden).
      */
-    suspend fun fetchWorkoutsAsEntities(days: Int = 30): Result<List<AmazfitWorkoutEntity>> = runCatchingCancellable {
+    suspend fun fetchWorkoutsAsEntities(days: Int = 30): Result<List<AmazfitWorkoutEntity>> {
         if (!isAuthenticated()) {
             Log.d(TAG, "Strava: nicht authentifiziert — kein Workout-Sync")
-            return@runCatchingCancellable emptyList()
+            return Result.success(emptyList())
         }
+        // Frank-Bugfix 2026-05-23: 429-Backoff — laeuft ein Cooldown, gar nicht erst syncen.
+        val nowMs = System.currentTimeMillis()
+        val cooldownUntil = secrets.stravaRateLimitedUntilMs
+        if (cooldownUntil > nowMs) {
+            val minsLeft = ((cooldownUntil - nowMs) / 60_000L) + 1
+            Log.d(TAG, "Strava-Sync uebersprungen — Rate-Limit-Cooldown noch ~$minsLeft Min")
+            diagnostics.warn(
+                DiagnosticArea.STRAVA,
+                "Sync uebersprungen — Rate-Limit-Cooldown laeuft noch ~$minsLeft Min",
+            )
+            return Result.success(emptyList())
+        }
+        // Frank-Bugfix 2026-05-23: Dedup — laeuft schon ein Sync, diesen ueberspringen.
+        if (!syncMutex.tryLock()) {
+            Log.d(TAG, "Strava-Sync uebersprungen — ein anderer Sync laeuft bereits")
+            diagnostics.info(DiagnosticArea.STRAVA, "Sync uebersprungen — laeuft bereits")
+            return Result.success(emptyList())
+        }
+        val result =
+            try {
+                runCatchingCancellable { doFetchWorkouts(days) }
+            } finally {
+                syncMutex.unlock()
+            }
+        return result.onFailure { handleSyncFailure(it) }
+    }
+
+    private suspend fun doFetchWorkouts(days: Int): List<AmazfitWorkoutEntity> {
         val accessToken = oauth.freshStravaAccessToken()
             ?: throw IllegalStateException("Strava-Access-Token konnte nicht erfrischt werden")
         val bearer = "Bearer $accessToken"
@@ -119,11 +159,43 @@ class StravaRepository @Inject constructor(
         }
 
         secrets.stravaLastSyncEpochMs = System.currentTimeMillis()
+        secrets.stravaRateLimitedUntilMs = 0L // Erfolg -> evtl. bestehenden Cooldown aufheben
         Log.i(TAG, "Strava-Sync abgeschlossen: ${results.size} Workouts gemappt")
-        results
-    }.onFailure {
-        if (it !is kotlinx.coroutines.CancellationException) {
-            Log.e(TAG, "Strava-Sync fehlgeschlagen", it)
+        diagnostics.success(
+            DiagnosticArea.STRAVA,
+            "Sync OK — ${summaries.size} Activities geprueft, ${results.size} Workouts geladen",
+        )
+        return results
+    }
+
+    /**
+     * Frank-Bugfix 2026-05-23: Zentrale Fehlerbehandlung fuer den Strava-Sync. Bei HTTP 429
+     * (Rate-Limit) wird ein 16-Minuten-Cooldown gesetzt (ueberbrueckt Stravas 15-Min-Fenster),
+     * damit die App nicht weiter gegen das erschoepfte Limit haemmert. Die Rate-Limit-Header
+     * (X-RateLimit-Usage/-Limit) werden mitgeloggt, damit im Diagnose-Screen sichtbar ist ob es
+     * das 15-Min- oder das Tageslimit war.
+     */
+    private fun handleSyncFailure(t: Throwable) {
+        if (t is kotlinx.coroutines.CancellationException) return
+        val http = t as? retrofit2.HttpException
+        if (http?.code() == 429) {
+            secrets.stravaRateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS
+            val usage = http.response()?.headers()?.get("X-RateLimit-Usage")
+            val limit = http.response()?.headers()?.get("X-RateLimit-Limit")
+            Log.e(TAG, "Strava 429 Rate-Limit — Cooldown 16 Min (Usage=$usage Limit=$limit)")
+            diagnostics.error(
+                DiagnosticArea.STRAVA,
+                "Rate-Limit erreicht (HTTP 429) — Sync pausiert 16 Min." +
+                    if (usage != null) " Nutzung $usage von ${limit ?: "?"} (15-Min, Tag)." else "",
+                t,
+            )
+        } else {
+            Log.e(TAG, "Strava-Sync fehlgeschlagen", t)
+            diagnostics.error(
+                DiagnosticArea.STRAVA,
+                "Sync fehlgeschlagen: ${t.message ?: t::class.java.simpleName}",
+                t,
+            )
         }
     }
 
@@ -368,5 +440,9 @@ class StravaRepository @Inject constructor(
 
     companion object {
         private const val TAG = "StravaRepository"
+
+        /** 16 Min — etwas mehr als Stravas 15-Min-Rate-Limit-Fenster, damit der naechste Versuch
+         * garantiert in einem frischen Fenster landet. */
+        private const val RATE_LIMIT_COOLDOWN_MS = 16L * 60L * 1000L
     }
 }

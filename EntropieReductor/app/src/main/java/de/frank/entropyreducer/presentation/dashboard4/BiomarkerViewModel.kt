@@ -872,23 +872,21 @@ constructor(
             _message.value = "⟳ Wird synchronisiert: Whoop · Strava · Oura · Health Connect …"
 
             val whoopJob = async { repo.syncLastDays(365) }
-            val amazfitJob = async {
-                runCatching { amazfitRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
-            }
             val ouraJob = async {
                 runCatching { ouraRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
             }
-            // Strava-Sync (Frank-Wunsch 2026-05-17): expliziter eigener Job
-            // damit der Footer den Strava-Status separat zeigt. Strava wird
-            // zwar auch im Amazfit-Sync getriggert, aber doppelt schadet nicht
-            // (mergeFromStrava ist idempotent + manualOverridesMs-Schutz greift).
+            // Frank-Bugfix 2026-05-23: NUR EIN Strava-Sync. Frueher liefen hier
+            // amazfitRepo.syncLastDays(365) UND mergeFromStrava(30) parallel — beide
+            // synchronisieren Strava (syncLastDays ist nur ein Wrapper um mergeFromStrava).
+            // Zusammen mit dem ON_START-Sync sprengte das Stravas Rate-Limit (HTTP 429).
+            // Jetzt nur dieser eine Job; der StravaRepository-Mutex faengt verbleibende
+            // Ueberschneidungen mit dem App-Start-Sync sauber ab.
             val stravaJob = async {
                 runCatching { amazfitRepo.mergeFromStrava(days = 30) }.getOrElse { -1 }
             }
             refreshWeight()
 
             val whoopRes = whoopJob.await()
-            val amazfitRes = amazfitJob.await()
             val ouraRes = ouraJob.await()
             val stravaCount = stravaJob.await()
             _refreshing.value = false
@@ -916,10 +914,6 @@ constructor(
                     _weight.value.history30d.size
                 }
             parts.add("Health Connect $hcCount")
-            // amazfitRes weiterhin awaiten damit der DB-Sync nicht abgebrochen
-            // wird — Resultat wird aber nicht mehr im Footer angezeigt.
-            @Suppress("UNUSED_VARIABLE")
-            val amazfitResult = amazfitRes
             val summary = parts.joinToString(" · ")
             // Frank-Wunsch 2026-05-17: Permanenter Footer mit Datum+Uhrzeit.
             // Bleibt sichtbar bis zum naechsten Refresh.

@@ -149,6 +149,16 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_STRAVA_LAST_SYNC, 0L)
         set(value) { prefs.edit().putLong(KEY_STRAVA_LAST_SYNC, value).apply() }
 
+    /**
+     * Cooldown-Sperre nach einem HTTP 429 (Rate-Limit) von Strava. Solange
+     * `System.currentTimeMillis() < stravaRateLimitedUntilMs` laeuft, wird KEIN neuer
+     * Strava-Sync gestartet. Verhindert das fruehere Hammering (mehrere Syncs pro
+     * Foreground feuerten je 429 und hielten das Limit dauerhaft erschoepft). 0 = kein Cooldown.
+     */
+    var stravaRateLimitedUntilMs: Long
+        get() = prefs.getLong(KEY_STRAVA_RATELIMIT_UNTIL, 0L)
+        set(value) { prefs.edit().putLong(KEY_STRAVA_RATELIMIT_UNTIL, value).apply() }
+
     fun clearStravaAuthState() {
         prefs.edit()
             .remove(KEY_STRAVA_AUTH_STATE)
@@ -277,5 +287,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_STRAVA_AUTH_STATE = "strava_auth_state_json"
         private const val KEY_STRAVA_ATHLETE_ID = "strava_athlete_id"
         private const val KEY_STRAVA_LAST_SYNC = "strava_last_sync_ms"
+        private const val KEY_STRAVA_RATELIMIT_UNTIL = "strava_ratelimit_until_ms"
     }
 }
