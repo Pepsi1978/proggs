@@ -188,7 +188,7 @@ Jede einzelne Aufgabe durchläuft denselben kleinen Kreislauf, bevor die nächst
 7. → nächste Aufgabe
 ```
 
-**Echtzeit-Abhaken (Punkt A):** Abgehakt wird SOFORT pro Aufgabe — aber erst NACH
+**Echtzeit-Abhaken:** Abgehakt wird SOFORT pro Aufgabe — aber erst NACH
 committen+pushen (eine Aufgabe gilt erst als erledigt, wenn sie sicher im Repo liegt),
 niemals erst am Ende gesammelt. So sieht der Benutzer live, wo der Vorgang steht, und
 nichts geht in der Mitte einer langen Liste unter. (Bei reinen Erklärungs-/Frage-Aufgaben
@@ -294,7 +294,7 @@ Standard ist aber: ein Build am Ende.
 
 ---
 
-## Schritt 7 — VERIFIZIEREN (End-Check, Punkt E)
+## Schritt 7 — VERIFIZIEREN (End-Check)
 
 > Bevor die finale Status-Meldung kommt: prüfen, ob WIRKLICH jede Aufgabe erledigt wurde —
 > besonders die in der Mitte einer langen Liste, die am ehesten untergehen.
@@ -378,7 +378,7 @@ Whisper produziert je nach Aussprache verschiedene Schreibweisen — alle werden
 - `Pre-Prompt:`, `PrePrompt:`, `Pre Prompt:`, `pre-prompt:`, `PRE-PROMPT:`
 - `Post-Prompt:`, `PostPrompt:`, `Post Prompt:`, `post-prompt:`, `POST-PROMPT:`
 
-Anfuehrungszeichen: `"..."`, `„..."` oder `"..."` — alle gueltig.
+Anfuehrungszeichen: `"..."` (gerade), `„...“` (deutsch) oder `“...”` (typografisch) — alle gueltig.
 
 ### Position im Prompt
 
