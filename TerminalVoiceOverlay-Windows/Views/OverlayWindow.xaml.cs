@@ -1060,7 +1060,7 @@ namespace TerminalVoiceOverlay.Views
                 try
                 {
                     DetachFromParent(b);
-                    b.Width = 40; b.Height = 40;            // Standard-Rundbutton-Groesse
+                    b.Width = 34; b.Height = 34;            // gleiche Groesse wie im vertikalen Modus
                     b.Margin = first ? new Thickness(0) : new Thickness(0, 4, 0, 0);
                     b.HorizontalAlignment = HorizontalAlignment.Center;
                     b.VerticalAlignment = VerticalAlignment.Center;
