@@ -344,13 +344,10 @@ fun TasksScreen(
                         // keine separate KiQuestionCard mehr in der LazyColumn.
                         de.frank.entropyreducer.presentation.briefing.BriefingPanel()
                     }
-                    item(key = "category-filter", contentType = "category-filter") {
-                        CategoryFilterRow(
-                            active = state.activeCategories,
-                            onToggle = vm::toggleCategory,
-                            onClearAll = vm::clearCategoryFilter,
-                        )
-                    }
+                    // Frank-Wunsch 2026-05-23 (Folge-Iteration): Kategorie-
+                    // Filterleiste ("Koerperlich/Mental/Zeitlich") ist hier raus —
+                    // stoert die Konzentration auf die Aufgaben. Filter-State
+                    // im ViewModel bleibt unveraendert (zeigt also alle Eintraege).
 
                     if (isEmpty) {
                         item(key = "empty", contentType = "empty") { EmptyState() }

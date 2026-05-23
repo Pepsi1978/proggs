@@ -53,27 +53,24 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Aufgaben-Tab-Akzent — orange (matched die BottomBar-Sub-Mode-Farbe des Aufgaben-Tabs
- * sowie TagebuchAccent in TagebuchScreen). Genutzt fuer den Lautsprecher-Knopf und die
- * Dropdown-Pfeile damit das Briefing visuell zum Aufgaben-Bereich gehoert.
+ * Helles Orange wie der TTS-Lautsprecher in BestJournalFrank (`FeatureAccentOrange`).
+ * Frank-Wunsch 2026-05-23 (Folge-Iteration): das vorher genutzte 0xFFEA580C wirkt rot —
+ * fuer alle Lautsprecher- und Refresh-Tints jetzt 0xFFFF8C00 (Dark Orange CSS).
  */
-private val AufgabenAccent: Color = Color(0xFFEA580C)
+private val SpeakerOrange: Color = Color(0xFFFF8C00)
 
 /**
- * Briefing-Panel — kompakte Karte mit Tagesbriefing + zwei eingeklappten Sub-Bereichen
- * (Frank-Wunsch 2026-05-23).
+ * Briefing-Panel (Frank-Wunsch 2026-05-23 + Folge-Iteration).
  *
  * Aufbau:
- *  1. Header "Briefing" mit Accent-Icon
- *  2. Briefing-Text (oder Leerhinweis)
- *  3. Mini-Toolbar: kleiner oranger Lautsprecher (Anhoeren/Stoppen) + Aktualisieren-Icon
- *  4. Dropdown "Antwort an die KI" — eingeklappt, expandiert auf Pfeil-Klick.
- *     Enthaelt das vorhandene Antwort-TextField + Whisper-Mic + Senden-Button.
- *  5. Dropdown "KI-Frage des Moments" — eingeklappt, expandiert auf Pfeil-Klick.
- *     Zieht state.kiQuestion vom TasksViewModel und nutzt dessen submit/snooze/refresh.
- *
- * Damit hat die Aufgaben-Liste deutlich mehr optisches Gewicht (frueher hat das
- * fixe Antwort-TextField + die KI-Frage-Karte mehrere Bildschirmhoehen belegt).
+ *  1. Header "Briefing" + Pfeil → klappt das gesamte Panel auf/zu (default collapsed,
+ *     damit die Aufgaben direkt unter dem Briefing-Header beginnen).
+ *  2. Bei aufgeklapptem Panel:
+ *     - Briefing-Text (oder Leerhinweis)
+ *     - Dropdown "Antwort an die KI" — eingeklappt
+ *     - Dropdown "KI-Frage des Moments" — eingeklappt
+ *     - Toolbar mit kleinem Lautsprecher (helles Orange) + Refresh (helles Orange),
+ *       linksbuendig direkt unter der KI-Frage
  */
 @Composable
 fun BriefingPanel(
@@ -86,9 +83,21 @@ fun BriefingPanel(
     val selected = PlayingKind.DAILY
     val cosmos = LocalCosmos.current
 
+    var panelExpanded by remember { mutableStateOf(false) }
+    val rootArrowRotation by
+        animateFloatAsState(targetValue = if (panelExpanded) 180f else 0f, label = "rootArrow")
+
     GlassCard(modifier = modifier.fillMaxWidth()) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // ── Klickbarer Briefing-Header (klappt das ganze Panel auf/zu) ──
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { panelExpanded = !panelExpanded }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(
                     Icons.Outlined.AutoAwesome,
                     null,
@@ -101,129 +110,138 @@ fun BriefingPanel(
                     style = MaterialTheme.typography.titleMedium,
                     color = CosmosColors.AccentPrimary,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ExpandMore,
+                    contentDescription = if (panelExpanded) "Briefing zuklappen" else "Briefing aufklappen",
+                    tint = cosmos.textSecondary,
+                    modifier = Modifier.size(22.dp).rotate(rootArrowRotation),
                 )
             }
-            Spacer(Modifier.height(10.dp))
 
-            val text = state.dailyText
-            val atMs = state.dailyAtMs
-            val regen: () -> Unit = vm::regenerateDaily
-
-            if (text.isBlank()) {
-                Text(
-                    text =
-                        "Noch kein Tagesbriefing vorhanden. Tippe auf Aktualisieren — das Genie braucht ca. 10 Sekunden.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cosmos.textSecondary,
-                )
-            } else {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cosmos.textPrimary,
-                )
-                if (atMs > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text =
-                            "Erstellt: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(atMs))}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = cosmos.textSecondary,
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = state.errorMessage != null) {
+            AnimatedVisibility(visible = panelExpanded) {
                 Column {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = state.errorMessage.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CosmosColors.Critical,
-                    )
-                }
-            }
+                    Spacer(Modifier.height(10.dp))
 
-            // ── Mini-Toolbar: kleiner Lautsprecher + Aktualisieren ──
-            // Frank-Wunsch 2026-05-23: Der grosse "Anhoeren"-Button wird zu einem
-            // kleinen orangen Lautsprecher-IconButton direkt neben dem Refresh-Icon.
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val isLoadingThis = state.loading == selected
-                val isPlayingThis = state.playing == selected
-                IconButton(
-                    onClick = {
-                        when {
-                            isPlayingThis || isLoadingThis -> vm.stop()
-                            text.isNotBlank() -> vm.speak(selected)
+                    val text = state.dailyText
+                    val atMs = state.dailyAtMs
+                    val regen: () -> Unit = vm::regenerateDaily
+
+                    if (text.isBlank()) {
+                        Text(
+                            text =
+                                "Noch kein Tagesbriefing vorhanden. Tippe auf Aktualisieren — das Genie braucht ca. 10 Sekunden.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cosmos.textSecondary,
+                        )
+                    } else {
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cosmos.textPrimary,
+                        )
+                        if (atMs > 0) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text =
+                                    "Erstellt: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(atMs))}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = cosmos.textSecondary,
+                            )
                         }
-                    },
-                    enabled = text.isNotBlank() || isPlayingThis || isLoadingThis,
-                ) {
-                    when {
-                        isLoadingThis ->
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = AufgabenAccent,
-                            )
-                        isPlayingThis ->
-                            Icon(
-                                imageVector = Icons.Outlined.Stop,
-                                contentDescription = "Vorlesen stoppen",
-                                tint = AufgabenAccent,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        else ->
-                            Icon(
-                                imageVector = Icons.Outlined.VolumeUp,
-                                contentDescription = "Briefing vorlesen",
-                                tint =
-                                    if (text.isNotBlank()) AufgabenAccent
-                                    else AufgabenAccent.copy(alpha = 0.35f),
-                                modifier = Modifier.size(22.dp),
-                            )
                     }
-                }
-                IconButton(onClick = regen) {
-                    Icon(
-                        Icons.Outlined.Refresh,
-                        contentDescription = "Briefing aktualisieren",
-                        tint = cosmos.textSecondary,
-                    )
-                }
-            }
 
-            // ── Dropdown 1: Antwort an die KI (Frank-Wunsch 2026-05-23) ──
-            if (text.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                CollapsibleSection(
-                    label = "Antwort an die KI",
-                    accent = AufgabenAccent,
-                ) {
-                    BriefingResponseInput(
-                        onSubmit = { resp -> vm.submitBriefingResponse(selected, resp) },
-                    )
-                }
-            }
+                    AnimatedVisibility(visible = state.errorMessage != null) {
+                        Column {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = state.errorMessage.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CosmosColors.Critical,
+                            )
+                        }
+                    }
 
-            // ── Dropdown 2: KI-Frage des Moments (Frank-Wunsch 2026-05-23) ──
-            tasksState.kiQuestion?.let { q ->
-                Spacer(Modifier.height(6.dp))
-                CollapsibleSection(
-                    label = "KI-Frage des Moments",
-                    accent = AufgabenAccent,
-                ) {
-                    KiQuestionContent(
-                        question = q,
-                        onSubmitAnswer = { answer -> tasksVm.submitKiQuestionAnswer(answer) },
-                        onSnooze = tasksVm::snoozeKiQuestion,
-                        onRefresh = tasksVm::refreshKiQuestion,
-                    )
+                    // ── Dropdown 1: Antwort an die KI ──
+                    if (text.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        CollapsibleSection(label = "Antwort an die KI") {
+                            BriefingResponseInput(
+                                onSubmit = { resp -> vm.submitBriefingResponse(selected, resp) },
+                            )
+                        }
+                    }
+
+                    // ── Dropdown 2: KI-Frage des Moments ──
+                    tasksState.kiQuestion?.let { q ->
+                        Spacer(Modifier.height(4.dp))
+                        CollapsibleSection(label = "KI-Frage des Moments") {
+                            KiQuestionContent(
+                                question = q,
+                                onSubmitAnswer = { answer ->
+                                    tasksVm.submitKiQuestionAnswer(answer)
+                                },
+                                onSnooze = tasksVm::snoozeKiQuestion,
+                                onRefresh = tasksVm::refreshKiQuestion,
+                            )
+                        }
+                    }
+
+                    // ── Toolbar UNTER der KI-Frage, linksbuendig ──
+                    // Frank-Wunsch 2026-05-23 (Folge-Iteration): Lautsprecher und
+                    // Aktualisieren-Symbol sitzen unten links — beide in hellem Orange
+                    // (gleich wie der TTS-Lautsprecher in BestJournalFrank).
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val isLoadingThis = state.loading == selected
+                        val isPlayingThis = state.playing == selected
+                        IconButton(
+                            onClick = {
+                                when {
+                                    isPlayingThis || isLoadingThis -> vm.stop()
+                                    text.isNotBlank() -> vm.speak(selected)
+                                }
+                            },
+                            enabled = text.isNotBlank() || isPlayingThis || isLoadingThis,
+                        ) {
+                            when {
+                                isLoadingThis ->
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = SpeakerOrange,
+                                    )
+                                isPlayingThis ->
+                                    Icon(
+                                        imageVector = Icons.Outlined.Stop,
+                                        contentDescription = "Vorlesen stoppen",
+                                        tint = SpeakerOrange,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                else ->
+                                    Icon(
+                                        imageVector = Icons.Outlined.VolumeUp,
+                                        contentDescription = "Briefing vorlesen",
+                                        tint =
+                                            if (text.isNotBlank()) SpeakerOrange
+                                            else SpeakerOrange.copy(alpha = 0.35f),
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                            }
+                        }
+                        IconButton(onClick = regen) {
+                            Icon(
+                                Icons.Outlined.Refresh,
+                                contentDescription = "Briefing aktualisieren",
+                                tint = SpeakerOrange,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -231,13 +249,12 @@ fun BriefingPanel(
 }
 
 /**
- * Wiederverwendbares Dropdown — Pfeil rechts, Klick auf Kopfzeile klappt auf/zu.
- * Default = collapsed. Per remember-State, lebt nur in der Komponente.
+ * Wiederverwendbares Dropdown — Pfeil rechts in Textfarbe (unauffaellig laut Frank-
+ * Wunsch 2026-05-23 Folge-Iteration), Klick auf Kopfzeile klappt auf/zu.
  */
 @Composable
 private fun CollapsibleSection(
     label: String,
-    accent: Color,
     initiallyExpanded: Boolean = false,
     content: @Composable () -> Unit,
 ) {
@@ -265,7 +282,7 @@ private fun CollapsibleSection(
             Icon(
                 imageVector = Icons.Outlined.ExpandMore,
                 contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
-                tint = accent,
+                tint = cosmos.textSecondary,
                 modifier = Modifier.size(20.dp).rotate(arrowRotation),
             )
         }
@@ -331,7 +348,6 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
 
 /**
  * Inhalt der KI-Frage (ohne aeussere Karte/Header — das macht CollapsibleSection).
- * Im Wesentlichen die alte KiQuestionCard ohne den Wrapper.
  */
 @Composable
 private fun KiQuestionContent(
