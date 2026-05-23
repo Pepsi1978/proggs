@@ -153,7 +153,7 @@
                  (21 + 34 Button-Reihe + 8), obwohl der Stern jetzt kleiner ist.
                  Sonst waere der Gesamt-Inhalt kuerzer als die feste Fensterhoehe
                  (612) → schwarze Luecke unten + verschobener Mic (Auto-Hide-Versatz). -->
-            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,21,0,8">
+            <Border Background="#B31F1B15" CornerRadius="34,34,0,0" Padding="0,21,0,8">
                 <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button x:Name="UltrathinkButton"
                             Style="{StaticResource CircleButton}"
@@ -185,7 +185,7 @@
                  rechts die drei Profile-Tiles (24px). Hoehe-symmetrisch:
                  Mic-Stack = 52+8+52 = 112px, Profile-Stack = 32+8+32+8+32
                  = 112px. -->
-            <Border Background="#FF1F1C15" Padding="0,6,0,6">
+            <Border Background="#B31F1C15" Padding="0,6,0,6">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -257,7 +257,7 @@
                  Grid mit fester 52px-Spalte links (Mic-Achse) und Profile-
                  Spalte rechts. Action-Buttons sind 40px breit, zentriert in
                  der 52px-Spalte → Mitte bei x=33 wie die Mics. -->
-            <Border Background="#FF19151F" Padding="0,6,0,6">
+            <Border Background="#B319151F" Padding="0,6,0,6">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="52"/>
@@ -305,7 +305,7 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 4: X (clear line) + Profile 6 -->
-            <Border Background="#FF1F1515" Padding="0,6,0,6">
+            <Border Background="#B31F1515" Padding="0,6,0,6">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="52"/>
@@ -338,7 +338,7 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 5: Copy + Paste (clipboard) + Profile 7, 8 -->
-            <Border Background="#FF151B1D" Padding="0,6,0,6">
+            <Border Background="#B3151B1D" Padding="0,6,0,6">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="52"/>
@@ -390,7 +390,7 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 6: Screenshot + Insert (capture & file paste) + Profile 9, 10 -->
-            <Border Background="#FF151B15" Padding="0,6,0,6">
+            <Border Background="#B3151B15" Padding="0,6,0,6">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="52"/>
@@ -450,7 +450,7 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 7: Enter (confirm, neutral) -->
-            <Border Background="#FF1A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
+            <Border Background="#B31A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
                 <Button x:Name="EnterButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnAutoEnter_Click"
@@ -468,7 +468,7 @@
          Die vertikale FullView bleibt davon voellig unberuehrt (Fallback). -->
     <Border x:Name="HorizontalView"
             CornerRadius="36"
-            Background="#FF1A1A1A"
+            Background="#B31A1A1A"
             BorderBrush="#FF000000"
             BorderThickness="2"
             Padding="14,12,14,12"
@@ -487,7 +487,7 @@
     <Border x:Name="CollapsedView"
             Width="96" Height="64"
             CornerRadius="28"
-            Background="#FF1A1A1A"
+            Background="#B31A1A1A"
             BorderBrush="#FF000000"
             BorderThickness="2"
             VerticalAlignment="Top"
@@ -497,10 +497,10 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Click="CollapsedMicButton_Click"
-                Background="#FF2E7D32"
+                Background="#FFF9A825"
                 ToolTip="Aufnahme">
             <Viewbox Width="22" Height="22">
-                <Path Fill="#FFFFFFFF" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+                <Path Fill="#FF1A1A1A" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
             </Viewbox>
         </Button>
     </Border>

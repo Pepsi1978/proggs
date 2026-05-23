@@ -895,19 +895,33 @@ namespace TerminalVoiceOverlay.Views
             // rechts, daher: Enter ganz links, Stern ganz rechts. INNERHALB jeder
             // Gruppe ist die Reihenfolge ebenfalls gespiegelt (das vertikal obere
             // Symbol erscheint rechts) — daher die Arrays in umgekehrter Reihenfolge.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null));
-            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }));
-            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }));
-            HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }));
-            HBar.Children.Add(MakeHGroup(new[] { GButton, WButton }, new[] { Profile5Button, Profile4Button }));
-            HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }));
-            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null));
+            // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
+            // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
+            // vertikalen Layout, nur um 90° gedreht.
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null, "#B31A1A1A"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }, "#B3151B1D"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }, "#B31F1515"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { GButton, WButton }, new[] { Profile5Button, Profile4Button }, "#B319151F"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15"));
+            HBar.Children.Add(MakeVDivider());
+            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null, "#B31F1B15"));
             OLog("HBUILD done");
         }
 
-        private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles)
+        // Senkrechter Trennstrich zwischen den horizontalen Sektionen — das
+        // Gegenstueck zu den waagerechten Strichen im vertikalen Layout.
+        private static Border MakeVDivider() =>
+            new Border { Width = 1, Background = Brush("#FF000000"), VerticalAlignment = VerticalAlignment.Stretch };
+
+        private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles, string bgHex)
         {
-            var col = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(5, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
+            var col = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
             var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
             foreach (var b in symbols)
             {
@@ -925,7 +939,7 @@ namespace TerminalVoiceOverlay.Views
                 }
                 col.Children.Add(bot);
             }
-            return col;
+            return new Border { Background = Brush(bgHex), Padding = new Thickness(8, 0, 8, 0), Child = col };
         }
 
         private void RestoreVerticalLayout()
@@ -975,6 +989,7 @@ namespace TerminalVoiceOverlay.Views
                 RestoreVerticalLayout();
                 HorizontalView.Visibility = Visibility.Collapsed;
                 FullView.Visibility       = Visibility.Visible;
+                FullView.UpdateLayout(); // erzwingt frisches Re-Layout der Sektionen
                 _isHorizontal = false;
             }
             ReassertTopmostIfVisible();
