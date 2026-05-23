@@ -1609,6 +1609,12 @@ private fun BiomarkerCardForId(
                     history = state.history,
                 )
 
+            BiomarkerCardId.SLEEP_REM_GRAPH ->
+                RemSleepGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                )
+
             BiomarkerCardId.SLEEP_WAKE_GRAPH ->
                 WakeTimeGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,

@@ -550,6 +550,7 @@ internal fun cardIdsForMetricKey(metricKey: String): List<String> = when (metric
         listOf(BiomarkerCardId.SLEEP_PERFORMANCE, BiomarkerCardId.MINI_SLEEP_PERFORMANCE)
     MetricKey.VO2MAX -> listOf(BiomarkerCardId.MINI_VO2MAX)
     MetricKey.SLEEP_DEEP -> listOf(BiomarkerCardId.SLEEP_DEEP_GRAPH)
+    MetricKey.SLEEP_REM -> listOf(BiomarkerCardId.SLEEP_REM_GRAPH)
     MetricKey.SLEEP_AWAKE -> listOf(BiomarkerCardId.SLEEP_WAKE_GRAPH)
     MetricKey.RECOVERY -> listOf(BiomarkerCardId.GESAMTERHOLUNG, BiomarkerCardId.RECOVERY_GRAPH)
     MetricKey.SLEEP_RESTORATIVE -> listOf(BiomarkerCardId.SLEEP_RESTORATIVE)

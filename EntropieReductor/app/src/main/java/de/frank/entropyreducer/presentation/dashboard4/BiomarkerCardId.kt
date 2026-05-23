@@ -70,6 +70,10 @@ object BiomarkerCardId {
     // Frank-Wunsch 2026-05-13: Tiefschlaf-Verlauf als prozentualer Balken-Graph
     // direkt unter den Schlafphasen. Tap → Bottom-Sheet mit Historie + Vortag-Delta.
     const val SLEEP_DEEP_GRAPH = "sleep_deep_graph"
+    // Frank-Wunsch 2026-05-23: REM-Schlaf-Verlauf — analog zu SLEEP_DEEP_GRAPH,
+    // mit Ampel (0-15% rot, 15-20% gelb, >20% gruen). Liegt zwischen Tiefschlaf-
+    // und Wachzeit-Verlauf.
+    const val SLEEP_REM_GRAPH = "sleep_rem_graph"
     // Frank-Wunsch 2026-05-17: Wachzeit-Verlauf — analog zu SLEEP_DEEP_GRAPH,
     // aber mit invertierter Ampel (wenig Wachzeit = gruen). Direkt unter
     // dem Tiefschlaf-Verlauf platziert.
@@ -154,6 +158,7 @@ object BiomarkerCardId {
             SLEEP_TOTAL,
             SLEEP_STAGES,
             SLEEP_DEEP_GRAPH,
+            SLEEP_REM_GRAPH,
             SLEEP_WAKE_GRAPH,
             SLEEP_RESTORATIVE,
             SLEEP_EFFICIENCY,
