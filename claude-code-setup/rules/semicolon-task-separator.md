@@ -188,14 +188,12 @@ Jede einzelne Aufgabe durchläuft denselben kleinen Kreislauf, bevor die nächst
 7. → nächste Aufgabe
 ```
 
-**Reihenfolge-Hinweis:** Abgehakt wird erst NACH committen+pushen — eine Aufgabe gilt erst
-dann als wirklich erledigt, wenn sie sicher im Repo liegt. (Bei reinen Erklärungs- oder
-Frage-Aufgaben ohne Code-Änderung entfallen die Zyklus-Schritte "committen+pushen" und
-"Marker ausgeben" — dann wird direkt nach der Antwort abgehakt.)
-
-**Echtzeit-Abhaken (Punkt A):** Jede Aufgabe wird SOFORT als erledigt markiert, sobald
-sie fertig und committed ist — niemals erst am Ende alle auf einmal. So sieht der Benutzer
-live, wo der Vorgang gerade steht, und nichts geht in der Mitte einer langen Liste unter.
+**Echtzeit-Abhaken (Punkt A):** Abgehakt wird SOFORT pro Aufgabe — aber erst NACH
+committen+pushen (eine Aufgabe gilt erst als erledigt, wenn sie sicher im Repo liegt),
+niemals erst am Ende gesammelt. So sieht der Benutzer live, wo der Vorgang steht, und
+nichts geht in der Mitte einer langen Liste unter. (Bei reinen Erklärungs-/Frage-Aufgaben
+ohne Code-Änderung gibt es kein Commit und keinen Marker — dann wird direkt nach der
+Antwort abgehakt.)
 
 **Commit+Push pro Aufgabe:** Jede abgeschlossene Aufgabe wird committed und gepusht, bevor
 die nächste beginnt. Das sind die Rettungspunkte. (Der BUILD kommt erst später — siehe Schritt 5.)
