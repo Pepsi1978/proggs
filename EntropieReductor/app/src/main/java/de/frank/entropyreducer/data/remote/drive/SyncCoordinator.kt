@@ -343,19 +343,45 @@ constructor(
             // (z.B. nach einem Bulk-Import) fangen wir den OOM ab und melden
             // SyncStatus.Failed — die App crasht NICHT mehr in der Endlos-
             // schleife wenn ein einziger Upload-Versuch fehlschlaegt.
+            // Performance 2026-05-23 (Vorschlag 2, vom Benutzer freigegeben): Das Haupt-Backup nur
+            // hochladen wenn sich der INHALT geaendert hat — analog zum Workouts-Backup. Der
+            // Fingerprint ist der inhaltsbasierte hashCode des Payloads, aber mit exportedAt = 0:
+            // der Zeitstempel aendert sich sonst bei jedem Lauf und wuerde den Hash immer
+            // verschieden machen. BackupPayload ist eine data class, daher deckt hashCode() alle
+            // Inhalts-Listen ab.
+            //
+            // Safe-Degradation (Direktive #3): sollte der Hash aus irgendeinem Grund instabil sein
+            // (ein verschachtelter Typ ohne content-hashCode, eine Query ohne ORDER BY), flackert
+            // er nur -> es wird wie bisher IMMER hochgeladen. Es kann nie FAELSCHLICH geskippt
+            // werden ohne dass beim naechsten echten Inhaltswechsel wieder hochgeladen wird
+            // (requestSync laeuft bei jeder Mutation + bei jedem Start).
+            val mainFingerprint = payload.copy(exportedAt = 0L).hashCode()
+            val lastMainFingerprint = appSettingsLazy.get().mainBackupFingerprintFlow.first()
             val mainOk =
-                try {
-                    val text = json.encodeToString(BackupPayload.serializer(), payload)
-                    val result = backupManager.upload(text)
-                    result.isSuccess
-                } catch (oom: OutOfMemoryError) {
-                    System.gc()
-                    _status.value = SyncStatus.Failed("Backup zu gross fuer Upload (OOM)")
-                    false
-                } catch (t: Throwable) {
-                    if (t is kotlinx.coroutines.CancellationException) throw t
-                    _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
-                    false
+                if (mainFingerprint == lastMainFingerprint && lastMainFingerprint != 0) {
+                    // Inhalt unveraendert -> teuren Serialize+Upload des Haupt-Backups ueberspringen.
+                    // mainOk = true, damit Workouts-/Health-Backup (eigene Skip-Logik) weiterlaufen.
+                    _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                    true
+                } else {
+                    try {
+                        val text = json.encodeToString(BackupPayload.serializer(), payload)
+                        val result = backupManager.upload(text)
+                        if (result.isSuccess) {
+                            // Fingerprint erst NACH erfolgreichem Upload speichern, damit ein
+                            // fehlgeschlagener Upload beim naechsten Mal erneut versucht wird.
+                            appSettingsLazy.get().setMainBackupFingerprint(mainFingerprint)
+                        }
+                        result.isSuccess
+                    } catch (oom: OutOfMemoryError) {
+                        System.gc()
+                        _status.value = SyncStatus.Failed("Backup zu gross fuer Upload (OOM)")
+                        false
+                    } catch (t: Throwable) {
+                        if (t is kotlinx.coroutines.CancellationException) throw t
+                        _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
+                        false
+                    }
                 }
 
             // Frank-Wunsch 2026-05-19: Sport-Trainings in EIGENER Drive-Datei

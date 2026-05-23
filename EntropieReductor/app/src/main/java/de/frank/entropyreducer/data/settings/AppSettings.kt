@@ -50,6 +50,10 @@ class AppSettings @Inject constructor(
     /** Fingerprint des zuletzt hochgeladenen Workouts-Backups (Frank-Wunsch 2026-05-23) —
      *  damit das 6-MB-Backup nur hochgeladen wird wenn sich Trainings geaendert haben. 0 = nie. */
     val workoutsBackupFingerprintFlow: Flow<Int> = ds.data.map { it[KEY_WORKOUTS_BACKUP_FP] ?: 0 }
+    /** Fingerprint des zuletzt hochgeladenen Haupt-Backups (Performance 2026-05-23, Vorschlag 2) —
+     *  inhaltsbasierter Hash des Payloads OHNE exportedAt. Aendert er sich nicht, wird der
+     *  Haupt-Upload uebersprungen. 0 = noch nie hochgeladen. */
+    val mainBackupFingerprintFlow: Flow<Int> = ds.data.map { it[KEY_MAIN_BACKUP_FP] ?: 0 }
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
@@ -200,6 +204,7 @@ class AppSettings @Inject constructor(
     suspend fun setLastAmazfitSync(value: Long) = ds.edit { it[KEY_LAST_AMAZFIT_SYNC] = value }
     suspend fun setLastHealthConnectSync(value: Long) = ds.edit { it[KEY_LAST_HEALTH_CONNECT_SYNC] = value }
     suspend fun setWorkoutsBackupFingerprint(value: Int) = ds.edit { it[KEY_WORKOUTS_BACKUP_FP] = value }
+    suspend fun setMainBackupFingerprint(value: Int) = ds.edit { it[KEY_MAIN_BACKUP_FP] = value }
     suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
 
     /**
@@ -304,6 +309,7 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
         private val KEY_WORKOUTS_BACKUP_FP = intPreferencesKey("workouts_backup_fingerprint")
+        private val KEY_MAIN_BACKUP_FP = intPreferencesKey("main_backup_fingerprint")
         private val KEY_LAST_REFRESH_FOOTER = stringPreferencesKey("last_refresh_footer_text")
         private val KEY_LAST_REFRESH_FOOTER_AT = longPreferencesKey("last_refresh_footer_at_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
