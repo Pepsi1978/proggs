@@ -50,6 +50,14 @@
                              BorderBrush="#FF454545" BorderThickness="1"
                              Padding="8,6" FontSize="13" Margin="0,0,0,16"/>
 
+                    <TextBlock Text="Overlay-Verhalten" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,8"/>
+                    <CheckBox x:Name="AutoHideCheck"
+                              Content="Automatisch einklappen (nur Mic-Button anzeigen, bei Maus-Hover ausklappen)"
+                              Foreground="#FFCCCCCC" FontSize="12"
+                              Margin="0,0,0,4"/>
+                    <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="Aus = das Overlay bleibt immer voll sichtbar (wie frueher). Aenderung wirkt nach dem naechsten Overlay-Neustart."/>
+
                     <TextBlock Text="Google Drive Backup" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,8"/>
                     <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"
                                Text="Lege in console.cloud.google.com ein Desktop-OAuth-Client an und fuege die Client ID und Secret hier ein. Dann 'Verbinden' klicken, Google-Konto auswaehlen, fertig."/>

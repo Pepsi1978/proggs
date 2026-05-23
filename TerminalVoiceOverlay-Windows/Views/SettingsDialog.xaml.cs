@@ -13,7 +13,8 @@ namespace TerminalVoiceOverlay.Views;
 public sealed record SettingsEditResult(
     string? GroqApiKey,
     string? GeminiApiKey,
-    string SeparatorTemplate);
+    string SeparatorTemplate,
+    bool AutoHide);
 
 public partial class SettingsDialog : Window
 {
@@ -31,6 +32,7 @@ public partial class SettingsDialog : Window
         GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
         SeparatorBox.Text = current.SeparatorTemplate;
+        AutoHideCheck.IsChecked = current.AutoHide;
 
         // Google OAuth credentials live in $HOME/SK/PromptBoard/.env per
         // secrets-in-sk-folder.md — they never enter the Drive backup JSON.
@@ -53,7 +55,8 @@ public partial class SettingsDialog : Window
             Result = new SettingsEditResult(
                 NullIfBlank(GroqKeyBox.Text),
                 NullIfBlank(GeminiKeyBox.Text),
-                SeparatorBox.Text ?? " ; ");
+                SeparatorBox.Text ?? " ; ",
+                AutoHideCheck.IsChecked == true);
             Close();
         };
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();

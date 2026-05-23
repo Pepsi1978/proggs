@@ -2495,6 +2495,7 @@ public partial class PromptBoardPanel : Window
             latest.GroqApiKey = result.GroqApiKey;
             latest.GeminiApiKey = result.GeminiApiKey;
             latest.SeparatorTemplate = result.SeparatorTemplate;
+            latest.AutoHide = result.AutoHide;
             await repo.UpdateAsync(latest);
         }
         catch (Exception ex)
