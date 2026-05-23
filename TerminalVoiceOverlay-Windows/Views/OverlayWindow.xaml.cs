@@ -2686,9 +2686,10 @@ namespace TerminalVoiceOverlay.Views
             if (_isHorizontal)
             {
                 const double boardHeight = 360;
+                double iw = double.IsNaN(input.Width) || input.Width < 1 ? input.ActualWidth : input.Width;
                 input.Height = boardHeight;
-                input.Top    = Top - boardHeight - 4; // oberhalb der Leiste, wo das Board war
-                input.Left   = Left;                  // linksbuendig mit der Leiste
+                input.Top    = Top - boardHeight - 4;      // oberhalb der Leiste, wo das Board war
+                input.Left   = Left + ActualWidth - iw;    // RECHTE Kante buendig mit der Leiste
             }
             else
             {
