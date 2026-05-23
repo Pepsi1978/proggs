@@ -40,7 +40,7 @@ Claude MUSS diese Trennung erkennen und JEDE der Teilaufgaben erledigen, ohne ei
 3. ANZEIGEN        →  ab 2 Aufgaben: Übersicht + TaskCreate-Liste sichtbar machen
         ↓
 4. ABARBEITEN      →  jede Aufgabe SICHTBAR, eine nach der anderen, KEINE Subagents.
-   (pro Aufgabe)       Pro Aufgabe: in_progress → umsetzen → abhaken → committen+pushen
+   (pro Aufgabe)       Pro Aufgabe: in_progress → umsetzen → committen+pushen → Marker → abhaken
         ↓
 5. BAUEN           →  NUR EINMAL nach der letzten Aufgabe: Build erzeugen
    (einmal am Ende)
@@ -52,19 +52,32 @@ Claude MUSS diese Trennung erkennen und JEDE der Teilaufgaben erledigen, ohne ei
    (End-Check)         Untergegangenes nachholen, dann erst Status-Meldung
 ```
 
-**Die Kette darf nie abreißen.** Wenn Schritt 1 ausgelöst wurde, werden 2–7 garantiert
-durchlaufen. Kein Schritt ist optional (außer wo unten ausdrücklich vermerkt).
+**Die Kette darf nie abreißen.** Wenn Schritt 1 ausgelöst wurde, werden die Schritte
+garantiert durchlaufen — kein Schritt wird vergessen.
+
+**Wann Schritt 5+6 (Bauen + Installieren) greifen:** NUR wenn die Aufgaben eine baubare,
+installierbare App betreffen (z.B. Android). Bei reinen Regel-, Doku-, Config-, Skript-
+oder Web-Aufgaben gibt es nichts zu bauen — dann werden Schritt 5+6 übersprungen und es
+geht direkt von Schritt 4 zu Schritt 7. Das ist die einzige erlaubte Auslassung. Alle
+anderen Schritte (1–4 und 7) laufen IMMER.
 
 ---
 
 ## Schritt 1 — ERKENNEN
 
-| Muster | Bedeutung |
-|--------|-----------|
-| Kein ` ; ` im Prompt | Eine einzelne Aufgabe — normal bearbeiten |
-| Ein ` ; ` im Prompt | Zwei Aufgaben — beide nacheinander abarbeiten |
-| N-mal ` ; ` im Prompt | N+1 Aufgaben — alle nacheinander abarbeiten |
-| ` ; ` am Ende des Prompts | Der Nachsatz ist leer — diesen letzten "leeren" Teil ignorieren |
+> **Faustregel:** Anzahl Aufgaben = Anzahl der NICHT-LEEREN Teile nach dem Split. Ein
+> abschließendes ` ; ` (ohne Text danach) erzeugt nur einen leeren Teil und zählt NICHT mit.
+
+| Muster | Anzahl Aufgaben |
+|--------|-----------------|
+| Kein ` ; ` im Prompt | 1 Aufgabe — normal bearbeiten |
+| Ein ` ; ` **zwischen** zwei Texten | 2 Aufgaben — beide nacheinander abarbeiten |
+| Ein ` ; ` nur **am Ende** (kein Text danach) | 1 Aufgabe — der leere Teil zählt nicht |
+| N Trenner **zwischen** Texten | N+1 Aufgaben |
+| N Trenner zwischen Texten **plus** ` ; ` am Ende | N+1 Aufgaben (das End-` ; ` zählt nicht extra) |
+
+Beispiel: `Mach X ;` = **1 Aufgabe** (ein End-Trenner). `Mach X ; Mach Y ;` = **2 Aufgaben**
+(ein Trenner dazwischen, einer am Ende der nicht zählt).
 
 **Wichtig:** Die Zeichenfolge muss EXAKT `Leerzeichen + Semikolon + Leerzeichen` sein.
 Semikola ohne umgebende Leerzeichen (z.B. in Code-Snippets, TypeScript-Statements,
@@ -169,11 +182,16 @@ Jede einzelne Aufgabe durchläuft denselben kleinen Kreislauf, bevor die nächst
 1. Task auf in_progress setzen (sichtbar)
 2. Kurz ansagen, was jetzt passiert
 3. Aufgabe umsetzen (Code-Änderung, sichtbar)
-4. Task als completed abhaken (Echtzeit — nicht am Ende stapeln)
-5. committen + pushen (Code ist sicher im Repo, bevor die nächste Aufgabe startet)
-6. SICHTBAREN Commit-Marker ausgeben (siehe unten) — damit der Benutzer den Rettungspunkt sieht
+4. committen + pushen (Code ist sicher im Repo, bevor die nächste Aufgabe startet)
+5. SICHTBAREN Commit-Marker ausgeben (siehe unten) — damit der Benutzer den Rettungspunkt sieht
+6. Task erst JETZT als completed abhaken (Echtzeit — erst wenn committed+gepusht, nicht am Ende stapeln)
 7. → nächste Aufgabe
 ```
+
+**Reihenfolge-Hinweis:** Abgehakt wird erst NACH committen+pushen — eine Aufgabe gilt erst
+dann als wirklich erledigt, wenn sie sicher im Repo liegt. (Bei reinen Erklärungs- oder
+Frage-Aufgaben ohne Code-Änderung entfallen die Zyklus-Schritte "committen+pushen" und
+"Marker ausgeben" — dann wird direkt nach der Antwort abgehakt.)
 
 **Echtzeit-Abhaken (Punkt A):** Jede Aufgabe wird SOFORT als erledigt markiert, sobald
 sie fertig und committed ist — niemals erst am Ende alle auf einmal. So sieht der Benutzer
@@ -222,8 +240,14 @@ damit der Benutzer auf einen Blick sieht: "An diesem Punkt wurde committed und g
 | `— committed und gepusht` | Wörtlich am Ende der Marker-Zeile |
 | Linie darunter | Genau 80 × `━`, alleine in der Zeile |
 
-**Wann:** Nach jeder einzelnen Aufgabe, sofort nach ihrem Commit+Push — nicht gesammelt am Ende.
-Der Marker erscheint mitten in der Abarbeitung, zwischen den Aufgaben, als sichtbarer Rettungspunkt.
+**Wann:** Nach jeder Aufgabe, DIE ETWAS COMMITTET, sofort nach ihrem Commit+Push — nicht
+gesammelt am Ende. Der Marker erscheint mitten in der Abarbeitung, zwischen den Aufgaben,
+als sichtbarer Rettungspunkt.
+
+**Wann NICHT:** Reine Erklärungs-, Frage- oder Recherche-Aufgaben ohne Datei-Änderung haben
+keinen Commit — und damit auch keinen Marker. Sie werden im Text beantwortet und abgehakt.
+In der finalen ERLEDIGTE-AUFGABEN-Box erscheinen sie trotzdem (mit Status-Symbol, siehe
+`task-completion-summary.md`).
 
 **Beispiel im Ablauf:**
 
@@ -280,10 +304,12 @@ Standard ist aber: ein Build am Ende.
 Pflicht-Ablauf am Ende:
 1. **Original-Liste durchgehen** — jede der N erkannten Aufgaben einzeln gegen das Ergebnis abgleichen.
 2. **Untergegangenes finden** — ist eine Aufgabe (z.B. Nummer 7 von 14) übersprungen oder nur halb erledigt?
-3. **Nachholen** — falls ja: die offene Aufgabe JETZT noch fertig machen (umsetzen → abhaken → committen+pushen), bevor abgeschlossen wird.
-4. **Erst dann** die Status-Meldung und die Abschluss-Boxen ausgeben.
+3. **Nachholen** — falls ja: die offene Aufgabe JETZT noch fertig machen (umsetzen → committen+pushen → abhaken), bevor abgeschlossen wird.
+4. **Erst dann** die Status-Meldung und die Abschluss-Boxen ausgeben (Boxen gemäß
+   `task-completion-summary.md` — wenn ausschließlich Fragen beantwortet und gar nichts
+   umgesetzt/committet wurde, entfallen die Boxen).
 
-Der TaskCreate-Liste hilft hier: stehen alle Tasks auf `completed`? Wenn nicht → der Vorgang ist nicht fertig.
+Die TaskCreate-Liste hilft hier: stehen alle Tasks auf `completed`? Wenn nicht → der Vorgang ist nicht fertig.
 
 ---
 
@@ -329,8 +355,8 @@ in Schritt 5/6 (Build+Install am Ende), nicht als eigener Zwischen-Build.
 
 **Ablauf:** Erkennen (12) → Sortieren (zusammengehörige UI-Änderungen gruppieren, Abhängigkeiten
 prüfen) → TaskCreate-Liste mit 12 Einträgen → jede Aufgabe sichtbar nacheinander umsetzen +
-abhaken + committen+pushen → nach der 12. Aufgabe EINMAL bauen → EINMAL aufs Handy installieren →
-verifizieren dass alle 12 wirklich erledigt sind → Status-Meldung.
+committen+pushen + Marker + abhaken → nach der 12. Aufgabe EINMAL bauen → EINMAL aufs Handy
+installieren → verifizieren dass alle 12 wirklich erledigt sind → Status-Meldung.
 
 ---
 
