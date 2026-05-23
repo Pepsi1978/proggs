@@ -926,7 +926,7 @@ namespace TerminalVoiceOverlay.Views
                 if (_inputSoloDock && _promptPanel?.InputWindow is { } soloInput)
                 {
                     if (!soloInput.IsVisible) soloInput.Show();
-                    soloInput.DockToOverlay(this);
+                    PositionSoloInput();
                 }
                 else
                 {
@@ -2675,6 +2675,27 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
+        // Positioniert das Eingabefenster im Solo-Modus DA, wo das Board war:
+        // vertikal links neben dem Pillar (Pillar-Hoehe), horizontal OBERHALB der
+        // Leiste (Board-Hoehe). Eigene (normale) Eingabe-Breite bleibt erhalten,
+        // damit man normal hineintippen kann — kein duenner Streifen am Pillar.
+        private void PositionSoloInput()
+        {
+            var input = _promptPanel?.InputWindow;
+            if (input is null) return;
+            if (_isHorizontal)
+            {
+                const double boardHeight = 360;
+                input.Height = boardHeight;
+                input.Top    = Top - boardHeight - 4; // oberhalb der Leiste, wo das Board war
+                input.Left   = Left;                  // linksbuendig mit der Leiste
+            }
+            else
+            {
+                input.DockToOverlay(this); // vertikal: links vom Pillar = wo das Board war
+            }
+        }
+
         /// <summary>
         /// Setzt den Solo-Andock-Modus um (Stern-Klick im Eingabefenster).
         /// <list type="bullet">
@@ -2709,7 +2730,7 @@ namespace TerminalVoiceOverlay.Views
                 // Subscriptions) erhalten bleiben.
                 _promptPanel.Hide();
                 _inputSoloDock = true;
-                input.DockToOverlay(this);
+                PositionSoloInput();
                 input.SetSoloDockState(true);
             }
             else
