@@ -68,6 +68,10 @@ class OAuthViewModel @Inject constructor(
     private val _state = MutableStateFlow(loadInitial())
     val state: StateFlow<OAuthUiState> = _state.asStateFlow()
 
+    /** Reentry-Schutz fuer den "Alles neu laden"-Knopf — verhindert parallele Voll-Syncs. */
+    @Volatile
+    private var reloadInProgress = false
+
     init {
         // Direktive 3 — UI-Konsistenz: AuthState kann "isAuthorized=true" sagen
         // selbst wenn der Refresh seit Stunden invalid_client wirft. Ein einmaliger
@@ -99,31 +103,38 @@ class OAuthViewModel @Inject constructor(
      * damit ein Fehler bei einer Quelle die anderen nicht stoppt.
      */
     fun reloadAllData() {
+        // Reentry-Schutz: mehrfaches Knopf-Druecken darf keine parallelen Voll-Syncs starten.
+        if (reloadInProgress) return
+        reloadInProgress = true
         viewModelScope.launch {
-            _state.update {
-                it.copy(message = "Lade alle Daten neu — das kann einen Moment dauern …")
-            }
-            // Zeitstempel zuruecksetzen -> die Sync-Methoden laden voll (lastSync == 0).
-            secrets.stravaLastSyncEpochMs = 0L
-            secrets.ouraLastSyncEpochMs = 0L
-            runCatching {
-                appSettings.setLastWhoopSync(0L)
-                appSettings.setLastOuraSync(0L)
-                appSettings.setLastHealthConnectSync(0L)
-                appSettings.setLastAmazfitSync(0L)
-            }
-            // Voll synchronisieren (gleiche Reihenfolge wie der App-Start).
-            runCatching { healthConnectRepository.syncToCache() }
-            runCatching {
-                if (oauth.loadWhoopAuthState().isAuthorized) whoopRepo.syncLastDays(365)
-            }
-            runCatching { if (ouraRepo.isTokenConfigured()) ouraRepo.syncLastDays(365) }
-            runCatching { amazfitRepo.mergeFromStrava(days = 60) }
-            _state.update {
-                it.copy(
-                    message = "Alle Daten wurden neu geladen.",
-                    stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
-                )
+            try {
+                _state.update {
+                    it.copy(message = "Lade alle Daten neu — das kann einen Moment dauern …")
+                }
+                // Zeitstempel zuruecksetzen -> die Sync-Methoden laden voll (lastSync == 0).
+                secrets.stravaLastSyncEpochMs = 0L
+                secrets.ouraLastSyncEpochMs = 0L
+                runCatching {
+                    appSettings.setLastWhoopSync(0L)
+                    appSettings.setLastOuraSync(0L)
+                    appSettings.setLastHealthConnectSync(0L)
+                    appSettings.setLastAmazfitSync(0L)
+                }
+                // Voll synchronisieren (gleiche Reihenfolge wie der App-Start).
+                runCatching { healthConnectRepository.syncToCache() }
+                runCatching {
+                    if (oauth.loadWhoopAuthState().isAuthorized) whoopRepo.syncLastDays(365)
+                }
+                runCatching { if (ouraRepo.isTokenConfigured()) ouraRepo.syncLastDays(365) }
+                runCatching { amazfitRepo.mergeFromStrava(days = 60) }
+                _state.update {
+                    it.copy(
+                        message = "Alle Daten wurden neu geladen.",
+                        stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
+                    )
+                }
+            } finally {
+                reloadInProgress = false
             }
         }
     }

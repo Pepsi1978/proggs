@@ -13,6 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 /**
@@ -48,6 +50,11 @@ constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val insertsSincePrune = AtomicInteger(0)
+
+    // Frank-Debugging 2026-05-23: serialisiert die JSONL-Datei-Schreibzugriffe. Mehrere Syncs
+    // loggen parallel (applicationScope/Dispatchers.IO) — ohne diesen Mutex koennten zwei
+    // gleichzeitige appendText-Aufrufe Zeilen verschraenken und die JSONL-Datei beschaedigen.
+    private val fileMutex = Mutex()
 
     // java.time-Formatter sind thread-safe (im Gegensatz zu SimpleDateFormat) — wichtig, weil
     // mehrere Log-Coroutinen parallel im ApplicationScope (Dispatchers.IO) laufen koennen.
@@ -120,8 +127,11 @@ constructor(
                     Log.w("DiagnosticLogger", "DB-Insert fehlgeschlagen (ignoriert)", it)
                 }
 
-            // Schicht 3: JSONL-Tagesdatei (von Claude per adb pull auslesbar).
-            runCatching { appendToDailyFile(area, level, message, details, timestampMs) }
+            // Schicht 3: JSONL-Tagesdatei (von Claude per adb pull auslesbar). Datei-Zugriffe
+            // ueber fileMutex serialisiert, damit parallele Logs keine Zeilen verschraenken.
+            runCatching {
+                fileMutex.withLock { appendToDailyFile(area, level, message, details, timestampMs) }
+            }
                 .onFailure { Log.w("DiagnosticLogger", "Datei-Append fehlgeschlagen (ignoriert)", it) }
         }
     }
@@ -157,7 +167,7 @@ constructor(
             val cutoff = System.currentTimeMillis() - MAX_AGE_MS
             dao.deleteOlderThan(cutoff)
             dao.trimToMaxCount(MAX_ENTRIES)
-            pruneOldFiles(cutoff)
+            fileMutex.withLock { pruneOldFiles(cutoff) }
         }
     }
 
