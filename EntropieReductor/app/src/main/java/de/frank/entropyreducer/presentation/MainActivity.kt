@@ -32,6 +32,8 @@ import de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus
 import de.frank.entropyreducer.presentation.widget.WidgetIntents
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -302,25 +304,58 @@ class StartupViewModel @Inject constructor(
                 // 5. Kalender: laedt am meisten (Jahre im Voraus), am wenigsten zeitkritisch.
                 // Jeweils nur wenn verbunden; Strava prueft die Auth intern selbst. Die Zaehler
                 // werden fuer den Footer gesammelt.
-                val hcCount = runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0)
-                val whoopCount =
-                    if (oauth.loadWhoopAuthState().isAuthorized) {
-                        whoop.syncLastDays(365).getOrDefault(0)
-                    } else {
-                        0
-                    }
-                val ouraCount =
-                    if (oura.isTokenConfigured()) {
-                        oura.syncLastDays(365).getOrNull()?.values?.sum() ?: 0
-                    } else {
-                        0
-                    }
-                val stravaCount =
-                    runCatching { amazfit.mergeFromStrava(days = 30) }
-                        .getOrDefault(-1)
-                        .coerceAtLeast(0)
-                if (secrets.calendarAccountEmail != null) {
-                    runCatching { calendar.syncDefaultWindow() }
+                // Performance 2026-05-23 (Vorschlag 3, vom Benutzer freigegeben): Die einzelnen
+                // Daten-APIs sind voneinander unabhaengig (verschiedene Hosts, je eigenes
+                // Rate-Limit, schreiben in verschiedene Tabellen) und liefen bisher streng
+                // nacheinander. Sie laufen jetzt PARALLEL (async/coroutineScope) — der Start-Sync
+                // dauert damit nur noch so lange wie der LANGSAMSTE Einzel-Sync statt deren Summe.
+                //
+                // Bewusst NICHT veraendert: Das Drive-Restore+Backup oben bleibt davor UND
+                // blockierend — die Historie muss wiederhergestellt/gesichert sein BEVOR neue
+                // Daten dazukommen (das war der einzige Reihenfolge-Zwang). Strava bringt seinen
+                // eigenen Rate-Limit-Cooldown mit und ist daher gefahrlos parallel. Jeder Block
+                // behaelt seine eigene Fehlerbehandlung (runCatching/getOrDefault) — ein
+                // Einzel-Fehler reisst die anderen nicht mit.
+                var hcCount = 0
+                var whoopCount = 0
+                var ouraCount = 0
+                var stravaCount = 0
+                coroutineScope {
+                    val hcDeferred =
+                        async { runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0) }
+                    val whoopDeferred =
+                        async {
+                            if (oauth.loadWhoopAuthState().isAuthorized) {
+                                whoop.syncLastDays(365).getOrDefault(0)
+                            } else {
+                                0
+                            }
+                        }
+                    val ouraDeferred =
+                        async {
+                            if (oura.isTokenConfigured()) {
+                                oura.syncLastDays(365).getOrNull()?.values?.sum() ?: 0
+                            } else {
+                                0
+                            }
+                        }
+                    val stravaDeferred =
+                        async {
+                            runCatching { amazfit.mergeFromStrava(days = 30) }
+                                .getOrDefault(-1)
+                                .coerceAtLeast(0)
+                        }
+                    val calendarDeferred =
+                        async {
+                            if (secrets.calendarAccountEmail != null) {
+                                runCatching { calendar.syncDefaultWindow() }
+                            }
+                        }
+                    hcCount = hcDeferred.await()
+                    whoopCount = whoopDeferred.await()
+                    ouraCount = ouraDeferred.await()
+                    stravaCount = stravaDeferred.await()
+                    calendarDeferred.await()
                 }
 
                 // Frank-Bugfix 2026-05-23: Footer-Zeitstempel setzen — genau wie der manuelle
