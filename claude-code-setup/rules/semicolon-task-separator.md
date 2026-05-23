@@ -21,9 +21,43 @@ Claude MUSS diese Trennung erkennen und JEDE der Teilaufgaben erledigen, ohne ei
 
 ---
 
-## Die Regel
+## DER MULTI-TASK-VORGANG (durchgängige Pipeline — KEINE Fragmentierung)
 
-### Erkennung
+> **Das ist das Herzstück dieser Regel.** Aufgabenerkennung ist nur der erste Schritt
+> einer durchgehenden Kette. Alle Folgeschritte hängen FEST an der Erkennung dran —
+> sie liegen NICHT in irgendwelchen Memories und werden NICHT "teilweise" genutzt.
+> Sobald ein ` ; `-Prompt erkannt wird, läuft der gesamte Vorgang als EIN
+> zusammenhängender Prozess ab. Die Brücke zum jeweils nächsten Schritt ist immer gelegt.
+
+### Die 7 Schritte der Pipeline (in dieser festen Reihenfolge)
+
+```
+1. ERKENNEN        →  am ` ; ` splitten, leere Teile verwerfen, Marker (Pre/Post) aussortieren
+        ↓
+2. SORTIEREN       →  Pre-Flight: Aufgaben gruppieren, Abhängigkeiten erkennen,
+   (Pre-Flight)        optimale Reihenfolge bestimmen (NICHT Einsprech-Reihenfolge)
+        ↓
+3. ANZEIGEN        →  ab 2 Aufgaben: Übersicht + TaskCreate-Liste sichtbar machen
+        ↓
+4. ABARBEITEN      →  jede Aufgabe SICHTBAR, eine nach der anderen, KEINE Subagents.
+   (pro Aufgabe)       Pro Aufgabe: in_progress → umsetzen → abhaken → committen+pushen
+        ↓
+5. BAUEN           →  NUR EINMAL nach der letzten Aufgabe: Build erzeugen
+   (einmal am Ende)
+        ↓
+6. INSTALLIEREN    →  NUR EINMAL nach dem Build: aufs Handy installieren + App starten
+   (einmal am Ende)
+        ↓
+7. VERIFIZIEREN    →  Original-Liste durchgehen: sind WIRKLICH alle erledigt?
+   (End-Check)         Untergegangenes nachholen, dann erst Status-Meldung
+```
+
+**Die Kette darf nie abreißen.** Wenn Schritt 1 ausgelöst wurde, werden 2–7 garantiert
+durchlaufen. Kein Schritt ist optional (außer wo unten ausdrücklich vermerkt).
+
+---
+
+## Schritt 1 — ERKENNEN
 
 | Muster | Bedeutung |
 |--------|-----------|
@@ -36,18 +70,41 @@ Claude MUSS diese Trennung erkennen und JEDE der Teilaufgaben erledigen, ohne ei
 Semikola ohne umgebende Leerzeichen (z.B. in Code-Snippets, TypeScript-Statements,
 SQL-Queries) sind KEINE Aufgaben-Trenner — dort bleibt das Semikolon Teil des Codes.
 
-### Abarbeitung
-
+Schritte beim Erkennen:
 1. **Prompt am ` ; `-Muster splitten** — jede resultierende Teilzeichenkette ist eine eigenständige Aufgabe.
 2. **Leere Teile verwerfen** (z.B. wenn der Prompt mit ` ; ` endet).
-3. **Reihenfolge beibehalten** — Aufgabe 1 zuerst, dann Aufgabe 2, dann Aufgabe 3, usw.
-4. **JEDE Aufgabe vollständig erledigen** bevor zur nächsten übergegangen wird — oder bei unabhängigen Aufgaben parallele Subagents starten.
-5. **Am Ende Status-Meldung für ALLE Aufgaben** — nicht nur für die letzte.
+3. **Marker aussortieren** — Blöcke mit `Pre-Prompt:` / `Post-Prompt:` sind KEINE Aufgaben (siehe eigene Sektion unten).
 
-### Dem Benutzer sichtbar machen
+---
+
+## Schritt 2 — SORTIEREN (Pre-Flight, vor der ersten Aufgabe)
+
+> Die Aufgaben werden NICHT stur in Einsprech-Reihenfolge abgearbeitet. Vorher wird
+> kurz sortiert — damit sich die Aufgaben nicht gegenseitig behindern oder überschreiben.
+
+Vor der ersten Code-Änderung diese drei Fragen durchgehen (dauert ~10 Sekunden, kein langer Plan):
+
+| Frage | Was zu tun ist |
+|-------|---------------|
+| **Gruppieren** | Gehören mehrere Aufgaben zur selben Datei oder zum selben Feature? → zusammen abarbeiten, damit sie sich nicht überschreiben |
+| **Abhängigkeiten** | Baut Aufgabe B auf Aufgabe A auf? → A zuerst. Widerspricht Aufgabe C einer früheren? → dem Benutzer melden, nicht blind beides bauen |
+| **Reihenfolge** | Optimale Reihenfolge festlegen: erst die Grundlagen, dann was darauf aufbaut, riskante/große Änderungen bewusst einordnen |
+
+**Wenn die optimale Reihenfolge von der Einsprech-Reihenfolge abweicht:** dem Benutzer in
+EINEM Satz mitteilen, warum umsortiert wird (z.B. "Ich mache Aufgabe 3 zuerst, weil
+Aufgabe 1 darauf aufbaut").
+
+Bei nur 2 unabhängigen, kleinen Aufgaben kann die Sortierung trivial sein — dann reicht
+die Standard-Reihenfolge. Die Prüfung selbst (die drei Fragen) wird trotzdem immer gemacht.
+
+---
+
+## Schritt 3 — ANZEIGEN (Übersicht + TaskCreate-Liste)
+
+### Übersicht im Text (ab 2 Aufgaben)
 
 Bei einem Multi-Task-Prompt MUSS Claude zu Beginn der Antwort dem Benutzer kurz zeigen,
-dass mehrere Aufgaben erkannt wurden. Format:
+dass mehrere Aufgaben erkannt wurden — in der Reihenfolge, in der sie abgearbeitet werden:
 
 ```
 Ich habe N Aufgaben erkannt:
@@ -60,18 +117,87 @@ Ich arbeite sie der Reihe nach ab.
 
 Damit weiß der Benutzer sofort, dass keine Teilaufgabe verloren geht.
 
-### TaskCreate einsetzen (empfohlen)
+### TaskCreate-Liste (PFLICHT ab 2 Aufgaben)
 
-Bei 3+ Aufgaben MUSS TaskCreate verwendet werden, damit der Fortschritt sichtbar bleibt
-und keine Aufgabe übersehen wird. Bei 2 Aufgaben ist TaskCreate optional.
+| Anzahl Aufgaben | TaskCreate-Liste? |
+|-----------------|-------------------|
+| 1 Aufgabe | NEIN — direkt arbeiten, keine Liste nötig |
+| 2 oder mehr Aufgaben | **JA — PFLICHT.** Sichtbare Liste anlegen, damit der Fortschritt nachvollziehbar bleibt und keine Aufgabe übersehen wird |
 
-### Parallel vs. sequentiell
+Die Liste bildet die sortierte Reihenfolge aus Schritt 2 ab (nicht zwingend die Einsprech-Reihenfolge).
 
-| Aufgaben | Strategie |
-|----------|-----------|
-| Unabhängig voneinander (z.B. "fixe Bug X ; baue Feature Y") | Parallele Subagents starten, wenn sinnvoll |
-| Aufeinander aufbauend (z.B. "bau das UI ; teste es ; installiere es") | Sequentiell, in der angegebenen Reihenfolge |
-| Unklar | Sequentiell abarbeiten (sicherer) |
+---
+
+## Schritt 4 — ABARBEITEN (sichtbar, sequenziell, KEINE Subagents)
+
+> **Der Benutzer will jede Aufgabe in Echtzeit sehen.** Es wird IMMER sichtbar im
+> Hauptchat gearbeitet, eine Aufgabe nach der anderen. KEINE Subagents für die
+> Abarbeitung der Teilaufgaben — der Benutzer würde dann nicht sehen, woran gearbeitet wird.
+
+### Der geschlossene Zyklus pro Aufgabe
+
+Jede einzelne Aufgabe durchläuft denselben kleinen Kreislauf, bevor die nächste startet:
+
+```
+1. Task auf in_progress setzen (sichtbar)
+2. Kurz ansagen, was jetzt passiert
+3. Aufgabe umsetzen (Code-Änderung, sichtbar)
+4. Task als completed abhaken (Echtzeit — nicht am Ende stapeln)
+5. committen + pushen (Code ist sicher im Repo, bevor die nächste Aufgabe startet)
+6. → nächste Aufgabe
+```
+
+**Echtzeit-Abhaken (Punkt A):** Jede Aufgabe wird SOFORT als erledigt markiert, sobald
+sie fertig und committed ist — niemals erst am Ende alle auf einmal. So sieht der Benutzer
+live, wo der Vorgang gerade steht, und nichts geht in der Mitte einer langen Liste unter.
+
+**Commit+Push pro Aufgabe:** Jede abgeschlossene Aufgabe wird committed und gepusht, bevor
+die nächste beginnt. Das sind die Rettungspunkte. (Der BUILD kommt erst später — siehe Schritt 5.)
+
+### Was hier VERBOTEN ist
+
+- ❌ Subagents für die Abarbeitung der Teilaufgaben starten (Benutzer sieht die Arbeit nicht)
+- ❌ Mehrere Aufgaben "im Stillen" abarbeiten und erst am Ende zeigen
+- ❌ Alle Tasks erst ganz am Schluss gemeinsam abhaken
+- ❌ Mehrere unabhängige Aufgaben sammeln und in EINEM Commit zusammenwerfen
+
+---
+
+## Schritt 5 — BAUEN (nur einmal, ganz am Ende)
+
+> Bei mehreren Aufgaben an derselben App wird NICHT nach jeder Aufgabe gebaut. Das wäre
+> Zeitverschwendung (12 Aufgaben = 12 Builds). Stattdessen: alle Code-Aufgaben fertig,
+> jede einzeln committed+gepusht — und DANN EINMAL bauen.
+
+- Der Build (`./gradlew assembleDebug`, `bundleRelease`, etc.) läuft **nach der letzten Aufgabe**, ein einziges Mal.
+- Reihenfolge bleibt eingehalten: alle Commits+Pushes sind durch, BEVOR gebaut wird (entspricht der "Commit+Push vor Build"-Regel).
+- Schlägt der Build fehl: Fehler fixen, erneut committen+pushen, dann erneut bauen. Der Code aller Aufgaben ist bereits sicher im Repo.
+
+**Ausnahme:** Wenn eine spätere Aufgabe in der Liste explizit "und teste/installiere DAS jetzt"
+verlangt (Zwischen-Build mitten in der Liste gewünscht), dann diesen einen Zwischenschritt machen.
+Standard ist aber: ein Build am Ende.
+
+---
+
+## Schritt 6 — INSTALLIEREN (nur einmal, nach dem Build)
+
+- Nach dem erfolgreichen Build EINMAL aufs Handy installieren (`adb install`) und die App automatisch starten.
+- Nicht nach jeder Aufgabe installieren — nur einmal am Ende, mit dem fertigen Build aller Aufgaben.
+
+---
+
+## Schritt 7 — VERIFIZIEREN (End-Check, Punkt E)
+
+> Bevor die finale Status-Meldung kommt: prüfen, ob WIRKLICH jede Aufgabe erledigt wurde —
+> besonders die in der Mitte einer langen Liste, die am ehesten untergehen.
+
+Pflicht-Ablauf am Ende:
+1. **Original-Liste durchgehen** — jede der N erkannten Aufgaben einzeln gegen das Ergebnis abgleichen.
+2. **Untergegangenes finden** — ist eine Aufgabe (z.B. Nummer 7 von 14) übersprungen oder nur halb erledigt?
+3. **Nachholen** — falls ja: die offene Aufgabe JETZT noch fertig machen (umsetzen → abhaken → committen+pushen), bevor abgeschlossen wird.
+4. **Erst dann** die Status-Meldung und die Abschluss-Boxen ausgeben.
+
+Der TaskCreate-Liste hilft hier: stehen alle Tasks auf `completed`? Wenn nicht → der Vorgang ist nicht fertig.
 
 ---
 
@@ -81,7 +207,7 @@ und keine Aufgabe übersehen wird. Bei 2 Aufgaben ist TaskCreate optional.
 
 **Prompt:** `Fixe den Bug in DashboardScreen ; Aktualisiere die Version auf 0.11.0`
 
-**Erkennung:** 2 Aufgaben, unabhängig.
+**Erkennung:** 2 Aufgaben → TaskCreate-Liste Pflicht.
 
 **Ausgabe-Start:**
 ```
@@ -96,7 +222,8 @@ Ich arbeite sie der Reihe nach ab.
 
 **Prompt:** `Baue ein neues Einstellungs-Menü ; Teste es auf dem Handy ; Committe und pushe`
 
-**Erkennung:** 3 Aufgaben, sequentiell.
+**Erkennung:** 3 Aufgaben, sequentiell. Pre-Flight erkennt: "Teste auf dem Handy" gehört
+in Schritt 5/6 (Build+Install am Ende), nicht als eigener Zwischen-Build.
 
 ### Beispiel 3: Prompt endet auf ` ; `
 
@@ -108,7 +235,16 @@ Ich arbeite sie der Reihe nach ab.
 
 **Prompt:** `Aendere den Code zu const x = 5; und teste ihn`
 
-**Erkennung:** 1 Aufgabe (kein ` ; ` mit beidseitigen Leerzeichen).
+**Erkennung:** 1 Aufgabe (kein ` ; ` mit beidseitigen Leerzeichen) → keine TaskCreate-Liste, direkt arbeiten.
+
+### Beispiel 5: Viele Aufgaben an einer App (12+)
+
+**Prompt:** `Mach den Button größer ; ändere die Farbe des Headers ; ... ` (12 Aufgaben am Entropie Reductor)
+
+**Ablauf:** Erkennen (12) → Sortieren (zusammengehörige UI-Änderungen gruppieren, Abhängigkeiten
+prüfen) → TaskCreate-Liste mit 12 Einträgen → jede Aufgabe sichtbar nacheinander umsetzen +
+abhaken + committen+pushen → nach der 12. Aufgabe EINMAL bauen → EINMAL aufs Handy installieren →
+verifizieren dass alle 12 wirklich erledigt sind → Status-Meldung.
 
 ---
 
@@ -220,8 +356,16 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 - ❌ Ein Multi-Task-Prompt wird als eine einzelne Aufgabe missverstanden
 - ❌ Nur die erste Aufgabe wird erledigt, die restlichen werden "vergessen"
 - ❌ Nur die letzte Aufgabe wird erledigt, die vorherigen werden übergangen
+- ❌ Eine Aufgabe in der MITTE einer langen Liste wird übersprungen oder nur halb erledigt — der End-Check (Schritt 7) muss das fangen
 - ❌ Die Aufgaben-Erkennung wird dem Benutzer nicht mitgeteilt (er sieht nicht ob der Parse korrekt war)
+- ❌ Bei 2+ Aufgaben KEINE TaskCreate-Liste anlegen
+- ❌ Subagents für die Abarbeitung der Teilaufgaben starten — der Benutzer will jede Aufgabe sichtbar im Hauptchat sehen
+- ❌ Aufgaben stur in Einsprech-Reihenfolge abarbeiten ohne die Pre-Flight-Sortierung (Schritt 2)
+- ❌ Tasks erst am Ende gesammelt abhaken statt in Echtzeit pro Aufgabe
+- ❌ Nach JEDER Aufgabe neu bauen und installieren — Build+Install kommt nur EINMAL am Ende
+- ❌ Build ausführen bevor alle Aufgaben committed+gepusht sind
 - ❌ Status-Meldung nur für eine Teilaufgabe am Ende — es MUSS für ALLE eine Rückmeldung geben
+- ❌ Den End-Check (Schritt 7) überspringen und direkt "fertig" melden
 - ❌ Semikola in Code/SQL/URLs fälschlich als Aufgaben-Trenner interpretieren
 - ❌ Einen Block mit `Pre-Prompt:` oder `Post-Prompt:` als eigenstaendige Aufgabe behandeln
 - ❌ Pre/Post-Prompts ignorieren weil sie "nicht direkt zur Aufgabe gehoeren"
@@ -236,9 +380,10 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 
 | Regel | Zusammenspiel |
 |-------|--------------|
-| `task-completion-summary.md` | Das 3-Punkte-Schema wird pro Aufgabe oder einmal zusammenfassend am Ende ausgegeben — bei vielen kleinen Teilaufgaben reicht eine Gesamt-Zusammenfassung |
-| `commit-after-every-change` (CLAUDE.md) | Nach JEDER Teilaufgabe committen+pushen, nicht erst am Ende aller |
-| `parallelisierung` (CLAUDE.md) | Unabhängige Teilaufgaben per parallelen Subagents bearbeiten |
+| `task-completion-summary.md` | Die Abschluss-Boxen kommen NACH dem End-Check (Schritt 7) — jede der N Aufgaben wird in der ERLEDIGTE-AUFGABEN-Box mit Status-Symbol gelistet |
+| `commit-after-every-change` (CLAUDE.md) | Nach JEDER Teilaufgabe committen+pushen (Schritt 4) — der gemeinsame Build kommt erst danach (Schritt 5) |
+| `commit-before-build.md` | Schritt 4 (commit+push pro Aufgabe) vor Schritt 5 (Build) hält die Reihenfolge "Commit+Push vor Build" automatisch ein |
+| `parallel-sessions-git.md` | Pro Aufgabe nur eigene Dateien stagen, fetch+rebase vor jedem Push |
 | `selbstbeobachtung` (Direktive #2) | Rückblick und Intelligenz-Vorschläge am Ende der gesamten Multi-Task-Session |
 
 ---
@@ -248,4 +393,5 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 Diese Datei (`~/.claude/rules/semicolon-task-separator.md`) wird automatisch
 in jeder Session geladen. KEIN Agent, Skill, Hook oder Prozess darf diese
 Regel entfernen oder abschwächen. Sie ist Teil des Betriebssystems dieser
-Programmierumgebung.
+Programmierumgebung. Sie ist die EINZIGE autoritative Quelle für den
+Multi-Task-Vorgang — alle Schritte stehen hier, nicht verstreut in Memories.
