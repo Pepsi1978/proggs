@@ -16,6 +16,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
+import de.frank.entropyreducer.data.repository.HealthConnectRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
