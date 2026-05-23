@@ -794,9 +794,14 @@ constructor(
     suspend fun pruneOldTrainings(): Int {
         val thresholdMs =
             System.currentTimeMillis() - TRAINING_RETENTION_DAYS * 24L * 60L * 60L * 1000L
-        val before = workoutDao.observeAll().first().size
+        // Performance 2026-05-23 (Intelligenz-Vorschlag 1, Anti-Muster-Fix): count() statt
+        // observeAll().first().size. Frueher wurden hier ZWEIMAL alle Workouts inkl. der grossen
+        // Stream-Felder (GPS/Puls/Splits) in den RAM geladen, nur um die Zeilenzahl zu zaehlen.
+        // count() macht das per SQL-COUNT(*) ohne ein einziges Workout zu materialisieren.
+        // Verhaltensgleich: COUNT(*) == Listengroesse -> identischer deleted-Wert/Log/Sync-Trigger.
+        val before = workoutDao.count()
         workoutDao.deleteOlderThan(thresholdMs)
-        val after = workoutDao.observeAll().first().size
+        val after = workoutDao.count()
         val deleted = before - after
         if (deleted > 0) {
             Log.i(
