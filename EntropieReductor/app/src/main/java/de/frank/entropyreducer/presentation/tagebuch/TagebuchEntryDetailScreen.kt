@@ -223,28 +223,23 @@ fun TagebuchEntryDetailScreen(
                 }
 
                 // ── Nachtrag einsprechen ──
+                // Frank-Wunsch 2026-05-23: Nur der Titel, kein "Whisper Large V3 Turbo"-Subtext.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Outlined.EditNote,
                             contentDescription = null,
-                            tint = CosmosColors.AccentPrimary,
+                            tint = TagebuchAccent,
                             modifier = Modifier.size(24.dp),
                         )
                         Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Nachtrag einsprechen",
-                                color = cosmos.textPrimary,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                "Whisper Large V3 Turbo — wird als eigene Karte gespeichert.",
-                                color = cosmos.textSecondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
+                        Text(
+                            "Nachtrag einsprechen",
+                            color = cosmos.textPrimary,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
+                        )
                         WhisperMicButton(
                             onTranscript = { transcript -> viewModel.addFollowup(transcript) },
                             size = 44.dp,
@@ -252,55 +247,41 @@ fun TagebuchEntryDetailScreen(
                     }
                 }
 
-                // ── Vorlesen-Zeile ──
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(1.dp)
-                            .background(cosmos.glassBorder.copy(alpha = 0.3f))
-                )
+                // ── Vorlesen-Knopf ──
+                // Frank-Wunsch 2026-05-23: Nur das orange Lautsprecher-Icon, kein
+                // Beschriftungs-Text daneben. Klein und unauffaellig.
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(
                         onClick = { viewModel.speakAll() },
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(40.dp),
                     ) {
                         when (state.ttsState) {
                             TagebuchTtsState.LOADING ->
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = CosmosColors.AccentPrimary,
+                                    color = TagebuchAccent,
                                 )
                             TagebuchTtsState.SPEAKING ->
                                 Icon(
                                     imageVector = Icons.Outlined.Stop,
                                     contentDescription = "Vorlesen stoppen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
+                                    tint = TagebuchAccent,
+                                    modifier = Modifier.size(22.dp),
                                 )
                             TagebuchTtsState.IDLE ->
                                 Icon(
                                     imageVector = Icons.Outlined.VolumeUp,
                                     contentDescription = "Vorlesen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
+                                    tint = TagebuchAccent,
+                                    modifier = Modifier.size(22.dp),
                                 )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text =
-                            when (state.ttsState) {
-                                TagebuchTtsState.LOADING -> "TTS wird erzeugt …"
-                                TagebuchTtsState.SPEAKING -> "Spricht — tippen zum Stoppen"
-                                TagebuchTtsState.IDLE -> "Eintrag + Nachträge vorlesen"
-                            },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = cosmos.textSecondary,
-                    )
                 }
 
                 // ── Löschen ──
@@ -341,8 +322,8 @@ fun TagebuchEntryDetailScreen(
 }
 
 /**
- * KI-Zusammenfassung als Bullet-Points (analog BestJournalFrank). Bei leerer Summary wird
- * stattdessen ein Knopf "Mit KI Zusammenfassung erstellen" gezeigt.
+ * KI-Zusammenfassung als Mini-Fliesstext (Frank-Wunsch 2026-05-23 — max 6 Zeilen,
+ * keine Bullet-Points mehr). Migriert alte Bullet-Daten automatisch zu Fliesstext.
  */
 @Composable
 private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> Unit) {
@@ -352,37 +333,24 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
             Text(
                 "Zusammenfassung",
                 style = MaterialTheme.typography.titleMedium,
-                color = CosmosColors.AccentPrimary,
+                color = TagebuchAccent,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             if (!summary.isNullOrBlank()) {
-                summary
-                    .lines()
-                    .filter { it.trimStart().startsWith("•") }
-                    .forEach { line ->
-                        val bulletText = line.trimStart().removePrefix("•").trim()
-                        Row(modifier = Modifier.padding(bottom = 4.dp)) {
-                            Text(
-                                "• ",
-                                color = cosmos.textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                bulletText,
-                                color = cosmos.textPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
+                val prose = summaryAsProse(summary)
+                Text(
+                    text = prose,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    maxLines = 6,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = onGenerate, enabled = !isRunning) {
                     if (isRunning) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
-                            color = CosmosColors.AccentPrimary,
+                            color = TagebuchAccent,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text("Wird erstellt …", style = MaterialTheme.typography.labelMedium)
@@ -391,20 +359,20 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
                             imageVector = Icons.Outlined.AutoAwesome,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = CosmosColors.AccentPrimary,
+                            tint = TagebuchAccent,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Neu erstellen",
                             style = MaterialTheme.typography.labelMedium,
-                            color = CosmosColors.AccentPrimary,
+                            color = TagebuchAccent,
                         )
                     }
                 }
             } else {
                 Text(
                     text =
-                        "Noch keine Zusammenfassung. Gemini erstellt 3–5 Bullet-Points aus dem Eintrag und allen Nachträgen.",
+                        "Noch keine Zusammenfassung. Gemini erstellt einen kurzen Mini-Fliesstext aus dem Eintrag und allen Nachträgen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -444,6 +412,23 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
             }
         }
     }
+}
+
+/**
+ * Migrations-Helper (Frank-Wunsch 2026-05-23): alte Bullet-Point-Daten werden zu
+ * Fliesstext gejoined damit die UI keine Spruenge zwischen alten/neuen Eintraegen zeigt.
+ * Neue Eintraege liefert das ViewModel bereits als Fliesstext — dann passiert hier nichts.
+ */
+private fun summaryAsProse(raw: String): String {
+    val trimmed = raw.trim()
+    if (!trimmed.contains("•") && !trimmed.contains("\n- ") && !trimmed.startsWith("- ")) {
+        return trimmed
+    }
+    return trimmed
+        .lines()
+        .map { it.trim().removePrefix("•").removePrefix("-").removePrefix("*").trim() }
+        .filter { it.isNotBlank() }
+        .joinToString(separator = " ")
 }
 
 @Composable

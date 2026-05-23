@@ -1,20 +1,23 @@
 package de.frank.entropyreducer.presentation.tagebuch
 
 import android.content.Context
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoFixHigh
@@ -44,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -227,19 +231,44 @@ fun TagebuchScreen(
                     )
                 }
             } else {
+                // Frank-Wunsch 2026-05-23: Gruppierung nach Zeit-Sektionen wie
+                // BestJournalFrank's Tagebuch — Heute / Gestern / Diese Woche /
+                // Letzte Woche / Vor 2/3/4 Wochen / Monatsname / Jahr — Monat.
+                // Jeder Eintrag bekommt links eine durchgehende Timeline-Rail
+                // mit Buch-Badge und rechts die Karte. Sortierung von neu nach alt.
+                val grouped = remember(entries) { groupEntriesBySection(entries) }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding =
                         androidx.compose.foundation.layout.PaddingValues(
-                            start = 16.dp,
+                            start = 12.dp,
                             end = 16.dp,
-                            top = 8.dp,
+                            top = 4.dp,
                             bottom = 120.dp,
                         ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(items = entries, key = { it.id }) { e ->
-                        EntryCard(entry = e, onClick = { onOpenEntry(e.id) })
+                    grouped.forEach { section ->
+                        item(key = "header-${section.label}") {
+                            SectionHeader(label = section.label)
+                        }
+                        val lastIndex = section.entries.lastIndex
+                        section.entries.forEachIndexed { index, e ->
+                            val position =
+                                when {
+                                    section.entries.size == 1 -> TimelinePosition.ONLY
+                                    index == 0 -> TimelinePosition.FIRST
+                                    index == lastIndex -> TimelinePosition.LAST
+                                    else -> TimelinePosition.MIDDLE
+                                }
+                            item(key = e.id) {
+                                TimelineEntryRow(
+                                    entry = e,
+                                    position = position,
+                                    onClick = { onOpenEntry(e.id) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -310,48 +339,208 @@ fun TagebuchScreen(
     }
 }
 
+/**
+ * Section-Header in der Zeit-gruppierten Liste — z.B. "Heute", "Diese Woche",
+ * "Vor 2 Wochen", "Mai" oder "2024 — Dezember". Frank-Wunsch 2026-05-23.
+ */
 @Composable
-private fun EntryCard(entry: TagebuchEntry, onClick: () -> Unit) {
+private fun SectionHeader(label: String) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier =
-                        Modifier.size(36.dp)
-                            .clip(CircleShape)
-                            .background(TagebuchAccent.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Book,
-                        contentDescription = null,
-                        tint = TagebuchAccent,
-                        modifier = Modifier.size(20.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Linker Block hat 52dp Breite — passt genau zur Timeline-Rail darunter.
+        Spacer(Modifier.width(52.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = TagebuchAccent,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.size(8.dp))
+        Box(
+            modifier =
+                Modifier.weight(1f).height(1.dp).background(TagebuchAccent.copy(alpha = 0.25f))
+        )
+    }
+}
+
+/**
+ * Eintrag plus Timeline-Rail links — 52dp Spalte mit durchgehender Linie und
+ * zentriertem Buch-Badge. Frank-Wunsch 2026-05-23 (Vorbild BestJournalFrank).
+ */
+@Composable
+private fun TimelineEntryRow(
+    entry: TagebuchEntry,
+    position: TimelinePosition,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val lineColor = TagebuchAccent.copy(alpha = 0.35f)
+    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 4.dp)) {
+        Box(
+            modifier = Modifier.width(52.dp).fillMaxHeight(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (position == TimelinePosition.ONLY) return@Canvas
+                val cx = size.width / 2f
+                val midY = size.height / 2f
+                val gap = 18.dp.toPx() + 2.dp.toPx()
+                val strokePx = 2.dp.toPx()
+                val drawAbove =
+                    position == TimelinePosition.MIDDLE || position == TimelinePosition.LAST
+                val drawBelow =
+                    position == TimelinePosition.MIDDLE || position == TimelinePosition.FIRST
+                if (drawAbove && midY - gap > 0f) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, 0f),
+                        end = Offset(cx, midY - gap),
+                        strokeWidth = strokePx,
                     )
                 }
-                Spacer(Modifier.size(12.dp))
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = entry.title.ifBlank { "Tagebucheintrag" },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = formatTimestamp(entry.timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = cosmos.textSecondary,
+                if (drawBelow && midY + gap < size.height) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, midY + gap),
+                        end = Offset(cx, size.height),
+                        strokeWidth = strokePx,
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = entry.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = cosmos.textPrimary,
-                maxLines = 4,
-            )
+            Box(
+                modifier =
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(TagebuchAccent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Book,
+                    contentDescription = null,
+                    tint = TagebuchAccent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        GlassCard(modifier = Modifier.weight(1f).clickable { onClick() }) {
+            Column {
+                Text(
+                    text = entry.title.ifBlank { "Tagebucheintrag" },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = formatTimestamp(entry.timestampMs),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(6.dp))
+                // Frank-Wunsch 2026-05-23: 5 statt 4 Zeilen Vorschau.
+                Text(
+                    text = entry.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    maxLines = 5,
+                )
+            }
+        }
+    }
+}
+
+/** Position eines Eintrags innerhalb seiner Zeit-Sektion — steuert die Timeline-Linie. */
+private enum class TimelinePosition {
+    FIRST,
+    MIDDLE,
+    LAST,
+    ONLY,
+}
+
+/** Eine Zeit-Sektion mit ihrem Label und allen darunter gruppierten Eintraegen. */
+private data class TagebuchSection(val label: String, val entries: List<TagebuchEntry>)
+
+/**
+ * Gruppiert Eintraege nach Zeit-Sektionen (Frank-Wunsch 2026-05-23). Reihenfolge:
+ * Heute, Gestern, Diese Woche, Letzte Woche, Vor 2/3/4 Wochen, Monatsname, Jahr — Monat.
+ * Innerhalb der Sektion bleiben die Eintraege nach Timestamp absteigend sortiert.
+ * Erwartet eine bereits nach Timestamp absteigend sortierte Eingabe.
+ */
+private fun groupEntriesBySection(entries: List<TagebuchEntry>): List<TagebuchSection> {
+    if (entries.isEmpty()) return emptyList()
+    val sorted = entries.sortedByDescending { it.timestampMs }
+    val buckets = linkedMapOf<String, MutableList<TagebuchEntry>>()
+    sorted.forEach { e ->
+        val label = sectionLabelFor(e.timestampMs)
+        buckets.getOrPut(label) { mutableListOf() }.add(e)
+    }
+    return buckets.map { (label, list) -> TagebuchSection(label, list) }
+}
+
+/**
+ * Berechnet das Section-Label fuer einen Timestamp. Adaptiert aus
+ * BestJournalFrank/DateTimeFormatter.getSectionLabel — erweitert um "Heute" und
+ * "Gestern" am Anfang (Frank-Wunsch 2026-05-23, exakter Wortlaut "heute und gestern").
+ */
+private fun sectionLabelFor(timestamp: Long): String {
+    val now = java.util.Calendar.getInstance()
+    val entry = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+    val todayStart =
+        java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+    val yesterdayStart =
+        (todayStart.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -1)
+        }
+    val dow = todayStart.get(java.util.Calendar.DAY_OF_WEEK)
+    val daysSinceMonday =
+        if (dow == java.util.Calendar.SUNDAY) 6 else dow - java.util.Calendar.MONDAY
+    val thisWeekMonday =
+        (todayStart.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -daysSinceMonday)
+        }
+    val lastWeekMonday =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -7)
+        }
+    val twoWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -14)
+        }
+    val threeWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -21)
+        }
+    val fourWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -28)
+        }
+    val sameMonth =
+        entry.get(java.util.Calendar.MONTH) == now.get(java.util.Calendar.MONTH) &&
+            entry.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR)
+
+    return when {
+        timestamp >= todayStart.timeInMillis -> "Heute"
+        timestamp >= yesterdayStart.timeInMillis -> "Gestern"
+        timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
+        timestamp >= lastWeekMonday.timeInMillis && sameMonth -> "Letzte Woche"
+        timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> "Vor 2 Wochen"
+        timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> "Vor 3 Wochen"
+        timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> "Vor 4 Wochen"
+        entry.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR) -> {
+            val fmt = java.text.SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
+            fmt.format(java.util.Date(timestamp)).replaceFirstChar { it.uppercase() }
+        }
+        else -> {
+            val fmt = java.text.SimpleDateFormat("MMMM", Locale.GERMAN)
+            val month = fmt.format(java.util.Date(timestamp)).replaceFirstChar { it.uppercase() }
+            "${entry.get(java.util.Calendar.YEAR)} — $month"
         }
     }
 }
@@ -832,4 +1021,4 @@ private fun formatTimestamp(ts: Long): String = formatTagebuchTimestamp(ts)
 /** Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche
  * Farbe wie der Aufgaben-Tab-Sub-Modus in der BottomBar (kraeftiges Orange
  * #EA580C, nicht das frueher genutzte hellere #FF9800). */
-private val TagebuchAccent: Color = Color(0xFFEA580C)
+internal val TagebuchAccent: Color = Color(0xFFEA580C)
