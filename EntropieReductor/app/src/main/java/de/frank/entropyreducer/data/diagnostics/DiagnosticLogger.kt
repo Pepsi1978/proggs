@@ -61,6 +61,15 @@ constructor(
     private val isoFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
     private val fileDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
+    // Performance 2026-05-24 (vom Benutzer freigegeben): Das app-private Diagnose-Verzeichnis
+    // aendert sich waehrend der Prozesslaufzeit nie. getExternalFilesDir() ist aber ein
+    // Framework-Aufruf, der bisher bei JEDER Log-Zeile neu lief. Wir cachen das Ergebnis — aber
+    // NUR wenn es erfolgreich aufgeloest wurde (non-null + Verzeichnis existiert/angelegt).
+    // Schlaegt die Aufloesung einmal fehl (z.B. Speicher kurz nicht verfuegbar), wird NICHT
+    // gecacht und beim naechsten Mal neu versucht. Zugriff laeuft immer unter fileMutex -> kein
+    // Race auf cachedDir.
+    @Volatile private var cachedDir: File? = null
+
     /** Fehler — etwas ist fehlgeschlagen. */
     fun error(area: DiagnosticArea, message: String, throwable: Throwable? = null) {
         write(area, DiagnosticLevel.ERROR, message, throwable)
@@ -144,8 +153,7 @@ constructor(
         details: String?,
         timestampMs: Long,
     ) {
-        val dir = File(context.getExternalFilesDir(null), DIR_NAME)
-        if (!dir.exists() && !dir.mkdirs()) return
+        val dir = diagnosticsDir() ?: return
         val zdt = Instant.ofEpochMilli(timestampMs).atZone(ZoneId.systemDefault())
         val file = File(dir, "diag-${fileDateFormat.format(zdt)}.jsonl")
         val line =
@@ -171,9 +179,23 @@ constructor(
         }
     }
 
+    /**
+     * Loest das app-private Diagnose-Verzeichnis auf und cacht es nach dem ersten Erfolg.
+     * Gibt null zurueck wenn der externe Speicher (gerade) nicht verfuegbar ist — dann wird
+     * NICHT gecacht, sondern beim naechsten Aufruf erneut versucht.
+     */
+    private fun diagnosticsDir(): File? {
+        cachedDir?.let { return it }
+        val base = context.getExternalFilesDir(null) ?: return null
+        val dir = File(base, DIR_NAME)
+        if (!dir.exists() && !dir.mkdirs()) return null
+        cachedDir = dir
+        return dir
+    }
+
     /** Loescht JSONL-Tagesdateien die aelter als 14 Tage sind. */
     private fun pruneOldFiles(cutoffMs: Long) {
-        val dir = File(context.getExternalFilesDir(null), DIR_NAME)
+        val dir = diagnosticsDir() ?: return
         val files = dir.listFiles() ?: return
         files.forEach { f ->
             if (f.isFile && f.name.startsWith("diag-") && f.lastModified() < cutoffMs) {
