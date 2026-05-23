@@ -135,7 +135,12 @@
          are kept VERY dim (variation only in the lower 5 bits of each
          channel) so the panel reads as one cohesive dark surface and not
          as a rainbow stripe. The colour signal lives on the buttons. -->
-    <Border CornerRadius="36"
+    <Grid>
+    <!-- FullView: das komplette Overlay (Standard). CollapsedView: nur der
+         Mic-Button. Beide liegen oben-buendig im Grid; Auto-Hide schaltet
+         per Code zwischen ihnen um und passt Fensterhoehe + Top an, damit
+         der Mic an gleicher Bildschirmposition bleibt. -->
+    <Border x:Name="FullView" CornerRadius="36"
             BorderBrush="#FF000000"
             BorderThickness="2"
             Width="96" Height="612">
@@ -438,4 +443,29 @@
 
         </StackPanel>
     </Border>
+
+    <!-- CollapsedView: kompakte Mic-Pille (nur sichtbar im eingeklappten
+         Zustand). Gleiche Breite wie das volle Overlay (96), Hoehe 64 — so
+         bleibt die horizontale Position identisch und nur die Hoehe/Top
+         aendern sich beim Ein-/Ausklappen. -->
+    <Border x:Name="CollapsedView"
+            Width="96" Height="64"
+            CornerRadius="28"
+            Background="#FF1A1A1A"
+            BorderBrush="#FF000000"
+            BorderThickness="2"
+            VerticalAlignment="Top"
+            Visibility="Collapsed">
+        <Button x:Name="CollapsedMicButton"
+                Style="{StaticResource MicButton}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Click="CollapsedMicButton_Click"
+                ToolTip="Aufnahme">
+            <Viewbox Width="22" Height="22">
+                <Path Fill="#FFE0E0E0" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+            </Viewbox>
+        </Button>
+    </Border>
+    </Grid>
 </Window>

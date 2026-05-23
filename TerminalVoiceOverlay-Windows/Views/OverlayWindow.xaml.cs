@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -523,6 +524,9 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(ScreenshotButton);
             AttachHover(InsertScreenshotButton);
 
+            // ── Auto-Hide / Hover-to-Expand initialisieren ──
+            InitAutoHide();
+
             // ── Terminal watcher ──
             _terminalWatcher.TerminalActivated   += OnTerminalActivated;
             _terminalWatcher.TerminalDeactivated += OnTerminalDeactivated;
@@ -595,6 +599,156 @@ namespace TerminalVoiceOverlay.Views
                 st.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
                 st.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
             }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        //  Auto-Hide / Hover-to-Expand
+        //  Zwei Zustaende: ausgeklappt (volles Overlay) und eingeklappt
+        //  (nur der Mic-Button). Hover klappt aus; Maus-Verlassen klappt
+        //  nach 2 s (wenn etwas benutzt wurde) bzw. 5 s (nur gehovert)
+        //  wieder ein. Waehrend einer Aufnahme bleibt es immer ausgeklappt.
+        //  Per Einstellung (AppSettings.AutoHide) komplett abschaltbar —
+        //  dann verhaelt sich das Overlay wie frueher (immer voll sichtbar).
+        // ════════════════════════════════════════════════════════════
+
+        // Layout-Konstanten in WPF-DIPs (DPI-unabhaengig). Aus dem festen
+        // XAML-Layout berechnet: die Mic-Mitte liegt im vollen Pillar bei
+        // y ≈ 98, im eingeklappten Pillar (Hoehe 64) bei y = 32. Differenz
+        // = 66 — um diesen Betrag schiebt sich das Fenster beim Einklappen
+        // nach unten, damit der Mic-Button exakt an derselben Bildschirm-
+        // Position bleibt (kein Springen). Breite bleibt konstant 96, daher
+        // ist keine horizontale Verschiebung noetig.
+        private const double CollapsedHeight   = 64;
+        private const double FullHeight        = 612;
+        private const double CollapseTopOffset = 66;
+        private const int    CollapseAfterUseMs  = 2000;
+        private const int    CollapseAfterPeekMs = 5000;
+
+        private bool _autoHideEnabled = true;
+        private bool _isCollapsed;
+        private bool _mouseOverOverlay;
+        private bool _usedSinceExpand;
+        private DispatcherTimer? _collapseTimer;
+
+        private void InitAutoHide()
+        {
+            // Einstellung synchron lesen. Der PromptBoardHost ist zu diesem
+            // Zeitpunkt bereits initialisiert (siehe App.StartOverlay, der
+            // Initialize() VOR new OverlayWindow(config) aufruft). Bei jedem
+            // Fehler: Default true — Feature an, exakt wie der Modell-Default.
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var ctx = scope.ServiceProvider
+                    .GetRequiredService<PromptBoard.Data.PromptBoardDbContext>();
+                var settings = ctx.AppSettings.FirstOrDefault();
+                _autoHideEnabled = settings?.AutoHide ?? true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"InitAutoHide: settings read failed, defaulting ON: {ex.Message}");
+                _autoHideEnabled = true;
+            }
+
+            // Einklapp-Timer. Intervall wird pro Ausloesung gesetzt (2 s/5 s).
+            _collapseTimer = new DispatcherTimer();
+            _collapseTimer.Tick += (_, _) =>
+            {
+                _collapseTimer!.Stop();
+                // Niemals waehrend Aufnahme/Verarbeitung einklappen.
+                if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
+                    return;
+                // Maus ist doch wieder ueber dem Overlay → offen lassen.
+                if (_mouseOverOverlay) return;
+                CollapseImmediate();
+            };
+
+            // Fenster-weite Hover-Erkennung. MouseEnter/MouseLeave am Window
+            // feuern beim Betreten/Verlassen der gesamten Fensterflaeche —
+            // unabhaengig von den Button-internen Hover-Skalierungen.
+            this.MouseEnter += (_, _) =>
+            {
+                if (!_autoHideEnabled) return;
+                _mouseOverOverlay = true;
+                _collapseTimer?.Stop();
+                if (_isCollapsed) Expand();
+            };
+            this.MouseLeave += (_, _) =>
+            {
+                if (!_autoHideEnabled) return;
+                _mouseOverOverlay = false;
+                ScheduleCollapse();
+            };
+
+            // Jeder Klick irgendwo im vollen Overlay zaehlt als "benutzt" →
+            // schnelleres Einklappen (2 s). Reines Hovern zaehlt NICHT.
+            FullView.PreviewMouseDown += (_, _) => _usedSinceExpand = true;
+        }
+
+        /// <summary>
+        /// Startet den Einklapp-Timer, wenn die Maus das Overlay verlassen
+        /// hat. Verzoegerung: 2 s wenn seit dem Aufklappen etwas benutzt
+        /// wurde, sonst 5 s. No-Op wenn das Feature aus ist, bereits
+        /// eingeklappt ist, gerade aufgenommen wird oder die Maus (doch)
+        /// drueber ist.
+        /// </summary>
+        private void ScheduleCollapse()
+        {
+            if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
+            if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording) return;
+            if (_mouseOverOverlay) return;
+
+            int ms = _usedSinceExpand ? CollapseAfterUseMs : CollapseAfterPeekMs;
+            _collapseTimer.Interval = TimeSpan.FromMilliseconds(ms);
+            _collapseTimer.Stop();
+            _collapseTimer.Start();
+        }
+
+        /// <summary>Klappt das Overlay sofort wieder zum vollen Pillar auf.</summary>
+        private void Expand()
+        {
+            if (!_isCollapsed) return;
+            _isCollapsed = false;
+            _usedSinceExpand = false;
+            _collapseTimer?.Stop();
+
+            CollapsedView.Visibility = Visibility.Collapsed;
+            FullView.Visibility = Visibility.Visible;
+            Height = FullHeight;
+            Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Klappt das Overlay sofort auf die kompakte Mic-Pille ein. Schiebt
+        /// das Fenster um <see cref="CollapseTopOffset"/> nach unten, damit
+        /// der Mic-Button an derselben Bildschirmposition bleibt.
+        /// </summary>
+        private void CollapseImmediate()
+        {
+            if (!_autoHideEnabled || _isCollapsed) return;
+            _collapseTimer?.Stop();
+
+            FullView.Visibility = Visibility.Collapsed;
+            CollapsedView.Visibility = Visibility.Visible;
+            Height = CollapsedHeight;
+            Top   += CollapseTopOffset;
+            _isCollapsed = true;
+            _usedSinceExpand = false;
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Klick auf den eingeklappten Mic: ausklappen und sofort die normale
+        /// Aufnahme-Logik ausloesen, als haette man den vollen Mic geklickt.
+        /// (In der Regel klappt schon das Hover aus, bevor der Klick kommt —
+        /// dieser Handler faengt den Direktklick ab.)
+        /// </summary>
+        private void CollapsedMicButton_Click(object sender, RoutedEventArgs e)
+        {
+            _usedSinceExpand = true;
+            Expand();
+            BtnMic_Click(MicButton, new RoutedEventArgs());
         }
 
         // ── Non-activating window setup ──
@@ -781,6 +935,8 @@ namespace TerminalVoiceOverlay.Views
             // laengst zurueck im Terminal arbeitet.
             _hideDelayTimer.Stop();
 
+            bool wasHidden = !IsVisible;
+
             if (!_manuallyPositioned)
             {
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
@@ -792,13 +948,34 @@ namespace TerminalVoiceOverlay.Views
                 // settings. Saved-position path above still wins once the
                 // user drags the pillar manually.
                 Left = workArea.X + workArea.Width - Width - 27;
-                Top  = workArea.Y + 57;
+                double fullTop = workArea.Y + 57;
+                // Collapse-bewusst: ist das Overlay gerade eingeklappt, liegt
+                // der Fenster-Top um CollapseTopOffset tiefer und die Hoehe ist
+                // die kompakte — sonst wuerde die Re-Positionierung den Mic
+                // beim Terminal-Fokuswechsel nach oben springen lassen.
+                if (_autoHideEnabled && _isCollapsed)
+                {
+                    Top    = fullTop + CollapseTopOffset;
+                    Height = CollapsedHeight;
+                }
+                else
+                {
+                    Top = fullTop;
+                }
             }
 
             if (!IsVisible)
             {
                 Show();
                 Console.WriteLine("Overlay: visible (terminal active)");
+            }
+
+            // Frisch eingeblendet (war versteckt) → eingeklappt starten, damit
+            // der Mic-Button aus dem Weg ist und die CLI frei lesbar bleibt.
+            if (wasHidden && _autoHideEnabled
+                && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
+            {
+                CollapseImmediate();
             }
 
             // Star toggle is on but the panel was hidden during a previous
@@ -2728,6 +2905,24 @@ namespace TerminalVoiceOverlay.Views
                 case RecordingState.Error:
                     MicButton.Background = BtnX;
                     break;
+            }
+
+            // Auto-Hide: waehrend einer Aufnahme immer ausgeklappt (Welle
+            // sichtbar). Nach Abschluss (Idle/Success/Error) wieder einklappen
+            // — aber nur wenn die Maus nicht ueber dem Overlay ist.
+            if (_autoHideEnabled)
+            {
+                if (state == RecordingState.Recording)
+                {
+                    if (_isCollapsed) Expand();
+                }
+                else if (!_mouseOverOverlay &&
+                         (state == RecordingState.Idle
+                          || state == RecordingState.Success
+                          || state == RecordingState.Error))
+                {
+                    ScheduleCollapse();
+                }
             }
         }
 
