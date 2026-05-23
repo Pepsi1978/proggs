@@ -113,6 +113,8 @@ constructor(
     private val recurringTemplateRepoLazy:
         Lazy<de.frank.entropyreducer.data.repository.RecurringTemplateRepository>,
     private val json: Json,
+    // Performance 2026-05-23 (Vorschlag 5): nur fuer Timing-Messungen (Payload-Aufbau, Upload).
+    private val diagnostics: de.frank.entropyreducer.data.diagnostics.DiagnosticLogger,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -176,6 +178,7 @@ constructor(
             // Frank-Wunsch 2026-05-19: ALLE Eintraege sichern, auch archivierte
             // (Bereich "Entropie"). getActive() filtert ARCHIVIERT raus — dadurch
             // gingen archivierte Eintraege bei Reinstall verloren.
+            val buildStartMs = System.currentTimeMillis()
             val entries = entryRepoLazy.get().getAllForBackup().map { it.toBackup() }
             val insights = insightDaoLazy.get().getByConfidenceDesc().first().map { it.toBackup() }
             val memories = memoryDaoLazy.get().getAll().first().map { it.toBackup() }
@@ -338,6 +341,17 @@ constructor(
                     recurringTemplates = recurringTemplateBackups,
                     amazfitDaily = amazfitDailyBackups,
                 )
+            // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
+            // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per
+            // Diagnose-Log (adb pull) sichtbar wird ob er den Start spuerbar bremst. Reine
+            // Messung — beeinflusst weder Inhalt noch Ablauf des Backups.
+            val payloadBuildMs = System.currentTimeMillis() - buildStartMs
+            diagnostics.info(
+                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                "Payload-Aufbau in ${payloadBuildMs}ms " +
+                    "(Aufgaben=${entries.size}, Insights=${insights.size}, Memories=${memories.size}, " +
+                    "Prompts=${allPrompts.size}, Amazfit-Daily=${amazfitDailyBackups.size})",
+            )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird
             // (z.B. nach einem Bulk-Import) fangen wir den OOM ab und melden
@@ -361,16 +375,26 @@ constructor(
                 if (mainFingerprint == lastMainFingerprint && lastMainFingerprint != 0) {
                     // Inhalt unveraendert -> teuren Serialize+Upload des Haupt-Backups ueberspringen.
                     // mainOk = true, damit Workouts-/Health-Backup (eigene Skip-Logik) weiterlaufen.
+                    diagnostics.info(
+                        de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                        "Haupt-Backup unveraendert -> Upload uebersprungen",
+                    )
                     _status.value = SyncStatus.Synced(System.currentTimeMillis())
                     true
                 } else {
                     try {
+                        val uploadStartMs = System.currentTimeMillis()
                         val text = json.encodeToString(BackupPayload.serializer(), payload)
                         val result = backupManager.upload(text)
                         if (result.isSuccess) {
                             // Fingerprint erst NACH erfolgreichem Upload speichern, damit ein
                             // fehlgeschlagener Upload beim naechsten Mal erneut versucht wird.
                             appSettingsLazy.get().setMainBackupFingerprint(mainFingerprint)
+                            diagnostics.info(
+                                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                                "Haupt-Upload OK in ${System.currentTimeMillis() - uploadStartMs}ms " +
+                                    "(${text.length} Zeichen)",
+                            )
                         }
                         result.isSuccess
                     } catch (oom: OutOfMemoryError) {
