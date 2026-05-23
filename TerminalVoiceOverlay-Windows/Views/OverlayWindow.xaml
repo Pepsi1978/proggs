@@ -471,13 +471,12 @@
             Background="#B31A1A1A"
             BorderBrush="#FF000000"
             BorderThickness="2"
-            Padding="14,12,14,12"
             VerticalAlignment="Top"
             HorizontalAlignment="Left"
             Visibility="Collapsed">
-        <!-- Padding gibt der Hover-Vergroesserung (Scale 1.15) Headroom, sonst
-             wird der vergroesserte Mic-Button oben am Fensterrand abgeschnitten. -->
-        <StackPanel x:Name="HBar" Orientation="Horizontal" VerticalAlignment="Center"/>
+        <!-- Kein Padding: die farbigen Gruppen fuellen die volle Leistenhoehe
+             (Headroom fuer die Hover-Vergroesserung steckt im Gruppen-Padding). -->
+        <StackPanel x:Name="HBar" Orientation="Horizontal" VerticalAlignment="Stretch"/>
     </Border>
 
     <!-- CollapsedView: kompakte Mic-Pille (nur sichtbar im eingeklappten

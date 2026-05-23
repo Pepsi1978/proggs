@@ -743,6 +743,7 @@ namespace TerminalVoiceOverlay.Views
                 Height = FullHeight;
                 Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
             }
+            FadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
             ReassertTopmostIfVisible();
         }
 
@@ -790,6 +791,7 @@ namespace TerminalVoiceOverlay.Views
                 Height = CollapsedHeight;
                 Top   += CollapseTopOffset;
             }
+            FadeIn(CollapsedView);
             _isCollapsed = true;
             _usedSinceExpand = false;
             ReassertTopmostIfVisible();
@@ -861,6 +863,17 @@ namespace TerminalVoiceOverlay.Views
             catch { }
         }
 
+        // Kurzer Einblende-Effekt (~140ms) fuer die gerade sichtbar gewordene
+        // Ansicht — macht den Wechsel weich statt ruckartig (Ein-/Ausklappen
+        // und Orientierungswechsel, vertikal wie horizontal).
+        private static void FadeIn(UIElement el)
+        {
+            el.BeginAnimation(UIElement.OpacityProperty, null);
+            el.Opacity = 0;
+            el.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(140))) { EasingFunction = HoverEaseOut });
+        }
+
         private void CaptureVerticalPlacement()
         {
             if (_orientationCaptured) return;
@@ -898,19 +911,19 @@ namespace TerminalVoiceOverlay.Views
             // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
             // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
             // vertikalen Layout, nur um 90° gedreht.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null, "#B31A1A1A"));
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null, "#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15"));
+            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }, "#B3151B1D"));
+            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }, "#B3151B1D", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }, "#B31F1515"));
+            HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }, "#B31F1515", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { GButton, WButton }, new[] { Profile5Button, Profile4Button }, "#B319151F"));
+            HBar.Children.Add(MakeHGroup(new[] { GButton, WButton }, new[] { Profile5Button, Profile4Button }, "#B319151F", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15"));
+            HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null, "#B31F1B15"));
+            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null, "#B31F1B15", new CornerRadius(0, 34, 34, 0)));
             OLog("HBUILD done");
         }
 
@@ -919,7 +932,7 @@ namespace TerminalVoiceOverlay.Views
         private static Border MakeVDivider() =>
             new Border { Width = 1, Background = Brush("#FF000000"), VerticalAlignment = VerticalAlignment.Stretch };
 
-        private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles, string bgHex)
+        private FrameworkElement MakeHGroup(Button[] symbols, Button[]? tiles, string bgHex, CornerRadius corner)
         {
             var col = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
             var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
@@ -939,7 +952,14 @@ namespace TerminalVoiceOverlay.Views
                 }
                 col.Children.Add(bot);
             }
-            return new Border { Background = Brush(bgHex), Padding = new Thickness(8, 0, 8, 0), Child = col };
+            return new Border
+            {
+                Background = Brush(bgHex),
+                CornerRadius = corner,
+                Padding = new Thickness(8, 6, 8, 6),
+                VerticalAlignment = VerticalAlignment.Stretch, // fuellt die volle Leistenhoehe
+                Child = col,
+            };
         }
 
         private void RestoreVerticalLayout()
@@ -992,6 +1012,7 @@ namespace TerminalVoiceOverlay.Views
                 FullView.UpdateLayout(); // erzwingt frisches Re-Layout der Sektionen
                 _isHorizontal = false;
             }
+            FadeIn(horizontal ? HorizontalView : (UIElement)FullView);
             ReassertTopmostIfVisible();
         }
 
