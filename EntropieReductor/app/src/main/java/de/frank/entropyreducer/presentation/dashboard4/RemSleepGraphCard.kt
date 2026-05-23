@@ -64,8 +64,8 @@ import java.util.Locale
  * Ampel-Logik (Frank-Vorgabe 2026-05-23, aktualisiert — wie Tiefschlaf NICHT invers,
  * viel REM ist GUT):
  *   - 0 – 17 %  REM → Rot   (kritisch wenig)
- *   - 17 – 25 % REM → Gelb  (grenzwertig)
- *   - > 25 %    REM → Gruen (gesund)
+ *   - 17 – 30 % REM → Gelb  (grenzwertig)
+ *   - > 30 %    REM → Gruen (gesund)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -288,13 +288,13 @@ private fun RemSleepBars(values: List<Double>) {
 /**
  * Farbe pro Balken im REM-Schlaf-Graph (Frank-Wunsch 2026-05-23, aktualisiert):
  *   0 – 17 %  → Rot   (kritisch wenig)
- *   17 – 25 % → Gelb  (grenzwertig)
- *   > 25 %    → Gruen (gesund)
+ *   17 – 30 % → Gelb  (grenzwertig)
+ *   > 30 %    → Gruen (gesund)
  */
 private fun remSleepBarColor(pct: Double): Color =
     when {
         pct < 17.0 -> CosmosColors.Critical
-        pct < 25.0 -> CosmosColors.Warning
+        pct < 30.0 -> CosmosColors.Warning
         else -> CosmosColors.Success
     }
 
