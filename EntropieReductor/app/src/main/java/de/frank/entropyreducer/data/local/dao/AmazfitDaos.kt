@@ -158,6 +158,27 @@ interface AmazfitWorkoutDao {
     suspend fun getStartMsInRange(from: Long, to: Long): List<Long>
 
     /**
+     * Performance 2026-05-23 (Loop 1, Direktive #3): Schlanke 3-Spalten-Projektion NUR der
+     * Felder die der Workouts-Backup-Fingerprint im [SyncCoordinator] braucht — trackId,
+     * createdAt und manualOverridesMs. OHNE die grossen Stream-Felder (gpsTrackJson,
+     * heartRateSeriesJson, paceSeriesJson, paceStreamJson, splitsJson).
+     *
+     * Hintergrund: Der Fingerprint entscheidet beim App-Start ob sich seit dem letzten
+     * Workouts-Backup etwas geaendert hat. Frueher wurden dafuer ueber observeAll() ALLE
+     * Workouts inkl. ~6 MB (bei viel Polar-Historie bis ~130 MB) Stream-Daten in den RAM
+     * geladen und nach dem Hash sofort verworfen. Diese Projektion liefert nur die ~30 Byte
+     * pro Workout die der Hash wirklich braucht.
+     *
+     * WICHTIG: Reihenfolge IDENTISCH zu [observeAll] (ORDER BY startMs DESC), damit der
+     * joinToString-Hash bit-genau derselbe ist und die Skip-/Upload-Entscheidung sich nicht
+     * aendert.
+     */
+    @Query(
+        "SELECT trackId, createdAt, manualOverridesMs FROM amazfit_workouts ORDER BY startMs DESC"
+    )
+    suspend fun getFingerprintRows(): List<AmazfitWorkoutFingerprintRow>
+
+    /**
      * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur
      * wo der Name aktuell abweicht (idempotent).
      */
@@ -214,4 +235,16 @@ data class AmazfitWorkoutBackupRow(
     val source: String?,
     val city: String?,
     val createdAt: Long,
+)
+
+/**
+ * Performance 2026-05-23 (Loop 1): Minimal-Projektion fuer den Workouts-Backup-Fingerprint.
+ * Enthaelt nur die drei Felder die in den Hash einfliessen — KEINE Stream-Felder. Wird von
+ * [AmazfitWorkoutDao.getFingerprintRows] geliefert. Feld-Reihenfolge und -Typen sind exakt
+ * die der bisherigen Fingerprint-Berechnung im SyncCoordinator, damit der Hash identisch bleibt.
+ */
+data class AmazfitWorkoutFingerprintRow(
+    val trackId: String,
+    val createdAt: Long,
+    val manualOverridesMs: Long?,
 )

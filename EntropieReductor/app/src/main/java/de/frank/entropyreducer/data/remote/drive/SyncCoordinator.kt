@@ -232,8 +232,14 @@ constructor(
             }
             val entropyFollowupBackups =
                 entropyEntryFollowupDaoLazy.get().getAllForBackup().map { it.toBackup() }
+            // Performance 2026-05-23 (Loop 2): Prompt-Liste EINMAL holen und sowohl fuer das
+            // Prompt-Backup (savedPromptBackups) als auch fuer Permissions/Trigger weiter unten
+            // wiederverwenden. Frueher wurde promptRepoLazy.get().getAll().first() ZWEIMAL
+            // aufgerufen — zwei DB-Queries + zwei Flow-Collections fuer denselben Snapshot.
+            // Verhaltensgleich, sogar konsistenter (beide Ableitungen aus genau einem Snapshot).
+            val allPrompts = promptRepoLazy.get().getAll().first()
             val savedPromptBackups =
-                promptRepoLazy.get().getAll().first().map { p ->
+                allPrompts.map { p ->
                     BackupSavedPrompt(
                         id = p.id,
                         name = p.name,
@@ -267,8 +273,8 @@ constructor(
                 )
             }
 
-            // Agentic-AI v9: Permissions + Triggers ueber alle Prompts
-            val allPrompts = promptRepoLazy.get().getAll().first()
+            // Agentic-AI v9: Permissions + Triggers ueber alle Prompts (allPrompts oben einmalig
+            // geholt — wird hier wiederverwendet statt erneut aus der DB zu lesen).
             val permissionBackups = mutableListOf<BackupPromptToolPermission>()
             val triggerBackups = mutableListOf<BackupPromptTrigger>()
             for (p in allPrompts) {
@@ -359,14 +365,23 @@ constructor(
             // unter 15 MB.
             if (mainOk) {
                 try {
-                    val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
                     // Frank-Wunsch 2026-05-23: Das Workouts-Backup ist mit ~6 MB die mit Abstand
                     // groesste Datei und bremst den App-Start am staerksten. Es wird nur noch
                     // hochgeladen, wenn sich seit dem letzten Workouts-Backup wirklich etwas
                     // geaendert hat. Fingerprint = Hash ueber trackId + createdAt + manuelle Edits
                     // aller Workouts — aendert sich bei neuem, geloeschtem oder editiertem Training.
+                    //
+                    // Performance 2026-05-23 (Loop 1, Direktive #3): Fingerprint aus der schlanken
+                    // 3-Spalten-Projektion getFingerprintRows() berechnen, NICHT mehr ueber
+                    // observeAll() (das laedt alle Stream-Felder, ~6 MB bis ~130 MB, nur um sie
+                    // nach dem Hash sofort zu verwerfen). Reihenfolge (startMs DESC) und die
+                    // joinToString-Form sind identisch -> der Hash und damit die Skip-/Upload-
+                    // Entscheidung bleiben bit-genau gleich. Die vollen Entities werden erst im
+                    // else-Zweig geladen, also nur wenn tatsaechlich hochgeladen wird.
                     val fingerprint =
-                        workoutEntities
+                        amazfitWorkoutDaoLazy
+                            .get()
+                            .getFingerprintRows()
                             .joinToString("|") {
                                 "${it.trackId}:${it.createdAt}:${it.manualOverridesMs ?: 0L}"
                             }
@@ -374,8 +389,11 @@ constructor(
                     val lastFingerprint = appSettingsLazy.get().workoutsBackupFingerprintFlow.first()
                     if (fingerprint == lastFingerprint && lastFingerprint != 0) {
                         // Keine Aenderung an den Trainings — teuren 6-MB-Upload ueberspringen.
+                        // Skip-Pfad laedt jetzt KEINE Stream-Daten mehr in den RAM.
                         _status.value = SyncStatus.Synced(System.currentTimeMillis())
                     } else {
+                        // Nur bei echter Aenderung die vollen Entities (inkl. Streams) laden.
+                        val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
                         val workoutBackups = workoutEntities.map { it.toBackup() }
                         val workoutsPayload =
                             WorkoutsBackupPayload(
