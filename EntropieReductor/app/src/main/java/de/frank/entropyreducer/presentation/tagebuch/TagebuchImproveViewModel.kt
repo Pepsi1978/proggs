@@ -48,6 +48,64 @@ class TagebuchImproveViewModel @Inject constructor(
         _error.value = null
     }
 
+    /**
+     * Frank-Wunsch 2026-05-23: Eintrag/Followup-spezifische Verbesserung — Ergebnis
+     * geht direkt an onResult ohne den geteilten _improvedText-State zu beeinflussen.
+     * Erlaubt parallele Verbesserung mehrerer Texte (Eintrag plus N Followups).
+     * onResult bekommt entweder den verbesserten Text oder null bei Fehler.
+     */
+    fun improveOnce(original: String, onResult: (String?) -> Unit) {
+        val text = original.trim()
+        if (text.isEmpty()) {
+            onResult(null)
+            return
+        }
+        viewModelScope.launch {
+            val apiKey = secrets.geminiApiKey
+            if (apiKey.isNullOrBlank()) {
+                _error.value = "Bitte Gemini-API-Key in den Einstellungen hinterlegen."
+                onResult(null)
+                return@launch
+            }
+            runCatching {
+                val model = settings.geminiModelFlow.first()
+                val response = gemini.generateContent(
+                    model = model,
+                    apiKey = apiKey,
+                    request = GeminiRequest(
+                        systemInstruction = GeminiContent(
+                            parts = listOf(GeminiPart(SYSTEM_PROMPT)),
+                        ),
+                        contents = listOf(
+                            GeminiContent(
+                                role = "user",
+                                parts = listOf(GeminiPart("Hier ist mein Tagebucheintrag (Roh-Transkript):\n\n$text")),
+                            ),
+                        ),
+                        generationConfig = GeminiGenerationConfig(
+                            temperature = 0.35,
+                            responseMimeType = "text/plain",
+                        ),
+                    ),
+                )
+                response.candidates
+                    ?.firstOrNull()
+                    ?.content
+                    ?.parts
+                    ?.firstOrNull()
+                    ?.text
+                    ?.trim()
+            }
+                .onSuccess { improved ->
+                    if (improved.isNullOrBlank()) onResult(null) else onResult(improved)
+                }
+                .onFailure { ex ->
+                    _error.value = ex.message ?: "Text-Verbesserung fehlgeschlagen"
+                    onResult(null)
+                }
+        }
+    }
+
     fun improve(original: String) {
         if (_state.value == ImproveState.RUNNING) return
         val text = original.trim()

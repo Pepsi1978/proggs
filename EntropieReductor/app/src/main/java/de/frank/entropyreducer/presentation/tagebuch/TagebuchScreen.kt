@@ -800,12 +800,18 @@ data class TagebuchEntry(
      */
     val followups: List<TagebuchFollowup> = emptyList(),
     /**
-     * KI-generierte Bullet-Point-Zusammenfassung (Frank-Wunsch 2026-05-20). Eine Zeile pro
-     * Bullet-Point, beginnt mit "• ". `null` = noch keine Zusammenfassung erstellt — der Detail-
-     * Screen zeigt dann einen Knopf "Mit KI zusammenfassen". Wird automatisch bei neuen Einträgen
-     * erzeugt sobald Gemini antwortet.
+     * KI-generierte Zusammenfassung (Frank-Wunsch 2026-05-20, 2026-05-23 auf Fliesstext).
+     * `null` = noch keine Zusammenfassung erstellt — der Detail-Screen zeigt dann einen
+     * Knopf "Mit KI zusammenfassen".
      */
     val summary: String? = null,
+    /**
+     * Nachträgliche KI-Verbesserung des Eintrags-Texts (Frank-Wunsch 2026-05-23).
+     * `null` = noch nicht via KI verbessert; in der UI gibt es dann den Knopf
+     * "Mit KI nachträglich verbessern". Original-Text bleibt in [text].
+     */
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
 ) {
     companion object {
         fun create(text: String): TagebuchEntry {
@@ -824,8 +830,17 @@ data class TagebuchEntry(
     }
 }
 
-/** Einzelner Nachtrag zu einem [TagebuchEntry]. */
-data class TagebuchFollowup(val id: String, val createdAtMs: Long, val text: String)
+/**
+ * Einzelner Nachtrag zu einem [TagebuchEntry]. Hat ebenfalls einen eigenen KI-verbesserten
+ * Text (Frank-Wunsch 2026-05-23) damit jeder Nachtrag separat nachgeschliffen werden kann.
+ */
+data class TagebuchFollowup(
+    val id: String,
+    val createdAtMs: Long,
+    val text: String,
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
+)
 
 private val Context.tagebuchStore by preferencesDataStore(name = "tagebuch_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
@@ -869,6 +884,9 @@ internal suspend fun deleteTagebuchEntry(context: Context, id: String) {
  * Aktualisiert Text und/oder Titel eines bestehenden Eintrags. Felder die als `null` uebergeben
  * werden, bleiben unveraendert. Wird sowohl vom Edit-Dialog (Text-Aenderung) als auch vom
  * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
+ *
+ * Frank-Wunsch 2026-05-23: Auch improvedText + isImproved werden hier durchgereicht damit
+ * die KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat.
  */
 internal suspend fun updateTagebuchEntry(
     context: Context,
@@ -876,8 +894,10 @@ internal suspend fun updateTagebuchEntry(
     text: String? = null,
     title: String? = null,
     summary: String? = null,
+    improvedText: String? = null,
+    isImproved: Boolean? = null,
 ) {
-    if (text == null && title == null && summary == null) return
+    if (text == null && title == null && summary == null && improvedText == null && isImproved == null) return
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
@@ -886,10 +906,40 @@ internal suspend fun updateTagebuchEntry(
                     text = text ?: e.text,
                     title = title ?: e.title,
                     summary = summary ?: e.summary,
+                    improvedText = improvedText ?: e.improvedText,
+                    isImproved = isImproved ?: e.isImproved,
                 )
             } else {
                 e
             }
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+}
+
+/**
+ * Speichert die KI-Verbesserung eines Followups (Frank-Wunsch 2026-05-23).
+ * Setzt improvedText + isImproved=true; rawText bleibt unveraendert.
+ */
+internal suspend fun setTagebuchFollowupImproved(
+    context: Context,
+    entryId: String,
+    followupId: String,
+    improvedText: String,
+) {
+    context.tagebuchStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id != entryId) return@map e
+            e.copy(
+                followups =
+                    e.followups.map { f ->
+                        if (f.id == followupId)
+                            f.copy(improvedText = improvedText, isImproved = true)
+                        else f
+                    }
+            )
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
@@ -966,6 +1016,8 @@ private fun jsonToEntry(o: JSONObject): TagebuchEntry =
         text = o.optString("text"),
         followups = jsonToFollowups(o.optJSONArray("followups")),
         summary = o.optString("summary").takeIf { it.isNotBlank() },
+        improvedText = o.optString("improvedText").takeIf { it.isNotBlank() },
+        isImproved = o.optBoolean("isImproved", false),
     )
 
 private fun jsonToFollowups(arr: JSONArray?): List<TagebuchFollowup> {
@@ -978,6 +1030,8 @@ private fun jsonToFollowups(arr: JSONArray?): List<TagebuchFollowup> {
                     id = o.optString("id"),
                     createdAtMs = o.optLong("ts"),
                     text = o.optString("text"),
+                    improvedText = o.optString("improvedText").takeIf { it.isNotBlank() },
+                    isImproved = o.optBoolean("isImproved", false),
                 )
             )
         }
@@ -999,6 +1053,10 @@ private fun serializeEntries(entries: List<TagebuchEntry>): String {
                 fo.put("id", f.id)
                 fo.put("ts", f.createdAtMs)
                 fo.put("text", f.text)
+                if (!f.improvedText.isNullOrBlank()) {
+                    fo.put("improvedText", f.improvedText)
+                }
+                if (f.isImproved) fo.put("isImproved", true)
                 fArr.put(fo)
             }
             o.put("followups", fArr)
@@ -1006,6 +1064,10 @@ private fun serializeEntries(entries: List<TagebuchEntry>): String {
         if (!e.summary.isNullOrBlank()) {
             o.put("summary", e.summary)
         }
+        if (!e.improvedText.isNullOrBlank()) {
+            o.put("improvedText", e.improvedText)
+        }
+        if (e.isImproved) o.put("isImproved", true)
         arr.put(o)
     }
     return arr.toString()

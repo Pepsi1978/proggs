@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.tagebuch
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -157,58 +158,55 @@ fun TagebuchEntryDetailScreen(
                     onGenerate = onGenerateSummary,
                 )
 
-                // ── Eintrag-Karte (Title + Text, inline editierbar) ──
-                var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
-                var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
-
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            "Eintrag",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = CosmosColors.AccentSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatTagebuchTimestamp(entry.timestampMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        BasicTextField(
-                            value = titleDraft,
-                            onValueChange = {
-                                titleDraft = it
-                                viewModel.updateTitle(it)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle =
-                                TextStyle(
-                                    color = cosmos.textPrimary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 24.sp,
-                                ),
-                            cursorBrush = SolidColor(CosmosColors.AccentPrimary),
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        BasicTextField(
-                            value = textDraft,
-                            onValueChange = {
-                                textDraft = it
-                                viewModel.updateText(it)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle =
-                                TextStyle(
-                                    color = cosmos.textSecondary,
-                                    fontSize = 15.sp,
-                                    lineHeight = 22.sp,
-                                ),
-                            cursorBrush = SolidColor(CosmosColors.AccentPrimary),
-                        )
+                // ── Eintrag-Karte (Title + Text, inline editierbar, optional KI-Verbessert) ──
+                // Frank-Wunsch 2026-05-23: Wie BestJournalFrank — bei vorhandener
+                // KI-Verbesserung erscheint oben ein Tab "Verbessert"/"Original".
+                // Andernfalls kann der Eintrag per Knopf "Mit KI nachträglich
+                // verbessern" verschliffen werden.
+                val improveVm: TagebuchImproveViewModel = hiltViewModel()
+                val improveError by improveVm.error.collectAsState()
+                LaunchedEffect(improveError) {
+                    improveError?.let {
+                        snackbar.showSnackbar(it)
+                        improveVm.clearImproved()
                     }
                 }
+
+                var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
+                var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
+                var showImproved by remember(entry.id, entry.isImproved) {
+                    mutableStateOf(entry.isImproved && entry.improvedText != null)
+                }
+                var entryImproving by remember(entry.id) { mutableStateOf(false) }
+
+                ImprovableEntryCard(
+                    headerLabel = "Eintrag",
+                    timestampMs = entry.timestampMs,
+                    titleDraft = titleDraft,
+                    onTitleChange = {
+                        titleDraft = it
+                        viewModel.updateTitle(it)
+                    },
+                    originalText = textDraft,
+                    onOriginalChange = {
+                        textDraft = it
+                        viewModel.updateText(it)
+                    },
+                    improvedText = entry.improvedText,
+                    showImproved = showImproved,
+                    onToggleVariant = { showImproved = !showImproved },
+                    isImproving = entryImproving,
+                    onImprove = {
+                        entryImproving = true
+                        improveVm.improveOnce(textDraft) { improved ->
+                            entryImproving = false
+                            if (improved != null) {
+                                viewModel.setImprovedText(improved)
+                                showImproved = true
+                            }
+                        }
+                    },
+                )
 
                 // ── Nachträge ──
                 entry.followups.forEachIndexed { index, followup ->
@@ -219,6 +217,10 @@ fun TagebuchEntryDetailScreen(
                             viewModel.updateFollowup(followup.id, newText)
                         },
                         onDelete = { viewModel.deleteFollowup(followup.id) },
+                        improveVm = improveVm,
+                        onImproved = { improved ->
+                            viewModel.setFollowupImproved(followup.id, improved)
+                        },
                     )
                 }
 
@@ -431,15 +433,187 @@ private fun summaryAsProse(raw: String): String {
         .joinToString(separator = " ")
 }
 
+/**
+ * Eintrag-Karte mit optionalem Verbessert/Original-Tab (Frank-Wunsch 2026-05-23).
+ * Wenn keine KI-Version vorhanden ist, wird unter dem editierbaren Originaltext ein
+ * "Mit KI nachträglich verbessern"-Knopf gezeigt. Liegt eine improvedText-Variante
+ * vor, erscheint oben ein Tab und der Knopf wird durch "Neu verbessern" ersetzt.
+ */
+@Composable
+private fun ImprovableEntryCard(
+    headerLabel: String,
+    timestampMs: Long,
+    titleDraft: String,
+    onTitleChange: (String) -> Unit,
+    originalText: String,
+    onOriginalChange: (String) -> Unit,
+    improvedText: String?,
+    showImproved: Boolean,
+    onToggleVariant: () -> Unit,
+    isImproving: Boolean,
+    onImprove: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val hasImproved = !improvedText.isNullOrBlank()
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                headerLabel,
+                style = MaterialTheme.typography.titleMedium,
+                color = TagebuchAccent,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatTagebuchTimestamp(timestampMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            BasicTextField(
+                value = titleDraft,
+                onValueChange = onTitleChange,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle =
+                    TextStyle(
+                        color = cosmos.textPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp,
+                    ),
+                cursorBrush = SolidColor(TagebuchAccent),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (hasImproved) {
+                VariantTabRow(
+                    showImproved = showImproved,
+                    onToggle = onToggleVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (hasImproved && showImproved) {
+                // Verbesserter Text — read-only, joinable per Klick auf Tab.
+                Text(
+                    text = improvedText!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    lineHeight = 22.sp,
+                )
+            } else {
+                BasicTextField(
+                    value = originalText,
+                    onValueChange = onOriginalChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle =
+                        TextStyle(
+                            color = cosmos.textSecondary,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                        ),
+                    cursorBrush = SolidColor(TagebuchAccent),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            ImproveButton(
+                isImproving = isImproving,
+                hasImproved = hasImproved,
+                onClick = onImprove,
+            )
+        }
+    }
+}
+
+/**
+ * Wiederverwendbarer Tab "Verbessert" / "Original" — orange Highlight unter dem
+ * aktiven Tab, anderer Tab in Sekundärfarbe.
+ */
+@Composable
+private fun VariantTabRow(showImproved: Boolean, onToggle: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TabChip(label = "Verbessert", active = showImproved, onClick = { if (!showImproved) onToggle() })
+        Spacer(Modifier.width(6.dp))
+        TabChip(label = "Original", active = !showImproved, onClick = { if (showImproved) onToggle() })
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = if (showImproved) "von Gemini" else "Roh-Transkript",
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
+    }
+}
+
+@Composable
+private fun TabChip(label: String, active: Boolean, onClick: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    val bg = if (active) TagebuchAccent.copy(alpha = 0.18f) else Color.Transparent
+    val fg = if (active) TagebuchAccent else cosmos.textSecondary
+    Box(
+        modifier =
+            Modifier
+                .background(bg, RoundedCornerShape(50))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = fg,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun ImproveButton(isImproving: Boolean, hasImproved: Boolean, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = !isImproving) {
+        if (isImproving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(14.dp),
+                strokeWidth = 2.dp,
+                color = TagebuchAccent,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("Wird verbessert …", style = MaterialTheme.typography.labelMedium)
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = TagebuchAccent,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text =
+                    if (hasImproved) "Neu verbessern"
+                    else "Mit KI nachträglich verbessern",
+                style = MaterialTheme.typography.labelMedium,
+                color = TagebuchAccent,
+            )
+        }
+    }
+}
+
 @Composable
 private fun FollowupCard(
     followup: TagebuchFollowup,
     index: Int,
     onTextChange: (String) -> Unit,
     onDelete: () -> Unit,
+    improveVm: TagebuchImproveViewModel,
+    onImproved: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     var draft by remember(followup.id, followup.text) { mutableStateOf(followup.text) }
+    val hasImproved = !followup.improvedText.isNullOrBlank()
+    var showImproved by
+        remember(followup.id, followup.isImproved) {
+            mutableStateOf(followup.isImproved && followup.improvedText != null)
+        }
+    var improving by remember(followup.id) { mutableStateOf(false) }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -455,14 +629,14 @@ private fun FollowupCard(
                     Icon(
                         imageVector = Icons.Outlined.Book,
                         contentDescription = null,
-                        tint = CosmosColors.AccentSecondary,
+                        tint = TagebuchAccent,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "Nachtrag ${germanNumberWord(index)}",
                         style = MaterialTheme.typography.titleSmall,
-                        color = CosmosColors.AccentSecondary,
+                        color = TagebuchAccent,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -481,16 +655,47 @@ private fun FollowupCard(
                 modifier = Modifier.padding(start = 26.dp),
             )
             Spacer(Modifier.height(8.dp))
-            BasicTextField(
-                value = draft,
-                onValueChange = {
-                    draft = it
-                    onTextChange(it)
+
+            if (hasImproved) {
+                VariantTabRow(showImproved = showImproved, onToggle = { showImproved = !showImproved })
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (hasImproved && showImproved) {
+                Text(
+                    text = followup.improvedText!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    lineHeight = 22.sp,
+                )
+            } else {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = {
+                        draft = it
+                        onTextChange(it)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle =
+                        TextStyle(color = cosmos.textPrimary, fontSize = 15.sp, lineHeight = 22.sp),
+                    cursorBrush = SolidColor(TagebuchAccent),
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+            ImproveButton(
+                isImproving = improving,
+                hasImproved = hasImproved,
+                onClick = {
+                    improving = true
+                    improveVm.improveOnce(draft) { improved ->
+                        improving = false
+                        if (improved != null) {
+                            onImproved(improved)
+                            showImproved = true
+                        }
+                    }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle =
-                    TextStyle(color = cosmos.textPrimary, fontSize = 15.sp, lineHeight = 22.sp),
-                cursorBrush = SolidColor(CosmosColors.AccentPrimary),
             )
         }
     }

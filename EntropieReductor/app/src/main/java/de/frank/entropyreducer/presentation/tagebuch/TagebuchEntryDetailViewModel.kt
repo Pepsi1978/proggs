@@ -119,6 +119,34 @@ constructor(
         viewModelScope.launch { deleteTagebuchFollowup(ctx, entryId, followupId) }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-23: KI-Nachbearbeitung des Eintrags-Texts via Gemini.
+     * Speichert das Ergebnis als improvedText, isImproved=true. Der Original-Text
+     * bleibt in `text` erhalten — die UI bietet einen Tab zwischen beiden.
+     */
+    fun setImprovedText(improved: String) {
+        if (entryId.isBlank()) return
+        viewModelScope.launch {
+            updateTagebuchEntry(
+                ctx,
+                entryId,
+                improvedText = improved,
+                isImproved = true,
+            )
+        }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-23: KI-Verbesserung eines einzelnen Nachtrags. Der originale
+     * Nachtragstext bleibt erhalten — improvedText wird daneben gespeichert.
+     */
+    fun setFollowupImproved(followupId: String, improved: String) {
+        if (entryId.isBlank()) return
+        viewModelScope.launch {
+            setTagebuchFollowupImproved(ctx, entryId, followupId, improved)
+        }
+    }
+
     fun deleteEntry() {
         if (entryId.isBlank()) return
         viewModelScope.launch {
