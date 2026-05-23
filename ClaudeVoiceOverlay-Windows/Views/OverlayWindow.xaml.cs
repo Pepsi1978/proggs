@@ -299,8 +299,11 @@ namespace ClaudeVoiceOverlay.Views
 
         private void CollapsedMicButton_Click(object sender, RoutedEventArgs e)
         {
-            _usedSinceExpand = true;
+            // Erst ausklappen (Expand() setzt _usedSinceExpand zurueck), DANN
+            // als "benutzt" markieren — sonst wuerde der Mic-Klick faelschlich
+            // als reines Hovern gewertet (5 s statt 2 s bis zum Einklappen).
             Expand();
+            _usedSinceExpand = true;
             BtnMic_Click(MicButton, new RoutedEventArgs());
         }
 
@@ -351,21 +354,23 @@ namespace ClaudeVoiceOverlay.Views
             }
             else
             {
-                Top = fullTop;
+                Top    = fullTop;
+                Height = FullHeight; // Geometrie an den Zustand koppeln (Defense in Depth)
+            }
+
+            // Frisch eingeblendet (war versteckt) → eingeklappt starten, damit
+            // der Mic-Button aus dem Weg ist und die App dahinter frei bleibt.
+            // VOR Show(), sonst blitzt das volle Overlay einen Frame lang auf.
+            if (wasHidden && _autoHideEnabled
+                && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
+            {
+                CollapseImmediate();
             }
 
             if (!IsVisible)
             {
                 Show();
                 Console.WriteLine("Overlay: visible (app active)");
-            }
-
-            // Frisch eingeblendet (war versteckt) → eingeklappt starten, damit
-            // der Mic-Button aus dem Weg ist und die App dahinter frei bleibt.
-            if (wasHidden && _autoHideEnabled
-                && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
-            {
-                CollapseImmediate();
             }
 
             // KRITISCH (Bugfix 2026-05-10): Auch wenn die Pille bereits sichtbar
