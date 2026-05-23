@@ -1409,11 +1409,15 @@ namespace TerminalVoiceOverlay.Views
             // both windows behave as a single unit per user expectation.
             // ABER: Im Solo-Andock-Modus ist das Promtboard absichtlich
             // ausgeblendet. Dann nicht das Promtboard reaktivieren, sondern
-            // das Eingabefenster direkt am Pillar wiederherstellen.
+            // das Eingabefenster an seiner KANONISCHEN Solo-Position
+            // wiederherstellen (horizontal: oberhalb der Leiste in Board-Hoehe,
+            // vertikal: links am Pillar). Bugfix 2026-05-23: vorher wurde hier
+            // hart DockToOverlay() gerufen — dadurch sprang die Eingabe nach
+            // jedem Absenden zurueck auf einen duennen Streifen in Pillar-Hoehe.
             if (_inputSoloDock && _promptPanel?.InputWindow is { } soloInput)
             {
                 if (!soloInput.IsVisible) soloInput.Show();
-                soloInput.DockToOverlay(this);
+                PositionSoloInput();
             }
             else
             {
@@ -2659,7 +2663,7 @@ namespace TerminalVoiceOverlay.Views
                 // Horizontal: Promptboard OBERHALB der Leiste, gleiche Breite wie
                 // die Leiste. Das Eingabefenster dockt dann links ans Board (auch
                 // oben), weil es dem Board via LocationChanged folgt.
-                const double boardHeight = 360;
+                const double boardHeight = 740; // ~10 cm hoeher als zuvor (360) → mehr Eingabeplatz, waechst nach oben
                 _promptPanel.Width  = ActualWidth;
                 _promptPanel.Height = boardHeight;
                 _promptPanel.Left   = Left;
@@ -2685,7 +2689,7 @@ namespace TerminalVoiceOverlay.Views
             if (input is null) return;
             if (_isHorizontal)
             {
-                const double boardHeight = 360;
+                const double boardHeight = 740; // ~10 cm hoeher als zuvor (360) → mehr Eingabeplatz, waechst nach oben
                 double iw = double.IsNaN(input.Width) || input.Width < 1 ? input.ActualWidth : input.Width;
                 input.Height = boardHeight;
                 input.Top    = Top - boardHeight - 4;      // oberhalb der Leiste, wo das Board war
