@@ -397,20 +397,8 @@ class ProcessEntryUseCase @Inject constructor(
      *  - 3-7 Tage Restzeit                     → mindestens 65
      *  - mehr als 7 Tage / keine Frist         → kein Floor, KI-Wert gilt
      */
-    private fun applyDeadlineFloor(baseScore: Double, dueAtMs: Long?): Double {
-        if (dueAtMs == null) return baseScore
-        val remainingMs = dueAtMs - System.currentTimeMillis()
-        val hours = remainingMs / (60L * 60 * 1000)
-        val floor = when {
-            remainingMs < 0 -> 98.0
-            hours < 24 -> 95.0
-            hours < 48 -> 85.0
-            hours < 72 -> 75.0
-            hours < 24 * 7 -> 65.0
-            else -> 0.0
-        }
-        return maxOf(baseScore, floor).coerceAtMost(100.0)
-    }
+    private fun applyDeadlineFloor(baseScore: Double, dueAtMs: Long?): Double =
+        de.frank.entropyreducer.domain.usecase.computeDeadlineFloor(baseScore, dueAtMs)
 
     companion object {
         private const val PRIORITY_DOCTRINE = """

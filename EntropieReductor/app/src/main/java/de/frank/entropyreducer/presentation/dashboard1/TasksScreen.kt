@@ -90,7 +90,6 @@ import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
-import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -230,7 +229,7 @@ fun TasksScreen(
     val themeMode by themeVm.themeMode.collectAsState()
 
     CosmosScaffold(
-        title = "Entropie Reduktor",
+        title = "Aufgaben",
         actions = {
             // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
             // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
@@ -285,12 +284,14 @@ fun TasksScreen(
                 // wenn Drive-Backup aktiviert ist.
                 if (state.driveBackupEnabled) {
                     // Frank-Wunsch 2026-05-09 (dritte Praezisierung): Zeile MUSS
-                    // direkt am Boden des Titels "Entropie Reduktor" kleben —
-                    // kein Spacer davor, kein Spacer danach, vertikales Padding
-                    // in der Row selbst auf 0 reduziert (siehe BackupStatusBadge).
+                    // direkt am Boden des Titels kleben — kein Spacer davor, kein
+                    // Spacer danach, vertikales Padding in der Row selbst auf 0
+                    // reduziert (siehe BackupStatusBadge).
                     BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
                 }
-                StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
+                // Frank-Wunsch 2026-05-23: StatusBar ("Zustand jetzt"-Balken) ist
+                // ausschliesslich im Analyse-Tab. Hier raus, damit der sichtbare
+                // Bereich fuer Aufgaben nach oben wandert.
                 Spacer(Modifier.height(8.dp))
 
                 // Re-Score-Banner: laeuft eine Re-Bewertung aller offenen Aufgaben

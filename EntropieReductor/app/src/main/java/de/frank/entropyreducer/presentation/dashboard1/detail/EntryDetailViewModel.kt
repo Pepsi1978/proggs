@@ -296,23 +296,34 @@ constructor(
     }
 
     /**
-     * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist setzen oder loeschen. null
-     * = keine Frist mehr. Nach jeder Aenderung wird der Eintrag neu bewertet, weil
-     * die Frist direkt in die Prio-Berechnung einfliesst (kurze Restzeit = hoehere
-     * Prio, < 24h = mindestens 95).
+     * Frank-Wunsch 2026-05-22 (dritte Iteration) + 2026-05-23 (Bugfix):
+     * Frist setzen oder loeschen. null = keine Frist mehr.
+     *
+     * Zwei-Stufen-Anpassung damit die Prio IMMER sofort sichtbar wird:
+     *  1. Lokaler Deadline-Floor wird unmittelbar berechnet und gespeichert —
+     *     funktioniert auch ohne Internet/Gemini-Key. Frank sieht den neuen
+     *     Wert sofort in der Liste.
+     *  2. Optionaler Gemini-Rescore obendrauf (kann ueberschreiben). Faellt
+     *     er aus (kein Key/Netz), bleibt der lokale Floor-Wert stehen.
      */
     fun setDueDate(epochMs: Long?) {
         viewModelScope.launch {
             val current = entries.get(entryId) ?: return@launch
+            val recomputedScore =
+                de.frank.entropyreducer.domain.usecase.computeDeadlineFloor(
+                    baseScore = current.priorityScore,
+                    dueAtMs = epochMs,
+                )
             entries.update(
                 current.copy(
                     dueAtMs = epochMs,
+                    priorityScore = recomputedScore,
                     updatedAt = System.currentTimeMillis(),
                 )
             )
             reloadTrigger.value = System.currentTimeMillis()
-            // Frist-Aenderung soll sofort in die Prio einfliessen — Followups
-            // mit anhaengen falls vorhanden.
+            // Optionale Verfeinerung durch Gemini — laeuft asynchron weiter.
+            // Falls Gemini ausfaellt, bleibt der lokale Floor-Wert stehen.
             rescoreWithCurrentFollowups()
         }
     }
