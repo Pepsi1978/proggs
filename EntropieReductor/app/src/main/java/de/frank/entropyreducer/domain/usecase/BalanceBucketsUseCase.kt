@@ -10,11 +10,19 @@ import javax.inject.Singleton
 
 /**
  * Bucket-Verteilung mit Soft-Limits fuer KI-Einordnung, harte Bevorzugung manueller
- * Eintraege (Frank-Spezifikation 2026-05-09, erweitert 2026-05-11):
- *   - HEUTE: KI fuellt bis 5 Eintraege, manuell darf ueberschreiten (5/6/7/...)
+ * Eintraege (Frank-Spezifikation 2026-05-09, erweitert 2026-05-11, geaendert 2026-05-23):
+ *   - HEUTE: wird NICHT mehr automatisch aufgefuellt. Der HEUTE-Bestand ist
+ *            eingefroren — was drin ist bleibt drin, neue Aufgaben rutschen NICHT
+ *            von selbst nach HEUTE. Die Mitgliedschaft aendert sich nur durch
+ *            (a) manuelle Zuordnung, (b) Tag-Rollover (MORGEN->HEUTE) oder
+ *            (c) den "Neue Aufgaben hinzufuegen"-Button (refillHeute im ViewModel).
  *   - MORGEN: KI fuellt bis 5, manuell darf ueberschreiten
  *   - FREIBLOCK: KI fuellt bis 10, manuell darf ueberschreiten
  *   - SPAETER: immer unbegrenzt
+ *
+ * Frank-Wunsch 2026-05-23: "Wenn ich Aufgaben aus dem Heute-Bereich abarbeite,
+ * sollen keine neuen automatisch nachgefuellt werden — erst wenn alle erledigt sind
+ * kommt ein Button, der 5 neue aus aelteren Bereichen holt."
  *
  * Diese Verteilung ist die EINZIGE autoritative Quelle fuer timeBucket-Werte
  * aktiver Eintraege. Sowohl der TasksViewModel (beim App-Start, nach Aenderungen)
@@ -22,12 +30,12 @@ import javax.inject.Singleton
  * kein anderer Code-Pfad die Verteilung ungewollt zerstoeren kann.
  *
  * Algorithmus:
- * 1) Manuelle Eintraege belegen ALLE Slots in ihrem Wunsch-Bucket — ohne Cap.
- *    Das Cap wird trotzdem dekrementiert (kann negativ werden) damit Pass 2
- *    keinen KI-Pool-Eintrag mehr in den ueberbelegten Bucket schiebt.
+ * 1) Manuelle Eintraege belegen ALLE Slots in ihrem Wunsch-Bucket — ohne Cap
+ *    (auch HEUTE, falls Frank manuell zuweist).
+ * 1.5) HEUTE-Bestand einfrieren: aktive Eintraege die schon in HEUTE liegen und
+ *      nicht manuell woanders platziert sind bleiben in HEUTE.
  * 2) Restliche Slots werden mit dem KI-Pool nach priorityScore desc aufgefuellt —
- *    HEUTE → MORGEN → FREIBLOCK → SPAETER. Bei negativem Rest-Cap landet der
- *    Pool weiter unten.
+ *    NUR MORGEN → FREIBLOCK → SPAETER (HEUTE ist KEIN Auto-Fill-Ziel mehr).
  *
  * Idempotent: schreibt nur wenn sich timeBucket aendert.
  */
@@ -43,14 +51,20 @@ class BalanceBucketsUseCase @Inject constructor(
         }
         val byPrio = active.sortedByDescending { it.priorityScore }
 
-        val orderedBuckets = listOf(
+        // Manuelle Wuensche koennen JEDEN Bucket betreffen (auch HEUTE).
+        val manualBuckets = listOf(
             TimeBucket.HEUTE,
             TimeBucket.MORGEN,
             TimeBucket.FREIBLOCK,
             TimeBucket.SPAETER,
         )
+        // Auto-Fill betrifft HEUTE NICHT mehr (Frank-Wunsch 2026-05-23).
+        val autoFillBuckets = listOf(
+            TimeBucket.MORGEN,
+            TimeBucket.FREIBLOCK,
+            TimeBucket.SPAETER,
+        )
         val capacityLeft = mutableMapOf(
-            TimeBucket.HEUTE to 5,
             TimeBucket.MORGEN to 5,
             TimeBucket.FREIBLOCK to 10,
             // SPAETER hat kein Limit
@@ -60,29 +74,31 @@ class BalanceBucketsUseCase @Inject constructor(
         // Pass 1: Manuelle Eintraege belegen ihre Wunsch-Buckets.
         //
         // Frank-Befund 2026-05-11: Manuelle Aufgaben haben HOECHSTE Prioritaet —
-        // sie duerfen das Cap ueberschreiten. Wenn Frank manuell 7 Aufgaben in
-        // HEUTE schiebt, bleiben es 7 (vorher: 5, die anderen 2 wurden in Pass 2
-        // automatisch in MORGEN weitergereicht). KI darf nicht "korrigieren".
+        // sie duerfen das Cap ueberschreiten. KI darf nicht "korrigieren".
         // Das Cap wird trotzdem dekrementiert (kann negativ werden) damit
         // Pass 2 keinen weiteren KI-Eintrag in einen schon ueberbelegten
         // Bucket schiebt.
-        for (bucket in orderedBuckets) {
+        for (bucket in manualBuckets) {
             val candidates = byPrio.filter { it.manualBucket == bucket }
-            if (bucket == TimeBucket.SPAETER) {
-                // Unbegrenzte Kapazitaet — alle manuellen SPAETER-Wuensche akzeptieren.
-                candidates.forEach { placement[it.id] = bucket }
-            } else {
-                // KEIN take(cap) mehr — alle manuellen Kandidaten kommen rein.
-                candidates.forEach { placement[it.id] = bucket }
-                val cap = capacityLeft[bucket] ?: 0
-                capacityLeft[bucket] = cap - candidates.size
+            candidates.forEach { placement[it.id] = bucket }
+            if (bucket != TimeBucket.SPAETER) {
+                capacityLeft[bucket]?.let { capacityLeft[bucket] = it - candidates.size }
             }
         }
 
-        // Pass 2: AI-Pool + verdraengte Manuelle fuellen freie Slots auf
+        // Pass 1.5: HEUTE-Bestand einfrieren (Frank-Wunsch 2026-05-23).
+        // Alle aktiven Eintraege die schon in HEUTE liegen und nicht bereits
+        // manuell woanders platziert wurden bleiben in HEUTE. So verschwindet
+        // keine begonnene HEUTE-Aufgabe und es wird auch keine automatisch
+        // nachgefuellt — HEUTE waechst nur ueber refillHeute() oder den Rollover.
+        byPrio.filter { it.id !in placement && it.timeBucket == TimeBucket.HEUTE }
+            .forEach { placement[it.id] = TimeBucket.HEUTE }
+
+        // Pass 2: AI-Pool + verdraengte Manuelle fuellen freie Slots auf —
+        // NUR noch MORGEN/FREIBLOCK/SPAETER, niemals HEUTE.
         val pool = byPrio.filter { it.id !in placement }
         var poolIndex = 0
-        for (bucket in orderedBuckets) {
+        for (bucket in autoFillBuckets) {
             if (bucket == TimeBucket.SPAETER) {
                 while (poolIndex < pool.size) {
                     placement[pool[poolIndex].id] = TimeBucket.SPAETER

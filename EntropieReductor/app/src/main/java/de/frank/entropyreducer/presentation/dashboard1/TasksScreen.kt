@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
@@ -247,11 +248,28 @@ fun TasksScreen(
 
     // Berechnet den LazyColumn-Index des Bucket-Headers fuer das Springen.
     // 0 = briefing-Item, 1..N = Bucket-Header + Eintraege.
+    // Sonderfall (Frank-Wunsch 2026-05-23): ist HEUTE leer aber es gibt Aufgaben
+    // in aelteren Bereichen, rendert die Liste dort 2 Items (Header + Nachlade-
+    // Button) — die muessen mitgezaehlt werden, sonst springt MORGEN daneben.
     fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int? {
+        val heuteEmptyShowsButton =
+            state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]
+                .orEmpty().isEmpty() &&
+                state.entriesByBucket.any { (b, l) ->
+                    b != de.frank.entropyreducer.domain.model.TimeBucket.HEUTE && l.isNotEmpty()
+                }
         var idx = 1
         for (bucket in ALL_TIME_BUCKETS) {
             val list = state.entriesByBucket[bucket].orEmpty()
-            if (list.isEmpty()) continue
+            if (list.isEmpty()) {
+                if (bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                    heuteEmptyShowsButton
+                ) {
+                    if (bucket == target) return idx
+                    idx += 2 // header-HEUTE + refill-heute
+                }
+                continue
+            }
             if (bucket == target) return idx
             idx += 1 + list.size
         }
@@ -470,6 +488,15 @@ fun TasksScreen(
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
+                        // Frank-Wunsch 2026-05-23: HEUTE wird nicht mehr automatisch
+                        // nachgefuellt. Sind alle HEUTE-Aufgaben erledigt (HEUTE leer)
+                        // und liegen in aelteren Bereichen noch offene Aufgaben, zeigen
+                        // wir im HEUTE-Bereich einen Button der 5 neue nachholt.
+                        val hasPullableTasks =
+                            state.entriesByBucket.any { (b, l) ->
+                                b != de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                                    l.isNotEmpty()
+                            }
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
                             if (list.isNotEmpty()) {
@@ -520,6 +547,18 @@ fun TasksScreen(
                                         onResolve = onResolve,
                                         onPickBucket = onPickBucket,
                                     )
+                                }
+                            } else if (
+                                bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                                    hasPullableTasks
+                            ) {
+                                // HEUTE ist leer (alles erledigt) — Nachlade-Button statt
+                                // automatischer Nachfuellung (Frank-Wunsch 2026-05-23).
+                                item(key = "header-HEUTE", contentType = "bucket-header") {
+                                    BucketHeader(bucket, 0, 0)
+                                }
+                                item(key = "refill-heute", contentType = "refill-heute") {
+                                    RefillHeuteButton(onClick = { vm.refillHeute() })
                                 }
                             }
                         }
@@ -1123,6 +1162,39 @@ private fun iconForCategory(
         EntropyCategory.SONSTIGES -> Icons.Outlined.MoreHoriz
     }
 
+/**
+ * "Neue Aufgaben hinzufügen?"-Button (Frank-Wunsch 2026-05-23). Erscheint im
+ * HEUTE-Bereich erst wenn alle HEUTE-Aufgaben erledigt sind — statt automatischer
+ * Nachfuellung. Hellgelber Hintergrund, ruft vm.refillHeute() auf das 5 neue
+ * Aufgaben aus den aelteren Bereichen nach HEUTE holt.
+ */
+@Composable
+private fun RefillHeuteButton(onClick: () -> Unit) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFFEF3C7)) // hellgelb (amber-100)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = null,
+            tint = Color(0xFF92400E), // dunkles Bernstein fuer Kontrast auf Hellgelb
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = "Neue Aufgaben hinzufügen?",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF92400E),
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
 @Composable
 private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
     val cosmos = LocalCosmos.current
@@ -1620,7 +1692,7 @@ private fun bucketLabelLong(bucket: TimeBucket): String =
 
 private fun bucketDescription(bucket: TimeBucket): String =
     when (bucket) {
-        TimeBucket.HEUTE -> "max. 5 Eintraege — schwächste Aufgabe rückt nach Morgen"
+        TimeBucket.HEUTE -> "wird nicht automatisch nachgefüllt — neue Aufgaben erst per Button"
         TimeBucket.MORGEN -> "rückt morgen automatisch in Heute"
         TimeBucket.FREIBLOCK -> "nächster freier Schichtblock"
         TimeBucket.SPAETER -> "kein Datum — Sammelbecken"
@@ -1942,21 +2014,30 @@ private fun formatBackupTime(epochMs: Long): String {
 
 /**
  * Berechnet den absoluten LazyColumn-Item-Index einer Aufgabe (Frank-Wunsch 2026-05-11). Muss exakt
- * die Reihenfolge der item()/items()-Aufrufe in der LazyColumn nachbilden: 0: briefing 1:
- * ki-question (optional) 2: category-filter 3..N: Pro nicht-leerem Bucket 1 Header + 1 Eintrag pro
- * Aufgabe Liefert -1 wenn die Aufgabe nicht in den aktiven Buckets gefunden wurde.
+ * die Reihenfolge der item()/items()-Aufrufe in der LazyColumn nachbilden:
+ *   0: briefing (enthaelt KI-Frage als Dropdown — KEIN separates Item mehr)
+ *   1..N: pro nicht-leerem Bucket 1 Header + 1 Eintrag pro Aufgabe.
+ * Sonderfall (Frank-Wunsch 2026-05-23): leerer HEUTE-Bereich mit Nachlade-Button
+ * rendert 2 Items (Header + Button) — die werden mitgezaehlt.
+ * Liefert -1 wenn die Aufgabe nicht in den aktiven Buckets gefunden wurde.
  */
 private fun computeTaskItemIndex(state: TasksUiState, taskId: String): Int {
     var idx = 0
     idx++ // briefing
-    if (state.kiQuestion != null) idx++ // ki-question
-    idx++ // category-filter
     val isEmpty =
         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
     if (isEmpty) return -1
+    val heuteEmptyShowsButton =
+        state.entriesByBucket[TimeBucket.HEUTE].orEmpty().isEmpty() &&
+            state.entriesByBucket.any { (b, l) -> b != TimeBucket.HEUTE && l.isNotEmpty() }
     for (bucket in ALL_TIME_BUCKETS) {
         val list = state.entriesByBucket[bucket].orEmpty()
-        if (list.isEmpty()) continue
+        if (list.isEmpty()) {
+            if (bucket == TimeBucket.HEUTE && heuteEmptyShowsButton) {
+                idx += 2 // header-HEUTE + refill-heute
+            }
+            continue
+        }
         idx++ // BucketHeader
         for (e in list) {
             if (e.id == taskId) return idx

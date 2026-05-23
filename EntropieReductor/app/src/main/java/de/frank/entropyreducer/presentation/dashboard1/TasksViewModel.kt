@@ -238,6 +238,45 @@ class TasksViewModel @Inject constructor(
     }
 
     /**
+     * "Neue Aufgaben hinzufuegen?"-Button (Frank-Wunsch 2026-05-23).
+     * HEUTE wird nicht mehr automatisch nachgefuellt — erst wenn ALLE
+     * HEUTE-Aufgaben erledigt sind, blendet der TasksScreen diesen Button ein.
+     * Beim Tippen holen wir die [count] hoechstpriorisierten offenen Aufgaben aus
+     * den aelteren Bereichen (MORGEN/FREIBLOCK/SPAETER) nach HEUTE. Wir setzen
+     * manualBucket=HEUTE damit der Eintrag dort sicher liegen bleibt (kein
+     * Auto-Rebalance schiebt ihn weg, kein erneuter Rollover greift).
+     */
+    fun refillHeute(count: Int = 5) {
+        viewModelScope.launch {
+            val active = entries.getActive().first().filter {
+                it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT
+            }
+            // Nur auffuellen wenn HEUTE wirklich leer ist (Button-Bedingung).
+            val heuteOpen = active.count { it.timeBucket == TimeBucket.HEUTE }
+            if (heuteOpen > 0) return@launch
+            val candidates = active
+                .filter { it.timeBucket != TimeBucket.HEUTE }
+                .sortedByDescending { it.priorityScore }
+                .take(count)
+            if (candidates.isEmpty()) return@launch
+            val now = System.currentTimeMillis()
+            candidates.forEach { e ->
+                entries.update(
+                    e.copy(
+                        manualBucket = TimeBucket.HEUTE,
+                        manualBucketSetAt = now,
+                        timeBucket = TimeBucket.HEUTE,
+                        updatedAt = now,
+                    ),
+                )
+            }
+            // Restliche Buckets neu verteilen (MORGEN/FREIBLOCK/SPAETER), damit die
+            // Caps stimmen nachdem die Eintraege HEUTE zugewiesen wurden.
+            autoBalanceBuckets()
+        }
+    }
+
+    /**
      * Throttled Auto-Refresh beim App-Start. Laeuft hoechstens einmal pro 6h
      * — Frank kann zwischendurch jederzeit manuell ueber den Refresh-Button
      * triggern.
