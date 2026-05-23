@@ -625,6 +625,17 @@ namespace TerminalVoiceOverlay.Views
         private const int    CollapseAfterUseMs  = 2000;
         private const int    CollapseAfterPeekMs = 3000;
 
+        // Horizontaler Modus: Abstand (in DIPs) zwischen dem UNTEREN Rand der
+        // Leiste und dem unteren Rand der Monitor-Arbeitsflaeche (= Oberkante
+        // der Taskleiste). Frueher hart 40 — dadurch klebte die Leiste direkt
+        // ueber der Taskleiste und ueberlappte die Claude-Code-Eingabezeile,
+        // die Statuszeile und den bypass-Hinweis. Frank's Wunsch 2026-05-23:
+        // die Leiste soll im Horizontal-Modus IMMER etwas hoeher sitzen, knapp
+        // oberhalb der CLI-Eingabezeile, wo er tippt. 150 DIPs raeumen das
+        // Eingabefeld + Statuszeile + bypass-Zeile frei. Das ist der EINZIGE
+        // Stellknopf — hier anpassen, falls die Leiste zu hoch oder zu tief sitzt.
+        private const double HBarBottomLift = 150;
+
         private bool _autoHideEnabled = true;
         private bool _isCollapsed;
         private bool _mouseOverOverlay;
@@ -756,7 +767,7 @@ namespace TerminalVoiceOverlay.Views
                 if (_waW > 0)
                 {
                     Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - 40;
+                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
                 }
             }
             else
@@ -1205,7 +1216,7 @@ namespace TerminalVoiceOverlay.Views
                 if (_waW > 0)
                 {
                     Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - 40;
+                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
                 }
             }
             else
@@ -1422,7 +1433,7 @@ namespace TerminalVoiceOverlay.Views
                     SizeToContent = SizeToContent.WidthAndHeight;
                     UpdateLayout();
                     Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - 40;
+                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
                 }
                 if (!IsVisible)
                 {
