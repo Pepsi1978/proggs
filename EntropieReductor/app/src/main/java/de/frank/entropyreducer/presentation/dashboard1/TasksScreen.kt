@@ -228,27 +228,86 @@ fun TasksScreen(
     val themeVm: ThemeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsState()
 
+    // Frank-Wunsch 2026-05-23 (Folge-Iteration):
+    //  - Heute-/Morgen-Schnellzugriff direkt neben dem Titel "Aufgaben",
+    //    nicht mehr im allgemeinen Tool-Bereich rechts.
+    //  - Heute-Icon zeigt einen kleinen orangen Punkt wenn neue HEUTE-Aufgaben
+    //    eingegangen sind seit Frank das letzte Mal aufs Icon getippt hat.
+    val heuteCount = state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]
+        ?.size
+        ?: 0
+    var lastSeenHeuteCount by remember { mutableStateOf(heuteCount) }
+    val hasNewHeute = heuteCount > lastSeenHeuteCount
+
+    // Berechnet den LazyColumn-Index des Bucket-Headers fuer das Springen.
+    // 0 = briefing-Item, 1..N = Bucket-Header + Eintraege.
+    fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int? {
+        var idx = 1
+        for (bucket in ALL_TIME_BUCKETS) {
+            val list = state.entriesByBucket[bucket].orEmpty()
+            if (list.isEmpty()) continue
+            if (bucket == target) return idx
+            idx += 1 + list.size
+        }
+        return null
+    }
+
     CosmosScaffold(
         title = "Aufgaben",
-        actions = {
-            // Heute-Schnellzugriff (Frank-Wunsch 2026-05-23): wenn Frank
-            // weit nach unten gescrollt ist, springt ein Tap zurueck zum
-            // HEUTE-Bucket. Index 1 ist immer der erste Bucket-Header (HEUTE)
-            // weil Briefing-Item auf Index 0 sitzt und keine Filterleiste
-            // mehr dazwischen liegt.
+        titleEndContent = {
+            // Heute-Icon (gelb) mit orangem Badge wenn neue HEUTE-Eintraege
+            Box {
+                IconButton(
+                    onClick = {
+                        lastSeenHeuteCount = heuteCount
+                        val target =
+                            bucketHeaderIndex(
+                                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE
+                            ) ?: 1
+                        scope.launch {
+                            runCatching { listState.animateScrollToItem(target) }
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Today,
+                        contentDescription = "Zu Heute springen",
+                        tint = Color(0xFFFBBF24),
+                    )
+                }
+                if (hasNewHeute) {
+                    Box(
+                        modifier =
+                            Modifier.align(Alignment.TopEnd)
+                                .padding(top = 8.dp, end = 8.dp)
+                                .size(8.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(Color(0xFFFF8C00))
+                    )
+                }
+            }
+            // Morgen-Icon (gruen) — kein Badge
             IconButton(
                 onClick = {
-                    scope.launch {
-                        runCatching { listState.animateScrollToItem(1) }
+                    val target =
+                        bucketHeaderIndex(
+                            de.frank.entropyreducer.domain.model.TimeBucket.MORGEN
+                        )
+                    if (target != null) {
+                        scope.launch {
+                            runCatching { listState.animateScrollToItem(target) }
+                        }
                     }
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Today,
-                    contentDescription = "Zu Heute springen",
-                    tint = cosmos.textPrimary,
+                    imageVector = Icons.Outlined.Event,
+                    contentDescription = "Zu Morgen springen",
+                    tint = Color(0xFF22C55E),
                 )
             }
+        },
+        actions = {
             // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
             // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
             // und neue Bewertung aller offenen Aufgaben mit aktuellen

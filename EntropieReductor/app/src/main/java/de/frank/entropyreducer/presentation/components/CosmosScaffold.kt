@@ -2,6 +2,7 @@ package de.frank.entropyreducer.presentation.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,13 @@ fun CosmosScaffold(
     navigationIcon: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     compactHeader: Boolean = false,
+    /**
+     * Optionaler Slot direkt rechts NEBEN dem Titel-Text (Frank-Wunsch 2026-05-23).
+     * Gedacht fuer Kontext-Knoepfe die nicht in den allgemeinen Actions-Bereich
+     * gehoeren — z.B. der Heute-Schnellzugriff im Aufgaben-Tab. Bleibt leer wenn
+     * nicht gesetzt — bestehende Caller bleiben unveraendert.
+     */
+    titleEndContent: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -52,11 +60,14 @@ fun CosmosScaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = title,
-                        color = cosmos.textPrimary,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = title,
+                            color = cosmos.textPrimary,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        titleEndContent()
+                    }
                 },
                 navigationIcon = navigationIcon,
                 actions = { actions() },
