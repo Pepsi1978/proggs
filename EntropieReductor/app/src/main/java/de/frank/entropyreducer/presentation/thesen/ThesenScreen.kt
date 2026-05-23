@@ -828,4 +828,7 @@ internal fun formatThesenTimestamp(ts: Long): String {
 private fun formatTimestamp(ts: Long): String = formatThesenTimestamp(ts)
 
 /** Akzentfarbe — Frank-Wunsch: gleiche Farbe wie der Aufgaben-Tab (Orange). */
-private val ThesenAccent: Color = Color(0xFFFF9800)
+// Frank-Wunsch 2026-05-23: Thesen sollen die gleiche Akzentfarbe haben wie das
+// Entropie-Tagebuch — vorher 0xFFFF9800 (helles Material-Orange) wirkte zu blass im
+// Vergleich. 0xFFEA580C ist identisch zu TagebuchAccent (Aufnehmen-/Schreiben-FAB).
+private val ThesenAccent: Color = Color(0xFFEA580C)
