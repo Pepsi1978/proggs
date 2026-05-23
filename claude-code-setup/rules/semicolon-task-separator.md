@@ -144,7 +144,8 @@ Jede einzelne Aufgabe durchläuft denselben kleinen Kreislauf, bevor die nächst
 3. Aufgabe umsetzen (Code-Änderung, sichtbar)
 4. Task als completed abhaken (Echtzeit — nicht am Ende stapeln)
 5. committen + pushen (Code ist sicher im Repo, bevor die nächste Aufgabe startet)
-6. → nächste Aufgabe
+6. SICHTBAREN Commit-Marker ausgeben (siehe unten) — damit der Benutzer den Rettungspunkt sieht
+7. → nächste Aufgabe
 ```
 
 **Echtzeit-Abhaken (Punkt A):** Jede Aufgabe wird SOFORT als erledigt markiert, sobald
@@ -153,6 +154,48 @@ live, wo der Vorgang gerade steht, und nichts geht in der Mitte einer langen Lis
 
 **Commit+Push pro Aufgabe:** Jede abgeschlossene Aufgabe wird committed und gepusht, bevor
 die nächste beginnt. Das sind die Rettungspunkte. (Der BUILD kommt erst später — siehe Schritt 5.)
+
+### Sichtbarer Commit-Marker pro Aufgabe (PFLICHT)
+
+Direkt nach dem Commit+Push JEDER Aufgabe wird ein klar abgegrenzter Marker ausgegeben,
+damit der Benutzer auf einen Blick sieht: "An diesem Punkt wurde committed und gepusht."
+
+**Genaues Format** — Linie darüber, Marker-Zeile, Linie darunter:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 Aufgabe N: [ganz kurze Beschreibung in leichtem Deutsch, max. 1 Zeile] — committed und gepusht
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Bausteine (alle Pflicht):**
+
+| Baustein | Regel |
+|----------|-------|
+| Linie darüber | Genau 80 × `━` (U+2501), alleine in der Zeile |
+| Disketten-Symbol | 💾 ganz vorne in der Marker-Zeile |
+| `Aufgabe N:` | Die Nummer aus der TaskCreate-Liste (Aufgabe 1, Aufgabe 2, …) |
+| Kurzbeschreibung | Ganz kurz, leichtes Deutsch, **maximal eine Zeile** |
+| `— committed und gepusht` | Wörtlich am Ende der Marker-Zeile |
+| Linie darunter | Genau 80 × `━`, alleine in der Zeile |
+
+**Wann:** Nach jeder einzelnen Aufgabe, sofort nach ihrem Commit+Push — nicht gesammelt am Ende.
+Der Marker erscheint mitten in der Abarbeitung, zwischen den Aufgaben, als sichtbarer Rettungspunkt.
+
+**Beispiel im Ablauf:**
+
+```
+(Arbeit an Aufgabe 1 sichtbar …)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 Aufgabe 1: Header-Farbe auf Blau geändert — committed und gepusht
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(Arbeit an Aufgabe 2 sichtbar …)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 Aufgabe 2: Button vergrößert — committed und gepusht
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+So bleibt der Bezug klar: Jede Linie-Marker-Linie-Einheit ist genau ein gespeicherter Punkt.
 
 ### Was hier VERBOTEN ist
 
@@ -362,6 +405,8 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 - ❌ Subagents für die Abarbeitung der Teilaufgaben starten — der Benutzer will jede Aufgabe sichtbar im Hauptchat sehen
 - ❌ Aufgaben stur in Einsprech-Reihenfolge abarbeiten ohne die Pre-Flight-Sortierung (Schritt 2)
 - ❌ Tasks erst am Ende gesammelt abhaken statt in Echtzeit pro Aufgabe
+- ❌ Den sichtbaren Commit-Marker (💾 + Aufgabe N + Beschreibung + "committed und gepusht", eingerahmt) nach einer Aufgabe weglassen oder gesammelt am Ende ausgeben
+- ❌ Den Commit-Marker ohne Disketten-Symbol, ohne Nummer oder ohne die zwei Rahmen-Linien ausgeben
 - ❌ Nach JEDER Aufgabe neu bauen und installieren — Build+Install kommt nur EINMAL am Ende
 - ❌ Build ausführen bevor alle Aufgaben committed+gepusht sind
 - ❌ Status-Meldung nur für eine Teilaufgabe am Ende — es MUSS für ALLE eine Rückmeldung geben
