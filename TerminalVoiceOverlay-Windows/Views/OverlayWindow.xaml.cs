@@ -990,7 +990,9 @@ namespace TerminalVoiceOverlay.Views
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { OrientationToggleButton, UltrathinkButton }, null, "#B31F1B15", new CornerRadius(0, 34, 34, 0)));
+            // Stern + Wechsel-Button UNTEREINANDER (Stern oben, Toggle unten),
+            // beide in Standard-Rundgroesse, vertikal mittig — statt nebeneinander.
+            HBar.Children.Add(MakeHStackGroup(UltrathinkButton, OrientationToggleButton, "#B31F1B15", new CornerRadius(0, 34, 34, 0)));
             OLog("HBUILD done");
         }
 
@@ -1012,12 +1014,15 @@ namespace TerminalVoiceOverlay.Views
             }
             col.Children.Add(top);
 
-            // Zahlen-Reihe mit FESTER Hoehe (32), IMMER vorhanden (auch leer bei
-            // Gruppen ohne Profil-Zahlen) — damit ALLE Zahlen exakt auf einer Linie
-            // liegen, statt je nach Symbol-Hoehe zu verrutschen.
-            var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 22, Margin = new Thickness(0, 6, 0, 0) };
+            // Zahlen-Reihe (FESTE Hoehe 22) NUR bei Gruppen die wirklich Zahlen
+            // haben — damit ALLE Zahlen exakt auf einer Linie liegen. Gruppen
+            // OHNE Zahl (z.B. Enter) bekommen KEINE leere Reihe; sonst wuerde der
+            // einzelne Button durch die leere Reihe nach oben gedrueckt. Ohne die
+            // Reihe zentriert sich der Button (col ist VerticalAlignment.Center)
+            // vertikal mittig in der vollen Leistenhoehe — genau wie gewuenscht.
             if (tiles != null)
             {
+                var bot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Height = 22, Margin = new Thickness(0, 6, 0, 0) };
                 foreach (var t in tiles)
                 {
                     // Kacheln liegend (30×22 statt 24×32) → flachere Zahlen-Reihe,
@@ -1025,14 +1030,52 @@ namespace TerminalVoiceOverlay.Views
                     try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); t.VerticalAlignment = VerticalAlignment.Center; t.Width = 30; t.Height = 22; bot.Children.Add(t); }
                     catch (Exception ex) { OLog($"HBUILD tile {t.Name} FAIL: {ex.Message}"); }
                 }
+                col.Children.Add(bot);
             }
-            col.Children.Add(bot);
             return new Border
             {
                 Background = Brush(bgHex),
                 CornerRadius = corner,
                 Padding = new Thickness(8, 6, 8, 6),
                 VerticalAlignment = VerticalAlignment.Stretch, // fuellt die volle Leistenhoehe
+                Child = col,
+            };
+        }
+
+        // Spezial-Gruppe fuer Stern + Wechsel-Button im HORIZONTAL-Modus: beide
+        // Buttons UNTEREINANDER (statt nebeneinander) in Standard-Rundgroesse
+        // (40x40), vertikal mittig in der Leiste, ohne Zahlen-Slot. Im vertikalen
+        // Modus bleiben sie nebeneinander (XAML Section1Panel) — RestoreVerticalLayout
+        // setzt die urspruengliche Groesse (34) wieder zurueck.
+        private FrameworkElement MakeHStackGroup(Button topBtn, Button bottomBtn, string bgHex, CornerRadius corner)
+        {
+            var col = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            void Add(Button b, bool first)
+            {
+                try
+                {
+                    DetachFromParent(b);
+                    b.Width = 40; b.Height = 40;            // Standard-Rundbutton-Groesse
+                    b.Margin = first ? new Thickness(0) : new Thickness(0, 4, 0, 0);
+                    b.HorizontalAlignment = HorizontalAlignment.Center;
+                    b.VerticalAlignment = VerticalAlignment.Center;
+                    col.Children.Add(b);
+                }
+                catch (Exception ex) { OLog($"HBUILD stack {b.Name} FAIL: {ex.Message}"); }
+            }
+            Add(topBtn, true);
+            Add(bottomBtn, false);
+            return new Border
+            {
+                Background = Brush(bgHex),
+                CornerRadius = corner,
+                Padding = new Thickness(8, 6, 8, 6),
+                VerticalAlignment = VerticalAlignment.Stretch,
                 Child = col,
             };
         }

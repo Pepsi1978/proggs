@@ -168,7 +168,7 @@
 
                     <Button x:Name="OrientationToggleButton"
                             Style="{StaticResource CircleButton}"
-                            Width="28" Height="28"
+                            Width="34" Height="34"
                             Margin="5,0,0,0"
                             Click="BtnOrientationToggle_Click"
                             ToolTip="Layout drehen (vertikal ↔ horizontal)">
