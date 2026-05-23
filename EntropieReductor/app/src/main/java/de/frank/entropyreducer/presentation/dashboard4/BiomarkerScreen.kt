@@ -1617,18 +1617,21 @@ private fun BiomarkerCardForId(
                 DeepSleepGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
+                    precomputed = state.deepSleepDerived,
                 )
 
             BiomarkerCardId.SLEEP_REM_GRAPH ->
                 RemSleepGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
+                    precomputed = state.remSleepDerived,
                 )
 
             BiomarkerCardId.SLEEP_WAKE_GRAPH ->
                 WakeTimeGraphCard(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
+                    precomputed = state.wakeTimeDerived,
                 )
 
             BiomarkerCardId.SLEEP_RESTORATIVE ->

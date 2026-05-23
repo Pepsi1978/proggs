@@ -162,6 +162,16 @@ data class BiomarkerUiState(
      * bis zu 365 Datenpunkte) — jetzt einmalig im VM.
      */
     val chartData: BiomarkerChartData = BiomarkerChartData(),
+    /**
+     * Performance 2026-05-23: Tiefschlaf-/REM-/Wachzeit-Verlauf werden EINMAL hier im
+     * VM (Default-Dispatcher) vorberechnet — vorher lief das teure groupBy+sort ueber
+     * die volle Historie bei jedem Rein-Scrollen der Karte auf dem Main-Thread und
+     * verursachte Frame-Spitzen beim schnellen Fling. Werte sind identisch (gleiche
+     * Funktion). null = noch nicht berechnet → Karte faellt auf lokale Berechnung zurueck.
+     */
+    val deepSleepDerived: DeepSleepDerived? = null,
+    val remSleepDerived: RemSleepDerived? = null,
+    val wakeTimeDerived: WakeTimeDerived? = null,
 )
 
 /**
@@ -757,6 +767,14 @@ constructor(
                         amazfitWorkouts = amazfit.workouts,
                     )
 
+                // Performance 2026-05-23: Sleep-Verlauf-Derivate hier (Default-Dispatcher,
+                // off-main) vorberechnen — identische Eingaben wie der Karten-Aufruf
+                // (selSnap ?: latest, all). Spart das groupBy+sort beim Rein-Scrollen.
+                val sleepSnap = selSnap ?: latest
+                val deepDerived = deepSleepDerived(sleepSnap, all)
+                val remDerived = remSleepDerived(sleepSnap, all)
+                val wakeDerived = wakeTimeDerived(sleepSnap, all)
+
                 BiomarkerUiState(
                     latest = latest,
                     history = all,
@@ -790,6 +808,9 @@ constructor(
                     ouraActivityHistory = oura.activity.sortedBy { it.day },
                     ouraResilienceHistory = oura.resilience.sortedBy { it.day },
                     chartData = chartData,
+                    deepSleepDerived = deepDerived,
+                    remSleepDerived = remDerived,
+                    wakeTimeDerived = wakeDerived,
                 )
             }
             // Performance-Audit Loop 1 (2026-05-10): combine{} enthaelt 30+ filter/sortedBy/

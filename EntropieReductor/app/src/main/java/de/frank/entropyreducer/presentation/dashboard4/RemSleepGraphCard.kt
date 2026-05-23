@@ -72,15 +72,18 @@ import java.util.Locale
 internal fun RemSleepGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
+    // Performance 2026-05-23: teure Historie-Berechnung im ViewModel vorberechnet
+    // (Default-Dispatcher), hier hereingereicht. Werte identisch. Fallback lokal.
+    precomputed: RemSleepDerived? = null,
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Rem
 
-    // Performance: alles Schwerere in remember.
     val derived =
-        remember(selectedSnapshot, history) {
-            remSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
-        }
+        precomputed
+            ?: remember(selectedSnapshot, history) {
+                remSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
+            }
 
     // Header-Zahl bekommt die gleiche Ampel-Farbe wie der aktuelle Tagesbalken.
     val headerColor = derived.currentPercent?.let { remSleepBarColor(it) } ?: accent
@@ -172,7 +175,8 @@ internal fun RemSleepGraphCard(
 
 /* ------------------------- Datenaufbereitung ------------------------- */
 
-private data class RemSleepDerived(
+@androidx.compose.runtime.Immutable
+data class RemSleepDerived(
     val currentPercent: Double?,
     val avg30Percent: Double?,
     val deltaVsAvg: Double?,
@@ -183,13 +187,13 @@ private data class RemSleepDerived(
     val chartPoints: List<Pair<Long, Double>>,
 )
 
-internal data class RemSleepRow(
+data class RemSleepRow(
     val date: LocalDate,
     val percent: Double,
     val deltaToPrevDay: Double?,
 )
 
-private fun remSleepDerived(
+internal fun remSleepDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
 ): RemSleepDerived {

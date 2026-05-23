@@ -63,15 +63,20 @@ import java.util.Locale
 internal fun DeepSleepGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
+    // Performance 2026-05-23: das teure groupBy+sort ueber die volle Historie wird
+    // jetzt EINMAL im ViewModel (Default-Dispatcher) berechnet und hier hereingereicht
+    // — nicht mehr bei jedem Rein-Scrollen auf dem Main-Thread. Werte identisch.
+    // Fallback (precomputed == null): lokale Berechnung wie bisher (defensiv).
+    precomputed: DeepSleepDerived? = null,
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Deep
 
-    // Performance: alles Schwerere in remember.
     val derived =
-        remember(selectedSnapshot, history) {
-            deepSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
-        }
+        precomputed
+            ?: remember(selectedSnapshot, history) {
+                deepSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
+            }
 
     // Frank-Wunsch 2026-05-17: Header-Zahl bekommt die gleiche Ampel-Farbe wie
     // der aktuelle Tagesbalken (rot/gelb/gruen). Einheitlich erkennbar.
@@ -165,7 +170,8 @@ internal fun DeepSleepGraphCard(
 
 /* ------------------------- Datenaufbereitung ------------------------- */
 
-private data class DeepSleepDerived(
+@androidx.compose.runtime.Immutable
+data class DeepSleepDerived(
     val currentPercent: Double?,
     val avg30Percent: Double?,
     val deltaVsAvg: Double?,
@@ -176,13 +182,13 @@ private data class DeepSleepDerived(
     val chartPoints: List<Pair<Long, Double>>,
 )
 
-internal data class DeepSleepRow(
+data class DeepSleepRow(
     val date: LocalDate,
     val percent: Double,
     val deltaToPrevDay: Double?,
 )
 
-private fun deepSleepDerived(
+internal fun deepSleepDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
 ): DeepSleepDerived {

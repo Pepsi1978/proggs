@@ -70,14 +70,18 @@ import java.util.Locale
 internal fun WakeTimeGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
+    // Performance 2026-05-23: teure Historie-Berechnung im ViewModel vorberechnet
+    // (Default-Dispatcher), hier hereingereicht. Werte identisch. Fallback lokal.
+    precomputed: WakeTimeDerived? = null,
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Awake
 
     val derived =
-        remember(selectedSnapshot, history) {
-            wakeTimeDerived(selectedSnapshot = selectedSnapshot, history = history)
-        }
+        precomputed
+            ?: remember(selectedSnapshot, history) {
+                wakeTimeDerived(selectedSnapshot = selectedSnapshot, history = history)
+            }
 
     // Frank-Wunsch 2026-05-17: Header-Zahl bekommt die gleiche Ampel-Farbe wie
     // der aktuelle Tagesbalken (gruen/gelb/rot). Einheitlich erkennbar.
@@ -169,7 +173,8 @@ internal fun WakeTimeGraphCard(
 
 /* ------------------------- Datenaufbereitung ------------------------- */
 
-private data class WakeTimeDerived(
+@androidx.compose.runtime.Immutable
+data class WakeTimeDerived(
     val currentPercent: Double?,
     val avg30Percent: Double?,
     val deltaVsAvg: Double?,
@@ -180,13 +185,13 @@ private data class WakeTimeDerived(
     val chartPoints: List<Pair<Long, Double>>,
 )
 
-internal data class WakeTimeRow(
+data class WakeTimeRow(
     val date: LocalDate,
     val percent: Double,
     val deltaToPrevDay: Double?,
 )
 
-private fun wakeTimeDerived(
+internal fun wakeTimeDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
 ): WakeTimeDerived {
