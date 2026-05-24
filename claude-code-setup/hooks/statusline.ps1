@@ -509,6 +509,13 @@ if ($cwd) {
     $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 }
 
+# Context (Frank 2026-05-24: an 4. Position, direkt hinter dem Ordner)
+if ($ctx_used -ne $null) {
+    $col = Get-PctColor $ctx_used
+    $bar = Get-Bar $ctx_used $col
+    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+}
+
 # 5h
 if ($five_h_used -ne $null) {
     $col = Get-PctColor $five_h_used
@@ -545,13 +552,6 @@ if ($week_used -ne $null -and $week_resets -gt 0) {
     $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar7 = Get-PaceBar $week_used $week_resets $nowPace7 604800
     $out += "${GSEP}${PACE7}slow${R} ${paceBar7} ${PACE7}fast${R}"
-}
-
-# Context
-if ($ctx_used -ne $null) {
-    $col = Get-PctColor $ctx_used
-    $bar = Get-Bar $ctx_used $col
-    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
 }
 
 # Uhrzeit

@@ -516,7 +516,14 @@ printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 # 3. Ordner
 [ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 
-# 3. 5h-Limit mit Balken
+# 4. Context-Verbrauch (Frank 2026-05-24: an 4. Position, direkt hinter dem Ordner)
+if [ -n "$ctx_used" ]; then
+    col=$(pct_color "$ctx_used")
+    bar=$(make_bar "$ctx_used" "$col")
+    printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
+fi
+
+# 5. 5h-Limit mit Balken
 EMPTY_BAR="${TRACK}░░░░░░░${R}"
 if [ -n "$five_h_used" ]; then
     col=$(pct_color "$five_h_used")
@@ -551,13 +558,6 @@ fi
 if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     pacebar7=$(make_pace_bar "$week_used" "$week_resets" 604800)
     printf "${GSEP}${PACE7}slow${R} ${pacebar7} ${PACE7}fast${R}"
-fi
-
-# 5. Context-Verbrauch mit Balken
-if [ -n "$ctx_used" ]; then
-    col=$(pct_color "$ctx_used")
-    bar=$(make_bar "$ctx_used" "$col")
-    printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
 fi
 
 # 6. Uhrzeit
