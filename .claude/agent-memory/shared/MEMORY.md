@@ -183,6 +183,16 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-18 19:10 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-18 20:21 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-21 18:23 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-22 20:32 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-05-23 08:47 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
+### 2026-05-23 09:00 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-23 11:19 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-23 13:58 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
+### 2026-05-23 20:39 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
+### 2026-05-23 23:32 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
+### 2026-05-24 10:32 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 98%
+### 2026-05-24 10:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-24 11:03 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -234,7 +244,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.138** (war v2.1.114 im Whiteboard — 24 Versionen veraltet!), Opus 4.7 (1M context, neuer Default seit April)
 - **Sprachen:** Rust 1.94.0 (1 Minor hinter, CVE-2026-33055/33056), Go 1.26.2 (1 Patch hinter), Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12 (1 Patch hinter), Bun 1.3.11 (2 Patch hinter), Node.js v24.15.0 (LTS aktuell)
 - **Effort Level:** high (Standard seit 2026-04-12). Manuelle Aenderung bleibt bis Session-Ende erhalten (CLAUDE.md-Update 2026-05-08).
-- **AUTOCOMPACT:** 85 (dauerhafter Standard)
+- **AUTOCOMPACT:** 100 (dauerhafter Standard ab 2026-05-24; grosse Komprimierung erst bei 100%, Microcompact erledigt den Rest. Alter Wert 85 war wegen Math.min-Clamp wirkungslos)
 - **worktree.baseRef:** "fresh" (NEU 2026-05-10) — schuetzt vor unpushed Commits in Worktrees
 - **Quality Gate:** quality-gate Agent (test+review+optimize parallel)
 - **Agents:** 29+ aktiv
@@ -433,6 +443,8 @@ _Noch keine Eintraege._
 - **[2026-05-18 10:52] researcher**: Claude Code Skill Design Patterns 2026: SKILL.md max 500 Zeilen (Layer 2), references/scripts/assets Pattern bestaetigt, Progressive Context Loading laedt nur YAML (~100 Token) bis Skill relevant. Description: imperativ statt deskriptiv, multilingual DE+EN moeglich. Multi-Phase: JSON-Checkpoint-Dateien fuer State-Persistence, Trail-of-Bits-Pattern fuer Security-Audits. Cross-Platform: sed via Tempfile statt sed -i, grep -E statt grep -P, find mit xargs -0. Token-Effizienz: Skript-Vorverarbeitung spart 14-70% vs Raw-Read. Externe Tools: Auto-Install via Claude wenn ModuleNotFoundError, explizite command-v Checks empfohlen.
 - **[2026-05-18 10:56] researcher**: Claude Code Plugin Best Practices 2026: Struktur ist plugin-root/.claude-plugin/plugin.json (einzige Pflicht-Datei) + skills/ agents/ hooks/ commands/ auf Root-Ebene. Plugin-Dev-Toolkit (7 Skills) existiert offiziell unter /plugin-dev:create-plugin. Skills haben eigene references/ Ordner, kein geteilter Plugin-Level-references/. Orchestrator-Agent-Pattern via settings.json 'agent'-Key. Skill-Chaining durch SKILL.md-Anweisungen die andere Skills aufrufen. Marketplace via .claude-plugin/marketplace.json. Plugin-Hooks in hooks/hooks.json. Grosse Plugins wie compound-engineering (37 Skills, 51 Agents) und superpowers nutzen beide Skills+Agents parallel.
 - **[2026-05-18 12:09] researcher**: Compound Engineering Plugin (EveryInc/compound-engineering-plugin): 37 Skills + 51 Agents, MIT-lizenziert, GitHub ~9.3k Stars. Core Loop: ce-brainstorm → ce-plan → ce-work → ce-code-review → ce-compound. Philosophie: 80% Planung/Review, 20% Ausführung. Compound-Schritt persistiert Learnings in docs/solutions/ die zukünftige Agenten lesen. Gebaut von Dan Shipper + Kieran Klaassen (Every Inc). Sweet Spot: komplexe Solo/Small-Team Codebases. vs Superpowers (121k Stars): CE fokussiert auf Wissenserhalt/Parallel-Research, Superpowers auf Engineering-Disziplin-Erzwingung (TDD). Key Pattern für Plugin-Bauer: strukturierte Artefakte (Plans, Solution Docs, STRATEGY.md) die Agent in Folgesessions liest = echter Compound Effect.
+- **[2026-05-24 11:01] researcher**: Semantische Code-Suche (snowflake-arctic-embed2, 8192 Token, 568M Param): Optimale Chunk-Groesse 128-512 Token / Funktions-Level; AST-Chunking +21pp Recall@5 (70.1% vs 42.4% Fixed-Size, cAST-Paper); Semantic Search schlechter als grep bei exakten Symbolen/Rename/allen Aufrufstellen/Import-Graphen; arctic-embed2 bevorzugt kleinere Chunks laut Snowflake-eigenen Hinweisen; Hybrid BM25+Vector per RRF ist Best Practice 2024-2025.
+- **[2026-05-24 11:02] researcher**: Semantische Code-Suche per Stack: Kotlin/Compose gut (tree-sitter-kotlin aktiv gepflegt, Maturity 14, aber Compose-Bäume > 200 Zeilen benötigen rekursives AST-Chunking); C#/XAML gespalten (C# top in coa-codesearch-mcp, XAML-Markup semantisch arm da kein AST-Semantik by design → grep bevorzugen); TypeScript/JS exzellent (native Unterstützung in allen Tools); Tampermonkey-JS (einzelne Großdatei) → function-granular Chunking nötig, grep für exakte Funktionsnamen besser; Markdown gut (tree-sitter-markdown, heading-aware Chunking); PowerShell nicht in den meisten Tools (tree-sitter-PowerShell existiert, aber kaum integriert → grep-Only empfohlen). Hybrid (grep+semantic) +31% Erfolgsrate, +56% auf großen Codebasen. XAML semantisch bedeutungslos by design.
 ---
 
 - **[2026-04-20] KGCompass Repository-Wissensgraph** - Status: UMZUSETZEN | arXiv 2503.21710

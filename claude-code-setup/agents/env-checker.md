@@ -44,7 +44,7 @@ Read `~/.claude/settings.json` and verify:
 - `effortLevel` = "high"
 - `env.CLAUDE_CODE_EFFORT_LEVEL` = "high"
 - `env.CLAUDE_CODE_SUBAGENT_MODEL` = "sonnet"
-- `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = "95"
+- `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = "100"
 - `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS` = "64000"
 - `alwaysThinkingEnabled` = true
 - Count enabledPlugins

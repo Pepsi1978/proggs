@@ -33,7 +33,7 @@
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
-- **CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ist IMMER 85.** Das ist der dauerhafte Standard auf allen Plattformen. NIEMALS auf einen anderen Wert aendern — weder hoeher noch niedriger. Wenn ein Hook, Agent oder /self-improve den Wert veraendert, ist DAS der Bug.
+- **CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ist IMMER 100.** Dauerhafter Standard auf allen Plattformen (geaendert 2026-05-24 per Benutzer-Anweisung). Die grosse, sichtbare Komprimierung soll erst bei 100% Kontext laufen — das leise Microcompact (Auslagern grosser Tool-Ergebnisse auf Disk, inkrementelles Aufraeumen) erledigt den Rest waehrend der Session. Hintergrund: Das Override kann den Schwellwert per Math.min-Clamp ohnehin nur SENKEN, nie erhoehen — der frueher gesetzte Wert 85 war faktisch wirkungslos. NIEMALS unter 85 senken (config-guard blockiert das als Sicherheitsnetz). Wenn ein Hook, Agent oder /self-improve den Wert von 100 wegaendert, ist DAS der Bug.
 - Jede Aktion bekommt eine eigene sichtbare Zeile — vorherige Ausgaben NIEMALS ueberschreiben.
 - Vor jeder Aktion kurz auf Deutsch erklaeren, was gleich passiert.
 - Nach jeder Aktion das Ergebnis zeigen, damit der Benutzer den Fortschritt verfolgen kann.
