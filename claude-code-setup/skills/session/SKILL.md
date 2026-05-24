@@ -133,7 +133,7 @@ Lies beide Dateien. Regeln:
 Vor dem Lesen des Repo-Backups einmal `git pull` (bzw. fetch+rebase), damit ein Backup von einem
 anderen Rechner wirklich aktuell ist.
 
-Timestamp-Vergleich (Beispiel):
+Timestamp-Vergleich (Beispiel — Bash-Snippet, auf Windows in Git Bash ausfuehren; `-s`/`-nt` sind POSIX-Test-Operatoren, kein PowerShell):
 
 ```bash
 LOCAL="$HOME/.claude/session-backup.md"
@@ -221,7 +221,7 @@ Repo-Stand.
 
 - **Du schreibst die Notiz, nicht der Benutzer.** Er sagt nur "backup" — die Kuration ist deine
   Aufgabe. Das spart Zeit und verhindert Luecken.
-- **Eine Datei je Ort, immer ueberschreiben.** Niemals anhaengen — sonst vermischen sich Sessions.
+- **Eine Datei je Ort, immer ueberschreiben — niemals anhaengen** (Begruendung siehe Abschnitt "Pfade").
 - **restore ist Pflicht-erster-Schritt nach /clear.** Nicht optional behandeln: erst lesen, dann
   arbeiten.
 - **Bei parallelen Sessions:** Das Repo-Backup ist eine gemeinsame Datei. Wenn mehrere Sessions
