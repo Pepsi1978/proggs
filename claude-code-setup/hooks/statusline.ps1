@@ -84,6 +84,10 @@ if ($obj) {
     }
 }
 
+# Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24).
+# PS -replace ist case-insensitiv, deckt context/Context/Kontext ab.
+$model = $model -replace ' (context|kontext)\)', ')'
+
 # Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
 # Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort. Eine idle
 # Session zeigt deshalb veraltete Werte. Loesung: alle Sessions schreiben in

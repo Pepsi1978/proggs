@@ -40,6 +40,11 @@ if [ -z "$effort" ]; then
 fi
 effort_upper="${effort^^}"
 
+# Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
+model="${model/ context)/)}"
+model="${model/ Context)/)}"
+model="${model/ Kontext)/)}"
+
 # Home-Pfad zu ~ kuerzen ohne Subprocess
 case "$cwd_raw" in
     "$HOME"*) cwd_raw="~${cwd_raw#$HOME}" ;;
