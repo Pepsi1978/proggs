@@ -49,8 +49,8 @@ TEXT
 # Robuste JSON-Erzeugung: jq bevorzugt, python3 als Fallback (beide escapen " + Sonderzeichen korrekt).
 # Ohne beide: kein Output -> Claude faehrt ohne injizierten Kontext fort (Graceful Degradation).
 if command -v jq > /dev/null 2>&1; then
-    jq -cn --arg ctx "$CONTEXT_TEXT" '{additionalContext: $ctx}'
+    jq -cn --arg ctx "$CONTEXT_TEXT" '{hookSpecificOutput: {hookEventName: "SubagentStart", additionalContext: $ctx}}'
 elif command -v python3 > /dev/null 2>&1; then
-    printf '%s' "$CONTEXT_TEXT" | python3 -c "import json,sys; print(json.dumps({'additionalContext': sys.stdin.read()}, ensure_ascii=False))"
+    printf '%s' "$CONTEXT_TEXT" | python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SubagentStart', 'additionalContext': sys.stdin.read()}}, ensure_ascii=False))"
 fi
 exit 0

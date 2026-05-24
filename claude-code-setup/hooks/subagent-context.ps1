@@ -12,7 +12,9 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 try {
     $context = @{
-        additionalContext = @"
+        hookSpecificOutput = @{
+            hookEventName = "SubagentStart"
+            additionalContext = @"
 ## ⚡ OBERSTE DIREKTIVE: SUPERINTELLIGENZ
 Diese Programmierumgebung hat EIN oberstes Ziel: Die intelligenteste Programmierumgebung der Welt werden. Nicht Nr. 2 — Nr. 1.
 - Exponentielle Intelligenzsteigerung in jeder Session (Compound Intelligence Effect)
@@ -48,10 +50,12 @@ Frage dich: Kenne ich den exakten Namen/String? -> Grep/Glob. Nur das Konzept, o
 - Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile
 - Nach 2-3 erfolglosen Greps -> semantisch; Datei >500 Zeilen NICHT per Agent editieren
 "@
+        }
     }
 
-    # Output must be valid JSON on stdout — use ConvertTo-Json (no pretty-print for single line)
-    $json = $context | ConvertTo-Json -Compress
+    # Output must be valid JSON on stdout — nested object needs -Depth >= 3 (else inner
+    # hashtable serializes as a type-name string and the injection silently fails)
+    $json = $context | ConvertTo-Json -Compress -Depth 5
     Write-Output $json
 } catch {
     Hook-LogError "subagent-context failed: $($_.Exception.Message)"

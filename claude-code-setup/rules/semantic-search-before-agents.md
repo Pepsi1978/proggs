@@ -2,7 +2,8 @@
 
 > Diese Regel verankert die richtige Werkzeugwahl beim Suchen im Code — nach Direktive #3
 > (Resilient Bugfixing, Poka-Yoke + Defense in Depth). Sie wird IMMER automatisch geladen
-> und zusaetzlich ueber CLAUDE.md in jeden Subagent getragen (Schicht 3 — verifiziert 2026-05-24).
+> und zusaetzlich per subagent-context Hook in jeden Subagent injiziert (Schicht 3, nested
+> hookSpecificOutput-Schema — verifiziert 2026-05-24).
 >
 > Aktualisiert 2026-05-24 nach 3-Researcher-Recherche. Korrigiert den frueheren Fehler,
 > Grep faelschlich "semantische Suche" zu nennen.
@@ -155,7 +156,7 @@ Diese Regel ist mehrschichtig verankert, damit die richtige Werkzeugwahl IMMER p
 |---------|-----|---------|
 | 1 | Diese Rule (`~/.claude/rules/`) | Wird bei JEDER Session automatisch geladen (Hauptagent) |
 | 2 | Repo-Kopie (`claude-code-setup/rules/`) | Cross-Platform-Sync (macOS + Windows) |
-| 3 | Kompakte Kopie in CLAUDE.md (`~/proggs/CLAUDE.md`) | Kommt nachweislich bei Subagents an (verifiziert 2026-05-24). Der `subagent-context` Hook gibt zwar valides JSON aus (JSON-Fix #1010 ok), aber Claude Code reicht SubagentStart-additionalContext in dieser Version NICHT an Subagents durch — daher CLAUDE.md statt Hook |
+| 3 | `subagent-context` Hook (.ps1 + .sh) | Injiziert die Kompakt-Regel in JEDEN Subagent — verifiziert 2026-05-24. PFLICHT-Schema: `{hookSpecificOutput:{hookEventName:"SubagentStart",additionalContext:...}}`. Flaches `{additionalContext:...}` wird von Claude Code STILL ignoriert (war der alte Bug). PS1: `ConvertTo-Json -Depth 5` noetig. CLAUDE.md ist zusaetzliches Fallback |
 | 4 | Pre-Learning-Memory | reference_semantic_search_vs_grep_heuristik.md |
 
 **Bewusst KEINE blockierende Erzwingung (kein Guard-Hook):** Die Werkzeugwahl ist eine

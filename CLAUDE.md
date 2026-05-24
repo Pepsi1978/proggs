@@ -284,10 +284,10 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 
 ## Such-Reflex: Semantische Suche vs. Grep (KRITISCH — auch fuer Subagents)
 
-> Diese Sektion steht bewusst in CLAUDE.md (nicht nur in `~/.claude/rules/`), weil der
-> SubagentStart-Hook-Kontext (`subagent-context`) in dieser Claude-Code-Version NICHT bei
-> Subagents ankommt — CLAUDE.md dagegen schon (verifiziert 2026-05-24). Vollstaendige Regel:
-> `~/.claude/rules/semantic-search-before-agents.md`.
+> Defense-in-Depth: Der `subagent-context`-Hook injiziert diesen Such-Reflex bereits in JEDEN
+> Subagent (Schicht 3, nested `hookSpecificOutput`-Schema — verifiziert 2026-05-24). Diese
+> CLAUDE.md-Kopie ist das zusaetzliche Fallback, falls der Hook mal nicht greift. Vollstaendige
+> Regel: `~/.claude/rules/semantic-search-before-agents.md`.
 
 **VOR jeder Code-Suche 1 Satz innehalten:**
 - Kenne ich den exakten Namen/String/Regex? → **Grep/Glob**.
