@@ -480,10 +480,10 @@ make_pace_bar() {
     printf "%b" "$out"
 }
 
-# Trennzeichen — dick + rot (Frank 2026-05-24), Doppelstrich zur Abgrenzung vom Pendel-Mittelstrich
-SEP="${SEPCOL} ║ ${R}"
-# Gruppen-Abstand (kein Trenner): haelt zusammengehoerige Bereiche wie 5h+Pendel optisch zusammen
-GSEP="  "
+# Trennzeichen — ein dicker roter Strich (Frank 2026-05-24)
+SEP="${SEPCOL} ┃ ${R}"
+# Gruppen-Abstand (kein Trenner, 1 Leerzeichen): haelt zusammengehoerige Bereiche wie 5h+Pendel eng zusammen
+GSEP=" "
 
 # Icons (Nerd-Font; Fallback auf Emoji wenn nicht gerendert)
 # Wenn keine Nerd Font: emoji greift
@@ -534,7 +534,7 @@ fi
 #     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets" 18000)
-    printf "${GSEP}${PACE}${ICON_PACE} slow${R} ${pacebar} ${PACE}fast${R}"
+    printf "${GSEP}${PACE}slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
 # 4. 7d-Limit mit Balken
@@ -550,7 +550,7 @@ fi
 #     (604800s), eigene Feature-Farbe (Pink). Nur wenn Verbrauch UND 7d-Reset bekannt.
 if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     pacebar7=$(make_pace_bar "$week_used" "$week_resets" 604800)
-    printf "${GSEP}${PACE7}${ICON_PACE} slow${R} ${pacebar7} ${PACE7}fast${R}"
+    printf "${GSEP}${PACE7}slow${R} ${pacebar7} ${PACE7}fast${R}"
 fi
 
 # 5. Context-Verbrauch mit Balken

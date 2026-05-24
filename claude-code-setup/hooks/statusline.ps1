@@ -487,8 +487,8 @@ function Get-PaceBar($used, $resets, $now, $window) {
     return $sb
 }
 
-$SEP = "${SEPCOL} ║ ${R}"   # dick + rot (Frank 2026-05-24), Doppelstrich zur Abgrenzung vom Pendel-Mittelstrich
-$GSEP = "  "                # Gruppen-Abstand (kein Trenner): haelt 5h+Pendel bzw. 7d+Pendel zusammen
+$SEP = "${SEPCOL} ┃ ${R}"   # ein dicker roter Strich (Frank 2026-05-24)
+$GSEP = " "                 # Gruppen-Abstand (kein Trenner, 1 Leerzeichen): haelt 5h+Pendel bzw. 7d+Pendel eng zusammen
 $EMPTY_BAR = "${TRACK}" + ('░' * 7) + "${R}"
 
 # Icons
@@ -527,7 +527,7 @@ if ($five_h_used -ne $null) {
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace 18000
-    $out += "${GSEP}${PACE}${ICON_PACE} slow${R} ${paceBar} ${PACE}fast${R}"
+    $out += "${GSEP}${PACE}slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
 # 7d
@@ -544,7 +544,7 @@ if ($week_used -ne $null) {
 if ($week_used -ne $null -and $week_resets -gt 0) {
     $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar7 = Get-PaceBar $week_used $week_resets $nowPace7 604800
-    $out += "${GSEP}${PACE7}${ICON_PACE} slow${R} ${paceBar7} ${PACE7}fast${R}"
+    $out += "${GSEP}${PACE7}slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
 # Context
