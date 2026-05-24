@@ -333,11 +333,16 @@ if ($transcript_path -and (Test-Path -LiteralPath $transcript_path)) {
 # ueberschreiben und der Hook laese den Kontext einer fremden Session. Atomic write.
 if ($ctx_used -ne $null -and $sessionId -and $sessionId -match '^[A-Za-z0-9_-]+$') {
     try {
+        # Export-Wert gegen Mullwerte absichern: auf 0..100 clampen, damit der Stop-Hook
+        # EXAKT den angezeigten Wert liest (Anzeige clamped ebenfalls). Normalwerte unveraendert.
+        $ctxOut = [int]$ctx_used
+        if ($ctxOut -lt 0) { $ctxOut = 0 }
+        if ($ctxOut -gt 100) { $ctxOut = 100 }
         $ctxDir = Join-Path $env:USERPROFILE '.claude\state'
         if (-not (Test-Path $ctxDir)) { New-Item -ItemType Directory -Path $ctxDir -Force | Out-Null }
         $ctxFile = Join-Path $ctxDir "ctx-$sessionId"
         $ctxTmp = "$ctxFile.tmp"
-        [string]$ctx_used | Out-File -FilePath $ctxTmp -Encoding ASCII -Force
+        [string]$ctxOut | Out-File -FilePath $ctxTmp -Encoding ASCII -Force
         Move-Item -Path $ctxTmp -Destination $ctxFile -Force -ErrorAction SilentlyContinue
     } catch { }
 }
