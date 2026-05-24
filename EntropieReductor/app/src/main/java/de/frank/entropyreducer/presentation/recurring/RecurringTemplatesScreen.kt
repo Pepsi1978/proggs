@@ -166,8 +166,10 @@ private fun EmptyHint(modifier: Modifier = Modifier) {
  * unter der Beschreibung, damit Frank auf einen Blick sieht wann der Eintrag
  * fällig wird.
  */
+// Frank-Wunsch 2026-05-24: internal statt private, damit der Aufgaben-Reiter
+// (TasksScreen) die Loop-Karten 1:1 als Akkordeon-Dropdown wiederverwenden kann.
 @Composable
-private fun TemplateAsTaskCard(
+internal fun TemplateAsTaskCard(
     template: RecurringTemplateEntity,
     onToggleActive: () -> Unit,
     onDelete: () -> Unit,

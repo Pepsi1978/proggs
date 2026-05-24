@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
@@ -102,6 +103,8 @@ import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
+import de.frank.entropyreducer.presentation.recurring.RecurringTemplatesViewModel
+import de.frank.entropyreducer.presentation.recurring.TemplateAsTaskCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.color
@@ -127,6 +130,12 @@ fun TasksScreen(
     val state by vm.state.collectAsState()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
+    // Frank-Wunsch 2026-05-24: Der Loop-Bereich (wiederkehrende Aufgaben) ist jetzt ein
+    // Akkordeon-Dropdown im Aufgaben-Reiter (zwischen SPAETER und ERLEDIGT) statt eines
+    // eigenen Sub-Screens. Vorlagen + ihre Verknuepfung (Checkbox an = Aufgabe erscheint
+    // im Reiter) kommen unveraendert aus dem RecurringTemplatesViewModel.
+    val recurringVm: RecurringTemplatesViewModel = hiltViewModel()
+    val recurringTemplates by recurringVm.templates.collectAsState()
     val scope = rememberCoroutineScope()
     // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
@@ -572,6 +581,49 @@ fun TasksScreen(
                                         key = "empty-${bucket.name}",
                                         contentType = "bucket-empty",
                                     ) {
+                                        EmptyBucketHint()
+                                    }
+                                }
+                            }
+                        }
+                        // Loop-Block (Frank-Wunsch 2026-05-24): wiederkehrende Aufgaben
+                        // 1:1 wie im fruehern Loop-Reiter, jetzt als Akkordeon zwischen
+                        // SPAETER und ERLEDIGT. Checkbox an = Aufgabe erscheint im Reiter
+                        // (Verknuepfung lebt im RecurringTemplatesViewModel, unveraendert).
+                        run {
+                            val loopExpanded = expandedSection == SECTION_LOOP
+                            val loopAccent = Color(0xFFEA580C)
+                            item(key = "header-loop", contentType = "loop-header") {
+                                AccordionHeaderRow(
+                                    label = "Loop",
+                                    icon = Icons.Outlined.Repeat,
+                                    accent = loopAccent,
+                                    count = recurringTemplates.size,
+                                    expanded = loopExpanded,
+                                    onToggle = {
+                                        expandedSection =
+                                            if (loopExpanded) null else SECTION_LOOP
+                                    },
+                                )
+                            }
+                            if (loopExpanded) {
+                                if (recurringTemplates.isNotEmpty()) {
+                                    items(
+                                        items = recurringTemplates,
+                                        key = { "loop-${it.id}" },
+                                        contentType = { "loop-entry" },
+                                    ) { template ->
+                                        // Frische Lambdas (1:1 wie im Loop-Reiter) damit
+                                        // toggleActive immer die aktuelle isActive-Version
+                                        // der Vorlage liest.
+                                        TemplateAsTaskCard(
+                                            template = template,
+                                            onToggleActive = { recurringVm.toggleActive(template) },
+                                            onDelete = { recurringVm.delete(template) },
+                                        )
+                                    }
+                                } else {
+                                    item(key = "empty-loop", contentType = "bucket-empty") {
                                         EmptyBucketHint()
                                     }
                                 }
