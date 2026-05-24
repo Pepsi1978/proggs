@@ -56,6 +56,16 @@ if (existsSync(dbDir)) {
 	} catch {}
 }
 
+// Reindex-Lock aufraeumen: Der SessionStart-Hook (ps1/sh) legt .reindex.lock an.
+// Die .sh entfernt ihn im Worker, die .ps1 (detached Start-Process) jedoch NICHT —
+// dadurch verwaiste der Lock auf Windows. Zentral hier fuer BEIDE Plattformen freigeben,
+// damit kein liegengebliebener Lock kuenftige Reindexe blockiert (search_status "running").
+const cleanupLock = () => {
+	try {
+		unlinkSync(join(dbDir, ".reindex.lock"));
+	} catch {}
+};
+
 // Run incremental reindex
 try {
 	const result = await reindexCodebase({
@@ -66,8 +76,10 @@ try {
 	});
 
 	console.log(result.message);
+	cleanupLock();
 	process.exit(0);
 } catch (err) {
 	console.error(`Reindex failed: ${err}`);
+	cleanupLock();
 	process.exit(1);
 }
