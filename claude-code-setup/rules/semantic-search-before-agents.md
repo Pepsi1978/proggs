@@ -18,6 +18,14 @@
 - Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile.
 - Nach 2-3 erfolglosen Greps → semantisch wechseln. Datei >500 Zeilen NICHT per Agent editieren.
 
+**Sichtbare Ansage (PFLICHT bei semantischer Suche):** Sobald die Wahl auf die semantische Suche
+faellt, IMMER zuerst diese eine Zeile ausgeben — damit im Terminal sichtbar ist, dass und warum
+sie genutzt wird:
+> `🔍 Semantische Suche — [kurzer Grund in 1 Halbsatz]`
+
+Gilt fuer den Hauptagenten bei JEDEM `code-search`-Aufruf. (Hinweis: Echte ANSI-Textfarbe geht im
+Renderer nicht — das farbige Lupen-Emoji ist die korrekte, gut sichtbare Loesung.)
+
 Das ist die aktive Kurzfassung. Die Begruendung und Details stehen darunter.
 
 ---
