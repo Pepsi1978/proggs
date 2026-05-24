@@ -15,6 +15,14 @@
         <package android:name="com.google.android.gms" />
     </queries>
 
+    <!-- Frank-Wunsch 2026-05-24: Leseberechtigung fuer die Tagebuch-Durchreiche.
+         protectionLevel "normal", weil Entropie Reductor mit anderem Signatur-Key
+         signiert ist (kein signature-Schutz moeglich). -->
+    <permission
+        android:name="com.entropyjournal.permission.READ_JOURNAL"
+        android:protectionLevel="normal"
+        android:label="Tagebuch lesen" />
+
     <application
         android:name=".EntropyJournalApp"
         android:allowBackup="true"
@@ -69,6 +77,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Frank-Wunsch 2026-05-24: Nur-lesende Durchreiche der Tagebucheintraege
+             fuer die App Entropie Reductor. -->
+        <provider
+            android:name=".data.provider.JournalExportProvider"
+            android:authorities="${applicationId}.journalexport"
+            android:exported="true"
+            android:readPermission="com.entropyjournal.permission.READ_JOURNAL" />
     </application>
 
 </manifest>
