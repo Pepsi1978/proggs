@@ -317,7 +317,9 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
     when (parentTab) {
         Routes.TASKS ->
             listOf(
-                SubIconMeta(Icons.Outlined.Repeat, "Loop"),
+                // Frank-Wunsch 2026-05-24: Loop wurde ins Aufgaben-Akkordeon verschoben,
+                // Slot 1 ist jetzt der (noch leere) Journal-Bereich. Icon-Wechsel in Aufgabe 5.
+                SubIconMeta(Icons.Outlined.Repeat, "Journal"),
                 SubIconMeta(Icons.Outlined.Book, "Entropie"),
                 SubIconMeta(Icons.Outlined.Lightbulb, "Thesen"),
             )

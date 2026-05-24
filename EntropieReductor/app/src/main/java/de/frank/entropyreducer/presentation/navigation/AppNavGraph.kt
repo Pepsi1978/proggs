@@ -215,27 +215,14 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                         nav.tabSwitch(route)
                     }
                 }
-                // Frank-Wunsch 2026-05-18: Aufgaben-Sub-Bereich 1 ist das
-                // Tagebuch (statt weisser Platzhalter). Andere Sub-Bereiche
-                // bleiben weisser Platzhalter — werden in spaeteren Sessions
-                // mit Inhalt befuellt.
-                // Frank-Wunsch 2026-05-22 (zweite Iteration): Sub-Reihenfolge
-                // umsortiert. Loop liegt jetzt direkt neben Aufgaben (Sub 1),
-                // Entropie auf Sub 2, Thesen auf Sub 3.
-                val isRecurring = parent == Routes.TASKS && index == 1
+                // Frank-Wunsch 2026-05-24: Sub-Bereich 1 war der Loop-Reiter. Die
+                // Loop-Aufgaben sind jetzt ein Akkordeon-Dropdown im Aufgaben-Reiter
+                // (TasksScreen), darum ist Slot 1 leer und heisst "Journal" — er
+                // routet ueber den SubAreaScreen-Platzhalter (else-Zweig unten).
+                // Sub-Bereich 2 = Tagebuch ("Entropie"), Sub-Bereich 3 = Thesen.
                 val isTagebuch = parent == Routes.TASKS && index == 2
                 val isThesen = parent == Routes.TASKS && index == 3
-                if (isRecurring) {
-                    de.frank.entropyreducer.presentation.recurring.RecurringTemplatesScreen(
-                        onSwitchTab = onSwitchTabFromSub,
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                    )
-                } else if (isTagebuch) {
+                if (isTagebuch) {
                     TagebuchScreen(
                         onBack = {
                             nav.popBackStack()

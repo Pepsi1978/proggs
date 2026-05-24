@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CalendarViewWeek
 import androidx.compose.material.icons.outlined.DirectionsRun
@@ -47,8 +48,9 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * lila, Biomarker rosé). So sieht der Benutzer sofort was hier mal kommen wird,
  * ohne dass es nach "Bug" aussieht.
  *
- * Inhalte: 9 Slots (3 leere Tabs * 3 Sub-Indizes). TASKS hat schon Tagebuch /
- * Thesen / Wiederkehrende belegt und routet daher nicht durch diesen Screen.
+ * Inhalte: TASKS-Slot 1 = "Journal" (Frank-Wunsch 2026-05-24, noch leerer Platzhalter,
+ * Loop zog ins Aufgaben-Akkordeon um), TASKS-Slot 2/3 (Tagebuch/Thesen) routen NICHT
+ * hierdurch. Dazu die 9 leeren Slots der drei uebrigen Tabs (Analyse/Forscher/Biomarker).
  *
  * Navigation:
  * - Zurueck-Geste → popBackStack → zurueck zum Parent-Tab
@@ -169,6 +171,22 @@ private data class SubSlotMeta(
  */
 private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
     return when (parent) {
+        // Frank-Wunsch 2026-05-24: TASKS-Slot 1 ist jetzt "Journal" (Loop zog ins
+        // Aufgaben-Akkordeon um). Slot 2 = Tagebuch, Slot 3 = Thesen routen nicht
+        // durch diesen Platzhalter.
+        Routes.TASKS -> when (index) {
+            1 -> SubSlotMeta(
+                icon = Icons.Outlined.Book,
+                title = "Journal",
+                teaser = "Dein persönliches Journal — Raum für Gedanken, Notizen und " +
+                    "Rückblicke. Inhalt folgt in einem der nächsten Updates.",
+            )
+            else -> SubSlotMeta(
+                icon = Icons.Outlined.Lightbulb,
+                title = "Bereich $index",
+                teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
+            )
+        }
         Routes.ANALYSIS -> when (index) {
             1 -> SubSlotMeta(
                 icon = Icons.Outlined.CalendarViewWeek,
