@@ -8,12 +8,19 @@ import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDao
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorFollowupEntity
 import de.frank.entropyreducer.domain.tts.TtsPlayer
+import de.frank.entropyreducer.domain.tts.TtsResult
 import javax.inject.Inject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+// Sicher unter dem Google-TTS-Limit (~5000 Zeichen/Anfrage). Laengere Abschnitte
+// werden an Absatz-/Satzgrenzen in mehrere Stuecke geteilt und sequentiell gelesen.
+private const val MAX_TTS_CHARS = 3500
 
 enum class JournalTtsState {
     IDLE,
@@ -53,39 +60,129 @@ constructor(
         }
     }
 
-    /** Liest Eintrag (Titel + Text) + alle Nachtraege am Stueck hintereinander vor. */
+    /**
+     * Liest Eintrag (Titel + Text) + alle Nachtraege abschnittsweise vor: ein Abschnitt
+     * wird gesprochen, nach dessen Ende automatisch der naechste — so wie BestJournal Frank
+     * es bei langen Rueckblicken macht (Muster aus TtsManager). Kein Abschneiden mehr; sehr
+     * lange Texte werden an Absatz- und Satzgrenzen in TTS-vertraegliche Stuecke geteilt.
+     * Erneutes Tippen oder Stop bricht die Kette sauber ab (Job-Cancel + tts.stop()).
+     */
     fun speak() {
         val s = _state.value
         if (s.ttsState != JournalTtsState.IDLE) {
-            // Bereits am Vorlesen/Laden -> stoppen (Toggle).
             stopSpeaking()
             return
         }
         val entry = s.entry ?: return
-        val sb = StringBuilder()
-        entry.title?.takeIf { it.isNotBlank() }?.let { sb.append(it).append(". ") }
-        sb.append(entry.displayText)
-        s.followups.forEach { f ->
-            val txt = if (f.isImproved && !f.improvedText.isNullOrBlank()) f.improvedText else f.text
-            sb.append(". Nachtrag: ").append(txt)
-        }
+        val chunks = buildSpeechChunks(entry, s.followups)
+        if (chunks.isEmpty()) return
+
         speakJob?.cancel()
         speakJob =
             viewModelScope.launch {
                 _state.value = _state.value.copy(ttsState = JournalTtsState.LOADING)
-                tts.speak(
-                    // Google TTS verarbeitet ~5000 Zeichen pro Request.
-                    text = sb.toString().take(4800),
-                    onPlaybackStart = {
-                        _state.value = _state.value.copy(ttsState = JournalTtsState.SPEAKING)
-                    },
-                    onComplete = {
-                        _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE)
-                    },
-                    onError = { _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE) },
-                )
+                var started = false
+                for (chunk in chunks) {
+                    if (!isActive) break
+                    val done = CompletableDeferred<Unit>()
+                    val result =
+                        tts.speak(
+                            text = chunk,
+                            onPlaybackStart = {
+                                if (!started) {
+                                    started = true
+                                    _state.value =
+                                        _state.value.copy(ttsState = JournalTtsState.SPEAKING)
+                                }
+                            },
+                            // Nach jedem Abschnitt geht es zum naechsten weiter.
+                            onComplete = { if (!done.isCompleted) done.complete(Unit) },
+                            // Bei Fehler diesen Abschnitt ueberspringen (Kette nicht abreissen).
+                            onError = { if (!done.isCompleted) done.complete(Unit) },
+                        )
+                    // Setup-Fehler (z.B. kein API-Key) -> ganze Kette beenden.
+                    if (result is TtsResult.Error) break
+                    done.await()
+                }
+                if (isActive) _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE)
             }
     }
+
+    /**
+     * Baut die geordnete Abschnittsliste (Titel+Text als erster Block, dann jeder Nachtrag)
+     * und teilt zu lange Bloecke an Absatz-/Satzgrenzen in TTS-vertraegliche Stuecke.
+     */
+    private fun buildSpeechChunks(
+        entry: JournalMirrorEntryEntity,
+        followups: List<JournalMirrorFollowupEntity>,
+    ): List<String> {
+        val sections = buildList {
+            val head = buildString {
+                entry.title?.takeIf { it.isNotBlank() }?.let { append(it).append(". ") }
+                append(entry.displayText)
+            }
+            add(head)
+            followups.forEachIndexed { i, f ->
+                val txt =
+                    if (f.isImproved && !f.improvedText.isNullOrBlank()) f.improvedText else f.text
+                add("Nachtrag ${germanOrdinal(i + 1)}. $txt")
+            }
+        }
+        return sections.flatMap { splitForTts(it) }.filter { it.isNotBlank() }
+    }
+
+    /** Teilt einen Abschnitt in Stuecke <= MAX_TTS_CHARS an Absatz- dann Satzgrenzen. */
+    private fun splitForTts(text: String): List<String> {
+        val trimmed = text.trim()
+        if (trimmed.length <= MAX_TTS_CHARS) return listOf(trimmed)
+        val out = mutableListOf<String>()
+        val buffer = StringBuilder()
+        // Erst an Absaetzen (Leerzeilen), dann an Satzenden splitten.
+        val paragraphs = trimmed.split(Regex("(\\r?\\n){2,}"))
+        for (para in paragraphs) {
+            val sentences = para.split(Regex("(?<=[.!?])\\s+"))
+            for (sentence in sentences) {
+                val piece = sentence.trim()
+                if (piece.isEmpty()) continue
+                when {
+                    piece.length > MAX_TTS_CHARS -> {
+                        // Einzelner uebergrosser Satz: hart in MAX-Stuecke schneiden.
+                        if (buffer.isNotBlank()) {
+                            out.add(buffer.toString().trim())
+                            buffer.clear()
+                        }
+                        piece.chunked(MAX_TTS_CHARS).forEach { out.add(it) }
+                    }
+                    buffer.length + piece.length + 1 > MAX_TTS_CHARS -> {
+                        out.add(buffer.toString().trim())
+                        buffer.clear()
+                        buffer.append(piece)
+                    }
+                    else -> {
+                        if (buffer.isNotEmpty()) buffer.append(' ')
+                        buffer.append(piece)
+                    }
+                }
+            }
+        }
+        if (buffer.isNotBlank()) out.add(buffer.toString().trim())
+        return out
+    }
+
+    private fun germanOrdinal(n: Int): String =
+        when (n) {
+            1 -> "Eins"
+            2 -> "Zwei"
+            3 -> "Drei"
+            4 -> "Vier"
+            5 -> "Fünf"
+            6 -> "Sechs"
+            7 -> "Sieben"
+            8 -> "Acht"
+            9 -> "Neun"
+            10 -> "Zehn"
+            else -> "$n"
+        }
 
     fun stopSpeaking() {
         speakJob?.cancel()
