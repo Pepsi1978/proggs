@@ -670,6 +670,7 @@ namespace TerminalVoiceOverlay.Views
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
+                CLog($"TICK mic={_micState} proc={_isProcessing} btw={isBtwRecording} mouseAny={IsMouseOverAnyPart()} aux={IsAuxiliaryWindowOpen()}");
                 // Niemals waehrend Aufnahme/Verarbeitung einklappen.
                 if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                     return;
@@ -778,6 +779,7 @@ namespace TerminalVoiceOverlay.Views
 
         private void ScheduleCollapse()
         {
+            CLog($"ScheduleCollapse autoHide={_autoHideEnabled} collapsed={_isCollapsed} mic={_micState} mouseOver={_mouseOverOverlay} used={_usedSinceExpand}\n{Frames()}");
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording) return;
             if (_mouseOverOverlay) return;
@@ -828,6 +830,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void CollapseImmediate()
         {
+            CLog($"CollapseImmediate ENTER autoHide={_autoHideEnabled} collapsed={_isCollapsed} horiz={_isHorizontal} mic={_micState} proc={_isProcessing} btw={isBtwRecording} aux={IsAuxiliaryWindowOpen()} mouseAny={IsMouseOverAnyPart()}\n{Frames()}");
             if (!_autoHideEnabled || _isCollapsed) return;
             _collapseTimer?.Stop();
 
@@ -940,6 +943,41 @@ namespace TerminalVoiceOverlay.Views
                     $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}");
             }
             catch { }
+        }
+
+        // DIAG (temporaer, 2026-05-24): Collapse/Hide-Sonde — schreibt nach
+        // %TEMP%\TVO-collapse.log. Findet welcher Pfad das Overlay einklappt
+        // wenn der Benutzer im Promptboard arbeitet. Wird nach dem Fix entfernt.
+        private static void CLog(string msg)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-collapse.log"),
+                    $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}");
+            }
+            catch { }
+        }
+
+        // DIAG: liefert die obersten Aufrufer-Frames (ohne CLog/Frames selbst),
+        // damit im Log sichtbar ist WER eine Methode aufgerufen hat.
+        private static string Frames()
+        {
+            try
+            {
+                var st = new System.Diagnostics.StackTrace(2, false);
+                var sb = new System.Text.StringBuilder();
+                int n = 0;
+                for (int i = 0; i < st.FrameCount && n < 6; i++)
+                {
+                    var m = st.GetFrame(i)?.GetMethod();
+                    if (m is null) continue;
+                    sb.Append("    <- ").Append(m.DeclaringType?.Name).Append('.').Append(m.Name).Append('\n');
+                    n++;
+                }
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
         }
 
         // Kurzer Einblende-Effekt (~140ms) fuer die gerade sichtbar gewordene
@@ -1458,6 +1496,7 @@ namespace TerminalVoiceOverlay.Views
             _hideDelayTimer.Stop();
 
             bool wasHidden = !IsVisible;
+            CLog($"OnTerminalActivated wasHidden={wasHidden} horiz={_isHorizontal} collapsed={_isCollapsed} mic={_micState} autoHide={_autoHideEnabled}");
 
             // Monitor-Arbeitsflaeche immer merken (auch fuer den In-Overlay-
             // Umschalter, der ohne frischen Fokuswechsel positionieren muss).
@@ -1601,6 +1640,7 @@ namespace TerminalVoiceOverlay.Views
 
         private void OnTerminalDeactivated()
         {
+            CLog($"OnTerminalDeactivated mic={_micState} proc={_isProcessing} btw={isBtwRecording} fg={Win32.GetForegroundWindow()}\n{Frames()}");
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
 
@@ -1627,6 +1667,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void HideOverlayNow()
         {
+            CLog($"HideOverlayNow ENTER visible={IsVisible} mic={_micState}\n{Frames()}");
             // Floating Children (Eingabe + Historie) ZUERST verstecken —
             // sie sind eigene Top-Level-Windows und werden vom Verstecken
             // des Promtboards nicht automatisch mitgenommen. Wenn wir das
