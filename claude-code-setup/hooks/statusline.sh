@@ -25,10 +25,11 @@ parsed=$(echo "$input" | jq -r '[
     .rate_limits.five_hour.used_percentage // "",
     .rate_limits.five_hour.resets_at // "",
     .rate_limits.seven_day.used_percentage // "",
+    .rate_limits.seven_day.resets_at // "",
     .session_id // "unknown",
     .transcript_path // ""
 ] | join("")' 2>/dev/null)
-IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw session_id transcript_path <<< "$parsed"
+IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path <<< "$parsed"
 
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
@@ -146,6 +147,17 @@ is_valid_reset() {
     [ "$ts" -ge "$((now_ts - 3600))" ] 2>/dev/null && [ "$ts" -le "$((now_ts + 21600))" ] 2>/dev/null
 }
 
+# Reset-Timestamp fuer 7d plausibel? (zwischen now-1h und now+8 Tagen, oder 0/leer = nicht gesetzt)
+# Eigene Funktion weil das 7d-Fenster bis zu 7 Tage in der Zukunft liegt (is_valid_reset deckt nur 6h ab).
+is_valid_reset_7d() {
+    local ts="$1"
+    { [ -z "$ts" ] || [ "$ts" = "null" ] || [ "$ts" = "0" ]; } && return 1
+    case "$ts" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$ts" -ge "$((now_ts - 3600))" ] 2>/dev/null && [ "$ts" -le "$((now_ts + 691200))" ] 2>/dev/null
+}
+
 # Session-ID-Format: nur a-z A-Z 0-9 _ - erlaubt — verhindert leere/Mull-IDs
 is_valid_sid() {
     local sid="$1"
@@ -178,10 +190,23 @@ if is_valid_sid "$session_id" \
     fi
     resets_safe="${five_h_resets_raw:-0}"
     [ "$resets_safe" = "null" ] && resets_safe="0"
+    # 7d-Reset: nur uebernehmen wenn plausibel. Wenn nicht (z.B. leer/null), den
+    # existierenden Wert aus dem eigenen State behalten — der Wochen-Reset ist ueber
+    # die ganze Woche konstant, geht also nicht verloren wenn ein API-Call ihn mal weglaesst.
+    week_resets_safe="${week_resets_raw:-0}"
+    [ "$week_resets_safe" = "null" ] && week_resets_safe="0"
+    if ! is_valid_reset_7d "$week_resets_safe"; then
+        if [ -f "$my_state" ]; then
+            week_resets_safe=$(jq -r '.seven_d_resets // 0' "$my_state" 2>/dev/null)
+            { [ -z "$week_resets_safe" ] || [ "$week_resets_safe" = "null" ]; } && week_resets_safe="0"
+        else
+            week_resets_safe="0"
+        fi
+    fi
     # Atomic write: tmp + mv (Schicht 3: Eliminierung von Half-Read)
     tmp_state="$my_state.tmp"
-    printf '{"ts_seen":%s,"session_id":"%s","account_fp":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s}\n' \
-        "$now_ts" "$session_id" "$account_fp" "$five_h_used_raw" "$resets_safe" "$seven_d_safe" \
+    printf '{"ts_seen":%s,"session_id":"%s","account_fp":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s,"seven_d_resets":%s}\n' \
+        "$now_ts" "$session_id" "$account_fp" "$five_h_used_raw" "$resets_safe" "$seven_d_safe" "$week_resets_safe" \
         > "$tmp_state" 2>/dev/null \
         && mv -f "$tmp_state" "$my_state" 2>/dev/null
 fi
@@ -226,7 +251,8 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         ($valid | map(.five_h_resets // 0) | max) as $maxR |
         ($valid | map(select((.five_h_resets // 0) == $maxR)) | max_by(.five_h // 0)) as $bestF |
         ($valid | map(.seven_d // 0) | max) as $bestS |
-        "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")"
+        ($valid | map(.seven_d_resets // 0) | max) as $maxSR |
+        "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
 
@@ -236,7 +262,9 @@ if [ -n "$fresh" ]; then
     fresh_resets="${rest%%|*}"
     rest="${rest#*|}"
     fresh_seven="${rest%%|*}"
-    fresh_session="${rest#*|}"
+    rest="${rest#*|}"
+    fresh_session="${rest%%|*}"
+    fresh_week_resets="${rest#*|}"
 fi
 
 # 4. Wenn Cross-Session-Werte vorhanden sind: diese verwenden statt Input.
@@ -245,6 +273,9 @@ if [ -n "$fresh_five" ] && [ "$fresh_five" != "null" ] && [ "$fresh_five" != "0"
     five_h_used="$fresh_five"
     week_used="$fresh_seven"
     five_h_resets="$fresh_resets"
+    week_resets="$fresh_week_resets"
+    # Fallback: wenn kein gueltiger 7d-Reset aggregiert wurde, den aus dem aktuellen Input nehmen
+    if [ -z "$week_resets" ] || [ "$week_resets" = "0" ]; then week_resets="${week_resets_raw:-0}"; fi
     if [ "$fresh_session" != "$session_id" ] && [ -n "$fresh_session" ]; then
         from_other_session="1"
     fi
@@ -252,6 +283,7 @@ else
     five_h_used="$five_h_used_raw"
     week_used="$week_used_raw"
     five_h_resets="$five_h_resets_raw"
+    week_resets="$week_resets_raw"
 fi
 
 # Prozent runden
@@ -347,7 +379,8 @@ GREEN='\033[38;2;64;200;90m' # Gruen        — < 50%
 YELLOW='\033[38;2;255;190;40m' # Gelb       — 50-79%
 RED='\033[38;2;240;70;70m'   # Rot          — >= 80%
 M='\033[38;2;180;130;255m'   # Lila         — Context
-PACE='\033[38;2;45;212;191m' # Teal         — Pacing-Feature (Symbol + slow/fast)
+PACE='\033[38;2;45;212;191m' # Teal         — Pacing-Feature 5h (Symbol + slow/fast)
+PACE7='\033[38;2;255;120;180m' # Pink/Rosa  — Pacing-Feature 7d (Symbol + slow/fast)
 MID='\033[1m\033[38;2;240;240;250m' # Hellweiss fett — Pacing-Ziellinie (Mittelstrich)
 T='\033[38;2;130;135;160m'   # Grau         — Commit, Modell-Name
 TIMECOL='\033[38;2;220;180;100m' # Amber    — Uhrzeit
@@ -406,11 +439,12 @@ make_bar() {
 make_pace_bar() {
     local used=$1
     local resets=$2
+    local window=$3        # Fensterlaenge in Sekunden: 18000 (5h) oder 604800 (7d)
     local rem=$((resets - now_ts))
-    local elapsed=$((18000 - rem))
+    local elapsed=$((window - rem))
     [ "$elapsed" -lt 0 ] && elapsed=0
-    [ "$elapsed" -gt 18000 ] && elapsed=18000
-    local ideal=$(( elapsed * 100 / 18000 ))
+    [ "$elapsed" -gt "$window" ] && elapsed=$window
+    local ideal=$(( elapsed * 100 / window ))
     local delta=$(( used - ideal ))
     local mid=3
     # Seite + Farbe: delta>0 = fast (rot, rechts), delta<=0 = slow/ideal (gruen, links).
@@ -496,7 +530,7 @@ fi
 # 3b. Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
 #     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
-    pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets")
+    pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets" 18000)
     printf "${SEP}${PACE}${ICON_PACE} slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
@@ -507,6 +541,13 @@ if [ -n "$week_used" ]; then
     printf "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%%${R}"
 else
     printf "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
+fi
+
+# 4b. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage
+#     (604800s), eigene Feature-Farbe (Pink). Nur wenn Verbrauch UND 7d-Reset bekannt.
+if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
+    pacebar7=$(make_pace_bar "$week_used" "$week_resets" 604800)
+    printf "${SEP}${PACE7}${ICON_PACE} slow${R} ${pacebar7} ${PACE7}fast${R}"
 fi
 
 # 5. Context-Verbrauch mit Balken

@@ -36,6 +36,7 @@ $ctx_remaining = $null
 $five_h_used = $null
 $five_h_resets = 0
 $week_used = $null
+$week_resets = 0
 $transcript_path = ''
 
 if ($obj) {
@@ -78,6 +79,9 @@ if ($obj) {
     }
     if ($obj.rate_limits.seven_day.used_percentage -ne $null) {
         $week_used = [int][Math]::Round($obj.rate_limits.seven_day.used_percentage)
+    }
+    if ($obj.rate_limits.seven_day.resets_at) {
+        $week_resets = [long]$obj.rate_limits.seven_day.resets_at
     }
     if ($obj.transcript_path) {
         $transcript_path = [string]$obj.transcript_path
@@ -124,6 +128,15 @@ function Test-ValidResetTs($ts, $now) {
         $n = [long]$ts
         # Plausibel: zwischen "vor 1h" (Server-Clock-Drift) und "in 6h" (5h-Fenster + 1h Toleranz)
         return ($n -ge ($now - 3600) -and $n -le ($now + 21600))
+    } catch { return $false }
+}
+
+function Test-ValidResetTs7d($ts, $now) {
+    if ($ts -eq $null) { return $false }
+    try {
+        $n = [long]$ts
+        # 7d-Fenster: zwischen "vor 1h" und "in 8 Tagen" (7d + 1 Tag Toleranz)
+        return ($n -ge ($now - 3600) -and $n -le ($now + 691200))
     } catch { return $false }
 }
 
@@ -177,6 +190,16 @@ try {
                 }
             } catch { $sevenDValue = 0 }
         }
+        # 7d-Reset: nur uebernehmen wenn plausibel, sonst aus eigenem State behalten (konstant ueber die Woche).
+        $sevenDResets = 0
+        if (Test-ValidResetTs7d $week_resets $nowTs) {
+            $sevenDResets = [long]$week_resets
+        } elseif (Test-Path $myState) {
+            try {
+                $existing7 = Get-Content -Raw -Encoding UTF8 -Path $myState | ConvertFrom-Json
+                if ($existing7 -and $existing7.seven_d_resets) { $sevenDResets = [long]$existing7.seven_d_resets }
+            } catch { $sevenDResets = 0 }
+        }
         $payload = [ordered]@{
             ts_seen        = $nowTs
             session_id     = $sessionId
@@ -184,6 +207,7 @@ try {
             five_h         = [int]$five_h_used
             five_h_resets  = [long]$five_h_resets
             seven_d        = $sevenDValue
+            seven_d_resets = [long]$sevenDResets
         }
         # Atomic write: tmp + rename (Schicht 3: Eliminierung von Half-Read)
         ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $tmpState -Encoding UTF8 -Force
@@ -255,11 +279,17 @@ try {
         if ($resets -ne 0 -and -not (Test-ValidResetTs $resets $nowTs)) {
             $resets = 0  # Ungueltigen Timestamp ignorieren, aber Eintrag behalten
         }
+        $weekResetsEntry = 0
+        try { $weekResetsEntry = [long]$entry.seven_d_resets } catch { $weekResetsEntry = 0 }
+        if ($weekResetsEntry -ne 0 -and -not (Test-ValidResetTs7d $weekResetsEntry $nowTs)) {
+            $weekResetsEntry = 0
+        }
         $allEntries += [PSCustomObject]@{
-            session_id    = $sid
-            five_h        = [int]$entry.five_h
-            seven_d       = if (Test-ValidPercent $entry.seven_d) { [int]$entry.seven_d } else { 0 }
-            five_h_resets = $resets
+            session_id     = $sid
+            five_h         = [int]$entry.five_h
+            seven_d        = if (Test-ValidPercent $entry.seven_d) { [int]$entry.seven_d } else { 0 }
+            five_h_resets  = $resets
+            seven_d_resets = $weekResetsEntry
         }
     }
 
@@ -270,6 +300,8 @@ try {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
             # 7d unabhaengig: hoechster Wert ueber alle Sessions (validiert)
             $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+            # 7d-Reset: aktuellster (groesster) ueber alle Sessions
+            $freshWeekResets = ($allEntries | ForEach-Object { [long]$_.seven_d_resets } | Measure-Object -Maximum).Maximum
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h
@@ -281,6 +313,8 @@ try {
             $five_h_used = $freshFive
             $week_used = $freshSeven
             $five_h_resets = [long]$bestFive.five_h_resets
+            # 7d-Reset uebernehmen; Fallback auf Input wenn keiner aggregiert wurde
+            if ($freshWeekResets -gt 0) { $week_resets = [long]$freshWeekResets }
         }
     }
 } catch { }
@@ -382,7 +416,8 @@ $GREEN  = "$ESC[38;2;64;200;90m"
 $YELLOW = "$ESC[38;2;255;190;40m"
 $RED    = "$ESC[38;2;240;70;70m"
 $T      = "$ESC[38;2;130;135;160m"
-$PACE   = "$ESC[38;2;45;212;191m"   # Teal — Pacing-Feature (Symbol + slow/fast)
+$PACE   = "$ESC[38;2;45;212;191m"   # Teal — Pacing-Feature 5h (Symbol + slow/fast)
+$PACE7  = "$ESC[38;2;255;120;180m"  # Pink/Rosa — Pacing-Feature 7d (Symbol + slow/fast)
 $MIDLINE = "$ESC[1m" + "$ESC[38;2;240;240;250m"  # Hellweiss fett — Pacing-Ziellinie (Mittelstrich). NICHT $MID nennen: PowerShell ist case-insensitiv, $MID kollidiert mit der lokalen Positionsvariable $mid in Get-PaceBar.
 $TIMECOL= "$ESC[38;2;220;180;100m"
 $DIM    = "$ESC[38;2;90;95;115m"
@@ -425,12 +460,12 @@ function Get-Bar($pct, $col) {
 # (schmal). Mitte (Index 3) ist IMMER der weisse Strich (Ziellinie). Der Marker sitzt
 # IMMER daneben — NIE auf der Mitte, damit Strich UND Marker stets sichtbar sind
 # (Frank 2026-05-24). Marker GRUEN links (slow) / ROT rechts (fast). Identisch zu sh.
-function Get-PaceBar($used, $resets, $now) {
+function Get-PaceBar($used, $resets, $now, $window) {
     $rem = $resets - $now
-    $elapsed = 18000 - $rem
+    $elapsed = $window - $rem
     if ($elapsed -lt 0) { $elapsed = 0 }
-    if ($elapsed -gt 18000) { $elapsed = 18000 }
-    $ideal = [int][Math]::Floor($elapsed * 100 / 18000)
+    if ($elapsed -gt $window) { $elapsed = $window }
+    $ideal = [int][Math]::Floor($elapsed * 100 / $window)
     $delta = [int]$used - $ideal
     $mid = 3
     # Seite + Farbe: delta>0 = fast (rot, rechts), delta<=0 = slow/ideal (gruen, links).
@@ -489,7 +524,7 @@ if ($five_h_used -ne $null) {
 # Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace
+    $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace 18000
     $out += "${SEP}${PACE}${ICON_PACE} slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
@@ -500,6 +535,14 @@ if ($week_used -ne $null) {
     $out += "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%${R}"
 } else {
     $out += "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
+}
+
+# 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage (604800s),
+# eigene Feature-Farbe (Pink). Nur zeigen wenn Verbrauch UND 7d-Reset bekannt sind.
+if ($week_used -ne $null -and $week_resets -gt 0) {
+    $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $paceBar7 = Get-PaceBar $week_used $week_resets $nowPace7 604800
+    $out += "${SEP}${PACE7}${ICON_PACE} slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
 # Context
