@@ -24,9 +24,9 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MonitorHeart
-import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -317,10 +317,11 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
     when (parentTab) {
         Routes.TASKS ->
             listOf(
-                // Frank-Wunsch 2026-05-24: Loop wurde ins Aufgaben-Akkordeon verschoben,
-                // Slot 1 ist jetzt der (noch leere) Journal-Bereich. Icon-Wechsel in Aufgabe 5.
-                SubIconMeta(Icons.Outlined.Repeat, "Journal"),
-                SubIconMeta(Icons.Outlined.Book, "Entropie"),
+                // Frank-Wunsch 2026-05-24: Journal bekommt das Buch-Icon (vorher bei
+                // Entropie). Entropie ("Stoerungen") bekommt ein Warndreieck mit
+                // Ausrufezeichen. Thesen bleibt die Gluehbirne.
+                SubIconMeta(Icons.Outlined.Book, "Journal"),
+                SubIconMeta(Icons.Outlined.Warning, "Entropie"),
                 SubIconMeta(Icons.Outlined.Lightbulb, "Thesen"),
             )
         else ->
