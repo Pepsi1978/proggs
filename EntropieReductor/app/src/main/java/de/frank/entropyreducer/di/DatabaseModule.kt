@@ -149,4 +149,27 @@ object DatabaseModule {
 
     @Provides
     fun provideDiagnosticLogDao(db: DiagnosticLogDatabase) = db.diagnosticLogDao()
+
+    /**
+     * Spiegel-DB der BestJournal-Frank-Tagebucheintraege (Frank-Wunsch 2026-05-24).
+     * Eigene DB-Datei, NICHT im Drive-Backup. destructiveFallback unkritisch (reine Kopie,
+     * wird bei jedem App-Start neu synchronisiert).
+     */
+    @Provides
+    @Singleton
+    fun provideJournalMirrorDatabase(
+        @ApplicationContext ctx: Context,
+    ): de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase =
+        Room.databaseBuilder(
+                ctx,
+                de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase::class.java,
+                de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase.DB_NAME,
+            )
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+
+    @Provides
+    fun provideJournalMirrorDao(
+        db: de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase,
+    ) = db.journalMirrorDao()
 }
