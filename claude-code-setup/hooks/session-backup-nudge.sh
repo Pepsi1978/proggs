@@ -21,7 +21,14 @@ trap 'hook_log_warn "session-backup-nudge: error at line $LINENO" 2>/dev/null ||
 stdin_input=$(cat)
 if [ -z "$stdin_input" ]; then exit 0; fi
 
-# Schleifenschutz 1: Claude macht bereits aufgrund eines Stop-Hooks weiter
+# Schleifenschutz 1 + session_id in EINEM jq-Aufruf (Performance: 1 jq statt 2 spart auf
+# Windows ~50-80ms pro Stop). jq gibt beide Werte als ZWEI ZEILEN aus, sicher per Newline
+# getrennt. Ein leerer join-Trenner klebte die Werte zusammen und machte sid leer; mit
+# Newline-Trennung kann das nicht passieren. Faellt jq aus, bleiben beide leer -> exit 0.
+# Schleifenschutz 1: Claude macht bereits aufgrund eines Stop-Hooks weiter.
+# Bewusst 2 jq via $() statt read: Command-Substitution entfernt das trailing CR der
+# Windows-jq-Ausgabe automatisch; read wuerde das CR behalten und die sid-Validierung brechen.
+# (Performance-Optimierung "1 jq statt 2" verworfen: marginal ~50ms, aber CR-fehleranfaellig.)
 stop_active=$(printf '%s' "$stdin_input" | jq -r '.stop_hook_active // false' 2>/dev/null || echo "false")
 if [ "$stop_active" = "true" ]; then exit 0; fi
 
