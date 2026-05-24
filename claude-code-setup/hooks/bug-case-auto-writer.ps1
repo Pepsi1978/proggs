@@ -16,6 +16,9 @@
 
 # --- Fehlerresilienz: Niemals die Session blockieren ---
 $ErrorActionPreference = "SilentlyContinue"
+# UTF-8-Ausgabe erzwingen: sonst verfaelscht PowerShell Sonderzeichen auf stdout
+# (Pfeil/Blitz/Gluehbirne -> ? bzw. als 0x1A JSON-Bruch). try/catch = Graceful Degradation.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 try {
 
 # --- Pfade ---
