@@ -670,7 +670,7 @@ namespace TerminalVoiceOverlay.Views
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
-                CLog($"TICK mic={_micState} proc={_isProcessing} btw={isBtwRecording} mouseAny={IsMouseOverAnyPart()} aux={IsAuxiliaryWindowOpen()}");
+                CLog($"TICK mic={_micState} proc={_isProcessing} btw={isBtwRecording} cursorOwn={IsCursorOverOwnUi()} mouseAny={IsMouseOverAnyPart()} aux={IsAuxiliaryWindowOpen()}");
                 // Niemals waehrend Aufnahme/Verarbeitung einklappen.
                 if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                     return;
@@ -681,7 +681,7 @@ namespace TerminalVoiceOverlay.Views
                 // liegt UEBER dem Board) haelt das Overlay ebenfalls offen —
                 // sonst klappt der Timer waehrend des Bearbeitens ein und
                 // versteckt das Board hinter dem Dialog. Re-arm statt einklappen.
-                if (IsMouseOverAnyPart() || IsAuxiliaryWindowOpen())
+                if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen())
                 {
                     _collapseTimer!.Start();
                     return;
@@ -777,6 +777,50 @@ namespace TerminalVoiceOverlay.Views
             return false;
         }
 
+        /// <summary>
+        /// Robuste Maus-ueber-Pruefung per ECHTER Cursor-Position statt WPFs
+        /// <c>IsMouseOver</c>. Grund (gemessen 2026-05-24 via Diagnose-Log):
+        /// die Promptboard-/Eingabe-Fenster tragen WS_EX_NOACTIVATE — WPFs
+        /// IsMouseOver kippt dort unzuverlaessig auf False sobald die Maus kurz
+        /// still steht oder ein WM_MOUSELEAVE verarbeitet wird, obwohl der
+        /// Cursor physisch ueber dem Fenster liegt. Der Auto-Hide-Timer klappte
+        /// dann mitten im Bearbeiten ein. Hier fragen wir Windows direkt:
+        /// liegt der Cursor geometrisch in einem unserer SICHTBAREN Fenster?
+        ///
+        /// GetCursorPos UND GetWindowRect liefern beide GERAETEPIXEL (physische
+        /// Bildschirmkoordinaten) — daher direkt vergleichbar, ohne DPI-Mathe.
+        /// Deckt Overlay, Promptboard, Eingabe, Historie UND offene Dialoge ab
+        /// (alle sichtbaren Fenster dieses Prozesses). Orientierungsunabhaengig.
+        /// </summary>
+        private bool IsCursorOverOwnUi()
+        {
+            try
+            {
+                if (!NativeMethods.Win32.GetCursorPos(out var pt)) return false;
+                var app = System.Windows.Application.Current;
+                if (app is null) return false;
+                foreach (Window w in app.Windows)
+                {
+                    if (w is null || !w.IsVisible) continue;
+                    if (CursorInWindowRect(w, pt)) return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static bool CursorInWindowRect(Window w, NativeMethods.Win32.POINT pt)
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                if (hwnd == IntPtr.Zero) return false;
+                if (!NativeMethods.Win32.GetWindowRect(hwnd, out var r)) return false;
+                return pt.X >= r.Left && pt.X <= r.Right && pt.Y >= r.Top && pt.Y <= r.Bottom;
+            }
+            catch { return false; }
+        }
+
         private void ScheduleCollapse()
         {
             CLog($"ScheduleCollapse autoHide={_autoHideEnabled} collapsed={_isCollapsed} mic={_micState} mouseOver={_mouseOverOverlay} used={_usedSinceExpand}\n{Frames()}");
@@ -830,7 +874,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void CollapseImmediate()
         {
-            CLog($"CollapseImmediate ENTER autoHide={_autoHideEnabled} collapsed={_isCollapsed} horiz={_isHorizontal} mic={_micState} proc={_isProcessing} btw={isBtwRecording} aux={IsAuxiliaryWindowOpen()} mouseAny={IsMouseOverAnyPart()}\n{Frames()}");
+            CLog($"CollapseImmediate ENTER autoHide={_autoHideEnabled} collapsed={_isCollapsed} horiz={_isHorizontal} mic={_micState} proc={_isProcessing} btw={isBtwRecording} cursorOwn={IsCursorOverOwnUi()} aux={IsAuxiliaryWindowOpen()} mouseAny={IsMouseOverAnyPart()}\n{Frames()}");
             if (!_autoHideEnabled || _isCollapsed) return;
             _collapseTimer?.Stop();
 
