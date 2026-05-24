@@ -337,6 +337,7 @@ YELLOW='\033[38;2;255;190;40m' # Gelb       — 50-79%
 RED='\033[38;2;240;70;70m'   # Rot          — >= 80%
 M='\033[38;2;180;130;255m'   # Lila         — Context
 PACE='\033[38;2;45;212;191m' # Teal         — Pacing-Feature (Symbol + slow/fast)
+MID='\033[1m\033[38;2;240;240;250m' # Hellweiss fett — Pacing-Ziellinie (Mittelstrich)
 T='\033[38;2;130;135;160m'   # Grau         — Commit, Modell-Name
 TIMECOL='\033[38;2;220;180;100m' # Amber    — Uhrzeit
 DIM='\033[38;2;90;95;115m'   # Dunkelgrau   — Trennzeichen
@@ -421,7 +422,7 @@ make_pace_bar() {
         if [ "$i" -eq "$mpos" ]; then
             out="${out}${mcol}●${R}"
         elif [ "$i" -eq "$mid" ]; then
-            out="${out}${T}┃${R}"
+            out="${out}${MID}┃${R}"
         else
             out="${out}${TRACK}─${R}"
         fi

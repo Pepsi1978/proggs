@@ -374,6 +374,7 @@ $YELLOW = "$ESC[38;2;255;190;40m"
 $RED    = "$ESC[38;2;240;70;70m"
 $T      = "$ESC[38;2;130;135;160m"
 $PACE   = "$ESC[38;2;45;212;191m"   # Teal — Pacing-Feature (Symbol + slow/fast)
+$MIDLINE = "$ESC[1m" + "$ESC[38;2;240;240;250m"  # Hellweiss fett — Pacing-Ziellinie (Mittelstrich). NICHT $MID nennen: PowerShell ist case-insensitiv, $MID kollidiert mit der lokalen Positionsvariable $mid in Get-PaceBar.
 $TIMECOL= "$ESC[38;2;220;180;100m"
 $DIM    = "$ESC[38;2;90;95;115m"
 $TRACK  = "$ESC[38;2;55;58;75m"
@@ -432,7 +433,7 @@ function Get-PaceBar($used, $resets, $now) {
     $sb = ''
     for ($i = 0; $i -lt 7; $i++) {
         if ($i -eq $mpos) { $sb += "${mcol}●${R}" }
-        elseif ($i -eq $mid) { $sb += "${T}┃${R}" }
+        elseif ($i -eq $mid) { $sb += "${MIDLINE}┃${R}" }
         else { $sb += "${TRACK}─${R}" }
     }
     return $sb
