@@ -18,6 +18,29 @@ Aufgabe automatisch von drei Hooks gepflegt und ueberlebt JEDEN Konto-Wechsel.
 
 ## Ablauf — KEIN Schritt darf ausgelassen werden
 
+### Schritt 0: Zuerst nach einem Session-Backup schauen (PFLICHT, vor dem Ledger)
+
+Der `session`-Skill schreibt bei einem kontrollierten Schnitt (vor `/clear`) eine
+**kuratierte** Handoff-Notiz. Die ist hochwertiger als der automatisch gepflegte Ledger,
+weil Claude sie bewusst geschrieben hat (Ziel, Status, fehlgeschlagene Ansaetze, naechste
+Schritte). Beide Systeme teilen sich die Trigger-Phrase "mache weiter wo wir waren" — also
+hat das Session-Backup VORRANG, wenn es existiert.
+
+```bash
+LOCAL="$HOME/.claude/session-backup.md"
+REPO="$HOME/proggs/.claude/session-backup.md"
+found=""
+for f in "$LOCAL" "$REPO"; do [ -s "$f" ] && found="$f" && break; done
+[ -n "$found" ] && echo "SESSION-BACKUP vorhanden: $found" || echo "kein Session-Backup"
+```
+
+- **Nicht-leeres Backup gefunden:** NICHT den Ledger lesen. Stattdessen dem Benutzer sagen:
+  "Es gibt ein kuratiertes Session-Backup vom <Timestamp aus Zeile 1 der Datei>. Das ist
+  praeziser als der Aufgaben-Ledger — ich stelle damit wieder her." Dann den `session`-Skill
+  im RESTORE-Modus uebernehmen lassen (er liest die Notiz, fasst zusammen, leert danach beide
+  Backups). Dieser Skill (aufgaben-bruecke) endet hier.
+- **Kein Backup vorhanden:** normal mit Schritt 1 (Ledger) weitermachen.
+
 ### Schritt 1: Ledger lesen
 
 ```bash
@@ -111,6 +134,8 @@ NICHT sofort losarbeiten. Frank kann sagen:
 
 Dieser Skill arbeitet zusammen mit:
 
+- **Skill `session`** — kuratiertes Backup/Restore. Hat VORRANG (Schritt 0): existiert ein
+  nicht-leeres Session-Backup, uebernimmt `session restore` statt des Ledgers
 - **Active-Task-Ledger Hooks** (`task-ledger-prompt/tool/stop`) — schreiben die Daten
 - **Skill `aufgaben-visualizer`** — komplette Ledger-Uebersicht (nicht nur Resume-Kandidaten)
 - **MEMORY.md** und **claude-mem Observations** — ergaenzendes Langzeitgedaechtnis
