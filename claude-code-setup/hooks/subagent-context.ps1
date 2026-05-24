@@ -40,10 +40,9 @@ Diese Programmierumgebung hat EIN oberstes Ziel: Die intelligenteste Programmier
 - Nach jedem Feature: quality-gate Agent starten (tester + code-reviewer + optimizer)
 - Bei Fehlern selbststaendig debuggen und fixen
 
-### Suchstrategie: semantische Suche vs. Grep
-- Nur Konzept bekannt ('wo wird X gemacht?', Datei/Name unklar) → semantische Suche (code-search MCP)
-- Exakter Name/String/Regex bekannt, oder INNERHALB einer bekannten Datei → Grep + Read
-- Multi-Task-Orientierung ('welche Dateien betrifft das?') = semantisch; Praezision/Edit = Grep
+### Such-Reflex: VOR jeder Code-Suche 1 Satz innehalten
+Frage dich: Kenne ich den exakten Namen/String? → Grep/Glob. Nur das Konzept, oder WELCHE Datei betroffen ist? → semantische Suche (code-search MCP).
+- Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile
 - Nach 2-3 erfolglosen Greps → semantisch; Datei >500 Zeilen NICHT per Agent editieren
 "@
     }

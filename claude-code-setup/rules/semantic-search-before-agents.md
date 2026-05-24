@@ -9,6 +9,19 @@
 
 ---
 
+## ⚡ Such-Reflex (das Wichtigste in einem Satz — VOR jeder Code-Suche)
+
+**Halte VOR jeder Suche im Code kurz inne und beantworte EINEN Satz:**
+> Kenne ich den exakten Namen/String/Regex? → **Grep/Glob**.
+> Nur das Konzept, oder "welche Datei betrifft das ueberhaupt?" → **semantische Suche** (`code-search` MCP).
+
+- Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile.
+- Nach 2-3 erfolglosen Greps → semantisch wechseln. Datei >500 Zeilen NICHT per Agent editieren.
+
+Das ist die aktive Kurzfassung. Die Begruendung und Details stehen darunter.
+
+---
+
 ## Das Kernmissverstaendnis (zuerst lesen)
 
 Frueher stand hier "IMMER semantische Suche (Grep)". Das war FALSCH: **Grep ist KEINE
