@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.thesen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -157,58 +158,55 @@ fun ThesenEntryDetailScreen(
                     onGenerate = onGenerateSummary,
                 )
 
-                // ── Eintrag-Karte (Title + Text, inline editierbar) ──
-                var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
-                var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
-
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            "Eintrag",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = CosmosColors.AccentSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatThesenTimestamp(entry.timestampMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        BasicTextField(
-                            value = titleDraft,
-                            onValueChange = {
-                                titleDraft = it
-                                viewModel.updateTitle(it)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle =
-                                TextStyle(
-                                    color = cosmos.textPrimary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 24.sp,
-                                ),
-                            cursorBrush = SolidColor(CosmosColors.AccentPrimary),
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        BasicTextField(
-                            value = textDraft,
-                            onValueChange = {
-                                textDraft = it
-                                viewModel.updateText(it)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle =
-                                TextStyle(
-                                    color = cosmos.textSecondary,
-                                    fontSize = 15.sp,
-                                    lineHeight = 22.sp,
-                                ),
-                            cursorBrush = SolidColor(CosmosColors.AccentPrimary),
-                        )
+                // ── Eintrag-Karte (Title + Text, inline editierbar, optional KI-Verbessert) ──
+                // Frank-Wunsch 2026-05-23: Wie BestJournalFrank — bei vorhandener
+                // KI-Verbesserung erscheint oben ein Tab "Verbessert"/"Original".
+                // Andernfalls kann der Eintrag per Knopf "Mit KI nachträglich
+                // verbessern" verschliffen werden.
+                val improveVm: ThesenImproveViewModel = hiltViewModel()
+                val improveError by improveVm.error.collectAsState()
+                LaunchedEffect(improveError) {
+                    improveError?.let {
+                        snackbar.showSnackbar(it)
+                        improveVm.clearImproved()
                     }
                 }
+
+                var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
+                var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
+                var showImproved by remember(entry.id, entry.isImproved) {
+                    mutableStateOf(entry.isImproved && entry.improvedText != null)
+                }
+                var entryImproving by remember(entry.id) { mutableStateOf(false) }
+
+                ImprovableEntryCard(
+                    headerLabel = "Eintrag",
+                    timestampMs = entry.timestampMs,
+                    titleDraft = titleDraft,
+                    onTitleChange = {
+                        titleDraft = it
+                        viewModel.updateTitle(it)
+                    },
+                    originalText = textDraft,
+                    onOriginalChange = {
+                        textDraft = it
+                        viewModel.updateText(it)
+                    },
+                    improvedText = entry.improvedText,
+                    showImproved = showImproved,
+                    onToggleVariant = { showImproved = !showImproved },
+                    isImproving = entryImproving,
+                    onImprove = {
+                        entryImproving = true
+                        improveVm.improveOnce(textDraft) { improved ->
+                            entryImproving = false
+                            if (improved != null) {
+                                viewModel.setImprovedText(improved)
+                                showImproved = true
+                            }
+                        }
+                    },
+                )
 
                 // ── Nachträge ──
                 entry.followups.forEachIndexed { index, followup ->
@@ -219,32 +217,31 @@ fun ThesenEntryDetailScreen(
                             viewModel.updateFollowup(followup.id, newText)
                         },
                         onDelete = { viewModel.deleteFollowup(followup.id) },
+                        improveVm = improveVm,
+                        onImproved = { improved ->
+                            viewModel.setFollowupImproved(followup.id, improved)
+                        },
                     )
                 }
 
                 // ── Nachtrag einsprechen ──
+                // Frank-Wunsch 2026-05-23: Nur der Titel, kein "Whisper Large V3 Turbo"-Subtext.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Outlined.EditNote,
                             contentDescription = null,
-                            tint = CosmosColors.AccentPrimary,
+                            tint = ThesenAccent,
                             modifier = Modifier.size(24.dp),
                         )
                         Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Nachtrag einsprechen",
-                                color = cosmos.textPrimary,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                "Whisper Large V3 Turbo — wird als eigene Karte gespeichert.",
-                                color = cosmos.textSecondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
+                        Text(
+                            "Nachtrag einsprechen",
+                            color = cosmos.textPrimary,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
+                        )
                         WhisperMicButton(
                             onTranscript = { transcript -> viewModel.addFollowup(transcript) },
                             size = 44.dp,
@@ -252,55 +249,41 @@ fun ThesenEntryDetailScreen(
                     }
                 }
 
-                // ── Vorlesen-Zeile ──
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(1.dp)
-                            .background(cosmos.glassBorder.copy(alpha = 0.3f))
-                )
+                // ── Vorlesen-Knopf ──
+                // Frank-Wunsch 2026-05-23: Nur das orange Lautsprecher-Icon, kein
+                // Beschriftungs-Text daneben. Klein und unauffaellig.
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(
                         onClick = { viewModel.speakAll() },
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(40.dp),
                     ) {
                         when (state.ttsState) {
                             ThesenTtsState.LOADING ->
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = CosmosColors.AccentPrimary,
+                                    color = ThesenAccent,
                                 )
                             ThesenTtsState.SPEAKING ->
                                 Icon(
                                     imageVector = Icons.Outlined.Stop,
                                     contentDescription = "Vorlesen stoppen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
+                                    tint = ThesenAccent,
+                                    modifier = Modifier.size(22.dp),
                                 )
                             ThesenTtsState.IDLE ->
                                 Icon(
                                     imageVector = Icons.Outlined.VolumeUp,
                                     contentDescription = "Vorlesen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
+                                    tint = ThesenAccent,
+                                    modifier = Modifier.size(22.dp),
                                 )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text =
-                            when (state.ttsState) {
-                                ThesenTtsState.LOADING -> "TTS wird erzeugt …"
-                                ThesenTtsState.SPEAKING -> "Spricht — tippen zum Stoppen"
-                                ThesenTtsState.IDLE -> "Eintrag + Nachträge vorlesen"
-                            },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = cosmos.textSecondary,
-                    )
                 }
 
                 // ── Löschen ──
@@ -341,8 +324,8 @@ fun ThesenEntryDetailScreen(
 }
 
 /**
- * KI-Zusammenfassung als Bullet-Points (analog BestJournalFrank). Bei leerer Summary wird
- * stattdessen ein Knopf "Mit KI Zusammenfassung erstellen" gezeigt.
+ * KI-Zusammenfassung als Mini-Fliesstext (Frank-Wunsch 2026-05-23 — max 6 Zeilen,
+ * keine Bullet-Points mehr). Migriert alte Bullet-Daten automatisch zu Fliesstext.
  */
 @Composable
 private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> Unit) {
@@ -352,37 +335,24 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
             Text(
                 "Zusammenfassung",
                 style = MaterialTheme.typography.titleMedium,
-                color = CosmosColors.AccentPrimary,
+                color = ThesenAccent,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             if (!summary.isNullOrBlank()) {
-                summary
-                    .lines()
-                    .filter { it.trimStart().startsWith("•") }
-                    .forEach { line ->
-                        val bulletText = line.trimStart().removePrefix("•").trim()
-                        Row(modifier = Modifier.padding(bottom = 4.dp)) {
-                            Text(
-                                "• ",
-                                color = cosmos.textPrimary,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                bulletText,
-                                color = cosmos.textPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
+                val prose = summaryAsProse(summary)
+                Text(
+                    text = prose,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    maxLines = 6,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = onGenerate, enabled = !isRunning) {
                     if (isRunning) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
-                            color = CosmosColors.AccentPrimary,
+                            color = ThesenAccent,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text("Wird erstellt …", style = MaterialTheme.typography.labelMedium)
@@ -391,20 +361,20 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
                             imageVector = Icons.Outlined.AutoAwesome,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = CosmosColors.AccentPrimary,
+                            tint = ThesenAccent,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Neu erstellen",
                             style = MaterialTheme.typography.labelMedium,
-                            color = CosmosColors.AccentPrimary,
+                            color = ThesenAccent,
                         )
                     }
                 }
             } else {
                 Text(
                     text =
-                        "Noch keine Zusammenfassung. Gemini erstellt 3–5 Bullet-Points aus dem Eintrag und allen Nachträgen.",
+                        "Noch keine Zusammenfassung. Gemini erstellt einen kurzen Mini-Fliesstext aus dem Eintrag und allen Nachträgen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -446,15 +416,204 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
     }
 }
 
+/**
+ * Migrations-Helper (Frank-Wunsch 2026-05-23): alte Bullet-Point-Daten werden zu
+ * Fliesstext gejoined damit die UI keine Spruenge zwischen alten/neuen Eintraegen zeigt.
+ * Neue Eintraege liefert das ViewModel bereits als Fliesstext — dann passiert hier nichts.
+ */
+private fun summaryAsProse(raw: String): String {
+    val trimmed = raw.trim()
+    if (!trimmed.contains("•") && !trimmed.contains("\n- ") && !trimmed.startsWith("- ")) {
+        return trimmed
+    }
+    return trimmed
+        .lines()
+        .map { it.trim().removePrefix("•").removePrefix("-").removePrefix("*").trim() }
+        .filter { it.isNotBlank() }
+        .joinToString(separator = " ")
+}
+
+/**
+ * Eintrag-Karte mit optionalem Verbessert/Original-Tab (Frank-Wunsch 2026-05-23).
+ * Wenn keine KI-Version vorhanden ist, wird unter dem editierbaren Originaltext ein
+ * "Mit KI nachträglich verbessern"-Knopf gezeigt. Liegt eine improvedText-Variante
+ * vor, erscheint oben ein Tab und der Knopf wird durch "Neu verbessern" ersetzt.
+ */
+@Composable
+private fun ImprovableEntryCard(
+    headerLabel: String,
+    timestampMs: Long,
+    titleDraft: String,
+    onTitleChange: (String) -> Unit,
+    originalText: String,
+    onOriginalChange: (String) -> Unit,
+    improvedText: String?,
+    showImproved: Boolean,
+    onToggleVariant: () -> Unit,
+    isImproving: Boolean,
+    onImprove: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val hasImproved = !improvedText.isNullOrBlank()
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                headerLabel,
+                style = MaterialTheme.typography.titleMedium,
+                color = ThesenAccent,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatThesenTimestamp(timestampMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            BasicTextField(
+                value = titleDraft,
+                onValueChange = onTitleChange,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle =
+                    TextStyle(
+                        color = cosmos.textPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp,
+                    ),
+                cursorBrush = SolidColor(ThesenAccent),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (hasImproved) {
+                VariantTabRow(
+                    showImproved = showImproved,
+                    onToggle = onToggleVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (hasImproved && showImproved) {
+                // Verbesserter Text — read-only, joinable per Klick auf Tab.
+                Text(
+                    text = improvedText!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    lineHeight = 22.sp,
+                )
+            } else {
+                BasicTextField(
+                    value = originalText,
+                    onValueChange = onOriginalChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle =
+                        TextStyle(
+                            color = cosmos.textSecondary,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                        ),
+                    cursorBrush = SolidColor(ThesenAccent),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            ImproveButton(
+                isImproving = isImproving,
+                hasImproved = hasImproved,
+                onClick = onImprove,
+            )
+        }
+    }
+}
+
+/**
+ * Wiederverwendbarer Tab "Verbessert" / "Original" — orange Highlight unter dem
+ * aktiven Tab, anderer Tab in Sekundärfarbe.
+ */
+@Composable
+private fun VariantTabRow(showImproved: Boolean, onToggle: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TabChip(label = "Verbessert", active = showImproved, onClick = { if (!showImproved) onToggle() })
+        Spacer(Modifier.width(6.dp))
+        TabChip(label = "Original", active = !showImproved, onClick = { if (showImproved) onToggle() })
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = if (showImproved) "von Gemini" else "Roh-Transkript",
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
+    }
+}
+
+@Composable
+private fun TabChip(label: String, active: Boolean, onClick: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    val bg = if (active) ThesenAccent.copy(alpha = 0.18f) else Color.Transparent
+    val fg = if (active) ThesenAccent else cosmos.textSecondary
+    Box(
+        modifier =
+            Modifier
+                .background(bg, RoundedCornerShape(50))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = fg,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun ImproveButton(isImproving: Boolean, hasImproved: Boolean, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = !isImproving) {
+        if (isImproving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(14.dp),
+                strokeWidth = 2.dp,
+                color = ThesenAccent,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("Wird verbessert …", style = MaterialTheme.typography.labelMedium)
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = ThesenAccent,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text =
+                    if (hasImproved) "Neu verbessern"
+                    else "Mit KI nachträglich verbessern",
+                style = MaterialTheme.typography.labelMedium,
+                color = ThesenAccent,
+            )
+        }
+    }
+}
+
 @Composable
 private fun FollowupCard(
     followup: ThesenFollowup,
     index: Int,
     onTextChange: (String) -> Unit,
     onDelete: () -> Unit,
+    improveVm: ThesenImproveViewModel,
+    onImproved: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     var draft by remember(followup.id, followup.text) { mutableStateOf(followup.text) }
+    val hasImproved = !followup.improvedText.isNullOrBlank()
+    var showImproved by
+        remember(followup.id, followup.isImproved) {
+            mutableStateOf(followup.isImproved && followup.improvedText != null)
+        }
+    var improving by remember(followup.id) { mutableStateOf(false) }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -470,14 +629,14 @@ private fun FollowupCard(
                     Icon(
                         imageVector = Icons.Outlined.Book,
                         contentDescription = null,
-                        tint = CosmosColors.AccentSecondary,
+                        tint = ThesenAccent,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "Nachtrag ${germanNumberWord(index)}",
                         style = MaterialTheme.typography.titleSmall,
-                        color = CosmosColors.AccentSecondary,
+                        color = ThesenAccent,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -496,16 +655,47 @@ private fun FollowupCard(
                 modifier = Modifier.padding(start = 26.dp),
             )
             Spacer(Modifier.height(8.dp))
-            BasicTextField(
-                value = draft,
-                onValueChange = {
-                    draft = it
-                    onTextChange(it)
+
+            if (hasImproved) {
+                VariantTabRow(showImproved = showImproved, onToggle = { showImproved = !showImproved })
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (hasImproved && showImproved) {
+                Text(
+                    text = followup.improvedText!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    lineHeight = 22.sp,
+                )
+            } else {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = {
+                        draft = it
+                        onTextChange(it)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle =
+                        TextStyle(color = cosmos.textPrimary, fontSize = 15.sp, lineHeight = 22.sp),
+                    cursorBrush = SolidColor(ThesenAccent),
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+            ImproveButton(
+                isImproving = improving,
+                hasImproved = hasImproved,
+                onClick = {
+                    improving = true
+                    improveVm.improveOnce(draft) { improved ->
+                        improving = false
+                        if (improved != null) {
+                            onImproved(improved)
+                            showImproved = true
+                        }
+                    }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle =
-                    TextStyle(color = cosmos.textPrimary, fontSize = 15.sp, lineHeight = 22.sp),
-                cursorBrush = SolidColor(CosmosColors.AccentPrimary),
             )
         }
     }

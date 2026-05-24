@@ -1,20 +1,23 @@
 package de.frank.entropyreducer.presentation.thesen
 
 import android.content.Context
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoFixHigh
@@ -44,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -227,19 +231,44 @@ fun ThesenScreen(
                     )
                 }
             } else {
+                // Frank-Wunsch 2026-05-23: Gruppierung nach Zeit-Sektionen wie
+                // BestJournalFrank's Thesen — Heute / Gestern / Diese Woche /
+                // Letzte Woche / Vor 2/3/4 Wochen / Monatsname / Jahr — Monat.
+                // Jeder Eintrag bekommt links eine durchgehende Timeline-Rail
+                // mit Buch-Badge und rechts die Karte. Sortierung von neu nach alt.
+                val grouped = remember(entries) { groupEntriesBySection(entries) }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding =
                         androidx.compose.foundation.layout.PaddingValues(
-                            start = 16.dp,
+                            start = 12.dp,
                             end = 16.dp,
-                            top = 8.dp,
+                            top = 4.dp,
                             bottom = 120.dp,
                         ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(items = entries, key = { it.id }) { e ->
-                        EntryCard(entry = e, onClick = { onOpenEntry(e.id) })
+                    grouped.forEach { section ->
+                        item(key = "header-${section.label}") {
+                            SectionHeader(label = section.label)
+                        }
+                        val lastIndex = section.entries.lastIndex
+                        section.entries.forEachIndexed { index, e ->
+                            val position =
+                                when {
+                                    section.entries.size == 1 -> TimelinePosition.ONLY
+                                    index == 0 -> TimelinePosition.FIRST
+                                    index == lastIndex -> TimelinePosition.LAST
+                                    else -> TimelinePosition.MIDDLE
+                                }
+                            item(key = e.id) {
+                                TimelineEntryRow(
+                                    entry = e,
+                                    position = position,
+                                    onClick = { onOpenEntry(e.id) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -259,6 +288,8 @@ fun ThesenScreen(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
                         backgroundColor = ThesenAccent.copy(alpha = 0.7f),
+                        // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon schwarz
+                        // wie der zentrale BottomBar-Mic.
                         iconTint = Color.Black,
                         onClick = {
                             inputDialogOpen = true
@@ -308,48 +339,208 @@ fun ThesenScreen(
     }
 }
 
+/**
+ * Section-Header in der Zeit-gruppierten Liste — z.B. "Heute", "Diese Woche",
+ * "Vor 2 Wochen", "Mai" oder "2024 — Dezember". Frank-Wunsch 2026-05-23.
+ */
 @Composable
-private fun EntryCard(entry: ThesenEntry, onClick: () -> Unit) {
+private fun SectionHeader(label: String) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier =
-                        Modifier.size(36.dp)
-                            .clip(CircleShape)
-                            .background(ThesenAccent.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Book,
-                        contentDescription = null,
-                        tint = ThesenAccent,
-                        modifier = Modifier.size(20.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Linker Block hat 52dp Breite — passt genau zur Timeline-Rail darunter.
+        Spacer(Modifier.width(52.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = ThesenAccent,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.size(8.dp))
+        Box(
+            modifier =
+                Modifier.weight(1f).height(1.dp).background(ThesenAccent.copy(alpha = 0.25f))
+        )
+    }
+}
+
+/**
+ * Eintrag plus Timeline-Rail links — 52dp Spalte mit durchgehender Linie und
+ * zentriertem Buch-Badge. Frank-Wunsch 2026-05-23 (Vorbild BestJournalFrank).
+ */
+@Composable
+private fun TimelineEntryRow(
+    entry: ThesenEntry,
+    position: TimelinePosition,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val lineColor = ThesenAccent.copy(alpha = 0.35f)
+    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 4.dp)) {
+        Box(
+            modifier = Modifier.width(52.dp).fillMaxHeight(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (position == TimelinePosition.ONLY) return@Canvas
+                val cx = size.width / 2f
+                val midY = size.height / 2f
+                val gap = 18.dp.toPx() + 2.dp.toPx()
+                val strokePx = 2.dp.toPx()
+                val drawAbove =
+                    position == TimelinePosition.MIDDLE || position == TimelinePosition.LAST
+                val drawBelow =
+                    position == TimelinePosition.MIDDLE || position == TimelinePosition.FIRST
+                if (drawAbove && midY - gap > 0f) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, 0f),
+                        end = Offset(cx, midY - gap),
+                        strokeWidth = strokePx,
                     )
                 }
-                Spacer(Modifier.size(12.dp))
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = entry.title.ifBlank { "Theseneintrag" },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = formatTimestamp(entry.timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = cosmos.textSecondary,
+                if (drawBelow && midY + gap < size.height) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, midY + gap),
+                        end = Offset(cx, size.height),
+                        strokeWidth = strokePx,
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = entry.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = cosmos.textPrimary,
-                maxLines = 4,
-            )
+            Box(
+                modifier =
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(ThesenAccent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Book,
+                    contentDescription = null,
+                    tint = ThesenAccent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        GlassCard(modifier = Modifier.weight(1f).clickable { onClick() }) {
+            Column {
+                Text(
+                    text = entry.title.ifBlank { "Theseneintrag" },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = formatTimestamp(entry.timestampMs),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(6.dp))
+                // Frank-Wunsch 2026-05-23: 5 statt 4 Zeilen Vorschau.
+                Text(
+                    text = entry.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    maxLines = 5,
+                )
+            }
+        }
+    }
+}
+
+/** Position eines Eintrags innerhalb seiner Zeit-Sektion — steuert die Timeline-Linie. */
+private enum class TimelinePosition {
+    FIRST,
+    MIDDLE,
+    LAST,
+    ONLY,
+}
+
+/** Eine Zeit-Sektion mit ihrem Label und allen darunter gruppierten Eintraegen. */
+private data class ThesenSection(val label: String, val entries: List<ThesenEntry>)
+
+/**
+ * Gruppiert Eintraege nach Zeit-Sektionen (Frank-Wunsch 2026-05-23). Reihenfolge:
+ * Heute, Gestern, Diese Woche, Letzte Woche, Vor 2/3/4 Wochen, Monatsname, Jahr — Monat.
+ * Innerhalb der Sektion bleiben die Eintraege nach Timestamp absteigend sortiert.
+ * Erwartet eine bereits nach Timestamp absteigend sortierte Eingabe.
+ */
+private fun groupEntriesBySection(entries: List<ThesenEntry>): List<ThesenSection> {
+    if (entries.isEmpty()) return emptyList()
+    val sorted = entries.sortedByDescending { it.timestampMs }
+    val buckets = linkedMapOf<String, MutableList<ThesenEntry>>()
+    sorted.forEach { e ->
+        val label = sectionLabelFor(e.timestampMs)
+        buckets.getOrPut(label) { mutableListOf() }.add(e)
+    }
+    return buckets.map { (label, list) -> ThesenSection(label, list) }
+}
+
+/**
+ * Berechnet das Section-Label fuer einen Timestamp. Adaptiert aus
+ * BestJournalFrank/DateTimeFormatter.getSectionLabel — erweitert um "Heute" und
+ * "Gestern" am Anfang (Frank-Wunsch 2026-05-23, exakter Wortlaut "heute und gestern").
+ */
+private fun sectionLabelFor(timestamp: Long): String {
+    val now = java.util.Calendar.getInstance()
+    val entry = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+    val todayStart =
+        java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+    val yesterdayStart =
+        (todayStart.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -1)
+        }
+    val dow = todayStart.get(java.util.Calendar.DAY_OF_WEEK)
+    val daysSinceMonday =
+        if (dow == java.util.Calendar.SUNDAY) 6 else dow - java.util.Calendar.MONDAY
+    val thisWeekMonday =
+        (todayStart.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -daysSinceMonday)
+        }
+    val lastWeekMonday =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -7)
+        }
+    val twoWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -14)
+        }
+    val threeWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -21)
+        }
+    val fourWeeksAgo =
+        (thisWeekMonday.clone() as java.util.Calendar).apply {
+            add(java.util.Calendar.DAY_OF_YEAR, -28)
+        }
+    val sameMonth =
+        entry.get(java.util.Calendar.MONTH) == now.get(java.util.Calendar.MONTH) &&
+            entry.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR)
+
+    return when {
+        timestamp >= todayStart.timeInMillis -> "Heute"
+        timestamp >= yesterdayStart.timeInMillis -> "Gestern"
+        timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
+        timestamp >= lastWeekMonday.timeInMillis && sameMonth -> "Letzte Woche"
+        timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> "Vor 2 Wochen"
+        timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> "Vor 3 Wochen"
+        timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> "Vor 4 Wochen"
+        entry.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR) -> {
+            val fmt = java.text.SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
+            fmt.format(java.util.Date(timestamp)).replaceFirstChar { it.uppercase() }
+        }
+        else -> {
+            val fmt = java.text.SimpleDateFormat("MMMM", Locale.GERMAN)
+            val month = fmt.format(java.util.Date(timestamp)).replaceFirstChar { it.uppercase() }
+            "${entry.get(java.util.Calendar.YEAR)} — $month"
         }
     }
 }
@@ -609,12 +800,18 @@ data class ThesenEntry(
      */
     val followups: List<ThesenFollowup> = emptyList(),
     /**
-     * KI-generierte Bullet-Point-Zusammenfassung (Frank-Wunsch 2026-05-20). Eine Zeile pro
-     * Bullet-Point, beginnt mit "• ". `null` = noch keine Zusammenfassung erstellt — der Detail-
-     * Screen zeigt dann einen Knopf "Mit KI zusammenfassen". Wird automatisch bei neuen Einträgen
-     * erzeugt sobald Gemini antwortet.
+     * KI-generierte Zusammenfassung (Frank-Wunsch 2026-05-20, 2026-05-23 auf Fliesstext).
+     * `null` = noch keine Zusammenfassung erstellt — der Detail-Screen zeigt dann einen
+     * Knopf "Mit KI zusammenfassen".
      */
     val summary: String? = null,
+    /**
+     * Nachträgliche KI-Verbesserung des Eintrags-Texts (Frank-Wunsch 2026-05-23).
+     * `null` = noch nicht via KI verbessert; in der UI gibt es dann den Knopf
+     * "Mit KI nachträglich verbessern". Original-Text bleibt in [text].
+     */
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
 ) {
     companion object {
         fun create(text: String): ThesenEntry {
@@ -633,8 +830,17 @@ data class ThesenEntry(
     }
 }
 
-/** Einzelner Nachtrag zu einem [ThesenEntry]. */
-data class ThesenFollowup(val id: String, val createdAtMs: Long, val text: String)
+/**
+ * Einzelner Nachtrag zu einem [ThesenEntry]. Hat ebenfalls einen eigenen KI-verbesserten
+ * Text (Frank-Wunsch 2026-05-23) damit jeder Nachtrag separat nachgeschliffen werden kann.
+ */
+data class ThesenFollowup(
+    val id: String,
+    val createdAtMs: Long,
+    val text: String,
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
+)
 
 private val Context.thesenStore by preferencesDataStore(name = "thesen_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
@@ -678,6 +884,9 @@ internal suspend fun deleteThesenEntry(context: Context, id: String) {
  * Aktualisiert Text und/oder Titel eines bestehenden Eintrags. Felder die als `null` uebergeben
  * werden, bleiben unveraendert. Wird sowohl vom Edit-Dialog (Text-Aenderung) als auch vom
  * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
+ *
+ * Frank-Wunsch 2026-05-23: Auch improvedText + isImproved werden hier durchgereicht damit
+ * die KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat.
  */
 internal suspend fun updateThesenEntry(
     context: Context,
@@ -685,8 +894,10 @@ internal suspend fun updateThesenEntry(
     text: String? = null,
     title: String? = null,
     summary: String? = null,
+    improvedText: String? = null,
+    isImproved: Boolean? = null,
 ) {
-    if (text == null && title == null && summary == null) return
+    if (text == null && title == null && summary == null && improvedText == null && isImproved == null) return
     context.thesenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
@@ -695,10 +906,40 @@ internal suspend fun updateThesenEntry(
                     text = text ?: e.text,
                     title = title ?: e.title,
                     summary = summary ?: e.summary,
+                    improvedText = improvedText ?: e.improvedText,
+                    isImproved = isImproved ?: e.isImproved,
                 )
             } else {
                 e
             }
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+}
+
+/**
+ * Speichert die KI-Verbesserung eines Followups (Frank-Wunsch 2026-05-23).
+ * Setzt improvedText + isImproved=true; rawText bleibt unveraendert.
+ */
+internal suspend fun setThesenFollowupImproved(
+    context: Context,
+    entryId: String,
+    followupId: String,
+    improvedText: String,
+) {
+    context.thesenStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id != entryId) return@map e
+            e.copy(
+                followups =
+                    e.followups.map { f ->
+                        if (f.id == followupId)
+                            f.copy(improvedText = improvedText, isImproved = true)
+                        else f
+                    }
+            )
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
@@ -775,6 +1016,8 @@ private fun jsonToEntry(o: JSONObject): ThesenEntry =
         text = o.optString("text"),
         followups = jsonToFollowups(o.optJSONArray("followups")),
         summary = o.optString("summary").takeIf { it.isNotBlank() },
+        improvedText = o.optString("improvedText").takeIf { it.isNotBlank() },
+        isImproved = o.optBoolean("isImproved", false),
     )
 
 private fun jsonToFollowups(arr: JSONArray?): List<ThesenFollowup> {
@@ -787,6 +1030,8 @@ private fun jsonToFollowups(arr: JSONArray?): List<ThesenFollowup> {
                     id = o.optString("id"),
                     createdAtMs = o.optLong("ts"),
                     text = o.optString("text"),
+                    improvedText = o.optString("improvedText").takeIf { it.isNotBlank() },
+                    isImproved = o.optBoolean("isImproved", false),
                 )
             )
         }
@@ -808,6 +1053,10 @@ private fun serializeEntries(entries: List<ThesenEntry>): String {
                 fo.put("id", f.id)
                 fo.put("ts", f.createdAtMs)
                 fo.put("text", f.text)
+                if (!f.improvedText.isNullOrBlank()) {
+                    fo.put("improvedText", f.improvedText)
+                }
+                if (f.isImproved) fo.put("isImproved", true)
                 fArr.put(fo)
             }
             o.put("followups", fArr)
@@ -815,6 +1064,10 @@ private fun serializeEntries(entries: List<ThesenEntry>): String {
         if (!e.summary.isNullOrBlank()) {
             o.put("summary", e.summary)
         }
+        if (!e.improvedText.isNullOrBlank()) {
+            o.put("improvedText", e.improvedText)
+        }
+        if (e.isImproved) o.put("isImproved", true)
         arr.put(o)
     }
     return arr.toString()
@@ -827,8 +1080,7 @@ internal fun formatThesenTimestamp(ts: Long): String {
 
 private fun formatTimestamp(ts: Long): String = formatThesenTimestamp(ts)
 
-/** Akzentfarbe — Frank-Wunsch: gleiche Farbe wie der Aufgaben-Tab (Orange). */
-// Frank-Wunsch 2026-05-23: Thesen sollen die gleiche Akzentfarbe haben wie das
-// Entropie-Tagebuch — vorher 0xFFFF9800 (helles Material-Orange) wirkte zu blass im
-// Vergleich. 0xFFEA580C ist identisch zu TagebuchAccent (Aufnehmen-/Schreiben-FAB).
-private val ThesenAccent: Color = Color(0xFFEA580C)
+/** Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche
+ * Farbe wie der Aufgaben-Tab-Sub-Modus in der BottomBar (kraeftiges Orange
+ * #EA580C, nicht das frueher genutzte hellere #FF9800). */
+internal val ThesenAccent: Color = Color(0xFFEA580C)

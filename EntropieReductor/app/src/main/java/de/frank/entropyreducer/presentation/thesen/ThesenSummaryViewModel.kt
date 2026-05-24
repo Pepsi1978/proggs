@@ -94,12 +94,12 @@ constructor(
                         ?.parts
                         ?.firstOrNull()
                         ?.text
-                        ?.let(::sanitizeBullets)
+                        ?.let(::sanitizeProse)
                 }
-                .onSuccess { bullets ->
-                    if (!bullets.isNullOrBlank()) {
+                .onSuccess { prose ->
+                    if (!prose.isNullOrBlank()) {
                         _state.value = SummaryState.IDLE
-                        onResult(bullets)
+                        onResult(prose)
                     } else {
                         _state.value = SummaryState.ERROR
                         _error.value = "Leere Antwort von Gemini"
@@ -117,11 +117,16 @@ constructor(
         if (_state.value == SummaryState.ERROR) _state.value = SummaryState.IDLE
     }
 
-    private fun sanitizeBullets(raw: String): String {
-        // Gemini liefert Bullet-Points manchmal als "- ", "* ", "1. " oder "• " — alle auf "• "
-        // normalisieren. Leere Zeilen und Praefix-Texte ("Hier ist die Zusammenfassung:")
-        // rausfiltern.
-        val lines =
+    /**
+     * Frank-Wunsch 2026-05-23: Zusammenfassung ist ein Mini-Fliesstext (max 6 Zeilen),
+     * keine Bullet-Points mehr. Wir saeubern Markdown-Reste, Bullet-Praefixe
+     * (falls die KI doch welche liefert), Einleitungs-/Schlussfloskeln und joinen
+     * Zeilen zu einem zusammenhaengenden Absatz. Wenn die KI mehrere kurze Saetze
+     * untereinander geliefert hat, werden sie mit Leerzeichen verbunden — das
+     * Detail-Layout begrenzt das Ganze dann via maxLines auf 6 Zeilen.
+     */
+    private fun sanitizeProse(raw: String): String {
+        val cleaned =
             raw.lines()
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
@@ -134,34 +139,29 @@ constructor(
                         .removePrefix("→")
                         .trim()
                         .let { stripped -> stripped.removePrefix("**").removeSuffix("**").trim() }
-                        // Nummerierungen wie "1. " oder "1) " entfernen.
                         .replace(Regex("^\\d+[.)]\\s+"), "")
                 }
                 .filter { it.isNotBlank() && !it.endsWith(":") }
-                .map { "• $it" }
-        return lines.joinToString("\n")
+        // Saetze mit Leerzeichen verbinden — die UI begrenzt auf 6 Zeilen.
+        return cleaned.joinToString(separator = " ").trim()
     }
 
     private companion object {
         const val SYSTEM_PROMPT =
             """
-Du erzeugst eine kurze Bullet-Point-Zusammenfassung eines Theseneintrags.
+Du erzeugst eine kurze Mini-Fliesstext-Zusammenfassung eines Theseneintrags.
 
 Pflicht-Regeln:
-- 3 bis 5 Bullet-Points. Lieber weniger als zu viele.
-- Jeder Bullet-Point beginnt mit "• " und steht auf einer eigenen Zeile.
-- Jeder Bullet-Point ist EIN kurzer prägnanter Satz oder Halbsatz (max 12 Wörter).
+- Ein zusammenhaengender Absatz, KEINE Bullet-Points, KEINE Aufzaehlung.
+- Maximal 6 Zeilen — lieber knapper. Insgesamt nicht mehr als ca. 70 Woerter.
 - Sprache: Deutsch mit echten Umlauten (ä ö ü ß).
 - KEINE Einleitung wie "Hier ist die Zusammenfassung:". KEINE Schlussbemerkung.
-- KEINE Anführungszeichen. KEIN Markdown (kein **fett**, kein _kursiv_).
-- Trifft den Kern des Eintrags: was passiert ist, was gefühlt wurde, was wichtig ist.
+- KEINE Anfuehrungszeichen. KEIN Markdown (kein **fett**, kein _kursiv_, keine Listen).
+- Trifft den Kern: was passiert ist, was gefuehlt wurde, was wichtig ist.
 - Schreibe in dritter Person oder neutral — KEIN "Ich".
 
 Beispiel-Output:
-• Streit mit Mama wegen unaufgeräumter Wohnung
-• Gefühl von Schuld und Wut gleichzeitig
-• Versöhnung am Abend mit gemeinsamem Tee
-• Erkenntnis: Konflikte schneller ansprechen
+Es gab Streit mit Mama wegen der unaufgeraeumten Wohnung. Gefuehle von Schuld und Wut traten gleichzeitig auf. Am Abend kam es zur Versoehnung bei einer Tasse Tee. Erkenntnis: Konflikte besser frueher ansprechen, dann eskalieren sie nicht so stark.
 """
     }
 }
