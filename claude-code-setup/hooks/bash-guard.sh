@@ -55,6 +55,24 @@ check_dangerous() {
 }
 
 # ============================================================
+# PART 1b: 'git add -A' / 'git add .' blockieren (parallele Sessions)
+# Wuerde fremde unfertige Dateien anderer Sessions mitcommitten.
+# Praezise: blockiert -A/--all/././ auch nach Flags, aber NICHT
+# spezifische Pfade ('git add .claude/x', 'git add foo.txt') und
+# nicht ueber && hinweg ('... && grep -A 3'). grep -E ohne -i =
+# case-sensitiv, damit '-A' nicht auch '-a' matcht.
+# ============================================================
+
+check_git_add_all() {
+    if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+add[[:space:]]+([^&|;<>]*[[:space:]]+)?(-A|--all|\.|\./)([[:space:]]|$)' 2>/dev/null; then
+        hook_log_error "BLOCKED 'git add -A/.': ${cmd:0:100}" 2>/dev/null || true
+        echo "bash-guard: BLOCKIERT — 'git add -A' / 'git add .' ist verboten. Parallele Sessions wuerden fremde unfertige Dateien mitcommitten. Stage deine eigenen Dateien namentlich: git add pfad/datei1 pfad/datei2" >&2
+        echo '{"error":"BLOCKED: git add -A/. verboten (parallele Sessions). Stage eigene Dateien namentlich: git add pfad/datei"}'
+        exit 2
+    fi
+}
+
+# ============================================================
 # PART 2: Codex-Verzeichnis + sed-auf-JSON blockieren (ex silent-corrector)
 # ============================================================
 
@@ -166,6 +184,7 @@ check_exit0_guard() {
 
 # Run all checks
 check_dangerous
+check_git_add_all
 check_forbidden
 check_shell_updates
 check_settings_write

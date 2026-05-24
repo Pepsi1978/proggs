@@ -65,6 +65,25 @@ foreach ($pattern in $dangerous) {
     }
 }
 
+# ------------------------------------------------------------
+# PART 1b: 'git add -A' / 'git add .' blockieren (parallele Sessions)
+# Wuerde fremde unfertige Dateien anderer Sessions mitcommitten.
+# Praezise: blockiert -A/--all/././ auch nach Flags, aber NICHT
+# spezifische Pfade ('git add .claude/x', 'git add foo.txt') und
+# nicht ueber && hinweg ('... && grep -A 3'). -cmatch = case-sensitiv,
+# damit '-A' nicht auch '-a' matcht.
+# ------------------------------------------------------------
+if ($cmd -cmatch 'git\s+add\s+([^&|;<>]*\s+)?(-A|--all|\.|\./)(\s|$)') {
+    try { Hook-LogError "BLOCKED 'git add -A/.': $($cmd.Substring(0, [Math]::Min(100, $cmd.Length)))" } catch { }
+    try {
+        $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: bash-guard.ps1 — 'git add -A/.' blockiert (parallele Sessions)"
+        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+    } catch { }
+    [Console]::Error.WriteLine("bash-guard: BLOCKIERT — 'git add -A' / 'git add .' ist verboten. Parallele Sessions wuerden fremde unfertige Dateien mitcommitten. Stage deine eigenen Dateien namentlich: git add pfad/datei1 pfad/datei2")
+    @{ error = "BLOCKED: git add -A/. verboten (parallele Sessions). Stage eigene Dateien namentlich: git add pfad/datei" } | ConvertTo-Json -Compress | Write-Output
+    exit 2
+}
+
 # ============================================================
 # PART 2: Codex-Verzeichnis + sed-auf-JSON blockieren (ex silent-corrector)
 # ============================================================
