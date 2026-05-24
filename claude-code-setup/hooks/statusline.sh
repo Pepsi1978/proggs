@@ -419,10 +419,17 @@ make_pace_bar() {
     else mcol="$RED"; fi
     local out="" i=0
     while [ "$i" -lt 7 ]; do
-        if [ "$i" -eq "$mpos" ]; then
+        if [ "$i" -eq "$mid" ]; then
+            # Ziellinie hat VORRANG — immer sichtbar. Sitzt der Marker genau hier
+            # (genau richtig), wird die Linie in der Ampelfarbe gezeigt statt vom
+            # Marker verdeckt zu werden (Frank-Bug 2026-05-24: Strich verschwand bei Treffer).
+            if [ "$mpos" -eq "$mid" ]; then
+                out="${out}${mcol}┃${R}"
+            else
+                out="${out}${MID}┃${R}"
+            fi
+        elif [ "$i" -eq "$mpos" ]; then
             out="${out}${mcol}●${R}"
-        elif [ "$i" -eq "$mid" ]; then
-            out="${out}${MID}┃${R}"
         else
             out="${out}${TRACK}─${R}"
         fi

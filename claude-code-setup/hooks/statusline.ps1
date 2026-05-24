@@ -432,9 +432,17 @@ function Get-PaceBar($used, $resets, $now) {
     $mcol = if ($adelta -le 8) { $GREEN } elseif ($adelta -le 20) { $YELLOW } else { $RED }
     $sb = ''
     for ($i = 0; $i -lt 7; $i++) {
-        if ($i -eq $mpos) { $sb += "${mcol}●${R}" }
-        elseif ($i -eq $mid) { $sb += "${MIDLINE}┃${R}" }
-        else { $sb += "${TRACK}─${R}" }
+        if ($i -eq $mid) {
+            # Ziellinie hat VORRANG — immer sichtbar. Sitzt der Marker genau hier
+            # (genau richtig), wird die Linie in der Ampelfarbe gezeigt statt vom
+            # Marker verdeckt zu werden (Frank-Bug 2026-05-24: Strich verschwand bei Treffer).
+            if ($mpos -eq $mid) { $sb += "${mcol}┃${R}" }
+            else { $sb += "${MIDLINE}┃${R}" }
+        } elseif ($i -eq $mpos) {
+            $sb += "${mcol}●${R}"
+        } else {
+            $sb += "${TRACK}─${R}"
+        }
     }
     return $sb
 }
