@@ -681,7 +681,7 @@ namespace TerminalVoiceOverlay.Views
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
-                CLog($"TICK mic={_micState} proc={_isProcessing} btw={isBtwRecording} cursorOwn={IsCursorOverOwnUi()} mouseAny={IsMouseOverAnyPart()} aux={IsAuxiliaryWindowOpen()}");
+                CLog($"TICK mic={_micState} proc={_isProcessing} btw={isBtwRecording} cursorOwn={IsCursorOverOwnUi()} transChild={IsTransientChildVisible()} aux={IsAuxiliaryWindowOpen()}");
                 // Niemals waehrend Aufnahme/Verarbeitung einklappen.
                 if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                     return;
@@ -692,7 +692,7 @@ namespace TerminalVoiceOverlay.Views
                 // liegt UEBER dem Board) haelt das Overlay ebenfalls offen —
                 // sonst klappt der Timer waehrend des Bearbeitens ein und
                 // versteckt das Board hinter dem Dialog. Re-arm statt einklappen.
-                if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen())
+                if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
                 {
                     _collapseTimer!.Start();
                     return;
@@ -819,6 +819,25 @@ namespace TerminalVoiceOverlay.Views
             }
             catch { }
             return false;
+        }
+
+        /// <summary>
+        /// True solange ein transientes Kind-Fenster (Prompt-Eingabe oder
+        /// Historie) sichtbar ist. Diese Fenster sind eigene Top-Level-Windows
+        /// links neben dem Board; beim Scrollen/Arbeiten darin ist die reine
+        /// Cursor-Punkt-Abtastung (IsCursorOverOwnUi) zu fragil — ein einziger
+        /// 2-Sekunden-Sample knapp neben dem Fenster reichte zum Einklappen
+        /// (gemessen 2026-05-24). Solange ein Kind sichtbar ist, arbeitet der
+        /// Benutzer damit → der Auto-Einklapp-Timer pausiert. NUR fuer den
+        /// Collapse-Timer gedacht — der Hide-Timer (echter App-Wechsel) versteckt
+        /// die Kinder weiterhin, damit sie nie ueber Chrome o.ae. stehen bleiben.
+        /// </summary>
+        private bool IsTransientChildVisible()
+        {
+            var p = _promptPanel;
+            if (p is null) return false;
+            try { return p.IsInputWindowVisible || p.IsHistoryWindowVisible; }
+            catch { return false; }
         }
 
         private void ScheduleCollapse()

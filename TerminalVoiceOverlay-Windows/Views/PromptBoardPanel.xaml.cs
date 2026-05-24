@@ -650,6 +650,11 @@ public partial class PromptBoardPanel : Window
     /// <summary>True wenn der Stern an ist und das Eingabefenster sichtbar.</summary>
     public bool IsInputWindowVisible => _inputWindowVisible;
 
+    /// <summary>True wenn das Historie-Fenster gerade sichtbar ist. Das
+    /// OverlayWindow nutzt das, um den Auto-Einklapp-Timer zu pausieren
+    /// solange der Benutzer in der Historie scrollt/arbeitet.</summary>
+    public bool IsHistoryWindowVisible => _historyWindowVisible;
+
     /// <summary>
     /// Versteckt Eingabe- und Historie-Fenster — wird vom OverlayWindow
     /// gerufen sobald der Benutzer aus dem Terminal in eine andere App
