@@ -10,8 +10,7 @@ description: >-
   wenn der Stop-Hook session-backup-nudge bei hohem Kontextverbrauch (ab 92%) anstoesst, ein
   Backup zu machen. backup erstellt eine kuratierte Handoff-Notiz und sichert sie lokal UND im
   Repo, bevor der Benutzer /clear eingibt. restore liest die neueste Notiz und setzt die Arbeit
-  nahtlos fort. Zweck: die verlustbehaftete Auto-Komprimierung des Kontextfensters vermeiden,
-  indem kontrolliert vor dem /clear gesichert wird.
+  nahtlos fort.
 ---
 
 # Session — Backup & Restore
@@ -54,7 +53,8 @@ sich nie mehrere Sessions vermischen.
 
 Fuehre diese Schritte der Reihe nach aus. Wenn der Hook dich angestossen hat: Pruefe ZUERST, ob die
 aktuelle Aufgabe wirklich abgeschlossen ist (keine offene Rueckfrage / kein Multiple-Choice). Wenn
-nicht — erst fertig machen, dann Backup.
+nicht — erst fertig machen, dann Backup. Wenn der Hook anstoesst und die Aufgabe noch laeuft, dem
+Benutzer kurz melden: "Kontext bei 92%+, ich sichere nach dieser Antwort."
 
 ### Schritt 1: Handoff-Notiz schreiben
 
@@ -80,6 +80,17 @@ git fetch origin && git rebase origin/main && git push
 ```
 
 Die fortlaufende Commit-Nummer wie ueblich aus dem letzten Commit ableiten.
+
+**Konflikt auf der Backup-Datei** (eine parallele Session hat sie auch committed): Dein eigenes,
+frisches Backup gewinnt, denn es gehoert zu DEINER Session-Fortsetzung. ACHTUNG: bei `git rebase`
+sind `--ours`/`--theirs` invertiert. `--theirs` ist dein gerade angewendeter Commit (den willst
+du), `--ours` ist origin/main. Bei Konflikt auf der Backup-Datei also:
+
+```bash
+git checkout --theirs .claude/session-backup.md
+git add .claude/session-backup.md
+git rebase --continue && git push
+```
 
 ### Schritt 4: Disketten-Marker zeigen
 
