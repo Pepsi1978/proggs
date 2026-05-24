@@ -281,7 +281,15 @@ class StravaRepository @Inject constructor(
         laps: List<de.frank.entropyreducer.data.remote.strava.StravaLap>,
     ): AmazfitWorkoutEntity {
         val startMs = parseStartMs(summary.startDateUtc, summary.startDateLocal)
-        val duration = summary.movingTime ?: summary.elapsedTime ?: 0L
+        // Frank-Wunsch 2026-05-24: "Dauer" = verstrichene Zeit (elapsed_time), NICHT Bewegungszeit
+        // (moving_time). Stravas moving_time stoppt bei Mini-Pausen (z.B. 2s Gehen nach einem Sprint);
+        // Frank will die Gesamtzeit Start→Stopp wie auf der Polar-Uhr. durationSeconds + endMs nutzen
+        // daher elapsedTime.
+        val duration = summary.elapsedTime ?: summary.movingTime ?: 0L
+        // Bewegungszeit bleibt fuer die Schrittlaengen-Schaetzung erhalten: die Kadenz (rpm) gilt nur
+        // waehrend der Bewegung — mit verstrichener Zeit (inkl. Pausen) wuerde die Schrittzahl
+        // ueberschaetzt und die Schrittlaenge zu kurz berechnet.
+        val movingDuration = summary.movingTime ?: summary.elapsedTime ?: 0L
         val endMs = startMs + duration * 1000L
         val zone = ZoneId.systemDefault()
         val dateKey = Instant.ofEpochMilli(startMs).atZone(zone).toLocalDate().toString()
@@ -365,8 +373,8 @@ class StravaRepository @Inject constructor(
         val strideLengthCm: Int? = run {
             val dist = summary.distance ?: return@run null
             val cad = summary.averageCadence ?: return@run null
-            if (cad <= 0.0 || dist <= 0.0 || duration <= 0) return@run null
-            val durationMin = duration / 60.0
+            if (cad <= 0.0 || dist <= 0.0 || movingDuration <= 0) return@run null
+            val durationMin = movingDuration / 60.0
             val totalSteps = cad * 2.0 * durationMin
             if (totalSteps <= 0.0) return@run null
             val strideM = dist / totalSteps
