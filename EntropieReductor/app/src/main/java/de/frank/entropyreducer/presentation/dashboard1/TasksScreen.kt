@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
@@ -67,6 +68,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -74,6 +76,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,6 +135,15 @@ fun TasksScreen(
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Frank-Wunsch 2026-05-24: Aufgabenbloecke (Heute/Morgen/Freiblock/Spaeter/Loop/
+    // Erledigt) sind jetzt aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
+    // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
+    // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: HEUTE.
+    // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
+    var expandedSection by rememberSaveable {
+        mutableStateOf<String?>(TimeBucket.HEUTE.name)
+    }
 
     // Frank-Wunsch 2026-05-22 (Sprint 6 Iteration): Mic-Tap oeffnet jetzt die
     // einheitliche MicCaptureActions ueber der BottomBar — zwei runde Buttons
@@ -200,17 +212,20 @@ fun TasksScreen(
                     de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
         if (!isTaskAction) return@LaunchedEffect
 
-        // Warten bis Tasks geladen sind, sonst kann computeTaskItemIndex
-        // den Index nicht finden und der Scroll waere zu briefing.
+        // Warten bis Tasks geladen sind, sonst kann computeTaskLocation
+        // den Block nicht finden und der Scroll waere zu briefing.
         val tasksLoaded =
             state.entriesByBucket.values.any { it.isNotEmpty() } ||
                 state.resolvedEntries.isNotEmpty()
         if (!tasksLoaded) return@LaunchedEffect
 
-        // 1) Scroll zur Aufgabe (beide Aktionen — FOCUS und RESCHEDULE)
-        val targetIndex = computeTaskItemIndex(state = state, taskId = link.taskId)
-        if (targetIndex >= 0) {
-            runCatching { listState.animateScrollToItem(targetIndex, scrollOffset = -120) }
+        // 1) Scroll zur Aufgabe (beide Aktionen — FOCUS und RESCHEDULE). Mit dem
+        // Akkordeon (Frank-Wunsch 2026-05-24) muss der Block der Aufgabe zuerst
+        // aufgeklappt werden, sonst ist die Karte nicht gerendert.
+        val location = computeTaskLocation(state = state, taskId = link.taskId)
+        if (location != null) {
+            expandedSection = location.first
+            runCatching { listState.animateScrollToItem(location.second, scrollOffset = -120) }
         }
 
         // 2) Bei RESCHEDULE zusaetzlich den Bucket-Picker oeffnen
@@ -246,35 +261,12 @@ fun TasksScreen(
     var lastSeenHeuteCount by remember { mutableStateOf(heuteCount) }
     val hasNewHeute = heuteCount > lastSeenHeuteCount
 
-    // Berechnet den LazyColumn-Index des Bucket-Headers fuer das Springen.
-    // 0 = briefing-Item, 1..N = Bucket-Header + Eintraege.
-    // Sonderfall (Frank-Wunsch 2026-05-23): ist HEUTE leer aber es gibt Aufgaben
-    // in aelteren Bereichen, rendert die Liste dort 2 Items (Header + Nachlade-
-    // Button) — die muessen mitgezaehlt werden, sonst springt MORGEN daneben.
-    fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int? {
-        val heuteEmptyShowsButton =
-            state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]
-                .orEmpty().isEmpty() &&
-                state.entriesByBucket.any { (b, l) ->
-                    b != de.frank.entropyreducer.domain.model.TimeBucket.HEUTE && l.isNotEmpty()
-                }
-        var idx = 1
-        for (bucket in ALL_TIME_BUCKETS) {
-            val list = state.entriesByBucket[bucket].orEmpty()
-            if (list.isEmpty()) {
-                if (bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
-                    heuteEmptyShowsButton
-                ) {
-                    if (bucket == target) return idx
-                    idx += 2 // header-HEUTE + refill-heute
-                }
-                continue
-            }
-            if (bucket == target) return idx
-            idx += 1 + list.size
-        }
-        return null
-    }
+    // Frank-Wunsch 2026-05-24: Mit dem Akkordeon ist die Header-Position eindeutig.
+    // Nach dem Aufklappen eines Ziel-Blocks sind alle anderen Bloecke zugeklappt
+    // (= je 1 Header-Item). Der Header liegt damit bei: 1 (Briefing) + Position des
+    // Buckets in ALL_TIME_BUCKETS. Erledigt liegt nach allen Buckets + Loop.
+    fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int =
+        1 + ALL_TIME_BUCKETS.indexOf(target)
 
     // Frank-Wunsch 2026-05-23 (Folge-Iteration #2): sanfter Pulse am Heute-Badge.
     // Alpha pulsiert zwischen 1.0 und 0.4 mit ~1.2s Periode, Reverse-Mode —
@@ -298,20 +290,18 @@ fun TasksScreen(
             Box {
                 IconButton(
                     onClick = {
-                        val target =
-                            bucketHeaderIndex(
-                                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE
-                            ) ?: 1
-                        // Frank-Wunsch 2026-05-23 (Folge-Iteration #2): nicht
-                        // scrollen wenn HEUTE-Header schon im sichtbaren
-                        // Bereich liegt — verhindert "erster Tap nach App-Start
-                        // springt unnoetig" und "ich bin schon bei HEUTE".
-                        val isAlreadyAtHeute =
-                            listState.layoutInfo.visibleItemsInfo.any { it.index == target }
+                        // Frank-Wunsch 2026-05-24: Sprung klappt den HEUTE-Block auf
+                        // (Akkordeon — andere schliessen) und scrollt zu seinem Header.
                         lastSeenHeuteCount = heuteCount
-                        if (!isAlreadyAtHeute) {
-                            scope.launch {
-                                runCatching { listState.animateScrollToItem(target) }
+                        expandedSection =
+                            de.frank.entropyreducer.domain.model.TimeBucket.HEUTE.name
+                        scope.launch {
+                            runCatching {
+                                listState.animateScrollToItem(
+                                    bucketHeaderIndex(
+                                        de.frank.entropyreducer.domain.model.TimeBucket.HEUTE
+                                    )
+                                )
                             }
                         }
                     },
@@ -338,13 +328,16 @@ fun TasksScreen(
             // nur in Gruen — nicht mehr das abweichende Event-Icon.
             IconButton(
                 onClick = {
-                    val target =
-                        bucketHeaderIndex(
-                            de.frank.entropyreducer.domain.model.TimeBucket.MORGEN
-                        )
-                    if (target != null) {
-                        scope.launch {
-                            runCatching { listState.animateScrollToItem(target) }
+                    // Frank-Wunsch 2026-05-24: MORGEN-Block aufklappen + zum Header scrollen.
+                    expandedSection =
+                        de.frank.entropyreducer.domain.model.TimeBucket.MORGEN.name
+                    scope.launch {
+                        runCatching {
+                            listState.animateScrollToItem(
+                                bucketHeaderIndex(
+                                    de.frank.entropyreducer.domain.model.TimeBucket.MORGEN
+                                )
+                            )
                         }
                     }
                 },
@@ -497,88 +490,133 @@ fun TasksScreen(
                                 b != de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
                                     l.isNotEmpty()
                             }
+                        // Frank-Wunsch 2026-05-24: jeder Bucket ist ein aufklappbares
+                        // Akkordeon. Der Header wird IMMER gezeigt (auch wenn leer), die
+                        // Eintraege nur wenn der Block aufgeklappt ist. Es ist immer nur
+                        // ein Block gleichzeitig offen (gesteuert ueber expandedSection).
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
-                            if (list.isNotEmpty()) {
-                                item(key = "header-${bucket.name}", contentType = "bucket-header") {
-                                    BucketHeader(bucket, list.size, list.sumOf { it.severity })
-                                }
-                                items(items = list, key = { it.id }, contentType = { "entry" }) {
-                                    entry ->
-                                    // PERFORMANCE 2026-05-09: Lambdas mit remember(entry.id)
-                                    // stabilisieren, damit EntropyEntryCard skippable bleibt
-                                    // (zusammen mit @Immutable auf der Entity). Ohne diese
-                                    // Stabilisierung erzeugt jede Recomposition neue Lambda-
-                                    // Instanzen → alle sichtbaren Karten recomposen → Jank.
-                                    val onClick =
-                                        remember(entry.id) { { onOpenEntryDetail(entry.id) } }
-                                    val onResolve =
-                                        remember(entry.id, entry.title) {
-                                            {
-                                                vm.markEntryResolved(entry.id)
-                                                scope.launch {
-                                                    val result =
-                                                        snackbar.showSnackbar(
-                                                            message =
-                                                                "Eintrag erledigt: ${entry.title}",
-                                                            actionLabel = "Rückgängig",
-                                                            duration =
+                            val sectionExpanded = expandedSection == bucket.name
+                            item(key = "header-${bucket.name}", contentType = "bucket-header") {
+                                BucketHeader(
+                                    bucket = bucket,
+                                    count = list.size,
+                                    expanded = sectionExpanded,
+                                    onToggle = {
+                                        expandedSection =
+                                            if (sectionExpanded) null else bucket.name
+                                    },
+                                )
+                            }
+                            if (sectionExpanded) {
+                                if (list.isNotEmpty()) {
+                                    items(
+                                        items = list,
+                                        key = { it.id },
+                                        contentType = { "entry" },
+                                    ) { entry ->
+                                        // PERFORMANCE 2026-05-09: Lambdas mit remember(entry.id)
+                                        // stabilisieren, damit EntropyEntryCard skippable bleibt
+                                        // (zusammen mit @Immutable auf der Entity). Ohne diese
+                                        // Stabilisierung erzeugt jede Recomposition neue Lambda-
+                                        // Instanzen → alle sichtbaren Karten recomposen → Jank.
+                                        val onClick =
+                                            remember(entry.id) { { onOpenEntryDetail(entry.id) } }
+                                        val onResolve =
+                                            remember(entry.id, entry.title) {
+                                                {
+                                                    vm.markEntryResolved(entry.id)
+                                                    scope.launch {
+                                                        val result =
+                                                            snackbar.showSnackbar(
+                                                                message =
+                                                                    "Eintrag erledigt: ${entry.title}",
+                                                                actionLabel = "Rückgängig",
+                                                                duration =
+                                                                    androidx.compose.material3
+                                                                        .SnackbarDuration
+                                                                        .Short,
+                                                            )
+                                                        if (
+                                                            result ==
                                                                 androidx.compose.material3
-                                                                    .SnackbarDuration
-                                                                    .Short,
-                                                        )
-                                                    if (
-                                                        result ==
-                                                            androidx.compose.material3
-                                                                .SnackbarResult
-                                                                .ActionPerformed
-                                                    ) {
-                                                        vm.reopenEntry(entry.id)
+                                                                    .SnackbarResult
+                                                                    .ActionPerformed
+                                                        ) {
+                                                            vm.reopenEntry(entry.id)
+                                                        }
                                                     }
+                                                    Unit
                                                 }
-                                                Unit
                                             }
-                                        }
-                                    val onPickBucket =
-                                        remember(entry.id) { { bucketPickerEntryId = entry.id } }
-                                    EntropyEntryCard(
-                                        entry = entry,
-                                        onClick = onClick,
-                                        onResolve = onResolve,
-                                        onPickBucket = onPickBucket,
-                                    )
-                                }
-                            } else if (
-                                bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
-                                    hasPullableTasks
-                            ) {
-                                // HEUTE ist leer (alles erledigt) — Nachlade-Button statt
-                                // automatischer Nachfuellung (Frank-Wunsch 2026-05-23).
-                                item(key = "header-HEUTE", contentType = "bucket-header") {
-                                    BucketHeader(bucket, 0, 0)
-                                }
-                                item(key = "refill-heute", contentType = "refill-heute") {
-                                    RefillHeuteButton(onClick = { vm.refillHeute() })
+                                        val onPickBucket =
+                                            remember(entry.id) { { bucketPickerEntryId = entry.id } }
+                                        EntropyEntryCard(
+                                            entry = entry,
+                                            onClick = onClick,
+                                            onResolve = onResolve,
+                                            onPickBucket = onPickBucket,
+                                        )
+                                    }
+                                } else if (
+                                    bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                                        hasPullableTasks
+                                ) {
+                                    // HEUTE ist leer (alles erledigt) — Nachlade-Button statt
+                                    // automatischer Nachfuellung (Frank-Wunsch 2026-05-23).
+                                    item(key = "refill-heute", contentType = "refill-heute") {
+                                        RefillHeuteButton(onClick = { vm.refillHeute() })
+                                    }
+                                } else {
+                                    item(
+                                        key = "empty-${bucket.name}",
+                                        contentType = "bucket-empty",
+                                    ) {
+                                        EmptyBucketHint()
+                                    }
                                 }
                             }
                         }
-                        // Erledigt-Sektion am Ende
-                        if (state.resolvedEntries.isNotEmpty()) {
+                        // Erledigt-Sektion am Ende — Header immer sichtbar, Inhalt nur
+                        // wenn der Block aufgeklappt ist (Frank-Wunsch 2026-05-24).
+                        run {
+                            val resolved = state.resolvedEntries
+                            val resolvedExpanded = expandedSection == SECTION_ERLEDIGT
                             item(key = "resolved-header", contentType = "resolved-header") {
-                                ResolvedHeader(state.resolvedEntries.size)
-                            }
-                            items(
-                                items = state.resolvedEntries,
-                                key = { "resolved-${it.id}" },
-                                contentType = { "entry" },
-                            ) { entry ->
-                                val onClick = remember(entry.id) { { onOpenEntryDetail(entry.id) } }
-                                val onResolve = remember(entry.id) { { vm.reopenEntry(entry.id) } }
-                                EntropyEntryCard(
-                                    entry = entry,
-                                    onClick = onClick,
-                                    onResolve = onResolve,
+                                ResolvedHeader(
+                                    count = resolved.size,
+                                    expanded = resolvedExpanded,
+                                    onToggle = {
+                                        expandedSection =
+                                            if (resolvedExpanded) null else SECTION_ERLEDIGT
+                                    },
                                 )
+                            }
+                            if (resolvedExpanded) {
+                                if (resolved.isNotEmpty()) {
+                                    items(
+                                        items = resolved,
+                                        key = { "resolved-${it.id}" },
+                                        contentType = { "entry" },
+                                    ) { entry ->
+                                        val onClick =
+                                            remember(entry.id) { { onOpenEntryDetail(entry.id) } }
+                                        val onResolve =
+                                            remember(entry.id) { { vm.reopenEntry(entry.id) } }
+                                        EntropyEntryCard(
+                                            entry = entry,
+                                            onClick = onClick,
+                                            onResolve = onResolve,
+                                        )
+                                    }
+                                } else {
+                                    item(
+                                        key = "empty-resolved",
+                                        contentType = "bucket-empty",
+                                    ) {
+                                        EmptyBucketHint()
+                                    }
+                                }
                             }
                         }
                     }
@@ -1196,8 +1234,12 @@ private fun RefillHeuteButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
-    val cosmos = LocalCosmos.current
+private fun BucketHeader(
+    bucket: TimeBucket,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
     val label =
         when (bucket) {
             TimeBucket.HEUTE -> "HEUTE"
@@ -1205,12 +1247,60 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
             TimeBucket.FREIBLOCK -> "FREIBLOCK"
             TimeBucket.SPAETER -> "SPÄTER"
         }
-    val accent = bucketAccent(bucket)
+    AccordionHeaderRow(
+        label = label,
+        icon = bucketIcon(bucket),
+        accent = bucketAccent(bucket),
+        count = count,
+        expanded = expanded,
+        onToggle = onToggle,
+    )
+}
+
+@Composable
+private fun ResolvedHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
+    AccordionHeaderRow(
+        label = "ERLEDIGT",
+        icon = Icons.Outlined.CheckCircle,
+        accent = CosmosColors.Success,
+        count = count,
+        expanded = expanded,
+        onToggle = onToggle,
+    )
+}
+
+/**
+ * Gemeinsamer Akkordeon-Header fuer die Aufgabenbloecke (Frank-Wunsch 2026-05-24).
+ * Klickbare Zeile mit Icon-Pille, Label, Count-Pille und einem Chevron das beim
+ * Aufklappen sanft um 180° dreht. Im aufgeklappten Zustand bekommt die Zeile eine
+ * zarte Akzent-Toenung, damit der aktive Block sofort erkennbar ist.
+ */
+@Composable
+private fun AccordionHeaderRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val chevronRotation by
+        animateFloatAsState(
+            targetValue = if (expanded) 180f else 0f,
+            animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+            label = "accordion-chevron",
+        )
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = 6.dp, bottom = 2.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (expanded) accent.copy(alpha = 0.12f) else Color.Transparent)
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Icon-Pille mit Calendar-Icon (Soll-Design)
         Box(
             modifier =
                 Modifier.size(28.dp)
@@ -1219,7 +1309,7 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = bucketIcon(bucket),
+                imageVector = icon,
                 contentDescription = null,
                 tint = accent,
                 modifier = Modifier.size(16.dp),
@@ -1233,7 +1323,6 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.weight(1f))
-        // Count-Pill rechts
         Box(
             modifier =
                 Modifier.clip(RoundedCornerShape(50))
@@ -1247,52 +1336,26 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
                 fontWeight = FontWeight.Bold,
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            imageVector = Icons.Outlined.ExpandMore,
+            contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
+            tint = accent,
+            modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = chevronRotation },
+        )
     }
 }
 
+/** Dezenter Hinweis fuer einen aufgeklappten, aber leeren Aufgabenblock. */
 @Composable
-private fun ResolvedHeader(count: Int) {
+private fun EmptyBucketHint() {
     val cosmos = LocalCosmos.current
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier.size(28.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CosmosColors.Success.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CheckCircle,
-                contentDescription = null,
-                tint = CosmosColors.Success,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = "ERLEDIGT",
-            style = MaterialTheme.typography.labelLarge,
-            color = cosmos.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.weight(1f))
-        Box(
-            modifier =
-                Modifier.clip(RoundedCornerShape(50))
-                    .background(CosmosColors.Success.copy(alpha = 0.18f))
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
-        ) {
-            Text(
-                text = "$count",
-                style = MaterialTheme.typography.labelMedium,
-                color = CosmosColors.Success,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
+    Text(
+        text = "Keine Aufgaben",
+        style = MaterialTheme.typography.bodySmall,
+        color = cosmos.textSecondary,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector =
@@ -1982,6 +2045,11 @@ private fun RescoreBanner(progress: RescoreProgress) {
 // pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
 
+// Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
+// Loop liegt zwischen SPAETER und ERLEDIGT (Frank-Wunsch 2026-05-24, Aufgabe 3).
+private const val SECTION_LOOP = "LOOP"
+private const val SECTION_ERLEDIGT = "ERLEDIGT"
+
 // Performance-Audit Loop 5 (2026-05-10): SimpleDateFormat ist nicht thread-safe,
 // aber teuer. ThreadLocal pro Pattern statt Allokation pro Aufruf.
 private val BACKUP_TIME_TODAY_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
@@ -2013,36 +2081,28 @@ private fun formatBackupTime(epochMs: Long): String {
 }
 
 /**
- * Berechnet den absoluten LazyColumn-Item-Index einer Aufgabe (Frank-Wunsch 2026-05-11). Muss exakt
- * die Reihenfolge der item()/items()-Aufrufe in der LazyColumn nachbilden:
- *   0: briefing (enthaelt KI-Frage als Dropdown — KEIN separates Item mehr)
- *   1..N: pro nicht-leerem Bucket 1 Header + 1 Eintrag pro Aufgabe.
- * Sonderfall (Frank-Wunsch 2026-05-23): leerer HEUTE-Bereich mit Nachlade-Button
- * rendert 2 Items (Header + Button) — die werden mitgezaehlt.
- * Liefert -1 wenn die Aufgabe nicht in den aktiven Buckets gefunden wurde.
+ * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet ihren LazyColumn-
+ * Index (Frank-Wunsch 2026-05-24, Akkordeon). Annahme: GENAU dieser Block ist
+ * aufgeklappt, alle anderen Bloecke sind zugeklappt (= je 1 Header-Item) — der
+ * Aufrufer klappt den Block vorher auf (expandedSection = bucketName).
+ *   0: briefing
+ *   1 + Position des Buckets in ALL_TIME_BUCKETS: dessen Header
+ *   danach: die Eintraege des aufgeklappten Blocks
+ * Liefert (Sektions-Schluessel, Item-Index) oder null wenn die Aufgabe in keinem
+ * aktiven Bucket liegt.
  */
-private fun computeTaskItemIndex(state: TasksUiState, taskId: String): Int {
-    var idx = 0
-    idx++ // briefing
+private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<String, Int>? {
     val isEmpty =
         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
-    if (isEmpty) return -1
-    val heuteEmptyShowsButton =
-        state.entriesByBucket[TimeBucket.HEUTE].orEmpty().isEmpty() &&
-            state.entriesByBucket.any { (b, l) -> b != TimeBucket.HEUTE && l.isNotEmpty() }
-    for (bucket in ALL_TIME_BUCKETS) {
+    if (isEmpty) return null
+    for ((bucketPos, bucket) in ALL_TIME_BUCKETS.withIndex()) {
         val list = state.entriesByBucket[bucket].orEmpty()
-        if (list.isEmpty()) {
-            if (bucket == TimeBucket.HEUTE && heuteEmptyShowsButton) {
-                idx += 2 // header-HEUTE + refill-heute
-            }
-            continue
-        }
-        idx++ // BucketHeader
-        for (e in list) {
-            if (e.id == taskId) return idx
-            idx++
+        val pos = list.indexOfFirst { it.id == taskId }
+        if (pos >= 0) {
+            // briefing(1) + Header der vorherigen (zugeklappten) Bloecke (bucketPos)
+            // + eigener Header(1) + Position in der Liste.
+            return bucket.name to (1 + bucketPos + 1 + pos)
         }
     }
-    return -1
+    return null
 }
