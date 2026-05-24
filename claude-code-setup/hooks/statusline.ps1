@@ -421,6 +421,7 @@ $PACE7  = "$ESC[38;2;255;120;180m"  # Pink/Rosa — Pacing-Feature 7d (Symbol + 
 $MIDLINE = "$ESC[1m" + "$ESC[38;2;240;240;250m"  # Hellweiss fett — Pacing-Ziellinie (Mittelstrich). NICHT $MID nennen: PowerShell ist case-insensitiv, $MID kollidiert mit der lokalen Positionsvariable $mid in Get-PaceBar.
 $TIMECOL= "$ESC[38;2;220;180;100m"
 $DIM    = "$ESC[38;2;90;95;115m"
+$SEPCOL = "$ESC[38;2;235;70;70m"    # Rot — Bereichs-Trenner (dick)
 $TRACK  = "$ESC[38;2;55;58;75m"
 $BOLD   = "$ESC[1m"
 $R      = "$ESC[0m"
@@ -486,7 +487,8 @@ function Get-PaceBar($used, $resets, $now, $window) {
     return $sb
 }
 
-$SEP = "${DIM} | ${R}"
+$SEP = "${SEPCOL} ║ ${R}"   # dick + rot (Frank 2026-05-24), Doppelstrich zur Abgrenzung vom Pendel-Mittelstrich
+$GSEP = "  "                # Gruppen-Abstand (kein Trenner): haelt 5h+Pendel bzw. 7d+Pendel zusammen
 $EMPTY_BAR = "${TRACK}" + ('░' * 7) + "${R}"
 
 # Icons
@@ -525,7 +527,7 @@ if ($five_h_used -ne $null) {
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace 18000
-    $out += "${SEP}${PACE}${ICON_PACE} slow${R} ${paceBar} ${PACE}fast${R}"
+    $out += "${GSEP}${PACE}${ICON_PACE} slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
 # 7d
@@ -542,7 +544,7 @@ if ($week_used -ne $null) {
 if ($week_used -ne $null -and $week_resets -gt 0) {
     $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar7 = Get-PaceBar $week_used $week_resets $nowPace7 604800
-    $out += "${SEP}${PACE7}${ICON_PACE} slow${R} ${paceBar7} ${PACE7}fast${R}"
+    $out += "${GSEP}${PACE7}${ICON_PACE} slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
 # Context
