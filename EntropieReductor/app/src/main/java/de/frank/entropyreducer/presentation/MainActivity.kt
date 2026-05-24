@@ -234,10 +234,22 @@ class StartupViewModel @Inject constructor(
         de.frank.entropyreducer.data.repository.HealthConnectRepository,
     // Frank-Bugfix 2026-05-23: fuer den "Zuletzt synchronisiert"-Footer beim frischen Start.
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
+    // Frank-Wunsch 2026-05-24: Tagebuch-Bruecke — Eintraege aus BestJournal Frank spiegeln.
+    private val journalMirror: de.frank.entropyreducer.data.repository.JournalMirrorRepository,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
             startupRanThisProcess = true
+            // Frank-Wunsch 2026-05-24: Tagebuch-Bruecke. Beim frischen App-Start die
+            // Eintraege aus BestJournal Frank spiegeln (read-only, volles Abbild).
+            // Eigener Launch-Block (Dispatchers.IO), laeuft parallel zu den anderen
+            // Start-Tasks und blockiert die UI nicht.
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching { journalMirror.sync() }
+                    .onFailure {
+                        android.util.Log.w("StartupViewModel", "Journal-Sync fehlgeschlagen", it)
+                    }
+            }
             // Performance-Warmup: parallel zur Drive-Restore-Logik laeuft das
             // Repository-Warming. So sind beim ersten Tab-Klick alle DB-Queries
             // schon gecacht (Frank-Wunsch 2026-05-09 Performance).

@@ -7,6 +7,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Frank-Wunsch 2026-05-24: Tagebuch-Bruecke. Liest die Eintraege aus
+         BestJournal Frank ueber dessen JournalExportProvider. -->
+    <uses-permission android:name="com.entropyjournal.permission.READ_JOURNAL" />
+
+    <!-- Android 11+ Package-Visibility: ohne diese Eintraege ist der Provider
+         von BestJournal Frank fuer uns unsichtbar (resolveContentProvider == null). -->
+    <queries>
+        <provider android:authorities="com.entropyjournal.journalexport" />
+        <provider android:authorities="com.entropyjournal.debug.journalexport" />
+    </queries>
+
     <!-- Foreground Service fuer stabile Aufnahme bei Bildschirm-Aus -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
