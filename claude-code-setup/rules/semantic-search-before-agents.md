@@ -2,7 +2,7 @@
 
 > Diese Regel verankert die richtige Werkzeugwahl beim Suchen im Code — nach Direktive #3
 > (Resilient Bugfixing, Poka-Yoke + Defense in Depth). Sie wird IMMER automatisch geladen
-> und zusaetzlich in jeden Subagent injiziert (subagent-context Hook, Schicht 3).
+> und zusaetzlich ueber CLAUDE.md in jeden Subagent getragen (Schicht 3 — verifiziert 2026-05-24).
 >
 > Aktualisiert 2026-05-24 nach 3-Researcher-Recherche. Korrigiert den frueheren Fehler,
 > Grep faelschlich "semantische Suche" zu nennen.
@@ -155,7 +155,7 @@ Diese Regel ist mehrschichtig verankert, damit die richtige Werkzeugwahl IMMER p
 |---------|-----|---------|
 | 1 | Diese Rule (`~/.claude/rules/`) | Wird bei JEDER Session automatisch geladen (Hauptagent) |
 | 2 | Repo-Kopie (`claude-code-setup/rules/`) | Cross-Platform-Sync (macOS + Windows) |
-| 3 | `subagent-context` Hook (.ps1 + .sh) | Kompakte Regel wird in JEDEN Subagent injiziert |
+| 3 | Kompakte Kopie in CLAUDE.md (`~/proggs/CLAUDE.md`) | Kommt nachweislich bei Subagents an (verifiziert 2026-05-24). Der `subagent-context` Hook gibt zwar valides JSON aus (JSON-Fix #1010 ok), aber Claude Code reicht SubagentStart-additionalContext in dieser Version NICHT an Subagents durch — daher CLAUDE.md statt Hook |
 | 4 | Pre-Learning-Memory | reference_semantic_search_vs_grep_heuristik.md |
 
 **Bewusst KEINE blockierende Erzwingung (kein Guard-Hook):** Die Werkzeugwahl ist eine

@@ -35,6 +35,17 @@ public partial class PromptEditDialog : Window
     private bool _isImproving;
 
     /// <summary>
+    /// True nur wenn DIESER Dialog die aktuell laufende Aufnahme selbst
+    /// gestartet hat. Der AudioRecorder ist prozessweit geteilt
+    /// (<see cref="VoiceServiceProvider"/>) — nur eine Instanz darf das
+    /// Mikrofon halten. Ohne dieses Flag wuerde der Dialog eine Aufnahme
+    /// stoppen die das Voice-Overlay gestartet hat (im Closed-Handler) oder
+    /// sie beim Mic-Klick uebernehmen. Mit dem Flag fasst der Dialog
+    /// ausschliesslich seine EIGENE Aufnahme an.
+    /// </summary>
+    private bool _recordingStartedHere;
+
+    /// <summary>
     /// True while the short-label field still holds an auto-generated value
     /// (after mic transcription or after Gemini improvement). The first
     /// moment the user manually types into the label field, this flips to
@@ -139,11 +150,15 @@ public partial class PromptEditDialog : Window
 
         Closed += (_, _) =>
         {
-            // Defensive: stop any in-progress recording so we never leak
-            // the microphone if the dialog is closed mid-recording.
+            // Defensive: NUR eine Aufnahme stoppen, die DIESER Dialog selbst
+            // gestartet hat — damit das Mikrofon nicht geleakt wird wenn der
+            // Dialog mitten in der eigenen Aufnahme geschlossen wird. Eine vom
+            // Voice-Overlay gestartete Aufnahme bleibt unangetastet; sonst
+            // wuerde das Schliessen des Editier-Dialogs die laufende Overlay-
+            // Aufnahme abwuergen (geteilter AudioRecorder).
             try
             {
-                if (VoiceServiceProvider.Recorder?.IsRecording == true)
+                if (_recordingStartedHere && VoiceServiceProvider.Recorder?.IsRecording == true)
                     VoiceServiceProvider.Recorder.Stop();
             }
             catch { /* ignored */ }
@@ -355,6 +370,16 @@ public partial class PromptEditDialog : Window
             return;
         }
 
+        // Der AudioRecorder ist prozessweit geteilt. Laeuft bereits eine
+        // Aufnahme, die NICHT dieser Dialog gestartet hat (z.B. die Voice-
+        // Overlay-Aufnahme), duerfen wir sie weder stoppen noch ihr Audio in
+        // dieses Editierfeld umleiten — sonst bricht die Overlay-Aufnahme ab.
+        if (recorder.IsRecording && !_recordingStartedHere)
+        {
+            ShowStatus("Es laeuft bereits eine Aufnahme (Voice-Overlay). Bitte zuerst dort stoppen.");
+            return;
+        }
+
         if (recorder.IsRecording)
         {
             // ── Stop & transcribe ──
@@ -365,6 +390,9 @@ public partial class PromptEditDialog : Window
             try
             {
                 wavPath = recorder.Stop();
+                // Unsere Aufnahme ist beendet — Eigentum freigeben, damit ein
+                // spaeterer Closed-Handler sie nicht erneut anzufassen versucht.
+                _recordingStartedHere = false;
                 if (string.IsNullOrEmpty(wavPath))
                 {
                     ShowStatus("Aufnahme leer.");
@@ -396,6 +424,7 @@ public partial class PromptEditDialog : Window
         try
         {
             recorder.Start();
+            _recordingStartedHere = true;
             StartPulse();
             ShowStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.");
         }
