@@ -70,26 +70,37 @@ if (-not (Test-Path $dbDir)) {
     New-Item -ItemType Directory -Path $dbDir -Force | Out-Null
 }
 
-# Stale-lock detection
+# Stale-lock detection (PID-basiert + Zeit, analog zur .sh): erkennt tote Reindex-Prozesse
+# SOFORT statt erst nach 30 Min. Sicher: ein frischer Lock mit noch unbekannter/pending PID
+# wird NIE entfernt (kein faelschliches Killen eines laufenden Reindex).
 if (Test-Path $lockFile) {
+    $lockPid = ((Get-Content $lockFile -ErrorAction SilentlyContinue | Select-Object -First 1) -as [string]).Trim()
     $lockAge = (Get-Date) - (Get-Item $lockFile).LastWriteTime
-    if ($lockAge.TotalSeconds -lt $maxLockAgeSec) {
-        # Reindex already running (or just finished) — skip
+    $deadByPid = $false
+    if ($lockPid -match '^\d+$') {
+        $deadByPid = -not [bool](Get-Process -Id ([int]$lockPid) -ErrorAction SilentlyContinue)
+    }
+    if ($lockAge.TotalSeconds -ge $maxLockAgeSec -or $deadByPid) {
+        # Zu alt ODER Prozess nachweislich tot -> stale -> entfernen
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+    } else {
+        # Frisch und Prozess lebt (oder PID noch "pending") -> laeuft wirklich -> skip
         exit 0
     }
-    # Stale lock — overwrite
-    Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
 }
 
 try {
     $reindexScript = Join-Path $mcpDir "src\session-reindex.ts"
     $allArgs = $tsxArgs + @($reindexScript, $rootDir)
-    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File $lockFile -Encoding UTF8
+    # Platzhalter bis die echte PID feststeht (schuetzt das kurze Fenster vor dem Start)
+    "pending" | Out-File $lockFile -Encoding UTF8
     # Detached: no -Wait, no WaitForExit, hook exits immediately while child keeps running.
-    Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -WindowStyle Hidden `
+    $proc = Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -WindowStyle Hidden `
         -RedirectStandardOutput $logFile `
         -RedirectStandardError (Join-Path $dbDir "reindex.err") `
-        -ErrorAction SilentlyContinue
+        -PassThru -ErrorAction SilentlyContinue
+    # PID des Reindex-Prozesses in den Lock schreiben -> Stale-Detection erkennt tote Prozesse (analog .sh)
+    if ($proc) { "$($proc.Id)" | Out-File $lockFile -Encoding UTF8 }
 } catch {
     Write-Output "Reindex-Hook: EXCEPTION beim Async-Start — $($_.Exception.Message)"
     Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
