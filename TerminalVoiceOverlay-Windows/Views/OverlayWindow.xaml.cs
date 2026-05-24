@@ -676,7 +676,11 @@ namespace TerminalVoiceOverlay.Views
                 // Maus (noch) ueber Overlay, Promptboard ODER Eingabefeld? Dann
                 // NICHT einklappen — erneut warten und pruefen. (Diese sind
                 // eigene Fenster, das Overlay-MouseLeave allein reicht nicht.)
-                if (IsMouseOverAnyPart())
+                // ZUSAETZLICH: ein offener Editier-/Einstellungs-Dialog (modal,
+                // liegt UEBER dem Board) haelt das Overlay ebenfalls offen —
+                // sonst klappt der Timer waehrend des Bearbeitens ein und
+                // versteckt das Board hinter dem Dialog. Re-arm statt einklappen.
+                if (IsMouseOverAnyPart() || IsAuxiliaryWindowOpen())
                 {
                     _collapseTimer!.Start();
                     return;
@@ -734,6 +738,41 @@ namespace TerminalVoiceOverlay.Views
                 if (_promptPanel?.InputWindow is { IsVisible: true } iw && iw.IsMouseOver) return true;
             }
             catch { }
+            return false;
+        }
+
+        /// <summary>
+        /// True solange ein modaler Hilfs-/Editier-Dialog sichtbar offen ist
+        /// (PromptEditDialog, SettingsDialog, ConfirmDialog, TextInputDialog,
+        /// PromptHistoryEditDialog). Diese Dialoge liegen UEBER dem Promptboard
+        /// und werden von <see cref="IsMouseOverAnyPart"/> nicht erfasst (der
+        /// Mauszeiger ist dann ueber dem Dialog, nicht ueber Board/Eingabe).
+        /// Ohne diese Pruefung klappt der Auto-Hide-Timer das Overlay waehrend
+        /// des Bearbeitens ein und versteckt das Board hinter dem Dialog —
+        /// auch waehrend ein modaler ShowDialog() laeuft tickt der
+        /// DispatcherTimer naemlich weiter (nested message loop).
+        ///
+        /// Erkennung ueber Ausschluss: jedes SICHTBARE Top-Level-Window, das
+        /// KEINE der vier Kern-Oberflaechen ist (Overlay, Board, Eingabe,
+        /// Historie), gilt als offener Dialog. Versteckte Fenster zaehlen
+        /// nicht (IsVisible-Filter). Gilt orientierungsunabhaengig — vertikal
+        /// wie horizontal nutzen denselben Collapse-Timer.
+        /// </summary>
+        private bool IsAuxiliaryWindowOpen()
+        {
+            try
+            {
+                var app = System.Windows.Application.Current;
+                if (app is null) return false;
+                foreach (Window w in app.Windows)
+                {
+                    if (w is null || !w.IsVisible) continue;
+                    if (w is OverlayWindow or PromptBoardPanel or PromptInputWindow or PromptHistoryWindow)
+                        continue;
+                    return true;
+                }
+            }
+            catch { /* Enumeration faellt praktisch nie aus; Default = normales Verhalten. */ }
             return false;
         }
 
