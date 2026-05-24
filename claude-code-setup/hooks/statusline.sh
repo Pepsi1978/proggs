@@ -120,8 +120,14 @@ printf -v now_ts '%(%s)T' -1
 # fehlen: Fingerprint = "default" (Verhalten wie vorher, kein Regression).
 account_fp="default"
 cred_file="$HOME/.claude/.credentials.json"
-if [ -f "$cred_file" ] && command -v sha256sum >/dev/null 2>&1; then
-    account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+if [ -f "$cred_file" ]; then
+    # Plattformuebergreifend: sha256sum (Linux/Git-Bash) ODER shasum -a 256 (macOS).
+    # Ohne Fallback wuerde der Fingerprint auf macOS immer "default" sein (Frank 2026-05-24).
+    if command -v sha256sum >/dev/null 2>&1; then
+        account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+    elif command -v shasum >/dev/null 2>&1; then
+        account_fp=$(shasum -a 256 "$cred_file" 2>/dev/null | cut -c1-16)
+    fi
     [ -z "$account_fp" ] && account_fp="default"
 fi
 
