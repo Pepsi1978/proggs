@@ -140,6 +140,17 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             )
         }
         composable(
+            route = Routes.JOURNAL_ENTRY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("sourceId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.journal.JournalEntryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(
             route = Routes.THESEN_ENTRY_DETAIL_PATTERN,
             arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
         ) {
@@ -220,9 +231,25 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 // (TasksScreen), darum ist Slot 1 leer und heisst "Journal" — er
                 // routet ueber den SubAreaScreen-Platzhalter (else-Zweig unten).
                 // Sub-Bereich 2 = Tagebuch ("Entropie"), Sub-Bereich 3 = Thesen.
+                // Frank-Wunsch 2026-05-24: Slot 1 = "Journal" zeigt die aus
+                // BestJournal Frank gespiegelten Tagebucheintraege (read-only).
+                val isJournal = parent == Routes.TASKS && index == 1
                 val isTagebuch = parent == Routes.TASKS && index == 2
                 val isThesen = parent == Routes.TASKS && index == 3
-                if (isTagebuch) {
+                if (isJournal) {
+                    de.frank.entropyreducer.presentation.journal.JournalScreen(
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = onSwitchTabFromSub,
+                        onOpenEntry = { sourceId ->
+                            nav.navigate(Routes.journalEntryDetail(sourceId))
+                        },
+                    )
+                } else if (isTagebuch) {
                     TagebuchScreen(
                         onBack = {
                             nav.popBackStack()

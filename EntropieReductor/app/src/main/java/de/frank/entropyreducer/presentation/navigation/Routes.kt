@@ -45,6 +45,12 @@ object Routes {
 
     fun tagebuchEntryDetail(entryId: String): String = "tagebuch/entry/$entryId"
 
+    // Vollbild-Detail eines gespiegelten Journal-Eintrags aus BestJournal Frank
+    // (Frank-Wunsch 2026-05-24). sourceId ist die id aus der Quell-DB (als String).
+    const val JOURNAL_ENTRY_DETAIL_PATTERN = "journal/entry/{sourceId}"
+
+    fun journalEntryDetail(sourceId: Long): String = "journal/entry/$sourceId"
+
     // Vollbild-Detail eines Thesen-Eintrags (Frank-Wunsch 2026-05-20).
     // Pfad: thesen/entry/{entryId}
     const val THESEN_ENTRY_DETAIL_PATTERN = "thesen/entry/{entryId}"
