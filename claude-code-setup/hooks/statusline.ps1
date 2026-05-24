@@ -417,9 +417,10 @@ function Get-Bar($pct, $col) {
 # Pacing-Pendel (Frank 2026-05-24): Zeigt ob der 5h-Verbrauch dem Zeitverlauf
 # voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
 # == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
-# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
-# (nah an Mitte) / gelb / rot (weit weg). Track 7 Zeichen (schmal), Mitte bei Index 3.
-# Identische Logik zu make_pace_bar in statusline.sh.
+# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Track 7 Zeichen
+# (schmal). Mitte (Index 3) ist IMMER der weisse Strich (Ziellinie). Der Marker sitzt
+# IMMER daneben — NIE auf der Mitte, damit Strich UND Marker stets sichtbar sind
+# (Frank 2026-05-24). Marker GRUEN links (slow) / ROT rechts (fast). Identisch zu sh.
 function Get-PaceBar($used, $resets, $now) {
     $rem = $resets - $now
     $elapsed = 18000 - $rem
@@ -427,24 +428,18 @@ function Get-PaceBar($used, $resets, $now) {
     if ($elapsed -gt 18000) { $elapsed = 18000 }
     $ideal = [int][Math]::Floor($elapsed * 100 / 18000)
     $delta = [int]$used - $ideal
-    # Marker-Offset: delta auf -3..+3 mappen (Vollausschlag bei ~30% Abweichung).
-    $offset = [int][Math]::Round($delta / 10.0, [MidpointRounding]::AwayFromZero)
-    if ($offset -gt 3) { $offset = 3 }
-    if ($offset -lt -3) { $offset = -3 }
     $mid = 3
-    $mpos = $mid + $offset
-    $adelta = [Math]::Abs($delta)
-    $mcol = if ($adelta -le 8) { $GREEN } elseif ($adelta -le 20) { $YELLOW } else { $RED }
+    # Seite + Farbe: delta>0 = fast (rot, rechts), delta<=0 = slow/ideal (gruen, links).
+    if ($delta -gt 0) { $mcol = $RED; $adev = $delta } else { $mcol = $GREEN; $adev = -$delta }
+    # Abstand vom Strich nach Abweichungsstaerke (1=nah, 2=mittel, 3=weit).
+    if ($adev -le 10) { $abstand = 1 } elseif ($adev -le 25) { $abstand = 2 } else { $abstand = 3 }
+    if ($delta -gt 0) { $mpos = $mid + $abstand } else { $mpos = $mid - $abstand }
     $sb = ''
     for ($i = 0; $i -lt 7; $i++) {
         if ($i -eq $mid) {
-            # Ziellinie hat VORRANG — immer sichtbar. Sitzt der Marker genau hier
-            # (genau richtig), wird die Linie in der Ampelfarbe gezeigt statt vom
-            # Marker verdeckt zu werden (Frank-Bug 2026-05-24: Strich verschwand bei Treffer).
-            if ($mpos -eq $mid) { $sb += "${mcol}┃${R}" }
-            else { $sb += "${MIDLINE}┃${R}" }
+            $sb += "${MIDLINE}┃${R}"      # Ziellinie: immer weiss, immer sichtbar
         } elseif ($i -eq $mpos) {
-            $sb += "${mcol}●${R}"
+            $sb += "${mcol}●${R}"         # Marker: gruen (slow) / rot (fast), nie auf der Mitte
         } else {
             $sb += "${TRACK}─${R}"
         }

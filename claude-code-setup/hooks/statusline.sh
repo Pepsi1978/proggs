@@ -393,9 +393,11 @@ make_bar() {
 # Pacing-Pendel (Frank 2026-05-24): Zeigt ob der 5h-Verbrauch dem Zeitverlauf
 # voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
 # == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
-# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
-# (nah an Mitte) / gelb / rot (weit weg). Track 7 Zeichen (schmal), Mitte bei Index 3.
-# Ganzzahl-Mathe: ideal = verstrichener Zeitanteil * 100, delta = used - ideal.
+# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Track 7 Zeichen
+# (schmal). Mitte (Index 3) ist IMMER der weisse Strich (Ziellinie). Der Marker sitzt
+# IMMER daneben — NIE auf der Mitte, damit Strich UND Marker stets sichtbar sind
+# (Frank 2026-05-24). Marker GRUEN links (slow, Reserve) / ROT rechts (fast, ins Limit);
+# Abstand vom Strich = Staerke der Abweichung (1 nah, 3 weit).
 make_pace_bar() {
     local used=$1
     local resets=$2
@@ -405,37 +407,31 @@ make_pace_bar() {
     [ "$elapsed" -gt 18000 ] && elapsed=18000
     local ideal=$(( elapsed * 100 / 18000 ))
     local delta=$(( used - ideal ))
-    # Marker-Offset: delta auf -3..+3 mappen (Vollausschlag bei ~30% Abweichung).
-    # Round half away from zero: +5/-5 vor der Ganzzahl-Division durch 10.
-    local offset
-    if [ "$delta" -ge 0 ]; then
-        offset=$(( (delta + 5) / 10 ))
-    else
-        offset=$(( (delta - 5) / 10 ))
-    fi
-    [ "$offset" -gt 3 ] && offset=3
-    [ "$offset" -lt -3 ] && offset=-3
     local mid=3
-    local mpos=$((mid + offset))
-    local adelta=$delta
-    [ "$adelta" -lt 0 ] && adelta=$(( -adelta ))
-    local mcol
-    if [ "$adelta" -le 8 ]; then mcol="$GREEN"
-    elif [ "$adelta" -le 20 ]; then mcol="$YELLOW"
-    else mcol="$RED"; fi
+    # Seite + Farbe: delta>0 = fast (rot, rechts), delta<=0 = slow/ideal (gruen, links).
+    local mcol adev
+    if [ "$delta" -gt 0 ]; then
+        mcol="$RED"; adev=$delta
+    else
+        mcol="$GREEN"; adev=$(( -delta ))
+    fi
+    # Abstand vom Strich nach Abweichungsstaerke (1=nah, 2=mittel, 3=weit).
+    local abstand
+    if   [ "$adev" -le 10 ]; then abstand=1
+    elif [ "$adev" -le 25 ]; then abstand=2
+    else abstand=3; fi
+    local mpos
+    if [ "$delta" -gt 0 ]; then
+        mpos=$(( mid + abstand ))
+    else
+        mpos=$(( mid - abstand ))
+    fi
     local out="" i=0
     while [ "$i" -lt 7 ]; do
         if [ "$i" -eq "$mid" ]; then
-            # Ziellinie hat VORRANG — immer sichtbar. Sitzt der Marker genau hier
-            # (genau richtig), wird die Linie in der Ampelfarbe gezeigt statt vom
-            # Marker verdeckt zu werden (Frank-Bug 2026-05-24: Strich verschwand bei Treffer).
-            if [ "$mpos" -eq "$mid" ]; then
-                out="${out}${mcol}┃${R}"
-            else
-                out="${out}${MID}┃${R}"
-            fi
+            out="${out}${MID}┃${R}"      # Ziellinie: immer weiss, immer sichtbar
         elif [ "$i" -eq "$mpos" ]; then
-            out="${out}${mcol}●${R}"
+            out="${out}${mcol}●${R}"     # Marker: gruen (slow) / rot (fast), nie auf der Mitte
         else
             out="${out}${TRACK}─${R}"
         fi
