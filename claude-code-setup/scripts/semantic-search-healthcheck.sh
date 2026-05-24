@@ -48,9 +48,9 @@ fail() { echo "  FAIL $*"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 # Optional reindex
 # ---------------------------------------------------------------------------
 if [[ "$REINDEX" -eq 1 ]]; then
-    echo "==> Reindexing codebase (bun run index)..."
+    echo "==> Reindexing codebase (session-reindex.ts)..."
     if [[ -d "$MCP_DIR" ]]; then
-        (cd "$MCP_DIR" && bun run index 2>&1) || echo "  WARN: Reindex returned non-zero exit"
+        (cd "$MCP_DIR" && bun src/session-reindex.ts "$PROGGS_DIR" 2>&1) || echo "  WARN: Reindex returned non-zero exit"
     else
         echo "  FAIL: $MCP_DIR not found — cannot reindex"
         exit 1
@@ -83,7 +83,7 @@ const store = new VectorStore(join(dbDir, dbName));
 const stats = store.stats();
 if (stats.totalChunks === 0) { console.log('FAIL-1C: Index is empty'); process.exit(1); }
 const emb = await generateEmbedding('test query for health check');
-if (emb.length !== 768) { console.log('FAIL-1D: Embedding dim ' + emb.length + ' instead of 768'); process.exit(1); }
+if (emb.length !== 1024) { console.log('FAIL-1D: Embedding dim ' + emb.length + ' instead of 1024'); process.exit(1); }
 const results = store.search(emb, 3);
 if (results.length === 0) { console.log('FAIL-1E: Search returned 0 results'); process.exit(1); }
 store.close();
