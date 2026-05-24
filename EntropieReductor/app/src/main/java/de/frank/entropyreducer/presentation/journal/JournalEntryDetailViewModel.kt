@@ -9,6 +9,7 @@ import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorFollowupEntity
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +41,10 @@ constructor(
     private val _state = MutableStateFlow(JournalDetailState())
     val state: StateFlow<JournalDetailState> = _state.asStateFlow()
 
+    // Job der laufenden Vorlese-Synthese, damit Stop auch WAEHREND des Ladens (vor der
+    // Wiedergabe) zuverlaessig greift und keine verspaetete Wiedergabe mehr startet.
+    private var speakJob: Job? = null
+
     init {
         viewModelScope.launch {
             val entry = dao.getEntry(sourceId)
@@ -64,26 +69,33 @@ constructor(
             val txt = if (f.isImproved && !f.improvedText.isNullOrBlank()) f.improvedText else f.text
             sb.append(". Nachtrag: ").append(txt)
         }
-        viewModelScope.launch {
-            _state.value = _state.value.copy(ttsState = JournalTtsState.LOADING)
-            tts.speak(
-                // Google TTS verarbeitet ~5000 Zeichen pro Request.
-                text = sb.toString().take(4800),
-                onPlaybackStart = {
-                    _state.value = _state.value.copy(ttsState = JournalTtsState.SPEAKING)
-                },
-                onComplete = { _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE) },
-                onError = { _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE) },
-            )
-        }
+        speakJob?.cancel()
+        speakJob =
+            viewModelScope.launch {
+                _state.value = _state.value.copy(ttsState = JournalTtsState.LOADING)
+                tts.speak(
+                    // Google TTS verarbeitet ~5000 Zeichen pro Request.
+                    text = sb.toString().take(4800),
+                    onPlaybackStart = {
+                        _state.value = _state.value.copy(ttsState = JournalTtsState.SPEAKING)
+                    },
+                    onComplete = {
+                        _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE)
+                    },
+                    onError = { _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE) },
+                )
+            }
     }
 
     fun stopSpeaking() {
+        speakJob?.cancel()
+        speakJob = null
         tts.stop()
         _state.value = _state.value.copy(ttsState = JournalTtsState.IDLE)
     }
 
     override fun onCleared() {
+        speakJob?.cancel()
         tts.stop()
         super.onCleared()
     }

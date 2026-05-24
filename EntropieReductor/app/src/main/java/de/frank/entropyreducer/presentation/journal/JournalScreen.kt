@@ -89,7 +89,8 @@ fun JournalScreen(
             SyncStatusHeader(status)
             if (entries.isEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    // weight(1f): fuellt nur den Rest UNTER dem Sync-Kopf (kein Ueberlauf).
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -118,7 +119,8 @@ fun JournalScreen(
             } else {
                 val grouped = remember(entries) { groupEntriesBySection(entries) }
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    // weight(1f): fuellt nur den Rest UNTER dem Sync-Kopf (kein Ueberlauf).
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding =
                         PaddingValues(start = 12.dp, end = 16.dp, top = 4.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),

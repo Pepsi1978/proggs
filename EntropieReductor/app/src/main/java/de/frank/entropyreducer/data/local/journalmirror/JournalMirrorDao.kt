@@ -21,23 +21,23 @@ interface JournalMirrorDao {
     @Query("SELECT sourceId FROM journal_mirror_entries")
     suspend fun existingEntryIds(): List<Long>
 
+    @Query("SELECT sourceId FROM journal_mirror_followups")
+    suspend fun existingFollowupIds(): List<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertEntries(entries: List<JournalMirrorEntryEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertFollowups(followups: List<JournalMirrorFollowupEntity>)
 
-    // Loeschen nach explizit uebergebener ID-Liste (Repository ruft bei leerer Quelle
-    // stattdessen deleteAll* auf — "NOT IN ()" ist in SQLite ungueltig).
-    @Query("DELETE FROM journal_mirror_entries WHERE sourceId NOT IN (:keepIds)")
-    suspend fun deleteEntriesNotIn(keepIds: List<Long>)
+    // Loeschen nach expliziter ID-Liste. Das Repository berechnet die Loeschmenge in
+    // Kotlin und ruft dies in Bloecken (<= 900 IDs) auf — vermeidet das
+    // SQLite-Variablenlimit (999 auf aelteren Geraeten). Niemals mit leerer Liste
+    // aufrufen ("IN ()" ist ungueltig); das Repository ruft pro Chunk auf, leere
+    // Loeschmengen erzeugen gar keinen Aufruf.
+    @Query("DELETE FROM journal_mirror_entries WHERE sourceId IN (:ids)")
+    suspend fun deleteEntriesByIds(ids: List<Long>)
 
-    @Query("DELETE FROM journal_mirror_followups WHERE sourceId NOT IN (:keepIds)")
-    suspend fun deleteFollowupsNotIn(keepIds: List<Long>)
-
-    @Query("DELETE FROM journal_mirror_entries")
-    suspend fun deleteAllEntries()
-
-    @Query("DELETE FROM journal_mirror_followups")
-    suspend fun deleteAllFollowups()
+    @Query("DELETE FROM journal_mirror_followups WHERE sourceId IN (:ids)")
+    suspend fun deleteFollowupsByIds(ids: List<Long>)
 }
