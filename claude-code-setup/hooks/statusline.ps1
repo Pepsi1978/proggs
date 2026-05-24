@@ -373,6 +373,7 @@ $GREEN  = "$ESC[38;2;64;200;90m"
 $YELLOW = "$ESC[38;2;255;190;40m"
 $RED    = "$ESC[38;2;240;70;70m"
 $T      = "$ESC[38;2;130;135;160m"
+$PACE   = "$ESC[38;2;45;212;191m"   # Teal — Pacing-Feature (Symbol + slow/fast)
 $TIMECOL= "$ESC[38;2;220;180;100m"
 $DIM    = "$ESC[38;2;90;95;115m"
 $TRACK  = "$ESC[38;2;55;58;75m"
@@ -411,7 +412,7 @@ function Get-Bar($pct, $col) {
 # voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
 # == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
 # (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
-# (nah an Mitte) / gelb / rot (weit weg). Track 11 Zeichen, Mitte bei Index 5.
+# (nah an Mitte) / gelb / rot (weit weg). Track 7 Zeichen (schmal), Mitte bei Index 3.
 # Identische Logik zu make_pace_bar in statusline.sh.
 function Get-PaceBar($used, $resets, $now) {
     $rem = $resets - $now
@@ -420,16 +421,16 @@ function Get-PaceBar($used, $resets, $now) {
     if ($elapsed -gt 18000) { $elapsed = 18000 }
     $ideal = [int][Math]::Floor($elapsed * 100 / 18000)
     $delta = [int]$used - $ideal
-    # Marker-Offset: delta auf -5..+5 mappen (Vollausschlag bei ~30% Abweichung).
-    $offset = [int][Math]::Round($delta / 6.0, [MidpointRounding]::AwayFromZero)
-    if ($offset -gt 5) { $offset = 5 }
-    if ($offset -lt -5) { $offset = -5 }
-    $mid = 5
+    # Marker-Offset: delta auf -3..+3 mappen (Vollausschlag bei ~30% Abweichung).
+    $offset = [int][Math]::Round($delta / 10.0, [MidpointRounding]::AwayFromZero)
+    if ($offset -gt 3) { $offset = 3 }
+    if ($offset -lt -3) { $offset = -3 }
+    $mid = 3
     $mpos = $mid + $offset
     $adelta = [Math]::Abs($delta)
     $mcol = if ($adelta -le 8) { $GREEN } elseif ($adelta -le 20) { $YELLOW } else { $RED }
     $sb = ''
-    for ($i = 0; $i -lt 11; $i++) {
+    for ($i = 0; $i -lt 7; $i++) {
         if ($i -eq $mpos) { $sb += "${mcol}●${R}" }
         elseif ($i -eq $mid) { $sb += "${T}┃${R}" }
         else { $sb += "${TRACK}─${R}" }
@@ -448,6 +449,7 @@ $ICON_5H     = '⏱'
 $ICON_7D     = '📅'
 $ICON_CTX    = '🧠'
 $ICON_TIME   = '🕐'
+$ICON_PACE   = '🎯'
 
 # Ausgabe
 $out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
@@ -475,7 +477,7 @@ if ($five_h_used -ne $null) {
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace
-    $out += "${SEP}${DIM}langsam${R} ${paceBar} ${DIM}schnell${R}"
+    $out += "${SEP}${PACE}${ICON_PACE} slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
 # 7d

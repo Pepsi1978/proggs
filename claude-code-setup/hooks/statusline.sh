@@ -336,6 +336,7 @@ GREEN='\033[38;2;64;200;90m' # Gruen        — < 50%
 YELLOW='\033[38;2;255;190;40m' # Gelb       — 50-79%
 RED='\033[38;2;240;70;70m'   # Rot          — >= 80%
 M='\033[38;2;180;130;255m'   # Lila         — Context
+PACE='\033[38;2;45;212;191m' # Teal         — Pacing-Feature (Symbol + slow/fast)
 T='\033[38;2;130;135;160m'   # Grau         — Commit, Modell-Name
 TIMECOL='\033[38;2;220;180;100m' # Amber    — Uhrzeit
 DIM='\033[38;2;90;95;115m'   # Dunkelgrau   — Trennzeichen
@@ -386,7 +387,7 @@ make_bar() {
 # voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
 # == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
 # (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
-# (nah an Mitte) / gelb / rot (weit weg). Track 11 Zeichen, Mitte bei Index 5.
+# (nah an Mitte) / gelb / rot (weit weg). Track 7 Zeichen (schmal), Mitte bei Index 3.
 # Ganzzahl-Mathe: ideal = verstrichener Zeitanteil * 100, delta = used - ideal.
 make_pace_bar() {
     local used=$1
@@ -397,17 +398,17 @@ make_pace_bar() {
     [ "$elapsed" -gt 18000 ] && elapsed=18000
     local ideal=$(( elapsed * 100 / 18000 ))
     local delta=$(( used - ideal ))
-    # Marker-Offset: delta auf -5..+5 mappen (Vollausschlag bei ~30% Abweichung).
-    # Round half away from zero: +3/-3 vor der Ganzzahl-Division.
+    # Marker-Offset: delta auf -3..+3 mappen (Vollausschlag bei ~30% Abweichung).
+    # Round half away from zero: +5/-5 vor der Ganzzahl-Division durch 10.
     local offset
     if [ "$delta" -ge 0 ]; then
-        offset=$(( (delta + 3) / 6 ))
+        offset=$(( (delta + 5) / 10 ))
     else
-        offset=$(( (delta - 3) / 6 ))
+        offset=$(( (delta - 5) / 10 ))
     fi
-    [ "$offset" -gt 5 ] && offset=5
-    [ "$offset" -lt -5 ] && offset=-5
-    local mid=5
+    [ "$offset" -gt 3 ] && offset=3
+    [ "$offset" -lt -3 ] && offset=-3
+    local mid=3
     local mpos=$((mid + offset))
     local adelta=$delta
     [ "$adelta" -lt 0 ] && adelta=$(( -adelta ))
@@ -416,7 +417,7 @@ make_pace_bar() {
     elif [ "$adelta" -le 20 ]; then mcol="$YELLOW"
     else mcol="$RED"; fi
     local out="" i=0
-    while [ "$i" -lt 11 ]; do
+    while [ "$i" -lt 7 ]; do
         if [ "$i" -eq "$mpos" ]; then
             out="${out}${mcol}●${R}"
         elif [ "$i" -eq "$mid" ]; then
@@ -441,6 +442,7 @@ ICON_5H="⏱"
 ICON_7D="📅"
 ICON_CTX="🧠"
 ICON_TIME="🕐"
+ICON_PACE="🎯"
 
 # Effort-Farbe nach Level
 case "$effort" in
@@ -480,7 +482,7 @@ fi
 #     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets")
-    printf "${SEP}${DIM}langsam${R} ${pacebar} ${DIM}schnell${R}"
+    printf "${SEP}${PACE}${ICON_PACE} slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
 # 4. 7d-Limit mit Balken
