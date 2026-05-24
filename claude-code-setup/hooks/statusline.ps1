@@ -407,6 +407,36 @@ function Get-Bar($pct, $col) {
     return "${col}" + ('█' * $filled) + "${TRACK}" + ('░' * $empty) + "${R}"
 }
 
+# Pacing-Pendel (Frank 2026-05-24): Zeigt ob der 5h-Verbrauch dem Zeitverlauf
+# voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
+# == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
+# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
+# (nah an Mitte) / gelb / rot (weit weg). Track 11 Zeichen, Mitte bei Index 5.
+# Identische Logik zu make_pace_bar in statusline.sh.
+function Get-PaceBar($used, $resets, $now) {
+    $rem = $resets - $now
+    $elapsed = 18000 - $rem
+    if ($elapsed -lt 0) { $elapsed = 0 }
+    if ($elapsed -gt 18000) { $elapsed = 18000 }
+    $ideal = [int][Math]::Floor($elapsed * 100 / 18000)
+    $delta = [int]$used - $ideal
+    # Marker-Offset: delta auf -5..+5 mappen (Vollausschlag bei ~30% Abweichung).
+    $offset = [int][Math]::Round($delta / 6.0, [MidpointRounding]::AwayFromZero)
+    if ($offset -gt 5) { $offset = 5 }
+    if ($offset -lt -5) { $offset = -5 }
+    $mid = 5
+    $mpos = $mid + $offset
+    $adelta = [Math]::Abs($delta)
+    $mcol = if ($adelta -le 8) { $GREEN } elseif ($adelta -le 20) { $YELLOW } else { $RED }
+    $sb = ''
+    for ($i = 0; $i -lt 11; $i++) {
+        if ($i -eq $mpos) { $sb += "${mcol}●${R}" }
+        elseif ($i -eq $mid) { $sb += "${T}┃${R}" }
+        else { $sb += "${TRACK}─${R}" }
+    }
+    return $sb
+}
+
 $SEP = "${DIM} | ${R}"
 $EMPTY_BAR = "${TRACK}" + ('░' * 10) + "${R}"
 
@@ -438,6 +468,14 @@ if ($five_h_used -ne $null) {
     }
 } else {
     $out += "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+}
+
+# 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+# Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
+if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
+    $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $paceBar = Get-PaceBar $five_h_used $five_h_resets $nowPace
+    $out += "${SEP}${DIM}langsam${R} ${paceBar} ${DIM}schnell${R}"
 }
 
 # 7d

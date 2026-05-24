@@ -382,6 +382,53 @@ make_bar() {
     printf "${col}${fpart}${TRACK}${epart}${R}"
 }
 
+# Pacing-Pendel (Frank 2026-05-24): Zeigt ob der 5h-Verbrauch dem Zeitverlauf
+# voraus (zu schnell) oder hinterher (zu langsam) ist. ┃ = Idealtempo (Verbrauch
+# == verstrichene Zeit im 5h-Fenster), ● = Ist-Position. Links vom Strich = langsam
+# (Reserve da), rechts = schnell (laeuft vor Fensterende ins Limit). Marker gruen
+# (nah an Mitte) / gelb / rot (weit weg). Track 11 Zeichen, Mitte bei Index 5.
+# Ganzzahl-Mathe: ideal = verstrichener Zeitanteil * 100, delta = used - ideal.
+make_pace_bar() {
+    local used=$1
+    local resets=$2
+    local rem=$((resets - now_ts))
+    local elapsed=$((18000 - rem))
+    [ "$elapsed" -lt 0 ] && elapsed=0
+    [ "$elapsed" -gt 18000 ] && elapsed=18000
+    local ideal=$(( elapsed * 100 / 18000 ))
+    local delta=$(( used - ideal ))
+    # Marker-Offset: delta auf -5..+5 mappen (Vollausschlag bei ~30% Abweichung).
+    # Round half away from zero: +3/-3 vor der Ganzzahl-Division.
+    local offset
+    if [ "$delta" -ge 0 ]; then
+        offset=$(( (delta + 3) / 6 ))
+    else
+        offset=$(( (delta - 3) / 6 ))
+    fi
+    [ "$offset" -gt 5 ] && offset=5
+    [ "$offset" -lt -5 ] && offset=-5
+    local mid=5
+    local mpos=$((mid + offset))
+    local adelta=$delta
+    [ "$adelta" -lt 0 ] && adelta=$(( -adelta ))
+    local mcol
+    if [ "$adelta" -le 8 ]; then mcol="$GREEN"
+    elif [ "$adelta" -le 20 ]; then mcol="$YELLOW"
+    else mcol="$RED"; fi
+    local out="" i=0
+    while [ "$i" -lt 11 ]; do
+        if [ "$i" -eq "$mpos" ]; then
+            out="${out}${mcol}●${R}"
+        elif [ "$i" -eq "$mid" ]; then
+            out="${out}${T}┃${R}"
+        else
+            out="${out}${TRACK}─${R}"
+        fi
+        i=$((i+1))
+    done
+    printf "%b" "$out"
+}
+
 # Trennzeichen
 SEP="${DIM} │ ${R}"
 
@@ -427,6 +474,13 @@ if [ -n "$five_h_used" ]; then
     fi
 else
     printf "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+fi
+
+# 3b. Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+#     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
+if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
+    pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets")
+    printf "${SEP}${DIM}langsam${R} ${pacebar} ${DIM}schnell${R}"
 fi
 
 # 4. 7d-Limit mit Balken
