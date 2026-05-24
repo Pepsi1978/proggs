@@ -62,23 +62,25 @@ for f in "$HOOKS_DIR"/*.ps1; do
     fi
 done
 
-# --- 3. Cross-Platform-Lock-Lifecycle: .ps1/.sh-Paare mit Lock symmetrisch? ---
-echo "--- 3. Cross-Platform-Lock-Lifecycle (.ps1 vs .sh) ---"
-for ps in "$HOOKS_DIR"/*.ps1; do
-    [ -f "$ps" ] || continue
-    sh="${ps%.ps1}.sh"
-    [ -f "$sh" ] || continue
-    base=$(basename "${ps%.ps1}")
-    # Nur pruefen wenn ueberhaupt mit einem Lock gearbeitet wird
-    if grep -qi "lock" "$ps" 2>/dev/null || grep -qi "lock" "$sh" 2>/dev/null; then
-        ps_clean=$(grep -ciE "(Remove-Item|del).*[Ll]ock" "$ps" 2>/dev/null || true)
-        sh_clean=$(grep -ciE "rm .*[Ll]ock|unlink.*[Ll]ock" "$sh" 2>/dev/null || true)
-        ps_clean=${ps_clean:-0}; sh_clean=${sh_clean:-0}
-        if { [ "$ps_clean" -gt 0 ] && [ "$sh_clean" -gt 0 ]; } || { [ "$ps_clean" -eq 0 ] && [ "$sh_clean" -eq 0 ]; }; then
-            ok "$base: Lock-Cleanup symmetrisch (ps1=$ps_clean, sh=$sh_clean; 0/0 = ggf. extern via TS)"
-        else
-            warn "$base: ASYMMETRIE im Lock-Cleanup (ps1=$ps_clean, sh=$sh_clean) — eine Plattform koennte Lock verwaisen lassen"
-        fi
+# --- 3. Lock-Lifecycle: erstellt ein Hook eine .lock-Datei, ohne sie je freizugeben? ---
+# Das ist die ECHTE Bug-Klasse hinter dem verwaisten Reindex-Lock (2026-05-24): explizit eine
+# Lock-Datei anlegen, aber nie entfernen. Pro-Datei-Pruefung (kein fragiler Cross-Platform-
+# Zaehlvergleich). flock/FD-Locks geben automatisch frei -> kein Leak, gelten als freigegeben.
+echo "--- 3. Lock-Lifecycle: erstellt-aber-nicht-freigegeben? ---"
+LOCK_PAT='\.lock|[Ll]ock[Ff]ile|LOCK_FILE'
+for f in "$HOOKS_DIR"/*.ps1 "$HOOKS_DIR"/*.sh; do
+    [ -f "$f" ] || continue
+    grep -qE "$LOCK_PAT" "$f" 2>/dev/null || continue
+    base=$(basename "$f")
+    # Erstellt der Hook explizit eine Lock-Datei?
+    creates=$(grep -ciE "CreateNew|New-Item.*($LOCK_PAT)|Out-File.*($LOCK_PAT)|(echo|printf).*>.*($LOCK_PAT)" "$f" 2>/dev/null || true)
+    # Gibt er sie frei — explizit (Remove/rm/unlink) ODER selbst-freigebend (flock/FD-Redirect)?
+    releases=$(grep -ciE "Remove-Item.*($LOCK_PAT)|(rm |unlink).*($LOCK_PAT)|flock|[0-9]+>.*($LOCK_PAT)" "$f" 2>/dev/null || true)
+    creates=${creates:-0}; releases=${releases:-0}
+    if [ "$creates" -gt 0 ] && [ "$releases" -eq 0 ]; then
+        warn "$base: erstellt Lock-Datei ($creates) aber kein Cleanup/flock erkennbar -> evtl. verwaister Lock (wie Bug 4)"
+    elif [ "$creates" -gt 0 ]; then
+        ok "$base: Lock-Datei wird erstellt UND freigegeben ($releases)"
     fi
 done
 
