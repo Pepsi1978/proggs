@@ -536,6 +536,7 @@ ausfuehrlichen Laeufen genug Mehrwert.
 Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 1. **Whiteboard-Scanner**: Lies `.claude/agent-memory/shared/MEMORY.md` komplett → Finde ALLE unfixten Probleme (Status: OFFEN), veraltete Eintraege, Widersprueche. Jedes Problem MUSS in diesem Lauf gefixt werden.
 2. **Umgebungs-Scanner**: Pruefe Hooks (laufen sie?), Agents (stimmen Prompts?), Rules (sind sie aktuell?), Settings (Drift?), session-scorer (liefert er echte Daten?). Finde AKTUELLE Fehler die noch niemand bemerkt hat.
+   - **Hook-Integritaet (v5.21, PFLICHT)**: `bash ~/.claude/scripts/hook-integrity-check.sh` ausfuehren. Prueft ALLE kontext-injizierenden Hooks auf (a) striktes UTF-8-JSON mit striktem Parser wie Claude Code (fing den subagent-context-JSON-Bruch 2026-05-24, der durch Pfeil→0x1A entstand), (b) UTF-8-OutputEncoding in JSON-ausgebenden .ps1-Hooks, (c) Cross-Platform-Lock-Lifecycle (.ps1/.sh-Symmetrie, fing den verwaisten Reindex-Lock). FAIL = JSON-Bruch SOFORT fixen (Kontext wuerde sonst still verworfen); WARN = pruefen ob OutputEncoding/Lock-Cleanup noetig ist.
 3. **Zukunfts-Scanner**: Analysiere die letzten 3 Aenderungen in MEMORY.md unter "Offene Fehler & Probleme" — welche NEUEN Fehlertypen koennten in Zukunft auftreten? Fuer jeden potenziellen Fehler: Praeventiven Hook oder Rule vorschlagen.
 
 ### 6B: Fehler-Muster → Praevention (Aus vergangenen Fehlern lernen)
