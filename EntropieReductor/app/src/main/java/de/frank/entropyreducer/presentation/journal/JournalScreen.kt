@@ -70,6 +70,9 @@ fun JournalScreen(
 
     CosmosScaffold(
         title = "Journal",
+        // Frank-Wunsch 2026-05-24: kompakter Header zieht Titel + Sync-Kopf + Liste
+        // dichter zusammen (weniger Luft unter "Journal").
+        compactHeader = true,
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.TASKS,
@@ -148,6 +151,7 @@ fun JournalScreen(
 
 @Composable
 private fun SyncStatusHeader(status: JournalSyncStatus) {
+    val cosmos = LocalCosmos.current
     val text =
         if (status.lastSyncMs == 0L) {
             "Noch nicht synchronisiert · 0 Einträge neu"
@@ -158,12 +162,14 @@ private fun SyncStatusHeader(status: JournalSyncStatus) {
             val neu = if (n == 1) "1 neuer Eintrag" else "$n Einträge neu"
             "Zuletzt synchronisiert: $ts  ·  $neu"
         }
+    // Frank-Wunsch 2026-05-24: dezenter Grauton statt Orange (nicht so stark sichtbar)
+    // und dicht unter dem Titel — nur ganz wenig Abstand oben/unten.
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = JournalAccent,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        color = cosmos.textSecondary,
+        modifier =
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 4.dp),
     )
 }
 
