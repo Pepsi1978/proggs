@@ -381,11 +381,11 @@ make_bar() {
         pct=0
     fi
     [ "$pct" -gt 100 ] && pct=100
-    # Round half up: 35% -> 4 Bloecke, 34% -> 3 Bloecke. Konsistent zur ps1-Variante.
-    # Vorher: pct/10 (truncate) — sh und ps1 zeigten unterschiedlich viele Bloecke.
-    local filled=$(( (pct + 5) / 10 ))
-    [ "$filled" -gt 10 ] && filled=10
-    local empty=$((10 - filled))
+    # 7 Segmente (Frank 2026-05-24, schmaler). Round half up: filled = round(pct*7/100).
+    # Prozent-Logik unveraendert, nur Gesamtbreite kleiner. Konsistent zur ps1-Variante.
+    local filled=$(( (pct * 7 + 50) / 100 ))
+    [ "$filled" -gt 7 ] && filled=7
+    local empty=$((7 - filled))
     local fpart=""
     local epart=""
     local i=0
@@ -480,7 +480,7 @@ printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 [ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 
 # 3. 5h-Limit mit Balken
-EMPTY_BAR="${TRACK}░░░░░░░░░░${R}"
+EMPTY_BAR="${TRACK}░░░░░░░${R}"
 if [ -n "$five_h_used" ]; then
     col=$(pct_color "$five_h_used")
     bar=$(make_bar "$five_h_used" "$col")

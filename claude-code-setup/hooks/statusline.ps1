@@ -410,11 +410,11 @@ function Get-Bar($pct, $col) {
     if ($pct -eq $null) { $pct = 0 }
     if ($pct -gt 100) { $pct = 100 }
     if ($pct -lt 0) { $pct = 0 }
-    # Round half up: 35% -> 4 Bloecke, 34% -> 3 Bloecke. Konsistent zur sh-Variante.
-    # Vorher: [int]($pct/10) machte banker's rounding und wich von sh ab.
-    $filled = [Math]::Floor(($pct + 5) / 10)
-    if ($filled -gt 10) { $filled = 10 }
-    $empty = 10 - $filled
+    # 7 Segmente (Frank 2026-05-24, schmaler). Round half up: filled = round(pct*7/100).
+    # Prozent-Logik unveraendert, nur Gesamtbreite kleiner. Konsistent zur sh-Variante.
+    $filled = [Math]::Floor(($pct * 7 + 50) / 100)
+    if ($filled -gt 7) { $filled = 7 }
+    $empty = 7 - $filled
     return "${col}" + ('█' * $filled) + "${TRACK}" + ('░' * $empty) + "${R}"
 }
 
@@ -452,7 +452,7 @@ function Get-PaceBar($used, $resets, $now) {
 }
 
 $SEP = "${DIM} | ${R}"
-$EMPTY_BAR = "${TRACK}" + ('░' * 10) + "${R}"
+$EMPTY_BAR = "${TRACK}" + ('░' * 7) + "${R}"
 
 # Icons
 $ICON_MODEL  = '🤖'
