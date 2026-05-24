@@ -135,7 +135,7 @@ Es gibt KEINE Zeilen-Schwelle fuer Grep-vs-semantisch — das entscheidet allein
 
 ## Bei vielen gleichartigen Aenderungen
 - Bis 20 Stellen: Grep + Edit pro Stelle
-- Ueber 20 Stellen: Python-Batch-Script (siehe batch-edits-python-not-agents.md)
+- Ueber 20 Stellen: Python-Batch-Script (siehe agent-and-researcher-rules.md, Abschnitt 3: Batch-Edits)
 
 ---
 

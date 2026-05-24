@@ -5,6 +5,9 @@
 # PowerShell equivalent of subagent-context.sh
 
 $ErrorActionPreference = 'SilentlyContinue'
+# UTF-8-Ausgabe erzwingen: ohne das verfaelscht PowerShell Sonderzeichen auf stdout
+# (Blitz/Gluehbirne/Gedankenstrich werden sonst zu ? bzw. zerstoeren als 0x1A das JSON).
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 . "$PSScriptRoot/hook-log.ps1"
 
 try {
@@ -41,9 +44,9 @@ Diese Programmierumgebung hat EIN oberstes Ziel: Die intelligenteste Programmier
 - Bei Fehlern selbststaendig debuggen und fixen
 
 ### Such-Reflex: VOR jeder Code-Suche 1 Satz innehalten
-Frage dich: Kenne ich den exakten Namen/String? → Grep/Glob. Nur das Konzept, oder WELCHE Datei betroffen ist? → semantische Suche (code-search MCP).
+Frage dich: Kenne ich den exakten Namen/String? -> Grep/Glob. Nur das Konzept, oder WELCHE Datei betroffen ist? -> semantische Suche (code-search MCP).
 - Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile
-- Nach 2-3 erfolglosen Greps → semantisch; Datei >500 Zeilen NICHT per Agent editieren
+- Nach 2-3 erfolglosen Greps -> semantisch; Datei >500 Zeilen NICHT per Agent editieren
 "@
     }
 
