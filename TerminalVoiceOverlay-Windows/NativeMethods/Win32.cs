@@ -224,6 +224,14 @@ namespace TerminalVoiceOverlay.NativeMethods
         [DllImport("user32.dll")]
         public static extern bool GetCursorPos(out POINT lpPoint);
 
+        // Liefert das Fenster-HWND unter einem Bildschirmpunkt (Geraetepixel).
+        // Erfasst auch Popup-/Menue-HWNDs (z.B. WPF-ContextMenu-Untermenues),
+        // die KEINE Application.Windows-Eintraege sind — darum ueber HWND+PID
+        // statt ueber die WPF-Fensterliste pruefen, ob der Cursor ueber
+        // unserer eigenen UI liegt.
+        [DllImport("user32.dll")]
+        public static extern IntPtr WindowFromPoint(POINT Point);
+
         // ── Mouse Capture ──
         [DllImport("user32.dll")]
         public static extern IntPtr SetCapture(IntPtr hWnd);

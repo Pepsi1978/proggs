@@ -442,6 +442,17 @@ namespace TerminalVoiceOverlay.Views
             _hideDelayTimer.Tick += (_, _) =>
             {
                 _hideDelayTimer.Stop();
+                CLog($"HideDelayTick cursorOwn={IsCursorOverOwnUi()} aux={IsAuxiliaryWindowOpen()}");
+                // Nicht verstecken, solange der Benutzer noch in unserer UI
+                // arbeitet: Cursor ueber einem unserer Fenster/Popups (z.B.
+                // offenes Kontextmenue "Hotkey zuweisen" mit A..Z-Untermenue)
+                // ODER ein modaler Dialog offen. Sonst verschwand das Overlay
+                // mitten im Bearbeiten (Terminal-Deaktivierung durch Popup → 5s → Hide).
+                if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen())
+                {
+                    _hideDelayTimer.Start();
+                    return;
+                }
                 HideOverlayNow();
             };
 
@@ -797,28 +808,17 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 if (!NativeMethods.Win32.GetCursorPos(out var pt)) return false;
-                var app = System.Windows.Application.Current;
-                if (app is null) return false;
-                foreach (Window w in app.Windows)
-                {
-                    if (w is null || !w.IsVisible) continue;
-                    if (CursorInWindowRect(w, pt)) return true;
-                }
+                IntPtr hwnd = NativeMethods.Win32.WindowFromPoint(pt);
+                if (hwnd == IntPtr.Zero) return false;
+                // Gehoert das Fenster unter dem Cursor UNSEREM Prozess? Dann
+                // liegt der Cursor ueber Overlay, Board, Eingabe, Historie,
+                // einem Dialog ODER einem offenen Kontextmenue/Untermenue
+                // (alles HWNDs dieses Prozesses) — nicht einklappen/verstecken.
+                NativeMethods.Win32.GetWindowThreadProcessId(hwnd, out uint pid);
+                return pid != 0 && pid == (uint)Environment.ProcessId;
             }
             catch { }
             return false;
-        }
-
-        private static bool CursorInWindowRect(Window w, NativeMethods.Win32.POINT pt)
-        {
-            try
-            {
-                var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
-                if (hwnd == IntPtr.Zero) return false;
-                if (!NativeMethods.Win32.GetWindowRect(hwnd, out var r)) return false;
-                return pt.X >= r.Left && pt.X <= r.Right && pt.Y >= r.Top && pt.Y <= r.Bottom;
-            }
-            catch { return false; }
         }
 
         private void ScheduleCollapse()
