@@ -441,6 +441,46 @@ constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-05-24: Einmaliger Backfill. Bestehende Strava-Trainings der letzten
+     * 30 Tage bekommen die verstrichene Zeit (elapsed_time) als Dauer statt der frueher
+     * gespeicherten Bewegungszeit (moving_time). NUR Strava-Trainings (`source == "strava"`),
+     * NUR die Dauer (durationSeconds + endMs) via gezieltem DAO-UPDATE — GPS/Puls/Splits und
+     * alle anderen Felder bleiben unangetastet. Polar-Trainings werden nicht beruehrt.
+     *
+     * Laeuft genau einmal (Flag in EncryptedSecretsStore). Es wird NUR der billige Listen-Call
+     * gemacht (kein Detail/Streams/Laps) -> keine Rate-Limit-Gefahr. Schlaegt der Call fehl
+     * (Cooldown/Netz), bleibt das Flag ungesetzt und der naechste Sync versucht es erneut.
+     */
+    suspend fun backfillStravaElapsedDurationsOnce() {
+        if (secrets.stravaElapsedBackfillDone) return
+        val repo = stravaRepo.get()
+        if (!repo.isAuthenticated()) return
+        val elapsedByTrackId =
+            repo.fetchElapsedDurations(days = 30).getOrElse {
+                Log.d(TAG, "Strava-Dauer-Backfill verschoben: ${it.message}")
+                return
+            }
+        val end = System.currentTimeMillis()
+        val start = end - 30L * 24L * 60L * 60L * 1000L
+        val existing = workoutDao.observeRange(start, end).first()
+        var updated = 0
+        for (w in existing) {
+            if (w.source != "strava") continue
+            val elapsed = elapsedByTrackId[w.trackId] ?: continue
+            updated += workoutDao.updateDurationByTrackId(
+                trackId = w.trackId,
+                durationSeconds = elapsed,
+                endMs = w.startMs + elapsed * 1000L,
+            )
+        }
+        secrets.stravaElapsedBackfillDone = true
+        Log.i(
+            TAG,
+            "Strava-Dauer-Backfill abgeschlossen: $updated Training(s) auf verstrichene Zeit korrigiert",
+        )
+    }
+
+    /**
      * Frank-Wunsch 2026-05-16: Strava-Workouts in die `amazfit_workouts`-Tabelle mergen. Strava ist
      * die zuverlaessigste Quelle mit vollen Detail-Daten (GPS, HR, Pace, Splits), daher hat Strava
      * VORRANG.
@@ -460,6 +500,9 @@ constructor(
             Log.d(TAG, "Strava: nicht verbunden — kein Strava-Merge")
             return 0
         }
+        // Frank-Wunsch 2026-05-24: einmaliger Dauer-Backfill bestehender Strava-Trainings
+        // (moving_time -> elapsed_time). Laeuft nur beim ersten Sync nach dem Update.
+        backfillStravaElapsedDurationsOnce()
         // Frank-Wunsch 2026-05-23 (Schritt 4): Existierende Workouts ZUERST holen — damit der
         // Strava-Sync die teuren Detail-Calls (GPS/Puls/Splits) NUR fuer NEUE Workouts macht
         // (inkrementell). Die bekannten trackIds werden an fetchWorkoutsAsEntities uebergeben.

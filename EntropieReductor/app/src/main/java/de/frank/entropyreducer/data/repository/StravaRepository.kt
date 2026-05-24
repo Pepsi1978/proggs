@@ -107,6 +107,50 @@ class StravaRepository @Inject constructor(
         return result.onFailure { handleSyncFailure(it) }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-24: Liefert trackId ("strava_<id>") -> verstrichene Zeit
+     * (elapsed_time in Sekunden) fuer alle Strava-Activities der letzten [days] Tage.
+     * Macht NUR den (billigen) Listen-Call — KEINE Detail/Streams/Laps-Calls. Dient dem
+     * einmaligen Dauer-Backfill bestehender Trainings ohne Rate-Limit-Gefahr.
+     *
+     * Bei fehlender Auth oder laufendem Rate-Limit-Cooldown -> Result.failure, damit der
+     * Aufrufer das Einmal-Flag NICHT setzt und beim naechsten Sync erneut versucht.
+     */
+    suspend fun fetchElapsedDurations(days: Int = 30): Result<Map<String, Long>> {
+        if (!isAuthenticated()) {
+            return Result.failure(IllegalStateException("Strava nicht authentifiziert"))
+        }
+        if (secrets.stravaRateLimitedUntilMs > System.currentTimeMillis()) {
+            return Result.failure(IllegalStateException("Strava Rate-Limit-Cooldown aktiv"))
+        }
+        return runCatchingCancellable {
+            val accessToken = oauth.freshStravaAccessToken()
+                ?: throw IllegalStateException("Strava-Access-Token konnte nicht erfrischt werden")
+            val bearer = "Bearer $accessToken"
+            val afterEpoch =
+                (System.currentTimeMillis() / 1000L) - (days.toLong() * 24L * 60L * 60L)
+            val out = HashMap<String, Long>()
+            var page = 1
+            while (true) {
+                val pageItems = api.listActivities(
+                    bearer = bearer,
+                    after = afterEpoch,
+                    perPage = 100,
+                    page = page,
+                )
+                for (s in pageItems) {
+                    val elapsed = s.elapsedTime ?: continue
+                    out["strava_${s.id}"] = elapsed
+                }
+                if (pageItems.size < 100) break
+                page += 1
+                delay(200L) // Rate-Limit-Schutz
+            }
+            Log.i(TAG, "Strava-Dauer-Backfill: ${out.size} Activities gelistet (${days}d-Fenster)")
+            out
+        }.onFailure { handleSyncFailure(it) }
+    }
+
     private suspend fun doFetchWorkouts(
         days: Int,
         knownTrackIds: Set<String>,

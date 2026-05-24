@@ -159,6 +159,17 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_STRAVA_RATELIMIT_UNTIL, 0L)
         set(value) { prefs.edit().putLong(KEY_STRAVA_RATELIMIT_UNTIL, value).apply() }
 
+    /**
+     * Frank-Wunsch 2026-05-24: Einmaliger Backfill-Marker. Vor diesem Datum gespeicherte
+     * Strava-Trainings nutzten die Bewegungszeit (moving_time) als Dauer; jetzt soll die
+     * verstrichene Zeit (elapsed_time) gelten. Beim ersten Sync nach dem Update korrigiert
+     * der Backfill die bestehenden Trainings einmalig und setzt dieses Flag. false = Backfill
+     * steht noch aus.
+     */
+    var stravaElapsedBackfillDone: Boolean
+        get() = prefs.getBoolean(KEY_STRAVA_ELAPSED_BACKFILL_DONE, false)
+        set(value) { prefs.edit().putBoolean(KEY_STRAVA_ELAPSED_BACKFILL_DONE, value).apply() }
+
     fun clearStravaAuthState() {
         prefs.edit()
             .remove(KEY_STRAVA_AUTH_STATE)
@@ -288,5 +299,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_STRAVA_ATHLETE_ID = "strava_athlete_id"
         private const val KEY_STRAVA_LAST_SYNC = "strava_last_sync_ms"
         private const val KEY_STRAVA_RATELIMIT_UNTIL = "strava_ratelimit_until_ms"
+        private const val KEY_STRAVA_ELAPSED_BACKFILL_DONE = "strava_elapsed_backfill_done"
     }
 }

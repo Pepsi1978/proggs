@@ -197,6 +197,21 @@ interface AmazfitWorkoutDao {
         "UPDATE amazfit_workouts SET sportName = :newName WHERE sportName = :oldName",
     )
     suspend fun renameSportName(oldName: String, newName: String): Int
+
+    /**
+     * Frank-Wunsch 2026-05-24: Einmaliger Strava-Dauer-Backfill. Setzt NUR durationSeconds
+     * und endMs eines Trainings (per trackId) auf die verstrichene Zeit (elapsed_time) —
+     * alle anderen Felder (GPS, Puls, Splits, Pace) bleiben unangetastet. Die WHERE-Klausel
+     * `durationSeconds != :durationSeconds` macht das idempotent (kein Schreibzugriff wenn
+     * der Wert schon stimmt).
+     *
+     * @return 1 wenn aktualisiert, sonst 0
+     */
+    @Query(
+        "UPDATE amazfit_workouts SET durationSeconds = :durationSeconds, endMs = :endMs " +
+            "WHERE trackId = :trackId AND durationSeconds != :durationSeconds",
+    )
+    suspend fun updateDurationByTrackId(trackId: String, durationSeconds: Long, endMs: Long): Int
 }
 
 /**
