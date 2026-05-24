@@ -113,6 +113,12 @@ except Exception as e:
     print('NOMATCH')
 " "$ERROR_TEXT" "$BUG_CASES" 2>/dev/null)
 
+    # Windows Git Bash: Python-Stdout liefert \r\n; $() entfernt nur das \n.
+    # Ein trailing \r wuerde sonst auf dem letzten read-Feld (MATCHED_PREVENTION)
+    # landen und als Stoer-Zeichen in der injizierten Meldung erscheinen
+    # (jq+read-CR-Fehlerklasse, Audit 2026-05-24). Auf macOS ein No-Op.
+    MATCH_RESULT="${MATCH_RESULT%$'\r'}"
+
     if [[ "$MATCH_RESULT" == MATCH* ]]; then
         IFS='|' read -r _ MATCHED_SCORE MATCHED_SYMPTOM MATCHED_ROOT MATCHED_FIX MATCHED_PREVENTION <<< "$MATCH_RESULT"
     fi
