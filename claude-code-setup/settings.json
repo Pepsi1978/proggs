@@ -251,6 +251,11 @@
 					{
 						"type": "command",
 						"command": "bash \"$HOME/.claude/hooks/task-ledger-stop.sh\""
+					},
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/session-backup-nudge.sh\"",
+						"timeout": 5
 					}
 				]
 			}

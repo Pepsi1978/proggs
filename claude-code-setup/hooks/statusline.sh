@@ -186,6 +186,7 @@ fi
 #    der Cleanup ist nicht zeitkritisch.
 if [ $((now_ts % 600)) -lt 2 ]; then
     find "$state_dir" -name "rate-limits-*.json" -mmin +1440 -delete 2>/dev/null
+    find "$state_dir" -name "ctx-*" -mmin +1440 -delete 2>/dev/null
     # Zusaetzlich: Files von fremden Accounts (anderer Fingerprint) sofort weg —
     # nicht erst nach 24h. Sonst zeigt nach Account-Wechsel die alte Anzeige.
     if [ "$account_fp" != "default" ]; then
@@ -293,6 +294,16 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     if [ "$transcript_lines" -lt 8 ] 2>/dev/null; then
         ctx_used=0
     fi
+fi
+
+# CTX-Verbrauch fuer den session-backup Stop-Hook exportieren (Frank 2026-05-24).
+# Der Stop-Hook bekommt context_window NICHT im stdin — er liest hier den EXAKTEN
+# Wert (genau das was die Statusline anzeigt) aus einer PRO-SESSION-Datei. Pro Session
+# weil Frank 4-5 parallele Sessions faehrt; eine gemeinsame Datei wuerde sich gegenseitig
+# ueberschreiben und der Hook laese den Kontext einer fremden Session. Atomic write.
+if [ -n "$ctx_used" ] && is_valid_sid "$session_id"; then
+    ctx_file="$state_dir/ctx-$session_id"
+    printf '%s\n' "$ctx_used" > "$ctx_file.tmp" 2>/dev/null && mv -f "$ctx_file.tmp" "$ctx_file" 2>/dev/null
 fi
 
 # 5h Reset-Countdown — mit Plausibilitaetspruefung:

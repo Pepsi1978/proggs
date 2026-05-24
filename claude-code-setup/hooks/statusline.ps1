@@ -195,6 +195,9 @@ try {
         Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue |
             Where-Object { $_.LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds -lt $cutoff } |
             Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $stateDir -Filter 'ctx-*' -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds -lt $cutoff } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
     }
     # Defekte Files mit leerer session_id IMMER entfernen (Schicht 2: Reaktiv)
     $emptyFile = Join-Path $stateDir 'rate-limits-.json'
@@ -320,6 +323,22 @@ if ($transcript_path -and (Test-Path -LiteralPath $transcript_path)) {
             }
         } finally { $reader.Close() }
         if ($lineCount -lt 8) { $ctx_used = 0 }
+    } catch { }
+}
+
+# CTX-Verbrauch fuer den session-backup Stop-Hook exportieren (Frank 2026-05-24).
+# Der Stop-Hook bekommt context_window NICHT im stdin — er liest hier den EXAKTEN
+# Wert (genau das was die Statusline anzeigt) aus einer PRO-SESSION-Datei. Pro Session
+# weil Frank 4-5 parallele Sessions faehrt; eine gemeinsame Datei wuerde sich gegenseitig
+# ueberschreiben und der Hook laese den Kontext einer fremden Session. Atomic write.
+if ($ctx_used -ne $null -and $sessionId -and $sessionId -match '^[A-Za-z0-9_-]+$') {
+    try {
+        $ctxDir = Join-Path $env:USERPROFILE '.claude\state'
+        if (-not (Test-Path $ctxDir)) { New-Item -ItemType Directory -Path $ctxDir -Force | Out-Null }
+        $ctxFile = Join-Path $ctxDir "ctx-$sessionId"
+        $ctxTmp = "$ctxFile.tmp"
+        [string]$ctx_used | Out-File -FilePath $ctxTmp -Encoding ASCII -Force
+        Move-Item -Path $ctxTmp -Destination $ctxFile -Force -ErrorAction SilentlyContinue
     } catch { }
 }
 
