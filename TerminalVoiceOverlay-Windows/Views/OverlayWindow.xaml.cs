@@ -1431,21 +1431,23 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Kurzes gruenes Aufblitzen der Diskette als Bestaetigung, dass die
-        /// Position gemerkt wurde. Animiert einen frischen (nicht eingefrorenen)
-        /// SolidColorBrush von Gruen zurueck auf das normale Dunkelgrau — die
-        /// statischen Brushes (BtnSuccess/BtnIdle) sind via Freeze() unveraenderbar
-        /// und koennen daher nicht direkt animiert werden.
+        /// Kurzes gruenes Aufblitzen des DISKETTEN-SYMBOLS als Bestaetigung,
+        /// dass die Position gemerkt wurde. Der Button hat keinen grauen
+        /// Hintergrund-Kasten mehr (Frank-Wunsch), daher animieren wir die
+        /// Foreground-Farbe des Symbols von Hellgruen zurueck auf Weiss.
+        /// Animiert einen frischen (nicht eingefrorenen) SolidColorBrush — die
+        /// statischen Brushes sind via Freeze() unveraenderbar.
         /// </summary>
         private void FlashSaveButton()
         {
             try
             {
-                var brush = new SolidColorBrush(BtnSuccess.Color);
-                SaveButton.Background = brush;
+                var flashGreen = Color.FromRgb(0x4C, 0xAF, 0x50); // Material Green 500 — gut sichtbar auf dunklem Overlay
+                var brush = new SolidColorBrush(flashGreen);
+                SaveIcon.Foreground = brush;
                 var anim = new ColorAnimation(
-                    BtnSuccess.Color,
-                    BtnIdle.Color,
+                    flashGreen,
+                    Colors.White,
                     new Duration(TimeSpan.FromMilliseconds(650)))
                 {
                     EasingFunction = HoverEaseOut,

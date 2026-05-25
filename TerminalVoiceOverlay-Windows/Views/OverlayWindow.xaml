@@ -109,7 +109,12 @@
         <Style x:Key="SaveButton" TargetType="Button">
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="40"/>
-            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <!-- Transparent: nur das Disketten-Symbol ist sichtbar, KEIN grauer
+                 Kasten (Frank-Wunsch 2026-05-25). Transparent bleibt klickbar —
+                 die volle 40x40-Flaeche ist weiterhin hit-testbar. Feedback beim
+                 Speichern laeuft ueber das Symbol selbst (gruenes Aufblitzen der
+                 Foreground-Farbe), nicht ueber einen Hintergrund-Kasten. -->
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -496,7 +501,8 @@
                             Margin="6,0,0,0"
                             Click="BtnSavePosition_Click"
                             ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
-                        <TextBlock Text="&#xE74E;"
+                        <TextBlock x:Name="SaveIcon"
+                                   Text="&#xE74E;"
                                    FontFamily="Segoe MDL2 Assets"
                                    FontSize="18"
                                    Foreground="White"
