@@ -542,17 +542,39 @@ constructor(
             workoutsPayload.workouts.map { backupWorkout ->
                 val freshFromBackup = backupWorkout.toEntity()
                 val existing = amazfitWorkoutDao.getById(freshFromBackup.trackId)
-                if (existing == null) {
-                    freshFromBackup
-                } else {
-                    freshFromBackup.copy(
-                        gpsTrackJson = freshFromBackup.gpsTrackJson ?: existing.gpsTrackJson,
-                        heartRateSeriesJson =
-                            freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
-                        paceSeriesJson = freshFromBackup.paceSeriesJson ?: existing.paceSeriesJson,
-                        paceStreamJson = freshFromBackup.paceStreamJson ?: existing.paceStreamJson,
-                        splitsJson = freshFromBackup.splitsJson ?: existing.splitsJson,
-                    )
+                // Frank-Wunsch 2026-05-25 (Restore-Haertung): Eine lokal MANUELL
+                // editierte Version (manualOverridesMs gesetzt) darf NICHT von einem
+                // aelteren Backup ueberschrieben werden — sonst kommen z.B. alte
+                // Bewegungszeiten zurueck, nachdem Frank die verstrichene Zeit
+                // korrigiert hat. Hat das Backup einen NEUEREN manuellen Edit (z.B.
+                // von einem anderen Geraet), gewinnt das Backup. Streams (GPS/Puls/
+                // Pace/Splits) sind kein manuell editierbares Feld und werden in
+                // beiden Faellen von der jeweils anderen Seite ergaenzt wenn sie dort
+                // fehlen. Nicht-manuelle Workouts verhalten sich exakt wie bisher.
+                val localMs = existing?.manualOverridesMs
+                val backupMs = freshFromBackup.manualOverridesMs
+                val localManualWins =
+                    existing != null && localMs != null && (backupMs == null || localMs >= backupMs)
+                when {
+                    existing == null -> freshFromBackup
+                    localManualWins ->
+                        existing.copy(
+                            gpsTrackJson = existing.gpsTrackJson ?: freshFromBackup.gpsTrackJson,
+                            heartRateSeriesJson =
+                                existing.heartRateSeriesJson ?: freshFromBackup.heartRateSeriesJson,
+                            paceSeriesJson = existing.paceSeriesJson ?: freshFromBackup.paceSeriesJson,
+                            paceStreamJson = existing.paceStreamJson ?: freshFromBackup.paceStreamJson,
+                            splitsJson = existing.splitsJson ?: freshFromBackup.splitsJson,
+                        )
+                    else ->
+                        freshFromBackup.copy(
+                            gpsTrackJson = freshFromBackup.gpsTrackJson ?: existing.gpsTrackJson,
+                            heartRateSeriesJson =
+                                freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                            paceSeriesJson = freshFromBackup.paceSeriesJson ?: existing.paceSeriesJson,
+                            paceStreamJson = freshFromBackup.paceStreamJson ?: existing.paceStreamJson,
+                            splitsJson = freshFromBackup.splitsJson ?: existing.splitsJson,
+                        )
                 }
             }
         amazfitWorkoutDao.upsertAll(merged)
