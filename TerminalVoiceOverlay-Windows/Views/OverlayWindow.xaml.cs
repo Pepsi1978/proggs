@@ -739,6 +739,10 @@ namespace TerminalVoiceOverlay.Views
             // Startup-Orientierung anwenden — nur wenn horizontal (vertikal ist
             // bereits der XAML-Standard). Position folgt in OnTerminalActivated.
             if (startupHorizontal) ApplyOrientation(true);
+
+            // Initialen Diskette-Zustand setzen (gruen falls fuer die aktuelle
+            // Ausrichtung bereits eine Position geladen/gemerkt ist).
+            UpdateSaveIndicator();
         }
 
         /// <summary>
@@ -1270,6 +1274,7 @@ namespace TerminalVoiceOverlay.Views
                 _isHorizontal = false;
             }
             FadeIn(horizontal ? HorizontalView : (UIElement)FullView);
+            UpdateSaveIndicator(); // gruener Diskette-Zustand spiegelt die JETZT sichtbare Ausrichtung
             ReassertTopmostIfVisible();
         }
 
@@ -1376,52 +1381,98 @@ namespace TerminalVoiceOverlay.Views
             ReassertTopmostIfVisible();
         }
 
+        // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
+        // Ausrichtung eine Position gemerkt ist, sonst Weiss. Hell-Gruen nur als
+        // kurzes Aufblitz-Feedback beim Speichern.
+        private static readonly Color SaveIdleColor   = Colors.White;
+        private static readonly Color SaveSavedColor  = Color.FromRgb(0x66, 0xBB, 0x6A); // Green 400 — "leicht gruen"
+        private static readonly Color SaveFlashColor  = Color.FromRgb(0xB9, 0xF6, 0xCA); // Light Green A100 — Aufblitzen
+
         /// <summary>
-        /// Klick auf die Diskette: merkt sich die AKTUELLE Overlay-Position
-        /// fuer die AKTUELLE Orientierung. Die Diskette ist nur in der
-        /// ausgeklappten Ansicht sichtbar, daher ist Left/Top hier immer die
-        /// ausgeklappte Position — genau das, was die Positions-Logik
-        /// (Collapse-Offset, Wiedereinblenden, Orientierungswechsel) erwartet.
-        /// Bewusst NUR im RAM: nach App-/PC-Neustart sind beide Felder null
-        /// und die kanonische Standardposition gilt wieder. _manuallyPositioned
-        /// wird gesetzt, damit ein direkt folgendes OnTerminalActivated die
-        /// gerade gemerkte Position nicht ueberschreibt.
+        /// Klick auf die Diskette = Umschalter Speichern/Loeschen fuer die
+        /// AKTUELLE Orientierung:
+        ///  • Noch nichts gemerkt → aktuelle (ausgeklappte) Position merken,
+        ///    Symbol blitzt auf und bleibt danach dezent gruen.
+        ///  • Bereits etwas gemerkt → Position loeschen, Overlay geht zurueck
+        ///    auf die kanonische Standardposition, gruen verschwindet.
+        /// Die Diskette ist nur in der ausgeklappten Ansicht sichtbar, daher ist
+        /// Left/Top hier immer die ausgeklappte Position — genau das, was die
+        /// Positions-Logik (Collapse-Offset, Wiedereinblenden, Wechsel) erwartet.
+        /// (Nur RAM — die DB-Persistenz fuer den Neustart kommt separat dazu.)
         /// </summary>
         private void BtnSavePosition_Click(object sender, RoutedEventArgs e)
         {
-            var pos = new Point(Left, Top);
-            if (_isHorizontal) _savedHorizontalPos = pos;
-            else               _savedVerticalPos   = pos;
-            _manuallyPositioned = true;
-            _usedSinceExpand    = true; // zaehlt als Interaktion → normaler Auto-Hide-Rhythmus
-            FlashSaveButton();
+            bool alreadySaved = (_isHorizontal ? _savedHorizontalPos : _savedVerticalPos) is not null;
+            if (alreadySaved)
+            {
+                // Zweiter Druck: gemerkte Position der aktuellen Ausrichtung loeschen.
+                if (_isHorizontal) _savedHorizontalPos = null;
+                else               _savedVerticalPos   = null;
+                _manuallyPositioned = false;
+                PositionForCurrentOrientation(); // zurueck zur kanonischen Standardposition
+                FlashSaveCleared();              // gruen → weiss
+            }
+            else
+            {
+                var pos = new Point(Left, Top);
+                if (_isHorizontal) _savedHorizontalPos = pos;
+                else               _savedVerticalPos   = pos;
+                _manuallyPositioned = true;
+                FlashSaveStored();               // Aufblitzen → bleibt dezent gruen
+            }
+            _usedSinceExpand = true; // zaehlt als Interaktion → normaler Auto-Hide-Rhythmus
         }
 
         /// <summary>
-        /// Kurzes gruenes Aufblitzen des DISKETTEN-SYMBOLS als Bestaetigung,
-        /// dass die Position gemerkt wurde. Der Button hat keinen grauen
-        /// Hintergrund-Kasten mehr (Frank-Wunsch), daher animieren wir die
-        /// Foreground-Farbe des Symbols von Hellgruen zurueck auf Weiss.
-        /// Animiert einen frischen (nicht eingefrorenen) SolidColorBrush — die
-        /// statischen Brushes sind via Freeze() unveraenderbar.
+        /// Setzt die Steady-Farbe des Disketten-Symbols passend zum Zustand der
+        /// AKTUELLEN Ausrichtung: dezent gruen wenn eine Position gemerkt ist,
+        /// sonst weiss. Wird bei jedem Orientierungswechsel und beim Start
+        /// aufgerufen, damit das Symbol immer den Stand der gerade sichtbaren
+        /// Ausrichtung zeigt. Ein frischer SolidColorBrush ersetzt einen evtl.
+        /// noch laufenden Aufblitz-Brush (dessen Animation wirkt dann nicht mehr).
         /// </summary>
-        private void FlashSaveButton()
+        private void UpdateSaveIndicator()
         {
             try
             {
-                var flashGreen = Color.FromRgb(0x4C, 0xAF, 0x50); // Material Green 500 — gut sichtbar auf dunklem Overlay
-                var brush = new SolidColorBrush(flashGreen);
+                bool saved = (_isHorizontal ? _savedHorizontalPos : _savedVerticalPos) is not null;
+                SaveIcon.Foreground = new SolidColorBrush(saved ? SaveSavedColor : SaveIdleColor);
+            }
+            catch (Exception ex) { Console.WriteLine($"UpdateSaveIndicator: {ex.Message}"); }
+        }
+
+        /// <summary>Speichern-Feedback: kurzes Aufblitzen, danach bleibt das
+        /// Symbol dezent gruen (HoldEnd haelt die End-Farbe).</summary>
+        private void FlashSaveStored()
+        {
+            try
+            {
+                var brush = new SolidColorBrush(SaveFlashColor);
                 SaveIcon.Foreground = brush;
-                var anim = new ColorAnimation(
-                    flashGreen,
-                    Colors.White,
-                    new Duration(TimeSpan.FromMilliseconds(650)))
+                brush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(
+                    SaveFlashColor, SaveSavedColor, new Duration(TimeSpan.FromMilliseconds(650)))
                 {
                     EasingFunction = HoverEaseOut,
-                };
-                brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
+                });
             }
-            catch (Exception ex) { Console.WriteLine($"FlashSaveButton: {ex.Message}"); }
+            catch (Exception ex) { Console.WriteLine($"FlashSaveStored: {ex.Message}"); }
+        }
+
+        /// <summary>Loeschen-Feedback: sanftes Ausblenden des Gruens zurueck
+        /// auf Weiss.</summary>
+        private void FlashSaveCleared()
+        {
+            try
+            {
+                var brush = new SolidColorBrush(SaveSavedColor);
+                SaveIcon.Foreground = brush;
+                brush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(
+                    SaveSavedColor, SaveIdleColor, new Duration(TimeSpan.FromMilliseconds(400)))
+                {
+                    EasingFunction = HoverEaseOut,
+                });
+            }
+            catch (Exception ex) { Console.WriteLine($"FlashSaveCleared: {ex.Message}"); }
         }
 
         // ── Non-activating window setup ──
