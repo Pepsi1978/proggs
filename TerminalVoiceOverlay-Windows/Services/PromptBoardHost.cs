@@ -120,6 +120,13 @@ public static class PromptBoardHost
             // switches. First-run installs get it from EnsureCreated.
             EnsureOrientationColumn();
 
+            // Overlay position persistence (diskette button). Same idempotent
+            // ALTER pattern: existing DBs get PersistOverlayPosition (DEFAULT 0 =
+            // off, classic behaviour) plus four nullable REAL columns for the
+            // saved per-orientation positions. First-run installs get them from
+            // EnsureCreated via the model properties.
+            EnsurePersistPositionColumns();
+
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
 
@@ -354,6 +361,27 @@ public static class PromptBoardHost
         {
             // First-run case: EF-Core EnsureCreated will have created
             // the column from the model already. Never block startup.
+        }
+    }
+
+    private static void EnsurePersistPositionColumns()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            // Bool maps to INTEGER 0/1; nullable double maps to REAL NULL —
+            // same EF Core conventions as the AppSettings properties.
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN PersistOverlayPosition INTEGER NOT NULL DEFAULT 0");
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayVerticalLeft REAL NULL");
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayVerticalTop REAL NULL");
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalLeft REAL NULL");
+            TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalTop REAL NULL");
+        }
+        catch
+        {
+            // First-run case: EF-Core EnsureCreated will have created
+            // the columns from the model already. Never block startup.
         }
     }
 

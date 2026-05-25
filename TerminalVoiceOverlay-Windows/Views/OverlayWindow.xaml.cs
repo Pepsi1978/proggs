@@ -682,6 +682,18 @@ namespace TerminalVoiceOverlay.Views
                 _autoHideEnabled = settings?.AutoHide ?? true;
                 startupHorizontal = string.Equals(settings?.Orientation, "horizontal",
                     StringComparison.OrdinalIgnoreCase);
+
+                // Persistierte Diskette-Positionen NUR laden wenn der Benutzer
+                // das Haekchen gesetzt hat. Sonst gelten die kanonischen
+                // Standardpositionen (Felder bleiben null). Beide Koordinaten
+                // muessen vorhanden sein, sonst ignorieren.
+                if (settings?.PersistOverlayPosition == true)
+                {
+                    if (settings.OverlayVerticalLeft is double vl && settings.OverlayVerticalTop is double vt)
+                        _savedVerticalPos = new Point(vl, vt);
+                    if (settings.OverlayHorizontalLeft is double hl && settings.OverlayHorizontalTop is double ht)
+                        _savedHorizontalPos = new Point(hl, ht);
+                }
             }
             catch (Exception ex)
             {
@@ -1330,6 +1342,35 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
+        /// <summary>
+        /// Schreibt die aktuell gemerkten Diskette-Positionen (oder null beim
+        /// Loeschen) in die DB. Wird bei JEDEM Speichern/Loeschen aufgerufen —
+        /// unabhaengig vom PersistOverlayPosition-Haekchen. Das Haekchen steuert
+        /// nur, ob die Werte beim naechsten Start GELADEN werden (siehe
+        /// InitAutoHide); so bleibt die zuletzt gemerkte Position erhalten falls
+        /// der Benutzer die Persistenz spaeter einschaltet. Fire-and-forget;
+        /// Fehler werden geloggt, nie der Klick blockiert.
+        /// </summary>
+        private async void PersistSavedPositionsToDb()
+        {
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var repo = scope.ServiceProvider
+                    .GetRequiredService<PromptBoard.Core.Repositories.IAppSettingsRepository>();
+                var s = await repo.GetAsync();
+                s.OverlayVerticalLeft   = _savedVerticalPos?.X;
+                s.OverlayVerticalTop    = _savedVerticalPos?.Y;
+                s.OverlayHorizontalLeft = _savedHorizontalPos?.X;
+                s.OverlayHorizontalTop  = _savedHorizontalPos?.Y;
+                await repo.UpdateAsync(s);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PersistSavedPositionsToDb failed: {ex.Message}");
+            }
+        }
+
         // Setzt Fenstergroesse + Position passend zur Orientierung. Horizontal:
         // SizeToContent (Leiste umschliesst die HBar), unten-rechts am Monitor.
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
@@ -1410,6 +1451,7 @@ namespace TerminalVoiceOverlay.Views
                 else               _savedVerticalPos   = null;
                 _manuallyPositioned = false;
                 PositionForCurrentOrientation(); // zurueck zur kanonischen Standardposition
+                PersistSavedPositionsToDb();     // DB aktualisieren (null fuer diese Ausrichtung)
                 FlashSaveCleared();              // gruen → weiss
             }
             else
@@ -1418,6 +1460,7 @@ namespace TerminalVoiceOverlay.Views
                 if (_isHorizontal) _savedHorizontalPos = pos;
                 else               _savedVerticalPos   = pos;
                 _manuallyPositioned = true;
+                PersistSavedPositionsToDb();     // DB aktualisieren (gilt beim Start nur wenn Haekchen an)
                 FlashSaveStored();               // Aufblitzen → bleibt dezent gruen
             }
             _usedSinceExpand = true; // zaehlt als Interaktion → normaler Auto-Hide-Rhythmus

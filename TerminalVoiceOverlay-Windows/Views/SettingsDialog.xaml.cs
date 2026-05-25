@@ -15,7 +15,8 @@ public sealed record SettingsEditResult(
     string? GeminiApiKey,
     string SeparatorTemplate,
     bool AutoHide,
-    string Orientation);
+    string Orientation,
+    bool PersistOverlayPosition);
 
 public partial class SettingsDialog : Window
 {
@@ -36,6 +37,7 @@ public partial class SettingsDialog : Window
         AutoHideCheck.IsChecked = current.AutoHide;
         HorizontalCheck.IsChecked = string.Equals(current.Orientation, "horizontal",
             StringComparison.OrdinalIgnoreCase);
+        PersistPositionCheck.IsChecked = current.PersistOverlayPosition;
 
         // Google OAuth credentials live in $HOME/SK/PromptBoard/.env per
         // secrets-in-sk-folder.md — they never enter the Drive backup JSON.
@@ -60,7 +62,8 @@ public partial class SettingsDialog : Window
                 NullIfBlank(GeminiKeyBox.Text),
                 SeparatorBox.Text ?? " ; ",
                 AutoHideCheck.IsChecked == true,
-                HorizontalCheck.IsChecked == true ? "horizontal" : "vertical");
+                HorizontalCheck.IsChecked == true ? "horizontal" : "vertical",
+                PersistPositionCheck.IsChecked == true);
             Close();
         };
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();

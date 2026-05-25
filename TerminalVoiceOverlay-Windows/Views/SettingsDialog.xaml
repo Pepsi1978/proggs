@@ -65,6 +65,13 @@
                     <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"
                                Text="Wirkt nach dem naechsten Overlay-Neustart. Schneller umschalten: der ⇄-Knopf direkt im Overlay neben dem Stern."/>
 
+                    <CheckBox x:Name="PersistPositionCheck"
+                              Content="Gemerkte Position beim Neustart behalten"
+                              Foreground="#FFCCCCCC" FontSize="12"
+                              Margin="0,0,0,4"/>
+                    <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="An = die zuletzt mit der Diskette gemerkte Position gilt auch nach App-/PC-Neustart als Standard (pro Ausrichtung). Aus = nach dem Neustart gelten wieder die Standardpositionen."/>
+
                     <TextBlock Text="Google Drive Backup" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,8"/>
                     <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"
                                Text="Lege in console.cloud.google.com ein Desktop-OAuth-Client an und fuege die Client ID und Secret hier ein. Dann 'Verbinden' klicken, Google-Konto auswaehlen, fertig."/>
