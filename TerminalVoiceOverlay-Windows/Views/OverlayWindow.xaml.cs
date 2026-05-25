@@ -1389,13 +1389,12 @@ namespace TerminalVoiceOverlay.Views
                 UpdateLayout();
                 if (_savedHorizontalPos is { } sh)
                 {
-                    Left = sh.X; Top = sh.Y;
+                    AnimateWindowTo(sh.X, sh.Y); // sanftes Hingleiten statt hartem Springen
                     _manuallyPositioned = true;
                 }
                 else if (_waW > 0)
                 {
-                    Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                    AnimateWindowTo(_waX + _waW - ActualWidth - 27, _waY + _waH - ActualHeight - HBarBottomLift);
                     _manuallyPositioned = false;
                 }
                 else { _manuallyPositioned = false; }
@@ -1408,18 +1407,44 @@ namespace TerminalVoiceOverlay.Views
                 Height = FullHeight;
                 if (_savedVerticalPos is { } sv)
                 {
-                    Left = sv.X; Top = sv.Y;
+                    AnimateWindowTo(sv.X, sv.Y); // sanftes Hingleiten statt hartem Springen
                     _manuallyPositioned = true;
                 }
                 else if (_waW > 0)
                 {
-                    Left = _waX + _waW - 96 - 27;
-                    Top  = _waY + 57;
+                    AnimateWindowTo(_waX + _waW - 96 - 27, _waY + 57);
                     _manuallyPositioned = false;
                 }
                 else { _manuallyPositioned = false; }
             }
             ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Laesst das Overlay sanft zur Zielposition gleiten statt hart zu
+        /// springen (Frank-Wunsch 2026-05-25, Ausrichtungswechsel + Zuruecksetzen).
+        /// Animiert Window.Left/Top per DoubleAnimation. FillBehavior.Stop +
+        /// finaler Wert im Completed-Handler ist Pflicht: sonst wuerde der
+        /// gehaltene Animationswert spaetere Left/Top-Zuweisungen (Drag,
+        /// Reposition) blockieren. Bei Fehler hart setzen (nie haengen bleiben).
+        /// </summary>
+        private void AnimateWindowTo(double left, double top)
+        {
+            try
+            {
+                var dur = new Duration(TimeSpan.FromMilliseconds(190));
+                var ax = new DoubleAnimation(left, dur) { EasingFunction = HoverEaseOut, FillBehavior = FillBehavior.Stop };
+                var ay = new DoubleAnimation(top, dur) { EasingFunction = HoverEaseOut, FillBehavior = FillBehavior.Stop };
+                ax.Completed += (_, _) => { BeginAnimation(LeftProperty, null); Left = left; };
+                ay.Completed += (_, _) => { BeginAnimation(TopProperty, null); Top = top; };
+                BeginAnimation(LeftProperty, ax);
+                BeginAnimation(TopProperty, ay);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AnimateWindowTo: {ex.Message}");
+                Left = left; Top = top; // Fallback: hart setzen
+            }
         }
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
@@ -1622,6 +1647,10 @@ namespace TerminalVoiceOverlay.Views
                     if (Win32.GetCursorPos(out var startPt))
                     {
                         _isDragging = true;
+                        // Laufende Glide-Animation abbrechen, sonst blockiert der
+                        // gehaltene Animationswert das Drag-Reposition.
+                        BeginAnimation(LeftProperty, null);
+                        BeginAnimation(TopProperty, null);
                         _dragStartCursorX = startPt.X;
                         _dragStartCursorY = startPt.Y;
                         _dragStartLeft = Left;
