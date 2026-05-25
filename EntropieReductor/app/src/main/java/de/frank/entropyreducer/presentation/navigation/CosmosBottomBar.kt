@@ -161,9 +161,14 @@ fun CosmosBottomBar(
                     onSubAreaClick = { index ->
                         if (index == selectedSubIndex) {
                             // Re-Tap auf den bereits offenen Unterbereich → zurueck zur
-                            // Uebersichtsleiste (Frank-Wunsch 2026-05-25). Von dort waehlt
-                            // Frank den naechsten Bereich.
+                            // Uebersichtsleiste UND zur Parent-Hauptansicht (Frank-Wunsch
+                            // 2026-05-25, Praezisierung): vorher blieb die ANSICHT im
+                            // Unterbereich (z.B. Thesen / Biomarker-"1") haengen, waehrend
+                            // die Leiste schon die Uebersicht mit markiertem Parent zeigte.
+                            // onTabSelected springt auf das Parent-Hauptpattern
+                            // (Aufgaben/Analyse/Forscher/Biomarker) — passend zur Markierung.
                             switcher.showSwitcher = true
+                            onTabSelected(activeSubMode)
                         } else {
                             onSubAreaSelected(activeSubMode, index)
                         }
