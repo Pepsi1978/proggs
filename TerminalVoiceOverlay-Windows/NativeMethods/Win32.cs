@@ -285,5 +285,38 @@ namespace TerminalVoiceOverlay.NativeMethods
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
             int X, int Y, int cx, int cy, uint uFlags);
+
+        // ── DWM (Desktop Window Manager) — fuer GPU-kompositiertes Fenster
+        // ohne AllowsTransparency: gerundete Ecken + Acrylic-Backdrop. So sind
+        // Fenster-Moves glatt und es flackert nichts ueber Terminal-Text. ──
+        // DWMWINDOWATTRIBUTE-Werte:
+        public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33; // Win11
+        public const int DWMWA_SYSTEMBACKDROP_TYPE       = 38; // Win11 22H2+
+        // DWM_WINDOW_CORNER_PREFERENCE:
+        public const int DWMWCP_DEFAULT    = 0;
+        public const int DWMWCP_DONOTROUND = 1;
+        public const int DWMWCP_ROUND      = 2;
+        public const int DWMWCP_ROUNDSMALL = 3;
+        // DWM_SYSTEMBACKDROP_TYPE:
+        public const int DWMSBT_AUTO           = 0;
+        public const int DWMSBT_NONE           = 1; // deckend (kein Backdrop)
+        public const int DWMSBT_MAINWINDOW     = 2; // Mica
+        public const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic
+        public const int DWMSBT_TABBEDWINDOW   = 4; // Mica Alt
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
     }
 }
