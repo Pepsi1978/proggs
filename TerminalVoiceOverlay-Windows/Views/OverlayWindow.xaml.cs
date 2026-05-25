@@ -1452,6 +1452,13 @@ namespace TerminalVoiceOverlay.Views
         // DwmFlush nicht im Render-Callback selbst sitzt.
         private bool _gliding;
         private double _glideCurLeft, _glideCurTop;
+        // Die hohe vertikale Saeule ist halbtransparent zu teuer pro Frame ueber
+        // dem Terminal zu komponieren → ruckelt beim Hochgleiten. Daher waehrend
+        // des Glides (NUR vertikal) kurz deckend machen; die flache Leiste bleibt
+        // unangetastet (ihr Glide ist bereits perfekt). Danach sofort restaurieren.
+        private bool _glidePillOpaque;
+        private Brush? _glidePillBg;
+        private static readonly SolidColorBrush GlidePillOpaqueBg = Brush("#FF1A1A1A");
 
         private void AnimateWindowTo(double targetLeft, double targetTop)
         {
@@ -1464,6 +1471,15 @@ namespace TerminalVoiceOverlay.Views
                 {
                     Left = targetLeft; Top = targetTop;
                     return;
+                }
+
+                // Vertikale Saeule waehrend des Glides deckend → billige Komposition → fluessig.
+                _glidePillOpaque = false;
+                if (!_isHorizontal)
+                {
+                    _glidePillBg = FullView.Background;
+                    FullView.Background = GlidePillOpaqueBg;
+                    _glidePillOpaque = true;
                 }
 
                 var src = PresentationSource.FromVisual(this);
@@ -1500,6 +1516,7 @@ namespace TerminalVoiceOverlay.Views
                     if (t >= 1.0)
                     {
                         _gliding = false;
+                        RestoreGlidePillBg();               // Saeule wieder transparent
                         Left = targetLeft; Top = targetTop; // WPF-Eigenschaften final synchronisieren
                         ReassertTopmostIfVisible();
                     }
@@ -1524,9 +1541,19 @@ namespace TerminalVoiceOverlay.Views
         {
             if (!_gliding) return;
             _gliding = false;
+            RestoreGlidePillBg();
             // Left/Top waren waehrend des Glides stale (SetWindowPos umging WPF) —
             // jetzt auf die zuletzt gesetzte Position bringen, damit Drag korrekt rechnet.
             Left = _glideCurLeft; Top = _glideCurTop;
+        }
+
+        /// <summary>Setzt den (waehrend des vertikalen Glides deckenden) Saeulen-Hintergrund
+        /// wieder auf den transparenten Originalzustand zurueck.</summary>
+        private void RestoreGlidePillBg()
+        {
+            if (!_glidePillOpaque) return;
+            _glidePillOpaque = false;
+            try { FullView.Background = _glidePillBg; } catch { }
         }
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
