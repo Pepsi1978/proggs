@@ -106,9 +106,13 @@ wenn es sich als wichtig erweist, zu einer eigenen Kategorie.
 
 - **Modell:** Claude Sonnet 4.6. **Effort:** X-High.
 - **Max 130.000 Token pro Researcher.** Kein Researcher darf darueber hinaus laufen.
-- **Scope klein schneiden:** Jeder Researcher bekommt einen eng begrenzten Bereich (z.B. eine
-  Kategorie oder einen Teil davon), der sicher deutlich unter 130k bleibt. Lieber mehr kleine
-  Researcher als wenige grosse.
+- **Scope klein schneiden — beim Volllauf 1 Kategorie pro Researcher:** Empirisch (Erstlauf
+  2026-05-25) verbraucht ein Researcher mit 2–3 Kategorien ~150–160k Token — UEBER dem 130k-Ziel.
+  Deshalb beim Volllauf genau EINE Kategorie pro Researcher. Nur bei kleinen Delta-Laeufen duerfen
+  verwandte Kategorien zusammengefasst werden, wenn der Zuwachs gering ist.
+- **Das 130k-Limit ist ein Ziel, kein Selbst-Stopp:** Ein Subagent misst seinen Token-Verbrauch
+  nicht live und kann sich nicht selbst stoppen. Durchgesetzt wird das Limit ueber (a) kleinen
+  Scope (1 Kategorie) und (b) die Continuation unten — nicht ueber Selbstmessung.
 - **Checkpoint / Continuation:** Der Researcher schreibt seinen Fortschritt **inkrementell** in
   die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo
   weitermachen). Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint**
