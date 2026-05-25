@@ -47,7 +47,7 @@ Pruefe, ob `~/proggs/best-practices/` existiert. Falls nicht, lege die Struktur 
 best-practices/
 ├── README.md              ← Inhaltsverzeichnis, verlinkt jede Kategorie
 ├── _state.json            ← {"last_version": null, "last_checked": null}
-├── _changelog-archiv.md   ← chronologische Master-Zeitleiste (anfangs leer)
+├── _changelog-archiv.md   ← VOLLSTAENDIGER offizieller Changelog, verbatim (siehe Abschnitt unten)
 ├── 01-hooks/best-practices.md
 ├── 02-skills/best-practices.md
 ├── 03-agents/best-practices.md
@@ -67,7 +67,9 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
 ## Ablauf eines Laufs
 
 1. **Stand lesen:** `_state.json` + `README.md` lesen → welche Version/welches Datum war zuletzt?
-2. **Delta bestimmen:** Offizielles Claude-Code-Changelog holen und mit `last_version` vergleichen.
+2. **Changelog verbatim holen + Delta bestimmen:** Den KOMPLETTEN offiziellen Changelog
+   wortwoertlich herunterladen (siehe Abschnitt "Changelog-Archiv — vollstaendig & verbatim")
+   und mit `last_version` vergleichen, um die neuen Versionen zu erkennen.
    (Bei explizitem Wunsch nach Volllauf den Delta-Schritt ueberspringen und alle Kategorien neu aufrollen.)
 3. **Nichts Relevantes neu?** → "Nichts Neues seit Version X (Stand: Datum)" melden, fertig.
 4. **Delta vorhanden?** → parallele Researcher starten (siehe Researcher-Regeln). Jeder Researcher
@@ -77,10 +79,30 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    - **Alternativen** von aussen (externe Quellen, klar als `extern` gelabelt, sekundaer)
    Was in keine Kategorie 1–10 passt → Kategorie 11 (Neues).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
-   `offiziell`/`extern`-Flag), `_changelog-archiv.md` chronologisch ergaenzen, `README.md` +
-   `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 11 bekommen einen eigenen
+   `offiziell`/`extern`-Flag), `_changelog-archiv.md` verbatim neu holen (siehe Abschnitt unten),
+   `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 11 bekommen einen eigenen
    Unterordner (12-…, 13-…) — die Taxonomie waechst selbst.
 6. **Auswertung ausgeben** (siehe Format unten).
+
+## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)
+
+Das `_changelog-archiv.md` ist die **Rohdaten-Grundlage** fuer alle spaeteren Mustererkennungen
+(wie entwickelt sich Claude Code?). Eine Zusammenfassung ist hier wertlos — ein Researcher kann
+nur mit dem Volltext arbeiten. Deshalb gilt strikt:
+
+- **Verbatim, ungekuerzt:** Die Datei enthaelt den KOMPLETTEN offiziellen Changelog JEDER Version,
+  alle Bullet-Points wortwoertlich. KEINE Zusammenfassungen, KEINE Wochen-Stichpunkte, KEINE Kuerzung.
+- **Kanonische Quelle:** `https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md`
+  — enthaelt alle Versionen (neueste oben), zurueck bis in die 0.x-Reihe. Mindest-Abdeckung: ab 2.0.
+- **Download-Methode:** IMMER direkter Datei-Download (`Invoke-WebRequest` / `curl`), der den Inhalt
+  1:1 speichert. NIEMALS WebFetch oder ein Researcher — die fassen zusammen und zerstoeren die
+  Vollstaendigkeit. Genau das war der urspruengliche Fehler (2026-05-25).
+- **Aufbau:** Kurzer Kopf (Quelle, Download-Datum, Abdeckung), darunter der komplette Changelog
+  chronologisch (neueste Version oben), jede Version `## X.Y.Z` mit allen Original-Bullets.
+- **Bei jedem Lauf:** Datei komplett neu holen (der kanonische CHANGELOG.md enthaelt ohnehin die
+  Gesamthistorie, neue Versionen sind dann oben automatisch dabei).
+- **Pflicht-Verifikation:** Nach dem Download Anzahl `## `-Versions-Header UND Bullet-Zeilen gegen
+  die Quelldatei pruefen — muessen identisch sein, sonst ging beim Schreiben etwas verloren.
 
 ## Taxonomie (11 Kategorien, selbst-erweiternd)
 
