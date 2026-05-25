@@ -256,11 +256,19 @@ fresh=$(jq -sr --arg fp "$account_fp" '
     )) as $valid |
     if ($valid | length) == 0 then ""
     else
-        ($valid | map(.five_h_resets // 0) | max) as $maxR |
-        ($valid | map(select((.five_h_resets // 0) == $maxR)) | max_by(.five_h // 0)) as $bestF |
+        # Reset-Fenster aus der FRISCHESTEN Session (hoechstes ts_seen) bestimmen,
+        # NICHT aus max(resets_at). Grund (Frank-Bug-Report 2026-05-25): Der
+        # Reset-Zeitpunkt ist eine accountweite Konstante des aktuellen Fensters —
+        # kein Wert der hochzaehlt. max(resets_at) liess eine liegengebliebene
+        # Test-/Anomalie-Datei mit kuenstlich grossem Timestamp den Countdown kapern
+        # (zeigte 3D10H statt echter 1D23H). Die frischeste API-Antwort hat per
+        # Definition den korrekten aktuellen Reset. Verbrauch bleibt max (zaehlt hoch).
+        ($valid | max_by(.ts_seen // 0)) as $freshest |
+        ($freshest.five_h_resets // 0) as $freshR |
+        ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
         ($valid | map(.seven_d // 0) | max) as $bestS |
-        ($valid | map(.seven_d_resets // 0) | max) as $maxSR |
-        "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
+        ($freshest.seven_d_resets // 0) as $maxSR |
+        "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
 

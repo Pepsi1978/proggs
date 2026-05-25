@@ -286,8 +286,11 @@ try {
         if ($weekResetsEntry -ne 0 -and -not (Test-ValidResetTs7d $weekResetsEntry $nowTs)) {
             $weekResetsEntry = 0
         }
+        $tsSeen = 0
+        try { $tsSeen = [long]$entry.ts_seen } catch { $tsSeen = 0 }
         $allEntries += [PSCustomObject]@{
             session_id     = $sid
+            ts_seen        = $tsSeen
             five_h         = [int]$entry.five_h
             seven_d        = if (Test-ValidPercent $entry.seven_d) { [int]$entry.seven_d } else { 0 }
             five_h_resets  = $resets
@@ -296,14 +299,22 @@ try {
     }
 
     if ($allEntries.Count -gt 0) {
-        $maxResets = ($allEntries | ForEach-Object { [long]$_.five_h_resets } | Measure-Object -Maximum).Maximum
-        $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $maxResets }
+        # Reset-Fenster aus der FRISCHESTEN Session (hoechstes ts_seen) bestimmen,
+        # NICHT aus max(resets_at). Grund (Frank-Bug-Report 2026-05-25): Der
+        # Reset-Zeitpunkt ist eine accountweite Konstante des aktuellen Fensters —
+        # kein Wert der hochzaehlt. max(resets_at) liess eine liegengebliebene
+        # Test-/Anomalie-Datei mit kuenstlich grossem Timestamp den Countdown kapern
+        # (zeigte 3D10H statt echter 1D23H). Die frischeste API-Antwort hat per
+        # Definition den korrekten aktuellen Reset. Verbrauch bleibt max (zaehlt hoch).
+        $freshest = $allEntries | Sort-Object -Property @{Expression={[long]$_.ts_seen}} -Descending | Select-Object -First 1
+        $freshResets = [long]$freshest.five_h_resets
+        $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $freshResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            # 7d unabhaengig: hoechster Wert ueber alle Sessions (validiert)
+            # 7d-Verbrauch unabhaengig: hoechster Wert ueber alle Sessions (validiert, zaehlt hoch)
             $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
-            # 7d-Reset: aktuellster (groesster) ueber alle Sessions
-            $freshWeekResets = ($allEntries | ForEach-Object { [long]$_.seven_d_resets } | Measure-Object -Maximum).Maximum
+            # 7d-Reset: aus der frischesten Session (accountweite Konstante, nicht max)
+            $freshWeekResets = [long]$freshest.seven_d_resets
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h
