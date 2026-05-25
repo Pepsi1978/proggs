@@ -1554,7 +1554,10 @@ namespace TerminalVoiceOverlay.Views
             view.Opacity = 1;
 
             double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
-            var dur = new Duration(TimeSpan.FromMilliseconds(Math.Clamp(dist * 1.3, 340.0, 600.0)));
+            // Hoehere Untergrenze (500ms) als beim horizontalen Move (340ms): die
+            // vertikale Strecke ist kurz, soll aber NICHT schneller wirken als das
+            // Runtergleiten (~600ms). So haben Hoch- und Runtergleiten ein aehnliches Tempo.
+            var dur = new Duration(TimeSpan.FromMilliseconds(Math.Clamp(dist * 1.3, 500.0, 600.0)));
             var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
             var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
             var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
