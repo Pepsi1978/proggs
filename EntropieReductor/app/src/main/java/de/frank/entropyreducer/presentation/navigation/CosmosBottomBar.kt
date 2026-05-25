@@ -86,10 +86,15 @@ fun CosmosBottomBar(
     val showSwitcher = switcher.showSwitcher
 
     val isOnMainTab = currentTab in MAIN_TABS
+    // Frank-Wunsch 2026-05-25: Die Uebersichtsleiste (showSwitcher) gewinnt IMMER —
+    // auch auf einem Sub-Screen (forcedSubMode). Dadurch kann man durch erneutes
+    // Tippen auf den bereits offenen Unterbereich (z.B. Journal/Entropie/Thesen)
+    // zurueck zur Standardleiste (Aufgaben/Analyse/Forscher/Biomarker) gelangen —
+    // nicht nur ueber den Haupt-Tab.
     val activeSubMode: String? =
         when {
-            forcedSubMode != null -> forcedSubMode
             showSwitcher -> null
+            forcedSubMode != null -> forcedSubMode
             isOnMainTab -> currentTab
             else -> null
         }
@@ -153,7 +158,16 @@ fun CosmosBottomBar(
                             switcher.showSwitcher = true
                         }
                     },
-                    onSubAreaClick = { index -> onSubAreaSelected(activeSubMode, index) },
+                    onSubAreaClick = { index ->
+                        if (index == selectedSubIndex) {
+                            // Re-Tap auf den bereits offenen Unterbereich → zurueck zur
+                            // Uebersichtsleiste (Frank-Wunsch 2026-05-25). Von dort waehlt
+                            // Frank den naechsten Bereich.
+                            switcher.showSwitcher = true
+                        } else {
+                            onSubAreaSelected(activeSubMode, index)
+                        }
+                    },
                 )
                 MicButton(
                     state = micState,
