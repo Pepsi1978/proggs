@@ -1404,14 +1404,29 @@ namespace TerminalVoiceOverlay.Views
                 if (orientationSwitch && _waW > 0)
                 {
                     // Sauberer SENKRECHTER Slide auf der Ziel-Spalte: zuerst an
-                    // die Ziel-X-Position und an den gegenueberliegenden
-                    // Bildschirmrand setzen, dann nur senkrecht zur Zielposition
-                    // gleiten. Verhindert den diagonalen "erst nach links/unten
-                    // unter den Bildschirm"-Effekt beim Form-Wechsel (Frank
-                    // 2026-05-25). Nach vertikal → von unten hoch; nach
-                    // horizontal → von oben runter.
+                    // die Ziel-X-Position und einen sinnvollen Start-Rand setzen,
+                    // dann nur senkrecht zur Zielposition gleiten. Verhindert den
+                    // diagonalen "erst nach links/unten unter den Bildschirm"-Effekt.
                     Left = tl;
-                    Top  = _isHorizontal ? _waY : (_waY + _waH - Height);
+                    double startTop;
+                    if (_isHorizontal)
+                    {
+                        // Ziel = horizontale Leiste (unten): von oben herunter gleiten.
+                        startTop = _waY;
+                    }
+                    else
+                    {
+                        // Ziel = vertikale Saeule (oben): von unten hochgleiten, aber
+                        // so, dass die UNTERKANTE der Saeule auf der Linie der
+                        // horizontalen Leiste startet — NICHT darunter (Frank
+                        // 2026-05-25: die Saeule soll nicht unter die Tool-Linie
+                        // tauchen). HBarBottomLift ist der Abstand der Leisten-
+                        // Unterkante vom Arbeitsbereich-Boden. Auf sehr kleinen
+                        // Screens (Start waere oberhalb des Ziels) ohne Glide direkt.
+                        startTop = _waY + _waH - HBarBottomLift - Height;
+                        if (startTop < tt) startTop = tt;
+                    }
+                    Top = startTop;
                     AnimateWindowTo(tl, tt);
                 }
                 else
