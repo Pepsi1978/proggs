@@ -1561,6 +1561,11 @@ namespace TerminalVoiceOverlay.Views
             var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
             var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
             var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
+            // WPF-Animationen sind per Default ~60fps → auf einem 120-Hz-Monitor
+            // wirkt das leicht gestuft. Gewuenschte Bildrate auf 120 anheben fuer
+            // ein flussigeres "120-Hz-Gefuehl" (entfernt die Mini-Ruckler).
+            Timeline.SetDesiredFrameRate(ax, 120);
+            Timeline.SetDesiredFrameRate(ay, 120);
             ay.Completed += (_, _) => FinalizeContentGlide();
             tt.BeginAnimation(TranslateTransform.XProperty, ax);
             tt.BeginAnimation(TranslateTransform.YProperty, ay);
