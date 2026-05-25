@@ -1025,20 +1025,6 @@ namespace TerminalVoiceOverlay.Views
             EnterButton, SaveButton,
         };
 
-        // Diagnose-Log fuer das Reparenting (findet den Button-Verlust beim
-        // Umschalten). Schreibt nach %TEMP%\TVO-orient.log. Wird nach dem Fix
-        // wieder entfernt.
-        private static void OLog(string msg)
-        {
-            try
-            {
-                System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-orient.log"),
-                    $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}");
-            }
-            catch { }
-        }
-
         // Kurzer Einblende-Effekt (~140ms) fuer die gerade sichtbar gewordene
         // Ansicht — macht den Wechsel weich statt ruckartig (Ein-/Ausklappen
         // und Orientierungswechsel, vertikal wie horizontal).
@@ -1095,10 +1081,8 @@ namespace TerminalVoiceOverlay.Views
             {
                 int index = el.Parent is StackPanel sp ? sp.Children.IndexOf(el) : -1;
                 _vplace[el] = (el.Parent, index, el.Margin, el.Width, el.Height);
-                OLog($"CAPTURE {el.Name} parent={el.Parent?.GetType().Name}#{el.Parent?.GetHashCode()}");
             }
             _orientationCaptured = true;
-            OLog("CAPTURE done");
         }
 
         private static void DetachFromParent(FrameworkElement el)
@@ -1116,7 +1100,6 @@ namespace TerminalVoiceOverlay.Views
         // links→rechts, daher Enter zuerst und der Stern zuletzt (= ganz rechts).
         private void BuildHorizontalLayout()
         {
-            OLog("HBUILD start");
             HBar.Children.Clear();
             // Reihenfolge rechts→links = vertikal oben→unten. HBar fuellt links→
             // rechts, daher: Enter ganz links, Stern ganz rechts. INNERHALB jeder
@@ -1146,7 +1129,6 @@ namespace TerminalVoiceOverlay.Views
             // Stern + Wechsel-Button UNTEREINANDER (Stern oben, Toggle unten),
             // beide in Standard-Rundgroesse, vertikal mittig — statt nebeneinander.
             HBar.Children.Add(MakeHStackGroup(UltrathinkButton, OrientationToggleButton, "#B31F1B15", new CornerRadius(0, 34, 34, 0)));
-            OLog("HBUILD done");
         }
 
         // Senkrechter Trennstrich zwischen den horizontalen Sektionen — das
@@ -1163,7 +1145,7 @@ namespace TerminalVoiceOverlay.Views
             foreach (var b in symbols)
             {
                 try { DetachFromParent(b); b.Margin = new Thickness(3, 0, 3, 0); b.VerticalAlignment = VerticalAlignment.Center; top.Children.Add(b); }
-                catch (Exception ex) { OLog($"HBUILD sym {b.Name} FAIL: {ex.Message}"); }
+                catch (Exception ex) { Console.WriteLine($"BuildHorizontalLayout sym {b.Name} FAIL: {ex.Message}"); }
             }
             col.Children.Add(top);
 
@@ -1181,7 +1163,7 @@ namespace TerminalVoiceOverlay.Views
                     // Kacheln liegend (30×22 statt 24×32) → flachere Zahlen-Reihe,
                     // dadurch wird die ganze horizontale Leiste schmaler.
                     try { DetachFromParent(t); t.Margin = new Thickness(3, 0, 3, 0); t.VerticalAlignment = VerticalAlignment.Center; t.Width = 30; t.Height = 22; bot.Children.Add(t); }
-                    catch (Exception ex) { OLog($"HBUILD tile {t.Name} FAIL: {ex.Message}"); }
+                    catch (Exception ex) { Console.WriteLine($"BuildHorizontalLayout tile {t.Name} FAIL: {ex.Message}"); }
                 }
                 col.Children.Add(bot);
             }
@@ -1219,7 +1201,7 @@ namespace TerminalVoiceOverlay.Views
                     b.VerticalAlignment = VerticalAlignment.Center;
                     col.Children.Add(b);
                 }
-                catch (Exception ex) { OLog($"HBUILD stack {b.Name} FAIL: {ex.Message}"); }
+                catch (Exception ex) { Console.WriteLine($"BuildHorizontalLayout stack {b.Name} FAIL: {ex.Message}"); }
             }
             Add(topBtn, true);
             Add(bottomBtn, false);
@@ -1235,13 +1217,11 @@ namespace TerminalVoiceOverlay.Views
 
         private void RestoreVerticalLayout()
         {
-            OLog("RESTORE start");
             foreach (var el in ManagedButtons())
             {
-                if (!_vplace.TryGetValue(el, out var vp)) { OLog($"RESTORE {el.Name}: no vplace"); continue; }
+                if (!_vplace.TryGetValue(el, out var vp)) { Console.WriteLine($"RestoreVerticalLayout: no vplace for {el.Name}"); continue; }
                 try
                 {
-                    OLog($"RESTORE {el.Name} cur={el.Parent?.GetType().Name ?? "NULL"} target={vp.parent?.GetType().Name}#{vp.parent?.GetHashCode()}");
                     DetachFromParent(el);
                     el.Margin = vp.margin;
                     el.Width  = vp.w;   // Original-Groesse zurueck (Horizontal aendert Kachel-Groesse)
@@ -1255,12 +1235,10 @@ namespace TerminalVoiceOverlay.Views
                         case ContentControl cc: cc.Content = el;    break;
                         case Decorator d:       d.Child = el;       break;
                     }
-                    OLog($"  -> ok parentNow={el.Parent?.GetType().Name ?? "NULL"}");
                 }
-                catch (Exception ex) { OLog($"  -> FAIL {el.Name}: {ex.Message}"); }
+                catch (Exception ex) { Console.WriteLine($"RestoreVerticalLayout {el.Name} FAIL: {ex.Message}"); }
             }
             HBar.Children.Clear();
-            OLog("RESTORE done");
         }
 
         // Wendet die Orientierung an (Reparenting + Sichtbarkeit). Position +
