@@ -29,9 +29,10 @@ parsed=$(echo "$input" | jq -r '[
     .rate_limits.seven_day.used_percentage // "",
     .rate_limits.seven_day.resets_at // "",
     .session_id // "unknown",
-    .transcript_path // ""
+    .transcript_path // "",
+    .context_window.used_percentage // ""
 ] | join("")' 2>/dev/null)
-IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path <<< "$parsed"
+IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct <<< "$parsed"
 
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
@@ -329,8 +330,18 @@ week_used=$(clamp_pct "$week_used")
 # Call wird der Wert aktualisiert. Fix: Wenn das Transcript-File sehr klein ist
 # (frische Session), ueberschreiben wir ctx_used mit 0 — sobald Claude Code echte
 # Werte liefert, uebernehmen wir die. Schwelle 8 Zeilen = grob 1-2 Turns.
+# Kontext-Verbrauch: das OFFIZIELLE Feld used_percentage DIREKT nehmen. Das ist genau
+# das Mass das auch die Auto-Compaction triggert ((input+cache_read+cache_creation)/
+# context_window_size, nur Input-Tokens) und das die TUI oben anzeigt. Frueher: 100 -
+# remaining_percentage gerechnet (in aktueller CC-Version identisch, aber used_percentage
+# ist die robuste Quelle, falls Anthropic je einen Reserve-Puffer einfuehrt der die Summe
+# != 100 macht). Fallback auf 100-remaining fuer aeltere CC-Versionen ohne das Feld.
+# (Empirisch verifiziert 2026-05-25: context_window liefert used_percentage + remaining_percentage,
+#  context_window_size=1000000 bei opus-1M, total_input_tokens; Quelle: code.claude.com/docs/en/statusline.)
 ctx_used=""
-if [ -n "$ctx_remaining" ]; then
+if [ -n "$ctx_used_pct" ]; then
+    ctx_used=$(printf "%.0f" "$ctx_used_pct" 2>/dev/null)
+elif [ -n "$ctx_remaining" ]; then
     ctx_used=$((100 - ctx_remaining))
 fi
 # Fallback: wenn transcript_path leer ist, aus session_id + cwd_raw rekonstruieren.

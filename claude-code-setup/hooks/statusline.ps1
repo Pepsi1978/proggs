@@ -73,6 +73,9 @@ if ($obj) {
     if ($obj.context_window.remaining_percentage -ne $null) {
         $ctx_remaining = [int][Math]::Round($obj.context_window.remaining_percentage)
     }
+    if ($obj.context_window.used_percentage -ne $null) {
+        $ctx_used_pct = [int][Math]::Round($obj.context_window.used_percentage)
+    }
     if ($obj.rate_limits.five_hour.used_percentage -ne $null) {
         $five_h_used = [int][Math]::Round($obj.rate_limits.five_hour.used_percentage)
     }
@@ -343,8 +346,12 @@ if ($week_used -ne $null) {
     if ([double]$week_used -lt 0)   { $week_used = 0 }
 }
 
+# Kontext-Verbrauch: das OFFIZIELLE Feld used_percentage DIREKT nehmen (genau das Mass
+# das die Auto-Compaction triggert + die TUI anzeigt). Fallback auf 100-remaining fuer
+# aeltere CC-Versionen ohne das Feld. Empirisch verifiziert 2026-05-25. Spiegelt statusline.sh.
 $ctx_used = $null
-if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
+if ($ctx_used_pct -ne $null) { $ctx_used = $ctx_used_pct }
+elseif ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
 # Frank-Bug-Report 2026-05-10 abend: Nach /clear oder Session-Start zeigt Claude
 # Code in stdin noch den ALTEN context_window.remaining_percentage aus der letzten
 # API-Antwort (z.B. 99% obwohl gerade gecleart). Erst nach dem ersten neuen API-
