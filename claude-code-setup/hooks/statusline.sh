@@ -375,6 +375,24 @@ if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
+# 7d Reset-Countdown — Tage + Stunden (Frank 2026-05-25). Format: "3D10H" bzw. nur
+# "10H" wenn weniger als ein Tag verbleibt. Wird in derselben grauen Farbe (DIM) in
+# Klammern hinter den 7d-Balken gesetzt, analog zum 5h-Countdown. Plausibel: 0..8
+# Tage (7d-Fenster + 1 Tag Toleranz), damit kaputte Timestamps keinen Absurd-Countdown zeigen.
+week_countdown=""
+if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
+    wdiff=$((week_resets - now_ts))
+    if [ "$wdiff" -gt 0 ] && [ "$wdiff" -le 691200 ]; then
+        wdays=$((wdiff / 86400))
+        whours=$(( (wdiff % 86400) / 3600 ))
+        if [ "$wdays" -ge 1 ]; then
+            week_countdown="${wdays}D${whours}H"
+        else
+            week_countdown="${whours}H"
+        fi
+    fi
+fi
+
 # Uhrzeit
 printf -v time '%(%H:%M)T' -1
 
@@ -538,11 +556,15 @@ if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 
     printf "${GSEP}${PACE}slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
-# 3. 7d-Limit mit Balken
+# 3. 7d-Limit mit Balken (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
 if [ -n "$week_used" ]; then
     col=$(pct_color "$week_used")
     bar=$(make_bar "$week_used" "$col")
-    printf "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%%${R}"
+    if [ -n "$week_countdown" ]; then
+        printf "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%%${R} ${DIM}(${week_countdown})${R}"
+    else
+        printf "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%%${R}"
+    fi
 else
     printf "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi

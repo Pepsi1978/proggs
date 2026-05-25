@@ -406,6 +406,24 @@ if ($five_h_resets -gt 0) {
     }
 }
 
+# 7d Reset-Countdown — Tage + Stunden (Frank 2026-05-25). Format: "3D10H" bzw. nur
+# "10H" wenn weniger als ein Tag verbleibt. Wird in derselben grauen Farbe (DIM) in
+# Klammern hinter den 7d-Balken gesetzt, analog zum 5h-Countdown. Plausibel: 0..8 Tage.
+$week_countdown = ''
+if ($week_resets -gt 0) {
+    $nowW = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $wdiff = $week_resets - $nowW
+    if ($wdiff -gt 0 -and $wdiff -le 691200) {
+        $wdays = [int][Math]::Floor($wdiff / 86400)
+        $whours = [int][Math]::Floor(($wdiff % 86400) / 3600)
+        if ($wdays -ge 1) {
+            $week_countdown = "${wdays}D${whours}H"
+        } else {
+            $week_countdown = "${whours}H"
+        }
+    }
+}
+
 $time = Get-Date -Format 'HH:mm'
 
 # Farben (ANSI 24-bit)
@@ -527,11 +545,15 @@ if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $out += "${GSEP}${PACE}slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
-# 3. 7d
+# 3. 7d (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
 if ($week_used -ne $null) {
     $col = Get-PctColor $week_used
     $bar = Get-Bar $week_used $col
-    $out += "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%${R}"
+    if ($week_countdown) {
+        $out += "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%${R} ${DIM}(${week_countdown})${R}"
+    } else {
+        $out += "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%${R}"
+    }
 } else {
     $out += "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
