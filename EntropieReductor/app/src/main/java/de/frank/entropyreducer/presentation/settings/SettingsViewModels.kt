@@ -632,7 +632,7 @@ constructor(
         content: String,
         category: de.frank.entropyreducer.domain.model.PromptCategory =
             de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN,
-        model: String = "gemini-2.5-flash",
+        model: String = "gemini-3.1-flash-lite",
         trustModeDefault: Boolean = false,
     ) = viewModelScope.launch {
         val now = System.currentTimeMillis()

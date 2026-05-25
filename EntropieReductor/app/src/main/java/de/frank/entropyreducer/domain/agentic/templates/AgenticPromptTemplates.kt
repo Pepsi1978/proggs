@@ -21,7 +21,7 @@ data class AgenticPromptTemplate(
     val name: String,
     val content: String,
     val category: PromptCategory,
-    val model: String = "gemini-2.5-flash",
+    val model: String = "gemini-3.1-flash-lite",
     val writeToolsToGrant: List<String> = emptyList(),
 )
 
@@ -30,7 +30,7 @@ object AgenticPromptTemplates {
     val WOCHENANALYSE = AgenticPromptTemplate(
         name = "Wochenanalyse",
         category = PromptCategory.ANALYSE,
-        model = "gemini-2.5-pro",
+        model = "gemini-3.1-flash-lite",
         content =
             """
             Du bist mein woechentlicher Analyse-Begleiter.
@@ -55,7 +55,7 @@ object AgenticPromptTemplates {
     val AUFGABEN_AUS_ENTROPIE = AgenticPromptTemplate(
         name = "Aufgaben aus Entropie",
         category = PromptCategory.AUFGABEN,
-        model = "gemini-2.5-flash",
+        model = "gemini-3.1-flash-lite",
         writeToolsToGrant = listOf("create_aufgabe"),
         content =
             """
@@ -85,7 +85,7 @@ object AgenticPromptTemplates {
     val FORSCHER_BRIEFING = AgenticPromptTemplate(
         name = "Forscher-Briefing",
         category = PromptCategory.FORSCHER,
-        model = "gemini-2.5-pro",
+        model = "gemini-3.1-flash-lite",
         writeToolsToGrant = listOf("create_hypothese", "create_forscher_session"),
         content =
             """
@@ -111,7 +111,7 @@ object AgenticPromptTemplates {
     val CODEX_SYNTHESE = AgenticPromptTemplate(
         name = "Codex-Synthese",
         category = PromptCategory.CODEX,
-        model = "gemini-2.5-pro",
+        model = "gemini-3.1-flash-lite",
         content =
             """
             Du erstellst eine kompakte Codex-Synthese meines aktuellen Zustands.
@@ -136,7 +136,7 @@ object AgenticPromptTemplates {
     val INSIGHT_UPDATE = AgenticPromptTemplate(
         name = "Insight-Update",
         category = PromptCategory.ANALYSE,
-        model = "gemini-2.5-flash",
+        model = "gemini-3.1-flash-lite",
         content =
             """
             Du pruefst ob meine Insights noch aktuell sind.
@@ -160,7 +160,7 @@ object AgenticPromptTemplates {
     val BIOMARKER_SPIKE_ERKENNUNG = AgenticPromptTemplate(
         name = "Biomarker-Spike-Erkennung",
         category = PromptCategory.ANALYSE,
-        model = "gemini-2.5-pro",
+        model = "gemini-3.1-flash-lite",
         content =
             """
             Du findest Tage mit ungewoehnlichen Koerperwerten und verknuepfst sie
@@ -189,7 +189,7 @@ object AgenticPromptTemplates {
     val THESEN_KONSOLIDIERUNG = AgenticPromptTemplate(
         name = "Thesen-Konsolidierung",
         category = PromptCategory.THESEN,
-        model = "gemini-2.5-pro",
+        model = "gemini-3.1-flash-lite",
         content =
             """
             Du pruefst meine Thesen auf Widersprueche und Ueberlappungen.

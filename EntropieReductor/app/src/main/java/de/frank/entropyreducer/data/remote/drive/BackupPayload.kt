@@ -180,9 +180,9 @@ data class BackupSavedPrompt(
     val category: String = "AUFGABEN",
     /**
      * Schema v9 (Frank-Wunsch 2026-05-21): Vom Nutzer gewaehltes Gemini-Modell
-     * fuer agentic-AI-Ausfuehrungen. Default "gemini-2.5-flash".
+     * fuer agentic-AI-Ausfuehrungen. Default "gemini-3.1-flash-lite".
      */
-    val model: String = "gemini-2.5-flash",
+    val model: String = "gemini-3.1-flash-lite",
     /**
      * Schema v9: Optionales Tages-Token-Limit. null = kein Limit.
      */

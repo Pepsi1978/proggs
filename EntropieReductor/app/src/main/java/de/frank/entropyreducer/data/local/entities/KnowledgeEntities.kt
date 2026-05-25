@@ -26,10 +26,11 @@ data class SavedPromptEntity(
     /**
      * Vom Nutzer gewaehltes Gemini-Modell fuer agentic-AI-Ausfuehrungen.
      * Beispiele: "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite".
-     * Default = flash (schnell, guenstig, ausreichend fuer die meisten Workflows).
+     * Default = Gemini 3.1 Flash Lite (Frank-Wunsch 2026-05-25: app-weites
+     * Standard-Modell, schnell und guenstig).
      * Frank-Entscheidung 2026-05-21: kein Auto-Selector, immer manuell pro Prompt.
      */
-    val model: String = "gemini-2.5-flash",
+    val model: String = "gemini-3.1-flash-lite",
     /**
      * Optionales Tages-Token-Limit fuer diesen Prompt. null = kein Limit. Bei
      * Ueberschreitung blockiert der WorkflowRunner weitere Aufrufe mit Status

@@ -222,7 +222,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
             initialName = "",
             initialContent = "",
             category = cat,
-            initialModel = "gemini-2.5-flash",
+            initialModel = "gemini-3.1-flash-lite",
             initialTrust = false,
             onSave = { n, c, model, trust ->
                 vm.create(n, c, cat, model, trust)
