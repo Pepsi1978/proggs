@@ -148,4 +148,8 @@ ausklappen:
 - [ ] Y-Koordinaten invertiert (macOS unten-links), `NSScreen.visibleFrame`.
 - [ ] Positionen absolut merken/wiederherstellen; Diskette-Positionen mit Vorrang.
 - [ ] Generations-Guard gegen Hover-Ueberlappung.
+- [ ] Eingeklappte Mic-Pille = **echter zentrierter Kreis** (nicht Kapsel): quadratisch,
+      CornerRadius = halbe Kantenlaenge, Mic mittig drin. Auf Windows: 64×64-Border,
+      CornerRadius 32, zentriert im 96×64-Fenster. macOS: runde `NSView`/Layer
+      (`cornerRadius = bounds.width/2`), zentriert.
 - [ ] Gegen weisser Terminal-Schrift testen — muss flackerfrei sein.
