@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
-# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Context | Ordner | Zeit
+# Reihenfolge: Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context | Ordner | Zeit
 
 input=$(cat)
 
@@ -536,27 +536,33 @@ esac
 # folgen dahinter. Kontext bleibt direkt hinter dem Ordner wie zuvor.
 EMPTY_BAR="${TRACK}░░░░░░░${R}"
 
-# 1. 5h-Limit mit Balken (erstes Element — KEIN fuehrender Trenner)
+# 1. Modell (erstes Element — KEIN fuehrender Trenner. Frank 2026-05-25: ganz nach vorne)
+printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+
+# 2. Effort (direkt hinter dem Modell)
+printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
+
+# 3. 5h-Limit mit Balken
 if [ -n "$five_h_used" ]; then
     col=$(pct_color "$five_h_used")
     bar=$(make_bar "$five_h_used" "$col")
     if [ -n "$five_h_countdown" ]; then
-        printf "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R} ${DIM}(${five_h_countdown})${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R} ${DIM}(${five_h_countdown})${R}"
     else
-        printf "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R}"
     fi
 else
-    printf "${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+    printf "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# 2. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+# 4. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
 #     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets" 18000)
     printf "${GSEP}${PACE}slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
-# 3. 7d-Limit mit Balken (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
+# 5. 7d-Limit mit Balken (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
 if [ -n "$week_used" ]; then
     col=$(pct_color "$week_used")
     bar=$(make_bar "$week_used" "$col")
@@ -569,20 +575,14 @@ else
     printf "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# 4. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage
+# 6. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage
 #     (604800s), eigene Feature-Farbe (Pink). Nur wenn Verbrauch UND 7d-Reset bekannt.
 if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     pacebar7=$(make_pace_bar "$week_used" "$week_resets" 604800)
     printf "${GSEP}${PACE7}slow${R} ${pacebar7} ${PACE7}fast${R}"
 fi
 
-# 5. Modell (jetzt hinter dem 7d-Pacing — Frank 2026-05-25)
-printf "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
-
-# 6. Effort (rechts neben dem Modell)
-printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
-
-# 7. Context-Verbrauch (direkt hinter dem Effort — Frank 2026-05-25)
+# 7. Context-Verbrauch (hinter den Limit-Bereichen, vor dem Ordner — Frank 2026-05-25)
 if [ -n "$ctx_used" ]; then
     col=$(pct_color "$ctx_used")
     bar=$(make_bar "$ctx_used" "$col")
