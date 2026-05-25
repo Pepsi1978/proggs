@@ -1439,100 +1439,133 @@ namespace TerminalVoiceOverlay.Views
             ReassertTopmostIfVisible();
         }
 
-        // Laufender Glide-Handler (CompositionTarget.Rendering). Null = kein Glide aktiv.
-        private EventHandler? _glideHandler;
+        // ── Content-Glide (GPU) statt Fenster-Bewegung ──
+        // Recherche 2026-05-25 (Memory: wpf-overlay-smooth-animation): Ein
+        // transparentes Topmost-Fenster zu BEWEGEN ruckelt bei WPF grundsaetzlich
+        // (Layered Window / UpdateLayeredWindow, GPU→CPU-Kopie pro Frame). Best
+        // Practice (MS-Doku): Fenster STEHEN lassen, den INHALT per RenderTransform
+        // + BitmapCache (GPU-Textur) gleiten. Wir vergroessern das Fenster fuer die
+        // Dauer des Glides auf die Gleitstrecke, schieben die Pille per
+        // TranslateTransform und setzen das Fenster danach wieder auf Pillen-Groesse
+        // an der Zielposition.
+        private FrameworkElement? _glideView;
+        private HorizontalAlignment _glideOrigH;
+        private VerticalAlignment _glideOrigV;
+        private double _glideTargetLeft, _glideTargetTop;
 
         /// <summary>
-        /// Laesst das Overlay sanft zur Zielposition gleiten statt hart zu
-        /// springen (Frank-Wunsch 2026-05-25). Bewusst NICHT per DoubleAnimation
-        /// auf Window.Left/Top: das lief sichtbar ruckelig, weil die Animations-
-        /// Uhr nicht zuverlaessig pro Frame einen Wert liefert UND jeder Achsen-
-        /// Setter eine eigene Fenster-Verschiebung ausloest (bei AllowsTransparency
-        /// + Topmost besonders teuer). Stattdessen: ein Tick pro ECHTEM Render-
-        /// Frame (CompositionTarget.Rendering), beide Koordinaten in EINEM Win32-
-        /// SetWindowPos-Aufruf, weiche Ease-in-out-Kurve. Am Ende werden Left/Top
-        /// (DIPs) final gesetzt, damit WPF wieder die Wahrheit kennt (Drag liest davon).
+        /// Laesst die Pille sanft zur Zielposition gleiten — GPU-kompositiert, ohne
+        /// das (teure) Bewegen des Layered-Windows. Frank-Wunsch 2026-05-25.
         /// </summary>
         private void AnimateWindowTo(double targetLeft, double targetTop)
         {
             try
             {
-                StopGlide(); // evtl. laufenden Glide zuerst beenden
+                StopGlide(); // evtl. laufenden Glide sauber abschliessen
 
                 double startLeft = Left, startTop = Top;
-                // Sehr kurze Distanz → direkt setzen, kein Glide noetig.
-                if (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0)
+                if (_isCollapsed ||
+                    (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0))
                 {
                     Left = targetLeft; Top = targetTop;
                     return;
                 }
 
-                var src = PresentationSource.FromVisual(this);
-                double dpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-                double dpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
-                var hwnd = new WindowInteropHelper(this).Handle;
+                // Pillen-Groesse der aktuellen Orientierung (fest 96 vertikal, Inhalt horizontal).
+                double pillW = _isHorizontal ? ActualWidth : 96.0;
+                double pillH = _isHorizontal ? ActualHeight : FullHeight;
+                var view = _isHorizontal ? (FrameworkElement)HorizontalView : FullView;
 
-                // Dauer an die Strecke koppeln: laenger = mehr Frames pro Pixel
-                // = weicher (besonders bei der hohen Saeule, die teuer zu
-                // bewegen ist). Etwas grosszuegiger als zuvor fuer "120-Hz-Gefuehl".
+                // Vereinigungs-Rechteck von Start- und Zielposition (Bildschirm-DIPs):
+                // so gross muss das Fenster waehrend des Glides sein, damit die Pille
+                // an beiden Enden hineinpasst und nie ueber den Fensterrand geclippt wird.
+                double ux = Math.Min(startLeft, targetLeft);
+                double uy = Math.Min(startTop, targetTop);
+                double uw = Math.Max(startLeft, targetLeft) + pillW - ux;
+                double uh = Math.Max(startTop, targetTop) + pillH - uy;
+
+                _glideView = view;
+                _glideOrigH = view.HorizontalAlignment;
+                _glideOrigV = view.VerticalAlignment;
+                _glideTargetLeft = targetLeft;
+                _glideTargetTop  = targetTop;
+
+                // Pille oben-links im (grossen) Fenster verankern; Transform setzt sie an den Start.
+                view.HorizontalAlignment = HorizontalAlignment.Left;
+                view.VerticalAlignment   = VerticalAlignment.Top;
+                var tt = new TranslateTransform(startLeft - ux, startTop - uy);
+                view.RenderTransform = tt;
+                view.CacheMode = new BitmapCache(); // einmal in GPU-Textur rendern, danach nur blitten
+
+                SizeToContent = SizeToContent.Manual;
+                Left = ux; Top = uy; Width = uw; Height = uh;
+
+                // Sicher sichtbar machen (ApplyOrientation kann Opacity gegen den
+                // Form-Wechsel-Flash auf 0 gesetzt haben); laufende Fade-Animation loesen.
+                view.BeginAnimation(UIElement.OpacityProperty, null);
+                view.Opacity = 1;
+
                 double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
-                double durationMs = Math.Clamp(dist * 1.3, 340.0, 600.0);
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                _glideHandler = (_, _) =>
-                {
-                    double t = sw.Elapsed.TotalMilliseconds / durationMs;
-                    if (t >= 1.0) t = 1.0;
-                    double e = Smootherstep(t);
-                    double curLeft = startLeft + (targetLeft - startLeft) * e;
-                    double curTop  = startTop  + (targetTop  - startTop)  * e;
-
-                    if (hwnd != IntPtr.Zero)
-                    {
-                        // EIN Move pro Frame in Geraetepixeln. SWP_NOZORDER:
-                        // Z-Order NICHT jeden Frame neu berechnen (spart Aufwand;
-                        // die Pille ist bereits Topmost, _topmostAssertTimer haelt das).
-                        Win32.SetWindowPos(hwnd, IntPtr.Zero,
-                            (int)Math.Round(curLeft * dpiX), (int)Math.Round(curTop * dpiY),
-                            0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE | Win32.SWP_NOZORDER);
-                    }
-                    else
-                    {
-                        Left = curLeft; Top = curTop;
-                    }
-
-                    if (t >= 1.0)
-                    {
-                        StopGlide();
-                        Left = targetLeft; Top = targetTop; // WPF-Eigenschaften final synchronisieren
-                    }
-                };
-                CompositionTarget.Rendering += _glideHandler;
+                var dur = new Duration(TimeSpan.FromMilliseconds(Math.Clamp(dist * 1.3, 340.0, 600.0)));
+                var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+                var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
+                var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
+                ay.Completed += (_, _) => FinalizeGlide();
+                tt.BeginAnimation(TranslateTransform.XProperty, ax);
+                tt.BeginAnimation(TranslateTransform.YProperty, ay);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
-                StopGlide();
+                FinalizeGlide();
                 Left = targetLeft; Top = targetTop; // Fallback: hart setzen
             }
         }
 
-        /// <summary>Beendet einen laufenden Glide (Rendering-Handler abmelden).</summary>
-        private void StopGlide()
+        /// <summary>
+        /// Schliesst den Content-Glide ab: Transform/Cache zuruecksetzen, Ausrichtung
+        /// wiederherstellen und das Fenster auf Pillen-Groesse an die Zielposition setzen.
+        /// </summary>
+        private void FinalizeGlide()
         {
-            if (_glideHandler != null)
+            var v = _glideView;
+            if (v == null) return;
+            _glideView = null;
+            try
             {
-                CompositionTarget.Rendering -= _glideHandler;
-                _glideHandler = null;
+                if (v.RenderTransform is TranslateTransform t)
+                {
+                    t.BeginAnimation(TranslateTransform.XProperty, null);
+                    t.BeginAnimation(TranslateTransform.YProperty, null);
+                }
+                v.RenderTransform = null;
+                v.CacheMode = null;
+                v.HorizontalAlignment = _glideOrigH;
+                v.VerticalAlignment   = _glideOrigV;
+                v.Opacity = 1;
+
+                if (_isHorizontal)
+                {
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                }
+                else
+                {
+                    SizeToContent = SizeToContent.Manual;
+                    Width = 96; Height = FullHeight;
+                }
+                Left = _glideTargetLeft;
+                Top  = _glideTargetTop;
             }
+            catch (Exception ex) { Console.WriteLine($"FinalizeGlide: {ex.Message}"); }
+            ReassertTopmostIfVisible();
         }
 
-        // Smootherstep (Perlin): nicht nur Geschwindigkeit, auch Beschleunigung
-        // ist an beiden Enden 0 (C2-stetig). Wirkt deutlich weicher als Cubic-
-        // Ease — kein harter Geschwindigkeitssprung am Anfang/Ende, daher kein
-        // wahrnehmbares "Anrucken".
-        private static double Smootherstep(double t)
-            => t * t * t * (t * (t * 6 - 15) + 10);
+        /// <summary>Bricht einen laufenden Glide ab und springt ans Ziel (z.B. bei Drag-Start).</summary>
+        private void StopGlide()
+        {
+            if (_glideView != null) FinalizeGlide();
+        }
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
         // Ausrichtung eine Position gemerkt ist, sonst Weiss. Hell-Gruen nur als
