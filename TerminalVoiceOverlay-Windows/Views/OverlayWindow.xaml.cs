@@ -1452,6 +1452,12 @@ namespace TerminalVoiceOverlay.Views
         private HorizontalAlignment _glideOrigH;
         private VerticalAlignment _glideOrigV;
         private double _glideTargetLeft, _glideTargetTop;
+        private Brush? _glideOrigBg;
+        // Deckender Hintergrund waehrend des Glides: verhindert, dass das
+        // Terminal (weisse CLI-Schrift) durch die sonst ~70%-transparente Pille
+        // durchblitzt, weil das Layered-Window-Compositing dem Verschieben einen
+        // Frame hinterherhinkt. Dunkler Grundton passend zum Overlay.
+        private static readonly SolidColorBrush GlideOpaqueBg = Brush("#FF1A1A1A");
 
         /// <summary>
         /// Laesst die Pille sanft zur Zielposition gleiten — GPU-kompositiert, ohne
@@ -1495,6 +1501,9 @@ namespace TerminalVoiceOverlay.Views
                 view.VerticalAlignment   = VerticalAlignment.Top;
                 var tt = new TranslateTransform(startLeft - ux, startTop - uy);
                 view.RenderTransform = tt;
+                // Waehrend des Glides deckend machen → kein Terminal-Durchblitzen.
+                _glideOrigBg = (view as Border)?.Background;
+                if (view is Border bdr) bdr.Background = GlideOpaqueBg;
                 view.CacheMode = new BitmapCache(); // einmal in GPU-Textur rendern, danach nur blitten
 
                 SizeToContent = SizeToContent.Manual;
@@ -1540,6 +1549,7 @@ namespace TerminalVoiceOverlay.Views
                 }
                 v.RenderTransform = null;
                 v.CacheMode = null;
+                if (v is Border vb) vb.Background = _glideOrigBg; // normale Transluzenz zurueck
                 v.HorizontalAlignment = _glideOrigH;
                 v.VerticalAlignment   = _glideOrigV;
                 v.Opacity = 1;
