@@ -670,6 +670,13 @@ namespace TerminalVoiceOverlay.Views
         private bool _mouseOverOverlay;
         private bool _usedSinceExpand;
         private DispatcherTimer? _collapseTimer;
+        // Expandierte Fensterposition, gemerkt beim Einklappen → exakt
+        // wiederhergestellt beim Aufklappen (absolut statt relativ, damit der
+        // Beam-Crossfade auch bei Hover-Ueberlappung konsistent bleibt).
+        private double _preCollapseLeft, _preCollapseTop;
+        // Generations-Zaehler fuer den Einklapp-/Ausklapp-Beam: jeder neue
+        // Uebergang erhoeht ihn; veraltete Animations-Callbacks brechen ab.
+        private int _collapseBeamGen;
 
         private void InitAutoHide()
         {
@@ -885,7 +892,12 @@ namespace TerminalVoiceOverlay.Views
             _collapseTimer.Start();
         }
 
-        /// <summary>Klappt das Overlay sofort wieder zum vollen Pillar auf.</summary>
+        /// <summary>
+        /// Klappt das Overlay wieder zur vollen Form auf — mit Beam-Crossfade:
+        /// Mic-Pille ausblenden → unsichtbar zur vollen Form + gemerkte
+        /// Expand-Position zuruecksetzen → volle Form weich einblenden. Beide
+        /// Orientierungen. Frank-Wunsch 2026-05-25 ("mit dem gleichen Beam-Effekt").
+        /// </summary>
         private void Expand()
         {
             if (!_isCollapsed) return;
@@ -893,50 +905,59 @@ namespace TerminalVoiceOverlay.Views
             _usedSinceExpand = false;
             _collapseTimer?.Stop();
 
-            if (_isHorizontal)
+            int gen = ++_collapseBeamGen;
+            // Mic-Pille sichtbar ausblenden.
+            BeamFadeOut(CollapsedView, () =>
             {
-                // Horizontal: zurueck zur vollen Leiste, kanonisch unten rechts —
-                // oder die in dieser Session gespeicherte Diskette-Position.
-                CollapsedView.Visibility  = Visibility.Collapsed;
-                HorizontalView.Visibility = Visibility.Visible;
-                SizeToContent = SizeToContent.WidthAndHeight;
-                UpdateLayout();
-                if (_savedHorizontalPos is { } sh)
-                {
-                    Left = sh.X; Top = sh.Y;
-                }
-                else if (_waW > 0)
-                {
-                    Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
-                }
-            }
-            else
-            {
+                if (gen != _collapseBeamGen) return; // durch neuen Uebergang ueberholt
+                // Unsichtbar auf die volle Form wechseln + Groesse/Position setzen.
                 CollapsedView.Visibility = Visibility.Collapsed;
-                FullView.Visibility = Visibility.Visible;
-                Height = FullHeight;
-                Top   -= CollapseTopOffset; // Fenster wieder nach oben → Mic bleibt an Ort
-            }
-            FadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
-            ShowPromptUiAfterExpand(); // vorher aktives Promptboard/Eingabefeld zurueckholen
-            ReassertTopmostIfVisible();
+                if (_isHorizontal)
+                {
+                    HorizontalView.Visibility = Visibility.Visible;
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                }
+                else
+                {
+                    FullView.Visibility = Visibility.Visible;
+                    SizeToContent = SizeToContent.Manual;
+                    Width  = 96;
+                    Height = FullHeight;
+                }
+                // Exakt die vor dem Einklappen gemerkte Expand-Position (absolut).
+                Left = _preCollapseLeft;
+                Top  = _preCollapseTop;
+                // Volle Form weich einblenden.
+                BeamFadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
+                ShowPromptUiAfterExpand(); // vorher aktives Promptboard/Eingabefeld zurueckholen
+                ReassertTopmostIfVisible();
+            });
         }
 
         /// <summary>
-        /// Klappt das Overlay sofort auf die kompakte Mic-Pille ein. Schiebt
-        /// das Fenster um <see cref="CollapseTopOffset"/> nach unten, damit
-        /// der Mic-Button an derselben Bildschirmposition bleibt.
+        /// Klappt das Overlay auf die kompakte Mic-Pille ein — mit Beam-Crossfade:
+        /// volle Form ausblenden → unsichtbar auf die Mic-Pille schrumpfen (Mic
+        /// bleibt an seiner Bildschirmposition) → Mic weich einblenden. Beide
+        /// Orientierungen. Die expandierte Position wird vorher gemerkt, damit
+        /// das Aufklappen sie exakt wiederherstellt.
         /// </summary>
         private void CollapseImmediate()
         {
             if (!_autoHideEnabled || _isCollapsed) return;
             _collapseTimer?.Stop();
+            _isCollapsed = true;
+            _usedSinceExpand = false;
 
+            // Expandierte Position merken (zum Wiederherstellen beim Aufklappen).
+            _preCollapseLeft = Left;
+            _preCollapseTop  = Top;
+
+            // Ziel-Geometrie der Mic-Pille JETZT (an der expandierten Form) messen,
+            // bevor irgendetwas ausgeblendet/veraendert wird.
+            double collapsedLeft, collapsedTop;
             if (_isHorizontal)
             {
-                // Mic-Bildschirmposition messen, BEVOR die Leiste ausgeblendet
-                // wird — damit die kompakte Pille genau dort sitzt wo der Mic war.
                 double micCx, micCy;
                 try
                 {
@@ -950,28 +971,38 @@ namespace TerminalVoiceOverlay.Views
                     micCx = Left + ActualWidth / 2;
                     micCy = Top + ActualHeight / 2;
                 }
-
-                HorizontalView.Visibility = Visibility.Collapsed;
-                CollapsedView.Visibility  = Visibility.Visible;
-                SizeToContent = SizeToContent.Manual;
-                Width  = 96;
-                Height = CollapsedHeight;
                 // CollapsedView-Mic-Mitte liegt bei (48,32) im 96x64-Fenster.
-                Left = micCx - 48;
-                Top  = micCy - 32;
+                collapsedLeft = micCx - 48;
+                collapsedTop  = micCy - 32;
             }
             else
             {
-                FullView.Visibility = Visibility.Collapsed;
-                CollapsedView.Visibility = Visibility.Visible;
-                Height = CollapsedHeight;
-                Top   += CollapseTopOffset;
+                // Vertikal: Breite bleibt 96, Fenster rutscht um CollapseTopOffset
+                // nach unten, damit der Mic an Ort bleibt (absolut vorberechnet).
+                collapsedLeft = Left;
+                collapsedTop  = Top + CollapseTopOffset;
             }
-            FadeIn(CollapsedView);
-            HidePromptUiForCollapse(); // Promptboard + Eingabefeld mit einklappen
-            _isCollapsed = true;
-            _usedSinceExpand = false;
-            ReassertTopmostIfVisible();
+
+            int gen = ++_collapseBeamGen;
+            UIElement fromView = _isHorizontal ? (UIElement)HorizontalView : FullView;
+
+            // Volle Form sichtbar ausblenden.
+            BeamFadeOut(fromView, () =>
+            {
+                if (gen != _collapseBeamGen) return; // durch neuen Uebergang ueberholt
+                // Unsichtbar auf die Mic-Pille schrumpfen.
+                fromView.Visibility = Visibility.Collapsed;
+                CollapsedView.Visibility = Visibility.Visible;
+                SizeToContent = SizeToContent.Manual;
+                Width  = 96;
+                Height = CollapsedHeight;
+                Left = collapsedLeft;
+                Top  = collapsedTop;
+                // Mic weich einblenden.
+                BeamFadeIn(CollapsedView);
+                HidePromptUiForCollapse(); // Promptboard + Eingabefeld mit einklappen
+                ReassertTopmostIfVisible();
+            });
         }
 
         /// <summary>
@@ -1058,12 +1089,12 @@ namespace TerminalVoiceOverlay.Views
         // el.Opacity): nach einer vorher gehaltenen Animation kann der lokale
         // Opacity-Basiswert 0 sein — ein "von el.Opacity" wuerde dann 0→0
         // animieren (kein sichtbares Ausblenden). Teil des Orientierungs-Beams.
-        private static void BeamFadeOut(UIElement el, Action onDone)
+        private static void BeamFadeOut(UIElement el, Action? onDone = null)
         {
             el.BeginAnimation(UIElement.OpacityProperty, null);
             var anim = new DoubleAnimation(1, 0, new Duration(TimeSpan.FromMilliseconds(240)))
             { EasingFunction = BeamEase };
-            anim.Completed += (_, _) => onDone();
+            anim.Completed += (_, _) => onDone?.Invoke();
             el.BeginAnimation(UIElement.OpacityProperty, anim);
         }
 
@@ -1071,13 +1102,13 @@ namespace TerminalVoiceOverlay.Views
         // erscheinen lassen (~380ms, 0 → 1), dann onDone (= an die Stelle
         // fallen). Bewusst laenger als das Ausblenden, damit der "Reinbeam"-
         // Moment ruhig und weich wirkt (Frank: "relativ langsam, sehr weich").
-        private static void BeamFadeIn(UIElement el, Action onDone)
+        private static void BeamFadeIn(UIElement el, Action? onDone = null)
         {
             el.BeginAnimation(UIElement.OpacityProperty, null);
             el.Opacity = 0;
             var anim = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(380)))
             { EasingFunction = BeamEase };
-            anim.Completed += (_, _) => onDone();
+            anim.Completed += (_, _) => onDone?.Invoke();
             el.BeginAnimation(UIElement.OpacityProperty, anim);
         }
 
