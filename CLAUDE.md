@@ -372,6 +372,22 @@ dass und warum semantisch statt Grep gesucht wird.
 - Die CLAUDE.md existiert NUR im Repository: `~/proggs/CLAUDE.md`
 - Es gibt KEINE Kopie im Home-Verzeichnis (`~/CLAUDE.md`) mehr — das Duplikat wurde am 2026-04-04 entfernt um ~8.700 Tokens Kontext zu sparen.
 
+## Compact Instructions
+
+Bei jeder Kontext-Komprimierung MUSS Folgendes erhalten bleiben (CLAUDE.md wird nach der
+Komprimierung frisch eingelesen — hier steht, was die Zusammenfassung niemals verlieren darf):
+
+- **Die 3 Hauptdirektiven** (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) gelten
+  ununterbrochen weiter — auch nach jeder Komprimierung.
+- **Aktueller Aufgaben-Stand:** Ziel der laufenden Aufgabe, was schon erledigt ist (welche
+  Commit-#Nummern), was noch aussteht. Offene Multi-Task-Listen (Semikolon-Aufgaben) vollstaendig.
+- **Uncommittete Arbeit:** Welche Dateien geaendert, aber noch nicht committed sind.
+- **Letzte Benutzer-Korrekturen/Praeferenzen** dieser Session, die noch nicht persistiert wurden.
+- **Commit+Push-Disziplin** sowie die Cross-Platform- und Status-Meldungs-Pflicht.
+
+Darf in der Zusammenfassung wegfallen: abgeschlossene Tool-Ausgaben im Detail, bereits committete
+Zwischenschritte, lange Datei-Dumps.
+
 ## Sprache
 - Kommunikation mit dem Benutzer auf Deutsch.
 - Code-Kommentare und Commit-Messages auf Englisch.
