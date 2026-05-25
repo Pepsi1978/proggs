@@ -141,6 +141,8 @@ constructor(
      */
     suspend fun applyManualOverrides(
         trackId: String,
+        durationSeconds: Long? = null,
+        distanceMeters: Double? = null,
         avgPaceSecPerKm: Double? = null,
         maxPaceSecPerKm: Double? = null,
         avgHeartRate: Int? = null,
@@ -168,6 +170,16 @@ constructor(
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?.forEach { editedLabels.add(it) }
+        if (durationSeconds != null && durationSeconds != existing.durationSeconds) {
+            editedLabels.add("Dauer")
+        }
+        if (
+            distanceMeters != null &&
+                (existing.distanceMeters == null ||
+                    kotlin.math.abs(distanceMeters - existing.distanceMeters) > 0.5)
+        ) {
+            editedLabels.add("Distanz")
+        }
         if (
             avgPaceSecPerKm != null &&
                 (existing.avgPaceSecPerKm == null ||
@@ -217,6 +229,11 @@ constructor(
         val mergedFields = editedLabels.joinToString(",").takeIf { it.isNotEmpty() }
         val updated =
             existing.copy(
+                durationSeconds = durationSeconds ?: existing.durationSeconds,
+                // Wenn die Dauer geaendert wird, endMs konsistent mitziehen
+                // (endMs = Start + Dauer) — sonst weicht die Detail-Anzeige ab.
+                endMs = durationSeconds?.let { existing.startMs + it * 1000L } ?: existing.endMs,
+                distanceMeters = distanceMeters ?: existing.distanceMeters,
                 avgPaceSecPerKm = avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
                 maxPaceSecPerKm = maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
                 avgSpeedKmh = avgPaceSecPerKm?.let { 3600.0 / it } ?: existing.avgSpeedKmh,

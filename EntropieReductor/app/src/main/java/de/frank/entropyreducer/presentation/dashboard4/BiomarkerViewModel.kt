@@ -849,6 +849,8 @@ constructor(
         viewModelScope.launch {
             amazfitRepo.applyManualOverrides(
                 trackId = trackId,
+                durationSeconds = overrides.durationSeconds,
+                distanceMeters = overrides.distanceMeters,
                 avgPaceSecPerKm = overrides.avgPaceSecPerKm,
                 maxPaceSecPerKm = overrides.maxPaceSecPerKm,
                 avgHeartRate = overrides.avgHeartRate,

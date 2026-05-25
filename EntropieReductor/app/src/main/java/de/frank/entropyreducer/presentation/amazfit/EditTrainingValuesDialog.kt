@@ -41,6 +41,10 @@ import java.util.Locale
  * existierenden Wert behalten.
  */
 data class ManualWorkoutOverrides(
+    // Frank-Wunsch 2026-05-25: Dauer (verstrichene Zeit) und Distanz manuell
+    // editierbar. Dauer in Sekunden, Distanz in Metern.
+    val durationSeconds: Long? = null,
+    val distanceMeters: Double? = null,
     val avgPaceSecPerKm: Double? = null,
     val maxPaceSecPerKm: Double? = null,
     val avgHeartRate: Int? = null,
@@ -70,6 +74,8 @@ fun EditTrainingValuesDialog(
     onSave: (ManualWorkoutOverrides) -> Unit,
 ) {
     // Vorbelegung mit aktuellen Werten (formatiert).
+    var duration by remember { mutableStateOf(workout.durationSeconds?.let { formatDurationHms(it) } ?: "") }
+    var distanceKm by remember { mutableStateOf(workout.distanceMeters?.let { formatKm(it) } ?: "") }
     var avgPace by remember { mutableStateOf(workout.avgPaceSecPerKm?.let { formatPaceMmSs(it) } ?: "") }
     var maxPace by remember { mutableStateOf(workout.maxPaceSecPerKm?.let { formatPaceMmSs(it) } ?: "") }
     var avgHr by remember { mutableStateOf(workout.avgHeartRate?.toString() ?: "") }
@@ -100,6 +106,40 @@ fun EditTrainingValuesDialog(
                     style = MaterialTheme.typography.labelSmall,
                 )
                 Spacer(Modifier.height(4.dp))
+
+                // Dauer + Distanz (Frank-Wunsch 2026-05-25: beide manuell editierbar.
+                // Wichtig fuer die Korrektur auf die verstrichene Zeit statt der
+                // Bewegungszeit. Dauer als h:mm:ss oder mm:ss; eine reine Zahl = Minuten.
+                // Distanz in Kilometern.)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = duration,
+                        onValueChange = { s -> duration = s.filter { it.isDigit() || it == ':' } },
+                        label = { Text("Dauer (h:mm:ss)") },
+                        placeholder = { Text("1:01:30") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = distanceKm,
+                        onValueChange = { s -> distanceKm = s.filter { it.isDigit() || it == '.' || it == ',' } },
+                        label = { Text("Distanz (km)") },
+                        placeholder = { Text("10,5") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
                 // Pace-Zeile
                 Row(
@@ -243,6 +283,8 @@ fun EditTrainingValuesDialog(
         confirmButton = {
             TextButton(onClick = {
                 val overrides = ManualWorkoutOverrides(
+                    durationSeconds = parseDurationToSeconds(duration),
+                    distanceMeters = parseKmToMeters(distanceKm),
                     avgPaceSecPerKm = parseMmSs(avgPace),
                     maxPaceSecPerKm = parseMmSs(maxPace),
                     avgHeartRate = avgHr.toIntOrNull(),
@@ -309,3 +351,56 @@ private fun formatDouble(v: Double): String {
         "%.1f".format(Locale.GERMANY, v)
     }
 }
+
+/**
+ * Parst eine Dauer-Eingabe zu Sekunden. Akzeptiert "H:MM:SS", "MM:SS" oder eine
+ * reine Zahl (= Minuten). Leer oder ungueltig → null (= bestehenden Wert behalten).
+ * Sanity: 1 Sekunde bis 24 Stunden.
+ */
+private fun parseDurationToSeconds(s: String): Long? {
+    val trimmed = s.trim()
+    if (trimmed.isEmpty()) return null
+    val parts = trimmed.split(":")
+    val total: Long = when (parts.size) {
+        3 -> {
+            val h = parts[0].toLongOrNull() ?: return null
+            val m = parts[1].toLongOrNull() ?: return null
+            val sec = parts[2].toLongOrNull() ?: return null
+            if (m !in 0..59 || sec !in 0..59) return null
+            h * 3600L + m * 60L + sec
+        }
+        2 -> {
+            val m = parts[0].toLongOrNull() ?: return null
+            val sec = parts[1].toLongOrNull() ?: return null
+            if (sec !in 0..59) return null
+            m * 60L + sec
+        }
+        1 -> {
+            // Reine Zahl = Minuten (Frank gibt oft nur die Minutenzahl ein).
+            val m = parts[0].toLongOrNull() ?: return null
+            m * 60L
+        }
+        else -> return null
+    }
+    return total.takeIf { it in 1L..86_400L }
+}
+
+/** Formatiert Sekunden als "H:MM:SS" (ab 1 h) oder "M:SS". */
+private fun formatDurationHms(seconds: Long): String {
+    val s = seconds.coerceAtLeast(0)
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val sec = s % 60
+    return if (h > 0) "%d:%02d:%02d".format(Locale.US, h, m, sec)
+    else "%d:%02d".format(Locale.US, m, sec)
+}
+
+/** Parst eine Kilometer-Eingabe (Komma oder Punkt) zu Metern. Leer/ungueltig → null. */
+private fun parseKmToMeters(s: String): Double? {
+    val km = parseDouble(s) ?: return null
+    if (km <= 0.0 || km > 1000.0) return null // Sanity: 0–1000 km
+    return km * 1000.0
+}
+
+/** Formatiert Meter als Kilometer mit Komma (10500 m → "10,5"). */
+private fun formatKm(meters: Double): String = formatDouble(meters / 1000.0)
