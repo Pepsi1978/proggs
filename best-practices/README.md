@@ -22,7 +22,9 @@ und was sich mit neuen Versionen geaendert hat. Gepflegt vom `best-practices`-Sk
 | 8 | Kontext-Management | [08-kontext/best-practices.md](08-kontext/best-practices.md) |
 | 9 | Token- & Kosten-Effizienz | [09-token-effizienz/best-practices.md](09-token-effizienz/best-practices.md) |
 | 10 | Arbeitsweise / Verhalten | [10-arbeitsweise/best-practices.md](10-arbeitsweise/best-practices.md) |
-| 11 | Neues / Horizont-Scan | [11-neues/best-practices.md](11-neues/best-practices.md) |
+| 11 | Researcher & Internet-Recherche | [11-researcher/best-practices.md](11-researcher/best-practices.md) |
+| 12 | Neues / Horizont-Scan | [12-neues/best-practices.md](12-neues/best-practices.md) |
 
-> Kategorien ab 12 werden bei Bedarf vom Skill selbst angelegt, wenn in Kategorie 11
-> eine neue Werkzeug-Klasse auftaucht, die ein eigenes Zuhause verdient.
+> "Neues" (Kategorie 12) ist die Auffangzone und bleibt IMMER die letzte Kategorie. Kommt eine
+> neue definierte Kategorie dazu, wird sie davor eingefuegt und "Neues" rueckt eine Nummer nach
+> hinten (Ordner entsprechend umbenannt).

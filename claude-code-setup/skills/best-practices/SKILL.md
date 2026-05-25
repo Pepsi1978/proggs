@@ -12,8 +12,7 @@ description: >
   "sind meine Hooks/Skills/Agents/MCP noch aktuell", "aktualisiere mein Harness-Wissen",
   "wie nutzt man Hooks/Skills/Agents/Plugins/MCP heute am besten", "Harness-Recherche".
   NICHT triggern fuer Best Practices von PROJEKT-Code (Kotlin, Compose, Android, C#,
-  TypeScript, Rust) — dafuer ist dieser Skill nicht da. Er betrifft ausschliesslich die
-  Claude-Code-Werkzeuge selbst, also WIE man den Harness am besten benutzt.
+  TypeScript, Rust) — dafuer ist dieser Skill nicht da.
 invocation: user
 ---
 
@@ -58,7 +57,8 @@ best-practices/
 ├── 08-kontext/best-practices.md
 ├── 09-token-effizienz/best-practices.md
 ├── 10-arbeitsweise/best-practices.md
-└── 11-neues/best-practices.md
+├── 11-researcher/best-practices.md
+└── 12-neues/best-practices.md   ← "Neues" bleibt immer die letzte Kategorie
 ```
 
 Der Ordner liegt bewusst **im Repo**, damit er nach macOS mit-synct. Jede Kategorie-Datei
@@ -77,7 +77,7 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    - **WAS** hat sich geaendert (offizielles Changelog)
    - **WIE** wendet man es am besten an (Anthropic-Docs / Engineering-Blog)
    - **Alternativen** von aussen (externe Quellen, klar als `extern` gelabelt, sekundaer)
-   Was in keine Kategorie 1–10 passt → Kategorie 11 (Neues).
+   Was in keine definierte Kategorie passt → Kategorie 12 (Neues, immer die letzte Kategorie).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
    `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 11 bekommen einen eigenen
@@ -117,7 +117,7 @@ deterministischen Script. NICHT als Prosa rekonstruieren — aufrufen:
 - Das Script pflegt `_state.json` selbst und gibt am Ende eine Verifikation aus (Versions-Header-Zahl,
   Duplikat-Check). Getestet 2026-05-25: FirstRun = 296 Versionen, inkrementell haengt exakt die neuen an.
 
-## Taxonomie (11 Kategorien, selbst-erweiternd)
+## Taxonomie (12 Kategorien, selbst-erweiternd)
 
 | # | Kategorie | Inhalt |
 |---|-----------|--------|
@@ -131,28 +131,33 @@ deterministischen Script. NICHT als Prosa rekonstruieren — aufrufen:
 | 8 | Kontext-Management | Compaction, Microcompact, Autocompact-Schwellen, Memory |
 | 9 | Token- & Kosten-Effizienz | Caching, Modellwahl, Effort-Levels, Parallelisierungs-Oekonomie |
 | 10 | Arbeitsweise / Verhalten | Wie man Fragen angeht, Multi-Task, Planung, TDD |
-| 11 | Neues / Horizont-Scan | Auffangzone fuer alles, was in 1–10 nicht passt. Waechst zu eigenen Kategorien heran. |
+| 11 | Researcher & Internet-Recherche | Robuster Einsatz von Researcher-Subagenten: Parallelitaet, Token-/Fetch-Limits, Absturz-Vermeidung, Checkpointing, gute Prompts fuer Web-Recherche. (Wir nutzen Internet-Researcher sehr oft — und sie stuerzen oft ab, daher eigener Fokus neben Kategorie 3 Agents.) |
+| 12 | Neues / Horizont-Scan | Auffangzone fuer alles, was in keine definierte Kategorie passt. **Bleibt IMMER die letzte Kategorie** (hoechste Nummer). |
 
-Kategorie 11 ist wichtig: Nicht nur das suchen, was schon bekannt ist — gerade die ganz
+Kategorie 12 (Neues) ist wichtig: Nicht nur das suchen, was schon bekannt ist — gerade die ganz
 neuen Faehigkeiten bringen den groessten Sprung. Alles Unbekannte landet hier und wird,
 wenn es sich als wichtig erweist, zu einer eigenen Kategorie.
+
+**Regel zur Reihenfolge:** "Neues" ist IMMER die letzte Kategorie (hoechste Nummer). Kommt eine
+neue definierte Kategorie dazu, wird sie VOR "Neues" eingefuegt und "Neues" rueckt eine Nummer
+nach hinten (Ordner entsprechend umbenennen). Beispiel: aus `12-neues` wird `13-neues`, die neue
+Kategorie wird 12.
 
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Sonnet 4.6. **Effort:** X-High.
-- **Max 130.000 Token pro Researcher.** Kein Researcher darf darueber hinaus laufen.
-- **Scope klein schneiden — beim Volllauf 1 Kategorie pro Researcher:** Empirisch (Erstlauf
-  2026-05-25) verbraucht ein Researcher mit 2–3 Kategorien ~150–160k Token — UEBER dem 130k-Ziel.
-  Deshalb beim Volllauf genau EINE Kategorie pro Researcher. Nur bei kleinen Delta-Laeufen duerfen
-  verwandte Kategorien zusammengefasst werden, wenn der Zuwachs gering ist.
-- **Das 130k-Limit ist ein Ziel, kein Selbst-Stopp:** Ein Subagent misst seinen Token-Verbrauch
-  nicht live und kann sich nicht selbst stoppen. Durchgesetzt wird das Limit ueber (a) kleinen
-  Scope (1 Kategorie) und (b) die Continuation unten — nicht ueber Selbstmessung.
+- **1 Researcher pro Kategorie — ALLE gleichzeitig:** Je Bereich genau ein Researcher, und alle
+  werden in EINEM Rutsch parallel gestartet (bei 12 Kategorien: 12 Researcher; waechst die Taxonomie,
+  entsprechend bis zu ~20 gleichzeitig). Diese Parallelitaet unterstuetzt Claude — KEIN 5er-Limit hier.
+  Der enge Scope (1 Kategorie) haelt jeden Researcher klein, und alle laufen zeitgleich.
+- **Token-Ziel ~130k — Ueberschreitung = Absturzrisiko:** Ein Researcher misst seinen Verbrauch nicht
+  live und kann sich nicht selbst stoppen. Laeuft er zu gross/lang, stuerzt er ab und verliert SEINEN
+  GESAMTEN Output — genau das passiert oft bei Internet-Researchern. Schutz daher ueber engen Scope
+  (1 Kategorie) + Checkpoint/Continuation, nicht ueber Selbstmessung.
 - **Checkpoint / Continuation:** Der Researcher schreibt seinen Fortschritt **inkrementell** in
-  die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo
-  weitermachen). Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint**
-  gestartet. So geht nie Fortschritt verloren und nichts stuerzt ab.
-- **Parallelitaet:** Max ~5 Researcher gleichzeitig (Sweet Spot, sichtbar im Hauptchat).
+  die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo weitermachen).
+  Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint** gestartet. So geht nie
+  Fortschritt verloren und nichts stuerzt ab.
 - Zusaetzlich gilt die allgemeine Researcher-Regel: max 50 Ergebnisse / 15 Web-Fetches / 10 Min je Lauf.
 
 ## Quellen-Rangordnung
