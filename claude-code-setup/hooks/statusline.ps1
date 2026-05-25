@@ -1,5 +1,5 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
-# Reihenfolge: Modell | Effort | Ordner | 5h-Balken | 7d-Balken | Context-Balken | Zeit
+# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Ordner | Context | Zeit
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -502,34 +502,24 @@ $ICON_TIME   = '🕐'
 $ICON_PACE   = '🎯'
 
 # Ausgabe
-$out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
-$out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
+# Reihenfolge (Frank 2026-05-25): zuerst die Limit-Bereiche (5h, 5h-Pacing, 7d,
+# 7d-Pacing), DANN Modell, Effort, Ordner, Kontext, Uhrzeit. Kontext bleibt direkt
+# hinter dem Ordner wie zuvor. Identische Reihenfolge wie statusline.sh.
 
-if ($cwd) {
-    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-}
-
-# Context (Frank 2026-05-24: an 4. Position, direkt hinter dem Ordner)
-if ($ctx_used -ne $null) {
-    $col = Get-PctColor $ctx_used
-    $bar = Get-Bar $ctx_used $col
-    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
-}
-
-# 5h
+# 1. 5h (erstes Element — $out mit = initialisieren, KEIN fuehrender Trenner)
 if ($five_h_used -ne $null) {
     $col = Get-PctColor $five_h_used
     $bar = Get-Bar $five_h_used $col
     if ($five_h_countdown) {
-        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R} ${DIM}(${five_h_countdown})${R}"
+        $out = "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R} ${DIM}(${five_h_countdown})${R}"
     } else {
-        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R}"
+        $out = "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R}"
     }
 } else {
-    $out += "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+    $out = "${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-# 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+# 2. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
 # Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -537,7 +527,7 @@ if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $out += "${GSEP}${PACE}slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
-# 7d
+# 3. 7d
 if ($week_used -ne $null) {
     $col = Get-PctColor $week_used
     $bar = Get-Bar $week_used $col
@@ -546,7 +536,7 @@ if ($week_used -ne $null) {
     $out += "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-# 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage (604800s),
+# 4. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage (604800s),
 # eigene Feature-Farbe (Pink). Nur zeigen wenn Verbrauch UND 7d-Reset bekannt sind.
 if ($week_used -ne $null -and $week_resets -gt 0) {
     $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -554,7 +544,25 @@ if ($week_used -ne $null -and $week_resets -gt 0) {
     $out += "${GSEP}${PACE7}slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
-# Uhrzeit
+# 5. Modell (jetzt hinter dem 7d-Pacing — Frank 2026-05-25)
+$out += "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
+
+# 6. Effort (rechts neben dem Modell)
+$out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
+
+# 7. Ordner
+if ($cwd) {
+    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
+}
+
+# 8. Context (bleibt direkt hinter dem Ordner — Frank 2026-05-25)
+if ($ctx_used -ne $null) {
+    $col = Get-PctColor $ctx_used
+    $bar = Get-Bar $ctx_used $col
+    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+}
+
+# 9. Uhrzeit
 $out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 
 [Console]::Out.Write($out)
