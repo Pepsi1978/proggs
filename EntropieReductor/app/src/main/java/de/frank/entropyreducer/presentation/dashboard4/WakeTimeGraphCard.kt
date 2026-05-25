@@ -106,7 +106,7 @@ internal fun WakeTimeGraphCard(
                     )
                 }
                 Text(
-                    text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
+                    text = derived.currentPercent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -121,7 +121,7 @@ internal fun WakeTimeGraphCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.0f %%".format(it) } ?: "—"}",
+                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
@@ -161,7 +161,7 @@ internal fun WakeTimeGraphCard(
                     accent = SleepStageColors.Awake,
                     unit = "%",
                     height = 200,
-                    valueFormatter = { "%.0f %%".format(it) },
+                    valueFormatter = { "%.1f".format(it).replace('.', ',') + " %" },
                     lowerIsBetter = true,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -384,7 +384,7 @@ private fun WakeTimeHistoryRow(row: WakeTimeRow) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "%.0f %%".format(row.percent),
+            text = "%.1f".format(row.percent).replace('.', ',') + " %",
             style = MaterialTheme.typography.bodyMedium,
             color = SleepStageColors.Awake,
             fontWeight = FontWeight.SemiBold,

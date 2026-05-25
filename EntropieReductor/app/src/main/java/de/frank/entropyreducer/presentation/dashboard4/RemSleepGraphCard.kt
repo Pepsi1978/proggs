@@ -108,7 +108,7 @@ internal fun RemSleepGraphCard(
                     )
                 }
                 Text(
-                    text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
+                    text = derived.currentPercent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -125,7 +125,7 @@ internal fun RemSleepGraphCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.0f %%".format(it) } ?: "—"}",
+                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
@@ -163,7 +163,7 @@ internal fun RemSleepGraphCard(
                     accent = SleepStageColors.Rem,
                     unit = "%",
                     height = 200,
-                    valueFormatter = { "%.0f %%".format(it) },
+                    valueFormatter = { "%.1f".format(it).replace('.', ',') + " %" },
                     lowerIsBetter = false,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -384,7 +384,7 @@ private fun RemSleepHistoryRow(row: RemSleepRow) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "%.0f %%".format(row.percent),
+            text = "%.1f".format(row.percent).replace('.', ',') + " %",
             style = MaterialTheme.typography.bodyMedium,
             color = SleepStageColors.Rem,
             fontWeight = FontWeight.SemiBold,

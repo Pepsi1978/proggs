@@ -117,7 +117,11 @@ private fun androidx.compose.foundation.layout.RowScope.StageSegment(
 ) {
     val ratio = (weight.toFloat() / total).coerceIn(0f, 1f)
     if (ratio <= 0f) return
-    val percent = (ratio * 100).toInt()
+    // Frank-Wunsch 2026-05-25: eine Nachkommastelle (mit Komma) statt abgeschnittener
+    // Ganzzahl. Vorher schnitt der Bar ab (16,7 → 16), waehrend der Tiefschlaf-/REM-/
+    // Wach-Verlauf rundete (16,7 → 17) — daher die 16-vs-17-Diskrepanz. Mit identischer
+    // Eine-Stelle-Formatierung stimmen beide Anzeigen ueberein.
+    val percentText = "%.1f".format(ratio * 100f).replace('.', ',')
     Box(
         modifier = Modifier.weight(ratio).fillMaxHeight().background(color),
         contentAlignment = Alignment.Center,
@@ -126,7 +130,7 @@ private fun androidx.compose.foundation.layout.RowScope.StageSegment(
         // und das Anzeigen erlaubt ist (Wach-Segment bewusst ohne Beschriftung).
         if (showPercent && ratio >= 0.07f) {
             Text(
-                text = "$percent %",
+                text = "$percentText %",
                 color = Color.White,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
