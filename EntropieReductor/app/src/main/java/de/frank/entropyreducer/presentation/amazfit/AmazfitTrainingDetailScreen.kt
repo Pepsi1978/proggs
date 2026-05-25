@@ -257,7 +257,7 @@ fun AmazfitTrainingDetailScreen(
                     item { Text("Wird geladen …", color = cosmos.textSecondary) }
                     return@LazyColumn
                 }
-                item { HeroCard(w) }
+                item { HeroCard(w, onEditClick = { editDialogOpen = true }) }
                 item { PaceAndHrGrid(w, editedLabels = editedLabels, onEditClick = { editDialogOpen = true }) }
                 item {
                     TerrainGrid(
@@ -320,7 +320,7 @@ fun AmazfitTrainingDetailScreen(
 /* ============================== HERO ============================== */
 
 @Composable
-private fun HeroCard(w: AmazfitWorkoutEntity) {
+private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -382,12 +382,14 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
                     value = w.distanceMeters?.let { formatDistance(it) } ?: "—",
                     accent = accent,
                     modifier = Modifier.weight(1f),
+                    onClick = onEditClick,
                 )
                 BigStat(
                     label = "Dauer",
                     value = w.durationSeconds?.let { formatDuration(it) } ?: "—",
                     accent = accent,
                     modifier = Modifier.weight(1f),
+                    onClick = onEditClick,
                 )
             }
         }
@@ -395,9 +397,26 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
 }
 
 @Composable
-private fun BigStat(label: String, value: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+private fun BigStat(
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
     val cosmos = LocalCosmos.current
-    Column(modifier = modifier) {
+    // Frank-Wunsch 2026-05-25: Distanz/Dauer im Trainingsdetail direkt antippbar,
+    // um den Editier-Dialog zu oeffnen (nur wenn onClick gesetzt ist — der
+    // Biomarker-Uebersichts-Hero bleibt bewusst nicht antippbar).
+    Column(
+        modifier = modifier.then(
+            if (onClick != null) {
+                Modifier.clip(RoundedCornerShape(8.dp)).clickable { onClick() }
+            } else {
+                Modifier
+            },
+        ),
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
