@@ -71,6 +71,7 @@ fun CosmosBottomBar(
     onMicClick: () -> Unit,
     onSubAreaSelected: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     forcedSubMode: String? = null,
+    selectedSubIndex: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
@@ -140,6 +141,7 @@ fun CosmosBottomBar(
                 SubModeRow(
                     parentTab = activeSubMode,
                     tint = tint,
+                    selectedSubIndex = selectedSubIndex,
                     onParentClick = {
                         // Klick auf das Parent-Icon links:
                         //  - Auf Sub-Screen (forcedSubMode): zurueck zum Parent-Tab
@@ -182,12 +184,14 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
             icon = Icons.Outlined.Checklist,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.TASKS) },
+            selected = currentTab == Routes.TASKS,
         )
         TabItem(
             label = "Analyse",
             icon = Icons.Outlined.Analytics,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.ANALYSIS) },
+            selected = currentTab == Routes.ANALYSIS,
         )
         // Luecke fuer den Mic-Button
         Spacer(Modifier.width(64.dp))
@@ -196,12 +200,14 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
             icon = Icons.Outlined.Science,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.SCIENTIST) },
+            selected = currentTab == Routes.SCIENTIST,
         )
         TabItem(
             label = "Biomarker",
             icon = Icons.Outlined.MonitorHeart,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.BIOMARKER) },
+            selected = currentTab == Routes.BIOMARKER,
         )
     }
 }
@@ -210,6 +216,7 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
 private fun SubModeRow(
     parentTab: String,
     tint: Color,
+    selectedSubIndex: Int?,
     onParentClick: () -> Unit,
     onSubAreaClick: (Int) -> Unit,
 ) {
@@ -252,6 +259,9 @@ private fun SubModeRow(
                         icon = parentMeta.icon,
                         tint = tint,
                         onClick = onParentClick,
+                        // Parent ist "offen" wenn wir auf dem Haupt-Screen sind
+                        // (kein Sub-Bereich aktiv → selectedSubIndex == null).
+                        selected = selectedSubIndex == null,
                     )
                 is SlotItem.Sub -> {
                     val capturedIndex = item.index
@@ -260,6 +270,7 @@ private fun SubModeRow(
                         icon = item.meta.icon,
                         tint = tint,
                         onClick = { onSubAreaClick(capturedIndex) },
+                        selected = capturedIndex == selectedSubIndex,
                     )
                 }
             }
@@ -276,14 +287,27 @@ private sealed class SlotItem {
 private data class SubIconMeta(val icon: ImageVector, val label: String)
 
 @Composable
-private fun TabItem(label: String, icon: ImageVector, tint: Color?, onClick: () -> Unit) {
+private fun TabItem(
+    label: String,
+    icon: ImageVector,
+    tint: Color?,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+) {
     val cosmos = LocalCosmos.current
     val resolvedTint = tint ?: cosmos.textSecondary
+    // Frank-Wunsch 2026-05-25: Der aktive Reiter bleibt DAUERHAFT grau hinterlegt
+    // (vorher zeigte sich das Grau nur waehrend des Klick-Ripples und verschwand
+    // beim Loslassen). So ist jederzeit sichtbar welcher Reiter offen ist.
+    // Neutrales Grau, in Hell und Dunkel separat abgestimmt.
+    val selectedBg =
+        if (cosmos.isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
     Box(
         modifier =
-            Modifier.size(width = 64.dp, height = 56.dp).clip(RoundedCornerShape(12.dp)).clickable {
-                onClick()
-            },
+            Modifier.size(width = 64.dp, height = 56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .then(if (selected) Modifier.background(selectedBg) else Modifier)
+                .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.layout.Column(

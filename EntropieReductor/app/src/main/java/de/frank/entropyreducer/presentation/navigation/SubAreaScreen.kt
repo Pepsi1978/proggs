@@ -86,6 +86,7 @@ fun SubAreaScreen(
                 onMicClick = { /* Mic-Button ist Platzhalter auf Sub-Screens */ },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = parentTab,
+                selectedSubIndex = subIndex,
             )
         },
     ) { padding ->

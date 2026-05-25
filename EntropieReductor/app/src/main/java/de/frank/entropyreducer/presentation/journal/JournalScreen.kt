@@ -82,6 +82,8 @@ fun JournalScreen(
                 onMicClick = {},
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
+                // Journal ist Sub-Bereich 1 unter Aufgaben → dauerhaft hervorheben.
+                selectedSubIndex = 1,
             )
         },
     ) { padding ->

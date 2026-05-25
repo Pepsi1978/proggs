@@ -198,6 +198,8 @@ fun ThesenScreen(
                 onMicClick = { actionsExpanded = !actionsExpanded },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
+                // Thesen ist Sub-Bereich 3 unter Aufgaben → dauerhaft hervorheben.
+                selectedSubIndex = 3,
             )
         },
     ) { padding ->

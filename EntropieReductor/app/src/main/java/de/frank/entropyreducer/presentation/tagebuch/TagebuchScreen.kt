@@ -198,6 +198,8 @@ fun TagebuchScreen(
                 onMicClick = { actionsExpanded = !actionsExpanded },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
+                // Tagebuch ist Sub-Bereich 2 unter Aufgaben → dauerhaft hervorheben.
+                selectedSubIndex = 2,
             )
         },
     ) { padding ->
