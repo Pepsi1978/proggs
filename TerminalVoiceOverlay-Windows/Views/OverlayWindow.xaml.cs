@@ -1276,7 +1276,7 @@ namespace TerminalVoiceOverlay.Views
             // oeffnet danach ueber den Stern frisch in der neuen Orientierung.
             CloseAttachedPanelsForOrientationSwitch();
             ApplyOrientation(target);
-            PositionForCurrentOrientation();
+            PositionForCurrentOrientation(orientationSwitch: true);
             PersistOrientation(target);
         }
 
@@ -1352,7 +1352,7 @@ namespace TerminalVoiceOverlay.Views
         // Setzt Fenstergroesse + Position passend zur Orientierung. Horizontal:
         // SizeToContent (Leiste umschliesst die HBar), unten-rechts am Monitor.
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
-        private void PositionForCurrentOrientation()
+        private void PositionForCurrentOrientation(bool orientationSwitch = false)
         {
             // Umschalten nimmt — falls in dieser Session eine Position fuer die
             // ZIELorientierung mit der Diskette gespeichert wurde — genau diese
@@ -1361,18 +1361,20 @@ namespace TerminalVoiceOverlay.Views
             // wird auf true gesetzt wenn eine gespeicherte Position angewendet
             // wurde, damit ein direkt folgendes OnTerminalActivated sie nicht
             // ueberschreibt.
+            double? targetLeft = null, targetTop = null;
             if (_isHorizontal)
             {
                 SizeToContent = SizeToContent.WidthAndHeight;
                 UpdateLayout();
                 if (_savedHorizontalPos is { } sh)
                 {
-                    AnimateWindowTo(sh.X, sh.Y); // sanftes Hingleiten statt hartem Springen
+                    targetLeft = sh.X; targetTop = sh.Y;
                     _manuallyPositioned = true;
                 }
                 else if (_waW > 0)
                 {
-                    AnimateWindowTo(_waX + _waW - ActualWidth - 27, _waY + _waH - ActualHeight - HBarBottomLift);
+                    targetLeft = _waX + _waW - ActualWidth - 27;
+                    targetTop  = _waY + _waH - ActualHeight - HBarBottomLift;
                     _manuallyPositioned = false;
                 }
                 else { _manuallyPositioned = false; }
@@ -1385,15 +1387,37 @@ namespace TerminalVoiceOverlay.Views
                 Height = FullHeight;
                 if (_savedVerticalPos is { } sv)
                 {
-                    AnimateWindowTo(sv.X, sv.Y); // sanftes Hingleiten statt hartem Springen
+                    targetLeft = sv.X; targetTop = sv.Y;
                     _manuallyPositioned = true;
                 }
                 else if (_waW > 0)
                 {
-                    AnimateWindowTo(_waX + _waW - 96 - 27, _waY + 57);
+                    targetLeft = _waX + _waW - 96 - 27;
+                    targetTop  = _waY + 57;
                     _manuallyPositioned = false;
                 }
                 else { _manuallyPositioned = false; }
+            }
+
+            if (targetLeft is double tl && targetTop is double tt)
+            {
+                if (orientationSwitch && _waW > 0)
+                {
+                    // Sauberer SENKRECHTER Slide auf der Ziel-Spalte: zuerst an
+                    // die Ziel-X-Position und an den gegenueberliegenden
+                    // Bildschirmrand setzen, dann nur senkrecht zur Zielposition
+                    // gleiten. Verhindert den diagonalen "erst nach links/unten
+                    // unter den Bildschirm"-Effekt beim Form-Wechsel (Frank
+                    // 2026-05-25). Nach vertikal → von unten hoch; nach
+                    // horizontal → von oben runter.
+                    Left = tl;
+                    Top  = _isHorizontal ? _waY : (_waY + _waH - Height);
+                    AnimateWindowTo(tl, tt);
+                }
+                else
+                {
+                    AnimateWindowTo(tl, tt); // sanftes Hingleiten (gleiche Form, beliebige Richtung)
+                }
             }
             ReassertTopmostIfVisible();
         }
@@ -1431,8 +1455,11 @@ namespace TerminalVoiceOverlay.Views
                 double dpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
                 var hwnd = new WindowInteropHelper(this).Handle;
 
+                // Dauer an die Strecke koppeln: kurze Wege schnell, lange Wege
+                // etwas laenger → kleinere Schritte pro Frame, wirkt weicher.
+                double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
+                double durationMs = Math.Clamp(dist * 0.9, 260.0, 460.0);
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                const double durationMs = 260.0;
 
                 _glideHandler = (_, _) =>
                 {
@@ -1444,11 +1471,12 @@ namespace TerminalVoiceOverlay.Views
 
                     if (hwnd != IntPtr.Zero)
                     {
-                        // EIN Move pro Frame in Geraetepixeln; HWND_TOPMOST haelt
-                        // die Pille dabei zugleich im Vordergrund.
-                        Win32.SetWindowPos(hwnd, Win32.HWND_TOPMOST,
+                        // EIN Move pro Frame in Geraetepixeln. SWP_NOZORDER:
+                        // Z-Order NICHT jeden Frame neu berechnen (spart Aufwand;
+                        // die Pille ist bereits Topmost, _topmostAssertTimer haelt das).
+                        Win32.SetWindowPos(hwnd, IntPtr.Zero,
                             (int)Math.Round(curLeft * dpiX), (int)Math.Round(curTop * dpiY),
-                            0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
+                            0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE | Win32.SWP_NOZORDER);
                     }
                     else
                     {
