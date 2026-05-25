@@ -1,420 +1,353 @@
-# Claude Code Best Practices — Slash-Commands & Skills
+# Slash-Commands — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
 
-**Stand:** 2026-05-25 | **Zielversion:** Claude Code v2.1.150
-**Quellen:** code.claude.com/docs (offiziell), Changelog v2.1.100–v2.1.150
-
----
-
-## 1. Slash-Commands → Skills: Die Grundlegende Vereinheitlichung
-
-Seit ca. v2.1.100 sind Custom Slash-Commands und Skills zu einem einheitlichen System
-zusammengeführt. Das `/slash-commands`-Docs-URL leitet auf die Skills-Seite weiter.
-
-**Kurzfassung:**
-- `.claude/commands/` (alt) → Rückwärtskompatibel, weiter nutzbar
-- `.claude/skills/<name>/SKILL.md` (neu, empfohlen) → Mehr Fähigkeiten, klarer strukturiert
-- Beide Formate werden erkannt und funktionieren parallel
-
-**Woher kommt der Name "Skills"?** Claude Code implementiert den offenen
-[Agent Skills Standard](https://agentskills.io) — eine Spezifikation für austauschbare
-KI-Fähigkeiten zwischen verschiedenen Systemen.
+> Offizielle Quelle: https://code.claude.com/docs/en/slash-commands  
+> Changelog: https://code.claude.com/docs/en/changelog  
+> Commands-Referenz: https://code.claude.com/docs/en/commands
 
 ---
 
-## 2. SKILL.md-Format: Vollständige Referenz
+## Unified Model: Commands sind jetzt Skills (seit 2.1.3)
 
-### Dateistruktur
+- **Was:** Seit Version 2.1.3 (Januar 2026) wurden Custom Slash-Commands und Skills zu einem einheitlichen System zusammengeführt. Eine Datei unter `.claude/commands/deploy.md` und eine Skill-Datei unter `.claude/skills/deploy/SKILL.md` erzeugen beide den Befehl `/deploy` — identisches Verhalten.
+- **Best Practice:** Neue Commands als Skills anlegen (Ordner mit `SKILL.md`), nicht als einzelne `.md`-Datei in `commands/`. Bestehende Commands-Dateien funktionieren weiter — keine Migration erzwungen.
+- **Vorteil von Skills gegenüber Commands:** Skills unterstützen unterstützende Dateien (Templates, Skripte, Referenzdokumente), Live Change Detection, `context: fork` für Subagent-Ausführung, und automatische Auslösung durch Claude ohne expliziten `/`-Aufruf.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://github.com/anthropics/claude-code/issues/17578 (offiziell/Changelog)
+- **Stand:** 2026-01-09 (Version 2.1.3)
 
-```markdown
----
-name: mein-skill
-description: >
-  Wann dieser Skill aufgerufen werden sollte. Dieser Text erscheint
-  im /skills-Menü und wird für die Auto-Invociation verwendet.
-  (Max 1.536 Zeichen)
-# Alle weiteren Felder sind OPTIONAL:
-model: claude-sonnet-4-5          # Welches Modell verwenden
-effort: high                       # low|medium|high|xhigh
-user-invocable: true               # Erscheint im /skills-Menü (default: true)
-disable-model-invocation: false    # true = nur Shell ausführen, kein LLM
-allowed-tools:                     # Tool-Whitelist (empty = alle erlaubt)
-  - Bash
-  - Read
-  - Write
-paths:                             # Kontextdateien automatisch einlesen
-  - src/
-  - docs/ARCHITECTURE.md
-argument-hint: "[datei] [--flag]"  # Hint für Argument-Eingabe
-arguments:                         # Benannte Argumente mit Defaults
-  - name: datei
-    description: Die zu prüfende Datei
-    default: "src/main.ts"
-  - name: verbose
-    description: Ausführliche Ausgabe
-    default: "false"
-shell: true                        # Shell-Injection via !`cmd` erlauben
-context:                           # Ausführungskontext
-  - fork                           # In Subagent isolieren
-agent: researcher                  # Welchen Agenten-Typ verwenden
-hooks:                             # Skill-spezifische Hooks
-  - matcher: ""
-    hooks:
-      - type: command
-        command: "echo 'Skill gestartet'"
 ---
 
-# Skill-Inhalt (Markdown-Body)
+## Speicherorte und Priorität
 
-Hier kommt der eigentliche Prompt/Anweisung für den Skill.
+- **Was:** Commands/Skills können auf vier Ebenen gespeichert werden.
 
-$ARGUMENTS wird durch alle übergebenen Argumente ersetzt.
-$1, $2, ... oder $name für benannte Argumente.
-${CLAUDE_SESSION_ID} für die aktuelle Session-ID.
-${CLAUDE_EFFORT} für den aktuellen Effort-Level.
-${CLAUDE_SKILL_DIR} für das Verzeichnis dieser SKILL.md-Datei.
+| Ebene       | Pfad                                         | Gilt für               |
+|-------------|----------------------------------------------|------------------------|
+| Enterprise  | Managed Settings (via Admin)                 | Alle Nutzer der Org    |
+| Persönlich  | `~/.claude/skills/<name>/SKILL.md`           | Alle eigenen Projekte  |
+| Projekt     | `.claude/skills/<name>/SKILL.md`             | Nur dieses Projekt     |
+| Plugin      | `<plugin>/skills/<name>/SKILL.md`            | Wo Plugin aktiv ist    |
+
+- **Best Practice:** Task-spezifische Commands (Deploy, Commit, Test) ins Projekt-Verzeichnis — sie werden automatisch ins Version-Control übernommen. Persönliche Produktivitäts-Commands in `~/.claude/skills/`. Enterprise-weite Standards per Managed Settings.
+- **Priorität bei Namenskonflikten:** Enterprise > Persönlich > Projekt. Plugin-Skills nutzen Namespace `plugin-name:skill-name` — kein Konflikt möglich.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## Frontmatter-Felder: Vollständige Referenz
+
+- **Was:** YAML-Frontmatter zwischen `---`-Markierungen am Anfang der `SKILL.md` konfiguriert das Verhalten des Commands/Skills.
+
+```yaml
+---
+name: my-command
+description: Was dieser Command tut und wann Claude ihn verwenden soll.
+when_to_use: Zusätzliche Trigger-Phrasen, z.B. "wenn der Nutzer nach X fragt"
+argument-hint: [issue-number] [priority]
+arguments: [issue, priority]
+disable-model-invocation: true
+user-invocable: true
+allowed-tools: Bash(git add *) Bash(git commit *)
+model: claude-sonnet-4-5
+effort: high
+context: fork
+agent: Explore
+paths: "src/**/*.ts, packages/**"
+shell: powershell
+---
 ```
 
-### String-Substitutionen (vollständige Liste)
+| Feld                       | Pflicht     | Beschreibung                                                                                          |
+|----------------------------|-------------|-------------------------------------------------------------------------------------------------------|
+| `name`                     | Nein        | Anzeigename; Standard: Verzeichnisname. Nur Kleinbuchstaben, Zahlen, Bindestriche (max 64 Zeichen)   |
+| `description`              | Empfohlen   | Was der Skill tut. Claude liest dies, um zu entscheiden ob er den Skill lädt. Erstes Schlüsselwort vorn stellen |
+| `when_to_use`              | Nein        | Zusätzlicher Kontext für Claude-Auslösung (Trigger-Phrasen). Wird an `description` angehängt; zusammen max 1.536 Zeichen |
+| `argument-hint`            | Nein        | Platzhaltervorgabe in der Autovervollständigung, z.B. `[filename] [format]`. Nur kosmetisch — kein Parsing |
+| `arguments`                | Nein        | Benannte Positionsargumente für `$name`-Substitution, z.B. `arguments: [issue, branch]`              |
+| `disable-model-invocation` | Nein        | `true` = nur manuell per `/name` aufrufbar; Claude lädt den Skill nicht automatisch                  |
+| `user-invocable`           | Nein        | `false` = nicht im `/`-Menü sichtbar; Claude kann trotzdem auslösen                                  |
+| `allowed-tools`            | Nein        | Tools die ohne Genehmigungsdialog genutzt werden dürfen, wenn der Skill aktiv ist                    |
+| `model`                    | Nein        | Modell-Override nur für diesen Turn; kehrt danach zur Session-Einstellung zurück                     |
+| `effort`                   | Nein        | Effort-Override: `low`, `medium`, `high`, `xhigh`, `max`                                             |
+| `context`                  | Nein        | `fork` = Skill läuft in isoliertem Subagenten                                                        |
+| `agent`                    | Nein        | Welcher Subagent-Typ bei `context: fork`; z.B. `Explore`, `Plan`, `general-purpose`                 |
+| `paths`                    | Nein        | Glob-Pattern; Claude lädt den Skill nur wenn passende Dateien bearbeitet werden                      |
+| `shell`                    | Nein        | `bash` (Standard) oder `powershell` für `!`-Inline-Befehle                                          |
 
-| Variable | Bedeutung |
-|----------|-----------|
-| `$ARGUMENTS` | Alle übergebenen Argumente als String |
-| `$ARGUMENTS[N]` | N-tes Argument (0-basiert) |
-| `$N` | Kurzform für `$ARGUMENTS[N]` (z.B. `$1`) |
-| `$name` | Benanntes Argument aus `arguments:` Frontmatter |
-| `${CLAUDE_SESSION_ID}` | Aktuelle Claude Code Session-ID |
-| `${CLAUDE_EFFORT}` | Aktueller Effort-Level (low/medium/high/xhigh) |
-| `${CLAUDE_SKILL_DIR}` | Absoluter Pfad zum Skill-Verzeichnis (NEU v2.1.x) |
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
 
 ---
 
-## 3. Dynamische Kontext-Injektion
+## Argument-Handling: $ARGUMENTS, $N, benannte Argumente
 
-### Inline-Befehl-Substitution
+- **Was:** Commands können Argumente entgegennehmen und in der Skill-Body verwenden.
 
-```markdown
-Die aktuelle Git-Branch ist: !`git branch --show-current`
+```yaml
+# Einfach: alle Argumente
+/fix-issue 123
+→ $ARGUMENTS → "123"
 
-Heutige offene TODOs:
-!`grep -r "TODO" src/ | head -20`
+# Positionell: $ARGUMENTS[N] oder $N (0-basiert)
+/migrate SearchBar React Vue
+→ $0 = "SearchBar", $1 = "React", $2 = "Vue"
+
+# Benannt (via arguments-Frontmatter)
+# arguments: [issue, branch]
+→ $issue = erstes Arg, $branch = zweites Arg
+
+# Multi-Word-Argumente: in Anführungszeichen
+/my-skill "hello world" second
+→ $0 = "hello world", $1 = "second"
 ```
 
-Der Befehl `` !`command` `` wird vor dem LLM-Aufruf ausgeführt. Stdout wird eingebettet.
+- **Best Practice:**
+  - `$ARGUMENTS` für einfache Single-Argument-Commands.
+  - `$ARGUMENTS[N]`/`$N` für Multi-Argument-Commands (klar und präzise).
+  - Benannte Argumente (`arguments:`-Frontmatter + `$name`) für komplexe Commands mit >2 Argumenten — macht den Skill selbst-dokumentierend.
+  - `argument-hint` IMMER setzen wenn der Command Argumente erwartet — erscheint in der Autovervollständigung als Vorschau.
+  - Wenn kein `$ARGUMENTS` im Body: Claude Code hängt `ARGUMENTS: <Eingabe>` automatisch ans Ende an.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
 
-### Fenced-Block-Injection
+---
 
-````markdown
-```!
-cat ~/.claude/project-context.md
+## description-Feld: Schlüssel für automatische Auslösung
+
+- **Was:** Claude liest alle Skill-Beschreibungen beim Session-Start. Hat eine Nutzerfrage semantische Übereinstimmung, lädt Claude den Skill automatisch — ohne dass der Nutzer `/name` tippt.
+- **Best Practice:**
+  - Den wichtigsten Anwendungsfall **zuerst** nennen (nicht: "This skill helps with...").
+  - Trigger-Phrasen, die Nutzer tatsächlich sagen würden, direkt verwenden: "Use when the user asks what changed, wants a commit message, or asks to review their diff."
+  - `when_to_use` für zusätzliche Trigger-Phrasen nutzen (wird an `description` angehängt).
+  - Gesamtlimit: 1.536 Zeichen für `description` + `when_to_use` zusammen.
+  - Bei zu vielen Skills: `/doctor` zeigt ob das Beschreibungs-Budget überläuft und welche Skills betroffen sind.
+- **Pitfall:** Zu generische Beschreibungen führen zu unkontrollierter automatischer Auslösung. Zu spezifische Beschreibungen verhindern, dass Claude den Skill erkennt.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## disable-model-invocation vs. user-invocable: Kontrolle wer auslöst
+
+- **Was:** Zwei Frontmatter-Felder steuern wer/was einen Skill auslösen darf.
+
+| Frontmatter                      | Nutzer kann `/` tippen | Claude löst automatisch aus | In Context geladen |
+|----------------------------------|------------------------|-----------------------------|--------------------|
+| (Standard)                       | Ja                     | Ja                          | Ja (Beschreibung)  |
+| `disable-model-invocation: true` | Ja                     | Nein                        | Nein               |
+| `user-invocable: false`          | Nein                   | Ja                          | Ja (Beschreibung)  |
+
+- **Best Practice:**
+  - **Deploy, Commit, Release:** `disable-model-invocation: true` — Claude soll nicht selbst entscheiden zu deployen.
+  - **Hintergrundwissen/Konventionen:** `user-invocable: false` — Claude lädt automatisch wenn relevant, aber kein unsinniger `/legacy-context`-Befehl im Menü.
+  - **Normale Workflows:** Standard-Einstellungen — Claude hilft, Nutzer kann übersteuern.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## allowed-tools: Genehmigungs-Bypass für Skills
+
+- **Was:** `allowed-tools` im Frontmatter erlaubt spezifische Tool-Aufrufe ohne Genehmigungsdialog, solange der Skill aktiv ist.
+
+```yaml
+---
+name: commit
+description: Stage and commit the current changes
+disable-model-invocation: true
+allowed-tools: Bash(git add *) Bash(git commit *) Bash(git status *)
+---
 ```
-````
 
-Der gesamte Block wird durch die Ausgabe des Befehls ersetzt.
+- **Best Practice:**
+  - So spezifisch wie möglich formulieren — `Bash(git add *)` statt `Bash` (zu weit).
+  - `allowed-tools` bei Projekt-Skills erst nach Workspace-Trust-Dialog aktiv (Sicherheitscheck bei fremden Repos).
+  - Tool-**Verbote** über `/permissions` deny-Regeln, nicht über `allowed-tools` (das ist nur für Freigaben).
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
 
-### Sicherheitshinweis: `disableSkillShellExecution`
+---
+
+## Dynamischer Kontext: !`command`-Syntax
+
+- **Was:** `!`-Präfix am Zeilenanfang in der `SKILL.md` führt einen Shell-Befehl aus **bevor** Claude den Skill sieht. Die Ausgabe ersetzt den Befehl direkt.
+
+```yaml
+---
+name: summarize-changes
+description: Summarizes uncommitted changes and flags anything risky.
+---
+
+## Current changes
+
+!`git diff HEAD`
+
+## Instructions
+Summarize the changes above...
+```
+
+Mehrzeilige Befehle mit Fenced Block:
+
+```
+` ` `!
+node --version
+npm --version
+git status --short
+` ` `
+```
+
+- **Best Practice:**
+  - Für Echtzeit-Kontext der sich ändert (git diff, aktuelle Logs, API-Status).
+  - Ausgabe wird **einmal** vor Übermittlung an Claude eingefügt — kein rekursives Expandieren.
+  - `!` muss am Zeilenanfang oder nach Leerzeichen stehen — mitten im Text (`KEY=!cmd`) wird ignoriert.
+  - Auf Windows: `shell: powershell` im Frontmatter setzen + `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
+  - Kann per `"disableSkillShellExecution": true` in Settings organisationsweit deaktiviert werden.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## context: fork — Skills als Subagenten ausführen
+
+- **Was:** `context: fork` lässt den Skill in einem isolierten Subagenten laufen. Der Skill-Body wird zum Prompt des Subagenten; Konversationshistorie ist nicht sichtbar.
+- **Best Practice:**
+  - Nur für Skills mit expliziten Aufgaben-Instruktionen verwenden — nicht für reine Referenz-Skills.
+  - `agent: Explore` für Read-only-Recherche (lädt keine CLAUDE.md, kleiner Kontext).
+  - `agent: Plan` für Planungsaufgaben ohne Side Effects.
+  - `agent: general-purpose` (Standard) für allgemeine Tasks mit Schreibzugriff.
+  - Mit `$ARGUMENTS` kombinieren: `/deep-research "async Rust patterns"` — Subagent recherchiert, Ergebnis kommt zurück in Hauptkonversation.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## Eingebaute Commands: Übersicht (built-in vs. bundled Skills)
+
+- **Was:** Claude Code unterscheidet zwischen echten Built-in-Commands (feste Logik, kein Prompt) und Bundled Skills (prompt-basiert, nutzbar wie eigene Skills).
+
+### Wichtige Built-in-Commands (feste Logik)
+
+| Command            | Funktion                                                              |
+|--------------------|-----------------------------------------------------------------------|
+| `/help`            | Listet alle verfügbaren Commands und Beschreibungen                   |
+| `/clear`           | Löscht Konversationshistorie                                          |
+| `/compact`         | Komprimiert Kontext (Zusammenfassung); erhält Skills mit Token-Budget |
+| `/context`         | Zeigt Kontext-Window-Nutzung                                          |
+| `/model`           | Wechselt das Modell für die Session                                   |
+| `/effort`          | Ändert Effort-Level (`low`, `medium`, `high`, `xhigh`, `max`)         |
+| `/permissions`     | Verwaltet Tool-Genehmigungen                                          |
+| `/mcp`             | Zeigt/konfiguriert MCP-Server                                         |
+| `/agents`          | Verwaltet Subagent-Konfigurationen                                    |
+| `/tasks`           | Listet laufende Hintergrundaufgaben                                   |
+| `/background`      | Trennt Session als Background Agent                                   |
+| `/batch`           | Zerteilt große Änderungen in parallele Worktrees                      |
+| `/plan`            | Wechselt in Plan-Mode vor großen Änderungen                           |
+| `/memory`          | Verwaltet CLAUDE.md-Dateien                                           |
+| `/init`            | Generiert Starter-CLAUDE.md für das Projekt                           |
+| `/doctor`          | Diagnostiziert Konfigurationsprobleme (Skill-Budget, etc.)            |
+| `/btw`             | Quick-Aside — geht nicht in Konversationshistorie                     |
+| `/skills`          | Zeigt/verwaltet verfügbare Skills (Space zum Umschalten)              |
+| `/review`          | Code-Review (auch via Skill Tool aufrufbar)                           |
+| `/security-review` | Sicherheits-Review                                                    |
+
+### Bundled Skills (Prompt-basiert, wie eigene Skills)
+
+| Skill                  | Funktion                                                              |
+|------------------------|-----------------------------------------------------------------------|
+| `/code-review`         | Code-Review mit detaillierten Instruktionen                           |
+| `/debug`               | Systematisches Debugging                                              |
+| `/loop`                | Wiederholte Ausführung                                                |
+| `/claude-api`          | Claude-API-Nutzung                                                    |
+| `/run`                 | App starten und Änderungen validieren (ab v2.1.145)                  |
+| `/verify`              | Build + Lauf ohne Fallback auf Tests (ab v2.1.145)                   |
+| `/run-skill-generator` | Einmal ausführen um `/run`/`/verify` projektspezifisch zu machen     |
+
+- **Best Practice:** Bundled Skills sind anpassbar — eigene Skills können gleiche Namen überschreiben wenn nötig. `/run-skill-generator` einmal pro Projekt ausführen um zuverlässige Build-Rezepte zu erstellen.
+- **Quelle:** https://code.claude.com/docs/en/commands (offiziell), https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2026
+
+---
+
+## Skill Content Lifecycle: Was nach dem Aufruf passiert
+
+- **Was:** Wenn ein Skill aufgerufen wird, landet der gerenderte `SKILL.md`-Inhalt als einzelne Message in der Konversation und bleibt für die gesamte Session sichtbar. Claude liest die Datei **nicht erneut** bei späteren Turns.
+- **Best Practice:**
+  - Skill-Inhalte als "stehende Anweisungen" formulieren, nicht als Einmal-Schritte.
+  - `SKILL.md` unter 500 Zeilen halten — Detailmaterial in Unterdateien auslagern.
+  - Bei Auto-Compaction: Skills werden mit max 5.000 Token pro Skill re-attached (Budget: 25.000 Token gesamt). Ältere Skills können entfallen → Skill nach Compaction erneut aufrufen wenn nötig.
+  - Für Deep-Reasoning in einem Skill: `ultrathink` irgendwo in den Skill-Body schreiben.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
+
+---
+
+## Skill-Beschreibungs-Budget: /doctor ist Pflicht bei vielen Skills
+
+- **Was:** Alle Skill-Beschreibungen werden beim Session-Start in den Kontext geladen. Bei vielen Skills läuft das Budget über — wenig genutzte Skills verlieren ihre Beschreibung, was automatische Auslösung verhindert.
+- **Best Practice:**
+  - `/doctor` regelmäßig ausführen wenn >8-10 Skills installiert sind.
+  - `skillListingBudgetFraction` in Settings erhöhen (Standard: 1% des Kontext-Windows; z.B. `0.02` für 2%).
+  - Wenig genutzte Skills auf `"name-only"` in `skillOverrides` setzen — kein Beschreibungstext, aber noch im Menü.
+  - `maxSkillDescriptionChars` anpassen (Standard-Cap pro Skill: 1.536 Zeichen).
+  - Beschreibung mit wichtigstem Schlüsselwort beginnen — bei Kürzung geht das Ende verloren, nicht der Anfang.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://perevillega.com/posts/2026-04-01-claude-code-skills-2-what-changed-what-works-what-to-watch-out-for/ (extern)
+- **Stand:** 2026
+
+---
+
+## Skill-Sichtbarkeit: skillOverrides in Settings
+
+- **Was:** `skillOverrides` in `.claude/settings.local.json` (oder Settings) steuert Skill-Sichtbarkeit ohne die `SKILL.md` selbst zu bearbeiten.
 
 ```json
-// ~/.claude/settings.json (Policy-Level)
 {
-  "permissions": {
-    "disableSkillShellExecution": true
+  "skillOverrides": {
+    "legacy-context": "name-only",
+    "deploy": "off"
   }
 }
 ```
 
-Deaktiviert `` !`cmd` `` und ```` ```! ```` in Skills global. Wichtig in
-Multi-User-Umgebungen oder wenn Skill-Quellen nicht vertrauenswürdig sind.
+| Wert                    | In Claude-Kontext     | Im `/`-Menü |
+|-------------------------|-----------------------|-------------|
+| `"on"` (Standard)       | Name + Beschreibung   | Ja          |
+| `"name-only"`           | Nur Name              | Ja          |
+| `"user-invocable-only"` | Versteckt             | Ja          |
+| `"off"`                 | Versteckt             | Nein        |
+
+- **Best Practice:** `/skills`-Menü öffnen → Skill markieren → `Space` zum Durchschalten der Zustände → `Enter` speichert in `.claude/settings.local.json`. Plugin-Skills sind von `skillOverrides` nicht betroffen — über `/plugin` verwalten.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
 
 ---
 
-## 4. Built-in Commands: Neue und geänderte Befehle (v2.1.100–v2.1.150)
+## Namespacing bei Plugins
 
-### Neu hinzugekommen
-
-| Befehl | Ab Version | Funktion |
-|--------|-----------|----------|
-| `/goal` | v2.1.139 | Aktuelles Session-Ziel setzen/anzeigen — bleibt über Compaction hinweg erhalten |
-| `/scroll-speed` | v2.1.139 | Scrollgeschwindigkeit im Terminal anpassen |
-| `/ultrareview` | v2.1.111 | Tiefes Code-Review mit mehrfachen Analyse-Durchgängen |
-| `/usage` | v2.1.149 | Token-Verbrauch mit Aufschlüsselung nach Kategorien |
-| `/diff` | v2.1.149 | Git-Diff-Anzeige mit Keyboard-Navigation (j/k Scroll) |
-| `/run-skill-generator` | v2.1.x | Interaktiver Assistent zum Erstellen neuer Skills |
-| `/less-permission-prompts` | v2.1.x | Reduziert Permission-Abfragen für ruhigeres Arbeiten |
-
-### Umbenannt/Geändert
-
-| Alt | Neu | Ab Version | Hinweis |
-|-----|-----|-----------|---------|
-| `/simplify` | `/code-review` | v2.1.147 | Mehr Fähigkeiten, nicht nur Vereinfachung |
-| `/skills` | `/skills` | v2.1.x | Zeigt Skill-Menü mit Spacebar-Toggle-Optionen |
-
-### Weiterhin wichtige Built-ins
-
-| Befehl | Funktion |
-|--------|----------|
-| `/run` | Aktuellen Skill oder Bash-Befehl ausführen |
-| `/verify` | Verifikation nach Implementierung |
-| `/batch` | Parallele Aufgaben in Worktrees aufteilen (bis 10x schneller) |
-| `/debug` | Systematischer Debug-Modus |
-| `/loop` | Iterativer Fix-Loop bis Bedingung erfüllt |
-| `/compact` | Kontext komprimieren |
-| `/effort` | Effort-Level umstellen (low/medium/high/xhigh) |
-| `/clear` | Session zurücksetzen |
-| `/cost` | Kosten der aktuellen Session anzeigen |
+- **Was:** Plugin-Skills nutzen automatisch den Namespace `plugin-name:skill-name` um Konflikte zu verhindern.
+- **Best Practice:** Beim direkten Aufruf den vollen Namen tippen: `/plugin-name:skill-name`. Im Menü werden eigene und Plugin-Skills gemeinsam angezeigt.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
+- **Stand:** 2025-2026
 
 ---
 
-## 5. Skill-Lifecycle und Kontext-Verwaltung
+## Wichtige Bugfixes in 2.1.x (relevant für Troubleshooting)
 
-### Nach Auto-Compaction
-
-Skills bleiben über Komprimierungen hinweg aktiv:
-- Bis zu **5.000 Tokens** des Skill-Inhalts werden nach jeder Komprimierung
-  automatisch wieder in den Kontext eingefügt
-- Gemeinsames Budget für alle aktiven Skills: **25.000 Tokens**
-- Skills mit `disable-model-invocation: true` sind davon nicht betroffen
-
-### `context: fork` für isolierte Ausführung
-
-```yaml
-context:
-  - fork
-agent: researcher
-```
-
-Mit `fork` läuft der Skill in einem isolierten Subagenten. Der Hauptkontext bleibt
-sauber, der Skill hat eigenen Kontext. Ideal für:
-- Ressourcen-intensive Recherchen
-- Code-Reviews die viele Dateien lesen
-- Aufgaben mit eigenem Tool-Set (`allowed-tools:`)
+- **2.1.149:** `argument-hint` wird bei Overflow nicht mehr abgeschnitten; Tab-Completion zeigt Hint auch wenn `name:` im Frontmatter vom Verzeichnisnamen abweicht.
+- **2.1.147:** Unbekannte Slash-Commands gaben in Headless/SDK-Modus kein Feedback — jetzt Error-Message.
+- **2.1.136:** Argument-Namen mit Regex-Sonderzeichen (z.B. `+`, `*`) brachen die Substitution — gefixt.
+- **2.1.120:** Slash-Command-Picker zeigt übereinstimmende Zeichen farblich hervorgehoben; lange Beschreibungen umbrechen statt abzuschneiden.
+- **2.1.119:** `${CLAUDE_EFFORT}` steht in Skill-Body zur Verfügung (aktueller Effort-Level).
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2025-2026
 
 ---
 
-## 6. Skill-Konfiguration: Sichtbarkeit und Overrides
+## Typische Fallstricke
 
-### `skillOverrides` — Welche Skills aktiv sind
-
-```json
-// ~/.claude/settings.json
-{
-  "skillOverrides": "user-invocable-only"
-}
-```
-
-| Wert | Bedeutung |
-|------|-----------|
-| `"on"` | Alle Skills aktiv (Default) |
-| `"name-only"` | Nur per Name aufrufbar, keine Auto-Invocation |
-| `"user-invocable-only"` | Nur Skills mit `user-invocable: true` |
-| `"off"` | Alle Skills deaktiviert |
-
-Kann auch aus dem `/skills`-Menü per Leertaste interaktiv umgestellt werden.
-
-### `skillListingBudgetFraction` — Wie viel Kontext für Skill-Listings
-
-```json
-{
-  "skillListingBudgetFraction": 0.1
-}
-```
-
-Anteil des Kontext-Budgets für Skill-Beschreibungen im System-Prompt. Default: 0.1 (10%).
-
-### `maxSkillDescriptionChars` — Länge der Beschreibungen
-
-```json
-{
-  "maxSkillDescriptionChars": 512
-}
-```
-
-Kürzt `description`-Felder in Skills auf diesen Wert. Hard-Cap: 1.536 Zeichen.
-
----
-
-## 7. Monorepo-Support und Entdeckung
-
-### Nested `.claude/skills/` Verzeichnisse
-
-In Monorepos werden Skills automatisch auf Demand entdeckt:
-
-```
-my-monorepo/
-├── .claude/skills/     ← Repo-weite Skills
-│   └── deploy/SKILL.md
-├── backend/
-│   └── .claude/skills/ ← Backend-spezifische Skills
-│       └── migrate/SKILL.md
-└── frontend/
-    └── .claude/skills/ ← Frontend-spezifische Skills
-        └── build/SKILL.md
-```
-
-Skills in Unterverzeichnissen werden geladen, wenn in dem Verzeichnis gearbeitet wird.
-
-### Live Change Detection
-
-Änderungen an SKILL.md-Dateien wirken **sofort** ohne Neustart von Claude Code.
-Kein `/clear` oder Neustart nötig nach dem Bearbeiten eines Skills.
-
----
-
-## 8. Best Practices (Praxis-Empfehlungen)
-
-### 8.1 Skill statt Command
-
-```bash
-# Alt (funktioniert noch):
-.claude/commands/mein-befehl.md
-
-# Neu (empfohlen):
-.claude/skills/mein-befehl/SKILL.md
-```
-
-Der SKILL.md-Format bietet mehr Kontrolle (Frontmatter, Hooks, Fork-Kontext).
-
-### 8.2 Beschreibung für Auto-Invocation optimieren
-
-Die `description:` in SKILL.md wird für die automatische Skill-Auswahl verwendet.
-Gute Beschreibungen beantworten: "Wann soll Claude DIESEN Skill nutzen?"
-
-```yaml
-description: >
-  Nutze diesen Skill wenn eine neue Android-App von Grund auf gebaut werden soll,
-  oder wenn gefragt wird "mach eine neue App" / "neue Android App" / "android bauen".
-  Nicht für Erweiterungen bestehender Apps.
-```
-
-### 8.3 `disable-model-invocation` für reine Shell-Skills
-
-Wenn ein Skill nur einen Befehl ausführen soll ohne LLM:
-
-```yaml
----
-name: git-status
-description: Zeigt den aktuellen Git-Status
-disable-model-invocation: true
-shell: true
----
-!`git status --short`
-```
-
-Kein Token-Verbrauch, maximale Geschwindigkeit.
-
-### 8.4 `allowed-tools` für sichere Subagenten
-
-```yaml
-allowed-tools:
-  - Read
-  - Glob
-  - Grep
-  - WebSearch
-```
-
-Verhindert dass ein Researcher-Skill versehentlich Code ändert.
-
-### 8.5 `paths:` für automatischen Datei-Kontext
-
-```yaml
-paths:
-  - docs/ARCHITECTURE.md
-  - src/models/
-  - CLAUDE.md
-```
-
-Diese Dateien werden vor dem LLM-Aufruf automatisch in den Kontext geladen.
-Spart das manuelle "lies zuerst..." am Anfang des Skill-Texts.
-
-### 8.6 `${CLAUDE_SKILL_DIR}` für mitgelieferte Scripts
-
-```yaml
-shell: true
----
-Analysiere diesen Code mit dem mitgelieferten Skript:
-!`python3 "${CLAUDE_SKILL_DIR}/analyze.py" $ARGUMENTS`
-```
-
-Scripts können direkt neben der SKILL.md abgelegt werden. Keine hardcodierten Pfade nötig.
-
-### 8.7 Skill-Qualität: Häufige Fehler vermeiden
-
-| Fehler | Besser |
-|--------|--------|
-| `description:` zu kurz/unklar | Ausführlich erklären WANN der Skill passt |
-| Kein `user-invocable: false` für interne Skills | Interne Utilities verstecken |
-| Shell-Injection ohne `shell: true` | Frontmatter-Feld setzen |
-| Zu viele `paths:` | Nur wirklich benötigte Dateien einlesen |
-| Keine `allowed-tools:` bei Subagent-Skills | Tool-Scope immer explizit begrenzen |
-
----
-
-## 9. Changelog-Highlights (Slash-Commands / Skills)
-
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| v2.1.147 | Mai 2026 | `/simplify` → `/code-review` umbenannt mit erweitertem Scope |
-| v2.1.149 | Mai 2026 | `/usage` per-Kategorie-Aufschlüsselung; `/diff` mit j/k-Keyboard-Navigation |
-| v2.1.139 | Apr 2026 | `/goal` Command (Session-Ziel persistent); `/scroll-speed` Command |
-| v2.1.139 | Apr 2026 | `${CLAUDE_SKILL_DIR}` Variable in Skills |
-| v2.1.x | 2026 | `skillOverrides` Einstellung (on/name-only/user-invocable-only/off) |
-| v2.1.x | 2026 | `disableSkillShellExecution` Policy-Setting |
-| v2.1.x | 2026 | `skillListingBudgetFraction` + `maxSkillDescriptionChars` Settings |
-| v2.1.x | 2026 | Monorepo nested `.claude/skills/` Entdeckung |
-| v2.1.x | 2026 | Live-Änderungserkennung (kein Neustart nach Skill-Edit) |
-| v2.1.111 | 2026 | `/ultrareview` built-in Command |
-| v2.1.x | 2025 | Skills-System (Agent Skills Standard) als Unified Framework |
-
----
-
-## 10. Fehler-Patterns und Lösungen
-
-### "Skill wird nicht erkannt"
-
-1. SKILL.md liegt in `.claude/skills/<name>/SKILL.md` (Unterverzeichnis nötig)
-2. `name:` im Frontmatter stimmt mit Verzeichnisname überein
-3. `user-invocable: false` — Skill ist intern, nicht im Menü sichtbar
-4. `skillOverrides: "off"` in Settings — Skills global deaktiviert
-
-### "Shell-Injection funktioniert nicht"
-
-```yaml
-# Vergessen: shell: true im Frontmatter
-shell: true
-```
-
-Oder `disableSkillShellExecution: true` blockiert es system-weit (Policy-Setting).
-
-### "Skill verliert Kontext nach Compaction"
-
-Skill-Inhalt über 5.000 Tokens wird nach Compaction nicht vollständig re-injiziert.
-Lösung: Skill-Inhalt kompakt halten, wichtige Anweisungen an den Anfang.
-
-### "Argumente kommen nicht an"
-
-```yaml
-# argument-hint zeigt was erwartet wird:
-argument-hint: "<datei> [--verbose]"
-# Benannte Argumente definieren:
-arguments:
-  - name: datei
-    description: Zieldatei
-```
-
-Im Skill-Body: `$datei` oder `$1` oder `$ARGUMENTS`.
-
----
-
-## 11. Projekt-spezifische Hinweise (dieses Repo)
-
-Bestehende Skills in `~/.claude/skills/` und `.claude/skills/` verwenden bereits das
-SKILL.md-Format. Bei neuen Skills:
-
-1. **IMMER** `/skill-creator:skill-creator` Skill verwenden (CLAUDE.md-Pflicht)
-2. Skill-Beschreibungen auf Deutsch (CLAUDE.md: `german-skill-triggers.md`)
-3. Bei Subagent-Skills `allowed-tools:` explizit setzen
-4. Nach Erstellung: In `~/.claude/rules/german-skill-triggers.md` Trigger-Zeile eintragen
-
----
-
-*Zuletzt aktualisiert: 2026-05-25 durch best-practices Researcher-Agent*
-*Quellen: code.claude.com/docs/en/skills, offizieller Claude Code Changelog v2.1.100–v2.1.150*
+- **Pitfall 1 — Kein argument-hint gesetzt:** Nutzer wissen nicht was für Argumente erwartet werden. Lösung: immer `argument-hint: [was erwartet wird]` setzen.
+- **Pitfall 2 — Zu generische description:** Claude löst den Skill bei jeder vagen Frage aus. Lösung: `disable-model-invocation: true` + explizite Aufrufe.
+- **Pitfall 3 — YAML-Formatierung:** Formatierungstools (Prettier etc.) können YAML-Frontmatter umbrechen → Skill wird unsichtbar. Lösung: Frontmatter von Auto-Formatierung ausschließen.
+- **Pitfall 4 — Skill zu groß:** Lange Skills bleiben permanent im Kontext, kosten bei jeder Session Tokens. Lösung: Body unter 500 Zeilen halten, Details in Unterdateien.
+- **Pitfall 5 — context: fork ohne Task:** Subagent bekommt nur Referenzinhalte ohne Aufgabe → kehrt ohne Output zurück. Lösung: `context: fork` nur für Skills mit klaren Aktions-Instruktionen.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://perevillega.com/posts/2026-04-01-claude-code-skills-2-what-changed-what-works-what-to-watch-out-for/ (extern)
+- **Stand:** 2026

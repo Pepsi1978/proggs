@@ -1,231 +1,188 @@
-# Best Practices: Kontext-Management
+# Kontext-Management — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
 
-> Recherchiert: 2026-05-25 | Claude Code v2.1.150 | Quellen: code.claude.com/docs
-
----
-
-## CLAUDE_AUTOCOMPACT_PCT_OVERRIDE — Kritische Falle
-
-**Was:** Umgebungsvariable zum Anpassen des Compaction-Schwellwerts. Funktioniert durch einen Math.min()-Clamp.
-
-**Best Practice:**
-- Der Wert wird via `Math.min(userOverride, defaultThreshold)` verarbeitet
-- Default-Schwellwert liegt bei ca. **83%** des Kontextfensters
-- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=100` bewirkt NICHTS über 83% hinaus (Math.min clamps)
-- Der Wert kann nur SENKEN, nie erhöhen
-- Empfohlener Wert: 100 (effektiv = Standard-Schwellwert beibehalten)
-- **Niemals unter 85 setzen** (config-guard sollte das blockieren) — zu frühe Komprimierung
-
-```bash
-# In settings.json env-Sektion:
-"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "100"
-# Bewirkt: Komprimierung bei ~83% (Standard), nicht früher
-```
-
-**Kontext-Buffer:** ~13.000 Tokens sind für Antwort-Generierung reserviert und werden NICHT genutzt. Die eigentliche Komprimierungsgrenze liegt daher etwas unter dem nominalen Schwellwert.
-
-**Quelle:** code.claude.com/docs/en/how-claude-code-works, github.com/anthropics/claude-code/issues/31806, turboai.dev  
-**Stand:** v2.1.150
+> Quelle-Hierarchie: offiziell = code.claude.com/docs (Grundwahrheit), extern = andere Quellen (klar markiert).
+> Erstellt von Researcher-Agent am 2026-05-25.
 
 ---
 
-## Komprimierungs-Mechanismus: Was passiert bei /compact
+## Wie der Kontext-Buffer funktioniert
 
-**Was:** `/compact` oder automatische Komprimierung verdichtet den Konversations-Kontext.
-
-**Best Practice:**
-
-Was **überlebt** die Komprimierung:
-- Wichtige Entscheidungen und Erkenntnisse (aus der Zusammenfassung)
-- CLAUDE.md wird neu geladen
-- MEMORY.md wird neu geladen (erste 200 Zeilen / max 25KB)
-- System-Prompt bleibt unverändert
-- Aktuelle Aufgaben-Informationen (wenn Claude sie im Summary festhält)
-
-Was **NICHT** überlebt:
-- Detaillierte Tool-Ausgaben
-- Konversations-Historie
-- Zwischen-Ergebnisse von Tool-Aufrufen
-- Lokale Variablen und Zwischenzustände
-
-**Kompakt-Instruktionen in CLAUDE.md:** Man kann angeben was in der Zusammenfassung betont werden soll:
-```markdown
-## Compact Instructions
-Bei der Komprimierung: Behalte immer den aktuellen Branch-Namen, 
-offene Tasks und die letzte Commit-Nummer im Summary.
-```
-
-**Quelle:** code.claude.com/docs/en/how-claude-code-works, code.claude.com/docs/en/memory  
-**Stand:** v2.1.150
+- **Was:** Claude Code reserviert ~33.000 Token (≈16,5 % eines 200K-Fensters) als festen Arbeitsbereich für die Komprimierung. Die restlichen ~167.000 Token stehen für die eigentliche Arbeit zur Verfügung. Vor 2026 war der Buffer größer (~45K Token); er wurde in v2.1.21 auf 33K reduziert — das gibt ca. 12.000 zusätzliche nutzbare Token.
+- **Best Practice:** Nicht versuchen, den Buffer zu umgehen. Er ist das Sicherheitsnetz des Systems. `/context` aufrufen, um zu sehen, was den Platz gerade verbraucht.
+- **Quelle:** [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell), [claudefa.st/blog/guide/mechanics/context-buffer-management](https://claudefa.st/blog/guide/mechanics/context-buffer-management) (extern)
+- **Stand:** 2026-05-25
 
 ---
 
-## Auto Memory System (v2.1.59+)
+## Drei Komprimierungs-Ebenen: Microcompact, Auto-Compact, /compact
 
-**Was:** Automatisches Memory-System das MEMORY.md und zugehörige Topic-Dateien verwaltet.
-
-**Best Practice:**
-```json
-{
-  "autoMemoryEnabled": true,
-  "autoMemoryDirectory": ".claude/agent-memory/shared"
-}
-```
-
-**Limits die bekannt sein müssen:**
-- MEMORY.md: Nur **erste 200 Zeilen** werden geladen (nicht die ganze Datei!)
-- Maximum: **25KB** pro MEMORY.md
-- Topic-Dateien: Werden on-demand geladen wenn relevant
-- Index-Einträge sollten max. ~200 Zeichen sein
-
-**Empfohlene Struktur:**
-```
-.claude/agent-memory/shared/
-├── MEMORY.md          # Index (max 200 Zeilen / 25KB)
-├── topic-android.md   # Detail-Datei
-├── topic-hooks.md     # Detail-Datei
-└── bug-cases.jsonl    # Bug-Datenbank
-```
-
-**Quelle:** code.claude.com/docs/en/memory  
-**Stand:** v2.1.59+, v2.1.150
+- **Was:** Claude Code hat drei verschiedene Komprimierungs-Mechanismen:
+  1. **Microcompact** (automatisch, ~60–70 % Auslastung): Leichter Pass — schreibt große Tool-Ergebnisse (Datei-Reads, Grep-Output, Befehlsausgaben) auf die Festplatte und hält nur eine Referenz im Kontext. Kein API-Aufruf nötig. Gibt 10–30K Token frei und verzögert die volle Auto-Komprimierung.
+  2. **Auto-Compact** (automatisch, ~83,5 % Auslastung): Fasst die gesamte Konversations-Historie zusammen — ein strukturierter Summary von max. 20.000 Token wird generiert. Oldest tool outputs werden zuerst entfernt, danach wird die Konversation zusammengefasst.
+  3. **`/compact` (manuell, jederzeit)**: Benutzer-ausgelöste Komprimierung mit optionaler Fokus-Anweisung: `/compact Focus on the API changes`. Ist präziser als Auto-Compact, weil sie zu einem logischen Aufgaben-Endpunkt ausgelöst wird.
+- **Best Practice:** Manuell `/compact` bevorzugen — am Ende jeder abgeschlossenen Aufgabe oder bei 60 % Auslastung auslösen, bevor die Qualität sinkt. Nicht bis zu 90 %+ warten. Wer wartet, bis Auto-Compact feuert, verliert Kontrolle über was zusammengefasst wird.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell), [morphllm.com/claude-code-compact](https://www.morphllm.com/claude-code-compact) (extern)
+- **Stand:** 2026-05-25
 
 ---
 
-## Kontext-Fenster-Anatomie
+## CLAUDE_AUTOCOMPACT_PCT_OVERRIDE — Verhalten und Einschränkungen
 
-**Was:** Wie das Kontextfenster aufgeteilt wird — wichtig für Token-Budgetierung.
-
-**Best Practice — typische Aufteilung:**
-
-| Komponente | ~Tokens | Anmerkung |
-|-----------|---------|-----------|
-| System Prompt | ~4.200 | Fest, unveränderlich |
-| MEMORY.md | ~680 | Erste 200 Zeilen |
-| Umgebungs-Info | ~280 | Plattform, Verzeichnis, etc. |
-| MCP-Tool-Definitionen | ~120 (deferred) | Werden verzögert geladen |
-| CLAUDE.md | variabel | Alle geladenen Regeln |
-| Konversations-Historie | variabel | Wächst mit der Session |
-| Antwort-Buffer | ~13.000 | Reserviert, nicht nutzbar |
-
-**Konsequenzen:**
-- Lange CLAUDE.md-Dateien fressen Kontext
-- Viele MCP-Tools erhöhen den Basis-Kontext-Overhead
-- `.claude/rules/` mit Pfad-Scoping reduziert Overhead
-- MEMORY.md-Index kurz halten (Details in Topic-Dateien)
-
-**Quelle:** code.claude.com/docs/en/how-claude-code-works, code.claude.com/docs/en/memory  
-**Stand:** v2.1.150
+- **Was:** Umgebungsvariable, die den Schwellwert für die Auto-Komprimierung steuert (Werte 1–100). **Kritische Einschränkung:** Das System verwendet intern `Math.min()`, sodass der Wert den internen Default (~83 %) nicht überschreiten kann. Die Variable kann die Komprimierung nur *früher* auslösen, nie später. Wer `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=100` setzt (wie in diesem System konfiguriert), hat faktisch keinen Effekt auf die obere Grenze — die Komprimierung feuert trotzdem bei ~83 %.
+- **Best Practice:** Die Variable nur nutzen, um frühere Komprimierung zu erzwingen (z.B. bei `50` für öfter aber kleinere Zusammenfassungen). Um späte Komprimierung zu erreichen: manuell `/compact` nutzen und `/clear` zwischen unabhängigen Aufgaben. Den Wert 100 zu setzen ist technisch wirkungslos für die obere Grenze.
+- **Hinweis für dieses System:** In CLAUDE.md steht `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ist IMMER 100` — das ist eine bewusste Entscheidung (Frank, 2026-05-24), die große sichtbare Komprimierung erst ganz spät zulässt, während Microcompact den Rest leistet.
+- **Quelle:** [github.com/anthropics/claude-code/issues/31806](https://github.com/anthropics/claude-code/issues/31806) (extern, GitHub-Issue), [claudefa.st/blog/guide/mechanics/context-buffer-management](https://claudefa.st/blog/guide/mechanics/context-buffer-management) (extern)
+- **Stand:** 2026-05-25
 
 ---
 
-## Microcompact vs. /compact
+## Was Komprimierung überlebt — und was verloren geht
 
-**Was:** Zwei verschiedene Komprimierungsmechanismen mit unterschiedlichem Verhalten.
+- **Was überlebt:**
+  - **CLAUDE.md** wird nach jeder Komprimierung frisch von der Festplatte neu eingelesen und re-injiziert. Das ist der zuverlässigste Kanal für persistente Regeln.
+  - **Auto Memory** (erste 200 Zeilen / 25 KB von MEMORY.md) wird am Sessionstart geladen.
+  - **Datei-Änderungen auf der Festplatte** bleiben erhalten (Git-Commits, bearbeitete Dateien).
+  - **Komprimierter Konversations-Summary** bleibt als komprimierter Text erhalten.
 
-**Best Practice:**
+- **Was verloren geht:**
+  - Exakte Datei-Pfade, Zeilennummern und Fehlermeldungen aus früheren Turns.
+  - Debugging-Hypothesen und Architektur-Überlegungen.
+  - Detaillierte Anweisungen aus frühen Konversations-Turns.
+  - Alte Tool-Outputs (Grep-Ergebnisse, Datei-Reads, Befehlsausgaben).
 
-**Microcompact (automatisch, leise):**
-- Läuft kontinuierlich im Hintergrund
-- Lagert große Tool-Ergebnisse auf Disk aus
-- Inkrementelles Aufräumen ohne sichtbare Unterbrechung
-- Kein Kontext-Verlust
+- **Best Practice:** Wichtige persistente Regeln gehören in CLAUDE.md, nicht in die Konversation. Für Komprimierungs-spezifische Anweisungen eine `## Compact Instructions`-Sektion in CLAUDE.md anlegen. Claude Code liest diese Sektion sowohl bei manuellem `/compact` als auch bei Auto-Compact.
 
-**Auto-Compaction (bei ~83%):**
-- Vollständige Zusammenfassung des Konversationsverlaufs
-- Sichtbare Unterbrechung der Session
-- Kontext-Verlust (nur Summary bleibt)
-- Wird durch `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` beeinflusst
-
-**/compact (manuell):**
-- Sofortige Komprimierung auf Befehl
-- Nützlich bevor wichtige, token-intensive Aufgaben
-- `compact` in CLAUDE.md definiert was betont werden soll
-
-**Empfehlung:** Vor großen Aufgaben manuell `/compact` ausführen wenn Kontext bereits voll ist.
-
-**Quelle:** code.claude.com/docs/en/how-claude-code-works  
-**Stand:** v2.1.150
+- **Quelle:** [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell), [morphllm.com/claude-code-auto-compact](https://www.morphllm.com/claude-code-auto-compact) (extern)
+- **Stand:** 2026-05-25
 
 ---
 
-## Subagents für Kontext-Isolation
+## Compact Instructions in CLAUDE.md — Steuern was erhalten bleibt
 
-**Was:** Subagents erhalten einen frischen Kontext — ideal für token-intensive Teilaufgaben.
-
-**Best Practice:**
-- Subagents erben NICHT die Konversations-Historie
-- Jeder Subagent startet mit dem System-Prompt + CLAUDE.md + MEMORY.md
-- Für große, isolierbare Aufgaben: Subagent spawnen statt im Hauptchat arbeiten
-- Subagent-Ergebnisse zurückgeben lassen ohne den gesamten Verlauf mitzunehmen
-
-**Kontext-Kosten von Subagents:**
-- Parallele Subagents teilen sich NICHT das Kontextfenster
-- Jeder bekommt sein eigenes Fenster (separate API-Aufrufe)
-- Kosteneffizienz: 3-5 Sonnet-Subagents für Implementation, 1 Opus für Review
-
-**Quelle:** code.claude.com/docs/en/how-claude-code-works  
-**Stand:** v2.1.150
+- **Was:** Eine dedizierte Sektion `## Compact Instructions` (oder ähnliche Überschrift) in CLAUDE.md gibt Claude Code Anweisungen, was bei der Komprimierung bevorzugt erhalten werden soll. Wird von der offiziellen Doku explizit empfohlen.
+- **Best Practice:**
+  ```markdown
+  ## Compact Instructions
+  - Vollständige Liste der geänderten Dateien immer erhalten
+  - Aktuelle Test-Befehle und Fehlerausgaben priorisieren
+  - Offene Bugs und deren Root-Cause immer zusammenfassen
+  ```
+  Alternativ bei manueller Ausführung: `/compact Focus on API changes and modified file list`.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## Skills mit disable-model-invocation
+## /clear vs. /compact — wann was verwenden
 
-**Was:** Skills können mit `disable-model-invocation: true` konfiguriert werden um Kontext zu sparen.
-
-**Best Practice:**
-- Skill-Definitionen tragen zum Kontext-Overhead bei
-- Selten genutzte Skills: `skillOverrides` in settings.json nutzen um sie zu deaktivieren
-- `maxSkillDescriptionChars` — Skill-Beschreibungen kurz halten
-- `skillListingBudgetFraction` — Anteil des Kontextfensters für Skill-Listings begrenzen
-
-```json
-{
-  "skillOverrides": {
-    "selten-genutzter-skill": {
-      "disabled": true
-    }
-  },
-  "maxSkillDescriptionChars": 200,
-  "skillListingBudgetFraction": 0.1
-}
-```
-
-**Quelle:** code.claude.com/docs/en/settings  
-**Stand:** v2.1.129+ (skillOverrides), v2.1.150
+- **Was:** Zwei verschiedene Mechanismen mit verschiedenen Zwecken:
+  - `/clear`: Setzt den gesamten Kontext zurück (tabula rasa). Kein Summary — komplett frische Session. Ideal zwischen unabhängigen Aufgaben.
+  - `/compact`: Fasst zusammen und setzt fort. Konversations-Geschichte bleibt als Summary. Ideal wenn man die aktuelle Aufgabe weiterverfolgt.
+- **Best Practice:** `/clear` bei komplett neuen, unabhängigen Aufgaben verwenden. Wenn Claude eine Korrektur mehr als zweimal nicht übernimmt: mit `/clear` neu starten mit präziserem Prompt. `/compact` bei langen Sessions innerhalb der gleichen Aufgabe.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## CLAUDE.md — Token-effizient halten
+## Subagents für Kontext-Schutz nutzen
 
-**Was:** CLAUDE.md wird bei jeder Session und nach Komprimierung geladen — Token-Kosten fallen immer an.
-
-**Best Practice:**
-- Hauptdatei kurz halten, Details in `.claude/rules/` auslagern
-- HTML-Kommentare werden aus dem Kontext herausgefiltert (für unsichtbare Metadaten)
-- `@path`-Imports für dynamisch geladene Teile nutzen
-- `claudeMdExcludes` in settings.json: Bestimmte CLAUDE.md-Dateien ausschließen
-- Einzeiler-Verweise auf Rules-Dateien statt vollständigen Regeltext in CLAUDE.md
-
-```markdown
-<!-- Dieser Kommentar wird nicht als Kontext geladen -->
-Vollständige Regel: siehe `~/.claude/rules/meine-regel.md`
-```
-
-**Quelle:** code.claude.com/docs/en/memory  
-**Stand:** v2.1.150
+- **Was:** Subagents laufen in einem eigenen, frischen Kontext-Fenster. Alle Tool-Calls eines Subagents (Datei-Reads, Greps, Befehle) belasten den Haupt-Kontext nicht. Am Ende gibt der Subagent nur einen Summary zurück.
+- **Best Practice:** Rechercheaufgaben, Sicherheits-Reviews, oder große Codebase-Erkundungen immer als Subagent delegieren. Formulierung: `"Use a subagent to investigate how authentication handles token refresh."` — der Subagent exploriert, der Haupt-Kontext bleibt sauber für die Implementierung.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell), [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## Checkpoint-System
+## /btw — Schnell-Fragen ohne Kontext-Kosten
 
-**Was:** Claude Code erstellt automatisch Checkpoints bevor risikoreiche Aktionen ausgeführt werden.
+- **Was:** `/btw <Frage>` zeigt die Antwort in einem overlay-artigen Bereich und schreibt sie nie in die Konversations-History. Nützlich für schnelle Lookup-Fragen (z.B. API-Syntax nachschlagen) mitten in einer Session.
+- **Best Practice:** Für Fragen nutzen, die man nicht als Konversations-Kontext braucht. Verhindert unnötige Kontext-Aufblähung durch Neben-Fragen.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
 
-**Best Practice:**
-- Checkpoints erlauben das Zurücksetzen auf vorherigen Zustand
-- Werden automatisch erstellt — kein manuelles Eingreifen nötig
-- Bei kritischen Operationen: Checkpoint-Erstellung abwarten
-- Checkpoints nicht mit dem Kontext-System verwechseln — sie sind Git-ähnliche Snapshots des Arbeitsverzeichnisses
+---
 
-**Quelle:** code.claude.com/docs/en/how-claude-code-works  
-**Stand:** v2.1.150
+## /rewind und Partial-Compaction (Summarize from here)
+
+- **Was:** `Esc + Esc` oder `/rewind` öffnet das Rewind-Menü. Optionen:
+  - **Restore**: Stellt Konversation und/oder Code auf einen früheren Checkpoint zurück.
+  - **Summarize from here**: Komprimiert Nachrichten ab dem gewählten Punkt — frühere Nachrichten bleiben vollständig erhalten.
+  - **Summarize up to here**: Komprimiert frühere Nachrichten, neueste bleiben vollständig erhalten.
+- **Best Practice:** Für gezielte Teilkomprimierung nutzen statt immer die ganze Session zu komprimieren. Wenn man nur den "Schlick" aus frühen Turns entfernen will, aber die aktuellen Turns komplett braucht: `Summarize up to here` auf einem frühen Checkpoint.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## CLAUDE.md — was rein soll (und was nicht)
+
+- **Was:** CLAUDE.md wird bei jeder Session geladen und nach jeder Komprimierung neu eingelesen. Das macht es zum einzigen garantiert persistenten Kanal für Regeln.
+- **Best Practice — Was rein soll:**
+  - Bash-Befehle die Claude nicht erraten kann
+  - Code-Style-Regeln die vom Default abweichen
+  - Test-Anweisungen und Befehle
+  - Architektur-Entscheidungen spezifisch für das Projekt
+  - Häufige Fallstricke und nicht-offensichtliches Verhalten
+  - Compact Instructions-Sektion
+- **Best Practice — Was nicht rein soll:**
+  - Was Claude aus dem Code ableiten kann
+  - Standard-Sprachkonventionen
+  - Detaillierte API-Dokumentation (stattdessen verlinken)
+  - Dinge die sich häufig ändern
+  - Offensichtliche Praktiken wie "schreib sauberen Code"
+- **Faustregel:** Pro Zeile fragen: "Würde Claude einen Fehler machen, wenn diese Zeile fehlt?" Wenn nein: raus. Zu langes CLAUDE.md führt dazu, dass Regeln ignoriert werden.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Auto Memory (MEMORY.md) — Grenzen und Nutzung
+
+- **Was:** Claude lädt automatisch die ersten 200 Zeilen oder 25 KB der MEMORY.md (je was kleiner ist) beim Session-Start. Alles darüber hinaus wird nicht geladen.
+- **Best Practice:** Index-Einträge kurz halten (max. eine Zeile, ~200 Zeichen). Details in verlinkte Topic-Dateien auslagern. Bei >25 KB aktiv beschneiden — neue Sessions "sehen" dann einen abgeschnittenen Index ohne Warnung.
+- **Hinweis:** Dieses System hat bereits einen MEMORY.md-Overflow (25,5 KB bei 24,4 KB Limit — laut MEMORY.md-Header aktiv).
+- **Quelle:** [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Skills — On-Demand-Laden statt Session-Start-Aufblähung
+
+- **Was:** Skills werden nicht vollständig beim Session-Start geladen. Claude sieht nur die Skill-Beschreibungen. Der vollständige Skill-Inhalt wird erst geladen, wenn der Skill aufgerufen wird. Mit `disable-model-invocation: true` kann man sogar die Beschreibungen aus dem Kontext halten, bis der Skill manuell ausgelöst wird.
+- **Best Practice:** Domänen-Wissen das nur manchmal relevant ist: als Skill statt in CLAUDE.md. Das schont den Kontext für alle anderen Sessions.
+- **Quelle:** [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell), [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## MCP Tool Definitions — Deferred Loading
+
+- **Was:** MCP Tool-Definitionen werden per Default auf Anfrage geladen (nicht beim Session-Start). Nur die Tool-Namen stehen im Kontext, bis Claude ein bestimmtes Tool tatsächlich nutzt. `/mcp` zeigt die Kosten pro Server.
+- **Best Practice:** `/mcp` regelmäßig prüfen, wenn viele MCP-Server konfiguriert sind. Tool-Search (wenn verfügbar) nutzen, um nur relevante Tools zu laden.
+- **Quelle:** [code.claude.com/docs/en/how-claude-code-works](https://code.claude.com/docs/en/how-claude-code-works) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Typische Kontext-Fallen (Anti-Patterns)
+
+- **Was:** Bekannte Muster die den Kontext unnötig aufblähen:
+  1. **Kitchen-Sink-Session:** Eine Aufgabe anfangen, dann unabhängige Fragen stellen, dann zurück zur ersten. Kontext füllt sich mit irrelevantem Material. **Fix:** `/clear` zwischen unabhängigen Aufgaben.
+  2. **Korrekturen stapeln:** Claude macht etwas falsch, man korrigiert, es ist immer noch falsch, man korrigiert wieder. Kontext füllt sich mit fehlgeschlagenen Ansätzen. **Fix:** Nach zwei Fehlkorrekturen `/clear` und mit besserem Prompt neu starten.
+  3. **Endlose Exploration:** "Untersuche X" ohne Scope-Einschränkung. Claude liest hunderte Dateien. **Fix:** Scope eng definieren oder Subagent nutzen.
+  4. **Zu langes CLAUDE.md:** Wichtige Regeln gehen im Rauschen unter. **Fix:** Regelmäßig beschneiden. Was Claude ohne die Regel richtig macht: raus.
+- **Quelle:** [code.claude.com/docs/en/best-practices](https://code.claude.com/docs/en/best-practices) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Bekannte Probleme und Regressions (Stand 2026-05)
+
+- **v2.1.92 Regression:** Autocompact-Schwellwert scheinbar auf 400K Token begrenzt bei Opus 4.6 (1M Kontext-Fenster). GitHub Issue #43989 — unbestätigt ob inzwischen behoben.
+- **CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ignoriert:** In einigen Sessions wird die Variable scheinbar ignoriert; Kontext überschreitet den konfigurierten Schwellwert ohne Komprimierung (GitHub Issue #36381).
+- **Quelle:** [github.com/anthropics/claude-code/issues/43989](https://github.com/anthropics/claude-code/issues/43989) (extern, GitHub), [github.com/anthropics/claude-code/issues/36381](https://github.com/anthropics/claude-code/issues/36381) (extern, GitHub)
+- **Stand:** 2026-05-25
+
+---
+
+*Quellen gesamt: 8 (3 offiziell, 5 extern). Status: VOLLSTÄNDIG.*

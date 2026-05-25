@@ -1,455 +1,262 @@
 # MCP-Server — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
 
-## Überblick
-
-- **Was:** MCP (Model Context Protocol) ist ein offener Standard für AI-Tool-Integrationen. Claude Code verbindet sich über MCP-Server mit externen Tools, Datenbanken und APIs.
-- **Best Practice:** MCP-Server einsetzen wenn man Daten aus anderen Tools ins Chat kopiert (Issue-Tracker, Monitoring-Dashboard etc.) — stattdessen Claude direkt lesen und handeln lassen.
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
+> Quellen: Offizielle Claude Code Dokumentation (code.claude.com/docs/en/mcp, /managed-mcp)
+> Recherche-Datum: 2026-05-25
 
 ---
 
-## Transport-Typen: HTTP vs SSE vs stdio
+## Transport-Typen: HTTP ist Standard, SSE veraltet
 
-- **Was:** Drei Transport-Typen für MCP-Server-Verbindungen.
+- **Was:** Claude Code unterstützt drei Transporte: `streamable-http` (Alias: `http`), `sse`, `stdio`.
+- **Best Practice:** Immer HTTP (streamable-http) verwenden. SSE ist offiziell deprecated — bei neuen Servern nicht mehr einsetzen, bestehende SSE-Server migrieren wenn möglich. Stdio für lokale Prozesse die direkten System-Zugriff brauchen.
+- **Wichtig:** In `.mcp.json` und `add-json`-Befehlen akzeptiert das `type`-Feld `streamable-http` als Alias für `http` — kopierte Doku-Beispiele funktionieren ohne Anpassung.
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Scopes: local / project / user (Terminologie geändert!)
+
+- **Was:** Drei Scope-Ebenen bestimmen wo ein MCP-Server gespeichert ist und ob er mit dem Team geteilt wird.
+- **Scope-Umbenennung (WICHTIG):** Ältere Doku nannte die Scopes anders — die **neue offizielle Terminologie** ist:
+  - `local` (Standard, früher: `project`) → Nur im aktuellen Projekt, nur für dich → gespeichert in `~/.claude.json`
+  - `project` (früher: `global`?) → Im Projekt für alle via `.mcp.json` → in Versionskontrolle einzuchecken
+  - `user` (früher: `global`) → Auf allen deinen Projekten, privat → gespeichert in `~/.claude.json`
 - **Best Practice:**
-
-| Transport | Verwendung | Status |
-|-----------|-----------|--------|
-| `http` (alias: `streamable-http`) | Remote/Cloud-Services — empfohlen | ✅ Standard |
-| `sse` | Legacy Remote-Server | ⚠️ Deprecated |
-| `stdio` | Lokale Prozesse, System-Zugriff | ✅ Aktiv |
-
-  - SSE ist deprecated — wo verfügbar auf HTTP wechseln
-  - `streamable-http` als alias für `http` in JSON-Configs: erlaubt direktes Kopieren von Server-Dokumentation
-  - Stdio-Server: `CLAUDE_PROJECT_DIR` ist im Server-Environment gesetzt → Projekt-relative Pfade ohne Working-Directory-Abhängigkeit
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
+  - `local` für experimentelle Server, persönliche Dev-Configs, Server mit Credentials
+  - `project` für Team-Server die alle brauchen (`.mcp.json` einchecken, Secrets via ENV-Variablen)
+  - `user` für persönliche Utility-Tools die projektübergreifend nützlich sind
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## Scopes: local / project / user
+## .mcp.json: Format & ENV-Variable-Expansion
 
-- **Was:** Drei Scopes kontrollieren wo Konfiguration gespeichert wird und ob sie geteilt wird.
-- **Best Practice:**
-
-| Scope | Geladen in | Geteilt | Gespeichert in |
-|-------|-----------|---------|----------------|
-| `local` (Standard) | Nur aktuelles Projekt | Nein | `~/.claude.json` |
-| `project` | Nur aktuelles Projekt | Ja, via `.mcp.json` in VCS | `.mcp.json` im Projekt-Root |
-| `user` | Alle Projekte | Nein | `~/.claude.json` |
-
-  - `local` für persönliche Dev-Server und experimentelle Configs mit Credentials
-  - `project` für Team-Infrastruktur (`.mcp.json` in VCS einchecken)
-  - `user` für persönliche Tools die projektübergreifend benötigt werden
-  - Scope-Priorität (bei Duplikaten): local > project > user > Plugin-Server > claude.ai-Connector
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## .mcp.json-Struktur (Project Scope)
-
-- **Was:** `.mcp.json` im Projekt-Root für Team-geteilte Konfiguration.
-- **Best Practice:** Vollständiges Format mit allen unterstützten Optionen:
-
-```json
-{
-  "mcpServers": {
-    "http-server": {
-      "type": "http",
-      "url": "${API_BASE_URL:-https://api.example.com}/mcp",
-      "headers": {
-        "Authorization": "Bearer ${API_KEY}"
-      },
-      "timeout": 600000,
-      "alwaysLoad": false,
-      "oauth": {
-        "scopes": "channels:read chat:write",
-        "callbackPort": 8080
+- **Was:** Project-scoped Server werden in `.mcp.json` im Projekt-Root gespeichert. Claude Code fragt zur Genehmigung vor dem ersten Laden (Security-Dialog). `claude mcp reset-project-choices` setzt Genehmigungen zurück.
+- **Unterstützte ENV-Syntax:**
+  - `${VAR}` → Expandiert zur ENV-Variable `VAR`
+  - `${VAR:-default}` → Expandiert zu `VAR` wenn gesetzt, sonst `default`
+- **Expansion funktioniert in:** `command`, `args`, `env`, `url`, `headers`
+- **Best Practice für Teams:** Niemals Secrets in `.mcp.json` hartkodieren. Stattdessen:
+  ```json
+  {
+    "mcpServers": {
+      "api-server": {
+        "type": "http",
+        "url": "${API_BASE_URL:-https://api.example.com}/mcp",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        }
       }
-    },
-    "stdio-server": {
-      "type": "stdio",
-      "command": "/path/to/server",
-      "args": ["--config", "${CLAUDE_PROJECT_DIR:-./}config.json"],
-      "env": {
-        "DB_URL": "${DB_URL}"
-      },
-      "timeout": 30000
     }
   }
-}
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
+  ```
+  Jeder Entwickler setzt `API_KEY` in seiner eigenen Umgebung. `.mcp.json` ist sicher commitbar.
+- **Achtung:** Wenn eine erforderliche ENV-Variable nicht gesetzt ist und kein Default existiert, schlägt das Parsen der Config fehl.
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## Umgebungsvariablen-Expansion
+## OAuth 2.0 Authentication für Remote-Server
 
-- **Was:** `.mcp.json` unterstützt `${VAR}` und `${VAR:-default}` Expansion in `command`, `args`, `env`, `url` und `headers`.
+- **Was:** Claude Code unterstützt OAuth 2.0 für sichere Remote-Verbindungen. Authentifizierung wird via `/mcp`-Befehl ausgelöst, Tokens werden sicher gespeichert und automatisch erneuert.
+- **Trigger:** Server antwortet mit `401 Unauthorized` oder `403 Forbidden` → Server wird in `/mcp` als "benötigt Authentifizierung" markiert.
+- **Best Practice für verschiedene Auth-Szenarien:**
+  - **Standard OAuth (dynamische Client-Registrierung):** `claude mcp add --transport http server https://...` → dann `/mcp` zum Einloggen
+  - **Fixer Callback-Port** (wenn Server eine vorregistrierte Redirect-URI braucht): `--callback-port 8080`
+  - **Vorkonfigurierte OAuth-Credentials:** `--client-id your-id --client-secret --callback-port 8080`
+  - **Benutzerdefiniertes Auth-Schema (Kerberos, Short-lived Tokens etc.):** `headersHelper` verwenden — Befehl wird bei jeder Verbindung ausgeführt und seine JSON-Ausgabe als Headers gesetzt
+  - **OAuth-Scopes einschränken:** `"oauth": { "scopes": "channels:read chat:write" }` in `.mcp.json` — sicherheitsrelevant wenn Server mehr Scopes anbietet als nötig
+- **Wichtig:** `authServerMetadataUrl` ab v2.1.64 verfügbar zum Überschreiben der OAuth-Discovery-Chain
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Tool Search: Kontext-Optimierung bei vielen MCP-Servern (Standard seit 2.1.x)
+
+- **Was:** Tool Search ist standardmäßig aktiviert. Nur Tool-Namen laden beim Session-Start — Tool-Definitionen werden on-demand geladen wenn Claude sie braucht. Hält den Kontext schlank auch bei vielen Servern.
+- **Voraussetzung:** Modell muss `tool_reference` Blocks unterstützen (Sonnet 4+, Opus 4+ — Haiku nicht). Auf Vertex AI ab Sonnet 4.5/Opus 4.5. Deaktiviert bei Vertex AI by default und bei Custom `ANTHROPIC_BASE_URL`.
 - **Best Practice:**
-  - `${VAR}` — erweitert auf Wert der Umgebungsvariable
-  - `${VAR:-default}` — Fallback-Wert wenn nicht gesetzt
-  - Für Secrets: Variable aus Umgebung lesen, nie hardcoden
-  - `${CLAUDE_PROJECT_DIR:-.}` als Default wenn Variable möglicherweise fehlt (z.B. außerhalb von Plugin-Kontext)
-
-```json
-{
-  "mcpServers": {
-    "api": {
-      "type": "http",
-      "url": "${API_URL:-https://api.default.com}/mcp",
-      "headers": { "Authorization": "Bearer ${API_TOKEN}" }
-    }
-  }
-}
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
+  - Standard-Setting (`ENABLE_TOOL_SEARCH` ungesetzt) für die meisten Setups
+  - `alwaysLoad: true` in der Server-Config nur für die wenigen Tools die Claude auf jedem Turn braucht (blockiert Session-Start bis Server verbunden, max 5 Sekunden)
+  - Für MCP-Server-Autoren: Klare `server instructions` schreiben — werden von Tool Search genutzt um relevante Tools zu finden (max 2KB, kritische Info vorne)
+  - `ENABLE_TOOL_SEARCH=auto` für Threshold-Modus: Tools laden upfront wenn sie in 10% des Context-Windows passen
+  - `ENABLE_TOOL_SEARCH=false` nur wenn Tool Search Probleme macht (lädt alle Tools upfront)
+- **Einzelnes Tool immer laden:** `"_meta": { "anthropic/alwaysLoad": true }` im tools/list-Response
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
 
 ---
 
-## CLI-Befehle
+## MCP Resources: @ Mentions
 
-### Server hinzufügen
+- **Was:** MCP-Server können Resources exponieren, die per `@`-Mention referenziert werden, ähnlich wie Dateien. Format: `@server:protocol://resource/path`
+- **Best Practice:**
+  - `@` tippen für Autocomplete-Menü mit allen verfügbaren Resources
+  - Mehrere Resources in einem Prompt kombinieren: `Compare @postgres:schema://users with @docs:file://database/user-model`
+  - Resources werden automatisch als Attachments eingebunden wenn referenziert
+  - Fuzzy-Search in der Autocomplete
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## MCP Prompts als Commands
+
+- **Was:** MCP-Server können Prompts exponieren die als `/mcp__servername__promptname`-Commands verfügbar werden
+- **Best Practice:**
+  - `/` tippen für alle verfügbaren Commands inkl. MCP-Prompts
+  - Mit Argumenten: `/mcp__github__pr_review 456`
+  - Server- und Prompt-Namen werden normalisiert (Leerzeichen → Unterstriche)
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Channels: Externe Events in die Session pushen
+
+- **Was:** MCP-Server können mit `claude/channel`-Capability Nachrichten aktiv in die laufende Session pushen — Claude reagiert auf externe Events (CI-Ergebnisse, Monitoring-Alerts, Chat-Nachrichten) ohne dass der Nutzer aktiv sein muss.
+- **Best Practice:**
+  - Opt-in beim Start: `--channels`-Flag
+  - Server muss `claude/channel`-Capability deklarieren
+  - Offiziell unterstützte Channels: [https://code.claude.com/docs/en/channels](https://code.claude.com/docs/en/channels)
+  - Für eigene Channels: [https://code.claude.com/docs/en/channels-reference](https://code.claude.com/docs/en/channels-reference)
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Managed MCP: Enterprise-Kontrolle
+
+- **Was:** Administratoren können via `managed-mcp.json` zentral steuern welche MCP-Server Nutzer verwenden dürfen.
+- **Pfade:**
+  - macOS: `/Library/Application Support/ClaudeCode/managed-mcp.json`
+  - Linux/WSL: `/etc/claude-code/managed-mcp.json`
+  - Windows: `C:\Program Files\ClaudeCode\managed-mcp.json`
+- **Kontrollmuster (von streng zu locker):**
+  1. **MCP komplett deaktivieren:** `{ "mcpServers": {} }` — leeres Objekt blockiert alles
+  2. **Festes Server-Set:** `managed-mcp.json` mit erlaubten Servern — Nutzer können nichts hinzufügen
+  3. **Genehmigter Katalog:** `allowedMcpServers` + `allowManagedMcpServersOnly: true` — Nutzer wählen aus der Liste
+  4. **Nur Plugin-Server:** `strictPluginOnlyCustomization` mit `mcp` in der Liste
+  5. **Weiche Allowlist:** `allowedMcpServers` ohne `allowManagedMcpServersOnly` — Nutzer können erweitern
+  6. **Nur Denylist:** `deniedMcpServers` — blockiert bekannte schlechte Server, Rest erlaubt
+- **Best Practice für Allowlist/Denylist:**
+  - Immer `serverUrl` für Remote-Server (mit Wildcards: `https://mcp.example.com/*`)
+  - Immer `serverCommand` für Stdio-Server (exakter Match aller Argumente!)
+  - `serverName` ist KEIN Sicherheitskontroll — Nutzer können jeden Server beliebig benennen
+  - Secrets niemals in `managed-mcp.json` (Datei ist maschinenlesbar) → `${VAR}` Expansion oder OAuth/headersHelper
+- **Validierung:** `claude mcp add --transport http test https://example.com/mcp` sollte mit Policy-Fehler fehlschlagen wenn `managed-mcp.json` aktiv
+- **Monitoring:** `OTEL_LOG_TOOL_DETAILS=1` für OpenTelemetry-Export mit MCP Server/Tool-Namen
+- **Quelle:** [https://code.claude.com/docs/en/managed-mcp](https://code.claude.com/docs/en/managed-mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Wichtige Umgebungsvariablen & Timeouts
+
+- **Was:** Mehrere ENV-Variablen steuern MCP-Verhalten auf Session-Ebene.
+- **Referenz:**
+
+| Variable | Default | Bedeutung |
+|---|---|---|
+| `MCP_TIMEOUT` | 5000ms | Server-Startup-Timeout in ms (`MCP_TIMEOUT=10000 claude`) |
+| `MAX_MCP_OUTPUT_TOKENS` | 25.000 | Max Token-Output pro Tool-Call |
+| `ENABLE_TOOL_SEARCH` | unset (=auto on) | Tool-Search-Verhalten (true/false/auto/auto:N) |
+| `ENABLE_CLAUDEAI_MCP_SERVERS` | true | Claude.ai Connectors in Claude Code laden |
+| `MCP_CLIENT_SECRET` | - | OAuth Client Secret für CI/non-interaktive Umgebungen |
+
+- **Per-Server Timeout:** `"timeout": 600000` (ms) in der Server-Konfiguration → überschreibt `MCP_TOOL_TIMEOUT` für diesen Server
+- **Warnung bei großem Output:** Ab 10.000 Token zeigt Claude Code eine Warnung. Limit erhöhen mit `MAX_MCP_OUTPUT_TOKENS=50000`
+- **Server-Autoren:** `"_meta": { "anthropic/maxResultSizeChars": 200000 }` im tools/list-Response für Tools die große Outputs brauchen (max 500.000 Chars)
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Scope-Hierarchie & Deduplizierung
+
+- **Was:** Wenn derselbe Server in mehreren Scopes definiert ist, verbindet Claude Code ihn einmalig mit der höchsten Precedence.
+- **Reihenfolge (höchste zuerst):**
+  1. Local Scope
+  2. Project Scope
+  3. User Scope
+  4. Plugin-bereitgestellte Server
+  5. Claude.ai Connectors
+- **Matching:** Scopes 1-3 matchen nach Name. Plugins und Connectors matchen nach Endpoint/URL.
+- **Best Practice:** Server-Name `workspace` ist reserviert (interner Gebrauch) → bei eigenen Servern vermeiden
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Reconnection & Reliability
+
+- **Was:** HTTP/SSE-Server werden bei Verbindungsabbruch automatisch reconnected (exponential backoff: bis 5 Versuche, Start bei 1 Sekunde, verdoppelt sich). Ab v2.1.121: auch Initial-Connection wird bis zu 3x wiederholt bei transienten Fehlern (5xx, Connection Refused, Timeout). Stdio-Server werden nicht automatisch reconnected.
+- **Best Practice:**
+  - Für produktive Remote-Server HTTP statt SSE verwenden (beide haben Reconnect-Logik, HTTP ist aktueller Standard)
+  - Bei Authentifizierungs- oder 404-Fehlern kein Retry — Config-Problem, nicht transienter Fehler
+  - `/mcp` zeigt Server-Status und pending/failed Verbindungen
+- **Dynamische Tool-Updates:** MCP `list_changed` Notifications werden unterstützt — Server können Tools live aktualisieren ohne Reconnect
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Plugin-gebundene MCP-Server
+
+- **Was:** Plugins können MCP-Server mitbringen — automatisch aktiv wenn Plugin aktiviert, keine manuelle Konfiguration nötig.
+- **ENV-Variablen in Plugin-MCP-Configs:**
+  - `${CLAUDE_PLUGIN_ROOT}` → Plugin-Verzeichnis für mitgelieferte Binaries
+  - `${CLAUDE_PLUGIN_DATA}` → Persistente Daten die Plugin-Updates überleben
+  - `${CLAUDE_PROJECT_DIR}` → Aktuelles Projekt-Root
+- **Best Practice:** `/reload-plugins` ausführen wenn Plugin während Session aktiviert/deaktiviert
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## MCP Elicitation: Strukturierte Eingabe mid-Task
+
+- **Was:** Server können via Elicitation strukturierte Eingaben vom Nutzer anfordern während Claude arbeitet. Automatisch als interaktiver Dialog oder Browser-URL angezeigt — keine Konfiguration nötig.
+- **Modi:**
+  - Form-Modus: Claude Code zeigt Formularfelder (z.B. Username/Password)
+  - URL-Modus: Browser-URL für OAuth/Approval-Flows
+- **Best Practice:** `Elicitation`-Hook für automatische Responses in nicht-interaktiven Umgebungen
+- **Quelle:** [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) (offiziell)
+- **Stand:** 2026-05-25
+
+---
+
+## Praktische Kurzreferenz: häufige Befehle
 
 ```bash
-# HTTP-Server (empfohlen)
+# HTTP-Server hinzufügen (empfohlen)
+claude mcp add --transport http notion https://mcp.notion.com/mcp
+
+# Mit Bearer-Token
 claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \
-  --header "Authorization: Bearer $GITHUB_PAT"
+  --header "Authorization: Bearer YOUR_PAT"
 
-# Mit Scope
-claude mcp add --transport http stripe --scope project https://mcp.stripe.com
+# Stdio-Server mit ENV-Variable
+claude mcp add --transport stdio --env API_KEY=xxx my-server -- npx -y server-package
 
-# Stdio-Server
-claude mcp add --transport stdio airtable \
-  --env AIRTABLE_API_KEY=KEY \
-  -- npx -y airtable-mcp-server
+# Project-Scope (für Team)
+claude mcp add --transport http paypal --scope project https://mcp.paypal.com/mcp
 
-# Aus JSON
-claude mcp add-json weather '{"type":"http","url":"https://api.weather.com/mcp"}'
+# User-Scope (alle Projekte)
+claude mcp add --scope user --transport http hubspot https://mcp.hubspot.com/anthropic
 
-# Aus Claude Desktop importieren (macOS/WSL)
-claude mcp add-from-claude-desktop --scope user
-```
+# Von JSON
+claude mcp add-json weather-api '{"type":"http","url":"https://api.weather.com/mcp"}'
 
-### Server verwalten
+# Von Claude Desktop importieren (macOS/WSL)
+claude mcp add-from-claude-desktop
 
-```bash
-claude mcp list           # Alle konfigurierten Server
-claude mcp get github     # Details für einen Server
-claude mcp remove github  # Server entfernen
-claude mcp reset-project-choices  # Genehmigungs-Entscheidungen zurücksetzen
-/mcp                      # In-Session: Status und Tool-Anzahl anzeigen
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## OAuth 2.0 Authentifizierung
-
-- **Was:** Claude Code unterstützt OAuth 2.0 für Remote-MCP-Server. Server wird als auth-pflichtig markiert bei 401/403-Antworten.
-- **Best Practice:**
-
-```bash
-# 1. Server hinzufügen
-claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
-
-# 2. In Claude Code authentifizieren
-/mcp  # → Browser-Flow folgen
-
-# Fester Callback-Port (für pre-registrierte Redirect-URIs)
-claude mcp add --transport http --callback-port 8080 my-server https://mcp.example.com/mcp
-
-# Pre-konfigurierte OAuth-Credentials
-claude mcp add --transport http \
-  --client-id my-client-id --client-secret --callback-port 8080 \
-  my-server https://mcp.example.com/mcp
-```
-
-  - OAuth-Tokens werden sicher im System-Keychain gespeichert und automatisch refreshed
-  - `authServerMetadataUrl` überschreibt Standard-Discovery (ab v2.1.64)
-  - `oauth.scopes` pinnt Scopes auf Security-genehmigte Teilmenge
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Dynamische Headers (headersHelper)
-
-- **Was:** Für Custom-Authentifizierung (Kerberos, Short-lived Tokens, internes SSO) ausführt `headersHelper` ein Kommando das Header generiert.
-- **Best Practice:**
-
-```json
-{
-  "mcpServers": {
-    "internal-api": {
-      "type": "http",
-      "url": "https://mcp.internal.example.com",
-      "headersHelper": "/opt/bin/get-mcp-auth-headers.sh"
-    }
-  }
-}
-```
-
-  - Helper muss JSON-Objekt mit String-Key-Value-Paaren auf stdout schreiben
-  - Läuft bei jeder Verbindung fresh (Session-Start + Reconnect) — kein Caching
-  - Timeout: 10 Sekunden
-  - `CLAUDE_CODE_MCP_SERVER_NAME` und `CLAUDE_CODE_MCP_SERVER_URL` sind im Helper-Environment verfügbar
-  - `headersHelper` in project/local scope: Nur nach Workspace-Trust-Dialog
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Tool Search (Standard ab ~v2.1.x)
-
-- **Was:** Tool Search lädt MCP-Tool-Definitionen erst on-demand statt alle beim Session-Start. Nur Tool-Namen laden initial → minimaler Kontext-Verbrauch.
-- **Best Practice:**
-
-```bash
-# Standard: alle Tools deferred
-# (kein Flag nötig)
-
-# Threshold-Modus: lädt sofort wenn unter 10% Kontext
-ENABLE_TOOL_SEARCH=auto claude
-
-# Custom Threshold
-ENABLE_TOOL_SEARCH=auto:5 claude
-
-# Deaktivieren (alle Tools sofort laden)
-ENABLE_TOOL_SEARCH=false claude
-```
-
-  - Standard ist `true` (alle deferred). Fällt auf Vertex AI oder bei custom `ANTHROPIC_BASE_URL` auf Upfront-Loading zurück.
-  - Erfordert Sonnet 4+ oder Opus 4+. Haiku unterstützt es nicht.
-  - `alwaysLoad: true` in Server-Config: Server-Tools laden immer sofort (für kritische, immer benötigte Tools)
-  - MCP-Server-Autoren: `server instructions`-Feld nutzen damit Claude weiß wann nach Tools zu suchen ist
-
-```json
-{
-  "mcpServers": {
-    "core-tools": {
-      "type": "http",
-      "url": "https://mcp.example.com/mcp",
-      "alwaysLoad": true
-    }
-  }
-}
-```
-
-  - `alwaysLoad` blockiert Startup bis Server verbunden (max 5 Sekunden Timeout) — sparsam einsetzen!
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Output-Limits konfigurieren
-
-- **Was:** MCP-Tool-Output wird bei 10.000 Tokens gewarnt, Default-Maximum 25.000 Tokens.
-- **Best Practice:**
-
-```bash
-# Global erhöhen
-export MAX_MCP_OUTPUT_TOKENS=50000
-claude
-```
-
-  Für eigene MCP-Server: `anthropic/maxResultSizeChars` in `tools/list`-Response setzen (max 500.000 Zeichen) — dann müssen Nutzer `MAX_MCP_OUTPUT_TOKENS` nicht anpassen:
-
-```json
-{
-  "name": "get_schema",
-  "description": "Returns the full database schema",
-  "_meta": { "anthropic/maxResultSizeChars": 200000 }
-}
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## MCP-Timeouts konfigurieren
-
-- **Was:** Startup-Timeout global, Tool-Execution-Timeout pro Server.
-- **Best Practice:**
-
-```bash
-# Startup-Timeout (global)
-MCP_TIMEOUT=10000 claude     # 10 Sekunden
-
-# Tool-Execution-Timeout (pro Server in .mcp.json)
-# "timeout": 600000 = 10 Minuten
-# Werte unter 1000ms werden auf 1 Sekunde aufgerundet
-# Bei HTTP/SSE: mindestens 60s First-Byte-Budget unabhängig davon
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Automatische Reconnection
-
-- **Was:** HTTP/SSE-Server: automatische Reconnection mit exponential Backoff (5 Versuche, start 1s, verdoppelt). Stdio-Server: kein Auto-Reconnect.
-- **Best Practice:** Ab v2.1.121: bis zu 3 Versuche bei transient errors (5xx, Connection refused, Timeout) beim initialen Connect. Auth-Fehler und 404 werden nicht retried (Config-Änderung nötig).
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Channels: Push-Nachrichten von MCP-Servern
-
-- **Was:** MCP-Server können aktiv Nachrichten in die Claude-Session pushen (CI-Ergebnisse, Monitoring-Alerts, Chat-Nachrichten). Server deklariert `claude/channel`-Capability, opt-in mit `--channels` Flag.
-- **Best Practice:** Für reaktive Workflows (CI → Claude reagiert automatisch). Dokumentation: `/en/channels` und `/en/channels-reference`.
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## MCP-Resources mit @-Mentions
-
-- **Was:** MCP-Server können Resources exponieren, die per `@server:protocol://resource/path` referenziert werden.
-- **Best Practice:**
-
-```
-# Beispiele
-@github:issue://123
-@docs:file://api/authentication
-@postgres:schema://users
-```
-
-  - Tippe `@` für Autocomplete aller verfügbaren Resources
-  - Resources werden automatisch als Attachments eingebunden
-  - Pfade sind fuzzy-searchbar
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## MCP-Prompts als Commands
-
-- **Was:** MCP-Server können Prompts exponieren die als `/mcp__servername__promptname`-Commands verfügbar sind.
-- **Best Practice:**
-
-```bash
-# Ohne Argumente
-/mcp__github__list_prs
-
-# Mit Argumenten
-/mcp__github__pr_review 456
-/mcp__jira__create_issue "Bug in login" high
-```
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Managed MCP Configuration (Enterprise)
-
-- **Was:** Für Teams/Enterprise: zentralisierte Kontrolle über MCP-Server via `managed-mcp.json` + `allowedMcpServers`/`deniedMcpServers`.
-- **Best Practice:** Verweis auf `/en/managed-mcp` für vollständige Doku. Ab v2.1.149 auch `allowAllClaudeAiMcps` Managed-Setting für claude.ai Cloud MCP Connectors.
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Claude Code als MCP-Server
-
-- **Was:** Claude Code selbst kann als stdio-MCP-Server gestartet werden.
-- **Best Practice:**
-
-```bash
-claude mcp serve
-```
-
-Claude Desktop config (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "claude-code": {
-      "type": "stdio",
-      "command": "/full/path/to/claude",
-      "args": ["mcp", "serve"]
-    }
-  }
-}
-```
-
-  - Vollpfad zu `claude` angeben (`which claude`). Nur Pfad im PATH reicht nicht immer.
-  - Exposiert Claude-Tools (View, Edit, LS etc.) für andere MCP-Clients.
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Empfohlene MCP-Server (Stand Mai 2026)
-
-- **Was:** Offiziell kuratierte und partner-verifizierte Server aus dem Anthropic Directory.
-- **Best Practice:** Im Anthropic Directory unter https://claude.ai/directory browsen. Alle dort gelisteten Remote-Server können direkt mit `claude mcp add` hinzugefügt werden.
-
-Häufig genutzter Kern:
-
-| Server | Transport | Befehl |
-|--------|-----------|--------|
-| GitHub | HTTP | `claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer $PAT"` |
-| Sentry | HTTP | `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` |
-| Notion | HTTP | `claude mcp add --transport http notion https://mcp.notion.com/mcp` |
-| PostgreSQL | stdio | `claude mcp add --transport stdio db -- npx -y @bytebase/dbhub --dsn "postgresql://..."` |
-| Playwright | stdio | `claude mcp add --transport stdio playwright -- npx -y @playwright/mcp@latest` |
-
-  - Eigene MCP-Server scaffolden: `mcp-server-dev`-Plugin aus Official Marketplace nutzen (`/mcp-server-dev:build-mcp-server`)
-
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Diagnose & Troubleshooting
-
-```bash
-# Server-Status prüfen
+# Status prüfen
 claude mcp list
-
-# Server-Details
-claude mcp get <name>
-
-# In-Session Status (Tool-Anzahl + fehlerhafte Server)
-/mcp
-
-# Server manuell testen (bei Disconnect)
-# Befehl aus .mcp.json manuell im Terminal ausführen → Fehler sehen
-```
-
-- **Best Practice:** JSON in `.mcp.json` vor Änderungen mit einem Linter validieren (Trailing Commas, fehlende Quotes → stille Fehler). `"workspace"` ist als Server-Name reserviert — vermeiden.
-- **Quelle:** https://code.claude.com/docs/en/mcp (offiziell)
-- **Stand:** Mai 2026
-
----
-
-## Changelog-Zeilen (MCP)
-
-```
-v2.1.149 (22.05.2026) — MCP: allowAllClaudeAiMcps Enterprise-Setting; /usage zeigt Kosten pro MCP-Server
-v2.1.144 (19.05.2026) — MCP: paginierte tools/list Responses werden vollständig geladen; SVG-Images zu Disk
-v2.1.121 (früher)     — MCP: alwaysLoad-Feld (ab v2.1.121); 3 Retries bei transient Initial-Connect-Fehlern
-v2.1.64  (früher)     — MCP: authServerMetadataUrl für OAuth-Discovery-Override
-~2025    (früher)     — MCP: Tool Search Standard (deferred loading); Channels-Feature; headersHelper; oauth.scopes
-~2025    (früher)     — MCP: SSE deprecated → HTTP empfohlen; dynamische list_changed Notifications
+claude mcp get github
+/mcp  # In Claude Code Session
 ```
