@@ -98,7 +98,13 @@ nur mit dem Volltext arbeiten. Deshalb gilt strikt:
   1:1 speichert. NIEMALS WebFetch oder ein Researcher — die fassen zusammen und zerstoeren die
   Vollstaendigkeit. Genau das war der urspruengliche Fehler (2026-05-25).
 - **Aufbau:** Kurzer Kopf (Quelle, Download-Datum, Abdeckung), darunter der komplette Changelog
-  chronologisch (neueste Version oben), jede Version `## X.Y.Z` mit allen Original-Bullets.
+  chronologisch (neueste Version oben), jede Version `## X.Y.Z — YYYY-MM-DD` mit allen Original-Bullets.
+- **Datum je Version (PFLICHT):** Der CHANGELOG.md enthaelt KEINE Datumsangaben. Das Release-Datum
+  jeder Version kommt aus den **npm-Publish-Zeitstempeln**: `npm view @anthropic-ai/claude-code time --json`
+  (Fallback: Registry-Fetch `https://registry.npmjs.org/@anthropic-ai%2Fclaude-code`, Feld `time`). Jeder
+  Versions-Header wird zu `## X.Y.Z — YYYY-MM-DD` angereichert (Datum aus dem Roh-ISO-String, ohne
+  Zeitzonen-Shift). Versionen ohne npm-Eintrag (sehr alte 0.2.x): `— Datum unbekannt`. So ist die
+  Entwicklung auch ZEITLICH erfassbar, nicht nur nach Versionsnummer.
 - **Bei jedem Lauf:** Datei komplett neu holen (der kanonische CHANGELOG.md enthaelt ohnehin die
   Gesamthistorie, neue Versionen sind dann oben automatisch dabei).
 - **Pflicht-Verifikation:** Nach dem Download Anzahl `## `-Versions-Header UND Bullet-Zeilen gegen
