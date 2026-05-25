@@ -646,6 +646,11 @@ namespace TerminalVoiceOverlay.Views
         private const double CollapsedHeight   = 64;
         private const double FullHeight        = 612;
         private const double CollapseTopOffset = 66;
+        // Abstand der vertikalen Saeulen-Oberkante vom oberen Rand der Monitor-
+        // Arbeitsflaeche (_waY). Das ist die kanonische "obere Linie" der Saeule —
+        // auch der Beam-Effekt blendet GENAU hier wieder ein, nicht hoeher
+        // (Frank 2026-05-25: "im Viereck bleiben, nicht nach oben vergroessern").
+        private const double VerticalTopOffset = 57;
         private const int    CollapseAfterUseMs  = 2000;
         private const int    CollapseAfterPeekMs = 3000;
 
@@ -1355,11 +1360,14 @@ namespace TerminalVoiceOverlay.Views
                 ApplyOrientationSilent(horizontal);
 
                 // 3) Endposition berechnen (setzt auch die Fenstergroesse) und das
-                //    Fenster GANZ OBEN auf derselben X-Spalte parken → danach
-                //    reiner senkrechter Fall.
+                //    Fenster auf derselben X-Spalte an der OBEREN LINIE der Saeule
+                //    parken (NICHT am Arbeitsbereich-Rand — sonst beamt es zu hoch
+                //    rein und ruckelt die Differenz runter; Frank 2026-05-25).
+                //    Vertikal: das ist bereits die Endposition → kein Fall.
+                //    Horizontal: von hier faellt die Leiste glatt nach unten.
                 ComputeOrientationTarget(out double finalLeft, out double finalTop);
                 Left = finalLeft;
-                Top  = _waY;
+                Top  = _waY + VerticalTopOffset;
 
                 UIElement targetView = horizontal ? (UIElement)HorizontalView : FullView;
 
@@ -1445,7 +1453,7 @@ namespace TerminalVoiceOverlay.Views
                 else
                 {
                     left = _waX + _waW - 96 - 27;
-                    top  = _waY + 57;
+                    top  = _waY + VerticalTopOffset;
                     _manuallyPositioned = false;
                 }
             }
@@ -1564,7 +1572,7 @@ namespace TerminalVoiceOverlay.Views
                 else if (_waW > 0)
                 {
                     targetLeft = _waX + _waW - 96 - 27;
-                    targetTop  = _waY + 57;
+                    targetTop  = _waY + VerticalTopOffset;
                     _manuallyPositioned = false;
                 }
                 else { _manuallyPositioned = false; }
@@ -2133,7 +2141,7 @@ namespace TerminalVoiceOverlay.Views
                     // wie fullTop (Collapse-Offset wird oben drauf gerechnet).
                     bool hasSaved = _savedVerticalPos is not null;
                     Left = hasSaved ? _savedVerticalPos!.Value.X : _waX + _waW - Width - 27;
-                    double fullTop = hasSaved ? _savedVerticalPos!.Value.Y : _waY + 57;
+                    double fullTop = hasSaved ? _savedVerticalPos!.Value.Y : _waY + VerticalTopOffset;
                     if (_autoHideEnabled && _isCollapsed)
                     {
                         Top    = fullTop + CollapseTopOffset;
