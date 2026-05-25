@@ -94,33 +94,28 @@ nur mit dem Volltext arbeiten. Deshalb gilt strikt:
   alle Bullet-Points wortwoertlich. KEINE Zusammenfassungen, KEINE Wochen-Stichpunkte, KEINE Kuerzung.
 - **Kanonische Quelle:** `https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md`
   — enthaelt alle Versionen (neueste oben), zurueck bis in die 0.x-Reihe. Mindest-Abdeckung: ab 2.0.
-- **Download-Methode:** IMMER direkter Datei-Download (`Invoke-WebRequest` / `curl`), der den Inhalt
-  1:1 speichert. NIEMALS WebFetch oder ein Researcher — die fassen zusammen und zerstoeren die
-  Vollstaendigkeit. Genau das war der urspruengliche Fehler (2026-05-25).
-- **Aufbau:** Kurzer Kopf (Quelle, Download-Datum, Abdeckung), darunter der komplette Changelog
-  chronologisch (neueste Version oben), jede Version `## X.Y.Z — YYYY-MM-DD` mit allen Original-Bullets.
-- **Datum je Version (PFLICHT):** Der CHANGELOG.md enthaelt KEINE Datumsangaben. Das Release-Datum
-  jeder Version kommt aus den **npm-Publish-Zeitstempeln**: `npm view @anthropic-ai/claude-code time --json`
-  (Fallback: Registry-Fetch `https://registry.npmjs.org/@anthropic-ai%2Fclaude-code`, Feld `time`). Jeder
-  Versions-Header wird zu `## X.Y.Z — YYYY-MM-DD` angereichert (Datum aus dem Roh-ISO-String, ohne
-  Zeitzonen-Shift). Versionen ohne npm-Eintrag (sehr alte 0.2.x): `— Datum unbekannt`. So ist die
-  Entwicklung auch ZEITLICH erfassbar, nicht nur nach Versionsnummer.
-- **Bei jedem Lauf — INKREMENTELL (nur Neues anhaengen):**
-  1. `last_version` aus `_state.json` lesen.
-  2. Kanonische CHANGELOG.md verbatim holen (enthaelt die Gesamthistorie).
-  3. Nur die Versions-Bloecke bestimmen, die NEUER als `last_version` sind (alle `## X.Y.Z` oberhalb
-     von `last_version` in der frischen Datei) — jeweils mit allen Original-Bullets.
-  4. Diese neuen Bloecke mit npm-Datum anreichern (`## X.Y.Z — YYYY-MM-DD`).
-  5. NUR diese neuen Bloecke oben ins bestehende `_changelog-archiv.md` einfuegen — direkt unter dem
-     Kopf-Block, ueber dem bisher neuesten Eintrag. Bestehende Eintraege (und evtl. eigene Hand-Notizen)
-     bleiben unangetastet.
-  6. `_state.json`: `last_version` auf die neueste Version, `last_checked` auf heute setzen.
-  - **Erstlauf** (`last_version` = null) oder fehlendes Archiv: einmalig kompletter Verbatim-Download
-    + Datums-Anreicherung (so wie beim Aufbau am 2026-05-25 mit 296 Versionen).
-- **Pflicht-Verifikation:** Nach dem Einfuegen pruefen, dass (a) genau die erwarteten neuen Versionen
-  jetzt oben stehen, (b) jede neue Version vollen Bullet-Text + Datum hat, und (c) die alten Eintraege
-  unveraendert sind (neue Header-Zahl = alte + Anzahl neuer Versionen). Beim Erstlauf/Voll-Download:
-  Header- und Bullet-Zahl gegen die Quelldatei abgleichen (muessen identisch sein).
+- **Download-Methode:** Direkter Datei-Download — NIEMALS WebFetch oder ein Researcher (die fassen
+  zusammen und zerstoeren die Vollstaendigkeit; genau das war der urspruengliche Fehler 2026-05-25).
+- **Datum je Version:** Der CHANGELOG.md hat KEINE Datumsangaben. Das Release-Datum kommt aus den
+  **npm-Publish-Zeitstempeln** (`@anthropic-ai/claude-code`, Feld `time`). Format: `## X.Y.Z — YYYY-MM-DD`,
+  fehlt ein npm-Eintrag (sehr alte 0.2.x): `— Datum unbekannt`. So ist die Entwicklung auch ZEITLICH
+  erfassbar, nicht nur nach Versionsnummer.
+
+### Ausfuehrung: das Script (nicht von Hand nachbauen!)
+
+Die komplette Mechanik (Download + npm-Datum + Erstlauf/inkrementell + Verifikation) steckt in einem
+deterministischen Script. NICHT als Prosa rekonstruieren — aufrufen:
+
+| Plattform | Befehl |
+|-----------|--------|
+| Windows | `pwsh ${CLAUDE_SKILL_DIR}/scripts/update-changelog.ps1` |
+| macOS/Linux | `bash ${CLAUDE_SKILL_DIR}/scripts/update-changelog.sh` |
+
+- **Ohne Flag = inkrementell:** nur Versionen neuer als `_state.json.last_version` werden oben
+  angehaengt; alte Eintraege + eigene Hand-Notizen bleiben unangetastet.
+- **Mit `-FirstRun` (ps1) / `--first-run` (sh):** kompletter Neu-Aufbau (Erstlauf oder Reparatur).
+- Das Script pflegt `_state.json` selbst und gibt am Ende eine Verifikation aus (Versions-Header-Zahl,
+  Duplikat-Check). Getestet 2026-05-25: FirstRun = 296 Versionen, inkrementell haengt exakt die neuen an.
 
 ## Taxonomie (11 Kategorien, selbst-erweiternd)
 
