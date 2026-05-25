@@ -553,14 +553,14 @@
          Zustand). Gleiche Breite wie das volle Overlay (96), Hoehe 64 — so
          bleibt die horizontale Position identisch und nur die Hoehe/Top
          aendern sich beim Ein-/Ausklappen. -->
-    <!-- Eingeklappt: ein ECHTER Kreis (64x64, CornerRadius=Haelfte) mit dem Mic
-         zentriert drin. Zentriert im 96x64-Fenster → Mic bleibt exakt bei (48,32),
-         die Positions-Logik in CollapseImmediate bleibt unveraendert. Frueher war
-         es 96x64 mit CornerRadius 28 → Kapsel (Seiten rund, oben flach abgeschnitten);
-         Frank-Wunsch 2026-05-25: runder Kreis statt Kapsel. -->
+    <!-- Eingeklappt: ein ECHTER Kreis (84x84, CornerRadius=Haelfte) mit dem
+         52px-Mic-Button zentriert drin → rundum ~16px Luft, der Kreis umschliesst
+         den Mic klar (statt dass der Button herausquillt). Zentriert im 96x96-
+         Fenster → Mic bleibt exakt bei (48,48). Frueher 64x64 → Kreis zu klein,
+         Mic quoll heraus (Frank-Wunsch 2026-05-25: schoener grosser runder Kreis). -->
     <Border x:Name="CollapsedView"
-            Width="64" Height="64"
-            CornerRadius="32"
+            Width="84" Height="84"
+            CornerRadius="42"
             Background="#B31A1A1A"
             BorderBrush="#FF000000"
             BorderThickness="2"

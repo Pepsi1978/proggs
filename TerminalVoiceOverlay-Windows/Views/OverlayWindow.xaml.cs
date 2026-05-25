@@ -638,14 +638,17 @@ namespace TerminalVoiceOverlay.Views
 
         // Layout-Konstanten in WPF-DIPs (DPI-unabhaengig). Aus dem festen
         // XAML-Layout berechnet: die Mic-Mitte liegt im vollen Pillar bei
-        // y ≈ 98, im eingeklappten Pillar (Hoehe 64) bei y = 32. Differenz
-        // = 66 — um diesen Betrag schiebt sich das Fenster beim Einklappen
-        // nach unten, damit der Mic-Button exakt an derselben Bildschirm-
-        // Position bleibt (kein Springen). Breite bleibt konstant 96, daher
-        // ist keine horizontale Verschiebung noetig.
-        private const double CollapsedHeight   = 64;
+        // y ≈ 98, im eingeklappten Pillar (Hoehe 96) bei y = 48 (Fenster-Mitte,
+        // Kreis ist zentriert). Differenz = 50 — um diesen Betrag schiebt sich
+        // das Fenster beim Einklappen nach unten, damit der Mic-Button exakt an
+        // derselben Bildschirm-Position bleibt (kein Springen). Breite bleibt
+        // konstant 96, daher ist keine horizontale Verschiebung noetig.
+        // Hoehe 96 (frueher 64): gibt dem runden Kreis (84px) genug Platz, damit
+        // der 52px-Mic-Button rundum ~16px Luft hat statt herauszuquellen
+        // (Frank-Wunsch 2026-05-25: "ein ganz normaler, schoener, runder Kreis").
+        private const double CollapsedHeight   = 96;
         private const double FullHeight        = 612;
-        private const double CollapseTopOffset = 66;
+        private const double CollapseTopOffset = 50;
         // Abstand der vertikalen Saeulen-Oberkante vom oberen Rand der Monitor-
         // Arbeitsflaeche (_waY). Das ist die kanonische "obere Linie" der Saeule —
         // auch der Beam-Effekt blendet GENAU hier wieder ein, nicht hoeher
@@ -971,9 +974,11 @@ namespace TerminalVoiceOverlay.Views
                     micCx = Left + ActualWidth / 2;
                     micCy = Top + ActualHeight / 2;
                 }
-                // CollapsedView-Mic-Mitte liegt bei (48,32) im 96x64-Fenster.
-                collapsedLeft = micCx - 48;
-                collapsedTop  = micCy - 32;
+                // CollapsedView-Mic-Mitte liegt bei (48,48) im 96x96-Fenster
+                // (Kreis zentriert) → Fenster so platzieren, dass der Mic genau
+                // an seiner bisherigen Bildschirmposition bleibt.
+                collapsedLeft = micCx - 48;               // halbe Breite (96/2)
+                collapsedTop  = micCy - CollapsedHeight / 2.0;
             }
             else
             {
