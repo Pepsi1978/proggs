@@ -1439,30 +1439,25 @@ namespace TerminalVoiceOverlay.Views
             ReassertTopmostIfVisible();
         }
 
-        // ── Content-Glide (GPU) statt Fenster-Bewegung ──
+        // ── Glide: pillengrosses Fenster pro Frame verschieben + DwmFlush ──
         // Recherche 2026-05-25 (Memory: wpf-overlay-smooth-animation): Ein
-        // transparentes Topmost-Fenster zu BEWEGEN ruckelt bei WPF grundsaetzlich
-        // (Layered Window / UpdateLayeredWindow, GPU→CPU-Kopie pro Frame). Best
-        // Practice (MS-Doku): Fenster STEHEN lassen, den INHALT per RenderTransform
-        // + BitmapCache (GPU-Textur) gleiten. Wir vergroessern das Fenster fuer die
-        // Dauer des Glides auf die Gleitstrecke, schieben die Pille per
-        // TranslateTransform und setzen das Fenster danach wieder auf Pillen-Groesse
-        // an der Zielposition.
-        private FrameworkElement? _glideView;
-        private HorizontalAlignment _glideOrigH;
-        private VerticalAlignment _glideOrigV;
-        private double _glideTargetLeft, _glideTargetTop;
+        // per-pixel-transparentes (Layered) Fenster ueber Text ruckelfrei zu
+        // bewegen ist eine harte Windows-Grenze. Beste look-erhaltende
+        // Abmilderung: das KLEINE (pillengrosse) Fenster bewegen (minimale
+        // transparente Flaeche ueber dem Text → wenig Flackerflaeche) UND nach
+        // jedem SetWindowPos DwmFlush() — synchronisiert unseren Move mit der
+        // DWM-Komposition des Terminals darunter, reduziert Flackern/Tearing.
+        // Eine selbst-repostende BeginInvoke(Render)-Schleife (DwmFlush gibt den
+        // Takt) statt CompositionTarget.Rendering, damit das blockierende
+        // DwmFlush nicht im Render-Callback selbst sitzt.
+        private bool _gliding;
+        private double _glideCurLeft, _glideCurTop;
 
-        /// <summary>
-        /// Laesst die Pille sanft zur Zielposition gleiten — GPU-kompositiert, ohne
-        /// das (teure) Bewegen des Layered-Windows. Frank-Wunsch 2026-05-25.
-        /// </summary>
         private void AnimateWindowTo(double targetLeft, double targetTop)
         {
             try
             {
-                StopGlide(); // evtl. laufenden Glide sauber abschliessen
-
+                StopGlide();
                 double startLeft = Left, startTop = Top;
                 if (_isCollapsed ||
                     (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0))
@@ -1471,100 +1466,67 @@ namespace TerminalVoiceOverlay.Views
                     return;
                 }
 
-                // Pillen-Groesse der aktuellen Orientierung (fest 96 vertikal, Inhalt horizontal).
-                double pillW = _isHorizontal ? ActualWidth : 96.0;
-                double pillH = _isHorizontal ? ActualHeight : FullHeight;
-                var view = _isHorizontal ? (FrameworkElement)HorizontalView : FullView;
-
-                // Vereinigungs-Rechteck von Start- und Zielposition (Bildschirm-DIPs):
-                // so gross muss das Fenster waehrend des Glides sein, damit die Pille
-                // an beiden Enden hineinpasst und nie ueber den Fensterrand geclippt wird.
-                double ux = Math.Min(startLeft, targetLeft);
-                double uy = Math.Min(startTop, targetTop);
-                double uw = Math.Max(startLeft, targetLeft) + pillW - ux;
-                double uh = Math.Max(startTop, targetTop) + pillH - uy;
-
-                _glideView = view;
-                _glideOrigH = view.HorizontalAlignment;
-                _glideOrigV = view.VerticalAlignment;
-                _glideTargetLeft = targetLeft;
-                _glideTargetTop  = targetTop;
-
-                // Pille oben-links im (grossen) Fenster verankern; Transform setzt sie an den Start.
-                view.HorizontalAlignment = HorizontalAlignment.Left;
-                view.VerticalAlignment   = VerticalAlignment.Top;
-                var tt = new TranslateTransform(startLeft - ux, startTop - uy);
-                view.RenderTransform = tt;
-                view.CacheMode = new BitmapCache(); // einmal in GPU-Textur rendern, danach nur blitten
-
-                SizeToContent = SizeToContent.Manual;
-                Left = ux; Top = uy; Width = uw; Height = uh;
-
-                // Sicher sichtbar machen (ApplyOrientation kann Opacity gegen den
-                // Form-Wechsel-Flash auf 0 gesetzt haben); laufende Fade-Animation loesen.
-                view.BeginAnimation(UIElement.OpacityProperty, null);
-                view.Opacity = 1;
+                var src = PresentationSource.FromVisual(this);
+                double dpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+                double dpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+                var hwnd = new WindowInteropHelper(this).Handle;
 
                 double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
-                var dur = new Duration(TimeSpan.FromMilliseconds(Math.Clamp(dist * 1.3, 340.0, 600.0)));
-                var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
-                var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
-                var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
-                ay.Completed += (_, _) => FinalizeGlide();
-                tt.BeginAnimation(TranslateTransform.XProperty, ax);
-                tt.BeginAnimation(TranslateTransform.YProperty, ay);
+                double durationMs = Math.Clamp(dist * 1.3, 340.0, 600.0);
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                _gliding = true;
+                _glideCurLeft = startLeft; _glideCurTop = startTop;
+
+                void Step()
+                {
+                    if (!_gliding) return;
+                    double t = sw.Elapsed.TotalMilliseconds / durationMs;
+                    if (t > 1.0) t = 1.0;
+                    double e = t * t * t * (t * (t * 6 - 15) + 10); // Smootherstep (C2-stetig)
+                    _glideCurLeft = startLeft + (targetLeft - startLeft) * e;
+                    _glideCurTop  = startTop  + (targetTop  - startTop)  * e;
+
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        Win32.SetWindowPos(hwnd, IntPtr.Zero,
+                            (int)Math.Round(_glideCurLeft * dpiX), (int)Math.Round(_glideCurTop * dpiY),
+                            0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE | Win32.SWP_NOZORDER);
+                        // Mit der DWM-Komposition synchronisieren → Terminal darunter
+                        // und unser Fenster aktualisieren gemeinsam, weniger Text-Flackern.
+                        try { Win32.DwmFlush(); } catch { }
+                    }
+                    else { Left = _glideCurLeft; Top = _glideCurTop; }
+
+                    if (t >= 1.0)
+                    {
+                        _gliding = false;
+                        Left = targetLeft; Top = targetTop; // WPF-Eigenschaften final synchronisieren
+                        ReassertTopmostIfVisible();
+                    }
+                    else
+                    {
+                        Dispatcher.BeginInvoke(new Action(Step), System.Windows.Threading.DispatcherPriority.Render);
+                    }
+                }
+                Step();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
-                FinalizeGlide();
+                _gliding = false;
                 Left = targetLeft; Top = targetTop; // Fallback: hart setzen
             }
         }
 
-        /// <summary>
-        /// Schliesst den Content-Glide ab: Transform/Cache zuruecksetzen, Ausrichtung
-        /// wiederherstellen und das Fenster auf Pillen-Groesse an die Zielposition setzen.
-        /// </summary>
-        private void FinalizeGlide()
-        {
-            var v = _glideView;
-            if (v == null) return;
-            _glideView = null;
-            try
-            {
-                if (v.RenderTransform is TranslateTransform t)
-                {
-                    t.BeginAnimation(TranslateTransform.XProperty, null);
-                    t.BeginAnimation(TranslateTransform.YProperty, null);
-                }
-                v.RenderTransform = null;
-                v.CacheMode = null;
-                v.HorizontalAlignment = _glideOrigH;
-                v.VerticalAlignment   = _glideOrigV;
-                v.Opacity = 1;
-
-                if (_isHorizontal)
-                {
-                    SizeToContent = SizeToContent.WidthAndHeight;
-                    UpdateLayout();
-                }
-                else
-                {
-                    SizeToContent = SizeToContent.Manual;
-                    Width = 96; Height = FullHeight;
-                }
-                Left = _glideTargetLeft;
-                Top  = _glideTargetTop;
-            }
-            catch (Exception ex) { Console.WriteLine($"FinalizeGlide: {ex.Message}"); }
-            ReassertTopmostIfVisible();
-        }
-
-        /// <summary>Bricht einen laufenden Glide ab und springt ans Ziel (z.B. bei Drag-Start).</summary>
+        /// <summary>Bricht einen laufenden Glide ab (z.B. bei Drag-Start) und uebernimmt die
+        /// aktuelle (per SetWindowPos gesetzte) Position in die WPF-Properties.</summary>
         private void StopGlide()
         {
-            if (_glideView != null) FinalizeGlide();
+            if (!_gliding) return;
+            _gliding = false;
+            // Left/Top waren waehrend des Glides stale (SetWindowPos umging WPF) —
+            // jetzt auf die zuletzt gesetzte Position bringen, damit Drag korrekt rechnet.
+            Left = _glideCurLeft; Top = _glideCurTop;
         }
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle

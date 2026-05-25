@@ -285,5 +285,12 @@ namespace TerminalVoiceOverlay.NativeMethods
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
             int X, int Y, int cx, int cy, uint uFlags);
+
+        // ── DwmFlush: blockiert bis zur naechsten DWM-Komposition (vsync).
+        // Nach einem SetWindowPos-Move eines Layered-Fensters aufgerufen,
+        // synchronisiert es unseren Move mit der Darstellung des Fensters
+        // darunter (Terminal) → weniger Flackern/Tearing ueber Text. ──
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmFlush();
     }
 }
