@@ -136,7 +136,8 @@
 						"command": "bash ~/.claude/hooks/config-guard.sh",
 						"timeout": 5
 					}
-				]
+				],
+				"continueOnBlock": true
 			},
 			{
 				"matcher": "Bash",
