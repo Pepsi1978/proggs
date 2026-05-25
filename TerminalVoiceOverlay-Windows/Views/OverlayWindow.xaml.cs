@@ -1561,12 +1561,10 @@ namespace TerminalVoiceOverlay.Views
             var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
             var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
             var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
-            // Niedrigere, SICHER erreichbare Bildrate (50fps) statt 120: das
-            // transparente Layered-Fenster kann pro Frame nicht beliebig schnell
-            // aktualisiert werden — bei 120 fallen unregelmaessig Frames aus
-            // (mehr Ruckeln). 50fps lauft gleichmaessig durch → glatter (Frank 2026-05-25).
-            Timeline.SetDesiredFrameRate(ax, 50);
-            Timeline.SetDesiredFrameRate(ay, 50);
+            // KEINE erzwungene DesiredFrameRate: ein fester Wert, der kein sauberer
+            // Teiler der Monitor-Bildrate ist (z.B. 50 bei 60/120Hz), kaempft gegen
+            // V-Sync → ungleichmaessige Frames = Ruckeln. Der WPF-Default ist
+            // vsync-gebunden und laeuft am gleichmaessigsten (Frank 2026-05-25).
             ay.Completed += (_, _) => FinalizeContentGlide();
             tt.BeginAnimation(TranslateTransform.XProperty, ax);
             tt.BeginAnimation(TranslateTransform.YProperty, ay);
