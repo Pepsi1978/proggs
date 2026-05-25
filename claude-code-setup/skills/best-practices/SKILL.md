@@ -79,7 +79,7 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    - **Alternativen** von aussen (externe Quellen, klar als `extern` gelabelt, sekundaer)
    Was in keine Kategorie 1–10 passt → Kategorie 11 (Neues).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
-   `offiziell`/`extern`-Flag), `_changelog-archiv.md` verbatim neu holen (siehe Abschnitt unten),
+   `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
    `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 11 bekommen einen eigenen
    Unterordner (12-…, 13-…) — die Taxonomie waechst selbst.
 6. **Auswertung ausgeben** (siehe Format unten).
@@ -105,10 +105,22 @@ nur mit dem Volltext arbeiten. Deshalb gilt strikt:
   Versions-Header wird zu `## X.Y.Z — YYYY-MM-DD` angereichert (Datum aus dem Roh-ISO-String, ohne
   Zeitzonen-Shift). Versionen ohne npm-Eintrag (sehr alte 0.2.x): `— Datum unbekannt`. So ist die
   Entwicklung auch ZEITLICH erfassbar, nicht nur nach Versionsnummer.
-- **Bei jedem Lauf:** Datei komplett neu holen (der kanonische CHANGELOG.md enthaelt ohnehin die
-  Gesamthistorie, neue Versionen sind dann oben automatisch dabei).
-- **Pflicht-Verifikation:** Nach dem Download Anzahl `## `-Versions-Header UND Bullet-Zeilen gegen
-  die Quelldatei pruefen — muessen identisch sein, sonst ging beim Schreiben etwas verloren.
+- **Bei jedem Lauf — INKREMENTELL (nur Neues anhaengen):**
+  1. `last_version` aus `_state.json` lesen.
+  2. Kanonische CHANGELOG.md verbatim holen (enthaelt die Gesamthistorie).
+  3. Nur die Versions-Bloecke bestimmen, die NEUER als `last_version` sind (alle `## X.Y.Z` oberhalb
+     von `last_version` in der frischen Datei) — jeweils mit allen Original-Bullets.
+  4. Diese neuen Bloecke mit npm-Datum anreichern (`## X.Y.Z — YYYY-MM-DD`).
+  5. NUR diese neuen Bloecke oben ins bestehende `_changelog-archiv.md` einfuegen — direkt unter dem
+     Kopf-Block, ueber dem bisher neuesten Eintrag. Bestehende Eintraege (und evtl. eigene Hand-Notizen)
+     bleiben unangetastet.
+  6. `_state.json`: `last_version` auf die neueste Version, `last_checked` auf heute setzen.
+  - **Erstlauf** (`last_version` = null) oder fehlendes Archiv: einmalig kompletter Verbatim-Download
+    + Datums-Anreicherung (so wie beim Aufbau am 2026-05-25 mit 296 Versionen).
+- **Pflicht-Verifikation:** Nach dem Einfuegen pruefen, dass (a) genau die erwarteten neuen Versionen
+  jetzt oben stehen, (b) jede neue Version vollen Bullet-Text + Datum hat, und (c) die alten Eintraege
+  unveraendert sind (neue Header-Zahl = alte + Anzahl neuer Versionen). Beim Erstlauf/Voll-Download:
+  Header- und Bullet-Zahl gegen die Quelldatei abgleichen (muessen identisch sein).
 
 ## Taxonomie (11 Kategorien, selbst-erweiternd)
 
