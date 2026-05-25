@@ -1804,36 +1804,58 @@ namespace TerminalVoiceOverlay.Views
 
             if (_isHorizontal)
             {
-                // Horizontale Leiste: Groesse = Inhalt, Position unten-rechts —
-                // oder die in dieser Session gespeicherte Diskette-Position.
-                if (!_manuallyPositioned)
+                bool freshShow = wasHidden && _autoHideEnabled
+                    && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording;
+
+                if (wasHidden)
                 {
+                    // KRITISCH (Bug 2026-05-25, horizontal): Beim echten Wieder-
+                    // einblenden IMMER mit der VOLLEN Leiste messen + positionieren,
+                    // auch wenn vor dem Verstecken eingeklappt. Sonst nutzt die
+                    // Rechts-Formel die 96px-Pillenbreite statt der Leistenbreite
+                    // und die eingeklappte Mic-Pille landet weit links (≈ Enter)
+                    // statt rechts. Erst volle Leiste platzieren, dann einklappen.
+                    if (_isCollapsed)
+                    {
+                        CollapsedView.Visibility  = Visibility.Collapsed;
+                        HorizontalView.Visibility = Visibility.Visible;
+                        _isCollapsed = false;
+                    }
                     SizeToContent = SizeToContent.WidthAndHeight;
                     UpdateLayout();
-                    if (_savedHorizontalPos is { } sh)
+                    if (!_manuallyPositioned)
                     {
-                        Left = sh.X; Top = sh.Y;
+                        if (_savedHorizontalPos is { } sh) { Left = sh.X; Top = sh.Y; }
+                        else
+                        {
+                            Left = _waX + _waW - ActualWidth  - 27;
+                            Top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                        }
                     }
+                    Show();
+                    Console.WriteLine("Overlay: visible (terminal active, horizontal)");
+
+                    // Aus der korrekt positionierten Leiste einklappen → die
+                    // Mic-Pille landet genau dort wo der Mic in der Leiste sitzt.
+                    if (freshShow)
+                    {
+                        UpdateLayout();
+                        CollapseImmediate();
+                    }
+                }
+                else if (!_manuallyPositioned && !_isCollapsed)
+                {
+                    // War sichtbar + ausgeklappt: nur die Leisten-Position auffrischen.
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                    if (_savedHorizontalPos is { } sh) { Left = sh.X; Top = sh.Y; }
                     else
                     {
                         Left = _waX + _waW - ActualWidth  - 27;
                         Top  = _waY + _waH - ActualHeight - HBarBottomLift;
                     }
                 }
-                if (!IsVisible)
-                {
-                    Show();
-                    Console.WriteLine("Overlay: visible (terminal active, horizontal)");
-                }
-
-                // Frisch eingeblendet → eingeklappt starten (nur Mic). UpdateLayout
-                // vorher, damit CollapseImmediate die Mic-Position messen kann.
-                if (wasHidden && _autoHideEnabled
-                    && _micState != RecordingState.Recording && !_isProcessing && !isBtwRecording)
-                {
-                    UpdateLayout();
-                    CollapseImmediate();
-                }
+                // War sichtbar + eingeklappt: nichts anfassen (kein Expand→Collapse-Flackern).
             }
             else
             {
