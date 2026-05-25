@@ -1277,9 +1277,61 @@ namespace TerminalVoiceOverlay.Views
             // schliessen, damit sich NUR das Overlay dreht. Der Benutzer
             // oeffnet danach ueber den Stern frisch in der neuen Orientierung.
             CloseAttachedPanelsForOrientationSwitch();
-            ApplyOrientation(target);
-            PositionForCurrentOrientation(orientationSwitch: true);
+            if (target)
+            {
+                // VERTIKAL → HORIZONTAL (runter): Form sofort wechseln (oben, im
+                // Stillstand), dann glatt in der flachen Leiste nach unten
+                // gleiten. Unveraendert — das ruckelt nicht.
+                ApplyOrientation(true);
+                PositionForCurrentOrientation(orientationSwitch: true);
+            }
+            else
+            {
+                // HORIZONTAL → VERTIKAL (hoch): NICHT zuerst auf die hohe Saeule
+                // umschalten (deren Inhalts-Glide ruckelt). Stattdessen in der
+                // flachen Leisten-Form nach oben gleiten (glatt via Fenster-Move
+                // + DwmFlush) und ERST OBEN IM STILLSTAND auf die Saeule morphen.
+                // Spiegelt exakt das Runtergleiten in umgekehrter Reihenfolge
+                // (Frank-Idee 2026-05-25).
+                GlideUpThenMorphToVertical();
+            }
             PersistOrientation(target);
+        }
+
+        /// <summary>
+        /// Hochschalten ohne Ruckeln: das Overlay bleibt in der flachen
+        /// Horizontal-Form und gleitet auf derselben Spalte glatt nach oben
+        /// (gleiches Verfahren wie das Runtergleiten). Erst wenn es oben im
+        /// Stillstand angekommen ist, wird auf die vertikale Saeule gemorpht
+        /// und deren Endposition HART gesetzt (kein zweites, stotterndes
+        /// Saeulen-Gleiten). Spiegelbild von Runter: dort morpht es oben im
+        /// Stillstand und gleitet dann runter — hier gleitet es hoch und
+        /// morpht oben im Stillstand.
+        /// </summary>
+        private void GlideUpThenMorphToVertical()
+        {
+            // Sicherheitsnetz: nicht horizontal oder Monitor-Geometrie unbekannt
+            // → klassisch umschalten (alte Verhalten), kein Spezialpfad.
+            if (!_isHorizontal || _waW <= 0)
+            {
+                ApplyOrientation(false);
+                PositionForCurrentOrientation(orientationSwitch: true);
+                return;
+            }
+
+            // Glide-Ziel in der flachen Form: gleiche X-Spalte, hoch bis an den
+            // oberen Rand der Arbeitsflaeche (_waY) — exakt der Startpunkt, von
+            // dem aus das Runtergleiten loslaeuft, nur in Gegenrichtung.
+            double targetLeft = Left;
+            double targetTop  = _waY;
+
+            AnimateWindowTo(targetLeft, targetTop, onComplete: () =>
+            {
+                // Oben angekommen, keine Bewegung mehr: jetzt auf die Saeule
+                // morphen und deren Position hart setzen.
+                ApplyOrientation(false);
+                PositionForCurrentOrientation(noGlide: true);
+            });
         }
 
         /// <summary>
@@ -1354,7 +1406,7 @@ namespace TerminalVoiceOverlay.Views
         // Setzt Fenstergroesse + Position passend zur Orientierung. Horizontal:
         // SizeToContent (Leiste umschliesst die HBar), unten-rechts am Monitor.
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
-        private void PositionForCurrentOrientation(bool orientationSwitch = false)
+        private void PositionForCurrentOrientation(bool orientationSwitch = false, bool noGlide = false)
         {
             // Umschalten nimmt — falls in dieser Session eine Position fuer die
             // ZIELorientierung mit der Diskette gespeichert wurde — genau diese
@@ -1403,7 +1455,14 @@ namespace TerminalVoiceOverlay.Views
 
             if (targetLeft is double tl && targetTop is double tt)
             {
-                if (orientationSwitch && _waW > 0)
+                if (noGlide)
+                {
+                    // Position OHNE Glide hart setzen — genutzt wenn die
+                    // Bewegung schon in der flachen Form passiert ist und hier
+                    // nur noch im Stillstand auf die Saeule gemorpht wird.
+                    Left = tl; Top = tt;
+                }
+                else if (orientationSwitch && _waW > 0)
                 {
                     // Sauberer SENKRECHTER Slide auf der Ziel-Spalte: zuerst an
                     // die Ziel-X-Position und einen sinnvollen Start-Rand setzen,
@@ -1456,7 +1515,11 @@ namespace TerminalVoiceOverlay.Views
         private VerticalAlignment _glideOrigV;
         private double _glideTargetLeft, _glideTargetTop;
 
-        private void AnimateWindowTo(double targetLeft, double targetTop)
+        // onComplete (optional) feuert NUR bei natuerlichem Glide-Ende — nicht
+        // wenn der Glide per StopGlide abgebrochen wird (z.B. Drag-Start). Wird
+        // genutzt um nach dem Hochgleiten in der flachen Form auf die vertikale
+        // Saeule zu morphen (Spiegelbild des Runtergleitens, 2026-05-25).
+        private void AnimateWindowTo(double targetLeft, double targetTop, Action? onComplete = null)
         {
             try
             {
@@ -1466,21 +1529,23 @@ namespace TerminalVoiceOverlay.Views
                     (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0))
                 {
                     Left = targetLeft; Top = targetTop;
+                    onComplete?.Invoke();
                     return;
                 }
-                if (_isHorizontal) GlideByWindowMove(startLeft, startTop, targetLeft, targetTop);
-                else               GlideByContentTransform(startLeft, startTop, targetLeft, targetTop);
+                if (_isHorizontal) GlideByWindowMove(startLeft, startTop, targetLeft, targetTop, onComplete);
+                else               GlideByContentTransform(startLeft, startTop, targetLeft, targetTop, onComplete);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
                 StopGlide();
                 Left = targetLeft; Top = targetTop; // Fallback: hart setzen
+                onComplete?.Invoke();
             }
         }
 
         // Flache horizontale Leiste: kleines Fenster pro Frame verschieben + DwmFlush.
-        private void GlideByWindowMove(double startLeft, double startTop, double targetLeft, double targetTop)
+        private void GlideByWindowMove(double startLeft, double startTop, double targetLeft, double targetTop, Action? onComplete = null)
         {
             var src = PresentationSource.FromVisual(this);
             double dpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
@@ -1514,6 +1579,7 @@ namespace TerminalVoiceOverlay.Views
                     _gliding = false;
                     Left = targetLeft; Top = targetTop;
                     ReassertTopmostIfVisible();
+                    onComplete?.Invoke();
                 }
                 else
                 {
@@ -1524,7 +1590,7 @@ namespace TerminalVoiceOverlay.Views
         }
 
         // Hohe vertikale Saeule: Fenster gross+stehend, nur den Inhalt per GPU-Transform gleiten.
-        private void GlideByContentTransform(double startLeft, double startTop, double targetLeft, double targetTop)
+        private void GlideByContentTransform(double startLeft, double startTop, double targetLeft, double targetTop, Action? onComplete = null)
         {
             const double pillW = 96.0;
             double pillH = FullHeight;
@@ -1565,7 +1631,7 @@ namespace TerminalVoiceOverlay.Views
             // Teiler der Monitor-Bildrate ist (z.B. 50 bei 60/120Hz), kaempft gegen
             // V-Sync → ungleichmaessige Frames = Ruckeln. Der WPF-Default ist
             // vsync-gebunden und laeuft am gleichmaessigsten (Frank 2026-05-25).
-            ay.Completed += (_, _) => FinalizeContentGlide();
+            ay.Completed += (_, _) => { FinalizeContentGlide(); onComplete?.Invoke(); };
             tt.BeginAnimation(TranslateTransform.XProperty, ax);
             tt.BeginAnimation(TranslateTransform.YProperty, ay);
         }
