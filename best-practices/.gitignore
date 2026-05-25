@@ -1,0 +1,4 @@
+# Writeback-/Sentinel-Artefakte von Subagenten — gehoeren NICHT in die Wissensbasis
+_writeback.json
+**/_writeback.json
+*.tmp

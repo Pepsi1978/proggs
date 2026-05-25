@@ -147,19 +147,27 @@ Kategorie wird 12.
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Sonnet 4.6. **Effort:** X-High.
-- **1 Researcher pro Kategorie — ALLE gleichzeitig:** Je Bereich genau ein Researcher, und alle
-  werden in EINEM Rutsch parallel gestartet (bei 12 Kategorien: 12 Researcher; waechst die Taxonomie,
-  entsprechend bis zu ~20 gleichzeitig). Diese Parallelitaet unterstuetzt Claude — KEIN 5er-Limit hier.
-  Der enge Scope (1 Kategorie) haelt jeden Researcher klein, und alle laufen zeitgleich.
-- **Token-Ziel ~130k — Ueberschreitung = Absturzrisiko:** Ein Researcher misst seinen Verbrauch nicht
-  live und kann sich nicht selbst stoppen. Laeuft er zu gross/lang, stuerzt er ab und verliert SEINEN
-  GESAMTEN Output — genau das passiert oft bei Internet-Researchern. Schutz daher ueber engen Scope
-  (1 Kategorie) + Checkpoint/Continuation, nicht ueber Selbstmessung.
+- **1 Researcher pro Kategorie, aber in BATCHES von 3–5 (KRITISCH, empirisch 2026-05-25):**
+  Web-Researcher sind ANFRAGE-DICHT (2–3 Tool-Runden pro Turn × viele Turns → 100+ RPM bei 5 Stueck).
+  Zu viele gleichzeitig sprengen das Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz
+  ("server is temporarily limiting requests · not your usage limit"). Live-Test: **12 gleichzeitig →
+  11 abgestuerzt; 5 gleichzeitig → alle ok**; offiziell stabil sind ~3–5. Also Researcher in Wellen
+  von 3–5 starten, NICHT alle auf einmal. (Anders als anfrage-SPARSE Agenten wie Uebersetzer, die
+  ueberwiegend lokal arbeiten — die vertragen 15–20 gleichzeitig, weil sie kaum Anfragen/Minute erzeugen.)
+- **Retry mit Backoff bei 429 (PFLICHT):** Stuerzt ein Researcher mit Rate-Limit ab, sofort dem Benutzer
+  melden und mit exponential backoff neu starten (`retry-after`-Header beachten) — nie still aufgeben.
+- **Scope eng halten:** max ~8 Websuchen / ~5 Fetches, ~8–10 Min pro Researcher. Begrenzt Anfrage-Rate
+  UND Kontext. (Beobachtet: ~140–165k Token je Kategorie ist normal und unkritisch — der limitierende
+  Faktor ist die ANFRAGE-RATE, nicht die Token.)
 - **Checkpoint / Continuation:** Der Researcher schreibt seinen Fortschritt **inkrementell** in
   die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo weitermachen).
   Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint** gestartet. So geht nie
   Fortschritt verloren und nichts stuerzt ab.
 - Zusaetzlich gilt die allgemeine Researcher-Regel: max 50 Ergebnisse / 15 Web-Fetches / 10 Min je Lauf.
+- **Einheitliches Header-Format erzwingen + aufraeumen:** Jede Kategorie-Datei MUSS mit
+  `# [Kategorie] — Best Practices (Stand JJJJ-MM-TT, Claude Code X.Y.Z)` beginnen — im Prompt verlangen
+  UND nach dem Lauf pruefen (beim Live-Test wich 03-agents vom Format ab). Sentinel-/Writeback-Artefakte
+  (`_writeback.json`) gehoeren NICHT in `best-practices/` — vor dem Commit entfernen (per .gitignore abgesichert).
 
 ## Quellen-Rangordnung
 
