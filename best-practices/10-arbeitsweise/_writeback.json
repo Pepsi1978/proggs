@@ -1,5 +1,0 @@
-{
-	"agent": "researcher",
-	"timestamp": "2026-05-25T00:00:00Z",
-	"findings": "Kategorie 10 (Arbeitsweise/Verhalten) recherchiert: EPIC-Workflow (Explore-Plan-Implement-Commit) ist offizieller Anthropic-Standard; TDD ist das staerkste Einzelmuster (Tests zuerst, Fehlschlag committen, dann implementieren); /clear-Hygiene nach 2 Fehlkorrekturen; Writer/Reviewer-Trennung via separate Sessions; Subagenten fuer Recherche ohne Kontext-Belastung; CLAUDE.md kurz halten (Hooks uebernehmen was nicht befolgt wird). 3 offizielle + 2 externe Quellen. Datei: best-practices/10-arbeitsweise/best-practices.md"
-}
