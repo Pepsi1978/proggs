@@ -1109,7 +1109,13 @@ namespace TerminalVoiceOverlay.Views
             // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
             // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
             // vertikalen Layout, nur um 90° gedreht.
-            HBar.Children.Add(MakeEnterSaveGroup("#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
+            // Enter als Symbol in der oberen Reihe (auf der Symbol-Achse der
+            // anderen runden Buttons) + Diskette als "Kachel" in der unteren
+            // Reihe darunter — analog zum vertikalen Modus, wo Enter auf der
+            // Button-Achse sitzt und die Diskette in der Profil-Spalte daneben
+            // (Frank-Wunsch 2026-05-25). MakeHGroup setzt die Diskette dabei auf
+            // die Kachel-Groesse (30x22) und zentriert Enter in der 52px-Reihe.
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { SaveButton }, "#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
@@ -1201,45 +1207,6 @@ namespace TerminalVoiceOverlay.Views
             }
             Add(topBtn, true);
             Add(bottomBtn, false);
-            return new Border
-            {
-                Background = Brush(bgHex),
-                CornerRadius = corner,
-                Padding = new Thickness(8, 6, 8, 6),
-                VerticalAlignment = VerticalAlignment.Stretch,
-                Child = col,
-            };
-        }
-
-        // Enter (oben) + Speichern-Diskette (unten) als vertikaler Stack im
-        // HORIZONTAL-Modus — die Diskette sitzt UNTER dem Enter-Button
-        // (Frank-Wunsch 2026-05-25). Beide behalten ihre Standardgroesse
-        // (40x40), vertikal mittig in der Leiste. Im vertikalen Modus liegen
-        // sie nebeneinander (XAML Section 7); RestoreVerticalLayout setzt die
-        // Original-Groesse via _vplace wieder zurueck.
-        private FrameworkElement MakeEnterSaveGroup(string bgHex, CornerRadius corner)
-        {
-            var col = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            void Add(Button b, bool first)
-            {
-                try
-                {
-                    DetachFromParent(b);
-                    b.Width = 40; b.Height = 40;
-                    b.Margin = first ? new Thickness(0) : new Thickness(0, 6, 0, 0);
-                    b.HorizontalAlignment = HorizontalAlignment.Center;
-                    b.VerticalAlignment = VerticalAlignment.Center;
-                    col.Children.Add(b);
-                }
-                catch (Exception ex) { OLog($"HBUILD enter/save {b.Name} FAIL: {ex.Message}"); }
-            }
-            Add(EnterButton, true);
-            Add(SaveButton, false);
             return new Border
             {
                 Background = Brush(bgHex),
