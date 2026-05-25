@@ -1,4 +1,4 @@
-# Best Practices: NEUES & Horizont-Scan (Kategorie 11)
+# Best Practices: NEUES & Horizont-Scan (Kategorie 12)
 
 > Stand: 2026-05-25 | Claude Code v2.1.150 | Quelle: offizielle Anthropic-Dokumentation (What's New)
 > Zeitraum: KW 13–20 2026 (ca. Dezember 2025 – Mai 2026)

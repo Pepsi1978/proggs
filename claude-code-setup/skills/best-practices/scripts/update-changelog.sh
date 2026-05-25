@@ -79,8 +79,8 @@ EOF
 # awk: Versions-Header mit Datum anreichern. mode=full | incr (incr stoppt am last_version-Header)
 enrich() {
   local mode="$1"; local last="$2"
-  awk -v mode="$mode" -v last="$last" -v dash="$DASH" '
-    FNR==NR { d[$1]=$2; next }
+  awk -v mode="$mode" -v last="$last" -v dash="$DASH" -v mapfile="$MAP" '
+    FILENAME==mapfile { d[$1]=$2; next }
     {
       if ($0 ~ /^## [0-9]+\.[0-9]+\.[0-9]+[ \t]*$/) {
         ver=$2

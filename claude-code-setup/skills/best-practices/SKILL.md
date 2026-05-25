@@ -80,8 +80,9 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    Was in keine definierte Kategorie passt → Kategorie 12 (Neues, immer die letzte Kategorie).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
-   `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 11 bekommen einen eigenen
-   Unterordner (12-…, 13-…) — die Taxonomie waechst selbst.
+   `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 12 (Neues) bekommen
+   einen eigenen Unterordner — eingefuegt VOR `Neues`, das dabei eine Nummer nach hinten rueckt
+   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie).
 6. **Auswertung ausgeben** (siehe Format unten).
 
 ## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)
