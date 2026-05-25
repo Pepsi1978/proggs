@@ -172,23 +172,38 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
      * generieren. Stattdessen: fuer jede Vorlage sicherstellen dass es
      * GENAU EINE offene Instanz gibt (wenn aktiv) bzw. KEINE (wenn inaktiv).
      *
-     * Ablauf pro Vorlage:
-     *  - Sammle alle offenen RECURRING_TEMPLATE-Eintraege fuer diese Vorlage
-     *    (ID-Praefix-Match "rec-${templateId}-").
+     * Frank-Wunsch 2026-05-25 (Bugfix Geist-Aufgaben): Innerhalb des LAUFENDEN
+     * Tages wird HEUTE NIE wieder aufgefuellt. Wurde die heutige Instanz einer
+     * Vorlage schon einmal erzeugt, darf sie NICHT erneut erscheinen — egal ob
+     * Frank sie inzwischen erledigt (Status REDUZIERT) oder ganz geloescht hat.
+     * Erst der naechste Tag bringt eine frische Instanz (neue Tages-ID). Damit
+     * laeuft die HEUTE-Liste ueber den Tag nur noch nach UNTEN (5 -> 4 -> ...).
+     *
+     * Ablauf pro aktiver Vorlage:
+     *  - Sammle alle OFFENEN RECURRING_TEMPLATE-Eintraege (ID-Praefix
+     *    "rec-${templateId}-") und loesche aeltere offene Duplikate.
+     *  - "Heute schon versorgt?" wird ueber ZWEI Marker erkannt:
+     *      (a) die heutige Tages-ID existiert in IRGENDEINEM Status
+     *          (offen/in Arbeit/erledigt/archiviert) — deckt "erledigt" ab,
+     *      (b) template.lastGeneratedAt liegt am heutigen Tag — deckt
+     *          "vom Nutzer geloescht" ab (Row weg, Marker bleibt).
+     *  - Nur wenn (KEINE offene Instanz da) UND (heute noch NICHT versorgt):
+     *    genau 1 neue Instanz fuer heute anlegen und lastGeneratedAt setzen.
      *  - Vorlage inaktiv → loesche ALLE offenen.
-     *  - Vorlage aktiv UND mehrere offene → behalte die juengste, loesche Rest.
-     *  - Vorlage aktiv UND keine offene → erzeuge 1 neue fuer heute.
      *
      * Damit verschwinden die Duplikate die durch frueheres lastGeneratedAt=0
-     * + RRULE-Iteration entstanden sind. Solange Frank in der Liste max. eine
-     * offene Aufgabe pro Vorlage haben will (Frank-Wunsch wortwoertlich:
-     * "Sie soll in den Aufgaben dann immer nur einmal erscheinen"), ist
-     * dieser Pfad der einzig richtige Start-Cleanup.
-     *
-     * @return Anzahl der bereinigten / erzeugten Eintraege (positive = neu, negative = geloescht).
+     * + RRULE-Iteration entstanden sind, UND eine heute erledigte/geloeschte
+     * Loop-Aufgabe wird nicht mehr als "neue" Aufgabe wiederbelebt.
      */
     suspend fun cleanupAndEnsureSingle() {
         val now = System.currentTimeMillis()
+        val todayMidnight = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         val allTemplates = templateRepo.getAllForBackup()
         val allOpenEntries = entryRepo.getActive().first()
 
@@ -206,14 +221,31 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                     continue
                 }
 
-                // Aktiv: behalte juengste, loesche Rest.
+                // Aktiv: behalte juengste OFFENE, loesche aeltere offene Duplikate.
                 if (openForThis.size > 1) {
                     for (e in openForThis.drop(1)) entryRepo.delete(e)
                 }
 
-                // Aktiv UND keine offene → erzeuge 1 fuer heute.
-                if (openForThis.isEmpty()) {
+                // Wurde die heutige Instanz schon einmal versorgt? getById liest
+                // statusunabhaengig (auch REDUZIERT/ARCHIVIERT) → faengt den Fall
+                // "heute erledigt" ab. lastGeneratedAt am heutigen Tag faengt den
+                // Fall "heute erzeugt und dann geloescht" ab.
+                val todayId = "rec-${template.id}-$todayMidnight"
+                val handledToday =
+                    entryRepo.get(todayId) != null || template.lastGeneratedAt >= todayMidnight
+
+                // Nur erzeugen wenn aktuell KEINE offene Instanz existiert UND heute
+                // noch nichts versorgt wurde. Sonst bleibt die HEUTE-Liste so wie
+                // Frank sie abgearbeitet hat (kein automatisches Nachfuellen).
+                if (openForThis.isEmpty() && !handledToday) {
                     entryRepo.upsert(buildEntryForToday(template, now))
+                    templateRepo.upsert(
+                        template.copy(
+                            lastGeneratedAt = now,
+                            occurrenceCount = template.occurrenceCount + 1,
+                            updatedAt = now,
+                        ),
+                    )
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Cleanup fuer Vorlage '${template.title}' (${template.id}) fehlgeschlagen: ${e.message}")
