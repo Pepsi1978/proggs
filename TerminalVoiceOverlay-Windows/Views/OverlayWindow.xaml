@@ -101,6 +101,35 @@
             </Setter>
         </Style>
 
+        <!-- Save button style: 40x40 rounded square (Viereck-Diskette),
+             CornerRadius=8. Sitzt im vertikalen Layout neben dem Enter-Button,
+             im horizontalen Layout unter dem Enter-Button. Merkt sich die
+             aktuelle Overlay-Position pro Orientierung (nur fuer die laufende
+             Session — nach Neustart gilt wieder die Standardposition). -->
+        <Style x:Key="SaveButton" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Profile button style: 24x32 numbered tile, CornerRadius=6.
              Sits to the right of the mic stack. Three profiles toggle the
              Gemini correction style (1=Standard, 2=Programmierung, 3=Meta). -->
@@ -449,14 +478,32 @@
 
             <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 7: Enter (confirm, neutral) -->
+            <!-- Section 7: Enter (confirm, neutral) + Speichern-Diskette.
+                 Enter und Diskette liegen nebeneinander, zentriert. Die
+                 Diskette merkt sich die aktuelle Overlay-Position fuer den
+                 vertikalen Modus (Session-weit, siehe BtnSavePosition_Click). -->
             <Border Background="#B31A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
-                <Button x:Name="EnterButton"
-                        Style="{StaticResource CircleButton}"
-                        Click="BtnAutoEnter_Click"
-                        ToolTip="Auto-Enter">
-                    <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
-                </Button>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="EnterButton"
+                            Style="{StaticResource CircleButton}"
+                            Click="BtnAutoEnter_Click"
+                            ToolTip="Auto-Enter">
+                        <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
+                    </Button>
+
+                    <Button x:Name="SaveButton"
+                            Style="{StaticResource SaveButton}"
+                            Margin="6,0,0,0"
+                            Click="BtnSavePosition_Click"
+                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
+                        <TextBlock Text="&#xE74E;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
             </Border>
 
         </StackPanel>

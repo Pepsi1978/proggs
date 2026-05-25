@@ -335,6 +335,19 @@ namespace TerminalVoiceOverlay.Views
         private int _pendingProfileTileClick;
         private const int DragThresholdPx = 4;
         private bool _manuallyPositioned;
+        // ── Gespeicherte Overlay-Position pro Orientierung (nur in dieser
+        // Session, NICHT persistiert) ──
+        // Frank-Wunsch 2026-05-25: Die Diskette neben/unter dem Enter-Button
+        // merkt sich die aktuelle Position fuer die JEWEILIGE Orientierung.
+        // Beim Wechsel vertikal↔horizontal wird die zur Zielorientierung
+        // gespeicherte Position wieder eingenommen. Bewusst NUR im RAM:
+        // nach App-/PC-Neustart sind beide null → die kanonische
+        // Standardposition (oben-rechts vertikal, unten-rechts horizontal)
+        // gilt wieder. Gespeichert wird IMMER die Position der AUSGEKLAPPTEN
+        // Ansicht (die Diskette ist nur dann sichtbar), damit die
+        // Collapse-Offset-Mathematik unveraendert weiterfunktioniert.
+        private Point? _savedHorizontalPos;
+        private Point? _savedVerticalPos;
         private int _dragStartCursorX, _dragStartCursorY;
         private double _dragStartLeft, _dragStartTop;
         private double _dragDpiX, _dragDpiY;
@@ -534,6 +547,7 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(PasteButton);
             AttachHover(ScreenshotButton);
             AttachHover(InsertScreenshotButton);
+            AttachHover(SaveButton);
 
             // ── Auto-Hide / Hover-to-Expand initialisieren ──
             InitAutoHide();
@@ -860,12 +874,17 @@ namespace TerminalVoiceOverlay.Views
 
             if (_isHorizontal)
             {
-                // Horizontal: zurueck zur vollen Leiste, kanonisch unten rechts.
+                // Horizontal: zurueck zur vollen Leiste, kanonisch unten rechts —
+                // oder die in dieser Session gespeicherte Diskette-Position.
                 CollapsedView.Visibility  = Visibility.Collapsed;
                 HorizontalView.Visibility = Visibility.Visible;
                 SizeToContent = SizeToContent.WidthAndHeight;
                 UpdateLayout();
-                if (_waW > 0)
+                if (_savedHorizontalPos is { } sh)
+                {
+                    Left = sh.X; Top = sh.Y;
+                }
+                else if (_waW > 0)
                 {
                     Left = _waX + _waW - ActualWidth  - 27;
                     Top  = _waY + _waH - ActualHeight - HBarBottomLift;
@@ -987,7 +1006,7 @@ namespace TerminalVoiceOverlay.Views
             Profile7Button, Profile8Button,
             ScreenshotButton, InsertScreenshotButton,
             Profile9Button, Profile10Button,
-            EnterButton,
+            EnterButton, SaveButton,
         };
 
         // Diagnose-Log fuer das Reparenting (findet den Button-Verlust beim
@@ -1090,7 +1109,7 @@ namespace TerminalVoiceOverlay.Views
             // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
             // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
             // vertikalen Layout, nur um 90° gedreht.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, null, "#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
+            HBar.Children.Add(MakeEnterSaveGroup("#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
@@ -1182,6 +1201,45 @@ namespace TerminalVoiceOverlay.Views
             }
             Add(topBtn, true);
             Add(bottomBtn, false);
+            return new Border
+            {
+                Background = Brush(bgHex),
+                CornerRadius = corner,
+                Padding = new Thickness(8, 6, 8, 6),
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Child = col,
+            };
+        }
+
+        // Enter (oben) + Speichern-Diskette (unten) als vertikaler Stack im
+        // HORIZONTAL-Modus — die Diskette sitzt UNTER dem Enter-Button
+        // (Frank-Wunsch 2026-05-25). Beide behalten ihre Standardgroesse
+        // (40x40), vertikal mittig in der Leiste. Im vertikalen Modus liegen
+        // sie nebeneinander (XAML Section 7); RestoreVerticalLayout setzt die
+        // Original-Groesse via _vplace wieder zurueck.
+        private FrameworkElement MakeEnterSaveGroup(string bgHex, CornerRadius corner)
+        {
+            var col = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            void Add(Button b, bool first)
+            {
+                try
+                {
+                    DetachFromParent(b);
+                    b.Width = 40; b.Height = 40;
+                    b.Margin = first ? new Thickness(0) : new Thickness(0, 6, 0, 0);
+                    b.HorizontalAlignment = HorizontalAlignment.Center;
+                    b.VerticalAlignment = VerticalAlignment.Center;
+                    col.Children.Add(b);
+                }
+                catch (Exception ex) { OLog($"HBUILD enter/save {b.Name} FAIL: {ex.Message}"); }
+            }
+            Add(EnterButton, true);
+            Add(SaveButton, false);
             return new Border
             {
                 Background = Brush(bgHex),
@@ -1305,20 +1363,29 @@ namespace TerminalVoiceOverlay.Views
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
         private void PositionForCurrentOrientation()
         {
-            // Umschalten setzt IMMER die kanonische Position — vertikal oben
-            // rechts, horizontal unten rechts. Eine vorherige manuelle
-            // Verschiebung wird zurueckgesetzt (es gibt nur die zwei festen
-            // Plaetze, wie vom Benutzer gewuenscht).
-            _manuallyPositioned = false;
+            // Umschalten nimmt — falls in dieser Session eine Position fuer die
+            // ZIELorientierung mit der Diskette gespeichert wurde — genau diese
+            // Position wieder ein. Sonst gilt die kanonische Standardposition
+            // (vertikal oben-rechts, horizontal unten-rechts). _manuallyPositioned
+            // wird auf true gesetzt wenn eine gespeicherte Position angewendet
+            // wurde, damit ein direkt folgendes OnTerminalActivated sie nicht
+            // ueberschreibt.
             if (_isHorizontal)
             {
                 SizeToContent = SizeToContent.WidthAndHeight;
                 UpdateLayout();
-                if (_waW > 0)
+                if (_savedHorizontalPos is { } sh)
+                {
+                    Left = sh.X; Top = sh.Y;
+                    _manuallyPositioned = true;
+                }
+                else if (_waW > 0)
                 {
                     Left = _waX + _waW - ActualWidth  - 27;
                     Top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                    _manuallyPositioned = false;
                 }
+                else { _manuallyPositioned = false; }
             }
             else
             {
@@ -1326,13 +1393,66 @@ namespace TerminalVoiceOverlay.Views
                 _isCollapsed = false;
                 Width  = 96;
                 Height = FullHeight;
-                if (_waW > 0)
+                if (_savedVerticalPos is { } sv)
+                {
+                    Left = sv.X; Top = sv.Y;
+                    _manuallyPositioned = true;
+                }
+                else if (_waW > 0)
                 {
                     Left = _waX + _waW - 96 - 27;
                     Top  = _waY + 57;
+                    _manuallyPositioned = false;
                 }
+                else { _manuallyPositioned = false; }
             }
             ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Klick auf die Diskette: merkt sich die AKTUELLE Overlay-Position
+        /// fuer die AKTUELLE Orientierung. Die Diskette ist nur in der
+        /// ausgeklappten Ansicht sichtbar, daher ist Left/Top hier immer die
+        /// ausgeklappte Position — genau das, was die Positions-Logik
+        /// (Collapse-Offset, Wiedereinblenden, Orientierungswechsel) erwartet.
+        /// Bewusst NUR im RAM: nach App-/PC-Neustart sind beide Felder null
+        /// und die kanonische Standardposition gilt wieder. _manuallyPositioned
+        /// wird gesetzt, damit ein direkt folgendes OnTerminalActivated die
+        /// gerade gemerkte Position nicht ueberschreibt.
+        /// </summary>
+        private void BtnSavePosition_Click(object sender, RoutedEventArgs e)
+        {
+            var pos = new Point(Left, Top);
+            if (_isHorizontal) _savedHorizontalPos = pos;
+            else               _savedVerticalPos   = pos;
+            _manuallyPositioned = true;
+            _usedSinceExpand    = true; // zaehlt als Interaktion → normaler Auto-Hide-Rhythmus
+            FlashSaveButton();
+        }
+
+        /// <summary>
+        /// Kurzes gruenes Aufblitzen der Diskette als Bestaetigung, dass die
+        /// Position gemerkt wurde. Animiert einen frischen (nicht eingefrorenen)
+        /// SolidColorBrush von Gruen zurueck auf das normale Dunkelgrau — die
+        /// statischen Brushes (BtnSuccess/BtnIdle) sind via Freeze() unveraenderbar
+        /// und koennen daher nicht direkt animiert werden.
+        /// </summary>
+        private void FlashSaveButton()
+        {
+            try
+            {
+                var brush = new SolidColorBrush(BtnSuccess.Color);
+                SaveButton.Background = brush;
+                var anim = new ColorAnimation(
+                    BtnSuccess.Color,
+                    BtnIdle.Color,
+                    new Duration(TimeSpan.FromMilliseconds(650)))
+                {
+                    EasingFunction = HoverEaseOut,
+                };
+                brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
+            }
+            catch (Exception ex) { Console.WriteLine($"FlashSaveButton: {ex.Message}"); }
         }
 
         // ── Non-activating window setup ──
@@ -1528,13 +1648,21 @@ namespace TerminalVoiceOverlay.Views
 
             if (_isHorizontal)
             {
-                // Horizontale Leiste: Groesse = Inhalt, Position unten-rechts.
+                // Horizontale Leiste: Groesse = Inhalt, Position unten-rechts —
+                // oder die in dieser Session gespeicherte Diskette-Position.
                 if (!_manuallyPositioned)
                 {
                     SizeToContent = SizeToContent.WidthAndHeight;
                     UpdateLayout();
-                    Left = _waX + _waW - ActualWidth  - 27;
-                    Top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                    if (_savedHorizontalPos is { } sh)
+                    {
+                        Left = sh.X; Top = sh.Y;
+                    }
+                    else
+                    {
+                        Left = _waX + _waW - ActualWidth  - 27;
+                        Top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                    }
                 }
                 if (!IsVisible)
                 {
@@ -1557,8 +1685,13 @@ namespace TerminalVoiceOverlay.Views
                 {
                     // Frank's exact spec (2026-04-26): 27px vom rechten Rand,
                     // 57px vom oberen Rand. WPF-DIPs sind DPI-unabhaengig.
-                    Left = _waX + _waW - Width - 27;
-                    double fullTop = _waY + 57;
+                    // Gibt es eine in dieser Session gespeicherte Diskette-
+                    // Position, gilt diese statt der kanonischen — gespeichert
+                    // wird die AUSGEKLAPPTE Position, daher gleiche Behandlung
+                    // wie fullTop (Collapse-Offset wird oben drauf gerechnet).
+                    bool hasSaved = _savedVerticalPos is not null;
+                    Left = hasSaved ? _savedVerticalPos!.Value.X : _waX + _waW - Width - 27;
+                    double fullTop = hasSaved ? _savedVerticalPos!.Value.Y : _waY + 57;
                     if (_autoHideEnabled && _isCollapsed)
                     {
                         Top    = fullTop + CollapseTopOffset;
