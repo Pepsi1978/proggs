@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
-# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Ordner | Context | Zeit
+# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Context | Ordner | Zeit
 
 input=$(cat)
 
@@ -582,15 +582,15 @@ printf "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
 # 6. Effort (rechts neben dem Modell)
 printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
-# 7. Ordner
-[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-
-# 8. Context-Verbrauch (bleibt direkt hinter dem Ordner — Frank 2026-05-25)
+# 7. Context-Verbrauch (direkt hinter dem Effort — Frank 2026-05-25)
 if [ -n "$ctx_used" ]; then
     col=$(pct_color "$ctx_used")
     bar=$(make_bar "$ctx_used" "$col")
     printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
 fi
+
+# 8. Ordner
+[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 
 # 9. Uhrzeit
 printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"

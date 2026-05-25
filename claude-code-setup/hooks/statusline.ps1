@@ -1,5 +1,5 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
-# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Ordner | Context | Zeit
+# Reihenfolge: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Modell | Effort | Context | Ordner | Zeit
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -572,16 +572,16 @@ $out += "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
 # 6. Effort (rechts neben dem Modell)
 $out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
-# 7. Ordner
-if ($cwd) {
-    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-}
-
-# 8. Context (bleibt direkt hinter dem Ordner — Frank 2026-05-25)
+# 7. Context (direkt hinter dem Effort — Frank 2026-05-25)
 if ($ctx_used -ne $null) {
     $col = Get-PctColor $ctx_used
     $bar = Get-Bar $ctx_used $col
     $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+}
+
+# 8. Ordner
+if ($cwd) {
+    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 }
 
 # 9. Uhrzeit
