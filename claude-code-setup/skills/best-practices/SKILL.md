@@ -188,26 +188,39 @@ Neueres gefunden, gilt der letzte Eintrag weiter als aktuell.
 
 ## Auswertungs-Format (Schritt 6)
 
-Am Ende eines Laufs eine gut strukturierte, uebersichtliche Auswertung ausgeben:
+Am Ende JEDES Laufs eine **ausfuehrliche** Auswertung ausgeben — nicht nur Stichpunkte.
+Drei Teile in dieser Reihenfolge:
 
+### Teil A — Ausfuehrliche Auswertung je Kategorie
+Fuer JEDE betroffene Kategorie ein eigener Abschnitt mit:
+- **Neuerungen:** was hat sich geaendert (Versionsnummer + Quelle, soweit bekannt)
+- **Best Practices:** wie nutzt man es heute am besten (das Wichtigste, nicht nur Aufzaehlung)
+- **Betrifft eigene Werkzeuge:** beruehrt das ein vorhandenes Hook/Skill/Agent/Setting? (Hinweis)
+
+### Teil B — Kurz-Header
 ```
 ## Best-Practices-Lauf — [Datum]
-Geprueft: Version [alt] → [neu]
-
-### Was hat sich geaendert
-- [Kategorie]: [kurze Beschreibung] (Quelle, Datum)
-- …
-
-### Direkte Verbesserungsvorschlaege
-1. [Konkret, sofort umsetzbar]
-2. …
-
-### Eigene Werkzeuge — moeglicherweise veraltet (nur Hinweis)
-- [Werkzeug X] koennte durch [Neuerung] ueberholt sein → tiefere Pruefung waere Teil 2
+Geprueft: Version [alt] → [neu] | Kategorien: [Anzahl] | Quellen: [Anzahl]
 ```
 
-Die Verbesserungsvorschlaege zusaetzlich im bestehenden Intelligenz-Vorschlags-Format ausgeben.
-Das "veraltete Werkzeuge"-Flagging ist nur ein Hinweis — Analyse und Umsetzung gehoeren in Teil 2.
+### Teil C — UMSETZBARE VERBESSERUNGSVORSCHLAEGE (das Herzstueck — PFLICHT am Ende)
+Eine nummerierte Liste konkreter, **sofort abnickbarer** Vorschlaege. AUSSCHLIESSLICH solche,
+bei denen die Recherche einen **echten, belegten Vorteil** gezeigt hat — kein Fuellmaterial.
+Pro Vorschlag GENAU dieses Format, damit der Benutzer einfach "ja, ja, ja" sagen kann:
+
+```
+N. [Konkrete Aktion in einem Satz]
+   Vorteil (belegt): [was es bringt] — Quelle: [offizieller Fund aus diesem Lauf]
+   Betrifft: [Datei/Werkzeug] | Aufwand: [klein/mittel/gross] | Risiko: [niedrig/mittel/hoch]
+```
+
+Regeln fuer Teil C:
+- NUR research-gestuetzte Vorschlaege mit nachweisbarem Vorteil. Lieber 3 starke als 10 schwache.
+- Jeder Vorschlag muss mit einem einfachen "ja" umsetzbar sein (konkret, nicht "man koennte mal").
+- Vorschlaege die ein eigenes Werkzeug aendern klar markieren (Teil-2-Gebiet, aber hier abnickbar gelistet).
+- Wenn ein Fund einen FRUEHEREN Vorschlag widerlegt (z.B. Feature ist buggy), ehrlich sagen und
+  den alten Vorschlag zurueckziehen.
+- Danach auf die Auswahl des Benutzers warten und NUR die bestaetigten Vorschlaege umsetzen.
 
 ## Wiederverwendung
 
