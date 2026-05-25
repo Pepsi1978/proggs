@@ -1251,6 +1251,7 @@ namespace TerminalVoiceOverlay.Views
                 BuildHorizontalLayout();
                 FullView.Visibility       = Visibility.Collapsed;
                 CollapsedView.Visibility  = Visibility.Collapsed;
+                HorizontalView.Opacity    = 0; // unsichtbar bis positioniert → kein Flash an alter Stelle
                 HorizontalView.Visibility = Visibility.Visible;
                 _isHorizontal = true;
                 _isCollapsed  = false; // Auto-Hide ist im Horizontal-Modus (v1) inaktiv
@@ -1259,6 +1260,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 RestoreVerticalLayout();
                 HorizontalView.Visibility = Visibility.Collapsed;
+                FullView.Opacity          = 0; // unsichtbar bis positioniert → kein Flash unter der Linie
                 FullView.Visibility       = Visibility.Visible;
                 FullView.UpdateLayout(); // erzwingt frisches Re-Layout der Sektionen
                 _isHorizontal = false;
@@ -1470,17 +1472,18 @@ namespace TerminalVoiceOverlay.Views
                 double dpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
                 var hwnd = new WindowInteropHelper(this).Handle;
 
-                // Dauer an die Strecke koppeln: kurze Wege schnell, lange Wege
-                // etwas laenger → kleinere Schritte pro Frame, wirkt weicher.
+                // Dauer an die Strecke koppeln: laenger = mehr Frames pro Pixel
+                // = weicher (besonders bei der hohen Saeule, die teuer zu
+                // bewegen ist). Etwas grosszuegiger als zuvor fuer "120-Hz-Gefuehl".
                 double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
-                double durationMs = Math.Clamp(dist * 0.9, 260.0, 460.0);
+                double durationMs = Math.Clamp(dist * 1.3, 340.0, 600.0);
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 _glideHandler = (_, _) =>
                 {
                     double t = sw.Elapsed.TotalMilliseconds / durationMs;
                     if (t >= 1.0) t = 1.0;
-                    double e = EaseInOutCubic(t);
+                    double e = Smootherstep(t);
                     double curLeft = startLeft + (targetLeft - startLeft) * e;
                     double curTop  = startTop  + (targetTop  - startTop)  * e;
 
@@ -1524,10 +1527,12 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        // Weiche Beschleunigung am Anfang UND Abbremsung am Ende — laesst den
-        // Glide gleichmaessiger wirken als reines Ease-out.
-        private static double EaseInOutCubic(double t)
-            => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+        // Smootherstep (Perlin): nicht nur Geschwindigkeit, auch Beschleunigung
+        // ist an beiden Enden 0 (C2-stetig). Wirkt deutlich weicher als Cubic-
+        // Ease — kein harter Geschwindigkeitssprung am Anfang/Ende, daher kein
+        // wahrnehmbares "Anrucken".
+        private static double Smootherstep(double t)
+            => t * t * t * (t * (t * 6 - 15) + 10);
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
         // Ausrichtung eine Position gemerkt ist, sonst Weiss. Hell-Gruen nur als
