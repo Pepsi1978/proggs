@@ -1036,6 +1036,21 @@ namespace TerminalVoiceOverlay.Views
                 new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(140))) { EasingFunction = HoverEaseOut });
         }
 
+        // Blendet eine Ansicht aus (Opacity → 0) und ruft danach onDone auf.
+        // Genutzt fuer den Form-Wechsel oben beim Hochschalten: erst die flache
+        // Leiste ausblenden, dann im unsichtbaren Zustand auf die Saeule morphen
+        // und wieder einblenden. So versteckt sich der harte Geometrie-/Form-
+        // Sprung hinter der Transparenz statt als Ruck sichtbar zu sein
+        // (Frank-Idee 2026-05-25).
+        private static void FadeOut(UIElement el, Action onDone)
+        {
+            el.BeginAnimation(UIElement.OpacityProperty, null);
+            var anim = new DoubleAnimation(el.Opacity, 0, new Duration(TimeSpan.FromMilliseconds(120)))
+            { EasingFunction = HoverEaseOut };
+            anim.Completed += (_, _) => onDone();
+            el.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
         // Beim Einklappen das Promptboard + Eingabefeld mit ausblenden. Die
         // Absicht (alwaysOnActive / _inputSoloDock) bleibt erhalten, damit beim
         // Aufklappen wiederhergestellt wird was vorher offen war.
@@ -1327,10 +1342,17 @@ namespace TerminalVoiceOverlay.Views
 
             AnimateWindowTo(targetLeft, targetTop, onComplete: () =>
             {
-                // Oben angekommen, keine Bewegung mehr: jetzt auf die Saeule
-                // morphen und deren Position hart setzen.
-                ApplyOrientation(false);
-                PositionForCurrentOrientation(noGlide: true);
+                // Oben angekommen, keine Bewegung mehr. Der harte Form-/
+                // Geometrie-Sprung von flacher Leiste zur Saeule sieht als
+                // Direkt-Klapp ruckhaft aus (Frank 2026-05-25). Daher
+                // ueberblenden: flache Leiste ausblenden → im unsichtbaren
+                // Zustand morphen + Position hart setzen → Saeule wieder
+                // einblenden (ApplyOrientation ruft FadeIn(FullView) selbst).
+                FadeOut(HorizontalView, () =>
+                {
+                    ApplyOrientation(false);
+                    PositionForCurrentOrientation(noGlide: true);
+                });
             });
         }
 
