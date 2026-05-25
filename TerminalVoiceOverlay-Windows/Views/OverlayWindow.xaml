@@ -107,8 +107,12 @@
              aktuelle Overlay-Position pro Orientierung (nur fuer die laufende
              Session — nach Neustart gilt wieder die Standardposition). -->
         <Style x:Key="SaveButton" TargetType="Button">
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
+            <!-- 28px im vertikalen Modus: passt mit 2px Margin in die 30px
+                 breite Profil-Spalte → Enter bleibt exakt auf der Achse der
+                 anderen runden Buttons. Im Horizontal-Modus setzt
+                 MakeEnterSaveGroup auf 40px hoch (dort ist Platz unter Enter). -->
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
             <!-- Transparent: nur das Disketten-Symbol ist sichtbar, KEIN grauer
                  Kasten (Frank-Wunsch 2026-05-25). Transparent bleibt klickbar —
                  die volle 40x40-Flaeche ist weiterhin hit-testbar. Feedback beim
@@ -484,32 +488,45 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 7: Enter (confirm, neutral) + Speichern-Diskette.
-                 Enter und Diskette liegen nebeneinander, zentriert. Die
-                 Diskette merkt sich die aktuelle Overlay-Position fuer den
-                 vertikalen Modus (Session-weit, siehe BtnSavePosition_Click). -->
+                 Gleiche Grid-Struktur wie Section 4 (X + Profil-Kachel): Enter
+                 sitzt zentriert in der 52px-Spalte → exakt auf der Achse der
+                 anderen runden Buttons. Die Diskette sitzt rechts daneben in der
+                 Auto-Spalte (wie die Profil-Kacheln), damit Enter NICHT nach
+                 aussen wandert (Frank-Wunsch 2026-05-25). Diskette 28px + 2px
+                 Margin = 30px Spaltenbreite — identisch zu den Profil-Spalten,
+                 daher exakt dieselbe Enter-Achse. -->
             <Border Background="#B31A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
                     <Button x:Name="EnterButton"
+                            Grid.Column="0"
                             Style="{StaticResource CircleButton}"
+                            HorizontalAlignment="Center"
                             Click="BtnAutoEnter_Click"
                             ToolTip="Auto-Enter">
                         <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
                     </Button>
 
                     <Button x:Name="SaveButton"
+                            Grid.Column="1"
                             Style="{StaticResource SaveButton}"
-                            Margin="6,0,0,0"
+                            VerticalAlignment="Center"
+                            Margin="2,0,0,0"
                             Click="BtnSavePosition_Click"
                             ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
                         <TextBlock x:Name="SaveIcon"
                                    Text="&#xE74E;"
                                    FontFamily="Segoe MDL2 Assets"
-                                   FontSize="18"
+                                   FontSize="16"
                                    Foreground="White"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Button>
-                </StackPanel>
+                </Grid>
             </Border>
 
         </StackPanel>
