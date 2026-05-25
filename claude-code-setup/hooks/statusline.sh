@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
 # Zweizeilig (Frank 2026-05-25):
-#   Zeile 1: Modell | Effort | Ordner | Zeit
-#   Zeile 2: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
+#   Zeile 1: Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
+#   Zeile 2: Ordner | Zeit
 
 input=$(cat)
 
@@ -538,7 +538,7 @@ esac
 # folgen dahinter. Kontext bleibt direkt hinter dem Ordner wie zuvor.
 EMPTY_BAR="${TRACK}░░░░░░░${R}"
 
-# ===== ZEILE 1: Modell | Effort | Ordner | Uhrzeit (Frank 2026-05-25) =====
+# ===== ZEILE 1: Modell | Effort | 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
 
 # 1. Modell (erstes Element von Zeile 1 — KEIN fuehrender Trenner)
 printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
@@ -546,38 +546,27 @@ printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
 # 2. Effort (direkt hinter dem Modell)
 printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
-# 3. Ordner
-[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-
-# 4. Uhrzeit
-printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
-
-# Zeilenumbruch -> Zeile 2 (jedes echo erzeugt eine eigene Statusline-Zeile, siehe Claude-Code-Doku)
-echo
-
-# ===== ZEILE 2: 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
-
-# 5. 5h-Limit mit Balken (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
+# 3. 5h-Limit mit Balken
 if [ -n "$five_h_used" ]; then
     col=$(pct_color "$five_h_used")
     bar=$(make_bar "$five_h_used" "$col")
     if [ -n "$five_h_countdown" ]; then
-        printf "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R} ${DIM}(${five_h_countdown})${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R} ${DIM}(${five_h_countdown})${R}"
     else
-        printf "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R}"
     fi
 else
-    printf "${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+    printf "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# 6. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+# 4. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
 #     Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if [ -n "$five_h_used" ] && [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     pacebar=$(make_pace_bar "$five_h_used" "$five_h_resets" 18000)
     printf "${GSEP}${PACE}slow${R} ${pacebar} ${PACE}fast${R}"
 fi
 
-# 7. 7d-Limit mit Balken (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
+# 5. 7d-Limit mit Balken (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
 if [ -n "$week_used" ]; then
     col=$(pct_color "$week_used")
     bar=$(make_bar "$week_used" "$col")
@@ -590,19 +579,30 @@ else
     printf "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# 8. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage
+# 6. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage
 #     (604800s), eigene Feature-Farbe (Pink). Nur wenn Verbrauch UND 7d-Reset bekannt.
 if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     pacebar7=$(make_pace_bar "$week_used" "$week_resets" 604800)
     printf "${GSEP}${PACE7}slow${R} ${pacebar7} ${PACE7}fast${R}"
 fi
 
-# 9. Context-Verbrauch (am Ende von Zeile 2)
+# 7. Context-Verbrauch (am Ende von Zeile 1)
 if [ -n "$ctx_used" ]; then
     col=$(pct_color "$ctx_used")
     bar=$(make_bar "$ctx_used" "$col")
     printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
 fi
+
+# Zeilenumbruch -> Zeile 2 (jedes echo erzeugt eine eigene Statusline-Zeile, siehe Claude-Code-Doku)
+echo
+
+# ===== ZEILE 2: Ordner | Uhrzeit (Frank 2026-05-25) =====
+
+# 8. Ordner (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
+[ -n "$cwd" ] && printf "${P}${ICON_DIR} ${cwd}${R}"
+
+# 9. Uhrzeit
+printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 echo
 
 exit 0

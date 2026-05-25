@@ -1,7 +1,7 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
 # Zweizeilig (Frank 2026-05-25):
-#   Zeile 1: Modell | Effort | Ordner | Zeit
-#   Zeile 2: 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
+#   Zeile 1: Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
+#   Zeile 2: Ordner | Zeit
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -526,7 +526,7 @@ $ICON_PACE   = '🎯'
 # 7d-Pacing), DANN Modell, Effort, Ordner, Kontext, Uhrzeit. Kontext bleibt direkt
 # hinter dem Ordner wie zuvor. Identische Reihenfolge wie statusline.sh.
 
-# ===== ZEILE 1: Modell | Effort | Ordner | Uhrzeit (Frank 2026-05-25) =====
+# ===== ZEILE 1: Modell | Effort | 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
 
 # 1. Modell (erstes Element von Zeile 1 — $out mit = initialisieren, KEIN fuehrender Trenner)
 $out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
@@ -534,33 +534,20 @@ $out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
 # 2. Effort (direkt hinter dem Modell)
 $out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
-# 3. Ordner
-if ($cwd) {
-    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
-}
-
-# 4. Uhrzeit
-$out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
-
-# Zeilenumbruch -> Zeile 2 (reines LF "`n", kein CRLF; jeder Newline = eigene Statusline-Zeile)
-$out += "`n"
-
-# ===== ZEILE 2: 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
-
-# 5. 5h (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
+# 3. 5h
 if ($five_h_used -ne $null) {
     $col = Get-PctColor $five_h_used
     $bar = Get-Bar $five_h_used $col
     if ($five_h_countdown) {
-        $out += "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R} ${DIM}(${five_h_countdown})${R}"
+        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R} ${DIM}(${five_h_countdown})${R}"
     } else {
-        $out += "${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R}"
+        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R}"
     }
 } else {
-    $out += "${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
+    $out += "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-# 6. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
+# 4. 5h-Pacing-Pendel direkt hinter dem 5h-Balken (Frank 2026-05-24):
 # Nur zeigen wenn Verbrauch UND Reset-Zeitpunkt bekannt sind.
 if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $nowPace = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -568,7 +555,7 @@ if ($five_h_used -ne $null -and $five_h_resets -gt 0) {
     $out += "${GSEP}${PACE}slow${R} ${paceBar} ${PACE}fast${R}"
 }
 
-# 7. 7d (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
+# 5. 7d (mit Reset-Countdown in Tagen+Stunden — Frank 2026-05-25)
 if ($week_used -ne $null) {
     $col = Get-PctColor $week_used
     $bar = Get-Bar $week_used $col
@@ -581,7 +568,7 @@ if ($week_used -ne $null) {
     $out += "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-# 8. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage (604800s),
+# 6. 7d-Pacing-Pendel (Frank 2026-05-24): gleiche Logik wie 5h, Fenster 7 Tage (604800s),
 # eigene Feature-Farbe (Pink). Nur zeigen wenn Verbrauch UND 7d-Reset bekannt sind.
 if ($week_used -ne $null -and $week_resets -gt 0) {
     $nowPace7 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -589,12 +576,25 @@ if ($week_used -ne $null -and $week_resets -gt 0) {
     $out += "${GSEP}${PACE7}slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
-# 9. Context (am Ende von Zeile 2)
+# 7. Context (am Ende von Zeile 1)
 if ($ctx_used -ne $null) {
     $col = Get-PctColor $ctx_used
     $bar = Get-Bar $ctx_used $col
     $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
 }
+
+# Zeilenumbruch -> Zeile 2 (reines LF "`n", kein CRLF; jeder Newline = eigene Statusline-Zeile)
+$out += "`n"
+
+# ===== ZEILE 2: Ordner | Uhrzeit (Frank 2026-05-25) =====
+
+# 8. Ordner (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
+if ($cwd) {
+    $out += "${P}${ICON_DIR} ${cwd}${R}"
+}
+
+# 9. Uhrzeit
+$out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 
 [Console]::Out.Write($out)
 
