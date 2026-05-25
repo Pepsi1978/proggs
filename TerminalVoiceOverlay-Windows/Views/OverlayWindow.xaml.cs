@@ -1036,17 +1036,42 @@ namespace TerminalVoiceOverlay.Views
                 new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(140))) { EasingFunction = HoverEaseOut });
         }
 
-        // Blendet eine Ansicht aus (Opacity → 0) und ruft danach onDone auf.
-        // Genutzt fuer den Form-Wechsel oben beim Hochschalten: erst die flache
-        // Leiste ausblenden, dann im unsichtbaren Zustand auf die Saeule morphen
-        // und wieder einblenden. So versteckt sich der harte Geometrie-/Form-
-        // Sprung hinter der Transparenz statt als Ruck sichtbar zu sein
-        // (Frank-Idee 2026-05-25).
-        private static void FadeOut(UIElement el, Action onDone)
+        // ── Beam-Effekt fuer den Orientierungswechsel (Frank 2026-05-25) ──
+        // Sehr weiche CubicEase EaseInOut — geschmeidiger als die quadratische
+        // Hover-Ease, passt zum bewussten, langsamen Teleport-Look. Eingefroren
+        // (Freeze) damit sie thread-safe ueber alle Beam-Animationen geteilt wird.
+        private static readonly CubicEase BeamEase = CreateFrozenBeamEase();
+        private static CubicEase CreateFrozenBeamEase()
+        {
+            var e = new CubicEase { EasingMode = EasingMode.EaseInOut };
+            e.Freeze();
+            return e;
+        }
+
+        // Beam-Ausblenden: die aktuelle Form sichtbar KOMPLETT verschwinden
+        // lassen (~240ms, 1 → 0), dann onDone. Explizit von 1 starten (nicht von
+        // el.Opacity): nach einer vorher gehaltenen Animation kann der lokale
+        // Opacity-Basiswert 0 sein — ein "von el.Opacity" wuerde dann 0→0
+        // animieren (kein sichtbares Ausblenden). Teil des Orientierungs-Beams.
+        private static void BeamFadeOut(UIElement el, Action onDone)
         {
             el.BeginAnimation(UIElement.OpacityProperty, null);
-            var anim = new DoubleAnimation(el.Opacity, 0, new Duration(TimeSpan.FromMilliseconds(120)))
-            { EasingFunction = HoverEaseOut };
+            var anim = new DoubleAnimation(1, 0, new Duration(TimeSpan.FromMilliseconds(240)))
+            { EasingFunction = BeamEase };
+            anim.Completed += (_, _) => onDone();
+            el.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        // Beam-Einblenden: die Zielform oben langsam + sehr weich wieder
+        // erscheinen lassen (~380ms, 0 → 1), dann onDone (= an die Stelle
+        // fallen). Bewusst laenger als das Ausblenden, damit der "Reinbeam"-
+        // Moment ruhig und weich wirkt (Frank: "relativ langsam, sehr weich").
+        private static void BeamFadeIn(UIElement el, Action onDone)
+        {
+            el.BeginAnimation(UIElement.OpacityProperty, null);
+            el.Opacity = 0;
+            var anim = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(380)))
+            { EasingFunction = BeamEase };
             anim.Completed += (_, _) => onDone();
             el.BeginAnimation(UIElement.OpacityProperty, anim);
         }
@@ -1292,68 +1317,138 @@ namespace TerminalVoiceOverlay.Views
             // schliessen, damit sich NUR das Overlay dreht. Der Benutzer
             // oeffnet danach ueber den Stern frisch in der neuen Orientierung.
             CloseAttachedPanelsForOrientationSwitch();
-            if (target)
-            {
-                // VERTIKAL → HORIZONTAL (runter): Form sofort wechseln (oben, im
-                // Stillstand), dann glatt in der flachen Leiste nach unten
-                // gleiten. Unveraendert — das ruckelt nicht.
-                ApplyOrientation(true);
-                PositionForCurrentOrientation(orientationSwitch: true);
-            }
-            else
-            {
-                // HORIZONTAL → VERTIKAL (hoch): NICHT zuerst auf die hohe Saeule
-                // umschalten (deren Inhalts-Glide ruckelt). Stattdessen in der
-                // flachen Leisten-Form nach oben gleiten (glatt via Fenster-Move
-                // + DwmFlush) und ERST OBEN IM STILLSTAND auf die Saeule morphen.
-                // Spiegelt exakt das Runtergleiten in umgekehrter Reihenfolge
-                // (Frank-Idee 2026-05-25).
-                GlideUpThenMorphToVertical();
-            }
+            BeamToOrientation(target);
             PersistOrientation(target);
         }
 
         /// <summary>
-        /// Hochschalten ohne Ruckeln: das Overlay bleibt in der flachen
-        /// Horizontal-Form und gleitet auf derselben Spalte glatt nach oben
-        /// (gleiches Verfahren wie das Runtergleiten). Erst wenn es oben im
-        /// Stillstand angekommen ist, wird auf die vertikale Saeule gemorpht
-        /// und deren Endposition HART gesetzt (kein zweites, stotterndes
-        /// Saeulen-Gleiten). Spiegelbild von Runter: dort morpht es oben im
-        /// Stillstand und gleitet dann runter — hier gleitet es hoch und
-        /// morpht oben im Stillstand.
+        /// "Beam"-Wechsel der Orientierung in BEIDE Richtungen (Frank-Wunsch
+        /// 2026-05-25). Ablauf:
+        ///  1. Die aktuelle Form blendet SICHTBAR komplett aus ("wegbeamen").
+        ///  2. Im unsichtbaren Zustand morpht das Overlay auf die Zielform und
+        ///     parkt sie GANZ OBEN auf derselben X-Spalte ("obere Stelle").
+        ///  3. Die Zielform blendet dort langsam + sehr weich wieder ein
+        ///     ("reinbeamen in die obere Stelle").
+        ///  4. Sie faellt senkrecht an ihren endgueltigen Platz ("runterfallen").
+        /// Der harte Form-/Geometrie-Sprung passiert komplett bei Opacity 0 und
+        /// ist daher kein Ruck mehr, sondern ein bewusster Teleport-Effekt.
         /// </summary>
-        private void GlideUpThenMorphToVertical()
+        private void BeamToOrientation(bool horizontal)
         {
-            // Sicherheitsnetz: nicht horizontal oder Monitor-Geometrie unbekannt
-            // → klassisch umschalten (alte Verhalten), kein Spezialpfad.
-            if (!_isHorizontal || _waW <= 0)
+            // Sicherheitsnetz: ohne bekannte Monitor-Geometrie klassisch
+            // umschalten (kein Beam, aber voll funktionsfaehig).
+            if (_waW <= 0)
             {
-                ApplyOrientation(false);
+                ApplyOrientation(horizontal);
                 PositionForCurrentOrientation(orientationSwitch: true);
                 return;
             }
 
-            // Glide-Ziel in der flachen Form: gleiche X-Spalte, hoch bis an den
-            // oberen Rand der Arbeitsflaeche (_waY) — exakt der Startpunkt, von
-            // dem aus das Runtergleiten loslaeuft, nur in Gegenrichtung.
-            double targetLeft = Left;
-            double targetTop  = _waY;
+            StopGlide();
+            UIElement currentView = _isHorizontal ? (UIElement)HorizontalView : FullView;
 
-            AnimateWindowTo(targetLeft, targetTop, onComplete: () =>
+            // 1) Aktuelle Form sichtbar ausblenden ("wegbeamen").
+            BeamFadeOut(currentView, () =>
             {
-                // Oben angekommen, keine Bewegung mehr. Der harte Form-/
-                // Geometrie-Sprung von flacher Leiste zur Saeule sieht als
-                // Direkt-Klapp ruckhaft aus (Frank 2026-05-25). Daher
-                // ueberblenden: flache Leiste ausblenden → im unsichtbaren
-                // Zustand morphen + Position hart setzen → Saeule wieder
-                // einblenden (ApplyOrientation ruft FadeIn(FullView) selbst).
-                FadeOut(HorizontalView, () =>
+                // 2) Unsichtbar auf die Zielform morphen (kein eigenes FadeIn —
+                //    der Beam steuert die Sichtbarkeit). Setzt _isHorizontal + Form.
+                ApplyOrientationSilent(horizontal);
+
+                // 3) Endposition berechnen (setzt auch die Fenstergroesse) und das
+                //    Fenster GANZ OBEN auf derselben X-Spalte parken → danach
+                //    reiner senkrechter Fall.
+                ComputeOrientationTarget(out double finalLeft, out double finalTop);
+                Left = finalLeft;
+                Top  = _waY;
+
+                UIElement targetView = horizontal ? (UIElement)HorizontalView : FullView;
+
+                // 4) Zielform oben langsam + sehr weich wieder einblenden.
+                BeamFadeIn(targetView, () =>
                 {
-                    ApplyOrientation(false);
-                    PositionForCurrentOrientation(noGlide: true);
+                    // 5) Senkrecht an die endgueltige Stelle fallen/gleiten.
+                    //    Horizontal: glatter Fenster-Move (DwmFlush). Vertikal:
+                    //    nur ~57px Content-Glide — zu kurz um zu ruckeln.
+                    AnimateWindowTo(finalLeft, finalTop);
                 });
             });
+        }
+
+        /// <summary>
+        /// Wie <see cref="ApplyOrientation"/>, aber OHNE eigenes Einblenden: die
+        /// Zielansicht wird auf Opacity 0 gesetzt, damit der Beam-Effekt das
+        /// Einblenden selbst steuern kann. Spiegelt sonst exakt die Form-Logik
+        /// von ApplyOrientation (Layout aufbauen/wiederherstellen, Sichtbarkeit).
+        /// </summary>
+        private void ApplyOrientationSilent(bool horizontal)
+        {
+            CaptureVerticalPlacement();
+            if (horizontal)
+            {
+                BuildHorizontalLayout();
+                FullView.Visibility      = Visibility.Collapsed;
+                CollapsedView.Visibility = Visibility.Collapsed;
+                HorizontalView.BeginAnimation(UIElement.OpacityProperty, null);
+                HorizontalView.Opacity    = 0;
+                HorizontalView.Visibility = Visibility.Visible;
+                _isHorizontal = true;
+                _isCollapsed  = false;
+            }
+            else
+            {
+                RestoreVerticalLayout();
+                HorizontalView.Visibility = Visibility.Collapsed;
+                FullView.BeginAnimation(UIElement.OpacityProperty, null);
+                FullView.Opacity    = 0;
+                FullView.Visibility = Visibility.Visible;
+                FullView.UpdateLayout();
+                _isHorizontal = false;
+            }
+            UpdateSaveIndicator();
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Berechnet die endgueltige Fensterposition fuer die AKTUELLE
+        /// Orientierung und setzt dabei die noetige Fenstergroesse (horizontal:
+        /// SizeToContent; vertikal: 96 x FullHeight) sowie ggf. eine per Diskette
+        /// gemerkte Position. Veraendert NICHT Left/Top — nur die Groesse —
+        /// damit der Beam-Aufrufer Start- (oben) und Endposition selbst steuert.
+        /// </summary>
+        private void ComputeOrientationTarget(out double left, out double top)
+        {
+            if (_isHorizontal)
+            {
+                SizeToContent = SizeToContent.WidthAndHeight;
+                UpdateLayout();
+                if (_savedHorizontalPos is { } sh)
+                {
+                    left = sh.X; top = sh.Y; _manuallyPositioned = true;
+                }
+                else
+                {
+                    left = _waX + _waW - ActualWidth - 27;
+                    top  = _waY + _waH - ActualHeight - HBarBottomLift;
+                    _manuallyPositioned = false;
+                }
+            }
+            else
+            {
+                SizeToContent = SizeToContent.Manual;
+                _isCollapsed  = false;
+                Width  = 96;
+                Height = FullHeight;
+                if (_savedVerticalPos is { } sv)
+                {
+                    left = sv.X; top = sv.Y; _manuallyPositioned = true;
+                }
+                else
+                {
+                    left = _waX + _waW - 96 - 27;
+                    top  = _waY + 57;
+                    _manuallyPositioned = false;
+                }
+            }
         }
 
         /// <summary>
@@ -1428,7 +1523,7 @@ namespace TerminalVoiceOverlay.Views
         // Setzt Fenstergroesse + Position passend zur Orientierung. Horizontal:
         // SizeToContent (Leiste umschliesst die HBar), unten-rechts am Monitor.
         // Vertikal: feste Breite 96, Hoehe via Auto-Hide-Zustand.
-        private void PositionForCurrentOrientation(bool orientationSwitch = false, bool noGlide = false)
+        private void PositionForCurrentOrientation(bool orientationSwitch = false)
         {
             // Umschalten nimmt — falls in dieser Session eine Position fuer die
             // ZIELorientierung mit der Diskette gespeichert wurde — genau diese
@@ -1477,14 +1572,7 @@ namespace TerminalVoiceOverlay.Views
 
             if (targetLeft is double tl && targetTop is double tt)
             {
-                if (noGlide)
-                {
-                    // Position OHNE Glide hart setzen — genutzt wenn die
-                    // Bewegung schon in der flachen Form passiert ist und hier
-                    // nur noch im Stillstand auf die Saeule gemorpht wird.
-                    Left = tl; Top = tt;
-                }
-                else if (orientationSwitch && _waW > 0)
+                if (orientationSwitch && _waW > 0)
                 {
                     // Sauberer SENKRECHTER Slide auf der Ziel-Spalte: zuerst an
                     // die Ziel-X-Position und einen sinnvollen Start-Rand setzen,
@@ -1537,11 +1625,7 @@ namespace TerminalVoiceOverlay.Views
         private VerticalAlignment _glideOrigV;
         private double _glideTargetLeft, _glideTargetTop;
 
-        // onComplete (optional) feuert NUR bei natuerlichem Glide-Ende — nicht
-        // wenn der Glide per StopGlide abgebrochen wird (z.B. Drag-Start). Wird
-        // genutzt um nach dem Hochgleiten in der flachen Form auf die vertikale
-        // Saeule zu morphen (Spiegelbild des Runtergleitens, 2026-05-25).
-        private void AnimateWindowTo(double targetLeft, double targetTop, Action? onComplete = null)
+        private void AnimateWindowTo(double targetLeft, double targetTop)
         {
             try
             {
@@ -1551,23 +1635,21 @@ namespace TerminalVoiceOverlay.Views
                     (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0))
                 {
                     Left = targetLeft; Top = targetTop;
-                    onComplete?.Invoke();
                     return;
                 }
-                if (_isHorizontal) GlideByWindowMove(startLeft, startTop, targetLeft, targetTop, onComplete);
-                else               GlideByContentTransform(startLeft, startTop, targetLeft, targetTop, onComplete);
+                if (_isHorizontal) GlideByWindowMove(startLeft, startTop, targetLeft, targetTop);
+                else               GlideByContentTransform(startLeft, startTop, targetLeft, targetTop);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
                 StopGlide();
                 Left = targetLeft; Top = targetTop; // Fallback: hart setzen
-                onComplete?.Invoke();
             }
         }
 
         // Flache horizontale Leiste: kleines Fenster pro Frame verschieben + DwmFlush.
-        private void GlideByWindowMove(double startLeft, double startTop, double targetLeft, double targetTop, Action? onComplete = null)
+        private void GlideByWindowMove(double startLeft, double startTop, double targetLeft, double targetTop)
         {
             var src = PresentationSource.FromVisual(this);
             double dpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
@@ -1601,7 +1683,6 @@ namespace TerminalVoiceOverlay.Views
                     _gliding = false;
                     Left = targetLeft; Top = targetTop;
                     ReassertTopmostIfVisible();
-                    onComplete?.Invoke();
                 }
                 else
                 {
@@ -1612,7 +1693,7 @@ namespace TerminalVoiceOverlay.Views
         }
 
         // Hohe vertikale Saeule: Fenster gross+stehend, nur den Inhalt per GPU-Transform gleiten.
-        private void GlideByContentTransform(double startLeft, double startTop, double targetLeft, double targetTop, Action? onComplete = null)
+        private void GlideByContentTransform(double startLeft, double startTop, double targetLeft, double targetTop)
         {
             const double pillW = 96.0;
             double pillH = FullHeight;
@@ -1653,7 +1734,7 @@ namespace TerminalVoiceOverlay.Views
             // Teiler der Monitor-Bildrate ist (z.B. 50 bei 60/120Hz), kaempft gegen
             // V-Sync → ungleichmaessige Frames = Ruckeln. Der WPF-Default ist
             // vsync-gebunden und laeuft am gleichmaessigsten (Frank 2026-05-25).
-            ay.Completed += (_, _) => { FinalizeContentGlide(); onComplete?.Invoke(); };
+            ay.Completed += (_, _) => FinalizeContentGlide();
             tt.BeginAnimation(TranslateTransform.XProperty, ax);
             tt.BeginAnimation(TranslateTransform.YProperty, ay);
         }
