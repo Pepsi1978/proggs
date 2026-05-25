@@ -4,7 +4,7 @@
         Title="TerminalVoiceOverlay"
         Width="96" Height="612"
         WindowStyle="None"
-        AllowsTransparency="False"
+        AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"

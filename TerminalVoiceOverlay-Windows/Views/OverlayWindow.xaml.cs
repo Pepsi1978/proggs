@@ -1439,21 +1439,30 @@ namespace TerminalVoiceOverlay.Views
             ReassertTopmostIfVisible();
         }
 
-        // ── Glide (Fenster-Move) auf dem DWM-Fenster ──
-        // Seit AllowsTransparency=False ist das Fenster NICHT mehr layered, sondern
-        // DWM-kompositiert (Recherche 2026-05-25, Memory: wpf-overlay-smooth-animation).
-        // Damit ist simples Bewegen von Window.Left/Top per DoubleAnimation glatt
-        // (GPU) UND es flackert nichts mehr ueber Terminal-Text — das Fenster bewegt
-        // sich als Block, es wird keine grosse Transparenzflaeche pro Frame neu
-        // komponiert. Im Completed-Handler erst den lokalen Wert auf das Ziel setzen,
-        // DANN die Animation loesen — so gibt es kein Zurueckspringen (FillBehavior).
-        private bool _gliding;
+        // ── Content-Glide (GPU) statt Fenster-Bewegung ──
+        // Recherche 2026-05-25 (Memory: wpf-overlay-smooth-animation): Ein
+        // transparentes Topmost-Fenster zu BEWEGEN ruckelt bei WPF grundsaetzlich
+        // (Layered Window / UpdateLayeredWindow, GPU→CPU-Kopie pro Frame). Best
+        // Practice (MS-Doku): Fenster STEHEN lassen, den INHALT per RenderTransform
+        // + BitmapCache (GPU-Textur) gleiten. Wir vergroessern das Fenster fuer die
+        // Dauer des Glides auf die Gleitstrecke, schieben die Pille per
+        // TranslateTransform und setzen das Fenster danach wieder auf Pillen-Groesse
+        // an der Zielposition.
+        private FrameworkElement? _glideView;
+        private HorizontalAlignment _glideOrigH;
+        private VerticalAlignment _glideOrigV;
+        private double _glideTargetLeft, _glideTargetTop;
 
+        /// <summary>
+        /// Laesst die Pille sanft zur Zielposition gleiten — GPU-kompositiert, ohne
+        /// das (teure) Bewegen des Layered-Windows. Frank-Wunsch 2026-05-25.
+        /// </summary>
         private void AnimateWindowTo(double targetLeft, double targetTop)
         {
             try
             {
-                StopGlide();
+                StopGlide(); // evtl. laufenden Glide sauber abschliessen
+
                 double startLeft = Left, startTop = Top;
                 if (_isCollapsed ||
                     (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0))
@@ -1461,35 +1470,101 @@ namespace TerminalVoiceOverlay.Views
                     Left = targetLeft; Top = targetTop;
                     return;
                 }
+
+                // Pillen-Groesse der aktuellen Orientierung (fest 96 vertikal, Inhalt horizontal).
+                double pillW = _isHorizontal ? ActualWidth : 96.0;
+                double pillH = _isHorizontal ? ActualHeight : FullHeight;
+                var view = _isHorizontal ? (FrameworkElement)HorizontalView : FullView;
+
+                // Vereinigungs-Rechteck von Start- und Zielposition (Bildschirm-DIPs):
+                // so gross muss das Fenster waehrend des Glides sein, damit die Pille
+                // an beiden Enden hineinpasst und nie ueber den Fensterrand geclippt wird.
+                double ux = Math.Min(startLeft, targetLeft);
+                double uy = Math.Min(startTop, targetTop);
+                double uw = Math.Max(startLeft, targetLeft) + pillW - ux;
+                double uh = Math.Max(startTop, targetTop) + pillH - uy;
+
+                _glideView = view;
+                _glideOrigH = view.HorizontalAlignment;
+                _glideOrigV = view.VerticalAlignment;
+                _glideTargetLeft = targetLeft;
+                _glideTargetTop  = targetTop;
+
+                // Pille oben-links im (grossen) Fenster verankern; Transform setzt sie an den Start.
+                view.HorizontalAlignment = HorizontalAlignment.Left;
+                view.VerticalAlignment   = VerticalAlignment.Top;
+                var tt = new TranslateTransform(startLeft - ux, startTop - uy);
+                view.RenderTransform = tt;
+                view.CacheMode = new BitmapCache(); // einmal in GPU-Textur rendern, danach nur blitten
+
+                SizeToContent = SizeToContent.Manual;
+                Left = ux; Top = uy; Width = uw; Height = uh;
+
+                // Sicher sichtbar machen (ApplyOrientation kann Opacity gegen den
+                // Form-Wechsel-Flash auf 0 gesetzt haben); laufende Fade-Animation loesen.
+                view.BeginAnimation(UIElement.OpacityProperty, null);
+                view.Opacity = 1;
+
                 double dist = Math.Max(Math.Abs(targetLeft - startLeft), Math.Abs(targetTop - startTop));
                 var dur = new Duration(TimeSpan.FromMilliseconds(Math.Clamp(dist * 1.3, 340.0, 600.0)));
                 var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
-                var ax = new DoubleAnimation(targetLeft, dur) { EasingFunction = ease };
-                var ay = new DoubleAnimation(targetTop,  dur) { EasingFunction = ease };
-                ax.Completed += (_, _) => { Left = targetLeft; BeginAnimation(LeftProperty, null); };
-                ay.Completed += (_, _) => { Top  = targetTop;  BeginAnimation(TopProperty,  null); _gliding = false; };
-                _gliding = true;
-                BeginAnimation(LeftProperty, ax);
-                BeginAnimation(TopProperty,  ay);
+                var ax = new DoubleAnimation(targetLeft - ux, dur) { EasingFunction = ease };
+                var ay = new DoubleAnimation(targetTop  - uy, dur) { EasingFunction = ease };
+                ay.Completed += (_, _) => FinalizeGlide();
+                tt.BeginAnimation(TranslateTransform.XProperty, ax);
+                tt.BeginAnimation(TranslateTransform.YProperty, ay);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
-                StopGlide();
-                Left = targetLeft; Top = targetTop;
+                FinalizeGlide();
+                Left = targetLeft; Top = targetTop; // Fallback: hart setzen
             }
         }
 
-        /// <summary>Bricht einen laufenden Glide ab (z.B. bei Drag-Start) und friert die
-        /// aktuelle Position ein, statt zum Startwert zurueckzuspringen.</summary>
+        /// <summary>
+        /// Schliesst den Content-Glide ab: Transform/Cache zuruecksetzen, Ausrichtung
+        /// wiederherstellen und das Fenster auf Pillen-Groesse an die Zielposition setzen.
+        /// </summary>
+        private void FinalizeGlide()
+        {
+            var v = _glideView;
+            if (v == null) return;
+            _glideView = null;
+            try
+            {
+                if (v.RenderTransform is TranslateTransform t)
+                {
+                    t.BeginAnimation(TranslateTransform.XProperty, null);
+                    t.BeginAnimation(TranslateTransform.YProperty, null);
+                }
+                v.RenderTransform = null;
+                v.CacheMode = null;
+                v.HorizontalAlignment = _glideOrigH;
+                v.VerticalAlignment   = _glideOrigV;
+                v.Opacity = 1;
+
+                if (_isHorizontal)
+                {
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                }
+                else
+                {
+                    SizeToContent = SizeToContent.Manual;
+                    Width = 96; Height = FullHeight;
+                }
+                Left = _glideTargetLeft;
+                Top  = _glideTargetTop;
+            }
+            catch (Exception ex) { Console.WriteLine($"FinalizeGlide: {ex.Message}"); }
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>Bricht einen laufenden Glide ab und springt ans Ziel (z.B. bei Drag-Start).</summary>
         private void StopGlide()
         {
-            if (!_gliding) return;
-            _gliding = false;
-            double l = Left, t = Top; // aktuell animierte Werte sichern
-            BeginAnimation(LeftProperty, null);
-            BeginAnimation(TopProperty, null);
-            Left = l; Top = t;
+            if (_glideView != null) FinalizeGlide();
         }
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
@@ -1604,36 +1679,6 @@ namespace TerminalVoiceOverlay.Views
             // Hook WndProc for WM_MOUSEACTIVATE
             var source = HwndSource.FromHwnd(hwnd);
             source?.AddHook(WndProc);
-
-            // ── DWM-Fenster statt Layered-Window (2026-05-25) ──
-            // AllowsTransparency=False (XAML) nimmt das Fenster aus dem langsamen
-            // Layered-Pfad → DWM-kompositiert, glatte Moves, kein Text-Flackern.
-            // Transparenz kommt jetzt als Acrylic-Backdrop vom DWM. Gerundete Ecken
-            // ebenfalls vom DWM. Best-effort: faellt der Backdrop weg (alte Windows),
-            // bleibt das Overlay dunkel-deckend sichtbar — nicht kaputt.
-            // FALLBACK auf "deckend" = DWMSBT_NONE statt DWMSBT_TRANSIENTWINDOW.
-            try
-            {
-                // Transparenter WPF-Compositing-Hintergrund, damit der DWM-Backdrop
-                // im Client-Bereich durchscheint.
-                if (source?.CompositionTarget is not null)
-                    source.CompositionTarget.BackgroundColor = Colors.Transparent;
-
-                // Rahmen in den Client-Bereich ziehen (Sheet-of-Glass), sonst greift
-                // der System-Backdrop bei WindowStyle=None nicht.
-                var margins = new Win32.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
-                Win32.DwmExtendFrameIntoClientArea(hwnd, ref margins);
-
-                int corner = Win32.DWMWCP_ROUND;
-                Win32.DwmSetWindowAttribute(hwnd, Win32.DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
-
-                int backdrop = Win32.DWMSBT_TRANSIENTWINDOW; // Acrylic (milchiger Durchschein)
-                Win32.DwmSetWindowAttribute(hwnd, Win32.DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DWM setup failed (overlay falls back to opaque): {ex.Message}");
-            }
 
             // ── AutoEnter-Status-HTTP-Server starten ───────────────────────
             // Macht den aktuellen orange/grau-Zustand fuer externe Hardware
