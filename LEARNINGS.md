@@ -1036,3 +1036,48 @@ Ich merke mir die **3 K** — **Konvertierung, Kaltstart, Konflikt:**
 
 Wenn alle drei "ja" sind, funktioniert der Hotkey. Wenn einer "nein" ist, faellt das Feature still aus — und der naechste maskiert die anderen.
 
+---
+
+## Windows/WPF: Transparentes Overlay ruckelfrei ueber Text gleiten lassen ⭐⭐⭐ NEU 2026-05-25
+
+**Kontext:** WPF-Overlay (`AllowsTransparency=True`, WindowStyle=None, Topmost), abgerundete
+halbtransparente Pille, schwebt ueber einem Terminal und gleitet beim Orientierungswechsel
+(horizontal↔vertikal). Problem: ruckelt/flackert beim Gleiten ueber weisser CLI-Schrift.
+Verifiziert in Voice Terminal Overlay (TVO).
+
+**Wurzelursache:** `AllowsTransparency=True` = Layered Window (`UpdateLayeredWindow`, CPU-Pfad).
+Ein transluzentes Layered-Fenster ueber Text zu bewegen ist nicht von selbst vsync-synchron →
+Flackern/Ruckeln. WPF hat zudem keinen Compositor-Thread (dotnet/wpf #133).
+
+**Loesung — HYBRID nach Fenster-FORM (nicht nach Richtung):**
+
+| Bewegtes Fenster | Technik | Warum |
+|---|---|---|
+| **flach/kurz** (horizontale Leiste) | kleines Fenster pro Frame per `SetWindowPos` verschieben **+ `DwmFlush()` nach jedem Move** | DwmFlush synct den (synchronen!) Move mit der DWM-Komposition des Terminals → kein Flackern, perfekt glatt. Kleine Flaeche = billig. |
+| **hoch/schmal** (vertikale Saeule, 96×612) | Fenster STEHEN lassen, nur **Inhalt per `TranslateTransform` + `CacheMode=BitmapCache`** gleiten | Hohes transluzentes Fenster zu verschieben ist zu teuer (ruckelt). Schmale 96px-Flaeche als stehender Content-Glide = transparent UND fluessig. |
+
+Faustregel: **breit→Fenster-Move+DwmFlush, schmal-hoch→Content-Transform.** Content-Glide NUR
+fuer schmale Fenster (bei breitem Fenster ist die stehende Flaeche riesig → flackert ueber Text).
+
+**V-Sync / Bildrate (wichtig):** KEINE feste `Timeline.DesiredFrameRate` setzen, die kein
+sauberer Teiler der Monitor-Bildrate ist. 50fps bei 60/120Hz → Beating → Ruckeln; 120fps → die
+Layered-Flaeche kann das nicht halten → schlimmer. **WPF-Default (vsync-gebunden) ist am
+glattesten** — Bildrate gar nicht erzwingen.
+
+**Tempo:** Dauer streckenabhaengig `clamp(dist*1.3, floor, 600ms)`, aber der kurzen Strecke eine
+hoehere Untergrenze (~500ms) geben, sonst wirkt sie schneller als die lange.
+
+**Verworfen:** `DoubleAnimation` auf `Window.Left/Top` (ruckelt); DWM-Umstellung
+(`AllowsTransparency=False`+Acrylic) = glatt, aber Look wird milchig → Benutzer abgelehnt;
+opake Pille waehrend Glide → Benutzer will durchsichtig.
+
+**DwmFlush P/Invoke:** `[DllImport("dwmapi.dll")] static extern int DwmFlush();` — Schleife als
+`Dispatcher.BeginInvoke(DispatcherPriority.Render)` (nicht in `CompositionTarget.Rendering`,
+damit das blockierende DwmFlush nicht im Render-Callback sitzt).
+
+**Echte 120Hz mit Per-Pixel-Look** (nicht umgesetzt): braeuchte `Windows.UI.Composition`-Interop
+(Compositor-Thread via HwndHost) oder WinUI 3.
+
+Quellen: support.microsoft.com/help/938660 · flutter/flutter#130683 (DwmFlush) ·
+dotnet/wpf#133 · learn.microsoft.com/.../animation-tips-and-tricks
+
