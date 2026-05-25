@@ -1398,32 +1398,93 @@ namespace TerminalVoiceOverlay.Views
             ReassertTopmostIfVisible();
         }
 
+        // Laufender Glide-Handler (CompositionTarget.Rendering). Null = kein Glide aktiv.
+        private EventHandler? _glideHandler;
+
         /// <summary>
         /// Laesst das Overlay sanft zur Zielposition gleiten statt hart zu
-        /// springen (Frank-Wunsch 2026-05-25, Ausrichtungswechsel + Zuruecksetzen).
-        /// Animiert Window.Left/Top per DoubleAnimation. FillBehavior.Stop +
-        /// finaler Wert im Completed-Handler ist Pflicht: sonst wuerde der
-        /// gehaltene Animationswert spaetere Left/Top-Zuweisungen (Drag,
-        /// Reposition) blockieren. Bei Fehler hart setzen (nie haengen bleiben).
+        /// springen (Frank-Wunsch 2026-05-25). Bewusst NICHT per DoubleAnimation
+        /// auf Window.Left/Top: das lief sichtbar ruckelig, weil die Animations-
+        /// Uhr nicht zuverlaessig pro Frame einen Wert liefert UND jeder Achsen-
+        /// Setter eine eigene Fenster-Verschiebung ausloest (bei AllowsTransparency
+        /// + Topmost besonders teuer). Stattdessen: ein Tick pro ECHTEM Render-
+        /// Frame (CompositionTarget.Rendering), beide Koordinaten in EINEM Win32-
+        /// SetWindowPos-Aufruf, weiche Ease-in-out-Kurve. Am Ende werden Left/Top
+        /// (DIPs) final gesetzt, damit WPF wieder die Wahrheit kennt (Drag liest davon).
         /// </summary>
-        private void AnimateWindowTo(double left, double top)
+        private void AnimateWindowTo(double targetLeft, double targetTop)
         {
             try
             {
-                var dur = new Duration(TimeSpan.FromMilliseconds(190));
-                var ax = new DoubleAnimation(left, dur) { EasingFunction = HoverEaseOut, FillBehavior = FillBehavior.Stop };
-                var ay = new DoubleAnimation(top, dur) { EasingFunction = HoverEaseOut, FillBehavior = FillBehavior.Stop };
-                ax.Completed += (_, _) => { BeginAnimation(LeftProperty, null); Left = left; };
-                ay.Completed += (_, _) => { BeginAnimation(TopProperty, null); Top = top; };
-                BeginAnimation(LeftProperty, ax);
-                BeginAnimation(TopProperty, ay);
+                StopGlide(); // evtl. laufenden Glide zuerst beenden
+
+                double startLeft = Left, startTop = Top;
+                // Sehr kurze Distanz → direkt setzen, kein Glide noetig.
+                if (Math.Abs(targetLeft - startLeft) < 1.0 && Math.Abs(targetTop - startTop) < 1.0)
+                {
+                    Left = targetLeft; Top = targetTop;
+                    return;
+                }
+
+                var src = PresentationSource.FromVisual(this);
+                double dpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+                double dpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+                var hwnd = new WindowInteropHelper(this).Handle;
+
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                const double durationMs = 260.0;
+
+                _glideHandler = (_, _) =>
+                {
+                    double t = sw.Elapsed.TotalMilliseconds / durationMs;
+                    if (t >= 1.0) t = 1.0;
+                    double e = EaseInOutCubic(t);
+                    double curLeft = startLeft + (targetLeft - startLeft) * e;
+                    double curTop  = startTop  + (targetTop  - startTop)  * e;
+
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        // EIN Move pro Frame in Geraetepixeln; HWND_TOPMOST haelt
+                        // die Pille dabei zugleich im Vordergrund.
+                        Win32.SetWindowPos(hwnd, Win32.HWND_TOPMOST,
+                            (int)Math.Round(curLeft * dpiX), (int)Math.Round(curTop * dpiY),
+                            0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
+                    }
+                    else
+                    {
+                        Left = curLeft; Top = curTop;
+                    }
+
+                    if (t >= 1.0)
+                    {
+                        StopGlide();
+                        Left = targetLeft; Top = targetTop; // WPF-Eigenschaften final synchronisieren
+                    }
+                };
+                CompositionTarget.Rendering += _glideHandler;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AnimateWindowTo: {ex.Message}");
-                Left = left; Top = top; // Fallback: hart setzen
+                StopGlide();
+                Left = targetLeft; Top = targetTop; // Fallback: hart setzen
             }
         }
+
+        /// <summary>Beendet einen laufenden Glide (Rendering-Handler abmelden).</summary>
+        private void StopGlide()
+        {
+            if (_glideHandler != null)
+            {
+                CompositionTarget.Rendering -= _glideHandler;
+                _glideHandler = null;
+            }
+        }
+
+        // Weiche Beschleunigung am Anfang UND Abbremsung am Ende — laesst den
+        // Glide gleichmaessiger wirken als reines Ease-out.
+        private static double EaseInOutCubic(double t)
+            => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
 
         // Farben des Disketten-Symbols: dezentes Gruen wenn fuer die aktuelle
         // Ausrichtung eine Position gemerkt ist, sonst Weiss. Hell-Gruen nur als
@@ -1625,10 +1686,7 @@ namespace TerminalVoiceOverlay.Views
                     if (Win32.GetCursorPos(out var startPt))
                     {
                         _isDragging = true;
-                        // Laufende Glide-Animation abbrechen, sonst blockiert der
-                        // gehaltene Animationswert das Drag-Reposition.
-                        BeginAnimation(LeftProperty, null);
-                        BeginAnimation(TopProperty, null);
+                        StopGlide(); // laufenden Glide abbrechen, damit das Drag sofort uebernimmt
                         _dragStartCursorX = startPt.X;
                         _dragStartCursorY = startPt.Y;
                         _dragStartLeft = Left;
