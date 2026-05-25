@@ -52,9 +52,13 @@ if ([string]::IsNullOrWhiteSpace($npmJson)) {
     $npmJson = $reg.time | ConvertTo-Json -Depth 3
   } catch { $npmJson = '{}' }
 }
+# Datums-Map EINMAL aufbauen (Version -> YYYY-MM-DD) statt pro Version den ganzen JSON neu zu scannen
+$dateMap = @{}
+foreach ($mm in [regex]::Matches($npmJson, '"(\d+\.\d+\.\d+)"\s*:\s*"(\d{4}-\d{2}-\d{2})')) {
+  $dateMap[$mm.Groups[1].Value] = $mm.Groups[2].Value
+}
 function Get-VerDate([string]$v) {
-  $m = [regex]::Match($npmJson, '"' + [regex]::Escape($v) + '"\s*:\s*"(\d{4}-\d{2}-\d{2})')
-  if ($m.Success) { return $m.Groups[1].Value } else { return $null }
+  if ($dateMap.ContainsKey($v)) { return $dateMap[$v] } else { return $null }
 }
 
 # --- 4. Versions-Header-Indizes im Quell-Changelog ---
