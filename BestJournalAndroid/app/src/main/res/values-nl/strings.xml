@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">Verversen</string>
     <string name="dashboard_weekly_review_waiting">Je weekterugblik staat voor je klaar</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">Je had een bewogen week. Met Premium krijg je de volledige analyse, herken je patronen, ontdek je inzichten en begrijp je wat je echt beweegt.</string>
+    <string name="dashboard_weekly_review_upsell_body">Je had een bewogen week. Met Premium zie je de volledige analyse: herken patronen, ontdek inzichten en begrijp wat je bezighoudt.</string>
     <string name="dashboard_discover_premium">Premium ontdekken</string>
     <string name="dashboard_please_wait">Wacht even</string>
     <string name="dashboard_gemini_unavailable">Gemini is nu niet bereikbaar, probeer het zo nog eens.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">Bewust (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">Aan de oppervlakte (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">Diepte van de inzichten</string>
-    <string name="legend_insight_deep">Diepgaand, verborgen patronen en overtuigingen</string>
+    <string name="legend_insight_deep">Diepgaand, terugkerende patronen en overtuigingen</string>
     <string name="legend_insight_aware">Bewust, herkende denk- en gevoelspatronen</string>
     <string name="legend_insight_surface">Aan de oppervlakte, eerste observaties</string>
     <string name="legend_progress">Voortgang</string>
@@ -320,14 +320,29 @@
     <string name="profile_custom">Aangepaste analyse</string>
     <string name="profile_summary_desc">Vat thema\'s, patronen en ervaringen samen</string>
     <string name="profile_entropy_desc">Spoort stress, chaos en belasting op</string>
-    <string name="profile_insight_desc">Onthult verborgen denk- en gevoelspatronen</string>
+    <string name="profile_insight_desc">Maakt terugkerende denk- en gevoelspatronen zichtbaar</string>
     <string name="profile_goals_desc">Herkent doelen, wensen en voortgang</string>
     <string name="profile_custom_desc">Stel je eigen analysefocus in</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Je notities worden neutraal samengevat, zonder oordeel of advies.\n\nJe ziet in één oogopslag:\n\n• welke thema\'s je nu bezighouden\n• welke patronen zich herhalen\n• hoe je leven zich ontwikkelt\n\nIdeaal als dagelijks overzicht van alles wat er in je leven speelt.</string>
-    <string name="profile_entropy_long">De AI zoekt gericht naar stress, belasting en chaos in je notities.\n\nJe krijgt:\n\n• een analyse van je grootste bronnen van belasting\n• 5 concrete acties om op te ruimen\n• tips die je meteen kunnen helpen\n\nIdeaal als je het gevoel hebt dat alles te veel wordt.</string>
-    <string name="profile_insight_long">De AI kijkt dieper dan de gebeurtenissen zelf. In je notities herkent ze:\n\n• verborgen denkpatronen en overtuigingen\n• terugkerende gevoelens en reacties\n• persoonlijke krachten waar je je niet bewust van bent\n• waarden die je handelen sturen\n\nVoor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string>
+    <string name="profile_entropy_long">De AI zoekt gericht naar stress, belasting en chaos in je aantekeningen.
+
+Je krijgt:
+
+• Een analyse van je grootste stressbronnen
+• 5 concrete maatregelen om op te ruimen
+• Tips die je in het dagelijks leven kunnen helpen
+
+Ideaal als je het gevoel hebt dat alles je te veel wordt.</string>
+    <string name="profile_insight_long">De AI kijkt dieper dan alleen naar gebeurtenissen. Ze herkent in je aantekeningen:
+
+• Denkpatronen en overtuigingen in je woorden
+• Terugkerende gevoelens en reacties
+• Sterktes die zichtbaar worden in je aantekeningen
+• Waarden die je handelen aandrijven
+
+Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string>
     <string name="profile_goals_long">De AI vindt alle doelen, wensen en plannen in je notities, ook als ze terloops worden genoemd.\n\nJe ziet:\n\n• welke doelen je hebt (ook de verborgen)\n• hoe ver je bij elk doel bent\n• wat je volgende stap kan zijn\n\nJouw persoonlijke doeltracker, die leest in je eigen woorden.</string>
     <string name="profile_custom_long">Jij bepaalt zelf waar de AI op moet letten.\n\nSchrijf je eigen analysefocus, bijvoorbeeld:\n\n• «Vind alle vermeldingen van sport»\n• «Analyseer mijn stemmingswisselingen»\n• «Laat zien wanneer ik het productiefst ben»\n\nVolle controle voor wie precies weet wat hij zoekt.</string>
     <string name="profile_custom_prompt">Wat is voor jou extra belangrijk? Waarop moet de AI zich richten bij het analyseren van je dagboeknotities?</string>
@@ -423,7 +438,7 @@
     <string name="settings_premium_feature_dashboard">Dagelijkse dashboard-analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit mee met je notities.</string>
     <string name="settings_premium_feature_5_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">Van helderheid tot zelfkennis</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Van samenvatting tot zelfkennis</string>
     <string name="settings_premium_feature_reviews">Week-, maand- en jaarterugblik</string>
     <string name="settings_premium_feature_reviews_desc">De AI vertelt jouw verhaal</string>
     <string name="settings_premium_feature_patterns">Patroondetectie</string>
@@ -834,9 +849,9 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="retro_weekly_p4">De eerste 2 weken zijn gratis</string>
     <string name="retro_monthly_p1">Verbindt je weekterugblikken tot een maandverhaal</string>
     <string name="retro_monthly_p2">Rode draden en ontwikkelingen over de maand worden zichtbaar</string>
-    <string name="retro_monthly_p3">Laat veranderingen zien die je in de drukte niet opmerkt</string>
+    <string name="retro_monthly_p3">Toont ontwikkelingen uit je aantekeningen</string>
     <string name="retro_yearly_p1">Je hele jaar in één oogopslag</string>
-    <string name="retro_yearly_p2">De AI herkent de grote thema\'s van je jaar</string>
+    <string name="retro_yearly_p2">De AI vat de grote thema's van je jaar samen</string>
     <string name="retro_yearly_p3">Persoonlijke groei wordt zichtbaar en tastbaar</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Jouw persoonlijke terugblikken</string>
@@ -865,7 +880,8 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Welkom bij\nBest Journal</string>
-    <string name="onboarding_subtitle">Jouw persoonlijke AI-dagboek\nvoor helderheid en verandering</string>
+    <string name="onboarding_subtitle">Je persoonlijk AI-dagboek
+voor meer duidelijkheid in het dagelijks leven</string>
     <string name="onboarding_feature_speech">Praat of schrijf, de AI begrijpt beide</string>
     <string name="onboarding_feature_secure">Je gegevens blijven bij jou, versleuteld en veilig</string>
     <string name="onboarding_goals_title">Wat wil je bereiken\nmet het AI-dagboek?</string>
@@ -879,15 +895,15 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="onboarding_how_step2_desc">Je tekst wordt automatisch bijgeschaafd en vanuit meerdere invalshoeken geanalyseerd.</string>
     <string name="onboarding_how_step3_desc">Leg bijzondere momenten vast, de AI neemt ze mee in de analyse.</string>
     <string name="onboarding_how_step4_title">Ontdek patronen en inzichten</string>
-    <string name="onboarding_how_step4_desc">Het dashboard toont je verbanden die je in de drukte ontgaan.</string>
+    <string name="onboarding_how_step4_desc">Het AI-dashboard toont je verbanden uit je aantekeningen.</string>
     <string name="onboarding_how_step5_title">Week-, maand- en jaarterugblik</string>
     <string name="onboarding_how_step5_desc">Automatische terugblikken laten zien hoe je je door de tijd ontwikkelt.</string>
     <string name="onboarding_premium_feature_improve">AI-tekstverbetering dagelijks, elke notitie wordt duidelijker en expressiever</string>
     <string name="onboarding_premium_feature_dashboard">Automatische dashboard-updates bij elke nieuwe notitie</string>
     <string name="onboarding_premium_feature_retro">Week-, maand- en jaarterugblikken laten je ontwikkeling zien</string>
-    <string name="onboarding_premium_feature_patterns">Persoonlijke patronen herkennen, de AI vindt verborgen denk- en gevoelspatronen</string>
+    <string name="onboarding_premium_feature_patterns">Patronen zichtbaar maken: De AI toont terugkerende denk- en gevoelspatronen in je aantekeningen</string>
     <string name="onboarding_premium_feature_noads">Geen reclame, schrijf en reflecteer ongestoord</string>
-    <string name="onboarding_free_trial">Gratis en vrijblijvend</string>
+    <string name="onboarding_free_trial">Gratis, op elk moment opzegbaar</string>
     <string name="onboarding_free_after_trial">Daarna gebruik je Best Journal verder,\ngratis met een beperkt aantal AI-oproepen per week.</string>
     <string name="onboarding_start_free">Gratis beginnen</string>
     <string name="onboarding_without_premium">Doorgaan zonder Premium</string>
@@ -898,7 +914,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="onboarding_perspectives_title">Verschillende invalshoeken op\njouw leven</string>
     <string name="onboarding_premium_feature_pdf">Pdf-export met foto\'s, bewaar je notities als document</string>
     <string name="onboarding_premium_profiles">5 slimme dashboardprofielen voor een diepe blik op je leven</string>
-    <string name="onboarding_try_premium">8 dagen gratis — daarna vanaf € 3,99/maand</string>
+    <string name="onboarding_try_premium">8 dagen gratis, daarna vanaf 3,99 €/maand</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -912,18 +928,19 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="paywall_reminder">Herinnering</string>
     <string name="paywall_day8">Dag 8</string>
     <string name="paywall_first_payment">Eerste betaling</string>
-    <string name="paywall_yearly_note">Daarna %1$s per jaar\nTijdens de proefperiode op elk moment opzegbaar</string>
-    <string name="paywall_most_popular">Meest gekozen</string>
+    <string name="paywall_yearly_note">Daarna %1$s per jaar, wordt automatisch verlengd
+Tijdens de proefperiode op elk moment opzegbaar</string>
+    <string name="paywall_most_popular">Aanbevolen</string>
     <string name="paywall_monthly_plan">Maandabonnement, %1$s per maand</string>
     <string name="paywall_yearly_savings">Bespaar %1$d%% ten opzichte van maandelijks \u2014 opzegbaar tot aan het einde van de contractperiode.</string>
     <string name="paywall_lifetime_title">Eenmalige aankoop</string>
     <string name="paywall_lifetime_desc">Eenmaal betalen, alles permanent gebruiken</string>
     <string name="paywall_lifetime_note">Geen abonnement, geen verlenging</string>
-    <string name="paywall_free_note">De app werkt ook zonder abonnement,</string>
+    <string name="paywall_free_note">De app werkt ook verder zonder abonnement.</string>
     <string name="paywall_cd_close">Sluiten</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Begrijp verborgen patronen in je denken</string>
+    <string name="paywall_feature_patterns">Herken terugkerende patronen in je denken</string>
     <string name="paywall_feature_improve">AI-tekstverbetering dagelijks voor elke notitie</string>
     <string name="paywall_feature_dashboard">Automatische dashboard-updates na elke notitie</string>
     <string name="paywall_feature_retro">Week-, maand- en jaarterugblikken met AI</string>
@@ -973,7 +990,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="churn_reason_other">Andere reden</string>
     <string name="churn_sorry_title">Jammer dat je vertrekt</string>
     <string name="churn_sorry_body">Voor je opzegt, mag je ons vertellen waarom? Dat helpt ons de app te verbeteren.</string>
-    <string name="churn_exclusive_offer">Exclusieve aanbieding</string>
+    <string name="churn_exclusive_offer">Aanbieding voor jou</string>
     <string name="churn_offer_subtitle">Ons aanbod voor jou</string>
     <string name="churn_offer_feature_ai">Dagelijkse AI-analyses</string>
     <string name="churn_offer_feature_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
@@ -1218,7 +1235,15 @@ Met Premium: tot 150 per dag.</string>
     <string name="privacy_gate_groq_local">In plaats daarvan lokaal transcriberen</string>
 
     <string name="privacy_gate_gemini_title">Tekst naar Google Gemini sturen?</string>
-    <string name="privacy_gate_gemini_body">Fijn dat je de slimme functies van Best Journal wilt gebruiken! Voor samenvattingen, terugblikken, dashboardinzichten en tekstverbeteringen wordt je tekst versleuteld naar Google Gemini gestuurd.\n\n✓ Nooit gebruikt om AI-modellen te trainen\n✓ Verzoeken worden direct na verwerking verwijderd\n✓ Versleuteld volgens het EU-US Data Privacy Framework\n\nBelangrijke mededeling: omdat je dagboeknotities bijzonder gevoelige gegevens kunnen bevatten (gezondheid, religie, persoonlijke relaties — Art. 9 AVG, bijzondere categorieën), vragen we hier je uitdrukkelijke toestemming voor AI-verwerking. De antwoorden van de AI zijn suggesties, geen professioneel advies, en vervangen geen gekwalificeerde persoon.\n\nJe kunt dit altijd wijzigen in Instellingen.</string>
+    <string name="privacy_gate_gemini_body">Fijn dat je de slimme functies van Best Journal wilt gebruiken! Voor samenvattingen, terugblikken, dashboard-inzichten en tekstverbeteringen worden je teksten versleuteld naar Google Gemini gestuurd.
+
+✓ Geen AI-training met jouw gegevens
+✓ Verzoeken worden niet permanent opgeslagen
+✓ Versleuteld volgens EU-US Data Privacy Framework
+
+Belangrijke opmerking: Omdat je dagboekentries bijzonder gevoelige gegevens kunnen bevatten (gezondheid, religie, persoonlijke relaties — Art. 9 AVG), vragen we hier om je uitdrukkelijke toestemming voor AI-verwerking. De AI-uitvoer is advies, geen professioneel advies en vervangt geen specialist.
+
+Je kunt dit op elk moment wijzigen in de instellingen.</string>
     <string name="privacy_gate_gemini_accept">Akkoord en verzenden</string>
     <string name="privacy_gate_gemini_cancel">Annuleren</string>
 
@@ -1307,7 +1332,7 @@ Zonder volledige verwijdering zou de melding \"onherroepelijk verwijderd\" niet 
 
 Wat wil je doen?</string>
     <string name="settings_delete_account_retry">Opnieuw proberen</string>
-    <string name="settings_delete_account_force_local">Alleen lokaal verwijderen (Drive-back-up blijft voorlopig staan)</string>
+    <string name="settings_delete_account_force_local">Alleen lokaal verwijderen (Drive-back-up blijft bewaard)</string>
     <string name="settings_delete_account_abort">Bewerking annuleren</string>
 
     <string name="legal_title_datenschutz">Privacybeleid</string>
@@ -1465,7 +1490,7 @@ Wat wil je doen?</string>
     <string name="paywall_lifetime_label">Eenmalig</string>
     <string name="paywall_monthly_label">Maandelijks</string>
     <string name="paywall_restore_button">Aankopen herstellen</string>
-    <string name="paywall_subscribe_button">Abonneren</string>
+    <string name="paywall_subscribe_button">Betaald abonneren</string>
     <string name="paywall_subtitle">Ontgrendel alle Premium-functies</string>
     <string name="paywall_title">Upgrade naar Premium</string>
     <string name="paywall_yearly_label">Jaarlijks</string>
@@ -1524,7 +1549,7 @@ Wat wil je doen?</string>
     <string name="churn_reason_other_placeholder">Vertel ons kort wat er speelt…</string>
     <string name="churn_renews_on">Wordt verlengd op <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">Premium-abonnement opgezegd</string>
-    <string name="settings_premium_cancelled_desc">Je Premium-functies blijven beschikbaar tot het einde van de factureringsperiode. Je kunt de opzegging op elk moment ongedaan maken via Google Play.</string>
+    <string name="settings_premium_cancelled_desc">Je Premium-functies blijven beschikbaar tot het einde van de factureringsperiode. Je kunt de opzegging ongedaan maken via Google Play.</string>
     <string name="settings_premium_cancelled_until">Premium-abonnement opgezegd — actief tot <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Thema</string>
     <string name="settings_themes_manager">Themabeheer</string>

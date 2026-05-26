@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">Yenile</string>
     <string name="dashboard_weekly_review_waiting">Haftalık geri bakışın seni bekliyor</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">Yoğun bir hafta geçirdin. Premium ile tam analizi görürsün: örüntüleri fark et, içgörüleri keşfet, seni asıl neyin harekete geçirdiğini anla.</string>
+    <string name="dashboard_weekly_review_upsell_body">Hareketli bir haftan geçti. Premium ile tam analizi görebilirsin: kalıpları tanı, içgörüleri keşfet ve seni meşgul edeni anla.</string>
     <string name="dashboard_discover_premium">Premium\'u keşfet</string>
     <string name="dashboard_please_wait">Lütfen bekle</string>
     <string name="dashboard_gemini_unavailable">Gemini şu an ulaşılamıyor, biraz sonra tekrar dene.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">Farkında (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">Yüzeysel (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">İçgörülerin derinliği</string>
-    <string name="legend_insight_deep">Derin, gizli örüntüler ve inançlar</string>
+    <string name="legend_insight_deep">Derinlemesine, tekrar eden kalıplar ve inançlar</string>
     <string name="legend_insight_aware">Farkında, tanınmış düşünce ve duygu örüntüleri</string>
     <string name="legend_insight_surface">Yüzeysel, ilk gözlemler</string>
     <string name="legend_progress">İlerleme</string>
@@ -320,14 +320,29 @@
     <string name="profile_custom">Kişisel analiz</string>
     <string name="profile_summary_desc">Temaları, örüntüleri ve deneyimleri özetler</string>
     <string name="profile_entropy_desc">Stresi, düzensizliği ve yükü saptar</string>
-    <string name="profile_insight_desc">Gizli düşünce ve duygu örüntülerini ortaya çıkarır</string>
+    <string name="profile_insight_desc">Tekrar eden düşünce ve duygu kalıplarını görünür kılar</string>
     <string name="profile_goals_desc">Hedefleri, istekleri ve ilerlemeyi tanır</string>
     <string name="profile_custom_desc">Kendi analiz odağını belirle</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Girişlerin yargılamadan, tavsiye vermeden nötr biçimde özetlenir.\n\nTek bakışta görürsün:\n\n• şu an seni hangi temalar meşgul ediyor\n• hangi örüntüler tekrarlanıyor\n• hayatın nasıl gelişiyor\n\nHayatında olan biten her şeyin günlük özeti olarak mükemmel.</string>
-    <string name="profile_entropy_long">YZ girişlerinde doğrudan stresi, yükü ve düzensizliği arar.\n\nŞunları alırsın:\n\n• en büyük yük kaynaklarının analizi\n• toparlamak için 5 somut adım\n• hemen yardımcı olacak ipuçları\n\nHer şey fazla gelmeye başladığında ideal.</string>
-    <string name="profile_insight_long">YZ olayların ötesine bakar. Girişlerinde şunları fark eder:\n\n• gizli düşünce örüntüleri ve inançlar\n• yinelenen duygular ve tepkiler\n• farkında olmadığın kişisel güçler\n• davranışını yöneten değerler\n\nKendini daha iyi anlamak ve içsel büyümek isteyen herkes için.</string>
+    <string name="profile_entropy_long">KI, günlük girişlerindeki stresi, yükü ve düzensizliği arar.
+
+Şunları elde edersin:
+
+• En büyük yük kaynaklarının analizi
+• Düzeni sağlamak için 5 somut adım
+• Günlük hayatta yardımcı olabilecek ipuçları
+
+Her şeyin çok fazla geldiğini hissediyorsan idealdir.</string>
+    <string name="profile_insight_long">KI, yalnızca olaylara bakmakla kalmaz. Günlük girişlerinde şunları tanır:
+
+• Kelimelerindeki düşünce kalıpları ve inançlar
+• Tekrar eden duygular ve tepkiler
+• Girişlerinde görünür olan güçlü yönler
+• Eylemlerini yönlendiren değerler
+
+Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
     <string name="profile_goals_long">YZ girişlerindeki tüm hedefleri, istekleri ve planları bulur, hatta geçerken söylenenleri bile.\n\nGörürsün:\n\n• hangi hedeflerin var (gizli olanlar dahil)\n• her hedefte nereye geldiğin\n• bir sonraki adımın ne olabileceği\n\nKendi sözlerinden okuyan kişisel hedef takipçin.</string>
     <string name="profile_custom_long">YZ\'nin neye odaklanacağına sen karar verirsin.\n\nKendi analiz odağını yaz, örneğin:\n\n• «Spora dair tüm anmaları bul»\n• «Ruh hali dalgalanmalarımı incele»\n• «En verimli olduğum anları göster»\n\nNe aradığını tam bilenler için tam kontrol.</string>
     <string name="profile_custom_prompt">Senin için özellikle önemli olan nedir? YZ girişlerini analiz ederken neye odaklanmalı?</string>
@@ -423,7 +438,7 @@
     <string name="settings_premium_feature_dashboard">Günlük gösterge paneli analizleri</string>
     <string name="settings_premium_feature_dashboard_desc">Gösterge panelin girişlerinle birlikte büyür.</string>
     <string name="settings_premium_feature_5_perspectives">Tüm YZ profilleri (4 hazır + sınırsız kişisel)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">Netlikten öz farkındalığa</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Özetten öz farkındalığa</string>
     <string name="settings_premium_feature_reviews">Haftalık, aylık ve yıllık geri bakış</string>
     <string name="settings_premium_feature_reviews_desc">YZ senin hikâyeni anlatır</string>
     <string name="settings_premium_feature_patterns">Örüntü tanıma</string>
@@ -752,9 +767,9 @@
     <string name="retro_weekly_p4">İlk 2 hafta ücretsizdir</string>
     <string name="retro_monthly_p1">Haftalık geri bakışlarını aylık bir anlatıya bağlar</string>
     <string name="retro_monthly_p2">Ana çizgiler ve ayın gelişmeleri görünür olur</string>
-    <string name="retro_monthly_p3">Günlük telaşta fark etmediğin değişimleri gösterir</string>
+    <string name="retro_monthly_p3">Girişlerindeki gelişmeleri gösterir</string>
     <string name="retro_yearly_p1">Tüm yılın tek bakışta</string>
-    <string name="retro_yearly_p2">YZ yılının büyük temalarını tanır</string>
+    <string name="retro_yearly_p2">KI, yılının büyük temalarını özetler</string>
     <string name="retro_yearly_p3">Kişisel gelişim görünür ve elle tutulur olur</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Kişisel geri bakışların</string>
@@ -783,7 +798,8 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Best Journal\'a\nhoş geldin</string>
-    <string name="onboarding_subtitle">Netlik ve değişim için\nkişisel YZ günlüğün</string>
+    <string name="onboarding_subtitle">Günlük hayatında daha fazla netlik için
+kişisel KI günlüğün</string>
     <string name="onboarding_feature_speech">Konuş veya yaz, YZ ikisini de anlar</string>
     <string name="onboarding_feature_secure">Verilerin sende kalır, şifreli ve güvenli</string>
     <string name="onboarding_goals_title">YZ günlüğüyle\nneye ulaşmak istersin?</string>
@@ -797,15 +813,15 @@
     <string name="onboarding_how_step2_desc">Metnin otomatik olarak inceltilir ve birkaç bakış açısından incelenir.</string>
     <string name="onboarding_how_step3_desc">Özel anları kaydet, YZ bunları analizde göz önünde bulundurur.</string>
     <string name="onboarding_how_step4_title">Örüntüleri ve içgörüleri keşfet</string>
-    <string name="onboarding_how_step4_desc">Panel sana günlük telaşta gizli kalan bağlantıları gösterir.</string>
+    <string name="onboarding_how_step4_desc">KI paneli, günlük girişlerindeki bağlantıları sana gösterir.</string>
     <string name="onboarding_how_step5_title">Haftalık, aylık ve yıllık geri bakış</string>
     <string name="onboarding_how_step5_desc">Otomatik geri bakışlar zaman içinde nasıl geliştiğini gösterir.</string>
     <string name="onboarding_premium_feature_improve">Günlük YZ metin iyileştirme, her giriş daha net ve etkileyici olur</string>
     <string name="onboarding_premium_feature_dashboard">Her yeni girişte otomatik panel güncellemeleri</string>
     <string name="onboarding_premium_feature_retro">Haftalık, aylık ve yıllık geri bakışlar gelişimini gösterir</string>
-    <string name="onboarding_premium_feature_patterns">Kişisel örüntü tanıma, YZ gizli düşünce ve duygu örüntülerini bulur</string>
+    <string name="onboarding_premium_feature_patterns">Kalıpları görünür yap: KI, günlük girişlerindeki tekrar eden düşünce ve duygu kalıplarını gösterir</string>
     <string name="onboarding_premium_feature_noads">Reklam yok, kesintisiz yaz ve düşün</string>
-    <string name="onboarding_free_trial">Ücretsiz ve bağlayıcı değil</string>
+    <string name="onboarding_free_trial">Ücretsiz, istediğin zaman iptal edilebilir</string>
     <string name="onboarding_free_after_trial">Sonra Best Journal\'ı kullanmaya devam edersin,\nücretsiz, haftada sınırlı YZ çağrısıyla.</string>
     <string name="onboarding_start_free">Ücretsiz başla</string>
     <string name="onboarding_without_premium">Premium olmadan devam</string>
@@ -816,7 +832,7 @@
     <string name="onboarding_perspectives_title">Hayatına farklı\nbakış açıları</string>
     <string name="onboarding_premium_feature_pdf">Fotoğraflı PDF dışa aktarım, girişlerini belge olarak sakla</string>
     <string name="onboarding_premium_profiles">Hayatına derin bir bakış için 5 akıllı panel profili</string>
-    <string name="onboarding_try_premium">8 gün ücretsiz — sonra aylık 3,99 €\'dan itibaren</string>
+    <string name="onboarding_try_premium">8 gün ücretsiz, ardından aylık 3,99 €\'dan itibaren</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +846,19 @@
     <string name="paywall_reminder">Hatırlatma</string>
     <string name="paywall_day8">Gün 8</string>
     <string name="paywall_first_payment">İlk ödeme</string>
-    <string name="paywall_yearly_note">Sonrasında yılda %1$s\nDeneme süresinde istediğin zaman iptal</string>
-    <string name="paywall_most_popular">En popüler seçim</string>
+    <string name="paywall_yearly_note">Ardından yılda %1$s, otomatik olarak yenilenir
+Deneme süresinde istediğin zaman iptal edilebilir</string>
+    <string name="paywall_most_popular">Önerilen</string>
     <string name="paywall_monthly_plan">Aylık abonelik, ayda %1$s</string>
     <string name="paywall_yearly_savings">Aylık aboneliğe göre %1$d %% tasarruf et — dönem sonunda istediğin zaman iptal</string>
     <string name="paywall_lifetime_title">Tek seferlik satın alma</string>
     <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
     <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
-    <string name="paywall_free_note">Uygulama aboneliksiz de çalışır,</string>
+    <string name="paywall_free_note">Uygulama abonelik olmadan da çalışmaya devam eder.</string>
     <string name="paywall_cd_close">Kapat</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Düşüncendeki gizli örüntüleri anla</string>
+    <string name="paywall_feature_patterns">Düşüncelerindeki tekrar eden kalıpları keşfet</string>
     <string name="paywall_feature_improve">Her giriş için günlük YZ metin iyileştirme</string>
     <string name="paywall_feature_dashboard">Her girişten sonra otomatik panel güncellemeleri</string>
     <string name="paywall_feature_retro">YZ ile haftalık, aylık ve yıllık geri bakışlar</string>
@@ -891,7 +908,7 @@
     <string name="churn_reason_other">Başka bir neden</string>
     <string name="churn_sorry_title">Gitmene üzüldük</string>
     <string name="churn_sorry_body">İptal etmeden önce nedenini söyler misin? Uygulamayı geliştirmemize yardım eder.</string>
-    <string name="churn_exclusive_offer">Özel teklif</string>
+    <string name="churn_exclusive_offer">Sana özel teklif</string>
     <string name="churn_offer_subtitle">Sana özel teklifimiz</string>
     <string name="churn_offer_feature_ai">Günlük YZ analizleri</string>
     <string name="churn_offer_feature_perspectives">Tüm YZ profilleri (4 hazır + sınırsız kişisel)</string>
@@ -1136,7 +1153,15 @@ Premium ile: günlük 150\'ye kadar.</string>
     <string name="privacy_gate_groq_local">Yerel olarak transkribe et</string>
 
     <string name="privacy_gate_gemini_title">Metin Google Gemini\'ye gönderilsin mi?</string>
-    <string name="privacy_gate_gemini_body">Best Journal’ın akıllı özelliklerini kullanmak istemene sevindik! Özetler, geriye bakışlar, gösterge paneli içgörüleri ve metin iyileştirmeleri için metnin şifrelenmiş olarak Google Gemini’ye gönderilir.\n\n✓ YZ modellerini eğitmek için asla kullanılmaz\n✓ İstekler işlendikten hemen sonra silinir\n✓ EU-US Data Privacy Framework uyarınca şifrelenir\n\nÖnemli uyarı: Günlük girdilerin özellikle hassas veriler (sağlık, din, kişisel ilişkiler — GDPR Md. 9 / özel kategoriler) içerebileceği için, burada YZ işleme için açık onayını istiyoruz. YZ çıktıları önerilerdir, profesyonel danışmanlık değildir ve kalifiye bir uzmanın yerini tutmaz.\n\nBunu istediğin zaman Ayarlar’dan değiştirebilirsin.</string>
+    <string name="privacy_gate_gemini_body">Best Journal\'ın akıllı özelliklerini kullanmak istediğin için harika! Özetler, geriye dönük bakışlar, panel içgörüleri ve metin geliştirmeleri için metinlerin şifrelenerek Google Gemini\'ye gönderilir.
+
+✓ Verilerinle KI eğitimi yapılmaz
+✓ İstekler kalıcı olarak saklanmaz
+✓ AB-ABD Veri Gizliliği Çerçevesi\'ne göre şifrelenir
+
+Önemli Not: Günlük girişlerin özellikle hassas veriler içerebileceğinden (sağlık, din, kişisel ilişkiler — GDPR Md. 9), KI işleme için açık onayını istiyoruz. KI çıktıları öneridir, profesyonel tavsiye değildir ve bir uzmanın yerini tutmaz.
+
+Bunu istediğin zaman Ayarlar\'dan değiştirebilirsin.</string>
     <string name="privacy_gate_gemini_accept">Kabul et ve gönder</string>
     <string name="privacy_gate_gemini_cancel">İptal</string>
 
@@ -1225,7 +1250,7 @@ Tam silme olmadan \"geri alınamaz biçimde silindi\" ifadesi doğru olmazdı.
 
 Ne yapmak istersin?</string>
     <string name="settings_delete_account_retry">Tekrar dene</string>
-    <string name="settings_delete_account_force_local">Sadece yerel olarak sil (Drive yedeği şimdilik kalır)</string>
+    <string name="settings_delete_account_force_local">Yalnızca yerel olarak sil (Drive yedeklemesi korunur)</string>
     <string name="settings_delete_account_abort">İşlemi iptal et</string>
 
     <string name="legal_title_datenschutz">Gizlilik Politikası</string>
@@ -1381,7 +1406,7 @@ Ne yapmak istersin?</string>
     <string name="paywall_lifetime_label">Tek seferlik</string>
     <string name="paywall_monthly_label">Aylık</string>
     <string name="paywall_restore_button">Satın alımları geri yükle</string>
-    <string name="paywall_subscribe_button">Abone ol</string>
+    <string name="paywall_subscribe_button">Ücretli abone ol</string>
     <string name="paywall_subtitle">Tüm Premium özelliklerinin kilidini aç</string>
     <string name="paywall_title">Premium’a yükselt</string>
     <string name="paywall_yearly_label">Yıllık</string>
@@ -1440,7 +1465,7 @@ Ne yapmak istersin?</string>
     <string name="churn_reason_other_placeholder">Lütfen bize kısaca ne olduğunu anlat…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde yenileniyor</string>
     <string name="settings_premium_cancelled">Premium abonelik iptal edildi</string>
-    <string name="settings_premium_cancelled_desc">Premium özelliklerine faturalandırma dönemi sonuna kadar erişebilirsin. İptalini istediğin zaman Google Play üzerinden geri alabilirsin.</string>
+    <string name="settings_premium_cancelled_desc">Premium özelliklerini faturalandırma döneminin sonuna kadar kullanabilirsin. İptali Google Play üzerinden geri alabilirsin.</string>
     <string name="settings_premium_cancelled_until">Premium abonelik iptal edildi — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> tarihine kadar geçerli</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Tema Yöneticisi</string>

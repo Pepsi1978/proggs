@@ -228,7 +228,7 @@
     <string name="dashboard_legend">Legend</string>
     <string name="dashboard_refresh">Refresh</string>
     <string name="dashboard_weekly_review_waiting">Your weekly review is ready</string>
-    <string name="dashboard_weekly_review_upsell_body">You had a busy week. With Premium you see the full analysis — spot patterns, discover insights, and understand what really moves you.</string>
+    <string name="dashboard_weekly_review_upsell_body">You had an eventful week. With Premium, you see the full analysis: discover patterns, uncover insights, and understand what\'s on your mind.</string>
     <string name="dashboard_discover_premium">Discover Premium</string>
     <string name="dashboard_please_wait">Please wait</string>
     <string name="dashboard_gemini_unavailable">The AI is currently unavailable, please try again shortly.</string>
@@ -283,7 +283,7 @@
     <string name="legend_reflection_aware">Aware (34–66%)</string>
     <string name="legend_reflection_surface">Surface (0–33%)</string>
     <string name="legend_insight_depth">Insight Depth</string>
-    <string name="legend_insight_deep">Deep — Hidden patterns and beliefs</string>
+    <string name="legend_insight_deep">Deep, recurring patterns and beliefs</string>
     <string name="legend_insight_aware">Aware — Recognized thought and feeling patterns</string>
     <string name="legend_insight_surface">Surface — Initial observations</string>
     <string name="legend_progress">Progress</string>
@@ -368,14 +368,29 @@
     <string name="profile_custom">Custom Analysis</string>
     <string name="profile_summary_desc">Summarizes themes, patterns, and experiences</string>
     <string name="profile_entropy_desc">Identifies stress, clutter, and burden</string>
-    <string name="profile_insight_desc">Uncovers hidden thought and feeling patterns</string>
+    <string name="profile_insight_desc">Reveals recurring thinking and feeling patterns</string>
     <string name="profile_goals_desc">Identifies goals, wishes, and progress</string>
     <string name="profile_custom_desc">Set your own analysis focus</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Your entries are summarized neutrally, without judgment or advice.\n\nAt a glance you\'ll see:\n\n• What topics are on your mind\n• Which patterns keep repeating\n• How your life is evolving\n\nPerfect as a daily overview of everything happening in your life.</string>
-    <string name="profile_entropy_long">The AI specifically looks for stress, burden, and clutter in your entries.\n\nYou\'ll get:\n\n• An analysis of your biggest stressors\n• 5 concrete steps to declutter\n• Tips that can help you right away\n\nIdeal when you feel like everything is just too much.</string>
-    <string name="profile_insight_long">The AI looks deeper than just events. It recognizes in your entries:\n\n• Hidden thought patterns and beliefs\n• Recurring feelings and reactions\n• Personal strengths you\'re not aware of\n• Values that drive your actions\n\nFor anyone who wants to understand themselves better and grow from within.</string>
+    <string name="profile_entropy_long">The AI actively looks for stress, strain, and chaos in your entries.
+
+You get:
+
+• An analysis of your biggest sources of stress
+• 5 concrete steps to clear things up
+• Tips that can help you in everyday life
+
+Perfect for when everything feels like too much.</string>
+    <string name="profile_insight_long">The AI looks deeper than just events. It recognizes in your entries:
+
+• Thinking patterns and beliefs in your words
+• Recurring feelings and reactions
+• Strengths that show up in your entries
+• Values that drive your actions
+
+For everyone who wants to understand themselves better and grow from within.</string>
     <string name="profile_goals_long">The AI finds all goals, wishes, and plans in your entries — even casually mentioned ones.\n\nYou\'ll see:\n\n• What goals you have (including hidden ones)\n• How far along you are with each goal\n• What your next step could be\n\nYour personal goal tracker that reads between the lines.</string>
     <string name="profile_custom_long">You decide what the AI should focus on.\n\nWrite your own analysis focus, for example:\n\n• "Find all mentions of exercise"\n• "Analyze my mood swings"\n• "Show me when I\'m most productive"\n\nFull control for anyone who knows exactly what they\'re looking for.</string>
     <string name="profile_custom_prompt">What matters most to you? What should the AI focus on when analyzing your journal entries?</string>
@@ -457,7 +472,7 @@
     <string name="settings_premium_active">Premium subscription active</string>
     <string name="settings_premium_cancelled">Premium subscription cancelled</string>
     <string name="settings_premium_cancelled_until">Premium subscription cancelled — runs until <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
-    <string name="settings_premium_cancelled_desc">Premium features remain available until the end of the billing period. You can resume the subscription at any time via Google Play.</string>
+    <string name="settings_premium_cancelled_desc">Your Premium features remain available until the end of the billing period. You can undo the cancellation via Google Play.</string>
     <string name="settings_premium_lifetime_desc">One-time purchase, all features unlocked permanently.</string>
     <string name="settings_premium_desc">All features unlocked, AI every day, PDF export and more.</string>
     <string name="settings_manage_subscription">Manage subscription</string>
@@ -470,7 +485,7 @@
     <string name="settings_premium_feature_dashboard">Daily dashboard analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with your entries.</string>
     <string name="settings_premium_feature_5_perspectives">All AI profiles (4 predefined + unlimited custom)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">From clarity to self-discovery</string>
+    <string name="settings_premium_feature_5_perspectives_desc">From summary to self-discovery</string>
     <string name="settings_premium_feature_reviews">Weekly, monthly, and yearly reviews</string>
     <string name="settings_premium_feature_reviews_desc">The AI tells your story</string>
     <string name="settings_premium_feature_patterns">Pattern recognition</string>
@@ -775,9 +790,9 @@
     <string name="retro_weekly_p4">The first 2 weeks are free</string>
     <string name="retro_monthly_p1">Connects your weekly reviews into a monthly story</string>
     <string name="retro_monthly_p2">Common threads and developments over the month become visible</string>
-    <string name="retro_monthly_p3">Shows changes you don\'t notice in everyday life</string>
+    <string name="retro_monthly_p3">Shows developments from your entries</string>
     <string name="retro_yearly_p1">Your whole year at a glance</string>
-    <string name="retro_yearly_p2">The AI recognizes the major themes of your year</string>
+    <string name="retro_yearly_p2">The AI summarizes the big themes of your year</string>
     <string name="retro_yearly_p3">Personal growth becomes visible and tangible</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Your personal reviews</string>
@@ -806,7 +821,8 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Welcome to\nBest Journal</string>
-    <string name="onboarding_subtitle">Your personal AI journal\nfor clarity and change</string>
+    <string name="onboarding_subtitle">Your personal AI journal
+for more clarity every day</string>
     <string name="onboarding_feature_speech">Speak or write — the AI understands both</string>
     <string name="onboarding_feature_secure">Your data stays with you, encrypted and secure</string>
     <string name="onboarding_goals_title">What do you want to achieve\nwith the AI journal?</string>
@@ -820,15 +836,15 @@
     <string name="onboarding_how_step2_desc">Your text is automatically refined and analyzed from different perspectives.</string>
     <string name="onboarding_how_step3_desc">Capture special moments — the AI includes them in the analysis.</string>
     <string name="onboarding_how_step4_title">Discover patterns and insights</string>
-    <string name="onboarding_how_step4_desc">The dashboard shows you connections that stay hidden in everyday life.</string>
+    <string name="onboarding_how_step4_desc">The AI dashboard shows you connections from your entries.</string>
     <string name="onboarding_how_step5_title">Weekly, monthly, and yearly reviews</string>
     <string name="onboarding_how_step5_desc">Automatic reviews show you how you evolve over time.</string>
     <string name="onboarding_premium_feature_improve">AI text improvement daily, every entry becomes clearer and more expressive</string>
     <string name="onboarding_premium_feature_dashboard">Automatic dashboard updates with every new entry</string>
     <string name="onboarding_premium_feature_retro">Weekly, monthly, and yearly reviews show your growth</string>
-    <string name="onboarding_premium_feature_patterns">Recognize personal patterns — the AI finds hidden thought and feeling patterns</string>
+    <string name="onboarding_premium_feature_patterns">Make patterns visible: The AI shows recurring thinking and feeling patterns in your entries</string>
     <string name="onboarding_premium_feature_noads">No ads — write and reflect without distractions</string>
-    <string name="onboarding_free_trial">Free and no obligation</string>
+    <string name="onboarding_free_trial">Free, cancel anytime</string>
     <string name="onboarding_free_after_trial">After that you continue using Best Journal\nfor free with limited AI calls per week.</string>
     <string name="onboarding_start_free">Start for free</string>
     <string name="onboarding_without_premium">Continue without Premium</string>
@@ -839,7 +855,7 @@
     <string name="onboarding_perspectives_title">Different perspectives on\nyour life</string>
     <string name="onboarding_premium_feature_pdf">PDF export with photos — save your entries as a document</string>
     <string name="onboarding_premium_profiles">5 smart dashboard profiles for deep insights into your life</string>
-    <string name="onboarding_try_premium">8 days free — then from 3.99/month</string>
+    <string name="onboarding_try_premium">8 days free, then from €3.99/month</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -861,18 +877,19 @@
     <string name="paywall_reminder">Reminder</string>
     <string name="paywall_day8">Day 8</string>
     <string name="paywall_first_payment">First payment</string>
-    <string name="paywall_yearly_note">Then %1$s per year\nCancel anytime during the trial</string>
-    <string name="paywall_most_popular">Most popular</string>
+    <string name="paywall_yearly_note">Then %1$s per year, renews automatically
+Cancel anytime during the trial period</string>
+    <string name="paywall_most_popular">Recommended</string>
     <string name="paywall_monthly_plan">Monthly, %1$s per month</string>
     <string name="paywall_yearly_savings">Save %1$d%% compared to monthly — cancellation possible at any time before the next renewal date.</string>
     <string name="paywall_lifetime_title">One-time purchase</string>
     <string name="paywall_lifetime_desc">Pay once, use everything permanently</string>
     <string name="paywall_lifetime_note">No subscription, no renewal</string>
-    <string name="paywall_free_note">The app also works without a subscription,</string>
+    <string name="paywall_free_note">The app keeps working without a subscription.</string>
     <string name="paywall_cd_close">Close</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Understand hidden patterns in your thinking</string>
+    <string name="paywall_feature_patterns">Discover recurring patterns in your thinking</string>
     <string name="paywall_feature_improve">AI text improvement daily for every entry</string>
     <string name="paywall_feature_dashboard">Automatic dashboard updates after every entry</string>
     <string name="paywall_feature_retro">Weekly, monthly, and yearly AI reviews</string>
@@ -926,7 +943,7 @@
     <string name="churn_reason_other_placeholder">Tell us briefly what\'s going on…</string>
     <string name="churn_sorry_title">Sorry to see you go</string>
     <string name="churn_sorry_body">Before you cancel, would you tell us why? This helps us improve the app.</string>
-    <string name="churn_exclusive_offer">Exclusive offer</string>
+    <string name="churn_exclusive_offer">Offer for you</string>
     <string name="churn_offer_subtitle">Our offer for you</string>
     <string name="churn_offer_feature_ai">Daily AI analyses</string>
     <string name="churn_offer_feature_perspectives">All AI profiles (4 predefined + unlimited custom)</string>
@@ -1168,7 +1185,7 @@ With Premium: up to 150 per day.</string>
     <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
     <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
     <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
+    <string name="settings_delete_account_force_local">Delete locally only (Drive backup is kept)</string>
     <string name="settings_delete_account_abort">Cancel operation</string>
 
     <!-- Withdrawal button § 356a BGB (mandatory from 19.06.2026). Two-stage, direct in-app. -->
@@ -1302,7 +1319,15 @@ With Premium: up to 150 per day.</string>
     <string name="privacy_gate_groq_local">Use local instead</string>
 
     <string name="privacy_gate_gemini_title">Enable AI feature</string>
-    <string name="privacy_gate_gemini_body">Great that you want to use Best Journal\'s intelligent features! For summaries, reviews, dashboard insights, and text improvements, your text is sent encrypted to Google Gemini.\n\n✓ Never used to train AI models\n✓ Requests are deleted immediately after processing\n✓ Encrypted under EU-US Data Privacy Framework\n\nImportant notice: Since your journal entries may contain especially sensitive data (health, religion, personal relationships — GDPR Art. 9 / special categories), we ask here for your explicit consent to AI processing. AI outputs are suggestions, not professional advice, and do not replace a qualified expert.\n\nYou can change this any time in Settings.</string>
+    <string name="privacy_gate_gemini_body">Great that you want to use the smart features of Best Journal! For summaries, recaps, dashboard insights, and text improvements, your texts are sent encrypted to Google Gemini.
+
+✓ No AI training with your data
+✓ Requests are not stored permanently
+✓ Encrypted under the EU-US Data Privacy Framework
+
+Important note: Since your journal entries can contain particularly sensitive data (health, religion, personal relationships — Art. 9 GDPR), we ask for your explicit consent to AI processing here. AI outputs are suggestions, not professional advice, and do not replace a specialist.
+
+You can change this at any time in the settings.</string>
     <string name="privacy_gate_gemini_accept">Give explicit consent</string>
     <string name="privacy_gate_gemini_cancel">Later</string>
 
@@ -1369,7 +1394,7 @@ With Premium: up to 150 per day.</string>
     <string name="paywall_lifetime_label">One-time</string>
     <string name="paywall_monthly_label">Monthly</string>
     <string name="paywall_restore_button">Restore purchases</string>
-    <string name="paywall_subscribe_button">Subscribe</string>
+    <string name="paywall_subscribe_button">Subscribe now</string>
     <string name="paywall_subtitle">Unlock all premium features</string>
     <string name="paywall_title">Upgrade to Premium</string>
     <string name="paywall_yearly_label">Yearly</string>

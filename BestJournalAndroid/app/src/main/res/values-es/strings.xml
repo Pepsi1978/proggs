@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">Actualizar</string>
     <string name="dashboard_weekly_review_waiting">Tu retrospectiva semanal te espera</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">Tuviste una semana intensa. Con Premium accedes al análisis completo, reconoces patrones, descubres ideas y entiendes qué te mueve de verdad.</string>
+    <string name="dashboard_weekly_review_upsell_body">Tuviste una semana muy activa. Con Premium ves el análisis completo: identifica patrones, descubre perspectivas y entiende qué te ocupa la mente.</string>
     <string name="dashboard_discover_premium">Descubrir Premium</string>
     <string name="dashboard_please_wait">Espera un momento</string>
     <string name="dashboard_gemini_unavailable">Gemini no está disponible ahora, prueba de nuevo en un momento.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">Consciente (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">Superficial (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">Profundidad de las ideas</string>
-    <string name="legend_insight_deep">Profunda, patrones y creencias ocultos</string>
+    <string name="legend_insight_deep">Profundo, patrones y creencias recurrentes</string>
     <string name="legend_insight_aware">Consciente, patrones de pensamiento y emoción reconocidos</string>
     <string name="legend_insight_surface">Superficial, primeras observaciones</string>
     <string name="legend_progress">Progreso</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">Análisis personalizado</string>
     <string name="profile_summary_desc">Resume temas, patrones y vivencias</string>
     <string name="profile_entropy_desc">Detecta estrés, desorden y carga</string>
-    <string name="profile_insight_desc">Revela patrones ocultos de pensamiento y emoción</string>
+    <string name="profile_insight_desc">Hace visibles los patrones de pensamiento y sentimiento recurrentes</string>
     <string name="profile_goals_desc">Reconoce metas, deseos y avances</string>
     <string name="profile_custom_desc">Define tu propio enfoque de análisis</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Tus entradas se resumen de forma neutral, sin juicio ni consejos.\n\nDe un vistazo ves:\n\n• qué temas te ocupan ahora\n• qué patrones se repiten\n• cómo se desarrolla tu vida\n\nIdeal como resumen diario de todo lo que está pasando en tu vida.</string>
-    <string name="profile_entropy_long">La IA busca específicamente estrés, carga y desorden en tus entradas.\n\nRecibes:\n\n• un análisis de tus mayores fuentes de carga\n• 5 acciones concretas para ordenar\n• consejos que te ayudan de inmediato\n\nIdeal cuando sientes que todo es demasiado.</string>
-    <string name="profile_insight_long">La IA mira más allá de los hechos. En tus entradas reconoce:\n\n• patrones de pensamiento y creencias ocultos\n• emociones y reacciones recurrentes\n• fortalezas personales que no notas\n• valores que guían tu actuar\n\nPara quienes quieren entenderse mejor y crecer por dentro.</string>
+    <string name="profile_entropy_long">La IA busca de forma específica el estrés, la carga y el desorden en tus entradas.\n\nRecibes:\n\n• Un análisis de tus principales fuentes de carga\n• 5 medidas concretas para ordenarlas\n• Consejos que pueden ayudarte en el día a día\n\nIdeal cuando sientes que todo se vuelve demasiado por ahora.</string>
+    <string name="profile_insight_long">La IA va más allá de los eventos. Reconoce en tus entradas:\n\n• Patrones de pensamiento y creencias en tus palabras\n• Sentimientos y reacciones recurrentes\n• Fortalezas que se hacen visibles en tus entradas\n• Valores que impulsan tus acciones\n\nPara quienes quieren entenderse mejor y crecer internamente.</string>
     <string name="profile_goals_long">La IA encuentra todas las metas, deseos y planes en tus entradas, incluso los mencionados de pasada.\n\nVes:\n\n• qué metas tienes (incluso las ocultas)\n• qué tan cerca estás de cada meta\n• cuál podría ser tu próximo paso\n\nTu rastreador personal de metas, que lee en tus propias palabras.</string>
     <string name="profile_custom_long">Tú decides en qué se debe enfocar la IA.\n\nEscribe tu propio enfoque de análisis, por ejemplo:\n\n• «Encuentra todas las menciones de deporte»\n• «Analiza mis cambios de ánimo»\n• «Muéstrame cuándo soy más productivo»\n\nControl total para quienes saben exactamente qué buscan.</string>
     <string name="profile_custom_prompt">¿Qué es lo más importante para ti? ¿En qué debe enfocarse la IA al analizar tus entradas de diario?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">Análisis diarios del panel</string>
     <string name="settings_premium_feature_dashboard_desc">Tu panel crece con tus entradas.</string>
     <string name="settings_premium_feature_5_perspectives">Todos los perfiles IA (4 predefinidos + ilimitados propios)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">De la claridad al autoconocimiento</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Desde resumen hasta autoconocimiento</string>
     <string name="settings_premium_feature_reviews">Retrospectivas semanal, mensual y anual</string>
     <string name="settings_premium_feature_reviews_desc">La IA cuenta tu historia</string>
     <string name="settings_premium_feature_patterns">Detección de patrones</string>
@@ -757,9 +757,9 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="retro_weekly_p4">Las primeras 2 semanas son gratis</string>
     <string name="retro_monthly_p1">Conecta tus retrospectivas semanales en un relato mensual</string>
     <string name="retro_monthly_p2">Los hilos conductores y la evolución del mes quedan visibles</string>
-    <string name="retro_monthly_p3">Muestra cambios que no notas en el día a día</string>
+    <string name="retro_monthly_p3">Muestra el desarrollo a partir de tus entradas</string>
     <string name="retro_yearly_p1">Tu año entero de un vistazo</string>
-    <string name="retro_yearly_p2">La IA reconoce los grandes temas de tu año</string>
+    <string name="retro_yearly_p2">La IA resume los grandes temas de tu año</string>
     <string name="retro_yearly_p3">El desarrollo personal se vuelve visible y tangible</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Tus retrospectivas personales</string>
@@ -788,7 +788,7 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Bienvenido a\nBest Journal</string>
-    <string name="onboarding_subtitle">Tu diario personal con IA\npara claridad y cambio</string>
+    <string name="onboarding_subtitle">Tu diario personal con IA\npara más claridad en el día a día</string>
     <string name="onboarding_feature_speech">Habla o escribe, la IA entiende ambos</string>
     <string name="onboarding_feature_secure">Tus datos se quedan contigo, cifrados y seguros</string>
     <string name="onboarding_goals_title">¿Qué quieres lograr\ncon el diario IA?</string>
@@ -802,15 +802,15 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="onboarding_how_step2_desc">Tu texto se afina automáticamente y se analiza desde varias perspectivas.</string>
     <string name="onboarding_how_step3_desc">Captura momentos especiales, la IA los tiene en cuenta en el análisis.</string>
     <string name="onboarding_how_step4_title">Descubre patrones e ideas</string>
-    <string name="onboarding_how_step4_desc">El panel te muestra conexiones que se te escapan en el día a día.</string>
+    <string name="onboarding_how_step4_desc">El dashboard de IA te muestra conexiones a partir de tus entradas.</string>
     <string name="onboarding_how_step5_title">Retrospectiva semanal, mensual y anual</string>
     <string name="onboarding_how_step5_desc">Retrospectivas automáticas te muestran cómo evolucionas con el tiempo.</string>
     <string name="onboarding_premium_feature_improve">Mejora de texto IA diaria, cada entrada se vuelve más clara y expresiva</string>
     <string name="onboarding_premium_feature_dashboard">Actualizaciones automáticas del panel con cada nueva entrada</string>
     <string name="onboarding_premium_feature_retro">Retrospectivas semanales, mensuales y anuales muestran tu evolución</string>
-    <string name="onboarding_premium_feature_patterns">Detección de patrones personales, la IA encuentra patrones ocultos de pensamiento y emoción</string>
+    <string name="onboarding_premium_feature_patterns">Hacer visibles los patrones: la IA muestra los patrones de pensamiento y sentimiento recurrentes en tus entradas</string>
     <string name="onboarding_premium_feature_noads">Sin publicidad, escribe y reflexiona sin interrupciones</string>
-    <string name="onboarding_free_trial">Gratis y sin compromiso</string>
+    <string name="onboarding_free_trial">Gratis, cancela cuando quieras</string>
     <string name="onboarding_free_after_trial">Después sigues usando Best Journal,\ngratis con un número limitado de llamadas de IA por semana.</string>
     <string name="onboarding_start_free">Empezar gratis</string>
     <string name="onboarding_without_premium">Continuar sin Premium</string>
@@ -821,7 +821,7 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="onboarding_perspectives_title">Diferentes perspectivas sobre\ntu vida</string>
     <string name="onboarding_premium_feature_pdf">Exportar PDF con fotos, guarda tus entradas como documento</string>
     <string name="onboarding_premium_profiles">5 perfiles inteligentes del panel para una mirada profunda a tu vida</string>
-    <string name="onboarding_try_premium">8 días gratis — luego desde 3,99 €/mes</string>
+    <string name="onboarding_try_premium">8 días gratis, luego desde 3,99 €/mes</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -835,18 +835,18 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="paywall_reminder">Recordatorio</string>
     <string name="paywall_day8">Día 8</string>
     <string name="paywall_first_payment">Primer pago</string>
-    <string name="paywall_yearly_note">Después %1$s al año\nCancelable en cualquier momento durante la prueba</string>
-    <string name="paywall_most_popular">La opción más popular</string>
+    <string name="paywall_yearly_note">Después %1$s por año, se renueva automáticamente\nPuedes cancelar en cualquier momento durante el periodo de prueba</string>
+    <string name="paywall_most_popular">Recomendado</string>
     <string name="paywall_monthly_plan">Suscripción mensual, %1$s al mes</string>
     <string name="paywall_yearly_savings">Ahorra %1$d%% frente al plan mensual \u2014 cancelable en cualquier momento al final del per\u00EDodo vigente.</string>
     <string name="paywall_lifetime_title">Compra única</string>
     <string name="paywall_lifetime_desc">Paga una vez, usa todo de forma permanente</string>
     <string name="paywall_lifetime_note">Sin suscripción, sin renovación</string>
-    <string name="paywall_free_note">La app también funciona sin suscripción,</string>
+    <string name="paywall_free_note">La app también funciona sin suscripción.</string>
     <string name="paywall_cd_close">Cerrar</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Entiende patrones ocultos en tu forma de pensar</string>
+    <string name="paywall_feature_patterns">Identifica patrones recurrentes en tu forma de pensar</string>
     <string name="paywall_feature_improve">Mejora de texto IA diaria para cada entrada</string>
     <string name="paywall_feature_dashboard">Actualizaciones automáticas del panel tras cada entrada</string>
     <string name="paywall_feature_retro">Retrospectivas semanal, mensual y anual con IA</string>
@@ -896,7 +896,7 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="churn_reason_other">Otro motivo</string>
     <string name="churn_sorry_title">Qué lástima que te vayas</string>
     <string name="churn_sorry_body">Antes de cancelar, ¿nos cuentas por qué? Nos ayuda a mejorar la app.</string>
-    <string name="churn_exclusive_offer">Oferta exclusiva</string>
+    <string name="churn_exclusive_offer">Oferta para ti</string>
     <string name="churn_offer_subtitle">Nuestra oferta para ti</string>
     <string name="churn_offer_feature_ai">Análisis IA diarios</string>
     <string name="churn_offer_feature_perspectives">Todos los perfiles IA (4 predefinidos + ilimitados propios)</string>
@@ -1141,7 +1141,7 @@ Con Premium: hasta 150 al día.</string>
     <string name="privacy_gate_groq_local">Transcribir localmente</string>
 
     <string name="privacy_gate_gemini_title">¿Enviar el texto a Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">¡Qué bueno que quieras usar las funciones inteligentes de Best Journal! Para resúmenes, retrospectivas, análisis del panel y mejoras de texto, tu texto se envía cifrado a Google Gemini.\n\n✓ Nunca se usa para entrenar modelos de IA\n✓ Las solicitudes se eliminan inmediatamente tras el procesamiento\n✓ Cifrado conforme al EU-US Data Privacy Framework\n\nAviso importante: como tus entradas del diario pueden contener datos especialmente sensibles (salud, religión, relaciones personales — Art. 9 del RGPD, categorías especiales), aquí te pedimos tu consentimiento explícito al procesamiento por IA. Las salidas de la IA son sugerencias, no consejos profesionales, y no sustituyen a un profesional cualificado.\n\nPuedes cambiarlo cuando quieras en Configuración.</string>
+    <string name="privacy_gate_gemini_body">¡Nos alegra que quieras usar las funciones inteligentes de Best Journal! Para resúmenes, repasos, perspectivas del dashboard y mejoras de texto, tus textos se envían de forma cifrada a Google Gemini.\n\n✓ Sin entrenamiento de IA con tus datos\n✓ Las solicitudes no se almacenan de forma permanente\n✓ Cifrado según el EU-US Data Privacy Framework\n\nNota importante: dado que tus entradas de diario pueden contener datos especialmente sensibles (salud, religión, relaciones personales — Art. 9 RGPD), te pedimos tu consentimiento explícito para el procesamiento por IA. Los resultados de la IA son sugerencias, no asesoramiento profesional y no reemplazan a un especialista.\n\nPuedes cambiar esto en cualquier momento en la configuración.</string>
     <string name="privacy_gate_gemini_accept">Aceptar y enviar</string>
     <string name="privacy_gate_gemini_cancel">Cancelar</string>
 
@@ -1230,7 +1230,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
 
 ¿Qué quieres hacer?</string>
     <string name="settings_delete_account_retry">Intentar de nuevo</string>
-    <string name="settings_delete_account_force_local">Eliminar solo localmente (la copia de Drive se conserva de momento)</string>
+    <string name="settings_delete_account_force_local">Eliminar solo localmente (se conserva la copia de seguridad en Drive)</string>
     <string name="settings_delete_account_abort">Cancelar operación</string>
 
     <string name="legal_title_datenschutz">Política de privacidad</string>
@@ -1388,7 +1388,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="paywall_lifetime_label">Pago único</string>
     <string name="paywall_monthly_label">Mensual</string>
     <string name="paywall_restore_button">Restaurar compras</string>
-    <string name="paywall_subscribe_button">Suscribirse</string>
+    <string name="paywall_subscribe_button">Suscribirse (pago)</string>
     <string name="paywall_subtitle">Activa todas las funciones Premium</string>
     <string name="paywall_title">Actualizar a Premium</string>
     <string name="paywall_yearly_label">Anual</string>
@@ -1441,7 +1441,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="churn_reason_other_placeholder">Cuéntanos brevemente qué ocurre…</string>
     <string name="churn_renews_on">Se renueva el <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">Suscripción Premium cancelada</string>
-    <string name="settings_premium_cancelled_desc">Tus funciones Premium siguen disponibles hasta el fin del período de facturación. Puedes revertir la cancelación en cualquier momento desde Google Play.</string>
+    <string name="settings_premium_cancelled_desc">Tus funciones Premium permanecen disponibles hasta el final del periodo de facturación. Puedes reactivar la suscripción a través de Google Play.</string>
     <string name="settings_premium_cancelled_until">Suscripción Premium cancelada — activa hasta el <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Gestor de temas</string>
