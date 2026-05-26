@@ -1,6 +1,6 @@
 {
 	"name": "finale",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Closed-Loop-Pipeline, die eine deutsche Android-App vor der Google-Play-Veröffentlichung vollständig durchleuchtet, rechtssicher macht und layout-stabil mehrsprachig übersetzt — ausschließlich Text-Änderungen, niemals Funktion oder Optik, bis 0 offene Findings.",
 	"author": {
 		"name": "Frank",

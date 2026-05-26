@@ -474,6 +474,123 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 
     Oder via Claude Code Plugin-Manager: `/plugins refresh finale` (wenn unterstuetzt).
 
+25. **FIN-048 — SUBAGENT-KONTEXT-BUDGET-REALITAET (ROOT CAUSE aller Worker-Crashes, Frank-Lauf 2026-05-26):**
+
+    Jeder via Task-Tool gespawnte Subagent ERBT den kompletten injizierten System-Kontext
+    (CLAUDE.md + ALLE `~/.claude/rules/*.md` + auto-memory + MCP-Instruktionen). Dieser
+    Sockel ist oft **100k+ Token** und belegt den Grossteil des **~175k-Subagent-Kontextlimits
+    BEVOR der Worker irgendetwas liest**. Effektiv nutzbar bleiben nur **~50-70k Token**.
+
+    Beim 2026-05-26-Lauf crashten dadurch reproduzierbar: der Roentgen-Monolith-Worker
+    ("Prompt is too long", 0 Output), der Marketing-Layer-Worker, und sogar ein
+    180-Zeilen-String-Bucket. Konsequenzen (PFLICHT):
+
+    a) **Phase 1A bei `ktFileCount > 50` ODER `stringResourceCount > 300`:** NIEMALS einen
+       Monolith-Worker spawnen, der den `app-roentgen`-Skill VOLL laedt. Stattdessen fokussierte
+       Layer/Bucket-Worker mit gezieltem Grep. Worker-Prompt MUSS explizit sagen: "Lade den
+       Skill NICHT vollstaendig, scanne scope-gezielt mit Grep/Read."
+    b) **Bucket-Groesse nach BYTES, nicht Zeilen.** Vor jedem Split `wc -c` (NICHT `wc -l`) pro
+       geplantem Bereich. Lange-String-Bereiche (Onboarding/Paywall/Legal/KI-Prompts) sind
+       token-dicht — 180 Zeilen koennen 31k Token sein. Ziel-Read-Budget pro Worker: **~40-50k
+       Token** (Sicherheitsmarge zum 175k-Limit, da der Regel-Sockel ~100k frisst).
+    b2) **Bucket-Worker laufen PARALLEL, aber max 7 gleichzeitig (FIN-051 Server-Cap) mit
+       Vordergrund-Continuous-Spawning.** Eine grosse strings.xml wird in N Byte-Buckets zerteilt
+       (z.B. 1117 Strings → 4 Buckets; 10.000 Strings → ~30-40 Buckets); davon laufen IMMER ~7
+       gleichzeitig im Vordergrund, und sobald ein Bucket-Worker fertig ist, wird sofort der
+       naechste Bucket-Bereich nachgeschoben — nie auf den langsamsten warten, nie >7 gleichzeitig
+       (sonst Server-Rate-Limit, halber Lauf scheitert unbemerkt). Gilt fuer Phase 1A
+       (Roentgen/String-Audit-Buckets) UND Phase 1B (Recht-Worker) UND Phase 3b (Uebersetzung).
+    c) **Marketing/HWG-Scan einer grossen strings.xml (>300 Strings):** NIE Vollread — nur
+       gezieltes Grep nach Risiko-Schluesselwoertern (Treffer-Zeilen).
+    d) **Worker manipulieren Ziel-Dateien NUR per Python** (`open/read/write`), NIE mit dem
+       Read-Tool. Das Read-Tool laedt in den LLM-Kontext (Crash-Gefahr), Python-Datei-IO nicht.
+    e) **Fallback fuer extrem lange Einzelstring-Bereiche** die selbst als Mini-Bucket crashen:
+       Der Orchestrator (1M-Kontext) macht sie SELBST per gestueckeltem Read (offset/limit, je
+       < 25k Token), statt es endlos per Subagent zu versuchen.
+    f) **Bestaetigtes Bucket-Schwarm-Pattern (skaliert auf beliebige Groesse):** 10.000 Strings
+       → ~30-40 Buckets, 100.000 → ~300-400 Buckets, immer N parallel mit Continuous-Nachschub.
+       Kein Vollread, kein Crash. (Frank-Lauf 2026-05-26: 1117 Strings via 4 Byte-Buckets sauber,
+       wo der Monolith-Worker scheiterte.)
+
+26. **FIN-049 — FORMAT-STRING-%-VERIFIER (Laufzeit-Crash-Schutz, Frank-Lauf 2026-05-26):**
+
+    Strings, die im Code via `getString(id, arg...)` / `String.format` / `MessageFormat`
+    verwendet werden, loesen zur Laufzeit eine **IllegalFormatException (App-Absturz)** aus,
+    wenn die Uebersetzung ein **nacktes literales `%`** enthaelt (z.B. "50%" statt "50 Prozent")
+    oder einen **verstuemmelten Platzhalter** (`%1` statt `%1$s`). Beim 2026-05-26-Lauf in 10
+    Sprach-Stellen gefunden (2 KI-Prompt-Strings) — der Build meldete es nur als WARNING, waere
+    also fast in den Markt durchgerutscht.
+
+    **Pflicht-Schritt im Post-Translation-Verifier UND als Worker-Regel:**
+    - Fuer JEDEN Format-Arg-String pruefen: (a) jedes literale `%` ist als `%%` escaped (kein `%`
+      das kein gueltiger Format-Specifier ist), (b) positionale Platzhalter (`%1$s`, `%2$d`) in
+      EXAKT gleicher Anzahl wie im DE-Original, nicht verstuemmelt.
+    - Pruefmethode (crash-sicher): `re.compile(r'%\d+\$[sd]|%[sd]|%%').sub('', wert).count('%')`
+      muss 0 sein (keine ungeschuetzten %). Achtung: `%%`-Escape nicht doppelt anwenden
+      (`%%` → `%%%` ist wieder kaputt — nur ungerade Folgen normalisieren).
+    - Die `aapt`-Warnung **"Multiple substitutions specified in non-positional format / Did you
+      mean to add formatted=false"** ist KEIN harmloser Warning — als FINDING behandeln. Sie ist
+      ein verlaesslicher Indikator fuer genau diesen Crash.
+    - Verifier MUSS XML-Parser (ElementTree) nutzen, NICHT zeilen-basiertes Grep — Format-Strings
+      koennen multiline sein (echte Newlines); zeilen-basierte Fixes verfehlen sie (it-Fall 2026-05-26).
+    - Worker-Regel: bei Format-Arg-Strings literale Prozentzeichen ausschreiben ODER `%%` escapen,
+      Platzhalter `%1$s` exakt uebernehmen (nie `$s`/`$d` weglassen).
+
+27. **FIN-050 — SUMMARY-/VERWEIS-ARCHITEKTUR-ERKENNUNG (FALSE-POSITIVE-Schutz, Frank-Lauf 2026-05-26):**
+
+    Erweiterung von FIN-007 (Assets-Inventar-Abgleich). Bevor der Rechtssicherheits-Skill ein
+    `missingDocs`/DSGVO-Finding "Dokument fehlt / unvollstaendig" ausgibt, MUSS er pruefen ob das
+    Dokument eine **bewusste Verweis-/Summary-Datei** ist:
+    (a) Byte-Groesse deutlich kleiner als die Vollversion in einer anderen Sprache, UND
+    (b) enthaelt Verweis-Links (href auf eine `legal/<lang>/`-Vollversion).
+    Wenn ja: Finding herabstufen auf "Summary verweist auf Vollversion — pruefen ob der Verweis
+    lebt (Datei/HTTP existiert)", NICHT als fehlende Pflicht-Unterrichtung eskalieren.
+
+    **Hintergrund:** Beim 2026-05-26-Lauf eskalierte der DSGVO-Worker 22 Sprachen faelschlich als
+    "🟥 Datenschutz fehlt". Es waren korrekte Kurz-Zusammenfassungen, die rechtsverbindlich auf die
+    DE/EN-Vollversion verweisen ("Bei Widerspruch gelten die Vollversionen"). Haette zu einer
+    voellig unnoetigen Massen-Uebersetzung von Rechtstexten in 22 Sprachen gefuehrt (riesiger
+    Aufwand + juristisches Risiko). Frank erkannte es, nicht das Plugin — genau das soll FIN-050
+    verhindern. Nur die echten Vollversionen (oft DE/EN + ggf. weitere) muessen vollstaendig sein.
+
+28. **FIN-051 — UEBERSETZUNG: 7-WORKER-CAP + VORDERGRUND-CONTINUOUS + PFLICHT-POST-VERIFIKATION (Frank-Lauf 2026-05-26):**
+
+    Praezisiert FIN-015/FIN-023/FIN-029 fuer Phase 3b (Uebersetzer-Worker). Drei harte Regeln:
+
+    **a) GENAU 7 gleichzeitige Worker (Hard-Cap — gilt fuer ALLE parallelen Opus-Worker-Phasen).**
+    Bei 8 wurde der 8. Worker rate-limited ("API Error: Server is temporarily limiting requests ·
+    Rate limited", total_tokens:0); bei 15 lief nur die Haelfte durch. 7 ist die stabile Obergrenze
+    fuer parallele Opus-Worker ohne Server-Drosselung. `maxConcurrentWorkers = 7` — verbindlich
+    nicht nur fuer Phase 3b (Uebersetzung), sondern auch fuer Phase 1A (Roentgen/String-Audit-Buckets)
+    und Phase 1B (Recht-Worker). Die in FIN-029 genannten "15-20 Worker" sind damit auf **7**
+    gedeckelt (Server-Realitaet schlaegt Wunsch-Parallelitaet). (Das ist die Anzahl GLEICHZEITIGER
+    Worker — unabhaengig von FIN-042, das die Sprachen PRO Uebersetzungs-Worker begrenzt. Empfehlung:
+    1 Sprache bzw. 1 Bucket pro Worker fuer maximale Isolation + einfachen Neustart bei Crash.)
+
+    **b) VORDERGRUND-Continuous-Spawning (KEIN run_in_background — Frank-Korrektur, mehrfach betont).**
+    NICHT auf alle 7 einer Welle warten (eine langsame Sprache blockiert sonst alles). Sobald 1
+    Worker fertig ist: SOFORT die naechste noch nicht uebersetzte Sprache als sichtbaren
+    Vordergrund-Worker nachschieben, sodass immer ~7 gleichzeitig laufen. Mechanik: kleine
+    ueberlappende Vordergrund-Bloecke (run_in_background widerspricht der Sichtbarkeits-Regel UND
+    funktioniert laut Frank nicht zuverlaessig fuer das Nachschieben). Bei Worker-Crash
+    (Rate-Limit/Prompt-too-long): die EINE Sprache sofort neu starten, die anderen laufen weiter.
+
+    **c) PFLICHT-POST-VERIFIKATION nach JEDER Sprache (ABMAHNRISIKO — Frank mehrfach betont).**
+    NIEMALS auf die Worker-Erfolgsmeldung allein verlassen (Worker meldeten "Rate limited" obwohl
+    fertig — und koennten umgekehrt Erfolg melden ohne vollstaendig zu sein). Harte Pruefung per
+    `git status` (welche Dateien WIRKLICH geaendert) + ElementTree:
+    1. Alle Ziel-Keys vorhanden (Anzahl == Job-Liste)
+    2. KEINER mehr identisch mit dem DE-Original (= unuebersetzt durchgerutscht)
+    3. XML valide
+    4. Platzhalter/`<xliff:g>` erhalten + FIN-049 Format-Check (keine ungeschuetzten %)
+    Fehler LAUT melden, nie still durchlaufen. Frank-Zitat: "Nicht, dass manche Sachen nicht
+    uebersetzt werden, denn dann kann man abgemahnt werden." Ein einziger unuebersetzter
+    deutscher Rechtstext in einer Fremdsprach-App ist abmahnfaehig.
+
+    **d) Einzelsprach-Worker brauchen FIN-048-Kontext-Schutz:** Skill nur gezielt via
+    `references/languages/<lang>.md` (nicht ganzer Skill-Vollload), Ziel-Datei nur per Python.
+    Sonst crashen auch Einzelworker bei kyrillischen/dichten Lang-Strings (ru-Crash 2026-05-26).
+
 ---
 
 ## Modi
@@ -1541,15 +1658,22 @@ Strings-Änderungen werden über den `fix-applier` angewendet (gleicher Workflow
 Auto-Detection: aus `values-*/-Verzeichnissen` Zielsprachen ableiten.
 
 **Continuous-Spawning-Pattern (PFLICHT — kein Wellen-Warten):**
-1. Die ersten **15** Übersetzer-Worker sofort parallel im Background starten
-   (FIN-023): `run_in_background: true` für jeden Worker-Task-Aufruf.
+
+> **⚠ UEBERSCHRIEBEN DURCH FIN-051 (2026-05-26):** Die hier urspruenglich genannten "15 Worker
+> im Background" sind VERALTET. Verbindlich gilt jetzt: **GENAU 7 gleichzeitige Worker** (8+
+> loesen Server-Rate-Limit aus) und **VORDERGRUND**-Spawning (KEIN `run_in_background` — das
+> widerspricht der Sichtbarkeits-Regel und funktioniert nicht zuverlaessig fuer das Nachschieben).
+> Siehe FIN-051 fuer die vollstaendige Mechanik + Pflicht-Post-Verifikation.
+
+1. Die ersten **7** Übersetzer-Worker sofort parallel im VORDERGRUND starten (1 Sprache/Worker).
 2. Sobald EIN Worker fertig gemeldet wird: SOFORT den nächsten Worker für
-   die nächste noch nicht gestartete Sprache spawnen.
-3. NICHT auf alle 15 warten, dann Welle 2 starten — das wäre suboptimal.
+   die nächste noch nicht gestartete Sprache spawnen (Vordergrund-Continuous).
+3. NICHT auf alle 7 warten, dann Welle 2 starten — eine langsame Sprache blockiert sonst alles.
    Beispiel: Sobald Worker "ar" fertig → Worker "bn" sofort starten, ohne
-   auf die noch laufenden Workers 2-14 zu warten.
-4. Ergebnis: Bei 26 Zielsprachen × ~5 Min pro Sprache ≈ **~10 Min Gesamtzeit**
-   statt ~4 Stunden bei sequenziellem oder wellenweisem Vorgehen.
+   auf die noch laufenden Workers zu warten.
+4. **Nach JEDER Sprache: harte Post-Verifikation (FIN-051c)** — git status + ElementTree:
+   alle Keys da, keiner == DE, XML valide, Platzhalter/Format-% ok. NIE auf Worker-Meldung
+   allein verlassen.
 
 **Template-Inklusion (FIN-040 Extrakt, Loop 5 2026-05-22):**
 Jeder Translation-Worker-Prompt MUSS am Anfang den Verweis auf das zentrale
