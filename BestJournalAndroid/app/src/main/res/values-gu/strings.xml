@@ -165,7 +165,7 @@
     <string name="dashboard_refresh">તાજું કરો</string>
     <string name="dashboard_weekly_review_waiting">તમારો સાપ્તાહિક અવલોકન તૈયાર છે</string>
     
-    <string name="dashboard_weekly_review_upsell_body">તમારો સપ્તાહ ઘટનાઓથી ભરેલ હતો. Premium સાથે સંપૂર્ણ વિશ્લેષણ જુઓ — પૅટર્ન ઓળખો, આંતરદૃષ્ટિ શોધો અને સમજો કે શું ખરેખર તમને પ્રેરે છે.</string>
+    <string name="dashboard_weekly_review_upsell_body">તમારો આ અઠવાડિયો ઘણો સઘળો રહ્યો. Premium સાથે તમે સંપૂર્ણ વિશ્લેષણ જોઈ શકો છો: પેટર્ન ઓળખો, અંતર્દૃષ્ટિ શોધો અને સમજો કે તમને શું વ્યસ્ત રાખે છે.</string>
     <string name="dashboard_discover_premium">Premium શોધો</string>
     <string name="dashboard_please_wait">કૃપા કરી રાહ જુઓ</string>
     <string name="dashboard_gemini_unavailable">Gemini અત્યારે ઉપલબ્ધ નથી, કૃપા કરી ટૂંક સમયમાં ફરી પ્રયાસ કરો.</string>
@@ -222,7 +222,7 @@
     <string name="legend_reflection_aware">સભાન (34–66%)</string>
     <string name="legend_reflection_surface">સ્તર (0–33%)</string>
     <string name="legend_insight_depth">આંતરદૃષ્ટિ ઊંડાઈ</string>
-    <string name="legend_insight_deep">ઊંડું, છુપાયેલ પૅટર્ન અને માન્યતાઓ</string>
+    <string name="legend_insight_deep">ઊંડાણ, વારંવાર આવતા પેટર્ન અને માન્યતાઓ</string>
     <string name="legend_insight_aware">સભાન, ઓળખાયેલ વિચાર અને ભાવ પૅટર્ન</string>
     <string name="legend_insight_surface">સ્તર, પ્રથમ અવલોકનો</string>
     <string name="legend_progress">પ્રગતિ</string>
@@ -307,14 +307,14 @@
     <string name="profile_custom">વ્યક્તિગત વિશ્લેષણ</string>
     <string name="profile_summary_desc">વિષયો, પૅટર્ન અને અનુભવો સારાંશ કરે છે</string>
     <string name="profile_entropy_desc">તણાવ, અવ્યવસ્થા અને ભારને ઓળખે છે</string>
-    <string name="profile_insight_desc">છુપાયેલ વિચાર અને ભાવ પૅટર્ન ખોલે છે</string>
+    <string name="profile_insight_desc">વારંવારના વિચાર અને લાગણીના પેટર્નને દૃશ્યમાન બનાવે છે</string>
     <string name="profile_goals_desc">લક્ષ્યો, ઇચ્છાઓ અને પ્રગતિ ઓળખે છે</string>
     <string name="profile_custom_desc">પોતાનો વિશ્લેષણ ફોકસ નક્કી કરો</string>
 
     
     <string name="profile_summary_long">તમારી નોંધો ટીકા કે સલાહ વિના તટસ્થ રીતે સારાંશ થાય છે.\n\nતમે એક નજરે જોઈ શકો:\n\n• અત્યારે ક્યા વિષયો તમને વ્યસ્ત રાખે છે\n• ક્યા પૅટર્ન વારંવાર આવે છે\n• તમારું જીવન કેવી રીતે વિકસે છે\n\nતમારા જીવનમાં જે ચાલી રહ્યું છે તેની દૈનિક ઝલક માટે આદર્શ.</string>
-    <string name="profile_entropy_long">AI ખાસ કરીને તમારી નોંધોમાં તણાવ, ભાર અને અવ્યવસ્થા શોધે છે.\n\nતમને મળે:\n\n• ભારના સૌથી મોટા સ્ત્રોતોનું વિશ્લેષણ\n• સ્વચ્છ કરવા 5 ચોક્કસ પગલાં\n• ટીપ્સ જે તરત મદદ કરી શકે\n\nજ્યારે લાગે કે બધું ઘણું થઈ ગયું છે ત્યારે આદર્શ.</string>
-    <string name="profile_insight_long">AI ઘટનાઓ કરતાં ઊંડે જુએ છે. તે તમારી નોંધોમાં ઓળખે છે:\n\n• છુપાયેલ વિચાર પૅટર્ન અને માન્યતાઓ\n• વારંવાર આવતી ભાવનાઓ અને પ્રતિક્રિયાઓ\n• વ્યક્તિગત શક્તિઓ જેની તમને ખબર નહીં\n• તમારી ક્રિયાઓ ચલાવતા મૂલ્યો\n\nજેઓ પોતાને વધુ સારી રીતે સમજવા અને આંતરિક રીતે વિકસવા ઈચ્છે છે.</string>
+    <string name="profile_entropy_long">AI તમારી એન્ટ્રીઓમાં ઈરાદાપૂર્વક તણાવ, બોજ અને અવ્યવસ્થા શોધે છે.\\n\\nતમને મળે છે:\\n\\n• તમારા સૌથી મોટા બોજના સ્ત્રોતોનું વિશ્લેષણ\\n• વ્યવસ્થિત કરવા માટે 5 ચોક્કસ પગલાં\\n• ટિપ્સ જે તમને રોજિંદા જીવનમાં મદદ કરી શકે\\n\\nજ્યારે તમને એવું લાગે કે બધું વધારે પડતું થઈ ગયું છે ત્યારે આદર્શ.</string>
+    <string name="profile_insight_long">AI ફક્ત ઘટનાઓ કરતાં ઊંડું જુએ છે. તે તમારી એન્ટ્રીઓમાં ઓળખે છે:\\n\\n• તમારા શબ્દોમાં વિચારના પેટર્ન અને માન્યતાઓ\\n• વારંવારની લાગણીઓ અને પ્રતિક્રિયાઓ\\n• તમારી એન્ટ્રીઓમાં દૃશ્યમાન થતી શક્તિઓ\\n• જે મૂલ્યો તમારી ક્રિયાઓ ચલાવે છે\\n\\nતે દરેક માટે જે પોતાને વધુ સારી રીતે સમજવા અને આંતરિક વૃદ્ધિ ઇચ્છે છે.</string>
     <string name="profile_goals_long">AI તમારી નોંધોમાં બધા લક્ષ્યો, ઇચ્છાઓ અને ઇરાદાઓ શોધે છે, સહેજ ઉલ્લેખ પણ.\n\nતમે જોઈ શકો:\n\n• ક્યા લક્ષ્યો છે (છુપાયેલ પણ)\n• દરેક લક્ષ્ય પર ક્યાં છો\n• આગળનું પગલું શું હોઈ શકે\n\nતમારા પોતાના શબ્દો વાંચતો વ્યક્તિગત લક્ષ્ય-ટ્રૅકર.</string>
     <string name="profile_custom_long">AI શું ધ્યાન આપવું તે તમે જ નક્કી કરો.\n\nતમારો પોતાનો વિશ્લેષણ ફોકસ લખો, ઉદાહરણ:\n\n• \"રમતગમતના બધા ઉલ્લેખ શોધો\"\n• \"મારા મૂડ ફેરફારો વિશ્લેષણ કરો\"\n• \"ક્યારે હું સૌથી વધુ ઉત્પાદક છું\"\n\nજેઓ ઠીક ઠીક જાણે છે કે શું શોધવું છે.</string>
     <string name="profile_custom_prompt">તમારા માટે ખાસ શું મહત્વપૂર્ણ છે? AI ડાયરી નોંધો વિશ્લેષણ કરતી વખતે શેના પર ધ્યાન આપવું?</string>
@@ -408,7 +408,7 @@
     <string name="settings_premium_feature_dashboard">દૈનિક ડેશબોર્ડ વિશ્લેષણો</string>
     <string name="settings_premium_feature_dashboard_desc">તમારું ડૅશબોર્ડ તમારી નોંધો સાથે વધે છે.</string>
     <string name="settings_premium_feature_5_perspectives">બધા AI પ્રોફાઇલ (4 પૂર્વ-વ્યાખ્યાયિત + અમર્યાદિત પોતાના)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">સ્પષ્ટતાથી આત્મ-જ્ઞાન સુધી</string>
+    <string name="settings_premium_feature_5_perspectives_desc">સારાંશથી આત્મ-જ્ઞાન સુધી</string>
     <string name="settings_premium_feature_reviews">સાપ્તાહિક, માસિક અને વાર્ષિક અવલોકન</string>
     <string name="settings_premium_feature_reviews_desc">AI તમારી વાર્તા કહે</string>
     <string name="settings_premium_feature_patterns">પૅટર્ન ઓળખ</string>
@@ -732,9 +732,9 @@
     <string name="retro_weekly_p4">. 2 .</string>
     <string name="retro_monthly_p1">.</string>
     <string name="retro_monthly_p2">.</string>
-    <string name="retro_monthly_p3">.</string>
+    <string name="retro_monthly_p3">તમારી એન્ટ્રીઓ પ્રમાણે ઘટનાઓ દર્શાવે છે</string>
     <string name="retro_yearly_p1">.</string>
-    <string name="retro_yearly_p2">AI .</string>
+    <string name="retro_yearly_p2">AI તમારા વર્ષના મોટા વિષયો સારાંશ કરે છે</string>
     <string name="retro_yearly_p3">.</string>
     
     <string name="retro_your_reviews">.</string>
@@ -761,7 +761,7 @@
 
     
     <string name="onboarding_welcome">Best Journal\nમાં સ્વાગત</string>
-    <string name="onboarding_subtitle">સ્પષ્ટ. અને\nbadlAv mATe AI ⚙</string>
+    <string name="onboarding_subtitle">સ્પષ્ટતા માટે તમારી અંગત AI ડાયરી\\nરોજિંદા જીવનમાં</string>
     <string name="onboarding_feature_speech">♻ AI ♻</string>
     <string name="onboarding_feature_secure">♻ ♻</string>
     <string name="onboarding_goals_title">AI ♻ ♻?\n</string>
@@ -775,15 +775,15 @@
     <string name="onboarding_how_step2_desc">♻</string>
     <string name="onboarding_how_step3_desc">♻</string>
     <string name="onboarding_how_step4_title">♻</string>
-    <string name="onboarding_how_step4_desc">♻</string>
+    <string name="onboarding_how_step4_desc">AI Dashboard તમારી એન્ટ્રીઓ વચ્ચેના સંબંધો દર્શાવે છે.</string>
     <string name="onboarding_how_step5_title">♻</string>
     <string name="onboarding_how_step5_desc">♻</string>
     <string name="onboarding_premium_feature_improve">દૈનિક AI લખાણ સુધારણા, દરેક પ્રવેશ વધુ સ્પષ્ટ અને અભિવ્યક્તિપૂર્ણ બને છે</string>
     <string name="onboarding_premium_feature_dashboard">♻</string>
     <string name="onboarding_premium_feature_retro">♻</string>
-    <string name="onboarding_premium_feature_patterns">♻</string>
+    <string name="onboarding_premium_feature_patterns">પેટર્ન દૃશ્યમાન: AI તમારી એન્ટ્રીઓમાં વારંવારના વિચાર અને લાગણીના પેટર્ન દર્શાવે છે</string>
     <string name="onboarding_premium_feature_noads">♻</string>
-    <string name="onboarding_free_trial">♻</string>
+    <string name="onboarding_free_trial">મફત, ગમે ત્યારે રદ્દ કરી શકાય</string>
     <string name="onboarding_free_after_trial">ત્યાર પછી Best Journal ચાલુ રાખો,\nઅઠવાડિયે મર્યાદિત AI-Call સાથે મફત.</string>
     <string name="onboarding_start_free">♻</string>
     <string name="onboarding_without_premium">Premium ♻</string>
@@ -794,7 +794,7 @@
     <string name="onboarding_perspectives_title">તમારા જીવન પર\nવિવિધ દ્રષ્ટિકોણ</string>
     <string name="onboarding_premium_feature_pdf">PDF ♻</string>
     <string name="onboarding_premium_profiles">5 AI ♻</string>
-    <string name="onboarding_try_premium">8 દિવસ મફત — ત્યારબાદ ₹3.99/મહિનાથી</string>
+    <string name="onboarding_try_premium">8 દિવસ મફત, પછી 3.99 €/મહિનાથી</string>
 
     
     <string name="paywall_prices_loading">♻\u2026</string>
@@ -806,18 +806,18 @@
     <string name="paywall_reminder">♻</string>
     <string name="paywall_day8">♻ 8</string>
     <string name="paywall_first_payment">♻</string>
-    <string name="paywall_yearly_note">♻ %1$s ♻\n♻</string>
-    <string name="paywall_most_popular">♻</string>
+    <string name="paywall_yearly_note">ત્યારબાદ %1$s પ્રતિ વર્ષ, આપોઆપ નવીકરણ\\nટ્રાયલ દરમિયાન ગમે ત્યારે રદ્દ કરી શકાય</string>
+    <string name="paywall_most_popular">ભલામણ કરેલ</string>
     <string name="paywall_monthly_plan">♻, %1$s/♻</string>
     <string name="paywall_yearly_savings">માસિક સબ્સ્ક્રિપ્શન કરતાં %1$d%% બચત — ગમે ત્યારે રદ કરી શકો.</string>
     <string name="paywall_lifetime_title">♻</string>
     <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
     <string name="paywall_lifetime_note">♻</string>
-    <string name="paywall_free_note">♻,</string>
+    <string name="paywall_free_note">App Subscription વગર પણ ચાલુ રહે છે.</string>
     <string name="paywall_cd_close">♻</string>
 
     
-    <string name="paywall_feature_patterns">♻</string>
+    <string name="paywall_feature_patterns">તમારા વિચારોમાં વારંવારના પેટર્ન ઓળખો</string>
     <string name="paywall_feature_improve">દરેક પ્રવેશ માટે દૈનિક AI લખાણ સુધારણા</string>
     <string name="paywall_feature_dashboard">♻</string>
     <string name="paywall_feature_retro">♻</string>
@@ -865,7 +865,7 @@
     <string name="churn_reason_other">♻</string>
     <string name="churn_sorry_title">♻</string>
     <string name="churn_sorry_body">♻</string>
-    <string name="churn_exclusive_offer">♻</string>
+    <string name="churn_exclusive_offer">તમારા માટે ઑફર</string>
     <string name="churn_offer_subtitle">તમારા માટે અમારી ઑફર</string>
     <string name="churn_offer_feature_ai">દૈનિક AI વિશ્લેષણ</string>
     <string name="churn_offer_feature_perspectives">બધા AI પ્રોફાઇલ (4 પૂર્વ-વ્યાખ્યાયિત + અમર્યાદિત પોતાના)</string>
@@ -1094,7 +1094,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="privacy_gate_groq_local">તેના બદલે સ્થાનિક રીતે ટ્રાન્સક્રાઇબ કરો</string>
 
     <string name="privacy_gate_gemini_title">ટેક્સ્ટ Google Gemini ને મોકલવો?</string>
-    <string name="privacy_gate_gemini_body">Best Journal સ્માર્ટ સુવિધાઓ વાપરવા માગો છો એ જાણીને આનંદ થયો! સારાંશ, સમીક્ષા, ડેશબોર્ડ ઇન્સાઇટ્સ અને ટેક્સ્ટ સુધારણા માટે તમારો ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\n\n✓ તમારા ડેટાથી AI મોડેલ્સને ક્યારેય તાલીમ આપવામાં આવતી નથી\n✓ પ્રક્રિયા પછી વિનંતીઓ તરત જ કાઢી નાખવામાં આવે છે\n✓ EU-US Data Privacy Framework મુજબ એન્ક્રિપ્ટેડ\n\nમહત્વપૂર્ણ સૂચના: તમારા ડાયરી એન્ટ્રીમાં ખાસ કરીને સંવેદનશીલ માહિતી (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR કલમ 9, વિશેષ શ્રેણીઓ) હોઈ શકે છે, તેથી અમે અહીન2 AI પ્રોસેસિંગ માટે તમારી સ્પષ્ટ સંમતિ માગી રહ્યા છિએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી, અને કોઈ વ્યાવસાયિકનું સ્થાન લઈ શકતા નથી.\n\nતમે કોઈપણ સમયે સેટિંગ્સમાં આ બદલી શકો છો.</string>
+    <string name="privacy_gate_gemini_body">સારું છે કે તમે Best Journal ની સ્માર્ટ સુવિધાઓ વાપરવા ઇચ્છો છો! સારાંશ, સ્મૃતિ, Dashboard અંતર્દૃષ્ટિ અને ટેક્સ્ટ સુધારણા માટે તમારા ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\\n\\n✓ તમારા ડેટા સાથે AI ટ્રેઇનિંગ નહીં\\n✓ વિનંતીઓ કાયમ સ્ટોર થતી નથી\\n✓ EU-US Data Privacy Framework અનુસાર એન્ક્રિપ્ટ\\n\\nમહત્ત્વની નોંધ: તમારી ડાયરી એન્ટ્રીઓમાં ખૂબ સંવેદનશીલ ડેટા (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR Art. 9) હોઈ શકે, તેથી અમે AI પ્રક્રિયા માટે તમારી સ્પષ્ટ સંમતિ માંગીએ છીએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી.\\n\\nતમે આ ગમે ત્યારે Settings માં બદલી શકો છો.</string>
     <string name="privacy_gate_gemini_accept">સંમત અને મોકલો</string>
     <string name="privacy_gate_gemini_cancel">રદ કરો</string>
 
@@ -1183,7 +1183,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
 
 તમે શું કરવા માંગો છો?</string>
     <string name="settings_delete_account_retry">ફરી પ્રયાસ કરો</string>
-    <string name="settings_delete_account_force_local">ફક્ત સ્થાનિક રીતે કાઢો (Drive બેકઅપ હાલ રહેશે)</string>
+    <string name="settings_delete_account_force_local">ફક્ત સ્થાનિક ભૂંસો (Drive Backup સચવાય છે)</string>
     <string name="settings_delete_account_abort">ક્રિયા રદ કરો</string>
 
     <string name="legal_title_datenschutz">ગોપનીયતા નીતિ</string>
@@ -1339,7 +1339,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="paywall_lifetime_label">એકવાર</string>
     <string name="paywall_monthly_label">માસિક</string>
     <string name="paywall_restore_button">ખરીદીઓ પુનઃસ્થાપિત કરો</string>
-    <string name="paywall_subscribe_button">સબ્સ્ક્રાઇબ કરો</string>
+    <string name="paywall_subscribe_button">સશુલ્ક સબ્સ્ક્રાઇબ કરો</string>
     <string name="paywall_subtitle">બધી Premium સુવિધાઓ અનલૉક કરો</string>
     <string name="paywall_title">Premium પર અપગ્રેડ કરો</string>
     <string name="paywall_yearly_label">વાર્ષિક</string>
@@ -1391,7 +1391,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="churn_reason_other_placeholder">કૃપા કરી અમને ટૂંકમાં કહો શું ચાલી રહ્યું છે…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ નવીનીકૃત થાય છે</string>
     <string name="settings_premium_cancelled">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું</string>
-    <string name="settings_premium_cancelled_desc">બિલિંગ સમયગાળો સમાપ્ત ન થાય ત્યાં સુધી તમારી પ્રીમિયમ સુવિધાઓ ઉપલબ્ધ રહેશે. તમે Google Play દ્વારા ગમે ત્યારે રદ્દ પૂર્વવત્ કરી શકો છો.</string>
+    <string name="settings_premium_cancelled_desc">તમારી Premium સુવિધાઓ બિલિંગ સમયગાળાના અંત સુધી ઉપલબ્ધ રહેશે. તમે Google Play દ્વારા રદ્દ ઉલટાવી શકો છો.</string>
     <string name="settings_premium_cancelled_until">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> સુધી ઉપલબ્ધ</string>
     <string name="settings_theme">થીમ</string>
     <string name="settings_themes_manager">થીમ્સ મેનેજર</string>
