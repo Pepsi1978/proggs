@@ -240,14 +240,11 @@ if [ -d "$hooks_dir" ]; then
     fi
 fi
 
-# CLAUDE.md — use the REPO version (~/proggs/CLAUDE.md) as authoritative source,
-# NOT the setup backup (which may be older if another platform pushed changes).
-# The repo copy is always pulled fresh by git pull above.
-repo_claude="$REPO_DIR/CLAUDE.md"
-if [ -f "$repo_claude" ]; then
-    cp "$repo_claude" "$HOME/CLAUDE.md"
-    synced="$synced CLAUDE.md(from-repo)"
-fi
+# CLAUDE.md — NICHT mehr ins Home-Verzeichnis kopieren!
+# Entfernt 2026-05-26: ~/CLAUDE.md soll NICHT existieren (Entscheidung 04.04.2026, spart ~8.700 Tokens).
+# invariant-check.sh erzwingt das. Frueher kopierte auto-sync proggs/CLAUDE.md -> ~/CLAUDE.md
+# bei JEDEM Start und erzeugte so genau die Verletzung die invariant-check meldete (Selbstwiderspruch
+# zweier Hooks). Die autoritative CLAUDE.md lebt ausschliesslich in ~/proggs/CLAUDE.md.
 
 # Skills
 skills_dir="$SETUP_DIR/skills"
