@@ -1169,11 +1169,11 @@ Con Premium: fino a 150 al giorno.</string>
     <string name="profile_style_coach">\n- Scrivi nello stile di un accompagnatore motivante di obiettivi, mostra i progressi sugli obiettivi personali e incoraggia a continuare</string>
     <string name="profile_style_custom">
 - STILE PROFILO (Personalizzato): Scrivi questa retrospettiva con un chiaro riferimento al compito dell\'utente. REGOLE OBBLIGATORIE:
-  1) ALMENO 60% della retrospettiva tratta direttamente o per parafrasi il tema del compito.
+  1) ALMENO 60%% della retrospettiva tratta direttamente o per parafrasi il tema del compito.
   2) ALMENO UNA sezione tematica e completamente dedicata al focus del compito (titolo + testo).
   3) Esprimi il riferimento al profilo in modo VARIANTENREICH con sinonimi e aree tematiche correlate, NON con ripetizione meccanica delle parole.
   4) Mantieni brevi o ometti le osservazioni senza relazione col compito — meglio meno sezioni con vero riferimento che molte generiche.
-  Compito dell\'utente (come orientamento): &quot;%1&quot;</string>
+  Compito dell\'utente (come orientamento): &quot;%1$s&quot;</string>
 
 
     <!-- ════════════════════════════════════════════════════════════════════

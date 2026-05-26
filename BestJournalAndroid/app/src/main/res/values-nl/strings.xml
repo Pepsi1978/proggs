@@ -1210,7 +1210,7 @@ Met Premium: tot 150 per dag.</string>
     <string name="profile_style_advisor">\n- Schrijf in de stijl van een levenscoach, licht uit wat goed ging, wat beter kan, en geef de lezer een gevoel van helderheid en orde</string>
     <string name="profile_style_insight">\n- Schrijf in de stijl van een diepgaand zelfkennisverhaal, onthul denkpatronen, terugkerende gevoelens en verborgen krachten</string>
     <string name="profile_style_coach">\n- Schrijf in de stijl van een motiverende doelbegeleider, laat voortgang bij persoonlijke doelen zien en moedig aan door te gaan</string>
-    <string name="profile_style_custom">\n- Schrijf de analyse met de volgende persoonlijke focus van de gebruiker: \"%1$s\".\n- Regel 1: Minimaal 60% van de inhoud moet betrekking hebben op het opgegeven focus-thema.\n- Regel 2: Minstens één sectie moet volledig aan de focusopdracht gewijd zijn.\n- Regel 3: Verwijs naar het profiel op afwisselende manieren (gebruik synoniemen, omschrijvingen, geen herhalingen).\n- Regel 4: Observaties zonder profielkoppeling zo kort mogelijk houden.</string>
+<string name="profile_style_custom">\n- Schrijf de analyse met de volgende persoonlijke focus van de gebruiker: \"%1$s\".\n- Regel 1: Minimaal 60%% van de inhoud moet betrekking hebben op het opgegeven focus-thema.\n- Regel 2: Minstens één sectie moet volledig aan de focusopdracht gewijd zijn.\n- Regel 3: Verwijs naar het profiel op afwisselende manieren (gebruik synoniemen, omschrijvingen, geen herhalingen).\n- Regel 4: Observaties zonder profielkoppeling zo kort mogelijk houden.</string>
 
 
     <!-- ════════════════════════════════════════════════════════════════════
