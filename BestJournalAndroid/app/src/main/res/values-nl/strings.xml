@@ -851,7 +851,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="retro_monthly_p2">Rode draden en ontwikkelingen over de maand worden zichtbaar</string>
     <string name="retro_monthly_p3">Toont ontwikkelingen uit je aantekeningen</string>
     <string name="retro_yearly_p1">Je hele jaar in één oogopslag</string>
-    <string name="retro_yearly_p2">De AI vat de grote thema's van je jaar samen</string>
+<string name="retro_yearly_p2">De AI vat de grote thema\'s van je jaar samen</string>
     <string name="retro_yearly_p3">Persoonlijke groei wordt zichtbaar en tastbaar</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Jouw persoonlijke terugblikken</string>
