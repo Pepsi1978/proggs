@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">Segarkan</string>
     <string name="dashboard_weekly_review_waiting">Tinjauan mingguanmu menunggu</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">Minggumu padat. Dengan Premium kamu melihat analisis lengkap, mengenali pola, menemukan wawasan, dan memahami apa yang benar-benar menggerakkanmu.</string>
+    <string name="dashboard_weekly_review_upsell_body">Kamu punya minggu yang penuh cerita. Dengan Premium, kamu bisa melihat analisis lengkap: kenali pola, temukan wawasan, dan pahami apa yang sedang ada di pikiranmu.</string>
     <string name="dashboard_discover_premium">Temukan Premium</string>
     <string name="dashboard_please_wait">Harap tunggu</string>
     <string name="dashboard_gemini_unavailable">Gemini sedang tidak tersedia, coba lagi sebentar.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">Sadar (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">Permukaan (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">Kedalaman wawasan</string>
-    <string name="legend_insight_deep">Dalam, pola dan keyakinan tersembunyi</string>
+    <string name="legend_insight_deep">Mendalam, pola dan keyakinan yang berulang</string>
     <string name="legend_insight_aware">Sadar, pola pikiran dan perasaan yang dikenali</string>
     <string name="legend_insight_surface">Permukaan, pengamatan pertama</string>
     <string name="legend_progress">Kemajuan</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">Analisis kustom</string>
     <string name="profile_summary_desc">Merangkum tema, pola, dan pengalaman</string>
     <string name="profile_entropy_desc">Mengenali stres, kekacauan, dan beban</string>
-    <string name="profile_insight_desc">Mengungkap pola pikir dan perasaan tersembunyi</string>
+    <string name="profile_insight_desc">Memperlihatkan pola pikir dan perasaan yang berulang</string>
     <string name="profile_goals_desc">Mengenali target, keinginan, dan kemajuan</string>
     <string name="profile_custom_desc">Tentukan fokus analisis sendiri</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Entrimu dirangkum netral, tanpa penilaian atau saran.\n\nKamu melihat sekaligus:\n\n• Apa yang sedang menyibukkanmu\n• Pola apa yang berulang\n• Bagaimana hidupmu berkembang\n\nSempurna sebagai gambaran harian semua yang terjadi di hidupmu.</string>
-    <string name="profile_entropy_long">AI mencari stres, beban, dan kekacauan di entrimu secara khusus.\n\nKamu mendapat:\n\n• Analisis sumber beban terbesar\n• 5 langkah konkret untuk menata\n• Tips yang bisa langsung membantu\n\nIdeal saat semuanya terasa berlebihan.</string>
-    <string name="profile_insight_long">AI melihat lebih dalam dari sekadar peristiwa. Di entrimu ia mengenali:\n\n• Pola pikir dan keyakinan tersembunyi\n• Perasaan dan reaksi berulang\n• Kekuatan pribadi yang tidak kamu sadari\n• Nilai yang menggerakkan tindakanmu\n\nUntuk yang ingin mengenal diri lebih baik dan tumbuh dari dalam.</string>
+    <string name="profile_entropy_long">AI mencari stres, beban, dan kekacauan dalam catatanmu secara spesifik.\n\nKamu akan mendapatkan:\n\n\u2022 Analisis sumber beban terbesar\n\u2022 5 langkah konkret untuk membereskan segalanya\n\u2022 Tips yang bisa membantu dalam keseharianmu\n\nIdeal jika kamu merasa semuanya terasa terlalu berat saat ini.</string>
+    <string name="profile_insight_long">AI melihat lebih dalam dari sekadar peristiwa. AI mengenali dalam catatanmu:\n\n\u2022 Pola pikir dan keyakinan dalam kata-katamu\n\u2022 Perasaan dan reaksi yang berulang\n\u2022 Kekuatan yang terlihat dalam catatanmu\n\u2022 Nilai-nilai yang mendorong tindakanmu\n\nUntuk semua orang yang ingin memahami diri sendiri lebih baik dan berkembang secara batin.</string>
     <string name="profile_goals_long">AI menemukan semua target, keinginan, dan rencana di entrimu, bahkan yang disebut sekilas.\n\nKamu melihat:\n\n• Target apa saja yang kamu punya (termasuk yang tersembunyi)\n• Kamu sudah sampai mana di setiap target\n• Langkah berikutnya bisa apa\n\nPelacak target pribadi yang membaca dari kata-katamu sendiri.</string>
     <string name="profile_custom_long">Kamu yang menentukan apa yang harus diperhatikan AI.\n\nTulis fokus analisismu, contohnya:\n\n• «Temukan semua sebutan olahraga»\n• «Analisis naik-turun suasana hatiku»\n• «Tunjukkan kapan aku paling produktif»\n\nKontrol penuh untuk yang tahu persis apa yang dicari.</string>
     <string name="profile_custom_prompt">Apa yang penting buatmu? Pada apa AI harus berfokus saat menganalisis entrimu?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">Analisis dashboard harian</string>
     <string name="settings_premium_feature_dashboard_desc">Dasbor kamu berkembang bersama entri-entrimu.</string>
     <string name="settings_premium_feature_5_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">Dari kejernihan hingga pengenalan diri</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Dari ringkasan hingga pengenalan diri</string>
     <string name="settings_premium_feature_reviews">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="settings_premium_feature_reviews_desc">AI menceritakan kisahmu</string>
     <string name="settings_premium_feature_patterns">Pengenalan pola</string>
@@ -753,9 +753,9 @@
     <string name="retro_weekly_p4">2 minggu pertama gratis</string>
     <string name="retro_monthly_p1">Menyambung tinjauan mingguanmu jadi cerita sebulan</string>
     <string name="retro_monthly_p2">Benang merah dan perkembangan sebulan terlihat</string>
-    <string name="retro_monthly_p3">Menunjukkan perubahan yang tak kamu sadari sehari-hari</string>
+    <string name="retro_monthly_p3">Menampilkan perkembangan dari catatanmu</string>
     <string name="retro_yearly_p1">Setahun penuh sekilas</string>
-    <string name="retro_yearly_p2">AI mengenali tema besar tahunmu</string>
+    <string name="retro_yearly_p2">AI merangkum tema-tema besar dari tahun-tahunmu</string>
     <string name="retro_yearly_p3">Pertumbuhan pribadi jadi terlihat dan nyata</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Tinjauan pribadimu</string>
@@ -784,7 +784,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Selamat datang di\nBest Journal</string>
-    <string name="onboarding_subtitle">Jurnal AI pribadimu\nuntuk kejernihan dan perubahan</string>
+    <string name="onboarding_subtitle">Jurnal AI pribadimu\nuntuk lebih jernih dalam keseharian</string>
     <string name="onboarding_feature_speech">Bicara atau tulis, AI memahami keduanya</string>
     <string name="onboarding_feature_secure">Datamu tetap di tanganmu, terenkripsi dan aman</string>
     <string name="onboarding_goals_title">Apa yang ingin kamu capai\ndengan jurnal AI?</string>
@@ -798,15 +798,15 @@
     <string name="onboarding_how_step2_desc">Teksmu dihaluskan otomatis dan dianalisis dari beberapa sudut.</string>
     <string name="onboarding_how_step3_desc">Simpan momen istimewa, AI memperhatikannya dalam analisis.</string>
     <string name="onboarding_how_step4_title">Temukan pola dan wawasan</string>
-    <string name="onboarding_how_step4_desc">Dasbor menunjukkan keterkaitan yang tersembunyi di keseharian.</string>
+    <string name="onboarding_how_step4_desc">Dashboard AI menampilkan keterkaitan dari catatanmu.</string>
     <string name="onboarding_how_step5_title">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="onboarding_how_step5_desc">Tinjauan otomatis menunjukkan bagaimana kamu berkembang seiring waktu.</string>
     <string name="onboarding_premium_feature_improve">Peningkatan teks AI harian, setiap entri menjadi lebih jelas dan ekspresif</string>
     <string name="onboarding_premium_feature_dashboard">Pembaruan otomatis dasbor setiap entri baru</string>
     <string name="onboarding_premium_feature_retro">Tinjauan mingguan, bulanan, dan tahunan menunjukkan perkembanganmu</string>
-    <string name="onboarding_premium_feature_patterns">Mengenali pola pribadi, AI menemukan pola pikir dan rasa tersembunyi</string>
+    <string name="onboarding_premium_feature_patterns">Buat pola terlihat: AI menampilkan pola pikir dan perasaan yang berulang dalam catatanmu</string>
     <string name="onboarding_premium_feature_noads">Tanpa iklan, tulis dan renungkan dengan tenang</string>
-    <string name="onboarding_free_trial">Gratis dan tanpa ikatan</string>
+    <string name="onboarding_free_trial">Gratis, bisa dibatalkan kapan saja</string>
     <string name="onboarding_free_after_trial">Setelah itu kamu terus pakai Best Journal,\ngratis dengan batas AI per minggu.</string>
     <string name="onboarding_start_free">Mulai gratis</string>
     <string name="onboarding_without_premium">Lanjut tanpa Premium</string>
@@ -817,7 +817,7 @@
     <string name="onboarding_perspectives_title">Berbagai sudut pandang tentang\nkehidupanmu</string>
     <string name="onboarding_premium_feature_pdf">Ekspor PDF dengan foto, simpan entrimu sebagai dokumen</string>
     <string name="onboarding_premium_profiles">5 profil dasbor cerdas untuk wawasan dalam</string>
-    <string name="onboarding_try_premium">8 hari gratis — lalu mulai dari Rp 59.000/bulan</string>
+    <string name="onboarding_try_premium">8 hari gratis, lalu mulai dari \u20ac3,99/bulan</string>
 
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">Agar kamu bisa mendiktekan entri jurnalmu lewat suara, kami butuh akses ke mikrofon kamu.</string>
@@ -837,18 +837,18 @@
     <string name="paywall_reminder">Pengingat</string>
     <string name="paywall_day8">Hari 8</string>
     <string name="paywall_first_payment">Pembayaran pertama</string>
-    <string name="paywall_yearly_note">Setelah itu %1$s per tahun\nBisa dibatalkan selama uji coba</string>
-    <string name="paywall_most_popular">Paling populer</string>
+    <string name="paywall_yearly_note">Selanjutnya %1$s per tahun, diperpanjang otomatis\nBisa dibatalkan kapan saja selama masa percobaan</string>
+    <string name="paywall_most_popular">Populer</string>
     <string name="paywall_monthly_plan">Langganan bulanan %1$s per bulan</string>
     <string name="paywall_yearly_savings">Hemat %1$d%% dibanding langganan bulanan \u2014 bisa dibatalkan kapan saja sebelum periode berakhir.</string>
     <string name="paywall_lifetime_title">Beli sekali</string>
     <string name="paywall_lifetime_desc">Bayar sekali, pakai semua secara permanen</string>
     <string name="paywall_lifetime_note">Tanpa langganan, tanpa perpanjangan</string>
-    <string name="paywall_free_note">Aplikasi tetap bisa dipakai tanpa langganan,</string>
+    <string name="paywall_free_note">Aplikasi tetap berfungsi tanpa langganan.</string>
     <string name="paywall_cd_close">Tutup</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Pahami pola tersembunyi di pikiranmu</string>
+    <string name="paywall_feature_patterns">Kenali pola yang berulang dalam pikiranmu</string>
     <string name="paywall_feature_improve">Peningkatan teks AI harian untuk setiap entri</string>
     <string name="paywall_feature_dashboard">Pembaruan dasbor otomatis setelah setiap entri</string>
     <string name="paywall_feature_retro">Tinjauan mingguan, bulanan, dan tahunan dengan AI</string>
@@ -898,7 +898,7 @@
     <string name="churn_reason_other">Alasan lain</string>
     <string name="churn_sorry_title">Sayang kamu pergi</string>
     <string name="churn_sorry_body">Sebelum membatalkan, mau beri tahu alasannya? Itu membantu kami memperbaiki aplikasi.</string>
-    <string name="churn_exclusive_offer">Penawaran eksklusif</string>
+    <string name="churn_exclusive_offer">Penawaran untukmu</string>
     <string name="churn_offer_subtitle">Penawaran kami untukmu</string>
     <string name="churn_offer_feature_ai">Analisis AI harian</string>
     <string name="churn_offer_feature_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
@@ -1139,7 +1139,7 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="privacy_gate_groq_local">Transkripsi lokal saja</string>
 
     <string name="privacy_gate_gemini_title">Kirim teks ke Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Senang kamu ingin menggunakan fitur cerdas Best Journal! Untuk ringkasan, tinjauan, wawasan dasbor, dan perbaikan teks, teks kamu dikirim terenkripsi ke Google Gemini.\n\n✓ Tidak pernah digunakan untuk melatih model AI\n✓ Permintaan dihapus segera setelah diproses\n✓ Terenkripsi sesuai EU-US Data Privacy Framework\n\nPemberitahuan penting: Karena catatan jurnal kamu bisa mengandung data yang sangat sensitif (kesehatan, agama, hubungan pribadi — Pasal 9 GDPR, kategori khusus), kami meminta persetujuan eksplisit kamu di sini untuk pemrosesan oleh AI. Output AI adalah saran, bukan nasihat profesional, dan tidak menggantikan seorang profesional.\n\nKamu bisa mengubahnya kapan saja di Pengaturan.</string>
+    <string name="privacy_gate_gemini_body">Senang kamu ingin menggunakan fitur cerdas Best Journal! Untuk ringkasan, kilas balik, wawasan dashboard, dan peningkatan teks, teks-teksmu akan dikirim secara terenkripsi ke Google Gemini.\n\n\u2713 Tidak ada pelatihan AI dengan datamu\n\u2713 Permintaan tidak disimpan secara permanen\n\u2713 Terenkripsi sesuai EU-US Data Privacy Framework\n\nCatatan Penting: Karena entri jurnal bisa mengandung data yang sangat sensitif (kesehatan, agama, hubungan pribadi \u2014 Pasal 9 DSGVO), kami meminta persetujuan eksplisit untuk pemrosesan AI. Hasil AI adalah saran, bukan konsultasi profesional dan tidak menggantikan ahli.\n\nKamu bisa mengubah ini kapan saja di Pengaturan.</string>
     <string name="privacy_gate_gemini_accept">Setuju dan kirim</string>
     <string name="privacy_gate_gemini_cancel">Batal</string>
 
@@ -1228,7 +1228,7 @@ Tanpa penghapusan menyeluruh, pesan \"dihapus permanen\" tidak akurat.
 
 Apa yang ingin kamu lakukan?</string>
     <string name="settings_delete_account_retry">Coba lagi</string>
-    <string name="settings_delete_account_force_local">Hapus lokal saja (cadangan Drive tetap untuk sementara)</string>
+    <string name="settings_delete_account_force_local">Hapus hanya secara lokal (cadangan Drive tetap tersimpan)</string>
     <string name="settings_delete_account_abort">Batalkan operasi</string>
 
     <string name="legal_title_datenschutz">Kebijakan Privasi</string>
@@ -1392,7 +1392,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="paywall_lifetime_label">Sekali bayar</string>
     <string name="paywall_monthly_label">Bulanan</string>
     <string name="paywall_restore_button">Pulihkan pembelian</string>
-    <string name="paywall_subscribe_button">Berlangganan</string>
+    <string name="paywall_subscribe_button">Berlangganan dengan pembayaran</string>
     <string name="paywall_subtitle">Aktifkan semua fitur Premium</string>
     <string name="paywall_title">Upgrade ke Premium</string>
     <string name="paywall_yearly_label">Tahunan</string>
@@ -1433,7 +1433,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="churn_reason_other_placeholder">Ceritakan singkat apa yang terjadi…</string>
     <string name="churn_renews_on">Diperpanjang otomatis pada <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">Langganan Premium dibatalkan</string>
-    <string name="settings_premium_cancelled_desc">Fitur Premium kamu tetap tersedia hingga akhir periode penagihan. Kamu bisa membatalkan pembatalan kapan saja melalui Google Play.</string>
+    <string name="settings_premium_cancelled_desc">Fitur Premium-mu tetap tersedia hingga akhir periode penagihan. Kamu bisa membatalkan penghentian langganan melalui Google Play.</string>
     <string name="settings_premium_cancelled_until">Langganan Premium dibatalkan — berlaku hingga <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Pengelola Tema</string>
