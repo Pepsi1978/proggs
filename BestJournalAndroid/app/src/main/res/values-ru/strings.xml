@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">Оновити</string>
     <string name="dashboard_weekly_review_waiting">Ваш підсумок тижня чекає</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">У вас была насыщенная неделя. С Premium вы видите полный анализ: распознавайте закономерности, открывайте новые идеи и понимайте, что вас занимает.</string>
+    <string name="dashboard_weekly_review_upsell_body">У вас была насыщенная неделя. С Premium вы увидите полный анализ: распознайте закономерности, откройте новые выводы и поймите, что вас занимает.</string>
     <string name="dashboard_discover_premium">Дізнатися про Преміум</string>
     <string name="dashboard_please_wait">Зачекайте</string>
     <string name="dashboard_gemini_unavailable">Gemini зараз недоступний, спробуйте за мить.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">Усвідомлена (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">Поверхнева (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">Глибина осяянь</string>
-    <string name="legend_insight_deep">Глубокий, повторяющиеся закономерности и убеждения</string>
+    <string name="legend_insight_deep">Глубокий анализ, повторяющиеся паттерны и убеждения</string>
     <string name="legend_insight_aware">Усвідомлена, розпізнані закономірності мислення та почуттів</string>
     <string name="legend_insight_surface">Поверхнева, перші спостереження</string>
     <string name="legend_progress">Поступ</string>
@@ -320,29 +320,14 @@
     <string name="profile_custom">Власний аналіз</string>
     <string name="profile_summary_desc">Збирає теми, закономірності й переживання</string>
     <string name="profile_entropy_desc">Виявляє стрес, безлад і навантаження</string>
-    <string name="profile_insight_desc">Выявляет повторяющиеся паттерны мышления и чувств</string>
+    <string name="profile_insight_desc">Делает видимыми повторяющиеся паттерны мышления и чувств</string>
     <string name="profile_goals_desc">Визначає цілі, бажання та поступ</string>
     <string name="profile_custom_desc">Задайте власну тему аналізу</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Ваші записи підсумовуються нейтрально, без оцінок і порад.\n\nВи одразу бачите:\n\n• які теми вас зараз займають\n• які закономірності повторюються\n• як розвивається ваше життя\n\nЧудовий щоденний огляд усього, що відбувається у вашому житті.</string>
-    <string name="profile_entropy_long">ИИ целенаправленно ищет стресс, нагрузку и беспорядок в ваших записях.
-
-Вы получите:
-
-• Анализ ваших главных источников нагрузки
-• 5 конкретных шагов для наведения порядка
-• Советы, которые помогут вам в повседневной жизни
-
-Идеально, если вы чувствуете, что всё стало слишком много.</string>
-    <string name="profile_insight_long">ИИ смотрит глубже, чем просто на события. В ваших записях он распознаёт:
-
-• Паттерны мышления и убеждения в ваших словах
-• Повторяющиеся чувства и реакции
-• Сильные стороны, которые видны в ваших записях
-• Ценности, которые движут вашими поступками
-
-Для всех, кто хочет лучше понять себя и расти внутренне.</string>
+    <string name="profile_entropy_long">ИИ целенаправленно ищет стресс, нагрузку и беспорядок в ваших записях.\n\nВы получите:\n\n• Анализ ваших главных источников нагрузки\n• 5 конкретных мер по наведению порядка\n• Советы, которые могут помочь вам в повседневной жизни\n\nИдеально, если вы чувствуете, что сейчас всего слишком много.</string>
+    <string name="profile_insight_long">ИИ смотрит глубже, чем просто на события. Он распознаёт в ваших записях:\n\n• Паттерны мышления и убеждения в ваших словах\n• Повторяющиеся чувства и реакции\n• Сильные стороны, которые проявляются в ваших записях\n• Ценности, которые движут вашими действиями\n\nДля тех, кто хочет лучше понять себя и расти внутренне.</string>
     <string name="profile_goals_long">ШІ знаходить у ваших записах усі цілі, бажання та плани, навіть згадані побіжно.\n\nВи бачите:\n\n• які у вас цілі (зокрема й приховані)\n• наскільки далеко ви просунулися у кожній\n• яким може бути ваш наступний крок\n\nВаш особистий трекер цілей, що читає вашими ж словами.</string>
     <string name="profile_custom_long">Ви самі вирішуєте, на чому ШІ має зосередитися.\n\nНапишіть власну тему аналізу, наприклад:\n\n• «Знайди всі згадки про спорт»\n• «Проаналізуй мої перепади настрою»\n• «Покажи, коли я найпродуктивніший»\n\nПовний контроль для тих, хто точно знає, що шукає.</string>
     <string name="profile_custom_prompt">Що для вас особливо важливо? На чому ШІ має зосередитися при аналізі ваших записів?</string>
@@ -438,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
     <string name="settings_premium_feature_dashboard_desc">Твой дашборд растёт вместе с твоими записями.</string>
     <string name="settings_premium_feature_5_perspectives">Все профили ИИ (4 встроенных + неограниченно своих)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">От краткого обзора до самопознания</string>
+    <string name="settings_premium_feature_5_perspectives_desc">От сводки до самопознания</string>
     <string name="settings_premium_feature_reviews">Підсумки тижня, місяця і року</string>
     <string name="settings_premium_feature_reviews_desc">ШІ розповідає вашу історію</string>
     <string name="settings_premium_feature_patterns">Розпізнавання закономірностей</string>
@@ -767,9 +752,9 @@
     <string name="retro_weekly_p4">Перші 2 тижні безкоштовно</string>
     <string name="retro_monthly_p1">Пов\'язує ваші тижневі підсумки в розповідь місяця</string>
     <string name="retro_monthly_p2">Наскрізні лінії та розвиток місяця стають видимими</string>
-    <string name="retro_monthly_p3">Показывает тенденции из ваших записей</string>
+    <string name="retro_monthly_p3">Показывает изменения из ваших записей</string>
     <string name="retro_yearly_p1">Ваш цілий рік одним поглядом</string>
-    <string name="retro_yearly_p2">ИИ суммирует главные темы вашего года</string>
+    <string name="retro_yearly_p2">ИИ подводит итоги главных тем вашего года</string>
     <string name="retro_yearly_p3">Особистісне зростання стає видимим і відчутним</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Ваші особисті підсумки</string>
@@ -798,8 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Ласкаво просимо до\nBest Journal</string>
-    <string name="onboarding_subtitle">Ваш личный ИИ-дневник
-для большей ясности в жизни</string>
+    <string name="onboarding_subtitle">Ваш личный ИИ-дневник\nдля большей ясности в повседневной жизни</string>
     <string name="onboarding_feature_speech">Говоріть або пишіть, ШІ розуміє і те, і інше</string>
     <string name="onboarding_feature_secure">Ваші дані залишаються з вами, зашифровані й захищені</string>
     <string name="onboarding_goals_title">Чого ви хочете досягти\nзі щоденником ШІ?</string>
@@ -819,9 +803,9 @@
     <string name="onboarding_premium_feature_improve">Щоденне покращення тексту ШІ, кожен запис стає чіткішим і виразнішим</string>
     <string name="onboarding_premium_feature_dashboard">Автоматичне оновлення панелі при кожному новому записі</string>
     <string name="onboarding_premium_feature_retro">Підсумки тижня, місяця і року показують ваш розвиток</string>
-    <string name="onboarding_premium_feature_patterns">Сделать закономерности видимыми: ИИ показывает повторяющиеся паттерны мышления и чувств в ваших записях</string>
+    <string name="onboarding_premium_feature_patterns">Сделать паттерны видимыми: ИИ показывает повторяющиеся паттерны мышления и чувств в ваших записях</string>
     <string name="onboarding_premium_feature_noads">Без реклами, пишіть і розмірковуйте без перешкод</string>
-    <string name="onboarding_free_trial">Бесплатно, отмена в любое время</string>
+    <string name="onboarding_free_trial">Бесплатно, можно отменить в любое время</string>
     <string name="onboarding_free_after_trial">Потім ви продовжуєте користуватися Best Journal,\nбезкоштовно з обмеженою кількістю звернень до ШІ на тиждень.</string>
     <string name="onboarding_start_free">Почати безкоштовно</string>
     <string name="onboarding_without_premium">Продовжити без Преміум</string>
@@ -832,7 +816,7 @@
     <string name="onboarding_perspectives_title">Разные взгляды на\nтвою жизнь</string>
     <string name="onboarding_premium_feature_pdf">Експорт у PDF з фото, збережіть записи як документ</string>
     <string name="onboarding_premium_profiles">5 розумних профілів панелі для глибокого погляду на життя</string>
-    <string name="onboarding_try_premium">8 дней бесплатно, затем от 3,99 €/мес.</string>
+    <string name="onboarding_try_premium">8 дней бесплатно, затем от 3,99 €/месяц</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -846,9 +830,8 @@
     <string name="paywall_reminder">Нагадування</string>
     <string name="paywall_day8">День 8</string>
     <string name="paywall_first_payment">Перший платіж</string>
-    <string name="paywall_yearly_note">Затем %1$s в год, продлевается автоматически
-В пробный период отмена в любое время</string>
-    <string name="paywall_most_popular">Популярное</string>
+    <string name="paywall_yearly_note">Затем %1$s в год, продлевается автоматически\nВ пробный период можно отменить в любое время</string>
+    <string name="paywall_most_popular">Рекомендуется</string>
     <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
     <string name="paywall_yearly_savings">Экономия %1$d %% по сравнению с месячной — отмена в любое время до окончания срока.</string>
     <string name="paywall_lifetime_title">Разова покупка</string>
@@ -858,7 +841,7 @@
     <string name="paywall_cd_close">Закрити</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Распознавайте повторяющиеся закономерности в своём мышлении</string>
+    <string name="paywall_feature_patterns">Распознайте повторяющиеся паттерны в своём мышлении</string>
     <string name="paywall_feature_improve">Щоденне покращення тексту ШІ для кожного запису</string>
     <string name="paywall_feature_dashboard">Автоматичне оновлення панелі після кожного запису</string>
     <string name="paywall_feature_retro">Підсумки тижня, місяця і року з ШІ</string>
@@ -1161,15 +1144,7 @@
     <string name="privacy_gate_groq_local">Транскрибувати локально</string>
 
     <string name="privacy_gate_gemini_title">Надіслати текст до Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Рады, что вы хотите воспользоваться интеллектуальными функциями Best Journal! Для создания обзоров, ретроспектив, дашбордов и улучшения текстов ваши тексты в зашифрованном виде отправляются в Google Gemini.
-
-✓ Ваши данные не используются для обучения ИИ
-✓ Запросы не сохраняются постоянно
-✓ Зашифровано по стандарту EU–US Data Privacy Framework
-
-Важное замечание: поскольку ваши дневниковые записи могут содержать особо чувствительные данные (здоровье, вероисповедание, личные отношения — ст. 9 GDPR), мы просим вашего явного согласия на обработку данных ИИ. Ответы ИИ являются предложениями, а не профессиональной консультацией и не заменяют специалиста.
-
-Вы можете изменить это в любое время в настройках.</string>
+    <string name="privacy_gate_gemini_body">Рады, что вы хотите использовать интеллектуальные функции Best Journal! Для создания сводок, обзоров, аналитики дашборда и улучшения текстов ваши тексты зашифрованными отправляются в Google Gemini.\n\n✓ Ваши данные не используются для обучения ИИ\n✓ Запросы не хранятся постоянно\n✓ Зашифровано по EU-US Data Privacy Framework\n\nВажное примечание: поскольку ваши дневниковые записи могут содержать особо чувствительные данные (здоровье, религия, личные отношения — ст. 9 GDPR), мы просим вашего явного согласия на обработку данных ИИ. Результаты ИИ являются предложениями, а не профессиональной консультацией и не заменяют специалиста.\n\nВы можете изменить это в любое время в настройках.</string>
     <string name="privacy_gate_gemini_accept">Погоджуюсь і надсилаю</string>
     <string name="privacy_gate_gemini_cancel">Скасувати</string>
 
@@ -1258,7 +1233,7 @@
 
 Що ти хочеш зробити?</string>
     <string name="settings_delete_account_retry">Спробувати ще раз</string>
-    <string name="settings_delete_account_force_local">Удалить только локально (резервная копия на Drive сохранится)</string>
+    <string name="settings_delete_account_force_local">Удалить только локально (резервная копия Drive сохранится)</string>
     <string name="settings_delete_account_abort">Скасувати операцію</string>
 
     <string name="legal_title_datenschutz">Політика конфіденційності</string>
@@ -1467,7 +1442,7 @@
     <string name="churn_reason_other_placeholder">Расскажи нам кратко, что происходит…</string>
     <string name="churn_renews_on">Продлевается <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">Подписка Premium отменена</string>
-    <string name="settings_premium_cancelled_desc">Ваши Premium-функции останутся доступны до конца расчётного периода. Вы можете отменить отмену подписки через Google Play.</string>
+    <string name="settings_premium_cancelled_desc">Ваши Premium-функции остаются доступными до конца расчётного периода. Вы можете отменить отмену подписки через Google Play.</string>
     <string name="settings_premium_cancelled_until">Подписка Premium отменена — действует до <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Тема</string>
     <string name="settings_themes_manager">Менеджер тем</string>
