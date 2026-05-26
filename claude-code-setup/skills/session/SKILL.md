@@ -51,6 +51,15 @@ sich nie mehrere Sessions vermischen.
 
 ## BACKUP-Workflow
 
+> **TEMPO-REGEL (PFLICHT — Backup soll SCHNELL gehen):** Die Backup-Datei existiert IMMER
+> (RESTORE leert sie, loescht sie aber nie). Beim Backup ist sie also leer oder veraltet —
+> **NIE vorher mit dem Read-Tool lesen und NIE pruefen ob sie voll ist.** Einfach blind
+> ueberschreiben. Das Backup wird genau dafuer gestartet: die Datei zu fuellen. Schreibe die
+> Notiz DIREKT per Bash (single-quoted Heredoc), NICHT mit dem Write-Tool — das Write-Tool
+> erzwingt bei existierenden Dateien ein vorheriges Read und kostet so 2-3 ueberfluessige
+> Tool-Calls. Ziel: Schritt 1-3 in moeglichst wenigen Tool-Calls (idealerweise zwei Bash-Aufrufe:
+> einer zum Schreiben beider Dateien, einer zum Committen).
+
 Fuehre diese Schritte der Reihe nach aus. Wenn der Hook dich angestossen hat: Pruefe ZUERST, ob die
 aktuelle Aufgabe wirklich abgeschlossen ist (keine offene Rueckfrage / kein Multiple-Choice). Wenn
 nicht — erst fertig machen, dann Backup. Wenn der Hook anstoesst und die Aufgabe noch laeuft, dem
@@ -62,10 +71,30 @@ Erstelle den Inhalt nach der Struktur unten (Abschnitt "Handoff-Template"). Der 
 Abschnitt ist **Fehlgeschlagene Ansaetze** — ohne ihn wiederholt die frische Session denselben
 Fehler. Schreibe so konkret, dass eine Session OHNE jeden Vorkontext sofort weiterarbeiten kann.
 
-### Schritt 2: An beide Orte schreiben (vorher leeren)
+### Schritt 2: An beide Orte schreiben — DIREKT per Bash, kein Read, kein Write-Tool
 
-Beide Dateien werden komplett ueberschrieben (nicht angehaengt). Schreibe denselben Inhalt nach
-LOKAL und REPO. Lege das Repo-Verzeichnis an, falls noetig.
+Schreibe die Notiz mit einem **single-quoted Heredoc** direkt in die lokale Datei und kopiere
+sie dann ins Repo. Das ueberschreibt zuverlaessig — egal ob die Datei existiert, leer oder
+veraltet ist — in EINEM Bash-Aufruf, ohne vorheriges Read:
+
+```bash
+mkdir -p "$HOME/proggs/.claude"
+cat <<'SESSION_BACKUP_EOF' > "$HOME/.claude/session-backup.md"
+# Session Handoff — <Datum + Uhrzeit>
+... (komplette Handoff-Notiz nach dem Template unten) ...
+SESSION_BACKUP_EOF
+cp "$HOME/.claude/session-backup.md" "$HOME/proggs/.claude/session-backup.md"
+```
+
+**Warum so:**
+- **Single-quoted Delimiter (`'SESSION_BACKUP_EOF'`)** → der Inhalt wird LITERAL geschrieben:
+  keine Shell-Expansion von `$HOME`, `%1$s`, Backslashes (`C:\Users`) oder Backticks. Genau
+  das, was die Notiz braucht (sie enthaelt oft Pfade, Platzhalter, Commit-Hashes).
+- **Ungewoehnlicher Delimiter** statt `EOF` → verhindert versehentliches fruehes Ende, falls
+  die Notiz selbst mal das Wort "EOF" enthaelt.
+- **`cp` statt zweitem Heredoc** → eine Quelle, kein Risiko dass die beiden Dateien abweichen.
+- **KEIN Write-Tool** → das hat bei existierenden Dateien einen Read-Zwang erzwungen (2-3
+  ueberfluessige Tool-Calls). Hier nicht noetig.
 
 ### Schritt 3: Repo-Version committen und pushen
 
