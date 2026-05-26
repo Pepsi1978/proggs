@@ -239,7 +239,7 @@
     <string name="dashboard_refresh">Aktualisieren</string>
     <string name="dashboard_weekly_review_waiting">Dein Wochenrückblick wartet</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse — erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.</string>
+    <string name="dashboard_weekly_review_upsell_body">Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse: erkenne Muster, entdecke Einsichten und verstehe, was dich beschäftigt.</string>
     <string name="dashboard_discover_premium">Premium entdecken</string>
     <string name="dashboard_please_wait">Bitte warten</string>
     <string name="dashboard_gemini_unavailable">Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.</string>
@@ -296,7 +296,7 @@
     <string name="legend_reflection_aware">Bewusst (34–66%)</string>
     <string name="legend_reflection_surface">Oberfläche (0–33%)</string>
     <string name="legend_insight_depth">Tiefe der Einsichten</string>
-    <string name="legend_insight_deep">Tiefgehend, Verborgene Muster und Überzeugungen</string>
+    <string name="legend_insight_deep">Tiefgehend, wiederkehrende Muster und Überzeugungen</string>
     <string name="legend_insight_aware">Bewusst, Erkannte Denk- und Gefühlsmuster</string>
     <string name="legend_insight_surface">Oberfläche, Erste Beobachtungen</string>
     <string name="legend_progress">Fortschritt</string>
@@ -381,14 +381,14 @@
     <string name="profile_custom">Individuelle Analyse</string>
     <string name="profile_summary_desc">Fasst Themen, Muster und Erlebnisse zusammen</string>
     <string name="profile_entropy_desc">Erkennt Stress, Unordnung und Belastung</string>
-    <string name="profile_insight_desc">Deckt verborgene Denk- und Gefühlsmuster auf</string>
+    <string name="profile_insight_desc">Macht wiederkehrende Denk- und Gefühlsmuster sichtbar</string>
     <string name="profile_goals_desc">Erkennt Ziele, Wünsche und Fortschritte</string>
     <string name="profile_custom_desc">Eigenen Analyse-Fokus festlegen</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Deine Einträge werden neutral zusammengefasst, ohne Bewertung oder Ratschläge.\n\nDu siehst auf einen Blick:\n\n• Welche Themen dich gerade beschäftigen\n• Welche Muster sich wiederholen\n• Wie sich dein Leben entwickelt\n\nPerfekt als täglicher Überblick über alles, was in deinem Leben passiert.</string>
-    <string name="profile_entropy_long">Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n• Eine Analyse deiner größten Belastungsquellen\n• 5 konkrete Maßnahmen zum Aufräumen\n• Tipps, die dir sofort helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.</string>
-    <string name="profile_insight_long">Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n• Verborgene Denkmuster und Überzeugungen\n• Wiederkehrende Gefühle und Reaktionen\n• Persönliche Stärken, die dir nicht bewusst sind\n• Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen.</string>
+    <string name="profile_entropy_long">Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n• Eine Analyse deiner größten Belastungsquellen\n• 5 konkrete Maßnahmen zum Aufräumen\n• Tipps, die dir im Alltag helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.</string>
+    <string name="profile_insight_long">Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n• Denkmuster und Überzeugungen in deinen Worten\n• Wiederkehrende Gefühle und Reaktionen\n• Stärken, die in deinen Einträgen sichtbar werden\n• Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen.</string>
     <string name="profile_goals_long">Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n• Welche Ziele du hast (auch versteckte)\n• Wie weit du bei jedem Ziel bist\n• Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest.</string>
     <string name="profile_custom_long">Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n• „Finde alle Erwähnungen von Sport"\n• „Analysiere meine Stimmungsschwankungen"\n• „Zeige mir, wann ich am produktivsten bin"\n\nVolle Kontrolle für alle, die genau wissen, was sie suchen.</string>
     <string name="profile_custom_prompt">Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?</string>
@@ -482,7 +482,7 @@
     <string name="settings_premium_active">Premium-Abo aktiv</string>
     <string name="settings_premium_cancelled">Premium-Abo gekündigt</string>
     <string name="settings_premium_cancelled_until">Premium-Abo gekündigt — läuft noch bis <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
-    <string name="settings_premium_cancelled_desc">Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung jederzeit über Google Play rückgängig machen.</string>
+    <string name="settings_premium_cancelled_desc">Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.</string>
     <string name="settings_premium_lifetime_desc">Einmalkauf, alle Features dauerhaft freigeschaltet.</string>
     <string name="settings_premium_desc">Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.</string>
     <string name="settings_manage_subscription">Abo verwalten</string>
@@ -495,7 +495,7 @@
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit deinen Einträgen.</string>
     <string name="settings_premium_feature_5_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Von Zusammenfassung bis Selbsterkenntnis</string>
     <string name="settings_premium_feature_reviews">Alle Rückblicke ausführlich mit KI erstellt</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
     <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
@@ -624,7 +624,7 @@
     <string name="privacy_gate_groq_local">Lieber lokal</string>
 
     <string name="privacy_gate_gemini_title">KI-Funktion aktivieren</string>
-    <string name="privacy_gate_gemini_body">Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\n\n✓ Kein KI-Training mit deinen Daten\n✓ Anfragen werden sofort nach Verarbeitung gelöscht\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\n\nDu kannst das jederzeit in den Einstellungen ändern.</string>
+    <string name="privacy_gate_gemini_body">Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\n\n✓ Kein KI-Training mit deinen Daten\n✓ Anfragen werden nicht dauerhaft gespeichert\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\n\nDu kannst das jederzeit in den Einstellungen ändern.</string>
     <string name="privacy_gate_gemini_accept">Ausdrücklich zustimmen</string>
     <string name="privacy_gate_gemini_cancel">Später</string>
 
@@ -742,7 +742,7 @@
     <string name="settings_delete_account_drive_error_title">Drive-Backup konnte nicht gelöscht werden</string>
     <string name="settings_delete_account_drive_error_body">Das Google-Drive-Backup konnte nicht verlässlich entfernt werden (Grund: %1$s).\n\nOhne vollständige Löschung wäre die Meldung „unwiderruflich entfernt" nicht korrekt.\n\nWas möchtest du tun?</string>
     <string name="settings_delete_account_retry">Erneut versuchen</string>
-    <string name="settings_delete_account_force_local">Nur lokal löschen (Drive-Backup bleibt vorerst)</string>
+    <string name="settings_delete_account_force_local">Nur lokal löschen (Drive-Backup bleibt erhalten)</string>
     <string name="settings_delete_account_abort">Vorgang abbrechen</string>
 
     <!-- Widerrufsbutton § 356a BGB (Pflicht ab 19.06.2026). Zweistufig, direkt in der App. -->
@@ -1028,9 +1028,9 @@
     <string name="retro_weekly_p4">Die ersten 2 Wochen sind kostenlos</string>
     <string name="retro_monthly_p1">Verbindet deine Wochenrückblicke zu einer Monatserzählung</string>
     <string name="retro_monthly_p2">Rote Fäden und Entwicklungen über den Monat werden sichtbar</string>
-    <string name="retro_monthly_p3">Zeigt Veränderungen die dir im Alltag nicht auffallen</string>
+    <string name="retro_monthly_p3">Zeigt Entwicklungen aus deinen Einträgen</string>
     <string name="retro_yearly_p1">Dein ganzes Jahr auf einen Blick</string>
-    <string name="retro_yearly_p2">Die KI erkennt die großen Themen deines Jahres</string>
+    <string name="retro_yearly_p2">Die KI fasst die großen Themen deines Jahres zusammen</string>
     <string name="retro_yearly_p3">Persönliche Entwicklung wird sichtbar und greifbar</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Deine persönlichen Rückblicke</string>
@@ -1059,7 +1059,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Willkommen bei\nBest Journal</string>
-    <string name="onboarding_subtitle">Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung</string>
+    <string name="onboarding_subtitle">Dein persönliches KI-Tagebuch\nfür mehr Klarheit im Alltag</string>
     <string name="onboarding_feature_speech">Sprich oder schreib, die KI versteht beides</string>
     <string name="onboarding_feature_secure">Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt</string>
     <string name="onboarding_goals_title">Was möchtest du mit dem\nKI-Tagebuch erreichen?</string>
@@ -1073,15 +1073,15 @@
     <string name="onboarding_how_step2_desc">Dein Text wird auf Wunsch verfeinert und aus verschiedenen Perspektiven analysiert.</string>
     <string name="onboarding_how_step3_desc">Halte besondere Momente fest, lebendige Erinnerungen für später.</string>
     <string name="onboarding_how_step4_title">Entdecke Muster und Einsichten</string>
-    <string name="onboarding_how_step4_desc">Das KI-Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.</string>
+    <string name="onboarding_how_step4_desc">Das KI-Dashboard zeigt dir Zusammenhänge aus deinen Einträgen.</string>
     <string name="onboarding_how_step5_title">Wochen-, Monats- und Jahresrückblick</string>
     <string name="onboarding_how_step5_desc">Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.</string>
     <string name="onboarding_premium_feature_improve">KI-Textverbesserung täglich, jeder Eintrag wird klarer und ausdrucksstärker</string>
     <string name="onboarding_premium_feature_dashboard">Automatische Dashboard-Updates bei jedem neuen Eintrag</string>
     <string name="onboarding_premium_feature_retro">Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung</string>
-    <string name="onboarding_premium_feature_patterns">Persönliche Muster erkennen, die KI findet verborgene Denk- und Gefühlsmuster</string>
+    <string name="onboarding_premium_feature_patterns">Muster sichtbar machen: Die KI zeigt wiederkehrende Denk- und Gefühlsmuster in deinen Einträgen</string>
     <string name="onboarding_premium_feature_noads">Keine Werbung, ungestört schreiben und reflektieren</string>
-    <string name="onboarding_free_trial">Kostenlos und unverbindlich</string>
+    <string name="onboarding_free_trial">Kostenlos, jederzeit kündbar</string>
     <string name="onboarding_free_after_trial">Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.</string>
     <string name="onboarding_start_free">Kostenlos starten</string>
     <string name="onboarding_without_premium">Ohne Premium fortfahren</string>
@@ -1092,7 +1092,7 @@
     <string name="onboarding_perspectives_title">Verschiedene Blickwinkel auf\ndein Leben</string>
     <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
     <string name="onboarding_premium_profiles">4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
-    <string name="onboarding_try_premium">8 Tage gratis — danach ab 3,99 €/Monat</string>
+    <string name="onboarding_try_premium">8 Tage gratis, danach ab 3,99 €/Monat</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -1113,18 +1113,18 @@
     <string name="paywall_reminder">Erinnerung</string>
     <string name="paywall_day8">Tag 8</string>
     <string name="paywall_first_payment">Erste Zahlung</string>
-    <string name="paywall_yearly_note">Danach %1$s pro Jahr\nIn der Testphase jederzeit kündbar</string>
-    <string name="paywall_most_popular">Beliebteste Wahl</string>
+    <string name="paywall_yearly_note">Danach %1$s pro Jahr, verlängert sich automatisch\nIn der Testphase jederzeit kündbar</string>
+    <string name="paywall_most_popular">Empfohlen</string>
     <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
     <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.</string>
     <string name="paywall_lifetime_title">Einmalkauf</string>
     <string name="paywall_lifetime_desc">Einmal zahlen, alles nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
-    <string name="paywall_free_note">Die App funktioniert auch ohne Abo,</string>
+    <string name="paywall_free_note">Die App funktioniert auch ohne Abo weiter.</string>
     <string name="paywall_cd_close">Schließen</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
+    <string name="paywall_feature_patterns">Erkenne wiederkehrende Muster in deinem Denken</string>
     <string name="paywall_feature_improve">KI-Textverbesserung für deine Einträge</string>
     <string name="paywall_feature_dashboard">KI-Dashboard-Updates nach neuen Einträgen</string>
     <string name="paywall_feature_retro">Alle Rückblicke KI generiert</string>
@@ -1179,7 +1179,7 @@
     <string name="churn_reason_other_placeholder">Bitte sag uns kurz, was los ist…</string>
     <string name="churn_sorry_title">Schade, dass du gehst</string>
     <string name="churn_sorry_body">Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.</string>
-    <string name="churn_exclusive_offer">Exklusives Angebot</string>
+    <string name="churn_exclusive_offer">Angebot für dich</string>
     <string name="churn_offer_subtitle">Unser Angebot für dich</string>
     <string name="churn_offer_feature_ai">Tägliche KI-Analysen</string>
     <string name="churn_offer_feature_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
@@ -1469,7 +1469,7 @@
     <string name="paywall_lifetime_label">Einmalig</string>
     <string name="paywall_monthly_label">Monatlich</string>
     <string name="paywall_restore_button">Käufe wiederherstellen</string>
-    <string name="paywall_subscribe_button">Abonnieren</string>
+    <string name="paywall_subscribe_button">Zahlungspflichtig abonnieren</string>
     <string name="paywall_subtitle">Schalte alle Premium-Funktionen frei</string>
     <string name="paywall_title">Upgrade auf Premium</string>
     <string name="paywall_yearly_label">Jährlich</string>
