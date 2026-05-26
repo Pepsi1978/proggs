@@ -107,6 +107,61 @@ function Check-PathHealth {
 }
 
 # ============================================================
+# CHECK 2b: Python-Stub-Shadowing (WindowsApps App-Ausfuehrungsalias)
+# ============================================================
+# Root Cause (2026-05-26): Windows legt in %LOCALAPPDATA%\Microsoft\WindowsApps
+# 0-Byte-Reparse-Point-Stubs fuer python.exe/python3.exe/pythonw.exe/py.exe an
+# (App-Ausfuehrungsalias). Stehen sie im PATH VOR dem echten Python, faengt der Stub
+# jeden python-Aufruf ab und gibt nur "Python wurde nicht gefunden" aus — Hooks die
+# python/python3 aufrufen (SessionStart, UserPromptSubmit, Stop) schlagen dann fehl.
+# Poka-Yoke Stufe 3: Tote Stubs bei jedem Start automatisch entfernen — ABER nur wenn
+# ein ECHTES Python anderswo existiert (Graceful Degradation: nie das einzige Python loeschen).
+function Check-PythonStub {
+    try {
+        $waDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+        if (-not (Test-Path $waDir)) { return }
+
+        # Gibt es ein ECHTES Python (ausserhalb WindowsApps, >0 Bytes)?
+        $realPython = $null
+        foreach ($cmd in @('python', 'python3')) {
+            $resolved = Get-Command $cmd -All -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Source -and $_.Source -notmatch 'WindowsApps' -and
+                    (Test-Path $_.Source) -and ((Get-Item $_.Source -ErrorAction SilentlyContinue).Length -gt 0)
+                } | Select-Object -First 1
+            if ($resolved) { $realPython = $resolved.Source; break }
+        }
+        if (-not $realPython) {
+            # Kein echtes Python gefunden — Stubs NICHT entfernen (Graceful Degradation)
+            return
+        }
+
+        $healed = @()
+        foreach ($stub in @('python.exe', 'python3.exe', 'pythonw.exe', 'py.exe')) {
+            $p = Join-Path $waDir $stub
+            if (Test-Path $p) {
+                $item = Get-Item $p -ErrorAction SilentlyContinue
+                $isDeadStub = $item -and ($item.Length -eq 0) -and
+                    ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+                if ($isDeadStub) {
+                    try { Remove-Item $p -Force -ErrorAction Stop; $healed += $stub } catch { }
+                }
+            }
+        }
+
+        if ($healed.Count -gt 0) {
+            $script:warnings += "Python-Stub geheilt: $($healed -join ', ') aus WindowsApps entfernt (ueberschatteten echtes Python). python-aufrufende Hooks funktionieren wieder."
+            try {
+                $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: startup-checks.ps1 — Python-Stub-Shadowing automatisch geheilt: $($healed -join ', ') aus WindowsApps entfernt (echtes Python: $realPython)"
+                Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+            } catch { }
+        }
+    } catch {
+        $script:warnings += "Python-Stub-Check fehlgeschlagen: $_"
+    }
+}
+
+# ============================================================
 # CHECK 3: Doctor-Lite (ehemals doctor-lite.ps1)
 # ============================================================
 function Check-DoctorLite {
@@ -205,6 +260,7 @@ function Check-MirrorLedger {
 # So bekommt der Benutzer die lokalen Ergebnisse sofort, auch wenn MCP-Auth haengt.
 Check-DiskSpace
 Check-PathHealth
+Check-PythonStub
 Check-DoctorLite
 Check-SemanticSearch
 Check-MirrorLedger
