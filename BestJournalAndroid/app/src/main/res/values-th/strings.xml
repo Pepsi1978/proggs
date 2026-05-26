@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">รีเฟรช</string>
     <string name="dashboard_weekly_review_waiting">การทบทวนประจำสัปดาห์รออยู่</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">สัปดาห์นี้ของคุณมีเรื่องเยอะ ด้วย Premium คุณจะเห็นการวิเคราะห์เต็มรูปแบบ รู้จักแพตเทิร์น ค้นพบมุมมอง และเข้าใจว่าอะไรขับเคลื่อนคุณจริง ๆ</string>
+    <string name="dashboard_weekly_review_upsell_body">สัปดาห์นี้ของคุณเต็มไปด้วยกิจกรรม ด้วย Premium คุณจะเห็นการวิเคราะห์เต็มรูปแบบ: ค้นพบรูปแบบ เข้าใจสิ่งที่ครอบครองความคิดคุณ</string>
     <string name="dashboard_discover_premium">ค้นพบ Premium</string>
     <string name="dashboard_please_wait">โปรดรอ</string>
     <string name="dashboard_gemini_unavailable">ขณะนี้ Gemini ใช้งานไม่ได้ ลองใหม่ภายหลัง</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">รู้ตัว (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">ผิวเผิน (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">ความลึกของข้อคิด</string>
-    <string name="legend_insight_deep">ลึก แพตเทิร์นและความเชื่อที่ซ่อนอยู่</string>
+    <string name="legend_insight_deep">เชิงลึก รูปแบบและความเชื่อที่เกิดซ้ำ</string>
     <string name="legend_insight_aware">รู้ตัว แพตเทิร์นความคิดและความรู้สึกที่รับรู้แล้ว</string>
     <string name="legend_insight_surface">ผิวเผิน การสังเกตแรกเริ่ม</string>
     <string name="legend_progress">ความก้าวหน้า</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">การวิเคราะห์เฉพาะ</string>
     <string name="profile_summary_desc">สรุปหัวข้อ แพตเทิร์น และประสบการณ์</string>
     <string name="profile_entropy_desc">รู้จักความเครียด ความวุ่นวาย และภาระ</string>
-    <string name="profile_insight_desc">เผยแพตเทิร์นความคิดและความรู้สึกที่ซ่อน</string>
+    <string name="profile_insight_desc">เปิดเผยรูปแบบความคิดและอารมณ์ที่เกิดซ้ำ</string>
     <string name="profile_goals_desc">รู้จักเป้าหมาย ความปรารถนา และความก้าวหน้า</string>
     <string name="profile_custom_desc">กำหนดจุดโฟกัสของการวิเคราะห์ของคุณเอง</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">บันทึกของคุณถูกสรุปแบบเป็นกลาง ไม่ตัดสินและไม่ให้คำแนะนำ\n\nเห็นในภาพรวม:\n\n• หัวข้อที่ครอบครองคุณตอนนี้\n• แพตเทิร์นที่วนซ้ำ\n• ชีวิตของคุณเป็นอย่างไร\n\nเหมาะเป็นภาพรวมประจำวันของทุกสิ่งในชีวิต</string>
-    <string name="profile_entropy_long">AI ค้นหาความเครียด ภาระ และความวุ่นวายในบันทึกของคุณอย่างตั้งใจ\n\nคุณจะได้:\n\n• การวิเคราะห์แหล่งภาระหลัก\n• 5 ก้าวที่เป็นรูปธรรมเพื่อจัดระเบียบ\n• คำแนะนำที่ใช้ได้ทันที\n\nเหมาะเมื่อรู้สึกว่าทุกอย่างล้นมือ</string>
-    <string name="profile_insight_long">AI มองลึกกว่าเหตุการณ์ เห็นในบันทึกของคุณ:\n\n• แพตเทิร์นความคิดและความเชื่อที่ซ่อน\n• ความรู้สึกและปฏิกิริยาที่วนซ้ำ\n• จุดแข็งส่วนตัวที่คุณไม่รู้\n• ค่านิยมที่ขับเคลื่อนการกระทำ\n\nสำหรับคนที่อยากเข้าใจตนเองและเติบโตจากภายใน</string>
+    <string name="profile_entropy_long">AI ค้นหาความเครียด ภาระ และความวุ่นวายในบันทึกของคุณโดยเฉพาะ\n\nคุณจะได้รับ:\n\n• การวิเคราะห์แหล่งที่มาของภาระหนักที่สุด\n• 5 มาตรการที่เป็นรูปธรรมเพื่อจัดการ\n• เคล็ดลับที่ช่วยในชีวิตประจำวัน\n\nเหมาะสำหรับเมื่อคุณรู้สึกว่าทุกอย่างมากเกินไป</string>
+    <string name="profile_insight_long">AI มองลึกกว่าแค่เหตุการณ์ ในบันทึกของคุณจะพบ:\n\n• รูปแบบความคิดและความเชื่อในคำพูดของคุณ\n• ความรู้สึกและปฏิกิริยาที่เกิดซ้ำ\n• จุดแข็งที่ปรากฏในบันทึกของคุณ\n• คุณค่าที่ขับเคลื่อนการกระทำของคุณ\n\nสำหรับทุกคนที่ต้องการเข้าใจตัวเองและเติบโตภายใน</string>
     <string name="profile_goals_long">AI หาเป้าหมาย ความปรารถนา และแผนทั้งหมดในบันทึก แม้ที่เอ่ยผ่าน ๆ\n\nคุณเห็น:\n\n• เป้าหมายของคุณ (รวมถึงที่ซ่อน)\n• ความก้าวหน้าในแต่ละเป้าหมาย\n• ก้าวถัดไปที่ทำได้\n\nเครื่องติดตามเป้าหมายส่วนตัวที่อ่านจากคำพูดของคุณเอง</string>
     <string name="profile_custom_long">คุณเป็นผู้กำหนดว่า AI ควรใส่ใจอะไร\n\nเขียนจุดโฟกัสของคุณเอง เช่น:\n\n• «หาการเอ่ยถึงการออกกำลังกายทั้งหมด»\n• «วิเคราะห์อารมณ์ขึ้นลงของฉัน»\n• «แสดงเวลาที่ฉันประสิทธิภาพสูงสุด»\n\nควบคุมเต็มที่สำหรับคนที่รู้ชัดว่าตามหาอะไร</string>
     <string name="profile_custom_prompt">อะไรสำคัญเป็นพิเศษสำหรับคุณ? AI ควรใส่ใจอะไรในการวิเคราะห์บันทึก?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดทุกวัน</string>
     <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดของคุณเติบโตไปพร้อมกับบันทึก</string>
     <string name="settings_premium_feature_5_perspectives">โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">ตั้งแต่ความชัดเจนถึงการรู้จักตนเอง</string>
+    <string name="settings_premium_feature_5_perspectives_desc">จากสรุปถึงการรู้จักตัวเอง</string>
     <string name="settings_premium_feature_reviews">ทบทวนรายสัปดาห์ เดือน และปี</string>
     <string name="settings_premium_feature_reviews_desc">AI เล่าเรื่องของคุณ</string>
     <string name="settings_premium_feature_patterns">รู้จักแพตเทิร์น</string>
@@ -752,9 +752,9 @@
     <string name="retro_weekly_p4">2 สัปดาห์แรกฟรี</string>
     <string name="retro_monthly_p1">เชื่อมการทบทวนรายสัปดาห์เป็นเรื่องของเดือน</string>
     <string name="retro_monthly_p2">เส้นหลักและพัฒนาการทั่วเดือนปรากฏ</string>
-    <string name="retro_monthly_p3">แสดงการเปลี่ยนแปลงที่ไม่เห็นในวันประจำ</string>
+    <string name="retro_monthly_p3">แสดงพัฒนาการจากบันทึกของคุณ</string>
     <string name="retro_yearly_p1">ปีเต็มของคุณในภาพเดียว</string>
-    <string name="retro_yearly_p2">AI รู้จักหัวข้อใหญ่ของปี</string>
+    <string name="retro_yearly_p2">AI สรุปหัวข้อสำคัญของปีคุณ</string>
     <string name="retro_yearly_p3">การเติบโตส่วนตัวเป็นสิ่งที่เห็นและสัมผัสได้</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">การทบทวนส่วนตัวของคุณ</string>
@@ -783,7 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">ยินดีต้อนรับสู่\nBest Journal</string>
-    <string name="onboarding_subtitle">สมุดบันทึก AI ส่วนตัวของคุณ\nเพื่อความชัดเจนและการเปลี่ยนแปลง</string>
+    <string name="onboarding_subtitle">สมุดบันทึก AI ส่วนตัวของคุณ\nสำหรับความชัดเจนในชีวิตประจำวัน</string>
     <string name="onboarding_feature_speech">พูดหรือพิมพ์ AI เข้าใจทั้งสอง</string>
     <string name="onboarding_feature_secure">ข้อมูลของคุณอยู่กับคุณ เข้ารหัสและปลอดภัย</string>
     <string name="onboarding_goals_title">คุณต้องการอะไรจาก\nสมุดบันทึก AI?</string>
@@ -797,15 +797,15 @@
     <string name="onboarding_how_step2_desc">ข้อความถูกขัดเกลาอัตโนมัติและวิเคราะห์จากหลายมุม</string>
     <string name="onboarding_how_step3_desc">เก็บช่วงเวลาพิเศษ AI คำนึงถึงในการวิเคราะห์</string>
     <string name="onboarding_how_step4_title">ค้นพบแพตเทิร์นและข้อคิด</string>
-    <string name="onboarding_how_step4_desc">แดชบอร์ดแสดงความเชื่อมโยงที่ไม่เห็นในวันประจำ</string>
+    <string name="onboarding_how_step4_desc">แดชบอร์ด AI แสดงความเชื่อมโยงจากบันทึกของคุณ</string>
     <string name="onboarding_how_step5_title">ทบทวนรายสัปดาห์ รายเดือน รายปี</string>
     <string name="onboarding_how_step5_desc">การทบทวนอัตโนมัติแสดงการพัฒนาของคุณตามเวลา</string>
     <string name="onboarding_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน รายการทุกครั้งจะชัดเจนและสื่อความหมายได้ดียิ่งขึ้น</string>
     <string name="onboarding_premium_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติทุกบันทึกใหม่</string>
     <string name="onboarding_premium_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี แสดงการเติบโต</string>
-    <string name="onboarding_premium_feature_patterns">รู้จักแพตเทิร์นส่วนตัว AI หาแพตเทิร์นความคิดและความรู้สึกที่ซ่อน</string>
+    <string name="onboarding_premium_feature_patterns">เปิดเผยรูปแบบ: AI แสดงรูปแบบความคิดและอารมณ์ที่เกิดซ้ำในบันทึกของคุณ</string>
     <string name="onboarding_premium_feature_noads">ไม่มีโฆษณา เขียนและใคร่ครวญอย่างสงบ</string>
-    <string name="onboarding_free_trial">ฟรีและไม่ผูกมัด</string>
+    <string name="onboarding_free_trial">ฟรี ยกเลิกได้ทุกเวลา</string>
     <string name="onboarding_free_after_trial">หลังจากนั้นใช้ Best Journal ต่อไปได้\nฟรี พร้อมขีดจำกัด AI รายสัปดาห์</string>
     <string name="onboarding_start_free">เริ่มฟรี</string>
     <string name="onboarding_without_premium">ใช้ต่อโดยไม่มี Premium</string>
@@ -816,7 +816,7 @@
     <string name="onboarding_perspectives_title">มุมมองที่หลากหลายต่อ\nชีวิตของคุณ</string>
     <string name="onboarding_premium_feature_pdf">ส่งออก PDF พร้อมภาพ เก็บบันทึกเป็นเอกสาร</string>
     <string name="onboarding_premium_profiles">5 โปรไฟล์แดชบอร์ดอัจฉริยะให้มุมมองลึก</string>
-    <string name="onboarding_try_premium">ฟรี 8 วัน — จากนั้นเริ่มต้น 3.99 €/เดือน</string>
+    <string name="onboarding_try_premium">ทดลอง 8 วันฟรี จากนั้น 3.99 €/เดือน</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +830,18 @@
     <string name="paywall_reminder">การเตือน</string>
     <string name="paywall_day8">วันที่ 8</string>
     <string name="paywall_first_payment">ชำระครั้งแรก</string>
-    <string name="paywall_yearly_note">หลังจากนั้น %1$s ต่อปี\nยกเลิกได้ในช่วงทดลอง</string>
-    <string name="paywall_most_popular">ยอดนิยม</string>
+    <string name="paywall_yearly_note">จากนั้น %1$s ต่อปี ต่ออายุอัตโนมัติ\nยกเลิกได้ทุกเวลาในช่วงทดลอง</string>
+    <string name="paywall_most_popular">แนะนำ</string>
     <string name="paywall_monthly_plan">รายเดือน %1$s ต่อเดือน</string>
     <string name="paywall_yearly_savings">ประหยัด %1$d %% เมื่อเทียบกับรายเดือน — ยกเลิกได้ทุกเมื่อก่อนสิ้นสุดสัญญา</string>
     <string name="paywall_lifetime_title">ซื้อครั้งเดียว</string>
     <string name="paywall_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกอย่างตลอดไป</string>
     <string name="paywall_lifetime_note">ไม่มีการสมัคร ไม่มีการต่ออายุ</string>
-    <string name="paywall_free_note">แอปใช้ได้ไม่ต้องสมัคร</string>
+    <string name="paywall_free_note">แอปใช้งานได้ต่อแม้ไม่มีสมาชิก</string>
     <string name="paywall_cd_close">ปิด</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">เข้าใจแพตเทิร์นที่ซ่อนในความคิด</string>
+    <string name="paywall_feature_patterns">ค้นพบรูปแบบที่เกิดซ้ำในความคิดของคุณ</string>
     <string name="paywall_feature_improve">ปรับปรุงข้อความ AI ทุกวันสำหรับทุกรายการ</string>
     <string name="paywall_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติหลังทุกบันทึก</string>
     <string name="paywall_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี ด้วย AI</string>
@@ -891,7 +891,7 @@
     <string name="churn_reason_other">เหตุผลอื่น</string>
     <string name="churn_sorry_title">เสียดายที่คุณจะไป</string>
     <string name="churn_sorry_body">ก่อนยกเลิก บอกเหตุผลได้ไหม? ช่วยให้เราปรับปรุงแอป</string>
-    <string name="churn_exclusive_offer">ข้อเสนอเฉพาะ</string>
+    <string name="churn_exclusive_offer">ข้อเสนอสำหรับคุณ</string>
     <string name="churn_offer_subtitle">ข้อเสนอสำหรับคุณ</string>
     <string name="churn_offer_feature_ai">การวิเคราะห์ AI ทุกวัน</string>
     <string name="churn_offer_feature_perspectives">โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)</string>
@@ -1135,7 +1135,7 @@
     <string name="privacy_gate_groq_local">ถอดเสียงในเครื่องแทน</string>
 
     <string name="privacy_gate_gemini_title">ส่งข้อความไปยัง Google Gemini หรือไม่</string>
-    <string name="privacy_gate_gemini_body">ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน อินไซต์แดชบอร์ด และการปรับปรุงข้อความ ข้อความของคุณจะถูกส่งแบบเข้ารหัสไปยัง Google Gemini\n\n✓ ไม่เคยใช้เพื่อฝึก AI\n✓ คำขอจะถูกลบทันทีหลังการประมวลผล\n✓ เข้ารหัสตาม EU-US Data Privacy Framework\n\nข้อควรทราบ: เนื่องจากบันทึกไดอารีของคุณอาจมีข้อมูลที่ละเอียดอ่อนเป็นพิเศษ (สุขภาพ ศาสนา ความสัมพันธ์ส่วนตัว — GDPR มาตรา 9 หมวดพิเศษ) เราจึงขอคำยินยอมอย่างชัดแจ้งของคุณในการประมวลผลด้วย AI ผลลัพธ์ AI เป็นคำแนะนำ ไม่ใช่คำปรึกษาจากผู้เชี่ยวชาญ และไม่สามารถทดแทนผู้เชี่ยวชาญได้\n\nคุณสามารถเปลี่ยนได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="privacy_gate_gemini_body">ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน ข้อมูลเชิงลึกจากแดชบอร์ด และการปรับปรุงข้อความ ข้อความของคุณจะถูกส่งไปยัง Google Gemini แบบเข้ารหัส\n\n✓ AI ไม่ใช้ข้อมูลของคุณในการฝึก\n✓ คำขอไม่ถูกจัดเก็บถาวร\n✓ เข้ารหัสตาม EU-US Data Privacy Framework\n\nหมายเหตุสำคัญ: เนื่องจากบันทึกของคุณอาจมีข้อมูลที่ละเอียดอ่อนเป็นพิเศษ (สุขภาพ ศาสนา ความสัมพันธ์ส่วนตัว) เราจึงขอความยินยอมของคุณสำหรับการประมวลผลด้วย AI ผลลัพธ์จาก AI เป็นข้อเสนอแนะ ไม่ใช่คำแนะนำจากผู้เชี่ยวชาญ\n\nคุณสามารถเปลี่ยนแปลงได้ทุกเวลาในการตั้งค่า</string>
     <string name="privacy_gate_gemini_accept">ยอมรับและส่ง</string>
     <string name="privacy_gate_gemini_cancel">ยกเลิก</string>
 
@@ -1224,7 +1224,7 @@
 
 คุณต้องการทำอะไร?</string>
     <string name="settings_delete_account_retry">ลองอีกครั้ง</string>
-    <string name="settings_delete_account_force_local">ลบเฉพาะในเครื่อง (ข้อมูลสำรองบน Drive จะยังอยู่ก่อน)</string>
+    <string name="settings_delete_account_force_local">ลบเฉพาะในเครื่อง (สำรองข้อมูล Drive ยังคงอยู่)</string>
     <string name="settings_delete_account_abort">ยกเลิกการดำเนินการ</string>
 
     <string name="legal_title_datenschutz">นโยบายความเป็นส่วนตัว</string>
@@ -1463,7 +1463,7 @@
     <string name="churn_reason_other_placeholder">โปรดบอกเราสั้นๆ ว่าเกิดอะไรขึ้น…</string>
     <string name="churn_renews_on">ต่ออายุอัตโนมัติ <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">ยกเลิก Premium แล้ว</string>
-    <string name="settings_premium_cancelled_desc">ฟีเจอร์ Premium ของคุณยังใช้ได้จนถึงสิ้นรอบการเรียกเก็บเงิน คุณสามารถยกเลิกการยกเลิกได้ตลอดเวลาผ่าน Google Play</string>
+    <string name="settings_premium_cancelled_desc">ฟีเจอร์ Premium ของคุณยังคงใช้งานได้จนถึงสิ้นรอบบิลปัจจุบัน คุณสามารถยกเลิกการยกเลิกได้ผ่าน Google Play</string>
     <string name="settings_premium_cancelled_until">ยกเลิก Premium แล้ว — ยังใช้ได้ถึง <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">ธีม</string>
     <string name="settings_themes_manager">ตัวจัดการธีม</string>

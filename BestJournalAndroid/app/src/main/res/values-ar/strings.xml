@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">تحديث</string>
     <string name="dashboard_weekly_review_waiting">مراجعتك الأسبوعية بانتظارك</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">كان أسبوعك مليئا. مع النسخة المميّزة ترى التحليل الكامل، تكتشف الأنماط والرؤى، وتفهم ما يحرّكك فعلا.</string>
+    <string name="dashboard_weekly_review_upsell_body">لقد مررت بأسبوع مليء بالأحداث. مع Premium، ترى التحليل الكامل: تعرّف على الأنماط، اكتشف الرؤى، وافهم ما يشغل بالك.</string>
     <string name="dashboard_discover_premium">اكتشف المميّز</string>
     <string name="dashboard_please_wait">يرجى الانتظار</string>
     <string name="dashboard_gemini_unavailable">\u200FGemini غير متاح حاليا، حاول مجددا بعد قليل.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">واع (34–66\u00A0%)</string>
     <string name="legend_reflection_surface">سطحي (0–33\u00A0%)</string>
     <string name="legend_insight_depth">عمق الرؤى</string>
-    <string name="legend_insight_deep">عميق، أنماط ومعتقدات خفيّة</string>
+    <string name="legend_insight_deep">عميق، أنماط ومعتقدات متكررة</string>
     <string name="legend_insight_aware">واع، أنماط تفكير ومشاعر مكتشفة</string>
     <string name="legend_insight_surface">سطحي، ملاحظات أولى</string>
     <string name="legend_progress">تقدّم</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">تحليل مخصّص</string>
     <string name="profile_summary_desc">يلخّص الموضوعات والأنماط والتجارب</string>
     <string name="profile_entropy_desc">يكشف التوتّر والفوضى والأعباء</string>
-    <string name="profile_insight_desc">يكشف أنماط التفكير والمشاعر الخفيّة</string>
+    <string name="profile_insight_desc">يكشف الأنماط المتكررة في التفكير والمشاعر</string>
     <string name="profile_goals_desc">يتعرّف على الأهداف والرغبات والتقدّم</string>
     <string name="profile_custom_desc">حدّد محور تحليل خاصا بك</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">تلخّص تسجيلاتك بحياد، دون حكم أو نصائح.\n\nترى بنظرة واحدة:\n\n• ما الذي يشغلك حاليا\n• الأنماط التي تتكرّر\n• كيف تتطوّر حياتك\n\nمثالي كنظرة يومية شاملة على كل ما يدور في حياتك.</string>
-    <string name="profile_entropy_long">يبحث الذكاء الاصطناعي بدقّة عن التوتّر والأعباء والفوضى في تسجيلاتك.\n\nتحصل على:\n\n• تحليل لأكبر مصادر الإرهاق\n• 5 إجراءات ملموسة للترتيب\n• نصائح يمكنها مساعدتك فورا\n\nمثالي عندما تشعر بأن كل شيء أصبح كثيرا.</string>
-    <string name="profile_insight_long">يتجاوز الذكاء الاصطناعي مجرد الأحداث. يكتشف في تسجيلاتك:\n\n• أنماط تفكير ومعتقدات خفيّة\n• مشاعر وردود أفعال متكرّرة\n• نقاط قوّة شخصية لا تلاحظها\n• قيما تقود أفعالك\n\nلمن يرغب في فهم نفسه والنموّ من الداخل.</string>
+    <string name="profile_entropy_long">يبحث الذكاء الاصطناعي بدقة عن التوتر والإجهاد والفوضى في مدخلاتك.\n\nستحصل على:\n\n\u2022 تحليل لأكبر مصادر الضغط لديك\n\u2022 5 إجراءات ملموسة للترتيب\n\u2022 نصائح يمكنها مساعدتك في حياتك اليومية\n\nمثالي عندما تشعر أن كل شيء أصبح أكثر من اللازم.</string>
+    <string name="profile_insight_long">يتعمق الذكاء الاصطناعي أكثر من مجرد الأحداث. يتعرف في مدخلاتك على:\n\n\u2022 أنماط التفكير والمعتقدات في كلماتك\n\u2022 المشاعر وردود الفعل المتكررة\n\u2022 نقاط القوة الظاهرة في مدخلاتك\n\u2022 القيم التي تحرك أفعالك\n\nلكل من يريد أن يفهم نفسه بشكل أفضل وأن ينمو من الداخل.</string>
     <string name="profile_goals_long">يعثر الذكاء الاصطناعي على كل الأهداف والرغبات والخطط في تسجيلاتك، حتى ما ذكر عرضا.\n\nترى:\n\n• ما أهدافك (بما فيها الخفيّة)\n• إلى أين وصلت في كل هدف\n• ما يمكن أن تكون خطوتك التالية\n\nمتعقّب أهداف شخصي يقرأ من كلماتك.</string>
     <string name="profile_custom_long">أنت تحدّد ما على الذكاء الاصطناعي الانتباه إليه.\n\nاكتب محور التحليل الخاص بك، مثلا:\n\n• «اعثر على كل إشارات الرياضة»\n• «حلّل تقلّبات مزاجي»\n• «أرني متى أكون الأكثر إنتاجا»\n\nتحكّم كامل لمن يعرف بالضبط ما يبحث عنه.</string>
     <string name="profile_custom_prompt">ما المهمّ لك تحديدا؟ على ماذا يجب أن يركّز الذكاء الاصطناعي عند تحليل تسجيلاتك؟</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">تحليلات لوحة التحكم اليومية</string>
     <string name="settings_premium_feature_dashboard_desc">تنمو لوحة التحكم مع تسجيلاتك.</string>
     <string name="settings_premium_feature_5_perspectives">جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">من الوضوح إلى معرفة الذات</string>
+    <string name="settings_premium_feature_5_perspectives_desc">من الملخص إلى معرفة الذات</string>
     <string name="settings_premium_feature_reviews">مراجعات أسبوعية وشهرية وسنوية</string>
     <string name="settings_premium_feature_reviews_desc">الذكاء الاصطناعي يروي قصّتك</string>
     <string name="settings_premium_feature_patterns">اكتشاف الأنماط</string>
@@ -752,9 +752,9 @@
     <string name="retro_weekly_p4">أوّل أسبوعين مجانا</string>
     <string name="retro_monthly_p1">يربط مراجعاتك الأسبوعية في قصّة الشهر</string>
     <string name="retro_monthly_p2">تظهر الخيوط الرئيسية والتطوّرات عبر الشهر</string>
-    <string name="retro_monthly_p3">يظهر تغيّرات لا تلاحظها في الحياة اليومية</string>
+    <string name="retro_monthly_p3">يعرض التطورات من مدخلاتك</string>
     <string name="retro_yearly_p1">سنتك كلّها بنظرة واحدة</string>
-    <string name="retro_yearly_p2">الذكاء الاصطناعي يتعرّف على الموضوعات الكبرى للسنة</string>
+    <string name="retro_yearly_p2">يلخص الذكاء الاصطناعي المواضيع الكبرى لعامك</string>
     <string name="retro_yearly_p3">النموّ الشخصي يصبح مرئيا وملموسا</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">مراجعاتك الشخصية</string>
@@ -783,7 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">مرحبا بك في\nBest Journal</string>
-    <string name="onboarding_subtitle">مذكراتك الشخصية بالذكاء الاصطناعي\nمن أجل الوضوح والتغيير</string>
+    <string name="onboarding_subtitle">يومياتك الشخصية بالذكاء الاصطناعي\nللمزيد من الوضوح في حياتك اليومية</string>
     <string name="onboarding_feature_speech">تكلّم أو اكتب، الذكاء الاصطناعي يفهم الاثنين</string>
     <string name="onboarding_feature_secure">بياناتك تبقى عندك، مشفّرة وآمنة</string>
     <string name="onboarding_goals_title">ما الذي تريد تحقيقه\nمع مذكّرات الذكاء الاصطناعي؟</string>
@@ -797,15 +797,15 @@
     <string name="onboarding_how_step2_desc">يحسّن نصّك تلقائيا ويحلّل من زوايا متعدّدة.</string>
     <string name="onboarding_how_step3_desc">احفظ اللحظات المميّزة، يأخذها الذكاء الاصطناعي في حسبانه.</string>
     <string name="onboarding_how_step4_title">اكتشف الأنماط والرؤى</string>
-    <string name="onboarding_how_step4_desc">تظهر لك لوحة التحكم روابط لا تنتبه لها في الحياة اليومية.</string>
+    <string name="onboarding_how_step4_desc">يعرض لوحة التحكم بالذكاء الاصطناعي الروابط من مدخلاتك.</string>
     <string name="onboarding_how_step5_title">مراجعات أسبوعية وشهرية وسنوية</string>
     <string name="onboarding_how_step5_desc">مراجعات تلقائية تظهر كيف تتطوّر عبر الزمن.</string>
     <string name="onboarding_premium_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا، كل إدخال يصبح أوضح وأكثر تعبيرًا</string>
     <string name="onboarding_premium_feature_dashboard">تحديث تلقائي للوحة التحكم عند كلّ تسجيل جديد</string>
     <string name="onboarding_premium_feature_retro">مراجعات أسبوعية وشهرية وسنوية تظهر تطوّرك</string>
-    <string name="onboarding_premium_feature_patterns">اكتشاف أنماط شخصية، الذكاء الاصطناعي يجد أنماط تفكير ومشاعر خفيّة</string>
+    <string name="onboarding_premium_feature_patterns">إظهار الأنماط: يُبيّن الذكاء الاصطناعي أنماط التفكير والمشاعر المتكررة في مدخلاتك</string>
     <string name="onboarding_premium_feature_noads">بلا إعلانات، اكتب وتأمّل بهدوء</string>
-    <string name="onboarding_free_trial">مجاني وبلا التزام</string>
+    <string name="onboarding_free_trial">مجاني، قابل للإلغاء في أي وقت</string>
     <string name="onboarding_free_after_trial">تستمرّ في استخدام Best Journal بعد ذلك،\nمجانا مع حدّ أسبوعي لاستخدام الذكاء الاصطناعي.</string>
     <string name="onboarding_start_free">ابدأ مجانا</string>
     <string name="onboarding_without_premium">متابعة بدون المميّز</string>
@@ -816,7 +816,7 @@
     <string name="onboarding_perspectives_title">زوايا مختلفة\nعلى حياتك</string>
     <string name="onboarding_premium_feature_pdf">تصدير PDF مع الصور، احفظ تسجيلاتك كمستند</string>
     <string name="onboarding_premium_profiles">5 ملفّات لوحة تحكم ذكية لرؤى عميقة في حياتك</string>
-    <string name="onboarding_try_premium">8 أيام مجاناً — ثم ابتداءً من 3٫99 € شهرياً</string>
+    <string name="onboarding_try_premium">8 أيام مجانية، ثم من 3.99 € شهريًا</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +830,18 @@
     <string name="paywall_reminder">تذكير</string>
     <string name="paywall_day8">اليوم 8</string>
     <string name="paywall_first_payment">الدفعة الأولى</string>
-    <string name="paywall_yearly_note">ثمّ %1$s سنويا\nيمكن الإلغاء أثناء التجربة</string>
-    <string name="paywall_most_popular">الأكثر اختيارا</string>
+    <string name="paywall_yearly_note">ثم %1$s سنويًا، يتجدد تلقائيًا\nقابل للإلغاء في أي وقت خلال فترة التجربة</string>
+    <string name="paywall_most_popular">موصى به</string>
     <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
     <string name="paywall_yearly_savings" formatted="false">وفّر %1$d%% مقارنةً بالاشتراك الشهري — الإلغاء ممكن في أي وقت عند انتهاء فترة العقد.</string>
     <string name="paywall_lifetime_title">دفعة واحدة</string>
     <string name="paywall_lifetime_desc">ادفع مرة واحدة، استخدم كل شيء بشكل دائم</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
-    <string name="paywall_free_note">التطبيق يعمل بدون اشتراك أيضا،</string>
+    <string name="paywall_free_note">يعمل التطبيق بدون اشتراك أيضًا.</string>
     <string name="paywall_cd_close">إغلاق</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">افهم الأنماط الخفيّة في تفكيرك</string>
+    <string name="paywall_feature_patterns">تعرّف على الأنماط المتكررة في تفكيرك</string>
     <string name="paywall_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا لكل إدخال</string>
     <string name="paywall_feature_dashboard">تحديث تلقائي للوحة التحكم بعد كلّ تسجيل</string>
     <string name="paywall_feature_retro">مراجعات أسبوعية وشهرية وسنوية بالذكاء الاصطناعي</string>
@@ -891,7 +891,7 @@
     <string name="churn_reason_other">سبب آخر</string>
     <string name="churn_sorry_title">يؤسفنا رحيلك</string>
     <string name="churn_sorry_body">قبل الإلغاء، هل تخبرنا بالسبب؟ هذا يساعدنا على تحسين التطبيق.</string>
-    <string name="churn_exclusive_offer">عرض حصري</string>
+    <string name="churn_exclusive_offer">عرض خاص لك</string>
     <string name="churn_offer_subtitle">عرضنا الخاص لك</string>
     <string name="churn_offer_feature_ai">تحليلات الذكاء الاصطناعي اليومية</string>
     <string name="churn_offer_feature_perspectives">جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)</string>
@@ -1152,7 +1152,7 @@
     <string name="privacy_gate_groq_local">النسخ محليًا بدلًا من ذلك</string>
 
     <string name="privacy_gate_gemini_title">إرسال النص إلى Google Gemini؟</string>
-    <string name="privacy_gate_gemini_body">يسعدنا أنك تريد استخدام الميزات الذكية لتطبيق Best Journal! للحصول على الملخصات والاستعراضات ورؤى لوحة المعلومات وتحسين النصوص، يُرسل نصك مشفرًّا إلى Google Gemini.\n\n✓ لا يُستخدم أبدًا لتدريب نماذج الذكاء الاصطناعي\n✓ تُحذف الطلبات فور انتهاء معالجتها\n✓ مشفّر وفق إطار EU-US Data Privacy Framework\n\nتنبيه هام: نظرًا لأن إدخالات يومياتك قد تحتوي على بيانات حساسة بشكل خاص (الصحة، الدين، العلاقات الشخصية — المادة 9 من اللائحة العامة لحماية البيانات، الفئات الخاصة)، نطلب هنا موافقتك الصريحة على معالجتها بالذكاء الاصطناعي. مخرجات الذكاء الاصطناعي اقتراحات وليست استشارة مهنية، ولا تغني عن المختصين.\n\nيمكنك تغيير ذلك في أي وقت من الإعدادات.</string>
+    <string name="privacy_gate_gemini_body">يسعدنا أنك تريد استخدام الميزات الذكية لـ ‏Best Journal! لإنشاء الملخصات والمراجعات ورؤى لوحة التحكم وتحسينات النص، تُرسَل نصوصك مشفرة إلى Google Gemini.\n\n\u2713 لا تدريب للذكاء الاصطناعي على بياناتك\n\u2713 لا تُحفظ الطلبات بشكل دائم\n\u2713 مشفرة وفق إطار خصوصية البيانات بين الاتحاد الأوروبي والولايات المتحدة\n\nملاحظة مهمة: نظرًا لأن مدخلات يومياتك قد تحتوي على بيانات حساسة (الصحة، الدين، العلاقات الشخصية — المادة 9 من اللائحة العامة لحماية البيانات)، نطلب موافقتك الصريحة على معالجة الذكاء الاصطناعي. مخرجات الذكاء الاصطناعي هي اقتراحات، وليست استشارة مهنية ولا تغني عن المتخصصين.\n\nيمكنك تغيير ذلك في أي وقت من الإعدادات.</string>
     <string name="privacy_gate_gemini_accept">الموافقة والإرسال</string>
     <string name="privacy_gate_gemini_cancel">إلغاء</string>
 
@@ -1241,7 +1241,7 @@
 
 ما الذي تريد فعله؟</string>
     <string name="settings_delete_account_retry">إعادة المحاولة</string>
-    <string name="settings_delete_account_force_local">الحذف محلياً فقط (تبقى النسخة الاحتياطية على Drive حالياً)</string>
+    <string name="settings_delete_account_force_local">حذف محلي فقط (يبقى النسخ الاحتياطي على Drive)</string>
     <string name="settings_delete_account_abort">إلغاء العملية</string>
 
     <string name="legal_title_datenschutz">سياسة الخصوصية</string>
@@ -1397,7 +1397,7 @@
     <string name="paywall_lifetime_label">مرة واحدة</string>
     <string name="paywall_monthly_label">شهريًا</string>
     <string name="paywall_restore_button">استعادة المشتريات</string>
-    <string name="paywall_subscribe_button">اشترك</string>
+    <string name="paywall_subscribe_button">الاشتراك بالدفع</string>
     <string name="paywall_subtitle">افتح جميع الميزات المميّزة</string>
     <string name="paywall_title">الترقية إلى Premium</string>
     <string name="paywall_yearly_label">سنويًا</string>
@@ -1458,7 +1458,7 @@
     <string name="churn_reason_other_placeholder">أخبرنا باختصار عمّا يجري…</string>
     <string name="churn_renews_on">يتجدد في <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled">تم إلغاء اشتراك Premium</string>
-    <string name="settings_premium_cancelled_desc">ستظل ميزات Premium متاحة حتى نهاية دورة الفوترة الحالية. يمكنك التراجع عن الإلغاء في أي وقت عبر Google Play.</string>
+    <string name="settings_premium_cancelled_desc">ستبقى ميزات Premium متاحة حتى نهاية فترة الفوترة. يمكنك التراجع عن الإلغاء عبر Google Play.</string>
     <string name="settings_premium_cancelled_until">تم إلغاء اشتراك Premium — ساري حتى <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">مظهر</string>
     <string name="settings_themes_manager">مدير المظاهر</string>

@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">刷新</string>
     <string name="dashboard_weekly_review_waiting">你的每周回顾在等你</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">这一周很丰富。有高级版，你能看到完整分析 — 发现规律，获得洞见，看清真正驱动你的东西。</string>
+    <string name="dashboard_weekly_review_upsell_body">这周发生了很多事。升级 Premium 后，你可以查看完整分析：识别规律、发现洞察，了解自己真正在乎的是什么。</string>
     <string name="dashboard_discover_premium">了解高级版</string>
     <string name="dashboard_please_wait">请稍候</string>
     <string name="dashboard_gemini_unavailable">Gemini 暂时无法使用，请稍后再试。</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">自觉（34–66\u00A0%%）</string>
     <string name="legend_reflection_surface">浅（0–33\u00A0%%）</string>
     <string name="legend_insight_depth">洞见的深度</string>
-    <string name="legend_insight_deep">深入，隐藏的规律与信念</string>
+    <string name="legend_insight_deep">深度分析，发现反复出现的思维模式和信念</string>
     <string name="legend_insight_aware">自觉，被识别的思维与情感规律</string>
     <string name="legend_insight_surface">浅，初步的观察</string>
     <string name="legend_progress">进展</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">自定义分析</string>
     <string name="profile_summary_desc">汇总主题、规律与经历</string>
     <string name="profile_entropy_desc">识别压力、混乱与负担</string>
-    <string name="profile_insight_desc">揭示藏在心里的思维与情感规律</string>
+    <string name="profile_insight_desc">让反复出现的思维和情感模式清晰可见</string>
     <string name="profile_goals_desc">识别目标、愿望与进展</string>
     <string name="profile_custom_desc">设置自己的分析焦点</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">你的条目会被中立地汇总，不做评判也不给建议。\n\n一眼就能看到：\n\n• 最近你在想什么\n• 哪些规律在重复\n• 生活如何展开\n\n作为每日的全景，很合适。</string>
-    <string name="profile_entropy_long">AI 会在你的条目里专门寻找压力、负担与混乱。\n\n你会得到：\n\n• 最主要负担来源的分析\n• 5 个可以立刻整理的具体行动\n• 能马上用上的小建议\n\n当一切都过多时很合用。</string>
-    <string name="profile_insight_long">AI 看得比事情本身更深。它会在条目里发现：\n\n• 隐藏的思维规律与信念\n• 反复出现的情绪与反应\n• 自己还没觉察的优点\n• 推动你行动的价值观\n\n适合想更了解自己、从内在成长的人。</string>
+    <string name="profile_entropy_long">AI 会专门分析你日记中的压力、负担和混乱。\n\n你将获得：\n\n• 你最大压力来源的分析\n• 5 个具体的整理方法\n• 日常实用建议\n\n适合感觉一切都太多时使用。</string>
+    <string name="profile_insight_long">AI 看得比事件更深。它会在你的日记中识别：\n\n• 你话语中的思维模式和信念\n• 反复出现的情绪和反应\n• 日记中可见的个人优势\n• 驱动你行动的价值观\n\n适合想更了解自己、追求内在成长的人。</string>
     <string name="profile_goals_long">AI 会找出条目里的所有目标、愿望与计划，哪怕只是顺口一提。\n\n你会看到：\n\n• 你有哪些目标（包括隐藏的）\n• 每个目标现在到了哪一步\n• 下一步可以是什么\n\n它是从你自己的话里读取的个人目标追踪器。</string>
     <string name="profile_custom_long">由你决定 AI 关注什么。\n\n写下自己的分析焦点，例如：\n\n•「找出所有关于运动的提及」\n•「分析我的情绪起伏」\n•「告诉我我在哪些时候最有效率」\n\n给很清楚自己在找什么的人完全的掌控。</string>
     <string name="profile_custom_prompt">对你特别重要的是什么？分析你的条目时 AI 该关注什么？</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">每日仪表盘分析</string>
     <string name="settings_premium_feature_dashboard_desc">你的面板随日记一同成长。</string>
     <string name="settings_premium_feature_5_perspectives">所有 AI 配置文件（4 个预设 + 无限自定义）</string>
-    <string name="settings_premium_feature_5_perspectives_desc">从清晰到自我认识</string>
+    <string name="settings_premium_feature_5_perspectives_desc">从摘要到自我认知</string>
     <string name="settings_premium_feature_reviews">每周、每月、每年的回顾</string>
     <string name="settings_premium_feature_reviews_desc">AI 讲述你的故事</string>
     <string name="settings_premium_feature_patterns">规律识别</string>
@@ -755,9 +755,9 @@
     <string name="retro_weekly_p4">前 2 周免费</string>
     <string name="retro_monthly_p1">把你的每周回顾连成一个月的故事</string>
     <string name="retro_monthly_p2">月度的主线与变化会显现</string>
-    <string name="retro_monthly_p3">呈现日常里注意不到的改变</string>
+    <string name="retro_monthly_p3">显示你日记中的成长轨迹</string>
     <string name="retro_yearly_p1">整整一年一目了然</string>
-    <string name="retro_yearly_p2">AI 看出一年的大主题</string>
+    <string name="retro_yearly_p2">AI 总结你这一年的重要主题</string>
     <string name="retro_yearly_p3">个人成长变得可见可触</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">你的个人回顾</string>
@@ -786,7 +786,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">欢迎使用\nBest Journal</string>
-    <string name="onboarding_subtitle">属于你的 AI 日记\n带来清晰与改变</string>
+    <string name="onboarding_subtitle">你的私人 AI 日记\n让日常生活更清晰</string>
     <string name="onboarding_feature_speech">说话或打字，AI 都能听懂</string>
     <string name="onboarding_feature_secure">数据留在你这里，加密且安全</string>
     <string name="onboarding_goals_title">你想通过 AI 日记\n达到什么？</string>
@@ -800,15 +800,15 @@
     <string name="onboarding_how_step2_desc">文字会自动打磨，并从多种角度分析。</string>
     <string name="onboarding_how_step3_desc">留下特别的时刻，AI 会在分析中考虑它们。</string>
     <string name="onboarding_how_step4_title">发现规律与洞见</string>
-    <string name="onboarding_how_step4_desc">面板向你展示日常里没留意到的关联。</string>
+    <string name="onboarding_how_step4_desc">AI 仪表盘展示你日记中的关联与规律。</string>
     <string name="onboarding_how_step5_title">每周、每月、每年的回顾</string>
     <string name="onboarding_how_step5_desc">自动的回顾让你看见自己如何随时间变化。</string>
     <string name="onboarding_premium_feature_improve">每日 AI 文本改进，每条记录都更清晰、更有表现力。</string>
     <string name="onboarding_premium_feature_dashboard">每次新增条目，面板自动刷新</string>
     <string name="onboarding_premium_feature_retro">每周、每月、每年回顾呈现你的变化</string>
-    <string name="onboarding_premium_feature_patterns">识别个人规律，AI 找出隐藏的思维与情感规律</string>
+    <string name="onboarding_premium_feature_patterns">发现规律：AI 展示你日记中反复出现的思维和情感模式</string>
     <string name="onboarding_premium_feature_noads">没有广告，安心地写作与反思</string>
-    <string name="onboarding_free_trial">免费，无须承诺</string>
+    <string name="onboarding_free_trial">免费，随时可取消</string>
     <string name="onboarding_free_after_trial">之后也可以继续使用 Best Journal，\n免费，每周 AI 次数有上限。</string>
     <string name="onboarding_start_free">免费开始</string>
     <string name="onboarding_without_premium">不用高级版继续</string>
@@ -819,7 +819,7 @@
     <string name="onboarding_perspectives_title">从多个角度\n看你的生活</string>
     <string name="onboarding_premium_feature_pdf">带照片的 PDF 导出，把条目保存成文档</string>
     <string name="onboarding_premium_profiles">5 种面板模板，让你深入看自己的生活</string>
-    <string name="onboarding_try_premium">8 天免费体验 — 之后低至 3.99 €/月</string>
+    <string name="onboarding_try_premium">8 天免费，之后每月 3.99 欧元起</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,18 +833,18 @@
     <string name="paywall_reminder">提醒</string>
     <string name="paywall_day8">第 8 天</string>
     <string name="paywall_first_payment">首次付款</string>
-    <string name="paywall_yearly_note">之后每年 %1$s\n试用期内随时可取消</string>
-    <string name="paywall_most_popular">最受欢迎</string>
+    <string name="paywall_yearly_note">之后每年 %1$s，自动续费\n试用期间随时可取消</string>
+    <string name="paywall_most_popular">推荐</string>
     <string name="paywall_monthly_plan">月度订阅，每月 %1$s</string>
     <string name="paywall_yearly_savings">比月付省 %1$d%% — 可在合同到期时随时取消。</string>
     <string name="paywall_lifetime_title">一次付清</string>
     <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">没有订阅，没有续费</string>
-    <string name="paywall_free_note">应用没有订阅也能用，</string>
+    <string name="paywall_free_note">即使不订阅，应用也可正常使用。</string>
     <string name="paywall_cd_close">关闭</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">看懂思考里隐藏的规律</string>
+    <string name="paywall_feature_patterns">识别你思维中反复出现的规律</string>
     <string name="paywall_feature_improve">每条记录每天都有 AI 文本改进</string>
     <string name="paywall_feature_dashboard">每次新增条目，面板自动刷新</string>
     <string name="paywall_feature_retro">AI 生成每周、每月、每年的回顾</string>
@@ -1135,7 +1135,7 @@
     <string name="privacy_gate_groq_local">改为本地转写</string>
 
     <string name="privacy_gate_gemini_title">将文本发送到 Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">很高兴你想使用 Best Journal 的智能功能！为生成摘要、回顾、仪表板洞察和文本改进，你的文本会加密发送至 Google Gemini。\n\n✓ 绝不用于训练 AI 模型\n✓ 请求在处理后立即删除\n✓ 按照 EU-US Data Privacy Framework 加密\n\n重要提示：日记内容可能包含特别敏感的数据（健康、宗教、人际关系——GDPR 第 9 条，特殊类别），因此我们在此请求你对 AI 处理的明确同意。AI 输出仅为建议，不是专业意见，无法代替专业人士。\n\n你可以随时在设置中更改此项。</string>
+    <string name="privacy_gate_gemini_body">很高兴你想使用 Best Journal 的智能功能！为了生成摘要、回顾、仪表盘洞察和文字改进，你的文字将加密发送至 Google Gemini。\n\n✓ 不使用你的数据训练 AI\n✓ 请求不会被永久存储\n✓ 依据欧美数据隐私框架加密\n\n重要提示：由于你的日记可能包含特别敏感的数据（健康、宗教、个人关系——《通用数据保护条例》第 9 条），我们需要你明确同意 AI 处理。AI 输出仅为建议，不构成专业意见，不能替代专业人士。\n\n你可以随时在设置中更改。</string>
     <string name="privacy_gate_gemini_accept">同意并发送</string>
     <string name="privacy_gate_gemini_cancel">取消</string>
 
@@ -1224,7 +1224,7 @@
 
 你想怎么做？</string>
     <string name="settings_delete_account_retry">重试</string>
-    <string name="settings_delete_account_force_local">仅删除本地数据（云端硬盘备份暂时保留）</string>
+    <string name="settings_delete_account_force_local">仅本地删除（Drive 备份保留）</string>
     <string name="settings_delete_account_abort">取消操作</string>
 
     <string name="legal_title_datenschutz">隐私政策</string>
@@ -1382,7 +1382,7 @@
     <string name="paywall_lifetime_label">一次性</string>
     <string name="paywall_monthly_label">每月</string>
     <string name="paywall_restore_button">恢复购买</string>
-    <string name="paywall_subscribe_button">订阅</string>
+    <string name="paywall_subscribe_button">订阅（付费）</string>
     <string name="paywall_subtitle">解锁所有高级功能</string>
     <string name="paywall_title">升级到 Premium</string>
     <string name="paywall_yearly_label">每年</string>
@@ -1436,7 +1436,7 @@
     <string name="churn_reason_other_placeholder">请简单告诉我们发生了什么…</string>
     <string name="churn_renews_on">将于 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 自动续订</string>
     <string name="settings_premium_cancelled">高级版订阅已取消</string>
-    <string name="settings_premium_cancelled_desc">在当前计费周期结束前，你仍可使用所有高级功能。你随时可以通过 Google Play 撤销取消操作。</string>
+    <string name="settings_premium_cancelled_desc">你的 Premium 功能在当前计费周期结束前仍可使用。你可以通过 Google Play 撤销取消操作。</string>
     <string name="settings_premium_cancelled_until">高级版订阅已取消 — 有效期至 <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">主题</string>
     <string name="settings_themes_manager">主题管理器</string>

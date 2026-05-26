@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">새로고침</string>
     <string name="dashboard_weekly_review_waiting">한 주의 돌아보기가 기다리고 있어요</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">바쁜 한 주였어요. 프리미엄이면 전체 분석을 볼 수 있어요. 흐름을 읽고, 통찰을 얻고, 나를 움직이는 것이 무엇인지 이해해 보세요.</string>
+    <string name="dashboard_weekly_review_upsell_body">바쁜 한 주를 보내셨군요. Premium으로 전체 분석을 확인하세요: 패턴을 파악하고, 인사이트를 발견하고, 무엇이 당신을 사로잡는지 이해할 수 있어요.</string>
     <string name="dashboard_discover_premium">프리미엄 보기</string>
     <string name="dashboard_please_wait">잠시만 기다려 주세요</string>
     <string name="dashboard_gemini_unavailable">Gemini를 지금은 사용할 수 없어요. 잠시 후 다시 시도해 주세요.</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">의식적 (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">표면 (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">통찰의 깊이</string>
-    <string name="legend_insight_deep">깊음, 숨겨진 흐름과 믿음</string>
+    <string name="legend_insight_deep">심층적, 반복 패턴 및 신념</string>
     <string name="legend_insight_aware">의식적, 알아차린 생각과 감정의 흐름</string>
     <string name="legend_insight_surface">표면, 첫 관찰</string>
     <string name="legend_progress">진행</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">맞춤 분석</string>
     <string name="profile_summary_desc">주제, 흐름, 경험을 모아요</string>
     <string name="profile_entropy_desc">스트레스와 무질서, 부담을 찾아요</string>
-    <string name="profile_insight_desc">숨은 생각과 감정의 흐름을 드러내요</string>
+    <string name="profile_insight_desc">반복되는 사고 및 감정 패턴을 드러내요</string>
     <string name="profile_goals_desc">목표, 바람, 진전을 알아차려요</string>
     <string name="profile_custom_desc">나만의 분석 주제를 정해요</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">기록은 평가나 조언 없이 중립적으로 요약돼요.\n\n한눈에 보여요:\n\n• 지금 당신을 차지하는 주제\n• 되풀이되는 흐름\n• 삶이 어떻게 흘러가는지\n\n일상의 큰 그림을 매일 확인하는 데 딱 맞아요.</string>
-    <string name="profile_entropy_long">AI가 기록에서 스트레스와 부담, 무질서를 집중해서 찾아요.\n\n받을 수 있는 것:\n\n• 가장 큰 부담 원인 분석\n• 정리를 위한 구체적인 5가지 행동\n• 바로 도움이 되는 조언\n\n모든 게 버겁게 느껴질 때 딱 맞아요.</string>
-    <string name="profile_insight_long">AI는 사건 너머까지 봐요. 기록에서 이런 것들을 알아차려요:\n\n• 숨은 생각의 흐름과 믿음\n• 되풀이되는 감정과 반응\n• 스스로 모르는 강점\n• 행동을 이끄는 가치\n\n자신을 더 깊이 이해하고 안에서부터 자라고 싶은 사람에게.</string>
+    <string name="profile_entropy_long">KI가 일기 속 스트레스, 부담, 혼란을 집중적으로 찾아요.\n\n받게 되는 것:\n\n• 주요 부담 원인 분석\n• 정리를 위한 구체적인 조치 5가지\n• 일상에서 도움이 되는 팁\n\n모든 것이 너무 많다고 느껴질 때 딱 맞아요.</string>
+    <string name="profile_insight_long">KI가 단순한 사건 이상을 살펴봐요. 일기에서 발견하는 것:\n\n• 말 속의 사고 패턴과 신념\n• 반복되는 감정과 반응\n• 일기에서 드러나는 강점\n• 행동을 이끄는 가치관\n\n자신을 더 잘 이해하고 내면적으로 성장하고 싶은 모든 분을 위해.</string>
     <string name="profile_goals_long">AI는 기록에서 모든 목표, 바람, 계획을 찾아내요. 스쳐 지나간 이야기도요.\n\n볼 수 있어요:\n\n• 지금 가지고 있는 목표 (숨은 것까지)\n• 각 목표에서의 진행 상태\n• 다음으로 내디딜 수 있는 한 걸음\n\n당신의 말에서 읽어 내는 개인 목표 추적기예요.</string>
     <string name="profile_custom_long">AI가 무엇에 집중할지 직접 정해요.\n\n자신의 분석 주제를 적어 주세요. 예를 들어:\n\n• 「운동에 대한 모든 언급을 찾아 줘」\n• 「내 기분 변화를 분석해 줘」\n• 「내가 가장 생산적인 때를 보여 줘」\n\n원하는 것을 정확히 아는 사람을 위한 완전한 자유.</string>
     <string name="profile_custom_prompt">당신에게 특히 중요한 것은 무엇인가요? 기록을 분석할 때 AI가 무엇에 집중해야 할까요?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">매일 대시보드 분석</string>
     <string name="settings_premium_feature_dashboard_desc">대시보드가 기록과 함께 성장해요.</string>
     <string name="settings_premium_feature_5_perspectives">모든 AI 프로필 (기본 4개 + 무제한 직접 만들기)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">명료함부터 자기 이해까지</string>
+    <string name="settings_premium_feature_5_perspectives_desc">요약부터 자기 이해까지</string>
     <string name="settings_premium_feature_reviews">주간·월간·연간 돌아보기</string>
     <string name="settings_premium_feature_reviews_desc">AI가 당신의 이야기를 들려줘요</string>
     <string name="settings_premium_feature_patterns">흐름 읽기</string>
@@ -752,9 +752,9 @@
     <string name="retro_weekly_p4">처음 2주는 무료예요</string>
     <string name="retro_monthly_p1">주간 돌아보기를 한 달의 이야기로 이어요</string>
     <string name="retro_monthly_p2">큰 줄기와 한 달의 변화가 보여요</string>
-    <string name="retro_monthly_p3">일상에서 놓치던 변화를 보여 줘요</string>
+    <string name="retro_monthly_p3">일기의 변화를 보여줘요</string>
     <string name="retro_yearly_p1">한 해를 한눈에</string>
-    <string name="retro_yearly_p2">AI가 한 해의 큰 주제를 알아차려요</string>
+    <string name="retro_yearly_p2">KI가 올해의 주요 주제를 요약해요</string>
     <string name="retro_yearly_p3">개인의 성장이 보이고 손에 잡혀요</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">나만의 돌아보기</string>
@@ -783,7 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Best Journal에\n오신 것을 환영해요</string>
-    <string name="onboarding_subtitle">또렷함과 변화를 위한\n나만의 AI 일기</string>
+    <string name="onboarding_subtitle">더 명확한 일상을 위한\n나만의 AI 일기</string>
     <string name="onboarding_feature_speech">말하거나 쓰세요. AI는 둘 다 알아들어요</string>
     <string name="onboarding_feature_secure">내 데이터는 내 곁에. 암호화되어 안전해요</string>
     <string name="onboarding_goals_title">AI 일기로\n무엇을 이루고 싶으세요?</string>
@@ -797,15 +797,15 @@
     <string name="onboarding_how_step2_desc">글은 자동으로 다듬어지고 여러 관점에서 분석돼요.</string>
     <string name="onboarding_how_step3_desc">특별한 순간을 남기면 AI가 분석에 반영해요.</string>
     <string name="onboarding_how_step4_title">흐름과 통찰을 찾아요</string>
-    <string name="onboarding_how_step4_desc">대시보드가 일상에서 놓치기 쉬운 연결을 보여 줘요.</string>
+    <string name="onboarding_how_step4_desc">AI 대시보드가 일기의 연결고리를 보여줘요.</string>
     <string name="onboarding_how_step5_title">주간·월간·연간 돌아보기</string>
     <string name="onboarding_how_step5_desc">자동 돌아보기가 시간에 따라 자라는 모습을 보여 줘요.</string>
     <string name="onboarding_premium_feature_improve">매일 AI 텍스트 개선으로 모든 기록이 더 명확하고 풍부하게 표현됩니다.</string>
     <string name="onboarding_premium_feature_dashboard">새 기록마다 대시보드가 자동으로 새로 고쳐져요</string>
     <string name="onboarding_premium_feature_retro">주간·월간·연간 돌아보기가 성장을 보여 줘요</string>
-    <string name="onboarding_premium_feature_patterns">개인의 흐름을 읽어요. AI가 숨은 생각과 감정의 흐름을 찾아요</string>
+    <string name="onboarding_premium_feature_patterns">패턴 파악: KI가 일기 속 반복되는 사고·감정 패턴을 보여줘요</string>
     <string name="onboarding_premium_feature_noads">광고 없이 쓰고 돌아볼 수 있어요</string>
-    <string name="onboarding_free_trial">무료이고 부담 없어요</string>
+    <string name="onboarding_free_trial">무료, 언제든 취소 가능</string>
     <string name="onboarding_free_after_trial">이후에도 Best Journal을 계속 쓸 수 있어요.\n무료로, 주마다 AI 이용 횟수에 한도가 있어요.</string>
     <string name="onboarding_start_free">무료로 시작</string>
     <string name="onboarding_without_premium">프리미엄 없이 계속</string>
@@ -816,7 +816,7 @@
     <string name="onboarding_perspectives_title">삶을 바라보는\n다양한 시각</string>
     <string name="onboarding_premium_feature_pdf">사진 포함 PDF 내보내기로 기록을 문서로 보관</string>
     <string name="onboarding_premium_profiles">삶을 깊이 들여다보는 5가지 대시보드 프로필</string>
-    <string name="onboarding_try_premium">8일 무료 체험 — 이후 월 3.99€부터</string>
+    <string name="onboarding_try_premium">8일 무료 체험, 이후 월 3.99€부터</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +830,18 @@
     <string name="paywall_reminder">알림</string>
     <string name="paywall_day8">8일차</string>
     <string name="paywall_first_payment">첫 결제</string>
-    <string name="paywall_yearly_note">이후 연 %1$s\n체험 기간 동안 언제든 해지 가능</string>
-    <string name="paywall_most_popular">가장 인기 있는 선택</string>
+    <string name="paywall_yearly_note">이후 연 %1$s, 자동 갱신\n체험 기간 중 언제든 취소 가능</string>
+    <string name="paywall_most_popular">추천</string>
     <string name="paywall_monthly_plan">월 요금제, 월 %1$s</string>
     <string name="paywall_yearly_savings">월 요금제보다 %1$d%% 절약 — 각 계약 종료 시 언제든 해지 가능.</string>
     <string name="paywall_lifetime_title">한 번 결제</string>
     <string name="paywall_lifetime_desc">한 번 결제로 모든 기능을 계속 사용</string>
     <string name="paywall_lifetime_note">구독 없음, 갱신 없음</string>
-    <string name="paywall_free_note">앱은 구독 없이도 사용할 수 있어요.</string>
+    <string name="paywall_free_note">앱은 구독 없이도 계속 사용할 수 있어요.</string>
     <string name="paywall_cd_close">닫기</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">생각 속 숨은 흐름을 이해해요</string>
+    <string name="paywall_feature_patterns">생각 속 반복 패턴을 파악해요</string>
     <string name="paywall_feature_improve">모든 기록에 대해 매일 AI 텍스트 개선</string>
     <string name="paywall_feature_dashboard">기록마다 대시보드를 자동으로 새로 고침</string>
     <string name="paywall_feature_retro">AI가 만드는 주간·월간·연간 돌아보기</string>
@@ -1135,7 +1135,7 @@ Premium: 하루 최대 150회.</string>
     <string name="privacy_gate_groq_local">로컬로 전사하기</string>
 
     <string name="privacy_gate_gemini_title">텍스트를 Google Gemini에 보낼까요?</string>
-    <string name="privacy_gate_gemini_body">Best Journal의 지능형 기능을 사용하고 싶으시다니 기뻐요! 요약, 회고, 대시보드 인사이트, 텍스트 개선을 위해 당신의 텍스트가 암호화되어 Google Gemini로 전송돼요.\n\n✓ AI 모델 학습에 사용되지 않아요\n✓ 요청은 처리 후 즉시 삭제돼요\n✓ EU-US Data Privacy Framework에 따라 암호화돼요\n\n중요 안내: 일기 내용에는 특히 민감한 정보(건강, 종교, 개인적 관계 — GDPR 제9조, 특수 범주)가 포함될 수 있으므로, AI 처리에 대한 당신의 명시적 동의를 여기에서 요청드려요. AI의 응답은 제안일 뿐 전문적인 조언이 아니며, 전문가를 대신할 수 없어요.\n\n설정에서 언제든 변경할 수 있어요.</string>
+    <string name="privacy_gate_gemini_body">Best Journal의 스마트 기능을 사용해 주셔서 감사해요! 요약, 회고, 대시보드 인사이트, 텍스트 개선을 위해 암호화된 텍스트가 Google Gemini로 전송돼요.\n\n✓ 내 데이터로 AI 학습 없음\n✓ 요청 영구 저장 없음\n✓ EU-US 데이터 개인정보 보호 프레임워크에 따른 암호화\n\n중요 안내: 일기에는 민감한 정보(건강, 종교, 개인 관계 — GDPR 제9조)가 포함될 수 있어 AI 처리에 대한 명시적 동의를 요청해요. AI 결과는 제안이며 전문적 조언이 아니에요.\n\n언제든지 설정에서 변경할 수 있어요.</string>
     <string name="privacy_gate_gemini_accept">동의하고 전송</string>
     <string name="privacy_gate_gemini_cancel">취소</string>
 
@@ -1224,7 +1224,7 @@ Premium: 하루 최대 150회.</string>
 
 어떻게 할까요?</string>
     <string name="settings_delete_account_retry">다시 시도</string>
-    <string name="settings_delete_account_force_local">로컬에서만 삭제(Drive 백업은 당분간 유지)</string>
+    <string name="settings_delete_account_force_local">로컬만 삭제 (드라이브 백업 유지)</string>
     <string name="settings_delete_account_abort">작업 취소</string>
 
     <string name="legal_title_datenschutz">개인정보 처리방침</string>
@@ -1390,7 +1390,7 @@ Premium: 하루 최대 150회.</string>
     <string name="paywall_lifetime_label">일회성</string>
     <string name="paywall_monthly_label">월간</string>
     <string name="paywall_restore_button">구매 복원</string>
-    <string name="paywall_subscribe_button">구독</string>
+    <string name="paywall_subscribe_button">유료 구독하기</string>
     <string name="paywall_subtitle">모든 프리미엄 기능 열기</string>
     <string name="paywall_title">Premium으로 업그레이드</string>
     <string name="paywall_yearly_label">연간</string>
@@ -1474,7 +1474,7 @@ Premium: 하루 최대 150회.</string>
     <string name="churn_reason_other_placeholder">어떤 점이 불편하셨는지 알려주세요…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>에 자동 갱신</string>
     <string name="settings_premium_cancelled">프리미엄 구독 취소됨</string>
-    <string name="settings_premium_cancelled_desc">현재 청구 주기가 끝날 때까지 프리미엄 기능을 계속 이용할 수 있어요. Google Play에서 언제든지 취소를 되돌릴 수 있어요.</string>
+    <string name="settings_premium_cancelled_desc">Premium 기능은 결제 기간이 끝날 때까지 유지돼요. Google Play에서 취소를 되돌릴 수 있어요.</string>
     <string name="settings_premium_cancelled_until">프리미엄 구독 취소됨 — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g>까지 이용 가능</string>
     <string name="settings_theme">테마</string>
     <string name="settings_themes_manager">테마 관리자</string>

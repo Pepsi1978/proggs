@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">রিফ্রেশ করো</string>
     <string name="dashboard_weekly_review_waiting">তোমার সাপ্তাহিক পর্যালোচনা অপেক্ষা করছে</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">তোমার একটি ঘটনাবহুল সপ্তাহ ছিল। Premium দিয়ে তুমি পূর্ণ বিশ্লেষণ দেখতে পাবে — প্যাটার্ন চিনতে পারো, নতুন উপলব্ধি আবিষ্কার করো আর বুঝতে পারো তোমাকে কী সত্যিই প্রভাবিত করছে।</string>
+    <string name="dashboard_weekly_review_upsell_body">তোমার এই সপ্তাহটা বেশ ঘটনাবহুল ছিল। Premium দিয়ে সম্পূর্ণ বিশ্লেষণ দেখো: প্যাটার্ন চিহ্নিত করো, নতুন দৃষ্টিভঙ্গি আবিষ্কার করো এবং বোঝো কী তোমাকে ব্যস্ত রাখছে।</string>
     <string name="dashboard_discover_premium">Premium আবিষ্কার করো</string>
     <string name="dashboard_please_wait">একটু অপেক্ষা করো</string>
     <string name="dashboard_gemini_unavailable">Gemini এই মুহূর্তে পাওয়া যাচ্ছে না, একটু পরে আবার চেষ্টা করো।</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">সচেতন (34–66%)</string>
     <string name="legend_reflection_surface">উপরিতল (0–33%)</string>
     <string name="legend_insight_depth">উপলব্ধির গভীরতা</string>
-    <string name="legend_insight_deep">গভীর, লুকানো প্যাটার্ন আর বিশ্বাস</string>
+    <string name="legend_insight_deep">গভীর, বারবার ফিরে আসা প্যাটার্ন ও বিশ্বাস</string>
     <string name="legend_insight_aware">সচেতন, চিনতে পারা চিন্তা ও অনুভূতির প্যাটার্ন</string>
     <string name="legend_insight_surface">উপরিতল, প্রথম পর্যবেক্ষণ</string>
     <string name="legend_progress">অগ্রগতি</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">ব্যক্তিগত বিশ্লেষণ</string>
     <string name="profile_summary_desc">বিষয়, প্যাটার্ন আর অভিজ্ঞতা সংক্ষিপ্ত করে</string>
     <string name="profile_entropy_desc">চাপ, বিশৃঙ্খলা আর ভার চিনতে পারে</string>
-    <string name="profile_insight_desc">লুকানো চিন্তা ও অনুভূতির প্যাটার্ন উন্মোচন করে</string>
+    <string name="profile_insight_desc">বারবার ফিরে আসা চিন্তা ও অনুভূতির প্যাটার্ন দৃশ্যমান করে</string>
     <string name="profile_goals_desc">লক্ষ্য, ইচ্ছা আর অগ্রগতি চিনতে পারে</string>
     <string name="profile_custom_desc">নিজের বিশ্লেষণ ফোকাস নির্ধারণ করো</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">তোমার লেখা নিরপেক্ষভাবে সংক্ষিপ্ত করা হয়, কোনো মূল্যায়ন বা পরামর্শ ছাড়াই।\n\nএক নজরে তুমি দেখতে পাও:\n\n• কোন বিষয়গুলি এখন তোমাকে ভাবাচ্ছে\n• কোন প্যাটার্ন নিজেদের পুনরাবৃত্তি করছে\n• তোমার জীবন কেমন এগিয়ে চলেছে\n\nতোমার জীবনে যা কিছু ঘটছে তার দৈনিক সংক্ষিপ্ত হিসেবে নিখুঁত।</string>
-    <string name="profile_entropy_long">এআই তোমার লেখায় চাপ, ভার আর বিশৃঙ্খলা খুঁজে দেখে।\n\nতুমি পাবে:\n\n• তোমার সবচেয়ে বড় চাপের উৎসের বিশ্লেষণ\n• গুছিয়ে নেওয়ার 5টি বাস্তব পদক্ষেপ\n• এমন টিপস যা তোমাকে এখনই সাহায্য করতে পারে\n\nযখন তোমার মনে হয় সব কিছু এখন অনেক বেশি, তখনই উপযুক্ত।</string>
-    <string name="profile_insight_long">এআই শুধু ঘটনার চেয়েও গভীরে দেখে। এটি তোমার লেখায় চিনতে পারে:\n\n• লুকানো চিন্তার ধরন ও বিশ্বাস\n• বারবার আসা অনুভূতি ও প্রতিক্রিয়া\n• তোমার অজানা ব্যক্তিগত শক্তি\n• তোমার কাজকে চালিত করা মূল্যবোধ\n\nযারা নিজেকে ভালো বুঝতে আর ভেতর থেকে বেড়ে উঠতে চায় তাদের জন্য।</string>
+    <string name="profile_entropy_long">KI তোমার এন্ট্রিগুলোতে মানসিক চাপ, বোঝা এবং অস্থিরতা খুঁজে বের করে।\n\nতুমি পাবে:\n\n• তোমার সবচেয়ে বড় চাপের উৎসগুলোর বিশ্লেষণ\n• সমস্যা সামলানোর 5টি কংক্রিট পদক্ষেপ\n• টিপস, যা তোমার দৈনন্দিন জীবনে কাজে লাগতে পারে\n\nআদর্শ যখন মনে হচ্ছে সব একসাথে বেশি হয়ে যাচ্ছে।</string>
+    <string name="profile_insight_long">KI শুধু ঘটনার উপর নয়, আরও গভীরে তাকায়। তোমার এন্ট্রিতে সে চিনতে পারে:\n\n• তোমার কথায় চিন্তার প্যাটার্ন ও বিশ্বাস\n• বারবার ফিরে আসা অনুভূতি ও প্রতিক্রিয়া\n• তোমার এন্ট্রিতে দৃশ্যমান শক্তিগুলো\n• যে মূল্যবোধগুলো তোমার কাজকে চালিত করে\n\nযারা নিজেদের আরও ভালো বুঝতে এবং ভেতর থেকে বেড়ে উঠতে চান তাদের জন্য।</string>
     <string name="profile_goals_long">এআই তোমার লেখায় সব লক্ষ্য, ইচ্ছা আর পরিকল্পনা খুঁজে পায়, এমনকি কথায় কথায় উল্লেখ করা কোনো কিছুও।\n\nতুমি দেখতে পাও:\n\n• তোমার কী কী লক্ষ্য আছে (লুকানো সহ)\n• প্রতিটি লক্ষ্যে তুমি কতদূর আছো\n• তোমার পরবর্তী পদক্ষেপ কী হতে পারে\n\nতোমার নিজের কথা থেকে পড়া তোমার ব্যক্তিগত লক্ষ্য-ট্র্যাকার।</string>
     <string name="profile_custom_long">তুমি নিজে ঠিক করো এআই কিসের উপর মনোযোগ দেবে।\n\nনিজের বিশ্লেষণ ফোকাস লিখো, উদাহরণস্বরূপ:\n\n• „খেলার সব উল্লেখ খুঁজে বের করো\"\n• „আমার মেজাজের ওঠানামা বিশ্লেষণ করো\"\n• „দেখাও আমি কখন সবচেয়ে উৎপাদনশীল\"\n\nযারা ঠিক জানে তারা কী খুঁজছে তাদের জন্য পূর্ণ নিয়ন্ত্রণ।</string>
     <string name="profile_custom_prompt">তোমার কাছে কী বিশেষভাবে গুরুত্বপূর্ণ? তোমার দিনলিপির লেখা বিশ্লেষণে এআই কিসের উপর মনোযোগ দেবে?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">প্রতিদিন ড্যাশবোর্ড বিশ্লেষণ</string>
     <string name="settings_premium_feature_dashboard_desc">তোমার লেখার সাথে সাথে তোমার ড্যাশবোর্ডও বাড়তে থাকে।</string>
     <string name="settings_premium_feature_5_perspectives">সব এআই-প্রোফাইল (4টি পূর্বনির্ধারিত + সীমাহীন নিজস্ব)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">স্পষ্টতা থেকে আত্ম-উপলব্ধি পর্যন্ত</string>
+    <string name="settings_premium_feature_5_perspectives_desc">সারসংক্ষেপ থেকে আত্মজ্ঞান পর্যন্ত</string>
     <string name="settings_premium_feature_reviews">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="settings_premium_feature_reviews_desc">এআই তোমার গল্প বলে</string>
     <string name="settings_premium_feature_patterns">প্যাটার্ন চিনতে পারা</string>
@@ -756,9 +756,9 @@
     <string name="retro_weekly_p4">প্রথম 2 সপ্তাহ বিনামূল্যে</string>
     <string name="retro_monthly_p1">তোমার সাপ্তাহিক পর্যালোচনা একটি মাসিক গল্পে সংযুক্ত করে</string>
     <string name="retro_monthly_p2">মাস জুড়ে মূল সূত্র আর বিকাশ দৃশ্যমান হয়</string>
-    <string name="retro_monthly_p3">দৈনন্দিন জীবনে তোমার নজরে না পড়া পরিবর্তন দেখায়</string>
+    <string name="retro_monthly_p3">তোমার এন্ট্রি থেকে বিকাশ দেখায়</string>
     <string name="retro_yearly_p1">তোমার পুরো বছর এক নজরে</string>
-    <string name="retro_yearly_p2">এআই তোমার বছরের বড় বিষয়গুলি চিনতে পারে</string>
+    <string name="retro_yearly_p2">KI তোমার বছরের বড় বিষয়গুলো সংক্ষেপ করে</string>
     <string name="retro_yearly_p3">ব্যক্তিগত বিকাশ দৃশ্যমান আর স্পর্শযোগ্য হয়</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">তোমার ব্যক্তিগত পর্যালোচনা</string>
@@ -787,7 +787,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Best Journal এ\nস্বাগতম</string>
-    <string name="onboarding_subtitle">স্পষ্টতা আর পরিবর্তনের জন্য\nতোমার ব্যক্তিগত এআই-দিনলিপি</string>
+    <string name="onboarding_subtitle">তোমার ব্যক্তিগত KI-জার্নাল\nদৈনন্দিন জীবনে আরও স্পষ্টতার জন্য</string>
     <string name="onboarding_feature_speech">বলো বা লিখো, এআই দুটোই বোঝে</string>
     <string name="onboarding_feature_secure">তোমার ডেটা তোমার কাছেই থাকে, এনক্রিপ্টেড আর সুরক্ষিত</string>
     <string name="onboarding_goals_title">তুমি এআই-দিনলিপি দিয়ে\nকী অর্জন করতে চাও?</string>
@@ -801,15 +801,15 @@
     <string name="onboarding_how_step2_desc">তোমার লেখা স্বয়ংক্রিয়ভাবে সুন্দর হয় আর বিভিন্ন দৃষ্টিকোণ থেকে বিশ্লেষণ করা হয়।</string>
     <string name="onboarding_how_step3_desc">বিশেষ মুহূর্ত ধরে রাখো, এআই বিশ্লেষণে সেগুলি বিবেচনা করে।</string>
     <string name="onboarding_how_step4_title">প্যাটার্ন আর উপলব্ধি আবিষ্কার করো</string>
-    <string name="onboarding_how_step4_desc">ড্যাশবোর্ড তোমাকে এমন সম্পর্ক দেখায় যা দৈনন্দিন জীবনে তোমার কাছে লুকানো থাকে।</string>
+    <string name="onboarding_how_step4_desc">KI-Dashboard তোমার এন্ট্রি থেকে যোগসূত্রগুলো দেখায়।</string>
     <string name="onboarding_how_step5_title">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="onboarding_how_step5_desc">স্বয়ংক্রিয় পর্যালোচনা দেখায় তুমি সময়ের সাথে কীভাবে বিকাশ করো।</string>
     <string name="onboarding_premium_feature_improve">প্রতিদিন AI টেক্সট উন্নতি, প্রতিটি এন্ট্রি আরও স্পষ্ট ও অভিব্যক্তিপূর্ণ হয়</string>
     <string name="onboarding_premium_feature_dashboard">প্রতিটি নতুন লেখায় স্বয়ংক্রিয় ড্যাশবোর্ড হালনাগাদ</string>
     <string name="onboarding_premium_feature_retro">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা তোমার বিকাশ দেখায়</string>
-    <string name="onboarding_premium_feature_patterns">ব্যক্তিগত প্যাটার্ন চিনতে পারো, এআই লুকানো চিন্তা ও অনুভূতির প্যাটার্ন খুঁজে পায়</string>
+    <string name="onboarding_premium_feature_patterns">প্যাটার্ন দৃশ্যমান করো: KI তোমার এন্ট্রিতে বারবার ফিরে আসা চিন্তা ও অনুভূতির প্যাটার্ন দেখায়</string>
     <string name="onboarding_premium_feature_noads">কোনো বিজ্ঞাপন নয়, নিরবচ্ছিন্নভাবে লিখো আর প্রতিফলন করো</string>
-    <string name="onboarding_free_trial">বিনামূল্যে আর বাধ্যবাধকতা ছাড়া</string>
+    <string name="onboarding_free_trial">বিনামূল্যে, যেকোনো সময় বাতিলযোগ্য</string>
     <string name="onboarding_free_after_trial">তারপর তুমি Best Journal ব্যবহার করতে পারো,\nবিনামূল্যে সপ্তাহে সীমিত এআই-কল সহ।</string>
     <string name="onboarding_start_free">বিনামূল্যে শুরু করো</string>
     <string name="onboarding_without_premium">Premium ছাড়া এগিয়ে যাও</string>
@@ -820,7 +820,7 @@
     <string name="onboarding_perspectives_title">তোমার জীবনের\nবিভিন্ন দৃষ্টিভঙ্গি</string>
     <string name="onboarding_premium_feature_pdf">ছবি সহ পিডিএফ-এক্সপোর্ট, তোমার লেখা নথি হিসেবে সুরক্ষিত করো</string>
     <string name="onboarding_premium_profiles">তোমার জীবনের গভীর অন্তর্দৃষ্টির জন্য 5টি স্মার্ট ড্যাশবোর্ড-প্রোফাইল</string>
-    <string name="onboarding_try_premium">৮ দিন বিনামূল্যে — তারপর মাত্র ৩.৯৯ €/মাস থেকে</string>
+    <string name="onboarding_try_premium">8 দিন বিনামূল্যে, তারপর মাসে 3.99 €</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -834,18 +834,18 @@
     <string name="paywall_reminder">রিমাইন্ডার</string>
     <string name="paywall_day8">দিন 8</string>
     <string name="paywall_first_payment">প্রথম পেমেন্ট</string>
-    <string name="paywall_yearly_note">তারপর বছরে %1$s\nপরীক্ষার সময়ে যেকোনো সময় বাতিলযোগ্য</string>
-    <string name="paywall_most_popular">সবচেয়ে জনপ্রিয় পছন্দ</string>
+    <string name="paywall_yearly_note">এরপর প্রতি বছর %1$s, স্বয়ংক্রিয়ভাবে নবায়ন হয়\nপরীক্ষামূলক সময়ে যেকোনো সময় বাতিলযোগ্য</string>
+    <string name="paywall_most_popular">প্রস্তাবিত</string>
     <string name="paywall_monthly_plan">মাসিক সাবস্ক্রিপশন, মাসে %1$s</string>
     <string name="paywall_yearly_savings">মাসিক সাবস্ক্রিপশনের তুলনায় %1$d%% সাশ্রয় — চুক্তির মেয়াদ শেষে যেকোনো সময় বাতিল করা যায়।</string>
     <string name="paywall_lifetime_title">একবার কেনাকাটা</string>
     <string name="paywall_lifetime_desc">একবার পরিশোধ করো, সব কিছু স্থায়ীভাবে ব্যবহার করো</string>
     <string name="paywall_lifetime_note">কোনো সাবস্ক্রিপশন নয়, কোনো পুনর্নবীকরণ নয়</string>
-    <string name="paywall_free_note">অ্যাপ সাবস্ক্রিপশন ছাড়াও কাজ করে,</string>
+    <string name="paywall_free_note">অ্যাপটি সাবসক্রিপশন ছাড়াও কাজ করে।</string>
     <string name="paywall_cd_close">বন্ধ করো</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">তোমার চিন্তায় লুকানো প্যাটার্ন বুঝো</string>
+    <string name="paywall_feature_patterns">তোমার চিন্তায় বারবার ফিরে আসা প্যাটার্ন চিহ্নিত করো</string>
     <string name="paywall_feature_improve">প্রতিটি এন্ট্রির জন্য প্রতিদিন AI টেক্সট উন্নতি</string>
     <string name="paywall_feature_dashboard">প্রতিটি লেখার পর স্বয়ংক্রিয় ড্যাশবোর্ড হালনাগাদ</string>
     <string name="paywall_feature_retro">এআই দিয়ে সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
@@ -870,7 +870,7 @@
     <string name="paywall_exit_special_offer">আমাদের তোমার জন্য\nএকটি বিশেষ অফার আছে:</string>
     <string name="paywall_exit_discount">%1$d মাসের জন্য ছাড়</string>
     <string name="paywall_exit_price_comparison">মাসে %2$s এর বদলে মাত্র %1$s</string>
-    <string name="paywall_exit_start_discount">পেমেন্টযোগ্য — ২ মাস অর্ধেক দামে</string>
+    <string name="paywall_exit_start_discount">পেমেন্টযোগ্য — 2 মাস অর্ধেক দামে</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -895,7 +895,7 @@
     <string name="churn_reason_other">অন্য কারণ</string>
     <string name="churn_sorry_title">তুমি যাচ্ছো দুঃখের বিষয়</string>
     <string name="churn_sorry_body">বাতিল করার আগে, আমাদের বলবে কেন? এটি আমাদের অ্যাপ উন্নত করতে সাহায্য করে।</string>
-    <string name="churn_exclusive_offer">বিশেষ অফার</string>
+    <string name="churn_exclusive_offer">তোমার জন্য অফার</string>
     <string name="churn_offer_subtitle">তোমার জন্য আমাদের অফার</string>
     <string name="churn_offer_feature_ai">প্রতিদিন AI বিশ্লেষণ</string>
     <string name="churn_offer_feature_perspectives">সব এআই-প্রোফাইল (4টি পূর্বনির্ধারিত + সীমাহীন নিজস্ব)</string>
@@ -1140,7 +1140,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="privacy_gate_groq_local">এর পরিবর্তে স্থানীয়ভাবে ট্রান্সক্রাইব করো</string>
 
     <string name="privacy_gate_gemini_title">Google Gemini-তে টেক্সট পাঠাবে?</string>
-    <string name="privacy_gate_gemini_body">Best Journal-এর বুদ্ধিমান ফিচার ব্যবহার করতে চাও শুনে ভালো লাগল! সারসংক্ষেপ, পর্যালোচনা, ড্যাশবোর্ড অন্তর্দৃষ্টি এবং টেক্সট উন্নতির জন্য তোমার টেক্সট এনক্রিপ্ট করে Google Gemini-তে পাঠানো হয়।\n\n✓ AI মডেল প্রশিক্ষণে কখনো ব্যবহৃত হয় না\n✓ অনুরোধ প্রক্রিয়াকরণের পরপরই মুছে ফেলা হয়\n✓ EU-US Data Privacy Framework অনুযায়ী এনক্রিপ্টেড\n\nগুরুত্বপূর্ণ বিজ্ঞপ্তি: যেহেতু তোমার ডায়েরির এন্ট্রিতে বিশেষভাবে সংবেদনশীল তথ্য (স্বাস্থ্য, ধর্ম, ব্যক্তিগত সম্পর্ক — GDPR অনুচ্ছেদ 9, বিশেষ বিভাগ) থাকতে পারে, তাই আমরা এখানে AI প্রসেসিংয়ের জন্য তোমার স্পষ্ট সম্মতি চাইছি। AI-এর আউটপুট পরামর্শ মাত্র, পেশাদার পরামর্শ নয়, এবং কোনো যোগ্য ব্যক্তির বিকল্প নয়।\n\nতুমি যেকোনো সময় সেটিংসে এটি পরিবর্তন করতে পারো।</string>
+    <string name="privacy_gate_gemini_body">Best Journal-এর বুদ্ধিমান ফিচারগুলো ব্যবহার করতে চাও, ভালো লাগল! সারসংক্ষেপ, পর্যালোচনা, Dashboard ইনসাইট এবং লেখার উন্নতির জন্য তোমার টেক্সট এনক্রিপ্টেড আকারে Google Gemini-তে পাঠানো হয়।\n\n✓ তোমার ডেটা দিয়ে KI প্রশিক্ষণ নয়\n✓ অনুরোধগুলো স্থায়ীভাবে সংরক্ষিত হয় না\n✓ EU-US Data Privacy Framework অনুযায়ী এনক্রিপ্টেড\n\nগুরুত্বপূর্ণ নোট: তোমার ডায়েরির এন্ট্রিতে বিশেষভাবে সংবেদনশীল তথ্য থাকতে পারে (স্বাস্থ্য, ধর্ম, ব্যক্তিগত সম্পর্ক — Art. 9 DSGVO), তাই আমরা KI প্রক্রিয়াকরণের জন্য তোমার স্পষ্ট সম্মতি চাইছি। KI-এর আউটপুট পরামর্শ মাত্র, পেশাদার বিশেষজ্ঞের বিকল্প নয়।\n\nতুমি যেকোনো সময় Settings-এ এটি পরিবর্তন করতে পারবে।</string>
     <string name="privacy_gate_gemini_accept">সম্মত হয়ে পাঠাও</string>
     <string name="privacy_gate_gemini_cancel">বাতিল</string>
 
@@ -1229,7 +1229,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
 
 আপনি কী করতে চান?</string>
     <string name="settings_delete_account_retry">আবার চেষ্টা করুন</string>
-    <string name="settings_delete_account_force_local">শুধু স্থানীয়ভাবে মুছুন (Drive ব্যাকআপ আপাতত থাকবে)</string>
+    <string name="settings_delete_account_force_local">শুধু স্থানীয়ভাবে মুছে ফেলো (Drive ব্যাকআপ থাকবে)</string>
     <string name="settings_delete_account_abort">কাজ বাতিল করুন</string>
 
     <string name="legal_title_datenschutz">গোপনীয়তা নীতি</string>
@@ -1351,11 +1351,11 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="paywall_monthly_label">মাসিক</string>
     <string name="paywall_yearly_label">বার্ষিক</string>
     <string name="paywall_lifetime_label">একবারেই</string>
-    <string name="paywall_subscribe_button">সদস্যতা নাও</string>
+    <string name="paywall_subscribe_button">সাবসক্রাইব করো (পেমেন্ট প্রযোজ্য)</string>
     <string name="paywall_restore_button">ক্রয় পুনরুদ্ধার করো</string>
     <string name="paywall_cancel_anytime">যেকোনো সময় বাতিল করো</string>
     <string name="paywall_consent_dialog_title">বিনামূল্যে বাতিলের অধিকার</string>
-    <string name="paywall_consent_dialog_body">সাবস্ক্রিপশন বা ক্রয় সম্পন্ন করার পর আপনার মূলত ১৪ দিনের প্রত্যাহারের অধিকার রয়েছে (§ 355 BGB)।\n\nআপনি যাতে Premium সুবিধাগুলো সঙ্গে সঙ্গে ব্যবহার করতে পারেন, সেজন্য আমরা আপনার ক্রয়ের পরপরই সেগুলো সক্রিয় করি। নিচে সম্মতি দিলে আপনি সচেতনভাবে আপনার ১৪ দিনের প্রত্যাহারের অধিকার ছেড়ে দিচ্ছেন (§ 356 Abs. 5 BGB)।\n\nএই সম্মতি ছাড়া আমরা Premium সুবিধাগুলো তাৎক্ষণিকভাবে সক্রিয় করতে পারব না।\n\nPremium সুবিধার সরবরাহকারী: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. প্রত্যাহারের জন্য ই-মেইল: dev.app.support@gmail.com।\n\nযদি সরবরাহ শুরু হওয়ার আগে প্রত্যাহার না করেন এবং Premium সাবস্ক্রিপশন শুরু হয়ে যায়, তাহলে চুক্তি সম্পাদনের দিন থেকে আপনার ১৪ দিনের প্রত্যাহারের মেয়াদ শুরু হবে। আপনি ই-মেইলে যেকোনো রূপে প্রত্যাহার করতে পারবেন বা EU-Muster-Widerrufsformular ব্যবহার করতে পারবেন (https://www.bmuv.de/widerruf — বাহ্যিক EU-নমুনা)।</string>
+    <string name="paywall_consent_dialog_body">সাবস্ক্রিপশন বা ক্রয় সম্পন্ন করার পর আপনার মূলত 14 দিনের প্রত্যাহারের অধিকার রয়েছে (§ 355 BGB)।\n\nআপনি যাতে Premium সুবিধাগুলো সঙ্গে সঙ্গে ব্যবহার করতে পারেন, সেজন্য আমরা আপনার ক্রয়ের পরপরই সেগুলো সক্রিয় করি। নিচে সম্মতি দিলে আপনি সচেতনভাবে আপনার 14 দিনের প্রত্যাহারের অধিকার ছেড়ে দিচ্ছেন (§ 356 Abs. 5 BGB)।\n\nএই সম্মতি ছাড়া আমরা Premium সুবিধাগুলো তাৎক্ষণিকভাবে সক্রিয় করতে পারব না।\n\nPremium সুবিধার সরবরাহকারী: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. প্রত্যাহারের জন্য ই-মেইল: dev.app.support@gmail.com।\n\nযদি সরবরাহ শুরু হওয়ার আগে প্রত্যাহার না করেন এবং Premium সাবস্ক্রিপশন শুরু হয়ে যায়, তাহলে চুক্তি সম্পাদনের দিন থেকে আপনার 14 দিনের প্রত্যাহারের মেয়াদ শুরু হবে। আপনি ই-মেইলে যেকোনো রূপে প্রত্যাহার করতে পারবেন বা EU-Muster-Widerrufsformular ব্যবহার করতে পারবেন (https://www.bmuv.de/widerruf — বাহ্যিক EU-নমুনা)।</string>
     <string name="paywall_consent_dialog_checkbox">আমি সম্মত যে ডিজিটাল বিষয়বস্তুর সাথে ডাউনলোড শুরু হলে আমার বাতিলের অধিকার বাতিল হবে।</string>
     <string name="paywall_consent_dialog_confirm">সম্মত হও এবং কিনো</string>
     <string name="paywall_consent_dialog_cancel">বাতিল করো</string>
@@ -1425,7 +1425,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     </plurals>
     <string name="ai_limits_disclaimer">নিবিড় ব্যবহারের জন্য এআই দৈনিক কোটা।</string>
     <string name="ai_limits_dialog_title">দৈনিক AI কোটা কীভাবে কাজ করে?</string>
-    <string name="ai_limits_dialog_body" formatted="false">প্রিমিয়াম সাবস্ক্রিপশনে\n\nপ্রতিদিন পাওয়া যায়:\n• প্রতি প্রোফাইলে প্রতিদিন 150টি অনুরোধ — ৪টি পূর্বনির্ধারিত প্রোফাইল মিলে ৬০০/দিন, আর তোমার নিজস্ব প্রতিটি প্রোফাইলের জন্য ১৫০/দিন।\n• সর্বোচ্চ 150টি টেক্সট উন্নতি\n\nবিস্তারিত প্রক্রিয়া:\n• অনুরোধ ১ থেকে ৩০: সর্বোচ্চ এআই মানে\n• অনুরোধ ৩১ থেকে ১০০: দ্রুত স্ট্যান্ডার্ড মানে\n• ১০১তম অনুরোধে: একবার ৩০ মিনিটের বিরতি\n• অনুরোধ ১০১ থেকে ১৫০: দ্রুত স্ট্যান্ডার্ড মানে\n• ১৫১তম অনুরোধ থেকে: আজকের জন্য আর কোনো অনুরোধ নেই\n\nসব ব্যবহারকারীর ক্ষেত্রে:\n• প্রতি ঘণ্টায় সর্বোচ্চ ৫০টি এআই অনুরোধ — তারপর ৫ মিনিটের বিরতি\n\nকোটা কখন রিসেট হয়?\nপ্রতিদিন ০:০০ (তোমার স্থানীয় সময়) থেকে নতুন পূর্ণ কোটা শুরু হয়।\n\n──────────\n\nসাবস্ক্রিপশন ছাড়া\n\n• প্রতি সপ্তাহে প্রতি প্রোফাইলে ৫টি ড্যাশবোর্ড বিশ্লেষণ\n• প্রতি সপ্তাহে ৫টি টেক্সট উন্নতি\n• সর্বদা দ্রুত স্ট্যান্ডার্ড মানে\n• প্রতি সোমবার ০:০০ (তোমার স্থানীয় সময়) রিসেট হয়\n\n──────────\n\nস্বাভাবিক ব্যবহারে বেশিরভাগ ব্যবহারকারী এই সীমায় পৌঁছাবেন না।</string>
+    <string name="ai_limits_dialog_body" formatted="false">প্রিমিয়াম সাবস্ক্রিপশনে\n\nপ্রতিদিন পাওয়া যায়:\n• প্রতি প্রোফাইলে প্রতিদিন 150টি অনুরোধ — 4টি পূর্বনির্ধারিত প্রোফাইল মিলে 600/দিন, আর তোমার নিজস্ব প্রতিটি প্রোফাইলের জন্য 150/দিন।\n• সর্বোচ্চ 150টি টেক্সট উন্নতি\n\nবিস্তারিত প্রক্রিয়া:\n• অনুরোধ 1 থেকে 30: সর্বোচ্চ এআই মানে\n• অনুরোধ 31 থেকে 100: দ্রুত স্ট্যান্ডার্ড মানে\n• 101তম অনুরোধে: একবার 30 মিনিটের বিরতি\n• অনুরোধ 101 থেকে 150: দ্রুত স্ট্যান্ডার্ড মানে\n• 151তম অনুরোধ থেকে: আজকের জন্য আর কোনো অনুরোধ নেই\n\nসব ব্যবহারকারীর ক্ষেত্রে:\n• প্রতি ঘণ্টায় সর্বোচ্চ 50টি এআই অনুরোধ — তারপর 5 মিনিটের বিরতি\n\nকোটা কখন রিসেট হয়?\nপ্রতিদিন 0:00 (তোমার স্থানীয় সময়) থেকে নতুন পূর্ণ কোটা শুরু হয়।\n\n──────────\n\nসাবস্ক্রিপশন ছাড়া\n\n• প্রতি সপ্তাহে প্রতি প্রোফাইলে 5টি ড্যাশবোর্ড বিশ্লেষণ\n• প্রতি সপ্তাহে 5টি টেক্সট উন্নতি\n• সর্বদা দ্রুত স্ট্যান্ডার্ড মানে\n• প্রতি সোমবার 0:00 (তোমার স্থানীয় সময়) রিসেট হয়\n\n──────────\n\nস্বাভাবিক ব্যবহারে বেশিরভাগ ব্যবহারকারী এই সীমায় পৌঁছাবেন না।</string>
     <string name="ai_limits_dialog_close">বুঝলাম</string>
     <string name="theme_neutral">নিরপেক্ষ</string>
     <string name="theme_profile">প্রোফাইল রঙ — ড্যাশবোর্ড প্রোফাইলের রঙ</string>
@@ -1451,7 +1451,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="churn_reason_other_placeholder">অনুগ্রহ করে সংক্ষেপে বলুন কী হয়েছে…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> তারিখে নবায়ন হবে</string>
     <string name="settings_premium_cancelled">প্রিমিয়াম সাবস্ক্রিপশন বাতিল করা হয়েছে</string>
-    <string name="settings_premium_cancelled_desc">আপনার প্রিমিয়াম ফিচারগুলো বিলিং পিরিয়ডের শেষ পর্যন্ত পাওয়া যাবে। আপনি যেকোনো সময় Google Play-এর মাধ্যমে বাতিল পূর্বাবস্থায় ফিরিয়ে আনতে পারবেন।</string>
+    <string name="settings_premium_cancelled_desc">তোমার Premium সুবিধাগুলো বিলিং পিরিয়ড শেষ হওয়া পর্যন্ত পাওয়া যাবে। Google Play-এর মাধ্যমে বাতিল পূর্বাবস্থায় ফেরানো যাবে।</string>
     <string name="settings_premium_cancelled_until">প্রিমিয়াম সাবস্ক্রিপশন বাতিল — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> পর্যন্ত সক্রিয়</string>
     <string name="settings_theme">থিম</string>
     <string name="settings_themes_manager">থিমস ম্যানেজার</string>

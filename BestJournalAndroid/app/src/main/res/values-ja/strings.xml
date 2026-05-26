@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">更新</string>
     <string name="dashboard_weekly_review_waiting">今週の振り返りが届いています</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">充実した1週間でしたね。プレミアムなら完全な分析を見られます。パターンに気づき、気づきを発見し、自分を動かすものを理解できます。</string>
+    <string name="dashboard_weekly_review_upsell_body">充実した1週間でしたね。プレミアムなら詳しい分析を確認できます。パターンを見つけ、気づきを発見し、自分の関心事を理解しましょう。</string>
     <string name="dashboard_discover_premium">プレミアムを見る</string>
     <string name="dashboard_please_wait">少々お待ちください</string>
     <string name="dashboard_gemini_unavailable">Geminiは現在利用できません。しばらくしてからお試しください。</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">自覚的（34–66\u00A0%%）</string>
     <string name="legend_reflection_surface">表面的（0–33\u00A0%%）</string>
     <string name="legend_insight_depth">気づきの深さ</string>
-    <string name="legend_insight_deep">深い。隠れたパターンと信念</string>
+    <string name="legend_insight_deep">深い洞察、繰り返しのパターンと信念</string>
     <string name="legend_insight_aware">自覚的。認識された思考と感情のパターン</string>
     <string name="legend_insight_surface">表面的。最初の観察</string>
     <string name="legend_progress">進捗</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">カスタム分析</string>
     <string name="profile_summary_desc">テーマ、パターン、体験をまとめます</string>
     <string name="profile_entropy_desc">ストレス、混乱、負担を見つけます</string>
-    <string name="profile_insight_desc">隠れた思考と感情のパターンを明らかにします</string>
+    <string name="profile_insight_desc">繰り返す思考と感情のパターンを可視化します</string>
     <string name="profile_goals_desc">目標、願い、進捗を認識します</string>
     <string name="profile_custom_desc">自分の分析フォーカスを設定します</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">記録は評価やアドバイスなしに中立にまとめられます。\n\n一目でわかります：\n\n• 今あなたを占めているテーマ\n• 繰り返されるパターン\n• 生活がどう進んでいるか\n\n日々の全体を見渡す手段として最適です。</string>
-    <string name="profile_entropy_long">AIは記録の中からストレス、負担、混乱を的確に探します。\n\n受け取れるもの：\n\n• 主な負担源の分析\n• 整理のための5つの具体的な行動\n• すぐ役立つヒント\n\nすべてが重荷に感じるときに最適です。</string>
-    <string name="profile_insight_long">AIは出来事の奥を見ます。記録の中に次を読み取ります：\n\n• 隠れた思考のパターンと信念\n• 繰り返す感情と反応\n• 自分では気づかない強み\n• 行動を導く価値観\n\n自分をより深く理解し、内側から成長したい方へ。</string>
+    <string name="profile_entropy_long">AIがあなたの記録からストレス、負担、混乱を探します。\n\n得られること：\n\n• あなたの主な負担源の分析\n• 整理するための5つの具体的な対策\n• 日常生活に役立つヒント\n\n「最近なんでも多すぎる」と感じているときに最適です。</string>
+    <string name="profile_insight_long">AIは出来事の表面だけでなく、深く読み込みます。あなたの記録から：\n\n• 言葉の中にある思考パターンと信念\n• 繰り返す感情と反応\n• 記録に現れる強み\n• 行動を導く価値観\n\n自分をより深く理解し、内面的に成長したいすべての人へ。</string>
     <string name="profile_goals_long">AIは、さりげない言及も含め、記録の中のすべての目標、願い、計画を見つけます。\n\n見えるようになります：\n\n• 持っている目標（隠れているものも）\n• 各目標の進み具合\n• 次の一歩になりそうなこと\n\nあなた自身の言葉から読み取る、個人の目標トラッカーです。</string>
     <string name="profile_custom_long">AIが何に注目するかを自分で決められます。\n\n自分の分析フォーカスを書いてください。例：\n\n•「スポーツに関するすべての言及を見つける」\n•「気分の変化を分析する」\n•「最も生産的な時間を教えて」\n\n目的がはっきりしている方に、完全な自由度を。</string>
     <string name="profile_custom_prompt">あなたにとって特に大切なことは何ですか？ 記録を分析するとき、AIは何に注目すべきですか？</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">毎日のダッシュボード分析</string>
     <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたの記録とともに進化します。</string>
     <string name="settings_premium_feature_5_perspectives">すべてのAIプロフィール（4種類のプリセット＋無制限のオリジナル）</string>
-    <string name="settings_premium_feature_5_perspectives_desc">明晰さから自己認識まで</string>
+    <string name="settings_premium_feature_5_perspectives_desc">要約から自己理解まで</string>
     <string name="settings_premium_feature_reviews">週・月・年の振り返り</string>
     <string name="settings_premium_feature_reviews_desc">AIがあなたの物語を語ります</string>
     <string name="settings_premium_feature_patterns">パターン認識</string>
@@ -752,9 +752,9 @@
     <string name="retro_weekly_p4">最初の2週間は無料</string>
     <string name="retro_monthly_p1">週の振り返りを月の物語につなぎます</string>
     <string name="retro_monthly_p2">月を通した太い線や変化が見えるようになります</string>
-    <string name="retro_monthly_p3">毎日の中では気づかない変化を示します</string>
+    <string name="retro_monthly_p3">あなたの記録からの成長を表示します</string>
     <string name="retro_yearly_p1">1年を一目で</string>
-    <string name="retro_yearly_p2">AIが1年の大きなテーマを見つけます</string>
+    <string name="retro_yearly_p2">AIがあなたの1年の主要テーマを要約します</string>
     <string name="retro_yearly_p3">個人の成長が見え、手に取れるようになります</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">あなただけの振り返り</string>
@@ -783,7 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Best Journalへ\nようこそ</string>
-    <string name="onboarding_subtitle">明晰さと変化のための\n個人のAI日記</string>
+    <string name="onboarding_subtitle">日常の明確さのための\nあなたのパーソナルAI日記</string>
     <string name="onboarding_feature_speech">話しても書いても、AIはどちらも分かります</string>
     <string name="onboarding_feature_secure">データはあなたの手元に。暗号化され安全です</string>
     <string name="onboarding_goals_title">AI日記で\n何を叶えたいですか？</string>
@@ -797,15 +797,15 @@
     <string name="onboarding_how_step2_desc">文章は自動で洗練され、複数の視点から分析されます。</string>
     <string name="onboarding_how_step3_desc">特別な瞬間を残すと、AIが分析に取り入れます。</string>
     <string name="onboarding_how_step4_title">パターンと気づきを見つける</string>
-    <string name="onboarding_how_step4_desc">ダッシュボードが、日々気づきにくいつながりを見せます。</string>
+    <string name="onboarding_how_step4_desc">AIダッシュボードであなたの記録のつながりを確認できます。</string>
     <string name="onboarding_how_step5_title">週・月・年の振り返り</string>
     <string name="onboarding_how_step5_desc">自動の振り返りが、時間の中でのあなたの歩みを見せます。</string>
     <string name="onboarding_premium_feature_improve">毎日のAIテキスト改善で、すべての記録がより明確で表現豊かに。</string>
     <string name="onboarding_premium_feature_dashboard">新しい記録ごとにダッシュボードを自動更新</string>
     <string name="onboarding_premium_feature_retro">週・月・年の振り返りがあなたの歩みを示します</string>
-    <string name="onboarding_premium_feature_patterns">個人のパターン認識。AIが隠れた思考と感情のパターンを見つけます</string>
+    <string name="onboarding_premium_feature_patterns">パターンを可視化：AIがあなたの記録の繰り返す思考・感情パターンを表示します</string>
     <string name="onboarding_premium_feature_noads">広告なし。書くことと内省に集中できます</string>
-    <string name="onboarding_free_trial">無料で、義務なし</string>
+    <string name="onboarding_free_trial">無料、いつでもキャンセル可能</string>
     <string name="onboarding_free_after_trial">そのあとも Best Journal を使い続けられます。\n無料で、週ごとにAI呼び出しの回数に上限があります。</string>
     <string name="onboarding_start_free">無料で始める</string>
     <string name="onboarding_without_premium">プレミアムなしで続ける</string>
@@ -816,7 +816,7 @@
     <string name="onboarding_perspectives_title">人生へのさまざまな\n視点</string>
     <string name="onboarding_premium_feature_pdf">写真つきPDF出力で、記録を文書として保存</string>
     <string name="onboarding_premium_profiles">人生を深く見る5つの知的ダッシュボードプロフィール</string>
-    <string name="onboarding_try_premium">8日間無料体験 — その後は月額3.99ユーロから</string>
+    <string name="onboarding_try_premium">8日間無料、その後月額3.99ユーロから</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +830,18 @@
     <string name="paywall_reminder">リマインダー</string>
     <string name="paywall_day8">8日目</string>
     <string name="paywall_first_payment">最初の支払い</string>
-    <string name="paywall_yearly_note">その後 年間%1$s\nお試し期間中はいつでも解約可能</string>
-    <string name="paywall_most_popular">最も人気の選択</string>
+    <string name="paywall_yearly_note">その後%1$sを年額で、自動更新\n試用期間中はいつでもキャンセル可能</string>
+    <string name="paywall_most_popular">おすすめ</string>
     <string name="paywall_monthly_plan">月額プラン、月%1$s</string>
     <string name="paywall_yearly_savings">月額プランに比べて%1$d\u00A0%%お得。いつでも解約可能</string>
     <string name="paywall_lifetime_title">買い切り</string>
     <string name="paywall_lifetime_desc">一度の支払いですべてを継続的に利用</string>
     <string name="paywall_lifetime_note">サブスクなし、更新なし</string>
-    <string name="paywall_free_note">アプリはサブスクなしでも使えます。</string>
+    <string name="paywall_free_note">アプリはサブスクリプションなしでも引き続きご利用いただけます。</string>
     <string name="paywall_cd_close">閉じる</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">考え方の見えないパターンを理解</string>
+    <string name="paywall_feature_patterns">思考の繰り返しパターンを見つける</string>
     <string name="paywall_feature_improve">毎日のAIテキスト改善をすべての記録に</string>
     <string name="paywall_feature_dashboard">記録ごとにダッシュボードを自動更新</string>
     <string name="paywall_feature_retro">AIによる週・月・年の振り返り</string>
@@ -891,7 +891,7 @@
     <string name="churn_reason_other">別の理由</string>
     <string name="churn_sorry_title">お別れは残念です</string>
     <string name="churn_sorry_body">解約の前に、理由を教えてもらえますか？ アプリを良くするのに役立ちます。</string>
-    <string name="churn_exclusive_offer">特別なご提案</string>
+    <string name="churn_exclusive_offer">あなたへの特別オファー</string>
     <string name="churn_offer_subtitle">あなたへのご提案</string>
     <string name="churn_offer_feature_ai">毎日のAI分析</string>
     <string name="churn_offer_feature_perspectives">すべてのAIプロフィール（4種類のプリセット＋無制限のオリジナル）</string>
@@ -1007,79 +1007,79 @@ Premiumでは：1日最大150件。</string>
     <string name="prompt_cat_relationships">人間関係</string>
 
     <string-array name="prompts_self_reflection">
-        <item>今日、何があなたを微笑ませましたか?</item>
-        <item>今日、どの考えが離れませんでしたか?</item>
-        <item>今日、自分について何を学びましたか?</item>
-        <item>今日、もっとも強く心に残った瞬間は?</item>
-        <item>できるなら、今日どこを変えたいですか?</item>
-        <item>今日、もっとも寄り添った気持ちは?</item>
-        <item>今日、何に驚きましたか?</item>
-        <item>今日、もっとも長く考えたことは?</item>
-        <item>今日、何があなたにエネルギーを与えましたか?</item>
-        <item>今日、何があなたからエネルギーを奪いましたか?</item>
-        <item>変えたい習慣はありますか?</item>
-        <item>今のあなたにとって、成功とは何ですか?</item>
-        <item>今、行く手を阻む怖れは何ですか?</item>
-        <item>若い頃のあなたは、今の暮らしをどう言うでしょう?</item>
-        <item>今、自分に贈るアドバイスは?</item>
-        <item>あなたをあなたらしくしているものは?</item>
+        <item>今日、何があなたを微笑ませましたか？</item>
+        <item>今日、どの考えが離れませんでしたか？</item>
+        <item>今日、自分について何を学びましたか？</item>
+        <item>今日、もっとも強く心に残った瞬間は？</item>
+        <item>できるなら、今日どこを変えたいですか？</item>
+        <item>今日、もっとも寄り添った気持ちは？</item>
+        <item>今日、何に驚きましたか？</item>
+        <item>今日、もっとも長く考えたことは？</item>
+        <item>今日、何があなたにエネルギーを与えましたか？</item>
+        <item>今日、何があなたからエネルギーを奪いましたか？</item>
+        <item>変えたい習慣はありますか？</item>
+        <item>今のあなたにとって、成功とは何ですか？</item>
+        <item>今、行く手を阻む怖れは何ですか？</item>
+        <item>若い頃のあなたは、今の暮らしをどう言うでしょう？</item>
+        <item>今、自分に贈るアドバイスは？</item>
+        <item>あなたをあなたらしくしているものは？</item>
     </string-array>
 
     <string-array name="prompts_gratitude">
-        <item>今日、何に感謝していますか?</item>
-        <item>今日、誰があなたの1日を明るくしましたか?</item>
-        <item>今日、どの小さなことが嬉しかったですか?</item>
-        <item>当たり前に感じているあなたの力は?</item>
-        <item>今週、一番うれしかったことは?</item>
-        <item>誰に、何を感謝したいですか?</item>
-        <item>家のように感じる場所はありますか?</item>
-        <item>すぐに笑顔になる思い出は?</item>
-        <item>もっと大切にしたい、自分の体の部分は?</item>
-        <item>今日、心地よかった食事は?</item>
-        <item>最近、心に響いた音楽は?</item>
-        <item>お金のかからない、あなたの宝物は?</item>
-        <item>あなたを強くした、過去の経験は?</item>
-        <item>当たり前の毎日の中の、実は特別なことは?</item>
-        <item>毎日の静かな英雄は?</item>
-        <item>今、いちばん味わっている季節は、なぜですか?</item>
+        <item>今日、何に感謝していますか？</item>
+        <item>今日、誰があなたの1日を明るくしましたか？</item>
+        <item>今日、どの小さなことが嬉しかったですか？</item>
+        <item>当たり前に感じているあなたの力は？</item>
+        <item>今週、一番うれしかったことは？</item>
+        <item>誰に、何を感謝したいですか？</item>
+        <item>家のように感じる場所はありますか？</item>
+        <item>すぐに笑顔になる思い出は？</item>
+        <item>もっと大切にしたい、自分の体の部分は？</item>
+        <item>今日、心地よかった食事は？</item>
+        <item>最近、心に響いた音楽は？</item>
+        <item>お金のかからない、あなたの宝物は？</item>
+        <item>あなたを強くした、過去の経験は？</item>
+        <item>当たり前の毎日の中の、実は特別なことは？</item>
+        <item>毎日の静かな英雄は？</item>
+        <item>今、いちばん味わっている季節は、なぜですか？</item>
     </string-array>
 
     <string-array name="prompts_future">
-        <item>1年後に、達成していたいことは?</item>
-        <item>5年後の、あなたの完ぺきな1日は?</item>
-        <item>今、いちばん情熱を注ぐ目標は?</item>
-        <item>失敗しないとわかったら、何をしますか?</item>
-        <item>学びたい新しい力は?</item>
-        <item>次に行きたい旅先は?</item>
-        <item>10年後、どんな人でありたいですか?</item>
-        <item>もう一度よみがえらせたい夢は?</item>
-        <item>今できる、いちばん勇気ある一歩は?</item>
-        <item>まだ始めていない、わくわくする計画は?</item>
-        <item>「今、満足だ」と言うために必要なことは?</item>
-        <item>世界に見たい変化は?</item>
-        <item>夢リストのいちばん上は?</item>
-        <item>来月までにやめたい悪い習慣は?</item>
-        <item>どう覚えられたいですか?</item>
-        <item>明日できる小さな一歩は?</item>
+        <item>1年後に、達成していたいことは？</item>
+        <item>5年後の、あなたの完ぺきな1日は？</item>
+        <item>今、いちばん情熱を注ぐ目標は？</item>
+        <item>失敗しないとわかったら、何をしますか？</item>
+        <item>学びたい新しい力は？</item>
+        <item>次に行きたい旅先は？</item>
+        <item>10年後、どんな人でありたいですか？</item>
+        <item>もう一度よみがえらせたい夢は？</item>
+        <item>今できる、いちばん勇気ある一歩は？</item>
+        <item>まだ始めていない、わくわくする計画は？</item>
+        <item>「今、満足だ」と言うために必要なことは？</item>
+        <item>世界に見たい変化は？</item>
+        <item>夢リストのいちばん上は？</item>
+        <item>来月までにやめたい悪い習慣は？</item>
+        <item>どう覚えられたいですか？</item>
+        <item>明日できる小さな一歩は？</item>
     </string-array>
 
     <string-array name="prompts_relationships">
-        <item>まだ伝えていないことを、誰に伝えたいですか?</item>
-        <item>もっと大切にしたい関係は?</item>
-        <item>親友のどこが好きですか?</item>
-        <item>最近、心から理解されたと感じたのはいつですか?</item>
-        <item>大切な人に、何を伝えたいですか?</item>
-        <item>人生を一番形作ったのは誰ですか?</item>
-        <item>愛情をどう相手に示していますか?</item>
-        <item>解決したい衝突はありますか?</item>
-        <item>あなたにとって友情とは?</item>
-        <item>最近、大切なことを教えてくれたのは誰ですか?</item>
-        <item>他の人のどんな性質をいちばん尊敬しますか?</item>
-        <item>丸1日を誰と過ごしたいですか?</item>
-        <item>受けたいちばんの褒め言葉は?</item>
-        <item>関係の中で、もっと上手に引きたい線は?</item>
-        <item>愛への考え方は、時と共にどう変わりましたか?</item>
-        <item>今日、あなたから電話やメッセージをもらうべき人は?</item>
+        <item>まだ伝えていないことを、誰に伝えたいですか？</item>
+        <item>もっと大切にしたい関係は？</item>
+        <item>親友のどこが好きですか？</item>
+        <item>最近、心から理解されたと感じたのはいつですか？</item>
+        <item>大切な人に、何を伝えたいですか？</item>
+        <item>人生を一番形作ったのは誰ですか？</item>
+        <item>愛情をどう相手に示していますか？</item>
+        <item>解決したい衝突はありますか？</item>
+        <item>あなたにとって友情とは？</item>
+        <item>最近、大切なことを教えてくれたのは誰ですか？</item>
+        <item>他の人のどんな性質をいちばん尊敬しますか？</item>
+        <item>丸1日を誰と過ごしたいですか？</item>
+        <item>受けたいちばんの褒め言葉は？</item>
+        <item>関係の中で、もっと上手に引きたい線は？</item>
+        <item>愛への考え方は、時と共にどう変わりましたか？</item>
+        <item>今日、あなたから電話やメッセージをもらうべき人は？</item>
     </string-array>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -1099,7 +1099,7 @@ Premiumでは：1日最大150件。</string>
     <string name="error_whisper_no_text">テキストを認識できません</string>
     <string name="error_sync_db_not_found">データベースが見つかりません</string>
     <string name="error_audio_record_init_failed">マイクを開始できませんでした</string>
-    <string name="error_json_key_missing">AI応答が不完全です: %1$s または %2$s がありません</string>
+    <string name="error_json_key_missing">AI応答が不完全です：%1$s または %2$s がありません</string>
     <string name="error_file_open_failed">エラー： ファイルを開けませんでした</string>
     <string name="error_generic">エラー： %1$s</string>
 
@@ -1135,7 +1135,7 @@ Premiumでは：1日最大150件。</string>
     <string name="privacy_gate_groq_local">ローカルで文字起こしする</string>
 
     <string name="privacy_gate_gemini_title">テキストをGoogle Geminiに送信しますか？</string>
-    <string name="privacy_gate_gemini_body">Best Journalの高度な機能をお使いいただきありがとうございます！要約、振り返り、ダッシュボードの気づき、テキスト改善のために、テキストは暗号化してGoogle Geminiへ送信されます。\n\n✓ あなたのデータはAIモデルの学習には使われません\n✓ リクエストは処理後すぐに削除されます\n✓ EU-US Data Privacy Frameworkに基づき暗号化されます\n\n重要なお知らせ：日記の記述には特に機微な情報（健康、宗教、個人的な関係 — GDPR第9条、特別カテゴリ）が含まれる場合があるため、AI処理への明示的な同意をここでお願いしています。AIの出力は提案であり、専門家の助言の代わりにはなりません。\n\n設定からいつでも変更できます。</string>
+    <string name="privacy_gate_gemini_body">Best Journalのスマート機能をご利用いただきありがとうございます！要約、振り返り、ダッシュボードの洞察、テキスト改善のため、あなたのテキストは暗号化されてGoogle Geminiに送信されます。\n\n✓ あなたのデータはAIのトレーニングに使用されません\n✓ リクエストは恒久的に保存されません\n✓ EU-US データプライバシーフレームワークに基づく暗号化\n\n重要なお知らせ：日記には特に繊細なデータ（健康、宗教、個人的な関係など — GDPRの第9条）が含まれる場合があります。そのため、AI処理への明示的な同意をお願いしています。AIの出力はあくまで提案であり、専門的なアドバイスや専門家の代替にはなりません。\n\n設定からいつでも変更できます。</string>
     <string name="privacy_gate_gemini_accept">同意して送信</string>
     <string name="privacy_gate_gemini_cancel">キャンセル</string>
 
@@ -1176,7 +1176,7 @@ Premiumでは：1日最大150件。</string>
     <string name="settings_revoke_no_email">メールアプリが見つかりません。dev.app.support@gmail.com に解除通知を送信してください。</string>
     <string name="settings_revoke_email_subject">Best Journal プレミアム契約解除</string>
     <string name="settings_revoke_email_body">本通知により、Best Journal の Premium 機能に関する契約の撤回を通知します。\n\n送信者（Google アカウント）：%1$s\n撤回時刻：%2$s\n\nこの撤回は、アプリ内の § 356a BGB 準拠の二段階撤回ボタンによって開始され、Gmail API を介して自動送信されました。</string>
-    <string name="settings_revoke_confirm_subject">受領確認: Best Journal での撤回</string>
+    <string name="settings_revoke_confirm_subject">受領確認：Best Journal での撤回</string>
     <string name="settings_revoke_confirm_user_body">こんにちは。\n\n%1$s の撤回を受領しました。これは § 356a BGB に基づく受領確認です。\n\n撤回はできるだけ早く処理し、確認が必要な場合は dev.app.support@gmail.com からご連絡します。\n\n今後の請求を止めるため、Google Play ストアの「定期購入」でも解約してください。\n\nありがとうございます\nBest Journal (Frank Barwandt)</string>
     <string name="settings_revoke_no_account">ログイン中の Google アカウントのアドレスが見つかりませんでした。設定で Google アカウントにログインするか、撤回を dev.app.support@gmail.com 宛てに手動で送信してください。</string>
     <string name="settings_revoke_sending">撤回を送信中…</string>
@@ -1184,7 +1184,7 @@ Premiumでは：1日最大150件。</string>
     <string name="settings_revoke_success_body">撤回は dev.app.support@gmail.com へ送信されました。受領確認も受信トレイに届いています。</string>
     <string name="settings_revoke_success_close">閉じる</string>
     <string name="settings_revoke_error_title">撤回を送信できませんでした</string>
-    <string name="settings_revoke_error_body">自動送信に失敗しました: %1$s\n\n代わりに dev.app.support@gmail.com 宛てに手動でメールを送れます。その場合は「メールアプリを開く」をタップしてください。</string>
+    <string name="settings_revoke_error_body">自動送信に失敗しました：%1$s\n\n代わりに dev.app.support@gmail.com 宛てに手動でメールを送れます。その場合は「メールアプリを開く」をタップしてください。</string>
     <string name="settings_revoke_error_email_fallback">メールアプリを開く</string>
 
 
@@ -1213,18 +1213,18 @@ Premiumでは：1日最大150件。</string>
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">オプトアウトを保存しました。統計は無効です。</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">カリフォルニア州の方向け(CCPA/CPRA 2026)。有効にすると、クラウドAI機能がすべて無効になり、統計も収集されません。</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">カリフォルニア州の方向け（CCPA/CPRA 2026）。有効にすると、クラウドAI機能がすべて無効になり、統計も収集されません。</string>
     <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sellを有効にしました。すべてのクラウドサービスが無効です。</string>
     <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sellを無効にしました。</string>
     <string name="settings_delete_account_in_progress">アカウントとデータを削除しています…</string>
     <string name="settings_delete_account_drive_error_title">Driveバックアップを削除できませんでした</string>
-    <string name="settings_delete_account_drive_error_body">Google Driveのバックアップを確実に削除できませんでした(理由: %1$s)。
+    <string name="settings_delete_account_drive_error_body">Google Driveのバックアップを確実に削除できませんでした（理由：%1$s）。
 
 完全に削除されないと「完全に削除しました」という表示は正確ではありません。
 
-どうしますか?</string>
+どうしますか？</string>
     <string name="settings_delete_account_retry">もう一度試す</string>
-    <string name="settings_delete_account_force_local">ローカルのみ削除(Driveバックアップは今のところ残す)</string>
+    <string name="settings_delete_account_force_local">ローカルのみ削除（Driveバックアップは保持）</string>
     <string name="settings_delete_account_abort">操作を中止</string>
 
     <string name="legal_title_datenschutz">プライバシーポリシー</string>
@@ -1382,7 +1382,7 @@ Premiumでは：1日最大150件。</string>
     <string name="paywall_lifetime_label">一回払い</string>
     <string name="paywall_monthly_label">月額</string>
     <string name="paywall_restore_button">購入を復元</string>
-    <string name="paywall_subscribe_button">登録</string>
+    <string name="paywall_subscribe_button">有料プランに登録する</string>
     <string name="paywall_subtitle">すべてのプレミアム機能をアンロック</string>
     <string name="paywall_title">Premiumにアップグレード</string>
     <string name="paywall_yearly_label">年額</string>
@@ -1474,7 +1474,7 @@ Premiumでは：1日最大150件。</string>
     <string name="churn_reason_other_placeholder">少し教えてください…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> に自動更新</string>
     <string name="settings_premium_cancelled">プレミアム解約済み</string>
-    <string name="settings_premium_cancelled_desc">請求サイクルの終了まで、プレミアム機能はご利用いただけます。Google Play からいつでも解約を取り消すことができます。</string>
+    <string name="settings_premium_cancelled_desc">プレミアム機能は請求期間の終了まで引き続きご利用いただけます。キャンセルはGoogle Playから取り消せます。</string>
     <string name="settings_premium_cancelled_until">プレミアム解約済み — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> まで有効</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_themes_manager">テーママネージャー</string>
