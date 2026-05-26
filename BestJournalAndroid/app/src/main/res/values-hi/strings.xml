@@ -178,7 +178,7 @@
     <string name="dashboard_refresh">अपडेट करें</string>
     <string name="dashboard_weekly_review_waiting">आपकी हफ्तावार समीक्षा इंतज़ार में है</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">आपका हफ्ता भरपूर रहा। Premium के साथ आप पूरा विश्लेषण देखते हैं, पैटर्न पहचानते हैं, इनसाइट्स पाते हैं और समझते हैं कि असल में आपको क्या चलाता है।</string>
+    <string name="dashboard_weekly_review_upsell_body">आपका यह हफ्ता काफी व्यस्त रहा। Premium के साथ आप पूरी analysis देख सकते हैं: patterns पहचानें, insights खोजें और समझें कि आपको क्या परेशान कर रहा है।</string>
     <string name="dashboard_discover_premium">Premium देखें</string>
     <string name="dashboard_please_wait">कृपया रुकें</string>
     <string name="dashboard_gemini_unavailable">Gemini फिलहाल उपलब्ध नहीं है, थोड़ी देर बाद कोशिश करें।</string>
@@ -235,7 +235,7 @@
     <string name="legend_reflection_aware">सजग (34–66\u00A0%%)</string>
     <string name="legend_reflection_surface">सतही (0–33\u00A0%%)</string>
     <string name="legend_insight_depth">इनसाइट्स की गहराई</string>
-    <string name="legend_insight_deep">गहरा, छुपे पैटर्न और विश्वास</string>
+    <string name="legend_insight_deep">गहरे, बार-बार आने वाले patterns और विश्वास</string>
     <string name="legend_insight_aware">सजग, पहचाने गए सोच और भावना पैटर्न</string>
     <string name="legend_insight_surface">सतही, पहले-पहल अवलोकन</string>
     <string name="legend_progress">प्रगति</string>
@@ -320,14 +320,14 @@
     <string name="profile_custom">व्यक्तिगत विश्लेषण</string>
     <string name="profile_summary_desc">विषय, पैटर्न और अनुभवों को सारांशित करता है</string>
     <string name="profile_entropy_desc">तनाव, अव्यवस्था और बोझ पहचानता है</string>
-    <string name="profile_insight_desc">छुपी सोच और भावना पैटर्न खोलता है</string>
+    <string name="profile_insight_desc">बार-बार आने वाले सोच और भावना के patterns को सामने लाता है</string>
     <string name="profile_goals_desc">लक्ष्य, इच्छाएं और प्रगति पहचानता है</string>
     <string name="profile_custom_desc">अपना विश्लेषण फोकस तय करें</string>
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">आपकी एंट्रीज़ तटस्थ रूप से सारांशित की जाती हैं, बिना किसी फैसले या सलाह के।\n\nएक नज़र में आप देखते हैं:\n\n• अभी आपको क्या चल रहा है\n• कौन से पैटर्न दोहराए जा रहे हैं\n• आपकी ज़िंदगी कैसे बढ़ रही है\n\nहर दिन की पूरी तस्वीर के लिए परफेक्ट।</string>
-    <string name="profile_entropy_long">AI आपकी एंट्री में तनाव, बोझ और अव्यवस्था खासतौर पर ढूंढता है।\n\nआपको मिलता है:\n\n• आपके सबसे बड़े बोझ के स्रोतों का विश्लेषण\n• व्यवस्थित करने के 5 ठोस क़दम\n• तुरंत काम आने वाले सुझाव\n\nजब सब कुछ ज़्यादा लगे, तब बढ़िया।</string>
-    <string name="profile_insight_long">AI घटनाओं से भी गहरा देखता है। वह आपकी एंट्री में पहचानता है:\n\n• छुपी सोच और विश्वास\n• दोहराई जाने वाली भावनाएं और प्रतिक्रियाएं\n• आपकी वे ख़ूबियां जो आपको नहीं दिखतीं\n• जो मूल्य आपके काम को चलाते हैं\n\nउनके लिए जो खुद को बेहतर समझना और अंदर से बढ़ना चाहते हैं।</string>
+    <string name="profile_entropy_long">KI आपकी entries में तनाव, बोझ और अव्यवस्था को खोजती है।\n\nआपको मिलेगा:\n\n• आपकी सबसे बड़ी परेशानियों की analysis\n• 5 ठोस कदम व्यवस्था के लिए\n• रोज़मर्रा में काम आने वाले tips\n\nआदर्श जब आपको लगे कि सब कुछ बहुत ज़्यादा हो गया है।</string>
+    <string name="profile_insight_long">KI सिर्फ events से आगे जाती है। वह आपकी entries में देखती है:\n\n• आपके शब्दों में सोच के patterns और विश्वास\n• बार-बार आने वाली भावनाएं और प्रतिक्रियाएं\n• आपकी entries में दिखने वाली खूबियां\n• वे मूल्य जो आपके कार्यों को प्रेरित करते हैं\n\nउन सभी के लिए जो खुद को बेहतर समझना और अंदर से बढ़ना चाहते हैं।</string>
     <string name="profile_goals_long">AI आपकी एंट्री में हर लक्ष्य, इच्छा और योजना ढूंढता है, भले ही वह हल्के से ज़िक्र में हो।\n\nआप देखते हैं:\n\n• आपके कौन-कौन से लक्ष्य हैं (छुपे हुए भी)\n• हर लक्ष्य पर आप कहां तक पहुंचे\n• अगला क़दम क्या हो सकता है\n\nआपके अपने शब्दों से पढ़ने वाला निजी लक्ष्य ट्रैकर।</string>
     <string name="profile_custom_long">आप खुद तय करें कि AI किस पर ध्यान दे।\n\nअपना विश्लेषण फोकस लिखें, जैसे:\n\n• «खेल के सारे ज़िक्र ढूंढें»\n• «मेरे मूड के उतार-चढ़ाव का विश्लेषण करें»\n• «बताएं कि मैं कब सबसे ज़्यादा प्रोडक्टिव होता हूं»\n\nउनके लिए पूरा नियंत्रण जिन्हें ठीक-ठीक पता है वे क्या चाहते हैं।</string>
     <string name="profile_custom_prompt">आपके लिए क्या खास अहम है? आपकी एंट्री के विश्लेषण में AI को किस पर ध्यान देना चाहिए?</string>
@@ -423,7 +423,7 @@
     <string name="settings_premium_feature_dashboard">रोज़ाना डैशबोर्ड विश्लेषण</string>
     <string name="settings_premium_feature_dashboard_desc">तुम्हारा डैशबोर्ड तुम्हारी एंट्रियों के साथ बढ़ता है।</string>
     <string name="settings_premium_feature_5_perspectives">सभी AI प्रोफ़ाइल (4 पूर्व-निर्धारित + असीमित अपने)</string>
-    <string name="settings_premium_feature_5_perspectives_desc">स्पष्टता से आत्म-ज्ञान तक</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Summary से self-knowledge तक</string>
     <string name="settings_premium_feature_reviews">हफ्तावार, माहवार और सालाना समीक्षा</string>
     <string name="settings_premium_feature_reviews_desc">AI आपकी कहानी सुनाता है</string>
     <string name="settings_premium_feature_patterns">पैटर्न पहचान</string>
@@ -752,9 +752,9 @@
     <string name="retro_weekly_p4">पहले 2 हफ्ते मुफ़्त</string>
     <string name="retro_monthly_p1">आपकी हफ्तावार समीक्षाओं को महीने की कहानी में जोड़ता है</string>
     <string name="retro_monthly_p2">महीने भर के मुख्य धागे और बदलाव दिखते हैं</string>
-    <string name="retro_monthly_p3">रोज़मर्रा में न दिखने वाले बदलाव सामने आते हैं</string>
+    <string name="retro_monthly_p3">आपकी entries में विकास दिखाता है</string>
     <string name="retro_yearly_p1">आपका पूरा साल एक नज़र में</string>
-    <string name="retro_yearly_p2">AI साल के बड़े विषय पहचानता है</string>
+    <string name="retro_yearly_p2">KI आपके साल के बड़े विषयों को summarize करती है</string>
     <string name="retro_yearly_p3">व्यक्तिगत विकास देखने और महसूस करने योग्य बनता है</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">आपकी व्यक्तिगत समीक्षाएं</string>
@@ -783,7 +783,7 @@
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
     <string name="onboarding_welcome">Best Journal में\nस्वागत है</string>
-    <string name="onboarding_subtitle">स्पष्टता और बदलाव के लिए\nआपकी व्यक्तिगत AI डायरी</string>
+    <string name="onboarding_subtitle">आपकी personal KI diary\nरोज़मर्रा में ज़्यादा clarity के लिए</string>
     <string name="onboarding_feature_speech">बोलें या लिखें, AI दोनों समझता है</string>
     <string name="onboarding_feature_secure">आपका डेटा आपके पास रहता है, एन्क्रिप्टेड और सुरक्षित</string>
     <string name="onboarding_goals_title">AI डायरी से आप\nक्या पाना चाहते हैं?</string>
@@ -797,15 +797,15 @@
     <string name="onboarding_how_step2_desc">आपका टेक्स्ट अपने आप निखरता है और कई नज़रियों से विश्लेषित होता है।</string>
     <string name="onboarding_how_step3_desc">ख़ास पल सहेजें, AI उन्हें विश्लेषण में लेता है।</string>
     <string name="onboarding_how_step4_title">पैटर्न और इनसाइट्स खोजें</string>
-    <string name="onboarding_how_step4_desc">डैशबोर्ड आपको रोज़मर्रा में छुपे रहने वाले जुड़ाव दिखाता है।</string>
+    <string name="onboarding_how_step4_desc">KI dashboard आपकी entries के बीच connections दिखाता है।</string>
     <string name="onboarding_how_step5_title">हफ्तावार, माहवार और सालाना समीक्षा</string>
     <string name="onboarding_how_step5_desc">अपने आप बनने वाली समीक्षाएं दिखाती हैं कि आप समय के साथ कैसे बदलते हैं।</string>
     <string name="onboarding_premium_feature_improve">रोज़ाना AI टेक्स्ट सुधार, हर एंट्री और अधिक स्पष्ट और अभिव्यक्तिपूर्ण बन जाती है</string>
     <string name="onboarding_premium_feature_dashboard">हर नई एंट्री पर डैशबोर्ड अपने आप अपडेट</string>
     <string name="onboarding_premium_feature_retro">हफ्तावार, माहवार और सालाना समीक्षाएं आपके विकास को दिखाती हैं</string>
-    <string name="onboarding_premium_feature_patterns">व्यक्तिगत पैटर्न पहचान, AI छुपी सोच और भावना पैटर्न खोजता है</string>
+    <string name="onboarding_premium_feature_patterns">Patterns visible करें: KI आपकी entries में बार-बार आने वाले सोच और भावना के patterns दिखाती है</string>
     <string name="onboarding_premium_feature_noads">कोई विज्ञापन नहीं, शांति से लिखें और चिंतन करें</string>
-    <string name="onboarding_free_trial">मुफ़्त और बिना किसी वादे के</string>
+    <string name="onboarding_free_trial">Free, जब चाहें cancel करें</string>
     <string name="onboarding_free_after_trial">उसके बाद आप Best Journal मुफ़्त में चलाते हैं,\nहफ्तावार AI सीमा के साथ।</string>
     <string name="onboarding_start_free">मुफ़्त शुरू करें</string>
     <string name="onboarding_without_premium">Premium के बिना जारी रखें</string>
@@ -816,7 +816,7 @@
     <string name="onboarding_perspectives_title">अपनी ज़िंदगी के\nअलग-अलग नज़रिए</string>
     <string name="onboarding_premium_feature_pdf">फोटो के साथ PDF एक्सपोर्ट, अपनी एंट्री दस्तावेज़ के रूप में</string>
     <string name="onboarding_premium_profiles">5 स्मार्ट डैशबोर्ड प्रोफ़ाइल, गहरी जानकारी</string>
-    <string name="onboarding_try_premium">8 दिन मुफ़्त — फिर ₹3.99/माह से शुरू</string>
+    <string name="onboarding_try_premium">8 दिन free, फिर 3.99 €/महीने से</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -830,18 +830,18 @@
     <string name="paywall_reminder">रिमाइंडर</string>
     <string name="paywall_day8">दिन 8</string>
     <string name="paywall_first_payment">पहला भुगतान</string>
-    <string name="paywall_yearly_note">उसके बाद %1$s सालाना\nट्रायल में कभी भी रद्द</string>
-    <string name="paywall_most_popular">सबसे पसंदीदा</string>
+    <string name="paywall_yearly_note">इसके बाद %1$s प्रति वर्ष, अपने आप renew होता है\nTrial के दौरान जब चाहें cancel करें</string>
+    <string name="paywall_most_popular">अनुशंसित</string>
     <string name="paywall_monthly_plan">माहवार सदस्यता, %1$s प्रति माह</string>
     <string name="paywall_yearly_savings">माहवार सदस्यता की तुलना में %1$d%% की बचत — अनुबंध अवधि के अंत तक कभी भी रद्द करो।</string>
     <string name="paywall_lifetime_title">एक बार खरीद</string>
     <string name="paywall_lifetime_desc">एक बार भुगतान करो, सब कुछ स्थायी रूप से उपयोग करो</string>
     <string name="paywall_lifetime_note">कोई सदस्यता नहीं, कोई नवीकरण नहीं</string>
-    <string name="paywall_free_note">ऐप बिना सदस्यता भी चलता है,</string>
+    <string name="paywall_free_note">App बिना subscription के भी काम करती रहती है।</string>
     <string name="paywall_cd_close">बंद करें</string>
 
     <!-- Paywall features -->
-    <string name="paywall_feature_patterns">अपनी सोच के छुपे पैटर्न समझें</string>
+    <string name="paywall_feature_patterns">अपनी सोच में बार-बार आने वाले patterns पहचानें</string>
     <string name="paywall_feature_improve">हर एंट्री के लिए रोज़ाना AI टेक्स्ट सुधार</string>
     <string name="paywall_feature_dashboard">हर एंट्री के बाद डैशबोर्ड अपने आप अपडेट</string>
     <string name="paywall_feature_retro">AI से हफ्तावार, माहवार और सालाना समीक्षाएं</string>
@@ -891,7 +891,7 @@
     <string name="churn_reason_other">कोई और कारण</string>
     <string name="churn_sorry_title">आपका जाना दुखद है</string>
     <string name="churn_sorry_body">रद्द करने से पहले कारण बताएंगे? इससे हम ऐप बेहतर कर सकते हैं।</string>
-    <string name="churn_exclusive_offer">ख़ास ऑफर</string>
+    <string name="churn_exclusive_offer">आपके लिए offer</string>
     <string name="churn_offer_subtitle">सिर्फ़ तुम्हारे लिए हमारा ऑफर</string>
     <string name="churn_offer_feature_ai">रोज़ाना AI विश्लेषण</string>
     <string name="churn_offer_feature_perspectives">सभी AI प्रोफ़ाइल (4 पूर्व-निर्धारित + असीमित अपने)</string>
@@ -1139,7 +1139,7 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="privacy_gate_groq_local">इसके बजाय लोकल ट्रांसक्राइब करें</string>
 
     <string name="privacy_gate_gemini_title">टेक्स्ट Google Gemini को भेजें?</string>
-    <string name="privacy_gate_gemini_body">बढ़िया! आप Best Journal की इंटेलिजेंट सुविधाओं का उपयोग करना चाहते हैं। सारांश, रिव्यू, डैशबोर्ड इनसाइट्स और टेक्स्ट सुधार के लिए आपका टेक्स्ट एन्क्रिप्टेड रूप में Google Gemini को भेजा जाता है।\n\n✓ आपके डेटा से AI मॉडल कभी ट्रेन नहीं किए जाते\n✓ प्रोसेसिंग के तुरंत बाद रिक्वेस्ट डिलीट हो जाती हैं\n✓ EU-US Data Privacy Framework के अनुसार एन्क्रिप्टेड\n\nमहत्वपूर्ण सूचना: चूंकि आपकी डायरी की एंट्री में विशेष रूप से संवेदनशील डेटा (स्वास्थ्य, धर्म, व्यक्तिगत रिश्ते — GDPR अनुच्छेद 9, विशेष श्रेणियाँ) हो सकते हैं, इसलिए हम यहाँ AI प्रोसेसिंग के लिए आपकी स्पष्ट सहमति माँग रहे हैं। AI का आउटपुट सुझाव है, पेशेवर सलाह नहीं, और किसी विशेषज्ञ की जगह नहीं लेता।\n\nआप इसे कभी भी सेटिंग्स में बदल सकते हैं।</string>
+    <string name="privacy_gate_gemini_body">अच्छा लगा कि आप Best Journal की smart सुविधाओं का उपयोग करना चाहते हैं! Summaries, reviews, dashboard insights और text improvements के लिए आपके texts encrypted होकर Google Gemini को भेजे जाते हैं।\n\n✓ आपके data से कोई KI training नहीं\n✓ Requests स्थायी रूप से store नहीं होतीं\n✓ EU-US Data Privacy Framework के अनुसार encrypted\n\nज़रूरी जानकारी: चूंकि आपकी diary entries में बेहद संवेदनशील data हो सकता है (स्वास्थ्य, धर्म, व्यक्तिगत संबंध — Art. 9 DSGVO), इसलिए हम KI processing के लिए आपकी स्पष्ट सहमति मांगते हैं। KI के results सुझाव हैं, कोई professional सलाह नहीं और किसी विशेषज्ञ की जगह नहीं लेते।\n\nआप इसे Settings में कभी भी बदल सकते हैं।</string>
     <string name="privacy_gate_gemini_accept">सहमत हूँ, भेजें</string>
     <string name="privacy_gate_gemini_cancel">रद्द करें</string>
 
@@ -1228,7 +1228,7 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
 
 आप क्या करना चाहते हैं?</string>
     <string name="settings_delete_account_retry">पुनः प्रयास करें</string>
-    <string name="settings_delete_account_force_local">केवल स्थानीय रूप से हटाएँ (Drive बैकअप अभी रहेगा)</string>
+    <string name="settings_delete_account_force_local">केवल locally delete करें (Drive backup बना रहेगा)</string>
     <string name="settings_delete_account_abort">क्रिया रद्द करें</string>
 
     <string name="legal_title_datenschutz">गोपनीयता नीति</string>
@@ -1384,7 +1384,7 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="paywall_lifetime_label">एक बार</string>
     <string name="paywall_monthly_label">मासिक</string>
     <string name="paywall_restore_button">खरीदारी पुनर्स्थापित करें</string>
-    <string name="paywall_subscribe_button">सदस्यता लें</string>
+    <string name="paywall_subscribe_button">Subscribe करें (भुगतान)</string>
     <string name="paywall_subtitle">सभी Premium सुविधाएं अनलॉक करो</string>
     <string name="paywall_title">Premium में अपग्रेड करें</string>
     <string name="paywall_yearly_label">वार्षिक</string>
@@ -1466,7 +1466,7 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="churn_reason_other_placeholder">कृपया हमें संक्षेप में बताएं कि क्या हुआ…</string>
     <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> को नवीनीकृत होगा</string>
     <string name="settings_premium_cancelled">प्रीमियम सदस्यता रद्द की गई</string>
-    <string name="settings_premium_cancelled_desc">आपकी प्रीमियम सुविधाएं बिलिंग अवधि के अंत तक उपलब्ध रहेंगी। आप Google Play के माध्यम से किसी भी समय रद्दीकरण को पूर्ववत कर सकते हैं।</string>
+    <string name="settings_premium_cancelled_desc">आपकी Premium सुविधाएं billing period के अंत तक उपलब्ध रहेंगी। आप Google Play के ज़रिए cancellation को वापस ले सकते हैं।</string>
     <string name="settings_premium_cancelled_until">प्रीमियम सदस्यता रद्द की गई — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> तक वैध</string>
     <string name="settings_theme">थीम</string>
     <string name="settings_themes_manager">थीम्स मैनेजर</string>
