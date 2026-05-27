@@ -134,14 +134,28 @@ extension OverlayPanel {
         }
     }
 
-    /// In der horizontalen Leiste werden Save + OrientationToggle bereits
-    /// von den HBar-Slots (saveExtra / orientationToggleExtra) positioniert.
-    /// Wir muessen hier nur die Sichtbarkeit aktivieren (alphaValue=1).
-    func positionExtraButtonsHorizontal() {
-        // Erzwingt das Lazy-Init falls die Buttons noch nicht existieren —
-        // die Slot-Positionierung passiert in positionButtonsInSection().
-        _ = self.orientationToggleButton
-        _ = self.saveButton
+    /// Positioniert die Extra-Buttons in der horizontalen Leiste.
+    /// Save wird automatisch in S7 ueber die Slot-Mechanik platziert
+    /// (.saveExtra in der lower-Reihe). Stern + ⇄ in S1 brauchen
+    /// Spezial-Behandlung: beide 34×34 ÜBEREINANDER (MakeHStackGroup auf
+    /// Windows), Slot-Mechanik kann das nicht (lower-Row ist nur 22 hoch).
+    /// `s1Origin` + `s1Width` werden von applyHorizontalLayout uebergeben.
+    func positionExtraButtonsHorizontal(s1Origin: NSPoint, s1Width: CGFloat) {
+        // Stern auf 34×34 verkleinern (war 40×40 im vertikalen Layout).
+        ultrathinkButton.buttonWidth  = 34
+        ultrathinkButton.buttonHeight = 34
+
+        // S1-Sektion: 50 breit, 92 hoch. Padding 6 oben/unten.
+        // Stack: Stern oben + 4 px Margin + ⇄ unten. Total 34+4+34 = 72.
+        // Free space innerhalb 92 - 12 padding = 80. (80-72)/2 = 4 zusaetzlich.
+        // macOS-Y (unten=0):
+        //   ⇄    untere Kante = padding 6 + 4 = 10
+        //   Stern untere Kante = 10 + 34 + 4 (margin) = 48
+        let stackX = s1Origin.x + (s1Width - 34) / 2
+        ultrathinkButton.frame        = NSRect(x: stackX, y: 48, width: 34, height: 34)
+        orientationToggleButton.frame = NSRect(x: stackX, y: 10, width: 34, height: 34)
+        ultrathinkButton.needsDisplay = true
+
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
     }

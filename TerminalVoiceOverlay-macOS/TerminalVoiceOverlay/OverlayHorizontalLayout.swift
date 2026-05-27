@@ -110,12 +110,16 @@ extension OverlayPanel {
         var x: CGFloat = HBarLayout.sectionInnerPadX
         var trackedSectionViews: [NSView] = []
         var trackedDividerViews: [NSView] = []
-        var s1Origin: NSPoint = .zero  // Position der S1-Sektion fuer Stern+⇄-Stack
+        var s1Origin: NSPoint = .zero
         var s1Width: CGFloat = 0
         for (i, s) in sections.enumerated() {
             let sectionRect = NSRect(x: x, y: 0,
                                      width: s.width,
                                      height: HBarLayout.panelHeight)
+            if i == sections.count - 1 {  // letzte Sektion = S1
+                s1Origin = sectionRect.origin
+                s1Width  = s.width
+            }
             let sectionView = makeSectionView(rect: sectionRect,
                                               hex: s.backgroundHex,
                                               cornerMode: s.cornerMode,
@@ -155,7 +159,7 @@ extension OverlayPanel {
         self.currentOrientation = .horizontal
 
         // Extra-Buttons (OrientationToggle, Save) positionieren.
-        positionExtraButtonsHorizontal()
+        positionExtraButtonsHorizontal(s1Origin: s1Origin, s1Width: s1Width)
 
         // 30% Durchsichtigkeit auf den Sektions-Hintergruenden — Windows-Stil.
         applySectionTransparency()
@@ -424,9 +428,10 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         // S1 ist die Spezial-Sektion (MakeHStackGroup in Windows):
-        // Stern 34×34 OBEN, OrientationToggle 34×34 UNTEN, 4px-Abstand.
-        // Wir nutzen positionExtraButtonsHorizontal() unten zur exakten
-        // Stack-Positionierung — die Slot-Logik kann das nicht 1:1.
+        // Stern 34×34 OBEN + ⇄ 34×34 UNTEN, 4 px-Abstand. Beide Buttons sind
+        // zu hoch fuer die 22-px-lower-Reihe, deshalb positioniert
+        // positionExtraButtonsHorizontal() sie direkt anhand der gemerkten
+        // s1-Sektion-Position. Slots leer halten.
         let s1 = HBarSection(
             backgroundHex: "#1F1B15",
             width: 50,  // 34 + 16 padding
@@ -540,13 +545,15 @@ extension OverlayPanel {
         }
     }
 
-    /// Kanonische HBar-Position: unten zentriert im sichtbaren Bildschirm
-    /// (Windows: "horizontale Leiste sitzt unten am Arbeitsbereich").
+    /// Kanonische HBar-Position: RECHTS-UNTEN im Arbeitsbereich (Windows:
+    /// `finalLeft = _waX + _waW - ActualWidth - 27`,
+    /// `finalTop = _waY + _waH - ActualHeight - HBarBottomLift`).
+    /// HBarBottomLift ~ 40 (kleiner Lift vom unteren Rand).
     func canonicalHorizontalOrigin(panelWidth: CGFloat) -> NSPoint {
         let screen = NSScreen.main?.visibleFrame ??
                      NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let x = screen.minX + (screen.width - panelWidth) / 2
-        let y = screen.minY + 40
+        let x = screen.maxX - panelWidth - 27    // 27 px rechts
+        let y = screen.minY + 40                  // 40 px ueber unterer Kante
         return NSPoint(x: x, y: y)
     }
 }
