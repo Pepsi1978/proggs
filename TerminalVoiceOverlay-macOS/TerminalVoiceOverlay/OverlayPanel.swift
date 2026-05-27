@@ -169,7 +169,9 @@ class RoundButton: NSView {
         anim.duration = 0.15
         anim.fillMode = .forwards
         anim.isRemovedOnCompletion = false
-        anim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        // Windows-XAML: QuadraticEase EaseOut, 150ms — langsam am Ende.
+        // easeOut entspricht 1:1 dem Windows-QuadraticEase mit EasingMode=EaseOut.
+        anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
         layer?.add(anim, forKey: "hoverScale")
     }
 }
