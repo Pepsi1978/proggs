@@ -260,26 +260,71 @@ extension OverlayPanel {
         }
 
         let myGen = nextBeamGen()
-        cv.beamFadeOut { [weak self] in
-            guard let self = self,
-                  self.beamGenIsCurrent(myGen) else { return }
+        switch target {
+        case .horizontal:
+            // ── Vertikal → Horizontal ──
+            // 1) Saeule ausblenden (BeamFadeOut)
+            // 2) Form wechseln unsichtbar — Leiste erscheint an der
+            //    Saeulen-Oberkante (gleiche Y wie aktuelle Saeulen-Oberkante)
+            // 3) Leiste einblenden (BeamFadeIn)
+            // 4) Leiste glatt nach unten gleiten lassen zur finalen Position
+            //    (gemerkte horizontalPosition oder kanonische Unten-Mitte).
+            cv.beamFadeOut { [weak self] in
+                guard let self = self,
+                      self.beamGenIsCurrent(myGen) else { return }
 
-            switch target {
-            case .horizontal:
-                // Aktuelle vertikale Position fuer spaeteres Zurueck merken,
-                // falls noch nicht persistiert (Windows: _savedVerticalPos).
+                // Saeulen-Oberkante in Bildschirmkoordinaten merken,
+                // bevor wir das Frame umstellen.
+                let columnTopY = self.frame.maxY
+                let columnX    = self.frame.origin.x
+                // Aktuelle vertikale Position persistieren, falls noch nicht.
                 if self.savedVerticalPosition == nil {
                     self.savedVerticalPosition = self.frame.origin
                 }
-                self.applyHorizontalLayout(at: self.savedHorizontalPosition)
-            case .vertical:
-                if self.savedHorizontalPosition == nil {
-                    self.savedHorizontalPosition = self.frame.origin
+                // Layout aufbauen, aber die Leiste erscheint zunaechst an
+                // der Saeulen-Oberkante (nicht am finalen Ziel).
+                let appearOrigin = NSPoint(x: columnX,
+                                           y: columnTopY - HBarLayout.panelHeight)
+                self.applyHorizontalLayout(at: appearOrigin)
+
+                cv.beamFadeIn { [weak self] in
+                    guard let self = self,
+                          self.beamGenIsCurrent(myGen) else { return }
+                    // Finale Position: gemerkte oder kanonische Unten-Mitte.
+                    let target = self.savedHorizontalPosition
+                        ?? self.canonicalHorizontalOrigin(panelWidth: self.frame.width)
+                    self.glideWindow(to: target) { completion?() }
                 }
-                self.applyVerticalLayout(at: self.savedVerticalPosition)
             }
 
-            cv.beamFadeIn { completion?() }
+        case .vertical:
+            // ── Horizontal → Vertikal ──
+            // 1) Leiste glatt NACH OBEN gleiten lassen bis zur Saeulen-Oberkante
+            //    (Gegenrichtung zur Erscheinen-Glide).
+            // 2) BeamFadeOut der Leiste.
+            // 3) Form wechseln unsichtbar — Saeule an gemerkter/kanonischer
+            //    Position einsetzen.
+            // 4) BeamFadeIn der Saeule.
+            if self.savedHorizontalPosition == nil {
+                self.savedHorizontalPosition = self.frame.origin
+            }
+            // Saeulen-Oberkante berechnen (Y-Position fuer die Glide-Endposition).
+            let panelHeight: CGFloat = 612
+            let canonicalCol = self.canonicalVerticalOrigin(panelHeight: panelHeight)
+            let columnTopY = (self.savedVerticalPosition?.y ?? canonicalCol.y) + panelHeight
+            let glideEnd = NSPoint(x: self.frame.origin.x,
+                                   y: columnTopY - HBarLayout.panelHeight)
+
+            self.glideWindow(to: glideEnd) { [weak self] in
+                guard let self = self,
+                      self.beamGenIsCurrent(myGen) else { return }
+                cv.beamFadeOut { [weak self] in
+                    guard let self = self,
+                          self.beamGenIsCurrent(myGen) else { return }
+                    self.applyVerticalLayout(at: self.savedVerticalPosition)
+                    cv.beamFadeIn { completion?() }
+                }
+            }
         }
     }
 
