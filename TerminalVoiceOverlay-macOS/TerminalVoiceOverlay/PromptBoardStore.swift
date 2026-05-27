@@ -344,7 +344,7 @@ final class PromptBoardStore {
 
     func settings() throws -> PBAppSettings {
         var result: PBAppSettings?
-        try query("SELECT Id,GroqApiKey,GeminiApiKey,GoogleOAuthRefreshToken,GoogleClientId,GoogleClientSecret,GoogleAccountEmail,GroqModel,AlwaysOnTop,BarHeight,SeparatorTemplate,CreatedAt,UpdatedAt FROM AppSettings LIMIT 1") { stmt in
+        try query("SELECT Id,GroqApiKey,GeminiApiKey,GoogleOAuthRefreshToken,GoogleClientId,GoogleClientSecret,GoogleAccountEmail,GroqModel,AlwaysOnTop,BarHeight,SeparatorTemplate,CreatedAt,UpdatedAt,AutoHide,Orientation,PersistOverlayPosition,OverlayVerticalLeft,OverlayVerticalTop,OverlayHorizontalLeft,OverlayHorizontalTop FROM AppSettings LIMIT 1") { stmt in
             result = self.readSettings(stmt)
         }
         if let s = result { return s }
@@ -353,7 +353,7 @@ final class PromptBoardStore {
     }
 
     func updateSettings(_ s: PBAppSettings) throws {
-        let sql = "UPDATE AppSettings SET GroqApiKey=?, GeminiApiKey=?, GoogleOAuthRefreshToken=?, GoogleClientId=?, GoogleClientSecret=?, GoogleAccountEmail=?, GroqModel=?, AlwaysOnTop=?, BarHeight=?, SeparatorTemplate=?, UpdatedAt=? WHERE Id=?"
+        let sql = "UPDATE AppSettings SET GroqApiKey=?, GeminiApiKey=?, GoogleOAuthRefreshToken=?, GoogleClientId=?, GoogleClientSecret=?, GoogleAccountEmail=?, GroqModel=?, AlwaysOnTop=?, BarHeight=?, SeparatorTemplate=?, UpdatedAt=?, AutoHide=?, Orientation=?, PersistOverlayPosition=?, OverlayVerticalLeft=?, OverlayVerticalTop=?, OverlayHorizontalLeft=?, OverlayHorizontalTop=? WHERE Id=?"
         try prepared(sql) { stmt in
             bindTextOrNull(stmt, 1, s.groqApiKey)
             bindTextOrNull(stmt, 2, s.geminiApiKey)
@@ -366,7 +366,14 @@ final class PromptBoardStore {
             sqlite3_bind_double(stmt, 9, s.barHeight)
             bindText(stmt, 10, s.separatorTemplate)
             bindText(stmt, 11, Self.fmt(Date()))
-            bindText(stmt, 12, s.id.uuidString)
+            sqlite3_bind_int64(stmt, 12, s.autoHide ? 1 : 0)
+            bindText(stmt, 13, s.orientation)
+            sqlite3_bind_int64(stmt, 14, s.persistOverlayPosition ? 1 : 0)
+            if let v = s.overlayVerticalLeft   { sqlite3_bind_double(stmt, 15, v) } else { sqlite3_bind_null(stmt, 15) }
+            if let v = s.overlayVerticalTop    { sqlite3_bind_double(stmt, 16, v) } else { sqlite3_bind_null(stmt, 16) }
+            if let v = s.overlayHorizontalLeft { sqlite3_bind_double(stmt, 17, v) } else { sqlite3_bind_null(stmt, 17) }
+            if let v = s.overlayHorizontalTop  { sqlite3_bind_double(stmt, 18, v) } else { sqlite3_bind_null(stmt, 18) }
+            bindText(stmt, 19, s.id.uuidString)
         }
     }
 
@@ -488,7 +495,7 @@ final class PromptBoardStore {
     }
 
     private func readSettings(_ stmt: OpaquePointer) -> PBAppSettings {
-        PBAppSettings(
+        var s = PBAppSettings(
             id: UUID(uuidString: readString(stmt, 0)) ?? UUID(),
             groqApiKey: readOptString(stmt, 1),
             geminiApiKey: readOptString(stmt, 2),
@@ -502,6 +509,29 @@ final class PromptBoardStore {
             separatorTemplate: readString(stmt, 10),
             createdAt: Self.parse(readString(stmt, 11)) ?? Date(),
             updatedAt: Self.parse(readString(stmt, 12)) ?? Date())
+        // Windows-1:1-Felder (Spalten 13-19). NULL/MISSING → Defaults aus struct.
+        if sqlite3_column_type(stmt, 13) != SQLITE_NULL {
+            s.autoHide = sqlite3_column_int64(stmt, 13) != 0
+        }
+        if sqlite3_column_type(stmt, 14) != SQLITE_NULL {
+            s.orientation = readString(stmt, 14)
+        }
+        if sqlite3_column_type(stmt, 15) != SQLITE_NULL {
+            s.persistOverlayPosition = sqlite3_column_int64(stmt, 15) != 0
+        }
+        if sqlite3_column_type(stmt, 16) != SQLITE_NULL {
+            s.overlayVerticalLeft = sqlite3_column_double(stmt, 16)
+        }
+        if sqlite3_column_type(stmt, 17) != SQLITE_NULL {
+            s.overlayVerticalTop = sqlite3_column_double(stmt, 17)
+        }
+        if sqlite3_column_type(stmt, 18) != SQLITE_NULL {
+            s.overlayHorizontalLeft = sqlite3_column_double(stmt, 18)
+        }
+        if sqlite3_column_type(stmt, 19) != SQLITE_NULL {
+            s.overlayHorizontalTop = sqlite3_column_double(stmt, 19)
+        }
+        return s
     }
 
     private func sqliteError(_ context: String) -> NSError {
