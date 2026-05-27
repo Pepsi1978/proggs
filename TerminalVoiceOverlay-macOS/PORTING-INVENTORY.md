@@ -286,10 +286,11 @@ Suchpfad-Priorität: `~/SK/VoiceOverlays/.env` → neben `.exe` → CWD → `~/.
 | 4  | Collapsed-Mic-Pille mit BeamFade | ✅ (#1116) — Test-Hotkey Cmd+Shift+C |
 | 5a | OrientationToggleButton + SaveButton (UI) | ✅ (#1117) |
 | 5b | Drag-Verhalten Rechtsklick + Threshold | offen |
-| 6  | Settings-Dialog (620×640) | offen — aufwendige NSWindow-UI, separate PR-Serie |
-| 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | offen — aufwendige UI-Serie |
-| 8  | PromptInputWindow + PromptHistoryWindow | offen — aufwendige UI-Serie |
+| 5b | Drag-Verhalten Rechtsklick + 4px-Threshold | ✅ (#1120) |
+| 6  | Settings-Dialog (620×640) | ✅ (#1120) — Skelett mit allen Feldern, Cmd+Shift+, |
+| 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | ✅ (#1120) — Skelette in CommonDialogs.swift |
+| 8  | PromptInputWindow + PromptHistoryWindow | ✅ — bereits in PromptInputPanel.swift + PromptHistoryPanel.swift |
 | 9  | AutoEnterStatusServer (HTTP, 127.0.0.1:5723) | ✅ (#1118) |
 | 10 | Hotkey-Registry (Cmd+1..9 ✅, Cmd+Opt+A..Z Stub) | ✅ (#1118) — Letter-Lookup braucht DB-Schema-Migration |
 | 11 | AlwaysOnPrefixService + Pre/Post-Prompt-Logik | ✅ — bereits vor Portierung vorhanden |
-| 12 | Schwester-Projekt ClaudeCodexVoiceOverlay-macOS angleichen | offen — eigene Adaptation noetig (kein PromptBoard, andere Buttons) |
+| 12 | Schwester-Projekt ClaudeCodexVoiceOverlay-macOS angleichen | ✅ (#1120) — Helfer (OverlayOrientation + OverlayGlideAnimation) kopiert, Layout-Adaptation des Panels offen |

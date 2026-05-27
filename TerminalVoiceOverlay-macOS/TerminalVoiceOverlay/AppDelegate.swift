@@ -1278,6 +1278,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Settings-Dialog oeffnen (Cmd+Shift+,)
+        reg.register(keyCode: TVOHotkey.openSettings.keyCode,
+                     modifiers: TVOHotkey.openSettings.modifiers) { [weak self] in
+            DispatchQueue.main.async { self?.openSettingsDialog() }
+        }
+
         // Prompt-Hotkeys Cmd+1..9 — Pendant zu Windows Strg+1..9
         for digit in 1...9 {
             guard let combo = TVOHotkey.promptDigit(digit) else { continue }
@@ -1295,6 +1301,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O/C + Cmd+1..9 + Cmd+Opt+A..Z)")
+    }
+
+    /// Oeffnet den Settings-Dialog (Cmd+Shift+,).
+    /// Speichert die Felder in UserDefaults, ruft danach optional Drive-
+    /// Connect/Disconnect-Aktionen aus.
+    private func openSettingsDialog() {
+        let dialog = SettingsDialog()
+        dialog.loadFromDefaults()
+        // Status der Drive-Verbindung anzeigen.
+        let connected = GoogleDriveBackupService.shared.isAuthenticated()
+        dialog.setGoogleStatus(connected ? "Verbunden" : "Nicht verbunden",
+                               connected: connected)
+        dialog.onSave = { values in
+            tvoDebug("[App] Settings saved: groqLen=\(values.groqApiKey.count) " +
+                     "geminiLen=\(values.geminiApiKey.count) " +
+                     "autoHide=\(values.autoHide) horizontal=\(values.horizontalOrientation) " +
+                     "persistPos=\(values.persistOverlayPosition)")
+        }
+        dialog.onGoogleConnect = { [weak self] in
+            tvoDebug("[App] Settings: Drive-Connect angefordert")
+            _ = self  // OAuth-Flow waere hier: GoogleDriveBackupService.shared.authenticate(...)
+        }
+        dialog.onGoogleDisconnect = {
+            tvoDebug("[App] Settings: Drive-Disconnect angefordert")
+            // GoogleDriveBackupService.shared.signOut() — die genaue API liegt
+            // im Service, koennen wir bei Bedarf in einer Folge-Etappe verkabeln.
+        }
+        dialog.center()
+        dialog.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation

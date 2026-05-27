@@ -900,6 +900,11 @@ final class OverlayPanel: NSPanel {
             guard isDragging else { return false }
             let dx = mouseLocation.x - dragStartMouseLocation.x
             let dy = mouseLocation.y - dragStartMouseLocation.y
+            // Drag-Threshold (Pendant zu Windows DragThresholdPx = 4):
+            // Erst ab 4 px Strecke wird tatsaechlich verschoben. Verhindert
+            // dass ein kurzer Right-Click versehentlich das Pillar verschiebt.
+            let distSq = dx * dx + dy * dy
+            if distSq < 16 { return true }
             setFrameOrigin(NSPoint(x: dragStartPanelOrigin.x + dx, y: dragStartPanelOrigin.y + dy))
             onPillarMoved?()
             return true

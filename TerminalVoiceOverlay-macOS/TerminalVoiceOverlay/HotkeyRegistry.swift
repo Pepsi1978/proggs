@@ -130,6 +130,10 @@ enum TVOHotkey {
     /// Pendant zu Windows AutoHide-Mechanismus.
     static let collapsedToggle = (keyCode: UInt32(kVK_ANSI_C), modifiers: UInt32(cmdKey | shiftKey))
 
+    /// Cmd+Shift+, — Settings-Dialog oeffnen. Pendant zu Windows-Settings-Button
+    /// in der PromptBoardPanel-Toolbar.
+    static let openSettings = (keyCode: UInt32(kVK_ANSI_Comma), modifiers: UInt32(cmdKey | shiftKey))
+
     /// Cmd+1..9 — Prompt-Hotkeys (mappt auf gespeicherte HotkeyNumber).
     /// `digit` muss 1..9 sein, andere Werte werden ignoriert.
     static func promptDigit(_ digit: Int) -> (keyCode: UInt32, modifiers: UInt32)? {
