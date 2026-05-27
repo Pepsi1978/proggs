@@ -731,7 +731,9 @@ final class OverlayPanel: NSPanel {
         let showActive = geminiOn
         for (idx, tile) in profileButtons.enumerated() {
             let isActive = showActive && (idx + 1) == activeProfile
-            tile.buttonColor = isActive ? .btnMicIdle : .toggleOff
+            // Aktives Profile = goldenrod (Windows starGold #DAA520), inaktiv
+            // = dunkelgrau (#2D2D2D). Label-Farbe dunkel auf gold, weiss auf grau.
+            tile.buttonColor = isActive ? .starGold : .toggleOff
             tile.labelColor = isActive ? .darkLabel : .white
         }
     }
