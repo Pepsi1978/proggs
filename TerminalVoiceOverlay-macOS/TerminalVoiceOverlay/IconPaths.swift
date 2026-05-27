@@ -12,6 +12,24 @@ import AppKit
 
 enum IconPaths {
 
+    /// Stern (Pentagram) — XAML Path:
+    /// `M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z`
+    static func star() -> NSBezierPath {
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: 12, y: 1))
+        p.line(to: NSPoint(x: 15.09, y: 7.26))
+        p.line(to: NSPoint(x: 22, y: 8.27))
+        p.line(to: NSPoint(x: 17, y: 13.14))
+        p.line(to: NSPoint(x: 18.18, y: 20.02))
+        p.line(to: NSPoint(x: 12, y: 16.77))
+        p.line(to: NSPoint(x: 5.82, y: 20.02))
+        p.line(to: NSPoint(x: 7, y: 13.14))
+        p.line(to: NSPoint(x: 2, y: 8.27))
+        p.line(to: NSPoint(x: 8.91, y: 7.26))
+        p.close()
+        return p
+    }
+
     /// Mic — Material "mic" Icon. XAML Path:
     /// `M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 ... Z`
     static func mic() -> NSBezierPath {
