@@ -379,8 +379,6 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_dark_off">Uit</string>
     <string name="settings_follow_system">Systeem volgen</string>
     <string name="settings_automatic">Automatisch</string>
-    <string name="settings_sunrise_sunset">Zonsopgang/zonsondergang</string>
-    <string name="settings_sunrise_sunset_desc">Donker \'s nachts, licht overdag</string>
     <string name="settings_sounds_haptics_section">Geluid / Trillen</string>
     <string name="settings_app_sounds">App-geluiden</string>
     <string name="settings_sounds_on">Geluid staat aan</string>
@@ -1525,7 +1523,6 @@ Wat wil je doen?</string>
     <!-- Permission rationale dialogs -->
     <string name="permission_rationale_microphone">Om je dagboeknotities per spraak te dicteren, hebben we toegang tot je microfoon nodig.</string>
     <string name="permission_rationale_camera">Om foto\'s aan je notities toe te voegen, hebben we toegang tot je camera nodig.</string>
-    <string name="permission_rationale_location">Om je notities een locatiecontext te geven, hebben we je geschatte locatie nodig. Je kunt dit altijd weigeren of later uitschakelen.</string>
     <string name="permission_rationale_notifications">Om je aan je dagelijkse schrijven te mogen herinneren, hebben we toestemming voor meldingen nodig.</string>
 
     <!-- Consent: Android system backup -->

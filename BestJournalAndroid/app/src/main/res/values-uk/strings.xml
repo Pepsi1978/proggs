@@ -379,8 +379,6 @@
     <string name="settings_dark_off">Вимкнено</string>
     <string name="settings_follow_system">Як у системі</string>
     <string name="settings_automatic">Автоматично</string>
-    <string name="settings_sunrise_sunset">Схід і захід сонця</string>
-    <string name="settings_sunrise_sunset_desc">Темний уночі, світлий удень</string>
     <string name="settings_sounds_haptics_section">Звук і вібрація</string>
     <string name="settings_app_sounds">Звуки застосунку</string>
     <string name="settings_sounds_on">Звуки увімкнено</string>
@@ -1454,7 +1452,6 @@
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">Щоб ти міг диктувати записи голосом, нам потрібен доступ до мікрофона.</string>
     <string name="permission_rationale_camera">Щоб ти міг додавати фото до своїх записів, нам потрібен доступ до камери.</string>
-    <string name="permission_rationale_location">Щоб ти міг прив\'язати запис до місця, нам потрібне приблизне місцезнаходження. Ти можеш відмовитись зараз або вимкнути це пізніше.</string>
     <string name="permission_rationale_notifications">Щоб ми могли нагадувати тобі про щоденний запис, нам потрібен дозвіл на сповіщення.</string>
 
     <!-- System backup consent -->

@@ -364,8 +364,6 @@
     <string name="settings_dark_off">बंद</string>
     <string name="settings_follow_system">सिस्टम जैसा</string>
     <string name="settings_automatic">ऑटोमैटिक</string>
-    <string name="settings_sunrise_sunset">सूर्योदय/सूर्यास्त</string>
-    <string name="settings_sunrise_sunset_desc">रात में डार्क, दिन में लाइट</string>
     <string name="settings_sounds_haptics_section">आवाज़/हैप्टिक</string>
     <string name="settings_app_sounds">ऐप की आवाज़ें</string>
     <string name="settings_sounds_on">आवाज़ें चालू</string>
@@ -1447,7 +1445,6 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
 
     <string name="permission_rationale_microphone">ताकि तुम अपनी डायरी की एंट्री बोलकर लिख सको, हमें माइक्रोफ़ोन की ज़रूरत है।</string>
     <string name="permission_rationale_camera">ताकि तुम अपनी एंट्री में फ़ोटो जोड़ सको, हमें कैमरे की ज़रूरत है।</string>
-    <string name="permission_rationale_location">ताकि तुम अपनी एंट्री में जगह का संदर्भ दे सको, हमें अनुमानित स्थान चाहिए। तुम इसे कभी भी मना कर सकते हो।</string>
     <string name="permission_rationale_notifications">ताकि हम तुम्हें रोज़ाना लिखने की याद दिला सकें, हमें नोटिफ़िकेशन की अनुमति चाहिए।</string>
     <string name="consent_info_system_backup_title">Android सिस्टम बैकअप</string>
     <string name="consent_info_system_backup_body">अगर तुमने डिवाइस सेटिंग में Android सिस्टम बैकअप चालू किया है, तो Android तुम्हारे डायरी डेटा को Google खाते के बैकअप क्षेत्र में स्वतः सुरक्षित करता है। तुम इसे डिवाइस सेटिंग में कभी भी बंद कर सकते हो — विवरण के लिए गोपनीयता नीति देखो।</string>

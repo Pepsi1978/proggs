@@ -364,8 +364,6 @@
     <string name="settings_dark_off">அணைக்கப்பட்டது</string>
     <string name="settings_follow_system">கணினியை பின்பற்று</string>
     <string name="settings_automatic">தானியங்கி</string>
-    <string name="settings_sunrise_sunset">சூரிய உதயம்/அஸ்தமனம்</string>
-    <string name="settings_sunrise_sunset_desc">இரவில் இருண்டு, பகலில் ஒளிரும்</string>
     <string name="settings_sounds_haptics_section">ஒலிகள் / அதிர்வுகள்</string>
     <string name="settings_app_sounds">App ஒலிகள்</string>
     <string name="settings_sounds_on">ஒலிகள் இயக்கப்பட்டுள்ளன</string>
@@ -1452,7 +1450,6 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="theme_gruvbox">அம்பர்</string>
     <string name="permission_rationale_microphone">நாட்குறிப்பு பதிவுகளை குரலால் படிக்க உன் மைக்ரோஃபோனை அணுக அனுமதி தேவை.</string>
     <string name="permission_rationale_camera">பதிவுகளில் புகைப்படங்கள் சேர்க்க உன் கேமராவை அணுக அனுமதி தேவை.</string>
-    <string name="permission_rationale_location">பதிவுகளுக்கு இட சூழல் கொடுக்க தோராயமான இருப்பிடம் தேவை. எப்போது வேண்டுமானாலும் மறுக்கலாம் அல்லது பின்னர் முடக்கலாம்.</string>
     <string name="permission_rationale_notifications">தினசரி எழுதுவதற்கு உன்னை நினைவூட்ட அறிவிப்பு அனுமதி தேவை.</string>
     <string name="consent_info_system_backup_title">Android கணினி காப்புப்பிரதி</string>
     <string name="consent_info_system_backup_body">சாதன அமைப்புகளில் Android கணினி காப்புப்பிரதியை இயக்கியிருந்தால், Android உன் நாட்குறிப்பு தரவை Google கணக்கின் காப்பு பகுதியில் தானாக சேமிக்கும். இதை சாதன அமைப்புகளில் எப்போதும் முடக்கலாம் — விவரங்களுக்கு தனியுரிமைக் கொள்கையைப் பார்.</string>

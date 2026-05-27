@@ -379,8 +379,6 @@ Para quem quer se entender melhor e crescer internamente.</string>
     <string name="settings_dark_off">Desativado</string>
     <string name="settings_follow_system">Seguir o sistema</string>
     <string name="settings_automatic">Automático</string>
-    <string name="settings_sunrise_sunset">Nascer/pôr do sol</string>
-    <string name="settings_sunrise_sunset_desc">Escuro à noite, claro de dia</string>
     <string name="settings_sounds_haptics_section">Sons / Vibração</string>
     <string name="settings_app_sounds">Sons do app</string>
     <string name="settings_sounds_on">Sons ativados</string>
@@ -1445,7 +1443,6 @@ O que você quer fazer?</string>
 
     <string name="permission_rationale_microphone">Para que você possa ditar suas entradas por voz, precisamos de acesso ao seu microfone.</string>
     <string name="permission_rationale_camera">Para adicionar fotos às suas entradas, precisamos de acesso à sua câmera.</string>
-    <string name="permission_rationale_location">Para adicionar contexto de local às suas entradas, precisamos da localização aproximada. Você pode recusar a qualquer momento ou desativar depois.</string>
     <string name="permission_rationale_notifications">Para lembrar você de escrever todos os dias, precisamos de permissão para enviar notificações.</string>
     <string name="consent_info_system_backup_title">Backup do sistema Android</string>
     <string name="consent_info_system_backup_body">Se você ativou o Backup do sistema Android nas configurações do dispositivo, o Android faz backup automático dos seus dados do diário na área de backup da sua conta Google. Você pode desativar isso nas configurações do dispositivo a qualquer momento — veja a política de privacidade para detalhes.</string>

@@ -364,8 +364,6 @@
     <string name="settings_dark_off">ಆಫ್</string>
     <string name="settings_follow_system">ಸಿಸ್ಟಮ್ ಅನುಸರಿಸಿ</string>
     <string name="settings_automatic">ಸ್ವಯಂಚಾಲಿತ</string>
-    <string name="settings_sunrise_sunset">ಸೂರ್ಯೋದಯ/ಸೂರ್ಯಾಸ್ತ</string>
-    <string name="settings_sunrise_sunset_desc">ರಾತ್ರಿ ಕತ್ತಲೆ, ಹಗಲು ಬೆಳಕು</string>
     <string name="settings_sounds_haptics_section">ಧ್ವನಿಗಳು / ಹ್ಯಾಪ್ಟಿಕ್</string>
     <string name="settings_app_sounds">ಆಪ್ ಧ್ವನಿಗಳು</string>
     <string name="settings_sounds_on">ಧ್ವನಿಗಳು ಆನ್ ಆಗಿವೆ</string>
@@ -1419,7 +1417,6 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
 
     <string name="permission_rationale_microphone">ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳನ್ನು ಮಾತಿನ ಮೂಲಕ ದಾಖಲಿಸಲು ನಾವು ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶ ಬೇಕು.</string>
     <string name="permission_rationale_camera">ನಿಮ್ಮ ನಮೂದುಗಳಿಗೆ ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಲು ನಾವು ನಿಮ್ಮ ಕ್ಯಾಮೆರಾ ಪ್ರವೇಶ ಬೇಕು.</string>
-    <string name="permission_rationale_location">ನಿಮ್ಮ ನಮೂದುಗಳಿಗೆ ಸ್ಥಳ ಸಂದರ್ಭ ನೀಡಲು ನಾವು ಅಂದಾಜು ಸ್ಥಳ ಬೇಕು. ನೀವು ಇದನ್ನು ಯಾವಾಗಲಾದರೂ ತಿರಸ್ಕರಿಸಬಹುದು ಅಥವಾ ನಂತರ ಆಫ್ ಮಾಡಬಹುದು.</string>
     <string name="permission_rationale_notifications">ನಿಮ್ಮ ದೈನಂದಿನ ಬರವಣಿಗೆಯ ಬಗ್ಗೆ ನಿಮ್ಮನ್ನು ನೆನಪಿಸಲು ನಾವು ಅಧಿಸೂಚನೆ ಅನುಮತಿ ಬೇಕು.</string>
     <string name="consent_info_system_backup_title">Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್</string>
     <string name="consent_info_system_backup_body">ನೀವು ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್ ಸಕ್ರಿಯಗೊಳಿಸಿದ್ದರೆ, Android ನಿಮ್ಮ ಡೈರಿ ಡೇಟಾವನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನಿಮ್ಮ Google ಖಾತೆಯ ಬ್ಯಾಕಪ್ ಪ್ರದೇಶಕ್ಕೆ ಸಂರಕ್ಷಿಸುತ್ತದೆ. ನೀವು ಇದನ್ನು ನಿಮ್ಮ ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬಹುದು — ವಿವರಗಳಿಗೆ ಗೌಪ್ಯತಾ ನೀತಿ ನೋಡಿ.</string>

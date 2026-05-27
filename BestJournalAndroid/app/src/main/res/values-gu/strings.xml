@@ -349,8 +349,6 @@
     <string name="settings_dark_off">બંધ</string>
     <string name="settings_follow_system">સિસ્ટમ અનુસરો</string>
     <string name="settings_automatic">આપોઆપ</string>
-    <string name="settings_sunrise_sunset">સૂર્યોદય/સૂર્યાસ્ત</string>
-    <string name="settings_sunrise_sunset_desc">રાત્રે ડાર્ક, દિવસે હળવું</string>
     <string name="settings_sounds_haptics_section">અવાજ / સ્પંદન</string>
     <string name="settings_app_sounds">App અવાજ</string>
     <string name="settings_sounds_on">અવાજ ચાલુ છે</string>
@@ -1373,7 +1371,6 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
 
     <string name="permission_rationale_microphone">જેથી તમે અવાજ દ્વારા ડાયરી-નોંધો ઉચ્ચારી શકો, અમને તમારા માઇક્રોફોનની ઍક્સેસ જોઈએ.</string>
     <string name="permission_rationale_camera">જેથી તમે નોંધોમાં ફોટો ઉમેરી શકો, અમને તમારા કૅમેરાની ઍક્સેસ જોઈએ.</string>
-    <string name="permission_rationale_location">જેથી તમે નોંધોને સ્થળ-સંદર્ભ આપી શકો, અમને અંદાજ સ્થળ જોઈએ. તમે આ ગમે ત્યારે નકારી અથવા બાદમાં બંધ કરી શકો.</string>
     <string name="permission_rationale_notifications">જેથી અમે તમને રોજ લખવા માટે યાદ કરાવી શકીએ, અમને સૂચનાઓ માટે પરવાનગી જોઈએ.</string>
     <string name="consent_info_system_backup_title">Android System-Backup</string>
     <string name="consent_info_system_backup_body">જો તમે ઉપકરણ-સેટિંગ્સમાં Android System-Backup ચાલુ કર્યું હોય, તો Android તમારા ડાયરી-ડેટાને આપોઆપ તમારા Google ખાતાના Backup-વિભાગમાં સાચવે છે. તમે ઉપકરણ-સેટિંગ્સમાં ગમે ત્યારે આ બંધ કરી શકો — વિગત માટે ગોપનીયતા-નીતિ જુઓ.</string>

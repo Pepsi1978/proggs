@@ -379,8 +379,6 @@ Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
     <string name="settings_dark_off">Kapalı</string>
     <string name="settings_follow_system">Sistemi izle</string>
     <string name="settings_automatic">Otomatik</string>
-    <string name="settings_sunrise_sunset">Gün doğumu/batımı</string>
-    <string name="settings_sunrise_sunset_desc">Geceleri koyu, gündüzleri açık</string>
     <string name="settings_sounds_haptics_section">Ses / Titreşim</string>
     <string name="settings_app_sounds">Uygulama sesleri</string>
     <string name="settings_sounds_on">Sesler açık</string>
@@ -1441,7 +1439,6 @@ Ne yapmak istersin?</string>
     <!-- Permission rationales -->
     <string name="permission_rationale_microphone">Günlük girişlerini sesle dikte edebilmek için mikrofonuna erişmemiz gerekiyor.</string>
     <string name="permission_rationale_camera">Girişlerine fotoğraf ekleyebilmek için kamerana erişmemiz gerekiyor.</string>
-    <string name="permission_rationale_location">Girişlerine konum bağlamı ekleyebilmek için yaklaşık konumuna ihtiyacımız var. Bunu istediğin zaman reddedebilir veya daha sonra kapatabilirsin.</string>
     <string name="permission_rationale_notifications">Günlük yazma alışkanlığını hatırlatabilmek için bildirim iznine ihtiyacımız var.</string>
 
     <!-- System backup consent -->

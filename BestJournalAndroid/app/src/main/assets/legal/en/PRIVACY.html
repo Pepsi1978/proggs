@@ -148,19 +148,10 @@ transcription</strong> (see 5.1).<br />
 <code>filesDir/photos/</code>) and are not uploaded automatically. With Google Drive backup<br />
 active, they are transferred encrypted to the Drive app data folder as part of the<br />
 backup.</p>
-<h3>3.4 Approximate location (<code>ACCESS_COARSE_LOCATION</code>)</h3>
-<p><strong>Purpose:</strong> Exclusively for the optional design feature <strong>"Sunrise/Sunset"</strong> in<br />
-settings (dark mode follows the local sun position). Sunrise and sunset times are<br />
-calculated entirely on your device using the <strong>NOAA Solar Position Algorithm</strong>.<br />
-<strong>Processing:</strong> Location is determined <strong>once</strong> when the toggle is enabled, stored<br />
-in <strong>encrypted app settings (AES256-GCM)</strong> on your device, and <strong>never</strong> transmitted<br />
-to external services. If you disable the feature in settings, no further location<br />
-request is made.<br />
-<strong>Legal basis:</strong> Consent by actively enabling the feature (Art. 6(1)(a) GDPR).</p>
-<h3>3.5 Notifications (<code>POST_NOTIFICATIONS</code>)</h3>
+<h3>3.4 Notifications (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>Purpose:</strong> Reminders to write entries (if you enable reminders).<br />
 <strong>Processing:</strong> Generated locally on your device only.</p>
-<h3>3.6 Autostart after reboot (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
+<h3>3.5 Autostart after reboot (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
 <p><strong>Purpose:</strong> Re-activation of scheduled reminders after a device restart.<br />
 <strong>Processing:</strong> Locally only, no data transmission.</p>
 <hr />

@@ -46,7 +46,6 @@ data class SettingsUiState(
     val autoUpdateDashboard: Boolean = true,
     val isDarkTheme: Boolean = false,
     val followSystem: Boolean = false,
-    val followSun: Boolean = false,
     val selectedThemeKey: String = "neutral",
     val biometricLock: Boolean = false,
     val lastSyncTimestamp: Long? = null,
@@ -406,15 +405,12 @@ constructor(
         when (key) {
             Constants.PREF_DARK_THEME,
             Constants.PREF_THEME_FOLLOW_SYSTEM,
-            Constants.PREF_THEME_FOLLOW_SUN,
             Constants.PREF_APP_THEME -> {
                 _uiState.value =
                     _uiState.value.copy(
                         isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
                         followSystem =
                             encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
-                        followSun =
-                            encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
                         selectedThemeKey =
                             encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
                                 ?: "neutral",
@@ -505,7 +501,6 @@ constructor(
                     encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true),
                 isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
                 followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
-                followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
                 selectedThemeKey =
                     encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral") ?: "neutral",
                 biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
@@ -533,10 +528,9 @@ constructor(
             .edit()
             .putBoolean(Constants.PREF_DARK_THEME, enabled)
             .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
-            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
             .apply()
         _uiState.value =
-            _uiState.value.copy(isDarkTheme = enabled, followSystem = false, followSun = false)
+            _uiState.value.copy(isDarkTheme = enabled, followSystem = false)
     }
 
     fun updateFollowSystem(enabled: Boolean) {
@@ -544,34 +538,14 @@ constructor(
             .edit()
             .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, enabled)
             .putBoolean(Constants.PREF_DARK_THEME, false)
-            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
             .apply()
         _uiState.value =
-            _uiState.value.copy(followSystem = enabled, isDarkTheme = false, followSun = false)
+            _uiState.value.copy(followSystem = enabled, isDarkTheme = false)
     }
 
     fun updateSelectedTheme(themeKey: String) {
         encryptedPrefs.edit().putString(Constants.PREF_APP_THEME, themeKey).apply()
         _uiState.value = _uiState.value.copy(selectedThemeKey = themeKey)
-    }
-
-    fun updateFollowSun(enabled: Boolean) {
-        encryptedPrefs
-            .edit()
-            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, enabled)
-            .putBoolean(Constants.PREF_DARK_THEME, false)
-            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
-            .apply()
-        _uiState.value =
-            _uiState.value.copy(followSun = enabled, isDarkTheme = false, followSystem = false)
-    }
-
-    fun saveLocation(lat: Double, lon: Double) {
-        encryptedPrefs
-            .edit()
-            .putFloat(Constants.PREF_LATITUDE, lat.toFloat())
-            .putFloat(Constants.PREF_LONGITUDE, lon.toFloat())
-            .apply()
     }
 
     fun updateTextImprovementDefault(enabled: Boolean) {

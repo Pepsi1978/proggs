@@ -364,8 +364,6 @@
     <string name="settings_dark_off">Desativado</string>
     <string name="settings_follow_system">Seguir o sistema</string>
     <string name="settings_automatic">Automático</string>
-    <string name="settings_sunrise_sunset">Nascer/pôr do sol</string>
-    <string name="settings_sunrise_sunset_desc">Escuro à noite, claro de dia</string>
     <string name="settings_sounds_haptics_section">Sons / Vibração</string>
     <string name="settings_app_sounds">Sons do app</string>
     <string name="settings_sounds_on">Sons ativados</string>
@@ -1433,7 +1431,6 @@ Se rescindires este contrato, devolveremos todos os pagamentos que recebemos de 
 
     <string name="permission_rationale_microphone">Para poderes ditar as tuas entradas do diário por voz, precisamos de acesso ao teu microfone.</string>
     <string name="permission_rationale_camera">Para poderes adicionar fotografias às tuas entradas, precisamos de acesso à tua câmara.</string>
-    <string name="permission_rationale_location">Para poderes dar contexto de localização às tuas entradas, precisamos da localização aproximada. Podes recusar a qualquer momento ou desativar mais tarde.</string>
     <string name="permission_rationale_notifications">Para te podermos lembrar da tua escrita diária, precisamos de permissão para enviar notificações.</string>
     <string name="consent_info_system_backup_title">Cópia de segurança do sistema Android</string>
     <string name="consent_info_system_backup_body">Se tiveres a cópia de segurança do sistema Android ativada nas definições do dispositivo, o Android faz cópias de segurança automáticas dos dados do teu diário na área de backup da tua conta Google. Podes desativar isso a qualquer momento nas definições do dispositivo — consulta a política de privacidade para mais detalhes.</string>

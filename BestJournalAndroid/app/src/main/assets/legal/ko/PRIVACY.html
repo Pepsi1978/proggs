@@ -151,16 +151,11 @@ Stettiner Straße 41<br />
 <p><strong>수집·이용 목적:</strong> 일기 항목에 사진 및 동영상 첨부.<br />
 <strong>처리 방식:</strong> 사진과 동영상은 로컬에만 저장됩니다 (앱 전용 폴더 <code>filesDir/photos/</code>). 자동으로 업로드되지 않으며, Google Drive 백업 활성화 시 백업의 일부로 암호화되어 Drive 앱 데이터 폴더에 전송됩니다.</p>
 
-<h3>3.4 대략적인 위치 (<code>ACCESS_COARSE_LOCATION</code>)</h3>
-<p><strong>수집·이용 목적:</strong> 설정의 <strong>"일출/일몰"</strong> 선택적 디자인 기능 전용 (다크 모드가 현지 일몰 시간을 따르는 기능).<br />
-<strong>처리 방식:</strong> 위치는 해당 토글 활성화 시 <strong>1회</strong>만 확인되어 <strong>AES256-GCM</strong>으로 암호화되어 앱 설정에 로컬 저장되며, 외부 서비스로는 <strong>절대 전송되지 않습니다</strong>. 일출·일몰 시간은 <strong>NOAA 태양 위치 알고리즘</strong>을 사용하여 기기에서 직접 계산됩니다.<br />
-<strong>처리 근거:</strong> 동의 (GDPR 제6조 제1항 (a)호).</p>
-
-<h3>3.5 알림 (<code>POST_NOTIFICATIONS</code>)</h3>
+<h3>3.4 알림 (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>수집·이용 목적:</strong> 일기 작성 알림 (리마인더 활성화 시).<br />
 <strong>처리 방식:</strong> 기기에서만 로컬로 생성됩니다.</p>
 
-<h3>3.6 재부팅 후 자동 시작 (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
+<h3>3.5 재부팅 후 자동 시작 (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
 <p><strong>수집·이용 목적:</strong> 기기 재시작 후 예약된 알림 재활성화.<br />
 <strong>처리 방식:</strong> 로컬 처리만, 데이터 전송 없음.</p>
 <hr />

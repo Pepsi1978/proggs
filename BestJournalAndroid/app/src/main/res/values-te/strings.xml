@@ -348,8 +348,6 @@
     <string name="settings_dark_off">ఆఫ్</string>
     <string name="settings_follow_system">సిస్టమ్‌ని అనుసరించండి</string>
     <string name="settings_automatic">స్వయంచాలకం</string>
-    <string name="settings_sunrise_sunset">సూర్యోదయం/సూర్యాస్తమయం</string>
-    <string name="settings_sunrise_sunset_desc">రాత్రి చీకటి, పగలు వెలుగు</string>
     <string name="settings_sounds_haptics_section">శబ్దాలు / హాప్టిక్</string>
     <string name="settings_app_sounds">ఆప్ శబ్దాలు</string>
     <string name="settings_sounds_on">శబ్దాలు ఆన్‌లో ఉన్నాయి</string>
@@ -1360,7 +1358,6 @@ Premium తో: రోజుకు 150 వరకు.</string>
          ════════════════════════════════════════════════════════════════════ -->
     <string name="permission_rationale_microphone">నీ డైరీ నమోదులను గళంతో చెప్పేందుకు మైక్రోఫోన్ ఉపయోగించాల్సి ఉంటుంది.</string>
     <string name="permission_rationale_camera">నీ నమోదులకు ఫోటోలు జోడించేందుకు కెమెరా ఉపయోగించాల్సి ఉంటుంది.</string>
-    <string name="permission_rationale_location">నీ నమోదులకు స్థల సందర్భం ఇవ్వాలంటే అంచనా స్థానం అవసరం. నీవు ఎప్పుడైనా నిరాకరించవచ్చు లేదా తర్వాత ఆపవచ్చు.</string>
     <string name="permission_rationale_notifications">నీ రోజువారీ రాత గురించి నిన్ను గుర్తు చేయడానికి నోటిఫికేషన్ అనుమతి అవసరం.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════

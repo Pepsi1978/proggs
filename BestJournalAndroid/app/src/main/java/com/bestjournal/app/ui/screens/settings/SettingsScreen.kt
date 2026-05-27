@@ -525,7 +525,7 @@ fun SettingsScreen(
                             ) {
                                 SettingsSunMoonIcon(
                                     isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current,
-                                    isActive = !uiState.followSystem && !uiState.followSun,
+                                    isActive = !uiState.followSystem,
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {

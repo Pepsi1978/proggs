@@ -242,7 +242,7 @@
     <string name="dashboard_weekly_review_upsell_body">Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse: erkenne Muster, entdecke Einsichten und verstehe, was dich beschäftigt.</string>
     <string name="dashboard_discover_premium">Premium entdecken</string>
     <string name="dashboard_please_wait">Bitte warten</string>
-    <string name="dashboard_gemini_unavailable">Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.</string>
+    <string name="dashboard_gemini_unavailable">Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.</string>
     <string name="dashboard_no_custom_focus">Kein Analyse-Fokus eingegeben</string>
     <string name="dashboard_custom_focus_hint">Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder wähle ein anderes Profil.</string>
     <string name="dashboard_no_analysis_yet">Noch keine Analyse</string>
@@ -433,8 +433,6 @@
     <string name="settings_dark_off">Aus</string>
     <string name="settings_follow_system">System folgen</string>
     <string name="settings_automatic">Automatisch</string>
-    <string name="settings_sunrise_sunset">Sonnenauf-/untergang</string>
-    <string name="settings_sunrise_sunset_desc">Dunkel bei Nacht, hell bei Tag</string>
     <string name="settings_sounds_haptics_section">Töne</string>
     <string name="settings_app_sounds">App-Töne</string>
     <string name="settings_sounds_on">Töne sind eingeschaltet</string>
@@ -697,7 +695,6 @@
     <!-- Permission rationales (Play Store policy + DSGVO Art. 13) -->
     <string name="permission_rationale_microphone">Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.</string>
     <string name="permission_rationale_camera">Damit du Fotos zu deinen Einträgen hinzufügen kannst, brauchen wir Zugriff auf deine Kamera.</string>
-    <string name="permission_rationale_location">Damit du deinen Einträgen einen Ortskontext geben kannst, brauchen wir den ungefähren Standort. Du kannst das jederzeit ablehnen oder später abschalten.</string>
     <string name="permission_rationale_notifications">Damit wir dich an dein tägliches Schreiben erinnern dürfen, brauchen wir die Erlaubnis für Benachrichtigungen.</string>
 
     <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
@@ -707,7 +704,7 @@
     <string name="settings_privacy_section_header">Datenschutz &amp; Einwilligungen</string>
 <string name="settings_ai_groq_title">Sprache-zu-Text (Groq)</string>
     <string name="settings_ai_groq_subtitle">Sprachaufnahmen zur Transkription an Groq USA senden</string>
-    <string name="settings_ai_gemini_title">KI-Reflexionen (Gemini)</string>
+    <string name="settings_ai_gemini_title">KI-Reflexionen (Google Gemini)</string>
     <string name="settings_ai_gemini_subtitle">Texte für KI-Zusammenfassungen an Google USA senden</string>
     <string name="settings_ai_tts_title">Vorlesen (Edge TTS)</string>
     <string name="settings_ai_tts_subtitle">Texte zur Sprachausgabe an Microsoft USA senden</string>

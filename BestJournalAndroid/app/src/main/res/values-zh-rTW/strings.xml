@@ -364,8 +364,6 @@
     <string name="settings_dark_off">已關閉</string>
     <string name="settings_follow_system">跟隨系統</string>
     <string name="settings_automatic">自動</string>
-    <string name="settings_sunrise_sunset">日出/日落</string>
-    <string name="settings_sunrise_sunset_desc">夜裡深色，白天淺色</string>
     <string name="settings_sounds_haptics_section">聲音/觸感</string>
     <string name="settings_app_sounds">應用聲音</string>
     <string name="settings_sounds_on">聲音已開</string>
@@ -1417,7 +1415,6 @@
     <!-- Permission rationale strings -->
     <string name="permission_rationale_microphone">為了讓你能以語音方式記錄日記，我們需要存取你的麥克風。</string>
     <string name="permission_rationale_camera">為了讓你能為日記新增照片，我們需要存取你的相機。</string>
-    <string name="permission_rationale_location">為了讓你能為日記標記位置，我們需要取得你的大略位置。你可以隨時拒絕或在之後關閉此權限。</string>
     <string name="permission_rationale_notifications">為了能提醒你每天記錄，我們需要傳送通知的權限。</string>
 
     <!-- System backup consent -->

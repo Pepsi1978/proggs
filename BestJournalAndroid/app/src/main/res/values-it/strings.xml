@@ -364,8 +364,6 @@
     <string name="settings_dark_off">Disattivata</string>
     <string name="settings_follow_system">Segui il sistema</string>
     <string name="settings_automatic">Automatico</string>
-    <string name="settings_sunrise_sunset">Alba/tramonto</string>
-    <string name="settings_sunrise_sunset_desc">Scuro di notte, chiaro di giorno</string>
     <string name="settings_sounds_haptics_section">Suoni / Vibrazione</string>
     <string name="settings_app_sounds">Suoni dell\'app</string>
     <string name="settings_sounds_on">Suoni attivi</string>
@@ -1320,7 +1318,6 @@ Cosa vuoi fare?</string>
     <string name="consent_toggle_do_not_sell_body">Opt-out California (CCPA/CPRA 2026). Se attivo, tutti i trattamenti dati opzionali sono disattivati — restano solo le funzioni locali.</string>
     <string name="permission_rationale_microphone">Per dettare le tue voci di diario tramite voce, abbiamo bisogno dell\'accesso al tuo microfono.</string>
     <string name="permission_rationale_camera">Per aggiungere foto alle tue voci, abbiamo bisogno dell\'accesso alla tua fotocamera.</string>
-    <string name="permission_rationale_location">Per aggiungere un contesto di luogo alle tue voci, abbiamo bisogno della tua posizione approssimativa. Puoi rifiutare in qualsiasi momento o disattivarlo in seguito.</string>
     <string name="permission_rationale_notifications">Per poterti ricordare la tua scrittura quotidiana, abbiamo bisogno del permesso per le notifiche.</string>
     <string name="consent_btn_accept_all">Accetta tutto</string>
     <string name="consent_btn_save_selection">Salva la mia selezione</string>

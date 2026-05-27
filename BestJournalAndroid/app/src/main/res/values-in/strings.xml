@@ -364,8 +364,6 @@
     <string name="settings_dark_off">Mati</string>
     <string name="settings_follow_system">Ikuti sistem</string>
     <string name="settings_automatic">Otomatis</string>
-    <string name="settings_sunrise_sunset">Matahari terbit/terbenam</string>
-    <string name="settings_sunrise_sunset_desc">Gelap di malam, terang di siang</string>
     <string name="settings_sounds_haptics_section">Suara/Getaran</string>
     <string name="settings_app_sounds">Suara aplikasi</string>
     <string name="settings_sounds_on">Suara aktif</string>
@@ -822,7 +820,6 @@
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">Agar kamu bisa mendiktekan entri jurnalmu lewat suara, kami butuh akses ke mikrofon kamu.</string>
     <string name="permission_rationale_camera">Agar kamu bisa menambahkan foto ke entri, kami butuh akses ke kamera kamu.</string>
-    <string name="permission_rationale_location">Agar kamu bisa menambahkan konteks lokasi ke entri, kami butuh lokasi perkiraan kamu. Kamu bisa menolak atau menonaktifkannya kapan saja.</string>
     <string name="permission_rationale_notifications">Agar kami bisa mengingatkan kamu untuk menulis setiap hari, kami butuh izin notifikasi.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════

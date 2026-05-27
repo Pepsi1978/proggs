@@ -364,8 +364,6 @@
     <string name="settings_dark_off">已关闭</string>
     <string name="settings_follow_system">跟随系统</string>
     <string name="settings_automatic">自动</string>
-    <string name="settings_sunrise_sunset">日出/日落</string>
-    <string name="settings_sunrise_sunset_desc">夜里深色，白天浅色</string>
     <string name="settings_sounds_haptics_section">声音/触感</string>
     <string name="settings_app_sounds">应用声音</string>
     <string name="settings_sounds_on">声音已开</string>
@@ -1416,7 +1414,6 @@
 
 <string name="permission_rationale_microphone">为了让你能够用语音输入日记，我们需要访问你的麦克风。</string>
     <string name="permission_rationale_camera">为了让你能够为日记条目添加照片，我们需要访问你的摄像头。</string>
-    <string name="permission_rationale_location">为了让你能够为条目添加位置信息，我们需要获取你的大致位置。你可以随时拒绝或稍后关闭。</string>
     <string name="permission_rationale_notifications">为了提醒你每日写作，我们需要获得发送通知的权限。</string>
     <string name="consent_info_system_backup_title">Android 系统备份</string>
     <string name="consent_info_system_backup_body">如果你在设备设置中启用了 Android 系统备份，Android 会自动将你的日记数据备份到 Google 账户的备份区域。你可以随时在设备设置中关闭此功能——详情请参阅隐私政策。</string>

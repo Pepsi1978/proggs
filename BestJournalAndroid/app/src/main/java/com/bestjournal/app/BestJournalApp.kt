@@ -54,7 +54,6 @@ class BestJournalApp : Application() {
                 .edit()
                 .putBoolean(Constants.PREF_DARK_THEME, false)
                 .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
-                .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
                 .apply()
         }
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).

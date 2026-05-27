@@ -364,8 +364,6 @@
     <string name="settings_dark_off">Desactivado</string>
     <string name="settings_follow_system">Seguir sistema</string>
     <string name="settings_automatic">Automático</string>
-    <string name="settings_sunrise_sunset">Amanecer/Atardecer</string>
-    <string name="settings_sunrise_sunset_desc">Oscuro de noche, claro de día</string>
     <string name="settings_sounds_haptics_section">Sonidos / Vibración</string>
     <string name="settings_app_sounds">Sonidos de la app</string>
     <string name="settings_sounds_on">Sonidos activados</string>
@@ -1423,7 +1421,6 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <!-- Nuevos strings -->
     <string name="permission_rationale_microphone">Para que puedas dictar tus entradas del diario por voz, necesitamos acceso a tu micrófono.</string>
     <string name="permission_rationale_camera">Para que puedas añadir fotos a tus entradas, necesitamos acceso a tu cámara.</string>
-    <string name="permission_rationale_location">Para que puedas añadir un contexto de ubicación a tus entradas, necesitamos tu ubicación aproximada. Puedes rechazarlo en cualquier momento o desactivarlo más adelante.</string>
     <string name="permission_rationale_notifications">Para poder recordarte que escribas a diario, necesitamos el permiso para enviarte notificaciones.</string>
     <string name="consent_info_system_backup_title">Copia de seguridad del sistema Android</string>
     <string name="consent_info_system_backup_body">Si has activado la copia de seguridad del sistema Android en los ajustes de tu dispositivo, Android guarda automáticamente los datos de tu diario en el área de copias de seguridad de tu cuenta de Google. Puedes desactivarlo en cualquier momento desde los ajustes de tu dispositivo — consulta la política de privacidad para más detalles.</string>

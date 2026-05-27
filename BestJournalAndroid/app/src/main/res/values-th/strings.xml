@@ -364,8 +364,6 @@
     <string name="settings_dark_off">ปิดอยู่</string>
     <string name="settings_follow_system">ตามระบบ</string>
     <string name="settings_automatic">อัตโนมัติ</string>
-    <string name="settings_sunrise_sunset">พระอาทิตย์ขึ้น/ตก</string>
-    <string name="settings_sunrise_sunset_desc">มืดตอนกลางคืน สว่างตอนกลางวัน</string>
     <string name="settings_sounds_haptics_section">เสียง/สั่น</string>
     <string name="settings_app_sounds">เสียงของแอป</string>
     <string name="settings_sounds_on">เสียงเปิดอยู่</string>
@@ -1265,7 +1263,6 @@
     <string name="consent_footer_version">การเลือกของคุณสามารถเปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
     <string name="permission_rationale_microphone">เพื่อให้คุณบันทึกรายการไดอารีด้วยเสียง เราต้องการสิทธิ์เข้าถึงไมโครโฟนของคุณ</string>
     <string name="permission_rationale_camera">เพื่อให้คุณเพิ่มรูปภาพในรายการ เราต้องการสิทธิ์เข้าถึงกล้องของคุณ</string>
-    <string name="permission_rationale_location">เพื่อให้คุณเพิ่มบริบทสถานที่ในรายการ เราต้องการตำแหน่งโดยประมาณ คุณสามารถปฏิเสธหรือปิดใช้งานได้ทุกเมื่อ</string>
     <string name="permission_rationale_notifications">เพื่อให้เราแจ้งเตือนคุณเกี่ยวกับการเขียนประจำวัน เราต้องการสิทธิ์ในการส่งการแจ้งเตือน</string>
     <string name="consent_details_expand">รายละเอียด</string>
     <string name="settings_open_privacy_sheet">ปรับแต่งการตั้งค่าความเป็นส่วนตัว</string>

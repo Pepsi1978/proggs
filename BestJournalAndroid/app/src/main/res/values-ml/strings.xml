@@ -343,8 +343,6 @@
     <string name="settings_dark_off">ഓഫ്</string>
     <string name="settings_follow_system">സിസ്റ്റം പിന്തുടരുക</string>
     <string name="settings_automatic">സ്വയം</string>
-    <string name="settings_sunrise_sunset">സൂര്യോദയം/അസ്തമയം</string>
-    <string name="settings_sunrise_sunset_desc">രാത്രി ഇരുണ്ടത്, പകൽ തെളിഞ്ഞത്</string>
     <string name="settings_sounds_haptics_section">ശബ്ദം / ഹാപ്റ്റിക്സ്</string>
     <string name="settings_app_sounds">ആപ്പ് ശബ്ദങ്ങൾ</string>
     <string name="settings_sounds_on">ശബ്ദം ഓൺ ആണ്</string>
@@ -1364,7 +1362,6 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">ഡയറി എൻട്രികൾ ശബ്ദം ഉപയോഗിച്ച് ഡിക്‌ടേറ്റ് ചെയ്യാൻ നിന്റെ മൈക്രോഫോണിലേക്ക് ആക്‌സസ് ആവശ്യമാണ്.</string>
     <string name="permission_rationale_camera">എൻട്രികളിൽ ഫോട്ടോ ചേർക്കാൻ നിന്റെ ക്യാമറയിലേക്ക് ആക്‌സസ് ആവശ്യമാണ്.</string>
-    <string name="permission_rationale_location">എൻട്രികൾക്ക് ഒരു സ്ഥലസന്ദർഭം നൽകാൻ ഏകദേശ ലൊക്കേഷൻ ആവശ്യമാണ്. ഇത് ഏത് സമയത്തും നിരസിക്കാം അല്ലെങ്കിൽ പിന്നീട് ഓഫ് ചെയ്യാം.</string>
     <string name="permission_rationale_notifications">ദൈനംദിന എഴുത്ത് ഓർമ്മിപ്പിക്കാൻ അറിയിപ്പ് അനുമതി ആവശ്യമാണ്.</string>
 
     <!-- System Backup consent -->

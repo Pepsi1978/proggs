@@ -364,8 +364,6 @@
     <string name="settings_dark_off">꺼짐</string>
     <string name="settings_follow_system">시스템 따라가기</string>
     <string name="settings_automatic">자동</string>
-    <string name="settings_sunrise_sunset">일출/일몰</string>
-    <string name="settings_sunrise_sunset_desc">밤엔 어둡게, 낮엔 밝게</string>
     <string name="settings_sounds_haptics_section">소리/진동</string>
     <string name="settings_app_sounds">앱 소리</string>
     <string name="settings_sounds_on">소리가 켜져 있어요</string>
@@ -1454,7 +1452,6 @@ Premium: 하루 최대 150회.</string>
 
     <string name="permission_rationale_microphone">음성으로 일기를 받아쓸 수 있도록 마이크 접근 권한이 필요해요.</string>
     <string name="permission_rationale_camera">기록에 사진을 추가할 수 있도록 카메라 접근 권한이 필요해요.</string>
-    <string name="permission_rationale_location">기록에 위치 정보를 추가할 수 있도록 대략적인 위치 권한이 필요해요. 언제든 거부하거나 나중에 끌 수 있어요.</string>
     <string name="permission_rationale_notifications">매일 쓰기를 알려드릴 수 있도록 알림 권한이 필요해요.</string>
     <string name="consent_info_system_backup_title">Android 시스템 백업</string>
     <string name="consent_info_system_backup_body">기기 설정에서 Android 시스템 백업을 활성화하면 Android가 일기 데이터를 Google 계정의 백업 영역에 자동으로 저장해요. 기기 설정에서 언제든 비활성화할 수 있어요 — 자세한 내용은 개인정보처리방침을 참고해 주세요.</string>

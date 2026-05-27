@@ -364,8 +364,6 @@
     <string name="settings_dark_off">बंद</string>
     <string name="settings_follow_system">सिस्टम फॉलो करा</string>
     <string name="settings_automatic">आपोआप</string>
-    <string name="settings_sunrise_sunset">सूर्योदय/सूर्यास्त</string>
-    <string name="settings_sunrise_sunset_desc">रात्री गडद, दिवसा उजळ</string>
     <string name="settings_sounds_haptics_section">आवाज / हॅप्टिक्स</string>
     <string name="settings_app_sounds">App आवाज</string>
     <string name="settings_sounds_on">आवाज चालू आहे</string>
@@ -1532,7 +1530,6 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">तुम्ही तुमच्या डायरी नोंदी आवाजाने लिहू शकण्यासाठी आम्हाला मायक्रोफोनचा अ‍ॅक्सेस आवश्यक आहे.</string>
     <string name="permission_rationale_camera">तुम्ही तुमच्या नोंदींमध्ये फोटो जोडू शकण्यासाठी आम्हाला कॅमेऱ्याचा अ‍ॅक्सेस आवश्यक आहे.</string>
-    <string name="permission_rationale_location">तुम्ही तुमच्या नोंदींना स्थान संदर्भ देऊ शकण्यासाठी आम्हाला अंदाजे स्थान आवश्यक आहे. तुम्ही हे कधीही नाकारू किंवा नंतर बंद करू शकता.</string>
     <string name="permission_rationale_notifications">तुम्हाला दैनंदिन लेखनाची आठवण करून देण्यासाठी आम्हाला सूचनांची परवानगी आवश्यक आहे.</string>
 
     <!-- System backup consent -->

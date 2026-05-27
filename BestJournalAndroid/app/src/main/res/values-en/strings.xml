@@ -425,8 +425,6 @@ For everyone who wants to understand themselves better and grow from within.</st
     <string name="settings_dark_off">Off</string>
     <string name="settings_follow_system">Follow system</string>
     <string name="settings_automatic">Automatic</string>
-    <string name="settings_sunrise_sunset">Sunrise/Sunset</string>
-    <string name="settings_sunrise_sunset_desc">Dark at night, light during the day</string>
     <string name="settings_sounds_haptics_section">Sounds / Haptics</string>
     <string name="settings_app_sounds">App sounds</string>
     <string name="settings_sounds_on">Sounds are on</string>
@@ -1294,7 +1292,7 @@ With Premium: up to 150 per day.</string>
     <string name="settings_privacy_section_header">Privacy &amp; Consents</string>
 <string name="settings_ai_groq_title">Speech-to-text (Groq)</string>
     <string name="settings_ai_groq_subtitle">Send voice recordings to Groq USA for transcription</string>
-    <string name="settings_ai_gemini_title">AI reflections (Gemini)</string>
+    <string name="settings_ai_gemini_title">AI reflections (Google Gemini)</string>
     <string name="settings_ai_gemini_subtitle">Send texts to Google USA for AI summaries</string>
     <string name="settings_ai_tts_title">Read-aloud (Edge TTS)</string>
     <string name="settings_ai_tts_subtitle">Send texts to Microsoft USA for speech output</string>
@@ -1429,7 +1427,6 @@ You can change this at any time in the settings.</string>
     <!-- Permission rationale strings -->
     <string name="permission_rationale_microphone">To let you dictate your journal entries by voice, we need access to your microphone.</string>
     <string name="permission_rationale_camera">To let you add photos to your entries, we need access to your camera.</string>
-    <string name="permission_rationale_location">To let you add a location context to your entries, we need approximate location. You can decline this at any time or turn it off later.</string>
     <string name="permission_rationale_notifications">To remind you of your daily writing, we need permission for notifications.</string>
 
     <!-- System backup info -->

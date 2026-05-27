@@ -379,8 +379,6 @@ Pour ceux qui veulent mieux se connaître et grandir intérieurement.</string>
     <string name="settings_dark_off">Désactivé</string>
     <string name="settings_follow_system">Suivre le système</string>
     <string name="settings_automatic">Automatique</string>
-    <string name="settings_sunrise_sunset">Lever/coucher du soleil</string>
-    <string name="settings_sunrise_sunset_desc">Sombre la nuit, clair le jour</string>
     <string name="settings_sounds_haptics_section">Sons / Vibrations</string>
     <string name="settings_app_sounds">Sons de l\'appli</string>
     <string name="settings_sounds_on">Sons activés</string>
@@ -1452,7 +1450,6 @@ Que veux-tu faire ?</string>
     <!-- Permissions rationale -->
     <string name="permission_rationale_microphone">Pour pouvoir dicter tes entrées de journal par la voix, nous avons besoin d\'accéder à ton microphone.</string>
     <string name="permission_rationale_camera">Pour pouvoir ajouter des photos à tes entrées, nous avons besoin d\'accéder à ta caméra.</string>
-    <string name="permission_rationale_location">Pour pouvoir associer un contexte de lieu à tes entrées, nous avons besoin de ta position approximative. Tu peux refuser à tout moment ou désactiver cela plus tard.</string>
     <string name="permission_rationale_notifications">Pour pouvoir te rappeler d\'écrire chaque jour, nous avons besoin de ta permission pour les notifications.</string>
 
     <!-- System backup -->

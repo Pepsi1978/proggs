@@ -364,8 +364,6 @@
     <string name="settings_dark_off">موقف</string>
     <string name="settings_follow_system">اتباع النظام</string>
     <string name="settings_automatic">تلقائي</string>
-    <string name="settings_sunrise_sunset">الشروق والغروب</string>
-    <string name="settings_sunrise_sunset_desc">داكن ليلا، فاتح نهارا</string>
     <string name="settings_sounds_haptics_section">الأصوات والاهتزاز</string>
     <string name="settings_app_sounds">أصوات التطبيق</string>
     <string name="settings_sounds_on">الأصوات مفعّلة</string>
@@ -1432,7 +1430,6 @@
     <!-- Permission rationale strings -->
     <string name="permission_rationale_microphone">لكي تتمكّن من إملاء تسجيلات يومياتك بالصوت، نحتاج إلى الوصول إلى الميكروفون.</string>
     <string name="permission_rationale_camera">لكي تتمكّن من إضافة صور إلى تسجيلاتك، نحتاج إلى الوصول إلى الكاميرا.</string>
-    <string name="permission_rationale_location">لكي تتمكّن من إضافة سياق المكان إلى تسجيلاتك، نحتاج إلى الموقع التقريبي. يمكنك الرفض في أي وقت أو التعطيل لاحقاً.</string>
     <string name="permission_rationale_notifications">لكي نتمكّن من تذكيرك بكتابة يومياتك اليومية، نحتاج إلى إذن لإرسال الإشعارات.</string>
 
     <!-- System backup consent strings -->

@@ -364,8 +364,6 @@
     <string name="settings_dark_off">بند</string>
     <string name="settings_follow_system">سسٹم کی پیروی کریں</string>
     <string name="settings_automatic">خودکار</string>
-    <string name="settings_sunrise_sunset">طلوع/غروب آفتاب</string>
-    <string name="settings_sunrise_sunset_desc">رات کو تاریک، دن میں روشن</string>
     <string name="settings_sounds_haptics_section">آوازیں / ہیپٹک</string>
     <string name="settings_app_sounds">ایپ کی آوازیں</string>
     <string name="settings_sounds_on">آوازیں چالو ہیں</string>
@@ -1282,7 +1280,6 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="settings_drive_backup_subtitle">اپنے Drive میں خفیہ کردہ اندراجات محفوظ کریں</string>
     <string name="permission_rationale_microphone">تاکہ تم اپنے ڈائری اندراجات آواز سے بول کر لکھ سکو، ہمیں تمہارے مائیکروفون تک رسائی درکار ہے۔</string>
     <string name="permission_rationale_camera">تاکہ تم اپنے اندراجات میں تصاویر شامل کر سکو، ہمیں تمہارے کیمرے تک رسائی درکار ہے۔</string>
-    <string name="permission_rationale_location">تاکہ تم اپنے اندراجات میں مقام کا سیاق دے سکو، ہمیں تمہاری تقریبی جگہ کی ضرورت ہے۔ تم اسے کسی بھی وقت مسترد کر سکتے ہو یا بعد میں بند کر سکتے ہو۔</string>
     <string name="permission_rationale_notifications">تاکہ ہم تمہیں روزانہ لکھنے کی یاد دلا سکیں، ہمیں اطلاعات کی اجازت درکار ہے۔</string>
     <string name="consent_info_system_backup_title">Android سسٹم بیک اپ</string>
     <string name="consent_info_system_backup_body">اگر تم نے اپنی ڈیوائس کی ترتیبات میں Android سسٹم بیک اپ فعال کر رکھا ہے تو Android تمہاری ڈائری کا ڈیٹا خودکار طور پر تمہارے Google اکاؤنٹ کے بیک اپ حصے میں محفوظ کرتا ہے۔ تم اسے اپنی ڈیوائس ترتیبات میں کسی بھی وقت غیر فعال کر سکتے ہو — تفصیل کے لیے رازداری کی پالیسی دیکھیں۔</string>
