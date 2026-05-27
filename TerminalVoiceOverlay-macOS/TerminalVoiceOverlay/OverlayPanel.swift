@@ -687,8 +687,10 @@ final class OverlayPanel: NSPanel {
                 self.btwButton.buttonColor = .btnBtwIdle
                 self.btwButton.labelColor = .darkLabel
             case .recording:
-                self.btwButton.buttonColor = .btnRecording
-                self.btwButton.labelColor = .white
+                // BTW Recording = #F57F17 (dunkles Gelb-Orange) wie Windows,
+                // NICHT btnRecording (#C62828 Rot — das ist die Mic-Farbe).
+                self.btwButton.buttonColor = .btnBtwRecording
+                self.btwButton.labelColor = .darkLabel
                 self.startBtwPulse()
             case .processing:
                 self.stopBtwPulse()
