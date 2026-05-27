@@ -286,10 +286,10 @@ Suchpfad-Priorität: `~/SK/VoiceOverlays/.env` → neben `.exe` → CWD → `~/.
 | 4  | Collapsed-Mic-Pille mit BeamFade | ✅ (#1116) — Test-Hotkey Cmd+Shift+C |
 | 5a | OrientationToggleButton + SaveButton (UI) | ✅ (#1117) |
 | 5b | Drag-Verhalten Rechtsklick + Threshold | offen |
-| 6  | Settings-Dialog | offen |
-| 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | offen |
-| 8  | PromptInputWindow + PromptHistoryWindow | offen |
+| 6  | Settings-Dialog (620×640) | offen — aufwendige NSWindow-UI, separate PR-Serie |
+| 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | offen — aufwendige UI-Serie |
+| 8  | PromptInputWindow + PromptHistoryWindow | offen — aufwendige UI-Serie |
 | 9  | AutoEnterStatusServer (HTTP, 127.0.0.1:5723) | ✅ (#1118) |
 | 10 | Hotkey-Registry (Cmd+1..9 ✅, Cmd+Opt+A..Z Stub) | ✅ (#1118) — Letter-Lookup braucht DB-Schema-Migration |
-| 11 | AlwaysOnPrefixService + Pre/Post-Prompt-Logik | offen |
-| 12 | Schwester-Projekt ClaudeCodexVoiceOverlay-macOS angleichen | offen |
+| 11 | AlwaysOnPrefixService + Pre/Post-Prompt-Logik | ✅ — bereits vor Portierung vorhanden |
+| 12 | Schwester-Projekt ClaudeCodexVoiceOverlay-macOS angleichen | offen — eigene Adaptation noetig (kein PromptBoard, andere Buttons) |
