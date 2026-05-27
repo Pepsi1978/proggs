@@ -20,6 +20,14 @@ final class AutoHideController {
     /// Processing — dann kein Auto-Collapse.
     var busyProvider: (() -> Bool)?
 
+    /// Wenn false: Auto-Hide-Timer wird nie gestartet (User hat Auto-Hide
+    /// in den Einstellungen deaktiviert).
+    var enabled: Bool = true {
+        didSet {
+            if enabled { resetTimer() } else { suspend() }
+        }
+    }
+
     private weak var panel: OverlayPanel?
     private var timer: Timer?
     private var globalMouseMonitor: Any?
@@ -40,6 +48,7 @@ final class AutoHideController {
     /// Manueller Reset, z.B. nach Click auf Mic/Btw/anderer Button.
     func resetTimer() {
         timer?.invalidate()
+        guard enabled else { return }
         timer = Timer.scheduledTimer(withTimeInterval: idleTimeout,
                                      repeats: false) { [weak self] _ in
             self?.collapseIfIdle()

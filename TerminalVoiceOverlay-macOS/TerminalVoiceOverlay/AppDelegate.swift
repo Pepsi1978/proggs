@@ -254,6 +254,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self else { return false }
             return self.isRecording || self.isProcessing
         }
+        // AutoHide-Enabled-State aus AppSettings laden (1:1 Windows-AutoHide).
+        if let stored = try? PromptBoardStore.shared.settings() {
+            autoHide?.enabled = stored.autoHide
+        }
         panel.onPillarMoved = { [weak self] in
             // Keep the PromptBoard side panel docked to the pillar's
             // left edge as the user right-click drags it around.
