@@ -159,6 +159,9 @@ extension OverlayPanel {
 
         // Extra-Buttons (OrientationToggle, Save) positionieren.
         positionExtraButtonsHorizontal()
+
+        // 30% Durchsichtigkeit auf den Sektions-Hintergruenden — Windows-Stil.
+        applySectionTransparency()
     }
 
     /// Vertikales Layout (96x612 Saeule) komplett neu aufbauen. Wird beim
@@ -357,10 +360,13 @@ extension OverlayPanel {
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#1A1A1A",  // S7-Farbe (Enter + Save Stack)
-            width: 56,
-            upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
-            lowerButtons: [.saveExtra(NSSize(width: 28, height: 26))],
+            backgroundHex: "#1A1A1A",  // S7-Farbe (Enter + Save nebeneinander)
+            width: 96,
+            upperButtons: [
+                .action(\.enterButton, HBarLayout.actionButtonSize),
+                .saveExtra(HBarLayout.actionButtonSize),
+            ],
+            lowerButtons: [],
             cornerMode: .leftRounded)
 
         let s6 = HBarSection(
@@ -424,10 +430,13 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s1 = HBarSection(
-            backgroundHex: "#1F1B15",  // S1 (Stern + OrientationToggle Stack)
-            width: 56,
-            upperButtons: [.action(\.ultrathinkButton, HBarLayout.actionButtonSize)],
-            lowerButtons: [.orientationToggleExtra(NSSize(width: 30, height: 26))],
+            backgroundHex: "#1F1B15",  // S1 (Stern + OrientationToggle nebeneinander)
+            width: 96,
+            upperButtons: [
+                .action(\.ultrathinkButton, HBarLayout.actionButtonSize),
+                .orientationToggleExtra(HBarLayout.actionButtonSize),
+            ],
+            lowerButtons: [],
             cornerMode: .rightRounded)
 
         return [s7, s6, s5, s4, s3, s2, s1]

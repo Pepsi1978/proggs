@@ -35,22 +35,36 @@ extension OverlayPanel {
     }
 
     /// Save-Button (Diskette) — gleich gross wie Enter (40×40), rund.
+    /// Disketten-Emoji 💾 statt SF-Symbol (das hat keine echte Diskette).
     var saveButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &saveButtonKey)
             as? RoundButton {
             return b
         }
-        let b = RoundButton(label: "",
+        let b = RoundButton(label: "\u{1F4BE}",  // 💾
                             color: NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1),
                             width: 40, height: 40)
-        b.symbolImage = NSImage(systemSymbolName: "externaldrive.fill",
-                                accessibilityDescription: "Save position")
+        b.labelFont = .systemFont(ofSize: 20)
         b.labelColor = NSColor.white
-        b.onClick = { [weak self] in self?.onSaveClicked?() }
+        b.onClick = { [weak self] in
+            self?.onSaveClicked?()
+            self?.flashSaveButtonGreen()
+        }
         self.contentView?.addSubview(b)
         objc_setAssociatedObject(self, &saveButtonKey, b,
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         return b
+    }
+
+    /// Disketten-Klick: kurz gruen aufleuchten als Feedback "Position
+    /// gespeichert" (analog Windows-Verhalten).
+    func flashSaveButtonGreen() {
+        let normalColor = NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1)
+        let greenColor  = NSColor(red: 0.18,  green: 0.49,  blue: 0.20,  alpha: 1)  // btnSuccess
+        saveButton.buttonColor = greenColor
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.saveButton.buttonColor = normalColor
+        }
     }
 
     /// Klick-Callback fuer den OrientationToggleButton.
@@ -70,30 +84,23 @@ extension OverlayPanel {
     }
 
     /// Positioniert OrientationToggle + Save fuer die vertikale Saeule.
-    /// Anordnung wie Windows: in S1 Stern OBEN + ⇄ UNTEN, in S7 Enter
-    /// OBEN + Diskette UNTEN. Wir muessen dafuer auch ultrathinkButton
-    /// und enterButton leicht verschieben, damit beide Buttons der Stack-
-    /// Gruppe in die jeweilige Sektion passen.
+    /// Anordnung: NEBENEINANDER in S1 (Stern + ⇄) bzw. S7 (Enter + Save),
+    /// beide gleich gross 40×40. Panel ist 96 breit, 2× 40 + 8 spacing
+    /// + 2× 4 padding = 96. Passt knapp.
     func positionExtraButtonsVertical() {
-        // S1 von y=547 bis y=610 (63 hoch). Stack:
-        //   Stern oben bei y=580 (40 hoch, Mitte y=600)
-        //   ⇄    unten bei y=550 (24 hoch)
-        ultrathinkButton.frame = NSRect(x: 28, y: 575, width: 40, height: 40)
-        orientationToggleButton.frame = NSRect(x: 33, y: 549,
-                                                width: 30, height: 24)
+        // S1 (y=547..610, Mitte y=578.5). 40-hohe Buttons bei y=558.
+        ultrathinkButton.frame        = NSRect(x: 4,  y: 558, width: 40, height: 40)
+        orientationToggleButton.frame = NSRect(x: 52, y: 558, width: 40, height: 40)
 
-        // S7 von y=2 bis y=65 (63 hoch). Stack:
-        //   Enter oben bei y=27 (40 hoch, Mitte y=47)
-        //   Save  unten bei y=4 (22 hoch)
-        enterButton.frame = NSRect(x: 28, y: 27, width: 40, height: 40)
-        saveButton.frame = NSRect(x: 33, y: 4, width: 30, height: 22)
+        // S7 (y=2..65, Mitte y=33). 40-hohe Buttons bei y=13.
+        enterButton.frame = NSRect(x: 4,  y: 13, width: 40, height: 40)
+        saveButton.frame  = NSRect(x: 52, y: 13, width: 40, height: 40)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
         // 30% Durchsichtigkeit (70% Opacity) auf den Sektions-Hintergruenden,
-        // wie auf Windows (Alpha-Praefix B3 in den Hex-Werten). Wirkt auf
-        // alle existierenden Sektions-NSViews (die kein RoundButton sind).
+        // wie auf Windows (Alpha-Praefix B3 in den Hex-Werten).
         applySectionTransparency()
     }
 
