@@ -430,7 +430,9 @@ final class OverlayPanel: NSPanel {
         btwButton.cornerRadius = 10
 
         micButton = RoundButton(label: "", color: .btnMicIdle, width: micSize, height: micSize)
-        micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
+        // 1:1 Windows-XAML: Mic-Path 22x22 mit Fill #FF1A1A1A
+        micButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.mic(), size: NSSize(width: 22, height: 22), fill: NSColor.darkLabel)
         micButton.labelColor = .darkLabel
         micButton.useSquareShape = true
         // Windows MicButton-Style: CornerRadius=10 (1:1).
@@ -441,13 +443,19 @@ final class OverlayPanel: NSPanel {
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
 
         copyButton = RoundButton(label: "", color: .btnCopy)
-        copyButton.symbolImage = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "Copy")
+        // 1:1 Windows-XAML Copy-Path (18x18, weiß)
+        copyButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.copy(), size: NSSize(width: 18, height: 18), fill: .white)
 
         pasteButton = RoundButton(label: "", color: .btnPaste)
-        pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
+        // 1:1 Windows-XAML Paste-Path (18x18, weiß)
+        pasteButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.paste(), size: NSSize(width: 18, height: 18), fill: .white)
 
         screenshotButton = RoundButton(label: "", color: .btnScreenshot)
-        screenshotButton.symbolImage = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot")
+        // 1:1 Windows-XAML Screenshot-Path (18x18, weiß)
+        screenshotButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.screenshot(), size: NSSize(width: 18, height: 18), fill: .white)
 
         insertScreenshotButton = RoundButton(label: "", color: .btnInsertScreenshot)
         insertScreenshotButton.symbolImage = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Insert screenshot path")
