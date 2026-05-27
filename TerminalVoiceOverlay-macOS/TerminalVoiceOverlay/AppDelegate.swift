@@ -1315,10 +1315,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O/C + Cmd+1..9 + Cmd+Opt+A..Z)")
     }
 
-    /// Oeffnet den Settings-Dialog (Cmd+Shift+,).
-    /// Speichert die Felder in UserDefaults, ruft danach optional Drive-
-    /// Connect/Disconnect-Aktionen aus.
+    /// Oeffnet den existierenden PromptBoard-Settings-Dialog (1:1 Windows).
+    /// Cmd+Shift+, ist mein Dev-Hotkey — derselbe Dialog kann auch ueber
+    /// den Settings-Knopf in der PromptBoardPanel-Toolbar geoeffnet werden.
     private func openSettingsDialog() {
+        guard let settings = try? PromptBoardStore.shared.settings() else { return }
+        // Anchor-Window fuer .modalPanel: das aktuelle Schluessel-Fenster
+        // oder das overlay panel.
+        let anchor = NSApp.keyWindow ?? self.panel
+        if let result = PBSettingsDialog.ask(parent: anchor, settings: settings) {
+            var latest = (try? PromptBoardStore.shared.settings()) ?? settings
+            latest.groqApiKey = result.groqApiKey
+            latest.geminiApiKey = result.geminiApiKey
+            latest.separatorTemplate = result.separatorTemplate
+            latest.googleClientId = result.googleClientId
+            latest.googleClientSecret = result.googleClientSecret
+            try? PromptBoardStore.shared.updateSettings(latest)
+        }
+        return
+        // (alte SettingsDialog-Skelett-Logik bleibt fuer Referenz unten —
+        // wird durch das vorzeitige `return` nicht mehr ausgefuehrt.)
         let dialog = SettingsDialog()
         dialog.loadFromDefaults()
         // Status der Drive-Verbindung anzeigen.
