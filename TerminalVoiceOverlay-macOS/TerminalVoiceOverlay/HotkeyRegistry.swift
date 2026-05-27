@@ -121,6 +121,11 @@ enum TVOHotkey {
     /// Pendant zu Windows Alt+F11.
     static let openReleaseBundle = (keyCode: UInt32(kVK_ANSI_E), modifiers: UInt32(cmdKey | shiftKey))
 
+    /// Cmd+Shift+O — Orientation umschalten (vertikal <-> horizontal).
+    /// Dev-Hotkey solange der OrientationToggleButton in der UI noch fehlt.
+    /// Pendant zu Windows OrientationToggleButton-Click.
+    static let orientationToggle = (keyCode: UInt32(kVK_ANSI_O), modifiers: UInt32(cmdKey | shiftKey))
+
     /// Cmd+1..9 — Prompt-Hotkeys (mappt auf gespeicherte HotkeyNumber).
     /// `digit` muss 1..9 sein, andere Werte werden ignoriert.
     static func promptDigit(_ digit: Int) -> (keyCode: UInt32, modifiers: UInt32)? {

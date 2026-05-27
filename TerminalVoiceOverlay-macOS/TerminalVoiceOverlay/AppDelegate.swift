@@ -1243,6 +1243,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.openReleaseBundleFolder()
         }
 
+        // Orientation umschalten (Cmd+Shift+O) — Dev-Hotkey solange der
+        // OrientationToggleButton in der UI noch fehlt. Pendant zu Windows
+        // OrientationToggleButton-Click.
+        reg.register(keyCode: TVOHotkey.orientationToggle.keyCode,
+                     modifiers: TVOHotkey.orientationToggle.modifiers) { [weak self] in
+            self?.toggleOverlayOrientation()
+        }
+
         // Prompt-Hotkeys Cmd+1..9 — Pendant zu Windows Strg+1..9
         for digit in 1...9 {
             guard let combo = TVOHotkey.promptDigit(digit) else { continue }
@@ -1251,7 +1259,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E + Cmd+1..9)")
+        NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O + Cmd+1..9)")
+    }
+
+    /// Dev-Helfer: Cmd+Shift+O togglet die Overlay-Orientation. Wird in
+    /// Etappe 3+ durch den richtigen OrientationToggleButton in der UI
+    /// abgeloest. Beam-Crossfade laeuft ueber OverlayPanel.beamToOrientation.
+    private func toggleOverlayOrientation() {
+        DispatchQueue.main.async { [weak self] in
+            guard let panel = self?.panel else { return }
+            let next: OverlayOrientation =
+                (panel.currentOrientation == .vertical) ? .horizontal : .vertical
+            tvoDebug("[App] toggleOrientation \(panel.currentOrientation.rawValue) -> \(next.rawValue)")
+            panel.beamToOrientation(next)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -42,6 +42,8 @@ SWIFT_FILES=(
     "$SRC_DIR/GeminiClient.swift"
     "$SRC_DIR/TerminalController.swift"
     "$SRC_DIR/OverlayPanel.swift"
+    "$SRC_DIR/OverlayOrientation.swift"
+    "$SRC_DIR/OverlayHorizontalLayout.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/PromptBoardModels.swift"
     "$SRC_DIR/PromptBoardStore.swift"

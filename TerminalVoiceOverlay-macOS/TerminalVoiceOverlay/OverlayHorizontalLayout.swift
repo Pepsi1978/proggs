@@ -156,19 +156,143 @@ extension OverlayPanel {
         self.currentOrientation = .horizontal
     }
 
-    /// Stellt das vertikale Layout wieder her. Aktuell vereinfacht: entfernt
-    /// die HBar-Ornamente und setzt das Panel-Frame zurueck auf die vertikale
-    /// Form. Die existierende `init()`-Layout-Logik baut den vertikalen Modus
-    /// auf — eine vollstaendige Rekonstruktion ohne kompletten Re-Init wird
-    /// in Etappe 2 (applyOrientation) integriert.
-    func resetForVerticalLayout(canonical: NSPoint? = nil) {
+    /// Vertikales Layout (96x612 Saeule) komplett neu aufbauen. Wird beim
+    /// Zurueckschalten von horizontal -> vertikal benoetigt; die existierende
+    /// init()-Logik wird nicht erneut durchlaufen, daher Sektions-Views +
+    /// Button-Frames hier 1:1 nachgebaut (gleiche Konstanten wie init()).
+    func applyVerticalLayout(at windowOrigin: NSPoint? = nil) {
         removeOrnamentSubviews()
-        self.hbarOrnamentViews = []
-        // Panel-Frame und CornerRadius sind plattform-abhaengig und werden
-        // in Etappe 2 sauber gesetzt — fuer jetzt setzen wir nur den
-        // CornerRadius zurueck.
+
+        let panelWidth: CGFloat = 96
+        let panelHeight: CGFloat = 612
+
+        let origin: NSPoint = windowOrigin
+            ?? savedVerticalPosition
+            ?? canonicalVerticalOrigin(panelHeight: panelHeight)
+        let newFrame = NSRect(x: origin.x, y: origin.y,
+                              width: panelWidth, height: panelHeight)
+        self.setFrame(newFrame, display: false)
         self.contentView?.layer?.cornerRadius = 36
+
+        var trackedViews: [NSView] = []
+
+        // 7 Sektionen + 6 Trenner — gleiche Werte wie in OverlayPanel.init().
+        let sections: [(hex: String, y: CGFloat, h: CGFloat)] = [
+            ("#1A1A1A", 2,   63),   // S7 Enter
+            ("#151B15", 66,  100),  // S6 Screenshot+Insert
+            ("#151B1D", 167, 100),  // S5 Copy+Paste
+            ("#1F1515", 268, 52),   // S4 X
+            ("#19151F", 321, 100),  // S3 W+G
+            ("#1F1C15", 422, 124),  // S2 Mic+BTW
+            ("#1F1B15", 547, 63),   // S1 Stern
+        ]
+        for s in sections {
+            let v = NSView(frame: NSRect(x: 0, y: s.y, width: panelWidth, height: s.h))
+            v.wantsLayer = true
+            v.layer?.backgroundColor = NSColor(hexAlpha: s.hex).cgColor
+            self.contentView?.addSubview(v, positioned: .below, relativeTo: nil)
+            trackedViews.append(v)
+        }
+        let dividerYs: [CGFloat] = [65, 166, 267, 320, 421, 546]
+        for dy in dividerYs {
+            let d = NSView(frame: NSRect(x: 0, y: dy, width: panelWidth, height: 1))
+            d.wantsLayer = true
+            d.layer?.backgroundColor = NSColor.black.cgColor
+            self.contentView?.addSubview(d, positioned: .below, relativeTo: nil)
+            trackedViews.append(d)
+        }
+
+        // Button-Frames — identisch mit init() Z. 523-533.
+        let btnSize: CGFloat = 40
+        let micSize: CGFloat = 52
+        let micColumnX: CGFloat = 7
+        let actionButtonX: CGFloat = 13     // 7 + (52-40)/2
+        let centeredButtonX: CGFloat = 28   // (96-40)/2
+
+        ultrathinkButton.frame       = NSRect(x: centeredButtonX, y: 553, width: btnSize, height: btnSize)
+        micButton.frame              = NSRect(x: micColumnX,      y: 488, width: micSize, height: micSize)
+        btwButton.frame              = NSRect(x: micColumnX,      y: 428, width: micSize, height: micSize)
+        wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
+        gButton.frame                = NSRect(x: actionButtonX,   y: 327, width: btnSize, height: btnSize)
+        xButton.frame                = NSRect(x: actionButtonX,   y: 274, width: btnSize, height: btnSize)
+        copyButton.frame             = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
+        pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
+        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
+        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
+        enterButton.frame            = NSRect(x: centeredButtonX, y: 19,  width: btnSize, height: btnSize)
+
+        // Profile-Tiles — gleiche Positionen wie computeProfilePositions().
+        let profileX: CGFloat = 65
+        let tileSize = NSSize(width: 24, height: 32)
+        let profilePositions: [(idx: Int, y: CGFloat)] = [
+            (1, 508), (2, 468), (3, 428),    // S2
+            (4, 375), (5, 335),              // S3
+            (6, 278),                         // S4
+            (7, 221), (8, 181),              // S5
+            (9, 120), (10, 80),              // S6
+        ]
+        for p in profilePositions where p.idx >= 1 && p.idx <= profileButtons.count {
+            profileButtons[p.idx - 1].frame =
+                NSRect(x: profileX, y: p.y, width: tileSize.width, height: tileSize.height)
+        }
+
+        self.hbarOrnamentViews = trackedViews
         self.currentOrientation = .vertical
+    }
+
+    /// Vollstaendiger Beam-Switch zwischen vertikaler Saeule und horizontaler
+    /// Leiste. Pseudocode (analog Windows BeamToOrientation Z. 1378):
+    ///   1) beamFadeOut(contentView, 240ms)
+    ///   2) im unsichtbaren Zustand neue Layout-Geometrie anwenden
+    ///   3) beamFadeIn(contentView, 380ms)
+    ///
+    /// Ein erneuter Aufruf waehrend einer laufenden Animation ist via
+    /// Generations-Counter abgesichert (analog `_collapseBeamGen`).
+    func beamToOrientation(_ target: OverlayOrientation,
+                           completion: (() -> Void)? = nil) {
+        guard target != currentOrientation else {
+            completion?()
+            return
+        }
+        guard let cv = self.contentView else {
+            completion?()
+            return
+        }
+
+        let myGen = nextBeamGen()
+        cv.beamFadeOut { [weak self] in
+            guard let self = self,
+                  self.beamGenIsCurrent(myGen) else { return }
+
+            switch target {
+            case .horizontal:
+                // Aktuelle vertikale Position fuer spaeteres Zurueck merken,
+                // falls noch nicht persistiert (Windows: _savedVerticalPos).
+                if self.savedVerticalPosition == nil {
+                    self.savedVerticalPosition = self.frame.origin
+                }
+                self.applyHorizontalLayout(at: self.savedHorizontalPosition)
+            case .vertical:
+                if self.savedHorizontalPosition == nil {
+                    self.savedHorizontalPosition = self.frame.origin
+                }
+                self.applyVerticalLayout(at: self.savedVerticalPosition)
+            }
+
+            cv.beamFadeIn { completion?() }
+        }
+    }
+
+    // MARK: - Generations-Counter (Re-Entrancy-Guard)
+
+    private func nextBeamGen() -> Int {
+        let next = beamGen + 1
+        beamGen = next
+        return next
+    }
+
+    private func beamGenIsCurrent(_ gen: Int) -> Bool {
+        return gen == beamGen
     }
 
     // MARK: - Private Hilfen
@@ -355,15 +479,28 @@ extension OverlayPanel {
 
 // MARK: - Property-Storage via Associated Object
 private var hbarOrnamentViewsKey: UInt8 = 0
+private var beamGenKey: UInt8 = 0
 extension OverlayPanel {
-    /// Trackt die Sektions-/Divider-Views des horizontalen Layouts, damit
-    /// sie beim Umschalten zurueck zu vertikal sauber entfernt werden.
+    /// Trackt die Sektions-/Divider-Views des aktuellen Layouts, damit
+    /// sie beim Umschalten der Orientation sauber entfernt werden.
     fileprivate var hbarOrnamentViews: [NSView] {
         get {
             (objc_getAssociatedObject(self, &hbarOrnamentViewsKey) as? [NSView]) ?? []
         }
         set {
             objc_setAssociatedObject(self, &hbarOrnamentViewsKey, newValue,
+                                    .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// Generations-Counter fuer Beam-Switches (Re-Entrancy-Schutz wenn
+    /// der Benutzer den Toggle mehrfach in schneller Folge ausloest).
+    fileprivate var beamGen: Int {
+        get {
+            (objc_getAssociatedObject(self, &beamGenKey) as? Int) ?? 0
+        }
+        set {
+            objc_setAssociatedObject(self, &beamGenKey, newValue,
                                     .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
