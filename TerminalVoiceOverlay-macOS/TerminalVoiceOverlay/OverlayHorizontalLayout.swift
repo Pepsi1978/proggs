@@ -508,20 +508,11 @@ extension OverlayPanel {
         let v = NSView(frame: rect)
         v.wantsLayer = true
         v.layer?.backgroundColor = NSColor(hexAlpha: hex).cgColor
-        // CornerRadius an Panel-Raendern (links/rechts) per Maske.
-        switch cornerMode {
-        case .leftRounded, .rightRounded:
-            // macOS-CALayer hat `maskedCorners`. CornerRadius wird vom
-            // contentView geerbt (cornerRadius=34), aber wir setzen ihn
-            // auch hier damit der Hintergrund mitgerundet wird.
-            v.layer?.cornerRadius = HBarLayout.cornerRadius
-            v.layer?.masksToBounds = true
-            v.layer?.maskedCorners = (cornerMode == .leftRounded)
-                ? [.layerMinXMinYCorner, .layerMinXMaxYCorner]
-                : [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-        case .middle:
-            v.layer?.cornerRadius = 0
-        }
+        // Kein eigener CornerRadius — das contentView des Panels clippt
+        // bereits durch seine masksToBounds=true + cornerRadius=46. Eigene
+        // maskedCorners auf der Sektion fuehrten dazu dass S1 (50 breit,
+        // cornerRadius 46) den Hintergrund komplett weg-clippte.
+        v.layer?.cornerRadius = 0
         return v
     }
 
