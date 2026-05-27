@@ -1286,10 +1286,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                               hotkeyLetter: result.hotkeyLetter,
                               createdAt: now, updatedAt: now)
         do {
-            // "Last wins": wenn der neue Prompt einen Hotkey kriegt, anderen
-            // Prompts diesen Hotkey wegnehmen — global eindeutig.
+            // "Last wins" fuer beide Hotkeys: Number und Letter global eindeutig.
             if let hk = result.hotkeyNumber {
                 try PromptBoardStore.shared.stripHotkeyFromOthers(hotkey: hk, exceptId: newPromptId)
+            }
+            if let hl = result.hotkeyLetter {
+                try PromptBoardStore.shared.stripLetterFromOthers(letter: hl, exceptId: newPromptId)
             }
             try PromptBoardStore.shared.addPrompt(prompt)
             scheduleAutoBackup()
@@ -1403,10 +1405,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         prompt.hotkeyNumber = result.hotkeyNumber
         prompt.hotkeyLetter = result.hotkeyLetter
         do {
-            // "Last wins": wenn der Hotkey geaendert wurde, anderen Prompts
-            // diesen Hotkey wegnehmen — global eindeutig pro Cmd+N.
+            // "Last wins" fuer beide Hotkeys: Number und Letter global eindeutig.
             if let hk = result.hotkeyNumber {
                 try PromptBoardStore.shared.stripHotkeyFromOthers(hotkey: hk, exceptId: prompt.id)
+            }
+            if let hl = result.hotkeyLetter {
+                try PromptBoardStore.shared.stripLetterFromOthers(letter: hl, exceptId: prompt.id)
             }
             try PromptBoardStore.shared.updatePrompt(prompt)
             scheduleAutoBackup()

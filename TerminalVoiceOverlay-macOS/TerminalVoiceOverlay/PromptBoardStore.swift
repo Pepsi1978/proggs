@@ -296,6 +296,17 @@ final class PromptBoardStore {
         }
     }
 
+    /// Last-wins fuer HotkeyLetter (Cmd+Opt+A..Z): wenn der Prompt einen
+    /// Letter zugewiesen bekommt, alle anderen verlieren ihn.
+    func stripLetterFromOthers(letter: String, exceptId: UUID) throws {
+        let upper = letter.uppercased()
+        try prepared("UPDATE Prompts SET HotkeyLetter=NULL, UpdatedAt=? WHERE HotkeyLetter=? AND Id<>?") { stmt in
+            bindText(stmt, 1, Self.fmt(Date()))
+            bindText(stmt, 2, upper)
+            bindText(stmt, 3, exceptId.uuidString)
+        }
+    }
+
     /// Returns the prompt currently bound to Cmd+N (1..9), or nil if none.
     func promptByHotkey(_ hotkey: Int) throws -> PBPrompt? {
         var result: PBPrompt?
