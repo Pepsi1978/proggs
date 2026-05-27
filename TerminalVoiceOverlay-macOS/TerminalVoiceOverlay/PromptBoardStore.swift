@@ -76,6 +76,7 @@ final class PromptBoardStore {
                 IsActiveForImprovement INTEGER NOT NULL DEFAULT 0,
                 ImprovedByAiPromptId TEXT,
                 HotkeyNumber INTEGER,
+                HotkeyLetter TEXT,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
                 FOREIGN KEY (CategoryId) REFERENCES Categories(Id) ON DELETE CASCADE
@@ -113,6 +114,8 @@ final class PromptBoardStore {
         // Mirrors Windows-Migration in EF Core. Nullable INTEGER weil viele
         // Prompts keinen Hotkey haben.
         try? exec("ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER")
+        // HotkeyLetter: optional Cmd+Opt+A..Z binding (Windows: Win+Alt+A..Z).
+        try? exec("ALTER TABLE Prompts ADD COLUMN HotkeyLetter TEXT")
     }
 
     private func ensureAppSettingsRow() throws {
@@ -285,6 +288,19 @@ final class PromptBoardStore {
         var result: PBPrompt?
         try prepared("SELECT \(Self.promptColumns) FROM Prompts WHERE HotkeyNumber=? LIMIT 1") { stmt in
             sqlite3_bind_int64(stmt, 1, sqlite3_int64(hotkey))
+        } step: { [weak self] stmt in
+            result = self?.readPrompt(stmt)
+        }
+        return result
+    }
+
+    /// Returns the prompt currently bound to Cmd+Opt+A..Z (single letter),
+    /// case-insensitive on storage (uppercase normalized).
+    func promptByLetter(_ letter: Character) throws -> PBPrompt? {
+        let upper = String(letter).uppercased()
+        var result: PBPrompt?
+        try prepared("SELECT \(Self.promptColumns) FROM Prompts WHERE HotkeyLetter=? LIMIT 1") { stmt in
+            bindText(stmt, 1, upper)
         } step: { [weak self] stmt in
             result = self?.readPrompt(stmt)
         }

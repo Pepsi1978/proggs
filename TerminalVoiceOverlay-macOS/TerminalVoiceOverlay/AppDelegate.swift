@@ -1420,13 +1420,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// dem Digit zugewiesen ist, passiert nichts (still — kein Beep, kein
     /// Alert, weil die Cmd+N-Kombi auch in vielen Apps eigene Bedeutungen
     /// hat und der User vielleicht gar nicht uns gemeint hat).
-    /// Stub fuer Cmd+Opt+A..Z (Letter-Hotkeys). Das DB-Schema hat aktuell
-    /// nur HotkeyNumber, kein HotkeyLetter — vollstaendige Implementation
-    /// braucht eine DB-Migration in einer spaeteren Etappe. Bis dahin nur
-    /// Log-Ausgabe damit der Hotkey registriert ist und das System lernt
-    /// wo der User welche Buchstaben drueckt.
+    /// Cmd+Opt+A..Z: laedt den Prompt mit HotkeyLetter=letter aus der DB
+    /// und fuegt seinen effectiveText ins aktive Terminal ein.
+    /// Pendant zu Windows Win+Alt+A..Z.
     private func pastePromptByLetter(_ letter: Character) {
-        tvoDebug("[PromptHotkey] Cmd+Opt+\(letter) — letter-hotkey not yet wired to DB (HotkeyLetter-Spalte fehlt)")
+        do {
+            guard let prompt = try PromptBoardStore.shared.promptByLetter(letter) else {
+                NSLog("[PromptHotkey] Cmd+Opt+%@ — no prompt assigned", String(letter))
+                return
+            }
+            let text = prompt.effectiveText
+            NSLog("[PromptHotkey] Cmd+Opt+%@ -> '%@' (len=%d)",
+                  String(letter), prompt.shortLabel, text.count)
+            TerminalController.pasteText(text, autoEnter: autoEnterEnabled)
+        } catch {
+            NSLog("[PromptHotkey] DB error: %@", error.localizedDescription)
+        }
     }
 
     private func pastePromptByHotkey(_ digit: Int) {

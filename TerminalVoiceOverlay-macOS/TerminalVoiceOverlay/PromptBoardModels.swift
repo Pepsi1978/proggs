@@ -42,6 +42,10 @@ struct PBPrompt {
     /// unique — assigning a hotkey already in use strips it from the previous
     /// owner ("last wins"). Mirrors Windows `Prompt.HotkeyNumber`.
     var hotkeyNumber: Int?
+    /// Optional Cmd+Opt+A..Z hotkey (single letter) — Windows-Pendant ist
+    /// Win+Alt+A..Z. Nil wenn keiner zugewiesen. Wie hotkeyNumber: globally
+    /// unique ("last wins").
+    var hotkeyLetter: String?
     var createdAt: Date
     var updatedAt: Date
 
