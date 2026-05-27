@@ -239,6 +239,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Sonst wuerden die Buttons erst nach dem ersten Cmd+Shift+O erscheinen.
         panel.positionExtraButtonsVertical()
 
+        // Beim App-Start die zuletzt verwendete Orientation aus AppSettings
+        // laden — 1:1 wie Windows (`startupHorizontal` aus _settings.Orientation).
+        if let stored = try? PromptBoardStore.shared.settings(),
+           stored.orientation == "horizontal" {
+            DispatchQueue.main.async { [weak self] in
+                self?.panel?.beamToOrientation(.horizontal)
+            }
+        }
+
         // Auto-Hide-Controller starten (5s Inaktivitaet → Collapsed-Pille).
         autoHide = AutoHideController(panel: panel)
         autoHide?.busyProvider = { [weak self] in
@@ -1363,6 +1372,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 (panel.currentOrientation == .vertical) ? .horizontal : .vertical
             tvoDebug("[App] toggleOrientation \(panel.currentOrientation.rawValue) -> \(next.rawValue)")
             panel.beamToOrientation(next)
+            // Orientation in AppSettings persistieren (Windows-Pendant:
+            // PersistOrientation in OverlayWindow.xaml.cs).
+            if var settings = try? PromptBoardStore.shared.settings() {
+                settings.orientation = next.rawValue
+                try? PromptBoardStore.shared.updateSettings(settings)
+            }
         }
     }
 
