@@ -47,6 +47,7 @@ SWIFT_FILES=(
     "$SRC_DIR/OverlayGlideAnimation.swift"
     "$SRC_DIR/OverlayCollapsedMic.swift"
     "$SRC_DIR/OverlayExtraButtons.swift"
+    "$SRC_DIR/AutoEnterStatusServer.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/PromptBoardModels.swift"
     "$SRC_DIR/PromptBoardStore.swift"

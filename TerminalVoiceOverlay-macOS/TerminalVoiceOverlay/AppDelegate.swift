@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isProcessing = false
     private var geminiEnabled = false // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
     private var autoEnterEnabled = true
+    private let autoEnterServer = AutoEnterStatusServer()
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
 
@@ -157,6 +158,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setGeminiEnabled(geminiEnabled)
         panel.setAutoEnterEnabled(autoEnterEnabled)
         panel.setActiveProfile(activeProfile)
+
+        // HTTP-Server fuer Stream-Deck-XL-Polling starten (Port 5723).
+        autoEnterServer.statusProvider = { [weak self] in
+            return self?.autoEnterEnabled ?? false
+        }
+        autoEnterServer.toggleHandler = { [weak self] in
+            guard let self = self else { return false }
+            self.autoEnterEnabled.toggle()
+            DispatchQueue.main.async {
+                self.panel?.setAutoEnterEnabled(self.autoEnterEnabled)
+            }
+            return self.autoEnterEnabled
+        }
+        autoEnterServer.start()
 
         // X-Button: kurzer Klick loescht eine Zeile, gedrueckt halten loescht alle Zeilen
         // hintereinander im 100ms-Takt — gut kontrollierbare Geschwindigkeit
@@ -1271,7 +1286,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O + Cmd+1..9)")
+        // Prompt-Hotkeys Cmd+Opt+A..Z — Pendant zu Windows Win+Alt+A..Z
+        for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+            guard let combo = TVOHotkey.promptLetter(letter) else { continue }
+            reg.register(keyCode: combo.keyCode, modifiers: combo.modifiers) { [weak self] in
+                self?.pastePromptByLetter(letter)
+            }
+        }
+
+        NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O/C + Cmd+1..9 + Cmd+Opt+A..Z)")
     }
 
     /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation
@@ -1311,6 +1334,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// dem Digit zugewiesen ist, passiert nichts (still — kein Beep, kein
     /// Alert, weil die Cmd+N-Kombi auch in vielen Apps eigene Bedeutungen
     /// hat und der User vielleicht gar nicht uns gemeint hat).
+    /// Stub fuer Cmd+Opt+A..Z (Letter-Hotkeys). Das DB-Schema hat aktuell
+    /// nur HotkeyNumber, kein HotkeyLetter — vollstaendige Implementation
+    /// braucht eine DB-Migration in einer spaeteren Etappe. Bis dahin nur
+    /// Log-Ausgabe damit der Hotkey registriert ist und das System lernt
+    /// wo der User welche Buchstaben drueckt.
+    private func pastePromptByLetter(_ letter: Character) {
+        tvoDebug("[PromptHotkey] Cmd+Opt+\(letter) — letter-hotkey not yet wired to DB (HotkeyLetter-Spalte fehlt)")
+    }
+
     private func pastePromptByHotkey(_ digit: Int) {
         do {
             guard let prompt = try PromptBoardStore.shared.promptByHotkey(digit) else {

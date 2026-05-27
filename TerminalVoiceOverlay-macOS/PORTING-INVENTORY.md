@@ -289,7 +289,7 @@ Suchpfad-Priorität: `~/SK/VoiceOverlays/.env` → neben `.exe` → CWD → `~/.
 | 6  | Settings-Dialog | offen |
 | 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | offen |
 | 8  | PromptInputWindow + PromptHistoryWindow | offen |
-| 9  | AutoEnterStatusServer (HTTP, 127.0.0.1:5723) | offen |
-| 10 | Hotkey-Registry (Strg+1..9, Cmd+Opt+A..Z) | offen |
+| 9  | AutoEnterStatusServer (HTTP, 127.0.0.1:5723) | ✅ (#1118) |
+| 10 | Hotkey-Registry (Cmd+1..9 ✅, Cmd+Opt+A..Z Stub) | ✅ (#1118) — Letter-Lookup braucht DB-Schema-Migration |
 | 11 | AlwaysOnPrefixService + Pre/Post-Prompt-Logik | offen |
 | 12 | Schwester-Projekt ClaudeCodexVoiceOverlay-macOS angleichen | offen |
