@@ -1440,6 +1440,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         latest.separatorTemplate = result.separatorTemplate
         latest.googleClientId = result.googleClientId
         latest.googleClientSecret = result.googleClientSecret
+        // Windows-1:1-Felder.
+        latest.autoHide = result.autoHide
+        latest.orientation = result.orientation
+        latest.persistOverlayPosition = result.persistOverlayPosition
         try? PromptBoardStore.shared.updateSettings(latest)
     }
 

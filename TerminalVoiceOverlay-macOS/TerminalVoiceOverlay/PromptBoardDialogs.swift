@@ -930,6 +930,10 @@ struct PBSettingsResult {
     let separatorTemplate: String
     let googleClientId: String?
     let googleClientSecret: String?
+    // Windows-1:1: AutoHide, Orientation, PersistOverlayPosition.
+    let autoHide: Bool
+    let orientation: String           // "vertical" | "horizontal"
+    let persistOverlayPosition: Bool
 }
 
 final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
@@ -942,6 +946,10 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     private let statusLabel = NSTextField(labelWithString: "nicht verbunden")
     private var connectButton: NSButton!
     private var disconnectButton: NSButton!
+    // Windows-1:1: AutoHide, Horizontal-Orientation, Persist-Position-Checkboxen
+    private let autoHideCheck = NSButton(checkboxWithTitle: "Auto-Hide (Mic-Pille bei Inaktivitaet)", target: nil, action: nil)
+    private let horizontalCheck = NSButton(checkboxWithTitle: "Horizontal-Orientierung beim Start", target: nil, action: nil)
+    private let persistPositionCheck = NSButton(checkboxWithTitle: "Disketten-Position ueber App-Neustart hinweg merken", target: nil, action: nil)
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -970,6 +978,13 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         separatorField.stringValue = settings.separatorTemplate
         clientIdField.stringValue = settings.googleClientId ?? ""
         clientSecretField.stringValue = settings.googleClientSecret ?? ""
+        // Checkboxen mit gespeicherten Settings vorbefuellen.
+        autoHideCheck.state = settings.autoHide ? .on : .off
+        horizontalCheck.state = (settings.orientation == "horizontal") ? .on : .off
+        persistPositionCheck.state = settings.persistOverlayPosition ? .on : .off
+        autoHideCheck.contentTintColor = NSColor.white
+        horizontalCheck.contentTintColor = NSColor.white
+        persistPositionCheck.contentTintColor = NSColor.white
 
         // Themed buttons kept as instance variables so connectGoogle() can
         // still flip their enabled state / title mid-OAuth flow.
@@ -1003,6 +1018,9 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             geminiField,
             label("Separator-Template"),
             separatorField,
+            autoHideCheck,
+            horizontalCheck,
+            persistPositionCheck,
             label("Google Drive Backup"),
             label("Client ID"),
             clientIdField,
@@ -1050,9 +1068,12 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         result = PBSettingsResult(
             groqApiKey: nullIfBlank(groqField.stringValue),
             geminiApiKey: nullIfBlank(geminiField.stringValue),
-            separatorTemplate: separatorField.stringValue.isEmpty ? " ; " : separatorField.stringValue,
+            separatorTemplate: separatorField.stringValue.isEmpty ? "\n\n;\n\n" : separatorField.stringValue,
             googleClientId: nullIfBlank(clientIdField.stringValue),
-            googleClientSecret: nullIfBlank(clientSecretField.stringValue))
+            googleClientSecret: nullIfBlank(clientSecretField.stringValue),
+            autoHide: autoHideCheck.state == .on,
+            orientation: horizontalCheck.state == .on ? "horizontal" : "vertical",
+            persistOverlayPosition: persistPositionCheck.state == .on)
         window?.close()    // windowWillClose handles stopModal (no double-stop)
     }
 

@@ -1347,7 +1347,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latest.separatorTemplate = result.separatorTemplate
             latest.googleClientId = result.googleClientId
             latest.googleClientSecret = result.googleClientSecret
+            latest.autoHide = result.autoHide
+            latest.orientation = result.orientation
+            latest.persistOverlayPosition = result.persistOverlayPosition
             try? PromptBoardStore.shared.updateSettings(latest)
+            // Sofort wirksam: AutoHide-Controller umschalten + ggf. Orientation switchen.
+            autoHide?.enabled = result.autoHide
+            if let panel = self.panel,
+               result.orientation == "horizontal" && panel.currentOrientation == .vertical {
+                panel.beamToOrientation(.horizontal)
+            } else if let panel = self.panel,
+                      result.orientation == "vertical" && panel.currentOrientation == .horizontal {
+                panel.beamToOrientation(.vertical)
+            }
         }
     }
 
