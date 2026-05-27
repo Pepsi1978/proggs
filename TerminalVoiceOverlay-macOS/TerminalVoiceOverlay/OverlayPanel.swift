@@ -426,11 +426,15 @@ final class OverlayPanel: NSPanel {
         btwButton.labelFont = .boldSystemFont(ofSize: 11)
         btwButton.labelColor = .darkLabel
         btwButton.useSquareShape = true
+        // Windows MicButton-Style: CornerRadius=10 (1:1).
+        btwButton.cornerRadius = 10
 
         micButton = RoundButton(label: "", color: .btnMicIdle, width: micSize, height: micSize)
         micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
         micButton.labelColor = .darkLabel
         micButton.useSquareShape = true
+        // Windows MicButton-Style: CornerRadius=10 (1:1).
+        micButton.cornerRadius = 10
 
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
