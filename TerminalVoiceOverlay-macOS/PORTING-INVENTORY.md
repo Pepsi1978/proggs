@@ -280,7 +280,7 @@ Suchpfad-Priorität: `~/SK/VoiceOverlays/.env` → neben `.exe` → CWD → `~/.
 | # | Etappe | Status |
 |---|--------|--------|
 | 1a | Beam-Fade-Helpers + Orientation-State | ✅ (#1111) |
-| 1b | Horizontales Layout (HBar mit MakeHGroup) | offen |
+| 1b | Horizontales Layout (HBar mit MakeHGroup) | ✅ (#1113) |
 | 2  | applyOrientation + beamToOrientation | offen |
 | 3  | Glide-Animation (Smootherstep) | offen |
 | 4  | Collapsed-Mic-Pille mit BeamFade | offen |
