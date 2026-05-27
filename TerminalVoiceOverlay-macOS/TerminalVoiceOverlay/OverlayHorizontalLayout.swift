@@ -154,6 +154,9 @@ extension OverlayPanel {
         // spaeteres applyVerticalLayout() sie wieder entfernen kann.
         self.hbarOrnamentViews = trackedSectionViews + trackedDividerViews
         self.currentOrientation = .horizontal
+
+        // Extra-Buttons (OrientationToggle, Save) positionieren.
+        positionExtraButtonsHorizontal()
     }
 
     /// Vertikales Layout (96x612 Saeule) komplett neu aufbauen. Wird beim
@@ -238,6 +241,9 @@ extension OverlayPanel {
 
         self.hbarOrnamentViews = trackedViews
         self.currentOrientation = .vertical
+
+        // Extra-Buttons (OrientationToggle, Save) positionieren.
+        positionExtraButtonsVertical()
     }
 
     /// Vollstaendiger Beam-Switch zwischen vertikaler Saeule und horizontaler

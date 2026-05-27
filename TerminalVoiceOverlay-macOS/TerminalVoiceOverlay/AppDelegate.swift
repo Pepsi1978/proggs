@@ -216,6 +216,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.xRepeatTimer = nil
         }
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
+        panel.onOrientationToggleClicked = { [weak self] in self?.toggleOverlayOrientation() }
+        panel.onSaveClicked = { [weak self] in self?.savePositionForCurrentOrientation() }
         panel.onPillarMoved = { [weak self] in
             // Keep the PromptBoard side panel docked to the pillar's
             // left edge as the user right-click drags it around.
@@ -1270,6 +1272,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E/O + Cmd+1..9)")
+    }
+
+    /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation
+    /// persistent merken (Disketten-Symbol). Pendant zu Windows-Diskette.
+    private func savePositionForCurrentOrientation() {
+        guard let panel = self.panel else { return }
+        let origin = panel.frame.origin
+        switch panel.currentOrientation {
+        case .vertical:
+            panel.savedVerticalPosition = origin
+            tvoDebug("[App] saved vertical position: \(origin)")
+        case .horizontal:
+            panel.savedHorizontalPosition = origin
+            tvoDebug("[App] saved horizontal position: \(origin)")
+        }
     }
 
     /// Dev-Helfer: Cmd+Shift+O togglet die Overlay-Orientation. Wird in

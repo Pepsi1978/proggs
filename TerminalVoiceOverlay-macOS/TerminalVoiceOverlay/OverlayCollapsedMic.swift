@@ -108,6 +108,9 @@ extension OverlayPanel {
         ]
         for b in otherButtons { b.frame = offscreen }
         for tile in profileButtons { tile.frame = offscreen }
+
+        // Extra-Buttons komplett verstecken im Collapsed-Modus.
+        hideExtraButtons()
     }
 
     /// Beam-Wechsel von voll → eingeklappt.
