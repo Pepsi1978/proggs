@@ -141,7 +141,7 @@ final class PromptBoardStore {
                 googleOAuthRefreshToken: nil, googleClientId: nil,
                 googleClientSecret: nil, googleAccountEmail: nil,
                 groqModel: "whisper-large-v3-turbo", alwaysOnTop: true,
-                barHeight: 140, separatorTemplate: " ; ",
+                barHeight: 140, separatorTemplate: "\n\n;\n\n",
                 createdAt: isoDate(now), updatedAt: isoDate(now))
             try insertSettings(settings)
         }
