@@ -104,6 +104,15 @@ extension OverlayPanel {
         ultrathinkButton.buttonHeight = 34
         ultrathinkButton.frame        = NSRect(x: 11, y: 555, width: 34, height: 34)
         orientationToggleButton.frame = NSRect(x: 50, y: 555, width: 34, height: 34)
+        // Stern auf SF-Symbol umstellen (Windows: Pentagram-Path mit Fill #8B7355
+        // starMuted). SF "star.fill" approximiert den Pentagram exakt + tint.
+        if ultrathinkButton.symbolImage == nil {
+            ultrathinkButton.label = ""
+            ultrathinkButton.symbolImage = NSImage(
+                systemSymbolName: "star.fill",
+                accessibilityDescription: "Promptboard"
+            )
+        }
         ultrathinkButton.needsDisplay = true
 
         // S7: y=2..65. WPF padding top 6 + bot 17.
