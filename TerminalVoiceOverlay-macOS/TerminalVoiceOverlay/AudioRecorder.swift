@@ -8,6 +8,11 @@ final class AudioRecorder {
     private let lock = NSLock()
     private var _isRecording = false
 
+    /// Wird pro Audio-Buffer (~100 ms) mit dem Peak-Level 0..1 aufgerufen.
+    /// Pendant zu Windows `LevelChanged` (NAudio). Aktiviert die Waveform-
+    /// Animation in OverlayPanel.
+    var onLevel: ((Float) -> Void)?
+
     var isRecording: Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -66,6 +71,24 @@ final class AudioRecorder {
 
             if status == .haveData {
                 try? file.write(from: convertedBuffer)
+            }
+
+            // Peak-Level berechnen fuer die Waveform-Animation (Windows
+            // LevelChanged-Pendant). Wir nehmen das ORIGINAL-Buffer (vor
+            // der Sample-Rate-Konvertierung), weil das die rohen Mic-Daten
+            // sind und genuegend Frames hat.
+            if let onLevel = self.onLevel,
+               let channelData = buffer.floatChannelData {
+                let frames = Int(buffer.frameLength)
+                let samples = channelData[0]
+                var peak: Float = 0
+                for i in 0..<frames {
+                    let s = abs(samples[i])
+                    if s > peak { peak = s }
+                }
+                DispatchQueue.main.async {
+                    onLevel(min(peak, 1.0))
+                }
             }
         }
 

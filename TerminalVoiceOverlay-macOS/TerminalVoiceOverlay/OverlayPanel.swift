@@ -650,6 +650,39 @@ final class OverlayPanel: NSPanel {
 
     // MARK: - State Updates
 
+    /// Lazy WaveformView, ueber dem Mic-Button gezeichnet (sichtbar nur
+    /// waehrend Recording). Wird in setMicState/.recording sichtbar gemacht.
+    private var waveformView: WaveformView? {
+        get { objc_getAssociatedObject(self, &waveformKey) as? WaveformView }
+        set { objc_setAssociatedObject(self, &waveformKey, newValue,
+                                       .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// Wird vom AudioRecorder ueber AppDelegate aufgerufen — schiebt einen
+    /// neuen Peak-Pegelwert in die 14-stellige FIFO-Reihe.
+    func pushWaveformLevel(_ value: Float) {
+        DispatchQueue.main.async { [weak self] in
+            self?.ensureWaveformView()
+            self?.waveformView?.pushLevel(value)
+        }
+    }
+
+    private func ensureWaveformView() {
+        if waveformView != nil { return }
+        let w = WaveformView(frame: micButton.bounds)
+        w.autoresizingMask = [.width, .height]
+        micButton.addSubview(w)
+        waveformView = w
+    }
+
+    func showWaveform(_ show: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.ensureWaveformView()
+            self?.waveformView?.isHidden = !show
+            if !show { self?.waveformView?.clear() }
+        }
+    }
+
     func setMicState(_ state: MicState) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -658,22 +691,27 @@ final class OverlayPanel: NSPanel {
                 self.stopPulse()
                 self.micButton.buttonColor = .btnMicIdle
                 self.micButton.labelColor = .darkLabel
+                self.showWaveform(false)
             case .recording:
                 self.micButton.buttonColor = .btnRecording
                 self.micButton.labelColor = .white
                 self.startPulse()
+                self.showWaveform(true)
             case .processing:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnProcessing
                 self.micButton.labelColor = .white
+                self.showWaveform(false)
             case .success:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnSuccess
                 self.micButton.labelColor = .white
+                self.showWaveform(false)
             case .error:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnRecording
                 self.micButton.labelColor = .white
+                self.showWaveform(false)
             }
         }
     }
@@ -949,3 +987,7 @@ final class OverlayPanel: NSPanel {
         case idle, recording, processing, success, error
     }
 }
+
+/// Associated-Object-Key fuer die Lazy-Initialisierte WaveformView, die im
+/// Mic-Button ueberlagert wird waehrend Recording.
+private var waveformKey: UInt8 = 0

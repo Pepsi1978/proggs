@@ -139,6 +139,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Init clients
         audioRecorder = AudioRecorder()
+        // Waveform-Animation waehrend Recording (1:1 Windows LevelChanged).
+        audioRecorder.onLevel = { [weak self] level in
+            self?.panel?.pushWaveformLevel(level)
+        }
         groqClient = GroqWhisperClient(apiKey: config.groqApiKey)
         if let geminiKey = config.geminiApiKey, !geminiKey.isEmpty {
             geminiClient = GeminiClient(apiKey: geminiKey)
