@@ -216,7 +216,7 @@ final class PromptBoardStore {
     /// ALTER TABLE migration, this constant, the bind() in addPrompt /
     /// updatePrompt, AND readPrompt(stmt). Five places, in lockstep.
     private static let promptColumns =
-        "Id,CategoryId,ShortLabel,OriginalText,ImprovedText,ActiveVersion,IsAlwaysOn,IsPrePrompt,IsPostPrompt,SortOrder,PromptKind,GeminiModel,IsActiveForImprovement,ImprovedByAiPromptId,HotkeyNumber,CreatedAt,UpdatedAt"
+        "Id,CategoryId,ShortLabel,OriginalText,ImprovedText,ActiveVersion,IsAlwaysOn,IsPrePrompt,IsPostPrompt,SortOrder,PromptKind,GeminiModel,IsActiveForImprovement,ImprovedByAiPromptId,HotkeyNumber,HotkeyLetter,CreatedAt,UpdatedAt"
 
     func prompts(in categoryId: UUID) throws -> [PBPrompt] {
         var list: [PBPrompt] = []
@@ -238,7 +238,7 @@ final class PromptBoardStore {
     }
 
     func addPrompt(_ p: PBPrompt) throws {
-        let sql = "INSERT INTO Prompts (\(Self.promptColumns)) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        let sql = "INSERT INTO Prompts (\(Self.promptColumns)) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         try prepared(sql) { stmt in
             bindText(stmt, 1, p.id.uuidString)
             bindText(stmt, 2, p.categoryId.uuidString)
@@ -255,13 +255,14 @@ final class PromptBoardStore {
             sqlite3_bind_int64(stmt, 13, p.isActiveForImprovement ? 1 : 0)
             bindTextOrNull(stmt, 14, p.improvedByAiPromptId?.uuidString)
             bindIntOrNull(stmt, 15, p.hotkeyNumber)
-            bindText(stmt, 16, Self.fmt(p.createdAt))
-            bindText(stmt, 17, Self.fmt(p.updatedAt))
+            bindTextOrNull(stmt, 16, p.hotkeyLetter)
+            bindText(stmt, 17, Self.fmt(p.createdAt))
+            bindText(stmt, 18, Self.fmt(p.updatedAt))
         }
     }
 
     func updatePrompt(_ p: PBPrompt) throws {
-        let sql = "UPDATE Prompts SET CategoryId=?, ShortLabel=?, OriginalText=?, ImprovedText=?, ActiveVersion=?, IsAlwaysOn=?, IsPrePrompt=?, IsPostPrompt=?, SortOrder=?, PromptKind=?, GeminiModel=?, IsActiveForImprovement=?, ImprovedByAiPromptId=?, HotkeyNumber=?, UpdatedAt=? WHERE Id=?"
+        let sql = "UPDATE Prompts SET CategoryId=?, ShortLabel=?, OriginalText=?, ImprovedText=?, ActiveVersion=?, IsAlwaysOn=?, IsPrePrompt=?, IsPostPrompt=?, SortOrder=?, PromptKind=?, GeminiModel=?, IsActiveForImprovement=?, ImprovedByAiPromptId=?, HotkeyNumber=?, HotkeyLetter=?, UpdatedAt=? WHERE Id=?"
         try prepared(sql) { stmt in
             bindText(stmt, 1, p.categoryId.uuidString)
             bindText(stmt, 2, p.shortLabel)
@@ -277,8 +278,9 @@ final class PromptBoardStore {
             sqlite3_bind_int64(stmt, 12, p.isActiveForImprovement ? 1 : 0)
             bindTextOrNull(stmt, 13, p.improvedByAiPromptId?.uuidString)
             bindIntOrNull(stmt, 14, p.hotkeyNumber)
-            bindText(stmt, 15, Self.fmt(Date()))
-            bindText(stmt, 16, p.id.uuidString)
+            bindTextOrNull(stmt, 15, p.hotkeyLetter)
+            bindText(stmt, 16, Self.fmt(Date()))
+            bindText(stmt, 17, p.id.uuidString)
         }
     }
 
@@ -490,8 +492,9 @@ final class PromptBoardStore {
             isActiveForImprovement: sqlite3_column_int64(stmt, 12) != 0,
             improvedByAiPromptId: (readOptString(stmt, 13)).flatMap(UUID.init(uuidString:)),
             hotkeyNumber: readOptInt(stmt, 14),
-            createdAt: Self.parse(readString(stmt, 15)) ?? Date(),
-            updatedAt: Self.parse(readString(stmt, 16)) ?? Date())
+            hotkeyLetter: readOptString(stmt, 15),
+            createdAt: Self.parse(readString(stmt, 16)) ?? Date(),
+            updatedAt: Self.parse(readString(stmt, 17)) ?? Date())
     }
 
     private func readSettings(_ stmt: OpaquePointer) -> PBAppSettings {

@@ -1283,6 +1283,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                               geminiModel: nil, isActiveForImprovement: false,
                               improvedByAiPromptId: nil,
                               hotkeyNumber: result.hotkeyNumber,
+                              hotkeyLetter: result.hotkeyLetter,
                               createdAt: now, updatedAt: now)
         do {
             // "Last wins": wenn der neue Prompt einen Hotkey kriegt, anderen
@@ -1392,13 +1393,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                                                   alwaysOn: prompt.isAlwaysOn,
                                                   prePrompt: prompt.isPrePrompt,
                                                   postPrompt: prompt.isPostPrompt,
-                                                  hotkey: prompt.hotkeyNumber) else { return }
+                                                  hotkey: prompt.hotkeyNumber,
+                                                  hotkeyLetter: prompt.hotkeyLetter) else { return }
         prompt.shortLabel = result.shortLabel
         prompt.originalText = result.originalText
         prompt.isAlwaysOn = result.isAlwaysOn
         prompt.isPrePrompt = result.isPrePrompt
         prompt.isPostPrompt = result.isPostPrompt
         prompt.hotkeyNumber = result.hotkeyNumber
+        prompt.hotkeyLetter = result.hotkeyLetter
         do {
             // "Last wins": wenn der Hotkey geaendert wurde, anderen Prompts
             // diesen Hotkey wegnehmen — global eindeutig pro Cmd+N.

@@ -237,6 +237,9 @@ struct PBPromptEditResult {
     /// Empfaenger (PromptBoardPanel) muss `stripHotkeyFromOthers` aufrufen
     /// damit globale Eindeutigkeit erhalten bleibt ("last wins").
     let hotkeyNumber: Int?
+    /// Cmd+Opt+A..Z hotkey assignment, or nil. Globally unique ("last wins").
+    /// Pendant zu Windows Win+Alt+A..Z.
+    let hotkeyLetter: String?
 }
 
 final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
@@ -251,6 +254,8 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private let postPromptCheckbox = NSButton(checkboxWithTitle: "Post-Prompt (nach dem Diktat)", target: nil, action: nil)
     /// Cmd+1..9 hotkey picker. Index 0 = "Kein Hotkey", Indizes 1..9 = Cmd+1..9.
     private let hotkeyPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    /// Cmd+Opt+A..Z Letter-Hotkey-Popup (Windows-Pendant: Win+Alt+A..Z)
+    private let letterPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let statusLabel = NSTextField(labelWithString: "")
     private var result: PBPromptEditResult?
 
@@ -285,7 +290,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     init(title: String, initialLabel: String, initialText: String,
          initialAlwaysOn: Bool, initialPrePrompt: Bool, initialPostPrompt: Bool,
-         initialHotkey: Int? = nil) {
+         initialHotkey: Int? = nil, initialHotkeyLetter: String? = nil) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 540, height: 580),
             styleMask: [.titled, .closable],
@@ -355,6 +360,22 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             hotkeyPopup.selectItem(at: 0)
         }
         PBDarkTheme.stylePopup(hotkeyPopup)
+
+        // Letter-Hotkey-Popup: "Kein", "A", "B", ..., "Z"
+        letterPopup.removeAllItems()
+        letterPopup.addItem(withTitle: "Kein")
+        for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+            letterPopup.addItem(withTitle: "Cmd+Opt+\(c)")
+        }
+        if let l = initialHotkeyLetter, let idx = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            .firstIndex(of: Character(l.uppercased())) {
+            let pos = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".distance(
+                from: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".startIndex, to: idx)
+            letterPopup.selectItem(at: pos + 1)
+        } else {
+            letterPopup.selectItem(at: 0)
+        }
+        PBDarkTheme.stylePopup(letterPopup)
 
         // ── Footer buttons ──
         let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(self.cancel))
@@ -426,7 +447,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         // Hotkey-Reihe: Label "Hotkey:" + Popup-Picker.
         let hotkeyLabel = NSTextField(labelWithString: "Hotkey:")
         PBDarkTheme.styleLabel(hotkeyLabel)
-        let hotkeyRow = NSStackView(views: [hotkeyLabel, hotkeyPopup])
+        let hotkeyRow = NSStackView(views: [hotkeyLabel, hotkeyPopup, letterPopup])
         hotkeyRow.orientation = .horizontal
         hotkeyRow.spacing = 8
         hotkeyRow.alignment = .centerY
@@ -542,13 +563,23 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         let isPost = postPromptCheckbox.state == .on
         let wrappedText = Self.applyPrePostWrap(text: text, isPre: isPre, isPost: isPost)
 
+        // Letter-Hotkey: Index 0 = "Kein", 1..26 = A..Z
+        let pickedLetter: String? = {
+            let idx = letterPopup.indexOfSelectedItem
+            guard idx >= 1, idx <= 26 else { return nil }
+            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            let pos = letters.index(letters.startIndex, offsetBy: idx - 1)
+            return String(letters[pos])
+        }()
+
         result = PBPromptEditResult(
             shortLabel: label,
             originalText: wrappedText,
             isAlwaysOn: alwaysOnCheckbox.state == .on,
             isPrePrompt: isPre,
             isPostPrompt: isPost,
-            hotkeyNumber: pickedHotkey)
+            hotkeyNumber: pickedHotkey,
+            hotkeyLetter: pickedLetter)
         window?.close()    // windowWillClose handles stopModal
     }
 
@@ -903,12 +934,13 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     static func ask(parent: NSWindow?, title: String,
                     label: String, text: String, alwaysOn: Bool,
                     prePrompt: Bool, postPrompt: Bool,
-                    hotkey: Int? = nil) -> PBPromptEditResult? {
+                    hotkey: Int? = nil, hotkeyLetter: String? = nil) -> PBPromptEditResult? {
         let ctrl = PBPromptEditDialog(title: title, initialLabel: label,
                                       initialText: text, initialAlwaysOn: alwaysOn,
                                       initialPrePrompt: prePrompt,
                                       initialPostPrompt: postPrompt,
-                                      initialHotkey: hotkey)
+                                      initialHotkey: hotkey,
+                                      initialHotkeyLetter: hotkeyLetter)
         guard let w = ctrl.window else { return nil }
         w.center()
         return PBModalPresenter.runHidingFloatingPanels {
