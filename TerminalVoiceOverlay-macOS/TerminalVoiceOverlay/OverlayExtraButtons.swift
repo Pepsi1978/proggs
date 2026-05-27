@@ -119,17 +119,21 @@ extension OverlayPanel {
         applySectionTransparency()
     }
 
-    /// Setzt 70% Opacity auf alle Sektions-Subviews der contentView —
-    /// passt das macOS-Aussehen an das Windows-Terminal-Vorbild an.
-    /// Wirkt auf init()'s Original-Sektionen UND auf von applyVerticalLayout
-    /// neu erstellte Sektions-Views.
+    /// Setzt 70% Opacity auf alle OPAKEN Sektions-Subviews der contentView.
+    /// init() (OverlayPanel.swift) erzeugt Sektionen mit opaken Hex-Werten —
+    /// die werden hier nachtraeglich auf 70% gesetzt. Sektionen die mit
+    /// B3-Alpha-Hex (z.B. applyVerticalLayout/applyHorizontalLayout) erzeugt
+    /// wurden, haben bereits Alpha < 1 und werden uebersprungen, um doppelte
+    /// Transparenz (0.7 × 0.7 = 0.49) zu vermeiden.
     func applySectionTransparency() {
         guard let subviews = self.contentView?.subviews else { return }
         for v in subviews {
             if v is RoundButton { continue }
-            guard v.layer?.backgroundColor != nil else { continue }
-            // Schwarze 1px-Trenner (height ~1) lassen wir voll opak.
+            guard let bg = v.layer?.backgroundColor else { continue }
+            // Trenner (1px hoch) lassen wir voll opak.
             if v.frame.height <= 2 { continue }
+            // Bereits transparenter Hintergrund: skip.
+            if bg.alpha < 0.99 { continue }
             v.alphaValue = 0.70
         }
     }

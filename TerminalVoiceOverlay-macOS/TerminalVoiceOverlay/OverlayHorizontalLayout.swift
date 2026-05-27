@@ -194,13 +194,13 @@ extension OverlayPanel {
 
         // 7 Sektionen + 6 Trenner — gleiche Werte wie in OverlayPanel.init().
         let sections: [(hex: String, y: CGFloat, h: CGFloat)] = [
-            ("#1A1A1A", 2,   63),   // S7 Enter
-            ("#151B15", 66,  100),  // S6 Screenshot+Insert
-            ("#151B1D", 167, 100),  // S5 Copy+Paste
-            ("#1F1515", 268, 52),   // S4 X
-            ("#19151F", 321, 100),  // S3 W+G
-            ("#1F1C15", 422, 124),  // S2 Mic+BTW
-            ("#1F1B15", 547, 63),   // S1 Stern
+            ("#B31A1A1A", 2,   63),   // S7 Enter
+            ("#B3151B15", 66,  100),  // S6 Screenshot+Insert
+            ("#B3151B1D", 167, 100),  // S5 Copy+Paste
+            ("#B31F1515", 268, 52),   // S4 X
+            ("#B319151F", 321, 100),  // S3 W+G
+            ("#B31F1C15", 422, 124),  // S2 Mic+BTW
+            ("#B31F1B15", 547, 63),   // S1 Stern
         ]
         for s in sections {
             let v = NSView(frame: NSRect(x: 0, y: s.y, width: panelWidth, height: s.h))
