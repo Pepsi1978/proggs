@@ -161,8 +161,9 @@ extension OverlayPanel {
         // Extra-Buttons (OrientationToggle, Save) positionieren.
         positionExtraButtonsHorizontal(s1Origin: s1Origin, s1Width: s1Width)
 
-        // 30% Durchsichtigkeit auf den Sektions-Hintergruenden — Windows-Stil.
-        applySectionTransparency()
+        // HBar-Sektion-Farben enthalten bereits B3-Alpha-Praefix —
+        // kein zusaetzlicher alphaValue-Multiplikator (sonst doppelte
+        // Transparenz).
     }
 
     /// Vertikales Layout (96x612 Saeule) komplett neu aufbauen. Wird beim
@@ -275,37 +276,35 @@ extension OverlayPanel {
         switch target {
         case .horizontal:
             // ── Vertikal → Horizontal ──
-            // 1) Saeule ausblenden (BeamFadeOut)
-            // 2) Form wechseln unsichtbar — Leiste erscheint an der
-            //    Saeulen-Oberkante (gleiche Y wie aktuelle Saeulen-Oberkante)
-            // 3) Leiste einblenden (BeamFadeIn)
-            // 4) Leiste glatt nach unten gleiten lassen zur finalen Position
-            //    (gemerkte horizontalPosition oder kanonische Unten-Mitte).
+            // 1) Saeule ausblenden
+            // 2) Layout-Switch — Leiste landet zunaechst an FINALER X-Position
+            //    (rechts-unten), aber auf Saeulen-Oberkante-Y. So glidet sie
+            //    NUR vertikal nach unten, nicht schraeg.
+            // 3) Leiste einblenden
+            // 4) Y-Glide nach unten zur finalen Y-Position
             cv.beamFadeOut { [weak self] in
                 guard let self = self,
                       self.beamGenIsCurrent(myGen) else { return }
 
-                // Saeulen-Oberkante in Bildschirmkoordinaten merken,
-                // bevor wir das Frame umstellen.
-                let columnTopY = self.frame.maxY
-                let columnX    = self.frame.origin.x
-                // Aktuelle vertikale Position persistieren, falls noch nicht.
+                let columnTopY = self.frame.maxY  // Saeulen-Oberkante
                 if self.savedVerticalPosition == nil {
                     self.savedVerticalPosition = self.frame.origin
                 }
-                // Layout aufbauen, aber die Leiste erscheint zunaechst an
-                // der Saeulen-Oberkante (nicht am finalen Ziel).
-                let appearOrigin = NSPoint(x: columnX,
-                                           y: columnTopY - HBarLayout.panelHeight)
-                self.applyHorizontalLayout(at: appearOrigin)
+                // Layout-Wechsel an FINALER Position aufbauen (= rechts-unten).
+                self.applyHorizontalLayout(at: self.savedHorizontalPosition)
+                // Finale X/Y nach dem Aufbau auslesen.
+                let finalFrame = self.frame
+                // Y-Sprung: HBar an die Saeulen-Oberkante hochsetzen.
+                self.setFrameOrigin(NSPoint(
+                    x: finalFrame.origin.x,
+                    y: columnTopY - HBarLayout.panelHeight
+                ))
 
                 cv.beamFadeIn { [weak self] in
                     guard let self = self,
                           self.beamGenIsCurrent(myGen) else { return }
-                    // Finale Position: gemerkte oder kanonische Unten-Mitte.
-                    let target = self.savedHorizontalPosition
-                        ?? self.canonicalHorizontalOrigin(panelWidth: self.frame.width)
-                    self.glideWindow(to: target) { completion?() }
+                    // GERADER Glide nach UNTEN — X bleibt, nur Y wechselt.
+                    self.glideWindow(to: finalFrame.origin) { completion?() }
                 }
             }
 
@@ -361,14 +360,14 @@ extension OverlayPanel {
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#1A1A1A",  // S7 = Enter oben + Save unten (MakeHGroup)
+            backgroundHex: "#B31A1A1A",  // S7 = Enter oben + Save unten (MakeHGroup)
             width: 56,
             upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
             lowerButtons: [.saveExtra(HBarLayout.saveButtonHSize)],  // 30×22
             cornerMode: .leftRounded)
 
         let s6 = HBarSection(
-            backgroundHex: "#151B15",  // S6 (Shot+Insert)
+            backgroundHex: "#B3151B15",  // S6 (Shot+Insert)
             width: 92,
             upperButtons: [
                 .action(\.insertScreenshotButton, HBarLayout.actionButtonSize),
@@ -381,7 +380,7 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s5 = HBarSection(
-            backgroundHex: "#151B1D",  // S5 (Copy+Paste)
+            backgroundHex: "#B3151B1D",  // S5 (Copy+Paste)
             width: 92,
             upperButtons: [
                 .action(\.pasteButton, HBarLayout.actionButtonSize),
@@ -394,14 +393,14 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s4 = HBarSection(
-            backgroundHex: "#1F1515",  // S4 (X)
+            backgroundHex: "#B31F1515",  // S4 (X)
             width: 52,
             upperButtons: [.action(\.xButton, HBarLayout.actionButtonSize)],
             lowerButtons: [.profile(6, HBarLayout.profileTileSize)],
             cornerMode: .middle)
 
         let s3 = HBarSection(
-            backgroundHex: "#19151F",  // S3 (W+G)
+            backgroundHex: "#B319151F",  // S3 (W+G)
             width: 92,
             upperButtons: [
                 .action(\.gButton, HBarLayout.actionButtonSize),
@@ -414,7 +413,7 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s2 = HBarSection(
-            backgroundHex: "#1F1C15",  // S2 (Mic+BTW)
+            backgroundHex: "#B31F1C15",  // S2 (Mic+BTW)
             width: 124,
             upperButtons: [
                 .action(\.btwButton, HBarLayout.micButtonSize),
@@ -433,7 +432,7 @@ extension OverlayPanel {
         // positionExtraButtonsHorizontal() sie direkt anhand der gemerkten
         // s1-Sektion-Position. Slots leer halten.
         let s1 = HBarSection(
-            backgroundHex: "#1F1B15",
+            backgroundHex: "#B31F1B15",
             width: 50,  // 34 + 16 padding
             upperButtons: [],
             lowerButtons: [],

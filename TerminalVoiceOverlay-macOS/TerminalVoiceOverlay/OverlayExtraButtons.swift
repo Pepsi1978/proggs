@@ -59,15 +59,15 @@ extension OverlayPanel {
         return b
     }
 
-    /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf als
-    /// Feedback "Position gespeichert" (Windows: gruenes Aufblitzen der
-    /// Foreground-Farbe). Hintergrund bleibt transparent.
+    /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf.
+    /// Das 💾-Emoji ignoriert labelColor (Color-Glyph), daher flashen wir
+    /// den Hintergrund-Kreis fuer 1s gruen.
     func flashSaveButtonGreen() {
-        let normalColor = NSColor.white
-        let greenColor  = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 1)
-        saveButton.labelColor = greenColor
+        let normalColor = NSColor.clear
+        let greenColor  = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 0.9)
+        saveButton.buttonColor = greenColor
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.saveButton.labelColor = normalColor
+            self?.saveButton.buttonColor = normalColor
         }
     }
 
