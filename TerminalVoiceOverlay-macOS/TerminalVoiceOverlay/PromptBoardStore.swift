@@ -116,6 +116,17 @@ final class PromptBoardStore {
         try? exec("ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER")
         // HotkeyLetter: optional Cmd+Opt+A..Z binding (Windows: Win+Alt+A..Z).
         try? exec("ALTER TABLE Prompts ADD COLUMN HotkeyLetter TEXT")
+        // AppSettings: Windows-1:1-Felder nachziehen. Read/Write nutzt
+        // aktuell noch Default-Werte aus dem Swift-struct — die Spalten
+        // existieren aber, damit PromptHistoryDriveSync sie spaeter
+        // serialisieren kann.
+        try? exec("ALTER TABLE AppSettings ADD COLUMN AutoHide INTEGER NOT NULL DEFAULT 1")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN Orientation TEXT NOT NULL DEFAULT 'vertical'")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN PersistOverlayPosition INTEGER NOT NULL DEFAULT 0")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN OverlayVerticalLeft REAL")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN OverlayVerticalTop REAL")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalLeft REAL")
+        try? exec("ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalTop REAL")
     }
 
     private func ensureAppSettingsRow() throws {

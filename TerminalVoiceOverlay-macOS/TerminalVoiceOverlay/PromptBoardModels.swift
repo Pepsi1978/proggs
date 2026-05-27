@@ -71,4 +71,19 @@ struct PBAppSettings {
     var separatorTemplate: String
     var createdAt: Date
     var updatedAt: Date
+
+    // Windows-1:1-Felder (in PBAppSettings nachgezogen). Migration in
+    // PromptBoardStore.swift fuegt die Spalten idempotent hinzu.
+    /// Auto-Hide aktiv? Default true (Windows-Default).
+    var autoHide: Bool = true
+    /// "vertical" oder "horizontal" — die zuletzt aktive Form.
+    var orientation: String = "vertical"
+    /// Disketten-Position ueber App-Neustart hinweg merken? Default false.
+    var persistOverlayPosition: Bool = false
+    /// Persistierte Vertikal-Position (nur wenn persistOverlayPosition=true).
+    var overlayVerticalLeft: Double? = nil
+    var overlayVerticalTop: Double? = nil
+    /// Persistierte Horizontal-Position.
+    var overlayHorizontalLeft: Double? = nil
+    var overlayHorizontalTop: Double? = nil
 }
