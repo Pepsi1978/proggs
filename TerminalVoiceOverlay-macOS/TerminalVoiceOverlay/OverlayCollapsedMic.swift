@@ -78,12 +78,15 @@ extension OverlayPanel {
         let frame = NSRect(x: origin.x, y: origin.y, width: size, height: size)
         self.setFrame(frame, display: false)
         self.contentView?.layer?.cornerRadius = CollapsedLayout.cornerRadius
+        // 2 px schwarzer Border-Ring (Windows: BorderBrush #FF000000 BorderThickness 2).
+        self.contentView?.layer?.borderColor = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth = 2
 
-        // Hintergrund — eine dunkle, leicht-transparente Pille
-        // (Windows-CollapsedView nutzt #B31F1C15 fuer den Mic-Sektor S2).
+        // Hintergrund — Windows-XAML CollapsedView nutzt #B31A1A1A (NICHT #B31F1C15
+        // wie ich vorher faelschlich angenommen hatte — das war S2 Mic-Sektor).
         let bg = NSView(frame: NSRect(x: 0, y: 0, width: size, height: size))
         bg.wantsLayer = true
-        bg.layer?.backgroundColor = NSColor(hexAlphaCollapsed: "#B31F1C15").cgColor
+        bg.layer?.backgroundColor = NSColor(hexAlphaCollapsed: "#B31A1A1A").cgColor
         bg.layer?.cornerRadius = CollapsedLayout.cornerRadius
         bg.layer?.masksToBounds = true
         self.contentView?.addSubview(bg, positioned: .below, relativeTo: nil)
