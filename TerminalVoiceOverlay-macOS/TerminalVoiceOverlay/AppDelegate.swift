@@ -1336,51 +1336,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latest.googleClientSecret = result.googleClientSecret
             try? PromptBoardStore.shared.updateSettings(latest)
         }
-        return
-        // (alte SettingsDialog-Skelett-Logik bleibt fuer Referenz unten —
-        // wird durch das vorzeitige `return` nicht mehr ausgefuehrt.)
-        let dialog = SettingsDialog()
-        dialog.loadFromDefaults()
-        // Status der Drive-Verbindung anzeigen.
-        let connected = GoogleDriveBackupService.shared.isAuthenticated()
-        dialog.setGoogleStatus(connected ? "Verbunden" : "Nicht verbunden",
-                               connected: connected)
-        dialog.onSave = { values in
-            tvoDebug("[App] Settings saved: groqLen=\(values.groqApiKey.count) " +
-                     "geminiLen=\(values.geminiApiKey.count) " +
-                     "autoHide=\(values.autoHide) horizontal=\(values.horizontalOrientation) " +
-                     "persistPos=\(values.persistOverlayPosition)")
-        }
-        dialog.onGoogleConnect = { [weak dialog] in
-            let d = UserDefaults.standard
-            let cid = d.string(forKey: "GOOGLE_CLIENT_ID") ?? ""
-            let cs  = d.string(forKey: "GOOGLE_CLIENT_SECRET") ?? ""
-            if cid.isEmpty || cs.isEmpty {
-                dialog?.setGoogleStatus("Bitte Client-ID + Secret eintragen + Speichern", connected: false)
-                return
-            }
-            dialog?.setGoogleStatus("Browser oeffnet ... bitte autorisieren", connected: false)
-            GoogleDriveBackupService.shared.connect(clientId: cid, clientSecret: cs) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let info):
-                        dialog?.setGoogleStatus("Verbunden: \(info.email)", connected: true)
-                        tvoDebug("[App] Drive-Connect OK email=\(info.email)")
-                    case .failure(let err):
-                        dialog?.setGoogleStatus("Fehler: \(err.localizedDescription)", connected: false)
-                        tvoDebug("[App] Drive-Connect Fehler: \(err.localizedDescription)")
-                    }
-                }
-            }
-        }
-        dialog.onGoogleDisconnect = { [weak dialog] in
-            GoogleDriveBackupService.shared.signOut()
-            dialog?.setGoogleStatus("Nicht verbunden", connected: false)
-            tvoDebug("[App] Drive-Disconnect ausgefuehrt")
-        }
-        dialog.center()
-        dialog.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation
