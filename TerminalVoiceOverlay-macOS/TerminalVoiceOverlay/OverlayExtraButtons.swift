@@ -28,6 +28,8 @@ extension OverlayPanel {
                                 accessibilityDescription: "Orientation toggle")
         b.labelColor = NSColor.white
         b.onClick = { [weak self] in self?.onOrientationToggleClicked?() }
+        // Windows-Tooltip: "Layout drehen (vertikal ↔ horizontal)"
+        b.toolTip = "Layout drehen (vertikal ↔ horizontal)"
         self.contentView?.addSubview(b)
         objc_setAssociatedObject(self, &orientationToggleButtonKey, b,
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
@@ -53,6 +55,8 @@ extension OverlayPanel {
             self?.onSaveClicked?()
             self?.flashSaveButtonGreen()
         }
+        // Windows-Tooltip: "Position dieser Ausrichtung merken (gilt bis zum Neustart)"
+        b.toolTip = "Position dieser Ausrichtung merken"
         self.contentView?.addSubview(b)
         objc_setAssociatedObject(self, &saveButtonKey, b,
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
