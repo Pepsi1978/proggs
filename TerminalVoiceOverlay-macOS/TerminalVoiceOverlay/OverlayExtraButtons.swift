@@ -39,16 +39,19 @@ extension OverlayPanel {
     /// Save-Button (Diskette) — TRANSPARENT (kein grauer Kasten), nur das
     /// Disketten-Symbol ist sichtbar. Exakt wie Windows SaveButton-Style:
     /// Width 28, Height 28, CornerRadius 8, Background transparent.
+    /// Disketten-Symbol als NSBezierPath (Material 'save'-Glyph approximiert
+    /// das Segoe MDL2 E74E-Glyph aus Windows-XAML).
     /// Beim Klick blitzt das Symbol kurz gruen auf als Feedback.
     var saveButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &saveButtonKey)
             as? RoundButton {
             return b
         }
-        let b = RoundButton(label: "\u{1F4BE}",  // 💾
+        let b = RoundButton(label: "",
                             color: NSColor.clear,
                             width: 28, height: 28)
-        b.labelFont = .systemFont(ofSize: 18)
+        b.symbolImage = IconPaths.renderImage(
+            path: IconPaths.save(), size: NSSize(width: 16, height: 16), fill: .white)
         b.labelColor = NSColor.white
         b.cornerRadius = 8
         b.onClick = { [weak self] in
@@ -63,15 +66,17 @@ extension OverlayPanel {
         return b
     }
 
-    /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf.
-    /// Das 💾-Emoji ignoriert labelColor (Color-Glyph), daher flashen wir
-    /// den Hintergrund-Kreis fuer 1s gruen.
+    /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf
+    /// (1:1 Windows: gruenes Aufblitzen der Foreground-Farbe).
+    /// Da jetzt NSBezierPath rendert mit labelColor als tint, koennen
+    /// wir das durch labelColor-Wechsel machen.
     func flashSaveButtonGreen() {
-        let normalColor = NSColor.clear
-        let greenColor  = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 0.9)
-        saveButton.buttonColor = greenColor
+        let greenColor = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 1)
+        saveButton.labelColor = greenColor
+        saveButton.needsDisplay = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.saveButton.buttonColor = normalColor
+            self?.saveButton.labelColor = NSColor.white
+            self?.saveButton.needsDisplay = true
         }
     }
 

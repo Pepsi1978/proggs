@@ -458,7 +458,9 @@ final class OverlayPanel: NSPanel {
             path: IconPaths.screenshot(), size: NSSize(width: 18, height: 18), fill: .white)
 
         insertScreenshotButton = RoundButton(label: "", color: .btnInsertScreenshot)
-        insertScreenshotButton.symbolImage = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Insert screenshot path")
+        // 1:1 Windows-XAML Segoe MDL2 E723 (Attach/Paperclip) — Material attach_file als NSBezierPath.
+        insertScreenshotButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.attach(), size: NSSize(width: 18, height: 18), fill: .white)
 
         // Profile-Tiles 1...10. Alle 24x32 mit cornerRadius 6.
         var tiles: [RoundButton] = []

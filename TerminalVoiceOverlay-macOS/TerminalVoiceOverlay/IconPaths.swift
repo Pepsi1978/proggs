@@ -166,6 +166,108 @@ enum IconPaths {
         return p
     }
 
+    /// Attach (Paperclip) — Material "attach_file" Icon. Approximiert das
+    /// Segoe MDL2 E723-Glyph aus dem Windows-XAML (InsertScreenshotButton).
+    static func attach() -> NSBezierPath {
+        let p = NSBezierPath()
+        // Buegel aussen
+        p.move(to: NSPoint(x: 16.5, y: 6))
+        p.line(to: NSPoint(x: 16.5, y: 17.5))
+        p.curve(to: NSPoint(x: 12.5, y: 21.5),
+                controlPoint1: NSPoint(x: 16.5, y: 19.71),
+                controlPoint2: NSPoint(x: 14.71, y: 21.5))
+        p.curve(to: NSPoint(x: 8.5, y: 17.5),
+                controlPoint1: NSPoint(x: 10.29, y: 21.5),
+                controlPoint2: NSPoint(x: 8.5, y: 19.71))
+        p.line(to: NSPoint(x: 8.5, y: 5))
+        p.curve(to: NSPoint(x: 11, y: 2.5),
+                controlPoint1: NSPoint(x: 8.5, y: 3.62),
+                controlPoint2: NSPoint(x: 9.62, y: 2.5))
+        p.curve(to: NSPoint(x: 13.5, y: 5),
+                controlPoint1: NSPoint(x: 12.38, y: 2.5),
+                controlPoint2: NSPoint(x: 13.5, y: 3.62))
+        p.line(to: NSPoint(x: 13.5, y: 15.5))
+        p.curve(to: NSPoint(x: 12, y: 17),
+                controlPoint1: NSPoint(x: 13.5, y: 16.33),
+                controlPoint2: NSPoint(x: 12.83, y: 17))
+        p.curve(to: NSPoint(x: 10.5, y: 15.5),
+                controlPoint1: NSPoint(x: 11.17, y: 17),
+                controlPoint2: NSPoint(x: 10.5, y: 16.33))
+        p.line(to: NSPoint(x: 10.5, y: 6))
+        p.line(to: NSPoint(x: 9, y: 6))
+        p.line(to: NSPoint(x: 9, y: 15.5))
+        p.curve(to: NSPoint(x: 12, y: 18.5),
+                controlPoint1: NSPoint(x: 9, y: 17.16),
+                controlPoint2: NSPoint(x: 10.34, y: 18.5))
+        p.curve(to: NSPoint(x: 15, y: 15.5),
+                controlPoint1: NSPoint(x: 13.66, y: 18.5),
+                controlPoint2: NSPoint(x: 15, y: 17.16))
+        p.line(to: NSPoint(x: 15, y: 5))
+        p.curve(to: NSPoint(x: 11, y: 1),
+                controlPoint1: NSPoint(x: 15, y: 2.79),
+                controlPoint2: NSPoint(x: 13.21, y: 1))
+        p.curve(to: NSPoint(x: 7, y: 5),
+                controlPoint1: NSPoint(x: 8.79, y: 1),
+                controlPoint2: NSPoint(x: 7, y: 2.79))
+        p.line(to: NSPoint(x: 7, y: 17.5))
+        p.curve(to: NSPoint(x: 12.5, y: 23),
+                controlPoint1: NSPoint(x: 7, y: 20.54),
+                controlPoint2: NSPoint(x: 9.46, y: 23))
+        p.curve(to: NSPoint(x: 18, y: 17.5),
+                controlPoint1: NSPoint(x: 15.54, y: 23),
+                controlPoint2: NSPoint(x: 18, y: 20.54))
+        p.line(to: NSPoint(x: 18, y: 6))
+        p.close()
+        return p
+    }
+
+    /// Diskette (Save) — Material "save" Icon. Approximiert das Segoe MDL2
+    /// E74E-Glyph aus dem Windows-XAML (SaveButton).
+    static func save() -> NSBezierPath {
+        let p = NSBezierPath()
+        // Aussenkontur
+        p.move(to: NSPoint(x: 17, y: 3))
+        p.line(to: NSPoint(x: 5, y: 3))
+        p.curve(to: NSPoint(x: 3, y: 5),
+                controlPoint1: NSPoint(x: 3.89, y: 3),
+                controlPoint2: NSPoint(x: 3, y: 3.9))
+        p.line(to: NSPoint(x: 3, y: 19))
+        p.curve(to: NSPoint(x: 5, y: 21),
+                controlPoint1: NSPoint(x: 3, y: 20.1),
+                controlPoint2: NSPoint(x: 3.89, y: 21))
+        p.line(to: NSPoint(x: 19, y: 21))
+        p.curve(to: NSPoint(x: 21, y: 19),
+                controlPoint1: NSPoint(x: 20.1, y: 21),
+                controlPoint2: NSPoint(x: 21, y: 20.1))
+        p.line(to: NSPoint(x: 21, y: 7))
+        p.line(to: NSPoint(x: 17, y: 3))
+        p.close()
+        // Inneres Label (oben)
+        p.move(to: NSPoint(x: 12, y: 19))
+        p.curve(to: NSPoint(x: 9, y: 16),
+                controlPoint1: NSPoint(x: 10.34, y: 19),
+                controlPoint2: NSPoint(x: 9, y: 17.66))
+        p.curve(to: NSPoint(x: 12, y: 13),
+                controlPoint1: NSPoint(x: 9, y: 14.34),
+                controlPoint2: NSPoint(x: 10.34, y: 13))
+        p.curve(to: NSPoint(x: 15, y: 16),
+                controlPoint1: NSPoint(x: 13.66, y: 13),
+                controlPoint2: NSPoint(x: 15, y: 14.34))
+        p.curve(to: NSPoint(x: 12, y: 19),
+                controlPoint1: NSPoint(x: 15, y: 17.66),
+                controlPoint2: NSPoint(x: 13.66, y: 19))
+        p.close()
+        // Schieber (oben)
+        p.move(to: NSPoint(x: 15, y: 9))
+        p.line(to: NSPoint(x: 5, y: 9))
+        p.line(to: NSPoint(x: 5, y: 5))
+        p.line(to: NSPoint(x: 15, y: 5))
+        p.line(to: NSPoint(x: 15, y: 9))
+        p.close()
+        p.windingRule = .evenOdd
+        return p
+    }
+
     /// Rendert einen Pfad (Koordinatensystem 24x24) als NSImage mit
     /// der angegebenen Zielgroesse + Fuell-Farbe.
     static func renderImage(path: NSBezierPath, size: NSSize, fill: NSColor) -> NSImage {
