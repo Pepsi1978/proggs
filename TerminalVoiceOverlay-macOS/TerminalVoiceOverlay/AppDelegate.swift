@@ -241,10 +241,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Beim App-Start die zuletzt verwendete Orientation aus AppSettings
         // laden — 1:1 wie Windows (`startupHorizontal` aus _settings.Orientation).
-        if let stored = try? PromptBoardStore.shared.settings(),
-           stored.orientation == "horizontal" {
-            DispatchQueue.main.async { [weak self] in
-                self?.panel?.beamToOrientation(.horizontal)
+        if let stored = try? PromptBoardStore.shared.settings() {
+            // Persistierte Positionen laden, falls PersistOverlayPosition=true.
+            if stored.persistOverlayPosition {
+                if let x = stored.overlayVerticalLeft, let y = stored.overlayVerticalTop {
+                    panel.savedVerticalPosition = NSPoint(x: x, y: y)
+                }
+                if let x = stored.overlayHorizontalLeft, let y = stored.overlayHorizontalTop {
+                    panel.savedHorizontalPosition = NSPoint(x: x, y: y)
+                }
+            }
+            if stored.orientation == "horizontal" {
+                DispatchQueue.main.async { [weak self] in
+                    self?.panel?.beamToOrientation(.horizontal)
+                }
             }
         }
 
@@ -1364,7 +1374,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation
-    /// persistent merken (Disketten-Symbol). Pendant zu Windows-Diskette.
+    /// persistent merken (Disketten-Symbol). Wenn persistOverlayPosition=true
+    /// in AppSettings, wird zusaetzlich in der DB persistiert (ueber Neustart
+    /// hinweg). Sonst nur UserDefaults (Session-Persistierung).
     private func savePositionForCurrentOrientation() {
         guard let panel = self.panel else { return }
         let origin = panel.frame.origin
@@ -1375,6 +1387,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .horizontal:
             panel.savedHorizontalPosition = origin
             tvoDebug("[App] saved horizontal position: \(origin)")
+        }
+        // Wenn PersistOverlayPosition aktiv: zusaetzlich in DB-Settings.
+        if var settings = try? PromptBoardStore.shared.settings(),
+           settings.persistOverlayPosition {
+            switch panel.currentOrientation {
+            case .vertical:
+                settings.overlayVerticalLeft = Double(origin.x)
+                settings.overlayVerticalTop  = Double(origin.y)
+            case .horizontal:
+                settings.overlayHorizontalLeft = Double(origin.x)
+                settings.overlayHorizontalTop  = Double(origin.y)
+            }
+            try? PromptBoardStore.shared.updateSettings(settings)
         }
     }
 
