@@ -103,8 +103,11 @@ extension OverlayPanel {
                               width: totalWidth, height: HBarLayout.panelHeight)
         self.setFrame(newFrame, display: false)
 
-        // CornerRadius bleibt 34 (passt gut zu Hoehe 96).
+        // CornerRadius + 2px schwarzer Border-Ring (Windows: BorderBrush #FF000000
+        // BorderThickness 2 auf der HorizontalView).
         self.contentView?.layer?.cornerRadius = HBarLayout.cornerRadius
+        self.contentView?.layer?.borderColor  = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth  = 2
 
         // Sektions-Hintergruende + Trenner einsetzen.
         var x: CGFloat = HBarLayout.sectionInnerPadX
@@ -139,11 +142,12 @@ extension OverlayPanel {
 
             x += s.width
 
-            // Vertikaler Trenner nach dieser Sektion (ausser letzter).
+            // Vertikaler Trenner nach dieser Sektion (ausser letzter) — geht
+            // ueber die VOLLE Hoehe der HBar (Windows: VerticalAlignment Stretch).
             if i < sections.count - 1 {
-                let dividerRect = NSRect(x: x, y: 4,
+                let dividerRect = NSRect(x: x, y: 0,
                                          width: HBarLayout.dividerWidth,
-                                         height: HBarLayout.panelHeight - 8)
+                                         height: HBarLayout.panelHeight)
                 let divider = NSView(frame: dividerRect)
                 divider.wantsLayer = true
                 divider.layer?.backgroundColor = NSColor.black.cgColor
@@ -183,6 +187,8 @@ extension OverlayPanel {
                               width: panelWidth, height: panelHeight)
         self.setFrame(newFrame, display: false)
         self.contentView?.layer?.cornerRadius = 36
+        self.contentView?.layer?.borderColor  = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth  = 2
 
         var trackedViews: [NSView] = []
 

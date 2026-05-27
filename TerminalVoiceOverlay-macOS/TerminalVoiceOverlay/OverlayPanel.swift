@@ -498,6 +498,9 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.cornerRadius = 36
         self.contentView?.layer?.masksToBounds = true
         self.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
+        // 2 px schwarzer Border-Ring (Windows: BorderBrush #FF000000 BorderThickness 2)
+        self.contentView?.layer?.borderColor = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth = 2
         self.contentView?.layer?.borderColor = NSColor.black.cgColor
         self.contentView?.layer?.borderWidth = 2
 
