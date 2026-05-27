@@ -45,6 +45,7 @@ SWIFT_FILES=(
     "$SRC_DIR/OverlayOrientation.swift"
     "$SRC_DIR/OverlayGlideAnimation.swift"
     "$SRC_DIR/OverlayHorizontalLayout.swift"
+    "$SRC_DIR/IconPaths.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"

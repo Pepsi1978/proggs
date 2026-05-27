@@ -182,14 +182,17 @@ final class OverlayPanel: NSPanel {
         btwButton.labelFont = .boldSystemFont(ofSize: 11)
         btwButton.useSquareShape = true
         micButton = RoundButton(label: "", color: .btnMicIdle)
-        micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
+        micButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.mic(), size: NSSize(width: 22, height: 22), fill: NSColor(white: 0.1, alpha: 1))
         micButton.useSquareShape = true
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
         copyButton = RoundButton(label: "", color: .btnCopy)
-        copyButton.symbolImage = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "Copy")
+        copyButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.copy(), size: NSSize(width: 18, height: 18), fill: .white)
         pasteButton = RoundButton(label: "", color: .btnPaste)
-        pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
+        pasteButton.symbolImage = IconPaths.renderImage(
+            path: IconPaths.paste(), size: NSSize(width: 18, height: 18), fill: .white)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
 
         // Calculate screen position (right edge, bottom)
