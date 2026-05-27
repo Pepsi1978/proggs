@@ -283,6 +283,17 @@ final class OverlayPanel: NSPanel {
         pasteButton.onClick = { [weak self] in self?.onPasteClicked?() }
         enterButton.onClick = { [weak self] in self?.onEnterClicked?() }
 
+        // Tooltips 1:1 wie auf Windows-ClaudeVoiceOverlay.
+        ultrathinkButton.toolTip = "Promptboard"
+        micButton.toolTip = "Aufnahme"
+        btwButton.toolTip = "Zwischenfrage"
+        wButton.toolTip = "Whisper"
+        gButton.toolTip = "Gemini"
+        xButton.toolTip = "Eingabe loeschen"
+        copyButton.toolTip = "Text kopieren"
+        pasteButton.toolTip = "Text einfuegen"
+        enterButton.toolTip = "Auto-Enter"
+
         setupDragMonitors()
     }
 
