@@ -390,6 +390,9 @@ final class PromptHistoryEditController: NSWindowController {
         textView.isAutomaticTextReplacementEnabled = false
         textView.font = NSFont.systemFont(ofSize: 14)
         textView.textColor = NSColor.textColor
+        // Goldener Cursor (Windows-XAML CaretBrush=#FFD700) — gleich wie
+        // PromptInputPanel.
+        textView.insertionPointColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
