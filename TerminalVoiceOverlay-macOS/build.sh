@@ -53,6 +53,7 @@ SWIFT_FILES=(
     "$SRC_DIR/AutoHideController.swift"
     "$SRC_DIR/WaveformView.swift"
     "$SRC_DIR/IconPaths.swift"
+    "$SRC_DIR/PushToTalkController.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/PromptBoardModels.swift"
     "$SRC_DIR/PromptBoardStore.swift"

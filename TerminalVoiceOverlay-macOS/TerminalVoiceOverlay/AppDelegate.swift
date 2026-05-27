@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var autoEnterEnabled = true
     private let autoEnterServer = AutoEnterStatusServer()
     private var autoHide: AutoHideController?
+    private var ptt: PushToTalkController?
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
 
@@ -263,6 +264,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Auto-Hide-Controller starten (5s Inaktivitaet → Collapsed-Pille).
+        // PTT: NSEvent-Monitor fuer KeyUp-Detection (Hold ≥500ms = PTT-Release).
+        ptt = PushToTalkController()
+        ptt?.onPTTRelease = { [weak self] in
+            if self?.isRecording == true { self?.stopRecording() }
+        }
+
         autoHide = AutoHideController(panel: panel)
         autoHide?.busyProvider = { [weak self] in
             guard let self = self else { return false }
@@ -1282,6 +1289,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Voice-Toggle (Cmd+Shift+R) — Pendant zu Windows Alt+F12
         reg.register(keyCode: TVOHotkey.voiceToggle.keyCode,
                      modifiers: TVOHotkey.voiceToggle.modifiers) { [weak self] in
+            // PTT: Press-Down-Zeit merken — bei KeyUp (NSEvent-Monitor)
+            // wird elapsed verglichen. Tap startet Aufnahme normal,
+            // Hold ≥500ms stoppt sie beim Loslassen.
+            self?.ptt?.notePressDown()
             self?.toggleRecording()
         }
 
