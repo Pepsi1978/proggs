@@ -50,6 +50,7 @@ SWIFT_FILES=(
     "$SRC_DIR/AutoEnterStatusServer.swift"
     "$SRC_DIR/SettingsDialog.swift"
     "$SRC_DIR/CommonDialogs.swift"
+    "$SRC_DIR/AutoHideController.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/PromptBoardModels.swift"
     "$SRC_DIR/PromptBoardStore.swift"

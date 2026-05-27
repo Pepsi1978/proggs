@@ -15,17 +15,17 @@ import AppKit
 
 extension OverlayPanel {
 
-    /// Toggle-Button (⇄) zwischen vertikaler Saeule und horizontaler Leiste.
-    /// Lazy: wird beim ersten Zugriff angelegt und ins contentView gepackt.
+    /// Toggle-Button (⇄) — gleich gross wie Stern/Enter (40×40), rund.
     var orientationToggleButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &orientationToggleButtonKey)
             as? RoundButton {
             return b
         }
-        let b = RoundButton(label: "\u{21C4}",
-                            color: NSColor(red: 0.176, green: 0.176, blue: 0.176, alpha: 1),
-                            width: 34, height: 34)
-        b.labelFont = .systemFont(ofSize: 16, weight: .bold)
+        let b = RoundButton(label: "",
+                            color: NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1),
+                            width: 40, height: 40)
+        b.symbolImage = NSImage(systemSymbolName: "arrow.left.arrow.right",
+                                accessibilityDescription: "Orientation toggle")
         b.labelColor = NSColor.white
         b.onClick = { [weak self] in self?.onOrientationToggleClicked?() }
         self.contentView?.addSubview(b)
@@ -34,19 +34,18 @@ extension OverlayPanel {
         return b
     }
 
-    /// Save-Button (Diskette) — merkt die aktuelle Position pro Orientation.
+    /// Save-Button (Diskette) — gleich gross wie Enter (40×40), rund.
     var saveButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &saveButtonKey)
             as? RoundButton {
             return b
         }
         let b = RoundButton(label: "",
-                            color: NSColor(red: 0.176, green: 0.176, blue: 0.176, alpha: 1),
-                            width: 28, height: 28)
+                            color: NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1),
+                            width: 40, height: 40)
         b.symbolImage = NSImage(systemSymbolName: "externaldrive.fill",
                                 accessibilityDescription: "Save position")
         b.labelColor = NSColor.white
-        b.cornerRadius = 6
         b.onClick = { [weak self] in self?.onSaveClicked?() }
         self.contentView?.addSubview(b)
         objc_setAssociatedObject(self, &saveButtonKey, b,
@@ -71,47 +70,56 @@ extension OverlayPanel {
     }
 
     /// Positioniert OrientationToggle + Save fuer die vertikale Saeule.
-    /// Wird von applyVerticalLayout() aufgerufen, nachdem die Sektionen
-    /// und die Standard-Buttons gesetzt sind.
+    /// Anordnung wie Windows: in S1 Stern OBEN + ⇄ UNTEN, in S7 Enter
+    /// OBEN + Diskette UNTEN. Wir muessen dafuer auch ultrathinkButton
+    /// und enterButton leicht verschieben, damit beide Buttons der Stack-
+    /// Gruppe in die jeweilige Sektion passen.
     func positionExtraButtonsVertical() {
-        // S1 (y=547, h=63): Stern bei (28, 553, 40, 40). OrientationToggle
-        // rechts neben dem Stern, kleiner (34x34) auf gleicher Mittenhoehe.
-        // Panel-Breite 96, Stern endet bei x=68. OrientationToggle bei (66, 555).
-        // Aber das wird zu eng — wir setzen ihn unter dem Stern bei (28, 549, 22, 22)?
-        // Stattdessen: Stern bleibt zentriert, OrientationToggle daneben links.
-        orientationToggleButton.frame = NSRect(x: 4, y: 555,
-                                                width: 22, height: 22)
+        // S1 von y=547 bis y=610 (63 hoch). Stack:
+        //   Stern oben bei y=580 (40 hoch, Mitte y=600)
+        //   ⇄    unten bei y=550 (24 hoch)
+        ultrathinkButton.frame = NSRect(x: 28, y: 575, width: 40, height: 40)
+        orientationToggleButton.frame = NSRect(x: 33, y: 549,
+                                                width: 30, height: 24)
 
-        // S7 (y=2, h=63): Enter bei (28, 19, 40, 40). Save klein daneben links.
-        saveButton.frame = NSRect(x: 4, y: 21, width: 22, height: 22)
+        // S7 von y=2 bis y=65 (63 hoch). Stack:
+        //   Enter oben bei y=27 (40 hoch, Mitte y=47)
+        //   Save  unten bei y=4 (22 hoch)
+        enterButton.frame = NSRect(x: 28, y: 27, width: 40, height: 40)
+        saveButton.frame = NSRect(x: 33, y: 4, width: 30, height: 22)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
+
+        // 30% Durchsichtigkeit (70% Opacity) auf den Sektions-Hintergruenden,
+        // wie auf Windows (Alpha-Praefix B3 in den Hex-Werten). Wirkt auf
+        // alle existierenden Sektions-NSViews (die kein RoundButton sind).
+        applySectionTransparency()
     }
 
-    /// Positioniert OrientationToggle + Save fuer die horizontale Leiste.
+    /// Setzt 70% Opacity auf alle Sektions-Subviews der contentView —
+    /// passt das macOS-Aussehen an das Windows-Terminal-Vorbild an.
+    /// Wirkt auf init()'s Original-Sektionen UND auf von applyVerticalLayout
+    /// neu erstellte Sektions-Views.
+    func applySectionTransparency() {
+        guard let subviews = self.contentView?.subviews else { return }
+        for v in subviews {
+            if v is RoundButton { continue }
+            guard v.layer?.backgroundColor != nil else { continue }
+            // Schwarze 1px-Trenner (height ~1) lassen wir voll opak.
+            if v.frame.height <= 2 { continue }
+            v.alphaValue = 0.70
+        }
+    }
+
+    /// In der horizontalen Leiste werden Save + OrientationToggle bereits
+    /// von den HBar-Slots (saveExtra / orientationToggleExtra) positioniert.
+    /// Wir muessen hier nur die Sichtbarkeit aktivieren (alphaValue=1).
     func positionExtraButtonsHorizontal() {
-        // Position wird aus den HBarSection-Slots berechnet — der
-        // applyHorizontalLayout() ueberlaesst die Anordnung an die
-        // Sektions-Slots .empty(...) die wir hier ersetzen. Fuer jetzt
-        // setzen wir die Buttons absolut sichtbar in S1 und S7 — die
-        // genauen Positionen kommen aus der finalen Sektions-Breite.
-        // Pragma: aktuell HBar baut Sektionen rechts→links, S7 ganz links,
-        // S1 ganz rechts. Konkret messen wir die Frames der Anker-Buttons
-        // (enterButton, ultrathinkButton) und positionieren daneben.
-
-        // Save neben Enter (Enter ist in S7 ganz links, in der oberen Reihe).
-        let enterFrame = enterButton.frame
-        saveButton.frame = NSRect(x: enterFrame.maxX + 4,
-                                   y: enterFrame.minY + 8,
-                                   width: 22, height: 22)
-
-        // OrientationToggle neben Stern (S1 ganz rechts, obere Reihe).
-        let starFrame = ultrathinkButton.frame
-        orientationToggleButton.frame = NSRect(x: starFrame.minX - 26,
-                                                y: starFrame.minY,
-                                                width: 22, height: 22)
-
+        // Erzwingt das Lazy-Init falls die Buttons noch nicht existieren —
+        // die Slot-Positionierung passiert in positionButtonsInSection().
+        _ = self.orientationToggleButton
+        _ = self.saveButton
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
     }

@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var geminiEnabled = false // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
     private var autoEnterEnabled = true
     private let autoEnterServer = AutoEnterStatusServer()
+    private var autoHide: AutoHideController?
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
 
@@ -233,6 +234,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
         panel.onOrientationToggleClicked = { [weak self] in self?.toggleOverlayOrientation() }
         panel.onSaveClicked = { [weak self] in self?.savePositionForCurrentOrientation() }
+        // Lazy-init der Extra-Buttons (OrientationToggle + Save) + Anordnung
+        // im vertikalen Stack-Layout (Stern oben/⇄ unten, Enter oben/Save unten).
+        // Sonst wuerden die Buttons erst nach dem ersten Cmd+Shift+O erscheinen.
+        panel.positionExtraButtonsVertical()
+
+        // Auto-Hide-Controller starten (5s Inaktivitaet → Collapsed-Pille).
+        autoHide = AutoHideController(panel: panel)
+        autoHide?.busyProvider = { [weak self] in
+            guard let self = self else { return false }
+            return self.isRecording || self.isProcessing
+        }
         panel.onPillarMoved = { [weak self] in
             // Keep the PromptBoard side panel docked to the pillar's
             // left edge as the user right-click drags it around.

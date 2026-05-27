@@ -74,7 +74,9 @@ private enum HBarCornerMode {
 private enum HBarButtonSlot {
     case action(KeyPath<OverlayPanel, RoundButton>, NSSize)
     case profile(Int, NSSize)
-    case empty(NSSize)  // Platzhalter fuer noch fehlende Buttons (Save, OrientationToggle)
+    case saveExtra(NSSize)              // Diskette (lazy via Associated Object)
+    case orientationToggleExtra(NSSize) // Pfeil (lazy via Associated Object)
+    case empty(NSSize)                  // Platzhalter
 }
 
 // MARK: - Anwendungs-Funktion
@@ -355,10 +357,10 @@ extension OverlayPanel {
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#1A1A1A",  // S7-Farbe (Enter)
+            backgroundHex: "#1A1A1A",  // S7-Farbe (Enter + Save Stack)
             width: 56,
             upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
-            lowerButtons: [.empty(NSSize(width: 30, height: 22))],  // Save (fehlt noch)
+            lowerButtons: [.saveExtra(NSSize(width: 28, height: 26))],
             cornerMode: .leftRounded)
 
         let s6 = HBarSection(
@@ -422,13 +424,10 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s1 = HBarSection(
-            backgroundHex: "#1F1B15",  // S1 (Stern)
-            width: 80,
-            upperButtons: [
-                .empty(HBarLayout.smallButtonSize),  // OrientationToggle (fehlt noch)
-                .action(\.ultrathinkButton, HBarLayout.smallButtonSize),
-            ],
-            lowerButtons: [],
+            backgroundHex: "#1F1B15",  // S1 (Stern + OrientationToggle Stack)
+            width: 56,
+            upperButtons: [.action(\.ultrathinkButton, HBarLayout.actionButtonSize)],
+            lowerButtons: [.orientationToggleExtra(NSSize(width: 30, height: 26))],
             cornerMode: .rightRounded)
 
         return [s7, s6, s5, s4, s3, s2, s1]
@@ -438,27 +437,47 @@ extension OverlayPanel {
                                           rowY: CGFloat,
                                           sectionX: CGFloat,
                                           sectionWidth: CGFloat) {
-        // buttons[] ist rechts→links angeordnet. In der Sektion werden sie
-        // von rechts (sectionX + sectionWidth) nach links platziert.
-        var cursor = sectionX + sectionWidth - HBarLayout.sectionInnerPadX
+        // Windows StackPanel laeuft LINKS -> RECHTS, also auch hier:
+        // buttons[0] landet links, buttons[N] rechts. Die Gesamtbreite der
+        // gefuellten Slots wird in der Sektion ZENTRIERT damit kleinere
+        // Inhalte (z.B. 1 Button + 1 Tile) nicht klebrig links sitzen.
+        let totalContent: CGFloat = buttons.reduce(0) { acc, slot in
+            switch slot {
+            case .action(_, let s):                return acc + s.width + HBarLayout.buttonSpacing
+            case .profile(_, let s):               return acc + s.width + HBarLayout.buttonSpacing
+            case .saveExtra(let s):                return acc + s.width + HBarLayout.buttonSpacing
+            case .orientationToggleExtra(let s):   return acc + s.width + HBarLayout.buttonSpacing
+            case .empty(let s):                    return acc + s.width + HBarLayout.buttonSpacing
+            }
+        } - (buttons.isEmpty ? 0 : HBarLayout.buttonSpacing)
+        let startX = sectionX + max(HBarLayout.sectionInnerPadX,
+                                    (sectionWidth - totalContent) / 2)
+        var cursor = startX
         for slot in buttons {
             switch slot {
             case .action(let keyPath, let size):
                 let btn = self[keyPath: keyPath]
-                let bx = cursor - size.width
-                let by = rowY + (rowYExtra(forRow: rowY, slotHeight: size.height))
-                btn.frame = NSRect(x: bx, y: by, width: size.width, height: size.height)
-                cursor = bx - HBarLayout.buttonSpacing
+                let by = rowY + rowYExtra(forRow: rowY, slotHeight: size.height)
+                btn.frame = NSRect(x: cursor, y: by, width: size.width, height: size.height)
+                cursor += size.width + HBarLayout.buttonSpacing
             case .profile(let index, let size):
                 guard index >= 1, index <= profileButtons.count else { continue }
                 let tile = profileButtons[index - 1]
-                let bx = cursor - size.width
-                let by = rowY + (rowYExtra(forRow: rowY, slotHeight: size.height))
-                tile.frame = NSRect(x: bx, y: by, width: size.width, height: size.height)
-                cursor = bx - HBarLayout.buttonSpacing
+                let by = rowY + rowYExtra(forRow: rowY, slotHeight: size.height)
+                tile.frame = NSRect(x: cursor, y: by, width: size.width, height: size.height)
+                cursor += size.width + HBarLayout.buttonSpacing
+            case .saveExtra(let size):
+                let by = rowY + rowYExtra(forRow: rowY, slotHeight: size.height)
+                self.saveButton.frame = NSRect(x: cursor, y: by,
+                                                width: size.width, height: size.height)
+                cursor += size.width + HBarLayout.buttonSpacing
+            case .orientationToggleExtra(let size):
+                let by = rowY + rowYExtra(forRow: rowY, slotHeight: size.height)
+                self.orientationToggleButton.frame = NSRect(x: cursor, y: by,
+                                                width: size.width, height: size.height)
+                cursor += size.width + HBarLayout.buttonSpacing
             case .empty(let size):
-                // Platzhalter — Cursor vorruecken, aber nichts zeichnen.
-                cursor = cursor - size.width - HBarLayout.buttonSpacing
+                cursor += size.width + HBarLayout.buttonSpacing
             }
         }
     }
