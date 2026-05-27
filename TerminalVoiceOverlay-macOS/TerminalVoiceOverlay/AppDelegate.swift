@@ -1251,6 +1251,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.toggleOverlayOrientation()
         }
 
+        // Collapsed-Pille togglen (Cmd+Shift+C) — Dev-Hotkey.
+        reg.register(keyCode: TVOHotkey.collapsedToggle.keyCode,
+                     modifiers: TVOHotkey.collapsedToggle.modifiers) { [weak self] in
+            DispatchQueue.main.async {
+                guard let panel = self?.panel else { return }
+                tvoDebug("[App] toggleCollapsed isCollapsed=\(panel.isCollapsed)")
+                panel.toggleCollapsed()
+            }
+        }
+
         // Prompt-Hotkeys Cmd+1..9 — Pendant zu Windows Strg+1..9
         for digit in 1...9 {
             guard let combo = TVOHotkey.promptDigit(digit) else { continue }

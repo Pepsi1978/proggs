@@ -283,7 +283,7 @@ Suchpfad-Priorität: `~/SK/VoiceOverlays/.env` → neben `.exe` → CWD → `~/.
 | 1b | Horizontales Layout (HBar mit MakeHGroup) | ✅ (#1113) |
 | 2  | applyOrientation + beamToOrientation | ✅ (#1114) — Test-Hotkey Cmd+Shift+O |
 | 3  | Glide-Animation (Smootherstep) | ✅ (#1115) |
-| 4  | Collapsed-Mic-Pille mit BeamFade | offen |
+| 4  | Collapsed-Mic-Pille mit BeamFade | ✅ (#1116) — Test-Hotkey Cmd+Shift+C |
 | 5  | Drag-Verhalten Rechtsklick + Threshold | offen |
 | 6  | Settings-Dialog | offen |
 | 7  | Confirm/PromptEdit/PromptHistoryEdit/TextInput-Dialoge | offen |
