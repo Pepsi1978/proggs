@@ -1142,6 +1142,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 self.panel.setMicState(.idle)
             }
+            // Auto-Hide-Timer neu starten nach Recording-Ende — sonst bleibt
+            // das Panel sichtbar bis zur naechsten Mausbewegung ueber dem
+            // Overlay.
+            self.autoHide?.resume()
         }
     }
 
