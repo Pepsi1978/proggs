@@ -34,18 +34,21 @@ extension OverlayPanel {
         return b
     }
 
-    /// Save-Button (Diskette) — gleich gross wie Enter (40×40), rund.
-    /// Disketten-Emoji 💾 statt SF-Symbol (das hat keine echte Diskette).
+    /// Save-Button (Diskette) — TRANSPARENT (kein grauer Kasten), nur das
+    /// Disketten-Symbol ist sichtbar. Exakt wie Windows SaveButton-Style:
+    /// Width 28, Height 28, CornerRadius 8, Background transparent.
+    /// Beim Klick blitzt das Symbol kurz gruen auf als Feedback.
     var saveButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &saveButtonKey)
             as? RoundButton {
             return b
         }
         let b = RoundButton(label: "\u{1F4BE}",  // 💾
-                            color: NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1),
-                            width: 40, height: 40)
-        b.labelFont = .systemFont(ofSize: 20)
+                            color: NSColor.clear,
+                            width: 28, height: 28)
+        b.labelFont = .systemFont(ofSize: 18)
         b.labelColor = NSColor.white
+        b.cornerRadius = 8
         b.onClick = { [weak self] in
             self?.onSaveClicked?()
             self?.flashSaveButtonGreen()
@@ -56,14 +59,15 @@ extension OverlayPanel {
         return b
     }
 
-    /// Disketten-Klick: kurz gruen aufleuchten als Feedback "Position
-    /// gespeichert" (analog Windows-Verhalten).
+    /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf als
+    /// Feedback "Position gespeichert" (Windows: gruenes Aufblitzen der
+    /// Foreground-Farbe). Hintergrund bleibt transparent.
     func flashSaveButtonGreen() {
-        let normalColor = NSColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 1)
-        let greenColor  = NSColor(red: 0.18,  green: 0.49,  blue: 0.20,  alpha: 1)  // btnSuccess
-        saveButton.buttonColor = greenColor
+        let normalColor = NSColor.white
+        let greenColor  = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 1)
+        saveButton.labelColor = greenColor
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.saveButton.buttonColor = normalColor
+            self?.saveButton.labelColor = normalColor
         }
     }
 
@@ -83,24 +87,35 @@ extension OverlayPanel {
                                        newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// Positioniert OrientationToggle + Save fuer die vertikale Saeule.
-    /// Anordnung: NEBENEINANDER in S1 (Stern + ⇄) bzw. S7 (Enter + Save),
-    /// beide gleich gross 40×40. Panel ist 96 breit, 2× 40 + 8 spacing
-    /// + 2× 4 padding = 96. Passt knapp.
+    /// Positioniert die Buttons in der vertikalen Saeule EXAKT wie das
+    /// Windows-XAML OverlayWindow.xaml:
+    ///
+    /// **S1** (Section1Panel, Padding 0,21,0,8): StackPanel Horizontal,
+    /// HorizontalAlignment=Center. Stern 34×34, ⇄ 34×34 mit Margin 5,0,0,0.
+    /// Total breite 34+5+34 = 73, zentriert in 96px Panel → x_origin = 11.
+    ///
+    /// **S7** (Padding 0,6,0,17): Grid mit Spalten 52 + Auto, HorizontalAlignment
+    /// Center. Enter 40×40 zentriert in 52-Spalte, Save 28×28 in Auto-Spalte
+    /// mit Margin 2,0,0,0. Grid-Breite = 52+2+28 = 82, zentriert → x_origin = 7.
     func positionExtraButtonsVertical() {
-        // S1 (y=547..610, Mitte y=578.5). 40-hohe Buttons bei y=558.
-        ultrathinkButton.frame        = NSRect(x: 4,  y: 558, width: 40, height: 40)
-        orientationToggleButton.frame = NSRect(x: 52, y: 558, width: 40, height: 40)
+        // S1: y=547..610 (h=63). WPF padding top 21 + bot 8.
+        // macOS-Y (unten=0): Buttons-Unterkante = 547 + 8 = 555.
+        ultrathinkButton.buttonWidth  = 34
+        ultrathinkButton.buttonHeight = 34
+        ultrathinkButton.frame        = NSRect(x: 11, y: 555, width: 34, height: 34)
+        orientationToggleButton.frame = NSRect(x: 50, y: 555, width: 34, height: 34)
+        ultrathinkButton.needsDisplay = true
 
-        // S7 (y=2..65, Mitte y=33). 40-hohe Buttons bei y=13.
-        enterButton.frame = NSRect(x: 4,  y: 13, width: 40, height: 40)
-        saveButton.frame  = NSRect(x: 52, y: 13, width: 40, height: 40)
+        // S7: y=2..65. WPF padding top 6 + bot 17.
+        // macOS-Y: Enter-Unterkante = 2 + 17 = 19. Save 28×28 vertikal zentriert
+        // zu Enter (40): Save-Unterkante = 19 + (40-28)/2 = 25.
+        enterButton.frame = NSRect(x: 13, y: 19, width: 40, height: 40)
+        saveButton.frame  = NSRect(x: 61, y: 25, width: 28, height: 28)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
-        // 30% Durchsichtigkeit (70% Opacity) auf den Sektions-Hintergruenden,
-        // wie auf Windows (Alpha-Praefix B3 in den Hex-Werten).
+        // 30% Durchsichtigkeit auf den Sektions-Hintergruenden (B3-Alpha in Windows).
         applySectionTransparency()
     }
 

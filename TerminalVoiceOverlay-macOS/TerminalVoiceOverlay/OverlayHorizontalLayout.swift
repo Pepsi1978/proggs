@@ -9,43 +9,38 @@ import AppKit
 // Tatsaechliches Umschalten (applyOrientation) folgt in Etappe 2.
 
 enum HBarLayout {
-    /// Panel-Hoehe der flachen Leiste. Zwei Reihen: obere = Symbol-Buttons (52px),
-    /// untere = Profile-Kacheln (32px). Plus Padding.
-    static let panelHeight: CGFloat = 96
+    /// Panel-Hoehe der flachen Leiste — exakt wie Windows MakeHGroup:
+    /// top-Reihe 52 + margin 6 + bot-Reihe 22 + padding (6+6) = 92.
+    static let panelHeight: CGFloat = 92
 
-    /// Innenabstand oben/unten zwischen Panel-Rand und Buttons.
-    static let verticalPadding: CGFloat = 4
-
-    /// Innenabstand zwischen den Gruppen (Sektionen).
+    static let verticalPadding: CGFloat = 6   // Windows: Padding 8,6,8,6 → vertikal 6
     static let groupSpacing: CGFloat = 0
-
-    /// Breite des schwarzen vertikalen Trenners zwischen Sektionen.
     static let dividerWidth: CGFloat = 1
-
-    /// Horizontaler Padding innerhalb jeder Sektion.
-    static let sectionInnerPadX: CGFloat = 6
-
-    /// Horizontaler Abstand zwischen zwei Buttons in derselben Reihe.
-    static let buttonSpacing: CGFloat = 6
+    static let sectionInnerPadX: CGFloat = 8  // Windows: Padding 8 (links/rechts)
+    static let buttonSpacing: CGFloat = 6     // Windows: Margin 3 pro Seite = 6 gesamt
 
     /// Y-Position der oberen Reihe (Symbol-Buttons), Panel-Koordinaten.
-    /// macOS hat Y-Ursprung unten — obere Reihe liegt also bei hoeherem Y.
-    static let upperRowY: CGFloat = 38
+    /// macOS hat Y-Ursprung unten. Sektions-Border-Padding 6 oben/unten,
+    /// dann Reihe 22 (bot), Reihe-Margin 6, dann Reihe 52 (top).
+    /// Y-Wert der unteren Reihe (Unterkante): 6 (padding)
+    /// Y-Wert der oberen Reihe (Unterkante): 6 + 22 + 6 = 34
+    static let upperRowY: CGFloat = 34
+    static let lowerRowY: CGFloat = 6
 
-    /// Y-Position der unteren Reihe (Profile-Kacheln/Diskette).
-    static let lowerRowY: CGFloat = 4
+    /// Profile-Tiles werden im horizontalen Modus auf 30×22 gestaucht
+    /// (Windows-Code Z. 1246: `t.Width = 30; t.Height = 22`).
+    static let profileTileSize = NSSize(width: 30, height: 22)
 
-    /// Hoehe einer typischen Profile-Kachel (Windows: 30x22 fuer Diskette,
-    /// 24x32 fuer Profile-Tiles — wir nutzen 24x30 als Mittelweg).
-    static let profileTileSize = NSSize(width: 24, height: 30)
-
-    /// Hoehe der typischen Symbol-Buttons in der oberen Reihe.
+    /// Standard-Button-Groessen wie in init().
     static let actionButtonSize = NSSize(width: 40, height: 40)
     static let micButtonSize    = NSSize(width: 52, height: 52)
+    /// Stern + OrientationToggle in S1: 34×34 (Windows-Code Z. 1279).
     static let smallButtonSize  = NSSize(width: 34, height: 34)
+    /// Save-Diskette in S7: 30×22 (Windows-Inventur).
+    static let saveButtonHSize  = NSSize(width: 30, height: 22)
 
-    /// CornerRadius der HBar — Windows nutzt 34 (rund, weil Hoehe 96).
-    static let cornerRadius: CGFloat = 34
+    /// CornerRadius der HBar — Hoehe/2 = 46 fuer perfekt runde Enden.
+    static let cornerRadius: CGFloat = 46
 }
 
 // MARK: - Sektions-Definition fuer das horizontale Layout
@@ -115,6 +110,8 @@ extension OverlayPanel {
         var x: CGFloat = HBarLayout.sectionInnerPadX
         var trackedSectionViews: [NSView] = []
         var trackedDividerViews: [NSView] = []
+        var s1Origin: NSPoint = .zero  // Position der S1-Sektion fuer Stern+⇄-Stack
+        var s1Width: CGFloat = 0
         for (i, s) in sections.enumerated() {
             let sectionRect = NSRect(x: x, y: 0,
                                      width: s.width,
@@ -360,13 +357,10 @@ extension OverlayPanel {
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#1A1A1A",  // S7-Farbe (Enter + Save nebeneinander)
-            width: 96,
-            upperButtons: [
-                .action(\.enterButton, HBarLayout.actionButtonSize),
-                .saveExtra(HBarLayout.actionButtonSize),
-            ],
-            lowerButtons: [],
+            backgroundHex: "#1A1A1A",  // S7 = Enter oben + Save unten (MakeHGroup)
+            width: 56,
+            upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
+            lowerButtons: [.saveExtra(HBarLayout.saveButtonHSize)],  // 30×22
             cornerMode: .leftRounded)
 
         let s6 = HBarSection(
@@ -429,13 +423,14 @@ extension OverlayPanel {
             ],
             cornerMode: .middle)
 
+        // S1 ist die Spezial-Sektion (MakeHStackGroup in Windows):
+        // Stern 34×34 OBEN, OrientationToggle 34×34 UNTEN, 4px-Abstand.
+        // Wir nutzen positionExtraButtonsHorizontal() unten zur exakten
+        // Stack-Positionierung — die Slot-Logik kann das nicht 1:1.
         let s1 = HBarSection(
-            backgroundHex: "#1F1B15",  // S1 (Stern + OrientationToggle nebeneinander)
-            width: 96,
-            upperButtons: [
-                .action(\.ultrathinkButton, HBarLayout.actionButtonSize),
-                .orientationToggleExtra(HBarLayout.actionButtonSize),
-            ],
+            backgroundHex: "#1F1B15",
+            width: 50,  // 34 + 16 padding
+            upperButtons: [],
             lowerButtons: [],
             cornerMode: .rightRounded)
 
