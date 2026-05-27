@@ -66,6 +66,9 @@ class RoundButton: NSView {
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
     var labelColor: NSColor = .white { didSet { needsDisplay = true } }
     var symbolImage: NSImage?
+    /// Skalierungsfaktor des symbolImage relativ zu bounds (Default 0.5).
+    /// Windows-XAML hat z.B. Mic-Viewbox 22 in 52px-Button → 22/52 ≈ 0.42.
+    var symbolScaleFactor: CGFloat = 0.5
     var useSquareShape: Bool = false       // legacy flag — retained for compat
     var onClick: (() -> Void)?
     var onMouseDown: (() -> Void)?
@@ -107,7 +110,8 @@ class RoundButton: NSView {
         path.fill()
 
         if let img = symbolImage {
-            let imgSize = CGSize(width: bounds.width * 0.5, height: bounds.height * 0.5)
+            let imgSize = CGSize(width: bounds.width * symbolScaleFactor,
+                                 height: bounds.height * symbolScaleFactor)
             let imgRect = NSRect(
                 x: (bounds.width - imgSize.width) / 2,
                 y: (bounds.height - imgSize.height) / 2,
@@ -433,6 +437,8 @@ final class OverlayPanel: NSPanel {
         // 1:1 Windows-XAML: Mic-Path 22x22 mit Fill #FF1A1A1A
         micButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.mic(), size: NSSize(width: 22, height: 22), fill: NSColor.darkLabel)
+        // Windows-Viewbox 22 in 52px → Scale 22/52 ≈ 0.423.
+        micButton.symbolScaleFactor = 22.0 / 52.0
         micButton.labelColor = .darkLabel
         micButton.useSquareShape = true
         // Windows MicButton-Style: CornerRadius=10 (1:1).
@@ -442,25 +448,29 @@ final class OverlayPanel: NSPanel {
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
 
+        // Windows-XAML CircleButton-Viewbox: 18 in 40 = 0.45
+        let actionSymbolScale: CGFloat = 18.0 / 40.0
+
         copyButton = RoundButton(label: "", color: .btnCopy)
-        // 1:1 Windows-XAML Copy-Path (18x18, weiß)
         copyButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.copy(), size: NSSize(width: 18, height: 18), fill: .white)
+        copyButton.symbolScaleFactor = actionSymbolScale
 
         pasteButton = RoundButton(label: "", color: .btnPaste)
-        // 1:1 Windows-XAML Paste-Path (18x18, weiß)
         pasteButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.paste(), size: NSSize(width: 18, height: 18), fill: .white)
+        pasteButton.symbolScaleFactor = actionSymbolScale
 
         screenshotButton = RoundButton(label: "", color: .btnScreenshot)
-        // 1:1 Windows-XAML Screenshot-Path (18x18, weiß)
         screenshotButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.screenshot(), size: NSSize(width: 18, height: 18), fill: .white)
+        screenshotButton.symbolScaleFactor = actionSymbolScale
 
         insertScreenshotButton = RoundButton(label: "", color: .btnInsertScreenshot)
         // 1:1 Windows-XAML Segoe MDL2 E723 (Attach/Paperclip) — Material attach_file als NSBezierPath.
         insertScreenshotButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.attach(), size: NSSize(width: 18, height: 18), fill: .white)
+        insertScreenshotButton.symbolScaleFactor = actionSymbolScale
 
         // Profile-Tiles 1...10. Alle 24x32 mit cornerRadius 6.
         var tiles: [RoundButton] = []
