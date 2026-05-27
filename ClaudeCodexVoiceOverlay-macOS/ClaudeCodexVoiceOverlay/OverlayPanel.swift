@@ -234,9 +234,10 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.masksToBounds = true
         self.contentView?.layer?.backgroundColor =
             NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
-        self.contentView?.layer?.borderColor =
-            NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
-        self.contentView?.layer?.borderWidth = 1
+        // 2 px schwarzer Border-Ring 1:1 wie Windows BorderBrush=#FF000000
+        // BorderThickness=2 auf FullView/HorizontalView/CollapsedView.
+        self.contentView?.layer?.borderColor = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth = 2
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
         // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
@@ -318,7 +319,9 @@ final class OverlayPanel: NSPanel {
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnBtwIdle
             case .recording:
-                self.btwButton.buttonColor = .btnRecording
+                // BTW Recording 1:1 Windows: eigene Farbe statt btnRecording
+                // (das ist die Mic-Farbe rot). btnBtwRecording ist blau.
+                self.btwButton.buttonColor = .btnBtwRecording
                 self.startBtwPulse()
             case .processing:
                 self.stopBtwPulse()
