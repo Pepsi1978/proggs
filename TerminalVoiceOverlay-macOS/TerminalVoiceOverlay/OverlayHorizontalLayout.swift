@@ -36,9 +36,13 @@ enum HBarLayout {
     static let micButtonSize    = NSSize(width: 52, height: 52)
     /// Stern + OrientationToggle in S1: 34×34 (Windows-Code Z. 1279).
     static let smallButtonSize  = NSSize(width: 34, height: 34)
-    /// Save-Diskette in S7: 36×26 (vergroessert von 30×22 fuer bessere
-    /// Sichtbarkeit; passt weiter unter die 40×40 Enter-Reihe in S7).
-    static let saveButtonHSize  = NSSize(width: 36, height: 26)
+    /// Save-Diskette in S7: 30×30 (QUADRATISCH). Frueher 36×26 — das
+    /// nicht-quadratische Frame hat das quadratische Disketten-Symbol via
+    /// RoundButton.draw (Symbolgroesse = bounds.width×scale × bounds.height×scale)
+    /// horizontal gestaucht ("gequetscht": 18×13 statt 18×18). Quadratisch +
+    /// hoeherer symbolScaleFactor (0.62, gesetzt in positionExtraButtonsHorizontal)
+    /// ergibt wieder ein sauberes ~18×18-Symbol. Passt unter die 40×40 Enter-Reihe.
+    static let saveButtonHSize  = NSSize(width: 30, height: 30)
 
     /// CornerRadius der HBar — Hoehe/2 = 46 fuer perfekt runde Enden.
     static let cornerRadius: CGFloat = 46

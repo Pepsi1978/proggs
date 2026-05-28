@@ -169,6 +169,12 @@ extension OverlayPanel {
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
+        // Vertikal ist die Diskette 36×36 — Standard-Scale (36×0.5 = 18).
+        // Explizit zuruecksetzen, falls vorher der horizontale 0.62-Wert aktiv
+        // war (Orientation-Wechsel).
+        saveButton.symbolScaleFactor = 0.5
+        saveButton.needsDisplay = true
+
         // 30% Durchsichtigkeit auf den Sektions-Hintergruenden (B3-Alpha in Windows).
         applySectionTransparency()
 
@@ -220,6 +226,12 @@ extension OverlayPanel {
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
+
+        // Diskette ist horizontal quadratisch (30×30). RoundButton skaliert das
+        // Symbol relativ zu bounds — mit 0.62 wird das Symbol ~18×18 (so gross
+        // wie im vertikalen 36×36-Layout) und nicht mehr gequetscht.
+        saveButton.symbolScaleFactor = 0.62
+        saveButton.needsDisplay = true
 
         // Save-Diskette einfaerben: gruen wenn eine horizontale Position
         // gespeichert ist, sonst weiss.
