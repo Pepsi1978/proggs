@@ -554,22 +554,43 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     // MARK: - Public
 
     func dock(rightOf vto: NSWindow) {
-        // Dock to the LEFT of the VTO pillar so the panel stays on-screen
-        // when the user pins the pillar to the right edge.
-        // Hoehe: 3/4 der Pillar-Hoehe (Frank-Wunsch 2026-05-28 — das Board
-        // wirkte zu hoch). Oben buendig mit dem Pillar ausgerichtet, damit der
-        // obere Rand der beiden Floating-Fenster auf einer Linie liegt.
-        // Width stays at our own value — the pillar is much narrower so we
-        // don't want to inherit that.
         let pillarFrame = vto.frame
-        let boardHeight = (pillarFrame.size.height * 0.75).rounded()
-        let newSize = NSSize(width: frame.size.width, height: boardHeight)
-        // macOS-Y (unten=0): oberer Rand = pillarOrigin.y + pillarHeight.
-        // origin.y so setzen dass der OBERE Rand mit dem Pillar fluchtet.
-        let newOrigin = NSPoint(
-            x: pillarFrame.origin.x - newSize.width - 4,
-            y: pillarFrame.origin.y + pillarFrame.size.height - boardHeight)
-        setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+        let isHorizontal = (vto as? OverlayPanel)?.currentOrientation == .horizontal
+        if isHorizontal {
+            // Horizontaler VTO-Modus: die Leiste ist breit und nur ~92px hoch.
+            // Das Board dockt OBEN an (Unterkante an der VTO-Oberkante),
+            // linksbuendig mit der Leiste (Frank-Wunsch 2026-05-28). Hoehe =
+            // 3/4 der vertikalen Saeulenhoehe — die Leistenhoehe selbst waere
+            // viel zu klein.
+            let boardHeight = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
+            let newSize = NSSize(width: frame.size.width, height: boardHeight)
+            var newOrigin = NSPoint(
+                x: pillarFrame.origin.x,
+                y: pillarFrame.origin.y + pillarFrame.size.height + 4)
+            // Off-Screen-Schutz: nicht ueber den sichtbaren Bereich hinaus.
+            if let vf = NSScreen.main?.visibleFrame {
+                if newOrigin.y + newSize.height > vf.maxY {
+                    newOrigin.y = vf.maxY - newSize.height
+                }
+                if newOrigin.x + newSize.width > vf.maxX {
+                    newOrigin.x = vf.maxX - newSize.width
+                }
+                if newOrigin.x < vf.minX { newOrigin.x = vf.minX }
+            }
+            setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+        } else {
+            // Vertikaler Modus: Board dockt LINKS an den Pillar.
+            // Hoehe: 3/4 der Pillar-Hoehe (Frank-Wunsch 2026-05-28 — das Board
+            // wirkte zu hoch). Oben buendig mit dem Pillar ausgerichtet, damit
+            // der obere Rand der beiden Floating-Fenster auf einer Linie liegt.
+            // Width bleibt unser eigener Wert — der Pillar ist viel schmaler.
+            let boardHeight = (pillarFrame.size.height * 0.75).rounded()
+            let newSize = NSSize(width: frame.size.width, height: boardHeight)
+            let newOrigin = NSPoint(
+                x: pillarFrame.origin.x - newSize.width - 4,
+                y: pillarFrame.origin.y + pillarFrame.size.height - boardHeight)
+            setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+        }
     }
 
     func refresh() {

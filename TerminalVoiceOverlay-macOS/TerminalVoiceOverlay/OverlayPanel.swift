@@ -334,6 +334,12 @@ final class TooltipManager {
 
 // MARK: - OverlayPanel
 final class OverlayPanel: NSPanel {
+    /// Hoehe der vertikalen Saeule (siehe init / applyVerticalLayout).
+    /// Zentrale Konstante, damit die andockenden Panels (PromptBoard/PromptInput)
+    /// im Horizontalmodus eine sinnvolle Hoehe ableiten koennen — die horizontale
+    /// Leiste selbst ist nur 92px hoch.
+    static let verticalPanelHeight: CGFloat = 612
+
     let ultrathinkButton: RoundButton
     let xButton: RoundButton
     let btwButton: RoundButton
@@ -405,7 +411,7 @@ final class OverlayPanel: NSPanel {
         // Total panel height bleibt 612 px:
         // S1 (63) + 1 + S2 (124) + 1 + S3 (100) + 1 + S4 (52) + 1
         // + S5 (100) + 1 + S6 (100) + 1 + S7 (63) = 608 + 4 (border) = 612
-        let panelHeight: CGFloat = 612
+        let panelHeight = Self.verticalPanelHeight
 
         // x-Achse Layout (alles in panel-coords, origin links):
         //   Mic-Spalte: x=7..59  (52 px)  → Mic-Mitte = 33

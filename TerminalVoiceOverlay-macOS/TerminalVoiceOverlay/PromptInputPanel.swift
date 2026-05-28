@@ -417,12 +417,24 @@ final class PromptInputPanel: NSPanel {
     /// Pillar angeglichen damit beide Fenster als Paar wirken.
     func dockToOverlay(_ pillar: NSWindow) {
         var frame = self.frame
-        // Hoehe: 3/4 der Pillar-Hoehe (Frank-Wunsch 2026-05-28 — analog zum
-        // Promtboard, #1172). Oben buendig mit dem Pillar ausgerichtet.
-        let h = (pillar.frame.height * 0.75).rounded()
-        frame.size.height = h
-        frame.origin.x = pillar.frame.origin.x - frame.size.width - 4
-        frame.origin.y = pillar.frame.origin.y + pillar.frame.height - h
+        let isHorizontal = (pillar as? OverlayPanel)?.currentOrientation == .horizontal
+        if isHorizontal {
+            // Horizontaler VTO-Modus: Eingabe dockt OBEN an (Unterkante an der
+            // VTO-Oberkante), linksbuendig mit der Leiste (Frank-Wunsch
+            // 2026-05-28). Hoehe = 3/4 der vertikalen Saeulenhoehe — die Leiste
+            // selbst ist nur ~92px hoch.
+            let h = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
+            frame.size.height = h
+            frame.origin.x = pillar.frame.origin.x
+            frame.origin.y = pillar.frame.origin.y + pillar.frame.height + 4
+        } else {
+            // Vertikaler Modus: Eingabe dockt LINKS an, oben buendig.
+            // Hoehe: 3/4 der Pillar-Hoehe (#1174).
+            let h = (pillar.frame.height * 0.75).rounded()
+            frame.size.height = h
+            frame.origin.x = pillar.frame.origin.x - frame.size.width - 4
+            frame.origin.y = pillar.frame.origin.y + pillar.frame.height - h
+        }
         setFrame(frame, display: true)
         clampToScreen()
     }
