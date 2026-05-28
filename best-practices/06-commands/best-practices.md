@@ -1,8 +1,9 @@
-# Slash-Commands — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Slash-Commands — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 > Offizielle Quelle: https://code.claude.com/docs/en/slash-commands  
 > Changelog: https://code.claude.com/docs/en/changelog  
 > Commands-Referenz: https://code.claude.com/docs/en/commands
+> Skills-Dokumentation: https://code.claude.com/docs/en/skills
 
 ---
 
@@ -34,7 +35,7 @@
 
 ---
 
-## Frontmatter-Felder: Vollständige Referenz
+## Frontmatter-Felder: Vollständige Referenz (inkl. 2.1.152)
 
 - **Was:** YAML-Frontmatter zwischen `---`-Markierungen am Anfang der `SKILL.md` konfiguriert das Verhalten des Commands/Skills.
 
@@ -48,6 +49,7 @@ arguments: [issue, priority]
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash(git add *) Bash(git commit *)
+disallowed-tools: AskUserQuestion WebSearch
 model: claude-sonnet-4-5
 effort: high
 context: fork
@@ -67,6 +69,7 @@ shell: powershell
 | `disable-model-invocation` | Nein        | `true` = nur manuell per `/name` aufrufbar; Claude lädt den Skill nicht automatisch                  |
 | `user-invocable`           | Nein        | `false` = nicht im `/`-Menü sichtbar; Claude kann trotzdem auslösen                                  |
 | `allowed-tools`            | Nein        | Tools die ohne Genehmigungsdialog genutzt werden dürfen, wenn der Skill aktiv ist                    |
+| `disallowed-tools`         | **NEU 2.1.152** | Tools die aus dem verfügbaren Pool entfernt werden, solange der Skill aktiv ist. Restriction gilt nur für den aktuellen Turn — beim nächsten eigenen Prompt wird sie aufgehoben. Accepts space-/comma-separated string oder YAML-Liste |
 | `model`                    | Nein        | Modell-Override nur für diesen Turn; kehrt danach zur Session-Einstellung zurück                     |
 | `effort`                   | Nein        | Effort-Override: `low`, `medium`, `high`, `xhigh`, `max`                                             |
 | `context`                  | Nein        | `fork` = Skill läuft in isoliertem Subagenten                                                        |
@@ -74,8 +77,123 @@ shell: powershell
 | `paths`                    | Nein        | Glob-Pattern; Claude lädt den Skill nur wenn passende Dateien bearbeitet werden                      |
 | `shell`                    | Nein        | `bash` (Standard) oder `powershell` für `!`-Inline-Befehle                                          |
 
-- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
-- **Stand:** 2025-2026
+- **Quelle:** https://code.claude.com/docs/en/skills (offiziell), https://code.claude.com/docs/en/changelog (offiziell, 2.1.152)
+- **Stand:** 2025-2026, `disallowed-tools` neu ab 2.1.152
+
+---
+
+## NEU 2.1.152: disallowed-tools — Tools für Skills sperren
+
+- **Was:** `disallowed-tools` im Frontmatter entfernt Tools aus dem verfügbaren Pool, solange der Skill aktiv ist. Während `allowed-tools` Tools *erlaubt* (bypass Genehmigungsdialog), *sperrt* `disallowed-tools` Tools komplett.
+- **Wichtig:** Die Sperre gilt nur für den aktuellen Turn (die Ausführung des Skills). Beim nächsten eigenen Prompt ist sie aufgehoben.
+
+```yaml
+---
+name: background-loop
+description: Führt automatisierte Checks ohne Nutzer-Interaktion durch.
+context: fork
+disallowed-tools: AskUserQuestion
+---
+
+Prüfe alle Tests und Linter-Regeln. Berichte nur, komm nicht zurück mit Fragen.
+```
+
+Weiteres Beispiel — Recherche-Skill ohne Web-Zugriff:
+
+```yaml
+---
+name: local-review
+description: Reviewt Änderungen im Working Tree, nur mit lokalem Kontext.
+disallowed-tools: WebSearch WebFetch
+allowed-tools: Read Bash(git diff *) Bash(git log *)
+---
+```
+
+- **Best Practice:**
+  - `AskUserQuestion` sperren bei autonomen Background-Loop-Skills die nicht pausieren sollen.
+  - `WebSearch, WebFetch` sperren bei Skills die nur lokalen Code analysieren sollen (Konsistenz + Kosten).
+  - `disallowed-tools` und `allowed-tools` sind orthogonal: `allowed-tools` ist eine Whitelist für den Genehmigungsbypass, `disallowed-tools` ist eine Blacklist die Tools komplett unsichtbar macht. Beide können gleichzeitig gesetzt werden.
+  - Für Security-relevante Sperren (Skills die nie schreiben sollen): `Write, Edit, Bash` in `disallowed-tools` eintragen — sicherer als `context: fork` mit `agent: Explore` allein.
+- **Pitfall:** Die Sperre gilt nur für den Turn — nicht für die gesamte Session. Nach Rückkehr aus dem Skill sind alle Tools wieder verfügbar.
+- **Quelle:** https://code.claude.com/docs/en/skills (offiziell), https://code.claude.com/docs/en/changelog (offiziell, 2.1.152)
+- **Stand:** ab Version 2.1.152 (2026-05-27)
+
+---
+
+## NEU 2.1.152: /reload-skills — Skills ohne Session-Neustart laden
+
+- **Was:** `/reload-skills` scannt alle Skill-Verzeichnisse neu und lädt neu erstellte oder veränderte Skills in die aktuelle Session — ohne `exit` + Neustart.
+- **Workflow:**
+  1. Neue `SKILL.md` anlegen oder bestehende bearbeiten.
+  2. `/reload-skills` tippen.
+  3. Neuer Skill erscheint sofort im `/`-Menü und ist automatisch auslösbar.
+
+- **Best Practice:**
+  - Beim iterativen Skill-Entwickeln immer `/reload-skills` statt Session-Neustart — spart den Kontext.
+  - Nach jeder Änderung am Frontmatter (z.B. neue `disallowed-tools`, neue `description`) neu laden.
+  - Kombinierbar mit `/skills`-Menü: erst `/reload-skills`, dann `/skills` um den aktualisierten Stand zu sehen.
+
+- **NEU: SessionStart-Hook kann Skills automatisch laden (2.1.152)**
+  `SessionStart`-Hooks können `reloadSkills: true` zurückgeben und lösen damit einen automatischen Skill-Rescan aus. Das macht Skills die der Hook installiert in derselben Session sofort verfügbar — ohne `/reload-skills` tippen zu müssen.
+
+  ```json
+  {
+    "hookSpecificOutput": {
+      "hookEventName": "SessionStart",
+      "reloadSkills": true
+    }
+  }
+  ```
+
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell, 2.1.152)
+- **Stand:** ab Version 2.1.152 (2026-05-27)
+
+---
+
+## NEU 2.1.152: /code-review --fix — Review-Findings direkt anwenden
+
+- **Was:** `/code-review --fix` führt einen Code-Review durch und wendet die Ergebnisse **automatisch auf den Working Tree an** — kein manuelles Copy-Paste der Vorschläge. Besonders für Reuse-, Vereinfachungs- und Effizienz-Verbesserungen.
+- **`/simplify` ist jetzt ein Alias für `/code-review --fix`** — der vertraute Befehl funktioniert weiter, intern läuft aber der neue Mechanismus.
+
+### Vergleich: Normaler Review vs. --fix-Modus
+
+| Befehl | Was passiert | Wann sinnvoll |
+|--------|-------------|---------------|
+| `/code-review` | Review-Bericht, nur lesen | Code durchschauen, PR vorbereiten, Lernzweck |
+| `/code-review --fix` | Review + automatische Anwendung auf Working Tree | Refactoring, Vereinfachung, Effizienz-Optimierung vor Commit |
+| `/code-review ultra --fix` | Ultrareview (Cloud, teurer) + automatische Anwendung | Tiefe Qualitätssicherung vor wichtigen Releases |
+| `/simplify` | Equivalent zu `/code-review --fix` | Legacy-Alias, weiter nutzbar |
+| `/code-review --comment` | Review + Posting als GitHub-PR-Kommentare | Feedback im PR-Workflow teilen |
+
+### Effort-Level kombinieren
+
+```
+/code-review --fix               # Session-Effort (Standard)
+/code-review high --fix          # Mehr Findings, auch unsichere
+/code-review low --fix           # Wenige, hochkonfidente Fixes
+/code-review ultra --fix         # Ultrareview-Cloud + Working-Tree-Anwendung
+```
+
+Niedrigere Effort-Level → weniger aber sicherere Fixes. Höhere Levels → breitere Abdeckung, möglicherweise unsicherere Vorschläge.
+
+### Workflow-Empfehlung (vor jedem Commit)
+
+```
+1. Entwicklung abgeschlossen, Änderungen im Working Tree
+2. /code-review          # Erst nur lesen/verstehen
+3. /code-review --fix    # Wenn Bericht sinnvoll war: Fixes anwenden
+4. git diff              # Angewandte Fixes prüfen
+5. git add / commit      # Geprüfte Fixes in Commit aufnehmen
+```
+
+- **Best Practice:**
+  - Vor dem ersten Einsatz: `/code-review` (ohne `--fix`) laufen lassen um ein Gefühl für die Qualität der Vorschläge zu bekommen.
+  - `--fix` nicht blind auf unverstandenem Code einsetzen — `git diff` nach dem Fix immer prüfen.
+  - Bei automatisierten Workflows (CI, Hooks): `/code-review --comment` statt `--fix` bevorzugen — direkte Working-Tree-Änderung in CI kann zu unerwarteten Zuständen führen.
+  - Für tiefe Reviews vor Releases: `/code-review ultra --fix` (aber: höhere Kosten, Cloud-Ausführung).
+- **Pitfall:** `--fix` ändert den Working Tree direkt. Nicht gesicherte Änderungen können überschrieben werden — `git stash` oder Commit vor dem Einsatz empfohlen.
+- **Quelle:** https://code.claude.com/docs/en/code-review (offiziell), https://code.claude.com/docs/en/changelog (offiziell, 2.1.152), https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern)
+- **Stand:** ab Version 2.1.152 (2026-05-27); `/simplify` war vorher Standard-Befehl ab 2.1.147
 
 ---
 
@@ -162,7 +280,7 @@ allowed-tools: Bash(git add *) Bash(git commit *) Bash(git status *)
 - **Best Practice:**
   - So spezifisch wie möglich formulieren — `Bash(git add *)` statt `Bash` (zu weit).
   - `allowed-tools` bei Projekt-Skills erst nach Workspace-Trust-Dialog aktiv (Sicherheitscheck bei fremden Repos).
-  - Tool-**Verbote** über `/permissions` deny-Regeln, nicht über `allowed-tools` (das ist nur für Freigaben).
+  - Tool-**Verbote** → `disallowed-tools` (NEU ab 2.1.152) oder `/permissions` deny-Regeln. `allowed-tools` ist nur für Freigaben.
 - **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
 - **Stand:** 2025-2026
 
@@ -216,6 +334,7 @@ git status --short
   - `agent: Plan` für Planungsaufgaben ohne Side Effects.
   - `agent: general-purpose` (Standard) für allgemeine Tasks mit Schreibzugriff.
   - Mit `$ARGUMENTS` kombinieren: `/deep-research "async Rust patterns"` — Subagent recherchiert, Ergebnis kommt zurück in Hauptkonversation.
+  - `disallowed-tools` (NEU 2.1.152) ist eine sicherere Ergänzung zu `context: fork` für autonome Skills: auch wenn der Subagent theoretisch Tools hat, sperrt `disallowed-tools` explizit benannte heraus.
 - **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
 - **Stand:** 2025-2026
 
@@ -247,6 +366,7 @@ git status --short
 | `/doctor`          | Diagnostiziert Konfigurationsprobleme (Skill-Budget, etc.)            |
 | `/btw`             | Quick-Aside — geht nicht in Konversationshistorie                     |
 | `/skills`          | Zeigt/verwaltet verfügbare Skills (Space zum Umschalten)              |
+| `/reload-skills`   | **NEU 2.1.152** — Scannt Skill-Verzeichnisse neu ohne Session-Neustart |
 | `/review`          | Code-Review (auch via Skill Tool aufrufbar)                           |
 | `/security-review` | Sicherheits-Review                                                    |
 
@@ -254,7 +374,8 @@ git status --short
 
 | Skill                  | Funktion                                                              |
 |------------------------|-----------------------------------------------------------------------|
-| `/code-review`         | Code-Review mit detaillierten Instruktionen                           |
+| `/code-review`         | Code-Review mit detaillierten Instruktionen; `--fix` wendet Findings an Working Tree an (**NEU 2.1.152**) |
+| `/simplify`            | Alias für `/code-review --fix` (**seit 2.1.152**; davor eigenständiger Befehl)           |
 | `/debug`               | Systematisches Debugging                                              |
 | `/loop`                | Wiederholte Ausführung                                                |
 | `/claude-api`          | Claude-API-Nutzung                                                    |
@@ -262,9 +383,9 @@ git status --short
 | `/verify`              | Build + Lauf ohne Fallback auf Tests (ab v2.1.145)                   |
 | `/run-skill-generator` | Einmal ausführen um `/run`/`/verify` projektspezifisch zu machen     |
 
-- **Best Practice:** Bundled Skills sind anpassbar — eigene Skills können gleiche Namen überschreiben wenn nötig. `/run-skill-generator` einmal pro Projekt ausführen um zuverlässige Build-Rezepte zu erstellen.
+- **Best Practice:** Bundled Skills sind anpassbar — eigene Skills können gleiche Namen überschreiben wenn nötig. `/run-skill-generator` einmal pro Projekt ausführen um zuverlässige Build-Rezepte zu erstellen. `/reload-skills` nach dem Überschreiben eines Bundled Skills aufrufen.
 - **Quelle:** https://code.claude.com/docs/en/commands (offiziell), https://code.claude.com/docs/en/slash-commands (offiziell)
-- **Stand:** 2026
+- **Stand:** 2026, `/reload-skills` neu ab 2.1.152
 
 ---
 
@@ -276,6 +397,7 @@ git status --short
   - `SKILL.md` unter 500 Zeilen halten — Detailmaterial in Unterdateien auslagern.
   - Bei Auto-Compaction: Skills werden mit max 5.000 Token pro Skill re-attached (Budget: 25.000 Token gesamt). Ältere Skills können entfallen → Skill nach Compaction erneut aufrufen wenn nötig.
   - Für Deep-Reasoning in einem Skill: `ultrathink` irgendwo in den Skill-Body schreiben.
+  - Skill geändert während der Session? → `/reload-skills` lädt die neue Version, aber der Skill-Content der aktuellen Session bleibt bis zum nächsten Aufruf erhalten.
 - **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell)
 - **Stand:** 2025-2026
 
@@ -332,8 +454,11 @@ git status --short
 
 ## Wichtige Bugfixes in 2.1.x (relevant für Troubleshooting)
 
+- **2.1.152:** `/code-review --fix` wendet Review-Findings auf Working Tree an; `/simplify` ist jetzt Alias dafür.
+- **2.1.152:** `/reload-skills` hinzugefügt; SessionStart-Hooks können `reloadSkills: true` zurückgeben.
+- **2.1.152:** `disallowed-tools` in Skill-Frontmatter — sperrt Tools für die Dauer des Skill-Turns.
 - **2.1.149:** `argument-hint` wird bei Overflow nicht mehr abgeschnitten; Tab-Completion zeigt Hint auch wenn `name:` im Frontmatter vom Verzeichnisnamen abweicht.
-- **2.1.147:** Unbekannte Slash-Commands gaben in Headless/SDK-Modus kein Feedback — jetzt Error-Message.
+- **2.1.147:** `/simplify` umbenannt zu `/code-review`; unbekannte Slash-Commands gaben in Headless/SDK-Modus kein Feedback — jetzt Error-Message.
 - **2.1.136:** Argument-Namen mit Regex-Sonderzeichen (z.B. `+`, `*`) brachen die Substitution — gefixt.
 - **2.1.120:** Slash-Command-Picker zeigt übereinstimmende Zeichen farblich hervorgehoben; lange Beschreibungen umbrechen statt abzuschneiden.
 - **2.1.119:** `${CLAUDE_EFFORT}` steht in Skill-Body zur Verfügung (aktueller Effort-Level).
@@ -349,5 +474,7 @@ git status --short
 - **Pitfall 3 — YAML-Formatierung:** Formatierungstools (Prettier etc.) können YAML-Frontmatter umbrechen → Skill wird unsichtbar. Lösung: Frontmatter von Auto-Formatierung ausschließen.
 - **Pitfall 4 — Skill zu groß:** Lange Skills bleiben permanent im Kontext, kosten bei jeder Session Tokens. Lösung: Body unter 500 Zeilen halten, Details in Unterdateien.
 - **Pitfall 5 — context: fork ohne Task:** Subagent bekommt nur Referenzinhalte ohne Aufgabe → kehrt ohne Output zurück. Lösung: `context: fork` nur für Skills mit klaren Aktions-Instruktionen.
-- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://perevillega.com/posts/2026-04-01-claude-code-skills-2-what-changed-what-works-what-to-watch-out-for/ (extern)
+- **Pitfall 6 — /code-review --fix ohne Prüfung:** `--fix` ändert den Working Tree direkt. Lösung: immer `git diff` nach dem Einsatz prüfen, vorher `git stash` oder Commit.
+- **Pitfall 7 — disallowed-tools für Session-weite Sperren:** `disallowed-tools` gilt nur für den aktuellen Turn, nicht für die Session. Lösung: Für dauerhafte Sperren `/permissions deny` verwenden.
+- **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://perevillega.com/posts/2026-04-01-claude-code-skills-2-what-changed-what-works-what-to-watch-out-for/ (extern), https://code.claude.com/docs/en/changelog (offiziell)
 - **Stand:** 2026

@@ -1,4 +1,4 @@
-# Hooks — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Hooks — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 > Quellen: Offizielle Claude Code Dokumentation (code.claude.com/docs) + Changelog.
 > Alle Einträge ohne "extern"-Label sind offiziell bestätigt.
@@ -14,9 +14,9 @@
 
 ---
 
-## Alle Hook-Events (31 Events, Stand v2.1.x)
+## Alle Hook-Events (32 Events, Stand v2.1.152+)
 
-- **Was:** Claude Code feuert 31 verschiedene Events über den Session-Lifecycle:
+- **Was:** Claude Code feuert 32 verschiedene Events über den Session-Lifecycle (32 seit v2.1.152 mit MessageDisplay):
   - **Session:** `SessionStart`, `Setup`, `SessionEnd`
   - **Turn:** `UserPromptSubmit`, `UserPromptExpansion`, `Stop`, `StopFailure`
   - **Tool-Loop:** `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `PermissionRequest`, `PermissionDenied`
@@ -25,10 +25,11 @@
   - **Kontext:** `InstructionsLoaded`, `ConfigChange`, `CwdChanged`, `FileChanged`, `PreCompact`, `PostCompact`
   - **Worktrees:** `WorktreeCreate`, `WorktreeRemove`
   - **MCP:** `Elicitation`, `ElicitationResult`
+  - **Anzeige (NEU v2.1.152):** `MessageDisplay`
   - **Sonstiges:** `Notification`
 - **Best Practice:** Hooks ohne `agent_id`-Prüfung bei `SubagentStop` feuern bei JEDEM Stop-Event, auch ohne echten Subagent — daher immer einen Input-Guard einbauen (siehe Abschnitt "Input-Guard").
 - **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell)
-- **Stand:** 2026-05-25
+- **Stand:** 2026-05-28
 
 ---
 
@@ -85,6 +86,161 @@
   Flaches `{ "additionalContext": "..." }` ohne `hookSpecificOutput` wird von Claude Code still ignoriert.
 - **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell)
 - **Stand:** 2026-05-25
+
+---
+
+## NEU (v2.1.152, 26. Mai 2026): `SessionStart` — `reloadSkills`
+
+- **Was:** `SessionStart`-Hooks können jetzt `reloadSkills: true` im `hookSpecificOutput` zurückgeben. Das löst einen neuen Skill-Directory-Scan aus, sodass Skills die der Hook in `~/.claude/skills/` oder `.claude/skills/` geschrieben hat, noch **in derselben Session** (ab dem ersten Prompt) verfügbar sind.
+
+  **Hintergrund:** Skill-Discovery läuft normalerweise VOR dem SessionStart-Hook — ohne `reloadSkills` tauchen neu geschriebene Skills erst in der nächsten Session auf.
+
+  ```json
+  {
+    "hookSpecificOutput": {
+      "hookEventName": "SessionStart",
+      "reloadSkills": true
+    }
+  }
+  ```
+
+  **Vollständiges Beispiel** — Shared Team-Skills synchronisieren:
+  ```bash
+  #!/bin/bash
+  # Synchronisiert Team-Skills und aktiviert sie in der aktuellen Session
+  git -C ~/.claude/skills/team-skills pull --quiet 2>/dev/null || \
+    git clone --quiet https://git.example.com/your-org/team-skills.git ~/.claude/skills/team-skills
+  
+  echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
+  ```
+
+  Ergänzend: Manuell kann der Skill-Scan auch per `/reload-skills`-Command ausgelöst werden (neu in v2.1.152).
+
+- **Best Practice:** `reloadSkills: true` nur dann setzen, wenn der Hook tatsächlich Skills-Dateien geschrieben hat — sonst unnötiger Re-Scan beim jedem Session-Start. Das Flag kann mit `sessionTitle` und `additionalContext` kombiniert werden (alle im gleichen `hookSpecificOutput`-Objekt).
+- **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell) + [Changelog v2.1.152](https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/) (offiziell)
+- **Stand:** 2026-05-26
+
+---
+
+## NEU (v2.1.152, 26. Mai 2026): `SessionStart` — `sessionTitle`
+
+- **Was:** `SessionStart`-Hooks können beim Start oder Resume automatisch den Session-Titel setzen — hat denselben Effekt wie der `/rename`-Command.
+
+  **Wann aktiv:** Nur bei `source = "startup"` oder `source = "resume"`. Wird ignoriert bei `"clear"` und `"compact"`.
+
+  **Input-Feld zum Prüfen:** Der Hook-Input enthält `session_title` — damit lässt sich prüfen ob der Benutzer bereits einen eigenen Titel gesetzt hat (nicht überschreiben).
+
+  ```json
+  {
+    "hookSpecificOutput": {
+      "hookEventName": "SessionStart",
+      "sessionTitle": "auth-refactor"
+    }
+  }
+  ```
+
+  **Vollständiges Beispiel** — Session aus Git-Branch benennen:
+  ```bash
+  #!/bin/bash
+  # Titel aus aktuellem Git-Branch ableiten, nur wenn noch kein Titel gesetzt
+  INPUT=$(cat)
+  EXISTING_TITLE=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_title','') or '')" 2>/dev/null)
+  
+  if [ -z "$EXISTING_TITLE" ]; then
+    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [ -n "$BRANCH" ]; then
+      echo "{\"hookSpecificOutput\": {\"hookEventName\": \"SessionStart\", \"sessionTitle\": \"$BRANCH\"}}"
+    fi
+  fi
+  ```
+
+  **Kombiniertes Beispiel** — Alle drei SessionStart-Felder gleichzeitig:
+  ```json
+  {
+    "hookSpecificOutput": {
+      "hookEventName": "SessionStart",
+      "additionalContext": "Current branch: feat/auth-refactor\nActive issue: #4211",
+      "sessionTitle": "auth-refactor",
+      "reloadSkills": true
+    }
+  }
+  ```
+
+- **Best Practice:** Immer zuerst `session_title` aus dem Input lesen — wenn der Benutzer bereits einen eigenen Titel vergeben hat, nicht überschreiben. Für automatische Benennung aus Git-Branch, Worktree-Name oder CWD-Ordnernamen besonders nützlich.
+- **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell) + [Changelog v2.1.152](https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/) (offiziell)
+- **Stand:** 2026-05-26
+
+---
+
+## NEU (v2.1.152, 26. Mai 2026): `MessageDisplay` — Anzeige-Text transformieren
+
+- **Was:** Ein neuer Hook-Event `MessageDisplay` der feuert, während Assistant-Message-Text auf dem Bildschirm angezeigt wird. Hooks können den **angezeigten** Text ersetzen oder verbergen — Transkript und Claude's internes Kontext bleiben unverändert.
+
+  **Kritischer Unterschied:**
+  - `displayContent` → ändert was der **Benutzer sieht**
+  - Transcript-Datei → behält **Original** (unverändert)
+  - Claude's Kontext → sieht **Original** (unverändert)
+  - Kein Matcher-Support — feuert bei JEDEM Occurrence
+
+  **Input-Schema:**
+  ```json
+  {
+    "session_id": "abc123",
+    "transcript_path": "/path/to/transcript.jsonl",
+    "cwd": "/current/working/directory",
+    "hook_event_name": "MessageDisplay",
+    "message_text": "The full assistant message text",
+    "message_index": 0
+  }
+  ```
+
+  **Output-Schema (hookSpecificOutput):**
+  ```json
+  {
+    "hookSpecificOutput": {
+      "hookEventName": "MessageDisplay",
+      "displayContent": "Ersetzter Text der auf dem Bildschirm erscheint"
+    }
+  }
+  ```
+
+  **Streaming-Felder** (laut Search-Ergebnissen — als `extern` markiert bis offiziell bestätigt):
+  - `turn_id` — Identifier für den Conversation-Turn
+  - `message_id` — Identifier für die Nachricht
+  - `index` — Position innerhalb der Nachricht (bei gestreamten Blöcken)
+  - `final` — Boolean, ob dies der letzte Block ist
+  - `delta` — Der neue Text-Delta der gerade angezeigt wird
+  *(Quelle: [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) — extern-Hinweis: Streaming-Felder aus Docs, aber delta/final/index noch nicht in offiziellem Schema-Beispiel der Hauptdoku bestätigt)*
+
+  **Anwendungsfälle:**
+  1. **Secrets-Redaktion:** API-Keys, Tokens, Passwörter aus der Anzeige entfernen bevor der Benutzer sie sieht
+  2. **Formatierung:** Rohen Code-Output für bessere Lesbarkeit formatieren
+  3. **Übersetzung:** Display-Text in andere Sprache übersetzen (Claude denkt auf Englisch, Benutzer sieht Deutsch)
+  4. **Compliance:** Interne Informationen die Claude erwähnt für den Benutzer-Screen redigieren
+  5. **Debugging:** Intern-Tags aus der Anzeige entfernen die für Claude gedacht waren
+
+  **Einfaches Beispiel** — API-Keys aus Anzeige entfernen:
+  ```bash
+  #!/bin/bash
+  INPUT=$(cat)
+  MESSAGE=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message_text',''))" 2>/dev/null)
+  
+  # API-Keys redaktieren (Pattern: sk-xxx... oder ghp_xxx...)
+  REDACTED=$(echo "$MESSAGE" | sed 's/sk-[A-Za-z0-9]\{20,\}/sk-[REDACTED]/g' | sed 's/ghp_[A-Za-z0-9]\{30,\}/ghp_[REDACTED]/g')
+  
+  if [ "$MESSAGE" != "$REDACTED" ]; then
+    python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput': {'hookEventName': 'MessageDisplay', 'displayContent': sys.argv[1]}}))" "$REDACTED"
+  fi
+  ```
+
+- **Best Practice:**
+  1. `MessageDisplay` nur für echte Anzeige-Transformation verwenden — es beeinflusst NICHT was Claude tut oder schreibt
+  2. Wenn `displayContent` nicht gesetzt wird (kein Output oder kein `hookSpecificOutput`), bleibt der originale Text unverändert
+  3. Für Security-Redaktion besonders wertvoll: Der Hook kann sensitives Material ausblenden ohne Claude's Reasoning zu beeinflussen
+  4. Kein Matcher-Support bedeutet: jeder MessageDisplay-Hook läuft für ALLE Assistant-Messages — Performance beachten (keine schweren Operationen)
+  5. Da Transcript und Claude-Kontext unverändert bleiben: nur für rein visuelle Transformationen geeignet, nicht für faktische Korrekturen
+- **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell) + [Changelog v2.1.152](https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/) (offiziell)
+- **Stand:** 2026-05-26
 
 ---
 
@@ -407,4 +563,4 @@
 
 ---
 
-*Erstellt: 2026-05-25 | Recherchiert für Claude Code v2.1.150 | Hauptquellen: code.claude.com/docs (offiziell)*
+*Erstellt: 2026-05-25 | Aktualisiert: 2026-05-28 | Stand: Claude Code v2.1.153 | Hauptquellen: code.claude.com/docs (offiziell)*

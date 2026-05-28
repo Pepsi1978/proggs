@@ -1,4 +1,4 @@
-# Skills — Best Practices (Stand 2026-05-25, Claude Code v2.1.150)
+# Skills — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 > Quellen: code.claude.com/docs/en/skills (offiziell, Grundwahrheit), Agent-SDK-Doku,
 > offizielles Changelog, docs.anthropic.com/en/docs/claude-code/cli-reference
@@ -18,12 +18,13 @@ festgelegten Verzeichnissen und steuern über YAML-Frontmatter ihr Verhalten.
 
 | Ebene | Pfad | Geltungsbereich |
 |-------|------|-----------------|
+| **Enterprise** | Via managed settings | Alle Benutzer der Organisation |
 | **Global** | `~/.claude/skills/<name>/SKILL.md` | Alle Projekte |
 | **Projekt** | `.claude/skills/<name>/SKILL.md` | Nur dieses Projekt |
-| **Plugin** | Via Plugin-System | Wie global |
-| **Eingebaut** | In Claude Code integriert | Immer verfügbar |
+| **Plugin** | Via Plugin-System | Wo Plugin aktiv ist |
 
-Bei Namenskonflikten überschreibt die spezifischere Ebene die allgemeinere.
+Bei Namenskonflikten: Enterprise überschreibt Global, Global überschreibt Projekt.
+Plugin-Skills nutzen `plugin-name:skill-name`-Namespace (kein Konflikt möglich).
 
 ---
 
@@ -45,24 +46,25 @@ ohne sie kann Claude den Skill nicht automatisch auswählen.
 
 ---
 
-## Alle Frontmatter-Felder (vollständige Referenz, v2.1.150)
+## Alle Frontmatter-Felder (vollständige Referenz, v2.1.153)
 
 | Feld | Typ | Standard | Bedeutung |
 |------|-----|----------|-----------|
-| `name` | string | Verzeichnisname | Anzeigename des Skills |
+| `name` | string | Verzeichnisname | Anzeigename des Skills (steuert nur Listing-Label, NICHT den Slash-Command-Namen — der kommt vom Verzeichnisnamen) |
 | `description` | string | — | **Wichtigstes Feld.** Claude entscheidet anhand dessen ob der Skill passt. Muss in der 3. Person stehen. Max. 1.536 Zeichen für die Listing-Anzeige. |
 | `when_to_use` | string | — | Erweiterte Trigger-Beschreibung; wird an `description` angehängt für die automatische Auswahl |
 | `argument-hint` | string | — | Hilfetext der beim Tippen von `/skill-name ` im Terminal erscheint |
 | `arguments` | list | — | Benannte Parameter die der Skill erwartet (`$name`-Substitution) |
 | `disable-model-invocation` | bool | `false` | Bei `true`: kein LLM-Aufruf; Skill-Inhalt wird direkt als Text injiziert. Entfernt Skill auch aus der Listing-Kontext-Anzeige. |
 | `user-invocable` | bool | `true` | Bei `false`: Skill erscheint NICHT in `/`-Autocomplete; kann aber von Claude oder anderen Skills aufgerufen werden |
-| `allowed-tools` | list | alle | Werkzeuge die der Skill nutzen darf (z.B. `[Read, Glob, WebSearch]`). **Nur im CLI wirksam — im Agent SDK ignoriert.** |
+| `allowed-tools` | list | alle | Werkzeuge die während des Skills ohne Bestätigung genutzt werden dürfen. Schränkt NICHT ein — andere Tools bleiben weiterhin nutzbar, brauchen aber normale Genehmigung. **Nur im CLI wirksam — im Agent SDK ignoriert.** |
+| `disallowed-tools` | list | keine | **NEU in v2.1.152.** Werkzeuge die während des Skills NICHT verfügbar sind. Gut für autonome Skills die bestimmte Tools nie aufrufen sollen (z.B. `AskUserQuestion` in einem Hintergrund-Loop). Beschränkung endet beim nächsten Benutzer-Prompt. |
 | `model` | string | Aktuelles Modell | Modell-Override für diesen Skill-Aufruf (z.B. `claude-opus-4-5`) |
-| `effort` | string | Aktuelle Stufe | Effort-Override: `low`, `medium`, `high`, `xhigh` |
+| `effort` | string | Aktuelle Stufe | Effort-Override: `low`, `medium`, `high`, `xhigh`, `max` |
 | `context` | string | — | `fork` = Skill läuft in eigenem isolierten Subagent-Context |
 | `agent` | string | `general-purpose` | Subagent-Typ wenn `context: fork` gesetzt ist |
 | `hooks` | map | — | Skill-lokale Lifecycle-Hooks (nur aktiv wenn dieser Skill läuft) |
-| `paths` | list | — | Pfade zu Hilfsdateien die beim Skill-Laden automatisch mitgeladen werden (relativ zum Skill-Verzeichnis) |
+| `paths` | list | — | Glob-Muster für pfad-spezifische Aktivierung (Skill nur geladen wenn passende Dateien bearbeitet werden) |
 | `shell` | string/bool | — | `powershell` für Windows-`` !`cmd` ``-Blöcke; braucht `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` |
 
 ### Kritischer Unterschied: `disable-model-invocation` vs. `user-invocable: false`
@@ -78,6 +80,144 @@ ohne sie kann Claude den Skill nicht automatisch auswählen.
 # → Claude kann den Skill trotzdem automatisch auswählen
 # → Ideal für: interne Hilfsskills, automatische Kontext-Schichten
 ```
+
+---
+
+## NEU: `disallowed-tools` — Tool-Sperren pro Skill (ab v2.1.152)
+
+**Quelle:** [Changelog code.claude.com](https://code.claude.com/docs/en/changelog) + [Skills-Doku](https://code.claude.com/docs/en/skills) — offiziell
+
+### Was es tut
+
+`disallowed-tools` entfernt bestimmte Tools aus dem verfügbaren Pool während ein Skill aktiv ist.
+Im Gegensatz zu `allowed-tools` (Allowlist: pre-approved Tools) ist es eine **Denylist**:
+alle anderen Tools bleiben verfügbar, nur die gelisteten werden gesperrt.
+
+Die Sperre gilt für **die Dauer des Skill-Aufrufs** und endet automatisch beim nächsten Benutzer-Prompt.
+
+### Verhältnis zu `allowed-tools`
+
+| Feld | Mechanismus | Wirkung |
+|------|-------------|---------|
+| `allowed-tools` | Allowlist | Gelistete Tools: vorab genehmigt (kein Prompt). Andere Tools: weiterhin nutzbar, brauchen Genehmigung |
+| `disallowed-tools` | Denylist | Gelistete Tools: komplett gesperrt. Alle anderen: verfügbar wie normal |
+
+**Wichtig:** Laut offizieller Doku (Stand vor 2.1.152) hieß es: "To block a skill from using certain
+tools, add deny rules in your permission settings instead." Ab v2.1.152 gibt es `disallowed-tools`
+als direkten Skill-Level-Mechanismus dafür.
+
+### Syntax
+
+```yaml
+---
+name: background-monitor
+description: Überwacht den Build-Status im Hintergrund
+disallowed-tools:
+  - AskUserQuestion
+  - WebSearch
+---
+```
+
+Auch als Leerzeichen- oder Komma-separierter String:
+```yaml
+disallowed-tools: AskUserQuestion WebSearch
+# oder:
+disallowed-tools: AskUserQuestion, WebSearch, Bash(rm *)
+```
+
+### Wann `disallowed-tools` sinnvoll ist
+
+| Anwendungsfall | Welche Tools sperren |
+|----------------|---------------------|
+| Autonomer Hintergrund-Loop (soll nicht interagieren) | `AskUserQuestion` |
+| Read-only Review-Skill (darf nichts schreiben) | `Write`, `Edit`, `MultiEdit` |
+| Sicherheits-Audit (darf keinen Code ausführen) | `Bash`, `Computer` |
+| Datenanalyse-Skill ohne Netzwerk | `WebSearch`, `WebFetch` |
+
+### Bash-spezifische Sperren (Subcommand-Pattern)
+
+```yaml
+disallowed-tools:
+  - Bash(rm *)
+  - Bash(git push --force *)
+  - Bash(sudo *)
+```
+
+Das Pattern `Bash(muster)` sperrt nur Bash-Aufrufe die auf das Muster passen,
+nicht Bash insgesamt.
+
+---
+
+## NEU: `/reload-skills` und `reloadSkills: true` in SessionStart-Hooks (ab v2.1.152)
+
+**Quelle:** [Changelog code.claude.com](https://code.claude.com/docs/en/changelog) — offiziell
+
+### Das Problem das gelöst wird
+
+Vor v2.1.152: Wenn ein SessionStart-Hook einen neuen Skill installiert hat, war dieser Skill
+**erst in der nächsten Session** verfügbar (Claude Code musste neu gestartet werden).
+
+Ab v2.1.152: Zwei Mechanismen lösen das:
+
+### `/reload-skills` Command
+
+Ein neuer eingebauter Slash-Command der die Skill-Verzeichnisse in der laufenden Session
+neu einliest — **ohne Session-Neustart**:
+
+```text
+/reload-skills
+```
+
+**Wann sinnvoll:**
+- Während der Skill-Entwicklung (SKILL.md oft ändern, sofort testen)
+- Nach manuellem Installieren eines neuen Skills in einem Terminal-Fenster
+- Nach Plugin-Aktivierung die neue Skills mitbringt
+- Wenn ein Hook Skills installiert hat und man sie sofort nutzen möchte
+
+**Hinweis:** Claude Code überwacht Skill-Verzeichnisse bereits auf Datei-Änderungen (Live-Change-Detection).
+`/reload-skills` ist nützlich wenn ein **neues Skill-Verzeichnis** erstellt wurde, das beim
+Session-Start noch nicht existiert hat.
+
+### `reloadSkills: true` in SessionStart-Hooks
+
+SessionStart-Hooks können jetzt im JSON-Output `reloadSkills: true` zurückgeben, um Claude Code
+anzuweisen, die Skill-Verzeichnisse nach dem Hook-Run neu zu scannen:
+
+```json
+{
+  "reloadSkills": true
+}
+```
+
+**Anwendungsfall — Hook installiert Skills dynamisch:**
+
+```powershell
+# SessionStart-Hook: Skill aus Repo klonen wenn nicht vorhanden
+$skillDir = "$HOME/.claude/skills/mein-neuer-skill"
+if (-not (Test-Path $skillDir)) {
+    git clone https://example.com/skills/mein-neuer-skill.git $skillDir
+    # Reload-Signal zurückgeben:
+    Write-Output '{"reloadSkills": true}'
+} else {
+    Write-Output '{}'
+}
+```
+
+```bash
+# Bash-Variante:
+SKILL_DIR="$HOME/.claude/skills/mein-neuer-skill"
+if [ ! -d "$SKILL_DIR" ]; then
+    git clone https://example.com/skills/mein-neuer-skill.git "$SKILL_DIR"
+    echo '{"reloadSkills": true}'
+else
+    echo '{}'
+fi
+```
+
+**Warum das wichtig ist:**
+- Skills die der Hook installiert sind **in derselben Session** sofort nutzbar
+- Kein "bitte starte Claude Code neu nach der Installation"
+- Automatisches Setup-Pattern: Hook prüft Voraussetzungen, installiert fehlende Skills, Reload erfolgt automatisch
 
 ---
 
@@ -148,6 +288,7 @@ description: >
 | Direkte Text-Injektion ohne LLM-Aufruf | `disable-model-invocation: true` |
 | Im eigenen Subagent-Context isoliert | `context: fork` |
 | Bestimmte Tools pre-approvt | `allowed-tools: [Read, Glob, Bash]` |
+| Bestimmte Tools blockiert | `disallowed-tools: [AskUserQuestion, Write]` (**NEU v2.1.152**) |
 | Nur für bestimmte Modelle | `model: claude-opus-4-5` |
 
 ---
@@ -271,16 +412,20 @@ Hier der Kerninhalt. Die Referenzen sind bereits geladen.
 **Vorteil:** Die `paths:`-Dateien werden nur geladen wenn der Skill aktiv ist — spart
 Token-Budget wenn der Skill gerade nicht gebraucht wird.
 
+> **Hinweis:** Die offizielle Doku verwendet `paths:` (v2.1.153) für Glob-Muster zur
+> pfad-spezifischen Aktivierung. Die Semantik "Hilfsdateien automatisch laden" sollte
+> via Markdown-Links im Skill-Body umgesetzt werden (Claude lädt sie bei Bedarf).
+
 ---
 
 ## Skill-Inhalt: Lebenszyklus und Komprimierung
 
 | Aspekt | Wert |
 |--------|------|
-| **Token-Limit pro Skill** | 5.000 Tokens |
-| **Kombiniertes Budget** | 25.000 Tokens für alle aktiven Skills |
+| **Token-Limit pro Skill** | 5.000 Tokens (nach Compaction: erste 5.000 Tokens werden re-attached) |
+| **Kombiniertes Budget** | 25.000 Tokens für alle aktiven Skills nach Compaction |
 | **Listing-Budget** | ~1% des Kontextfensters (steuerbar via `skillListingBudgetFraction`) |
-| **Nach Compaction** | Skill-Inhalte werden automatisch wieder eingebettet |
+| **Nach Compaction** | Skill-Inhalte werden automatisch wieder eingebettet (neueste zuerst) |
 | **Live-Updates** | Skills werden bei Datei-Änderung sofort neu geladen (kein Neustart nötig) |
 | **Description-Limit** | 1.536 Zeichen in der Listing-Ansicht |
 
@@ -298,6 +443,7 @@ Token-Budget wenn der Skill gerade nicht gebraucht wird.
 | `/debug` | Strukturierter Debug-Workflow | eingebaut |
 | `/loop` | Iterativer Verbesserungs-Loop | eingebaut |
 | `/claude-api` | Claude API-Nutzung direkt aus Skills | eingebaut |
+| `/reload-skills` | Skill-Verzeichnisse ohne Session-Neustart neu einlesen | **v2.1.152** |
 
 ---
 
@@ -312,12 +458,6 @@ Der Skill Creator (`skill-creator:skill-creator`) führt durch den Erstellungspr
 
 **Pflicht laut CLAUDE.md:** Niemals Skills manuell erstellen ohne den Skill Creator zu nutzen.
 
-**Typische Fragen des Skill Creators:**
-- Was soll der Skill tun?
-- Wann soll Claude ihn automatisch aktivieren?
-- Braucht er eigene Tools oder einen Subagent-Context?
-- Gibt es Beispiel-Eingaben?
-
 ---
 
 ## Naming Conventions
@@ -325,7 +465,7 @@ Der Skill Creator (`skill-creator:skill-creator`) führt durch den Erstellungspr
 | Aspekt | Empfehlung |
 |--------|-----------|
 | **Verzeichnisname** | Kleinbuchstaben, Bindestriche: `code-review`, `db-migrator` |
-| **`name`-Feld** | Gleich wie Verzeichnisname oder sprechender Name |
+| **`name`-Feld** | Nur Anzeige-Label — NICHT der Command-Name |
 | **Namespace via Plugin** | `pluginname:skillname` (Doppelpunkt als Trenner) |
 | **Projekt-Namespace** | `.claude/skills/team-skill/` — klar vom globalen trennen |
 | **Keine Sonderzeichen** | Nur a-z, 0-9, `-`, `_` |
@@ -367,9 +507,13 @@ Ohne die SKILL.md zu ändern lässt sich ein Skill in `settings.json` steuern:
 
 | Version / Zeitraum | Änderung |
 |--------------------|---------|
-| **v2.1.150 (aktuell)** | Stable: alle unten genannten Features |
+| **v2.1.153 (aktuell)** | Stable: alle unten genannten Features |
+| **v2.1.152** | `disallowed-tools` Frontmatter: Tools pro Skill blockieren |
+| **v2.1.152** | `/reload-skills` Command: Skill-Dirs ohne Neustart neu einlesen |
+| **v2.1.152** | `reloadSkills: true` in SessionStart-Hooks: Skills sofort nach Installation verfügbar |
+| **v2.1.150** | Vorige stabile Basis |
 | **v2.1.145** | Eingebaute Skills: `/run`, `/verify`, `/run-skill-generator` |
-| **v2.1.100+** | `paths:` Frontmatter für automatisches Laden von Hilfsdateien |
+| **v2.1.100+** | `paths:` Frontmatter für pfad-spezifische Aktivierung |
 | **v2.1.63** | `context: fork` + `agent:` stabil für Subagent-Isolation |
 | **Anfang 2026** | `hooks:` Frontmatter für skill-lokale Lifecycle-Hooks |
 | **Anfang 2026** | `shell: powershell` für Windows `` !`cmd` ``-Blöcke |
@@ -385,12 +529,13 @@ Ohne die SKILL.md zu ändern lässt sich ein Skill in `settings.json` steuern:
 |-------------|---------|--------|
 | Kein `description`-Feld | Claude wählt den Skill nie automatisch | Immer `description` setzen |
 | Zu vage Description ("hilft mit Code") | False-Positives und Missed-Triggers | Konkrete Auslöser-Phrasen |
-| Alles in SKILL.md packen | Überschreitet 5.000-Token-Limit | `paths:` für Referenzdokumente |
+| Alles in SKILL.md packen | Überschreitet 5.000-Token-Limit | Markdown-Links auf Hilfsdateien |
 | Hardcoded Skript-Pfade | Bricht bei anderem Install-Level | `${CLAUDE_SKILL_DIR}` verwenden |
 | `allowed-tools` im Agent SDK | Wird ignoriert, gibt falsches Sicherheitsgefühl | SDK-Tool-Settings nutzen |
 | `disable-model-invocation: true` für interaktive Skills | Kein LLM = keine Anpassung an Kontext | Nur für statische Kontext-Injektion |
 | Skill ohne `user-invocable: false` der intern bleiben soll | Erscheint im Benutzer-Menü | `user-invocable: false` setzen |
 | Shell-Injection ohne `shell: true` | Befehl wird als Literal angezeigt | Frontmatter-Flag setzen |
+| `disallowed-tools` setzen aber `allowed-tools` auch aktiv | Verhalten unklar (beide wirken) | Bewusst entscheiden: Allowlist ODER Denylist |
 
 ---
 
@@ -400,6 +545,7 @@ Beim Einsatz via Agent SDK (Python/TypeScript) gelten andere Regeln:
 
 - Skills werden via `settingSources` aus dem Dateisystem geladen
 - `allowed-tools` Frontmatter wird **ignoriert** (SDK-seitige Tool-Konfiguration gilt)
+- `disallowed-tools` Frontmatter: Verhalten im Agent SDK **nicht offiziell dokumentiert** (Stand 2026-05-28)
 - `context: fork` funktioniert (Subagent-Isolation)
 - `disable-model-invocation: true` funktioniert
 - Shell-Execution (`` !`cmd` ``) ist standardmäßig deaktiviert (`disableSkillShellExecution`)
@@ -410,20 +556,22 @@ Beim Einsatz via Agent SDK (Python/TypeScript) gelten andere Regeln:
 
 - [ ] `description` gesetzt, in 3. Person, konkrete Auslöser-Phrasen enthalten?
 - [ ] `when_to_use` für Grenzfälle/Abgrenzung ergänzt?
-- [ ] Skill-Inhalt unter 5.000 Tokens? (Umfangreiche Refs via `paths:`)
+- [ ] Skill-Inhalt unter 5.000 Tokens? (Umfangreiche Refs als Hilfsdateien)
 - [ ] Skript-Referenzen via `${CLAUDE_SKILL_DIR}` (nicht Hardcoded-Pfade)?
 - [ ] `user-invocable: false` wenn der Skill intern bleiben soll?
 - [ ] `context: fork` wenn der Skill den Hauptkontext isolieren soll?
 - [ ] `allowed-tools` korrekt gesetzt (und bewusst, dass im SDK ignoriert)?
+- [ ] `disallowed-tools` gesetzt wo Skill autonomes Verhalten hat? (**NEU v2.1.152**)
 - [ ] Shell-Blöcke via `shell: true` / `shell: powershell` freigegeben?
 - [ ] Naming Convention eingehalten (Kleinbuchstaben, Bindestriche)?
 - [ ] Mit `skill-creator` erstellt oder geprüft?
 
 ---
 
-> **Quellen (alle offiziell, Stand 2026-05-25):**
-> - [Skills — code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills)
-> - [Agent SDK Skills — docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code/agent-sdk/skills)
-> - [Changelog — code.claude.com/changelog](https://code.claude.com/changelog)
-> - [CLI Reference — docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code/cli-reference)
-> - Externe/unbestätigte Angaben: keine in diesem Dokument
+> **Quellen (Stand 2026-05-28):**
+> - [Skills — code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) — **offiziell**
+> - [Changelog — code.claude.com/docs/en/changelog](https://code.claude.com/docs/en/changelog) — **offiziell**
+> - [Agent SDK Skills — docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code/agent-sdk/skills) — **offiziell**
+> - [CLI Reference — docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code/cli-reference) — **offiziell**
+> - [SKILL.md Spec (agensi.io)](https://www.agensi.io/learn/skill-md-format-reference) — extern (nicht für v2.1.152-Features aktualisiert, Stand 2026-05-28)
+> - [releasebot.io Claude Code Updates May 2026](https://releasebot.io/updates/anthropic/claude-code) — extern

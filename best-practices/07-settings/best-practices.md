@@ -1,4 +1,4 @@
-# Settings & Konfiguration — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Settings & Konfiguration — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 ---
 
@@ -109,13 +109,118 @@
   - `cwd`, `version`, `output_style`
   - `model` — Objekt mit `id` und `display_name`
   - `workspace` — Objekt mit `current_dir` und `project_dir`
+  - `context_window` — Objekt mit `used_percentage` (und weiteren Feldern)
   - `cost` — Objekt mit `total_cost_usd`, `total_duration_ms`, `total_api_duration_ms`, `total_lines_added`, `total_lines_removed`
+  - `vim` — Vim-Mode-Status
+- **NEU ab v2.1.153 — COLUMNS und LINES Umgebungsvariablen:**
+  - Claude Code setzt jetzt `COLUMNS` und `LINES` als Umgebungsvariablen **bevor** dein Script ausgeführt wird.
+  - Hintergrund: Da Claude Code die Script-Ausgabe abfängt (statt das Script direkt mit dem Terminal zu verbinden), funktionieren `tput cols` und sprachebenenweite Breiten-Erkennung **nicht** von innen aus dem Script.
+  - Lösung: Stattdessen `$COLUMNS` und `$LINES` lesen — diese enthalten die aktuelle Terminal-Größe.
+  - **Auswirkung auf vorhandene Statusline-Scripts:** Wer bisher Workarounds für die fehlende Terminal-Breite hatte (z.B. hart codierte Breiten oder externe Mechanismen), kann jetzt auf `$COLUMNS` umsteigen.
+  - Beispiel:
+    ```bash
+    #!/bin/bash
+    input=$(cat)
+    PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
+    # Trennlinie genau so breit wie das Terminal
+    SEPARATOR=$(printf '─%.0s' $(seq 1 $COLUMNS))
+    echo "$SEPARATOR"
+    echo "${PCT}% context"
+    ```
 - **HINWEIS:** Der Stop-Hook empfängt `context_window` NICHT (anders als die Statusbar). Für Kontext-Prozent im Stop-Hook: Statusline schreibt pro Session in `~/.claude/state/ctx-<session_id>`, Hook liest dort nach.
 - **Refresh:** Aktualisierung bei jeder Nachrichtenänderung, maximal alle 300ms. ANSI-Farbcodes werden unterstützt.
 - **Mehrzeilig:** Mehrere Print-Zeilen ergeben mehrere Status-Zeilen (z.B. Git-Info oben, Kontext-Bar unten).
 - **Generierung per Command:** `/statusline` eintippen — Claude Code generiert den Script-Code automatisch.
+- **refreshInterval:** Optionales Feld — lässt das Script alle N Sekunden zusätzlich zu Event-getriggerten Updates neu laufen. Nützlich für Uhranzeigen oder wenn Hintergrund-Subagenten den Git-Status ändern.
+- **hideVimModeIndicator:** `true` unterdrückt den eingebauten `-- INSERT --`-Text falls dein Script `vim.mode` selbst rendert.
 - **Quelle:** https://code.claude.com/docs/en/statusline (offiziell), https://cld-docs.onlinetool.cc/en/docs/claude-code/statusline.html (extern)
-- **Stand:** 2026-05-25
+- **Stand:** 2026-05-28 (COLUMNS/LINES neu in v2.1.153)
+
+---
+
+## /model — Modell-Auswahl & Default-Verhalten (NEU ab v2.1.153)
+
+- **Was:** Das `/model`-Kommando öffnet den Modell-Picker im Terminal. **Ab v2.1.153 geändertes Verhalten:** Die Auswahl wird jetzt als **Default für neue Sessions** gespeichert — identisch zum Verhalten im IDE-Modus.
+- **Vorheriges Verhalten (bis v2.1.152):** Modell-Auswahl galt nur für die aktuelle Session.
+- **Neues Verhalten (ab v2.1.153):**
+  - `Enter` / `d` im Picker → Auswahl wird als **persistenter Default** gespeichert (neue Sessions starten mit diesem Modell).
+  - `s` im Picker → Auswahl gilt **nur für die aktuelle Session** (temporär, kein Persistent-Write).
+- **Konsequenzen für Workflows:**
+  - Wer bisher im `/model`-Picker testweise auf ein anderes Modell gewechselt hat, setzt damit jetzt dauerhaft den Default — Achtung!
+  - Für temporäre Experimente immer `s` drücken statt Enter.
+  - Für dauerhaften Wechsel weiterhin Enter oder `d` nutzen.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://github.com/anthropics/claude-code/releases (offiziell)
+- **Stand:** 2026-05-28
+
+---
+
+## keybindings.json — modelPicker-Umbenennung (MIGRATION erforderlich ab v2.1.153)
+
+- **Was:** Mit dem neuen `/model`-Verhalten (Default vs. Session-only) wurde die Keybinding-Aktion umbenannt.
+- **MIGRATION PFLICHT:** Wer `modelPicker:setAsDefault` in `~/.claude/keybindings.json` oder in `~/proggs/claude-code-setup/` angepasst hat, muss umbenennen:
+  ```json
+  // ALT (bis v2.1.152):
+  { "action": "modelPicker:setAsDefault", "key": "d" }
+
+  // NEU (ab v2.1.153):
+  { "action": "modelPicker:thisSessionOnly", "key": "s" }
+  ```
+- **Erklärung:** Die Aktion `setAsDefault` existiert nicht mehr (Default ist jetzt das normale Enter-Verhalten). Die neue Aktion `thisSessionOnly` entspricht dem alten "nur für diese Session"-Modus, jetzt auf `s` gelegt.
+- **Prüfen:** `grep -r "modelPicker:setAsDefault" ~/.claude/` — falls nichts gefunden, ist keine Migration nötig.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://code.claude.com/docs/en/keybindings (offiziell)
+- **Stand:** 2026-05-28
+
+---
+
+## fallback-model — Automatische Modell-Degradierung (NEU ab v2.1.152)
+
+- **Was:** `--fallback-model` ist ein CLI-Flag (und potenziell Settings-Key) das ein Ersatz-Modell konfiguriert, falls das primäre Modell nicht verfügbar ist.
+- **Altes Verhalten (bis v2.1.151):** Wenn das primäre Modell nicht gefunden wird, schlagen **alle** Requests in der Session fehl.
+- **Neues Verhalten (ab v2.1.152):** Claude Code wechselt automatisch für den Rest der Session auf das konfigurierte Fallback-Modell — statt jeden Request zu scheitern.
+- **Bonus (v2.1.152):** `/bg` und `←-detach` übernehmen `--fallback-model` jetzt — Background-Worker degradieren bei Überlastung ebenfalls auf das Fallback statt hart zu scheitern.
+- **Best Practice:**
+  ```bash
+  # Start mit Fallback konfiguriert:
+  claude --model claude-opus-4-5 --fallback-model claude-sonnet-4-5
+  ```
+  Oder in `.claude/settings.json` über `ANTHROPIC_MODEL` und ein geplantes `fallbackModel`-Feld (noch nicht offiziell in Settings-JSON, primär CLI-Flag).
+- **Wann sinnvoll:** Bei hoher API-Last, in CI/CD-Workflows wo Unterbrechungen kritisch sind, und bei Nacht-Jobs die ohne Aufsicht laufen.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern)
+- **Stand:** 2026-05-28
+
+---
+
+## pluginSuggestionMarketplaces — Enterprise Managed Setting (NEU ab v2.1.152)
+
+- **Was:** Neues Managed Setting `pluginSuggestionMarketplaces` für Admins. Erlaubt das Allowlisten von Organisations-Marketplaces, deren Plugins als kontextbezogene Hinweise vorgeschlagen werden dürfen.
+- **Scope:** Nur `managed`-Ebene (nicht in User- oder Project-Settings setzbar).
+- **Syntax (managed-settings.json):**
+  ```json
+  {
+    "pluginSuggestionMarketplaces": [
+      "https://marketplace.example.com/plugins"
+    ]
+  }
+  ```
+- **Zweck:** Admins können steuern, welche Plugin-Quellen in kontextbezogenen Tipps erscheinen — verhindert, dass externe oder inoffizielle Marketplaces in Empfehlungen auftauchen.
+- **Best Practice:** In Unternehmensumgebungen explizit nur geprüfte interne Marketplaces listen. Bei Nicht-Konfiguration bleibt das Verhalten wie bisher.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://managed-settings.com/ (extern)
+- **Stand:** 2026-05-28
+
+---
+
+## claude update — Release-Channel-Verhalten (Bugfix v2.1.153)
+
+- **Was:** `claude update` installiert jetzt die Version des konfigurierten Release-Channels statt immer `latest` — für npm-Installationen.
+- **Problem vorher:** Bei npm-Installationen ignorierte `claude update` den konfigurierten Release-Channel und installierte stets die neueste Version, auch wenn ein Stable- oder Beta-Channel konfiguriert war.
+- **Fix (v2.1.153):** Der konfigurierte Channel wird jetzt respektiert.
+- **Relevanz:** Betrifft nur npm-Installationen (`npm install -g @anthropic-ai/claude-code`). Standalone-Binary-Installationen waren nicht betroffen.
+- **Best Practice:** Release-Channel in Settings konfigurieren wenn Stabilität wichtiger ist als neueste Features:
+  ```json
+  { "releaseChannel": "stable" }
+  ```
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-28
 
 ---
 
@@ -201,9 +306,20 @@
 
 ---
 
-## Neue Settings in v2.1.128–v2.1.150 (Änderungsprotokoll)
+## Neue Settings in v2.1.128–v2.1.153 (Änderungsprotokoll)
 
 - **Was:** Zusammenfassung der neusten Ergänzungen seit ca. Anfang 2026:
+  - **v2.1.153 (2026-05-28):**
+    - `/model` speichert Auswahl jetzt als Default für neue Sessions (nicht mehr nur temporär)
+    - `s`-Taste im Picker für session-only Wechsel; Keybinding `modelPicker:setAsDefault` → `modelPicker:thisSessionOnly` umbenennen
+    - Statusline-Scripts erhalten `COLUMNS` und `LINES` als Umgebungsvariablen für Terminal-Breite
+    - Bugfix: `claude update` (npm) installiert jetzt konfigurierten Release-Channel statt immer latest
+  - **v2.1.152 (2026-05-27):**
+    - Fallback-Model greift jetzt sessionweit wenn primäres Modell nicht gefunden wird (statt jeden Request zu scheitern)
+    - `/bg` und Detach übernehmen `--fallback-model` für Background-Worker
+    - `pluginSuggestionMarketplaces` — Neues Managed Setting für Admin-Allowlisting von Plugin-Marketplaces
+    - `MessageDisplay` Hook Event — neue Möglichkeit, Ausgaben zu transformieren/ausblenden
+    - `SessionStart` Hook kann jetzt `sessionTitle` und `reloadSkills: true` zurückgeben
   - **v2.1.150 (2026-05-23):** Nur interne Infrastruktur, keine User-sichtbaren Änderungen
   - **v2.1.149 (2026-05-22):** `allowAllClaudeAiMcps` (Enterprise) — lädt claude.ai Cloud-MCP-Konnektoren zusammen mit managed-mcp.json. `/usage` zeigt jetzt Kostenaufschlüsselung nach Skills/Subagents/Plugins. GFM-Task-Checkboxen (`- [ ]`) werden nun gerendert.
   - **v2.1.143:** `worktree.bgIsolation` — Datei-Isolierung für Hintergrund-Agenten (`"worktree"` oder `"none"`); `NO_COLOR`/`FORCE_COLOR` müssen jetzt vor Start gesetzt werden, nicht mehr im env-Key
@@ -215,8 +331,8 @@
   ```json
   { "$schema": "https://json.schemastore.org/claude-code-settings.json" }
   ```
-- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-150/ (extern)
-- **Stand:** 2026-05-25
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ (extern), https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern)
+- **Stand:** 2026-05-28
 
 ---
 
@@ -251,11 +367,15 @@
 | https://code.claude.com/docs/en/settings | offiziell |
 | https://code.claude.com/docs/en/statusline | offiziell |
 | https://code.claude.com/docs/en/changelog | offiziell |
+| https://code.claude.com/docs/en/keybindings | offiziell |
+| https://github.com/anthropics/claude-code/releases | offiziell |
 | https://github.com/anthropics/claude-code/issues/23478 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/21858 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/17204 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/45453 | offiziell (Bug-Tracker) |
-| https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-150/ | extern |
+| https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ | extern |
+| https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ | extern |
 | https://claudefa.st/blog/guide/mechanics/rules-directory | extern |
 | https://cld-docs.onlinetool.cc/en/docs/claude-code/statusline.html | extern |
 | https://www.eesel.ai/blog/settings-json-claude-code | extern |
+| https://managed-settings.com/ | extern |

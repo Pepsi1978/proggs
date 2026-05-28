@@ -1,4 +1,4 @@
-# Neues / Horizont-Scan — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Neues / Horizont-Scan — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 > Kategorie 12: Ganz neue Claude-Code-Fähigkeiten der letzten ~6 Monate.
 > Quellen: Ausschließlich offizielle Anthropic-Dokumentation (code.claude.com/docs/en/whats-new)
@@ -6,9 +6,106 @@
 
 ---
 
+## Background Agents & `claude agents` — Reifegrad und Best Practices (Stand 2.1.153)
+
+### Was sind Background Agents?
+
+Background Agents sind vollständige Claude-Code-Sessions, die ohne angehängtes Terminal
+weiterlaufen. Öffnet man `claude agents`, sieht man alle laufenden Sessions auf einem Bildschirm
+gruppiert nach Status: *Working*, *Needs input*, *Ready for review*, *Completed*. Der Supervisor-Prozess
+läuft im Hintergrund; Sessions überleben Sleep, aber nicht Shutdown.
+
+### Reifegrad (2.1.139 → 2.1.153)
+
+- **2.1.139** (Mai 2026): Research Preview — `claude agents` + `/goal` + Background Sessions eingeführt.
+- **2.1.141–2.1.148**: Stufenweise Stabilisierung: `--cwd`-Filter, `--permission-mode`/`--model`/
+  `--effort` Flags, `worktree.bgIsolation`-Setting, Pinning, MCP-Config-Flags.
+- **2.1.152–2.1.153** (27./28. Mai 2026): Signifikante UX-Verbesserungen und Bugfixes — erster
+  Release-Cluster der auf Stabilisierung der gesamten Background-Session-Infrastruktur abzielt.
+
+### Neue Fähigkeiten in 2.1.153
+
+| Feature | Was sich ändert |
+|---------|----------------|
+| `/bg` während Response | Wenn Claude noch antwortet und man `/bg` ausführt, wird die Response in der Background-Session **fortgesetzt** statt abgebrochen |
+| `/btw` in Background Sessions | Keyboard-Shortcuts für `/btw` funktionieren jetzt auch wenn eine Background-Session aktiv einen Task ausführt |
+| `Ctrl+T` Pinning | Gepinnte Sessions bleiben im Idle bestehen, werden bei Updates neu gestartet und nur unter extremem Speicherdruck nach nicht-gepinnten Sessions gestoppt |
+| `EnterWorktree` sofort verfügbar | Kein `ToolSearch`-Aufruf als Voraussetzung mehr nötig |
+| macOS Privacy & Security | Background Agents erscheinen als "Claude Code" in Datenschutz-Einstellungen; Permission-Grants bleiben nach Upgrades erhalten |
+| PR-Spalte | Zeigt `PR #N` (einzeln) oder `N PRs` (mehrere) statt generischem Label |
+| Autocomplete Dispatch | Schlägt jetzt native Slash Commands **und** bundled Skills vor, nicht nur Project Skills |
+| Temp-File-Permissions | Background Sessions, die Temp-Files in `$CLAUDE_JOB_DIR` schreiben, triggern keine "sensitive file" Permission-Prompts mehr |
+
+### Neue Fähigkeiten in 2.1.152
+
+| Feature | Was sich ändert |
+|---------|----------------|
+| Workflow-Tool Progress | Vereinfachte Inline-Progress-Anzeige — live Agent-Counts nur noch in der persistenten Workflow-Status-Zeile unter dem Prompt |
+| Post-Response Timer | "Waiting for N background agents/workflows to finish" wenn backgrounded Agents oder Workflows noch laufen |
+
+### Wie man Background Agents heute am besten nutzt
+
+**Einstieg — drei Wege:**
+```bash
+# 1. Agent View öffnen, Prompt eintippen → Enter
+claude agents
+
+# 2. Direkt aus der Shell starten
+claude --bg "untersuche den flaky SettingsChangeDetector-Test"
+
+# 3. Laufende Session backgrounden
+/bg run the test suite and fix any failures
+```
+
+**Dispatch-Flags mitgeben (ab 2.1.142):**
+```bash
+claude agents --permission-mode bypassPermissions --model opus --effort high
+```
+
+**Best Practices (Stand 2.1.153):**
+
+- **Mehrere unabhängige Tasks parallel starten** (Bug-Fix, PR-Review, Test-Untersuchung) statt sequenziell.
+- **`Ctrl+T` für wichtige Sessions pinnen** — damit laufen sie auch nach einer Stunde Idle weiter und werden bei Auto-Updates neu gestartet statt gestoppt.
+- **`/bg` mit Nachricht** nutzen: `/bg run tests and push when green` — Claude führt den nächsten Schritt erst in der Background-Session aus.
+- **`Space` zum Peek** reicht für die meisten Check-ins; nur bei Bedarf mit `Enter`/`→` vollständig attachen.
+- **`--cwd <path>`** nutzen wenn man nur Sessions eines Projekts sehen will.
+- **Worktree-Isolation** ist Standard für git-Repos: jede Background-Session schreibt in ihr eigenes Worktree unter `.claude/worktrees/`. Deaktivieren per `worktree.bgIsolation: "none"` in `.claude/settings.json` nur wenn git-Worktrees nicht praktikabel sind.
+- **Quota beachten**: Jede Background-Session verbraucht Subscription-Quota wie eine interaktive Session.
+- **Shutdown-Recovery**: Nach Rechner-Neustart Sessions einfach attachen oder antworten — der Supervisor startet sie neu vom letzten Stand.
+
+**Was `/bg`, `/btw` und `claude agents` unterscheidet:**
+
+| Befehl | Zweck |
+|--------|-------|
+| `claude agents` | Dashboard für ALLE Background-Sessions |
+| `/bg` | Aktuelle Session in Background schieben (trägt Config-Flags mit) |
+| `--bg` Flag | Session von Anfang an als Background starten |
+| `/btw` | Schnelle Frage ohne Kontext-Einfluss (kein Tooling, sieht vollen Kontext) |
+
+- **Quelle:** [https://code.claude.com/docs/en/agent-view](https://code.claude.com/docs/en/agent-view) (offiziell), [https://code.claude.com/docs/en/changelog](https://code.claude.com/docs/en/changelog) (offiziell)
+- **Stand:** Mai 2026, ab v2.1.139 (Research Preview), signifikant reifer ab 2.1.152/153
+
+---
+
+## Workflow-Tool — Dynamische Multi-Agent-Orchestrierung (Mai 2026)
+
+- **Was:** Claude schreibt automatisch Orchestrierungs-Scripts, die Dutzende bis Hunderte paralleler
+  Subagenten in einer einzigen Session starten. Das System plant dynamisch, verteilt Teilaufgaben,
+  führt adversarische Prüf-Agents aus und liefert ein geprüftes Ergebnis. Inline-Progress wurde in
+  2.1.152 vereinfacht: Live-Agent-Counts erscheinen nur noch in der persistenten Workflow-Status-Zeile
+  unter dem Prompt. Post-Response-Timer zeigt "Waiting for N background agents/workflows to finish".
+- **Best Practice:** Für codebase-weite Aufgaben (Sicherheitsprüfungen, große Migrationen, Bug-Hunts
+  über hunderte Dateien) einsetzen. Kein manuelles Triggern nötig — Claude entscheidet selbst ob
+  ein Workflow-Ansatz sinnvoll ist. Quota-Verbrauch beachten: Workflows kosten signifikant mehr als
+  Single-Agent-Sessions. Verfügbar für Max-, Team- und Enterprise-Pläne.
+- **Quelle:** [https://claude.com/blog/introducing-dynamic-workflows-in-claude-code](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code) (offiziell)
+- **Stand:** Mai 2026 (Research Preview)
+
+---
+
 ## Auto Mode (v2.1.83, März 2026)
 
-- **Was:** Classifier-basiertes Permission-System als Mittelweg zwischen manuellem Review und `--dangerously-skip-permissions`. Sichere Aktionen laufen durch, riskante werden blockiert. Zwei Schichten: Server-seitiger Prompt-Injection-Probe (Input) + Transcript-Classifier mit Sonnet 4.6 (Output). Stage 1: schnelle Ja/Nein-Entscheidung. Stage 2: Chain-of-Thought nur für markierte Aktionen.
+- **Was:** Classifier-basiertes Permission-System als Mittelweg zwischen manuellem Review und `--dangerously-skip-permissions`. Sichere Aktionen laufen durch, riskante werden blockiert. Zwei Schichten: Server-seitiger Prompt-Injection-Probe (Input) + Transcript-Classifier mit Sonnet 4.6 (Output). Stage 1: schnelle Ja/Nein-Entscheidung. Stage 2: Chain-of-Thought nur für markierte Aktionen. Ab 2.1.152: kein Opt-in Consent mehr nötig.
 - **Best Practice:** Mit Default-Einstellungen beginnen (konservative Konfiguration). `autoMode.allow`, `soft_deny`, und `environment` anpassen. `"$defaults"` in die Listen aufnehmen, um eigene Regeln zusätzlich zu den eingebauten hinzuzufügen (nicht zu ersetzen). `autoMode.hardDeny` nutzen für absolut verbotene Aktionen unabhängig von Ausnahmen. Für Max-Abonnenten auf Opus 4.7 ist Auto Mode ohne `--enable-auto-mode`-Flag verfügbar. 0,4% False-Positive-Rate auf echtem Traffic; ~17% der unsicheren Aktionen werden nicht erkannt — kein Ersatz für eigene Urteilsfähigkeit.
 - **Quelle:** [https://www.anthropic.com/engineering/claude-code-auto-mode](https://www.anthropic.com/engineering/claude-code-auto-mode) (offiziell), [https://code.claude.com/docs/en/whats-new/2026-w13](https://code.claude.com/docs/en/whats-new/2026-w13) (offiziell)
 - **Stand:** März 2026 (Research Preview → ab April 2026 für Max ohne Flag)
@@ -116,10 +213,10 @@
 
 ## /usage — Verbrauchs-Analyse (v2.1.105–113, April 2026)
 
-- **Was:** Zeigt was die Limits antreibt: parallele Sessions, Subagents, Cache-Misses, langer Kontext — jeweils mit Prozentzahl der letzten 24h und Optimierungstipp. `d`/`w` für Tag/Woche-Ansicht. Vereinigt die alten `/cost` und `/stats` Befehle (alte Namen noch als Shortcuts verfügbar).
-- **Best Practice:** Regelmäßig prüfen wenn Limits spürbar werden. Cache-Miss-Prozentsatz beobachten — hohe Werte deuten auf suboptimalen Prompt-Aufbau hin. Parallelisierungs-Overhead gegen Zeitgewinn abwägen. Wochenansicht für Trend-Erkennung nutzen.
+- **Was:** Zeigt was die Limits antreibt: parallele Sessions, Subagents, Cache-Misses, langer Kontext — jeweils mit Prozentzahl der letzten 24h und Optimierungstipp. `d`/`w` für Tag/Woche-Ansicht. Vereinigt die alten `/cost` und `/stats` Befehle (alte Namen noch als Shortcuts verfügbar). Ab 2.1.152: per-Category Breakdown von Limits-Nutzung — Skills, Subagents, Plugins, Pro MCP-Server Cost.
+- **Best Practice:** Regelmäßig prüfen wenn Limits spürbar werden. Cache-Miss-Prozentsatz beobachten — hohe Werte deuten auf suboptimalen Prompt-Aufbau hin. Parallelisierungs-Overhead gegen Zeitgewinn abwägen. Wochenansicht für Trend-Erkennung nutzen. Category-Breakdown (neu 2.1.152) nutzen um zu sehen ob Background Agents den größten Anteil verursachen.
 - **Quelle:** [https://code.claude.com/docs/en/whats-new/2026-w16](https://code.claude.com/docs/en/whats-new/2026-w16) (offiziell)
-- **Stand:** April 2026
+- **Stand:** April 2026, per-Category Breakdown neu in 2.1.152
 
 ---
 
@@ -152,7 +249,7 @@
 
 ## Conditional Hooks & Hook-Neuerungen (Woche 13–20, 2026)
 
-- **Was:** `if`-Hooks feuern nur unter Bedingungen. `continueOnBlock` bei `PostToolUse`: Ablehnungsgrund wird Claude mitgeteilt und der Turn weitergeführt statt abzubrechen. `terminalSequence`-Feld in Hook-JSON für Desktop-Benachrichtigungen ohne Terminal. `args: string[]` exec-Form spawnt Befehle direkt ohne Shell (kein Quoting-Problem bei Pfad-Platzhaltern). `PreCompact`-Hooks können Kompaktierung via exit 2 oder `{"decision":"block"}` blockieren. Hooks können nun MCP-Tools direkt via `type: "mcp_tool"` aufrufen.
+- **Was:** `if`-Hooks feuern nur unter Bedingungen. `continueOnBlock` bei `PostToolUse`: Ablehnungsgrund wird Claude mitgeteilt und der Turn weitergeführt statt abzubrechen. `terminalSequence`-Feld in Hook-JSON für Desktop-Benachrichtigungen ohne Terminal. `args: string[]` exec-Form spawnt Befehle direkt ohne Shell (kein Quoting-Problem bei Pfad-Platzhaltern). `PreCompact`-Hooks können Kompaktierung via exit 2 oder `{"decision":"block"}` blockieren. Hooks können nun MCP-Tools direkt via `type: "mcp_tool"` aufrufen. Neu ab 2.1.152: `MessageDisplay`-Hook-Event um Assistant-Message-Text beim Anzeigen zu transformieren oder zu verstecken. `SessionStart`-Hooks können `reloadSkills: true` zurückgeben.
 - **Best Practice:** `if`-Bedingungen nutzen um Hook-Overhead zu reduzieren (nur bei relevanten Tool-Calls feuern). `continueOnBlock` für Hooks die Claude auf Alternativen hinweisen sollen statt den Turn hart abzubrechen. `type: "mcp_tool"` für Hooks die auf bereits verbundene MCP-Server zugreifen müssen — effizienter als Prozess-Spawn. `PreCompact`-Block nur einsetzen wenn wichtige In-Progress-Daten gesichert werden müssen. `args: string[]`-Form bevorzugen bei Pfaden mit Leerzeichen.
 - **Quelle:** [https://code.claude.com/docs/en/whats-new/2026-w13](https://code.claude.com/docs/en/whats-new/2026-w13) (offiziell), [https://code.claude.com/docs/en/whats-new/2026-w17](https://code.claude.com/docs/en/whats-new/2026-w17) (offiziell), [https://code.claude.com/docs/en/whats-new/2026-w20](https://code.claude.com/docs/en/whats-new/2026-w20) (offiziell)
 - **Stand:** März–Mai 2026
@@ -186,4 +283,13 @@
 
 ---
 
-*Recherchiert 2026-05-25 · 8 WebFetches aus code.claude.com/docs/en/whats-new (Wochen 13–20, 2026) + anthropic.com/engineering/claude-code-auto-mode · Alle Angaben offiziell bestätigt.*
+## Skills: disallowed-tools + /reload-skills (v2.1.152, Mai 2026)
+
+- **Was:** Skills können jetzt `disallowed-tools` in ihrem Frontmatter setzen um Tools für die Dauer des Skills zu deaktivieren (z.B. Web-Search unterdrücken). Neuer `/reload-skills`-Befehl scannt Skill-Verzeichnisse erneut ohne Neustart. `SessionStart`-Hooks können `reloadSkills: true` zurückgeben.
+- **Best Practice:** `disallowed-tools` für fokussierte Skills nutzen die keine bestimmten Tools brauchen (z.B. reine Code-Analyse-Skills die kein Web-Search benötigen). `/reload-skills` nach dem Hinzufügen neuer Skills ausführen statt die Session zu schließen.
+- **Quelle:** [https://code.claude.com/docs/en/changelog](https://code.claude.com/docs/en/changelog) (offiziell)
+- **Stand:** Mai 2026 (v2.1.152)
+
+---
+
+*Recherchiert 2026-05-28 · 4 WebFetches (code.claude.com/docs/en/changelog, agent-view, anthropic.com Engineering Blog, claude.com Blog) + 2 WebSearches · Alle Kernangaben zu 2.1.152/153 offiziell aus dem Changelog bestätigt.*

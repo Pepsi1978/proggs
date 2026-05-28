@@ -1,7 +1,7 @@
-# Arbeitsweise / Verhalten — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Arbeitsweise / Verhalten — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
 
 > Quelle: Offizielle Anthropic-Dokumentation (code.claude.com/docs/en/best-practices)  
-> Recherche-Datum: 2026-05-25
+> Recherche-Datum: 2026-05-28
 
 ---
 
@@ -259,3 +259,49 @@
   - **Direkt umsetzen:** Bei klarem, kleinem Scope.
 - **Quelle:** https://code.claude.com/docs/en/best-practices (offiziell)
 - **Stand:** 2026-05-25
+
+---
+
+## NEU (2.1.152): Auto Mode — kein Opt-in mehr erforderlich
+
+- **Was:** Auto Mode ist ein KI-gestützter Sicherheitsmodus zwischen manuellem Genehmigen und vollständigem Bypass. Ein Klassifizierer evaluiert Aktionen automatisch: er blockiert potenziell gefährliche Operationen (Scope-Eskalation, nicht vertrauenswürdige Infrastruktur, Prompt-Injection) und lässt sichere Aktionen ohne Benutzer-Prompt durch. Bis 2.1.151 war dafür ein explizites Opt-in-Consent erforderlich. Ab 2.1.152 entfällt dieser Schritt.
+- **Best Practice:**
+  - Aktivierung: `--permission-mode auto` im CLI oder Modusauswahl in VS Code / Desktop-App.
+  - Nur auf Max, Team und Enterprise verfügbar. Pro, Bedrock, Vertex und Foundry **nicht unterstützt**.
+  - Benötigt: Sonnet 4.6, Opus 4.6 oder Opus 4.7 (Haiku nicht unterstützt).
+  - Team- und Enterprise-Admins müssen Auto Mode in den Organization-Settings zuerst aktivieren.
+  - **Praktische Bedeutung:** Wer bisher Auto Mode nicht nutzte weil der Consent-Dialog störte, kann ihn jetzt friktionslos aktivieren — kein extra Schritt mehr.
+  - **Hinweis:** Der Klassifizierer läuft in zwei Phasen (schneller Filter → Chain-of-Thought bei Verdacht). Lokale Dateivorgänge und vordefinierte Erlaubnisregeln werden sofort genehmigt.
+- **Quelle:** https://claudefa.st/blog/guide/development/auto-mode (extern, Zusammenfassung aus Changelog); https://releasebot.io/updates/anthropic/claude-code (extern); offizielles Changelog verbatim: „Auto mode no longer requires opt-in consent" (v2.1.152)
+- **Unsicherheit:** Die offizielle Anthropic-Dokumentationsseite zu Auto Mode konnte nicht direkt abgerufen werden. Beschreibung basiert auf einem Community-Summary-Artikel. Als `offiziell` markiert nur das Changelog-Zitat selbst; die technischen Details sind `extern`.
+- **Stand:** 2026-05-28
+
+---
+
+## NEU (2.1.152): /code-review --fix wendet Befunde direkt an; /simplify als Alias
+
+- **Was:** `/code-review --fix` ist eine neue Flag für den `/code-review`-Befehl. Nach dem Review-Durchlauf werden die gefundenen Verbesserungsvorschläge (Wiederverwendung, Vereinfachung, Effizienz) automatisch direkt im Working Tree angewendet — kein manuelles Copy-Paste mehr. Zusätzlich wurde `/simplify` so umgebogen, dass es intern `/code-review --fix` aufruft.
+- **Best Practice:**
+  - **Standard-Review** (nur Befunde lesen): `/code-review` ohne Flag — Claude reviewt und listet Findings auf, ändert aber nichts.
+  - **Review + direkte Anwendung**: `/code-review --fix` — Claude reviewt und wendet Vereinfachungs- und Effizienz-Vorschläge sofort an.
+  - **Kurzform**: `/simplify` ist jetzt identisch mit `/code-review --fix`.
+  - **Workflow-Empfehlung:** Vor dem Einsatz von `--fix` mit git sicherstellen dass der aktuelle Stand committed ist — der Befehl ändert Dateien ohne weiteres Bestätigen.
+  - **Effort-Level kombinierbar:** `/code-review high --fix` für tiefere Analyse vor der Anwendung.
+  - **Vorherige Entwicklung:** `/simplify` hieß bis v2.1.146 so und wurde damals zu `/code-review` umbenannt (mit Effort-Levels). In v2.1.152 wurde `/simplify` als Alias für `/code-review --fix` wieder eingeführt, was die Auto-Fix-Funktionalität zurückbringt die zwischenzeitlich entfernt worden war.
+- **Quelle:** https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern); https://github.com/anthropics/claude-code/releases (offiziell); https://www.neoteric.no/blog/claude-code-s-simplify-stopped-fixing-code-yesterday/ (extern); offizielles Changelog verbatim: „/code-review --fix now applies review findings to your working tree after the review, surfacing reuse, simplification, and efficiency suggestions; /simplify now invokes /code-review --fix" (v2.1.152)
+- **Stand:** 2026-05-28
+
+---
+
+## NEU (2.1.153): /model speichert Auswahl dauerhaft als Default für neue Sessions
+
+- **Was:** Bis v2.1.152 galt eine per `/model` gewählte Modell-Auswahl nur für die aktuelle Session. Ab v2.1.153 speichert `/model` die Wahl dauerhaft in den User-Settings (`model`-Feld) und gilt damit als Default für alle neuen Sessions — konsistent mit dem Verhalten in den IDE-Integrationen (VS Code, JetBrains).
+- **Best Practice:**
+  - **Default ändern:** `/model <name>` eingeben oder `Enter` im Picker drücken → dauerhaft gespeichert.
+  - **Nur aktuelle Session wechseln:** Im Picker `s` drücken statt `Enter` → kein Schreiben in Settings.
+  - **Breaking Change für Keybindings:** Wer `modelPicker:setAsDefault` in `keybindings.json` konfiguriert hatte, muss es in `modelPicker:thisSessionOnly` umbenennen (die alte `d`-Taste wurde durch `s` ersetzt).
+  - **Resumed Sessions:** Beim Fortsetzen einer alten Session (`--resume`, `--continue`) wird das damals verwendete Modell beibehalten — das neue Default greift nicht rückwirkend.
+  - **Projekt/Managed-Settings haben Vorrang:** Wenn eine `.claude/settings.json` im Projekt ein Modell vorschreibt, überschreibt das den User-Default bei jedem Start.
+  - **Praktische Bedeutung:** Wer dauerhaft auf Opus wechseln will, muss nicht mehr jede Session mit `--model opus` starten oder die `model`-Zeile in Settings manuell editieren — `/model opus` + Enter genügt.
+- **Quelle:** https://code.claude.com/docs/en/model-config (offiziell); https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ (extern); offizielles Changelog verbatim: „/model now saves your selection as the default for new sessions (matching the IDE). Press s in the picker to switch models for the current session only." (v2.1.153)
+- **Stand:** 2026-05-28
