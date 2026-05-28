@@ -193,6 +193,22 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-24 10:32 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 98%
 ### 2026-05-24 10:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-24 11:03 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-27 19:02 — Hook: plugin-health-check.sh — Auto-repaired 7 plugin .sh files with missing +x permission in /Users/frank/.claude/plugins/cache — Status: AUTO-GEFIXT
+### [2026-05-27 23:12] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+
+### 2026-05-27 23:56 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"22439593-f2af-4db5-b42f-708e5b456ded","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/22439593-f2af-4db5-b42f-708e5b456ded.jsonl","cwd":"/Users/frank/proggs","effort":{"level":"xhigh"},"hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"API Error: Server is temporarily limiting requests (not your usage limit) · Rate limited"}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+
+### 2026-05-28 19:25 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"06a371fd-cf7a-4cb9-a5c5-b8b62130c632","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/06a371fd-cf7a-4cb9-a5c5-b8b62130c632.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"invalid_request","error_details":"400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 206086 tokens > 200000 maximum\"},\"request_id\":\"req_011CbVMgXFBnPaU4ta96yrws\"... (truncated)
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -239,9 +255,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-05-10 (aktualisiert durch /self-improve Thorough auf Windows)
+**Stand:** 2026-05-28 (Versions-Bump auf macOS, Plattform-Stand sonst von /self-improve Thorough 2026-05-10 auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.138** (war v2.1.114 im Whiteboard — 24 Versionen veraltet!), Opus 4.7 (1M context, neuer Default seit April)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.154** (macOS heute via `claude update` verifiziert, Windows-Stand 2026-05-10: v2.1.138), Opus 4.7 (1M context, neuer Default seit April)
 - **Sprachen:** Rust 1.94.0 (1 Minor hinter, CVE-2026-33055/33056), Go 1.26.2 (1 Patch hinter), Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12 (1 Patch hinter), Bun 1.3.11 (2 Patch hinter), Node.js v24.15.0 (LTS aktuell)
 - **Effort Level:** high (Standard seit 2026-04-12). Manuelle Aenderung bleibt bis Session-Ende erhalten (CLAUDE.md-Update 2026-05-08).
 - **AUTOCOMPACT:** 100 (dauerhafter Standard ab 2026-05-24; grosse Komprimierung erst bei 100%, Microcompact erledigt den Rest. Alter Wert 85 war wegen Math.min-Clamp wirkungslos)
@@ -261,8 +277,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Letzter Compound Effect:** #6 (2026-04-20) — Sechster Effect, 12 Verbesserungen in einer Session via Entscheidungsliste-Workflow.
 - **Cross-Platform:** Beide Plattformen synchron. macOS-Stand wird beim naechsten Mac-Start aufgeholt.
 - **[2026-05-10 19:30] /self-improve Thorough**: Lauf abgeschlossen — Merge-Konflikt MEMORY.md gefixt, 35 Spam-Eintraege archiviert, 3 Stop-Hook-Stale-Eintraege als GEFIXT markiert (Compound Effect #5), session-scorer.ts Dedup-Fix umgesetzt, startup-checks Cooldown gestuft (.ps1+.sh), worktree.baseRef:"fresh" eingetragen, R8-Findings (Anthropic Dreaming, Darwin Goedel Machine, ARISE, Outcomes/Grader) in Forschung.md ergaenzt.
-- **Pending Admin Updates:** Rust 1.94→1.95 (CVE!), Go 1.26.2→1.26.3, Bun 1.3.11→1.3.13, Python 3.13.12→3.13.13, Kotlin 2.3.20→2.3.21 — werden NACH Self-Improve in eigener Wartungs-Session umgesetzt (Shell-Update-Regel: niemals waehrend laufender Arbeit).
 - **[2026-05-10 19:22] evolution-analyst**: PLATEAU (8.72→8.74, +0.02): Qualitaet stabil aber Meta-Intelligence KRITISCH (10% self-improving, 40% Vorschlaege) — groesste Schwaeche ist fehlendes 7. Compound-Effect seit 3 Wochen und 6 unumgesetzte UMZUSETZEN-Forschungseintraege (SICA, MAR, TraceCoder, When-To-Verify, KGCompass, Fault-Localization) die alle >30 Tage alt sind.
+- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,ca-certificates,steipete/tap/camsnap,certifi,deno,dotnet,ffmpeg,fontconfig,fzf,gh,steipete/tap/gifgrep,giflib,git,glib,go,openclaw/tap/gogcli,golangci-lint,openclaw/tap/goplaces,gradle,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -291,6 +307,17 @@ _Noch keine Eintraege._
 
 - **[2026-04-03] Autopsy bafc0d45**: 4 Korrekturen (0.7%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
 - **[2026-04-03] Autopsy bafc0d45**: 4 Korrekturen (0.7%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-05-28] Autopsy 22439593**: 4 Korrekturen (0.7%), Hauptmuster: other (4x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
 ## Performance & Optimierung
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -614,6 +641,8 @@ _Noch keine Eintraege._
 - **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (21 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (56 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (56 Turns) zeigte keine Selbstbeobachtung
+- **[2026-05-28] intelligence-checker**: [WARNING] Session 72c35189 (33 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-05-28] self-observation-checker**: [WARNING] Session 72c35189 (33 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen
