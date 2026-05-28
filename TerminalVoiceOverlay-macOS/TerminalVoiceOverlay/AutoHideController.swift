@@ -20,6 +20,15 @@ final class AutoHideController {
     /// Processing — dann kein Auto-Collapse.
     var busyProvider: (() -> Bool)?
 
+    /// Wird gesetzt vom AppDelegate. Soll true sein solange das Prompt-Board,
+    /// die Prompt-Eingabe oder die Historie sichtbar ist — dann kein
+    /// Auto-Collapse, unabhaengig davon ob die Maus gerade ueber dem Pillar
+    /// liegt. Verhindert dass das VTO einklappt waehrend der Benutzer im
+    /// Prompt-System (inkl. Menues/Untermenues) arbeitet. Gilt fuer den
+    /// vertikalen UND den horizontalen Modus (collapseIfIdle ist
+    /// orientierungs-agnostisch).
+    var promptSurfaceVisibleProvider: (() -> Bool)?
+
     /// Wenn false: Auto-Hide-Timer wird nie gestartet (User hat Auto-Hide
     /// in den Einstellungen deaktiviert).
     var enabled: Bool = true {
@@ -72,6 +81,15 @@ final class AutoHideController {
     private func collapseIfIdle() {
         guard let panel = panel else { return }
         if busyProvider?() == true { return }
+        // Prompt-Board / Eingabe / Historie offen → NICHT einklappen, aber den
+        // Timer weiterlaufen lassen (Polling alle `idleTimeout` Sekunden),
+        // damit nach dem Schliessen des Prompt-Systems wieder normal
+        // eingeklappt wird. Ohne resetTimer() wuerde der non-repeating Timer
+        // hier auslaufen und nie wieder feuern.
+        if promptSurfaceVisibleProvider?() == true {
+            resetTimer()
+            return
+        }
         if panel.isCollapsed { return }
         panel.beamToCollapsed { [weak self] in
             // Im Collapsed-State KEIN Timer mehr — der User muss aktiv

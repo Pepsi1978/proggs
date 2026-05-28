@@ -1020,6 +1020,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// True wenn der Stern an ist und das Eingabefenster sichtbar.
     var isInputPanelVisible: Bool { inputPanelVisible }
 
+    /// True solange irgendeine Flaeche des Prompt-Systems sichtbar ist: das
+    /// Board selbst, die Prompt-Eingabe (auch im Solo-Dock, wenn das Board
+    /// orderOut'd ist) oder die Historie. Wird vom AutoHideController (via
+    /// AppDelegate.promptSurfaceVisibleProvider) genutzt, um das VTO NICHT
+    /// einzuklappen waehrend der Benutzer hier arbeitet — auch wenn die Maus
+    /// gerade nicht ueber dem Pillar liegt. Modale Untermenues (NSApp.runModal)
+    /// sind zusaetzlich schon durch den RunLoop-Modus geschuetzt, weil der
+    /// .default-Timer waehrend eines modalen Loops nicht feuert.
+    var isAnyPromptSurfaceVisible: Bool {
+        if self.isVisible { return true }
+        if inputPanelVisible { return true }
+        if let ip = inputPanel, ip.isVisible { return true }
+        if historyPanelVisible { return true }
+        if let hp = historyPanel, hp.isVisible { return true }
+        return false
+    }
+
     /// Verschiebt die GANZE Fenster-Gruppe (Promptboard, Eingabe, Historie
     /// und durch das onPanelDragged-Callback auch den Voice-Pillar) um den
     /// gleichen Versatz. Wird aus den Rechtsklick-Drags der Eingabe und

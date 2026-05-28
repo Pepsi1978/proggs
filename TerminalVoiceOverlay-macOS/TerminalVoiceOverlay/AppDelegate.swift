@@ -275,6 +275,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self else { return false }
             return self.isRecording || self.isProcessing
         }
+        // Kein Auto-Collapse solange der Benutzer im Prompt-System arbeitet
+        // (Board, Eingabe oder Historie sichtbar) — vertikal wie horizontal.
+        autoHide?.promptSurfaceVisibleProvider = { [weak self] in
+            self?.isPromptSurfaceVisible() ?? false
+        }
         // AutoHide-Enabled-State aus AppSettings laden (1:1 Windows-AutoHide).
         if let stored = try? PromptBoardStore.shared.settings() {
             autoHide?.enabled = stored.autoHide
@@ -819,6 +824,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hidePromptStack()
         }
         NSLog("PromptBoard panel %@", alwaysOnActive ? "OPEN" : "CLOSED")
+    }
+
+    /// True solange irgendein Teil des Prompt-Systems sichtbar ist (Board,
+    /// Eingabe oder Historie). Der AutoHideController nutzt das, um das VTO
+    /// NICHT einzuklappen waehrend der Benutzer im Prompt-Board / in der
+    /// Eingabe (inkl. Menues/Untermenues) arbeitet — vertikal wie horizontal.
+    private func isPromptSurfaceVisible() -> Bool {
+        guard let board = promptBoardPanel else { return false }
+        return board.isAnyPromptSurfaceVisible
     }
 
     /// Klassischer Show-Pfad: das Promtboard erscheint rechts neben dem
