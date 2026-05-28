@@ -4,12 +4,27 @@
 	"version": "0.1.0",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
-	"permissions": ["storage", "offscreen", "activeTab", "scripting"],
+	"permissions": [
+		"storage",
+		"offscreen",
+		"activeTab",
+		"scripting",
+		"declarativeNetRequestWithHostAccess"
+	],
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
 		"https://speech.platform.bing.com/*",
 		"wss://speech.platform.bing.com/*"
 	],
+	"declarative_net_request": {
+		"rule_resources": [
+			{
+				"id": "edge_ua",
+				"enabled": true,
+				"path": "rules/edge-ua.json"
+			}
+		]
+	},
 	"background": {
 		"service_worker": "background/service-worker.js",
 		"type": "module"

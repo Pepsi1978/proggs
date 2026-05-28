@@ -21,11 +21,12 @@
 // Oeffentlicher, fest in Microsoft Edge eingebauter Client-Token — KEIN Geheimnis;
 // steht so in jeder Edge-TTS-Implementierung und auch im BestJournal-Repo.
 const TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"; // gitleaks:allow
-// Browser-Kontext: Der Endpunkt akzeptiert OHNE Origin-/User-Agent-Header (die im
-// Browser nicht setzbar sind) nur diese aeltere Version. Best Journal nutzt 143,
-// aber NUR weil es als native App den Origin-Header mitschickt. Im Browser
-// funktioniert 130 (wie die erprobte travisvn/edge-tts-extension).
-const CHROMIUM_FULL_VERSION = "130.0.2849.68";
+// Der Edge-Endpunkt akzeptiert den Handshake NUR mit einem User-Agent, der "Edg/"
+// enthaelt (per Kommandozeilen-Test verifiziert: UA allein reicht, Origin/Cookie/
+// Version sind egal). Die WebSocket-API im Browser kann den User-Agent nicht setzen
+// — das erledigt eine declarativeNetRequest-Regel (rules/edge-ua.json), die ihn auf
+// Edg/143 setzt. Diese Version hier muss dazu passen (1-143...).
+const CHROMIUM_FULL_VERSION = "143.0.3650.75";
 const WIN_EPOCH = 11644473600n; // Sekunden zwischen 1601-01-01 und 1970-01-01
 
 const WSS_BASE =
