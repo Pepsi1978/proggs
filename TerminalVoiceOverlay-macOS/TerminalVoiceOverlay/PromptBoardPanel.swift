@@ -555,16 +555,20 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     func dock(rightOf vto: NSWindow) {
         // Dock to the LEFT of the VTO pillar so the panel stays on-screen
-        // when the user pins the pillar to the right edge. Match the
-        // pillar's HEIGHT exactly so the two floating windows visually
-        // line up — the user asked for a uniform vertical extent so the
-        // panel doesn't look stubby next to the bar (or vice-versa).
-        // Width stays at our own value (380) — the pillar is much
-        // narrower so we don't want to inherit that.
+        // when the user pins the pillar to the right edge.
+        // Hoehe: 3/4 der Pillar-Hoehe (Frank-Wunsch 2026-05-28 — das Board
+        // wirkte zu hoch). Oben buendig mit dem Pillar ausgerichtet, damit der
+        // obere Rand der beiden Floating-Fenster auf einer Linie liegt.
+        // Width stays at our own value — the pillar is much narrower so we
+        // don't want to inherit that.
         let pillarFrame = vto.frame
-        let newSize = NSSize(width: frame.size.width, height: pillarFrame.size.height)
-        let newOrigin = NSPoint(x: pillarFrame.origin.x - newSize.width - 4,
-                                y: pillarFrame.origin.y)
+        let boardHeight = (pillarFrame.size.height * 0.75).rounded()
+        let newSize = NSSize(width: frame.size.width, height: boardHeight)
+        // macOS-Y (unten=0): oberer Rand = pillarOrigin.y + pillarHeight.
+        // origin.y so setzen dass der OBERE Rand mit dem Pillar fluchtet.
+        let newOrigin = NSPoint(
+            x: pillarFrame.origin.x - newSize.width - 4,
+            y: pillarFrame.origin.y + pillarFrame.size.height - boardHeight)
         setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
     }
 
