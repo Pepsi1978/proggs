@@ -7,14 +7,16 @@
  *
  * Der Worker kann selbst kein Audio abspielen — dafuer erzeugt er ein
  * verstecktes Offscreen-Dokument (chrome.offscreen) und schickt ihm die
- * fertigen Audiodaten.
+ * fertigen Audiodaten (als Data-URL).
  *
- * STUFE 1: Nachrichten-Router + Offscreen-Helfer stehen. Die eigentliche
- * Synthese/Wiedergabe wird in Stufe 2 (Edge) und Stufe 3 (Google) angebunden.
+ * Datenfluss:
+ *   Overlay (SPEAK) -> Worker (Synthese) -> Offscreen (ENQUEUE/Wiedergabe)
+ *   Offscreen (STARTED/ENDED/ERROR) -> Worker -> Overlay (Status)
  */
 
 import * as edge from "../engines/edge-tts.js";
 import * as google from "../engines/google-tts.js";
+import { splitIntoChunks } from "../engines/chunker.js";
 
 const MSG = {
 	SPEAK: "TTS_SPEAK",
@@ -26,6 +28,13 @@ const MSG = {
 
 const OFFSCREEN_PATH = "offscreen/offscreen.html";
 let creatingOffscreen = null;
+
+// Generations-Zaehler: jede neue SPEAK/STOP erhoeht ihn. Ergebnisse einer
+// Synthese, deren Generation veraltet ist, werden verworfen (sauberer Abbruch
+// auch mitten im Chunking).
+let currentGen = 0;
+// Tab, an den Status-Meldungen gehen (der zuletzt ausloesende Tab).
+let activeTabId = null;
 
 function getEngine(name) {
 	return name === "google" ? google : edge;
@@ -77,10 +86,29 @@ function notifyTab(tabId, payload) {
 	}
 }
 
+// ----- Nachrichten an das Offscreen-Dokument -------------------------------
+function sendToOffscreen(payload) {
+	try {
+		chrome.runtime.sendMessage(
+			Object.assign({ target: "offscreen" }, payload),
+			() => void chrome.runtime.lastError,
+		);
+	} catch (e) {
+		/* Offscreen evtl. nicht aktiv */
+	}
+}
+
 // ----- Nachrichten-Router ---------------------------------------------------
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (!msg || typeof msg !== "object") return false;
-	if (msg.target === "offscreen") return false; // Antworten des Offscreen-Docs ignorieren
+
+	// Rueckmeldungen vom Offscreen-Dokument (Wiedergabe-Status)
+	if (msg.target === "background") {
+		handleOffscreenFeedback(msg);
+		return false;
+	}
+	// Eigene Nachrichten ans Offscreen ignorieren (werden mit-empfangen)
+	if (msg.target === "offscreen") return false;
 
 	const tabId = sender.tab ? sender.tab.id : undefined;
 
@@ -93,13 +121,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 		case MSG.SPEAK:
 		case MSG.TEST:
-			// STUFE 1: Synthese noch nicht angebunden.
-			notifyTab(tabId, {
-				type: MSG.STATE,
-				state: "error",
-				message:
-					"Vorlesen wird in Stufe 2 (Edge) bzw. Stufe 3 (Google) angebunden.",
-			});
+			handleSpeak(msg, tabId);
 			return false;
 
 		case MSG.STOP:
@@ -116,27 +138,100 @@ async function handleGetVoices(msg) {
 	return await eng.listGermanVoices(msg.apiKey);
 }
 
-function stopPlayback() {
-	// Offscreen anweisen, Wiedergabe + Queue zu leeren.
-	try {
-		chrome.runtime.sendMessage(
-			{ target: "offscreen", type: "STOP" },
-			() => void chrome.runtime.lastError,
-		);
-	} catch (e) {
-		/* Offscreen evtl. nicht aktiv */
+// ----- Vorlesen: Text -> (Chunks) -> Synthese -> Offscreen ------------------
+async function handleSpeak(msg, tabId) {
+	const gen = ++currentGen; // bricht alle vorher laufenden Synthesen ab
+	if (tabId != null) activeTabId = tabId;
+
+	const text = (msg.text || "").trim();
+	if (!text) {
+		notifyTab(tabId, {
+			type: MSG.STATE,
+			state: "error",
+			message: "Bitte zuerst Text markieren.",
+		});
+		return;
 	}
+
+	try {
+		const eng = getEngine(msg.engine);
+		await ensureOffscreen();
+		sendToOffscreen({ type: "STOP" }); // evtl. laufende Wiedergabe beenden
+
+		// Langen Text an Satzgrenzen aufteilen, damit die Dienste-Limits nicht
+		// gerissen werden und das erste Stueck schnell zu hoeren ist.
+		const chunks = splitIntoChunks(text, msg.engine === "google" ? 2500 : 1200);
+
+		let enqueuedAny = false;
+		for (const part of chunks) {
+			const bytes = await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
+			if (gen !== currentGen) return; // zwischenzeitlich gestoppt/ersetzt
+			if (bytes && bytes.length > 0) {
+				sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes) });
+				enqueuedAny = true;
+			}
+		}
+
+		if (!enqueuedAny && gen === currentGen) {
+			notifyTab(tabId, {
+				type: MSG.STATE,
+				state: "error",
+				message: "Keine Audiodaten erhalten.",
+			});
+		}
+	} catch (e) {
+		if (gen !== currentGen) return;
+		notifyTab(tabId, {
+			type: MSG.STATE,
+			state: "error",
+			message: humanError(e),
+		});
+	}
+}
+
+function stopPlayback() {
+	currentGen++; // laufende Synthese-Ergebnisse verwerfen
+	sendToOffscreen({ type: "STOP" });
+}
+
+// ----- Wiedergabe-Status vom Offscreen an das Overlay weiterreichen ---------
+function handleOffscreenFeedback(msg) {
+	switch (msg.type) {
+		case "OFFSCREEN_STARTED":
+			notifyTab(activeTabId, { type: MSG.STATE, state: "playing" });
+			break;
+		case "OFFSCREEN_ENDED":
+			notifyTab(activeTabId, { type: MSG.STATE, state: "stopped" });
+			break;
+		case "OFFSCREEN_ERROR":
+			notifyTab(activeTabId, {
+				type: MSG.STATE,
+				state: "error",
+				message: msg.message || "Audio konnte nicht abgespielt werden.",
+			});
+			break;
+	}
+}
+
+// ----- MP3-Bytes -> Data-URL (im Worker gibt es kein URL.createObjectURL) ---
+function bytesToDataUrl(bytes) {
+	let binary = "";
+	const step = 0x8000; // in Bloecken, sonst sprengt String.fromCharCode den Stack
+	for (let i = 0; i < bytes.length; i += step) {
+		binary += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+	}
+	return "data:audio/mpeg;base64," + btoa(binary);
 }
 
 // ----- Fehlertexte in verstaendliches Deutsch uebersetzen ------------------
 function humanError(e) {
 	const m = String((e && e.message) || e || "Unbekannter Fehler");
-	if (/Failed to fetch|NetworkError|net::|ERR_/.test(m))
+	if (/Failed to fetch|NetworkError|net::|ERR_|Kein Internet/.test(m))
 		return "Kein Internet erreichbar.";
 	return m;
 }
 
-// Tastaturkuerzel (Anbindung in Stufe 4)
+// Tastaturkuerzel: markierten Text vorlesen
 if (chrome.commands && chrome.commands.onCommand) {
 	chrome.commands.onCommand.addListener((command) => {
 		if (command !== "speak-selection") return;
@@ -153,5 +248,4 @@ if (chrome.commands && chrome.commands.onCommand) {
 	});
 }
 
-// Exporte fuer spaetere Stufen (ensureOffscreen wird in Stufe 2 genutzt)
 export { ensureOffscreen, notifyTab, humanError };

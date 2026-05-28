@@ -7,6 +7,7 @@
  *   - Verschieben per Ziehen + Merken der Position
  *   - Senden von Befehlen an den Service-Worker (speak / stop / Stimmen / Test)
  *   - Anzeigen des Wiedergabe-Status und von Fehlermeldungen
+ *   - Das Einstellungs-Panel (Engine-Umschalter, Edge-/Google-Reiter)
  *
  * Es finden KEINE Netzwerk-Aufrufe und KEINE Audio-Wiedergabe hier statt
  * (das wuerde an der CSP der Seite scheitern). Alles laeuft im Service-Worker
@@ -28,9 +29,14 @@
 		SPEAK_COMMAND: "SPEAK_COMMAND", // Worker -> Content: Tastaturkuerzel ausgeloest
 	};
 
+	const SAMPLE_TEXT =
+		"Dies ist ein Beispielsatz, mit dem du die gewählte Stimme und das Tempo prüfen kannst.";
+
 	let lastSelection = "";
 	let isPlaying = false;
 	let hintTimer = null;
+	// Vom Panel gesetzte Funktion, um Status-/Fehlermeldungen im Panel anzuzeigen.
+	let panelStatusHandler = null;
 
 	// ----- Selektion zuverlaessig erfassen -------------------------------------
 	// Sobald irgendwo eine nicht-leere Markierung existiert, merken wir sie uns.
@@ -53,11 +59,9 @@
 	// ----- Overlay aufbauen (Shadow DOM) ---------------------------------------
 	const host = document.createElement("div");
 	host.id = "vorlese-overlay-host";
-	// Host selbst nimmt keinen Platz/keine Klicks weg ausserhalb der Buttons.
 	host.style.cssText = "all: initial; position: static;";
 	const shadow = host.attachShadow({ mode: "open" });
 
-	// CSS aus der Datei laden und in den Shadow Root injizieren.
 	const styleEl = document.createElement("style");
 	shadow.appendChild(styleEl);
 	fetch(chrome.runtime.getURL("content/overlay.css"))
@@ -77,7 +81,6 @@
 	const ICON_GEAR =
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7 7 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.27 8.3a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7 7 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
 
-	// Container mit den beiden Buttons + Hinweis-Bubble
 	const container = document.createElement("div");
 	container.className = "vo-container";
 	container.innerHTML =
@@ -94,7 +97,6 @@
 	const gearBtn = container.querySelector(".vo-gear");
 	const hintEl = container.querySelector(".vo-hint");
 
-	// Panel (Einstellungen) — Aufbau in settings-panel-Funktion (Stufen 2/3)
 	const panel = document.createElement("div");
 	panel.className = "vo-panel";
 	shadow.appendChild(panel);
@@ -108,7 +110,7 @@
 		hintEl.classList.toggle("vo-error", !!isError);
 		hintEl.classList.add("vo-show");
 		if (hintTimer) clearTimeout(hintTimer);
-		hintTimer = setTimeout(() => hintEl.classList.remove("vo-show"), 2600);
+		hintTimer = setTimeout(() => hintEl.classList.remove("vo-show"), 2800);
 	}
 
 	// ----- Wiedergabe-Status am Lautsprecher ----------------------------------
@@ -151,8 +153,6 @@
 	});
 
 	window.addEventListener("resize", () => {
-		// Falls per left/top positioniert: erneut clampen, damit das Overlay
-		// nach Fenstergroessen-Aenderung sichtbar bleibt.
 		if (container.style.left && container.style.left !== "auto") {
 			const left = parseFloat(container.style.left);
 			const top = parseFloat(container.style.top);
@@ -207,7 +207,6 @@
 		drag = null;
 
 		if (wasDrag) {
-			// Position merken
 			const rect = container.getBoundingClientRect();
 			window.VOSettings.setPosition(rect.left, rect.top);
 		} else if (pressed === speakerBtn) {
@@ -233,6 +232,13 @@
 		const settings = await window.VOSettings.load();
 		const engine = settings.activeEngine;
 		const cfg = settings[engine];
+		if (engine === "google" && !(settings.google.apiKey || "").trim()) {
+			showHint(
+				"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
+				true,
+			);
+			return;
+		}
 		setState("loading");
 		sendMessage({
 			type: MSG.SPEAK,
@@ -247,13 +253,33 @@
 	// ----- Kommunikation mit dem Service-Worker --------------------------------
 	function sendMessage(msg) {
 		try {
-			chrome.runtime.sendMessage(msg, () => {
-				// lastError abfragen, damit Chrome keine Warnung wirft
-				void chrome.runtime.lastError;
-			});
+			chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError);
 		} catch (e) {
 			showHint("Erweiterung nicht erreichbar — Seite neu laden.", true);
 		}
+	}
+
+	// Stimmenliste vom Worker holen (Antwort: { voices } oder { error }).
+	function requestVoices(engine, apiKey) {
+		return new Promise((resolve) => {
+			try {
+				chrome.runtime.sendMessage(
+					{ type: MSG.GET_VOICES, engine, apiKey },
+					(res) => {
+						if (chrome.runtime.lastError || !res) {
+							resolve({
+								voices: [],
+								error: "Stimmen konnten nicht geladen werden.",
+							});
+							return;
+						}
+						resolve(res);
+					},
+				);
+			} catch (e) {
+				resolve({ voices: [], error: "Erweiterung nicht erreichbar." });
+			}
+		});
 	}
 
 	// Status-/Befehls-Nachrichten vom Worker empfangen
@@ -266,15 +292,13 @@
 			} else {
 				setState(msg.state);
 			}
+			if (panelStatusHandler) panelStatusHandler(msg.state, msg.message);
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
 			onSpeakerClick();
 		}
 	});
 
 	// ----- Einstellungs-Panel --------------------------------------------------
-	// Der vollstaendige Aufbau (Engine-Umschalter, Edge-/Google-Reiter) wird in
-	// buildPanel() erstellt. Stufe 1 liefert das Grundgeruest; Stufen 2/3
-	// verdrahten Stimmen-Listen und Test-Buttons.
 	function togglePanel() {
 		if (!panelBuilt) {
 			buildPanel();
@@ -288,7 +312,6 @@
 		const c = container.getBoundingClientRect();
 		const pw = panel.offsetWidth || 340;
 		const ph = panel.offsetHeight || 300;
-		// bevorzugt links neben dem Overlay, sonst rechts
 		let left = c.left - pw - 12;
 		if (left < 8) left = Math.min(window.innerWidth - pw - 8, c.right + 12);
 		let top = c.top;
@@ -299,19 +322,248 @@
 	}
 
 	function buildPanel() {
-		// In Stufe 1 nur ein Platzhalter — wird in Stufe 2/3 ersetzt.
 		panel.innerHTML =
 			'<div class="vo-panel-head">' +
-			'<h2 class="vo-panel-title">Einstellungen</h2>' +
-			'<button class="vo-close" type="button" title="Schliessen">&times;</button>' +
+			'<h2 class="vo-panel-title">Vorlesen — Einstellungen</h2>' +
+			'<button class="vo-close" type="button" title="Schließen">&times;</button>' +
 			"</div>" +
 			'<div class="vo-panel-body">' +
-			'<p class="vo-help">Die Einstellungen (Engine-Wahl, Stimmen, Tempo, API-Key) ' +
-			"werden in den naechsten Stufen aktiviert.</p>" +
+			// Aktive Engine
+			'<div class="vo-section">' +
+			'<span class="vo-label">Aktive Stimme (nutzt der Lautsprecher)</span>' +
+			'<div class="vo-engine-switch">' +
+			'<div class="vo-engine-opt" data-engine="edge">Edge TTS</div>' +
+			'<div class="vo-engine-opt" data-engine="google">Google Chirp 3 HD</div>' +
+			"</div></div>" +
+			// Reiter
+			'<div class="vo-tabs">' +
+			'<button class="vo-tab" type="button" data-tab="edge">Edge TTS</button>' +
+			'<button class="vo-tab" type="button" data-tab="google">Google Chirp 3 HD</button>' +
+			"</div>" +
+			// Edge-Seite
+			'<div class="vo-tabpage" data-page="edge">' +
+			'<div class="vo-section"><span class="vo-label">Stimme</span>' +
+			'<select class="vo-select" data-role="edge-voice"></select></div>' +
+			'<div class="vo-section"><span class="vo-label">Vorlese-Tempo</span>' +
+			'<div class="vo-row"><input class="vo-range" type="range" min="0.5" max="2" step="0.1" data-role="edge-rate">' +
+			'<span class="vo-range-val" data-role="edge-rate-val"></span></div></div>' +
+			'<button class="vo-test" type="button" data-role="edge-test">Test — Beispielsatz vorlesen</button>' +
+			'<div class="vo-status" data-role="edge-status"></div>' +
+			"</div>" +
+			// Google-Seite
+			'<div class="vo-tabpage" data-page="google">' +
+			'<div class="vo-section"><span class="vo-label">Google-Cloud-API-Key</span>' +
+			'<input class="vo-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…" data-role="google-key">' +
+			'<p class="vo-help">Eigener Google-Cloud-Key mit aktivierter Text-to-Speech-API. ' +
+			"Der Gemini-Key funktioniert hier <b>nicht</b>.</p></div>" +
+			'<div class="vo-section"><span class="vo-label">Stimme</span>' +
+			'<select class="vo-select" data-role="google-voice" disabled></select></div>' +
+			'<div class="vo-section"><span class="vo-label">Vorlese-Tempo</span>' +
+			'<div class="vo-row"><input class="vo-range" type="range" min="0.5" max="2" step="0.1" data-role="google-rate">' +
+			'<span class="vo-range-val" data-role="google-rate-val"></span></div></div>' +
+			'<button class="vo-test" type="button" data-role="google-test">Test — Beispielsatz vorlesen</button>' +
+			'<div class="vo-status" data-role="google-status"></div>' +
+			"</div>" +
 			"</div>";
+
+		const $ = (role) => panel.querySelector('[data-role="' + role + '"]');
 		panel
 			.querySelector(".vo-close")
 			.addEventListener("click", () => panel.classList.remove("vo-open"));
+
+		const engineOpts = panel.querySelectorAll(".vo-engine-opt");
+		const tabs = panel.querySelectorAll(".vo-tab");
+		const pages = panel.querySelectorAll(".vo-tabpage");
+
+		let current = null; // aktuelle Einstellungen im Speicher
+
+		function showTab(name) {
+			tabs.forEach((t) =>
+				t.classList.toggle("vo-active", t.dataset.tab === name),
+			);
+			pages.forEach((p) =>
+				p.classList.toggle("vo-active", p.dataset.page === name),
+			);
+		}
+		function markEngine(name) {
+			engineOpts.forEach((o) =>
+				o.classList.toggle("vo-active", o.dataset.engine === name),
+			);
+		}
+		async function persist() {
+			current = await window.VOSettings.save(current);
+		}
+		function setRateUI(roleRange, roleVal, value) {
+			$(roleRange).value = String(value);
+			$(roleVal).textContent = Number(value).toFixed(1) + "×";
+		}
+		function showStatus(role, message, kind) {
+			const el = $(role);
+			el.textContent = message || "";
+			el.classList.toggle("vo-ok", kind === "ok");
+			el.classList.toggle("vo-err", kind === "err");
+		}
+		function fillVoiceSelect(sel, voices, selectedId) {
+			sel.innerHTML = "";
+			for (const v of voices) {
+				const opt = document.createElement("option");
+				opt.value = v.id;
+				opt.textContent = v.label;
+				if (v.id === selectedId) opt.selected = true;
+				sel.appendChild(opt);
+			}
+		}
+
+		async function loadEdgeVoices() {
+			const sel = $("edge-voice");
+			sel.innerHTML = "<option>Lädt…</option>";
+			sel.disabled = true;
+			const res = await requestVoices("edge");
+			const voices = (res && res.voices) || [];
+			if (!voices.length) {
+				sel.innerHTML = "<option>Keine Stimmen gefunden</option>";
+				return;
+			}
+			fillVoiceSelect(sel, voices, current.edge.voice);
+			sel.disabled = false;
+			if (!voices.some((v) => v.id === current.edge.voice)) {
+				current.edge.voice = sel.value;
+				await persist();
+			}
+		}
+
+		async function loadGoogleVoices() {
+			const sel = $("google-voice");
+			const key = (current.google.apiKey || "").trim();
+			if (!key) {
+				sel.innerHTML = "<option>Erst API-Key eintragen</option>";
+				sel.disabled = true;
+				return;
+			}
+			sel.innerHTML = "<option>Lädt…</option>";
+			sel.disabled = true;
+			const res = await requestVoices("google", key);
+			if (res && res.error) {
+				sel.innerHTML = "<option>Stimmen nicht ladbar</option>";
+				showStatus("google-status", res.error, "err");
+				return;
+			}
+			const voices = (res && res.voices) || [];
+			if (!voices.length) {
+				sel.innerHTML = "<option>Keine Chirp-3-HD-Stimmen</option>";
+				return;
+			}
+			fillVoiceSelect(sel, voices, current.google.voice);
+			sel.disabled = false;
+			showStatus("google-status", "", "");
+			if (!voices.some((v) => v.id === current.google.voice)) {
+				current.google.voice = sel.value;
+				await persist();
+			}
+		}
+
+		// ----- Verdrahtung -----
+		engineOpts.forEach((o) =>
+			o.addEventListener("click", async () => {
+				current.activeEngine = o.dataset.engine;
+				markEngine(current.activeEngine);
+				showTab(current.activeEngine);
+				await persist();
+			}),
+		);
+		tabs.forEach((t) =>
+			t.addEventListener("click", () => showTab(t.dataset.tab)),
+		);
+
+		$("edge-voice").addEventListener("change", async (e) => {
+			current.edge.voice = e.target.value;
+			await persist();
+		});
+		$("edge-rate").addEventListener("input", (e) => {
+			$("edge-rate-val").textContent = Number(e.target.value).toFixed(1) + "×";
+		});
+		$("edge-rate").addEventListener("change", async (e) => {
+			current.edge.rate = window.VOSettings.clampRate(e.target.value);
+			await persist();
+		});
+		$("edge-test").addEventListener("click", () => {
+			showStatus("edge-status", "Wird vorgelesen…", "");
+			sendMessage({
+				type: MSG.TEST,
+				engine: "edge",
+				text: SAMPLE_TEXT,
+				voice: $("edge-voice").value,
+				rate: window.VOSettings.clampRate($("edge-rate").value),
+			});
+		});
+
+		$("google-key").addEventListener("change", async (e) => {
+			current.google.apiKey = e.target.value.trim();
+			await persist();
+			await loadGoogleVoices();
+		});
+		$("google-voice").addEventListener("change", async (e) => {
+			current.google.voice = e.target.value;
+			await persist();
+		});
+		$("google-rate").addEventListener("input", (e) => {
+			$("google-rate-val").textContent =
+				Number(e.target.value).toFixed(1) + "×";
+		});
+		$("google-rate").addEventListener("change", async (e) => {
+			current.google.rate = window.VOSettings.clampRate(e.target.value);
+			await persist();
+		});
+		$("google-test").addEventListener("click", () => {
+			const key = (current.google.apiKey || "").trim();
+			if (!key) {
+				showStatus(
+					"google-status",
+					"Bitte zuerst den API-Key eintragen.",
+					"err",
+				);
+				return;
+			}
+			showStatus("google-status", "Wird vorgelesen…", "");
+			sendMessage({
+				type: MSG.TEST,
+				engine: "google",
+				text: "Test.",
+				voice: $("google-voice").value,
+				rate: window.VOSettings.clampRate($("google-rate").value),
+				apiKey: key,
+			});
+		});
+
+		// Status/Fehler aus der Wiedergabe auch im Panel zeigen.
+		panelStatusHandler = (state, message) => {
+			const page = panel.querySelector(".vo-tabpage.vo-active");
+			if (!page) return;
+			const el = page.querySelector(".vo-status");
+			if (!el) return;
+			if (state === "playing") {
+				el.textContent = "Spielt…";
+				el.className = "vo-status vo-ok";
+			} else if (state === "stopped") {
+				el.textContent = "";
+				el.className = "vo-status";
+			} else if (state === "error") {
+				el.textContent = message || "Es ist ein Fehler aufgetreten.";
+				el.className = "vo-status vo-err";
+			}
+		};
+
+		// ----- Initialisieren -----
+		(async () => {
+			current = await window.VOSettings.load();
+			markEngine(current.activeEngine);
+			showTab(current.activeEngine);
+			setRateUI("edge-rate", "edge-rate-val", current.edge.rate);
+			setRateUI("google-rate", "google-rate-val", current.google.rate);
+			$("google-key").value = current.google.apiKey || "";
+			await loadEdgeVoices();
+			await loadGoogleVoices();
+		})();
 	}
 
 	// Panel schliessen, wenn ausserhalb geklickt wird
