@@ -372,14 +372,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // clicks-fall-through-to-terminal symptom.
                 self.panel.level = .floating
                 if self.alwaysOnActive, let p = self.promptBoardPanel {
-                    p.dock(rightOf: self.panel)
-                    p.level = .floating
-                    p.orderFrontRegardless()
-                    // Floating Eingabe/Historie auch zurueckholen — der
-                    // Benutzer hatte sie evtl. offen als das Terminal die
-                    // Aktivitaet verlor. So sind die Panels nie ueber
-                    // Chrome o.ae. zu sehen, sondern nur ueber dem Terminal.
-                    p.showTransientChildrenIfNeeded()
+                    if self.inputSoloDock {
+                        // Solo-Dock: nur die Eingabe haengt am Pillar, das
+                        // Board ist bewusst unsichtbar. Bei Rueckkehr ins
+                        // Terminal NUR die Eingabe zurueckholen — das Board
+                        // NICHT sichtbar machen, sonst taucht es ungewollt auf
+                        // (Regression-Fix #1170). Das Board selbst bleibt
+                        // orderOut'd.
+                        if let input = p.currentInputPanel {
+                            input.dockToOverlay(self.panel)
+                            input.orderFrontRegardless()
+                        }
+                    } else {
+                        p.dock(rightOf: self.panel)
+                        p.level = .floating
+                        p.orderFrontRegardless()
+                        // Floating Eingabe/Historie auch zurueckholen — der
+                        // Benutzer hatte sie evtl. offen als das Terminal die
+                        // Aktivitaet verlor. So sind die Panels nie ueber
+                        // Chrome o.ae. zu sehen, sondern nur ueber dem Terminal.
+                        p.showTransientChildrenIfNeeded()
+                    }
                 }
             }
         }
@@ -860,6 +873,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showPromptInputDockedToOverlay() {
         ensurePromptBoardInstance()
         guard let board = promptBoardPanel else { return }
+        // Board im Solo-Dock-Modus garantiert unsichtbar halten UND ihm eine
+        // valide Position relativ zum Pillar geben, BEVOR openInputPanel-
+        // Externally() das Eingabefeld intern via dock(leftOf:board)
+        // positioniert. Sonst stuende das Board noch bei (0,0) und die Eingabe
+        // wuerde kurz in der Bildschirmecke aufflackern (Fix #1170).
+        board.orderOut(nil)
+        board.dock(rightOf: self.panel)
         // Daten frisch laden, damit beim Einblenden des Boards via
         // Solo-Dock-Stern keine leere Liste zu sehen ist.
         board.refresh()
@@ -885,6 +905,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func hidePromptStack() {
         promptBoardPanel?.closeInputPanelExternally()
         promptBoardPanel?.orderOut(nil)
+        // Solo-Dock-Zustand zuruecksetzen, damit er nach dem Schliessen immer
+        // konsistent ist (Fix #1170).
+        inputSoloDock = false
     }
 
     /// Solo-Dock-Stern wurde geklickt. Wird sowohl vom Stern in der
