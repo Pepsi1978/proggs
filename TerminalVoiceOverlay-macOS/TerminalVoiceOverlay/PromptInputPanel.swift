@@ -425,7 +425,9 @@ final class PromptInputPanel: NSPanel {
             // selbst ist nur ~92px hoch.
             let h = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
             frame.size.height = h
-            frame.origin.x = pillar.frame.origin.x
+            // Rechtsbuendig: rechte Eingabe-Kante fluchtet mit der rechten
+            // VTO-Aussenkante (Frank-Wunsch 2026-05-28).
+            frame.origin.x = pillar.frame.origin.x + pillar.frame.width - frame.size.width
             frame.origin.y = pillar.frame.origin.y + pillar.frame.height + 4
         } else {
             // Vertikaler Modus: Eingabe dockt LINKS an, oben buendig.

@@ -564,8 +564,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             // viel zu klein.
             let boardHeight = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
             let newSize = NSSize(width: frame.size.width, height: boardHeight)
+            // Rechtsbuendig: rechte Board-Kante fluchtet mit der rechten
+            // VTO-Aussenkante (Frank-Wunsch 2026-05-28).
             var newOrigin = NSPoint(
-                x: pillarFrame.origin.x,
+                x: pillarFrame.origin.x + pillarFrame.size.width - newSize.width,
                 y: pillarFrame.origin.y + pillarFrame.size.height + 4)
             // Off-Screen-Schutz: nicht ueber den sichtbaren Bereich hinaus.
             if let vf = NSScreen.main?.visibleFrame {
