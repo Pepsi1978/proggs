@@ -246,15 +246,41 @@ final class GoogleDriveBackupService {
         ]
         req.httpBody = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
             .joined(separator: "&").data(using: .utf8)
-        URLSession.shared.dataTask(with: req) { data, _, err in
+        URLSession.shared.dataTask(with: req) { data, response, err in
             if let err = err { completion(.failure(err)); return }
-            guard let data = data,
-                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let access = dict["access_token"] as? String else {
-                completion(.failure(self.errorString("No access_token")))
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let bodyText = data.flatMap { String(data: $0, encoding: .utf8) } ?? "<no body>"
+            let dict = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+
+            if let access = dict["access_token"] as? String {
+                completion(.success(access))
                 return
             }
-            completion(.success(access))
+
+            // Kein access_token im Response — echte Ursache aus Google's Antwort extrahieren.
+            let googleError = (dict["error"] as? String) ?? "unknown"
+            let googleErrorDesc = (dict["error_description"] as? String) ?? ""
+            NSLog("[GoogleDriveBackup] Token-Refresh fehlgeschlagen: status=\(status) error=\(googleError) desc=\(googleErrorDesc) body=\(bodyText.prefix(500))")
+
+            // invalid_grant: Refresh-Token ist revoked/abgelaufen — Settings
+            // automatisch zuruecksetzen, damit der naechste Verbindungsversuch
+            // sauber durchlaeuft und der User klare Anweisung bekommt.
+            if googleError == "invalid_grant" {
+                if var settings = try? PromptBoardStore.shared.settings() {
+                    settings.googleOAuthRefreshToken = nil
+                    settings.googleAccountEmail = nil
+                    try? PromptBoardStore.shared.updateSettings(settings)
+                }
+                completion(.failure(self.errorString(
+                    "Google-Konto-Verbindung ist abgelaufen oder wurde widerrufen. " +
+                    "Bitte in den Einstellungen → Google Drive neu verbinden.")))
+                return
+            }
+
+            let userMessage = googleErrorDesc.isEmpty
+                ? "Google-Token-Refresh fehlgeschlagen (\(googleError), HTTP \(status))."
+                : "Google-Token-Refresh fehlgeschlagen: \(googleErrorDesc) (\(googleError))."
+            completion(.failure(self.errorString(userMessage)))
         }.resume()
     }
 
