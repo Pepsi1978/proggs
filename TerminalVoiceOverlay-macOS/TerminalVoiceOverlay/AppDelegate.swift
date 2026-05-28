@@ -1388,12 +1388,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// SaveButton-Click: aktuelle Position fuer die aktuelle Orientation
-    /// persistent merken (Disketten-Symbol). Wenn persistOverlayPosition=true
-    /// in AppSettings, wird zusaetzlich in der DB persistiert (ueber Neustart
-    /// hinweg). Sonst nur UserDefaults (Session-Persistierung).
+    /// SaveButton-Click: toggelt die gespeicherte Position fuer die aktuelle
+    /// Orientation.
+    /// - Diskette weiss (keine Position gespeichert): aktuelle Position
+    ///   speichern, Diskette wird gruen.
+    /// - Diskette gruen (Position gespeichert): Position loeschen, Overlay
+    ///   glide-t zurueck zur Standard-Position (canonicalHorizontalOrigin
+    ///   bzw. canonicalVerticalOrigin), Diskette wird wieder weiss.
+    /// Vertikal und horizontal werden getrennt verwaltet.
     private func savePositionForCurrentOrientation() {
         guard let panel = self.panel else { return }
+
+        let alreadySaved: Bool
+        switch panel.currentOrientation {
+        case .vertical:   alreadySaved = (panel.savedVerticalPosition   != nil)
+        case .horizontal: alreadySaved = (panel.savedHorizontalPosition != nil)
+        }
+
+        if alreadySaved {
+            clearSavedPositionAndReturnToCanonical()
+            return
+        }
+
         let origin = panel.frame.origin
         switch panel.currentOrientation {
         case .vertical:
@@ -1413,6 +1429,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .horizontal:
                 settings.overlayHorizontalLeft = Double(origin.x)
                 settings.overlayHorizontalTop  = Double(origin.y)
+            }
+            try? PromptBoardStore.shared.updateSettings(settings)
+        }
+    }
+
+    /// Loescht die gespeicherte Position fuer die aktive Orientation und
+    /// glide-t das Overlay zurueck zur kanonischen Standard-Position.
+    /// Wird vom Disketten-Toggle-Off und kann auch von anderen Stellen
+    /// genutzt werden (Reset-Hotkeys o.ae.).
+    private func clearSavedPositionAndReturnToCanonical() {
+        guard let panel = self.panel else { return }
+        let canonical: NSPoint
+        switch panel.currentOrientation {
+        case .vertical:
+            panel.savedVerticalPosition = nil
+            let panelHeight: CGFloat = 612
+            canonical = panel.canonicalVerticalOrigin(panelHeight: panelHeight)
+            tvoDebug("[App] cleared vertical position, gliding to canonical: \(canonical)")
+        case .horizontal:
+            panel.savedHorizontalPosition = nil
+            canonical = panel.canonicalHorizontalOrigin(panelWidth: panel.frame.width)
+            tvoDebug("[App] cleared horizontal position, gliding to canonical: \(canonical)")
+        }
+        panel.glideWindow(to: canonical, completion: nil)
+
+        // Wenn PersistOverlayPosition aktiv: gespeicherte Werte auch
+        // aus DB-Settings entfernen (auf 0/0 zuruecksetzen, damit ein
+        // App-Neustart wieder zur kanonischen Position startet).
+        if var settings = try? PromptBoardStore.shared.settings(),
+           settings.persistOverlayPosition {
+            switch panel.currentOrientation {
+            case .vertical:
+                settings.overlayVerticalLeft = 0
+                settings.overlayVerticalTop  = 0
+            case .horizontal:
+                settings.overlayHorizontalLeft = 0
+                settings.overlayHorizontalTop  = 0
             }
             try? PromptBoardStore.shared.updateSettings(settings)
         }
