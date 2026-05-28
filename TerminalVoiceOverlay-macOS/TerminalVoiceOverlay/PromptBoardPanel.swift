@@ -562,24 +562,24 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             // linksbuendig mit der Leiste (Frank-Wunsch 2026-05-28). Hoehe =
             // 3/4 der vertikalen Saeulenhoehe — die Leistenhoehe selbst waere
             // viel zu klein.
-            let boardHeight = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
-            let newSize = NSSize(width: frame.size.width, height: boardHeight)
-            // Rechtsbuendig: rechte Board-Kante fluchtet mit der rechten
-            // VTO-Aussenkante (Frank-Wunsch 2026-05-28).
-            var newOrigin = NSPoint(
-                x: pillarFrame.origin.x + pillarFrame.size.width - newSize.width,
-                y: pillarFrame.origin.y + pillarFrame.size.height + 4)
-            // Off-Screen-Schutz: nicht ueber den sichtbaren Bereich hinaus.
-            if let vf = NSScreen.main?.visibleFrame {
-                if newOrigin.y + newSize.height > vf.maxY {
-                    newOrigin.y = vf.maxY - newSize.height
-                }
-                if newOrigin.x + newSize.width > vf.maxX {
-                    newOrigin.x = vf.maxX - newSize.width
-                }
-                if newOrigin.x < vf.minX { newOrigin.x = vf.minX }
+            // UNTERKANTE fix BUENDIG an der VTO-Oberkante (4px Anschluss). Die
+            // Unterkante bleibt fix — passt die 3/4-Hoehe oben nicht in den
+            // sichtbaren Bereich, wird die HOEHE gekuerzt statt das Fenster nach
+            // unten zu verschieben (Letzteres machte das Board "zu tief", weil
+            // promptScroll min 300 das Board hoeher zwingt als 3/4). Frank-
+            // Wunsch 2026-05-28. Rechtsbuendig zur VTO-Aussenkante.
+            let bottomY = pillarFrame.origin.y + pillarFrame.size.height + 4
+            var boardHeight = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
+            if let vf = NSScreen.main?.visibleFrame, bottomY + boardHeight > vf.maxY {
+                boardHeight = vf.maxY - bottomY
             }
-            setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+            let newSize = NSSize(width: frame.size.width, height: boardHeight)
+            var newX = pillarFrame.origin.x + pillarFrame.size.width - newSize.width
+            if let vf = NSScreen.main?.visibleFrame {
+                if newX + newSize.width > vf.maxX { newX = vf.maxX - newSize.width }
+                if newX < vf.minX { newX = vf.minX }
+            }
+            setFrame(NSRect(origin: NSPoint(x: newX, y: bottomY), size: newSize), display: true)
         } else {
             // Vertikaler Modus: Board dockt LINKS an den Pillar.
             // Hoehe: 3/4 der Pillar-Hoehe (Frank-Wunsch 2026-05-28 — das Board

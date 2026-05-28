@@ -423,12 +423,18 @@ final class PromptInputPanel: NSPanel {
             // VTO-Oberkante), linksbuendig mit der Leiste (Frank-Wunsch
             // 2026-05-28). Hoehe = 3/4 der vertikalen Saeulenhoehe — die Leiste
             // selbst ist nur ~92px hoch.
-            let h = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
+            // UNTERKANTE fix BUENDIG an der VTO-Oberkante (4px Anschluss). Hoehe
+            // kuerzen statt verschieben, falls oben kein Platz ist — sonst wuerde
+            // clampToScreen das Fenster nach unten druecken ("zu tief").
+            // Frank-Wunsch 2026-05-28. Rechtsbuendig zur VTO-Aussenkante.
+            let bottomY = pillar.frame.origin.y + pillar.frame.height + 4
+            var h = (OverlayPanel.verticalPanelHeight * 0.75).rounded()
+            if let vf = NSScreen.main?.visibleFrame, bottomY + h > vf.maxY {
+                h = vf.maxY - bottomY
+            }
             frame.size.height = h
-            // Rechtsbuendig: rechte Eingabe-Kante fluchtet mit der rechten
-            // VTO-Aussenkante (Frank-Wunsch 2026-05-28).
+            frame.origin.y = bottomY
             frame.origin.x = pillar.frame.origin.x + pillar.frame.width - frame.size.width
-            frame.origin.y = pillar.frame.origin.y + pillar.frame.height + 4
         } else {
             // Vertikaler Modus: Eingabe dockt LINKS an, oben buendig.
             // Hoehe: 3/4 der Pillar-Hoehe (#1174).
