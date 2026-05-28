@@ -1141,13 +1141,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if remoteDate > localDate.addingTimeInterval(2) {
                     DispatchQueue.main.async {
                         do {
-                            try PromptBoardPanel.applyBackupJson(json)
-                            UserDefaults.standard.set(remoteDate, forKey: "pbLastBackupDate")
-                            tvoDebug("[App] launch-restore applied remote backup from \(remoteDate)")
-                            // If the PromptBoard panel has already been created
-                            // (lazy — only after ★ click), refresh it so the
-                            // new data is visible immediately.
-                            self?.promptBoardPanel?.refresh()
+                            let result = try PromptBoardPanel.applyBackupJson(json)
+                            tvoDebug("[App] launch-restore applied remote backup from \(remoteDate): \(result.newPrompts) neue Prompts, \(result.newCategories) neue Kategorien")
+                            // PromptBoard ueber den Auto-Sync informieren —
+                            // setzt Timestamp + "+N neu"-Badge im Header.
+                            // Wenn das Panel noch nicht existiert (lazy nach
+                            // Stern-Klick), bleiben die Werte in UserDefaults
+                            // und werden beim ersten Anzeigen sichtbar.
+                            if let panel = self?.promptBoardPanel {
+                                panel.recordLaunchAutoSync(date: remoteDate, newItems: result.total)
+                                panel.refresh()
+                            } else {
+                                UserDefaults.standard.set(remoteDate, forKey: "pbLastBackupDate")
+                                UserDefaults.standard.set(result.total, forKey: PromptBoardPanel.lastSyncNewItemsKey)
+                            }
                         } catch {
                             tvoDebug("[App] launch-restore apply failed: \(error.localizedDescription)")
                         }

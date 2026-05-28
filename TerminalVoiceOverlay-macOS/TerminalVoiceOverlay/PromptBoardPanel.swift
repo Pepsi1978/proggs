@@ -1,5 +1,15 @@
 import AppKit
 
+/// Anzahl Items, die ein applyBackupJson()-Aufruf NEU lokal hinzugefuegt
+/// hat (id war lokal vorher nicht vorhanden). Updates an bestehenden
+/// Items zaehlen NICHT mit — nur "neu" ist relevant fuer "+N neu" im
+/// PromptBoard-Header.
+struct BackupApplyResult {
+    let newPrompts: Int
+    let newCategories: Int
+    var total: Int { newPrompts + newCategories }
+}
+
 /// Side panel that mirrors the Windows VTO PromptBoardPanel.xaml:
 /// - horizontal category tabs at the top
 /// - vertical scrollable prompt list
@@ -47,6 +57,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// and persisted in UserDefaults so it survives app restarts.
     private let syncLabel = NSTextField(labelWithString: "")
     private static let lastSyncKey = "pbLastBackupDate"
+    /// Anzahl neuer Items aus dem letzten Auto-Sync (Launch-Restore).
+    /// Wird beim naechsten manuellen Sync auf 0 zurueckgesetzt, weil dann
+    /// nichts mehr "neu vom letzten Mal" ist.
+    static let lastSyncNewItemsKey = "pbLastBackupNewItemCount"
 
     private var categories: [PBCategory] = []
     /// Multiple categories can be active at the same time — prompts from every
@@ -224,9 +238,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     /// Persists "now" as the last successful sync time and repaints the
-    /// header badge next to the title.
+    /// header badge next to the title. Bei manuellem Sync (Upload/manuelles
+    /// Restore) wird der "+N neu"-Counter auf 0 zurueckgesetzt, weil ab
+    /// jetzt nichts mehr "neu vom letzten Auto-Sync" ist.
     private func recordSuccessfulSync() {
         UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
+        UserDefaults.standard.set(0, forKey: Self.lastSyncNewItemsKey)
+        refreshSyncLabel()
+    }
+
+    /// Public Hook fuer den AppDelegate: nach einem erfolgreichen Auto-Sync
+    /// beim App-Launch wird hier der Timestamp + die Anzahl neuer Items
+    /// gespeichert und das Header-Badge live aktualisiert. Wenn das Panel
+    /// noch nicht sichtbar ist (lazy nach Stern-Klick), bleiben die Werte
+    /// in UserDefaults und werden beim ersten Refresh angezeigt.
+    func recordLaunchAutoSync(date: Date, newItems: Int) {
+        UserDefaults.standard.set(date, forKey: Self.lastSyncKey)
+        UserDefaults.standard.set(newItems, forKey: Self.lastSyncNewItemsKey)
         refreshSyncLabel()
     }
 
@@ -241,9 +269,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     /// Reads the persisted last-sync timestamp and renders it as a short
-    /// muted badge like "· sync 24.04. 22:39". Always shows date + time so
-    /// you can tell at a glance how fresh the last sync is, even right
-    /// after restarting the app. Empty when no sync has happened yet.
+    /// muted badge like "· sync 24.04. 22:39". Wenn beim letzten Auto-Sync
+    /// neue Items geladen wurden, wird zusaetzlich "(+N neu)" angehaengt.
+    /// Always shows date + time so you can tell at a glance how fresh the
+    /// last sync is, even right after restarting the app. Empty when no
+    /// sync has happened yet.
     private func refreshSyncLabel() {
         guard let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date else {
             syncLabel.stringValue = ""
@@ -252,7 +282,13 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "de_DE")
         fmt.dateFormat = "dd.MM. HH:mm"
-        syncLabel.stringValue = "· sync \(fmt.string(from: last))"
+        let newItems = UserDefaults.standard.integer(forKey: Self.lastSyncNewItemsKey)
+        if newItems > 0 {
+            let suffix = newItems == 1 ? "1 neu" : "\(newItems) neu"
+            syncLabel.stringValue = "· sync \(fmt.string(from: last)) (+\(suffix))"
+        } else {
+            syncLabel.stringValue = "· sync \(fmt.string(from: last))"
+        }
     }
 
     override var canBecomeKey: Bool { false }
@@ -1533,7 +1569,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         return String(data: data, encoding: .utf8) ?? ""
     }
 
-    private func applyBackupJson(_ json: String) throws {
+    @discardableResult
+    private func applyBackupJson(_ json: String) throws -> BackupApplyResult {
         try Self.applyBackupJson(json)
     }
 
@@ -1543,7 +1580,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// deleted on another machine would re-appear locally on restore.
     /// Static so it can run at app launch before the PromptBoard panel
     /// is lazily created.
-    static func applyBackupJson(_ json: String) throws {
+    ///
+    /// Returnt die Anzahl an Items, die NEU lokal hinzukommen (Prompt/Category
+    /// existiert lokal noch nicht). Updates zaehlen nicht mit — nur "neu".
+    /// Wird vom Launch-Auto-Sync genutzt um "+N neu" im PromptBoard anzuzeigen.
+    @discardableResult
+    static func applyBackupJson(_ json: String) throws -> BackupApplyResult {
         guard let data = json.data(using: .utf8),
               let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw NSError(domain: "PromptBoardPanel", code: 1,
@@ -1551,6 +1593,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         }
         let cats = root["Categories"] as? [[String: Any]] ?? []
         let prompts = root["Prompts"] as? [[String: Any]] ?? []
+
+        // Lokale IDs einsammeln BEVOR wir upserten — sonst koennen wir
+        // "neu" nicht von "Update" unterscheiden.
+        let localCategoryIdsBefore: Set<UUID> = {
+            guard let locals = try? PromptBoardStore.shared.allCategories() else { return [] }
+            return Set(locals.map { $0.id })
+        }()
+        let localPromptIdsBefore: Set<UUID> = {
+            guard let locals = try? PromptBoardStore.shared.allCategories() else { return [] }
+            var ids = Set<UUID>()
+            for c in locals {
+                if let ps = try? PromptBoardStore.shared.prompts(in: c.id) {
+                    for p in ps { ids.insert(p.id) }
+                }
+            }
+            return ids
+        }()
 
         // Collect the ids the backup considers authoritative.
         var remoteCategoryIds = Set<UUID>()
@@ -1618,6 +1677,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 }
             }
         }
+
+        // Neu = im Backup vorhanden, lokal vor dem Apply NICHT vorhanden.
+        let newCategories = remoteCategoryIds.subtracting(localCategoryIdsBefore).count
+        let newPrompts    = remotePromptIds.subtracting(localPromptIdsBefore).count
+        return BackupApplyResult(newPrompts: newPrompts, newCategories: newCategories)
     }
 
     /// Returns the `ExportedAt` timestamp from a backup JSON, or nil if
