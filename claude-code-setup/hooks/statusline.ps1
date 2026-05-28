@@ -159,14 +159,35 @@ try {
     # Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
     # naechsten Cleanup geloescht).
     $accountFp = 'default'
-    $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
-    if (Test-Path $credFile) {
+    # PRIMAERQUELLE: accountUuid aus ~/.claude.json. Existiert auf macOS UND Windows.
+    # Frank-Bug 2026-05-28: Auf macOS fehlt ~/.claude/.credentials.json (Keychain) -> der
+    # alte cred_file-Hash blieb "default" -> Konto-Wechsel-Schutz griff nicht -> die Statusline
+    # zeigte 5h/7d-Werte des ALTEN Kontos. accountUuid wechselt zuverlaessig bei Account-Wechsel.
+    # Gleicher Algorithmus wie statusline.sh: SHA256(uuid-string), erste 16 Hex-Zeichen, lowercase.
+    $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
+    if (Test-Path $claudeJson) {
         try {
-            $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
-            if ($hashObj -and $hashObj.Hash) {
-                $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
+            $cj = Get-Content -Raw -Encoding UTF8 -Path $claudeJson | ConvertFrom-Json
+            $uuid = [string]$cj.oauthAccount.accountUuid
+            if ($uuid) {
+                $sha = [System.Security.Cryptography.SHA256]::Create()
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($uuid)
+                $hex = (($sha.ComputeHash($bytes)) | ForEach-Object { $_.ToString('x2') }) -join ''
+                if ($hex.Length -ge 16) { $accountFp = $hex.Substring(0, 16) }
             }
-        } catch { $accountFp = 'default' }
+        } catch { }
+    }
+    # FALLBACK: Hash der credentials.json (aeltere Setups / Windows ohne ~/.claude.json).
+    if ($accountFp -eq 'default') {
+        $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
+        if (Test-Path $credFile) {
+            try {
+                $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
+                if ($hashObj -and $hashObj.Hash) {
+                    $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
+                }
+            } catch { $accountFp = 'default' }
+        }
     }
 
     # 1. SCHREIBEN — nur wenn alle Werte plausibel sind (Schicht 1: Praeventiv).
@@ -314,10 +335,13 @@ try {
         $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $freshResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            # 7d-Verbrauch unabhaengig: hoechster Wert ueber alle Sessions (validiert, zaehlt hoch)
-            $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
-            # 7d-Reset: aus der frischesten Session (accountweite Konstante, nicht max)
+            # 7d-Verbrauch: hoechster Wert NUR im aktuellen 7d-Fenster (Fix B, 2026-05-28,
+            # analog zum 5h-Fenster-Filter). Ohne den Filter gewann ein veralteter Wert aus
+            # einem alten 7d-Fenster den MAX (z.B. nach einem 7d-Reset). Reset-Fenster aus der
+            # frischesten Session (accountweite Konstante).
             $freshWeekResets = [long]$freshest.seven_d_resets
+            $sevenCandidates = $allEntries | Where-Object { ([long]$_.seven_d_resets) -eq $freshWeekResets }
+            $freshSeven = ($sevenCandidates | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h

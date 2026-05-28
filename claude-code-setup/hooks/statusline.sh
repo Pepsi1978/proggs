@@ -126,16 +126,34 @@ now_ts=$(date +%s)
 # naechsten Cleanup geloescht). Wenn kein sha256sum verfuegbar oder Credentials
 # fehlen: Fingerprint = "default" (Verhalten wie vorher, kein Regression).
 account_fp="default"
-cred_file="$HOME/.claude/.credentials.json"
-if [ -f "$cred_file" ]; then
-    # Plattformuebergreifend: sha256sum (Linux/Git-Bash) ODER shasum -a 256 (macOS).
-    # Ohne Fallback wuerde der Fingerprint auf macOS immer "default" sein (Frank 2026-05-24).
+# Fingerprint-Berechnung mit kleinem Helfer (sha256sum Linux/Git-Bash ODER shasum -a 256 macOS).
+_fp_hash() {
     if command -v sha256sum >/dev/null 2>&1; then
-        account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+        printf '%s' "$1" | sha256sum 2>/dev/null | cut -c1-16
     elif command -v shasum >/dev/null 2>&1; then
-        account_fp=$(shasum -a 256 "$cred_file" 2>/dev/null | cut -c1-16)
+        printf '%s' "$1" | shasum -a 256 2>/dev/null | cut -c1-16
     fi
-    [ -z "$account_fp" ] && account_fp="default"
+}
+# PRIMAERQUELLE: accountUuid aus ~/.claude.json. Existiert auf macOS UND Windows.
+# Frank-Bug 2026-05-28: Auf macOS gibt es KEINE ~/.claude/.credentials.json (Credentials
+# liegen im Keychain) -> der alte cred_file-Hash blieb immer "default" -> der Konto-Wechsel-
+# Schutz griff nicht -> die Statusline zeigte 5h/7d-Werte des ALTEN Kontos (alte State-Files
+# mit hoeheren Werten gewannen den MAX-Pass). accountUuid wechselt zuverlaessig bei Account-Wechsel.
+claude_json="$HOME/.claude.json"
+if [ -f "$claude_json" ] && command -v jq >/dev/null 2>&1; then
+    account_uuid=$(jq -r '.oauthAccount.accountUuid // ""' "$claude_json" 2>/dev/null)
+    if [ -n "$account_uuid" ] && [ "$account_uuid" != "null" ]; then
+        account_fp=$(_fp_hash "$account_uuid")
+        [ -z "$account_fp" ] && account_fp="default"
+    fi
+fi
+# FALLBACK: Hash der credentials.json (aeltere Setups / Windows ohne ~/.claude.json).
+if [ "$account_fp" = "default" ]; then
+    cred_file="$HOME/.claude/.credentials.json"
+    if [ -f "$cred_file" ]; then
+        cred_hash=$(_fp_hash "$(cat "$cred_file" 2>/dev/null)")
+        [ -n "$cred_hash" ] && account_fp="$cred_hash"
+    fi
 fi
 
 # Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
@@ -271,8 +289,8 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         ($valid | max_by(.ts_seen // 0)) as $freshest |
         ($freshest.five_h_resets // 0) as $freshR |
         ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
-        ($valid | map(.seven_d // 0) | max) as $bestS |
         ($freshest.seven_d_resets // 0) as $maxSR |
+        ($valid | map(select((.seven_d_resets // 0) == $maxSR)) | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
