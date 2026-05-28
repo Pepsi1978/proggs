@@ -809,17 +809,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)
 
     /// Pillar-Stern-Klick (Windows-Pendant: BtnUltrathink_Click).
-    /// Default seit 2026-05-09: erster Klick zeigt das PromptBoard mit
-    /// allen Kategorien, das Eingabefeld bleibt zu. Der Benutzer schaltet
-    /// ueber den NEUEN Stern in der Promtboard-Toolbar in den Solo-Modus
-    /// (Board zu, Eingabefeld am Pillar). Der Stern in der Eingabe-Toolbar
-    /// holt das Promtboard wieder zurueck. Zweiter Klick auf diesen Pillar-
-    /// Stern schliesst alles.
+    /// Seit 2026-05-28 (Frank-Wunsch): erster Klick oeffnet ZUERST die
+    /// Prompt-Eingabe direkt am Pillar (Solo-Dock). Das PromptBoard wird
+    /// intern instanziiert, bleibt aber unsichtbar — der Solo-Dock-Stern in
+    /// der Eingabe-Toolbar holt es bei Bedarf nach vorne. Zweiter Klick auf
+    /// diesen Pillar-Stern schliesst alles (Eingabe + Board).
     private func toggleUltrathink() {
         alwaysOnActive.toggle()
         panel.setUltrathinkEnabled(alwaysOnActive)
         if alwaysOnActive {
-            showPromptPanel()
+            showPromptInputDockedToOverlay()
         } else {
             hidePromptStack()
         }
