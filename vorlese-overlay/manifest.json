@@ -1,0 +1,39 @@
+{
+	"manifest_version": 3,
+	"name": "Vorlese-Overlay",
+	"version": "0.1.0",
+	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
+	"default_locale": "de",
+	"permissions": ["storage", "offscreen", "activeTab", "scripting"],
+	"host_permissions": [
+		"https://texttospeech.googleapis.com/*",
+		"https://speech.platform.bing.com/*"
+	],
+	"background": {
+		"service_worker": "background/service-worker.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["http://*/*", "https://*/*"],
+			"js": ["settings/settings.js", "content/overlay.js"],
+			"run_at": "document_idle",
+			"all_frames": false
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["content/overlay.css", "icons/*"],
+			"matches": ["<all_urls>"]
+		}
+	],
+	"commands": {
+		"speak-selection": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+S",
+				"mac": "Command+Shift+S"
+			},
+			"description": "Markierten Text vorlesen"
+		}
+	}
+}

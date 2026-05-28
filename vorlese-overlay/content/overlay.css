@@ -1,0 +1,364 @@
+/*
+ * Vorlese-Overlay — Styling des schwebenden Bedienelements.
+ *
+ * Dieses CSS wird in den Shadow Root des Overlays injiziert (siehe overlay.js).
+ * Dadurch ist es vollstaendig von der jeweiligen Webseite isoliert: weder kann
+ * die Seite unsere Buttons veraendern, noch beeinflussen wir die Seite.
+ *
+ * Alle Klassen sind mit "vo-" praefixiert, damit sie auch ausserhalb des
+ * Shadow DOM (Fallback) eindeutig bleiben.
+ */
+
+:host {
+	all: initial;
+}
+
+.vo-container {
+	position: fixed;
+	z-index: 2147483647; /* maximaler z-index, damit nichts uns verdeckt */
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	user-select: none;
+	-webkit-user-select: none;
+	touch-action: none;
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.vo-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	cursor: pointer;
+	color: #ffffff;
+	background: rgba(28, 28, 32, 0.82);
+	backdrop-filter: blur(10px) saturate(140%);
+	-webkit-backdrop-filter: blur(10px) saturate(140%);
+	box-shadow:
+		0 4px 16px rgba(0, 0, 0, 0.28),
+		0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+	transition:
+		transform 0.12s ease,
+		background 0.15s ease,
+		box-shadow 0.15s ease;
+	padding: 0;
+}
+
+.vo-btn:hover {
+	background: rgba(40, 40, 46, 0.92);
+	transform: translateY(-1px);
+}
+
+.vo-btn:active {
+	transform: scale(0.94);
+}
+
+.vo-btn svg {
+	width: 55%;
+	height: 55%;
+	display: block;
+	fill: currentColor;
+	pointer-events: none;
+}
+
+.vo-speaker {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+}
+
+/* Zustand „spielt gerade" — Button bekommt einen aktiven Farbton */
+.vo-speaker.vo-playing {
+	background: rgba(220, 60, 70, 0.92);
+	box-shadow:
+		0 4px 18px rgba(220, 60, 70, 0.45),
+		0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+}
+
+.vo-speaker.vo-loading {
+	background: rgba(60, 120, 220, 0.92);
+}
+
+/* kleiner rotierender Ring bei „laedt" */
+.vo-speaker.vo-loading svg {
+	animation: vo-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes vo-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.vo-gear {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+}
+
+/* Hinweis-Bubble ----------------------------------------------------------- */
+
+.vo-hint {
+	position: absolute;
+	right: 56px;
+	top: 8px;
+	max-width: 220px;
+	background: rgba(28, 28, 32, 0.95);
+	color: #fff;
+	font-size: 13px;
+	line-height: 1.35;
+	padding: 8px 11px;
+	border-radius: 10px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	opacity: 0;
+	transform: translateX(6px);
+	transition:
+		opacity 0.18s ease,
+		transform 0.18s ease;
+	pointer-events: none;
+	white-space: normal;
+}
+
+.vo-hint.vo-show {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.vo-hint.vo-error {
+	background: rgba(200, 50, 55, 0.96);
+}
+
+/* Einstellungs-Panel (Modal) ---------------------------------------------- */
+
+.vo-panel {
+	position: fixed;
+	z-index: 2147483647;
+	width: 340px;
+	max-width: calc(100vw - 24px);
+	max-height: calc(100vh - 24px);
+	overflow-y: auto;
+	background: #1c1c20;
+	color: #f2f2f5;
+	border-radius: 16px;
+	box-shadow:
+		0 18px 60px rgba(0, 0, 0, 0.55),
+		0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	padding: 0;
+	display: none;
+}
+
+.vo-panel.vo-open {
+	display: block;
+}
+
+.vo-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 18px 10px;
+}
+
+.vo-panel-title {
+	font-size: 16px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.vo-close {
+	border: none;
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.vo-close:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.vo-panel-body {
+	padding: 4px 18px 18px;
+}
+
+.vo-section {
+	margin-top: 14px;
+}
+
+.vo-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #9a9aa2;
+	margin-bottom: 6px;
+}
+
+/* Engine-Umschalter (Segmented Control) */
+.vo-engine-switch {
+	display: flex;
+	background: rgba(255, 255, 255, 0.07);
+	border-radius: 10px;
+	padding: 3px;
+	gap: 3px;
+}
+
+.vo-engine-opt {
+	flex: 1;
+	text-align: center;
+	padding: 8px 6px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 500;
+	color: #cfcfd6;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
+}
+
+.vo-engine-opt.vo-active {
+	background: #3a82f6;
+	color: #fff;
+}
+
+/* Tabs */
+.vo-tabs {
+	display: flex;
+	gap: 6px;
+	margin-top: 16px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vo-tab {
+	background: none;
+	border: none;
+	color: #9a9aa2;
+	padding: 8px 4px;
+	margin-bottom: -1px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	border-bottom: 2px solid transparent;
+}
+
+.vo-tab.vo-active {
+	color: #fff;
+	border-bottom-color: #3a82f6;
+}
+
+.vo-tabpage {
+	display: none;
+}
+
+.vo-tabpage.vo-active {
+	display: block;
+}
+
+/* Formularelemente */
+.vo-select,
+.vo-input {
+	width: 100%;
+	box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.07);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: #fff;
+	border-radius: 9px;
+	padding: 9px 10px;
+	font-size: 14px;
+	outline: none;
+}
+
+.vo-select:focus,
+.vo-input:focus {
+	border-color: #3a82f6;
+}
+
+.vo-select:disabled,
+.vo-input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.vo-select option {
+	background: #1c1c20;
+	color: #fff;
+}
+
+.vo-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.vo-range {
+	flex: 1;
+	accent-color: #3a82f6;
+}
+
+.vo-range-val {
+	min-width: 38px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: #cfcfd6;
+}
+
+.vo-test {
+	margin-top: 12px;
+	width: 100%;
+	background: #3a82f6;
+	border: none;
+	color: #fff;
+	padding: 10px;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.vo-test:hover {
+	background: #2f72e0;
+}
+
+.vo-test:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.vo-help {
+	font-size: 12px;
+	color: #8a8a92;
+	margin-top: 6px;
+	line-height: 1.4;
+}
+
+.vo-status {
+	font-size: 13px;
+	margin-top: 10px;
+	min-height: 17px;
+}
+
+.vo-status.vo-ok {
+	color: #57c777;
+}
+.vo-status.vo-err {
+	color: #ee6a6a;
+}
