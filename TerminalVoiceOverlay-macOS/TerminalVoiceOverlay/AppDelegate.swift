@@ -285,10 +285,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             autoHide?.enabled = stored.autoHide
         }
         panel.onPillarMoved = { [weak self] in
-            // Keep the PromptBoard side panel docked to the pillar's
-            // left edge as the user right-click drags it around.
+            // Beim Verschieben des VTO das angedockte Prompt-Fenster mitziehen,
+            // damit es IMMER am VTO klebt (Frank-Wunsch 2026-05-28).
             guard let self = self else { return }
-            self.promptBoardPanel?.dock(rightOf: self.panel)
+            if self.inputSoloDock,
+               let input = self.promptBoardPanel?.currentInputPanel {
+                // Solo-Dock: nur die Eingabe haengt am VTO — sie nachziehen.
+                input.dockToOverlay(self.panel)
+            } else {
+                // Board-Modus: das Board nachziehen.
+                self.promptBoardPanel?.dock(rightOf: self.panel)
+            }
         }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
