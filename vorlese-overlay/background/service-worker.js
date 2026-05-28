@@ -164,7 +164,7 @@ async function handleSpeak(msg, tabId) {
 
 		let enqueuedAny = false;
 		for (const part of chunks) {
-			const bytes = await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
+			const bytes = await synthesizeChunk(eng, msg.engine, part, msg, gen);
 			if (gen !== currentGen) return; // zwischenzeitlich gestoppt/ersetzt
 			if (bytes && bytes.length > 0) {
 				sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes) });
@@ -186,6 +186,19 @@ async function handleSpeak(msg, tabId) {
 			state: "error",
 			message: humanError(e),
 		});
+	}
+}
+
+// Edge kann gelegentlich scheitern (z.B. veraltetes Sec-MS-GEC-Token oder eine
+// kurze Verbindungsstoerung). Dann EINMAL mit frischem Token erneut versuchen —
+// synthesize() erzeugt das Token bei jedem Aufruf neu. Google NICHT wiederholen:
+// ein Key-/API-Fehler bliebe bestehen und wuerde nur Kontingent kosten.
+async function synthesizeChunk(eng, engineName, part, msg, gen) {
+	try {
+		return await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
+	} catch (e) {
+		if (engineName === "google" || gen !== currentGen) throw e;
+		return await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
 	}
 }
 
