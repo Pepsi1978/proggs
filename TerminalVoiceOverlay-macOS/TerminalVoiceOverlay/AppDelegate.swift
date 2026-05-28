@@ -937,16 +937,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             input.setSoloDockState(true)
             input.makeKeyAndOrderFront(nil)
         } else {
-            guard let input = board.currentInputPanel else { return }
+            // Eingabe-Stern (Frank-Wunsch 2026-05-28): die Prompt-Eingabe
+            // SCHLIESSEN und nur das Board zeigen. Vorher rueckte die Eingabe
+            // an den linken Board-Rand und blieb offen — der Benutzer will sie
+            // zu. Der Text bleibt erhalten (closeInputPanel macht nur orderOut,
+            // kein Verwerfen); der Board-Stern holt die Eingabe bei Bedarf
+            // wieder zurueck via applySoloDockMode(true).
             inputSoloDock = false
+            board.closeInputPanelExternally()
             board.dock(rightOf: self.panel)
             board.orderFrontRegardless()
             board.refresh()
-            // Eingabe rueckt an den linken Rand des Boards via interner
-            // dock(leftOf:) — diese Methode existiert schon im PromptInputPanel.
-            input.dock(leftOf: board, force: true)
-            input.setSoloDockState(false)
-            input.makeKeyAndOrderFront(nil)
         }
     }
 
