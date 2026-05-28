@@ -215,6 +215,15 @@ N. [Konkrete Aktion in einem Satz]
 ```
 
 Regeln fuer Teil C:
+- **Umgebungs-Gegencheck VOR dem Listen (PFLICHT):** Jeden Vorschlag erst gegen den IST-Zustand der
+  Umgebung pruefen, nicht nur aus dem Changelog-Feature ableiten. Drei Fragen: (1) Existieren die
+  betroffenen Skills/Hooks/Dateien ueberhaupt? (2) Nutzt der betroffene Skill/Hook das Feature
+  wirklich (z.B. ruft er das Tool, das gesperrt werden soll, ueberhaupt auf; schreibt der Hook die
+  Skills die er neu laden soll wirklich)? (3) Bringt es in GENAU dieser Umgebung echten Nutzen — oder
+  waere es nur ein theoretischer Zusatz? Nur Vorschlaege die alle drei bestehen, werden gelistet.
+  Grund: rein feature-getriebene Vorschlaege ohne Ist-Abgleich erweisen sich bei der Umsetzung oft
+  als unpassend (Beispiel: disallowed-tools fuer einen Skill der das Tool nie aufruft; reloadSkills
+  fuer einen SessionStart-Hook der gar keine Skills schreibt).
 - NUR research-gestuetzte Vorschlaege mit nachweisbarem Vorteil. Lieber 3 starke als 10 schwache.
 - Jeder Vorschlag muss mit einem einfachen "ja" umsetzbar sein (konkret, nicht "man koennte mal").
 - Vorschlaege die ein eigenes Werkzeug aendern klar markieren (Teil-2-Gebiet, aber hier abnickbar gelistet).
