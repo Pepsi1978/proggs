@@ -1,5 +1,7 @@
 ---
 name: screenshot-loop
+disallowed-tools:
+  - AskUserQuestion
 description: Macht periodisch automatisch Screenshots vom angeschlossenen Android-Geraet (Galaxy S23 Ultra, Galaxy Tab S9, Galaxy Fold 6) und vibriert dabei das Geraet als Bestaetigung — Frank navigiert manuell durch die App, der Skill knipst was gerade auf dem Bildschirm ist. Standard-Intervall 2,7 Sekunden, aber per Trigger-Phrase ueberschreibbar (siehe unten). Nutze diesen Skill IMMER und SOFORT wenn der Benutzer sagt "starte Screenshot-Loop", "Screenshot-Loop starten", "starte den Screenshot-Loop", "starte den Screenshot-Loop mit 3 Sekunden", "mit 4 Sekunden", "alle 5 Sekunden", "mach alle paar Sekunden ein Bild", "automatische Screenshots", "Polling-Screenshots", "Auto-Screenshot-Skript starten", oder eine aehnliche Phrase die auf einen periodischen Screenshot-Modus hindeutet. Auch triggern wenn der Benutzer sinngemaess "ich navigiere durch die App, du machst alle paar Sekunden ein Bild" sagt — auch wenn das exakte Wort "Loop" nicht faellt. Nicht triggern bei einzelnen Screenshot-Anfragen ("mach ein Bild", "zeig mir den Screen jetzt") — dafuer reicht ein einzelner Aufruf von ~/proggs/scripts/screenshot.sh.
 ---
 
