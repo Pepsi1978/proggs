@@ -7,7 +7,8 @@
 	"permissions": ["storage", "offscreen", "activeTab", "scripting"],
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
-		"https://speech.platform.bing.com/*"
+		"https://speech.platform.bing.com/*",
+		"wss://speech.platform.bing.com/*"
 	],
 	"background": {
 		"service_worker": "background/service-worker.js",

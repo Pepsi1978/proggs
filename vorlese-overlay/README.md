@@ -112,6 +112,14 @@ eingebaut und in jeder Edge-TTS-Implementierung identisch.
 > (User-Agent/Origin/Cookie). Anders als der OkHttp-Code in „Best Journal" tragen
 > hier allein die URL-Query-Parameter (vor allem das Token). Schlägt Edge fehl,
 > versucht der Worker es **einmal automatisch** mit frischem Token erneut.
+>
+> **Wichtig (`host_permissions`):** Für die WebSocket-Verbindung muss
+> `wss://speech.platform.bing.com/*` **eigens** in `host_permissions` stehen — das
+> `https://`-Gegenstück reicht **nicht**. Fehlt der `wss://`-Eintrag, blockiert
+> Chrome den Verbindungsaufbau und das Overlay meldet „Edge-Verbindung
+> fehlgeschlagen". (Der Edge-Endpunkt selbst akzeptiert den
+> `chrome-extension://…`-Origin jeder Erweiterung — ein gefälschter Origin ist also
+> nicht nötig.)
 
 ### Stimmen-Logik (aus „Best Journal" übernommen)
 - **Google:** Stimmen werden primär **dynamisch** über `/v1/voices?languageCode=de-DE`
