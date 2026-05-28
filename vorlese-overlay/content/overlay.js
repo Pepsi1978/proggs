@@ -528,7 +528,7 @@
 			sendMessage({
 				type: MSG.TEST,
 				engine: "google",
-				text: "Test.",
+				text: SAMPLE_TEXT,
 				voice: $("google-voice").value,
 				rate: window.VOSettings.clampRate($("google-rate").value),
 				apiKey: key,
