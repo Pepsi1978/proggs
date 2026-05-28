@@ -21,7 +21,11 @@
 // Oeffentlicher, fest in Microsoft Edge eingebauter Client-Token — KEIN Geheimnis;
 // steht so in jeder Edge-TTS-Implementierung und auch im BestJournal-Repo.
 const TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"; // gitleaks:allow
-const CHROMIUM_FULL_VERSION = "143.0.3650.75"; // wie in Best Journal bewaehrt
+// Browser-Kontext: Der Endpunkt akzeptiert OHNE Origin-/User-Agent-Header (die im
+// Browser nicht setzbar sind) nur diese aeltere Version. Best Journal nutzt 143,
+// aber NUR weil es als native App den Origin-Header mitschickt. Im Browser
+// funktioniert 130 (wie die erprobte travisvn/edge-tts-extension).
+const CHROMIUM_FULL_VERSION = "130.0.2849.68";
 const WIN_EPOCH = 11644473600n; // Sekunden zwischen 1601-01-01 und 1970-01-01
 
 const WSS_BASE =
@@ -177,9 +181,9 @@ export async function synthesize(text, voice, rate /* , apiKey */) {
 		"&Sec-MS-GEC=" +
 		token +
 		"&Sec-MS-GEC-Version=1-" +
-		CHROMIUM_FULL_VERSION +
-		"&ConnectionId=" +
-		uuidHex();
+		CHROMIUM_FULL_VERSION;
+	// Kein ConnectionId-Query-Param — die funktionierende Browser-Referenz (travisvn)
+	// haengt ihn nicht an; weniger Variablen im Handshake.
 
 	return await new Promise((resolve, reject) => {
 		let ws;
