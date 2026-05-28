@@ -36,8 +36,9 @@ enum HBarLayout {
     static let micButtonSize    = NSSize(width: 52, height: 52)
     /// Stern + OrientationToggle in S1: 34×34 (Windows-Code Z. 1279).
     static let smallButtonSize  = NSSize(width: 34, height: 34)
-    /// Save-Diskette in S7: 30×22 (Windows-Inventur).
-    static let saveButtonHSize  = NSSize(width: 30, height: 22)
+    /// Save-Diskette in S7: 36×26 (vergroessert von 30×22 fuer bessere
+    /// Sichtbarkeit; passt weiter unter die 40×40 Enter-Reihe in S7).
+    static let saveButtonHSize  = NSSize(width: 36, height: 26)
 
     /// CornerRadius der HBar — Hoehe/2 = 46 fuer perfekt runde Enden.
     static let cornerRadius: CGFloat = 46
@@ -116,14 +117,29 @@ extension OverlayPanel {
         var s1Origin: NSPoint = .zero
         var s1Width: CGFloat = 0
         for (i, s) in sections.enumerated() {
-            let sectionRect = NSRect(x: x, y: 0,
-                                     width: s.width,
-                                     height: HBarLayout.panelHeight)
+            // Hintergrund-Rect der Sektion. Erste Sektion (S7, links) deckt
+            // zusaetzlich das linke Innen-Polster ab, letzte Sektion (S1,
+            // rechts) das rechte Innen-Polster — sonst zeigt der transparente
+            // contentView dort durch und die Pillenenden wirken "abgeschnitten".
+            // Die masksToBounds=true + cornerRadius=46 am contentView clippt
+            // die Erweiterung sauber auf die runden Pillenenden.
+            var bgRect = NSRect(x: x, y: 0,
+                                width: s.width,
+                                height: HBarLayout.panelHeight)
+            if i == 0 {
+                bgRect.origin.x = 0
+                bgRect.size.width = s.width + HBarLayout.sectionInnerPadX
+            }
+            if i == sections.count - 1 {
+                bgRect.size.width = s.width + HBarLayout.sectionInnerPadX
+            }
+            // Tracking-Origin/Width fuer S1-Extra-Buttons bleibt die
+            // logische Sektion (ohne Polster-Erweiterung).
             if i == sections.count - 1 {  // letzte Sektion = S1
-                s1Origin = sectionRect.origin
+                s1Origin = NSPoint(x: x, y: 0)
                 s1Width  = s.width
             }
-            let sectionView = makeSectionView(rect: sectionRect,
+            let sectionView = makeSectionView(rect: bgRect,
                                               hex: s.backgroundHex,
                                               cornerMode: s.cornerMode,
                                               totalRect: newFrame)
@@ -193,14 +209,18 @@ extension OverlayPanel {
         var trackedViews: [NSView] = []
 
         // 7 Sektionen + 6 Trenner — gleiche Werte wie in OverlayPanel.init().
+        // Erste Sektion (S7 unten) und letzte (S1 oben) wurden um 2 px zu den
+        // Pillenenden hin verlaengert, damit die Hintergrundfarbe bis zu den
+        // abgerundeten Enden durchgeht (sonst zeigt der transparente
+        // contentView dort durch — analog zur HBar-Korrektur).
         let sections: [(hex: String, y: CGFloat, h: CGFloat)] = [
-            ("#B31A1A1A", 2,   63),   // S7 Enter
+            ("#B31A1A1A", 0,   65),   // S7 Enter (war y=2 h=63)
             ("#B3151B15", 66,  100),  // S6 Screenshot+Insert
             ("#B3151B1D", 167, 100),  // S5 Copy+Paste
             ("#B31F1515", 268, 52),   // S4 X
             ("#B319151F", 321, 100),  // S3 W+G
             ("#B31F1C15", 422, 124),  // S2 Mic+BTW
-            ("#B31F1B15", 547, 63),   // S1 Stern
+            ("#B31F1B15", 547, 65),   // S1 Stern (war h=63 → 65 bis zur Oberkante 612)
         ]
         for s in sections {
             let v = NSView(frame: NSRect(x: 0, y: s.y, width: panelWidth, height: s.h))
@@ -372,9 +392,14 @@ extension OverlayPanel {
             lowerButtons: [.saveExtra(HBarLayout.saveButtonHSize)],  // 30×22
             cornerMode: .leftRounded)
 
+        // Sektion-Widths: Mindestbreite = Content + 2×sectionInnerPadX (=16),
+        // sonst landet das berechnete Polster (max(8, (width-content)/2))
+        // hinter der Sektion-Grenze und die Buttons ragen in die Nachbar-
+        // Sektion. Vorher: 92 fuer 86-Content → nur 3 px Polster, Buttons
+        // 5 px ueber die Trennlinie. Jetzt 104 → echtes 9 px Polster.
         let s6 = HBarSection(
             backgroundHex: "#B3151B15",  // S6 (Shot+Insert)
-            width: 92,
+            width: 104,
             upperButtons: [
                 .action(\.insertScreenshotButton, HBarLayout.actionButtonSize),
                 .action(\.screenshotButton,       HBarLayout.actionButtonSize),
@@ -387,7 +412,7 @@ extension OverlayPanel {
 
         let s5 = HBarSection(
             backgroundHex: "#B3151B1D",  // S5 (Copy+Paste)
-            width: 92,
+            width: 104,
             upperButtons: [
                 .action(\.pasteButton, HBarLayout.actionButtonSize),
                 .action(\.copyButton,  HBarLayout.actionButtonSize),
@@ -400,14 +425,14 @@ extension OverlayPanel {
 
         let s4 = HBarSection(
             backgroundHex: "#B31F1515",  // S4 (X)
-            width: 52,
+            width: 60,
             upperButtons: [.action(\.xButton, HBarLayout.actionButtonSize)],
             lowerButtons: [.profile(6, HBarLayout.profileTileSize)],
             cornerMode: .middle)
 
         let s3 = HBarSection(
             backgroundHex: "#B319151F",  // S3 (W+G)
-            width: 92,
+            width: 104,
             upperButtons: [
                 .action(\.gButton, HBarLayout.actionButtonSize),
                 .action(\.wButton, HBarLayout.actionButtonSize),
@@ -420,7 +445,7 @@ extension OverlayPanel {
 
         let s2 = HBarSection(
             backgroundHex: "#B31F1C15",  // S2 (Mic+BTW)
-            width: 124,
+            width: 132,
             upperButtons: [
                 .action(\.btwButton, HBarLayout.micButtonSize),
                 .action(\.micButton, HBarLayout.micButtonSize),

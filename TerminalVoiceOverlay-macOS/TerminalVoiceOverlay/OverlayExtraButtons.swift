@@ -37,11 +37,15 @@ extension OverlayPanel {
     }
 
     /// Save-Button (Diskette) — TRANSPARENT (kein grauer Kasten), nur das
-    /// Disketten-Symbol ist sichtbar. Exakt wie Windows SaveButton-Style:
-    /// Width 28, Height 28, CornerRadius 8, Background transparent.
+    /// Disketten-Symbol ist sichtbar. Vergroessert von 28×28 auf 36×36 fuer
+    /// bessere Sichtbarkeit (Windows-Pendant zieht auf 36 mit).
+    /// CornerRadius 10 (proportional skaliert).
     /// Disketten-Symbol als NSBezierPath (Material 'save'-Glyph approximiert
     /// das Segoe MDL2 E74E-Glyph aus Windows-XAML).
     /// Beim Klick blitzt das Symbol kurz gruen auf als Feedback.
+    /// Wenn eine Position gespeichert ist (savedHorizontalPosition oder
+    /// savedVerticalPosition != nil) wird das Symbol dauerhaft gruen
+    /// angezeigt — `refreshSaveButtonState()` synchronisiert das.
     var saveButton: RoundButton {
         if let b = objc_getAssociatedObject(self, &saveButtonKey)
             as? RoundButton {
@@ -49,14 +53,20 @@ extension OverlayPanel {
         }
         let b = RoundButton(label: "",
                             color: NSColor.clear,
-                            width: 28, height: 28)
+                            width: 36, height: 36)
         b.symbolImage = IconPaths.renderImage(
-            path: IconPaths.save(), size: NSSize(width: 16, height: 16), fill: .white)
+            path: IconPaths.save(), size: NSSize(width: 22, height: 22), fill: .white)
         b.labelColor = NSColor.white
-        b.cornerRadius = 8
+        b.cornerRadius = 10
         b.onClick = { [weak self] in
             self?.onSaveClicked?()
             self?.flashSaveButtonGreen()
+            // Nach dem Speicher-Klick wird die Save-Position gesetzt — kurz
+            // warten bis der Caller das tatsaechlich gemacht hat, dann den
+            // Zustand neu auswerten (gruen bleibt an).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self] in
+                self?.refreshSaveButtonState()
+            }
         }
         // Windows-Tooltip: "Position dieser Ausrichtung merken (gilt bis zum Neustart)"
         b.toolTip = "Position dieser Ausrichtung merken"
@@ -66,18 +76,41 @@ extension OverlayPanel {
         return b
     }
 
+    /// Gemeinsame Gruen-Farbe fuer Save-Feedback und Dauer-Indikator.
+    static var saveButtonGreen: NSColor {
+        NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 1)
+    }
+
     /// Disketten-Klick: das Disketten-Symbol blitzt kurz gruen auf
     /// (1:1 Windows: gruenes Aufblitzen der Foreground-Farbe).
-    /// Da jetzt NSBezierPath rendert mit labelColor als tint, koennen
-    /// wir das durch labelColor-Wechsel machen.
+    /// Nach dem Aufblitzen wird der dauerhafte Zustand (gruen wenn
+    /// Position gespeichert ist, sonst weiss) wiederhergestellt.
     func flashSaveButtonGreen() {
-        let greenColor = NSColor(red: 0.18, green: 0.71, blue: 0.20, alpha: 1)
-        saveButton.labelColor = greenColor
+        saveButton.labelColor = OverlayPanel.saveButtonGreen
         saveButton.needsDisplay = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.saveButton.labelColor = NSColor.white
-            self?.saveButton.needsDisplay = true
+            self?.refreshSaveButtonState()
         }
+    }
+
+    /// Setzt die Disketten-Farbe abhaengig davon ob eine Position fuer die
+    /// AKTUELLE Orientierung gespeichert ist:
+    /// - horizontal aktiv → savedHorizontalPosition != nil → gruen
+    /// - vertikal   aktiv → savedVerticalPosition   != nil → gruen
+    /// - sonst weiss.
+    /// Muss nach jeder applyHorizontalLayout / applyVerticalLayout sowie
+    /// nach jedem Setzen/Loeschen einer gespeicherten Position aufgerufen
+    /// werden.
+    func refreshSaveButtonState() {
+        let hasSavedPosition: Bool
+        switch currentOrientation {
+        case .horizontal: hasSavedPosition = (savedHorizontalPosition != nil)
+        case .vertical:   hasSavedPosition = (savedVerticalPosition   != nil)
+        }
+        saveButton.labelColor = hasSavedPosition
+            ? OverlayPanel.saveButtonGreen
+            : NSColor.white
+        saveButton.needsDisplay = true
     }
 
     /// Klick-Callback fuer den OrientationToggleButton.
@@ -125,17 +158,23 @@ extension OverlayPanel {
         }
         ultrathinkButton.needsDisplay = true
 
-        // S7: y=2..65. WPF padding top 6 + bot 17.
-        // macOS-Y: Enter-Unterkante = 2 + 17 = 19. Save 28×28 vertikal zentriert
-        // zu Enter (40): Save-Unterkante = 19 + (40-28)/2 = 25.
+        // S7: y=0..65 (nach Pillenenden-Fix). WPF padding top 6 + bot 17.
+        // macOS-Y: Enter-Unterkante = 2 + 17 = 19. Save 36×36 vertikal zentriert
+        // zu Enter (40): Save-Unterkante = 19 + (40-36)/2 = 21.
+        // X: Enter endet bei 13+40=53, Save mit kleinem Margin 2 → x=55.
+        // Save endet bei 55+36=91 → 5 px rechtes Polster im 96er Panel.
         enterButton.frame = NSRect(x: 13, y: 19, width: 40, height: 40)
-        saveButton.frame  = NSRect(x: 61, y: 25, width: 28, height: 28)
+        saveButton.frame  = NSRect(x: 55, y: 21, width: 36, height: 36)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
         // 30% Durchsichtigkeit auf den Sektions-Hintergruenden (B3-Alpha in Windows).
         applySectionTransparency()
+
+        // Save-Diskette einfaerben: gruen wenn eine vertikale Position
+        // gespeichert ist, sonst weiss.
+        refreshSaveButtonState()
     }
 
     /// Setzt 70% Opacity auf alle OPAKEN Sektions-Subviews der contentView.
@@ -181,6 +220,10 @@ extension OverlayPanel {
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
+
+        // Save-Diskette einfaerben: gruen wenn eine horizontale Position
+        // gespeichert ist, sonst weiss.
+        refreshSaveButtonState()
     }
 
     /// Versteckt die Extra-Buttons (Collapsed-Mode).
