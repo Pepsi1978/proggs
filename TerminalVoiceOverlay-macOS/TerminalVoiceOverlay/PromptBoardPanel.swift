@@ -1504,6 +1504,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 ]
             },
             "Prompts": allPrompts.map { p -> [String: Any] in
+                // Vollstaendige Feld-Liste — frueher fehlten promptKind,
+                // geminiModel, isActiveForImprovement, improvedByAiPromptId
+                // und hotkeyLetter (die wurden beim Restore auf Defaults
+                // zurueckgesetzt → "unvollstaendig"-Symptom).
                 var dict: [String: Any] = [
                     "Id": p.id.uuidString,
                     "CategoryId": p.categoryId.uuidString,
@@ -1514,9 +1518,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     "IsPrePrompt": p.isPrePrompt,
                     "IsPostPrompt": p.isPostPrompt,
                     "SortOrder": p.sortOrder,
+                    "PromptKind": p.promptKind,
+                    "IsActiveForImprovement": p.isActiveForImprovement,
                 ]
-                if let it = p.improvedText { dict["ImprovedText"] = it }
-                if let hk = p.hotkeyNumber { dict["HotkeyNumber"] = hk }
+                if let it = p.improvedText                { dict["ImprovedText"]            = it }
+                if let hk = p.hotkeyNumber                { dict["HotkeyNumber"]            = hk }
+                if let hl = p.hotkeyLetter                { dict["HotkeyLetter"]            = hl }
+                if let gm = p.geminiModel                 { dict["GeminiModel"]             = gm }
+                if let ai = p.improvedByAiPromptId        { dict["ImprovedByAiPromptId"]    = ai.uuidString }
                 return dict
             },
         ]
@@ -1583,6 +1592,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 isActiveForImprovement: (p["IsActiveForImprovement"] as? Bool) ?? false,
                 improvedByAiPromptId: (p["ImprovedByAiPromptId"] as? String).flatMap(UUID.init(uuidString:)),
                 hotkeyNumber: p["HotkeyNumber"] as? Int,
+                hotkeyLetter: p["HotkeyLetter"] as? String,
                 createdAt: now, updatedAt: now)
             try PromptBoardStore.shared.upsertPrompt(prompt)
         }
