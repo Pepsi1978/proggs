@@ -10,6 +10,24 @@
  * Google-Synthese (reines fetch) bleibt im Service-Worker; der schickt das
  * fertige Audio per ENQUEUE hierher.
  *
+ * ----- Wiedergabe ueber die Web Audio API (NICHT ueber <audio>) -------------
+ * Die Wiedergabe laeuft bewusst ueber die Web Audio API (AudioContext +
+ * AudioBufferSourceNode) statt ueber ein HTMLAudioElement (new Audio()).
+ *
+ * Grund: Chromes Live-Untertitel (Live Caption / SODA) haengt seine
+ * Spracherkennung im Chromium-Quellcode ausschliesslich in den Media-Pipeline-
+ * Pfad (AudioRendererImpl) ein — und der bedient nur HTMLMediaElemente
+ * (<audio>/<video>/new Audio()). Audio aus der Web Audio API laeuft durch einen
+ * anderen Renderer-Pfad OHNE diesen Hook. Dadurch transkribiert Live Caption
+ * unser Vorlese-Audio nicht mehr und es erscheinen keine unerwuenschten
+ * Untertitel — ohne dass der Nutzer Live Caption global abschalten muss.
+ *
+ * Sicherheitsnetz (Funktionalitaet bleibt IMMER erhalten): Schlaegt die
+ * Web-Audio-Wiedergabe aus irgendeinem Grund fehl (AudioContext nicht
+ * verfuegbar, suspendiert, decode-Fehler), schaltet die Wiedergabe automatisch
+ * und dauerhaft auf das HTMLAudioElement zurueck. Dann spielt das Audio in
+ * jedem Fall — schlimmstenfalls eben wieder mit Untertiteln.
+ *
  * Nachrichten vom Service-Worker (target: "offscreen"):
  *   ENQUEUE  { url }                  — fertiges Audio (Google) abspielen
  *   EDGE_SPEAK { text, voice, rate }  — Edge hier synthetisieren + abspielen
@@ -20,10 +38,16 @@
 import * as edge from "../engines/edge-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
 
+// Warteschlange. Jedes Item ist entweder { buffer: ArrayBuffer } (Edge liefert
+// rohe MP3-Bytes) oder { url: string } (Google schickt eine Data-URL).
 const queue = [];
-let current = null;
+let currentSource = null; // laufender AudioBufferSourceNode (Web Audio)
+let currentAudio = null; // laufendes HTMLAudioElement (Fallback)
 let playing = false;
 let gen = 0; // Abbruch-Zaehler: STOP und jede neue EDGE_SPEAK erhoehen ihn
+
+let audioCtx = null;
+let webAudioBroken = false; // true, sobald Web Audio einmal scheitert -> Fallback
 
 function send(payload) {
 	try {
@@ -36,29 +60,104 @@ function send(payload) {
 	}
 }
 
-function bytesToBlobUrl(bytes) {
-	return URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+// ----- AudioContext (lazy, mit resume gegen evtl. Suspend) ------------------
+async function getCtx() {
+	if (!audioCtx) {
+		const AC = self.AudioContext || self.webkitAudioContext;
+		audioCtx = new AC();
+	}
+	if (audioCtx.state === "suspended") {
+		try {
+			await audioCtx.resume();
+		} catch (e) {
+			/* unten faengt die state-Pruefung das ab */
+		}
+	}
+	return audioCtx;
 }
 
-function enqueue(url) {
-	queue.push(url);
+// ----- Item -> ArrayBuffer (fuer Web Audio) ---------------------------------
+async function itemToArrayBuffer(item) {
+	if (item.buffer) return item.buffer; // Edge: schon rohe Bytes
+	const resp = await fetch(item.url); // Google: Data-URL -> ArrayBuffer
+	return await resp.arrayBuffer();
+}
+
+// ----- Item -> Blob-/Data-URL (fuer das HTMLAudioElement-Fallback) ----------
+function itemToBlobUrl(item) {
+	if (item.url) return item.url; // schon eine (Data-)URL
+	return URL.createObjectURL(new Blob([item.buffer], { type: "audio/mpeg" }));
+}
+
+function enqueueItem(item) {
+	queue.push(item);
 	if (!playing) {
 		send({ type: "OFFSCREEN_STARTED" });
 		playNext();
 	}
 }
 
-function playNext() {
+async function playNext() {
 	if (queue.length === 0) {
 		playing = false;
-		current = null;
+		currentSource = null;
+		currentAudio = null;
 		send({ type: "OFFSCREEN_ENDED" });
 		return;
 	}
 	playing = true;
-	const url = queue.shift();
+	const item = queue.shift();
+	const myGen = gen;
+
+	// ----- Bevorzugt: Web Audio API (umgeht Chromes Live-Untertitel) --------
+	if (!webAudioBroken) {
+		try {
+			const ctx = await getCtx();
+			if (myGen !== gen) return; // zwischenzeitlich gestoppt/ersetzt
+			if (ctx.state !== "running") throw new Error("AudioContext nicht aktiv");
+
+			const ab = await itemToArrayBuffer(item);
+			if (myGen !== gen) return;
+			// decodeAudioData "detached" den Buffer -> mit einer Kopie arbeiten,
+			// damit das Original fuer ein evtl. Fallback intakt bleibt.
+			const audioBuf = await ctx.decodeAudioData(ab.slice(0));
+			if (myGen !== gen) return;
+
+			const src = ctx.createBufferSource();
+			src.buffer = audioBuf;
+			src.connect(ctx.destination);
+			currentSource = src;
+			src.onended = () => {
+				if (currentSource === src) {
+					currentSource = null;
+					playNext();
+				}
+			};
+			src.start();
+			return;
+		} catch (e) {
+			// Web Audio nicht moeglich -> fuer den Rest der Session auf das
+			// HTMLAudioElement zurueckfallen (Audio bleibt funktionsfaehig).
+			if (myGen !== gen) return;
+			webAudioBroken = true;
+			currentSource = null;
+		}
+	}
+
+	// ----- Fallback: HTMLAudioElement (kann von Live Caption erfasst werden) -
+	let url;
+	try {
+		url = itemToBlobUrl(item);
+	} catch (e) {
+		send({
+			type: "OFFSCREEN_ERROR",
+			message: "Audio konnte nicht vorbereitet werden.",
+		});
+		playNext();
+		return;
+	}
 	const audio = new Audio(url);
-	current = audio;
+	currentAudio = audio;
 
 	const cleanup = () => {
 		if (url.startsWith("blob:")) {
@@ -72,11 +171,15 @@ function playNext() {
 
 	audio.onended = () => {
 		cleanup();
-		if (current === audio) playNext();
+		if (currentAudio === audio) {
+			currentAudio = null;
+			playNext();
+		}
 	};
 	audio.onerror = () => {
 		cleanup();
-		if (current === audio) {
+		if (currentAudio === audio) {
+			currentAudio = null;
 			send({
 				type: "OFFSCREEN_ERROR",
 				message: "Audio konnte nicht abgespielt werden.",
@@ -90,21 +193,33 @@ function playNext() {
 			type: "OFFSCREEN_ERROR",
 			message: String(e && e.message ? e.message : e),
 		});
-		if (current === audio) playNext();
+		if (currentAudio === audio) {
+			currentAudio = null;
+			playNext();
+		}
 	});
 }
 
 function stopAll() {
 	queue.length = 0;
-	if (current) {
+	if (currentSource) {
 		try {
-			current.pause();
-			current.src = "";
+			currentSource.onended = null;
+			currentSource.stop();
 		} catch (e) {
 			/* egal */
 		}
 	}
-	current = null;
+	currentSource = null;
+	if (currentAudio) {
+		try {
+			currentAudio.pause();
+			currentAudio.src = "";
+		} catch (e) {
+			/* egal */
+		}
+	}
+	currentAudio = null;
 	playing = false;
 }
 
@@ -128,7 +243,8 @@ async function edgeSpeak(text, voice, rate, myGen) {
 		}
 		if (myGen !== gen) return; // zwischenzeitlich gestoppt/ersetzt
 		if (bytes && bytes.length > 0) {
-			enqueue(bytesToBlobUrl(bytes));
+			// Rohe Bytes als ArrayBuffer-Kopie in die Queue (fuer Web Audio).
+			enqueueItem({ buffer: bytes.slice().buffer });
 			any = true;
 		}
 	}
@@ -150,7 +266,7 @@ chrome.runtime.onMessage.addListener((msg) => {
 	if (!msg || msg.target !== "offscreen") return;
 	switch (msg.type) {
 		case "ENQUEUE":
-			enqueue(msg.url);
+			enqueueItem({ url: msg.url });
 			break;
 		case "STOP":
 			gen++;
