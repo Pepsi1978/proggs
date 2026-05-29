@@ -48,11 +48,19 @@ Markierung+Vorlesen, Verschieben, Resize) und loggt jeden Schritt unter `TEST`.
 In der **Service-Worker-Konsole**:
 
 ```js
-chrome.runtime.sendMessage({type:'VO_SELFTEST_RUN'}, r => console.log(r));
+__voSelftest();   // Diagnose-Modus an + Runner im aktiven Tab starten
 ```
 
-Der Worker schaltet den Diagnose-Modus an und löst den Runner im aktiven Tab
-aus. Danach `VO_DIAG_EXPORT` ausführen, um die `.jsonl` zu erhalten.
+Der Runner braucht ~25 s (echte Synthese). Danach den Export ausführen, um die
+`.jsonl` zu erhalten:
+
+```js
+chrome.runtime.sendMessage({type:'VO_DIAG_EXPORT'}, r => console.log(r));
+```
+
+> `chrome.runtime.sendMessage({type:'VO_SELFTEST_RUN'})` funktioniert NUR aus
+> einem anderen Kontext (Content-Script/Popup), **nicht** aus der SW-Konsole
+> selbst — daher dort `__voSelftest()` verwenden.
 
 > Hinweis: Es muss ein normaler Tab (http/https) im Vordergrund sein — auf
 > `chrome://`-Seiten laufen keine Content-Scripts.

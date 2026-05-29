@@ -64,7 +64,10 @@
 
 	const styleEl = document.createElement("style");
 	shadow.appendChild(styleEl);
-	fetch(chrome.runtime.getURL("content/overlay.css"))
+	// CSS-Load-Promise: die initiale Layout-Sonde misst erst, wenn dieses
+	// asynchron geladene CSS angewandt ist — sonst meldet sie die ungestylte
+	// Groesse (volle Viewport-Breite) und koennte Fehlalarme erzeugen.
+	const cssReady = fetch(chrome.runtime.getURL("content/overlay.css"))
 		.then((r) => r.text())
 		.then((css) => {
 			styleEl.textContent = css;
@@ -190,10 +193,16 @@
 
 	window.VOSettings.getPosition().then((pos) => {
 		if (pos) applyPosition(pos.left, pos.top);
-		logLayout("Overlay", container, {
-			initial: true,
-			gespeichertePosition: !!pos,
-		});
+		// Initiale Layout-Sonde erst nach dem CSS-Load + naechstem Frame messen
+		// (sonst ungestylte Groesse). Position wird wie bisher sofort angewandt.
+		cssReady.then(() =>
+			requestAnimationFrame(() =>
+				logLayout("Overlay", container, {
+					initial: true,
+					gespeichertePosition: !!pos,
+				}),
+			),
+		);
 	});
 
 	window.addEventListener("resize", () => {

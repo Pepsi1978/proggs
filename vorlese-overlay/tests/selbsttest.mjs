@@ -72,12 +72,29 @@ try {
 	await page.waitForTimeout(2000);
 	log("Testseite geladen:", TESTSEITE);
 
-	// Selbsttest ausloesen (gleicher Trigger-Pfad wie beim manuellen Test)
+	// Selbsttest ausloesen: VO_SELFTEST_BEGIN DIREKT an den aktiven Tab senden.
+	// (chrome.runtime.sendMessage aus dem SW erreicht den SW-eigenen onMessage-
+	//  Listener NICHT — daher kein Umweg ueber VO_SELFTEST_RUN, sondern direkt
+	//  tabs.sendMessage an das Content-Script.)
 	await sw.evaluate(
 		() =>
-			new Promise((r) =>
-				chrome.runtime.sendMessage({ type: "VO_SELFTEST_RUN" }, () => r()),
-			),
+			new Promise((res) => {
+				chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+					const tab = tabs && tabs[0];
+					if (tab && tab.id != null) {
+						chrome.tabs.sendMessage(
+							tab.id,
+							{ type: "VO_SELFTEST_BEGIN" },
+							() => {
+								void chrome.runtime.lastError;
+								res();
+							},
+						);
+					} else {
+						res();
+					}
+				});
+			}),
 	);
 	log(
 		`Selbsttest ausgeloest — warte ${Math.round(WARTE_RUNNER_MS / 1000)} s auf Abschluss...`,

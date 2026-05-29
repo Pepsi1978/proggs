@@ -108,10 +108,13 @@
 	}
 
 	function redact(v) {
-		if (v == null || v === "") return v;
-		var s = String(v);
-		if (s.length <= 4) return "<maskiert>";
-		return "<maskiert:" + s.length + ">";
+		// Nur Strings maskieren. Booleans/Zahlen sind keine Geheimnisse — sonst
+		// wuerde z.B. ein Flag wie "hatGoogleKey" maskiert, nur weil sein Name
+		// "key" enthaelt (die Regex matcht den Schluessel, nicht den Wert).
+		if (typeof v !== "string") return v;
+		if (v === "") return v;
+		if (v.length <= 4) return "<maskiert>";
+		return "<maskiert:" + v.length + ">";
 	}
 
 	function buildEntry(stufe, kategorie, ereignis, inhalt, korrelationId) {

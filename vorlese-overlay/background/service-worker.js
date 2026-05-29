@@ -25,6 +25,25 @@ diag.init("service-worker");
 // (liest die Logs per readAllJsonl) und die manuelle Inspektion in der Konsole.
 globalThis.__voDiag = diag;
 
+// Selbsttest bequem aus der Service-Worker-Konsole ausloesen: __voSelftest()
+// (chrome.runtime.sendMessage erreicht den SW-eigenen Listener NICHT, daher
+//  hier der direkte Weg: Diagnose an + VO_SELFTEST_BEGIN an den aktiven Tab.)
+globalThis.__voSelftest = function () {
+	chrome.storage.local.set({ vo_diag: true }, () => {
+		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+			const tab = tabs && tabs[0];
+			if (tab && tab.id != null) {
+				chrome.tabs.sendMessage(
+					tab.id,
+					{ type: "VO_SELFTEST_BEGIN" },
+					() => void chrome.runtime.lastError,
+				);
+			}
+		});
+	});
+	return "Selbsttest gestartet — nach ~25 s: chrome.runtime.sendMessage({type:'VO_DIAG_EXPORT'})";
+};
+
 const MSG = {
 	SPEAK: "TTS_SPEAK",
 	STOP: "TTS_STOP",
