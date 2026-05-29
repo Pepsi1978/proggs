@@ -38,6 +38,19 @@ chrome.runtime.sendMessage({type:'VO_DIAG_CLEAR'},  r => console.log(r)); // all
 await globalThis.__voDiag.readAllJsonl();   // gibt die JSONL als Text zurück
 ```
 
+### App-Verbesserungsvorschläge ableiten (Service-Worker-Konsole)
+
+Das Diagnose-System sammelt standardmäßig (immer an) auch **Nutzungssignale**
+(Synthese-Latenz, Wiedergabe-Dauer, früher Abbruch, Engine-/Stimmen-Nutzung,
+Fehlerquoten). `__voInsights()` wertet sie aus und gibt konkrete, priorisierte
+**Verbesserungsvorschläge für die App** zurück:
+
+```js
+await __voInsights();   // Kennzahlen + priorisierte Vorschläge (hoch/mittel/niedrig)
+```
+
+Diagnose ist **standardmäßig an**. Komplett ausschalten: `chrome.storage.local.set({vo_diag:false})`.
+
 ---
 
 ## Variante A — In-App-Runner (ohne zusätzliche Software)

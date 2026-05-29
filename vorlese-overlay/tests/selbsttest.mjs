@@ -20,7 +20,7 @@
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, rmSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXT_PFAD = resolve(__dirname, ".."); // -> vorlese-overlay/
@@ -45,6 +45,13 @@ let ctx;
 let exitCode = 0;
 try {
 	log("Starte Chromium mit geladener Erweiterung:", EXT_PFAD);
+	// Frisches Profil erzwingen: ein persistentes Profil cacht den MV3-Service-
+	// Worker und wuerde sonst veralteten SW-Code aus einem frueheren Lauf testen.
+	try {
+		rmSync(USER_DIR, { recursive: true, force: true });
+	} catch (e) {
+		/* erster Lauf: Profil existiert noch nicht */
+	}
 	ctx = await chromium.launchPersistentContext(USER_DIR, {
 		headless: false,
 		args: [
@@ -108,6 +115,18 @@ try {
 	writeFileSync(LOG_OUT, jsonl, "utf8");
 	const zeilen = jsonl.split("\n").filter(Boolean);
 	log("Logs geschrieben:", LOG_OUT, `(${zeilen.length} Eintraege)`);
+
+	// App-Verbesserungsvorschlaege aus den frischen Daten ableiten
+	const insights = await sw.evaluate(async () =>
+		globalThis.__voInsights ? await globalThis.__voInsights() : null,
+	);
+	if (insights) {
+		log("=== App-Verbesserungsvorschlaege ===");
+		log("Kennzahlen:", JSON.stringify(insights.kennzahlen));
+		for (const v of insights.vorschlaege) {
+			log(`  [${v.prioritaet}] ${v.thema}: ${v.vorschlag}`);
+		}
+	}
 
 	// Kurzauswertung
 	let fehler = 0;
