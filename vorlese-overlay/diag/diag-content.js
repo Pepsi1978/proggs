@@ -35,6 +35,7 @@
 		PERFORMANCE: "PERFORMANCE",
 		FEHLER: "FEHLER",
 		TEST: "TEST",
+		NUTZUNG: "NUTZUNG",
 	};
 
 	var enabled = false; // schneller No-Op-Schalter
@@ -180,8 +181,12 @@
 	function readFlag() {
 		try {
 			chrome.storage.local.get([DIAG_FLAG], function (res) {
-				if (chrome.runtime && chrome.runtime.lastError) return;
-				enabled = !!(res && res[DIAG_FLAG]);
+				// Standardmaessig AN — nur ein explizit gespeichertes false schaltet aus.
+				if (chrome.runtime && chrome.runtime.lastError) {
+					enabled = true;
+					return;
+				}
+				enabled = !(res && res[DIAG_FLAG] === false);
 				if (enabled)
 					log(STUFE.INFO, KATEGORIE.ZUSTAND, "diag_init", {
 						komponente: COMPONENT,
@@ -197,7 +202,7 @@
 		try {
 			chrome.storage.onChanged.addListener(function (changes, area) {
 				if (area === "local" && changes[DIAG_FLAG])
-					enabled = !!changes[DIAG_FLAG].newValue;
+					enabled = changes[DIAG_FLAG].newValue !== false;
 			});
 		} catch (e) {
 			/* egal */

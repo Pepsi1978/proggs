@@ -8,9 +8,10 @@
  * der sie ueber ingest() zentral ablegt (siehe diag-content.js).
  *
  * ----- Grundprinzipien (entsprechen der Diagnose-Direktive) ----------------
- *  - EIN zentraler Schalter: chrome.storage.local["vo_diag"] (Default: aus).
- *    Im Aus-Zustand ist log() ein sofortiger No-Op -> praktisch keine Mehrlast,
- *    die Erweiterung bleibt release-tauglich.
+ *  - EIN zentraler Schalter: chrome.storage.local["vo_diag"]. Standardmaessig AN;
+ *    nur ein explizit gespeichertes false schaltet aus. Im Aus-Zustand ist log()
+ *    ein sofortiger No-Op (keine Mehrlast) — das Diagnose-System laeuft sonst
+ *    dauerhaft mit (Fehler UND Nutzungssignale fuer App-Verbesserungen).
  *  - Rein ADDITIV: keine bestehende Funktion wird veraendert. Schalter aus =
  *    Verhalten exakt wie vorher.
  *  - Ein Eintrag = eine JSONL-Zeile mit festen Feldern (siehe buildEntry()).
@@ -45,6 +46,7 @@ const KATEGORIE = Object.freeze({
 	PERFORMANCE: "PERFORMANCE",
 	FEHLER: "FEHLER",
 	TEST: "TEST",
+	NUTZUNG: "NUTZUNG", // Nutzungssignale fuer App-Verbesserungsvorschlaege
 });
 
 let component = "unbekannt";
@@ -221,11 +223,12 @@ function readFlag() {
 	return new Promise((resolve) => {
 		try {
 			chrome.storage.local.get([DIAG_FLAG], (res) => {
-				if (chrome.runtime && chrome.runtime.lastError) return resolve(false);
-				resolve(!!(res && res[DIAG_FLAG]));
+				// Standardmaessig AN — nur ein explizit gespeichertes false schaltet aus.
+				if (chrome.runtime && chrome.runtime.lastError) return resolve(true);
+				resolve(!(res && res[DIAG_FLAG] === false));
 			});
 		} catch (e) {
-			resolve(false);
+			resolve(true);
 		}
 	});
 }
@@ -234,7 +237,8 @@ function watchFlag() {
 	try {
 		chrome.storage.onChanged.addListener((changes, area) => {
 			if (area === "local" && changes[DIAG_FLAG]) {
-				enabled = !!changes[DIAG_FLAG].newValue;
+				// Default an: nur ein explizites false schaltet aus.
+				enabled = changes[DIAG_FLAG].newValue !== false;
 			}
 		});
 	} catch (e) {
