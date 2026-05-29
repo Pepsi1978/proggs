@@ -61,6 +61,9 @@ let creatingOffscreen = null;
 let currentGen = 0;
 // Tab, an den Status-Meldungen gehen (der zuletzt ausloesende Tab).
 let activeTabId = null;
+// NUTZUNG-Sonden: Zeitmarken fuer Synthese-Latenz und Wiedergabe-Dauer.
+let lastSpeakTs = 0;
+let playStartTs = 0;
 
 function getEngine(name) {
 	return name === "google" ? google : edge;
@@ -211,6 +214,7 @@ async function handleGetVoices(msg) {
 async function handleSpeak(msg, tabId) {
 	const gen = ++currentGen; // bricht alle vorher laufenden Synthesen ab
 	if (tabId != null) activeTabId = tabId;
+	lastSpeakTs = performance.now();
 
 	const text = (msg.text || "").trim();
 	diag.log("INFO", "FUNKTION", "handleSpeak:eintritt", {
@@ -289,7 +293,15 @@ async function handleSpeak(msg, tabId) {
 }
 
 function stopPlayback() {
-	diag.log("INFO", "UI_EREIGNIS", "stopPlayback", { gen: currentGen });
+	// NUTZUNG: manueller Stop — kurze Spielzeit deutet auf Unzufriedenheit hin
+	// (falsche Stimme/Tempo/Text) -> Signal fuer App-Verbesserungsvorschlaege.
+	const spielzeit = playStartTs
+		? Math.round(performance.now() - playStartTs)
+		: 0;
+	diag.log("INFO", "NUTZUNG", "manueller_stop", {
+		spielzeit_ms: spielzeit,
+		frueh_abgebrochen: spielzeit > 0 && spielzeit < 2000,
+	});
 	currentGen++; // laufende Synthese-Ergebnisse verwerfen
 	sendToOffscreen({ type: "STOP" });
 }
@@ -304,9 +316,20 @@ function handleOffscreenFeedback(msg) {
 	);
 	switch (msg.type) {
 		case "OFFSCREEN_STARTED":
+			if (lastSpeakTs)
+				diag.log("INFO", "NUTZUNG", "synthese_latenz", {
+					ms: Math.round(performance.now() - lastSpeakTs),
+				});
+			playStartTs = performance.now();
 			notifyTab(activeTabId, { type: MSG.STATE, state: "playing" });
 			break;
 		case "OFFSCREEN_ENDED":
+			if (playStartTs) {
+				diag.log("INFO", "NUTZUNG", "wiedergabe_dauer", {
+					ms: Math.round(performance.now() - playStartTs),
+				});
+				playStartTs = 0;
+			}
 			notifyTab(activeTabId, { type: MSG.STATE, state: "stopped" });
 			break;
 		case "OFFSCREEN_ERROR":
