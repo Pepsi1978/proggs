@@ -11,6 +11,7 @@
 - [Whisper 30-Sekunden-Limit: Stille-basiertes Chunking](#whisper-30-sekunden-limit-stille-basiertes-chunking-wichtig) ⭐
 - [Compose Waveform-Visualizer](#compose-waveform-visualizer-mutablestatelistof--rememberupdatedstate-wichtig) ⭐
 - [Text-Verbesserung (Tampermonkey-Style)](#text-verbesserung-tampermonkey-style)
+- [Chrome Live Caption (Untertitel) umgehen via Web Audio API](#chrome-live-caption-untertitel-umgehen-via-web-audio-api-neu-2026-05-29) ⭐ NEU 2026-05-29
 
 **UI & Navigation:**
 - [Compose Chart Smooth Pinch-Zoom (Google-Maps-Smoothness)](#compose-chart-smooth-pinch-zoom-google-maps-smoothness-via-graphicslayer-kritisch) ⭐⭐⭐ NEU 2026-05-17
@@ -1080,4 +1081,52 @@ damit das blockierende DwmFlush nicht im Render-Callback sitzt).
 
 Quellen: support.microsoft.com/help/938660 · flutter/flutter#130683 (DwmFlush) ·
 dotnet/wpf#133 · learn.microsoft.com/.../animation-tips-and-tricks
+
+---
+
+## Chrome Live Caption (Untertitel) umgehen via Web Audio API (NEU 2026-05-29) ⭐
+
+**Problem:** Eine Chrome-/Chromium-App spielt Audio ab (z.B. TTS / Vorlesen) über ein
+HTMLMediaElement (`new Audio()` / `<audio>`). Hat der Nutzer Chromes **Live-Untertitel**
+(Live Caption) aktiviert, transkribiert Chrome dieses Audio automatisch und blendet eine
+schwebende Untertitel-Box ein — unerwünscht bei eigenem TTS-/Vorlese-Audio. Die App selbst
+hat dabei keinerlei Untertitel-Code; die Untertitel kommen rein vom Browser-Feature.
+
+**Root Cause:** Im Chromium-Quellcode hängt der `SpeechRecognitionClient` (SODA / Live
+Caption) ausschließlich in `media/renderers/audio_renderer_impl.cc` — und der `AudioRendererImpl`
+bedient **nur die Media-Pipeline** (HTMLMediaElement). Audio aus der **Web Audio API** läuft
+durch einen anderen Renderpfad **ohne** diesen Hook.
+
+**Lösung:** Audio über die Web Audio API statt über `<audio>` abspielen:
+
+```js
+const ctx = new AudioContext();
+if (ctx.state === "suspended") await ctx.resume();
+const audioBuf = await ctx.decodeAudioData(arrayBuffer.slice(0)); // slice: decode "detached" den Buffer
+const src = ctx.createBufferSource();
+src.buffer = audioBuf;
+src.connect(ctx.destination);
+src.onended = () => { /* nächstes Stück abspielen */ };
+src.start();
+```
+
+**Fallstricke:**
+- `decodeAudioData` "detached" den übergebenen ArrayBuffer → immer mit einer Kopie
+  (`.slice(0)`) dekodieren, wenn das Original noch gebraucht wird (z.B. für ein Fallback).
+- AudioContext kann "suspended" starten → `await ctx.resume()` und `ctx.state === "running"`
+  prüfen, sonst spielt nichts und `onended` feuert nie (Queue hängt).
+- Es gibt **keine** Extension-API und **kein** HTML-Attribut, um Live Caption pro Element
+  auszunehmen — Web Audio ist der einzige codeseitige Hebel. Alternative für den Nutzer:
+  Live Caption global aus unter `chrome://settings/accessibility`.
+- **Robustheit (Pflicht):** Immer einen Fallback auf `<audio>` einbauen, falls Web Audio
+  scheitert (kein AudioContext, suspended, decode-Fehler) — dann spielt das Audio in jedem
+  Fall, schlimmstenfalls wieder mit Untertiteln.
+- Caveat: Quellcode-belegt; theoretisch könnte Live Caption künftig auf Browser-Prozess-Ebene
+  ansetzen. Stand 2026 greift der Web-Audio-Weg aber zuverlässig.
+
+**Gilt für:** alle Chromium-Browser (Chrome, Edge, Brave) auf jedem OS. Relevant für jede
+eigene Audio-Wiedergabe (TTS, Sound-Effekte, Player) in Web-Apps und Erweiterungen.
+
+**Quelle:** Vorlese-Overlay (Chrome-Erweiterung), Commit #1191. Chromium-Referenz:
+`media/renderers/audio_renderer_impl.cc` (SpeechRecognitionClient-Hook nur in der Media-Pipeline).
 
