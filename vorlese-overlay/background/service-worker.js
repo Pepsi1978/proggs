@@ -21,6 +21,9 @@ import { diag } from "../diag/diag.js";
 
 // Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
 diag.init("service-worker");
+// Im Service-Worker-Kontext erreichbar machen — fuer den Playwright-Selbsttest
+// (liest die Logs per readAllJsonl) und die manuelle Inspektion in der Konsole.
+globalThis.__voDiag = diag;
 
 const MSG = {
 	SPEAK: "TTS_SPEAK",

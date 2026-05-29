@@ -1,0 +1,13 @@
+{
+	"name": "vorlese-overlay-tests",
+	"private": true,
+	"type": "module",
+	"version": "1.0.0",
+	"description": "Playwright-Selbsttest fuer das Vorlese-Overlay: laedt die entpackte Erweiterung in Chromium, loest den In-App-Diagnose-Runner aus und schreibt die gesammelten Diagnose-Logs als .jsonl heraus.",
+	"scripts": {
+		"selbsttest": "node selbsttest.mjs"
+	},
+	"devDependencies": {
+		"playwright": "^1.48.0"
+	}
+}
