@@ -11,6 +11,8 @@
  * schnell zu hoeren und langer Text spielt nahtlos hintereinander.
  */
 
+import { diag } from "../diag/diag.js";
+
 export function splitIntoChunks(text, maxLen) {
 	const limit = typeof maxLen === "number" && maxLen > 50 ? maxLen : 1200;
 	const clean = String(text || "")
@@ -50,6 +52,11 @@ export function splitIntoChunks(text, maxLen) {
 	}
 
 	if (buf) chunks.push(buf);
+	diag.log("INFO", "PERFORMANCE", "chunker.splitIntoChunks", {
+		chunks: chunks.length,
+		textLen: clean.length,
+		limit,
+	});
 	return chunks;
 }
 

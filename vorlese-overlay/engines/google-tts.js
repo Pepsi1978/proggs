@@ -20,6 +20,8 @@
  *   synthesize(text, voice, rate, apiKey) -> Promise<Uint8Array>  (MP3-Bytes)
  */
 
+import { diag } from "../diag/diag.js";
+
 const SYNTH_URL = "https://texttospeech.googleapis.com/v1/text:synthesize";
 const VOICES_URL = "https://texttospeech.googleapis.com/v1/voices";
 const DEFAULT_VOICE = "de-DE-Chirp3-HD-Kore";
@@ -128,11 +130,17 @@ export async function listGermanVoices(apiKey) {
 		);
 	} catch (e) {
 		// Netzwerkproblem: bewaehrte Liste, damit der Nutzer trotzdem arbeiten kann
+		diag.log("WARN", "FEHLER", "google.listGermanVoices:netzwerk_fallback", {
+			message: String((e && e.message) || e),
+		});
 		return FALLBACK_GOOGLE_VOICES.slice();
 	}
 
 	if (!res.ok) {
 		// Key-/API-Problem deutlich machen (kein stiller Fallback)
+		diag.log("ERROR", "FEHLER", "google.listGermanVoices:http", {
+			status: res.status,
+		});
 		throw new Error(await describeHttpError(res));
 	}
 
@@ -170,6 +178,13 @@ export async function synthesize(text, voice, rate, apiKey) {
 	const key = (apiKey || "").trim();
 	if (!key) throw new Error("Kein Google-API-Key eingetragen.");
 
+	const t0 = performance.now();
+	diag.log("INFO", "FUNKTION", "google.synthesize:eintritt", {
+		voice: voice || DEFAULT_VOICE,
+		rate,
+		textLen: clean.length,
+	});
+
 	const body = {
 		input: { text: clean }, // reiner Text — Chirp unterstuetzt SSML nur eingeschraenkt
 		voice: { languageCode: "de-DE", name: voice || DEFAULT_VOICE },
@@ -188,15 +203,29 @@ export async function synthesize(text, voice, rate, apiKey) {
 			body: JSON.stringify(body),
 		});
 	} catch (e) {
+		diag.log("ERROR", "FEHLER", "google.synthesize:netzwerk", {
+			message: String((e && e.message) || e),
+		});
 		throw new Error("Kein Internet erreichbar.");
 	}
 
 	if (!res.ok) {
+		diag.log("ERROR", "FEHLER", "google.synthesize:http", {
+			status: res.status,
+		});
 		throw new Error(await describeHttpError(res));
 	}
 
 	const data = await res.json();
 	const b64 = data && data.audioContent;
-	if (!b64) throw new Error("Google lieferte keine Audiodaten.");
-	return base64ToBytes(b64);
+	if (!b64) {
+		diag.log("ERROR", "FEHLER", "google.synthesize:keine_audiodaten", {});
+		throw new Error("Google lieferte keine Audiodaten.");
+	}
+	const bytes = base64ToBytes(b64);
+	diag.log("INFO", "PERFORMANCE", "google.synthesize:erfolg", {
+		bytes: bytes.length,
+		dauer_ms: Math.round(performance.now() - t0),
+	});
+	return bytes;
 }

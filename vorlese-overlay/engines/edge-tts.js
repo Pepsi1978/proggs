@@ -20,6 +20,8 @@
 
 // Oeffentlicher, fest in Microsoft Edge eingebauter Client-Token — KEIN Geheimnis;
 // steht so in jeder Edge-TTS-Implementierung und auch im BestJournal-Repo.
+import { diag } from "../diag/diag.js";
+
 const TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"; // gitleaks:allow
 // Der Edge-Endpunkt akzeptiert den Handshake NUR mit einem User-Agent, der "Edg/"
 // enthaelt (per Kommandozeilen-Test verifiziert: UA allein reicht, Origin/Cookie/
@@ -141,8 +143,14 @@ export async function listGermanVoices(/* apiKey */) {
 			}
 		}
 	} catch (e) {
+		diag.log("WARN", "FEHLER", "edge.listGermanVoices:fehler", {
+			message: String((e && e.message) || e),
+		});
 		/* Fallback unten */
 	}
+	diag.log("WARN", "ZUSTAND", "edge.listGermanVoices:fallback_liste", {
+		anzahl: FALLBACK_EDGE_VOICES.length,
+	});
 	return FALLBACK_EDGE_VOICES.slice();
 }
 
@@ -174,6 +182,12 @@ export async function synthesize(text, voice, rate /* , apiKey */) {
 	if (!clean) return new Uint8Array(0);
 
 	const v = voice || "de-DE-KatjaNeural";
+	const t0 = performance.now();
+	diag.log("INFO", "FUNKTION", "edge.synthesize:eintritt", {
+		voice: v,
+		rate,
+		textLen: clean.length,
+	});
 	const token = await generateSecMsGec();
 	const url =
 		WSS_BASE +
@@ -255,7 +269,13 @@ export async function synthesize(text, voice, rate /* , apiKey */) {
 			if (typeof ev.data === "string") {
 				// Text-Frame: turn.start | audio.metadata | turn.end
 				if (ev.data.includes("Path:turn.end")) {
-					finish(resolve, concatChunks(chunks));
+					const out = concatChunks(chunks);
+					diag.log("INFO", "PERFORMANCE", "edge.synthesize:erfolg", {
+						bytes: out.length,
+						frames: chunks.length,
+						dauer_ms: Math.round(performance.now() - t0),
+					});
+					finish(resolve, out);
 				}
 				return;
 			}
@@ -273,15 +293,28 @@ export async function synthesize(text, voice, rate /* , apiKey */) {
 		};
 
 		ws.onerror = () => {
+			diag.log("ERROR", "FEHLER", "edge.synthesize:ws_error", {
+				voice: v,
+				dauer_ms: Math.round(performance.now() - t0),
+			});
 			finish(reject, new Error("Edge-Verbindung fehlgeschlagen."));
 		};
 
 		ws.onclose = () => {
 			if (settled) return;
 			// Ohne turn.end geschlossen: wenn schon Audio kam, das nehmen.
-			if (chunks.length > 0) finish(resolve, concatChunks(chunks));
-			else
+			if (chunks.length > 0) {
+				diag.log("WARN", "FEHLER", "edge.synthesize:close_ohne_turnend", {
+					frames: chunks.length,
+					dauer_ms: Math.round(performance.now() - t0),
+				});
+				finish(resolve, concatChunks(chunks));
+			} else {
+				diag.log("ERROR", "FEHLER", "edge.synthesize:close_ohne_audio", {
+					dauer_ms: Math.round(performance.now() - t0),
+				});
 				finish(reject, new Error("Edge-Verbindung wurde unerwartet getrennt."));
+			}
 		};
 	});
 }
