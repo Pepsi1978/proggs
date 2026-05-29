@@ -18,6 +18,7 @@ import * as edge from "../engines/edge-tts.js";
 import * as google from "../engines/google-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
 import { diag } from "../diag/diag.js";
+import { analyze } from "../diag/insights.js";
 
 // Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
 diag.init("service-worker");
@@ -42,6 +43,30 @@ globalThis.__voSelftest = function () {
 		});
 	});
 	return "Selbsttest gestartet — nach ~25 s: chrome.runtime.sendMessage({type:'VO_DIAG_EXPORT'})";
+};
+
+// App-Verbesserungsvorschlaege aus den gesammelten Logs ableiten: __voInsights()
+// Liefert Kennzahlen + priorisierte Vorschlaege und loggt sie lesbar in die Konsole.
+globalThis.__voInsights = async function () {
+	const jsonl = await diag.readAllJsonl();
+	const r = analyze(jsonl);
+	console.log("[VO-DIAG] Insights — Kennzahlen:", r.kennzahlen);
+	console.log(
+		"[VO-DIAG] App-Verbesserungsvorschlaege (" + r.vorschlaege.length + "):",
+	);
+	for (const v of r.vorschlaege) {
+		console.log(
+			"  [" +
+				v.prioritaet +
+				"] " +
+				v.thema +
+				": " +
+				v.befund +
+				" -> " +
+				v.vorschlag,
+		);
+	}
+	return r;
 };
 
 const MSG = {
