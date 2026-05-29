@@ -75,6 +75,16 @@
 	function save(settings) {
 		return new Promise((resolve) => {
 			const clean = mergeDefaults(settings);
+			// Diagnose: gespeicherte Einstellungen (API-Key NICHT, nur ob vorhanden)
+			if (window.VODiag)
+				window.VODiag.log("INFO", "ZUSTAND", "settings.save", {
+					activeEngine: clean.activeEngine,
+					edgeVoice: clean.edge.voice,
+					edgeRate: clean.edge.rate,
+					googleVoice: clean.google.voice,
+					googleRate: clean.google.rate,
+					hatGoogleKey: !!(clean.google.apiKey || "").trim(),
+				});
 			try {
 				chrome.storage.local.set({ [STORE_KEY]: clean }, () => resolve(clean));
 			} catch (e) {

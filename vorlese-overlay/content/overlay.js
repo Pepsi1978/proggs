@@ -219,6 +219,8 @@
 	// ----- Lautsprecher-Aktion -------------------------------------------------
 	async function onSpeakerClick() {
 		if (isPlaying) {
+			if (window.VODiag)
+				window.VODiag.log("INFO", "UI_EREIGNIS", "speaker_klick:stop", {});
 			sendMessage({ type: MSG.STOP });
 			setState("stopped");
 			return;
@@ -226,6 +228,13 @@
 		captureSelection();
 		const text = (lastSelection || "").trim();
 		if (!text) {
+			if (window.VODiag)
+				window.VODiag.log(
+					"WARN",
+					"UI_EREIGNIS",
+					"speaker_klick:keine_markierung",
+					{},
+				);
 			showHint("Bitte zuerst Text markieren.");
 			return;
 		}
@@ -233,12 +242,26 @@
 		const engine = settings.activeEngine;
 		const cfg = settings[engine];
 		if (engine === "google" && !(settings.google.apiKey || "").trim()) {
+			if (window.VODiag)
+				window.VODiag.log(
+					"WARN",
+					"UI_EREIGNIS",
+					"speaker_klick:google_kein_key",
+					{},
+				);
 			showHint(
 				"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
 				true,
 			);
 			return;
 		}
+		if (window.VODiag)
+			window.VODiag.log("INFO", "UI_EREIGNIS", "speaker_klick:start", {
+				engine,
+				voice: cfg.voice,
+				rate: cfg.rate,
+				textLen: text.length,
+			});
 		setState("loading");
 		sendMessage({
 			type: MSG.SPEAK,
@@ -255,6 +278,11 @@
 		try {
 			chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError);
 		} catch (e) {
+			if (window.VODiag)
+				window.VODiag.log("ERROR", "FEHLER", "overlay.sendMessage:fehler", {
+					typ: msg && msg.type,
+					message: String((e && e.message) || e),
+				});
 			showHint("Erweiterung nicht erreichbar — Seite neu laden.", true);
 		}
 	}
@@ -286,6 +314,13 @@
 	chrome.runtime.onMessage.addListener((msg) => {
 		if (!msg || typeof msg !== "object") return;
 		if (msg.type === MSG.STATE) {
+			if (window.VODiag)
+				window.VODiag.log(
+					msg.state === "error" ? "ERROR" : "INFO",
+					msg.state === "error" ? "FEHLER" : "ZUSTAND",
+					"overlay.status_empfangen",
+					{ state: msg.state, message: msg.message },
+				);
 			if (msg.state === "error") {
 				setState("stopped");
 				showHint(msg.message || "Es ist ein Fehler aufgetreten.", true);
@@ -294,6 +329,8 @@
 			}
 			if (panelStatusHandler) panelStatusHandler(msg.state, msg.message);
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
+			if (window.VODiag)
+				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.tastenkuerzel", {});
 			onSpeakerClick();
 		}
 	});
@@ -305,6 +342,8 @@
 			panelBuilt = true;
 		}
 		const open = panel.classList.toggle("vo-open");
+		if (window.VODiag)
+			window.VODiag.log("INFO", "UI_EREIGNIS", "panel_toggle", { open });
 		if (open) positionPanel();
 	}
 

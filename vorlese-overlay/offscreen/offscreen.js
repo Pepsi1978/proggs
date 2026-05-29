@@ -143,6 +143,9 @@ async function playNext() {
 			// Web Audio nicht moeglich -> fuer den Rest der Session auf das
 			// HTMLAudioElement zurueckfallen (Audio bleibt funktionsfaehig).
 			if (myGen !== gen) return;
+			diag.log("WARN", "PERFORMANCE", "offscreen.webaudio_fallback", {
+				message: String((e && e.message) || e),
+			});
 			webAudioBroken = true;
 			currentSource = null;
 		}
@@ -229,6 +232,11 @@ function stopAll() {
 
 // ----- Edge-Synthese (WebSocket HIER -> DNR-User-Agent-Regel greift) --------
 async function edgeSpeak(text, voice, rate, myGen) {
+	diag.log("INFO", "FUNKTION", "offscreen.edgeSpeak:eintritt", {
+		voice,
+		rate,
+		textLen: (text || "").length,
+	});
 	const chunks = splitIntoChunks(text, 1200);
 	let any = false;
 	for (const part of chunks) {
@@ -237,9 +245,15 @@ async function edgeSpeak(text, voice, rate, myGen) {
 			bytes = await edge.synthesize(part, voice, rate);
 		} catch (e) {
 			// Einmal mit frischem Token erneut versuchen.
+			diag.log("WARN", "FEHLER", "offscreen.edgeSpeak:retry", {
+				message: String((e && e.message) || e),
+			});
 			try {
 				bytes = await edge.synthesize(part, voice, rate);
 			} catch (e2) {
+				diag.log("ERROR", "FEHLER", "offscreen.edgeSpeak:fehlgeschlagen", {
+					message: String((e2 && e2.message) || e2),
+				});
 				if (myGen === gen)
 					send({ type: "OFFSCREEN_ERROR", message: humanError(e2) });
 				return;

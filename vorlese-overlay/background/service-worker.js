@@ -172,7 +172,16 @@ async function handleSpeak(msg, tabId) {
 	if (tabId != null) activeTabId = tabId;
 
 	const text = (msg.text || "").trim();
+	diag.log("INFO", "FUNKTION", "handleSpeak:eintritt", {
+		engine: msg.engine || "edge",
+		voice: msg.voice,
+		rate: msg.rate,
+		textLen: text.length,
+		test: msg.type === MSG.TEST,
+		gen,
+	});
 	if (!text) {
+		diag.log("WARN", "FEHLER", "handleSpeak:kein_text", {});
 		notifyTab(tabId, {
 			type: MSG.STATE,
 			state: "error",
@@ -225,6 +234,11 @@ async function handleSpeak(msg, tabId) {
 		}
 	} catch (e) {
 		if (gen !== currentGen) return;
+		diag.log("ERROR", "FEHLER", "handleSpeak:fehler", {
+			engine: msg.engine || "edge",
+			message: String((e && e.message) || e),
+			stack: e && e.stack,
+		});
 		notifyTab(tabId, {
 			type: MSG.STATE,
 			state: "error",
@@ -234,12 +248,19 @@ async function handleSpeak(msg, tabId) {
 }
 
 function stopPlayback() {
+	diag.log("INFO", "UI_EREIGNIS", "stopPlayback", { gen: currentGen });
 	currentGen++; // laufende Synthese-Ergebnisse verwerfen
 	sendToOffscreen({ type: "STOP" });
 }
 
 // ----- Wiedergabe-Status vom Offscreen an das Overlay weiterreichen ---------
 function handleOffscreenFeedback(msg) {
+	diag.log(
+		msg.type === "OFFSCREEN_ERROR" ? "ERROR" : "INFO",
+		msg.type === "OFFSCREEN_ERROR" ? "FEHLER" : "ZUSTAND",
+		"offscreen_feedback",
+		{ typ: msg.type, message: msg.message },
+	);
 	switch (msg.type) {
 		case "OFFSCREEN_STARTED":
 			notifyTab(activeTabId, { type: MSG.STATE, state: "playing" });
