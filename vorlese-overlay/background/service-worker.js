@@ -129,6 +129,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		diag.getCount().then((n) => sendResponse({ count: n }));
 		return true;
 	}
+	// Selbsttest starten: Diagnose-Modus an + Runner im aktiven Tab ausloesen.
+	if (msg.type === "VO_SELFTEST_RUN") {
+		chrome.storage.local.set({ vo_diag: true }, () => {
+			chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+				const tab = tabs && tabs[0];
+				if (tab && tab.id != null) {
+					chrome.tabs.sendMessage(
+						tab.id,
+						{ type: "VO_SELFTEST_BEGIN" },
+						() => void chrome.runtime.lastError,
+					);
+					sendResponse({ ok: true, tabId: tab.id });
+				} else {
+					sendResponse({ ok: false, error: "Kein aktiver Tab gefunden." });
+				}
+			});
+		});
+		return true;
+	}
 
 	// Rueckmeldungen vom Offscreen-Dokument (Wiedergabe-Status)
 	if (msg.target === "background") {

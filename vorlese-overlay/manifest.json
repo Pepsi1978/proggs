@@ -36,7 +36,8 @@
 			"js": [
 				"diag/diag-content.js",
 				"settings/settings.js",
-				"content/overlay.js"
+				"content/overlay.js",
+				"diag/selftest.js"
 			],
 			"run_at": "document_idle",
 			"all_frames": false
