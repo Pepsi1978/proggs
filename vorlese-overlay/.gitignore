@@ -3,3 +3,6 @@
 
 # macOS
 .DS_Store
+
+# Von Chrome beim Laden der entpackten Erweiterung erzeugt
+_metadata/
