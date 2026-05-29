@@ -17,6 +17,10 @@
 import * as edge from "../engines/edge-tts.js";
 import * as google from "../engines/google-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
+import { diag } from "../diag/diag.js";
+
+// Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
+diag.init("service-worker");
 
 const MSG = {
 	SPEAK: "TTS_SPEAK",
@@ -101,6 +105,30 @@ function sendToOffscreen(payload) {
 // ----- Nachrichten-Router ---------------------------------------------------
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (!msg || typeof msg !== "object") return false;
+
+	// ----- Diagnose-Schicht (additiv; im Aus-Zustand No-Op) ------------------
+	// Logs des Content-Scripts (anderer Ursprung) zentral ablegen + Export/Clear.
+	if (msg.type === "VO_DIAG_LOG") {
+		diag.ingest(msg.entry);
+		return false;
+	}
+	if (msg.type === "VO_DIAG_EXPORT") {
+		diag
+			.exportLogs()
+			.then((r) => sendResponse(Object.assign({ ok: true }, r)))
+			.catch((e) =>
+				sendResponse({ ok: false, error: String((e && e.message) || e) }),
+			);
+		return true;
+	}
+	if (msg.type === "VO_DIAG_CLEAR") {
+		diag.clearLogs().then(() => sendResponse({ ok: true }));
+		return true;
+	}
+	if (msg.type === "VO_DIAG_COUNT") {
+		diag.getCount().then((n) => sendResponse({ count: n }));
+		return true;
+	}
 
 	// Rueckmeldungen vom Offscreen-Dokument (Wiedergabe-Status)
 	if (msg.target === "background") {

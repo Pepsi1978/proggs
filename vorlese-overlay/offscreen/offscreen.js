@@ -37,6 +37,10 @@
  */
 import * as edge from "../engines/edge-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
+import { diag } from "../diag/diag.js";
+
+// Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
+diag.init("offscreen");
 
 // Warteschlange. Jedes Item ist entweder { buffer: ArrayBuffer } (Edge liefert
 // rohe MP3-Bytes) oder { url: string } (Google schickt eine Data-URL).

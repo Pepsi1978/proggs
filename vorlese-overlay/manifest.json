@@ -9,7 +9,8 @@
 		"offscreen",
 		"activeTab",
 		"scripting",
-		"declarativeNetRequestWithHostAccess"
+		"declarativeNetRequestWithHostAccess",
+		"downloads"
 	],
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
@@ -32,7 +33,11 @@
 	"content_scripts": [
 		{
 			"matches": ["http://*/*", "https://*/*"],
-			"js": ["settings/settings.js", "content/overlay.js"],
+			"js": [
+				"diag/diag-content.js",
+				"settings/settings.js",
+				"content/overlay.js"
+			],
 			"run_at": "document_idle",
 			"all_frames": false
 		}
