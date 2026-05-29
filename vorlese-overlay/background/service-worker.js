@@ -154,29 +154,45 @@ async function handleSpeak(msg, tabId) {
 	}
 
 	try {
-		const eng = getEngine(msg.engine);
 		await ensureOffscreen();
 		sendToOffscreen({ type: "STOP" }); // evtl. laufende Wiedergabe beenden
 
-		// Langen Text an Satzgrenzen aufteilen, damit die Dienste-Limits nicht
-		// gerissen werden und das erste Stueck schnell zu hoeren ist.
-		const chunks = splitIntoChunks(text, msg.engine === "google" ? 2500 : 1200);
-
-		let enqueuedAny = false;
-		for (const part of chunks) {
-			const bytes = await synthesizeChunk(eng, msg.engine, part, msg, gen);
-			if (gen !== currentGen) return; // zwischenzeitlich gestoppt/ersetzt
-			if (bytes && bytes.length > 0) {
-				sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes) });
-				enqueuedAny = true;
+		if (msg.engine === "google") {
+			// Google: REST-fetch laeuft hier im Worker (DNR greift fuer fetch).
+			// Langen Text an Satzgrenzen teilen; das erste Stueck ist schnell hoerbar.
+			const chunks = splitIntoChunks(text, 2500);
+			let enqueuedAny = false;
+			for (const part of chunks) {
+				const bytes = await google.synthesize(
+					part,
+					msg.voice,
+					msg.rate,
+					msg.apiKey,
+				);
+				if (gen !== currentGen) return; // zwischenzeitlich gestoppt/ersetzt
+				if (bytes && bytes.length > 0) {
+					sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes) });
+					enqueuedAny = true;
+				}
 			}
-		}
-
-		if (!enqueuedAny && gen === currentGen) {
-			notifyTab(tabId, {
-				type: MSG.STATE,
-				state: "error",
-				message: "Keine Audiodaten erhalten.",
+			if (!enqueuedAny && gen === currentGen) {
+				notifyTab(tabId, {
+					type: MSG.STATE,
+					state: "error",
+					message: "Keine Audiodaten erhalten.",
+				});
+			}
+		} else {
+			// Edge: Der WebSocket MUSS im Offscreen-Dokument geoeffnet werden.
+			// declarativeNetRequest (setzt den noetigen Edge-User-Agent) greift wegen
+			// Chromium-Bug 1285664 NICHT auf WebSocket-Upgrades aus einem Service-
+			// Worker — wohl aber aus einem normalen Dokument. Chunking + Synthese +
+			// Wiedergabe laufen daher komplett im Offscreen.
+			sendToOffscreen({
+				type: "EDGE_SPEAK",
+				text,
+				voice: msg.voice,
+				rate: msg.rate,
 			});
 		}
 	} catch (e) {
@@ -186,19 +202,6 @@ async function handleSpeak(msg, tabId) {
 			state: "error",
 			message: humanError(e),
 		});
-	}
-}
-
-// Edge kann gelegentlich scheitern (z.B. veraltetes Sec-MS-GEC-Token oder eine
-// kurze Verbindungsstoerung). Dann EINMAL mit frischem Token erneut versuchen —
-// synthesize() erzeugt das Token bei jedem Aufruf neu. Google NICHT wiederholen:
-// ein Key-/API-Fehler bliebe bestehen und wuerde nur Kontingent kosten.
-async function synthesizeChunk(eng, engineName, part, msg, gen) {
-	try {
-		return await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
-	} catch (e) {
-		if (engineName === "google" || gen !== currentGen) throw e;
-		return await eng.synthesize(part, msg.voice, msg.rate, msg.apiKey);
 	}
 }
 
