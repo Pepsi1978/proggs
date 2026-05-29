@@ -209,6 +209,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"06a371fd-cf7a-4cb9-a5c5-b8b62130c632","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/06a371fd-cf7a-4cb9-a5c5-b8b62130c632.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"invalid_request","error_details":"400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 206086 tokens > 200000 maximum\"},\"request_id\":\"req_011CbVMgXFBnPaU4ta96yrws\"... (truncated)
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
+### 2026-05-29 18:22 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-29 18:22 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-05-29 18:28 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -255,9 +258,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-05-28 (Versions-Bump auf macOS, Plattform-Stand sonst von /self-improve Thorough 2026-05-10 auf Windows)
+**Stand:** 2026-05-29 (Windows: Claude Code v2.1.156 via `claude --version` verifiziert; Plattform-Stand sonst von /self-improve Thorough 2026-05-10 auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.154** (macOS heute via `claude update` verifiziert, Windows-Stand 2026-05-10: v2.1.138), Opus 4.7 (1M context, neuer Default seit April)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.156** (Windows via `claude --version` verifiziert 2026-05-29; zuvor dokumentiert v2.1.154), Opus 4.8 (1M context)
 - **Sprachen:** Rust 1.94.0 (1 Minor hinter, CVE-2026-33055/33056), Go 1.26.2 (1 Patch hinter), Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12 (1 Patch hinter), Bun 1.3.11 (2 Patch hinter), Node.js v24.15.0 (LTS aktuell)
 - **Effort Level:** high (Standard seit 2026-04-12). Manuelle Aenderung bleibt bis Session-Ende erhalten (CLAUDE.md-Update 2026-05-08).
 - **AUTOCOMPACT:** 100 (dauerhafter Standard ab 2026-05-24; grosse Komprimierung erst bei 100%, Microcompact erledigt den Rest. Alter Wert 85 war wegen Math.min-Clamp wirkungslos)
