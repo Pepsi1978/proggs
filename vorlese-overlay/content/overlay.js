@@ -144,12 +144,56 @@
 		container.style.bottom = "auto";
 	}
 
+	// ----- Layout-Sonde: Geometrie + Sichtbarkeits-Check im Viewport ----------
+	// Loggt Position/Groesse eines Overlay-Elements und ob es vollstaendig im
+	// sichtbaren Bereich liegt (welche Seite ragt hinaus?). Nur aktiv im
+	// Diagnose-Modus -> sonst KEIN getBoundingClientRect (keine Mehrlast).
+	function logLayout(komponente, el, extra) {
+		if (!(window.VODiag && window.VODiag.isEnabled())) return;
+		try {
+			const r = el.getBoundingClientRect();
+			const vw = window.innerWidth;
+			const vh = window.innerHeight;
+			const abgeschnitten = [];
+			if (r.left < 0) abgeschnitten.push("links");
+			if (r.top < 0) abgeschnitten.push("oben");
+			if (r.right > vw) abgeschnitten.push("rechts");
+			if (r.bottom > vh) abgeschnitten.push("unten");
+			const sichtbar =
+				abgeschnitten.length === 0 && r.width > 0 && r.height > 0;
+			window.VODiag.log(
+				sichtbar ? "INFO" : "WARN",
+				"LAYOUT",
+				komponente + (sichtbar ? ":sichtbar" : ":teilweise_ausserhalb"),
+				Object.assign(
+					{
+						x: Math.round(r.left),
+						y: Math.round(r.top),
+						breite: Math.round(r.width),
+						hoehe: Math.round(r.height),
+						sichtbarer_bereich: { breite: vw, hoehe: vh },
+						dpr: window.devicePixelRatio,
+						bildschirm: { breite: screen.width, hoehe: screen.height },
+						abgeschnitten,
+					},
+					extra || {},
+				),
+			);
+		} catch (e) {
+			/* Layout-Sonde darf nie stoeren */
+		}
+	}
+
 	// Standard: unten rechts (bis der Benutzer verschiebt)
 	container.style.right = "16px";
 	container.style.bottom = "16px";
 
 	window.VOSettings.getPosition().then((pos) => {
 		if (pos) applyPosition(pos.left, pos.top);
+		logLayout("Overlay", container, {
+			initial: true,
+			gespeichertePosition: !!pos,
+		});
 	});
 
 	window.addEventListener("resize", () => {
@@ -209,6 +253,7 @@
 		if (wasDrag) {
 			const rect = container.getBoundingClientRect();
 			window.VOSettings.setPosition(rect.left, rect.top);
+			logLayout("Overlay", container, { nachDrag: true });
 		} else if (pressed === speakerBtn) {
 			onSpeakerClick();
 		} else if (pressed === gearBtn) {
@@ -358,6 +403,7 @@
 			top = Math.max(8, window.innerHeight - ph - 8);
 		panel.style.left = Math.max(8, left) + "px";
 		panel.style.top = Math.max(8, top) + "px";
+		logLayout("EinstellungenPanel", panel, { verankert: "neben Overlay" });
 	}
 
 	function buildPanel() {
