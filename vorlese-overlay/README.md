@@ -6,8 +6,10 @@ Overlay (Lautsprecher + Zahnrad). Zwei Vorlese-Dienste zur Auswahl:
 1. **Edge TTS** — kostenlos, kein Schlüssel nötig
 2. **Google Chirp 3 HD** — über einen eigenen Google-Cloud-API-Key
 
-Reines Vanilla-JavaScript, **kein Build-Schritt**. Manifest V3, gebaut und
-getestet für Chrome auf macOS. Ausgabe-Sprache: **Deutsch**.
+Reines Vanilla-JavaScript, **kein Build-Schritt**. Manifest V3 — läuft in
+**Chrome unter Windows und macOS** (sowie in anderen Chromium-Browsern wie
+Edge oder Brave). Es gibt **keinen** plattformspezifischen Code: dieselbe
+Erweiterung läuft auf jedem Betriebssystem identisch. Ausgabe-Sprache: **Deutsch**.
 
 ---
 
@@ -31,8 +33,10 @@ getestet für Chrome auf macOS. Ausgabe-Sprache: **Deutsch**.
   sofort und leert die Wiedergabe-Queue.
 - Das **Zahnrad** (unter dem Lautsprecher) öffnet die Einstellungen.
 - Das Overlay lässt sich per **Ziehen** verschieben; die Position wird gemerkt.
-- **Tastaturkürzel:** `Cmd+Shift+S` (macOS) liest die Markierung sofort vor.
-  (Bei Konflikt unter `chrome://extensions/shortcuts` änderbar.)
+- **Tastaturkürzel:** `Ctrl+Shift+S` (Windows/Linux) bzw. `Cmd+Shift+S` (macOS)
+  liest die Markierung sofort vor. (Chrome wählt das richtige Kürzel je nach
+  Betriebssystem automatisch; bei Konflikt unter `chrome://extensions/shortcuts`
+  änderbar.)
 
 ---
 
@@ -137,6 +141,8 @@ Ein Service-Worker hat kein `URL.createObjectURL`. Die MP3-Bytes werden darum al
 
 ## Status
 
+- ✅ **Plattformen** — verifiziert in Chrome unter **Windows** und **macOS**
+  (gleiche Codebasis, kein plattformspezifischer Code)
 - ✅ **Stufe 1** — Grundgerüst: Overlay, Verschieben, Markierung erfassen
 - ✅ **Stufe 2** — Edge TTS (Token, WebSocket-Synthese, Wiedergabe, Panel)
 - ✅ **Stufe 3** — Google Chirp 3 HD (dynamische Stimmen + Fallback, Synthese)
