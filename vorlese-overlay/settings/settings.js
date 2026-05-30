@@ -36,6 +36,7 @@
 		},
 		autoSpeak: false, // Haekchen: markierten Text automatisch vorlesen
 		autoMode: false, // A-Button: ab markiertem Wort absatzweise bis Ende vorlesen
+		favoriteVoices: [], // mit Stern markierte Lieblings-Stimmen (Liste von IDs)
 	});
 
 	// Tiefe, robuste Zusammenführung mit den Defaults, damit fehlende Felder
@@ -58,6 +59,16 @@
 				typeof s.autoSpeak === "boolean" ? s.autoSpeak : DEFAULTS.autoSpeak,
 			autoMode:
 				typeof s.autoMode === "boolean" ? s.autoMode : DEFAULTS.autoMode,
+			// Lieblings-Stimmen: nur eindeutige, nicht-leere String-IDs uebernehmen.
+			favoriteVoices: Array.isArray(s.favoriteVoices)
+				? Array.from(
+						new Set(
+							s.favoriteVoices.filter(
+								(x) => typeof x === "string" && x.length > 0,
+							),
+						),
+					)
+				: [],
 		};
 	}
 
@@ -104,6 +115,7 @@
 					googleRate: clean.google.rate,
 					hatGoogleKey: !!(clean.google.apiKey || "").trim(),
 					autoSpeak: clean.autoSpeak,
+					favoritenAnzahl: clean.favoriteVoices.length,
 				});
 			try {
 				chrome.storage.local.set({ [STORE_KEY]: clean }, () => resolve(clean));

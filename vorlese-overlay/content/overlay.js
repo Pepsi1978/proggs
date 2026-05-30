@@ -1185,7 +1185,10 @@
 			// Edge-Seite
 			'<div class="vo-tabpage" data-page="edge">' +
 			'<div class="vo-section"><span class="vo-label">Stimme</span>' +
-			'<select class="vo-select" data-role="edge-voice"></select></div>' +
+			'<div class="vo-row">' +
+			'<select class="vo-select" data-role="edge-voice"></select>' +
+			'<button class="vo-star" type="button" data-role="edge-star" title="Diese Stimme mit Stern markieren">☆</button>' +
+			"</div></div>" +
 			'<div class="vo-section"><span class="vo-label">Vorlese-Tempo</span>' +
 			'<div class="vo-row"><input class="vo-range" type="range" min="0.5" max="2" step="0.1" data-role="edge-rate">' +
 			'<span class="vo-range-val" data-role="edge-rate-val"></span></div></div>' +
@@ -1203,7 +1206,10 @@
 			'<p class="vo-help">Eigener Google-Cloud-Key mit aktivierter Text-to-Speech-API. ' +
 			"Der Gemini-Key funktioniert hier <b>nicht</b>.</p></div>" +
 			'<div class="vo-section"><span class="vo-label">Stimme</span>' +
-			'<select class="vo-select" data-role="google-voice" disabled></select></div>' +
+			'<div class="vo-row">' +
+			'<select class="vo-select" data-role="google-voice" disabled></select>' +
+			'<button class="vo-star" type="button" data-role="google-star" title="Diese Stimme mit Stern markieren">☆</button>' +
+			"</div></div>" +
 			'<div class="vo-section"><span class="vo-label">Vorlese-Tempo</span>' +
 			'<div class="vo-row"><input class="vo-range" type="range" min="0.5" max="2" step="0.1" data-role="google-rate">' +
 			'<span class="vo-range-val" data-role="google-rate-val"></span></div></div>' +
@@ -1321,6 +1327,8 @@
 		const pages = panel.querySelectorAll(".vo-tabpage");
 
 		let current = null; // aktuelle Einstellungen im Speicher
+		let lastEdgeVoices = []; // zuletzt geladene Edge-Stimmen (fuer Stern-Refill)
+		let lastGoogleVoices = []; // zuletzt geladene Google-Stimmen (fuer Stern-Refill)
 
 		function showTab(name) {
 			tabs.forEach((t) =>
@@ -1353,15 +1361,67 @@
 			el.classList.toggle("vo-ok", kind === "ok");
 			el.classList.toggle("vo-err", kind === "err");
 		}
+		// Pruefen ob eine Stimmen-ID als Favorit (Stern) markiert ist.
+		function isFavoriteVoice(id) {
+			return !!(
+				current &&
+				Array.isArray(current.favoriteVoices) &&
+				current.favoriteVoices.includes(id)
+			);
+		}
+
 		function fillVoiceSelect(sel, voices, selectedId) {
 			sel.innerHTML = "";
-			for (const v of voices) {
+			// Favoriten nach oben sortieren (stabil), Rest in Original-Reihenfolge.
+			const sorted = voices
+				.map((v, i) => ({ v, i }))
+				.sort((a, b) => {
+					const fa = isFavoriteVoice(a.v.id) ? 0 : 1;
+					const fb = isFavoriteVoice(b.v.id) ? 0 : 1;
+					return fa - fb || a.i - b.i;
+				})
+				.map((x) => x.v);
+			for (const v of sorted) {
 				const opt = document.createElement("option");
 				opt.value = v.id;
-				opt.textContent = v.label;
+				// Favoriten bekommen einen Stern vor dem Namen.
+				opt.textContent = (isFavoriteVoice(v.id) ? "★ " : "") + v.label;
 				if (v.id === selectedId) opt.selected = true;
 				sel.appendChild(opt);
 			}
+		}
+
+		// Stern-Button (☆/★) an den aktuell im Dropdown gewaehlten Wert anpassen.
+		function updateStarButton(starRole, selectRole) {
+			const btn = $(starRole);
+			const sel = $(selectRole);
+			if (!btn || !sel) return;
+			const id = sel.value;
+			const fav = isFavoriteVoice(id);
+			btn.textContent = fav ? "★" : "☆";
+			btn.classList.toggle("vo-star-on", fav);
+			btn.title = fav ? "Stern entfernen" : "Diese Stimme mit Stern markieren";
+		}
+
+		// Favorit-Status der aktuell gewaehlten Stimme umschalten + speichern.
+		async function toggleFavoriteVoice(selectRole, starRole, engineKey) {
+			const sel = $(selectRole);
+			if (!sel || !sel.value) return;
+			const id = sel.value;
+			if (!Array.isArray(current.favoriteVoices)) current.favoriteVoices = [];
+			const pos = current.favoriteVoices.indexOf(id);
+			if (pos >= 0) current.favoriteVoices.splice(pos, 1);
+			else current.favoriteVoices.push(id);
+			await persist();
+			if (window.VODiag)
+				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.stimme_favorit", {
+					engine: engineKey,
+					markiert: pos < 0,
+				});
+			// Liste neu aufbauen (Favoriten nach oben), Auswahl + Stern aktualisieren.
+			const voices = engineKey === "google" ? lastGoogleVoices : lastEdgeVoices;
+			if (voices && voices.length) fillVoiceSelect(sel, voices, id);
+			updateStarButton(starRole, selectRole);
 		}
 
 		async function loadEdgeVoices() {
@@ -1374,12 +1434,14 @@
 				sel.innerHTML = "<option>Keine Stimmen gefunden</option>";
 				return;
 			}
+			lastEdgeVoices = voices;
 			fillVoiceSelect(sel, voices, current.edge.voice);
 			sel.disabled = false;
 			if (!voices.some((v) => v.id === current.edge.voice)) {
 				current.edge.voice = sel.value;
 				await persist();
 			}
+			updateStarButton("edge-star", "edge-voice");
 		}
 
 		async function loadGoogleVoices() {
@@ -1403,6 +1465,7 @@
 				sel.innerHTML = "<option>Keine Chirp-3-HD-Stimmen</option>";
 				return;
 			}
+			lastGoogleVoices = voices;
 			fillVoiceSelect(sel, voices, current.google.voice);
 			sel.disabled = false;
 			showStatus("google-status", "", "");
@@ -1410,6 +1473,7 @@
 				current.google.voice = sel.value;
 				await persist();
 			}
+			updateStarButton("google-star", "google-voice");
 		}
 
 		// ----- Verdrahtung -----
@@ -1428,7 +1492,11 @@
 		$("edge-voice").addEventListener("change", async (e) => {
 			current.edge.voice = e.target.value;
 			await persist();
+			updateStarButton("edge-star", "edge-voice");
 		});
+		$("edge-star").addEventListener("click", () =>
+			toggleFavoriteVoice("edge-voice", "edge-star", "edge"),
+		);
 		$("edge-rate").addEventListener("input", (e) => {
 			$("edge-rate-val").textContent = Number(e.target.value).toFixed(1) + "×";
 		});
@@ -1469,7 +1537,11 @@
 		$("google-voice").addEventListener("change", async (e) => {
 			current.google.voice = e.target.value;
 			await persist();
+			updateStarButton("google-star", "google-voice");
 		});
+		$("google-star").addEventListener("click", () =>
+			toggleFavoriteVoice("google-voice", "google-star", "google"),
+		);
 		$("google-rate").addEventListener("input", (e) => {
 			$("google-rate-val").textContent =
 				Number(e.target.value).toFixed(1) + "×";
