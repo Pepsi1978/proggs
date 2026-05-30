@@ -409,8 +409,18 @@
 /* Aktuell vorgelesenes Wort ----------------------------------------------- */
 
 /* Kleines Label unter dem Fortschrittsbalken; zeigt das gerade gesprochene
-   Wort an. Dezent gedimmt, damit es nicht mit dem Seiteninhalt konkurriert. */
+   Wort an. Dezent gedimmt, damit es nicht mit dem Seiteninhalt konkurriert.
+
+   WICHTIG: absolut positioniert (aus dem Flex-Fluss genommen). Sonst bestimmt
+   das je nach Wort unterschiedlich breite Label die Breite des .vo-container,
+   und weil dieser seine Kinder zentriert (align-items:center), wuerden die
+   Buttons im Wort-Takt (~350ms) rhythmisch nach links/rechts springen. */
 .vo-current-word {
+	position: absolute;
+	bottom: -18px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: max-content;
 	max-width: 180px;
 	font-size: 12px;
 	line-height: 1.3;
@@ -419,5 +429,5 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	min-height: 1em; /* Höhe bleibt stabil auch wenn leer */
+	pointer-events: none; /* faengt keine Klicks ab */
 }

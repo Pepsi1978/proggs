@@ -1,9 +1,10 @@
 {
 	"manifest_version": 3,
 	"name": "Vorlese-Overlay",
-	"version": "0.1.1",
+	"version": "0.3.0",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSnwK50UdE1Y1GbtG+0dfqno3pqlNrRUsE0itzxXwTEUDLdaRxos7VLCeURv7FnYJNrpGDyBfHwRyVnYH7ir+xU4S/dQ69bvluPHHea9KC31AdV0+plYLKVfJupGIsOgkg/qVvGLxOU5m1yLB9OU1yXlTOTdgPt2sdNx2zft403d+p9j0Y95KTLARnJtFtMC9in+8MP31LMvi/BAqJmsxZHXGkwJohE1WxpBZY5kGCQLhiPsdfjxzFze3ppP/7QtmOkW4Bi6k/+3JJPQPQYOXofejd26rIxAm5fa+iSrwjl3ir25v1/mRDXcPnSQDafKDA+RMiBexCJgapsezyx/hwIDAQAB",
 	"permissions": [
 		"storage",
 		"offscreen",

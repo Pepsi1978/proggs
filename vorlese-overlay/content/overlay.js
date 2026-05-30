@@ -636,6 +636,17 @@
 	}
 
 	function positionPanel() {
+		doPositionPanel();
+		// Beim allerersten Oeffnen sind CSS und Inhalt evtl. noch nicht final
+		// gerendert, sodass die gemessene Panel-Hoehe zu klein ist und das Panel
+		// unten aus dem Bildschirm ragt (war erst beim zweiten Klick korrekt).
+		// Nach dem naechsten Frame ist das Layout sicher angewandt -> erneut clampen.
+		requestAnimationFrame(() => {
+			if (panel.classList.contains("vo-open")) doPositionPanel();
+		});
+	}
+
+	function doPositionPanel() {
 		const c = container.getBoundingClientRect();
 		const pw = panel.offsetWidth || 340;
 		const ph = panel.offsetHeight || 300;
@@ -934,6 +945,9 @@
 			$("auto-speak").checked = !!current.autoSpeak;
 			await loadEdgeVoices();
 			await loadGoogleVoices();
+			// Nach dem (asynchronen) Laden der Stimmen kann sich die Panel-Hoehe
+			// geaendert haben — falls noch offen, erneut sauber positionieren.
+			if (panel.classList.contains("vo-open")) positionPanel();
 		})();
 	}
 

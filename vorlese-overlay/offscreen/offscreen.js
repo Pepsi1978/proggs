@@ -58,6 +58,15 @@ let gen = 0; // Abbruch-Zähler: STOP und jede neue EDGE_SPEAK erhöhen ihn
 let pauseRequested = false;
 let pausedAtChunkIndex = 0; // für zukünftige Erweiterungen (Fortsetzung ab Chunk)
 
+// Sample-genaues Pause/Resume fuer den Web-Audio-Pfad: Ein AudioBufferSourceNode
+// kann nicht "pausiert" werden — wir merken uns daher den aktuell spielenden
+// Buffer plus die bereits gespielte Zeit und starten beim Fortsetzen denselben
+// Buffer ab genau diesem Offset neu (src.start(0, offset)). Dadurch liest die
+// Wiedergabe exakt an der Stelle weiter, an der pausiert wurde.
+let currentBuffer = null; // aktuell spielender AudioBuffer (fuer Resume)
+let playStartTime = 0; // ctx.currentTime beim letzten Start des Buffers
+let playOffset = 0; // bereits gespielte Sekunden im aktuellen Buffer
+
 let audioCtx = null;
 let webAudioBroken = false; // true, sobald Web Audio einmal scheitert -> Fallback
 
@@ -103,9 +112,43 @@ function itemToBlobUrl(item) {
 
 function enqueueItem(item) {
 	queue.push(item);
-	if (!playing) {
+	// Waehrend einer Pause NICHT automatisch starten — sonst wuerden waehrend der
+	// Pause eintreffende (z.B. Edge-)Chunks die Wiedergabe heimlich fortsetzen.
+	if (!playing && !pauseRequested) {
 		send({ type: "OFFSCREEN_STARTED" });
 		playNext();
+	}
+}
+
+// Startet den aktuell gemerkten Buffer (currentBuffer) ab "offset" Sekunden.
+// Wird sowohl fuer den normalen Start (offset 0) als auch fuer Resume genutzt.
+function startWebAudioBuffer(offset) {
+	const ctx = audioCtx;
+	if (!ctx || !currentBuffer) return;
+	const src = ctx.createBufferSource();
+	src.buffer = currentBuffer;
+	src.connect(ctx.destination);
+	currentSource = src;
+	playStartTime = ctx.currentTime;
+	playOffset = offset;
+	src.onended = () => {
+		if (currentSource === src) {
+			currentSource = null;
+			currentBuffer = null;
+			playOffset = 0;
+			playNext();
+		}
+	};
+	try {
+		src.start(0, Math.max(0, offset));
+	} catch (e) {
+		// Falls der Offset (z.B. minimal ueber Bufferlaenge) abgelehnt wird:
+		// von vorne starten statt die Wiedergabe zu verlieren.
+		try {
+			src.start();
+		} catch (e2) {
+			/* egal — onended/STOP raeumt auf */
+		}
 	}
 }
 
@@ -138,17 +181,11 @@ async function playNext() {
 			const audioBuf = await ctx.decodeAudioData(ab.slice(0));
 			if (myGen !== gen) return;
 
-			const src = ctx.createBufferSource();
-			src.buffer = audioBuf;
-			src.connect(ctx.destination);
-			currentSource = src;
-			src.onended = () => {
-				if (currentSource === src) {
-					currentSource = null;
-					playNext();
-				}
-			};
-			src.start();
+			// Buffer merken und ab 0 starten — bei Pause/Resume wird derselbe
+			// Buffer ueber startWebAudioBuffer(offset) sample-genau fortgesetzt.
+			currentBuffer = audioBuf;
+			playOffset = 0;
+			startWebAudioBuffer(0);
 			return;
 		} catch (e) {
 			// Web Audio nicht moeglich -> fuer den Rest der Session auf das
@@ -229,6 +266,9 @@ function stopAll() {
 		}
 	}
 	currentSource = null;
+	currentBuffer = null;
+	playOffset = 0;
+	playStartTime = 0;
 	if (currentAudio) {
 		try {
 			currentAudio.pause();
@@ -323,10 +363,15 @@ chrome.runtime.onMessage.addListener((msg) => {
 			// Wiedergabe pausieren: Queue bleibt intakt, gen wird NICHT erhöht.
 			if (!pauseRequested) {
 				pauseRequested = true;
-				// Laufendes Audio sanft stoppen (Queue-Item bleibt in der Queue,
-				// da es bereits entfernt wurde — aber playNext() wird nicht mehr
-				// aufgerufen, solange pauseRequested=true ist).
-				if (currentSource) {
+				// Web-Audio: bereits gespielte Zeit zum Offset addieren und die
+				// laufende Source stoppen. currentBuffer bleibt erhalten, damit
+				// RESUME exakt an dieser Stelle wieder aufsetzen kann.
+				if (currentSource && audioCtx) {
+					try {
+						playOffset += Math.max(0, audioCtx.currentTime - playStartTime);
+					} catch (e) {
+						/* egal — schlimmstenfalls von vorne */
+					}
 					try {
 						currentSource.onended = null;
 						currentSource.stop();
@@ -335,29 +380,46 @@ chrome.runtime.onMessage.addListener((msg) => {
 					}
 					currentSource = null;
 				}
+				// Fallback HTMLAudio: nativ pausieren (Element merkt sich die
+				// Position selbst). currentAudio NICHT auf null setzen.
 				if (currentAudio) {
 					try {
 						currentAudio.pause();
 					} catch (e) {
 						/* egal */
 					}
-					// currentAudio nicht auf null setzen, damit RESUME ggf. fortsetzen kann
 				}
 				playing = false;
 				send({ type: "OFFSCREEN_PAUSED" });
 			}
 			break;
 		case "RESUME":
-			// Wiedergabe fortsetzen: pauseRequested zurücksetzen, playNext() aufrufen.
+			// Wiedergabe fortsetzen — genau an der pausierten Stelle.
 			if (pauseRequested) {
 				pauseRequested = false;
-				send({ type: "OFFSCREEN_RESUMED" });
-				if (queue.length > 0) {
-					// Es gibt noch Items in der Queue — weiterspielen.
+				if (currentBuffer && audioCtx) {
+					// 1) Web-Audio: aktuellen Buffer ab gemerktem Offset fortsetzen.
+					send({ type: "OFFSCREEN_RESUMED" });
+					send({ type: "OFFSCREEN_STARTED" });
+					playing = true;
+					const maxOff = Math.max(0, currentBuffer.duration - 0.05);
+					startWebAudioBuffer(Math.min(playOffset, maxOff));
+				} else if (currentAudio) {
+					// 2) Fallback: HTMLAudio nativ ab der gemerkten Position fortsetzen.
+					send({ type: "OFFSCREEN_RESUMED" });
+					send({ type: "OFFSCREEN_STARTED" });
+					playing = true;
+					currentAudio.play().catch(() => {
+						/* egal — onerror raeumt auf */
+					});
+				} else if (queue.length > 0) {
+					// 3) Nichts spielte mitten im Chunk — naechstes Item starten.
+					send({ type: "OFFSCREEN_RESUMED" });
 					send({ type: "OFFSCREEN_STARTED" });
 					playNext();
 				} else {
-					// Queue war leer — Wiedergabe ist abgeschlossen.
+					// 4) Queue leer und nichts pausiert — Wiedergabe ist beendet.
+					send({ type: "OFFSCREEN_RESUMED" });
 					send({ type: "OFFSCREEN_ENDED" });
 				}
 			}
