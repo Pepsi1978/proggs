@@ -325,16 +325,20 @@
 	container.style.bottom = "16px";
 
 	window.VOSettings.getPosition().then((pos) => {
-		if (pos) applyPosition(pos.left, pos.top);
-		// Initiale Layout-Sonde erst nach dem CSS-Load + naechstem Frame messen
-		// (sonst ungestylte Groesse). Position wird wie bisher sofort angewandt.
+		// WICHTIG: Position ERST nach dem CSS-Load + naechstem Frame anwenden.
+		// Vorher ist das Overlay ungestylt (nicht flex) und wird viel zu breit
+		// gemessen -> clampToViewport() rechnet maxLeft negativ und clamped auf
+		// left=4 -> das Overlay sprang beim Neuladen an den linken Rand. Nach dem
+		// CSS-Load stimmt die Breite und die gespeicherte (rechte) Position bleibt.
+		// Ohne gespeicherte Position bleibt es bei right/bottom = unten rechts.
 		cssReady.then(() =>
-			requestAnimationFrame(() =>
+			requestAnimationFrame(() => {
+				if (pos) applyPosition(pos.left, pos.top);
 				logLayout("Overlay", container, {
 					initial: true,
 					gespeichertePosition: !!pos,
-				}),
-			),
+				});
+			}),
 		);
 	});
 
@@ -487,21 +491,57 @@
 			if (idx > 0) paras[0] = paras[0].slice(idx);
 		}
 
-		autoQueue = paras.filter((p) => p && p.trim().length > 1);
-		if (!autoQueue.length) {
-			showHint("Hier wurde kein lesbarer Absatz gefunden.");
-			return;
-		}
 		if (window.VODiag)
 			window.VODiag.log("INFO", "NUTZUNG", "overlay.auto_read_start", {
-				absaetze: autoQueue.length,
+				absaetze: paras.length,
 				wort: clickedWord.slice(0, 40),
 			});
-		autoReading = true;
-		autoTotal = autoQueue.length;
-		isPaused = false;
-		showHint("Liest vor… " + autoTotal + " Absätze");
-		speakNextAuto();
+		startParagraphQueue(paras);
+	}
+
+	// Sammelt alle Absaetze, die die aktuelle Markierung beruehrt — fuer das
+	// absatzweise Vorlesen einer Mehrfach-Markierung. Jeder Absatz wird bereinigt
+	// (ohne Quellenangaben/Fussnoten). Liegt die Markierung nur in EINEM Absatz,
+	// kommt hoechstens ein Eintrag zurueck (-> der Aufrufer liest dann die reine
+	// Auswahl statt des ganzen Absatzes).
+	function collectParagraphsInSelection() {
+		let sel;
+		try {
+			sel = window.getSelection();
+		} catch (e) {
+			return [];
+		}
+		if (!sel || sel.rangeCount === 0) return [];
+		let range;
+		try {
+			range = sel.getRangeAt(0);
+		} catch (e) {
+			return [];
+		}
+		if (range.collapsed) return [];
+		const candidates = Array.from(
+			document.querySelectorAll(
+				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
+			),
+		);
+		const result = [];
+		for (const el of candidates) {
+			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
+			if (el.querySelector("p, li, blockquote")) continue;
+			let intersects = false;
+			try {
+				intersects = range.intersectsNode(el);
+			} catch (e) {
+				intersects = false;
+			}
+			if (!intersects) continue;
+			if (!isVisible(el)) continue;
+			const text = cleanParagraphText(el);
+			if (text && text.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(text)) {
+				result.push(text);
+			}
+		}
+		return result;
 	}
 
 	// Den naechsten Absatz aus der Queue an den Service-Worker schicken.
@@ -590,8 +630,11 @@
 	const SKIP_ANCESTOR_SELECTOR =
 		"figure, table, nav, aside, header, footer, code, pre, " +
 		"svg, canvas, math, .reference, .references, .footnote, .footnotes, " +
-		"#references, #footnotes, .citation, .reflist, .mw-references-wrap, " +
-		'[role="note"], [role="navigation"], [role="contentinfo"], [aria-hidden="true"]';
+		"#references, #footnotes, .citation, .citations, .reflist, " +
+		".mw-references-wrap, .bibliography, .endnotes, .sources, " +
+		'[role="note"], [role="navigation"], [role="contentinfo"], ' +
+		'[role="doc-bibliography"], [role="doc-endnotes"], [role="doc-footnote"], ' +
+		'[aria-hidden="true"]';
 
 	// Sammelt ab startBlock alle nachfolgenden lesbaren Absaetze (in
 	// Dokumentreihenfolge), gefiltert + bereinigt (ohne Fussnoten/Quellen).
@@ -668,17 +711,20 @@
 		// Fussnoten-Marker, Quellenverweise, Diagramme und Code aus dem Klon werfen.
 		clone
 			.querySelectorAll(
-				"sup, .reference, .footnote, .citation, cite, " +
+				"sup, sub.reference, .reference, .footnote, .footnote-ref, " +
+					".citation, .cite, cite, .mw-editsection, " +
 					"figure, table, svg, canvas, math, code, pre, " +
-					'a[href^="#cite"], a[href^="#fn"], .mw-editsection',
+					'[role="doc-noteref"], [role="doc-biblioref"], ' +
+					'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"]',
 			)
 			.forEach((n) => n.remove());
 		let t = (clone.innerText || clone.textContent || "")
 			.replace(/\s+/g, " ")
 			.trim();
-		// Haengende Fussnoten-Zahlen wie [1], [12] am Ende/innen entfernen.
+		// Haengende Fussnoten-Marker wie [1], [12], [a] entfernen.
 		t = t
 			.replace(/\[\s*\d+\s*\]/g, "")
+			.replace(/\[\s*[a-z]\s*\]/gi, "")
 			.replace(/\s{2,}/g, " ")
 			.trim();
 		return t;
@@ -721,6 +767,21 @@
 			showHint("Bitte zuerst Text markieren.");
 			return;
 		}
+
+		// Mehrere Absaetze markiert? -> Absatz fuer Absatz vorlesen. Jeder Absatz
+		// wird einzeln synthetisiert (erst wenn er dran ist), daher kein Abbruch
+		// bei sehr viel markiertem Text. Quellenangaben/Fussnoten werden pro
+		// Absatz herausgefiltert.
+		const selParas = collectParagraphsInSelection();
+		if (selParas.length > 1) {
+			if (window.VODiag)
+				window.VODiag.log("INFO", "NUTZUNG", "speaker_klick:absatz_queue", {
+					absaetze: selParas.length,
+				});
+			startParagraphQueue(selParas);
+			return;
+		}
+
 		const settings = await window.VOSettings.load();
 		const engine = settings.activeEngine;
 		const cfg = settings[engine];
@@ -751,15 +812,40 @@
 			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
 				? settings.edge.pitch
 				: 0;
+		// Auch bei einer einzelnen Markierung haengende Fussnoten-Zahlen [1] entfernen.
+		const cleanedText = text
+			.replace(/\[\s*\d+\s*\]/g, "")
+			.replace(/\s{2,}/g, " ")
+			.trim();
 		sendMessage({
 			type: MSG.SPEAK,
 			engine,
-			text,
+			text: cleanedText || text,
 			voice: cfg.voice,
 			rate: cfg.rate,
 			pitch,
 			apiKey: engine === "google" ? settings.google.apiKey : undefined,
 		});
+	}
+
+	// Startet eine absatzweise Vorlesung aus einer Liste von Absatz-Texten.
+	// Gemeinsam genutzt von der Mehrfach-Markierung (Lautsprecher/Haekchen) und
+	// dem A-Auto-Modus. Jeder Absatz wird einzeln synthetisiert (siehe
+	// speakNextAuto), daher kein Crash bei sehr viel Text.
+	function startParagraphQueue(paras) {
+		autoQueue = (paras || []).filter((p) => p && p.trim().length > 1);
+		if (!autoQueue.length) {
+			showHint("Kein lesbarer Text gefunden.");
+			return false;
+		}
+		autoReading = true;
+		autoTotal = autoQueue.length;
+		isPaused = false;
+		showHint(
+			"Liest vor… " + autoTotal + (autoTotal === 1 ? " Absatz" : " Absätze"),
+		);
+		speakNextAuto();
+		return true;
 	}
 
 	// ----- Kommunikation mit dem Service-Worker --------------------------------
@@ -1075,12 +1161,37 @@
 		}
 
 		// Aktualisieren-Button: Erweiterung neu laden (Speicher bleibt erhalten).
+		// WICHTIG: chrome.runtime.reload() laedt die Erweiterung neu, macht damit
+		// aber das Overlay in DIESEM Tab zu einer "verwaisten" Instanz mit totem
+		// Verbindungskanal (Vorlesen ginge nicht mehr, der Button drehte ewig).
+		// Deshalb laedt das Content-Script danach die SEITE neu -> frisches Overlay
+		// mit der neuen Version. Erst Extension neu laden, dann (verzoegert) die Seite.
 		const reloadBtn = $("reload");
 		if (reloadBtn) {
 			reloadBtn.addEventListener("click", () => {
 				reloadBtn.textContent = "Wird aktualisiert…";
 				reloadBtn.disabled = true;
-				sendMessage({ type: MSG.RELOAD_EXTENSION });
+				let reloaded = false;
+				const reloadPage = () => {
+					if (reloaded) return;
+					reloaded = true;
+					try {
+						location.reload();
+					} catch (e) {
+						/* egal */
+					}
+				};
+				try {
+					chrome.runtime.sendMessage(
+						{ type: MSG.RELOAD_EXTENSION },
+						() => void chrome.runtime.lastError,
+					);
+				} catch (e) {
+					/* Kanal evtl. schon weg — Seite trotzdem neu laden */
+				}
+				// Der Extension genug Zeit geben, sich neu zu laden, dann die Seite
+				// neu laden (re-injiziert das frische Content-Script).
+				setTimeout(reloadPage, 600);
 			});
 		}
 
