@@ -63,6 +63,13 @@ let currentSource = null; // laufender AudioBufferSourceNode (Web Audio)
 let currentAudio = null; // laufendes HTMLAudioElement (Fallback)
 let sessionActive = false; // true von OFFSCREEN_STARTED bis OFFSCREEN_ENDED
 let producerDone = false; // true sobald alle Stuecke geliefert wurden
+// playing wird SYNCHRON gesetzt, sobald playNext() ein Item aus der Queue nimmt —
+// noch BEVOR (nach einem await) currentSource gesetzt ist. Das schliesst die
+// asynchrone Luecke: ohne dieses Flag koennte finishIfDone() (aufgerufen direkt
+// nach dem Einreihen) ein verfruehtes OFFSCREEN_ENDED senden, weil currentSource
+// in dem Moment noch null ist -> die naechste Passage wuerde die gerade
+// startende abwuergen und es waere NICHTS hoerbar.
+let playing = false;
 let gen = 0; // Abbruch-Zähler: STOP und jede neue EDGE_SPEAK erhöhen ihn
 
 // Pause-Zustand. paused=true hält playNext() an, lässt die Queue intakt.
@@ -120,9 +127,11 @@ function itemToBlobUrl(item) {
 	return URL.createObjectURL(new Blob([item.buffer], { type: "audio/mpeg" }));
 }
 
-// true, wenn gerade nichts abgespielt wird (kein Web-Audio, kein HTMLAudio).
-function isIdle() {
-	return !currentSource && !currentAudio;
+// true, wenn gerade NICHTS laeuft und auch kein Item in Bearbeitung ist.
+// Beruecksichtigt playing (synchron), damit der async-Gap nicht zu einem
+// verfruehten Ende fuehrt.
+function isBusy() {
+	return playing || !!currentSource || !!currentAudio;
 }
 
 function enqueueItem(item) {
@@ -133,16 +142,16 @@ function enqueueItem(item) {
 		sessionActive = true;
 		send({ type: "OFFSCREEN_STARTED" });
 		playNext();
-	} else if (isIdle()) {
+	} else if (!isBusy()) {
 		// Session laeuft, aber es spielt gerade nichts (wartete auf Nachschub).
 		playNext();
 	}
 }
 
 // Sendet OFFSCREEN_ENDED nur, wenn wirklich alles fertig ist. Verhindert das
-// verfruehte/flackernde Ende bei mehreren Stuecken (rotes Stop-Icon-Bug).
+// verfruehte Ende (kein Ton bei mehreren Stuecken) UND das haengende Stop-Icon.
 function finishIfDone() {
-	if (producerDone && queue.length === 0 && isIdle() && !paused) {
+	if (producerDone && queue.length === 0 && !isBusy() && !paused) {
 		sessionActive = false;
 		producerDone = false;
 		currentBuffer = null;
@@ -190,9 +199,12 @@ async function playNext() {
 	if (queue.length === 0) {
 		// Nichts mehr in der Queue. Nur beenden, wenn der Produzent fertig ist —
 		// sonst auf weitere Stuecke warten (Session bleibt aktiv).
+		playing = false;
 		finishIfDone();
 		return;
 	}
+	// SYNCHRON markieren, dass ein Item in Bearbeitung ist — vor jedem await.
+	playing = true;
 	const item = queue.shift();
 	const myGen = gen;
 
@@ -310,6 +322,7 @@ function stopAll() {
 	currentAudio = null;
 	sessionActive = false;
 	producerDone = false;
+	playing = false;
 }
 
 // ----- Edge-Synthese (WebSocket HIER -> DNR-User-Agent-Regel greift) --------

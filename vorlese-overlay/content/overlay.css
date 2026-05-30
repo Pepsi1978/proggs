@@ -462,3 +462,22 @@
 	opacity: 0.6;
 	cursor: not-allowed;
 }
+
+/* Haekchen-Zeile (automatisch vorlesen) ----------------------------------- */
+
+.vo-check-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	font-size: 14px;
+	color: #f2f2f5;
+}
+
+.vo-check {
+	width: 18px;
+	height: 18px;
+	flex: 0 0 auto;
+	accent-color: #3a82f6;
+	cursor: pointer;
+}

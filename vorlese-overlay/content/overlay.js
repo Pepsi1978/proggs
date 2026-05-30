@@ -56,6 +56,8 @@
 	let autoMode = false; // A-Button an/aus
 	let autoQueue = []; // verbleibende Absaetze
 	let autoReading = false; // laeuft gerade eine automatische Vorlesung
+	let autoTotal = 0; // Gesamtzahl Absaetze der aktuellen Auto-Vorlesung
+	let autoTriggerTimer = null; // Debounce fuer den Auswahl-Trigger
 
 	// ----- Selektion zuverlaessig erfassen -------------------------------------
 	// Sobald irgendwo eine nicht-leere Markierung existiert, merken wir sie uns.
@@ -75,24 +77,55 @@
 	document.addEventListener("selectionchange", captureSelection, true);
 	document.addEventListener("mouseup", captureSelection, true);
 
-	// Auto-Lese-Modus: Doppelklick auf ein Wort startet das Vorlesen ab dort.
-	document.addEventListener(
-		"dblclick",
-		(e) => {
-			if (!autoMode) return;
-			// Klicks im Overlay selbst ignorieren (Buttons/Panel).
+	// Auto-Trigger bei Textauswahl (Ziehen-Markierung ODER Doppelklick — beide
+	// enden mit mouseup):
+	//   - A-Button (autoMode) an  -> ab der Auswahl absatzweise bis zum Ende vorlesen
+	//   - sonst Haekchen (autoSpeak) an -> nur den markierten Text vorlesen
+	function onSelectionSettled(e) {
+		// Markierungen im Overlay selbst ignorieren (Buttons/Panel/Drag).
+		try {
+			const path = e && e.composedPath ? e.composedPath() : [];
+			if (path.includes(host)) return;
+		} catch (e2) {
+			/* ignorieren */
+		}
+		if (autoTriggerTimer) clearTimeout(autoTriggerTimer);
+		// Kurz warten, bis die Auswahl final steht.
+		autoTriggerTimer = setTimeout(async () => {
+			autoTriggerTimer = null;
+			let text = "";
 			try {
-				const path = e.composedPath ? e.composedPath() : [];
-				if (path.includes(host)) return;
-			} catch (e2) {
-				/* ignorieren */
+				const sel = window.getSelection();
+				text = sel ? sel.toString().trim() : "";
+			} catch (e3) {
+				return;
 			}
-			// Nach dem Doppelklick hat der Browser das Wort markiert -> im naechsten
-			// Tick die Selektion auswerten und das Vorlesen ab dort starten.
-			setTimeout(() => startAutoReadFromSelection(), 0);
-		},
-		true,
-	);
+			if (!text) return;
+			if (autoMode) {
+				// Laufende Auto-Vorlesung nicht durch jede neue Auswahl neu starten.
+				startAutoReadFromSelection();
+				return;
+			}
+			let settings = null;
+			try {
+				settings = await window.VOSettings.load();
+			} catch (e4) {
+				return;
+			}
+			if (settings && settings.autoSpeak) {
+				if (isPlaying || autoReading) return; // laufende Wiedergabe nicht stoeren
+				if (window.VODiag)
+					window.VODiag.log(
+						"INFO",
+						"NUTZUNG",
+						"overlay.auto_speak_ausgefuehrt",
+						{ textLen: text.length },
+					);
+				onSpeakerClick();
+			}
+		}, 450);
+	}
+	document.addEventListener("mouseup", onSelectionSettled, true);
 
 	// ----- Overlay aufbauen (Shadow DOM) ---------------------------------------
 	const host = document.createElement("div");
@@ -312,7 +345,7 @@
 	// Auto-Lese-Modus (A-Button) aus den Einstellungen wiederherstellen.
 	window.VOSettings.load()
 		.then((s) => {
-			autoMode = !!(s && s.autoSpeak);
+			autoMode = !!(s && s.autoMode);
 			applyAutoButton();
 		})
 		.catch(() => {
@@ -400,7 +433,7 @@
 		// Zustand dauerhaft speichern (ueberlebt Reloads).
 		try {
 			const s = await window.VOSettings.load();
-			s.autoSpeak = autoMode;
+			s.autoMode = autoMode;
 			await window.VOSettings.save(s);
 		} catch (e) {
 			/* ignorieren — Button-Zustand ist trotzdem aktiv */
@@ -447,19 +480,27 @@
 			showHint("Hier wurde kein lesbarer Absatz gefunden.");
 			return;
 		}
-		// Ersten Absatz ab dem geklickten Wort beginnen (nicht von vorne).
-		const idx = paras[0].toLowerCase().indexOf(clickedWord.toLowerCase());
-		if (idx > 0) paras[0] = paras[0].slice(idx);
+		// Nur wenn EIN einzelnes Wort markiert wurde: ersten Absatz ab diesem Wort
+		// beginnen. Bei groesseren Markierungen ab dem Absatzanfang vorlesen.
+		if (!/\s/.test(clickedWord)) {
+			const idx = paras[0].toLowerCase().indexOf(clickedWord.toLowerCase());
+			if (idx > 0) paras[0] = paras[0].slice(idx);
+		}
 
 		autoQueue = paras.filter((p) => p && p.trim().length > 1);
-		if (!autoQueue.length) return;
+		if (!autoQueue.length) {
+			showHint("Hier wurde kein lesbarer Absatz gefunden.");
+			return;
+		}
 		if (window.VODiag)
 			window.VODiag.log("INFO", "NUTZUNG", "overlay.auto_read_start", {
 				absaetze: autoQueue.length,
 				wort: clickedWord.slice(0, 40),
 			});
 		autoReading = true;
+		autoTotal = autoQueue.length;
 		isPaused = false;
+		showHint("Liest vor… " + autoTotal + " Absätze");
 		speakNextAuto();
 	}
 
@@ -475,6 +516,13 @@
 			return;
 		}
 		const text = autoQueue.shift();
+		// Sichtbares Feedback: welcher Absatz gerade vorgelesen/eingelesen wird.
+		showHint(
+			"Liest vor… Absatz " +
+				(autoTotal - autoQueue.length) +
+				" von " +
+				autoTotal,
+		);
 		let settings;
 		try {
 			settings = await window.VOSettings.load();
@@ -955,6 +1003,16 @@
 			'<button class="vo-test" type="button" data-role="google-test">Test — Beispielsatz vorlesen</button>' +
 			'<div class="vo-status" data-role="google-status"></div>' +
 			"</div>" +
+			// Haekchen: markierten Text automatisch vorlesen (unabhaengig vom A-Button).
+			'<div class="vo-section">' +
+			'<label class="vo-check-row">' +
+			'<input type="checkbox" class="vo-check" data-role="auto-speak">' +
+			"<span>Markierten Text automatisch vorlesen</span>" +
+			"</label>" +
+			'<p class="vo-help">Sobald du Text markierst, wird er vorgelesen. ' +
+			"Der A-Button am Overlay ist etwas anderes: er liest ab dem markierten " +
+			"Wort den ganzen folgenden Text Absatz fuer Absatz vor.</p>" +
+			"</div>" +
 			// Aktualisieren-Button (letztes Panel-Element): laedt die Erweiterung
 			// neu, OHNE den gespeicherten API-Key/Stimme/Position zu verlieren.
 			'<div class="vo-section">' +
@@ -1004,6 +1062,15 @@
 				};
 				window.addEventListener("mousemove", onMove, true);
 				window.addEventListener("mouseup", onUp, true);
+			});
+		}
+
+		// Haekchen "Markierten Text automatisch vorlesen".
+		const autoSpeakCb = $("auto-speak");
+		if (autoSpeakCb) {
+			autoSpeakCb.addEventListener("change", async (e) => {
+				current.autoSpeak = !!e.target.checked;
+				await persist();
 			});
 		}
 
@@ -1232,6 +1299,7 @@
 			setPitchUI("edge-pitch", "edge-pitch-val", pitch);
 			setRateUI("google-rate", "google-rate-val", current.google.rate);
 			$("google-key").value = current.google.apiKey || "";
+			if ($("auto-speak")) $("auto-speak").checked = !!current.autoSpeak;
 			await loadEdgeVoices();
 			await loadGoogleVoices();
 			// Nach dem (asynchronen) Laden der Stimmen kann sich die Panel-Hoehe

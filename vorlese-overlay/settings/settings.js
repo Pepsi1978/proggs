@@ -34,7 +34,8 @@
 			voice: "", // wird nach Key-Eingabe dynamisch befüllt
 			rate: 1.0,
 		},
-		autoSpeak: false, // bei Textauswahl automatisch vorlesen
+		autoSpeak: false, // Haekchen: markierten Text automatisch vorlesen
+		autoMode: false, // A-Button: ab markiertem Wort absatzweise bis Ende vorlesen
 	});
 
 	// Tiefe, robuste Zusammenführung mit den Defaults, damit fehlende Felder
@@ -55,6 +56,8 @@
 			},
 			autoSpeak:
 				typeof s.autoSpeak === "boolean" ? s.autoSpeak : DEFAULTS.autoSpeak,
+			autoMode:
+				typeof s.autoMode === "boolean" ? s.autoMode : DEFAULTS.autoMode,
 		};
 	}
 
