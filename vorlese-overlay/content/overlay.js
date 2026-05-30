@@ -449,6 +449,7 @@
 			if (autoReading) {
 				autoReading = false;
 				autoQueue = [];
+				clearParagraphHighlight();
 				sendMessage({ type: MSG.STOP });
 				setState("stopped");
 				resetProgress();
@@ -865,6 +866,7 @@
 			// Manueller Stop beendet auch eine laufende automatische Vorlesung.
 			autoReading = false;
 			autoQueue = [];
+			clearParagraphHighlight();
 			sendMessage({ type: MSG.STOP });
 			setState("stopped");
 			// Pause-Zustand und Fortschritt zurücksetzen
@@ -1023,6 +1025,7 @@
 				isPaused = false;
 				autoReading = false;
 				autoQueue = [];
+				clearParagraphHighlight();
 				resetProgress();
 				setPauseButtonVisible(false);
 				setPauseButtonState(false);
@@ -1052,6 +1055,7 @@
 					speakNextAuto();
 				} else {
 					autoReading = false;
+					clearParagraphHighlight();
 					setState("stopped");
 					isPaused = false;
 					resetProgress();
