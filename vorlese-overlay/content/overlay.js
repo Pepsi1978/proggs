@@ -58,6 +58,9 @@
 	let autoReading = false; // laeuft gerade eine automatische Vorlesung
 	let autoTotal = 0; // Gesamtzahl Absaetze der aktuellen Auto-Vorlesung
 	let autoTriggerTimer = null; // Debounce fuer den Auswahl-Trigger
+	// Haekchen-Viereck (unter dem Zahnrad): "Markierten Text automatisch vorlesen".
+	// Spiegelt die Einstellung autoSpeak — synchron mit dem Panel-Haekchen.
+	let autoSpeakOn = false;
 
 	// ----- Selektion zuverlaessig erfassen -------------------------------------
 	// Sobald irgendwo eine nicht-leere Markierung existiert, merken wir sie uns.
@@ -178,6 +181,11 @@
 		'<button class="vo-btn vo-gear" type="button" title="Einstellungen">' +
 		ICON_GEAR +
 		"</button>" +
+		// Haekchen-Viereck UNTER dem Zahnrad: schaltet "Markierten Text automatisch
+		// vorlesen" direkt am Overlay (gleiche Einstellung wie das Panel-Haekchen).
+		'<button class="vo-btn vo-autospeak-box" type="button" title="Markierten Text automatisch vorlesen">' +
+		'<span class="vo-autospeak-check">✓</span>' +
+		"</button>" +
 		// Schmaler Fortschrittsbalken unter dem Button-Container
 		'<div class="vo-progress-wrap" style="display:none;">' +
 		'<div class="vo-progress"></div>' +
@@ -188,6 +196,7 @@
 	const speakerBtn = container.querySelector(".vo-speaker");
 	const pauseBtn = container.querySelector(".vo-pause-btn");
 	const gearBtn = container.querySelector(".vo-gear");
+	const autoSpeakBox = container.querySelector(".vo-autospeak-box");
 	const hintEl = container.querySelector(".vo-hint");
 	const progressWrap = container.querySelector(".vo-progress-wrap");
 	const progressBar = container.querySelector(".vo-progress");
@@ -416,6 +425,8 @@
 			onPauseClick();
 		} else if (pressed === gearBtn) {
 			togglePanel();
+		} else if (pressed === autoSpeakBox) {
+			toggleAutoSpeak();
 		}
 	}
 
@@ -425,6 +436,41 @@
 		autoBtn.title = autoMode
 			? "Auto-Vorlesen AN — Doppelklick auf ein Wort liest ab dort weiter (erneut klicken zum Ausschalten)"
 			: "Auto-Vorlesen: Doppelklick auf ein Wort liest ab dort weiter";
+	}
+
+	// ----- Haekchen-Viereck "Markierten Text automatisch vorlesen" -------------
+	function applyAutoSpeakBox() {
+		autoSpeakBox.classList.toggle("vo-checked", autoSpeakOn);
+		autoSpeakBox.title = autoSpeakOn
+			? "Automatisch vorlesen AN — markierter Text wird vorgelesen (klicken zum Ausschalten)"
+			: "Markierten Text automatisch vorlesen (klicken zum Einschalten)";
+	}
+
+	// Schaltet autoSpeak um, speichert und haelt das Panel-Haekchen synchron.
+	async function toggleAutoSpeak() {
+		autoSpeakOn = !autoSpeakOn;
+		applyAutoSpeakBox();
+		if (window.VODiag)
+			window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.autospeak_box_toggle", {
+				an: autoSpeakOn,
+			});
+		try {
+			const s = await window.VOSettings.load();
+			s.autoSpeak = autoSpeakOn;
+			await window.VOSettings.save(s);
+		} catch (e) {
+			/* Button-Zustand ist trotzdem gesetzt */
+		}
+		// Panel-Haekchen synchronisieren (falls das Panel schon gebaut wurde).
+		try {
+			const cb = panel.querySelector('[data-role="auto-speak"]');
+			if (cb) cb.checked = autoSpeakOn;
+		} catch (e) {
+			/* egal */
+		}
+		showHint(
+			autoSpeakOn ? "Automatisch vorlesen an." : "Automatisch vorlesen aus.",
+		);
 	}
 
 	async function toggleAutoMode() {
@@ -1284,6 +1330,9 @@
 			autoSpeakCb.addEventListener("change", async (e) => {
 				current.autoSpeak = !!e.target.checked;
 				await persist();
+				// Overlay-Haekchen-Viereck synchron halten.
+				autoSpeakOn = current.autoSpeak;
+				applyAutoSpeakBox();
 			});
 		}
 

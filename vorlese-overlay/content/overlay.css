@@ -439,6 +439,43 @@
 	background: rgba(58, 130, 246, 1);
 }
 
+/* Haekchen-Viereck unter dem Zahnrad (Auto-Vorlesen an/aus) ---------------- */
+
+/* Erbt Grundform von .vo-btn, ist aber bewusst ECKIG (ein Viereck) und etwas
+   kleiner — sieht aus wie ein Kontrollkaestchen. */
+.vo-autospeak-box {
+	width: 30px;
+	height: 30px;
+	border-radius: 7px;
+}
+
+/* Der Haken ist nur sichtbar, wenn das Kaestchen aktiv ist. */
+.vo-autospeak-check {
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1;
+	color: #ffffff;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.12s ease;
+}
+
+/* Aktiv: gruener Hintergrund + sichtbarer Haken. */
+.vo-autospeak-box.vo-checked {
+	background: rgba(60, 190, 110, 0.95);
+	box-shadow:
+		0 4px 14px rgba(60, 190, 110, 0.4),
+		0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+}
+
+.vo-autospeak-box.vo-checked .vo-autospeak-check {
+	opacity: 1;
+}
+
+.vo-autospeak-box.vo-checked:hover {
+	background: rgba(60, 190, 110, 1);
+}
+
 /* Aktualisieren-Button im Panel ------------------------------------------- */
 
 .vo-reload {
