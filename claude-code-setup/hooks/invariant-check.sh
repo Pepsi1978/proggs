@@ -76,9 +76,19 @@ fi
 # --- Invariant 5: ~/CLAUDE.md darf NICHT existieren (Geloescht 2026-04-04) ---
 # Frueher wurde Sync zwischen ~/proggs/CLAUDE.md und ~/CLAUDE.md geprueft.
 # Seit 2026-04-04 gibt es keine ~/CLAUDE.md mehr (Duplikat entfernt fuer Token-Ersparnis).
+# Poka-Yoke Stufe 3 (2026-05-30): identisches Duplikat wird AUTOMATISCH geheilt
+# (geloescht) statt nur gemeldet. Abweichende Datei wird weiterhin nur gemeldet,
+# damit eigener Inhalt nicht verloren geht.
 CLAUDE_HOME="$HOME/CLAUDE.md"
+CLAUDE_REPO="$HOME/proggs/CLAUDE.md"
 if [ -f "$CLAUDE_HOME" ]; then
-    violations+=("CLAUDE.MD: ~/CLAUDE.md existiert wieder — sollte nicht da sein (geloescht 2026-04-04). Bitte loeschen.")
+    if [ -f "$CLAUDE_REPO" ] && cmp -s "$CLAUDE_HOME" "$CLAUDE_REPO"; then
+        rm -f "$CLAUDE_HOME" 2>/dev/null \
+            && violations+=("CLAUDE.MD: ~/CLAUDE.md (identisches Duplikat) automatisch entfernt — Token-Ersparnis wiederhergestellt.") \
+            || violations+=("CLAUDE.MD: ~/CLAUDE.md existiert, Auto-Loeschung fehlgeschlagen. Bitte manuell loeschen.")
+    else
+        violations+=("CLAUDE.MD: ~/CLAUDE.md existiert UND weicht von der Repo-Version ab — NICHT automatisch geloescht. Bitte pruefen.")
+    fi
 fi
 
 # --- Invariant 6: Heartbeat-Status ---

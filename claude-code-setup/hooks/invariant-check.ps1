@@ -80,10 +80,30 @@ if ($content -match 'Stand:\s*(\d{4}-\d{2}-\d{2})') {
 # --- Invariant 5: CLAUDE.md im Home darf NICHT existieren (Geloescht 2026-04-04) ---
 # Frueher wurde Sync zwischen ~/proggs/CLAUDE.md und ~/CLAUDE.md geprueft.
 # Seit 2026-04-04 gibt es keine ~/CLAUDE.md mehr (Duplikat entfernt fuer Token-Ersparnis).
-# Wenn ~/CLAUDE.md wieder auftaucht: Warnung — wahrscheinlich versehentlich erstellt.
+# Poka-Yoke Stufe 3 (2026-05-30): identisches Duplikat wird AUTOMATISCH geheilt
+# (geloescht) statt nur gemeldet. Abweichende Datei wird weiterhin nur gemeldet,
+# damit eigener Inhalt nicht verloren geht.
 $claudeHome = Join-Path $env:USERPROFILE "CLAUDE.md"
+$claudeRepo = Join-Path $env:USERPROFILE "proggs\CLAUDE.md"
 if (Test-Path $claudeHome) {
-    $violations += "CLAUDE.MD: ~/CLAUDE.md existiert wieder — sollte nicht da sein (geloescht 2026-04-04). Bitte loeschen."
+    $isDuplicate = $false
+    if (Test-Path $claudeRepo) {
+        try {
+            $hashHome = (Get-FileHash -Path $claudeHome -Algorithm MD5 -ErrorAction Stop).Hash
+            $hashRepo = (Get-FileHash -Path $claudeRepo -Algorithm MD5 -ErrorAction Stop).Hash
+            $isDuplicate = ($hashHome -eq $hashRepo)
+        } catch {}
+    }
+    if ($isDuplicate) {
+        try {
+            Remove-Item -Path $claudeHome -Force -ErrorAction Stop
+            $violations += "CLAUDE.MD: ~/CLAUDE.md (identisches Duplikat) automatisch entfernt — Token-Ersparnis wiederhergestellt."
+        } catch {
+            $violations += "CLAUDE.MD: ~/CLAUDE.md existiert, Auto-Loeschung fehlgeschlagen. Bitte manuell loeschen."
+        }
+    } else {
+        $violations += "CLAUDE.MD: ~/CLAUDE.md existiert UND weicht von der Repo-Version ab — NICHT automatisch geloescht. Bitte pruefen."
+    }
 }
 
 # --- Invariant 6: Heartbeat-Status ---
