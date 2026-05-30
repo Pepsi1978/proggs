@@ -113,7 +113,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Betroffene Dateien:** ~/.claude/hooks/startup-checks.ps1, claude-code-setup/hooks/startup-checks.ps1
 **Reproduktion:** Mehrere /clear hintereinander oder Sessions starten — fuer jeden Lauf 1 Eintrag.
 **Fix-Vorschlag:** (1) Hook implementiert Cooldown: max 1 Eintrag pro Tag fuer den gleichen Disk-%-Wert. (2) Disk bereinigen: Temp-Dateien, alte Logs, ggf. node_modules-Caches. (3) `~/.claude/scripts/disk-cleanup.ps1` als manueller Aufruf bauen.
-**Status:** OFFEN — wird in dieser Self-Improve-Session in Stufe 3 angegangen
+**Status:** GEFIXT (2026-05-30 — Cooldown im startup-checks-Hook implementiert; Disk-Vollstand ist bekanntes separates Thema, siehe Systemzustand)
 
 ### 2026-05-10 — Hook: auto-sync.ps1 — Merge-Konflikt seit 3 Tagen
 **Quelle:** Hook auto-sync.ps1 (Windows)
@@ -156,7 +156,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-16 14:19 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
 ### 2026-05-16 15:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-16 19:11 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-16 20:03 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-05-16 20:03 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
 ### 2026-05-16 20:06 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-16 21:28 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-16 23:23 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
@@ -166,7 +166,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-17 20:01 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-17 20:45 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-17 20:57 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-05-17 21:33 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-05-17 21:33 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
 ### 2026-05-18 10:23 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
 ### 2026-05-18 10:44 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-18 10:50 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
@@ -183,7 +183,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-18 19:10 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-18 20:21 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-21 18:23 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-22 20:32 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-05-22 20:32 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
 ### 2026-05-23 08:47 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
 ### 2026-05-23 09:00 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-23 11:19 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
@@ -194,7 +194,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-24 10:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-24 11:03 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-30 16:26 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-30 16:26 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
+### 2026-05-30 16:26 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: GEFIXT (2026-05-30 geprueft: rebase laeuft sauber durch, war transienter Parallel-Session-Konflikt)
 ### 2026-05-30 17:36 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
