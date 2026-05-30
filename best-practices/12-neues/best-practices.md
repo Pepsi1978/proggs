@@ -1,8 +1,218 @@
-# Neues / Horizont-Scan — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# Neues / Horizont-Scan — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
 
 > Kategorie 12: Ganz neue Claude-Code-Fähigkeiten der letzten ~6 Monate.
 > Quellen: Ausschließlich offizielle Anthropic-Dokumentation (code.claude.com/docs/en/whats-new)
 > sofern nicht anders angegeben.
+
+---
+
+## Dynamic Workflows — Dynamische Multi-Agent-Orchestrierung (v2.1.154, Mai 2026)
+
+### Was ist ein Dynamic Workflow?
+
+Ein Dynamic Workflow ist ein JavaScript-Script, das Claude für deine Aufgabe schreibt. Die Workflow-Runtime
+führt dieses Script im Hintergrund aus, während deine Session responsiv bleibt. Das ist der entscheidende
+Unterschied zu normalen Subagents: Bei Subagents lebt der Plan im Kontext von Claude — bei Workflows
+lebt der Plan im Script selbst.
+
+| Eigenschaft | Subagents | Skills | Workflows |
+|:---|:---|:---|:---|
+| Was es ist | Worker den Claude spawnt | Anweisungen die Claude folgt | Script das die Runtime ausführt |
+| Wer entscheidet was als nächstes läuft | Claude, Turn für Turn | Claude, dem Prompt folgend | Das Script |
+| Wo leben Zwischenergebnisse | Claudes Kontextfenster | Claudes Kontextfenster | Script-Variablen |
+| Was ist wiederholbar | Worker-Definition | Anweisungen | Die Orchestrierung selbst |
+| Skalierung | Wenige delegierte Tasks pro Turn | Gleich wie Subagents | Dutzende bis Hunderte Agents pro Run |
+| Unterbrechung | Startet den Turn neu | Startet den Turn neu | Innerhalb der Session fortsetzbar |
+
+### Technische Limits (offiziell bestätigt)
+
+| Constraint | Wert | Warum |
+|:---|:---|:---|
+| Max concurrent Agents | **16** (weniger auf Maschinen mit wenig CPU-Kernen) | Lokale Ressourcen-Begrenzung |
+| Max Agents gesamt pro Run | **1.000** | Verhindert Endlosschleifen |
+| Kein Mid-Run-Input vom User | — | Nur Agent-Permission-Prompts können pausieren |
+| Kein direkter Filesystem-/Shell-Zugriff vom Workflow-Script selbst | — | Agents lesen/schreiben/führen aus; Script koordiniert nur |
+
+### Bundled Workflow: /deep-research
+
+Der einzige eingebaute Workflow. Fächert Web-Suchen über mehrere Winkel auf, holt Quellen,
+lässt Agents adversarisch gegeneinander prüfen (Voting), filtert Behauptungen die
+die Kreuzprüfung nicht überstehen, und liefert einen zitierten Bericht.
+
+```text
+/deep-research Was hat sich im Node.js Permission-Modell zwischen v20 und v22 geändert?
+```
+
+### Drei Wege um einen Workflow zu starten
+
+**1. Keyword-Trigger:** Schreib das Wort `workflow` in deinen Prompt:
+```text
+Führe einen workflow aus um alle API-Endpunkte unter src/routes/ auf fehlende Auth-Checks zu prüfen
+```
+
+**2. `ultracode` Effort Level (Claude entscheidet selbst):**
+```text
+/effort ultracode
+```
+Mit ultracode plant Claude für jede substanzielle Aufgabe automatisch einen Workflow — ohne dass du
+`workflow` schreiben musst. Eine einzelne Anfrage kann mehrere Workflows in Folge auslösen
+(verstehen → ändern → verifizieren). Warnung: Deutlich mehr Tokens und Zeit als bei `xhigh`.
+Nach Abschluss mit `/effort high` zurückschalten.
+
+**3. Gespeicherten Workflow-Command aufrufen:**
+Workflows die du als Command gespeichert hast erscheinen in der `/`-Autocomplete.
+
+### Workflow speichern für Wiederverwendung
+
+```text
+/workflows
+# → Run auswählen → s drücken
+```
+Zwei Speicherorte:
+- `.claude/workflows/` im Projekt: wird mit dem Repo geteilt
+- `~/.claude/workflows/` im Home: in jedem Projekt verfügbar, nur für dich sichtbar
+
+### /workflows Dashboard-Tasten
+
+| Taste | Aktion |
+|:---|:---|
+| `↑` / `↓` | Phase oder Agent auswählen |
+| `Enter` oder `→` | In Phase/Agent hineinzoomen |
+| `Esc` | Eine Ebene zurück |
+| `p` | Run pausieren/fortsetzen |
+| `x` | Gewählten Agent oder ganzen Workflow stoppen |
+| `r` | Gewählten laufenden Agent neu starten |
+| `s` | Run-Script als Command speichern |
+
+### Permission-Verhalten bei Workflows
+
+Die Subagents in einem Workflow laufen IMMER in `acceptEdits`-Modus — unabhängig vom
+Session-Permission-Mode. Datei-Edits sind auto-approved. Shell-Commands, Web-Fetches und
+MCP-Tools die nicht in der Allowlist sind können mid-run nach Erlaubnis fragen.
+→ **Vor großen Runs: nötige Commands zur Allowlist hinzufügen.**
+
+| Permission-Modus | Wann wird nach Erlaubnis gefragt |
+|:---|:---|
+| default, acceptEdits | Jeder Run (außer "Don't ask again" für diesen Workflow) |
+| auto | Nur beim ersten Launch; danach automatisch |
+| bypassPermissions, `claude -p`, Agent SDK | Nie — Run startet sofort |
+
+### Kosten
+
+Ein Workflow spawnt viele Agents — ein einziger Run kann deutlich mehr Tokens verbrauchen
+als die gleiche Aufgabe im Gespräch. Runs zählen zu den Plan-Limits wie jede Session.
+Laufenden Workflow jederzeit in `/workflows` stoppen — erledigte Arbeit geht nicht verloren.
+
+### Wann lohnt sich ein Workflow?
+
+- Codebase-weite Sicherheitsprüfungen (alle Dateien, nicht nur Stichproben)
+- Große Migrationen (500+ Dateien)
+- Recherche-Fragen die mehrere Quellen gegeneinander prüfen müssen
+- Planung wo mehrere unabhängige Entwürfe gegeneinander abgewogen werden sollen
+- Jede Aufgabe die mehr Agents braucht als eine Konversation koordinieren kann
+
+### Workflows deaktivieren
+
+```json
+{ "disableWorkflows": true }
+```
+Oder: `CLAUDE_CODE_DISABLE_WORKFLOWS=1` setzen.
+Oder: In `/config` → "Dynamic workflows" aus.
+
+- **Quelle:** [https://code.claude.com/docs/en/workflows](https://code.claude.com/docs/en/workflows) (offiziell), [https://claude.com/blog/introducing-dynamic-workflows-in-claude-code](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code) (offiziell)
+- **Stand:** Mai 2026, Research Preview, erfordert v2.1.154+, alle bezahlten Pläne inkl. Bedrock/Vertex/Foundry
+
+---
+
+## Auto Mode auf Bedrock / Vertex / Foundry (v2.1.158, Mai 2026)
+
+### Was ist neu in v2.1.158?
+
+Auto mode ist jetzt auch auf Amazon Bedrock, Google Cloud Vertex AI und Microsoft Azure Foundry
+verfügbar — für Opus 4.7 und Opus 4.8. Opt-in über Umgebungsvariable:
+
+```bash
+CLAUDE_CODE_ENABLE_AUTO_MODE=1
+```
+
+Außerdem in v2.1.158: verbesserter Classifier für Daten-Exfiltration-Erkennung
+(besonders Bulk-Transfer von Repository-Inhalten).
+
+### Was Auto Mode ist (offiziell)
+
+Auto Mode lässt Claude ohne Permission-Prompts ausführen. Ein separater Classifier-Model
+prüft Aktionen bevor sie ausgeführt werden. Der Classifier blockiert alles was:
+- über den ursprünglichen Request hinausgeht (Scope Creep)
+- auf nicht erkannte Infrastruktur zielt
+- durch hostile Content in gelesenen Dateien gesteuert zu werden scheint
+
+**Zwei Schutzschichten:**
+1. Server-seitiger Probe scannt eingehende Tool-Results auf verdächtigen Content
+   (bevor Claude sie liest — verhindert direkte Prompt-Injection via Dateiinhalt)
+2. Transcript-Classifier mit Chain-of-Thought für jede nicht-triviale Aktion
+
+### Verhältnis zu bypassPermissions (KRITISCH für Franks Setup)
+
+| Eigenschaft | `bypassPermissions` | `auto` Mode |
+|:---|:---|:---|
+| Permission-Prompts | Keine | Keine |
+| Sicherheits-Classifier | Keiner | Aktiv im Hintergrund |
+| Prompt-Injection-Schutz | Kein | Vorhanden (2 Schichten) |
+| Für welche Umgebung | Nur isolierte Container / VMs | Normaler Rechner OK |
+| Blanket-Allow-Regeln (`Bash(*)`) | Bleiben aktiv | Werden beim Betreten fallen gelassen |
+| `defaultMode` in Projekt-Settings | Möglich | Wird ignoriert (nur `~/.claude/settings.json`) |
+| Auf Bedrock/Vertex/Foundry | Ja | Ab v2.1.158 mit `CLAUDE_CODE_ENABLE_AUTO_MODE=1` |
+
+**Klartext:** Frank's aktuelle `bypassPermissions`-Konfiguration bietet **keinen Classifier-Schutz**.
+Auto Mode wäre sicherer, aber erfordert Anthropic-API oder seit v2.1.158 Bedrock/Vertex/Foundry.
+Auto Mode und bypassPermissions sind **komplementär** — kein Ersatz füreinander.
+
+### Was der Classifier blockiert (Standard)
+
+Geblockt:
+- `curl | bash` (Download + sofortige Ausführung)
+- Sensible Daten an externe Endpunkte senden
+- Production Deploys und Migrationen
+- Massenlöschung auf Cloud Storage
+- IAM- oder Repo-Berechtigungen erteilen
+- Force-Push, oder Push direkt auf `main`
+
+Erlaubt:
+- Lokale Datei-Operationen im Working Directory
+- Dependencies aus Lockfiles installieren
+- `.env`-Credentials an die passende API senden
+- Read-only HTTP-Requests
+- Push auf aktuellen Branch oder Branch den Claude erstellt hat
+
+### Fallback-Logik
+
+- 3 aufeinanderfolgende Blocks → Auto Mode pausiert, normal prompting resumiert
+- 20 Blocks gesamt in der Session → Auto Mode pausiert
+- Jede erlaubte Aktion setzt den consecutiven Zähler zurück; der Gesamt-Zähler läuft bis zum Limit
+
+### Boundaries in der Konversation
+
+Wenn du sagst "pushe nicht" oder "warte auf mein Review" behandelt der Classifier das als
+Block-Signal — auch wenn die Default-Regeln die Aktion erlauben würden. Caveat: Boundaries
+können bei Context Compaction verloren gehen. Für harte Garantien: `hardDeny`-Regel anlegen.
+
+### Classifier-Kosten
+
+Classifier-Aufrufe zählen zum Token-Verbrauch. Reads und Working-Directory-Edits (außer
+Protected Paths) überspringen den Classifier → Overhead hauptsächlich bei Shell-Commands
+und Netzwerk-Operationen.
+
+### Wichtig: Docs-Seite noch nicht aktualisiert
+
+Die offizielle Docs-Seite zu `permission-modes` (Stand 2026-05-30) listet Auto Mode
+noch als "Anthropic API only, not available on Bedrock/Vertex/Foundry". v2.1.158 hat
+das geändert, aber nur via `CLAUDE_CODE_ENABLE_AUTO_MODE=1` opt-in.
+Die Docs werden erfahrungsgemäß verzögert aktualisiert.
+
+- **Quelle (Docs):** [https://code.claude.com/docs/en/permission-modes](https://code.claude.com/docs/en/permission-modes) (offiziell)
+- **Quelle (Engineering):** [https://www.anthropic.com/engineering/claude-code-auto-mode](https://www.anthropic.com/engineering/claude-code-auto-mode) (offiziell)
+- **Quelle (v2.1.158):** [https://github.com/anthropics/claude-code/releases](https://github.com/anthropics/claude-code/releases) (offiziell)
+- **Stand:** Mai 2026, Research Preview
 
 ---
 
@@ -87,22 +297,6 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 
 ---
 
-## Workflow-Tool — Dynamische Multi-Agent-Orchestrierung (Mai 2026)
-
-- **Was:** Claude schreibt automatisch Orchestrierungs-Scripts, die Dutzende bis Hunderte paralleler
-  Subagenten in einer einzigen Session starten. Das System plant dynamisch, verteilt Teilaufgaben,
-  führt adversarische Prüf-Agents aus und liefert ein geprüftes Ergebnis. Inline-Progress wurde in
-  2.1.152 vereinfacht: Live-Agent-Counts erscheinen nur noch in der persistenten Workflow-Status-Zeile
-  unter dem Prompt. Post-Response-Timer zeigt "Waiting for N background agents/workflows to finish".
-- **Best Practice:** Für codebase-weite Aufgaben (Sicherheitsprüfungen, große Migrationen, Bug-Hunts
-  über hunderte Dateien) einsetzen. Kein manuelles Triggern nötig — Claude entscheidet selbst ob
-  ein Workflow-Ansatz sinnvoll ist. Quota-Verbrauch beachten: Workflows kosten signifikant mehr als
-  Single-Agent-Sessions. Verfügbar für Max-, Team- und Enterprise-Pläne.
-- **Quelle:** [https://claude.com/blog/introducing-dynamic-workflows-in-claude-code](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code) (offiziell)
-- **Stand:** Mai 2026 (Research Preview)
-
----
-
 ## Auto Mode (v2.1.83, März 2026)
 
 - **Was:** Classifier-basiertes Permission-System als Mittelweg zwischen manuellem Review und `--dangerously-skip-permissions`. Sichere Aktionen laufen durch, riskante werden blockiert. Zwei Schichten: Server-seitiger Prompt-Injection-Probe (Input) + Transcript-Classifier mit Sonnet 4.6 (Output). Stage 1: schnelle Ja/Nein-Entscheidung. Stage 2: Chain-of-Thought nur für markierte Aktionen. Ab 2.1.152: kein Opt-in Consent mehr nötig.
@@ -123,7 +317,7 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 
 ## /ultrareview — Cloud-basierter Multi-Agent-Review (v2.1.114, April 2026)
 
-- **Was:** Fleet von Bug-hunting-Agents in der Cloud analysiert den aktuellen Branch oder einen bestimmten PR. Befunde landen automatisch in CLI oder Desktop. Umfasst parallele Multi-Agent-Analyse und einen adversarial Critique-Pass. Kein lokales Rechnen nötig.
+- **Was:** Fleet von Bug-hunting-Agents in der Cloud analysiert den aktuellen Branch oder einen bestimmten PR. Befunde landen automatisch in CLI oder Desktop. Umfasst parallele Multi-Agent-Analyse und einen adversarischen Critique-Pass. Kein lokales Rechnen nötig.
 - **Best Practice:** Vor Merges kritischer Änderungen einsetzen (Auth, Datenmigration, Security-Code). Aktuellen Branch: `/ultrareview`. Bestimmten PR: `/ultrareview 1234`. Auch aus CI und Scripts via `claude ultrareview` (ohne Slash, ab v2.1.120) aufrufbar. Nicht für triviale Änderungen — der Ressourcenaufwand ist erheblich. Ergänzt, ersetzt nicht den lokalen Code-Reviewer-Agent.
 - **Quelle:** [https://code.claude.com/docs/en/whats-new/2026-w17](https://code.claude.com/docs/en/whats-new/2026-w17) (offiziell), [https://code.claude.com/docs/en/ultrareview](https://code.claude.com/docs/en/ultrareview) (offiziell)
 - **Stand:** April 2026 (Research Preview → ab Woche 18 auch in CI)
@@ -178,7 +372,7 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 ## Fast Mode auf Opus 4.7 (Research Preview, Mai 2026)
 
 - **Was:** `/fast` läuft jetzt auf Opus 4.7 statt Opus 4.6. Gleiche Modellqualität bei ~2,5× Geschwindigkeit gegen höhere Token-Kosten. Preis unverändert ($30/$150 pro MTok wie Opus 4.6 Fast Mode). Für schnelle Iteration und Live-Debugging gedacht.
-- **Best Practice:** `/fast` für Rapid-Iteration-Phasen und interaktives Debugging nutzen. Für finale, qualitätskritische Arbeit wieder auf Standard-Modus zurückschalten. Pin auf Opus 4.6: `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE=1` setzen. Nicht als Dauereinstellung — Fast Mode kostet mehr pro Token.
+- **Best Practice:** `/fast` für Rapid-Iteration-Phasen und interaktives Debugging nutzen. Für finale, qualitätskritische Arbeit wieder auf Standard-Modus zurückschalten. Pin auf Opus 4.6: `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE=1` setzen. Nicht als Dauereinstellung — Fast Mode kostet mehr pro Token. **VERALTET ab 06/01/2026:** `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` wird entfernt (deprecated in v2.1.158).
 - **Quelle:** [https://code.claude.com/docs/en/whats-new/2026-w20](https://code.claude.com/docs/en/whats-new/2026-w20) (offiziell), [https://code.claude.com/docs/en/fast-mode](https://code.claude.com/docs/en/fast-mode) (offiziell)
 - **Stand:** Mai 2026 (Research Preview)
 
@@ -292,4 +486,6 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 
 ---
 
-*Recherchiert 2026-05-28 · 4 WebFetches (code.claude.com/docs/en/changelog, agent-view, anthropic.com Engineering Blog, claude.com Blog) + 2 WebSearches · Alle Kernangaben zu 2.1.152/153 offiziell aus dem Changelog bestätigt.*
+*Recherchiert 2026-05-30 · 3 WebSearches + 2 WebFetches (code.claude.com/docs/en/workflows, code.claude.com/docs/en/permission-modes) · Alle Kernangaben zu Dynamic Workflows und Auto Mode v2.1.158 offiziell bestätigt.*
+
+<!-- CHECKPOINT: fertig — Dynamic Workflows (2.1.154) und Auto Mode Bedrock/Vertex (2.1.158) vollständig dokumentiert. Empfehlung: Eigene Kategorie für Dynamic Workflows. Nächste Recherche-Session: Claude Opus 4.8 Details (neu in v2.1.158). -->

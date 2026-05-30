@@ -1,7 +1,7 @@
-# Arbeitsweise / Verhalten — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# Arbeitsweise / Verhalten — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
 
 > Quelle: Offizielle Anthropic-Dokumentation (code.claude.com/docs/en/best-practices)  
-> Recherche-Datum: 2026-05-28
+> Recherche-Datum: 2026-05-28 / 2026-05-30
 
 ---
 
@@ -272,24 +272,33 @@
   - Team- und Enterprise-Admins müssen Auto Mode in den Organization-Settings zuerst aktivieren.
   - **Praktische Bedeutung:** Wer bisher Auto Mode nicht nutzte weil der Consent-Dialog störte, kann ihn jetzt friktionslos aktivieren — kein extra Schritt mehr.
   - **Hinweis:** Der Klassifizierer läuft in zwei Phasen (schneller Filter → Chain-of-Thought bei Verdacht). Lokale Dateivorgänge und vordefinierte Erlaubnisregeln werden sofort genehmigt.
+  - **NEU (2.1.154):** Anthropic empfiehlt explizit Auto Mode zu aktivieren wenn Dynamic Workflows genutzt werden — ein Workflow der mit hunderten Subagenten läuft und bei jeder Genehmigung pausiert ist nicht wirklich parallel.
 - **Quelle:** https://claudefa.st/blog/guide/development/auto-mode (extern, Zusammenfassung aus Changelog); https://releasebot.io/updates/anthropic/claude-code (extern); offizielles Changelog verbatim: „Auto mode no longer requires opt-in consent" (v2.1.152)
 - **Unsicherheit:** Die offizielle Anthropic-Dokumentationsseite zu Auto Mode konnte nicht direkt abgerufen werden. Beschreibung basiert auf einem Community-Summary-Artikel. Als `offiziell` markiert nur das Changelog-Zitat selbst; die technischen Details sind `extern`.
 - **Stand:** 2026-05-28
 
 ---
 
-## NEU (2.1.152): /code-review --fix wendet Befunde direkt an; /simplify als Alias
+## NEU (2.1.152/154): /simplify vs /code-review — klare Trennung
 
-- **Was:** `/code-review --fix` ist eine neue Flag für den `/code-review`-Befehl. Nach dem Review-Durchlauf werden die gefundenen Verbesserungsvorschläge (Wiederverwendung, Vereinfachung, Effizienz) automatisch direkt im Working Tree angewendet — kein manuelles Copy-Paste mehr. Zusätzlich wurde `/simplify` so umgebogen, dass es intern `/code-review --fix` aufruft.
+- **Was:** `/code-review --fix` und `/simplify` wurden in 2.1.152/154 neu voneinander abgegrenzt. Sie haben jetzt klar unterschiedliche Scopes und Ziele.
 - **Best Practice:**
-  - **Standard-Review** (nur Befunde lesen): `/code-review` ohne Flag — Claude reviewt und listet Findings auf, ändert aber nichts.
-  - **Review + direkte Anwendung**: `/code-review --fix` — Claude reviewt und wendet Vereinfachungs- und Effizienz-Vorschläge sofort an.
-  - **Kurzform**: `/simplify` ist jetzt identisch mit `/code-review --fix`.
-  - **Workflow-Empfehlung:** Vor dem Einsatz von `--fix` mit git sicherstellen dass der aktuelle Stand committed ist — der Befehl ändert Dateien ohne weiteres Bestätigen.
-  - **Effort-Level kombinierbar:** `/code-review high --fix` für tiefere Analyse vor der Anwendung.
-  - **Vorherige Entwicklung:** `/simplify` hieß bis v2.1.146 so und wurde damals zu `/code-review` umbenannt (mit Effort-Levels). In v2.1.152 wurde `/simplify` als Alias für `/code-review --fix` wieder eingeführt, was die Auto-Fix-Funktionalität zurückbringt die zwischenzeitlich entfernt worden war.
-- **Quelle:** https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern); https://github.com/anthropics/claude-code/releases (offiziell); https://www.neoteric.no/blog/claude-code-s-simplify-stopped-fixing-code-yesterday/ (extern); offizielles Changelog verbatim: „/code-review --fix now applies review findings to your working tree after the review, surfacing reuse, simplification, and efficiency suggestions; /simplify now invokes /code-review --fix" (v2.1.152)
-- **Stand:** 2026-05-28
+
+  | Befehl | Scope | Wann nutzen |
+  |---|---|---|
+  | `/code-review` | Vollständiges Bug-Hunting: Fehler, Edge Cases, Sicherheitsprobleme, Logikfehler — **liest nur, ändert nichts** | Wenn man wissen will ob Code korrekt ist |
+  | `/code-review --fix` | Wie oben, aber **wendet die Befunde direkt an** | Wenn man Befunde automatisch angewendet haben will (git-Stand vorher sichern!) |
+  | `/simplify` | **Cleanup-only**: Wiederverwendung, Vereinfachung, Effizienz, Abstraktionsniveau — kein Bug-Hunting | Wenn Code funktioniert, aber zu komplex/redundant ist |
+
+  **Wichtige Nuance (NEU ab 2.1.154):** `/simplify` ist seit 2.1.154 ein eigenständiger Cleanup-Review — **kein** Alias mehr für `/code-review --fix`. Es führt keine Bug-Hunting-Analyse durch. Wer Security-Lücken oder Logic-Errors sucht: `/code-review` nutzen, nicht `/simplify`.
+
+  **Workflow-Empfehlung:**
+  1. Vor Einsatz von `--fix`: `git commit` oder `git stash` — der Befehl ändert Dateien ohne Bestätigung.
+  2. Cleanup nach Feature-Implementierung: `/simplify` — schnell, kein Overhead durch Bug-Hunting.
+  3. Vor einem PR: `/code-review` für gründliche Analyse.
+  4. Effort kombinierbar: `/code-review high` für tiefere Analyse.
+- **Quelle:** https://dev.classmethod.jp/en/articles/20260529-claude-code-updates-v2-1-154/ (extern); offizielles Changelog verbatim: „/simplify now runs a cleanup-only review (reuse, simplification, efficiency, altitude) and applies the fixes, instead of running the full /code-review --fix bug-hunting review" (v2.1.154)
+- **Stand:** 2026-05-30
 
 ---
 
@@ -305,3 +314,84 @@
   - **Praktische Bedeutung:** Wer dauerhaft auf Opus wechseln will, muss nicht mehr jede Session mit `--model opus` starten oder die `model`-Zeile in Settings manuell editieren — `/model opus` + Enter genügt.
 - **Quelle:** https://code.claude.com/docs/en/model-config (offiziell); https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ (extern); offizielles Changelog verbatim: „/model now saves your selection as the default for new sessions (matching the IDE). Press s in the picker to switch models for the current session only." (v2.1.153)
 - **Stand:** 2026-05-28
+
+---
+
+## NEU (2.1.154): Zurückhaltendes Nachfrage-Verhalten — Claude fragt weniger
+
+- **Was:** Claude Code stellte bisher Mehrfachauswahl-Fragen auch dann, wenn bereits genug Kontext vorhanden war um selbst zu entscheiden. Ab 2.1.154 reserviert Claude diesen Prompt-Typ für Entscheidungen die es wirklich nicht alleine treffen kann.
+- **Best Practice:**
+  - **Was das bedeutet:** Claude handelt jetzt autonomer. Bei unvollständigem Kontext wird es dennoch weitermachen — mit einer Annahme, die es nennt. Wenn die Annahme falsch ist, kann man korrigieren.
+  - **Praktische Auswirkung auf Prompts:** Weniger Rückfragen bedeutet mehr Flow — aber auch: wenn Claude etwas Wichtiges wissen muss, muss man es in den Prompt schreiben, statt auf eine Frage zu warten.
+  - **Was trotzdem gefragt wird:** Destruktive Operationen (Datei löschen, DB löschen, force-push), echte Ambiguität zwischen zwei gleichwertigen Optionen, fehlende externe Credentials.
+  - **Empfehlung:** Bei mehrdeutigen Aufgaben direkt im Prompt die relevanten Einschränkungen angeben. `"Falls X dann Y, falls Z dann W"` im Prompt verhindert stilles Raten.
+  - **Zusammenspiel mit lean system prompt:** Der schlanke System-Prompt verstärkt dieses Verhalten — Claude erhält weniger „frage lieber nach"-Anweisungen und ist dadurch proaktiver.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell); https://dev.classmethod.jp/en/articles/20260529-claude-code-updates-v2-1-154/ (extern); offizielles Changelog verbatim: „Claude now reserves the multiple-choice question prompt for decisions it genuinely cannot make itself, instead of asking when it already has enough context to proceed" (v2.1.154)
+- **Stand:** 2026-05-30
+
+---
+
+## NEU (2.1.154): Lean System Prompt — weniger Token-Overhead, mehr Kontext für echte Arbeit
+
+- **Was:** Der „lean system prompt" ist ab v2.1.154 der Default für alle Modelle außer Haiku, Sonnet und Opus 4.7 (und älter). Er enthält kompaktere Anweisungen — der volle Standard-Prompt war deutlich länger und fraß Token die besser für Nutzer-Kontext genutzt werden könnten.
+- **Best Practice:**
+  - **Für wen relevant:** Alle die Opus 4.8 oder neuere Modelle nutzen. Haiku/Sonnet/Opus 4.7 bleiben beim bisherigen Prompt.
+  - **Was sich ändert:** Claude verhält sich autonomer und fragt weniger nach (siehe Eintrag oben). Das ist eine direkte Folge des lean prompts — weniger „frage lieber nach"-Instruktionen.
+  - **Eigene System-Prompt-Ergänzungen:** Wer mit `--system-prompt` oder `systemPrompt` in Settings eigene Anweisungen hinterlegt hat, muss prüfen ob diese noch konsistent mit dem lean-Default sind. Anthropic stellt System-Prompt-Inhalte transparent über https://github.com/Piebald-AI/claude-code-system-prompts bereit.
+  - **Für `bypassPermissions`-Nutzer (Frank's Setup):** Der lean prompt kombiniert mit autonomem Verhalten ist ideal — Claude handelt direkter ohne unnötige Rückfragen.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell); https://dev.classmethod.jp/en/articles/20260529-claude-code-updates-v2-1-154/ (extern); https://github.com/Piebald-AI/claude-code-system-prompts (offiziell/community-tracked)
+- **Stand:** 2026-05-30
+
+---
+
+## NEU (2.1.154): Dynamic Workflows — Orchestrierung von Dutzenden bis Hunderten Agenten
+
+- **Was:** Dynamic Workflows sind ein neues Orchestrierungsparadigma (Research Preview ab 2.1.154). Claude schreibt ein JavaScript-Skript für eine Aufgabe, das Runtime führt es im Hintergrund aus und koordiniert bis zu 1.000 Subagenten — während die Session responsiv bleibt.
+- **Wann Workflows vs. Subagenten vs. Skills:**
+
+  | | Subagenten | Skills | Workflows |
+  |---|---|---|---|
+  | Wer entscheidet was als nächstes läuft | Claude, Turn für Turn | Claude, nach Prompt | Das Skript |
+  | Wo Zwischenergebnisse landen | Claudes Kontext | Claudes Kontext | Skript-Variablen |
+  | Was wiederholbar ist | Worker-Definition | Anweisungen | Die Orchestrierung selbst |
+  | Skala | Wenige Tasks pro Turn | Wie Subagenten | Dutzende bis Hunderte Agenten pro Run |
+  | Bei Unterbrechung | Turn neu starten | Turn neu starten | Fortsetzbarer Run |
+
+  **Workflows nutzen wenn:**
+  - Aufgabe braucht mehr Agenten als eine Konversation koordinieren kann (große Codebase-Audits, 500-Datei-Migrationen, Cross-checked Research)
+  - Die Orchestrierung selbst wiederholt werden soll (Review-Prozess bei jedem Branch)
+  - Adversariale Review: unabhängige Agenten prüfen gegenseitig ihre Befunde
+
+  **Workflows NICHT nutzen wenn:**
+  - Kleine, klar umgrenzte Aufgaben die ein einzelner Agent-Pass erledigt
+  - Vorhersagbares Token-Budget wichtig ist (Workflows können deutlich mehr kosten)
+  - Routine-Arbeit — nach dem schweren Task: `/effort high` zurückschalten
+
+- **Best Practice:**
+  - **Trigger:** Das Wort `workflow` irgendwo im Prompt schreiben — Claude hebt es hervor und erstellt ein Workflow-Skript statt sequenziell zu arbeiten.
+  - **`/deep-research <frage>`:** Eingebauter Workflow — durchsucht Web aus mehreren Winkeln, verifiziert Quellen gegenseitig, liefert einen zitierten Bericht. Beste Einstiegsübung.
+  - **`/workflows`:** Monitoring-Ansicht während des Runs — Phasen, Agenten-Anzahl, Token-Summen, Laufzeit. Navigation: Pfeiltasten, `p` pausieren/fortsetzen, `r` Agenten neustarten, `s` als Command speichern.
+  - **`/effort ultracode`:** Claude entscheidet selbst bei jeder substantiellen Aufgabe ob ein Workflow nötig ist. Kostet deutlich mehr Tokens — nach dem schweren Task `/effort high` zurückschalten.
+  - **Auto Mode empfohlen:** Anthropic empfiehlt explizit Auto Mode beim Einsatz von Workflows — ein Workflow der bei jeder Permission-Abfrage pausiert ist nicht wirklich parallel.
+  - **Limits:** Max 16 parallele Agenten gleichzeitig, max 1.000 Agenten pro Run gesamt.
+  - **Speichern:** Nach einem erfolgreichen Run: `/workflows` → Run auswählen → `s` → als wiederverwendbaren Command speichern (projekt-weit in `.claude/workflows/` oder persönlich in `~/.claude/workflows/`).
+
+- **Quelle:** https://code.claude.com/docs/en/workflows (offiziell); https://claude.com/blog/introducing-dynamic-workflows-in-claude-code (offiziell); https://agentpedia.codes/blog/claude-opus-4-8-claude-code-workflows (extern)
+- **Stand:** 2026-05-30
+
+---
+
+## NEU (2.1.158): Workflow-Keyword-Trigger abschaltbar — `/config`-Einstellung
+
+- **Was:** Das Wort `workflow` im Prompt triggert ab 2.1.154 automatisch die Workflow-Erstellung. Das ist nützlich wenn man einen Workflow starten will — störend wenn man nur über Workflows reden will. Ab 2.1.158 gibt es eine `/config`-Einstellung um diesen automatischen Trigger zu deaktivieren.
+- **Best Practice:**
+  - **Problem deaktivieren:** In `/config` → „Workflow keyword trigger" ausschalten. Persistiert über Sessions.
+  - **Alternativ pro Prompt:** `alt+w` drücken wenn das Wort hervorgehoben wird um es für diesen Prompt zu ignorieren. Oder Backspace direkt nach dem hervorgehobenen Wort drücken.
+  - **Für Frank's Setup:** Falls in Prompts oft das Wort „Workflow" vorkommt (z.B. beim Besprechen von CI/CD-Workflows oder App-Workflows), den Trigger in `/config` deaktivieren und Workflows explizit per `/deep-research` oder vollständiger Phrase `"erstelle einen Claude-Workflow für..."` auslösen.
+  - **Technisch:** Vollständiges Deaktivieren auch über `"disableWorkflows": true` in `~/.claude/settings.json` oder `CLAUDE_CODE_DISABLE_WORKFLOWS=1` (deaktiviert Workflows komplett, nicht nur den Keyword-Trigger).
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell); https://releasebot.io/updates/anthropic/claude-code (extern); offizielles Changelog verbatim: „Workflow keyword trigger Setting to stop the word 'workflow' from triggering a workflow added to /config" (v2.1.158)
+- **Stand:** 2026-05-30
+
+---
+
+<!-- CHECKPOINT: fertig — alle 4 Changelog-Punkte (2.1.154 multiple-choice, /simplify vs /code-review, dynamic workflows, lean system prompt, 2.1.158 workflow keyword trigger) recherchiert und eingebaut. Nächste relevante Updates ab 2.1.159+ beobachten. -->

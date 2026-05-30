@@ -1,4 +1,4 @@
-# Plugins — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Plugins — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
 
 ---
 
@@ -29,6 +29,7 @@
     "license": "MIT",
     "keywords": ["keyword1"],
     "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+    "defaultEnabled": false,         // NEU ab v2.1.154: Plugin deaktiviert installieren
 
     // Komponenten-Pfade (alle optional, überschreiben Defaults)
     "skills": "./custom/skills/",
@@ -55,10 +56,10 @@
     ]
   }
   ```
-- **Best Practice:** `$schema`-Feld einsetzen für Editor-Autocomplete. `displayName` (v2.1.143+) für saubere UI-Anzeige nutzen.
+- **Best Practice:** `$schema`-Feld einsetzen für Editor-Autocomplete. `displayName` (v2.1.143+) für saubere UI-Anzeige nutzen. `defaultEnabled: false` (v2.1.154+) für Plugins nutzen, die Kosten verursachen oder sich auf externe Dienste verbinden.
 - **Wichtig:** Unbekannte Top-Level-Felder werden **ignoriert** (kein Fehler), falsche Typen sind Load-Fehler. Manifest kann parallel als npm `package.json` oder VS-Code-Extension-Manifest dienen.
 - **Quelle:** https://code.claude.com/docs/en/plugins-reference (offiziell)
-- **Stand:** 2026-04-02
+- **Stand:** 2026-04-02 (aktualisiert 2026-05-30)
 
 ---
 
@@ -86,6 +87,121 @@
 - **Best Practice:** `skills/` für neue Plugins bevorzugen (statt `commands/`). `commands/` ist Legacy und wird nur noch für Rückwärtskompatibilität unterstützt. Häufiger Fehler: Skill-Verzeichnisse fälschlich in `.claude-plugin/` ablegen — dort gehört nur `plugin.json` rein.
 - **Quelle:** https://code.claude.com/docs/en/plugins (offiziell)
 - **Stand:** 2026-04-02
+
+---
+
+## NEU v2.1.157: .claude/skills Auto-Loading — kein Marketplace nötig
+
+- **Was:** Jeder Ordner unter einem skills-Verzeichnis, der eine `.claude-plugin/plugin.json` enthält, wird beim nächsten Session-Start **automatisch als Plugin** geladen — ohne Marketplace und ohne Install-Schritt. Der Plugin-Name lautet `<name>@skills-dir`.
+- **Zwei unterstützte Scopes:**
+
+  | Skills-Verzeichnis        | Scope    | Wann geladen                                                               |
+  |---------------------------|----------|----------------------------------------------------------------------------|
+  | `~/.claude/skills/`       | personal | In jedem Projekt, da der Pfad persönlich ist                               |
+  | `<cwd>/.claude/skills/`   | project  | Nur nach Workspace-Trust-Dialog für diesen Ordner                          |
+
+- **Unterschied zu Marketplace-Install:** Plugin wird **in-place geladen** (nicht in Plugin-Cache kopiert). Änderungen an `SKILL.md` greifen sofort; Änderungen an `hooks/`, `.mcp.json`, `agents/` etc. erst nach `/reload-plugins` oder Neustart.
+- **Einschränkungen bei project-scope `@skills-dir`:**
+  - MCP-Server brauchen Pro-Server-Genehmigung (wie bei project `.mcp.json`)
+  - LSP-Server starten erst nach Workspace-Trust
+  - Background Monitors laden **nicht**
+  - Kein Walk-up zum Repo-Root — immer vom Repo-Root starten oder `/reload-plugins` nach `cd`
+- **Best Practice:**
+  - Personal-scope (`~/.claude/skills/`) für persönliche Helfer nutzen — keine Einschränkungen.
+  - Project-scope (`.claude/skills/`) für Team-Plugins im Repo nutzen — per Git geteilt.
+  - Plugin stoppen: Verzeichnis löschen oder `claude plugin disable my-tool@skills-dir`.
+- **Quelle:** https://code.claude.com/docs/en/plugins-reference#skills-directory-plugins (offiziell)
+- **Stand:** 2026-05-29
+
+---
+
+## NEU v2.1.157: `claude plugin init` — Plugin scaffolden
+
+- **Was:** Neuer CLI-Befehl, der ein Plugin-Gerüst in `~/.claude/skills/<name>/` anlegt. Beim nächsten Session-Start wird es automatisch als `<name>@skills-dir` geladen.
+- **Syntax:**
+  ```bash
+  claude plugin init <name> [options]
+
+  # Minimal (nur plugin.json + SKILL.md)
+  claude plugin init my-helper
+
+  # Mit extras (kombinierbar)
+  claude plugin init my-helper --include skills
+  claude plugin init my-helper --include agents
+  claude plugin init my-helper --include hooks
+  claude plugin init my-helper --include mcp
+  claude plugin init my-helper --include lsp
+  claude plugin init my-helper --include output-style
+  claude plugin init my-helper --include channel  # MCP-basierter Channel
+  ```
+- **Was wird angelegt:** `.claude-plugin/plugin.json` + starter `SKILL.md` + optional gewählte Komponenten-Verzeichnisse.
+- **Best Practice:**
+  - Für schnelle persönliche Helfer: `claude plugin init my-helper` (minimal, kein `--include` nötig).
+  - Für Plugins mit Hooks oder Agents: passende `--include`-Flags gleich beim Init mitgeben.
+  - `<name>` darf keine Leerzeichen oder Pfad-Separatoren enthalten (wird Skill-Namespace und Verzeichnisname).
+  - Danach **keine neuen Fenster öffnen nötig** — Plugin lädt beim nächsten Session-Start automatisch.
+- **Quelle:** https://code.claude.com/docs/en/plugins-reference#plugin-init (offiziell)
+- **Stand:** 2026-05-29
+
+---
+
+## NEU v2.1.154: `defaultEnabled: false` — Plugin deaktiviert ausliefern
+
+- **Was:** `defaultEnabled: false` in `plugin.json` lässt ein Plugin im installierten, aber deaktivierten Zustand. Der Nutzer aktiviert es manuell mit `claude plugin enable <plugin>` oder über `/plugin`.
+- **Wann nutzen:** Plugins die Kosten verursachen, sich mit externen Diensten verbinden oder einen expliziten Opt-in rechtfertigen.
+- **Precedence-Regeln:**
+  1. **Nutzer-Setting** (`enabledPlugins` in settings): überschreibt `defaultEnabled` dauerhaft — auch über Plugin-Updates hinweg.
+  2. **Dependency-Requirement**: wenn Plugin als Abhängigkeit eines aktiven Plugins benötigt wird, setzt Claude Code automatisch `true` und ignoriert `defaultEnabled`.
+  3. **`defaultEnabled`**: greift nur, wenn keiner der beiden oben etwas gesetzt hat.
+- **Marketplace-Eintrag**: `defaultEnabled` kann auch im Marketplace-Eintrag stehen — das hat Vorrang vor `plugin.json`.
+- **Rückwärtskompatibilität:** Claude Code vor v2.1.154 ignoriert das Feld und aktiviert das Plugin beim Install.
+- **Best Practice:**
+  - Für Opt-in-Plugins (externe Dienste, teure Operationen): `"defaultEnabled": false` in `plugin.json`.
+  - Für Standard-Helfer die immer nützlich sind: Feld weglassen (Default ist `true`).
+  - **Nie** `defaultEnabled: false` für Abhängigkeits-Plugins setzen — Claude Code setzt das automatisch auf `true`, wenn der Plugin als Dependency aktiv wird.
+- **Quelle:** https://code.claude.com/docs/en/plugins-reference#default-enablement (offiziell)
+- **Stand:** 2026-05-28
+
+---
+
+## NEU v2.1.157: `/plugin` Autocomplete
+
+- **Was:** Der `/plugin`-Befehl hat jetzt Autocomplete für: Subcommands, installierte Plugin-Namen, und Plugins aus bekannten Marketplaces.
+- **Best Practice:** Keine Aktion nötig — greift automatisch beim Tippen von `/plugin`. Nützlich um verfügbare Marketplace-Plugins zu entdecken ohne den Discover-Tab zu öffnen.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-29
+
+---
+
+## NEU v2.1.157: `/plugin` Discover Tab — "Suggested for this directory"
+
+- **Was:** Der Discover-Tab im `/plugin`-Manager pinnt Plugins oben an, deren Relevanz-Signale zum aktuellen Verzeichnis passen (z.B. ein Android-Plugin wenn `build.gradle.kts` vorhanden ist). Diese Plugins werden mit "suggested for this directory" annotiert.
+- **Best Practice:** Beim Starten in einem neuen Projekttyp kurz `/plugin` öffnen — suggested Plugins sind oft nützliche LSP-Server oder Sprach-Spezifische Tools.
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-29
+
+---
+
+## NEU v2.1.153: `skipLfs` in Marketplace-Quellen
+
+- **Was:** `github`- und `git`-Quellen in `marketplace.json` unterstützen jetzt ein `skipLfs: true`-Feld, das Git LFS-Downloads beim Klonen und Aktualisieren überspringt.
+- **Wann nutzen:** Wenn ein Plugin-Repo große Binärdateien in Git LFS hat (z.B. Modelle, Assets), die für den Plugin-Betrieb nicht gebraucht werden.
+- **Beispiel:**
+  ```json
+  {
+    "plugins": [
+      {
+        "name": "my-plugin",
+        "source": {
+          "github": "myorg/my-plugin",
+          "skipLfs": true
+        }
+      }
+    ]
+  }
+  ```
+- **Quelle:** https://github.com/anthropics/claude-code/releases/tag/v2.1.153 (offiziell)
+- **Stand:** 2026-05-28
 
 ---
 
@@ -139,6 +255,7 @@
 - Hintergrundprozesse die Logs/Status beobachten und Claude automatisch benachrichtigen.
 - `when: "on-skill-invoke:<name>"` startet Monitor erst beim ersten Skill-Aufruf (ressourcenschonend).
 - Monitors stoppen erst beim Session-Ende, nicht beim Deaktivieren des Plugins.
+- **Achtung:** Monitors laden **nicht** bei project-scope `@skills-dir` Plugins.
 - **Quelle:** https://code.claude.com/docs/en/plugins-reference (offiziell)
 - **Stand:** 2026-04-02
 
@@ -172,8 +289,9 @@
   ]
   ```
 - **Best Practice:** Abhängigkeiten explizit deklarieren — Claude Code installiert sie automatisch mit. Im `/plugin`-Installed-Tab werden Plugins mit ungelösten Abhängigkeiten oben angezeigt.
+- **NEU ab v2.1.154:** Abhängigkeits-Plugins werden automatisch aktiviert wenn ein abhängiges Plugin aktiviert wird — `defaultEnabled: false` greift dann nicht.
 - **Quelle:** https://code.claude.com/docs/en/plugins-reference (offiziell)
-- **Stand:** 2026-04-02
+- **Stand:** 2026-04-02 (aktualisiert 2026-05-30)
 
 ---
 
@@ -224,8 +342,9 @@
   - **Team-Marketplace in Projekt einbetten:** `extraKnownMarketplaces` in `.claude/settings.json` — Claude Code fragt Nutzer beim Vertrauen des Ordners automatisch zur Installation.
   - **Auto-Update** per `"autoUpdate": true` in `extraKnownMarketplaces` für org-weite automatische Updates.
   - Offizielle Anthropic-Marketplaces (`claude-plugins-official`) haben Auto-Update standardmäßig aktiv.
+  - **NEU ab v2.1.153:** `skipLfs: true` in `github`/`git`-Quellen nutzen wenn das Plugin-Repo große LFS-Dateien hat die nicht gebraucht werden.
 - **Quelle:** https://code.claude.com/docs/en/plugin-marketplaces (offiziell)
-- **Stand:** 2026-04-02
+- **Stand:** 2026-04-02 (aktualisiert 2026-05-30)
 
 ---
 
@@ -276,6 +395,16 @@
 
 ## Entwicklungs-Workflow (Kurzfassung)
 
+### Workflow A: Plugin per `claude plugin init` (NEU v2.1.157 — empfohlen für persönliche Plugins)
+
+1. `claude plugin init my-helper` → legt `~/.claude/skills/my-helper/` an
+2. `SKILL.md` bearbeiten
+3. Nächste Session starten → Plugin lädt automatisch als `my-helper@skills-dir`
+4. Änderungen an SKILL.md greifen **sofort**; andere Komponenten nach `/reload-plugins`
+5. Plugin stoppen: `claude plugin disable my-helper@skills-dir`
+
+### Workflow B: Plugin mit `--plugin-dir` (für geteilte/Marketplace-Plugins)
+
 1. **Entwickeln:** In `.claude/` als Standalone starten, mit `--plugin-dir ./my-plugin` testen.
 2. **Iterieren:** `/reload-plugins` statt Neustart nach Änderungen nutzen.
 3. **Validieren:** `claude plugin validate ./my-plugin --strict` vor jedem Commit/Push.
@@ -284,13 +413,19 @@
 6. **Veröffentlichen:** `claude plugin validate` → Submission-Formular → Community-Marketplace.
 
 - **Quelle:** https://code.claude.com/docs/en/plugins (offiziell)
-- **Stand:** 2026-04-02
+- **Stand:** 2026-04-02 (aktualisiert 2026-05-30)
 
 ---
 
 ## Wichtige CLI-Befehle (Referenz)
 
 ```bash
+# Plugin scaffolden (NEU v2.1.157)
+claude plugin init my-helper                     # Minimal in ~/.claude/skills/my-helper/
+claude plugin init my-helper --include hooks     # Mit Hooks
+claude plugin init my-helper --include agents    # Mit Agents
+claude plugin init my-helper --include mcp       # Mit MCP-Server
+
 # Plugin lokal testen
 claude --plugin-dir ./my-plugin
 claude --plugin-dir ./my-plugin.zip            # ZIP ab v2.1.128
@@ -315,13 +450,15 @@ claude plugin validate ./my-plugin              # Validierung
 claude plugin validate ./my-plugin --strict     # Warnings als Errors (CI)
 claude plugin install formatter@org --scope project
 claude plugin uninstall formatter@org --scope project
+claude plugin enable my-tool@skills-dir         # skills-dir Plugin aktivieren
+claude plugin disable my-tool@skills-dir        # skills-dir Plugin deaktivieren
 
 # Debugging
 rm -rf ~/.claude/plugins/cache                  # Cache leeren (dann neu installieren)
 ```
 
 - **Quelle:** https://code.claude.com/docs/en/discover-plugins (offiziell), https://code.claude.com/docs/en/plugins-reference (offiziell)
-- **Stand:** 2026-04-02
+- **Stand:** 2026-04-02 (aktualisiert 2026-05-30)
 
 ---
 
@@ -334,6 +471,16 @@ rm -rf ~/.claude/plugins/cache                  # Cache leeren (dann neu install
 | v2.1.143+ | `displayName`-Feld in plugin.json; Context-Cost-Anzeige im Plugin-Detail |
 | v2.1.144+ | "Last updated"-Datum im Plugin-Detail |
 | v2.1.145+ | "Will install"-Sektion zeigt alle Komponenten vor Installation |
+| v2.1.153+ | `skipLfs: true` in `github`/`git` Marketplace-Quellen |
+| v2.1.154+ | `defaultEnabled: false` in plugin.json; Dependency-Auto-Enable |
+| v2.1.157+ | `.claude/skills/`-Verzeichnis Auto-Loading ohne Marketplace |
+| v2.1.157+ | `claude plugin init <name>` Scaffolding-Befehl |
+| v2.1.157+ | `/plugin` Autocomplete (Subcommands, Plugin-Namen, Marketplace-Plugins) |
+| v2.1.157+ | `/plugin` Discover Tab: "suggested for this directory" Kontextannotation |
 
-- **Quelle:** https://code.claude.com/docs/en/discover-plugins (offiziell)
-- **Stand:** 2026-04-02
+- **Quelle:** https://code.claude.com/docs/en/discover-plugins (offiziell), https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-30
+
+---
+
+<!-- CHECKPOINT: fertig — alle v2.1.153 bis v2.1.158 Plugin-Features dokumentiert. Nächste Recherche: v2.1.159+ oder Kategorie 5 (Hooks/Events). -->

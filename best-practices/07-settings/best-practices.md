@@ -1,4 +1,4 @@
-# Settings & Konfiguration — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# Settings & Konfig — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
 
 ---
 
@@ -56,8 +56,9 @@
 - **KRITISCH — NIEMALS per Env-Variable steuern:** `CLAUDE_CODE_EFFORT_LEVEL` als Umgebungsvariable blockiert `/effort`-Änderungen während der Session. Nur über `effortLevel` in settings.json oder den `/effort`-Befehl.
 - **Session-Override:** `/effort low|medium|high|xhigh` während der Session ändert den Wert nur bis Session-Ende. Beim nächsten echten Start gilt wieder der settings.json-Wert.
 - **Bekannter Bug (Issue #45453):** `effortLevel` in settings.json wird manchmal beim Start nicht angewendet. Workaround: SessionStart-Hook der den Wert explizit setzt (nur bei `source=startup` oder `source=clear`, nicht bei `source=compact` oder `source=resume`).
+- **NEU ab v2.1.154 — CLAUDE_CODE_ALWAYS_ENABLE_EFFORT:** Wenn auf `1` gesetzt, sendet Claude Code den `effort`-Parameter auch an Modelle die ihn nicht offiziell unterstützen. Nützlich für Custom-Endpoints oder experimentelle Modelle. Standardmäßig wird der Parameter bei nicht-unterstützten Modellen weggelassen.
 - **Quelle:** https://code.claude.com/docs/en/settings (offiziell), https://github.com/anthropics/claude-code/issues/45453 (offiziell, Bug-Tracker)
-- **Stand:** 2026-05-25
+- **Stand:** 2026-05-30 (CLAUDE_CODE_ALWAYS_ENABLE_EFFORT neu in v2.1.154)
 
 ---
 
@@ -84,10 +85,14 @@
   - `CLAUDE_CODE_NO_FLICKER` — Fullscreen-TUI aktivieren (Äquivalent zu `"tui": "fullscreen"`)
   - `CLAUDE_CODE_USE_POWERSHELL_TOOL` — PowerShell-Tool aktivieren (Windows)
   - `CLAUDE_CODE_DISABLE_THINKING` — Extended Thinking erzwungen deaktivieren
+  - `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT` — Effort-Parameter auch an nicht-unterstützte Modelle senden (neu v2.1.154)
+  - `OTEL_LOG_TOOL_DETAILS` — Wenn `1`, werden `tool_parameters` in `tool_decision`- und `tool_result`-Telemetrie-Events eingeschlossen (neu v2.1.157)
+  - `CLAUDE_CODE_ENABLE_AUTO_MODE` — Auto-Mode auf Bedrock/Vertex/Foundry opt-in (neu v2.1.158, nur Opus 4.7/4.8)
+- **DEPRECATED ab v2.1.154 (entfernt 2026-06-01):** `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` — nicht mehr verwenden. Wird mit v2.1.154 deprecated und am 1. Juni 2026 entfernt. Fast Mode ist jetzt allgemein verfügbar und wird über andere Mechanismen gesteuert.
 - **WICHTIG (seit v2.1.143):** `NO_COLOR` und `FORCE_COLOR` müssen VOR dem Start von Claude Code gesetzt werden — nicht über den `env`-Key in settings.json.
 - **Best Practice:** Team-übergreifende Env-Vars in Project-Settings `.claude/settings.json`. Geheime Tokens nur in `.claude/settings.local.json` oder über `apiKeyHelper`-Script, niemals in geteilten Dateien.
 - **Quelle:** https://code.claude.com/docs/en/settings (offiziell)
-- **Stand:** 2026-05-25
+- **Stand:** 2026-05-30 (CLAUDE_CODE_ALWAYS_ENABLE_EFFORT, OTEL_LOG_TOOL_DETAILS, CLAUDE_CODE_ENABLE_AUTO_MODE neu)
 
 ---
 
@@ -306,9 +311,137 @@
 
 ---
 
-## Neue Settings in v2.1.128–v2.1.153 (Änderungsprotokoll)
+## Auto-Mode — Konfiguration & settings.json-Block (NEU / ERWEITERT in v2.1.158)
 
-- **Was:** Zusammenfassung der neusten Ergänzungen seit ca. Anfang 2026:
+- **Was:** Auto-Mode lässt Claude Code ohne Permission-Prompts laufen, indem jeder Tool-Call durch einen KI-Sicherheits-Klassifizierer geroutet wird. Dieser blockiert irreversible, destruktive oder umgebungsfremde Aktionen automatisch.
+- **Aktivierung (Anthropic API):** `/model`-Picker oder CLI-Flag `--enable-auto-mode`, dann Shift+Tab zum Wechseln.
+- **NEU ab v2.1.158 — Bedrock / Vertex / Foundry:** Auto-Mode ist jetzt auch für Opus 4.7 und Opus 4.8 auf AWS Bedrock, Google Vertex AI und Microsoft Azure Foundry verfügbar. Opt-in über Umgebungsvariable:
+  ```bash
+  CLAUDE_CODE_ENABLE_AUTO_MODE=1
+  ```
+  Vorher war Auto-Mode ausschließlich über die Anthropic-API verfügbar.
+- **Sicherheitsarchitektur:** Der Auto-Mode-Klassifizierer läuft als **zweite Sicherheitsstufe NACH** dem normalen Permissions-System. Aktionen die in `permissions.deny` stehen, werden bereits davor blockiert und erreichen den Klassifizierer nicht.
+- **autoMode-Block in settings.json (Konfigurationsreferenz):**
+  ```json
+  {
+    "autoMode": {
+      "environment": [
+        "$defaults",
+        "Organization: Acme Corp. Primary use: software development",
+        "Source control: github.com/acme-corp and all repos under it",
+        "Trusted internal domains: *.internal.acme.com, api.acme.com"
+      ],
+      "allow": [
+        "$defaults",
+        "Deploying to staging namespace is allowed: isolated, resets nightly"
+      ],
+      "soft_deny": [
+        "$defaults",
+        "Never run db migrations outside migrations CLI"
+      ],
+      "hard_deny": [
+        "$defaults",
+        "Never send repository contents to third-party APIs"
+      ]
+    }
+  }
+  ```
+- **$defaults-Platzhalter (KRITISCH):** In `environment`, `allow`, `soft_deny` und `hard_deny` können die eingebauten Standardregeln mit `"$defaults"` an einer beliebigen Position eingebunden werden. Wer `"$defaults"` weglässt, ersetzt die gesamte eingebaute Regelliste — inkl. Force-Push-Schutz, curl-pipe-bash-Schutz, Produktions-Deploy-Schutz. **Niemals eine Sektion ohne `"$defaults"` setzen, ohne vorher `claude auto-mode defaults` ausgeführt zu haben.**
+- **Scope des autoMode-Blocks:** Wird aus `~/.claude/settings.json` (User), `.claude/settings.local.json` (per Projekt, gitignoriert), Managed-Settings und `--settings`-Flag gelesen. **Nicht** aus `.claude/settings.json` (shared Project-Settings) — verhindert, dass ein Repo eigene Auto-Mode-Allow-Regeln injiziert.
+- **Diagnose-Kommandos:**
+  ```bash
+  claude auto-mode defaults   # Zeigt eingebaute Regeln als JSON
+  claude auto-mode config     # Zeigt effektive Konfiguration nach Merge
+  claude auto-mode critique   # KI-Feedback zu eigenen Regeln
+  ```
+- **Prioritäten im Klassifizierer:**
+  1. `hard_deny` — blockiert immer, kein Override möglich
+  2. `soft_deny` — blockiert, außer `allow` oder explizite Benutzerabsicht überschreibt
+  3. `allow` — Ausnahme zu `soft_deny`
+  4. Explizite Benutzerabsicht — überschreibt `soft_deny` (nicht `hard_deny`)
+- **WICHTIG für Frank (bypassPermissions-User):** Auto-Mode und `bypassPermissions` erfüllen unterschiedliche Zwecke und schließen sich nicht gegenseitig aus:
+  - `bypassPermissions` = kein Permission-Dialog, aber kein Sicherheits-Klassifizierer
+  - Auto-Mode = kein Permission-Dialog + aktiver Sicherheits-Klassifizierer im Hintergrund
+  - Für Solo-Entwickler mit vollem Verständnis der Risiken: `bypassPermissions` ist weiterhin die einfachere Wahl (kein Overhead durch Klassifizierer). Auto-Mode ist besonders nützlich in Team- oder Enterprise-Umgebungen oder wenn Bedrock/Vertex/Foundry genutzt wird.
+- **Quelle:** https://code.claude.com/docs/en/auto-mode-config (offiziell), https://code.claude.com/docs/en/permission-modes (offiziell), https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-30 (Bedrock/Vertex/Foundry-Support neu in v2.1.158)
+
+---
+
+## Workflow-Keyword-Trigger — Deaktivierung in /config (NEU ab v2.1.157/158)
+
+- **Was:** Claude Code hat ein "Dynamic Workflows"-Feature das beim Erkennen des Schlüsselworts `workflow` (oder eines verwandten Ausdrucks) in einem Prompt automatisch einen Workflow-Modus auslöst. Ab v2.1.157/158 gibt es in `/config` eine neue Einstellung um dieses automatische Triggern zu deaktivieren.
+- **Problem:** Das Wort "workflow" kommt in normalen Prompts häufig vor (z.B. "mein Git-Workflow", "CI/CD-Workflow erklären") — das ungewollte Auslösen des Workflow-Modus störte den normalen Gesprächsfluss.
+- **Fix:** In `/config` die Option **"Workflow keyword trigger"** deaktivieren. Danach löst das Wort `workflow` in einem Prompt keinen Dynamic-Workflow mehr aus.
+- **Hintergrund Dynamic Workflows (v2.1.154):** Anthropic hat mit Claude Opus 4.8 "Dynamic Workflows" eingeführt — ein Orchestrierungs-Feature für sehr große Aufgaben mit bis zu 1.000 Sub-Agenten. Der Workflow wird durch ein Schlüsselwort im Prompt gestartet.
+- **Empfehlung:** Die Einstellung deaktivieren wenn das Wort `workflow` regelmäßig in normalen Prompts auftaucht (z.B. bei Voice-Diktation).
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://techcrunch.com/2026/05/28/anthropic-releases-opus-4-8-with-new-dynamic-workflow-tool/ (extern)
+- **Stand:** 2026-05-30
+
+---
+
+## agent-Feld in settings.json für Dispatched Sessions (NEU ab v2.1.154/158)
+
+- **Was:** Das `agent`-Feld in `settings.json` wird ab v2.1.154/158 auch für **dispatched sessions** (Sub-Agenten, Hintergrund-Agenten, `/bg`-Läufe) berücksichtigt.
+- **Vorheriges Verhalten:** Das `agent`-Feld galt nur für die primäre interaktive Session. Dispatched Sub-Agenten ignorierten es und nutzten den globalen Default.
+- **Neues Verhalten:** Wenn eine Session via `--settings` ein JSON mit einem `agent`-Feld übergibt, gilt dieses auch für alle von dieser Session erzeugten Sub-Agenten (dispatched sessions).
+- **Anwendungsfall:** Multi-Agenten-Workflows wo Sub-Agenten ein spezifisches Modell, Effort-Level oder andere agent-spezifische Settings erhalten sollen:
+  ```json
+  {
+    "agent": {
+      "model": "claude-sonnet-4-5",
+      "effortLevel": "medium"
+    }
+  }
+  ```
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-30
+
+---
+
+## OTEL-Telemetrie — tool_parameters in Logs (NEU ab v2.1.157)
+
+- **Was:** OpenTelemetry-Telemetrie-Events enthalten jetzt optional die vollständigen `tool_parameters` (Bash-Befehle, MCP/Skill-Namen, etc.).
+- **Aktivierung:**
+  ```bash
+  OTEL_LOG_TOOL_DETAILS=1
+  ```
+  In settings.json:
+  ```json
+  {
+    "env": {
+      "OTEL_LOG_TOOL_DETAILS": "1"
+    }
+  }
+  ```
+- **Betrifft diese Events:**
+  - `tool_decision` — Enthält jetzt `tool_parameters` (welche Parameter der Tool-Call hatte)
+  - `tool_result` — Enthält jetzt ebenfalls `tool_parameters` (gated, nur wenn Variable gesetzt)
+- **Vorheriges Verhalten:** `tool_parameters` wurden in Telemetrie-Events nicht mitgeloggt — nur Tool-Name und Ergebnis-Status.
+- **Datenschutz-Hinweis:** `OTEL_LOG_TOOL_DETAILS=1` loggt Bash-Befehle im Klartext in die Telemetrie. Nicht in Umgebungen einschalten wo Befehle sensitive Daten enthalten könnten (z.B. Passworte als CLI-Argumente).
+- **Quelle:** https://code.claude.com/docs/en/changelog (offiziell)
+- **Stand:** 2026-05-30
+
+---
+
+## Neue Settings in v2.1.128–v2.1.158 (Änderungsprotokoll)
+
+- **Was:** Zusammenfassung der neuesten Ergänzungen:
+  - **v2.1.158 (2026-05-30):**
+    - Auto-Mode auf Bedrock, Vertex, Foundry für Opus 4.7/4.8 via `CLAUDE_CODE_ENABLE_AUTO_MODE=1`
+    - "Workflow keyword trigger"-Einstellung in `/config` zum Deaktivieren des automatischen Workflow-Starts
+    - `agent`-Feld in settings.json wird jetzt für dispatched sessions berücksichtigt
+    - Worktrees beim Agent-Ende entsperrt (für `git worktree remove/prune`)
+    - PowerShell-Tool auf Bedrock/Vertex/Foundry (Windows) standardmäßig aktiv
+  - **v2.1.157 (2026-05-29):**
+    - `tool_decision`-Telemetrie-Events enthalten `tool_parameters` wenn `OTEL_LOG_TOOL_DETAILS=1`
+    - `tool_parameters` in `tool_result`-Events ebenfalls hinter `OTEL_LOG_TOOL_DETAILS=1` gated
+  - **v2.1.154 (2026-05-28):**
+    - Claude Opus 4.8 als neues Modell mit xhigh Effort
+    - Dynamic Workflows (`/workflows`) für Agent-Orchestrierung mit bis zu 1.000 Sub-Agenten
+    - `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` **deprecated** (Entfernung am 2026-06-01)
+    - `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1` — Effort-Parameter auch an nicht-unterstützte Modelle senden
+    - `MCP_TOOL_TIMEOUT` wird jetzt auch für Remote HTTP/SSE MCP-Server berücksichtigt
   - **v2.1.153 (2026-05-28):**
     - `/model` speichert Auswahl jetzt als Default für neue Sessions (nicht mehr nur temporär)
     - `s`-Taste im Picker für session-only Wechsel; Keybinding `modelPicker:setAsDefault` → `modelPicker:thisSessionOnly` umbenennen
@@ -332,7 +465,7 @@
   { "$schema": "https://json.schemastore.org/claude-code-settings.json" }
   ```
 - **Quelle:** https://code.claude.com/docs/en/changelog (offiziell), https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ (extern), https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ (extern)
-- **Stand:** 2026-05-28
+- **Stand:** 2026-05-30
 
 ---
 
@@ -354,9 +487,10 @@
   - `"worktree"` (Standard) — Hintergrund-Jobs dürfen Haupt-Checkout nicht bearbeiten, bis in Worktree gewechselt wird
   - `"none"` — Hintergrund-Jobs dürfen direkt im Working-Copy arbeiten
 - **symlinkDirectories:** `node_modules` und `.cache` werden per Symlink geteilt statt kopiert → spart Speicherplatz und Build-Zeit bei parallelen Coder-Agents erheblich.
+- **NEU ab v2.1.158:** Von Claude Code verwaltete Worktrees werden beim Beenden des Agenten **entsperrt** (unlocked), sodass `git worktree remove` und `git worktree prune` diese danach aufräumen können. Vorher blieben die Worktrees gesperrt und mussten manuell entsperrt werden.
 - **Best Practice:** Für parallele Coder-Agents `"bgIsolation": "worktree"` + `"symlinkDirectories": ["node_modules"]` in Project-Settings. Datei-Ownership je Agent strikt trennen, nie zwei Agents auf die gleiche Datei.
 - **Quelle:** https://code.claude.com/docs/en/settings (offiziell)
-- **Stand:** 2026-05-25
+- **Stand:** 2026-05-30 (Worktree-Unlocking neu in v2.1.158)
 
 ---
 
@@ -368,14 +502,21 @@
 | https://code.claude.com/docs/en/statusline | offiziell |
 | https://code.claude.com/docs/en/changelog | offiziell |
 | https://code.claude.com/docs/en/keybindings | offiziell |
+| https://code.claude.com/docs/en/auto-mode-config | offiziell |
+| https://code.claude.com/docs/en/permission-modes | offiziell |
 | https://github.com/anthropics/claude-code/releases | offiziell |
 | https://github.com/anthropics/claude-code/issues/23478 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/21858 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/17204 | offiziell (Bug-Tracker) |
 | https://github.com/anthropics/claude-code/issues/45453 | offiziell (Bug-Tracker) |
+| https://github.com/anthropics/claude-code/issues/41179 | offiziell (Bug-Tracker) |
 | https://dev.classmethod.jp/en/articles/20260528-claude-code-updates-v2-1-153/ | extern |
 | https://dev.classmethod.jp/en/articles/20260524-claude-code-updates-v2-1-152/ | extern |
 | https://claudefa.st/blog/guide/mechanics/rules-directory | extern |
 | https://cld-docs.onlinetool.cc/en/docs/claude-code/statusline.html | extern |
 | https://www.eesel.ai/blog/settings-json-claude-code | extern |
 | https://managed-settings.com/ | extern |
+| https://techcrunch.com/2026/05/28/anthropic-releases-opus-4-8-with-new-dynamic-workflow-tool/ | extern |
+| https://www.marktechpost.com/2026/05/28/anthropic-ships-claude-opus-4-8-alongside-dynamic-workflows-and-cheaper-fast-mode-with-workflows-capped-at-1000-subagents/ | extern |
+
+<!-- CHECKPOINT: fertig — alle Einträge von v2.1.154 bis v2.1.158 eingearbeitet. Nächste Recherche: Auto-Mode Details wenn Frank auf Bedrock/Vertex wechselt; Dynamic Workflows /workflows Command-Referenz. -->
