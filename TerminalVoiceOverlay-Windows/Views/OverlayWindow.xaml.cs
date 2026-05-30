@@ -3354,6 +3354,15 @@ namespace TerminalVoiceOverlay.Views
             if (_promptPanel is not null) return;
 
             _promptPanel = new PromptBoardPanel();
+            // Remember the board's normal vertical width deterministically at
+            // creation time (XAML width, fixed because the board is NoResize).
+            // The old lazy capture inside PositionPromptPanel could record a
+            // width that had already been shrunk by a horizontal-mode excursion,
+            // which then made the board come back NARROW after an auto-collapse/
+            // expand cycle instead of vanishing/reappearing at full width
+            // (Frank-Bug 2026-05-30: board got squeezed instead of disappearing).
+            if (!double.IsNaN(_promptPanel.Width) && _promptPanel.Width > 1)
+                _boardVerticalWidth = _promptPanel.Width;
             _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
             _promptPanel.InputSubmitRequested  += OnInputSubmit;
             // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag
@@ -3477,7 +3486,11 @@ namespace TerminalVoiceOverlay.Views
             else
             {
                 // Vertikal: links neben dem Pillar mit 4px Naht, gleiche Hoehe.
-                if (_boardVerticalWidth > 1) _promptPanel.Width = _boardVerticalWidth;
+                // ALWAYS restore the full vertical width — never leave the board
+                // at a narrow horizontal-mode width. Fallback to the XAML default
+                // (532) if the remembered width is missing/invalid, so the board
+                // can never come back "squeezed" after a collapse/expand cycle.
+                _promptPanel.Width = _boardVerticalWidth > 1 ? _boardVerticalWidth : 532;
                 _promptPanel.Height = Height;
                 _promptPanel.Left = Left - _promptPanel.Width - 4;
                 _promptPanel.Top = Top;
