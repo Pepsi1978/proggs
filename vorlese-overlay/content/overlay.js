@@ -355,14 +355,17 @@
 		clampCurrentPosition();
 	});
 
-	// Auto-Lese-Modus (A-Button) aus den Einstellungen wiederherstellen.
+	// Auto-Lese-Modus (A-Button) + Auto-Vorlesen-Haekchen aus den Einstellungen
+	// wiederherstellen.
 	window.VOSettings.load()
 		.then((s) => {
 			autoMode = !!(s && s.autoMode);
 			applyAutoButton();
+			autoSpeakOn = !!(s && s.autoSpeak);
+			applyAutoSpeakBox();
 		})
 		.catch(() => {
-			/* Button bleibt im Standardzustand (aus) */
+			/* Buttons bleiben im Standardzustand (aus) */
 		});
 
 	// ----- Drag + Klick (mousedown mit preventDefault) -------------------------
