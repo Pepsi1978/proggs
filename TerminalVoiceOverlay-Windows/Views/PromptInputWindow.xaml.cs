@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -196,6 +198,14 @@ public partial class PromptInputWindow : Window
         InputBox.ScrollToEnd();
         InputBox.Focus();
         Keyboard.Focus(InputBox);
+
+        // Sofortiges Feedback im PreviewLabel: Anzahl der erkannten Aufgaben
+        // (nicht-leere Teile nach Split an " ; "). Der Benutzer sieht das
+        // ohne erst nach unten scrollen zu muessen.
+        int taskCount = InputBox.Text
+            .Split([" ; "], StringSplitOptions.None)
+            .Count(p => !string.IsNullOrWhiteSpace(p));
+        UpdatePreview($"{taskCount} Aufgabe{(taskCount == 1 ? "" : "n")} erkannt");
     }
 
     /// <summary>
@@ -490,6 +500,61 @@ public partial class PromptInputWindow : Window
         if (Top  + Height > area.Bottom)   Top  = area.Bottom - Height;
     }
 
+    // ── Fokus-Indikator ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Hebt die umgebende Border beim Tastatur-Fokus hervor: BorderBrush
+    /// wechselt auf gedaempftes Blau (#FF6A9FD8) statt dem haesslichen
+    /// gestrichelten WPF-Standard-FocusVisualStyle (der auf der TextBox
+    /// per FocusVisualStyle="{x:Null}" deaktiviert wurde).
+    /// </summary>
+    private void InputBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        InputBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x6A, 0x9F, 0xD8));
+    }
+
+    /// <summary>
+    /// Setzt den Border-Rahmen zurueck auf den Ruhezustand (#FF3A3A3A)
+    /// sobald die TextBox den Fokus verliert.
+    /// </summary>
+    private void InputBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        InputBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3A));
+    }
+
+    // ── Live-Vorschau (TextChanged) ───────────────────────────────────────
+
+    /// <summary>
+    /// Fuellt das PreviewLabel bei jeder Texteingabe mit einer kompakten
+    /// Struktur-Vorschau. Das Format deutet an, dass Pre- und Post-Prompts
+    /// aus dem PromptBoard beim Abschicken dazukommen, ohne deren genauen
+    /// Inhalt hier zu kennen:
+    ///   "[Pre] &lt;Anfang des Textes&gt;… [Post]"
+    /// Bei leerem Text wird das Label geleert. Haelt sich an die gleiche
+    /// Logik wie PromptChainBuilder.Build(): alwaysOn-Prompts kommen vor
+    /// dem Benutzer-Text, Post-Prompts danach.
+    /// </summary>
+    private void InputBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        var text = InputBox.Text ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            // Kein Text — Vorschau leeren, damit kein veralteter Status stehen bleibt.
+            // Nur leeren wenn kein Gemini-Status angezeigt wird (der beginnt nie mit "[").
+            if (!PreviewLabel.Text.StartsWith("Verbessere", StringComparison.Ordinal) &&
+                !PreviewLabel.Text.StartsWith("Gemini", StringComparison.Ordinal))
+            {
+                PreviewLabel.Text = string.Empty;
+            }
+            return;
+        }
+
+        // Kompakte Vorschau: ersten 60 Zeichen des Textes zeigen.
+        const int maxLen = 60;
+        string snippet = text.Length > maxLen ? text[..maxLen].TrimEnd() + "…" : text.Replace('\n', ' ');
+        PreviewLabel.Text = $"[Pre] {snippet} [Post]";
+    }
+
     // ── Eingabe-Tasten ────────────────────────────────────────────────────
 
     private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -519,6 +584,11 @@ public partial class PromptInputWindow : Window
         // koennte der Benutzer kein Kontextmenue mehr nutzen. Wir starten
         // nur wenn das Klick-Ziel das Window oder der Border ist.
         if (e.OriginalSource is System.Windows.Controls.TextBox) return;
+        // Rechtsklick auf Toolbar-Buttons (ButtonBase und abgeleitete Typen)
+        // darf ebenfalls keinen Drag ausloesen — sonst wuerde ein Klick auf
+        // den X-, G- oder ;-Button gleichzeitig den Button-Click und den
+        // Fenster-Drag starten.
+        if (e.OriginalSource is ButtonBase) return;
 
         _isDragging      = true;
         _dragStartScreen = PointToScreen(e.GetPosition(this));

@@ -186,8 +186,12 @@
             <!-- Eingabefeld: mehrzeilig, scrollbar. KEIN eigener Hintergrund —
                  die aeussere Border (#C71E1E1E, 78% opak) scheint durch, so
                  dass der Eingabebereich exakt so transparent wirkt wie das
-                 Promtboard und die Historie. -->
-            <Border Grid.Row="1"
+                 Promtboard und die Historie.
+                 InputBorder reagiert auf den Tastatur-Fokus der TextBox:
+                 BorderBrush wechselt beim Fokus auf gedaempftes Blau (#6A9FD8)
+                 und zurueck auf #3A3A3A wenn der Fokus verloren geht. -->
+            <Border x:Name="InputBorder"
+                    Grid.Row="1"
                     CornerRadius="8"
                     Background="Transparent"
                     BorderBrush="#FF3A3A3A"
@@ -203,7 +207,11 @@
                          BorderThickness="0"
                          FontSize="26"
                          Padding="10,8"
-                         FontFamily="Segoe UI"/>
+                         FontFamily="Segoe UI"
+                         FocusVisualStyle="{x:Null}"
+                         GotFocus="InputBox_GotFocus"
+                         LostFocus="InputBox_LostFocus"
+                         TextChanged="InputBox_TextChanged"/>
             </Border>
 
             <!-- Statuszeile unten: Pre/Post-Vorschau -->

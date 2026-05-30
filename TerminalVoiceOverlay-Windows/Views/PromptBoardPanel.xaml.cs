@@ -419,6 +419,16 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private async Task ClearAllAlwaysOnAsync()
     {
+        // Guard against an accidental click: this button clears ALL Always-On
+        // checks across every category (except "Allgemein") and is not trivially
+        // reversible. Require an explicit confirmation first.
+        if (!ConfirmDialog.Ask(this, "Alle Haekchen entfernen?",
+                "Alle Always-On-Haekchen in allen Kategorien werden entfernt. Die Kategorie \"Allgemein\" bleibt unberuehrt. Fortfahren?",
+                "Entfernen"))
+        {
+            return;
+        }
+
         // Visuelles Feedback SOFORT setzen, damit der Klick ankommt — auch
         // wenn die DB-Operation ein paar hundert Millisekunden dauert.
         var originalBackground = BtnClearAllChecks.Background;
@@ -703,13 +713,25 @@ public partial class PromptBoardPanel : Window
 
     private async void ToggleHistoryWindow()
     {
-        if (_historyWindowVisible)
+        // async void here is an event-handler wrapper (BtnHistory.Click). An
+        // exception out of OpenHistoryWindowAsync would otherwise travel
+        // unhandled into the WPF dispatcher loop and crash the process without
+        // any visible error. Catch and log defensively (same pattern as the
+        // other click handlers in this file).
+        try
         {
-            CloseHistoryWindow();
+            if (_historyWindowVisible)
+            {
+                CloseHistoryWindow();
+            }
+            else
+            {
+                await OpenHistoryWindowAsync();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await OpenHistoryWindowAsync();
+            Console.WriteLine($"[PBPanel] ToggleHistoryWindow failed: {ex.Message}");
         }
     }
 
@@ -1677,6 +1699,10 @@ public partial class PromptBoardPanel : Window
             Content = "",
             Style = (Style)FindResource("RowIconButton"),
             ToolTip = "Loeschen",
+            // Wider left gap than the other row icons (style default is 2px) so a
+            // fast click can't accidentally hit delete instead of edit/insert.
+            // Delete is destructive, so give it some breathing room.
+            Margin = new Thickness(8, 0, 0, 0),
         };
         deleteBtn.Click += async (_, _) => await DeletePromptAsync(prompt);
         deleteBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
@@ -2525,8 +2551,19 @@ public partial class PromptBoardPanel : Window
             _autoBackupTimer = new DispatcherTimer { Interval = AutoBackupDelay };
             _autoBackupTimer.Tick += async (_, _) =>
             {
-                _autoBackupTimer!.Stop();
-                await RunAutoBackupIfConnectedAsync();
+                // Defensive: this is an async-void timer tick. Even though
+                // RunAutoBackupIfConnectedAsync catches internally, Stop() or an
+                // unexpected state (e.g. ObjectDisposedException while closing)
+                // could still throw and take down the dispatcher.
+                try
+                {
+                    _autoBackupTimer!.Stop();
+                    await RunAutoBackupIfConnectedAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[PBPanel] auto-backup tick unhandled: {ex.Message}");
+                }
             };
         }
         _autoBackupTimer.Stop();
@@ -2870,8 +2907,14 @@ public partial class PromptBoardPanel : Window
             var d = JsonSerializer.Deserialize<BackupData>(json);
             if (d is null) return null;
             // ExportedAt is serialized as a UTC ISO string by JsonSerializer,
-            // but if it round-tripped as Local we still treat it as UTC.
-            return DateTime.SpecifyKind(d.ExportedAt, DateTimeKind.Utc);
+            // but if it round-tripped as Local we must CONVERT it (not just
+            // re-label it): SpecifyKind keeps the clock value unchanged, so a
+            // local timestamp tagged as UTC would shift the comparison and the
+            // launch-time auto-restore could pick an OLDER remote backup as the
+            // newer one. Convert local -> UTC, only label already-UTC/unspecified.
+            return d.ExportedAt.Kind == DateTimeKind.Local
+                ? d.ExportedAt.ToUniversalTime()
+                : DateTime.SpecifyKind(d.ExportedAt, DateTimeKind.Utc);
         }
         catch { return null; }
     }

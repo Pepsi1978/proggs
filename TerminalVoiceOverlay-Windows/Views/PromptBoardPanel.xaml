@@ -87,6 +87,14 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
+            <Style.Triggers>
+                <!-- Hover feedback: the row lightens slightly under the mouse.
+                     Previously there was no visual cue even though the whole row
+                     is clickable (toggles Always-On). -->
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF363636"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="PromptButton" TargetType="Button">
