@@ -47,7 +47,10 @@ if ($errorInput.Length -gt 300) {
 Set-Content -Path $rateLimitFile -Value $timestamp -NoNewline -ErrorAction SilentlyContinue
 
 # Build whiteboard entry
-$entry = "### $timestamp — StopFailure: API/Rate-Limit Error — Status: OFFEN"
+# 2026-05-30: Status TRANSIENT statt OFFEN — ein externer API-/Rate-Limit-Fehler
+# ist kein reparierbarer Harness-Bug. So blaeht er die OFFEN-Liste nicht auf und
+# der invariant-check zaehlt ihn nicht als ungeloesten Fehler.
+$entry = "### $timestamp — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)"
 
 # Write to whiteboard
 try {

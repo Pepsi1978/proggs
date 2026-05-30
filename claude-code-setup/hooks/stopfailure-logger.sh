@@ -50,14 +50,17 @@ fi
 echo "$TIMESTAMP" > "$RATE_LIMIT_FILE" 2>/dev/null || true
 
 # Build whiteboard entry
+# 2026-05-30: Status TRANSIENT statt OFFEN — ein externer API-/Rate-Limit-Fehler
+# ist kein reparierbarer Harness-Bug. So blaeht er die OFFEN-Liste nicht auf und
+# der invariant-check zaehlt ihn nicht als ungeloesten Fehler.
 ENTRY=$(cat << ENTRY_EOF
 
-### $TIMESTAMP — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### $TIMESTAMP — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
 **Symptom:** Session-Turn endete durch API-Fehler
 **Details:** $ERROR_INPUT
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
+**Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 ENTRY_EOF
 )
 
