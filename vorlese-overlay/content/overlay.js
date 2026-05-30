@@ -486,9 +486,11 @@
 		}
 		// Nur wenn EIN einzelnes Wort markiert wurde: ersten Absatz ab diesem Wort
 		// beginnen. Bei groesseren Markierungen ab dem Absatzanfang vorlesen.
-		if (!/\s/.test(clickedWord)) {
-			const idx = paras[0].toLowerCase().indexOf(clickedWord.toLowerCase());
-			if (idx > 0) paras[0] = paras[0].slice(idx);
+		if (!/\s/.test(clickedWord) && paras[0] && paras[0].text) {
+			const idx = paras[0].text
+				.toLowerCase()
+				.indexOf(clickedWord.toLowerCase());
+			if (idx > 0) paras[0].text = paras[0].text.slice(idx);
 		}
 
 		if (window.VODiag)
@@ -499,11 +501,33 @@
 		startParagraphQueue(paras);
 	}
 
-	// Liefert NUR den markierten Text, in Absaetze aufgeteilt und von Quellen/
-	// Fussnoten bereinigt. Nutzt range.cloneContents(): das Fragment enthaelt
-	// EXAKT die Markierung — bei einer Teil-Markierung also nur den markierten
-	// Teil des Absatzes (kein Vorlesen von Text VOR der Markierung). Geht die
-	// Markierung ueber mehrere Absaetze, kommt ein Eintrag pro Absatz zurueck.
+	// Liefert den Schnitt-Text zwischen einem Range und einem Element — also nur
+	// den Teil des Elements, der wirklich markiert ist (bereinigt). So beginnt das
+	// Vorlesen exakt am ersten markierten Wort, nicht am Absatzanfang.
+	function intersectionText(range, el) {
+		try {
+			const sub = range.cloneRange();
+			const elRange = document.createRange();
+			elRange.selectNodeContents(el);
+			if (sub.compareBoundaryPoints(Range.START_TO_START, elRange) < 0) {
+				sub.setStart(elRange.startContainer, elRange.startOffset);
+			}
+			if (sub.compareBoundaryPoints(Range.END_TO_END, elRange) > 0) {
+				sub.setEnd(elRange.endContainer, elRange.endOffset);
+			}
+			const frag = sub.cloneContents();
+			stripRefs(frag);
+			return finalizeText(frag.textContent || "");
+		} catch (e) {
+			return "";
+		}
+	}
+
+	// Liefert NUR die Markierung — als Liste von { text, el }-Objekten. "el" ist
+	// das LIVE-Absatz-Element (zum Hervorheben), "text" der bereinigte, auf die
+	// Markierungsgrenzen beschnittene Vorlese-Text. Bei einer Teil-Markierung wird
+	// nichts VOR dem ersten markierten Wort gelesen; mehrere markierte Absaetze
+	// ergeben je einen Eintrag.
 	function paragraphsFromSelection() {
 		let sel;
 		try {
@@ -520,39 +544,80 @@
 		}
 		if (range.collapsed) return [];
 
+		// Live-Bloecke finden, die die Markierung beruehrt.
+		const candidates = Array.from(
+			document.querySelectorAll(
+				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
+			),
+		);
+		const result = [];
+		for (const el of candidates) {
+			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
+			if (el.querySelector("p, li, blockquote")) continue;
+			let hit = false;
+			try {
+				hit = range.intersectsNode(el);
+			} catch (e) {
+				hit = false;
+			}
+			if (!hit) continue;
+			if (!isVisible(el)) continue;
+			const t = intersectionText(range, el);
+			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) {
+				result.push({ text: t, el });
+			}
+		}
+		if (result.length) return result;
+
+		// Fallback: Markierung liegt nicht in einem erkannten Block -> reines
+		// Markierungs-Fragment bereinigt, Absatz-Element = naechster Block.
 		let frag;
 		try {
-			frag = range.cloneContents(); // exakt der markierte Inhalt
+			frag = range.cloneContents();
 		} catch (e) {
 			return [];
 		}
-		// Quellen/Fussnoten/Diagramme aus dem markierten Fragment werfen.
 		stripRefs(frag);
-
-		const blocks = frag.querySelectorAll
-			? frag.querySelectorAll(
-					"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
-				)
-			: [];
-		const result = [];
-		if (!blocks || blocks.length === 0) {
-			// Markierung liegt innerhalb EINES Absatzes -> ein Eintrag.
-			const t = finalizeText(frag.textContent || "");
-			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
-			return result;
-		}
-		for (const b of blocks) {
-			// Verschachtelte Bloecke vermeiden (z.B. li das ein p enthaelt).
-			if (b.querySelector("p, li, blockquote")) continue;
-			const t = finalizeText(b.textContent || "");
-			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
-		}
-		// Falls nur verschachtelte Bloecke uebrig blieben: ganzen Fragment-Text.
-		if (result.length === 0) {
-			const t = finalizeText(frag.textContent || "");
-			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
+		const t = finalizeText(frag.textContent || "");
+		if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) {
+			result.push({ text: t, el: closestReadableBlock(range.startContainer) });
 		}
 		return result;
+	}
+
+	// ----- Absatz-Hervorhebung im Seitentext (gelb) ----------------------------
+	// Edge/Google liefern KEIN Wort-Timing, daher wird der gerade vorgelesene
+	// ABSATZ hervorgehoben (laeuft nie aus dem Takt). Inline-Style mit
+	// Sichern/Wiederherstellen, damit das Seiten-Layout unangetastet bleibt.
+	let hlEl = null;
+	let hlPrevBg = "";
+	let hlPrevTransition = "";
+	function highlightParagraph(el) {
+		clearParagraphHighlight();
+		if (!el || !el.style) return;
+		hlEl = el;
+		hlPrevBg = el.style.backgroundColor;
+		hlPrevTransition = el.style.transition;
+		try {
+			el.style.transition = "background-color 0.2s ease";
+			el.style.backgroundColor = "rgba(255, 230, 0, 0.40)";
+			el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+		} catch (e) {
+			/* Hervorhebung darf nie stoeren */
+		}
+	}
+	function clearParagraphHighlight() {
+		if (hlEl && hlEl.style) {
+			try {
+				hlEl.style.backgroundColor = hlPrevBg;
+				hlEl.style.transition = hlPrevTransition;
+			} catch (e) {
+				/* egal */
+			}
+		}
+		hlEl = null;
+		hlPrevBg = "";
+		hlPrevTransition = "";
 	}
 
 	// Den naechsten Absatz aus der Queue an den Service-Worker schicken.
@@ -560,13 +625,21 @@
 		if (!autoReading) return;
 		if (!autoQueue.length) {
 			autoReading = false;
+			clearParagraphHighlight();
 			setState("stopped");
 			resetProgress();
 			setPauseButtonVisible(false);
 			setPauseButtonState(false);
 			return;
 		}
-		const text = autoQueue.shift();
+		const item = autoQueue.shift();
+		const text = item && typeof item === "object" ? item.text : item;
+		// Gerade vorgelesenen Absatz im Seitentext gelb hervorheben.
+		if (item && typeof item === "object" && item.el) {
+			highlightParagraph(item.el);
+		} else {
+			clearParagraphHighlight();
+		}
 		// Sichtbares Feedback: welcher Absatz gerade vorgelesen/eingelesen wird.
 		showHint(
 			"Liest vor… Absatz " +
@@ -586,6 +659,7 @@
 		if (engine === "google" && !(settings.google.apiKey || "").trim()) {
 			autoReading = false;
 			autoQueue = [];
+			clearParagraphHighlight();
 			showHint(
 				"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
 				true,
@@ -693,7 +767,7 @@
 			if (!isVisible(el)) continue;
 			const text = cleanParagraphText(el);
 			if (text && text.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(text)) {
-				result.push(text);
+				result.push({ text, el });
 			}
 		}
 		return result;
@@ -873,7 +947,10 @@
 	// dem A-Auto-Modus. Jeder Absatz wird einzeln synthetisiert (siehe
 	// speakNextAuto), daher kein Crash bei sehr viel Text.
 	function startParagraphQueue(paras) {
-		autoQueue = (paras || []).filter((p) => p && p.trim().length > 1);
+		// Akzeptiert sowohl { text, el }-Objekte als auch reine Strings.
+		autoQueue = (paras || [])
+			.map((p) => (typeof p === "string" ? { text: p, el: null } : p))
+			.filter((p) => p && p.text && p.text.trim().length > 1);
 		if (!autoQueue.length) {
 			showHint("Kein lesbarer Text gefunden.");
 			return false;
