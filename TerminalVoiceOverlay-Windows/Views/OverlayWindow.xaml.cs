@@ -2289,15 +2289,22 @@ namespace TerminalVoiceOverlay.Views
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
 
-            // Statt sofort zu verstecken: 5-Sekunden-Timer starten. Wechselt
-            // der Benutzer in dieser Zeit zurueck zum Terminal, bricht
-            // OnTerminalActivated den Timer ab — das Overlay bleibt sichtbar.
-            // Stop+Start sorgt dafuer dass das Intervall bei mehrfachem
-            // App-Wechsel (z.B. Terminal → Browser → andere App) immer wieder
-            // bei 5 s anfaengt, statt vorher abzulaufen.
+            // Frank-Wunsch 2026-05-30: KEIN 5-Sekunden-Nachhang mehr in anderen
+            // Programmen. Das Overlay verschwindet SOFORT, sobald der Fokus ein
+            // echtes Fremdfenster (Browser, Editor, ...) erreicht. Es bleibt nur
+            // sichtbar, solange der Benutzer mit unserer EIGENEN UI arbeitet:
+            // Cursor ueber Pillar/Board/Eingabe/Historie ODER ein Hilfsdialog/
+            // Kontextmenue offen (unsere eigenen Fenster sind ebenfalls "kein
+            // Terminal" und loesen sonst faelschlich ein Verstecken aus). In dem
+            // Fall dient der Timer nur noch als Fallback, falls der Benutzer die
+            // UI gleich wieder verlaesst ohne zum Terminal zurueckzukehren.
             _hideDelayTimer.Stop();
-            _hideDelayTimer.Start();
-            Console.WriteLine("Overlay: hide delay started (5s)");
+            if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen())
+            {
+                _hideDelayTimer.Start();
+                return;
+            }
+            HideOverlayNow();
         }
 
         /// <summary>
