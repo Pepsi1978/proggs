@@ -32,7 +32,7 @@
 		RESUME: "TTS_RESUME", // Content → SW: Wiedergabe fortsetzen
 		PAUSE_RESUME_TOGGLE: "TTS_PAUSE_RESUME", // Content → SW: Toggle Pause/Resume
 		PROGRESS: "TTS_PROGRESS", // SW → Content: Fortschrittsanzeige {chunk, totalChunks}
-		CHUNK_TIMING: "TTS_CHUNK_TIMING", // SW → Content: Wort-Liste {words, chunkIndex, totalChunks}
+		RELOAD_EXTENSION: "RELOAD_EXTENSION", // Content → SW: Erweiterung neu laden (Speicher bleibt)
 	};
 
 	const SAMPLE_TEXT =
@@ -44,15 +44,18 @@
 	// Vom Panel gesetzte Funktion, um Status-/Fehlermeldungen im Panel anzuzeigen.
 	let panelStatusHandler = null;
 
-	// ----- Neue Zustands-Variablen für Pause, Fortschritt und Wort-Highlight ---
+	// ----- Zustand für Pause und Fortschritt -----------------------------------
 	let isPaused = false;
-	let highlightTimer = null;
-	let currentChunkWords = [];
-	let currentChunkWordIndex = 0;
-	let lastHighlightedRange = null;
 	let progressChunk = 0;
 	let progressTotal = 0;
-	let autoSpeakTimer = null;
+
+	// ----- Auto-Lese-Modus (A-Button) ------------------------------------------
+	// Wenn aktiv: Ein Doppelklick auf ein Wort liest ab diesem Wort den restlichen
+	// Text Absatz fuer Absatz vor (Quellenangaben/Fussnoten/Diagramme werden
+	// ausgefiltert). Der Zustand wird in den Einstellungen gespeichert (autoSpeak).
+	let autoMode = false; // A-Button an/aus
+	let autoQueue = []; // verbleibende Absaetze
+	let autoReading = false; // laeuft gerade eine automatische Vorlesung
 
 	// ----- Selektion zuverlaessig erfassen -------------------------------------
 	// Sobald irgendwo eine nicht-leere Markierung existiert, merken wir sie uns.
@@ -72,52 +75,21 @@
 	document.addEventListener("selectionchange", captureSelection, true);
 	document.addEventListener("mouseup", captureSelection, true);
 
-	// Auto-Speak: bei Markierungsänderung ggf. automatisch vorlesen
+	// Auto-Lese-Modus: Doppelklick auf ein Wort startet das Vorlesen ab dort.
 	document.addEventListener(
-		"selectionchange",
-		() => {
-			// Einstellungen asynchron prüfen — wir speichern den Snapshot lokal
-			window.VOSettings.load()
-				.then((settings) => {
-					const autoSpeak = settings && settings.autoSpeak;
-					if (!autoSpeak) return;
-					try {
-						const sel = window.getSelection();
-						const text = sel ? sel.toString().trim() : "";
-						if (!text) {
-							if (autoSpeakTimer) {
-								clearTimeout(autoSpeakTimer);
-								autoSpeakTimer = null;
-							}
-							return;
-						}
-						if (text === lastSelection && isPlaying) return;
-						if (autoSpeakTimer) clearTimeout(autoSpeakTimer);
-						if (window.VODiag)
-							window.VODiag.log(
-								"INFO",
-								"UI_EREIGNIS",
-								"overlay.auto_speak_timer_gestartet",
-								{ textLen: text.length },
-							);
-						autoSpeakTimer = setTimeout(() => {
-							autoSpeakTimer = null;
-							if (window.VODiag)
-								window.VODiag.log(
-									"INFO",
-									"NUTZUNG",
-									"overlay.auto_speak_ausgefuehrt",
-									{ textLen: text.length },
-								);
-							onSpeakerClick();
-						}, 1200);
-					} catch (e) {
-						/* ignorieren */
-					}
-				})
-				.catch(() => {
-					/* ignorieren */
-				});
+		"dblclick",
+		(e) => {
+			if (!autoMode) return;
+			// Klicks im Overlay selbst ignorieren (Buttons/Panel).
+			try {
+				const path = e.composedPath ? e.composedPath() : [];
+				if (path.includes(host)) return;
+			} catch (e2) {
+				/* ignorieren */
+			}
+			// Nach dem Doppelklick hat der Browser das Wort markiert -> im naechsten
+			// Tick die Selektion auswerten und das Vorlesen ab dort starten.
+			setTimeout(() => startAutoReadFromSelection(), 0);
 		},
 		true,
 	);
@@ -159,6 +131,10 @@
 	container.className = "vo-container";
 	container.innerHTML =
 		'<div class="vo-hint" part="hint"></div>' +
+		// Auto-Lese-Button (A) — ueber dem Lautsprecher. Leuchtet wenn aktiv.
+		'<button class="vo-btn vo-auto-btn" type="button" title="Auto-Vorlesen: Doppelklick auf ein Wort liest ab dort weiter">' +
+		'<span class="vo-auto-letter">A</span>' +
+		"</button>" +
 		'<button class="vo-btn vo-speaker" type="button" title="Markierten Text vorlesen">' +
 		ICON_SPEAKER +
 		"</button>" +
@@ -172,18 +148,16 @@
 		// Schmaler Fortschrittsbalken unter dem Button-Container
 		'<div class="vo-progress-wrap" style="display:none;">' +
 		'<div class="vo-progress"></div>' +
-		"</div>" +
-		// Aktuelles Wort (KISS-Lösung: kleines Label statt DOM-Manipulation)
-		'<div class="vo-current-word"></div>';
+		"</div>";
 	shadow.appendChild(container);
 
+	const autoBtn = container.querySelector(".vo-auto-btn");
 	const speakerBtn = container.querySelector(".vo-speaker");
 	const pauseBtn = container.querySelector(".vo-pause-btn");
 	const gearBtn = container.querySelector(".vo-gear");
 	const hintEl = container.querySelector(".vo-hint");
 	const progressWrap = container.querySelector(".vo-progress-wrap");
 	const progressBar = container.querySelector(".vo-progress");
-	const currentWordEl = container.querySelector(".vo-current-word");
 
 	const panel = document.createElement("div");
 	panel.className = "vo-panel";
@@ -241,35 +215,6 @@
 		progressTotal = 0;
 		progressWrap.style.display = "none";
 		progressBar.style.width = "0%";
-	}
-
-	// ----- Wort-Highlight (KISS: Label im Overlay) ----------------------------
-	function startWordHighlight(words) {
-		stopWordHighlight();
-		currentChunkWords = Array.isArray(words) ? words : [];
-		currentChunkWordIndex = 0;
-		if (currentChunkWords.length === 0) return;
-		// Geschätzte Zeit pro Wort: 350 ms (konservativ, da Chunk-Dauer unbekannt)
-		const msPerWord = 350;
-		currentWordEl.textContent = currentChunkWords[0] || "";
-		highlightTimer = setInterval(() => {
-			currentChunkWordIndex++;
-			if (currentChunkWordIndex >= currentChunkWords.length) {
-				stopWordHighlight();
-				return;
-			}
-			currentWordEl.textContent = currentChunkWords[currentChunkWordIndex];
-		}, msPerWord);
-	}
-
-	function stopWordHighlight() {
-		if (highlightTimer) {
-			clearInterval(highlightTimer);
-			highlightTimer = null;
-		}
-		currentChunkWords = [];
-		currentChunkWordIndex = 0;
-		currentWordEl.textContent = "";
 	}
 
 	// ----- Position: wiederherstellen + clampen --------------------------------
@@ -364,6 +309,16 @@
 		clampCurrentPosition();
 	});
 
+	// Auto-Lese-Modus (A-Button) aus den Einstellungen wiederherstellen.
+	window.VOSettings.load()
+		.then((s) => {
+			autoMode = !!(s && s.autoSpeak);
+			applyAutoButton();
+		})
+		.catch(() => {
+			/* Button bleibt im Standardzustand (aus) */
+		});
+
 	// ----- Drag + Klick (mousedown mit preventDefault) -------------------------
 	// preventDefault auf mousedown ist entscheidend: es verhindert, dass der
 	// Klick die aktuelle Text-Markierung aufhebt oder den Fokus stiehlt.
@@ -416,6 +371,8 @@
 			// Viewport-Clamp nach Drag sicherstellen
 			clampCurrentPosition();
 			logLayout("Overlay", container, { nachDrag: true });
+		} else if (pressed === autoBtn) {
+			toggleAutoMode();
 		} else if (pressed === speakerBtn) {
 			onSpeakerClick();
 		} else if (pressed === pauseBtn) {
@@ -423,6 +380,260 @@
 		} else if (pressed === gearBtn) {
 			togglePanel();
 		}
+	}
+
+	// ----- Auto-Lese-Modus (A-Button) ------------------------------------------
+	function applyAutoButton() {
+		autoBtn.classList.toggle("vo-active", autoMode);
+		autoBtn.title = autoMode
+			? "Auto-Vorlesen AN — Doppelklick auf ein Wort liest ab dort weiter (erneut klicken zum Ausschalten)"
+			: "Auto-Vorlesen: Doppelklick auf ein Wort liest ab dort weiter";
+	}
+
+	async function toggleAutoMode() {
+		autoMode = !autoMode;
+		applyAutoButton();
+		if (window.VODiag)
+			window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.auto_modus_toggle", {
+				an: autoMode,
+			});
+		// Zustand dauerhaft speichern (ueberlebt Reloads).
+		try {
+			const s = await window.VOSettings.load();
+			s.autoSpeak = autoMode;
+			await window.VOSettings.save(s);
+		} catch (e) {
+			/* ignorieren — Button-Zustand ist trotzdem aktiv */
+		}
+		if (autoMode) {
+			showHint("Auto-Vorlesen an: Doppelklick auf ein Wort.");
+		} else {
+			// Ausschalten beendet eine laufende automatische Vorlesung.
+			if (autoReading) {
+				autoReading = false;
+				autoQueue = [];
+				sendMessage({ type: MSG.STOP });
+				setState("stopped");
+				resetProgress();
+				setPauseButtonVisible(false);
+				setPauseButtonState(false);
+			}
+			showHint("Auto-Vorlesen aus.");
+		}
+	}
+
+	// Doppelklick im Auto-Modus -> ab dem geklickten Wort den restlichen Text
+	// Absatz fuer Absatz vorlesen.
+	async function startAutoReadFromSelection() {
+		let sel;
+		try {
+			sel = window.getSelection();
+		} catch (e) {
+			return;
+		}
+		if (!sel || sel.rangeCount === 0) return;
+		const clickedWord = sel.toString().trim();
+		if (!clickedWord) return;
+
+		let range;
+		try {
+			range = sel.getRangeAt(0);
+		} catch (e) {
+			return;
+		}
+		const startBlock = closestReadableBlock(range.startContainer);
+		const paras = collectParagraphsFrom(startBlock);
+		if (!paras.length) {
+			showHint("Hier wurde kein lesbarer Absatz gefunden.");
+			return;
+		}
+		// Ersten Absatz ab dem geklickten Wort beginnen (nicht von vorne).
+		const idx = paras[0].toLowerCase().indexOf(clickedWord.toLowerCase());
+		if (idx > 0) paras[0] = paras[0].slice(idx);
+
+		autoQueue = paras.filter((p) => p && p.trim().length > 1);
+		if (!autoQueue.length) return;
+		if (window.VODiag)
+			window.VODiag.log("INFO", "NUTZUNG", "overlay.auto_read_start", {
+				absaetze: autoQueue.length,
+				wort: clickedWord.slice(0, 40),
+			});
+		autoReading = true;
+		isPaused = false;
+		speakNextAuto();
+	}
+
+	// Den naechsten Absatz aus der Queue an den Service-Worker schicken.
+	async function speakNextAuto() {
+		if (!autoReading) return;
+		if (!autoQueue.length) {
+			autoReading = false;
+			setState("stopped");
+			resetProgress();
+			setPauseButtonVisible(false);
+			setPauseButtonState(false);
+			return;
+		}
+		const text = autoQueue.shift();
+		let settings;
+		try {
+			settings = await window.VOSettings.load();
+		} catch (e) {
+			autoReading = false;
+			return;
+		}
+		const engine = settings.activeEngine;
+		const cfg = settings[engine];
+		if (engine === "google" && !(settings.google.apiKey || "").trim()) {
+			autoReading = false;
+			autoQueue = [];
+			showHint(
+				"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
+				true,
+			);
+			setState("stopped");
+			return;
+		}
+		setState("loading");
+		const pitch =
+			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
+				? settings.edge.pitch
+				: 0;
+		sendMessage({
+			type: MSG.SPEAK,
+			engine,
+			text,
+			voice: cfg.voice,
+			rate: cfg.rate,
+			pitch,
+			apiKey: engine === "google" ? settings.google.apiKey : undefined,
+		});
+	}
+
+	// ----- Absatz-Erkennung fuer das Auto-Vorlesen -----------------------------
+	// Findet das naechste lesbare Block-Element zu einem (Text-)Knoten.
+	function closestReadableBlock(node) {
+		const BLOCK = new Set([
+			"P",
+			"LI",
+			"H1",
+			"H2",
+			"H3",
+			"H4",
+			"H5",
+			"H6",
+			"BLOCKQUOTE",
+			"DD",
+			"DT",
+			"TD",
+			"FIGCAPTION",
+		]);
+		let el = node && node.nodeType === 3 ? node.parentElement : node;
+		while (el && el !== document.body) {
+			if (el.nodeType === 1 && BLOCK.has(el.tagName)) return el;
+			el = el.parentElement;
+		}
+		// Kein klassischer Block gefunden -> naechstes Element nehmen.
+		return node && node.nodeType === 3 ? node.parentElement : node;
+	}
+
+	// Vorfahren/Elemente, die NICHT vorgelesen werden (Diagramme, Tabellen,
+	// Navigation, Fuss-/Kopfzeilen, Quellen-/Literaturverzeichnisse, Code).
+	const SKIP_ANCESTOR_SELECTOR =
+		"figure, table, nav, aside, header, footer, code, pre, " +
+		"svg, canvas, math, .reference, .references, .footnote, .footnotes, " +
+		"#references, #footnotes, .citation, .reflist, .mw-references-wrap, " +
+		'[role="note"], [role="navigation"], [role="contentinfo"], [aria-hidden="true"]';
+
+	// Sammelt ab startBlock alle nachfolgenden lesbaren Absaetze (in
+	// Dokumentreihenfolge), gefiltert + bereinigt (ohne Fussnoten/Quellen).
+	function collectParagraphsFrom(startBlock) {
+		const result = [];
+		if (!startBlock) return result;
+		const candidates = Array.from(
+			document.querySelectorAll(
+				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
+			),
+		);
+		// Startindex bestimmen: das erste Element, das startBlock IST oder ihn
+		// enthaelt bzw. in Dokumentreihenfolge danach kommt.
+		let startIdx = candidates.indexOf(startBlock);
+		if (startIdx < 0) {
+			// startBlock ist evtl. ein Container (z.B. DIV) -> erstes Kandidaten-
+			// Element nehmen, das davon umschlossen wird oder danach kommt.
+			for (let i = 0; i < candidates.length; i++) {
+				const pos = startBlock.compareDocumentPosition(candidates[i]);
+				if (
+					candidates[i] === startBlock ||
+					pos & Node.DOCUMENT_POSITION_CONTAINED_BY ||
+					pos & Node.DOCUMENT_POSITION_FOLLOWING
+				) {
+					startIdx = i;
+					break;
+				}
+			}
+		}
+		if (startIdx < 0) startIdx = 0;
+
+		const MAX_PARAGRAPHS = 400; // Sicherheitsgrenze gegen Riesen-Seiten
+		for (
+			let i = startIdx;
+			i < candidates.length && result.length < MAX_PARAGRAPHS;
+			i++
+		) {
+			const el = candidates[i];
+			// Verschachtelte Bloecke vermeiden (z.B. li, das ein p enthaelt):
+			// nur Bloecke nehmen, die selbst keinen Listen-/Absatz-Block enthalten.
+			if (el.querySelector("p, li, blockquote")) continue;
+			// In einem zu ueberspringenden Vorfahren? (Tabelle, Quellen, nav, ...)
+			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
+			// Unsichtbares ueberspringen.
+			if (!isVisible(el)) continue;
+			const text = cleanParagraphText(el);
+			if (text && text.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(text)) {
+				result.push(text);
+			}
+		}
+		return result;
+	}
+
+	function isVisible(el) {
+		try {
+			const r = el.getBoundingClientRect();
+			if (r.width === 0 && r.height === 0) return false;
+			const st = getComputedStyle(el);
+			return st.display !== "none" && st.visibility !== "hidden";
+		} catch (e) {
+			return true;
+		}
+	}
+
+	// Liefert den vorlesbaren Text eines Block-Elements, OHNE Fussnoten-Marker,
+	// Quellen-Verweise, Diagramme, Code etc. (auf einer Klon-Kopie gefiltert).
+	function cleanParagraphText(el) {
+		let clone;
+		try {
+			clone = el.cloneNode(true);
+		} catch (e) {
+			return (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+		}
+		// Fussnoten-Marker, Quellenverweise, Diagramme und Code aus dem Klon werfen.
+		clone
+			.querySelectorAll(
+				"sup, .reference, .footnote, .citation, cite, " +
+					"figure, table, svg, canvas, math, code, pre, " +
+					'a[href^="#cite"], a[href^="#fn"], .mw-editsection',
+			)
+			.forEach((n) => n.remove());
+		let t = (clone.innerText || clone.textContent || "")
+			.replace(/\s+/g, " ")
+			.trim();
+		// Haengende Fussnoten-Zahlen wie [1], [12] am Ende/innen entfernen.
+		t = t
+			.replace(/\[\s*\d+\s*\]/g, "")
+			.replace(/\s{2,}/g, " ")
+			.trim();
+		return t;
 	}
 
 	// ----- Pause-Button Klick --------------------------------------------------
@@ -437,11 +648,13 @@
 		if (isPlaying) {
 			if (window.VODiag)
 				window.VODiag.log("INFO", "UI_EREIGNIS", "speaker_klick:stop", {});
+			// Manueller Stop beendet auch eine laufende automatische Vorlesung.
+			autoReading = false;
+			autoQueue = [];
 			sendMessage({ type: MSG.STOP });
 			setState("stopped");
 			// Pause-Zustand und Fortschritt zurücksetzen
 			isPaused = false;
-			stopWordHighlight();
 			resetProgress();
 			setPauseButtonVisible(false);
 			setPauseButtonState(false);
@@ -555,9 +768,10 @@
 			if (msg.state === "error") {
 				setState("stopped");
 				showHint(msg.message || "Es ist ein Fehler aufgetreten.", true);
-				// Aufräumen bei Fehler
+				// Aufräumen bei Fehler — auch die automatische Vorlesung abbrechen.
 				isPaused = false;
-				stopWordHighlight();
+				autoReading = false;
+				autoQueue = [];
 				resetProgress();
 				setPauseButtonVisible(false);
 				setPauseButtonState(false);
@@ -580,14 +794,19 @@
 				if (window.VODiag)
 					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_resumed", {});
 			} else if (msg.state === "stopped") {
-				setState("stopped");
-				// Alles zurücksetzen
-				isPaused = false;
-				stopWordHighlight();
-				resetProgress();
-				setPauseButtonVisible(false);
-				setPauseButtonState(false);
-				currentWordEl.textContent = "";
+				// Im Auto-Lese-Modus bedeutet "stopped" nur: dieser Absatz ist
+				// fertig -> direkt den naechsten Absatz vorlesen, ohne den Status
+				// zurueckzusetzen (sonst flackert der Button zwischen den Absaetzen).
+				if (autoReading && autoQueue.length > 0) {
+					speakNextAuto();
+				} else {
+					autoReading = false;
+					setState("stopped");
+					isPaused = false;
+					resetProgress();
+					setPauseButtonVisible(false);
+					setPauseButtonState(false);
+				}
 			} else {
 				setState(msg.state);
 			}
@@ -600,10 +819,6 @@
 					? msg.totalChunks
 					: 0;
 			setProgress(chunk, total);
-		} else if (msg.type === MSG.CHUNK_TIMING) {
-			// Wort-Highlight starten
-			const words = Array.isArray(msg.words) ? msg.words : [];
-			startWordHighlight(words);
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
 			if (window.VODiag)
 				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.tastenkuerzel", {});
@@ -632,9 +847,42 @@
 		const open = panel.classList.toggle("vo-open");
 		if (window.VODiag)
 			window.VODiag.log("INFO", "UI_EREIGNIS", "panel_toggle", { open });
-		if (open) positionPanel();
+		if (open) openPanelPositioned();
 	}
 
+	// Beim Oeffnen: hat der Benutzer das Panel schon einmal verschoben, wird die
+	// gespeicherte Position genutzt — sonst automatisch neben dem Overlay.
+	function openPanelPositioned() {
+		window.VOSettings.getPanelPosition()
+			.then((pos) => {
+				if (pos) {
+					applyPanelPosition(pos.left, pos.top);
+					// Nach dem ersten Frame erneut einpassen (finale Panel-Hoehe).
+					requestAnimationFrame(() => {
+						if (panel.classList.contains("vo-open"))
+							applyPanelPosition(pos.left, pos.top);
+					});
+				} else {
+					positionPanel();
+				}
+			})
+			.catch(() => positionPanel());
+	}
+
+	// Panel an eine konkrete Position setzen, geclamppt auf den sichtbaren Bereich.
+	function applyPanelPosition(left, top) {
+		const pw = panel.offsetWidth || 340;
+		const ph = panel.offsetHeight || 300;
+		const maxLeft = Math.max(8, window.innerWidth - pw - 8);
+		const maxTop = Math.max(8, window.innerHeight - ph - 8);
+		const l = Math.min(Math.max(8, left), maxLeft);
+		const t = Math.min(Math.max(8, top), maxTop);
+		panel.style.left = l + "px";
+		panel.style.top = t + "px";
+	}
+
+	// Automatische Positionierung neben dem Overlay (wenn keine gespeicherte
+	// Position existiert).
 	function positionPanel() {
 		doPositionPanel();
 		// Beim allerersten Oeffnen sind CSS und Inhalt evtl. noch nicht final
@@ -707,18 +955,67 @@
 			'<button class="vo-test" type="button" data-role="google-test">Test — Beispielsatz vorlesen</button>' +
 			'<div class="vo-status" data-role="google-status"></div>' +
 			"</div>" +
-			// Auto-Speak Toggle (letztes Panel-Element)
-			'<div class="vo-section vo-autospeak-section">' +
-			'<label class="vo-toggle-row">' +
-			'<span class="vo-label" style="margin-bottom:0;">Automatisch vorlesen bei Markierung</span>' +
-			'<input type="checkbox" class="vo-toggle" data-role="auto-speak">' +
-			"</label></div>" +
+			// Aktualisieren-Button (letztes Panel-Element): laedt die Erweiterung
+			// neu, OHNE den gespeicherten API-Key/Stimme/Position zu verlieren.
+			'<div class="vo-section">' +
+			'<button class="vo-reload" type="button" data-role="reload">Auf neue Version aktualisieren</button>' +
+			'<p class="vo-help">Laedt die Erweiterung mit der neuesten Version neu. ' +
+			"API-Key, Stimme und Position bleiben erhalten. Nutze das nach einem Update — " +
+			"NICHT die Erweiterung entfernen und neu laden, das wuerde die Einstellungen loeschen.</p>" +
+			"</div>" +
 			"</div>";
 
 		const $ = (role) => panel.querySelector('[data-role="' + role + '"]');
 		panel
 			.querySelector(".vo-close")
 			.addEventListener("click", () => panel.classList.remove("vo-open"));
+
+		// Panel per Titelleiste verschiebbar machen (Position wird gemerkt).
+		const head = panel.querySelector(".vo-panel-head");
+		if (head) {
+			head.addEventListener("mousedown", (e) => {
+				if (e.target.closest(".vo-close")) return; // Schliessen nicht ziehen
+				if (e.button !== 0) return;
+				e.preventDefault();
+				const rect = panel.getBoundingClientRect();
+				const startX = e.clientX;
+				const startY = e.clientY;
+				const origLeft = rect.left;
+				const origTop = rect.top;
+				let moved = false;
+				const onMove = (ev) => {
+					const dx = ev.clientX - startX;
+					const dy = ev.clientY - startY;
+					if (!moved && Math.hypot(dx, dy) > 3) moved = true;
+					if (moved) applyPanelPosition(origLeft + dx, origTop + dy);
+				};
+				const onUp = () => {
+					window.removeEventListener("mousemove", onMove, true);
+					window.removeEventListener("mouseup", onUp, true);
+					if (moved) {
+						const r = panel.getBoundingClientRect();
+						window.VOSettings.setPanelPosition(r.left, r.top);
+						if (window.VODiag)
+							window.VODiag.log("INFO", "UI_EREIGNIS", "panel_verschoben", {
+								left: Math.round(r.left),
+								top: Math.round(r.top),
+							});
+					}
+				};
+				window.addEventListener("mousemove", onMove, true);
+				window.addEventListener("mouseup", onUp, true);
+			});
+		}
+
+		// Aktualisieren-Button: Erweiterung neu laden (Speicher bleibt erhalten).
+		const reloadBtn = $("reload");
+		if (reloadBtn) {
+			reloadBtn.addEventListener("click", () => {
+				reloadBtn.textContent = "Wird aktualisiert…";
+				reloadBtn.disabled = true;
+				sendMessage({ type: MSG.RELOAD_EXTENSION });
+			});
+		}
 
 		const engineOpts = panel.querySelectorAll(".vo-engine-opt");
 		const tabs = panel.querySelectorAll(".vo-tab");
@@ -903,12 +1200,6 @@
 			});
 		});
 
-		// Auto-Speak Toggle
-		$("auto-speak").addEventListener("change", async (e) => {
-			current.autoSpeak = e.target.checked;
-			await persist();
-		});
-
 		// Status/Fehler aus der Wiedergabe auch im Panel zeigen.
 		panelStatusHandler = (state, message) => {
 			const page = panel.querySelector(".vo-tabpage.vo-active");
@@ -941,8 +1232,6 @@
 			setPitchUI("edge-pitch", "edge-pitch-val", pitch);
 			setRateUI("google-rate", "google-rate-val", current.google.rate);
 			$("google-key").value = current.google.apiKey || "";
-			// Auto-Speak Toggle initialisieren
-			$("auto-speak").checked = !!current.autoSpeak;
 			await loadEdgeVoices();
 			await loadGoogleVoices();
 			// Nach dem (asynchronen) Laden der Stimmen kann sich die Panel-Hoehe
@@ -967,5 +1256,4 @@
 	// Nicht verwendete Referenzen sauber halten (verhindert Linter-Warnungen)
 	void onPauseConfirmed;
 	void onResumeConfirmed;
-	void lastHighlightedRange;
 })();

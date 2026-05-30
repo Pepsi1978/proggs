@@ -8,7 +8,8 @@
  * Edge-Synthese (WebSocket) HIER, nicht im Service-Worker.
  *
  * Google-Synthese (reines fetch) bleibt im Service-Worker; der schickt das
- * fertige Audio per ENQUEUE hierher.
+ * fertige Audio per ENQUEUE hierher und meldet mit ENQUEUE_DONE, dass alle
+ * Stuecke geliefert sind.
  *
  * ----- Wiedergabe ueber die Web Audio API (NICHT ueber <audio>) -------------
  * Die Wiedergabe laeuft bewusst ueber die Web Audio API (AudioContext +
@@ -28,15 +29,24 @@
  * und dauerhaft auf das HTMLAudioElement zurueck. Dann spielt das Audio in
  * jedem Fall — schlimmstenfalls eben wieder mit Untertiteln.
  *
+ * ----- Eindeutiges Wiedergabe-Ende (kein haengendes Stop-Icon) --------------
+ * Eine "Session" laeuft von OFFSCREEN_STARTED bis OFFSCREEN_ENDED. OFFSCREEN_ENDED
+ * wird NUR gesendet, wenn der Produzent fertig ist (producerDone) UND die Queue
+ * leer ist UND nichts mehr spielt. Sonst wuerde bei langen Texten ein kurzzeitig
+ * leerer Queue-Zwischenstand ein verfruehtes Ende ausloesen (und durch die
+ * asynchrone Nachrichten-Reihenfolge koennte der Status auf "spielt" haengen
+ * bleiben -> rotes Stop-Icon trotz fertigem Vorlesen).
+ *
  * Nachrichten vom Service-Worker (target: "offscreen"):
- *   ENQUEUE    { url }                        — fertiges Audio (Google) abspielen
- *   EDGE_SPEAK { text, voice, rate, pitch? }  — Edge hier synthetisieren + abspielen
- *   STOP                                      — Wiedergabe + laufende Synthese abbrechen
- *   PAUSE                                     — laufendes Audio pausieren, Queue behalten
- *   RESUME                                    — Wiedergabe fortsetzen (Queue bleibt)
- * Rückmeldungen an den Worker (target: "background"):
+ *   ENQUEUE      { url }                        — fertiges Audio (Google) abspielen
+ *   ENQUEUE_DONE                                — alle Google-Stuecke geliefert
+ *   EDGE_SPEAK   { text, voice, rate, pitch? }  — Edge hier synthetisieren + abspielen
+ *   STOP                                        — Wiedergabe + laufende Synthese abbrechen
+ *   PAUSE                                       — laufendes Audio pausieren, Queue behalten
+ *   RESUME                                      — Wiedergabe an gleicher Stelle fortsetzen
+ * Rueckmeldungen an den Worker (target: "background"):
  *   OFFSCREEN_STARTED | OFFSCREEN_ENDED | OFFSCREEN_ERROR
- *   OFFSCREEN_PAUSED  — Pause wurde tatsächlich ausgeführt
+ *   OFFSCREEN_PAUSED  — Pause wurde tatsaechlich ausgefuehrt
  *   OFFSCREEN_RESUMED — Wiedergabe wurde fortgesetzt
  */
 import * as edge from "../engines/edge-tts.js";
@@ -51,12 +61,12 @@ diag.init("offscreen");
 const queue = [];
 let currentSource = null; // laufender AudioBufferSourceNode (Web Audio)
 let currentAudio = null; // laufendes HTMLAudioElement (Fallback)
-let playing = false;
+let sessionActive = false; // true von OFFSCREEN_STARTED bis OFFSCREEN_ENDED
+let producerDone = false; // true sobald alle Stuecke geliefert wurden
 let gen = 0; // Abbruch-Zähler: STOP und jede neue EDGE_SPEAK erhöhen ihn
 
-// Pause-Zustand. pauseRequested=true hält playNext() an, lässt die Queue intakt.
-let pauseRequested = false;
-let pausedAtChunkIndex = 0; // für zukünftige Erweiterungen (Fortsetzung ab Chunk)
+// Pause-Zustand. paused=true hält playNext() an, lässt die Queue intakt.
+let paused = false;
 
 // Sample-genaues Pause/Resume fuer den Web-Audio-Pfad: Ein AudioBufferSourceNode
 // kann nicht "pausiert" werden — wir merken uns daher den aktuell spielenden
@@ -110,13 +120,34 @@ function itemToBlobUrl(item) {
 	return URL.createObjectURL(new Blob([item.buffer], { type: "audio/mpeg" }));
 }
 
+// true, wenn gerade nichts abgespielt wird (kein Web-Audio, kein HTMLAudio).
+function isIdle() {
+	return !currentSource && !currentAudio;
+}
+
 function enqueueItem(item) {
 	queue.push(item);
-	// Waehrend einer Pause NICHT automatisch starten — sonst wuerden waehrend der
-	// Pause eintreffende (z.B. Edge-)Chunks die Wiedergabe heimlich fortsetzen.
-	if (!playing && !pauseRequested) {
+	if (paused) return; // waehrend Pause nur sammeln, nicht starten
+	if (!sessionActive) {
+		// Neue Session beginnt -> genau EIN OFFSCREEN_STARTED.
+		sessionActive = true;
 		send({ type: "OFFSCREEN_STARTED" });
 		playNext();
+	} else if (isIdle()) {
+		// Session laeuft, aber es spielt gerade nichts (wartete auf Nachschub).
+		playNext();
+	}
+}
+
+// Sendet OFFSCREEN_ENDED nur, wenn wirklich alles fertig ist. Verhindert das
+// verfruehte/flackernde Ende bei mehreren Stuecken (rotes Stop-Icon-Bug).
+function finishIfDone() {
+	if (producerDone && queue.length === 0 && isIdle() && !paused) {
+		sessionActive = false;
+		producerDone = false;
+		currentBuffer = null;
+		playOffset = 0;
+		send({ type: "OFFSCREEN_ENDED" });
 	}
 }
 
@@ -154,16 +185,14 @@ function startWebAudioBuffer(offset) {
 
 async function playNext() {
 	// Pause-Guard: wenn pausiert, Queue intakt lassen und warten.
-	if (pauseRequested) return;
+	if (paused) return;
 
 	if (queue.length === 0) {
-		playing = false;
-		currentSource = null;
-		currentAudio = null;
-		send({ type: "OFFSCREEN_ENDED" });
+		// Nichts mehr in der Queue. Nur beenden, wenn der Produzent fertig ist —
+		// sonst auf weitere Stuecke warten (Session bleibt aktiv).
+		finishIfDone();
 		return;
 	}
-	playing = true;
 	const item = queue.shift();
 	const myGen = gen;
 
@@ -196,6 +225,7 @@ async function playNext() {
 			});
 			webAudioBroken = true;
 			currentSource = null;
+			currentBuffer = null;
 		}
 	}
 
@@ -278,15 +308,12 @@ function stopAll() {
 		}
 	}
 	currentAudio = null;
-	playing = false;
+	sessionActive = false;
+	producerDone = false;
 }
 
 // ----- Edge-Synthese (WebSocket HIER -> DNR-User-Agent-Regel greift) --------
 // pitch: Tonhöhe in Halbtönen (-50 bis +50), Default 0.
-// Hinweis: Der Pitch-Wert wird als 4. Parameter an edge.synthesize() übergeben.
-// engines/edge-tts.js muss diesen Parameter in das SSML-prosody-Attribut
-// eintragen (z.B. "+2st" oder "-1st"). Bis das implementiert ist, wird der
-// Wert korrekt weitergeleitet aber noch ignoriert.
 async function edgeSpeak(text, voice, rate, myGen, pitch) {
 	const pitchVal = typeof pitch === "number" ? pitch : 0;
 	diag.log("INFO", "FUNKTION", "offscreen.edgeSpeak:eintritt", {
@@ -324,11 +351,18 @@ async function edgeSpeak(text, voice, rate, myGen, pitch) {
 			any = true;
 		}
 	}
-	if (!any && myGen === gen)
+	if (myGen !== gen) return;
+	if (!any) {
 		send({
 			type: "OFFSCREEN_ERROR",
 			message: "Keine Audiodaten von Edge erhalten.",
 		});
+		return;
+	}
+	// Alle Stuecke synthetisiert und eingereiht -> Ende anstossen, falls die
+	// Wiedergabe bereits durch ist.
+	producerDone = true;
+	finishIfDone();
 }
 
 function humanError(e) {
@@ -344,25 +378,28 @@ chrome.runtime.onMessage.addListener((msg) => {
 		case "ENQUEUE":
 			enqueueItem({ url: msg.url });
 			break;
+		case "ENQUEUE_DONE":
+			// Google hat alle Stuecke geliefert -> Ende anstossen, falls fertig.
+			producerDone = true;
+			finishIfDone();
+			break;
 		case "STOP":
 			gen++;
-			pauseRequested = false; // Pause beim expliziten Stop zurücksetzen
-			pausedAtChunkIndex = 0;
+			paused = false; // Pause beim expliziten Stop zurücksetzen
 			stopAll();
 			break;
 		case "EDGE_SPEAK": {
 			gen++;
 			const myGen = gen;
-			pauseRequested = false; // neue Wiedergabe setzt vorherige Pause zurück
-			pausedAtChunkIndex = 0;
+			paused = false; // neue Wiedergabe setzt vorherige Pause zurück
 			stopAll();
 			edgeSpeak(msg.text, msg.voice, msg.rate, myGen, msg.pitch ?? 0);
 			break;
 		}
 		case "PAUSE":
 			// Wiedergabe pausieren: Queue bleibt intakt, gen wird NICHT erhöht.
-			if (!pauseRequested) {
-				pauseRequested = true;
+			if (!paused) {
+				paused = true;
 				// Web-Audio: bereits gespielte Zeit zum Offset addieren und die
 				// laufende Source stoppen. currentBuffer bleibt erhalten, damit
 				// RESUME exakt an dieser Stelle wieder aufsetzen kann.
@@ -389,38 +426,29 @@ chrome.runtime.onMessage.addListener((msg) => {
 						/* egal */
 					}
 				}
-				playing = false;
 				send({ type: "OFFSCREEN_PAUSED" });
 			}
 			break;
 		case "RESUME":
 			// Wiedergabe fortsetzen — genau an der pausierten Stelle.
-			if (pauseRequested) {
-				pauseRequested = false;
+			if (paused) {
+				paused = false;
 				if (currentBuffer && audioCtx) {
 					// 1) Web-Audio: aktuellen Buffer ab gemerktem Offset fortsetzen.
 					send({ type: "OFFSCREEN_RESUMED" });
-					send({ type: "OFFSCREEN_STARTED" });
-					playing = true;
 					const maxOff = Math.max(0, currentBuffer.duration - 0.05);
 					startWebAudioBuffer(Math.min(playOffset, maxOff));
 				} else if (currentAudio) {
 					// 2) Fallback: HTMLAudio nativ ab der gemerkten Position fortsetzen.
 					send({ type: "OFFSCREEN_RESUMED" });
-					send({ type: "OFFSCREEN_STARTED" });
-					playing = true;
 					currentAudio.play().catch(() => {
 						/* egal — onerror raeumt auf */
 					});
-				} else if (queue.length > 0) {
-					// 3) Nichts spielte mitten im Chunk — naechstes Item starten.
-					send({ type: "OFFSCREEN_RESUMED" });
-					send({ type: "OFFSCREEN_STARTED" });
-					playNext();
 				} else {
-					// 4) Queue leer und nichts pausiert — Wiedergabe ist beendet.
+					// 3) Mitten zwischen Stuecken pausiert -> naechstes spielen oder
+					//    sauber beenden, falls schon alles fertig ist.
 					send({ type: "OFFSCREEN_RESUMED" });
-					send({ type: "OFFSCREEN_ENDED" });
+					playNext();
 				}
 			}
 			break;

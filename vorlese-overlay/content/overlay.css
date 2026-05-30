@@ -406,28 +406,59 @@
 	transition: width 0.2s ease;
 }
 
-/* Aktuell vorgelesenes Wort ----------------------------------------------- */
+/* Auto-Lese-Button (A) ----------------------------------------------------- */
 
-/* Kleines Label unter dem Fortschrittsbalken; zeigt das gerade gesprochene
-   Wort an. Dezent gedimmt, damit es nicht mit dem Seiteninhalt konkurriert.
+/* Erbt Grundform von .vo-btn. Etwas kleiner, ueber dem Lautsprecher. Der
+   Buchstabe A zeigt den Auto-Lese-Modus an. */
+.vo-auto-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+}
 
-   WICHTIG: absolut positioniert (aus dem Flex-Fluss genommen). Sonst bestimmt
-   das je nach Wort unterschiedlich breite Label die Breite des .vo-container,
-   und weil dieser seine Kinder zentriert (align-items:center), wuerden die
-   Buttons im Wort-Takt (~350ms) rhythmisch nach links/rechts springen. */
-.vo-current-word {
-	position: absolute;
-	bottom: -18px;
-	left: 50%;
-	transform: translateX(-50%);
-	width: max-content;
-	max-width: 180px;
-	font-size: 12px;
-	line-height: 1.3;
-	color: rgba(255, 255, 255, 0.62);
-	text-align: center;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	pointer-events: none; /* faengt keine Klicks ab */
+.vo-auto-letter {
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1;
+	color: #ffffff;
+	pointer-events: none;
+}
+
+/* Zustand „aktiv": der A-Button leuchtet, damit der Auto-Lese-Modus klar
+   erkennbar ist. */
+.vo-auto-btn.vo-active {
+	background: rgba(58, 130, 246, 0.95);
+	box-shadow:
+		0 4px 18px rgba(58, 130, 246, 0.5),
+		0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+}
+
+.vo-auto-btn.vo-active:hover {
+	background: rgba(58, 130, 246, 1);
+}
+
+/* Aktualisieren-Button im Panel ------------------------------------------- */
+
+.vo-reload {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	color: #fff;
+	padding: 10px;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.vo-reload:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.vo-reload:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }

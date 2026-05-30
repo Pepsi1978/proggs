@@ -8,6 +8,9 @@
 	"contextMenuLesen": {
 		"message": "Markierung vorlesen"
 	},
+	"contextMenuAktualisieren": {
+		"message": "Auf neue Version aktualisieren"
+	},
 	"cmdPauseResume": {
 		"message": "Wiedergabe pausieren / fortsetzen"
 	},

@@ -215,6 +215,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		diag.getCount().then((n) => sendResponse({ count: n }));
 		return true;
 	}
+	// Erweiterung auf die neue Version aktualisieren (entpackte Erweiterung neu
+	// vom Datenträger laden). chrome.runtime.reload() BEHAELT chrome.storage.local
+	// — anders als "Entfernen + neu laden", das den Speicher (API-Key, Stimme,
+	// Position) loescht. Der Aktualisieren-Button im Panel ruft das hier auf.
+	if (msg.type === "RELOAD_EXTENSION") {
+		diag.log("INFO", "NUTZUNG", "sw:reload_extension", {});
+		sendResponse({ ok: true });
+		// Nach dem Antworten neu laden, damit der Aufrufer keine Verbindung verliert.
+		setTimeout(() => {
+			try {
+				chrome.runtime.reload();
+			} catch (e) {
+				/* egal */
+			}
+		}, 80);
+		return true;
+	}
 	// Selbsttest starten: Diagnose-Modus an + Runner im aktiven Tab auslösen.
 	if (msg.type === "VO_SELFTEST_RUN") {
 		chrome.storage.local.set({ vo_diag: true }, () => {
@@ -356,12 +373,18 @@ async function handleSpeak(msg, tabId) {
 					enqueuedAny = true;
 				}
 			}
-			if (!enqueuedAny && gen === currentGen) {
-				notifyTab(tabId, {
-					type: MSG.STATE,
-					state: "error",
-					message: "Keine Audiodaten erhalten.",
-				});
+			if (gen === currentGen) {
+				if (enqueuedAny) {
+					// Alle Google-Stuecke geliefert -> Offscreen darf das Ende
+					// melden, sobald die Wiedergabe durch ist (kein verfruehtes Ende).
+					sendToOffscreen({ type: "ENQUEUE_DONE" });
+				} else {
+					notifyTab(tabId, {
+						type: MSG.STATE,
+						state: "error",
+						message: "Keine Audiodaten erhalten.",
+					});
+				}
 			}
 		} else {
 			// Edge: Der WebSocket MUSS im Offscreen-Dokument geöffnet werden.
@@ -514,12 +537,26 @@ if (chrome.commands && chrome.commands.onCommand) {
 // damit der Eintrag nach Erweiterungs-Updates immer vorhanden ist.
 function setupContextMenu() {
 	chrome.contextMenus.removeAll(() => {
+		// Eintrag im Seiten-Kontextmenue (Rechtsklick auf markierten Text).
 		chrome.contextMenus.create(
 			{
 				id: "vorlese-lesen",
 				title:
 					chrome.i18n.getMessage("contextMenuLesen") || "Markierung vorlesen",
 				contexts: ["selection"],
+			},
+			() => void chrome.runtime.lastError,
+		);
+		// Eintrag im Aktions-Kontextmenue (Rechtsklick auf das Symbol in der
+		// Toolbar): Erweiterung auf die neue Version aktualisieren, ohne den
+		// gespeicherten API-Key/Stimme/Position zu verlieren.
+		chrome.contextMenus.create(
+			{
+				id: "vorlese-aktualisieren",
+				title:
+					chrome.i18n.getMessage("contextMenuAktualisieren") ||
+					"Auf neue Version aktualisieren",
+				contexts: ["action"],
 			},
 			() => void chrome.runtime.lastError,
 		);
@@ -533,6 +570,16 @@ chrome.runtime.onInstalled.addListener(() => {
 // Kontextmenü-Klick: gleiches Verhalten wie das Tastaturkürzel
 if (chrome.contextMenus && chrome.contextMenus.onClicked) {
 	chrome.contextMenus.onClicked.addListener((info, tab) => {
+		// Aktualisieren (Rechtsklick auf das Toolbar-Symbol): neu laden, Speicher bleibt.
+		if (info.menuItemId === "vorlese-aktualisieren") {
+			diag.log("INFO", "NUTZUNG", "sw:contextmenu_aktualisieren", {});
+			try {
+				chrome.runtime.reload();
+			} catch (e) {
+				/* egal */
+			}
+			return;
+		}
 		if (info.menuItemId !== "vorlese-lesen") return;
 		if (!tab || tab.id == null) return;
 		// Diagnose-Sonde: Nutzung über das Kontextmenü erfassen

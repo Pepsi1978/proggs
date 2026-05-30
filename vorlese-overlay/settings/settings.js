@@ -20,6 +20,7 @@
 
 	const STORE_KEY = "vo_settings";
 	const POS_KEY = "vo_position";
+	const PANEL_POS_KEY = "vo_panel_position";
 
 	const DEFAULTS = Object.freeze({
 		activeEngine: "edge", // "edge" | "google"
@@ -140,6 +141,42 @@
 		});
 	}
 
+	// Position des Einstellungs-Panels (vom Benutzer per Ziehen gesetzt).
+	// Bleibt null, solange der Benutzer das Panel nie verschoben hat -> dann
+	// positioniert sich das Panel automatisch neben dem Overlay.
+	function getPanelPosition() {
+		return new Promise((resolve) => {
+			try {
+				chrome.storage.local.get([PANEL_POS_KEY], (res) => {
+					if (chrome.runtime.lastError || !res || !res[PANEL_POS_KEY]) {
+						resolve(null);
+						return;
+					}
+					const p = res[PANEL_POS_KEY];
+					if (typeof p.left === "number" && typeof p.top === "number") {
+						resolve({ left: p.left, top: p.top });
+					} else {
+						resolve(null);
+					}
+				});
+			} catch (e) {
+				resolve(null);
+			}
+		});
+	}
+
+	function setPanelPosition(left, top) {
+		return new Promise((resolve) => {
+			try {
+				chrome.storage.local.set({ [PANEL_POS_KEY]: { left, top } }, () =>
+					resolve(),
+				);
+			} catch (e) {
+				resolve();
+			}
+		});
+	}
+
 	window.VOSettings = {
 		DEFAULTS,
 		clampRate,
@@ -148,5 +185,7 @@
 		save,
 		getPosition,
 		setPosition,
+		getPanelPosition,
+		setPanelPosition,
 	};
 })();
