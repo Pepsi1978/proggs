@@ -209,13 +209,15 @@
 	document.documentElement.appendChild(host);
 
 	// ----- Hinweis-Bubble ------------------------------------------------------
-	function showHint(message, isError) {
-		hintEl.textContent = message;
-		hintEl.classList.toggle("vo-error", !!isError);
-		hintEl.classList.add("vo-show");
-		if (hintTimer) clearTimeout(hintTimer);
-		hintTimer = setTimeout(() => hintEl.classList.remove("vo-show"), 2800);
+	// Auf Wunsch des Benutzers deaktiviert: die erklaerenden Text-Bubbles am Rand
+	// (z.B. "Auto-Vorlesen an", "Bitte zuerst Text markieren") werden NICHT mehr
+	// angezeigt. showHint bleibt als No-Op bestehen, damit alle bestehenden Aufrufe
+	// gefahrlos weiterlaufen und der hintTimer/hintEl unangetastet bleiben.
+	function showHint(/* message, isError */) {
+		/* bewusst leer — keine Hinweis-Bubbles mehr */
 	}
+	void hintEl;
+	void hintTimer;
 
 	// ----- Wiedergabe-Status am Lautsprecher ----------------------------------
 	function setState(state) {
