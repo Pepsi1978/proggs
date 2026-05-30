@@ -2,16 +2,20 @@
  * service-worker.js — der Hintergrund-Dienst (ES-Modul).
  *
  * Hier laufen ALLE Netzwerk-Aufrufe (Edge-WebSocket, Google-REST). Der Worker
- * laeuft im Ursprung der Erweiterung und umgeht damit die CSP der jeweiligen
+ * läuft im Ursprung der Erweiterung und umgeht damit die CSP der jeweiligen
  * Webseite (die Hosts stehen in host_permissions).
  *
- * Der Worker kann selbst kein Audio abspielen — dafuer erzeugt er ein
+ * Der Worker kann selbst kein Audio abspielen — dafür erzeugt er ein
  * verstecktes Offscreen-Dokument (chrome.offscreen) und schickt ihm die
  * fertigen Audiodaten (als Data-URL).
  *
  * Datenfluss:
  *   Overlay (SPEAK) -> Worker (Synthese) -> Offscreen (ENQUEUE/Wiedergabe)
  *   Offscreen (STARTED/ENDED/ERROR) -> Worker -> Overlay (Status)
+ *
+ *   Pause/Resume:
+ *   Overlay (TTS_PAUSE/TTS_RESUME/TTS_PAUSE_RESUME) -> Worker -> Offscreen (PAUSE/RESUME)
+ *   Offscreen (OFFSCREEN_PAUSED/OFFSCREEN_RESUMED) -> Worker -> Overlay (TTS_STATE)
  */
 
 import * as edge from "../engines/edge-tts.js";
@@ -22,11 +26,11 @@ import { analyze } from "../diag/insights.js";
 
 // Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
 diag.init("service-worker");
-// Im Service-Worker-Kontext erreichbar machen — fuer den Playwright-Selbsttest
+// Im Service-Worker-Kontext erreichbar machen — für den Playwright-Selbsttest
 // (liest die Logs per readAllJsonl) und die manuelle Inspektion in der Konsole.
 globalThis.__voDiag = diag;
 
-// Selbsttest bequem aus der Service-Worker-Konsole ausloesen: __voSelftest()
+// Selbsttest bequem aus der Service-Worker-Konsole auslösen: __voSelftest()
 // (chrome.runtime.sendMessage erreicht den SW-eigenen Listener NICHT, daher
 //  hier der direkte Weg: Diagnose an + VO_SELFTEST_BEGIN an den aktiven Tab.)
 globalThis.__voSelftest = function () {
@@ -45,14 +49,14 @@ globalThis.__voSelftest = function () {
 	return "Selbsttest gestartet — nach ~25 s: chrome.runtime.sendMessage({type:'VO_DIAG_EXPORT'})";
 };
 
-// App-Verbesserungsvorschlaege aus den gesammelten Logs ableiten: __voInsights()
-// Liefert Kennzahlen + priorisierte Vorschlaege und loggt sie lesbar in die Konsole.
+// App-Verbesserungsvorschläge aus den gesammelten Logs ableiten: __voInsights()
+// Liefert Kennzahlen + priorisierte Vorschläge und loggt sie lesbar in die Konsole.
 globalThis.__voInsights = async function () {
 	const jsonl = await diag.readAllJsonl();
 	const r = analyze(jsonl);
 	console.log("[VO-DIAG] Insights — Kennzahlen:", r.kennzahlen);
 	console.log(
-		"[VO-DIAG] App-Verbesserungsvorschlaege (" + r.vorschlaege.length + "):",
+		"[VO-DIAG] App-Verbesserungsvorschläge (" + r.vorschlaege.length + "):",
 	);
 	for (const v of r.vorschlaege) {
 		console.log(
@@ -69,32 +73,48 @@ globalThis.__voInsights = async function () {
 	return r;
 };
 
+// ----- Message-Typ-Konstanten -----------------------------------------------
 const MSG = {
 	SPEAK: "TTS_SPEAK",
 	STOP: "TTS_STOP",
 	GET_VOICES: "GET_VOICES",
 	TEST: "TTS_TEST",
 	STATE: "TTS_STATE",
+	// Pause/Resume (Content -> SW -> Offscreen)
+	PAUSE: "TTS_PAUSE",
+	RESUME: "TTS_RESUME",
+	PAUSE_RESUME: "TTS_PAUSE_RESUME", // Toggle: SW prüft isPaused und delegiert
+	// Fortschrittsanzeige (SW -> Content)
+	PROGRESS: "TTS_PROGRESS",
+	// Wort-Highlight-Basis (SW -> Content)
+	CHUNK_TIMING: "TTS_CHUNK_TIMING",
+	// Status-Werte
+	STATE_PAUSED: "paused",
+	STATE_RESUMED: "resumed",
+	// Kontextmenü (intern)
+	CONTEXT_MENU_SPEAK: "CONTEXT_MENU_SPEAK",
 };
 
 const OFFSCREEN_PATH = "offscreen/offscreen.html";
 let creatingOffscreen = null;
 
-// Generations-Zaehler: jede neue SPEAK/STOP erhoeht ihn. Ergebnisse einer
+// Generations-Zähler: jede neue SPEAK/STOP erhöht ihn. Ergebnisse einer
 // Synthese, deren Generation veraltet ist, werden verworfen (sauberer Abbruch
 // auch mitten im Chunking).
 let currentGen = 0;
-// Tab, an den Status-Meldungen gehen (der zuletzt ausloesende Tab).
+// Tab, an den Status-Meldungen gehen (der zuletzt auslösende Tab).
 let activeTabId = null;
-// NUTZUNG-Sonden: Zeitmarken fuer Synthese-Latenz und Wiedergabe-Dauer.
+// NUTZUNG-Sonden: Zeitmarken für Synthese-Latenz und Wiedergabe-Dauer.
 let lastSpeakTs = 0;
 let playStartTs = 0;
+// Pause-Zustand: true wenn die Wiedergabe aktuell pausiert ist.
+let isPaused = false;
 
 function getEngine(name) {
 	return name === "google" ? google : edge;
 }
 
-// ----- Offscreen-Dokument sicherstellen (Audio-Wiedergabe) -----------------
+// ----- Offscreen-Dokument sicherstellen (Audio-Wiedergabe) ------------------
 async function ensureOffscreen() {
 	try {
 		if (chrome.offscreen.hasDocument) {
@@ -102,7 +122,7 @@ async function ensureOffscreen() {
 			if (has) return;
 		}
 	} catch (e) {
-		/* hasDocument evtl. nicht verfuegbar — weiter zur Erstellung */
+		/* hasDocument evtl. nicht verfügbar — weiter zur Erstellung */
 	}
 
 	if (creatingOffscreen) {
@@ -126,7 +146,7 @@ async function ensureOffscreen() {
 	}
 }
 
-// ----- Status an das Content-Script des ausloesenden Tabs senden -----------
+// ----- Status an das Content-Script des auslösenden Tabs senden -------------
 function notifyTab(tabId, payload) {
 	if (tabId == null) return;
 	try {
@@ -140,7 +160,7 @@ function notifyTab(tabId, payload) {
 	}
 }
 
-// ----- Nachrichten an das Offscreen-Dokument -------------------------------
+// ----- Nachrichten an das Offscreen-Dokument --------------------------------
 function sendToOffscreen(payload) {
 	try {
 		chrome.runtime.sendMessage(
@@ -150,6 +170,22 @@ function sendToOffscreen(payload) {
 	} catch (e) {
 		/* Offscreen evtl. nicht aktiv */
 	}
+}
+
+// ----- Pause ausführen (intern, von TTS_PAUSE und Toggle genutzt) -----------
+function executePause() {
+	isPaused = true;
+	sendToOffscreen({ type: "PAUSE" });
+	notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_PAUSED });
+	diag.log("INFO", "ZUSTAND", "sw:pause", {});
+}
+
+// ----- Resume ausführen (intern, von TTS_RESUME und Toggle genutzt) ---------
+function executeResume() {
+	isPaused = false;
+	sendToOffscreen({ type: "RESUME" });
+	notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_RESUMED });
+	diag.log("INFO", "ZUSTAND", "sw:resume", {});
 }
 
 // ----- Nachrichten-Router ---------------------------------------------------
@@ -179,7 +215,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		diag.getCount().then((n) => sendResponse({ count: n }));
 		return true;
 	}
-	// Selbsttest starten: Diagnose-Modus an + Runner im aktiven Tab ausloesen.
+	// Selbsttest starten: Diagnose-Modus an + Runner im aktiven Tab auslösen.
 	if (msg.type === "VO_SELFTEST_RUN") {
 		chrome.storage.local.set({ vo_diag: true }, () => {
 			chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -199,7 +235,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		return true;
 	}
 
-	// Rueckmeldungen vom Offscreen-Dokument (Wiedergabe-Status)
+	// Rückmeldungen vom Offscreen-Dokument (Wiedergabe-Status)
 	if (msg.target === "background") {
 		handleOffscreenFeedback(msg);
 		return false;
@@ -225,6 +261,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 			stopPlayback();
 			return false;
 
+		// ----- Pause / Resume / Toggle ----------------------------------------
+		case MSG.PAUSE:
+			executePause();
+			return false;
+
+		case MSG.RESUME:
+			executeResume();
+			return false;
+
+		case MSG.PAUSE_RESUME:
+			// Toggle: pausieren wenn läuft, fortsetzen wenn pausiert
+			if (isPaused) {
+				executeResume();
+			} else {
+				executePause();
+			}
+			return false;
+
 		default:
 			return false;
 	}
@@ -238,6 +292,7 @@ async function handleGetVoices(msg) {
 // ----- Vorlesen: Text -> (Chunks) -> Synthese -> Offscreen ------------------
 async function handleSpeak(msg, tabId) {
 	const gen = ++currentGen; // bricht alle vorher laufenden Synthesen ab
+	isPaused = false; // neues Sprechen setzt Pause-Zustand zurück
 	if (tabId != null) activeTabId = tabId;
 	lastSpeakTs = performance.now();
 
@@ -265,11 +320,30 @@ async function handleSpeak(msg, tabId) {
 		sendToOffscreen({ type: "STOP" }); // evtl. laufende Wiedergabe beenden
 
 		if (msg.engine === "google") {
-			// Google: REST-fetch laeuft hier im Worker (DNR greift fuer fetch).
-			// Langen Text an Satzgrenzen teilen; das erste Stueck ist schnell hoerbar.
+			// Google: REST-fetch läuft hier im Worker (DNR greift für fetch).
+			// Langen Text an Satzgrenzen teilen; das erste Stück ist schnell hörbar.
 			const chunks = splitIntoChunks(text, 2500);
+			const totalChunks = chunks.length;
 			let enqueuedAny = false;
-			for (const part of chunks) {
+			for (let i = 0; i < chunks.length; i++) {
+				const part = chunks[i];
+
+				// Fortschritts-Nachricht vor dem ENQUEUE ans Content senden
+				notifyTab(tabId, {
+					type: MSG.PROGRESS,
+					chunk: i,
+					totalChunks,
+				});
+
+				// Wort-Timing-Nachricht für Highlight-Timer im Content
+				const words = part.split(/\s+/).filter((w) => w.length > 0);
+				notifyTab(tabId, {
+					type: MSG.CHUNK_TIMING,
+					words,
+					chunkIndex: i,
+					totalChunks,
+				});
+
 				const bytes = await google.synthesize(
 					part,
 					msg.voice,
@@ -290,16 +364,32 @@ async function handleSpeak(msg, tabId) {
 				});
 			}
 		} else {
-			// Edge: Der WebSocket MUSS im Offscreen-Dokument geoeffnet werden.
-			// declarativeNetRequest (setzt den noetigen Edge-User-Agent) greift wegen
+			// Edge: Der WebSocket MUSS im Offscreen-Dokument geöffnet werden.
+			// declarativeNetRequest (setzt den nötigen Edge-User-Agent) greift wegen
 			// Chromium-Bug 1285664 NICHT auf WebSocket-Upgrades aus einem Service-
 			// Worker — wohl aber aus einem normalen Dokument. Chunking + Synthese +
 			// Wiedergabe laufen daher komplett im Offscreen.
+			//
+			// Für Edge: Fortschritts- und Timing-Nachrichten mit einem einzelnen
+			// virtuellen Chunk senden (Edge verarbeitet intern, kein Chunk-Split hier).
+			notifyTab(tabId, {
+				type: MSG.PROGRESS,
+				chunk: 0,
+				totalChunks: 1,
+			});
+			const words = text.split(/\s+/).filter((w) => w.length > 0);
+			notifyTab(tabId, {
+				type: MSG.CHUNK_TIMING,
+				words,
+				chunkIndex: 0,
+				totalChunks: 1,
+			});
 			sendToOffscreen({
 				type: "EDGE_SPEAK",
 				text,
 				voice: msg.voice,
 				rate: msg.rate,
+				pitch: msg.pitch ?? 0,
 			});
 		}
 	} catch (e) {
@@ -319,7 +409,7 @@ async function handleSpeak(msg, tabId) {
 
 function stopPlayback() {
 	// NUTZUNG: manueller Stop — kurze Spielzeit deutet auf Unzufriedenheit hin
-	// (falsche Stimme/Tempo/Text) -> Signal fuer App-Verbesserungsvorschlaege.
+	// (falsche Stimme/Tempo/Text) -> Signal für App-Verbesserungsvorschläge.
 	const spielzeit = playStartTs
 		? Math.round(performance.now() - playStartTs)
 		: 0;
@@ -328,6 +418,7 @@ function stopPlayback() {
 		frueh_abgebrochen: spielzeit > 0 && spielzeit < 2000,
 	});
 	currentGen++; // laufende Synthese-Ergebnisse verwerfen
+	isPaused = false; // Pause-Zustand zurücksetzen
 	sendToOffscreen({ type: "STOP" });
 }
 
@@ -355,6 +446,7 @@ function handleOffscreenFeedback(msg) {
 				});
 				playStartTs = 0;
 			}
+			isPaused = false; // Pause-Zustand bei normalem Ende zurücksetzen
 			notifyTab(activeTabId, { type: MSG.STATE, state: "stopped" });
 			break;
 		case "OFFSCREEN_ERROR":
@@ -364,20 +456,27 @@ function handleOffscreenFeedback(msg) {
 				message: msg.message || "Audio konnte nicht abgespielt werden.",
 			});
 			break;
+		// Rückmeldungen vom Offscreen nach Pause/Resume
+		case "OFFSCREEN_PAUSED":
+			notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_PAUSED });
+			break;
+		case "OFFSCREEN_RESUMED":
+			notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_RESUMED });
+			break;
 	}
 }
 
 // ----- MP3-Bytes -> Data-URL (im Worker gibt es kein URL.createObjectURL) ---
 function bytesToDataUrl(bytes) {
 	let binary = "";
-	const step = 0x8000; // in Bloecken, sonst sprengt String.fromCharCode den Stack
+	const step = 0x8000; // in Blöcken, sonst sprengt String.fromCharCode den Stack
 	for (let i = 0; i < bytes.length; i += step) {
 		binary += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
 	}
 	return "data:audio/mpeg;base64," + btoa(binary);
 }
 
-// ----- Fehlertexte in verstaendliches Deutsch uebersetzen ------------------
+// ----- Fehlertexte in verständliches Deutsch übersetzen --------------------
 function humanError(e) {
 	const m = String((e && e.message) || e || "Unbekannter Fehler");
 	if (/Failed to fetch|NetworkError|net::|ERR_|Kein Internet/.test(m))
@@ -385,20 +484,66 @@ function humanError(e) {
 	return m;
 }
 
-// Tastaturkuerzel: markierten Text vorlesen
+// ----- Tastaturkürzel -------------------------------------------------------
 if (chrome.commands && chrome.commands.onCommand) {
 	chrome.commands.onCommand.addListener((command) => {
-		if (command !== "speak-selection") return;
-		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-			const tab = tabs && tabs[0];
-			if (tab && tab.id != null) {
-				chrome.tabs.sendMessage(
-					tab.id,
-					{ type: "SPEAK_COMMAND" },
-					() => void chrome.runtime.lastError,
-				);
+		if (command === "speak-selection") {
+			chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+				const tab = tabs && tabs[0];
+				if (tab && tab.id != null) {
+					chrome.tabs.sendMessage(
+						tab.id,
+						{ type: "SPEAK_COMMAND" },
+						() => void chrome.runtime.lastError,
+					);
+				}
+			});
+		} else if (command === "pause-resume") {
+			// Toggle: pausieren wenn läuft, fortsetzen wenn pausiert
+			if (isPaused) {
+				executeResume();
+			} else {
+				executePause();
 			}
+		}
+	});
+}
+
+// ----- Kontextmenü: markierten Text vorlesen --------------------------------
+// Wird beim Installieren einmalig angelegt; beim Update-Event ebenfalls,
+// damit der Eintrag nach Erweiterungs-Updates immer vorhanden ist.
+function setupContextMenu() {
+	chrome.contextMenus.removeAll(() => {
+		chrome.contextMenus.create(
+			{
+				id: "vorlese-lesen",
+				title:
+					chrome.i18n.getMessage("contextMenuLesen") || "Markierung vorlesen",
+				contexts: ["selection"],
+			},
+			() => void chrome.runtime.lastError,
+		);
+	});
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+	setupContextMenu();
+});
+
+// Kontextmenü-Klick: gleiches Verhalten wie das Tastaturkürzel
+if (chrome.contextMenus && chrome.contextMenus.onClicked) {
+	chrome.contextMenus.onClicked.addListener((info, tab) => {
+		if (info.menuItemId !== "vorlese-lesen") return;
+		if (!tab || tab.id == null) return;
+		// Diagnose-Sonde: Nutzung über das Kontextmenü erfassen
+		diag.log("INFO", "NUTZUNG", "sw:contextmenu_vorlesen", {
+			tabId: tab.id,
 		});
+		chrome.tabs.sendMessage(
+			tab.id,
+			{ type: "SPEAK_COMMAND" },
+			() => void chrome.runtime.lastError,
+		);
 	});
 }
 

@@ -10,7 +10,8 @@
 		"activeTab",
 		"scripting",
 		"declarativeNetRequestWithHostAccess",
-		"downloads"
+		"downloads",
+		"contextMenus"
 	],
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
@@ -56,6 +57,13 @@
 				"mac": "Command+Shift+S"
 			},
 			"description": "Markierten Text vorlesen"
+		},
+		"pause-resume": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+P",
+				"mac": "Command+Shift+P"
+			},
+			"description": "Wiedergabe pausieren / fortsetzen"
 		}
 	}
 }

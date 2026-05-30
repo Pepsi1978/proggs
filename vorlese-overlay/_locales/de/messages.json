@@ -4,5 +4,20 @@
 	},
 	"extDescription": {
 		"message": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD."
+	},
+	"contextMenuLesen": {
+		"message": "Markierung vorlesen"
+	},
+	"cmdPauseResume": {
+		"message": "Wiedergabe pausieren / fortsetzen"
+	},
+	"labelPitch": {
+		"message": "Tonhöhe"
+	},
+	"labelAutoSpeak": {
+		"message": "Automatisch vorlesen bei Markierung"
+	},
+	"labelAutoSpeakHint": {
+		"message": "Liest Markierungen nach kurzem Warten automatisch vor"
 	}
 }

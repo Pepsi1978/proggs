@@ -8,6 +8,7 @@
  *   - Senden von Befehlen an den Service-Worker (speak / stop / Stimmen / Test)
  *   - Anzeigen des Wiedergabe-Status und von Fehlermeldungen
  *   - Das Einstellungs-Panel (Engine-Umschalter, Edge-/Google-Reiter)
+ *   - Pause-Button, Fortschrittsbalken, Wort-Anzeige, Auto-Speak
  *
  * Es finden KEINE Netzwerk-Aufrufe und KEINE Audio-Wiedergabe hier statt
  * (das wuerde an der CSP der Seite scheitern). Alles laeuft im Service-Worker
@@ -25,8 +26,13 @@
 		STOP: "TTS_STOP",
 		GET_VOICES: "GET_VOICES",
 		TEST: "TTS_TEST",
-		STATE: "TTS_STATE", // Worker -> Content: Status der Wiedergabe
-		SPEAK_COMMAND: "SPEAK_COMMAND", // Worker -> Content: Tastaturkuerzel ausgeloest
+		STATE: "TTS_STATE", // Worker → Content: Status der Wiedergabe
+		SPEAK_COMMAND: "SPEAK_COMMAND", // Worker → Content: Tastaturkuerzel ausgeloest
+		PAUSE: "TTS_PAUSE", // Content → SW: Wiedergabe pausieren
+		RESUME: "TTS_RESUME", // Content → SW: Wiedergabe fortsetzen
+		PAUSE_RESUME_TOGGLE: "TTS_PAUSE_RESUME", // Content → SW: Toggle Pause/Resume
+		PROGRESS: "TTS_PROGRESS", // SW → Content: Fortschrittsanzeige {chunk, totalChunks}
+		CHUNK_TIMING: "TTS_CHUNK_TIMING", // SW → Content: Wort-Liste {words, chunkIndex, totalChunks}
 	};
 
 	const SAMPLE_TEXT =
@@ -37,6 +43,16 @@
 	let hintTimer = null;
 	// Vom Panel gesetzte Funktion, um Status-/Fehlermeldungen im Panel anzuzeigen.
 	let panelStatusHandler = null;
+
+	// ----- Neue Zustands-Variablen für Pause, Fortschritt und Wort-Highlight ---
+	let isPaused = false;
+	let highlightTimer = null;
+	let currentChunkWords = [];
+	let currentChunkWordIndex = 0;
+	let lastHighlightedRange = null;
+	let progressChunk = 0;
+	let progressTotal = 0;
+	let autoSpeakTimer = null;
 
 	// ----- Selektion zuverlaessig erfassen -------------------------------------
 	// Sobald irgendwo eine nicht-leere Markierung existiert, merken wir sie uns.
@@ -55,6 +71,56 @@
 	}
 	document.addEventListener("selectionchange", captureSelection, true);
 	document.addEventListener("mouseup", captureSelection, true);
+
+	// Auto-Speak: bei Markierungsänderung ggf. automatisch vorlesen
+	document.addEventListener(
+		"selectionchange",
+		() => {
+			// Einstellungen asynchron prüfen — wir speichern den Snapshot lokal
+			window.VOSettings.load()
+				.then((settings) => {
+					const autoSpeak = settings && settings.autoSpeak;
+					if (!autoSpeak) return;
+					try {
+						const sel = window.getSelection();
+						const text = sel ? sel.toString().trim() : "";
+						if (!text) {
+							if (autoSpeakTimer) {
+								clearTimeout(autoSpeakTimer);
+								autoSpeakTimer = null;
+							}
+							return;
+						}
+						if (text === lastSelection && isPlaying) return;
+						if (autoSpeakTimer) clearTimeout(autoSpeakTimer);
+						if (window.VODiag)
+							window.VODiag.log(
+								"INFO",
+								"UI_EREIGNIS",
+								"overlay.auto_speak_timer_gestartet",
+								{ textLen: text.length },
+							);
+						autoSpeakTimer = setTimeout(() => {
+							autoSpeakTimer = null;
+							if (window.VODiag)
+								window.VODiag.log(
+									"INFO",
+									"NUTZUNG",
+									"overlay.auto_speak_ausgefuehrt",
+									{ textLen: text.length },
+								);
+							onSpeakerClick();
+						}, 1200);
+					} catch (e) {
+						/* ignorieren */
+					}
+				})
+				.catch(() => {
+					/* ignorieren */
+				});
+		},
+		true,
+	);
 
 	// ----- Overlay aufbauen (Shadow DOM) ---------------------------------------
 	const host = document.createElement("div");
@@ -83,6 +149,11 @@
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 	const ICON_GEAR =
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7 7 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.27 8.3a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7 7 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
+	// SVG-Icons für den Pause-Button (Pause-Balken und Play-Dreieck)
+	const ICON_PAUSE =
+		'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+	const ICON_PLAY_TRIANGLE =
+		'<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>';
 
 	const container = document.createElement("div");
 	container.className = "vo-container";
@@ -91,14 +162,28 @@
 		'<button class="vo-btn vo-speaker" type="button" title="Markierten Text vorlesen">' +
 		ICON_SPEAKER +
 		"</button>" +
+		// Pause-Button: initial versteckt, wird bei 'playing'/'paused' sichtbar
+		'<button class="vo-btn vo-pause-btn" type="button" title="Pause / Weiter" style="display:none;">' +
+		ICON_PAUSE +
+		"</button>" +
 		'<button class="vo-btn vo-gear" type="button" title="Einstellungen">' +
 		ICON_GEAR +
-		"</button>";
+		"</button>" +
+		// Schmaler Fortschrittsbalken unter dem Button-Container
+		'<div class="vo-progress-wrap" style="display:none;">' +
+		'<div class="vo-progress"></div>' +
+		"</div>" +
+		// Aktuelles Wort (KISS-Lösung: kleines Label statt DOM-Manipulation)
+		'<div class="vo-current-word"></div>';
 	shadow.appendChild(container);
 
 	const speakerBtn = container.querySelector(".vo-speaker");
+	const pauseBtn = container.querySelector(".vo-pause-btn");
 	const gearBtn = container.querySelector(".vo-gear");
 	const hintEl = container.querySelector(".vo-hint");
+	const progressWrap = container.querySelector(".vo-progress-wrap");
+	const progressBar = container.querySelector(".vo-progress");
+	const currentWordEl = container.querySelector(".vo-current-word");
 
 	const panel = document.createElement("div");
 	panel.className = "vo-panel";
@@ -126,6 +211,67 @@
 			state === "playing" ? "Vorlesen stoppen" : "Markierten Text vorlesen";
 	}
 
+	// ----- Pause-Button Sichtbarkeit und Zustand steuern ----------------------
+	function setPauseButtonVisible(visible) {
+		pauseBtn.style.display = visible ? "" : "none";
+	}
+
+	function setPauseButtonState(paused) {
+		pauseBtn.innerHTML = paused ? ICON_PLAY_TRIANGLE : ICON_PAUSE;
+		pauseBtn.title = paused ? "Weiter vorlesen" : "Pause";
+		pauseBtn.classList.toggle("vo-paused", paused);
+	}
+
+	// ----- Fortschrittsbalken aktualisieren ------------------------------------
+	function setProgress(chunk, total) {
+		progressChunk = chunk;
+		progressTotal = total;
+		if (total > 0) {
+			progressWrap.style.display = "";
+			const pct = Math.round((chunk / total) * 100);
+			progressBar.style.width = pct + "%";
+		} else {
+			progressWrap.style.display = "none";
+			progressBar.style.width = "0%";
+		}
+	}
+
+	function resetProgress() {
+		progressChunk = 0;
+		progressTotal = 0;
+		progressWrap.style.display = "none";
+		progressBar.style.width = "0%";
+	}
+
+	// ----- Wort-Highlight (KISS: Label im Overlay) ----------------------------
+	function startWordHighlight(words) {
+		stopWordHighlight();
+		currentChunkWords = Array.isArray(words) ? words : [];
+		currentChunkWordIndex = 0;
+		if (currentChunkWords.length === 0) return;
+		// Geschätzte Zeit pro Wort: 350 ms (konservativ, da Chunk-Dauer unbekannt)
+		const msPerWord = 350;
+		currentWordEl.textContent = currentChunkWords[0] || "";
+		highlightTimer = setInterval(() => {
+			currentChunkWordIndex++;
+			if (currentChunkWordIndex >= currentChunkWords.length) {
+				stopWordHighlight();
+				return;
+			}
+			currentWordEl.textContent = currentChunkWords[currentChunkWordIndex];
+		}, msPerWord);
+	}
+
+	function stopWordHighlight() {
+		if (highlightTimer) {
+			clearInterval(highlightTimer);
+			highlightTimer = null;
+		}
+		currentChunkWords = [];
+		currentChunkWordIndex = 0;
+		currentWordEl.textContent = "";
+	}
+
 	// ----- Position: wiederherstellen + clampen --------------------------------
 	function clampToViewport(left, top) {
 		const rect = container.getBoundingClientRect();
@@ -145,6 +291,15 @@
 		container.style.top = c.top + "px";
 		container.style.right = "auto";
 		container.style.bottom = "auto";
+	}
+
+	// Viewport-Clamp bei Resize: Overlay bleibt immer vollständig sichtbar
+	function clampCurrentPosition() {
+		if (container.style.left && container.style.left !== "auto") {
+			const left = parseFloat(container.style.left);
+			const top = parseFloat(container.style.top);
+			applyPosition(left, top);
+		}
 	}
 
 	// ----- Layout-Sonde: Geometrie + Sichtbarkeits-Check im Viewport ----------
@@ -206,11 +361,7 @@
 	});
 
 	window.addEventListener("resize", () => {
-		if (container.style.left && container.style.left !== "auto") {
-			const left = parseFloat(container.style.left);
-			const top = parseFloat(container.style.top);
-			applyPosition(left, top);
-		}
+		clampCurrentPosition();
 	});
 
 	// ----- Drag + Klick (mousedown mit preventDefault) -------------------------
@@ -262,12 +413,23 @@
 		if (wasDrag) {
 			const rect = container.getBoundingClientRect();
 			window.VOSettings.setPosition(rect.left, rect.top);
+			// Viewport-Clamp nach Drag sicherstellen
+			clampCurrentPosition();
 			logLayout("Overlay", container, { nachDrag: true });
 		} else if (pressed === speakerBtn) {
 			onSpeakerClick();
+		} else if (pressed === pauseBtn) {
+			onPauseClick();
 		} else if (pressed === gearBtn) {
 			togglePanel();
 		}
+	}
+
+	// ----- Pause-Button Klick --------------------------------------------------
+	function onPauseClick() {
+		if (window.VODiag)
+			window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.pause_klick", {});
+		sendMessage({ type: MSG.PAUSE_RESUME_TOGGLE });
 	}
 
 	// ----- Lautsprecher-Aktion -------------------------------------------------
@@ -277,6 +439,12 @@
 				window.VODiag.log("INFO", "UI_EREIGNIS", "speaker_klick:stop", {});
 			sendMessage({ type: MSG.STOP });
 			setState("stopped");
+			// Pause-Zustand und Fortschritt zurücksetzen
+			isPaused = false;
+			stopWordHighlight();
+			resetProgress();
+			setPauseButtonVisible(false);
+			setPauseButtonState(false);
 			return;
 		}
 		captureSelection();
@@ -317,12 +485,18 @@
 				textLen: text.length,
 			});
 		setState("loading");
+		// Pitch nur für Edge relevant
+		const pitch =
+			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
+				? settings.edge.pitch
+				: 0;
 		sendMessage({
 			type: MSG.SPEAK,
 			engine,
 			text,
 			voice: cfg.voice,
 			rate: cfg.rate,
+			pitch,
 			apiKey: engine === "google" ? settings.google.apiKey : undefined,
 		});
 	}
@@ -367,7 +541,9 @@
 	// Status-/Befehls-Nachrichten vom Worker empfangen
 	chrome.runtime.onMessage.addListener((msg) => {
 		if (!msg || typeof msg !== "object") return;
+
 		if (msg.type === MSG.STATE) {
+			// Vorhandene Diagnose-Sonde erhalten
 			if (window.VODiag)
 				window.VODiag.log(
 					msg.state === "error" ? "ERROR" : "INFO",
@@ -375,19 +551,77 @@
 					"overlay.status_empfangen",
 					{ state: msg.state, message: msg.message },
 				);
+
 			if (msg.state === "error") {
 				setState("stopped");
 				showHint(msg.message || "Es ist ein Fehler aufgetreten.", true);
+				// Aufräumen bei Fehler
+				isPaused = false;
+				stopWordHighlight();
+				resetProgress();
+				setPauseButtonVisible(false);
+				setPauseButtonState(false);
+			} else if (msg.state === "playing") {
+				setState("playing");
+				// Pause-Button einblenden wenn Wiedergabe läuft
+				setPauseButtonVisible(true);
+				setPauseButtonState(false);
+				isPaused = false;
+			} else if (msg.state === "paused") {
+				isPaused = true;
+				// Icon auf Play umschalten (bereit zum Fortsetzen)
+				setPauseButtonState(true);
+				if (window.VODiag)
+					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_paused", {});
+			} else if (msg.state === "resumed") {
+				isPaused = false;
+				// Icon auf Pause zurück (läuft wieder)
+				setPauseButtonState(false);
+				if (window.VODiag)
+					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_resumed", {});
+			} else if (msg.state === "stopped") {
+				setState("stopped");
+				// Alles zurücksetzen
+				isPaused = false;
+				stopWordHighlight();
+				resetProgress();
+				setPauseButtonVisible(false);
+				setPauseButtonState(false);
+				currentWordEl.textContent = "";
 			} else {
 				setState(msg.state);
 			}
 			if (panelStatusHandler) panelStatusHandler(msg.state, msg.message);
+		} else if (msg.type === MSG.PROGRESS) {
+			// Fortschrittsbalken aktualisieren
+			const chunk = msg.chunk && typeof msg.chunk === "number" ? msg.chunk : 0;
+			const total =
+				msg.totalChunks && typeof msg.totalChunks === "number"
+					? msg.totalChunks
+					: 0;
+			setProgress(chunk, total);
+		} else if (msg.type === MSG.CHUNK_TIMING) {
+			// Wort-Highlight starten
+			const words = Array.isArray(msg.words) ? msg.words : [];
+			startWordHighlight(words);
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
 			if (window.VODiag)
 				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.tastenkuerzel", {});
 			onSpeakerClick();
 		}
 	});
+
+	// ----- Diagnose-Sonden für Pause/Resume ------------------------------------
+	// Diese werden im onPauseClick und über TTS_STATE-Handler ausgelöst.
+	// Zusätzlich: direkte Sonden für Pause/Resume-Bestätigung vom SW
+	function onPauseConfirmed() {
+		if (window.VODiag)
+			window.VODiag.log("INFO", "NUTZUNG", "overlay.pause_ausgeloest", {});
+	}
+	function onResumeConfirmed() {
+		if (window.VODiag)
+			window.VODiag.log("INFO", "NUTZUNG", "overlay.resume_ausgeloest", {});
+	}
 
 	// ----- Einstellungs-Panel --------------------------------------------------
 	function togglePanel() {
@@ -441,6 +675,10 @@
 			'<div class="vo-section"><span class="vo-label">Vorlese-Tempo</span>' +
 			'<div class="vo-row"><input class="vo-range" type="range" min="0.5" max="2" step="0.1" data-role="edge-rate">' +
 			'<span class="vo-range-val" data-role="edge-rate-val"></span></div></div>' +
+			// Tonhöhe (Pitch) — nur für Edge
+			'<div class="vo-section"><span class="vo-label">Tonhöhe (Halbtöne)</span>' +
+			'<div class="vo-row"><input class="vo-range" type="range" min="-50" max="50" step="1" data-role="edge-pitch">' +
+			'<span class="vo-range-val" data-role="edge-pitch-val"></span></div></div>' +
 			'<button class="vo-test" type="button" data-role="edge-test">Test — Beispielsatz vorlesen</button>' +
 			'<div class="vo-status" data-role="edge-status"></div>' +
 			"</div>" +
@@ -458,6 +696,12 @@
 			'<button class="vo-test" type="button" data-role="google-test">Test — Beispielsatz vorlesen</button>' +
 			'<div class="vo-status" data-role="google-status"></div>' +
 			"</div>" +
+			// Auto-Speak Toggle (letztes Panel-Element)
+			'<div class="vo-section vo-autospeak-section">' +
+			'<label class="vo-toggle-row">' +
+			'<span class="vo-label" style="margin-bottom:0;">Automatisch vorlesen bei Markierung</span>' +
+			'<input type="checkbox" class="vo-toggle" data-role="auto-speak">' +
+			"</label></div>" +
 			"</div>";
 
 		const $ = (role) => panel.querySelector('[data-role="' + role + '"]');
@@ -490,6 +734,11 @@
 		function setRateUI(roleRange, roleVal, value) {
 			$(roleRange).value = String(value);
 			$(roleVal).textContent = Number(value).toFixed(1) + "×";
+		}
+		function setPitchUI(roleRange, roleVal, value) {
+			const v = Number(value) || 0;
+			$(roleRange).value = String(v);
+			$(roleVal).textContent = (v >= 0 ? "+" : "") + v + " st";
 		}
 		function showStatus(role, message, kind) {
 			const el = $(role);
@@ -580,6 +829,19 @@
 			current.edge.rate = window.VOSettings.clampRate(e.target.value);
 			await persist();
 		});
+
+		// Tonhöhe (Pitch) für Edge
+		$("edge-pitch").addEventListener("input", (e) => {
+			const v = parseInt(e.target.value, 10) || 0;
+			$("edge-pitch-val").textContent = (v >= 0 ? "+" : "") + v + " st";
+		});
+		$("edge-pitch").addEventListener("change", async (e) => {
+			const v = Math.max(-50, Math.min(50, parseInt(e.target.value, 10) || 0));
+			if (!current.edge) current.edge = {};
+			current.edge.pitch = v;
+			await persist();
+		});
+
 		$("edge-test").addEventListener("click", () => {
 			showStatus("edge-status", "Wird vorgelesen…", "");
 			sendMessage({
@@ -588,6 +850,7 @@
 				text: SAMPLE_TEXT,
 				voice: $("edge-voice").value,
 				rate: window.VOSettings.clampRate($("edge-rate").value),
+				pitch: parseInt($("edge-pitch").value, 10) || 0,
 			});
 		});
 
@@ -629,6 +892,12 @@
 			});
 		});
 
+		// Auto-Speak Toggle
+		$("auto-speak").addEventListener("change", async (e) => {
+			current.autoSpeak = e.target.checked;
+			await persist();
+		});
+
 		// Status/Fehler aus der Wiedergabe auch im Panel zeigen.
 		panelStatusHandler = (state, message) => {
 			const page = panel.querySelector(".vo-tabpage.vo-active");
@@ -653,8 +922,16 @@
 			markEngine(current.activeEngine);
 			showTab(current.activeEngine);
 			setRateUI("edge-rate", "edge-rate-val", current.edge.rate);
+			// Tonhöhe initialisieren (Default 0 wenn noch nicht vorhanden)
+			const pitch =
+				current.edge && current.edge.pitch !== undefined
+					? current.edge.pitch
+					: 0;
+			setPitchUI("edge-pitch", "edge-pitch-val", pitch);
 			setRateUI("google-rate", "google-rate-val", current.google.rate);
 			$("google-key").value = current.google.apiKey || "";
+			// Auto-Speak Toggle initialisieren
+			$("auto-speak").checked = !!current.autoSpeak;
 			await loadEdgeVoices();
 			await loadGoogleVoices();
 		})();
@@ -672,4 +949,9 @@
 		},
 		true,
 	);
+
+	// Nicht verwendete Referenzen sauber halten (verhindert Linter-Warnungen)
+	void onPauseConfirmed;
+	void onResumeConfirmed;
+	void lastHighlightedRange;
 })();

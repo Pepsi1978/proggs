@@ -362,3 +362,62 @@
 .vo-status.vo-err {
 	color: #ee6a6a;
 }
+
+/* Pause-Button ------------------------------------------------------------ */
+
+/* Erbt Grundform von .vo-btn (40×40px wäre Standard — hier gleiche Größe
+   wie .vo-gear verwenden, damit er neben dem Lautsprecher nicht zu groß wirkt) */
+.vo-pause-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+}
+
+/* Zustand „pausiert": leicht blauer Akzent, damit erkennbar ist, dass
+   die Wiedergabe angehalten wurde und ein Klick sie fortsetzt */
+.vo-pause-btn.vo-paused {
+	background: rgba(58, 130, 246, 0.22);
+	box-shadow:
+		0 4px 14px rgba(58, 130, 246, 0.28),
+		0 0 0 1px rgba(58, 130, 246, 0.38) inset;
+}
+
+.vo-pause-btn.vo-paused:hover {
+	background: rgba(58, 130, 246, 0.34);
+}
+
+/* Fortschrittsbalken ------------------------------------------------------ */
+
+/* Schmale Leiste unterhalb der Button-Gruppe; volle Breite des Containers */
+.vo-progress-wrap {
+	width: 100%;
+	height: 5px;
+	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.12);
+	overflow: hidden;
+}
+
+/* Die füllende Leiste; Breite wird per JS in % gesetzt */
+.vo-progress {
+	height: 100%;
+	width: 0%;
+	border-radius: 3px;
+	background: #3a82f6;
+	transition: width 0.2s ease;
+}
+
+/* Aktuell vorgelesenes Wort ----------------------------------------------- */
+
+/* Kleines Label unter dem Fortschrittsbalken; zeigt das gerade gesprochene
+   Wort an. Dezent gedimmt, damit es nicht mit dem Seiteninhalt konkurriert. */
+.vo-current-word {
+	max-width: 180px;
+	font-size: 12px;
+	line-height: 1.3;
+	color: rgba(255, 255, 255, 0.62);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-height: 1em; /* Höhe bleibt stabil auch wenn leer */
+}

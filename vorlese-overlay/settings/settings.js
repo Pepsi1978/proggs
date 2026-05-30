@@ -1,15 +1,17 @@
 /*
  * settings.js — zentrale Einstellungs-Verwaltung.
  *
- * Laeuft als Content-Script (vor overlay.js) und stellt die Funktionen
- * ueber `window.VOSettings` bereit. Alle Werte liegen in chrome.storage.local
- * (NICHT sync) — der Google-API-Key bleibt damit ausschliesslich lokal.
+ * Läuft als Content-Script (vor overlay.js) und stellt die Funktionen
+ * über `window.VOSettings` bereit. Alle Werte liegen in chrome.storage.local
+ * (NICHT sync) — der Google-API-Key bleibt damit ausschließlich lokal.
  *
  * Gespeichert werden:
  *   - aktive Engine
- *   - pro Engine: gewaehlte Stimme + Vorlese-Tempo
+ *   - pro Engine: gewählte Stimme + Vorlese-Tempo
+ *   - Edge: Tonhöhe (pitch, -50 bis +50 Halbtöne)
  *   - Google-API-Key
  *   - Overlay-Position
+ *   - autoSpeak: Vorlesen bei Textauswahl automatisch starten
  */
 (function () {
 	"use strict";
@@ -24,16 +26,18 @@
 		edge: {
 			voice: "de-DE-KatjaNeural", // sinnvolle Standard-Stimme bis die Liste geladen ist
 			rate: 1.0,
+			pitch: 0, // Tonhöhe in Halbtönen (-50 bis +50), SSML prosody pitch
 		},
 		google: {
 			apiKey: "",
-			voice: "", // wird nach Key-Eingabe dynamisch befuellt
+			voice: "", // wird nach Key-Eingabe dynamisch befüllt
 			rate: 1.0,
 		},
+		autoSpeak: false, // bei Textauswahl automatisch vorlesen
 	});
 
-	// Tiefe, robuste Zusammenfuehrung mit den Defaults, damit fehlende Felder
-	// (z.B. nach einem Update) immer einen gueltigen Wert haben.
+	// Tiefe, robuste Zusammenführung mit den Defaults, damit fehlende Felder
+	// (z.B. nach einem Update) immer einen gültigen Wert haben.
 	function mergeDefaults(stored) {
 		const s = stored && typeof stored === "object" ? stored : {};
 		return {
@@ -41,13 +45,23 @@
 			edge: {
 				voice: (s.edge && s.edge.voice) || DEFAULTS.edge.voice,
 				rate: clampRate((s.edge && s.edge.rate) ?? DEFAULTS.edge.rate),
+				pitch: clampPitch((s.edge && s.edge.pitch) ?? DEFAULTS.edge.pitch),
 			},
 			google: {
 				apiKey: (s.google && s.google.apiKey) || "",
 				voice: (s.google && s.google.voice) || "",
 				rate: clampRate((s.google && s.google.rate) ?? DEFAULTS.google.rate),
 			},
+			autoSpeak:
+				typeof s.autoSpeak === "boolean" ? s.autoSpeak : DEFAULTS.autoSpeak,
 		};
+	}
+
+	// Tonhöhe auf ganzzahligen Wert im Bereich -50 bis +50 Halbtöne begrenzen.
+	function clampPitch(v) {
+		const n = Math.round(Number(v));
+		if (!isFinite(n)) return 0;
+		return Math.min(50, Math.max(-50, n));
 	}
 
 	function clampRate(v) {
@@ -81,9 +95,11 @@
 					activeEngine: clean.activeEngine,
 					edgeVoice: clean.edge.voice,
 					edgeRate: clean.edge.rate,
+					edgePitch: clean.edge.pitch,
 					googleVoice: clean.google.voice,
 					googleRate: clean.google.rate,
 					hatGoogleKey: !!(clean.google.apiKey || "").trim(),
+					autoSpeak: clean.autoSpeak,
 				});
 			try {
 				chrome.storage.local.set({ [STORE_KEY]: clean }, () => resolve(clean));
@@ -127,6 +143,7 @@
 	window.VOSettings = {
 		DEFAULTS,
 		clampRate,
+		clampPitch,
 		load,
 		save,
 		getPosition,

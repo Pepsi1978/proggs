@@ -29,11 +29,15 @@
  * jedem Fall — schlimmstenfalls eben wieder mit Untertiteln.
  *
  * Nachrichten vom Service-Worker (target: "offscreen"):
- *   ENQUEUE  { url }                  — fertiges Audio (Google) abspielen
- *   EDGE_SPEAK { text, voice, rate }  — Edge hier synthetisieren + abspielen
- *   STOP                              — Wiedergabe + laufende Synthese abbrechen
- * Rueckmeldungen an den Worker (target: "background"):
+ *   ENQUEUE    { url }                        — fertiges Audio (Google) abspielen
+ *   EDGE_SPEAK { text, voice, rate, pitch? }  — Edge hier synthetisieren + abspielen
+ *   STOP                                      — Wiedergabe + laufende Synthese abbrechen
+ *   PAUSE                                     — laufendes Audio pausieren, Queue behalten
+ *   RESUME                                    — Wiedergabe fortsetzen (Queue bleibt)
+ * Rückmeldungen an den Worker (target: "background"):
  *   OFFSCREEN_STARTED | OFFSCREEN_ENDED | OFFSCREEN_ERROR
+ *   OFFSCREEN_PAUSED  — Pause wurde tatsächlich ausgeführt
+ *   OFFSCREEN_RESUMED — Wiedergabe wurde fortgesetzt
  */
 import * as edge from "../engines/edge-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
@@ -48,7 +52,11 @@ const queue = [];
 let currentSource = null; // laufender AudioBufferSourceNode (Web Audio)
 let currentAudio = null; // laufendes HTMLAudioElement (Fallback)
 let playing = false;
-let gen = 0; // Abbruch-Zaehler: STOP und jede neue EDGE_SPEAK erhoehen ihn
+let gen = 0; // Abbruch-Zähler: STOP und jede neue EDGE_SPEAK erhöhen ihn
+
+// Pause-Zustand. pauseRequested=true hält playNext() an, lässt die Queue intakt.
+let pauseRequested = false;
+let pausedAtChunkIndex = 0; // für zukünftige Erweiterungen (Fortsetzung ab Chunk)
 
 let audioCtx = null;
 let webAudioBroken = false; // true, sobald Web Audio einmal scheitert -> Fallback
@@ -102,6 +110,9 @@ function enqueueItem(item) {
 }
 
 async function playNext() {
+	// Pause-Guard: wenn pausiert, Queue intakt lassen und warten.
+	if (pauseRequested) return;
+
 	if (queue.length === 0) {
 		playing = false;
 		currentSource = null;
@@ -231,10 +242,17 @@ function stopAll() {
 }
 
 // ----- Edge-Synthese (WebSocket HIER -> DNR-User-Agent-Regel greift) --------
-async function edgeSpeak(text, voice, rate, myGen) {
+// pitch: Tonhöhe in Halbtönen (-50 bis +50), Default 0.
+// Hinweis: Der Pitch-Wert wird als 4. Parameter an edge.synthesize() übergeben.
+// engines/edge-tts.js muss diesen Parameter in das SSML-prosody-Attribut
+// eintragen (z.B. "+2st" oder "-1st"). Bis das implementiert ist, wird der
+// Wert korrekt weitergeleitet aber noch ignoriert.
+async function edgeSpeak(text, voice, rate, myGen, pitch) {
+	const pitchVal = typeof pitch === "number" ? pitch : 0;
 	diag.log("INFO", "FUNKTION", "offscreen.edgeSpeak:eintritt", {
 		voice,
 		rate,
+		pitch: pitchVal,
 		textLen: (text || "").length,
 	});
 	const chunks = splitIntoChunks(text, 1200);
@@ -242,14 +260,14 @@ async function edgeSpeak(text, voice, rate, myGen) {
 	for (const part of chunks) {
 		let bytes;
 		try {
-			bytes = await edge.synthesize(part, voice, rate);
+			bytes = await edge.synthesize(part, voice, rate, pitchVal);
 		} catch (e) {
 			// Einmal mit frischem Token erneut versuchen.
 			diag.log("WARN", "FEHLER", "offscreen.edgeSpeak:retry", {
 				message: String((e && e.message) || e),
 			});
 			try {
-				bytes = await edge.synthesize(part, voice, rate);
+				bytes = await edge.synthesize(part, voice, rate, pitchVal);
 			} catch (e2) {
 				diag.log("ERROR", "FEHLER", "offscreen.edgeSpeak:fehlgeschlagen", {
 					message: String((e2 && e2.message) || e2),
@@ -288,14 +306,61 @@ chrome.runtime.onMessage.addListener((msg) => {
 			break;
 		case "STOP":
 			gen++;
+			pauseRequested = false; // Pause beim expliziten Stop zurücksetzen
+			pausedAtChunkIndex = 0;
 			stopAll();
 			break;
 		case "EDGE_SPEAK": {
 			gen++;
 			const myGen = gen;
+			pauseRequested = false; // neue Wiedergabe setzt vorherige Pause zurück
+			pausedAtChunkIndex = 0;
 			stopAll();
-			edgeSpeak(msg.text, msg.voice, msg.rate, myGen);
+			edgeSpeak(msg.text, msg.voice, msg.rate, myGen, msg.pitch ?? 0);
 			break;
 		}
+		case "PAUSE":
+			// Wiedergabe pausieren: Queue bleibt intakt, gen wird NICHT erhöht.
+			if (!pauseRequested) {
+				pauseRequested = true;
+				// Laufendes Audio sanft stoppen (Queue-Item bleibt in der Queue,
+				// da es bereits entfernt wurde — aber playNext() wird nicht mehr
+				// aufgerufen, solange pauseRequested=true ist).
+				if (currentSource) {
+					try {
+						currentSource.onended = null;
+						currentSource.stop();
+					} catch (e) {
+						/* egal */
+					}
+					currentSource = null;
+				}
+				if (currentAudio) {
+					try {
+						currentAudio.pause();
+					} catch (e) {
+						/* egal */
+					}
+					// currentAudio nicht auf null setzen, damit RESUME ggf. fortsetzen kann
+				}
+				playing = false;
+				send({ type: "OFFSCREEN_PAUSED" });
+			}
+			break;
+		case "RESUME":
+			// Wiedergabe fortsetzen: pauseRequested zurücksetzen, playNext() aufrufen.
+			if (pauseRequested) {
+				pauseRequested = false;
+				send({ type: "OFFSCREEN_RESUMED" });
+				if (queue.length > 0) {
+					// Es gibt noch Items in der Queue — weiterspielen.
+					send({ type: "OFFSCREEN_STARTED" });
+					playNext();
+				} else {
+					// Queue war leer — Wiedergabe ist abgeschlossen.
+					send({ type: "OFFSCREEN_ENDED" });
+				}
+			}
+			break;
 	}
 });
