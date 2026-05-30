@@ -35,12 +35,14 @@ function Write-Log($msg) {
 }
 
 # --- stdin lesen (JSON vom Hook-Event) ---
+# ROBUST 2026-05-30: Je nach Invokation liefert mal [Console]::In, mal $input den
+# stdin. Empirisch: Claude-Code-Produktion + manche pwsh-Aufrufe -> $input;
+# andere Aufrufer (z.B. Git-Bash-Pipe nach `pwsh -File`) -> [Console]::In.
+# Daher BEIDE versuchen und das nicht-leere Ergebnis nehmen (Defense in Depth).
 $inputJson = ""
-try {
-    $inputJson = $input | Out-String
-} catch {
-    Write-Log "WARN: stdin konnte nicht gelesen werden"
-    exit 0
+try { $inputJson = [Console]::In.ReadToEnd() } catch {}
+if ([string]::IsNullOrWhiteSpace($inputJson)) {
+    try { $inputJson = $input | Out-String } catch {}
 }
 
 if ([string]::IsNullOrWhiteSpace($inputJson)) {
