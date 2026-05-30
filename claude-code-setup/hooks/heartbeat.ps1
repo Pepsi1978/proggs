@@ -65,13 +65,17 @@ function Check-DiskSpace {
         $drive = Get-PSDrive C -ErrorAction Stop
         $usedPct = [math]::Round(($drive.Used / ($drive.Used + $drive.Free)) * 100)
         $freeGB = [math]::Round($drive.Free / 1GB, 1)
-        if ($usedPct -ge 95) {
-            Notify-Critical "Speicherplatz KRITISCH: ${usedPct}% belegt, nur ${freeGB}GB frei!"
-            return @{ status = "CRITICAL"; detail = "${usedPct}% used, ${freeGB}GB free" }
+        # Intelligentere Schwelle (2026-05-30): Prozent allein ist irrefuehrend.
+        # Auf einer 838-GB-Platte sind 97% noch 28 GB freie Luft. CRITICAL nur bei
+        # genuin wenig absolutem Platz (<10 GB — Risiko fuer Android-Builds/AAB),
+        # sonst WARNING bei hoher Belegung. Beendet Dauer-Falschalarm.
+        if ($freeGB -lt 10) {
+            Notify-Critical "Speicherplatz KRITISCH: nur ${freeGB}GB frei (${usedPct}% belegt)!"
+            return @{ status = "CRITICAL"; detail = "${freeGB}GB free (${usedPct}% used)" }
         } elseif ($usedPct -ge 90) {
             return @{ status = "WARNING"; detail = "${usedPct}% used, ${freeGB}GB free" }
         } else {
-            return @{ status = "OK"; detail = "${usedPct}% used" }
+            return @{ status = "OK"; detail = "${usedPct}% used, ${freeGB}GB free" }
         }
     } catch {
         return @{ status = "UNKNOWN"; detail = "Could not read disk usage" }

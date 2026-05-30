@@ -80,24 +80,26 @@ notify_critical() {
 # ─────────────────────────────────────────────────────────────────────
 
 check_disk_space() {
-    local pct
+    local pct free free_kb free_gb
     pct=$(df -h / 2>/dev/null | awk 'NR==2 {gsub(/%/,""); print $5}')
-    if [ -z "$pct" ]; then
+    free=$(df -h / 2>/dev/null | awk 'NR==2 {print $4}')
+    free_kb=$(df -k / 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ -z "$pct" ] || [ -z "$free_kb" ]; then
         echo '"disk_space": {"status": "UNKNOWN", "detail": "Could not read disk usage"}'
         return
     fi
+    free_gb=$((free_kb / 1024 / 1024))
 
-    if [ "$pct" -ge "$DISK_CRITICAL_PCT" ] 2>/dev/null; then
-        local free
-        free=$(df -h / 2>/dev/null | awk 'NR==2 {print $4}')
-        notify_critical "Speicherplatz KRITISCH: ${pct}% belegt, nur ${free} frei!"
-        echo "\"disk_space\": {\"status\": \"CRITICAL\", \"detail\": \"${pct}% used, ${free} free\"}"
+    # Intelligentere Schwelle (2026-05-30): absoluter Platz zaehlt, nicht nur %.
+    # Auf einer grossen Platte sind 97% noch zweistellige GB. CRITICAL nur bei
+    # genuin wenig Platz (<10 GB), sonst WARNING bei hoher Belegung.
+    if [ "$free_gb" -lt 10 ] 2>/dev/null; then
+        notify_critical "Speicherplatz KRITISCH: nur ${free} frei (${pct}% belegt)!"
+        echo "\"disk_space\": {\"status\": \"CRITICAL\", \"detail\": \"${free} free (${pct}% used)\"}"
     elif [ "$pct" -ge "$DISK_WARNING_PCT" ] 2>/dev/null; then
-        local free
-        free=$(df -h / 2>/dev/null | awk 'NR==2 {print $4}')
         echo "\"disk_space\": {\"status\": \"WARNING\", \"detail\": \"${pct}% used, ${free} free\"}"
     else
-        echo "\"disk_space\": {\"status\": \"OK\", \"detail\": \"${pct}% used\"}"
+        echo "\"disk_space\": {\"status\": \"OK\", \"detail\": \"${pct}% used, ${free} free\"}"
     fi
 }
 
