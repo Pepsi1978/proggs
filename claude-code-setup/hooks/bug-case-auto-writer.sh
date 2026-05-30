@@ -186,7 +186,7 @@ with open(path, 'a', encoding='utf-8') as f:
         # Claude informieren
         python3 -c "
 import json
-out = {'hookSpecificOutput': {'hookEventName': 'PostToolUseFailure', 'additionalContext': 'Bug-Case automatisch erfasst (Tool: $TOOL_NAME). Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld auto_captured: true suchen).'}}
+out = {'hookSpecificOutput': {'hookEventName': 'PostToolUseFailure', 'additionalContext': 'Bug-Case automatisch erfasst (Tool: $TOOL_NAME). Wiederhole den fehlgeschlagenen Aufruf nicht unveraendert, analysiere erst kurz die Ursache. Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld auto_captured: true suchen).'}}
 print(json.dumps(out))
 " 2>/dev/null
     else

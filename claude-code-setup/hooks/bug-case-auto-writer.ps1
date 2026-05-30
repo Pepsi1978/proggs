@@ -202,6 +202,7 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
 
         # Claude informieren dass ein neuer Fall erfasst wurde
         $infoText = "Bug-Case automatisch erfasst (Tool: $toolName). "
+        $infoText += "Wiederhole den fehlgeschlagenen Aufruf nicht unveraendert, analysiere erst kurz die Ursache. "
         $infoText += "Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld 'auto_captured: true' suchen)."
 
         $output = @{

@@ -294,15 +294,6 @@
 						"timeout": 10
 					}
 				]
-			},
-			{
-				"hooks": [
-					{
-						"type": "prompt",
-						"prompt": "A tool call just failed. The bug-case-auto-writer hook has already logged this error and checked for known fixes.\n\n1. If the hook injected a KNOWN FIX above: Apply that fix FIRST before trying anything else.\n2. If the hook noted 'auto-captured': After fixing, update the auto-captured entry in bug-cases.jsonl with root_cause and fix fields.\n3. Briefly analyze the error (1-2 sentences).\n4. Do NOT retry the exact same command unchanged.",
-						"timeout": 15
-					}
-				]
 			}
 		],
 		"StopFailure": [
