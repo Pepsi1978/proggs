@@ -499,12 +499,12 @@
 		startParagraphQueue(paras);
 	}
 
-	// Sammelt alle Absaetze, die die aktuelle Markierung beruehrt — fuer das
-	// absatzweise Vorlesen einer Mehrfach-Markierung. Jeder Absatz wird bereinigt
-	// (ohne Quellenangaben/Fussnoten). Liegt die Markierung nur in EINEM Absatz,
-	// kommt hoechstens ein Eintrag zurueck (-> der Aufrufer liest dann die reine
-	// Auswahl statt des ganzen Absatzes).
-	function collectParagraphsInSelection() {
+	// Liefert NUR den markierten Text, in Absaetze aufgeteilt und von Quellen/
+	// Fussnoten bereinigt. Nutzt range.cloneContents(): das Fragment enthaelt
+	// EXAKT die Markierung — bei einer Teil-Markierung also nur den markierten
+	// Teil des Absatzes (kein Vorlesen von Text VOR der Markierung). Geht die
+	// Markierung ueber mehrere Absaetze, kommt ein Eintrag pro Absatz zurueck.
+	function paragraphsFromSelection() {
 		let sel;
 		try {
 			sel = window.getSelection();
@@ -519,27 +519,38 @@
 			return [];
 		}
 		if (range.collapsed) return [];
-		const candidates = Array.from(
-			document.querySelectorAll(
-				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
-			),
-		);
+
+		let frag;
+		try {
+			frag = range.cloneContents(); // exakt der markierte Inhalt
+		} catch (e) {
+			return [];
+		}
+		// Quellen/Fussnoten/Diagramme aus dem markierten Fragment werfen.
+		stripRefs(frag);
+
+		const blocks = frag.querySelectorAll
+			? frag.querySelectorAll(
+					"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
+				)
+			: [];
 		const result = [];
-		for (const el of candidates) {
-			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
-			if (el.querySelector("p, li, blockquote")) continue;
-			let intersects = false;
-			try {
-				intersects = range.intersectsNode(el);
-			} catch (e) {
-				intersects = false;
-			}
-			if (!intersects) continue;
-			if (!isVisible(el)) continue;
-			const text = cleanParagraphText(el);
-			if (text && text.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(text)) {
-				result.push(text);
-			}
+		if (!blocks || blocks.length === 0) {
+			// Markierung liegt innerhalb EINES Absatzes -> ein Eintrag.
+			const t = finalizeText(frag.textContent || "");
+			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
+			return result;
+		}
+		for (const b of blocks) {
+			// Verschachtelte Bloecke vermeiden (z.B. li das ein p enthaelt).
+			if (b.querySelector("p, li, blockquote")) continue;
+			const t = finalizeText(b.textContent || "");
+			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
+		}
+		// Falls nur verschachtelte Bloecke uebrig blieben: ganzen Fragment-Text.
+		if (result.length === 0) {
+			const t = finalizeText(frag.textContent || "");
+			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) result.push(t);
 		}
 		return result;
 	}
@@ -699,6 +710,59 @@
 		}
 	}
 
+	// Entfernt Quellenangaben, Fussnoten-Marker, Verweise, Diagramme und Code aus
+	// einem (geklonten) Element/Fragment — IN PLACE. Wird von cleanParagraphText
+	// und vom Markierungs-Pfad (cloneContents) gemeinsam genutzt.
+	function stripRefs(root) {
+		// 1) Bekannte Quellen-/Fussnoten-/Nicht-Text-Container hart entfernen.
+		try {
+			root
+				.querySelectorAll(
+					"sup, sub.reference, .reference, .references, .footnote, " +
+						".footnotes, .footnote-ref, .citation, .citations, .cite, cite, " +
+						".mw-editsection, .reflist, .mw-references-wrap, .bibliography, " +
+						"figure, table, svg, canvas, math, code, pre, " +
+						'[role="doc-noteref"], [role="doc-biblioref"], ' +
+						'[role="doc-footnote"], [role="doc-endnotes"], ' +
+						'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"]',
+				)
+				.forEach((n) => n.remove());
+		} catch (e) {
+			/* einzelne Selektoren koennen in Fragmenten fehlschlagen — egal */
+		}
+		// 2) Quellen-Chips: kurze Inline-Links/Buttons (wie "oreilly", "Claude",
+		//    "[1]", "(2024)") sind fast immer Verweise, kein Lesetext. Sie haben
+		//    sehr wenig Text -> entfernen. Laengere Link-Texte (Satzteile) bleiben.
+		try {
+			root
+				.querySelectorAll('a, button, [role="button"], [role="link"]')
+				.forEach((n) => {
+					const txt = (n.textContent || "").trim();
+					const words = txt.split(/\s+/).filter(Boolean);
+					// <= 3 Woerter ODER <= 25 Zeichen ODER nur Zahlen/Klammern = Quelle.
+					if (
+						words.length <= 3 ||
+						txt.length <= 25 ||
+						/^[\s\d.,;:()\[\]–-]+$/.test(txt)
+					) {
+						n.remove();
+					}
+				});
+		} catch (e) {
+			/* egal */
+		}
+	}
+
+	// Macht aus einem (gefilterten) Roh-Text einen sauberen Vorlese-String.
+	function finalizeText(raw) {
+		return String(raw || "")
+			.replace(/\s+/g, " ")
+			.replace(/\[\s*\d+\s*\]/g, "") // [1], [12]
+			.replace(/\[\s*[a-z]\s*\]/gi, "") // [a]
+			.replace(/\s{2,}/g, " ")
+			.trim();
+	}
+
 	// Liefert den vorlesbaren Text eines Block-Elements, OHNE Fussnoten-Marker,
 	// Quellen-Verweise, Diagramme, Code etc. (auf einer Klon-Kopie gefiltert).
 	function cleanParagraphText(el) {
@@ -706,28 +770,10 @@
 		try {
 			clone = el.cloneNode(true);
 		} catch (e) {
-			return (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+			return finalizeText(el.innerText || el.textContent || "");
 		}
-		// Fussnoten-Marker, Quellenverweise, Diagramme und Code aus dem Klon werfen.
-		clone
-			.querySelectorAll(
-				"sup, sub.reference, .reference, .footnote, .footnote-ref, " +
-					".citation, .cite, cite, .mw-editsection, " +
-					"figure, table, svg, canvas, math, code, pre, " +
-					'[role="doc-noteref"], [role="doc-biblioref"], ' +
-					'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"]',
-			)
-			.forEach((n) => n.remove());
-		let t = (clone.innerText || clone.textContent || "")
-			.replace(/\s+/g, " ")
-			.trim();
-		// Haengende Fussnoten-Marker wie [1], [12], [a] entfernen.
-		t = t
-			.replace(/\[\s*\d+\s*\]/g, "")
-			.replace(/\[\s*[a-z]\s*\]/gi, "")
-			.replace(/\s{2,}/g, " ")
-			.trim();
-		return t;
+		stripRefs(clone);
+		return finalizeText(clone.innerText || clone.textContent || "");
 	}
 
 	// ----- Pause-Button Klick --------------------------------------------------
@@ -768,12 +814,25 @@
 			return;
 		}
 
-		// Mehrere Absaetze markiert? -> Absatz fuer Absatz vorlesen. Jeder Absatz
-		// wird einzeln synthetisiert (erst wenn er dran ist), daher kein Abbruch
-		// bei sehr viel markiertem Text. Quellenangaben/Fussnoten werden pro
-		// Absatz herausgefiltert.
-		const selParas = collectParagraphsInSelection();
-		if (selParas.length > 1) {
+		// IMMER nur den MARKIERTEN Text vorlesen — in Absaetze aufgeteilt und von
+		// Quellenangaben/Fussnoten bereinigt. cloneContents() respektiert die
+		// Markierungsgrenzen, daher wird NICHTS vor dem ersten markierten Wort
+		// gelesen. Jeder Absatz wird einzeln synthetisiert (erst wenn er dran ist)
+		// -> kein Abbruch bei sehr viel markiertem Text.
+		const selParas = paragraphsFromSelection();
+		if (selParas.length) {
+			// Google-Key-Pruefung vorab (speakNextAuto bricht sonst pro Absatz ab).
+			const settings = await window.VOSettings.load();
+			if (
+				settings.activeEngine === "google" &&
+				!(settings.google.apiKey || "").trim()
+			) {
+				showHint(
+					"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
+					true,
+				);
+				return;
+			}
 			if (window.VODiag)
 				window.VODiag.log("INFO", "NUTZUNG", "speaker_klick:absatz_queue", {
 					absaetze: selParas.length,
@@ -782,45 +841,26 @@
 			return;
 		}
 
+		// Fallback (sollte selten greifen): reiner markierter Text, gereinigt.
 		const settings = await window.VOSettings.load();
 		const engine = settings.activeEngine;
 		const cfg = settings[engine];
 		if (engine === "google" && !(settings.google.apiKey || "").trim()) {
-			if (window.VODiag)
-				window.VODiag.log(
-					"WARN",
-					"UI_EREIGNIS",
-					"speaker_klick:google_kein_key",
-					{},
-				);
 			showHint(
 				"Google braucht einen API-Key — bitte im Zahnrad eintragen.",
 				true,
 			);
 			return;
 		}
-		if (window.VODiag)
-			window.VODiag.log("INFO", "UI_EREIGNIS", "speaker_klick:start", {
-				engine,
-				voice: cfg.voice,
-				rate: cfg.rate,
-				textLen: text.length,
-			});
 		setState("loading");
-		// Pitch nur für Edge relevant
 		const pitch =
 			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
 				? settings.edge.pitch
 				: 0;
-		// Auch bei einer einzelnen Markierung haengende Fussnoten-Zahlen [1] entfernen.
-		const cleanedText = text
-			.replace(/\[\s*\d+\s*\]/g, "")
-			.replace(/\s{2,}/g, " ")
-			.trim();
 		sendMessage({
 			type: MSG.SPEAK,
 			engine,
-			text: cleanedText || text,
+			text: finalizeText(text),
 			voice: cfg.voice,
 			rate: cfg.rate,
 			pitch,
