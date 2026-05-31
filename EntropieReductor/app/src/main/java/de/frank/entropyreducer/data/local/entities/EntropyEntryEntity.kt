@@ -83,4 +83,12 @@ data class EntropyEntryEntity(
      * auf mindestens 95 angehoben (Frank's Vorgabe: "wenn nur noch ein Tag, fast 100%").
      */
     val dueAtMs: Long? = null,
+    /**
+     * Frank-Wunsch 2026-05-31: manuell per Schieberegler gesetzte Prioritaet
+     * (0..100, in 5er-Schritten). null = KI bestimmt die Prioritaet (priorityScore).
+     * Wenn gesetzt, hat dieser Wert IMMER Vorrang vor der KI-Prioritaet — auch bei
+     * spaeteren Rescores. Die Aufgaben-Kachel faerbt sich nach der effektiven
+     * Prioritaet (manualPriorityScore ?: priorityScore).
+     */
+    val manualPriorityScore: Double? = null,
 )

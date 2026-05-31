@@ -847,6 +847,24 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-31: setzt die manuelle Prioritaet einer Aufgabe (0..100,
+     * vom Schieberegler in 5er-Schritten). Hat Vorrang vor der KI-Prioritaet und
+     * bleibt auch bei spaeteren Rescores bestehen. Die Kachel faerbt sich sofort
+     * nach dem neuen Wert, da die Liste reaktiv aus der DB liest.
+     */
+    fun setManualPriority(entryId: String, score: Double) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            entries.update(
+                entry.copy(
+                    manualPriorityScore = score.coerceIn(0.0, 100.0),
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+        }
+    }
+
     fun onMicClick() {
         val app = getApplication<Application>()
         when (uiOnlyFlow.value.micState) {

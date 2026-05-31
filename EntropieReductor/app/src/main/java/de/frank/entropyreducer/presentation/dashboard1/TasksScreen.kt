@@ -567,11 +567,18 @@ fun TasksScreen(
                                             }
                                         val onPickBucket =
                                             remember(entry.id) { { bucketPickerEntryId = entry.id } }
+                                        val onSetPrio =
+                                            remember(entry.id) {
+                                                { score: Double ->
+                                                    vm.setManualPriority(entry.id, score)
+                                                }
+                                            }
                                         EntropyEntryCard(
                                             entry = entry,
                                             onClick = onClick,
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
+                                            onSetManualPriority = onSetPrio,
                                         )
                                     }
                                 } else if (
@@ -1518,6 +1525,7 @@ private fun EntropyEntryCard(
     onResolve: () -> Unit = {},
     onSeverityHint: () -> Unit = {},
     onPickBucket: () -> Unit = {},
+    onSetManualPriority: (Double) -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
@@ -1527,11 +1535,19 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
+    // Frank-Wunsch 2026-05-31: manuelle Prioritaet per Schieberegler. Solange der
+    // Regler aktiv ist, faerbt sich die Kachel LIVE nach dem aktuellen Reglerwert.
+    // Effektive Prioritaet = Live-Regler ?: manueller Wert ?: KI-Wert.
+    var sliderActive by remember(entry.id) { mutableStateOf(false) }
+    var liveSlider by remember(entry.id) { mutableStateOf<Float?>(null) }
+    val effectivePriority =
+        liveSlider?.toDouble() ?: entry.manualPriorityScore ?: entry.priorityScore
+
     // Frank-Wunsch 2026-05-31: Karten-Hintergrund ist ein kraeftiger horizontaler
     // Verlauf in der Prioritaetsfarbe — links dezent, rechts die volle Farbe.
     // Die Farbe allein (Dunkelrot=hoch … Hellgruen=niedrig, kein Blau) macht die
     // Prioritaet sofort sichtbar; eine Prio-Zahl ist nicht mehr noetig.
-    val ramp = priorityRampColor(entry.priorityScore)
+    val ramp = priorityRampColor(effectivePriority)
     val priorityBrush =
         remember(ramp) {
             Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp))
@@ -1588,17 +1604,76 @@ private fun EntropyEntryCard(
                 )
             }
 
-            // Untere Zeile: nur die KI/manuell-Pille (rechts) — alles andere entfernt.
+            // Untere Zeile: Priorität-Perle + KI/manuell-Perle (rechts).
             Spacer(Modifier.height(8.dp))
+            val prioLabel =
+                when {
+                    liveSlider != null -> "Priorität ${Math.round(liveSlider!!)}"
+                    entry.manualPriorityScore != null ->
+                        "Priorität ${entry.manualPriorityScore!!.toInt()}"
+                    else -> "Priorität KI"
+                }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
+                PriorityPearl(label = prioLabel, onClick = { sliderActive = !sliderActive })
+                Spacer(Modifier.width(8.dp))
                 BucketPickerButton(
                     isManual = entry.manualBucket != null,
                     bucket = entry.timeBucket,
                     onClick = onPickBucket,
                 )
             }
+            // Schieberegler — nur wenn die Priorität-Perle angetippt wurde. In 5%-
+            // Schritten (steps=19 → 0,5,…,100). Beim Schieben aendert sich Kachel-
+            // Farbe + Wert live; beim Loslassen wird gespeichert und der Regler
+            // klappt wieder zu.
+            if (sliderActive) {
+                Spacer(Modifier.height(8.dp))
+                val sliderPos =
+                    liveSlider
+                        ?: (entry.manualPriorityScore ?: entry.priorityScore).toFloat()
+                androidx.compose.material3.Slider(
+                    value = sliderPos.coerceIn(0f, 100f),
+                    onValueChange = { liveSlider = it },
+                    onValueChangeFinished = {
+                        liveSlider?.let { onSetManualPriority(it.toDouble()) }
+                        sliderActive = false
+                    },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                    colors =
+                        androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = ramp,
+                            activeTrackColor = ramp,
+                        ),
+                )
+            }
         }
+    }
+}
+
+/**
+ * Kleine Perle (gleicher Stil wie die KI/manuell-Perle) die die Prioritaet zeigt:
+ * "Priorität KI" wenn die KI bestimmt, sonst "Priorität <Wert>" bei manuellem Wert.
+ * Klick oeffnet den Schieberegler. Die Perle selbst aendert ihre Farbe NICHT —
+ * nur die Kachel dahinter faerbt sich (Frank-Wunsch 2026-05-31).
+ */
+@Composable
+private fun PriorityPearl(label: String, onClick: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    val pillShape = remember { RoundedCornerShape(50) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier.background(cosmos.glassBg, pillShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
     }
 }
 

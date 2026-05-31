@@ -418,6 +418,11 @@ data class BackupEntry(
      * Frist. Beeinflusst Prio-Berechnung — siehe ProcessEntryUseCase.
      */
     val dueAtMs: Long? = null,
+    /**
+     * Frank-Wunsch 2026-05-31: manuell gesetzte Prioritaet (0..100). null = KI.
+     * Default null damit alte Backups weiter die KI-Prioritaet nutzen.
+     */
+    val manualPriorityScore: Double? = null,
 )
 
 @Serializable
@@ -523,6 +528,7 @@ fun EntropyEntryEntity.toBackup(): BackupEntry =
         manualBucketSetAt = manualBucketSetAt,
         durationManuallySet = durationManuallySet,
         dueAtMs = dueAtMs,
+        manualPriorityScore = manualPriorityScore,
     )
 
 fun InsightEntity.toBackup(): BackupInsight =
@@ -753,6 +759,7 @@ fun BackupEntry.toEntity(): EntropyEntryEntity =
         manualBucketSetAt = manualBucketSetAt,
         durationManuallySet = durationManuallySet,
         dueAtMs = dueAtMs,
+        manualPriorityScore = manualPriorityScore?.coerceIn(0.0, 100.0),
     )
 
 fun BackupInsight.toEntity(): InsightEntity =
