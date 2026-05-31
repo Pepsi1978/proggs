@@ -46,6 +46,13 @@ fun GlassCard(
     contentPadding: Dp = 16.dp,
     tintColor: Color? = null,
     /**
+     * Frank-Wunsch 2026-05-31: optionaler, fertig konstruierter Farbverlauf als
+     * Toenungs-Overlay. Hat Vorrang vor `tintColor`. Wird von der Aufgaben-Kachel
+     * genutzt, um einen echten Links→Rechts-Verlauf (links dezent, rechts volle
+     * Prioritaetsfarbe) zu zeichnen statt der Standard-Diagonal-Toenung.
+     */
+    tintBrush: Brush? = null,
+    /**
      * Frank-Wunsch 2026-05-18: optionale Hintergrundfarbe pro Karte. Wenn
      * gesetzt, ersetzt sie die Standard-Hintergrundfarbe (`cosmos.glassBg`)
      * vollstaendig — anders als `tintColor`, das nur einen Gradient-Overlay
@@ -68,7 +75,7 @@ fun GlassCard(
     // Gradient-Achse: bottom-left (transparent) → top-right (volle Toenung).
     // Compose mappt Float.POSITIVE_INFINITY auf die jeweilige Box-Dimension, also
     // (0f, ∞) = bottom-left und (∞, 0f) = top-right.
-    val tintBrush = remember(tintColor) {
+    val diagonalTintBrush = remember(tintColor) {
         tintColor?.let { color ->
             Brush.linearGradient(
                 colors = listOf(Color.Transparent, color),
@@ -77,7 +84,10 @@ fun GlassCard(
             )
         }
     }
-    val tintModifier = if (tintBrush != null) Modifier.background(tintBrush, shape) else Modifier
+    // tintBrush (explizit uebergeben) hat Vorrang vor der Standard-Diagonal-Toenung.
+    val effectiveTintBrush = tintBrush ?: diagonalTintBrush
+    val tintModifier =
+        if (effectiveTintBrush != null) Modifier.background(effectiveTintBrush, shape) else Modifier
     Box(
         modifier = modifier
             .background(baseBackground, shape)

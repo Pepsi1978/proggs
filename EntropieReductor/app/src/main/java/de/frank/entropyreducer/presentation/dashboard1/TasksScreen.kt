@@ -85,10 +85,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -1468,6 +1470,21 @@ private fun priorityCardTint(score: Double, isDark: Boolean): Color {
     return base.copy(alpha = if (isDark) 0.14f else 0.18f)
 }
 
+/**
+ * Frank-Wunsch 2026-05-31: 5-Stufen-Farbrampe fuer den Karten-Hintergrund.
+ * Hohe Prioritaet (100) = ganz Dunkelrot, runter ueber Orange/Gelb bis
+ * Hellgruen bei niedriger Prioritaet (0). KEIN Blau mehr — die Farbe allein
+ * macht die Prioritaet sofort sichtbar, ohne dass eine Zahl noetig ist.
+ */
+private fun priorityRampColor(score: Double): Color =
+    when {
+        score >= 80.0 -> Color(0xFFB91C1C) // Dunkelrot — hoechste Prioritaet
+        score >= 60.0 -> Color(0xFFF97316) // Orange
+        score >= 40.0 -> Color(0xFFFBBF24) // Gelb
+        score >= 20.0 -> Color(0xFFA3E635) // Gelbgruen
+        else -> Color(0xFF86EFAC) // Hellgruen — niedrigste Prioritaet
+    }
+
 @Composable
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
@@ -1477,7 +1494,6 @@ private fun EntropyEntryCard(
     onPickBucket: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
-    val catColor = entry.category.color()
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
     // PERFORMANCE 2026-05-09: graphicsLayer statt Modifier.alpha — bei alpha = 1f
     // wird der Layer komplett uebersprungen (compositingStrategy = ModulateAlpha
@@ -1485,121 +1501,71 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
-    // Frank-Wunsch 2026-05-22 (vierte Iteration): Karten-Hintergrund folgt der
-    // priorityScore-Farbe statt des Time-Buckets. So sieht Frank den Status der
-    // Aufgabe direkt visuell, ohne die Prio-Zahl rechts ablesen zu muessen.
-    val priorityTint = priorityCardTint(entry.priorityScore, cosmos.isDark)
+    // Frank-Wunsch 2026-05-31: Karten-Hintergrund ist ein kraeftiger horizontaler
+    // Verlauf in der Prioritaetsfarbe — links dezent, rechts die volle Farbe.
+    // Die Farbe allein (Dunkelrot=hoch … Hellgruen=niedrig, kein Blau) macht die
+    // Prioritaet sofort sichtbar; eine Prio-Zahl ist nicht mehr noetig.
+    val ramp = priorityRampColor(entry.priorityScore)
+    val priorityBrush =
+        remember(ramp) {
+            Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp))
+        }
     GlassCard(
         modifier =
             Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
                 alpha = cardAlpha
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
-        tintColor = priorityTint,
+        tintBrush = priorityBrush,
     ) {
         Column {
-            // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
-            Row(verticalAlignment = Alignment.Top) {
-                CategoryIconCircle(category = entry.category, tint = catColor)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        EntropyCategoryPill(entry.category)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = entry.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = entry.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = cosmos.textSecondary,
-                        maxLines = 2,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "${entry.priorityScore.toInt()}",
-                        color = priorityColor(entry.priorityScore),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = "Prio",
-                        color = cosmos.textSecondary,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // Checkbox-Stil: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn
-                    // erledigt.
-                    // Tap toggelt — offen → erledigt (REDUZIERT), erledigt → wieder OFFEN.
-                    val checkBg =
-                        if (isResolved) CosmosColors.Success.copy(alpha = 0.85f)
-                        else androidx.compose.ui.graphics.Color.Transparent
-                    val checkBorder = if (isResolved) CosmosColors.Success else cosmos.glassBorder
-                    Box(
-                        modifier =
-                            Modifier.size(28.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(checkBg)
-                                .border(
-                                    androidx.compose.foundation.BorderStroke(2.dp, checkBorder),
-                                    RoundedCornerShape(8.dp),
-                                )
-                                .clickable(onClick = onResolve),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (isResolved) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = "Erledigt",
-                                tint = androidx.compose.ui.graphics.Color.White,
-                                modifier = Modifier.size(18.dp),
+            // Frank-Wunsch 2026-05-31: radikal vereinfacht — ganz vorne das Haekchen
+            // (hakt direkt ab, kein Dialog), dann der Titel in EINER Zeile (von der KI
+            // auf max. 3 Woerter zusammengefasst). Keine Beschreibung, keine Prio-Zahl,
+            // kein Schweregrad-Balken, keine Tags/Bereiche, kein Empfohlen/Zeitaufwand.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Haekchen: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn erledigt.
+                val checkBg =
+                    if (isResolved) CosmosColors.Success.copy(alpha = 0.85f)
+                    else androidx.compose.ui.graphics.Color.Transparent
+                val checkBorder = if (isResolved) CosmosColors.Success else cosmos.glassBorder
+                Box(
+                    modifier =
+                        Modifier.size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(checkBg)
+                            .border(
+                                androidx.compose.foundation.BorderStroke(2.dp, checkBorder),
+                                RoundedCornerShape(8.dp),
                             )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Severity-Bar im Regenbogen-Stil (Soll-Design): 5 Segmente in Status-Farben,
-            // gefuellt nach severity (1-10 -> 0..1)
-            SeverityRainbowBar(severity = entry.severity)
-
-            // Tag-Pills
-            // PERFORMANCE 2026-05-09: tagsToShow + pillShape mit remember cachen.
-            // entry.tags.take(3) allociert sonst pro Recompose eine neue List.
-            // clip() entfernt — background(color, shape) zeichnet die Pille direkt
-            // ohne separaten GraphicsLayer, kein Overflow weil Tag-Strings kurz sind.
-            val tagsToShow = remember(entry.id, entry.tags) { entry.tags.take(3) }
-            if (tagsToShow.isNotEmpty()) {
-                val pillShape = remember { RoundedCornerShape(50) }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tagsToShow.forEach { tag ->
-                        Text(
-                            text = tag,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                            modifier =
-                                Modifier.background(cosmos.glassBg, pillShape)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            .clickable(onClick = onResolve),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isResolved) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "Erledigt",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
             }
 
-            // Meta-Row unten: Bucket-Hinweis | Empfohlen-Badge | Wearable-Badge | Picker-Button
-            Spacer(Modifier.height(10.dp))
+            // Untere Zeile: nur die KI/manuell-Pille (rechts) — alles andere entfernt.
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                EntryMetaRow(entry = entry, modifier = Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 BucketPickerButton(
                     isManual = entry.manualBucket != null,
                     bucket = entry.timeBucket,
