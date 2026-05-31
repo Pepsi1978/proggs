@@ -1,7 +1,6 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
-# Zweizeilig (Frank 2026-05-25):
-#   Zeile 1: Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
-#   Zeile 2: Ordner | Zeit
+# Einzeilig (Frank 2026-05-31, frueher zweizeilig):
+#   Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context | Ordner | Zeit
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -159,35 +158,14 @@ try {
     # Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
     # naechsten Cleanup geloescht).
     $accountFp = 'default'
-    # PRIMAERQUELLE: accountUuid aus ~/.claude.json. Existiert auf macOS UND Windows.
-    # Frank-Bug 2026-05-28: Auf macOS fehlt ~/.claude/.credentials.json (Keychain) -> der
-    # alte cred_file-Hash blieb "default" -> Konto-Wechsel-Schutz griff nicht -> die Statusline
-    # zeigte 5h/7d-Werte des ALTEN Kontos. accountUuid wechselt zuverlaessig bei Account-Wechsel.
-    # Gleicher Algorithmus wie statusline.sh: SHA256(uuid-string), erste 16 Hex-Zeichen, lowercase.
-    $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
-    if (Test-Path $claudeJson) {
+    $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
+    if (Test-Path $credFile) {
         try {
-            $cj = Get-Content -Raw -Encoding UTF8 -Path $claudeJson | ConvertFrom-Json
-            $uuid = [string]$cj.oauthAccount.accountUuid
-            if ($uuid) {
-                $sha = [System.Security.Cryptography.SHA256]::Create()
-                $bytes = [System.Text.Encoding]::UTF8.GetBytes($uuid)
-                $hex = (($sha.ComputeHash($bytes)) | ForEach-Object { $_.ToString('x2') }) -join ''
-                if ($hex.Length -ge 16) { $accountFp = $hex.Substring(0, 16) }
+            $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
+            if ($hashObj -and $hashObj.Hash) {
+                $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
             }
-        } catch { }
-    }
-    # FALLBACK: Hash der credentials.json (aeltere Setups / Windows ohne ~/.claude.json).
-    if ($accountFp -eq 'default') {
-        $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
-        if (Test-Path $credFile) {
-            try {
-                $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
-                if ($hashObj -and $hashObj.Hash) {
-                    $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
-                }
-            } catch { $accountFp = 'default' }
-        }
+        } catch { $accountFp = 'default' }
     }
 
     # 1. SCHREIBEN — nur wenn alle Werte plausibel sind (Schicht 1: Praeventiv).
@@ -335,13 +313,10 @@ try {
         $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $freshResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            # 7d-Verbrauch: hoechster Wert NUR im aktuellen 7d-Fenster (Fix B, 2026-05-28,
-            # analog zum 5h-Fenster-Filter). Ohne den Filter gewann ein veralteter Wert aus
-            # einem alten 7d-Fenster den MAX (z.B. nach einem 7d-Reset). Reset-Fenster aus der
-            # frischesten Session (accountweite Konstante).
+            # 7d-Verbrauch unabhaengig: hoechster Wert ueber alle Sessions (validiert, zaehlt hoch)
+            $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+            # 7d-Reset: aus der frischesten Session (accountweite Konstante, nicht max)
             $freshWeekResets = [long]$freshest.seven_d_resets
-            $sevenCandidates = $allEntries | Where-Object { ([long]$_.seven_d_resets) -eq $freshWeekResets }
-            $freshSeven = ($sevenCandidates | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h
@@ -625,14 +600,12 @@ if ($ctx_used -ne $null) {
     $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
 }
 
-# Zeilenumbruch -> Zeile 2 (reines LF "`n", kein CRLF; jeder Newline = eigene Statusline-Zeile)
-$out += "`n"
+# ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
+# Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.
 
-# ===== ZEILE 2: Ordner | Uhrzeit (Frank 2026-05-25) =====
-
-# 8. Ordner (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
+# 8. Ordner (mit fuehrendem Trenner, da jetzt hinter dem Kontext in derselben Zeile)
 if ($cwd) {
-    $out += "${P}${ICON_DIR} ${cwd}${R}"
+    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 }
 
 # 9. Uhrzeit

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
-# Zweizeilig (Frank 2026-05-25):
-#   Zeile 1: Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context
-#   Zeile 2: Ordner | Zeit
+# Einzeilig (Frank 2026-05-31, frueher zweizeilig):
+#   Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context | Ordner | Zeit
 
 input=$(cat)
 
@@ -42,10 +41,7 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-# Grossschreibung portabel: macOS-System-bash ist 3.2.57 und kennt ${var^^} (bash 4.0) NICHT
-# (sonst "bad substitution" -> effort_upper leer -> Effort-Text fehlt in der Leiste).
-# tr laeuft auf bash 3.2 (macOS) und Git-Bash 5.x (Windows) gleichermassen.
-effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
+effort_upper="${effort^^}"
 
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
 model="${model/ context)/)}"
@@ -111,8 +107,7 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-# date statt printf '%(%s)T': Letzteres braucht bash 4.2, macOS-System-bash ist 3.2.57.
-now_ts=$(date +%s)
+printf -v now_ts '%(%s)T' -1
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -126,34 +121,16 @@ now_ts=$(date +%s)
 # naechsten Cleanup geloescht). Wenn kein sha256sum verfuegbar oder Credentials
 # fehlen: Fingerprint = "default" (Verhalten wie vorher, kein Regression).
 account_fp="default"
-# Fingerprint-Berechnung mit kleinem Helfer (sha256sum Linux/Git-Bash ODER shasum -a 256 macOS).
-_fp_hash() {
+cred_file="$HOME/.claude/.credentials.json"
+if [ -f "$cred_file" ]; then
+    # Plattformuebergreifend: sha256sum (Linux/Git-Bash) ODER shasum -a 256 (macOS).
+    # Ohne Fallback wuerde der Fingerprint auf macOS immer "default" sein (Frank 2026-05-24).
     if command -v sha256sum >/dev/null 2>&1; then
-        printf '%s' "$1" | sha256sum 2>/dev/null | cut -c1-16
+        account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
     elif command -v shasum >/dev/null 2>&1; then
-        printf '%s' "$1" | shasum -a 256 2>/dev/null | cut -c1-16
+        account_fp=$(shasum -a 256 "$cred_file" 2>/dev/null | cut -c1-16)
     fi
-}
-# PRIMAERQUELLE: accountUuid aus ~/.claude.json. Existiert auf macOS UND Windows.
-# Frank-Bug 2026-05-28: Auf macOS gibt es KEINE ~/.claude/.credentials.json (Credentials
-# liegen im Keychain) -> der alte cred_file-Hash blieb immer "default" -> der Konto-Wechsel-
-# Schutz griff nicht -> die Statusline zeigte 5h/7d-Werte des ALTEN Kontos (alte State-Files
-# mit hoeheren Werten gewannen den MAX-Pass). accountUuid wechselt zuverlaessig bei Account-Wechsel.
-claude_json="$HOME/.claude.json"
-if [ -f "$claude_json" ] && command -v jq >/dev/null 2>&1; then
-    account_uuid=$(jq -r '.oauthAccount.accountUuid // ""' "$claude_json" 2>/dev/null)
-    if [ -n "$account_uuid" ] && [ "$account_uuid" != "null" ]; then
-        account_fp=$(_fp_hash "$account_uuid")
-        [ -z "$account_fp" ] && account_fp="default"
-    fi
-fi
-# FALLBACK: Hash der credentials.json (aeltere Setups / Windows ohne ~/.claude.json).
-if [ "$account_fp" = "default" ]; then
-    cred_file="$HOME/.claude/.credentials.json"
-    if [ -f "$cred_file" ]; then
-        cred_hash=$(_fp_hash "$(cat "$cred_file" 2>/dev/null)")
-        [ -n "$cred_hash" ] && account_fp="$cred_hash"
-    fi
+    [ -z "$account_fp" ] && account_fp="default"
 fi
 
 # Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
@@ -289,8 +266,8 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         ($valid | max_by(.ts_seen // 0)) as $freshest |
         ($freshest.five_h_resets // 0) as $freshR |
         ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
+        ($valid | map(.seven_d // 0) | max) as $bestS |
         ($freshest.seven_d_resets // 0) as $maxSR |
-        ($valid | map(select((.seven_d_resets // 0) == $maxSR)) | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
@@ -436,8 +413,8 @@ if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Uhrzeit — date statt printf '%(%H:%M)T' (bash 4.2 noetig, macOS-bash ist 3.2.57)
-time=$(date +%H:%M)
+# Uhrzeit
+printf -v time '%(%H:%M)T' -1
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
@@ -634,13 +611,11 @@ if [ -n "$ctx_used" ]; then
     printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
 fi
 
-# Zeilenumbruch -> Zeile 2 (jedes echo erzeugt eine eigene Statusline-Zeile, siehe Claude-Code-Doku)
-echo
+# ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
+# Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.
 
-# ===== ZEILE 2: Ordner | Uhrzeit (Frank 2026-05-25) =====
-
-# 8. Ordner (erstes Element von Zeile 2 — KEIN fuehrender Trenner)
-[ -n "$cwd" ] && printf "${P}${ICON_DIR} ${cwd}${R}"
+# 8. Ordner (mit fuehrendem Trenner, da jetzt hinter dem Kontext in derselben Zeile)
+[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
 
 # 9. Uhrzeit
 printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
