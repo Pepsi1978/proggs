@@ -835,14 +835,12 @@
     <string name="paywall_yearly_note">ನಂತರ ವರ್ಷಕ್ಕೆ %1$s, ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ\nಪ್ರಯೋಗ ಅವಧಿಯಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದು ಮಾಡಬಹುದು</string>
     <string name="paywall_most_popular">ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ</string> <!-- SHORTER: ಜನಪ್ರಿಯ -->
     <string name="paywall_monthly_plan">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ, ತಿಂಗಳಿಗೆ %1$s</string>
-    <string name="paywall_yearly_savings">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆಗೆ ಹೋಲಿಸಿದರೆ %1$d%% ಉಳಿಸಿ — ಒಪ್ಪಂದ ಅವಧಿ ಮುಗಿಯುವ ಸಮಯದಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು.</string>
     <string name="paywall_lifetime_title">ಒಂದು ಬಾರಿಯ ಖರೀದಿ</string>
     <string name="paywall_lifetime_desc">ಒಮ್ಮೆ ಪಾವತಿಸು, ಎಲ್ಲವನ್ನೂ ಶಾಶ್ವತವಾಗಿ ಬಳಸು</string>
     <string name="paywall_lifetime_note">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲ, ನವೀಕರಣ ಇಲ್ಲ</string>
     <string name="paywall_free_note">ಅಪ್ಲಿಕೇಶನ್ ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆಯೂ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ.</string>
     <string name="paywall_legal_hint" formatted="false">ಚಂದಾದಾರಿಕೆಯಿಂದ ನೀನು %1$s ಒಪ್ಪುತ್ತೀಯ. ನಿನ್ನ 14-ದಿನಗಳ ಒಪ್ಪಂದ ರದ್ದು ಹಕ್ಕನ್ನು ಅಲ್ಲಿ ವಿವರಿಸಲಾಗಿದೆ.</string>
     <string name="paywall_legal_hint_link">ಬಳಕೆ ನಿಯಮಗಳನ್ನು</string>
-    <string name="paywall_cd_close">ಮುಚ್ಚಿ</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">ನಿಮ್ಮ ಚಿಂತನೆಯಲ್ಲಿ ಮರುಕಳಿಸುವ ಮಾದರಿಗಳನ್ನು ಗುರುತಿಸಿ</string>
@@ -1338,11 +1336,6 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="journal_improve">ಸುಧಾರಿಸಿ</string>
     <string name="journal_state_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
     <string name="journal_state_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
-    <string name="paywall_consent_dialog_body">ಚಂದಾದಾರಿಕೆ ಅಥವಾ ಖರೀದಿ ಮುಗಿಸಿದ ನಂತರ ನಿಮಗೆ ಮೂಲತಃ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಹಕ್ಕಿದೆ (§ 355 BGB).\n\nನೀವು Premium ಕಾರ್ಯಗಳನ್ನು ತಕ್ಷಣ ಬಳಸಲು ಸಾಧ್ಯವಾಗಲು, ನಿಮ್ಮ ಖರೀದಿಯ ತಕ್ಷಣ ಒದಗಿಸುವಿಕೆ ಪ್ರಾರಂಭಿಸುತ್ತೇವೆ. ಕೆಳಗಿನ ನಿಮ್ಮ ಒಪ್ಪಿಗೆಯ ಮೂಲಕ ನೀವು ಪರಿಣಾಮಗಳ ಅರಿವಿನೊಂದಿಗೆ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಹಕ್ಕನ್ನು ಬಿಟ್ಟುಕೊಡುತ್ತಿದ್ದೀರಿ (§ 356 Abs. 5 BGB).\n\nಈ ಒಪ್ಪಿಗೆ ಇಲ್ಲದೆ ನಾವು Premium ಕಾರ್ಯಗಳನ್ನು ತಕ್ಷಣ ತೆರೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ.\n\nPremium ಕಾರ್ಯಗಳ ಒದಗಿಸುವವರು: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳಲು ಇಮೇಲ್: dev.app.support@gmail.com.\n\nಒದಗಿಸುವ ಮೊದಲು ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳದಿದ್ದರೆ ಮತ್ತು Premium ಚಂದಾದಾರಿಕೆ ಪ್ರಾರಂಭವಾದರೆ, ನಿಮ್ಮ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಅವಧಿ ಒಪ್ಪಂದದ ದಿನಾಂಕದಂದು ಪ್ರಾರಂಭವಾಗುತ್ತದೆ. ಇಮೇಲ್ ಮೂಲಕ ಅನೌಪಚಾರಿಕವಾಗಿ ಅಥವಾ EU ಮಾದರಿ ಫಾರ್ಮ್ ಬಳಸಿ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು (https://www.bmuv.de/widerruf — ಬಾಹ್ಯ EU ಮಾದರಿ).</string>
-    <string name="paywall_consent_dialog_cancel">ರದ್ದುಮಾಡಿ</string>
-    <string name="paywall_consent_dialog_checkbox">ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದ ನಂತರ, ಹಿಂದಿರುಗಿಸುವ ಹಕ್ಕು ಅವಸಾನಗೊಳ್ಳುತ್ತದೆ ಎಂದು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ (§ 356 Abs. 5 BGB ಪ್ರಕಾರ).</string>
-    <string name="paywall_consent_dialog_confirm">ಒಪ್ಪಿ ಖರೀದಿಸಿ</string>
-    <string name="paywall_consent_dialog_title">ಖರೀದಿ ದೃಢೀಕರಿಸಿ</string>
     <string name="profile_custom_add">ಪ್ರೊಫೈಲ್ ಸೇರಿಸಿ</string>
     <string name="profile_custom_remove">ಪ್ರೊಫೈಲ್ ತೆಗೆದುಹಾಕಿ</string>
     <string name="profile_custom_rename">ಪ್ರೊಫೈಲ್ ಮರುನಾಮಕರಣ ಮಾಡಿ</string>
@@ -1378,17 +1371,6 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="follow_up_tab_label">ಫಾಲೋ-ಅಪ್‌ಗಳು</string>
     <string name="follow_up_transcribe_error">ಲಿಪ್ಯಂತರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
     <string name="follow_up_transcribing_state">ಲಿಪ್ಯಂತರಿಸಲಾಗುತ್ತಿದೆ…</string>
-    <string name="paywall_cancel_anytime">ಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದುಮಾಡಿ</string>
-    <string name="paywall_feature_ai_improvement">AI ಮೂಲಕ ಪಠ್ಯ ಸುಧಾರಣೆ</string>
-    <string name="paywall_feature_drive_backup">Google Drive ಬ್ಯಾಕಪ್</string>
-    <string name="paywall_feature_pdf_export">PDF ರಫ್ತು</string>
-    <string name="paywall_lifetime_label">ಒಮ್ಮೆ</string>
-    <string name="paywall_monthly_label">ಮಾಸಿಕ</string>
-    <string name="paywall_restore_button">ಖರೀದಿಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಿ</string>
-    <string name="paywall_subscribe_button">ಚಂದಾದಾರಿಕೆ ಮಾಡಿ</string>
-    <string name="paywall_subtitle">ಎಲ್ಲ Premium ಕಾರ್ಯಗಳನ್ನು ತೆರೆಯಿರಿ</string>
-    <string name="paywall_title">Premium ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ</string>
-    <string name="paywall_yearly_label">ವಾರ್ಷಿಕ</string>
     <string name="prompt_char_count_label">%1$d ಅಕ್ಷರಗಳು</string>
     <string name="prompt_improve_button_label">ಸುಧಾರಿಸಿ</string>
     <string name="prompt_placeholder_text">ನಿಮ್ಮ ಮನಸ್ಸಿನಲ್ಲಿರುವುದನ್ನು ಬರೆಯಿರಿ…</string>

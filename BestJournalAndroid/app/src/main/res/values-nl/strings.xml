@@ -930,14 +930,12 @@ voor meer duidelijkheid in het dagelijks leven</string>
 Tijdens de proefperiode op elk moment opzegbaar</string>
     <string name="paywall_most_popular">Aanbevolen</string>
     <string name="paywall_monthly_plan">Maandabonnement, %1$s per maand</string>
-    <string name="paywall_yearly_savings">Bespaar %1$d%% ten opzichte van maandelijks \u2014 opzegbaar tot aan het einde van de contractperiode.</string>
     <string name="paywall_lifetime_title">Eenmalige aankoop</string>
     <string name="paywall_lifetime_desc">Eenmaal betalen, alles permanent gebruiken</string>
     <string name="paywall_lifetime_note">Geen abonnement, geen verlenging</string>
     <string name="paywall_free_note">De app werkt ook verder zonder abonnement.</string>
     <string name="paywall_legal_hint" formatted="false">Met het abonnement ga je akkoord met de %1$s. Je herroepingsrecht van 14 dagen staat daar beschreven.</string>
     <string name="paywall_legal_hint_link">Gebruiksvoorwaarden</string>
-    <string name="paywall_cd_close">Sluiten</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Herken terugkerende patronen in je denken</string>
@@ -1443,11 +1441,6 @@ Wat wil je doen?</string>
     <string name="journal_improve">Tekst verbeteren</string>
     <string name="journal_state_improving">Wordt verbeterd…</string>
     <string name="journal_state_transcribing">Wordt getranscribeerd…</string>
-    <string name="paywall_consent_dialog_body">Na het afsluiten van een abonnement of aankoop heb je in principe 14 dagen herroepingsrecht.\n\nZodat je de Premium-functies meteen kunt gebruiken, starten we de levering direct na je aankoop. Met je toestemming hieronder zie je bewust af van je herroepingsrecht van 14 dagen.\n\nZonder deze toestemming kunnen we de Premium-functies niet meteen activeren.\n\nAanbieder van de Premium-functies: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Duitsland. E-mail voor herroeping: dev.app.support@gmail.com.\n\nAls je het herroepingsrecht niet voor de levering inroept en het Premium-abonnement gestart wordt, begint je herroepingstermijn van 14 dagen op de dag van de contractsluiting. Je kunt de herroeping vormvrij per e-mail melden of het EU-modelformulier voor herroeping gebruiken (https://www.bmuv.de/widerruf — extern EU-model).</string>
-    <string name="paywall_consent_dialog_cancel">Annuleren</string>
-    <string name="paywall_consent_dialog_checkbox">Ik ga ermee akkoord dat de levering van de Premium-functies direct na bestelling begint. Ik begrijp dat ik hiermee afzie van mijn herroepingsrecht van 14 dagen.</string>
-    <string name="paywall_consent_dialog_confirm">Nu abonneren met betalingsverplichting</string>
-    <string name="paywall_consent_dialog_title">Herroepingsinformatie</string>
     <string name="profile_custom_add">Aangepaste analyse toevoegen</string>
     <string name="profile_custom_remove">Aangepaste analyse verwijderen</string>
     <string name="profile_custom_rename">Hernoemen</string>
@@ -1483,17 +1476,6 @@ Wat wil je doen?</string>
     <string name="follow_up_tab_label">Follow-ups</string>
     <string name="follow_up_transcribe_error">Kon niet transcriberen. Probeer het opnieuw.</string>
     <string name="follow_up_transcribing_state">Transcriberen…</string>
-    <string name="paywall_cancel_anytime">Altijd opzegbaar</string>
-    <string name="paywall_feature_ai_improvement">Tekstverbetering met AI</string>
-    <string name="paywall_feature_drive_backup">Google Drive-back-up</string>
-    <string name="paywall_feature_pdf_export">PDF-export</string>
-    <string name="paywall_lifetime_label">Eenmalig</string>
-    <string name="paywall_monthly_label">Maandelijks</string>
-    <string name="paywall_restore_button">Aankopen herstellen</string>
-    <string name="paywall_subscribe_button">Betaald abonneren</string>
-    <string name="paywall_subtitle">Ontgrendel alle Premium-functies</string>
-    <string name="paywall_title">Upgrade naar Premium</string>
-    <string name="paywall_yearly_label">Jaarlijks</string>
     <string name="prompt_char_count_label">%1$d tekens</string>
     <string name="prompt_improve_button_label">Verbeteren</string>
     <string name="prompt_placeholder_text">Schrijf wat er in je omgaat…</string>

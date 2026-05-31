@@ -860,14 +860,12 @@
     <string name="paywall_yearly_note">பிறகு ஆண்டுக்கு %1$s, தானாக புதுப்பிக்கப்படும்\nசோதனை காலத்தில் எப்போது வேண்டுமானாலும் ரத்துசெய்யலாம்</string>
     <string name="paywall_most_popular">பரிந்துரைக்கப்பட்டது</string>
     <string name="paywall_monthly_plan">மாத சந்தா, மாதத்திற்கு %1$s</string>
-    <string name="paywall_yearly_savings">மாத சந்தாவுடன் ஒப்பிடும்போது %1$d%% சேமிப்பு — ஒப்பந்த முடிவில் எப்போதும் ரத்து செய்யலாம்.</string>
     <string name="paywall_lifetime_title">ஒரு முறை வாங்கல்</string>
     <string name="paywall_lifetime_desc">ஒருமுறை பணம் செலுத்தி, அனைத்தையும் நிரந்தரமாக பயன்படுத்து</string>
     <string name="paywall_lifetime_note">சந்தா இல்லை, புதுப்பிப்பு இல்லை</string>
     <string name="paywall_free_note">சந்தா இல்லாமலும் App தொடர்ந்து செயல்படும்.</string>
     <string name="paywall_legal_hint" formatted="false">சந்தா செலுத்துவதன் மூலம் நீ %1$s ஏற்கிறாய். உனது 14 நாள் ஒப்பந்த ரத்து உரிமை அங்கே விவரிக்கப்பட்டுள்ளது.</string>
     <string name="paywall_legal_hint_link">பயன்பாட்டு விதிமுறைகளை</string>
-    <string name="paywall_cd_close">மூடு</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">உங்கள் சிந்தனையில் மீண்டும் மீண்டும் வரும் முறைகளை அறிந்துகொள்ளுங்கள்</string>
@@ -1362,22 +1360,6 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="ai_retro_copied_message">இடைப்பகுதிக்கு நகலெடுக்கப்பட்டது</string>
 
     <!-- Paywall / consent strings -->
-    <string name="paywall_title">பிரீமியத்திற்கு மேம்படுத்தவும்</string>
-    <string name="paywall_subtitle">அனைத்து Premium வசதிகளையும் திறக்க</string>
-    <string name="paywall_monthly_label">மாதாந்திரம்</string>
-    <string name="paywall_yearly_label">ஆண்டுதோறும்</string>
-    <string name="paywall_lifetime_label">வாழ்நாள் முழுவதும்</string>
-    <string name="paywall_subscribe_button">கட்டணமாக சந்தா செய்யுங்கள்</string>
-    <string name="paywall_restore_button">வாங்கியதை மீட்டமைக்கவும்</string>
-    <string name="paywall_cancel_anytime">எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்</string>
-    <string name="paywall_consent_dialog_title">இலவச ரத்துசெய்யும் உரிமை</string>
-    <string name="paywall_consent_dialog_body">சந்தா அல்லது கொள்முதல் முடிந்த பிறகு நீ அடிப்படையில் 14 நாட்கள் திரும்பப் பெறும் உரிமை (§ 355 BGB) கொண்டிருக்கிறாய்.\n\nPremium வசதிகளை உடனடியாக பயன்படுத்த நீ அனுமதித்தால், வாங்கியவுடனேயே வழங்கல் தொடங்கும். கீழே சம்மதிப்பதன் மூலம் நீ இதன் விளைவுகளை அறிந்து உன் 14 நாட்கள் திரும்பப் பெறும் உரிமையை (§ 356 Abs. 5 BGB) விட்டுவிடுகிறாய்.\n\nஇந்த சம்மதம் இல்லாமல் Premium வசதிகளை உடனடியாக திறக்க முடியாது.\n\nPremium வசதிகளை வழங்குபவர்: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany. திரும்பப் பெற மின்னஞ்சல்: dev.app.support@gmail.com.\n\nவழங்கல் தொடங்குவதற்கு முன் திரும்பப் பெறும் உரிமையை நீ பயன்படுத்தாவிட்டால், ஒப்பந்த தேதியிலிருந்து 14 நாட்கள் கணக்கிடப்படும். மின்னஞ்சல் மூலம் அல்லது EU மாதிரி படிவம் பயன்படுத்தி திரும்பப் பெறலாம் (https://www.bmuv.de/widerruf — வெளிப்புற EU மாதிரி).</string>
-    <string name="paywall_consent_dialog_checkbox">பதிவிறக்கம் தொடங்கியதும் டிஜிட்டல் உள்ளடக்கத்திற்கான என் ரத்துசெய்யும் உரிமை இல்லாமல் போகும் என்று நான் ஒப்புக்கொள்கிறேன்.</string>
-    <string name="paywall_consent_dialog_confirm">ஒப்புக்கொண்டு வாங்கவும்</string>
-    <string name="paywall_consent_dialog_cancel">ரத்துசெய்யவும்</string>
-    <string name="paywall_feature_ai_improvement">AI மூலம் உரையை மேம்படுத்துதல்</string>
-    <string name="paywall_feature_pdf_export">PDF ஆக ஏற்றுமதி செய்தல்</string>
-    <string name="paywall_feature_drive_backup">Google Drive காப்புப்பிரதி</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          MISSING STRINGS — BATCH INSERT

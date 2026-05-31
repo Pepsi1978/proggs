@@ -831,14 +831,12 @@
     <string name="paywall_yearly_note">इसके बाद %1$s प्रति वर्ष, अपने आप renew होता है\nTrial के दौरान जब चाहें cancel करें</string>
     <string name="paywall_most_popular">अनुशंसित</string>
     <string name="paywall_monthly_plan">माहवार सदस्यता, %1$s प्रति माह</string>
-    <string name="paywall_yearly_savings">माहवार सदस्यता की तुलना में %1$d%% की बचत — अनुबंध अवधि के अंत तक कभी भी रद्द करो।</string>
     <string name="paywall_lifetime_title">एक बार खरीद</string>
     <string name="paywall_lifetime_desc">एक बार भुगतान करो, सब कुछ स्थायी रूप से उपयोग करो</string>
     <string name="paywall_lifetime_note">कोई सदस्यता नहीं, कोई नवीकरण नहीं</string>
     <string name="paywall_free_note">App बिना subscription के भी काम करती रहती है।</string>
     <string name="paywall_legal_hint" formatted="false">सदस्यता लेने पर तुम %1$s स्वीकार करते हो। तुम्हारा 14-दिन का अनुबंध रद्द करने का अधिकार वहाँ वर्णित है।</string>
     <string name="paywall_legal_hint_link">उपयोग की शर्तें</string>
-    <string name="paywall_cd_close">बंद करें</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">अपनी सोच में बार-बार आने वाले patterns पहचानें</string>
@@ -1337,11 +1335,6 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="journal_improve">सुधारें</string>
     <string name="journal_state_improving">सुधारा जा रहा है…</string>
     <string name="journal_state_transcribing">ट्रांसक्राइब हो रहा है…</string>
-    <string name="paywall_consent_dialog_body">सदस्यता या खरीद पूरी होने पर तुम्हें मूल रूप से 14 दिनों का वापसी अधिकार (§ 355 BGB) मिलता है।\n\nताकि तुम तुरंत Premium सुविधाएं इस्तेमाल कर सको, हम खरीद के तुरंत बाद डिलीवरी शुरू कर देते हैं। नीचे सहमति देकर तुम जानते-बूझते अपने 14-दिन के वापसी अधिकार (§ 356 Abs. 5 BGB) से मुक्त होते हो।\n\nइस सहमति के बिना हम Premium सुविधाएं तुरंत अनलॉक नहीं कर सकते।\n\nPremium सुविधाओं के प्रदाता: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. वापसी के लिए ई-मेल: dev.app.support@gmail.com।\n\nयदि तुम डिलीवरी से पहले वापसी का अधिकार घोषित नहीं करते और Premium सदस्यता शुरू हो जाती है, तो 14 दिन की वापसी अवधि अनुबंध की तारीख से शुरू होती है। वापसी ई-मेल द्वारा या EU के नमूना-वापसी फ़ॉर्म से की जा सकती है (https://www.bmuv.de/widerruf — बाहरी EU नमूना)।</string>
-    <string name="paywall_consent_dialog_cancel">रद्द करें</string>
-    <string name="paywall_consent_dialog_checkbox">मैं समझता/समझती हूँ कि डाउनलोड शुरू होने के बाद, वापसी का अधिकार समाप्त हो जाता है (§ 356 Abs. 5 BGB के अनुसार)।</string>
-    <string name="paywall_consent_dialog_confirm">सहमत हूँ और खरीदें</string>
-    <string name="paywall_consent_dialog_title">खरीदारी की पुष्टि करें</string>
     <string name="profile_custom_add">प्रोफ़ाइल जोड़ें</string>
     <string name="profile_custom_remove">प्रोफ़ाइल हटाएं</string>
     <string name="profile_custom_rename">प्रोफ़ाइल का नाम बदलें</string>
@@ -1377,17 +1370,6 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="follow_up_tab_label">फ़ॉलो-अप</string>
     <string name="follow_up_transcribe_error">ट्रांसक्राइब नहीं किया जा सका। फिर से कोशिश करें।</string>
     <string name="follow_up_transcribing_state">ट्रांसक्राइब किया जा रहा है…</string>
-    <string name="paywall_cancel_anytime">कभी भी रद्द करें</string>
-    <string name="paywall_feature_ai_improvement">AI से टेक्स्ट सुधार</string>
-    <string name="paywall_feature_drive_backup">Google Drive बैकअप</string>
-    <string name="paywall_feature_pdf_export">PDF निर्यात</string>
-    <string name="paywall_lifetime_label">एक बार</string>
-    <string name="paywall_monthly_label">मासिक</string>
-    <string name="paywall_restore_button">खरीदारी पुनर्स्थापित करें</string>
-    <string name="paywall_subscribe_button">Subscribe करें (भुगतान)</string>
-    <string name="paywall_subtitle">सभी Premium सुविधाएं अनलॉक करो</string>
-    <string name="paywall_title">Premium में अपग्रेड करें</string>
-    <string name="paywall_yearly_label">वार्षिक</string>
     <string name="prompt_char_count_label">%1$d अक्षर</string>
     <string name="prompt_improve_button_label">सुधारें</string>
     <string name="prompt_placeholder_text">अपने मन की बात लिखें…</string>

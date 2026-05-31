@@ -837,14 +837,12 @@
     <string name="paywall_yearly_note">Następnie %1$s rocznie, odnawia się automatycznie\nW okresie próbnym możliwe do anulowania w dowolnym momencie</string>
     <string name="paywall_most_popular">Polecane</string>
     <string name="paywall_monthly_plan">Subskrypcja miesięczna, %1$s miesięcznie</string>
-    <string name="paywall_yearly_savings">Oszczędź %1$d%% w porównaniu z planem miesięcznym — możesz anulować w każdej chwili do końca okresu rozliczeniowego.</string>
     <string name="paywall_lifetime_title">Zakup jednorazowy</string>
     <string name="paywall_lifetime_desc">Zapłać raz, korzystaj na stałe</string>
     <string name="paywall_lifetime_note">Bez subskrypcji, bez odnowień</string>
     <string name="paywall_free_note">Aplikacja działa również bez subskrypcji.</string>
     <string name="paywall_legal_hint" formatted="false">Subskrybując, akceptujesz %1$s. Twoje 14-dniowe prawo odstąpienia od umowy jest tam opisane.</string>
     <string name="paywall_legal_hint_link">Warunki użytkowania</string>
-    <string name="paywall_cd_close">Zamknij</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Odkryj powtarzające się wzorce w swoim myśleniu</string>
@@ -1361,11 +1359,6 @@ Co chcesz zrobić?</string>
     <string name="journal_improve">Popraw tekst</string>
     <string name="journal_state_improving">Ulepszanie…</string>
     <string name="journal_state_transcribing">Transkrypcja…</string>
-    <string name="paywall_consent_dialog_body">Po zawarciu subskrypcji lub dokonaniu zakupu masz co do zasady 14-dniowe prawo do odstąpienia od umowy (§ 355 BGB).\n\nAby umożliwić Ci natychmiastowe korzystanie z funkcji Premium, rozpoczynamy dostawę niezwłocznie po Twoim zakupie. Wyrażając zgodę poniżej, świadomie rezygnujesz z 14-dniowego prawa do odstąpienia od umowy (§ 356 ust. 5 BGB).\n\nBez tej zgody nie możemy natychmiast odblokować funkcji Premium.\n\nDostawca funkcji Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Niemcy. E-mail do odstąpienia: dev.app.support@gmail.com.\n\nJeśli nie złożysz oświadczenia o rezygnacji przed rozpoczęciem dostawy i subskrypcja Premium zostanie uruchomiona, Twój 14-dniowy termin do odstąpienia biegnie od dnia zawarcia umowy. Możesz odstąpić od umowy w dowolnej formie e-mailem lub skorzystać z wzoru formularza UE (https://www.bmuv.de/widerruf — zewnętrzny wzór UE).</string>
-    <string name="paywall_consent_dialog_cancel">Anuluj</string>
-    <string name="paywall_consent_dialog_checkbox">Wyrażam zgodę, aby dostarczanie funkcji Premium rozpoczęło się natychmiast po złożeniu zamówienia. Wiem, że w ten sposób tracę 14-dniowe prawo do odstąpienia od umowy.</string>
-    <string name="paywall_consent_dialog_confirm">Subskrybuj teraz z obowiązkiem zapłaty</string>
-    <string name="paywall_consent_dialog_title">Informacja o prawie do odstąpienia</string>
     <string name="profile_custom_add">Dodaj indywidualną analizę</string>
     <string name="profile_custom_remove">Usuń indywidualną analizę</string>
     <string name="profile_custom_rename">Zmień nazwę</string>
@@ -1401,17 +1394,6 @@ Co chcesz zrobić?</string>
     <string name="follow_up_tab_label">Uzupełnienia</string>
     <string name="follow_up_transcribe_error">Nie udało się przepisać. Spróbuj ponownie.</string>
     <string name="follow_up_transcribing_state">Transkrypcja…</string>
-    <string name="paywall_cancel_anytime">Anuluj w dowolnym momencie</string>
-    <string name="paywall_feature_ai_improvement">Ulepszanie tekstu przez AI</string>
-    <string name="paywall_feature_drive_backup">Kopia zapasowa Google Drive</string>
-    <string name="paywall_feature_pdf_export">Eksport PDF</string>
-    <string name="paywall_lifetime_label">Jednorazowo</string>
-    <string name="paywall_monthly_label">Miesięcznie</string>
-    <string name="paywall_restore_button">Przywróć zakupy</string>
-    <string name="paywall_subscribe_button">Subskrybuj (płatność wymagana)</string>
-    <string name="paywall_subtitle">Odblokuj wszystkie funkcje Premium</string>
-    <string name="paywall_title">Przejdź na Premium</string>
-    <string name="paywall_yearly_label">Rocznie</string>
     <string name="prompt_char_count_label">%1$d znaków</string>
     <string name="prompt_improve_button_label">Ulepsz</string>
     <string name="prompt_placeholder_text">Napisz, co masz na myśli…</string>

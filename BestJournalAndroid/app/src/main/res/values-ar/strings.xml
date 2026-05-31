@@ -831,14 +831,12 @@
     <string name="paywall_yearly_note">ثم %1$s سنويًا، يتجدد تلقائيًا\nقابل للإلغاء في أي وقت خلال فترة التجربة</string>
     <string name="paywall_most_popular">موصى به</string>
     <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
-    <string name="paywall_yearly_savings" formatted="false">وفّر %1$d%% مقارنةً بالاشتراك الشهري — الإلغاء ممكن في أي وقت عند انتهاء فترة العقد.</string>
     <string name="paywall_lifetime_title">دفعة واحدة</string>
     <string name="paywall_lifetime_desc">ادفع مرة واحدة، استخدم كل شيء بشكل دائم</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
     <string name="paywall_free_note">يعمل التطبيق بدون اشتراك أيضًا.</string>
     <string name="paywall_legal_hint" formatted="false">بالاشتراك فإنك توافق على %1$s. حقك في الرجوع عن العقد خلال 14 يومًا موضّح هناك.</string>
     <string name="paywall_legal_hint_link">شروط الاستخدام</string>
-    <string name="paywall_cd_close">إغلاق</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">تعرّف على الأنماط المتكررة في تفكيرك</string>
@@ -1350,11 +1348,6 @@
     <string name="journal_improve">تحسين النص</string>
     <string name="journal_state_improving">جارٍ التحسين…</string>
     <string name="journal_state_transcribing">جارٍ التحويل إلى نص…</string>
-    <string name="paywall_consent_dialog_body">بعد إتمام الاشتراك أو الشراء، يحق لك أصلاً حق سحب لمدة 14 يوماً (§ 355 BGB).\n\nلكي تتمكن من استخدام ميزات Premium فوراً، سنبدأ بتوفيرها مباشرة بعد شرائك. بموافقتك أدناه، تتنازل — مع علمك بالعواقب — عن حق السحب خلال 14 يوماً (§ 356 Abs. 5 BGB).\n\nبدون هذه الموافقة لا يمكننا تفعيل ميزات Premium فوراً.\n\nمزوّد ميزات Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. البريد الإلكتروني للسحب: dev.app.support@gmail.com.\n\nإذا لم تُعلن حق السحب قبل التوفير وبدأ اشتراك Premium، تبدأ مهلة السحب البالغة 14 يوماً من يوم إبرام العقد. يمكنك الإعلان عن السحب بحرية الشكل عبر البريد الإلكتروني، أو استخدام نموذج السحب الأوروبي القياسي (https://www.bmuv.de/widerruf — نموذج EU الخارجي القياسي).</string>
-    <string name="paywall_consent_dialog_cancel">إلغاء</string>
-    <string name="paywall_consent_dialog_checkbox">أوافق على أن يبدأ تقديم ميزات Premium فوراً بعد الطلب. أعلم أنني بذلك أفقد حقي في الرجوع خلال 14 يوماً.</string>
-    <string name="paywall_consent_dialog_confirm">اشترك الآن بشكل مدفوع</string>
-    <string name="paywall_consent_dialog_title">إشعار حق الرجوع</string>
     <string name="profile_custom_add">إضافة تحليل مخصص</string>
     <string name="profile_custom_remove">إزالة التحليل المخصص</string>
     <string name="profile_custom_rename">إعادة التسمية</string>
@@ -1390,17 +1383,6 @@
     <string name="follow_up_tab_label">المتابعات</string>
     <string name="follow_up_transcribe_error">تعذر التفريغ النصي. حاول مرة أخرى.</string>
     <string name="follow_up_transcribing_state">جارٍ التفريغ النصي…</string>
-    <string name="paywall_cancel_anytime">يمكنك الإلغاء في أي وقت</string>
-    <string name="paywall_feature_ai_improvement">تحسين النص بالذكاء الاصطناعي</string>
-    <string name="paywall_feature_drive_backup">نسخ احتياطي إلى Google Drive</string>
-    <string name="paywall_feature_pdf_export">تصدير PDF</string>
-    <string name="paywall_lifetime_label">مرة واحدة</string>
-    <string name="paywall_monthly_label">شهريًا</string>
-    <string name="paywall_restore_button">استعادة المشتريات</string>
-    <string name="paywall_subscribe_button">الاشتراك بالدفع</string>
-    <string name="paywall_subtitle">افتح جميع الميزات المميّزة</string>
-    <string name="paywall_title">الترقية إلى Premium</string>
-    <string name="paywall_yearly_label">سنويًا</string>
     <string name="prompt_char_count_label">%1$d حرفًا</string>
     <string name="prompt_improve_button_label">تحسين</string>
     <string name="prompt_placeholder_text">اكتب ما يدور في ذهنك…</string>

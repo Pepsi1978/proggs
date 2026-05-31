@@ -941,14 +941,12 @@ herleitung — सामग्रीचा स्रोत:
     <string name="paywall_yearly_note">नंतर %1$s प्रति वर्ष, आपोआप नूतनीकरण होते\nचाचणी कालावधीत कधीही रद्द करता येते</string>
     <string name="paywall_most_popular">शिफारस केलेले</string>
     <string name="paywall_monthly_plan">मासिक सदस्यत्व, %1$s प्रति महिना</string>
-    <string name="paywall_yearly_savings">मासिक सदस्यतेपेक्षा %1$d%% बचत — कधीही रद्द करता येते, संबंधित करार कालावधी संपल्यावर.</string>
     <string name="paywall_lifetime_title">एकवेळ खरेदी</string>
     <string name="paywall_lifetime_desc">एकदा पैसे भर, सर्वकाही कायमस्वरूपी वापर</string>
     <string name="paywall_lifetime_note">कोणतेही सदस्यत्व नाही, कोणती नूतनीकरण नाही</string>
     <string name="paywall_free_note">सदस्यत्वाशिवायही अॅप चालू राहते.</string>
     <string name="paywall_legal_hint" formatted="false">सदस्यता घेतल्याने तू %1$s स्वीकारतोस. तुझा 14 दिवसांचा करार रद्दबातल हक्क तिथे वर्णन केला आहे.</string>
     <string name="paywall_legal_hint_link">वापर अटी</string>
-    <string name="paywall_cd_close">बंद करा</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">तुमच्या विचारांमधील वारंवार येणारे नमुने ओळखा</string>
@@ -1450,11 +1448,6 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="journal_improve">सुधारा</string>
     <string name="journal_state_improving">सुधारत आहे…</string>
     <string name="journal_state_transcribing">ट्रान्सक्राइब होत आहे…</string>
-    <string name="paywall_consent_dialog_body">सदस्यता किंवा खरेदी पूर्ण केल्यावर तुम्हाला मूलभूतपणे 14 दिवसांचा रद्दीकरण अधिकार आहे (§ 355 BGB).\n\nजेणेकरून तुम्ही Premium सुविधा लगेच वापरू शकाल, खरेदीनंतर लगेच सेवा उपलब्ध करून दिली जाते. खाली संमती देऊन तुम्ही जाणीवपूर्वक 14 दिवसांच्या रद्दीकरण अधिकारावर (§ 356 Abs. 5 BGB) सोडून देत आहात.\n\nही संमती दिल्याशिवाय आम्ही Premium सुविधा लगेच सक्रिय करू शकत नाही.\n\nPremium सुविधांचे प्रदाता: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany. रद्दीकरणासाठी ईमेल: dev.app.support@gmail.com.\n\nसेवा सुरू होण्यापूर्वी रद्दीकरण अधिकार न वापरल्यास आणि Premium सदस्यता सुरू झाल्यास, तुमचा 14 दिवसांचा रद्दीकरण कालावधी करार झाल्याच्या दिवशी सुरू होतो. तुम्ही ईमेलद्वारे किंवा EU नमुना रद्दीकरण फॉर्मद्वारे रद्द करू शकता (https://www.bmuv.de/widerruf — बाह्य EU नमुना).</string>
-    <string name="paywall_consent_dialog_cancel">रद्द करा</string>
-    <string name="paywall_consent_dialog_checkbox">मला समजते की डाउनलोड सुरू झाल्यावर, परतावा हक्क संपतो (§ 356 Abs. 5 BGB नुसार).</string>
-    <string name="paywall_consent_dialog_confirm">सहमत आहे आणि खरेदी करा</string>
-    <string name="paywall_consent_dialog_title">खरेदीची पुष्टी करा</string>
     <string name="profile_custom_add">प्रोफाइल जोडा</string>
     <string name="profile_custom_remove">प्रोफाइल हटवा</string>
     <string name="profile_custom_rename">प्रोफाइलचे नाव बदला</string>
@@ -1490,17 +1483,6 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="follow_up_tab_label">फॉलो-अप</string>
     <string name="follow_up_transcribe_error">लिप्यंतर करता आले नाही. पुन्हा प्रयत्न करा.</string>
     <string name="follow_up_transcribing_state">लिप्यंतर होत आहे…</string>
-    <string name="paywall_cancel_anytime">कधीही रद्द करा</string>
-    <string name="paywall_feature_ai_improvement">AI सह मजकूर सुधारणा</string>
-    <string name="paywall_feature_drive_backup">Google Drive बॅकअप</string>
-    <string name="paywall_feature_pdf_export">PDF निर्यात</string>
-    <string name="paywall_lifetime_label">एकदाच</string>
-    <string name="paywall_monthly_label">मासिक</string>
-    <string name="paywall_restore_button">खरेदी पुनर्संचयित करा</string>
-    <string name="paywall_subscribe_button">सशुल्क सदस्यत्व घ्या</string>
-    <string name="paywall_subtitle">सर्व Premium सुविधा अनलॉक करा</string>
-    <string name="paywall_title">Premium वर अपग्रेड करा</string>
-    <string name="paywall_yearly_label">वार्षिक</string>
     <string name="prompt_char_count_label">%1$d अक्षरे</string>
     <string name="prompt_improve_button_label">सुधारा</string>
     <string name="prompt_placeholder_text">तुमच्या मनातले लिहा…</string>

@@ -834,14 +834,12 @@
     <string name="paywall_yearly_note">之后每年 %1$s，自动续费\n试用期间随时可取消</string>
     <string name="paywall_most_popular">推荐</string>
     <string name="paywall_monthly_plan">月度订阅，每月 %1$s</string>
-    <string name="paywall_yearly_savings">比月付省 %1$d%% — 可在合同到期时随时取消。</string>
     <string name="paywall_lifetime_title">一次付清</string>
     <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">没有订阅，没有续费</string>
     <string name="paywall_free_note">即使不订阅，应用也可正常使用。</string>
     <string name="paywall_legal_hint" formatted="false">订阅即表示你接受%1$s。你的14天撤销合同权利在那里有说明。</string>
     <string name="paywall_legal_hint_link">使用条款</string>
-    <string name="paywall_cd_close">关闭</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">识别你思维中反复出现的规律</string>
@@ -1335,11 +1333,6 @@
     <string name="journal_improve">润色文字</string>
     <string name="journal_state_improving">优化中…</string>
     <string name="journal_state_transcribing">转录中…</string>
-    <string name="paywall_consent_dialog_body">完成订阅或购买后，你原则上享有 14 天的撤回权（§ 355 BGB）。\n\n为让你立即使用高级功能，我们将在购买后立即开始提供服务。在下方同意即表示你了解并依据 § 356 Abs. 5 BGB 放弃 14 天的撤回权。\n\n若不同意，我们将无法立即为你开通高级功能。\n\n高级功能提供方：Frank Barwandt，c/o Impressumservice Dein-Impressum，Stettiner Straße 41，35410 Hungen，德国。撤回邮箱：dev.app.support@gmail.com。\n\n如果你未在服务提供前行使撤回权且已开始高级订阅，撤回期自合同签订之日起算 14 天。你可以通过电子邮件或 EU 标准撤回表格（https://www.bmuv.de/widerruf）随时撤回。</string>
-    <string name="paywall_consent_dialog_cancel">取消</string>
-    <string name="paywall_consent_dialog_checkbox">我同意在下单后立即开始提供高级功能。我了解这意味着我放弃 14 天的撤回权。</string>
-    <string name="paywall_consent_dialog_confirm">立即付费订阅</string>
-    <string name="paywall_consent_dialog_title">撤回权告知</string>
     <string name="profile_custom_add">添加自定义分析</string>
     <string name="profile_custom_remove">删除自定义分析</string>
     <string name="profile_custom_rename">重命名</string>
@@ -1375,17 +1368,6 @@
     <string name="follow_up_tab_label">后续</string>
     <string name="follow_up_transcribe_error">无法转写。请重试。</string>
     <string name="follow_up_transcribing_state">正在转写…</string>
-    <string name="paywall_cancel_anytime">可随时取消</string>
-    <string name="paywall_feature_ai_improvement">AI 文本优化</string>
-    <string name="paywall_feature_drive_backup">Google Drive 备份</string>
-    <string name="paywall_feature_pdf_export">PDF 导出</string>
-    <string name="paywall_lifetime_label">一次性</string>
-    <string name="paywall_monthly_label">每月</string>
-    <string name="paywall_restore_button">恢复购买</string>
-    <string name="paywall_subscribe_button">订阅（付费）</string>
-    <string name="paywall_subtitle">解锁所有高级功能</string>
-    <string name="paywall_title">升级到 Premium</string>
-    <string name="paywall_yearly_label">每年</string>
     <string name="prompt_char_count_label">%1$d 个字符</string>
     <string name="prompt_improve_button_label">优化</string>
     <string name="prompt_placeholder_text">写下你此刻的想法…</string>

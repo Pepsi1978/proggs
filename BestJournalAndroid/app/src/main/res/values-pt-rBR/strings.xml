@@ -853,14 +853,12 @@ para mais clareza no dia a dia</string>
 Cancele a qualquer momento durante o período de teste</string>
     <string name="paywall_most_popular">Recomendado</string>
     <string name="paywall_monthly_plan">Assinatura mensal, %1$s por mês</string>
-    <string name="paywall_yearly_savings">Economize %1$d\u00A0%% em relação ao plano mensal — cancelável a qualquer momento ao fim do período.</string>
     <string name="paywall_lifetime_title">Compra única</string>
     <string name="paywall_lifetime_desc">Pague uma vez, use tudo permanentemente</string>
     <string name="paywall_lifetime_note">Sem assinatura, sem renovação</string>
     <string name="paywall_free_note">O aplicativo continua funcionando sem assinatura.</string>
     <string name="paywall_legal_hint" formatted="false">Ao assinar, você aceita os %1$s. Seu direito de arrependimento de 14 dias está descrito lá.</string>
     <string name="paywall_legal_hint_link">Termos de uso</string>
-    <string name="paywall_cd_close">Fechar</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Reconheça padrões recorrentes no seu pensamento</string>
@@ -1364,11 +1362,6 @@ O que você quer fazer?</string>
     <string name="journal_improve">Melhorar texto</string>
     <string name="journal_state_improving">Melhorando…</string>
     <string name="journal_state_transcribing">Transcrevendo…</string>
-    <string name="paywall_consent_dialog_body">Após concluir uma assinatura ou compra, você tem direito de arrependimento de até 7 dias corridos (CDC, art. 49).\n\nPara que você possa usar os recursos Premium imediatamente, começamos a disponibilizá-los logo após a sua compra. Com o seu consentimento abaixo, você renuncia ao direito de arrependimento, ciente das consequências.\n\nSem esse consentimento não podemos liberar os recursos Premium imediatamente.\n\nFornecedor: Frank Barwandt, dev.app.support@gmail.com</string>
-    <string name="paywall_consent_dialog_cancel">Cancelar</string>
-    <string name="paywall_consent_dialog_checkbox">Concordo que a disponibilização dos recursos Premium começa imediatamente após o pedido. Estou ciente de que, com isso, perco meu direito de arrependimento de 14 dias.</string>
-    <string name="paywall_consent_dialog_confirm">Assinar com pagamento agora</string>
-    <string name="paywall_consent_dialog_title">Aviso de arrependimento</string>
     <string name="profile_custom_add">Adicionar análise individual</string>
     <string name="profile_custom_remove">Remover análise individual</string>
     <string name="profile_custom_rename">Renomear</string>
@@ -1404,17 +1397,6 @@ O que você quer fazer?</string>
     <string name="follow_up_tab_label">Complementos</string>
     <string name="follow_up_transcribe_error">Não foi possível transcrever. Tente de novo.</string>
     <string name="follow_up_transcribing_state">Transcrevendo…</string>
-    <string name="paywall_cancel_anytime">Cancele quando quiser</string>
-    <string name="paywall_feature_ai_improvement">Melhoria de texto com IA</string>
-    <string name="paywall_feature_drive_backup">Backup no Google Drive</string>
-    <string name="paywall_feature_pdf_export">Exportação em PDF</string>
-    <string name="paywall_lifetime_label">Pagamento único</string>
-    <string name="paywall_monthly_label">Mensal</string>
-    <string name="paywall_restore_button">Restaurar compras</string>
-    <string name="paywall_subscribe_button">Assinar com cobrança</string>
-    <string name="paywall_subtitle">Libere todas as funções Premium</string>
-    <string name="paywall_title">Fazer upgrade para Premium</string>
-    <string name="paywall_yearly_label">Anual</string>
     <string name="prompt_char_count_label">%1$d caracteres</string>
     <string name="prompt_improve_button_label">Melhorar</string>
     <string name="prompt_placeholder_text">Escreva o que está na sua mente…</string>

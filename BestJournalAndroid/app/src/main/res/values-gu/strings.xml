@@ -807,14 +807,12 @@
     <string name="paywall_yearly_note">ત્યારબાદ %1$s પ્રતિ વર્ષ, આપોઆપ નવીકરણ\\nટ્રાયલ દરમિયાન ગમે ત્યારે રદ્દ કરી શકાય</string>
     <string name="paywall_most_popular">ભલામણ કરેલ</string>
     <string name="paywall_monthly_plan">♻, %1$s/♻</string>
-    <string name="paywall_yearly_savings">માસિક સબ્સ્ક્રિપ્શન કરતાં %1$d%% બચત — ગમે ત્યારે રદ કરી શકો.</string>
     <string name="paywall_lifetime_title">♻</string>
     <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
     <string name="paywall_lifetime_note">♻</string>
     <string name="paywall_free_note">App Subscription વગર પણ ચાલુ રહે છે.</string>
     <string name="paywall_legal_hint" formatted="false">સબ્સ્ક્રાઇબ કરવાથી તું %1$s સ્વીકારે છે. તારો 14-દિવસનો કરાર રદ કરવાનો અધિકાર ત્યાં વર્ણવેલ છે.</string>
     <string name="paywall_legal_hint_link">ઉપયોગ-શરતો</string>
-    <string name="paywall_cd_close">♻</string>
 
     
     <string name="paywall_feature_patterns">તમારા વિચારોમાં વારંવારના પેટર્ન ઓળખો</string>
@@ -1292,11 +1290,6 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="journal_improve">સુધારો</string>
     <string name="journal_state_improving">સુધારી રહ્યું છે…</string>
     <string name="journal_state_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
-    <string name="paywall_consent_dialog_body">સબ્સ્ક્રિપ્શન અથવા ખરીદી પૂર્ણ કર્યા પછી, તમને સૈદ્ધાંતિક રીતે 14 દિવસનો ઉપાડ-અધિકાર (§ 355 BGB) મળે છે.\n\nજેથી તમે Premium સુવિધાઓ તરત ઉપયોગ કરી શકો, અમે ખરીદી પછી તુરંત સેવા ચાલુ કરીએ છીએ. નીચે સંમત થઈ, તમે સ્વૈચ્છિક રીતે 14 દિવસના ઉપાડ-અધિકાર (§ 356 Abs. 5 BGB) ત્યાગ કરો છો.\n\nઆ સંમત્તિ વિના, અમે Premium સુવિધાઓ તાત્કાલિક અનલૉક કરી શકતા નથી.\n\nPremium સુવિધાઓ પ્રદાતા: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. ઉપાડ માટે ઇ-મેઇલ: dev.app.support@gmail.com.\n\nજો તમે સેવા ચાલુ થાય તે પહેલાં ઉપાડ-અધિકારનો ઉપયોગ ન કરો અને Premium સબ્સ્ક્રિપ્શન શરૂ થઈ જાય, તો 14 દિવસની ઉપાડ-મુદ્દત કરાર-દિવસ થી ગણાય. ઉપાડ ઇ-મેઇલ દ્વારા ઔપચારિક રીતે નોંધાવી શકો, અથવા EU-નમૂના-ઉપાડ-ફોર્મ ઉપયોગ કરો (https://www.bmuv.de/widerruf — EU-બાહ્ય નમૂનો).</string>
-    <string name="paywall_consent_dialog_cancel">રદ કરો</string>
-    <string name="paywall_consent_dialog_checkbox">હું સમજું છું કે ડાઉનલોડ શરૂ થયા પછી, પરત કરવાનો અધિકાર સમાપ્ત થઈ જાય છે (§ 356 Abs. 5 BGB મુજબ).</string>
-    <string name="paywall_consent_dialog_confirm">સંમત છું અને ખરીદો</string>
-    <string name="paywall_consent_dialog_title">ખરીદી કન્ફર્મ કરો</string>
     <string name="profile_custom_add">પ્રોફાઇલ ઉમેરો</string>
     <string name="profile_custom_remove">પ્રોફાઇલ દૂર કરો</string>
     <string name="profile_custom_rename">પ્રોફાઇલ નામ બદલો</string>
@@ -1332,17 +1325,6 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="follow_up_tab_label">ફોલો-અપ્સ</string>
     <string name="follow_up_transcribe_error">ટ્રાન્સક્રાઇબ કરી શકાયું નથી. ફરી પ્રયાસ કરો.</string>
     <string name="follow_up_transcribing_state">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
-    <string name="paywall_cancel_anytime">ક્યારે પણ રદ કરો</string>
-    <string name="paywall_feature_ai_improvement">AI સાથે લખાણ સુધારો</string>
-    <string name="paywall_feature_drive_backup">Google Drive બેકઅપ</string>
-    <string name="paywall_feature_pdf_export">PDF નિકાસ</string>
-    <string name="paywall_lifetime_label">એકવાર</string>
-    <string name="paywall_monthly_label">માસિક</string>
-    <string name="paywall_restore_button">ખરીદીઓ પુનઃસ્થાપિત કરો</string>
-    <string name="paywall_subscribe_button">સશુલ્ક સબ્સ્ક્રાઇબ કરો</string>
-    <string name="paywall_subtitle">બધી Premium સુવિધાઓ અનલૉક કરો</string>
-    <string name="paywall_title">Premium પર અપગ્રેડ કરો</string>
-    <string name="paywall_yearly_label">વાર્ષિક</string>
     <string name="prompt_char_count_label">%1$d અક્ષરો</string>
     <string name="prompt_improve_button_label">સુધારો</string>
     <string name="prompt_placeholder_text">તમારા મનમાં જે છે તે લખો…</string>

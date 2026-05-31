@@ -835,14 +835,12 @@
     <string name="paywall_yearly_note">Depois %1$s por ano, renova-se automaticamente\nPodes cancelar a qualquer momento durante o período de teste</string>
     <string name="paywall_most_popular">Recomendado</string>
     <string name="paywall_monthly_plan">Subscrição mensal, %1$s por mês</string>
-    <string name="paywall_yearly_savings">Poupa %1$d%% em relação à subscrição mensal — cancelável a qualquer momento até ao final do período.</string>
     <string name="paywall_lifetime_title">Compra única</string>
     <string name="paywall_lifetime_desc">Paga uma vez, utiliza tudo permanentemente</string>
     <string name="paywall_lifetime_note">Sem subscrição, sem renovação</string>
     <string name="paywall_free_note">A aplicação continua a funcionar sem subscrição.</string>
     <string name="paywall_legal_hint" formatted="false">Ao subscrever, aceitas os %1$s. O teu direito de rescisão de 14 dias está descrito aí.</string>
     <string name="paywall_legal_hint_link">Termos de Utilização</string>
-    <string name="paywall_cd_close">Fechar</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Reconhece padrões recorrentes no teu pensamento</string>
@@ -1338,25 +1336,6 @@ O que queres fazer?</string>
     <string name="journal_improve">Melhorar texto</string>
     <string name="journal_state_improving">A melhorar…</string>
     <string name="journal_state_transcribing">A transcrever…</string>
-    <string name="paywall_consent_dialog_body">Direito de rescisão segundo o §355 BGB:
-
-Tens o direito de rescindir este contrato no prazo de 14 dias sem indicar qualquer motivo.
-
-O prazo de rescisão é de 14 dias a partir da data de celebração do contrato.
-
-Para exerceres o teu direito de rescisão, deves informar-nos (Frank Barwandt, Stettiner Straße 41, 35410 Hungen, Alemanha, dev.app.support@gmail.com) da tua decisão de rescindir este contrato através de uma declaração inequívoca (por exemplo, uma carta enviada por correio ou e-mail).
-
-Podes utilizar o formulário de rescisão em https://ec.europa.eu/consumers/odr, mas tal não é obrigatório.
-
-Para cumprires o prazo de rescisão, é suficiente que envies a comunicação relativa ao exercício do direito de rescisão antes de expirar o prazo de rescisão.
-
-Consequências da rescisão segundo o §356 BGB:
-
-Se rescindires este contrato, devolveremos todos os pagamentos que recebemos de ti, incluindo as despesas de entrega (exceto os custos adicionais resultantes da escolha de um tipo de entrega diferente do tipo de entrega padrão mais económico que oferecemos), sem demora e o mais tardar no prazo de 14 dias a partir do dia em que recebermos a notificação da tua rescisão deste contrato.</string>
-    <string name="paywall_consent_dialog_cancel">Cancelar</string>
-    <string name="paywall_consent_dialog_checkbox">Concordo que a disponibilização das funcionalidades Premium começa imediatamente após a encomenda. Sei que com isso perco o meu direito de retratação de 14 dias.</string>
-    <string name="paywall_consent_dialog_confirm">Subscrever com pagamento agora</string>
-    <string name="paywall_consent_dialog_title">Aviso de retratação</string>
     <string name="profile_custom_add">Adicionar análise individual</string>
     <string name="profile_custom_remove">Remover análise individual</string>
     <string name="profile_custom_rename">Mudar o nome</string>
@@ -1392,17 +1371,6 @@ Se rescindires este contrato, devolveremos todos os pagamentos que recebemos de 
     <string name="follow_up_tab_label">Seguimentos</string>
     <string name="follow_up_transcribe_error">Não foi possível transcrever. Tenta novamente.</string>
     <string name="follow_up_transcribing_state">A transcrever…</string>
-    <string name="paywall_cancel_anytime">Cancela quando quiseres</string>
-    <string name="paywall_feature_ai_improvement">Melhoria de texto com IA</string>
-    <string name="paywall_feature_drive_backup">Cópia de segurança no Google Drive</string>
-    <string name="paywall_feature_pdf_export">Exportação em PDF</string>
-    <string name="paywall_lifetime_label">Pagamento único</string>
-    <string name="paywall_monthly_label">Mensal</string>
-    <string name="paywall_restore_button">Restaurar compras</string>
-    <string name="paywall_subscribe_button">Subscrever com pagamento</string>
-    <string name="paywall_subtitle">Desbloqueia todas as funcionalidades Premium</string>
-    <string name="paywall_title">Atualizar para Premium</string>
-    <string name="paywall_yearly_label">Anual</string>
     <string name="prompt_char_count_label">%1$d caracteres</string>
     <string name="prompt_improve_button_label">Melhorar</string>
     <string name="prompt_placeholder_text">Escreve o que te vai na cabeça…</string>

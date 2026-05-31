@@ -768,14 +768,12 @@
     <string name="paywall_yearly_note">తర్వాత సంవత్సరానికి %1$s, స్వయంచాలకంగా పునరుద్ధరించబడుతుంది\nపరీక్ష దశలో ఎప్పుడైనా రద్దు చేయవచ్చు</string>
     <string name="paywall_most_popular">సిఫారసు చేయబడింది</string><!-- SHORTER: సిఫారసు -->
     <string name="paywall_monthly_plan">నెలవారీ సబ్‌స్క్రిప్షన్, నెలకి %1$s</string>
-    <string name="paywall_yearly_savings">నెలవారీ సభ్యత్వంతో పోలిస్తే %1$d%% ఆదా — సంబంధిత ఒప్పంద వ్యవధి ముగింపులో ఎప్పుడైనా రద్దు చేయవచ్చు.</string>
     <string name="paywall_lifetime_title">ఒకసారి కొనుగోలు</string>
     <string name="paywall_lifetime_desc">ఒకసారి చెల్లించు, అన్నీ శాశ్వతంగా ఉపయోగించు</string>
     <string name="paywall_lifetime_note">సబ్‌స్క్రిప్షన్ లేదు, పొడిగింపు లేదు</string>
     <string name="paywall_free_note">యాప్ సబ్‌స్క్రిప్షన్ లేకుండా కూడా పని చేస్తుంది.</string>
     <string name="paywall_legal_hint" formatted="false">సబ్‌స్క్రైబ్ చేయడం ద్వారా నువ్వు %1$s అంగీకరిస్తావు. నీ 14 రోజుల ఒప్పందం ఉపసంహరణ హక్కు అక్కడ వివరించబడింది.</string>
     <string name="paywall_legal_hint_link">వినియోగ నిబంధనలను</string>
-    <string name="paywall_cd_close">మూసివేయండి</string>
 
     <string name="paywall_feature_patterns">మీ ఆలోచనలో పునరావృత నమూనాలను గుర్తించండి</string>
     <string name="paywall_feature_improve">ప్రతి ఎంట్రీకి ప్రతిరోజూ AI టెక్స్ట్ మెరుగుదల</string>
@@ -1266,22 +1264,6 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="ai_retro_copied_message">క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది</string>
 
     <!-- Paywall / consent strings -->
-    <string name="paywall_title">ప్రీమియమ్‌కు అప్‌గ్రేడ్ చేయండి</string>
-    <string name="paywall_subtitle">అన్ని Premium ఫీచర్లు అన్‌లాక్ చేయి</string>
-    <string name="paywall_monthly_label">నెలవారీ</string>
-    <string name="paywall_yearly_label">వార్షిక</string>
-    <string name="paywall_lifetime_label">జీవితకాలం</string>
-    <string name="paywall_subscribe_button">చెల్లింపు సభ్యత్వం తీసుకోండి</string>
-    <string name="paywall_restore_button">కొనుగోలు పునరుద్ధరించండి</string>
-    <string name="paywall_cancel_anytime">ఎప్పుడైనా రద్దు చేయవచ్చు</string>
-    <string name="paywall_consent_dialog_title">ఉచిత రద్దు హక్కు</string>
-    <string name="paywall_consent_dialog_body">సభ్యత్వం లేదా కొనుగోలు పూర్తయిన తర్వాత నీకు మూలంగా 14 రోజుల రద్దు హక్కు ఉంటుంది (§ 355 BGB).\n\nనీవు Premium ఫీచర్లు వెంటనే ఉపయోగించగలిగేందుకు, నీ కొనుగోలు తర్వాత వెంటనే అందుబాటు ప్రారంభమవుతుంది. దిగువ నీ సమ్మతితో నీవు 14 రోజుల రద్దు హక్కును పరిణామాలు తెలిసి వదులుకుంటున్నావు (§ 356 Abs. 5 BGB).\n\nఈ సమ్మతి లేకుండా మేము Premium ఫీచర్లు వెంటనే అన్‌లాక్ చేయలేము.\n\nPremium ఫీచర్ల అందజేతదారు: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. రద్దు కోసం ఇ-మెయిల్: dev.app.support@gmail.com.\n\nనీవు అందజేత ముందే రద్దు హక్కు వినియోగించకపోతే మరియు Premium సభ్యత్వం ప్రారంభమైతే, నీ 14 రోజుల రద్దు గడువు ఒప్పంద కుదుర్పు రోజు నుండి మొదలవుతుంది. రద్దును సాధారణ ఇ-మెయిల్ ద్వారా లేదా EU నమూనా రద్దు ఫారమ్ ద్వారా చేయవచ్చు (https://www.bmuv.de/widerruf — బాహ్య EU నమూనా).</string>
-    <string name="paywall_consent_dialog_checkbox">డౌన్‌లోడ్ ప్రారంభమైన తర్వాత డిజిటల్ కంటెంట్‌కు సంబంధించి నా రద్దు హక్కు రద్దవుతుందని నేను అంగీకరిస్తున్నాను.</string>
-    <string name="paywall_consent_dialog_confirm">అంగీకరించి కొనండి</string>
-    <string name="paywall_consent_dialog_cancel">రద్దు చేయండి</string>
-    <string name="paywall_feature_ai_improvement">AI తో వచనాన్ని మెరుగుపరచడం</string>
-    <string name="paywall_feature_pdf_export">PDF గా ఎగుమతి చేయడం</string>
-    <string name="paywall_feature_drive_backup">Google Drive బ్యాకప్</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          MISSING STRINGS — BATCH INSERT

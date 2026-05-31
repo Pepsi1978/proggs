@@ -831,14 +831,12 @@
     <string name="paywall_yearly_note">จากนั้น %1$s ต่อปี ต่ออายุอัตโนมัติ\nยกเลิกได้ทุกเวลาในช่วงทดลอง</string>
     <string name="paywall_most_popular">แนะนำ</string>
     <string name="paywall_monthly_plan">รายเดือน %1$s ต่อเดือน</string>
-    <string name="paywall_yearly_savings">ประหยัด %1$d %% เมื่อเทียบกับรายเดือน — ยกเลิกได้ทุกเมื่อก่อนสิ้นสุดสัญญา</string>
     <string name="paywall_lifetime_title">ซื้อครั้งเดียว</string>
     <string name="paywall_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกอย่างตลอดไป</string>
     <string name="paywall_lifetime_note">ไม่มีการสมัคร ไม่มีการต่ออายุ</string>
     <string name="paywall_free_note">แอปใช้งานได้ต่อแม้ไม่มีสมาชิก</string>
     <string name="paywall_legal_hint" formatted="false">เมื่อสมัครสมาชิก คุณยอมรับ%1$s สิทธิ์การเพิกถอนภายใน 14 วันอธิบายไว้ที่นั่น</string>
     <string name="paywall_legal_hint_link">ข้อกำหนดการใช้งาน</string>
-    <string name="paywall_cd_close">ปิด</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">ค้นพบรูปแบบที่เกิดซ้ำในความคิดของคุณ</string>
@@ -1341,11 +1339,6 @@
     <string name="journal_improve">ปรับปรุงข้อความ</string>
     <string name="journal_state_improving">กำลังปรับปรุง…</string>
     <string name="journal_state_transcribing">กำลังแปลงเป็นข้อความ…</string>
-    <string name="paywall_consent_dialog_body">โดยหลักการแล้วคุณมีสิทธิ์ยกเลิกภายใน 14 วันหลังจากสมัครสมาชิกหรือซื้อสินค้า\n\nเพื่อให้คุณใช้ฟีเจอร์ Premium ได้ทันที เราจะเริ่มให้บริการทันทีหลังจากที่คุณซื้อ โดยการให้ความยินยอมด้านล่าง คุณสละสิทธิ์การยกเลิกภายใน 14 วันโดยรับทราบผลที่ตามมา\n\nหากไม่มีความยินยอมนี้ เราไม่สามารถเปิดใช้ฟีเจอร์ Premium ได้ทันที\n\nผู้ให้บริการฟีเจอร์ Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, ประเทศเยอรมนี อีเมลสำหรับยกเลิก: dev.app.support@gmail.com\n\nหากคุณไม่ได้แจ้งยกเลิกก่อนเริ่มให้บริการและ Premium เริ่มทำงานแล้ว ระยะเวลาการยกเลิก 14 วันของคุณจะเริ่มนับตั้งแต่วันที่ทำสัญญา คุณสามารถแจ้งยกเลิกทางอีเมลโดยไม่ต้องมีแบบฟอร์มใดๆ หรือใช้แบบฟอร์มยกเลิกมาตรฐาน EU (https://www.bmuv.de/widerruf — แบบฟอร์ม EU ภายนอก)</string>
-    <string name="paywall_consent_dialog_cancel">ยกเลิก</string>
-    <string name="paywall_consent_dialog_checkbox">ฉันยินยอมให้เริ่มให้บริการฟีเจอร์ Premium ทันทีหลังจากสั่งซื้อ และรับทราบว่าฉันจะสูญเสียสิทธิ์การยกเลิกภายใน 14 วัน</string>
-    <string name="paywall_consent_dialog_confirm">สมัครสมาชิกแบบชำระเงินทันที</string>
-    <string name="paywall_consent_dialog_title">การแจ้งสิทธิ์ยกเลิก</string>
     <string name="profile_custom_add">เพิ่มการวิเคราะห์ส่วนตัว</string>
     <string name="profile_custom_remove">ลบการวิเคราะห์ส่วนตัว</string>
     <string name="profile_custom_rename">เปลี่ยนชื่อ</string>
@@ -1381,17 +1374,6 @@
     <string name="follow_up_tab_label">บันทึกต่อเนื่อง</string>
     <string name="follow_up_transcribe_error">ถอดเสียงไม่ได้ ลองอีกครั้ง</string>
     <string name="follow_up_transcribing_state">กำลังถอดเสียง…</string>
-    <string name="paywall_cancel_anytime">ยกเลิกได้ทุกเมื่อ</string>
-    <string name="paywall_feature_ai_improvement">ปรับปรุงข้อความด้วย AI</string>
-    <string name="paywall_feature_drive_backup">สำรองข้อมูล Google Drive</string>
-    <string name="paywall_feature_pdf_export">ส่งออก PDF</string>
-    <string name="paywall_lifetime_label">ครั้งเดียว</string>
-    <string name="paywall_monthly_label">รายเดือน</string>
-    <string name="paywall_restore_button">กู้คืนการซื้อ</string>
-    <string name="paywall_subscribe_button">สมัครสมาชิก</string>
-    <string name="paywall_subtitle">ปลดล็อกฟีเจอร์ Premium ทั้งหมด</string>
-    <string name="paywall_title">อัปเกรดเป็น Premium</string>
-    <string name="paywall_yearly_label">รายปี</string>
     <string name="prompt_char_count_label">%1$d อักขระ</string>
     <string name="prompt_improve_button_label">ปรับปรุง</string>
     <string name="prompt_placeholder_text">เขียนสิ่งที่อยู่ในใจ…</string>

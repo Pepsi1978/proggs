@@ -848,14 +848,12 @@ kişisel KI günlüğün</string>
 Deneme süresinde istediğin zaman iptal edilebilir</string>
     <string name="paywall_most_popular">Önerilen</string>
     <string name="paywall_monthly_plan">Aylık abonelik, ayda %1$s</string>
-    <string name="paywall_yearly_savings">Aylık aboneliğe göre %1$d %% tasarruf et — dönem sonunda istediğin zaman iptal</string>
     <string name="paywall_lifetime_title">Tek seferlik satın alma</string>
     <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
     <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
     <string name="paywall_free_note">Uygulama abonelik olmadan da çalışmaya devam eder.</string>
     <string name="paywall_legal_hint" formatted="false">Abone olarak %1$s kabul edersin. 14 günlük cayma hakkın orada açıklanır.</string>
     <string name="paywall_legal_hint_link">Kullanım Koşulları\'nı</string>
-    <string name="paywall_cd_close">Kapat</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Düşüncelerindeki tekrar eden kalıpları keşfet</string>
@@ -1359,11 +1357,6 @@ Ne yapmak istersin?</string>
     <string name="journal_improve">Metni geliştir</string>
     <string name="journal_state_improving">Geliştiriliyor…</string>
     <string name="journal_state_transcribing">Metne dönüştürülüyor…</string>
-    <string name="paywall_consent_dialog_body">Abonelik veya satın alma işlemini tamamladıktan sonra kural olarak 14 günlük cayma hakkına sahipsin (§ 355 BGB).\n\nPremium özelliklerini hemen kullanabilmen için satın alma işleminin hemen ardından sunumu başlatıyoruz. Aşağıdaki onayınla, sonuçlarından haberdar olarak 14 günlük cayma hakkından feragat etmiş olursun (§ 356 Abs. 5 BGB).\n\nBu onay olmadan Premium özelliklerini hemen etkinleştiremeyiz.\n\nPremium özelliklerini sunan taraf: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Almanya. Cayma bildirimi için e-posta: dev.app.support@gmail.com.\n\nBereitstellung başlamadan önce cayma hakkını kullanmadıysan ve Premium aboneliği başlatıldıysa, 14 günlük cayma süresi sözleşme tarihinden itibaren başlar. Cayma bildirimini e-posta yoluyla serbest biçimde iletebilir ya da AB örnek cayma formunu kullanabilirsin (https://www.bmuv.de/widerruf — harici AB formu).</string>
-    <string name="paywall_consent_dialog_cancel">İptal</string>
-    <string name="paywall_consent_dialog_checkbox">Premium özelliklerin sunumunun sipariş hemen ardından başladığını kabul ediyorum. Bu nedenle 14 günlük cayma hakkımı kaybettiğimin farkındayım.</string>
-    <string name="paywall_consent_dialog_confirm">Şimdi ücretli olarak abone ol</string>
-    <string name="paywall_consent_dialog_title">Cayma bildirimi</string>
     <string name="profile_custom_add">Kişisel analiz ekle</string>
     <string name="profile_custom_remove">Kişisel analizi kaldır</string>
     <string name="profile_custom_rename">Yeniden adlandır</string>
@@ -1399,17 +1392,6 @@ Ne yapmak istersin?</string>
     <string name="follow_up_tab_label">Takipler</string>
     <string name="follow_up_transcribe_error">Yazıya dökülemedi. Tekrar dene.</string>
     <string name="follow_up_transcribing_state">Yazıya dökülüyor…</string>
-    <string name="paywall_cancel_anytime">İstediğin zaman iptal et</string>
-    <string name="paywall_feature_ai_improvement">AI ile metin iyileştirme</string>
-    <string name="paywall_feature_drive_backup">Google Drive yedeği</string>
-    <string name="paywall_feature_pdf_export">PDF dışa aktarma</string>
-    <string name="paywall_lifetime_label">Tek seferlik</string>
-    <string name="paywall_monthly_label">Aylık</string>
-    <string name="paywall_restore_button">Satın alımları geri yükle</string>
-    <string name="paywall_subscribe_button">Ücretli abone ol</string>
-    <string name="paywall_subtitle">Tüm Premium özelliklerinin kilidini aç</string>
-    <string name="paywall_title">Premium’a yükselt</string>
-    <string name="paywall_yearly_label">Yıllık</string>
     <string name="prompt_char_count_label">%1$d karakter</string>
     <string name="prompt_improve_button_label">İyileştir</string>
     <string name="prompt_placeholder_text">Aklından geçenleri yaz…</string>

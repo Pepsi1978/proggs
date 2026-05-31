@@ -863,11 +863,6 @@ for more clarity every day</string>
 
     <!-- § 356(5) German Civil Code immediate-supply waiver dialog (M1 Audit v6, 2026-04-28).
          Shown before launchPurchaseFlow. Confirmation gates the actual Google Play Billing sheet. -->
-    <string name="paywall_consent_dialog_title">Right of Withdrawal</string>
-    <string name="paywall_consent_dialog_body">After completing a subscription or purchase you have a 14-day right of withdrawal under § 355 of the German Civil Code (BGB).\n\nTo unlock the premium features immediately, we begin providing them right after your purchase. By giving your consent below you knowingly waive your 14-day right of withdrawal (§ 356(5) BGB).\n\nWithout this consent we cannot unlock the premium features instantly.\n\nProvider: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany · E-mail: dev.app.support@gmail.com\n\nTo exercise your right of withdrawal, you can use the model withdrawal form provided by the EU: https://www.bmuv.de/widerruf\n\nIn order to comply with the withdrawal period, it is sufficient to send the notification of your intention to exercise the right of withdrawal before the end of the withdrawal period.</string>
-    <string name="paywall_consent_dialog_checkbox">I agree that the premium features are provided to me immediately upon purchase. I am aware that this waives my 14-day right of withdrawal.</string>
-    <string name="paywall_consent_dialog_confirm">Subscribe — payment required</string>
-    <string name="paywall_consent_dialog_cancel">Cancel</string>
     <string name="paywall_purchase_loading_toast">Loading purchase, please try again shortly.</string>
     <string name="paywall_today">Today</string>
     <string name="paywall_full_access">Full access</string>
@@ -879,14 +874,12 @@ for more clarity every day</string>
 Cancel anytime during the trial period</string>
     <string name="paywall_most_popular">Recommended</string>
     <string name="paywall_monthly_plan">Monthly, %1$s per month</string>
-    <string name="paywall_yearly_savings">Save %1$d%% compared to monthly — cancellation possible at any time before the next renewal date.</string>
     <string name="paywall_lifetime_title">One-time purchase</string>
     <string name="paywall_lifetime_desc">Pay once, use everything permanently</string>
     <string name="paywall_lifetime_note">No subscription, no renewal</string>
     <string name="paywall_free_note">The app keeps working without a subscription.</string>
     <string name="paywall_legal_hint" formatted="false">By subscribing you accept the %1$s. Your 14-day right of withdrawal is described there.</string>
     <string name="paywall_legal_hint_link">Terms of Use</string>
-    <string name="paywall_cd_close">Close</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Discover recurring patterns in your thinking</string>
@@ -1387,17 +1380,6 @@ You can change this at any time in the settings.</string>
     <string name="follow_up_tab_label">Follow-ups</string>
     <string name="follow_up_transcribe_error">Could not transcribe it. Try again.</string>
     <string name="follow_up_transcribing_state">Transcribing…</string>
-    <string name="paywall_cancel_anytime">Cancel anytime</string>
-    <string name="paywall_feature_ai_improvement">AI text improvement</string>
-    <string name="paywall_feature_drive_backup">Google Drive backup</string>
-    <string name="paywall_feature_pdf_export">PDF export</string>
-    <string name="paywall_lifetime_label">One-time</string>
-    <string name="paywall_monthly_label">Monthly</string>
-    <string name="paywall_restore_button">Restore purchases</string>
-    <string name="paywall_subscribe_button">Subscribe now</string>
-    <string name="paywall_subtitle">Unlock all premium features</string>
-    <string name="paywall_title">Upgrade to Premium</string>
-    <string name="paywall_yearly_label">Yearly</string>
     <string name="prompt_char_count_label">%1$d characters</string>
     <string name="prompt_improve_button_label">Improve</string>
     <string name="prompt_placeholder_text">Write what is on your mind…</string>

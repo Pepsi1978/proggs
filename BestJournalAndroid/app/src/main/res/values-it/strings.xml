@@ -887,14 +887,12 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
     <string name="paywall_yearly_note">Poi %1$s all\'anno, si rinnova automaticamente\nAnnullabile in qualsiasi momento durante il periodo di prova</string>
     <string name="paywall_most_popular">Consigliato</string>
     <string name="paywall_monthly_plan">Abbonamento mensile, %1$s al mese</string>
-    <string name="paywall_yearly_savings">Risparmia il %1$d%% rispetto al mensile — disdici in qualsiasi momento al termine del contratto.</string>
     <string name="paywall_lifetime_title">Acquisto unico</string>
     <string name="paywall_lifetime_desc">Paga una volta, usa tutto in modo permanente</string>
     <string name="paywall_lifetime_note">Nessun abbonamento, nessun rinnovo</string>
     <string name="paywall_free_note">L\'app funziona anche senza abbonamento.</string>
     <string name="paywall_legal_hint" formatted="false">Con l\'abbonamento accetti le %1$s. Il tuo diritto di recesso di 14 giorni è descritto lì.</string>
     <string name="paywall_legal_hint_link">Condizioni d\'uso</string>
-    <string name="paywall_cd_close">Chiudi</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Riconosci i pattern ricorrenti nel tuo pensiero</string>
@@ -1409,11 +1407,6 @@ Cosa vuoi fare?</string>
     <string name="journal_improve">Migliora il testo</string>
     <string name="journal_state_improving">Miglioramento in corso…</string>
     <string name="journal_state_transcribing">Trascrizione in corso…</string>
-    <string name="paywall_consent_dialog_body">Dopo la conclusione di un abbonamento o di un acquisto hai in linea di principio un diritto di recesso di 14 giorni (§ 355 BGB).\n\nPer consentirti di utilizzare subito le funzioni Premium, iniziamo la fornitura immediatamente dopo il tuo acquisto. Con il tuo consenso consapevole qui sotto rinunci al diritto di recesso di 14 giorni (§ 356 Abs. 5 BGB).\n\nSenza questo consenso non possiamo attivare immediatamente le funzioni Premium.\n\nFornitore delle funzioni Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germania. E-mail per il recesso: dev.app.support@gmail.com.\n\nSe non dichiari il recesso prima della fornitura e l\'abbonamento Premium viene avviato, il tuo periodo di recesso di 14 giorni inizia il giorno della conclusione del contratto. Puoi dichiarare il recesso in forma libera via e-mail o utilizzare il modulo di recesso UE (https://www.bmuv.de/widerruf — modello UE esterno).</string>
-    <string name="paywall_consent_dialog_cancel">Annulla</string>
-    <string name="paywall_consent_dialog_checkbox">Acconsento che la fornitura delle funzioni Premium inizi subito dopo l\'ordine. Sono consapevole di perdere così il mio diritto di recesso di 14 giorni.</string>
-    <string name="paywall_consent_dialog_confirm">Abbonati ora con obbligo di pagamento</string>
-    <string name="paywall_consent_dialog_title">Informativa sul recesso</string>
     <string name="profile_custom_add">Aggiungi analisi personalizzata</string>
     <string name="profile_custom_remove">Rimuovi analisi personalizzata</string>
     <string name="profile_custom_rename">Rinomina</string>
@@ -1449,17 +1442,6 @@ Cosa vuoi fare?</string>
     <string name="follow_up_tab_label">Follow-up</string>
     <string name="follow_up_transcribe_error">Impossibile trascrivere. Riprova.</string>
     <string name="follow_up_transcribing_state">Trascrizione…</string>
-    <string name="paywall_cancel_anytime">Annulla quando vuoi</string>
-    <string name="paywall_feature_ai_improvement">Miglioramento testo con IA</string>
-    <string name="paywall_feature_drive_backup">Backup su Google Drive</string>
-    <string name="paywall_feature_pdf_export">Esportazione PDF</string>
-    <string name="paywall_lifetime_label">Una tantum</string>
-    <string name="paywall_monthly_label">Mensile</string>
-    <string name="paywall_restore_button">Ripristina acquisti</string>
-    <string name="paywall_subscribe_button">Abbonati (pagamento richiesto)</string>
-    <string name="paywall_subtitle">Sblocca tutte le funzioni Premium</string>
-    <string name="paywall_title">Passa a Premium</string>
-    <string name="paywall_yearly_label">Annuale</string>
     <string name="prompt_char_count_label">%1$d caratteri</string>
     <string name="prompt_improve_button_label">Migliora</string>
     <string name="prompt_placeholder_text">Scrivi ciò che hai in mente…</string>

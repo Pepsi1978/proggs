@@ -1098,11 +1098,6 @@
     <string name="paywall_sub_loading_toast">Abo wird geladen, bitte versuche es gleich nochmal.</string>
 
     <!-- § 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28) — VOR launchPurchaseFlow -->
-    <string name="paywall_consent_dialog_title">Widerrufsbelehrung</string>
-    <string name="paywall_consent_dialog_body">Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.\n\nAnbieter der Premium-Funktionen: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. E-Mail für Widerruf: dev.app.support@gmail.com.\n\nFalls du das Widerrufsrecht nicht vor Bereitstellung erklärst und das Premium-Abo gestartet wird, beginnt deine 14-tägige Widerrufsfrist am Tag des Vertragsabschlusses. Du kannst den Widerruf formfrei per E-Mail erklären oder das EU-Muster-Widerrufsformular nutzen (https://www.bmuv.de/widerruf — externes EU-Muster).</string>
-    <string name="paywall_consent_dialog_checkbox">Ich stimme zu, dass die Bereitstellung der Premium-Funktionen sofort nach Bestellung beginnt. Mir ist bekannt, dass ich dadurch mein 14-tägiges Widerrufsrecht verliere.</string>
-    <string name="paywall_consent_dialog_confirm">Jetzt zahlungspflichtig abonnieren</string>
-    <string name="paywall_consent_dialog_cancel">Abbrechen</string>
     <string name="paywall_purchase_loading_toast">Kaufvorgang wird geladen, bitte versuche es gleich nochmal.</string>
     <string name="paywall_today">Heute</string>
     <string name="paywall_full_access">Voller Zugang</string>
@@ -1113,14 +1108,12 @@
     <string name="paywall_yearly_note">Danach %1$s pro Jahr, verlängert sich automatisch\nIn der Testphase jederzeit kündbar</string>
     <string name="paywall_most_popular">Empfohlen</string>
     <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
-    <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.</string>
     <string name="paywall_lifetime_title">Einmalkauf</string>
     <string name="paywall_lifetime_desc">Einmal zahlen, alles nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
     <string name="paywall_free_note">Die App funktioniert auch ohne Abo weiter.</string>
     <string name="paywall_legal_hint" formatted="false">Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.</string>
     <string name="paywall_legal_hint_link">Nutzungsbedingungen</string>
-    <string name="paywall_cd_close">Schließen</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Erkenne wiederkehrende Muster in deinem Denken</string>
@@ -1461,17 +1454,6 @@
     <string name="follow_up_tab_label">Ergänzungen</string>
     <string name="follow_up_transcribe_error">Konnte nicht transkribiert werden. Versuche es erneut.</string>
     <string name="follow_up_transcribing_state">Wird transkribiert…</string>
-    <string name="paywall_cancel_anytime">Jederzeit kündbar</string>
-    <string name="paywall_feature_ai_improvement">Textverbesserung mit KI</string>
-    <string name="paywall_feature_drive_backup">Google Drive Backup</string>
-    <string name="paywall_feature_pdf_export">PDF-Export</string>
-    <string name="paywall_lifetime_label">Einmalig</string>
-    <string name="paywall_monthly_label">Monatlich</string>
-    <string name="paywall_restore_button">Käufe wiederherstellen</string>
-    <string name="paywall_subscribe_button">Zahlungspflichtig abonnieren</string>
-    <string name="paywall_subtitle">Schalte alle Premium-Funktionen frei</string>
-    <string name="paywall_title">Upgrade auf Premium</string>
-    <string name="paywall_yearly_label">Jährlich</string>
     <string name="prompt_char_count_label">%1$d Zeichen</string>
     <string name="prompt_improve_button_label">Verbessern</string>
     <string name="prompt_placeholder_text">Schreib, was dir durch den Kopf geht…</string>

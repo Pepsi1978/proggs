@@ -831,14 +831,12 @@
     <string name="paywall_yearly_note">その後%1$sを年額で、自動更新\n試用期間中はいつでもキャンセル可能</string>
     <string name="paywall_most_popular">おすすめ</string>
     <string name="paywall_monthly_plan">月額プラン、月%1$s</string>
-    <string name="paywall_yearly_savings">月額プランに比べて%1$d\u00A0%%お得。いつでも解約可能</string>
     <string name="paywall_lifetime_title">買い切り</string>
     <string name="paywall_lifetime_desc">一度の支払いですべてを継続的に利用</string>
     <string name="paywall_lifetime_note">サブスクなし、更新なし</string>
     <string name="paywall_free_note">アプリはサブスクリプションなしでも引き続きご利用いただけます。</string>
     <string name="paywall_legal_hint" formatted="false">定期購入すると%1$sに同意したことになります。14日間の契約解除権はそちらに記載されています。</string>
     <string name="paywall_legal_hint_link">利用規約</string>
-    <string name="paywall_cd_close">閉じる</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">思考の繰り返しパターンを見つける</string>
@@ -1335,11 +1333,6 @@ Premiumでは：1日最大150件。</string>
     <string name="journal_improve">文章を改善</string>
     <string name="journal_state_improving">改善中…</string>
     <string name="journal_state_transcribing">文字起こし中…</string>
-    <string name="paywall_consent_dialog_body">ご購入またはサブスクリプション契約後、原則として14日間の撤回権があります（§ 355 BGB）。\n\nご購入直後からプレミアム機能をご利用いただけるよう、契約成立直後にサービスの提供を開始します。下記にご同意いただくことで、14日間の撤回権を放棄することになります（§ 356 Abs. 5 BGB）。\n\nご同意いただけない場合、プレミアム機能を即時にご利用いただくことはできません。\n\nプレミアム機能の提供者：Frank Barwandt、c/o Impressumservice Dein-Impressum、Stettiner Straße 41、35410 Hungen、ドイツ。撤回通知の連絡先：dev.app.support@gmail.com。\n\nサービス提供開始前に撤回権を行使されない場合、サブスクリプション開始日から14日間の撤回期間が始まります。撤回は任意の形式（メール等）で行うか、EUの撤回書式をご利用いただけます（https://www.bmuv.de/widerruf — 外部EUサンプルフォーム）。</string>
-    <string name="paywall_consent_dialog_cancel">キャンセル</string>
-    <string name="paywall_consent_dialog_checkbox">プレミアム機能のご提供がご注文直後に開始されることに同意します。これにより14日間のキャンセル権を失うことを理解しています。</string>
-    <string name="paywall_consent_dialog_confirm">今すぐ有料登録する</string>
-    <string name="paywall_consent_dialog_title">撤回権の告知</string>
     <string name="profile_custom_add">カスタム分析を追加</string>
     <string name="profile_custom_remove">カスタム分析を削除</string>
     <string name="profile_custom_rename">名前を変更</string>
@@ -1375,17 +1368,6 @@ Premiumでは：1日最大150件。</string>
     <string name="follow_up_tab_label">フォローアップ</string>
     <string name="follow_up_transcribe_error">文字起こしできませんでした。もう一度お試しください。</string>
     <string name="follow_up_transcribing_state">文字起こし中…</string>
-    <string name="paywall_cancel_anytime">いつでもキャンセル可能</string>
-    <string name="paywall_feature_ai_improvement">AIによる文章改善</string>
-    <string name="paywall_feature_drive_backup">Google Driveバックアップ</string>
-    <string name="paywall_feature_pdf_export">PDFエクスポート</string>
-    <string name="paywall_lifetime_label">一回払い</string>
-    <string name="paywall_monthly_label">月額</string>
-    <string name="paywall_restore_button">購入を復元</string>
-    <string name="paywall_subscribe_button">有料プランに登録する</string>
-    <string name="paywall_subtitle">すべてのプレミアム機能をアンロック</string>
-    <string name="paywall_title">Premiumにアップグレード</string>
-    <string name="paywall_yearly_label">年額</string>
     <string name="prompt_char_count_label">%1$d文字</string>
     <string name="prompt_improve_button_label">改善</string>
     <string name="prompt_placeholder_text">今考えていることを書いてください…</string>

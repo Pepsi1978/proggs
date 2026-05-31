@@ -851,14 +851,12 @@
 У тестовий період можна скасувати будь-коли</string>
     <string name="paywall_most_popular">Рекомендовано</string>
     <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
-    <string name="paywall_yearly_savings">Заощадьте %1$d%% порівняно з місячною — скасування будь-коли до кінця строку.</string>
     <string name="paywall_lifetime_title">Разова покупка</string>
     <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
     <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
     <string name="paywall_free_note">Застосунок працює і без підписки.</string>
     <string name="paywall_legal_hint" formatted="false">Підписуючись, ти приймаєш %1$s. Твоє 14-денне право на відкликання описане там.</string>
     <string name="paywall_legal_hint_link">Умови використання</string>
-    <string name="paywall_cd_close">Закрити</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Розпізнавайте повторювані закономірності у вашому мисленні</string>
@@ -1372,11 +1370,6 @@
     <string name="journal_improve">Покращити текст</string>
     <string name="journal_state_improving">Покращення…</string>
     <string name="journal_state_transcribing">Транскрибування…</string>
-    <string name="paywall_consent_dialog_body">Після оформлення підписки або покупки ти маєш принципове право на відмову протягом 14 днів (§ 355 BGB).\n\nЩоб ти міг одразу користуватися функціями Premium, ми починаємо надання послуги безпосередньо після твоєї оплати. Надаючи згоду нижче, ти усвідомлено відмовляєшся від 14-денного права на відмову (§ 356 абз. 5 BGB).\n\nБез цієї згоди ми не можемо одразу активувати функції Premium.\n\nПостачальник функцій Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Німеччина. E-Mail для відмови: dev.app.support@gmail.com.\n\nЯкщо ти не заявиш про відмову до початку надання послуги і підписку Premium буде активовано, 14-денний строк відмови починається з дня укладення договору. Відмову можна подати у довільній формі електронною поштою або скористатись типовою формою ЄС для відмови (https://www.bmuv.de/widerruf — зовнішня форма ЄС).</string>
-    <string name="paywall_consent_dialog_cancel">Скасувати</string>
-    <string name="paywall_consent_dialog_checkbox">Я погоджуюся, що надання функцій Premium розпочнеться одразу після замовлення. Я розумію, що таким чином втрачаю 14-денне право на відмову.</string>
-    <string name="paywall_consent_dialog_confirm">Оформити підписку зараз із зобов\'язанням оплати</string>
-    <string name="paywall_consent_dialog_title">Інформація про право на відмову</string>
     <string name="profile_custom_add">Додати індивідуальний аналіз</string>
     <string name="profile_custom_remove">Видалити індивідуальний аналіз</string>
     <string name="profile_custom_rename">Перейменувати</string>
@@ -1412,17 +1405,6 @@
     <string name="follow_up_tab_label">Продовження</string>
     <string name="follow_up_transcribe_error">Не вдалося транскрибувати. Спробуй ще раз.</string>
     <string name="follow_up_transcribing_state">Транскрибування…</string>
-    <string name="paywall_cancel_anytime">Скасувати будь-коли</string>
-    <string name="paywall_feature_ai_improvement">Покращення тексту за допомогою ШІ</string>
-    <string name="paywall_feature_drive_backup">Резервна копія Google Drive</string>
-    <string name="paywall_feature_pdf_export">Експорт PDF</string>
-    <string name="paywall_lifetime_label">Разово</string>
-    <string name="paywall_monthly_label">Щомісяця</string>
-    <string name="paywall_restore_button">Відновити покупки</string>
-    <string name="paywall_subscribe_button">Оформити підписку</string>
-    <string name="paywall_subtitle">Відкрий усі функції Premium</string>
-    <string name="paywall_title">Перейти на Premium</string>
-    <string name="paywall_yearly_label">Щороку</string>
     <string name="prompt_char_count_label">%1$d символів</string>
     <string name="prompt_improve_button_label">Покращити</string>
     <string name="prompt_placeholder_text">Напиши, що в тебе на думці…</string>

@@ -788,14 +788,12 @@
     <string name="paywall_yearly_note">തുടർന്ന് %1$s വർഷം തോറും, സ്വയം പുതുക്കുന്നു\nടെസ്റ്റ് ഘട്ടത്തിൽ ഏത് സമയത്തും റദ്ദാക്കാം</string>
     <string name="paywall_most_popular">ശുപാർശ ചെയ്തത്</string>
     <string name="paywall_monthly_plan">മാസ സബ്സ്ക്രിപ്ഷൻ, %1$s/മാസം</string>
-    <string name="paywall_yearly_savings">മാസ സബ്‌സ്‌ക്രിപ്ഷനേക്കാൾ %1$d%% ലാഭം — കരാർ കാലാവധി അവസാനിക്കുമ്പോൾ എപ്പോൾ വേണമെങ്കിലും റദ്ദ് ചെയ്യാം.</string>
     <string name="paywall_lifetime_title">ഒറ്റ വാങ്ങൽ</string>
     <string name="paywall_lifetime_desc">ഒറ്റത്തവണ പണമടയ്ക്കുക, എല്ലാം ശാശ്വതമായി ഉപയോഗിക്കുക</string>
     <string name="paywall_lifetime_note">സബ്സ്ക്രിപ്ഷൻ ഇല്ല, പുതുക്കൽ ഇല്ല</string>
     <string name="paywall_free_note">ആപ്പ് സബ്സ്ക്രിപ്ഷൻ ഇല്ലാതെയും തുടർന്ന് പ്രവർത്തിക്കും.</string>
     <string name="paywall_legal_hint" formatted="false">സബ്സ്ക്രൈബ് ചെയ്യുമ്പോൾ നീ %1$s അംഗീകരിക്കുന്നു. നിന്റെ 14 ദിവസത്തെ കരാർ റദ്ദാക്കൽ അവകാശം അവിടെ വിവരിച്ചിട്ടുണ്ട്.</string>
     <string name="paywall_legal_hint_link">ഉപയോഗ നിബന്ധനകൾ</string>
-    <string name="paywall_cd_close">അടയ്ക്കുക</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">നിങ്ങളുടെ ചിന്തയിലെ ആവർത്തിക്കുന്ന മാതൃകകൾ തിരിച്ചറിയൂ</string>
@@ -1272,22 +1270,6 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="ai_retro_copied_message">ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി</string>
 
     <!-- Paywall / consent strings -->
-    <string name="paywall_title">പ്രീമിയത്തിലേക്ക് അപ്‌ഗ്രേഡ് ചെയ്യുക</string>
-    <string name="paywall_subtitle">എല്ലാ പ്രീമിയം ഫീച്ചറുകളും അൺലോക്ക് ചെയ്യൂ</string>
-    <string name="paywall_monthly_label">പ്രതിമാസം</string>
-    <string name="paywall_yearly_label">വാർഷികം</string>
-    <string name="paywall_lifetime_label">ജീവിതകാലം</string>
-    <string name="paywall_subscribe_button">പണമടച്ച് സബ്സ്ക്രൈബ് ചെയ്യൂ</string>
-    <string name="paywall_restore_button">വാങ്ങൽ പുനഃസ്ഥാപിക്കുക</string>
-    <string name="paywall_cancel_anytime">എപ്പോൾ വേണമെങ്കിലും റദ്ദാക്കാം</string>
-    <string name="paywall_consent_dialog_title">സൗജന്യ റദ്ദാക്കൽ അവകാശം</string>
-    <string name="paywall_consent_dialog_body">ഒരു സബ്‌സ്‌ക്രിപ്ഷൻ അല്ലെങ്കിൽ വാങ്ങൽ പൂർത്തിയാക്കിയ ശേഷം §355 BGB പ്രകാരം 14 ദിവസത്തിനുള്ളിൽ റദ്ദാക്കാനുള്ള അവകാശം നിനക്കുണ്ട്.\n\nപ്രീമിയം ഫീച്ചറുകൾ ഉടൻ ലഭ്യമാക്കുന്നതിനായി, നിന്റെ വാങ്ങലിനു ശേഷം ഉടൻ ഞങ്ങൾ നൽകൽ ആരംഭിക്കും. ചുവടെയുള്ള നിന്റെ സമ്മതത്തോടെ, §356 Abs. 5 BGB പ്രകാരം 14 ദിവസത്തെ റദ്ദാക്കൽ അവകാശം നിനക്ക് ഉണ്ടെന്നറിഞ്ഞ് നീ ഉപേക്ഷിക്കുന്നു.\n\nഈ സമ്മതം ഇല്ലാതെ ഞങ്ങൾക്ക് പ്രീമിയം ഫീച്ചറുകൾ ഉടൻ തുറക്കാൻ കഴിയില്ല.\n\nപ്രീമിയം ഫീച്ചറുകളുടെ ദാതാവ്: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, ജർമ്മനി. റദ്ദാക്കലിനുള്ള ഇ-മെയിൽ: dev.app.support@gmail.com.\n\nനൽകൽ ആരംഭിക്കുന്നതിന് മുൻപ് റദ്ദാക്കൽ അവകാശം ഉപയോഗിക്കാതെ പ്രീമിയം സബ്‌സ്‌ക്രിപ്ഷൻ ആരംഭിച്ചാൽ, കരാർ ഉറപ്പിച്ച ദിവസം മുതൽ 14 ദിവസത്തെ അവകാശ കാലാവധി ആരംഭിക്കും. ഇ-മെയിൽ വഴി ഔപചാരിക രൂപമില്ലാതെ റദ്ദ് ചെയ്യാം അല്ലെങ്കിൽ EU മാതൃകാ ഫോം ഉപയോഗിക്കാം (https://www.bmuv.de/widerruf — ബാഹ്യ EU മാതൃക).</string>
-    <string name="paywall_consent_dialog_checkbox">ഡൗൺലോഡ് ആരംഭിക്കുമ്പോൾ ഡിജിറ്റൽ ഉള്ളടക്കത്തിനുള്ള എന്റെ റദ്ദാക്കൽ അവകാശം നഷ്ടമാകുമെന്ന് ഞാൻ സമ്മതിക്കുന്നു.</string>
-    <string name="paywall_consent_dialog_confirm">സമ്മതിക്കുകയും വാങ്ങുകയും ചെയ്യുക</string>
-    <string name="paywall_consent_dialog_cancel">റദ്ദാക്കുക</string>
-    <string name="paywall_feature_ai_improvement">AI ഉപയോഗിച്ച് ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ</string>
-    <string name="paywall_feature_pdf_export">PDF ആയി കയറ്റുമതി ചെയ്യൽ</string>
-    <string name="paywall_feature_drive_backup">Google Drive ബാക്കപ്പ്</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          MISSING STRINGS — BATCH INSERT

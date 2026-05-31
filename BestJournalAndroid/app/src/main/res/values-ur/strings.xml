@@ -835,14 +835,12 @@
     <string name="paywall_yearly_note">بعد میں %1$s سالانہ، خودکار تجدید\nآزمائشی مدت میں کسی بھی وقت منسوخ کریں</string>
     <string name="paywall_most_popular">تجویز کردہ</string>
     <string name="paywall_monthly_plan">ماہانہ پلان، %1$s فی ماہ</string>
-    <string name="paywall_yearly_savings">ماہانہ پلان کے مقابلے %1$d%% بچاؤ — معاہدے کے اختتام پر کسی بھی وقت منسوخ ممکن۔</string>
     <string name="paywall_lifetime_title">یک مشت خرید</string>
     <string name="paywall_lifetime_desc">ایک بار ادائیگی کریں، ہر چیز مستقل طور پر استعمال کریں</string>
     <string name="paywall_lifetime_note">کوئی سبسکرپشن نہیں، کوئی تجدید نہیں</string>
     <string name="paywall_free_note">یہ ایپ سبسکرپشن کے بغیر بھی کام کرتی رہے گی۔</string>
     <string name="paywall_legal_hint" formatted="false">سبسکرائب کرنے سے تم %1$s قبول کرتے ہو۔ تمہارا 14 دن کا معاہدہ منسوخی کا حق وہاں بیان کیا گیا ہے۔</string>
     <string name="paywall_legal_hint_link">استعمال کی شرائط</string>
-    <string name="paywall_cd_close">بند کریں</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">اپنی سوچ میں بار بار آنے والے نمونوں کو پہچانیں</string>
@@ -1349,11 +1347,6 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="journal_improve">متن بہتر کریں</string>
     <string name="journal_state_improving">بہتر ہو رہا ہے…</string>
     <string name="journal_state_transcribing">تحریر میں تبدیل ہو رہا ہے…</string>
-    <string name="paywall_consent_dialog_body">سبسکرپشن یا خریداری مکمل ہونے کے بعد تمہیں بنیادی طور پر 14 دن کا واپسی کا حق (§ 355 BGB) حاصل ہے۔\n\nتاکہ تم Premium خصوصیات فوری طور پر استعمال کر سکو، ہم تمہاری خریداری کے فوری بعد فراہمی شروع کر دیتے ہیں۔ نیچے تمہاری رضامندی سے تم نتائج سے باخبر ہو کر اپنا 14 دن کا واپسی کا حق ساقط کر دیتے ہو (§ 356 Abs. 5 BGB)۔\n\nاس رضامندی کے بغیر ہم Premium خصوصیات فوری طور پر فعال نہیں کر سکتے۔\n\nPremium خصوصیات کے فراہم کنندہ: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. واپسی کے لیے ای میل: dev.app.support@gmail.com۔\n\nاگر تم فراہمی سے پہلے واپسی کا حق استعمال نہیں کرتے اور Premium سبسکرپشن شروع ہو جاتی ہے تو تمہاری 14 دن کی مدت معاہدے کے دن سے شروع ہوتی ہے۔ تم واپسی غیر رسمی طور پر ای میل کے ذریعے یا EU کے نمونہ واپسی فارم سے کر سکتے ہو (https://www.bmuv.de/widerruf — بیرونی EU نمونہ)۔</string>
-    <string name="paywall_consent_dialog_cancel">منسوخ کریں</string>
-    <string name="paywall_consent_dialog_checkbox">میں اس بات پر رضامند ہوں کہ Premium خصوصیات کی فراہمی آرڈر کے فوری بعد شروع ہو جائے۔ مجھے معلوم ہے کہ اس سے میرا 14 دن کا واپسی کا حق ختم ہو جائے گا۔</string>
-    <string name="paywall_consent_dialog_confirm">ابھی ادائیگی کے ساتھ سبسکرائب کریں</string>
-    <string name="paywall_consent_dialog_title">واپسی کی اطلاع</string>
     <string name="profile_custom_add">ذاتی تجزیہ شامل کریں</string>
     <string name="profile_custom_remove">ذاتی تجزیہ ہٹائیں</string>
     <string name="profile_custom_rename">نام تبدیل کریں</string>
@@ -1389,17 +1382,6 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="follow_up_tab_label">فالو اپس</string>
     <string name="follow_up_transcribe_error">متن میں تبدیل نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
     <string name="follow_up_transcribing_state">متن میں تبدیل کیا جا رہا ہے…</string>
-    <string name="paywall_cancel_anytime">کسی بھی وقت منسوخ کریں</string>
-    <string name="paywall_feature_ai_improvement">AI سے متن بہتر بنائیں</string>
-    <string name="paywall_feature_drive_backup">Google Drive بیک اپ</string>
-    <string name="paywall_feature_pdf_export">PDF برآمد</string>
-    <string name="paywall_lifetime_label">ایک بار</string>
-    <string name="paywall_monthly_label">ماہانہ</string>
-    <string name="paywall_restore_button">خریداری بحال کریں</string>
-    <string name="paywall_subscribe_button">ادائیگی کے ساتھ سبسکرائب کریں</string>
-    <string name="paywall_subtitle">تمام Premium خصوصیات فعال کرو</string>
-    <string name="paywall_title">Premium پر اپ گریڈ کریں</string>
-    <string name="paywall_yearly_label">سالانہ</string>
     <string name="prompt_char_count_label">%1$d حروف</string>
     <string name="prompt_improve_button_label">بہتر بنائیں</string>
     <string name="prompt_placeholder_text">اپنے ذہن کی بات لکھیں…</string>

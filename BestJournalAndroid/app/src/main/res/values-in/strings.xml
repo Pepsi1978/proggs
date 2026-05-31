@@ -837,14 +837,12 @@
     <string name="paywall_yearly_note">Selanjutnya %1$s per tahun, diperpanjang otomatis\nBisa dibatalkan kapan saja selama masa percobaan</string>
     <string name="paywall_most_popular">Populer</string>
     <string name="paywall_monthly_plan">Langganan bulanan %1$s per bulan</string>
-    <string name="paywall_yearly_savings">Hemat %1$d%% dibanding langganan bulanan \u2014 bisa dibatalkan kapan saja sebelum periode berakhir.</string>
     <string name="paywall_lifetime_title">Beli sekali</string>
     <string name="paywall_lifetime_desc">Bayar sekali, pakai semua secara permanen</string>
     <string name="paywall_lifetime_note">Tanpa langganan, tanpa perpanjangan</string>
     <string name="paywall_free_note">Aplikasi tetap berfungsi tanpa langganan.</string>
     <string name="paywall_legal_hint" formatted="false">Dengan berlangganan, kamu menyetujui %1$s. Hak pembatalan kontrak 14 hari kamu dijelaskan di sana.</string>
     <string name="paywall_legal_hint_link">Ketentuan Penggunaan</string>
-    <string name="paywall_cd_close">Tutup</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Kenali pola yang berulang dalam pikiranmu</string>
@@ -1344,11 +1342,6 @@ Apa yang ingin kamu lakukan?</string>
     <string name="journal_improve">Tingkatkan teks</string>
     <string name="journal_state_improving">Sedang ditingkatkan…</string>
     <string name="journal_state_transcribing">Sedang ditranskripsi…</string>
-    <string name="paywall_consent_dialog_body">Pada dasarnya kamu memiliki hak pembatalan 14 hari setelah menyelesaikan langganan atau pembelian (§ 355 BGB).\n\nAgar kamu bisa langsung menggunakan fitur Premium, kami mulai menyediakannya segera setelah pembelianmu. Dengan persetujuanmu di bawah ini, kamu melepaskan hak pembatalan 14 hari dengan mengetahui konsekuensinya (§ 356 Abs. 5 BGB).\n\nTanpa persetujuan ini kami tidak bisa langsung mengaktifkan fitur Premium.\n\nPenyedia fitur Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Jerman. E-mail untuk pembatalan: dev.app.support@gmail.com.\n\nJika kamu tidak menyatakan pembatalan sebelum penyediaan dimulai dan langganan Premium berjalan, masa 14 hari dimulai pada hari penutupan kontrak. Kamu bisa menyampaikan pembatalan secara bebas bentuk melalui e-mail atau menggunakan formulir pembatalan standar EU (https://www.bmuv.de/widerruf — formulir eksternal EU).</string>
-    <string name="paywall_consent_dialog_cancel">Batal</string>
-    <string name="paywall_consent_dialog_checkbox">Saya setuju bahwa penyediaan fitur Premium dimulai segera setelah pemesanan. Saya menyadari bahwa dengan ini saya kehilangan hak pembatalan 14 hari.</string>
-    <string name="paywall_consent_dialog_confirm">Berlangganan berbayar sekarang</string>
-    <string name="paywall_consent_dialog_title">Pemberitahuan pembatalan</string>
     <string name="profile_custom_add">Tambah analisis pribadi</string>
     <string name="profile_custom_remove">Hapus analisis pribadi</string>
     <string name="profile_custom_rename">Ubah nama</string>
@@ -1384,17 +1377,6 @@ Apa yang ingin kamu lakukan?</string>
     <string name="follow_up_tab_label">Tindak lanjut</string>
     <string name="follow_up_transcribe_error">Tidak dapat menyalin suara ke teks. Coba lagi.</string>
     <string name="follow_up_transcribing_state">Menyalin suara ke teks…</string>
-    <string name="paywall_cancel_anytime">Batalkan kapan saja</string>
-    <string name="paywall_feature_ai_improvement">Perbaikan teks dengan AI</string>
-    <string name="paywall_feature_drive_backup">Cadangan Google Drive</string>
-    <string name="paywall_feature_pdf_export">Ekspor PDF</string>
-    <string name="paywall_lifetime_label">Sekali bayar</string>
-    <string name="paywall_monthly_label">Bulanan</string>
-    <string name="paywall_restore_button">Pulihkan pembelian</string>
-    <string name="paywall_subscribe_button">Berlangganan dengan pembayaran</string>
-    <string name="paywall_subtitle">Aktifkan semua fitur Premium</string>
-    <string name="paywall_title">Upgrade ke Premium</string>
-    <string name="paywall_yearly_label">Tahunan</string>
     <string name="prompt_char_count_label">%1$d karakter</string>
     <string name="prompt_improve_button_label">Perbaiki</string>
     <string name="prompt_placeholder_text">Tulis apa yang ada di pikiranmu…</string>

@@ -835,14 +835,12 @@
     <string name="paywall_yearly_note">এরপর প্রতি বছর %1$s, স্বয়ংক্রিয়ভাবে নবায়ন হয়\nপরীক্ষামূলক সময়ে যেকোনো সময় বাতিলযোগ্য</string>
     <string name="paywall_most_popular">প্রস্তাবিত</string>
     <string name="paywall_monthly_plan">মাসিক সাবস্ক্রিপশন, মাসে %1$s</string>
-    <string name="paywall_yearly_savings">মাসিক সাবস্ক্রিপশনের তুলনায় %1$d%% সাশ্রয় — চুক্তির মেয়াদ শেষে যেকোনো সময় বাতিল করা যায়।</string>
     <string name="paywall_lifetime_title">একবার কেনাকাটা</string>
     <string name="paywall_lifetime_desc">একবার পরিশোধ করো, সব কিছু স্থায়ীভাবে ব্যবহার করো</string>
     <string name="paywall_lifetime_note">কোনো সাবস্ক্রিপশন নয়, কোনো পুনর্নবীকরণ নয়</string>
     <string name="paywall_free_note">অ্যাপটি সাবসক্রিপশন ছাড়াও কাজ করে।</string>
     <string name="paywall_legal_hint" formatted="false">সাবস্ক্রাইব করলে তুমি %1$s মেনে নাও। তোমার 14-দিনের চুক্তি প্রত্যাহারের অধিকার সেখানে বর্ণিত আছে।</string>
     <string name="paywall_legal_hint_link">ব্যবহারের শর্তাবলী</string>
-    <string name="paywall_cd_close">বন্ধ করো</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">তোমার চিন্তায় বারবার ফিরে আসা প্যাটার্ন চিহ্নিত করো</string>
@@ -1346,22 +1344,6 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="ai_retro_copied_message">ক্লিপবোর্ডে কপি হয়েছে</string>
 
     <!-- Paywall / consent strings -->
-    <string name="paywall_title">প্রিমিয়ামে আপগ্রেড করো</string>
-    <string name="paywall_subtitle">সব Premium সুবিধা আনলক করো</string>
-    <string name="paywall_monthly_label">মাসিক</string>
-    <string name="paywall_yearly_label">বার্ষিক</string>
-    <string name="paywall_lifetime_label">একবারেই</string>
-    <string name="paywall_subscribe_button">সাবসক্রাইব করো (পেমেন্ট প্রযোজ্য)</string>
-    <string name="paywall_restore_button">ক্রয় পুনরুদ্ধার করো</string>
-    <string name="paywall_cancel_anytime">যেকোনো সময় বাতিল করো</string>
-    <string name="paywall_consent_dialog_title">বিনামূল্যে বাতিলের অধিকার</string>
-    <string name="paywall_consent_dialog_body">সাবস্ক্রিপশন বা ক্রয় সম্পন্ন করার পর আপনার মূলত 14 দিনের প্রত্যাহারের অধিকার রয়েছে (§ 355 BGB)।\n\nআপনি যাতে Premium সুবিধাগুলো সঙ্গে সঙ্গে ব্যবহার করতে পারেন, সেজন্য আমরা আপনার ক্রয়ের পরপরই সেগুলো সক্রিয় করি। নিচে সম্মতি দিলে আপনি সচেতনভাবে আপনার 14 দিনের প্রত্যাহারের অধিকার ছেড়ে দিচ্ছেন (§ 356 Abs. 5 BGB)।\n\nএই সম্মতি ছাড়া আমরা Premium সুবিধাগুলো তাৎক্ষণিকভাবে সক্রিয় করতে পারব না।\n\nPremium সুবিধার সরবরাহকারী: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. প্রত্যাহারের জন্য ই-মেইল: dev.app.support@gmail.com।\n\nযদি সরবরাহ শুরু হওয়ার আগে প্রত্যাহার না করেন এবং Premium সাবস্ক্রিপশন শুরু হয়ে যায়, তাহলে চুক্তি সম্পাদনের দিন থেকে আপনার 14 দিনের প্রত্যাহারের মেয়াদ শুরু হবে। আপনি ই-মেইলে যেকোনো রূপে প্রত্যাহার করতে পারবেন বা EU-Muster-Widerrufsformular ব্যবহার করতে পারবেন (https://www.bmuv.de/widerruf — বাহ্যিক EU-নমুনা)।</string>
-    <string name="paywall_consent_dialog_checkbox">আমি সম্মত যে ডিজিটাল বিষয়বস্তুর সাথে ডাউনলোড শুরু হলে আমার বাতিলের অধিকার বাতিল হবে।</string>
-    <string name="paywall_consent_dialog_confirm">সম্মত হও এবং কিনো</string>
-    <string name="paywall_consent_dialog_cancel">বাতিল করো</string>
-    <string name="paywall_feature_ai_improvement">AI দিয়ে লেখা উন্নত করা</string>
-    <string name="paywall_feature_pdf_export">PDF হিসেবে রপ্তানি করা</string>
-    <string name="paywall_feature_drive_backup">Google Drive ব্যাকআপ</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          MISSING STRINGS — BATCH INSERT
