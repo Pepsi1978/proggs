@@ -43,6 +43,12 @@ Diese Programmierumgebung hat EIN oberstes Ziel: Die intelligenteste Programmier
 Frage dich: Kenne ich den exakten Namen/String? -> Grep/Glob. Nur das Konzept, oder WELCHE Datei betroffen ist? -> semantische Suche (code-search MCP).
 - Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile
 - Nach 2-3 erfolglosen Greps -> semantisch; Datei >500 Zeilen NICHT per Agent editieren
+
+### Kontext-Schutz (NICHT crashen — du hast KEIN Auto-Compact und kein Tacho fuer deinen Tank)
+- Grosse Dateien NIE komplett ins Kontext lesen: per Python (open/read/write) bearbeiten ODER Grep mit head_limit + Read nur mit Ranges (offset/limit). Das Read-Tool blockt eh bei 256 KB/Aufruf.
+- Grep breit zuerst mit output_mode count/files_with_matches, DANN gezielt content nur fuer relevante Treffer (verlustfrei: erst alle finden, dann gezielt lesen)
+- Grosse Zwischenergebnisse SOFORT in eine Datei schreiben, im Kontext nur Pfad + Kurz-Summary behalten
+- Engen Scope halten; bei Annaeherung ans Limit Teilstand in Datei sichern + sauber beenden (der Orchestrator setzt mit Folge-Worker fort). Voller Regeltext: ~/.claude/rules/subagent-crash-proofing.md
 TEXT
 )
 
