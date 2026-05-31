@@ -1215,6 +1215,21 @@
 			return;
 		}
 
+		// Nach "Erweiterung aktualisieren": die Seite kurz danach selbst neu laden,
+		// damit ein frisches Content-Script geladen wird. location.reload() ist eine
+		// Seiten-API und funktioniert auch, nachdem der Extension-Context durch den
+		// Reload ungueltig wurde (chrome.* APIs gehen dann nicht mehr, location schon).
+		if (msg.type === "RELOAD_PAGE_SOON") {
+			setTimeout(() => {
+				try {
+					location.reload();
+				} catch (_) {
+					/* egal */
+				}
+			}, 800);
+			return;
+		}
+
 		if (msg.type === MSG.STATE) {
 			// Vorhandene Diagnose-Sonde erhalten
 			if (window.VODiag)

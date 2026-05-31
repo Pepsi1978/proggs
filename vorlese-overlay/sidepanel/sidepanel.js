@@ -296,14 +296,28 @@
 			await persist();
 		});
 
-		// Aktualisieren: NUR die Nachricht an den Service-Worker senden. Der laedt
-		// die Erweiterung neu UND danach automatisch die offenen Seiten (damit kein
-		// totes Content-Script zurueckbleibt). NICHT hier selbst chrome.runtime.reload()
-		// aufrufen — sonst stirbt die Seitenleiste, bevor der Worker das Flag setzt.
-		$("reload").addEventListener("click", () => {
+		// Aktualisieren: (1) ALLEN Tabs sagen, sich gleich selbst neu zu laden
+		// (das Content-Script macht location.reload() — funktioniert auch nach der
+		// Context-Invalidierung). Tabs ohne unser Script ignorieren das. (2) Dann die
+		// Erweiterung neu laden. So passiert das F5 automatisch und zuverlaessig.
+		$("reload").addEventListener("click", async () => {
 			const btn = $("reload");
 			btn.textContent = "Wird aktualisiert…";
 			btn.disabled = true;
+			try {
+				const tabs = await chrome.tabs.query({});
+				for (const t of tabs) {
+					if (t.id != null) {
+						chrome.tabs.sendMessage(
+							t.id,
+							{ type: "RELOAD_PAGE_SOON" },
+							() => void chrome.runtime.lastError,
+						);
+					}
+				}
+			} catch (_) {
+				/* egal — Erweiterung wird trotzdem neu geladen */
+			}
 			send({ type: MSG.RELOAD });
 		});
 	}
