@@ -483,11 +483,12 @@ function Get-Bar($pct, $col) {
     if ($pct -eq $null) { $pct = 0 }
     if ($pct -gt 100) { $pct = 100 }
     if ($pct -lt 0) { $pct = 0 }
-    # 7 Segmente (Frank 2026-05-24, schmaler). Round half up: filled = round(pct*7/100).
-    # Prozent-Logik unveraendert, nur Gesamtbreite kleiner. Konsistent zur sh-Variante.
-    $filled = [Math]::Floor(($pct * 7 + 50) / 100)
-    if ($filled -gt 7) { $filled = 7 }
-    $empty = 7 - $filled
+    # 5 Segmente (Frank 2026-05-31, ~30% schmaler als die alten 7 — mehr Platz in der
+    # Statuszeile). Round half up: filled = round(pct*5/100). Prozent-Logik unveraendert,
+    # nur Gesamtbreite kleiner. Konsistent zur sh-Variante.
+    $filled = [Math]::Floor(($pct * 5 + 50) / 100)
+    if ($filled -gt 5) { $filled = 5 }
+    $empty = 5 - $filled
     return "${col}" + ('█' * $filled) + "${TRACK}" + ('░' * $empty) + "${R}"
 }
 
@@ -526,7 +527,7 @@ function Get-PaceBar($used, $resets, $now, $window) {
 
 $SEP = "${SEPCOL} ┃ ${R}"   # ein dicker roter Strich (Frank 2026-05-24)
 $GSEP = " "                 # Gruppen-Abstand (kein Trenner, 1 Leerzeichen): haelt 5h+Pendel bzw. 7d+Pendel eng zusammen
-$EMPTY_BAR = "${TRACK}" + ('░' * 7) + "${R}"
+$EMPTY_BAR = "${TRACK}" + ('░' * 5) + "${R}"
 
 # Icons
 $ICON_MODEL  = '🤖'

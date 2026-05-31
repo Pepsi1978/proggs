@@ -459,11 +459,12 @@ make_bar() {
         pct=0
     fi
     [ "$pct" -gt 100 ] && pct=100
-    # 7 Segmente (Frank 2026-05-24, schmaler). Round half up: filled = round(pct*7/100).
-    # Prozent-Logik unveraendert, nur Gesamtbreite kleiner. Konsistent zur ps1-Variante.
-    local filled=$(( (pct * 7 + 50) / 100 ))
-    [ "$filled" -gt 7 ] && filled=7
-    local empty=$((7 - filled))
+    # 5 Segmente (Frank 2026-05-31, ~30% schmaler als die alten 7 — mehr Platz in der
+    # Statuszeile). Round half up: filled = round(pct*5/100). Prozent-Logik unveraendert,
+    # nur Gesamtbreite kleiner. Konsistent zur ps1-Variante.
+    local filled=$(( (pct * 5 + 50) / 100 ))
+    [ "$filled" -gt 5 ] && filled=5
+    local empty=$((5 - filled))
     local fpart=""
     local epart=""
     local i=0
@@ -554,7 +555,7 @@ esac
 # 7d-Pacing), DANN Modell, Effort, Ordner, Kontext, Uhrzeit. Die Limit-Bereiche
 # wandern nach vorne; Modell/Effort/Ordner/Kontext (in dieser Reihenfolge)
 # folgen dahinter. Kontext bleibt direkt hinter dem Ordner wie zuvor.
-EMPTY_BAR="${TRACK}░░░░░░░${R}"
+EMPTY_BAR="${TRACK}░░░░░${R}"
 
 # ===== ZEILE 1: Modell | Effort | 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
 
