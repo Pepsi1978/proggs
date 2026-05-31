@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Prompt Board",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Prompt-Board als Seitenpanel. Klick auf das Symbol oeffnet/schliesst das Panel, ein Klick auf einen Prompt fuegt ihn ins zuletzt benutzte Textfeld ein.",
 	"permissions": ["sidePanel", "storage"],
 	"action": {

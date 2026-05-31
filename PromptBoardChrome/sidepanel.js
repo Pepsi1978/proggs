@@ -98,35 +98,83 @@ async function sendPrompt(text) {
 	}
 }
 
+// --- Rendering -------------------------------------------------------------
+
+function renderPromptButton(p) {
+	const row = document.createElement("div");
+	row.className = "pb-row";
+
+	const btn = document.createElement("button");
+	btn.className = "pb-prompt";
+	btn.textContent = p.label;
+	btn.title = p.text;
+	btn.addEventListener("click", () => sendPrompt(p.text));
+	row.appendChild(btn);
+
+	return row;
+}
+
+function renderEditCard(p, index) {
+	const card = document.createElement("div");
+	card.className = "pb-edit-card";
+
+	const head = document.createElement("div");
+	head.className = "pb-edit-card-head";
+
+	const labelInput = document.createElement("input");
+	labelInput.type = "text";
+	labelInput.className = "pb-edit-label";
+	labelInput.maxLength = 40;
+	labelInput.value = p.label;
+	labelInput.placeholder = "Kurzname";
+	// Save on blur/change so editing the text field keeps focus (no live re-render).
+	labelInput.addEventListener("change", () => {
+		const v = labelInput.value.trim();
+		prompts[index].label = v || prompts[index].label;
+		labelInput.value = prompts[index].label;
+		save();
+		showHint("Gespeichert ✓", false);
+	});
+
+	const del = document.createElement("button");
+	del.className = "pb-del";
+	del.textContent = "✕ Löschen";
+	del.title = "Diesen Prompt löschen";
+	del.addEventListener("click", () => {
+		prompts = prompts.filter((x) => x.id !== p.id);
+		save();
+		render();
+	});
+
+	head.appendChild(labelInput);
+	head.appendChild(del);
+
+	const textArea = document.createElement("textarea");
+	textArea.className = "pb-edit-text";
+	textArea.rows = 3;
+	textArea.value = p.text;
+	textArea.placeholder = "Einzufügender Prompt-Text";
+	textArea.addEventListener("change", () => {
+		prompts[index].text = textArea.value;
+		save();
+		showHint("Gespeichert ✓", false);
+	});
+
+	card.appendChild(head);
+	card.appendChild(textArea);
+	return card;
+}
+
 function render() {
 	listEl.innerHTML = "";
-	prompts.forEach((p) => {
-		const row = document.createElement("div");
-		row.className = "pb-row";
-
-		const btn = document.createElement("button");
-		btn.className = "pb-prompt";
-		btn.textContent = p.label;
-		btn.title = p.text;
-		btn.addEventListener("click", () => sendPrompt(p.text));
-		row.appendChild(btn);
-
-		if (editMode) {
-			const del = document.createElement("button");
-			del.className = "pb-del";
-			del.textContent = "✕";
-			del.title = "Löschen";
-			del.addEventListener("click", () => {
-				prompts = prompts.filter((x) => x.id !== p.id);
-				save();
-				render();
-			});
-			row.appendChild(del);
-		}
-
-		listEl.appendChild(row);
+	prompts.forEach((p, index) => {
+		listEl.appendChild(
+			editMode ? renderEditCard(p, index) : renderPromptButton(p),
+		);
 	});
 }
+
+// --- Edit mode + add -------------------------------------------------------
 
 editToggle.addEventListener("click", () => {
 	editMode = !editMode;
@@ -150,6 +198,27 @@ document.getElementById("addBtn").addEventListener("click", () => {
 	labelEl.value = "";
 	textEl.value = "";
 	showHint("Prompt hinzugefügt ✓", false);
+});
+
+// --- Refresh button: reload the extension AND the active page --------------
+// runtime.reload() reloads the unpacked extension from disk (picks up new code)
+// but destroys this side panel, so we hand the page reload to the background
+// service worker via a stored flag (see background.js).
+
+document.getElementById("reloadBtn").addEventListener("click", async () => {
+	showHint("Aktualisiere Erweiterung & Seite …", false);
+	try {
+		const [tab] = await chrome.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		if (tab && typeof tab.id === "number") {
+			await chrome.storage.local.set({ pendingReloadTabId: tab.id });
+		}
+	} catch (_) {
+		/* ignore – still reload the extension */
+	}
+	chrome.runtime.reload();
 });
 
 load();
