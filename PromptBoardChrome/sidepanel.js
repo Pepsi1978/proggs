@@ -48,43 +48,85 @@ function uid() {
 	return "p" + Date.now() + Math.floor(Math.random() * 1000);
 }
 
-const STORE_KEY = "prompts";
+// Prompts liegen in chrome.storage.sync = Chromes Google-Backup (sichert ins
+// Google-Konto und spiegelt auf alle Chrome-Installationen mit demselben Konto).
+// JEDER Prompt ist ein EIGENER Eintrag (pb_p_<id>), die Reihenfolge steht in
+// pb_order. Dadurch gilt das 8-KB-Limit pro Prompt statt fuer die ganze Liste
+// (kein lautloser Verlust mehr), insgesamt ~100 KB. Die feste Extension-ID (key
+// im Manifest) sorgt dafuer, dass Windows und macOS denselben Sync-Speicher teilen.
+const ORDER_KEY = "pb_order";
+const ITEM_PREFIX = "pb_p_";
+let applyingRemote = false; // verhindert Rueckschreiben bei Remote-Aenderungen
+
+function promptsFromStore(all) {
+	const order = all && Array.isArray(all[ORDER_KEY]) ? all[ORDER_KEY] : null;
+	if (!order) return null;
+	return order
+		.map((id) => all[ITEM_PREFIX + id])
+		.filter((p) => p && typeof p === "object" && p.id);
+}
 
 function load() {
-	// chrome.storage.local: zuverlaessig + grosszuegig (~5 MB). Frueher wurde
-	// chrome.storage.sync genutzt — das hat aber nur 8 KB PRO EINTRAG; ein langer
-	// Prompt (z.B. PDF) sprengte das Limit, set() schlug LAUTLOS fehl und der
-	// Eintrag war nach dem Neuladen weg. Darum local + Migration aus sync.
-	chrome.storage.local.get({ [STORE_KEY]: null }, (res) => {
-		if (Array.isArray(res[STORE_KEY])) {
-			prompts = res[STORE_KEY];
-			render();
-			return;
-		}
-		// Noch nichts in local -> evtl. liegen aeltere Prompts in sync. Uebernehmen.
-		chrome.storage.sync.get({ prompts: null }, (s) => {
-			if (Array.isArray(s.prompts) && s.prompts.length) {
-				prompts = s.prompts;
-			} else {
-				prompts = DEFAULT_PROMPTS.slice();
+	chrome.storage.sync.get(null, (all) => {
+		if (!chrome.runtime.lastError) {
+			const list = promptsFromStore(all);
+			if (list && list.length) {
+				prompts = list;
+				render();
+				return;
 			}
-			save(); // nach local schreiben (Migration bzw. Defaults setzen)
+		}
+		// Nichts in sync -> aus altem local-Speicher migrieren, sonst Defaults.
+		chrome.storage.local.get({ prompts: null }, (loc) => {
+			prompts =
+				Array.isArray(loc.prompts) && loc.prompts.length
+					? loc.prompts
+					: DEFAULT_PROMPTS.slice();
+			save(); // nach sync schreiben
 			render();
 		});
 	});
 }
 
 function save() {
-	chrome.storage.local.set({ [STORE_KEY]: prompts }, () => {
-		if (chrome.runtime.lastError) {
-			// Speichern fehlgeschlagen -> sichtbar warnen, nicht lautlos verlieren.
-			showHint(
-				"Konnte nicht speichern: " + chrome.runtime.lastError.message,
-				true,
-			);
-		}
+	if (applyingRemote) return; // gerade Remote-Stand uebernommen
+	chrome.storage.sync.get(null, (all) => {
+		const obj = { [ORDER_KEY]: prompts.map((p) => p.id) };
+		for (const p of prompts) obj[ITEM_PREFIX + p.id] = p;
+		const keep = new Set(prompts.map((p) => p.id));
+		const remove = Object.keys(all || {}).filter(
+			(k) =>
+				k.startsWith(ITEM_PREFIX) && !keep.has(k.slice(ITEM_PREFIX.length)),
+		);
+		chrome.storage.sync.set(obj, () => {
+			if (chrome.runtime.lastError) {
+				showHint(
+					"Sync-Speichern fehlgeschlagen: " + chrome.runtime.lastError.message,
+					true,
+				);
+			}
+		});
+		if (remove.length) chrome.storage.sync.remove(remove);
 	});
 }
+
+// Aenderungen von einem anderen Geraet live uebernehmen (nicht waehrend des
+// Bearbeitens, um laufende Eingaben nicht zu ueberschreiben).
+chrome.storage.onChanged.addListener((changes, area) => {
+	if (area !== "sync" || editMode) return;
+	const touched = Object.keys(changes).some(
+		(k) => k === ORDER_KEY || k.startsWith(ITEM_PREFIX),
+	);
+	if (!touched) return;
+	chrome.storage.sync.get(null, (all) => {
+		const list = promptsFromStore(all);
+		if (!list) return;
+		applyingRemote = true;
+		prompts = list;
+		render();
+		applyingRemote = false;
+	});
+});
 
 function showHint(msg, isError) {
 	hintEl.textContent = msg;
