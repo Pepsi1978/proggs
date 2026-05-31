@@ -23,7 +23,21 @@
 				"https://translate.google.com/*",
 				"https://www.translate.google.com/*",
 				"https://translate.google.de/*",
-				"https://www.translate.google.de/*"
+				"https://www.translate.google.de/*",
+				"https://claude.ai/*",
+				"https://www.claude.ai/*",
+				"https://gemini.google.com/*",
+				"https://grok.com/*",
+				"https://www.grok.com/*",
+				"https://aistudio.google.com/*",
+				"https://www.aistudio.google.com/*",
+				"https://platform.openai.com/chat/*",
+				"https://chat.mistral.ai/*",
+				"https://arena.ai/*",
+				"https://web.arena.ai/*",
+				"https://chat.lmsys.org/*",
+				"https://arena.lmsys.org/*",
+				"https://notebooklm.google.com/*"
 			],
 			"css": ["src/overlay.css"],
 			"js": [

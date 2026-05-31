@@ -3,12 +3,23 @@
 Eine **einzige** Chrome-Erweiterung, die auf verschiedenen Webseiten unterschiedliche
 Overlays (Button-Leisten) einblendet. Loest die einzelnen Tampermonkey-Skripte ab.
 
-Aktuell als Prototyp enthalten:
+Unterstuetzte Seiten (jede ehemalige Tampermonkey-Seite ist ein Profil):
 
-| Seite | Buttons |
-|-------|---------|
-| **Google Uebersetzer** (`translate.google.com`) | 🎙️ Mic · 📋 Einfuegen · 📎 Kopieren · ❌ Leeren (4) |
-| **ChatGPT** (`chatgpt.com`) | 🎙️ Mic · ⏎ Auto-Send · 📋 · 📎 · ❌ · G (Gemini-Korrektur) · ✨ Prompt (Frank) · 🪄 Prompt (allgemein) · 💾 Memory (9) |
+| Seite | Domain | Buttons |
+|-------|--------|---------|
+| Google Uebersetzer | `translate.google.com` / `.de` | 🎙️ 📋 📎 ❌ (4) |
+| ChatGPT | `chatgpt.com`, `chat.openai.com` | volle Leiste + 💾 Memory (9) |
+| Gemini | `gemini.google.com` | volle Leiste + 💾 Memory (9) |
+| Claude | `claude.ai` | volle Leiste (8) |
+| Grok | `grok.com` | volle Leiste (8) |
+| Google AI Studio | `aistudio.google.com` | volle Leiste (8) |
+| OpenAI Platform | `platform.openai.com/chat` | volle Leiste (8) |
+| Mistral | `chat.mistral.ai` | volle Leiste (8) |
+| LMArena | `arena.ai`, `web.arena.ai`, `*.lmsys.org` | volle Leiste (8) |
+| NotebookLM | `notebooklm.google.com` | volle Leiste (8) |
+
+"Volle Leiste" = 🎙️ Mic · ⏎ Auto-Send · 📋 Einfuegen · 📎 Kopieren · ❌ Leeren ·
+G (Gemini-Korrektur) · ✨ Prompt (Frank) · 🪄 Prompt (allgemein) · ggf. 💾 Memory.
 
 Welche Buttons auf welcher Seite erscheinen, steht in **`src/registry.js`** — eine Liste pro Seite.
 
