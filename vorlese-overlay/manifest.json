@@ -1,11 +1,21 @@
 {
 	"manifest_version": 3,
 	"name": "Vorlese-Overlay",
-	"version": "0.5.4",
+	"version": "0.5.5",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
 	"action": {
-		"default_title": "Vorlese-Overlay"
+		"default_title": "Vorlese-Overlay",
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
+	},
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
 	},
 	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSnwK50UdE1Y1GbtG+0dfqno3pqlNrRUsE0itzxXwTEUDLdaRxos7VLCeURv7FnYJNrpGDyBfHwRyVnYH7ir+xU4S/dQ69bvluPHHea9KC31AdV0+plYLKVfJupGIsOgkg/qVvGLxOU5m1yLB9OU1yXlTOTdgPt2sdNx2zft403d+p9j0Y95KTLARnJtFtMC9in+8MP31LMvi/BAqJmsxZHXGkwJohE1WxpBZY5kGCQLhiPsdfjxzFze3ppP/7QtmOkW4Bi6k/+3JJPQPQYOXofejd26rIxAm5fa+iSrwjl3ir25v1/mRDXcPnSQDafKDA+RMiBexCJgapsezyx/hwIDAQAB",
 	"permissions": [
