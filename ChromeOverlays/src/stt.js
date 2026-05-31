@@ -393,6 +393,14 @@
 			OV.toast("❌ Mikrofon nicht verfuegbar (getUserMedia).", 5000);
 			return;
 		}
+		// Erweiterung aktualisiert, aber Tab nicht neu geladen -> chrome.* tot.
+		if (OV.ctxAlive && !OV.ctxAlive()) {
+			OV.toast(
+				"🔄 Erweiterung wurde aktualisiert — bitte diese Seite neu laden (F5).",
+				9000,
+			);
+			return;
+		}
 		if (!wantsRecording) startListening();
 		else stopListening();
 	}
