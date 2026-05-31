@@ -59,7 +59,7 @@
 		}, 300);
 	}
 	function renderAutoEnter(btn) {
-		OV.setSvgIcon(btn, OV.ICONS.send, OV.ICON_FALLBACK.send);
+		OV.setSvgIcon(btn, OV.ICONS.enter, OV.ICON_FALLBACK.enter);
 		btn.style.setProperty("border-color", "transparent", "important");
 		if (autoSendEnabled) {
 			setColors(btn, "#16a34a", "#fff");
