@@ -25,49 +25,21 @@ async function save() {
 
 document.getElementById("save").addEventListener("click", save);
 
-// ── Version & Aktualisieren ──
-const REMOTE_MANIFEST =
-	"https://raw.githubusercontent.com/Pepsi1978/proggs/main/ChromeOverlays/manifest.json";
-
-function cmpVersion(a, b) {
-	const pa = String(a).split(".").map(Number);
-	const pb = String(b).split(".").map(Number);
-	for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-		const x = pa[i] || 0;
-		const y = pb[i] || 0;
-		if (x !== y) return x - y;
-	}
-	return 0;
-}
-
-async function checkUpdate() {
-	const el = document.getElementById("updstatus");
-	el.textContent = " — pruefe…";
-	el.style.color = "#94a3b8";
-	try {
-		const r = await fetch(REMOTE_MANIFEST, { cache: "no-store" });
-		if (!r.ok) throw new Error("HTTP " + r.status);
-		const remote = JSON.parse(await r.text());
-		const local = chrome.runtime.getManifest().version;
-		if (cmpVersion(remote.version, local) > 0) {
-			el.textContent = ` — neue Version ${remote.version} verfuegbar!`;
-			el.style.color = "#fbbf24";
-		} else {
-			el.textContent = " — du hast die neueste Version.";
-			el.style.color = "#4ade80";
-		}
-	} catch (e) {
-		el.textContent = " — Pruefung fehlgeschlagen.";
-		el.style.color = "#f87171";
-		console.warn("[Overlays] update-check:", e);
-	}
-}
-
+// ── Aktualisieren ──
 document.getElementById("ver").textContent =
 	chrome.runtime.getManifest().version;
-document.getElementById("check").addEventListener("click", checkUpdate);
+
+// "Erweiterung neu laden" laedt die Erweiterung mit dem neuesten lokalen Code neu
+// UND danach automatisch die offene Seite (aktiver Tab) — kein manuelles F5 mehr.
+// Das Flag ueberlebt chrome.runtime.reload(); der Service-Worker liest es beim
+// Neustart und laedt die aktiven Tabs neu (siehe background.js).
 document.getElementById("reload").addEventListener("click", () => {
-	chrome.runtime.reload();
+	const btn = document.getElementById("reload");
+	btn.textContent = "Wird neu geladen…";
+	btn.disabled = true;
+	chrome.storage.local.set({ ov_reload_tabs_after_update: true }, () => {
+		chrome.runtime.reload();
+	});
 });
 
 load();

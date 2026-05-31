@@ -243,3 +243,31 @@ try {
 } catch (e) {
 	console.warn("[Overlays] sidePanel API nicht verfuegbar:", e);
 }
+
+// ── "Erweiterung neu laden": offene Seite automatisch mit-neuladen ──
+// chrome.runtime.reload() macht Content-Scripts in bereits offenen Tabs ungueltig
+// ("Extension context invalidated") -> Buttons/Mic gingen erst nach manuellem F5
+// wieder. Die Options-Seite setzt vor dem Reload das Flag ov_reload_tabs_after_update
+// (ueberlebt den Reload). Beim SW-Neustart laden wir die aktiven Tabs einmal neu,
+// damit ein frisches Content-Script injiziert wird — kein F5 noetig.
+function reloadActiveTabsAfterUpdate() {
+	try {
+		chrome.storage.local.get("ov_reload_tabs_after_update", (res) => {
+			if (chrome.runtime.lastError || !res || !res.ov_reload_tabs_after_update)
+				return;
+			chrome.storage.local.remove("ov_reload_tabs_after_update");
+			chrome.tabs.query({ active: true }, (tabs) => {
+				if (chrome.runtime.lastError) return;
+				for (const t of tabs || []) {
+					if (t.id != null) {
+						chrome.tabs.reload(t.id, {}, () => void chrome.runtime.lastError);
+					}
+				}
+			});
+		});
+	} catch (e) {
+		console.warn("[Overlays] reload-tabs:", e);
+	}
+}
+
+reloadActiveTabsAfterUpdate();
