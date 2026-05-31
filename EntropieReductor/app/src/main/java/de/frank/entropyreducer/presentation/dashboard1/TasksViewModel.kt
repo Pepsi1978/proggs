@@ -138,9 +138,15 @@ class TasksViewModel @Inject constructor(
         // jedem State-Update (Status-Tick alle 5 min, DB-Aenderung) neu laeuft —
         // das war eine der Hauptursachen fuer Scroll-Ruckler im Aufgaben-Bereich.
         val activeList = filtered.filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+        // Frank-Wunsch 2026-05-31: nach EFFEKTIVER Prioritaet sortieren
+        // (manualPriorityScore ?: priorityScore). So wandert eine manuell auf 100%
+        // gesetzte Aufgabe sofort nach oben — die Liste re-sortiert sich automatisch,
+        // weil der DB-Flow nach dem Update neu emittiert.
         val grouped = activeList
             .groupBy { it.timeBucket }
-            .mapValues { (_, entries) -> entries.sortedByDescending { it.priorityScore } }
+            .mapValues { (_, entries) ->
+                entries.sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
+            }
         // Erledigt-Bucket (REDUZIERT) — sortiert nach resolvedAt absteigend (neueste zuerst).
         val resolvedList = filtered
             .filter { it.status == EntryStatus.REDUZIERT }
@@ -257,7 +263,7 @@ class TasksViewModel @Inject constructor(
             if (heuteOpen > 0) return@launch
             val candidates = active
                 .filter { it.timeBucket != TimeBucket.HEUTE }
-                .sortedByDescending { it.priorityScore }
+                .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
                 .take(count)
             if (candidates.isEmpty()) return@launch
             val now = System.currentTimeMillis()
