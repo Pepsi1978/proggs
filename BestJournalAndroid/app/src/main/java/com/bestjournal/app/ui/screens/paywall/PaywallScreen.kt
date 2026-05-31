@@ -83,7 +83,13 @@ import kotlinx.coroutines.delay
 // See benefitsList below
 
 @Composable
-fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
+fun PaywallScreen(
+    viewModel: PaywallViewModel,
+    onDismiss: () -> Unit,
+    // D1-Fix (2026-05-31): opens the Terms of Use (which contain the §355 BGB
+    // withdrawal instruction) so the consumer can read it BEFORE purchasing.
+    onOpenTerms: () -> Unit = {},
+) {
     val monthlyPrice by viewModel.monthlyPrice.collectAsStateWithLifecycle()
     val yearlyPrice by viewModel.yearlyPrice.collectAsStateWithLifecycle()
     val lifetimePrice by viewModel.lifetimePrice.collectAsStateWithLifecycle()
@@ -631,6 +637,22 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
 
                 // ── Free tier note (two lines for readability) — whole block clickable ──
                 AiLimitsFreeNote()
+
+                // ── D1-Fix (2026-05-31): legal hint + link to Terms (with §355 BGB
+                // withdrawal instruction). Google Play Billing handles the §312j
+                // "pay now" confirmation; this makes the withdrawal info reachable
+                // BEFORE the purchase, closing the only remaining gap. ──
+                TextButton(
+                    onClick = onOpenTerms,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.paywall_legal_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
             }

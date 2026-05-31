@@ -295,7 +295,11 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             enterTransition = { slideInHorizontally { it } + fadeIn() },
             exitTransition = { slideOutHorizontally { it } + fadeOut() },
         ) {
-            PaywallScreen(viewModel = hiltViewModel(), onDismiss = { navController.popBackStack() })
+            PaywallScreen(
+                viewModel = hiltViewModel(),
+                onDismiss = { navController.popBackStack() },
+                onOpenTerms = { navController.navigate("legal/nutzungsbedingungen") },
+            )
         }
     }
 }
