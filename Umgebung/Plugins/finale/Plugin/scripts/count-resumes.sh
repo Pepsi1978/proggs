@@ -19,7 +19,10 @@ if [ ! -f "$LOG" ]; then
   exit 0
 fi
 
-count=$(grep -c "orchestrator-resume-after-crash" "$LOG" 2>/dev/null)
+# Loop-2-Fix: grep -o | wc -l zaehlt tatsaechliche VORKOMMEN des Markers, nicht nur Zeilen
+# mit Treffer (was grep -c taete). Identischer Wert bei Konvention "1 Marker pro Zeile",
+# aber robust falls je zwei Resume-Marker in einer Zeile landen -> korrekte Haeufigkeit.
+count=$(grep -o "orchestrator-resume-after-crash" "$LOG" 2>/dev/null | wc -l | tr -d ' ')
 count=${count:-0}
 
 # Aufschluesselung pro Phase (best effort)

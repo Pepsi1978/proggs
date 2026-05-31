@@ -44,15 +44,29 @@ def iter_files(paths, pattern):
 
 
 def split_scope(paths, pattern, max_bytes):
+    # Loop-2-Fix: nicht-existente Top-Level-Pfade NICHT still verschlucken (geschluckter Fehler)
+    # -> als missing_paths melden, damit ein Tippfehler im Scope auffaellt statt unbemerkt zu fehlen.
+    missing = [p for p in paths if not os.path.exists(os.path.expanduser(p))]
     files = []
+    seen = set()
     for fp in iter_files(paths, pattern):
+        # Loop-2-Fix: Duplikate (ueberlappende Scope-Pfade, z.B. Verzeichnis UND eine Datei darin)
+        # nur EINMAL zaehlen -> verhindert Doppel-Bucketing/Doppel-Arbeit. Invariante "jede Datei
+        # genau einmal" bleibt erhalten; ohne Duplikat-Input aendert sich nichts.
+        key = os.path.normcase(os.path.abspath(fp))
+        if key in seen:
+            continue
+        seen.add(key)
         try:
             files.append((fp, os.path.getsize(fp)))
         except OSError:
             continue  # nicht lesbar -> ueberspringen, niemals crashen
 
-    # groesste zuerst -> besseres Bin-Packing (First-Fit-Decreasing)
-    files.sort(key=lambda x: -x[1])
+    # Loop-3-Fix: groesste zuerst, bei GLEICHER Groesse nach Pfad -> deterministische Reihenfolge.
+    # Pflicht weil FIN-052-Resume denselben Scope erneut splittet und EXAKT dieselben Buckets
+    # erhalten muss (sonst stimmt die "schon erledigt"-Zuordnung nicht). Bin-Packing-Ergebnis
+    # identisch, nur die vorher unbestimmte Reihenfolge bei Groessengleichheit wird stabil.
+    files.sort(key=lambda x: (-x[1], x[0]))
 
     buckets = []      # je Eintrag: [liste_dateien, summe_bytes]
     oversize = []
@@ -79,6 +93,7 @@ def split_scope(paths, pattern, max_bytes):
         "max_bytes": max_bytes,
         "bucket_count": len(buckets),
         "total_files": len(files),
+        "missing_paths": missing,
         "oversize_files": oversize,
         "buckets": [
             {
@@ -100,6 +115,12 @@ def main():
     ap.add_argument("--glob", default=None, help="optionaler Datei-Filter, z.B. '*.kt'")
     ap.add_argument("paths", nargs="+")
     args = ap.parse_args()
+
+    # Loop-2-Fix (Randfall): max-bytes <= 0 wuerde JEDE Datei als oversize markieren (unsinnig)
+    # -> auf Default zuruecksetzen statt kaputtes Bucketing zu liefern.
+    if args.max_bytes <= 0:
+        sys.stderr.write("WARN: --max-bytes <= 0 ungueltig, nutze Default 180000\n")
+        args.max_bytes = 180000
 
     try:
         sys.stdout.reconfigure(encoding="utf-8")
