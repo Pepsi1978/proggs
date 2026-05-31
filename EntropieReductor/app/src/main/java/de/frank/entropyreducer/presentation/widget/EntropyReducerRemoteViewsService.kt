@@ -81,12 +81,12 @@ class EntropyReducerRemoteViewsFactory(
                 mapOf(
                     TimeBucket.HEUTE to all
                         .filter { it.timeBucket == TimeBucket.HEUTE }
-                        .sortedByDescending { it.priorityScore },
+                        .sortedByDescending { it.manualPriorityScore ?: it.priorityScore },
                 )
             } else {
                 ALL_BUCKETS.associateWith { bucket ->
                     all.filter { it.timeBucket == bucket }
-                        .sortedByDescending { it.priorityScore }
+                        .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
                 }
             }
 
