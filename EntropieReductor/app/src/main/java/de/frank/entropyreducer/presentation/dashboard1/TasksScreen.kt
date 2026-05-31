@@ -1584,9 +1584,13 @@ private fun EntropyEntryCard(
 @Composable
 private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
-    val accent = bucketAccent(bucket)
-    val bg = if (isManual) accent.copy(alpha = 0.22f) else cosmos.glassBg
-    val tint = if (isManual) accent else cosmos.textSecondary
+    // Frank-Wunsch 2026-05-31: Beide Pillen (KI + manuell) haben jetzt denselben
+    // hellen Perle-Hintergrund (cosmos.glassBg). Frueher war "manuell" durchsichtig
+    // mit Akzentfarbe — auf den farbigen Kachel-Hintergruenden kaum lesbar. Jetzt
+    // unterscheidet nur die Textfarbe: "manuell" in Hellblau, "KI" dezent (textSecondary).
+    val manuellBlue = Color(0xFF38BDF8)
+    val bg = cosmos.glassBg
+    val tint = if (isManual) manuellBlue else cosmos.textSecondary
     // PERFORMANCE 2026-05-09: clip() entfernt — background(color, shape) clippt
     // visuell (zeichnet abgerundete Form), Inhalte sind kurz und passen rein.
     val pillShape = remember { RoundedCornerShape(50) }
