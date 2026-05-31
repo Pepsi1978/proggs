@@ -686,12 +686,10 @@ class TasksViewModel @Inject constructor(
                 updatedAt = now,
             )
             entries.update(updated)
-            // Proaktiver Forscher: nach dem Haken-Tap fragen wie geloest.
-            // Nur ausloesen wenn der Eintrag VORHER nicht schon REDUZIERT war
-            // (Doppel-Tap auf Haken sollte keinen zweiten Dialog triggern).
-            if (entry.status != EntryStatus.REDUZIERT) {
-                pendingMethodForFlow.value = updated
-            }
+            // Frank-Wunsch 2026-05-31: Klick aufs Haekchen hakt die Aufgabe DIREKT ab.
+            // Es erscheint KEIN "Wie hast du das geloest?"-Fenster mehr. Das Erledigen
+            // ist die einzige Aufgabe des Haekchens; rueckgaengig geht ueber die
+            // Undo-Snackbar (siehe TasksScreen.onResolve).
         }
     }
 
