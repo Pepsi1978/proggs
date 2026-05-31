@@ -591,6 +591,53 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
     `references/languages/<lang>.md` (nicht ganzer Skill-Vollload), Ziel-Datei nur per Python.
     Sonst crashen auch Einzelworker bei kyrillischen/dichten Lang-Strings (ru-Crash 2026-05-26).
 
+29. **FIN-052 — ORCHESTRATOR-RESUME ALS PFLICHT-ABLAUF (Schicht 3, empirisch validiert 2026-05-31):**
+
+    Live-Test bestaetigt: ein ueberlasteter Worker crasht OHNE Vorwarnung (general-purpose
+    bereits nach ~6 Tool-Calls), meldet "Prompt is too long" / `subagent_tokens: 0` / **0 Output**,
+    und schafft seinen ersten Checkpoint NICHT. Selbst-Stopp im Worker ist daher unzuverlaessig.
+    ABER: Der Crash ist fuer DICH (Orchestrator) sichtbar — und ein disziplinierter Folge-Worker
+    erledigt denselben Scope sauber. Deshalb ist Resume KEINE Option, sondern Pflicht-Ablauf.
+
+    **Nach JEDEM Worker-Spawn (in JEDER Phase) MUSST du das Ergebnis pruefen und ggf. resumen:**
+    ```
+    res = spawn(worker, scope_X)
+    crashed = (res enthaelt "Prompt is too long") OR (res.subagent_tokens == 0)
+              OR (res.output leer/kein gueltiges JSON trotz erwartetem Output)
+    if crashed:
+        log audit: "orchestrator-resume-after-crash | phase=<P> | scope=<X> | worker=<id>"   # FIN-055-Counter zaehlt das
+        done = read_checkpoint(scope_X)            # FIN-053: was schon gesichert ist (kann leer sein)
+        rest = scope_X minus done
+        # Rest VERLUSTFREI fortsetzen — kleiner + disziplinierter, nie aufgeben:
+        sub_buckets = scope_splitter(rest, max_bytes=PRO_WORKER_BYTE_BUDGET)   # FIN-054 Byte-Waechter
+        for b in sub_buckets:
+            spawn_disciplined(worker, b)           # Python/Grep statt Voll-Read, max 7 gleichzeitig (FIN-051)
+    ```
+    - **NIE die Aufgabe nach einem Worker-Crash aufgeben** — immer per Resume kleiner fortsetzen.
+    - **NIE denselben Scope unveraendert neu spawnen** (crasht wieder) — immer kleiner + disziplinierter.
+    - Resume-Tiefe begrenzen: wenn ein Einzel-Bucket 2x crasht, der Orchestrator (1M-Kontext)
+      macht ihn SELBST per gestueckeltem Read (FIN-048e). Kein Endlos-Spawn.
+    - Jedes Resume MUSS mit dem Audit-Log-Marker `orchestrator-resume-after-crash` geloggt werden
+      (Pflicht — sonst kann FIN-054 die Haeufigkeit nicht messen).
+
+30. **FIN-053 — INKREMENTELLES CHECKPOINTING ERZWINGEN (Schicht 2, macht Resume verlustfrei):**
+
+    Lehre aus dem Live-Crash: Der Worker schrieb seinen Checkpoint NACH dem teuren Schritt —
+    und kam nie dazu (Crash davor). Deshalb: Checkpoint VOR bzw. UNMITTELBAR bei jedem Teilschritt.
+
+    **Pflicht-Block in JEDEM Worker-Prompt (ergaenzt FIN-040/FIN-048):**
+    ```
+    ## CHECKPOINTING (FIN-053, PFLICHT)
+    - Schreibe Fortschritt inkrementell nach <app-root>/.android-shield/worker-checkpoints/<worker-id>.jsonl
+    - 1 Zeile pro erledigter Teil-Einheit (Datei/Bucket/Sprache/Finding), SOFORT nach Fertigstellung
+      dieser Einheit (append, nicht am Ende gesammelt) — per Python open(...,'a'), NICHT per Read/Edit-Tool.
+    - Format je Zeile: {"unit":"<id>","done":true,"result_ref":"<pfad-zur-teilausgabe>"}
+    - So kann der Orchestrator nach einem Crash genau sehen, welche Einheiten fertig sind (done)
+      und nur den Rest neu spawnen — kein Doppel-Arbeit, kein Datenverlust.
+    ```
+    Der Orchestrator liest diese `.jsonl` in FIN-052 (`read_checkpoint`). Existiert keine Datei
+    (Worker crashte vor der ersten Einheit): `done = leer`, ganzer Scope wird kleiner neu gespawnt.
+
 ---
 
 ## Modi
