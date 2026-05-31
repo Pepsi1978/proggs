@@ -839,7 +839,8 @@
     <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">没有订阅，没有续费</string>
     <string name="paywall_free_note">即使不订阅，应用也可正常使用。</string>
-    <string name="paywall_legal_hint">订阅即表示你接受使用条款。你的14天撤销合同权利在那里有说明。</string>
+    <string name="paywall_legal_hint" formatted="false">订阅即表示你接受%1$s。你的14天撤销合同权利在那里有说明。</string>
+    <string name="paywall_legal_hint_link">使用条款</string>
     <string name="paywall_cd_close">关闭</string>
 
     <!-- Paywall features -->

@@ -793,7 +793,8 @@
     <string name="paywall_lifetime_desc">ഒറ്റത്തവണ പണമടയ്ക്കുക, എല്ലാം ശാശ്വതമായി ഉപയോഗിക്കുക</string>
     <string name="paywall_lifetime_note">സബ്സ്ക്രിപ്ഷൻ ഇല്ല, പുതുക്കൽ ഇല്ല</string>
     <string name="paywall_free_note">ആപ്പ് സബ്സ്ക്രിപ്ഷൻ ഇല്ലാതെയും തുടർന്ന് പ്രവർത്തിക്കും.</string>
-    <string name="paywall_legal_hint">സബ്സ്ക്രൈബ് ചെയ്യുമ്പോൾ നീ ഉപയോഗ നിബന്ധനകൾ അംഗീകരിക്കുന്നു. നിന്റെ 14 ദിവസത്തെ കരാർ റദ്ദാക്കൽ അവകാശം അവിടെ വിവരിച്ചിട്ടുണ്ട്.</string>
+    <string name="paywall_legal_hint" formatted="false">സബ്സ്ക്രൈബ് ചെയ്യുമ്പോൾ നീ %1$s അംഗീകരിക്കുന്നു. നിന്റെ 14 ദിവസത്തെ കരാർ റദ്ദാക്കൽ അവകാശം അവിടെ വിവരിച്ചിട്ടുണ്ട്.</string>
+    <string name="paywall_legal_hint_link">ഉപയോഗ നിബന്ധനകൾ</string>
     <string name="paywall_cd_close">അടയ്ക്കുക</string>
 
     <!-- Paywall features -->

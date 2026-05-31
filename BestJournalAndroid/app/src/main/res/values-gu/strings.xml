@@ -812,7 +812,8 @@
     <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
     <string name="paywall_lifetime_note">♻</string>
     <string name="paywall_free_note">App Subscription વગર પણ ચાલુ રહે છે.</string>
-    <string name="paywall_legal_hint">સબ્સ્ક્રાઇબ કરવાથી તું ઉપયોગ-શરતો સ્વીકારે છે. તારો 14-દિવસનો કરાર રદ કરવાનો અધિકાર ત્યાં વર્ણવેલ છે.</string>
+    <string name="paywall_legal_hint" formatted="false">સબ્સ્ક્રાઇબ કરવાથી તું %1$s સ્વીકારે છે. તારો 14-દિવસનો કરાર રદ કરવાનો અધિકાર ત્યાં વર્ણવેલ છે.</string>
+    <string name="paywall_legal_hint_link">ઉપયોગ-શરતો</string>
     <string name="paywall_cd_close">♻</string>
 
     

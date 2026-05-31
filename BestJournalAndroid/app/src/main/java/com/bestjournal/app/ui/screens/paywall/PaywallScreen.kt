@@ -63,8 +63,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -642,12 +646,33 @@ fun PaywallScreen(
                 // withdrawal instruction). Google Play Billing handles the §312j
                 // "pay now" confirmation; this makes the withdrawal info reachable
                 // BEFORE the purchase, closing the only remaining gap. ──
+                // D1-Fix (2026-05-31): only the "Terms of Use" part is rendered as a
+                // visible link (dark blue + underline); the rest stays plain hint text.
+                // %1$s in paywall_legal_hint marks where the link word goes (we split it
+                // ourselves, so the string is formatted="false" — no String.format).
+                val termsLinkColor =
+                    if (isDarkTheme) Color(0xFF82B1FF) else Color(0xFF1565C0)
+                val legalHint = stringResource(R.string.paywall_legal_hint)
+                val legalLinkText = stringResource(R.string.paywall_legal_hint_link)
+                val legalAnnotated = buildAnnotatedString {
+                    val parts = legalHint.split("%1\$s", limit = 2)
+                    append(parts[0])
+                    withStyle(
+                        SpanStyle(
+                            color = termsLinkColor,
+                            textDecoration = TextDecoration.Underline,
+                        )
+                    ) {
+                        append(legalLinkText)
+                    }
+                    if (parts.size > 1) append(parts[1])
+                }
                 TextButton(
                     onClick = onOpenTerms,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = stringResource(R.string.paywall_legal_hint),
+                        text = legalAnnotated,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

@@ -842,7 +842,8 @@
     <string name="paywall_lifetime_desc">Zapłać raz, korzystaj na stałe</string>
     <string name="paywall_lifetime_note">Bez subskrypcji, bez odnowień</string>
     <string name="paywall_free_note">Aplikacja działa również bez subskrypcji.</string>
-    <string name="paywall_legal_hint">Subskrybując, akceptujesz Warunki użytkowania. Twoje 14-dniowe prawo odstąpienia od umowy jest tam opisane.</string>
+    <string name="paywall_legal_hint" formatted="false">Subskrybując, akceptujesz %1$s. Twoje 14-dniowe prawo odstąpienia od umowy jest tam opisane.</string>
+    <string name="paywall_legal_hint_link">Warunki użytkowania</string>
     <string name="paywall_cd_close">Zamknij</string>
 
     <!-- Paywall features -->

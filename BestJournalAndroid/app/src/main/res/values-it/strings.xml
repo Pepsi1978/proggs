@@ -892,7 +892,8 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
     <string name="paywall_lifetime_desc">Paga una volta, usa tutto in modo permanente</string>
     <string name="paywall_lifetime_note">Nessun abbonamento, nessun rinnovo</string>
     <string name="paywall_free_note">L\'app funziona anche senza abbonamento.</string>
-    <string name="paywall_legal_hint">Con l\'abbonamento accetti le Condizioni d\'uso. Il tuo diritto di recesso di 14 giorni è descritto lì.</string>
+    <string name="paywall_legal_hint" formatted="false">Con l\'abbonamento accetti le %1$s. Il tuo diritto di recesso di 14 giorni è descritto lì.</string>
+    <string name="paywall_legal_hint_link">Condizioni d\'uso</string>
     <string name="paywall_cd_close">Chiudi</string>
 
     <!-- Paywall features -->

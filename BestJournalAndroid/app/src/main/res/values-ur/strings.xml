@@ -840,7 +840,8 @@
     <string name="paywall_lifetime_desc">ایک بار ادائیگی کریں، ہر چیز مستقل طور پر استعمال کریں</string>
     <string name="paywall_lifetime_note">کوئی سبسکرپشن نہیں، کوئی تجدید نہیں</string>
     <string name="paywall_free_note">یہ ایپ سبسکرپشن کے بغیر بھی کام کرتی رہے گی۔</string>
-    <string name="paywall_legal_hint">سبسکرائب کرنے سے تم استعمال کی شرائط قبول کرتے ہو۔ تمہارا 14 دن کا معاہدہ منسوخی کا حق وہاں بیان کیا گیا ہے۔</string>
+    <string name="paywall_legal_hint" formatted="false">سبسکرائب کرنے سے تم %1$s قبول کرتے ہو۔ تمہارا 14 دن کا معاہدہ منسوخی کا حق وہاں بیان کیا گیا ہے۔</string>
+    <string name="paywall_legal_hint_link">استعمال کی شرائط</string>
     <string name="paywall_cd_close">بند کریں</string>
 
     <!-- Paywall features -->

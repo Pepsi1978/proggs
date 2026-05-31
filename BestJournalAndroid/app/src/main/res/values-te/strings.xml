@@ -773,7 +773,8 @@
     <string name="paywall_lifetime_desc">ఒకసారి చెల్లించు, అన్నీ శాశ్వతంగా ఉపయోగించు</string>
     <string name="paywall_lifetime_note">సబ్‌స్క్రిప్షన్ లేదు, పొడిగింపు లేదు</string>
     <string name="paywall_free_note">యాప్ సబ్‌స్క్రిప్షన్ లేకుండా కూడా పని చేస్తుంది.</string>
-    <string name="paywall_legal_hint">సబ్‌స్క్రైబ్ చేయడం ద్వారా నువ్వు వినియోగ నిబంధనలను అంగీకరిస్తావు. నీ 14 రోజుల ఒప్పందం ఉపసంహరణ హక్కు అక్కడ వివరించబడింది.</string>
+    <string name="paywall_legal_hint" formatted="false">సబ్‌స్క్రైబ్ చేయడం ద్వారా నువ్వు %1$s అంగీకరిస్తావు. నీ 14 రోజుల ఒప్పందం ఉపసంహరణ హక్కు అక్కడ వివరించబడింది.</string>
+    <string name="paywall_legal_hint_link">వినియోగ నిబంధనలను</string>
     <string name="paywall_cd_close">మూసివేయండి</string>
 
     <string name="paywall_feature_patterns">మీ ఆలోచనలో పునరావృత నమూనాలను గుర్తించండి</string>

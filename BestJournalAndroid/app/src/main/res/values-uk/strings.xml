@@ -856,7 +856,8 @@
     <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
     <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
     <string name="paywall_free_note">Застосунок працює і без підписки.</string>
-    <string name="paywall_legal_hint">Підписуючись, ти приймаєш Умови використання. Твоє 14-денне право на відкликання описане там.</string>
+    <string name="paywall_legal_hint" formatted="false">Підписуючись, ти приймаєш %1$s. Твоє 14-денне право на відкликання описане там.</string>
+    <string name="paywall_legal_hint_link">Умови використання</string>
     <string name="paywall_cd_close">Закрити</string>
 
     <!-- Paywall features -->

@@ -836,7 +836,8 @@
     <string name="paywall_lifetime_desc">एक बार भुगतान करो, सब कुछ स्थायी रूप से उपयोग करो</string>
     <string name="paywall_lifetime_note">कोई सदस्यता नहीं, कोई नवीकरण नहीं</string>
     <string name="paywall_free_note">App बिना subscription के भी काम करती रहती है।</string>
-    <string name="paywall_legal_hint">सदस्यता लेने पर तुम उपयोग की शर्तें स्वीकार करते हो। तुम्हारा 14-दिन का अनुबंध रद्द करने का अधिकार वहाँ वर्णित है।</string>
+    <string name="paywall_legal_hint" formatted="false">सदस्यता लेने पर तुम %1$s स्वीकार करते हो। तुम्हारा 14-दिन का अनुबंध रद्द करने का अधिकार वहाँ वर्णित है।</string>
+    <string name="paywall_legal_hint_link">उपयोग की शर्तें</string>
     <string name="paywall_cd_close">बंद करें</string>
 
     <!-- Paywall features -->

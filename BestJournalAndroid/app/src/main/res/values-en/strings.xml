@@ -884,7 +884,8 @@ Cancel anytime during the trial period</string>
     <string name="paywall_lifetime_desc">Pay once, use everything permanently</string>
     <string name="paywall_lifetime_note">No subscription, no renewal</string>
     <string name="paywall_free_note">The app keeps working without a subscription.</string>
-    <string name="paywall_legal_hint">By subscribing you accept the Terms of Use. Your 14-day right of withdrawal is described there.</string>
+    <string name="paywall_legal_hint" formatted="false">By subscribing you accept the %1$s. Your 14-day right of withdrawal is described there.</string>
+    <string name="paywall_legal_hint_link">Terms of Use</string>
     <string name="paywall_cd_close">Close</string>
 
     <!-- Paywall features -->

@@ -836,7 +836,8 @@
     <string name="paywall_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกอย่างตลอดไป</string>
     <string name="paywall_lifetime_note">ไม่มีการสมัคร ไม่มีการต่ออายุ</string>
     <string name="paywall_free_note">แอปใช้งานได้ต่อแม้ไม่มีสมาชิก</string>
-    <string name="paywall_legal_hint">เมื่อสมัครสมาชิก คุณยอมรับข้อกำหนดการใช้งาน สิทธิ์การเพิกถอนภายใน 14 วันอธิบายไว้ที่นั่น</string>
+    <string name="paywall_legal_hint" formatted="false">เมื่อสมัครสมาชิก คุณยอมรับ%1$s สิทธิ์การเพิกถอนภายใน 14 วันอธิบายไว้ที่นั่น</string>
+    <string name="paywall_legal_hint_link">ข้อกำหนดการใช้งาน</string>
     <string name="paywall_cd_close">ปิด</string>
 
     <!-- Paywall features -->

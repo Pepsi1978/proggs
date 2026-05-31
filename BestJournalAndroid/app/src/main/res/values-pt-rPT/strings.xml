@@ -840,7 +840,8 @@
     <string name="paywall_lifetime_desc">Paga uma vez, utiliza tudo permanentemente</string>
     <string name="paywall_lifetime_note">Sem subscrição, sem renovação</string>
     <string name="paywall_free_note">A aplicação continua a funcionar sem subscrição.</string>
-    <string name="paywall_legal_hint">Ao subscrever, aceitas os Termos de Utilização. O teu direito de rescisão de 14 dias está descrito aí.</string>
+    <string name="paywall_legal_hint" formatted="false">Ao subscrever, aceitas os %1$s. O teu direito de rescisão de 14 dias está descrito aí.</string>
+    <string name="paywall_legal_hint_link">Termos de Utilização</string>
     <string name="paywall_cd_close">Fechar</string>
 
     <!-- Paywall features -->

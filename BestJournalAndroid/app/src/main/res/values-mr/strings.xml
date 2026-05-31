@@ -946,7 +946,8 @@ herleitung — सामग्रीचा स्रोत:
     <string name="paywall_lifetime_desc">एकदा पैसे भर, सर्वकाही कायमस्वरूपी वापर</string>
     <string name="paywall_lifetime_note">कोणतेही सदस्यत्व नाही, कोणती नूतनीकरण नाही</string>
     <string name="paywall_free_note">सदस्यत्वाशिवायही अॅप चालू राहते.</string>
-    <string name="paywall_legal_hint">सदस्यता घेतल्याने तू वापर अटी स्वीकारतोस. तुझा 14 दिवसांचा करार रद्दबातल हक्क तिथे वर्णन केला आहे.</string>
+    <string name="paywall_legal_hint" formatted="false">सदस्यता घेतल्याने तू %1$s स्वीकारतोस. तुझा 14 दिवसांचा करार रद्दबातल हक्क तिथे वर्णन केला आहे.</string>
+    <string name="paywall_legal_hint_link">वापर अटी</string>
     <string name="paywall_cd_close">बंद करा</string>
 
     <!-- Paywall features -->

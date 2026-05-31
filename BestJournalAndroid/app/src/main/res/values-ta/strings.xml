@@ -865,7 +865,8 @@
     <string name="paywall_lifetime_desc">ஒருமுறை பணம் செலுத்தி, அனைத்தையும் நிரந்தரமாக பயன்படுத்து</string>
     <string name="paywall_lifetime_note">சந்தா இல்லை, புதுப்பிப்பு இல்லை</string>
     <string name="paywall_free_note">சந்தா இல்லாமலும் App தொடர்ந்து செயல்படும்.</string>
-    <string name="paywall_legal_hint">சந்தா செலுத்துவதன் மூலம் நீ பயன்பாட்டு விதிமுறைகளை ஏற்கிறாய். உனது 14 நாள் ஒப்பந்த ரத்து உரிமை அங்கே விவரிக்கப்பட்டுள்ளது.</string>
+    <string name="paywall_legal_hint" formatted="false">சந்தா செலுத்துவதன் மூலம் நீ %1$s ஏற்கிறாய். உனது 14 நாள் ஒப்பந்த ரத்து உரிமை அங்கே விவரிக்கப்பட்டுள்ளது.</string>
+    <string name="paywall_legal_hint_link">பயன்பாட்டு விதிமுறைகளை</string>
     <string name="paywall_cd_close">மூடு</string>
 
     <!-- Paywall features -->

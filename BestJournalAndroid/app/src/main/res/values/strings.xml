@@ -1118,7 +1118,8 @@
     <string name="paywall_lifetime_desc">Einmal zahlen, alles nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
     <string name="paywall_free_note">Die App funktioniert auch ohne Abo weiter.</string>
-    <string name="paywall_legal_hint">Mit dem Abo akzeptierst du die Nutzungsbedingungen. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.</string>
+    <string name="paywall_legal_hint" formatted="false">Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.</string>
+    <string name="paywall_legal_hint_link">Nutzungsbedingungen</string>
     <string name="paywall_cd_close">Schließen</string>
 
     <!-- Paywall features -->
