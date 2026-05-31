@@ -3,7 +3,7 @@
 	"name": "Overlays (Voice + Tools)",
 	"version": "0.2.0",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
-	"permissions": ["storage", "clipboardRead", "clipboardWrite"],
+	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel"],
 	"host_permissions": [
 		"https://api.groq.com/*",
 		"https://generativelanguage.googleapis.com/*"
@@ -18,13 +18,15 @@
 		"128": "icons/icon128.png"
 	},
 	"action": {
-		"default_title": "Overlays — Einstellungen (API-Keys)",
-		"default_popup": "options.html",
+		"default_title": "Overlays — Einstellungen (Seitenleiste)",
 		"default_icon": {
 			"16": "icons/icon16.png",
 			"48": "icons/icon48.png",
 			"128": "icons/icon128.png"
 		}
+	},
+	"side_panel": {
+		"default_path": "options.html"
 	},
 	"content_scripts": [
 		{

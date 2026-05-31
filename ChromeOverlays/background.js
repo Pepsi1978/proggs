@@ -234,5 +234,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	return false;
 });
 
-// Hinweis: Ein Klick auf das Erweiterungs-Icon oeffnet jetzt das Popup
-// (action.default_popup = options.html im Manifest) — kein onClicked noetig.
+// Klick auf das Erweiterungs-Icon oeffnet die Einstellungen als Seitenleiste
+// (rechts, bleibt offen) statt als Popup oder neuer Tab.
+try {
+	chrome.sidePanel
+		.setPanelBehavior({ openPanelOnActionClick: true })
+		.catch((e) => console.warn("[Overlays] sidePanel:", e));
+} catch (e) {
+	console.warn("[Overlays] sidePanel API nicht verfuegbar:", e);
+}
