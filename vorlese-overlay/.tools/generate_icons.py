@@ -18,7 +18,7 @@ import os
 import struct
 import zlib
 
-BG = (8, 145, 178)        # #0891B2 teal — distinct from Prompt Board's purple
+BG = (249, 115, 22)       # #F97316 orange — Frank uses orange for speaker/audio
 WHITE = (255, 255, 255)
 SCALE = 4                 # supersampling factor for anti-aliasing
 
