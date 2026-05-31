@@ -167,12 +167,19 @@ class EntropyReducerRemoteViewsFactory(
             android.content.res.ColorStateList.valueOf(rampColor),
         )
 
-        // Haekchen: leeres Quadrat mit Border (Widget zeigt nur offene Aufgaben).
-        views.setColorStateList(
-            R.id.task_check_box,
-            "setBackgroundTintList",
-            android.content.res.ColorStateList.valueOf(palette.border),
-        )
+        // Haekchen: normalerweise leeres Quadrat mit deutlicher dunkler Umrandung
+        // (klar als Klickfeld erkennbar). Direkt nach dem Tap (ID im WidgetCheckState)
+        // kurz ein gefuelltes gruenes Haekchen — dann verschwindet die Aufgabe.
+        if (WidgetCheckState.isChecking(entry.id)) {
+            views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_done)
+            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(WIDGET_SUCCESS))
+            views.setImageViewResource(R.id.task_check_box, R.drawable.ic_widget_check)
+            views.setInt(R.id.task_check_box, "setColorFilter", 0xFFFFFFFF.toInt())
+        } else {
+            views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_bg)
+            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.textPrimary))
+            views.setImageViewResource(R.id.task_check_box, 0)
+        }
 
         // Titel (eine Zeile)
         views.setTextViewText(R.id.task_title, entry.title)
@@ -227,6 +234,22 @@ sealed class WidgetListItem {
 }
 
 // === Helpers ===
+
+/** Mintgruen (CosmosColors.Success) fuer das kurz sichtbare Erledigt-Haekchen. */
+internal val WIDGET_SUCCESS: Int = 0xFF34D399.toInt()
+
+/**
+ * Haelt die IDs der Aufgaben, die gerade abgehakt wurden und kurz ein gefuelltes
+ * Haekchen zeigen sollen, BEVOR sie aus der Liste verschwinden (Frank-Wunsch
+ * 2026-05-31, Mini-Animation). Der WidgetActionReceiver markiert die ID, refresht,
+ * wartet kurz, markiert die Aufgabe als erledigt und entfernt die ID wieder.
+ */
+object WidgetCheckState {
+    private val checking = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    fun mark(id: String) { checking.add(id) }
+    fun clear(id: String) { checking.remove(id) }
+    fun isChecking(id: String): Boolean = checking.contains(id)
+}
 
 internal val ALL_BUCKETS = listOf(
     TimeBucket.HEUTE,

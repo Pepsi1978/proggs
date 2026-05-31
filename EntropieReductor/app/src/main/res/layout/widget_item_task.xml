@@ -35,6 +35,8 @@
                 android:id="@+id/task_check_box"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
                 android:background="@drawable/widget_check_box_bg"
                 android:contentDescription="Aufgabe abhaken" />
 

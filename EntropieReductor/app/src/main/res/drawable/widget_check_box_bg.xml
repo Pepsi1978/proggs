@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Check-Box rechts in der Aufgaben-Karte. Farbe wird zur Laufzeit gesetzt.
+  Haekchen-Feld (offen) in der Widget-Aufgaben-Karte. Outline-Style: transparenter
+  Innenraum + deutliche Umrandung, damit klar als antippbares Haekchenfeld erkennbar
+  (Frank-Wunsch 2026-05-31). Die Stroke-Farbe wird zur Laufzeit getoent
+  (setBackgroundTintList = palette.textPrimary → im Hell-Theme quasi schwarz, im
+  Dunkel-Theme hell). Innenraum bleibt transparent (Tint faerbt nur sichtbare Pixel).
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#2A1F44" />
+    <solid android:color="#00000000" />
     <corners android:radius="8dp" />
+    <stroke
+        android:width="2dp"
+        android:color="#FFFFFFFF" />
 </shape>

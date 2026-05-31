@@ -12,6 +12,7 @@ import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -57,9 +58,13 @@ class WidgetActionReceiver : BroadcastReceiver() {
     }
 
     /**
-     * Markiert die Aufgabe als REDUZIERT (= erledigt) — identische Logik zu
-     * TasksViewModel.markEntryResolved. goAsync haelt den Receiver am Leben, bis
-     * der DB-Write und der Widget-Refresh fertig sind.
+     * Hakt die Aufgabe ab — mit Mini-Animation (Frank-Wunsch 2026-05-31):
+     *  Phase 1: ID im WidgetCheckState markieren + Widget refreshen → kurz erscheint
+     *           ein gefuelltes gruenes Haekchen.
+     *  (kurze Pause, damit das Haekchen wahrnehmbar ist)
+     *  Phase 2: Aufgabe als REDUZIERT markieren (identisch zu markEntryResolved),
+     *           ID wieder freigeben + Widget refreshen → die Aufgabe verschwindet.
+     * goAsync haelt den Receiver am Leben, bis beide Phasen fertig sind.
      */
     private fun completeTask(appContext: Context, taskId: String) {
         val pending = goAsync()
@@ -68,6 +73,11 @@ class WidgetActionReceiver : BroadcastReceiver() {
             .entryDao()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Phase 1: Haekchen sofort sichtbar machen.
+                WidgetCheckState.mark(taskId)
+                WidgetUpdater.updateAll(appContext)
+                delay(450)
+                // Phase 2: Aufgabe wirklich erledigen.
                 val entry = dao.getActive().first().firstOrNull { it.id == taskId }
                 if (entry != null) {
                     val now = System.currentTimeMillis()
@@ -78,12 +88,13 @@ class WidgetActionReceiver : BroadcastReceiver() {
                             updatedAt = now,
                         ),
                     )
-                    // Widget frisch ziehen, damit die erledigte Aufgabe sofort verschwindet.
-                    WidgetUpdater.updateAll(appContext)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("WidgetActionReceiver", "completeTask fehlgeschlagen", e)
             } finally {
+                // Haekchen-Markierung loesen und Widget final refreshen (Aufgabe ist weg).
+                WidgetCheckState.clear(taskId)
+                WidgetUpdater.updateAll(appContext)
                 pending.finish()
             }
         }
