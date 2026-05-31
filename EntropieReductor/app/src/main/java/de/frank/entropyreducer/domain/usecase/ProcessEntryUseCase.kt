@@ -120,7 +120,7 @@ class ProcessEntryUseCase @Inject constructor(
                 EntropyEntryEntity(
                     id = UUID.randomUUID().toString(),
                     rawTranscript = rawTranscript,
-                    title = parsed.title.take(60),
+                    title = limitToThreeWords(parsed.title),
                     description = parsed.description,
                     category = runCatching { EntropyCategory.valueOf(parsed.category) }
                         .getOrDefault(EntropyCategory.SONSTIGES),
@@ -158,7 +158,7 @@ class ProcessEntryUseCase @Inject constructor(
         return EntropyEntryEntity(
             id = UUID.randomUUID().toString(),
             rawTranscript = transcript,
-            title = transcript.take(60).ifBlank { "Eintrag" },
+            title = limitToThreeWords(transcript).ifBlank { "Eintrag" },
             description = transcript.ifBlank { "(leeres Transkript)" },
             category = EntropyCategory.SONSTIGES,
             severity = 5,
@@ -176,6 +176,19 @@ class ProcessEntryUseCase @Inject constructor(
             biomarkerSnapshotId = null,
         )
     }
+
+    /**
+     * Frank-Wunsch 2026-05-31: KI-Titel duerfen hoechstens 3 Woerter lang sein.
+     * Vorher wurde nur auf 60 Zeichen gekappt, was die einzeilige Kachel mit
+     * "fuenf Woerter + ..." abschnitt. Jetzt werden hart die ersten 3 Woerter
+     * genommen (manuell eingegebene Titel werden NICHT hierdurch gekappt).
+     */
+    private fun limitToThreeWords(raw: String): String =
+        raw.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .take(3)
+            .joinToString(" ")
 
     /**
      * Frank-Wunsch 2026-05-22 (dritte Iteration): formatiert eine Liste manuell
