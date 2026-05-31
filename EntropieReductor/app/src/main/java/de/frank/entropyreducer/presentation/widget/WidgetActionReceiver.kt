@@ -46,6 +46,19 @@ class WidgetActionReceiver : BroadcastReceiver() {
         if (action == WidgetIntents.ACTION_COMPLETE) {
             if (taskId.isBlank()) return
             completeTask(context.applicationContext, taskId)
+        } else if (action == WidgetIntents.ACTION_TOGGLE_BUCKET) {
+            // Bucket-Sektion auf-/zuklappen (Akkordeon) — OHNE die App zu oeffnen.
+            val bucket = intent.getStringExtra(WidgetIntents.EXTRA_BUCKET).orEmpty()
+            if (bucket.isBlank()) return
+            WidgetExpandState.toggle(bucket)
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    WidgetUpdater.updateAll(context.applicationContext)
+                } finally {
+                    pending.finish()
+                }
+            }
         } else {
             // App oeffnen und Deep-Link durchreichen (wie das fruehere Activity-Template).
             val launch = Intent(context, MainActivity::class.java).apply {

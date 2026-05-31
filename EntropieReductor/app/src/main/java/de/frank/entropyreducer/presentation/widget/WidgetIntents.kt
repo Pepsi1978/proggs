@@ -23,9 +23,15 @@ object WidgetIntents {
     /** Haekchen-Tap im Widget: Aufgabe direkt als erledigt markieren (ohne App). */
     const val ACTION_COMPLETE = "complete"
 
+    /** Tap auf einen Bucket-Header: Sektion auf-/zuklappen (Akkordeon, ohne App). */
+    const val ACTION_TOGGLE_BUCKET = "toggle_bucket"
+
     /** Bundle-Schluessel im Intent. */
     const val EXTRA_TASK_ID = "widget_task_id"
     const val EXTRA_ACTION = "widget_action"
+
+    /** Bucket-Name (TimeBucket.name) fuer ACTION_TOGGLE_BUCKET. */
+    const val EXTRA_BUCKET = "widget_bucket"
 
     /**
      * Klassik-Intent-Erzeugung fuer Tap auf Widget-Items. Wird vom

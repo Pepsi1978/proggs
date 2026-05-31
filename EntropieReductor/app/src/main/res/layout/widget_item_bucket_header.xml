@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Bucket-Header in der ListView (Heute / Morgen / Freiblock / Spaeter).
-  Bucket-Tinted Pille + Anzahl rechts daneben. Visuell 1:1 zur Glance-Version.
+  Bucket-Tinted Pille + Anzahl + Chevron rechts (auf/zu). Der ganze Header ist
+  antippbar (Akkordeon, Frank-Wunsch 2026-05-31): Klick klappt diese Sektion auf
+  und alle anderen zu; Klick auf die offene klappt sie zu.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bucket_header_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -50,4 +53,18 @@
         android:textSize="12sp"
         android:textColor="#A499D9"
         android:text="0" />
+
+    <!-- Schiebt den Chevron nach ganz rechts -->
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
+    <!-- Auf/Zu-Pfeil (Akkordeon) -->
+    <ImageView
+        android:id="@+id/bucket_chevron"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:src="@drawable/ic_widget_chevron_down"
+        android:contentDescription="Aufklappen/Zuklappen" />
 </LinearLayout>

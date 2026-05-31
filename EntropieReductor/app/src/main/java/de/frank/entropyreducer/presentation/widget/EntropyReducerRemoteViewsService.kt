@@ -90,12 +90,19 @@ class EntropyReducerRemoteViewsFactory(
                 }
             }
 
+            // Akkordeon (Frank-Wunsch 2026-05-31): nur die Tasks des AKTUELL offenen
+            // Buckets erscheinen; alle anderen zeigen nur ihren Header. Der offene Bucket
+            // kommt aus WidgetExpandState (Default HEUTE).
+            val expandedName = WidgetExpandState.get()
             val list = mutableListOf<WidgetListItem>()
             ALL_BUCKETS.forEach { bucket ->
                 val tasks = grouped[bucket].orEmpty()
                 if (tasks.isNotEmpty()) {
-                    list.add(WidgetListItem.BucketHeader(bucket, tasks.size))
-                    tasks.forEach { list.add(WidgetListItem.Task(it)) }
+                    val isExpanded = expandedName == bucket.name
+                    list.add(WidgetListItem.BucketHeader(bucket, tasks.size, isExpanded))
+                    if (isExpanded) {
+                        tasks.forEach { list.add(WidgetListItem.Task(it)) }
+                    }
                 }
             }
             items = list
@@ -145,6 +152,20 @@ class EntropyReducerRemoteViewsFactory(
         views.setTextColor(R.id.bucket_label, accent)
         views.setTextViewText(R.id.bucket_count, item.count.toString())
         views.setTextColor(R.id.bucket_count, palette.textSecondary)
+        // Chevron: hoch = offen, runter = zu (Akkordeon).
+        views.setImageViewResource(
+            R.id.bucket_chevron,
+            if (item.expanded) R.drawable.ic_widget_chevron_up else R.drawable.ic_widget_chevron_down,
+        )
+        views.setInt(R.id.bucket_chevron, "setColorFilter", palette.textSecondary)
+        // Tap auf den ganzen Header → diese Sektion auf-/zuklappen (ohne App zu oeffnen).
+        val toggleFill = Intent().apply {
+            putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_TOGGLE_BUCKET)
+            putExtra(WidgetIntents.EXTRA_BUCKET, item.bucket.name)
+            // Eindeutige URI je Bucket, damit die FillInIntents nicht gecached kollidieren.
+            data = android.net.Uri.parse("widget://bucket/${item.bucket.name}/toggle")
+        }
+        views.setOnClickFillInIntent(R.id.bucket_header_root, toggleFill)
         return views
     }
 
@@ -230,7 +251,7 @@ class EntropyReducerRemoteViewsFactory(
 // === Sealed class fuer ListView-Items ===
 
 sealed class WidgetListItem {
-    data class BucketHeader(val bucket: TimeBucket, val count: Int) : WidgetListItem()
+    data class BucketHeader(val bucket: TimeBucket, val count: Int, val expanded: Boolean) : WidgetListItem()
     data class Task(val entry: EntropyEntryEntity) : WidgetListItem()
 }
 
@@ -250,6 +271,21 @@ object WidgetCheckState {
     fun mark(id: String) { checking.add(id) }
     fun clear(id: String) { checking.remove(id) }
     fun isChecking(id: String): Boolean = checking.contains(id)
+}
+
+/**
+ * Akkordeon-State des Widgets (Frank-Wunsch 2026-05-31): welcher Bucket-Header
+ * gerade aufgeklappt ist (TimeBucket.name) — analog zu expandedSection in der App.
+ * Immer nur EINE Sektion offen; null = alle zu. Default: HEUTE offen. In-memory
+ * (wie rememberSaveable in der App, ueberlebt keinen Prozess-Tod — Default greift dann).
+ */
+object WidgetExpandState {
+    @Volatile
+    private var expanded: String? = TimeBucket.HEUTE.name
+    fun get(): String? = expanded
+    fun toggle(bucketName: String) {
+        expanded = if (expanded == bucketName) null else bucketName
+    }
 }
 
 internal val ALL_BUCKETS = listOf(
