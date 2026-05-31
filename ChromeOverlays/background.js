@@ -32,14 +32,16 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 	if (!key)
 		return { ok: false, error: "Groq API-Key fehlt (Einstellungen oeffnen)." };
 
-	const blob = await (await fetch(audioDataUrl)).blob();
-	const form = new FormData();
-	form.append("file", blob, "recording.webm");
-	form.append("model", model || "whisper-large-v3-turbo");
-	form.append("language", lang || "de");
-	form.append("response_format", "text");
+	if (!audioDataUrl) return { ok: false, error: "Kein Audio empfangen." };
 
 	try {
+		const blob = await (await fetch(audioDataUrl)).blob();
+		const form = new FormData();
+		form.append("file", blob, "recording.webm");
+		form.append("model", model || "whisper-large-v3-turbo");
+		form.append("language", lang || "de");
+		form.append("response_format", "text");
+
 		const r = await withTimeout(
 			fetch(GROQ_URL, {
 				method: "POST",

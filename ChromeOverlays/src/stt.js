@@ -38,33 +38,85 @@
 
 	const ED = () => OV.editable;
 
+	// ── Trusted-Types-sicheres Setzen von SVG/HTML ──
+	// Seiten wie grok.com/claude.ai verbieten per CSP "el.innerHTML = string".
+	// Dann ueber DOMParser einfuegen, notfalls Emoji als Text (Symbol ist IMMER da).
+	function setSvgIcon(el, svgStr, emoji) {
+		try {
+			el.innerHTML = svgStr;
+			return;
+		} catch {}
+		try {
+			el.textContent = "";
+			const doc = new DOMParser().parseFromString(svgStr, "image/svg+xml");
+			const node = doc.documentElement;
+			if (node && node.tagName && node.tagName.toLowerCase() === "svg") {
+				el.appendChild(document.importNode(node, true));
+				return;
+			}
+		} catch {}
+		el.textContent = emoji || "";
+	}
+
+	function setSafeInner(el, htmlStr) {
+		try {
+			el.innerHTML = htmlStr;
+			return;
+		} catch {}
+		try {
+			el.textContent = "";
+			const doc = new DOMParser().parseFromString(htmlStr, "text/html");
+			for (const n of [...doc.body.childNodes])
+				el.appendChild(document.importNode(n, true));
+		} catch {
+			el.textContent = htmlStr.replace(/<[^>]+>/g, "");
+		}
+	}
+
+	// Farben INLINE setzen — sonst gewinnt das weisse Inline-Background aus ui.js
+	// (styleRoundButton) und das weisse SVG-Icon (stroke=currentColor) waere unsichtbar.
+	function colorMic(bg) {
+		if (!micBtn) return;
+		micBtn.style.setProperty("background", bg, "important");
+		micBtn.style.setProperty("color", "#fff", "important");
+		micBtn.style.setProperty("border-color", bg, "important");
+	}
+
 	function setMicState(state, msg = "") {
 		if (!micBtn) return;
-		if (!micBtn.classList.contains("stt-mic-btn"))
-			micBtn.classList.add("stt-mic-btn");
-		if (state === "listening") {
-			micBtn.innerHTML = MIC_ICON.stop;
-			micBtn.setAttribute("data-state", "listening");
-			micBtn.title = "Spracheingabe laeuft – klicken zum Stop";
-			return;
+		try {
+			if (!micBtn.classList.contains("stt-mic-btn"))
+				micBtn.classList.add("stt-mic-btn");
+			if (state === "listening") {
+				setSvgIcon(micBtn, MIC_ICON.stop, "⏹️");
+				micBtn.setAttribute("data-state", "listening");
+				colorMic("#dc2626");
+				micBtn.title = "Spracheingabe laeuft – klicken zum Stop";
+				return;
+			}
+			if (state === "working") {
+				setSvgIcon(micBtn, MIC_ICON.spinner, "⏳");
+				micBtn.setAttribute("data-state", "working");
+				colorMic("#d97706");
+				micBtn.title = msg || "Bereinigung laeuft…";
+				return;
+			}
+			if (state === "error") {
+				setSvgIcon(micBtn, MIC_ICON.error, "⚠️");
+				micBtn.setAttribute("data-state", "error");
+				colorMic("#8b0000");
+				micBtn.title = msg || "Fehler";
+				return;
+			}
+			setSvgIcon(micBtn, MIC_ICON.mic, "🎙️");
+			micBtn.setAttribute("data-state", "idle");
+			colorMic("#2563eb");
+			micBtn.title = supportedSpeech
+				? "Spracheingabe (Start/Stop)"
+				: "Speech API nicht verfuegbar";
+		} catch (e) {
+			console.warn("[Overlays] setMicState:", e);
 		}
-		if (state === "working") {
-			micBtn.innerHTML = MIC_ICON.spinner;
-			micBtn.setAttribute("data-state", "working");
-			micBtn.title = msg || "Bereinigung laeuft…";
-			return;
-		}
-		if (state === "error") {
-			micBtn.innerHTML = MIC_ICON.error;
-			micBtn.setAttribute("data-state", "error");
-			micBtn.title = msg || "Fehler";
-			return;
-		}
-		micBtn.innerHTML = MIC_ICON.mic;
-		micBtn.setAttribute("data-state", "idle");
-		micBtn.title = supportedSpeech
-			? "Spracheingabe (Start/Stop)"
-			: "Speech API nicht verfuegbar";
 	}
 
 	// ── Live-Vorschau ──
@@ -72,8 +124,10 @@
 		if (!livePreviewEl) return;
 		const box = livePreviewEl.querySelector(".stt-pv-text");
 		if (box)
-			box.innerHTML =
-				'<span class="stt-pv-waiting">Whisper transkribiert…</span>';
+			setSafeInner(
+				box,
+				'<span class="stt-pv-waiting">Whisper transkribiert…</span>',
+			);
 	}
 	function removeLivePreview() {
 		if (livePreviewEl) {
@@ -85,8 +139,10 @@
 		removeLivePreview();
 		livePreviewEl = document.createElement("div");
 		livePreviewEl.id = "stt-live-preview";
-		livePreviewEl.innerHTML =
-			'<div class="stt-pv-label">🎤 Live-Vorschau</div><div class="stt-pv-text">…</div>';
+		setSafeInner(
+			livePreviewEl,
+			'<div class="stt-pv-label">🎤 Live-Vorschau</div><div class="stt-pv-text">…</div>',
+		);
 		document.body.appendChild(livePreviewEl);
 	}
 
@@ -283,7 +339,9 @@
 					if (e.data.size > 0) audioChunks.push(e.data);
 				};
 				mediaRecorder.onstop = () => {
-					stream.getTracks().forEach((tr) => { tr.stop(); });
+					stream.getTracks().forEach((tr) => {
+						tr.stop();
+					});
 					audioStream = null;
 					if (audioChunks.length === 0) {
 						setMicState("idle");
@@ -320,7 +378,9 @@
 			mediaRecorder.stop();
 		} else {
 			if (audioStream) {
-				audioStream.getTracks().forEach((tr) => { tr.stop(); });
+				audioStream.getTracks().forEach((tr) => {
+					tr.stop();
+				});
 				audioStream = null;
 			}
 			removeLivePreview();
