@@ -234,7 +234,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	return false;
 });
 
-// Klick auf das Erweiterungs-Icon oeffnet die Einstellungen (API-Keys).
-chrome.action.onClicked.addListener(() => {
-	chrome.runtime.openOptionsPage();
-});
+// Hinweis: Ein Klick auf das Erweiterungs-Icon oeffnet jetzt das Popup
+// (action.default_popup = options.html im Manifest) — kein onClicked noetig.
