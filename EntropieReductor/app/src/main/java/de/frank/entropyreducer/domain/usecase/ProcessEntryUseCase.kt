@@ -200,6 +200,61 @@ class ProcessEntryUseCase @Inject constructor(
             .joinToString(" ")
 
     /**
+     * Frank-Wunsch 2026-05-31: kuerzt einen bestehenden, zu langen Aufgaben-Titel
+     * per KI auf maximal 3 praegnante Woerter (schoener als die mechanische
+     * Erste-3-Woerter-Kappung). Wird von der einmaligen Titel-Migration
+     * (TasksViewModel.maybeShortenLongTitles) genutzt. Gibt bei Erfolg den neuen
+     * Titel zurueck; bei fehlendem Key/Netzfehler ein Result.failure — der Aufrufer
+     * laesst den Titel dann unveraendert (kein mechanischer Fallback, Frank wollte KI).
+     */
+    suspend fun shortenTitle(entry: EntropyEntryEntity): Result<String> {
+        val key = secrets.geminiApiKey
+            ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
+        val model = settings.geminiModelFlow.first()
+        val systemPrompt =
+            "Du kuerzt Aufgaben-Titel auf das Wesentliche. Gib AUSSCHLIESSLICH einen neuen " +
+                "Titel aus HOECHSTENS DREI praegnanten deutschen Woertern zurueck, der den Kern " +
+                "der Aufgabe eindeutig zusammenfasst. Keine Fuellwoerter, kein Satz, keine " +
+                "Anfuehrungszeichen, keine Erklaerung, kein Punkt am Ende — nur die Woerter."
+        val userText = buildString {
+            appendLine("Titel: ${entry.title}")
+            if (entry.description.isNotBlank() && entry.description != entry.title) {
+                appendLine("Beschreibung: ${entry.description.take(200)}")
+            }
+        }
+        return try {
+            val response = gemini.generateContent(
+                model = model,
+                apiKey = key,
+                request = GeminiRequest(
+                    systemInstruction = GeminiContent(parts = listOf(GeminiPart(systemPrompt))),
+                    contents = listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(userText))),
+                    ),
+                    generationConfig = GeminiGenerationConfig(temperature = 0.2),
+                ),
+            )
+            val raw = response.candidates
+                ?.firstOrNull()
+                ?.content
+                ?.parts
+                ?.firstOrNull()
+                ?.text
+                ?.let { stripMarkdownCodeFence(it) }
+                ?.trim()
+                ?.trim('"', '\'', '.', ' ')
+            if (raw.isNullOrBlank()) {
+                Result.failure(IllegalStateException("Leere KI-Antwort fuer Titel-Kuerzung"))
+            } else {
+                // Sicherheitsnetz: auch wenn die KI doch mehr als 3 Woerter liefert, hart kappen.
+                Result.success(limitToThreeWords(raw))
+            }
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
+    /**
      * Frank-Wunsch 2026-05-22 (dritte Iteration): formatiert eine Liste manuell
      * bestaetigter Dauer-Werte als Few-Shot fuer die Gemini-Anfrage. Die KI
      * sieht damit "Frank hat fuer XYZ 60 min angegeben" und nutzt das als

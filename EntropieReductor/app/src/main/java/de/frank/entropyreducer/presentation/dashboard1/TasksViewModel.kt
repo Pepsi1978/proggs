@@ -110,6 +110,7 @@ class TasksViewModel @Inject constructor(
     private val balanceBuckets: de.frank.entropyreducer.domain.usecase.BalanceBucketsUseCase,
     private val syncCoordinator: SyncCoordinator,
     private val secrets: EncryptedSecretsStore,
+    private val settings: de.frank.entropyreducer.data.settings.AppSettings,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -225,6 +226,9 @@ class TasksViewModel @Inject constructor(
         // er den Ziel-VersionCode erreicht hat, laeuft der Auto-Re-Score nicht
         // mehr. Frank kann jederzeit manuell rescoreAllOpenEntries() ausloesen.
         maybeAutoRescoreOnDoctrineChange()
+        // Frank-Wunsch 2026-05-31: einmalige KI-Kuerzung aller alten, zu langen Titel
+        // (>3 Woerter) auf max. 3 Woerter. Neue Aufgaben sind ohnehin schon begrenzt.
+        maybeShortenLongTitles()
         // Auto-Refresh beim App-Start (Frank-Wunsch 2026-05-22): wenn Frank die App
         // oeffnet sollen Nachtraege/Zeitanpassungen/Prio gepueft werden. Throttle 6h
         // damit kurze Cold-Starts hintereinander keine Gemini-Quota verbrennen.
@@ -325,6 +329,62 @@ class TasksViewModel @Inject constructor(
             rescoreAllOpenEntries(autoTriggered = true)
         }
     }
+
+    /**
+     * Frank-Wunsch 2026-05-31: einmalige KI-Kuerzung aller bestehenden Aufgaben-Titel
+     * mit mehr als 3 Woertern. Neue Titel werden ohnehin schon beim Erfassen auf 3
+     * Woerter begrenzt (ProcessEntryUseCase.limitToThreeWords) — diese Migration holt
+     * die alten Aufgaben nach. Die KI fasst jeden Titel in max. 3 praegnanten Woertern
+     * neu zusammen (Frank-Wahl: schoener als die mechanische Erste-3-Woerter-Kappung).
+     *
+     * Laeuft genau EINMAL pro Installation (Flag in AppSettings). Ueberspringt still wenn:
+     *   - bereits gelaufen
+     *   - kein Gemini-Key gesetzt (wird beim naechsten Start mit Key getriggert)
+     *   - keine zu langen Titel vorhanden (Marker wird trotzdem gesetzt)
+     * Ein fehlgeschlagener Titel bricht die Schleife NICHT ab — er bleibt unveraendert.
+     * Das gemeinsame DB-Update sorgt dafuer dass die kurzen Titel automatisch auch im
+     * Home-Screen-Widget erscheinen (1:1, Frank-Wunsch).
+     */
+    private fun maybeShortenLongTitles() {
+        viewModelScope.launch {
+            if (settings.isTitleShortenV1Done()) return@launch
+            if (secrets.geminiApiKey.isNullOrBlank()) return@launch
+            val targets = entries.getActive().first()
+                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+                .filter { wordCount(it.title) > 3 }
+            if (targets.isEmpty()) {
+                settings.setTitleShortenV1Done(true)
+                return@launch
+            }
+            android.util.Log.i(TAG, "Titel-Kuerzung startet — ${targets.size} lange Titel werden per KI gekuerzt")
+            var done = 0
+            var failed = 0
+            for (entry in targets) {
+                process.shortenTitle(entry).onSuccess { newTitle ->
+                    if (newTitle.isNotBlank() && newTitle != entry.title) {
+                        entries.update(entry.copy(title = newTitle, updatedAt = System.currentTimeMillis()))
+                    }
+                    done++
+                }.onFailure { ex ->
+                    failed++
+                    android.util.Log.w(TAG, "Titel-Kuerzung fuer ${entry.id} fehlgeschlagen: ${ex.message}")
+                }
+                // Sanfte Pause zwischen Calls — schont die Gemini-Quota bei vielen Aufgaben.
+                delay(200L)
+            }
+            // Marker setzen — auch wenn ein paar fehlgeschlagen sind (laeuft nicht ewig).
+            settings.setTitleShortenV1Done(true)
+            android.util.Log.i(TAG, "Titel-Kuerzung fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
+            // Widget aktualisieren, damit die gekuerzten Titel sofort 1:1 erscheinen.
+            runCatching {
+                de.frank.entropyreducer.presentation.widget.WidgetUpdater.updateAll(getApplication())
+            }
+        }
+    }
+
+    /** Zaehlt die Woerter eines Titels (fuer die 3-Woerter-Regel). */
+    private fun wordCount(title: String): Int =
+        title.trim().split(Regex("\\s+")).count { it.isNotBlank() }
 
     /**
      * Bewertet alle offenen Eintraege (OFFEN + IN_ARBEIT) mit der aktuellen

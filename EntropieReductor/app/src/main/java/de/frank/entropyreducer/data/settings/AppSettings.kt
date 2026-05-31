@@ -297,6 +297,15 @@ class AppSettings @Inject constructor(
     suspend fun isPolarSyncDisabled(): Boolean = ds.data.map { it[KEY_DISABLE_POLAR_SYNC] ?: true }.first()
     suspend fun setDisablePolarSync(value: Boolean) = ds.edit { it[KEY_DISABLE_POLAR_SYNC] = value }
 
+    /**
+     * Frank-Wunsch 2026-05-31: einmalige Titel-Migration. Alle bestehenden Aufgaben
+     * mit mehr als 3 Woertern im Titel werden EINMAL per KI auf max. 3 Woerter
+     * gekuerzt (neue Aufgaben sind ohnehin schon auf 3 Woerter begrenzt). Laeuft
+     * genau EINMAL pro App-Installation, sobald ein Gemini-Key vorhanden ist.
+     */
+    suspend fun isTitleShortenV1Done(): Boolean = ds.data.map { it[KEY_TITLE_SHORTEN_V1] ?: false }.first()
+    suspend fun setTitleShortenV1Done(value: Boolean) = ds.edit { it[KEY_TITLE_SHORTEN_V1] = value }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -322,6 +331,7 @@ class AppSettings @Inject constructor(
         private val KEY_SPORT_RENAME_V1 = booleanPreferencesKey("sport_rename_v1_done")
         private val KEY_SPORT_RENAME_V2 = booleanPreferencesKey("sport_rename_v2_done")
         private val KEY_DISABLE_POLAR_SYNC = booleanPreferencesKey("disable_polar_sync")
+        private val KEY_TITLE_SHORTEN_V1 = booleanPreferencesKey("title_shorten_v1_done")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")
