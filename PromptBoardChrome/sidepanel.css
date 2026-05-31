@@ -135,6 +135,16 @@ body {
 	transform: scale(0.99);
 }
 
+/* Wird beim Umsortieren per Rechts-Drag gezogen. */
+.pb-row.pb-dragging {
+	opacity: 0.55;
+}
+
+.pb-row.pb-dragging .pb-prompt {
+	cursor: grabbing;
+	border-color: var(--pb-accent);
+}
+
 .pb-del {
 	flex: 0 0 auto;
 	width: 36px;

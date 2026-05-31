@@ -42,6 +42,7 @@ const editToggle = document.getElementById("editToggle");
 let prompts = [];
 let editMode = false;
 let hintTimer = null;
+let reorderDrag = null; // aktiver Umsortier-Zug (rechte Maustaste)
 
 function uid() {
 	return "p" + Date.now() + Math.floor(Math.random() * 1000);
@@ -130,15 +131,77 @@ async function sendPrompt(text) {
 function renderPromptButton(p) {
 	const row = document.createElement("div");
 	row.className = "pb-row";
+	row.dataset.id = p.id;
 
 	const btn = document.createElement("button");
 	btn.className = "pb-prompt";
 	btn.textContent = p.label;
-	btn.title = p.text;
+	btn.title =
+		p.text +
+		"\n\n(Linksklick: einfügen · rechte Maustaste gedrückt halten und ziehen: Reihenfolge ändern)";
+	// Linksklick = einfügen.
 	btn.addEventListener("click", () => sendPrompt(p.text));
-	row.appendChild(btn);
+	// Rechte Maustaste gedrückt halten + ziehen = Reihenfolge ändern (kein Einfügen,
+	// kein Kontextmenü). Bewusst eine andere Geste als der Linksklick.
+	btn.addEventListener("mousedown", (e) => {
+		if (e.button !== 2) return; // nur rechte Maustaste
+		e.preventDefault();
+		startReorder(row);
+	});
+	btn.addEventListener("contextmenu", (e) => e.preventDefault());
 
+	row.appendChild(btn);
 	return row;
+}
+
+// --- Umsortieren per Rechts-Drag (nur im normalen Modus) -------------------
+
+function startReorder(rowEl) {
+	const startOrder = Array.from(listEl.querySelectorAll(".pb-row")).map(
+		(r) => r.dataset.id,
+	);
+	reorderDrag = { rowEl, startOrder };
+	rowEl.classList.add("pb-dragging");
+	document.addEventListener("mousemove", onReorderMove, true);
+	document.addEventListener("mouseup", onReorderUp, true);
+}
+
+function onReorderMove(e) {
+	if (!reorderDrag) return;
+	e.preventDefault();
+	const rows = Array.from(listEl.querySelectorAll(".pb-row"));
+	// Erste Zeile finden, deren Mitte unterhalb des Mauszeigers liegt -> davor
+	// einsortieren; sonst ans Ende. Das verschiebt die gezogene Zeile live.
+	const after = rows.find((r) => {
+		if (r === reorderDrag.rowEl) return false;
+		const rect = r.getBoundingClientRect();
+		return e.clientY < rect.top + rect.height / 2;
+	});
+	if (after) {
+		listEl.insertBefore(reorderDrag.rowEl, after);
+	} else {
+		listEl.appendChild(reorderDrag.rowEl);
+	}
+}
+
+function onReorderUp() {
+	document.removeEventListener("mousemove", onReorderMove, true);
+	document.removeEventListener("mouseup", onReorderUp, true);
+	if (!reorderDrag) return;
+	const rowEl = reorderDrag.rowEl;
+	const startOrder = reorderDrag.startOrder;
+	reorderDrag = null;
+	rowEl.classList.remove("pb-dragging");
+
+	const order = Array.from(listEl.querySelectorAll(".pb-row")).map(
+		(r) => r.dataset.id,
+	);
+	if (order.join("|") !== startOrder.join("|")) {
+		// Neue Reihenfolge in die Prompt-Liste uebernehmen + speichern.
+		prompts.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+		save();
+		showHint("Reihenfolge gespeichert ✓", false);
+	}
 }
 
 function renderEditCard(p, index) {
