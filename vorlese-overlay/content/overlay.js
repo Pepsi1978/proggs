@@ -168,7 +168,12 @@
 		'<div class="vo-hint" part="hint"></div>' +
 		// Auto-Lese-Button (A) — ueber dem Lautsprecher. Leuchtet wenn aktiv.
 		'<button class="vo-btn vo-auto-btn" type="button" title="Auto-Vorlesen: Doppelklick auf ein Wort liest ab dort weiter">' +
-		'<span class="vo-auto-letter">A</span>' +
+		// A als SVG-Text exakt im Kreismittelpunkt (text-anchor=middle +
+		// dominant-baseline=central) -> mathematisch zentriert, unabhaengig von
+		// Schrift-Metriken.
+		'<svg class="vo-auto-letter" viewBox="0 0 24 24" aria-hidden="true">' +
+		'<text x="12" y="12" text-anchor="middle" dominant-baseline="central">A</text>' +
+		"</svg>" +
 		"</button>" +
 		'<button class="vo-btn vo-speaker" type="button" title="Markierten Text vorlesen">' +
 		ICON_SPEAKER +

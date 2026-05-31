@@ -430,17 +430,22 @@
 	justify-content: center;
 }
 
-.vo-auto-letter {
+/* Das A ist jetzt ein SVG-Text, im viewBox-Mittelpunkt (12,12) verankert
+   (text-anchor=middle + dominant-baseline=central) -> exakt zentriert ohne
+   Pixel-Korrekturen. Das SVG selbst wird per flex im Kreis zentriert. */
+/* Spezifischer als `.vo-btn svg` (55%), damit die Groesse hier gilt. */
+.vo-auto-btn .vo-auto-letter {
+	width: 64%;
+	height: 64%;
+	pointer-events: none;
+}
+
+.vo-auto-letter text {
 	font-family:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	font-size: 18px;
+	font-size: 17px;
 	font-weight: 700;
-	line-height: 1;
-	color: #ffffff;
-	pointer-events: none;
-	/* Optische Mitte: das A sass minimal zu tief und zu weit rechts -> leicht
-	   nach oben und links ruecken, damit es exakt im Kreis zentriert wirkt. */
-	transform: translate(-1px, -1px);
+	fill: #ffffff;
 }
 
 /* Zustand „aktiv": der A-Button leuchtet, damit der Auto-Lese-Modus klar
