@@ -438,9 +438,9 @@
 	line-height: 1;
 	color: #ffffff;
 	pointer-events: none;
-	/* Grossbuchstabe sitzt mit line-height:1 optisch leicht zu hoch -> minimal
-	   nach unten ruecken, damit das A exakt im Kreis zentriert wirkt. */
-	transform: translateY(1px);
+	/* Optische Mitte: das A sass minimal zu tief und zu weit rechts -> leicht
+	   nach oben und links ruecken, damit es exakt im Kreis zentriert wirkt. */
+	transform: translate(-1px, -1px);
 }
 
 /* Zustand „aktiv": der A-Button leuchtet, damit der Auto-Lese-Modus klar

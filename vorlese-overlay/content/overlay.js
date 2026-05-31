@@ -357,6 +357,9 @@
 	// Doppelter Abstand: die Overlays-Buttons haben untereinander ~10px Luecke.
 	const OVERLAY_DOCK_GAP = 20;
 	let dockedToOverlays = false;
+	// Einstellung "Overlay verschiebbar": false = fester Platz (angedockt/Standard),
+	// true = per Maus verschiebbar und bleibt wo losgelassen.
+	let draggable = false;
 
 	// Die Overlays-Erweiterung (frueher Tampermonkey-Skripte) rendert ihre Buttons
 	// als senkrechte Spalte; der Mikrofon-Button (.stt-mic-btn) ist der unterste.
@@ -380,7 +383,25 @@
 		return true;
 	}
 
+	// Zurueck an den Standardort: angedockt unter den Overlays, sonst unten rechts.
+	function resetToDocked() {
+		rightOffset = null;
+		topOffset = null;
+		dockedToOverlays = false;
+		container.style.left = "auto";
+		container.style.top = "auto";
+		container.style.right = "16px";
+		container.style.bottom = "16px";
+		if (anchorToOverlays()) dockedToOverlays = true;
+	}
+
+	// Verschiebbar -> gespeicherte Position (oder Standard). Nicht verschiebbar ->
+	// an die Overlays andocken bzw. fester Standardplatz.
 	function positionInitial(pos) {
+		if (draggable) {
+			if (pos) applyPosition(pos.left, pos.top);
+			return;
+		}
 		if (anchorToOverlays()) {
 			dockedToOverlays = true;
 			return;
@@ -388,48 +409,60 @@
 		if (pos) applyPosition(pos.left, pos.top);
 	}
 
-	window.VOSettings.getPosition().then((pos) => {
-		// Position ERST nach CSS-Load + naechstem Frame anwenden (sonst falsche
-		// Breitenmessung -> Sprung an den Rand).
-		cssReady.then(() =>
-			requestAnimationFrame(() => {
-				positionInitial(pos);
-				logLayout("Overlay", container, {
-					initial: true,
-					angedockt: dockedToOverlays,
-					gespeichertePosition: !!pos,
-				});
-
-				// Die Overlays-Erweiterung laedt evtl. erst spaeter -> ein paar
-				// Sekunden lang nachversuchen anzudocken.
-				let tries = 0;
-				const dockTimer = setInterval(() => {
-					tries++;
-					if (!dockedToOverlays && anchorToOverlays()) dockedToOverlays = true;
-					if (dockedToOverlays || tries >= 20) clearInterval(dockTimer);
-				}, 300);
-			}),
-		);
-	});
-
-	window.addEventListener("resize", () => {
-		// Angedockt: rechtsbuendig unter dem Overlays-Mikrofon bleiben.
-		if (dockedToOverlays && anchorToOverlays()) return;
-		clampCurrentPosition();
-	});
-
-	// Auto-Lese-Modus (A-Button) + Auto-Vorlesen-Haekchen aus den Einstellungen
-	// wiederherstellen.
-	window.VOSettings.load()
-		.then((s) => {
+	Promise.all([window.VOSettings.getPosition(), window.VOSettings.load()]).then(
+		([pos, s]) => {
+			draggable = !!(s && s.draggable);
 			autoMode = !!(s && s.autoMode);
 			applyAutoButton();
 			autoSpeakOn = !!(s && s.autoSpeak);
 			applyAutoSpeakBox();
-		})
-		.catch(() => {
-			/* Buttons bleiben im Standardzustand (aus) */
-		});
+
+			// Position ERST nach CSS-Load + naechstem Frame anwenden (sonst falsche
+			// Breitenmessung -> Sprung an den Rand).
+			cssReady.then(() =>
+				requestAnimationFrame(() => {
+					positionInitial(pos);
+					logLayout("Overlay", container, {
+						initial: true,
+						angedockt: dockedToOverlays,
+						verschiebbar: draggable,
+					});
+
+					// Nur andocken wenn NICHT verschiebbar; Overlays laden evtl. spaeter.
+					if (!draggable) {
+						let tries = 0;
+						const dockTimer = setInterval(() => {
+							tries++;
+							if (!dockedToOverlays && anchorToOverlays())
+								dockedToOverlays = true;
+							if (dockedToOverlays || tries >= 20) clearInterval(dockTimer);
+						}, 300);
+					}
+				}),
+			);
+		},
+	);
+
+	window.addEventListener("resize", () => {
+		// Nicht verschiebbar + angedockt: rechtsbuendig unter dem Mikrofon bleiben.
+		if (!draggable && dockedToOverlays && anchorToOverlays()) return;
+		clampCurrentPosition();
+	});
+
+	// Aenderungen aus der Seitenleiste live uebernehmen (verschiebbar an/aus).
+	chrome.storage.onChanged.addListener((changes, area) => {
+		if (area !== "local" || !changes.vo_settings) return;
+		const nv = changes.vo_settings.newValue;
+		if (!nv) return;
+		if (typeof nv.autoSpeak === "boolean" && nv.autoSpeak !== autoSpeakOn) {
+			autoSpeakOn = nv.autoSpeak;
+			applyAutoSpeakBox();
+		}
+		const was = draggable;
+		draggable = !!nv.draggable;
+		// Verschiebbar AUS -> zurueck an den Standardort.
+		if (was && !draggable) resetToDocked();
+	});
 
 	// ----- Drag + Klick (mousedown mit preventDefault) -------------------------
 	// preventDefault auf mousedown ist entscheidend: es verhindert, dass der
@@ -438,11 +471,16 @@
 	const DRAG_THRESHOLD = 4;
 
 	container.addEventListener("mousedown", (e) => {
-		if (e.button !== 0) return;
+		const isLeft = e.button === 0;
+		const isRight = e.button === 2;
+		// Linke Taste: immer (Klick auf Button bzw. Ziehen wenn verschiebbar).
+		// Rechte Taste: nur zum Ziehen und nur wenn das Overlay verschiebbar ist.
+		if (!isLeft && !(isRight && draggable)) return;
 		e.preventDefault();
 		e.stopPropagation();
 
-		const pressed = e.target.closest(".vo-btn");
+		// Rechtsklick ist reines Ziehen -> kein Button-Klick ausloesen.
+		const pressed = isLeft ? e.target.closest(".vo-btn") : null;
 		const rect = container.getBoundingClientRect();
 		drag = {
 			pressed,
@@ -456,6 +494,12 @@
 		window.addEventListener("mouseup", onDragEnd, true);
 	});
 
+	// Rechtsklick auf das Overlay oeffnet kein Kontextmenu, wenn es verschiebbar
+	// ist (die rechte Taste dient dann dem Ziehen).
+	container.addEventListener("contextmenu", (e) => {
+		if (draggable) e.preventDefault();
+	});
+
 	function onDragMove(e) {
 		if (!drag) return;
 		const dx = e.clientX - drag.startX;
@@ -463,7 +507,8 @@
 		if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
 			drag.moved = true;
 		}
-		if (drag.moved) {
+		// Nur tatsaechlich verschieben, wenn das Overlay verschiebbar ist.
+		if (drag.moved && draggable) {
 			e.preventDefault();
 			applyPosition(drag.origLeft + dx, drag.origTop + dy);
 		}
@@ -478,11 +523,14 @@
 		drag = null;
 
 		if (wasDrag) {
-			const rect = container.getBoundingClientRect();
-			window.VOSettings.setPosition(rect.left, rect.top);
-			// Viewport-Clamp nach Drag sicherstellen
-			clampCurrentPosition();
-			logLayout("Overlay", container, { nachDrag: true });
+			// Position nur merken, wenn das Overlay verschiebbar ist; sonst wurde
+			// gar nicht bewegt (onDragMove ignoriert die Bewegung).
+			if (draggable) {
+				const rect = container.getBoundingClientRect();
+				window.VOSettings.setPosition(rect.left, rect.top);
+				clampCurrentPosition();
+				logLayout("Overlay", container, { nachDrag: true });
+			}
 		} else if (pressed === autoBtn) {
 			toggleAutoMode();
 		} else if (pressed === speakerBtn) {

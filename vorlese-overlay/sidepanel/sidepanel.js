@@ -290,9 +290,9 @@
 			setTimeout(() => showStatus($("google-status"), "", ""), 4000);
 		});
 
-		// Auto-Speak
-		$("auto-speak").addEventListener("change", async (e) => {
-			current.autoSpeak = !!e.target.checked;
+		// Overlay verschiebbar
+		$("draggable").addEventListener("change", async (e) => {
+			current.draggable = !!e.target.checked;
 			await persist();
 		});
 
@@ -321,7 +321,7 @@
 		setPitchUI($("edge-pitch"), $("edge-pitch-val"), current.edge.pitch);
 		setRateUI($("google-rate"), $("google-rate-val"), current.google.rate);
 		$("google-key").value = current.google.apiKey || "";
-		$("auto-speak").checked = !!current.autoSpeak;
+		$("draggable").checked = !!current.draggable;
 
 		wire();
 

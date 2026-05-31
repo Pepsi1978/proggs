@@ -37,6 +37,7 @@
 		autoSpeak: false, // Haekchen: markierten Text automatisch vorlesen
 		autoMode: false, // A-Button: ab markiertem Wort absatzweise bis Ende vorlesen
 		favoriteVoices: [], // mit Stern markierte Lieblings-Stimmen (Liste von IDs)
+		draggable: false, // Overlay per Maus verschiebbar (sonst fester Platz)
 	});
 
 	// Tiefe, robuste Zusammenführung mit den Defaults, damit fehlende Felder
@@ -59,6 +60,8 @@
 				typeof s.autoSpeak === "boolean" ? s.autoSpeak : DEFAULTS.autoSpeak,
 			autoMode:
 				typeof s.autoMode === "boolean" ? s.autoMode : DEFAULTS.autoMode,
+			draggable:
+				typeof s.draggable === "boolean" ? s.draggable : DEFAULTS.draggable,
 			// Lieblings-Stimmen: nur eindeutige, nicht-leere String-IDs uebernehmen.
 			favoriteVoices: Array.isArray(s.favoriteVoices)
 				? Array.from(
