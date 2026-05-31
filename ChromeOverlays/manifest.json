@@ -1,12 +1,13 @@
 {
 	"manifest_version": 3,
 	"name": "Overlays (Voice + Tools)",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
 	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel"],
 	"host_permissions": [
 		"https://api.groq.com/*",
-		"https://generativelanguage.googleapis.com/*"
+		"https://generativelanguage.googleapis.com/*",
+		"https://raw.githubusercontent.com/*"
 	],
 	"background": {
 		"service_worker": "background.js"
