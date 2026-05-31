@@ -79,17 +79,30 @@ fun MicCaptureActions(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     bottomPadding: Dp = 110.dp,
+    // Frank-Wunsch 2026-05-31: wenn gesetzt, wird ein per Mikrofon transkribierter
+    // Text NICHT sofort gespeichert, sondern an diesen Callback uebergeben (der
+    // Aufgaben-Reiter oeffnet damit ein Review-Fenster zum Pruefen/Verbessern/
+    // Benennen). Ist er null, bleibt das alte Verhalten (Direkt-Speichern).
+    onReviewTranscript: ((transcript: String) -> Unit)? = null,
     voiceVm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
     val voiceState by voiceVm.state.collectAsState()
     var inputDialogOpen by remember { mutableStateOf(false) }
 
+    // Liefert ein fertiges Transkript entweder ans Review-Fenster (wenn gesetzt)
+    // oder direkt an onTextCommit (altes Verhalten der anderen Reiter).
+    val deliverTranscript: (String) -> Unit = { raw ->
+        val t = raw.trim()
+        if (t.isNotEmpty()) {
+            if (onReviewTranscript != null) onReviewTranscript(t)
+            else onTextCommit(t, EntrySource.NUTZER_MIC)
+        }
+    }
+
     val micPermission = rememberMicPermissionState(
         onAllGranted = {
             voiceVm.toggle { transcript ->
-                if (transcript.isNotBlank()) {
-                    onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
-                }
+                deliverTranscript(transcript)
                 onClose()
             }
         },
@@ -144,9 +157,7 @@ fun MicCaptureActions(
                     VoiceCaptureState.IDLE -> {
                         if (micPermission.check()) {
                             voiceVm.toggle { transcript ->
-                                if (transcript.isNotBlank()) {
-                                    onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
-                                }
+                                deliverTranscript(transcript)
                                 onClose()
                             }
                         } else {
@@ -155,9 +166,7 @@ fun MicCaptureActions(
                     }
                     VoiceCaptureState.RECORDING -> {
                         voiceVm.toggle { transcript ->
-                            if (transcript.isNotBlank()) {
-                                onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
-                            }
+                            deliverTranscript(transcript)
                             onClose()
                         }
                     }

@@ -41,7 +41,12 @@ class ProcessEntryUseCase @Inject constructor(
     suspend operator fun invoke(
         rawTranscript: String,
         source: EntrySource,
+        // Frank-Wunsch 2026-05-31: optionaler manuell eingetippter Titel aus dem
+        // Review-Fenster. Wenn gesetzt (nicht leer), hat er Vorrang vor dem
+        // KI-Titel und wird NICHT auf 3 Woerter gekappt — Frank bestimmt selbst.
+        manualTitle: String? = null,
     ): Result<EntropyEntryEntity> {
+        val cleanManualTitle = manualTitle?.trim()?.takeIf { it.isNotBlank() }
         val key = secrets.geminiApiKey
             ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
         val model = settings.geminiModelFlow.first()
@@ -120,7 +125,7 @@ class ProcessEntryUseCase @Inject constructor(
                 EntropyEntryEntity(
                     id = UUID.randomUUID().toString(),
                     rawTranscript = rawTranscript,
-                    title = limitToThreeWords(parsed.title),
+                    title = cleanManualTitle ?: limitToThreeWords(parsed.title),
                     description = parsed.description,
                     category = runCatching { EntropyCategory.valueOf(parsed.category) }
                         .getOrDefault(EntropyCategory.SONSTIGES),
@@ -140,25 +145,29 @@ class ProcessEntryUseCase @Inject constructor(
                     biomarkerSnapshotId = null,
                 )
             } else {
-                fallbackEntry(rawTranscript, source)
+                fallbackEntry(rawTranscript, source, cleanManualTitle)
             }
             entries.upsert(entry)
             Result.success(entry)
         } catch (t: Throwable) {
             // Fallback-Eintrag mit OFFEN-Status speichern, damit der Nutzer ihn
             // später erneut bewerten lassen kann (Spec §19).
-            val fallback = fallbackEntry(rawTranscript, source)
+            val fallback = fallbackEntry(rawTranscript, source, cleanManualTitle)
             entries.upsert(fallback)
             Result.failure(t)
         }
     }
 
-    private fun fallbackEntry(transcript: String, source: EntrySource): EntropyEntryEntity {
+    private fun fallbackEntry(
+        transcript: String,
+        source: EntrySource,
+        manualTitle: String? = null,
+    ): EntropyEntryEntity {
         val now = System.currentTimeMillis()
         return EntropyEntryEntity(
             id = UUID.randomUUID().toString(),
             rawTranscript = transcript,
-            title = limitToThreeWords(transcript).ifBlank { "Eintrag" },
+            title = manualTitle ?: limitToThreeWords(transcript).ifBlank { "Eintrag" },
             description = transcript.ifBlank { "(leeres Transkript)" },
             category = EntropyCategory.SONSTIGES,
             severity = 5,

@@ -163,6 +163,11 @@ fun TasksScreen(
     // "Aufnehmen" innerhalb der Actions geprueft.
     var micActionsOpen by remember { mutableStateOf(false) }
 
+    // Frank-Wunsch 2026-05-31: Nach dem Einsprechen einer Aufgabe erscheint ein
+    // Review-Fenster mit dem transkribierten Text. Hier wird das aktuelle
+    // Transkript gehalten; null = kein Fenster offen.
+    var reviewTranscript by remember { mutableStateOf<String?>(null) }
+
     // Frank-Wunsch 2026-05-11: Widget muss frisch werden wenn sich Aufgaben
     // aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne diesen
     // Trigger wuerde die Liste bis zu 30 Min veraltet bleiben.
@@ -695,8 +700,29 @@ fun TasksScreen(
                 accent = micAccent,
                 onTextCommit = { text, source -> vm.processCapturedText(text, source) },
                 onClose = { micActionsOpen = false },
+                // Frank-Wunsch 2026-05-31: eingesprochene Aufgaben erst im
+                // Review-Fenster pruefen/verbessern/benennen, dann speichern.
+                onReviewTranscript = { reviewTranscript = it },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
+
+            // Review-Fenster nach der Transkription (Frank-Wunsch 2026-05-31).
+            reviewTranscript?.let { transcript ->
+                TaskCaptureReviewDialog(
+                    initialTranscript = transcript,
+                    accent = micAccent,
+                    onImprove = { text -> vm.improveTranscript(text) },
+                    onSave = { text, manualTitle ->
+                        vm.processCapturedText(
+                            text,
+                            de.frank.entropyreducer.domain.model.EntrySource.NUTZER_MIC,
+                            manualTitle,
+                        )
+                        reviewTranscript = null
+                    },
+                    onDismiss = { reviewTranscript = null },
+                )
+            }
         }
     }
 

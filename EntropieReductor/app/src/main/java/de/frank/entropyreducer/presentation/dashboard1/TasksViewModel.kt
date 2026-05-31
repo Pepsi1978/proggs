@@ -101,6 +101,7 @@ class TasksViewModel @Inject constructor(
     private val recorder: AudioRecorder,
     private val transcribe: TranscribeAudioUseCase,
     private val process: ProcessEntryUseCase,
+    private val improveText: de.frank.entropyreducer.domain.usecase.ImproveTextUseCase,
     private val statusObserver: StatusObserver,
     private val kiQuestions: KiQuestionRepository,
     private val generateKiQuestion: de.frank.entropyreducer.domain.kiquestion.GenerateKiQuestionUseCase,
@@ -807,7 +808,19 @@ class TasksViewModel @Inject constructor(
      * ProcessEntryUseCase. Ersetzt den alten Direct-Mic-Pfad — der bleibt nur
      * noch als Fallback fuer das Widget.
      */
-    fun processCapturedText(text: String, source: EntrySource) {
+    /**
+     * Frank-Wunsch 2026-05-31: verbessert einen diktierten Text per Gemini
+     * (Grammatik/Rechtschreibung, gleiche Laenge, Inhalt bleibt). Wird vom
+     * Review-Fenster aufgerufen. Gibt bei Erfolg den verbesserten Text zurueck,
+     * bei Fehler ein Result.failure (Aufrufer behaelt dann das Original).
+     */
+    suspend fun improveTranscript(text: String): Result<String> = improveText(text)
+
+    /**
+     * @param manualTitle optionaler, manuell eingetippter Titel aus dem
+     *   Review-Fenster. Leer/null → KI erstellt den Titel.
+     */
+    fun processCapturedText(text: String, source: EntrySource, manualTitle: String? = null) {
         val trimmed = text.trim()
         if (trimmed.isBlank()) return
         viewModelScope.launch {
@@ -815,7 +828,7 @@ class TasksViewModel @Inject constructor(
                 micState = MicState.PROCESSING,
                 processingMessage = "Verarbeite …",
             )
-            process(trimmed, source)
+            process(trimmed, source, manualTitle)
                 .onSuccess { e ->
                     uiOnlyFlow.value = uiOnlyFlow.value.copy(
                         micState = MicState.IDLE,
