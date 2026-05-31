@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Button
@@ -140,6 +141,11 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                 return@Column
             }
 
+            // Frank-Wunsch 2026-05-31: Titel oben ist antippbar und inline editierbar.
+            // Der gespeicherte Titel erscheint dank gemeinsamer DB auch in der Liste.
+            var editingTitle by remember(entry.id) { mutableStateOf(false) }
+            var titleDraft by remember(entry.id) { mutableStateOf(entry.title) }
+
             Column(
                 modifier =
                     Modifier.fillMaxSize()
@@ -162,12 +168,53 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                             Column(modifier = Modifier.weight(1f)) {
                                 EntropyCategoryPill(entry.category)
                                 Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = entry.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = cosmos.textPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                if (editingTitle) {
+                                    androidx.compose.material3.OutlinedTextField(
+                                        value = titleDraft,
+                                        onValueChange = { titleDraft = it },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textStyle =
+                                            MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                            ),
+                                        colors =
+                                            androidx.compose.material3.OutlinedTextFieldDefaults
+                                                .colors(
+                                                    focusedTextColor = cosmos.textPrimary,
+                                                    unfocusedTextColor = cosmos.textPrimary,
+                                                    focusedBorderColor = CosmosColors.AccentPrimary,
+                                                    unfocusedBorderColor = cosmos.glassBorder,
+                                                    cursorColor = CosmosColors.AccentPrimary,
+                                                ),
+                                        trailingIcon = {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.updateTitle(titleDraft)
+                                                    editingTitle = false
+                                                },
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Check,
+                                                    contentDescription = "Titel speichern",
+                                                    tint = CosmosColors.AccentPrimary,
+                                                )
+                                            }
+                                        },
+                                    )
+                                } else {
+                                    Text(
+                                        text = entry.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = cosmos.textPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier =
+                                            Modifier.clickable {
+                                                titleDraft = entry.title
+                                                editingTitle = true
+                                            },
+                                    )
+                                }
                                 if (entry.description.isNotBlank()) {
                                     Spacer(Modifier.height(4.dp))
                                     Text(

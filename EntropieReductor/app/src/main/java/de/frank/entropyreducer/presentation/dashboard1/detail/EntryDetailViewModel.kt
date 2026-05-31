@@ -205,6 +205,23 @@ constructor(
         }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-31: manueller Titel-Edit. Tippt Frank den Titel oben im
+     * Detail an und aendert ihn, wird der neue Titel gespeichert und erscheint
+     * dank der gemeinsamen DB-Quelle automatisch auch in der Aufgabenuebersicht.
+     * Leere Eingaben werden ignoriert (alter Titel bleibt).
+     */
+    fun updateTitle(newTitle: String) {
+        val clean = newTitle.trim()
+        if (clean.isBlank()) return
+        viewModelScope.launch {
+            val current = entries.get(entryId) ?: return@launch
+            if (current.title == clean) return@launch
+            entries.update(current.copy(title = clean, updatedAt = System.currentTimeMillis()))
+            reloadTrigger.value = System.currentTimeMillis()
+        }
+    }
+
     /** Löscht den Eintrag (Nachträge fliegen per ForeignKey CASCADE automatisch mit). */
     fun deleteEntry() {
         viewModelScope.launch {
