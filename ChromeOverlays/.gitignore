@@ -1,0 +1,8 @@
+# Chrome verweigert das Laden einer Erweiterung, die Dateien/Ordner mit
+# fuehrendem "_" enthaelt. Solche Helfer-/Build-Artefakte daher draussen halten
+# (und nie im Erweiterungs-Ordner erzeugen).
+__pycache__/
+*.pyc
+_*.py
+.DS_Store
+node_modules/
