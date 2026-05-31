@@ -1558,10 +1558,13 @@ private fun EntropyEntryCard(
             // kein Schweregrad-Balken, keine Tags/Bereiche, kein Empfohlen/Zeitaufwand.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Haekchen: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn erledigt.
+                // Frank-Wunsch 2026-05-31: offenes Haekchenfeld hat eine weisse Fuellflaeche
+                // (gleiche Farbe wie die KI-/Prio-Perlen = cosmos.glassBg) und eine graue
+                // Umrandung — damit klar als antippbares Feld erkennbar.
                 val checkBg =
                     if (isResolved) CosmosColors.Success.copy(alpha = 0.85f)
-                    else androidx.compose.ui.graphics.Color.Transparent
-                val checkBorder = if (isResolved) CosmosColors.Success else cosmos.glassBorder
+                    else cosmos.glassBg
+                val checkBorder = if (isResolved) CosmosColors.Success else cosmos.textSecondary
                 Box(
                     modifier =
                         Modifier.size(28.dp)

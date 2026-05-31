@@ -176,8 +176,9 @@ class EntropyReducerRemoteViewsFactory(
             views.setImageViewResource(R.id.task_check_box, R.drawable.ic_widget_check)
             views.setInt(R.id.task_check_box, "setColorFilter", 0xFFFFFFFF.toInt())
         } else {
+            // Offenes Feld: weisse Fuellung + graue Umrandung kommen FEST aus dem Drawable.
+            // KEIN Tint setzen — sonst wuerden Fuell- und Umrandungsfarbe ueberschrieben.
             views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_bg)
-            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.textPrimary))
             views.setImageViewResource(R.id.task_check_box, 0)
         }
 
