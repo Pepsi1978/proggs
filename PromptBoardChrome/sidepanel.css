@@ -268,6 +268,15 @@ body {
 	border-top: 1px solid var(--pb-border);
 }
 
+/* Versions-Stempel ganz unten */
+.pb-version {
+	padding: 0 14px 12px;
+	font-size: 10.5px;
+	color: var(--pb-muted);
+	opacity: 0.8;
+	text-align: right;
+}
+
 .pb-footer-text {
 	flex: 1 1 auto;
 }

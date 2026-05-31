@@ -48,15 +48,20 @@ function uid() {
 	return "p" + Date.now() + Math.floor(Math.random() * 1000);
 }
 
-// Prompts liegen in chrome.storage.sync = Chromes Google-Backup (sichert ins
-// Google-Konto und spiegelt auf alle Chrome-Installationen mit demselben Konto).
-// JEDER Prompt ist ein EIGENER Eintrag (pb_p_<id>), die Reihenfolge steht in
-// pb_order. Dadurch gilt das 8-KB-Limit pro Prompt statt fuer die ganze Liste
-// (kein lautloser Verlust mehr), insgesamt ~100 KB. Die feste Extension-ID (key
-// im Manifest) sorgt dafuer, dass Windows und macOS denselben Sync-Speicher teilen.
+// Doppelte Speicherung:
+// (1) chrome.storage.local = ZUVERLAESSIGE Quelle fuer DIESES Geraet (schnell,
+//     kein Sync-Timing/Flakiness) -> beim Neuladen NIE Datenverlust.
+// (2) chrome.storage.sync = Chromes Google-Backup fuer den Abgleich zwischen
+//     Geraeten; jeder Prompt als eigener Eintrag (umgeht das 8-KB-pro-Eintrag-Limit),
+//     feste Extension-ID (key) sorgt fuer denselben Sync-Speicher auf Win/macOS.
+// Ein Zeitstempel entscheidet bei Unterschieden, welche Seite neuer ist (last write wins).
+const LOCAL_KEY = "prompts"; // ganze Liste in local
+const LOCAL_TS = "prompts_ts";
 const ORDER_KEY = "pb_order";
 const ITEM_PREFIX = "pb_p_";
+const TS_KEY = "pb_ts";
 let applyingRemote = false; // verhindert Rueckschreiben bei Remote-Aenderungen
+let currentTs = 0; // Zeitstempel des aktuell geladenen Standes
 
 function promptsFromStore(all) {
 	const order = all && Array.isArray(all[ORDER_KEY]) ? all[ORDER_KEY] : null;
@@ -67,31 +72,54 @@ function promptsFromStore(all) {
 }
 
 function load() {
-	chrome.storage.sync.get(null, (all) => {
-		if (!chrome.runtime.lastError) {
-			const list = promptsFromStore(all);
-			if (list && list.length) {
-				prompts = list;
-				render();
-				return;
+	chrome.storage.local.get({ [LOCAL_KEY]: null, [LOCAL_TS]: 0 }, (loc) => {
+		const localList =
+			Array.isArray(loc[LOCAL_KEY]) && loc[LOCAL_KEY].length
+				? loc[LOCAL_KEY]
+				: null;
+		const localTs = Number(loc[LOCAL_TS]) || 0;
+		chrome.storage.sync.get(null, (all) => {
+			const syncList = !chrome.runtime.lastError ? promptsFromStore(all) : null;
+			const syncTs = (all && Number(all[TS_KEY])) || 0;
+
+			if (syncList && syncList.length && syncTs > localTs) {
+				// Cloud (anderes Geraet) ist neuer -> uebernehmen + lokal spiegeln.
+				prompts = syncList;
+				currentTs = syncTs;
+				writeLocal(currentTs);
+			} else if (localList) {
+				// Lokaler Stand ist die zuverlaessige Quelle dieses Geraets.
+				prompts = localList;
+				currentTs = localTs;
+				if (syncTs < localTs) writeSync(currentTs); // Cloud nachziehen
+			} else if (syncList && syncList.length) {
+				prompts = syncList;
+				currentTs = syncTs;
+				writeLocal(currentTs);
+			} else {
+				prompts = DEFAULT_PROMPTS.slice();
+				save();
 			}
-		}
-		// Nichts in sync -> aus altem local-Speicher migrieren, sonst Defaults.
-		chrome.storage.local.get({ prompts: null }, (loc) => {
-			prompts =
-				Array.isArray(loc.prompts) && loc.prompts.length
-					? loc.prompts
-					: DEFAULT_PROMPTS.slice();
-			save(); // nach sync schreiben
 			render();
 		});
 	});
 }
 
-function save() {
-	if (applyingRemote) return; // gerade Remote-Stand uebernommen
+function writeLocal(ts) {
+	chrome.storage.local.set({ [LOCAL_KEY]: prompts, [LOCAL_TS]: ts }, () => {
+		if (chrome.runtime.lastError) {
+			showHint(
+				"Speichern (lokal) fehlgeschlagen: " + chrome.runtime.lastError.message,
+				true,
+			);
+		}
+	});
+}
+
+function writeSync(ts) {
 	chrome.storage.sync.get(null, (all) => {
-		const obj = { [ORDER_KEY]: prompts.map((p) => p.id) };
+		if (chrome.runtime.lastError) return; // lokal ist bereits gesichert
+		const obj = { [ORDER_KEY]: prompts.map((p) => p.id), [TS_KEY]: ts };
 		for (const p of prompts) obj[ITEM_PREFIX + p.id] = p;
 		const keep = new Set(prompts.map((p) => p.id));
 		const remove = Object.keys(all || {}).filter(
@@ -100,8 +128,10 @@ function save() {
 		);
 		chrome.storage.sync.set(obj, () => {
 			if (chrome.runtime.lastError) {
+				// Lokal ist schon sicher gespeichert -> nur Hinweis, kein Datenverlust.
 				showHint(
-					"Sync-Speichern fehlgeschlagen: " + chrome.runtime.lastError.message,
+					"Cloud-Sync fehlgeschlagen (lokal gespeichert): " +
+						chrome.runtime.lastError.message,
 					true,
 				);
 			}
@@ -110,19 +140,31 @@ function save() {
 	});
 }
 
+function save() {
+	if (applyingRemote) return; // gerade Remote-Stand uebernommen
+	currentTs = Date.now();
+	writeLocal(currentTs); // zuerst zuverlaessig lokal sichern
+	writeSync(currentTs); // dann ins Google-Backup spiegeln
+}
+
 // Aenderungen von einem anderen Geraet live uebernehmen (nicht waehrend des
 // Bearbeitens, um laufende Eingaben nicht zu ueberschreiben).
 chrome.storage.onChanged.addListener((changes, area) => {
 	if (area !== "sync" || editMode) return;
 	const touched = Object.keys(changes).some(
-		(k) => k === ORDER_KEY || k.startsWith(ITEM_PREFIX),
+		(k) => k === ORDER_KEY || k === TS_KEY || k.startsWith(ITEM_PREFIX),
 	);
 	if (!touched) return;
 	chrome.storage.sync.get(null, (all) => {
+		if (chrome.runtime.lastError) return;
 		const list = promptsFromStore(all);
-		if (!list) return;
+		const syncTs = (all && Number(all[TS_KEY])) || 0;
+		// Nur uebernehmen, wenn die Cloud NEUER ist als unser aktueller Stand.
+		if (!list || !list.length || syncTs < currentTs) return;
 		applyingRemote = true;
 		prompts = list;
+		currentTs = syncTs;
+		writeLocal(syncTs); // lokal spiegeln
 		render();
 		applyingRemote = false;
 	});
@@ -374,5 +416,11 @@ document.getElementById("reloadBtn").addEventListener("click", async () => {
 	}
 	chrome.runtime.reload();
 });
+
+// Versions-Stempel unten anzeigen (aus dem Manifest).
+const versionEl = document.getElementById("version");
+if (versionEl) {
+	versionEl.textContent = "Version " + chrome.runtime.getManifest().version;
+}
 
 load();
