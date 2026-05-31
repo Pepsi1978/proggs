@@ -14,16 +14,14 @@
 	const BTN_SIZE = 42;
 	const GAP = 52; // vertikaler Abstand zwischen Buttons
 
-	function setColors(btn, bg, fg) {
-		btn.style.setProperty("background", bg, "important");
-		btn.style.setProperty("color", fg, "important");
-	}
-	function emojiRender(text, bg, fg, title) {
+	// Material-Icon im farbigen Kreis (weisses Icon) — Stil wie BestJournal Android.
+	// Trusted-Types-sicher ueber OV.setSvgIcon, Emoji nur als allerletzter Notfall.
+	function iconRender(iconKey, bg, title) {
 		return (btn) => {
-			btn.textContent = text;
-			btn.style.fontSize = "18px";
-			btn.style.fontWeight = "normal";
-			setColors(btn, bg, fg);
+			OV.setSvgIcon(btn, OV.ICONS[iconKey], OV.ICON_FALLBACK[iconKey]);
+			btn.style.setProperty("background", bg, "important");
+			btn.style.setProperty("color", "#fff", "important");
+			btn.style.setProperty("border-color", bg, "important");
 			btn.title = title;
 		};
 	}
@@ -36,15 +34,15 @@
 			onClick: (b) => A().toggleAutoEnter(b),
 		},
 		paste: {
-			render: emojiRender("📋", "white", "black", "Zwischenablage einfuegen"),
+			render: iconRender("paste", "#7c3aed", "Zwischenablage einfuegen"),
 			onClick: () => A().paste(),
 		},
 		copy: {
-			render: emojiRender("📎", "white", "black", "Text kopieren"),
+			render: iconRender("copy", "#0891b2", "Text kopieren"),
 			onClick: () => A().copy(),
 		},
 		clear: {
-			render: emojiRender("❌", "white", "#c40000", "Feld leeren"),
+			render: iconRender("clear", "#dc2626", "Feld leeren"),
 			onClick: () => A().clear(),
 		},
 		gemini: {
@@ -52,25 +50,23 @@
 			onClick: (b) => A().toggleGemini(b),
 		},
 		promptFrank: {
-			render: emojiRender(
-				"✨",
-				"white",
-				"black",
+			render: iconRender(
+				"sparkles",
+				"#4f46e5",
 				"Prompt (fuer Frank) einbetten",
 			),
 			onClick: (b) => A().promptFrank(b),
 		},
 		promptGeneral: {
-			render: emojiRender(
-				"🪄",
-				"white",
-				"black",
+			render: iconRender(
+				"wand",
+				"#db2777",
 				"Prompt (allgemein / 10. Klasse) einbetten",
 			),
 			onClick: (b) => A().promptGeneral(b),
 		},
 		memory: {
-			render: emojiRender("💾", "white", "black", "Memory-Prompt einfuegen"),
+			render: iconRender("brain", "#ea580c", "Memory-Prompt einfuegen"),
 			onClick: (b) => A().memory(b),
 		},
 	};

@@ -59,14 +59,13 @@
 		}, 300);
 	}
 	function renderAutoEnter(btn) {
-		btn.textContent = "⏎";
-		btn.style.fontWeight = "bold";
-		btn.style.fontSize = "18px";
+		OV.setSvgIcon(btn, OV.ICONS.send, OV.ICON_FALLBACK.send);
+		btn.style.setProperty("border-color", "transparent", "important");
 		if (autoSendEnabled) {
-			setColors(btn, "#f97316", "#fff");
+			setColors(btn, "#16a34a", "#fff");
 			btn.title = "Auto-Send AN – Spracheingabe wird automatisch abgeschickt";
 		} else {
-			setColors(btn, "#ffffff", "#333");
+			setColors(btn, "#64748b", "#fff");
 			btn.title = "Auto-Send AUS – Klicken zum Aktivieren";
 		}
 	}
@@ -135,14 +134,13 @@
 
 	// ── Gemini-Toggle (Auto-Korrektur an/aus) ──
 	function renderGeminiToggle(btn) {
-		btn.textContent = "G";
-		btn.style.fontWeight = "bold";
-		btn.style.fontSize = "18px";
+		OV.setSvgIcon(btn, OV.ICONS.spellcheck, OV.ICON_FALLBACK.spellcheck);
+		btn.style.setProperty("border-color", "transparent", "important");
 		if (OV.storage.get("autoGeminiCorrection", true)) {
 			setColors(btn, "#22c55e", "#fff");
 			btn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
 		} else {
-			setColors(btn, "#ef4444", "#fff");
+			setColors(btn, "#94a3b8", "#fff");
 			btn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
 		}
 	}

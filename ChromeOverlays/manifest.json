@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Overlays (Voice + Tools)",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
 	"permissions": ["storage", "clipboardRead", "clipboardWrite"],
 	"host_permissions": [
@@ -12,8 +12,18 @@
 		"service_worker": "background.js"
 	},
 	"options_page": "options.html",
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
+	},
 	"action": {
-		"default_title": "Overlays — Einstellungen (API-Keys)"
+		"default_title": "Overlays — Einstellungen (API-Keys)",
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
 	},
 	"content_scripts": [
 		{
@@ -43,6 +53,7 @@
 			"js": [
 				"src/storage.js",
 				"src/toast.js",
+				"src/icons.js",
 				"src/editable.js",
 				"src/stt.js",
 				"src/gemini.js",

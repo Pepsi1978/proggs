@@ -9,14 +9,9 @@
 	window.__chromeOverlays__ = window.__chromeOverlays__ || {};
 	const OV = window.__chromeOverlays__;
 
-	const MIC_ICON = {
-		mic: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
-		stop: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
-		spinner:
-			'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>',
-		error:
-			'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-	};
+	// Schoene Material-Icons + Notfall-Emojis aus icons.js (zentral, TT-sicher).
+	const MIC_ICON = OV.ICONS;
+	const MIC_EMOJI = OV.ICON_FALLBACK;
 
 	const supportedSpeech = !!(
 		navigator.mediaDevices && navigator.mediaDevices.getUserMedia
@@ -88,27 +83,27 @@
 			if (!micBtn.classList.contains("stt-mic-btn"))
 				micBtn.classList.add("stt-mic-btn");
 			if (state === "listening") {
-				setSvgIcon(micBtn, MIC_ICON.stop, "⏹️");
+				setSvgIcon(micBtn, MIC_ICON.stop, MIC_EMOJI.stop);
 				micBtn.setAttribute("data-state", "listening");
 				colorMic("#dc2626");
 				micBtn.title = "Spracheingabe laeuft – klicken zum Stop";
 				return;
 			}
 			if (state === "working") {
-				setSvgIcon(micBtn, MIC_ICON.spinner, "⏳");
+				setSvgIcon(micBtn, MIC_ICON.spinner, MIC_EMOJI.spinner);
 				micBtn.setAttribute("data-state", "working");
 				colorMic("#d97706");
 				micBtn.title = msg || "Bereinigung laeuft…";
 				return;
 			}
 			if (state === "error") {
-				setSvgIcon(micBtn, MIC_ICON.error, "⚠️");
+				setSvgIcon(micBtn, MIC_ICON.error, MIC_EMOJI.error);
 				micBtn.setAttribute("data-state", "error");
 				colorMic("#8b0000");
 				micBtn.title = msg || "Fehler";
 				return;
 			}
-			setSvgIcon(micBtn, MIC_ICON.mic, "🎙️");
+			setSvgIcon(micBtn, MIC_ICON.mic, MIC_EMOJI.mic);
 			micBtn.setAttribute("data-state", "idle");
 			colorMic("#2563eb");
 			micBtn.title = supportedSpeech
