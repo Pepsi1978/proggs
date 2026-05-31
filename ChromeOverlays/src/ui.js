@@ -88,8 +88,14 @@
 
 	function styleRoundButton(btn, profile, index) {
 		const pos = profile.uiPos || {};
-		const right = (pos.right ?? 16) + (pos.shiftLeft ?? 0);
-		const bottom = (pos.bottom ?? 96) + index * GAP;
+		// Zwei-Spalten-Layout: max. 5 Buttons pro Spalte, danach eine zweite
+		// Spalte nach LINKS — so wird die Leiste nicht zu hoch. Bei wenigen
+		// Buttons (z.B. Uebersetzer = 4) bleibt automatisch alles einspaltig.
+		const COLUMN_SIZE = 5;
+		const col = Math.floor(index / COLUMN_SIZE);
+		const row = index % COLUMN_SIZE;
+		const right = (pos.right ?? 16) + (pos.shiftLeft ?? 0) + col * GAP;
+		const bottom = (pos.bottom ?? 96) + row * GAP;
 		btn.type = "button";
 		btn.tabIndex = -1;
 		const s = btn.style;
