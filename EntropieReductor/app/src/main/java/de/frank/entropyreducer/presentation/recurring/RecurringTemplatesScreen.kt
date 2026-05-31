@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.presentation.recurring
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +20,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,13 +36,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
+import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
@@ -108,6 +117,8 @@ fun RecurringTemplatesScreen(
                             template = t,
                             onToggleActive = { viewModel.toggleActive(t) },
                             onDelete = { viewModel.delete(t) },
+                            onSetPriority = { score -> viewModel.setPriority(t, score) },
+                            onSetTargetBucket = { bucket -> viewModel.setTargetBucket(t, bucket) },
                         )
                     }
                 }
@@ -168,86 +179,188 @@ private fun EmptyHint(modifier: Modifier = Modifier) {
  */
 // Frank-Wunsch 2026-05-24: internal statt private, damit der Aufgaben-Reiter
 // (TasksScreen) die Loop-Karten 1:1 als Akkordeon-Dropdown wiederverwenden kann.
+// Frank-Wunsch 2026-05-31: Loop-Karten sehen jetzt 1:1 wie die normalen Aufgaben-
+// Karten aus (EntropyEntryCard): Farbverlauf-Hintergrund nach Prioritaet, Titel in
+// EINER Zeile, darunter Prio-Perle (oeffnet Schieberegler) + Bucket-Perle (Tag-Wahl).
+// Statt des Erledigungs-Haekchens sitzt vorne ein AKTIV-Schalter (gefuellt orange =
+// aktiv/wird erstellt, leer = pausiert). Loeschen bleibt als dezentes Icon erreichbar.
 @Composable
 internal fun TemplateAsTaskCard(
     template: RecurringTemplateEntity,
     onToggleActive: () -> Unit,
     onDelete: () -> Unit,
+    onSetPriority: (Int) -> Unit = {},
+    onSetTargetBucket: (TimeBucket?) -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
-    val catColor = template.category.color()
-    val tint = priorityCardTint(template.priorityScore.toDouble(), cosmos.isDark)
+    val loopAccent = Color(0xFFEA580C)
+
+    var sliderActive by remember(template.id) { mutableStateOf(false) }
+    var liveSlider by remember(template.id) { mutableStateOf<Float?>(null) }
+    var bucketMenuOpen by remember(template.id) { mutableStateOf(false) }
+
+    // Effektive Prioritaet = Live-Regler ?: gespeicherter Wert. Faerbt die Karte live.
+    val effectivePriority = liveSlider?.toDouble() ?: template.priorityScore.toDouble()
+    val ramp = priorityRampColor(effectivePriority)
+    val priorityBrush = remember(ramp) {
+        Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp))
+    }
+    // Pausierte Vorlagen dezent ausgegraut.
+    val cardAlpha = if (template.isActive) 1f else 0.5f
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleActive),
-        tintColor = tint,
+        modifier = Modifier.fillMaxWidth().alpha(cardAlpha),
+        tintBrush = priorityBrush,
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            // Checkbox links (Frank-Wunsch 2026-05-22: statt Switch rechts).
-            Checkbox(
-                checked = template.isActive,
-                onCheckedChange = { onToggleActive() },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = Color(0xFFEA580C),
-                    uncheckedColor = cosmos.textSecondary,
-                ),
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            Spacer(Modifier.width(4.dp))
-            CategoryIconCircle(category = template.category, tint = catColor)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EntropyCategoryPill(template.category)
+        Column {
+            // ZEILE 1: Aktiv-Schalter (vorderes Feld) + Titel + Loeschen.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val boxBg = if (template.isActive) loopAccent else cosmos.glassBg
+                val boxBorder = if (template.isActive) loopAccent else cosmos.textSecondary
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(boxBg)
+                        .border(BorderStroke(2.dp, boxBorder), RoundedCornerShape(8.dp))
+                        .clickable(onClick = onToggleActive),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Repeat,
+                        contentDescription =
+                            if (template.isActive) "Aktiv – tippen zum Pausieren"
+                            else "Pausiert – tippen zum Aktivieren",
+                        tint = if (template.isActive) Color.White else cosmos.textSecondary,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = template.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
-                if (!template.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = template.description ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = cosmos.textSecondary,
-                        maxLines = 2,
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = humanReadable(template.rrule),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "${template.priorityScore}",
-                    color = priorityColor(template.priorityScore.toDouble()),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    "Prio",
-                    color = cosmos.textSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                Spacer(Modifier.height(4.dp))
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Löschen",
                         tint = CosmosColors.Critical,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
+
+            Spacer(Modifier.height(8.dp))
+            // ZEILE 2: Wiederkehr-Rhythmus links + Prio-Perle + Bucket-Perle rechts.
+            val prioLabel =
+                if (liveSlider != null) "Priorität ${Math.round(liveSlider!!)}"
+                else "Priorität ${template.priorityScore}"
+            val bucketLabel = template.targetBucket?.let { loopBucketLabel(it) } ?: "KI"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = humanReadable(template.rrule),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                // Prio-Perle: oeffnet den Schieberegler (setzt priorityScore der Vorlage).
+                LoopPearl(label = prioLabel) { sliderActive = !sliderActive }
+                Spacer(Modifier.width(8.dp))
+                // Bucket-Perle: "KI" oder Tag-Name. Tap oeffnet die Tag-Auswahl.
+                Box {
+                    LoopPearl(label = bucketLabel) { bucketMenuOpen = true }
+                    DropdownMenu(
+                        expanded = bucketMenuOpen,
+                        onDismissRequest = { bucketMenuOpen = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("KI · automatisch (Heute)") },
+                            onClick = {
+                                onSetTargetBucket(null)
+                                bucketMenuOpen = false
+                            },
+                        )
+                        loopBucketOptions.forEach { b ->
+                            DropdownMenuItem(
+                                text = { Text(loopBucketLabel(b)) },
+                                onClick = {
+                                    onSetTargetBucket(b)
+                                    bucketMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Schieberegler — nur sichtbar wenn die Prio-Perle angetippt wurde.
+            // 5%-Schritte (steps=19). Beim Loslassen wird gespeichert, der Regler
+            // klappt zu, und die Kachelfarbe bleibt auf dem neuen Wert.
+            if (sliderActive) {
+                Spacer(Modifier.height(8.dp))
+                val sliderPos = liveSlider ?: template.priorityScore.toFloat()
+                Slider(
+                    value = sliderPos.coerceIn(0f, 100f),
+                    onValueChange = { liveSlider = it },
+                    onValueChangeFinished = {
+                        liveSlider?.let { onSetPriority(Math.round(it)) }
+                        sliderActive = false
+                    },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                    colors = SliderDefaults.colors(
+                        thumbColor = ramp,
+                        activeTrackColor = ramp,
+                    ),
+                )
+            }
         }
+    }
+}
+
+/** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
+private val loopBucketOptions = listOf(
+    TimeBucket.HEUTE,
+    TimeBucket.MORGEN,
+    TimeBucket.FREIBLOCK,
+    TimeBucket.SPAETER,
+)
+
+private fun loopBucketLabel(b: TimeBucket): String = when (b) {
+    TimeBucket.HEUTE -> "Heute"
+    TimeBucket.MORGEN -> "Morgen"
+    TimeBucket.FREIBLOCK -> "Freiblock"
+    TimeBucket.SPAETER -> "Später"
+}
+
+/**
+ * Kleine Perle im gleichen Stil wie die Prio-/Bucket-Perle der normalen Aufgaben-
+ * Karte (glassBg-Hintergrund + textSecondary-Text). Frank-Wunsch 2026-05-31.
+ */
+@Composable
+private fun LoopPearl(label: String, onClick: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    val pillShape = remember { RoundedCornerShape(50) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(cosmos.glassBg, pillShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
     }
 }
 

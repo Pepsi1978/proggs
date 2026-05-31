@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import de.frank.entropyreducer.domain.model.EntropyCategory
+import de.frank.entropyreducer.domain.model.TimeBucket
 
 /**
  * Vorlage fuer wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22).
@@ -58,6 +59,12 @@ data class RecurringTemplateEntity(
     val occurrenceCount: Int = 0,
     /** Ist die Vorlage aktiv? false = pausiert (erzeugt keine Eintraege). */
     val isActive: Boolean = true,
+    /**
+     * Frank-Wunsch 2026-05-31: In welchen Zeit-Bucket die generierte Aufgabe kommen
+     * soll. null = "KI"/automatisch → HEUTE (bisheriges Verhalten). Frank kann pro
+     * Vorlage einen festen Tag (HEUTE/MORGEN/FREIBLOCK/SPAETER) vorgeben.
+     */
+    val targetBucket: TimeBucket? = null,
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updatedAt") val updatedAt: Long = System.currentTimeMillis(),
 )

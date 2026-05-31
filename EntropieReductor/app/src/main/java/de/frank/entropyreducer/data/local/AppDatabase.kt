@@ -99,7 +99,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22)
             RecurringTemplateEntity::class,
         ],
-    version = 26,
+    version = 27,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -822,6 +822,18 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(25, 26) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN manualPriorityScore REAL")
+                }
+            }
+
+        /**
+         * Schema 26 -> 27 (Frank-Wunsch 2026-05-31): Loop-Vorlagen koennen einen
+         * Ziel-Bucket vorgeben. Neue Spalte targetBucket (TEXT, nullable) — speichert
+         * TimeBucket.name. null = "KI"/automatisch HEUTE (bisheriges Verhalten).
+         */
+        val MIGRATION_26_27: Migration =
+            object : Migration(26, 27) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE recurring_templates ADD COLUMN targetBucket TEXT")
                 }
             }
     }

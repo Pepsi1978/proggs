@@ -142,7 +142,10 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             priorityScore = template.priorityScore.toDouble(),
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
-            timeBucket = TimeBucket.HEUTE,
+            // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.
+            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            manualBucket = template.targetBucket,
+            manualBucketSetAt = if (template.targetBucket != null) occurrenceMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,
             createdAt = occurrenceMs,
             updatedAt = occurrenceMs,
@@ -278,7 +281,10 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             priorityScore = template.priorityScore.toDouble(),
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
-            timeBucket = TimeBucket.HEUTE,
+            // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.
+            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            manualBucket = template.targetBucket,
+            manualBucketSetAt = if (template.targetBucket != null) nowMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,
             createdAt = nowMs,
             updatedAt = nowMs,

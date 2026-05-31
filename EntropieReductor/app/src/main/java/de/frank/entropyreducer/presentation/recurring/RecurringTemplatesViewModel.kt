@@ -101,6 +101,60 @@ class RecurringTemplatesViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-31: manuelle Prioritaet einer wiederkehrenden Aufgabe.
+     * Setzt den priorityScore der Vorlage und zieht offene Instanzen sofort mit,
+     * damit Farbe/Prio direkt im Aufgaben-Reiter sichtbar werden.
+     */
+    fun setPriority(template: RecurringTemplateEntity, score: Int) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val clamped = score.coerceIn(0, 100)
+            repo.upsert(template.copy(priorityScore = clamped, updatedAt = now))
+            entryRepo.getActive().first()
+                .filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }
+                .forEach {
+                    entryRepo.upsert(
+                        it.copy(priorityScore = clamped.toDouble(), updatedAt = now),
+                    )
+                }
+        }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-31: Ziel-Bucket (Tag) einer wiederkehrenden Aufgabe.
+     * null = "KI"/automatisch HEUTE. Offene Instanzen werden sofort in den
+     * gewuenschten Bucket verschoben (und als manuell markiert, wenn ein Tag
+     * gewaehlt wurde — sonst wieder KI/automatisch).
+     */
+    fun setTargetBucket(template: RecurringTemplateEntity, bucket: TimeBucket?) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            repo.upsert(template.copy(targetBucket = bucket, updatedAt = now))
+            val target = bucket ?: TimeBucket.HEUTE
+            entryRepo.getActive().first()
+                .filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }
+                .forEach {
+                    entryRepo.upsert(
+                        it.copy(
+                            timeBucket = target,
+                            manualBucket = bucket,
+                            manualBucketSetAt = if (bucket != null) now else null,
+                            updatedAt = now,
+                        ),
+                    )
+                }
+        }
+    }
+
     /** Erstellt eine neue Vorlage oder aktualisiert eine bestehende. */
     fun save(template: RecurringTemplateEntity) {
         viewModelScope.launch {
@@ -193,7 +247,10 @@ class RecurringTemplatesViewModel @Inject constructor(
             priorityScore = template.priorityScore.toDouble(),
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
-            timeBucket = TimeBucket.HEUTE,
+            // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket; null = HEUTE (KI/automatisch).
+            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            manualBucket = template.targetBucket,
+            manualBucketSetAt = if (template.targetBucket != null) nowMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,
             createdAt = nowMs,
             updatedAt = nowMs,

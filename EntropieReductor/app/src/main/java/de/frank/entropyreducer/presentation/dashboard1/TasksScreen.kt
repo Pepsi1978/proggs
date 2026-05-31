@@ -653,6 +653,12 @@ fun TasksScreen(
                                             template = template,
                                             onToggleActive = { recurringVm.toggleActive(template) },
                                             onDelete = { recurringVm.delete(template) },
+                                            onSetPriority = { score ->
+                                                recurringVm.setPriority(template, score)
+                                            },
+                                            onSetTargetBucket = { bucket ->
+                                                recurringVm.setTargetBucket(template, bucket)
+                                            },
                                         )
                                     }
                                 } else {

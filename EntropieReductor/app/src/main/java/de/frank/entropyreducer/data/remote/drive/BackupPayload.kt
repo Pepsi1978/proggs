@@ -165,6 +165,8 @@ data class BackupRecurringTemplate(
     val isActive: Boolean = true,
     val createdAt: Long,
     val updatedAt: Long,
+    /** TimeBucket.name oder null (= "KI"/automatisch HEUTE). Frank-Wunsch 2026-05-31. */
+    val targetBucket: String? = null,
 )
 
 /** Schema v8/v9: gespeicherter Prompt mit Kategorie + Agentic-AI-Felder. */
@@ -1443,6 +1445,7 @@ fun RecurringTemplateEntity.toBackup(): BackupRecurringTemplate =
         isActive = isActive,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        targetBucket = targetBucket?.name,
     )
 
 fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
@@ -1463,6 +1466,10 @@ fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
         isActive = isActive,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        // Unbekannte/alte Werte -> null (= KI/automatisch HEUTE). Frank-Wunsch 2026-05-31.
+        targetBucket = targetBucket?.let {
+            runCatching { de.frank.entropyreducer.domain.model.TimeBucket.valueOf(it) }.getOrNull()
+        },
     )
 
 // =========================================================================
