@@ -350,29 +350,71 @@
 		}
 	}
 
-	// Standard: unten rechts (bis der Benutzer verschiebt)
+	// Standard: unten rechts (bis angedockt oder verschoben)
 	container.style.right = "16px";
 	container.style.bottom = "16px";
 
+	// Doppelter Abstand: die Overlays-Buttons haben untereinander ~10px Luecke.
+	const OVERLAY_DOCK_GAP = 20;
+	let dockedToOverlays = false;
+
+	// Die Overlays-Erweiterung (frueher Tampermonkey-Skripte) rendert ihre Buttons
+	// als senkrechte Spalte; der Mikrofon-Button (.stt-mic-btn) ist der unterste.
+	// Das Vorlese-Overlay dockt rechtsbuendig DARUNTER an (doppelter Abstand),
+	// damit es als eigenstaendiges, aber zugehoeriges Overlay erkennbar ist.
+	// Existiert keine Overlays-Erweiterung auf der Seite -> fester Platz unten rechts.
+	function anchorToOverlays() {
+		const mic = document.querySelector(".stt-mic-btn");
+		if (!mic) return false;
+		const m = mic.getBoundingClientRect();
+		if (m.width < 5 || m.height < 5) return false;
+		const rect = container.getBoundingClientRect();
+		const h = rect.height || 48;
+		rightOffset = Math.max(4, window.innerWidth - m.right); // gleiche rechte Kante
+		topOffset = Math.max(4, m.bottom + OVERLAY_DOCK_GAP); // doppelter Abstand darunter
+		topOffset = Math.min(topOffset, Math.max(4, window.innerHeight - h - 4));
+		container.style.left = "auto";
+		container.style.bottom = "auto";
+		container.style.right = rightOffset + "px";
+		container.style.top = topOffset + "px";
+		return true;
+	}
+
+	function positionInitial(pos) {
+		if (anchorToOverlays()) {
+			dockedToOverlays = true;
+			return;
+		}
+		if (pos) applyPosition(pos.left, pos.top);
+	}
+
 	window.VOSettings.getPosition().then((pos) => {
-		// WICHTIG: Position ERST nach dem CSS-Load + naechstem Frame anwenden.
-		// Vorher ist das Overlay ungestylt (nicht flex) und wird viel zu breit
-		// gemessen -> clampToViewport() rechnet maxLeft negativ und clamped auf
-		// left=4 -> das Overlay sprang beim Neuladen an den linken Rand. Nach dem
-		// CSS-Load stimmt die Breite und die gespeicherte (rechte) Position bleibt.
-		// Ohne gespeicherte Position bleibt es bei right/bottom = unten rechts.
+		// Position ERST nach CSS-Load + naechstem Frame anwenden (sonst falsche
+		// Breitenmessung -> Sprung an den Rand).
 		cssReady.then(() =>
 			requestAnimationFrame(() => {
-				if (pos) applyPosition(pos.left, pos.top);
+				positionInitial(pos);
 				logLayout("Overlay", container, {
 					initial: true,
+					angedockt: dockedToOverlays,
 					gespeichertePosition: !!pos,
 				});
+
+				// Die Overlays-Erweiterung laedt evtl. erst spaeter -> ein paar
+				// Sekunden lang nachversuchen anzudocken.
+				let tries = 0;
+				const dockTimer = setInterval(() => {
+					tries++;
+					if (!dockedToOverlays && anchorToOverlays()) dockedToOverlays = true;
+					if (dockedToOverlays || tries >= 20) clearInterval(dockTimer);
+				}, 300);
 			}),
 		);
 	});
 
 	window.addEventListener("resize", () => {
+		// Angedockt: rechtsbuendig unter dem Overlays-Mikrofon bleiben.
+		if (dockedToOverlays && anchorToOverlays()) return;
 		clampCurrentPosition();
 	});
 
