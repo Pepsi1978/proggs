@@ -1,0 +1,43 @@
+{
+	"manifest_version": 3,
+	"name": "Overlays (Voice + Tools)",
+	"version": "0.1.0",
+	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
+	"permissions": ["storage", "clipboardRead", "clipboardWrite"],
+	"host_permissions": [
+		"https://api.groq.com/*",
+		"https://generativelanguage.googleapis.com/*"
+	],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"options_page": "options.html",
+	"action": {
+		"default_title": "Overlays — Einstellungen (API-Keys)"
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"https://chatgpt.com/*",
+				"https://chat.openai.com/*",
+				"https://translate.google.com/*",
+				"https://www.translate.google.com/*",
+				"https://translate.google.de/*",
+				"https://www.translate.google.de/*"
+			],
+			"css": ["src/overlay.css"],
+			"js": [
+				"src/storage.js",
+				"src/toast.js",
+				"src/editable.js",
+				"src/stt.js",
+				"src/gemini.js",
+				"src/actions.js",
+				"src/ui.js",
+				"src/registry.js",
+				"src/content.js"
+			],
+			"run_at": "document_idle"
+		}
+	]
+}
