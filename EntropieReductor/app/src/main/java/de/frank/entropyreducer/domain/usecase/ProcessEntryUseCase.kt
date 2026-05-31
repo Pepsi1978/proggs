@@ -570,7 +570,7 @@ WICHTIGE REGELN:
 Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne Schluss:
 
 {
-  "title": "Kurzer prägnanter Titel, max. 60 Zeichen",
+  "title": "Maximal 3 Woerter, die den Kern der Aufgabe eindeutig zusammenfassen (z.B. 'Steuererklaerung abgeben', 'Arzttermin vereinbaren'). Keine Fuellwoerter, kein Satz — nur die 3 praegnantesten Woerter.",
   "description": "Strukturierte Beschreibung in 1-3 Saetzen",
   "category": "KOERPERLICH | MENTAL | ZEITLICH | EMOTIONAL | GESUNDHEITLICH | UMGEBUNG | SONSTIGES",
   "severity": 1-10,
