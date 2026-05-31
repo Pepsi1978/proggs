@@ -1,14 +1,15 @@
 // ============================================================
 // registry.js — DIE ZENTRALE DATEI
 // ------------------------------------------------------------
-// Pro Webseite ein Profil. "buttons" ist eine einfache Liste von
-// Schluesseln aus dem CATALOG (ui.js), von UNTEN nach OBEN gestapelt.
+// Pro Webseite ein Profil. Das Layout ist ein 2-Spalten-Raster:
+//   layout.right = rechte Spalte (von UNTEN nach oben)
+//   layout.left  = linke  Spalte (von UNTEN nach oben)
+// So bleibt die Leiste kompakt statt einer hohen Reihe.
 //
 // EINE NEUE SEITE HINZUFUEGEN:
-//   1) Hier unten ein neues Profil-Objekt ergaenzen (match + buttons).
+//   1) Hier unten ein neues Profil-Objekt ergaenzen (match + layout).
 //   2) Die URL-Muster der Seite in manifest.json -> content_scripts.matches
-//      eintragen (host_permissions sind nur fuer Groq/Gemini noetig, nicht
-//      fuer die Seiten selbst).
+//      eintragen (host_permissions sind nur fuer Groq/Gemini noetig).
 //   3) Erweiterung in chrome://extensions neu laden. Fertig.
 //
 // Verfuegbare Button-Schluessel (siehe CATALOG in ui.js):
@@ -18,30 +19,24 @@
 	window.__chromeOverlays__ = window.__chromeOverlays__ || {};
 	const OV = window.__chromeOverlays__;
 
-	// Geteilte Button-Sets der KI-Chat-Seiten (alle aus den Tampermonkey-Skripten).
-	const CHAT = [
-		"mic",
-		"enter",
-		"paste",
-		"copy",
-		"clear",
-		"gemini",
-		"promptFrank",
-		"promptGeneral",
-	];
-	const CHAT_MEM = [...CHAT, "memory"]; // Seiten mit zusaetzlichem Memory-Prompt-Button
+	// Von Frank festgelegte Anordnung (jeweils von UNTEN nach oben):
+	//   rechte Spalte:  Mic, Enter, Frank-Prompt, Kopieren [, Memory ganz oben]
+	//   linke  Spalte:  X (Leeren), Gemini (ueber X), 10.-Klasse, Einfuegen
+	const RIGHT = ["mic", "enter", "promptFrank", "copy"];
+	const RIGHT_MEM = [...RIGHT, "memory"]; // Memory ganz oben rechts
+	const LEFT = ["clear", "gemini", "promptGeneral", "paste"];
 
 	// Standard-Position fuer KI-Chat-Overlays (unten rechts, ueber dem Eingabefeld).
-	const CHAT_POS = { right: 16, bottom: 110, shiftLeft: 11.34 };
+	const CHAT_POS = { right: 16, bottom: 124, shiftLeft: 11.34 };
 
 	OV.SITE_PROFILES = [
-		// ── Google Uebersetzer: nur Spracheingabe + Basis-Tools (4 Buttons) ──
+		// ── Google Uebersetzer: nur Spracheingabe + Basis-Tools (2x2) ──
 		{
 			id: "translate",
 			label: "Google Uebersetzer",
 			match: (host) => /(^|\.)translate\.google\.(com|de)$/.test(host),
 			uiPos: { right: 27, bottom: 87 },
-			buttons: ["mic", "paste", "copy", "clear"],
+			layout: { right: ["mic", "copy"], left: ["clear", "paste"] },
 		},
 
 		// ── KI-Chat-Seiten: volle Leiste (Whisper + Gemini-Prompt-Builder) ──
@@ -51,7 +46,7 @@
 			match: (host) => host === "chatgpt.com" || host === "chat.openai.com",
 			uiPos: { right: 16, bottom: 124, shiftLeft: 11.34 },
 			gemini: true,
-			buttons: CHAT_MEM, // 9 Buttons (mit Memory)
+			layout: { right: RIGHT_MEM, left: LEFT }, // mit Memory (9)
 		},
 		{
 			id: "claude",
@@ -59,7 +54,7 @@
 			match: (host) => host === "claude.ai" || host === "www.claude.ai",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT, // 8 Buttons
+			layout: { right: RIGHT, left: LEFT }, // ohne Memory (8)
 		},
 		{
 			id: "gemini",
@@ -67,7 +62,7 @@
 			match: (host) => host === "gemini.google.com",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT_MEM, // 9 Buttons (mit Memory)
+			layout: { right: RIGHT_MEM, left: LEFT }, // mit Memory (9)
 		},
 		{
 			id: "grok",
@@ -75,7 +70,7 @@
 			match: (host) => host === "grok.com" || host === "www.grok.com",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 		{
 			id: "aistudio",
@@ -84,7 +79,7 @@
 				host === "aistudio.google.com" || host === "www.aistudio.google.com",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 		{
 			id: "platformopenai",
@@ -92,7 +87,7 @@
 			match: (host) => host === "platform.openai.com",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 		{
 			id: "mistral",
@@ -100,7 +95,7 @@
 			match: (host) => host === "chat.mistral.ai",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 		{
 			id: "lmarena",
@@ -112,7 +107,7 @@
 				host === "arena.lmsys.org",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 		{
 			id: "notebooklm",
@@ -120,7 +115,7 @@
 			match: (host) => host === "notebooklm.google.com",
 			uiPos: CHAT_POS,
 			gemini: true,
-			buttons: CHAT,
+			layout: { right: RIGHT, left: LEFT },
 		},
 	];
 

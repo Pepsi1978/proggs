@@ -86,14 +86,10 @@
 		btn.dataset.ovFocusGuard = "1";
 	}
 
-	function styleRoundButton(btn, profile, index) {
+	function styleRoundButton(btn, profile, col, row) {
 		const pos = profile.uiPos || {};
-		// Zwei-Spalten-Layout: max. 5 Buttons pro Spalte, danach eine zweite
-		// Spalte nach LINKS — so wird die Leiste nicht zu hoch. Bei wenigen
-		// Buttons (z.B. Uebersetzer = 4) bleibt automatisch alles einspaltig.
-		const COLUMN_SIZE = 5;
-		const col = Math.floor(index / COLUMN_SIZE);
-		const row = index % COLUMN_SIZE;
+		// col 0 = rechte Spalte, col 1 = linke Spalte (eine Button-Breite weiter
+		// links). row 0 = unten. Die genaue Anordnung steht in registry.js (layout).
 		const right = (pos.right ?? 16) + (pos.shiftLeft ?? 0) + col * GAP;
 		const bottom = (pos.bottom ?? 96) + row * GAP;
 		btn.type = "button";
@@ -130,7 +126,7 @@
 			s.setProperty("transform", "scale(1)", "important");
 	}
 
-	function makeButton(profile, key, index) {
+	function makeButton(profile, key, col, row) {
 		const entry = CATALOG[key];
 		if (!entry) {
 			console.warn("[Overlays] Unbekannter Button-Schluessel:", key);
@@ -145,7 +141,7 @@
 		}
 		btn.classList.add("ov-btn");
 		btn.dataset.ovKey = key;
-		styleRoundButton(btn, profile, index);
+		styleRoundButton(btn, profile, col, row);
 		preventFocusSteal(btn);
 
 		if (entry.special === "mic") {
@@ -170,17 +166,26 @@
 		return rect.width >= 10 && rect.height >= 10;
 	}
 
+	function profileKeys(profile) {
+		const L = profile.layout || { right: [], left: [] };
+		return [...(L.right || []), ...(L.left || [])];
+	}
+
 	function buildOverlay(profile) {
 		currentProfile = profile;
 		if (!document.body) return;
-		profile.buttons.forEach((key, index) => {
-			makeButton(profile, key, index);
+		const L = profile.layout || { right: [], left: [] };
+		(L.right || []).forEach((key, row) => {
+			makeButton(profile, key, 0, row); // col 0 = rechte Spalte
+		});
+		(L.left || []).forEach((key, row) => {
+			makeButton(profile, key, 1, row); // col 1 = linke Spalte
 		});
 	}
 
 	function needsRepair() {
 		if (!currentProfile) return false;
-		return currentProfile.buttons.some((key) => {
+		return profileKeys(currentProfile).some((key) => {
 			const btn = document.getElementById(btnId(currentProfile.id, key));
 			return !btn || !isRenderable(btn);
 		});
