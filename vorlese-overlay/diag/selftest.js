@@ -231,7 +231,6 @@
 		}
 
 		const speakerBtn = shadow.querySelector(".vo-speaker");
-		const gearBtn = shadow.querySelector(".vo-gear");
 		const container = shadow.querySelector(".vo-container");
 		const panel = shadow.querySelector(".vo-panel");
 
@@ -241,7 +240,7 @@
 			"overlay_vorhanden",
 			{
 				speaker: !!speakerBtn,
-				gear: !!gearBtn,
+				panelHook: !!(window.VOOverlay && window.VOOverlay.toggleSettings),
 				container: !!container,
 			},
 			startKorr,
@@ -250,7 +249,8 @@
 		// 2) Einstellungs-Panel oeffnen (loest Panel-Layout-Sonde aus)
 		let k = kid();
 		tlog("INFO", "panel_oeffnen", {}, k);
-		pressButton(gearBtn);
+		if (window.VOOverlay && window.VOOverlay.toggleSettings)
+			window.VOOverlay.toggleSettings();
 		await sleep(400);
 		if (panel) checkPanelOverflow(panel, k);
 

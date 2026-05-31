@@ -33,6 +33,7 @@
 		PAUSE_RESUME_TOGGLE: "TTS_PAUSE_RESUME", // Content → SW: Toggle Pause/Resume
 		PROGRESS: "TTS_PROGRESS", // SW → Content: Fortschrittsanzeige {chunk, totalChunks}
 		RELOAD_EXTENSION: "RELOAD_EXTENSION", // Content → SW: Erweiterung neu laden (Speicher bleibt)
+		OPEN_SETTINGS: "OPEN_SETTINGS", // SW → Content: Einstellungs-Panel oeffnen (Toolbar-Klick)
 	};
 
 	const SAMPLE_TEXT =
@@ -155,8 +156,6 @@
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/></svg>';
 	const ICON_STOP =
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-	const ICON_GEAR =
-		'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7 7 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.27 8.3a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7 7 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
 	// SVG-Icons für den Pause-Button (Pause-Balken und Play-Dreieck)
 	const ICON_PAUSE =
 		'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
@@ -178,11 +177,10 @@
 		'<button class="vo-btn vo-pause-btn" type="button" title="Pause / Weiter" style="display:none;">' +
 		ICON_PAUSE +
 		"</button>" +
-		'<button class="vo-btn vo-gear" type="button" title="Einstellungen">' +
-		ICON_GEAR +
-		"</button>" +
-		// Haekchen-Viereck UNTER dem Zahnrad: schaltet "Markierten Text automatisch
-		// vorlesen" direkt am Overlay (gleiche Einstellung wie das Panel-Haekchen).
+		// Haekchen-Viereck am Overlay: schaltet "Markierten Text automatisch
+		// vorlesen" direkt (gleiche Einstellung wie das Panel-Haekchen).
+		// (Das Einstellungs-Zahnrad entfaellt — Einstellungen oeffnen jetzt ueber
+		//  Linksklick auf das Toolbar-Symbol der Erweiterung.)
 		'<button class="vo-btn vo-autospeak-box" type="button" title="Markierten Text automatisch vorlesen">' +
 		'<span class="vo-autospeak-check">✓</span>' +
 		"</button>" +
@@ -195,7 +193,6 @@
 	const autoBtn = container.querySelector(".vo-auto-btn");
 	const speakerBtn = container.querySelector(".vo-speaker");
 	const pauseBtn = container.querySelector(".vo-pause-btn");
-	const gearBtn = container.querySelector(".vo-gear");
 	const autoSpeakBox = container.querySelector(".vo-autospeak-box");
 	const hintEl = container.querySelector(".vo-hint");
 	const progressWrap = container.querySelector(".vo-progress-wrap");
@@ -428,8 +425,6 @@
 			onSpeakerClick();
 		} else if (pressed === pauseBtn) {
 			onPauseClick();
-		} else if (pressed === gearBtn) {
-			togglePanel();
 		} else if (pressed === autoSpeakBox) {
 			toggleAutoSpeak();
 		}
@@ -1056,8 +1051,17 @@
 	}
 
 	// Status-/Befehls-Nachrichten vom Worker empfangen
+	// Toolbar-Klick (vom Service-Worker) und Selbsttest oeffnen das Panel hierueber.
+	window.VOOverlay = window.VOOverlay || {};
+	window.VOOverlay.toggleSettings = () => togglePanel();
+
 	chrome.runtime.onMessage.addListener((msg) => {
 		if (!msg || typeof msg !== "object") return;
+
+		if (msg.type === MSG.OPEN_SETTINGS) {
+			togglePanel();
+			return;
+		}
 
 		if (msg.type === MSG.STATE) {
 			// Vorhandene Diagnose-Sonde erhalten

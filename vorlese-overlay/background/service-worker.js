@@ -594,4 +594,50 @@ if (chrome.contextMenus && chrome.contextMenus.onClicked) {
 	});
 }
 
+// Linksklick auf das Toolbar-Symbol oeffnet das Einstellungs-Panel direkt auf der
+// aktiven Seite (das Zahnrad im Overlay entfaellt dadurch). War die Seite schon
+// vor dem Laden der Erweiterung offen, wird das Content-Script per activeTab
+// nachinjiziert und der Befehl wiederholt.
+const SETTINGS_FILES = [
+	"diag/diag-content.js",
+	"settings/settings.js",
+	"content/overlay.js",
+];
+
+function sendOpenSettings(tabId) {
+	return new Promise((resolve) => {
+		chrome.tabs.sendMessage(tabId, { type: "OPEN_SETTINGS" }, () => {
+			const err = chrome.runtime.lastError;
+			// Nur "kein Content-Script vorhanden" gilt als Fehlschlag; ein benignes
+			// "port closed" (kein sendResponse) wird als Erfolg gewertet.
+			const noReceiver =
+				err &&
+				/Receiving end does not exist|Could not establish connection/i.test(
+					err.message || "",
+				);
+			resolve(!noReceiver);
+		});
+	});
+}
+
+if (chrome.action && chrome.action.onClicked) {
+	chrome.action.onClicked.addListener(async (tab) => {
+		if (!tab || tab.id == null) return;
+		diag.log("INFO", "NUTZUNG", "sw:action_open_settings", { tabId: tab.id });
+		if (await sendOpenSettings(tab.id)) return;
+		// Self-heal: Content-Script in einen bereits offenen Tab nachladen.
+		try {
+			await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				files: SETTINGS_FILES,
+			});
+			await sendOpenSettings(tab.id);
+		} catch (e) {
+			diag.log("INFO", "FEHLER", "sw:action_inject_failed", {
+				error: String(e && e.message),
+			});
+		}
+	});
+}
+
 export { ensureOffscreen, notifyTab, humanError };
