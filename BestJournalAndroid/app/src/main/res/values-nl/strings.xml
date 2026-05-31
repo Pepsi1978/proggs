@@ -935,6 +935,7 @@ Tijdens de proefperiode op elk moment opzegbaar</string>
     <string name="paywall_lifetime_desc">Eenmaal betalen, alles permanent gebruiken</string>
     <string name="paywall_lifetime_note">Geen abonnement, geen verlenging</string>
     <string name="paywall_free_note">De app werkt ook verder zonder abonnement.</string>
+    <string name="paywall_legal_hint">Met het abonnement ga je akkoord met de Gebruiksvoorwaarden. Je herroepingsrecht van 14 dagen staat daar beschreven.</string>
     <string name="paywall_cd_close">Sluiten</string>
 
     <!-- Paywall features -->

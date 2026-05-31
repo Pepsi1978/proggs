@@ -836,6 +836,7 @@
     <string name="paywall_lifetime_desc">一度の支払いですべてを継続的に利用</string>
     <string name="paywall_lifetime_note">サブスクなし、更新なし</string>
     <string name="paywall_free_note">アプリはサブスクリプションなしでも引き続きご利用いただけます。</string>
+    <string name="paywall_legal_hint">定期購入すると利用規約に同意したことになります。14日間の契約解除権はそちらに記載されています。</string>
     <string name="paywall_cd_close">閉じる</string>
 
     <!-- Paywall features -->

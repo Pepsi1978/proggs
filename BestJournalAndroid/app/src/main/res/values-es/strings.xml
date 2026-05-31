@@ -841,6 +841,7 @@ Devuelve ÚNICAMENTE un array JSON válido. Sin texto antes ni después.</string
     <string name="paywall_lifetime_desc">Paga una vez, usa todo de forma permanente</string>
     <string name="paywall_lifetime_note">Sin suscripción, sin renovación</string>
     <string name="paywall_free_note">La app también funciona sin suscripción.</string>
+    <string name="paywall_legal_hint">Al suscribirte aceptas las Condiciones de uso. Tu derecho de desistimiento de 14 días se describe allí.</string>
     <string name="paywall_cd_close">Cerrar</string>
 
     <!-- Paywall features -->

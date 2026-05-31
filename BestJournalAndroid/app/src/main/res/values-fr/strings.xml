@@ -862,6 +862,7 @@ Résiliable à tout moment pendant la période d\'essai</string>
     <string name="paywall_lifetime_desc">Paye une fois, utilise tout en permanence</string>
     <string name="paywall_lifetime_note">Pas d\'abonnement, pas de reconduction</string>
     <string name="paywall_free_note">L’app fonctionne aussi sans abonnement.</string>
+    <string name="paywall_legal_hint">En t\'abonnant, tu acceptes les Conditions d\'utilisation. Ton droit de rétractation de 14 jours y est décrit.</string>
     <string name="paywall_cd_close">Fermer</string>
 
     <!-- Paywall features -->

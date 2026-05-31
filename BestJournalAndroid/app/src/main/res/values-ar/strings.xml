@@ -836,6 +836,7 @@
     <string name="paywall_lifetime_desc">ادفع مرة واحدة، استخدم كل شيء بشكل دائم</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
     <string name="paywall_free_note">يعمل التطبيق بدون اشتراك أيضًا.</string>
+    <string name="paywall_legal_hint">بالاشتراك فإنك توافق على شروط الاستخدام. حقك في الرجوع عن العقد خلال 14 يومًا موضّح هناك.</string>
     <string name="paywall_cd_close">إغلاق</string>
 
     <!-- Paywall features -->

@@ -842,6 +842,7 @@
     <string name="paywall_lifetime_desc">Bayar sekali, pakai semua secara permanen</string>
     <string name="paywall_lifetime_note">Tanpa langganan, tanpa perpanjangan</string>
     <string name="paywall_free_note">Aplikasi tetap berfungsi tanpa langganan.</string>
+    <string name="paywall_legal_hint">Dengan berlangganan, kamu menyetujui Ketentuan Penggunaan. Hak pembatalan kontrak 14 hari kamu dijelaskan di sana.</string>
     <string name="paywall_cd_close">Tutup</string>
 
     <!-- Paywall features -->

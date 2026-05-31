@@ -853,6 +853,7 @@ Deneme süresinde istediğin zaman iptal edilebilir</string>
     <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
     <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
     <string name="paywall_free_note">Uygulama abonelik olmadan da çalışmaya devam eder.</string>
+    <string name="paywall_legal_hint">Abone olarak Kullanım Koşulları\'nı kabul edersin. 14 günlük cayma hakkın orada açıklanır.</string>
     <string name="paywall_cd_close">Kapat</string>
 
     <!-- Paywall features -->

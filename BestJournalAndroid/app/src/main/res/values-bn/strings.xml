@@ -840,6 +840,7 @@
     <string name="paywall_lifetime_desc">একবার পরিশোধ করো, সব কিছু স্থায়ীভাবে ব্যবহার করো</string>
     <string name="paywall_lifetime_note">কোনো সাবস্ক্রিপশন নয়, কোনো পুনর্নবীকরণ নয়</string>
     <string name="paywall_free_note">অ্যাপটি সাবসক্রিপশন ছাড়াও কাজ করে।</string>
+    <string name="paywall_legal_hint">সাবস্ক্রাইব করলে তুমি ব্যবহারের শর্তাবলী মেনে নাও। তোমার 14-দিনের চুক্তি প্রত্যাহারের অধিকার সেখানে বর্ণিত আছে।</string>
     <string name="paywall_cd_close">বন্ধ করো</string>
 
     <!-- Paywall features -->

@@ -858,6 +858,7 @@ Cancele a qualquer momento durante o período de teste</string>
     <string name="paywall_lifetime_desc">Pague uma vez, use tudo permanentemente</string>
     <string name="paywall_lifetime_note">Sem assinatura, sem renovação</string>
     <string name="paywall_free_note">O aplicativo continua funcionando sem assinatura.</string>
+    <string name="paywall_legal_hint">Ao assinar, você aceita os Termos de uso. Seu direito de arrependimento de 14 dias está descrito lá.</string>
     <string name="paywall_cd_close">Fechar</string>
 
     <!-- Paywall features -->

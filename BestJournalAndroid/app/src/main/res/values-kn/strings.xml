@@ -840,6 +840,7 @@
     <string name="paywall_lifetime_desc">ಒಮ್ಮೆ ಪಾವತಿಸು, ಎಲ್ಲವನ್ನೂ ಶಾಶ್ವತವಾಗಿ ಬಳಸು</string>
     <string name="paywall_lifetime_note">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲ, ನವೀಕರಣ ಇಲ್ಲ</string>
     <string name="paywall_free_note">ಅಪ್ಲಿಕೇಶನ್ ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆಯೂ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ.</string>
+    <string name="paywall_legal_hint">ಚಂದಾದಾರಿಕೆಯಿಂದ ನೀನು ಬಳಕೆ ನಿಯಮಗಳನ್ನು ಒಪ್ಪುತ್ತೀಯ. ನಿನ್ನ 14-ದಿನಗಳ ಒಪ್ಪಂದ ರದ್ದು ಹಕ್ಕನ್ನು ಅಲ್ಲಿ ವಿವರಿಸಲಾಗಿದೆ.</string>
     <string name="paywall_cd_close">ಮುಚ್ಚಿ</string>
 
     <!-- Paywall features -->

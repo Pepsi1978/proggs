@@ -836,6 +836,7 @@
     <string name="paywall_lifetime_desc">한 번 결제로 모든 기능을 계속 사용</string>
     <string name="paywall_lifetime_note">구독 없음, 갱신 없음</string>
     <string name="paywall_free_note">앱은 구독 없이도 계속 사용할 수 있어요.</string>
+    <string name="paywall_legal_hint">구독하면 이용약관에 동의하게 됩니다. 14일간의 청약 철회권은 거기에 설명되어 있어요.</string>
     <string name="paywall_cd_close">닫기</string>
 
     <!-- Paywall features -->
