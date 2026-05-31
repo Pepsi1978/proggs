@@ -277,8 +277,13 @@ class EntropyReducerRemoteViewsFactory(
             views.setInt(R.id.task_check_box, "setColorFilter", 0xFFFFFFFF.toInt())
         } else {
             // Offenes Feld: weisse Fuellung + graue Umrandung kommen FEST aus dem Drawable.
-            // KEIN Tint setzen — sonst wuerden Fuell- und Umrandungsfarbe ueberschrieben.
+            // Tint MUSS explizit auf null zurueckgesetzt werden — sonst erbt eine aus einer
+            // erledigten/abgehakten Karte recycelte ListView-Zeile deren gruenen
+            // SRC_IN-Tint (RemoteViews-Recycling toent kumulativ). Genau das liess mit der
+            // Zeit ALLE Haekchenfelder gruen werden. null = Drawable zeigt seine echten
+            // Farben (weiss + grau), ohne dass ein eigener Tint die zwei Farben ueberschreibt.
             views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_bg)
+            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", null)
             views.setImageViewResource(R.id.task_check_box, 0)
         }
 
