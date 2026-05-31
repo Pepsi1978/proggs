@@ -90,13 +90,13 @@ android {
 
     buildTypes {
         release {
-            // R8/ProGuard ist während der aktiven Entwicklungsphase deaktiviert,
-            // damit `bundleRelease` ohne Hilt/Room/Firebase-Keep-Regel-Wartung
-            // läuft. Vor dem produktiven Play-Store-Release (Sprint „Release-Hardening")
-            // beide auf `true` zurücksetzen — proguard-rules.pro liegt bereit.
-            // PS-001 ist daher auf "deferred-to-release-build" gesetzt.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8/ProGuard AKTIV (2026-05-31, PS-001 Release-Hardening):
+            // Code-Shrinking + Obfuskation + Resource-Shrinking eingeschaltet.
+            // Keep-Regeln fuer Hilt/Room/Moshi/Retrofit/Firebase/Gemini/sherpa-onnx
+            // liegen in proguard-rules.pro. Bei Laufzeit-Crashes durch entfernte
+            // Reflection-Klassen: dort gezielt -keep ergaenzen.
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
