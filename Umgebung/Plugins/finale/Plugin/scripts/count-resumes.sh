@@ -19,14 +19,14 @@ if [ ! -f "$LOG" ]; then
   exit 0
 fi
 
-# Loop-2-Fix: grep -o | wc -l zaehlt tatsaechliche VORKOMMEN des Markers, nicht nur Zeilen
-# mit Treffer (was grep -c taete). Identischer Wert bei Konvention "1 Marker pro Zeile",
-# aber robust falls je zwei Resume-Marker in einer Zeile landen -> korrekte Haeufigkeit.
-count=$(grep -o "orchestrator-resume-after-crash" "$LOG" 2>/dev/null | wc -l | tr -d ' ')
+# Datei nur EINMAL scannen (Perf, Loop-2): Marker-Zeilen einmal holen, dann count UND per_phase
+# aus dieser kleinen In-Memory-Variable ableiten (vorher 2 separate Datei-Scans). Werte identisch.
+# count via grep -o | wc -l = tatsaechliche VORKOMMEN (robust falls >1 Marker pro Zeile), nicht
+# nur Zeilen mit Treffer (was grep -c taete) -> korrekte Haeufigkeit bleibt erhalten.
+marker_lines=$(grep "orchestrator-resume-after-crash" "$LOG" 2>/dev/null)
+count=$(printf '%s\n' "$marker_lines" | grep -o "orchestrator-resume-after-crash" | wc -l | tr -d ' ')
 count=${count:-0}
-
-# Aufschluesselung pro Phase (best effort)
-per_phase=$(grep "orchestrator-resume-after-crash" "$LOG" 2>/dev/null \
+per_phase=$(printf '%s\n' "$marker_lines" \
             | grep -oE "phase=[^ |]+" | sort | uniq -c | tr -s ' ' | paste -sd ';' - 2>/dev/null)
 
 echo "{\"resume_count\":$count,\"found\":true,\"audit_log\":\"$LOG\",\"per_phase\":\"${per_phase}\"}"
