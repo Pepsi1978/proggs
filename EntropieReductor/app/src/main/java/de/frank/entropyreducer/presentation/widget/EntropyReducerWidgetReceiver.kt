@@ -104,10 +104,12 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
 
         // PendingIntentTemplate fuer ListView-Items — die Items selber bekommen
         // setOnClickFillInIntent in der Factory, die Templates werden hier zusammengefuegt.
-        val templateIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val templatePending = PendingIntent.getActivity(
+        // Frank-Wunsch 2026-05-31: Template zeigt jetzt auf den WidgetActionReceiver
+        // (Broadcast statt Activity), damit das Haekchen die Aufgabe abhaken kann OHNE
+        // die App zu oeffnen. Der Receiver entscheidet anhand der Action: ACTION_COMPLETE
+        // erledigt direkt, alle anderen Actions oeffnen wie bisher die MainActivity.
+        val templateIntent = Intent(context, WidgetActionReceiver::class.java)
+        val templatePending = PendingIntent.getBroadcast(
             context,
             widgetId * 1000 + 2,
             templateIntent,

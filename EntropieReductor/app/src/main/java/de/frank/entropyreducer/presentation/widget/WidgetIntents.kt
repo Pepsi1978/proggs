@@ -20,6 +20,9 @@ object WidgetIntents {
     const val ACTION_SETTINGS = "settings"
     const val ACTION_OPEN = "open"
 
+    /** Haekchen-Tap im Widget: Aufgabe direkt als erledigt markieren (ohne App). */
+    const val ACTION_COMPLETE = "complete"
+
     /** Bundle-Schluessel im Intent. */
     const val EXTRA_TASK_ID = "widget_task_id"
     const val EXTRA_ACTION = "widget_action"

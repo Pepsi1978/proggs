@@ -17,6 +17,7 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.priorityRampArgb
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -151,72 +152,43 @@ class EntropyReducerRemoteViewsFactory(
 
     private fun buildTaskCard(entry: EntropyEntryEntity): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_item_task)
-        val catColor = categoryColor(palette, entry.category)
-        val prioColor = priorityColor(palette, entry.priorityScore)
-        val isManual = entry.manualBucket != null
-        val bucketAccent = bucketColor(palette, entry.timeBucket)
 
-        // Card-Hintergrund: Gradient-Drawable basierend auf priorityScore + Theme
-        // (Frank-Wunsch 2026-05-22 fuenfte Iteration) — vorher Bucket-basiert.
-        views.setInt(
+        // Effektive Prioritaet wie in der App: manueller Wert hat Vorrang vor KI.
+        val effectivePriority = entry.manualPriorityScore ?: entry.priorityScore
+
+        // Karten-Hintergrund: horizontaler Verlauf in der Prioritaetsfarbe. Das
+        // Basis-Drawable (weiss 20%→100%) wird mit der EXAKT gleichen Rampe wie in
+        // der App getoent (priorityRampArgb ruft dieselbe Funktion auf). SRC_IN-Tint
+        // erhaelt den Alpha-Verlauf → links dezent, rechts volle Farbe.
+        val rampColor = priorityRampArgb(effectivePriority)
+        views.setColorStateList(
             R.id.task_card_root,
-            "setBackgroundResource",
-            cardBackgroundRes(palette, entry.priorityScore),
+            "setBackgroundTintList",
+            android.content.res.ColorStateList.valueOf(rampColor),
         )
 
-        // Icon-Kreis: 18% Alpha vom catColor
-        views.setColorStateList(R.id.cat_icon_bg, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(catColor, 0.18f)))
-        views.setImageViewResource(R.id.cat_icon, categoryIconRes(entry.category))
-        views.setInt(R.id.cat_icon, "setColorFilter", catColor)
+        // Haekchen: leeres Quadrat mit Border (Widget zeigt nur offene Aufgaben).
+        views.setColorStateList(
+            R.id.task_check_box,
+            "setBackgroundTintList",
+            android.content.res.ColorStateList.valueOf(palette.border),
+        )
 
-        // Kategorie-Pille
-        views.setColorStateList(R.id.cat_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(catColor, 0.22f)))
-        views.setTextViewText(R.id.cat_pill, categoryLabel(entry.category))
-        views.setTextColor(R.id.cat_pill, catColor)
-
-        // Titel + Beschreibung
+        // Titel (eine Zeile)
         views.setTextViewText(R.id.task_title, entry.title)
         views.setTextColor(R.id.task_title, palette.textPrimary)
-        if (entry.description.isNotBlank()) {
-            views.setTextViewText(R.id.task_description, entry.description)
-            views.setTextColor(R.id.task_description, palette.textSecondary)
-            views.setViewVisibility(R.id.task_description, android.view.View.VISIBLE)
-        } else {
-            views.setViewVisibility(R.id.task_description, android.view.View.GONE)
-        }
 
-        // Prio-Zahl
-        views.setTextViewText(R.id.task_prio_value, entry.priorityScore.toInt().toString())
-        views.setTextColor(R.id.task_prio_value, prioColor)
+        // Prioritaet-Perle: "Priorität KI" wenn die KI bestimmt, sonst "Priorität <Wert>".
+        val prioLabel = entry.manualPriorityScore
+            ?.let { "Priorität ${it.toInt()}" }
+            ?: "Priorität KI"
+        views.setTextViewText(R.id.task_prio_pill, prioLabel)
+        views.setColorStateList(R.id.task_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
+        views.setTextColor(R.id.task_prio_pill, palette.textSecondary)
 
-        // Check-Box
-        views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.border))
-
-        // Severity-Bar (10 Segmente)
-        applySeverityBar(views, entry.severity)
-
-        // Tags (bis zu 3)
-        applyTags(views, entry.tags)
-
-        // Meta-Row: Bucket-Label + Dauer + ggf. Empfohlen + Wearable
-        val metaText = buildMetaText(entry)
-        views.setTextViewText(R.id.meta_text, metaText)
-        views.setTextColor(R.id.meta_text, palette.textSecondary)
-        if (entry.priorityScore > 70) {
-            views.setViewVisibility(R.id.empfohlen_badge, android.view.View.VISIBLE)
-            views.setColorStateList(R.id.empfohlen_badge, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(palette.prioGreen, 0.18f)))
-            views.setTextColor(R.id.empfohlen_badge, palette.prioGreen)
-        } else {
-            views.setViewVisibility(R.id.empfohlen_badge, android.view.View.GONE)
-        }
-        if (entry.biomarkerSnapshotId != null) {
-            views.setViewVisibility(R.id.wearable_icon, android.view.View.VISIBLE)
-            views.setInt(R.id.wearable_icon, "setColorFilter", palette.bucketSpaeter)
-        } else {
-            views.setViewVisibility(R.id.wearable_icon, android.view.View.GONE)
-        }
-
-        // KI/Manuell-Pille
+        // KI/Manuell-Perle (Bucket): manuell = Bucket-Akzentfarbe, KI = gedaempft.
+        val isManual = entry.manualBucket != null
+        val bucketAccent = bucketColor(palette, entry.timeBucket)
         if (isManual) {
             views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(bucketAccent, 0.22f)))
             views.setInt(R.id.bucket_status_icon, "setColorFilter", bucketAccent)
@@ -230,85 +202,25 @@ class EntropyReducerRemoteViewsFactory(
         }
         views.setImageViewResource(R.id.bucket_status_icon, bucketIconRes(entry.timeBucket))
 
-        // FillInIntent fuer Tap auf die Karte (ACTION_FOCUS) und KI/Manuell-Pille (ACTION_RESCHEDULE)
-        val cardFillIn = Intent().apply {
-            putExtra(WidgetIntents.EXTRA_TASK_ID, entry.id)
-            putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_FOCUS)
-            data = android.net.Uri.parse("widget://task/${entry.id}/focus")
-        }
-        views.setOnClickFillInIntent(R.id.task_card_root, cardFillIn)
-        val pillFillIn = Intent().apply {
-            putExtra(WidgetIntents.EXTRA_TASK_ID, entry.id)
-            putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_RESCHEDULE)
-            data = android.net.Uri.parse("widget://task/${entry.id}/reschedule")
-        }
-        views.setOnClickFillInIntent(R.id.bucket_status_pill, pillFillIn)
+        // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):
+        //  - Haekchen   → ACTION_COMPLETE: hakt die Aufgabe DIREKT ab, ohne App
+        //  - Karte      → ACTION_FOCUS: oeffnet die App (Detail)
+        //  - Prio-Perle → ACTION_FOCUS: oeffnet die App (dort der Prio-Schieber)
+        //  - Bucket     → ACTION_RESCHEDULE: oeffnet die App (dort der Bucket-Picker)
+        views.setOnClickFillInIntent(R.id.task_check_box, fillIn(entry.id, WidgetIntents.ACTION_COMPLETE))
+        views.setOnClickFillInIntent(R.id.task_card_root, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
+        views.setOnClickFillInIntent(R.id.task_prio_pill, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
+        views.setOnClickFillInIntent(R.id.bucket_status_pill, fillIn(entry.id, WidgetIntents.ACTION_RESCHEDULE))
 
         return views
     }
 
-    private fun applySeverityBar(views: RemoteViews, severity: Int) {
-        val sev = severity.coerceIn(1, 10)
-        val segIds = intArrayOf(
-            R.id.seg_0, R.id.seg_1, R.id.seg_2, R.id.seg_3, R.id.seg_4,
-            R.id.seg_5, R.id.seg_6, R.id.seg_7, R.id.seg_8, R.id.seg_9,
-        )
-        for (i in 0 until 10) {
-            val color = if (i < sev) {
-                when (i) {
-                    in 0..1 -> palette.prioBlue
-                    in 2..3 -> palette.prioGreen
-                    in 4..5 -> palette.prioYellow
-                    in 6..7 -> palette.prioOrange
-                    else -> palette.prioRed
-                }
-            } else {
-                palette.severityEmpty
-            }
-            views.setColorStateList(segIds[i], "setBackgroundTintList", android.content.res.ColorStateList.valueOf(color))
-        }
-    }
-
-    private fun applyTags(views: RemoteViews, tags: List<String>) {
-        val tagIds = intArrayOf(R.id.tag_1, R.id.tag_2, R.id.tag_3)
-        val spacerIds = intArrayOf(R.id.tag_2_spacer, R.id.tag_3_spacer)
-        if (tags.isEmpty()) {
-            views.setViewVisibility(R.id.tags_row, android.view.View.GONE)
-            return
-        }
-        views.setViewVisibility(R.id.tags_row, android.view.View.VISIBLE)
-        val take = tags.take(3)
-        for (i in 0 until 3) {
-            if (i < take.size) {
-                views.setViewVisibility(tagIds[i], android.view.View.VISIBLE)
-                views.setTextViewText(tagIds[i], take[i])
-                views.setColorStateList(tagIds[i], "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
-                views.setTextColor(tagIds[i], palette.textSecondary)
-                if (i > 0) {
-                    views.setViewVisibility(spacerIds[i - 1], android.view.View.VISIBLE)
-                }
-            } else {
-                views.setViewVisibility(tagIds[i], android.view.View.GONE)
-                if (i > 0) views.setViewVisibility(spacerIds[i - 1], android.view.View.GONE)
-            }
-        }
-    }
-
-    private fun buildMetaText(entry: EntropyEntryEntity): String {
-        val bucketShort = when (entry.timeBucket) {
-            TimeBucket.HEUTE -> "heute"
-            TimeBucket.MORGEN -> "morgen"
-            TimeBucket.FREIBLOCK -> "Freiblock"
-            TimeBucket.SPAETER -> "später"
-        }
-        val dur = entry.estimatedDurationMinutes?.let { mins ->
-            when {
-                mins < 60 -> "$mins min"
-                mins < 24 * 60 -> "${mins / 60} h"
-                else -> "${mins / (24 * 60)} d"
-            }
-        }
-        return if (dur != null) "$bucketShort, $dur" else bucketShort
+    /** Baut ein FillInIntent fuer ein ListView-Item (Action + Task-ID). */
+    private fun fillIn(taskId: String, action: String): Intent = Intent().apply {
+        putExtra(WidgetIntents.EXTRA_TASK_ID, taskId)
+        putExtra(WidgetIntents.EXTRA_ACTION, action)
+        // Eindeutige Daten-URI, damit Android die FillInIntents nicht als gleich cached.
+        data = android.net.Uri.parse("widget://task/$taskId/$action")
     }
 }
 

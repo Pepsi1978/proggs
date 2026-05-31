@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Aufgaben-Karten-Layout fuer die Widget-ListView (klassisch, ohne Glance).
-  Visuell 1:1 zur Glance-Variante:
-   - Card mit Gradient-Drawable als Hintergrund (Bucket+Theme abhaengig)
-   - Top: Icon-Kreis links | Title-Block | Prio+Check rechts
-   - Mitte: Severity-Bar (10 Segmente)
-   - Tags-Row (bis zu 3)
-   - Bottom: Meta-Info links | KI/Manuell-Pille rechts
+  Aufgaben-Karte fuer die Widget-ListView (Frank-Wunsch 2026-05-31).
+
+  1:1 zur radikal vereinfachten App-Karte (TasksScreen.EntropyEntryCard):
+   - Hintergrund: horizontaler Verlauf in der Prioritaetsfarbe (im Code getoent)
+   - Zeile 1: Haekchen (hakt die Aufgabe DIREKT ab) + Titel (eine Zeile)
+   - Zeile 2 (rechtsbuendig): Prioritaet-Perle + KI/Manuell-Perle
+   Keine Beschreibung, keine Prio-Zahl, kein Schweregrad-Balken, keine Tags,
+   kein Empfohlen/Zeitaufwand — genau wie in der App.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/task_card_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
-    android:background="@drawable/bg_card_heute_dark"
+    android:background="@drawable/bg_widget_task_gradient"
     android:padding="14dp">
 
     <LinearLayout
@@ -21,245 +22,72 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- TOP-ROW: IconCircle | Title-Block | Prio+Check -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <!-- Kategorie-Icon-Kreis -->
-            <FrameLayout
-                android:layout_width="44dp"
-                android:layout_height="44dp">
-
-                <ImageView
-                    android:id="@+id/cat_icon_bg"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/widget_circle_bg" />
-
-                <ImageView
-                    android:id="@+id/cat_icon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_widget_cat_environment"
-                    android:contentDescription="Kategorie" />
-            </FrameLayout>
-
-            <ImageView
-                android:layout_width="12dp"
-                android:layout_height="1dp" />
-
-            <!-- Title-Block: Kategorie-Pille + Titel + Beschreibung -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <!-- Kategorie-Pille -->
-                <TextView
-                    android:id="@+id/cat_pill"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="3dp"
-                    android:background="@drawable/widget_pill_bg"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:textColor="#22D3EE"
-                    android:text="Umgebung" />
-
-                <ImageView
-                    android:layout_width="1dp"
-                    android:layout_height="6dp" />
-
-                <TextView
-                    android:id="@+id/task_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="15sp"
-                    android:textColor="#EAE6FF"
-                    android:textStyle="normal"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    android:text="Aufgaben-Titel" />
-
-                <TextView
-                    android:id="@+id/task_description"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textSize="12sp"
-                    android:textColor="#A499D9"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    android:text="Beschreibung"
-                    android:visibility="visible" />
-            </LinearLayout>
-
-            <ImageView
-                android:layout_width="8dp"
-                android:layout_height="1dp" />
-
-            <!-- Rechte Spalte: Prio + Label + Check-Box -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="end">
-
-                <TextView
-                    android:id="@+id/task_prio_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="26sp"
-                    android:textStyle="bold"
-                    android:textColor="#F97316"
-                    android:text="45" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="10sp"
-                    android:textColor="#A499D9"
-                    android:text="Prio" />
-
-                <ImageView
-                    android:layout_width="1dp"
-                    android:layout_height="8dp" />
-
-                <ImageView
-                    android:id="@+id/task_check_box"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="@drawable/widget_check_box_bg" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="1dp"
-            android:layout_height="12dp" />
-
-        <!-- SEVERITY-BAR: 10 Segmente nebeneinander, dynamisch gefuellt -->
-        <include layout="@layout/widget_severity_bar" />
-
-        <!-- TAGS-ROW: bis zu 3 Tag-Pillen (sichtbar je nach Datenmenge) -->
-        <LinearLayout
-            android:id="@+id/tags_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tag_1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="3dp"
-                android:background="@drawable/widget_pill_bg"
-                android:textSize="10sp"
-                android:textColor="#A499D9"
-                android:text="Tag" />
-
-            <ImageView
-                android:layout_width="6dp"
-                android:layout_height="1dp"
-                android:visibility="gone"
-                android:id="@+id/tag_2_spacer" />
-
-            <TextView
-                android:id="@+id/tag_2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="3dp"
-                android:background="@drawable/widget_pill_bg"
-                android:textSize="10sp"
-                android:textColor="#A499D9"
-                android:text="Tag"
-                android:visibility="gone" />
-
-            <ImageView
-                android:layout_width="6dp"
-                android:layout_height="1dp"
-                android:visibility="gone"
-                android:id="@+id/tag_3_spacer" />
-
-            <TextView
-                android:id="@+id/tag_3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="3dp"
-                android:background="@drawable/widget_pill_bg"
-                android:textSize="10sp"
-                android:textColor="#A499D9"
-                android:text="Tag"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="1dp"
-            android:layout_height="10dp" />
-
-        <!-- BOTTOM-ROW: Meta-Info LINKS | KI/Manuell-Pille RECHTS -->
+        <!-- ZEILE 1: Haekchen + Titel -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Meta-Row: Uhr-Icon + Bucket-Label + ggf. Empfohlen + Wearable -->
-            <LinearLayout
+            <!-- Haekchen: leeres Quadrat (Widget zeigt nur offene Aufgaben).
+                 Tap markiert die Aufgabe als erledigt — ohne die App zu oeffnen. -->
+            <ImageView
+                android:id="@+id/task_check_box"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/widget_check_box_bg"
+                android:contentDescription="Aufgabe abhaken" />
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="1dp" />
+
+            <TextView
+                android:id="@+id/task_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#EAE6FF"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Aufgaben-Titel" />
+        </LinearLayout>
 
-                <ImageView
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:src="@drawable/ic_widget_cat_temporal"
-                    android:contentDescription="@null" />
+        <ImageView
+            android:layout_width="1dp"
+            android:layout_height="8dp" />
 
-                <TextView
-                    android:id="@+id/meta_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:textSize="11sp"
-                    android:textColor="#A499D9"
-                    android:text="heute, 30 min" />
+        <!-- ZEILE 2: rechtsbuendig — Prioritaet-Perle + KI/Manuell-Perle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/empfohlen_badge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:background="@drawable/widget_pill_bg"
-                    android:textSize="10sp"
-                    android:textColor="#22C55E"
-                    android:text="Empfohlen"
-                    android:visibility="gone" />
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
-                <ImageView
-                    android:id="@+id/wearable_icon"
-                    android:layout_width="11dp"
-                    android:layout_height="11dp"
-                    android:layout_marginStart="6dp"
-                    android:src="@drawable/ic_widget_cat_health"
-                    android:visibility="gone"
-                    android:contentDescription="Wearable" />
-            </LinearLayout>
+            <!-- Prioritaet-Perle ("Priorität KI" / "Priorität <Wert>") -->
+            <TextView
+                android:id="@+id/task_prio_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/widget_pill_bg"
+                android:textSize="12sp"
+                android:textColor="#A499D9"
+                android:text="Priorität KI" />
 
-            <!-- KI/Manuell-Pille (tapbar) -->
+            <ImageView
+                android:layout_width="8dp"
+                android:layout_height="1dp" />
+
+            <!-- KI/Manuell-Perle (Bucket-Picker) -->
             <LinearLayout
                 android:id="@+id/bucket_status_pill"
                 android:layout_width="wrap_content"

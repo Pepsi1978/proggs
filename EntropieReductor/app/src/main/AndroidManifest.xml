@@ -193,6 +193,13 @@
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
 
+        <!-- Empfaengt Taps auf Widget-Aufgaben (Frank-Wunsch 2026-05-31): Haekchen
+             hakt direkt ab (ACTION_COMPLETE), andere Taps oeffnen die App. Wird nur
+             ueber das interne PendingIntent-Template getriggert → exported=false. -->
+        <receiver
+            android:name=".presentation.widget.WidgetActionReceiver"
+            android:exported="false" />
+
         <!-- Foreground Service fuer Audio-Aufnahme -->
         <service
             android:name=".data.audio.RecordingService"
