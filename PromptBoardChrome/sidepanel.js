@@ -73,6 +73,16 @@ function showHint(msg, isError) {
 	}, 3500);
 }
 
+// Try to deliver the insert message to the content script. Resolves true on
+// success, false if no frame answered (e.g. the script isn't present yet).
+function trySend(tabId, text) {
+	return new Promise((resolve) => {
+		chrome.tabs.sendMessage(tabId, { type: "insertPrompt", text }, (resp) => {
+			resolve(!chrome.runtime.lastError && resp && resp.ok);
+		});
+	});
+}
+
 async function sendPrompt(text) {
 	try {
 		const [tab] = await chrome.tabs.query({
@@ -83,16 +93,33 @@ async function sendPrompt(text) {
 			showHint("Keine aktive Seite gefunden.", true);
 			return;
 		}
-		chrome.tabs.sendMessage(tab.id, { type: "insertPrompt", text }, (resp) => {
-			if (chrome.runtime.lastError || !resp || !resp.ok) {
-				showHint(
-					"Kein Textfeld gefunden – klicke zuerst in ein Eingabefeld auf der Seite (Seite ggf. neu laden).",
-					true,
-				);
-			} else {
+
+		// First attempt: content script is usually already present.
+		if (await trySend(tab.id, text)) {
+			showHint("Eingefügt ✓", false);
+			return;
+		}
+
+		// Self-heal: the tab may have been open before the extension loaded, so
+		// no content script is running yet. Inject it now and retry once.
+		try {
+			await chrome.scripting.executeScript({
+				target: { tabId: tab.id, allFrames: true },
+				files: ["content.js"],
+			});
+			await new Promise((r) => setTimeout(r, 120));
+			if (await trySend(tab.id, text)) {
 				showHint("Eingefügt ✓", false);
+				return;
 			}
-		});
+		} catch (_) {
+			/* page disallows injection (chrome://, Web Store, PDF) */
+		}
+
+		showHint(
+			"Kein Textfeld gefunden – klicke in ein Eingabefeld auf der Seite und versuche es erneut.",
+			true,
+		);
 	} catch (e) {
 		showHint("Fehler: " + (e && e.message), true);
 	}
