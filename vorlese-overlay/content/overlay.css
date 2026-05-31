@@ -17,9 +17,13 @@
 	position: fixed;
 	z-index: 2147483647; /* maximaler z-index, damit nichts uns verdeckt */
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	align-items: center;
-	gap: 8px;
+	flex-wrap: wrap;
+	/* Horizontale Reihe wie die Overlays-Erweiterung. 20px Abstand = doppelt so
+	   viel wie zwischen den ChromeOverlays-Buttons (dort ~10px). Kleiner row-gap,
+	   damit der Fortschrittsbalken knapp unter die Buttons umbricht. */
+	gap: 6px 20px;
 	font-family:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	user-select: none;
@@ -43,7 +47,7 @@
 		0 4px 16px rgba(0, 0, 0, 0.28),
 		0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 	transition:
-		transform 0.12s ease,
+		transform 0.15s ease,
 		background 0.15s ease,
 		box-shadow 0.15s ease;
 	padding: 0;
@@ -51,11 +55,12 @@
 
 .vo-btn:hover {
 	background: rgba(40, 40, 46, 0.92);
-	transform: translateY(-1px);
+	/* "hochpoppen" wie das Spracheingabe-Symbol der Overlays-Erweiterung */
+	transform: scale(1.15);
 }
 
 .vo-btn:active {
-	transform: scale(0.94);
+	transform: scale(0.93);
 }
 
 .vo-btn svg {
@@ -67,9 +72,10 @@
 }
 
 .vo-speaker {
-	width: 48px;
-	height: 48px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
+	order: 3; /* rechts in der Reihe: [Kaestchen] [A] [Lautsprecher] */
 }
 
 /* Zustand „spielt gerade" — Button bekommt einen aktiven Farbton */
@@ -368,9 +374,10 @@
 /* Erbt Grundform von .vo-btn (40×40px wäre Standard — hier gleiche Größe
    wie .vo-gear verwenden, damit er neben dem Lautsprecher nicht zu groß wirkt) */
 .vo-pause-btn {
-	width: 36px;
-	height: 36px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
+	order: 4; /* erscheint waehrend der Wiedergabe rechts neben dem Lautsprecher */
 }
 
 /* Zustand „pausiert": leicht blauer Akzent, damit erkennbar ist, dass
@@ -391,6 +398,8 @@
 /* Schmale Leiste unterhalb der Button-Gruppe; volle Breite des Containers */
 .vo-progress-wrap {
 	width: 100%;
+	flex-basis: 100%; /* bricht unter die horizontale Button-Reihe um */
+	order: 5;
 	height: 5px;
 	border-radius: 3px;
 	background: rgba(255, 255, 255, 0.12);
@@ -411,9 +420,10 @@
 /* Erbt Grundform von .vo-btn. Etwas kleiner, ueber dem Lautsprecher. Der
    Buchstabe A zeigt den Auto-Lese-Modus an. */
 .vo-auto-btn {
-	width: 36px;
-	height: 36px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
+	order: 2; /* Mitte: links neben dem Lautsprecher, gleiche Groesse */
 }
 
 .vo-auto-letter {
@@ -444,9 +454,10 @@
 /* Erbt Grundform von .vo-btn, ist aber bewusst ECKIG (ein Viereck) und etwas
    kleiner — sieht aus wie ein Kontrollkaestchen. */
 .vo-autospeak-box {
-	width: 30px;
-	height: 30px;
-	border-radius: 7px;
+	width: 34px;
+	height: 34px;
+	border-radius: 8px;
+	order: 1; /* ganz links, etwas kleiner als A und Lautsprecher */
 }
 
 /* Der Haken ist nur sichtbar, wenn das Kaestchen aktiv ist. */
