@@ -179,27 +179,22 @@ class EntropyReducerRemoteViewsFactory(
         views.setTextColor(R.id.task_title, palette.textPrimary)
 
         // Prioritaet-Perle: "Priorität KI" wenn die KI bestimmt, sonst "Priorität <Wert>".
+        // Farben EXAKT wie die App-Karte: glassBg-Hintergrund + textSecondary-Text (neutral).
         val prioLabel = entry.manualPriorityScore
             ?.let { "Priorität ${it.toInt()}" }
             ?: "Priorität KI"
         views.setTextViewText(R.id.task_prio_pill, prioLabel)
-        views.setColorStateList(R.id.task_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
-        views.setTextColor(R.id.task_prio_pill, palette.textSecondary)
+        views.setColorStateList(R.id.task_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
+        views.setTextColor(R.id.task_prio_pill, palette.pearlText)
 
-        // KI/Manuell-Perle (Bucket): manuell = Bucket-Akzentfarbe, KI = gedaempft.
+        // KI/Manuell-Perle (Bucket): wie in der App KOMPLETT identisch zur Prio-Perle —
+        // gleicher glassBg-Hintergrund + gleiche textSecondary-Farbe fuer Icon UND Text.
+        // Nur das Wort unterscheidet ("KI" vs. "manuell"); kein Akzent/Hellblau mehr.
         val isManual = entry.manualBucket != null
-        val bucketAccent = bucketColor(palette, entry.timeBucket)
-        if (isManual) {
-            views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(bucketAccent, 0.22f)))
-            views.setInt(R.id.bucket_status_icon, "setColorFilter", bucketAccent)
-            views.setTextViewText(R.id.bucket_status_label, "manuell")
-            views.setTextColor(R.id.bucket_status_label, bucketAccent)
-        } else {
-            views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
-            views.setInt(R.id.bucket_status_icon, "setColorFilter", palette.textSecondary)
-            views.setTextViewText(R.id.bucket_status_label, "KI")
-            views.setTextColor(R.id.bucket_status_label, palette.textSecondary)
-        }
+        views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
+        views.setInt(R.id.bucket_status_icon, "setColorFilter", palette.pearlText)
+        views.setTextViewText(R.id.bucket_status_label, if (isManual) "manuell" else "KI")
+        views.setTextColor(R.id.bucket_status_label, palette.pearlText)
         views.setImageViewResource(R.id.bucket_status_icon, bucketIconRes(entry.timeBucket))
 
         // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):

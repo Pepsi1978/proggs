@@ -38,6 +38,11 @@ data class SimpleWidgetPalette(
     val prioBlue: Int,
     val severityEmpty: Int,
     val cardTintAlpha: Float,
+    // Perlen-Farben EXAKT wie die App-Karte (Frank-Wunsch 2026-05-31): KI/manuell-
+    // und Prio-Perle nutzen cosmos.glassBg (Hintergrund) + cosmos.textSecondary
+    // (Text/Icon). Beide Perlen identisch — nur das Wort unterscheidet.
+    val pearlBg: Int,
+    val pearlText: Int,
     val isDark: Boolean,
 )
 
@@ -67,6 +72,8 @@ val SimpleWidgetDarkPalette = SimpleWidgetPalette(
     prioBlue = 0xFF3B82F6.toInt(),
     severityEmpty = 0xFF2A1F44.toInt(),
     cardTintAlpha = 0.12f,
+    pearlBg = 0x14FFFFFF, // GlassDark — weiss alpha 0.08 (App: cosmos.glassBg)
+    pearlText = 0xFF94A3B8.toInt(), // TextSecondaryDark (App: cosmos.textSecondary)
     isDark = true,
 )
 
@@ -96,6 +103,8 @@ val SimpleWidgetLightPalette = SimpleWidgetPalette(
     prioBlue = 0xFF2563EB.toInt(),
     severityEmpty = 0xFFEBE6F8.toInt(),
     cardTintAlpha = 0.18f,
+    pearlBg = 0xCCFFFFFF.toInt(), // GlassLight — weiss alpha 0.80 (App: cosmos.glassBg)
+    pearlText = 0xFF475569.toInt(), // TextSecondaryLight (App: cosmos.textSecondary)
     isDark = false,
 )
 
