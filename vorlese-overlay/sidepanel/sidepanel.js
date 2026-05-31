@@ -296,17 +296,15 @@
 			await persist();
 		});
 
-		// Aktualisieren: Erweiterung neu laden (Speicher bleibt erhalten).
+		// Aktualisieren: NUR die Nachricht an den Service-Worker senden. Der laedt
+		// die Erweiterung neu UND danach automatisch die offenen Seiten (damit kein
+		// totes Content-Script zurueckbleibt). NICHT hier selbst chrome.runtime.reload()
+		// aufrufen — sonst stirbt die Seitenleiste, bevor der Worker das Flag setzt.
 		$("reload").addEventListener("click", () => {
 			const btn = $("reload");
 			btn.textContent = "Wird aktualisiert…";
 			btn.disabled = true;
 			send({ type: MSG.RELOAD });
-			try {
-				chrome.runtime.reload();
-			} catch (_) {
-				/* egal — der Worker reloadet ohnehin */
-			}
 		});
 	}
 

@@ -222,14 +222,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (msg.type === "RELOAD_EXTENSION") {
 		diag.log("INFO", "NUTZUNG", "sw:reload_extension", {});
 		sendResponse({ ok: true });
-		// Nach dem Antworten neu laden, damit der Aufrufer keine Verbindung verliert.
-		setTimeout(() => {
-			try {
-				chrome.runtime.reload();
-			} catch (e) {
-				/* egal */
-			}
-		}, 80);
+		// Erweiterung neu laden UND danach automatisch die offenen Seiten neu
+		// laden, damit kein totes ("invalidiertes") Content-Script zurueckbleibt.
+		// Das manuelle F5 entfaellt damit.
+		reloadExtensionWithTabRefresh();
 		return true;
 	}
 	// Selbsttest starten: Diagnose-Modus an + Runner im aktiven Tab auslösen.
@@ -573,11 +569,7 @@ if (chrome.contextMenus && chrome.contextMenus.onClicked) {
 		// Aktualisieren (Rechtsklick auf das Toolbar-Symbol): neu laden, Speicher bleibt.
 		if (info.menuItemId === "vorlese-aktualisieren") {
 			diag.log("INFO", "NUTZUNG", "sw:contextmenu_aktualisieren", {});
-			try {
-				chrome.runtime.reload();
-			} catch (e) {
-				/* egal */
-			}
+			reloadExtensionWithTabRefresh();
 			return;
 		}
 		if (info.menuItemId !== "vorlese-lesen") return;
@@ -613,5 +605,55 @@ if (chrome.runtime.onStartup) {
 	chrome.runtime.onStartup.addListener(enableSidePanelToggle);
 }
 enableSidePanelToggle();
+
+// ----- "Aktualisieren": Erweiterung neu laden + Seiten automatisch neu laden ---
+// chrome.runtime.reload() macht Content-Scripts in bereits offenen Tabs ungueltig
+// ("Extension context invalidated") -> Vorlesen ginge dort erst nach einem F5
+// wieder. Damit das automatisch passiert, setzen wir vor dem Reload ein Flag in
+// chrome.storage.local (ueberlebt den Reload). Beim SW-Neustart werden alle
+// offenen http/https-Tabs einmalig neu geladen -> frisches Content-Script.
+const RELOAD_TABS_FLAG = "vo_reload_tabs_after_update";
+
+function reloadExtensionWithTabRefresh() {
+	try {
+		chrome.storage.local.set({ [RELOAD_TABS_FLAG]: true }, () => {
+			setTimeout(() => {
+				try {
+					chrome.runtime.reload();
+				} catch (e) {
+					/* egal */
+				}
+			}, 80);
+		});
+	} catch (e) {
+		try {
+			chrome.runtime.reload();
+		} catch (e2) {
+			/* egal */
+		}
+	}
+}
+
+function reloadPendingTabsAfterUpdate() {
+	try {
+		chrome.storage.local.get(RELOAD_TABS_FLAG, (res) => {
+			if (chrome.runtime.lastError || !res || !res[RELOAD_TABS_FLAG]) return;
+			chrome.storage.local.remove(RELOAD_TABS_FLAG);
+			chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
+				if (chrome.runtime.lastError) return;
+				for (const t of tabs || []) {
+					if (t.id != null) {
+						chrome.tabs.reload(t.id, {}, () => void chrome.runtime.lastError);
+					}
+				}
+			});
+		});
+	} catch (e) {
+		/* egal */
+	}
+}
+
+// Lief der letzte Start aus einem "Aktualisieren" heraus? Dann Seiten neu laden.
+reloadPendingTabsAfterUpdate();
 
 export { ensureOffscreen, notifyTab, humanError };
