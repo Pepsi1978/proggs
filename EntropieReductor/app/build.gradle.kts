@@ -231,6 +231,14 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
 
+    // Remote Compose (Frank-Wunsch 2026-05-31): Vorbereitung fuer zukuenftige
+    // Widget-Experimente. ALPHA — noch nicht im aktiven Widget verwendet, das
+    // laeuft weiter ueber klassische RemoteViews (EntropyReducerWidgetReceiver).
+    implementation(libs.compose.remote.core)
+    implementation(libs.compose.remote.creation)
+    implementation(libs.compose.remote.creation.compose)
+    implementation(libs.compose.remote.player.view)
+
     // Vico Charts (Stufe 2-4)
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
