@@ -242,25 +242,58 @@
 		pauseBtn.classList.toggle("vo-paused", paused);
 	}
 
-	// ----- Fortschrittsbalken aktualisieren ------------------------------------
-	function setProgress(chunk, total) {
-		progressChunk = chunk;
-		progressTotal = total;
-		if (total > 0) {
-			progressWrap.style.display = "";
-			const pct = Math.round((chunk / total) * 100);
-			progressBar.style.width = pct + "%";
-		} else {
-			progressWrap.style.display = "none";
-			progressBar.style.width = "0%";
-		}
+	// ----- Fortschrittsbalken (zeitbasiert) ------------------------------------
+	// NICHT pro Chunk zaehlen (kurzer/mittlerer Text = 1 Chunk -> bliebe bei 0%),
+	// sondern ein gleichmaessig laufender Balken ueber die GESCHAETZTE Vorlese-Dauer
+	// (Textlaenge / Tempo). Start/Pause/Weiter folgen den Status-Events.
+	let lastSpeechMs = 0;
+
+	function estimateSpeechMs(text, rate) {
+		const chars = (text || "").length;
+		const r = rate && rate > 0 ? rate : 1;
+		// ~14 Zeichen pro Sekunde bei Tempo 1.0 (deutsche Sprache, grobe Schaetzung).
+		const seconds = chars / (14 * r);
+		return Math.max(800, Math.round(seconds * 1000));
+	}
+
+	function startProgressAnim(ms) {
+		progressWrap.style.display = "";
+		progressBar.style.transition = "none";
+		progressBar.style.width = "0%";
+		void progressBar.offsetWidth; // Reflow erzwingen, damit 0% greift
+		const dur = Math.max(800, ms || 0);
+		progressBar.style.transition = "width " + dur + "ms linear";
+		progressBar.style.width = "100%";
+	}
+
+	function pauseProgressAnim() {
+		// Aktuelle Breite (px) einfrieren, damit der Balken stehen bleibt.
+		const w = getComputedStyle(progressBar).width;
+		progressBar.style.transition = "none";
+		progressBar.style.width = w;
+	}
+
+	function resumeProgressAnim() {
+		const wrapW = progressWrap.clientWidth || 1;
+		const curW = parseFloat(getComputedStyle(progressBar).width) || 0;
+		const frac = Math.min(1, Math.max(0, curW / wrapW));
+		const remainMs = Math.max(
+			400,
+			Math.round((lastSpeechMs || 0) * (1 - frac)),
+		);
+		progressBar.style.transition = "none";
+		progressBar.style.width = frac * 100 + "%";
+		void progressBar.offsetWidth;
+		progressBar.style.transition = "width " + remainMs + "ms linear";
+		progressBar.style.width = "100%";
 	}
 
 	function resetProgress() {
 		progressChunk = 0;
 		progressTotal = 0;
-		progressWrap.style.display = "none";
+		progressBar.style.transition = "none";
 		progressBar.style.width = "0%";
+		progressWrap.style.display = "none";
 	}
 
 	// ----- Position: wiederherstellen + clampen --------------------------------
@@ -832,6 +865,7 @@
 			return;
 		}
 		setState("loading");
+		lastSpeechMs = estimateSpeechMs(text, cfg.rate);
 		const pitch =
 			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
 				? settings.edge.pitch
@@ -1092,6 +1126,7 @@
 			return;
 		}
 		setState("loading");
+		lastSpeechMs = estimateSpeechMs(text, cfg.rate);
 		const pitch =
 			engine === "edge" && settings.edge && settings.edge.pitch !== undefined
 				? settings.edge.pitch
@@ -1207,16 +1242,20 @@
 				setPauseButtonVisible(true);
 				setPauseButtonState(false);
 				isPaused = false;
+				// Fortschrittsbalken ueber die geschaetzte Dauer laufen lassen.
+				startProgressAnim(lastSpeechMs);
 			} else if (msg.state === "paused") {
 				isPaused = true;
 				// Icon auf Play umschalten (bereit zum Fortsetzen)
 				setPauseButtonState(true);
+				pauseProgressAnim();
 				if (window.VODiag)
 					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_paused", {});
 			} else if (msg.state === "resumed") {
 				isPaused = false;
 				// Icon auf Pause zurück (läuft wieder)
 				setPauseButtonState(false);
+				resumeProgressAnim();
 				if (window.VODiag)
 					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_resumed", {});
 			} else if (msg.state === "stopped") {
@@ -1239,13 +1278,9 @@
 			}
 			if (panelStatusHandler) panelStatusHandler(msg.state, msg.message);
 		} else if (msg.type === MSG.PROGRESS) {
-			// Fortschrittsbalken aktualisieren
-			const chunk = msg.chunk && typeof msg.chunk === "number" ? msg.chunk : 0;
-			const total =
-				msg.totalChunks && typeof msg.totalChunks === "number"
-					? msg.totalChunks
-					: 0;
-			setProgress(chunk, total);
+			// Chunk-basierter Fortschritt steuert den Balken NICHT mehr (kurzer Text
+			// = 1 Chunk -> bliebe bei 0%). Der Balken laeuft jetzt zeitbasiert ueber
+			// die Status-Events playing/paused/resumed. Hier bewusst nichts tun.
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
 			if (window.VODiag)
 				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.tastenkuerzel", {});
