@@ -85,6 +85,20 @@ weit kommen) + Schicht 3 (Orchestrator faengt den Crash auf und setzt fort). Die
 ueberlebt, auch wenn ein einzelner Worker stirbt. Das finale-Plugin hat den Ansatz in
 FIN-004/005/048 — diese Regel macht ihn systemweit und ergaenzt das Orchestrator-Resume.
 
+## Systemweite Verankerung (wo dieser Schutz ueberall greift)
+
+Damit das 4-Schichten-Protokoll fuer ALLE Agenten gilt — nicht nur finale:
+- **subagent-context-Hook** (`~/.claude/hooks/subagent-context.{sh,ps1}`) injiziert die
+  Kontext-Schutz-Kurzregel automatisch in JEDEN Subagent (SubagentStart) — ohne dass der Agent
+  diese Regel kennen muss. **Das ist der systemweite Traeger** (deckt alle Plugins/Skills/Agenten
+  auf einen Schlag, statt dutzende Agent-Dateien einzeln zu aendern — fehleranfrei + wartbar).
+- **finale-Plugin** hat zusaetzlich die erzwungenen Ablaeufe FIN-052 (Orchestrator-Resume),
+  FIN-053 (inkrementelles Checkpointing), FIN-054 (Byte-Waechter), FIN-055 (Resume-Counter)
+  + die Skripte `scripts/scope-splitter.py` (generisch) und `scripts/count-resumes.sh`.
+- **Andere Plugins/Workflows mit Orchestrator/Worker-Pattern** uebernehmen: (1) `scope-splitter.py`
+  vor jedem Spawn (beliebige Pfade, nicht finale-spezifisch), (2) das Resume-Pattern aus FIN-052
+  als Pseudocode (Crash erkennen → Checkpoint lesen → kleiner+diszipliniert neu spawnen → nie aufgeben).
+
 ## Was NIEMALS passieren darf
 - Einen Worker ohne tools-Whitelist mit vollem Tool-Erbe spawnen wenn er nur wenige braucht
 - Sich darauf verlassen, dass der Worker sich selbst rechtzeitig stoppt (tut er empirisch nicht)

@@ -281,6 +281,7 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 - **Kontext grosszuegig geben**: Agents erben NICHT die Konversations-Historie. Alles Wichtige im Prompt mitgeben.
 - **3-5 parallele Agents** ist der Sweet Spot. Mehr als 5 bringt kaum Geschwindigkeitsvorteil, aber viel mehr Token-Kosten.
 - Bei kleinen Aufgaben (unter 2 Minuten) reicht ein einzelner Agent oder direktes Tool-Call.
+- **Absturzsicher (KRITISCH):** Jeder Worker liest grosse Dateien NIE komplett (Python/Grep/Ranges statt Voll-Read), haelt engen Scope und lagert grosse Ergebnisse in Dateien aus. Subagents haben KEIN Auto-Compact — bei Worker-Crash ("Prompt is too long") setzt der Orchestrator per Resume fort (Checkpoint lesen → kleiner + diszipliniert neu spawnen → nie die Aufgabe aufgeben). Verlustfrei (nichts wegwerfen). Der `subagent-context`-Hook injiziert das in jeden Worker. Vollstaendig: `~/.claude/rules/subagent-crash-proofing.md` + `lossless-context-principle.md`.
 
 ## Such-Reflex: Semantische Suche vs. Grep (KRITISCH — auch fuer Subagents)
 
