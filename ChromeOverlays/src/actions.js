@@ -265,9 +265,10 @@ Zielgruppe, Kontext, Format und Ton duerfen niemals abweichen.
 		}
 		const snap = ED().readPromptText(el);
 		if (snap.length < MIN_CHARS) {
+			// Klare Erklaerung: der Builder braucht einen vorhandenen Text zum Ausbauen.
 			OV.toast(
-				`Text zu kurz (${snap.length}) – Prompt-Builder nicht gestartet.`,
-				3500,
+				`Text zu kurz (${snap.length}) – schreib oder sprich zuerst deine Frage/Aufgabe ins Feld, dann den Button druecken.`,
+				4500,
 			);
 			return;
 		}
