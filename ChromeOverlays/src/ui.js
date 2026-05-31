@@ -66,7 +66,7 @@
 			onClick: (b) => A().promptGeneral(b),
 		},
 		memory: {
-			render: iconRender("brain", "#ea580c", "Memory-Prompt einfuegen"),
+			render: iconRender("save", "#ea580c", "Memory-Prompt einfuegen"),
 			onClick: (b) => A().memory(b),
 		},
 	};
