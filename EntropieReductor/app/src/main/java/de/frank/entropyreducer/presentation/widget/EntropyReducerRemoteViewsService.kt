@@ -238,12 +238,25 @@ class EntropyReducerRemoteViewsFactory(
         views.setInt(R.id.loop_icon, "setColorFilter", palette.textPrimary)
         views.setTextViewText(R.id.loop_title, template.title)
         views.setTextColor(R.id.loop_title, palette.textPrimary)
-        // Tap oeffnet die App (Aktiv/Inaktiv-Schalten bleibt dort).
-        val fill = Intent().apply {
-            putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_OPEN)
-            data = android.net.Uri.parse("widget://loop/${template.id}/open")
-        }
-        views.setOnClickFillInIntent(R.id.loop_card_root, fill)
+
+        // Prio-Perle: "Priorität <Wert>" — gleiche Optik wie die Aufgaben-Karte.
+        views.setTextViewText(R.id.loop_prio_pill, "Priorität ${template.priorityScore}")
+        views.setColorStateList(R.id.loop_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
+        views.setTextColor(R.id.loop_prio_pill, palette.pearlText)
+
+        // Tag-Perle: "KI" (automatisch) oder der vorgegebene Tag.
+        val bucketText = template.targetBucket?.let { bucketLabel(it) } ?: "KI"
+        views.setTextViewText(R.id.loop_bucket_pill, bucketText)
+        views.setColorStateList(R.id.loop_bucket_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
+        views.setTextColor(R.id.loop_bucket_pill, palette.pearlText)
+
+        // FillIns (EXTRA_TASK_ID traegt die Template-ID):
+        //  - Karte      → ACTION_OPEN: oeffnet die App (Aktiv/Inaktiv bleibt dort)
+        //  - Prio-Perle → ACTION_SET_LOOP_PRIORITY: App + Schieberegler dieser Vorlage
+        //  - Tag-Perle  → ACTION_SET_LOOP_BUCKET: App + Tag-Auswahl dieser Vorlage
+        views.setOnClickFillInIntent(R.id.loop_card_root, fillIn(template.id, WidgetIntents.ACTION_OPEN))
+        views.setOnClickFillInIntent(R.id.loop_prio_pill, fillIn(template.id, WidgetIntents.ACTION_SET_LOOP_PRIORITY))
+        views.setOnClickFillInIntent(R.id.loop_bucket_pill, fillIn(template.id, WidgetIntents.ACTION_SET_LOOP_BUCKET))
         return views
     }
 

@@ -29,6 +29,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -191,6 +192,10 @@ internal fun TemplateAsTaskCard(
     onDelete: () -> Unit,
     onSetPriority: (Int) -> Unit = {},
     onSetTargetBucket: (TimeBucket?) -> Unit = {},
+    autoOpenPrioSlider: Boolean = false,
+    onPrioSliderConsumed: () -> Unit = {},
+    autoOpenBucketMenu: Boolean = false,
+    onBucketMenuConsumed: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val loopAccent = Color(0xFFEA580C)
@@ -198,6 +203,22 @@ internal fun TemplateAsTaskCard(
     var sliderActive by remember(template.id) { mutableStateOf(false) }
     var liveSlider by remember(template.id) { mutableStateOf<Float?>(null) }
     var bucketMenuOpen by remember(template.id) { mutableStateOf(false) }
+
+    // Frank-Wunsch 2026-05-31: Vom Widget aus (ACTION_SET_LOOP_PRIORITY / _BUCKET) wird
+    // genau diese Vorlage gemeint — dann den Schieberegler bzw. das Tag-Menue direkt
+    // aufklappen und die Markierung sofort wieder freigeben (Einmal-Konsum).
+    LaunchedEffect(autoOpenPrioSlider) {
+        if (autoOpenPrioSlider) {
+            sliderActive = true
+            onPrioSliderConsumed()
+        }
+    }
+    LaunchedEffect(autoOpenBucketMenu) {
+        if (autoOpenBucketMenu) {
+            bucketMenuOpen = true
+            onBucketMenuConsumed()
+        }
+    }
 
     // Effektive Prioritaet = Live-Regler ?: gespeicherter Wert. Faerbt die Karte live.
     val effectivePriority = liveSlider?.toDouble() ?: template.priorityScore.toDouble()

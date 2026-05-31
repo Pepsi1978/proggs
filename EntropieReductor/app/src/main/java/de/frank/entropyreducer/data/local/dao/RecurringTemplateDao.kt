@@ -12,8 +12,15 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RecurringTemplateDao {
 
-    /** Reactive Liste aller Vorlagen (sowohl aktiv als auch pausiert) sortiert nach Titel. */
-    @Query("SELECT * FROM recurring_templates ORDER BY isActive DESC, title COLLATE NOCASE ASC")
+    /**
+     * Reactive Liste aller Vorlagen. Frank-Wunsch 2026-05-31: nach Prioritaet geordnet
+     * (hoechste oben) — wie die normalen Aufgaben-Buckets. Aktive Vorlagen stehen vor
+     * pausierten; Titel nur als Tiebreaker bei gleicher Prioritaet.
+     */
+    @Query(
+        "SELECT * FROM recurring_templates " +
+            "ORDER BY isActive DESC, priorityScore DESC, title COLLATE NOCASE ASC",
+    )
     fun observeAll(): Flow<List<RecurringTemplateEntity>>
 
     /** Liste aller AKTIVEN Vorlagen — fuer den Recurrence-Generator beim App-Start. */

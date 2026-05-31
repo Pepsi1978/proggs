@@ -24,6 +24,14 @@ object WidgetIntents {
      * manuellen Prioritaet — analog zu ACTION_RESCHEDULE beim Bucket-Picker).
      */
     const val ACTION_SET_PRIORITY = "set_priority"
+
+    /**
+     * Frank-Wunsch 2026-05-31: Tap auf die Prio-/Tag-Perle einer LOOP-Vorlage im Widget.
+     * Oeffnet die App, klappt den Loop-Block auf und oeffnet direkt den Schieberegler
+     * bzw. die Tag-Auswahl GENAU dieser Vorlage. EXTRA_TASK_ID traegt die Template-ID.
+     */
+    const val ACTION_SET_LOOP_PRIORITY = "set_loop_priority"
+    const val ACTION_SET_LOOP_BUCKET = "set_loop_bucket"
     const val ACTION_SETTINGS = "settings"
     const val ACTION_OPEN = "open"
 

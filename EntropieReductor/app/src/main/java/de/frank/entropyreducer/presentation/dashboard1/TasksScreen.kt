@@ -148,6 +148,11 @@ fun TasksScreen(
     // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
     // Karte selbst wieder geleert, sobald sie den Regler aufgeklappt hat.
     var prioPickerEntryId by remember { mutableStateOf<String?>(null) }
+    // Frank-Wunsch 2026-05-31: Gleiches fuer LOOP-Vorlagen — welche Vorlage nach einem
+    // Widget-Tap auf ihre Prio- bzw. Tag-Perle den Schieberegler / das Tag-Menue
+    // automatisch geoeffnet bekommt.
+    var prioPickerTemplateId by remember { mutableStateOf<String?>(null) }
+    var bucketPickerTemplateId by remember { mutableStateOf<String?>(null) }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -270,6 +275,30 @@ fun TasksScreen(
         }
 
         // 3) Bus clearen — Link wurde konsumiert
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
+    }
+
+    // Frank-Wunsch 2026-05-31: Widget-Tap auf die Prio-/Tag-Perle einer LOOP-Vorlage.
+    // Eigener Handler, weil Loop-Vorlagen keine normalen Aufgaben sind: Loop-Block
+    // aufklappen und genau diese Vorlage markieren — ihre Karte oeffnet dann selbst
+    // den Schieberegler (autoOpenPrioSlider) bzw. das Tag-Menue (autoOpenBucketMenu).
+    LaunchedEffect(widgetDeepLink, recurringTemplates) {
+        val link = widgetDeepLink ?: return@LaunchedEffect
+        val isLoopAction =
+            link.action ==
+                de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY ||
+                link.action ==
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET
+        if (!isLoopAction) return@LaunchedEffect
+        // Warten bis die Vorlagen geladen sind (z.B. App-Start direkt aus dem Widget).
+        if (recurringTemplates.none { it.id == link.taskId }) return@LaunchedEffect
+        expandedSection = SECTION_LOOP
+        when (link.action) {
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY ->
+                prioPickerTemplateId = link.taskId
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET ->
+                bucketPickerTemplateId = link.taskId
+        }
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
@@ -658,6 +687,16 @@ fun TasksScreen(
                                             },
                                             onSetTargetBucket = { bucket ->
                                                 recurringVm.setTargetBucket(template, bucket)
+                                            },
+                                            autoOpenPrioSlider =
+                                                prioPickerTemplateId == template.id,
+                                            onPrioSliderConsumed = {
+                                                prioPickerTemplateId = null
+                                            },
+                                            autoOpenBucketMenu =
+                                                bucketPickerTemplateId == template.id,
+                                            onBucketMenuConsumed = {
+                                                bucketPickerTemplateId = null
                                             },
                                         )
                                     }
