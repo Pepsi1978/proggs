@@ -553,11 +553,6 @@
     <string name="ai_prompt_rerank_actions_header">=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===</string>
     <string name="ai_prompt_rerank_entries_header">=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===</string>
     <string name="ai_prompt_rerank_instruction">Wróć do zoptymalizowanej listy 5 działań jako tablica JSON. Każde działanie musi zawierać te same pola co oryginał. Zastąp słabiej dopasowane pozycje lepszymi działaniami z wpisów dziennika — jeśli takie istnieją. Zachowaj kolejność: najważniejsze działanie na pierwszym miejscu.</string>
-    <plurals name="retro_month_more_entries">
-        <item quantity="one">(+ %1$d kolejny wpis)</item>
-        <item quantity="few">(+ %1$d kolejne wpisy)</item>
-        <item quantity="other">(+ %1$d kolejnych wpisów)</item>
-    </plurals>
     <string name="retro_month_entries_header">Wpisy w tym miesiącu</string>
     <string name="dashboard_active_profile_label">Aktywny profil: %1$s</string>
     <string name="dashboard_profile_summary">Podsumowanie</string>
