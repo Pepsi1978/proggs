@@ -271,21 +271,43 @@
 		};
 	}
 
+	// Rechts-Verankerung wie die Overlays-Erweiterung: gespeichert wird left/top,
+	// angewendet wird aber als Abstand zum RECHTEN Rand. So wandert das Overlay
+	// beim Oeffnen/Schliessen der Seitenleiste mit dem rechten Rand mit, statt am
+	// Rand kleben zu bleiben. null = noch nicht verschoben -> CSS right/bottom gilt.
+	let rightOffset = null;
+	let topOffset = null;
+
 	function applyPosition(left, top) {
 		const c = clampToViewport(left, top);
-		container.style.left = c.left + "px";
-		container.style.top = c.top + "px";
-		container.style.right = "auto";
+		const rect = container.getBoundingClientRect();
+		const w = rect.width || 56;
+		rightOffset = Math.max(4, window.innerWidth - (c.left + w));
+		topOffset = c.top;
+		container.style.left = "auto";
 		container.style.bottom = "auto";
+		container.style.right = rightOffset + "px";
+		container.style.top = topOffset + "px";
 	}
 
-	// Viewport-Clamp bei Resize: Overlay bleibt immer vollständig sichtbar
+	// Bei Resize bleibt die horizontale Lage durch CSS `right` automatisch am
+	// rechten Rand verankert; hier nur sicherstellen, dass nichts aus dem
+	// Viewport ragt (links/unten) — vertikal clampen, rechten Abstand begrenzen.
 	function clampCurrentPosition() {
-		if (container.style.left && container.style.left !== "auto") {
-			const left = parseFloat(container.style.left);
-			const top = parseFloat(container.style.top);
-			applyPosition(left, top);
-		}
+		if (rightOffset == null) return; // noch nie verschoben -> CSS-Standard gilt
+		const rect = container.getBoundingClientRect();
+		const w = rect.width || 56;
+		const h = rect.height || 96;
+		rightOffset = Math.min(
+			Math.max(4, rightOffset),
+			Math.max(4, window.innerWidth - w - 4),
+		);
+		topOffset = Math.min(
+			Math.max(4, topOffset),
+			Math.max(4, window.innerHeight - h - 4),
+		);
+		container.style.right = rightOffset + "px";
+		container.style.top = topOffset + "px";
 	}
 
 	// ----- Layout-Sonde: Geometrie + Sichtbarkeits-Check im Viewport ----------

@@ -425,6 +425,9 @@
 	height: 42px;
 	border-radius: 50%;
 	order: 2; /* Mitte: links neben dem Lautsprecher, gleiche Groesse */
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .vo-auto-letter {
@@ -435,19 +438,23 @@
 	line-height: 1;
 	color: #ffffff;
 	pointer-events: none;
+	/* Grossbuchstabe sitzt mit line-height:1 optisch leicht zu hoch -> minimal
+	   nach unten ruecken, damit das A exakt im Kreis zentriert wirkt. */
+	transform: translateY(1px);
 }
 
 /* Zustand „aktiv": der A-Button leuchtet, damit der Auto-Lese-Modus klar
    erkennbar ist. */
 .vo-auto-btn.vo-active {
-	background: rgba(58, 130, 246, 0.95);
+	/* Gleiches Gruen wie der aktive Enter-/Gemini-Button der Overlays-Erweiterung */
+	background: #16a34a;
 	box-shadow:
-		0 4px 18px rgba(58, 130, 246, 0.5),
+		0 4px 18px rgba(22, 163, 74, 0.5),
 		0 0 0 1px rgba(255, 255, 255, 0.22) inset;
 }
 
 .vo-auto-btn.vo-active:hover {
-	background: rgba(58, 130, 246, 1);
+	background: #15803d;
 }
 
 /* Haekchen-Viereck unter dem Zahnrad (Auto-Vorlesen an/aus) ---------------- */
@@ -455,10 +462,10 @@
 /* Erbt Grundform von .vo-btn, ist aber bewusst ECKIG (ein Viereck) und etwas
    kleiner — sieht aus wie ein Kontrollkaestchen. */
 .vo-autospeak-box {
-	width: 34px;
-	height: 34px;
-	border-radius: 8px;
-	order: 1; /* ganz links, etwas kleiner als A und Lautsprecher */
+	width: 28px;
+	height: 28px;
+	border-radius: 7px;
+	order: 1; /* ganz links, deutlich kleiner als A und Lautsprecher */
 }
 
 /* Der Haken ist nur sichtbar, wenn das Kaestchen aktiv ist. */
