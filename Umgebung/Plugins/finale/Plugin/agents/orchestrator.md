@@ -638,6 +638,35 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
     Der Orchestrator liest diese `.jsonl` in FIN-052 (`read_checkpoint`). Existiert keine Datei
     (Worker crashte vor der ersten Einheit): `done = leer`, ganzer Scope wird kleiner neu gespawnt.
 
+31. **FIN-054 — BYTE-WAECHTER VOR JEDEM WORKER-SPAWN (Schicht 1, Praevention):**
+
+    Bevor du einen Scope (Datei-/Verzeichnis-Menge) an einen oder mehrere Worker uebergibst,
+    MUSST du ihn durch den Byte-Waechter splitten — so kommt kein Worker je an eine zu grosse
+    Portion. Verlustfrei: nichts wird weggeworfen, nur in sichere Buckets verteilt.
+    ```bash
+    PYTHONIOENCODING=utf-8 python3 "${FINALE_PLUGIN_ROOT}/scripts/scope-splitter.py" \
+        --glob '*.kt' --max-bytes 180000 "<scope-pfad>"
+    ```
+    - Default 180000 Bytes/Bucket (~45k Token Read-Budget; Sicherheitsmarge zum ~175k-Limit,
+      da der Regel-Sockel ~70-120k frisst).
+    - `oversize_files` (Einzeldatei > Bucket-Grenze, z.B. SettingsScreen 282 KB): bekommt einen
+      eigenen Bucket + Warnung — der zustaendige Worker liest sie NUR per Grep/Range/Python, NIE voll.
+    - 1 Bucket pro Worker (max 7 gleichzeitig, FIN-051). Bei N>7 Buckets: Continuous-Spawning.
+    - Verifiziert 2026-05-31: 142 .kt-Dateien von BestJournal -> 11 Buckets, alle unter dem Limit;
+      die 2 Crash-Dateien (282/188 KB) korrekt als oversize markiert.
+
+32. **FIN-055 — RESUME-COUNTER AM LAUF-ENDE (Schicht 3 Metrik):**
+
+    Am Ende jedes Laufs (Phase 5, neben FIN-047 RUN-ISSUES) den Resume-Counter ausfuehren und
+    sein Ergebnis ins audit-log + die End-Status-Meldung aufnehmen:
+    ```bash
+    bash "${FINALE_PLUGIN_ROOT}/scripts/count-resumes.sh" "<app-root>"
+    ```
+    - Zaehlt die `orchestrator-resume-after-crash`-Marker (die FIN-052 Pflicht-Logs).
+    - 0 = sauberer Lauf (Praevention hat alle Crashes verhindert). >0 = wie oft die Chef-Rettung
+      greifen musste. Steigt die Zahl ueber Laeufe -> ein Scope ist zu gross dimensioniert
+      (Byte-Waechter-Schwelle FIN-054 pruefen). So wird sichtbar, ob das System stabiler wird.
+
 ---
 
 ## Modi
