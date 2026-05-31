@@ -22,11 +22,11 @@ media3 = "1.5.1"
 workManager = "2.10.0"
 vico = "2.0.0-beta.3"
 glance = "1.1.1"
-# Remote Compose (Frank-Wunsch 2026-05-31): brandneue Rendering-Engine fuer
-# Widgets (I/O 2026). Aktuell nur ALPHA — als Vorbereitung aufgenommen, damit
-# spaeter damit experimentiert werden kann, sobald die Glance-Widget-Anbindung
-# reif ist. Das aktuelle Widget nutzt weiterhin klassische RemoteViews.
-composeRemote = "1.0.0-alpha11"
+# Remote Compose (Frank-Wunsch 2026-05-31): brandneue Rendering-Engine fuer Widgets
+# (I/O 2026). ALPHA — NICHT aktiviert, weil alpha11 AGP 9.1.0 (Projekt: 8.10.0),
+# minSdk 29 (Projekt: 28 → Geraete-Ausschluss) und compileSdk 37 (Projekt: 36)
+# erzwingt. Sobald die Engine reif ist + diese Anforderungen tragbar sind, hier wieder
+# aktivieren:  composeRemote = "1.0.0-alpha11"  (oder neuere Version)
 googleApiClient = "2.7.0"
 googleDrive = "v3-rev20241206-2.0.0"
 playServicesAuth = "21.3.0"
@@ -106,11 +106,12 @@ vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = 
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 
-# Remote Compose (Vorbereitung — ALPHA, noch nicht im Widget verwendet)
-compose-remote-core = { group = "androidx.compose.remote", name = "remote-core", version.ref = "composeRemote" }
-compose-remote-creation = { group = "androidx.compose.remote", name = "remote-creation", version.ref = "composeRemote" }
-compose-remote-creation-compose = { group = "androidx.compose.remote", name = "remote-creation-compose", version.ref = "composeRemote" }
-compose-remote-player-view = { group = "androidx.compose.remote", name = "remote-player-view", version.ref = "composeRemote" }
+# Remote Compose (Vorbereitung — DEAKTIVIERT, siehe Kommentar bei composeRemote oben).
+# Erfordert AGP 9.1.0 + minSdk 29 + compileSdk 37. Bei Reife wieder einkommentieren:
+# compose-remote-core = { group = "androidx.compose.remote", name = "remote-core", version.ref = "composeRemote" }
+# compose-remote-creation = { group = "androidx.compose.remote", name = "remote-creation", version.ref = "composeRemote" }
+# compose-remote-creation-compose = { group = "androidx.compose.remote", name = "remote-creation-compose", version.ref = "composeRemote" }
+# compose-remote-player-view = { group = "androidx.compose.remote", name = "remote-player-view", version.ref = "composeRemote" }
 
 # Google Drive (Stufe 1 — Backup/Restore via appDataFolder)
 google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }

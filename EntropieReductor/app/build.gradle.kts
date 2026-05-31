@@ -231,13 +231,12 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
 
-    // Remote Compose (Frank-Wunsch 2026-05-31): Vorbereitung fuer zukuenftige
-    // Widget-Experimente. ALPHA — noch nicht im aktiven Widget verwendet, das
-    // laeuft weiter ueber klassische RemoteViews (EntropyReducerWidgetReceiver).
-    implementation(libs.compose.remote.core)
-    implementation(libs.compose.remote.creation)
-    implementation(libs.compose.remote.creation.compose)
-    implementation(libs.compose.remote.player.view)
+    // Remote Compose (Frank-Wunsch 2026-05-31): WIEDER ENTFERNT — alpha11 erzwingt
+    // AGP 9.1.0 (Projekt: 8.10.0), minSdk 29 (Projekt: 28 → wuerde Android-9-Geraete
+    // ausschliessen) und compileSdk 37 (Projekt: 36). Eine ungenutzte Vorbereitung ist
+    // diese Anforderungen + den Geraete-Ausschluss nicht wert. Sobald Remote Compose
+    // reif ist (stabile Glance-Widget-Anbindung), hier wieder aktivieren — die
+    // Catalog-Eintraege stehen auskommentiert in gradle/libs.versions.toml bereit.
 
     // Vico Charts (Stufe 2-4)
     implementation(libs.vico.compose.m3)
