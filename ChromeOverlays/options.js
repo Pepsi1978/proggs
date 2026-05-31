@@ -25,6 +25,17 @@ async function save() {
 
 document.getElementById("save").addEventListener("click", save);
 
+// ── Overlay verschiebbar (1:1 wie beim Vorlese-Overlay) ──
+// Aktiv = Overlay per linker/rechter Maustaste verschiebbar, bleibt wo losgelassen.
+// Aus = springt an den Standardort zurueck. Das Content-Script reagiert live.
+const dragCb = document.getElementById("ovDraggable");
+chrome.storage.local.get("ovDraggable").then(({ ovDraggable }) => {
+	dragCb.checked = !!ovDraggable;
+});
+dragCb.addEventListener("change", (e) => {
+	chrome.storage.local.set({ ovDraggable: !!e.target.checked });
+});
+
 // ── Aktualisieren ──
 document.getElementById("ver").textContent =
 	chrome.runtime.getManifest().version;

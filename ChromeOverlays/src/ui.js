@@ -14,6 +14,14 @@
 	const BTN_SIZE = 42;
 	const GAP = 52; // vertikaler Abstand zwischen Buttons
 
+	// "Overlay verschiebbar" (1:1 wie beim Vorlese-Overlay): aus = feste
+	// Standardposition; an = die ganze Button-Gruppe per Maus verschiebbar, bleibt
+	// wo losgelassen. offRight/offBottom = gespeicherter Versatz (px) zum Standard.
+	const DRAG = { on: false, offRight: 0, offBottom: 0 };
+	const DRAG_THRESHOLD = 4;
+	let dragActive = null;
+	let suppressClick = false;
+
 	// Material-Icon im farbigen Kreis (weisses Icon) — Stil wie BestJournal Android.
 	// Trusted-Types-sicher ueber OV.setSvgIcon, Emoji nur als allerletzter Notfall.
 	function iconRender(iconKey, bg, title) {
@@ -90,8 +98,11 @@
 		const pos = profile.uiPos || {};
 		// col 0 = rechte Spalte, col 1 = linke Spalte (eine Button-Breite weiter
 		// links). row 0 = unten. Die genaue Anordnung steht in registry.js (layout).
-		const right = (pos.right ?? 16) + (pos.shiftLeft ?? 0) + col * GAP;
-		const bottom = (pos.bottom ?? 96) + row * GAP;
+		const right =
+			(pos.right ?? 16) + (pos.shiftLeft ?? 0) + col * GAP + DRAG.offRight;
+		const bottom = (pos.bottom ?? 96) + row * GAP + DRAG.offBottom;
+		btn.dataset.ovCol = String(col);
+		btn.dataset.ovRow = String(row);
 		btn.type = "button";
 		btn.tabIndex = -1;
 		const s = btn.style;
@@ -171,6 +182,152 @@
 		return [...(L.right || []), ...(L.left || [])];
 	}
 
+	// Alle aktuellen Buttons mit dem aktuellen Versatz neu positionieren (waehrend
+	// des Ziehens und beim Umschalten der Einstellung).
+	function repositionAll() {
+		if (!currentProfile) return;
+		const pos = currentProfile.uiPos || {};
+		const baseRight = (pos.right ?? 16) + (pos.shiftLeft ?? 0);
+		const baseBottom = pos.bottom ?? 96;
+		profileKeys(currentProfile).forEach((key) => {
+			const btn = document.getElementById(btnId(currentProfile.id, key));
+			if (!btn) return;
+			const col = Number(btn.dataset.ovCol) || 0;
+			const row = Number(btn.dataset.ovRow) || 0;
+			btn.style.setProperty(
+				"right",
+				baseRight + col * GAP + DRAG.offRight + "px",
+				"important",
+			);
+			btn.style.setProperty(
+				"bottom",
+				baseBottom + row * GAP + DRAG.offBottom + "px",
+				"important",
+			);
+		});
+	}
+
+	function loadDragSettings() {
+		try {
+			chrome.storage.local.get(
+				["ovDraggable", "ovOffRight", "ovOffBottom"],
+				(r) => {
+					if (chrome.runtime.lastError) return;
+					DRAG.on = !!r.ovDraggable;
+					DRAG.offRight = DRAG.on ? Number(r.ovOffRight) || 0 : 0;
+					DRAG.offBottom = DRAG.on ? Number(r.ovOffBottom) || 0 : 0;
+					repositionAll();
+				},
+			);
+		} catch (e) {
+			/* egal */
+		}
+	}
+
+	// Einmalige Initialisierung der Drag-Mechanik (Gruppen-Verschiebung).
+	let dragInit = false;
+	function ensureDragInit() {
+		if (dragInit) return;
+		dragInit = true;
+		loadDragSettings();
+
+		document.addEventListener(
+			"mousedown",
+			(e) => {
+				if (!DRAG.on) return;
+				const btn = e.target.closest && e.target.closest(".ov-btn");
+				if (!btn) return;
+				if (e.button !== 0 && e.button !== 2) return; // links ODER rechts
+				dragActive = {
+					startX: e.clientX,
+					startY: e.clientY,
+					startRight: DRAG.offRight,
+					startBottom: DRAG.offBottom,
+					moved: false,
+				};
+				e.preventDefault();
+			},
+			true,
+		);
+
+		document.addEventListener(
+			"mousemove",
+			(e) => {
+				if (!dragActive) return;
+				const dx = e.clientX - dragActive.startX;
+				const dy = e.clientY - dragActive.startY;
+				if (!dragActive.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD)
+					dragActive.moved = true;
+				if (dragActive.moved) {
+					// Maus nach rechts -> right kleiner; nach unten -> bottom kleiner.
+					DRAG.offRight = dragActive.startRight - dx;
+					DRAG.offBottom = dragActive.startBottom - dy;
+					repositionAll();
+				}
+			},
+			true,
+		);
+
+		document.addEventListener(
+			"mouseup",
+			() => {
+				if (!dragActive) return;
+				const wasDrag = dragActive.moved;
+				dragActive = null;
+				if (wasDrag) {
+					try {
+						chrome.storage.local.set({
+							ovOffRight: DRAG.offRight,
+							ovOffBottom: DRAG.offBottom,
+						});
+					} catch (e) {
+						/* egal */
+					}
+					suppressClick = true; // den folgenden Klick schlucken (war ein Zug)
+				}
+			},
+			true,
+		);
+
+		document.addEventListener(
+			"click",
+			(e) => {
+				if (suppressClick && e.target.closest && e.target.closest(".ov-btn")) {
+					e.stopImmediatePropagation();
+					e.preventDefault();
+				}
+				suppressClick = false;
+			},
+			true,
+		);
+
+		document.addEventListener(
+			"contextmenu",
+			(e) => {
+				if (DRAG.on && e.target.closest && e.target.closest(".ov-btn"))
+					e.preventDefault();
+			},
+			true,
+		);
+
+		try {
+			chrome.storage.onChanged.addListener((changes, area) => {
+				if (area !== "local" || !changes.ovDraggable) return;
+				DRAG.on = !!changes.ovDraggable.newValue;
+				if (!DRAG.on) {
+					// Haekchen aus -> zurueck an den Standardort.
+					DRAG.offRight = 0;
+					DRAG.offBottom = 0;
+					repositionAll();
+				} else {
+					loadDragSettings(); // gespeicherten Versatz wieder anwenden
+				}
+			});
+		} catch (e) {
+			/* egal */
+		}
+	}
+
 	function buildOverlay(profile) {
 		currentProfile = profile;
 		if (!document.body) return;
@@ -181,6 +338,7 @@
 		(L.left || []).forEach((key, row) => {
 			makeButton(profile, key, 1, row); // col 1 = linke Spalte
 		});
+		ensureDragInit();
 	}
 
 	function needsRepair() {
