@@ -17,6 +17,13 @@ object WidgetIntents {
 
     const val ACTION_FOCUS = "focus"
     const val ACTION_RESCHEDULE = "reschedule"
+
+    /**
+     * Tap auf die Prio-Perle im Widget: App oeffnen, zur Aufgabe scrollen und
+     * direkt deren Prioritaets-Schieberegler aufklappen (Verknuepfung zur
+     * manuellen Prioritaet — analog zu ACTION_RESCHEDULE beim Bucket-Picker).
+     */
+    const val ACTION_SET_PRIORITY = "set_priority"
     const val ACTION_SETTINGS = "settings"
     const val ACTION_OPEN = "open"
 

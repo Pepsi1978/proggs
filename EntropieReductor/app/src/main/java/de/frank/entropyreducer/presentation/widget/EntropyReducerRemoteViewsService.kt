@@ -313,7 +313,8 @@ class EntropyReducerRemoteViewsFactory(
         // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):
         //  - Haekchen   → ACTION_COMPLETE: hakt die Aufgabe DIREKT ab, ohne App
         //  - Karte      → ACTION_FOCUS: oeffnet die App (Detail)
-        //  - Prio-Perle → ACTION_FOCUS: oeffnet die App (dort der Prio-Schieber)
+        //  - Prio-Perle → ACTION_SET_PRIORITY: oeffnet die App und klappt direkt den
+        //                 Prio-Schieber DIESER Aufgabe auf (manuelle Prioritaet setzen)
         //  - Bucket     → ACTION_RESCHEDULE: oeffnet die App (dort der Bucket-Picker)
         // Bei erledigten Eintraegen hakt das Haekchen NICHT erneut ab — Tap oeffnet die App.
         views.setOnClickFillInIntent(
@@ -321,7 +322,7 @@ class EntropyReducerRemoteViewsFactory(
             fillIn(entry.id, if (resolved) WidgetIntents.ACTION_FOCUS else WidgetIntents.ACTION_COMPLETE),
         )
         views.setOnClickFillInIntent(R.id.task_card_root, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
-        views.setOnClickFillInIntent(R.id.task_prio_pill, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
+        views.setOnClickFillInIntent(R.id.task_prio_pill, fillIn(entry.id, WidgetIntents.ACTION_SET_PRIORITY))
         views.setOnClickFillInIntent(R.id.bucket_status_pill, fillIn(entry.id, WidgetIntents.ACTION_RESCHEDULE))
 
         return views

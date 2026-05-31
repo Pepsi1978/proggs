@@ -144,6 +144,10 @@ fun TasksScreen(
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
     // die Anzeige immer den neusten manualBucket/timeBucket-Stand zeigt.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
+    // Frank-Wunsch 2026-05-31: Welche Aufgabe nach einem Widget-Tap auf die Prio-Perle
+    // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
+    // Karte selbst wieder geleert, sobald sie den Regler aufgeklappt hat.
+    var prioPickerEntryId by remember { mutableStateOf<String?>(null) }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -226,7 +230,9 @@ fun TasksScreen(
         val isTaskAction =
             link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
                 link.action ==
-                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE ||
+                link.action ==
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY
         if (!isTaskAction) return@LaunchedEffect
 
         // Warten bis Tasks geladen sind, sonst kann computeTaskLocation
@@ -251,6 +257,16 @@ fun TasksScreen(
                 de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
         ) {
             bucketPickerEntryId = link.taskId
+        }
+
+        // 2b) Bei SET_PRIORITY den Schieberegler genau dieser Aufgabe direkt aufklappen.
+        // Die Karte (EntropyEntryCard) liest prioPickerEntryId und oeffnet ihren Slider,
+        // sobald sie nach dem Scroll gerendert ist — und leert die Markierung wieder.
+        if (
+            link.action ==
+                de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY
+        ) {
+            prioPickerEntryId = link.taskId
         }
 
         // 3) Bus clearen — Link wurde konsumiert
@@ -580,6 +596,8 @@ fun TasksScreen(
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
                                             onSetManualPriority = onSetPrio,
+                                            autoOpenPrioSlider = prioPickerEntryId == entry.id,
+                                            onPrioSliderConsumed = { prioPickerEntryId = null },
                                         )
                                     }
                                 } else if (
@@ -1517,6 +1535,8 @@ private fun EntropyEntryCard(
     onSeverityHint: () -> Unit = {},
     onPickBucket: () -> Unit = {},
     onSetManualPriority: (Double) -> Unit = {},
+    autoOpenPrioSlider: Boolean = false,
+    onPrioSliderConsumed: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
@@ -1531,6 +1551,17 @@ private fun EntropyEntryCard(
     // Effektive Prioritaet = Live-Regler ?: manueller Wert ?: KI-Wert.
     var sliderActive by remember(entry.id) { mutableStateOf(false) }
     var liveSlider by remember(entry.id) { mutableStateOf<Float?>(null) }
+    // Frank-Wunsch 2026-05-31: Tap auf die Prio-Perle im Widget oeffnet die App und
+    // klappt direkt den Schieberegler GENAU dieser Aufgabe auf (Verknuepfung zur
+    // manuellen Prioritaet, analog zum Bucket-Picker). autoOpenPrioSlider wird vom
+    // TasksScreen gesetzt, sobald der Widget-Deep-Link diese Karte meint; danach wird
+    // die Markierung via onPrioSliderConsumed sofort wieder geleert.
+    LaunchedEffect(autoOpenPrioSlider) {
+        if (autoOpenPrioSlider) {
+            sliderActive = true
+            onPrioSliderConsumed()
+        }
+    }
     val effectivePriority =
         liveSlider?.toDouble() ?: entry.manualPriorityScore ?: entry.priorityScore
 
