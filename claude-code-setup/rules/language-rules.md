@@ -1,3 +1,24 @@
+---
+# Path-scoped (2026-05-31): laedt nur beim Bearbeiten von Quellcode der jeweiligen Sprache.
+# Verlustfrei — die Specs sind da WENN man Code dieser Sprache anfasst; beim reinen Reden/
+# Planen werden sie nicht gebraucht. Spart Sockel ausserhalb von Code-Arbeit.
+paths:
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.cs"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.rs"
+  - "**/*.go"
+  - "**/*.swift"
+  - "**/*.java"
+  - "**/*.cpp"
+  - "**/*.c"
+  - "**/*.h"
+  - "**/*.hpp"
+---
+
 # Programmiersprachen-Regeln (Referenz)
 
 > Konsolidiert aus: cpp, csharp, go, java, kotlin, rust, swift, typescript, tampermonkey
