@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Bucket-Header in der ListView (Heute / Morgen / Freiblock / Spaeter).
-  Bucket-Tinted Pille + Anzahl + Chevron rechts (auf/zu). Der ganze Header ist
-  antippbar (Akkordeon, Frank-Wunsch 2026-05-31): Klick klappt diese Sektion auf
-  und alle anderen zu; Klick auf die offene klappt sie zu.
+  Sektions-Header in der ListView (Heute / Morgen / Freiblock / Spaeter / Loop /
+  Erledigt). 1:1 zur App-AccordionHeaderRow (Frank-Wunsch 2026-05-31): volle Breite,
+  Icon-Kaestchen + grosses Label + farbige Count-Pille + Chevron. Der ganze Header ist
+  antippbar (Akkordeon): Klick klappt diese Sektion auf und alle anderen zu.
+  Hintergrund-Toenung der offenen Sektion + alle Akzentfarben werden im Code gesetzt.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/bucket_header_root"
@@ -11,60 +12,68 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingTop="4dp"
-    android:paddingBottom="6dp">
+    android:layout_marginTop="6dp"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="8dp">
 
-    <LinearLayout
-        android:id="@+id/bucket_pill"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="10dp"
-        android:paddingVertical="5dp"
-        android:background="@drawable/widget_bucket_pill_bg">
+    <!-- Icon-Kaestchen -->
+    <FrameLayout
+        android:id="@+id/bucket_icon_box"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/widget_icon_box_bg">
 
         <ImageView
             android:id="@+id/bucket_icon"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center"
             android:src="@drawable/ic_widget_bucket_today"
-            android:contentDescription="Bucket" />
-
-        <TextView
-            android:id="@+id/bucket_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#F472B6"
-            android:text="Heute" />
-    </LinearLayout>
+            android:contentDescription="Bereich" />
+    </FrameLayout>
 
     <ImageView
-        android:layout_width="6dp"
+        android:layout_width="10dp"
         android:layout_height="1dp" />
 
+    <!-- Grosses Label (Grossbuchstaben) -->
     <TextView
-        android:id="@+id/bucket_count"
+        android:id="@+id/bucket_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="#A499D9"
-        android:text="0" />
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:textColor="#EAE6FF"
+        android:text="HEUTE" />
 
-    <!-- Schiebt den Chevron nach ganz rechts -->
+    <!-- Schiebt Count-Pille + Chevron nach rechts -->
     <ImageView
         android:layout_width="0dp"
         android:layout_height="1dp"
         android:layout_weight="1" />
 
-    <!-- Auf/Zu-Pfeil (Akkordeon) -->
+    <!-- Farbige Count-Pille -->
+    <TextView
+        android:id="@+id/bucket_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="3dp"
+        android:background="@drawable/widget_pill_bg"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#F472B6"
+        android:text="0" />
+
+    <ImageView
+        android:layout_width="8dp"
+        android:layout_height="1dp" />
+
+    <!-- Auf/Zu-Pfeil -->
     <ImageView
         android:id="@+id/bucket_chevron"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:src="@drawable/ic_widget_chevron_down"
         android:contentDescription="Aufklappen/Zuklappen" />
 </LinearLayout>

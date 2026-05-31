@@ -12,7 +12,9 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.R
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
+import de.frank.entropyreducer.data.local.dao.RecurringTemplateDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
@@ -41,6 +43,7 @@ class EntropyReducerRemoteViewsService : RemoteViewsService() {
     interface WidgetDataEntryPoint {
         fun entryDao(): EntropyEntryDao
         fun appSettings(): AppSettings
+        fun recurringDao(): RecurringTemplateDao
     }
 }
 
@@ -68,6 +71,7 @@ class EntropyReducerRemoteViewsFactory(
         )
         val dao = entry.entryDao()
         val settings = entry.appSettings()
+        val recurringDao = entry.recurringDao()
 
         runBlocking {
             val themeMode = settings.readWidgetThemeModeOnce()
@@ -77,34 +81,77 @@ class EntropyReducerRemoteViewsFactory(
             val all = dao.getActive().first()
                 .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
 
-            val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
-                mapOf(
-                    TimeBucket.HEUTE to all
-                        .filter { it.timeBucket == TimeBucket.HEUTE }
-                        .sortedByDescending { it.manualPriorityScore ?: it.priorityScore },
-                )
-            } else {
-                ALL_BUCKETS.associateWith { bucket ->
+            // Bei "Nur Heute" wird nur der HEUTE-Bucket gezeigt; sonst alle vier. Loop und
+            // Erledigt kommen IMMER dazu (Frank-Wunsch 2026-05-31).
+            val bucketsToShow = if (onlyToday) listOf(TimeBucket.HEUTE) else ALL_BUCKETS
+            val grouped: Map<TimeBucket, List<EntropyEntryEntity>> =
+                bucketsToShow.associateWith { bucket ->
                     all.filter { it.timeBucket == bucket }
                         .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
                 }
-            }
 
-            // Akkordeon (Frank-Wunsch 2026-05-31): nur die Tasks des AKTUELL offenen
-            // Buckets erscheinen; alle anderen zeigen nur ihren Header. Der offene Bucket
-            // kommt aus WidgetExpandState (Default HEUTE).
+            // Erledigte (REDUZIERT) — fuer die Erledigt-Sektion, neueste zuerst.
+            val resolved = runCatching {
+                dao.getRecentlyResolved(sinceMillis = 0L).first()
+                    .sortedByDescending { it.resolvedAt ?: it.updatedAt }
+            }.getOrDefault(emptyList())
+
+            // Loop-Vorlagen (wiederkehrende Aufgaben) — fuer die Loop-Sektion.
+            val templates = runCatching {
+                recurringDao.observeAll().first()
+            }.getOrDefault(emptyList())
+
+            // Akkordeon (Frank-Wunsch 2026-05-31): ALLE Sektions-Header sind IMMER sichtbar
+            // (auch leer), damit Frank durchschalten kann. Eintraege erscheinen nur in der
+            // aktuell offenen Sektion (WidgetExpandState, Default HEUTE).
             val expandedName = WidgetExpandState.get()
             val list = mutableListOf<WidgetListItem>()
-            ALL_BUCKETS.forEach { bucket ->
+
+            // 1.-4. Zeit-Buckets
+            bucketsToShow.forEach { bucket ->
                 val tasks = grouped[bucket].orEmpty()
-                if (tasks.isNotEmpty()) {
-                    val isExpanded = expandedName == bucket.name
-                    list.add(WidgetListItem.BucketHeader(bucket, tasks.size, isExpanded))
-                    if (isExpanded) {
-                        tasks.forEach { list.add(WidgetListItem.Task(it)) }
-                    }
-                }
+                val isExpanded = expandedName == bucket.name
+                list.add(
+                    WidgetListItem.SectionHeader(
+                        key = bucket.name,
+                        label = bucketLabel(bucket).uppercase(),
+                        iconRes = bucketIconRes(bucket),
+                        accent = bucketColor(palette, bucket),
+                        count = tasks.size,
+                        expanded = isExpanded,
+                    ),
+                )
+                if (isExpanded) tasks.forEach { list.add(WidgetListItem.Task(it, resolved = false)) }
             }
+
+            // 5. Loop
+            val loopExpanded = expandedName == SECTION_LOOP
+            list.add(
+                WidgetListItem.SectionHeader(
+                    key = SECTION_LOOP,
+                    label = "LOOP",
+                    iconRes = R.drawable.ic_widget_loop,
+                    accent = palette.prioOrange,
+                    count = templates.size,
+                    expanded = loopExpanded,
+                ),
+            )
+            if (loopExpanded) templates.forEach { list.add(WidgetListItem.Loop(it)) }
+
+            // 6. Erledigt
+            val resolvedExpanded = expandedName == SECTION_ERLEDIGT
+            list.add(
+                WidgetListItem.SectionHeader(
+                    key = SECTION_ERLEDIGT,
+                    label = "ERLEDIGT",
+                    iconRes = R.drawable.ic_widget_done,
+                    accent = WIDGET_SUCCESS,
+                    count = resolved.size,
+                    expanded = resolvedExpanded,
+                ),
+            )
+            if (resolvedExpanded) resolved.forEach { list.add(WidgetListItem.Task(it, resolved = true)) }
+
             items = list
         }
     }
@@ -120,20 +167,22 @@ class EntropyReducerRemoteViewsFactory(
             return RemoteViews(context.packageName, R.layout.widget_item_bucket_header)
         }
         return when (val item = items[position]) {
-            is WidgetListItem.BucketHeader -> buildBucketHeader(item)
-            is WidgetListItem.Task -> buildTaskCard(item.entry)
+            is WidgetListItem.SectionHeader -> buildSectionHeader(item)
+            is WidgetListItem.Task -> buildTaskCard(item.entry, item.resolved)
+            is WidgetListItem.Loop -> buildLoopCard(item.template)
         }
     }
 
     override fun getLoadingView(): RemoteViews? = null
 
-    override fun getViewTypeCount(): Int = 2
+    override fun getViewTypeCount(): Int = 3
 
     override fun getItemId(position: Int): Long {
         if (position < 0 || position >= items.size) return position.toLong()
         return when (val it = items[position]) {
-            is WidgetListItem.BucketHeader -> it.bucket.ordinal.toLong()
+            is WidgetListItem.SectionHeader -> it.key.hashCode().toLong()
             is WidgetListItem.Task -> it.entry.id.hashCode().toLong()
+            is WidgetListItem.Loop -> ("loop-" + it.template.id).hashCode().toLong()
         }
     }
 
@@ -141,37 +190,66 @@ class EntropyReducerRemoteViewsFactory(
 
     // === Bucket-Header ===
 
-    private fun buildBucketHeader(item: WidgetListItem.BucketHeader): RemoteViews {
+    private fun buildSectionHeader(item: WidgetListItem.SectionHeader): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_item_bucket_header)
-        val accent = bucketColor(palette, item.bucket)
-        // Hintergrund der Pille mit 22% Alpha vom Akzent
-        views.setColorStateList(R.id.bucket_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.22f)))
-        views.setImageViewResource(R.id.bucket_icon, bucketIconRes(item.bucket))
+        val accent = item.accent
+        // Icon-Kaestchen: Akzent mit 18% Alpha + Icon in Akzentfarbe.
+        views.setColorStateList(R.id.bucket_icon_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.18f)))
+        views.setImageViewResource(R.id.bucket_icon, item.iconRes)
         views.setInt(R.id.bucket_icon, "setColorFilter", accent)
-        views.setTextViewText(R.id.bucket_label, bucketLabel(item.bucket))
-        views.setTextColor(R.id.bucket_label, accent)
+        // Grosses Label (Grossbuchstaben) in textPrimary.
+        views.setTextViewText(R.id.bucket_label, item.label)
+        views.setTextColor(R.id.bucket_label, palette.textPrimary)
+        // Count-Pille: Akzent 18% Hintergrund + Akzent-Text.
+        views.setColorStateList(R.id.bucket_count, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.18f)))
         views.setTextViewText(R.id.bucket_count, item.count.toString())
-        views.setTextColor(R.id.bucket_count, palette.textSecondary)
-        // Chevron: hoch = offen, runter = zu (Akkordeon).
+        views.setTextColor(R.id.bucket_count, accent)
+        // Chevron: hoch = offen, runter = zu.
         views.setImageViewResource(
             R.id.bucket_chevron,
             if (item.expanded) R.drawable.ic_widget_chevron_up else R.drawable.ic_widget_chevron_down,
         )
-        views.setInt(R.id.bucket_chevron, "setColorFilter", palette.textSecondary)
+        views.setInt(R.id.bucket_chevron, "setColorFilter", accent)
+        // Offene Sektion bekommt eine zarte Akzent-Toenung (wie die App-AccordionHeaderRow).
+        if (item.expanded) {
+            views.setInt(R.id.bucket_header_root, "setBackgroundResource", R.drawable.widget_section_header_bg)
+            views.setColorStateList(R.id.bucket_header_root, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.12f)))
+        } else {
+            views.setInt(R.id.bucket_header_root, "setBackgroundResource", 0)
+        }
         // Tap auf den ganzen Header → diese Sektion auf-/zuklappen (ohne App zu oeffnen).
         val toggleFill = Intent().apply {
             putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_TOGGLE_BUCKET)
-            putExtra(WidgetIntents.EXTRA_BUCKET, item.bucket.name)
-            // Eindeutige URI je Bucket, damit die FillInIntents nicht gecached kollidieren.
-            data = android.net.Uri.parse("widget://bucket/${item.bucket.name}/toggle")
+            putExtra(WidgetIntents.EXTRA_BUCKET, item.key)
+            data = android.net.Uri.parse("widget://section/${item.key}/toggle")
         }
         views.setOnClickFillInIntent(R.id.bucket_header_root, toggleFill)
         return views
     }
 
+    private fun buildLoopCard(template: RecurringTemplateEntity): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_item_loop)
+        // Verlaufs-Hintergrund nach Prioritaet (gleiche Rampe wie Aufgaben/App).
+        views.setColorStateList(
+            R.id.loop_card_root,
+            "setBackgroundTintList",
+            android.content.res.ColorStateList.valueOf(priorityRampArgb(template.priorityScore.toDouble())),
+        )
+        views.setInt(R.id.loop_icon, "setColorFilter", palette.textPrimary)
+        views.setTextViewText(R.id.loop_title, template.title)
+        views.setTextColor(R.id.loop_title, palette.textPrimary)
+        // Tap oeffnet die App (Aktiv/Inaktiv-Schalten bleibt dort).
+        val fill = Intent().apply {
+            putExtra(WidgetIntents.EXTRA_ACTION, WidgetIntents.ACTION_OPEN)
+            data = android.net.Uri.parse("widget://loop/${template.id}/open")
+        }
+        views.setOnClickFillInIntent(R.id.loop_card_root, fill)
+        return views
+    }
+
     // === Aufgaben-Karte ===
 
-    private fun buildTaskCard(entry: EntropyEntryEntity): RemoteViews {
+    private fun buildTaskCard(entry: EntropyEntryEntity, resolved: Boolean): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_item_task)
 
         // Effektive Prioritaet wie in der App: manueller Wert hat Vorrang vor KI.
@@ -191,7 +269,8 @@ class EntropyReducerRemoteViewsFactory(
         // Haekchen: normalerweise leeres Quadrat mit deutlicher dunkler Umrandung
         // (klar als Klickfeld erkennbar). Direkt nach dem Tap (ID im WidgetCheckState)
         // kurz ein gefuelltes gruenes Haekchen — dann verschwindet die Aufgabe.
-        if (WidgetCheckState.isChecking(entry.id)) {
+        if (resolved || WidgetCheckState.isChecking(entry.id)) {
+            // Erledigt (Erledigt-Sektion) ODER gerade abgehakt: gefuelltes gruenes Haekchen.
             views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_done)
             views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(WIDGET_SUCCESS))
             views.setImageViewResource(R.id.task_check_box, R.drawable.ic_widget_check)
@@ -231,7 +310,11 @@ class EntropyReducerRemoteViewsFactory(
         //  - Karte      → ACTION_FOCUS: oeffnet die App (Detail)
         //  - Prio-Perle → ACTION_FOCUS: oeffnet die App (dort der Prio-Schieber)
         //  - Bucket     → ACTION_RESCHEDULE: oeffnet die App (dort der Bucket-Picker)
-        views.setOnClickFillInIntent(R.id.task_check_box, fillIn(entry.id, WidgetIntents.ACTION_COMPLETE))
+        // Bei erledigten Eintraegen hakt das Haekchen NICHT erneut ab — Tap oeffnet die App.
+        views.setOnClickFillInIntent(
+            R.id.task_check_box,
+            fillIn(entry.id, if (resolved) WidgetIntents.ACTION_FOCUS else WidgetIntents.ACTION_COMPLETE),
+        )
         views.setOnClickFillInIntent(R.id.task_card_root, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
         views.setOnClickFillInIntent(R.id.task_prio_pill, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
         views.setOnClickFillInIntent(R.id.bucket_status_pill, fillIn(entry.id, WidgetIntents.ACTION_RESCHEDULE))
@@ -251,9 +334,22 @@ class EntropyReducerRemoteViewsFactory(
 // === Sealed class fuer ListView-Items ===
 
 sealed class WidgetListItem {
-    data class BucketHeader(val bucket: TimeBucket, val count: Int, val expanded: Boolean) : WidgetListItem()
-    data class Task(val entry: EntropyEntryEntity) : WidgetListItem()
+    /** Generischer Sektions-Header (Zeit-Bucket, Loop oder Erledigt). */
+    data class SectionHeader(
+        val key: String,
+        val label: String,
+        val iconRes: Int,
+        val accent: Int,
+        val count: Int,
+        val expanded: Boolean,
+    ) : WidgetListItem()
+    data class Task(val entry: EntropyEntryEntity, val resolved: Boolean) : WidgetListItem()
+    data class Loop(val template: RecurringTemplateEntity) : WidgetListItem()
 }
+
+/** Sektions-Schluessel fuer Loop und Erledigt (Zeit-Buckets nutzen TimeBucket.name). */
+internal const val SECTION_LOOP = "LOOP"
+internal const val SECTION_ERLEDIGT = "ERLEDIGT"
 
 // === Helpers ===
 

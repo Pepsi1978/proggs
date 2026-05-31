@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Icon-Kaestchen im Sektions-Header (28dp, abgerundet 8dp). Weiss-Basis, wird zur
+  Laufzeit mit der Akzentfarbe getoent (ca. 18% Alpha) — wie die Icon-Box der
+  App-AccordionHeaderRow.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <corners android:radius="8dp" />
+</shape>
