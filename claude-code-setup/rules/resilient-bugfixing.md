@@ -478,6 +478,32 @@ settings.json abgeschnitten und JSON unlesbar gemacht.
  
 ---
  
+## Verlustfreie Reduktion & Regressionstest-Pflicht (Funktionalitaets-Erhaltung, Teil 2)
+
+> Ergaenzt die Funktionalitaets-Erhaltungspflicht oben. Eigenstaendige Regel:
+> `~/.claude/rules/lossless-context-principle.md`. Anwendung auf Agenten:
+> `~/.claude/rules/subagent-crash-proofing.md`.
+
+Jede Optimierung, die Kontext/Tokens/Umfang reduziert (Regeln verschlanken, Tool-Output
+begrenzen, Worker-Scope kuerzen, Daten auslagern), MUSS verlustfrei sein:
+
+| **Verlustbehaftet (lossy) — VERBOTEN** | **Verlustfrei (lossless) — ERLAUBT** |
+|----------------------------------------|--------------------------------------|
+| Information wegwerfen: Truncation, blindes `head_limit` das Treffer kappt, gebrauchte Regel weglassen, Feature entfernen | Information auslagern, bleibt erreichbar: File-as-Memory, progressive disclosure, path-scoped rules, just-in-time, count→gezielt-content |
+| Capability sinkt | Capability bleibt 100% — jeder Fakt per `read(pfad)` wiederholbar |
+
+**Context-Rot-Hinweis:** Weniger Ballast macht Agenten nicht schlechter, sondern genauer
+(Chroma 2026; GPT-4 98,1%→64,1% nur durch Struktur). Lossless-Reduktion = crash-sicher UND besser.
+
+**Regressionstest-Pflicht (Anthropic "Demystifying evals"):** Vor der Optimierung Baseline
+festhalten (was leistet der Agent/die Pipeline?), nach der Optimierung identischen Lauf
+wiederholen, vergleichen. Near-100% der Leistung muss erhalten bleiben — jede Einbusse =
+Regression = zuruecknehmen oder nachbessern. Erst wenn Capability == Baseline UND das
+Problem geloest: bestanden. Das ist die harte Funktionalitaets-Garantie fuer jeden Fix,
+der etwas reduziert.
+
+---
+
 ## Was NIEMALS passieren darf
  
 Diese Liste ist ABSOLUT. Jeder einzelne Punkt ist ein Versagen der Dritten Direktive:
@@ -581,6 +607,8 @@ Vor dem Commit jedes Fixes diese Checkliste mental durchgehen:
 □ Fix-Induced-Failure-Pruefung (8 Punkte) bestanden?
 □ Funktionalitaets-Diff: Alle Features weiterhin ✅?
 □ KEINE Funktionalitaet entfernt, auskommentiert oder geschluckt?
+□ Falls etwas reduziert wurde (Kontext/Tokens/Umfang): verlustfrei (ausgelagert, nicht weggeworfen)?
+□ Falls reduziert: Regressionstest gegen Baseline bestanden (Capability == vorher)?
 □ Mindestens 2 Absicherungsschichten (praeventiv + reaktiv)?
 □ Poka-Yoke geprueft (kann der Fehler eliminiert werden)?
 □ Memory mit Root Cause, Fix und Muster-Erkennung gespeichert?
