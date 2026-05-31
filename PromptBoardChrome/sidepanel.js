@@ -48,20 +48,42 @@ function uid() {
 	return "p" + Date.now() + Math.floor(Math.random() * 1000);
 }
 
+const STORE_KEY = "prompts";
+
 function load() {
-	chrome.storage.sync.get({ prompts: null }, (res) => {
-		if (Array.isArray(res.prompts)) {
-			prompts = res.prompts;
-		} else {
-			prompts = DEFAULT_PROMPTS.slice();
-			save(); // seed defaults on first run
+	// chrome.storage.local: zuverlaessig + grosszuegig (~5 MB). Frueher wurde
+	// chrome.storage.sync genutzt — das hat aber nur 8 KB PRO EINTRAG; ein langer
+	// Prompt (z.B. PDF) sprengte das Limit, set() schlug LAUTLOS fehl und der
+	// Eintrag war nach dem Neuladen weg. Darum local + Migration aus sync.
+	chrome.storage.local.get({ [STORE_KEY]: null }, (res) => {
+		if (Array.isArray(res[STORE_KEY])) {
+			prompts = res[STORE_KEY];
+			render();
+			return;
 		}
-		render();
+		// Noch nichts in local -> evtl. liegen aeltere Prompts in sync. Uebernehmen.
+		chrome.storage.sync.get({ prompts: null }, (s) => {
+			if (Array.isArray(s.prompts) && s.prompts.length) {
+				prompts = s.prompts;
+			} else {
+				prompts = DEFAULT_PROMPTS.slice();
+			}
+			save(); // nach local schreiben (Migration bzw. Defaults setzen)
+			render();
+		});
 	});
 }
 
 function save() {
-	chrome.storage.sync.set({ prompts });
+	chrome.storage.local.set({ [STORE_KEY]: prompts }, () => {
+		if (chrome.runtime.lastError) {
+			// Speichern fehlgeschlagen -> sichtbar warnen, nicht lautlos verlieren.
+			showHint(
+				"Konnte nicht speichern: " + chrome.runtime.lastError.message,
+				true,
+			);
+		}
+	});
 }
 
 function showHint(msg, isError) {
