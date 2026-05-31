@@ -3,7 +3,15 @@
 Python standard library. The icon is a rounded purple square with three white
 bars that read as a list / prompt board, matching the in-panel SVG logo.
 
-Run: python generate_icons.py
+This script lives in a dot-prefixed folder (.tools) ON PURPOSE: Chrome ignores
+any file/directory whose name starts with "." when loading an unpacked
+extension, but REJECTS the whole extension if any name starts with "_".
+Python tooling produces __pycache__ (underscore) when compiled, so keeping the
+script outside the Chrome-scanned tree means that cache can never break loading.
+(.tools rather than .build because the global gitignore ignores .build/, and we
+want this tooling tracked in the repo.)
+
+Run: python .tools/generate_icons.py   (writes into ../icons)
 """
 
 import os
@@ -18,14 +26,9 @@ TRANSPARENT = (0, 0, 0, 0)
 def _in_rounded(x, y, s, r):
     """True if pixel center is inside the rounded-rect silhouette."""
     px, py = x + 0.5, y + 0.5
-    corners = [(r, r), (s - r, r), (r, s - r), (s - r, s - r)]
     in_x = px < r or px > s - r
     in_y = py < r or py > s - r
     if in_x and in_y:
-        for cx, cy in corners:
-            if (cx - r <= px <= cx + r) and (cy - r <= py <= cy + r):
-                pass
-        # nearest corner center
         cx = r if px < r else s - r
         cy = r if py < r else s - r
         return (px - cx) ** 2 + (py - cy) ** 2 <= r * r
@@ -77,7 +80,9 @@ def make_icon(path, s):
 
 
 def main():
-    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
+    # Write into <extension-root>/icons, i.e. one level up from this .tools dir.
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base = os.path.join(root, "icons")
     os.makedirs(base, exist_ok=True)
     for size in (16, 48, 128):
         make_icon(os.path.join(base, f"icon{size}.png"), size)

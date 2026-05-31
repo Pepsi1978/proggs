@@ -20,9 +20,11 @@ schließt es wieder. Im Panel klickst du auf einen Prompt — er wird sofort in 
 
 1. Icons erzeugen (einmalig):
    ```
-   python generate_icons.py
+   python .tools/generate_icons.py
    ```
    Das legt `icons/icon16.png`, `icon48.png`, `icon128.png` an.
+   (Das Skript liegt bewusst in `.tools/` — Chrome ignoriert `.`-Ordner, und so
+   kann das Python-`__pycache__` die Erweiterung nie blockieren.)
 2. In Chrome `chrome://extensions` öffnen.
 3. Oben rechts **Entwicklermodus** einschalten.
 4. **Entpackte Erweiterung laden** klicken und den Ordner `PromptBoardChrome` auswählen.
@@ -41,4 +43,4 @@ schließt es wieder. Im Panel klickst du auf einen Prompt — er wird sofort in 
 | `background.js` | Service Worker — aktiviert das Klick-Toggle des Symbols |
 | `sidepanel.html/.css/.js` | Oberfläche des Panels, Prompt-Verwaltung |
 | `content.js` | Merkt sich das letzte Textfeld und fügt den Prompt ein |
-| `generate_icons.py` | Erzeugt die Toolbar-Icons (nur Standardbibliothek) |
+| `.tools/generate_icons.py` | Erzeugt die Toolbar-Icons (nur Standardbibliothek, außerhalb des Chrome-Scans) |
