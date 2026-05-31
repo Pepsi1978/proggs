@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Vorlese-Overlay",
-	"version": "0.6.2",
+	"version": "0.7.0",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
 	"action": {
@@ -23,10 +23,14 @@
 		"offscreen",
 		"activeTab",
 		"scripting",
+		"sidePanel",
 		"declarativeNetRequestWithHostAccess",
 		"downloads",
 		"contextMenus"
 	],
+	"side_panel": {
+		"default_path": "sidepanel/sidepanel.html"
+	},
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
 		"https://speech.platform.bing.com/*",
