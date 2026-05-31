@@ -1503,20 +1503,49 @@ private fun priorityCardTint(score: Double, isDark: Boolean): Color {
     return base.copy(alpha = if (isDark) 0.14f else 0.18f)
 }
 
+// Frank-Wunsch 2026-05-31 (Folge-Korrektur): Anker-Farben fuer die drei
+// Farbfamilien. Innerhalb jeder Familie wird zwischen "dunkel" (hohes Ende) und
+// "hell" (niedriges Ende) interpoliert.
+private val PRIO_DARK_RED = Color(0xFF7F1D1D) // 100 % — dunkelrot
+private val PRIO_LIGHT_RED = Color(0xFFF87171) // ~67 % — hellrot
+private val PRIO_DARK_ORANGE = Color(0xFFEA580C) // ~67 % — dunkelorange/-gelb
+private val PRIO_LIGHT_YELLOW = Color(0xFFFDE047) // ~33 % — hellgelb
+private val PRIO_DARK_GREEN = Color(0xFF15803D) // ~33 % — dunkelgruen
+private val PRIO_LIGHT_GREEN = Color(0xFF86EFAC) // 0 % — hellgruen
+
 /**
- * Frank-Wunsch 2026-05-31: 5-Stufen-Farbrampe fuer den Karten-Hintergrund.
- * Hohe Prioritaet (100) = ganz Dunkelrot, runter ueber Orange/Gelb bis
- * Hellgruen bei niedriger Prioritaet (0). KEIN Blau mehr — die Farbe allein
- * macht die Prioritaet sofort sichtbar, ohne dass eine Zahl noetig ist.
+ * Frank-Wunsch 2026-05-31 (Folge-Korrektur): kontinuierliche Farbrampe in
+ * 5%-Schritten statt 5 grober Bloecke. Der Wert wird auf den naechsten
+ * 5er-Schritt gerundet (0,5,…,100), sodass JEDER 5%-Schritt eine eigene,
+ * klar unterscheidbare Farbe hat.
+ *
+ * Drei Farbfamilien ueber je ~33,3 % des Bereichs:
+ *  - 66,7..100 : Rot      — dunkelrot (100) → hellrot (66,7)
+ *  - 33,3..66,7: Gelb     — dunkelorange (66,7) → hellgelb (33,3)
+ *  - 0..33,3   : Gruen    — dunkelgruen (33,3) → hellgruen (0)
+ * Innerhalb jeder Familie wird linear interpoliert (kein Blau).
  */
-private fun priorityRampColor(score: Double): Color =
-    when {
-        score >= 80.0 -> Color(0xFFB91C1C) // Dunkelrot — hoechste Prioritaet
-        score >= 60.0 -> Color(0xFFF97316) // Orange
-        score >= 40.0 -> Color(0xFFFBBF24) // Gelb
-        score >= 20.0 -> Color(0xFFA3E635) // Gelbgruen
-        else -> Color(0xFF86EFAC) // Hellgruen — niedrigste Prioritaet
+private fun priorityRampColor(score: Double): Color {
+    val stepped = (Math.round(score.coerceIn(0.0, 100.0) / 5.0) * 5).toDouble()
+    val third = 100.0 / 3.0
+    return when {
+        stepped >= 2 * third -> {
+            // Rot-Familie: bei 2*third (hellrot) → bei 100 (dunkelrot)
+            val t = ((stepped - 2 * third) / (100.0 - 2 * third)).coerceIn(0.0, 1.0)
+            androidx.compose.ui.graphics.lerp(PRIO_LIGHT_RED, PRIO_DARK_RED, t.toFloat())
+        }
+        stepped >= third -> {
+            // Gelb-Familie: bei third (hellgelb) → bei 2*third (dunkelorange)
+            val t = ((stepped - third) / third).coerceIn(0.0, 1.0)
+            androidx.compose.ui.graphics.lerp(PRIO_LIGHT_YELLOW, PRIO_DARK_ORANGE, t.toFloat())
+        }
+        else -> {
+            // Gruen-Familie: bei 0 (hellgruen) → bei third (dunkelgruen)
+            val t = (stepped / third).coerceIn(0.0, 1.0)
+            androidx.compose.ui.graphics.lerp(PRIO_LIGHT_GREEN, PRIO_DARK_GREEN, t.toFloat())
+        }
     }
+}
 
 @Composable
 private fun EntropyEntryCard(
