@@ -65,23 +65,12 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 }
 
 // ── Gemini generateContent ──
-async function geminiGenerate({ prompt, model, temperature, maxOutputTokens }) {
-	const key = await getKey("geminiKey");
-	if (!key)
-		return {
-			ok: false,
-			error: "Gemini API-Key fehlt (Einstellungen oeffnen).",
-		};
+// In-memory: einmal aufgeloestes, fuer diesen Key funktionierendes Modell.
+let resolvedGeminiModel = null;
+const GEMINI_DEFAULT_MODEL = "models/gemini-2.5-flash";
 
-	const usedModel = (model || "models/gemini-3.1-flash-lite").replace(
-		/^\/+/,
-		"",
-	);
-	const url =
-		`https://generativelanguage.googleapis.com/v1beta/${usedModel}:generateContent?key=` +
-		encodeURIComponent(key);
-
-	const generationConfig = usedModel.includes("gemini-3")
+function buildGeminiPayload(modelName, prompt, temperature, maxOutputTokens) {
+	const generationConfig = modelName.includes("gemini-3")
 		? {
 				maxOutputTokens: maxOutputTokens || 2048,
 				thinkingConfig: { thinkingLevel: "MEDIUM" },
@@ -90,46 +79,130 @@ async function geminiGenerate({ prompt, model, temperature, maxOutputTokens }) {
 				temperature: temperature ?? 0.4,
 				maxOutputTokens: maxOutputTokens || 2048,
 			};
-
-	const payload = {
+	return {
 		contents: [{ role: "user", parts: [{ text: prompt }] }],
 		generationConfig,
 	};
+}
 
-	const attempt = async (n) => {
+// Ein einzelner generateContent-Aufruf. Liefert {ok, status, text?, error?}.
+async function callGeminiOnce(modelName, key, payload) {
+	const url =
+		`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=` +
+		encodeURIComponent(key);
+	const r = await withTimeout(
+		fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload),
+		}),
+		REQUEST_TIMEOUT_MS,
+		"Gemini",
+	);
+	const body = await r.text();
+	if (!r.ok) {
+		let msg = body.slice(0, 800) || `HTTP ${r.status}`;
 		try {
-			const r = await withTimeout(
-				fetch(url, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(payload),
-				}),
-				REQUEST_TIMEOUT_MS,
-				"Gemini",
-			);
-			const body = await r.text();
-			if (!r.ok) {
-				let msg = body.slice(0, 800);
-				try {
-					const j = JSON.parse(body);
-					msg = j?.error?.message || j?.message || msg;
-				} catch {}
-				return { ok: false, error: `HTTP ${r.status}: ${msg}` };
-			}
 			const j = JSON.parse(body);
-			const parts = j?.candidates?.[0]?.content?.parts;
-			let out = "";
-			if (Array.isArray(parts)) {
-				out = parts
-					.filter((p) => !p?.thought)
-					.map((p) => p?.text ?? "")
-					.join("")
-					.trim();
+			msg = j?.error?.message || j?.message || msg;
+		} catch {}
+		return { ok: false, status: r.status, error: msg };
+	}
+	const j = JSON.parse(body);
+	const parts = j?.candidates?.[0]?.content?.parts;
+	let out = "";
+	if (Array.isArray(parts)) {
+		out = parts
+			.filter((p) => !p?.thought)
+			.map((p) => p?.text ?? "")
+			.join("")
+			.trim();
+	}
+	if (!out && typeof j?.candidates?.[0]?.text === "string")
+		out = j.candidates[0].text.trim();
+	if (!out)
+		return { ok: false, status: 200, error: "Gemini lieferte keinen Text." };
+	return { ok: true, text: out };
+}
+
+// Fragt die fuer DIESEN Key verfuegbaren Modelle ab und waehlt ein Flash-Modell.
+// So ist der Modellname nie mehr "falsch" — egal welche Modelle der Key freischaltet.
+async function listFlashModel(key) {
+	try {
+		const url =
+			"https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=" +
+			encodeURIComponent(key);
+		const r = await withTimeout(fetch(url), REQUEST_TIMEOUT_MS, "ListModels");
+		if (!r.ok) return null;
+		const j = await r.json();
+		const usable = (j.models || [])
+			.filter((m) =>
+				(m.supportedGenerationMethods || []).includes("generateContent"),
+			)
+			.map((m) => m.name);
+		return (
+			usable.find((n) => /flash-lite/i.test(n) && /latest/i.test(n)) ||
+			usable.find((n) => /flash-lite/i.test(n)) ||
+			usable.find((n) => /flash/i.test(n) && /latest/i.test(n)) ||
+			usable.find((n) => /flash/i.test(n)) ||
+			usable[0] ||
+			null
+		);
+	} catch {
+		return null;
+	}
+}
+
+async function geminiGenerate({ prompt, model, temperature, maxOutputTokens }) {
+	const key = await getKey("geminiKey");
+	if (!key)
+		return {
+			ok: false,
+			error: "Gemini API-Key fehlt (Einstellungen oeffnen).",
+		};
+
+	const configured = (model || "").replace(/^\/+/, "").trim();
+	// Reihenfolge: vom Benutzer gesetzt > zuvor aufgeloest > Standard
+	const startModel = configured || resolvedGeminiModel || GEMINI_DEFAULT_MODEL;
+
+	const run = async (modelName, n) => {
+		try {
+			const res = await callGeminiOnce(
+				modelName,
+				key,
+				buildGeminiPayload(modelName, prompt, temperature, maxOutputTokens),
+			);
+			if (res.ok) {
+				resolvedGeminiModel = modelName;
+				return { ok: true, text: res.text };
 			}
-			if (!out && typeof j?.candidates?.[0]?.text === "string")
-				out = j.candidates[0].text.trim();
-			if (!out) return { ok: false, error: "Gemini lieferte keinen Text." };
-			return { ok: true, text: out };
+			// Modell nicht gefunden/unterstuetzt -> ein gueltiges per ListModels suchen (einmal)
+			const notFound =
+				res.status === 404 ||
+				/not\s*found|not\s*support|does not exist/i.test(res.error || "");
+			if (notFound && n === 0) {
+				const fb = await listFlashModel(key);
+				if (fb && fb !== modelName) {
+					const res2 = await callGeminiOnce(
+						fb,
+						key,
+						buildGeminiPayload(fb, prompt, temperature, maxOutputTokens),
+					);
+					if (res2.ok) {
+						resolvedGeminiModel = fb;
+						return { ok: true, text: res2.text };
+					}
+					return {
+						ok: false,
+						error: `Gemini-Modell nicht verfuegbar (versucht: ${modelName} + ${fb}). ${res2.error}`,
+					};
+				}
+				return {
+					ok: false,
+					error: `Kein nutzbares Gemini-Modell fuer diesen API-Key gefunden. (${res.error})`,
+				};
+			}
+			return { ok: false, error: `HTTP ${res.status}: ${res.error}` };
 		} catch (e) {
 			const msg = String(e?.message || e);
 			if (
@@ -137,13 +210,13 @@ async function geminiGenerate({ prompt, model, temperature, maxOutputTokens }) {
 				n < 3
 			) {
 				await new Promise((r) => setTimeout(r, 1200 * (n + 1)));
-				return attempt(n + 1);
+				return run(modelName, n + 1);
 			}
 			return { ok: false, error: msg };
 		}
 	};
 
-	return attempt(0);
+	return run(startModel, 0);
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

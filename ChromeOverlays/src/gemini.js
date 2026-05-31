@@ -23,7 +23,8 @@
 	};
 
 	function model() {
-		return OV.storage.get("geminiModel", "") || "models/gemini-3.1-flash-lite";
+		// Leer = der Service Worker waehlt automatisch ein fuer den Key gueltiges Modell.
+		return OV.storage.get("geminiModel", "");
 	}
 
 	// Ruft den Service Worker; wirft bei Fehler (fuer try/catch in actions).
