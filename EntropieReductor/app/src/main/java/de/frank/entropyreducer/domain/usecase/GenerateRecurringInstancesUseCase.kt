@@ -301,22 +301,34 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                                 ),
                             )
                         }
-                    } else if (!handledToday) {
-                        // Keine offene Instanz + heute noch nicht versorgt -> eine im Faelligkeits-Bucket.
-                        entryRepo.upsert(
-                            buildEntryForToday(template, now).copy(
-                                timeBucket = dueBucket,
-                                manualBucket = dueBucket,
-                                manualBucketSetAt = now,
-                            ),
-                        )
-                        templateRepo.upsert(
-                            template.copy(
-                                lastGeneratedAt = now,
-                                occurrenceCount = template.occurrenceCount + 1,
-                                updatedAt = now,
-                            ),
-                        )
+                    } else {
+                        // Keine offene Instanz -> eine fuer die NAECHSTE Faelligkeit anlegen.
+                        // Frank-Wunsch 2026-06-01: Eine Intervall-Loop-Aufgabe muss IMMER irgendwo
+                        // sichtbar sein (im Faelligkeits-Bucket) — nicht "verschwinden". Der
+                        // handledToday-Mechanismus gilt NICHT fuer Intervall-Vorlagen, weil die
+                        // Instanz die naechste Faelligkeit repraesentiert, nicht "heute".
+                        // Die ID basiert auf nextDueMidnight (statt heute), damit sie NIE mit der
+                        // bereits erledigten Instanz kollidiert (kein Ueberschreiben per Upsert).
+                        val dueId = "rec-${template.id}-$nextDueMidnight"
+                        if (entryRepo.get(dueId) == null) {
+                            entryRepo.upsert(
+                                buildEntry(template, nextDueMidnight).copy(
+                                    timeBucket = dueBucket,
+                                    manualBucket = dueBucket,
+                                    manualBucketSetAt = now,
+                                    // Jetzt erstellt (nextDueMidnight kann in der Zukunft liegen).
+                                    createdAt = now,
+                                    updatedAt = now,
+                                ),
+                            )
+                            templateRepo.upsert(
+                                template.copy(
+                                    lastGeneratedAt = now,
+                                    occurrenceCount = template.occurrenceCount + 1,
+                                    updatedAt = now,
+                                ),
+                            )
+                        }
                     }
                     continue
                 }
