@@ -230,8 +230,11 @@ namespace ClaudeVoiceOverlay.Views
         private const double CollapsedHeight   = 64;
         private const double FullHeight        = 480;
         private const double CollapseTopOffset = 58;
-        private const int    CollapseAfterUseMs  = 2000;
-        private const int    CollapseAfterPeekMs = 5000;
+        // Frank-Wunsch 2026-06-02: nach Verlassen mit der Maus IMMER nach 1 s
+        // einklappen — egal ob vorher geklickt (Use) oder nur drueber gehovert
+        // (Peek). Gilt fuer beide Orientierungen (gemeinsamer _collapseTimer).
+        private const int    CollapseAfterUseMs  = 1000;
+        private const int    CollapseAfterPeekMs = 1000;
 
         private readonly bool _autoHideEnabled = true;
         private bool _isCollapsed;

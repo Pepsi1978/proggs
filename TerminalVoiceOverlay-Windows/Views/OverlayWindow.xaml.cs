@@ -654,8 +654,11 @@ namespace TerminalVoiceOverlay.Views
         // auch der Beam-Effekt blendet GENAU hier wieder ein, nicht hoeher
         // (Frank 2026-05-25: "im Viereck bleiben, nicht nach oben vergroessern").
         private const double VerticalTopOffset = 57;
-        private const int    CollapseAfterUseMs  = 2000;
-        private const int    CollapseAfterPeekMs = 3000;
+        // Frank-Wunsch 2026-06-02: nach Verlassen mit der Maus IMMER nach 1 s
+        // einklappen — egal ob vorher geklickt (Use) oder nur drueber gehovert
+        // (Peek). Gilt fuer beide Orientierungen (gemeinsamer _collapseTimer).
+        private const int    CollapseAfterUseMs  = 1000;
+        private const int    CollapseAfterPeekMs = 1000;
 
         // Horizontaler Modus: Abstand (in DIPs) zwischen dem UNTEREN Rand der
         // Leiste und dem unteren Rand der Monitor-Arbeitsflaeche (= Oberkante
