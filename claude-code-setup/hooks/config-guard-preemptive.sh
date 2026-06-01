@@ -63,7 +63,7 @@ try:
 
     sub = env.get('CLAUDE_CODE_SUBAGENT_MODEL', '')
     if sub and sub not in ('sonnet', 'opus', 'opus[1m]'):
-        violations.append(f\"SUBAGENT_MODEL='{sub}' (erwartet: sonnet)\")
+        violations.append(f\"SUBAGENT_MODEL='{sub}' (erlaubt: sonnet, opus, opus[1m])\")
 
 except Exception as e:
     pass

@@ -90,7 +90,7 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
 ## Core Rules
 
 - NEVER run hidden (no `run_in_background`, no silent subagents). User reads EVERYTHING.
-- Default: `effortLevel: high` (permanenter Standard laut Gemini.md). Protected: `model: Gemini-opus-4-6`, `SUBAGENT_MODEL: sonnet`
+- Default: `effortLevel: high` (permanenter Standard laut Gemini.md). Protected: `model: Gemini-opus-4-6`, `SUBAGENT_MODEL: opus[1m]`
 - Single repo: `Pepsi1978/proggs`. NEVER create new repos. NEVER delete files/repos without asking.
 - NEVER modify this skill without user approval. Always backup before changing.
 - Parallel execution: Maximum simultaneous agents wherever possible.

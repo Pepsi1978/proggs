@@ -126,6 +126,11 @@
 
 ## Parallelisierung & Agenten-Schwarm (KRITISCH)
 
+> **Modell-Policy (2026-06-01):** Alle Subagents/Worker/Researcher laufen IMMER auf dem
+> hoechsten Opus mit groesstem Kontextfenster (`opus[1m]`), NIE Sonnet/Haiku. Gesteuert ueber
+> `CLAUDE_CODE_SUBAGENT_MODEL` (ueberschreibt jedes Agent-Frontmatter, auch fremde Plugins).
+> self-improve/ACE duerfen den Wert NIE von Opus wegaendern. Voll: `~/.claude/rules/highest-model-everywhere.md`.
+
 ### Grundregel: Immer parallel, nie sequentiell
 - Wenn 2+ Aufgaben unabhaengig sind: SOFORT parallel starten — nie eine nach der anderen.
 - Jede Nachricht mit mehreren unabhaengigen Aufgaben → mehrere Agent-Tool-Aufrufe in EINEM Antwortblock.
