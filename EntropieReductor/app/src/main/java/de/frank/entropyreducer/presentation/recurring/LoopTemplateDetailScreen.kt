@@ -28,6 +28,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -162,9 +163,8 @@ fun LoopTemplateDetailScreen(
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("Priorität: ${t.priorityScore}", loopAccent)
-                    var prio by remember(t.id, t.priorityScore) {
-                        mutableStateOf(t.priorityScore.toFloat())
-                    }
+                    val initialPrio = t.priorityScore.toFloat()
+                    var prio by remember(t.id) { mutableStateOf(initialPrio) }
                     Slider(
                         value = prio.coerceIn(0f, 100f),
                         onValueChange = { prio = it },
