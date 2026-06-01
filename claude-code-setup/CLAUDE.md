@@ -170,7 +170,7 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 | Bulk-Reviews | `batch-reviewer` | **Sonnet** | Viele Dateien schnell pruefen |
 | Tests schreiben | `tester` | Opus | Qualitaet bei Tests wichtig |
 | Recherche | `researcher` | **Sonnet** | Schnelles Web-Lookup |
-| Generische Subagents | Explore/Plan | **Sonnet** | Via CLAUDE_CODE_SUBAGENT_MODEL |
+| Alle Subagents/Worker | Explore/Plan/coder/researcher/etc. | **Opus 4.8 (1M)** | Via CLAUDE_CODE_SUBAGENT_MODEL (ueberschreibt Frontmatter) |
 
 **Faustregel**: 3-5 `coder`-Agents (Sonnet) fuer parallele Implementation spawnen, dann 1 `code-reviewer` (Opus) fuer die Qualitaetskontrolle.
 

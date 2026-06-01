@@ -132,8 +132,8 @@ if env_data:
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)
     sub_model = env_data.get('CLAUDE_CODE_SUBAGENT_MODEL')
-    if sub_model and sub_model != 'sonnet':
-        blocks.append(f"CLAUDE_CODE_SUBAGENT_MODEL={sub_model} (erwartet: sonnet)")
+    if sub_model and sub_model not in ('sonnet', 'opus', 'opus[1m]'):
+        blocks.append(f"CLAUDE_CODE_SUBAGENT_MODEL={sub_model} (erlaubt: sonnet, opus, opus[1m])")
 
     # AUTOCOMPACT: BLOCK if below 85 (85 is the correct standard, NOT 95)
     acp = env_data.get('CLAUDE_AUTOCOMPACT_PCT_OVERRIDE')

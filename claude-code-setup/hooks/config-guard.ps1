@@ -127,8 +127,8 @@ if ($envData) {
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)
     $subModel = $envData.CLAUDE_CODE_SUBAGENT_MODEL
-    if ($null -ne $subModel -and $subModel -ne '' -and $subModel -ne 'sonnet') {
-        $blocks += "CLAUDE_CODE_SUBAGENT_MODEL=$subModel (erwartet: sonnet)"
+    if ($null -ne $subModel -and $subModel -ne '' -and $subModel -notin @('sonnet','opus','opus[1m]')) {
+        $blocks += "CLAUDE_CODE_SUBAGENT_MODEL=$subModel (erlaubt: sonnet, opus, opus[1m])"
     }
 
     # AUTOCOMPACT: BLOCK if below 85 (85 is the correct standard, NOT 95)

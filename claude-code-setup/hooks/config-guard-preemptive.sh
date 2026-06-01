@@ -62,7 +62,7 @@ try:
         violations.append(f'AUTOCOMPACT={acp} (Minimum: 85)')
 
     sub = env.get('CLAUDE_CODE_SUBAGENT_MODEL', '')
-    if sub and sub != 'sonnet':
+    if sub and sub not in ('sonnet', 'opus', 'opus[1m]'):
         violations.append(f\"SUBAGENT_MODEL='{sub}' (erwartet: sonnet)\")
 
 except Exception as e:

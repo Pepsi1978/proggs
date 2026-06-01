@@ -76,8 +76,8 @@ foreach ($settingsPath in $settingsFiles) {
 
             # SUBAGENT_MODEL muss sonnet bleiben
             $subModel = $data.env.CLAUDE_CODE_SUBAGENT_MODEL
-            if ($null -ne $subModel -and $subModel -ne "" -and $subModel -ne "sonnet") {
-                $violations += "SUBAGENT_MODEL='$subModel' (erwartet: sonnet)"
+            if ($null -ne $subModel -and $subModel -ne "" -and $subModel -notin @("sonnet","opus","opus[1m]")) {
+                $violations += "SUBAGENT_MODEL='$subModel' (erlaubt: sonnet, opus, opus[1m])"
             }
         }
 

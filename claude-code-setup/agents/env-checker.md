@@ -43,7 +43,7 @@ Read `~/.claude/settings.json` and verify:
 - `model` = "claude-opus-4-6"
 - `effortLevel` = "high"
 - `env.CLAUDE_CODE_EFFORT_LEVEL` = "high"
-- `env.CLAUDE_CODE_SUBAGENT_MODEL` = "sonnet"
+- `env.CLAUDE_CODE_SUBAGENT_MODEL` = "opus[1m]"
 - `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = "100"
 - `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS` = "64000"
 - `alwaysThinkingEnabled` = true
