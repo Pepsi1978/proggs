@@ -71,7 +71,12 @@ exit 0
 $ErrorActionPreference = "Stop"
 
 try {
-    $input_data = $input | Out-String | ConvertFrom-Json
+    # stdin robust lesen: je nach Invokation liefert mal [Console]::In, mal $input (claude-hooks.md 12.4).
+    $raw = ""
+    try { $raw = [Console]::In.ReadToEnd() } catch {}
+    if ([string]::IsNullOrWhiteSpace($raw)) { try { $raw = $input | Out-String } catch {} }
+    if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }
+    $input_data = $raw | ConvertFrom-Json
     $toolName = $input_data.tool_name
     $toolInput = $input_data.tool_input
 
