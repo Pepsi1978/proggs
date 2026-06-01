@@ -57,7 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -176,13 +176,13 @@ object RetrospectiveColors {
 @Composable
 fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     val doHaptic = rememberHapticAction()
-    val weekly by viewModel.weeklySummaries.collectAsState()
-    val monthly by viewModel.monthlySummaries.collectAsState()
-    val yearly by viewModel.yearlySummaries.collectAsState()
-    val isGenerating by viewModel.isGenerating.collectAsState()
-    val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsState()
-    val isProfileSwitch by viewModel.isProfileSwitch.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
+    val weekly by viewModel.weeklySummaries.collectAsStateWithLifecycle()
+    val monthly by viewModel.monthlySummaries.collectAsStateWithLifecycle()
+    val yearly by viewModel.yearlySummaries.collectAsStateWithLifecycle()
+    val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
+    val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsStateWithLifecycle()
+    val isProfileSwitch by viewModel.isProfileSwitch.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     var selectedSummary by remember { mutableStateOf<RetrospectiveSummaryEntity?>(null) }
     var weeklyExpanded by rememberSaveable { mutableStateOf(false) }
@@ -857,7 +857,7 @@ private fun SummaryDetailDialog(
     var showShareDialog by remember { mutableStateOf(false) }
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
     val tts = remember { TtsManager(context) }
-    val photos by viewModel.currentPhotos.collectAsState()
+    val photos by viewModel.currentPhotos.collectAsStateWithLifecycle()
     val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
 
     LaunchedEffect(summary.startDate, summary.endDate) {

@@ -88,7 +88,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -136,7 +136,7 @@ fun EntryDetailScreen(
     onBack: () -> Unit,
     searchQuery: String = "",
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val doHaptic = rememberHapticAction()
     val isDark = com.entropyjournal.ui.theme.LocalIsDarkTheme.current
@@ -173,8 +173,8 @@ fun EntryDetailScreen(
     var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val tts = remember { TtsManager(context) }
-    val followUpAmplitude by viewModel.followUpAmplitude.collectAsState()
-    val followUpDuration by viewModel.followUpDurationSeconds.collectAsState()
+    val followUpAmplitude by viewModel.followUpAmplitude.collectAsStateWithLifecycle()
+    val followUpDuration by viewModel.followUpDurationSeconds.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         onDispose {

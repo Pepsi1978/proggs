@@ -65,7 +65,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -104,18 +104,18 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> Unit) {
-    val allEntries by viewModel.entries.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val allEntries by viewModel.entries.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchResults by
-        viewModel.searchEntries(uiState.searchQuery).collectAsState(initial = emptyList())
+        viewModel.searchEntries(uiState.searchQuery).collectAsStateWithLifecycle(initialValue = emptyList())
     val entries =
         if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
             searchResults
         } else {
             allEntries
         }
-    val amplitude by viewModel.amplitude.collectAsState()
-    val duration by viewModel.durationSeconds.collectAsState()
+    val amplitude by viewModel.amplitude.collectAsStateWithLifecycle()
+    val duration by viewModel.durationSeconds.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val doHaptic = rememberHapticAction()
     val context = LocalContext.current

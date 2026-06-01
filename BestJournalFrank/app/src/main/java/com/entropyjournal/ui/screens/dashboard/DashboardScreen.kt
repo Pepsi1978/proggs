@@ -59,7 +59,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,8 +110,8 @@ import com.entropyjournal.ui.theme.NeonRed
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
-    val blocks by viewModel.adviceBlocks.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val blocks by viewModel.adviceBlocks.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = LocalIsDarkTheme.current
     val doHaptic = rememberHapticAction()
     var showLegendDialog by remember { mutableStateOf(false) }
