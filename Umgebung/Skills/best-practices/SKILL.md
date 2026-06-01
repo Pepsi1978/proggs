@@ -8,8 +8,9 @@ description: >
   .NET/WPF, TypeScript, Rust …) — das ist die "zweite Seite der Medaille" zum
   Bug-Almanach. Gleicht den aktuellen Stand gegen die jeweils passenden offiziellen
   Changelogs/Docs ab (Claude-Code-Changelog fuer den Harness, der eigene Software-
-  Changelog fuer Projekt-Code), speichert das Wissen im best-practices/-Ordner und
-  liefert eine strukturierte Auswertung mit direkten Verbesserungsvorschlaegen. Nutze
+  Changelog fuer Projekt-Code), speichert das Wissen im best-practices/-Ordner (und
+  koppelt dabei gefundene Bugs in den Bug-Almanach bugs/ zurueck) und liefert eine
+  strukturierte Auswertung mit direkten Verbesserungsvorschlaegen. Nutze
   diesen Skill IMMER wenn der Benutzer sagt: "Best-Practices", "starte den
   Best-Practices-Skill", "Best Practices recherchieren", "recherchiere Best Practices
   fuer [meine Werkzeuge / Kotlin / Swift / Gradle / …]", "was ist neu in Claude Code /
@@ -105,7 +106,9 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
    `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 12 (Neues) bekommen
    einen eigenen Unterordner — eingefuegt VOR `Neues`, das dabei eine Nummer nach hinten rueckt
-   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie).
+   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie). Bei **Projekt-Code**-
+   Laeufen zusaetzlich die **Bug-Almanach-Rueckkopplung** ausfuehren (Abschnitt „Kopplung zum
+   Bug-Almanach"): gefundene Bugs nach `bugs/<bereich>.md` zurueckschreiben + Bezugs-Tabellen synchron halten.
 6. **Auswertung ausgeben** (siehe Format unten).
 
 ## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)
@@ -187,6 +190,36 @@ die bei Bedarf entstehen (Inhaltsverzeichnis: `projekt-code/README.md`).
 Bei einem fokussierten Lauf ("nur fuer Kotlin") wird genau eine Software/Kategorie
 recherchiert und geschrieben — kein Volllauf.
 
+## Kopplung zum Bug-Almanach (beide Richtungen — PFLICHT bei Projekt-Code)
+
+Best-Practices und der Bug-Almanach (`~/proggs/bugs/<bereich>.md`) sind zwei Seiten derselben Medaille,
+und die Kopplung laeuft in BEIDE Richtungen — symmetrisch zum `bug-almanach-recherche`-Skill (dessen
+Schritt 4 die Praevention in best-practices schreibt). Wenn DIESER Skill laeuft und die Recherche einen
+konkreten BUG / eine Falle / einen Stolperstein zutage foerdert (nicht nur eine positive Empfehlung),
+gehoert dieser Bug in den Almanach ZURUECK. Gilt v.a. fuer Projekt-Code-Laeufe (Kotlin, Swift, Gradle …);
+ein Harness-Bug-Fund passt analog in den jeweiligen Almanach bzw. `bug-cases.jsonl`.
+
+### A — Bug-Fund in den Almanach zurueckschreiben
+Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + betroffene Versionen):
+- **`bugs/<bereich>.md` existiert** → als Eintrag ergaenzen (Format aus `~/proggs/bugs/SYSTEM.md`:
+  `## N. Titel [⭐ HAEUFIG] / Symptom / Ursache / Versionen / FIX / Quelle`), gegen bestehende Eintraege
+  DEDUPLIZIEREN (gleicher Bug → nicht doppelt, hoechstens praezisieren), Stand-Header aktualisieren.
+  Im FIX-Feld auf den passenden Best-Practice-Abschnitt verweisen.
+- **`bugs/<bereich>.md` existiert NICHT** → NICHT im Vorbeigehen einen halben Almanach anlegen (ihm
+  fehlt die Fix-Status-Pruefung per `gh`, die nur `bug-almanach-recherche` macht). Stattdessen dem
+  Benutzer melden ("Best-Practices-Recherche hat Bugs gefunden, aber es gibt keinen Almanach fuer
+  <bereich>") und den Skill `bug-almanach-recherche` vorschlagen (erst Franks OK). Die gefundenen Bugs
+  kompakt mitliefern, damit nichts verloren geht.
+
+### B — Bezugs-Tabellen synchron halten
+Existieren BEIDE Dateien (`best-practices/projekt-code/<software>/best-practices.md` UND
+`bugs/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
+Bug-Abschnitt" aktuell halten. Fehlt eine, anlegen; kamen Abschnitte dazu, ergaenzen. So bleibt jede
+Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).
+
+Diese Rueckrichtung ist PFLICHT — frueher schrieb nur `bug-almanach-recherche` Richtung best-practices.
+Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive #1).
+
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
@@ -226,8 +259,9 @@ Neueres gefunden, gilt der letzte Eintrag weiter als aktuell.
 
 - Eine falsche Best-Practice ist schlimmer als gar keine — deshalb offiziell zuerst, alles mit Quelle + Datum.
 - Niemals eine externe Behauptung als offiziell darstellen.
-- Dieser Skill liest/schreibt nur den `best-practices/`-Ordner und schlaegt vor. Er aendert
-  niemals ein Hook, Skill, Agent, MCP oder Setting.
+- Dieser Skill schreibt in den `best-practices/`-Ordner UND (Rueckkopplung) in den Bug-Almanach
+  `bugs/<bereich>.md`, und schlaegt vor. Er aendert niemals ein Hook, Skill, Agent, MCP oder Setting
+  (nur Wissensdateien — Code/Werkzeuge bleiben unangetastet).
 
 ## Auswertungs-Format (Schritt 6)
 

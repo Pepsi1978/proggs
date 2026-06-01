@@ -1,18 +1,24 @@
 ---
 name: best-practices
 description: >
-  Recherchiert und pflegt die Best Practices fuer die eigenen Claude-Code-Werkzeuge
-  (den "Harness"): Hooks, Skills, Agents, Plugins, MCP-Server, Slash-Commands, Settings,
-  Kontext-Management, Token-Effizienz und Arbeitsweise. Gleicht den aktuellen Stand gegen
-  die offiziellen Claude-Code-Changelogs und Anthropic-Docs ab, speichert das Wissen
-  chronologisch im best-practices/-Ordner und liefert eine strukturierte Auswertung mit
-  direkten Verbesserungsvorschlaegen. Nutze diesen Skill IMMER wenn der Benutzer sagt:
-  "Best-Practices", "starte den Best-Practices-Skill", "Best Practices recherchieren",
-  "recherchiere Best Practices fuer meine Werkzeuge", "was ist neu in Claude Code",
-  "sind meine Hooks/Skills/Agents/MCP noch aktuell", "aktualisiere mein Harness-Wissen",
-  "wie nutzt man Hooks/Skills/Agents/Plugins/MCP heute am besten", "Harness-Recherche".
-  NICHT triggern fuer Best Practices von PROJEKT-Code (Kotlin, Compose, Android, C#,
-  TypeScript, Rust) — dafuer ist dieser Skill nicht da.
+  Recherchiert und pflegt Best Practices in zwei Bereichen: (1) die eigenen
+  Claude-Code-Werkzeuge (den "Harness"): Hooks, Skills, Agents, Plugins, MCP-Server,
+  Slash-Commands, Settings, Kontext-Management, Token-Effizienz, Arbeitsweise; und (2)
+  die Software/Sprachen, die in den Projekten benutzt werden (Kotlin, Swift, Gradle,
+  .NET/WPF, TypeScript, Rust …) — das ist die "zweite Seite der Medaille" zum
+  Bug-Almanach. Gleicht den aktuellen Stand gegen die jeweils passenden offiziellen
+  Changelogs/Docs ab (Claude-Code-Changelog fuer den Harness, der eigene Software-
+  Changelog fuer Projekt-Code), speichert das Wissen im best-practices/-Ordner (und
+  koppelt dabei gefundene Bugs in den Bug-Almanach bugs/ zurueck) und liefert eine
+  strukturierte Auswertung mit direkten Verbesserungsvorschlaegen. Nutze
+  diesen Skill IMMER wenn der Benutzer sagt: "Best-Practices", "starte den
+  Best-Practices-Skill", "Best Practices recherchieren", "recherchiere Best Practices
+  fuer [meine Werkzeuge / Kotlin / Swift / Gradle / …]", "was ist neu in Claude Code /
+  in Kotlin / in Swift", "sind meine Hooks/Skills/MCP noch aktuell", "aktualisiere mein
+  Harness-Wissen", "Best Practices fuer die aktuelle [Software]-Version", "Harness-
+  Recherche". Standardlauf deckt ALLE Kategorien ab; man kann ihn aber auf EINEN Bereich
+  fokussieren ("Best-Practices nur fuer Kotlin", "nur fuer Hooks", "nur fuer Chrome-
+  Erweiterungen"). Aendert nie ein Werkzeug — recherchiert, speichert und schlaegt vor.
 invocation: user
 ---
 
@@ -30,13 +36,31 @@ Dieser Skill ist **Teil 1** (Wissen sammeln + strukturieren + auswerten). Das sp
 Plugin "Harness-Intelligenz" (Teil 2) denkt ueber das gesammelte Wissen nach und verbessert
 Werkzeuge — das ist NICHT Aufgabe dieses Skills.
 
+## Zwei Bereiche, ein Ordner
+
+Der Skill pflegt zwei Arten von Best-Practices im selben `best-practices/`-Ordner:
+
+1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist
+   der offizielle **Claude-Code**-Changelog (via `update-changelog.ps1`-Script).
+2. **Projekt-Code** (Sektion `projekt-code/<software>/`): Kotlin, Swift, Gradle, .NET/WPF,
+   TypeScript, Rust … Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
+   Claude-Script) — die installierte Software-Version wird live ermittelt und ist der
+   Versions-Anker. Das ist die zweite Seite der Medaille zum Bug-Almanach (`~/proggs/bugs/`):
+   dort steht *was schiefgeht*, hier *wie man es von vornherein richtig macht*.
+
 ## Abgrenzung — wann dieser Skill NICHT greift
 
-- **Projekt-Code-Best-Practices** (Kotlin, Compose, Android, C#, TypeScript, Rust): nicht
-  dieser Skill. Hier geht es ausschliesslich um die Claude-Code-Werkzeuge.
 - **Tiefe Meta-Analyse** ueber den ganzen Ordner, Mustererkennung, Zukunftsprojektion: Teil 2.
 - **Werkzeuge tatsaechlich aendern/reparieren**: Teil 2. Dieser Skill schlaegt nur vor und
   fasst nie ein Werkzeug an.
+
+## Fokus auf einen Bereich (statt Volllauf)
+
+Standardmaessig deckt ein Lauf alle Kategorien ab. Man kann den Skill aber auf EINEN
+Bereich einschraenken — z.B. "Best-Practices nur fuer Kotlin", "nur fuer Hooks", "nur fuer
+Chrome-Erweiterungen". Dann nur die genannte Kategorie/Software recherchieren und schreiben.
+Das nutzt u.a. der `bug-almanach-recherche`-Skill, wenn er gezielt eine Software aufrollen
+laesst.
 
 ## Erster Lauf: Wissensbasis anlegen (falls noch nicht vorhanden)
 
@@ -82,7 +106,9 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
    `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 12 (Neues) bekommen
    einen eigenen Unterordner — eingefuegt VOR `Neues`, das dabei eine Nummer nach hinten rueckt
-   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie).
+   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie). Bei **Projekt-Code**-
+   Laeufen zusaetzlich die **Bug-Almanach-Rueckkopplung** ausfuehren (Abschnitt „Kopplung zum
+   Bug-Almanach"): gefundene Bugs nach `bugs/<bereich>.md` zurueckschreiben + Bezugs-Tabellen synchron halten.
 6. **Auswertung ausgeben** (siehe Format unten).
 
 ## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)
@@ -144,9 +170,59 @@ neue definierte Kategorie dazu, wird sie VOR "Neues" eingefuegt und "Neues" ruec
 nach hinten (Ordner entsprechend umbenennen). Beispiel: aus `12-neues` wird `13-neues`, die neue
 Kategorie wird 12.
 
+### Projekt-Code-Sektion (`projekt-code/<software>/`)
+
+Neben den 12 nummerierten Harness-Kategorien gibt es die Sektion `projekt-code/` mit je
+einem Unterordner pro Software (kotlin, swift, gradle, wpf-csharp, typescript, rust …),
+die bei Bedarf entstehen (Inhaltsverzeichnis: `projekt-code/README.md`).
+
+**Wichtiger Mechanik-Unterschied — beim Recherchieren beachten:**
+- **Harness-Kategorien (01–12):** Changelog-Quelle ist der **Claude-Code**-Changelog,
+  geholt mit dem `update-changelog.ps1`/`.sh`-Script (siehe naechster Abschnitt). Versions-
+  Anker = installierte Claude-Code-Version.
+- **Projekt-Code (`projekt-code/<software>/`):** Changelog-Quelle ist der **eigene**
+  Changelog/die Release-Notes der jeweiligen Software (Kotlin-Releases bei JetBrains,
+  Swift-Releases bei Apple, Gradle-Releases …). Das Claude-Changelog-Script wird hier NICHT
+  benutzt. Versions-Anker = die LIVE ermittelte installierte Version dieser Software
+  (`kotlinc -version`, `swift --version`, `./gradlew --version`, `dotnet --version` …).
+  Quellen-Rangordnung gleich: offizielle Hersteller-Quelle = Grundwahrheit, Community = `extern`.
+
+Bei einem fokussierten Lauf ("nur fuer Kotlin") wird genau eine Software/Kategorie
+recherchiert und geschrieben — kein Volllauf.
+
+## Kopplung zum Bug-Almanach (beide Richtungen — PFLICHT bei Projekt-Code)
+
+Best-Practices und der Bug-Almanach (`~/proggs/bugs/<bereich>.md`) sind zwei Seiten derselben Medaille,
+und die Kopplung laeuft in BEIDE Richtungen — symmetrisch zum `bug-almanach-recherche`-Skill (dessen
+Schritt 4 die Praevention in best-practices schreibt). Wenn DIESER Skill laeuft und die Recherche einen
+konkreten BUG / eine Falle / einen Stolperstein zutage foerdert (nicht nur eine positive Empfehlung),
+gehoert dieser Bug in den Almanach ZURUECK. Gilt v.a. fuer Projekt-Code-Laeufe (Kotlin, Swift, Gradle …);
+ein Harness-Bug-Fund passt analog in den jeweiligen Almanach bzw. `bug-cases.jsonl`.
+
+### A — Bug-Fund in den Almanach zurueckschreiben
+Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + betroffene Versionen):
+- **`bugs/<bereich>.md` existiert** → als Eintrag ergaenzen (Format aus `~/proggs/bugs/SYSTEM.md`:
+  `## N. Titel [⭐ HAEUFIG] / Symptom / Ursache / Versionen / FIX / Quelle`), gegen bestehende Eintraege
+  DEDUPLIZIEREN (gleicher Bug → nicht doppelt, hoechstens praezisieren), Stand-Header aktualisieren.
+  Im FIX-Feld auf den passenden Best-Practice-Abschnitt verweisen.
+- **`bugs/<bereich>.md` existiert NICHT** → NICHT im Vorbeigehen einen halben Almanach anlegen (ihm
+  fehlt die Fix-Status-Pruefung per `gh`, die nur `bug-almanach-recherche` macht). Stattdessen dem
+  Benutzer melden ("Best-Practices-Recherche hat Bugs gefunden, aber es gibt keinen Almanach fuer
+  <bereich>") und den Skill `bug-almanach-recherche` vorschlagen (erst Franks OK). Die gefundenen Bugs
+  kompakt mitliefern, damit nichts verloren geht.
+
+### B — Bezugs-Tabellen synchron halten
+Existieren BEIDE Dateien (`best-practices/projekt-code/<software>/best-practices.md` UND
+`bugs/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
+Bug-Abschnitt" aktuell halten. Fehlt eine, anlegen; kamen Abschnitte dazu, ergaenzen. So bleibt jede
+Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).
+
+Diese Rueckrichtung ist PFLICHT — frueher schrieb nur `bug-almanach-recherche` Richtung best-practices.
+Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive #1).
+
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
-- **Modell:** Claude Sonnet 4.6. **Effort:** X-High.
+- **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
 - **1 Researcher pro Kategorie, aber in BATCHES von 3–5 (KRITISCH, empirisch 2026-05-25):**
   Web-Researcher sind ANFRAGE-DICHT (2–3 Tool-Runden pro Turn × viele Turns → 100+ RPM bei 5 Stueck).
   Zu viele gleichzeitig sprengen das Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz
@@ -183,8 +259,9 @@ Neueres gefunden, gilt der letzte Eintrag weiter als aktuell.
 
 - Eine falsche Best-Practice ist schlimmer als gar keine — deshalb offiziell zuerst, alles mit Quelle + Datum.
 - Niemals eine externe Behauptung als offiziell darstellen.
-- Dieser Skill liest/schreibt nur den `best-practices/`-Ordner und schlaegt vor. Er aendert
-  niemals ein Hook, Skill, Agent, MCP oder Setting.
+- Dieser Skill schreibt in den `best-practices/`-Ordner UND (Rueckkopplung) in den Bug-Almanach
+  `bugs/<bereich>.md`, und schlaegt vor. Er aendert niemals ein Hook, Skill, Agent, MCP oder Setting
+  (nur Wissensdateien — Code/Werkzeuge bleiben unangetastet).
 
 ## Auswertungs-Format (Schritt 6)
 

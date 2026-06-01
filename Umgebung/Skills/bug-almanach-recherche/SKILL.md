@@ -166,6 +166,12 @@ Jeder Eintrag mit Quelle + Datum + `offiziell`/`extern`-Flag (gleiche Regeln wie
 `best-practices`-Skill). So fuellen sich beide Speicher: Bug+Workaround im Almanach,
 Praevention in best-practices.
 
+**4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<bereich>.md` UND
+`best-practices/projekt-code/<software>/best-practices.md`), in JEDER eine wechselseitige
+Abschnitts-Bezugs-Tabelle „Bug-Abschnitt ↔ Best-Practice-Abschnitt" anlegen/aktuell halten, damit
+jede Loesung auf ihr Gegenstueck zeigt. (Gleiches Vorgehen wie im `best-practices`-Skill, Abschnitt
+„Kopplung zum Bug-Almanach" — beide Skills pflegen dieselben zwei Tabellen.)
+
 **Optional — breiter Best-Practices-Lauf:** Bei einem groesseren Bereich dem Benutzer
 anbieten, separat den `best-practices`-Skill fokussiert zu starten ("Best-Practices nur
 fuer <software>"), um die NEUESTEN Best-Practices der Software breit aufzurollen (geht
