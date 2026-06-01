@@ -82,8 +82,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions { jvmTarget = "17" }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -98,6 +96,13 @@ android {
     }
 
     androidResources { noCompress += listOf("onnx", "txt") }
+}
+
+// Kotlin 2.x: jvmTarget via compilerOptions (kotlinOptions {} wird in Kotlin 2.2 ein Fehler).
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
 }
 
 dependencies {
