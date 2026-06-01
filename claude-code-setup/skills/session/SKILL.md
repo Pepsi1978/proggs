@@ -2,15 +2,18 @@
 name: session
 description: >-
   Sessionuebergreifendes Backup und Restore des Arbeitskontexts. Nutze diesen Skill IMMER wenn
-  der Benutzer sagt "session backup", "starte den Skill Session Backup", "starte den Session
-  Backup Skill", "mach ein Session-Backup", "sichere die Session", "sichere den Stand fuer den
-  Neustart", "Backup vor Clear", "session restore", "starte den Skill Session Restore", "starte
-  den Session Restore Skill", "lade das Session-Backup", "stelle die Session wieder her", oder
-  "mache weiter wo wir waren" direkt nach einem /clear. Wird AUSSERDEM automatisch ausgeloest,
-  wenn der Stop-Hook session-backup-nudge bei hohem Kontextverbrauch (ab 92%) anstoesst, ein
-  Backup zu machen. backup erstellt eine kuratierte Handoff-Notiz und sichert sie lokal UND im
-  Repo, bevor der Benutzer /clear eingibt. restore liest die neueste Notiz und setzt die Arbeit
-  nahtlos fort.
+  der Benutzer eine dieser EXAKTEN Drei-Wort-Phrasen sagt: "starte session backup" (auch
+  "Session Backup starten", "starte Session-Backup") -> Modus BACKUP; "starte session restore"
+  (auch "Session Restore starten", "starte Session-Restore") -> Modus RESTORE. Diese genauen
+  drei Woerter REICHEN aus — ein "starte den Skill" davor ist NICHT noetig. Ebenso ausloesen bei:
+  "session backup", "starte den Skill Session Backup", "starte den Session Backup Skill", "mach
+  ein Session-Backup", "sichere die Session", "sichere den Stand fuer den Neustart", "Backup vor
+  Clear", "session restore", "starte den Skill Session Restore", "starte den Session Restore
+  Skill", "lade das Session-Backup", "stelle die Session wieder her", oder "mache weiter wo wir
+  waren" direkt nach einem /clear. Wird AUSSERDEM automatisch ausgeloest, wenn der Stop-Hook
+  session-backup-nudge bei hohem Kontextverbrauch (ab 88%) anstoesst, ein Backup zu machen.
+  backup erstellt eine kuratierte Handoff-Notiz und sichert sie lokal UND im Repo, bevor der
+  Benutzer /clear eingibt. restore liest die neueste Notiz und setzt die Arbeit nahtlos fort.
 ---
 
 # Session — Backup & Restore
@@ -63,7 +66,7 @@ sich nie mehrere Sessions vermischen.
 Fuehre diese Schritte der Reihe nach aus. Wenn der Hook dich angestossen hat: Pruefe ZUERST, ob die
 aktuelle Aufgabe wirklich abgeschlossen ist (keine offene Rueckfrage / kein Multiple-Choice). Wenn
 nicht — erst fertig machen, dann Backup. Wenn der Hook anstoesst und die Aufgabe noch laeuft, dem
-Benutzer kurz melden: "Kontext bei 92%+, ich sichere nach dieser Antwort."
+Benutzer kurz melden: "Kontext bei 88%+, ich sichere nach dieser Antwort."
 
 ### Schritt 1: Handoff-Notiz schreiben
 
