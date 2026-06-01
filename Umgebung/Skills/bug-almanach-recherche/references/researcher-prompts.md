@@ -66,9 +66,12 @@ Quelle (URL)**.
 
 ---
 
-## Phase B — Fix-Status (Schritt 3): 2-3 Researcher parallel
+## Phase B — Fix-Status (Schritt 3): Researcher (Changelog/Sekundaer) + Hauptagent (gh)
 
 > Diese Phase ist der Kern. Sie verhindert, dass laengst gefixte Bugs als aktiv gelten.
+> **Arbeitsteilung:** Changelog-/Sekundaerquellen-Recherche machen Researcher (WebFetch); die
+> harte gh-Issue-Status-Pruefung macht der HAUPTAGENT — `researcher`-Agenten haben KEIN Bash
+> und koennen `gh` nicht ausfuehren (im Lauf 2026-06-02 bestaetigt).
 
 ### Fix-Researcher 1 — Changelog der Versionen durchgehen
 > Du recherchierst, welche [BEREICH]-Bugs in neueren Versionen bereits GEFIXT wurden.
@@ -79,21 +82,21 @@ Quelle (URL)**.
 > weg ist. LIMITS: max 12 Fetches, max 8 Min, ~1200 Token. Ehrlich sein, wenn eine
 > Version nichts Bereichsbezogenes hatte.
 
-### Fix-Researcher 2 — Issue-Status der konkreten Bugs pruefen
-> Du pruefst den aktuellen STATUS (offen/geschlossen/gefixt) konkreter Bug-Tickets aus
-> Phase A. [Liste der wichtigsten Issue-Nummern/URLs einfuegen.] Aktuell installiert:
-> [VERSION].
+### Fix-Status Schritt 2 — Issue-Status HART pruefen (HAUPTAGENT, KEIN Researcher)
+> **Wichtig:** Das ist KEIN Researcher-Prompt. `researcher`-Agenten haben kein Bash und koennen
+> `gh` nicht ausfuehren. Diesen Schritt macht der HAUPTAGENT selbst (er hat Bash). Die Researcher
+> (Fix-Researcher 1/3) liefern die zu pruefenden Issue-Nummern/URLs aus Phase A; der Hauptagent
+> verifiziert sie hart. Aktuell installiert: [VERSION].
 >
-> **Bei GitHub-Trackern die GitHub-CLI nutzen (installiert + authentifiziert), NICHT WebFetch
+> **GitHub-Tracker per GitHub-CLI pruefen (installiert + authentifiziert), NICHT WebFetch
 > (das liefert nur vage Snippets):**
 > - Einzeln: `gh issue view <nr> --repo <org>/<repo> --json number,state,title,closedAt,stateReason`
 >   → harter OPEN/CLOSED-Status + closedAt + stateReason (COMPLETED / NOT_PLANNED = Duplikat/won't-fix).
 > - Mehrere: `gh issue list --repo <org>/<repo> --search "<stichwort>" --state all --json number,state,title`.
 >
-> Pro Issue: Nummer · Status (OFFEN/GESCHLOSSEN) · falls geschlossen: closedAt + stateReason ·
-> 1 Satz Beleg. LIMITS: max 15 Aufrufe, max 9 Min. Nur wenn ein Tracker NICHT ueber gh
-> erreichbar ist (GitLab/Bugzilla), auf WebFetch ausweichen — unklare Faelle ehrlich als
-> "unklar" markieren statt zu raten.
+> Pro Issue notieren: Nummer · Status (OFFEN/GESCHLOSSEN) · falls geschlossen: closedAt + stateReason ·
+> 1 Satz Beleg. Nur wenn ein Tracker NICHT ueber gh erreichbar ist (GitLab/Bugzilla/YouTrack),
+> auf WebFetch ausweichen — unklare Faelle ehrlich als "unklar" markieren statt zu raten.
 
 ### Fix-Researcher 3 — Sekundaerquellen als Gegenprobe (optional)
 > Du suchst in Blogs, dev.to, Medium, Reddit, Changelog-Zusammenfassungen nach Aussagen,

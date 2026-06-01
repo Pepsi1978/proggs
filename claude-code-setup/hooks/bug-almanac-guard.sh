@@ -25,7 +25,7 @@ case "$fpl" in
     *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
         slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
     *.kt|*.kts|*androidmanifest.xml)
-        slug="android"; file="android-compose.md"; name="Android (Kotlin/Compose)";;
+        slug="kotlin"; file="kotlin.md"; name="Kotlin (Sprache/K2/Coroutines/Compose-Kontext)";;
     *.swift)
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
     *.ts|*.tsx|*tsconfig.json)

@@ -121,12 +121,20 @@ Der Schritt, der am leichtesten vergessen wird und am wichtigsten ist. NACH der 
 Suche eine SEPARATE, gezielte Recherche: **Welche der gefundenen Bugs sind in neueren
 Versionen (bis zur in Schritt 1 ermittelten installierten Version) bereits behoben?**
 
-2-3 Researcher parallel: Changelog/Release-Notes durchgehen · **Issue-Status per GitHub-CLI
-hart pruefen** — `gh issue view <nr> --repo <org>/<repo> --json number,state,title,closedAt,stateReason`
-(gh ist installiert + authentifiziert → echter OPEN/CLOSED-Status statt vager WebFetch-Snippets;
-verifiziert 2026-06-01 an Issue #55889). Nur wenn ein Tracker NICHT ueber gh erreichbar ist
-(GitLab/Bugzilla), auf WebFetch ausweichen und unklare Faelle ehrlich markieren · Sekundaerquellen
-als Gegenprobe.
+**Arbeitsteilung (WICHTIG — im Lauf 2026-06-02 verifiziert):** `researcher`-Agenten haben KEIN
+Bash-Tool und koennen `gh` NICHT ausfuehren. Deshalb wird Schritt 3 aufgeteilt:
+
+- **Researcher (2-3 parallel, nur WebFetch/WebSearch):** Changelog/Release-Notes der Versionen
+  durchgehen + Sekundaerquellen (Blogs/Reddit/dev.to) als Gegenprobe. Sie liefern die konkreten
+  **Issue-Nummern/URLs**, deren Status zu pruefen ist — aber NICHT den harten Status.
+- **Hauptagent (hat Bash) — macht die harte Pruefung selbst:** die von den Researchern gesammelten
+  GitHub-Issues per GitHub-CLI verifizieren:
+  `gh issue view <nr> --repo <org>/<repo> --json number,state,title,closedAt,stateReason`
+  (gh installiert + authentifiziert → echter OPEN/CLOSED-Status statt vager WebFetch-Snippets;
+  verifiziert 2026-06-01 an #55889, 2026-06-02 an ksp/dagger/kotlinx.serialization), oder mehrere
+  auf einmal: `gh issue list --repo <org>/<repo> --search "<stichwort>" --state all --json number,state,title`.
+  Nur wenn ein Tracker NICHT ueber gh erreichbar ist (GitLab/Bugzilla/YouTrack), auf WebFetch
+  ausweichen und unklare Faelle ehrlich markieren.
 
 **Ehrlichkeits-Pflicht:** Strikt trennen zwischen *belegt gefixt* (Changelog/offizielle
 Quelle) und *Status unklar / kein Fix gefunden*. Nie "gefixt" ohne Beleg — im Zweifel

@@ -28,7 +28,7 @@ try {
     } elseif ($fpl -match 'build\.gradle(\.kts)?$' -or $fpl -match 'settings\.gradle(\.kts)?$' -or $fpl -match '/gradle/' -or $fpl -match 'gradle\.properties$' -or $fpl -match 'gradle-wrapper') {
         $slug = 'gradle'; $file = 'gradle.md'; $name = 'Build - Gradle (AGP/R8)'
     } elseif ($fpl -match '\.kts?$' -or $fpl -match 'androidmanifest\.xml$') {
-        $slug = 'android'; $file = 'android-compose.md'; $name = 'Android (Kotlin/Compose)'
+        $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
     } elseif ($fpl -match '\.swift$') {
         $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
