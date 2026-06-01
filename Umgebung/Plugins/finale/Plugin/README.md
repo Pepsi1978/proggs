@@ -70,7 +70,7 @@ finale/
 ├── agents/
 │   ├── orchestrator.md    (Opus, effort: max — Phase-0…5-Dirigent)
 │   ├── fix-applier.md     (Opus, effort: max — einziger File-Writer)
-│   ├── url-checker.md     (Sonnet — HTTP-HEAD-Checks)
+│   ├── url-checker.md     (Opus — HTTP-HEAD-Checks)
 │   └── researcher.md      (Opus, effort: max — Wissenslücken)
 ├── skills/                                   ← SYMLINKS, keine Kopien
 │   ├── roentgen-skill          → ~/.claude/skills/app-roentgen

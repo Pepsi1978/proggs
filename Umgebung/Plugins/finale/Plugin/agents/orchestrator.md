@@ -42,7 +42,7 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
    - `fix-applier` (Opus, max) für JEDE Code-/String-Änderung. Niemals selbst per Edit/Write Apps modifizieren.
    - Übersetzer-Subagenten (Opus, max) parallel pro Zielsprache.
    - `researcher` (Opus, max) bei Wissenslücken zu Rechtsordnungen, Play-Policy-Updates, Pflichthinweisen.
-   - `url-checker` (Sonnet) ausschließlich für HTTP-HEAD-Checks von Privacy/Impressum/TOS-URLs.
+   - `url-checker` (Opus) ausschließlich für HTTP-HEAD-Checks von Privacy/Impressum/TOS-URLs.
 3a. **145k-TOKEN-CAP PRO SUBAGENT — FIN-004 + FIN-005 (Frank-Direktive 2026-05-22):** Jeder
     Subagent darf maximal **145.000 Token** verbrauchen (vorher 100k, am 2026-05-22 erhoeht
     weil der Bereich bis 145k stabil funktioniert). Wenn ein Worker dem Limit nahe kommt:
