@@ -182,6 +182,11 @@ class RecurringTemplatesViewModel @Inject constructor(
             repo.upsert(
                 template.copy(intervalDays = days, rrule = newRrule, updatedAt = now),
             )
+            // Frank-Wunsch 2026-06-01: Nach jeder Intervall-Aenderung SOFORT das gesamte
+            // Aufgabenfeld neu bewerten — eine faelschlich offene Instanz im Cooldown
+            // (z.B. Kraftsport heute, gestern erledigt, jetzt "alle 5 Tage") verschwindet
+            // dadurch sofort, faellige Instanzen werden erzeugt. Nicht erst beim naechsten Start.
+            runCatching { generator.cleanupAndEnsureSingle() }
         }
     }
 

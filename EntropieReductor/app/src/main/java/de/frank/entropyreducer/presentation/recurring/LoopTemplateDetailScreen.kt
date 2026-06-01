@@ -14,6 +14,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -140,20 +142,30 @@ fun LoopTemplateDetailScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = cosmos.textSecondary,
                     )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = t.intervalDays == null,
-                            onClick = { viewModel.setIntervalDays(t, null) },
-                            label = { Text("KI entscheidet") },
-                            colors = chipColors(loopAccent),
-                        )
-                        loopIntervalOptions.forEach { d ->
-                            FilterChip(
-                                selected = t.intervalDays == d,
-                                onClick = { viewModel.setIntervalDays(t, d) },
-                                label = { Text(if (d == 1) "Täglich" else "Alle $d Tage") },
-                                colors = chipColors(loopAccent),
-                            )
+                    // Frank-Wunsch 2026-06-01: Dropdown mit voller Bandbreite (taeglich, jeder
+                    // Tageswert lueckenlos, Wochen-/Monats-Schritte, jaehrlich) statt nur
+                    // weniger Chips.
+                    var intervalOpen by remember(t.id) { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(
+                            onClick = { intervalOpen = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(loopIntervalLabel(t.intervalDays), color = loopAccent)
+                        }
+                        DropdownMenu(
+                            expanded = intervalOpen,
+                            onDismissRequest = { intervalOpen = false },
+                        ) {
+                            loopIntervalChoices.forEach { (label, days) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        viewModel.setIntervalDays(t, days)
+                                        intervalOpen = false
+                                    },
+                                )
+                            }
                         }
                     }
                 }

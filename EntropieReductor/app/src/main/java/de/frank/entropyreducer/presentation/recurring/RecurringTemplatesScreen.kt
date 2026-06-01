@@ -308,18 +308,11 @@ internal fun TemplateAsTaskCard(
                         expanded = intervalMenuOpen,
                         onDismissRequest = { intervalMenuOpen = false },
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("KI entscheidet") },
-                            onClick = {
-                                onSetInterval(null)
-                                intervalMenuOpen = false
-                            },
-                        )
-                        loopIntervalOptions.forEach { d ->
+                        loopIntervalChoices.forEach { (label, days) ->
                             DropdownMenuItem(
-                                text = { Text(if (d == 1) "Täglich" else "Alle $d Tage") },
+                                text = { Text(label) },
                                 onClick = {
-                                    onSetInterval(d)
+                                    onSetInterval(days)
                                     intervalMenuOpen = false
                                 },
                             )
@@ -385,6 +378,33 @@ internal fun TemplateAsTaskCard(
 
 /** Waehlbare Wiederkehr-Intervalle in Tagen (Frank-Wunsch 2026-06-01). 1 = taeglich. */
 internal val loopIntervalOptions = listOf(1, 2, 3, 5, 7, 10, 14, 30)
+
+/**
+ * Frank-Wunsch 2026-06-01: deutlich groessere Bandbreite an Wiederkehr-Intervallen fuer das
+ * Dropdown im Loop-Detail (vorher fehlten u.a. "alle 4 Tage" und "alle 6 Tage"). Liste aus
+ * (Label, intervalDays): null = "KI entscheidet". Tage lueckenlos 1..31, danach Wochen- und
+ * Monats-Schritte (als Tage gerechnet, da das Cooldown-Modell in Tagen ab letzter Erledigung
+ * arbeitet). Deckt die gaengige Bandbreite (taeglich bis jaehrlich) ab.
+ */
+internal val loopIntervalChoices: List<Pair<String, Int?>> =
+    buildList {
+        add("KI entscheidet" to null)
+        add("Täglich" to 1)
+        for (n in 2..31) add("Alle $n Tage" to n)
+        add("Alle 6 Wochen (42 Tage)" to 42)
+        add("Alle 8 Wochen (56 Tage)" to 56)
+        add("Alle 2 Monate (60 Tage)" to 60)
+        add("Alle 3 Monate (90 Tage)" to 90)
+        add("Alle 4 Monate (120 Tage)" to 120)
+        add("Alle 6 Monate (180 Tage)" to 180)
+        add("Jährlich (365 Tage)" to 365)
+    }
+
+/** Menschenlesbares Label fuer ein Intervall (intervalDays). null = KI entscheidet. */
+internal fun loopIntervalLabel(days: Int?): String =
+    loopIntervalChoices.firstOrNull { it.second == days }?.first
+        ?: days?.let { "Alle $it Tage" }
+        ?: "KI entscheidet"
 
 /** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
 internal val loopBucketOptions = listOf(

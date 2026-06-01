@@ -266,7 +266,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 // in ganzen Tagen (Frank's Modell: "Montag erledigt, alle 5 Tage -> Samstag").
                 // null = "KI entscheidet" -> kein Cooldown, bisheriges taegliches Verhalten.
                 val intervalDays = template.intervalDays
-                if (intervalDays != null && intervalDays >= 1 && openForThis.isEmpty()) {
+                if (intervalDays != null && intervalDays >= 1) {
                     val lastCompletedAt = lastCompletedByTemplate[template.id]
                     if (lastCompletedAt != null && lastCompletedAt > 0L) {
                         val lastCompletedMidnight = Calendar.getInstance().apply {
@@ -279,6 +279,11 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         val daysSince = (todayMidnight - lastCompletedMidnight) / (24L * 60L * 60L * 1000L)
                         if (daysSince < intervalDays) {
                             // Noch im Cooldown — die naechste Faelligkeit ist noch nicht erreicht.
+                            // Frank-Wunsch 2026-06-01: Wenn nach einer Intervall-Aenderung eine
+                            // faelschlich offene Instanz existiert (z.B. Kraftsport steht fuer heute,
+                            // wurde aber gestern erledigt und ist jetzt auf "alle 5 Tage" gesetzt),
+                            // muss sie SOFORT verschwinden — nicht erst beim naechsten Tag.
+                            for (e in openForThis) entryRepo.delete(e)
                             continue
                         }
                     }
