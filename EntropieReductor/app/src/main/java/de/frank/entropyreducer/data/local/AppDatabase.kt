@@ -99,7 +99,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22)
             RecurringTemplateEntity::class,
         ],
-    version = 27,
+    version = 28,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -834,6 +834,19 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(26, 27) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE recurring_templates ADD COLUMN targetBucket TEXT")
+                }
+            }
+
+        /**
+         * Schema 27 -> 28 (Frank-Wunsch 2026-06-01): festes Wiederkehr-Intervall in Tagen.
+         * Neue Spalte intervalDays (INTEGER, nullable) — null = "KI entscheidet" (bisheriges
+         * Verhalten). Wenn gesetzt (z.B. 5), erscheint die naechste Loop-Instanz erst N Tage
+         * nach der letzten Erledigung.
+         */
+        val MIGRATION_27_28: Migration =
+            object : Migration(27, 28) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE recurring_templates ADD COLUMN intervalDays INTEGER")
                 }
             }
     }

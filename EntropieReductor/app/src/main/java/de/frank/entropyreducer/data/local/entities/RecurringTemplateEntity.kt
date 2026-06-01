@@ -65,6 +65,14 @@ data class RecurringTemplateEntity(
      * Vorlage einen festen Tag (HEUTE/MORGEN/FREIBLOCK/SPAETER) vorgeben.
      */
     val targetBucket: TimeBucket? = null,
+    /**
+     * Frank-Wunsch 2026-06-01: festes Wiederkehr-Intervall in Tagen. null = "KI entscheidet"
+     * (bisheriges Verhalten — taeglich verfuegbar, KI plant frei). Wenn gesetzt (z.B. 5),
+     * erscheint die naechste Instanz erst N Tage NACH der letzten Erledigung — eine alle
+     * 5 Tage faellige Aufgabe (z.B. Kraftsport) wird also nicht jeden Morgen vorgeschlagen.
+     * Wird zusaetzlich in die rrule gespiegelt (FREQ=DAILY;INTERVAL=N) fuer Anzeige + RFC-Pfad.
+     */
+    val intervalDays: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updatedAt") val updatedAt: Long = System.currentTimeMillis(),
 )

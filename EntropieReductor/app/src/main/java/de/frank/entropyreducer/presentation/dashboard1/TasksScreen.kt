@@ -694,6 +694,9 @@ fun TasksScreen(
                                             onRename = { newTitle ->
                                                 recurringVm.setTitle(template, newTitle)
                                             },
+                                            onSetInterval = { days ->
+                                                recurringVm.setIntervalDays(template, days)
+                                            },
                                             autoOpenPrioSlider =
                                                 prioPickerTemplateId == template.id,
                                             onPrioSliderConsumed = {

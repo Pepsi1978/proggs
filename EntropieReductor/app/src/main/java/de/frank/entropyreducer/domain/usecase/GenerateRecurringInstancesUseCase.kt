@@ -210,6 +210,29 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         val allTemplates = templateRepo.getAllForBackup()
         val allOpenEntries = entryRepo.getActive().first()
 
+        // Frank-Wunsch 2026-06-01: fuer den Intervall-Cooldown brauchen wir den
+        // Zeitstempel der LETZTEN Erledigung pro Vorlage. Jede erledigte Aufgabe traegt
+        // dafuer resolvedAt (Tag + Uhrzeit). Wir lesen einmal alle Eintraege und bilden
+        // pro Template-ID das Maximum der resolvedAt-Werte unter erledigten Instanzen.
+        val allEntries = entryRepo.getAllForBackup()
+        val lastCompletedByTemplate: Map<String, Long> =
+            allEntries
+                .asSequence()
+                .filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        (it.status == EntryStatus.REDUZIERT || it.status == EntryStatus.ARCHIVIERT) &&
+                        it.resolvedAt != null
+                }
+                .mapNotNull { e ->
+                    // ID-Form: "rec-{templateId}-{occurrenceMs}". Template-ID herausloesen.
+                    val withoutPrefix = e.id.removePrefix("rec-")
+                    val lastDash = withoutPrefix.lastIndexOf('-')
+                    if (lastDash <= 0) null
+                    else withoutPrefix.substring(0, lastDash) to (e.resolvedAt ?: 0L)
+                }
+                .groupingBy { it.first }
+                .fold(0L) { acc, (_, ts) -> maxOf(acc, ts) }
+
         for (template in allTemplates) {
             try {
                 val openForThis = allOpenEntries.filter {
@@ -236,6 +259,30 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 val todayId = "rec-${template.id}-$todayMidnight"
                 val handledToday =
                     entryRepo.get(todayId) != null || template.lastGeneratedAt >= todayMidnight
+
+                // Frank-Wunsch 2026-06-01: Intervall-Cooldown. Hat die Vorlage ein festes
+                // Intervall (alle N Tage) und wurde sie schon einmal erledigt, erscheint die
+                // naechste Instanz erst N KALENDERTAGE nach der letzten Erledigung — gerechnet
+                // in ganzen Tagen (Frank's Modell: "Montag erledigt, alle 5 Tage -> Samstag").
+                // null = "KI entscheidet" -> kein Cooldown, bisheriges taegliches Verhalten.
+                val intervalDays = template.intervalDays
+                if (intervalDays != null && intervalDays >= 1 && openForThis.isEmpty()) {
+                    val lastCompletedAt = lastCompletedByTemplate[template.id]
+                    if (lastCompletedAt != null && lastCompletedAt > 0L) {
+                        val lastCompletedMidnight = Calendar.getInstance().apply {
+                            timeInMillis = lastCompletedAt
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                        val daysSince = (todayMidnight - lastCompletedMidnight) / (24L * 60L * 60L * 1000L)
+                        if (daysSince < intervalDays) {
+                            // Noch im Cooldown — die naechste Faelligkeit ist noch nicht erreicht.
+                            continue
+                        }
+                    }
+                }
 
                 // Nur erzeugen wenn aktuell KEINE offene Instanz existiert UND heute
                 // noch nichts versorgt wurde. Sonst bleibt die HEUTE-Liste so wie

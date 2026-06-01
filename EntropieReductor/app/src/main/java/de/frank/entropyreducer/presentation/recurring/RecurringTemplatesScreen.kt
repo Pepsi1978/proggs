@@ -124,6 +124,7 @@ fun RecurringTemplatesScreen(
                             onSetPriority = { score -> viewModel.setPriority(t, score) },
                             onSetTargetBucket = { bucket -> viewModel.setTargetBucket(t, bucket) },
                             onRename = { newTitle -> viewModel.setTitle(t, newTitle) },
+                            onSetInterval = { days -> viewModel.setIntervalDays(t, days) },
                         )
                     }
                 }
@@ -197,6 +198,7 @@ internal fun TemplateAsTaskCard(
     onSetPriority: (Int) -> Unit = {},
     onSetTargetBucket: (TimeBucket?) -> Unit = {},
     onRename: (String) -> Unit = {},
+    onSetInterval: (Int?) -> Unit = {},
     autoOpenPrioSlider: Boolean = false,
     onPrioSliderConsumed: () -> Unit = {},
     autoOpenBucketMenu: Boolean = false,
@@ -210,6 +212,8 @@ internal fun TemplateAsTaskCard(
     var bucketMenuOpen by remember(template.id) { mutableStateOf(false) }
     // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet einen Rename-Dialog.
     var renameOpen by remember(template.id) { mutableStateOf(false) }
+    // Frank-Wunsch 2026-06-01: Intervall-Perle (alle N Tage / KI entscheidet).
+    var intervalMenuOpen by remember(template.id) { mutableStateOf(false) }
 
     // Frank-Wunsch 2026-05-31: Vom Widget aus (ACTION_SET_LOOP_PRIORITY / _BUCKET) wird
     // genau diese Vorlage gemeint — dann den Schieberegler bzw. das Tag-Menue direkt
@@ -291,15 +295,39 @@ internal fun TemplateAsTaskCard(
                 else "Priorität ${template.priorityScore}"
             val bucketLabel = template.targetBucket?.let { loopBucketLabel(it) } ?: "KI"
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = humanReadable(template.rrule),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(8.dp))
+                // Frank-Wunsch 2026-06-01: Intervall-Perle. Zeigt "KI" (KI entscheidet),
+                // "Täglich" oder "Alle N Tage" und oeffnet bei Tap die Intervall-Auswahl.
+                val intervalLabel =
+                    when (val d = template.intervalDays) {
+                        null -> "KI"
+                        1 -> "Täglich"
+                        else -> "Alle $d Tage"
+                    }
+                Box {
+                    LoopPearl(label = intervalLabel) { intervalMenuOpen = true }
+                    DropdownMenu(
+                        expanded = intervalMenuOpen,
+                        onDismissRequest = { intervalMenuOpen = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("KI entscheidet") },
+                            onClick = {
+                                onSetInterval(null)
+                                intervalMenuOpen = false
+                            },
+                        )
+                        loopIntervalOptions.forEach { d ->
+                            DropdownMenuItem(
+                                text = { Text(if (d == 1) "Täglich" else "Alle $d Tage") },
+                                onClick = {
+                                    onSetInterval(d)
+                                    intervalMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.weight(1f))
                 // Prio-Perle: oeffnet den Schieberegler (setzt priorityScore der Vorlage).
                 LoopPearl(label = prioLabel) { sliderActive = !sliderActive }
                 Spacer(Modifier.width(8.dp))
@@ -383,6 +411,9 @@ internal fun TemplateAsTaskCard(
         )
     }
 }
+
+/** Waehlbare Wiederkehr-Intervalle in Tagen (Frank-Wunsch 2026-06-01). 1 = taeglich. */
+private val loopIntervalOptions = listOf(1, 2, 3, 5, 7, 10, 14, 30)
 
 /** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
 private val loopBucketOptions = listOf(

@@ -149,6 +149,23 @@ class RecurringTemplatesViewModel @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-06-01: festes Wiederkehr-Intervall (alle N Tage). null = "KI entscheidet"
+     * (kein Cooldown, taeglich verfuegbar). Bei N >= 2 erscheint die naechste Instanz erst N Tage
+     * nach der letzten Erledigung (siehe GenerateRecurringInstancesUseCase). Die rrule wird
+     * mitgepflegt, damit die Karte "Alle N Tage" bzw. "Täglich" korrekt anzeigt.
+     */
+    fun setIntervalDays(template: RecurringTemplateEntity, days: Int?) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val newRrule =
+                if (days != null && days >= 2) "FREQ=DAILY;INTERVAL=$days" else "FREQ=DAILY"
+            repo.upsert(
+                template.copy(intervalDays = days, rrule = newRrule, updatedAt = now),
+            )
+        }
+    }
+
+    /**
      * Frank-Wunsch 2026-05-31: Ziel-Bucket (Tag) einer wiederkehrenden Aufgabe.
      * null = "KI"/automatisch HEUTE. Offene Instanzen werden sofort in den
      * gewuenschten Bucket verschoben (und als manuell markiert, wenn ein Tag

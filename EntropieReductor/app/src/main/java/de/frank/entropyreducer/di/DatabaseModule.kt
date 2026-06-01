@@ -46,6 +46,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_24_25,
                 AppDatabase.MIGRATION_25_26,
                 AppDatabase.MIGRATION_26_27,
+                AppDatabase.MIGRATION_27_28,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
