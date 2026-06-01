@@ -23,6 +23,9 @@ import * as google from "../engines/google-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
 import { diag } from "../diag/diag.js";
 import { analyze } from "../diag/insights.js";
+// Geraeteuebergreifende Synchronisierung (chrome.storage.local <-> .sync).
+// Selbst-initialisierend, erfasst alle Schreibpfade. Siehe sync-bridge.js.
+import "./sync-bridge.js";
 
 // Diagnose-Schicht initialisieren (No-Op solange der Diagnose-Modus aus ist).
 diag.init("service-worker");
