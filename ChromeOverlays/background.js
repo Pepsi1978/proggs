@@ -8,10 +8,6 @@
 // schickt das Ergebnis zurueck.
 // ============================================================
 
-// Geraeteuebergreifende Synchronisierung (chrome.storage.local <-> .sync).
-// Laeuft eigenstaendig, erfasst alle Schreibpfade. Siehe sync-bridge.js.
-importScripts("sync-bridge.js");
-
 const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const REQUEST_TIMEOUT_MS = 120000;
 
