@@ -30,6 +30,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
 | **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-01 | 9 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs · „Erweiterung", „Extension", „Overlay" |
+| **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 
 ---
 
@@ -45,7 +46,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
 | **Web — TypeScript / Node** | `typescript-node.md` | `*.ts`, `*.tsx`, `package.json`, `tsconfig.json` · „TypeScript", „Node", „npm" |
 | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
-| **Claude-Harness — Hooks (PowerShell/Bash)** | `claude-hooks.md` | `~/.claude/hooks/*.ps1`, `*.sh` · „Hook", „SessionStart", „PreToolUse" |
 | **Build — Gradle** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*` · „Gradle", „AGP", „R8" |
 
 (Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen — und das
