@@ -28,6 +28,14 @@ object CosmosColors {
     val Warning = Color(0xFFFBBF24)               // Bernstein
     val Critical = Color(0xFFF87171)              // Korallrot
 
+    // Offizielle WHOOP-Recovery-Farben (Frank-Wunsch 2026-06-01). Kraeftiger als die
+    // Cosmos-Pastelltoene oben — bewusst die Original-Whoop-Toene fuer alle
+    // Erholungs-/Recovery-Anzeigen. Schwellen laut WHOOP: gruen 67-100 %, gelb 34-66 %,
+    // rot 0-33 %. Siehe whoopRecoveryColor() unten.
+    val WhoopRecoveryGreen = Color(0xFF16EC06)
+    val WhoopRecoveryYellow = Color(0xFFFFDE00)
+    val WhoopRecoveryRed = Color(0xFFFF0026)
+
     // Text
     val TextPrimaryDark = Color(0xFFF8FAFC)
     val TextSecondaryDark = Color(0xFF94A3B8)
@@ -74,6 +82,20 @@ object CosmosColors {
     val CatHealth = Color(0xFF34D399)
     val CatEnvironment = Color(0xFF22D3EE)
     val CatOther = Color(0xFF94A3B8)
+}
+
+/**
+ * Offizielle WHOOP-Recovery-Ampel (Frank-Wunsch 2026-06-01). Eine einzige Quelle der
+ * Wahrheit fuer ALLE Recovery-/Erholungs-Faerbungen (Gesamterholung-Ring, Erholungsverlauf,
+ * Detail-Werte, Historie). Schwellen exakt nach WHOOP:
+ *  - 67-100 % → Gruen
+ *  - 34-66 %  → Gelb
+ *  - 0-33 %   → Rot
+ */
+fun whoopRecoveryColor(percent: Double): Color = when {
+    percent >= 67.0 -> CosmosColors.WhoopRecoveryGreen
+    percent >= 34.0 -> CosmosColors.WhoopRecoveryYellow
+    else -> CosmosColors.WhoopRecoveryRed
 }
 
 /** Liefert die Akzentfarbe einer Kategorie — für Pillen und Highlights. */

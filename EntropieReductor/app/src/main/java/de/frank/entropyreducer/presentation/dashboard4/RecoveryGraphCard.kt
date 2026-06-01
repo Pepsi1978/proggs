@@ -37,6 +37,7 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.whoopRecoveryColor
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -239,17 +240,14 @@ private fun RecoveryBars(values: List<Double>) {
 }
 
 /**
- * Frank-Wunsch 2026-05-16: Ampel-Farben analog zu Whoop-Doktrin.
- *  - 80 % und mehr: gruen (gut erholt)
- *  - 60-79 %:        gelb (mittel)
- *  - unter 60 %:    rot  (schwach)
+ * Frank-Wunsch 2026-06-01: offizielle WHOOP-Recovery-Ampel (vorher Doktrin-Schwellen 80/60).
+ * Delegiert an die zentrale whoopRecoveryColor() — eine Quelle der Wahrheit fuer alle
+ * Recovery-Faerbungen:
+ *  - 67-100 % → Gruen
+ *  - 34-66 %  → Gelb
+ *  - 0-33 %   → Rot
  */
-private fun recoveryBarColor(pct: Double): Color =
-    when {
-        pct < 60.0 -> CosmosColors.Critical
-        pct < 80.0 -> CosmosColors.Warning
-        else -> CosmosColors.Success
-    }
+private fun recoveryBarColor(pct: Double): Color = whoopRecoveryColor(pct)
 
 @Composable
 private fun RecoveryTrendBadgePercent(delta: Double) {

@@ -22,8 +22,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.whoopRecoveryColor
 
 /**
  * Whoop-stiliger Recovery-Ring (Spec §13.1). Score 0-100, Farbverlauf rot/gelb/grün,
@@ -47,13 +47,8 @@ fun RecoveryRing(
     // Vorher wurde bei jedem Animations-Frame (60 fps × 800 ms tween = ~48 Frames)
     // listOf+ringColor.copy+Brush.sweepGradient neu allokiert. Mit remember(target)
     // bleiben sie ueber die Animation stabil; animated triggert nur das Canvas-Lambda.
-    val ringColor = remember(target) {
-        when {
-            target >= 67 -> CosmosColors.Success
-            target >= 34 -> CosmosColors.Warning
-            else -> CosmosColors.Critical
-        }
-    }
+    // Frank-Wunsch 2026-06-01: offizielle WHOOP-Recovery-Ampel (67/34-Schwellen).
+    val ringColor = remember(target) { whoopRecoveryColor(target.toDouble()) }
     val ringBrush = remember(ringColor) {
         Brush.sweepGradient(
             listOf(ringColor.copy(alpha = 0.4f), ringColor),
