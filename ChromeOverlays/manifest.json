@@ -1,8 +1,9 @@
 {
 	"manifest_version": 3,
 	"name": "Overlays (Voice + Tools)",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqetATfo0qEnhm5Q0e8Gm5/NVFajfSegW0n1ZwEhqCQExr0ab2Qb6oglsMx2V35NZJR6Sj/ozKXkVKO1EK6U+Tt9u6ECbwETniPeYfd2mVt5+IxNDpolN1bdChPOX2x5aTJgJAeHHpTNiHqY/yrJ9HHb8aYQDJrmByHgrSmXhvYraEuK7Yb2LQ7pF4W9t5Bck7dYW2prxVi1WeVQ/D+LOrwAYRF06uIVgewk3aD2iPLIBiPqlBJVWnvpyvbQt7jFqPfpyJcM4dZg9kiK9FB3tFDbVN2dU1MF/Sl+evhfDEai1pu+AKxYqcD7UPFwYH7WlvNIrR5oLfjh9fVxwLvAqSwIDAQAB",
 	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel"],
 	"host_permissions": [
 		"https://api.groq.com/*",
