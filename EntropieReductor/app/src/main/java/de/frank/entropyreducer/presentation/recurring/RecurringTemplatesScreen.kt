@@ -20,14 +20,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -120,6 +123,7 @@ fun RecurringTemplatesScreen(
                             onDelete = { viewModel.delete(t) },
                             onSetPriority = { score -> viewModel.setPriority(t, score) },
                             onSetTargetBucket = { bucket -> viewModel.setTargetBucket(t, bucket) },
+                            onRename = { newTitle -> viewModel.setTitle(t, newTitle) },
                         )
                     }
                 }
@@ -192,6 +196,7 @@ internal fun TemplateAsTaskCard(
     onDelete: () -> Unit,
     onSetPriority: (Int) -> Unit = {},
     onSetTargetBucket: (TimeBucket?) -> Unit = {},
+    onRename: (String) -> Unit = {},
     autoOpenPrioSlider: Boolean = false,
     onPrioSliderConsumed: () -> Unit = {},
     autoOpenBucketMenu: Boolean = false,
@@ -203,6 +208,8 @@ internal fun TemplateAsTaskCard(
     var sliderActive by remember(template.id) { mutableStateOf(false) }
     var liveSlider by remember(template.id) { mutableStateOf<Float?>(null) }
     var bucketMenuOpen by remember(template.id) { mutableStateOf(false) }
+    // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet einen Rename-Dialog.
+    var renameOpen by remember(template.id) { mutableStateOf(false) }
 
     // Frank-Wunsch 2026-05-31: Vom Widget aus (ACTION_SET_LOOP_PRIORITY / _BUCKET) wird
     // genau diese Vorlage gemeint — dann den Schieberegler bzw. das Tag-Menue direkt
@@ -264,7 +271,8 @@ internal fun TemplateAsTaskCard(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet den Rename-Dialog.
+                    modifier = Modifier.weight(1f).clickable { renameOpen = true },
                 )
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(
@@ -344,6 +352,35 @@ internal fun TemplateAsTaskCard(
                 )
             }
         }
+    }
+
+    // Frank-Wunsch 2026-06-01: Rename-Dialog — Titel der Loop-Aufgabe editieren.
+    if (renameOpen) {
+        var draft by remember(template.id) { mutableStateOf(template.title) }
+        AlertDialog(
+            onDismissRequest = { renameOpen = false },
+            title = { Text("Titel bearbeiten") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (draft.isNotBlank()) onRename(draft.trim())
+                        renameOpen = false
+                    },
+                    enabled = draft.isNotBlank(),
+                ) {
+                    Text("Speichern", color = loopAccent)
+                }
+            },
+            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("Abbrechen") } },
+        )
     }
 }
 

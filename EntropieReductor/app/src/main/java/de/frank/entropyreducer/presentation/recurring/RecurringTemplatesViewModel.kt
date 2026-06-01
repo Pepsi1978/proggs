@@ -126,6 +126,29 @@ class RecurringTemplatesViewModel @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-06-01: Titel einer wiederkehrenden Aufgabe bearbeiten.
+     * Setzt den Titel der Vorlage und zieht offene Instanzen sofort mit, damit der
+     * neue Titel auch im Aufgaben-Reiter sichtbar wird. Leere Eingaben werden ignoriert.
+     */
+    fun setTitle(template: RecurringTemplateEntity, newTitle: String) {
+        val clean = newTitle.trim()
+        if (clean.isBlank() || clean == template.title) return
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            repo.upsert(template.copy(title = clean, updatedAt = now))
+            entryRepo.getActive().first()
+                .filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }
+                .forEach {
+                    entryRepo.upsert(it.copy(title = clean, updatedAt = now))
+                }
+        }
+    }
+
+    /**
      * Frank-Wunsch 2026-05-31: Ziel-Bucket (Tag) einer wiederkehrenden Aufgabe.
      * null = "KI"/automatisch HEUTE. Offene Instanzen werden sofort in den
      * gewuenschten Bucket verschoben (und als manuell markiert, wenn ein Tag
