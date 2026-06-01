@@ -92,6 +92,21 @@ final class AutoHideController {
             resetTimer()
             return
         }
+        // Maus aktuell ueber dem Overlay? → NICHT einklappen, Timer neu starten
+        // (Polling alle idleTimeout Sekunden). Behebt Frank-Bug 2026-06-01:
+        // Wenn der Zeiger STILL ueber dem Overlay liegt (keine Bewegung), feuert
+        // der globalMouseMonitor kein .mouseMoved-Event, der Idle-Timer lief
+        // trotzdem ab und klappte ein. Der Monitor resettet nur bei BEWEGUNG —
+        // ein ruhender Zeiger wurde nicht erkannt. NSEvent.mouseLocation liefert
+        // die Position ereignis-unabhaengig; panel.frame ist in denselben
+        // Screen-Koordinaten (exakt die "ueber dem Overlay"-Definition aus dem
+        // Monitor). Deckt den GESAMTEN Overlay-Bereich ab, Vertikal- wie
+        // Horizontalmodus. Erst wenn der Zeiger ausserhalb ist, greift die
+        // 2-Sekunden-Regel.
+        if panel.frame.contains(NSEvent.mouseLocation) {
+            resetTimer()
+            return
+        }
         if panel.isCollapsed { return }
         panel.beamToCollapsed { [weak self] in
             // Im Collapsed-State KEIN Timer mehr — der User muss aktiv
