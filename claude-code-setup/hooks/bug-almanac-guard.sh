@@ -42,7 +42,7 @@ touch "$marker" 2>/dev/null || true
 if [ -f "$HOME/proggs/bugs/$file" ]; then
     msg="BUG-ALMANACH-HINWEIS: Du arbeitest an $name. Lies ZUERST bugs/$file (falls in dieser Session noch nicht geschehen), bevor du bekannte Bugs einbaust."
 else
-    msg="BUG-ALMANACH-HINWEIS: Du arbeitest an $name, aber es gibt noch KEINEN Almanach (bugs/$file). Frag Frank kurz, ob du die bekannten Bugs dieses Bereichs recherchieren sollst (erst sein OK), dann lege den Almanach an."
+    msg="BUG-ALMANACH-HINWEIS: Du arbeitest an $name, aber es gibt noch KEINEN Almanach (bugs/$file). Hol Franks kurzes OK und STARTE dann den Skill 'bug-almanach-recherche' - das ist der vorgeschriebene, vollstaendige Weg; NICHT selbst ad hoc recherchieren."
 fi
 
 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': sys.argv[1]}}))" "$msg"

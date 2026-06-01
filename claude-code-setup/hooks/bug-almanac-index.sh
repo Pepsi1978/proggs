@@ -28,7 +28,7 @@ if [ -d "$BUGS_DIR" ]; then
     done
     [ -n "$list" ] || list="(noch keine)"
 
-    ctx="BUG-ALMANACH-SYSTEM aktiv. Vorhandene Almanache in bugs/: $list. Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): bugs/README.md pruefen und den passenden Almanach ZUERST lesen. Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann bekannte Bugs recherchieren und Almanach in bugs/ anlegen. Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump)."
+    ctx="BUG-ALMANACH-SYSTEM aktiv. Vorhandene Almanache in bugs/: $list. Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): bugs/README.md pruefen und den passenden Almanach ZUERST lesen. Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN (das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump)."
     sysmsg="Bug-Almanach: $count Almanach(e) aktiv."
 
     python3 -c "import json,sys; print(json.dumps({'systemMessage': sys.argv[1], 'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': sys.argv[2]}}))" "$sysmsg" "$ctx"

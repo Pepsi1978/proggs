@@ -53,9 +53,11 @@ durchsucht; der Almanach wird PROAKTIV vor der Arbeit gelesen.
    dokumentiert → Frank melden, OK fuer einen kurzen Re-Check einholen. Dann mit dem
    Bug-Wissen arbeiten.
 5. **Kein Almanach** → Frank melden ("neuer Bereich X, kein Almanach"), auf sein
-   **OK** warten, dann 3–5 Researcher die bekannten Bugs + bewaehrte (funktionserhaltende!)
-   Loesungen recherchieren, daraus einen Almanach in `bugs/` anlegen und in `README.md`
-   eintragen (Trigger im `bug-almanac-guard`-Hook ergaenzen).
+   **OK** warten, dann **den Skill `bug-almanach-recherche` STARTEN** — NICHT selbst ad hoc
+   recherchieren. Der Skill ist der vorgeschriebene, vollstaendige Weg (Version live
+   ermitteln → Researcher-Schwarm → Fix-Status → Best-Practices-Abgleich (lesen+schreiben)
+   → Almanach + `README.md` + Hook-Mapping + Commit). Eine Ad-hoc-Recherche von Hand
+   ueberspringt diese Schritte und ist deshalb unvollstaendig.
 6. Tritt waehrend der Arbeit ein Fehler auf → ZUERST pruefen, ob es ein bekannter Bug
    aus dem Almanach ist → dokumentierte Loesung sofort anwenden (schnellster Pfad).
 7. **Nach** der Aufgabe: jeden NEU erlebten Bug als Eintrag im Almanach ergaenzen
@@ -99,4 +101,7 @@ Erkennungssignale fuer "Chrome-Extension-Arbeit": eine `manifest.json` mit
 - ❌ Einen erlebten Bug fixen, ohne ihn anschliessend im passenden Almanach zu ergaenzen
 - ❌ Den Almanach als "nice to have" behandeln — das Vorab-Lesen ist Pflicht
 - ❌ Eine gezielte Almanach-Recherche ohne Franks OK starten
+- ❌ Bei einem neuen Bereich selbst ad hoc recherchieren, statt den Skill `bug-almanach-recherche`
+  zu starten — der Skill ist der vorgeschriebene, vollstaendige Weg (sonst fehlen Fix-Status,
+  Best-Practices-Abgleich, Hook-Mapping etc.)
 - ❌ Einen Bug "loesen", indem Funktionalitaet entfernt wird (Direktive #3 — funktionserhaltend)

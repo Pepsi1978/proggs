@@ -25,8 +25,8 @@ try {
     $ctx = "BUG-ALMANACH-SYSTEM aktiv. Vorhandene Almanache in bugs/: $list. " +
         "Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): " +
         "bugs/README.md pruefen und den passenden Almanach ZUERST lesen. " +
-        "Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann bekannte Bugs recherchieren " +
-        "und Almanach in bugs/ anlegen. Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump)."
+        "Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN " +
+        "(das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump)."
 
     $out = @{
         systemMessage = "Bug-Almanach: $count Almanach(e) aktiv."
