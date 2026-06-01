@@ -42,7 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +78,7 @@ fun ThesenEntryDetailScreen(
     onBack: () -> Unit,
     viewModel: ThesenEntryDetailViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
 
@@ -132,8 +132,8 @@ fun ThesenEntryDetailScreen(
             ) {
                 // ── KI-Zusammenfassung-Karte (Bullet-Points oder Knopf "Mit KI erstellen") ──
                 val summaryVm: ThesenSummaryViewModel = hiltViewModel()
-                val summaryState by summaryVm.state.collectAsState()
-                val summaryError by summaryVm.error.collectAsState()
+                val summaryState by summaryVm.state.collectAsStateWithLifecycle()
+                val summaryError by summaryVm.error.collectAsStateWithLifecycle()
                 LaunchedEffect(summaryError) {
                     summaryError?.let {
                         snackbar.showSnackbar(it)
@@ -164,7 +164,7 @@ fun ThesenEntryDetailScreen(
                 // Andernfalls kann der Eintrag per Knopf "Mit KI nachträglich
                 // verbessern" verschliffen werden.
                 val improveVm: ThesenImproveViewModel = hiltViewModel()
-                val improveError by improveVm.error.collectAsState()
+                val improveError by improveVm.error.collectAsStateWithLifecycle()
                 LaunchedEffect(improveError) {
                     improveError?.let {
                         snackbar.showSnackbar(it)

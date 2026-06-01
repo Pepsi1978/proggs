@@ -38,7 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,7 +99,7 @@ fun ThesenScreen(
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val entries by thesenEntriesFlow(context).collectAsState(initial = emptyList())
+    val entries by thesenEntriesFlow(context).collectAsStateWithLifecycle(initialValue = emptyList())
 
     var inputDialogOpen by remember { mutableStateOf(false) }
     // Frank-Wunsch 2026-05-18 Folgeauftrag: Erst nur Mic-Button anzeigen.
@@ -107,12 +107,12 @@ fun ThesenScreen(
     var actionsExpanded by remember { mutableStateOf(false) }
     // A12: echte Whisper-Aufnahme via Groq + Gemini-Text-Verbesserung.
     val voiceVm: VoiceCaptureViewModel = hiltViewModel()
-    val voiceState by voiceVm.state.collectAsState()
-    val voiceError by voiceVm.error.collectAsState()
+    val voiceState by voiceVm.state.collectAsStateWithLifecycle()
+    val voiceError by voiceVm.error.collectAsStateWithLifecycle()
     val improveVm: ThesenImproveViewModel = hiltViewModel()
-    val improveState by improveVm.state.collectAsState()
-    val improvedText by improveVm.improvedText.collectAsState()
-    val improveError by improveVm.error.collectAsState()
+    val improveState by improveVm.state.collectAsStateWithLifecycle()
+    val improvedText by improveVm.improvedText.collectAsStateWithLifecycle()
+    val improveError by improveVm.error.collectAsStateWithLifecycle()
     // Frank-Wunsch 2026-05-19: Auto-Ueberschrift via Gemini (max 3 Woerter).
     // Wird nach jedem neuen Eintrag und nach jedem Edit asynchron gesetzt.
     val titleVm: ThesenTitleViewModel = hiltViewModel()

@@ -28,7 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -105,9 +105,9 @@ fun WidgetSettingsScreen(
     vm: WidgetSettingsViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
-    val mode by vm.themeMode.collectAsState()
-    val onlyToday by vm.onlyToday.collectAsState()
-    val bgAlpha by vm.bgAlpha.collectAsState()
+    val mode by vm.themeMode.collectAsStateWithLifecycle()
+    val onlyToday by vm.onlyToday.collectAsStateWithLifecycle()
+    val bgAlpha by vm.bgAlpha.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

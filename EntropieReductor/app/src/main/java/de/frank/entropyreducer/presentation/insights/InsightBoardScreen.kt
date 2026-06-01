@@ -47,7 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,7 +84,7 @@ fun InsightBoardScreen(
     onBack: () -> Unit,
     vm: InsightBoardViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)

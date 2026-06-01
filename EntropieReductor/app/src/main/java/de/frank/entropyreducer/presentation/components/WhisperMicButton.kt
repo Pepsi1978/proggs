@@ -12,7 +12,7 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,7 +131,7 @@ fun WhisperMicButton(
     size: Dp = 44.dp,
     vm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     val (bg, icon, tint) = when (state) {
         VoiceCaptureState.IDLE -> Triple(
             CosmosColors.AccentPrimary,

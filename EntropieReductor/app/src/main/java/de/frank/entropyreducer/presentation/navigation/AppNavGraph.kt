@@ -3,7 +3,7 @@ package de.frank.entropyreducer.presentation.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -83,7 +83,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
     // Widget-Settings-Screen. ACTION_FOCUS / ACTION_RESCHEDULE werden in
     // TasksScreen behandelt — hier nur ACTION_SETTINGS + ACTION_OPEN.
     val widgetLink by
-        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsState()
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsStateWithLifecycle()
     LaunchedEffect(widgetLink) {
         val link = widgetLink ?: return@LaunchedEffect
         when (link.action) {

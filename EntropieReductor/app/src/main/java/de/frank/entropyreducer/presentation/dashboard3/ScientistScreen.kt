@@ -52,7 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,7 +98,7 @@ fun ScientistScreen(
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: ScientistViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -142,7 +142,7 @@ fun ScientistScreen(
     }
 
     val themeVm: ThemeViewModel = hiltViewModel()
-    val themeMode by themeVm.themeMode.collectAsState()
+    val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
 
     var hypothesisToStart by remember { mutableStateOf<HypothesisEntity?>(null) }
 

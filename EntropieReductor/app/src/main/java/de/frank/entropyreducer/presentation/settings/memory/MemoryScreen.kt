@@ -33,7 +33,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +53,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 @Composable
 fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
-    val memories by vm.memories.collectAsState()
+    val memories by vm.memories.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     var adding by remember { mutableStateOf(false) }
 
@@ -61,8 +61,8 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
     // AUS_PROFIL-Memories und ruft Gemini erneut. Wir holen uns den ProfileViewModel
     // hier per hiltViewModel — dieselbe Instanz wie im ProfileScreen wenn Activity gleich.
     val profileVm: de.frank.entropyreducer.presentation.settings.ProfileViewModel = hiltViewModel()
-    val distillState by profileVm.distillState.collectAsState()
-    val distillError by profileVm.distillError.collectAsState()
+    val distillState by profileVm.distillState.collectAsStateWithLifecycle()
+    val distillError by profileVm.distillError.collectAsStateWithLifecycle()
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     androidx.compose.runtime.LaunchedEffect(distillError) {
         distillError?.let {

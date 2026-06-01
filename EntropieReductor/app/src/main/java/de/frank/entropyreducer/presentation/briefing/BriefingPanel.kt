@@ -30,7 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,8 +78,8 @@ fun BriefingPanel(
     vm: BriefingViewModel = hiltViewModel(),
     tasksVm: TasksViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
-    val tasksState by tasksVm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val tasksState by tasksVm.state.collectAsStateWithLifecycle()
     val selected = PlayingKind.DAILY
     val cosmos = LocalCosmos.current
 

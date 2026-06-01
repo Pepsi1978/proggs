@@ -23,7 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,9 +40,9 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 @Composable
 fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
-    val saved by vm.profileText.collectAsState()
-    val distillState by vm.distillState.collectAsState()
-    val distillError by vm.distillError.collectAsState()
+    val saved by vm.profileText.collectAsStateWithLifecycle()
+    val distillState by vm.distillState.collectAsStateWithLifecycle()
+    val distillError by vm.distillError.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     var text by remember(saved) { mutableStateOf(saved) }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }

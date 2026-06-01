@@ -1,7 +1,7 @@
 package de.frank.entropyreducer.presentation.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -56,7 +56,7 @@ class CardColorViewModel @Inject constructor(
 @Composable
 fun rememberCardColors(): CardColorAccess {
     val vm: CardColorViewModel = hiltViewModel()
-    val colors by vm.cardColors.collectAsState()
+    val colors by vm.cardColors.collectAsStateWithLifecycle()
     return CardColorAccess(
         colors = colors,
         setColor = { id, idx -> vm.setCardColor(id, idx) },

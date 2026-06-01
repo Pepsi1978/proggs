@@ -30,7 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,8 +73,8 @@ fun EntryCaptureSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val cosmos = LocalCosmos.current
-    val voiceState by voiceVm.state.collectAsState()
-    val voiceError by voiceVm.error.collectAsState()
+    val voiceState by voiceVm.state.collectAsStateWithLifecycle()
+    val voiceError by voiceVm.error.collectAsStateWithLifecycle()
 
     // Lokaler UI-Mode: CHOOSE / WRITING — RECORDING/PROCESSING kommen aus voiceState.
     var mode by remember { mutableStateOf(CaptureMode.CHOOSE) }

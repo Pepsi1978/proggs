@@ -31,7 +31,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,7 +69,7 @@ fun LoopTemplateDetailScreen(
 ) {
     val cosmos = LocalCosmos.current
     val loopAccent = Color(0xFFEA580C)
-    val templates by viewModel.templates.collectAsState()
+    val templates by viewModel.templates.collectAsStateWithLifecycle()
     val template = templates.firstOrNull { it.id == templateId }
 
     // Vorlage geloescht (oder nie existiert) → zurueck zur Liste.

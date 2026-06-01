@@ -48,7 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,7 +76,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  */
 @Composable
 fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
-    val prompts by vm.prompts.collectAsState()
+    val prompts by vm.prompts.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     var editing by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }

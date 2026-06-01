@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
             // ThemeViewModel beobachtet die Theme-Einstellung — der ganze Compose-Tree
             // wird automatisch hell/dunkel gerendert wenn der Toggle umgeschaltet wird.
             val themeVm: ThemeViewModel = hiltViewModel()
-            val themeMode by themeVm.themeMode.collectAsState()
+            val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val effectiveDark = when (themeMode) {
                 ThemeMode.SYSTEM -> systemDark

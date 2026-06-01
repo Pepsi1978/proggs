@@ -25,7 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -65,8 +65,8 @@ fun JournalScreen(
     vm: JournalViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
-    val entries by vm.entries.collectAsState()
-    val status by vm.syncStatus.collectAsState()
+    val entries by vm.entries.collectAsStateWithLifecycle()
+    val status by vm.syncStatus.collectAsStateWithLifecycle()
 
     CosmosScaffold(
         title = "Journal",

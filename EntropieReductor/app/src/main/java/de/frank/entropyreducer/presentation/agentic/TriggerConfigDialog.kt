@@ -29,7 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,8 +71,8 @@ fun TriggerConfigDialog(
     onToggleActive: (PromptTriggerEntity, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val triggers by triggersFlow.collectAsState(initial = emptyList())
-    val allPrompts by allPromptsFlow.collectAsState(initial = emptyList())
+    val triggers by triggersFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allPrompts by allPromptsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
     var newCron by remember { mutableStateOf("") }
     var chainAfterId by remember { mutableStateOf<String?>(null) }
     var chainDropdownExpanded by remember { mutableStateOf(false) }

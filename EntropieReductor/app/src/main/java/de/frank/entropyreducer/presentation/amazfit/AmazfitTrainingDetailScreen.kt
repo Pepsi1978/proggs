@@ -45,7 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -95,8 +95,8 @@ fun AmazfitTrainingDetailScreen(
     onBack: () -> Unit,
     vm: AmazfitTrainingDetailViewModel = hiltViewModel(),
 ) {
-    val workout by vm.workout.collectAsState()
-    val restingHrForDay by vm.restingHrForWorkoutDay.collectAsState()
+    val workout by vm.workout.collectAsStateWithLifecycle()
+    val restingHrForDay by vm.restingHrForWorkoutDay.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val w = workout
     // Frank-Wunsch 2026-05-17: Edit-Dialog fuer manuelle Werte (Pace/HR/Hoehe

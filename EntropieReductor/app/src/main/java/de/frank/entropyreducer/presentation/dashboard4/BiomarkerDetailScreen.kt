@@ -23,7 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,8 +66,8 @@ fun BiomarkerDetailScreen(
     onBack: () -> Unit,
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
-    val cardColors by vm.cardColors.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val cardColors by vm.cardColors.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val spec = metricSpecFor(metricKey)
     var range by remember { mutableStateOf(DetailRange.ALL) }

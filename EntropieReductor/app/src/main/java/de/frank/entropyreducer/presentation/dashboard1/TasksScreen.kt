@@ -65,7 +65,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -132,7 +132,7 @@ fun TasksScreen(
     onOpenLoopDetail: (templateId: String) -> Unit = {},
     vm: TasksViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
     // Frank-Wunsch 2026-05-24: Der Loop-Bereich (wiederkehrende Aufgaben) ist jetzt ein
@@ -140,7 +140,7 @@ fun TasksScreen(
     // eigenen Sub-Screens. Vorlagen + ihre Verknuepfung (Checkbox an = Aufgabe erscheint
     // im Reiter) kommen unveraendert aus dem RecurringTemplatesViewModel.
     val recurringVm: RecurringTemplatesViewModel = hiltViewModel()
-    val recurringTemplates by recurringVm.templates.collectAsState()
+    val recurringTemplates by recurringVm.templates.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
@@ -223,7 +223,7 @@ fun TasksScreen(
     // Nach Verarbeitung wird der Bus geleert, damit ein Configuration-Change
     // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
     val widgetDeepLink by
-        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsState()
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsStateWithLifecycle()
     // Bugfix 2026-05-11: Konsolidierter Widget-Tap-Handler. Vorher zwei
     // LaunchedEffects (BucketPicker + Scroll), die race-conditions hatten —
     // einer hat den Bus gecleart bevor der andere reagieren konnte. Jetzt
@@ -312,7 +312,7 @@ fun TasksScreen(
     }
 
     val themeVm: ThemeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-    val themeMode by themeVm.themeMode.collectAsState()
+    val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
 
     // Frank-Wunsch 2026-05-23 (Folge-Iteration):
     //  - Heute-/Morgen-Schnellzugriff direkt neben dem Titel "Aufgaben",

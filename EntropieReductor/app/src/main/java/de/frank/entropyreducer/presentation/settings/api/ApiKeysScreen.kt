@@ -42,7 +42,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,10 +75,10 @@ fun ApiKeysScreen(
     ouraVm: OuraApiViewModel = hiltViewModel(),
     healthConnectVm: HealthConnectApiViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
-    val oauthState by oauthVm.state.collectAsState()
-    val ouraState by ouraVm.state.collectAsState()
-    val healthConnectState by healthConnectVm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val oauthState by oauthVm.state.collectAsStateWithLifecycle()
+    val ouraState by ouraVm.state.collectAsStateWithLifecycle()
+    val healthConnectState by healthConnectVm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "API-Schlüssel",

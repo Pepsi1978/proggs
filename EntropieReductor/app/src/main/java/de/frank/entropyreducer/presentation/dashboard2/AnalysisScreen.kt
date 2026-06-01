@@ -35,7 +35,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,7 +81,7 @@ fun AnalysisScreen(
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: AnalysisViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
 
@@ -93,7 +93,7 @@ fun AnalysisScreen(
     }
 
     val themeVm: ThemeViewModel = hiltViewModel()
-    val themeMode by themeVm.themeMode.collectAsState()
+    val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
 
     // Frank-Wunsch 2026-05-22: Einheitliches Mic-Verhalten ueber alle Reiter.
     // Mic-Tap oeffnet zwei runde Buttons (Schreiben/Aufnehmen) in Gruen — der
