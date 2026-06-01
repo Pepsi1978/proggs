@@ -66,6 +66,22 @@ Opus-Wert ist ein BUG, kein Optimierung.
 
 ---
 
+## Workflows (eigener Modell-Pfad — wichtig)
+
+Das Workflow-Tool (dynamische Workflows, viele Agenten pro Run) verwendet NICHT
+`CLAUDE_CODE_SUBAGENT_MODEL`, sondern das **Session-Modell** (`model` in settings.json).
+Da `model = opus[1m]` ist (durch `session-guard` abgesichert), laufen ALLE Workflow-Agenten
+automatisch auf Opus 4.8 mit 1M Kontext — OHNE extra Einstellung. Belegt durch die offizielle
+Doku (code.claude.com/docs/en/workflows): "Every agent in a workflow uses your session's model
+unless the script routes a stage to a different one."
+
+Konsequenz fuer selbst geschriebene Workflows:
+- `agent(prompt)` ohne `opts.model` → erbt das Session-Modell (opus[1m]). RICHTIG so.
+- `opts.model` NIEMALS auf ein kleineres Modell (sonnet/haiku) setzen — ausser bewusst fuer eine
+  triviale, anfrage-dichte Stage, und nur mit Begruendung.
+- Concurrency-Fakt: max 16 Agenten GLEICHZEITIG (CPU-abhaengig), bis 1000 total pro Run. "Hunderte
+  gleichzeitig" stimmt nicht — sie laufen in 16er-Slots ab. Wer auf opus[1m] laeuft, stuerzt dabei nicht ab.
+
 ## Zusammenspiel
 
 | Regel | Zusammenspiel |
