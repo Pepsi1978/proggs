@@ -27,6 +27,29 @@ kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
 
 ---
 
+## 🔗 Bezug zum Bug-Almanach ([`bugs/kotlin.md`](../../../bugs/kotlin.md))
+
+Jeder Best-Practice-Abschnitt hier ist die **Praevention** zu einem Abschnitt im Bug-Almanach —
+zwei Seiten derselben Medaille. Tritt einer der dortigen Bugs auf, liefert der Almanach die konkrete
+funktionserhaltende Loesung; dieser Abschnitt sagt, wie man ihn von vornherein vermeidet. Direkt zur
+passenden Loesung springen:
+
+| Best-Practice (hier) | Verhindert Bug(s) in `bugs/kotlin.md` |
+|----------------------|----------------------------------------|
+| §1 Sprache & Idiome (K2) | §1 K2-Compiler & Sprach-Migration (1.1–1.9) |
+| §2 Coroutines & Flow | §2 Coroutines (2.1–2.9) |
+| §3 Null-Safety & Fehlerbehandlung | §3 Null-Safety (3.1–3.3) |
+| §4 Collections & Immutability | §5 data class (5.1–5.3) |
+| §5 Flow / StateFlow in Compose | §4 Flow / StateFlow / SharedFlow (4.1–4.4) |
+| §6 Compose — Stabilitaet & Recomposition | §6 Recomposition & Stabilitaet (6.1–6.3) |
+| §7 Compose — State | §7 State & remember (7.1–7.4) |
+| §8 Compose — Side-Effects | §8 Side-Effects (8.1–8.3) |
+| §9 Compose — Performance | §9 Performance (9.1–9.2) |
+| §10 Build & Toolchain | §10 Build & Toolchain (10.1–10.6) |
+| §11 Testing | — (kein Bug-Pendant, reine Praevention) |
+
+---
+
 ## 1. Sprache & Idiome (K2)
 
 - **Explizit typisieren statt auf Inferenz hoffen.** K2 (default ab 2.0, nicht abschaltbar) ist bei

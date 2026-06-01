@@ -27,6 +27,27 @@
 
 ---
 
+## 🔗 Bezug zu den Best-Practices ([`best-practices/projekt-code/kotlin/best-practices.md`](../best-practices/projekt-code/kotlin/best-practices.md))
+
+Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest*, die Best-Practices sagen
+*wie man den Bug von vornherein vermeidet*. Pro Bug-Abschnitt der passende Praeventions-Abschnitt —
+nach einem Fix immer auch dort verankern, damit der Fehler nicht wiederkommt:
+
+| Bug-Abschnitt (hier) | Praevention in best-practices/projekt-code/kotlin |
+|----------------------|---------------------------------------------------|
+| §1 K2-Compiler & Sprach-Migration | §1 Sprache & Idiome (K2) |
+| §2 Coroutines | §2 Coroutines & Flow |
+| §3 Null-Safety | §3 Null-Safety & Fehlerbehandlung |
+| §4 Flow / StateFlow / SharedFlow | §5 Flow / StateFlow in Compose |
+| §5 data class | §4 Collections & Immutability |
+| §6 Recomposition & Stabilitaet | §6 Compose — Stabilitaet & Recomposition |
+| §7 State & remember | §7 Compose — State |
+| §8 Side-Effects | §8 Compose — Side-Effects |
+| §9 Performance | §9 Compose — Performance |
+| §10 Build & Toolchain | §10 Build & Toolchain |
+
+---
+
 ## 1. K2-Compiler & Sprach-Migration (Kotlin 2.0 → 2.3)
 
 ### 1.1 K2 ist default und nicht abschaltbar (2.0.0)  ⭐
