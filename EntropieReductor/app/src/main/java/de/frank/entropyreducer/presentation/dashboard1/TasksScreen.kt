@@ -688,6 +688,12 @@ fun TasksScreen(
                                             onSetTargetBucket = { bucket ->
                                                 recurringVm.setTargetBucket(template, bucket)
                                             },
+                                            // Bugfix 2026-06-01: onRename war hier nicht verdrahtet
+                                            // (Default no-op) -> Rename-Dialog im Loop-Bereich des
+                                            // Aufgaben-Reiters tat beim Speichern nichts.
+                                            onRename = { newTitle ->
+                                                recurringVm.setTitle(template, newTitle)
+                                            },
                                             autoOpenPrioSlider =
                                                 prioPickerTemplateId == template.id,
                                             onPrioSliderConsumed = {
