@@ -67,14 +67,14 @@ constructor(
      * lange Texte werden an Absatz- und Satzgrenzen in TTS-vertraegliche Stuecke geteilt.
      * Erneutes Tippen oder Stop bricht die Kette sauber ab (Job-Cancel + tts.stop()).
      */
-    fun speak() {
+    fun speak(showImproved: Boolean) {
         val s = _state.value
         if (s.ttsState != JournalTtsState.IDLE) {
             stopSpeaking()
             return
         }
         val entry = s.entry ?: return
-        val chunks = buildSpeechChunks(entry, s.followups)
+        val chunks = buildSpeechChunks(entry, s.followups, showImproved)
         if (chunks.isEmpty()) return
 
         speakJob?.cancel()
@@ -115,16 +115,22 @@ constructor(
     private fun buildSpeechChunks(
         entry: JournalMirrorEntryEntity,
         followups: List<JournalMirrorFollowupEntity>,
+        showImproved: Boolean,
     ): List<String> {
         val sections = buildList {
             val head = buildString {
                 entry.title?.takeIf { it.isNotBlank() }?.let { append(it).append(". ") }
-                append(entry.displayText)
+                // Vorlesen == Anzeige: dieselbe Variante wie der angewählte Tab.
+                val mainImproved = entry.improvedText
+                append(
+                    if (showImproved && !mainImproved.isNullOrBlank()) mainImproved
+                    else entry.displayText
+                )
             }
             add(head)
             followups.forEachIndexed { i, f ->
-                val txt =
-                    if (f.isImproved && !f.improvedText.isNullOrBlank()) f.improvedText else f.text
+                val fImproved = f.improvedText
+                val txt = if (showImproved && !fImproved.isNullOrBlank()) fImproved else f.text
                 add("Nachtrag ${germanOrdinal(i + 1)}. $txt")
             }
         }

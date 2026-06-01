@@ -156,8 +156,15 @@ constructor(
         }
     }
 
-    /** Spricht Titel + Text + alle Nachträge der Reihe nach vor. */
-    fun speakAll() {
+    /**
+     * Spricht Titel + Text + alle Nachträge der Reihe nach vor.
+     *
+     * @param showImproved Welche Variante vorgelesen wird — entspricht dem aktuell
+     *        im Detail-Screen angewählten Tab: true = KI-verbesserte Fassung
+     *        (Fallback auf Original, wo es keine verbesserte gibt), false = Original.
+     *        So liest der Lautsprecher exakt das vor, was gerade sichtbar ist.
+     */
+    fun speakAll(showImproved: Boolean) {
         val state = uiState.value
         val entry = state.entry ?: return
         if (state.ttsState != TagebuchTtsState.IDLE) {
@@ -166,10 +173,14 @@ constructor(
         }
         val parts = buildList {
             if (entry.title.isNotBlank()) add(entry.title)
-            if (entry.text.isNotBlank()) add(entry.text)
+            val mainImproved = entry.improvedText
+            val mainText =
+                if (showImproved && !mainImproved.isNullOrBlank()) mainImproved else entry.text
+            if (mainText.isNotBlank()) add(mainText)
             entry.followups.forEachIndexed { index, f ->
                 add("Nachtrag ${germanOrdinal(index + 1)}")
-                add(f.text)
+                val fImproved = f.improvedText
+                add(if (showImproved && !fImproved.isNullOrBlank()) fImproved else f.text)
             }
         }
         val spokenText = parts.joinToString(separator = ". ").take(4500)

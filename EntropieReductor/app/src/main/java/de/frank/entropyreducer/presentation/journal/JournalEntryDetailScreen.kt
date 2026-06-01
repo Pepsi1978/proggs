@@ -67,6 +67,15 @@ fun JournalEntryDetailScreen(
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    // Original/KI-Umschalter hier hochgezogen, damit der Vorlese-Knopf in der Top-Bar
+    // dieselbe Variante liest, die unten angezeigt wird (Frank-Wunsch 2026-06-01).
+    // Standard ist "KI-verbessert", sobald eine verbesserte Variante existiert.
+    val variantEntry = state.entry
+    val improvedAvailable = !variantEntry?.improvedText.isNullOrBlank()
+    var showImproved by remember(variantEntry?.sourceId, improvedAvailable) {
+        mutableStateOf(improvedAvailable)
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize().padding(top = topInset)) {
             // ── Top-Bar: Zurück + Titel + Vorlesen ──
@@ -88,7 +97,7 @@ fun JournalEntryDetailScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = { viewModel.speak() }, modifier = Modifier.size(44.dp)) {
+                IconButton(onClick = { viewModel.speak(showImproved) }, modifier = Modifier.size(44.dp)) {
                     when (state.ttsState) {
                         JournalTtsState.LOADING ->
                             CircularProgressIndicator(
@@ -160,10 +169,7 @@ fun JournalEntryDetailScreen(
                 }
 
                 // ── Eintrag-Karte (Titel + Text, optional Original/KI-Umschalter) ──
-                var showImproved by
-                    remember(entry.sourceId, entry.isImproved) {
-                        mutableStateOf(entry.isImproved && !entry.improvedText.isNullOrBlank())
-                    }
+                // showImproved ist oben hochgezogen — damit Vorlesen == Anzeige.
                 val hasImproved = !entry.improvedText.isNullOrBlank()
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {

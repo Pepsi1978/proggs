@@ -174,8 +174,10 @@ fun TagebuchEntryDetailScreen(
 
                 var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
                 var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
-                var showImproved by remember(entry.id, entry.isImproved) {
-                    mutableStateOf(entry.isImproved && entry.improvedText != null)
+                // Standard ist IMMER die verbesserte Variante, sobald eine existiert
+                // (Frank-Wunsch 2026-06-01) — unabhängig vom isImproved-Flag.
+                var showImproved by remember(entry.id, entry.improvedText) {
+                    mutableStateOf(entry.improvedText != null)
                 }
                 var entryImproving by remember(entry.id) { mutableStateOf(false) }
 
@@ -258,7 +260,7 @@ fun TagebuchEntryDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(
-                        onClick = { viewModel.speakAll() },
+                        onClick = { viewModel.speakAll(showImproved) },
                         modifier = Modifier.size(40.dp),
                     ) {
                         when (state.ttsState) {
