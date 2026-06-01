@@ -125,16 +125,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
-            "-opt-in=kotlin.RequiresOptIn",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-        )
-    }
-
     // PERFORMANCE 2026-05-09: Compose Compiler Reports aktivieren — schreibt
     // beim Build pro Modul eine Datei mit allen nicht-skippable Composables
     // und allen unstable Parametern in build/compose_compiler/. Goldquelle
@@ -162,6 +152,19 @@ android {
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/INDEX.LIST"
         }
+    }
+}
+
+// Kotlin 2.x: jvmTarget + opt-ins via compilerOptions (kotlinOptions {} wird in Kotlin 2.2 ein Fehler).
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        freeCompilerArgs.addAll(
+            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+        )
     }
 }
 
