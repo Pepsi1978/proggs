@@ -1582,6 +1582,21 @@ private fun priorityCardTint(score: Double, isDark: Boolean): Color {
 // (Frank-Wunsch 2026-05-31). priorityRampColor() kommt jetzt via Import oben.
 
 @Composable
+/**
+ * Frank-Wunsch 2026-06-01: Erledigungs-Zeitpunkt menschenlesbar (Tag + Uhrzeit) —
+ * z.B. "01.06.2026 um 12:38". Quelle ist resolvedAt, das jeder Erledigen-Pfad setzt.
+ */
+private fun formatResolvedAt(ms: Long): String {
+    val dt = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
+    return "%02d.%02d.%d um %02d:%02d".format(
+        dt.dayOfMonth,
+        dt.monthValue,
+        dt.year,
+        dt.hour,
+        dt.minute,
+    )
+}
+
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
     onClick: () -> Unit = {},
@@ -1681,6 +1696,21 @@ private fun EntropyEntryCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+            }
+
+            // Frank-Wunsch 2026-06-01: Bei erledigten Aufgaben sichtbar anzeigen WANN genau
+            // erledigt wurde (Tag + Uhrzeit aus resolvedAt). Eingerueckt unter den Titel
+            // (40dp = Haekchen 28dp + 12dp Abstand).
+            if (isResolved) {
+                entry.resolvedAt?.let { resolvedMs ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Erledigt am ${formatResolvedAt(resolvedMs)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                        modifier = Modifier.padding(start = 40.dp),
+                    )
+                }
             }
 
             // Untere Zeile: Priorität-Perle + KI/manuell-Perle (rechts).
