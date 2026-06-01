@@ -260,33 +260,65 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 val handledToday =
                     entryRepo.get(todayId) != null || template.lastGeneratedAt >= todayMidnight
 
-                // Frank-Wunsch 2026-06-01: Intervall-Cooldown. Hat die Vorlage ein festes
-                // Intervall (alle N Tage) und wurde sie schon einmal erledigt, erscheint die
-                // naechste Instanz erst N KALENDERTAGE nach der letzten Erledigung — gerechnet
-                // in ganzen Tagen (Frank's Modell: "Montag erledigt, alle 5 Tage -> Samstag").
-                // null = "KI entscheidet" -> kein Cooldown, bisheriges taegliches Verhalten.
+                // Frank-Wunsch 2026-06-01: Festes Intervall (alle N Tage). Statt die Aufgabe
+                // im "Cooldown" zu verstecken, wird sie nach FAELLIGKEIT in den passenden Bucket
+                // einsortiert: naechste Faelligkeit = letzte Erledigung + Intervall (Kalendertage).
+                //  - heute oder ueberfaellig -> HEUTE
+                //  - in 1 Tag                -> MORGEN
+                //  - in 2..7 Tagen           -> FREIBLOCK
+                //  - in >7 Tagen             -> SPAETER
+                // So verschwindet z.B. Kraftsport (alle 5 Tage, gestern erledigt) nicht, sondern
+                // wandert nach FREIBLOCK und rueckt Tag fuer Tag naeher Richtung HEUTE.
+                // null = "KI entscheidet" -> kein Intervall-Bucket, bisherige taegliche Logik unten.
                 val intervalDays = template.intervalDays
                 if (intervalDays != null && intervalDays >= 1) {
                     val lastCompletedAt = lastCompletedByTemplate[template.id]
-                    if (lastCompletedAt != null && lastCompletedAt > 0L) {
-                        val lastCompletedMidnight = Calendar.getInstance().apply {
-                            timeInMillis = lastCompletedAt
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                        val daysSince = (todayMidnight - lastCompletedMidnight) / (24L * 60L * 60L * 1000L)
-                        if (daysSince < intervalDays) {
-                            // Noch im Cooldown — die naechste Faelligkeit ist noch nicht erreicht.
-                            // Frank-Wunsch 2026-06-01: Wenn nach einer Intervall-Aenderung eine
-                            // faelschlich offene Instanz existiert (z.B. Kraftsport steht fuer heute,
-                            // wurde aber gestern erledigt und ist jetzt auf "alle 5 Tage" gesetzt),
-                            // muss sie SOFORT verschwinden — nicht erst beim naechsten Tag.
-                            for (e in openForThis) entryRepo.delete(e)
-                            continue
+                    val nextDueMidnight =
+                        if (lastCompletedAt != null && lastCompletedAt > 0L) {
+                            midnightOf(lastCompletedAt) + intervalDays.toLong() * MS_PER_DAY
+                        } else {
+                            // Noch nie erledigt -> ab heute faellig.
+                            todayMidnight
                         }
+                    val daysUntilDue = ((nextDueMidnight - todayMidnight) / MS_PER_DAY).toInt()
+                    val dueBucket =
+                        when {
+                            daysUntilDue <= 0 -> TimeBucket.HEUTE
+                            daysUntilDue == 1 -> TimeBucket.MORGEN
+                            daysUntilDue <= 7 -> TimeBucket.FREIBLOCK
+                            else -> TimeBucket.SPAETER
+                        }
+                    if (openForThis.isNotEmpty()) {
+                        // Vorhandene offene Instanz behalten und in den Faelligkeits-Bucket schieben.
+                        val keep = openForThis.first()
+                        if (keep.timeBucket != dueBucket || keep.manualBucket != dueBucket) {
+                            entryRepo.upsert(
+                                keep.copy(
+                                    timeBucket = dueBucket,
+                                    manualBucket = dueBucket,
+                                    manualBucketSetAt = now,
+                                    updatedAt = now,
+                                ),
+                            )
+                        }
+                    } else if (!handledToday) {
+                        // Keine offene Instanz + heute noch nicht versorgt -> eine im Faelligkeits-Bucket.
+                        entryRepo.upsert(
+                            buildEntryForToday(template, now).copy(
+                                timeBucket = dueBucket,
+                                manualBucket = dueBucket,
+                                manualBucketSetAt = now,
+                            ),
+                        )
+                        templateRepo.upsert(
+                            template.copy(
+                                lastGeneratedAt = now,
+                                occurrenceCount = template.occurrenceCount + 1,
+                                updatedAt = now,
+                            ),
+                        )
                     }
+                    continue
                 }
 
                 // Nur erzeugen wenn aktuell KEINE offene Instanz existiert UND heute
@@ -350,7 +382,18 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         )
     }
 
+    /** Lokale Mitternacht (00:00) des Tages zu dem [ms] gehoert. */
+    private fun midnightOf(ms: Long): Long =
+        Calendar.getInstance().apply {
+            timeInMillis = ms
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
     companion object {
         private const val TAG = "RecurringInstances"
+        private const val MS_PER_DAY = 24L * 60L * 60L * 1000L
     }
 }
