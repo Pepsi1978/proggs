@@ -92,6 +92,33 @@ neu einzutragen sind (oder per Sync vom anderen Geraet kommen).
 **FIX:** In der Options-/Panel-Seite einen `chrome.storage.onChanged`-Listener
 ergaenzen, der die Felder live aktualisiert. (Sofort-Workaround: Panel neu oeffnen.)
 
+## 10. Mikrofon/Spracheingabe stumm nach USB-Port- oder Hub-Wechsel  ⭐ HAEUFIG
+**Symptom:** Mic-Button startet sichtbar (Button wird rot, Aufnahme-Indikator an),
+aber es kommt KEIN Ton an: Live-Vorschau bleibt leer, Whisper/Groq bekommt nur
+Stille, KEIN Fehler-Toast. `getUserMedia` wirft KEINEN Fehler. Tritt auf ALLEN
+Seiten auf. Dasselbe Mikrofon funktioniert gleichzeitig in nativen Apps
+(z.B. Terminal-Voice-Overlay) einwandfrei.
+**Ursache (zweistufig):** (1) **Windows** vergibt einem USB-Mikrofon **ohne
+Seriennummer** seine Instanz-ID aus **Bus + Port** — neuer USB-Port oder ein neu
+dazwischen gesteckter **USB-Hub** = neue Geraete-Instanz = Standard-Aufnahmegeraet-
+Zuordnung verloren. (2) **Chrome** speichert die Mikrofon-Wahl als **gehashte
+`deviceId`** (`device_id_salt` + Geraetemerkmale); wird die ID ungueltig, faellt
+Chrome auf ein anderes/leeres Geraet zurueck. `getUserMedia` liefert dann einen
+**gueltigen aber stummen Track** (`track.muted`). Native Apps folgen dem
+System-Default und laufen weiter — Chrome haengt an der gemerkten ID und ist stumm.
+**Versionen:** Chromium-weit (Chrome + Edge), Windows; belegt in Chromium-Issues
+#40275281, #997689, Google-Chrome-Help #8079458 — Stand 2026 nicht behoben.
+**FIX (Nutzer):** `chrome://settings/content/microphone` oeffnen und das richtige
+(USB-)Mikrofon explizit als Standard waehlen. (Reiner Chrome-Neustart hilft NICHT.)
+Vorbeugend: Mikrofon moeglichst am selben Port lassen; nach Hub-Wechsel Geraet
+einmal neu auswaehlen. **FIX (Code, optional/Haertung):** Stummen Stream erkennen
+(Web Audio `AnalyserNode`, RMS < ~0,01 ueber 1-2 s, zusaetzlich `track.muted`/
+`track.readyState` lesen — `getUserMedia` wirft bei stummem Geraet keinen Fehler)
+und dem Nutzer eine klare Meldung zeigen statt still zurueckzukehren; optional
+`enumerateDevices()` + `devicechange`-Listener fuer Geraetewahl/Hot-Plug.
+**Quelle:** eigener Vorfall 2026-06-01 (overlays-Erweiterung, Mic ging nach
+USB-Hub-Wechsel nicht; Chrome-Mic-Auswahl neu setzen war die Loesung) + Recherche.
+
 ---
 
 ## Pflicht-Checkliste vor Chrome-Extension-Arbeit
@@ -102,3 +129,4 @@ ergaenzen, der die Felder live aktualisiert. (Sofort-Workaround: Panel neu oeffn
 - [ ] WebSocket-Hosts als `wss://` in host_permissions (Punkt 3)?
 - [ ] Sync: pro-Datensatz, fester key, Verschluesselung bedacht (Punkt 7)?
 - [ ] Nach Code-Aenderung: Erweiterung neu laden + offene Tabs reloaden (Punkt 6)?
+- [ ] Mikrofon geht nicht (aber Button wird rot)? ZUERST Chrome-Mic-Auswahl pruefen (Punkt 10), nicht den Code.

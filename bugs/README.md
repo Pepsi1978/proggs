@@ -29,7 +29,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
-| **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-01 | 9 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs · „Erweiterung", „Extension", „Overlay" |
+| **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-01 | 10 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
 | **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 
 ---
