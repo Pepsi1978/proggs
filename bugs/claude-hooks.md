@@ -432,7 +432,7 @@ beim Beenden Non-Raw-Mode hinterlaesst; Claude restauriert Raw-Mode nicht.
 ### 12.7 Parallele Sessions korrumpieren `.claude.json`
 **Symptom:** "JSON Parse error: Unexpected EOF"; Config kaputt.
 **Ursache:** Mehrere parallele Claude-Instanzen schreiben gleichzeitig (kein atomares Write/Lock).
-**Versionen:** Windows (Issue #28806).
+**Versionen:** Windows (Issue #28806). ✅ **Hotfix gefixt ab v2.1.61** — auf 2.1.159 nicht mehr relevant.
 **FIX:** Eigene Config-Schreiber atomar machen (temp-Datei + `os.replace`/rename); nicht
 mehrere Sessions gleichzeitig dieselbe Config schreiben lassen.
 
@@ -485,6 +485,42 @@ oft "not connected").
 **Ursache:** Das Flag wirkt nur auf user/project-Hooks.
 **Versionen:** per Design (Issue #26637).
 **FIX:** Bewusst sein, dass org-Hooks separat verwaltet werden.
+
+---
+
+## 15. Fix-Status — was auf v2.1.159 schon behoben ist
+
+> Wichtig fuers Versions-Denken: Diese Eintraege waren frueher Bugs, sind aber in der
+> aktuell installierten Version (2.1.159) bereits GEFIXT. Sie gelten nur noch fuer
+> aeltere Versionen — auf 2.1.159 NICHT mehr als aktive Bugs behandeln (Changelog-belegt,
+> Stand 2026-06-01).
+
+| Frueherer Bug | Gefixt ab | Almanach-Bezug |
+|---------------|-----------|----------------|
+| Hook-Output korrumpiert interaktiven Prompt (Hooks hatten Terminal-Zugriff) | **v2.1.141** | 11.3 |
+| `transcript_path` ungueltig nach EnterWorktree / CWD-Wechsel | **v2.1.141** | — |
+| Stop-Hook-Endlosschleife laeuft ewig (Block-Cap 8 eingefuehrt) | **v2.1.143** | 6.1, 11.2 |
+| Hook-`if`-Conditions (`PowerShell(git push*)` / `Bash(...)`) matchten nie | **v2.1.147** | 9.x (matcher-conditions) |
+| Plugin-`Stop`/`UserPromptSubmit` brechen bei Cache-Cleanup ab | **v2.1.147** | 3.6-nah |
+| `.claude.json`-Korruption bei parallelen Sessions (Windows) | **v2.1.61** | 12.7 |
+| `/goal` haengt still bei `disableAllHooks` / `allowManagedHooksOnly` | **v2.1.140** | 14.2-nah |
+| Symlinkte Settings loesen falsche `ConfigChange`-Hooks aus | **v2.1.140** | — |
+
+### Noch NICHT gefixt auf v2.1.159 (Workaround bleibt aktiv)
+Per Design oder noch offen — Loesungen oben weiter anwenden:
+- exit 1 blockiert nicht / nur exit 2 (1.1) — per Design.
+- Flaches `additionalContext` ohne `hookSpecificOutput` ignoriert (2.1) — per Design.
+- `type:"prompt"` nicht bei SessionStart/SessionEnd (8.1) — per Design.
+- stdin dual-read noetig (Console.In vs `$input`) (12.4) — noch offen.
+- UTF-8 BOM in settings.json (12.1, #9906) — noch offen.
+- Falsche "hook error"-Labels trotz exit 0 (11.1, #34859/#34713) — kein Fix belegt, wahrsch. offen.
+- v2.1.123 Bash-Matcher droppt Kontext (2.4, #55889) — wahrsch. offen; betrifft v.a. `Bash`-Matcher, `Edit|Write` evtl. nicht.
+- PreToolUse exit 2 blockt Write/Edit nicht (1.6, #13744 als Duplikat geschlossen, kein eigener Fix belegt).
+
+**Methodik-Hinweis:** Der GitHub-Issue-Status liess sich nur eingeschraenkt verifizieren
+(github.com per WebFetch blockiert — nur Such-Snippets). Die "gefixt"-Angaben sind
+Changelog-belegt; die "noch offen"-Angaben sind teils "kein Fix gefunden" und vorsichtig
+zu behandeln. Bei naechster Re-Recherche `gh issue view <nr>` nutzen fuer harten Status.
 
 ---
 
