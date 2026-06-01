@@ -8,7 +8,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
-trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"' ERR
+trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"; exit 0' ERR
 
 input=$(cat)
 [ -n "$input" ] || exit 0

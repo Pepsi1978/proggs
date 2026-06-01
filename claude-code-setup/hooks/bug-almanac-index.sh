@@ -9,7 +9,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
-trap 'hook_log_warn "bug-almanac-index: Error at line $LINENO"' ERR
+trap 'hook_log_warn "bug-almanac-index: Error at line $LINENO"; exit 0' ERR
 
 # Spam-Schutz-Marker des Guard-Hooks zuruecksetzen -> frische Erinnerung pro Session.
 rm -f "${TMPDIR:-/tmp}"/bug-almanac-seen-*.flag 2>/dev/null || true
