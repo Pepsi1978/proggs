@@ -299,6 +299,13 @@ DTO/`@SerializedName`-Felder pro Modell. So eng wie moeglich, nie pauschal `-kee
 **Versionen:** Dagger/Hilt-KSP2-Inkompat war **dagger #4303 = CLOSED/COMPLETED (2024-12)** → in aktuellen Versionen gefixt; ksp #2545 (Lifetime-Token) ist noch **OPEN**.
 **FIX:** Hilt/Dagger auf aktuelle (KSP2-faehige) Version heben; alle Processor auf `ksp`-Konfiguration (nicht `kapt`); Dagger-Optionen als `ksp { arg(...) }`. Notfalls `ksp.useKSP2=false`.
 
+### 10.7 `proguard-android.txt` faellt mit AGP 9.0 weg (Release-Minification)
+**Symptom:** Release-Build mit Minification bricht oder aendert Verhalten nach einem AGP-9.0-Upgrade, wenn das Modul `proguard-android.txt` als Default-ProGuard-Basis referenziert.
+**Ursache:** AGP 9.0 entfernt die alte Default-Basis `proguard-android.txt`; Basis ist nur noch `proguard-android-optimize.txt` (R8 fullMode, aggressivere Optimierung) — zu breite/fehlende keep-Rules fallen damit haerter auf.
+**Versionen:** ab **AGP 9.0** (Projekte aktuell 8.7–8.10 → Upgrade-Pfad). Per Design.
+**FIX (funktionserhaltend):** `getDefaultProguardFile("proguard-android-optimize.txt")` verwenden; keep-Rules eng halten und mit dem **R8 Configuration Analyzer** pruefen, welche Regel wie viele Klassen blockiert; Release-Variante mit Minification VOR dem AGP-Upgrade testen. Praevention: best-practices §10 (Build & Toolchain).
+**Quelle:** developer.android.com shrink-code / keep-rules-overview / r8-configuration-analyzer (2025); ergaenzt aus dem best-practices-Lauf 2026-06-02 (Rueckkopplung).
+
 ---
 
 ## 11. Fix-Status — was auf dem aktuellen Stack schon behoben ist
