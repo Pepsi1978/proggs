@@ -123,7 +123,6 @@ fun RecurringTemplatesScreen(
                             onDelete = { viewModel.delete(t) },
                             onSetPriority = { score -> viewModel.setPriority(t, score) },
                             onSetTargetBucket = { bucket -> viewModel.setTargetBucket(t, bucket) },
-                            onRename = { newTitle -> viewModel.setTitle(t, newTitle) },
                             onSetInterval = { days -> viewModel.setIntervalDays(t, days) },
                         )
                     }
@@ -197,8 +196,10 @@ internal fun TemplateAsTaskCard(
     onDelete: () -> Unit,
     onSetPriority: (Int) -> Unit = {},
     onSetTargetBucket: (TimeBucket?) -> Unit = {},
-    onRename: (String) -> Unit = {},
     onSetInterval: (Int?) -> Unit = {},
+    // Frank-Wunsch 2026-06-01: Klick auf die Karte oeffnet den Loop-Detail-Screen,
+    // wo Titel/Beschreibung/Intervall/Prio/Bucket/aktiv bearbeitet werden.
+    onOpenDetail: () -> Unit = {},
     autoOpenPrioSlider: Boolean = false,
     onPrioSliderConsumed: () -> Unit = {},
     autoOpenBucketMenu: Boolean = false,
@@ -210,8 +211,6 @@ internal fun TemplateAsTaskCard(
     var sliderActive by remember(template.id) { mutableStateOf(false) }
     var liveSlider by remember(template.id) { mutableStateOf<Float?>(null) }
     var bucketMenuOpen by remember(template.id) { mutableStateOf(false) }
-    // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet einen Rename-Dialog.
-    var renameOpen by remember(template.id) { mutableStateOf(false) }
     // Frank-Wunsch 2026-06-01: Intervall-Perle (alle N Tage / KI entscheidet).
     var intervalMenuOpen by remember(template.id) { mutableStateOf(false) }
 
@@ -241,7 +240,7 @@ internal fun TemplateAsTaskCard(
     val cardAlpha = if (template.isActive) 1f else 0.5f
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth().alpha(cardAlpha),
+        modifier = Modifier.fillMaxWidth().alpha(cardAlpha).clickable(onClick = onOpenDetail),
         tintBrush = priorityBrush,
     ) {
         Column {
@@ -275,8 +274,8 @@ internal fun TemplateAsTaskCard(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet den Rename-Dialog.
-                    modifier = Modifier.weight(1f).clickable { renameOpen = true },
+                    // Frank-Wunsch 2026-06-01: Tap auf den Titel oeffnet den Loop-Detail-Screen.
+                    modifier = Modifier.weight(1f).clickable(onClick = onOpenDetail),
                 )
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(
@@ -382,48 +381,20 @@ internal fun TemplateAsTaskCard(
         }
     }
 
-    // Frank-Wunsch 2026-06-01: Rename-Dialog — Titel der Loop-Aufgabe editieren.
-    if (renameOpen) {
-        var draft by remember(template.id) { mutableStateOf(template.title) }
-        AlertDialog(
-            onDismissRequest = { renameOpen = false },
-            title = { Text("Titel bearbeiten") },
-            text = {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (draft.isNotBlank()) onRename(draft.trim())
-                        renameOpen = false
-                    },
-                    enabled = draft.isNotBlank(),
-                ) {
-                    Text("Speichern", color = loopAccent)
-                }
-            },
-            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("Abbrechen") } },
-        )
-    }
 }
 
 /** Waehlbare Wiederkehr-Intervalle in Tagen (Frank-Wunsch 2026-06-01). 1 = taeglich. */
-private val loopIntervalOptions = listOf(1, 2, 3, 5, 7, 10, 14, 30)
+internal val loopIntervalOptions = listOf(1, 2, 3, 5, 7, 10, 14, 30)
 
 /** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
-private val loopBucketOptions = listOf(
+internal val loopBucketOptions = listOf(
     TimeBucket.HEUTE,
     TimeBucket.MORGEN,
     TimeBucket.FREIBLOCK,
     TimeBucket.SPAETER,
 )
 
-private fun loopBucketLabel(b: TimeBucket): String = when (b) {
+internal fun loopBucketLabel(b: TimeBucket): String = when (b) {
     TimeBucket.HEUTE -> "Heute"
     TimeBucket.MORGEN -> "Morgen"
     TimeBucket.FREIBLOCK -> "Freiblock"

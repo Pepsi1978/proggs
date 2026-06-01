@@ -149,6 +149,26 @@ class RecurringTemplatesViewModel @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-06-01: Beschreibung einer wiederkehrenden Aufgabe im Loop-Detail
+     * bearbeiten. Leerer Text = keine Beschreibung (null). Offene Instanzen werden mitgezogen,
+     * damit die Aenderung auch im Aufgaben-Reiter sichtbar wird.
+     */
+    fun setDescription(template: RecurringTemplateEntity, newDescription: String) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val clean = newDescription.trim().ifBlank { null }
+            repo.upsert(template.copy(description = clean, updatedAt = now))
+            entryRepo.getActive().first()
+                .filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }
+                .forEach { entryRepo.upsert(it.copy(description = clean ?: "", updatedAt = now)) }
+        }
+    }
+
+    /**
      * Frank-Wunsch 2026-06-01: festes Wiederkehr-Intervall (alle N Tage). null = "KI entscheidet"
      * (kein Cooldown, taeglich verfuegbar). Bei N >= 2 erscheint die naechste Instanz erst N Tage
      * nach der letzten Erledigung (siehe GenerateRecurringInstancesUseCase). Die rrule wird

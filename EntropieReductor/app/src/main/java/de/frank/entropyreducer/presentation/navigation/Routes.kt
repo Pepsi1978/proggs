@@ -39,6 +39,13 @@ object Routes {
 
     fun entropyEntryDetail(entryId: String): String = "tasks/entry/$entryId"
 
+    // Vollbild-Detail einer Loop-Vorlage (Frank-Wunsch 2026-06-01): Klick auf eine
+    // Loop-Karte oeffnet die Vorlage zum Bearbeiten (Titel, Intervall, Prio, Bucket …).
+    // Pfad: loop/template/{templateId}
+    const val LOOP_TEMPLATE_DETAIL_PATTERN = "loop/template/{templateId}"
+
+    fun loopTemplateDetail(templateId: String): String = "loop/template/$templateId"
+
     // Vollbild-Detail eines Tagebuch-/Entropie-Eintrags (Frank-Wunsch 2026-05-20).
     // Pfad: tagebuch/entry/{entryId}
     const val TAGEBUCH_ENTRY_DETAIL_PATTERN = "tagebuch/entry/{entryId}"

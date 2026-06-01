@@ -115,6 +115,21 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 currentTab = Routes.TASKS,
                 onOpenSubArea = onOpenSubArea,
                 onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
+                onOpenLoopDetail = { templateId ->
+                    nav.navigate(Routes.loopTemplateDetail(templateId))
+                },
+            )
+        }
+        composable(
+            route = Routes.LOOP_TEMPLATE_DETAIL_PATTERN,
+            arguments = listOf(navArgument("templateId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            de.frank.entropyreducer.presentation.recurring.LoopTemplateDetailScreen(
+                templateId = backStackEntry.arguments?.getString("templateId").orEmpty(),
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
             )
         }
         composable(

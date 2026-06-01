@@ -128,6 +128,8 @@ fun TasksScreen(
     currentTab: String,
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     onOpenEntryDetail: (entryId: String) -> Unit = {},
+    // Frank-Wunsch 2026-06-01: Klick auf eine Loop-Karte oeffnet den Loop-Detail-Screen.
+    onOpenLoopDetail: (templateId: String) -> Unit = {},
     vm: TasksViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -688,15 +690,10 @@ fun TasksScreen(
                                             onSetTargetBucket = { bucket ->
                                                 recurringVm.setTargetBucket(template, bucket)
                                             },
-                                            // Bugfix 2026-06-01: onRename war hier nicht verdrahtet
-                                            // (Default no-op) -> Rename-Dialog im Loop-Bereich des
-                                            // Aufgaben-Reiters tat beim Speichern nichts.
-                                            onRename = { newTitle ->
-                                                recurringVm.setTitle(template, newTitle)
-                                            },
                                             onSetInterval = { days ->
                                                 recurringVm.setIntervalDays(template, days)
                                             },
+                                            onOpenDetail = { onOpenLoopDetail(template.id) },
                                             autoOpenPrioSlider =
                                                 prioPickerTemplateId == template.id,
                                             onPrioSliderConsumed = {
