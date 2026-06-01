@@ -28,3 +28,16 @@ und was sich mit neuen Versionen geaendert hat. Gepflegt vom `best-practices`-Sk
 > "Neues" (Kategorie 12) ist die Auffangzone und bleibt IMMER die letzte Kategorie. Kommt eine
 > neue definierte Kategorie dazu, wird sie davor eingefuegt und "Neues" rueckt eine Nummer nach
 > hinten (Ordner entsprechend umbenannt).
+
+## Projekt-Code (zweite Seite der Medaille zum Bug-Almanach)
+
+Neben den Harness-Kategorien oben gibt es die Sektion **[`projekt-code/`](projekt-code/README.md)**
+fuer die Software/Sprachen, die in den Projekten benutzt werden (Kotlin, Swift, Gradle,
+.NET/WPF, TypeScript, Rust …) — ein Unterordner pro Software, entsteht bei Bedarf.
+
+- Quelle hier: der **eigene** Changelog der Software (nicht der Claude-Code-Changelog).
+- Versions-Anker: die live ermittelte installierte Version der Software.
+- Gepflegt vom `bug-almanach-recherche`-Skill (Praevention pro Bug) und vom
+  `best-practices`-Skill (gezielter Lauf "nur fuer <software>").
+- Gegenstueck: `~/proggs/bugs/<bereich>.md` sammelt die Bugs, hier steht, wie man sie
+  von vornherein vermeidet.
