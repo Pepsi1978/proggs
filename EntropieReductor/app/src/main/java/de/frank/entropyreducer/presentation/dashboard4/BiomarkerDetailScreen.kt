@@ -42,6 +42,7 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.whoopRecoveryColor
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -149,14 +150,20 @@ fun BiomarkerDetailScreen(
                 // Statistik-Card: Min/Max/Mittel/Anzahl
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
+                        // Frank-Wunsch 2026-06-01: Min/Mittel/Max wert-abhaengig faerben
+                        // (z.B. Recovery nach WHOOP-Ampel). Faellt auf spec.accent zurueck
+                        // wenn die Metrik keine wert-abhaengige Faerbung definiert.
+                        val statColor: (Double?) -> Color = { v ->
+                            v?.let { spec.valueColor?.invoke(it) } ?: spec.accent
+                        }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             StatCell("Anzahl", values.size.toString(), spec.accent, Modifier.weight(1f))
-                            StatCell("Min", minV?.let { spec.format(it) } ?: "—", spec.accent, Modifier.weight(1f))
+                            StatCell("Min", minV?.let { spec.format(it) } ?: "—", statColor(minV), Modifier.weight(1f))
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatCell("Mittel", avgV?.let { spec.format(it) } ?: "—", spec.accent, Modifier.weight(1f))
-                            StatCell("Max", maxV?.let { spec.format(it) } ?: "—", spec.accent, Modifier.weight(1f))
+                            StatCell("Mittel", avgV?.let { spec.format(it) } ?: "—", statColor(avgV), Modifier.weight(1f))
+                            StatCell("Max", maxV?.let { spec.format(it) } ?: "—", statColor(maxV), Modifier.weight(1f))
                         }
                     }
                 }
@@ -286,7 +293,9 @@ private fun ValueRow(
         )
         Text(
             text = spec.format(value),
-            color = spec.accent,
+            // Frank-Wunsch 2026-06-01: wert-abhaengige Faerbung (Recovery nach WHOOP-Ampel),
+            // sonst einheitlich spec.accent.
+            color = spec.valueColor?.invoke(value) ?: spec.accent,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -312,6 +321,13 @@ private data class MetricSpec(
     val extract: (BiomarkerSnapshotEntity) -> Double?,
     val format: (Double) -> String,
     val lowerIsBetter: Boolean = false,
+    /**
+     * Frank-Wunsch 2026-06-01: optionale wert-abhaengige Faerbung der Zahlen
+     * (Min/Mittel/Max + Werte-Liste). null = einheitlich spec.accent (Standard fuer
+     * die meisten Metriken). Bei Recovery liefert sie die offizielle WHOOP-Ampel,
+     * damit die Werte nicht mehr alle gruen sind, sondern je nach Prozent rot/gelb/gruen.
+     */
+    val valueColor: ((Double) -> Color)? = null,
 )
 
 @Composable
@@ -415,6 +431,9 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         accent = CosmosColors.Success,
         extract = { it.recoveryScore?.toDouble() },
         format = { "%.0f %%".format(it) },
+        // Frank-Wunsch 2026-06-01: Werte nach offizieller WHOOP-Ampel faerben
+        // (vorher alle gruen). 67-100 gruen, 34-66 gelb, 0-33 rot.
+        valueColor = { whoopRecoveryColor(it) },
     )
     // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08).
     MetricKey.RESPIRATORY -> MetricSpec(
