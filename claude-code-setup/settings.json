@@ -138,7 +138,7 @@
 				]
 			},
 			{
-				"matcher": "Edit|Write",
+				"matcher": "Read|Edit|Write",
 				"hooks": [
 					{
 						"type": "command",
@@ -266,7 +266,7 @@
 					{
 						"type": "command",
 						"command": "bash \"$HOME/.claude/hooks/bug-almanac-guard.sh\"",
-						"timeout": 5
+						"timeout": 15
 					}
 				]
 			}

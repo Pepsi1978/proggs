@@ -1,7 +1,13 @@
-# bug-almanac-guard: Erinnert bei Edit/Write an bereichstypischen Dateien an den passenden Bug-Almanach.
-# Schicht 2 ("Sicherheitsnetz") des Bug-Almanach-Systems (siehe ~/proggs/bugs/SYSTEM.md).
-# Runs as PreToolUse hook (matcher: Edit|Write). NICHT blockierend - injiziert nur additionalContext.
-# Output: JSON mit hookSpecificOutput.additionalContext (offizielles Schema) -> AI-Kontext.
+# bug-almanac-guard: Stufe 2 (ERZWINGUNG) des Bug-Almanach-Systems (siehe ~/proggs/bugs/SYSTEM.md).
+# Bei Edit/Write an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer den
+#   Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht per Read geoeffnet wurde.
+# Bei Read einer bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
+# Kein Almanach fuer den Bereich? -> nur erinnern (Stufe 1), NICHT blockieren (Recherche braucht Franks OK).
+# Notaus: existiert $TEMP/bug-almanac-disable.flag -> nie blockieren (nur erinnern). Sicherheitsventil.
+# FAIL-OPEN: jeder interne Fehler -> exit 0 OHNE deny (durchlassen). Ein Guard der bei eigenem Fehler
+#   blockiert wuerde die Session lahmlegen (Direktive #3, Fix-Induced-Failure vermeiden).
+# Runs as PreToolUse hook (matcher: Read|Edit|Write).
+# Output: JSON mit hookSpecificOutput (offizielles PreToolUse-Schema) + exit 0.
 # Platform: Windows (PowerShell 7+)
 
 . "$PSScriptRoot/hook-log.ps1"
@@ -17,11 +23,25 @@ try {
     if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }
 
     $data = $raw | ConvertFrom-Json
+    $tool = [string]$data.tool_name
     $fp = $data.tool_input.file_path
     if ([string]::IsNullOrWhiteSpace($fp)) { exit 0 }
     $fpl = ($fp.ToLower()) -replace '\\', '/'
 
-    # Bereich anhand des Dateipfads erkennen (Pfad-Mapping - bei neuem Almanach hier ergaenzen).
+    # ── Read-Zweig: "gelesen"-Marker setzen, NIE blockieren ──
+    # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin").
+    if ($tool -eq 'Read') {
+        if ($fpl -match '/bugs/([^/]+)\.md$') {
+            $almName = $Matches[1]
+            if ($almName -ne 'readme' -and $almName -ne 'system') {
+                $rm = Join-Path $env:TEMP ("bug-almanac-read-" + $almName + ".flag")
+                New-Item -ItemType File -Path $rm -Force -ErrorAction SilentlyContinue | Out-Null
+            }
+        }
+        exit 0
+    }
+
+    # ── Edit/Write-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). ──
     $slug = $null; $file = $null; $name = $null
     if ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
@@ -42,24 +62,47 @@ try {
     }
     if (-not $slug) { exit 0 }
 
-    # Spam-Schutz: nur einmal pro Bereich pro Session (Marker leert der Index-Hook bei SessionStart).
-    $marker = Join-Path $env:TEMP ("bug-almanac-seen-" + $slug + ".flag")
-    if (Test-Path $marker) { exit 0 }
-    New-Item -ItemType File -Path $marker -Force -ErrorAction SilentlyContinue | Out-Null
-
     $almanachPath = Join-Path (Join-Path $env:USERPROFILE "proggs/bugs") $file
-    if (Test-Path $almanachPath) {
-        $msg = "BUG-ALMANACH-HINWEIS: Du arbeitest an " + $name + ". Lies ZUERST bugs/" + $file + " (falls in dieser Session noch nicht geschehen), bevor du bekannte Bugs einbaust."
-    } else {
-        $msg = "BUG-ALMANACH-HINWEIS: Du arbeitest an " + $name + ", aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Hol Franks kurzes OK und STARTE dann den Skill 'bug-almanach-recherche' - das ist der vorgeschriebene, vollstaendige Weg; NICHT selbst ad hoc recherchieren."
+    $almanachExists = Test-Path $almanachPath
+    $disabled = Test-Path (Join-Path $env:TEMP "bug-almanac-disable.flag")
+    $almKey = ($file -replace '\.md$', '').ToLower()
+    $readMarker = Join-Path $env:TEMP ("bug-almanac-read-" + $almKey + ".flag")
+    $seenMarker = Join-Path $env:TEMP ("bug-almanac-seen-" + $slug + ".flag")
+
+    # ── ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN ──
+    if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
+        $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber bugs/" + $file + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/bugs/" + $file + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        $out = @{
+            hookSpecificOutput = @{
+                hookEventName            = "PreToolUse"
+                permissionDecision       = "deny"
+                permissionDecisionReason = $reason
+            }
+        }
+        Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
+        exit 0
     }
 
-    $out = @{
-        hookSpecificOutput = @{
-            hookEventName = "PreToolUse"
-            additionalContext = $msg
+    # ── Almanach existiert + bereits gelesen (oder Notaus): einmalige sanfte Bestaetigung, dann frei ──
+    if ($almanachExists) {
+        if (-not (Test-Path $seenMarker)) {
+            New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            $msg = if ($disabled) {
+                "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies bugs/" + $file + " freiwillig."
+            } else {
+                "BUG-ALMANACH: bugs/" + $file + " wurde gelesen - Bereich '" + $name + "' ist fuer diese Session freigegeben."
+            }
+            $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
+            Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
         }
+        exit 0
     }
+
+    # ── Kein Almanach: nur erinnern (Stufe 1), NICHT blockieren - Recherche braucht Franks OK ──
+    if (Test-Path $seenMarker) { exit 0 }
+    New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+    $msg = "BUG-ALMANACH-HINWEIS: Du arbeitest an " + $name + ", aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Hol Franks kurzes OK und STARTE dann den Skill 'bug-almanach-recherche' - das ist der vorgeschriebene, vollstaendige Weg; NICHT selbst ad hoc recherchieren."
+    $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
     Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
 } catch {
     Hook-LogWarn "bug-almanac-guard: $_"

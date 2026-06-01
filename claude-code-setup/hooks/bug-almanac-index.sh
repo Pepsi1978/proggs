@@ -11,8 +11,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
 trap 'hook_log_warn "bug-almanac-index: Error at line $LINENO"; exit 0' ERR
 
-# Spam-Schutz-Marker des Guard-Hooks zuruecksetzen -> frische Erinnerung pro Session.
-rm -f "${TMPDIR:-/tmp}"/bug-almanac-seen-*.flag 2>/dev/null || true
+# Alle Guard-Marker zuruecksetzen -> frische Erinnerung + frischer Lese-Zwang pro Session.
+# Deckt seen-* (Spam-Schutz), read-* (Stufe-2-"gelesen"-Marker) und disable (Notaus) ab.
+# Der Notaus gilt damit nur fuer die Session in der er gesetzt wurde (Schutz ist danach wieder an).
+rm -f "${TMPDIR:-/tmp}"/bug-almanac-*.flag 2>/dev/null || true
 
 BUGS_DIR="$HOME/proggs/bugs"
 if [ -d "$BUGS_DIR" ]; then
@@ -28,7 +30,7 @@ if [ -d "$BUGS_DIR" ]; then
     done
     [ -n "$list" ] || list="(noch keine)"
 
-    ctx="BUG-ALMANACH-SYSTEM aktiv. Vorhandene Almanache in bugs/: $list. Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): bugs/README.md pruefen und den passenden Almanach ZUERST lesen. Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN (das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump)."
+    ctx="BUG-ALMANACH-SYSTEM aktiv (Stufe 2 = ERZWINGUNG). Vorhandene Almanache in bugs/: $list. Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): bugs/README.md pruefen und den passenden Almanach ZUERST mit dem Read-Tool lesen. WICHTIG: Existiert ein Almanach fuer den Bereich, BLOCKIERT der bug-almanac-guard Edit/Write so lange, bis du die Almanach-Datei in dieser Session per Read geoeffnet hast (Lesen gibt den Bereich frei, gilt pro Bereich 1x/Session). Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN (das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump). Notaus bei Fehlalarm: leere Datei bug-almanac-disable.flag im TEMP-Verzeichnis anlegen."
     sysmsg="Bug-Almanach: $count Almanach(e) aktiv."
 
     python3 -c "import json,sys; print(json.dumps({'systemMessage': sys.argv[1], 'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': sys.argv[2]}}))" "$sysmsg" "$ctx"

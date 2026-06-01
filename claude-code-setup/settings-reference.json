@@ -210,12 +210,12 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Read|Edit|Write",
         "hooks": [
           {
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/bug-almanac-guard.ps1\"",
-            "timeout": 5
+            "timeout": 15
           }
         ]
       }

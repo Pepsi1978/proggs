@@ -45,12 +45,16 @@ drei Schichten, die unabhaengig voneinander greifen:
 | # | Name | Mechanismus | Wann | Poka-Yoke |
 |---|------|-------------|------|-----------|
 | 1 | **Praesenz** | `bug-almanac-index` Hook (SessionStart) liest `README.md` und blendet die Liste der vorhandenen Almanache + erwarteten Bereiche ein | bei JEDEM Session-Start (auch nach Compaction) | Stufe 1–2: das System ist immer im Blick |
-| 2 | **Sicherheitsnetz** | `bug-almanac-guard` Hook (PreToolUse auf Edit/Write) erkennt bereichstypische Dateipfade und erinnert an den passenden Almanach | sobald eine bereichstypische Datei angefasst wird | Stufe 2–3: am konkreten Ausloeser |
+| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write) **BLOCKIERT** Edit/Write (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht per Read geoeffnet wurde. Read einer `bugs/<X>.md` setzt den "gelesen"-Marker und gibt den Bereich frei (1x pro Bereich/Session). Kein Almanach vorhanden → nur erinnern (kein Block — Recherche braucht Franks OK). Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
 | 3 | **Verhalten** | Regel `~/.claude/rules/known-bugs-before-coding.md` | immer geladen | Stufe 1: Verhaltensanweisung |
 
-Beide Hooks: Cross-Platform (`.ps1` + `.sh`), `exit 0`, nicht blockierend
-(injizieren nur Kontext/Erinnerung — sie stoppen nie die Arbeit und stoeren nie,
-falls eine Datei fehlt). Registriert in `~/.claude/settings.json`, gespiegelt in
+Beide Hooks: Cross-Platform (`.ps1` + `.sh`). Der Index-Hook ist nicht blockierend
+(injiziert nur Kontext). Der Guard-Hook ist seit 2026-06-02 **blockierend** (Stufe 2):
+er stoppt Edit/Write per `permissionDecision:deny` + `exit 0` (NICHT `exit 2` — das
+blockt Write/Edit nicht, siehe bugs/claude-hooks.md 1.6), bis der Almanach des Bereichs
+in dieser Session gelesen wurde. FAIL-OPEN: jeder interne Hook-Fehler → durchlassen,
+nie faelschlich blockieren. Notaus via `bug-almanac-disable.flag` im TEMP-Verzeichnis.
+Registriert in `~/.claude/settings.json`, gespiegelt in
 `claude-code-setup/hooks/`.
 
 ---
