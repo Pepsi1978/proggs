@@ -680,68 +680,68 @@
     <string name="retro_please_wait">કૃપા કરી રાહ જુઓ</string>
     <string name="retro_backup_loading">બૅકઅપ લોડ થઈ રહ્યું છે… ત્યારબાદ અવલોકન આપમેળે શરૂ થશે.</string>
     <string name="retro_profile_switching">પ્રોફાઇલ બદલ્યા પછી અવ. .).</string>
-    <string name="retro_generating">અ. .).…</string>
-    <string name="retro_ai_unavailable">AI .</string>
-    <string name="retro_weekly_title">.</string>
-    <string name="retro_weekly_subtitle">.</string>
-    <string name="retro_weekly_empty">ક. .).\n.</string>
-    <string name="retro_monthly_title">.</string>
-    <string name="retro_monthly_subtitle">.</string>
-    <string name="retro_monthly_empty">ક. .).\n.</string>
-    <string name="retro_yearly_title">.</string>
-    <string name="retro_yearly_subtitle">.</string>
-    <string name="retro_yearly_empty">ક. .).\n.</string>
-    <string name="retro_premium_unlock">Premium .).</string>
-    <string name="retro_at_a_glance">.</string>
-    <string name="retro_cd_expand">.</string>
-    <string name="retro_cd_collapse">.</string>
-    <string name="retro_share_text_label">.</string>
+    <string name="retro_generating">સમીક્ષાઓ બની રહી છે…</string>
+    <string name="retro_ai_unavailable">AI અત્યારે ઉપલબ્ધ નથી, કૃપા કરીને થોડી વાર પછી ફરી પ્રયાસ કરો.</string>
+    <string name="retro_weekly_title">સાપ્તાહિક સમીક્ષા</string>
+    <string name="retro_weekly_subtitle">છેલ્લા 7 દિવસ એક નજરમાં</string>
+    <string name="retro_weekly_empty">હજુ કોઈ સાપ્તાહિક સમીક્ષા નથી.\nઅઠવાડિયે ઓછામાં ઓછી 2 ડાયરી એન્ટ્રી જરૂરી છે.</string>
+    <string name="retro_monthly_title">માસિક સમીક્ષા</string>
+    <string name="retro_monthly_subtitle">તમારો વીતેલો મહિનો એક નજરમાં</string>
+    <string name="retro_monthly_empty">હજુ કોઈ માસિક સમીક્ષા નથી.\nમહિનાના અંતે સાપ્તાહિક સમીક્ષાઓમાંથી બને છે.</string>
+    <string name="retro_yearly_title">વાર્ષિક સમીક્ષા</string>
+    <string name="retro_yearly_subtitle">યાદોથી ભરેલું આખું વર્ષ</string>
+    <string name="retro_yearly_empty">હજુ કોઈ વાર્ષિક સમીક્ષા નથી.\nવર્ષના અંતે માસિક સમીક્ષાઓમાંથી બને છે.</string>
+    <string name="retro_premium_unlock">Premium સાથે બધી સમીક્ષાઓ અનલૉક કરો</string>
+    <string name="retro_at_a_glance">એક નજરમાં</string>
+    <string name="retro_cd_expand">ખોલો</string>
+    <string name="retro_cd_collapse">બંધ કરો</string>
+    <string name="retro_share_text_label">ટેક્સ્ટ</string>
 
     
-    <string name="retro_fallback_week">.</string>
-    <string name="retro_fallback_month">.</string>
-    <string name="retro_fallback_year">. %1$d</string>
+    <string name="retro_fallback_week">સાપ્તાહિક સમીક્ષા</string>
+    <string name="retro_fallback_month">માસિક સમીક્ષા</string>
+    <string name="retro_fallback_year">વાર્ષિક સમીક્ષા %1$d</string>
     <string name="retro_period_label_week">. %1$d (%2$s - %3$s)</string>
     
-    <string name="retro_photos_videos">. &amp; .</string>
-    <string name="retro_photos_videos_colon">. &amp; .:</string>
-    <string name="retro_cd_video">.</string>
-    <string name="retro_cd_photo">.</string>
-    <string name="retro_play_video">.</string>
-    <string name="retro_enable_voices">.</string>
-    <string name="retro_tts_stop">.</string>
-    <string name="retro_tts_read">.</string>
-    <string name="retro_tts_wait">.\u2026</string>
-    <string name="retro_cd_share">.</string>
-    <string name="retro_share_title">.</string>
-    <string name="retro_share_text_content">.</string>
-    <string name="retro_photo_n">. %1$d</string>
-    <string name="retro_share_header">.</string>
-    <string name="retro_at_a_glance_colon">.</string>
+    <string name="retro_photos_videos">ફોટા અને વીડિયો</string>
+    <string name="retro_photos_videos_colon">ફોટા અને વીડિયો:</string>
+    <string name="retro_cd_video">વીડિયો</string>
+    <string name="retro_cd_photo">ફોટો</string>
+    <string name="retro_play_video">વીડિયો ચલાવો</string>
+    <string name="retro_enable_voices">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="retro_tts_stop">રોકો</string>
+    <string name="retro_tts_read">વાંચી સંભળાવો</string>
+    <string name="retro_tts_wait">કૃપા કરીને રાહ જુઓ, ટેક્સ્ટ-ટુ-સ્પીચ બની રહ્યું છે…</string>
+    <string name="retro_cd_share">શેર કરો</string>
+    <string name="retro_share_title">સમીક્ષા શેર કરો</string>
+    <string name="retro_share_text_content">સમીક્ષા-ટેક્સ્ટ</string>
+    <string name="retro_photo_n">ફોટો %1$d</string>
+    <string name="retro_share_header">BestJournal App તરફથી સમીક્ષા</string>
+    <string name="retro_at_a_glance_colon">એક નજરમાં:</string>
     
-    <string name="retro_cd_locked">.</string>
-    <string name="retro_unlock_premium_short">Premium .</string>
-    <string name="retro_cd_premium_required">Premium .</string>
+    <string name="retro_cd_locked">લૉક કરેલું</string>
+    <string name="retro_unlock_premium_short">Premium અનલૉક કરો</string>
+    <string name="retro_cd_premium_required">Premium જરૂરી છે</string>
     
-    <string name="retro_your_ai_reviews">AI .</string>
-    <string name="retro_weekly_p1">AI .</string>
-    <string name="retro_weekly_p2">.</string>
-    <string name="retro_weekly_p3">.</string>
-    <string name="retro_weekly_p4">. 2 .</string>
-    <string name="retro_monthly_p1">.</string>
-    <string name="retro_monthly_p2">.</string>
+    <string name="retro_your_ai_reviews">તમારી AI-સમીક્ષાઓ</string>
+    <string name="retro_weekly_p1">AI તમારા અઠવાડિયાને એક અંગત વાર્તામાં સમાવે છે</string>
+    <string name="retro_weekly_p2">ભાવનાત્મક પૅટર્ન અને ખાસ ક્ષણો દેખાય છે</string>
+    <string name="retro_weekly_p3">દર રવિવારે આપમેળે બને છે, જો તમારી પાસે ઓછામાં ઓછી 2 એન્ટ્રી હોય</string>
+    <string name="retro_weekly_p4">પહેલા 2 અઠવાડિયા મફત છે</string>
+    <string name="retro_monthly_p1">તમારી સાપ્તાહિક સમીક્ષાઓને એક માસિક વાર્તામાં જોડે છે</string>
+    <string name="retro_monthly_p2">મહિના દરમિયાનના મુખ્ય વિષયો અને વિકાસ દેખાય છે</string>
     <string name="retro_monthly_p3">તમારી એન્ટ્રીઓ પ્રમાણે ઘટનાઓ દર્શાવે છે</string>
-    <string name="retro_yearly_p1">.</string>
+    <string name="retro_yearly_p1">તમારું આખું વર્ષ એક નજરમાં</string>
     <string name="retro_yearly_p2">AI તમારા વર્ષના મોટા વિષયો સારાંશ કરે છે</string>
-    <string name="retro_yearly_p3">.</string>
+    <string name="retro_yearly_p3">અંગત વિકાસ દેખાય અને અનુભવાય છે</string>
     
-    <string name="retro_your_reviews">.</string>
-    <string name="retro_premium_reviews_desc">Premium .</string>
+    <string name="retro_your_reviews">તમારી અંગત સમીક્ષાઓ</string>
+    <string name="retro_premium_reviews_desc">Premium સાથે AI તમારી ડાયરી એન્ટ્રીઓમાંથી આપમેળે સમીક્ષાઓ બનાવે છે:</string>
     <string name="retro_benefit_weekly">અમર્યાદિત સાપ્તાહિક સમીક્ષાઓ, ફક્ત પ્રથમ 2 અઠવાડિયા નહીં</string>
-    <string name="retro_benefit_monthly">.</string>
-    <string name="retro_benefit_yearly">.</string>
-    <string name="retro_start_sub">.</string>
-    <string name="retro_decide_later">.</string>
+    <string name="retro_benefit_monthly">માસિક સમીક્ષાઓ, જે તમારી પ્રગતિ અને ફેરફારોને દર્શાવે છે</string>
+    <string name="retro_benefit_yearly">વાર્ષિક સમીક્ષાઓ, તમારું આખું વર્ષ એક અંગત વાર્તા તરીકે</string>
+    <string name="retro_start_sub">સબ્સ્ક્રિપ્શન શરૂ કરો</string>
+    <string name="retro_decide_later">પછી નક્કી કરો</string>
 
     
     <string name="month_january">જાન્યુ.</string>
@@ -760,56 +760,56 @@
     
     <string name="onboarding_welcome">Best Journal\nમાં સ્વાગત</string>
     <string name="onboarding_subtitle">સ્પષ્ટતા માટે તમારી અંગત AI ડાયરી\\nરોજિંદા જીવનમાં</string>
-    <string name="onboarding_feature_speech">♻ AI ♻</string>
-    <string name="onboarding_feature_secure">♻ ♻</string>
-    <string name="onboarding_goals_title">AI ♻ ♻?\n</string>
-    <string name="onboarding_goal_stress">♻</string>
-    <string name="onboarding_goal_clarity">♻</string>
-    <string name="onboarding_goal_growth">♻</string>
-    <string name="onboarding_goal_thoughts">♻</string>
-    <string name="onboarding_how_step1_title">♻</string>
-    <string name="onboarding_how_step1_desc">♻</string>
-    <string name="onboarding_how_step2_title">AI ♻</string>
-    <string name="onboarding_how_step2_desc">♻</string>
-    <string name="onboarding_how_step3_desc">♻</string>
-    <string name="onboarding_how_step4_title">♻</string>
+    <string name="onboarding_feature_speech">બોલો કે લખો, AI બંને સમજે છે</string>
+    <string name="onboarding_feature_secure">તમારો ડેટા સ્થાનિક રીતે સંગ્રહિત છે, AI વિનંતીઓ એન્ક્રિપ્ટેડ છે</string>
+    <string name="onboarding_goals_title">તમે AI-ડાયરી સાથે\nશું મેળવવા માંગો છો?</string>
+    <string name="onboarding_goal_stress">તણાવ ઓછો કરવો</string>
+    <string name="onboarding_goal_clarity">સ્પષ્ટતા મેળવવી</string>
+    <string name="onboarding_goal_growth">અંગત વિકાસ</string>
+    <string name="onboarding_goal_thoughts">મારા વિચારો નોંધવા</string>
+    <string name="onboarding_how_step1_title">તમારી એન્ટ્રી બોલો કે ટાઇપ કરો</string>
+    <string name="onboarding_how_step1_desc">તમારા વિચારોને વૉઇસ મેસેજ તરીકે રેકોર્ડ કરો કે ટાઇપ કરો, જેમ તમે ઇચ્છો તેમ.</string>
+    <string name="onboarding_how_step2_title">AI સુધારે અને વિશ્લેષણ કરે છે</string>
+    <string name="onboarding_how_step2_desc">તમારો ટેક્સ્ટ ઇચ્છા મુજબ સુધારાય છે અને વિવિધ દૃષ્ટિકોણથી વિશ્લેષણ થાય છે.</string>
+    <string name="onboarding_how_step3_desc">ખાસ ક્ષણો સાચવો, પછી માટે જીવંત યાદો.</string>
+    <string name="onboarding_how_step4_title">પૅટર્ન અને સૂઝ શોધો</string>
     <string name="onboarding_how_step4_desc">AI Dashboard તમારી એન્ટ્રીઓ વચ્ચેના સંબંધો દર્શાવે છે.</string>
-    <string name="onboarding_how_step5_title">♻</string>
-    <string name="onboarding_how_step5_desc">♻</string>
+    <string name="onboarding_how_step5_title">સાપ્તાહિક, માસિક અને વાર્ષિક સમીક્ષા</string>
+    <string name="onboarding_how_step5_desc">આપમેળે બનતી સમીક્ષાઓ બતાવે છે કે તમે સમય સાથે કેવી રીતે વિકસો છો.</string>
     <string name="onboarding_premium_feature_improve">દૈનિક AI લખાણ સુધારણા, દરેક પ્રવેશ વધુ સ્પષ્ટ અને અભિવ્યક્તિપૂર્ણ બને છે</string>
-    <string name="onboarding_premium_feature_dashboard">♻</string>
-    <string name="onboarding_premium_feature_retro">♻</string>
+    <string name="onboarding_premium_feature_dashboard">દરેક નવી એન્ટ્રી પર આપમેળે Dashboard અપડેટ</string>
+    <string name="onboarding_premium_feature_retro">સાપ્તાહિક, માસિક અને વાર્ષિક સમીક્ષાઓ તમારો વિકાસ બતાવે છે</string>
     <string name="onboarding_premium_feature_patterns">પેટર્ન દૃશ્યમાન: AI તમારી એન્ટ્રીઓમાં વારંવારના વિચાર અને લાગણીના પેટર્ન દર્શાવે છે</string>
-    <string name="onboarding_premium_feature_noads">♻</string>
+    <string name="onboarding_premium_feature_noads">કોઈ જાહેરાત નહીં, ખલેલ વિના લખો અને વિચારો</string>
     <string name="onboarding_free_trial">મફત, ગમે ત્યારે રદ્દ કરી શકાય</string>
     <string name="onboarding_free_after_trial">ત્યાર પછી Best Journal ચાલુ રાખો,\nઅઠવાડિયે મર્યાદિત AI-Call સાથે મફત.</string>
-    <string name="onboarding_start_free">♻</string>
-    <string name="onboarding_without_premium">Premium ♻</string>
-    <string name="onboarding_feature_profiles">5 ♻</string>
-    <string name="onboarding_goals_select">♻</string>
-    <string name="onboarding_how_step3_title">♻</string>
-    <string name="onboarding_how_title">♻</string>
+    <string name="onboarding_start_free">મફતમાં શરૂ કરો</string>
+    <string name="onboarding_without_premium">Premium વિના ચાલુ રાખો</string>
+    <string name="onboarding_feature_profiles">વિવિધ દૃષ્ટિકોણ માટે 4 સ્માર્ટ વિશ્લેષણ પ્રોફાઇલ</string>
+    <string name="onboarding_goals_select">એક કે વધુ ધ્યેય પસંદ કરો</string>
+    <string name="onboarding_how_step3_title">ફોટા અને વીડિયો ઉમેરો</string>
+    <string name="onboarding_how_title">આટલું સરળ છે</string>
     <string name="onboarding_perspectives_title">તમારા જીવન પર\nવિવિધ દ્રષ્ટિકોણ</string>
-    <string name="onboarding_premium_feature_pdf">PDF ♻</string>
-    <string name="onboarding_premium_profiles">5 AI ♻</string>
+    <string name="onboarding_premium_feature_pdf">ફોટા સાથે PDF એક્સપોર્ટ, તમારી એન્ટ્રીઓ દસ્તાવેજ તરીકે સાચવો</string>
+    <string name="onboarding_premium_profiles">તમારા જીવનમાં ઊંડી સમજ માટે 4 સ્માર્ટ Dashboard પ્રોફાઇલ</string>
     <string name="onboarding_try_premium">8 દિવસ મફત, પછી 3.99 €/મહિનાથી</string>
 
     
-    <string name="paywall_prices_loading">♻\u2026</string>
-    <string name="paywall_sub_loading_toast">♻</string>
-    <string name="paywall_purchase_loading_toast">♻</string>
-    <string name="paywall_today">♻</string>
-    <string name="paywall_full_access">♻</string>
-    <string name="paywall_day7">♻ 7</string>
-    <string name="paywall_reminder">♻</string>
-    <string name="paywall_day8">♻ 8</string>
-    <string name="paywall_first_payment">♻</string>
+    <string name="paywall_prices_loading">કિંમતો લોડ થઈ રહી છે…</string>
+    <string name="paywall_sub_loading_toast">સબ્સ્ક્રિપ્શન લોડ થઈ રહ્યું છે, કૃપા કરીને થોડી વારમાં ફરી પ્રયાસ કરો.</string>
+    <string name="paywall_purchase_loading_toast">ખરીદી પ્રક્રિયા લોડ થઈ રહી છે, કૃપા કરીને થોડી વારમાં ફરી પ્રયાસ કરો.</string>
+    <string name="paywall_today">આજે</string>
+    <string name="paywall_full_access">સંપૂર્ણ ઍક્સેસ</string>
+    <string name="paywall_day7">દિવસ 7</string>
+    <string name="paywall_reminder">રિમાઇન્ડર</string>
+    <string name="paywall_day8">દિવસ 8</string>
+    <string name="paywall_first_payment">પહેલી ચુકવણી</string>
     <string name="paywall_yearly_note">ત્યારબાદ %1$s પ્રતિ વર્ષ, આપોઆપ નવીકરણ\\nટ્રાયલ દરમિયાન ગમે ત્યારે રદ્દ કરી શકાય</string>
     <string name="paywall_most_popular">ભલામણ કરેલ</string>
-    <string name="paywall_monthly_plan">♻, %1$s/♻</string>
-    <string name="paywall_lifetime_title">♻</string>
+    <string name="paywall_monthly_plan">માસિક સબ્સ્ક્રિપ્શન, %1$s પ્રતિ મહિને</string>
+    <string name="paywall_lifetime_title">એક વખતની ખરીદી</string>
     <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
-    <string name="paywall_lifetime_note">♻</string>
+    <string name="paywall_lifetime_note">કોઈ સબ્સ્ક્રિપ્શન નહીં, કોઈ રિન્યૂઅલ નહીં</string>
     <string name="paywall_free_note">App Subscription વગર પણ ચાલુ રહે છે.</string>
     <string name="paywall_legal_hint" formatted="false">સબ્સ્ક્રાઇબ કરવાથી તું %1$s સ્વીકારે છે. તારો 14-દિવસનો કરાર રદ કરવાનો અધિકાર ત્યાં વર્ણવેલ છે.</string>
     <string name="paywall_legal_hint_link">ઉપયોગ-શરતો</string>
@@ -817,257 +817,257 @@
     
     <string name="paywall_feature_patterns">તમારા વિચારોમાં વારંવારના પેટર્ન ઓળખો</string>
     <string name="paywall_feature_improve">દરેક પ્રવેશ માટે દૈનિક AI લખાણ સુધારણા</string>
-    <string name="paywall_feature_dashboard">♻</string>
-    <string name="paywall_feature_retro">♻</string>
-    <string name="paywall_feature_pdf">PDF ♻</string>
-    <string name="paywall_feature_noads">♻</string>
+    <string name="paywall_feature_dashboard">નવી એન્ટ્રીઓ પછી AI-Dashboard અપડેટ</string>
+    <string name="paywall_feature_retro">બધી સમીક્ષાઓ AI દ્વારા બનાવેલ</string>
+    <string name="paywall_feature_pdf">ડાયરી એન્ટ્રીઓ ફોટા સાથે PDF તરીકે એક્સપોર્ટ કરો</string>
+    <string name="paywall_feature_noads">ખલેલ વિના બોલો કે લખો, જાહેરાત વગર</string>
     <string name="paywall_feature_profiles">અમર્યાદિત કસ્ટમ વિશ્લેષણ પ્રોફાઇલ</string>
 
     
     <string name="paywall_headline_stress">રોજિંદા જીવનમાં વધુ સ્પષ્ટતા</string>
     <string name="paywall_headline_stress_sub">જે તમને રોજ સ્પર્શે છે તે ઓળખો અને સ્પષ્ટ રીતે વ્યક્ત કરો.</string>
-    <string name="paywall_headline_clarity">♻</string>
-    <string name="paywall_headline_clarity_sub">AI ♻</string>
-    <string name="paywall_headline_growth">♻</string>
-    <string name="paywall_headline_growth_sub">♻</string>
-    <string name="paywall_headline_thoughts">♻</string>
+    <string name="paywall_headline_clarity">તમારી જાતને વધુ સારી રીતે સમજો</string>
+    <string name="paywall_headline_clarity_sub">AI એવા પૅટર્ન ઓળખે છે જે તમારાથી છુપાયેલા રહે છે</string>
+    <string name="paywall_headline_growth">દરેક દિવસમાં સારું શોધો</string>
+    <string name="paywall_headline_growth_sub">કૃતજ્ઞતા અને વિકાસ માટે તમારી અંગત જગ્યા</string>
+    <string name="paywall_headline_thoughts">તમારા વિચારોને વહેવા દો</string>
     <string name="paywall_headline_thoughts_sub">તારો રોજિંદા જીવનનો સર્જનાત્મક સાથી</string>
-    <string name="paywall_headline_default">♻\n♻</string>
+    <string name="paywall_headline_default">તમારી જાતને શોધો\nદરરોજ થોડું વધારે</string>
     <string name="paywall_headline_default_sub">તારો રોજિંદા જીવનનો વ્યક્તિગત AI સાથી</string>
 
     
-    <string name="paywall_exit_wait">♻!</string>
-    <string name="paywall_exit_special_offer">♻\n♻:</string>
-    <string name="paywall_exit_discount">♻ %1$d ♻</string>
-    <string name="paywall_exit_price_comparison">♻ %1$s ♻ %2$s/♻</string>
+    <string name="paywall_exit_wait">થોડી વાર રોકાઓ!</string>
+    <string name="paywall_exit_special_offer">અમારી પાસે તમારા માટે એક ખાસ\nઑફર છે:</string>
+    <string name="paywall_exit_discount">%1$d મહિના માટે ડિસ્કાઉન્ટ</string>
+    <string name="paywall_exit_price_comparison">પ્રતિ મહિને %2$s ને બદલે માત્ર %1$s</string>
     <string name="paywall_exit_start_discount">ચૂકવણી-આધારિત — 2 મહિના અડધા ભાવે</string>
 
     
-    <string name="churn_your_sub">♻</string>
-    <string name="churn_plan_yearly">♻</string>
-    <string name="churn_plan_monthly">♻</string>
-    <string name="churn_plan">♻</string>
-    <string name="churn_price">♻</string>
-    <string name="churn_renewal">♻</string>
-    <string name="churn_automatic">♻</string>
+    <string name="churn_your_sub">તમારું સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan_yearly">વાર્ષિક સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan_monthly">માસિક સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan">પ્લાન</string>
+    <string name="churn_price">કિંમત</string>
+    <string name="churn_renewal">રિન્યૂઅલ</string>
+    <string name="churn_automatic">આપમેળે</string>
     <string name="churn_promo_active_label">ડિસ્કાઉન્ટ ઓફર</string>
     <string name="churn_promo_one_month_remaining">1 મહિનો બાકી — પછી દર મહિને <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
     <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> મહિના બાકી — પછી દર મહિને <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
-    <string name="churn_auto_renew_note">Google Play ♻</string>
+    <string name="churn_auto_renew_note">તમારું સબ્સ્ક્રિપ્શન Google Play દ્વારા આપમેળે રિન્યૂ થાય છે. તમે કોઈપણ સમયે રદ કરી શકો છો.</string>
     <string name="churn_cancel_sub">સબ્સ્ક્રિપ્શન રદ કરો</string>
-    <string name="churn_reason_too_expensive">♻</string>
-    <string name="churn_reason_unused">♻</string>
-    <string name="churn_per_year">/♻</string>
-    <string name="churn_per_month">/♻</string>
-    <string name="churn_reason_features">♻</string>
-    <string name="churn_reason_other">♻</string>
-    <string name="churn_sorry_title">♻</string>
-    <string name="churn_sorry_body">♻</string>
+    <string name="churn_reason_too_expensive">ખૂબ મોંઘું</string>
+    <string name="churn_reason_unused">હું તેનો બહુ ઓછો ઉપયોગ કરું છું</string>
+    <string name="churn_per_year">પ્રતિ વર્ષ</string>
+    <string name="churn_per_month">પ્રતિ મહિને</string>
+    <string name="churn_reason_features">મને જોઈતી સુવિધાઓ નથી</string>
+    <string name="churn_reason_other">બીજું કારણ</string>
+    <string name="churn_sorry_title">દુ:ખ છે કે તમે જઈ રહ્યા છો</string>
+    <string name="churn_sorry_body">રદ કરતા પહેલા, શું તમે અમને કારણ જણાવશો? તે અમને App સુધારવામાં મદદ કરે છે.</string>
     <string name="churn_exclusive_offer">તમારા માટે ઑફર</string>
     <string name="churn_offer_subtitle">તમારા માટે અમારી ઑફર</string>
     <string name="churn_offer_feature_ai">દૈનિક AI વિશ્લેષણ</string>
     <string name="churn_offer_feature_perspectives">બધા AI પ્રોફાઇલ (4 પૂર્વ-વ્યાખ્યાયિત + અમર્યાદિત પોતાના)</string>
-    <string name="churn_offer_feature_voice">Premium ♻</string>
-    <string name="churn_offer_auto_renew">♻</string>
-    <string name="churn_accept_offer">♻</string>
-    <string name="churn_switch_yearly">♻</string>
-    <string name="churn_pause_sub">Google Play ♻</string>
-    <string name="churn_cancel_anyway">♻</string>
-    <string name="churn_are_you_sure">♻?</string>
-    <string name="churn_stay">♻</string>
+    <string name="churn_offer_feature_voice">Premium વૉઇસ ઓળખ</string>
+    <string name="churn_offer_auto_renew">આપમેળે રિન્યૂ થાય છે, કોઈપણ સમયે રદ કરી શકાય</string>
+    <string name="churn_accept_offer">ઑફર સ્વીકારો</string>
+    <string name="churn_switch_yearly">અથવા વાર્ષિક સબ્સ્ક્રિપ્શન પર સ્વિચ કરો અને વધુ બચાવો</string>
+    <string name="churn_pause_sub">અથવા Google Play પર સબ્સ્ક્રિપ્શન થોભાવો</string>
+    <string name="churn_cancel_anyway">છતાં પણ રદ કરો</string>
+    <string name="churn_are_you_sure">શું તમે ચોક્કસ છો?</string>
+    <string name="churn_stay">ના, રહેવાનું પસંદ કરું</string>
 
     
-    <string name="ai_limit_title">♻</string>
+    <string name="ai_limit_title">તમારી સાપ્તાહિક મર્યાદા પૂરી થઈ ગઈ</string>
     <string name="ai_limit_body">સબ્સ્ક્રિપ્શન વિના તમારી પાસે દર અઠવાડિયે 5 ટેક્સ્ટ સુધારા અને દર અઠવાડિયે 5 ડૅશબૉર્ડ અપડેટ પ્રતિ પ્રોફાઇલ છે.
 Premium સાથે: દરરોજ 150 સુધી.</string>
-    <string name="ai_limit_monthly">♻, %1$s/♻</string>
-    <string name="ai_limit_yearly">♻, %1$s/♻ (37%% ♻)</string>
-    <string name="ai_limit_no_thanks">♻ AI ♻</string>
-    <string name="ai_banner_title">AI ♻</string>
+    <string name="ai_limit_monthly">માસિક સબ્સ્ક્રિપ્શન, %1$s/મહિને</string>
+    <string name="ai_limit_yearly">વાર્ષિક સબ્સ્ક્રિપ્શન, %1$s/વર્ષ (37%% બચાવો)</string>
+    <string name="ai_limit_no_thanks">ના આભાર, AI વગર ચાલુ રાખો</string>
+    <string name="ai_banner_title">તમારી ડાયરી AI દ્વારા સપોર્ટેડ છે</string>
     <string name="ai_banner_body">• ઉચ્ચારેલ ટેક્સ્ટ આપોઆપ સુધારાય છે\n• દરેક નોંધ માટે સારાંશ\n• તમારી રૂઢિઓ પરથી સ્માર્ટ જીવન-સૂચનો. બધા AI-આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નહીં.\n• તમારા મફત ટ્રાયલ સમયગાળામાં સઘળું સામેલ</string>
-    <string name="cd_mic_start">♻</string>
-    <string name="cd_mic_stop">♻</string>
-    <string name="entry_improve_limit_daily">♻!</string>
-    <string name="entry_improve_limit_cooldown">♻ %1$d ♻.</string>
-    <string name="entry_improve_failed">♻</string>
+    <string name="cd_mic_start">રેકોર્ડિંગ શરૂ કરો</string>
+    <string name="cd_mic_stop">રેકોર્ડિંગ રોકો</string>
+    <string name="entry_improve_limit_daily">દૈનિક મર્યાદા પૂરી થઈ. કાલે ફરી ચાલુ!</string>
+    <string name="entry_improve_limit_cooldown">ટૂંકો વિરામ: હજુ %1$d મિનિટ.</string>
+    <string name="entry_improve_failed">ટેક્સ્ટ સુધારણા નિષ્ફળ</string>
 
     
-    <string name="notif_reminder_title">♻</string>
-    <string name="notif_reminder_body_0">♻?</string>
-    <string name="notif_reminder_body_1">♻</string>
-    <string name="notif_reminder_body_2">♻</string>
-    <string name="notif_reminder_body_3">♻</string>
-    <string name="notif_reminder_body_4">♻?</string>
-    <string name="notif_weekly_title">♻</string>
-    <string name="notif_weekly_body">♻ ♻</string>
-    <string name="notif_monthly_title">♻</string>
-    <string name="notif_monthly_body">♻</string>
-    <string name="notif_yearly_title">♻</string>
-    <string name="notif_yearly_body">♻</string>
+    <string name="notif_reminder_title">તમારી ડાયરીનો સમય</string>
+    <string name="notif_reminder_body_0">આજે તમને શું સ્પર્શી રહ્યું છે?</string>
+    <string name="notif_reminder_body_1">તમારા માટે એક ક્ષણ, તેને સાચવો</string>
+    <string name="notif_reminder_body_2">તમારું ભવિષ્યનું સ્વરૂપ તમારો આભાર માનશે</string>
+    <string name="notif_reminder_body_3">ફક્ત એક વિચાર પૂરતો છે, શરૂ કરો</string>
+    <string name="notif_reminder_body_4">આજે તમારી ખાસ ક્ષણ કઈ હતી?</string>
+    <string name="notif_weekly_title">તમારી સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_weekly_body">જુઓ આ અઠવાડિયે તમને શું સ્પર્શ્યું, તમારા Dashboard પર નવી સૂઝ છે.</string>
+    <string name="notif_monthly_title">તમારી માસિક સમીક્ષા</string>
+    <string name="notif_monthly_body">યાદોથી ભરેલો આખો મહિનો તમારી રાહ જુએ છે.</string>
+    <string name="notif_yearly_title">તમારી વાર્ષિક સમીક્ષા</string>
+    <string name="notif_yearly_body">યાદોથી ભરેલું આખું વર્ષ, તમારી સફર પર નજર નાખો.</string>
 
     
-    <string name="notif_channel_daily_name">♻</string>
-    <string name="notif_channel_daily_desc">♻</string>
-    <string name="notif_channel_weekly_name">♻</string>
-    <string name="notif_channel_weekly_desc">♻ 15:00</string>
-    <string name="notif_channel_monthly_name">♻</string>
-    <string name="notif_channel_monthly_desc">♻</string>
-    <string name="notif_channel_yearly_name">♻</string>
-    <string name="notif_channel_yearly_desc">♻</string>
+    <string name="notif_channel_daily_name">દૈનિક રિમાઇન્ડર</string>
+    <string name="notif_channel_daily_desc">તમને દરરોજ ડાયરી લખવાની યાદ અપાવે છે</string>
+    <string name="notif_channel_weekly_name">સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_channel_weekly_desc">દર રવિવારે 15:00 વાગ્યે તમારી સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_channel_monthly_name">માસિક સમીક્ષા</string>
+    <string name="notif_channel_monthly_desc">જ્યારે તમારી માસિક સમીક્ષા તૈયાર થાય ત્યારે સૂચના</string>
+    <string name="notif_channel_yearly_name">વાર્ષિક સમીક્ષા</string>
+    <string name="notif_channel_yearly_desc">જ્યારે તમારી વાર્ષિક સમીક્ષા તૈયાર થાય ત્યારે સૂચના</string>
 
     
-    <string name="datetime_just_now">♻</string>
+    <string name="datetime_just_now">હમણાં જ</string>
     <plurals name="datetime_minutes_ago">
-        <item quantity="one">%1$d ♻</item>
-        <item quantity="other">%1$d ♻</item>
+        <item quantity="one">%1$d મિનિટ પહેલા</item>
+        <item quantity="other">%1$d મિનિટ પહેલા</item>
     </plurals>
     <plurals name="datetime_hours_ago">
-        <item quantity="one">%1$d ♻</item>
-        <item quantity="other">%1$d ♻</item>
+        <item quantity="one">%1$d કલાક પહેલા</item>
+        <item quantity="other">%1$d કલાક પહેલા</item>
     </plurals>
     <plurals name="datetime_days_ago">
-        <item quantity="one">%1$d ♻</item>
-        <item quantity="other">%1$d ♻</item>
+        <item quantity="one">%1$d દિવસ પહેલા</item>
+        <item quantity="other">%1$d દિવસ પહેલા</item>
     </plurals>
     
     <plurals name="settings_export_success">
-        <item quantity="one">%1$d ♻</item>
-        <item quantity="other">%1$d ♻</item>
+        <item quantity="one">%1$d એન્ટ્રી એક્સપોર્ટ કરી</item>
+        <item quantity="other">%1$d એન્ટ્રીઓ એક્સપોર્ટ કરી</item>
     </plurals>
-    <string name="datetime_today">♻</string>
-    <string name="datetime_yesterday">♻</string>
-    <string name="datetime_day_before_yesterday">♻</string>
-    <string name="datetime_this_week">♻</string>
-    <string name="datetime_last_week">♻</string>
-    <string name="datetime_weeks_ago">%1$d ♻</string>
+    <string name="datetime_today">આજે</string>
+    <string name="datetime_yesterday">ગઈકાલે</string>
+    <string name="datetime_day_before_yesterday">પરમ દિવસે</string>
+    <string name="datetime_this_week">આ અઠવાડિયે</string>
+    <string name="datetime_last_week">ગયા અઠવાડિયે</string>
+    <string name="datetime_weeks_ago">%1$d અઠવાડિયા પહેલા</string>
 
     
-    <string name="achievement_nightowl_title">♻</string>
-    <string name="achievement_nightowl_desc">22 ♻ 50 ♻</string>
-    <string name="achievement_earlybird_title">♻</string>
-    <string name="achievement_earlybird_desc">7 ♻ 20 ♻</string>
-    <string name="achievement_confession_title">♻</string>
-    <string name="achievement_confession_desc">1,000 ♻</string>
-    <string name="achievement_marathon_title">♻</string>
-    <string name="achievement_marathon_desc">100 ♻</string>
-    <string name="achievement_wordartist_title">♻</string>
-    <string name="achievement_wordartist_desc">500 ♻</string>
-    <string name="achievement_consistency_title">♻</string>
-    <string name="achievement_consistency_desc">30 ♻</string>
-    <string name="achievement_chronicler_title">♻</string>
-    <string name="achievement_chronicler_desc">365 ♻</string>
-    <string name="achievement_photodiary_title">♻</string>
-    <string name="achievement_photodiary_desc">50 ♻</string>
-    <string name="achievement_voiceartist_title">♻</string>
-    <string name="achievement_voiceartist_desc">25 ♻</string>
-    <string name="achievement_reflectionmaster_title">♻</string>
-    <string name="achievement_reflectionmaster_desc">50 ♻</string>
+    <string name="achievement_nightowl_title">રાત્રિ ઘુવડ</string>
+    <string name="achievement_nightowl_desc">22 વાગ્યા પછી 50 એન્ટ્રી લખી</string>
+    <string name="achievement_earlybird_title">વહેલા ઊઠનાર</string>
+    <string name="achievement_earlybird_desc">7 વાગ્યા પહેલા 20 એન્ટ્રી લખી</string>
+    <string name="achievement_confession_title">કબૂલાત</string>
+    <string name="achievement_confession_desc">1,000 થી વધુ શબ્દોની એક એન્ટ્રી લખી</string>
+    <string name="achievement_marathon_title">મેરેથોન લેખક</string>
+    <string name="achievement_marathon_desc">100 ડાયરી એન્ટ્રી લખી</string>
+    <string name="achievement_wordartist_title">શબ્દ કલાકાર</string>
+    <string name="achievement_wordartist_desc">500 ડાયરી એન્ટ્રી લખી</string>
+    <string name="achievement_consistency_title">સાતત્ય</string>
+    <string name="achievement_consistency_desc">30-દિવસની સ્ટ્રીક હાંસલ કરી</string>
+    <string name="achievement_chronicler_title">વાર્ષિક ઇતિહાસકાર</string>
+    <string name="achievement_chronicler_desc">365 એન્ટ્રી લખી</string>
+    <string name="achievement_photodiary_title">ફોટો ડાયરી</string>
+    <string name="achievement_photodiary_desc">એન્ટ્રીઓ સાથે 50 ફોટા જોડ્યા</string>
+    <string name="achievement_voiceartist_title">વૉઇસ કલાકાર</string>
+    <string name="achievement_voiceartist_desc">25 વૉઇસ એન્ટ્રી બનાવી</string>
+    <string name="achievement_reflectionmaster_title">ચિંતન માસ્ટર</string>
+    <string name="achievement_reflectionmaster_desc">50 Dashboard વિશ્લેષણ કર્યા</string>
 
     
-    <string name="prompt_cat_self_reflection">♻</string>
-    <string name="prompt_cat_gratitude">♻</string>
-    <string name="prompt_cat_future">♻</string>
-    <string name="prompt_cat_relationships">♻</string>
+    <string name="prompt_cat_self_reflection">આત્મ-ચિંતન</string>
+    <string name="prompt_cat_gratitude">કૃતજ્ઞતા</string>
+    <string name="prompt_cat_future">ભવિષ્ય</string>
+    <string name="prompt_cat_relationships">સંબંધો</string>
 
     <string-array name="prompts_self_reflection">
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
+        <item>આજે તમને શું હસાવી ગયું?</item>
+        <item>આજે કયો વિચાર તમે છોડી ન શક્યા?</item>
+        <item>આજે તમે તમારા વિશે શું શીખ્યા?</item>
+        <item>આજે કઈ ક્ષણ સૌથી તીવ્ર હતી?</item>
+        <item>જો શક્ય હોત તો આજે તમે શું અલગ કરત?</item>
+        <item>આજે કઈ લાગણી તમારી સાથે સૌથી વધુ રહી?</item>
+        <item>આજે તમને શું આશ્ચર્ય થયું?</item>
+        <item>આજે તમે સૌથી લાંબો સમય શેના વિશે વિચાર્યું?</item>
+        <item>આજે તમને શેણે ઊર્જા આપી?</item>
+        <item>આજે તમારી ઊર્જા શેણે છીનવી?</item>
+        <item>તમે કઈ આદત બદલવા માંગો છો?</item>
+        <item>અત્યારે તમારા માટે સફળતાનો અર્થ શું છે?</item>
+        <item>અત્યારે કયો ડર તમારા માર્ગમાં છે?</item>
+        <item>તમારું નાનું સ્વરૂપ તમારા આજના જીવન વિશે શું કહેત?</item>
+        <item>અત્યારે તમે તમારી જાતને કયો સલાહ આપો છો?</item>
+        <item>તમને શું અનન્ય બનાવે છે?</item>
     </string-array>
 
     <string-array name="prompts_gratitude">
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
+        <item>આજે તમે શેના માટે કૃતજ્ઞ છો?</item>
+        <item>આજે કઈ વ્યક્તિએ તમારો દિવસ સમૃદ્ધ કર્યો?</item>
+        <item>આજે કઈ નાની વિગતે તમને આનંદ આપ્યો?</item>
+        <item>તમારી પાસે કઈ આવડત છે જેને તમે ઘણીવાર ગૃહીત માનો છો?</item>
+        <item>આ અઠવાડિયે તમારી સાથે બનેલી શ્રેષ્ઠ બાબત કઈ છે?</item>
+        <item>તમે કોનો અને શેના માટે આભાર માનવા માંગો છો?</item>
+        <item>કઈ જગ્યા તમને ઘરનો અનુભવ આપે છે?</item>
+        <item>કઈ યાદ તમને તરત જ ખુશ કરી દે છે?</item>
+        <item>તમારા શરીરની કઈ બાબત વધુ કદર માગે છે?</item>
+        <item>આજે કયા ભોજને તમને ખરેખર સારું લાગ્યું?</item>
+        <item>છેલ્લે કયા સંગીતે તમને સ્પર્શ્યા?</item>
+        <item>તમારી પાસેની સૌથી મૂલ્યવાન વસ્તુ કઈ છે જેની કોઈ કિંમત નથી?</item>
+        <item>ભૂતકાળના કયા અનુભવે તમને વધુ મજબૂત બનાવ્યા?</item>
+        <item>તમારા રોજિંદા જીવનની કઈ બાબત ખરેખર એક વિશેષાધિકાર છે?</item>
+        <item>રોજિંદા જીવનમાં તમારો ગુપ્ત નાયક કોણ છે?</item>
+        <item>અત્યારે તમે કઈ ઋતુનો સૌથી વધુ આનંદ માણો છો, અને શા માટે?</item>
     </string-array>
 
     <string-array name="prompts_future">
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
+        <item>એક વર્ષમાં તમે શું હાંસલ કરવા માંગો છો?</item>
+        <item>પાંચ વર્ષમાં તમારો સંપૂર્ણ દિવસ કેવો દેખાય છે?</item>
+        <item>અત્યારે તમે કયા ધ્યેયને સૌથી વધુ ઉત્કટતાથી અનુસરો છો?</item>
+        <item>જો તમને ખબર હોત કે તમે નિષ્ફળ નહીં જાઓ તો તમે શું કરત?</item>
+        <item>તમે કઈ નવી આવડત શીખવા માંગો છો?</item>
+        <item>તમે આગળ ક્યાં પ્રવાસ કરવા માંગો છો?</item>
+        <item>દસ વર્ષમાં તમે કેવી વ્યક્તિ બનવા માંગો છો?</item>
+        <item>તમે કયું સ્વપ્ન છોડી દીધું જેને તમે ફરી જીવંત કરી શકો?</item>
+        <item>અત્યારે તમે લઈ શકો તે સૌથી હિંમતભર્યું પગલું કયું છે?</item>
+        <item>કયો પ્રોજેક્ટ તમને ઉત્સાહિત કરે છે જે તમે હજુ શરૂ કર્યો નથી?</item>
+        <item>શું થવું જોઈએ કે તમે કહો: હવે હું સંતુષ્ટ છું?</item>
+        <item>તમે દુનિયામાં કયો ફેરફાર જોવા માંગો છો?</item>
+        <item>તમારી બકેટ લિસ્ટમાં સૌથી ઉપર શું છે?</item>
+        <item>આવતા મહિના સુધીમાં તમે કઈ ખરાબ આદત છોડવા માંગો છો?</item>
+        <item>તમે કેવી રીતે યાદ રાખવા માંગો છો?</item>
+        <item>કાલે તમે લઈ શકો તે નાનું પગલું કયું છે?</item>
     </string-array>
 
     <string-array name="prompts_relationships">
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
-        <item>♻?</item>
+        <item>તમે કોને કંઈક કહેવા માંગો છો જે તમે અત્યાર સુધી કહ્યું નથી?</item>
+        <item>તમારા જીવનમાં કયો સંબંધ વધુ ધ્યાન માગે છે?</item>
+        <item>તમારા શ્રેષ્ઠ મિત્રની કઈ બાબતની તમે સૌથી વધુ કદર કરો છો?</item>
+        <item>છેલ્લે ક્યારે તમને ખરેખર સમજાયેલા હોવાનો અનુભવ થયો?</item>
+        <item>તમારા માટે મહત્વની વ્યક્તિને તમે શું કહેશો?</item>
+        <item>કઈ વ્યક્તિએ તમારા જીવનને સૌથી વધુ ઘડ્યું?</item>
+        <item>તમે બીજાને કેવી રીતે બતાવો છો કે તમે તેમને પ્રેમ કરો છો?</item>
+        <item>તમે કયો સંઘર્ષ ઉકેલવા માંગો છો?</item>
+        <item>તમારા માટે મિત્રતાનો અર્થ શું છે?</item>
+        <item>છેલ્લે કોણે તમને કંઈક મહત્વનું શીખવ્યું?</item>
+        <item>બીજાની કઈ ખૂબીની તમે સૌથી વધુ પ્રશંસા કરો છો?</item>
+        <item>તમે કોની સાથે આખો દિવસ વિતાવવા માંગો છો?</item>
+        <item>તમને મળેલી સૌથી સુંદર પ્રશંસા કઈ છે?</item>
+        <item>સંબંધોમાં તમે કઈ સીમાઓ વધુ સારી રીતે નક્કી કરવા માંગો છો?</item>
+        <item>સમય સાથે પ્રેમ વિશેની તમારી કલ્પના કેવી રીતે બદલાઈ?</item>
+        <item>આજે કોણ તમારા ફોન કે સંદેશને પાત્ર છે?</item>
     </string-array>
 
     
-    <string name="pdf_entry_fallback_title">♻ #%1$d</string>
-    <string name="pdf_entry_counter">♻ %1$d / %2$d</string>
-    <string name="pdf_summary_label">♻</string>
-    <string name="pdf_continuation">%1$s (♻)</string>
-    <string name="pdf_page_number">♻ %1$d</string>
+    <string name="pdf_entry_fallback_title">એન્ટ્રી #%1$d</string>
+    <string name="pdf_entry_counter">એન્ટ્રી %1$d / %2$d</string>
+    <string name="pdf_summary_label">સારાંશ</string>
+    <string name="pdf_continuation">%1$s (ચાલુ)</string>
+    <string name="pdf_page_number">પૃષ્ઠ %1$d</string>
 
     
-    <string name="error_retro_all_failed">♻ %1$d AI ♻</string>
-    <string name="error_whisper_audio_empty">♻</string>
-    <string name="error_whisper_no_text">♻</string>
-    <string name="error_sync_db_not_found">♻</string>
+    <string name="error_retro_all_failed">બધી %1$d AI વિનંતીઓ નિષ્ફળ. કૃપા કરીને ઇન્ટરનેટ કનેક્શન તપાસો.</string>
+    <string name="error_whisper_audio_empty">ઑડિયો ફાઇલ ખાલી છે</string>
+    <string name="error_whisper_no_text">કોઈ ટેક્સ્ટ ઓળખાયો નથી</string>
+    <string name="error_sync_db_not_found">ડેટાબેઝ મળ્યો નથી</string>
     <string name="error_audio_record_init_failed">માઇક્રોફોન શરૂ કરી શકાયો નહીં</string>
     <string name="error_json_key_missing">AI જવાબ અધૂરો છે: %1$s અથવા %2$s નથી</string>
-    <string name="error_file_open_failed">♻</string>
-    <string name="error_generic">♻: %1$s</string>
+    <string name="error_file_open_failed">ભૂલ: ફાઇલ ખોલી શકાઈ નથી</string>
+    <string name="error_generic">ભૂલ: %1$s</string>
 
     
-    <string name="profile_style_chronicler">\n- ♻</string>
-    <string name="profile_style_advisor">\n- ♻</string>
-    <string name="profile_style_insight">\n- ♻</string>
-    <string name="profile_style_coach">\n- ♻</string>
-    <string name="profile_style_custom">\n- ♻ \"%1$s\"</string>
+    <string name="profile_style_chronicler">\n- સારાંશરૂપ વાર્તાની શૈલીમાં લખો, મુખ્ય ઘટનાઓ અને લાગણીઓને એક અંગત ઇતિહાસકારની જેમ સમાવો</string>
+    <string name="profile_style_advisor">\n- જીવન સલાહકારની શૈલીમાં લખો, શું સારું રહ્યું અને શું સુધારી શકાય તે દર્શાવો, અને વાચકને સ્પષ્ટતા અને વ્યવસ્થાનો અનુભવ આપો</string>
+    <string name="profile_style_insight">\n- ઊંડી આત્મ-સમજની વાર્તાની શૈલીમાં લખો, વિચારોની પૅટર્ન, વારંવાર આવતી લાગણીઓ અને છુપાયેલી શક્તિઓ ઉજાગર કરો</string>
+    <string name="profile_style_coach">\n- પ્રેરક ધ્યેય-સાથીની શૈલીમાં લખો, અંગત ધ્યેયોમાં પ્રગતિ દર્શાવો અને આગળ વધવા પ્રોત્સાહિત કરો</string>
+    <string name="profile_style_custom">\n- પ્રોફાઇલ-શૈલી (Custom): આ સમીક્ષા વપરાશકર્તાના કાર્ય સાથે સ્પષ્ટ સંબંધ રાખીને લખો. ફરજિયાત નિયમો:\n  1) સમીક્ષાનો ઓછામાં ઓછો 60 ટકા ભાગ સીધી રીતે અથવા આડકતરી રીતે કાર્ય-વિષયને આવરી લે.\n  2) ઓછામાં ઓછો એક વિષયક વિભાગ સંપૂર્ણપણે કાર્ય-કેન્દ્ર પર સમર્પિત હોય (શીર્ષક + ટેક્સ્ટ).\n  3) પ્રોફાઇલ-સંબંધ વૈવિધ્યપૂર્ણ રીતે વ્યક્ત કરો, સમાનાર્થી અને વિષયક નિકટતા સાથે, યાંત્રિક શબ્દ-પુનરાવર્તન સાથે નહીં.\n  4) કાર્ય સાથે સંબંધ વગરના અવલોકનો ટૂંકા રાખો અથવા સંપૂર્ણ છોડી દો — સાચા સંબંધવાળા ઓછા વિભાગો સામાન્ય ઘણા કરતાં વધુ સારા.\n  વપરાશકર્તા-કાર્ય (માર્ગદર્શન માટે): \"%1$s\"</string>
 
 
     <!-- ════════════════════════════════════════════════════════════════════
