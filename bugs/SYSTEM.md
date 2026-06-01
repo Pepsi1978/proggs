@@ -1,6 +1,6 @@
 # Bug-Almanach-System — Funktionsweise & Design
 
-> Stand: 2026-06-01 (v1). Entwickelt mit Frank, ausgeloest durch den
+> Stand: 2026-06-01 (v1), erweitert 2026-06-02 (Kopplung mit Best-Practices, §9). Entwickelt mit Frank, ausgeloest durch den
 > Chrome-Extension-Verschwind-Bug (~1h verloren, weil der dokumentierte Workaround
 > nicht VORHER nachgeschlagen wurde). Dieses Dokument beschreibt, wie das System
 > arbeitet. Es ist die Referenz fuer kuenftige Verbesserungen.
@@ -125,10 +125,41 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 2. In `README.md` aus „Bereiche ohne Almanach" nach „Vorhandene Almanache"
    verschieben (mit Stand, Bug-Anzahl, Trigger).
 3. Im `bug-almanac-guard`-Hook das Pfad-Mapping ergaenzen (Dateimuster → Almanach).
+4. Existiert eine `best-practices/projekt-code/<bereich>/best-practices.md`: die wechselseitige
+   Bezugs-Tabelle in BEIDEN Dateien anlegen (siehe §9) und `python3 bugs/check-coupling.py` ausfuehren.
 
 ---
 
-## 9. Bewusste Grenzen von v1 (kommende Verbesserungen)
+## 9. Kopplung mit den Best-Practices (zwei Seiten einer Medaille)
+
+Der Bug-Almanach sagt *was schiefgeht und wie man es loest*; der Ordner
+`~/proggs/best-practices/projekt-code/<software>/best-practices.md` sagt *wie man es von
+vornherein richtig macht, damit der Bug nie entsteht*. Beide gehoeren zusammen und werden in
+BEIDE Richtungen gepflegt — keine Einbahnstrasse:
+
+| Richtung | Wer schreibt | Was |
+|----------|--------------|-----|
+| Bug → Best-Practice | `bug-almanach-recherche`-Skill (Schritt 4b) | findet er einen Bug, traegt er die allgemeine Praevention in best-practices ein |
+| Best-Practice → Bug | `best-practices`-Skill (Abschnitt „Kopplung zum Bug-Almanach", Teil A) | foerdert ein Lauf einen Bug zutage, schreibt er ihn in `bugs/<bereich>.md` zurueck |
+
+**Bezugs-Tabellen (die Verlinkung).** Existieren beide Dateien einer Software, traegt JEDE eine
+wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔ Bug-Abschnitt". So springt
+man von einer Best-Practice direkt zur konkreten Bug-Loesung und zurueck. Beide Skills (Schritt 4c
+bzw. Teil B) halten diese Tabellen synchron — egal, welcher laeuft.
+
+**Regel beim Zurueckschreiben (Direktive #3).** Bug-Eintraege werden gegen bestehende
+DEDUPLIZIERT; gibt es noch keinen Almanach fuer den Bereich, wird KEIN halber angelegt (ihm
+fehlte die Fix-Status-Pruefung per `gh`) — stattdessen `bug-almanach-recherche` vorgeschlagen.
+Die Funktionalitaets-Erhaltung der Loesungen gilt unveraendert.
+
+**Health-Check.** `python3 bugs/check-coupling.py` prueft fuer jede Projekt-Code-Software mit
+beiden Dateien, ob die Bezugs-Tabelle in BEIDEN vorhanden ist. Rein lesend, immer `exit 0`
+(blockiert nie eine Session), meldet Drift per `[DRIFT]`-Zeile. Manuell oder im Rahmen eines
+Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
+
+---
+
+## 10. Bewusste Grenzen von v1 (kommende Verbesserungen)
 
 - Das Pfad-Mapping im Guard-Hook ist aktuell hartkodiert (klein, erweiterbar).
   Spaeter evtl. aus `README.md` auslesen, damit nur eine Stelle gepflegt werden muss.
