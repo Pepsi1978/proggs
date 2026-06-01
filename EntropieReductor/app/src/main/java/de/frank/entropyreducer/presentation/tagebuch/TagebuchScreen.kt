@@ -133,13 +133,28 @@ fun TagebuchScreen(
 
     // Helper: Eintrag speichern und parallel den Auto-Titel via Gemini erzeugen.
     // Fallback-Titel bleibt bei Fehler (kein API-Key, kein Netz) bestehen.
-    val saveNewEntry: (String) -> Unit = { rawText ->
-        val entry = TagebuchEntry.create(rawText)
+    //
+    // Frank-Wunsch 2026-06-01: Auch beim SOFORT-Verbessern direkt nach der Aufnahme
+    // muss das Original-Transkript erhalten bleiben. rawText = immer das Original,
+    // improved = optionaler Gemini-Text. Beide werden gespeichert (text + improvedText),
+    // damit der Detail-Screen zwischen Original und Verbessert umschalten kann —
+    // genau wie bei der nachtraeglichen Verbesserung. preferImproved spiegelt Franks
+    // Anzeigewahl im Transkript-Dialog (welcher Text als primaer angezeigt wird).
+    val saveNewEntry: (String, String?, Boolean) -> Unit = { rawText, improved, preferImproved ->
+        val base = TagebuchEntry.create(rawText)
+        val entry =
+            if (!improved.isNullOrBlank()) {
+                base.copy(improvedText = improved, isImproved = preferImproved)
+            } else {
+                base
+            }
         scope.launch { addTagebuchEntry(context, entry) }
-        titleVm.generateTitle(rawText) { newTitle ->
+        // Titel/Zusammenfassung aus dem primaer angezeigten Text ableiten (bessere Qualitaet).
+        val primaryText = if (preferImproved && !improved.isNullOrBlank()) improved else rawText
+        titleVm.generateTitle(primaryText) { newTitle ->
             scope.launch { updateTagebuchEntry(context, entry.id, title = newTitle) }
         }
-        summaryVm.generateSummary(rawText) { bullets ->
+        summaryVm.generateSummary(primaryText) { bullets ->
             scope.launch { updateTagebuchEntry(context, entry.id, summary = bullets) }
         }
     }
@@ -148,7 +163,8 @@ fun TagebuchScreen(
         TextInputDialog(
             onDismiss = { inputDialogOpen = false },
             onSave = { text ->
-                saveNewEntry(text)
+                // Manuell getippter Eintrag — keine KI-Verbesserung, nur Original.
+                saveNewEntry(text, null, false)
                 inputDialogOpen = false
             },
         )
@@ -163,8 +179,8 @@ fun TagebuchScreen(
             isImproving = improveState == ImproveState.RUNNING,
             errorMessage = improveError ?: voiceError,
             onImprove = { text -> improveVm.improve(text) },
-            onSave = { text ->
-                saveNewEntry(text)
+            onSave = { original, improved, preferImproved ->
+                saveNewEntry(original, improved, preferImproved)
                 pendingTranscript = null
                 improveVm.clearImproved()
             },
@@ -614,7 +630,10 @@ private fun TranscriptDialog(
     isImproving: Boolean,
     errorMessage: String?,
     onImprove: (String) -> Unit,
-    onSave: (String) -> Unit,
+    // Frank-Wunsch 2026-06-01: Original UND verbesserter Text werden zurueckgegeben,
+    // damit das Original beim Sofort-Verbessern nicht verloren geht. preferImproved =
+    // welcher Text gerade angezeigt wird (wird als primaere Anzeige im Detail uebernommen).
+    onSave: (original: String, improved: String?, preferImproved: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var editableText by remember(initialText) { mutableStateOf(initialText) }
@@ -692,7 +711,14 @@ private fun TranscriptDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { if (activeText.isNotBlank()) onSave(activeText.trim()) },
+                onClick = {
+                    if (activeText.isNotBlank()) {
+                        // Original = editierter Roh-Text, Verbessert = Gemini-Resultat (falls vorhanden).
+                        // useImproved = welche Variante Frank gerade ansieht → wird als primaer uebernommen.
+                        val original = editableText.trim().ifBlank { activeText.trim() }
+                        onSave(original, improvedText?.trim(), useImproved && improvedText != null)
+                    }
+                },
                 enabled = activeText.isNotBlank(),
             ) {
                 Text("Speichern", color = TagebuchAccent)

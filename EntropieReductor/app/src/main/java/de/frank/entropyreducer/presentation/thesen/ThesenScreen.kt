@@ -133,13 +133,25 @@ fun ThesenScreen(
 
     // Helper: Eintrag speichern und parallel den Auto-Titel via Gemini erzeugen.
     // Fallback-Titel bleibt bei Fehler (kein API-Key, kein Netz) bestehen.
-    val saveNewEntry: (String) -> Unit = { rawText ->
-        val entry = ThesenEntry.create(rawText)
+    // Frank-Wunsch 2026-06-01: Auch beim SOFORT-Verbessern direkt nach der Aufnahme
+    // muss das Original-Transkript erhalten bleiben. rawText = immer das Original,
+    // improved = optionaler Gemini-Text. Beide werden gespeichert (text + improvedText),
+    // damit der Detail-Screen zwischen Original und Verbessert umschalten kann.
+    // preferImproved spiegelt Franks Anzeigewahl im Transkript-Dialog.
+    val saveNewEntry: (String, String?, Boolean) -> Unit = { rawText, improved, preferImproved ->
+        val base = ThesenEntry.create(rawText)
+        val entry =
+            if (!improved.isNullOrBlank()) {
+                base.copy(improvedText = improved, isImproved = preferImproved)
+            } else {
+                base
+            }
         scope.launch { addThesenEntry(context, entry) }
-        titleVm.generateTitle(rawText) { newTitle ->
+        val primaryText = if (preferImproved && !improved.isNullOrBlank()) improved else rawText
+        titleVm.generateTitle(primaryText) { newTitle ->
             scope.launch { updateThesenEntry(context, entry.id, title = newTitle) }
         }
-        summaryVm.generateSummary(rawText) { bullets ->
+        summaryVm.generateSummary(primaryText) { bullets ->
             scope.launch { updateThesenEntry(context, entry.id, summary = bullets) }
         }
     }
@@ -148,7 +160,7 @@ fun ThesenScreen(
         TextInputDialog(
             onDismiss = { inputDialogOpen = false },
             onSave = { text ->
-                saveNewEntry(text)
+                saveNewEntry(text, null, false)
                 inputDialogOpen = false
             },
         )
@@ -163,8 +175,8 @@ fun ThesenScreen(
             isImproving = improveState == ImproveState.RUNNING,
             errorMessage = improveError ?: voiceError,
             onImprove = { text -> improveVm.improve(text) },
-            onSave = { text ->
-                saveNewEntry(text)
+            onSave = { original, improved, preferImproved ->
+                saveNewEntry(original, improved, preferImproved)
                 pendingTranscript = null
                 improveVm.clearImproved()
             },
@@ -614,7 +626,9 @@ private fun TranscriptDialog(
     isImproving: Boolean,
     errorMessage: String?,
     onImprove: (String) -> Unit,
-    onSave: (String) -> Unit,
+    // Frank-Wunsch 2026-06-01: Original UND verbesserter Text werden zurueckgegeben,
+    // damit das Original beim Sofort-Verbessern nicht verloren geht.
+    onSave: (original: String, improved: String?, preferImproved: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var editableText by remember(initialText) { mutableStateOf(initialText) }
@@ -692,7 +706,12 @@ private fun TranscriptDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { if (activeText.isNotBlank()) onSave(activeText.trim()) },
+                onClick = {
+                    if (activeText.isNotBlank()) {
+                        val original = editableText.trim().ifBlank { activeText.trim() }
+                        onSave(original, improvedText?.trim(), useImproved && improvedText != null)
+                    }
+                },
                 enabled = activeText.isNotBlank(),
             ) {
                 Text("Speichern", color = ThesenAccent)
