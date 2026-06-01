@@ -68,11 +68,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// wird alle 10 ms eine Zeile geloescht. Bei mouseUp wird der Timer invalidiert.
     private var xRepeatTimer: Timer?
 
-    // 5-second hide-delay timer (matches Windows _hideDelayTimer from
-    // commit #1913). When the user switches away from the terminal we
-    // delay the panel hide by 5 s so they can still grab a screenshot
-    // or use the pillar from another app. If the terminal becomes
-    // active again within those 5 s, the timer is cancelled.
+    // Kurzer hide-delay timer (Frank-Wunsch 2026-06-01: 0.4s, frueher 5s wie
+    // Windows _hideDelayTimer #1913). Beim Wechsel weg vom Terminal wird das
+    // Panel nach 0.4s ausgeblendet — das VTO soll nur ueber dem Terminal/CLI
+    // haengen, nicht im Browser nachhaengen. Wird das Terminal innerhalb der
+    // 0.4s wieder aktiv, wird der Timer gecancelt (kein Flackern).
     private var hideDelayTimer: Timer?
     private var isBtwRecording = false
     private var hasPastedText = false
@@ -408,13 +408,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
                 tvoDebug("[App] onTerminalDeactivated isRec=\(self.isRecording) isProc=\(self.isProcessing)")
                 if !self.isRecording && !self.isProcessing {
-                    // 5-second hide-delay (matches Windows #1913). Lets
-                    // the user grab a screenshot of another app or use
-                    // the pillar from a browser without the panel
-                    // disappearing the moment they leave the terminal.
+                    // Kurze hide-delay (Frank-Wunsch 2026-06-01: 0.4s statt 5s).
+                    // Das VTO soll WIRKLICH nur ueber dem Terminal/CLI haengen —
+                    // beim Wechsel in den Browser o.ae. quasi sofort verschwinden,
+                    // nicht 5s nachhaengen. Die 0.4s sind nur ein Flacker-Schutz
+                    // gegen sehr kurze Fokus-Glitches (z.B. kurzes Aufblitzen eines
+                    // Hilfsfensters); 0s wuerde bei jedem Mini-Fokuswechsel flackern.
+                    // Recording/Processing pausiert das Verstecken weiterhin (s.o.).
                     self.hideDelayTimer?.invalidate()
                     self.hideDelayTimer = Timer.scheduledTimer(
-                        withTimeInterval: 5.0, repeats: false
+                        withTimeInterval: 0.4, repeats: false
                     ) { [weak self] _ in
                         guard let self = self else { return }
                         self.hideDelayTimer = nil

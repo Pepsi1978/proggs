@@ -13,8 +13,10 @@ import AppKit
 
 final class AutoHideController {
 
-    /// Sekunden Inaktivitaet bevor das Panel einklappt (Frank-Wunsch: 3s).
-    var idleTimeout: TimeInterval = 3.0
+    /// Sekunden Inaktivitaet bevor das Panel einklappt (Frank-Wunsch 2026-06-01: 2s).
+    /// Gilt orientierungs-agnostisch fuer Vertikal- UND Horizontalmodus
+    /// (collapseIfIdle ruft beamToCollapsed, das beide Layouts auf die Mic-Pille schrumpft).
+    var idleTimeout: TimeInterval = 2.0
 
     /// Wird gesetzt vom AppDelegate. Soll true sein wahrend Recording/
     /// Processing — dann kein Auto-Collapse.
