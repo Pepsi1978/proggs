@@ -41,7 +41,10 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-effort_upper="${effort^^}"
+# bash-3.2-kompatibel: macOS liefert /bin/bash 3.2 (kein ${x^^} — "bad substitution").
+# tr ist POSIX und laeuft auf bash 3.2/4/5 und Windows Git Bash gleichermassen.
+# (Frank-Bug-Report 2026-06-01: Effort zeigte nur das ⚡-Symbol ohne Text.)
+effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
 
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
 model="${model/ context)/)}"
@@ -107,7 +110,10 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-printf -v now_ts '%(%s)T' -1
+# bash-3.2-kompatibel: printf '%(...)T' gibt es erst ab bash 4.2 (macOS hat 3.2 ->
+# now_ts blieb leer -> alle Reset-Countdowns/Plausibilitaetspruefungen kaputt).
+# date +%s laeuft auf jeder bash-Version. (Frank-Bug-Report 2026-06-01)
+now_ts=$(date +%s)
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -413,8 +419,10 @@ if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Uhrzeit
-printf -v time '%(%H:%M)T' -1
+# Uhrzeit — bash-3.2-kompatibel (printf '%(...)T' erst ab bash 4.2, macOS hat 3.2 ->
+# Uhrzeit blieb leer, nur das 🕐-Symbol war sichtbar). date laeuft ueberall.
+# (Frank-Bug-Report 2026-06-01)
+time=$(date +%H:%M)
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
