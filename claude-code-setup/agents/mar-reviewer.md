@@ -40,7 +40,7 @@ Spawn ALL THREE agents in a SINGLE message (parallel tool calls). Each agent rec
 
 ### Persona A — Security Hacker
 
-Pass this prompt to a generic Sonnet sub-agent:
+Pass this prompt to a generic sub-agent:
 
 ```
 You are an experienced penetration tester doing a security-focused code review.
@@ -76,7 +76,7 @@ Files to review:
 
 ### Persona B — Senior Architect (5-Year Maintainability)
 
-Pass this prompt to a generic Sonnet sub-agent:
+Pass this prompt to a generic sub-agent:
 
 ```
 You are a senior engineer who will maintain this codebase for the next 5 years.
@@ -110,7 +110,7 @@ Files to review:
 
 ### Persona C — User Advocate (Intent Compliance)
 
-Pass this prompt to a generic Sonnet sub-agent:
+Pass this prompt to a generic sub-agent:
 
 ```
 You are the user's lawyer. Your job: verify that this code change actually does

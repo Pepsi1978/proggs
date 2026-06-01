@@ -1,7 +1,7 @@
 ---
 name: intelligence-researcher
 description: Dedicated intelligence researcher for self-improve Stufe 5. Searches for reasoning breakthroughs, cognitive tools, competitive analysis, biological patterns, and self-improvement mechanisms. Has memory of previous findings to avoid duplicate research.
-model: sonnet
+model: opus
 effort: high
 maxTurns: 20
 tools:

@@ -157,7 +157,7 @@
 
 ### Geschwindigkeitsstufen (Speed Tiers)
 
-Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
+Richtiges Modell fuer die richtige Aufgabe — alle Subagents laufen auf Opus 4.8 (1M):
 
 | Aufgabe | Agent / Modus | Modell | Warum |
 |---------|---------------|--------|-------|
@@ -166,13 +166,13 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 | Code Review (Sicherheit) | `code-reviewer` | Opus | Sicherheitsluecken erkennen |
 | Performance-Optimierung | `optimizer` | Opus | Systemweites Verstaendnis |
 | UI-Verbesserung | `ui-polisher` | Opus | Design-Expertise |
-| Implementation | `coder` | **Sonnet** | Schnell, fokussiert, guenstig |
-| Bulk-Reviews | `batch-reviewer` | **Sonnet** | Viele Dateien schnell pruefen |
+| Implementation | `coder` | **Opus 4.8 (1M)** | Hoechstes Modell, max. Stabilitaet |
+| Bulk-Reviews | `batch-reviewer` | **Opus 4.8 (1M)** | Viele Dateien pruefen |
 | Tests schreiben | `tester` | Opus | Qualitaet bei Tests wichtig |
-| Recherche | `researcher` | **Sonnet** | Schnelles Web-Lookup |
+| Recherche | `researcher` | **Opus 4.8 (1M)** | Web-Lookup |
 | Alle Subagents/Worker | Explore/Plan/coder/researcher/etc. | **Opus 4.8 (1M)** | Via CLAUDE_CODE_SUBAGENT_MODEL (ueberschreibt Frontmatter) |
 
-**Faustregel**: 3-5 `coder`-Agents (Sonnet) fuer parallele Implementation spawnen, dann 1 `code-reviewer` (Opus) fuer die Qualitaetskontrolle.
+**Faustregel**: 3-5 `coder`-Agents fuer parallele Implementation spawnen, dann 1 `code-reviewer` (Opus) fuer die Qualitaetskontrolle.
 
 ### Konkrete Parallel-Muster
 
@@ -195,7 +195,7 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 
 **Bei Implementation (NEU — maximale Geschwindigkeit):**
 ```
-→ Gleichzeitig 3-5 coder-Agents (Sonnet) starten:
+→ Gleichzeitig 3-5 coder-Agents starten:
   Coder 1: Datei A implementieren (z.B. Model-Schicht)
   Coder 2: Datei B implementieren (z.B. View-Schicht)
   Coder 3: Datei C implementieren (z.B. Controller-Schicht)
@@ -214,7 +214,7 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 
 **Bei Recherche-Aufgaben:**
 ```
-→ Gleichzeitig 3-5 researcher-Agents (Sonnet) parallel spawnen
+→ Gleichzeitig 3-5 researcher-Agents parallel spawnen
 → Jeder recherchiert ein anderes Thema
 → Ergebnisse zusammenfuehren
 ```

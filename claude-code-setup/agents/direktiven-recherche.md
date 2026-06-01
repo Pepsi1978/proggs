@@ -79,7 +79,7 @@ vorschlaegst was bereits existiert. Beispiele:
 > den Kontext sprengten. 3 Researcher mit je 5-8 Funden = 15-24 Findings = stabil.
 > Vorfall 2026-03-28: 5 Researcher mit je 50+ Ergebnissen → alle abgestuerzt.
 
-Starte **3 parallele Researcher-Agenten** (Sonnet-Modell, je max 8 Web-Fetches, max 18 Turns).
+Starte **3 parallele Researcher-Agenten** (je max 8 Web-Fetches, max 18 Turns).
 JEDER Researcher bekommt:
 1. Eine **Zusammenfassung** (NICHT den vollstaendigen Text!) der relevanten Direktive(n) — max 500 Woerter
 2. Seinen **spezifischen Suchauftrag**

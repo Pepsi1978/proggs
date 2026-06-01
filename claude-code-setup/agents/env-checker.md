@@ -1,7 +1,7 @@
 ---
 name: env-checker
 description: Comprehensive environment health checker. Audits ALL installed tools, versions, settings, hooks, plugins, language readiness, mobile dev readiness, security patches, backup drift, and disk space. Returns a detailed structured report. Use this agent for Phase 1 of self-improve or standalone environment checks.
-model: sonnet
+model: opus
 effort: high
 maxTurns: 30
 tools:
@@ -52,7 +52,7 @@ Read `~/.claude/settings.json` and verify:
 ### 3. Agent Model Tiers
 Check all files in `~/.claude/agents/*.md` — verify model assignments:
 - Opus: architect, debugger, code-reviewer, optimizer, tester, ui-polisher, quality-gate, challenger, mar-reviewer, evolution-analyst
-- Sonnet: coder, batch-reviewer, researcher, env-checker, intelligence-researcher
+- Alle Subagents laufen auf opus[1m] (via CLAUDE_CODE_SUBAGENT_MODEL, ueberschreibt Frontmatter)
 
 ### 4. Hook Health
 For each hook in settings.json:

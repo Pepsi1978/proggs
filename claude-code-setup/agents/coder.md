@@ -1,7 +1,7 @@
 ---
 name: coder
-description: Fast implementation agent for well-defined coding tasks. Use for routine work, simple features, refactoring, boilerplate, and repetitive changes. Sonnet-based for speed — spawn 3-5 in parallel for maximum throughput.
-model: sonnet
+description: Fast implementation agent for well-defined coding tasks. Use for routine work, simple features, refactoring, boilerplate, and repetitive changes. Optimized for parallel throughput — spawn 3-5 in parallel for maximum throughput.
+model: opus
 effort: high
 maxTurns: 40
 isolation: worktree
