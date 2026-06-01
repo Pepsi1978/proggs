@@ -84,6 +84,15 @@
 						"timeout": 15
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/bug-almanac-index.sh\"",
+						"timeout": 10
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
@@ -248,6 +257,16 @@
 						"type": "command",
 						"command": "bash \"$HOME/.claude/hooks/pre-push-diff-sanity.sh\"",
 						"timeout": 30
+					}
+				]
+			},
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/bug-almanac-guard.sh\"",
+						"timeout": 5
 					}
 				]
 			}
@@ -459,7 +478,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -609,7 +633,10 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": ["-y", "android-debug-bridge-mcp"]
+			"args": [
+				"-y",
+				"android-debug-bridge-mcp"
+			]
 		}
 	}
 }
