@@ -121,9 +121,12 @@ Der Schritt, der am leichtesten vergessen wird und am wichtigsten ist. NACH der 
 Suche eine SEPARATE, gezielte Recherche: **Welche der gefundenen Bugs sind in neueren
 Versionen (bis zur in Schritt 1 ermittelten installierten Version) bereits behoben?**
 
-2-3 Researcher parallel: Changelog/Release-Notes durchgehen · Issue-Status der konkreten
-Tickets pruefen (falls Tracker per WebFetch blockiert: `gh issue view` bzw. Such-Snippets,
-ehrlich vermerken) · Sekundaerquellen als Gegenprobe.
+2-3 Researcher parallel: Changelog/Release-Notes durchgehen · **Issue-Status per GitHub-CLI
+hart pruefen** — `gh issue view <nr> --repo <org>/<repo> --json number,state,title,closedAt,stateReason`
+(gh ist installiert + authentifiziert → echter OPEN/CLOSED-Status statt vager WebFetch-Snippets;
+verifiziert 2026-06-01 an Issue #55889). Nur wenn ein Tracker NICHT ueber gh erreichbar ist
+(GitLab/Bugzilla), auf WebFetch ausweichen und unklare Faelle ehrlich markieren · Sekundaerquellen
+als Gegenprobe.
 
 **Ehrlichkeits-Pflicht:** Strikt trennen zwischen *belegt gefixt* (Changelog/offizielle
 Quelle) und *Status unklar / kein Fix gefunden*. Nie "gefixt" ohne Beleg — im Zweifel

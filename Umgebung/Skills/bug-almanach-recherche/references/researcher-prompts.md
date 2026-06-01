@@ -82,9 +82,18 @@ Quelle (URL)**.
 ### Fix-Researcher 2 — Issue-Status der konkreten Bugs pruefen
 > Du pruefst den aktuellen STATUS (offen/geschlossen/gefixt) konkreter Bug-Tickets aus
 > Phase A. [Liste der wichtigsten Issue-Nummern/URLs einfuegen.] Aktuell installiert:
-> [VERSION]. Pro Issue: Nummer · Status (OFFEN/GESCHLOSSEN/unklar) · falls gefixt: Version
-> oder Datum · 1 Satz Beleg. LIMITS: max 15 Fetches, max 9 Min. Wenn der Status nicht
-> ermittelbar ist (z.B. Tracker blockiert), ehrlich "unklar" schreiben statt raten.
+> [VERSION].
+>
+> **Bei GitHub-Trackern die GitHub-CLI nutzen (installiert + authentifiziert), NICHT WebFetch
+> (das liefert nur vage Snippets):**
+> - Einzeln: `gh issue view <nr> --repo <org>/<repo> --json number,state,title,closedAt,stateReason`
+>   → harter OPEN/CLOSED-Status + closedAt + stateReason (COMPLETED / NOT_PLANNED = Duplikat/won't-fix).
+> - Mehrere: `gh issue list --repo <org>/<repo> --search "<stichwort>" --state all --json number,state,title`.
+>
+> Pro Issue: Nummer · Status (OFFEN/GESCHLOSSEN) · falls geschlossen: closedAt + stateReason ·
+> 1 Satz Beleg. LIMITS: max 15 Aufrufe, max 9 Min. Nur wenn ein Tracker NICHT ueber gh
+> erreichbar ist (GitLab/Bugzilla), auf WebFetch ausweichen — unklare Faelle ehrlich als
+> "unklar" markieren statt zu raten.
 
 ### Fix-Researcher 3 — Sekundaerquellen als Gegenprobe (optional)
 > Du suchst in Blogs, dev.to, Medium, Reddit, Changelog-Zusammenfassungen nach Aussagen,
