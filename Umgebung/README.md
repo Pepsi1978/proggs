@@ -1,6 +1,6 @@
 # Umgebung
 
-Hier liegt die komplette transportable Programmier-Umgebung: alle selbstgebauten Claude-Code-Plugins und alle selbst erstellten Skills. Damit kannst du auf jedem neuen Rechner (macOS, Linux, Windows) und in jeder KI-Umgebung (Claude Code, Codex, andere) deine vertraute Toolbox einspielen.
+Hier liegt die komplette transportable Programmier-Umgebung: alle selbstgebauten Claude-Code-Plugins, alle selbst erstellten Skills und alle selbst gebauten Hooks. Damit kannst du auf jedem neuen Rechner (macOS, Linux, Windows) und in jeder KI-Umgebung (Claude Code, Codex, andere) deine vertraute Toolbox einspielen.
 
 ## Layout
 
@@ -18,16 +18,21 @@ Umgebung/
 │       ├── Plugin/
 │       └── Skills/
 │
-└── Skills/                      ← ALLE selbst erstellten Skills, plattformneutral
-    ├── app-roentgen/
-    ├── rechtssicherheit/
-    ├── string-extraktor/
-    ├── übersetzung/
-    ├── designer/
-    ├── superintelligenz/
-    ├── selbstbeobachtung/
-    ├── resilient-bugfixing/
-    └── ... (alle weiteren)
+├── Skills/                      ← ALLE selbst erstellten Skills, plattformneutral
+│   ├── app-roentgen/
+│   ├── rechtssicherheit/
+│   ├── string-extraktor/
+│   ├── übersetzung/
+│   ├── designer/
+│   ├── superintelligenz/
+│   ├── selbstbeobachtung/
+│   ├── resilient-bugfixing/
+│   └── ... (alle weiteren)
+│
+└── Hooks/                       ← ALLE selbst gebauten Hooks (.ps1 + .sh), plattformneutral
+    ├── bug-almanac-index.ps1    ← (+ .sh) SessionStart: Bug-Almanach-Liste einblenden
+    ├── bug-almanac-guard.ps1    ← (+ .sh) PreToolUse: an passenden Almanach erinnern
+    └── ... (weitere nach Bedarf)
 ```
 
 ## Die zwei Skills-Bereiche — Unterschied
@@ -81,6 +86,24 @@ Umgebung/
 | `übersetzung` | 138 KB | Android-Strings in 30+ Locales übersetzen |
 
 **Hinweis:** Einige Skills (z. B. `codebase-memory-*`, eventuell `android-dev`) stammen evtl. aus installierten Plugins statt selbst erstellt zu sein. Sie sind trotzdem mit drin — eine kleine Datei-Größe schadet nicht und beim Filtern auf der Ziel-Plattform kannst du sie weglassen falls nicht gewünscht.
+
+### Hooks
+
+Selbst gebaute Claude-Code-Hooks, jeweils als `.ps1` (Windows) **und** `.sh` (macOS/Linux):
+
+| Hook | Event | Was er macht |
+|---|---|---|
+| `bug-almanac-index` | SessionStart | Blendet die Liste der vorhandenen Bug-Almanache (`~/proggs/bugs/`) ein (Schicht 1 des Bug-Almanach-Systems) |
+| `bug-almanac-guard` | PreToolUse (Edit/Write) | Erinnert beim Anfassen bereichstypischer Dateien an den passenden Almanach (Schicht 2) |
+
+**Einspielen:** Hooks nach `~/.claude/hooks/` kopieren und in `~/.claude/settings.json` registrieren
+(Befehlsformat und macOS-Pfade siehe `claude-code-setup/settings.json`):
+
+```bash
+cp -R Umgebung/Hooks/* ~/.claude/hooks/
+# danach in settings.json unter SessionStart (bug-almanac-index)
+# bzw. PreToolUse mit matcher "Edit|Write" (bug-almanac-guard) eintragen
+```
 
 ## Einspielen auf einem neuen Rechner
 
