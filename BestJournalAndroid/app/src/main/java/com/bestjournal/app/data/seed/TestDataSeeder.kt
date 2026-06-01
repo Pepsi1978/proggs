@@ -51,6 +51,9 @@ constructor(
         prefs.edit().remove(KEY_SEEDED_IDS).apply()
     }
 
+    /** Oeffentlich fuer "Alle loeschen": vergisst das Seed-ID-Tracking. */
+    fun forgetSeededIds() = clearSeededIds()
+
     suspend fun seed(): Result<Int> {
         return try {
             val locale = context.resources.configuration.locales[0]

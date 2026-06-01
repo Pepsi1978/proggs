@@ -76,6 +76,7 @@ data class JournalUiState(
     val seedRunning: Boolean = false,
     val seedSeededCount: Int = 0,
     val seedToastMessage: String? = null,
+    val showSeedDialog: Boolean = false,
 )
 
 enum class SyncStatus {
@@ -1001,17 +1002,43 @@ constructor(
         _uiState.update { it.copy(seedSeededCount = testDataSeeder.getSeededCount()) }
     }
 
-    fun toggleTestDataSeed() {
+    // --- Debug-Test-Daten-Feature (Dialog: Hinzufuegen / Alle loeschen) ---
+
+    fun onSeedButtonClicked() {
+        _uiState.update { it.copy(showSeedDialog = true) }
+    }
+
+    fun dismissSeedDialog() {
+        _uiState.update { it.copy(showSeedDialog = false) }
+    }
+
+    /** Dialog-Aktion "Hinzufuegen": erzeugt 70 Test-Eintraege. */
+    fun seedTestData() {
+        runSeedAction { testDataSeeder.seed().map { count -> SeedActionResult.Seeded(count) } }
+    }
+
+    /**
+     * Dialog-Aktion "Alle loeschen": loescht ROBUST alle Eintraege via DELETE-Query
+     * (nicht mehr per fragilem ID-Tracking, das verwaisen konnte) und vergisst das Seed-Tracking.
+     */
+    fun deleteAllEntriesNow() {
+        runSeedAction {
+            val count = journalRepository.deleteAllEntries()
+            testDataSeeder.forgetSeededIds()
+            Result.success(SeedActionResult.Deleted(count))
+        }
+    }
+
+    private fun runSeedAction(block: suspend () -> Result<SeedActionResult>) {
         if (_uiState.value.seedRunning) return
+        _uiState.update { it.copy(showSeedDialog = false) }
         viewModelScope.launch {
             _uiState.update { it.copy(seedRunning = true, seedToastMessage = null) }
             val result =
-                if (testDataSeeder.isSeeded()) {
-                    testDataSeeder.deleteSeeded().map { count ->
-                        SeedActionResult.Deleted(count)
-                    }
-                } else {
-                    testDataSeeder.seed().map { count -> SeedActionResult.Seeded(count) }
+                try {
+                    block()
+                } catch (e: Exception) {
+                    Result.failure(e)
                 }
             result.fold(
                 onSuccess = { action ->

@@ -179,6 +179,35 @@ fun JournalScreen(
         }
     }
 
+    // DEBUG-only: Test-Daten-Dialog (Hinzufuegen / Alle loeschen / Abbrechen)
+    if (BuildConfig.DEBUG && uiState.showSeedDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissSeedDialog() },
+            title = { Text(stringResource(R.string.dev_seed_dialog_title)) },
+            text = { Text(stringResource(R.string.dev_seed_dialog_message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { viewModel.seedTestData() }) {
+                    Text(stringResource(R.string.dev_seed_add_action))
+                }
+            },
+            dismissButton = {
+                Row {
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.deleteAllEntriesNow() }
+                    ) {
+                        Text(stringResource(R.string.dev_seed_delete_all_action), color = NeonRed)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.dismissSeedDialog() }
+                    ) {
+                        Text(stringResource(R.string.dev_seed_cancel_action))
+                    }
+                }
+            },
+        )
+    }
+
     // Achievement unlock Snackbar
     val achievementTitle by viewModel.achievementUnlocked.collectAsStateWithLifecycle()
     var showAchievementSnackbar by remember { mutableStateOf<String?>(null) }
@@ -304,11 +333,10 @@ fun JournalScreen(
                         SunMoonToggle()
                         if (BuildConfig.DEBUG) {
                             Spacer(modifier = Modifier.width(4.dp))
-                            val seeded = uiState.seedSeededCount > 0
                             IconButton(
                                 onClick = {
                                     doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.toggleTestDataSeed()
+                                    viewModel.onSeedButtonClicked()
                                 },
                                 enabled = !uiState.seedRunning,
                             ) {
@@ -320,17 +348,10 @@ fun JournalScreen(
                                     )
                                 } else {
                                     Icon(
-                                        imageVector =
-                                            if (seeded) Icons.Rounded.DeleteSweep
-                                            else Icons.AutoMirrored.Rounded.PlaylistAdd,
+                                        imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
                                         contentDescription =
-                                            stringResource(
-                                                if (seeded) R.string.dev_seed_delete_label
-                                                else R.string.dev_seed_create_label
-                                            ),
-                                        tint =
-                                            if (seeded) NeonRed
-                                            else MaterialTheme.colorScheme.primary,
+                                            stringResource(R.string.dev_seed_dialog_title),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp),
                                     )
                                 }

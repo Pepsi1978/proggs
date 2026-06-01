@@ -1429,6 +1429,11 @@
     <string name="dev_seed_deleted">%1$d Test-Einträge gelöscht</string>
     <string name="dev_seed_error">Fehler: %1$s</string>
     <string name="dev_seed_ai_no_entries">KI hat keine Test-Einträge zurückgegeben</string>
+    <string name="dev_seed_dialog_title">Test-Daten</string>
+    <string name="dev_seed_dialog_message">Was möchtest du tun?</string>
+    <string name="dev_seed_add_action">70 Test-Einträge hinzufügen</string>
+    <string name="dev_seed_delete_all_action">Alle Einträge löschen</string>
+    <string name="dev_seed_cancel_action">Abbrechen</string>
     <string name="ai_retro_copied_message">In die Zwischenablage kopiert</string>
     <string name="ai_retro_copy_button">Kopieren</string>
     <string name="ai_retro_empty_state">Nicht genug Einträge für einen Rückblick.</string>

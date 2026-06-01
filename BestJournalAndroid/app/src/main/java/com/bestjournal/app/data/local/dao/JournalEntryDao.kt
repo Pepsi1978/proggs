@@ -70,6 +70,10 @@ interface JournalEntryDao {
 
     @Delete suspend fun delete(entry: JournalEntryEntity)
 
+    // Debug/Test-Feature: loescht ALLE Eintraege robust, gibt Anzahl geloeschter Zeilen zurueck.
+    @Query("DELETE FROM journal_entries")
+    suspend fun deleteAll(): Int
+
     @Query("UPDATE journal_entries SET isSynced = 1 WHERE id IN (:ids)")
     suspend fun markAsSynced(ids: List<Long>)
 

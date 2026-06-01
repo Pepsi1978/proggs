@@ -52,6 +52,11 @@ class JournalRepository @Inject constructor(
         journalEntryDao.delete(entry.toEntity())
     }
 
+    // Debug/Test-Feature "Alle loeschen": entfernt ALLE Eintraege, gibt Anzahl zurueck.
+    suspend fun deleteAllEntries(): Int {
+        return journalEntryDao.deleteAll()
+    }
+
     suspend fun getEntryCount(): Int {
         return journalEntryDao.getEntryCount()
     }
