@@ -1581,7 +1581,6 @@ private fun priorityCardTint(score: Double, isDark: Boolean): Color {
 // Home-Screen-Widget nutzen dieselbe Funktion, damit die Farben bit-identisch sind
 // (Frank-Wunsch 2026-05-31). priorityRampColor() kommt jetzt via Import oben.
 
-@Composable
 /**
  * Frank-Wunsch 2026-06-01: Erledigungs-Zeitpunkt menschenlesbar (Tag + Uhrzeit) —
  * z.B. "01.06.2026 um 12:38". Quelle ist resolvedAt, das jeder Erledigen-Pfad setzt.
@@ -1597,6 +1596,7 @@ private fun formatResolvedAt(ms: Long): String {
     )
 }
 
+@Composable
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
     onClick: () -> Unit = {},
