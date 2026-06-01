@@ -32,10 +32,15 @@ Quelle (URL)**.
 >
 > DEIN TEILBEREICH:
 
-### Teilbereich 1 — Offizielle Doku + Changelog
-> Offizielle Dokumentation, Changelog und Release-Notes von [BEREICH]. Welche Bugs
-> wurden in welcher Version gemeldet/gefixt? Welche dokumentierten Einschraenkungen,
-> Workarounds und "known issues" gibt es? Was ist laut Doku noch fehleranfaellig?
+### Teilbereich 1 — Offizielle Doku + Hersteller-Hilfen (Vorrang vor Foren)
+> Offizielle Dokumentation, Changelog, Release-Notes UND offizielle Support-/Hilfe-Seiten
+> von [BEREICH]. Welche Bugs wurden in welcher Version gemeldet/gefixt? Welche
+> dokumentierten Einschraenkungen, Workarounds und "known issues" gibt es? Suche GEZIELT
+> nach offiziellen Empfehlungen und DIREKTEN HILFEN ZUM KONKRETEN Bug — nicht nur
+> allgemeine Doku. Bei Hersteller-eigenen Bugs direkt beim Hersteller schauen:
+> Anthropic-Docs bei Claude, JetBrains bei Kotlin, Gradle-Docs bei Gradle, Apple-
+> Developer bei Swift, Microsoft-Learn bei .NET, Chrome-Developer bei Erweiterungen.
+> Offizielle Loesungen haben Vorrang vor Foren-Meinungen und gehoeren zuerst ins FIX-Feld.
 
 ### Teilbereich 2 — GitHub-Issues / Bugtracker
 > Der offizielle Bugtracker (z.B. github.com/<org>/<repo>/issues). Hook-/bereichsbezogene
