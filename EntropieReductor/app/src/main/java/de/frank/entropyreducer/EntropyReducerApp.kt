@@ -2,8 +2,12 @@ package de.frank.entropyreducer
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import de.frank.entropyreducer.domain.usecase.ForegroundSyncManager
 import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
@@ -50,6 +54,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
     @Inject lateinit var healthConnect: HealthConnectManager
 
     @Inject lateinit var appSettings: AppSettings
+
+    /** Frank-Wunsch 2026-06-01: zentraler Daten-Sync mit 8h-Throttle fuer Foreground-Wechsel. */
+    @Inject lateinit var foregroundSync: ForegroundSyncManager
 
     @Inject
     lateinit var agenticTriggerScheduler:
@@ -307,12 +314,37 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Frank-Wunsch 2026-05-23: Der fruehere ProcessLifecycleOwner-ON_START-Observer
-        // wurde ENTFERNT. Er triggerte bei JEDEM App-Foreground-Wechsel (auch beim kurzen
-        // Zurueckholen aus dem Hintergrund) einen Sync von Whoop, Strava, Oura und Health
-        // Connect. Das ist jetzt unerwuenscht: Daten-Syncs laufen NUR noch beim frischen
-        // App-Start (zentral im StartupViewModel, siehe MainActivity) und beim manuellen
-        // Aktualisieren-Knopf. Beim blossen Zurueckholen der App wird nichts mehr
-        // synchronisiert — kein unnoetiger Datenverbrauch, kein Rate-Limit-Risiko.
+        // Frank-Wunsch 2026-06-01: ProcessLifecycleOwner-ON_START-Observer mit 8h-THROTTLE.
+        //
+        // Vorgeschichte: Der fruehere Observer wurde am 2026-05-23 entfernt, weil er bei
+        // JEDEM Foreground-Wechsel synchronisierte (Datenverbrauch/Rate-Limit). Danach lief
+        // der Sync NUR noch beim frischen App-Start (StartupViewModel). Bug: Lag die App
+        // ueber Nacht nur im Hintergrund/Arbeitsspeicher, wurde beim Zurueckholen KEIN neuer
+        // Prozess gestartet -> kein Sync -> "Zuletzt synchronisiert" blieb auf dem Vorabend.
+        //
+        // Loesung (Frank's Vorschlag): Bei jedem Foreground-Wechsel pruefen, aber NUR
+        // synchronisieren wenn seit dem letzten Sync >= 8 h vergangen sind. Damit ist der
+        // Spam-Fall ausgeschlossen UND der Ueber-Nacht-Fall abgedeckt. Der Mutex im Manager
+        // verhindert Doppel-Laeufe falls frischer Start und Foreground-Event zusammenfallen.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    applicationScope.launch {
+                        runCatching {
+                                foregroundSync.syncIfStale(
+                                    ForegroundSyncManager.FOREGROUND_SYNC_MIN_INTERVAL_MS,
+                                )
+                            }
+                            .onFailure {
+                                android.util.Log.w(
+                                    "EntropyReducerApp",
+                                    "Foreground-Sync (8h-Throttle) fehlgeschlagen",
+                                    it,
+                                )
+                            }
+                    }
+                }
+            },
+        )
     }
 }

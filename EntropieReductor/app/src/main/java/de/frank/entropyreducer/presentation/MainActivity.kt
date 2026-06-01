@@ -236,6 +236,9 @@ class StartupViewModel @Inject constructor(
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     // Frank-Wunsch 2026-05-24: Tagebuch-Bruecke — Eintraege aus BestJournal Frank spiegeln.
     private val journalMirror: de.frank.entropyreducer.data.repository.JournalMirrorRepository,
+    // Frank-Wunsch 2026-06-01: Daten-Sync jetzt zentral im ForegroundSyncManager,
+    // damit derselbe Ablauf auch beim Foreground-Wechsel (8h-Throttle) laufen kann.
+    private val foregroundSync: de.frank.entropyreducer.domain.usecase.ForegroundSyncManager,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
@@ -293,99 +296,12 @@ class StartupViewModel @Inject constructor(
                 }
             }
             viewModelScope.launch(Dispatchers.IO) {
-                // Frank-Wunsch 2026-05-23: ZENTRALER Start-Sync-Ablauf. Alle Daten-APIs
-                // synchronisieren NUR beim frischen App-Start (hier, einmal pro Prozess) —
-                // nicht mehr beim Zurueckholen aus dem Hintergrund und nicht beim Oeffnen
-                // des Biomarker-Tabs.
-                //
-                // Reihenfolge bewusst: ZUERST Google Drive komplett (1. Restore holt die
-                // gesicherte Historie zurueck, 2. Backup sichert neue lokale Aenderungen) —
-                // beides wird ABGEWARTET. ERST DANN die einzelnen Daten-APIs. So ist die
-                // Historie wiederhergestellt/gesichert bevor neue Daten oben drauf kommen.
-                if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
-                    runCatching { syncEntries.restoreFromDrive() }
-                    // syncNowAndWait() WARTET bis das komplette Backup (Haupt + Workouts +
-                    // Health) durch ist — anders als das fruehere fire-and-forget requestSync().
-                    runCatching { coordinator.syncNowAndWait() }
-                }
-
-                // Frank-Wunsch 2026-05-23: Reihenfolge nach dem Drive-Backup bewusst gewaehlt —
-                // 1. Health Connect: lokal, schnell, kein Netz/Rate-Limit -> Gewicht sofort da.
-                // 2. + 3. Whoop und Oura: die zentralen Biomarker (Erholung, Schlaf).
-                // 4. Strava: oft rate-limitiert, darum nicht blockierend vorne.
-                // 5. Kalender: laedt am meisten (Jahre im Voraus), am wenigsten zeitkritisch.
-                // Jeweils nur wenn verbunden; Strava prueft die Auth intern selbst. Die Zaehler
-                // werden fuer den Footer gesammelt.
-                // Performance 2026-05-23 (Vorschlag 3, vom Benutzer freigegeben): Die einzelnen
-                // Daten-APIs sind voneinander unabhaengig (verschiedene Hosts, je eigenes
-                // Rate-Limit, schreiben in verschiedene Tabellen) und liefen bisher streng
-                // nacheinander. Sie laufen jetzt PARALLEL (async/coroutineScope) — der Start-Sync
-                // dauert damit nur noch so lange wie der LANGSAMSTE Einzel-Sync statt deren Summe.
-                //
-                // Bewusst NICHT veraendert: Das Drive-Restore+Backup oben bleibt davor UND
-                // blockierend — die Historie muss wiederhergestellt/gesichert sein BEVOR neue
-                // Daten dazukommen (das war der einzige Reihenfolge-Zwang). Strava bringt seinen
-                // eigenen Rate-Limit-Cooldown mit und ist daher gefahrlos parallel. Jeder Block
-                // behaelt seine eigene Fehlerbehandlung (runCatching/getOrDefault) — ein
-                // Einzel-Fehler reisst die anderen nicht mit.
-                var hcCount = 0
-                var whoopCount = 0
-                var ouraCount = 0
-                var stravaCount = 0
-                coroutineScope {
-                    val hcDeferred =
-                        async { runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0) }
-                    val whoopDeferred =
-                        async {
-                            if (oauth.loadWhoopAuthState().isAuthorized) {
-                                whoop.syncLastDays(365).getOrDefault(0)
-                            } else {
-                                0
-                            }
-                        }
-                    val ouraDeferred =
-                        async {
-                            if (oura.isTokenConfigured()) {
-                                oura.syncLastDays(365).getOrNull()?.values?.sum() ?: 0
-                            } else {
-                                0
-                            }
-                        }
-                    val stravaDeferred =
-                        async {
-                            runCatching { amazfit.mergeFromStrava(days = 30) }
-                                .getOrDefault(-1)
-                                .coerceAtLeast(0)
-                        }
-                    val calendarDeferred =
-                        async {
-                            if (secrets.calendarAccountEmail != null) {
-                                runCatching { calendar.syncDefaultWindow() }
-                            }
-                        }
-                    hcCount = hcDeferred.await()
-                    whoopCount = whoopDeferred.await()
-                    ouraCount = ouraDeferred.await()
-                    stravaCount = stravaDeferred.await()
-                    calendarDeferred.await()
-                }
-
-                // Frank-Bugfix 2026-05-23: Footer-Zeitstempel setzen — genau wie der manuelle
-                // Aktualisieren-Knopf (refreshNow). Behebt die Regression aus #987, wo der
-                // frische Start die Syncs zwar ausfuehrte, aber den "Zuletzt synchronisiert"-
-                // Footer nicht aktualisierte (er blieb auf dem alten Stand stehen).
-                val nowZ = java.time.ZonedDateTime.now()
-                val footerTs =
-                    "%02d.%02d. %02d:%02d".format(
-                        nowZ.dayOfMonth,
-                        nowZ.monthValue,
-                        nowZ.hour,
-                        nowZ.minute,
-                    )
-                val footer =
-                    "✓ $footerTs · Whoop $whoopCount · Strava $stravaCount · " +
-                        "Oura $ouraCount · Health Connect $hcCount"
-                runCatching { appSettings.setLastRefreshFooter(footer, System.currentTimeMillis()) }
+                // Frank-Wunsch 2026-06-01: ZENTRALER Daten-Sync liegt jetzt im
+                // ForegroundSyncManager (eine Quelle der Wahrheit). Beim frischen App-Start
+                // laeuft er hier einmal; beim Foreground-Wechsel ruft der ProcessLifecycle-
+                // Observer in EntropyReducerApp denselben Ablauf mit 8h-Throttle auf.
+                // Reihenfolge/Parallelitaet/Footer-Stempel sind unveraendert im Manager.
+                runCatching { foregroundSync.syncAllSources() }
 
                 // Hintergrund-Jobs aufsetzen. ensureNightlyJobs() bestellt die alten
                 // naechtlichen Whoop-/Kalender-Jobs jetzt AB (Frank-Wunsch 2026-05-23:
