@@ -140,6 +140,10 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             category = template.category,
             severity = template.severity,
             priorityScore = template.priorityScore.toDouble(),
+            // Frank-Wunsch 2026-06-01: Die im Loop gesetzte Prioritaet ist eine MANUELLE
+            // Prioritaet — sie muss in der generierten Aufgabe gelten und darf NICHT von der
+            // KI ueberschrieben werden. manualPriorityScore hat Vorrang vor priorityScore.
+            manualPriorityScore = template.priorityScore.toDouble(),
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
             // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.
@@ -290,13 +294,20 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         }
                     if (openForThis.isNotEmpty()) {
                         // Vorhandene offene Instanz behalten und in den Faelligkeits-Bucket schieben.
+                        // Frank-Wunsch 2026-06-01: dabei auch die manuelle Loop-Prio synchronisieren.
                         val keep = openForThis.first()
-                        if (keep.timeBucket != dueBucket || keep.manualBucket != dueBucket) {
+                        val prio = template.priorityScore.toDouble()
+                        if (keep.timeBucket != dueBucket ||
+                            keep.manualBucket != dueBucket ||
+                            keep.manualPriorityScore != prio
+                        ) {
                             entryRepo.upsert(
                                 keep.copy(
                                     timeBucket = dueBucket,
                                     manualBucket = dueBucket,
                                     manualBucketSetAt = now,
+                                    priorityScore = prio,
+                                    manualPriorityScore = prio,
                                     updatedAt = now,
                                 ),
                             )
@@ -331,6 +342,23 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         }
                     }
                     continue
+                }
+
+                // Frank-Wunsch 2026-06-01: bestehende offene Instanz (ohne festes Intervall)
+                // auf die im Loop gesetzte Prioritaet synchronisieren — damit sie nicht als
+                // "KI" angezeigt oder von der KI hochgesetzt wird. Greift auch fuer Instanzen
+                // die vor dieser Aenderung ohne manualPriorityScore erzeugt wurden.
+                openForThis.firstOrNull()?.let { keepNormal ->
+                    val prio = template.priorityScore.toDouble()
+                    if (keepNormal.manualPriorityScore != prio) {
+                        entryRepo.upsert(
+                            keepNormal.copy(
+                                priorityScore = prio,
+                                manualPriorityScore = prio,
+                                updatedAt = now,
+                            ),
+                        )
+                    }
                 }
 
                 // Nur erzeugen wenn aktuell KEINE offene Instanz existiert UND heute
@@ -375,6 +403,10 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             category = template.category,
             severity = template.severity,
             priorityScore = template.priorityScore.toDouble(),
+            // Frank-Wunsch 2026-06-01: Die im Loop gesetzte Prioritaet ist eine MANUELLE
+            // Prioritaet — sie muss in der generierten Aufgabe gelten und darf NICHT von der
+            // KI ueberschrieben werden. manualPriorityScore hat Vorrang vor priorityScore.
+            manualPriorityScore = template.priorityScore.toDouble(),
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
             // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.

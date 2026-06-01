@@ -118,8 +118,15 @@ class RecurringTemplatesViewModel @Inject constructor(
                         it.status == EntryStatus.OFFEN
                 }
                 .forEach {
+                    // Frank-Wunsch 2026-06-01: auch manualPriorityScore mitziehen, damit die
+                    // offene Instanz die im Loop gesetzte Prio behaelt (Vorrang vor KI) und nicht
+                    // als "KI" angezeigt oder rescored wird.
                     entryRepo.upsert(
-                        it.copy(priorityScore = clamped.toDouble(), updatedAt = now),
+                        it.copy(
+                            priorityScore = clamped.toDouble(),
+                            manualPriorityScore = clamped.toDouble(),
+                            updatedAt = now,
+                        ),
                     )
                 }
         }
