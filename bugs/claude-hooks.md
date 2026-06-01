@@ -454,6 +454,11 @@ und frischen macOS-Systemen.
 **Versionen:** beide (Issue #14817).
 **FIX:** `brew install jq`/`apt-get install jq` ODER JSON in Python parsen (`json`-Modul)
 statt jq. Eigene Hooks nie zwingend auf jq bauen.
+**Eigener Vorfall (2026-06-01):** `bug-almanac-guard.sh` extrahierte den `file_path` mit
+`jq`; fehlt jq, ist `file_path` leer → der Guard erkennt nie einen Bereich und feuert stumm
+NIE (Sicherheitsnetz tot, ohne Fehlermeldung). Fix: `file_path` per
+`python3 -c "json.load(sys.stdin)…"` statt jq (python3 war fuer den JSON-Output ohnehin
+noetig → eine Abhaengigkeit weniger auf dem Hot Path). Beim Hook-Debugging gefunden.
 
 ### 13.3 CRLF → "bad interpreter: /usr/bin/env bash^M"
 **Symptom:** Der `.sh`-Hook bricht zuverlaessig.
@@ -468,6 +473,11 @@ Git global `core.autocrlf=input`.
 **Versionen:** macOS/Linux Bash.
 **FIX:** Kritische Stellen mit `|| true` absichern; bewusst am Ende `exit 0`. (Trap fuer ERR
 zum Loggen ist ok, darf aber den Hook nicht mit non-zero beenden.)
+**Eigener Vorfall (2026-06-01):** `bug-almanac-{guard,index}.sh` hatten `trap 'log' ERR`
+OHNE `exit 0`. Bei einem scheiternden Befehl (python3) loggte der trap, dann beendete
+`set -e` das Skript mit non-zero → "hook error". Fix: **`exit 0` IN den trap** packen:
+`trap 'hook_log_warn "…"; exit 0' ERR`. So endet der Hook bei JEDEM unerwarteten Fehler
+graceful — genau wie die PS1-Variante via `try/catch` + finalem `exit 0`. Beim Debugging gefunden.
 
 ---
 
