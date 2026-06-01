@@ -12,7 +12,8 @@ trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"; exit 0' ERR
 
 input=$(cat)
 [ -n "$input" ] || exit 0
-fp=$(echo "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
+# file_path via python3 statt jq (jq kann fehlen -> waere stummes Versagen; siehe claude-hooks.md 13.2).
+fp=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print((d.get('tool_input') or {}).get('file_path','') or '')" 2>/dev/null || echo "")
 [ -n "$fp" ] || exit 0
 fpl=$(echo "$fp" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
 
