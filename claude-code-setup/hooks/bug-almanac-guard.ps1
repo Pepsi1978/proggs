@@ -25,14 +25,18 @@ try {
     $slug = $null; $file = $null; $name = $null
     if ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
+    } elseif ($fpl -match 'build\.gradle(\.kts)?$' -or $fpl -match 'settings\.gradle(\.kts)?$' -or $fpl -match '/gradle/' -or $fpl -match 'gradle\.properties$' -or $fpl -match 'gradle-wrapper') {
+        $slug = 'gradle'; $file = 'gradle.md'; $name = 'Build - Gradle (AGP/R8)'
     } elseif ($fpl -match '\.kts?$' -or $fpl -match 'androidmanifest\.xml$') {
         $slug = 'android'; $file = 'android-compose.md'; $name = 'Android (Kotlin/Compose)'
-    } elseif ($fpl -match '\.xaml$' -or $fpl -match '\.csproj$' -or $fpl -match '\.cs$') {
-        $slug = 'wpf'; $file = 'wpf-csharp.md'; $name = 'Windows-Desktop (C#/WPF/WinUI)'
     } elseif ($fpl -match '\.swift$') {
         $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
+    } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
+        $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
     } elseif ($fpl -match '\.user\.js$') {
         $slug = 'tampermonkey'; $file = 'tampermonkey.md'; $name = 'Tampermonkey/Userscripts'
+    } elseif ($fpl -match '\.xaml$' -or $fpl -match '\.csproj$' -or $fpl -match '\.cs$') {
+        $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
     }

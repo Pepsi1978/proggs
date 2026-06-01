@@ -41,12 +41,12 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|------------------|-------------------------------------------|
-| **Android — Kotlin / Compose** | `android-compose.md` | `*.kt`, `*.kts`, `AndroidManifest.xml`, `build.gradle*` · „Compose", „Android", „Jetpack" |
-| **Windows-Desktop — C# / WPF / WinUI** | `wpf-csharp.md` | `*.xaml`, `*.cs`, `*.csproj` · „WPF", „WinUI", „.NET" |
+| **Android — Kotlin / Compose** | `android-compose.md` | `*.kt`, `*.kts`, `AndroidManifest.xml` · „Compose", „Android", „Jetpack" |
+| **C# / .NET** (WPF, WinUI, Konsole, Backend) | `dotnet-csharp.md` | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#" |
 | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
-| **Web — TypeScript / Node** | `typescript-node.md` | `*.ts`, `*.tsx`, `package.json`, `tsconfig.json` · „TypeScript", „Node", „npm" |
+| **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
 | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
-| **Build — Gradle** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*` · „Gradle", „AGP", „R8" |
+| **Build — Gradle** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*`, `gradle.properties` · „Gradle", „AGP", „R8" |
 
 (Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen — und das
 Pfad-Mapping im `bug-almanac-guard`-Hook entsprechend nachziehen.)

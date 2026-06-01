@@ -22,14 +22,18 @@ slug=""; file=""; name=""
 case "$fpl" in
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
         slug="chrome"; file="chrome-extensions.md"; name="Browser-Erweiterungen (Chrome/Edge MV3)";;
+    *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
+        slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
     *.kt|*.kts|*androidmanifest.xml)
         slug="android"; file="android-compose.md"; name="Android (Kotlin/Compose)";;
-    *.xaml|*.csproj|*.cs)
-        slug="wpf"; file="wpf-csharp.md"; name="Windows-Desktop (C#/WPF/WinUI)";;
     *.swift)
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
+    *.ts|*.tsx|*tsconfig.json)
+        slug="typescript"; file="typescript.md"; name="TypeScript / Node";;
     *.user.js)
         slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
+    *.xaml|*.csproj|*.cs)
+        slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)";;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
 esac
