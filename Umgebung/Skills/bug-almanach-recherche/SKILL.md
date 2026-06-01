@@ -129,25 +129,38 @@ ehrlich vermerken) · Sekundaerquellen als Gegenprobe.
 Quelle) und *Status unklar / kein Fix gefunden*. Nie "gefixt" ohne Beleg — im Zweifel
 bleibt der Bug "noch offen".
 
-### Schritt 4 — Best-Practices-Abgleich (bekanntes Wissen wiederverwenden)
+### Schritt 4 — Best-Practices-Abgleich (beide Richtungen: lesen UND schreiben)
 
-Bevor kuratiert wird, jeden gefundenen Bug gegen den **lokalen best-practices-Ordner**
-abgleichen: `~/proggs/best-practices/`. Dort steht oft schon eine erprobte Loesung oder
-eine Empfehlung, die genau diesen Bug **ganz ausschliesst**.
+Bug-Almanach und `best-practices/`-Ordner sind zwei Seiten derselben Medaille: der
+Almanach sagt *was schiefgeht und wie man es umgeht*, best-practices sagt *wie man es von
+vornherein richtig macht, damit der Bug nie entsteht*. Dieser Schritt verbindet beide.
 
-So vorgehen:
-1. Mit Grep nach Bug-Stichworten suchen, z.B.
-   `grep -ri "<stichwort>" ~/proggs/best-practices/` (oder den thematisch passenden
-   Unterordner: `01-hooks/`, `02-skills/`, `05-mcp/`, `07-settings/`, …).
-2. Treffer lesen und pruefen, ob die dortige Loesung den Bug adressiert.
-3. Falls ja: diese Loesung mit in den **FIX-Bereich** des Almanach-Eintrags aufnehmen,
-   mit Verweis ("siehe best-practices/<datei>"). So steht die beste bekannte Loesung
-   direkt im Almanach — vollstaendig, nicht nur verlinkt.
+**4a — LESEN (bekanntes Wissen wiederverwenden):**
+Jeden gefundenen Bug gegen den lokalen Ordner abgleichen:
+`grep -ri "<stichwort>" ~/proggs/best-practices/` — passende Stelle: Harness-Kategorien
+`01-hooks/` … `12-neues/`, oder Projekt-Code `projekt-code/<software>/`. Steht dort schon
+eine Loesung/Empfehlung, die den Bug adressiert oder ganz ausschliesst → mit in den
+**FIX-Bereich** des Almanach-Eintrags aufnehmen (Verweis "siehe best-practices/<datei>").
+So steht die beste bekannte Loesung direkt im Almanach. (Beispiel: `best-practices/01-hooks`
+hat einen Hook-JSON-Bug verhindert, bevor er passierte.)
 
-Warum das wichtig ist: Genau heute hat `best-practices/01-hooks` einen Hook-Bug
-(JSON-Schema) verhindert, BEVOR er passierte. Dieser Schritt holt solches Wissen
-systematisch in jeden Almanach. (Hat ein Bereich noch keine best-practices, findet Grep
-nichts — dann einfach weiter, kein Schaden.)
+**4b — SCHREIBEN (Praevention zurueckspeisen):**
+Hat ein Bug eine allgemeingueltige Loesung/Praevention ("so baut man es von vornherein
+richtig"), diese AUCH nach best-practices eintragen — nicht nur in den Almanach:
+- **Harness-Bug** (Hooks, Skills, MCP, Settings …) → passende Harness-Kategorie
+  `best-practices/<NN-kategorie>/best-practices.md`.
+- **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/projekt-code/<software>/best-practices.md`
+  (Unterordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da).
+Jeder Eintrag mit Quelle + Datum + `offiziell`/`extern`-Flag (gleiche Regeln wie der
+`best-practices`-Skill). So fuellen sich beide Speicher: Bug+Workaround im Almanach,
+Praevention in best-practices.
+
+**Optional — breiter Best-Practices-Lauf:** Bei einem groesseren Bereich dem Benutzer
+anbieten, separat den `best-practices`-Skill fokussiert zu starten ("Best-Practices nur
+fuer <software>"), um die NEUESTEN Best-Practices der Software breit aufzurollen (geht
+ueber die eine Bug-Loesung hinaus). Nur mit OK — kostet eigene Recherche-Zeit.
+
+(Hat ein Bereich noch keine best-practices, findet 4a nichts — dann nur 4b schreiben.)
 
 ### Schritt 5 — Kuratieren in `~/proggs/bugs/<bereich>.md`
 
