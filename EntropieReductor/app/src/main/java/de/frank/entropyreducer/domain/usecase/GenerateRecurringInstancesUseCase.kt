@@ -484,7 +484,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 if (recInstance != null) {
                     for (fu in followupDao.getByEntryId(orphan.id)) {
                         followupDao.upsert(
-                            fu.copy(id = UUID.randomUUID().toString(), entryId = recInstance.id),
+                            fu.copy(id = java.util.UUID.randomUUID().toString(), entryId = recInstance.id),
                         )
                     }
                     entryRepo.delete(orphan)
@@ -506,7 +506,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                     )
                     for (fu in followupDao.getByEntryId(orphan.id)) {
                         followupDao.upsert(
-                            fu.copy(id = UUID.randomUUID().toString(), entryId = recId),
+                            fu.copy(id = java.util.UUID.randomUUID().toString(), entryId = recId),
                         )
                     }
                     entryRepo.delete(orphan)
