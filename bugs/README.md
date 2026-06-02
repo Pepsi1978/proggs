@@ -41,12 +41,22 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 > Diese Liste ist die Landkarte der erwarteten Bereiche. Sobald an einem davon
 > echte Arbeit beginnt und noch kein Almanach existiert, wird er angelegt.
 
-| Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
-|---------|------------------|-------------------------------------------|
-| **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
-| **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
-| **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
-| **Build — Gradle** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*`, `gradle.properties` · „Gradle", „AGP", „R8" |
+> Priorisiert nach Franks tatsaechlicher Nutzung (⭐ = hoher Hebel, oft angefasst).
+
+| Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
+|------|---------|------------------|-------------------------------------------|
+| ⭐ | **Build — Gradle / AGP / R8 / KSP** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*`, `gradle.properties` · „Gradle", „AGP", „R8", „KSP" |
+| ⭐ | **Python (v.a. Windows-Encoding)** | `python-windows.md` | `*.py` · „Python", „Encoding", „BOM", „cp1252", „UnicodeEncodeError" |
+| · | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
+| · | **Firebase / Crashlytics / Play Billing** | `firebase.md` | `google-services.json`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Billing", „Paywall" |
+| · | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
+| · | **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
+| · | **Stream-Deck-Plugin (Node-SDK)** | `stream-deck.md` | `*.sdPlugin/*`, Stream-Deck-`manifest.json`, `propertyInspector` · „Stream Deck", „Elgato" |
+| · | **MCP-Server-Bau** | `mcp-server.md` | `.mcp.json`, MCP-SDK · „MCP", „Model Context Protocol", „stdio", „tool schema" |
+
+> **Moegliche Vertiefungen**, die zunaechst als Abschnitt im bestehenden Almanach
+> wachsen koennen (statt eigener Datei — bei genug Eigenleben spaeter ausgliedern):
+> Jetpack Compose → `kotlin.md` · Room/SQLite → `kotlin.md` · PowerShell allgemein → `claude-hooks.md`.
 
 (Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen — und das
 Pfad-Mapping im `bug-almanac-guard`-Hook entsprechend nachziehen.)
