@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
+import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
@@ -191,13 +192,62 @@ constructor(
                     timeOfDayMinutes = 480,
                     untilEpochMs = null,
                     nextOccurrenceAt = null,
-                    lastGeneratedAt = 0L,
-                    occurrenceCount = 0,
+                    // Frank-Wunsch 2026-06-02 (Bugfix Loop-Prio): Die heutige Instanz entsteht
+                    // SOFORT aus der konvertierten Aufgabe (unten). lastGeneratedAt=now +
+                    // occurrenceCount=1 verhindern, dass GenerateRecurringInstancesUseCase beim
+                    // naechsten App-Start eine ZWEITE Instanz fuer heute erzeugt (Duplikat).
+                    lastGeneratedAt = now,
+                    occurrenceCount = 1,
                     isActive = true,
                     createdAt = now,
                     updatedAt = now,
                 )
                 recurringRepo.upsert(template)
+
+                // Frank-Wunsch 2026-06-02 (Bugfix): Die konvertierte Aufgabe WIRD die heutige
+                // Loop-Instanz dieser Vorlage — sie bekommt die deterministische rec-ID
+                // ("rec-<templateId>-<mitternacht>") und source=RECURRING_TEMPLATE. Dadurch findet
+                // die Loop-Bearbeitung (setPriority/setTitle/setTargetBucket im
+                // RecurringTemplatesViewModel filtern genau auf dieses ID-Praefix + source) die
+                // Aufgabe wieder, und eine im Loop-Block gesetzte Prioritaet schlaegt sofort auf
+                // die Aufgabe im "Heute"-Reiter durch. Vorher blieb die Original-Aufgabe eine
+                // unverknuepfte Normal-Aufgabe, sodass die Loop-Prioritaet sie nie erreichte.
+                // Die Template-Prioritaet gilt als manuelle Prioritaet der Instanz (Vorrang vor
+                // KI) — identisch zu regulaer generierten Loop-Instanzen (Doktrin 2026-06-01).
+                val midnight = java.util.Calendar.getInstance().apply {
+                    timeInMillis = now
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                val recId = "rec-${template.id}-$midnight"
+                val templatePrio = template.priorityScore.toDouble()
+                val recInstance = current.copy(
+                    id = recId,
+                    source = EntrySource.RECURRING_TEMPLATE,
+                    priorityScore = templatePrio,
+                    manualPriorityScore = templatePrio,
+                    updatedAt = now,
+                )
+                // Reihenfolge zwingend (FK entropy_entry_followups.entryId -> entropy_entries.id,
+                // ON DELETE CASCADE): 1) neue Instanz anlegen, 2) Nachtraege auf die neue ID
+                // umhaengen, 3) ERST DANN die Original loeschen. So gehen keine Nachtraege
+                // verloren — CASCADE entfernt nur die alten Rows mit der Original-ID, die
+                // umgehaengten haben bereits die neue entryId und bleiben erhalten.
+                entries.upsert(recInstance)
+                for (followup in followupDao.getByEntryId(current.id)) {
+                    followupDao.upsert(
+                        followup.copy(id = java.util.UUID.randomUUID().toString(), entryId = recId),
+                    )
+                }
+                entries.delete(current)
+
+                // Der Detail-Screen zeigte die Original-ID, die jetzt nicht mehr existiert (die
+                // Aufgabe lebt als Loop-Instanz mit neuer ID weiter). Ueber den bestehenden
+                // isDeleted -> onBack-Pfad sauber zurueck zur Liste, statt einen toten Eintrag
+                // anzuzeigen.
+                deletedFlow.value = true
                 templateCreated.tryEmit(true)
             } catch (t: Throwable) {
                 templateCreated.tryEmit(false)
