@@ -36,6 +36,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`dotnet-csharp.md`](dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
 | **Build — Gradle / AGP / R8·ProGuard / KSP** | [`gradle.md`](gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`python-windows.md`](python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
+| **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android-platform.md`](android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
 
 ---
 
@@ -50,7 +51,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| · | **Android-Framework / Platform** | `android-platform.md` | `AndroidManifest.xml`, Lifecycle/Room/WorkManager · „Lifecycle", „Room", „WorkManager", „Permission", „Service" |
 | · | **Firebase / Crashlytics / Play Billing** | `firebase-billing.md` | `google-services.json`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Billing", „Paywall" |
 | · | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
 | · | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
