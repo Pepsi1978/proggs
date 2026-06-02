@@ -20,6 +20,7 @@ gar nicht erst entsteht*.
 projekt-code/
 ├── README.md                      ← diese Datei
 ├── kotlin/best-practices.md
+├── jetpack-compose/best-practices.md   ← Android-UI Jetpack Compose (Stand 2026-06-02, BOM 2025.01.01 / 2026.03.00)
 ├── dotnet-csharp/best-practices.md
 ├── chrome-extensions/best-practices.md   ← Chrome/Edge MV3 (Stand 2026-06-02, Chrome 148)
 ├── gradle/best-practices.md       ← Android-Build-System Gradle/AGP/R8/KSP (Stand 2026-06-02)
@@ -28,8 +29,8 @@ projekt-code/
 └── …                              ← ein Unterordner pro Software, entsteht bei Bedarf
 ```
 
-Vorhandene Software-Ordner: **kotlin**, **dotnet-csharp**, **chrome-extensions**, **gradle**,
-**python-windows** (jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
+Vorhandene Software-Ordner: **kotlin**, **jetpack-compose**, **dotnet-csharp**, **chrome-extensions**,
+**gradle**, **python-windows** (jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
 
 Jede Datei beginnt mit `# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.
 

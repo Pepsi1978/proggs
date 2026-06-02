@@ -6,6 +6,10 @@
 > Google-Blogs und Community (Stack Overflow, Medium, Reddit) + eigenen Vorfaellen.
 > Loesungen sind **funktionserhaltend** — nie "Composable/Feature weglassen" (Direktive #3).
 >
+> **Zweite Seite der Medaille (Praevention):** Wie man diese Bugs von vornherein vermeidet, steht in
+> [`best-practices/projekt-code/jetpack-compose/best-practices.md`](../best-practices/projekt-code/jetpack-compose/best-practices.md)
+> — Bezugstabelle „Bug-Abschnitt ↔ Best-Practice" ganz unten.
+>
 > **Stand:** recherchiert am **2026-06-02** (7-Researcher-Schwarm) fuer die real genutzten Versionen:
 > - **BestJournalAndroid:** Compose **BOM 2025.01.01** (UI ~1.7.6, Material3 1.3.1), Kotlin 2.1.0,
 >   Compose-Compiler-Plugin 2.1.0, navigation-compose 2.8.7, lifecycle 2.8.7, AGP 8.7.3.
@@ -671,6 +675,27 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 - [ ] Scaffold-`innerPadding` angewendet, edge-to-edge/IME-Insets bedacht (§8.1/§8.2)?
 - [ ] Navigation: geteiltes ViewModel am Parent-Entry, type-safe NavType registriert, Tab-State mit save/restore (§7.3/§7.4/§7.7)?
 - [ ] Performance im **Release**-Build (R8) gemessen, hochfrequente Reads deferred (§10.1/§10.3)? `@Preview` stateless (§10.6)?
+
+---
+
+## Bezug zu den Best-Practices (Praevention)
+
+Zweite Seite der Medaille: [`best-practices/projekt-code/jetpack-compose/best-practices.md`](../best-practices/projekt-code/jetpack-compose/best-practices.md)
+sagt, wie man jeden dieser Bugs von vornherein vermeidet. Pro Bug-Abschnitt der passende Praeventions-Abschnitt:
+
+| Bug-Abschnitt (DIESE Datei) | Praevention in `best-practices/.../jetpack-compose/best-practices.md` |
+|------------------------------|------------------------------------------------------------------------|
+| §1 Recomposition & Stabilitaet (1.1–1.6) | §2 Stabilitaet & Recomposition / Skippability |
+| §2 State & `remember` (2.1–2.13) | §3 State & `remember`/`rememberSaveable`/`derivedStateOf`; §2.12/§2.13 → §1 Architektur & UDF |
+| §3 Side-Effects (3.1–3.10) | §4 Side-Effects (richtige API je Fall) |
+| §4 Lazy-Layouts & Pager (4.1–4.8) | §5 Lazy-Layouts & Pager |
+| §5 Modifier (5.1–5.2) | §6 Modifier |
+| §6 Crashes (6.1/6.2 nested, 6.6 Subcompose) | §5 Lazy-Layouts; (6.3/6.4/6.5 Context/Owner/Kontext) → §1/§11 |
+| §6.7 Background-Write | §4 Side-Effects |
+| §7 Navigation-Compose (7.1–7.9) | §8 Navigation-Compose |
+| §8 Material3, Theming & Insets (8.1–8.6) | §7 Material3, Theming & Insets; §8.1 → §9 Adaptive Layouts |
+| §9 Animation (9.1–9.5) | §10 Animation |
+| §10 Performance, Debug-vs-Release & Tooling (10.1–10.8) | §11 Performance, Tooling & Testing |
 
 ---
 
