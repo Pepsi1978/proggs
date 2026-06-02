@@ -18,14 +18,17 @@ gar nicht erst entsteht*.
 
 ```
 projekt-code/
-├── README.md            ← diese Datei
+├── README.md                      ← diese Datei
 ├── kotlin/best-practices.md
-├── swift/best-practices.md
-├── gradle/best-practices.md
-├── wpf-csharp/best-practices.md
-├── typescript/best-practices.md
-└── …                    ← ein Unterordner pro Software, entsteht bei Bedarf
+├── dotnet-csharp/best-practices.md
+├── chrome-extensions/best-practices.md   ← Chrome/Edge MV3 (Stand 2026-06-02, Chrome 148)
+├── swift/best-practices.md        ← entsteht bei Bedarf
+├── gradle/best-practices.md       ← entsteht bei Bedarf
+└── …                              ← ein Unterordner pro Software, entsteht bei Bedarf
 ```
+
+Vorhandene Software-Ordner: **kotlin**, **dotnet-csharp**, **chrome-extensions**
+(jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
 
 Jede Datei beginnt mit `# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.
 
