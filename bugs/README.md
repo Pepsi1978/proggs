@@ -32,6 +32,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-01 | 10 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
 | **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 | **Kotlin** (Sprache/K2 + Coroutines + Compose-Kontext) | [`kotlin.md`](kotlin.md) | 2026-06-02 | ~46 | `*.kt`, `*.kts` (ausser `build/settings.gradle.kts` → Gradle), `AndroidManifest.xml` · „Kotlin", „K2", „Coroutines", „Flow", „Compose", „Android" |
+| **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`dotnet-csharp.md`](dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
 
 ---
 
@@ -42,7 +43,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|------------------|-------------------------------------------|
-| **C# / .NET** (WPF, WinUI, Konsole, Backend) | `dotnet-csharp.md` | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#" |
 | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
 | **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
 | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
