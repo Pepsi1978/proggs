@@ -40,6 +40,7 @@ class ForegroundSyncManager
 constructor(
     private val secrets: EncryptedSecretsStore,
     private val syncEntries: SyncEntriesUseCase,
+    private val generateRecurringInstances: GenerateRecurringInstancesUseCase,
     private val coordinator: SyncCoordinator,
     private val oauth: OAuthService,
     private val whoop: WhoopRepository,
@@ -84,6 +85,16 @@ constructor(
         try {
             if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
                 runCatching { syncEntries.restoreFromDrive() }
+                // Frank-Wunsch 2026-06-02 (Bugfix): SOFORT nach dem Backup-Merge die
+                // Loop-Instanzen bereinigen — VOR dem Upload. restoreFromDrive() spielt jede
+                // Backup-Aufgabe per ID wieder ein (auch lokal geheilte Duplikate, da es kein
+                // Deletion-Tracking gibt). Liefe die Heilung nur parallel beim App-Start
+                // (EntropyReducerApp), wuerde der Restore sie ueberholen und verwaiste
+                // Konvertierungs-Duplikate (NUTZER_MIC neben rec-Instanz) wieder auferstehen
+                // lassen. Hier ist die Reihenfolge garantiert sequenziell: Restore -> Heilung
+                // -> Upload. Der folgende syncNowAndWait() laedt den bereinigten Stand hoch,
+                // sodass das Drive-Backup dauerhaft duplikatfrei wird (selbstheilend).
+                runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
                 runCatching { coordinator.syncNowAndWait() }
             }
 
