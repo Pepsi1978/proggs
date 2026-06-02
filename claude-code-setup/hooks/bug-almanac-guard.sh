@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # bug-almanac-guard: Stufe 2 (ERZWINGUNG) des Bug-Almanach-Systems (siehe ~/proggs/bugs/SYSTEM.md).
-# Bei Edit/Write an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer den
-#   Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht per Read geoeffnet wurde.
-# Bei Read einer bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
+# Bei Edit/Write/MultiEdit an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer
+#   den Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht gelesen wurde.
+# Bei Read einer bugs/<X>.md ODER Bash-cat/bat/less auf bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
 # Kein Almanach fuer den Bereich? -> nur erinnern (Stufe 1), NICHT blockieren (Recherche braucht Franks OK).
 # Notaus: existiert $TMPDIR/bug-almanac-disable.flag -> nie blockieren (nur erinnern). Sicherheitsventil.
+# Block-Logging: jeder Block wird (Datum + slug) nach ~/.claude/state/bug-almanac-blocks.log geschrieben (persistent).
 # FAIL-OPEN: jeder interne Fehler -> exit 0 OHNE deny (durchlassen).
-# WICHTIG (Almanach 1.6): NICHT exit 2 zum Blocken (blockt Write/Edit nicht) -> permissionDecision=deny + exit 0.
-# Runs as PreToolUse hook (matcher: Read|Edit|Write). Platform: macOS/Linux.
+# WICHTIG (claude-hooks.md 1.6): NICHT exit 2 zum Blocken (blockt Write/Edit nicht) -> permissionDecision=deny + exit 0.
+# Runs as PreToolUse hook (matcher: Read|Edit|Write|MultiEdit|Bash). Platform: macOS/Linux.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,14 +18,31 @@ trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"; exit 0' ERR
 TMP="${TMPDIR:-/tmp}"
 input=$(cat)
 [ -n "$input" ] || exit 0
-# tool_name + file_path via python3 statt jq (jq kann fehlen -> stummes Versagen; siehe claude-hooks.md 13.2).
 tool=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name','') or '')" 2>/dev/null || echo "")
+
+# -- Bash-Zweig: cat/bat/less etc. auf bugs/<X>.md -> "gelesen"-Marker, NIE blockieren --
+if [ "$tool" = "Bash" ]; then
+    cmd=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print((d.get('tool_input') or {}).get('command','') or '')" 2>/dev/null || echo "")
+    if [ -n "$cmd" ]; then
+        cl=$(echo "$cmd" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
+        # grep ohne Treffer = exit 1 -> mit pipefail/set -e abfangen (|| true), sonst Log-Spam pro Bash-Call.
+        matches=$(echo "$cl" | grep -oE 'bugs/[a-z0-9._-]+\.md' || true)
+        if [ -n "$matches" ]; then
+            echo "$matches" | sed -E 's#bugs/([a-z0-9._-]+)\.md#\1#' | while read -r an; do
+                if [ -n "$an" ] && [ "$an" != "readme" ] && [ "$an" != "system" ]; then
+                    touch "$TMP/bug-almanac-read-$an.flag" 2>/dev/null || true
+                fi
+            done
+        fi
+    fi
+    exit 0
+fi
+
 fp=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print((d.get('tool_input') or {}).get('file_path','') or '')" 2>/dev/null || echo "")
 [ -n "$fp" ] || exit 0
 fpl=$(echo "$fp" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
 
-# -- Read-Zweig: "gelesen"-Marker setzen, NIE blockieren --
-# Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin").
+# -- Read-Zweig: "gelesen"-Marker setzen, NIE blockieren (relativ + absolut) --
 if [ "$tool" = "Read" ]; then
     almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/([^/]+)\.md$#\2#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
@@ -33,7 +51,7 @@ if [ "$tool" = "Read" ]; then
     exit 0
 fi
 
-# -- Edit/Write-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
+# -- Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
 slug=""; file=""; name=""
 case "$fpl" in
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
@@ -63,6 +81,10 @@ disabled=0; [ -f "$TMP/bug-almanac-disable.flag" ] && disabled=1
 
 # -- ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN --
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
+    # Block-Logging (persistent) — nur Beobachtung, beeinflusst nie die Entscheidung.
+    stateDir="$HOME/.claude/state"
+    mkdir -p "$stateDir" 2>/dev/null || true
+    echo "$(date '+%Y-%m-%d %H:%M') $slug" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
     reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber bugs/$file wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/bugs/$file mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
     python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
     exit 0

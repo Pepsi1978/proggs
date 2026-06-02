@@ -1,13 +1,13 @@
 # bug-almanac-guard: Stufe 2 (ERZWINGUNG) des Bug-Almanach-Systems (siehe ~/proggs/bugs/SYSTEM.md).
-# Bei Edit/Write an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer den
-#   Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht per Read geoeffnet wurde.
-# Bei Read einer bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
+# Bei Edit/Write/MultiEdit an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer
+#   den Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht gelesen wurde.
+# Bei Read einer bugs/<X>.md ODER Bash-cat/bat/less auf bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
 # Kein Almanach fuer den Bereich? -> nur erinnern (Stufe 1), NICHT blockieren (Recherche braucht Franks OK).
 # Notaus: existiert $TEMP/bug-almanac-disable.flag -> nie blockieren (nur erinnern). Sicherheitsventil.
-# FAIL-OPEN: jeder interne Fehler -> exit 0 OHNE deny (durchlassen). Ein Guard der bei eigenem Fehler
-#   blockiert wuerde die Session lahmlegen (Direktive #3, Fix-Induced-Failure vermeiden).
-# Runs as PreToolUse hook (matcher: Read|Edit|Write).
-# Output: JSON mit hookSpecificOutput (offizielles PreToolUse-Schema) + exit 0.
+# Block-Logging: jeder Block wird (Datum + slug) nach ~/.claude/state/bug-almanac-blocks.log geschrieben (persistent).
+# FAIL-OPEN: jeder interne Fehler -> exit 0 OHNE deny (durchlassen).
+# WICHTIG (claude-hooks.md 1.6): NICHT exit 2 zum Blocken (blockt Write/Edit nicht) -> permissionDecision=deny + exit 0.
+# Runs as PreToolUse hook (matcher: Read|Edit|Write|MultiEdit|Bash).
 # Platform: Windows (PowerShell 7+)
 
 . "$PSScriptRoot/hook-log.ps1"
@@ -24,12 +24,29 @@ try {
 
     $data = $raw | ConvertFrom-Json
     $tool = [string]$data.tool_name
+
+    # ── Bash-Zweig: cat/bat/less etc. auf bugs/<X>.md -> "gelesen"-Marker, NIE blockieren ──
+    # (deckt den Fall ab, dass ein Almanach nicht ueber das Read-Tool geoeffnet wird.)
+    if ($tool -eq 'Bash') {
+        $cmd = [string]$data.tool_input.command
+        if (-not [string]::IsNullOrWhiteSpace($cmd)) {
+            $cl = ($cmd.ToLower()) -replace '\\', '/'
+            foreach ($m in [regex]::Matches($cl, 'bugs/([a-z0-9._-]+)\.md')) {
+                $an = $m.Groups[1].Value
+                if ($an -ne 'readme' -and $an -ne 'system') {
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-read-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                }
+            }
+        }
+        exit 0
+    }
+
     $fp = $data.tool_input.file_path
     if ([string]::IsNullOrWhiteSpace($fp)) { exit 0 }
     $fpl = ($fp.ToLower()) -replace '\\', '/'
 
     # ── Read-Zweig: "gelesen"-Marker setzen, NIE blockieren ──
-    # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin").
+    # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin"). Relativ + absolut.
     if ($tool -eq 'Read') {
         if ($fpl -match '(?:^|/)bugs/([^/]+)\.md$') {
             $almName = $Matches[1]
@@ -41,7 +58,7 @@ try {
         exit 0
     }
 
-    # ── Edit/Write-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). ──
+    # ── Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). ──
     $slug = $null; $file = $null; $name = $null
     if ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
@@ -71,6 +88,12 @@ try {
 
     # ── ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN ──
     if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
+        # Block-Logging (persistent ueber Sessions/Tage) — nur Beobachtung, beeinflusst nie die Entscheidung.
+        try {
+            $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+            if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+            Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug") -Encoding UTF8 -ErrorAction SilentlyContinue
+        } catch {}
         $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber bugs/" + $file + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/bugs/" + $file + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
         $out = @{
             hookSpecificOutput = @{
