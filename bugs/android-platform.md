@@ -12,6 +12,12 @@
 >
 > Recherche: 7-Researcher-Schwarm (offizielle Quellen zuerst), Fix-Status teils per
 > `gh` hart geprueft. Quelle des Systems: `~/proggs/bugs/SYSTEM.md`.
+>
+> **Ergaenzung 2026-06-02 (Best-Practices-Lauf):** Die Best-Practices-Seite
+> [`best-practices/projekt-code/android-platform/best-practices.md`](../best-practices/projekt-code/android-platform/best-practices.md)
+> ist die „so macht man es richtig"-Seite zu diesem Almanach. Dabei kamen zusaetzliche Bug-Funde
+> dazu: 4.14, 4.15 (WorkManager/Hilt) und 8.10–8.13 (Android-15/16-Plattform-Crashes). Die
+> wechselseitige Bezugs-Tabelle steht direkt unter dem TL;DR.
 
 ---
 
@@ -65,6 +71,25 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
    `unregisterX`; Flows mit `repeatOnLifecycle(STARTED)` sammeln; vor UI-Zugriff aus
    async Callbacks `isFinishing/isDestroyed` pruefen; ViewModel ueberlebt Config-Change
    aber NICHT Process Death → `SavedStateHandle`/Persistenz.
+
+---
+
+## 🔗 Bezug zur Best-Practices-Seite (so vermeidet man diese Bugs von vornherein)
+
+Zwei Seiten derselben Medaille: dieser Almanach sagt *was schiefgeht und wie man es umgeht*,
+[`best-practices/projekt-code/android-platform/best-practices.md`](../best-practices/projekt-code/android-platform/best-practices.md)
+sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihre Praevention.
+
+| Bug-Sektion (hier) | Praevention in `best-practices/.../android-platform/best-practices.md` |
+|--------------------|------------------------------------------------------------------------|
+| §1 Lifecycle/Process-Death/Leaks (1.1–1.11) | §2 Lifecycle-sicheres Arbeiten (Grundlage: §1 Architektur) |
+| §2 Runtime-Permissions (2.1–2.10) | §6 Moderner Permission-Flow |
+| §3 Foreground Services & ANRs (3.1–3.9) | §5 FGS & Notifications (+ §4 WorkManager als Alternative) |
+| §4 WorkManager/Doze/App-Standby (4.1–4.15) | §4 Korrekter WorkManager-Einsatz |
+| §5 Room Runtime/Migrations/WAL (5.1–5.15) | §3 Saubere Room-Migrationsstrategie & Runtime-Disziplin |
+| §6 PendingIntent/AlarmManager/Notifications/Receiver (6.1–6.9) | §6 PendingIntent/AlarmManager + §5 Notifications |
+| §7 Scoped Storage (7.1–7.3) | §7 Scoped Storage (Entscheidungsbaum + FileProvider) |
+| §8 Android 15/16 targetSdk-Verhalten (8.1–8.13) | §7 targetSdk-36-Compliance (Edge-to-Edge, Predictive Back, 16-KB, Large-Screen) |
 
 ---
 
@@ -383,6 +408,20 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 - **FIX:** Nicht pauschal whitelisten. WorkManager + korrekte Constraints + Expedited fuer dringend; echte Dauer-Tasks → FGS. Nutzer ueber Geraete-Einstellungen informieren statt programmatisch erzwingen.
 - **Quelle:** https://developer.android.com/training/monitoring-device-state/doze-standby
 
+### 4.14 Hilt-`@HiltWorker` wird nie aufgerufen — stiller Fehler (kein Crash)
+- **Symptom:** Ein `@HiltWorker` mit `@AssistedInject`-Konstruktor wird scheinbar nie ausgefuehrt / dependencies sind null; KEINE Exception, nur „passiert nichts".
+- **Ursache:** Die `Application` implementiert kein `Configuration.Provider` mit `setWorkerFactory(HiltWorkerFactory)`, ODER der Default-`WorkManagerInitializer` wurde nicht aus dem Manifest entfernt. Dann nutzt WorkManager die Default-Factory, die den `@AssistedInject`-Konstruktor nicht kennt — stiller Fehlschlag.
+- **Versionen:** hilt-work (per Design, betrifft EntropieReductor mit `hilt-work 1.2.0`).
+- **FIX:** `Application : Configuration.Provider` mit `@Inject HiltWorkerFactory` + `setWorkerFactory(...)`, UND im Manifest den Default-Initializer per `tools:node="remove"` entfernen (siehe 4.1). Best-Practice: §4.9. Nie die Funktion „weglassen" — die DI-Verkabelung reparieren.
+- **Quelle:** https://developer.android.com/reference/androidx/hilt/work/HiltWorker
+
+### 4.15 Expedited Worker ohne `getForegroundInfo()` → Crash; `setForeground()` → IllegalStateException
+- **Symptom:** (a) `setExpedited(...)`-Worker crasht auf aelteren Plattformversionen (vor API 31) zur Laufzeit. (b) `setForeground(...)`/`setForegroundAsync(...)` wirft `IllegalStateException`.
+- **Ursache:** (a) Auf < API 31 laeuft Expedited Work als FGS und verlangt darum eine `getForegroundInfo()`-Implementierung — fehlt sie, Crash. (b) `setForeground` wird aufgerufen, waehrend die App nicht in den Vordergrund treten darf.
+- **Versionen:** WM 2.6+ / per Design.
+- **FIX:** Bei `setExpedited` IMMER `getForegroundInfo()` implementieren; `OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST` setzen (statt DROP). `setForeground` in `try/catch (IllegalStateException)` kapseln. Best-Practice: §4.5/§4.6.
+- **Quelle:** https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work
+
 ---
 
 ## 5. Room (Runtime/Migrations), WAL & SQLite
@@ -652,6 +691,34 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 - **Ursache:** Android 16 macht `BODY_SENSORS` granular zu `android.permission.health.*`; Local-Network-Zugriff wird `NEARBY_WIFI_DEVICES`-gated (Opt-in-Preview).
 - **Versionen:** API 36.
 - **FIX:** Granulare Health-Permissions deklarieren + runtime (Privacy-Policy-Activity Pflicht); fuer LAN `NEARBY_WIFI_DEVICES` vorbereiten. (Betrifft EntropieReductors Health-Connect-Pfad.)
+- **Quelle:** https://developer.android.com/about/versions/16/behavior-changes-16
+
+### 8.10 `Arrays.asList(...).toArray()`-Cast → ClassCastException (Android 15 OpenJDK)
+- **Symptom:** `ClassCastException` beim Cast von `Arrays.asList(...).toArray()` nach `String[]` (o. ae.).
+- **Ursache:** Android 15 aktualisiert OpenJDK-Verhalten: `Arrays.asList(...).toArray()` gibt `Object[]` zurueck, nicht den Element-Typ. Der Cast nach `String[]` crasht.
+- **Versionen:** ab API 35 (targetSdk 35+), per Design.
+- **FIX:** `toArray(new String[0])` (typisierte Ueberladung) statt `(String[]) ...toArray()`. Best-Practice: §7.8.
+- **Quelle:** https://developer.android.com/about/versions/15/behavior-changes-15
+
+### 8.11 `List.removeFirst()/removeLast()` Kotlin-stdlib-Kollision (Android 15 SequencedCollection)
+- **Symptom:** Verhaltensaenderung/Build-Warnung oder unerwartetes Ergebnis bei `list.removeFirst()`/`removeLast()` auf Kotlin-`MutableList`.
+- **Ursache:** Android 15 fuegt `List` die OpenJDK-`SequencedCollection`-Methoden `removeFirst()`/`removeLast()` hinzu; sie kollidieren mit den gleichnamigen Kotlin-stdlib-Extensions — die Plattform-Methode gewinnt.
+- **Versionen:** ab API 35 (targetSdk 35+), per Design.
+- **FIX:** `removeAt(0)` / `removeAt(lastIndex)` verwenden. Best-Practice: §7.8.
+- **Quelle:** https://developer.android.com/about/versions/15/behavior-changes-15
+
+### 8.12 `scheduleAtFixedRate()` holt nur EINE verpasste Ausfuehrung nach (Android 16)
+- **Symptom:** Periodische Logik, die auf das Nachholen ALLER verpassten Ausfuehrungen baut, verhaelt sich nach App-Pause/Doze anders.
+- **Ursache:** Ab Android 16 fuehrt `ScheduledThreadPoolExecutor.scheduleAtFixedRate()` hoechstens EINE verpasste Ausfuehrung sofort nach (vorher alle verpassten in schneller Folge).
+- **Versionen:** ab API 36, per Design.
+- **FIX:** Nicht auf „alle verpassten Laeufe werden nachgeholt" verlassen; fuer garantierte Background-Frequenz WorkManager nutzen. Best-Practice: §5.11.
+- **Quelle:** https://developer.android.com/about/versions/16/behavior-changes-16
+
+### 8.13 `MediaStore#getVersion()` ab Android 16 pro App eindeutig
+- **Symptom:** Code, der ein bestimmtes Format/einen Vergleich des `MediaStore`-Versions-Strings annimmt (z. B. um Aenderungen zu erkennen), bricht.
+- **Ursache:** Ab Android 16 ist `MediaStore.getVersion()` pro App eindeutig — das Format darf nicht mehr appuebergreifend verglichen werden.
+- **Versionen:** ab API 36, per Design.
+- **FIX:** Den Versions-String nur als opaken Token behandeln (Gleichheits-Check gegen den eigenen zuletzt gespeicherten Wert), kein Format/Parsing annehmen.
 - **Quelle:** https://developer.android.com/about/versions/16/behavior-changes-16
 
 ---
