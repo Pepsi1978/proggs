@@ -15,6 +15,10 @@
 > Relevante Systemversionen: Ventura 13, Sonoma 14, **Sequoia 15** (und neuer).
 >
 > Betroffene Projekte: `~/proggs/ClaudeCodexVoiceOverlay-macOS`, `~/proggs/TerminalVoiceOverlay-macOS`.
+>
+> **Zweite Seite der Medaille (Best Practices):** `~/proggs/best-practices/projekt-code/swift-appkit/best-practices.md`
+> — *wie man es von vornherein richtig macht*. Wechselseitige Abschnitts-Bezugstabelle unten
+> ("Best-Practices-Kopplung"). Stand der Kopplung: 2026-06-02.
 
 ---
 
@@ -273,6 +277,13 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **FIX:** `authorizationStatus(for: .audio)` pruefen, bei `.notDetermined` `requestAccess` aufrufen — der Dialog erscheint auch ohne Fenster. Voraussetzung: korrekte Info.plist (E1/E2).
 **Quelle:** [Apple — requestAccess](https://developer.apple.com/documentation/avfoundation/avcapturedevice/1624584-requestaccess) · [Apple Forums 738986](https://developer.apple.com/forums/thread/738986)
 
+### E7. `Thread.sleep` in `stop()` als Tap-Callback-Barriere (unsicher + unnoetig)
+**Symptom:** Beim Stoppen der Aufnahme ein fixes `Thread.sleep(forTimeInterval: 0.05)`, um in-flight AVAudioEngine-Tap-Callbacks „abzuwarten". Race-anfaellig (50 ms sind nicht garantiert ausreichend) und blockiert den aufrufenden Thread.
+**Ursache:** Annahme, der Tap koenne nach `engine.stop()` noch feuern. Tatsaechlich kommen nach `removeTap(onBus:)` keine neuen Callbacks mehr — der Sleep ist sowohl unsicher als auch ueberfluessig.
+**Versionen:** Code-Smell / per Design, alle Versionen. (Im aktuellen `AudioRecorder.stop()` beider Projekte vorhanden.)
+**FIX (funktionserhaltend):** Erst `removeTap(onBus: 0)` (danach feuert kein Callback mehr), dann `engine.stop()`, dann den letzten gepufferten Stand ueber eine Serial-Queue/`withCheckedContinuation` finalisieren statt zu schlafen. Geteilten Tap-Zustand ueber Serial-Dispatch-Queue oder Actor schuetzen, nicht ad-hoc `NSLock`. Siehe Best-Practices Abschnitt F.5.
+**Quelle:** [Apple — removeTap](https://developer.apple.com/documentation/avfaudio/avaudionode/removetap(onbus:)) · best-practices/projekt-code/swift-appkit (F.5)
+
 ---
 
 ## F — App-Sandbox (falls je aktiviert)
@@ -355,12 +366,12 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **FIX (funktionserhaltend):** `--timestamp` immer setzen; `get-task-allow` aus Release-Entitlements entfernen; mit „Developer ID Application" signieren; alle eingebetteten Binaries **inside-out** zuerst signieren, dann die App.
 **Quelle:** [Apple — Resolving notarization issues](https://developer.apple.com/documentation/security/resolving-common-notarization-issues) · [frr.dev — Notarization-Guide](https://www.frr.dev/posts/macos-notarization-guide-linter/)
 
-### G6. `codesign --deep` ist eine Falle (falsche Entitlements/Reihenfolge)
-**Symptom:** Notarisiert, aber zur Laufzeit Permissions falsch / Signatur ungueltig; Nested-Code bekommt App-Entitlements.
-**Ursache:** `--deep` signiert verschachtelte Binaries mit denselben Flags/Entitlements wie die App statt individuell — von Apple ausdruecklich NICHT fuer korrektes Signing empfohlen.
-**Versionen:** per Design.
-**FIX (funktionserhaltend):** Nested-Code einzeln von innen nach aussen signieren, dann die App ohne `--deep`. `--deep` nur fuer schnelle ad-hoc-Tests.
-**Quelle:** [Apple TN2206 — Code Signing In Depth](https://developer.apple.com/library/archive/technotes/tn2206/_index.html)
+### G6. `codesign --deep` ist eine Falle — und seit macOS 13.0 zum Signieren deprecated   [⭐ HAEUFIG]
+**Symptom:** Notarisiert, aber zur Laufzeit Permissions falsch / Signatur ungueltig; Nested-Code bekommt App-Entitlements. Bei neueren Toolchains zusaetzlich Deprecation-Hinweis.
+**Ursache:** `--deep` signiert verschachtelte Binaries mit denselben Flags/Entitlements wie die App statt individuell — von Apple ausdruecklich NICHT fuer korrektes Signing empfohlen. **Zudem ist `--deep` zum SIGNIEREN seit macOS 13.0 offiziell deprecated** (codesign(1)); nur noch zum reinen *Verifizieren* unproblematisch.
+**Versionen:** Deprecation ab macOS 13.0 (codesign(1)); die Entitlements-Falle per Design alle Versionen. **Beide Projekt-`build.sh` nutzen aktuell `codesign … --deep` (Z. 92/97) → umstellen.**
+**FIX (funktionserhaltend):** Top-Bundle ohne `--deep` signieren; eventuellen Nested-Code (dylibs/Frameworks) einzeln von innen nach aussen signieren, dann die App. `--deep` nur fuer schnelle ad-hoc-Tests oder zum Verifizieren (`codesign --verify --deep`).
+**Quelle:** [Apple TN2206 — Code Signing In Depth](https://developer.apple.com/library/archive/technotes/tn2206/_index.html) · [codesign(1) Manpage](https://keith.github.io/xcode-man-pages/codesign.1.html)
 
 ### G7. `zip` statt `ditto` zerstoert die Notarization / „App is damaged"
 **Symptom:** Notarization scheitert („signature of the binary is invalid"); ODER beim Endnutzer „App is damaged and can't be opened".
@@ -410,6 +421,13 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **Versionen:** per Design, aktuell. (`t3code#728` OPEN.)
 **FIX (funktionserhaltend):** Immer die `.app` als Bundle starten (`open App.app`), nicht das nackte Executable. Bundle (mindestens ad-hoc) signiert + stabile Bundle-ID.
 **Quelle:** [t3code #728](https://github.com/pingdotgg/t3code/issues/728)
+
+### H6. Ablauf/Neuerzeugung des (Dev-)Signing-Zertifikats → stiller TCC-Reset
+**Symptom:** TCC-Grants (Mic/Accessibility) verschwinden ohne Code-Aenderung und ohne Bundle-ID-Aenderung — nur weil das lokale Signing-Zertifikat (z.B. „Frank Local Dev") abgelaufen und neu erzeugt wurde.
+**Ursache:** TCC bindet den Grant an die `csreq` (Code Signing Requirement), die aus der Zertifikats-Identitaet abgeleitet wird. Ein neues Zertifikat = neue `csreq` = fuer TCC eine fremde App, ohne Fehlermeldung.
+**Versionen:** per Design, alle. Verschaerft bei kurzlebigen selbst-erzeugten Dev-Zertifikaten.
+**FIX (funktionserhaltend):** Fuer die Verteilung ein laenger gueltiges „Developer ID Application"-Zertifikat nutzen (robuster als ein lokales Dev-Zertifikat). Beim bewussten Zertifikatswechsel Grants einmalig neu erteilen (ggf. `tccutil reset … <bundle-id>`). Stabile Bundle-ID beibehalten (H1).
+**Quelle:** [jano.dev — Accessibility Permission](https://jano.dev/apple/macos/swift/2025/01/08/Accessibility-Permission.html) · best-practices/projekt-code/swift-appkit (G.2)
 
 ---
 
@@ -489,12 +507,26 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **FIX (funktionserhaltend):** Aufrufer `@MainActor` markieren; in einem Callback, von dem man WEISS, dass er auf Main laeuft, `MainActor.assumeIsolated { … }`; oder `Task { @MainActor in … }`. `@preconcurrency`-Import nur als Brueckenschritt. Migration schrittweise (`-strict-concurrency=targeted` → `complete` → Swift-6-Mode). **Hinweis:** Reiner `swiftc arm64-apple-macos13.0` ohne Package.swift erzwingt KEINEN Mode 6 — der Mode haengt an den `-swift-version`-Flags.
 **Quelle:** [swift.org — Concurrency Migration: Common Problems](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/commonproblems/) · [jano.dev — Swift 6 Migration Errors](https://jano.dev/apple/macos/swift/2025/03/09/Swift-6-Migration-Errors.html)
 
-### J3. macOS Sequoia 15: erzwungene periodische Reauthorisierung (Mic + Accessibility/Screen Recording)
+### J3. macOS Sequoia 15: periodische Reauthorisierung (primaer Screen Recording, NICHT Mic/Accessibility im gleichen Takt)
 **Symptom:** Laufende App bekommt periodisch (berichtet: monatlich + nach Reboot) erneut System-Permission-Dialoge — auch ohne Code-Aenderung.
-**Ursache:** Bewusste TCC-Verschaerfung in Sequoia (urspruenglich woechentlich in Betas geplant, final monatlich). Betrifft sensible Capture-/Accessibility-Dienste. Kein App-Bug.
-**Versionen:** neu ab macOS 15; nicht in 13/14. (*Exakte Mic-Frequenz in Quellen leicht uneinheitlich — „monatlich + nach Reboot" ist die haeufigste Angabe.*)
-**FIX (funktionserhaltend):** Nicht im Code „fixbar". App beim Start defensiv `AXIsProcessTrusted()` / `authorizationStatus(for:.audio)` pruefen, bei Entzug freundlich zur Re-Autorisierung fuehren (Settings-Pane oeffnen). Bei erneutem `.notDetermined`/Denial nicht crashen. Keine Funktion entfernen — nur Re-Check + Hinweis-UI.
+**Ursache:** Bewusste TCC-Verschaerfung in Sequoia (urspruenglich woechentlich in Betas geplant, final monatlich). **Praezisierung 2026-06-02:** der monatliche Re-Prompt-Takt betrifft **primaer Screen Recording / Screen Capture** — **Mikrofon und Accessibility laeuten NICHT im selben 30-Tage-Rhythmus**. Eine App ohne Screen Recording (wie diese Overlays) ist vom schlimmsten Aerger nicht betroffen. Kein App-Bug.
+**Versionen:** neu ab macOS 15; nicht in 13/14. (*Mic/Accessibility koennen weiterhin durch Update/Nutzer/Identitaetswechsel wegfallen — nur eben nicht im festen Monatstakt.*)
+**FIX (funktionserhaltend):** Nicht im Code „fixbar". App beim Start UND bei `didBecomeActiveNotification` defensiv `AXIsProcessTrusted()` / `authorizationStatus(for:.audio)` pruefen, bei Entzug freundlich zur Re-Autorisierung fuehren (Settings-Pane oeffnen). Bei erneutem `.notDetermined`/Denial nicht crashen. NICHT praeventiv Mic neu anfragen „wegen Sequoia" — das nervt unnoetig.
 **Quelle:** [TidBITS — Sequoia Permission Prompts](https://tidbits.com/2024/08/12/macos-15-sequoias-excessive-permissions-prompts-will-hurt-security/) · [Daring Fireball](https://daringfireball.net/linked/2024/08/07/macos-15-sequoia-weekly-permission-prompts)
+
+### J4. `MainActor.assumeIsolated` in einem Off-Main-Callback (z.B. AVAudioEngine-Tap) = harter Crash
+**Symptom:** App crasht sofort beim ersten Audio-Buffer mit einer `assumeIsolated`-precondition-failure, wenn man das „On-Main"-Bruecken-Pattern aus einem Carbon-Hotkey-Callback versehentlich in die AVAudioEngine-Tap-Closure kopiert.
+**Ursache:** `MainActor.assumeIsolated { … }` betritt den Main-Actor NUR korrekt, wenn der Aufrufer wirklich auf dem Main-Thread laeuft (Fail-Fast). Die Tap-Closure laeuft aber auf einem internen Audio-Thread (off-main) → precondition schlaegt fehl.
+**Versionen:** Swift 6 Concurrency, alle (relevant ab Concurrency-Migration).
+**FIX (funktionserhaltend):** Off-Main-Callbacks per `AsyncStream`/`Task { @MainActor in … }` bruecken, NIE `assumeIsolated`. `assumeIsolated` NUR fuer Callbacks, die garantiert auf Main laufen (Carbon-`EventHandler`, viele AppKit-Delegate-Methoden). Siehe Best-Practices Abschnitt B („Bruecken").
+**Quelle:** [fatbobman — MainActor.assumeIsolated](https://fatbobman.com/en/posts/mainactor-assumeisolated/) · [Embracing Swift concurrency, WWDC25-268](https://developer.apple.com/videos/play/wwdc2025/268/)
+
+### J5. `@Observable`-Auto-Tracking in AppKit wirkt auf macOS 15 nur mit `NSObservationTrackingEnabled`-Plist-Key
+**Symptom:** Bei MVVM mit `@Observable`-ViewModel aktualisiert sich die AppKit-UI nicht, obwohl Properties in `layout()`/`draw(_:)`/`viewWillLayout()` gelesen werden — kein Crash, die UI bleibt nur stehen.
+**Ursache:** Das automatische Observation-Tracking in AppKit ist auf macOS 15 standardmaessig AUS und muss per Info.plist-Key `NSObservationTrackingEnabled = YES` aktiviert werden. Ab macOS 26 ist es Default (Key ignoriert). Zweite Falle: Properties, die NUR in `init`/eigenen Methoden (statt in den getrackten Layout-/Draw-Methoden) gelesen werden, etablieren keine Abhaengigkeit.
+**Versionen:** Auto-Tracking ab macOS 15 (mit Plist-Key); Default ab macOS 26. Bei Deployment-Target macOS 13/14 gar nicht verfuegbar → `withObservationTracking`-Fallback (re-arm!) nutzen.
+**FIX (funktionserhaltend):** Auf macOS 15 den Plist-Key setzen; Properties in einer getrackten Methode lesen; bei Target < 15 manuell `withObservationTracking` mit erneutem Aufsetzen im `onChange` (auf Main marshallen). Siehe Best-Practices Abschnitt E.1.
+**Quelle:** [Apple — Observation](https://developer.apple.com/documentation/Observation) · [steipete.me — Automatic Observation Tracking](https://steipete.me/posts/2025/automatic-observation-tracking-uikit-appkit)
 
 ---
 
@@ -545,6 +577,24 @@ ueber ihren OPEN/CLOSED-Status, ob der zugrundeliegende Mechanismus noch lebt.
 - **E3** (Entitlement-XML-Kommentar) — genaue macOS-Version nicht belegt.
 - **J3** — exakte Mic-Reauth-Frequenz auf Sequoia uneinheitlich dokumentiert.
 - Apple-Doku-Seiten sind teils JS-gerendert und liessen sich nicht per Fetch im Volltext lesen; betroffene Punkte sind durch Sekundaerquellen quer-belegt.
+
+---
+
+## Best-Practices-Kopplung (wechselseitige Bezugstabelle)
+
+Bug-Almanach (diese Datei) ↔ Best-Practices `~/proggs/best-practices/projekt-code/swift-appkit/best-practices.md`.
+Die identische Tabelle steht auch dort — so bleibt jeder Bug mit seiner „so macht man es von vornherein
+richtig"-Regel verlinkt.
+
+| Bug-Almanach-Abschnitt (hier) | Zugehoeriger Best-Practice-Abschnitt (`best-practices/.../swift-appkit`) |
+|-------------------------------|--------------------------------------------------------------------------|
+| **A** NSPanel Fokus/Aktivierung, **B** Window-Level/Spaces/Fullscreen, **K2** | **A** Overlay-Fenster richtig konfigurieren |
+| **J** Timer/Swift-6-Concurrency (J2/J4/J5), **I4** | **B** Moderne Swift-Concurrency in AppKit |
+| **C** Accessibility-**Permission**, **D5/D8** TCC-Kategorien, **E1/E2/E6** Mic-Permission, **H** TCC-Identitaet, **J3** | **D** Permission-Handling richtig & nutzerfreundlich |
+| (eigene UI fuer VoiceOver — kein Bug-Pendant) | **C** Accessibility (VoiceOver) fuer custom AppKit-UI |
+| **J5** @Observable-Plist-Key | **E** App-Architektur (MVVM & saubere Struktur) |
+| **E** Mikrofon/AVFoundation (E4/E5/E7) | **F** AVFoundation-Audioaufnahme richtig machen |
+| **G** Code-Signing/Notarization (G4–G7), **H** TCC-Identitaet (H1/H4/H6), **K1** | **G** Build, Code-Signing & Distribution richtig |
 
 ---
 
