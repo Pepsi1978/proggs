@@ -33,6 +33,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 | **Kotlin** (Sprache/K2 + Coroutines + Compose-Kontext) | [`kotlin.md`](kotlin.md) | 2026-06-02 | ~46 | `*.kt`, `*.kts` (ausser `build/settings.gradle.kts` → Gradle), `AndroidManifest.xml` · „Kotlin", „K2", „Coroutines", „Flow", „Compose", „Android" |
 | **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`dotnet-csharp.md`](dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
+| **Build — Gradle / AGP / R8·ProGuard / KSP** | [`gradle.md`](gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
 
 ---
 
@@ -47,7 +48,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| ⭐ | **Build — Gradle / AGP / R8 / KSP** | `gradle.md` | `build.gradle*`, `settings.gradle*`, `gradle/*`, `gradle.properties` · „Gradle", „AGP", „R8", „KSP" |
 | ⭐ | **Python (v.a. Windows-Encoding)** | `python-windows.md` | `*.py` · „Python", „Encoding", „BOM", „cp1252", „UnicodeEncodeError" |
 | ⭐ | **Jetpack Compose** (Android-UI) | `jetpack-compose.md` | `*.kt` mit `@Composable`/`setContent` · „Compose", „Recomposition", „remember", „LazyColumn", „Modifier" |
 | · | **Android-Framework / Platform** | `android-platform.md` | `AndroidManifest.xml`, Lifecycle/Room/WorkManager · „Lifecycle", „Room", „WorkManager", „Permission", „Service" |
@@ -58,7 +58,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | · | **Stream-Deck-Plugin (Node-SDK)** | `stream-deck.md` | `*.sdPlugin/*`, Stream-Deck-`manifest.json`, `propertyInspector` · „Stream Deck", „Elgato" |
 | · | **MCP-Server-Bau** | `mcp-server.md` | `.mcp.json`, MCP-SDK · „MCP", „Model Context Protocol", „stdio", „tool schema" |
 
-> **Fertige Recherche-Prompts** fuer alle 10 offenen Bereiche (Almanach + Best-Practices,
+> **Fertige Recherche-Prompts** fuer alle 9 offenen Bereiche (Almanach + Best-Practices,
 > Copy-Paste fuer parallele Sessions): siehe [`OFFENE-ALMANACHE-PROMPTS.md`](OFFENE-ALMANACHE-PROMPTS.md).
 >
 > **Moegliche Vertiefung** als Abschnitt statt eigener Datei: PowerShell-Scripting allgemein
