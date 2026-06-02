@@ -79,6 +79,21 @@ readMarker="$TMP/bug-almanac-read-$almKey.flag"
 seenMarker="$TMP/bug-almanac-seen-$slug.flag"
 disabled=0; [ -f "$TMP/bug-almanac-disable.flag" ] && disabled=1
 
+# -- Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen --
+# Read-Hook kann das Read verpasst haben: Matcher-Cache in der Hook-Aenderungs-Session
+# (Hook-Config gecacht — claude-hooks.md TL;DR Punkt 3) ODER Race bei Read+Edit im selben Block.
+# Bevor blockiert wird: fehlt der Read-Marker, im Transkript nach einem Tool-Call mit file_path
+# auf bugs/<almanach>.md suchen (unabhaengig vom Read-Hook). Block-Reasons haben den Pfad NICHT
+# als file_path -> kein Self-Unblock. Laeuft nur im Fehlalarm-Fall (Marker fehlt), also selten.
+if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
+    tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
+    if [ -n "$tpath" ] && [ -f "$tpath" ]; then
+        if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*bugs[/\\]+'"$almKey"'\.md' "$tpath" 2>/dev/null; then
+            touch "$readMarker" 2>/dev/null || true
+        fi
+    fi
+fi
+
 # -- ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN --
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
     # Block-Logging (persistent) — nur Beobachtung, beeinflusst nie die Entscheidung.

@@ -86,6 +86,27 @@ try {
     $readMarker = Join-Path $env:TEMP ("bug-almanac-read-" + $almKey + ".flag")
     $seenMarker = Join-Path $env:TEMP ("bug-almanac-seen-" + $slug + ".flag")
 
+    # ── Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen ──
+    # Der Read-Zweig dieses Hooks setzt den Marker nur, wenn der Read-Hook tatsaechlich feuert.
+    # Das kann ausbleiben: (a) Matcher-Cache in der Session, in der dieser Hook geaendert wurde
+    # (Hook-Config ist gecacht — claude-hooks.md TL;DR Punkt 3), (b) Race wenn Read+Edit im selben
+    # Antwortblock laufen. Dann blockt der Guard faelschlich, obwohl der Almanach laengst gelesen
+    # wurde. Fallback: fehlt der Read-Marker, im Session-Transkript nach einem Tool-Call mit
+    # file_path auf bugs/<almanach>.md suchen (unabhaengig vom Read-Hook). Block-Reasons enthalten
+    # den Pfad NICHT als "file_path" -> kein Self-Unblock durch fruehere Blocks. Laeuft nur wenn
+    # der Marker fehlt (Fehlalarm-Fall), also selten -> kein Performance-Problem.
+    if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
+        try {
+            $tp = [string]$data.transcript_path
+            if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
+                $pat = 'file_path"\s*:\s*"[^"]*bugs[\\/]+' + [regex]::Escape($almKey) + '\.md'
+                if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
+                    New-Item -ItemType File -Path $readMarker -Force -ErrorAction SilentlyContinue | Out-Null
+                }
+            }
+        } catch {}
+    }
+
     # ── ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN ──
     if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
         # Block-Logging (persistent ueber Sessions/Tage) — nur Beobachtung, beeinflusst nie die Entscheidung.
