@@ -28,12 +28,13 @@ projekt-code/
 ├── gradle/best-practices.md       ← Android-Build-System Gradle/AGP/R8/KSP (Stand 2026-06-02)
 ├── python-windows/best-practices.md   ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
 ├── swift-appkit/best-practices.md   ← macOS-Desktop Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
+├── typescript/best-practices.md   ← TypeScript/Node.js (Stand 2026-06-03, Node 24.15.0 / TS 6.0.2 / npm 11.12.0 / Bun 1.3.11)
 └── …                              ← ein Unterordner pro Software, entsteht bei Bedarf
 ```
 
 Vorhandene Software-Ordner: **kotlin**, **jetpack-compose**, **android-platform**, **firebase-billing**,
-**dotnet-csharp**, **chrome-extensions**, **gradle**, **python-windows**, **swift-appkit** (jeweils mit
-Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
+**dotnet-csharp**, **chrome-extensions**, **gradle**, **python-windows**, **swift-appkit**, **typescript**
+(jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
 
 Jede Datei beginnt mit `# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.
 

@@ -1,9 +1,9 @@
 # Bekannte Bugs: TypeScript & Node.js (+ npm, Bun)
 
 > **PFLICHT-LESEN vor echter Arbeit an TypeScript-/Node-Code.**
-> Stand: zuletzt recherchiert am **2026-06-02** fuer **Node v24.15.0 · TypeScript 6.0.2 · npm 11.12.0 · Bun 1.3.11**.
+> Stand: zuletzt recherchiert am **2026-06-02**, Abschnitt **J** ergaenzt am **2026-06-03** (aus dem Best-Practices-Lauf), fuer **Node v24.15.0 · TypeScript 6.0.2 · npm 11.12.0 · Bun 1.3.11**.
 > Beispielprojekt im Repo: `~/proggs/mcp-code-search` (ESM + Bun + `better-sqlite3`, `moduleResolution: bundler`, `strict: true`).
-> Fokus dieser Datei: **was in der Praxis schiefgeht** (Bugs/Fallen) + funktionserhaltende Loesung. Best Practices ("wie man es von vornherein richtig macht") sind bewusst getrennt.
+> Fokus dieser Datei: **was in der Praxis schiefgeht** (Bugs/Fallen) + funktionserhaltende Loesung. Die "richtige Seite der Medaille" — *wie man es von vornherein richtig macht* — steht in `~/proggs/best-practices/projekt-code/typescript/best-practices.md` (wechselseitige Bezugstabelle unten).
 
 ---
 
@@ -681,6 +681,142 @@
 **Versionen:** per Design (Linux-Kernel).
 **FIX (funktionserhaltend):** Limit erhoehen: `echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`; `node_modules`/`.git`/`dist` aus dem Watch ausschliessen.
 **Quelle:** bobbyhadz.com/blog/system-limit-for-number-of-file-watchers-reached
+
+---
+
+## J. Aus dem Best-Practices-Lauf ergaenzt (2026-06-03)
+
+> Diese Bugs hat der Best-Practices-Lauf (`best-practices/projekt-code/typescript/`) zutage gefoerdert
+> und waren in A-I noch nicht abgedeckt. Quelle pro Eintrag, gegen A-I dedupliziert.
+
+### 90. `exports`-Condition-Reihenfolge falsch — `types`/`import` werden ueberschattet   ⭐ HAEUFIG
+**Symptom:** Consumer bekommt `any`/"Cannot find module"-Typen oder laedt die falsche Datei, obwohl alle Pfade in `exports` stehen. `attw` meldet "masquerading"/missing types.
+**Ursache:** `exports`-Conditions werden der Reihe nach geprueft; die ERSTE passende gewinnt. Steht `default` (oder `require`/`import`) VOR `types`, findet TS nie die Deklarationen. Haeufigster Publishing-Fehler.
+**Versionen:** Node 12.7+ exports, aktuell 24. Per Design.
+**FIX:** Conditions spezifisch->allgemein ordnen: `types` IMMER zuerst, `default` IMMER zuletzt (`types -> node-addons -> node -> import/require -> module-sync -> default`). Mit `attw --pack .` verifizieren.
+**Quelle:** nodejs.org/api/packages.html · esmodules.com/publishing/ (Best-Practices A/G)
+
+### 91. Switch ueber Discriminated Union ohne `never`-Default — neue Member still vergessen
+**Symptom:** Beim Hinzufuegen eines Union-Members wird der zugehoerige `case` vergessen; kein Compile-Fehler, falsches Laufzeitverhalten.
+**Ursache:** Ohne Exhaustiveness-Check faellt der unbehandelte Member stillschweigend durch.
+**Versionen:** per Design, alle.
+**FIX:** Im `default` `const _exhaustive: never = shape;` — TS wirft dann einen Compile-Fehler, sobald ein Member fehlt. (Best-Practice C, Kern-Pattern.)
+**Quelle:** typescriptlang.org/docs/handbook/2/narrowing.html
+
+### 92. `typeof x === "object"` laesst `null` durch -> `null.foo`-Crash
+**Symptom:** Naives Object-Guard akzeptiert `null` -> "Cannot read properties of null".
+**Ursache:** `typeof null === "object"` (historischer JS-Bug, per Spec).
+**Versionen:** alle.
+**FIX:** `x && typeof x === "object"` schreiben (Truthiness-Check zuerst).
+**Quelle:** typescriptlang.org/docs/handbook/2/narrowing.html
+
+### 93. Strukturelle ID-Verwechslung (`UserId`/`OrderId` als nackte `string`)
+**Symptom:** Eine `OrderId` wird an eine Funktion uebergeben, die eine `UserId` erwartet — kein Compile-Fehler, subtiler Logik-Bug (kein Crash).
+**Ursache:** TS ist strukturell; zwei `string`-Aliasse sind austauschbar.
+**Versionen:** per Design.
+**FIX:** Branded/Nominal Types per `unique symbol`: `type UserId = string & { readonly [brand]: "UserId" }`. Null Laufzeit-Overhead, Cast nur im Constructor. (Best-Practice C.)
+**Quelle:** github.com/microsoft/TypeScript/pull/33038 · oneuptime.com (Branded Types)
+
+### 94. `await using` / `Symbol.asyncDispose` braucht Runtime-Support
+**Symptom:** Code kompiliert (TS 5.2+), wirft aber zur Laufzeit in aelteren Runtimes — `Symbol.asyncDispose` ist `undefined`.
+**Ursache:** Explicit Resource Management ist nativ erst ab Node 24; aeltere Runtimes brauchen einen Polyfill.
+**Versionen:** TS 5.2+ (Syntax), nativ ab Node 24.
+**FIX:** Node >=24 sicherstellen oder Polyfill laden. Bei `tsc`-Downlevel den Helper einbinden (TS emittiert ihn). (Best-Practice D.)
+**Quelle:** typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html · tc39/proposal-async-explicit-resource-management
+
+### 95. `node file.ts` (Type-Stripping) prueft KEINE Typen
+**Symptom:** `node app.ts` laeuft durch, obwohl Typfehler im Code sind — der Fehler kommt erst zur Laufzeit. Falsche Sicherheit ("ist ja getypt").
+**Ursache:** Node-Type-Stripping entfernt nur Annotations und fuehrt das uebrige JS aus; es ruft KEINEN Typechecker.
+**Versionen:** Type-Stripping stable ab Node 24.12.0.
+**FIX:** Typecheck IMMER separat: `tsc --noEmit` im CI / pre-commit. Type-Stripping ersetzt nur den Transpile-Step, nicht den Check.
+**Quelle:** nodejs.org/api/typescript.html · nodejs.org/learn/typescript/run-natively (Best-Practice F)
+
+### 96. `enum`/`namespace`/Parameter-Properties crashen beim reinen Type-Stripping
+**Symptom:** `node file.ts` wirft `SyntaxError` bei `enum`, `namespace` mit Runtime-Code oder `constructor(private x)`.
+**Ursache:** Diese TS-Features erzeugen Runtime-Code; reines Stripping kann sie nicht entfernen — sie brauchen Code-Generierung (`--experimental-transform-types`).
+**Versionen:** ab Node 24 (Type-Stripping).
+**FIX:** Erasable-only TS schreiben (`type`, `interface`, `import type`, keine `enum`/`namespace`) ODER `--experimental-transform-types` setzen. Empfehlung: erasable-only.
+**Quelle:** nodejs.org/api/typescript.html
+
+### 97. `node --watch` startet bei `.env`-Aenderung NICHT neu
+**Symptom:** `node --watch --env-file=.env app.ts` reagiert nicht, wenn man die `.env` speichert — alte Werte bleiben.
+**Ursache:** `--watch` beobachtet die JS/TS-Modulgraphen, nicht die per `--env-file` geladene Datei.
+**Versionen:** Node 24 — **OPEN** (#54001).
+**FIX:** `.env` manuell in eine Watch-Liste aufnehmen oder den Prozess bei `.env`-Aenderung selbst neu starten (z.B. via separatem Watcher).
+**Quelle:** github.com/nodejs/node/issues/54001
+
+### 98. `node:sqlite` in Node 24 nur mit `--experimental-sqlite`
+**Symptom:** `import { DatabaseSync } from 'node:sqlite'` wirft `ERR_UNKNOWN_BUILTIN_MODULE` / Flag-Fehler ohne Flag.
+**Ursache:** Built-in SQLite ist in Node 24 noch experimentell; RC-Status (1.2) erst ab v25.7.0.
+**Versionen:** Node 22.5+ (Flag), in 24 weiter `--experimental-sqlite`.
+**FIX:** Fuer Prototyping `--experimental-sqlite` setzen; fuer Produktion `better-sqlite3` (erprobt, schneller) verwenden.
+**Quelle:** zenn.dev/.../node-builtin-sqlite · sqg.dev/blog/sqlite-driver-benchmark/
+
+### 99. `--enable-source-maps` in Produktion: Performance-Overhead + bricht `Error.prepareStackTrace`
+**Symptom:** (a) Spuerbare Verlangsamung bei vielen/grossen Source-Maps und hoher Error-Rate (kleiner Service kann bei ~10 failenden Requests/s einbrechen). (b) Custom-Stack-Trace-Formatter (Sentry-Wrapper etc.) werden still ignoriert.
+**Ursache:** `--enable-source-maps` remappt jeden Stack-Trace (teuer) und ueberschreibt/ignoriert `Error.prepareStackTrace`.
+**Versionen:** durchgehend — Perf-Issue **OPEN** (node#41541).
+**FIX:** In Staging/CI an, in Hot-Path-Produktion abwaegen. Wenn ein Custom-Formatter gebraucht wird: `--enable-source-maps` dort NICHT setzen oder Source-Maps anders aufloesen.
+**Quelle:** github.com/nodejs/node/issues/41541 · nodejs.org CLI Docs
+
+### 100. `.npmignore` ueberschreibt `.gitignore`-Verhalten komplett -> Sources/Secrets im Tarball
+**Symptom:** Veroeffentlichtes Paket enthaelt Quellen, Tests, `.env` o.ae. — obwohl `.gitignore` sie ausschliesst.
+**Ursache:** Sobald eine `.npmignore` existiert, ignoriert npm die `.gitignore` KOMPLETT; vergessene Eintraege lecken in das Tarball.
+**Versionen:** per Design.
+**FIX:** Statt `.npmignore`-Denylist die `files`-Allowlist in package.json nutzen (`"files": ["dist"]`) + `npm pack --dry-run` als Pflicht-Gate vor jedem Publish.
+**Quelle:** docs.npmjs.com/cli/v11/using-npm/developers (Best-Practice G)
+
+### 101. `isolatedDeclarations` failt bei nicht vollstaendig annotierten exports
+**Symptom:** Compiler-Fehler an Public-API-Funktionen mit inferiertem Rueckgabetyp, sobald `isolatedDeclarations: true` aktiv ist.
+**Ursache:** `isolatedDeclarations` verlangt explizite Typ-Annotationen an ALLEN exports (damit `.d.ts` ohne Typechecker generierbar ist).
+**Versionen:** TS 5.5+.
+**FIX:** Public-API-Rueckgabetypen explizit annotieren. Migration grosser Bestands-Libraries ist nicht "frei" — case-by-case einfuehren.
+**Quelle:** typescriptlang.org/docs/handbook/release-notes/typescript-5-5.html
+
+### 102. `composite`-Projekt: alle Dateien muessen per `include`/`files` erfasst sein
+**Symptom:** `error TS6307: File ... is not listed within the file list of project` bei `composite: true`.
+**Ursache:** Project-References-faehige Projekte (`composite: true`) verlangen, dass JEDE Implementierungsdatei ueber `include`/`files` erfasst ist.
+**Versionen:** per Design.
+**FIX:** `include` vollstaendig setzen (z.B. `"include": ["src"]`), keine impliziten Dateien ausserhalb.
+**Quelle:** typescriptlang.org/docs/handbook/project-references.html
+
+### 103. `tsup` honoriert `declarationMap` aus tsconfig nicht zuverlaessig
+**Symptom:** Erwartete `.d.ts.map` fehlen trotz `declarationMap: true` in tsconfig.
+**Ursache:** `tsup` liest die Option nicht zuverlaessig aus tsconfig; braucht explizite Config.
+**Versionen:** **OPEN** (tsup #488/#885).
+**FIX:** `declarationMap` explizit in der tsup-Config setzen; `.d.ts.map` ohnehin NICHT ins npm-Tarball publishen (nur Monorepo-DX).
+**Quelle:** github.com/egoist/tsup/issues/488 · github.com/egoist/tsup/issues/885
+
+### 104. `npm publish --provenance` erzeugt Attestation auch bei fehlgeschlagenem Publish
+**Symptom:** Eine Provenance-Attestation entsteht, obwohl der eigentliche Publish scheitert -> potenziell verwaiste Attestation.
+**Ursache:** Reihenfolge-Problem im Publish-Flow.
+**Versionen:** **OPEN** (npm/cli #7654).
+**FIX:** Publish-Erfolg in CI explizit verifizieren (Exit-Code + `npm view <pkg>@<version>`), bevor man sich auf die Attestation verlaesst.
+**Quelle:** github.com/npm/cli/issues/7654
+
+### 105. Native C++-Addons brauchen ggf. C++20 (V8 13.6 in Node 24)
+**Symptom:** Recompile-Fehler bei nativen Modulen, die mit C++17 gebaut wurden, nach Node-24-Upgrade.
+**Ursache:** V8 13.6 in Node 24 verlangt teils C++20 fuer Addon-Builds.
+**Versionen:** ab Node 24.
+**FIX:** Addon-Toolchain auf C++20 heben bzw. aktualisierte Addon-Version nutzen; im Zweifel das Modul gegen die Ziel-Node-Version neu bauen.
+**Quelle:** nodejs.org/en/blog/migrations/v22-to-v24
+
+---
+
+## Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
+
+Bug-Almanach (diese Datei) <-> Best-Practices `~/proggs/best-practices/projekt-code/typescript/best-practices.md`.
+Die identische Tabelle steht auch dort.
+
+| Best-Practice-Abschnitt (`best-practices/.../typescript/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
+|------------------------------------------------------------|--------------------------------------------|
+| **A — Strikte tsconfig & Compiler-Strenge** | **A** (TS-6.0 Defaults), **B** (Deprecations), **D24-D39** (Typ-Fallen / fehlende Strict-Flags / skipLibCheck) |
+| **B — Sauberes ESM-Setup + package.json** | **C** (ESM vs CommonJS #15-23), **G69** (require(esm) default), **J90** (exports-Reihenfolge) |
+| **C — Typsichere Patterns ohne any** | **D** (Typ-Fallen #24-39), **J91** (never-Exhaustiveness), **J92** (typeof null), **J93** (Branded IDs) |
+| **D — Robuste async-Fehlerbehandlung** | **E** (Async/Promises #40-52), **J94** (await using Runtime) |
+| **E — Dependency-Hygiene & npm/Toolchain** | **F** (npm/Dependencies #53-68), **J104** (--provenance bei fail) |
+| **F — Node 24 APIs + Bun-Interop** | **G** (Node-24-APIs #69-74), **H** (Bun #75-83), **J95-J98, J105** (Type-Stripping, --watch/.env, node:sqlite, C++20) |
+| **G — Build, Publishing & Projektstruktur** | **A/B** (tsconfig), **C20** (exports-Kapselung), **J99-J103** (source-maps, .npmignore, isolatedDeclarations, composite, tsup) |
 
 ---
 
