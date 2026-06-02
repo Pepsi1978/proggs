@@ -38,6 +38,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`python-windows.md`](python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
 | **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android-platform.md`](android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
 | **Firebase / Crashlytics / Play Billing** (Google-Backend-Dienste) | [`firebase-billing.md`](firebase-billing.md) | 2026-06-02 | 138 | `google-services.json`, `*Billing*.kt`/`*Subscription*.kt`/`*Purchase*.kt`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Firestore", „Billing", „Paywall", „App Check", „Remote Config", „acknowledge", „Proration", „RTDN", „firebase-ai", „Gemini" · Best-Practices: `best-practices/projekt-code/firebase-billing/` |
+| **macOS-Desktop — Swift / AppKit** (Overlay-Apps, swiftc-CLI-Builds) | [`swift-appkit.md`](swift-appkit.md) | 2026-06-02 | ~58 | `*.swift`, `*.xcodeproj`, `Info.plist`, `*.entitlements`, `build.sh` · „Swift", „AppKit", „NSWindow", „NSPanel", „Overlay", „Accessibility", „AXIsProcessTrusted", „CGEventTap", „RegisterEventHotKey", „Hotkey", „Mikrofon", „AVAudioEngine", „TCC", „Notarization", „Sandbox", „setActivationPolicy" |
 
 ---
 
@@ -52,7 +53,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| · | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
 | · | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
 | · | **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
 | · | **Stream-Deck-Plugin (Node-SDK)** | `stream-deck.md` | `*.sdPlugin/*`, Stream-Deck-`manifest.json`, `propertyInspector` · „Stream Deck", „Elgato" |

@@ -92,7 +92,7 @@ try {
         } else {
             $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
         }
-    } elseif ($fpl -match '\.swift$') {
+    } elseif ($fpl -match '\.swift$' -or $fpl -match '\.xcodeproj' -or $fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
         $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
         $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'

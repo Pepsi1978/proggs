@@ -94,7 +94,7 @@ $ti_extra"
             slug="kotlin"; file="kotlin.md"; name="Kotlin (Sprache/K2/Coroutines/Compose-Kontext)"
         fi
         ;;
-    *.swift)
+    *.swift|*.xcodeproj*|*/info.plist|info.plist|*.entitlements)
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
     *.ts|*.tsx|*tsconfig.json)
         slug="typescript"; file="typescript.md"; name="TypeScript / Node";;
