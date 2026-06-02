@@ -877,6 +877,75 @@ richtig macht*. Wechselseitig gepflegt:
 
 ---
 
+## 15b. Nachtrag aus dem Best-Practices-Lauf (2026-06-02)
+
+Diese Bugs/Fallen kamen beim positiven Best-Practices-Lauf zutage und ergaenzen die Themen-Abschnitte oben.
+
+### 15b.1 `JsonSerializerOptions` nach erstem Gebrauch eingefroren → InvalidOperationException (zu §10)
+**Symptom:** Aenderung an einer geteilten `JsonSerializerOptions`-Instanz nach der ersten (De)Serialisierung wirft `InvalidOperationException`.
+**Ursache:** Die Optionen werden beim ersten Gebrauch implizit immutable.
+**Versionen:** .NET 8 — per Design.
+**FIX:** Optionen EINMAL konfigurieren, dann `MakeReadOnly()`; als statische Instanz wiederverwenden (Analyzer CA1869). Siehe BP §3.
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/configure-options
+
+### 15b.2 IHttpClientFactory + Cookies = CookieContainer-Leak (zu §8)
+**Symptom:** Cookies lecken zwischen unabhaengigen App-Teilen; bei Handler-Recycling gehen Cookies verloren.
+**Ursache:** Gepoolte Handler teilen sich den `CookieContainer`.
+**Versionen:** .NET 8 — per Design.
+**FIX:** Bei Cookie-Bedarf NICHT `IHttpClientFactory` nutzen, sondern eigenen Handler/Client mit dediziertem `CookieContainer`.
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines
+
+### 15b.3 Polly wirft `TimeoutRejectedException`, nicht `TimeoutException` (zu §8)
+**Symptom:** `catch (TimeoutException)` faengt den Resilience-Timeout NICHT.
+**Ursache:** `Microsoft.Extensions.Http.Resilience`/Polly wirft `TimeoutRejectedException`.
+**Versionen:** .NET 8.
+**FIX:** Im `ShouldHandle`/catch `TimeoutRejectedException` behandeln.
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/core/resilience/http-resilience
+
+### 15b.4 Scoped-Service aus dem Root-Provider (Captive-Dependency) (zu §11/DI)
+**Symptom:** Fehler/Captive-Dependency beim Aufloesen eines Scoped-Service direkt aus dem Root-Provider (Desktop-App ohne Request-Scope).
+**Ursache:** Kein aktiver Scope.
+**Versionen:** alle .NET Core/.NET.
+**FIX:** Expliziten Scope via `IServiceScopeFactory.CreateScope()`; Singletons duerfen keine Scoped-Services kapseln.
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/guidelines
+
+### 15b.5 `BitmapSource` auf ThreadPool-Thread laden leakt einen Dispatcher (zu §9)
+**Symptom:** Speicher waechst; ein Dispatcher bleibt haengen, selbst wenn das Bild gefreezt wird.
+**Ursache:** WPF erzeugt fuer das Laden auf einem Nicht-UI-Thread einen Dispatcher, der nicht aufgeraeumt wird.
+**Versionen:** WPF (dotnet/wpf#3412).
+**FIX:** `BitmapSource`/`BitmapImage` auf dem UI-Thread laden, oder Bytes laden + auf UI-Thread dekodieren; danach `Freeze()`.
+**Quelle:** https://github.com/dotnet/wpf/issues/3412
+
+### 15b.6 WPF-Virtualisierung wird still abgeschaltet (zu §2/Performance)
+**Symptom:** Grosse Liste ruckelt / hoher Speicher trotz `VirtualizingStackPanel`.
+**Ursache:** Container direkt zum ItemsControl adden, gemischte Container-Typen (Separator+MenuItem), `CanContentScroll="false"`, oder Container-gebundener State (`Expander.IsExpanded` am Container statt Item) bei Recycling.
+**Versionen:** alle WPF.
+**FIX:** Nur ItemsSource-Binding (keine direkten Container), einheitliche Item-Typen, `CanContentScroll="true"`, State ans Item binden. Siehe BP §5.
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/optimizing-performance-controls
+
+### 15b.7 CommunityToolkit `[RelayCommand]` CanExecute aktualisiert sich nicht automatisch (zu §12/MVVM)
+**Symptom:** Button bleibt im falschen Enabled-State, obwohl sich die Bedingung geaendert hat.
+**Ursache:** Der Command merkt Aenderungen an `CanExecute` nicht selbst.
+**Versionen:** CommunityToolkit.Mvvm 8.x.
+**FIX:** Auf der gekoppelten Property `[NotifyCanExecuteChangedFor(nameof(XxxCommand))]` setzen (oder `IRelayCommand.NotifyCanExecuteChanged()`).
+**Quelle:** https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/generators/relaycommand
+
+### 15b.8 WinUI 3: kein DataGrid, kein AdornerLayer, VS-XAML-Designer nicht unterstuetzt (zu §12)
+**Symptom:** Fehlende Standard-Controls; der VS-Design-Tab funktioniert nicht.
+**Ursache:** WinUI-3-Funktionsumfang.
+**Versionen:** WASDK alle.
+**FIX:** DataGrid via Community `WinUI.TableView` (Wartung selbst pruefen); Adorner per Canvas/Grid-Overlay nachbauen; statt Designer XAML Hot Reload nutzen.
+**Quelle:** https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/migrate-to-windows-app-sdk/wpf-patterns-winui3
+
+### 15b.9 Moq 4.20.0 SponsorLink (Tooling-Falle)
+**Symptom:** Moq 4.20.0 (Aug 2023) las still Git-Emails aus und lud sie hoch.
+**Ursache:** Eingebettete `SponsorLink`-DLL (in 4.20.2 entfernt).
+**Versionen:** Moq 4.20.0.
+**FIX:** Moq-Version pinnen oder auf **NSubstitute** migrieren (MIT, unkritisch). Siehe BP §8.
+**Quelle:** https://medium.com/azlamps/moq-scandal-or-why-caring-about-licenses-is-a-good-idea-9c5086024435
+
+---
+
 ## 16. Fix-Status — was am 2026-06-02 per `gh` verifiziert wurde
 
 > Ehrlichkeits-Hinweis: "CLOSED COMPLETED" heisst bei .NET oft "Verhalten dokumentiert /
