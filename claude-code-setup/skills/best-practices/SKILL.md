@@ -223,23 +223,31 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
-- **1 Researcher pro Kategorie, aber in BATCHES von 3–5 (KRITISCH, empirisch 2026-05-25):**
-  Web-Researcher sind ANFRAGE-DICHT (2–3 Tool-Runden pro Turn × viele Turns → 100+ RPM bei 5 Stueck).
-  Zu viele gleichzeitig sprengen das Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz
-  ("server is temporarily limiting requests · not your usage limit"). Live-Test: **12 gleichzeitig →
-  11 abgestuerzt; 5 gleichzeitig → alle ok**; offiziell stabil sind ~3–5. Also Researcher in Wellen
-  von 3–5 starten, NICHT alle auf einmal. (Anders als anfrage-SPARSE Agenten wie Uebersetzer, die
-  ueberwiegend lokal arbeiten — die vertragen 15–20 gleichzeitig, weil sie kaum Anfragen/Minute erzeugen.)
-- **Retry mit Backoff bei 429 (PFLICHT):** Stuerzt ein Researcher mit Rate-Limit ab, sofort dem Benutzer
-  melden und mit exponential backoff neu starten (`retry-after`-Header beachten) — nie still aufgeben.
-- **Scope eng halten:** max ~8 Websuchen / ~5 Fetches, ~8–10 Min pro Researcher. Begrenzt Anfrage-Rate
-  UND Kontext. (Beobachtet: ~140–165k Token je Kategorie ist normal und unkritisch — der limitierende
-  Faktor ist die ANFRAGE-RATE, nicht die Token.)
+- **5–7 Researcher GLEICHZEITIG mit CONTINUOUS-SPAWNING (empirisch, Frank 2026-06-02):**
+  Konstant 5–7 Researcher laufen lassen — wird EINER fertig, SOFORT den naechsten starten (statt in
+  Wellen zu warten, bis alle 5 fertig sind). Das haelt die Parallelitaet hoch UND den RPM-Strom
+  gleichmaessig (besser als ein Burst von "alle auf einmal"). Empirisch: **5 sicher, 7 laeuft auch
+  (Frank), 12 → 11 abgestuerzt**. Also Obergrenze ~7 gleichzeitig.
+- **Warum die Obergrenze NICHT vom Kontextfenster kommt (wichtig):** Web-Researcher sind
+  ANFRAGE-DICHT (2–3 Tool-Runden/Turn → 100+ RPM bei 5 Stueck). Zu viele gleichzeitig sprengen das
+  Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz ("server is temporarily limiting requests ·
+  not your usage limit"). Das ist UNABHAENGIG vom 1M-Kontextfenster — Opus 4.8 / 1M loest den
+  *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten), aber NICHT den *RPM*-Crash. Darum bleibt
+  ~7 die Obergrenze + 429-Backoff. (Anfrage-SPARSE Agenten wie Uebersetzer vertragen 15–20, weil sie
+  ueberwiegend lokal arbeiten.)
+- **KEIN Findings-/Ergebnis-Cap (Frank-Korrektur 2026-06-02):** ALLE gefundenen Best-Practices/Bugs
+  dokumentieren — kein kuenstliches "max 50". Mit 1M-Kontext ist die Menge kein Absturzrisiko mehr;
+  ein hartes Cap waere *lossy* (siehe `lossless-context-principle.md`). Bei sehr vielen Funden
+  verlustfrei in die Kategorie-Datei schreiben (File-as-Memory) + kompakte Summary, nie kappen.
+- **Retry mit Backoff bei 429 (PFLICHT, bleibt):** Stuerzt ein Researcher mit Rate-Limit ab, sofort dem
+  Benutzer melden und mit exponential backoff neu starten (`retry-after`-Header beachten) — nie still aufgeben.
+- **Scope (gegen RPM/Haengen, NICHT gegen Vollstaendigkeit):** ~15 Websuchen/Fetches, ~10 Min pro
+  Researcher. Begrenzt die ANFRAGE-Rate, nicht die Findings-Zahl. (Beobachtet: ~140–200k Token je
+  Kategorie ist normal und unkritisch — der limitierende Faktor ist die Anfrage-Rate, nicht die Token.)
 - **Checkpoint / Continuation:** Der Researcher schreibt seinen Fortschritt **inkrementell** in
   die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo weitermachen).
   Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint** gestartet. So geht nie
   Fortschritt verloren und nichts stuerzt ab.
-- Zusaetzlich gilt die allgemeine Researcher-Regel: max 50 Ergebnisse / 15 Web-Fetches / 10 Min je Lauf.
 - **Einheitliches Header-Format erzwingen + aufraeumen:** Jede Kategorie-Datei MUSS mit
   `# [Kategorie] — Best Practices (Stand JJJJ-MM-TT, Claude Code X.Y.Z)` beginnen — im Prompt verlangen
   UND nach dem Lauf pruefen (beim Live-Test wich 03-agents vom Format ab). Sentinel-/Writeback-Artefakte

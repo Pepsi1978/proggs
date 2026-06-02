@@ -91,9 +91,15 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 
 ### Schritt 2 — Researcher-Schwarm (breite Bug-Suche, offizielle Quellen zuerst)
 
-3-5 Researcher PARALLEL spawnen (in EINEM Antwortblock), jeder mit eigenem Teilbereich.
+**5-7 Researcher GLEICHZEITIG mit CONTINUOUS-SPAWNING** (Frank 2026-06-02): zuerst 5-7
+parallel spawnen (in EINEM Antwortblock), und sobald EINER fertig ist, SOFORT den naechsten
+Teilbereich nachstarten, damit konstant 5-7 laufen — nicht in Wellen warten. So werden die
+Researcher voll ausgenutzt und der RPM-Strom bleibt gleichmaessig (kein Burst). Empirisch:
+5 sicher, 7 laeuft auch; ab ~12 RPM-Abstuerze. Reicht der Bereich nicht fuer 7 Teilbereiche,
+mehr Researcher mit GLEICHEM Teilbereich aber unterschiedlichem Fokus (verschiedene Quellen-Typen,
+Versionen, Unterthemen) spawnen — Duplikate bestaetigen den Bug, kosten aber nichts.
 Fertige Prompt-Vorlagen: `references/researcher-prompts.md` — `[BEREICH]`/`[VERSION]`
-einsetzen. Standard-Aufteilung:
+einsetzen. Standard-Aufteilung (bei 7 die Liste um Unterthemen erweitern):
 
 1. **Offizielle Doku + Hersteller-Hilfen** — die offizielle Anleitung, das Changelog
    UND gezielt offizielle Empfehlungen/Workarounds/Fixes zum konkreten Bug. Bei
@@ -107,7 +113,8 @@ einsetzen. Standard-Aufteilung:
 
 **Offizielle Quellen haben Vorrang vor Foren-Meinungen**: Wenn der Hersteller eine
 offizielle Loesung/Empfehlung nennt, ist die die erste Wahl im FIX-Feld; Foren-Tipps
-ergaenzen, ersetzen sie aber nicht. Kleine/enge Bereiche: 3 Researcher reichen; breite: 5.
+ergaenzen, ersetzen sie aber nicht. Sei grosszuegig: lieber 7 Researcher mit feineren
+Unterthemen als 3 grobe — die Findings werden vollstaendiger und nichts wird gekappt.
 
 **Pflicht-Limits pro Researcher** (gegen *Haengen*, siehe `agent-and-researcher-rules.md`
 + `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min. **KEIN kuenstliches

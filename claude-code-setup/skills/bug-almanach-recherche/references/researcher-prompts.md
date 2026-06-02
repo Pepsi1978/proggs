@@ -15,7 +15,7 @@ nie abschneiden. Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
 
 ---
 
-## Phase A — Breite Bug-Suche (Schritt 2): 3-5 Researcher parallel
+## Phase A — Breite Bug-Suche (Schritt 2): 5-7 Researcher, Continuous-Spawning
 
 ### Gemeinsamer Prompt-Kopf (vor jeden Teilbereich setzen)
 

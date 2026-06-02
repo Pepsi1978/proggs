@@ -40,22 +40,30 @@ Agent, Aufgabe, Fehler, Neuversuch-Ergebnis.
 > Vorfall 2026-03-28: 5 Researcher mit je 100 Fragen → alle abgestuerzt.
 > 5 Researcher mit je 50 Fragen → alle erfolgreich.
 
+> **Update 2026-06-02 (Frank-Korrektur):** Mit Opus 4.8 / 1M-Kontext ist der *Kontext*-Crash kein
+> Thema mehr — das alte "max 50 Ergebnisse"-Cap war Kontext-bedingt und entfaellt. Researcher sollen
+> GROSSZUEGIG arbeiten und ALLE Findings dokumentieren (kappen waere lossy, siehe
+> `lossless-context-principle.md`). Was BLEIBT, ist der ANFRAGE-RATEN-Schutz (RPM/429) — der ist
+> unabhaengig vom Kontextfenster.
+
 ### Pflicht-Limits fuer JEDEN Researcher
 
 | Limit | Wert | Warum |
 |-------|------|-------|
-| Max Ergebnisse | **50** pro Researcher | Kontext wird zu gross bei >50 |
+| Max Ergebnisse/Findings | **KEIN Cap** | 1M-Kontext; alle Funde dokumentieren. Bei sehr vielen lossless in Datei auslagern + Summary zurueckgeben |
 | Max Laufzeit | **10 Minuten** | Danach: Agent haengt wahrscheinlich |
-| Max Web-Fetches | **15** pro Researcher | >15 → Kontext-Ueberlauf |
+| Max Web-Fetches | **~15** pro Researcher | Begrenzt die ANFRAGE-Rate (RPM), nicht die Findings-Zahl |
 | Max Prompt-Laenge | **2000 Woerter** | Kurz und praezise, nur Kernfrage |
+| Gleichzeitige Researcher | **5-7** (Continuous-Spawning) | RPM-Limit: 5 sicher, 7 ok (empirisch), ~12 → Abstuerze |
 
-### Grosser Researcher (>50 Ergebnisse): Aufteilung PFLICHT
+### Continuous-Spawning statt Wellen (Researcher voll ausnutzen)
 
 ```
-Scope: 51+ Ergebnisse
-→ N Researcher parallel, je max 50
-→ Jeder bekommt eigenen Teilbereich
-→ Ergebnisse am Ende zusammenfuehren
+Start: 5-7 Researcher gleichzeitig
+→ Wird EINER fertig: SOFORT den naechsten starten (konstant 5-7 laufen lassen)
+→ NICHT in Wellen warten bis alle fertig sind
+→ Haelt Parallelitaet hoch UND RPM-Strom gleichmaessig (kein Burst)
+→ Reicht der Scope nicht: mehr Researcher mit feineren Unterthemen (Duplikate kosten nichts)
 ```
 
 ### Fehler-Praevention
@@ -63,14 +71,15 @@ Scope: 51+ Ergebnisse
 | Problem | Praevention |
 |---------|-------------|
 | Agent haengt | Timeout nach 10 Min, Benutzer informieren |
-| Kontext zu gross | Max 50 Ergebnisse, max 15 Fetches |
+| RPM / 429 (Server-Burst) | Max ~7 gleichzeitig; Retry mit exponential backoff (`retry-after`) |
 | Netzwerk-Fehler | Graceful Degradation — was da ist zurueckgeben |
-| API-Rate-Limit | Retry mit Pause, max 3 Versuche |
+| Sehr viele Findings | NICHT kappen — lossless in Datei auslagern + kompakte Summary |
 
 ### Was NIEMALS passieren darf
 
 - ❌ Researcher laeuft >10 Min ohne Ergebnis
-- ❌ Researcher sammelt >50 Ergebnisse in einem Durchlauf
+- ❌ Echte Findings an einem kuenstlichen Cap abschneiden (alle dokumentieren — bei Menge lossless auslagern)
+- ❌ Mehr als ~7 Researcher gleichzeitig (RPM-Absturz) — stattdessen Continuous-Spawning
 - ❌ Researcher crasht und der Benutzer erfaehrt es nicht
 - ❌ Riesige Rohdaten ungefiltert zurueckgegeben
 
