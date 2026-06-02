@@ -56,6 +56,10 @@ slug=""; file=""; name=""
 case "$fpl" in
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
         slug="chrome"; file="chrome-extensions.md"; name="Browser-Erweiterungen (Chrome/Edge MV3)";;
+    *google-services*.json|*billing*.kt|*subscription*.kt|*purchase*.kt)
+        # Firebase-/Billing-Backend: google-services.json + Billing/Subscription/Purchase-Klassen.
+        # MUSS vor dem androidplatform- und dem generischen .kt-Zweig stehen.
+        slug="firebasebilling"; file="firebase-billing.md"; name="Firebase / Crashlytics / Play Billing (Google-Backend-Dienste)";;
     *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
         slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
     *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt|*migration.kt|*migrations.kt|*database.kt)

@@ -37,6 +37,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Build — Gradle / AGP / R8·ProGuard / KSP** | [`gradle.md`](gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`python-windows.md`](python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
 | **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android-platform.md`](android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
+| **Firebase / Crashlytics / Play Billing** (Google-Backend-Dienste) | [`firebase-billing.md`](firebase-billing.md) | 2026-06-02 | 122 | `google-services.json`, `*Billing*.kt`/`*Subscription*.kt`/`*Purchase*.kt`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Billing", „Paywall", „App Check", „Remote Config", „acknowledge", „Proration", „RTDN", „firebase-ai", „Gemini" |
 
 ---
 
@@ -51,7 +52,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| · | **Firebase / Crashlytics / Play Billing** | `firebase-billing.md` | `google-services.json`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Billing", „Paywall" |
 | · | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |
 | · | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
 | · | **Web — TypeScript / Node** | `typescript.md` | `*.ts`, `*.tsx`, `tsconfig.json` · „TypeScript", „Node", „npm" |
