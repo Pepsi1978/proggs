@@ -794,3 +794,23 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 - [ ] Version-Catalog/BOM: BOM-gemanagte Libs ohne eigene Version, `platform(...)` + BOM auf jeder
       Configuration (§9)?
 - [ ] Neuen, selbst erlebten Build-Bug nach der Arbeit hier ergaenzt (Bug + funktionserhaltende Loesung + Versionen)?
+
+---
+
+## 🔗 Bezug: Best-Practices-Gegenstuecke
+
+> Zweite Seite der Medaille: `~/proggs/best-practices/projekt-code/gradle/best-practices.md` sammelt
+> *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihr praeventives Gegenstueck.
+
+| Bug-Sektion (diese Datei) | Best-Practice-Gegenstueck (`best-practices/projekt-code/gradle/best-practices.md`) |
+|---|---|
+| §1 Versions-Kompatibilitaet | §1 Versions-Strategie & Kompatibilitaet |
+| §2 AGP 9.0 Breaking Changes | §9 Upgrade-Strategie (+ §4 R8-Defaults) |
+| §4 Gradle 9.0 Core-Migration | §1, §9 Upgrade-Strategie |
+| §5 Configuration Cache | §3 Configuration Cache richtig einfuehren |
+| §6 Build Cache / Daemon / Performance | §2 `gradle.properties` Build-Flags |
+| §7 R8 / ProGuard / Shrinking | §4 R8/Shrinking richtig konfigurieren |
+| §8 KSP als Gradle-Plugin | §5 KSP richtig einsetzen |
+| §9 Dependency-Resolution / Catalogs / BOM | §6 Version-Catalogs & Dependency-Management |
+| §10 Gradle Wrapper | §7 Gradle Wrapper absichern |
+| §11 Windows-Build-Fallen | §8 Windows-Build-Hygiene |
