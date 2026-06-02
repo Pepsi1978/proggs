@@ -12,8 +12,13 @@
 > - **Play In-App Review 2.0.2**, **google-services Gradle-Plugin 4.4.2**
 > - AGP 8.7.3 · Kotlin 2.1.0 · compileSdk/targetSdk 36 · minSdk 26 · R8/ProGuard im Release **AKTIV**
 >
-> **Wichtig — proaktiv:** **Crashlytics** und **FCM/Cloud Messaging** sind aktuell **NICHT** eingebunden.
-> Ihre Bug-Sektionen (3 + 4) sind Zukunftswissen fuer den spaeteren Einbau und entsprechend markiert.
+> **Wichtig — proaktiv:** **Crashlytics**, **FCM/Cloud Messaging** und **Firestore** sind aktuell **NICHT**
+> eingebunden. Ihre Bug-Sektionen (3, 4 + 12) sind Zukunftswissen fuer den spaeteren Einbau und entsprechend markiert.
+>
+> **Praeventions-Seite (zweite Seite der Medaille):** seit 2026-06-02 existiert die Best-Practices-Seite
+> [`best-practices/projekt-code/firebase-billing/best-practices.md`](../best-practices/projekt-code/firebase-billing/best-practices.md)
+> (7-Researcher-Lauf) — *wie man es von vornherein richtig macht*. Wechselseitige Abschnitts-Kopplung am Dateiende.
+> Teil 11 (Bugs 123–133) + Teil 12 (Firestore 134–138) wurden aus diesem Best-Practices-Lauf zurueckgekoppelt.
 >
 > **Versions-Anker:** Billing 7.1.1 ist NICHT die neueste Version (Billing 8.x existiert seit 2025-06-30).
 > Das ist relevant — siehe Sektion 1 (v8-Migration) und die **Play-Store-Deadline 31.08.2026** (Bug 41).
@@ -923,6 +928,136 @@
 
 ---
 
+# Teil 11 — Nachträge aus dem Best-Practices-Lauf (2026-06-02)
+
+> Diese Bugs wurden bei der **Best-Practices-Recherche** (Praeventions-Seite,
+> `best-practices/projekt-code/firebase-billing/best-practices.md`) als echte, nicht-duplizierte
+> Stolpersteine gefunden und hierher zurueckgekoppelt. Jeder verweist auf den passenden
+> Best-Practice-Abschnitt.
+
+## 123. Promo-Code-Kaeufe lassen sich nicht ueber orderId deduplizieren   ⭐ HAEUFIG
+**Symptom:** Promo-Code-eingeloeste Kaeufe tauchen doppelt auf / die Dedup-Logik greift nicht.
+**Ursache:** Deduplizierung ueber `orderId` — Promo-Code-Kaeufe (und manche Test-/Renewal-Faelle) erzeugen aber KEINEN `orderId`.
+**Versionen:** per Design, alle.
+**FIX:** `purchaseToken` (global eindeutig) als Dedup-Schluessel verwenden, NIE `orderId`. Siehe Best-Practices Teil 2 (Idempotenz). Ergaenzt Bug 29.
+**Quelle:** developer.android.com/google/play/billing/security
+
+## 124. Mehrere BillingClient-Instanzen → doppelte onPurchasesUpdated-Callbacks
+**Symptom:** Entitlement-Logik laeuft mehrfach pro Kauf; doppelte Grants/Acknowledges.
+**Ursache:** BillingClient pro Activity gebaut statt als App-Singleton → mehrere aktive Listener feuern fuer dasselbe Ereignis.
+**Versionen:** per Design, alle.
+**FIX:** Genau EIN App-Scope-Singleton (Application-Context), ein zentraler `PurchasesUpdatedListener`. Praezisiert Bug 9 (Memory-Leak/Singleton). Siehe Best-Practices Teil 1 A.
+**Quelle:** developer.android.com/reference/com/android/billingclient/api/BillingClient
+
+## 125. Refund OHNE Revoke erscheint nicht in der Voided Purchases API
+**Symptom:** Per Refund erstattete Kaeufe ohne Entzug werden serverseitig nie als „void" erkannt; Entitlement bleibt aktiv.
+**Ursache:** Die Voided Purchases API listet nur Refunds MIT Revoke; reine Erstattungen ohne Entzug fehlen.
+**Versionen:** Server-API, per Design.
+**FIX:** Zusaetzlich RTDN `voidedPurchaseNotification` verarbeiten UND die Refund-/Revoke-Policy in der Play Console pruefen; nicht allein auf Voided-API-Polling verlassen. Siehe Best-Practices Teil 2 D.
+**Quelle:** developers.google.com/android-publisher/voided-purchases · developer.android.com/google/play/billing/rtdn-reference
+
+## 126. RTDN-Duplikate / Out-of-order ohne Idempotenz → Doppel-Grants / Zustandsruecksetzer   ⭐ HAEUFIG
+**Symptom:** Abo-Status springt zurueck oder Premium wird doppelt gewaehrt.
+**Ursache:** Pub/Sub liefert mindestens einmal (Duplikate moeglich) und NICHT garantiert in Reihenfolge; ohne Dedup/Versionierung wird eine alte Notification spaeter verarbeitet.
+**Versionen:** Pub/Sub, per Design.
+**FIX:** Pro Event per `messageId`/`eventTimeMillis` deduplizieren; nach JEDER Notification frischen `subscriptionsv2.get` machen und den Zustand AUS dem get ableiten (nie aus dem Notification-Typ). Ergaenzt Bug 33. Siehe Best-Practices Teil 2 C.
+**Quelle:** developer.android.com/google/play/billing/rtdn-reference · cloud.google.com/pubsub/docs/subscriber
+
+## 127. Pub/Sub-Push-Endpoint antwortet nicht 2xx → Endlos-Re-Delivery + Quota-Verbrauch
+**Symptom:** Dieselbe RTDN kommt endlos wieder; Function-Kosten/Quota steigen.
+**Ursache:** Eine Push-Subscription wertet Non-2xx als Fehler und re-delivered; eine langsame/fehlerhafte Function antwortet nicht rechtzeitig mit 2xx.
+**Versionen:** Pub/Sub Push, per Design.
+**FIX:** In der Cloud Function SOFORT 2xx ack'en, die eigentliche Arbeit idempotent (ggf. asynchron) erledigen; nie blockierende Lang-Arbeit vor dem Ack. Siehe Best-Practices Teil 2 C/E.
+**Quelle:** cloud.google.com/pubsub/docs/push
+
+## 128. App-Check Replay-Schutz (limited-use/consume-Token) nur fuer Node.js-Backend
+**Symptom:** Der erwartete Replay-Schutz fuer einen sensiblen Function-Aufruf greift auf einem nicht-Node-Backend nicht.
+**Ursache:** Die token-`consume`-API (Replay-Schutz) ist Beta und nur im Node-Admin-SDK verfuegbar.
+**Versionen:** aktuell, Beta.
+**FIX:** Fuer Replay-kritische Aufrufe Node.js-Cloud-Functions + `consumeAppCheckToken` nutzen; auf anderen Runtimes eine eigene Nonce-/Idempotenz-Schicht bauen, nicht den limited-use-Replay-Schutz annehmen. Siehe Best-Practices Teil 6 C.
+**Quelle:** firebase.google.com/docs/app-check/cloud-functions
+
+## 129. PendingIntent ohne FLAG_IMMUTABLE → Crash ab Android 12 (FCM-Deep-Links)
+**Symptom:** Notification-Tap/Deep-Link crasht mit `IllegalArgumentException` ab Android 12 / targetSdk 31+ (garantiert bei targetSdk 36).
+**Ursache:** Ab Android 12 muss jeder PendingIntent explizit `FLAG_IMMUTABLE` oder `FLAG_MUTABLE` setzen.
+**Versionen:** Android 12+ (targetSdk 31+).
+**FIX:** PendingIntent mit `FLAG_IMMUTABLE` (oder bewusst MUTABLE) bauen. Gilt auch ausserhalb FCM — siehe `bugs/android-platform.md` (PendingIntent). Siehe Best-Practices Teil 4 D.
+**Quelle:** developer.android.com/reference/android/app/PendingIntent
+
+## 130. Legacy FCM Server-Key zum Senden → schlaegt fehl (HTTP v1 Pflicht)
+**Symptom:** Server-Push schlaegt fehl/401, obwohl es frueher funktionierte.
+**Ursache:** Die Legacy-HTTP-/XMPP-Server-Key-APIs wurden im Juli 2024 abgeschaltet.
+**Versionen:** ab 2024-07.
+**FIX:** Nur noch FCM HTTP v1 API mit OAuth2/Service-Account verwenden (z.B. ueber eine Cloud Function senden). Siehe Best-Practices Teil 4 E.
+**Quelle:** firebase.google.com/docs/cloud-messaging/migrate-v1
+
+## 131. Consent Mode v2: Default-Consent NACH der Init gesetzt → DSGVO-Luecke   ⭐ HAEUFIG
+**Symptom:** Die ersten Analytics-Events laufen mit falschem Consent-Status raus (z.B. in der EU ohne Einwilligung).
+**Ursache:** `setConsent(...)` erst nach der Firebase-Init aufgerufen, statt den Default-Consent VOR der Init zu setzen.
+**Versionen:** per Design.
+**FIX:** Default-Consent als Manifest-`meta-data` setzen (EU: denied, opt-in), erst nach Einwilligung per `setConsent()` updaten. Keine PII in Analytics. Siehe Best-Practices Teil 7 E.
+**Quelle:** firebase.google.com/docs/analytics/android/consent · developers.google.com/tag-platform/security/concepts/consent
+
+## 132. fetchAndActivate() blockiert den ersten App-Start (RC-Timeout)
+**Symptom:** UI haengt beim ersten Start bis zu ~1 Minute.
+**Ursache:** Synchron beim Erststart auf Remote Config gewartet, statt „load for next startup".
+**Versionen:** per Design.
+**FIX:** Beim Erststart XML-Defaults nutzen, RC asynchron laden und erst beim naechsten Start aktivieren; nie den UI-Thread auf den Fetch warten lassen. Ergaenzt Bug 83/86. Siehe Best-Practices Teil 6 B.
+**Quelle:** firebase.google.com/docs/remote-config/loading
+
+## 133. Lange Arbeit direkt in onMessageReceived → abgebrochen (Zeitfenster)
+**Symptom:** Server-Call/Bild-Download direkt im Callback wird abgebrochen, Verarbeitung unvollstaendig.
+**Ursache:** `onMessageReceived` hat nur ein kurzes Ausfuehrungsfenster (~Sekunden, Doze-abhaengig).
+**Versionen:** per Design.
+**FIX:** Im Callback nur kurz handeln; laengere Arbeit an WorkManager (expedited) delegieren. Ergaenzt Bug 76. Siehe Best-Practices Teil 4 C.
+**Quelle:** firebase.google.com/docs/cloud-messaging/android/receive-messages
+
+---
+
+# Teil 12 — Firebase Firestore (PROAKTIV — noch nicht eingebunden)
+
+> **PROAKTIV:** Firestore ist in BestJournalAndroid aktuell NICHT eingebunden (lokale Daten in Room,
+> Backup via Drive). Diese Sektion ist Zukunftswissen, sobald ein Cloud-Sync- oder Entitlement-Store
+> ueber Firestore kommt. App-Check-Enforcement-zu-frueh fuer Firestore ist bereits durch **Bug 90**
+> (generell) abgedeckt — gestaffelt aktivieren. Volle Praevention: Best-Practices Teil 5.
+
+## 134. Offene Security Rules (`allow read, write: if true`) → komplette Daten oeffentlich   ⭐⭐ KRITISCH
+**Symptom:** Jeder kann alle Daten lesen/schreiben; Datenleck und -manipulation.
+**Ursache:** Default-Deny verletzt — Test-Rules in Prod (`if true`) oder zu weit gefasste Bedingungen.
+**Versionen:** per Design.
+**FIX:** Default-Deny; mindestens `request.auth != null`; private Daten per Ownership (`request.auth.uid == resource.data.ownerId`); `read`/`write` granular in `get/list/create/update/delete` aufteilen. Subcollections erben Rules NICHT.
+**Quelle:** firebase.google.com/docs/firestore/security/get-started
+
+## 135. „Rules sind keine Filter" → PERMISSION_DENIED bei korrekt aussehender Query   ⭐ HAEUFIG
+**Symptom:** Eine `list`-Query schlaegt komplett mit PERMISSION_DENIED fehl, obwohl die eigenen Daten regelkonform waeren.
+**Ursache:** Security Rules filtern NICHT; die Query muss die Rule-Constraint per `where()` spiegeln, sonst wird die ganze Query verweigert.
+**Versionen:** per Design.
+**FIX:** Query-`where()` exakt an die Rule-Bedingung anpassen (z.B. `whereEqualTo("ownerId", uid)`).
+**Quelle:** firebase.google.com/docs/firestore/security/rules-query
+
+## 136. Entitlement-/Abo-Felder client-schreibbar → Premium clientseitig faelschbar   ⭐⭐ KRITISCH
+**Symptom:** Ein Nutzer setzt sich selbst per direktem Firestore-Write auf Premium.
+**Ursache:** Rules erlauben Client-Writes auf Abo-/Entitlement-Felder.
+**Versionen:** per Design.
+**FIX:** Entitlement-Dokumente fuer Clients `write: if false`; nur per Admin SDK / Cloud Function (umgeht Rules) schreiben. Client liest nur. Spiegelt die Billing-Server-Wahrheit (Teil 2).
+**Quelle:** firebase.google.com/docs/firestore/security/rules-structure
+
+## 137. Sequenzielle / monoton steigende Document-IDs → Hotspotting + Latenz
+**Symptom:** Schreib-Latenz steigt bei hoher Frequenz; „500/50/5"-Regel verletzt.
+**Ursache:** Monoton steigende IDs (z.B. uebernommene Room-Auto-Increment-IDs) konzentrieren Writes auf eine Partition.
+**Versionen:** per Design.
+**FIX:** Auto-IDs (`add()` / `collection().document()`) verwenden; bei Migration von Room IDs NICHT 1:1 als Doc-IDs uebernehmen.
+**Quelle:** firebase.google.com/docs/firestore/best-practices
+
+## 138. Offset-Pagination erzeugt versteckte Read-Kosten
+**Symptom:** Pagination teurer als erwartet — Reads steigen ueberproportional.
+**Ursache:** `offset(n)` laedt und berechnet die uebersprungenen n Dokumente intern als Reads.
+**Versionen:** per Design.
+**FIX:** Cursor-Pagination (`startAfter(lastDoc)`) statt `offset`. Offline-Cache (Android) ist per Default an — Listener nur wo noetig, sonst one-time `get()`.
+**Quelle:** firebase.google.com/docs/firestore/best-practices
+
+---
+
 # Fix-Status (gh-verifiziert 2026-06-02)
 
 > **Methodik (ehrlich):** GitHub-Issue-Status hart per `gh issue view` geprueft. **Wichtig:** "CLOSED/COMPLETED"
@@ -979,12 +1114,27 @@
 
 ## Querverweis: Best Practices
 
+**Hauptseite (Praeventions-Seite der Medaille):** [`best-practices/projekt-code/firebase-billing/best-practices.md`](../best-practices/projekt-code/firebase-billing/best-practices.md)
+— erstellt 2026-06-02 (7-Researcher-Best-Practices-Lauf). Wechselseitige Abschnitts-Kopplung:
+
+| Bug-Almanach-Abschnitt | Best-Practice-Abschnitt (`firebase-billing/best-practices.md`) |
+|------------------------|----------------------------------------------------------------|
+| Teil 1 (Billing 1–28: Verbindung, Acknowledge, PENDING, Proration) | Teil 1 — sichere Client-Flows |
+| Teil 1 D + E (29–41: Signature, RTDN, Developer API, Deadline) | Teil 1 D + Teil 2 — serverseitige Validierung |
+| Teil 2 (42–52: google-services, Init, BOM, SHA) | Teil 7 — Setup/Init/BOM/Analytics/Consent |
+| Teil 3 (53–75: Crashlytics/Analytics) | Teil 3 — Crashlytics richtig (proaktiv) |
+| Teil 4 (76–82: FCM) | Teil 4 — FCM sauber (proaktiv) |
+| Teil 5 (83–87: Remote Config) | Teil 6 B — Remote Config |
+| Teil 6 (88–91: App Check) | Teil 6 A — App Check |
+| Teil 7 (92–96: Cloud Functions) | Teil 6 C — Cloud Functions |
+| Teil 11 (123–133: Nachträge) | Teil 1/2/4/6/7 (jeweils im Eintrag verlinkt) |
+| Teil 12 (134–138: Firestore proaktiv) | Teil 5 — Firestore Security Rules & Data Modeling |
+
+**Querverweise in andere Almanache/Best-Practices:**
+
 | Bug-Almanach-Abschnitt | Best-Practice (Praevention) |
 |------------------------|------------------------------|
 | Teil 9 (R8/Keep 113–119) | `best-practices/projekt-code/gradle/best-practices.md §4` (R8/Shrinking/Keep-Regeln) |
 | Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android-platform/best-practices.md` (FGS-Start-Trigger) |
 | Teil 2/10 (google-services.json, config-cache) | `best-practices/projekt-code/gradle/best-practices.md` (Build-System) |
-
-> Es existiert (noch) keine eigene `best-practices/projekt-code/firebase-billing/`-Seite — bewusst, weil dieser
-> Lauf eine reine Bug-Recherche war. Bei Bedarf separat den `best-practices`-Skill fuer Firebase/Billing starten
-> (Praeventions-Seite der Medaille).
+| Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android-platform/best-practices.md` |
