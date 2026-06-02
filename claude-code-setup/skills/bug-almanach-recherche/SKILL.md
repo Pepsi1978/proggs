@@ -109,11 +109,17 @@ einsetzen. Standard-Aufteilung:
 offizielle Loesung/Empfehlung nennt, ist die die erste Wahl im FIX-Feld; Foren-Tipps
 ergaenzen, ersetzen sie aber nicht. Kleine/enge Bereiche: 3 Researcher reichen; breite: 5.
 
-**Pflicht-Limits pro Researcher** (gegen Absturz, siehe `agent-and-researcher-rules.md`
-+ `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min, max ~40 Eintraege,
-KOMPAKTE Rueckgabe (~1500-2000 Token). Subagenten laufen auf dem hoechsten Opus-Modell
-(Modell-Policy) — `opts.model` nicht setzen. Pro Bug zurueckgeben: **Titel · Symptom ·
-Ursache · Loesung (funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
+**Pflicht-Limits pro Researcher** (gegen *Haengen*, siehe `agent-and-researcher-rules.md`
++ `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min. **KEIN kuenstliches
+Eintrags-Cap** — ALLE gefundenen Bugs dokumentieren. (Mit Opus 4.8 / 1M-Kontext gibt es
+kein Absturzrisiko mehr; ein hartes Cap, das echte Funde wegwirft, waere *lossy* und damit
+verboten — siehe `lossless-context-principle.md`. Frank-Korrektur 2026-06-02: "wenn mehr
+Bugs gefunden, dann auch alle dokumentieren".) Findet ein Researcher sehr viele Bugs, bleibt
+er trotzdem vollstaendig: bei Bedarf die Vollliste verlustfrei in eine Datei schreiben
+(File-as-Memory) und dem Hauptagenten eine kompakte Zusammenfassung + Dateipfad zurueckgeben,
+statt zu kappen. Subagenten laufen auf dem hoechsten Opus-Modell (Modell-Policy) —
+`opts.model` nicht setzen. Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
+(funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
 
 ### Schritt 3 — Fix-Status-Recherche (was ist schon gefixt?)
 
@@ -239,7 +245,7 @@ zu spiegeln — er liegt schon im Repo unter `bugs/`.
 - Den Fix-Status- oder den Best-Practices-Schritt ueberspringen.
 - Eine Loesung notieren, die Funktionalitaet entfernt (Direktive #3 — funktionserhaltend).
 - Foren-Meinung ueber eine offizielle Hersteller-Loesung stellen.
-- Researcher ohne Limits spawnen oder einen Crash verschweigen.
+- Researcher ohne Fetch-/Zeit-Limits spawnen, einen Crash verschweigen, ODER echte Funde an einem kuenstlichen Eintrags-Cap abschneiden (alle gefundenen Bugs dokumentieren — bei sehr vielen verlustfrei in Datei auslagern, nie kappen).
 - Rohdaten-Dumps 1:1 uebernehmen statt zu deduplizieren und zu kuratieren.
 
 ## Referenzen

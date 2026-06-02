@@ -6,10 +6,12 @@ ersetzen (z.B. "Chrome-Erweiterungen / Manifest V3", "Android Jetpack Compose",
 `[DATUM]` durch das heutige Datum. Alle Researcher laufen auf dem hoechsten Opus-Modell
 (Modell-Policy) — `opts.model` NICHT setzen. Agent-Typ: `researcher`.
 
-Pro Researcher gilt: max 15 Web-Fetches, max 10 Minuten, max ~40 Eintraege, KOMPAKTE
-strukturierte Rueckgabe (~1500-2000 Token, kein Rohdaten-Dump). Pro Bug zurueckgeben:
-**Titel · Symptom · Ursache · Loesung (funktionserhaltend!) · betroffene Versionen ·
-Quelle (URL)**.
+Pro Researcher gilt: max 15 Web-Fetches, max 10 Minuten (gegen Haengen). **KEIN
+kuenstliches Eintrags-Cap** — ALLE gefundenen Bugs dokumentieren (Opus 1M = kein
+Absturzrisiko; Kappen waere lossy, siehe `lossless-context-principle.md`). Bei sehr
+vielen Funden verlustfrei in eine Datei schreiben + kompakte Summary/Pfad zurueckgeben,
+nie abschneiden. Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
+(funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
 
 ---
 
@@ -26,9 +28,10 @@ Quelle (URL)**.
 > und FUNKTIONSERHALTEND — niemals "Feature weglassen") · betroffene Versionen (ab/bis;
 > gefixt ab? oder "per Design") · Quelle (URL).
 >
-> LIMITS (strikt): max 15 Web-Fetches, max 10 Minuten, max ~40 Eintraege. KOMPAKTE
-> strukturierte Liste (~1500-2000 Token, KEIN Rohdaten-Dump). Wenn du zu einem Punkt
-> nichts Konkretes findest, sag das ehrlich statt zu raten.
+> LIMITS: max 15 Web-Fetches, max 10 Minuten (gegen Haengen). KEIN Eintrags-Cap — gib
+> ALLE gefundenen Bugs zurueck (kein kuenstliches Limit; du laeufst auf Opus 1M). Bei sehr
+> vielen Funden vollstaendig bleiben (ggf. in Datei auslagern + Summary). Wenn du zu einem
+> Punkt nichts Konkretes findest, sag das ehrlich statt zu raten.
 >
 > DEIN TEILBEREICH:
 
