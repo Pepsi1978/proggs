@@ -68,6 +68,8 @@ case "$fpl" in
         slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
     *.xaml|*.csproj|*.cs)
         slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)";;
+    *.py)
+        slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)";;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
 esac
