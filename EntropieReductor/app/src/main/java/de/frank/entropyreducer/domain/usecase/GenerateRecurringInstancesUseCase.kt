@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
 import android.util.Log
+import de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
@@ -28,6 +29,7 @@ import javax.inject.Singleton
 class GenerateRecurringInstancesUseCase @Inject constructor(
     private val templateRepo: RecurringTemplateRepository,
     private val entryRepo: EntryRepository,
+    private val followupDao: EntropyEntryFollowupDao,
 ) {
     /**
      * Laeuft alle aktiven Vorlagen durch, erzeugt fuer jedes seit lastGeneratedAt
@@ -212,6 +214,14 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         val allTemplates = templateRepo.getAllForBackup()
+        // Frank-Wunsch 2026-06-02 (Bugfix): VOR der Instanz-Verwaltung verwaiste Konvertierungs-
+        // Duplikate heilen. Mit dem alten Konvertierungs-Code ("Aufgabe zu wiederkehrenden
+        // hinzufuegen") blieb die Original-Aufgabe (eigene ID, z.B. NUTZER_MIC) als unverknuepftes
+        // Duplikat neben der generierten Loop-Instanz liegen. Die Loop-Bearbeitung (setPriority etc.)
+        // erreicht nur die rec-Instanz -> die Original zeigt weiter "KI". Diese Heilung entfernt das
+        // Duplikat (bzw. wandelt die Original in die Loop-Instanz um) -> der Nutzer sieht nur noch
+        // EINE Aufgabe mit der korrekten Loop-Prioritaet. Idempotent: ohne Duplikate ein No-Op.
+        healOrphanedConversions(allTemplates.filter { it.isActive }, now)
         val allOpenEntries = entryRepo.getActive().first()
 
         // Frank-Wunsch 2026-06-01: fuer den Intervall-Cooldown brauchen wir den
@@ -424,6 +434,101 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             durationManuallySet = template.estimatedDurationMinutes != null,
             dueAtMs = null,
         )
+    }
+
+    /**
+     * Frank-Wunsch 2026-06-02 (Bugfix): Heilt verwaiste Konvertierungs-Duplikate.
+     *
+     * Der alte "Aufgabe zu wiederkehrenden hinzufuegen"-Pfad legte ein Template an, liess die
+     * Original-Aufgabe (eigene ID, z.B. NUTZER_MIC) aber als unverknuepftes Duplikat liegen.
+     * Zusaetzlich erzeugte cleanupAndEnsureSingle eine echte Loop-Instanz — Ergebnis: zwei
+     * gleichnamige Aufgaben. setPriority/setTitle/setTargetBucket erreichen nur die rec-Instanz,
+     * die Original zeigt weiter "Priorität KI" (manualPriorityScore=null). Fuer den Nutzer sieht
+     * es aus, als wirke die Loop-Aenderung nicht.
+     *
+     * Heilung pro aktivem Template T: jede OFFENE Nicht-Loop-Aufgabe mit exakt T's Titel ist eine
+     * verwaiste Konvertierung.
+     *  - Existiert bereits eine offene rec-Instanz von T  -> die Original ist ein Duplikat:
+     *    Nachtraege auf die rec-Instanz umhaengen, dann Original loeschen.
+     *  - Existiert KEINE rec-Instanz                       -> die Original WIRD die heutige
+     *    Loop-Instanz (rec-ID + source + Template-Prio), damit kuenftige Loop-Aenderungen sie
+     *    erreichen (identisch zum Konvertierungs-Fix in EntryDetailViewModel).
+     *
+     * Exakter Titel-Match ist hier sicher genug: eine normale Aufgabe mit identischem Titel wie
+     * ein aktives Loop-Template entsteht praktisch nur durch genau diese Konvertierung. Idempotent
+     * — ohne verwaiste Duplikate passiert nichts. Reihenfolge respektiert die Followup-FK (CASCADE):
+     * Ziel-Row existiert vor dem Umhaengen, Original wird zuletzt geloescht.
+     */
+    private suspend fun healOrphanedConversions(
+        activeTemplates: List<RecurringTemplateEntity>,
+        now: Long,
+    ) {
+        if (activeTemplates.isEmpty()) return
+        val open = entryRepo.getActive().first().filter { it.status == EntryStatus.OFFEN }
+        if (open.isEmpty()) return
+        val templatesByTitle = activeTemplates.groupBy { it.title.trim() }
+
+        for (orphan in open) {
+            // Nur echte Original-Aufgaben (NICHT-Loop) sind Heilungs-Kandidaten.
+            val isRec =
+                orphan.source == EntrySource.RECURRING_TEMPLATE || orphan.id.startsWith("rec-")
+            if (isRec) continue
+            val template = templatesByTitle[orphan.title.trim()]?.firstOrNull() ?: continue
+            try {
+                val recInstance = open.firstOrNull {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }
+                val prio = template.priorityScore.toDouble()
+                if (recInstance != null) {
+                    for (fu in followupDao.getByEntryId(orphan.id)) {
+                        followupDao.upsert(
+                            fu.copy(id = UUID.randomUUID().toString(), entryId = recInstance.id),
+                        )
+                    }
+                    entryRepo.delete(orphan)
+                    Log.i(
+                        TAG,
+                        "Verwaiste Konvertierung '${orphan.title}' entfernt (Duplikat zu ${recInstance.id}).",
+                    )
+                } else {
+                    val recId = "rec-${template.id}-${midnightOf(now)}"
+                    if (recId == orphan.id) continue
+                    entryRepo.upsert(
+                        orphan.copy(
+                            id = recId,
+                            source = EntrySource.RECURRING_TEMPLATE,
+                            priorityScore = prio,
+                            manualPriorityScore = prio,
+                            updatedAt = now,
+                        ),
+                    )
+                    for (fu in followupDao.getByEntryId(orphan.id)) {
+                        followupDao.upsert(
+                            fu.copy(id = UUID.randomUUID().toString(), entryId = recId),
+                        )
+                    }
+                    entryRepo.delete(orphan)
+                    templateRepo.upsert(
+                        template.copy(
+                            lastGeneratedAt = now,
+                            occurrenceCount = maxOf(template.occurrenceCount, 1),
+                            updatedAt = now,
+                        ),
+                    )
+                    Log.i(
+                        TAG,
+                        "Verwaiste Konvertierung '${orphan.title}' in Loop-Instanz $recId umgewandelt.",
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(
+                    TAG,
+                    "Heilung fuer '${orphan.title}' (${orphan.id}) fehlgeschlagen: ${e.message}",
+                )
+            }
+        }
     }
 
     /** Lokale Mitternacht (00:00) des Tages zu dem [ms] gehoert. */
