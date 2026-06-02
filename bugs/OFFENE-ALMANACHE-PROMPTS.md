@@ -1,195 +1,277 @@
 # Offene Almanache — fertige Recherche-Prompts (Copy-Paste)
 
 > Stand: 2026-06-02. Fuer jeden Bereich OHNE Almanach stehen hier zwei fertige Prompts:
-> einer startet den `bug-almanach-recherche`-Skill (bekannte Bugs + Loesungen), einer den
-> `best-practices`-Skill (wie man es von vornherein richtig macht). Beide gehoeren zusammen
-> (zwei Seiten einer Medaille, siehe `SYSTEM.md` §9). Landkarte aller Bereiche: `README.md`.
+> einer startet den `bug-almanach-recherche`-Skill, einer den `best-practices`-Skill.
+> Landkarte aller Bereiche: `README.md`. Systemverhalten: `SYSTEM.md`.
+
+---
+
+## Die zwei Prompt-Sorten — klar getrennt
+
+Jeder Bereich hat ZWEI Seiten, und jede Prompt-Sorte zielt nur auf EINE davon:
+
+| Prompt-Sorte | Skill | ZIEL — worauf er rein abzielt |
+|--------------|-------|-------------------------------|
+| **🐛 Bug-Prompt** | `bug-almanach-recherche` | **Reine Bugsuche:** was in der Praxis SCHIEFGEHT — bekannte Bugs, Fehler, Abstuerze, Fallstricke, Versions-/Plattform-Fallen + die funktionserhaltende Loesung pro Bug. |
+| **✅ Best-Practices-Prompt** | `best-practices` | **Wie man es RICHTIG macht:** die empfohlene, idiomatische Arbeitsweise — bewaehrte Patterns, offizielle Empfehlungen, Do's & Don'ts, „so arbeitet man am besten damit". |
+
+Beide Prompts sagen ihr Ziel ausdruecklich und grenzen sich gegen die andere Sorte ab,
+damit die Recherche nicht vermischt: Bugs landen im Almanach, Arbeitsweise in best-practices.
 
 ---
 
 ## So benutzt du diese Prompts
 
-1. Oeffne eine neue Claude-Code-Session im Repo (`~/proggs`).
-2. Kopiere EINEN Prompt-Block von unten und fuege ihn als Nachricht ein.
-3. Der genannte Skill startet automatisch, ermittelt die Version live, recherchiert mit
-   einem Researcher-Schwarm, legt die Datei an, traegt sie in `README.md` ein, ergaenzt das
-   Hook-Pfad-Mapping und committet + pusht selbst.
-4. Pro Bereich gibt es zwei Prompts: **zuerst** den Almanach-Prompt, **danach** den
-   Best-Practices-Prompt.
+1. Neue Claude-Code-Session im Repo (`~/proggs`) oeffnen.
+2. EINEN Prompt-Block kopieren und als Nachricht einfuegen.
+3. Der Skill startet, ermittelt die Version live, recherchiert, legt die Datei an, traegt
+   sie ein, ergaenzt das Hook-Mapping und committet + pusht selbst.
+4. Pro Bereich: **zuerst** den 🐛 Bug-Prompt fertig laufen lassen, **danach** den ✅ Best-Practices-Prompt.
 
-## Wichtig: nicht zu viele gleichzeitig (RPM-Schutz)
+## Wichtig: Reihenfolge & RPM-Schutz
 
-- Jeder dieser Prompts startet selbst einen Researcher-Schwarm (5–7 parallele Researcher).
-- Mehrere solcher Sessions GLEICHZEITIG addieren die Researcher → 429/RPM-Absturz-Risiko.
-- **Empfehlung: hoechstens 2–3 dieser Recherche-Sessions parallel laufen lassen.**
-- Fuer DENSELBEN Bereich: erst den Almanach-Prompt fertig laufen lassen, DANN den
-  Best-Practices-Prompt — sie koppeln sich gegenseitig (`SYSTEM.md` §9), nicht gleichzeitig
-  fuer denselben Bereich starten.
+- **Gleicher Bereich nie gleichzeitig:** erst Bug-Almanach fertig + committet, DANN Best-Practices
+  (sie schreiben dieselben Dateien und koppeln sich → sonst Datei-/Push-Konflikt).
+- **Nicht zu viele parallel:** jeder Prompt startet selbst 5–7 Researcher → hoechstens
+  **2–3 Recherche-Sessions gleichzeitig**, sonst 429/RPM-Absturz.
 
 ## Reihenfolge-Empfehlung (nach Hebel)
 
-Gradle ⭐ → Python ⭐ → Jetpack Compose ⭐ → Android-Framework → Firebase/Billing →
-Swift/AppKit → Tampermonkey → TypeScript → Stream-Deck → MCP-Server.
+Python ⭐ → Jetpack Compose ⭐ → Android-Framework → Firebase/Billing → Swift/AppKit →
+Tampermonkey → TypeScript → Stream-Deck → MCP-Server. (Gradle-Best-Practices siehe ganz unten.)
 
 ---
 
-## 1. Gradle / AGP / R8 / KSP (Android-Build)
+## 1. Python (Windows-Encoding & Cross-Platform-Scripting) ⭐
 
-**Bug-Almanach:**
+**🐛 Bug-Prompt:**
 ```
-Starte den Skill bug-almanach-recherche fuer das Android-Build-System: Gradle, Android Gradle Plugin (AGP), R8/ProGuard und KSP. Ermittle die aktuell benutzten Versionen LIVE aus meinen Android-Projekten in ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor (z.B. ./gradlew --version sowie die Versionen in gradle/libs.versions.toml und build.gradle.kts). Lege einen eigenen Almanach bugs/gradle.md an, trage ihn in bugs/README.md (von "ohne Almanach" nach "Vorhandene") ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (build.gradle*, settings.gradle*, gradle.properties, gradle/*). Grenze klar gegen kotlin.md (Sprache) ab — hier nur Build-, Dependency-, R8- und KSP-Themen. Am Ende committen und pushen.
-```
+Starte den Skill bug-almanach-recherche fuer Python (Schwerpunkt Windows-Encoding & Cross-Platform-Scripting).
 
-**Best-Practices:**
-```
-Starte den Best-Practices-Skill fuer das Android-Build-System (Gradle, AGP, R8, KSP) — die Projekt-Code-Seite, NICHT den Claude-Harness. Gleiche gegen die aktuell benutzten Versionen in ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor ab. Speichere unter best-practices/projekt-code/gradle/best-practices.md und koppele die Funde wechselseitig mit dem Bug-Almanach bugs/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
-```
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — und zu jedem die funktionserhaltende Loesung. NICHT um Best Practices/Stil (das laeuft getrennt), sondern um konkrete Fehlerquellen: cp1252-vs-UTF-8, BOM, UnicodeEncodeError beim Schreiben von JSON mit Emojis/Umlauten, fehlendes encoding='utf-8', /c/Users-vs-Windows-Pfade (FileNotFoundError), abgeschnittene Dateien bei Crash ohne atomares Schreiben, venv-/PATH-Fallen. Bei mir schon mehrfach passiert (BOM-Bug 2x).
 
----
-
-## 2. Python (Windows-Encoding & Cross-Platform-Scripting)
-
-**Bug-Almanach:**
-```
-Starte den Skill bug-almanach-recherche fuer Python mit Schwerpunkt Windows-Encoding und Cross-Platform-Scripting: cp1252-vs-UTF-8, BOM, UnicodeEncodeError beim Schreiben von JSON mit Emojis/Umlauten, open(...encoding='utf-8'), Pfad-Probleme (/c/Users vs native Windows-Pfade), atomares Schreiben (temp+rename). Diese Encoding-Fehler sind bei mir schon mehrfach aufgetreten (BOM-Bug 2x). Benutzte Python-Version LIVE ermitteln (python --version). Scripts liegen u.a. in ~/proggs/scripts und ~/proggs/tools. Lege bugs/python-windows.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.py). Am Ende committen und pushen.
+Python-Version LIVE ermitteln (python --version). Scripts liegen u.a. in ~/proggs/scripts und ~/proggs/tools. Lege bugs/python-windows.md an, trage ihn in bugs/README.md (von "ohne Almanach" nach "Vorhandene") ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.py). Am Ende committen und pushen.
 ```
 
-**Best-Practices:**
+**✅ Best-Practices-Prompt:**
 ```
-Starte den Best-Practices-Skill fuer Python auf Windows / Cross-Platform-Scripting (Projekt-Code, nicht Harness): Encoding (immer encoding='utf-8'), atomares Schreiben, Pfad-Handling, venv/Abhaengigkeiten. Speichere unter best-practices/projekt-code/python-windows/best-practices.md und koppele wechselseitig mit bugs/python-windows.md. Am Ende committen und pushen.
+Starte den Best-Practices-Skill fuer Python auf Windows / Cross-Platform-Scripting (Projekt-Code-Seite, NICHT den Claude-Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN PYTHON-SCRIPTING AUF WINDOWS/CROSS-PLATFORM AM BESTEN UND RICHTIG MACHT — die empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs laufen getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: immer encoding='utf-8' + ensure_ascii=False, atomares Schreiben (temp + os.replace), plattformneutrale Pfade (pathlib/os.path statt Hardcoding), saubere venv-/Dependency-Verwaltung, robuste CLI-Struktur, Typ-Hints.
+
+Speichere unter best-practices/projekt-code/python-windows/best-practices.md und koppele wechselseitig mit dem Bug-Almanach bugs/python-windows.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
 ```
 
 ---
 
-## 3. Jetpack Compose (Android-UI)
+## 2. Jetpack Compose (Android-UI) ⭐
 
-**Bug-Almanach:**
+**🐛 Bug-Prompt:**
 ```
-Starte den Skill bug-almanach-recherche fuer Jetpack Compose (Android-UI): Recomposition-Fallen, State-Hoisting, remember/rememberSaveable/derivedStateOf, Modifier-Reihenfolge, LazyColumn/LazyRow (Keys, Scroll-State), Navigation-Compose, Stability/Performance (@Stable, Skippability), Side-Effects (LaunchedEffect/DisposableEffect/SideEffect). Ermittle die benutzte Compose-Version LIVE aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor (Compose-BOM / Compose-Compiler in gradle/libs.versions.toml). Lege bugs/jetpack-compose.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.kt mit @Composable / setContent). Grenze klar gegen kotlin.md (reine Sprache/Coroutines) und android-platform.md (Framework) ab — hier nur Compose-UI. Am Ende committen und pushen.
-```
+Starte den Skill bug-almanach-recherche fuer Jetpack Compose (Android-UI).
 
-**Best-Practices:**
-```
-Starte den Best-Practices-Skill fuer Jetpack Compose (Projekt-Code, nicht Harness): State-Management, Recomposition-Vermeidung, Stability, LazyList-Keys, Theming. Gleiche gegen die benutzte Compose-Version in ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor ab. Speichere unter best-practices/projekt-code/jetpack-compose/best-practices.md und koppele wechselseitig mit bugs/jetpack-compose.md. Am Ende committen und pushen.
-```
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — und zu jedem die funktionserhaltende Loesung. NICHT um Best Practices/Stil (laeuft getrennt), sondern konkrete Fehlerquellen: Recomposition-Schleifen/zu-viele-Recompositions, falsches remember/rememberSaveable (State-Verlust bei Rotation/Navigation), Modifier-Reihenfolge-Bugs, LazyColumn/LazyRow ohne stabile Keys (Scroll-Sprung/Flackern), Side-Effect-Fallen (LaunchedEffect-Key falsch), Instabilitaet/Skippability-Probleme, Crashes.
 
----
-
-## 4. Android-Framework / Platform-SDK
-
-**Bug-Almanach:**
-```
-Starte den Skill bug-almanach-recherche fuer das Android-Framework/Platform-SDK: Activity/Fragment-Lifecycle, Permissions (Runtime + neue API-Level-Restriktionen), Foreground-Services, WorkManager, Room (SQLite, Migrationen, WAL-Checkpoint), Notifications, Intents/PendingIntent (Mutability-Flags), Scoped Storage, Background-Restrictions/Doze. Ermittle compileSdk/targetSdk/minSdk LIVE aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor (build.gradle.kts). Lege bugs/android-platform.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (AndroidManifest.xml und android-spezifische Verzeichnisse). Grenze gegen kotlin.md (Sprache), jetpack-compose.md (UI) und gradle.md (Build) ab — hier nur Framework-/Runtime-Themen. Am Ende committen und pushen.
+Compose-Version LIVE ermitteln aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor (Compose-BOM / Compiler in gradle/libs.versions.toml). Lege bugs/jetpack-compose.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.kt mit @Composable/setContent). Grenze klar gegen kotlin.md (Sprache/Coroutines), android-platform.md (Framework) und gradle.md (Build) ab — hier nur Compose-UI. Am Ende committen und pushen.
 ```
 
-**Best-Practices:**
+**✅ Best-Practices-Prompt:**
 ```
-Starte den Best-Practices-Skill fuer das Android-Framework/Platform-SDK (Projekt-Code, nicht Harness): Lifecycle-sicheres Arbeiten, Room-Migrationen, WorkManager, Permissions, Foreground-Services, Storage. Gleiche gegen compileSdk/targetSdk in ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor ab. Speichere unter best-practices/projekt-code/android-platform/best-practices.md und koppele wechselseitig mit bugs/android-platform.md. Am Ende committen und pushen.
+Starte den Best-Practices-Skill fuer Jetpack Compose (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT JETPACK COMPOSE AM BESTEN UND RICHTIG ARBEITET — empfohlene, idiomatische Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: unidirektionaler Datenfluss + State-Hoisting, stabile/immutable State-Typen fuer Skippability, korrekte remember-/derivedStateOf-Nutzung, LazyList mit stabilen Keys, richtige Side-Effect-API je Fall, Material3-Theming, Performance-Empfehlungen.
+
+Compose-Version aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/jetpack-compose/best-practices.md und koppele wechselseitig mit bugs/jetpack-compose.md. Am Ende committen und pushen.
 ```
 
 ---
 
-## 5. Firebase / Crashlytics / Google Play Billing
+## 3. Android-Framework / Platform-SDK
 
-**Bug-Almanach:**
+**🐛 Bug-Prompt:**
 ```
-Starte den Skill bug-almanach-recherche fuer die Google-Backend-Dienste meiner Android-App: Firebase (Auth, Firestore, Cloud Functions, Crashlytics inkl. Mapping-Upload, FCM, Remote Config) und Google Play Billing (BillingClient, Abos, acknowledgePurchase, Pending Purchases, Proration, Subscription-Status-Validierung). Hauptprojekt: ~/proggs/BestJournalAndroid (nutzt google-services.json + BillingClient). Ermittle die benutzten SDK-Versionen LIVE aus gradle/libs.versions.toml. Lege bugs/firebase-billing.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (google-services.json, BillingClient/Billing-/Subscription-Klassen). Am Ende committen und pushen.
-```
+Starte den Skill bug-almanach-recherche fuer das Android-Framework/Platform-SDK.
 
-**Best-Practices:**
-```
-Starte den Best-Practices-Skill fuer Firebase + Google Play Billing (Projekt-Code, nicht Harness): Crashlytics-Mapping, sichere Billing-Flows, Abo-Status serverseitig validieren, FCM. Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/projekt-code/firebase-billing/best-practices.md und koppele wechselseitig mit bugs/firebase-billing.md. Am Ende committen und pushen.
-```
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: Lifecycle-Crashes (Leaks, Arbeit nach onDestroy), Permission-Fallen bei neuen API-Leveln, Foreground-Service-Restriktionen/ANRs, WorkManager-Eigenheiten, Room-Migrations-Crashes + WAL-Checkpoint, PendingIntent-Mutability-Flags, Scoped-Storage-Bruch, Background-/Doze-Drosselung.
 
----
-
-## 6. Swift / AppKit (macOS-Desktop)
-
-**Bug-Almanach:**
-```
-Starte den Skill bug-almanach-recherche fuer macOS-Desktop-Entwicklung mit Swift und AppKit: Overlay-Fenster (NSWindow/NSPanel, Level/Collection-Behavior), Accessibility-API, globale Hotkeys, Mikrofon/AVFoundation-Permissions, App-Sandbox, ruckelfreie Fenster-Animation. Projekte: ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Swift-Version LIVE ermitteln (swift --version); falls die Session auf Windows laeuft (kein Swift installiert): fuer die aktuelle stabile Swift-/Xcode-Version recherchieren. Lege bugs/swift-appkit.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.swift, *.xcodeproj, Info.plist). Am Ende committen und pushen.
+compileSdk/targetSdk/minSdk LIVE ermitteln aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor (build.gradle.kts). Lege bugs/android-platform.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (AndroidManifest.xml + android-spezifische Verzeichnisse). Grenze gegen kotlin.md, jetpack-compose.md und gradle.md ab — hier nur Framework/Runtime. Am Ende committen und pushen.
 ```
 
-**Best-Practices:**
+**✅ Best-Practices-Prompt:**
 ```
-Starte den Best-Practices-Skill fuer Swift + AppKit (macOS-Desktop, Projekt-Code, nicht Harness): Overlay-Fenster, Concurrency (async/await, Actor), Accessibility, Permissions. Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/projekt-code/swift-appkit/best-practices.md und koppele wechselseitig mit bugs/swift-appkit.md. Am Ende committen und pushen.
+Starte den Best-Practices-Skill fuer das Android-Framework/Platform-SDK (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT DEM ANDROID-FRAMEWORK AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": lifecycle-sicheres Arbeiten (lifecycleScope, repeatOnLifecycle), saubere Room-Migrationsstrategie, korrekter WorkManager-Einsatz, moderner Runtime-Permission-Flow, sauberer Foreground-Service-/Notification-/Scoped-Storage-Umgang, empfohlene App-Architektur.
+
+compileSdk/targetSdk aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android-platform/best-practices.md und koppele wechselseitig mit bugs/android-platform.md. Am Ende committen und pushen.
 ```
 
 ---
 
-## 7. TypeScript / Node
+## 4. Firebase / Crashlytics / Google Play Billing
 
-**Bug-Almanach:**
+**🐛 Bug-Prompt:**
 ```
-Starte den Skill bug-almanach-recherche fuer TypeScript und Node.js: Modul-System (ESM vs CommonJS), async/Promises (unhandled rejections), tsconfig strictness, haeufige Typ-Fallen, npm-/Dependency-Probleme (peer deps, ESM-only Pakete), Bun-Kompatibilitaet. Projekt-Beispiel: ~/proggs/mcp-code-search. Node-/TypeScript-Version LIVE ermitteln (node --version, package.json, tsconfig.json). Lege bugs/typescript.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.ts, *.tsx, tsconfig.json). Am Ende committen und pushen.
-```
+Starte den Skill bug-almanach-recherche fuer die Google-Backend-Dienste meiner Android-App (Firebase + Google Play Billing).
 
-**Best-Practices:**
-```
-Starte den Best-Practices-Skill fuer TypeScript + Node.js (Projekt-Code, nicht Harness): strict-Konfiguration, Modul-Setup, Fehlerbehandlung, Typsicherheit. Speichere unter best-practices/projekt-code/typescript/best-practices.md und koppele wechselseitig mit bugs/typescript.md. Am Ende committen und pushen.
-```
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: google-services.json nicht neu geladen nach Konsolen-Aenderung, Crashlytics-Mapping fehlt/Symbole unleserlich, FCM-Zustellprobleme, BillingClient-Verbindungsabbrueche, vergessenes acknowledgePurchase (Auto-Refund), Pending Purchases, Proration-Fehler, falsche Abo-Status-Synchronisation.
 
----
-
-## 8. Tampermonkey / Userscripts
-
-**Bug-Almanach:**
-```
-Starte den Skill bug-almanach-recherche fuer Tampermonkey/Userscripts: GM_-APIs (@grant), @match/@include-Fallen, unsafeWindow, SPA-DOM-Timing (Elemente noch nicht da), MutationObserver, CSP-Probleme, Background-Throttling (setInterval gedrosselt). Scripts liegen in ~/proggs/Tampermonkey (*.user.js). Beruecksichtige die Tampermonkey-Engine- und Browser-Version. Lege bugs/tampermonkey.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.user.js). Grenze klar gegen chrome-extensions.md (MV3-Erweiterungen) ab — hier nur Userscripts. Am Ende committen und pushen.
+SDK-Versionen LIVE aus ~/proggs/BestJournalAndroid (gradle/libs.versions.toml). Lege bugs/firebase-billing.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (google-services.json, BillingClient/Billing-/Subscription-Klassen). Am Ende committen und pushen.
 ```
 
-**Best-Practices:**
+**✅ Best-Practices-Prompt:**
 ```
-Starte den Best-Practices-Skill fuer Tampermonkey/Userscripts (Projekt-Code, nicht Harness): robustes DOM-Warten, GM_-API-Nutzung, Persistenz, Update-Mechanik. Scripts in ~/proggs/Tampermonkey. Speichere unter best-practices/projekt-code/tampermonkey/best-practices.md und koppele wechselseitig mit bugs/tampermonkey.md. Am Ende committen und pushen.
+Starte den Best-Practices-Skill fuer Firebase + Google Play Billing (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN FIREBASE UND PLAY BILLING AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sichere Billing-Flows (Kauf verifizieren + acknowledgen), Abo-Status serverseitig (Cloud Function / Play Developer API) validieren statt nur lokal, korrekter Crashlytics-Mapping-Upload, sauberer FCM-Umgang, sinnvolle Firestore-Security-Rules.
+
+Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/projekt-code/firebase-billing/best-practices.md und koppele wechselseitig mit bugs/firebase-billing.md. Am Ende committen und pushen.
 ```
 
 ---
 
-## 9. Stream-Deck-Plugin (Elgato)
+## 5. Swift / AppKit (macOS-Desktop)
 
-**Bug-Almanach:**
+**🐛 Bug-Prompt:**
 ```
-Starte den Skill bug-almanach-recherche fuer Elgato-Stream-Deck-Plugin-Entwicklung: Stream Deck SDK, manifest.json (Actions, States), Property Inspector (HTML/JS), WebSocket-Verbindung zum Stream-Deck-Host, Action-Lifecycle (willAppear/keyDown), Node-Backend, Settings-Persistenz. Projekt: ~/proggs/TVO-StreamDeck-Plugin. SDK-/Software-Version aus dem manifest.json ermitteln. Lege bugs/stream-deck.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.sdPlugin/*, Stream-Deck-manifest.json, propertyInspector). Am Ende committen und pushen.
-```
+Starte den Skill bug-almanach-recherche fuer macOS-Desktop-Entwicklung mit Swift und AppKit.
 
-**Best-Practices:**
-```
-Starte den Best-Practices-Skill fuer Elgato-Stream-Deck-Plugins (Projekt-Code, nicht Harness): Action-Lifecycle, bidirektionale Kommunikation Plugin<->Property-Inspector, State-Handling. Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/projekt-code/stream-deck/best-practices.md und koppele wechselseitig mit bugs/stream-deck.md. Am Ende committen und pushen.
-```
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: Overlay-Fenster (NSWindow/NSPanel) bekommt keinen Fokus / falsches Level / verschwindet, Accessibility-API-Berechtigung wird nicht erkannt, globale Hotkeys feuern nicht, Mikrofon/AVFoundation-Permission-Fallen, App-Sandbox blockiert Zugriffe, ruckelnde Fenster-Animation.
 
----
-
-## 10. MCP-Server-Bau
-
-**Bug-Almanach:**
-```
-Starte den Skill bug-almanach-recherche fuer den Bau von MCP-Servern (Model Context Protocol): stdio- vs SSE-Transport, Tool-Schema-Validierung (JSON-Schema), Timeouts, Fehler-Propagation, .mcp.json-Konfiguration (ABSOLUTE Pfade statt nackter Befehlsnamen!), Cross-Platform-Start (Windows vs macOS), Server-Crash-Recovery. Projekt: ~/proggs/mcp-code-search. MCP-SDK-Version aus package.json bzw. Cargo.toml ermitteln. Lege bugs/mcp-server.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (.mcp.json, MCP-Server-Quellen). Grenze gegen claude-hooks.md ab. Am Ende committen und pushen.
+Swift-Version LIVE ermitteln (swift --version); falls Session auf Windows laeuft: fuer die aktuelle stabile Swift-/Xcode-Version recherchieren. Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Lege bugs/swift-appkit.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.swift, *.xcodeproj, Info.plist). Am Ende committen und pushen.
 ```
 
-**Best-Practices:**
+**✅ Best-Practices-Prompt:**
 ```
-Starte den Best-Practices-Skill fuer den Bau von MCP-Servern (Projekt-Code, nicht Harness): Transport-Wahl, Tool-Schema-Design, Fehlerbehandlung, .mcp.json mit absoluten Pfaden, Cross-Platform. Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/projekt-code/mcp-server/best-practices.md und koppele wechselseitig mit bugs/mcp-server.md. Am Ende committen und pushen.
+Starte den Best-Practices-Skill fuer Swift + AppKit (macOS-Desktop, Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT SWIFT/APPKIT AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": idiomatische Overlay-Fenster-Konfiguration (Level/Collection-Behavior), moderne Swift-Concurrency (async/await, Actors, @MainActor), saubere Accessibility-Integration, korrektes Permission-Handling, empfohlene App-Architektur (MVVM).
+
+Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/projekt-code/swift-appkit/best-practices.md und koppele wechselseitig mit bugs/swift-appkit.md. Am Ende committen und pushen.
 ```
 
 ---
 
-## Optionale Vertiefung (kein eigener Almanach noetig)
+## 6. TypeScript / Node
 
-- **PowerShell-Scripting allgemein** (ausserhalb von Hooks, z.B. Overlay-Start-/Stop-Scripts):
-  waechst zunaechst als Abschnitt in `claude-hooks.md`. Bei genug Eigenleben spaeter als
-  `powershell.md` ausgliedern.
+**🐛 Bug-Prompt:**
+```
+Starte den Skill bug-almanach-recherche fuer TypeScript und Node.js.
+
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: ESM-vs-CommonJS-Bruch, unhandled Promise rejections, falsche tsconfig (kein strict), Typ-Fallen (any-Leaks, falsche Generics), npm/peer-dependency-Konflikte, ESM-only-Pakete in CJS, Bun-Kompatibilitaetsprobleme.
+
+Node-/TypeScript-Version LIVE ermitteln (node --version, package.json, tsconfig.json). Beispielprojekt ~/proggs/mcp-code-search. Lege bugs/typescript.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.ts, *.tsx, tsconfig.json). Am Ende committen und pushen.
+```
+
+**✅ Best-Practices-Prompt:**
+```
+Starte den Best-Practices-Skill fuer TypeScript + Node.js (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT TYPESCRIPT/NODE AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": strikte tsconfig, sauberes ESM-Setup, typsichere Patterns (kein any, korrekte Generics/Utility-Types), robuste async-Fehlerbehandlung, Dependency-Hygiene.
+
+Speichere unter best-practices/projekt-code/typescript/best-practices.md und koppele wechselseitig mit bugs/typescript.md. Am Ende committen und pushen.
+```
+
+---
+
+## 7. Tampermonkey / Userscripts
+
+**🐛 Bug-Prompt:**
+```
+Starte den Skill bug-almanach-recherche fuer Tampermonkey/Userscripts.
+
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: GM_-API ohne @grant, @match/@include greift nicht, unsafeWindow-Probleme, SPA-DOM-Timing (Element noch nicht da), MutationObserver-Lecks, CSP blockiert Inline-Code, setInterval/setTimeout-Drosselung in Hintergrund-Tabs.
+
+Scripts in ~/proggs/Tampermonkey (*.user.js). Tampermonkey-Engine-/Browser-Version beruecksichtigen. Lege bugs/tampermonkey.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.user.js). Grenze klar gegen chrome-extensions.md (MV3) ab — hier nur Userscripts. Am Ende committen und pushen.
+```
+
+**✅ Best-Practices-Prompt:**
+```
+Starte den Best-Practices-Skill fuer Tampermonkey/Userscripts (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN USERSCRIPTS AM BESTEN UND RICHTIG SCHREIBT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": robustes Warten aufs DOM (MutationObserver-Pattern statt fixe Delays), korrekter @grant/GM_-API-Einsatz, saubere Persistenz (GM_setValue), wartbare Skript-Struktur, sichere Update-Mechanik (@version/@updateURL).
+
+Scripts in ~/proggs/Tampermonkey. Speichere unter best-practices/projekt-code/tampermonkey/best-practices.md und koppele wechselseitig mit bugs/tampermonkey.md. Am Ende committen und pushen.
+```
+
+---
+
+## 8. Stream-Deck-Plugin (Elgato)
+
+**🐛 Bug-Prompt:**
+```
+Starte den Skill bug-almanach-recherche fuer Elgato-Stream-Deck-Plugin-Entwicklung.
+
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: manifest.json-Fehler (Actions/States), WebSocket-Verbindung zum Host bricht ab, Property-Inspector zeigt/sendet keine Settings, Action-Lifecycle-Events (willAppear/keyDown) feuern nicht/doppelt, Settings-Persistenz verloren, Node-Backend-Crash.
+
+Projekt ~/proggs/TVO-StreamDeck-Plugin. SDK-/Software-Version aus manifest.json ermitteln. Lege bugs/stream-deck.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.sdPlugin/*, Stream-Deck-manifest.json, propertyInspector). Am Ende committen und pushen.
+```
+
+**✅ Best-Practices-Prompt:**
+```
+Starte den Best-Practices-Skill fuer Elgato-Stream-Deck-Plugins (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN STREAM-DECK-PLUGINS AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sauberer Action-Lifecycle, korrekte bidirektionale Kommunikation Plugin<->Property-Inspector, robuste Settings-Persistenz, empfohlene Projekt-/Manifest-Struktur, offizielle SDK-Konventionen.
+
+Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/projekt-code/stream-deck/best-practices.md und koppele wechselseitig mit bugs/stream-deck.md. Am Ende committen und pushen.
+```
+
+---
+
+## 9. MCP-Server-Bau
+
+**🐛 Bug-Prompt:**
+```
+Starte den Skill bug-almanach-recherche fuer den Bau von MCP-Servern (Model Context Protocol).
+
+ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: stdio-vs-SSE-Transport-Fehler, ungueltiges Tool-Schema (Client lehnt ab), Timeouts, Fehler werden verschluckt statt propagiert, .mcp.json mit nackten Befehlsnamen statt absoluten Pfaden (startet nicht), Cross-Platform-Start-Fehler (Windows vs macOS), Server-Crash ohne Recovery.
+
+Projekt ~/proggs/mcp-code-search. MCP-SDK-Version aus package.json/Cargo.toml ermitteln. Lege bugs/mcp-server.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (.mcp.json, MCP-Server-Quellen). Grenze gegen claude-hooks.md ab. Am Ende committen und pushen.
+```
+
+**✅ Best-Practices-Prompt:**
+```
+Starte den Best-Practices-Skill fuer den Bau von MCP-Servern (Projekt-Code-Seite, NICHT Harness).
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MCP-SERVER AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": passende Transport-Wahl (stdio vs SSE), sauberes Tool-Schema-Design (klare Beschreibungen, enge Typen), korrekte Fehler-Propagation, .mcp.json mit absoluten Pfaden, Cross-Platform-tauglicher Start, sinnvolle Tool-Granularitaet.
+
+Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/projekt-code/mcp-server/best-practices.md und koppele wechselseitig mit bugs/mcp-server.md. Am Ende committen und pushen.
+```
+
+---
+
+## Gradle — nur noch Best-Practices offen (Almanach ✅ fertig)
+
+Der Bug-Almanach `bugs/gradle.md` existiert bereits (Stand 2026-06-02, ~67 Bugs). Es fehlt
+nur noch die Best-Practices-Seite:
+
+**✅ Best-Practices-Prompt:**
+```
+Starte den Best-Practices-Skill fuer das Android-Build-System (Gradle, AGP, R8, KSP) — Projekt-Code-Seite, NICHT Harness.
+
+ZIEL = BEST PRACTICES: Recherchiere, WIE MAN GRADLE/AGP AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs stehen schon in bugs/gradle.md), sondern "so macht man es richtig": Version-Catalog (libs.versions.toml) konsequent nutzen, Configuration-Cache + Build-Cache aktivieren, saubere Dependency-Deklaration (api vs implementation), korrekte R8/ProGuard-Regel-Pflege, modulare Projektstruktur, schnelle Builds.
+
+Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/gradle/best-practices.md und koppele wechselseitig mit dem bestehenden Bug-Almanach bugs/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
+```
+
+---
 
 ## Fortschritt abhaken
 
-| Bereich | Almanach erledigt | Best-Practices erledigt |
-|---------|:-----------------:|:-----------------------:|
-| 1. Gradle | ⬜ | ⬜ |
-| 2. Python-Windows | ⬜ | ⬜ |
-| 3. Jetpack Compose | ⬜ | ⬜ |
-| 4. Android-Platform | ⬜ | ⬜ |
-| 5. Firebase/Billing | ⬜ | ⬜ |
-| 6. Swift/AppKit | ⬜ | ⬜ |
-| 7. TypeScript/Node | ⬜ | ⬜ |
-| 8. Tampermonkey | ⬜ | ⬜ |
-| 9. Stream-Deck | ⬜ | ⬜ |
-| 10. MCP-Server | ⬜ | ⬜ |
+| Bereich | 🐛 Bug-Almanach | ✅ Best-Practices |
+|---------|:---------------:|:-----------------:|
+| Gradle | ✅ fertig | ⬜ |
+| Python-Windows | ⬜ | ⬜ |
+| Jetpack Compose | ⬜ | ⬜ |
+| Android-Platform | ⬜ | ⬜ |
+| Firebase/Billing | ⬜ | ⬜ |
+| Swift/AppKit | ⬜ | ⬜ |
+| TypeScript/Node | ⬜ | ⬜ |
+| Tampermonkey | ⬜ | ⬜ |
+| Stream-Deck | ⬜ | ⬜ |
+| MCP-Server | ⬜ | ⬜ |
+
+## Optionale Vertiefung (kein eigener Almanach noetig)
+
+- **PowerShell-Scripting allgemein** (ausserhalb von Hooks): waechst zunaechst als Abschnitt
+  in `claude-hooks.md`. Bei genug Eigenleben spaeter als `powershell.md` ausgliedern.
