@@ -32,6 +32,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-02 | 73 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
 | **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 | **Kotlin** (Sprache/K2 + Coroutines + Compose-Kontext) | [`kotlin.md`](kotlin.md) | 2026-06-02 | ~46 | `*.kt`, `*.kts` (ausser `build/settings.gradle.kts` → Gradle), `AndroidManifest.xml` · „Kotlin", „K2", „Coroutines", „Flow", „Compose", „Android" |
+| **Jetpack Compose** (Android-UI) | [`jetpack-compose.md`](jetpack-compose.md) | 2026-06-02 | ~74 | `*.kt` mit `@Composable`/`setContent` · „Compose", „Recomposition", „remember", „rememberSaveable", „LazyColumn", „Modifier", „LaunchedEffect", „Material3", „navigation-compose" |
 | **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`dotnet-csharp.md`](dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
 | **Build — Gradle / AGP / R8·ProGuard / KSP** | [`gradle.md`](gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`python-windows.md`](python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
@@ -49,7 +50,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| ⭐ | **Jetpack Compose** (Android-UI) | `jetpack-compose.md` | `*.kt` mit `@Composable`/`setContent` · „Compose", „Recomposition", „remember", „LazyColumn", „Modifier" |
 | · | **Android-Framework / Platform** | `android-platform.md` | `AndroidManifest.xml`, Lifecycle/Room/WorkManager · „Lifecycle", „Room", „WorkManager", „Permission", „Service" |
 | · | **Firebase / Crashlytics / Play Billing** | `firebase-billing.md` | `google-services.json`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Billing", „Paywall" |
 | · | **macOS-Desktop — Swift / AppKit** | `swift-appkit.md` | `*.swift`, `*.xcodeproj`, `Info.plist` · „Swift", „AppKit", „SwiftUI" |

@@ -197,6 +197,12 @@ oder entfernen, ggf. `-jvm-default=disable`.
 
 ---
 
+> **Abgrenzung (NEU 2026-06-02):** Die Abschnitte 6–9 sind die **kompakten Compose-Grundlagen
+> im Kotlin-Kontext**. Der **vollstaendige, tiefe Compose-UI-Almanach** (~74 Bugs: Recomposition,
+> State, Side-Effects, Lazy/Pager, Modifier, Crashes, navigation-compose, Material3, Animation,
+> Performance/Tooling) ist **`bugs/jetpack-compose.md`** — bei echter Compose-UI-Arbeit DORT
+> nachschlagen. Bezugstabelle siehe Ende von `jetpack-compose.md`.
+
 ## 6. Jetpack Compose — Recomposition & Stabilitaet
 
 ### 6.1 Instabile Parameter erzwingen Recomposition  ⭐ HAEUFIG

@@ -59,7 +59,33 @@ case "$fpl" in
     *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
         slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
     *.kt|*.kts|*androidmanifest.xml)
-        slug="kotlin"; file="kotlin.md"; name="Kotlin (Sprache/K2/Coroutines/Compose-Kontext)";;
+        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
+        # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
+        composeSignal=0
+        case "$fpl" in
+          *.kt|*.kts)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in *@Composable*|*setContent*) composeSignal=1;; esac
+            ;;
+        esac
+        if [ "$composeSignal" -eq 1 ]; then
+            slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
+        else
+            slug="kotlin"; file="kotlin.md"; name="Kotlin (Sprache/K2/Coroutines/Compose-Kontext)"
+        fi
+        ;;
     *.swift)
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
     *.ts|*.tsx|*tsconfig.json)

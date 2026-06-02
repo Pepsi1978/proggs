@@ -65,7 +65,25 @@ try {
     } elseif ($fpl -match 'build\.gradle(\.kts)?$' -or $fpl -match 'settings\.gradle(\.kts)?$' -or $fpl -match '/gradle/' -or $fpl -match 'gradle\.properties$' -or $fpl -match 'gradle-wrapper') {
         $slug = 'gradle'; $file = 'gradle.md'; $name = 'Build - Gradle (AGP/R8)'
     } elseif ($fpl -match '\.kts?$' -or $fpl -match 'androidmanifest\.xml$') {
-        $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
+        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
+        # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
+        $composeSignal = $false
+        if ($fpl -match '\.kts?$') {
+            $probe = ""
+            try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            if ($probe -match '@Composable' -or $probe -match 'setContent') { $composeSignal = $true }
+        }
+        if ($composeSignal) {
+            $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
+        } else {
+            $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
+        }
     } elseif ($fpl -match '\.swift$') {
         $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
