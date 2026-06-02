@@ -26,7 +26,7 @@ fpl=$(echo "$fp" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
 # -- Read-Zweig: "gelesen"-Marker setzen, NIE blockieren --
 # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin").
 if [ "$tool" = "Read" ]; then
-    almName=$(echo "$fpl" | sed -n 's#.*/bugs/\([^/]*\)\.md$#\1#p')
+    almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/([^/]+)\.md$#\2#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
         touch "$TMP/bug-almanac-read-$almName.flag" 2>/dev/null || true
     fi

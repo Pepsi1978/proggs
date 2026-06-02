@@ -31,7 +31,7 @@ try {
     # ── Read-Zweig: "gelesen"-Marker setzen, NIE blockieren ──
     # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin").
     if ($tool -eq 'Read') {
-        if ($fpl -match '/bugs/([^/]+)\.md$') {
+        if ($fpl -match '(?:^|/)bugs/([^/]+)\.md$') {
             $almName = $Matches[1]
             if ($almName -ne 'readme' -and $almName -ne 'system') {
                 $rm = Join-Path $env:TEMP ("bug-almanac-read-" + $almName + ".flag")
