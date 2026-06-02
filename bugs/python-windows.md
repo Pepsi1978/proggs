@@ -44,6 +44,24 @@
 
 ---
 
+## 🔗 Bezugs-Tabelle: Bug-Almanach ↔ Best-Practice
+
+> Zweite Seite der Medaille: `best-practices/projekt-code/python-windows/best-practices.md` sagt
+> *wie man es von vornherein richtig macht, damit der Bug gar nicht erst entsteht*.
+
+| Bug-Abschnitt (diese Datei) | Best-Practice-Gegenpart in `best-practices/projekt-code/python-windows/` |
+|---|---|
+| §1 Encoding-Defaults (1.1–1.9: cp1252 / print / json / subprocess / logging / Buffering) | §1 Encoding & Text-/JSON-I/O (1.1–1.9) |
+| §2 UTF-8 BOM (2.1) | §1.2 BOM-behaftete Dateien lesen (`utf-8-sig`) |
+| §3 Pfade (3.1–3.7: Git-Bash-Pfade / Escape / MAX_PATH / Reserved / pathlib) | §3 Pfade plattformneutral & Cross-Platform-Mechanik (3.1–3.9) |
+| §4 Zeilenenden / CSV (4.1–4.2) | §1.4 Newline-Handling fuer generierte Dateien |
+| §5 Atomares Schreiben / Datei-Korruption (5.1–5.9) | §2 Atomares & crash-sicheres Datei-Schreiben (2.1–2.11) |
+| §6 venv / PATH / Interpreter (6.1–6.6) | §4 venv & Dependency-Management (4.1–4.10) |
+| §7 subprocess / Shell-Mechanik (7.1–7.2) | §3.7 subprocess cross-platform (Listen-Args, kein shell/shlex) |
+| §8 Fix-Status & Versions-Denken | §1.9 (PEP 686 Ausblick) + §6.11/§6.12 (3.13-Neuerungen, EncodingWarning) |
+
+---
+
 ## 1. Encoding-Defaults (cp1252) — die Kern-Fehlerklasse
 
 ### 1.1 `open()` ohne `encoding=` nutzt cp1252 statt UTF-8  ⭐ HAEUFIG (Nr.1-Ursache)

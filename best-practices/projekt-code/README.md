@@ -23,12 +23,13 @@ projekt-code/
 ├── dotnet-csharp/best-practices.md
 ├── chrome-extensions/best-practices.md   ← Chrome/Edge MV3 (Stand 2026-06-02, Chrome 148)
 ├── gradle/best-practices.md       ← Android-Build-System Gradle/AGP/R8/KSP (Stand 2026-06-02)
+├── python-windows/best-practices.md   ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
 ├── swift/best-practices.md        ← entsteht bei Bedarf
 └── …                              ← ein Unterordner pro Software, entsteht bei Bedarf
 ```
 
-Vorhandene Software-Ordner: **kotlin**, **dotnet-csharp**, **chrome-extensions**, **gradle**
-(jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
+Vorhandene Software-Ordner: **kotlin**, **dotnet-csharp**, **chrome-extensions**, **gradle**,
+**python-windows** (jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
 
 Jede Datei beginnt mit `# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.
 
