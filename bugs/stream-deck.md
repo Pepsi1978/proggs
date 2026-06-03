@@ -116,6 +116,13 @@
 **FIX:** Immer beide Groessen liefern, quadratisch (nicht-quadratische werden gestreckt), Action-Icons monochrom-transparent.
 **Quelle:** docs.elgato.com/streamdeck/sdk/references/manifest/ · docs.elgato.com/guidelines/stream-deck/plugins/
 
+### B2. (SD+) Touch-Strip-Layout laedt GAR NICHT bei Out-of-bounds-Items / zu kleinen Touch-Targets
+**Symptom:** Custom-Touch-Strip-Layout (Stream Deck +) wird nicht angezeigt; `setFeedback` wirkt ins Leere.
+**Ursache:** Ein Layout-Item ragt aus dem **200×100-px-Canvas** heraus, ODER ein interaktives Element ist kleiner als das **Mindest-Touch-Target 35×35 px** → das Layout wird verworfen (kein Teil-Render).
+**Versionen:** SD+ ab Software 6.0, per Design.
+**FIX:** Alle Items im 200×100-Canvas halten, Touch-Targets ≥ 35×35 px, Layout vor Auslieferung mit `streamdeck validate` pruefen. (Best-Practice: `best-practices/projekt-code/stream-deck/best-practices.md` Abschnitt J.)
+**Quelle:** docs.elgato.com/streamdeck/sdk/references/touch-strip-layout/ · docs.elgato.com/streamdeck/sdk/guides/dials/
+
 ---
 
 ## C. WebSocket-Handshake & Reconnect (klassisches SDK)
@@ -707,6 +714,25 @@ Direkt nach `keyDown` kam ein noch laufender Poll-Response mit dem ALTEN State z
 
 ## Wechselseitige Bezugstabelle (Almanach ↔ Best Practices)
 
-> Noch keine `best-practices/projekt-code/stream-deck/` angelegt — Frank hat diesen Lauf bewusst auf REINE
-> Bugsuche beschraenkt. Sobald ein separater Best-Practices-Lauf fuer Stream Deck erfolgt, hier die
-> Abschnitts-Bezuege ergaenzen (Bug-Abschnitt ↔ Best-Practice-Abschnitt), analog zu `firebase-billing.md`.
+> Gegenstueck: [`best-practices/projekt-code/stream-deck/best-practices.md`](../best-practices/projekt-code/stream-deck/best-practices.md)
+> (angelegt 2026-06-03). Verknuepft jeden Bug-Abschnitt mit der praeventiven Best-Practice.
+
+| Bug-Abschnitt (hier) | Best-Practice-Abschnitt (best-practices/.../stream-deck) |
+|----------------------|----------------------------------------------------------|
+| A1–A10 (manifest/UUID/Pfade/States) | A. Projekt-/Manifest-Struktur & SDK-Wahl |
+| B1 (Icon-Specs/@2x), O1 | I. Icons / Images |
+| B2 (SD+ Touch-Layout) | J. SD+ Encoder & Touchscreen |
+| C1–C5 (Handshake/Reconnect) | D. WebSocket-Connect & Reconnect |
+| D1, D2, D5, D6 (Lifecycle) | B. Action-Lifecycle |
+| D3, D4, E4, G10 (context/Ghost) | C. Context-Management & State |
+| E1, E2, E3, E5 (States/Titel) + Z1/Z4/Z5 | H. States, setTitle & SVG-Rendering |
+| F1, F4, F5, F6 (Property Inspector) | F. Property Inspector UI (sdpi) |
+| F2, F3, H1–H4 (PI↔Plugin-Komm.) | E. PI ↔ Plugin-Kommunikation |
+| G1–G10 (Settings-Persistenz) | G. Settings-Persistenz |
+| G5, N2 (Secrets) | Q. Sicherheit |
+| I1–I7 (Node-Sandbox/Crash) | K. Node.js-Backend Sandbox-konform |
+| J1, J3, J4, J5, I6 (CLI/Build) | N. Build-Toolchain & CLI |
+| J6, J7, L1 (Logging/Debug) | M. Logging & Debugging |
+| K1–K7 (Packaging/Distribution) | O. Distribution & Packaging |
+| M1, M2 (Throttling/Push) + Z6/Z7 | L. Performance & Push-statt-Poll |
+| O1–O4, A4 (Marketplace) | P. Marketplace-Konventionen |
