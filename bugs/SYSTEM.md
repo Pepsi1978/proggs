@@ -21,18 +21,28 @@ jeder erlebte Bug verdichtet einen bestehenden. Verwandt — aber getrennt:
 
 ---
 
-## 2. Ordnerstruktur
+## 2. Ordnerstruktur (seit 2026-06-03: Kategorie-Unterordner)
 
 ```
 ~/proggs/bugs/
-├── README.md            ← Inhaltsverzeichnis: vorhandene + erwartete Bereiche, Trigger
-├── SYSTEM.md            ← dieses Dokument
-├── chrome-extensions.md ← ein Almanach pro Bereich (flach, eine Datei = ein Thema)
-└── …
+├── README.md                    ← Inhaltsverzeichnis (nach Kategorie gruppiert), Trigger
+├── SYSTEM.md                    ← dieses Dokument
+├── OFFENE-ALMANACHE-PROMPTS.md  ← fertige Recherche-Prompts fuer offene Bereiche
+├── check-coupling.py            ← Health-Check der Bug↔Best-Practices-Kopplung
+├── android/                     ← Kategorie-Ordner (eine Datei = ein Thema)
+│   ├── kotlin.md · jetpack-compose.md · android-platform.md · firebase-billing.md
+├── android-build/               ← gradle.md · r8.md
+├── desktop/                     ← dotnet-csharp.md · swift-appkit.md
+├── web/                         ← chrome-extensions.md · typescript.md
+├── peripherie/                  ← stream-deck.md
+└── claude-tooling/              ← claude-hooks.md · mcp-server.md · python-windows.md
 ```
 
-Eine Datei pro Thema, flach. Kein Unterordner pro Thema, solange ein Thema in eine
-Datei passt (YAGNI). Aufbau einer Almanach-Datei: siehe Format-Vorlage in `README.md`.
+Almanache liegen in **Kategorie-Unterordnern** (`bugs/<kategorie>/<bereich>.md`), eine
+Datei pro Thema. Die Kategorien gruppieren nach Software-Typ und halten den wachsenden
+Bestand uebersichtlich. Die Hooks und `check-coupling.py` suchen **rekursiv** — der
+Kategorie-Ordner einer Datei ist frei waehlbar und aenderbar, ohne dass ein Hook
+angepasst werden muss. Aufbau einer Almanach-Datei: siehe Format-Vorlage in `README.md`.
 
 ---
 
@@ -51,7 +61,7 @@ drei Schichten, die unabhaengig voneinander greifen:
 Beide Hooks: Cross-Platform (`.ps1` + `.sh`). Der Index-Hook ist nicht blockierend
 (injiziert nur Kontext). Der Guard-Hook ist seit 2026-06-02 **blockierend** (Stufe 2):
 er stoppt Edit/Write per `permissionDecision:deny` + `exit 0` (NICHT `exit 2` — das
-blockt Write/Edit nicht, siehe bugs/claude-hooks.md 1.6), bis der Almanach des Bereichs
+blockt Write/Edit nicht, siehe bugs/claude-tooling/claude-hooks.md 1.6), bis der Almanach des Bereichs
 in dieser Session gelesen wurde. FAIL-OPEN: jeder interne Hook-Fehler → durchlassen,
 nie faelschlich blockieren. Notaus via `bug-almanac-disable.flag` im TEMP-Verzeichnis.
 Registriert in `~/.claude/settings.json`, gespiegelt in
@@ -125,19 +135,24 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 
 ## 8. So erweiterst du das System (neuen Almanach hinzufuegen)
 
-1. Datei `bugs/<bereich>.md` nach der Format-Vorlage anlegen.
-2. In `README.md` aus „Bereiche ohne Almanach" nach „Vorhandene Almanache"
-   verschieben (mit Stand, Bug-Anzahl, Trigger).
-3. Im `bug-almanac-guard`-Hook das Pfad-Mapping ergaenzen (Dateimuster → Almanach).
-4. Existiert eine `best-practices/projekt-code/<bereich>/best-practices.md`: die wechselseitige
-   Bezugs-Tabelle in BEIDEN Dateien anlegen (siehe §9) und `python3 bugs/check-coupling.py` ausfuehren.
+1. Passende **Kategorie** waehlen (android, android-build, desktop, web, peripherie,
+   claude-tooling) — oder, wenn nichts passt, eine neue Kategorie anlegen. Datei
+   `bugs/<kategorie>/<bereich>.md` nach der Format-Vorlage anlegen.
+2. In `README.md` unter der passenden Kategorie eintragen (aus „Bereiche ohne Almanach"
+   nach „Vorhandene Almanache"; Stand, Bug-Anzahl, Trigger).
+3. Im `bug-almanac-guard`-Hook NUR dann etwas tun, wenn es ein NEUES Dateimuster gibt
+   (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE Kategorie — der Hook findet die
+   Datei rekursiv). Ein blosser Kategorie-Wechsel braucht KEINE Hook-Aenderung.
+4. Existiert eine `best-practices/projekt-code/<kategorie>/<bereich>/best-practices.md`: die
+   wechselseitige Bezugs-Tabelle in BEIDEN Dateien anlegen (siehe §9) und
+   `python3 bugs/check-coupling.py` ausfuehren.
 
 ---
 
 ## 9. Kopplung mit den Best-Practices (zwei Seiten einer Medaille)
 
 Der Bug-Almanach sagt *was schiefgeht und wie man es loest*; der Ordner
-`~/proggs/best-practices/projekt-code/<software>/best-practices.md` sagt *wie man es von
+`~/proggs/best-practices/projekt-code/<kategorie>/<software>/best-practices.md` sagt *wie man es von
 vornherein richtig macht, damit der Bug nie entsteht*. Beide gehoeren zusammen und werden in
 BEIDE Richtungen gepflegt — keine Einbahnstrasse:
 
@@ -165,8 +180,12 @@ Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
 
 ## 10. Bewusste Grenzen von v1 (kommende Verbesserungen)
 
-- Das Pfad-Mapping im Guard-Hook ist aktuell hartkodiert (klein, erweiterbar).
-  Spaeter evtl. aus `README.md` auslesen, damit nur eine Stelle gepflegt werden muss.
+- Das Dateimuster→Almanach-Mapping im Guard-Hook ist weiterhin hartkodiert (welcher
+  Dateipfad/welche Endung zu welchem Almanach gehoert) — klein, erweiterbar. Der
+  KATEGORIE-Pfad eines Almanachs ist hingegen seit 2026-06-03 NICHT mehr hartkodiert:
+  der Hook sucht die Almanach-Datei rekursiv unter `bugs/` (kategorie-robust). Spaeter
+  evtl. auch das Dateimuster-Mapping aus `README.md` auslesen, damit nur eine Stelle
+  gepflegt werden muss.
 - Schwellen-Erkennung („echte Bereichsarbeit vs. Kleinkram") laeuft ueber mein
   Urteil; falls das in der Praxis zu oft daneben liegt, schaerfen wir nach.
 - Das System wird in Aktion erprobt und nach Direktive #1 (Superintelligenz)

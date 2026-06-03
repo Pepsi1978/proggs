@@ -8,7 +8,7 @@ Kopiere es, passe die markierten Stellen an, und entferne die Kommentar-Markieru
 > das `exit 0` am Dateiende wird NIE erreicht. Folge: Hook gibt non-zero zurueck → "hook error".
 > Deshalb gehoert `exit 0` IN jeden ERR-trap (nicht nur ans Dateiende). So endet der Hook bei
 > JEDEM unerwarteten Fehler graceful. (Eigener Vorfall 2026-06-01: bug-almanac-Hooks hatten
-> genau diesen Bug; siehe bugs/claude-hooks.md 13.4.)
+> genau diesen Bug; siehe bugs/claude-tooling/claude-hooks.md 13.4.)
 
 ```bash
 #!/usr/bin/env bash
@@ -71,7 +71,7 @@ exit 0
 
 > stdin per **python3** parsen, NICHT per `jq`: jq ist eine optionale Abhaengigkeit, die auf
 > frischen macOS-Systemen und unter Git-Bash oft fehlt — dann liefert es leere Werte und der
-> Hook versagt stumm (bugs/claude-hooks.md 13.2). python3 ist praktisch ueberall vorhanden.
+> Hook versagt stumm (bugs/claude-tooling/claude-hooks.md 13.2). python3 ist praktisch ueberall vorhanden.
 
 ```bash
 #!/usr/bin/env bash

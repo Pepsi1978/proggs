@@ -18,9 +18,13 @@ try {
     $bugsDir = Join-Path $env:USERPROFILE "proggs/bugs"
     if (-not (Test-Path $bugsDir)) { exit 0 }
 
-    $almanachs = Get-ChildItem -Path $bugsDir -Filter "*.md" -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -ne "README.md" -and $_.Name -ne "SYSTEM.md" } |
-        Select-Object -ExpandProperty Name
+    # Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>.md). Rekursiv sammeln und
+    # als relativen Pfad ab bugs/ anzeigen; alles direkt in bugs/ (README/SYSTEM/OFFENE-*) hat keinen
+    # '/' im Relativpfad und faellt damit automatisch raus (robust gegen Slash-Normalisierung).
+    $almanachs = Get-ChildItem -Path $bugsDir -Recurse -Filter "*.md" -File -ErrorAction SilentlyContinue |
+        ForEach-Object { ($_.FullName -replace '\\','/') -replace '.*?/bugs/', '' } |
+        Where-Object { $_ -match '/' } |
+        Sort-Object
     $list = if ($almanachs) { ($almanachs -join ", ") } else { "(noch keine)" }
     $count = if ($almanachs) { @($almanachs).Count } else { 0 }
 

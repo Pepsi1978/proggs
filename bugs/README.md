@@ -9,13 +9,38 @@
 
 ---
 
+## Ordnerstruktur (seit 2026-06-03: nach Kategorien sortiert)
+
+Die Almanache liegen in **Kategorie-Unterordnern** (`bugs/<kategorie>/<bereich>.md`),
+gruppiert nach Software-Typ. Das haelt den wachsenden Bestand uebersichtlich. Die
+beiden Such-/Schutz-Hooks (`bug-almanac-index`, `bug-almanac-guard`) und
+`check-coupling.py` finden Almanache **rekursiv** — eine Datei darf jederzeit die
+Kategorie wechseln, ohne dass ein Hook angefasst werden muss.
+
+```
+bugs/
+├── README.md · SYSTEM.md · OFFENE-ALMANACHE-PROMPTS.md · check-coupling.py   (oben, kategorielos)
+├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing
+├── android-build/    Gradle/AGP, R8/ProGuard
+├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS)
+├── web/              Chrome-Erweiterungen, TypeScript/Node  (+ Tampermonkey geplant)
+├── peripherie/       Elgato Stream-Deck-Plugin
+└── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
+```
+
+Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
+`best-practices/projekt-code/<kategorie>/<software>/best-practices.md`.
+
+---
+
 ## So funktioniert es (Kurzfassung)
 
 1. **Vor** echter Arbeit an einem technischen Bereich: pruefen, ob es hier einen
    Almanach fuer den Bereich gibt (diese Liste).
 2. **Almanach vorhanden** → komplett lesen, Versionen abgleichen, DANN arbeiten.
 3. **Kein Almanach** → Frank Bescheid geben, auf sein **OK** warten, dann die
-   bekannten Bugs des Bereichs recherchieren und hier einen neuen Almanach anlegen.
+   bekannten Bugs des Bereichs recherchieren und im passenden Kategorie-Ordner einen
+   neuen Almanach anlegen.
 4. **Neuen Bug erlebt** → in den passenden Almanach eintragen (Bug + Loesung + Version).
 
 Drei Automatik-Schichten sorgen dafuer, dass das in **jeder** Session laeuft:
@@ -25,48 +50,74 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 ---
 
-## ✅ Vorhandene Almanache
+## ✅ Vorhandene Almanache (nach Kategorie)
+
+### 📱 `android/` — Android-App-Entwicklung
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
-| **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`chrome-extensions.md`](chrome-extensions.md) | 2026-06-02 | 73 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
-| **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-hooks.md`](claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
-| **Kotlin** (Sprache/K2 + Coroutines + Compose-Kontext) | [`kotlin.md`](kotlin.md) | 2026-06-02 | ~46 | `*.kt`, `*.kts` (ausser `build/settings.gradle.kts` → Gradle), `AndroidManifest.xml` · „Kotlin", „K2", „Coroutines", „Flow", „Compose", „Android" |
-| **Jetpack Compose** (Android-UI) | [`jetpack-compose.md`](jetpack-compose.md) | 2026-06-02 | ~74 | `*.kt` mit `@Composable`/`setContent` · „Compose", „Recomposition", „remember", „rememberSaveable", „LazyColumn", „Modifier", „LaunchedEffect", „Material3", „navigation-compose" |
-| **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`dotnet-csharp.md`](dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
-| **Build — Gradle / AGP / R8·ProGuard / KSP** | [`gradle.md`](gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
-| **R8** (Code-Shrinker/Optimizer/Obfuscator, ProGuard-Nachfolger) | [`r8.md`](r8.md) | 2026-06-03 | ~50 | `proguard-rules.pro`, `consumer-rules.pro`, `*.keep.xml` · „R8", „minifyEnabled", „shrinkResources", „keep-Regel", „Full-Mode", „Release-Crash", „Obfuscation", „ProGuard", „missing_rules", „mapping.txt" · Best-Practices: `best-practices/projekt-code/r8/` |
-| **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`python-windows.md`](python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
-| **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android-platform.md`](android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
-| **Firebase / Crashlytics / Play Billing** (Google-Backend-Dienste) | [`firebase-billing.md`](firebase-billing.md) | 2026-06-02 | 138 | `google-services.json`, `*Billing*.kt`/`*Subscription*.kt`/`*Purchase*.kt`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Firestore", „Billing", „Paywall", „App Check", „Remote Config", „acknowledge", „Proration", „RTDN", „firebase-ai", „Gemini" · Best-Practices: `best-practices/projekt-code/firebase-billing/` |
-| **macOS-Desktop — Swift / AppKit** (Overlay-Apps, swiftc-CLI-Builds) | [`swift-appkit.md`](swift-appkit.md) | 2026-06-02 | ~58 | `*.swift`, `*.xcodeproj`, `Info.plist`, `*.entitlements`, `build.sh` · „Swift", „AppKit", „NSWindow", „NSPanel", „Overlay", „Accessibility", „AXIsProcessTrusted", „CGEventTap", „RegisterEventHotKey", „Hotkey", „Mikrofon", „AVAudioEngine", „TCC", „Notarization", „Sandbox", „setActivationPolicy" |
-| **Web — TypeScript / Node** (+ npm, Bun) | [`typescript.md`](typescript.md) | 2026-06-02 | 89 | `*.ts`, `*.tsx`, `tsconfig.json`, `package.json` · „TypeScript", „Node", „npm", „ESM", „CommonJS", „require(esm)", „Bun", „tsconfig", „strict", „moduleResolution", „peer dependency", „ERESOLVE", „unhandled rejection", „@types", „better-sqlite3" |
-| **Elgato Stream-Deck-Plugin** (klassisches WebSocket/JS-SDK + Node-SDK) | [`stream-deck.md`](stream-deck.md) | 2026-06-03 | ~85 | `*.sdPlugin/*`, Stream-Deck-`manifest.json` (mit `SDKVersion`/`Actions`/`States`), `propertyInspector`, `code.js`/`plugin.html`/`inspector.html` im Plugin-Webview, `@elgato/streamdeck` · „Stream Deck", „Elgato", „sdPlugin", „Property Inspector", „willAppear", „keyDown", „setState", „DisableAutomaticStates" · Best-Practices: `best-practices/projekt-code/stream-deck/` |
-| **MCP-Server-Bau** (Model Context Protocol, TS-SDK 1.27.1 + python-sdk) | [`mcp-server.md`](mcp-server.md) | 2026-06-03 | ~59 | `.mcp.json`, MCP-Server-Quellcode (`*.ts`/`*.py` mit `@modelcontextprotocol/sdk`/`McpServer`/`StdioServerTransport`/`FastMCP`/`stdio_server` — per Content-Probe) · „MCP", „Model Context Protocol", „stdio", „Streamable HTTP", „tool schema", „registerTool", „isError", „inputSchema" · Best-Practices: `best-practices/projekt-code/mcp-server/` (Server-Bau-Seite) + `best-practices/05-mcp/` (Client/Konfig-Seite) |
+| **Kotlin** (Sprache/K2 + Coroutines + Compose-Kontext) | [`android/kotlin.md`](android/kotlin.md) | 2026-06-02 | ~46 | `*.kt`, `*.kts` (ausser `build/settings.gradle.kts` → Gradle), `AndroidManifest.xml` · „Kotlin", „K2", „Coroutines", „Flow", „Compose", „Android" |
+| **Jetpack Compose** (Android-UI) | [`android/jetpack-compose.md`](android/jetpack-compose.md) | 2026-06-02 | ~74 | `*.kt` mit `@Composable`/`setContent` · „Compose", „Recomposition", „remember", „rememberSaveable", „LazyColumn", „Modifier", „LaunchedEffect", „Material3", „navigation-compose" |
+| **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android/android-platform.md`](android/android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
+| **Firebase / Crashlytics / Play Billing** (Google-Backend-Dienste) | [`android/firebase-billing.md`](android/firebase-billing.md) | 2026-06-02 | 138 | `google-services.json`, `*Billing*.kt`/`*Subscription*.kt`/`*Purchase*.kt`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Firestore", „Billing", „Paywall", „App Check", „Remote Config", „acknowledge", „Proration", „RTDN", „firebase-ai", „Gemini" · Best-Practices: `best-practices/projekt-code/android/firebase-billing/` |
+
+### 🔧 `android-build/` — Build-Kette
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **Build — Gradle / AGP / R8·ProGuard / KSP** | [`android-build/gradle.md`](android-build/gradle.md) | 2026-06-02 | ~67 | `build.gradle*`, `settings.gradle*`, `gradle.properties`, `gradle/*`, `libs.versions.toml` · „Gradle", „AGP", „R8", „ProGuard", „KSP", „Daemon", „Version-Catalog" |
+| **R8** (Code-Shrinker/Optimizer/Obfuscator, ProGuard-Nachfolger) | [`android-build/r8.md`](android-build/r8.md) | 2026-06-03 | ~50 | `proguard-rules.pro`, `consumer-rules.pro`, `*.keep.xml` · „R8", „minifyEnabled", „shrinkResources", „keep-Regel", „Full-Mode", „Release-Crash", „Obfuscation", „ProGuard", „missing_rules", „mapping.txt" · Best-Practices: `best-practices/projekt-code/android-build/r8/` |
+
+### 🖥️ `desktop/` — Desktop-Apps
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **C# / .NET 8** (WPF, WinUI 3, Konsole, Backend) | [`desktop/dotnet-csharp.md`](desktop/dotnet-csharp.md) | 2026-06-02 | ~130 | `*.cs`, `*.csproj`, `*.xaml` · „WPF", „WinUI", „.NET", „C#", „Overlay" |
+| **macOS-Desktop — Swift / AppKit** (Overlay-Apps, swiftc-CLI-Builds) | [`desktop/swift-appkit.md`](desktop/swift-appkit.md) | 2026-06-02 | ~58 | `*.swift`, `*.xcodeproj`, `Info.plist`, `*.entitlements`, `build.sh` · „Swift", „AppKit", „NSWindow", „NSPanel", „Overlay", „Accessibility", „AXIsProcessTrusted", „CGEventTap", „RegisterEventHotKey", „Hotkey", „Mikrofon", „AVAudioEngine", „TCC", „Notarization", „Sandbox", „setActivationPolicy" |
+
+### 🌐 `web/` — Web & Browser
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`web/chrome-extensions.md`](web/chrome-extensions.md) | 2026-06-02 | 73 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
+| **Web — TypeScript / Node** (+ npm, Bun) | [`web/typescript.md`](web/typescript.md) | 2026-06-02 | 89 | `*.ts`, `*.tsx`, `tsconfig.json`, `package.json` · „TypeScript", „Node", „npm", „ESM", „CommonJS", „require(esm)", „Bun", „tsconfig", „strict", „moduleResolution", „peer dependency", „ERESOLVE", „unhandled rejection", „@types", „better-sqlite3" |
+
+### 🎛️ `peripherie/` — Hardware-Peripherie
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **Elgato Stream-Deck-Plugin** (klassisches WebSocket/JS-SDK + Node-SDK) | [`peripherie/stream-deck.md`](peripherie/stream-deck.md) | 2026-06-03 | ~85 | `*.sdPlugin/*`, Stream-Deck-`manifest.json` (mit `SDKVersion`/`Actions`/`States`), `propertyInspector`, `code.js`/`plugin.html`/`inspector.html` im Plugin-Webview, `@elgato/streamdeck` · „Stream Deck", „Elgato", „sdPlugin", „Property Inspector", „willAppear", „keyDown", „setState", „DisableAutomaticStates" · Best-Practices: `best-practices/projekt-code/peripherie/stream-deck/` |
+
+### 🛠️ `claude-tooling/` — Claude-Code-Werkzeuge
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-tooling/claude-hooks.md`](claude-tooling/claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
+| **MCP-Server-Bau** (Model Context Protocol, TS-SDK 1.27.1 + python-sdk) | [`claude-tooling/mcp-server.md`](claude-tooling/mcp-server.md) | 2026-06-03 | ~59 | `.mcp.json`, MCP-Server-Quellcode (`*.ts`/`*.py` mit `@modelcontextprotocol/sdk`/`McpServer`/`StdioServerTransport`/`FastMCP`/`stdio_server` — per Content-Probe) · „MCP", „Model Context Protocol", „stdio", „Streamable HTTP", „tool schema", „registerTool", „isError", „inputSchema" · Best-Practices: `best-practices/projekt-code/claude-tooling/mcp-server/` (Server-Bau-Seite) + `best-practices/05-mcp/` (Client/Konfig-Seite) |
+| **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`claude-tooling/python-windows.md`](claude-tooling/python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
 
 ---
 
 ## ⬜ Bereiche ohne Almanach (bei erster echter Arbeit: recherchieren — erst Franks OK)
 
 > Diese Liste ist die Landkarte der erwarteten Bereiche. Sobald an einem davon
-> echte Arbeit beginnt und noch kein Almanach existiert, wird er angelegt.
-
-> Priorisiert nach Franks tatsaechlicher Nutzung (⭐ = hoher Hebel, oft angefasst).
-> Android ist bewusst granular geschnitten (Sprache/UI/Framework/Build getrennt), weil
-> jeder dieser Sektoren eigene Fehlerklassen hat.
+> echte Arbeit beginnt und noch kein Almanach existiert, wird er im passenden
+> Kategorie-Ordner angelegt.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| · | **Tampermonkey / Userscripts** | `tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
+| · | **Tampermonkey / Userscripts** | `web/tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
 
-> **Fertige Recherche-Prompts** fuer alle 8 offenen Bereiche (Almanach + Best-Practices,
+> **Fertige Recherche-Prompts** fuer alle offenen Bereiche (Almanach + Best-Practices,
 > Copy-Paste fuer parallele Sessions): siehe [`OFFENE-ALMANACHE-PROMPTS.md`](OFFENE-ALMANACHE-PROMPTS.md).
 >
 > **Moegliche Vertiefung** als Abschnitt statt eigener Datei: PowerShell-Scripting allgemein
-> → `claude-hooks.md` (bei genug Eigenleben spaeter ausgliedern).
+> → `claude-tooling/claude-hooks.md` (bei genug Eigenleben spaeter ausgliedern).
 
-(Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen — und das
-Pfad-Mapping im `bug-almanac-guard`-Hook entsprechend nachziehen.)
+(Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen. Das Pfad-Mapping
+im `bug-almanac-guard`-Hook ist kategorie-robust — bei einem NEUEN Dateimuster dort einen
+Zweig ergaenzen; ein blosser Kategorie-Wechsel einer bestehenden Datei braucht KEINE
+Hook-Aenderung.)
 
 ---
 

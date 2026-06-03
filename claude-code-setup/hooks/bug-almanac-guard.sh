@@ -26,9 +26,9 @@ if [ "$tool" = "Bash" ]; then
     if [ -n "$cmd" ]; then
         cl=$(echo "$cmd" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
         # grep ohne Treffer = exit 1 -> mit pipefail/set -e abfangen (|| true), sonst Log-Spam pro Bash-Call.
-        matches=$(echo "$cl" | grep -oE 'bugs/[a-z0-9._-]+\.md' || true)
+        matches=$(echo "$cl" | grep -oE 'bugs/([a-z0-9._-]+/)*[a-z0-9._-]+\.md' || true)
         if [ -n "$matches" ]; then
-            echo "$matches" | sed -E 's#bugs/([a-z0-9._-]+)\.md#\1#' | while read -r an; do
+            echo "$matches" | sed -E 's#.*/([a-z0-9._-]+)\.md#\1#' | while read -r an; do
                 if [ -n "$an" ] && [ "$an" != "readme" ] && [ "$an" != "system" ]; then
                     touch "$TMP/bug-almanac-read-$an.flag" 2>/dev/null || true
                 fi
@@ -44,7 +44,7 @@ fpl=$(echo "$fp" | tr '[:upper:]' '[:lower:]' | tr '\\' '/')
 
 # -- Read-Zweig: "gelesen"-Marker setzen, NIE blockieren (relativ + absolut) --
 if [ "$tool" = "Read" ]; then
-    almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/([^/]+)\.md$#\2#p')
+    almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/(.*/)?([^/]+)\.md$#\3#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
         touch "$TMP/bug-almanac-read-$almName.flag" 2>/dev/null || true
     fi
@@ -173,7 +173,12 @@ $ti_extra"
 esac
 [ -n "$slug" ] || exit 0
 
-almanachPath="$HOME/proggs/bugs/$file"
+# Kategorie-robust (2026-06-03): Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>).
+# Den Almanach per Suche nach dem Dateinamen finden, statt einen festen Pfad zu raten — so muss dieser
+# Hook NICHT angefasst werden, wenn eine Datei die Kategorie wechselt. '|| true' faengt SIGPIPE (head) ab.
+bugsRoot="$HOME/proggs/bugs"
+almanachPath="$(find "$bugsRoot" -name "$file" -type f 2>/dev/null | head -1 || true)"
+if [ -n "$almanachPath" ]; then almRel="bugs/${almanachPath#"$bugsRoot"/}"; else almRel="bugs/$file"; fi
 almKey=$(echo "$file" | sed 's/\.md$//' | tr '[:upper:]' '[:lower:]')
 readMarker="$TMP/bug-almanac-read-$almKey.flag"
 seenMarker="$TMP/bug-almanac-seen-$slug.flag"
@@ -188,7 +193,7 @@ disabled=0; [ -f "$TMP/bug-almanac-disable.flag" ] && disabled=1
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
     tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
     if [ -n "$tpath" ] && [ -f "$tpath" ]; then
-        if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*bugs[/\\]+'"$almKey"'\.md' "$tpath" 2>/dev/null; then
+        if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*bugs[/\\]+([^"/\\]+[/\\]+)*'"$almKey"'\.md' "$tpath" 2>/dev/null; then
             touch "$readMarker" 2>/dev/null || true
         fi
     fi
@@ -200,7 +205,7 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     stateDir="$HOME/.claude/state"
     mkdir -p "$stateDir" 2>/dev/null || true
     echo "$(date '+%Y-%m-%d %H:%M') $slug" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-    reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber bugs/$file wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/bugs/$file mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
     python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
     exit 0
 fi
@@ -210,9 +215,9 @@ if [ -f "$almanachPath" ]; then
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
         if [ "$disabled" -eq 1 ]; then
-            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies bugs/$file freiwillig."
+            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel freiwillig."
         else
-            msg="BUG-ALMANACH: bugs/$file wurde gelesen - Bereich '$name' ist fuer diese Session freigegeben."
+            msg="BUG-ALMANACH: $almRel wurde gelesen - Bereich '$name' ist fuer diese Session freigegeben."
         fi
         python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$msg"
     fi

@@ -16,10 +16,12 @@ $env:TEMP = $iso; $env:TMP = $iso
 
 $bugsDir = Join-Path $env:USERPROFILE "proggs/bugs"
 # Bereich mit existierendem Almanach (fuer Block-Tests) + Bereich OHNE Almanach (fuer Hinweis-Test) dynamisch waehlen.
-$haveKotlin = Test-Path (Join-Path $bugsDir "kotlin.md")
+# Kategorie-robust: Almanach rekursiv suchen (liegt jetzt in bugs/<kategorie>/<datei>.md).
+function Test-AlmExists([string]$name) { [bool](Get-ChildItem -Path $bugsDir -Recurse -Filter $name -File -ErrorAction SilentlyContinue | Select-Object -First 1) }
+$haveKotlin = Test-AlmExists "kotlin.md"
 $mapMissing = $null
 foreach ($pair in @(@('Foo.swift','swift-appkit.md'), @('app.ts','typescript.md'), @('x.user.js','tampermonkey.md'))) {
-    if (-not (Test-Path (Join-Path $bugsDir $pair[1]))) { $mapMissing = $pair; break }
+    if (-not (Test-AlmExists $pair[1])) { $mapMissing = $pair; break }
 }
 
 $fails = 0
@@ -44,16 +46,16 @@ if (-not $haveKotlin) {
     Check "MultiEdit .kt ohne Lesen -> deny" ((Decision (Run '{"tool_name":"MultiEdit","tool_input":{"file_path":"x/Foo.kt"}}')) -eq 'deny')
 
     ClearMarkers
-    Run '{"tool_name":"Read","tool_input":{"file_path":"/p/proggs/bugs/kotlin.md"}}' | Out-Null
-    Check "Read absolut -> Marker gesetzt" (Test-Path (Join-Path $iso "bug-almanac-read-kotlin.flag"))
+    Run '{"tool_name":"Read","tool_input":{"file_path":"/p/proggs/bugs/android/kotlin.md"}}' | Out-Null
+    Check "Read absolut (Kategorie-Pfad) -> Marker gesetzt" (Test-Path (Join-Path $iso "bug-almanac-read-kotlin.flag"))
     Check "Edit .kt nach Read -> kein deny" ((Decision (Run '{"tool_name":"Edit","tool_input":{"file_path":"x/Foo.kt"}}')) -ne 'deny')
 
     ClearMarkers
-    Run '{"tool_name":"Read","tool_input":{"file_path":"bugs/kotlin.md"}}' | Out-Null
-    Check "Read relativ -> Marker gesetzt" (Test-Path (Join-Path $iso "bug-almanac-read-kotlin.flag"))
+    Run '{"tool_name":"Read","tool_input":{"file_path":"bugs/android/kotlin.md"}}' | Out-Null
+    Check "Read relativ (Kategorie-Pfad) -> Marker gesetzt" (Test-Path (Join-Path $iso "bug-almanac-read-kotlin.flag"))
 
     ClearMarkers
-    Run '{"tool_name":"Bash","tool_input":{"command":"cat ~/proggs/bugs/kotlin.md"}}' | Out-Null
+    Run '{"tool_name":"Bash","tool_input":{"command":"cat ~/proggs/bugs/android/kotlin.md"}}' | Out-Null
     Check "Bash-cat Almanach -> Marker gesetzt" (Test-Path (Join-Path $iso "bug-almanac-read-kotlin.flag"))
     Check "Bash harmlos -> kein Output" ([string]::IsNullOrWhiteSpace((Run '{"tool_name":"Bash","tool_input":{"command":"echo hallo"}}')))
 

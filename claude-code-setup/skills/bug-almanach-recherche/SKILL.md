@@ -3,7 +3,7 @@ name: bug-almanach-recherche
 description: >-
   Recherchiert gruendlich die oeffentlich bekannten Bugs, Fallen und Workarounds eines
   technischen Bereichs und erstellt daraus einen kuratierten Bug-Almanach in
-  ~/proggs/bugs/<bereich>.md. Teil des proaktiven Bug-Almanach-Systems (siehe
+  ~/proggs/bugs/<kategorie>/<bereich>.md. Teil des proaktiven Bug-Almanach-Systems (siehe
   ~/proggs/bugs/SYSTEM.md). Nutze diesen Skill IMMER wenn der Benutzer einen neuen
   Bug-Almanach anlegen will oder die bekannten Bugs einer beliebigen Software/Technologie
   recherchieren will — egal welche: Claude-Hooks, Kotlin, Gradle, Jetpack Compose, Swift,
@@ -166,7 +166,7 @@ vornherein richtig macht, damit der Bug nie entsteht*. Dieser Schritt verbindet 
 **4a — LESEN (bekanntes Wissen wiederverwenden):**
 Jeden gefundenen Bug gegen den lokalen Ordner abgleichen:
 `grep -ri "<stichwort>" ~/proggs/best-practices/` — passende Stelle: Harness-Kategorien
-`01-hooks/` … `12-neues/`, oder Projekt-Code `projekt-code/<software>/`. Steht dort schon
+`01-hooks/` … `12-neues/`, oder Projekt-Code `projekt-code/<kategorie>/<software>/`. Steht dort schon
 eine Loesung/Empfehlung, die den Bug adressiert oder ganz ausschliesst → mit in den
 **FIX-Bereich** des Almanach-Eintrags aufnehmen (Verweis "siehe best-practices/<datei>").
 So steht die beste bekannte Loesung direkt im Almanach. (Beispiel: `best-practices/01-hooks`
@@ -177,14 +177,14 @@ Hat ein Bug eine allgemeingueltige Loesung/Praevention ("so baut man es von vorn
 richtig"), diese AUCH nach best-practices eintragen — nicht nur in den Almanach:
 - **Harness-Bug** (Hooks, Skills, MCP, Settings …) → passende Harness-Kategorie
   `best-practices/<NN-kategorie>/best-practices.md`.
-- **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/projekt-code/<software>/best-practices.md`
-  (Unterordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da).
+- **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/projekt-code/<kategorie>/<software>/best-practices.md`
+  (Kategorie- + Software-Unterordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da; gleiche Kategorie wie der Almanach).
 Jeder Eintrag mit Quelle + Datum + `offiziell`/`extern`-Flag (gleiche Regeln wie der
 `best-practices`-Skill). So fuellen sich beide Speicher: Bug+Workaround im Almanach,
 Praevention in best-practices.
 
-**4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<bereich>.md` UND
-`best-practices/projekt-code/<software>/best-practices.md`), in JEDER eine wechselseitige
+**4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<kategorie>/<bereich>.md` UND
+`best-practices/projekt-code/<kategorie>/<software>/best-practices.md`), in JEDER eine wechselseitige
 Abschnitts-Bezugs-Tabelle „Bug-Abschnitt ↔ Best-Practice-Abschnitt" anlegen/aktuell halten, damit
 jede Loesung auf ihr Gegenstueck zeigt. (Gleiches Vorgehen wie im `best-practices`-Skill, Abschnitt
 „Kopplung zum Bug-Almanach" — beide Skills pflegen dieselben zwei Tabellen.)
@@ -196,7 +196,7 @@ ueber die eine Bug-Loesung hinaus). Nur mit OK — kostet eigene Recherche-Zeit.
 
 (Hat ein Bereich noch keine best-practices, findet 4a nichts — dann nur 4b schreiben.)
 
-### Schritt 5 — Kuratieren in `~/proggs/bugs/<bereich>.md`
+### Schritt 5 — Kuratieren in `~/proggs/bugs/<kategorie>/<bereich>.md`
 
 Researcher-Ergebnisse DEDUPLIZIEREN (gleiche Bugs von mehreren Researchern → EIN Eintrag,
 aber das bestaetigt sie) und thematisch gruppieren. Format pro Eintrag (konsistent mit
@@ -228,11 +228,17 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
 
 ### Schritt 6 — Ins System einhaengen
 
-1. **`~/proggs/bugs/README.md`**: Bereich aus "Bereiche ohne Almanach" nach "Vorhandene
-   Almanache" verschieben (Stand, Bug-Anzahl, Erkennungs-Trigger).
-2. **`~/.claude/hooks/bug-almanac-guard.{ps1,sh}`**: Pfad-Mapping pruefen; falls der
-   Bereich fehlt, Dateimuster → `<bereich>.md` in BEIDEN Varianten ergaenzen +
-   `claude-code-setup/hooks/` spiegeln.
+0. **Kategorie waehlen**: Den Almanach in den passenden Kategorie-Ordner legen
+   (`bugs/<kategorie>/<bereich>.md` — android, android-build, desktop, web, peripherie,
+   claude-tooling; passt nichts, neue Kategorie anlegen). Die Best-Practices-Gegenseite in
+   dieselbe Kategorie (`best-practices/projekt-code/<kategorie>/<software>/`).
+1. **`~/proggs/bugs/README.md`**: Bereich unter der passenden Kategorie aus "Bereiche ohne
+   Almanach" nach "Vorhandene Almanache" verschieben (Stand, Bug-Anzahl, Erkennungs-Trigger).
+2. **`~/.claude/hooks/bug-almanac-guard.{ps1,sh}`**: Das Mapping ist seit 2026-06-03
+   kategorie-robust (es findet den Almanach rekursiv unter `bugs/`). NUR bei einem NEUEN
+   Dateimuster einen Zweig ergaenzen (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE
+   Kategorie) in BEIDEN Varianten + `claude-code-setup/hooks/` spiegeln. Ein blosser
+   Kategorie-Wechsel einer bestehenden Datei braucht KEINE Hook-Aenderung.
 
 ### Schritt 7 — Committen + pushen
 

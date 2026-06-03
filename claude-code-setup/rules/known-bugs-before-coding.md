@@ -15,7 +15,7 @@
 Es gibt pro Technologie-Bereich einen **kuratierten Bug-Almanach** unter:
 
 ```
-~/proggs/bugs/<bereich>.md
+~/proggs/bugs/<kategorie>/<bereich>.md
 ```
 
 Das Inhaltsverzeichnis aller Almanache (sortiert nach Plattform, mit Erkennungs-Triggern)
@@ -74,8 +74,8 @@ Web-Lookup mitten im Debuggen einer laufenden Aufgabe bleibt frei.
 
 | Arbeit an … | Almanach |
 |-------------|----------|
-| Chrome-/Browser-Erweiterung (manifest.json, content scripts, service worker, chrome.storage, Overlays) | `~/proggs/bugs/chrome-extensions.md` |
-| Weitere Bereiche (Android, WPF, Swift, TS, Tampermonkey, Hooks, Gradle …) | `~/proggs/bugs/<bereich>.md` (bei erster echter Arbeit anlegen, siehe README) |
+| Chrome-/Browser-Erweiterung (manifest.json, content scripts, service worker, chrome.storage, Overlays) | `~/proggs/bugs/web/chrome-extensions.md` |
+| Weitere Bereiche (Android, WPF, Swift, TS, Tampermonkey, Hooks, Gradle …) | `~/proggs/bugs/<kategorie>/<bereich>.md` (bei erster echter Arbeit anlegen, siehe README) |
 
 Erkennungssignale fuer "Chrome-Extension-Arbeit": eine `manifest.json` mit
 `manifest_version`, Dateien in einem Extension-/Overlay-Ordner, `chrome.*`-APIs,

@@ -20,14 +20,16 @@ BUGS_DIR="$HOME/proggs/bugs"
 if [ -d "$BUGS_DIR" ]; then
     list=""
     count=0
-    for f in "$BUGS_DIR"/*.md; do
+    # Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>.md). Rekursiv sammeln und
+    # als relativen Pfad ab bugs/ anzeigen; alles direkt in bugs/ (README/SYSTEM/OFFENE-*) hat keinen
+    # '/' im Relativpfad und faellt damit automatisch raus.
+    while IFS= read -r f; do
         [ -e "$f" ] || continue
-        base="$(basename "$f")"
-        if [ "$base" != "README.md" ] && [ "$base" != "SYSTEM.md" ]; then
-            list="${list:+$list, }$base"
-            count=$((count + 1))
-        fi
-    done
+        rel="${f#"$BUGS_DIR"/}"
+        case "$rel" in
+            */*) list="${list:+$list, }$rel"; count=$((count + 1));;
+        esac
+    done < <(find "$BUGS_DIR" -name '*.md' -type f 2>/dev/null | sort)
     [ -n "$list" ] || list="(noch keine)"
 
     ctx="BUG-ALMANACH-SYSTEM aktiv (Stufe 2 = ERZWINGUNG). Vorhandene Almanache in bugs/: $list. Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...): bugs/README.md pruefen und den passenden Almanach ZUERST mit dem Read-Tool lesen. WICHTIG: Existiert ein Almanach fuer den Bereich, BLOCKIERT der bug-almanac-guard Edit/Write so lange, bis du die Almanach-Datei in dieser Session per Read geoeffnet hast (Lesen gibt den Bereich frei, gilt pro Bereich 1x/Session). Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN (das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump). Notaus bei Fehlalarm: leere Datei bug-almanac-disable.flag im TEMP-Verzeichnis anlegen."

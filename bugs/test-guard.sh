@@ -21,7 +21,9 @@ ne()       { [ "$1" != "$2" ] && echo 1 || echo 0; }
 isempty()  { [ -z "$1" ] && echo 1 || echo 0; }
 exists()   { [ -f "$1" ] && echo 1 || echo 0; }
 
-if [ ! -f "$BUGS/kotlin.md" ]; then
+# Kategorie-robust: Almanach rekursiv suchen (liegt jetzt in bugs/<kategorie>/<datei>.md).
+alm_path() { find "$BUGS" -name "$1" -type f 2>/dev/null | head -1; }
+if [ -z "$(alm_path kotlin.md)" ]; then
     echo "WARN: kotlin.md fehlt — Block-Tests uebersprungen"
 else
     clearm
@@ -31,16 +33,16 @@ else
     check "MultiEdit .kt ohne Lesen -> deny"      "$(eq "$(decision "$(run '{"tool_name":"MultiEdit","tool_input":{"file_path":"x/Foo.kt"}}')")" deny)"
 
     clearm
-    run '{"tool_name":"Read","tool_input":{"file_path":"/p/proggs/bugs/kotlin.md"}}' >/dev/null
-    check "Read absolut -> Marker gesetzt"        "$(exists "$TMPDIR/bug-almanac-read-kotlin.flag")"
+    run '{"tool_name":"Read","tool_input":{"file_path":"/p/proggs/bugs/android/kotlin.md"}}' >/dev/null
+    check "Read absolut (Kategorie-Pfad) -> Marker gesetzt" "$(exists "$TMPDIR/bug-almanac-read-kotlin.flag")"
     check "Edit .kt nach Read -> kein deny"       "$(ne "$(decision "$(run '{"tool_name":"Edit","tool_input":{"file_path":"x/Foo.kt"}}')")" deny)"
 
     clearm
-    run '{"tool_name":"Read","tool_input":{"file_path":"bugs/kotlin.md"}}' >/dev/null
-    check "Read relativ -> Marker gesetzt"        "$(exists "$TMPDIR/bug-almanac-read-kotlin.flag")"
+    run '{"tool_name":"Read","tool_input":{"file_path":"bugs/android/kotlin.md"}}' >/dev/null
+    check "Read relativ (Kategorie-Pfad) -> Marker gesetzt" "$(exists "$TMPDIR/bug-almanac-read-kotlin.flag")"
 
     clearm
-    run '{"tool_name":"Bash","tool_input":{"command":"cat ~/proggs/bugs/kotlin.md"}}' >/dev/null
+    run '{"tool_name":"Bash","tool_input":{"command":"cat ~/proggs/bugs/android/kotlin.md"}}' >/dev/null
     check "Bash-cat Almanach -> Marker gesetzt"   "$(exists "$TMPDIR/bug-almanac-read-kotlin.flag")"
     check "Bash harmlos -> kein Output"           "$(isempty "$(run '{"tool_name":"Bash","tool_input":{"command":"echo hallo"}}')")"
 
@@ -54,7 +56,7 @@ fi
 missing=""
 for pair in "Foo.swift:swift-appkit.md" "app.ts:typescript.md" "x.user.js:tampermonkey.md"; do
     f="${pair%%:*}"; md="${pair##*:}"
-    if [ ! -f "$BUGS/$md" ]; then missing="$f"; break; fi
+    if [ -z "$(alm_path "$md")" ]; then missing="$f"; break; fi
 done
 if [ -n "$missing" ]; then
     check "Kein Almanach -> kein deny (nur Hinweis)" "$(ne "$(decision "$(run "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"x/$missing\"}}")")" deny)"

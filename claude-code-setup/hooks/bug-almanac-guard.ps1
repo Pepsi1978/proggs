@@ -31,7 +31,7 @@ try {
         $cmd = [string]$data.tool_input.command
         if (-not [string]::IsNullOrWhiteSpace($cmd)) {
             $cl = ($cmd.ToLower()) -replace '\\', '/'
-            foreach ($m in [regex]::Matches($cl, 'bugs/([a-z0-9._-]+)\.md')) {
+            foreach ($m in [regex]::Matches($cl, 'bugs/(?:[a-z0-9._-]+/)*([a-z0-9._-]+)\.md')) {
                 $an = $m.Groups[1].Value
                 if ($an -ne 'readme' -and $an -ne 'system') {
                     New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-read-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
@@ -46,9 +46,9 @@ try {
     $fpl = ($fp.ToLower()) -replace '\\', '/'
 
     # ── Read-Zweig: "gelesen"-Marker setzen, NIE blockieren ──
-    # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/kotlin.md -> "kotlin"). Relativ + absolut.
+    # Marker-Key = Almanach-Dateiname ohne .md (z.B. bugs/android/kotlin.md -> "kotlin", kategorie-unabhaengig). Relativ + absolut.
     if ($tool -eq 'Read') {
-        if ($fpl -match '(?:^|/)bugs/([^/]+)\.md$') {
+        if ($fpl -match '(?:^|/)bugs/(?:[^/]+/)*([^/]+)\.md$') {
             $almName = $Matches[1]
             if ($almName -ne 'readme' -and $almName -ne 'system') {
                 $rm = Join-Path $env:TEMP ("bug-almanac-read-" + $almName + ".flag")
@@ -153,8 +153,14 @@ try {
     }
     if (-not $slug) { exit 0 }
 
-    $almanachPath = Join-Path (Join-Path $env:USERPROFILE "proggs/bugs") $file
-    $almanachExists = Test-Path $almanachPath
+    # Kategorie-robust (2026-06-03): Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>).
+    # Den Almanach per rekursiver Suche nach dem Dateinamen finden, statt einen festen Pfad zu raten —
+    # so muss dieser Hook NICHT angefasst werden, wenn eine Datei die Kategorie wechselt.
+    $bugsRoot = Join-Path $env:USERPROFILE "proggs/bugs"
+    $almanachItem = $null
+    try { $almanachItem = Get-ChildItem -Path $bugsRoot -Recurse -Filter $file -File -ErrorAction SilentlyContinue | Select-Object -First 1 } catch {}
+    $almanachExists = [bool]$almanachItem
+    $almRel = if ($almanachItem) { (($almanachItem.FullName -replace '\\','/') -replace '.*?/bugs/', 'bugs/') } else { "bugs/$file" }
     $disabled = Test-Path (Join-Path $env:TEMP "bug-almanac-disable.flag")
     $almKey = ($file -replace '\.md$', '').ToLower()
     $readMarker = Join-Path $env:TEMP ("bug-almanac-read-" + $almKey + ".flag")
@@ -173,7 +179,7 @@ try {
         try {
             $tp = [string]$data.transcript_path
             if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
-                $pat = 'file_path"\s*:\s*"[^"]*bugs[\\/]+' + [regex]::Escape($almKey) + '\.md'
+                $pat = 'file_path"\s*:\s*"[^"]*bugs[\\/]+(?:[^"\\/]+[\\/]+)*' + [regex]::Escape($almKey) + '\.md'
                 if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
                     New-Item -ItemType File -Path $readMarker -Force -ErrorAction SilentlyContinue | Out-Null
                 }
@@ -189,7 +195,7 @@ try {
             if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
             Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug") -Encoding UTF8 -ErrorAction SilentlyContinue
         } catch {}
-        $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber bugs/" + $file + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/bugs/" + $file + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
         $out = @{
             hookSpecificOutput = @{
                 hookEventName            = "PreToolUse"
@@ -206,9 +212,9 @@ try {
         if (-not (Test-Path $seenMarker)) {
             New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
             $msg = if ($disabled) {
-                "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies bugs/" + $file + " freiwillig."
+                "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies " + $almRel + " freiwillig."
             } else {
-                "BUG-ALMANACH: bugs/" + $file + " wurde gelesen - Bereich '" + $name + "' ist fuer diese Session freigegeben."
+                "BUG-ALMANACH: " + $almRel + " wurde gelesen - Bereich '" + $name + "' ist fuer diese Session freigegeben."
             }
             $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
             Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)

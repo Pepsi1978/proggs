@@ -33,7 +33,9 @@ und was sich mit neuen Versionen geaendert hat. Gepflegt vom `best-practices`-Sk
 
 Neben den Harness-Kategorien oben gibt es die Sektion **[`projekt-code/`](projekt-code/README.md)**
 fuer die Software/Sprachen, die in den Projekten benutzt werden (Kotlin, Swift, Gradle,
-.NET/WPF, TypeScript, Rust …) — ein Unterordner pro Software, entsteht bei Bedarf.
+.NET/WPF, TypeScript, Rust …). Seit 2026-06-03 sind die Software-Ordner **nach Kategorie
+gruppiert** (`projekt-code/<kategorie>/<software>/`, z.B. `android/kotlin/`) — dieselben
+Kategorien wie der Bug-Almanach (`bugs/<kategorie>/`). Entsteht bei Bedarf.
 
 - Quelle hier: der **eigene** Changelog der Software (nicht der Claude-Code-Changelog).
 - Versions-Anker: die live ermittelte installierte Version der Software.
