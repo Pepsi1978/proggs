@@ -478,12 +478,7 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": [
-			"node_modules",
-			".cache",
-			".gradle",
-			"build"
-		]
+		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -492,7 +487,7 @@
 		"superpowers@claude-plugins-official": true,
 		"frontend-design@claude-plugins-official": true,
 		"context7@claude-plugins-official": true,
-		"github@claude-plugins-official": true,
+		"github@claude-plugins-official": false,
 		"feature-dev@claude-plugins-official": true,
 		"code-simplifier@claude-plugins-official": true,
 		"commit-commands@claude-plugins-official": true,
@@ -633,10 +628,7 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": [
-				"-y",
-				"android-debug-bridge-mcp"
-			]
+			"args": ["-y", "android-debug-bridge-mcp"]
 		}
 	}
 }
