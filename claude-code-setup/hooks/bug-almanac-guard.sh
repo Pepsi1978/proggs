@@ -54,6 +54,11 @@ fi
 # -- Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
 slug=""; file=""; name=""
 case "$fpl" in
+    *.sdplugin/*|*propertyinspector*)
+        # Stream-Deck-Plugin: Dateien im *.sdPlugin-Ordner ODER ein Property Inspector.
+        # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
+        # generischen '*manifest.json'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
+        slug="streamdeck"; file="stream-deck.md"; name="Elgato Stream Deck Plugin-Entwicklung";;
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
         slug="chrome"; file="chrome-extensions.md"; name="Browser-Erweiterungen (Chrome/Edge MV3)";;
     *google-services*.json|*billing*.kt|*subscription*.kt|*purchase*.kt)

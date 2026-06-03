@@ -60,7 +60,12 @@ try {
 
     # ── Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). ──
     $slug = $null; $file = $null; $name = $null
-    if ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
+    if ($fpl -match '\.sdplugin/' -or $fpl -match 'propertyinspector') {
+        # Stream-Deck-Plugin: Dateien im *.sdPlugin-Ordner ODER ein Property Inspector.
+        # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
+        # generischen 'manifest.json$'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
+        $slug = 'streamdeck'; $file = 'stream-deck.md'; $name = 'Elgato Stream Deck Plugin-Entwicklung'
+    } elseif ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
     } elseif ($fpl -match 'google-services.*\.json$' -or $fpl -match '(billing|subscription|purchase).*\.kt$') {
         # Firebase-/Billing-Backend: google-services.json + Billing/Subscription/Purchase-Klassen.
