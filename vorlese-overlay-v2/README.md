@@ -18,7 +18,7 @@ Erweiterung läuft auf jedem Betriebssystem identisch. Ausgabe-Sprache: **Deutsc
 1. Chrome öffnen und in der Adresszeile `chrome://extensions` aufrufen.
 2. Oben rechts den **Entwicklermodus** einschalten.
 3. Auf **„Entpackte Erweiterung laden"** klicken.
-4. Den Ordner `vorlese-overlay/` auswählen.
+4. Den Ordner `vorlese-overlay-v2/` auswählen.
 5. Fertig — auf jeder Webseite erscheint unten rechts das Overlay.
 
 > Nach Code-Änderungen in `chrome://extensions` bei der Erweiterung auf den

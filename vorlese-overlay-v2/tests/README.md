@@ -86,7 +86,7 @@ Lädt die Erweiterung in ein frisches Chromium, löst den Runner aus, liest die
 Logs aus und wertet sie aus.
 
 ```bash
-cd vorlese-overlay/tests
+cd vorlese-overlay-v2/tests
 npm install          # installiert Playwright + Chromium (einmalig, ~150 MB)
 npx playwright install chromium
 npm run selbsttest

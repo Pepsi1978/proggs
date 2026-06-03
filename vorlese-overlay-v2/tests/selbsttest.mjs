@@ -14,7 +14,7 @@
  *   7. Kurzauswertung: FEHLER/FATAL + Layout-Markierungen zaehlen. Exit-Code 0
  *      wenn sauber, sonst 1 (fuer die "zwei stille Schleifen"-Iteration).
  *
- * Start:  cd vorlese-overlay/tests && npm install && npm run selbsttest
+ * Start:  cd vorlese-overlay-v2/tests && npm install && npm run selbsttest
  * Optional:  VO_TESTSEITE=https://de.wikipedia.org/wiki/Test  npm run selbsttest
  */
 import { chromium } from "playwright";
@@ -23,7 +23,7 @@ import { dirname, resolve } from "node:path";
 import { writeFileSync, rmSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const EXT_PFAD = resolve(__dirname, ".."); // -> vorlese-overlay/
+const EXT_PFAD = resolve(__dirname, ".."); // -> vorlese-overlay-v2/
 const USER_DIR = resolve(__dirname, ".pw-profile");
 const LOG_OUT = resolve(__dirname, "selbsttest-log.jsonl");
 const TESTSEITE = process.env.VO_TESTSEITE || "https://example.com";
