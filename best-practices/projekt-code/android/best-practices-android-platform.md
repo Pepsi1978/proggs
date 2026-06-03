@@ -12,7 +12,7 @@
   (Foreground-Worker `dataSync`/`microphone`), `ProcessLifecycleOwner`, Glance-Widget,
   Media3, Health Connect, Maps, DataStore, AppAuth, Drive.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/android-platform.md`](../../../../bugs/android/android-platform.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/android-platform.md`](../../../bugs/android/android-platform.md)):
 > der Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von
 > vornherein richtig macht, damit der Bug gar nicht erst entsteht*. Quellen-Rangordnung: offizielle
 > Android/Google-Quelle (developer.android.com, Android Developers Blog/Medium, Now in Android) =
@@ -59,7 +59,7 @@
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/android/android-platform.md`](../../../../bugs/android/android-platform.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/android-platform.md`](../../../bugs/android/android-platform.md))
 
 Jeder Best-Practice-Abschnitt hier ist die **Praevention** zu einer Sektion im Bug-Almanach —
 zwei Seiten derselben Medaille. Tritt einer der dortigen Bugs auf, liefert der Almanach die konkrete

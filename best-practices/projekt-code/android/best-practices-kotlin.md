@@ -5,7 +5,7 @@
 KSP **2.1.0-1.0.29**, AGP **8.7–8.10**, Compose BOM **2025.01 / 2026.03**, JDK **21**.
 kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/kotlin.md`](../../../../bugs/android/kotlin.md)): der
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/kotlin.md`](../../../bugs/android/kotlin.md)): der
 > Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von vornherein
 > richtig macht*. Quellen-Rangordnung: offizielle JetBrains/Kotlin/Android-Quelle = Grundwahrheit
 > (`offiziell`), Community/Blogs = `extern` (sekundaer, ueberstimmt nie das Offizielle). Jeder Eintrag
@@ -27,7 +27,7 @@ kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/android/kotlin.md`](../../../../bugs/android/kotlin.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/kotlin.md`](../../../bugs/android/kotlin.md))
 
 Jeder Best-Practice-Abschnitt hier ist die **Praevention** zu einem Abschnitt im Bug-Almanach —
 zwei Seiten derselben Medaille. Tritt einer der dortigen Bugs auf, liefert der Almanach die konkrete
@@ -227,4 +227,4 @@ passenden Loesung springen:
 Neue belegte Best-Practice (offizielle Quelle bevorzugt) hier ergaenzen, Stand-Header + Versionen
 aktualisieren. Bei Versionssprung der genutzten Kotlin/Compose/AGP-Version: kurzer Re-Check, ob
 Empfehlungen noch gelten (besonders die „Upgrade-Pfad"-Punkte, sobald die Projekte von 2.1 hochziehen).
-Gegenstueck-Bugs immer auch in [`bugs/android/kotlin.md`](../../../../bugs/android/kotlin.md) pflegen.
+Gegenstueck-Bugs immer auch in [`bugs/android/kotlin.md`](../../../bugs/android/kotlin.md) pflegen.

@@ -42,7 +42,7 @@ Der Skill pflegt zwei Arten von Best-Practices im selben `best-practices/`-Ordne
 
 1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist
    der offizielle **Claude-Code**-Changelog (via `update-changelog.ps1`-Script).
-2. **Projekt-Code** (Sektion `projekt-code/<kategorie>/<software>/`): Kotlin, Swift, Gradle, .NET/WPF,
+2. **Projekt-Code** (Sektion `projekt-code/<kategorie>/best-practices-<software>.md`): Kotlin, Swift, Gradle, .NET/WPF,
    TypeScript, Rust … Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
    Claude-Script) — die installierte Software-Version wird live ermittelt und ist der
    Versions-Anker. Das ist die zweite Seite der Medaille zum Bug-Almanach (`~/proggs/bugs/`):
@@ -170,19 +170,20 @@ neue definierte Kategorie dazu, wird sie VOR "Neues" eingefuegt und "Neues" ruec
 nach hinten (Ordner entsprechend umbenennen). Beispiel: aus `12-neues` wird `13-neues`, die neue
 Kategorie wird 12.
 
-### Projekt-Code-Sektion (`projekt-code/<kategorie>/<software>/`)
+### Projekt-Code-Sektion (`projekt-code/<kategorie>/best-practices-<software>.md`)
 
 Neben den 12 nummerierten Harness-Kategorien gibt es die Sektion `projekt-code/`, seit
 2026-06-03 nach **Kategorie** gruppiert (android, android-build, desktop, web, peripherie,
-claude-tooling — dieselben Kategorien wie der Bug-Almanach `bugs/<kategorie>/`), mit je
-einem Software-Unterordner (`projekt-code/<kategorie>/<software>/`, z.B. `android/kotlin/`,
-`desktop/swift-appkit/`), die bei Bedarf entstehen (Inhaltsverzeichnis: `projekt-code/README.md`).
+claude-tooling — dieselben Kategorien wie der Bug-Almanach `bugs/<kategorie>/`), mit je einer
+selbst-identifizierenden Datei direkt im Kategorie-Ordner (`projekt-code/<kategorie>/best-practices-<software>.md`,
+z.B. `android/best-practices-kotlin.md`, `desktop/best-practices-swift-appkit.md`; KEIN Software-Unterordner),
+die bei Bedarf entsteht (Inhaltsverzeichnis: `projekt-code/README.md`).
 
 **Wichtiger Mechanik-Unterschied — beim Recherchieren beachten:**
 - **Harness-Kategorien (01–12):** Changelog-Quelle ist der **Claude-Code**-Changelog,
   geholt mit dem `update-changelog.ps1`/`.sh`-Script (siehe naechster Abschnitt). Versions-
   Anker = installierte Claude-Code-Version.
-- **Projekt-Code (`projekt-code/<kategorie>/<software>/`):** Changelog-Quelle ist der **eigene**
+- **Projekt-Code (`projekt-code/<kategorie>/best-practices-<software>.md`):** Changelog-Quelle ist der **eigene**
   Changelog/die Release-Notes der jeweiligen Software (Kotlin-Releases bei JetBrains,
   Swift-Releases bei Apple, Gradle-Releases …). Das Claude-Changelog-Script wird hier NICHT
   benutzt. Versions-Anker = die LIVE ermittelte installierte Version dieser Software
@@ -214,7 +215,7 @@ Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + bet
   kompakt mitliefern, damit nichts verloren geht.
 
 ### B — Bezugs-Tabellen synchron halten
-Existieren BEIDE Dateien (`best-practices/projekt-code/<kategorie>/<software>/best-practices.md` UND
+Existieren BEIDE Dateien (`best-practices/projekt-code/<kategorie>/best-practices-<software>.md` UND
 `bugs/<kategorie>/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
 Bug-Abschnitt" aktuell halten. Fehlt eine, anlegen; kamen Abschnitte dazu, ergaenzen. So bleibt jede
 Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).

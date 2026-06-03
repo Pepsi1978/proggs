@@ -4,9 +4,10 @@
 Prueft pro Projekt-Code-Software, ob der Bug-Almanach UND die Best-Practices-Datei
 beide die wechselseitige Bezugs-Tabelle tragen (Marker '🔗' + 'Bezug').
 
-Kategorie-bewusst (2026-06-03): Beide Seiten liegen in Kategorie-Unterordnern:
+Kategorie-bewusst (2026-06-03): Beide Seiten liegen in Kategorie-Ordnern, die Datei
+traegt den Software-Namen selbst (selbst-identifizierend, kein generischer Dateiname):
   - Almanach:        bugs/<kategorie>/<software>.md
-  - Best-Practices:  best-practices/projekt-code/<kategorie>/<software>/best-practices.md
+  - Best-Practices:  best-practices/projekt-code/<kategorie>/best-practices-<software>.md
 Die Paarung erfolgt ueber den <software>-Namen (rekursiv gesucht), NICHT ueber die
 Kategorie — so bleibt der Check robust, falls eine Software die Kategorie wechselt.
 
@@ -37,15 +38,21 @@ def rel(repo, path):
 
 
 def find_best_practices(pc_dir):
-    """software-name -> Pfad der best-practices.md (rekursiv in projekt-code/)."""
+    """software-name -> Pfad der best-practices-<software>.md (rekursiv in projekt-code/).
+
+    Der Software-Name steht selbst-identifizierend im Dateinamen (best-practices-<software>.md),
+    direkt im Kategorie-Ordner — kein generischer 'best-practices.md' mehr, kein Software-Unterordner.
+    """
     result = {}
     if not os.path.isdir(pc_dir):
         return result
+    prefix, suffix = "best-practices-", ".md"
     for root, _dirs, files in os.walk(pc_dir):
-        if "best-practices.md" in files:
-            sw = os.path.basename(root)
-            if sw and sw != "projekt-code":
-                result[sw] = os.path.join(root, "best-practices.md")
+        for fn in files:
+            if fn.startswith(prefix) and fn.endswith(suffix):
+                sw = fn[len(prefix):-len(suffix)]
+                if sw:
+                    result[sw] = os.path.join(root, fn)
     return result
 
 

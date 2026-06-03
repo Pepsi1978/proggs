@@ -5,7 +5,7 @@
 WPF auf .NET, WinUI 3 / Windows App SDK **1.8**, Windows 10/11. Kontext: self-contained single-file Desktop-Overlays
 (TerminalVoiceOverlay, ClaudeVoiceOverlay, PromptBoard) mit Audio-Aufnahme + HTTP-Calls (Groq Whisper, Google Gemini).
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/dotnet-csharp.md`](../../../../bugs/desktop/dotnet-csharp.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/dotnet-csharp.md`](../../../bugs/desktop/dotnet-csharp.md)):
 > der Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von vornherein
 > richtig macht*. Quellen-Rangordnung: offizielle Microsoft-Learn-Quelle = Grundwahrheit (`offiziell`),
 > Community/anerkannte Experten (Cleary, Toub) = `extern` (sekundaer). Jeder Eintrag traegt Quelle + Flag.
@@ -28,7 +28,7 @@ WPF auf .NET, WinUI 3 / Windows App SDK **1.8**, Windows 10/11. Kontext: self-co
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/desktop/dotnet-csharp.md`](../../../../bugs/desktop/dotnet-csharp.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/desktop/dotnet-csharp.md`](../../../bugs/desktop/dotnet-csharp.md))
 
 Jeder Best-Practice-Block ist die **Praevention** zu Almanach-Abschnitten:
 
@@ -144,6 +144,6 @@ Jeder Best-Practice-Block ist die **Praevention** zu Almanach-Abschnitten:
 
 ## Wartung
 - Diese Datei + der Bug-Almanach sind gekoppelt: neue Praevention hier → ggf. Gegenstueck-Bug in
-  [`bugs/desktop/dotnet-csharp.md`](../../../../bugs/desktop/dotnet-csharp.md) pflegen, Bezugs-Tabellen synchron halten
+  [`bugs/desktop/dotnet-csharp.md`](../../../bugs/desktop/dotnet-csharp.md) pflegen, Bezugs-Tabellen synchron halten
   (`python3 bugs/check-coupling.py`).
 - Bei .NET-Versionssprung (.NET 9/10-Migration): Re-Check (neue Breaking Changes, neue Defaults, neue Source-Gen-Analyzer).

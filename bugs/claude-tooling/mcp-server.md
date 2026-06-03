@@ -19,7 +19,7 @@
 > *Konfigurieren/Verbinden* von Servern in Claude Code steht in `best-practices/05-mcp/`,
 > die *Hook*-Seite (MCP-Matcher, MCP-Tool-als-Hook) in [`claude-hooks.md`](claude-hooks.md).
 > Die positive Gegenseite zu DIESEM Almanach (*wie man es richtig baut*) steht in
-> [`best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md`](../../best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md)
+> [`best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md`](../../best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md)
 > — wechselseitige Bezugstabelle in Sektion 11. Details der Abgrenzung: Sektion 10.
 
 ---
@@ -609,7 +609,7 @@ Drei Dateien beruehren „MCP", mit klarer Aufgabentrennung:
 | Datei | Perspektive | Was hier steht |
 |-------|-------------|----------------|
 | **`bugs/claude-tooling/mcp-server.md`** (diese) | **Server BAUEN — Fallen** | Transport-Impl, Tool-Schema, Error-Handling, Lifecycle, `.mcp.json`-Registrierung, SDK-Versions-Bugs |
-| [`best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md`](../../best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md) | **Server BAUEN — richtige Seite** | Positive Gegenseite zu DIESER Datei: empfohlene Arbeitsweise, Do's & Don'ts (Transport-Wahl, Tool-Schema-Design, Fehler-Propagation, Setup, Sicherheit, Testing). Bezugstabelle in Sektion 11 |
+| [`best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md`](../../best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md) | **Server BAUEN — richtige Seite** | Positive Gegenseite zu DIESER Datei: empfohlene Arbeitsweise, Do's & Don'ts (Transport-Wahl, Tool-Schema-Design, Fehler-Propagation, Setup, Sicherheit, Testing). Bezugstabelle in Sektion 11 |
 | [`bugs/claude-tooling/claude-hooks.md`](claude-hooks.md) | **Claude-Code-Hooks** | Hooks generell. MCP nur am Rand: MCP-Matcher (`mcp__server__.*`, 9.2), MCP-Tool-als-Hook (14.1), absolute Pfade/BOM in `settings.json`/`.mcp.json` (12.1, 12.5) |
 | `best-practices/05-mcp/best-practices.md` | **Server KONFIGURIEREN/VERBINDEN** (Harness-Seite) | Transport-Wahl in Claude Code, Scopes (local/project/user), `.mcp.json`-ENV-Expansion, OAuth-Setup, Managed MCP, Tool-Search |
 
@@ -644,7 +644,7 @@ matcht) → `claude-hooks.md`.
 
 ## 11. Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
 
-Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md`](../../best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md`](../../best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
 
 | Best-Practice-Abschnitt (`best-practices/projekt-code/claude-tooling/mcp-server/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
 |--------------------------------|------------------------------------------------------------|

@@ -59,7 +59,7 @@ Starte den Best-Practices-Skill fuer Python auf Windows / Cross-Platform-Scripti
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN PYTHON-SCRIPTING AUF WINDOWS/CROSS-PLATFORM AM BESTEN UND RICHTIG MACHT — die empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs laufen getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: immer encoding='utf-8' + ensure_ascii=False, atomares Schreiben (temp + os.replace), plattformneutrale Pfade (pathlib/os.path statt Hardcoding), saubere venv-/Dependency-Verwaltung, robuste CLI-Struktur, Typ-Hints.
 
-Speichere unter best-practices/projekt-code/claude-tooling/python-windows/best-practices.md und koppele wechselseitig mit dem Bug-Almanach bugs/claude-tooling/python-windows.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
+Speichere unter best-practices/projekt-code/claude-tooling/best-practices-python-windows.md und koppele wechselseitig mit dem Bug-Almanach bugs/claude-tooling/python-windows.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
 ```
 
 ---
@@ -81,7 +81,7 @@ Starte den Best-Practices-Skill fuer Jetpack Compose (Projekt-Code-Seite, NICHT 
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT JETPACK COMPOSE AM BESTEN UND RICHTIG ARBEITET — empfohlene, idiomatische Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: unidirektionaler Datenfluss + State-Hoisting, stabile/immutable State-Typen fuer Skippability, korrekte remember-/derivedStateOf-Nutzung, LazyList mit stabilen Keys, richtige Side-Effect-API je Fall, Material3-Theming, Performance-Empfehlungen.
 
-Compose-Version aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/jetpack-compose/best-practices.md und koppele wechselseitig mit bugs/android/jetpack-compose.md. Am Ende committen und pushen.
+Compose-Version aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/best-practices-jetpack-compose.md und koppele wechselseitig mit bugs/android/jetpack-compose.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -103,7 +103,7 @@ Starte den Best-Practices-Skill fuer das Android-Framework/Platform-SDK (Projekt
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT DEM ANDROID-FRAMEWORK AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": lifecycle-sicheres Arbeiten (lifecycleScope, repeatOnLifecycle), saubere Room-Migrationsstrategie, korrekter WorkManager-Einsatz, moderner Runtime-Permission-Flow, sauberer Foreground-Service-/Notification-/Scoped-Storage-Umgang, empfohlene App-Architektur.
 
-compileSdk/targetSdk aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/android-platform/best-practices.md und koppele wechselseitig mit bugs/android/android-platform.md. Am Ende committen und pushen.
+compileSdk/targetSdk aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/best-practices-android-platform.md und koppele wechselseitig mit bugs/android/android-platform.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -125,7 +125,7 @@ Starte den Best-Practices-Skill fuer Firebase + Google Play Billing (Projekt-Cod
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN FIREBASE UND PLAY BILLING AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sichere Billing-Flows (Kauf verifizieren + acknowledgen), Abo-Status serverseitig (Cloud Function / Play Developer API) validieren statt nur lokal, korrekter Crashlytics-Mapping-Upload, sauberer FCM-Umgang, sinnvolle Firestore-Security-Rules.
 
-Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/projekt-code/android/firebase-billing/best-practices.md und koppele wechselseitig mit bugs/android/firebase-billing.md. Am Ende committen und pushen.
+Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/projekt-code/android/best-practices-firebase-billing.md und koppele wechselseitig mit bugs/android/firebase-billing.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -147,7 +147,7 @@ Starte den Best-Practices-Skill fuer Swift + AppKit (macOS-Desktop, Projekt-Code
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT SWIFT/APPKIT AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": idiomatische Overlay-Fenster-Konfiguration (Level/Collection-Behavior), moderne Swift-Concurrency (async/await, Actors, @MainActor), saubere Accessibility-Integration, korrektes Permission-Handling, empfohlene App-Architektur (MVVM).
 
-Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/projekt-code/desktop/swift-appkit/best-practices.md und koppele wechselseitig mit bugs/desktop/swift-appkit.md. Am Ende committen und pushen.
+Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/projekt-code/desktop/best-practices-swift-appkit.md und koppele wechselseitig mit bugs/desktop/swift-appkit.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -169,7 +169,7 @@ Starte den Best-Practices-Skill fuer TypeScript + Node.js (Projekt-Code-Seite, N
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT TYPESCRIPT/NODE AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": strikte tsconfig, sauberes ESM-Setup, typsichere Patterns (kein any, korrekte Generics/Utility-Types), robuste async-Fehlerbehandlung, Dependency-Hygiene.
 
-Speichere unter best-practices/projekt-code/web/typescript/best-practices.md und koppele wechselseitig mit bugs/web/typescript.md. Am Ende committen und pushen.
+Speichere unter best-practices/projekt-code/web/best-practices-typescript.md und koppele wechselseitig mit bugs/web/typescript.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -191,7 +191,7 @@ Starte den Best-Practices-Skill fuer Tampermonkey/Userscripts (Projekt-Code-Seit
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN USERSCRIPTS AM BESTEN UND RICHTIG SCHREIBT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": robustes Warten aufs DOM (MutationObserver-Pattern statt fixe Delays), korrekter @grant/GM_-API-Einsatz, saubere Persistenz (GM_setValue), wartbare Skript-Struktur, sichere Update-Mechanik (@version/@updateURL).
 
-Scripts in ~/proggs/Tampermonkey. Speichere unter best-practices/projekt-code/web/tampermonkey/best-practices.md und koppele wechselseitig mit bugs/web/tampermonkey.md. Am Ende committen und pushen.
+Scripts in ~/proggs/Tampermonkey. Speichere unter best-practices/projekt-code/web/best-practices-tampermonkey.md und koppele wechselseitig mit bugs/web/tampermonkey.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -213,7 +213,7 @@ Starte den Best-Practices-Skill fuer Elgato-Stream-Deck-Plugins (Projekt-Code-Se
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN STREAM-DECK-PLUGINS AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sauberer Action-Lifecycle, korrekte bidirektionale Kommunikation Plugin<->Property-Inspector, robuste Settings-Persistenz, empfohlene Projekt-/Manifest-Struktur, offizielle SDK-Konventionen.
 
-Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/projekt-code/peripherie/stream-deck/best-practices.md und koppele wechselseitig mit bugs/peripherie/stream-deck.md. Am Ende committen und pushen.
+Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/projekt-code/peripherie/best-practices-stream-deck.md und koppele wechselseitig mit bugs/peripherie/stream-deck.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -235,7 +235,7 @@ Starte den Best-Practices-Skill fuer den Bau von MCP-Servern (Projekt-Code-Seite
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MCP-SERVER AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": passende Transport-Wahl (stdio vs SSE), sauberes Tool-Schema-Design (klare Beschreibungen, enge Typen), korrekte Fehler-Propagation, .mcp.json mit absoluten Pfaden, Cross-Platform-tauglicher Start, sinnvolle Tool-Granularitaet.
 
-Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/projekt-code/claude-tooling/mcp-server/best-practices.md und koppele wechselseitig mit bugs/claude-tooling/mcp-server.md. Am Ende committen und pushen.
+Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md und koppele wechselseitig mit bugs/claude-tooling/mcp-server.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -251,7 +251,7 @@ Starte den Best-Practices-Skill fuer das Android-Build-System (Gradle, AGP, R8, 
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN GRADLE/AGP AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs stehen schon in bugs/android-build/gradle.md), sondern "so macht man es richtig": Version-Catalog (libs.versions.toml) konsequent nutzen, Configuration-Cache + Build-Cache aktivieren, saubere Dependency-Deklaration (api vs implementation), korrekte R8/ProGuard-Regel-Pflege, modulare Projektstruktur, schnelle Builds.
 
-Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android-build/gradle/best-practices.md und koppele wechselseitig mit dem bestehenden Bug-Almanach bugs/android-build/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
+Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android-build/best-practices-gradle.md und koppele wechselseitig mit dem bestehenden Bug-Almanach bugs/android-build/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
 ```
 
 ---

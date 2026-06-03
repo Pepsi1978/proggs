@@ -120,7 +120,7 @@
 **Symptom:** Custom-Touch-Strip-Layout (Stream Deck +) wird nicht angezeigt; `setFeedback` wirkt ins Leere.
 **Ursache:** Ein Layout-Item ragt aus dem **200×100-px-Canvas** heraus, ODER ein interaktives Element ist kleiner als das **Mindest-Touch-Target 35×35 px** → das Layout wird verworfen (kein Teil-Render).
 **Versionen:** SD+ ab Software 6.0, per Design.
-**FIX:** Alle Items im 200×100-Canvas halten, Touch-Targets ≥ 35×35 px, Layout vor Auslieferung mit `streamdeck validate` pruefen. (Best-Practice: `best-practices/projekt-code/peripherie/stream-deck/best-practices.md` Abschnitt J.)
+**FIX:** Alle Items im 200×100-Canvas halten, Touch-Targets ≥ 35×35 px, Layout vor Auslieferung mit `streamdeck validate` pruefen. (Best-Practice: `best-practices/projekt-code/peripherie/best-practices-stream-deck.md` Abschnitt J.)
 **Quelle:** docs.elgato.com/streamdeck/sdk/references/touch-strip-layout/ · docs.elgato.com/streamdeck/sdk/guides/dials/
 
 ---
@@ -714,7 +714,7 @@ Direkt nach `keyDown` kam ein noch laufender Poll-Response mit dem ALTEN State z
 
 ## Wechselseitige Bezugstabelle (Almanach ↔ Best Practices)
 
-> Gegenstueck: [`best-practices/projekt-code/peripherie/stream-deck/best-practices.md`](../../best-practices/projekt-code/peripherie/stream-deck/best-practices.md)
+> Gegenstueck: [`best-practices/projekt-code/peripherie/best-practices-stream-deck.md`](../../best-practices/projekt-code/peripherie/best-practices-stream-deck.md)
 > (angelegt 2026-06-03). Verknuepft jeden Bug-Abschnitt mit der praeventiven Best-Practice.
 
 | Bug-Abschnitt (hier) | Best-Practice-Abschnitt (best-practices/.../stream-deck) |

@@ -36,7 +36,7 @@
 
 ---
 
-## 🔗 Bezug zu den Best Practices ([`best-practices/projekt-code/desktop/dotnet-csharp/best-practices.md`](../../best-practices/projekt-code/desktop/dotnet-csharp/best-practices.md))
+## 🔗 Bezug zu den Best Practices ([`best-practices/projekt-code/desktop/best-practices-dotnet-csharp.md`](../../best-practices/projekt-code/desktop/best-practices-dotnet-csharp.md))
 
 Dieser Almanach sagt *was schiefgeht*; die Best-Practices-Datei sagt *wie man es von vornherein
 richtig macht*. Wechselseitig gepflegt:

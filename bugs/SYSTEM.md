@@ -143,7 +143,7 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 3. Im `bug-almanac-guard`-Hook NUR dann etwas tun, wenn es ein NEUES Dateimuster gibt
    (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE Kategorie — der Hook findet die
    Datei rekursiv). Ein blosser Kategorie-Wechsel braucht KEINE Hook-Aenderung.
-4. Existiert eine `best-practices/projekt-code/<kategorie>/<bereich>/best-practices.md`: die
+4. Existiert eine `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`: die
    wechselseitige Bezugs-Tabelle in BEIDEN Dateien anlegen (siehe §9) und
    `python3 bugs/check-coupling.py` ausfuehren.
 
@@ -152,7 +152,7 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 ## 9. Kopplung mit den Best-Practices (zwei Seiten einer Medaille)
 
 Der Bug-Almanach sagt *was schiefgeht und wie man es loest*; der Ordner
-`~/proggs/best-practices/projekt-code/<kategorie>/<software>/best-practices.md` sagt *wie man es von
+`~/proggs/best-practices/projekt-code/<kategorie>/best-practices-<software>.md` sagt *wie man es von
 vornherein richtig macht, damit der Bug nie entsteht*. Beide gehoeren zusammen und werden in
 BEIDE Richtungen gepflegt — keine Einbahnstrasse:
 

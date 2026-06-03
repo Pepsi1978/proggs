@@ -799,10 +799,10 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 
 ## 🔗 Bezug: Best-Practices-Gegenstuecke
 
-> Zweite Seite der Medaille: `~/proggs/best-practices/projekt-code/android-build/gradle/best-practices.md` sammelt
+> Zweite Seite der Medaille: `~/proggs/best-practices/projekt-code/android-build/best-practices-gradle.md` sammelt
 > *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihr praeventives Gegenstueck.
 
-| Bug-Sektion (diese Datei) | Best-Practice-Gegenstueck (`best-practices/projekt-code/android-build/gradle/best-practices.md`) |
+| Bug-Sektion (diese Datei) | Best-Practice-Gegenstueck (`best-practices/projekt-code/android-build/best-practices-gradle.md`) |
 |---|---|
 | §1 Versions-Kompatibilitaet | §1 Versions-Strategie & Kompatibilitaet |
 | §2 AGP 9.0 Breaking Changes | §9 Upgrade-Strategie (+ §4 R8-Defaults) |

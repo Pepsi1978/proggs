@@ -16,7 +16,7 @@
 > eingebunden. Ihre Bug-Sektionen (3, 4 + 12) sind Zukunftswissen fuer den spaeteren Einbau und entsprechend markiert.
 >
 > **Praeventions-Seite (zweite Seite der Medaille):** seit 2026-06-02 existiert die Best-Practices-Seite
-> [`best-practices/projekt-code/android/firebase-billing/best-practices.md`](../../best-practices/projekt-code/android/firebase-billing/best-practices.md)
+> [`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md)
 > (7-Researcher-Lauf) — *wie man es von vornherein richtig macht*. Wechselseitige Abschnitts-Kopplung am Dateiende.
 > Teil 11 (Bugs 123–133) + Teil 12 (Firestore 134–138) wurden aus diesem Best-Practices-Lauf zurueckgekoppelt.
 >
@@ -36,7 +36,7 @@
    eintragen, sonst brechen Auth/App-Check nach Release lautlos (Bug 45).
 4. **R8/Release ist aktiv** → fehlende Keep-Regeln fuer Firebase/Billing/Gemini lassen die App **nur im
    Release** crashen (Debug laeuft). Release-Build IMMER testen (Bugs 113–117, siehe
-   `best-practices/projekt-code/android-build/gradle/best-practices.md §4`).
+   `best-practices/projekt-code/android-build/best-practices-gradle.md §4`).
 5. **Abo-Status nie nur lokal vertrauen** — `ON_HOLD`-Abos fehlen in `queryPurchasesAsync` (Bug 30);
    Wahrheit kommt aus RTDN + Play Developer API `subscriptionsv2.get` serverseitig (Bugs 32–36).
 6. **App Check + Enforcement**: erst Client-Rollout, dann Enforcement (Bug 90); Debug-Token in der Konsole
@@ -408,7 +408,7 @@
 **Symptom:** `NoClassDefFoundError` / R8 `Missing class com.google.firebase.messaging.TopicOperation$TopicOperations`; Firebase-Komponente crasht NUR im Release.
 **Ursache:** R8/Minify entfernt Firebase-Klassen ohne passende Keep-Regeln (das SDK liefert nicht fuer alles Consumer-Rules).
 **Versionen:** wiederkehrend (#3740, #5746 CLOSED).
-**FIX:** R8-`missing_rules.txt` (`build/outputs/mapping/<variant>/`) auswerten und Keep-Regeln in `proguard-rules.pro` ergaenzen. NICHT Minify dauerhaft deaktivieren (nur temporaer zum Eingrenzen). Release-Build IMMER testen. Siehe Sektion 9 + `best-practices/projekt-code/android-build/gradle/best-practices.md §4`. (Frank-Memory `feedback_billing_release_only`.)
+**FIX:** R8-`missing_rules.txt` (`build/outputs/mapping/<variant>/`) auswerten und Keep-Regeln in `proguard-rules.pro` ergaenzen. NICHT Minify dauerhaft deaktivieren (nur temporaer zum Eingrenzen). Release-Build IMMER testen. Siehe Sektion 9 + `best-practices/projekt-code/android-build/best-practices-gradle.md §4`. (Frank-Memory `feedback_billing_release_only`.)
 **Quelle:** github.com/firebase/firebase-android-sdk/issues/3740 · /issues/5746
 
 ## 50. google-services.json im Repo / API-Key-Exposition — was harmlos ist
@@ -622,7 +622,7 @@
 **Symptom:** Notifications kommen stark verzoegert oder gar nicht, v.a. Xiaomi/Huawei/Samsung/OnePlus.
 **Ursache:** Doze/App-Standby batcht normal-priority Messages; Hersteller-Mechanismen killen den Prozess. (Frank-relevant: Samsung S23 Ultra / Fold 6.)
 **Versionen:** alle; hersteller-abhaengig.
-**FIX:** Fuer user-sichtbare Pushes `priority: high` setzen (umgeht Doze-Batching). User per `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` um Ausnahme bitten. High-priority NICHT fuer reine Background-Syncs missbrauchen (Quota). Siehe `best-practices/projekt-code/android/android-platform/best-practices.md` (FGS-Start-Trigger: high-priority FCM vorher `remoteMessage.priority == PRIORITY_HIGH` pruefen — System kann downgraden).
+**FIX:** Fuer user-sichtbare Pushes `priority: high` setzen (umgeht Doze-Batching). User per `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` um Ausnahme bitten. High-priority NICHT fuer reine Background-Syncs missbrauchen (Quota). Siehe `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger: high-priority FCM vorher `remoteMessage.priority == PRIORITY_HIGH` pruefen — System kann downgraden).
 **Quelle:** firebase.blog/posts/2025/04/fcm-on-android
 
 ## 81. FCM-Token-Rotation / onNewToken / getToken SERVICE_NOT_AVAILABLE
@@ -852,7 +852,7 @@
 # Teil 9 — R8/ProGuard Keep-Regeln (Release) fuer Firebase + Billing
 
 > BestJournalAndroid hat `isMinifyEnabled=true` + `isShrinkResources=true` im Release. Die folgenden Bugs
-> manifestieren sich NUR im Release-Build (Debug laeuft). Querverweis: `best-practices/projekt-code/android-build/gradle/best-practices.md §4`.
+> manifestieren sich NUR im Release-Build (Debug laeuft). Querverweis: `best-practices/projekt-code/android-build/best-practices-gradle.md §4`.
 
 ## 113. R8 fullMode ist Default ab AGP 8.0   ⭐ HAEUFIG
 **Symptom:** Release crasht, Debug laeuft (NoClassDefFound, fehlende Reflection-Klassen) — obwohl frueher (AGP 7) ok.
@@ -931,7 +931,7 @@
 # Teil 11 — Nachträge aus dem Best-Practices-Lauf (2026-06-02)
 
 > Diese Bugs wurden bei der **Best-Practices-Recherche** (Praeventions-Seite,
-> `best-practices/projekt-code/android/firebase-billing/best-practices.md`) als echte, nicht-duplizierte
+> `best-practices/projekt-code/android/best-practices-firebase-billing.md`) als echte, nicht-duplizierte
 > Stolpersteine gefunden und hierher zurueckgekoppelt. Jeder verweist auf den passenden
 > Best-Practice-Abschnitt.
 
@@ -1114,7 +1114,7 @@
 
 ## Querverweis: Best Practices
 
-**Hauptseite (Praeventions-Seite der Medaille):** [`best-practices/projekt-code/android/firebase-billing/best-practices.md`](../../best-practices/projekt-code/android/firebase-billing/best-practices.md)
+**Hauptseite (Praeventions-Seite der Medaille):** [`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md)
 — erstellt 2026-06-02 (7-Researcher-Best-Practices-Lauf). Wechselseitige Abschnitts-Kopplung:
 
 | Bug-Almanach-Abschnitt | Best-Practice-Abschnitt (`firebase-billing/best-practices.md`) |
@@ -1134,7 +1134,7 @@
 
 | Bug-Almanach-Abschnitt | Best-Practice (Praevention) |
 |------------------------|------------------------------|
-| Teil 9 (R8/Keep 113–119) | `best-practices/projekt-code/android-build/gradle/best-practices.md §4` (R8/Shrinking/Keep-Regeln) |
-| Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android/android-platform/best-practices.md` (FGS-Start-Trigger) |
-| Teil 2/10 (google-services.json, config-cache) | `best-practices/projekt-code/android-build/gradle/best-practices.md` (Build-System) |
-| Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android/android-platform/best-practices.md` |
+| Teil 9 (R8/Keep 113–119) | `best-practices/projekt-code/android-build/best-practices-gradle.md §4` (R8/Shrinking/Keep-Regeln) |
+| Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger) |
+| Teil 2/10 (google-services.json, config-cache) | `best-practices/projekt-code/android-build/best-practices-gradle.md` (Build-System) |
+| Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android/best-practices-android-platform.md` |

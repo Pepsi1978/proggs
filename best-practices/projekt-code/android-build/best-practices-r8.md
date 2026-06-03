@@ -357,7 +357,7 @@ typischen „läuft in Debug, bricht in Release"-Bugs **gar nicht erst entstehen
 ## Querverweise
 
 - **Bug-Almanach (Gegenstück, „so geht es schief"):** `~/proggs/bugs/android-build/r8.md`
-- **Build-System-Sicht:** `best-practices/projekt-code/android-build/gradle/best-practices.md` (§4 R8/Shrinking) —
+- **Build-System-Sicht:** `best-practices/projekt-code/android-build/best-practices-gradle.md` (§4 R8/Shrinking) —
   diese Datei fokussiert R8 selbst (Shrinking/Obfuscation/Optimization + keep-Regeln + Release-Verifikation).
 - Verwandte: `best-practices/projekt-code/android/firebase-billing/` (Crashlytics/Firestore),
   `best-practices/projekt-code/android/jetpack-compose/` (Navigation), `bugs/android/kotlin.md`, `bugs/android/android-platform.md`.

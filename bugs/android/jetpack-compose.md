@@ -7,7 +7,7 @@
 > Loesungen sind **funktionserhaltend** — nie "Composable/Feature weglassen" (Direktive #3).
 >
 > **Zweite Seite der Medaille (Praevention):** Wie man diese Bugs von vornherein vermeidet, steht in
-> [`best-practices/projekt-code/android/jetpack-compose/best-practices.md`](../../best-practices/projekt-code/android/jetpack-compose/best-practices.md)
+> [`best-practices/projekt-code/android/best-practices-jetpack-compose.md`](../../best-practices/projekt-code/android/best-practices-jetpack-compose.md)
 > — Bezugstabelle „Bug-Abschnitt ↔ Best-Practice" ganz unten.
 >
 > **Stand:** recherchiert am **2026-06-02** (7-Researcher-Schwarm) fuer die real genutzten Versionen:
@@ -680,7 +680,7 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 
 ## Bezug zu den Best-Practices (Praevention)
 
-Zweite Seite der Medaille: [`best-practices/projekt-code/android/jetpack-compose/best-practices.md`](../../best-practices/projekt-code/android/jetpack-compose/best-practices.md)
+Zweite Seite der Medaille: [`best-practices/projekt-code/android/best-practices-jetpack-compose.md`](../../best-practices/projekt-code/android/best-practices-jetpack-compose.md)
 sagt, wie man jeden dieser Bugs von vornherein vermeidet. Pro Bug-Abschnitt der passende Praeventions-Abschnitt:
 
 | Bug-Abschnitt (DIESE Datei) | Praevention in `best-practices/.../jetpack-compose/best-practices.md` |

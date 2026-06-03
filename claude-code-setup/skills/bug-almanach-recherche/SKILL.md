@@ -166,7 +166,7 @@ vornherein richtig macht, damit der Bug nie entsteht*. Dieser Schritt verbindet 
 **4a — LESEN (bekanntes Wissen wiederverwenden):**
 Jeden gefundenen Bug gegen den lokalen Ordner abgleichen:
 `grep -ri "<stichwort>" ~/proggs/best-practices/` — passende Stelle: Harness-Kategorien
-`01-hooks/` … `12-neues/`, oder Projekt-Code `projekt-code/<kategorie>/<software>/`. Steht dort schon
+`01-hooks/` … `12-neues/`, oder Projekt-Code `projekt-code/<kategorie>/best-practices-<software>.md`. Steht dort schon
 eine Loesung/Empfehlung, die den Bug adressiert oder ganz ausschliesst → mit in den
 **FIX-Bereich** des Almanach-Eintrags aufnehmen (Verweis "siehe best-practices/<datei>").
 So steht die beste bekannte Loesung direkt im Almanach. (Beispiel: `best-practices/01-hooks`
@@ -177,14 +177,14 @@ Hat ein Bug eine allgemeingueltige Loesung/Praevention ("so baut man es von vorn
 richtig"), diese AUCH nach best-practices eintragen — nicht nur in den Almanach:
 - **Harness-Bug** (Hooks, Skills, MCP, Settings …) → passende Harness-Kategorie
   `best-practices/<NN-kategorie>/best-practices.md`.
-- **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/projekt-code/<kategorie>/<software>/best-practices.md`
-  (Kategorie- + Software-Unterordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da; gleiche Kategorie wie der Almanach).
+- **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/projekt-code/<kategorie>/best-practices-<software>.md`
+  (Datei `best-practices-<software>.md` direkt im Kategorie-Ordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da; gleiche Kategorie wie der Almanach, KEIN Software-Unterordner).
 Jeder Eintrag mit Quelle + Datum + `offiziell`/`extern`-Flag (gleiche Regeln wie der
 `best-practices`-Skill). So fuellen sich beide Speicher: Bug+Workaround im Almanach,
 Praevention in best-practices.
 
 **4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<kategorie>/<bereich>.md` UND
-`best-practices/projekt-code/<kategorie>/<software>/best-practices.md`), in JEDER eine wechselseitige
+`best-practices/projekt-code/<kategorie>/best-practices-<software>.md`), in JEDER eine wechselseitige
 Abschnitts-Bezugs-Tabelle „Bug-Abschnitt ↔ Best-Practice-Abschnitt" anlegen/aktuell halten, damit
 jede Loesung auf ihr Gegenstueck zeigt. (Gleiches Vorgehen wie im `best-practices`-Skill, Abschnitt
 „Kopplung zum Bug-Almanach" — beide Skills pflegen dieselben zwei Tabellen.)
@@ -231,7 +231,7 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
 0. **Kategorie waehlen**: Den Almanach in den passenden Kategorie-Ordner legen
    (`bugs/<kategorie>/<bereich>.md` — android, android-build, desktop, web, peripherie,
    claude-tooling; passt nichts, neue Kategorie anlegen). Die Best-Practices-Gegenseite in
-   dieselbe Kategorie (`best-practices/projekt-code/<kategorie>/<software>/`).
+   dieselbe Kategorie (`best-practices/projekt-code/<kategorie>/best-practices-<software>.md`).
 1. **`~/proggs/bugs/README.md`**: Bereich unter der passenden Kategorie aus "Bereiche ohne
    Almanach" nach "Vorhandene Almanache" verschieben (Stand, Bug-Anzahl, Erkennungs-Trigger).
 2. **`~/.claude/hooks/bug-almanac-guard.{ps1,sh}`**: Das Mapping ist seit 2026-06-03

@@ -11,7 +11,7 @@
   als Gradle-Plugin (`org.jetbrains.kotlin.plugin.compose`), `collectAsStateWithLifecycle`
   vorhanden (lifecycle 2.8.7). Spanne der Empfehlungen: Compose 1.7 → 1.10, Material3 1.3 → 1.4.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/jetpack-compose.md`](../../../../bugs/android/jetpack-compose.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/jetpack-compose.md`](../../../bugs/android/jetpack-compose.md)):
 > der Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von
 > vornherein richtig macht, damit der Bug gar nicht erst entsteht*. Quellen-Rangordnung: offizielle
 > Android/Google-Quelle (developer.android.com, Android Developers Medium/Blog) = Grundwahrheit
@@ -38,7 +38,7 @@
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/android/jetpack-compose.md`](../../../../bugs/android/jetpack-compose.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/jetpack-compose.md`](../../../bugs/android/jetpack-compose.md))
 
 Jeder Best-Practice-Abschnitt hier ist die **Praevention** zu einem Abschnitt im Bug-Almanach —
 zwei Seiten derselben Medaille. Tritt einer der dortigen Bugs auf, liefert der Almanach die konkrete
@@ -152,7 +152,7 @@ funktionserhaltende Loesung; dieser Abschnitt sagt, wie man ihn von vornherein v
 - **Fremd-Modul-Typen** (kein Compose-Compiler, z.B. `java.time.LocalDateTime`) gelten als instabil →
   **Stability-Configuration-File** (`.conf`, eine Klasse/Pattern pro Zeile, Wildcards) per
   `composeCompiler { stabilityConfigurationFile = ... }`, oder eigener `@Immutable`-Wrapper.
-  *(offiziell: /performance/stability/fix)* *(Plugin-Setup im Build → [`gradle.md`](../../android-build/gradle/best-practices.md))*
+  *(offiziell: /performance/stability/fix)* *(Plugin-Setup im Build → [`gradle.md`](../android-build/best-practices-gradle.md))*
 - **Compiler-Reports/Metrics** (`composeCompiler { reportsDestination/metricsDestination }`) **IMMER
   auf Release** laufen lassen; `<modul>-classes.txt` (Feld-Stabilitaet, `<runtime stability>`) und
   `<modul>-composables.txt` (restartable/skippable, Param-Stabilitaet) auswerten — fehlt `skippable`,
@@ -397,7 +397,7 @@ Parameter (Key) des Effekts — oder per `rememberUpdatedState`."
 
 **Performance**
 - **IMMER im Release-Build (R8 / `minifyEnabled true`) messen** — Debug ist by-design langsam und
-  maskiert echte Performance. *(offiziell: /develop/ui/compose/performance)* (Bug-Almanach §10.1) *(Build-Config → [`gradle.md`](../../android-build/gradle/best-practices.md))*
+  maskiert echte Performance. *(offiziell: /develop/ui/compose/performance)* (Bug-Almanach §10.1) *(Build-Config → [`gradle.md`](../android-build/best-practices-gradle.md))*
 - **Baseline Profiles** (`androidx.baselineprofile`-Plugin, AGP 8.0+) fuer kritische Journeys (Startup,
   Navigation, Scroll, Login/Payment) — ~30% schnellere Ausfuehrung ab erstem Start; Compose liefert ein
   Default-Profil mit. *(offiziell: /topic/performance/baselineprofiles/overview)*
@@ -437,7 +437,7 @@ Parameter (Key) des Effekts — oder per `rememberUpdatedState`."
 
 - Bei jeder neuen offiziellen Compose-/Material3-/Navigation-Empfehlung hier ergaenzen (mit Quelle +
   `offiziell`/`extern` + ggf. Versionsmarke/Upgrade-Pfad), Stand-Header aktualisieren.
-- Gegenstueck-Bugs immer auch in [`bugs/android/jetpack-compose.md`](../../../../bugs/android/jetpack-compose.md) pflegen
+- Gegenstueck-Bugs immer auch in [`bugs/android/jetpack-compose.md`](../../../bugs/android/jetpack-compose.md) pflegen
   und die Bezugstabelle dort synchron halten (zwei Seiten derselben Medaille — Compound Intelligence).
 
 ## Quellen (offiziell, developer.android.com & Android Developers Medium)
