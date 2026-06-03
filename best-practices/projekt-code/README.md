@@ -31,12 +31,13 @@ projekt-code/
 ├── swift-appkit/best-practices.md   ← macOS-Desktop Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
 ├── typescript/best-practices.md   ← TypeScript/Node.js (Stand 2026-06-03, Node 24.15.0 / TS 6.0.2 / npm 11.12.0 / Bun 1.3.11)
 ├── stream-deck/best-practices.md   ← Elgato Stream Deck Plugins (Stand 2026-06-03, Stream Deck 7.4.2 / @elgato/streamdeck 2.1.0 / SDKVersion 2+3)
+├── mcp-server/best-practices.md   ← MCP-Server-Bau (Stand 2026-06-03, MCP TS-SDK 1.27.1/1.29.0, zod v4, Bun 1.3.11, Spec 2025-11-25) — Gegenstueck zu bugs/mcp-server.md
 └── …                              ← ein Unterordner pro Software, entsteht bei Bedarf
 ```
 
 Vorhandene Software-Ordner: **kotlin**, **jetpack-compose**, **android-platform**, **firebase-billing**,
 **dotnet-csharp**, **chrome-extensions**, **gradle**, **r8**, **python-windows**, **swift-appkit**, **typescript**,
-**stream-deck**
+**stream-deck**, **mcp-server**
 (jeweils mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/`).
 
 Jede Datei beginnt mit `# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.

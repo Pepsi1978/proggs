@@ -18,7 +18,9 @@
 > **Abgrenzung:** Dies ist die **Server-Autor-Seite** (einen MCP-Server BAUEN). Das
 > *Konfigurieren/Verbinden* von Servern in Claude Code steht in `best-practices/05-mcp/`,
 > die *Hook*-Seite (MCP-Matcher, MCP-Tool-als-Hook) in [`claude-hooks.md`](claude-hooks.md).
-> Details der Abgrenzung: Sektion 10.
+> Die positive Gegenseite zu DIESEM Almanach (*wie man es richtig baut*) steht in
+> [`best-practices/projekt-code/mcp-server/best-practices.md`](../best-practices/projekt-code/mcp-server/best-practices.md)
+> — wechselseitige Bezugstabelle in Sektion 11. Details der Abgrenzung: Sektion 10.
 
 ---
 
@@ -158,10 +160,10 @@ Sticky-Sessions (sonst Bruch bei Deploy/Failover). Verwandt: [typescript-sdk #16
 
 ### 2.6 Fehlende Origin-Validierung → DNS-Rebinding (oder zu strikt → 403)
 **Symptom:** (a) Sicherheitsloch: entfernte Webseite spricht lokalen MCP-Server an. (b) Fehlkonfig: legitime Clients bekommen `403`.
-**Ursache:** Spec: Server MUSS `Origin`-Header validieren; bei ungueltigem Origin `403`. Vergessen → DNS-Rebinding; zu enge Allowlist → legitime Calls geblockt.
-**Versionen:** Spec ab 2025-03-26.
-**FIX:** Origin-Allowlist korrekt setzen (nicht entfernen!), lokal an `127.0.0.1` binden statt `0.0.0.0`, Auth ergaenzen. Schutz aktivieren UND echte Client-Origins eintragen.
-**Quelle:** [Spec Security Warning](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), [auth0.com](https://auth0.com/blog/mcp-streamable-http/).
+**Ursache:** Spec: Server MUSS `Origin`-Header validieren; bei ungueltigem Origin `403`. Vergessen → DNS-Rebinding; zu enge Allowlist → legitime Calls geblockt. **Verschaerfend im TS-SDK:** Der DNS-Rebinding-Schutz (`enableDnsRebindingProtection`) ist standardmaessig **AUS** — wer ihn nicht aktiv einschaltet, ist ungeschuetzt (Advisory GHSA-w48q-cv73-mx4w).
+**Versionen:** Spec ab 2025-03-26; TS-SDK-Default-AUS per Advisory [GHSA-w48q-cv73-mx4w](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-w48q-cv73-mx4w).
+**FIX:** Im TS-SDK `enableDnsRebindingProtection: true` setzen UND `allowedHosts`/`allowedOrigins` konfigurieren (Defense in Depth). Origin-Allowlist korrekt setzen (nicht entfernen!), lokal an `127.0.0.1` binden statt `0.0.0.0`, Auth ergaenzen. Schutz aktivieren UND echte Client-Origins eintragen.
+**Quelle:** [Spec Security Warning](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), [GHSA-w48q-cv73-mx4w](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-w48q-cv73-mx4w), [auth0.com](https://auth0.com/blog/mcp-streamable-http/).
 
 ### 2.7 CORS: `Mcp-Session-Id` nicht als Response-Header exponiert (Browser-Clients)
 **Symptom:** Browser-Client kann die Session nach Init nicht weiterfuehren; Preflight scheitert oder ID ist im JS nicht lesbar.
@@ -606,7 +608,8 @@ Drei Dateien beruehren „MCP", mit klarer Aufgabentrennung:
 
 | Datei | Perspektive | Was hier steht |
 |-------|-------------|----------------|
-| **`bugs/mcp-server.md`** (diese) | **Server BAUEN** | Transport-Impl, Tool-Schema, Error-Handling, Lifecycle, `.mcp.json`-Registrierung, SDK-Versions-Bugs |
+| **`bugs/mcp-server.md`** (diese) | **Server BAUEN — Fallen** | Transport-Impl, Tool-Schema, Error-Handling, Lifecycle, `.mcp.json`-Registrierung, SDK-Versions-Bugs |
+| [`best-practices/projekt-code/mcp-server/best-practices.md`](../best-practices/projekt-code/mcp-server/best-practices.md) | **Server BAUEN — richtige Seite** | Positive Gegenseite zu DIESER Datei: empfohlene Arbeitsweise, Do's & Don'ts (Transport-Wahl, Tool-Schema-Design, Fehler-Propagation, Setup, Sicherheit, Testing). Bezugstabelle in Sektion 11 |
 | [`bugs/claude-hooks.md`](claude-hooks.md) | **Claude-Code-Hooks** | Hooks generell. MCP nur am Rand: MCP-Matcher (`mcp__server__.*`, 9.2), MCP-Tool-als-Hook (14.1), absolute Pfade/BOM in `settings.json`/`.mcp.json` (12.1, 12.5) |
 | `best-practices/05-mcp/best-practices.md` | **Server KONFIGURIEREN/VERBINDEN** (Harness-Seite) | Transport-Wahl in Claude Code, Scopes (local/project/user), `.mcp.json`-ENV-Expansion, OAuth-Setup, Managed MCP, Tool-Search |
 
@@ -636,3 +639,42 @@ matcht) → `claude-hooks.md`.
 - [ ] ESM: `"type":"module"`, NodeNext, lokale Imports mit `.js` (8.7)?
 - [ ] SDK ≥1.25.2 (ReDoS-sicher); fuer discriminatedUnion/unknown-tool-Fix ≥1.28/1.29 erwogen (8.1, 3.2, 4.3)?
 - [ ] HTTP-Transport: Accept-Header, Origin-Validierung, CORS-Expose `Mcp-Session-Id`, Session-404-Reinit (2.x)?
+
+---
+
+## 11. Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
+
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/mcp-server/best-practices.md`](../best-practices/projekt-code/mcp-server/best-practices.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
+
+| Best-Practice-Abschnitt (`best-practices/projekt-code/mcp-server/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
+|--------------------------------|------------------------------------------------------------|
+| A1 Transport-Wahl / SSE deprecated | 2.1 SSE-Deprecation / Streamable HTTP |
+| A2 Stateless vs stateful | 2.4 Stateless „Server not initialized", 2.5 Session-Lifecycle |
+| A3 McpServer vs Low-Level | 3.9 manueller ListTools ohne inputSchema |
+| A5 Lifecycle/Handshake | 7.4 protocolVersion-Mismatch, 7.5 Handshake-Reihenfolge |
+| A6 Lazy Startup | 7.3 Init-/Startup-Timeout |
+| A7 Graceful Shutdown | 7.7 SIGTERM/SIGINT-Cleanup |
+| B1 registerTool | 3.3 `server.tool` deprecated |
+| B3 `.describe()` | 3.10 zod-v4-Description nicht propagiert |
+| B4 Enge Typen / flaches z.object | 3.2 discriminatedUnion → leeres Schema, 3.5/3.6 vendor-Keywords |
+| B6 Tool-Namen | 3.7 Tool-Name-Regex; 3.8 `inputSchema {}` vs `undefined` |
+| B8 draft-2020-12 | 3.4 draft-07 → 400; 3.1 zod-v4 `_parse` (historisch) |
+| C3 Token-effiziente Antworten | (Client-Limit 25k — Praevention, kein Bug) |
+| D1/D2 isError vs JSON-RPC error | 4.1 leeres catch, 4.2 Fehlerklasse, 4.3 unknown-tool, 4.6 Codes, 4.8 Python |
+| D4 stdout-Hygiene / Logging | 1.1 console.log auf stdout (#1), 1.2 dotenv-Banner, 1.3 Pretty-Print |
+| D5 Prozess-Resilienz | 4.4 uncaughtException, 4.5 floating Promise, 7.1 kein Auto-Reconnect, 7.6 Event-Loop-Block |
+| D7 Timeout & Progress | 7.2 resetTimeoutOnProgress opt-in |
+| D8 Cancellation | (7.x Lifecycle — Praevention) |
+| E1 `.mcp.json`/Scopes | 5.6 Scope-Lade-Bugs |
+| E2 Absolute Pfade / cmd /c | 5.1 nackter Befehl, 6.1 cmd /c, 6.2 `claude mcp add` zerstoert `/c`, 6.3 ENOENT, 5.7 npx -y |
+| E3 Projektpfad statt cwd | 5.3 cwd ignoriert, 5.4 Tilde/Relativpfad |
+| E4 Cross-Platform-Start | 6.4 cp1252/UTF-8, 6.5 Shebang, 6.6 Backslash-Pfade, 1.5 CRLF (Python) |
+| E5 env & Secrets | 5.2 env nicht durchgereicht |
+| E6 ESM-Setup | 8.7 ESM `.js`-Imports |
+| E8 JSON valide | 5.5 Trailing-Comma/BOM |
+| F2–F4 OAuth/Token | 8.6 OAuth-Fehlimplementierungen |
+| F5 Origin/DNS-Rebinding | 2.6 Origin-Validierung (+ GHSA-w48q-cv73-mx4w), 2.7 CORS Mcp-Session-Id |
+| G5 SDK-Versionierung | 8.1 ReDoS CVE, 8.2 transitive CVEs, 8.3 Batching, 8.4 Protocol-Version-Header, 8.5 Capabilities-Overwrite; Sektion 9 Fix-Status |
+| (HTTP-Robustheit allg.) | 2.2 Accept-Header 406, 2.3 JSON-only 406, 2.8 Idle-Timeout/Keep-Alive |
+
+*Bei jedem neu erlebten Bug hier ergaenzen UND die Best-Practice-Gegenseite aktualisieren, Bezugstabelle synchron halten (Compound Intelligence, Direktive #1).*
