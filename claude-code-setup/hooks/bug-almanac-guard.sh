@@ -59,12 +59,20 @@ case "$fpl" in
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
         # generischen '*manifest.json'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
         slug="streamdeck"; file="stream-deck.md"; name="Elgato Stream Deck Plugin-Entwicklung";;
+    *.mcp.json)
+        # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
+        # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
+        slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)";;
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
         slug="chrome"; file="chrome-extensions.md"; name="Browser-Erweiterungen (Chrome/Edge MV3)";;
     *google-services*.json|*billing*.kt|*subscription*.kt|*purchase*.kt)
         # Firebase-/Billing-Backend: google-services.json + Billing/Subscription/Purchase-Klassen.
         # MUSS vor dem androidplatform- und dem generischen .kt-Zweig stehen.
         slug="firebasebilling"; file="firebase-billing.md"; name="Firebase / Crashlytics / Play Billing (Google-Backend-Dienste)";;
+    *proguard*.pro|*consumer*.pro|*.keep.xml)
+        # R8/ProGuard-Regeln + Resource-keep (*.keep.xml). MUSS vor dem gradle-Zweig stehen:
+        # build.gradle* bleibt gradle.md, R8-Regeldateien -> r8.md.
+        slug="r8"; file="r8.md"; name="R8 (Code-Shrinker/Optimizer/Obfuscator)";;
     *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
         slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
     *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt|*migration.kt|*migrations.kt|*database.kt)
@@ -102,13 +110,64 @@ $ti_extra"
     *.swift|*.xcodeproj*|*/info.plist|info.plist|*.entitlements)
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
     *.ts|*.tsx|*tsconfig.json)
-        slug="typescript"; file="typescript.md"; name="TypeScript / Node";;
+        # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog Compose-Probe). FAIL-OPEN (trap).
+        mcpSignal=0
+        case "$fpl" in
+          *.ts|*.tsx)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in
+              *@modelcontextprotocol/sdk*|*McpServer*|*StdioServerTransport*|*StreamableHTTPServerTransport*|*setRequestHandler*) mcpSignal=1;;
+            esac
+            ;;
+        esac
+        if [ "$mcpSignal" -eq 1 ]; then
+            slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        else
+            slug="typescript"; file="typescript.md"; name="TypeScript / Node"
+        fi
+        ;;
     *.user.js)
         slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
     *.xaml|*.csproj|*.cs)
         slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)";;
     *.py)
-        slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)";;
+        # .py: MCP-Server-Quelle (mcp/FastMCP)? -> mcp-server.md, sonst python-windows.md. FAIL-OPEN (trap).
+        mcpPy=0
+        probe=""
+        [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+        ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        probe="$probe
+$ti_extra"
+        case "$probe" in
+          *FastMCP*|*mcp.server*|*"from mcp"*|*"import mcp"*|*stdio_server*) mcpPy=1;;
+        esac
+        if [ "$mcpPy" -eq 1 ]; then
+            slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        else
+            slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)"
+        fi
+        ;;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
 esac

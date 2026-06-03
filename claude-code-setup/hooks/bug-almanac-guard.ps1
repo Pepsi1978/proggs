@@ -65,12 +65,20 @@ try {
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
         # generischen 'manifest.json$'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
         $slug = 'streamdeck'; $file = 'stream-deck.md'; $name = 'Elgato Stream Deck Plugin-Entwicklung'
+    } elseif ($fpl -match '\.mcp\.json$') {
+        # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
+        # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
+        $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
     } elseif ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
     } elseif ($fpl -match 'google-services.*\.json$' -or $fpl -match '(billing|subscription|purchase).*\.kt$') {
         # Firebase-/Billing-Backend: google-services.json + Billing/Subscription/Purchase-Klassen.
         # MUSS vor dem androidplatform- und dem generischen .kt-Zweig stehen (sonst faengt z.B. database.kt/.kt das ab).
         $slug = 'firebasebilling'; $file = 'firebase-billing.md'; $name = 'Firebase / Crashlytics / Play Billing (Google-Backend-Dienste)'
+    } elseif ($fpl -match 'proguard.*\.pro$' -or $fpl -match 'consumer.*\.pro$' -or $fpl -match '\.keep\.xml$') {
+        # R8/ProGuard-Regeln (proguard-rules.pro, consumer-rules.pro) + Resource-keep (*.keep.xml).
+        # MUSS vor dem gradle-Zweig stehen: build.gradle* bleibt gradle.md, R8-Regeldateien -> r8.md.
+        $slug = 'r8'; $file = 'r8.md'; $name = 'R8 (Code-Shrinker/Optimizer/Obfuscator)'
     } elseif ($fpl -match 'build\.gradle(\.kts)?$' -or $fpl -match 'settings\.gradle(\.kts)?$' -or $fpl -match '/gradle/' -or $fpl -match 'gradle\.properties$' -or $fpl -match 'gradle-wrapper') {
         $slug = 'gradle'; $file = 'gradle.md'; $name = 'Build - Gradle (AGP/R8)'
     } elseif ($fpl -match 'androidmanifest\.xml$' -or $fpl -match '(service|receiver|worker|migrations?|database)\.kt$') {
@@ -100,13 +108,46 @@ try {
     } elseif ($fpl -match '\.swift$' -or $fpl -match '\.xcodeproj' -or $fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
         $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
-        $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
+        # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum Compose-Probe). FAIL-OPEN.
+        $mcpSignal = $false
+        if ($fpl -match '\.tsx?$') {
+            $probe = ""
+            try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            if ($probe -match '@modelcontextprotocol/sdk' -or $probe -match 'McpServer' -or $probe -match 'StdioServerTransport' -or $probe -match 'StreamableHTTPServerTransport' -or $probe -match 'setRequestHandler') { $mcpSignal = $true }
+        }
+        if ($mcpSignal) {
+            $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } else {
+            $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
+        }
     } elseif ($fpl -match '\.user\.js$') {
         $slug = 'tampermonkey'; $file = 'tampermonkey.md'; $name = 'Tampermonkey/Userscripts'
     } elseif ($fpl -match '\.xaml$' -or $fpl -match '\.csproj$' -or $fpl -match '\.cs$') {
         $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
     } elseif ($fpl -match '\.py$') {
-        $slug = 'python'; $file = 'python-windows.md'; $name = 'Python (Windows-Encoding/Cross-Platform-Scripting)'
+        # .py: MCP-Server-Quelle (mcp/FastMCP)? -> mcp-server.md, sonst python-windows.md. FAIL-OPEN.
+        $mcpPy = $false
+        $probe = ""
+        try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($probe -match 'FastMCP' -or $probe -match 'mcp\.server' -or $probe -match 'from mcp' -or $probe -match 'import mcp' -or $probe -match 'stdio_server') { $mcpPy = $true }
+        if ($mcpPy) {
+            $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } else {
+            $slug = 'python'; $file = 'python-windows.md'; $name = 'Python (Windows-Encoding/Cross-Platform-Scripting)'
+        }
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
     }
