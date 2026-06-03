@@ -2,7 +2,7 @@
 	"_comment": "MCP server configuration for Windows. Auto-synced to ~/proggs/.mcp.json by auto-sync.ps1",
 	"mcpServers": {
 		"code-review-graph": {
-			"command": "C:/Users/barwa/.local/bin/uvx.exe",
+			"command": "C:/Users/barwa/bin/uvx.exe",
 			"args": ["code-review-graph", "serve"]
 		},
 		"code-search": {
