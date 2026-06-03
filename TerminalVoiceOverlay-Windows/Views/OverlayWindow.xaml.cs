@@ -3325,12 +3325,13 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>Star button — toggles the full PromptBoard integration:
-        /// opens/closes the side panel AND enables/disables the always-on
-        /// prefix. Default-Einstieg seit Aenderung 2026-05-09: erster Klick
-        /// zeigt das Promtboard (mit allen Kategorien), das Eingabefeld bleibt
-        /// zu. Der Benutzer schaltet ueber den NEUEN Stern in der Promtboard-
-        /// Toolbar in den Solo-Modus (Board zu, Eingabefeld am Pillar). Der
-        /// Stern in der Eingabe-Toolbar holt das Promtboard wieder zurueck.
+        /// opens/closes the prompt UI AND enables/disables the always-on
+        /// prefix. Default-Einstieg seit Aenderung 2026-06-03 (Frank-Wunsch):
+        /// erster Klick zeigt ZUERST das Prompt-Eingabefenster (Solo-Modus —
+        /// Board versteckt, Eingabe direkt am Pillar), NICHT mehr das Promtboard.
+        /// Der Benutzer holt das Promtboard bei Bedarf ueber den Stern in der
+        /// Eingabe-Toolbar dazu; der Stern in der Promtboard-Toolbar schaltet
+        /// wieder zurueck in den Solo-Modus.
         /// Zweiter Klick auf diesen Voice-Overlay-Stern schliesst alles.</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
@@ -3340,7 +3341,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
-                ShowPromptPanel();
+                ShowPromptInputSolo();
             }
             else
             {
@@ -3349,7 +3350,7 @@ namespace TerminalVoiceOverlay.Views
                 HidePromptPanel();
             }
 
-            Console.WriteLine($"PromptBoard panel {(alwaysOnActive ? "OPEN" : "CLOSED")}");
+            Console.WriteLine($"Prompt input {(alwaysOnActive ? "OPEN (solo)" : "CLOSED")}");
         }
 
         /// <summary>
@@ -3460,6 +3461,35 @@ namespace TerminalVoiceOverlay.Views
             _inputSoloDock = false;
             input.DockTo(_promptPanel);
             input.SetSoloDockState(false);
+        }
+
+        /// <summary>
+        /// Solo-Einstieg ueber den Voice-Overlay-Stern (Frank-Wunsch 2026-06-03):
+        /// oeffnet ZUERST das Prompt-Eingabefenster und blendet das Promtboard
+        /// dabei aus — die Eingabe dockt direkt an die linke Pillar-Kante. Das
+        /// Promtboard wird im Hintergrund erstellt und mit frischen Daten
+        /// geladen, damit der Benutzer es spaeter ueber den Stern in der
+        /// Eingabe-Toolbar verzoegerungsfrei einblenden kann. Nutzt dieselbe
+        /// ApplySoloDockMode-Mechanik wie der Board-Stern, nur als Einstieg.
+        /// </summary>
+        private void ShowPromptInputSolo()
+        {
+            EnsurePromptPanelInstance();
+            if (_promptPanel is null) return;
+
+            // Board-Daten laden (Kategorien/Prompts), auch wenn das Board nicht
+            // sichtbar ist — sonst waere es beim spaeteren Einblenden leer.
+            _ = _promptPanel.RefreshAsync();
+
+            // Board-Position vorab festlegen, damit das Eingabefenster beim
+            // ersten Andocken schon nahe der finalen Stelle sitzt (weniger Flash),
+            // bevor ApplySoloDockMode es an den Pillar umdockt.
+            PositionPromptPanel();
+
+            // Eingabe oeffnen, Promtboard ausblenden, Eingabe an den Pillar
+            // andocken — identische, bereits erprobte Solo-Andock-Sequenz wie
+            // beim Stern in der Board-/Eingabe-Toolbar.
+            ApplySoloDockMode(true);
         }
 
         private void HidePromptPanel()
