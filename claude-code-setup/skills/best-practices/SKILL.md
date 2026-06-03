@@ -223,11 +223,14 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
-- **5–7 Researcher GLEICHZEITIG mit CONTINUOUS-SPAWNING (empirisch, Frank 2026-06-02):**
-  Konstant 5–7 Researcher laufen lassen — wird EINER fertig, SOFORT den naechsten starten (statt in
-  Wellen zu warten, bis alle 5 fertig sind). Das haelt die Parallelitaet hoch UND den RPM-Strom
-  gleichmaessig (besser als ein Burst von "alle auf einmal"). Empirisch: **5 sicher, 7 laeuft auch
-  (Frank), 12 → 11 abgestuerzt**. Also Obergrenze ~7 gleichzeitig.
+- **Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING (Frank 2026-06-02 + 2026-06-03):**
+  Bei genug Themen IMMER mit **7 auf einmal** beginnen — NICHT erst 4 und danach nochmal 3 (Zeitverschwendung).
+  7 gleichzeitig funktionieren einwandfrei. Gibt es MEHR als 7 Themen: sobald EINER fertig wird (nur noch 6
+  laufen), SOFORT den naechsten fuers naechste Thema hinterher starten, damit wieder 7 laufen — bis ALLE
+  Themen abgedeckt sind. **NIEMALS** warten, bis die ersten 7 fertig sind, und dann eine zweite Welle (z.B. 3)
+  nachschieben (waere in der Spitze 10 → RPM-Risiko, langsamer). So bleibt die Parallelitaet konstant bei 7
+  und der RPM-Strom gleichmaessig (kein Burst). Empirisch: **5 sicher, 7 laeuft einwandfrei, 12 → 11 abgestuerzt**.
+  Also Obergrenze ~7 gleichzeitig.
 - **Warum die Obergrenze NICHT vom Kontextfenster kommt (wichtig):** Web-Researcher sind
   ANFRAGE-DICHT (2–3 Tool-Runden/Turn → 100+ RPM bei 5 Stueck). Zu viele gleichzeitig sprengen das
   Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz ("server is temporarily limiting requests ·

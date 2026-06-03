@@ -91,11 +91,15 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 
 ### Schritt 2 — Researcher-Schwarm (breite Bug-Suche, offizielle Quellen zuerst)
 
-**5-7 Researcher GLEICHZEITIG mit CONTINUOUS-SPAWNING** (Frank 2026-06-02): zuerst 5-7
-parallel spawnen (in EINEM Antwortblock), und sobald EINER fertig ist, SOFORT den naechsten
-Teilbereich nachstarten, damit konstant 5-7 laufen — nicht in Wellen warten. So werden die
-Researcher voll ausgenutzt und der RPM-Strom bleibt gleichmaessig (kein Burst). Empirisch:
-5 sicher, 7 laeuft auch; ab ~12 RPM-Abstuerze. Reicht der Bereich nicht fuer 7 Teilbereiche,
+**Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
+Bei genug Teilbereichen IMMER mit **7 auf einmal** beginnen (in EINEM Antwortblock) — NICHT erst 4 und
+danach nochmal 3 (das ist Zeitverschwendung). 7 gleichzeitig funktionieren einwandfrei.
+Gibt es MEHR als 7 Themen, dann gilt Continuous-Spawning: sobald EINER fertig wird (es laufen also nur
+noch 6), SOFORT den naechsten Researcher fuers naechste Thema hinterher starten, damit wieder 7 laufen —
+und so weiter, bis ALLE Themen abgedeckt sind. **NIEMALS** warten, bis die ersten 7 alle fertig sind, und
+dann erst die naechste Welle (z.B. 3) nachschieben (das wuerden in der Spitze 10 → RPM-Risiko und langsamer).
+So bleibt die Parallelitaet konstant bei 7 und der RPM-Strom gleichmaessig (kein Burst). Empirisch:
+5 sicher, 7 laeuft einwandfrei; ab ~12 RPM-Abstuerze. Reicht der Bereich nicht fuer 7 Teilbereiche,
 mehr Researcher mit GLEICHEM Teilbereich aber unterschiedlichem Fokus (verschiedene Quellen-Typen,
 Versionen, Unterthemen) spawnen — Duplikate bestaetigen den Bug, kosten aber nichts.
 Fertige Prompt-Vorlagen: `references/researcher-prompts.md` — `[BEREICH]`/`[VERSION]`
