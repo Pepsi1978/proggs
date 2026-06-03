@@ -60,9 +60,25 @@ Do While True
         End If
 
         ' Starten (0 = versteckt, False = nicht warten)
-        WshShell.Run """" & exePath & """", 0, False
-        lastStartTime = nowMs
-        WScript.Sleep 5000  ' 5 Sekunden warten nach Start
+        ' Race-Condition-Schutz: Waehrend eines Rebuilds (publish.ps1) wird die .exe
+        ' kurzzeitig geloescht/ersetzt. Dann NICHT mit blockierender Fehlerbox (80070002)
+        ' abstuerzen, sondern Start ueberspringen und beim naechsten Durchlauf erneut versuchen.
+        If fso.FileExists(exePath) Then
+            On Error Resume Next
+            WshShell.Run """" & exePath & """", 0, False
+            If Err.Number <> 0 Then
+                LogMsg logPath, "Start uebersprungen (Fehler " & Err.Number & "): " & Err.Description
+                Err.Clear
+            Else
+                lastStartTime = nowMs
+            End If
+            On Error GoTo 0
+            WScript.Sleep 5000  ' 5 Sekunden warten nach Start
+        Else
+            ' .exe gerade nicht vorhanden (vermutlich laeuft ein Rebuild) — geduldig warten
+            LogMsg logPath, "exe nicht vorhanden (vermutlich Rebuild) — warte und versuche erneut."
+            WScript.Sleep 3000
+        End If
     End If
     WScript.Sleep 3000  ' Alle 3 Sekunden pruefen
 Loop
