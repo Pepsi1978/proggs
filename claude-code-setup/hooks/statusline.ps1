@@ -313,10 +313,20 @@ try {
         $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $freshResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            # 7d-Verbrauch unabhaengig: hoechster Wert ueber alle Sessions (validiert, zaehlt hoch)
-            $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
-            # 7d-Reset: aus der frischesten Session (accountweite Konstante, nicht max)
+            # 7d-Reset zuerst: aus der frischesten Session (accountweite Konstante, nicht max)
             $freshWeekResets = [long]$freshest.seven_d_resets
+            # 7d-Verbrauch NUR aus dem AKTUELLEN 7d-Fenster (gleiches seven_d_resets wie die
+            # frischeste Session) — exakt analog zur 5h-Fenster-Logik oben. Verhindert dass eine
+            # idle Session aus dem VORHERIGEN Fenster mit hohem seven_d den frischen niedrigen Wert
+            # nach einem 7d-Reset kapert (Frank-Bug-Report 2026-06-03: zeigte 48% statt 5% nach
+            # Reset — altes State-File mit seven_d_resets aus dem Vorfenster gewann beim globalen
+            # MAX). Fallback auf alle Eintraege wenn kein gueltiges Fenster bekannt ist (lossless).
+            if ($freshWeekResets -gt 0) {
+                $weekCandidates = $allEntries | Where-Object { [long]$_.seven_d_resets -eq $freshWeekResets }
+            } else {
+                $weekCandidates = $allEntries
+            }
+            $freshSeven = ($weekCandidates | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h

@@ -272,8 +272,13 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         ($valid | max_by(.ts_seen // 0)) as $freshest |
         ($freshest.five_h_resets // 0) as $freshR |
         ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
-        ($valid | map(.seven_d // 0) | max) as $bestS |
         ($freshest.seven_d_resets // 0) as $maxSR |
+        # 7d-Verbrauch NUR aus dem AKTUELLEN 7d-Fenster (gleiches seven_d_resets wie die
+        # frischeste Session) — analog zur 5h-Fenster-Logik. Verhindert dass eine idle Session
+        # aus dem VORHERIGEN Fenster mit hohem seven_d den frischen niedrigen Wert nach einem
+        # 7d-Reset kapert (Frank-Bug-Report 2026-06-03: 48% statt 5%). Fallback auf alle wenn
+        # kein gueltiges Fenster (maxSR=0) bekannt ist (lossless).
+        ($valid | (if $maxSR > 0 then map(select((.seven_d_resets // 0) == $maxSR)) else . end) | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
