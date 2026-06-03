@@ -26,7 +26,7 @@ projekt-code/
 ├── dotnet-csharp/best-practices.md
 ├── chrome-extensions/best-practices.md   ← Chrome/Edge MV3 (Stand 2026-06-02, Chrome 148)
 ├── gradle/best-practices.md       ← Android-Build-System Gradle/AGP/R8/KSP (Stand 2026-06-02)
-├── r8/best-practices.md           ← R8 Code-Shrinker/Optimizer/Obfuscator (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
+├── r8/best-practices.md           ← R8 Code-Shrinker/Optimizer/Obfuscator — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
 ├── python-windows/best-practices.md   ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
 ├── swift-appkit/best-practices.md   ← macOS-Desktop Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
 ├── typescript/best-practices.md   ← TypeScript/Node.js (Stand 2026-06-03, Node 24.15.0 / TS 6.0.2 / npm 11.12.0 / Bun 1.3.11)
