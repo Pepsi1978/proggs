@@ -126,23 +126,23 @@ public partial class MainWindow : Window
                 p.Y >= _monTopPx &&
                 p.Y < _monBottomPx;
 
-            if (atRightEdge) Open();
+            if (atRightEdge) OpenSidebar();
         }
         else
         {
             // Maus deutlich links vom Fenster -> wieder einfahren.
-            if (p.X < _winLeftPx - HideMarginPx) Close();
+            if (p.X < _winLeftPx - HideMarginPx) CloseSidebar();
         }
     }
 
-    private void Open()
+    private void OpenSidebar()
     {
         if (_isOpen) return;
         _isOpen = true;
         Animate(SlideTransform, 0, 220);
     }
 
-    private void Close()
+    private void CloseSidebar()
     {
         if (!_isOpen) return;
         _isOpen = false;

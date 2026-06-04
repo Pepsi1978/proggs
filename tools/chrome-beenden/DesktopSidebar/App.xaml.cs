@@ -3,7 +3,9 @@ using System.Windows;
 
 namespace DesktopSidebar;
 
-public partial class App : Application
+// Application voll qualifizieren: UseWindowsForms macht "Application" sonst mehrdeutig
+// (System.Windows.Application vs. System.Windows.Forms.Application).
+public partial class App : System.Windows.Application
 {
     // Mutex MUSS static gehalten werden, sonst sammelt der GC ihn ein (Almanach §6.4).
     private static Mutex? _instanceMutex;
