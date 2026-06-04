@@ -5,6 +5,8 @@ using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+// MouseEventArgs ist mehrdeutig (Projekt referenziert auch WinForms fuer Screen) -> WPF-Variante festlegen.
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
