@@ -111,6 +111,7 @@
         <Border x:Name="RootBorder"
                 CornerRadius="26,0,0,26"
                 Margin="0"
+                Height="188" VerticalAlignment="Center"
                 BorderBrush="#2EFFFFFF"
                 BorderThickness="1,1,0,1">
             <Border.Background>
