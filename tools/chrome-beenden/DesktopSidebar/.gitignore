@@ -1,0 +1,3 @@
+# Build-Artefakte nicht ins Repo (self-contained .exe ist ~150 MB, wird lokal gebaut)
+bin/
+obj/

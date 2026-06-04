@@ -1,4 +1,5 @@
-/tools/
+/tools/*
+!/tools/chrome-beenden/
 .code-search/
 .think-tank/
 .env
