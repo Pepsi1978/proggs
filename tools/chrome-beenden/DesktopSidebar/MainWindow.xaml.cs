@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -23,12 +24,22 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
     private static readonly IntPtr HWND_TOPMOST = new(-1);
     private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080; // nicht im Alt-Tab / nicht in der Taskbar
     private const int WS_EX_NOACTIVATE = 0x08000000; // klaut beim Anzeigen keinen Fokus
+    private const int WS_EX_TRANSPARENT = 0x00000020; // maus-durchlaessig (Almanach §2.4)
+
+    // Symbol-Glyphen (muessen zu den Tag-Werten in MainWindow.xaml passen).
+    private const string GlyphRestart = "";
+    private const string GlyphPower = "";
+    private const string GlyphWarning = "";
 
     // ===== Konfiguration =====
     private const string ChromeLnk = @"C:\Users\barwa\Desktop\Chrome beenden.lnk";
@@ -63,24 +74,28 @@ public partial class MainWindow : Window
 
         _hwnd = new WindowInteropHelper(this).Handle;
 
-        // Aus Alt-Tab/Taskbar nehmen und Fokus-Diebstahl verhindern.
+        // Aus Alt-Tab/Taskbar nehmen, keinen Fokus klauen, und geschlossen klick-durchlaessig
+        // (der unsichtbare Randstreifen darf keine Desktop-Klicks/Icons blockieren — Almanach §2.4).
         int ex = GetWindowLong(_hwnd, GWL_EXSTYLE);
-        SetWindowLong(_hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+        SetWindowLong(_hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT);
 
         _dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
 
         PositionWindow();
         ApplyTopmost();
 
-        // Start: eingefahren (unsichtbar am rechten Rand).
-        SlideTransform.X = ActualWidthOrFallback();
+        // Start: eingefahren (unsichtbar am rechten Rand, inkl. Schatten).
+        SlideTransform.X = HiddenX();
         _isOpen = false;
 
         _poll.Tick += Poll_Tick;
         _poll.Start();
     }
 
-    private double ActualWidthOrFallback() => Width > 0 ? Width : 188;
+    private double ActualWidthOrFallback() => Width > 0 ? Width : 92;
+
+    /// <summary>Versteck-Offset: Fensterbreite plus Rand fuer den Schlagschatten.</summary>
+    private double HiddenX() => ActualWidthOrFallback() + 30;
 
     /// <summary>Positioniert das Fenster rechts am Primaermonitor, vertikal zentriert (physische Pixel).</summary>
     private void PositionWindow()
@@ -107,6 +122,28 @@ public partial class MainWindow : Window
         SetWindowPos(_hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
+    /// <summary>Maus-Durchlaessigkeit umschalten: geschlossen = durchlaessig, offen = klickbar.</summary>
+    private void SetClickThrough(bool on)
+    {
+        int ex = GetWindowLong(_hwnd, GWL_EXSTYLE);
+        ex = on ? (ex | WS_EX_TRANSPARENT) : (ex & ~WS_EX_TRANSPARENT);
+        SetWindowLong(_hwnd, GWL_EXSTYLE, ex);
+    }
+
+    /// <summary>True, wenn der Windows-Desktop (Shell) das Vordergrundfenster ist.</summary>
+    private static bool IsOnDesktop()
+    {
+        IntPtr fg = GetForegroundWindow();
+        if (fg == IntPtr.Zero) return false;
+
+        var sb = new StringBuilder(256);
+        GetClassName(fg, sb, sb.Capacity);
+        string cls = sb.ToString();
+
+        // "Progman" = Desktop-Shell, "WorkerW" = Desktop bei aktivem Hintergrund/Slideshow.
+        return cls == "Progman" || cls == "WorkerW";
+    }
+
     private void Poll_Tick(object? sender, EventArgs e)
     {
         // ca. jede Sekunde Topmost auffrischen (60ms * 16).
@@ -126,7 +163,8 @@ public partial class MainWindow : Window
                 p.Y >= _monTopPx &&
                 p.Y < _monBottomPx;
 
-            if (atRightEdge) OpenSidebar();
+            // Nur oeffnen, wenn der Desktop im Vordergrund ist — nicht ueber anderen Fenstern.
+            if (atRightEdge && IsOnDesktop()) OpenSidebar();
         }
         else
         {
@@ -139,6 +177,7 @@ public partial class MainWindow : Window
     {
         if (_isOpen) return;
         _isOpen = true;
+        SetClickThrough(false);                 // jetzt klickbar (Buttons)
         Animate(SlideTransform, 0, 220);
     }
 
@@ -146,15 +185,17 @@ public partial class MainWindow : Window
     {
         if (!_isOpen) return;
         _isOpen = false;
-        Animate(SlideTransform, ActualWidthOrFallback(), 200);
+        // Erst nach dem Einfahren wieder durchlaessig schalten.
+        Animate(SlideTransform, HiddenX(), 200, () => { if (!_isOpen) SetClickThrough(true); });
     }
 
-    private static void Animate(TranslateTransform target, double to, int ms)
+    private static void Animate(TranslateTransform target, double to, int ms, Action? done = null)
     {
         var anim = new DoubleAnimation(to, TimeSpan.FromMilliseconds(ms))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
+        if (done != null) anim.Completed += (_, _) => done();
         target.BeginAnimation(TranslateTransform.XProperty, anim);
     }
 
@@ -168,9 +209,8 @@ public partial class MainWindow : Window
         _busy = true;
         _countdownValue = 3;
 
-        CountdownTitle.Text = restart ? "Neustart" : "Herunterfahren";
+        CountdownGlyph.Text = restart ? GlyphRestart : GlyphPower;
         CountdownNumber.Text = _countdownValue.ToString();
-        CountdownHint.Text = "Sekunden";
         CancelButton.Visibility = Visibility.Visible;
         CountdownOverlay.Visibility = Visibility.Visible;
 
@@ -213,9 +253,9 @@ public partial class MainWindow : Window
     /// <summary>Chrome hart beenden, warten bis weg, dann Neustart/Herunterfahren.</summary>
     private async Task ExecuteActionAsync()
     {
+        // Symbolzustand "wird ausgefuehrt": Abbrechen weg, nur noch das Aktions-Symbol.
         CancelButton.Visibility = Visibility.Collapsed;
         CountdownNumber.Text = "";
-        CountdownHint.Text = "Chrome wird beendet …";
 
         // 1) Chrome-beenden-Verknuepfung starten (taskkill /F /IM chrome.exe /T).
         try
@@ -247,7 +287,6 @@ public partial class MainWindow : Window
         await WaitForChromeGoneAsync(ChromeWaitMs);
 
         // 3) Neustart bzw. Herunterfahren.
-        CountdownHint.Text = _restartAction ? "Neustart …" : "Herunterfahren …";
         try
         {
             Process.Start(new ProcessStartInfo
@@ -260,7 +299,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            CountdownHint.Text = "Fehler beim Beenden";
+            // Fehlerzustand rein symbolisch anzeigen (Warn-Glyph), Abbrechen wieder erlauben.
+            CountdownGlyph.Text = GlyphWarning;
             CountdownNumber.Text = "";
             CancelButton.Visibility = Visibility.Visible;
             _busy = false;
