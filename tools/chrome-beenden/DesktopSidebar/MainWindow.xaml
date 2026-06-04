@@ -130,12 +130,6 @@
             </Border.Effect>
 
             <Grid>
-                <!-- Schlanker Griff-Indikator am linken Rand -->
-                <Border Width="4" Height="44" CornerRadius="2"
-                        Background="#3DFFFFFF"
-                        HorizontalAlignment="Left" VerticalAlignment="Center"
-                        Margin="6,0,0,0"/>
-
                 <!-- Die zwei Symbol-Buttons, vertikal zentriert -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,2,0">
                     <!-- Neustart (blau) -->
