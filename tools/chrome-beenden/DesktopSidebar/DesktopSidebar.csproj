@@ -24,6 +24,11 @@
 
     <AssemblyName>DesktopSidebar</AssemblyName>
     <Product>Chrome-Shutdown-Sidebar</Product>
+
+    <!-- WFO0003: WinForms-DPI-Hinweis. Bewusst ignoriert — dies ist eine WPF-App,
+         die PerMonitorV2 ueber das Manifest setzt (Almanach §3.1); WinForms wird nur
+         fuer Screen.PrimaryScreen.Bounds genutzt. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
 
 </Project>
