@@ -55,6 +55,7 @@ public partial class MainWindow : Window
     private bool _isOpen;
     private bool _busy;            // Countdown laeuft / Aktion startet -> nicht automatisch schliessen
     private int _topmostTick;
+    private bool _indicatorShown;  // aktueller Sichtbarkeitszustand des Rand-Indikators
 
     // Primaermonitor in physischen Pixeln
     private int _monLeftPx, _monRightPx, _monTopPx, _monBottomPx;
@@ -149,6 +150,9 @@ public partial class MainWindow : Window
         // ca. jede Sekunde Topmost auffrischen (60ms * 16).
         if (++_topmostTick >= 16) { _topmostTick = 0; ApplyTopmost(); }
 
+        // Rand-Indikator nachfuehren (zeigt nur eingeklappt + am Desktop).
+        UpdateEdgeIndicator();
+
         // Waehrend Countdown/Aktion bleibt die Sidebar offen.
         if (_busy) return;
 
@@ -177,8 +181,19 @@ public partial class MainWindow : Window
     {
         if (_isOpen) return;
         _isOpen = true;
+        EdgeIndicator.Visibility = Visibility.Collapsed;  // Indikator sofort weg
+        _indicatorShown = false;
         SetClickThrough(false);                 // jetzt klickbar (Buttons)
         Animate(SlideTransform, 0, 220);
+    }
+
+    /// <summary>Blendet den Rand-Indikator ein, solange die Sidebar eingeklappt und der Desktop vorn ist.</summary>
+    private void UpdateEdgeIndicator()
+    {
+        bool show = !_isOpen && !_busy && IsOnDesktop();
+        if (show == _indicatorShown) return;
+        _indicatorShown = show;
+        EdgeIndicator.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void CloseSidebar()
