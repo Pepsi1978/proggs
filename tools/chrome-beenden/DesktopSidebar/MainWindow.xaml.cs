@@ -24,7 +24,8 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(POINT p);
+    [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private static readonly IntPtr HWND_TOPMOST = new(-1);
     private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
     private const int GWL_EXSTYLE = -20;
+    private const uint GA_ROOT = 2;                  // GetAncestor -> oberstes Wurzelfenster
     private const int WS_EX_TOOLWINDOW = 0x00000080; // nicht im Alt-Tab / nicht in der Taskbar
     private const int WS_EX_NOACTIVATE = 0x08000000; // klaut beim Anzeigen keinen Fokus
     private const int WS_EX_TRANSPARENT = 0x00000020; // maus-durchlaessig (Almanach §2.4)
@@ -131,14 +133,29 @@ public partial class MainWindow : Window
         SetWindowLong(_hwnd, GWL_EXSTYLE, ex);
     }
 
-    /// <summary>True, wenn der Windows-Desktop (Shell) das Vordergrundfenster ist.</summary>
-    private static bool IsOnDesktop()
+    /// <summary>
+    /// True, wenn links neben der eingeklappten Sidebar (auf Hoehe yPx) der Windows-Desktop
+    /// frei sichtbar ist — also KEIN anderes App-Fenster den rechten Bildschirmrand verdeckt.
+    /// Bewusst NICHT ueber GetForegroundWindow: nach dem Schliessen/Minimieren eines Fensters
+    /// ist Progman/WorkerW oft nicht das Vordergrundfenster, obwohl der Desktop sichtbar ist —
+    /// dann ging die Sidebar frueher erst nach einem Klick auf eine freie Desktop-Flaeche auf.
+    /// WindowFromPoint fragt stattdessen direkt, was an dieser Stelle tatsaechlich sichtbar ist.
+    /// </summary>
+    private bool IsDesktopFreeAt(int yPx)
     {
-        IntPtr fg = GetForegroundWindow();
-        if (fg == IntPtr.Zero) return false;
+        // Punkt knapp LINKS neben der eingeklappten Sidebar pruefen, damit wir nicht das eigene
+        // (klick-durchlaessige) Fenster treffen, sondern das wirklich sichtbare Fenster dort.
+        int xPx = _winLeftPx - 4;
+        if (xPx < _monLeftPx) xPx = _monLeftPx;
+
+        IntPtr h = WindowFromPoint(new POINT { X = xPx, Y = yPx });
+        if (h == IntPtr.Zero) return false;
+
+        IntPtr root = GetAncestor(h, GA_ROOT);
+        if (root == _hwnd) return true; // die eigene Sidebar zaehlt nicht als fremdes Fenster
 
         var sb = new StringBuilder(256);
-        GetClassName(fg, sb, sb.Capacity);
+        GetClassName(root, sb, sb.Capacity);
         string cls = sb.ToString();
 
         // "Progman" = Desktop-Shell, "WorkerW" = Desktop bei aktivem Hintergrund/Slideshow.
@@ -167,8 +184,8 @@ public partial class MainWindow : Window
                 p.Y >= _monTopPx &&
                 p.Y < _monBottomPx;
 
-            // Nur oeffnen, wenn der Desktop im Vordergrund ist — nicht ueber anderen Fenstern.
-            if (atRightEdge && IsOnDesktop()) OpenSidebar();
+            // Nur oeffnen, wenn am rechten Rand der Desktop frei liegt — nicht ueber anderen Fenstern.
+            if (atRightEdge && IsDesktopFreeAt(p.Y)) OpenSidebar();
         }
         else
         {
@@ -190,7 +207,7 @@ public partial class MainWindow : Window
     /// <summary>Blendet den Rand-Indikator ein, solange die Sidebar eingeklappt und der Desktop vorn ist.</summary>
     private void UpdateEdgeIndicator()
     {
-        bool show = !_isOpen && !_busy && IsOnDesktop();
+        bool show = !_isOpen && !_busy && IsDesktopFreeAt((_monTopPx + _monBottomPx) / 2);
         if (show == _indicatorShown) return;
         _indicatorShown = show;
         EdgeIndicator.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
