@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -59,9 +61,17 @@ public partial class MainWindow : Window
     private int _topmostTick;
     private bool _indicatorShown;  // aktueller Sichtbarkeitszustand des Rand-Indikators
 
+    // Vertikales Verschieben per Maus (Drag) + persistente Position
+    private bool _dragging;
+    private int _dragStartCursorY; // Cursor-Y bei Drag-Beginn (physische Pixel)
+    private int _dragStartTopPx;   // Fenster-Oberkante bei Drag-Beginn (physische Pixel)
+    private int? _savedTopPx;      // beim Start geladene gespeicherte Position (falls vorhanden)
+
     // Primaermonitor in physischen Pixeln
     private int _monLeftPx, _monRightPx, _monTopPx, _monBottomPx;
     private int _winLeftPx;        // linke Fensterkante in physischen Pixeln
+    private int _winTopPx;         // obere Fensterkante in physischen Pixeln (aktuell)
+    private int _winHeightPx;      // Fensterhoehe in physischen Pixeln
 
     private bool _restartAction;
     private int _countdownValue;
@@ -84,12 +94,18 @@ public partial class MainWindow : Window
 
         _dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
 
+        LoadSavedPosition();
         PositionWindow();
         ApplyTopmost();
 
         // Start: eingefahren (unsichtbar am rechten Rand, inkl. Schatten).
         SlideTransform.X = HiddenX();
         _isOpen = false;
+
+        // Dunkle Flaeche als vertikaler Ziehgriff (Buttons verschlucken ihren eigenen Klick).
+        RootBorder.MouseLeftButtonDown += Drag_MouseDown;
+        RootBorder.MouseMove += Drag_MouseMove;
+        RootBorder.MouseLeftButtonUp += Drag_MouseUp;
 
         _poll.Tick += Poll_Tick;
         _poll.Start();
@@ -110,13 +126,24 @@ public partial class MainWindow : Window
         _monBottomPx = b.Bottom;
 
         int widthPx = (int)Math.Round(Width * _dpi);
-        int heightPx = (int)Math.Round(Height * _dpi);
+        _winHeightPx = (int)Math.Round(Height * _dpi);
 
         _winLeftPx = b.Right - widthPx;
-        int topPx = b.Top + (b.Height - heightPx) / 2;
+
+        // Gespeicherte vertikale Position verwenden, sonst vertikal zentrieren.
+        int defaultTop = b.Top + (b.Height - _winHeightPx) / 2;
+        _winTopPx = ClampTop(_savedTopPx ?? defaultTop);
 
         // Nur Position setzen (physische Pixel), Groesse bleibt WPF-DIP. Almanach §3.3.
-        SetWindowPos(_hwnd, HWND_TOPMOST, _winLeftPx, topPx, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+        SetWindowPos(_hwnd, HWND_TOPMOST, _winLeftPx, _winTopPx, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    /// <summary>Haelt die Fenster-Oberkante komplett im sichtbaren Monitorbereich.</summary>
+    private int ClampTop(int topPx)
+    {
+        int max = _monBottomPx - _winHeightPx;
+        if (max < _monTopPx) max = _monTopPx;
+        return Math.Max(_monTopPx, Math.Min(max, topPx));
     }
 
     /// <summary>Topmost erneut anwenden — geht bei ShowInTaskbar=false sonst verloren (Almanach §2.1/§2.2).</summary>
@@ -170,8 +197,8 @@ public partial class MainWindow : Window
         // Rand-Indikator nachfuehren (zeigt nur eingeklappt + am Desktop).
         UpdateEdgeIndicator();
 
-        // Waehrend Countdown/Aktion bleibt die Sidebar offen.
-        if (_busy) return;
+        // Waehrend Countdown/Aktion oder aktivem Ziehen bleibt die Sidebar offen.
+        if (_busy || _dragging) return;
 
         if (!GetCursorPos(out POINT p)) return;
 
@@ -229,6 +256,70 @@ public partial class MainWindow : Window
         };
         if (done != null) anim.Completed += (_, _) => done();
         target.BeginAnimation(TranslateTransform.XProperty, anim);
+    }
+
+    // ===== Vertikales Verschieben per Maus =====
+    private void Drag_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Nur ziehen, wenn die Sidebar offen ist und kein Countdown laeuft.
+        // Klicks auf die Buttons kommen hier nicht an (Button verschluckt MouseLeftButtonDown).
+        if (!_isOpen || _busy) return;
+        if (!GetCursorPos(out POINT p)) return;
+
+        _dragging = true;
+        _dragStartCursorY = p.Y;
+        _dragStartTopPx = _winTopPx;
+        RootBorder.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void Drag_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_dragging) return;
+        if (!GetCursorPos(out POINT p)) return;
+
+        // Immer aus der ABSOLUTEN Cursorposition rechnen — driftet nicht, wenn das Fenster mitwandert.
+        int newTop = ClampTop(_dragStartTopPx + (p.Y - _dragStartCursorY));
+        if (newTop == _winTopPx) return;
+
+        _winTopPx = newTop;
+        SetWindowPos(_hwnd, HWND_TOPMOST, _winLeftPx, _winTopPx, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    private void Drag_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_dragging) return;
+        _dragging = false;
+        RootBorder.ReleaseMouseCapture();
+        SavePosition();
+        e.Handled = true;
+    }
+
+    // ===== Persistente vertikale Position =====
+    private static string PositionFilePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "ChromeShutdownSidebar", "sidebar-position.txt");
+
+    private void LoadSavedPosition()
+    {
+        try
+        {
+            string path = PositionFilePath();
+            if (File.Exists(path) && int.TryParse(File.ReadAllText(path).Trim(), out int top))
+                _savedTopPx = top;
+        }
+        catch { /* kein/unlesbarer Wert -> Default (zentriert) */ }
+    }
+
+    private void SavePosition()
+    {
+        try
+        {
+            string path = PositionFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, _winTopPx.ToString());
+        }
+        catch { /* Speichern fehlgeschlagen -> beim naechsten Start eben zentriert */ }
     }
 
     // ===== Button-Handler =====
