@@ -86,9 +86,28 @@ Registriert in `~/.claude/settings.json`, gespiegelt in
 5. Tritt ein Fehler auf → ZUERST Almanach pruefen: ist das ein bekannter Bug?
    └─ ja → dokumentierte Loesung sofort anwenden (schnellster Pfad).
 6. Neuen Bug erlebt (oder im Netz beste Loesung gefunden)
-   → Eintrag in den Almanach: Bug + funktionserhaltende Loesung + Versionen,
+   → NUR wenn es ein HARTER, sicher bestaetigter Bug ist (reproduzierbar, eindeutig
+     ein echter Fehler — keine Vermutung): Eintrag in den passenden
+     `bugs/<bereich>.md`-Almanach: Bug + funktionserhaltende Loesung + Versionen,
      Stand-Header aktualisieren.
 ```
+
+### Zwei Ebenen — was wohin (Qualitaetsschwelle)
+
+Die rohe Fall-Datenbank und der kuratierte Almanach haben bewusst verschiedene Schwellen:
+
+| | `bug-cases.jsonl` (Posteingang) | `bugs/<bereich>.md` (Almanach/Lehrbuch) |
+|---|---|---|
+| Wer schreibt | `bug-case-auto-writer`-Hook, automatisch bei JEDEM Tool-Fehler | ich, manuell, NACH der Aufgabe |
+| Schwelle | ALLES — auch Unsicheres, Einmaliges, Rauschen (`auto_captured: true`) | **NUR HARTE, sicher bestaetigte Bugs** (reproduzierbar, eindeutig ein echter Fehler) |
+| Zweck | reaktiver Auto-Match nach einem Fehler (RAG) | proaktive Vorab-Lektuere, hochwertig, wird gelesen bevor gearbeitet wird |
+
+**Befoerderung (Posteingang → Lehrbuch).** Bestaetigt sich ein roher `jsonl`-Auto-Eintrag als
+HARTER Bug (Ursache verstanden, reproduzierbar, funktionserhaltende Loesung bekannt), wird er
+in den passenden `bugs/<bereich>.md`-Almanach uebernommen — mit Format Symptom/Ursache/
+Versionen/FIX/Quelle. Nur so erscheint er bei der erzwungenen Vorab-Lektuere und kann den
+Fehler kuenftig verhindern. Unsichere/spekulative Eintraege bleiben in der `jsonl` und
+verschmutzen den Almanach NICHT — der Almanach bleibt vertrauenswuerdig, weil dort nur Hartes steht.
 
 ---
 

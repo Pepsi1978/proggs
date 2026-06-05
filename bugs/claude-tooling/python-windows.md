@@ -552,6 +552,36 @@ Erscheinen von 3.14/3.15: 1.x und 1.6 erneut pruefen (UTF-8-Default aendert die 
 
 ---
 
+## 9. Allgemeine Python-Fallen (plattformunabhaengig)
+
+> Diese Eintraege sind KEINE Windows/Encoding-Spezialitaeten, sondern allgemeine Python-
+> Fallstricke, die auf JEDER Plattform (auch macOS/Linux) auftreten. Hier gesammelt, weil es
+> (noch) keinen eigenen allgemeinen Python-Almanach gibt. Aufnahme-Schwelle wie ueberall:
+> nur harte, sicher bestaetigte Bugs (siehe `SYSTEM.md` §4).
+
+### 9.1 `re.sub`-Replacement mit `\U`/`\g` in Raw-String → `re.PatternError: bad escape`  ⭐
+**Symptom:** `re.sub(r'^(#+ )', r'\g<1>\U0001f517 ', text)` crasht sofort mit
+`re.PatternError: bad escape \U at position N` — der Code laeuft nie an.
+**Ursache:** Der **Replacement**-String von `re.sub` hat eine EIGENE Mini-Sprache
+(`\g<1>`, `\1`, `\\`), die `re` selbst parst. Schreibt man das Replacement als Raw-String
+(`r'...'`), wird ein gewuenschtes Unicode-Escape wie `\U0001f517` (🔗) NICHT vom Python-Parser
+zum Zeichen aufgeloest, sondern landet literal im Template — und `re` interpretiert `\U` dort
+als ungueltige Replacement-Escape-Sequenz. (Gleiche Wurzel wie 3.2, nur im re-Replacement
+statt im String-Literal.)
+**Versionen:** per Design, alle 3.x; Eskalation von Warning zu hartem `PatternError` ab
+**3.12** (auf 3.13/3.14 voll aktiv). Live reproduziert auf 3.14.3.
+**FIX:** Replacement NIE als Raw-String mit Unicode-Escape mischen. Entweder Lambda-
+Replacement (umgeht das Template komplett — robusteste Loesung):
+```python
+re.sub(r'^(#+ )', lambda m: m.group(1) + '\U0001f517 ', text, count=1)
+```
+oder das Sonderzeichen vorab in eine normale (Nicht-Raw-)Variable legen und einsetzen
+(`EMOJI = '\U0001f517'` → `lambda m: m.group(1) + EMOJI + ' '`).
+**Quelle:** docs.python.org/3/library/re.html (Replacement-String-Syntax); eigener Vorfall
+2026-06-05 (Bug-Almanach/Best-Practices-Kopplungs-Fix).
+
+---
+
 ## Pflicht-Checkliste vor Python-Arbeit auf Windows
 - [ ] Diese Datei gelesen, Stand-Datum gegen `python --version` abgeglichen (3.13.13)?
 - [ ] JEDES `open()` mit `encoding='utf-8'` (Lesen evtl. `utf-8-sig`)?
