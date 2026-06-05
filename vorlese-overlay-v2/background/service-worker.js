@@ -163,6 +163,51 @@ function notifyTab(tabId, payload) {
 	}
 }
 
+// ----- Aktiven Tab merken — auch ueber SW-Neustarts hinweg ------------------
+// KRITISCH (MV3): Der Service-Worker stirbt nach ~30 s Idle. Waehrend einer
+// langen Wiedergabe (Audio laeuft im Offscreen-Dokument, der SW ist derweil
+// idle) passiert das fast sicher. Eine reine In-Memory-Variable activeTabId
+// waere nach dem SW-Neustart null -> das abschliessende "stopped" (aus
+// OFFSCREEN_ENDED) ginge an notifyTab(null) verloren und das Overlay haengt
+// fuer immer im "spielt"-Zustand (Stop-Icon bleibt, neuer markierter Text wird
+// nicht mehr vorgelesen). Deshalb activeTabId zusaetzlich in
+// chrome.storage.session sichern (ueberlebt den SW-Neustart) und bei Bedarf
+// nachladen. (storage.session, nicht .local: kein Persistieren ueber
+// Browser-Neustarts noetig — danach spielt ohnehin nichts mehr.)
+const ACTIVE_TAB_KEY = "vo_active_tab";
+
+function setActiveTab(tabId) {
+	activeTabId = tabId;
+	try {
+		chrome.storage.session.set(
+			{ [ACTIVE_TAB_KEY]: tabId },
+			() => void chrome.runtime.lastError,
+		);
+	} catch (e) {
+		/* storage.session evtl. nicht verfuegbar — In-Memory reicht im Normalfall */
+	}
+}
+
+async function resolveActiveTab() {
+	if (activeTabId != null) return activeTabId;
+	try {
+		const res = await chrome.storage.session.get(ACTIVE_TAB_KEY);
+		const id = res ? res[ACTIVE_TAB_KEY] : null;
+		if (id != null) {
+			activeTabId = id; // wieder in den In-Memory-Cache uebernehmen
+			return id;
+		}
+	} catch (e) {
+		/* egal — faellt unten auf null zurueck */
+	}
+	return null;
+}
+
+// Status an den (auch nach SW-Neustart) aufgeloesten aktiven Tab senden.
+function notifyActiveTab(payload) {
+	resolveActiveTab().then((tabId) => notifyTab(tabId, payload));
+}
+
 // ----- Nachrichten an das Offscreen-Dokument --------------------------------
 function sendToOffscreen(payload) {
 	try {
@@ -179,7 +224,7 @@ function sendToOffscreen(payload) {
 function executePause() {
 	isPaused = true;
 	sendToOffscreen({ type: "PAUSE" });
-	notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_PAUSED });
+	notifyActiveTab({ type: MSG.STATE, state: MSG.STATE_PAUSED });
 	diag.log("INFO", "ZUSTAND", "sw:pause", {});
 }
 
@@ -187,7 +232,7 @@ function executePause() {
 function executeResume() {
 	isPaused = false;
 	sendToOffscreen({ type: "RESUME" });
-	notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_RESUMED });
+	notifyActiveTab({ type: MSG.STATE, state: MSG.STATE_RESUMED });
 	diag.log("INFO", "ZUSTAND", "sw:resume", {});
 }
 
@@ -309,7 +354,7 @@ async function handleGetVoices(msg) {
 async function handleSpeak(msg, tabId) {
 	const gen = ++currentGen; // bricht alle vorher laufenden Synthesen ab
 	isPaused = false; // neues Sprechen setzt Pause-Zustand zurück
-	if (tabId != null) activeTabId = tabId;
+	if (tabId != null) setActiveTab(tabId); // auch ueber SW-Neustart hinweg merken
 	lastSpeakTs = performance.now();
 
 	const text = (msg.text || "").trim();
@@ -459,7 +504,7 @@ function handleOffscreenFeedback(msg) {
 					ms: Math.round(performance.now() - lastSpeakTs),
 				});
 			playStartTs = performance.now();
-			notifyTab(activeTabId, { type: MSG.STATE, state: "playing" });
+			notifyActiveTab({ type: MSG.STATE, state: "playing" });
 			break;
 		case "OFFSCREEN_ENDED":
 			if (playStartTs) {
@@ -469,10 +514,10 @@ function handleOffscreenFeedback(msg) {
 				playStartTs = 0;
 			}
 			isPaused = false; // Pause-Zustand bei normalem Ende zurücksetzen
-			notifyTab(activeTabId, { type: MSG.STATE, state: "stopped" });
+			notifyActiveTab({ type: MSG.STATE, state: "stopped" });
 			break;
 		case "OFFSCREEN_ERROR":
-			notifyTab(activeTabId, {
+			notifyActiveTab({
 				type: MSG.STATE,
 				state: "error",
 				message: msg.message || "Audio konnte nicht abgespielt werden.",
@@ -480,10 +525,10 @@ function handleOffscreenFeedback(msg) {
 			break;
 		// Rückmeldungen vom Offscreen nach Pause/Resume
 		case "OFFSCREEN_PAUSED":
-			notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_PAUSED });
+			notifyActiveTab({ type: MSG.STATE, state: MSG.STATE_PAUSED });
 			break;
 		case "OFFSCREEN_RESUMED":
-			notifyTab(activeTabId, { type: MSG.STATE, state: MSG.STATE_RESUMED });
+			notifyActiveTab({ type: MSG.STATE, state: MSG.STATE_RESUMED });
 			break;
 	}
 }

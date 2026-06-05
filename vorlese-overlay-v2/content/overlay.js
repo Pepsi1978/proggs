@@ -49,6 +49,8 @@
 	let isPaused = false;
 	let progressChunk = 0;
 	let progressTotal = 0;
+	// Sicherheitsnetz gegen einen haengenden "spielt"-Zustand (siehe armEndWatchdog).
+	let endWatchdog = null;
 
 	// ----- Auto-Lese-Modus (A-Button) ------------------------------------------
 	// Wenn aktiv: Ein Doppelklick auf ein Wort liest ab diesem Wort den restlichen
@@ -294,6 +296,44 @@
 		progressBar.style.transition = "none";
 		progressBar.style.width = "0%";
 		progressWrap.style.display = "none";
+	}
+
+	// ----- Sicherheitsnetz gegen haengenden "spielt"-Zustand -------------------
+	// Falls das abschliessende "stopped" vom Service-Worker verloren geht (z.B.
+	// weil der MV3-Worker waehrend langer Wiedergabe neu gestartet ist), bliebe
+	// der Status fuer immer auf "spielt": Balken + rotes Stop-Icon haengen und
+	// neuer markierter Text wird nicht mehr vorgelesen. Dieser Watchdog setzt den
+	// Zustand notfalls selbst zurueck. Er ist BEWUSST sehr grosszuegig bemessen
+	// (doppelte geschaetzte Dauer, mind. 30 s), damit eine echte Wiedergabe NIE
+	// abgebrochen wird — er greift nur, wenn das Ende-Signal wirklich ausbleibt.
+	function clearEndWatchdog() {
+		if (endWatchdog) {
+			clearTimeout(endWatchdog);
+			endWatchdog = null;
+		}
+	}
+	function armEndWatchdog() {
+		clearEndWatchdog();
+		const timeout = Math.max(30000, (lastSpeechMs || 0) * 2 + 10000);
+		endWatchdog = setTimeout(() => {
+			endWatchdog = null;
+			// Nur eingreifen, wenn laut Overlay noch "gespielt" wird und NICHT pausiert
+			// (bei Pause ist ein langes Ausbleiben des Endes voellig normal).
+			if (!isPlaying || isPaused) return;
+			if (window.VODiag)
+				window.VODiag.log("WARN", "ZUSTAND", "overlay.end_watchdog_reset", {
+					geschaetzt_ms: lastSpeechMs,
+				});
+			// Wie ein verspaetetes "stopped" behandeln -> Zustand sauber zuruecksetzen.
+			autoReading = false;
+			autoQueue = [];
+			isPaused = false;
+			clearParagraphHighlight();
+			setState("stopped");
+			resetProgress();
+			setPauseButtonVisible(false);
+			setPauseButtonState(false);
+		}, timeout);
 	}
 
 	// ----- Position: wiederherstellen + clampen --------------------------------
@@ -1227,6 +1267,7 @@
 				);
 
 			if (msg.state === "error") {
+				clearEndWatchdog();
 				setState("stopped");
 				showHint(msg.message || "Es ist ein Fehler aufgetreten.", true);
 				// Aufräumen bei Fehler — auch die automatische Vorlesung abbrechen.
@@ -1245,11 +1286,14 @@
 				isPaused = false;
 				// Fortschrittsbalken ueber die geschaetzte Dauer laufen lassen.
 				startProgressAnim(lastSpeechMs);
+				// Sicherheitsnetz scharf schalten, falls das Ende-Signal ausbleibt.
+				armEndWatchdog();
 			} else if (msg.state === "paused") {
 				isPaused = true;
 				// Icon auf Play umschalten (bereit zum Fortsetzen)
 				setPauseButtonState(true);
 				pauseProgressAnim();
+				clearEndWatchdog(); // bei Pause ist ein langes Ausbleiben normal
 				if (window.VODiag)
 					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_paused", {});
 			} else if (msg.state === "resumed") {
@@ -1257,9 +1301,14 @@
 				// Icon auf Pause zurück (läuft wieder)
 				setPauseButtonState(false);
 				resumeProgressAnim();
+				armEndWatchdog(); // Wiedergabe laeuft wieder -> Netz erneut scharf
 				if (window.VODiag)
 					window.VODiag.log("INFO", "ZUSTAND", "overlay.status_resumed", {});
 			} else if (msg.state === "stopped") {
+				// Aktuelles Sicherheitsnetz abbauen — dieser Absatz/Text ist fertig.
+				// Folgt eine weitere Passage (Auto-Lese-Modus), schaltet deren
+				// "playing"-Event den Watchdog ohnehin wieder scharf.
+				clearEndWatchdog();
 				// Im Auto-Lese-Modus bedeutet "stopped" nur: dieser Absatz ist
 				// fertig -> direkt den naechsten Absatz vorlesen, ohne den Status
 				// zurueckzusetzen (sonst flackert der Button zwischen den Absaetzen).
