@@ -469,6 +469,62 @@ final class GoogleDriveBackupService {
         }
     }
 
+    // MARK: - Prompt-Zwischenspeicher-Slots
+    //
+    // Eigene Upload/Download-Methoden fuer prompt-slots.json — gleiche Mechanik
+    // wie Historie/Backup, nur anderer Dateiname. Teilt sich den OAuth-Token
+    // und das appDataFolder, bleibt aber eine eigene Datei, damit die 10
+    // Zwischenspeicher-Slots unabhaengig gespiegelt werden.
+
+    private static let slotsFileName = "prompt-slots.json"
+
+    /// Laedt prompt-slots.json zu Drive hoch und raeumt Duplikate weg. Wird
+    /// SOFORT nach jedem Speichern/Loeschen eines Slots aufgerufen.
+    func uploadSlots(json: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.slotsFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        if let keepId = ids.first {
+                            self.replaceFile(id: keepId, token: token, json: json) { replaceResult in
+                                let dups = Array(ids.dropFirst())
+                                if !dups.isEmpty { self.deleteFiles(ids: dups, token: token) }
+                                completion(replaceResult)
+                            }
+                        } else {
+                            self.createFile(name: Self.slotsFileName,
+                                            token: token, json: json,
+                                            completion: completion)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Holt den aktuellsten Stand der prompt-slots.json aus Drive. Liefert nil
+    /// wenn noch keine Cloud-Slots existieren.
+    func downloadSlots(completion: @escaping (Result<String?, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.slotsFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        guard let id = ids.first else { completion(.success(nil)); return }
+                        self.downloadContent(id: id, token: token, completion: completion)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Generische Helpers (parametrisierbarer Filename)
 
     /// Wie `findAllBackupFileIds`, aber mit konfigurierbarem Filename —
