@@ -67,6 +67,15 @@
 						"timeout": 15
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/bug-almanac-index.sh\"",
+						"timeout": 10
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
@@ -197,6 +206,16 @@
 						"type": "command",
 						"command": "bash ~/.claude/hooks/bash-guard.sh",
 						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Read|Edit|Write|MultiEdit|Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/bug-almanac-guard.sh\"",
+						"timeout": 15
 					}
 				]
 			}

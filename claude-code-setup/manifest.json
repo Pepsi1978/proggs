@@ -279,7 +279,9 @@
 		"codebase-memory-exploring",
 		"codebase-memory-quality",
 		"codebase-memory-reference",
-		"codebase-memory-tracing"
+		"codebase-memory-tracing",
+		"bug-almanach-recherche",
+		"best-practices"
 	],
 
 	"custom_agents": [

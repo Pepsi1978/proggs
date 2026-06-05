@@ -261,7 +261,7 @@
 				]
 			},
 			{
-				"matcher": "Edit|Write",
+				"matcher": "Read|Edit|Write|MultiEdit|Bash",
 				"hooks": [
 					{
 						"type": "command",
