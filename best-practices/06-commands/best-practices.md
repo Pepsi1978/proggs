@@ -1,4 +1,4 @@
-# Slash-Commands — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# Slash-Commands — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Offizielle Quelle: https://code.claude.com/docs/en/slash-commands  
 > Changelog: https://code.claude.com/docs/en/changelog  
@@ -478,3 +478,21 @@ git status --short
 - **Pitfall 7 — disallowed-tools für Session-weite Sperren:** `disallowed-tools` gilt nur für den aktuellen Turn, nicht für die Session. Lösung: Für dauerhafte Sperren `/permissions deny` verwenden.
 - **Quelle:** https://code.claude.com/docs/en/slash-commands (offiziell), https://perevillega.com/posts/2026-04-01-claude-code-skills-2-what-changed-what-works-what-to-watch-out-for/ (extern), https://code.claude.com/docs/en/changelog (offiziell)
 - **Stand:** 2026
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Slash-Commands & Skill-Command-Bodies
+
+**1. Autocomplete-Klick fuellt Prompt statt sofort auszufuehren (2.1.162)**
+- **Was:** Klick auf einen Slash-Command im Autocomplete fuellt ihn in den Prompt (Enter zum Ausfuehren) statt sofort zu starten.
+- **Best Practice:** Destruktive Commands (`/reset`, `/compact`) beruhigt anwaehlen und den befuellten Prompt kurz lesen, bevor Enter. Kein versehentliches Ausloesen durch Klick.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**2. `\$`-Escape-Syntax in Skill-/Command-Bodies (2.1.163)**
+- **Was:** In SKILL.md- und `.claude/commands/`-Bodies fuegt `\$` ein *literales* `$` vor einer Ziffer ein — ohne Expansion als Argument-Platzhalter (`$1`, `$ARGUMENTS[0]`).
+- **Best Practice:** `\$1` schreiben, wenn ein literales `$1` im Prompt-Text/Code-Snippet stehen soll (Shell-Variablen, Preise wie `\$1.99`, Regex-Backreferences). Falsche Expansion ist ein STILLER Fehler (kein Error, falscher Output) — Skill-Bodies mit `$`+Ziffer pruefen.
+- **Quelle:** code.claude.com/docs/en/skills `[offiziell]`
+
+**3. `/btw` "c to copy" (2.1.163)** — Taste `c` kopiert die rohe Markdown-Antwort (statt gerenderten Text); nuetzlich zum Einfuegen in Markdown/Issues ohne Formatverlust. `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Punkt 2 — alle Skills in `~/.claude/skills/` und `~/proggs/.claude/skills/` sowie `.claude/commands/`: pruefen, ob `$`+Ziffer (Shell-Snippets, Regex, Preise) faelschlich als Argument expandiert; ggf. `\$` setzen.

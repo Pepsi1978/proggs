@@ -1,4 +1,4 @@
-# Settings & Konfig — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
+# Settings & Konfig — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 ---
 
@@ -520,3 +520,30 @@
 | https://www.marktechpost.com/2026/05/28/anthropic-ships-claude-opus-4-8-alongside-dynamic-workflows-and-cheaper-fast-mode-with-workflows-capped-at-1000-subagents/ | extern |
 
 <!-- CHECKPOINT: fertig — alle Einträge von v2.1.154 bis v2.1.158 eingearbeitet. Nächste Recherche: Auto-Mode Details wenn Frank auf Bedrock/Vertex wechselt; Dynamic Workflows /workflows Command-Referenz. -->
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Settings & Permissions
+
+**1. Managed Settings `requiredMinimumVersion` / `requiredMaximumVersion` (2.1.163)**
+- **Was:** Zwei neue Felder in `managed-settings.json`. Claude Code startet nicht, wenn die Version ausserhalb des Bereichs liegt, und verweist auf eine genehmigte Version.
+- **macOS-Pfad:** `/Library/Application Support/ClaudeCode/managed-settings.json` (Drop-in: `.../managed-settings.d/*.json`). Managed Settings sind von keiner anderen Ebene ueberschreibbar.
+- **Best Practice (Solo):** `requiredMinimumVersion` als Policy-Lock setzen, damit ein versehentliches `claude update` ein versionsabhaengiges Hook/Skills-Setup nicht bricht.
+- **Quelle:** github.com/anthropics/claude-code/releases/tag/v2.1.163 `[offiziell]`
+
+**2. Prompts vor Shell-Startup- & Build-Config-Dateien (2.1.160)**
+- **Was:** Prompt vor Schreibzugriff auf `.zshenv`, `.zlogin`, `.bash_login`, `~/.config/git/`; im `acceptEdits`-Modus zusaetzlich vor `.npmrc`, `.yarnrc*`, `bunfig.toml`, `.bazelrc`, `.pre-commit-config.yaml`, `.devcontainer/`.
+- **WICHTIG fuer bypassPermissions:** Der Prompt greift NICHT bei `bypassPermissions` — der Modus skippt alle Permission-Prompts. Franks Hooks in `~/.claude/` schreiben unveraendert ohne Prompt. Wer trotzdem Schutz will: PreToolUse-Hook, der Schreibzugriffe auf `.zshenv`/`.bash_login` prueft (Hook-Entscheidung gilt unabhaengig vom Modus).
+- **Quelle:** code.claude.com/docs/en/permissions `[offiziell]`
+
+**3. WebFetch-Permission-Vorrang (2.1.162)**
+- **Was:** Explizite `WebFetch(domain:...)` deny/ask/allow-Regeln haben jetzt Vorrang vor eingebauten vorab-genehmigten Domains.
+- **Best Practice:** Unerwuenschte Domains zuverlaessig per `"deny": ["WebFetch(domain:...)"]` sperrbar.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**4. `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` entfernt (2.1.160)**
+- **Was:** Env-Var ist jetzt No-op. Fast Mode laeuft ueber `/fast` (auf Opus 4.8 empfohlen).
+- **Best Practice:** Falls der Eintrag noch im `env`-Block von `~/.claude/settings.json` steht — entfernen (toter Code).
+- **Quelle:** code.claude.com/docs/en/fast-mode `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Punkt 2 betrifft das `bypassPermissions`-Setup NICHT (Hooks schreiben weiter ohne Prompt). Punkt 1 (`requiredMinimumVersion`) ist als Update-Schutz nuetzlich. Punkt 4: evtl. toten Env-Eintrag entfernen.

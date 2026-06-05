@@ -1,4 +1,4 @@
-# Agents — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
+# Agents — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Recherche-Datum: 2026-05-30 | Claude Code Version: 2.1.158
 > Quellen: Offizielle Anthropic-Doku (code.claude.com/docs, anthropic.com), Changelog 2.1.153–2.1.158
@@ -493,3 +493,28 @@ Quelle: `https://code.claude.com/docs/en/sub-agents` | offiziell | 2026-05-30
 ---
 
 <!-- CHECKPOINT: fertig — alle Changelog-Einträge 2.1.154–2.1.158 integriert. Nächste Recherche bei Version 2.1.163+ oder wenn Dynamic Workflows aus Research Preview geht. -->
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Agents & Workflows
+
+(Fixes laut Changelog ueberwiegend 2.1.161-2.1.163.)
+
+**1. `--tools`: Grep/Glob auf nativen Builds jetzt wirksam (2.1.162/163)**
+- **Was:** Auf nativen macOS/Linux-Builds (Embedded Search) wurden `Grep`/`Glob` in `--tools`-Listen still ignoriert; jetzt liefern sie die dedizierten Such-Tools.
+- **Best Practice:** In eigenen Agent-Definitionen (`~/.claude/agents/*.md`, Frontmatter `tools:`) Grep und Glob explizit nennen, wenn der Agent auf macOS laufen soll. Haelt zudem den Start-Sockel schlank (nur gelistete Tool-Schemas geladen → verstaerkt `subagent-crash-proofing`).
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**2. Worktree-Isolation gefixt (2.1.161)**
+- **Was:** Workflow-Agents mit `isolation:"worktree"` in Background-Sessions durften ihre eigenen Worktree-Dateien nicht editieren — gefixt.
+- **Best Practice:** `isolation:"worktree"` ist jetzt zuverlaessig fuer parallele Coder-Agents an verschiedenen Dateien.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**3. Background-Sessions: Stale-Modell gefixt (2.1.161)**
+- **Was:** Background-Sessions booteten auf dem Modell aus der Daemon-Env statt aus `settings.json` — `CLAUDE_CODE_SUBAGENT_MODEL` wurde ignoriert. Jetzt ist `settings.json` die Modell-Wahrheit.
+- **Best Practice:** Die Policy `CLAUDE_CODE_SUBAGENT_MODEL = opus[1m]` (abgesichert via `session-guard`) greift jetzt konsistent auf allen Agent-Typen, auch Background.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**4. `claude agents --json` Feld `waitingFor` (2.1.162)** — zeigt, worauf eine blockierte Session wartet (z.B. Permission-Prompt). Nuetzlich fuer Monitoring-Scripts. `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Punkt 1 rechtfertigt, in eigenen Agent-Definitionen `Grep`/`Glob` explizit in die `tools:`-Whitelist aufzunehmen — besonders auf macOS (vorher faktisch tot). Verstaerkt zugleich den Crash-Schutz (schlanker Start-Sockel).

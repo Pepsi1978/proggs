@@ -1,4 +1,4 @@
-# Hooks — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# Hooks — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Quellen: Offizielle Claude Code Dokumentation (code.claude.com/docs) + Changelog.
 > Alle Einträge ohne "extern"-Label sind offiziell bestätigt.
@@ -564,3 +564,29 @@
 ---
 
 *Erstellt: 2026-05-25 | Aktualisiert: 2026-05-28 | Stand: Claude Code v2.1.153 | Hauptquellen: code.claude.com/docs (offiziell)*
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Hooks
+
+Alle drei Aenderungen kamen mit **2.1.163** (2026-06-04). Die hooks-Doku ist noch nicht aktualisiert (Doku-Lag) — der Changelog ist die Grundwahrheit.
+
+**1. Stop-/SubagentStop-Hooks: `hookSpecificOutput.additionalContext`**
+- **Was:** Stop- und SubagentStop-Hooks koennen jetzt `hookSpecificOutput.additionalContext` zurueckgeben, um Claude Feedback zu geben und den Turn fortzusetzen — OHNE als Hook-Fehler gewertet zu werden.
+- **Best Practice:** `additionalContext` nutzen, wenn der Hook Feedback *injizieren* soll (metacognitive Erinnerung, Verifikations-Nachfass), der Turn aber weiterlaeuft. `decision:"block"` nur, wenn Claude am Stoppen gehindert werden soll (fehlschlagende Tests). Exit 2 ist ein harter Fehler — fuer Feedback NIE verwenden. Schema:
+```json
+{ "hookSpecificOutput": { "hookEventName": "Stop", "additionalContext": "Bitte verifiziere ob alle Tasks committed sind." } }
+```
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**2. `if: "Bash(...)"`-Conditions — False-Positive-Fix**
+- **Was:** `if: "Bash(...)"`-Bedingungen feuerten faelschlich bei JEDEM Bash-Command mit `$()` oder `$VAR`; das Muster matcht jetzt korrekt auch Commands in Subshells/Backticks.
+- **Best Practice:** `if`-Conditions spezifisch gegen das Kommando schreiben (`"if": "Bash(git push *)"`), nicht gegen Variablen. Nach Update eigene Hooks mit `if: "Bash(...)"` auf False-Positives re-testen.
+- **Quelle:** code.claude.com/docs/en/hooks `[offiziell]`
+
+**3. Deny-Rules auf Home-Pfaden — `$HOME` vs. `~/`**
+- **Was:** Deny-Rules wie `Read(~/Desktop/**)` blockierten keine Bash-Commands, die den Pfad ueber `$HOME` referenzierten — jetzt aequivalent behandelt.
+- **Best Practice:** Deny-Rules auf sensible Home-Verzeichnisse (`~/.ssh`, `~/.gnupg`, `~/.claude`) sind jetzt zuverlaessiger; bisher noetige Doppel-Eintraege (`~/path` UND `$HOME/path`) koennen entfallen. Defense-in-Depth: Deny = Stufe 1, PreToolUse-Guard = Stufe 2 bleibt.
+- **Quelle:** code.claude.com/docs/en/permissions `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Ja — `hyperagent-stop`, `writeback-enforcer`, `memory-watchdog` (Stop/SubagentStop) koennen statt blossem `exit 0` jetzt `hookSpecificOutput.additionalContext` fuer Feedback nutzen, ohne `decision:block` zu brauchen.

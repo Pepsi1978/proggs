@@ -1,4 +1,4 @@
-# Plugins — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
+# Plugins — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 ---
 
@@ -484,3 +484,14 @@ rm -rf ~/.claude/plugins/cache                  # Cache leeren (dann neu install
 ---
 
 <!-- CHECKPOINT: fertig — alle v2.1.153 bis v2.1.158 Plugin-Features dokumentiert. Nächste Recherche: v2.1.159+ oder Kategorie 5 (Hooks/Events). -->
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Plugins
+
+**`/plugin list` mit `--enabled`/`--disabled`-Filtern (2.1.163)**
+- **Was:** Neuer Built-in-Command listet installierte Plugins; `--enabled`/`--disabled` filtern.
+- **Best Practice:** Plugin-Hygiene — `/plugin list --disabled` offenbart "Zombie-Plugins" (installiert, nie aktiviert), die beim Start Token kosten und die Prompt-Injection-Angriffsflaeche erhoehen. Bei unbekanntem Projekt `/plugin list --enabled` als Security-Check. Eignet sich als Basis fuer einen SessionStart-Diagnose-Hook (warnt, wenn ein Pflicht-Plugin aus ist).
+- **Quelle:** code.claude.com/docs/en/plugins-reference `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Wenn `bug-almanac-guard`, `session-guard` o.a. schweigen — zuerst `/plugin list --enabled` pruefen, ob deren Plugin ueberhaupt aktiv ist (deckt sich mit dem Feedback "Hook vorhanden != aktiv").

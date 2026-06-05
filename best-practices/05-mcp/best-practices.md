@@ -1,4 +1,4 @@
-# MCP-Server — Best Practices (Stand 2026-05-28, Claude Code 2.1.153)
+# MCP-Server — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Quellen: Offizielle Claude Code Dokumentation (code.claude.com/docs/en/mcp, /managed-mcp)
 > Recherche-Datum: 2026-05-28
@@ -341,3 +341,26 @@ claude mcp list
 claude mcp get github
 /mcp  # In Claude Code Session
 ```
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — MCP
+
+**1. Secret-Redaction in `claude mcp` (2.1.161)**
+- **Was:** `claude mcp list/get/add` expandiert `${VAR}`-Referenzen nicht mehr und redigiert Credential-Header und URL-Secrets.
+- **Best Practice:** `.mcp.json` nie mit Klartext-Secrets; Referenzform `"env": { "TOKEN": "${TOKEN}" }`, Variable im Shell-Environment setzen (`~/.zshrc`, launchd, oder SK-Ordner `$HOME/SK/<projekt>/.env`). `.mcp.json` ist commitbar, sobald nur noch `${VAR}`-Referenzen drinstehen.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**2. per-Server `timeout` < 1000 ms (2.1.162)**
+- **Was:** Werte < 1000 ms werden jetzt ignoriert (Fallback auf `MCP_TOOL_TIMEOUT`/Default) statt auf einen 1s-Watchdog gefloort, der jeden Tool-Call abbrach. `claude mcp get` annotiert das.
+- **Best Practice:** Nie < 1000 setzen. Lokale stdio-Server: >= 30000 (30s); langsame externe APIs: 300000-600000. Server-Start-Timeout separat via `MCP_TIMEOUT`-Env.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**3. `CLAUDE_CODE_SESSION_ID` in stdio-MCP bei `--resume` (2.1.163)**
+- **Was:** Stdio-MCP-Server bekommen bei `--resume` dieselbe Session-ID wie Hooks/Bash.
+- **Nutzen:** Zustandsbehaftete Server (eigene Logger, ClaudeWatch-artig) koennen Session-Korrelation betreiben und Kontext anhand der ID nachladen.
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**4. `/mcp` blendet ungenutzte claude.ai-Connectors aus (2.1.161)** — rein kosmetisch, kein Handlungsbedarf. `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Ja — die macOS-`.mcp.json` auf `${VAR}`-Secret-Referenzen pruefen; jede Klartext-Credential auf `"${VARNAME}"` umstellen + Variable im Shell-Env exportieren.

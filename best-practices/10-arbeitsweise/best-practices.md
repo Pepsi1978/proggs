@@ -1,4 +1,4 @@
-# Arbeitsweise / Verhalten — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
+# Arbeitsweise / Verhalten — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Quelle: Offizielle Anthropic-Dokumentation (code.claude.com/docs/en/best-practices)  
 > Recherche-Datum: 2026-05-28 / 2026-05-30
@@ -395,3 +395,23 @@
 ---
 
 <!-- CHECKPOINT: fertig — alle 4 Changelog-Punkte (2.1.154 multiple-choice, /simplify vs /code-review, dynamic workflows, lean system prompt, 2.1.158 workflow keyword trigger) recherchiert und eingebaut. Nächste relevante Updates ab 2.1.159+ beobachten. -->
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Arbeitsweise & Effizienz
+
+**1. Grep ersetzt separates Read vor Edit (2.1.160)**
+- **Was:** Single-file `grep`/`egrep`/`fgrep`-Commands erfuellen jetzt den read-before-edit-Check. Ein separates `Read` nach einem Grep ist nicht mehr noetig.
+- **Best Practice:** Flow `grep -> Read(Ausschnitt) -> Edit` kuerzen auf `grep -> Edit`. Gilt NUR fuer single-file grep (eine Datei/Aufruf). Spart pro Edit-Zyklus einen Read (~500-3000 Token). Werkzeugwahl bleibt: Grep wenn Name bekannt, semantische Suche wenn nur Konzept.
+- **Quelle:** github.com/anthropics/claude-code/releases/tag/v2.1.160 `[offiziell]`
+
+**2. Parallele Bash-Calls: Fehler isoliert (2.1.161)**
+- **Was:** Scheitert ein Bash-Command in einem parallelen Tool-Batch, liefern die anderen Calls trotzdem ihr Ergebnis (kein Batch-Abbruch mehr).
+- **Best Practice:** Mehrere unabhaengige Bash-Kommandos ruhig in EINEN Antwortblock buendeln — aggressivere Parallelisierung ist jetzt risikoaermer und Standard.
+- **Quelle:** github.com/anthropics/claude-code/releases/tag/v2.1.161 `[offiziell]`
+
+**3. `/effort` bestaetigt Persistierung (2.1.162)**
+- **Was:** `/effort` zeigt jetzt an, wenn das Level als Default fuer neue Sessions persistiert. Nur mehr Transparenz. Regel bleibt: Effort nie per `CLAUDE_CODE_EFFORT_LEVEL`-Env setzen (blockiert `/effort`).
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Punkt 1 rechtfertigt eine Anpassung von `semantic-search-before-agents.md` und `debugging-and-verification.md` — der bisherige Hinweis "Read(Ausschnitt) nach Grep" ist veraltet; der Grep-Schritt IST jetzt das Read. Der Grep-Reflex selbst bleibt unveraendert.

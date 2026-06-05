@@ -1,4 +1,4 @@
-# Neues / Horizont-Scan — Best Practices (Stand 2026-05-30, Claude Code 2.1.158)
+# Neues / Horizont-Scan — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
 
 > Kategorie 12: Ganz neue Claude-Code-Fähigkeiten der letzten ~6 Monate.
 > Quellen: Ausschließlich offizielle Anthropic-Dokumentation (code.claude.com/docs/en/whats-new)
@@ -489,3 +489,22 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 *Recherchiert 2026-05-30 · 3 WebSearches + 2 WebFetches (code.claude.com/docs/en/workflows, code.claude.com/docs/en/permission-modes) · Alle Kernangaben zu Dynamic Workflows und Auto Mode v2.1.158 offiziell bestätigt.*
 
 <!-- CHECKPOINT: fertig — Dynamic Workflows (2.1.154) und Auto Mode Bedrock/Vertex (2.1.158) vollständig dokumentiert. Empfehlung: Eigene Kategorie für Dynamic Workflows. Nächste Recherche-Session: Claude Opus 4.8 Details (neu in v2.1.158). -->
+
+---
+
+### Update 2026-06-05 (Claude Code 2.1.165) — Neues / Horizont
+
+**1. Dynamic-Workflow-Trigger umbenannt: `workflow` -> `ultracode` (2.1.160)**
+- **Was:** Das Literal-Keyword fuer einen Dynamic Workflow heisst jetzt `ultracode` (violett hervorgehoben). Das Wort "workflow" triggert keinen Run mehr; natuerlichsprachlich ("use a workflow") geht weiter.
+- **Was sind Dynamic Workflows:** JavaScript-Skripte, die Claude fuer die Aufgabe schreibt und ein eigener Runtime-Prozess im Hintergrund ausfuehrt; das Skript haelt Schleife + Zwischenergebnisse, Claude's Kontext enthaelt am Ende nur das Resultat. Bis 16 Agenten gleichzeitig, bis 1000 pro Run; resumebar; gespeicherte Workflows werden zu `/`-Commands.
+- **Best Practice:** `ultracode: <aufgabe>` in den Prompt schreiben fuer einen Einzel-Run. Deaktivieren via `"disableWorkflows": true` oder `CLAUDE_CODE_DISABLE_WORKFLOWS=1`. Builtin `/deep-research` als Einstieg.
+- **Quelle:** code.claude.com/docs/en/workflows `[offiziell]`
+
+**2. `/effort ultracode` = xhigh + Auto-Orchestrierung (2.1.160)**
+- **Was:** Kombiniert xhigh-Reasoning mit automatischer Workflow-Orchestrierung fuer jede substantielle Aufgabe der Session; setzt sich beim naechsten Start zurueck; nur auf xhigh-faehigen Modellen.
+- **Best Practice:** Fuer Routine `/effort high` — ultracode verbraucht deutlich mehr Token.
+- **Quelle:** code.claude.com/docs/en/workflows `[offiziell]`
+
+**3. Horizont-Scan (Querverweise):** Stop/SubagentStop `additionalContext` (-> 01-hooks), `requiredMinimumVersion` (-> 07-settings), `/plugin list` (-> 04-plugins), Grep/Glob via `--tools` (-> 03-agents). `[offiziell]`
+
+**Betrifft eigene Werkzeuge:** Das `ultracode`-Keyword ist der neue offizielle Trigger fuer Dynamic Workflows — die Parallelisierungs-Sektion in CLAUDE.md und `semicolon-task-separator.md` koennen es erwaehnen. `additionalContext`-Rueckgabe (2.1.163) ist relevant fuer `writeback-enforcer`/`memory-watchdog`.
