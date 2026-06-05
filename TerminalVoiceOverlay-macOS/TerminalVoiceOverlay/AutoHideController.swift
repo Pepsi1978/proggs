@@ -13,10 +13,10 @@ import AppKit
 
 final class AutoHideController {
 
-    /// Sekunden Inaktivitaet bevor das Panel einklappt (Frank-Wunsch 2026-06-01: 2s).
+    /// Sekunden Inaktivitaet bevor das Panel einklappt (Frank-Wunsch 2026-06-05: 1s).
     /// Gilt orientierungs-agnostisch fuer Vertikal- UND Horizontalmodus
     /// (collapseIfIdle ruft beamToCollapsed, das beide Layouts auf die Mic-Pille schrumpft).
-    var idleTimeout: TimeInterval = 2.0
+    var idleTimeout: TimeInterval = 1.0
 
     /// Wird gesetzt vom AppDelegate. Soll true sein wahrend Recording/
     /// Processing — dann kein Auto-Collapse.
@@ -102,7 +102,7 @@ final class AutoHideController {
         // Screen-Koordinaten (exakt die "ueber dem Overlay"-Definition aus dem
         // Monitor). Deckt den GESAMTEN Overlay-Bereich ab, Vertikal- wie
         // Horizontalmodus. Erst wenn der Zeiger ausserhalb ist, greift die
-        // 2-Sekunden-Regel.
+        // 1-Sekunden-Regel.
         if panel.frame.contains(NSEvent.mouseLocation) {
             resetTimer()
             return
