@@ -1087,7 +1087,20 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// gleichen Versatz. Wird aus den Rechtsklick-Drags der Eingabe und
     /// Historie aufgerufen — egal an welchem Fenster der Benutzer anfasst,
     /// alle bewegen sich als ein starres Konstrukt.
+    /// Wird vom AppDelegate gesetzt waehrend der Solo-Dock-Modus aktiv ist
+    /// (Promptboard versteckt, Eingabe haengt direkt am Pillar). Dann darf der
+    /// Drag NICHT die veraltete Board-Position als Anker nehmen — der
+    /// AppDelegate verschiebt stattdessen Pillar + Eingabe direkt.
+    /// Frank-Bug 2026-06-05: ohne das sprang der Pillar beim Ziehen der
+    /// Eingabe nach rechts aus dem Bildschirm.
+    var soloDockDragHandler: ((CGFloat, CGFloat) -> Void)?
+
     func translateGroup(dx: CGFloat, dy: CGFloat) {
+        // Solo-Dock: Board ist versteckt → eigener Pfad (Pillar direkt).
+        if let handler = soloDockDragHandler {
+            handler(dx, dy)
+            return
+        }
         var origin = self.frame.origin
         origin.x += dx
         origin.y += dy

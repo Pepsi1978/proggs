@@ -774,6 +774,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func uploadHistoryToCloud() {
         guard GoogleDriveBackupService.shared.isAuthenticated() else {
             tvoDebug("[App] history upload skipped: drive not connected")
+            notifyDriveDisconnectedOnce()
             return
         }
         let json = PromptHistoryStore.shared.rawJsonFromDisk()
@@ -781,6 +782,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch result {
             case .success:
                 tvoDebug("[App] history uploaded to cloud")
+                self?.driveDisconnectedNotified = false
                 // Sync-Badge im Promtboard-Header auch fuer Historie-
                 // Uploads aktualisieren — sonst zeigt das Label nur den
                 // letzten Promtboard-Backup, obwohl die Historie laufend
@@ -823,9 +825,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Laedt die lokale prompt-slots.json SOFORT zu Drive hoch. Wird nach
     /// jedem Speichern UND jedem Loeschen eines Slots aufgerufen (Frank-Wunsch:
     /// direkt nach Speichern und Loeschen syncen). Fire-and-forget.
+    /// Einmal pro Session: warnt der Benutzer sichtbar, dass Drive nicht
+    /// verbunden ist und deshalb NICHTS gesichert wird. Frank-Vorfall
+    /// 2026-06-05: der Token war seit 01.06 weg (OAuth-Testing-Modus laeuft
+    /// nach 7 Tagen ab), der Sync uebersprang aber still — tagelang unbemerkt.
+    private var driveDisconnectedNotified = false
+    private func notifyDriveDisconnectedOnce() {
+        guard !driveDisconnectedNotified else { return }
+        driveDisconnectedNotified = true
+        let n = NSUserNotification()
+        n.title = "Drive-Sync pausiert"
+        n.informativeText = "Google Drive ist nicht verbunden — Prompts und Slots werden NICHT gesichert. Bitte im Promptboard (Stern → Einstellungen) neu verbinden."
+        NSUserNotificationCenter.default.deliver(n)
+    }
+
     private func uploadSlotsToCloud() {
         guard GoogleDriveBackupService.shared.isAuthenticated() else {
             tvoDebug("[App] slot upload skipped: drive not connected")
+            notifyDriveDisconnectedOnce()
             return
         }
         let json = PromptSlotStore.shared.rawJsonFromDisk()
@@ -833,6 +850,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch result {
             case .success:
                 tvoDebug("[App] slots uploaded to cloud")
+                self?.driveDisconnectedNotified = false
                 self?.promptBoardPanel?.markSyncedNow()
             case .failure(let e):
                 tvoDebug("[App] slot upload failed: \(e.localizedDescription)")
@@ -957,10 +975,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         inputSoloDock = true
         input.dockToOverlay(self.panel)
         input.setSoloDockState(true)
+        installSoloDockDragHandler(on: board)
         // Fokus ins Eingabefeld damit der Benutzer SOFORT tippen kann
         // ohne erst klicken zu muessen — fixt den Beep-Bug, weil das
         // Eingabe-Fenster jetzt firstResponder ist.
         input.makeKeyAndOrderFront(nil)
+    }
+
+    /// Installiert den Solo-Dock-Drag-Handler: beim Ziehen der Eingabe wird der
+    /// Pillar DIREKT verschoben (auf den sichtbaren Bildschirm geklemmt) und die
+    /// Eingabe nachgezogen — NICHT ueber die versteckte, veraltete Board-Position.
+    /// Behebt Frank-Bug 2026-06-05 (Pillar sprang beim Ziehen der Eingabe rechts
+    /// aus dem Monitor). Wird an beiden Solo-Dock-Einstiegen aufgerufen.
+    private func installSoloDockDragHandler(on board: PromptBoardPanel) {
+        board.soloDockDragHandler = { [weak self] dx, dy in
+            guard let self = self,
+                  let input = self.promptBoardPanel?.currentInputPanel else { return }
+            var origin = self.panel.frame.origin
+            origin.x += dx
+            origin.y += dy
+            let clamped = OverlayPanel.clampFrameToVisibleScreen(
+                NSRect(origin: origin, size: self.panel.frame.size))
+            self.panel.setFrame(clamped, display: true)
+            self.panel.savePillarPosition()
+            input.dockToOverlay(self.panel)
+        }
     }
 
     /// Schliesst sowohl Eingabe als auch Board (z.B. wenn der Pillar-Stern
@@ -968,6 +1007,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func hidePromptStack() {
         promptBoardPanel?.closeInputPanelExternally()
         promptBoardPanel?.orderOut(nil)
+        promptBoardPanel?.soloDockDragHandler = nil
         // Solo-Dock-Zustand zuruecksetzen, damit er nach dem Schliessen immer
         // konsistent ist (Fix #1170).
         inputSoloDock = false
@@ -999,6 +1039,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             input.dockToOverlay(self.panel)
             input.setSoloDockState(true)
             input.makeKeyAndOrderFront(nil)
+            installSoloDockDragHandler(on: board)
         } else {
             // Eingabe-Stern (Frank-Wunsch 2026-05-28): die Prompt-Eingabe
             // SCHLIESSEN und nur das Board zeigen. Vorher rueckte die Eingabe
@@ -1007,6 +1048,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // kein Verwerfen); der Board-Stern holt die Eingabe bei Bedarf
             // wieder zurueck via applySoloDockMode(true).
             inputSoloDock = false
+            board.soloDockDragHandler = nil
             board.closeInputPanelExternally()
             board.dock(rightOf: self.panel)
             board.orderFrontRegardless()
