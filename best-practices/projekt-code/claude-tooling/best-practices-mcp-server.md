@@ -468,7 +468,7 @@ Konkrete Anwendung dieser Best-Practices auf den eigenen Server (3 Tools, stdio,
 
 ---
 
-## Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
 Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/claude-tooling/mcp-server.md`](../../../bugs/claude-tooling/mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
 

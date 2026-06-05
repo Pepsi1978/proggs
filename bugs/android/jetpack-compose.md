@@ -678,7 +678,7 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 
 ---
 
-## Bezug zu den Best-Practices (Praevention)
+## 🔗 Bezug zu den Best-Practices (Praevention)
 
 Zweite Seite der Medaille: [`best-practices/projekt-code/android/best-practices-jetpack-compose.md`](../../best-practices/projekt-code/android/best-practices-jetpack-compose.md)
 sagt, wie man jeden dieser Bugs von vornherein vermeidet. Pro Bug-Abschnitt der passende Praeventions-Abschnitt:

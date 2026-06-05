@@ -734,7 +734,7 @@ codesign --verify --strict --verbose=2 "$APP"           # 6. verifizieren → br
 
 ---
 
-## Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
 Best-Practices (diese Datei) ↔ Bug-Almanach `~/proggs/bugs/desktop/swift-appkit.md`. Die identische Tabelle steht
 auch dort — so bleibt jede „so macht man es richtig"-Regel mit ihrer konkreten Bug-Loesung verlinkt.

@@ -396,7 +396,7 @@ nur auf Linux; Windows/macOS brauchen Enterprise-Policy.
 
 ---
 
-## 12. Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach
+## 🔗 12. Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach
 
 Jeder Best-Practice-Abschnitt verweist auf die passende Sektion im Bug-Almanach
 [`bugs/web/chrome-extensions.md`](../../../bugs/web/chrome-extensions.md) (Sektionen A–P, 73 Eintraege).

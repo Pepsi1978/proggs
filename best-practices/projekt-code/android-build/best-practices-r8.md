@@ -374,3 +374,11 @@ typischen „läuft in Debug, bricht in Release"-Bugs **gar nicht erst entstehen
 | G Deobfuskation & Crash-Reporting | N mapping.txt / F4 Crashlytics |
 | H Baseline/Startup Profiles | (Performance-Querverweis, R8-DEX-Layout) |
 | I Versions-Hygiene / R8-Override / CI | O Fix-Status / J Versions-Bugs / K OOM / M Upgrade-Breaking |
+
+
+---
+
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android-build/r8.md`](../../../bugs/android-build/r8.md))
+
+Zweite Seite der Medaille: Hier stehen die *Praeventions-Regeln* — im Bug-Almanach
+*die konkreten Fehler und ihre Fixes*. Beide Seiten zusammen lesen: Praevention hier, Schadensbehebung dort.

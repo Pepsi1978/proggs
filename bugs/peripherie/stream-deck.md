@@ -712,7 +712,7 @@ Direkt nach `keyDown` kam ein noch laufender Poll-Response mit dem ALTEN State z
 
 ---
 
-## Wechselseitige Bezugstabelle (Almanach ↔ Best Practices)
+## 🔗 Wechselseitige Bezugstabelle (Almanach ↔ Best Practices)
 
 > Gegenstueck: [`best-practices/projekt-code/peripherie/best-practices-stream-deck.md`](../../best-practices/projekt-code/peripherie/best-practices-stream-deck.md)
 > (angelegt 2026-06-03). Verknuepft jeden Bug-Abschnitt mit der praeventiven Best-Practice.

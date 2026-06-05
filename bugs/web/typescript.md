@@ -803,7 +803,7 @@
 
 ---
 
-## Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
+## 🔗 Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
 
 Bug-Almanach (diese Datei) <-> Best-Practices `~/proggs/best-practices/projekt-code/web/best-practices-typescript.md`.
 Die identische Tabelle steht auch dort.

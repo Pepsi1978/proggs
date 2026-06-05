@@ -870,7 +870,7 @@ Build mit `tsc --build` (bzw. `tsc -b`). `composite: true` ist Pflicht fuer refe
 
 ---
 
-## Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
 Best-Practices (diese Datei) <-> Bug-Almanach `~/proggs/bugs/web/typescript.md`. Die identische Tabelle
 steht auch dort. So bleibt jede Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).

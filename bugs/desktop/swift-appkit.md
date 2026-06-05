@@ -587,7 +587,7 @@ ueber ihren OPEN/CLOSED-Status, ob der zugrundeliegende Mechanismus noch lebt.
 
 ---
 
-## Best-Practices-Kopplung (wechselseitige Bezugstabelle)
+## 🔗 Best-Practices-Kopplung (wechselseitige Bezugstabelle)
 
 Bug-Almanach (diese Datei) ↔ Best-Practices `~/proggs/best-practices/projekt-code/desktop/best-practices-swift-appkit.md`.
 Die identische Tabelle steht auch dort — so bleibt jeder Bug mit seiner „so macht man es von vornherein

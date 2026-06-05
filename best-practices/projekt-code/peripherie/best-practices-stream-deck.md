@@ -474,7 +474,7 @@ Quelle: docs.elgato.com/streamdeck/cli/commands/pack/ · .../validate/ — **off
 
 ---
 
-## Wechselseitige Bezugstabelle (Best Practice ↔ Almanach)
+## 🔗 Wechselseitige Bezugstabelle (Best Practice ↔ Almanach)
 
 > Verknuepft jede Best-Practice mit der konkreten Bug-Loesung in [`bugs/peripherie/stream-deck.md`](../../../bugs/peripherie/stream-deck.md).
 

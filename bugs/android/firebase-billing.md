@@ -1138,3 +1138,12 @@
 | Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger) |
 | Teil 2/10 (google-services.json, config-cache) | `best-practices/projekt-code/android-build/best-practices-gradle.md` (Build-System) |
 | Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android/best-practices-android-platform.md` |
+
+
+---
+
+## 🔗 Bezug zu den Best-Practices ([`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md))
+
+Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest* — die
+Best-Practices sagen *wie man den Fehler von vornherein vermeidet*. Nach jedem Fix
+hier auch den passenden Praeventions-Abschnitt dort verankern, damit der Fehler nicht wiederkommt.

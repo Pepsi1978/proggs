@@ -1562,3 +1562,11 @@ Quelle durchgehend: developer.android.com/google/play/billing/lifecycle/subscrip
 
 3. **Service-Account-Keys (Admin SDK / Cloud Functions Deploy) NIEMALS ins Repo** — das sind echte
    Secrets, im Gegensatz zur google-services.json. `[offiziell]`
+
+
+---
+
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/firebase-billing.md`](../../../bugs/android/firebase-billing.md))
+
+Zweite Seite der Medaille: Hier stehen die *Praeventions-Regeln* — im Bug-Almanach
+*die konkreten Fehler und ihre Fixes*. Beide Seiten zusammen lesen: Praevention hier, Schadensbehebung dort.

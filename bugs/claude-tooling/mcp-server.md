@@ -642,7 +642,7 @@ matcht) → `claude-hooks.md`.
 
 ---
 
-## 11. Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
+## 🔗 11. Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
 
 Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md`](../../best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
 

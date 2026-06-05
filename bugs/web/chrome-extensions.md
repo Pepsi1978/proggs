@@ -904,7 +904,7 @@ Observer nicht an globale Dauer-Elemente binden wenn vermeidbar; bei SPA-Navi ne
 
 ---
 
-## Bezug zu Best-Practices (beide Seiten der Medaille)
+## 🔗 Bezug zu Best-Practices (beide Seiten der Medaille)
 
 | Bug-Abschnitt (hier) | Best-Practice-Abschnitt (`best-practices/projekt-code/web/best-practices-chrome-extensions.md`) |
 |----------------------|---------------------------------------------------------------------------------------------|
