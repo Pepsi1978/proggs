@@ -952,6 +952,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// nicht sichtbar. Der Solo-Dock-Stern in der Eingabe-Toolbar holt es
     /// bei Bedarf nach vorne.
     private func showPromptInputDockedToOverlay() {
+        // KRITISCH (Frank-Bug 2026-06-05 "soll immer angedockt sein"): Wenn das
+        // Overlay eingeklappt ist (Mic-Pille 84x84, z.B. nach langer Nicht-
+        // Nutzung), ZUERST vollstaendig ausklappen und ERST DANN andocken.
+        // Sonst dockt die Eingabe an die collapsed-Geometrie, die sich direkt
+        // danach (beamToExpanded) wieder aendert → die Eingabe landet weit
+        // links statt sauber 4px am Pillar.
+        if panel.isCollapsed {
+            tvoDebug("[SoloDock] Pillar collapsed → erst ausklappen, dann andocken")
+            panel.beamToExpanded { [weak self] in
+                self?.dockPromptInputToPillar()
+            }
+        } else {
+            dockPromptInputToPillar()
+        }
+    }
+
+    private func dockPromptInputToPillar() {
         ensurePromptBoardInstance()
         guard let board = promptBoardPanel else { return }
         // Board im Solo-Dock-Modus garantiert unsichtbar halten UND ihm eine
@@ -961,25 +978,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // wuerde kurz in der Bildschirmecke aufflackern (Fix #1170).
         board.orderOut(nil)
         board.dock(rightOf: self.panel)
-        // Daten frisch laden, damit beim Einblenden des Boards via
-        // Solo-Dock-Stern keine leere Liste zu sehen ist.
         board.refresh()
-        // Eingabe oeffnen — das Board ruft openInputPanelExternally(),
-        // welche das InputPanel via interner dock(leftOf:) ans Board
-        // andockt. Wir ueberschreiben das gleich auf Pillar-Andock.
         board.openInputPanelExternally()
-        // Solo-Dock-Toggle und Gemini-Callback verdrahten BEVOR wir die
-        // Andockung anpassen — sonst koennten Klicks ins Leere laufen.
         wireInputPanelCallbacks()
         guard let input = board.currentInputPanel else { return }
         inputSoloDock = true
         input.dockToOverlay(self.panel)
         input.setSoloDockState(true)
         installSoloDockDragHandler(on: board)
-        // Fokus ins Eingabefeld damit der Benutzer SOFORT tippen kann
-        // ohne erst klicken zu muessen — fixt den Beep-Bug, weil das
-        // Eingabe-Fenster jetzt firstResponder ist.
+        tvoDebug("[SoloDock] pillar=\(self.panel.frame) input=\(input.frame) collapsed=\(self.panel.isCollapsed)")
         input.makeKeyAndOrderFront(nil)
+        // Sicherheitsnetz: kurz nach allen Layout-/Beam-Animationen nochmal
+        // exakt an den Pillar andocken — falls sich die Pillar-Geometrie direkt
+        // nach dem Oeffnen noch geaendert hat (Race mit beamFadeIn).
+        redockInputToPillarAfterSettle()
+    }
+
+    /// Dockt die Eingabe nach ~0.35s nochmal exakt an den Pillar — Sicherheits-
+    /// netz gegen Geometrie-Aenderungen direkt nach dem Oeffnen (Aufklapp-
+    /// Animation, Layout-Settle). Greift nur wenn der Solo-Dock-Modus noch aktiv
+    /// ist.
+    private func redockInputToPillarAfterSettle() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self = self, self.inputSoloDock,
+                  let input = self.promptBoardPanel?.currentInputPanel else { return }
+            input.dockToOverlay(self.panel)
+            tvoDebug("[SoloDock] re-dock settle: input=\(input.frame)")
+        }
     }
 
     /// Installiert den Solo-Dock-Drag-Handler: beim Ziehen der Eingabe wird der
@@ -1040,6 +1065,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             input.setSoloDockState(true)
             input.makeKeyAndOrderFront(nil)
             installSoloDockDragHandler(on: board)
+            redockInputToPillarAfterSettle()
         } else {
             // Eingabe-Stern (Frank-Wunsch 2026-05-28): die Prompt-Eingabe
             // SCHLIESSEN und nur das Board zeigen. Vorher rueckte die Eingabe
