@@ -869,8 +869,8 @@ public partial class PromptBoardPanel : Window
     {
         try
         {
-            var map = await VoiceServiceProvider.Slots.LoadMapAsync().ConfigureAwait(false);
-            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map));
+            var (map, times) = await VoiceServiceProvider.Slots.LoadMapAndTimesAsync().ConfigureAwait(false);
+            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times));
         }
         catch (Exception ex)
         {

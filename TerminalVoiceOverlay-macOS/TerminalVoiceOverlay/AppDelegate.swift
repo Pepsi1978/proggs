@@ -783,6 +783,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .success:
                 tvoDebug("[App] history uploaded to cloud")
                 self?.driveDisconnectedNotified = false
+                PromptBoardPanel.recordSyncNow()
                 // Sync-Badge im Promtboard-Header auch fuer Historie-
                 // Uploads aktualisieren — sonst zeigt das Label nur den
                 // letzten Promtboard-Backup, obwohl die Historie laufend
@@ -851,6 +852,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .success:
                 tvoDebug("[App] slots uploaded to cloud")
                 self?.driveDisconnectedNotified = false
+                // Sync-Zeitstempel GARANTIERT persistieren (auch wenn das Board
+                // gerade nicht offen/instanziiert ist) + UI refreshen wenn offen.
+                PromptBoardPanel.recordSyncNow()
                 self?.promptBoardPanel?.markSyncedNow()
             case .failure(let e):
                 tvoDebug("[App] slot upload failed: \(e.localizedDescription)")

@@ -79,6 +79,32 @@ public sealed class PromptSlotService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Wie <see cref="LoadMapAsync"/>, liefert aber zusaetzlich die Speicher-
+    /// Zeitstempel pro belegtem Slot — fuer die Anzeige „wann gespeichert".
+    /// </summary>
+    public async Task<(Dictionary<int, string> Map, Dictionary<int, DateTime> Times)>
+        LoadMapAndTimesAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            var map = new Dictionary<int, string>();
+            var times = new Dictionary<int, DateTime>();
+            foreach (var e in entries)
+            {
+                if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                {
+                    map[e.Number] = e.Text;
+                    times[e.Number] = e.UpdatedAt;
+                }
+            }
+            return (map, times);
+        }
+        finally { _gate.Release(); }
+    }
+
     /// <summary>Liefert ALLE Eintraege roh (inkl. Tombstones) — fuer den Cloud-Merge.</summary>
     public async Task<List<PromptSlotEntry>> LoadEntriesAsync(CancellationToken ct = default)
     {

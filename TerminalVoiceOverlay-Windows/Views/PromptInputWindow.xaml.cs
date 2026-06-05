@@ -638,9 +638,13 @@ public partial class PromptInputWindow : Window
 
     private int? _selectedSlot;
     private readonly Dictionary<int, string> _slotContents = new();
+    /// <summary>Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.</summary>
+    private readonly Dictionary<int, DateTime> _slotTimestamps = new();
     private readonly Dictionary<int, Button> _slotButtons = new();
     private Button? _slotSaveButton;
     private Button? _slotDeleteButton;
+    /// <summary>Zeigt „wann gespeichert" fuer den gewaehlten belegten Slot, rechts neben dem X.</summary>
+    private TextBlock? _slotTimeLabel;
 
     private static readonly Brush SlotGold  = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
     private static readonly Brush SlotGrey  = new SolidColorBrush(Color.FromRgb(0x8C, 0x8C, 0x8C));
@@ -652,12 +656,17 @@ public partial class PromptInputWindow : Window
     /// der belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein
     /// und laesst die aktuelle Auswahl/Diskette unveraendert.
     /// </summary>
-    public void SetSlotContents(Dictionary<int, string> map)
+    public void SetSlotContents(Dictionary<int, string> map, Dictionary<int, DateTime>? timestamps = null)
     {
         _slotContents.Clear();
         foreach (var kv in map)
         {
             if (!string.IsNullOrEmpty(kv.Value)) _slotContents[kv.Key] = kv.Value;
+        }
+        _slotTimestamps.Clear();
+        if (timestamps != null)
+        {
+            foreach (var kv in timestamps) _slotTimestamps[kv.Key] = kv.Value;
         }
         UpdateSlotVisuals();
     }
@@ -699,6 +708,18 @@ public partial class PromptInputWindow : Window
         _slotDeleteButton.Visibility = Visibility.Collapsed;
         _slotDeleteButton.Click += OnSlotDeleteClick;
         SlotBar.Children.Add(_slotDeleteButton);
+
+        // Zeitstempel-Label rechts neben dem X — zeigt wann der Prompt im
+        // gewaehlten Slot gespeichert wurde. Anfangs versteckt.
+        _slotTimeLabel = new TextBlock
+        {
+            Foreground = SlotGrey,
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
+            Visibility = Visibility.Collapsed,
+        };
+        SlotBar.Children.Add(_slotTimeLabel);
 
         UpdateSlotVisuals();
     }
@@ -743,6 +764,24 @@ public partial class PromptInputWindow : Window
             // Wahrheit, nicht der lokale Cache) — Loeschen+Sync laeuft immer.
             _slotDeleteButton.IsEnabled = hasSelection;
         }
+
+        // Zeitstempel rechts neben dem X — nur wenn der gewaehlte Slot belegt
+        // ist und ein Speicher-Zeitpunkt bekannt ist.
+        if (_slotTimeLabel is not null)
+        {
+            if (_selectedSlot is int sel
+                && _slotTimestamps.TryGetValue(sel, out var ts)
+                && _slotContents.TryGetValue(sel, out var tx) && !string.IsNullOrEmpty(tx))
+            {
+                _slotTimeLabel.Text = "🕒 " + ts.ToLocalTime().ToString("dd.MM. HH:mm");
+                _slotTimeLabel.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                _slotTimeLabel.Text = string.Empty;
+                _slotTimeLabel.Visibility = Visibility.Collapsed;
+            }
+        }
     }
 
     /// <summary>
@@ -783,6 +822,7 @@ public partial class PromptInputWindow : Window
             return;
         }
         _slotContents[n] = text;
+        _slotTimestamps[n] = DateTime.UtcNow;
         UpdateSlotVisuals();
         UpdatePreview($"In Slot {n} gespeichert.");
         SlotSaveRequested?.Invoke(n, text);
@@ -798,6 +838,7 @@ public partial class PromptInputWindow : Window
     {
         if (_selectedSlot is not int n) return;
         _slotContents.Remove(n);
+        _slotTimestamps.Remove(n);
         ClearInput();
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");

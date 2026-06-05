@@ -242,9 +242,18 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// Restore) wird der "+N neu"-Counter auf 0 zurueckgesetzt, weil ab
     /// jetzt nichts mehr "neu vom letzten Auto-Sync" ist.
     private func recordSuccessfulSync() {
-        UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
-        UserDefaults.standard.set(0, forKey: Self.lastSyncNewItemsKey)
+        Self.recordSyncNow()
         refreshSyncLabel()
+    }
+
+    /// Persistiert "jetzt" als letzten Sync-Zeitpunkt — STATIC, damit der
+    /// AppDelegate den Zeitstempel garantiert sichern kann, auch wenn das
+    /// Board-Panel gerade nicht existiert oder nicht geoeffnet ist. Frank-Wunsch
+    /// 2026-06-05: nach jedem Slot-Speichern/-Loeschen (= Sync) muss der
+    /// Promtboard-Sync-Zeitstempel stimmen, egal ob das Board offen ist.
+    static func recordSyncNow() {
+        UserDefaults.standard.set(Date(), forKey: lastSyncKey)
+        UserDefaults.standard.set(0, forKey: lastSyncNewItemsKey)
     }
 
     /// Public Hook fuer den AppDelegate: nach einem erfolgreichen Auto-Sync
@@ -1018,8 +1027,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         inputPanel?.makeKeyAndOrderFront(nil)
         // Belegte Slots in die Zahlen-Leiste laden — bei jedem Oeffnen, damit
         // ein zwischenzeitlicher Cloud-Merge sofort sichtbar wird.
-        PromptSlotStore.shared.loadMap { [weak self] map in
-            self?.inputPanel?.setSlotContents(map)
+        PromptSlotStore.shared.loadMapAndTimes { [weak self] map, times in
+            self?.inputPanel?.setSlotContents(map, timestamps: times)
         }
         inputPanelVisible = true
         updateStarVisual()
@@ -1213,8 +1222,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// nach (falls die Eingabe offen ist). Wird vom AppDelegate nach dem
     /// Cloud-Merge beim Start aufgerufen.
     func reloadSlots() {
-        PromptSlotStore.shared.loadMap { [weak self] map in
-            self?.inputPanel?.setSlotContents(map)
+        PromptSlotStore.shared.loadMapAndTimes { [weak self] map, times in
+            self?.inputPanel?.setSlotContents(map, timestamps: times)
         }
     }
 

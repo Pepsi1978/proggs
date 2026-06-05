@@ -64,13 +64,24 @@ final class PromptInputPanel: NSPanel {
     /// Einfaerbung der Zahlen und fuer das Laden beim Klick. Wird vom
     /// AppDelegate via `setSlotContents` gefuellt (lokaler Stand + Cloud-Merge).
     private var slotContents: [Int: String] = [:]
+    /// Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.
+    private var slotTimestamps: [Int: Date] = [:]
     private var slotButtons: [Int: NSButton] = [:]
     private let slotSaveButton = NSButton()
     private let slotDeleteButton = NSButton()
+    /// Zeigt „wann gespeichert" fuer den gewaehlten belegten Slot, rechts neben dem X.
+    private let slotTimeLabel = NSTextField(labelWithString: "")
 
     private static let slotGold = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
     private static let slotGrey = NSColor(calibratedWhite: 0.55, alpha: 1)
     private static let slotRed = NSColor(calibratedRed: 1.0, green: 0.27, blue: 0.27, alpha: 1)
+
+    private static let slotTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "de_DE")
+        f.dateFormat = "dd.MM. HH:mm"
+        return f
+    }()
 
     // ── Rechtsklick-Drag-State ──
     private var isDragging = false
@@ -451,8 +462,9 @@ final class PromptInputPanel: NSPanel {
     /// Wird vom AppDelegate aufgerufen — uebergibt den aktuellen Stand der
     /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
     /// laesst die aktuelle Auswahl/Diskette unveraendert.
-    func setSlotContents(_ map: [Int: String]) {
+    func setSlotContents(_ map: [Int: String], timestamps: [Int: Date] = [:]) {
         slotContents = map.filter { !$0.value.isEmpty }
+        slotTimestamps = timestamps
         updateSlotVisuals()
     }
 
@@ -479,12 +491,18 @@ final class PromptInputPanel: NSPanel {
         slotSaveButton.isHidden = true
         slotDeleteButton.isHidden = true
 
+        // Zeitstempel-Label rechts neben dem X — zeigt wann der Prompt im
+        // gewaehlten Slot gespeichert wurde. Anfangs leer/versteckt.
+        slotTimeLabel.textColor = Self.slotGrey
+        slotTimeLabel.font = NSFont.systemFont(ofSize: 11)
+        slotTimeLabel.isHidden = true
+
         // Kleiner Abstand zwischen Zahlen und den Aktions-Buttons.
         let spacer = NSView()
         spacer.translatesAutoresizingMaskIntoConstraints = false
         spacer.widthAnchor.constraint(equalToConstant: 8).isActive = true
 
-        let bar = NSStackView(views: views + [spacer, slotSaveButton, slotDeleteButton])
+        let bar = NSStackView(views: views + [spacer, slotSaveButton, slotDeleteButton, slotTimeLabel])
         bar.orientation = .horizontal
         bar.spacing = 7
         bar.alignment = .centerY
@@ -548,6 +566,17 @@ final class PromptInputPanel: NSPanel {
         // immer durchlaufen (der Store ist die Wahrheit, nicht der lokale Cache).
         slotDeleteButton.isEnabled = hasSelection
         slotDeleteButton.alphaValue = 1.0
+
+        // Zeitstempel rechts neben dem X — nur wenn der gewaehlte Slot belegt
+        // ist und ein Speicher-Zeitpunkt bekannt ist.
+        if let s = selectedSlot, let t = slotTimestamps[s],
+           !(slotContents[s]?.isEmpty ?? true) {
+            slotTimeLabel.stringValue = "🕒 \(Self.slotTimeFormatter.string(from: t))"
+            slotTimeLabel.isHidden = false
+        } else {
+            slotTimeLabel.stringValue = ""
+            slotTimeLabel.isHidden = true
+        }
     }
 
     private func slotLabel(of btn: NSButton) -> NSTextField? {
@@ -582,6 +611,7 @@ final class PromptInputPanel: NSPanel {
             return
         }
         slotContents[n] = text
+        slotTimestamps[n] = Date()
         updateSlotVisuals()
         flashSlotButton(slotSaveButton, color: Self.slotGold)
         onSlotSave?(n, text)
@@ -595,6 +625,7 @@ final class PromptInputPanel: NSPanel {
     @objc private func onSlotDeleteClick() {
         guard let n = selectedSlot else { return }
         slotContents.removeValue(forKey: n)
+        slotTimestamps.removeValue(forKey: n)
         // Geloeschten Prompt auch aus dem Eingabefeld entfernen.
         clearInput()
         updateSlotVisuals()

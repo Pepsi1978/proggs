@@ -69,6 +69,22 @@ final class PromptSlotStore {
         }
     }
 
+    /// Wie `loadMap`, liefert aber zusaetzlich die Speicher-Zeitstempel pro
+    /// belegtem Slot — fuer die Anzeige „wann gespeichert" neben dem X.
+    func loadMapAndTimes(completion: @escaping ([Int: String], [Int: Date]) -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { completion([:], [:]); return }
+            let entries = self.loadUnlocked()
+            var map: [Int: String] = [:]
+            var times: [Int: Date] = [:]
+            for e in entries where !e.text.isEmpty && (1...Self.slotCount).contains(e.number) {
+                map[e.number] = e.text
+                times[e.number] = e.updatedAt
+            }
+            DispatchQueue.main.async { completion(map, times) }
+        }
+    }
+
     /// Liefert ALLE Eintraege roh (inkl. Tombstones mit leerem Text) — wird
     /// fuer den Cloud-Merge gebraucht, der die Zeitstempel vergleicht.
     func loadEntries(completion: @escaping ([PBSlotEntry]) -> Void) {
