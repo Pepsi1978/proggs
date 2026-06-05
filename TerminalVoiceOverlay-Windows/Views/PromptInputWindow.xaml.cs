@@ -85,7 +85,7 @@ public partial class PromptInputWindow : Window
         // direkt lostippen kann.
         Loaded += (_, _) => InputBox.Focus();
 
-        // Prompt-Zwischenspeicher-Leiste (1…10) unten aufbauen.
+        // Prompt-Zwischenspeicher-Leiste (1…15) unten aufbauen.
         BuildSlotBar();
     }
 
@@ -626,7 +626,7 @@ public partial class PromptInputWindow : Window
         ReleaseMouseCapture();
     }
 
-    // ── Prompt-Zwischenspeicher-Slots (1…10) ─────────────────────────────
+    // ── Prompt-Zwischenspeicher-Slots (1…15) ─────────────────────────────
 
     /// <summary>Diskette geklickt: speichere <paramref name="text"/> im Slot
     /// <paramref name="number"/> (1…10). Das PromptBoardPanel persistiert
@@ -672,7 +672,7 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
-    /// Baut die untere Leiste: Zahlen 1…10, danach Diskette und X. Diskette
+    /// Baut die untere Leiste: Zahlen 1…15, danach Diskette und X. Diskette
     /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
     /// Zahl (Frank-Wunsch).
     /// </summary>

@@ -73,7 +73,7 @@
             </Setter>
         </Style>
 
-        <!-- Slot-Button (Prompt-Zwischenspeicher 1…10 sowie Diskette/X).
+        <!-- Slot-Button (Prompt-Zwischenspeicher 1…15 sowie Diskette/X).
              Rechteckiger als die runden Toolbar-Buttons (CornerRadius 6), 30x26.
              Auswahl wird ueber BorderBrush/BorderThickness vom Code-Behind
              gesetzt (goldener Rahmen), belegt/leer ueber Foreground. -->
@@ -263,7 +263,7 @@
                        TextWrapping="NoWrap"
                        TextTrimming="CharacterEllipsis"/>
 
-            <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+            <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…15) ganz unten.
                  Eine Trennlinie grenzt sie sichtbar vom Eingabefeld ab — die
                  Slots sind unabhaengig von der Eingabe. Die Buttons werden im
                  Code-Behind (BuildSlotBar) in den inneren StackPanel eingehaengt;

@@ -48,16 +48,16 @@ final class PromptInputPanel: NSPanel {
     /// bewegen uns NIE selbst — die Andockung bleibt dadurch starr.
     var onGroupDragDelta: ((CGFloat, CGFloat) -> Void)?
 
-    // ── Prompt-Zwischenspeicher-Slots (1…10) ──
+    // ── Prompt-Zwischenspeicher-Slots (1…15) ──
     /// Wird ausgeloest wenn der Benutzer auf die Diskette klickt: speichere
-    /// `text` dauerhaft im Slot `number` (1…10). Der AppDelegate persistiert
+    /// `text` dauerhaft im Slot `number` (1…15). Der AppDelegate persistiert
     /// und stoesst SOFORT den Cloud-Sync an.
     var onSlotSave: ((Int, String) -> Void)?
     /// Wird ausgeloest wenn der Benutzer auf das X klickt: loesche Slot
     /// `number` dauerhaft. AppDelegate persistiert + Sofort-Sync.
     var onSlotDelete: ((Int) -> Void)?
 
-    /// Aktuell ausgewaehlte Slot-Nummer (1…10) oder nil. Bestimmt ob
+    /// Aktuell ausgewaehlte Slot-Nummer (1…15) oder nil. Bestimmt ob
     /// Diskette/X sichtbar sind und welcher Slot gespeichert/geloescht wird.
     private var selectedSlot: Int?
     /// Lokale Kopie der belegten Slots (Nummer → Text). Quelle fuer die
@@ -291,7 +291,7 @@ final class PromptInputPanel: NSPanel {
         previewLabel.lineBreakMode = .byTruncatingTail
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // Trennlinie + Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+        // Trennlinie + Zahlen-Leiste (Prompt-Zwischenspeicher 1…15) ganz unten.
         // Die Linie grenzt die Leiste sichtbar vom Eingabefeld ab — die Slots
         // sind unabhaengig von der Eingabe (Frank-Wunsch 2026-06-05).
         let slotSeparator = NSView()
@@ -457,7 +457,7 @@ final class PromptInputPanel: NSPanel {
         clearInput()
     }
 
-    // MARK: - Prompt-Zwischenspeicher-Slots (1…10)
+    // MARK: - Prompt-Zwischenspeicher-Slots (1…15)
 
     /// Wird vom AppDelegate aufgerufen — uebergibt den aktuellen Stand der
     /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
@@ -468,7 +468,7 @@ final class PromptInputPanel: NSPanel {
         updateSlotVisuals()
     }
 
-    /// Baut die untere Leiste: Zahlen 1…10, danach Diskette und X. Diskette
+    /// Baut die untere Leiste: Zahlen 1…15, danach Diskette und X. Diskette
     /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
     /// Zahl (Frank-Wunsch).
     private func buildSlotBar() -> NSView {

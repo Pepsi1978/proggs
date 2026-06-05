@@ -1,18 +1,18 @@
 import Foundation
 
-/// Ein einzelner Prompt-Zwischenspeicher-Slot (1…10). `text == ""` ist ein
+/// Ein einzelner Prompt-Zwischenspeicher-Slot (1…15). `text == ""` ist ein
 /// Tombstone: der Slot wurde geloescht, der Zeitstempel bleibt aber erhalten,
 /// damit das Loeschen beim Cloud-Merge geraeteuebergreifend gewinnt (ein
 /// frisch geloeschter Slot mit neuem `updatedAt` ueberschreibt einen aelteren
 /// belegten Stand auf dem anderen Geraet). Feldnamen sind camelCase und damit
 /// 1:1 mit dem Windows-Pendant (PromptSlotService.cs) JSON-kompatibel.
 struct PBSlotEntry: Codable, Equatable {
-    var number: Int       // 1…10
+    var number: Int       // 1…15
     var text: String      // "" == geloescht (Tombstone)
     var updatedAt: Date
 }
 
-/// Liest und schreibt die 10 Prompt-Zwischenspeicher-Slots aus einer JSON-
+/// Liest und schreibt die 15 Prompt-Zwischenspeicher-Slots aus einer JSON-
 /// Datei. Voellig analog zum `PromptHistoryStore`: serielle Queue, atomares
 /// Schreiben via Temp-Datei + Replace, ISO-8601-Datum kompatibel zu EF Core /
 /// Windows. Die Datei wird nach jedem Speichern/Loeschen sofort zu Google
@@ -24,9 +24,9 @@ final class PromptSlotStore {
 
     static let shared = PromptSlotStore()
 
-    /// Anzahl der Slots (1…10). Zentral, damit UI und Validierung dieselbe
+    /// Anzahl der Slots (1…15). Zentral, damit UI und Validierung dieselbe
     /// Quelle nutzen.
-    static let slotCount = 10
+    static let slotCount = 15
 
     private let baseDir: URL
     private let slotsFileURL: URL

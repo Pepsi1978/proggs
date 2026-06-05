@@ -41,7 +41,7 @@ public static class VoiceServiceProvider
 
     /// <summary>
     /// Single PromptSlotService instance per process — gleiche Lazy-/Lock-
-    /// Logik wie <see cref="History"/>. Haelt die 10 Prompt-Zwischenspeicher-
+    /// Logik wie <see cref="History"/>. Haelt die 15 Prompt-Zwischenspeicher-
     /// Slots, die OverlayWindow (Cloud-Sync) und PromptBoardPanel (UI) teilen.
     /// </summary>
     private static PromptSlotService? _slots;

@@ -18,7 +18,7 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 namespace TerminalVoiceOverlay.Services;
 
 /// <summary>
-/// Synchronisiert die 10 Prompt-Zwischenspeicher-Slots zwischen Mac, Windows
+/// Synchronisiert die 15 Prompt-Zwischenspeicher-Slots zwischen Mac, Windows
 /// und Cloud (Google Drive appDataFolder). Eigenstaendiger Service neben
 /// <see cref="PromptHistoryDriveSync"/> — gleicher Secret-Store und OAuth-
 /// Refresh-Token, aber eine eigene Datei <c>prompt-slots.json</c>, damit die
