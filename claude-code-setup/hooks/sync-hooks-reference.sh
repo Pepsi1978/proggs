@@ -16,6 +16,10 @@ COMMENT="Complete hooks reference for macOS. Merge into ~/.claude/settings.json 
 
 # Extract hooks section with python3
 TMP_FILE="$REF_FILE.tmp.$$"
+# Poka-Yoke (Direktive #3, Stufe 3): trap raeumt die Temp-Datei bei JEDEM Exit
+# (normal, Fehler, Signal/Timeout am SessionEnd) auf — verhindert verwaiste .tmp-Leichen.
+# Nach erfolgreichem mv existiert TMP_FILE nicht mehr; das rm ist dann harmlos.
+trap 'rm -f "$TMP_FILE" 2>/dev/null' EXIT
 python3 -c "
 import json, sys, os
 
@@ -37,8 +41,11 @@ print(json.dumps(output, indent='\t', ensure_ascii=False))
 # Only update if content actually differs (ignore whitespace)
 if [[ -f "$REF_FILE" ]]; then
     # Compare JSON structure, not formatting
-    OLD_HASH=$(python3 -c "import json; print(hash(json.dumps(json.load(open('$REF_FILE')).get('hooks',{}), sort_keys=True)))" 2>/dev/null || echo "none")
-    NEW_HASH=$(python3 -c "import json; print(hash(json.dumps(json.load(open('$TMP_FILE')).get('hooks',{}), sort_keys=True)))" 2>/dev/null || echo "changed")
+    # sha256 statt hash(): Pythons String-hash() ist pro Prozess randomisiert (PYTHONHASHSEED),
+    # daher waren OLD_HASH/NEW_HASH fast immer ungleich -> Datei wurde bei JEDEM SessionEnd
+    # unnoetig neu geschrieben (Git-Churn). sha256 ist deterministisch ueber Prozesse hinweg.
+    OLD_HASH=$(python3 -c "import json,hashlib; print(hashlib.sha256(json.dumps(json.load(open('$REF_FILE')).get('hooks',{}), sort_keys=True).encode()).hexdigest())" 2>/dev/null || echo "none")
+    NEW_HASH=$(python3 -c "import json,hashlib; print(hashlib.sha256(json.dumps(json.load(open('$TMP_FILE')).get('hooks',{}), sort_keys=True).encode()).hexdigest())" 2>/dev/null || echo "changed")
     if [[ "$OLD_HASH" == "$NEW_HASH" ]]; then
         rm -f "$TMP_FILE"
         exit 0
