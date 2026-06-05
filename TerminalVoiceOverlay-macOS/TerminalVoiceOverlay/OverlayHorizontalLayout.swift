@@ -104,8 +104,12 @@ extension OverlayPanel {
         let origin: NSPoint = windowOrigin
             ?? savedHorizontalPosition
             ?? canonicalHorizontalOrigin(panelWidth: totalWidth)
-        let newFrame = NSRect(x: origin.x, y: origin.y,
-                              width: totalWidth, height: HBarLayout.panelHeight)
+        // Auf den sichtbaren Bildschirm klemmen — sonst ragt das breite
+        // Horizontal-Overlay bei einer am rechten Rand gespeicherten Position
+        // aus dem Monitor (2026-06-05-Bug).
+        let newFrame = OverlayPanel.clampFrameToVisibleScreen(
+            NSRect(x: origin.x, y: origin.y,
+                   width: totalWidth, height: HBarLayout.panelHeight))
         self.setFrame(newFrame, display: false)
 
         // CornerRadius + 2px schwarzer Border-Ring (Windows: BorderBrush #FF000000
@@ -203,8 +207,10 @@ extension OverlayPanel {
         let origin: NSPoint = windowOrigin
             ?? savedVerticalPosition
             ?? canonicalVerticalOrigin(panelHeight: panelHeight)
-        let newFrame = NSRect(x: origin.x, y: origin.y,
-                              width: panelWidth, height: panelHeight)
+        // Auf den sichtbaren Bildschirm klemmen (Konsistenz mit Horizontal/Collapsed).
+        let newFrame = OverlayPanel.clampFrameToVisibleScreen(
+            NSRect(x: origin.x, y: origin.y,
+                   width: panelWidth, height: panelHeight))
         self.setFrame(newFrame, display: false)
         self.contentView?.layer?.cornerRadius = 36
         self.contentView?.layer?.borderColor  = NSColor.black.cgColor

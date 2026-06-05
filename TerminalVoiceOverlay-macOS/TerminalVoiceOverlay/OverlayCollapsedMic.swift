@@ -75,7 +75,11 @@ extension OverlayPanel {
         removeOrnamentSubviewsHelper()
 
         let size = CollapsedLayout.panelSize
-        let frame = NSRect(x: origin.x, y: origin.y, width: size, height: size)
+        // Auf den sichtbaren Bildschirm klemmen — sonst landet die eingeklappte
+        // Mic-Pille ausserhalb, wenn das expandierte Overlay schon am Rand klebte
+        // (2026-06-05-Bug: "kurz zu sehen, dann ganz weg").
+        let frame = OverlayPanel.clampFrameToVisibleScreen(
+            NSRect(x: origin.x, y: origin.y, width: size, height: size))
         self.setFrame(frame, display: false)
         self.contentView?.layer?.cornerRadius = CollapsedLayout.cornerRadius
         // 2 px schwarzer Border-Ring (Windows: BorderBrush #FF000000 BorderThickness 2).

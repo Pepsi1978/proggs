@@ -505,7 +505,8 @@ final class OverlayPanel: NSPanel {
             y = CGFloat(savedY)
         }
 
-        let contentRect = NSRect(x: x, y: y, width: panelWidth, height: panelHeight)
+        let contentRect = OverlayPanel.clampFrameToVisibleScreen(
+            NSRect(x: x, y: y, width: panelWidth, height: panelHeight))
 
         super.init(
             contentRect: contentRect,
@@ -1005,6 +1006,31 @@ final class OverlayPanel: NSPanel {
     func savePillarPosition() {
         let position: [String: Double] = ["x": Double(frame.origin.x), "y": Double(frame.origin.y)]
         UserDefaults.standard.set(position, forKey: OverlayPanel.positionKey)
+    }
+
+    /// Klemmt ein Frame so, dass es VOLLSTAENDIG im sichtbaren Bereich liegt.
+    /// Verhindert dass das Overlay rechts/unten aus dem Monitor wandert —
+    /// Root Cause des "verschwindet rechts vom Monitor"-Bugs (2026-06-05):
+    /// eine im schmalen Vertikal-Modus (96pt) gespeicherte Position klebte am
+    /// rechten Rand; im breiten Horizontal-Modus ragte das Overlay dann zu 2/3
+    /// raus und die eingeklappte Mic-Pille verschwand ganz. Funktionserhaltend:
+    /// es wird NUR die Position verschoben, NIE die Groesse geaendert (Layout
+    /// bleibt intakt). Waehlt den Bildschirm mit dem groessten Ueberlapp,
+    /// faellt auf den Hauptbildschirm zurueck. Static, damit auch der Init
+    /// (vor super.init) ihn nutzen kann.
+    static func clampFrameToVisibleScreen(_ frame: NSRect) -> NSRect {
+        let screen: NSScreen? = NSScreen.screens.max(by: { a, b in
+            let ia = a.frame.intersection(frame)
+            let ib = b.frame.intersection(frame)
+            return (ia.width * ia.height) < (ib.width * ib.height)
+        }) ?? NSScreen.main
+        guard let visible = screen?.visibleFrame else { return frame }
+        var f = frame
+        if f.maxX > visible.maxX { f.origin.x = visible.maxX - f.width }
+        if f.maxY > visible.maxY { f.origin.y = visible.maxY - f.height }
+        if f.origin.x < visible.minX { f.origin.x = visible.minX }
+        if f.origin.y < visible.minY { f.origin.y = visible.minY }
+        return f
     }
 
     deinit {
