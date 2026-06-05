@@ -70,7 +70,17 @@ setzt den Timer zurueck. Der globale Scope wird beim Neustart neu ausgefuehrt �
 **Versionen:** per Design, alle MV3-Versionen.
 **FIX:** State NIE in globalen Variablen halten → in `chrome.storage.local`/`.session` (oder IndexedDB)
 schreiben und beim SW-Start rehydrieren. SW als zustandslosen, jederzeit neu startbaren Mittler behandeln.
-**Quelle:** developer.chrome.com — service-workers/lifecycle.
+**Beispiel (eigener Vorfall 2026-06-05, vorlese-overlay-v2):** Der SW merkte sich den Ziel-Tab fuer
+Status-Updates in der globalen Variable `activeTabId`. Bei langem Vorlesen (Audio laeuft im
+Offscreen-Doc, der SW ist derweil idle) starb der SW nach 30 s; beim abschliessenden `OFFSCREEN_ENDED`
+war `activeTabId` null → das `stopped` ging an `notifyTab(null)` verloren → das Overlay hing fuer immer
+im "spielt"-Zustand (rotes Stop-Icon + Fortschrittsbalken blieben, neuer markierter Text wurde nicht
+mehr vorgelesen, weil `if (isPlaying) return` ihn blockierte). FIX: `activeTabId` in
+`chrome.storage.session` sichern + per `resolveActiveTab()` nachladen; zusaetzlich ein grosszuegiger
+Watchdog im Content-Script als Selbstheilung, falls `stopped` doch verloren geht. Merkregel: JEDER
+Tab/State, den der SW fuer ein SPAETERES Event (Ende/Timeout/Callback) braucht, MUSS persistiert werden —
+nicht nur Login/Abo/Caches.
+**Quelle:** developer.chrome.com — service-workers/lifecycle; eigener Vorfall 2026-06-05.
 
 ### 4. 5-Minuten-Hardlimit pro Request / 30 s `fetch`-Timeout
 **Symptom:** Lange Operation/Event-Handler bricht nach 5 Min ab; `fetch()` das >30 s auf die Antwort
