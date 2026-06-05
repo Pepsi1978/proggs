@@ -556,6 +556,10 @@ final class PromptInputPanel: NSPanel {
         selectedSlot = n
         if let text = slotContents[n], !text.isEmpty {
             setText(text)
+        } else {
+            // Leerer Slot → Eingabefeld leeren, keinen Prompt anzeigen
+            // (Frank-Wunsch 2026-06-05). Feld ist danach bereit zum Tippen.
+            setText("")
         }
         updateSlotVisuals()
     }

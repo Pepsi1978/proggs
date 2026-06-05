@@ -763,6 +763,12 @@ public partial class PromptInputWindow : Window
         {
             SetText(text);
         }
+        else
+        {
+            // Leerer Slot → Eingabefeld leeren, keinen Prompt anzeigen
+            // (Frank-Wunsch 2026-06-05). Feld ist danach bereit zum Tippen.
+            SetText(string.Empty);
+        }
         UpdateSlotVisuals();
     }
 
