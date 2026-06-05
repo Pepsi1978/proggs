@@ -782,39 +782,25 @@
 		return result;
 	}
 
-	// ----- Absatz-Hervorhebung im Seitentext (gelb) ----------------------------
-	// Edge/Google liefern KEIN Wort-Timing, daher wird der gerade vorgelesene
-	// ABSATZ hervorgehoben (laeuft nie aus dem Takt). Inline-Style mit
-	// Sichern/Wiederherstellen, damit das Seiten-Layout unangetastet bleibt.
+	// ----- Folgen des gerade vorgelesenen Absatzes -----------------------------
+	// Die frueher gelbe Einfaerbung des vorgelesenen Absatzes wurde auf
+	// ausdruecklichen Wunsch entfernt: Der Seitentext wird NICHT mehr eingefaerbt.
+	// Es wird nur noch sanft zum gerade vorgelesenen Absatz gescrollt, damit man
+	// sieht, wo die Vorlesung steht. Kein Seiten-Style wird mehr veraendert.
 	let hlEl = null;
-	let hlPrevBg = "";
-	let hlPrevTransition = "";
 	function highlightParagraph(el) {
 		clearParagraphHighlight();
-		if (!el || !el.style) return;
+		if (!el) return;
 		hlEl = el;
-		hlPrevBg = el.style.backgroundColor;
-		hlPrevTransition = el.style.transition;
 		try {
-			el.style.transition = "background-color 0.2s ease";
-			el.style.backgroundColor = "rgba(255, 230, 0, 0.40)";
 			el.scrollIntoView({ block: "nearest", behavior: "smooth" });
 		} catch (e) {
-			/* Hervorhebung darf nie stoeren */
+			/* Scrollen darf nie stoeren */
 		}
 	}
 	function clearParagraphHighlight() {
-		if (hlEl && hlEl.style) {
-			try {
-				hlEl.style.backgroundColor = hlPrevBg;
-				hlEl.style.transition = hlPrevTransition;
-			} catch (e) {
-				/* egal */
-			}
-		}
+		// Es wird kein Seiten-Style mehr gesetzt -> es gibt nichts zurueckzusetzen.
 		hlEl = null;
-		hlPrevBg = "";
-		hlPrevTransition = "";
 	}
 
 	// Den naechsten Absatz aus der Queue an den Service-Worker schicken.
@@ -831,7 +817,7 @@
 		}
 		const item = autoQueue.shift();
 		const text = item && typeof item === "object" ? item.text : item;
-		// Gerade vorgelesenen Absatz im Seitentext gelb hervorheben.
+		// Sanft zum gerade vorgelesenen Absatz scrollen (keine Farb-Markierung mehr).
 		if (item && typeof item === "object" && item.el) {
 			highlightParagraph(item.el);
 		} else {
