@@ -264,14 +264,21 @@
                        TextTrimming="CharacterEllipsis"/>
 
             <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
-                 Die Buttons werden im Code-Behind (BuildSlotBar) erzeugt und
-                 hier eingehaengt — Diskette und X erscheinen erst nach Auswahl
-                 einer Zahl. -->
+                 Eine Trennlinie grenzt sie sichtbar vom Eingabefeld ab — die
+                 Slots sind unabhaengig von der Eingabe. Die Buttons werden im
+                 Code-Behind (BuildSlotBar) in den inneren StackPanel eingehaengt;
+                 Diskette und X erscheinen erst nach Auswahl einer Zahl. -->
             <StackPanel Grid.Row="3"
-                        x:Name="SlotBar"
-                        Orientation="Horizontal"
-                        Margin="4,8,0,0"
-                        VerticalAlignment="Center"/>
+                        Orientation="Vertical"
+                        Margin="4,8,0,0">
+                <Border Height="1"
+                        Background="#FF525252"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,8"/>
+                <StackPanel x:Name="SlotBar"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"/>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

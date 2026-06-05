@@ -280,10 +280,18 @@ final class PromptInputPanel: NSPanel {
         previewLabel.lineBreakMode = .byTruncatingTail
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+        // Trennlinie + Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+        // Die Linie grenzt die Leiste sichtbar vom Eingabefeld ab — die Slots
+        // sind unabhaengig von der Eingabe (Frank-Wunsch 2026-06-05).
+        let slotSeparator = NSView()
+        slotSeparator.wantsLayer = true
+        slotSeparator.layer?.backgroundColor = NSColor(calibratedWhite: 0.32, alpha: 1).cgColor
+        slotSeparator.translatesAutoresizingMaskIntoConstraints = false
+        slotSeparator.heightAnchor.constraint(equalToConstant: 1).isActive = true
+
         let slotBar = buildSlotBar()
 
-        let stack = NSStackView(views: [header, scrollView, previewLabel, slotBar])
+        let stack = NSStackView(views: [header, scrollView, previewLabel, slotSeparator, slotBar])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -299,6 +307,7 @@ final class PromptInputPanel: NSPanel {
             scrollView.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 240),
             previewLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            slotSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
 
         updateSlotVisuals()
@@ -477,7 +486,7 @@ final class PromptInputPanel: NSPanel {
 
         let bar = NSStackView(views: views + [spacer, slotSaveButton, slotDeleteButton])
         bar.orientation = .horizontal
-        bar.spacing = 4
+        bar.spacing = 7
         bar.alignment = .centerY
         return bar
     }
@@ -535,11 +544,10 @@ final class PromptInputPanel: NSPanel {
         let hasSelection = (selectedSlot != nil)
         slotSaveButton.isHidden = !hasSelection
         slotDeleteButton.isHidden = !hasSelection
-        if let s = selectedSlot {
-            let hasContent = !(slotContents[s]?.isEmpty ?? true)
-            slotDeleteButton.isEnabled = hasContent
-            slotDeleteButton.alphaValue = hasContent ? 1.0 : 0.4
-        }
+        // X ist immer aktiv wenn eine Zahl gewaehlt ist — Loeschen+Sync soll
+        // immer durchlaufen (der Store ist die Wahrheit, nicht der lokale Cache).
+        slotDeleteButton.isEnabled = hasSelection
+        slotDeleteButton.alphaValue = 1.0
     }
 
     private func slotLabel(of btn: NSButton) -> NSTextField? {
@@ -579,10 +587,16 @@ final class PromptInputPanel: NSPanel {
         onSlotSave?(n, text)
     }
 
-    /// X: loescht den gewaehlten Slot dauerhaft (nur wenn er Inhalt hat).
+    /// X: loescht den gewaehlten Slot dauerhaft. Laeuft IMMER durch wenn eine
+    /// Zahl gewaehlt ist (nicht mehr vom lokalen Cache abhaengig — Frank-Bug
+    /// 2026-06-05: X reagierte nicht, weil der Button bei vermeintlich leerem
+    /// Slot deaktiviert war). Tombstone im Store + SOFORT-Sync verhindern, dass
+    /// der Prompt beim naechsten Merge wieder auftaucht.
     @objc private func onSlotDeleteClick() {
-        guard let n = selectedSlot, !(slotContents[n]?.isEmpty ?? true) else { return }
+        guard let n = selectedSlot else { return }
         slotContents.removeValue(forKey: n)
+        // Geloeschten Prompt auch aus dem Eingabefeld entfernen.
+        clearInput()
         updateSlotVisuals()
         flashSlotButton(slotDeleteButton, color: Self.slotRed)
         onSlotDelete?(n)

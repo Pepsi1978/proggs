@@ -674,7 +674,7 @@ public partial class PromptInputWindow : Window
             var btn = CreateSlotButton(n.ToString(), SlotGrey,
                 $"Slot {n} — klick speichert/laedt hier deinen Prompt-Zwischenspeicher.");
             btn.Tag = n;
-            btn.Margin = new Thickness(0, 0, 4, 0);
+            btn.Margin = new Thickness(0, 0, 7, 0);
             btn.Click += OnSlotNumberClick;
             _slotButtons[n] = btn;
             SlotBar.Children.Add(btn);
@@ -739,12 +739,9 @@ public partial class PromptInputWindow : Window
         if (_slotDeleteButton is not null)
         {
             _slotDeleteButton.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
-            if (hasSelection)
-            {
-                bool hasContent = _slotContents.TryGetValue(_selectedSlot!.Value, out var t)
-                                  && !string.IsNullOrEmpty(t);
-                _slotDeleteButton.IsEnabled = hasContent;
-            }
+            // X immer aktiv wenn eine Zahl gewaehlt ist (der Store ist die
+            // Wahrheit, nicht der lokale Cache) — Loeschen+Sync laeuft immer.
+            _slotDeleteButton.IsEnabled = hasSelection;
         }
     }
 
@@ -791,12 +788,17 @@ public partial class PromptInputWindow : Window
         SlotSaveRequested?.Invoke(n, text);
     }
 
-    /// <summary>X: loescht den gewaehlten Slot dauerhaft (nur wenn er Inhalt hat).</summary>
+    /// <summary>
+    /// X: loescht den gewaehlten Slot dauerhaft. Laeuft IMMER durch wenn eine
+    /// Zahl gewaehlt ist (nicht mehr vom lokalen Cache abhaengig — Frank-Bug
+    /// 2026-06-05: X reagierte nicht, weil der Button bei vermeintlich leerem
+    /// Slot deaktiviert war). Tombstone + Sofort-Sync verhindern ein Restore.
+    /// </summary>
     private void OnSlotDeleteClick(object sender, RoutedEventArgs e)
     {
         if (_selectedSlot is not int n) return;
-        if (!_slotContents.ContainsKey(n)) return;
         _slotContents.Remove(n);
+        ClearInput();
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");
         SlotDeleteRequested?.Invoke(n);
