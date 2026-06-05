@@ -72,6 +72,44 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Slot-Button (Prompt-Zwischenspeicher 1…10 sowie Diskette/X).
+             Rechteckiger als die runden Toolbar-Buttons (CornerRadius 6), 30x26.
+             Auswahl wird ueber BorderBrush/BorderThickness vom Code-Behind
+             gesetzt (goldener Rahmen), belegt/leer ueber Foreground. -->
+        <Style x:Key="SlotButton" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="#FF8C8C8C"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="SlotBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SlotBorder" Property="Background" Value="#FF3D3D3D"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Halbtransparenter Container, gleiche Optik wie PromptBoardPanel,
@@ -84,6 +122,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
@@ -223,6 +262,16 @@
                        Margin="4,8,0,0"
                        TextWrapping="NoWrap"
                        TextTrimming="CharacterEllipsis"/>
+
+            <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+                 Die Buttons werden im Code-Behind (BuildSlotBar) erzeugt und
+                 hier eingehaengt — Diskette und X erscheinen erst nach Auswahl
+                 einer Zahl. -->
+            <StackPanel Grid.Row="3"
+                        x:Name="SlotBar"
+                        Orientation="Horizontal"
+                        Margin="4,8,0,0"
+                        VerticalAlignment="Center"/>
         </Grid>
     </Border>
 </Window>

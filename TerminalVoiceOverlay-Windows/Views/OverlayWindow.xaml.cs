@@ -122,6 +122,9 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private readonly PromptHistoryService _historyService = VoiceServiceProvider.History;
 
+        /// <summary>Geteilter Prompt-Zwischenspeicher-Service (10 Slots).</summary>
+        private readonly PromptSlotService _slotService = VoiceServiceProvider.Slots;
+
         /// <summary>
         /// Drive-Sync der Historie. Lazy initialisiert — beim ersten Submit
         /// oder beim Mergen am App-Start. Wenn Drive nicht verbunden ist,
@@ -129,6 +132,9 @@ namespace TerminalVoiceOverlay.Views
         /// schlucken (Sync ist eine Komfort-Funktion, kein Pflichtkanal).
         /// </summary>
         private PromptHistoryDriveSync? _historySync;
+
+        /// <summary>Drive-Sync der Prompt-Zwischenspeicher-Slots. Lazy wie _historySync.</summary>
+        private PromptSlotDriveSync? _slotSync;
 
         /// <summary>
         /// Liefert den AKTIVEN GeminiClient — der Key kommt bevorzugt aus
@@ -582,6 +588,9 @@ namespace TerminalVoiceOverlay.Views
             // and-forget — wenn Drive nicht verbunden ist, schluckt der
             // Helper die Exception und es wird einfach nichts gemergt.
             _ = TryMergeHistoryFromCloudAsync();
+
+            // Cloud-Merge der Prompt-Zwischenspeicher-Slots: gleiche Idee.
+            _ = TryMergeSlotsFromCloudAsync();
         }
 
         // ── Hover animation helper ──
@@ -3379,6 +3388,8 @@ namespace TerminalVoiceOverlay.Views
             // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag
             // im Editor-Dialog gespeichert hat — Cloud-Upload anstossen.
             _promptPanel.HistorySyncRequested  += () => _ = TryUploadHistoryAsync();
+            // Prompt-Zwischenspeicher: nach Speichern/Loeschen sofort hochladen.
+            _promptPanel.SlotsSyncRequested    += () => _ = TryUploadSlotsAsync();
             // Right-click drag on the panel itself moves both the
             // panel (handled inside) and this pillar window — slide
             // the pillar to stay glued to the panel's right edge.
@@ -3914,6 +3925,68 @@ namespace TerminalVoiceOverlay.Views
             catch (Exception ex)
             {
                 Console.WriteLine($"PromptHistoryDriveSync init skipped: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ── Prompt-Zwischenspeicher-Slots: Cloud-Sync (1:1 zum History-Muster) ──
+
+        /// <summary>
+        /// Laedt die lokale prompt-slots.json SOFORT zu Drive hoch. Wird nach
+        /// jedem Speichern UND jedem Loeschen eines Slots aufgerufen (Frank-
+        /// Wunsch: direkt nach Speichern und Loeschen syncen). Fire-and-forget.
+        /// </summary>
+        private async Task TryUploadSlotsAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateSlotSync();
+                if (sync is null) return;
+                await sync.UploadSlotsAsync(_slotService.SlotsFilePath);
+                _promptPanel?.MarkSyncedNow();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Slot upload failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Holt die Cloud-Slots und mergt sie mit dem lokalen Stand (pro Nummer
+        /// gewinnt der juengste UpdatedAt — auch Tombstones). Einmal beim Start.
+        /// </summary>
+        public async Task TryMergeSlotsFromCloudAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateSlotSync();
+                if (sync is null) return;
+                string? cloud = await sync.DownloadSlotsAsync();
+                if (cloud is null) return;
+                var local = await _slotService.LoadEntriesAsync();
+                var merged = PromptSlotDriveSync.MergeEntries(local, cloud);
+                await _slotService.ReplaceAllAsync(merged);
+                // Offene Eingabe-Leiste sofort aktualisieren.
+                _promptPanel?.ReloadSlots();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Slot cloud merge skipped: {ex.Message}");
+            }
+        }
+
+        private PromptSlotDriveSync? GetOrCreateSlotSync()
+        {
+            if (_slotSync is not null) return _slotSync;
+            try
+            {
+                var store = PromptBoardHost.Get<PromptBoardSecretStore>();
+                _slotSync = new PromptSlotDriveSync(store);
+                return _slotSync;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PromptSlotDriveSync init skipped: {ex.Message}");
                 return null;
             }
         }

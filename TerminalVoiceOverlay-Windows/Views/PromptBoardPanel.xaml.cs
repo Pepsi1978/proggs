@@ -586,6 +586,27 @@ public partial class PromptBoardPanel : Window
             // wird und wo das Eingabefenster anschliessend andockt.
             _inputWindow.SoloDockToggleRequested += newState =>
                 SoloDockToggleRequested?.Invoke(newState);
+            // Prompt-Zwischenspeicher: Speichern/Loeschen direkt in den Store,
+            // danach SOFORT Cloud-Sync anstossen (Frank-Wunsch). Async-Lambda
+            // mit try/catch — kein unbehandeltes async void (Bug-Almanach §7.2).
+            _inputWindow.SlotSaveRequested += async (number, text) =>
+            {
+                try
+                {
+                    await VoiceServiceProvider.Slots.SaveAsync(number, text);
+                    SlotsSyncRequested?.Invoke();
+                }
+                catch (Exception ex) { Console.WriteLine($"Slot save failed: {ex.Message}"); }
+            };
+            _inputWindow.SlotDeleteRequested += async number =>
+            {
+                try
+                {
+                    await VoiceServiceProvider.Slots.DeleteAsync(number);
+                    SlotsSyncRequested?.Invoke();
+                }
+                catch (Exception ex) { Console.WriteLine($"Slot delete failed: {ex.Message}"); }
+            };
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;
@@ -602,6 +623,9 @@ public partial class PromptBoardPanel : Window
         _inputWindow.DockTo(this, force: true);
         _inputWindow.Show();
         _inputWindowVisible = true;
+        // Belegte Slots in die Zahlen-Leiste laden — bei jedem Oeffnen, damit
+        // ein zwischenzeitlicher Cloud-Merge sofort sichtbar wird.
+        ReloadSlots();
     }
 
     private void CloseInputWindow()
@@ -824,6 +848,35 @@ public partial class PromptBoardPanel : Window
     /// Mac-Seite sichtbar wird.
     /// </summary>
     public event Action? HistorySyncRequested;
+
+    /// <summary>
+    /// Wird ausgeloest nachdem ein Prompt-Zwischenspeicher-Slot gespeichert
+    /// oder geloescht wurde. Das OverlayWindow abonniert dieses Event und
+    /// stoesst SOFORT einen Cloud-Upload der prompt-slots.json an, damit der
+    /// Stand auch auf dem anderen Geraet ankommt.
+    /// </summary>
+    public event Action? SlotsSyncRequested;
+
+    /// <summary>
+    /// Laedt die belegten Slots aus dem Store und faerbt die Zahlen-Leiste im
+    /// offenen Eingabefenster nach. Marshallt auf den UI-Thread, weil der
+    /// Store-Zugriff off-thread zurueckkommen kann. Wird beim Oeffnen der
+    /// Eingabe und vom OverlayWindow nach dem Cloud-Merge aufgerufen.
+    /// </summary>
+    public void ReloadSlots() => _ = LoadSlotsIntoInputAsync();
+
+    private async Task LoadSlotsIntoInputAsync()
+    {
+        try
+        {
+            var map = await VoiceServiceProvider.Slots.LoadMapAsync().ConfigureAwait(false);
+            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Slot load failed: {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// Oeffnet den modalen Editor fuer einen Historie-Eintrag, persistiert

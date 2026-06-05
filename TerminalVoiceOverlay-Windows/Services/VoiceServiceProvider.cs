@@ -39,6 +39,26 @@ public static class VoiceServiceProvider
         }
     }
 
+    /// <summary>
+    /// Single PromptSlotService instance per process — gleiche Lazy-/Lock-
+    /// Logik wie <see cref="History"/>. Haelt die 10 Prompt-Zwischenspeicher-
+    /// Slots, die OverlayWindow (Cloud-Sync) und PromptBoardPanel (UI) teilen.
+    /// </summary>
+    private static PromptSlotService? _slots;
+    private static readonly object _slotsLock = new();
+    public static PromptSlotService Slots
+    {
+        get
+        {
+            if (_slots is not null) return _slots;
+            lock (_slotsLock)
+            {
+                _slots ??= new PromptSlotService();
+                return _slots;
+            }
+        }
+    }
+
     public static bool RecorderAvailable => Recorder is not null && Groq is not null;
     public static bool GeminiAvailable => Gemini is not null;
 

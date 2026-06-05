@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -82,6 +84,9 @@ public partial class PromptInputWindow : Window
         // Beim Anzeigen Fokus in die Box setzen, damit der Benutzer
         // direkt lostippen kann.
         Loaded += (_, _) => InputBox.Focus();
+
+        // Prompt-Zwischenspeicher-Leiste (1…10) unten aufbauen.
+        BuildSlotBar();
     }
 
     /// <summary>
@@ -619,5 +624,175 @@ public partial class PromptInputWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ReleaseMouseCapture();
+    }
+
+    // ── Prompt-Zwischenspeicher-Slots (1…10) ─────────────────────────────
+
+    /// <summary>Diskette geklickt: speichere <paramref name="text"/> im Slot
+    /// <paramref name="number"/> (1…10). Das PromptBoardPanel persistiert
+    /// und stoesst SOFORT den Cloud-Sync an.</summary>
+    public event Action<int, string>? SlotSaveRequested;
+
+    /// <summary>X geklickt: loesche Slot <paramref name="number"/> dauerhaft.</summary>
+    public event Action<int>? SlotDeleteRequested;
+
+    private int? _selectedSlot;
+    private readonly Dictionary<int, string> _slotContents = new();
+    private readonly Dictionary<int, Button> _slotButtons = new();
+    private Button? _slotSaveButton;
+    private Button? _slotDeleteButton;
+
+    private static readonly Brush SlotGold  = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+    private static readonly Brush SlotGrey  = new SolidColorBrush(Color.FromRgb(0x8C, 0x8C, 0x8C));
+    private static readonly Brush SlotRed   = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+    private static readonly Brush SlotClear = new SolidColorBrush(Colors.Transparent);
+
+    /// <summary>
+    /// Wird vom PromptBoardPanel aufgerufen — uebergibt den aktuellen Stand
+    /// der belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein
+    /// und laesst die aktuelle Auswahl/Diskette unveraendert.
+    /// </summary>
+    public void SetSlotContents(Dictionary<int, string> map)
+    {
+        _slotContents.Clear();
+        foreach (var kv in map)
+        {
+            if (!string.IsNullOrEmpty(kv.Value)) _slotContents[kv.Key] = kv.Value;
+        }
+        UpdateSlotVisuals();
+    }
+
+    /// <summary>
+    /// Baut die untere Leiste: Zahlen 1…10, danach Diskette und X. Diskette
+    /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
+    /// Zahl (Frank-Wunsch).
+    /// </summary>
+    private void BuildSlotBar()
+    {
+        for (int n = 1; n <= PromptSlotService.SlotCount; n++)
+        {
+            var btn = CreateSlotButton(n.ToString(), SlotGrey,
+                $"Slot {n} — klick speichert/laedt hier deinen Prompt-Zwischenspeicher.");
+            btn.Tag = n;
+            btn.Margin = new Thickness(0, 0, 4, 0);
+            btn.Click += OnSlotNumberClick;
+            _slotButtons[n] = btn;
+            SlotBar.Children.Add(btn);
+        }
+
+        // Kleiner Abstand zwischen Zahlen und den Aktions-Buttons.
+        SlotBar.Children.Add(new Border { Width = 8 });
+
+        // Diskette (Segoe-Fluent-Icons "Save" E74E) — gold.
+        _slotSaveButton = CreateSlotButton("", SlotGold,
+            "Aktuellen Prompt im gewaehlten Slot dauerhaft speichern.");
+        _slotSaveButton.FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
+        _slotSaveButton.Margin = new Thickness(0, 0, 4, 0);
+        _slotSaveButton.Visibility = Visibility.Collapsed;
+        _slotSaveButton.Click += OnSlotSaveClick;
+        SlotBar.Children.Add(_slotSaveButton);
+
+        // X — rot.
+        _slotDeleteButton = CreateSlotButton("✕", SlotRed,
+            "Prompt im gewaehlten Slot dauerhaft loeschen.");
+        _slotDeleteButton.FontWeight = FontWeights.Bold;
+        _slotDeleteButton.Visibility = Visibility.Collapsed;
+        _slotDeleteButton.Click += OnSlotDeleteClick;
+        SlotBar.Children.Add(_slotDeleteButton);
+
+        UpdateSlotVisuals();
+    }
+
+    private Button CreateSlotButton(string content, Brush foreground, string tooltip)
+    {
+        return new Button
+        {
+            Content = content,
+            Foreground = foreground,
+            Style = (Style)FindResource("SlotButton"),
+            ToolTip = tooltip,
+        };
+    }
+
+    /// <summary>
+    /// Faerbt die Zahlen-Leiste neu: belegte Zahlen gold, leere grau, die
+    /// ausgewaehlte Zahl bekommt einen goldenen Rahmen. Diskette/X sind nur
+    /// sichtbar wenn eine Zahl ausgewaehlt ist; X ist nur aktiv wenn der
+    /// Slot wirklich Inhalt hat.
+    /// </summary>
+    private void UpdateSlotVisuals()
+    {
+        foreach (var kv in _slotButtons)
+        {
+            int n = kv.Key;
+            Button btn = kv.Value;
+            bool hasContent = _slotContents.TryGetValue(n, out var t) && !string.IsNullOrEmpty(t);
+            btn.Foreground = hasContent ? SlotGold : SlotGrey;
+            bool selected = _selectedSlot == n;
+            btn.BorderBrush = selected ? SlotGold : SlotClear;
+            btn.BorderThickness = new Thickness(selected ? 2 : 0);
+        }
+
+        bool hasSelection = _selectedSlot.HasValue;
+        if (_slotSaveButton is not null)
+            _slotSaveButton.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+        if (_slotDeleteButton is not null)
+        {
+            _slotDeleteButton.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+            if (hasSelection)
+            {
+                bool hasContent = _slotContents.TryGetValue(_selectedSlot!.Value, out var t)
+                                  && !string.IsNullOrEmpty(t);
+                _slotDeleteButton.IsEnabled = hasContent;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Klick auf eine Zahl: auswaehlen, Diskette/X einblenden. Hat der Slot
+    /// bereits einen gespeicherten Prompt, wird er sofort ins Eingabefeld
+    /// geladen (Zwischenspeicher abrufen — Frank-Wunsch). Leere Slots lassen
+    /// den getippten Text stehen, damit der Benutzer ihn dort ablegen kann.
+    /// </summary>
+    private void OnSlotNumberClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int n) return;
+        if (n < 1 || n > PromptSlotService.SlotCount) return;
+        _selectedSlot = n;
+        if (_slotContents.TryGetValue(n, out var text) && !string.IsNullOrEmpty(text))
+        {
+            SetText(text);
+        }
+        UpdateSlotVisuals();
+    }
+
+    /// <summary>
+    /// Diskette: speichert den aktuellen Eingabe-Text im gewaehlten Slot.
+    /// Leerer Text wird nicht gespeichert (kurzer Hinweis in der Vorschau).
+    /// </summary>
+    private void OnSlotSaveClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedSlot is not int n) return;
+        var text = InputBox.Text ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            UpdatePreview("Kein Text zum Speichern im Slot.");
+            return;
+        }
+        _slotContents[n] = text;
+        UpdateSlotVisuals();
+        UpdatePreview($"In Slot {n} gespeichert.");
+        SlotSaveRequested?.Invoke(n, text);
+    }
+
+    /// <summary>X: loescht den gewaehlten Slot dauerhaft (nur wenn er Inhalt hat).</summary>
+    private void OnSlotDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedSlot is not int n) return;
+        if (!_slotContents.ContainsKey(n)) return;
+        _slotContents.Remove(n);
+        UpdateSlotVisuals();
+        UpdatePreview($"Slot {n} geloescht.");
+        SlotDeleteRequested?.Invoke(n);
     }
 }
