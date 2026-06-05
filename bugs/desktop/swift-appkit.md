@@ -111,6 +111,13 @@
 **Status:** **Keine belastbare Quelle gefunden — ehrlich als unverifiziert markiert.** Nicht als Fakt behandeln. Bei Stage-Manager-Problemen zuerst `collectionBehavior` (B2/B3) und Level (B1) pruefen.
 **Quelle:** —
 
+### B5. Gespeicherte Position klemmt nicht → Overlay ragt im Horizontal-Modus aus dem Monitor (verschwindet)   [⭐ erlebt 2026-06-05]
+**Symptom:** Overlay kurz sichtbar, dann „verschwindet rechts vom Monitor" — im Horizontal-Modus nur noch zu einem Drittel am rechten Rand sichtbar, nach dem Einklappen (Auto-Hide) ganz weg. Prozess laeuft weiter (kein Crash).
+**Ursache:** Eine im schmalen Vertikal-Modus (z.B. 96pt) gespeicherte X-Position klebt am rechten Rand. Beim Wechsel in den breiten Horizontal-Modus (mehrere hundert pt breit) wird dieselbe Origin-X uebernommen — das Overlay ragt rechts raus. Die Positionierung (`applyHorizontalLayout`/`applyVerticalLayout`/`applyCollapsedLayout` + Init) rief `setFrame` OHNE Klemmung auf den `visibleFrame`. Verschaerft auf Retina: logische Breite (z.B. 2560px → 1280pt) macht eine „1159"-Position fast randbuendig. Die eingeklappte Mic-Pille wird auf die vorherige Mic-Mitte zentriert → liegt dann komplett ausserhalb.
+**Versionen:** eigener Code, alle macOS-Versionen (Geometrie-Logik).
+**FIX (funktionserhaltend):** Einen Helper `clampFrameToVisibleScreen(_:)` (waehlt Bildschirm mit groesstem Ueberlapp, verschiebt das Frame zurueck in den `visibleFrame` — NUR Position, NIE Groesse) an JEDER Positionierungs-Stelle anwenden: Init, vertikal, horizontal, collapsed (Defense in Depth). Layout und alle Funktionen bleiben unveraendert, das Overlay bleibt nur garantiert sichtbar. NICHT die gespeicherte Position blind loeschen (das verliert die Nutzer-Praeferenz) — klemmen genuegt.
+**Quelle:** eigener Vorfall (TerminalVoiceOverlay-macOS, Commit #41573).
+
 ---
 
 ## C — Accessibility-Permission (AX-API / TCC)
