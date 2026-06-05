@@ -118,6 +118,13 @@
 **FIX (funktionserhaltend):** Einen Helper `clampFrameToVisibleScreen(_:)` (waehlt Bildschirm mit groesstem Ueberlapp, verschiebt das Frame zurueck in den `visibleFrame` — NUR Position, NIE Groesse) an JEDER Positionierungs-Stelle anwenden: Init, vertikal, horizontal, collapsed (Defense in Depth). Layout und alle Funktionen bleiben unveraendert, das Overlay bleibt nur garantiert sichtbar. NICHT die gespeicherte Position blind loeschen (das verliert die Nutzer-Praeferenz) — klemmen genuegt.
 **Quelle:** eigener Vorfall (TerminalVoiceOverlay-macOS, Commit #41573).
 
+### B6. Solo-Dock-Drag berechnet Pillar-Position aus versteckter Board-Position → Pillar springt raus   [erlebt 2026-06-05]
+**Symptom:** Im Solo-Dock-Modus (Promptboard versteckt, Eingabe haengt direkt am Pillar) verschiebt das Ziehen des Eingabe-Fensters den ganzen Pillar nach rechts aus dem Bildschirm. Erst nach Aus-/Wieder-Einblenden geht es korrekt.
+**Ursache:** Der Eingabe-Drag ruft `translateGroup` des Promptboards, das die Pillar-Position aus der **Board-Position** ableitet (`pillar.x = board.x + board.width + 4`). Im Solo-Dock ist das Board `orderOut` und steht an veralteter/falscher Position → der Pillar wird falsch gerechnet und springt weg. Zusaetzlich ist die Drag-Geometrie inkonsistent (Board 380pt vs. Eingabe 760pt breit).
+**Versionen:** eigener Code, alle macOS-Versionen.
+**FIX (funktionserhaltend):** Im Solo-Dock eigener Drag-Pfad: `PromptBoardPanel.soloDockDragHandler` (vom AppDelegate gesetzt) verschiebt den **Pillar DIREKT** um das Delta, klemmt ihn mit `clampFrameToVisibleScreen` (B5) und zieht die Eingabe per `dockToOverlay` nach. An BEIDEN Solo-Dock-Einstiegen per gemeinsamem Helper installieren; beim Verlassen/Schliessen wieder nil. NICHT die Board-Position als Anker nehmen, solange das Board versteckt ist.
+**Quelle:** eigener Vorfall (TerminalVoiceOverlay-macOS, Commit #41577).
+
 ---
 
 ## C — Accessibility-Permission (AX-API / TCC)
