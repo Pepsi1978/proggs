@@ -48,6 +48,30 @@ final class PromptInputPanel: NSPanel {
     /// bewegen uns NIE selbst — die Andockung bleibt dadurch starr.
     var onGroupDragDelta: ((CGFloat, CGFloat) -> Void)?
 
+    // ── Prompt-Zwischenspeicher-Slots (1…10) ──
+    /// Wird ausgeloest wenn der Benutzer auf die Diskette klickt: speichere
+    /// `text` dauerhaft im Slot `number` (1…10). Der AppDelegate persistiert
+    /// und stoesst SOFORT den Cloud-Sync an.
+    var onSlotSave: ((Int, String) -> Void)?
+    /// Wird ausgeloest wenn der Benutzer auf das X klickt: loesche Slot
+    /// `number` dauerhaft. AppDelegate persistiert + Sofort-Sync.
+    var onSlotDelete: ((Int) -> Void)?
+
+    /// Aktuell ausgewaehlte Slot-Nummer (1…10) oder nil. Bestimmt ob
+    /// Diskette/X sichtbar sind und welcher Slot gespeichert/geloescht wird.
+    private var selectedSlot: Int?
+    /// Lokale Kopie der belegten Slots (Nummer → Text). Quelle fuer die
+    /// Einfaerbung der Zahlen und fuer das Laden beim Klick. Wird vom
+    /// AppDelegate via `setSlotContents` gefuellt (lokaler Stand + Cloud-Merge).
+    private var slotContents: [Int: String] = [:]
+    private var slotButtons: [Int: NSButton] = [:]
+    private let slotSaveButton = NSButton()
+    private let slotDeleteButton = NSButton()
+
+    private static let slotGold = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
+    private static let slotGrey = NSColor(calibratedWhite: 0.55, alpha: 1)
+    private static let slotRed = NSColor(calibratedRed: 1.0, green: 0.27, blue: 0.27, alpha: 1)
+
     // ── Rechtsklick-Drag-State ──
     private var isDragging = false
     private var dragStartMouseLocation: NSPoint = .zero
@@ -256,7 +280,10 @@ final class PromptInputPanel: NSPanel {
         previewLabel.lineBreakMode = .byTruncatingTail
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = NSStackView(views: [header, scrollView, previewLabel])
+        // Zahlen-Leiste (Prompt-Zwischenspeicher 1…10) ganz unten.
+        let slotBar = buildSlotBar()
+
+        let stack = NSStackView(views: [header, scrollView, previewLabel, slotBar])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -273,6 +300,8 @@ final class PromptInputPanel: NSPanel {
             scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 240),
             previewLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
+
+        updateSlotVisuals()
     }
 
     private func makeKeyAndFocusInput() {
@@ -406,6 +435,163 @@ final class PromptInputPanel: NSPanel {
 
     @objc private func onClearClick() {
         clearInput()
+    }
+
+    // MARK: - Prompt-Zwischenspeicher-Slots (1…10)
+
+    /// Wird vom AppDelegate aufgerufen — uebergibt den aktuellen Stand der
+    /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
+    /// laesst die aktuelle Auswahl/Diskette unveraendert.
+    func setSlotContents(_ map: [Int: String]) {
+        slotContents = map.filter { !$0.value.isEmpty }
+        updateSlotVisuals()
+    }
+
+    /// Baut die untere Leiste: Zahlen 1…10, danach Diskette und X. Diskette
+    /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
+    /// Zahl (Frank-Wunsch).
+    private func buildSlotBar() -> NSView {
+        var views: [NSView] = []
+        for n in 1...PromptSlotStore.slotCount {
+            let btn = NSButton()
+            configureSlotButton(btn, title: "\(n)", textColor: Self.slotGrey,
+                tooltip: "Slot \(n) — klick speichert/laedt hier deinen Prompt-Zwischenspeicher.",
+                action: #selector(onSlotNumberClick(_:)))
+            btn.tag = n
+            slotButtons[n] = btn
+            views.append(btn)
+        }
+        configureSlotButton(slotSaveButton, title: "💾", textColor: Self.slotGold,
+            tooltip: "Aktuellen Prompt im gewaehlten Slot dauerhaft speichern.",
+            action: #selector(onSlotSaveClick))
+        configureSlotButton(slotDeleteButton, title: "✕", textColor: Self.slotRed,
+            tooltip: "Prompt im gewaehlten Slot dauerhaft loeschen.",
+            action: #selector(onSlotDeleteClick))
+        slotSaveButton.isHidden = true
+        slotDeleteButton.isHidden = true
+
+        // Kleiner Abstand zwischen Zahlen und den Aktions-Buttons.
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.widthAnchor.constraint(equalToConstant: 8).isActive = true
+
+        let bar = NSStackView(views: views + [spacer, slotSaveButton, slotDeleteButton])
+        bar.orientation = .horizontal
+        bar.spacing = 4
+        bar.alignment = .centerY
+        return bar
+    }
+
+    /// Style-Helper fuer einen Slot-Button (Zahl oder Aktion). 30x26, gleiche
+    /// dunkle Optik wie die Toolbar-Buttons, aber rechteckiger (CornerRadius 6).
+    private func configureSlotButton(_ btn: NSButton, title: String,
+                                     textColor: NSColor, tooltip: String,
+                                     action: Selector) {
+        btn.title = ""
+        btn.bezelStyle = .regularSquare
+        btn.isBordered = false
+        btn.target = self
+        btn.action = action
+        btn.toolTip = tooltip
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.wantsLayer = true
+        btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
+        btn.layer?.cornerRadius = 6
+
+        let label = NSTextField(labelWithString: title)
+        label.textColor = textColor
+        label.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        label.alignment = .center
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.isEditable = false
+        label.isSelectable = false
+        label.translatesAutoresizingMaskIntoConstraints = false
+        btn.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            btn.widthAnchor.constraint(equalToConstant: 30),
+            btn.heightAnchor.constraint(equalToConstant: 26),
+            label.centerXAnchor.constraint(equalTo: btn.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: btn.centerYAnchor),
+        ])
+    }
+
+    /// Faerbt die Zahlen-Leiste neu: belegte Zahlen gold, leere grau, die
+    /// ausgewaehlte Zahl bekommt einen goldenen Rahmen. Diskette/X sind nur
+    /// sichtbar wenn eine Zahl ausgewaehlt ist; X ist nur aktiv wenn der Slot
+    /// wirklich Inhalt hat.
+    private func updateSlotVisuals() {
+        for (n, btn) in slotButtons {
+            let hasContent = !(slotContents[n]?.isEmpty ?? true)
+            slotLabel(of: btn)?.textColor = hasContent ? Self.slotGold : Self.slotGrey
+            let isSelected = (selectedSlot == n)
+            btn.layer?.borderWidth = isSelected ? 2 : 0
+            btn.layer?.borderColor = isSelected ? Self.slotGold.cgColor : NSColor.clear.cgColor
+            btn.layer?.backgroundColor = isSelected
+                ? NSColor(calibratedWhite: 0.26, alpha: 1).cgColor
+                : NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
+        }
+        let hasSelection = (selectedSlot != nil)
+        slotSaveButton.isHidden = !hasSelection
+        slotDeleteButton.isHidden = !hasSelection
+        if let s = selectedSlot {
+            let hasContent = !(slotContents[s]?.isEmpty ?? true)
+            slotDeleteButton.isEnabled = hasContent
+            slotDeleteButton.alphaValue = hasContent ? 1.0 : 0.4
+        }
+    }
+
+    private func slotLabel(of btn: NSButton) -> NSTextField? {
+        return btn.subviews.compactMap { $0 as? NSTextField }.first
+    }
+
+    /// Klick auf eine Zahl: auswaehlen, Diskette/X einblenden. Hat der Slot
+    /// bereits einen gespeicherten Prompt, wird er sofort ins Eingabefeld
+    /// geladen (Zwischenspeicher abrufen — Frank-Wunsch). Leere Slots lassen
+    /// den getippten Text stehen, damit der Benutzer ihn dort ablegen kann.
+    @objc private func onSlotNumberClick(_ sender: NSButton) {
+        let n = sender.tag
+        guard (1...PromptSlotStore.slotCount).contains(n) else { return }
+        selectedSlot = n
+        if let text = slotContents[n], !text.isEmpty {
+            setText(text)
+        }
+        updateSlotVisuals()
+    }
+
+    /// Diskette: speichert den aktuellen Eingabe-Text im gewaehlten Slot.
+    /// Leerer Text wird nicht gespeichert (kurzer roter Flash als Hinweis).
+    @objc private func onSlotSaveClick() {
+        guard let n = selectedSlot else { return }
+        let text = textView.string
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            flashSlotButton(slotSaveButton, color: Self.slotRed)
+            return
+        }
+        slotContents[n] = text
+        updateSlotVisuals()
+        flashSlotButton(slotSaveButton, color: Self.slotGold)
+        onSlotSave?(n, text)
+    }
+
+    /// X: loescht den gewaehlten Slot dauerhaft (nur wenn er Inhalt hat).
+    @objc private func onSlotDeleteClick() {
+        guard let n = selectedSlot, !(slotContents[n]?.isEmpty ?? true) else { return }
+        slotContents.removeValue(forKey: n)
+        updateSlotVisuals()
+        flashSlotButton(slotDeleteButton, color: Self.slotRed)
+        onSlotDelete?(n)
+    }
+
+    /// Kurzer Aufleucht-Effekt (~400ms) als visuelle Bestaetigung.
+    private func flashSlotButton(_ btn: NSButton, color: NSColor) {
+        let glow = CABasicAnimation(keyPath: "backgroundColor")
+        glow.fromValue = color.cgColor
+        glow.toValue = NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
+        glow.duration = 0.4
+        glow.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        btn.layer?.add(glow, forKey: "slotFlash")
     }
 
     // MARK: - Andocken am Pillar (Solo-Dock-Modus)

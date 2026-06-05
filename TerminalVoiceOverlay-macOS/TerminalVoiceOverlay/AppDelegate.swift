@@ -130,6 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // der Helper still und es wird einfach nichts gemergt.
         mergeHistoryFromCloudOnLaunch()
 
+        // Cloud-Merge der Prompt-Zwischenspeicher-Slots: gleiche Idee wie
+        // bei der Historie — einmal beim Start den Stand vom anderen Geraet
+        // abholen. Fire-and-forget.
+        mergeSlotsFromCloudOnLaunch()
+
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
         }
@@ -787,6 +792,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Holt die Cloud-Slots beim App-Start und mergt sie mit dem lokalen
+    /// Stand (pro Nummer gewinnt der juengste `updatedAt` — auch Tombstones).
+    /// Fire-and-forget, Fehler nur in den Debug-Log.
+    private func mergeSlotsFromCloudOnLaunch() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] slot cloud merge skipped: drive not connected")
+            return
+        }
+        GoogleDriveBackupService.shared.downloadSlots { [weak self] result in
+            switch result {
+            case .failure(let e):
+                tvoDebug("[App] slot cloud download failed: \(e.localizedDescription)")
+            case .success(let cloud):
+                guard let cloudJson = cloud, !cloudJson.isEmpty else {
+                    tvoDebug("[App] no cloud slots yet — nothing to merge")
+                    return
+                }
+                PromptSlotStore.shared.loadEntries { local in
+                    let merged = PromptSlotStore.merge(local: local, cloudJson: cloudJson)
+                    PromptSlotStore.shared.replaceAll(entries: merged) {
+                        tvoDebug("[App] cloud slots merged")
+                        self?.promptBoardPanel?.reloadSlots()
+                    }
+                }
+            }
+        }
+    }
+
+    /// Laedt die lokale prompt-slots.json SOFORT zu Drive hoch. Wird nach
+    /// jedem Speichern UND jedem Loeschen eines Slots aufgerufen (Frank-Wunsch:
+    /// direkt nach Speichern und Loeschen syncen). Fire-and-forget.
+    private func uploadSlotsToCloud() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] slot upload skipped: drive not connected")
+            return
+        }
+        let json = PromptSlotStore.shared.rawJsonFromDisk()
+        GoogleDriveBackupService.shared.uploadSlots(json: json) { [weak self] result in
+            switch result {
+            case .success:
+                tvoDebug("[App] slots uploaded to cloud")
+                self?.promptBoardPanel?.markSyncedNow()
+            case .failure(let e):
+                tvoDebug("[App] slot upload failed: \(e.localizedDescription)")
+            }
+        }
+    }
+
     private func writeHistory(middleText: String) {
         let mid = middleText
         let fallbackTitle = GeminiClient.fallbackTitle(from: mid)
@@ -978,6 +1031,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         p.onHistorySyncRequested = { [weak self] in
             self?.uploadHistoryToCloud()
+        }
+        p.onSlotsSyncRequested = { [weak self] in
+            self?.uploadSlotsToCloud()
         }
         // Rechtsklick-Drag aufs Board verschiebt die ganze Gruppe — wenn
         // das Board sichtbar ist, zieht der Pillar mit; im Solo-Dock-Modus

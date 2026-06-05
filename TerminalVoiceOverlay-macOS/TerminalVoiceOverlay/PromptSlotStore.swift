@@ -69,6 +69,16 @@ final class PromptSlotStore {
         }
     }
 
+    /// Liefert ALLE Eintraege roh (inkl. Tombstones mit leerem Text) — wird
+    /// fuer den Cloud-Merge gebraucht, der die Zeitstempel vergleicht.
+    func loadEntries(completion: @escaping ([PBSlotEntry]) -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { completion([]); return }
+            let entries = self.loadUnlocked()
+            DispatchQueue.main.async { completion(entries) }
+        }
+    }
+
     // MARK: - Schreiben
 
     /// Speichert (oder ueberschreibt) den Text in einem Slot. Aktualisiert

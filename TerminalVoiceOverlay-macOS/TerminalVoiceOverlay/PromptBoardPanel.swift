@@ -998,11 +998,29 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             panel.onGroupDragDelta = { [weak self] dx, dy in
                 self?.translateGroup(dx: dx, dy: dy)
             }
+            // Prompt-Zwischenspeicher: Speichern/Loeschen direkt in den Store,
+            // danach SOFORT Cloud-Sync anstossen (Frank-Wunsch). Gleiches
+            // Muster wie die Historie (onHistorySyncRequested).
+            panel.onSlotSave = { [weak self] number, text in
+                PromptSlotStore.shared.save(number: number, text: text) {
+                    self?.onSlotsSyncRequested?()
+                }
+            }
+            panel.onSlotDelete = { [weak self] number in
+                PromptSlotStore.shared.delete(number: number) {
+                    self?.onSlotsSyncRequested?()
+                }
+            }
             inputPanel = panel
         }
         inputPanel?.dock(leftOf: self, force: true)
         inputPanel?.orderFront(nil)
         inputPanel?.makeKeyAndOrderFront(nil)
+        // Belegte Slots in die Zahlen-Leiste laden — bei jedem Oeffnen, damit
+        // ein zwischenzeitlicher Cloud-Merge sofort sichtbar wird.
+        PromptSlotStore.shared.loadMap { [weak self] map in
+            self?.inputPanel?.setSlotContents(map)
+        }
         inputPanelVisible = true
         updateStarVisual()
     }
@@ -1170,6 +1188,20 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         guard let panel = historyPanel else { return }
         PromptHistoryStore.shared.load { entries in
             panel.render(entries)
+        }
+    }
+
+    /// Wird vom AppDelegate gesetzt — stoesst nach Speichern/Loeschen eines
+    /// Prompt-Zwischenspeicher-Slots SOFORT den Cloud-Upload an, damit das
+    /// andere Geraet den neuen Stand erhaelt.
+    var onSlotsSyncRequested: (() -> Void)?
+
+    /// Liest die belegten Slots neu aus dem Store und faerbt die Zahlen-Leiste
+    /// nach (falls die Eingabe offen ist). Wird vom AppDelegate nach dem
+    /// Cloud-Merge beim Start aufgerufen.
+    func reloadSlots() {
+        PromptSlotStore.shared.loadMap { [weak self] map in
+            self?.inputPanel?.setSlotContents(map)
         }
     }
 
