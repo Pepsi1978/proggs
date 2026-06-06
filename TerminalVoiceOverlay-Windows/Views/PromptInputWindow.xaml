@@ -127,11 +127,16 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Kopfzeile: Titel + Hint + Buttonleiste rechts.
-                 Spalte 2 ist eine StackPanel, damit weitere Buttons spaeter
-                 einfach links neben das X eingefuegt werden koennen. -->
+            <!-- Kopfzeile: Titel + Hint + Standard-Symbole + Kopieren/Einfuegen.
+                 Spalte 2 = Standard-Symbole (Stern, Trenner, Gemini, Loeschen).
+                 Spalte 4 = Kopieren/Einfuegen, GANZ rechts am Rand. Die beiden
+                 *-Spalten (1 und 3) teilen sich den freien Platz, so dass das
+                 Kopieren/Einfuegen-Paar abgesetzt ganz aussen rechts steht und
+                 NICHT direkt neben dem X (Frank-Wunsch 2026-06-06). -->
             <Grid Grid.Row="0" Margin="4,0,0,8">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -220,15 +225,20 @@
                                    FontSize="14"
                                    Foreground="#FFFF4444"/>
                     </Button>
-                    <!-- Ganz aussen rechts das Kopieren/Einfuegen-Paar (Segoe-
-                         Fluent-Icons, monochrom). Kopieren legt den Feld-Text in
-                         die Zwischenablage (ueberall mit Strg+V einfuegbar),
-                         Einfuegen holt den Zwischenablage-Text an die Cursor-
-                         Position ins Feld. -->
+                </StackPanel>
+
+                <!-- Kopieren/Einfuegen-Paar: eigene StackPanel GANZ rechts am
+                     Fensterrand (Spalte 4), abgesetzt von den Standard-Symbolen.
+                     Segoe-Fluent-Icons, monochrom. Kopieren legt den Feld-Text in
+                     die Zwischenablage (ueberall mit Strg+V einfuegbar), Einfuegen
+                     holt den Zwischenablage-Text an die Cursor-Position ins Feld. -->
+                <StackPanel Grid.Column="4"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
                     <Button x:Name="CopyButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnCopy_Click"
-                            Margin="4,0,0,0"
+                            Margin="0,0,4,0"
                             ToolTip="Angezeigten Text kopieren — danach überall mit Strg+V einfügbar.">
                         <TextBlock Text="&#xE8C8;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -238,7 +248,6 @@
                     <Button x:Name="PasteButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnPaste_Click"
-                            Margin="4,0,0,0"
                             ToolTip="Text aus der Zwischenablage ins Eingabefeld einfügen.">
                         <TextBlock Text="&#xE77F;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"

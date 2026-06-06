@@ -256,14 +256,32 @@ final class PromptInputPanel: NSPanel {
             tooltip: "Text aus der Zwischenablage ins Eingabefeld einfuegen.",
             action: #selector(onPasteClick))
 
-        let toolbar = NSStackView(views: [soloDockButton, separatorButton, geminiButton, clearButton, copyButton, pasteButton])
-        toolbar.orientation = .horizontal
-        toolbar.spacing = 4
-        toolbar.alignment = .centerY
+        // Standard-Symbole als eine Gruppe (Stern, Trenner, Gemini, Loeschen).
+        let mainToolbar = NSStackView(views: [soloDockButton, separatorButton, geminiButton, clearButton])
+        mainToolbar.orientation = .horizontal
+        mainToolbar.spacing = 4
+        mainToolbar.alignment = .centerY
+        mainToolbar.setContentHuggingPriority(.required, for: .horizontal)
 
-        // hintLabel: greedy spacer in der Mitte, damit toolbar rechts klebt.
-        hintLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let header = NSStackView(views: [titleLabel, hintLabel, toolbar])
+        // Kopieren/Einfuegen als eigene Gruppe, die GANZ AUSSEN am rechten Rand
+        // klebt — bewusst abgesetzt von den Standard-Symbolen, NICHT direkt neben
+        // dem X (Frank-Wunsch 2026-06-06).
+        let clipboardToolbar = NSStackView(views: [copyButton, pasteButton])
+        clipboardToolbar.orientation = .horizontal
+        clipboardToolbar.spacing = 4
+        clipboardToolbar.alignment = .centerY
+        clipboardToolbar.setContentHuggingPriority(.required, for: .horizontal)
+
+        // Flexible Luecke zwischen Standard-Gruppe und Kopieren/Einfuegen-Paar,
+        // damit das Paar nach ganz rechts geschoben wird (min. 24 pt Abstand).
+        let midSpacer = NSView()
+        midSpacer.translatesAutoresizingMaskIntoConstraints = false
+        midSpacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
+        midSpacer.setContentHuggingPriority(.init(1), for: .horizontal)
+
+        // hintLabel: greedy spacer direkt nach dem Titel.
+        hintLabel.setContentHuggingPriority(.init(1), for: .horizontal)
+        let header = NSStackView(views: [titleLabel, hintLabel, mainToolbar, midSpacer, clipboardToolbar])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 10
