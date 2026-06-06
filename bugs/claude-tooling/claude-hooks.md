@@ -24,6 +24,29 @@
 
 ---
 
+## 0. Notfall: ALLE Hooks erroren auf einmal (Runtime/Interpreter kaputt) ⭐ KRITISCH
+
+### 0.1 `dyld: Library not loaded: …libllhttp.9.x.dylib` → node kaputt nach `brew install` (macOS)
+**Symptom:** In ALLEN Sessions bei JEDEM Tool-Aufruf "PreToolUse: Hook error" bzw.
+`Failed with non-blocking status code: dyld[…]: Library not loaded: /opt/homebrew/opt/llhttp/lib/libllhttp.9.3.dylib`.
+**Ursache:** Ein `brew install <tool>` hat als Nebenwirkung eine GETEILTE Bibliothek
+(`llhttp`) hochgezogen (9.3 → 9.4.1). `node` war gegen die alte `libllhttp.9.3.dylib`
+gelinkt → node startet nicht mehr → jeder node-basierte Hook (und node-MCP/Tools) erroren.
+Konkreter Ausloeser 2026-06-06: `git-delta` und `node` teilen sich `llhttp`
+(`brew uses --installed llhttp` zeigt beide).
+**Versionen:** macOS/Homebrew, jederzeit moeglich beim Bundeln mehrerer brew-Installs.
+**FIX:** `brew reinstall node` (linkt node gegen das aktuelle llhttp; hier wurde node
+25.9.0 → 26.0.0 gegen `libllhttp.9.4.dylib` gezogen). Danach MUSS `node --version` laufen.
+NIEMALS `libllhttp.9.3.dylib` auf 9.4 symlinken — ABI-Inkompatibilitaet → subtile node-Abstuerze.
+**PRAEVENTION (Direktive #3):** (1) Nach JEDEM `brew install` auf macOS sofort `node --version`
+pruefen. (2) Vor dem Install pruefen, was eine neue Lib bricht: `brew uses --installed <lib>`.
+(3) Tools, die sich Libs mit node teilen (git-delta → llhttp), bewusst getrennt installieren.
+(4) Nach node-Major-Bump (25→26) koennen native Addons (better-sqlite3, node-pty in
+MCP/claude-mem/claudewatch) brechen — bei Folgefehlern das Paket `npm rebuild` bzw. neu installieren.
+**Quelle:** eigener Vorfall 2026-06-06 (self-improve-Lauf installierte 10 CLI-Tools; git-delta zog llhttp hoch).
+
+---
+
 ## 1. Exit-Codes (haeufigste Fehlerquelle)
 
 ### 1.1 `exit 1` blockiert NICHT — nur `exit 2` blockiert  ⭐ HAEUFIG
