@@ -244,12 +244,14 @@ final class PromptInputPanel: NSPanel {
         // System-Zwischenablage (ueberall mit ⌘V einfuegbar), Einfuegen holt den
         // Zwischenablage-Text an die Cursor-Position ins Feld.
         configureToolbarButton(copyButton,
-            symbol: "", color: .white, fontSize: 14,
+            symbol: "", color: NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1),
+            fontSize: 14,
             sfSymbol: "doc.on.doc",
             tooltip: "Angezeigten Text kopieren — danach ueberall mit ⌘V einfuegbar.",
             action: #selector(onCopyClick))
         configureToolbarButton(pasteButton,
-            symbol: "", color: .white, fontSize: 14,
+            symbol: "", color: NSColor(calibratedRed: 0.30, green: 0.85, blue: 0.39, alpha: 1),
+            fontSize: 14,
             sfSymbol: "doc.on.clipboard",
             tooltip: "Text aus der Zwischenablage ins Eingabefeld einfuegen.",
             action: #selector(onPasteClick))
@@ -514,8 +516,10 @@ final class PromptInputPanel: NSPanel {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
+        // Aufleuchten in hellem Gelb — passend zum jetzt gelben Kopieren-Button
+        // (Gruen ist die Farbe des Einfuegen-Buttons, daher hier bewusst Gelb).
         flashSlotButton(copyButton,
-            color: NSColor(calibratedRed: 0.40, green: 0.85, blue: 0.45, alpha: 1))
+            color: NSColor(calibratedRed: 1.0, green: 0.90, blue: 0.40, alpha: 1))
     }
 
     /// Fuegt den Text aus der System-Zwischenablage an der Cursor-Position ins

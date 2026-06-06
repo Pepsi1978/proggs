@@ -233,7 +233,7 @@
                         <TextBlock Text="&#xE8C8;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="14"
-                                   Foreground="White"/>
+                                   Foreground="#FFFFD700"/>
                     </Button>
                     <Button x:Name="PasteButton"
                             Style="{StaticResource ToolbarButton}"
@@ -243,7 +243,7 @@
                         <TextBlock Text="&#xE77F;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="14"
-                                   Foreground="White"/>
+                                   Foreground="#FF4CD964"/>
                     </Button>
                 </StackPanel>
             </Grid>
