@@ -3575,9 +3575,11 @@ namespace TerminalVoiceOverlay.Views
         /// <list type="bullet">
         /// <item>active=true: Promtboard ausblenden und Eingabe direkt
         /// links an den Pillar andocken (mit 4-Pixel-Naht, Hoehe = Pillar).</item>
-        /// <item>active=false: Promtboard wieder einblenden und re-positionieren;
-        /// das Eingabefenster zieht via PanelDragged-Kette automatisch an
-        /// den linken Rand des Promtboards zurueck.</item>
+        /// <item>active=false: NUR das Promtboard einblenden und re-positionieren —
+        /// das Eingabefenster wird AUSGEBLENDET (Frank-Wunsch 2026-06-06: der Stern
+        /// togglet zwischen "nur Eingabe" und "nur Board", nie beide gleichzeitig).
+        /// Der getippte Text bleibt erhalten und kommt beim naechsten Board-Stern
+        /// mit dem Eingabefenster zurueck.</item>
         /// </list>
         /// Das Eingabefenster wird per <see cref="PromptInputWindow.SetSoloDockState"/>
         /// nachgezogen damit das Stern-Visual den neuen Zustand zeigt.
@@ -3609,17 +3611,19 @@ namespace TerminalVoiceOverlay.Views
             }
             else
             {
-                var input = _promptPanel.InputWindow;
-                if (input is null) return;
-
+                // Wechsel Solo-Eingabe → nur Board: Promtboard einblenden und an
+                // seiner normalen Stelle positionieren (vertikal links vom Pillar,
+                // horizontal oberhalb der Leiste — beide Faelle in
+                // PositionPromptPanel). Das Eingabefenster wird AUSGEBLENDET, damit
+                // nur das Board sichtbar ist (Frank-Wunsch 2026-06-06). HideInputWindow
+                // sichert den noch nicht abgeschickten Text; der naechste Board-Stern
+                // (ApplySoloDockMode(true) → EnsureInputWindowOpen) holt die Eingabe
+                // damit zurueck. Board ZUERST zeigen, dann Eingabe verstecken, damit
+                // kein Frame entsteht in dem gar nichts sichtbar ist.
                 _inputSoloDock = false;
                 _promptPanel.Show();
                 PositionPromptPanel();
-                // Das Eingabefenster folgt dem Promtboard automatisch via
-                // LocationChanged → RefollowChildren in PromptBoardPanel.
-                // Trotzdem explizit redocken damit die Naht sofort sitzt.
-                input.DockTo(_promptPanel);
-                input.SetSoloDockState(false);
+                _promptPanel.HideInputWindow();
             }
         }
 

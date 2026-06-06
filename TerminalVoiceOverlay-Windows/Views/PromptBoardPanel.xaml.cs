@@ -393,6 +393,20 @@ public partial class PromptBoardPanel : Window
     }
 
     /// <summary>
+    /// Blendet das Eingabefenster aus, sodass im Solo-Andock-Modus NUR noch
+    /// das Promtboard sichtbar ist (Frank-Wunsch 2026-06-06: der Stern togglet
+    /// zwischen "nur Eingabe" und "nur Board", nie beide zugleich). Symmetrisches
+    /// Gegenstueck zu <see cref="EnsureInputWindowOpen"/>. Der noch nicht
+    /// abgeschickte Text wird ueber CloseInputWindow in den Session-Puffer
+    /// (_persistedInputText) gesichert und vom naechsten EnsureInputWindowOpen
+    /// wiederhergestellt — beim Toggle geht nichts verloren.
+    /// </summary>
+    public void HideInputWindow()
+    {
+        if (_inputWindowVisible) CloseInputWindow();
+    }
+
+    /// <summary>
     /// Klick-Handler fuer den Stern-Button in der Promtboard-Toolbar (neben
     /// dem "!"). Symmetrisches Pendant zum Stern im Eingabefenster: feuert
     /// <see cref="SoloDockToggleRequested"/>(true) — das OverlayWindow stellt
