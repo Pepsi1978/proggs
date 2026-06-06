@@ -291,6 +291,15 @@ final class PromptInputPanel: NSPanel {
         previewLabel.lineBreakMode = .byTruncatingTail
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
 
+        // Trennlinie OBEN: grenzt das Eingabefeld nach oben gegen die Kopfzeile
+        // (Titel + Toolbar) ab — Gegenstueck zur Linie ueber der Slot-Leiste
+        // (Frank-Wunsch 2026-06-06). Gleiche Optik wie slotSeparator.
+        let topSeparator = NSView()
+        topSeparator.wantsLayer = true
+        topSeparator.layer?.backgroundColor = NSColor(calibratedWhite: 0.32, alpha: 1).cgColor
+        topSeparator.translatesAutoresizingMaskIntoConstraints = false
+        topSeparator.heightAnchor.constraint(equalToConstant: 1).isActive = true
+
         // Trennlinie + Zahlen-Leiste (Prompt-Zwischenspeicher 1…15) ganz unten.
         // Die Linie grenzt die Leiste sichtbar vom Eingabefeld ab — die Slots
         // sind unabhaengig von der Eingabe (Frank-Wunsch 2026-06-05).
@@ -302,7 +311,7 @@ final class PromptInputPanel: NSPanel {
 
         let slotBar = buildSlotBar()
 
-        let stack = NSStackView(views: [header, scrollView, previewLabel, slotSeparator, slotBar])
+        let stack = NSStackView(views: [header, topSeparator, scrollView, previewLabel, slotSeparator, slotBar])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -315,6 +324,7 @@ final class PromptInputPanel: NSPanel {
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
             stack.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -10),
             header.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            topSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scrollView.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 240),
             previewLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),

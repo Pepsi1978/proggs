@@ -121,6 +121,7 @@
         <Grid Margin="10,10,10,10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -222,6 +223,16 @@
                 </StackPanel>
             </Grid>
 
+            <!-- Trennlinie oben: grenzt das Eingabefeld nach oben gegen die
+                 Kopfzeile (Titel + Toolbar) ab — Gegenstueck zur Linie ueber
+                 der Slot-Leiste (Frank-Wunsch 2026-06-06). Gleicher Grauton
+                 #FF525252 wie der untere Strich. -->
+            <Border Grid.Row="1"
+                    Height="1"
+                    Background="#FF525252"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,0,8"/>
+
             <!-- Eingabefeld: mehrzeilig, scrollbar. KEIN eigener Hintergrund —
                  die aeussere Border (#C71E1E1E, 78% opak) scheint durch, so
                  dass der Eingabebereich exakt so transparent wirkt wie das
@@ -230,7 +241,7 @@
                  BorderBrush wechselt beim Fokus auf gedaempftes Blau (#6A9FD8)
                  und zurueck auf #3A3A3A wenn der Fokus verloren geht. -->
             <Border x:Name="InputBorder"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     CornerRadius="8"
                     Background="Transparent"
                     BorderBrush="#FF3A3A3A"
@@ -254,7 +265,7 @@
             </Border>
 
             <!-- Statuszeile unten: Pre/Post-Vorschau -->
-            <TextBlock Grid.Row="2"
+            <TextBlock Grid.Row="3"
                        x:Name="PreviewLabel"
                        Text=""
                        Foreground="#FF8C8C8C"
@@ -268,7 +279,7 @@
                  Slots sind unabhaengig von der Eingabe. Die Buttons werden im
                  Code-Behind (BuildSlotBar) in den inneren StackPanel eingehaengt;
                  Diskette und X erscheinen erst nach Auswahl einer Zahl. -->
-            <StackPanel Grid.Row="3"
+            <StackPanel Grid.Row="4"
                         Orientation="Vertical"
                         Margin="4,8,0,0">
                 <Border Height="1"
