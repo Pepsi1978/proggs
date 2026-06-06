@@ -124,6 +124,8 @@ Jede Regel ist eine verdichtete Lektion darüber, was eine Handlungsweise intell
 | RI-1 | Eine Zahl, die man optimiert, hört auf zu messen, was sie messen sollte (Goodhart). Darum: an der Wirklichkeit prüfen, nicht an einem Proxy. | 2026-06-06 (Gründung) | 73,8 % der untersuchten Selbstoptimierungs-Läufe zeigten Scheingewinne ohne echte Verbesserung. |
 | RI-2 | Forschen ist Teil der Intelligenz, nicht ihr Gegenteil. "Ich finde keine Alternative" ist ein Auftrag zu forschen, kein Endpunkt. | 2026-06-06 (Gründung) | Frank: "Man kann nicht alles wissen, aber man kann versuchen etwas intelligenteres zu finden." |
 | RI-3 | Mehr Kontext macht dümmer, nicht klüger. Wissen schlank halten und just-in-time holen schlägt "alles im Kopf behalten". | 2026-06-06 (Gründung) | GPT-4 fiel von 98,1 % auf 64,1 % allein durch aufgeblähten Kontext (Context Rot, Chroma 2026). |
+| RI-4 | Ein Prozess, der auf geteiltem Zustand handelt (Git, gemeinsame Dateien), ist intelligenter, wenn er NUR anfasst, was ihm gehört. Breite Aktionen (`git add <ganzer Ordner>`) greifen still fremde Arbeit ab. | 2026-06-06 (1. v6.0-Lauf) | Dry-Run bewies: `git add claude-code-setup/` hätte 2 von einer Parallel-Session geänderte Fremd-Dateien (settings.json, hooks-macos.json) mitcommittet; der managed-paths-Fix verhindert es. |
+| RI-5 | Eine Vorschrift (z.B. "5 Researcher") ist ein Default, kein Zwang. Liegt das nötige Wissen schon frisch vor, ist es intelligenter, es zu nutzen, als die Prozedur blind zu wiederholen. | 2026-06-06 (1. v6.0-Lauf) | Dieser Lauf nutzte die 30 Min alte 5-Researcher-Recherche statt sie erneut zu starten, und erforschte gezielt nur das NEUE Problem (Achse 10/Effizienz). |
 
 *(Neue Regeln kommen aus Phase 6. Format: kurze Regel + Datum + ein echtes Beispiel, das sie belegt.)*
 
@@ -134,3 +136,4 @@ Jede Regel ist eine verdichtete Lektion darüber, was eine Handlungsweise intell
 | Datum | Was geändert | Warum (Beleg) |
 |-------|--------------|---------------|
 | 2026-06-06 | Gründung: 10 Achsen, Vergleichsregel, RI-1 bis RI-3. | Neudesign von self-improve v6.0 — score-freier Maßstab statt IQ-/Utility-Zahl. |
+| 2026-06-06 | RI-4 + RI-5 ergänzt (geteilter Zustand nur eigene Pfade; Vorschrift ≠ Zwang). | Erster echter v6.0-Lauf: Sync-Skript-A6-Verstoß real gefunden + geprüft; Researcher-Flotte intelligent adaptiert. |

@@ -145,26 +145,40 @@ Write-Host ""
 # ---------------------------------------------------------------------------
 # Git sync
 # ---------------------------------------------------------------------------
-Write-Host "==> Pulling latest changes..." -ForegroundColor Cyan
+Write-Host "==> Syncing with origin (fetch + rebase, not blind pull)..." -ForegroundColor Cyan
 Push-Location $ProggsDir
 try {
-    $GitPull = git pull --rebase 2>&1
-    Write-Host $GitPull
+    # Only ever stage the paths THIS script manages — never `git add $SetupDir`,
+    # which would sweep up files other parallel sessions are editing (A6). Explicit
+    # pathspecs also mirror deletions and shrink the rebase conflict surface.
+    $Managed = @(
+        "$SetupDir\rules",
+        "$SetupDir\agents",
+        "$SetupDir\commands",
+        "$SetupDir\hooks",
+        "$SetupDir\skills",
+        "$SetupDir\agent-memory\shared\MEMORY.md",
+        "$ProggsDir\CLAUDE.md"
+    )
+
+    git fetch origin 2>&1 | Out-Null
+    git -c rebase.autoStash=true rebase origin/main 2>&1 | Write-Host
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "git pull --rebase failed — resolve conflicts first"
+        git rebase --abort 2>&1 | Out-Null
+        Write-Error "rebase onto origin/main failed — resolve conflicts first"
         exit 1
     }
 
     Write-Host ""
-    Write-Host "==> Staging changes..." -ForegroundColor Cyan
-    git add $SetupDir $ProggsDir\CLAUDE.md 2>&1 | Out-Null
+    Write-Host "==> Staging only this script's own paths..." -ForegroundColor Cyan
+    git add -- @Managed 2>&1 | Out-Null
 
     # Re-stage after auto-formatters may have modified staged files (race condition fix)
     Start-Sleep -Seconds 1
-    git add $SetupDir $ProggsDir\CLAUDE.md 2>&1 | Out-Null
+    git add -- @Managed 2>&1 | Out-Null
 
-    # Check if there is anything to commit
-    $Status = git status --porcelain $SetupDir $ProggsDir\CLAUDE.md 2>&1
+    # Check if there is anything to commit (own paths only)
+    $Status = git status --porcelain -- @Managed 2>&1
     if (-not ($Status | Where-Object { $_ -match '.' })) {
         Write-Host "==> Nothing to commit — configuration is already up to date." -ForegroundColor Green
         exit 0

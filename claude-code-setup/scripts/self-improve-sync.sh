@@ -98,23 +98,41 @@ echo ""
 # ---------------------------------------------------------------------------
 # Git sync
 # ---------------------------------------------------------------------------
-echo "==> Pulling latest changes..."
+# Only ever touch the paths THIS script manages. NEVER `git add "$SETUP_DIR/"`,
+# which would sweep up files that other parallel sessions are editing at the same
+# time (settings.json, hooks-macos.json, ...) and commit them under our message —
+# a direct violation of the parallel-sessions rule. Explicit pathspecs also mirror
+# deletions safely (git add <pathspec> stages removed tracked files) and shrink the
+# rebase conflict surface.
+MANAGED=(
+    "$SETUP_DIR/rules"
+    "$SETUP_DIR/agents"
+    "$SETUP_DIR/commands"
+    "$SETUP_DIR/hooks"
+    "$SETUP_DIR/skills"
+    "$SETUP_DIR/agent-memory/shared/MEMORY.md"
+    "$PROGGS_DIR/CLAUDE.md"
+)
+
+echo "==> Syncing with origin (fetch + rebase, not blind pull)..."
 cd "$PROGGS_DIR"
-git pull --rebase || {
-    echo "ERROR: git pull --rebase failed — resolve conflicts first" >&2
+git fetch origin
+git -c rebase.autoStash=true rebase origin/main || {
+    echo "ERROR: rebase onto origin/main failed — resolve conflicts first" >&2
+    git rebase --abort 2>/dev/null || true
     exit 1
 }
 
 echo ""
-echo "==> Staging changes..."
-git add "$SETUP_DIR/" "$PROGGS_DIR/CLAUDE.md"
+echo "==> Staging only this script's own paths..."
+git add -- "${MANAGED[@]}" 2>/dev/null || true
 
 # Re-stage after auto-formatters may have modified staged files (race condition fix)
 sleep 1
-git add "$SETUP_DIR/" "$PROGGS_DIR/CLAUDE.md"
+git add -- "${MANAGED[@]}" 2>/dev/null || true
 
-# Check if there is anything to commit
-if ! git status --porcelain "$SETUP_DIR/" "$PROGGS_DIR/CLAUDE.md" | grep -q .; then
+# Check if there is anything to commit (own paths only)
+if ! git status --porcelain -- "${MANAGED[@]}" | grep -q .; then
     echo "==> Nothing to commit — configuration is already up to date."
     exit 0
 fi

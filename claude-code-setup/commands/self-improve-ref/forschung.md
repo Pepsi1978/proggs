@@ -11,6 +11,7 @@ Bewertung gegen die Achsen — selbst wenn am Ende entschieden wird, sie nicht z
 
 ## So wird geforscht
 
+- **Frisches Wissen zuerst (RI-5):** Liegt relevante Forschung bereits frisch aus dieser Session vor, nutze sie — statt die volle Researcher-Flotte blind erneut zu starten (Achse 10/Effizienz). Erforsche dann gezielt nur das NEUE Problem. Die "5 Researcher" sind ein Default, kein Zwang.
 - **Parallel:** 5–7 Researcher gleichzeitig (Continuous-Spawning: sobald einer fertig ist, sofort den nächsten starten — keine Wellen-Barriere). Mehr als ~7 gleichzeitig → 429-Fehler.
 - **Sichtbar:** Researcher als normale, sichtbare Agent-Aufrufe — kein Hintergrund.
 - **Auf Opus/1M:** alle Researcher laufen auf dem höchsten Modell (via `CLAUDE_CODE_SUBAGENT_MODEL`); nicht herabstufen.
