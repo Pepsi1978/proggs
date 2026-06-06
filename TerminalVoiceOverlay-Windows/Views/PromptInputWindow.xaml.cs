@@ -797,14 +797,14 @@ public partial class PromptInputWindow : Window
         _selectedSlot = n;
         if (_slotContents.TryGetValue(n, out var text) && !string.IsNullOrEmpty(text))
         {
+            // Belegter Slot → gespeicherten Prompt abrufen (bewusste Lade-Aktion).
             SetText(text);
         }
-        else
-        {
-            // Leerer Slot → Eingabefeld leeren, keinen Prompt anzeigen
-            // (Frank-Wunsch 2026-06-05). Feld ist danach bereit zum Tippen.
-            SetText(string.Empty);
-        }
+        // Leerer Slot → das Eingabefeld NIE anfassen. Der frisch getippte Prompt
+        // muss stehen bleiben, denn genau ihn will der Benutzer jetzt in diesem
+        // Slot speichern. Frueher stand hier SetText(string.Empty) — das loeschte
+        // den getippten Prompt im Moment des Zahl-Klicks, BEVOR die Diskette
+        // gedrueckt werden konnte (Frank-Datenverlust 2026-06-06). NIEMALS leeren.
         UpdateSlotVisuals();
     }
 

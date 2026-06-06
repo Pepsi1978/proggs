@@ -602,12 +602,14 @@ final class PromptInputPanel: NSPanel {
         guard (1...PromptSlotStore.slotCount).contains(n) else { return }
         selectedSlot = n
         if let text = slotContents[n], !text.isEmpty {
+            // Belegter Slot → gespeicherten Prompt abrufen (bewusste Lade-Aktion).
             setText(text)
-        } else {
-            // Leerer Slot → Eingabefeld leeren, keinen Prompt anzeigen
-            // (Frank-Wunsch 2026-06-05). Feld ist danach bereit zum Tippen.
-            setText("")
         }
+        // Leerer Slot → das Eingabefeld NIE anfassen. Der frisch getippte Prompt
+        // muss stehen bleiben, denn genau ihn will der Benutzer jetzt in diesem
+        // Slot speichern. Frueher stand hier setText("") — das loeschte den
+        // getippten Prompt im Moment des Zahl-Klicks, BEVOR die Diskette gedrueckt
+        // werden konnte (Frank-Datenverlust 2026-06-06). NIEMALS wieder leeren.
         updateSlotVisuals()
     }
 
