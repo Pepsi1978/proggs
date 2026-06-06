@@ -35,6 +35,9 @@ final class PromptInputPanel: NSPanel {
     private let separatorButton = NSButton()
     private let geminiButton = NSButton()
     private let clearButton = NSButton()
+    // Ganz aussen rechts: Text kopieren / Zwischenablage einfuegen.
+    private let copyButton = NSButton()
+    private let pasteButton = NSButton()
     private var separatorGlowLayer: CALayer?
 
     /// True, wenn das PromptBoard ausgeblendet ist und die Eingabe direkt
@@ -236,8 +239,22 @@ final class PromptInputPanel: NSPanel {
             fontSize: 14, bold: true,
             tooltip: "Eingabe-Text loeschen",
             action: #selector(onClearClick))
+        // Ganz aussen rechts das Kopieren/Einfuegen-Paar — SF-Symbole, damit es
+        // wie gekaufte Software aussieht. Kopieren legt den Feld-Text in die
+        // System-Zwischenablage (ueberall mit ⌘V einfuegbar), Einfuegen holt den
+        // Zwischenablage-Text an die Cursor-Position ins Feld.
+        configureToolbarButton(copyButton,
+            symbol: "", color: .white, fontSize: 14,
+            sfSymbol: "doc.on.doc",
+            tooltip: "Angezeigten Text kopieren — danach ueberall mit ⌘V einfuegbar.",
+            action: #selector(onCopyClick))
+        configureToolbarButton(pasteButton,
+            symbol: "", color: .white, fontSize: 14,
+            sfSymbol: "doc.on.clipboard",
+            tooltip: "Text aus der Zwischenablage ins Eingabefeld einfuegen.",
+            action: #selector(onPasteClick))
 
-        let toolbar = NSStackView(views: [soloDockButton, separatorButton, geminiButton, clearButton])
+        let toolbar = NSStackView(views: [soloDockButton, separatorButton, geminiButton, clearButton, copyButton, pasteButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 4
         toolbar.alignment = .centerY
@@ -353,6 +370,7 @@ final class PromptInputPanel: NSPanel {
                                          color: NSColor,
                                          fontSize: CGFloat,
                                          bold: Bool = false,
+                                         sfSymbol: String? = nil,
                                          tooltip: String,
                                          action: Selector) {
         btn.title = ""
@@ -365,6 +383,26 @@ final class PromptInputPanel: NSPanel {
         btn.wantsLayer = true
         btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
         btn.layer?.cornerRadius = 14
+
+        // SF-Symbol-Variante (fuer Kopieren/Einfuegen): monochrome Template-
+        // Vorlage in einem NSImageView, ueber contentTintColor eingefaerbt —
+        // gleiche 28x28-Basis wie die Text-Symbol-Buttons.
+        if let sfSymbol = sfSymbol,
+           let base = NSImage(systemSymbolName: sfSymbol, accessibilityDescription: nil) {
+            let cfg = NSImage.SymbolConfiguration(pointSize: fontSize, weight: .semibold)
+            let iv = NSImageView(image: base.withSymbolConfiguration(cfg) ?? base)
+            iv.contentTintColor = color
+            iv.translatesAutoresizingMaskIntoConstraints = false
+            btn.addSubview(iv)
+            NSLayoutConstraint.activate([
+                btn.widthAnchor.constraint(equalToConstant: 28),
+                btn.heightAnchor.constraint(equalToConstant: 28),
+                iv.centerXAnchor.constraint(equalTo: btn.centerXAnchor),
+                iv.centerYAnchor.constraint(equalTo: btn.centerYAnchor),
+            ])
+            btn.identifier = NSUserInterfaceItemIdentifier(sfSymbol + "-icon")
+            return
+        }
 
         let label = NSTextField(labelWithString: symbol)
         label.textColor = color
@@ -465,6 +503,28 @@ final class PromptInputPanel: NSPanel {
 
     @objc private func onClearClick() {
         clearInput()
+    }
+
+    /// Kopiert den aktuell angezeigten Eingabe-Text in die System-Zwischenablage.
+    /// Danach laesst er sich ueberall (Browser, Editor, …) mit ⌘V einfuegen. Kurzes
+    /// gruenes Aufleuchten des Buttons bestaetigt den Kopiervorgang.
+    @objc private func onCopyClick() {
+        let text = textView.string
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        flashSlotButton(copyButton,
+            color: NSColor(calibratedRed: 0.40, green: 0.85, blue: 0.45, alpha: 1))
+    }
+
+    /// Fuegt den Text aus der System-Zwischenablage an der Cursor-Position ins
+    /// Eingabefeld ein (Gegenstueck zum Kopieren). Nutzt appendText, damit eine
+    /// bestehende Auswahl ersetzt und der Fokus zurueck ins Feld gesetzt wird.
+    @objc private func onPasteClick() {
+        guard let text = NSPasteboard.general.string(forType: .string),
+              !text.isEmpty else { return }
+        appendText(text)
     }
 
     // MARK: - Prompt-Zwischenspeicher-Slots (1…15)

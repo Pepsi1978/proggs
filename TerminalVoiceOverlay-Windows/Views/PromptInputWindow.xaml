@@ -220,6 +220,31 @@
                                    FontSize="14"
                                    Foreground="#FFFF4444"/>
                     </Button>
+                    <!-- Ganz aussen rechts das Kopieren/Einfuegen-Paar (Segoe-
+                         Fluent-Icons, monochrom). Kopieren legt den Feld-Text in
+                         die Zwischenablage (ueberall mit Strg+V einfuegbar),
+                         Einfuegen holt den Zwischenablage-Text an die Cursor-
+                         Position ins Feld. -->
+                    <Button x:Name="CopyButton"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="BtnCopy_Click"
+                            Margin="4,0,0,0"
+                            ToolTip="Angezeigten Text kopieren — danach überall mit Strg+V einfügbar.">
+                        <TextBlock Text="&#xE8C8;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="14"
+                                   Foreground="White"/>
+                    </Button>
+                    <Button x:Name="PasteButton"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="BtnPaste_Click"
+                            Margin="4,0,0,0"
+                            ToolTip="Text aus der Zwischenablage ins Eingabefeld einfügen.">
+                        <TextBlock Text="&#xE77F;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="14"
+                                   Foreground="White"/>
+                    </Button>
                 </StackPanel>
             </Grid>
 

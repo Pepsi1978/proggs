@@ -241,6 +241,46 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
+    /// Kopiert den angezeigten Eingabe-Text in die System-Zwischenablage —
+    /// danach ueberall mit Strg+V einfuegbar. Die Zwischenablage kann jederzeit
+    /// von einem anderen Prozess gesperrt sein (CLIPBRD_E_CANT_OPEN), daher der
+    /// SetDataObject-Overload mit Retry-Schleife (Bug-Almanach C#/.NET §4.1).
+    /// </summary>
+    private void BtnCopy_Click(object sender, RoutedEventArgs e)
+    {
+        var text = InputBox.Text ?? string.Empty;
+        if (string.IsNullOrEmpty(text)) return;
+        try
+        {
+            Clipboard.SetDataObject(text, true, 10, 100);
+            UpdatePreview("Text kopiert — überall mit Strg+V einfügbar.");
+        }
+        catch
+        {
+            UpdatePreview("Kopieren fehlgeschlagen — Zwischenablage gerade belegt.");
+        }
+    }
+
+    /// <summary>
+    /// Fuegt den Text aus der System-Zwischenablage an der Cursor-Position ins
+    /// Eingabefeld ein (Gegenstueck zum Kopieren). Clipboard-Zugriff in try/catch,
+    /// da die Zwischenablage gesperrt sein kann (Bug-Almanach C#/.NET §4.1).
+    /// </summary>
+    private void BtnPaste_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (!Clipboard.ContainsText()) return;
+            var text = Clipboard.GetText();
+            if (!string.IsNullOrEmpty(text)) AppendText(text);
+        }
+        catch
+        {
+            UpdatePreview("Einfügen fehlgeschlagen — Zwischenablage gerade belegt.");
+        }
+    }
+
+    /// <summary>
     /// Click-Handler fuer den neuen Semikolon-Button (links neben dem G-Button).
     /// Fuegt manuell einen Aufgaben-Trenner ans Ende des Eingabe-Textes ein
     /// (Leerzeile + Semikolon + Leerzeile). Damit ersetzt der Benutzer das
