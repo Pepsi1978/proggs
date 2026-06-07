@@ -330,6 +330,23 @@ als dynamisch registriert); Patch defensiv schreiben; nicht auf exakte Reihenfol
 `document_start`-Scripts verlassen.
 **Quelle:** github.com/w3c/webextensions/issues/103; David Walsh.
 
+### 74. contenteditable gibt beim Zuruecklesen NICHT 1:1 den gesetzten String zurueck  ⭐ HAEUFIG
+**Symptom:** Man setzt Text in ein `contenteditable`-Feld (ChatGPT/Claude/Gemini-Composer), liest ihn
+gleich darauf wieder aus und vergleicht strikt (`gelesen === gesetzt`) — der Vergleich ist FALSE, obwohl
+der Nutzer nichts geaendert hat. Folge in der Praxis: eine „hat der Nutzer manuell editiert?"-Pruefung
+schlaegt faelschlich an; ein Undo/Restore wird blockiert.
+**Ursache:** Der Editor normalisiert beim Einfuegen: `\n` wird zu `<br>`/Block-Element, fuehrende/anhaengende
+Leerzeichen werden getrimmt, Mehrfach-Whitespace kollabiert, teils geschuetzte Leerzeichen (` `) oder
+Zero-Width-Zeichen (`​`/`﻿`) eingestreut. `innerText`/`textContent` liefern danach einen leicht
+abweichenden String.
+**Versionen:** per Design (DOM/contenteditable), Chromium-weit, versionsunabhaengig.
+**FIX:** Gesetzten vs. gelesenen Text NIE strikt vergleichen. Vor dem Vergleich normalisieren
+(Zero-Width entfernen, `\s+`→Space, trim) — genau das macht `setViaPaste` intern bereits beim eigenen
+Erfolgs-Check. Fuer Snapshots/Undo zusaetzlich den TATSAECHLICH zurueckgelesenen Feldwert als Referenz
+speichern, nicht den Roh-String, den man hineingab.
+**Quelle:** eigener Vorfall 2026-06-07 (overlays, Gemini-Toggle „Original wiederherstellen" scheiterte am
+strikten `===`-Vergleich) + DOM-Verhalten.
+
 ---
 
 ## E — Storage (sync / local / session)
