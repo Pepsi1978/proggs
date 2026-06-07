@@ -1,35 +1,25 @@
 ---
 name: sound-search
-description: >
-  Search and preview sound effects from Freesound.org and Zapsplat. Use when: the user
-  needs sounds for an app, asks "find me a sound for...", "search for a click sound",
-  "what sounds could I use for...", or when building Android/iOS apps that need audio.
-  Also triggers on: "suche einen Sound", "finde einen Klang", "Sound-Effekt fuer".
+description: "Sucht kostenlose CC0-Sound-Effekte von Freesound und baut IMMER eine anklickbare HTML-Galerie mit standardmaessig 10 nummerierten Vorschlaegen, die im Browser geoeffnet wird. Nutze IMMER wenn der Benutzer sagt: 'suche einen Sound', 'suche mir einen kostenlosen Sound', 'finde einen Klang', 'Sound-Effekt fuer', 'find me a sound', 'search for a click/notification sound', oder wenn eine App Audio braucht."
 ---
 
 # Sound Search Skill — Find & Preview Audio for Apps
 
 ## Prerequisites
 
-Freesound API key must be set. Check with:
+**Frank hat bereits ein Freesound-Konto + API-Key** (siehe Memory `reference_freesound_account_exists`).
+NIEMALS eine Neu-Registrierung vorschlagen. Key pruefen (Windows-Pfad):
 ```bash
-cat ~/.config/freesound/api_key 2>/dev/null
+cat ~/.config/freesound/api_key 2>/dev/null   # Windows: %USERPROFILE%\.config\freesound\api_key
 ```
 
-If missing, tell the user:
-> Du brauchst einen kostenlosen Freesound API-Key. Einmal registrieren:
-> 1. Gehe zu https://freesound.org/apiv2/apply/
-> 2. Erstelle ein Konto (oder logge dich ein)
-> 3. Erstelle eine "Application" (Name egal, z.B. "Claude Audio")
-> 4. Kopiere den "Client secret / API key"
-> 5. Sag mir den Key und ich speichere ihn sicher.
-
-Save the key:
-```bash
-mkdir -p ~/.config/freesound
-echo "THE_KEY" > ~/.config/freesound/api_key
-chmod 600 ~/.config/freesound/api_key
-```
+- **Key da** → SOFORT suchen (kein Account-Schritt, keine Rueckfrage).
+- **Datei fehlt mal** (neuer Rechner / geloescht) → NICHT registrieren lassen. Sagen, dass nur
+  die lokale Key-Datei fehlt, und Frank um seinen vorhandenen Key bitten, dann speichern:
+  ```powershell
+  $d = Join-Path $env:USERPROFILE ".config\freesound"; New-Item -ItemType Directory -Force -Path $d | Out-Null
+  Set-Content -Path (Join-Path $d "api_key") -Value "THE_KEY" -NoNewline -Encoding ascii
+  ```
 
 ## Step 1: Understand What Sound Is Needed
 
@@ -58,23 +48,36 @@ curl -s "https://freesound.org/apiv2/search/text/?query=SUCHBEGRIFF&filter=durat
 | Münzen/Punkte | `coin collect`, `point score`, `reward` |
 | Levelaufstieg | `level up`, `fanfare short`, `upgrade` |
 
-## Step 3: Present Results
+## Step 3: HTML-Galerie bauen + im Browser oeffnen (PFLICHT — Frank-Regel 2026-06-07)
 
-For each result, show:
+> **Bei JEDER Sound-Suche IMMER eine anklickbare HTML-Galerie bauen und im Browser oeffnen —
+> NICHT die Sounds einzeln im Terminal vorspielen.** Grund (Frank woertlich): "nur kurz anhoeren
+> weiss ich ja gar nicht, welcher Sound war das, wie ordnen wir den jetzt zu. Es geht ja darum,
+> dass ich mir einen aussuche." Er will klicken, vergleichen, dann sagen "Sound 3 einbauen".
+
+Ablauf:
+1. **Standardmaessig 10 Vorschlaege** sammeln (mehrere Suchbegriffe kombinieren, falls eine
+   Query zu wenig CC0-Treffer liefert — `page_size` hoch genug, Duplikate per ID raus).
+2. Die `preview-hq-mp3`-Dateien aller 10 in einen Temp-Ordner laden
+   (`$env:TEMP\<thema>_sounds\`), Dateinamen nummeriert (`01_...mp3` … `10_...mp3`).
+3. Eine `auswahl.html` daneben schreiben — **eine Karte pro Sound** mit: grosser Nummer
+   ("Sound N"), Titel, 1-Satz-Beschreibung, `<audio controls preload="none" src="NN_...mp3">`,
+   Freesound-Link (`https://freesound.org/s/<id>/`) und dem Hinweis 'sag: "Sound N einbauen"'.
+   HTML **UTF-8 ohne BOM** schreiben (`[System.IO.File]::WriteAllText($p,$html,(New-Object System.Text.UTF8Encoding $false))`),
+   sonst kaputte Umlaute.
+4. Im Browser oeffnen: `Start-Process <pfad\auswahl.html>` (Windows) bzw. `open` (macOS).
+5. Frank waehlt per Nummer ("Sound 3 einbauen") → dann Step 4 (HQ laden + ins Projekt).
+
+Optionales Zusatz-Vorspielen im Terminal (nur auf Wunsch "spiel Nummer X nochmal") —
+plattformrichtig, **kein** macOS-`afplay` auf Windows:
+```powershell
+# Windows: MP3 hoerbar abspielen
+Add-Type -AssemblyName PresentationCore
+$p = New-Object System.Windows.Media.MediaPlayer
+$p.Open([Uri]"C:\...\03_....mp3"); $p.Play(); Start-Sleep 3; $p.Close()
 ```
-🔊 [Name] — [Duration]s — ⭐ [Rating] — Lizenz: [License]
-   Tags: [top 5 tags]
-   Preview: [preview URL]
-   Freesound: https://freesound.org/people/[user]/sounds/[id]/
-```
-
-## Step 4: Preview Sound
-
-Download and play the preview:
 ```bash
-# Download low-quality preview (always available, no special auth needed)
-curl -sL "[preview-hq-ogg URL from API]" -o /tmp/sound_preview.ogg
-afplay /tmp/sound_preview.ogg
+# macOS: afplay datei.mp3   |   Linux: ffplay -nodisp -autoexit datei.mp3
 ```
 
 If the user likes it:
