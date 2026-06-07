@@ -5,18 +5,21 @@ using System.Windows.Input;
 using VoiceAgent.Core;
 using VoiceAgent.Diagnostics;
 using VoiceAgent.Services;
+using VoiceAgent.Services.Audio;
 using VoiceAgent.Services.Llm;
 
 namespace VoiceAgent
 {
     /// <summary>
-    /// Hauptfenster. In Etappe 2 ein Text-Chat mit dem BossAgent (Debug-Eingabe);
-    /// Sprachausgabe (Etappe 3) und Mikrofon-Loop (Etappe 4) werden hier angedockt.
+    /// Hauptfenster. Text-Chat mit dem BossAgent + Sprachausgabe (Chirp3-HD).
+    /// Der Mikrofon-Loop (Etappe 4) wird hier zusaetzlich angedockt.
     /// </summary>
     public partial class MainWindow : Window
     {
         private AppSettings _settings = new();
         private BossAgent? _agent;
+        private GoogleTtsClient? _tts;
+        private readonly AudioPlayer _player = new();
 
         public MainWindow()
         {
@@ -30,7 +33,8 @@ namespace VoiceAgent
             {
                 _settings = Config.Load();
                 _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt);
-                Log.Info("MainWindow geladen, Agent bereit.");
+                _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
+                Log.Info("MainWindow geladen, Agent + TTS bereit.");
             }
             catch (Exception ex)
             {
@@ -70,6 +74,8 @@ namespace VoiceAgent
             {
                 var reply = await _agent.RespondAsync(text);
                 Append("Agent", reply);
+                SetStatus("Spreche …");
+                await SpeakAsync(reply);
                 SetStatus("Bereit");
             }
             catch (Exception ex)
@@ -81,6 +87,21 @@ namespace VoiceAgent
             finally
             {
                 SendButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>Liest den Text per Google Chirp3-HD vor. Fehler werden geloggt, nicht geworfen.</summary>
+        private async Task SpeakAsync(string text)
+        {
+            if (_tts == null || string.IsNullOrWhiteSpace(text)) return;
+            try
+            {
+                var audio = await _tts.SynthesizeAsync(text, _settings.TtsLanguageCode, _settings.TtsVoiceName);
+                await _player.PlayAsync(audio);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("MainWindow: Sprachausgabe fehlgeschlagen (App laeuft weiter)", ex);
             }
         }
 
