@@ -39,15 +39,23 @@ except Exception:
 
 BUG_CASES = Path.home() / "proggs" / ".claude" / "agent-memory" / "shared" / "bug-cases.jsonl"
 
-# Backslash, der KEINE gueltige JSON-Escape-Sequenz einleitet -> muss verdoppelt werden.
-# Gueltig: \" \\ \/ \b \f \n \r \t  und  \u + genau 4 Hex.
-_INVALID_ESCAPE = re.compile(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})')
+# Matcht ENTWEDER ein gueltiges JSON-Escape als EINHEIT (\" \\ \/ \b \f \n \r \t oder \u+4Hex)
+# ODER einen einzelnen, nackten Backslash. Die Paar-Bewusstheit ist entscheidend: ein gueltiges
+# \\ wird als Einheit konsumiert und bleibt unangetastet, sodass z.B. ein Windows-Pfad
+# "C:\\xyz" intakt bleibt und NUR der echte Fehler (z.B. truncated \u12) verdoppelt wird.
+# (Eine reine Negativ-Lookahead-Regex ohne diese Paar-Logik wuerde den 2. Backslash eines
+#  gueltigen \\ faelschlich verdoppeln, wenn ein Nicht-Escape-Zeichen folgt.)
+_ESCAPE_OR_BACKSLASH = re.compile(r'\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})|\\')
 
 
 def repair_line(line: str) -> str:
-    """Verdoppelt ungueltige Backslash-Escapes. Lambda-Replacement (umgeht die
-    re-Replacement-Mini-Sprache, siehe python-windows.md 9.1)."""
-    return _INVALID_ESCAPE.sub(lambda _m: r"\\", line)
+    """Verdoppelt NUR Backslashes, die kein gueltiges JSON-Escape einleiten; gueltige
+    Escape-Paare bleiben unveraendert (verlustfrei). Lambda-Replacement umgeht die
+    re-Replacement-Mini-Sprache (python-windows.md 9.1)."""
+    def _repl(m: "re.Match[str]") -> str:
+        s = m.group(0)
+        return "\\\\" if len(s) == 1 else s  # nackter Backslash -> verdoppeln; gueltiges Escape -> unveraendert
+    return _ESCAPE_OR_BACKSLASH.sub(_repl, line)
 
 
 def atomic_write_text(target: Path, text: str) -> None:
@@ -132,14 +140,20 @@ def main(argv: list[str] | None = None) -> int:
         print("\nDry-Run. Mit --apply anwenden.")
         return 0
 
-    # Anwenden: Hauptdatei = valide + reparierte Zeilen; quarantaene separat anhaengen.
-    atomic_write_text(path, ("\n".join(out_lines) + "\n") if out_lines else "")
+    # Reihenfolge ist fuer die Datenintegritaet entscheidend: ZUERST die Quarantaene
+    # dauerhaft sichern (inkl. fsync), DANN erst die Hauptdatei (ohne die quarantaenierten
+    # Zeilen) atomar ueberschreiben. Andernfalls koennte ein Crash zwischen beiden Schritten
+    # die quarantaenierten Zeilen verlieren (sie waeren weder in der Haupt- noch in der
+    # Quarantaene-Datei) -> Datenverlust.
     if quarantine:
         qpath = path.with_suffix(path.suffix + ".corrupt")
         block = "".join(f"# Zeile {n} (urspruenglich):\n{orig}\n" for n, orig in quarantine)
         with open(qpath, "a", encoding="utf-8", newline="\n") as qf:
             qf.write(block)
+            qf.flush()
+            os.fsync(qf.fileno())
         print(f"\n{len(quarantine)} nicht reparierbare Zeile(n) nach {qpath.name} ausgelagert.")
+    atomic_write_text(path, ("\n".join(out_lines) + "\n") if out_lines else "")
     print(f"Angewendet: {len(repaired)} repariert, {len(quarantine)} quarantaeniert.")
     return 0
 
