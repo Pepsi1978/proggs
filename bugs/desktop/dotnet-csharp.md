@@ -181,6 +181,13 @@ richtig macht*. Wechselseitig gepflegt:
 **FIX:** Nur EINE Methode pro Fenster. Bei Per-Pixel-Alpha durchgehend `UpdateLayeredWindow`. Keine HWND-Children in transparenten WPF-Fenstern (Airspace).
 **Quelle:** https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-updatelayeredwindow
 
+### 2.10 Event-Handler (ValueChanged/Checked/SelectionChanged) feuert waehrend XAML-Load -> NullRef  ⭐ HAEUFIG
+**Symptom:** Fenster mit Slider/CheckBox/ComboBox crasht beim Oeffnen — die App verschwindet komplett (NullReferenceException in einem ValueChanged/Checked-Handler).
+**Ursache:** Beim XAML-Parsen setzt z.B. `<Slider Minimum="0.002">` einen Wert -> WPF coerced den Value -> `ValueChanged` feuert BEVOR `InitializeComponent` fertig ist. Der Handler greift auf Controls zu, die im XAML WEITER UNTEN stehen und noch nicht erzeugt sind (null). Ein Guard, der nur EIN Control auf null prueft, reicht NICHT — die XAML-Reihenfolge entscheidet, welches Control schon existiert (das vor dem Slider) und welches noch fehlt (das danach).
+**Versionen:** alle WPF inkl. .NET 8/10 — per Design (Property-Coercion beim Laden, `RangeBase.OnMinimumChanged`).
+**FIX:** Ein `_ready`/`_loaded`-Flag, das erst NACH dem vollstaendigen Befuellen (Populate/Loaded) auf true gesetzt wird; der Handler returnt, solange es false ist. Defense in Depth: `Application.DispatcherUnhandledException` mit `e.Handled = true` (NACH dem Logging) verhindert, dass ein UI-Handler-Fehler die ganze App verschwinden laesst (Graceful Degradation).
+**Quelle:** dotnet/wpf — RangeBase Property-Coercion; Frank-Vorfall 2026-06-07 (VoiceAgent: Einstellungen-Fenster-Crash, per Observability-Log lokalisiert).
+
 ---
 
 ## 3. DPI / Multi-Monitor

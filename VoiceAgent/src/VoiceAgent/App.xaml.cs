@@ -43,7 +43,11 @@ public partial class App : Application
     /// </summary>
     private void OnDispatcherException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Log.Error("Unbehandelte UI-Dispatcher-Exception", e.Exception);
+        // Geloggt (nichts stirbt still) UND als behandelt markiert: ein unerwarteter UI-Fehler
+        // darf die laufende Always-On-App nicht komplett verschwinden lassen (Graceful Degradation).
+        // Der Fehler bleibt sichtbar — im Log und (wo moeglich) in der Status-/Fehlerzeile der UI.
+        Log.Error("Unbehandelte UI-Dispatcher-Exception (App laeuft weiter)", e.Exception);
+        e.Handled = true;
     }
 
     /// <summary>

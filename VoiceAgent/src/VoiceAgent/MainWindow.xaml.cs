@@ -121,10 +121,11 @@ namespace VoiceAgent
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new Views.SettingsWindow(_settings) { Owner = this };
-            if (dlg.ShowDialog() == true)
+            // Auch das OEFFNEN in try/catch: ein Fehler im Settings-Fenster darf die App nie killen.
+            try
             {
-                try
+                var dlg = new Views.SettingsWindow(_settings) { Owner = this };
+                if (dlg.ShowDialog() == true)
                 {
                     _settings = Config.Load();
                     BuildAgents();
@@ -133,11 +134,12 @@ namespace VoiceAgent
                     UpdateMicLabel();
                     Append("System", "Einstellungen gespeichert und uebernommen.");
                 }
-                catch (Exception ex)
-                {
-                    Log.Error("MainWindow: Uebernehmen der Einstellungen fehlgeschlagen", ex);
-                    Append("Fehler", ex.Message);
-                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("MainWindow: Einstellungen oeffnen/uebernehmen fehlgeschlagen", ex);
+                Append("Fehler", "Einstellungen konnten nicht geoeffnet werden: " + ex.Message);
+                SetStatus("Fehler — siehe Log");
             }
         }
 

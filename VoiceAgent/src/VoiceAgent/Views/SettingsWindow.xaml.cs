@@ -15,6 +15,7 @@ namespace VoiceAgent.Views
     {
         private readonly AppSettings _settings;
         private readonly AudioPlayer _previewPlayer = new();
+        private bool _ready;   // true erst NACH Populate — verhindert NullRef in ValueChanged waehrend XAML-Load
 
         public SettingsWindow(AppSettings settings)
         {
@@ -58,6 +59,7 @@ namespace VoiceAgent.Views
                 SilenceMsSlider.Value = _settings.SilenceMs;
                 MinUtteranceSlider.Value = _settings.MinUtteranceMs;
                 EndpointWaitSlider.Value = _settings.EndpointMaxWaitMs;
+                _ready = true;            // ab jetzt existieren ALLE Controls -> Label-Updates erlaubt
                 UpdateSliderLabels();
             }
             catch (Exception ex)
@@ -121,7 +123,10 @@ namespace VoiceAgent.Views
         /// <summary>Aktualisiert die Live-Wertanzeige neben den Empfindlichkeits-Schiebereglern.</summary>
         private void UpdateSliderLabels()
         {
-            if (SilenceThresholdLabel == null) return;   // ValueChanged kann vor Populate feuern
+            // ValueChanged feuert schon beim XAML-Laden (Slider.Minimum -> Wert-Coercion), wenn die
+            // weiter unten im XAML stehenden Label/Slider-Controls noch gar nicht existieren.
+            // Erst nach Populate (alle Controls da) ausfuehren — sonst NullReferenceException.
+            if (!_ready) return;
             SilenceThresholdLabel.Text = $"Stille-Schwelle (Empfindlichkeit): {SilenceThresholdSlider.Value:F3} — kleiner = empfindlicher";
             SilenceMsLabel.Text = $"Pause bis eine Aussage endet: {SilenceMsSlider.Value:F0} ms";
             MinUtteranceLabel.Text = $"Kuerzeste erkannte Aussage: {MinUtteranceSlider.Value:F0} ms";
