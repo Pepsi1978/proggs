@@ -262,7 +262,7 @@ if [ -f "$almanachPath" ]; then
         if [ "$disabled" -eq 1 ]; then
             msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel (+ Best Practices) freiwillig."
         else
-            msg="BUG-ALMANACH: $almRel + Best-Practices gelesen - Bereich '$name' ist fuer diese Session freigegeben."
+            msg="BUG-ALMANACH: $almRel gelesen, Best-Practices-Pflicht erfuellt - Bereich '$name' ist fuer diese Session freigegeben."
         fi
         python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$msg"
     fi

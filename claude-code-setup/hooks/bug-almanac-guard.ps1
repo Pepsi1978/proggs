@@ -273,7 +273,7 @@ try {
             $msg = if ($disabled) {
                 "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies " + $almRel + " (+ Best Practices) freiwillig."
             } else {
-                "BUG-ALMANACH: " + $almRel + " + Best-Practices gelesen - Bereich '" + $name + "' ist fuer diese Session freigegeben."
+                "BUG-ALMANACH: " + $almRel + " gelesen, Best-Practices-Pflicht erfuellt - Bereich '" + $name + "' ist fuer diese Session freigegeben."
             }
             $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
             Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
