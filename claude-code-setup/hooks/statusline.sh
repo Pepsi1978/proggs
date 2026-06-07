@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
 # Einzeilig (Frank 2026-05-31, frueher zweizeilig):
-#   Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context | Ordner | Zeit
+#   Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Ordner | Zeit
+#   (Context ganz vorne — Frank 2026-06-07)
 
 input=$(cat)
 
@@ -41,10 +42,7 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-# bash-3.2-kompatibel: macOS liefert /bin/bash 3.2 (kein ${x^^} — "bad substitution").
-# tr ist POSIX und laeuft auf bash 3.2/4/5 und Windows Git Bash gleichermassen.
-# (Frank-Bug-Report 2026-06-01: Effort zeigte nur das ⚡-Symbol ohne Text.)
-effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
+effort_upper="${effort^^}"
 
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
 model="${model/ context)/)}"
@@ -110,10 +108,7 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-# bash-3.2-kompatibel: printf '%(...)T' gibt es erst ab bash 4.2 (macOS hat 3.2 ->
-# now_ts blieb leer -> alle Reset-Countdowns/Plausibilitaetspruefungen kaputt).
-# date +%s laeuft auf jeder bash-Version. (Frank-Bug-Report 2026-06-01)
-now_ts=$(date +%s)
+printf -v now_ts '%(%s)T' -1
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -424,10 +419,8 @@ if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Uhrzeit — bash-3.2-kompatibel (printf '%(...)T' erst ab bash 4.2, macOS hat 3.2 ->
-# Uhrzeit blieb leer, nur das 🕐-Symbol war sichtbar). date laeuft ueberall.
-# (Frank-Bug-Report 2026-06-01)
-time=$(date +%H:%M)
+# Uhrzeit
+printf -v time '%(%H:%M)T' -1
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
@@ -572,10 +565,25 @@ EMPTY_BAR="${TRACK}░░░░░${R}"
 
 # ===== ZEILE 1: Modell | Effort | 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
 
-# 1. Modell (erstes Element von Zeile 1 — KEIN fuehrender Trenner)
-printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+# 1. Context-Verbrauch (jetzt GANZ vorne — Frank 2026-06-07).
+#    Erstes Element von Zeile 1: KEIN fuehrender Trenner. Wenn kein ctx-Wert bekannt
+#    ist (frueher Session-Start), faellt das Modell auf die erste Position zurueck.
+ctx_shown=""
+if [ -n "$ctx_used" ]; then
+    col=$(pct_color "$ctx_used")
+    bar=$(make_bar "$ctx_used" "$col")
+    printf "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
+    ctx_shown="1"
+fi
 
-# 2. Effort (direkt hinter dem Modell)
+# 2. Modell — fuehrender Trenner NUR wenn der Kontext davor steht (sonst erstes Element)
+if [ -n "$ctx_shown" ]; then
+    printf "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
+else
+    printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+fi
+
+# 3. Effort (direkt hinter dem Modell)
 printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
 # 3. 5h-Limit mit Balken
@@ -618,12 +626,7 @@ if [ -n "$week_used" ] && [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/d
     printf "${GSEP}${PACE7}slow${R} ${pacebar7} ${PACE7}fast${R}"
 fi
 
-# 7. Context-Verbrauch (am Ende von Zeile 1)
-if [ -n "$ctx_used" ]; then
-    col=$(pct_color "$ctx_used")
-    bar=$(make_bar "$ctx_used" "$col")
-    printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
-fi
+# (Context steht jetzt GANZ vorne — Frank 2026-06-07, frueher hier an Position 7)
 
 # ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
 # Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.

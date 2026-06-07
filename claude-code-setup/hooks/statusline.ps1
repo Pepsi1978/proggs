@@ -1,6 +1,7 @@
 # statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
 # Einzeilig (Frank 2026-05-31, frueher zweizeilig):
-#   Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Context | Ordner | Zeit
+#   Context | Modell | Effort | 5h-Balken | 5h-Pacing | 7d-Balken | 7d-Pacing | Ordner | Zeit
+#   (Context ganz vorne — Frank 2026-06-07)
 # Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -556,10 +557,22 @@ $ICON_PACE   = '🎯'
 
 # ===== ZEILE 1: Modell | Effort | 5h + Pacing | 7d + Pacing | Kontext (Frank 2026-05-25) =====
 
-# 1. Modell (erstes Element von Zeile 1 — $out mit = initialisieren, KEIN fuehrender Trenner)
-$out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+# 1. Context-Verbrauch (jetzt GANZ vorne — Frank 2026-06-07).
+#    Erstes Element von Zeile 1: KEIN fuehrender Trenner ($out mit = initialisieren).
+#    Wenn kein ctx-Wert bekannt ist (frueher Session-Start), faellt das Modell auf
+#    die erste Position zurueck (dann ohne Trenner initialisieren).
+if ($ctx_used -ne $null) {
+    $col = Get-PctColor $ctx_used
+    $bar = Get-Bar $ctx_used $col
+    $out = "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+    # 2. Modell — fuehrender Trenner, da der Kontext davor steht
+    $out += "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
+} else {
+    # Kein Kontext bekannt: Modell ist erstes Element OHNE fuehrenden Trenner
+    $out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+}
 
-# 2. Effort (direkt hinter dem Modell)
+# 3. Effort (direkt hinter dem Modell)
 $out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
 
 # 3. 5h
@@ -604,12 +617,7 @@ if ($week_used -ne $null -and $week_resets -gt 0) {
     $out += "${GSEP}${PACE7}slow${R} ${paceBar7} ${PACE7}fast${R}"
 }
 
-# 7. Context (am Ende von Zeile 1)
-if ($ctx_used -ne $null) {
-    $col = Get-PctColor $ctx_used
-    $bar = Get-Bar $ctx_used $col
-    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
-}
+# (Context steht jetzt GANZ vorne — Frank 2026-06-07, frueher hier an Position 7)
 
 # ===== Ordner + Uhrzeit jetzt am Ende von Zeile 1 (Frank 2026-05-31) =====
 # Frueher zweizeilig; auf Wunsch von Frank in EINE Zeile zusammengefuehrt.
