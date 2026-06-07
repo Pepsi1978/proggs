@@ -68,6 +68,17 @@ namespace VoiceAgent.Views
                 TimeZoneBox.SelectedValue = autoTz ? TimeZoneInfo.Local.Id : _settings.TimeZoneId;
                 TimeZoneBox.IsEnabled = !autoTz;
 
+                UserColorBox.ItemsSource = ColorPalette.All;
+                UserColorBox.DisplayMemberPath = nameof(ColorChoice.Name);
+                UserColorBox.SelectedValuePath = nameof(ColorChoice.Hex);
+                UserColorBox.SelectedValue = _settings.UserColor;
+                if (UserColorBox.SelectedValue == null) UserColorBox.SelectedIndex = 0;
+                AgentColorBox.ItemsSource = ColorPalette.All;
+                AgentColorBox.DisplayMemberPath = nameof(ColorChoice.Name);
+                AgentColorBox.SelectedValuePath = nameof(ColorChoice.Hex);
+                AgentColorBox.SelectedValue = _settings.AgentColor;
+                if (AgentColorBox.SelectedValue == null) AgentColorBox.SelectedIndex = 0;
+
                 _ready = true;            // ab jetzt existieren ALLE Controls -> Label-Updates erlaubt
                 UpdateSliderLabels();
             }
@@ -104,6 +115,8 @@ namespace VoiceAgent.Views
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
                     ? string.Empty
                     : (TimeZoneBox.SelectedValue as string ?? string.Empty);
+                _settings.UserColor = UserColorBox.SelectedValue as string ?? "#4FC3F7";
+                _settings.AgentColor = AgentColorBox.SelectedValue as string ?? "#F97316";
 
                 Config.Save(_settings);
                 Config.SaveApiKey("groq", GroqKeyBox.Text?.Trim() ?? "");

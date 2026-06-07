@@ -3,7 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using VoiceAgent.Core;
 using VoiceAgent.Diagnostics;
@@ -393,8 +395,27 @@ namespace VoiceAgent
 
         private void Append(string who, string text)
         {
-            ConversationBox.AppendText($"{who}: {text}\n\n");
+            // Farbliche Unterscheidung: Du/Agent aus den Einstellungen waehlbar; Fehler=Rot, System=Grau.
+            var brush = new SolidColorBrush(who switch
+            {
+                "Du" => ParseColor(_settings.UserColor, Color.FromRgb(0x4F, 0xC3, 0xF7)),
+                "Agent" => ParseColor(_settings.AgentColor, Color.FromRgb(0xF9, 0x73, 0x16)),
+                "Fehler" => Color.FromRgb(0xEF, 0x53, 0x50),
+                _ => Color.FromRgb(0x9A, 0xA0, 0xAA),
+            });
+            var para = new Paragraph();
+            para.Inlines.Add(new Run(who + ": ") { FontWeight = FontWeights.Bold, Foreground = brush });
+            para.Inlines.Add(new Run(text) { Foreground = brush });
+            ConversationBox.Document.Blocks.Add(para);
             ConversationBox.ScrollToEnd();
+        }
+
+        /// <summary>Hex -> Color, mit Fallback bei ungueltigem Wert (kein Crash).</summary>
+        private static Color ParseColor(string? hex, Color fallback)
+        {
+            if (string.IsNullOrWhiteSpace(hex)) return fallback;
+            try { return (Color)ColorConverter.ConvertFromString(hex)!; }
+            catch { return fallback; }
         }
 
         private void SetStatus(string text) => StatusText.Text = text;

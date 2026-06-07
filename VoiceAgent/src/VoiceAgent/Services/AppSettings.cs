@@ -57,5 +57,9 @@ namespace VoiceAgent.Services
         // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
         // die System-Zeitzone dieses PCs; sonst eine TimeZoneInfo-Id (z.B. "W. Europe Standard Time").
         public string TimeZoneId { get; set; } = string.Empty;
+
+        // ----- Farben im Gespraech (in den Einstellungen waehlbar) -----
+        public string UserColor { get; set; } = "#4FC3F7";   // was Frank sagt (Cyan)
+        public string AgentColor { get; set; } = "#F97316";  // was der Agent antwortet (Orange)
     }
 }

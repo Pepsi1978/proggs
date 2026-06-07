@@ -33,9 +33,15 @@
 
         <!-- Gespraechsverlauf -->
         <Border Grid.Row="1" Background="#1E2128" CornerRadius="8" Padding="10">
-            <TextBox x:Name="ConversationBox" IsReadOnly="True" TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto" BorderThickness="0"
-                     Background="Transparent" Foreground="#E4E6EB" FontSize="14"/>
+            <RichTextBox x:Name="ConversationBox" IsReadOnly="True"
+                         VerticalScrollBarVisibility="Auto" BorderThickness="0"
+                         Background="Transparent" Foreground="#E4E6EB" FontSize="14">
+                <RichTextBox.Resources>
+                    <Style TargetType="Paragraph">
+                        <Setter Property="Margin" Value="0,0,0,8"/>
+                    </Style>
+                </RichTextBox.Resources>
+            </RichTextBox>
         </Border>
 
         <!-- Eingabezeile (Text-Eingabe ergaenzend zur Sprache) -->

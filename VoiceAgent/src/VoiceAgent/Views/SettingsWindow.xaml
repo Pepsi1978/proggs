@@ -113,6 +113,13 @@
                           Content="Automatisch (Systemzeit dieses PCs)" Click="AutoTimeZone_Click"/>
                 <ComboBox x:Name="TimeZoneBox"/>
 
+                <!-- 7. Farben im Gespraech -->
+                <TextBlock Text="Farben im Gespraech" Style="{StaticResource Section}"/>
+                <TextBlock Text="Deine Farbe (was du sagst)" Style="{StaticResource Label}"/>
+                <ComboBox x:Name="UserColorBox"/>
+                <TextBlock Text="Farbe des Agenten (Antworten)" Style="{StaticResource Label}"/>
+                <ComboBox x:Name="AgentColorBox"/>
+
             </StackPanel>
         </ScrollViewer>
 
