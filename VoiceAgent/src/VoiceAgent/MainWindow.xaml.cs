@@ -107,6 +107,13 @@ namespace VoiceAgent
 
         private void UpdateMicLabel() => MicToggle.Content = _settings.MicEnabled ? "Mikrofon: an" : "Mikrofon: aus";
 
+        private void LogButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Nicht-modal (Show, nicht ShowDialog): Frank kann gleichzeitig sprechen und mitlesen.
+            try { new Views.LogViewerWindow { Owner = this }.Show(); }
+            catch (Exception ex) { Log.Error("MainWindow: Log-Viewer oeffnen fehlgeschlagen", ex); }
+        }
+
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Views.SettingsWindow(_settings) { Owner = this };

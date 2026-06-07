@@ -22,6 +22,8 @@
                        VerticalAlignment="Center"/>
             <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="Einstellungen"
                     Padding="12,4" Click="SettingsButton_Click"/>
+            <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"
+                    Margin="0,0,8,0" Padding="12,4" Click="LogButton_Click"/>
             <ToggleButton x:Name="MicToggle" DockPanel.Dock="Right" Content="Mikrofon: an"
                           Margin="0,0,8,0" Padding="12,4" Click="MicToggle_Click"/>
         </DockPanel>
