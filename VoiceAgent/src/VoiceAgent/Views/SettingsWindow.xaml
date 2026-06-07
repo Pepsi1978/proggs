@@ -70,6 +70,8 @@
                 <ComboBox x:Name="ProviderBox"/>
                 <TextBlock Text="Modell-Bezeichnung" Style="{StaticResource Label}"/>
                 <TextBox x:Name="ModelBox"/>
+                <TextBlock Text="Modell fuer Endpunkt-Check (FERTIG/WEITER — immer Gemini, guenstig + schnell)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="EndpointModelBox"/>
 
                 <!-- 4. Sprachausgabe -->
                 <TextBlock Text="Sprachausgabe (Stimme)" Style="{StaticResource Section}"/>

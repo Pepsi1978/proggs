@@ -44,6 +44,7 @@ namespace VoiceAgent.Views
                 if (ProviderBox.SelectedItem == null) ProviderBox.SelectedIndex = 0;
 
                 ModelBox.Text = _settings.LlmModel;
+                EndpointModelBox.Text = _settings.EndpointModel;
 
                 VoiceBox.ItemsSource = GoogleTtsVoices.All;
                 VoiceBox.DisplayMemberPath = nameof(GoogleTtsVoice.DisplayName);
@@ -70,6 +71,9 @@ namespace VoiceAgent.Views
                 _settings.LlmModel = string.IsNullOrWhiteSpace(ModelBox.Text)
                     ? AppSettings.DefaultGeminiModel
                     : ModelBox.Text.Trim();
+                _settings.EndpointModel = string.IsNullOrWhiteSpace(EndpointModelBox.Text)
+                    ? AppSettings.DefaultGeminiModel
+                    : EndpointModelBox.Text.Trim();
                 _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
 
                 Config.Save(_settings);

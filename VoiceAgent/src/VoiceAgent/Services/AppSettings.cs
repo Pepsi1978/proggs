@@ -36,7 +36,16 @@ namespace VoiceAgent.Services
         // ----- Mikrofon / Voice-Loop -----
         public bool MicEnabled { get; set; } = true;
         public double SilenceThreshold { get; set; } = 0.012;  // RMS-Schwelle: darunter = Stille
-        public int SilenceMs { get; set; } = 900;              // Stille-Dauer bis "Aussage zu Ende"
+        public int SilenceMs { get; set; } = 1000;             // Stille-Dauer bis ein Sprech-Haeppchen endet
         public int MinUtteranceMs { get; set; } = 350;         // kuerzere Schnipsel ignorieren (Huster etc.)
+
+        // Semantische Endpunkt-Erkennung: nach einer Pause prueft das LLM, ob der Gedanke
+        // abgeschlossen ist (FERTIG) oder ob nur eine Denkpause vorliegt (WEITER → weiter zuhoeren).
+        public bool SemanticEndpointing { get; set; } = true;
+        public int EndpointMaxWaitMs { get; set; } = 4000;     // Sicherheitsnetz: nach so langer Stille trotzdem senden
+
+        // FERTIG/WEITER ist eine triviale Aufgabe -> eigenes, guenstiges + schnelles Gemini-Modell,
+        // unabhaengig vom (evtl. teureren) Haupt-Gehirn. In den Einstellungen aenderbar.
+        public string EndpointModel { get; set; } = "gemini-3.1-flash-lite";
     }
 }
