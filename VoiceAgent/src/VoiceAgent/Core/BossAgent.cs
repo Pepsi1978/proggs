@@ -18,13 +18,15 @@ namespace VoiceAgent.Core
         private readonly ILlmProvider _provider;
         private readonly string _systemPrompt;
         private readonly AgentMemory? _memory;
+        private readonly SubAgentRegistry? _subAgents;
         private readonly List<LlmMessage> _history = new();
 
-        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null)
+        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null)
         {
             _provider = provider;
             _systemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? BossAgentPrompt.Default : systemPrompt!;
             _memory = memory;
+            _subAgents = subAgents;
         }
 
         public IReadOnlyList<LlmMessage> History => _history;
@@ -65,6 +67,38 @@ namespace VoiceAgent.Core
                 Log.Error("BossAgent: Fehler beim Erzeugen der Antwort", ex);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Hauptagent dirigiert: Ist eine AUFGABE erkannt UND ein Unteragent zustaendig, wird an
+        /// ihn DELEGIERT; sonst antwortet der Hauptagent selbst (LLM). Liefert die Antwort und —
+        /// falls delegiert — den Namen des Unteragenten (fuer die Turn-Trace). Faellt bei einem
+        /// Fehler des Unteragenten sicher auf den Hauptagenten zurueck (kein Funktionsverlust).
+        /// </summary>
+        public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
+        {
+            if (intent == IntentKind.Task && _subAgents != null)
+            {
+                var sub = _subAgents.Find(userText);
+                if (sub != null)
+                {
+                    Log.Info($"BossAgent: delegiere an Unteragent '{sub.Name}'");
+                    try
+                    {
+                        var subReply = await sub.HandleAsync(userText, ct).ConfigureAwait(false);
+                        _history.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
+                        _history.Add(new LlmMessage(LlmRole.Assistant, subReply));
+                        _memory?.RecordTurn(userText ?? string.Empty, subReply);
+                        return new AgentReply(subReply, sub.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"BossAgent: Unteragent '{sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
+                        // Fallback: nichts geht verloren, der Hauptagent antwortet selbst.
+                    }
+                }
+            }
+            return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
         }
 
         /// <summary>Setzt den Gespraechsverlauf zurueck (neues Gespraech).</summary>

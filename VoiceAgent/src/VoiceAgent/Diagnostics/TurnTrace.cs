@@ -114,6 +114,10 @@ namespace VoiceAgent.Diagnostics
             Log.Info("GESPROCHEN", new { voice, ok });
         }
 
+        /// <summary>Der Hauptagent hat die Aufgabe an einen Unteragenten delegiert (Manifest Baustein 2).</summary>
+        public void Delegated(string subAgentName)
+            => Log.Info("DELEGIERT", new { to = subAgentName });
+
         /// <summary>Eine Stufe ist fehlgeschlagen — mit vollem Kontext (turn-korreliert).</summary>
         public void Failed(string stage, Exception ex)
             => Log.Error($"Turn-Fehler in Stufe {stage}", ex, new { stage });

@@ -29,6 +29,7 @@ namespace VoiceAgent
         private AlwaysOnListener? _listener;
         private readonly AudioPlayer _player = new();
         private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
+        private SubAgentRegistry? _subAgents;         // Unteragenten, die der Hauptagent dirigiert
 
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
@@ -48,6 +49,8 @@ namespace VoiceAgent
             {
                 _settings = Config.Load();
                 _memory = new AgentMemory();   // laedt Fakten + letzte Gespraeche aus frueheren Sessions
+                _subAgents = new SubAgentRegistry();
+                _subAgents.Register(new NoteSubAgent(_memory));   // erster Demo-Unteragent (merkt sich Notizen)
                 BuildAgents();
 
                 RebuildListener();
@@ -66,7 +69,7 @@ namespace VoiceAgent
 
         private void BuildAgents()
         {
-            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory);
+            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory, _subAgents);
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
@@ -315,16 +318,19 @@ namespace VoiceAgent
             // Erst VERSTEHEN: Intent exakt per LLM-Detektor klassifizieren (wenn aktiviert),
             // sonst spaeter heuristisch aus der Antwort ableiten.
             bool exactIntent = _settings.IntentDetection && _intentDetector != null;
+            IntentKind intent = IntentKind.Unknown;
             if (exactIntent)
             {
                 SetStatus("Verstehe, was du willst …");
-                var kind = await _intentDetector!.ClassifyAsync(text);
-                _turn?.UnderstoodExact(kind);
+                intent = await _intentDetector!.ClassifyAsync(text);
+                _turn?.UnderstoodExact(intent);
             }
             SetStatus("Denke nach …");
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var reply = await _agent.RespondAsync(text);
+            var result = await _agent.HandleAsync(text, intent);   // delegiert ggf. an einen Unteragenten
             sw.Stop();
+            var reply = result.Text;
+            if (result.DelegatedTo != null) _turn?.Delegated(result.DelegatedTo);
             if (!exactIntent) _turn?.Understood(reply);                                  // Fallback: heuristisch aus der Antwort
             _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds);  // welches Gehirn, wie schnell, Rueckfrage?
             Append("Agent", reply);
