@@ -20,6 +20,9 @@
             <TextBlock x:Name="StatusText" DockPanel.Dock="Left"
                        Text="Bereit" FontSize="13" Foreground="#9AA0AA"
                        VerticalAlignment="Center"/>
+            <TextBlock x:Name="ClockText" DockPanel.Dock="Left" Margin="16,0,0,0"
+                       FontSize="13" FontWeight="SemiBold" Foreground="#E4E6EB"
+                       VerticalAlignment="Center"/>
             <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="Einstellungen"
                     Padding="12,4" Click="SettingsButton_Click"/>
             <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"

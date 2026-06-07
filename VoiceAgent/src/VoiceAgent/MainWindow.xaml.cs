@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using VoiceAgent.Core;
 using VoiceAgent.Diagnostics;
 using VoiceAgent.Services;
@@ -35,6 +36,7 @@ namespace VoiceAgent
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
         private CancellationTokenSource? _safetyCts;  // Sicherheitsnetz-Timer nach "WEITER"
         private TurnTrace? _turn;                     // aktueller Sprach-Turn (Live-Logik-Sonde)
+        private DispatcherTimer? _clockTimer;         // live Uhr oben im Fenster
 
         public MainWindow()
         {
@@ -57,6 +59,7 @@ namespace VoiceAgent
 
                 MicToggle.IsChecked = _settings.MicEnabled;
                 UpdateMicLabel();
+                StartClock();
                 Log.Info("MainWindow geladen — Voice-Loop bereit.");
                 Append("System", "Bereit. Sprich einfach los — Gedankenpausen sind erlaubt. Oder tippe unten.");
             }
@@ -95,7 +98,7 @@ namespace VoiceAgent
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { CancelSafetyTimer(); _listener?.Dispose(); _player.Stop(); }
+            try { _clockTimer?.Stop(); CancelSafetyTimer(); _listener?.Dispose(); _player.Stop(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
         }
 
@@ -111,6 +114,26 @@ namespace VoiceAgent
         }
 
         private void UpdateMicLabel() => MicToggle.Content = _settings.MicEnabled ? "Mikrofon: an" : "Mikrofon: aus";
+
+        private void StartClock()
+        {
+            _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _clockTimer.Tick += (_, __) => UpdateClock();
+            _clockTimer.Start();
+            UpdateClock();
+        }
+
+        /// <summary>Zeigt die Uhr in derselben Zeitzone, die auch der Agent kennt (konsistent).</summary>
+        private void UpdateClock()
+        {
+            try
+            {
+                var zone = TimeContext.ResolveZone(_settings.TimeZoneId);
+                var now = TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone);
+                ClockText.Text = now.ToString("ddd, dd.MM.yyyy  HH:mm:ss", new System.Globalization.CultureInfo("de-DE"));
+            }
+            catch { /* Uhr ist unkritisch — nie crashen */ }
+        }
 
         private void LogButton_Click(object sender, RoutedEventArgs e)
         {
