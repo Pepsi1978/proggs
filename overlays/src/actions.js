@@ -152,10 +152,10 @@
 	//      KUENFTIGE Spracheingaben automatisch korrigiert werden (gelesen in stt.js).
 	//   2) Live auf den AKTUELL im Feld stehenden Text: AN korrigiert ihn sofort, AUS
 	//      stellt den urspruenglichen (rohen) Text wieder her.
-	// Der Snapshot merkt sich Original + Korrektur, damit man verlustfrei hin- und
-	// herspringen kann — beim zweiten Mal ohne erneuten Gemini-Aufruf (instant).
-	// Er ist nur gueltig, solange der Feldtext exakt einem der beiden Werte entspricht;
-	// hat der Nutzer manuell editiert, wird nichts ueberschrieben.
+	// Der Snapshot merkt sich Original + Korrektur, damit AUS den Originaltext
+	// verlustfrei wiederherstellen kann. Erneutes AN startet bewusst eine NEUE
+	// Korrektur (kein Cache) — falls dem Nutzer die erste Korrektur nicht gefiel.
+	// Restore ueberschreibt nichts, wenn der Nutzer seither manuell editiert hat.
 	let geminiSnap = null; // { el, original, corrected }
 
 	function resetGeminiSnapshot() {
@@ -176,9 +176,9 @@
 		}
 	}
 
-	// AN: korrigiert den aktuell im Feld stehenden Text sofort per Gemini und merkt
-	// sich Original + Korrektur. Springt instant zurueck auf die Korrektur, wenn der
-	// gleiche Originaltext schon einmal korrigiert wurde (kein erneuter API-Call).
+	// AN: korrigiert den aktuell im Feld stehenden Text IMMER frisch per Gemini und
+	// merkt sich Original + Korrektur. Jedes erneute AN startet eine neue Korrektur
+	// (kein Cache), damit eine ungeliebte erste Korrektur verworfen werden kann.
 	async function geminiCorrectCurrent(btn) {
 		const el = ED().getUserTargetEditable();
 		if (!el) {
@@ -189,34 +189,6 @@
 			return;
 		}
 		const current = ED().readPromptText(el);
-
-		// Schon korrigiert (Feldtext == Korrektur)? Dann nichts tun.
-		if (
-			geminiSnap &&
-			geminiSnap.el === el &&
-			sameText(current, geminiSnap.corrected)
-		) {
-			console.log(
-				"[Overlays] Gemini-Toggle AN: Text bereits korrigiert — kein erneuter Aufruf.",
-			);
-			OV.toast("✅ Gemini-Korrektur aktiviert.", 1600);
-			return;
-		}
-
-		// Bekannter Originaltext? Dann gecachte Korrektur sofort einsetzen (kein API-Call).
-		if (geminiSnap && geminiSnap.el === el && sameText(current, geminiSnap.original)) {
-			console.log(
-				"[Overlays] Gemini-Toggle AN: bekannter Originaltext — Korrektur aus Cache (kein API-Call).",
-			);
-			const ok = await ED().setViaPaste(el, geminiSnap.corrected);
-			OV.toast(
-				ok
-					? "✨ Korrektur wieder eingesetzt. Nochmal klicken = Original."
-					: "⚠️ Konnte korrigierten Text nicht einsetzen.",
-				2400,
-			);
-			return;
-		}
 
 		if (!current || current.length < MIN_CHARS) {
 			console.log(
