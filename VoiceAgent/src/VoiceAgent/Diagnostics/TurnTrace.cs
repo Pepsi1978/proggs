@@ -145,7 +145,11 @@ namespace VoiceAgent.Diagnostics
             }
             finally
             {
-                Log.CurrentTurn = 0;
+                // Nur die EIGENE Korrelation beenden: hat inzwischen ein neuer Turn begonnen
+                // (ueberlappend oder dieser hier verspaetet beendet), wuerde ein bedingungsloses
+                // CurrentTurn = 0 die Korrelation des NEUEREN Turns faelschlich loeschen.
+                // Im sequenziellen Normalfall gilt CurrentTurn == Id -> identisches Verhalten.
+                if (Log.CurrentTurn == Id) Log.CurrentTurn = 0;
             }
         }
 
@@ -153,7 +157,8 @@ namespace VoiceAgent.Diagnostics
         public void Abort(string reason)
         {
             Log.Info("Turn abgebrochen", new { reason });
-            Log.CurrentTurn = 0;
+            // Wie in Complete(): nur die eigene Korrelation zuruecksetzen, nie die eines neueren Turns.
+            if (Log.CurrentTurn == Id) Log.CurrentTurn = 0;
         }
 
         // ---- Intent-Heuristik (gekapselt; spaeter durch echten LLM-Detektor ersetzbar) ----
