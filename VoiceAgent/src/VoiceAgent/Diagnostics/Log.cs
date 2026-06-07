@@ -143,7 +143,7 @@ namespace VoiceAgent.Diagnostics
                 var entry = new LogEntry
                 {
                     Ts = DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
-                    Level = level.ToString().ToUpperInvariant(),
+                    Level = LevelName(level),
                     Turn = turn == 0 ? null : turn,
                     Module = ModuleOf(file),
                     Fn = fn,
@@ -175,6 +175,18 @@ namespace VoiceAgent.Diagnostics
             {
                 // Diagnostics must never break the main flow.
             }
+        }
+
+        // Vorab-gecachte Level-Namen: spart pro Log-Eintrag eine Enum.ToString()- UND eine
+        // ToUpperInvariant()-Allokation. Reihenfolge = LogLevel-Werte (0..4), identische Strings
+        // wie level.ToString().ToUpperInvariant() -> rein verhaltensneutral.
+        private static readonly string[] _levelNames = { "DEBUG", "INFO", "WARN", "ERROR", "FATAL" };
+
+        /// <summary>Gibt den Level-Namen aus dem Cache; faellt fuer unerwartete Werte sicher zurueck.</summary>
+        private static string LevelName(LogLevel level)
+        {
+            int i = (int)level;
+            return (uint)i < (uint)_levelNames.Length ? _levelNames[i] : level.ToString().ToUpperInvariant();
         }
 
         /// <summary>Dateiname ohne Pfad und Endung als Modul-Name (z.B. "AlwaysOnListener").</summary>
