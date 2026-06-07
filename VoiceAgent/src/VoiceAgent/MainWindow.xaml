@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:VoiceAgent"
         mc:Ignorable="d"
         Title="VoiceAgent" Height="640" Width="840"
+        Icon="/assets/voiceagent.ico"
         Background="#15171C">
     <Grid Margin="14">
         <Grid.RowDefinitions>

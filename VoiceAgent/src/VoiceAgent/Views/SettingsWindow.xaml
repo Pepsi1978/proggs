@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="VoiceAgent — Einstellungen" Height="720" Width="660"
+        Icon="/assets/voiceagent.ico"
         WindowStartupLocation="CenterOwner" Background="#15171C">
     <Window.Resources>
         <Style TargetType="TextBox">
