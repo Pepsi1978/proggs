@@ -145,7 +145,7 @@ namespace VoiceAgent
             UpdateMicLabel();
         }
 
-        private void UpdateMicLabel() => MicToggle.Content = _settings.MicEnabled ? "Mikrofon: an" : "Mikrofon: aus";
+        private void UpdateMicLabel() => MicToggle.Content = _settings.MicEnabled ? "🎙 Mikrofon: an" : "🎙 Mikrofon: aus";
 
         private void StartClock()
         {
@@ -521,10 +521,12 @@ namespace VoiceAgent
             // Farbliche Unterscheidung: Du/Agent aus den Einstellungen waehlbar; Fehler=Rot, System=Grau.
             var brush = new SolidColorBrush(who switch
             {
-                "Du" => ParseColor(_settings.UserColor, Color.FromRgb(0x4F, 0xC3, 0xF7)),
-                "Agent" => ParseColor(_settings.AgentColor, Color.FromRgb(0xF9, 0x73, 0x16)),
-                "Fehler" => Color.FromRgb(0xEF, 0x53, 0x50),
-                _ => Color.FromRgb(0x9A, 0xA0, 0xAA),
+                // Fallbacks auf das warm-helle Theme abgestimmt (lesbar auf hellem Grund);
+                // eigene Farben aus den Einstellungen haben weiterhin Vorrang.
+                "Du" => ParseColor(_settings.UserColor, Color.FromRgb(0x1E, 0x66, 0xB0)),
+                "Agent" => ParseColor(_settings.AgentColor, Color.FromRgb(0x9A, 0x6B, 0x2F)),
+                "Fehler" => Color.FromRgb(0xC0, 0x39, 0x2B),
+                _ => Color.FromRgb(0x8A, 0x82, 0x75),
             });
             var para = new Paragraph();
             para.Inlines.Add(new Run(who + ": ") { FontWeight = FontWeights.Bold, Foreground = brush });
@@ -647,7 +649,7 @@ namespace VoiceAgent
                 Title = title, Width = 380, Height = 150, Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x21, 0x28))
+                Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xFA, 0xF8))
             };
             var grid = new System.Windows.Controls.Grid { Margin = new Thickness(12) };
             grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
@@ -655,8 +657,9 @@ namespace VoiceAgent
             var tb = new System.Windows.Controls.TextBox
             {
                 Text = initial, FontSize = 14, Padding = new Thickness(6, 4, 6, 4),
-                Background = new SolidColorBrush(Color.FromRgb(0x23, 0x26, 0x2E)),
-                Foreground = new SolidColorBrush(Color.FromRgb(0xE4, 0xE6, 0xEB)),
+                Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x37, 0x32, 0x2B)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0xD9, 0xCC)),
                 VerticalContentAlignment = VerticalAlignment.Center
             };
             System.Windows.Controls.Grid.SetRow(tb, 0);
