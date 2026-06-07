@@ -15,3 +15,7 @@ keys.json
 # Publish-Ausgabe
 publish/
 release/
+
+# Logs (Observability-First: nie ins Repo — liegen normal in %LOCALAPPDATA%\VoiceAgent\logs\)
+*.log
+logs/
