@@ -272,6 +272,14 @@
 **FIX:** keywords.txt enthaelt pro Zeile NUR die BPE-Tokens (`▁OKAY ▁COMP U TER`), optional `:boost`/`#threshold`. KEIN `@...`. `result.Keyword` liefert trotzdem die de-tokenisierte Phrase ("OKAY COMPUTER", `▁` → Leerzeichen). Siehe `best-practices-wake-word.md` §1.3.
 **Quelle:** Eigener Vorfall — durch Engine-Smoke-Test VOR der Integration gefunden (Observability/Verifikation).
 
+### 33. VAD-Vorfilter VOR dem Streaming-KWS zerstoert die Erkennung   [⭐⭐ EIGENER VORFALL, KRITISCH]
+**Symptom:** Im Live-Betrieb wird das Weckwort NIE erkannt, obwohl dieselbe Aufnahme als Batch-WAV sauber erkannt wird. Diagnose-Log: „Sprache gehoert, aber Weckwort nicht erkannt".
+**Ursache:** Ein VAD-/Energie-Vorfilter, der einzelne (leise) Audio-Bloecke VERWIRFT, bevor sie an die KWS-Engine gehen. Das KWS-Modell ist ein STREAMING-Modell mit internem Kontext (chunk-16-left-64) und braucht KONTINUIERLICHES Audio. Verworfene Bloecke (Pausen, leise Silben in „Okay Computer", Wort-Anlaut) zerstueckeln den Stream → die Erkennung bricht komplett zusammen.
+**Versionen:** sherpa-onnx KWS alle — prinzipbedingt (gilt fuer JEDES Streaming-KWS). Eigener Vorfall sherpa 1.13.2.
+**Datengetriebener Beweis (2026-06-08):** dieselbe verifizierte „Okay Computer"-WAV: (A) ganze WAV am Stueck → ERKANNT; (B) Live-Bloecke 100ms OHNE VAD → ERKANNT; (C) Live-Bloecke 100ms MIT VAD (Schwelle 0.012) → NICHT erkannt (9 Bloecke verworfen).
+**FIX:** KEIN Block-verwerfender Vorfilter vor einem Streaming-KWS. ALLE Audio-Frames kontinuierlich an die Engine geben. Ein VAD darf hoechstens fuer Endpointing/Schlaf-nach-Stille genutzt werden — NIEMALS um einzelne Frames aus dem Engine-Stream zu nehmen. (Effizienz: das int8-3.3M-Modell ist leicht genug fuer Dauerbetrieb; VAD-Sparen lohnt den Erkennungsverlust nicht.) Siehe `best-practices-wake-word.md` §4.
+**Quelle:** Eigener Vorfall — kostete mehrere Fehlversuche, weil mein eigener Best-Practices-Eintrag den VAD-Vorfilter faelschlich empfahl. Lehre: VAD-vor-Streaming-KWS ist ein bekanntes Anti-Pattern.
+
 ---
 
 ## Fix-Status (Stand 2026-06-08)

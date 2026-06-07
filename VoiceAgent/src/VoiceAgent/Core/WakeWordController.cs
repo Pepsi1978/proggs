@@ -57,19 +57,21 @@ namespace VoiceAgent.Core
         {
             if (_disposed || State != WakeState.Sleeping) return false;
             if (samples == null || samples.Length == 0) return false;
-            if (!_vad.IsSpeech(samples)) return false;   // Vorfilter: nur Sprache zur Engine (§4)
 
+            // KEIN VAD-Vorfilter vor der Engine (Bug #33, datengetrieben verifiziert 2026-06-08):
+            // Das KWS-Modell ist ein STREAMING-Modell mit internem Kontext (chunk-16-left-64) und
+            // braucht KONTINUIERLICHES Audio. Einzelne (leise) Bloecke zu verwerfen zerstueckelt den
+            // Stream -> das Weckwort wird NIE erkannt. Daher: ALLE Frames durchreichen. Das _vad-Feld
+            // bleibt fuer eine kuenftige, stream-vertraegliche Nutzung (z.B. Endpointing), filtert hier
+            // aber bewusst NICHT mehr.
             string? keyword = _engine.Accept(samples);
             if (string.IsNullOrEmpty(keyword))
             {
-                // Diagnose: Sprache gehoert, aber (noch) kein Weckwort. Throttled, damit das Log
-                // nicht ueberlaeuft. Zeigt sofort, ob das Modell die Aussprache nicht erkennt.
                 _speechBlocks++;
-                if (_speechBlocks - _lastDiagAt >= 40)
+                if (_speechBlocks - _lastDiagAt >= 100)
                 {
                     _lastDiagAt = _speechBlocks;
-                    Log.Info("Wake-Lauschen: Sprache gehoert, aber Weckwort nicht erkannt",
-                        new { speechBlocks = _speechBlocks });
+                    Log.Info("Wake-Lauschen aktiv (noch kein Weckwort erkannt)", new { blocks = _speechBlocks });
                 }
                 return false;
             }

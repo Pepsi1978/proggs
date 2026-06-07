@@ -103,12 +103,20 @@ Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Fe
 
 ## 4. Always-on-Listening — Effizienz
 
-- **Silero-VAD als Vorfilter** vor dem KWS-Modell (sherpa-onnx liefert Silero-VAD mit): nur bei Sprache das teurere KWS-Modell laufen lassen → größter CPU-/Energie-Hebel. Silero ist winzig (~1 MB JIT, <1 ms/Frame).
-- **ONNX-Runtime-Threading minimal**: `intra_op_num_threads`/`NumThreads` niedrig (2), Spinning aus (`onnxruntime` spinnt sonst CPU im Leerlauf hoch) — `OrtSessionOptions` `inter_op`/`intra_op` bewusst setzen.
-- **int8-quantisiertes Modell** für kleineren Footprint (siehe §1.2).
-- **Windows EcoQoS / PowerThrottling** für den Listener-Prozess/-Thread (`SetProcessInformation` mit `PROCESS_POWER_THROTTLING_EXECUTION_SPEED`) → Scheduler nutzt Effizienzkerne, schont Akku.
-- Messung: Energie/CPU über Windows-eigene Tools (devblogs „Measuring Application Power Impact").
-- Quelle: onnxruntime.ai (threading), k2-fsa silero-vad, Microsoft EcoQoS · offiziell; Silero VAD GitHub · extern.
+> **⚠️ KRITISCH (Bug #33, eigener Vorfall 2026-06-08):** NIEMALS einen Block-verwerfenden VAD-/
+> Energie-Vorfilter VOR ein **Streaming**-KWS-Modell setzen. Das KWS-Modell hat internen Kontext
+> (chunk-16-left-64) und braucht KONTINUIERLICHES Audio — verworfene Bloecke zerstueckeln den Stream
+> und die Erkennung bricht komplett zusammen (datengetrieben belegt: Batch erkannt, Streaming ohne
+> VAD erkannt, Streaming MIT VAD nicht erkannt). **ALLE Frames durchreichen.** Die fruehere Empfehlung
+> „Silero-VAD als Vorfilter" war hier FALSCH.
+
+- **KEIN Frame-Filtering vor der Engine.** Alle 16-kHz-Bloecke kontinuierlich an `AcceptWaveform`.
+- **Effizienz anders holen:** das int8-3.3M-Modell ist leicht genug fuer Dauerbetrieb. Spar-Hebel ohne
+  Stream-Bruch: **ONNX-Runtime-Threading minimal** (`NumThreads`=1–2, Spinning aus), **int8-Modell** (§1.2),
+  **Windows EcoQoS / PowerThrottling** fuer den Listener-Thread (`SetProcessInformation`).
+- **VAD nur stream-vertraeglich nutzen** (falls ueberhaupt): zum Endpointing / „nach langer Stille die
+  Engine schlafen legen" — NIE um einzelne Frames aus dem laufenden Decode-Stream zu nehmen.
+- Quelle: eigener Vorfall (Bug #33); onnxruntime.ai (threading), Microsoft EcoQoS · offiziell.
 
 ---
 

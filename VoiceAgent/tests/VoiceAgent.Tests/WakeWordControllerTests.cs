@@ -45,15 +45,18 @@ namespace VoiceAgent.Tests
         }
 
         [Fact]
-        public void Vad_Blocks_Silence_EngineNeverQueried()
+        public void AllFrames_ReachEngine_NoVadFiltering()
         {
+            // Bug #33: Streaming-KWS braucht KONTINUIERLICHES Audio — KEIN VAD-Filtering vor der
+            // Engine. Selbst wenn das VAD "keine Sprache" meldet, MUSS der Frame die Engine erreichen
+            // (sonst zerstueckelt der Stream und das Weckwort wird nie erkannt).
             var engine = new FakeWakeWordEngine();
             var c = new WakeWordController(engine, new FakeVad { Result = false }, 60000);
             engine.TriggerWake();
 
-            Assert.False(c.ProcessFrame(Frame()));   // VAD blockt -> kein KWS-Decode (Effizienz §4)
-            Assert.Equal(0, engine.AcceptCount);
-            Assert.Equal(WakeState.Sleeping, c.State);
+            Assert.True(c.ProcessFrame(Frame()));    // Frame erreicht die Engine trotz VAD=false
+            Assert.Equal(1, engine.AcceptCount);
+            Assert.Equal(WakeState.Awake, c.State);
         }
 
         [Fact]
