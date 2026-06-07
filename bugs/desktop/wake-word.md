@@ -183,6 +183,90 @@
 
 ---
 
+## G. Ergaenzungen aus der Best-Practices-Recherche (2026-06-08)
+
+> Diese 11 Eintraege kamen aus dem Best-Practices-Researcher-Schwarm (sherpa-onnx-API,
+> Audio-Pipeline, WPF-Threading, .NET-Deployment). Sie ergaenzen A–F.
+
+### 21. `Decode` ohne `IsReady`-while-Schleife   [⭐ HAEUFIG]
+**Symptom:** Keywords werden nie erkannt / `GetResult` leer trotz korrektem Audio.
+**Ursache:** `Decode` wird nur einmal statt in `while (spotter.IsReady(stream))` aufgerufen — gepufferte Feature-Frames bleiben unverarbeitet.
+**Versionen:** sherpa-onnx alle (1.13.2). API-Vertrag.
+**FIX:** Immer `while (spotter.IsReady(stream)) spotter.Decode(stream);` — nie ein einzelner Decode-Call. Siehe `best-practices-wake-word.md` §1.1.
+**Quelle:** k2-fsa.github.io/sherpa/onnx/kws · offiziell.
+
+### 22. Hartkodierte `16000` im `AcceptWaveform`-Sample-Rate-Parameter
+**Symptom:** Schlechte/keine Erkennung, wenn das Mikro nicht nativ 16 kHz liefert.
+**Ursache:** Erster `AcceptWaveform`-Parameter ist die TATSAECHLICHE Input-Rate; hartkodiertes `16000` bei 44,1/48-kHz-Input verhindert das korrekte interne Resampling.
+**Versionen:** sherpa-onnx alle. (Verwandt mit Bug 6, aber API-Parameter-Ebene.)
+**FIX:** Echte Aufnahme-Rate uebergeben (sherpa resampled selbst) ODER vorher sauber auf 16 kHz mono resampeln und dann 16000 uebergeben — konsistent halten.
+**Quelle:** sherpa-onnx Go/JS-Binding-Semantik · offiziell.
+
+### 23. `float → PCM16` ohne Clamp (Integer-Wrap)
+**Symptom:** Hoerbare Knackser/Verzerrung bei lauten Passagen.
+**Ursache:** Float-Samples ausserhalb [-1,1] erzeugen bei `(short)(f*32767f)` Integer-Wrap-Around (positiv → negativ).
+**Versionen:** unabhaengig.
+**FIX:** Vor dem Cast `Math.Clamp(f,-1f,1f)`, besser NAudios `SampleToWaveProvider16`/`ToWaveProvider16()`. Siehe §2.2.
+**Quelle:** markheath.net/post/convert-16-bit-pcm-to-ieee-float · offiziell.
+
+### 24. `PCM16 → float` mit Divisor 32767 statt 32768
+**Symptom:** Negativster Sample (−32768) mappt knapp unter −1,0 → loest nachgelagertes Clipping aus.
+**Ursache:** 16-bit-Range ist asymmetrisch [−32768, +32767]; Divisor 32767 ueberschreitet −1,0.
+**Versionen:** unabhaengig.
+**FIX:** Immer durch **32768f** teilen.
+**Quelle:** markheath.net/post/convert-16-bit-pcm-to-ieee-float · offiziell.
+
+### 25. WASAPI Shared Mode verschleiert das echte Geraeteformat
+**Symptom:** Capture liefert eine andere Sample-Rate als das physische Geraet.
+**Ursache:** WASAPI Shared Mode macht automatische Sample-Rate-Conversion; das gemeldete Mix-Format ist nicht die Hardware-Rate.
+**Versionen:** unabhaengig (Windows WASAPI).
+**FIX:** Capture-WaveFormat explizit pruefen/setzen und gezielt auf 16 kHz mono resampeln, statt das gemeldete Format als Wahrheit zu nehmen.
+**Quelle:** markheath.net/post/wasapi-sample-rate-conversion · offiziell.
+
+### 26. `async void` ohne try/catch crasht die ganze App
+**Symptom:** Unerwarteter App-Crash aus einem Audio-/Wake-Event heraus.
+**Ursache:** Eine Exception in einer `async void`-Methode (Event-Handler) wird nicht gefangen und reisst den Prozess mit.
+**Versionen:** unabhaengig (.NET TAP).
+**FIX:** `async void` NUR fuer Event-Handler, dort immer try/catch. Sonst `async Task`. Im Engine-Code `ConfigureAwait(false)`.
+**Quelle:** Microsoft Learn (async best practices); Stephen Cleary · offiziell + extern.
+
+### 27. Unbounded Channel / `Dispatcher.Invoke` blockiert oder leakt
+**Symptom:** Speicher waechst unbegrenzt ODER UI/Audio-Loop blockiert/deadlockt.
+**Ursache:** Unbounded `Channel<T>` als Frame-Puffer laeuft voll (Consumer langsamer als Producer); synchrones `Dispatcher.Invoke` aus dem Audio-Thread blockiert.
+**Versionen:** unabhaengig (WPF/.NET).
+**FIX:** Bounded `Channel<T>` mit `BoundedChannelFullMode.DropOldest`, `SingleWriter/SingleReader=true`; UI-Updates via `Dispatcher.InvokeAsync` (gedrosselt). Siehe §3.
+**Quelle:** Microsoft Learn (System.Threading.Channels, WPF threading) · offiziell.
+
+### 28. AEC funktioniert nur bei linearer Wiedergabekette
+**Symptom:** Acoustic Echo Cancellation gegen Self-Trigger wirkt nicht, App weckt sich beim TTS trotzdem selbst.
+**Ursache:** AEC/Double-Talk-Detection setzt eine LINEARE Referenz voraus; nichtlineare Verzerrung (dynamische Lautstaerke, Effekte) zwischen TTS und Lautsprecher macht die Echo-Schaetzung unbrauchbar.
+**Versionen:** unabhaengig (AEC-Prinzip).
+**FIX:** Wiedergabekette linear halten ODER pragmatisch den Wake-Listener waehrend TTS gaten (pausieren). Siehe §5 + Bug 19.
+**Quelle:** WebRTC/Speex AEC-Doku · offiziell.
+
+### 29. .NET 8+: `RuntimeIdentifier` impliziert NICHT mehr self-contained   [⭐ DEPLOYMENT]
+**Symptom:** Build mit RID laeuft beim Entwickler, startet beim Endnutzer nicht (fehlende Runtime).
+**Ursache:** Breaking Change ab .NET 8 — ein gesetztes RID erzeugt NICHT mehr automatisch ein self-contained Publish.
+**Versionen:** .NET 8, 9, 10.
+**FIX:** `<SelfContained>true</SelfContained>` explizit setzen, wenn eine eigenstaendige EXE gewollt ist. Siehe §6.
+**Quelle:** Microsoft Learn (.NET 8 breaking changes, publish) · offiziell.
+
+### 30. `PublishTrimmed` crasht WPF beim Start (NETSDK1168)
+**Symptom:** Getrimmte WPF-App startet nicht / Crash beim Start.
+**Ursache:** WPF ist nicht trim-kompatibel (Reflection); `PublishTrimmed` entfernt benoetigte Typen, Build warnt mit NETSDK1168.
+**Versionen:** WPF auf .NET 8–10.
+**FIX:** `PublishTrimmed` bei WPF NICHT verwenden; fuer Groessenreduktion `EnableCompressionInSingleFile`. Siehe §6.
+**Quelle:** Microsoft Learn (trimming incompatibilities), dotnet/wpf-Issues · offiziell.
+
+### 31. `Assembly.Location` ist in single-file leer
+**Symptom:** Modell-/Datei-Pfade werden zur Laufzeit nicht gefunden, sobald single-file publiziert wird.
+**Ursache:** In single-file-Builds ist `Assembly.Location` leer; Pfad-Aufloesung darueber (oder ueber das Arbeitsverzeichnis) schlaegt fehl.
+**Versionen:** .NET single-file (8–10).
+**FIX:** Modell-/Asset-Pfade ueber **`AppContext.BaseDirectory`** aufloesen. Siehe §6.
+**Quelle:** Microsoft Learn (single-file deployment) · offiziell.
+
+---
+
 ## Fix-Status (Stand 2026-06-08)
 
 | Frueherer Bug | Status | Bezug |
@@ -206,12 +290,15 @@
 
 | Almanach-Bug | Best-Practice-Abschnitt (Praevention) |
 |--------------|----------------------------------------|
-| 1, 2, 3, 4 (DLLs) | §1 Native-DLL-Handling |
-| 5, 6, 7, 8, 14, 17 (Audio) | §2 Audio-Pipeline |
-| 9, 10, 11, 12 (KeywordSpotter) | §3 KeywordSpotter-Geruest |
 | 13, 15, 16 (Lizenz/Engine) | §0 Engine-Entscheidung |
-| 19, 20 (Design) | §4 Voice-Assistant-Verhalten |
-| (alle, Frueherkennung) | §5 Observability |
+| 9, 10, 11, 12, 21, 22 (KeywordSpotter-API) | §1 KeywordSpotter idiomatisch |
+| 5, 6, 8, 14, 17, 23, 24, 25 (Audio) | §2 Audio-Pipeline |
+| 7, 26, 27 (Threading/Async) | §3 WPF-Threading & Async |
+| (CPU/Energie) | §4 Always-on-Effizienz |
+| 19, 20, 28 (Design/Privacy) | §5 Voice-Assistant & Privacy/UX |
+| 1, 2, 3, 4, 29, 30, 31 (Deployment) | §6 Modell-Bundling & Deployment |
+| (Qualitaetssicherung) | §7 Testbarkeit |
+| (alle, Frueherkennung) | §8 Observability |
 
 ---
 

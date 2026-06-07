@@ -2,11 +2,12 @@
 
 > Stand: **2026-06-08** · Ziel: **.NET 10** (`net10.0-windows`, WPF) ·
 > Engine-Empfehlung: **sherpa-onnx** `org.k2fsa.sherpa.onnx` **1.13.2** (Apache-2.0) ·
-> Audio: **NAudio 2.2.1**. Gegenseite (was schiefgeht): `bugs/desktop/wake-word.md`.
+> Audio: **NAudio 2.2.1** (NAudio 3 Preview im Blick). Gegenseite (was schiefgeht): `bugs/desktop/wake-word.md`.
 >
 > Diese Datei sagt **wie man es von vornherein richtig macht**, damit die im Almanach
-> dokumentierten Bugs gar nicht erst entstehen. Quelle der Erkenntnisse: Researcher-
-> Schwarm-Recherche 2026-06-07/08 (claude-mem #13831–#13845) + Live-Verifikation.
+> dokumentierten Bugs gar nicht erst entstehen. Quellen: Researcher-Schwarm 2026-06-07/08
+> (7 parallele Agenten: sherpa-onnx-API, Audio-Pipeline, Effizienz, Testbarkeit, WPF-Threading,
+> Deployment, Privacy/UX) + Live-Verifikation. Offizielle Quellen = Grundwahrheit; `extern` = sekundaer.
 
 ---
 
@@ -18,61 +19,139 @@
 | Lizenz (Modelle) | **Apache-2.0** | proprietaer | **CC-BY-NC-SA** (nicht kommerziell) |
 | Custom Wake Word | `text2token`, **kein Training** | Console, Sekunden | **75–90 Min Colab-Training** |
 | Kosten/Zukunft | dauerhaft frei | **Free-Tier endet 30.06.2026** | frei (nach Training) |
+| Offline | 100 % | 100 % (nach AccessKey-Validierung) | 100 % |
 | .NET 10 | ja | ja (4.0.2) | ja (.NET Std 2.0) |
 
-**Empfehlung fuer den VoiceAgent:** sherpa-onnx — Apache-2.0 fuer Code UND Modelle, custom Wake Word ohne Training, 100 % offline, dauerhaft frei.
+**Empfehlung VoiceAgent:** sherpa-onnx — Apache-2.0 für Code UND Modelle, custom Wake Word ohne Training, 100 % offline, dauerhaft frei. Der echte Offline-Stack (kein Online-Lizenzcheck wie bei Porcupine) ist sogar ein **Privacy-Verkaufsargument** (Quelle: Privacy-Researcher, sherpa-onnx Docs · offiziell).
 
 ---
 
-## 1. Native-DLL-Handling sauber aufsetzen (verhindert Almanach-Bug 1–4)
+## 1. sherpa-onnx KeywordSpotter — idiomatische C#-Nutzung
 
-- **Beide Pakete, gleiche Version:** `org.k2fsa.sherpa.onnx` + `org.k2fsa.sherpa.onnx.runtime.win-x64`. Versions-Pinning im `.csproj`, nie auseinanderlaufen lassen.
-- **DLL-Suchpfad beim Start explizit setzen**, bevor der erste native Aufruf passiert:
-  ```csharp
-  // ganz frueh in App.OnStartup, vor jeder sherpa-Nutzung
-  var dir = Path.GetDirectoryName(Environment.ProcessPath)!;
-  SetDllDirectory(dir);            // P/Invoke kernel32
-  // optional haerter: SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS) + AddDllDirectory(dir)
-  ```
-  So gewinnt die mitgelieferte `onnxruntime.dll` gegen eine alte in `System32`.
-- **single-file publish:** im `.csproj`
-  ```xml
-  <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-  ```
-  Nach jedem Release-Build verifizieren, dass die nativen DLLs neben/in der EXE liegen.
-- **x64 bleiben** (VoiceAgent ist x64) — x86 hat den cdecl/stdcall-Mismatch.
+### 1.1 Decode-Loop (die korrekte API-Sequenz)
+```csharp
+// Spotter EINMAL beim App-Start anlegen (teuer, Modelle laden), dann wiederverwenden.
+// Pro Mikrofon-Session GENAU EINEN OnlineStream — nicht pro Audio-Block neu erstellen.
+stream.AcceptWaveform(actualSampleRate, floatSamples);   // float[-1,1]
+while (spotter.IsReady(stream))                            // PFLICHT: while, nicht ein einzelner Decode
+    spotter.Decode(stream);
+var r = spotter.GetResult(stream);
+if (!string.IsNullOrEmpty(r.Keyword)) {
+    OnWakeWord(r.Keyword);
+    spotter.Reset(stream);                                // PFLICHT nach Treffer, sonst Dauerfeuer
+}
+```
+- **`Decode` nur wenn `IsReady`** (in `while`-Schleife) — sonst werden gepufferte Feature-Frames nicht verarbeitet, Erkennung bleibt leer.
+- **`Reset(stream)` nach jedem Treffer** — sonst feuert dasselbe Wake Word mehrfach.
+- **Stream persistent halten** — KWS ist ein Streaming-Modell mit linkem Kontext (chunk-16-left-64); ein neuer Stream pro Block zerstört den Kontext.
+- Quelle: k2-fsa.github.io/sherpa/onnx/kws · offiziell; Decibri KWS-Integration · extern.
 
-## 2. Audio-Pipeline (verhindert Bug 5–8, 14, 17)
+### 1.2 Config (offizielle Defaults)
+`OnlineModelConfig`: Transducer encoder/decoder/joiner als **`.int8.onnx`** (12M→4.6M, kaum Genauigkeitsverlust), `Tokens=tokens.txt`, `NumThreads=2`, `Provider="cpu"`. `KeywordSpotterConfig`: `KeywordsFile=keywords.txt`, `KeywordsScore=1.0f`, `KeywordsThreshold=0.25f`, `MaxActivePaths=4`, `FeatConfig.SampleRate=16000`, `FeatureDim=80`. Quelle: KWS Pretrained Models · offiziell.
 
-- **Festes Zielformat:** 16 kHz, mono, 16-bit PCM. Mikrofon liefert oft 48 kHz → `MediaFoundationResampler` (Quality ~60) dazwischen, ODER `WaveInEvent` direkt mit `new WaveFormat(16000, 16, 1)`.
-- **Ring-Buffer fuer Frame-Groessen:** sherpa ist flexibel, aber wenn man Porcupine (512) oder openWakeWord (1280) je einsetzt, exakt diese Chunk-Groessen liefern. Ring-Buffer statt variabler Frames.
-- **Off-UI-Thread:** Audio-Capture + Inferenz im Hintergrund, UI nur via `Dispatcher.BeginInvoke`.
-- **Geraete-Hotplug:** `MMDeviceEnumerator` + `IMMNotificationClient`; bei Mic-Wechsel Capture sauber stoppen/neu starten, Init mit Timeout in Try/Catch — nie den UI-Thread blockieren.
+### 1.3 Custom Wake Word via text2token (PFLICHT)
+Das gigaspeech-Modell ist **BPE-basiert** — roher Klartext in `keywords.txt` wird NIE erkannt. Immer:
+```
+sherpa-onnx-cli text2token --tokens tokens.txt --tokens-type bpe --bpe-model bpe.model keywords_raw.txt keywords.txt
+```
+Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Feintuning ohne Modell-Neutraining. Quelle: KWS Doku · offiziell.
 
-## 3. sherpa-onnx KeywordSpotter — Grundgeruest (verhindert Bug 9–12)
+### 1.4 Float-Format & Lifecycle
+- PCM16 → float: **`/ 32768f`** (nicht 32767 — sonst mappt −32768 unter −1,0). Erster `AcceptWaveform`-Param = **echte** Aufnahme-Rate (sherpa resampled intern), nicht blind 16000.
+- `Spotter`/`Stream` kapseln native Handles → explizit `Dispose()` (in WPF `OnExit`, nicht dem GC überlassen) — sonst Native-Heap-Leak.
+- Spotter ist threadsicher zu erstellen, aber jeder Stream gehört genau einem Audio-Thread; `AcceptWaveform`/`Decode` für denselben Stream serialisieren.
 
-- **Custom Wake Word:** Klartext ("Okay Computer") via `text2token` → `keywords.txt`. Pro Zeile optional `:boost`, `#threshold`, `@original`.
-- **`Reset` nach jedem Treffer** (C#-Pendant zu `reset_stream()`), sonst feuert die naechste Erkennung nicht.
-- **Eigener C#-Mikrofon-Pfad** (kein fertiges Beispiel im dotnet-examples-Repo). Muster:
-  ```csharp
-  // NAudio DataAvailable -> 16kHz mono floats -> stream.AcceptWaveform(16000, samples)
-  // spotter.Decode(stream); var r = spotter.GetResult(stream);
-  // if (!string.IsNullOrEmpty(r.Keyword)) { OnWakeWord(r.Keyword); spotter.Reset(stream); }
-  ```
-- **Modell bundeln:** `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` als `Content`/`CopyToOutputDirectory=PreserveNewest`.
+---
 
-## 4. Voice-Assistant-Verhalten (verhindert Bug 19/20)
+## 2. Audio-Capture-Pipeline (NAudio)
 
-- **Sleep/Wake-State sauber trennen:** Sleeping-Mode = nur leichtgewichtiger WakeWordListener; Wake-Event → Awake-Mode mit voller Transkription, 60 s Timeout, dann zurueck zu Sleep.
-- **Self-Trigger vermeiden:** Wake-Listener waehrend TTS-Greeting/Ausgabe pausieren (einfach + robust). Echtes Barge-in nur mit Acoustic Echo Cancellation + Double-Talk-Detection.
-- **Kalibrierung anbieten:** mehrere Wake-Word-Aufnahmen → Scores messen → Threshold automatisch setzen. Ziel: FA < 0,5/h, FR < 5 %.
+### 2.1 Capture-Backend
+- **`WasapiCapture`** (Shared, event-driven, float32) ist Mark Heaths empfohlener Weg für neue Apps — erlaubt direkte Format-Wahl, evtl. direkt 16 kHz mono (spart Resampling). **Shared Mode** (nie Exclusive — würde das Mikro für andere Apps sperren).
+- **`WaveInEvent`** (nicht `WaveIn`) als simpler, latenzarmer Background-Thread-Capture ohne Window-Kontext; liefert 16-bit PCM, aber **keine freie Formatwahl** (Treiber-abhängig, meist nachgelagert resampeln).
+- **NIE `WasapiLoopbackCapture`** fürs Mikrofon (das ist System-Audio/Render).
+- Zukunft: hinter Interface kapseln für Migration auf **NAudio 3 `WasapiRecorder`** (Span-basiert, allokationsarm — relevant für Dauerschleife).
+- Quelle: markheath.net, NAudio Docs · offiziell.
 
-## 5. Observability (Observability-First-Direktive)
+### 2.2 Konvertierung
+- PCM16→float: `/32768f`. float→PCM16: **vor `(short)(f*32767f)` `Math.Clamp(f,-1f,1f)`** (sonst Integer-Wrap → Knackser), besser direkt NAudios `SampleToWaveProvider16`/`ToWaveProvider16()`.
+- Pipeline intern auf `ISampleProvider` (32-bit float) ausrichten — NAudios definiertes Format für Signalverarbeitung; `WaveBuffer` (Union-View) für allokationsarme Reinterpretation.
+
+### 2.3 Resampling 48/44,1 → 16 kHz mono
+- **`MediaFoundationResampler` `{ResamplerQuality=60}`** = transparenteste Qualität (Windows-only), kann Rate+Channels+Bittiefe in einem Schritt. Bei knapper CPU/Latenz Quality ~30.
+- **`WdlResamplingSampleProvider(src, 16000)`** = vollständig managed, input-driven, latenzarm — gut für kontinuierliche Streams und Store-Apps. Für 16-kHz-KWS-Input qualitativ ausreichend.
+- **Nie selbst decimieren** (Aliasing ohne Tiefpass verschlechtert die Erkennung).
+
+### 2.4 Buffering & feste Frames
+`DataAvailable` → `BufferedWaveProvider` (`DiscardOnBufferOverflow=true`, BufferLength großzügig) → Consumer liest. Eigener **Akkumulator-Ring** baut exakt N-Sample-Frames (sherpa flexibel, Porcupine 512, openWakeWord 1280) und behält den Rest — sonst gehen Samples an Frame-Grenzen verloren.
+
+### 2.5 Geräte & Hotplug
+- Enumeration: `MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)`; Default-Mic via `GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications)` (**Communications**, nicht Multimedia).
+- Hotplug: eigene **`IMMNotificationClient`** registrieren (`RegisterEndpointNotificationCallback`), bei `OnDefaultDeviceChanged`/`OnDeviceRemoved` die Capture-Instanz **sauber stoppen + neu instanziieren** (kein Live-Switch — WASAPI bindet an festen Endpoint). Init mit Timeout/Try-Catch, nie im UI-Thread.
+
+---
+
+## 3. WPF-Threading & Async (Hintergrund-Listener)
+
+- **UI-Updates** aus dem Audio-Callback via **`Dispatcher.InvokeAsync`** (nicht `Invoke` (blockt/deadlock) und nicht das ältere `BeginInvoke`), gedrosselt auf 50–100 ms (z.B. Pegelanzeige).
+- **Frame-Transport** Capture→Inferenz: **`System.Threading.Channels` Channel<T>** bounded mit `BoundedChannelFullMode.DropOldest`, `SingleWriter=true`/`SingleReader=true`; Producer `TryWrite`, Consumer `await ReadAllAsync(ct)`. (`BufferedWaveProvider` nur für Playback-Puffer.)
+- **Inferenz-Loop** als `Task.Run` (NICHT `TaskCreationOptions.LongRunning` bei async); ein **dedizierter `Thread`** nur für synchron-blockierende Capture-APIs.
+- **Stop** kooperativ mit `CancellationToken`, `OperationCanceledException` erwarten, Shutdown-Timeout; **`IAsyncDisposable`** (Reihenfolge: Capture stoppen → Loop canceln+awaiten → Engine disposen).
+- `async void` nur in Event-Handlern (mit try/catch — sonst crasht eine Exception die App); im Engine/Library-Code `ConfigureAwait(false)`; nie `.Result`/`.Wait()` blocken.
+- Quelle: Microsoft Learn (WPF threading, Channels, TAP, CancellationToken) · offiziell; Stephen Cleary · extern.
+
+---
+
+## 4. Always-on-Listening — Effizienz
+
+- **Silero-VAD als Vorfilter** vor dem KWS-Modell (sherpa-onnx liefert Silero-VAD mit): nur bei Sprache das teurere KWS-Modell laufen lassen → größter CPU-/Energie-Hebel. Silero ist winzig (~1 MB JIT, <1 ms/Frame).
+- **ONNX-Runtime-Threading minimal**: `intra_op_num_threads`/`NumThreads` niedrig (2), Spinning aus (`onnxruntime` spinnt sonst CPU im Leerlauf hoch) — `OrtSessionOptions` `inter_op`/`intra_op` bewusst setzen.
+- **int8-quantisiertes Modell** für kleineren Footprint (siehe §1.2).
+- **Windows EcoQoS / PowerThrottling** für den Listener-Prozess/-Thread (`SetProcessInformation` mit `PROCESS_POWER_THROTTLING_EXECUTION_SPEED`) → Scheduler nutzt Effizienzkerne, schont Akku.
+- Messung: Energie/CPU über Windows-eigene Tools (devblogs „Measuring Application Power Impact").
+- Quelle: onnxruntime.ai (threading), k2-fsa silero-vad, Microsoft EcoQoS · offiziell; Silero VAD GitHub · extern.
+
+---
+
+## 5. Voice-Assistant-Verhalten & Privacy/UX
+
+- **Sleep/Wake-State**: passives KWS-Lauschen → Wake (+ kurzer Sound/Greeting) → aktive Session → Timeout (60 s Stille) → zurück zu passiv. Im Sleep nur der leichtgewichtige Listener.
+- **Self-Trigger bei TTS vermeiden**: pragmatisch den Wake-Listener während eigener TTS-Ausgabe **gaten** (pausieren). Echtes Barge-in nur mit **AEC** (WebRTC/Speex) + **Double-Talk-Detection** — Achtung: AEC funktioniert nur bei **linearer** Wiedergabekette (keine nichtlineare Lautstärke-/Effektverzerrung dazwischen).
+- **Threshold-Kalibrierung**: mehrere Wake-Word-Aufnahmen → Scores messen → Threshold automatisch setzen; Ziel **FA < 0,5/h, FR < 5 %**; pro Keyword via `:boost`/`#threshold`.
+- **Transparenz**: sichtbarer Mikro-Status ("hört zu" vs. "wach"), Mute-Möglichkeit, klare Aussage dass kein Audio die Maschine verlässt (Offline-Garantie). Branchenstandard: erst NACH Wake aufnehmen/verarbeiten.
+- Quelle: Picovoice/openWakeWord Design-Guides, WebRTC/Speex AEC · offiziell + extern.
+
+---
+
+## 6. Modell-Bundling & Deployment
+
+- **NuGet**: nur das Meta-Paket `org.k2fsa.sherpa.onnx` referenzieren — zieht `…runtime.win-x64` automatisch. Version mit Modell zusammen versionieren.
+- **RID + SelfContained BEIDE explizit** setzen: seit **.NET 8 impliziert ein `RuntimeIdentifier` NICHT mehr self-contained** — ohne `<SelfContained>true</SelfContained>` liefert man versehentlich framework-dependent aus, die beim Endnutzer nicht startet.
+- **Modelle als `Content` + `CopyToOutputDirectory=PreserveNewest`** (NICHT embedded — die native API erwartet Dateipfade).
+- **Pfade über `AppContext.BaseDirectory`** auflösen, nie über das Arbeitsverzeichnis; `Assembly.Location` ist in single-file **leer**.
+- **`PublishTrimmed` bei WPF strikt verboten** (NETSDK1168, Startup-Crash) — stattdessen `EnableCompressionInSingleFile` für Größe.
+- single-file: `CopyLocalLockFileAssemblies` + `IncludeNativeLibrariesForSelfExtract`; native DLLs werden nach `%TEMP%` extrahiert (Pfad-Annahmen vermeiden).
+- **DLL-Suchpfad beim Start setzen** (`SetDllDirectory`/`AddDllDirectory`) gegen alte `onnxruntime.dll` in System32. x64 bleiben (x86 cdecl/stdcall-Mismatch).
+- Quelle: Microsoft Learn (.NET publish/RID/single-file/trimming), k2-fsa packaging · offiziell.
+
+---
+
+## 7. Testbarkeit & Mockbarkeit
+
+- **Abstraktion + DI**: `IWakeWordEngine` / `IAudioSource` über sherpa-onnx + NAudio legen, Constructor-Injection via `Microsoft.Extensions.DependencyInjection` (im Projekt vorhanden).
+- **Hardware-frei testen**: WAV per `WaveFileReader(Stream)` oder synthetische `ISampleProvider`-Buffer in den `AcceptWaveform`-Pfad speisen statt Live-Mikro → deterministische Detection-Tests.
+- **`FakeWakeWordEngine`** mit `TriggerWake()` für ViewModel-/UI-Logik-Tests.
+- **Konvertierung isoliert** als pure Funktion testen (PCM16→float `/32768f`, little-endian) mit festen Erwartungswerten; Resampling deterministisch via `WdlResamplingSampleProvider` (nicht MediaFoundation — nicht deterministisch genug).
+- **Async deterministisch**: `TaskCompletionSource` + `Task.Delay`-Timeout statt `Thread.Sleep`; Timer hinter `ITimer`/`DeterministicTimer`; Tests immer `async Task`.
+- **Integration** mit echten Modellen in separater `[Trait("Category","Integration")]`-Suite + Golden-Audio-Samples.
+- Quelle: Microsoft Learn (DI, async testing patterns), NAudio (`Mock<IWaveProvider>`) · offiziell.
+
+---
+
+## 8. Observability (Observability-First-Direktive)
 
 - Beim Start einmal Log-Pfad ausgeben; JSON-Lines.
-- **Intent-Checkpoint** `kind:CHECKPOINT, step:"Weckwort erkannt", expected/actual` beim Wake-Event — damit live verifizierbar ist, dass die Wake-Logik so greift wie gemeint.
-- Logik-Sonden: erwartete Sample-Rate/Frame-Groesse pruefen (Sanity-Check), Threshold-Ueberschreitungen loggen.
+- **Intent-Checkpoint** `kind:CHECKPOINT, step:"Weckwort erkannt", expected/actual` beim Wake-Event — live verifizierbar, dass die Wake-Logik wie gemeint greift.
+- Logik-Sonden: erwartete Sample-Rate/Frame-Größe prüfen (Sanity-Check), Threshold-Überschreitungen + VAD-Entscheidungen loggen.
 
 ---
 
@@ -81,8 +160,11 @@
 | Best-Practice-Abschnitt | adressiert Almanach-Bug |
 |-------------------------|--------------------------|
 | §0 Engine-Entscheidung | 13, 15, 16 |
-| §1 Native-DLL-Handling | 1, 2, 3, 4 |
-| §2 Audio-Pipeline | 5, 6, 7, 8, 14, 17 |
-| §3 KeywordSpotter-Geruest | 9, 10, 11, 12 |
-| §4 Voice-Assistant-Verhalten | 19, 20 |
-| §5 Observability | (quer — Frueherkennung aller) |
+| §1 KeywordSpotter-API | 9, 10, 11, 12, 21, 22 |
+| §2 Audio-Pipeline | 5, 6, 7, 8, 14, 17, 23, 24, 25 |
+| §3 WPF-Threading/Async | 7, 26, 27 |
+| §4 Always-on-Effizienz | (quer — CPU/Energie) |
+| §5 Voice-Assistant/Privacy | 19, 20, 28 |
+| §6 Deployment | 1, 2, 3, 4, 29, 30, 31 |
+| §7 Testbarkeit | (quer — Qualitätssicherung) |
+| §8 Observability | (quer — Früherkennung) |
