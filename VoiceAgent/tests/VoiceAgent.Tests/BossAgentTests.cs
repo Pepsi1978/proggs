@@ -37,14 +37,16 @@ namespace VoiceAgent.Tests
             var agent = new BossAgent(new FakeProvider("x"), "MEIN-PROMPT");
             var msgs = agent.BuildMessages();
             Assert.Equal(LlmRole.System, msgs[0].Role);
-            Assert.Equal("MEIN-PROMPT", msgs[0].Text);
+            // System-Prompt beginnt mit dem konfigurierten Text; danach folgt der Echtzeit-/Gedaechtnis-Block.
+            Assert.StartsWith("MEIN-PROMPT", msgs[0].Text);
         }
 
         [Fact]
         public void EmptySystemPrompt_FallsBackToDefault()
         {
             var agent = new BossAgent(new FakeProvider("x"), "");
-            Assert.Equal(BossAgentPrompt.Default, agent.BuildMessages()[0].Text);
+            // Faellt auf den Default-Prompt zurueck; danach folgt der Echtzeit-/Gedaechtnis-Block.
+            Assert.StartsWith(BossAgentPrompt.Default, agent.BuildMessages()[0].Text);
         }
 
         [Fact]
