@@ -205,7 +205,9 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
         # Claude informieren dass ein neuer Fall erfasst wurde
         $infoText = "Bug-Case automatisch erfasst (Tool: $toolName). "
         $infoText += "Wiederhole den fehlgeschlagenen Aufruf nicht unveraendert, analysiere erst kurz die Ursache. "
-        $infoText += "Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld 'auto_captured: true' suchen)."
+        $infoText += "Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld 'auto_captured: true' suchen). "
+        # ALMANACH-BRUECKE (2026-06-07): reaktive bug-cases.jsonl <-> proaktiver bugs/-Almanach verbinden.
+        $infoText += "ALMANACH-BRUECKE: Pruefe ausserdem den passenden Bug-Almanach (~/proggs/bugs/<bereich>.md, Index bugs/README.md) - ist das ein bereits bekannter Bug mit dokumentierter Loesung? Falls fuer den Bereich noch KEIN Almanach existiert UND der Fehler hartnaeckig ist (>=2x), Frank kurz um OK fragen und dann den Skill 'bug-almanach-recherche' starten."
 
         $output = @{
             hookSpecificOutput = @{
