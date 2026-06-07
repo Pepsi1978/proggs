@@ -39,14 +39,18 @@ Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
 1. **Vor** echter Arbeit an einem technischen Bereich: pruefen, ob es hier einen
    Almanach fuer den Bereich gibt (diese Liste).
 2. **Almanach vorhanden** → komplett lesen, Versionen abgleichen, DANN arbeiten.
-3. **Kein Almanach** → Frank Bescheid geben, auf sein **OK** warten, dann die
-   bekannten Bugs des Bereichs recherchieren und im passenden Kategorie-Ordner einen
-   neuen Almanach anlegen.
+3. **Kein Almanach** → der Guard BLOCKIERT den Edit (seit 2026-06-07). Frank Bescheid geben
+   und entscheiden: entweder nach seinem **OK** den Skill `bug-almanach-recherche` starten und
+   einen Almanach anlegen, ODER (bei Kleinkram / bewusstem Verzicht) die Quittung
+   `bug-almanac-ack-<slug>.flag` im TEMP anlegen. Auch komplett neue Sprachen werden generisch
+   erkannt und blockiert.
 4. **Neuen Bug erlebt** → in den passenden Almanach eintragen (Bug + Loesung + Version).
 
-Drei Automatik-Schichten sorgen dafuer, dass das in **jeder** Session laeuft:
+Vier Automatik-Schichten sorgen dafuer, dass das in **jeder** Session laeuft:
 Session-Hook (`bug-almanac-index`) blendet diese Liste beim Start ein · Datei-Hook
-(`bug-almanac-guard`) erinnert beim Anfassen bereichstypischer Dateien an den Almanach ·
+(`bug-almanac-guard`) BLOCKIERT beim Anfassen bereichstypischer Dateien, bis der Almanach
+(+ Best-Practices) gelesen ist bzw. — fehlt der Almanach — eine Quittung gesetzt ist ·
+Fehler-Hook (`bug-case-auto-writer`) verweist bei neuen Fehlern auf den Almanach ·
 Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 ---

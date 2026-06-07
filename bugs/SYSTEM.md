@@ -57,7 +57,8 @@ drei Schichten, die unabhaengig voneinander greifen:
 | # | Name | Mechanismus | Wann | Poka-Yoke |
 |---|------|-------------|------|-----------|
 | 1 | **Praesenz** | `bug-almanac-index` Hook (SessionStart) liest `README.md` und blendet die Liste der vorhandenen Almanache + erwarteten Bereiche ein | bei JEDEM Session-Start (auch nach Compaction) | Stufe 1–2: das System ist immer im Blick |
-| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde — und (seit 2026-06-07) danach weiter, solange die zugehoerige `best-practices-<bereich>.md` (falls vorhanden) nicht gelesen wurde. Read einer `bugs/<X>.md` bzw. `best-practices-<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den jeweiligen "gelesen"-Marker und gibt frei (1x pro Bereich/Session; Reihenfolge erst Almanach, dann Best Practices). Kein Almanach vorhanden → nur erinnern (kein Block — Recherche braucht Franks OK). Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
+| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde — und (seit 2026-06-07) danach weiter, solange die zugehoerige `best-practices-<bereich>.md` (falls vorhanden) nicht gelesen wurde. Read einer `bugs/<X>.md` bzw. `best-practices-<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den jeweiligen "gelesen"-Marker und gibt frei (1x pro Bereich/Session; Reihenfolge erst Almanach, dann Best Practices). **Kein Almanach vorhanden (seit 2026-06-07): ebenfalls BLOCKIERT** — bis eine bewusste Quittung `bug-almanac-ack-<slug>.flag` (im TEMP) gesetzt ist (von mir NACH Franks Entscheidung: Recherche ODER bewusst verzichten) oder der Notaus aktiv ist. Damit ist der "neuer Bereich"-Trigger nicht mehr zahnlos (frueher nur `additionalContext`, wurde uebersehen — im Block-Log nie ein "kein-almanach"-Eintrag). Zusaetzlich erkennt der Guard **komplett neue Sprachen generisch** ueber die Endung (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.h/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`), sodass auch eine erste Rust-/Go-Datei Zaehne bekommt statt still durchzurutschen. Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
+| 2b | **Fehler-Bruecke** | `bug-case-auto-writer` Hook (PostToolUseFailure) verbindet die reaktive `bug-cases.jsonl` mit dem proaktiven Almanach: bei einem NEUEN Fehler (kein bekannter Fix) haengt er einen "ALMANACH-BRUECKE"-Hinweis an (passenden `bugs/<bereich>.md` pruefen; bei hartnaeckigem Fehler ohne Almanach → Recherche mit Franks OK). | bei jedem Tool-Fehler | Stufe 1–2: verbindet beide Ebenen |
 | 3 | **Verhalten** | Regel `~/.claude/rules/known-bugs-before-coding.md` | immer geladen | Stufe 1: Verhaltensanweisung |
 
 Beide Hooks: Cross-Platform (`.ps1` + `.sh`). Der Index-Hook ist nicht blockierend
@@ -85,9 +86,12 @@ gespiegelt in `claude-code-setup/hooks/`.
    │        ├─ gleiche/aeltere Version als dokumentiert → weiter zu 3b
    │        └─ neuere Version als dokumentiert → Frank melden, OK fuer kurzen
    │           Re-Check einholen (existieren die Bugs noch? neue dazugekommen?) → weiter zu 3b
-   └─ NEIN → Frank melden: „neuer Bereich X, kein Almanach — recherchieren?"
-            → auf sein OK warten → 3–5 Researcher (gedeckelt, siehe §5)
-            → Almanach anlegen → in README.md eintragen
+   └─ NEIN → der Guard BLOCKIERT den Edit (Quittungs-Mechanismus). Frank melden:
+            „neuer Bereich X, kein Almanach — recherchieren?"
+            ├─ JA (echte Bereichsarbeit) → auf sein OK warten → Skill `bug-almanach-recherche`
+            │   (3–5 Researcher, gedeckelt, siehe §5) → Almanach anlegen → in README.md eintragen
+            └─ NEIN / nur Kleinkram → bewusste Quittung `bug-almanac-ack-<slug>.flag` (TEMP) anlegen
+                → Bereich fuer diese Session frei (NIE reflexhaft, nur nach Franks Entscheidung)
 3b. Zweite Seite: existiert eine `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`?
     → JA: komplett lesen (wie man es von vornherein richtig macht). Der Guard erzwingt das
       ohnehin in der Reihenfolge erst Almanach, dann Best Practices. → NEIN: nur Almanach zaehlt.
@@ -222,5 +226,11 @@ Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
   gepflegt werden muss.
 - Schwellen-Erkennung („echte Bereichsarbeit vs. Kleinkram") laeuft ueber mein
   Urteil; falls das in der Praxis zu oft daneben liegt, schaerfen wir nach.
+- **GESCHLOSSEN am 2026-06-07:** Frueher rutschten (a) erkannte Bereiche OHNE Almanach
+  und (b) komplett neue Sprachen ohne Mapping still durch (nur Hinweis bzw. gar nichts).
+  Jetzt blockiert der Guard beide Faelle mit Quittung, und eine generische Endungs-Whitelist
+  faengt neue Sprachen ab. Die generische Whitelist ist selbst hartkodiert (erweiterbar) —
+  bei einer wirklich exotischen Endung ausserhalb der Liste greift der Trigger noch nicht;
+  dann bewusst Almanach anlegen lassen. Restkante, bewusst akzeptiert.
 - Das System wird in Aktion erprobt und nach Direktive #1 (Superintelligenz)
   iterativ verbessert.
