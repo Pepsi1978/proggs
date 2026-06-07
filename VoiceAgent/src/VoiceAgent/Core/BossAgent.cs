@@ -17,12 +17,14 @@ namespace VoiceAgent.Core
     {
         private readonly ILlmProvider _provider;
         private readonly string _systemPrompt;
+        private readonly AgentMemory? _memory;
         private readonly List<LlmMessage> _history = new();
 
-        public BossAgent(ILlmProvider provider, string? systemPrompt)
+        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null)
         {
             _provider = provider;
             _systemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? BossAgentPrompt.Default : systemPrompt!;
+            _memory = memory;
         }
 
         public IReadOnlyList<LlmMessage> History => _history;
@@ -33,9 +35,11 @@ namespace VoiceAgent.Core
         /// <summary>System-Prompt + bisheriger Verlauf — die vollstaendige Nachrichtenliste fuers LLM.</summary>
         public IReadOnlyList<LlmMessage> BuildMessages()
         {
+            // System-Prompt + Gedaechtnis-Block (Fakten + letzte Gespraeche) ueber Sessions hinweg.
+            var systemText = _systemPrompt + (_memory?.ContextBlock() ?? string.Empty);
             var list = new List<LlmMessage>(_history.Count + 1)
             {
-                new LlmMessage(LlmRole.System, _systemPrompt)
+                new LlmMessage(LlmRole.System, systemText)
             };
             list.AddRange(_history);
             return list;
@@ -52,6 +56,7 @@ namespace VoiceAgent.Core
                 var reply = await _provider.ChatAsync(BuildMessages(), ct).ConfigureAwait(false);
                 Probe.That(!string.IsNullOrWhiteSpace(reply), "BossAgent: LLM lieferte eine leere Antwort", new { provider = _provider.Name });
                 _history.Add(new LlmMessage(LlmRole.Assistant, reply));
+                _memory?.RecordTurn(userText ?? string.Empty, reply);   // ueber Sessions hinweg merken
                 Log.Info($"BossAgent: Antwort erzeugt ({reply.Length} Zeichen) via {_provider.Name}");
                 return reply;
             }

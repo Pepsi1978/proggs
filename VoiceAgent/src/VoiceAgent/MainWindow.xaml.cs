@@ -28,6 +28,7 @@ namespace VoiceAgent
         private GroqWhisperClient? _stt;
         private AlwaysOnListener? _listener;
         private readonly AudioPlayer _player = new();
+        private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
 
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
@@ -46,6 +47,7 @@ namespace VoiceAgent
             try
             {
                 _settings = Config.Load();
+                _memory = new AgentMemory();   // laedt Fakten + letzte Gespraeche aus frueheren Sessions
                 BuildAgents();
 
                 RebuildListener();
@@ -64,7 +66,7 @@ namespace VoiceAgent
 
         private void BuildAgents()
         {
-            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt);
+            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory);
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
