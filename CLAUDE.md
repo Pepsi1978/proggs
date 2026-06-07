@@ -54,6 +54,16 @@ jeder Feature-Arbeit — die Beobachtungsschicht**. Sonden weglassen nur bei Weg
 - **Selbst-Check vor „fertig"** (pro qualifiziertem Commit): Logschicht existiert, provozierter Fehler
   landet mit Kontext im Log, Live-Tail geht, neue Logik instrumentiert, betroffene Sonden aktualisiert, keine toten Sonden.
 
+> **Zusatz-Direktive — Live-Logik-Sonden (Intent-Verifikation):** Volltext (immer geladen)
+> `~/.claude/rules/observability-live-logic-probes.md`. Erweitert die obigen Logik-Sonden um
+> **bestaetigende** Checkpoints: aus jedem Bau-Prompt mit klarer Verhaltensabsicht werden die
+> beabsichtigten Schritte als benannte Checkpoints verdrahtet, die zur Laufzeit
+> „erwartet vs. tatsaechlich" in einen eigenen Kanal (`kind:CHECKPOINT`, z. B. `adb logcat -s LOGIC`)
+> schreiben. Frank startet die App, Claude Code liest den Kanal live mit und bestaetigt Schritt fuer
+> Schritt, ob die Logik so angekommen ist wie gemeint — `ok:false` wird sofort gemeldet + an der
+> Wurzel gefixt. Checkpoints unterliegen der Co-Evolution (geaenderter Intent → Checkpoint mitziehen).
+> Zuruf-Hebel: **„starte den Live-Logik-Check"**.
+
 ## Commit + Push nach JEDER Aenderung (KRITISCH — FUNDAMENTALE REGEL)
 
 > **Diese Regel ist so fundamental wie Atmen: Nach JEDER abgeschlossenen Aenderung — egal wie klein —

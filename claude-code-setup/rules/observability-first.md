@@ -8,6 +8,12 @@
 >
 > Eng verbunden mit Direktive #3 (Resilient Bugfixing: Root-Cause + Logik-Sonden) und der
 > Debugging-Regel (`debugging-and-verification.md`, Stufe 2: Sonden VOR dem Raten einbauen).
+>
+> **Zusatz-Direktive:** [[observability-live-logic-probes]]
+> (`~/.claude/rules/observability-live-logic-probes.md`) erweitert Abschnitt 2.3 und 4 um
+> **Live-Logik-Sonden (Intent-Verifikation)** — benannte Checkpoints, die live „erwartet vs.
+> tatsaechlich" melden und damit bestaetigen, ob die Logik so umgesetzt wurde wie im
+> Bau-Prompt gemeint (nicht nur „ist etwas kaputt?", sondern „ist die Logik richtig angekommen?").
 
 ---
 
@@ -69,6 +75,13 @@ Eine Logik-Sonde prueft eine **Annahme** und protokolliert deren Verletzung — 
 - **Entscheidungs-Logging** an wichtigen Verzweigungen — gerade dort, wo „der falsche Pfad" ein stiller Logikfehler waere.
 
 **Praktische Umsetzung:** eine Hilfsfunktion `probe(bedingung, meldung, kontext)`, die bei Verletzung ein WARN/ERROR mit vollem Kontext schreibt (per Schalter optional auch hart abbrechbar), im Normalbetrieb aber **nicht** crasht.
+
+> **Erweiterung — Live-Logik-Sonden (Intent-Verifikation):** Die obigen Sonden sind
+> *defensiv* (schlagen bei Annahme-Verletzung an). Zusaetzlich werden bei einem Bau-Prompt
+> mit klarer Verhaltensabsicht **bestaetigende** Checkpoints verdrahtet, die zur Laufzeit
+> „erwartet vs. tatsaechlich" in einen eigenen Kanal (`kind:CHECKPOINT`) schreiben — damit
+> live pruefbar ist, ob jeder fachliche Schritt so umgesetzt wurde wie gemeint. Vollstaendig:
+> [[observability-live-logic-probes]] (`~/.claude/rules/observability-live-logic-probes.md`).
 
 ---
 
@@ -175,6 +188,7 @@ Damit das bei **jedem** qualifizierten Projekt automatisch befolgt wird:
 | `debugging-and-verification.md` (Hypothesen-Debugging) | Sonden VOR dem Raten einbauen (Stufe 2) ist die Laufzeit-Anwendung dieser Direktive |
 | `secrets-in-sk-folder.md` / `git-workflow.md` (Secrets) | Abschnitt 8 ergaenzt: Logs nie mit Secrets, Log-Pfad in `.gitignore` |
 | `lossless-context-principle.md` | Grosse Logs nie ungefiltert in den Kontext laden — per Pfad gezielt `grep`/`jq` (verlustfrei) |
+| [[observability-live-logic-probes]] (Zusatz-Direktive) | Erweitert Abschnitt 2.3 + 4 um bestaetigende Intent-Checkpoints (`erwartet vs. tatsaechlich`) und den Live-Verifikations-Loop „ist die Logik so angekommen wie gemeint?" |
 
 ---
 
