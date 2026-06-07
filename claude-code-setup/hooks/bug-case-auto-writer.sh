@@ -64,9 +64,11 @@ import json, sys, re, os
 
 error_text = sys.argv[1]
 bug_path = sys.argv[2]
+log_path = sys.argv[3] if len(sys.argv) > 3 else ''
 
 best_score = 0
 best_case = None
+corrupt = 0  # Frueherkennung kaputter DB-Zeilen (2026-06-07)
 
 try:
     with open(bug_path, 'r', encoding='utf-8') as f:
@@ -77,6 +79,7 @@ try:
             try:
                 case = json.loads(line)
             except:
+                corrupt += 1
                 continue
 
             symptom = case.get('symptom', '')
@@ -105,13 +108,20 @@ try:
                 except:
                     pass
 
+    if corrupt and log_path:
+        try:
+            with open(log_path, 'a', encoding='utf-8') as lf:
+                lf.write('[repair-hint] WARN: %d kaputte JSON-Zeile(n) in bug-cases.jsonl uebersprungen. Reparatur: python3 ~/proggs/bugs/repair-bug-cases.py --apply\n' % corrupt)
+        except:
+            pass
+
     if best_case and best_score >= 0.5:
         print(f'MATCH|{best_score}|{best_case.get(\"symptom\",\"\")}|{best_case.get(\"root_cause\",\"\")}|{best_case.get(\"fix\",\"\")}|{best_case.get(\"prevention\",best_case.get(\"prevention_rule\",\"\"))}')
     else:
         print('NOMATCH')
 except Exception as e:
     print('NOMATCH')
-" "$ERROR_TEXT" "$BUG_CASES" 2>/dev/null)
+" "$ERROR_TEXT" "$BUG_CASES" "$LOG_FILE" 2>/dev/null)
 
     # Windows Git Bash: Python-Stdout liefert \r\n; $() entfernt nur das \n.
     # Ein trailing \r wuerde sonst auf dem letzten read-Feld (MATCHED_PREVENTION)

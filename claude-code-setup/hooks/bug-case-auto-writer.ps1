@@ -79,6 +79,7 @@ if ($errorText.Length -lt 20) {
 # --- LUECKE 6: Pattern-Matching gegen bestehende Bug-Cases ---
 $matchedCase = $null
 $matchedScore = 0
+$corruptLines = 0   # Frueherkennung kaputter DB-Zeilen (2026-06-07)
 
 if (Test-Path $bugCasesPath) {
     $existingCases = Get-Content $bugCasesPath -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -87,7 +88,7 @@ if (Test-Path $bugCasesPath) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
 
         $case = $null
-        try { $case = $line | ConvertFrom-Json } catch { continue }
+        try { $case = $line | ConvertFrom-Json } catch { $corruptLines++; continue }
 
         if (-not $case.symptom) { continue }
 
@@ -122,6 +123,11 @@ if (Test-Path $bugCasesPath) {
             }
         }
     }
+}
+
+# Frueherkennung: kaputte DB-Zeilen wurden uebersprungen -> Reparatur-Hinweis ins Log (kein Block, kein DB-Schreibzugriff im Hot-Path).
+if ($corruptLines -gt 0) {
+    Write-Log "WARN: $corruptLines kaputte JSON-Zeile(n) in bug-cases.jsonl uebersprungen. Reparatur: python3 ~/proggs/bugs/repair-bug-cases.py --apply"
 }
 
 # --- Entscheidung: Match gefunden oder neuer Fall? ---
