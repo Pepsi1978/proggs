@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# session-backup-nudge: Stupst Claude bei >=88% Kontext einmal pro Session an,
+# session-backup-nudge: Stupst Claude bei >=80% Kontext einmal pro Session an,
 #   ein 'session backup' zu machen, BEVOR die grosse Komprimierung (100%) zuschlaegt.
 # Runs as Stop hook.
 # stdout -> JSON {"decision":"block","reason":...} (reason geht als Anweisung an Claude)
@@ -43,14 +43,14 @@ if [ ! -f "$ctx_file" ]; then exit 0; fi
 
 pct=$(tr -cd '0-9' < "$ctx_file" 2>/dev/null || echo "")
 if [ -z "$pct" ]; then exit 0; fi
-if [ "$pct" -lt 88 ] 2>/dev/null; then exit 0; fi
+if [ "$pct" -lt 80 ] 2>/dev/null; then exit 0; fi
 
 # Schleifenschutz 2: nur EINMAL pro Session anstupsen
 marker="$state_dir/ctx-nudged-$sid"
 if [ -f "$marker" ]; then exit 0; fi
 echo "$pct" > "$marker" 2>/dev/null || true
 
-reason="KONTEXT BEI ${pct}% (Schwelle 88%, grosse Komprimierung droht bei 100%). Dieser Hinweis kommt nur EINMAL pro Session. Wenn die aktuelle Aufgabe VOLLSTAENDIG abgeschlossen ist (kein offener Multiple-Choice, keine Rueckfrage an den Benutzer offen): Fuehre JETZT den Skill 'session' mit Unterbefehl 'backup' aus, zeige danach den Disketten-Marker (drei Disketten vorne, drei Ausrufezeichen hinten, je eine dicke Linie drueber und drunter) und anschliessend eine FETTE Warnung mit Warndreieck, dass der Benutzer JETZT eine neue Session starten muss (/clear, danach 'session restore'). Wenn die Aufgabe noch laeuft oder du auf eine Antwort des Benutzers wartest: erst fertig machen bzw. abwarten, das Backup danach."
+reason="KONTEXT BEI ${pct}% (Schwelle 80%, grosse Komprimierung droht bei 100%). Dieser Hinweis kommt nur EINMAL pro Session. Wenn die aktuelle Aufgabe VOLLSTAENDIG abgeschlossen ist (kein offener Multiple-Choice, keine Rueckfrage an den Benutzer offen): Fuehre JETZT den Skill 'session' mit Unterbefehl 'backup' aus, zeige danach den Disketten-Marker (drei Disketten vorne, drei Ausrufezeichen hinten, je eine dicke Linie drueber und drunter) und anschliessend eine FETTE Warnung mit Warndreieck, dass der Benutzer JETZT eine neue Session starten muss (/clear, danach 'session restore'). Wenn die Aufgabe noch laeuft oder du auf eine Antwort des Benutzers wartest: erst fertig machen bzw. abwarten, das Backup danach."
 
 out=$(jq -nc --arg r "$reason" '{decision:"block", reason:$r}' 2>/dev/null || echo "")
 if [ -n "$out" ]; then echo "$out"; fi

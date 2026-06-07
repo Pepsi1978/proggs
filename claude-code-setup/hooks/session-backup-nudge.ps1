@@ -1,4 +1,4 @@
-# session-backup-nudge: Stupst Claude bei >=88% Kontext einmal pro Session an,
+# session-backup-nudge: Stupst Claude bei >=80% Kontext einmal pro Session an,
 #   ein 'session backup' zu machen, BEVOR die grosse Komprimierung (100%) zuschlaegt.
 # Runs as Stop hook.
 # stdout -> JSON {"decision":"block","reason":...} (reason geht als Anweisung an Claude)
@@ -31,14 +31,14 @@ try {
     $pctRaw = ((Get-Content -Raw -Path $ctxFile -ErrorAction Stop) -replace '\D', '')
     if (-not $pctRaw) { exit 0 }
     $pct = [int]$pctRaw
-    if ($pct -lt 88) { exit 0 }
+    if ($pct -lt 80) { exit 0 }
 
     # Schleifenschutz 2: nur EINMAL pro Session anstupsen
     $marker = Join-Path $stateDir "ctx-nudged-$sid"
     if (Test-Path $marker) { exit 0 }
     Set-Content -Path $marker -Value $pct -Encoding ASCII -ErrorAction SilentlyContinue
 
-    $reason = "KONTEXT BEI $pct% (Schwelle 88%, grosse Komprimierung droht bei 100%). Dieser Hinweis kommt nur EINMAL pro Session. Wenn die aktuelle Aufgabe VOLLSTAENDIG abgeschlossen ist (kein offener Multiple-Choice, keine Rueckfrage an den Benutzer offen): Fuehre JETZT den Skill 'session' mit Unterbefehl 'backup' aus, zeige danach den Disketten-Marker (drei Disketten vorne, drei Ausrufezeichen hinten, je eine dicke Linie drueber und drunter) und anschliessend eine FETTE Warnung mit Warndreieck, dass der Benutzer JETZT eine neue Session starten muss (/clear, danach 'session restore'). Wenn die Aufgabe noch laeuft oder du auf eine Antwort des Benutzers wartest: erst fertig machen bzw. abwarten, das Backup danach."
+    $reason = "KONTEXT BEI $pct% (Schwelle 80%, grosse Komprimierung droht bei 100%). Dieser Hinweis kommt nur EINMAL pro Session. Wenn die aktuelle Aufgabe VOLLSTAENDIG abgeschlossen ist (kein offener Multiple-Choice, keine Rueckfrage an den Benutzer offen): Fuehre JETZT den Skill 'session' mit Unterbefehl 'backup' aus, zeige danach den Disketten-Marker (drei Disketten vorne, drei Ausrufezeichen hinten, je eine dicke Linie drueber und drunter) und anschliessend eine FETTE Warnung mit Warndreieck, dass der Benutzer JETZT eine neue Session starten muss (/clear, danach 'session restore'). Wenn die Aufgabe noch laeuft oder du auf eine Antwort des Benutzers wartest: erst fertig machen bzw. abwarten, das Backup danach."
 
     $out = @{ decision = "block"; reason = $reason } | ConvertTo-Json -Compress
     Write-Output $out

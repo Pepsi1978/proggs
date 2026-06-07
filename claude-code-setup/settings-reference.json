@@ -4,14 +4,14 @@
 		"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
 		"DISABLE_COST_WARNINGS": "1",
 		"CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
-		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "<REDACTED -- set locally>",
+		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
 		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "100",
 		"CLAUDE_CODE_SUBAGENT_MODEL": "opus[1m]",
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
 		"ENABLE_TOOL_SEARCH": "1",
 		"ENABLE_SECURITY_REMINDER": "0",
 		"ECC_HOOK_PROFILE": "minimal",
-		"GITHUB_PERSONAL_ACCESS_TOKEN": "<REDACTED -- set locally>",
+		"GITHUB_PERSONAL_ACCESS_TOKEN": "REDACTED -- set locally in ~/.claude/settings.json",
 		"ENABLE_PROMPT_CACHING_1H": "1"
 	},
 	"permissions": {
@@ -20,17 +20,6 @@
 	"model": "opus[1m]",
 	"enableAllProjectMcpServers": true,
 	"hooks": {
-		"MessageDisplay": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/redact-display.ps1\"",
-						"timeout": 5
-					}
-				]
-			}
-		],
 		"SessionStart": [
 			{
 				"hooks": [
@@ -200,16 +189,6 @@
 				]
 			},
 			{
-				"matcher": "Bash",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/pre-push-diff-sanity.ps1\"",
-						"timeout": 30
-					}
-				]
-			},
-			{
 				"matcher": "Read|Edit|Write|MultiEdit|Bash",
 				"hooks": [
 					{
@@ -261,8 +240,7 @@
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
 						"timeout": 5
 					}
-				],
-				"continueOnBlock": true
+				]
 			},
 			{
 				"matcher": "Edit|Write",
@@ -300,6 +278,16 @@
 					{
 						"type": "command",
 						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-tool.ps1\""
+					}
+				]
+			},
+			{
+				"matcher": "Task|Agent",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/session-backup-midturn.ps1\"",
+						"timeout": 5
 					}
 				]
 			}
@@ -518,7 +506,7 @@
 		"superpowers@claude-plugins-official": true,
 		"frontend-design@claude-plugins-official": true,
 		"context7@claude-plugins-official": true,
-		"github@claude-plugins-official": false,
+		"github@claude-plugins-official": true,
 		"feature-dev@claude-plugins-official": true,
 		"code-simplifier@claude-plugins-official": true,
 		"commit-commands@claude-plugins-official": true,
@@ -572,7 +560,8 @@
 		"ask-questions-if-underspecified@trailofbits": true,
 		"skill-improver@trailofbits": true,
 		"static-analysis@trailofbits": true,
-		"workflow-skill-design@trailofbits": true
+		"workflow-skill-design@trailofbits": true,
+		"finale@local": true
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -645,5 +634,11 @@
 	"autoDreamEnabled": true,
 	"skipDangerousModePermissionPrompt": true,
 	"theme": "dark",
+	"verbose": false,
+	"autoCompactEnabled": false,
+	"teammateMode": "auto",
+	"remoteControlAtStartup": true,
+	"inputNeededNotifEnabled": true,
+	"agentPushNotifEnabled": true,
 	"_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)"
 }
