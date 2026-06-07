@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -7,27 +8,42 @@ using VoiceAgent.Diagnostics;
 namespace VoiceAgent.Services.Audio
 {
     /// <summary>
-    /// Spielt einen kurzen "Enterprise"-/Funkspruch-Signalton (zwei aufsteigende Toene), wenn der
-    /// Agent PROAKTIV etwas sagen will — so weiss Frank: gleich spricht der Agent. Generiert mit
-    /// NAudio (SignalGenerator), keine Audiodatei noetig. Crasht nie (Ton ist unkritisch).
+    /// Spielt den Erinnerungs-/Funkspruch-Signalton, wenn der Agent PROAKTIV etwas sagen will.
+    /// Bevorzugt die mitgelieferte WAV (assets/message1.wav neben der EXE, von Frank gewaehlt);
+    /// fehlt sie, faellt es auf einen generierten NAudio-Zweiton zurueck. Crasht nie (unkritisch).
     /// </summary>
     public sealed class Chime
     {
         private WaveOutEvent? _wo;
+        private IDisposable? _reader;
+
+        private static string SoundPath
+        {
+            get
+            {
+                var dir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+                return Path.Combine(dir, "assets", "message1.wav");
+            }
+        }
 
         public void Play()
         {
             try
             {
                 Stop();
-                // Zwei kurze Sinustoene, leicht ansteigend (Kommunikator-artig).
-                var seq = new ConcatenatingSampleProvider(new ISampleProvider[]
-                {
-                    Tone(988.0,  TimeSpan.FromMilliseconds(110)),   // H5
-                    Tone(1318.5, TimeSpan.FromMilliseconds(170)),   // E6
-                });
                 _wo = new WaveOutEvent();
-                _wo.Init(seq);
+                var path = SoundPath;
+                if (File.Exists(path))
+                {
+                    var afr = new AudioFileReader(path);   // liest die WAV (ISampleProvider + IDisposable)
+                    _reader = afr;
+                    _wo.Init(afr);
+                }
+                else
+                {
+                    Log.Warn("Chime: WAV nicht gefunden — generierter Ton als Fallback", new { path });
+                    _wo.Init(GeneratedTone());
+                }
                 _wo.Play();
             }
             catch (Exception ex)
@@ -39,11 +55,21 @@ namespace VoiceAgent.Services.Audio
         public void Stop()
         {
             try { _wo?.Stop(); _wo?.Dispose(); } catch { /* egal */ }
+            try { _reader?.Dispose(); } catch { /* egal */ }
             _wo = null;
+            _reader = null;
         }
 
-        private static ISampleProvider Tone(double freq, TimeSpan dur)
-            => new SignalGenerator(44100, 1) { Type = SignalGeneratorType.Sin, Frequency = freq, Gain = 0.28 }
-                .Take(dur);
+        // Fallback: zwei kurze aufsteigende Sinustoene (Kommunikator-artig), falls die WAV fehlt.
+        private static ISampleProvider GeneratedTone()
+        {
+            ISampleProvider Tone(double freq, TimeSpan dur)
+                => new SignalGenerator(44100, 1) { Type = SignalGeneratorType.Sin, Frequency = freq, Gain = 0.28 }.Take(dur);
+            return new ConcatenatingSampleProvider(new[]
+            {
+                Tone(988.0,  TimeSpan.FromMilliseconds(110)),
+                Tone(1318.5, TimeSpan.FromMilliseconds(170)),
+            });
+        }
     }
 }

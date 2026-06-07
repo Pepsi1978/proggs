@@ -16,6 +16,8 @@
     <Resource Include="assets\voiceagent.ico" />
     <!-- Faehigkeiten-Liste: wird neben die EXE kopiert und beim Start eingelesen (siehe AgentCapabilities). -->
     <Content Include="capabilities.md" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Erinnerungs-Signalton (Frank's WAV): wird neben die EXE kopiert und vom Chime abgespielt. -->
+    <Content Include="assets\message1.wav" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
