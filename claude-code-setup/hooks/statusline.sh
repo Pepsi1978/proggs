@@ -570,9 +570,26 @@ EMPTY_BAR="${TRACK}░░░░░${R}"
 #    ist (frueher Session-Start), faellt das Modell auf die erste Position zurueck.
 ctx_shown=""
 if [ -n "$ctx_used" ]; then
-    col=$(pct_color "$ctx_used")
-    bar=$(make_bar "$ctx_used" "$col")
-    printf "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
+    # Ab 80% BLINKT der Kontextbereich auffaellig (Frank 2026-06-07): zwei Techniken
+    # kombiniert. (1) Skript-Puls ueber refreshInterval=1 — in der ungeraden Sekunde
+    # wird der ganze Bereich invers dargestellt (weisser fetter Text auf rotem
+    # Hintergrund), in der geraden normal rot → pulst ~1 Hz, terminal-UNABHAENGIG.
+    # (2) zusaetzlich das native ANSI-Blink-Attribut (SGR 5) fuer Terminals die es
+    # koennen (Windows Terminal ja). Eigener Balken ohne interne Resets, damit der
+    # rote Hintergrund im Invers-Zustand durchgehend bleibt.
+    if [ "$ctx_used" -ge 80 ] 2>/dev/null && [ $((now_ts % 2)) -eq 1 ]; then
+        cf=$(( (ctx_used * 5 + 50) / 100 )); [ "$cf" -gt 5 ] && cf=5; ce=$((5 - cf))
+        cbar=""; ci=0
+        while [ "$ci" -lt "$cf" ]; do cbar="${cbar}█"; ci=$((ci+1)); done
+        ci=0; while [ "$ci" -lt "$ce" ]; do cbar="${cbar}░"; ci=$((ci+1)); done
+        BLINK='\033[5m'
+        INV='\033[1m\033[38;2;255;255;255m\033[48;2;235;70;70m'  # fett, weiss auf rot
+        printf "${BLINK}${INV} ${ICON_CTX} ctx ${cbar} ${ctx_used}%% ${R}"
+    else
+        col=$(pct_color "$ctx_used")
+        bar=$(make_bar "$ctx_used" "$col")
+        printf "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
+    fi
     ctx_shown="1"
 fi
 

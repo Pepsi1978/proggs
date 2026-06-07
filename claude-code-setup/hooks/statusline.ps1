@@ -562,9 +562,24 @@ $ICON_PACE   = '🎯'
 #    Wenn kein ctx-Wert bekannt ist (frueher Session-Start), faellt das Modell auf
 #    die erste Position zurueck (dann ohne Trenner initialisieren).
 if ($ctx_used -ne $null) {
-    $col = Get-PctColor $ctx_used
-    $bar = Get-Bar $ctx_used $col
-    $out = "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+    # Ab 80% BLINKT der Kontextbereich auffaellig (Frank 2026-06-07): zwei Techniken
+    # kombiniert. (1) Skript-Puls ueber refreshInterval=1 — in der ungeraden Sekunde
+    # invers (weisser fetter Text auf rotem Hintergrund), in der geraden normal rot →
+    # pulst ~1 Hz, terminal-UNABHAENGIG. (2) zusaetzlich das native ANSI-Blink-Attribut
+    # (SGR 5) fuer Terminals die es koennen. Eigener Balken ohne interne Resets, damit
+    # der rote Hintergrund im Invers-Zustand durchgehend bleibt. Identisch zu statusline.sh.
+    $ctxSec = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() % 2
+    if (([int]$ctx_used -ge 80) -and ($ctxSec -eq 1)) {
+        $cf = [int][Math]::Floor(([int]$ctx_used * 5 + 50) / 100); if ($cf -gt 5) { $cf = 5 }; $ce = 5 - $cf
+        $cbar = ('█' * $cf) + ('░' * $ce)
+        $BLINK = "$ESC[5m"
+        $INV = "$ESC[1m" + "$ESC[38;2;255;255;255m" + "$ESC[48;2;235;70;70m"  # fett, weiss auf rot
+        $out = "${BLINK}${INV} ${ICON_CTX} ctx ${cbar} ${ctx_used}% ${R}"
+    } else {
+        $col = Get-PctColor $ctx_used
+        $bar = Get-Bar $ctx_used $col
+        $out = "${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+    }
     # 2. Modell — fuehrender Trenner, da der Kontext davor steht
     $out += "${SEP}${B}${ICON_MODEL} ${BOLD}${model}${R}"
 } else {
