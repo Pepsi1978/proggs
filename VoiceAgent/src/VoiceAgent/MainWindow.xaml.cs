@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -46,6 +47,13 @@ namespace VoiceAgent
         private TurnTrace? _turn;                     // aktueller Sprach-Turn (Live-Logik-Sonde)
         private DispatcherTimer? _clockTimer;         // live Uhr oben im Fenster
 
+        private SessionStore? _sessionStore;          // Persistenz der Sessions (JSON pro Session)
+        private SessionManager? _sessions;            // aktive Session, entkoppelt vom Provider/Settings
+        private ContextCompressor? _compressor;       // verlustarme Hintergrund-Komprimierung pro Session
+        private ILlmProvider? _provider;              // aktiver LLM-Provider (auch fuer die Komprimierung)
+        private bool _ready;                          // true erst NACH dem Laden — Guard gegen Handler beim XAML-Load (§2.10)
+        private bool _suppressSelection;              // unterdrueckt SelectionChanged beim Neu-Befuellen der Liste
+
         public MainWindow()
         {
             InitializeComponent();
@@ -63,6 +71,13 @@ namespace VoiceAgent
                 _reminderService = new ReminderService();
                 _subAgents.Register(new ReminderSubAgent(_reminderService));   // Erinnerungen (zeitgesteuert)
                 _subAgents.Register(new NoteSubAgent(_memory));                // Notizen
+
+                _sessionStore = new SessionStore();
+                _sessions = new SessionManager(_sessionStore);
+                _sessions.ActiveChanged += RefreshSessionList;
+                _sessions.NewSession();                 // Start: frische, leere Session
+                _compressor = new ContextCompressor();  // Default-Budget/-Schwelle
+
                 BuildAgents();
 
                 RebuildListener();
@@ -72,6 +87,10 @@ namespace VoiceAgent
                 StartClock();
                 Log.Info("MainWindow geladen — Voice-Loop bereit.");
                 Append("System", "Bereit. Sprich einfach los — Gedankenpausen sind erlaubt. Oder tippe unten.");
+
+                _ready = true;            // ab jetzt duerfen die Sidebar-Handler feuern
+                RefreshSessionList();
+                RefreshContextMeter();
             }
             catch (Exception ex)
             {
@@ -82,7 +101,10 @@ namespace VoiceAgent
 
         private void BuildAgents()
         {
-            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId);
+            _provider = LlmProviderFactory.Create(_settings);
+            // WICHTIG (Settings-Fix): die AKTIVE Session wird hereingereicht — beim erneuten BuildAgents
+            // (z.B. nach dem Speichern der Einstellungen) bleibt derselbe Verlauf erhalten.
+            _agent = new BossAgent(_provider, _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId, _sessions?.Active);
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
@@ -456,6 +478,15 @@ namespace VoiceAgent
             SetStatus("Spreche …");
             bool spoke = await SpeakAsync(reply);
             _turn?.Spoke(_settings.TtsVoiceName, spoke);
+
+            // Nach dem Sprechen: Session sichern, Titel ggf. setzen, bei Bedarf im Hintergrund komprimieren.
+            _sessions?.EnsureTitleFromFirstMessage();
+            if (_compressor != null && _provider != null && _sessions != null)
+                await _compressor.MaybeCompressAsync(_sessions.Active, _provider);
+            _sessions?.SaveActive();
+            RefreshContextMeter();
+            RefreshSessionList();
+
             SetStatus("Bereit");
         }
 
@@ -508,6 +539,140 @@ namespace VoiceAgent
             if (string.IsNullOrWhiteSpace(hex)) return fallback;
             try { return (Color)ColorConverter.ConvertFromString(hex)!; }
             catch { return fallback; }
+        }
+
+        // ---------- Sessions-Sidebar ----------
+
+        private void RefreshSessionList()
+        {
+            if (_sessions == null) return;
+            try
+            {
+                var query = SearchBox.Text?.Trim() ?? "";
+                IEnumerable<SessionInfo> items = _sessions.List();
+                if (!string.IsNullOrEmpty(query))
+                    items = items.Where(i => i.Title.Contains(query, StringComparison.OrdinalIgnoreCase));
+                _suppressSelection = true;
+                SessionList.ItemsSource = items.ToList();
+                SessionList.SelectedItem = null;
+                _suppressSelection = false;
+            }
+            catch (Exception ex) { Log.Error("Sidebar: Liste aktualisieren fehlgeschlagen", ex); }
+        }
+
+        private void NewSessionButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_sessions == null) return;
+            _sessions.SaveActive();
+            _sessions.NewSession();
+            BuildAgents();          // Agent zeigt auf die neue (leere) Session
+            ClearTranscript();
+            RefreshContextMeter();
+        }
+
+        private void SessionList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (!_ready || _suppressSelection || _sessions == null) return;
+            if (SessionList.SelectedItem is SessionInfo info && info.Id != _sessions.Active.Id)
+            {
+                _sessions.SaveActive();
+                _sessions.Switch(info.Id);
+                BuildAgents();
+                RenderTranscript();
+                RefreshContextMeter();
+            }
+        }
+
+        private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (!_ready) return;
+            RefreshSessionList();
+        }
+
+        private void RenameSession_Click(object sender, RoutedEventArgs e)
+        {
+            if (InfoFromMenu(sender) is not { } info || _sessions == null) return;
+            var name = PromptText("Session umbenennen", info.Title);
+            if (!string.IsNullOrWhiteSpace(name)) { _sessions.Rename(info.Id, name!); RefreshSessionList(); }
+        }
+
+        private void PinSession_Click(object sender, RoutedEventArgs e)
+        {
+            if (InfoFromMenu(sender) is not { } info || _sessions == null) return;
+            _sessions.SetPinned(info.Id, !info.Pinned);
+            RefreshSessionList();
+        }
+
+        private void DeleteSession_Click(object sender, RoutedEventArgs e)
+        {
+            if (InfoFromMenu(sender) is not { } info || _sessions == null) return;
+            if (MessageBox.Show($"Session „{info.Title}“ löschen?", "Löschen",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            bool wasActive = info.Id == _sessions.Active.Id;
+            _sessions.Delete(info.Id);
+            if (wasActive) { BuildAgents(); RenderTranscript(); }
+            RefreshSessionList();
+            RefreshContextMeter();
+        }
+
+        private static SessionInfo? InfoFromMenu(object sender)
+            => (sender as System.Windows.Controls.MenuItem)?.DataContext as SessionInfo;
+
+        private void RefreshContextMeter()
+        {
+            if (_compressor == null || _sessions == null) return;
+            try
+            {
+                int pct = (int)Math.Round(_compressor.Fill(_sessions.Active) * 100);
+                ContextPillText.Text = pct >= 75 ? $"Kontext {pct}% · wird komprimiert…" : $"Kontext {pct}%";
+            }
+            catch (Exception ex) { Log.Error("Kontext-Anzeige aktualisieren fehlgeschlagen", ex); }
+        }
+
+        private void ClearTranscript() => ConversationBox.Document.Blocks.Clear();
+
+        private void RenderTranscript()
+        {
+            ClearTranscript();
+            if (_sessions == null) return;
+            foreach (var m in _sessions.Active.History)
+                Append(m.Role == LlmRole.Assistant ? "Agent" : "Du", m.Text);
+        }
+
+        /// <summary>Kleiner modaler Text-Dialog (bewusst ohne Microsoft.VisualBasic-Dependency).</summary>
+        private string? PromptText(string title, string initial)
+        {
+            var win = new Window
+            {
+                Title = title, Width = 380, Height = 150, Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize,
+                Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x21, 0x28))
+            };
+            var grid = new System.Windows.Controls.Grid { Margin = new Thickness(12) };
+            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            var tb = new System.Windows.Controls.TextBox
+            {
+                Text = initial, FontSize = 14, Padding = new Thickness(6, 4, 6, 4),
+                Background = new SolidColorBrush(Color.FromRgb(0x23, 0x26, 0x2E)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xE4, 0xE6, 0xEB)),
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            System.Windows.Controls.Grid.SetRow(tb, 0);
+            var ok = new System.Windows.Controls.Button
+            {
+                Content = "OK", Width = 90, Height = 30, IsDefault = true,
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom
+            };
+            System.Windows.Controls.Grid.SetRow(ok, 1);
+            string? result = null;
+            ok.Click += (_, __) => { result = tb.Text; win.DialogResult = true; };
+            grid.Children.Add(tb);
+            grid.Children.Add(ok);
+            win.Content = grid;
+            tb.Loaded += (_, __) => { tb.Focus(); tb.SelectAll(); };
+            return win.ShowDialog() == true ? result : null;
         }
 
         private void SetStatus(string text) => StatusText.Text = text;

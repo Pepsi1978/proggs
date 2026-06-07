@@ -5,56 +5,102 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VoiceAgent"
         mc:Ignorable="d"
-        Title="VoiceAgent" Height="640" Width="840"
+        Title="VoiceAgent" Height="640" Width="980"
         Icon="/assets/voiceagent.ico"
         Background="#15171C">
-    <Grid Margin="14">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="SidebarCol" Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Kopfzeile: Status + Mikrofon-Schalter + Einstellungen -->
-        <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,10">
-            <TextBlock x:Name="StatusText" DockPanel.Dock="Left"
-                       Text="Bereit" FontSize="13" Foreground="#9AA0AA"
-                       VerticalAlignment="Center"/>
-            <TextBlock x:Name="ClockText" DockPanel.Dock="Left" Margin="16,0,0,0"
-                       FontSize="13" FontWeight="SemiBold" Foreground="#E4E6EB"
-                       VerticalAlignment="Center"/>
-            <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="Einstellungen"
-                    Padding="12,4" Click="SettingsButton_Click"/>
-            <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"
-                    Margin="0,0,8,0" Padding="12,4" Click="LogButton_Click"/>
-            <ToggleButton x:Name="MicToggle" DockPanel.Dock="Right" Content="Mikrofon: an"
-                          Margin="0,0,8,0" Padding="12,4" Click="MicToggle_Click"/>
-        </DockPanel>
-
-        <!-- Gespraechsverlauf -->
-        <Border Grid.Row="1" Background="#1E2128" CornerRadius="8" Padding="10">
-            <RichTextBox x:Name="ConversationBox" IsReadOnly="True"
-                         VerticalScrollBarVisibility="Auto" BorderThickness="0"
-                         Background="Transparent" Foreground="#E4E6EB" FontSize="14">
-                <RichTextBox.Resources>
-                    <Style TargetType="Paragraph">
-                        <Setter Property="Margin" Value="0,0,0,8"/>
-                    </Style>
-                </RichTextBox.Resources>
-            </RichTextBox>
+        <!-- ============ Sidebar: Sessions (Hermes-Stil) ============ -->
+        <Border Grid.Column="0" Background="#1A1D24" BorderBrush="#2A2E38" BorderThickness="0,0,1,0">
+            <DockPanel Margin="10">
+                <Button DockPanel.Dock="Top" x:Name="NewSessionButton" Content="＋  Neue Session"
+                        Click="NewSessionButton_Click" Height="36" Margin="0,0,0,8"
+                        Background="#2F6BFF" Foreground="White" BorderThickness="0" FontWeight="SemiBold"/>
+                <TextBox DockPanel.Dock="Top" x:Name="SearchBox" Height="30" Margin="0,0,0,8"
+                         Background="#23262E" Foreground="#E4E6EB" BorderBrush="#333845"
+                         Padding="6,4,6,4" TextChanged="SearchBox_TextChanged"
+                         ToolTip="Sessions durchsuchen…"/>
+                <TextBlock DockPanel.Dock="Top" Text="SESSIONS" FontSize="10" Foreground="#6B7280"
+                           Margin="2,2,0,4"/>
+                <ListBox x:Name="SessionList" BorderThickness="0" Background="Transparent"
+                         Foreground="#E4E6EB" SelectionChanged="SessionList_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Umbenennen" Click="RenameSession_Click"/>
+                                        <MenuItem Header="Anpinnen / Lösen" Click="PinSession_Click"/>
+                                        <MenuItem Header="Löschen" Click="DeleteSession_Click"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
+                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
+                                           Padding="4,6,4,6"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
         </Border>
 
-        <!-- Eingabezeile (Text-Eingabe ergaenzend zur Sprache) -->
-        <Grid Grid.Row="2" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="InputBox" Grid.Column="0" FontSize="14" Padding="8,6"
-                     Background="#23262E" Foreground="#E4E6EB" BorderBrush="#333845"
-                     KeyDown="InputBox_KeyDown"/>
-            <Button x:Name="SendButton" Grid.Column="1" Content="Senden" Margin="8,0,0,0"
-                    Padding="18,6" Click="SendButton_Click"/>
+        <!-- ============ Hauptbereich ============ -->
+        <Grid Grid.Column="1" Margin="14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Kopfzeile: Status + Uhr + Kontext-Pille + Schalter -->
+            <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,10">
+                <TextBlock x:Name="StatusText" DockPanel.Dock="Left"
+                           Text="Bereit" FontSize="13" Foreground="#9AA0AA"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="ClockText" DockPanel.Dock="Left" Margin="16,0,0,0"
+                           FontSize="13" FontWeight="SemiBold" Foreground="#E4E6EB"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="Einstellungen"
+                        Padding="12,4" Click="SettingsButton_Click"/>
+                <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"
+                        Margin="0,0,8,0" Padding="12,4" Click="LogButton_Click"/>
+                <ToggleButton x:Name="MicToggle" DockPanel.Dock="Right" Content="Mikrofon: an"
+                              Margin="0,0,8,0" Padding="12,4" Click="MicToggle_Click"/>
+                <Border DockPanel.Dock="Right" x:Name="ContextPill" CornerRadius="11" Background="#23303F"
+                        Padding="10,3" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="ContextPillText" Foreground="#8AA0FF" FontSize="12" Text="Kontext 0%"/>
+                </Border>
+            </DockPanel>
+
+            <!-- Gespraechsverlauf -->
+            <Border Grid.Row="1" Background="#1E2128" CornerRadius="8" Padding="10">
+                <RichTextBox x:Name="ConversationBox" IsReadOnly="True"
+                             VerticalScrollBarVisibility="Auto" BorderThickness="0"
+                             Background="Transparent" Foreground="#E4E6EB" FontSize="14">
+                    <RichTextBox.Resources>
+                        <Style TargetType="Paragraph">
+                            <Setter Property="Margin" Value="0,0,0,8"/>
+                        </Style>
+                    </RichTextBox.Resources>
+                </RichTextBox>
+            </Border>
+
+            <!-- Eingabezeile (Text-Eingabe ergaenzend zur Sprache) -->
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="InputBox" Grid.Column="0" FontSize="14" Padding="8,6"
+                         Background="#23262E" Foreground="#E4E6EB" BorderBrush="#333845"
+                         KeyDown="InputBox_KeyDown"/>
+                <Button x:Name="SendButton" Grid.Column="1" Content="Senden" Margin="8,0,0,0"
+                        Padding="18,6" Click="SendButton_Click"/>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
