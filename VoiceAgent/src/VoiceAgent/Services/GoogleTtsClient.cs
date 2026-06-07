@@ -55,6 +55,9 @@ namespace VoiceAgent.Services
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("Kein Google-TTS-API-Schluessel hinterlegt (Einstellungen → API-Schluessel).");
 
+            // Sanity: Google TTS lehnt Requests ueber 5000 Byte ab — lange Antworten wuerden still scheitern.
+            Probe.That(text.Length <= 5000, "TTS: Text ueber Google-5000-Zeichen-Limit — Ausgabe koennte abgelehnt werden", new { chars = text.Length });
+
             var url = $"https://texttospeech.googleapis.com/v1/text:synthesize?key={_apiKey}";
             using var content = new StringContent(BuildRequestJson(text, languageCode, voiceName), Encoding.UTF8, "application/json");
 

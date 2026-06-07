@@ -31,6 +31,7 @@ namespace VoiceAgent
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
         private CancellationTokenSource? _safetyCts;  // Sicherheitsnetz-Timer nach "WEITER"
+        private TurnTrace? _turn;                     // aktueller Sprach-Turn (Live-Logik-Sonde)
 
         public MainWindow()
         {
@@ -138,6 +139,10 @@ namespace VoiceAgent
                     return;
                 }
 
+                // Live-Sonde: neuer Turn, sobald das erste Haeppchen einer frischen Aussage eintrifft.
+                if (string.IsNullOrEmpty(_pending)) _turn = TurnTrace.Begin("voice");
+                _turn?.Heard(segment);
+
                 _pending = string.IsNullOrEmpty(_pending) ? segment.Trim() : (_pending + " " + segment.Trim());
 
                 bool complete = true;
@@ -145,6 +150,7 @@ namespace VoiceAgent
                 {
                     SetStatus("Pruefe, ob du fertig bist …");
                     complete = await _endpoint.IsCompleteAsync(_pending);
+                    _turn?.Endpoint(complete);
                 }
 
                 if (complete)
@@ -160,6 +166,9 @@ namespace VoiceAgent
             catch (Exception ex)
             {
                 Log.Error("MainWindow: Sprach-Verarbeitung fehlgeschlagen", ex);
+                _turn?.Failed("voice", ex);
+                _turn?.Complete();
+                _turn = null;
                 Append("Fehler", ex.Message);
                 SetStatus("Fehler — siehe Log");
                 _pending = string.Empty;
@@ -176,9 +185,12 @@ namespace VoiceAgent
         {
             var text = _pending;
             _pending = string.Empty;
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrWhiteSpace(text)) { _turn?.Abort("leere Aussage"); _turn = null; return; }
+            _turn?.Accumulated(text);
             Append("Du", text);
             await RespondAndSpeakAsync(text);
+            _turn?.Complete();
+            _turn = null;
         }
 
         // ---------- Sicherheitsnetz: nach langer Stille trotzdem senden ----------
@@ -215,6 +227,9 @@ namespace VoiceAgent
             catch (Exception ex)
             {
                 Log.Error("MainWindow: Sicherheitsnetz-Senden fehlgeschlagen", ex);
+                _turn?.Failed("safety-flush", ex);
+                _turn?.Complete();
+                _turn = null;
                 _pending = string.Empty;
             }
             finally
@@ -245,18 +260,24 @@ namespace VoiceAgent
             PauseMic();
             Append("Du", text);
             SendButton.IsEnabled = false;
+            _turn = TurnTrace.Begin("text");
+            _turn.Accumulated(text);
             try
             {
                 await RespondAndSpeakAsync(text);
+                _turn?.Complete();
             }
             catch (Exception ex)
             {
                 Log.Error("MainWindow: Text-Verarbeitung fehlgeschlagen", ex);
+                _turn?.Failed("text", ex);
+                _turn?.Complete();
                 Append("Fehler", ex.Message);
                 SetStatus("Fehler — siehe Log");
             }
             finally
             {
+                _turn = null;
                 SendButton.IsEnabled = true;
                 _busy = false;
                 ResumeMic();
@@ -269,24 +290,31 @@ namespace VoiceAgent
         {
             if (_agent == null) return;
             SetStatus("Denke nach …");
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var reply = await _agent.RespondAsync(text);
+            sw.Stop();
+            _turn?.Understood(reply);                                                  // Aufgabe/Frage/Plauderei erkannt?
+            _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds); // welches Gehirn, wie schnell
             Append("Agent", reply);
             SetStatus("Spreche …");
-            await SpeakAsync(reply);
+            bool spoke = await SpeakAsync(reply);
+            _turn?.Spoke(_settings.TtsVoiceName, spoke);
             SetStatus("Bereit");
         }
 
-        private async Task SpeakAsync(string text)
+        private async Task<bool> SpeakAsync(string text)
         {
-            if (_tts == null || string.IsNullOrWhiteSpace(text)) return;
+            if (_tts == null || string.IsNullOrWhiteSpace(text)) return false;
             try
             {
                 var audio = await _tts.SynthesizeAsync(text, _settings.TtsLanguageCode, _settings.TtsVoiceName);
                 await _player.PlayAsync(audio);
+                return true;
             }
             catch (Exception ex)
             {
                 Log.Error("MainWindow: Sprachausgabe fehlgeschlagen (App laeuft weiter)", ex);
+                return false;
             }
         }
 

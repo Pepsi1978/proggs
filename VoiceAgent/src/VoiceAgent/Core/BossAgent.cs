@@ -27,6 +27,9 @@ namespace VoiceAgent.Core
 
         public IReadOnlyList<LlmMessage> History => _history;
 
+        /// <summary>Name des aktiven LLM-Providers (fuer die Turn-Trace: welches Gehirn hat geantwortet).</summary>
+        public string ProviderName => _provider.Name;
+
         /// <summary>System-Prompt + bisheriger Verlauf — die vollstaendige Nachrichtenliste fuers LLM.</summary>
         public IReadOnlyList<LlmMessage> BuildMessages()
         {
@@ -42,10 +45,12 @@ namespace VoiceAgent.Core
         public async Task<string> RespondAsync(string userText, CancellationToken ct = default)
         {
             Log.Info($"BossAgent: Eingabe empfangen ({userText?.Length ?? 0} Zeichen)");
+            Probe.That(!string.IsNullOrWhiteSpace(userText), "BossAgent: leere Eingabe an den Hauptagenten");
             _history.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
             try
             {
                 var reply = await _provider.ChatAsync(BuildMessages(), ct).ConfigureAwait(false);
+                Probe.That(!string.IsNullOrWhiteSpace(reply), "BossAgent: LLM lieferte eine leere Antwort", new { provider = _provider.Name });
                 _history.Add(new LlmMessage(LlmRole.Assistant, reply));
                 Log.Info($"BossAgent: Antwort erzeugt ({reply.Length} Zeichen) via {_provider.Name}");
                 return reply;

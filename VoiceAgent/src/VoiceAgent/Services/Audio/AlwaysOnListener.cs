@@ -45,6 +45,10 @@ namespace VoiceAgent.Services.Audio
             _silenceThreshold = (float)silenceThreshold;
             _silenceMs = silenceMs;
             _minUtteranceMs = minUtteranceMs;
+            // Sanity-Sonden: unsinnige Konfigwerte wuerden die Stille-Erkennung lautlos lahmlegen.
+            Probe.That(_silenceThreshold > 0f, "AlwaysOnListener: silenceThreshold <= 0 — Sprache wird evtl. nie erkannt", new { silenceThreshold });
+            Probe.That(silenceMs > 0, "AlwaysOnListener: silenceMs <= 0 — Aussage-Ende wird evtl. nie erkannt", new { silenceMs });
+            Probe.That(minUtteranceMs >= 0, "AlwaysOnListener: minUtteranceMs negativ", new { minUtteranceMs });
         }
 
         public void SetEnabled(bool on)

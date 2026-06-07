@@ -39,6 +39,9 @@ Im Zweifel IMMER WEITER — lieber kurz abwarten als den Nutzer mitten im Gedank
                     new LlmMessage(LlmRole.User, text)
                 };
                 var reply = await _provider.ChatAsync(msgs, ct).ConfigureAwait(false);
+                var u = reply.ToUpperInvariant();
+                Probe.That(u.Contains("FERTIG") || u.Contains("WEITER"),
+                    "EndpointDetector: unklare LLM-Antwort — nehme FERTIG an", new { reply = reply.Trim() });
                 bool complete = ParseIsComplete(reply);
                 Log.Info($"Endpoint-Check: \"{text}\" -> {(complete ? "FERTIG" : "WEITER")} (LLM: {reply.Trim()})");
                 return complete;

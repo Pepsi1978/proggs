@@ -44,6 +44,8 @@ namespace VoiceAgent.Services
         {
             // Datei einmal laden und ueber alle Retries wiederverwenden.
             byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath, ct).ConfigureAwait(false);
+            // Sanity: ein gueltiges WAV ist groesser als der 44-Byte-Header — sonst kam kein Audio an.
+            Probe.That(fileBytes.Length > 44, "Whisper: WAV verdaechtig klein (evtl. kein Audio aufgenommen)", new { bytes = fileBytes.Length });
             return await TranscribeWithRetry(fileBytes, 0, ct).ConfigureAwait(false);
         }
 

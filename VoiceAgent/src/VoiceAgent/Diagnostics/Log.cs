@@ -62,6 +62,14 @@ namespace VoiceAgent.Diagnostics
         /// <summary>Aktuelle Filter-Schwelle. Eintraege unterhalb werden verworfen.</summary>
         public static LogLevel MinLevel { get; set; } = LogLevel.Info;
 
+        /// <summary>
+        /// Korrelations-ID des gerade laufenden Sprach-Turns (0 = kein Turn aktiv).
+        /// Wird von TurnTrace gesetzt; jeder Log-Eintrag waehrend eines Turns traegt sie
+        /// als "turn"-Feld, sodass man im Live-Tail einen kompletten Turn (gehoert ->
+        /// verstanden -> Aktion -> gesprochen) als zusammenhaengende Kette filtern kann.
+        /// </summary>
+        public static long CurrentTurn { get; set; }
+
         static Log()
         {
             string path;
@@ -131,10 +139,12 @@ namespace VoiceAgent.Diagnostics
 
             try
             {
+                long turn = CurrentTurn;
                 var entry = new LogEntry
                 {
                     Ts = DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
                     Level = level.ToString().ToUpperInvariant(),
+                    Turn = turn == 0 ? null : turn,
                     Module = ModuleOf(file),
                     Fn = fn,
                     Msg = message,
@@ -209,6 +219,7 @@ namespace VoiceAgent.Diagnostics
         {
             [JsonPropertyName("ts")] public string Ts { get; set; } = "";
             [JsonPropertyName("level")] public string Level { get; set; } = "";
+            [JsonPropertyName("turn")] public long? Turn { get; set; }
             [JsonPropertyName("module")] public string Module { get; set; } = "";
             [JsonPropertyName("fn")] public string Fn { get; set; } = "";
             [JsonPropertyName("msg")] public string Msg { get; set; } = "";
