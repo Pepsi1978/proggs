@@ -35,3 +35,4 @@ BestJournalFrank/Screenshots/
 
 # Plattformspezifische Lock-Dateien (Cron/Scheduled-Tasks pro Rechner).
 .claude/scheduled_tasks.lock
+.superpowers/
