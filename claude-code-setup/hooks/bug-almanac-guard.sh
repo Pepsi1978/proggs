@@ -194,6 +194,35 @@ esac
 if [ "$slug" = "claudeconfig" ]; then
     case "$fpl" in */bugs/*|*/best-practices/*) slug=""; file=""; name="";; esac
 fi
+
+# -- Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. --
+# Greift NUR, wenn oben kein spezifischer Bereich erkannt wurde. So bekommt auch eine erste Rust-/Go-/Ruby-/
+# Java-Datei (= neuer Bereich ohne Almanach) Zaehne, statt still durchzurutschen. Nur echte Programmiersprachen-
+# Endungen. Der abgeleitete file-Name (z.B. rust.md) existiert noch nicht -> faellt unten in den
+# "kein Almanach"-Quittungszweig. Legt Frank spaeter bugs/<kat>/rust.md an, findet ihn der find-Filter
+# automatisch -> dann greift die normale Almanach-Erzwingung. FAIL-OPEN bleibt (trap).
+if [ -z "$slug" ]; then
+    case "$fpl" in
+        *.rs)     slug="rust";    file="rust.md";    name="neuer Code-Bereich (Rust)";;
+        *.go)     slug="go";      file="go.md";      name="neuer Code-Bereich (Go)";;
+        *.rb)     slug="ruby";    file="ruby.md";    name="neuer Code-Bereich (Ruby)";;
+        *.java)   slug="java";    file="java.md";    name="neuer Code-Bereich (Java)";;
+        *.php)    slug="php";     file="php.md";     name="neuer Code-Bereich (PHP)";;
+        *.lua)    slug="lua";     file="lua.md";     name="neuer Code-Bereich (Lua)";;
+        *.c|*.cc|*.cpp|*.cxx|*.h|*.hpp) slug="cpp"; file="cpp.md"; name="neuer Code-Bereich (C/C++)";;
+        *.dart)   slug="dart";    file="dart.md";    name="neuer Code-Bereich (Dart/Flutter)";;
+        *.vue)    slug="vue";     file="vue.md";     name="neuer Code-Bereich (Vue)";;
+        *.svelte) slug="svelte";  file="svelte.md";  name="neuer Code-Bereich (Svelte)";;
+        *.ex|*.exs) slug="elixir"; file="elixir.md"; name="neuer Code-Bereich (Elixir)";;
+        *.clj)    slug="clojure"; file="clojure.md"; name="neuer Code-Bereich (Clojure)";;
+        *.scala)  slug="scala";   file="scala.md";   name="neuer Code-Bereich (Scala)";;
+        *.hs)     slug="haskell"; file="haskell.md"; name="neuer Code-Bereich (Haskell)";;
+        *.zig)    slug="zig";     file="zig.md";     name="neuer Code-Bereich (Zig)";;
+        *.nim)    slug="nim";     file="nim.md";     name="neuer Code-Bereich (Nim)";;
+        *.pl)     slug="perl";    file="perl.md";    name="neuer Code-Bereich (Perl)";;
+        *.groovy) slug="groovy";  file="groovy.md";  name="neuer Code-Bereich (Groovy)";;
+    esac
+fi
 [ -n "$slug" ] || exit 0
 
 # Kategorie-robust (2026-06-03): Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>).
@@ -281,10 +310,29 @@ if [ -f "$almanachPath" ]; then
     exit 0
 fi
 
-# -- Kein Almanach: nur erinnern (Stufe 1), NICHT blockieren - Recherche braucht Franks OK --
-[ -f "$seenMarker" ] && exit 0
-touch "$seenMarker" 2>/dev/null || true
-msg="BUG-ALMANACH-HINWEIS: Du arbeitest an $name, aber es gibt noch KEINEN Almanach (bugs/$file). Hol Franks kurzes OK und STARTE dann den Skill 'bug-almanach-recherche' - das ist der vorgeschriebene, vollstaendige Weg; NICHT selbst ad hoc recherchieren."
-python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$msg"
+# -- Kein Almanach: BLOCKIEREN mit Quittung (Stufe 2, 2026-06-07) - Recherche/Entscheidung braucht Franks OK --
+# Frueher nur zahnloser additionalContext-Hinweis (wurde uebersehen; im Block-Log nie ein "kein-almanach"-Eintrag).
+# Jetzt deny, bis eine bewusste Geste ihn aufhebt: Quittung 'bug-almanac-ack-<slug>.flag' (nach Franks OK / bei
+# Kleinkram angelegt) ODER globaler Notaus. So bekommt der "neuer Bereich"-Trigger echte Zaehne.
+ackMarker="$TMP/bug-almanac-ack-$slug.flag"
+if [ "$disabled" -eq 1 ] || [ -f "$ackMarker" ]; then
+    # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
+    if [ ! -f "$seenMarker" ]; then
+        touch "$seenMarker" 2>/dev/null || true
+        if [ "$disabled" -eq 1 ]; then
+            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' ohne Almanach (bugs/$file) - Notaus aktiv, freigegeben."
+        else
+            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' ohne Almanach (bugs/$file) - Quittung gesetzt, fuer diese Session freigegeben."
+        fi
+        python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$msg"
+    fi
+    exit 0
+fi
+# Block-Logging (persistent) - nur Beobachtung, beeinflusst nie die Entscheidung.
+stateDir="$HOME/.claude/state"
+mkdir -p "$stateDir" 2>/dev/null || true
+echo "$(date '+%Y-%m-%d %H:%M') $slug (kein-almanach)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '$name', aber es gibt noch KEINEN Almanach (bugs/$file). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '$ackMarker' (touch) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen."
+python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
 
 exit 0

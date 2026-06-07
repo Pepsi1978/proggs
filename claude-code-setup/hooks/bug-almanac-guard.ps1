@@ -177,6 +177,43 @@ try {
         # Hooks (.ps1/.sh) faengt der claudehooks-Zweig oben ab; MEMORY.md bewusst NICHT (zu haeufig automatisch beschrieben).
         $slug = 'claudeconfig'; $file = 'claude-config.md'; $name = 'Claude-Code Konfiguration und Regeln (CLAUDE.md/Rules/Settings/Skills/Commands/Agents)'
     }
+
+    # ── Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. ──
+    # Greift NUR, wenn oben kein spezifischer Bereich erkannt wurde. So bekommt auch eine erste Rust-/Go-/Ruby-/
+    # Java-Datei (= neuer Bereich, fuer den noch kein Almanach existiert) Zaehne, statt still durchzurutschen
+    # ('if (-not $slug) { exit 0 }' liess das frueher komplett still verstummen). Nur echte Programmiersprachen-
+    # Endungen (keine Daten/Doku/Config). Der abgeleitete file-Name (z.B. 'rust.md') existiert noch nicht ->
+    # faellt unten korrekt in den "kein Almanach"-Quittungszweig. Legt Frank spaeter bugs/<kat>/rust.md an,
+    # findet der rekursive Filter ihn automatisch -> dann greift die normale Almanach-Erzwingung. FAIL-OPEN bleibt.
+    if (-not $slug) {
+        $genMap = [ordered]@{
+            '\.rs$'              = 'rust|Rust'
+            '\.go$'             = 'go|Go'
+            '\.rb$'             = 'ruby|Ruby'
+            '\.java$'           = 'java|Java'
+            '\.php$'            = 'php|PHP'
+            '\.lua$'            = 'lua|Lua'
+            '\.(c|cc|cpp|cxx|h|hpp)$' = 'cpp|C/C++'
+            '\.dart$'           = 'dart|Dart/Flutter'
+            '\.vue$'            = 'vue|Vue'
+            '\.svelte$'         = 'svelte|Svelte'
+            '\.exs?$'           = 'elixir|Elixir'
+            '\.clj$'            = 'clojure|Clojure'
+            '\.scala$'          = 'scala|Scala'
+            '\.hs$'             = 'haskell|Haskell'
+            '\.zig$'            = 'zig|Zig'
+            '\.nim$'            = 'nim|Nim'
+            '\.pl$'             = 'perl|Perl'
+            '\.groovy$'         = 'groovy|Groovy'
+        }
+        foreach ($pat in $genMap.Keys) {
+            if ($fpl -match $pat) {
+                $parts = $genMap[$pat] -split '\|'
+                $slug = $parts[0]; $file = $parts[0] + '.md'; $name = 'neuer Code-Bereich (' + $parts[1] + ')'
+                break
+            }
+        }
+    }
     if (-not $slug) { exit 0 }
 
     # Kategorie-robust (2026-06-03): Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>).
@@ -297,11 +334,40 @@ try {
         exit 0
     }
 
-    # ── Kein Almanach: nur erinnern (Stufe 1), NICHT blockieren - Recherche braucht Franks OK ──
-    if (Test-Path $seenMarker) { exit 0 }
-    New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
-    $msg = "BUG-ALMANACH-HINWEIS: Du arbeitest an " + $name + ", aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Hol Franks kurzes OK und STARTE dann den Skill 'bug-almanach-recherche' - das ist der vorgeschriebene, vollstaendige Weg; NICHT selbst ad hoc recherchieren."
-    $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
+    # ── Kein Almanach: BLOCKIEREN mit Quittung (Stufe 2, 2026-06-07) — Recherche/Entscheidung braucht Franks OK ──
+    # Frueher war dies nur ein zahnloser additionalContext-Hinweis (= wurde uebersehen; im Block-Log gab es nie
+    # einen "kein-almanach"-Eintrag). Jetzt BLOCKT der Hook (permissionDecision=deny), bis eine bewusste Geste
+    # ihn aufhebt: die Quittung 'bug-almanac-ack-<slug>.flag' (von mir nach Franks OK / bei Kleinkram angelegt)
+    # ODER der globale Notaus. So bekommt der "neuer Bereich"-Trigger echte Zaehne (deterministisch statt advisory).
+    $ackMarker = Join-Path $env:TEMP ("bug-almanac-ack-" + $slug + ".flag")
+    if ($disabled -or (Test-Path $ackMarker)) {
+        # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
+        if (-not (Test-Path $seenMarker)) {
+            New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            $msg = if ($disabled) {
+                "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' ohne Almanach (bugs/" + $file + ") - Notaus aktiv, freigegeben."
+            } else {
+                "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' ohne Almanach (bugs/" + $file + ") - Quittung gesetzt, fuer diese Session freigegeben."
+            }
+            $out = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } }
+            Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
+        }
+        exit 0
+    }
+    # Block-Logging (persistent) — nur Beobachtung, beeinflusst nie die Entscheidung.
+    try {
+        $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+        if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+        Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (kein-almanach)") -Encoding UTF8 -ErrorAction SilentlyContinue
+    } catch {}
+    $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '" + $name + "', aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '" + $ackMarker + "' (z.B. Bash: touch ... / PowerShell: New-Item) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen."
+    $out = @{
+        hookSpecificOutput = @{
+            hookEventName            = "PreToolUse"
+            permissionDecision       = "deny"
+            permissionDecisionReason = $reason
+        }
+    }
     Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
 } catch {
     Hook-LogWarn "bug-almanac-guard: $_"
