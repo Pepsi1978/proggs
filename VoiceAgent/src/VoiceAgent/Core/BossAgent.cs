@@ -39,11 +39,18 @@ namespace VoiceAgent.Core
         /// <summary>System-Prompt + bisheriger Verlauf — die vollstaendige Nachrichtenliste fuers LLM.</summary>
         public IReadOnlyList<LlmMessage> BuildMessages()
         {
-            // System-Prompt + aktuelle Echtzeit (LLM kennt die Uhrzeit sonst nicht, raet sie) +
-            // Gedaechtnis-Block (Fakten + letzte Gespraeche) ueber Sessions hinweg.
+            // System-Prompt + aktuelle Echtzeit (LLM kennt die Uhrzeit sonst nicht) + Gedaechtnis-Block.
             var systemText = _systemPrompt
                 + TimeContext.BuildBlock(_timeZoneId)
                 + (_memory?.ContextBlock() ?? string.Empty);
+
+            // Faehigkeiten-Liste NUR anhaengen, wenn der Nutzer gerade danach fragt — sonst Kontext sparen
+            // (Frank-Wunsch 2026-06-07: nicht bei jedem Turn, nur bei "kannst du ...?"-Fragen).
+            string? lastUser = null;
+            for (int i = _history.Count - 1; i >= 0; i--)
+                if (_history[i].Role == LlmRole.User) { lastUser = _history[i].Text; break; }
+            if (AgentCapabilities.IsCapabilityQuestion(lastUser))
+                systemText += AgentCapabilities.BuildBlock();
             var list = new List<LlmMessage>(_history.Count + 1)
             {
                 new LlmMessage(LlmRole.System, systemText)

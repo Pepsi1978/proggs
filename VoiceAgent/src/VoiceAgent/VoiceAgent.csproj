@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <Resource Include="assets\voiceagent.ico" />
+    <!-- Faehigkeiten-Liste: wird neben die EXE kopiert und beim Start eingelesen (siehe AgentCapabilities). -->
+    <Content Include="capabilities.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
