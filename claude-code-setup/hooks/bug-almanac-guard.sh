@@ -2,7 +2,10 @@
 # bug-almanac-guard: Stufe 2 (ERZWINGUNG) des Bug-Almanach-Systems (siehe ~/proggs/bugs/SYSTEM.md).
 # Bei Edit/Write/MultiEdit an bereichstypischen Dateien: BLOCKIERT (permissionDecision=deny), wenn fuer
 #   den Bereich ein Almanach existiert, dieser aber in DIESER Session noch nicht gelesen wurde.
-# Bei Read einer bugs/<X>.md ODER Bash-cat/bat/less auf bugs/<X>.md: setzt den "gelesen"-Marker (NIE blockierend).
+# DANACH (zweite Stufe): existiert eine best-practices-<bereich>.md, BLOCKIERT der Hook weiter, bis auch sie
+#   gelesen ist. Reihenfolge automatisch erzwungen: erst Almanach (was schiefgeht), dann Best Practices
+#   (wie man es richtig macht), DANN editieren. Keine BP-Datei fuer den Bereich -> nur Almanach zaehlt.
+# Bei Read einer bugs/<X>.md / best-practices-<X>.md ODER Bash-cat/bat/less darauf: setzt den "gelesen"-Marker (NIE blockierend).
 # Kein Almanach fuer den Bereich? -> nur erinnern (Stufe 1), NICHT blockieren (Recherche braucht Franks OK).
 # Notaus: existiert $TMPDIR/bug-almanac-disable.flag -> nie blockieren (nur erinnern). Sicherheitsventil.
 # Block-Logging: jeder Block wird (Datum + slug) nach ~/.claude/state/bug-almanac-blocks.log geschrieben (persistent).
@@ -34,6 +37,13 @@ if [ "$tool" = "Bash" ]; then
                 fi
             done
         fi
+        # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
+        bpmatches=$(echo "$cl" | grep -oE 'best-practices-[a-z0-9._-]+\.md' || true)
+        if [ -n "$bpmatches" ]; then
+            echo "$bpmatches" | sed -E 's#best-practices-([a-z0-9._-]+)\.md#\1#' | while read -r bn; do
+                [ -n "$bn" ] && touch "$TMP/bug-almanac-bp-read-$bn.flag" 2>/dev/null || true
+            done
+        fi
     fi
     exit 0
 fi
@@ -47,6 +57,11 @@ if [ "$tool" = "Read" ]; then
     almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/(.*/)?([^/]+)\.md$#\3#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
         touch "$TMP/bug-almanac-read-$almName.flag" 2>/dev/null || true
+    fi
+    # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
+    bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices-([a-z0-9._-]+)\.md$#\1#p')
+    if [ -n "$bpName" ]; then
+        touch "$TMP/bug-almanac-bp-read-$bpName.flag" 2>/dev/null || true
     fi
     exit 0
 fi
@@ -210,14 +225,44 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     exit 0
 fi
 
+# -- BP-ERZWINGUNG (zweite Seite der Medaille): Almanach gelesen, aber best-practices-<bereich>.md noch nicht --
+# Reihenfolge automatisch erzwungen: dieser Block wird nur erreicht, wenn der Almanach-Block oben durchfiel
+# (= Almanach gelesen ODER Notaus). Greift NUR wenn Almanach existiert+gelesen, Notaus aus und eine
+# best-practices-<almKey>.md unter best-practices/projekt-code/ existiert. Sonst (keine BP-Datei): durchlassen.
+if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
+    bpRoot="$HOME/proggs/best-practices/projekt-code"
+    bpPath="$(find "$bpRoot" -name "best-practices-$almKey.md" -type f 2>/dev/null | head -1 || true)"
+    if [ -n "$bpPath" ]; then
+        bpRel="best-practices/${bpPath#*/best-practices/}"
+        bpReadMarker="$TMP/bug-almanac-bp-read-$almKey.flag"
+        # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
+        if [ ! -f "$bpReadMarker" ]; then
+            tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
+            if [ -n "$tpath" ] && [ -f "$tpath" ]; then
+                if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices-'"$almKey"'\.md' "$tpath" 2>/dev/null; then
+                    touch "$bpReadMarker" 2>/dev/null || true
+                fi
+            fi
+        fi
+        if [ ! -f "$bpReadMarker" ]; then
+            stateDir="$HOME/.claude/state"
+            mkdir -p "$stateDir" 2>/dev/null || true
+            echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+            reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+            python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
+            exit 0
+        fi
+    fi
+fi
+
 # -- Almanach existiert + bereits gelesen (oder Notaus): einmalige sanfte Bestaetigung, dann frei --
 if [ -f "$almanachPath" ]; then
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
         if [ "$disabled" -eq 1 ]; then
-            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel freiwillig."
+            msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel (+ Best Practices) freiwillig."
         else
-            msg="BUG-ALMANACH: $almRel wurde gelesen - Bereich '$name' ist fuer diese Session freigegeben."
+            msg="BUG-ALMANACH: $almRel + Best-Practices gelesen - Bereich '$name' ist fuer diese Session freigegeben."
         fi
         python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$msg"
     fi

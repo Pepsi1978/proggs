@@ -1,6 +1,8 @@
 # Bug-Almanach-System — Funktionsweise & Design
 
-> Stand: 2026-06-01 (v1), erweitert 2026-06-02 (Kopplung mit Best-Practices, §9). Entwickelt mit Frank, ausgeloest durch den
+> Stand: 2026-06-01 (v1), erweitert 2026-06-02 (Kopplung mit Best-Practices, §9), erweitert
+> 2026-06-07 (das LESEN der Best-Practices-Datei wird jetzt vom Guard MIT-erzwungen — erst Almanach,
+> dann Best Practices, dann coden; §3/§4/§9). Entwickelt mit Frank, ausgeloest durch den
 > Chrome-Extension-Verschwind-Bug (~1h verloren, weil der dokumentierte Workaround
 > nicht VORHER nachgeschlagen wurde). Dieses Dokument beschreibt, wie das System
 > arbeitet. Es ist die Referenz fuer kuenftige Verbesserungen.
@@ -55,17 +57,21 @@ drei Schichten, die unabhaengig voneinander greifen:
 | # | Name | Mechanismus | Wann | Poka-Yoke |
 |---|------|-------------|------|-----------|
 | 1 | **Praesenz** | `bug-almanac-index` Hook (SessionStart) liest `README.md` und blendet die Liste der vorhandenen Almanache + erwarteten Bereiche ein | bei JEDEM Session-Start (auch nach Compaction) | Stufe 1–2: das System ist immer im Blick |
-| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde. Read einer `bugs/<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den "gelesen"-Marker und gibt den Bereich frei (1x pro Bereich/Session). Kein Almanach vorhanden → nur erinnern (kein Block — Recherche braucht Franks OK). Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
+| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde — und (seit 2026-06-07) danach weiter, solange die zugehoerige `best-practices-<bereich>.md` (falls vorhanden) nicht gelesen wurde. Read einer `bugs/<X>.md` bzw. `best-practices-<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den jeweiligen "gelesen"-Marker und gibt frei (1x pro Bereich/Session; Reihenfolge erst Almanach, dann Best Practices). Kein Almanach vorhanden → nur erinnern (kein Block — Recherche braucht Franks OK). Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
 | 3 | **Verhalten** | Regel `~/.claude/rules/known-bugs-before-coding.md` | immer geladen | Stufe 1: Verhaltensanweisung |
 
 Beide Hooks: Cross-Platform (`.ps1` + `.sh`). Der Index-Hook ist nicht blockierend
 (injiziert nur Kontext). Der Guard-Hook ist seit 2026-06-02 **blockierend** (Stufe 2):
 er stoppt Edit/Write per `permissionDecision:deny` + `exit 0` (NICHT `exit 2` — das
-blockt Write/Edit nicht, siehe bugs/claude-tooling/claude-hooks.md 1.6), bis der Almanach des Bereichs
-in dieser Session gelesen wurde. FAIL-OPEN: jeder interne Hook-Fehler → durchlassen,
-nie faelschlich blockieren. Notaus via `bug-almanac-disable.flag` im TEMP-Verzeichnis.
-Registriert in `~/.claude/settings.json`, gespiegelt in
-`claude-code-setup/hooks/`.
+blockt Write/Edit nicht, siehe bugs/claude-tooling/claude-hooks.md 1.6), bis ZUERST der
+Almanach UND DANN (seit 2026-06-07, falls vorhanden) die zugehoerige Best-Practices-Datei
+des Bereichs in dieser Session gelesen wurde. Die Reihenfolge ist automatisch erzwungen: der
+BP-Block wird erst erreicht, wenn der Almanach-Block bereits durchfiel (= Almanach gelesen).
+Die BP-Datei wird per Pfad-Ableitung gesucht (`best-practices-<almKey>.md` rekursiv unter
+`best-practices/projekt-code/`); existiert keine, zaehlt nur der Almanach. FAIL-OPEN: jeder
+interne Hook-Fehler → durchlassen, nie faelschlich blockieren. Notaus via
+`bug-almanac-disable.flag` im TEMP-Verzeichnis. Registriert in `~/.claude/settings.json`,
+gespiegelt in `claude-code-setup/hooks/`.
 
 ---
 
@@ -76,13 +82,16 @@ Registriert in `~/.claude/settings.json`, gespiegelt in
 2. Greift das System? (siehe §6 Schwelle) — bei trivialem Kleinkram: nein, weiter.
 3. Almanach im Index vorhanden?
    ├─ JA  → komplett lesen → Version live abgleichen
-   │        ├─ gleiche/aeltere Version als dokumentiert → arbeiten mit Bug-Wissen
+   │        ├─ gleiche/aeltere Version als dokumentiert → weiter zu 3b
    │        └─ neuere Version als dokumentiert → Frank melden, OK fuer kurzen
-   │           Re-Check einholen (existieren die Bugs noch? neue dazugekommen?)
+   │           Re-Check einholen (existieren die Bugs noch? neue dazugekommen?) → weiter zu 3b
    └─ NEIN → Frank melden: „neuer Bereich X, kein Almanach — recherchieren?"
             → auf sein OK warten → 3–5 Researcher (gedeckelt, siehe §5)
             → Almanach anlegen → in README.md eintragen
-4. ARBEITEN — mit den bekannten Bugs im Kopf, damit sie gar nicht erst eingebaut werden.
+3b. Zweite Seite: existiert eine `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`?
+    → JA: komplett lesen (wie man es von vornherein richtig macht). Der Guard erzwingt das
+      ohnehin in der Reihenfolge erst Almanach, dann Best Practices. → NEIN: nur Almanach zaehlt.
+4. ARBEITEN — mit den bekannten Bugs UND den Best Practices im Kopf, damit Fehler gar nicht erst entstehen.
 5. Tritt ein Fehler auf → ZUERST Almanach pruefen: ist das ein bekannter Bug?
    └─ ja → dokumentierte Loesung sofort anwenden (schnellster Pfad).
 6. Neuen Bug erlebt (oder im Netz beste Loesung gefunden)
@@ -174,6 +183,12 @@ Der Bug-Almanach sagt *was schiefgeht und wie man es loest*; der Ordner
 `~/proggs/best-practices/projekt-code/<kategorie>/best-practices-<software>.md` sagt *wie man es von
 vornherein richtig macht, damit der Bug nie entsteht*. Beide gehoeren zusammen und werden in
 BEIDE Richtungen gepflegt — keine Einbahnstrasse:
+
+**Seit 2026-06-07 ist die Kopplung auch beim LESEN erzwungen, nicht nur beim Pflegen:** Der
+`bug-almanac-guard` (§3, Schicht 2) blockiert bereichstypische Edits, bis ZUERST der Almanach UND
+DANN die zugehoerige Best-Practices-Datei in der Session gelesen wurde. Damit greift die "zwei
+Seiten"-Idee genau dort, wo sie am meisten zaehlt: vor der ersten Code-Aenderung. Die folgenden
+Pflege-Richtungen (Schreiben) bleiben unveraendert.
 
 | Richtung | Wer schreibt | Was |
 |----------|--------------|-----|
