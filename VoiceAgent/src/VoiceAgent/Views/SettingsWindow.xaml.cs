@@ -51,6 +51,14 @@ namespace VoiceAgent.Views
                 VoiceBox.SelectedValuePath = nameof(GoogleTtsVoice.Name);
                 VoiceBox.SelectedValue = _settings.TtsVoiceName;
                 if (VoiceBox.SelectedValue == null) VoiceBox.SelectedValue = GoogleTtsVoices.DefaultVoiceName;
+
+                SemanticEndpointBox.IsChecked = _settings.SemanticEndpointing;
+                IntentDetectionBox.IsChecked = _settings.IntentDetection;
+                SilenceThresholdSlider.Value = _settings.SilenceThreshold;
+                SilenceMsSlider.Value = _settings.SilenceMs;
+                MinUtteranceSlider.Value = _settings.MinUtteranceMs;
+                EndpointWaitSlider.Value = _settings.EndpointMaxWaitMs;
+                UpdateSliderLabels();
             }
             catch (Exception ex)
             {
@@ -76,6 +84,13 @@ namespace VoiceAgent.Views
                     : EndpointModelBox.Text.Trim();
                 _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
 
+                _settings.SemanticEndpointing = SemanticEndpointBox.IsChecked == true;
+                _settings.IntentDetection = IntentDetectionBox.IsChecked == true;
+                _settings.SilenceThreshold = Math.Round(SilenceThresholdSlider.Value, 3);
+                _settings.SilenceMs = (int)SilenceMsSlider.Value;
+                _settings.MinUtteranceMs = (int)MinUtteranceSlider.Value;
+                _settings.EndpointMaxWaitMs = (int)EndpointWaitSlider.Value;
+
                 Config.Save(_settings);
                 Config.SaveApiKey("groq", GroqKeyBox.Text?.Trim() ?? "");
                 Config.SaveApiKey("google", GoogleKeyBox.Text?.Trim() ?? "");
@@ -99,6 +114,18 @@ namespace VoiceAgent.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateSliderLabels();
+
+        /// <summary>Aktualisiert die Live-Wertanzeige neben den Empfindlichkeits-Schiebereglern.</summary>
+        private void UpdateSliderLabels()
+        {
+            if (SilenceThresholdLabel == null) return;   // ValueChanged kann vor Populate feuern
+            SilenceThresholdLabel.Text = $"Stille-Schwelle (Empfindlichkeit): {SilenceThresholdSlider.Value:F3} — kleiner = empfindlicher";
+            SilenceMsLabel.Text = $"Pause bis eine Aussage endet: {SilenceMsSlider.Value:F0} ms";
+            MinUtteranceLabel.Text = $"Kuerzeste erkannte Aussage: {MinUtteranceSlider.Value:F0} ms";
+            EndpointWaitLabel.Text = $"Sicherheitsnetz nach langer Pause: {EndpointWaitSlider.Value:F0} ms";
         }
 
         // Event-Handler: async void ist hier ok, Body komplett in try/catch (Almanach §7.2).

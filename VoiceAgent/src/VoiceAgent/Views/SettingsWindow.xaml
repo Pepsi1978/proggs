@@ -81,6 +81,30 @@
                 <Button x:Name="PreviewButton" Content="Probehoeren" HorizontalAlignment="Left"
                         Margin="0,8,0,0" Padding="14,5" Click="Preview_Click"/>
 
+                <!-- 5. Spracherkennung (Empfindlichkeit) -->
+                <TextBlock Text="Spracherkennung (Empfindlichkeit)" Style="{StaticResource Section}"/>
+
+                <CheckBox x:Name="SemanticEndpointBox" Foreground="#E4E6EB" Margin="0,4,0,2"
+                          Content="Gedankenpausen abwarten (semantischer Endpunkt-Check)"/>
+                <CheckBox x:Name="IntentDetectionBox" Foreground="#E4E6EB" Margin="0,4,0,8"
+                          Content="Absicht erkennen (Aufgabe/Frage/Plauderei — fuer die Live-Sonde)"/>
+
+                <TextBlock x:Name="SilenceThresholdLabel" Style="{StaticResource Label}"/>
+                <Slider x:Name="SilenceThresholdSlider" Minimum="0.002" Maximum="0.05"
+                        TickFrequency="0.001" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                <TextBlock x:Name="SilenceMsLabel" Style="{StaticResource Label}"/>
+                <Slider x:Name="SilenceMsSlider" Minimum="500" Maximum="6000"
+                        TickFrequency="100" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                <TextBlock x:Name="MinUtteranceLabel" Style="{StaticResource Label}"/>
+                <Slider x:Name="MinUtteranceSlider" Minimum="100" Maximum="1500"
+                        TickFrequency="50" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                <TextBlock x:Name="EndpointWaitLabel" Style="{StaticResource Label}"/>
+                <Slider x:Name="EndpointWaitSlider" Minimum="1000" Maximum="10000"
+                        TickFrequency="250" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
             </StackPanel>
         </ScrollViewer>
 

@@ -48,10 +48,7 @@ namespace VoiceAgent
                 _settings = Config.Load();
                 BuildAgents();
 
-                _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs);
-                _listener.OnUtterance += OnUtterance;
-                _listener.Start();
-                _listener.SetEnabled(_settings.MicEnabled);
+                RebuildListener();
 
                 MicToggle.IsChecked = _settings.MicEnabled;
                 UpdateMicLabel();
@@ -74,6 +71,21 @@ namespace VoiceAgent
             _intentDetector = new IntentDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel));
             _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
             _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage);
+        }
+
+        /// <summary>
+        /// Erstellt den Mikrofon-Listener mit den aktuellen Empfindlichkeits-Werten neu.
+        /// Wird beim Laden UND nach dem Speichern der Einstellungen aufgerufen, damit geaenderte
+        /// Schieberegler-Werte (Stille-Schwelle/Pausendauer) sofort greifen — nicht erst beim Neustart.
+        /// </summary>
+        private void RebuildListener()
+        {
+            try { _listener?.Dispose(); }
+            catch (Exception ex) { Log.Error("MainWindow: alten Listener schliessen fehlgeschlagen", ex); }
+            _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs);
+            _listener.OnUtterance += OnUtterance;
+            _listener.Start();
+            _listener.SetEnabled(_settings.MicEnabled);
         }
 
         private void OnClosed(object? sender, EventArgs e)
@@ -104,7 +116,7 @@ namespace VoiceAgent
                 {
                     _settings = Config.Load();
                     BuildAgents();
-                    _listener?.SetEnabled(_settings.MicEnabled);
+                    RebuildListener();   // geaenderte Empfindlichkeit sofort uebernehmen
                     MicToggle.IsChecked = _settings.MicEnabled;
                     UpdateMicLabel();
                     Append("System", "Einstellungen gespeichert und uebernommen.");
