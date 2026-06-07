@@ -364,23 +364,27 @@
 
 ## 10. Kopplung zur Best-Practices-Seite (zwei Seiten einer Medaille)
 
-Die Praeventions-Haelfte ("wie macht man es von vornherein richtig") ist bereits stark in den
-Harness-Best-Practices abgedeckt — dieser Almanach verweist dorthin, statt zu duplizieren:
+**Dediziertes Gegenstueck (seit 2026-06-07):** `best-practices/projekt-code/claude-tooling/best-practices-claude-config.md`
+— spiegelgleich abgelegt, damit der `bug-almanac-guard` nach dem Lesen DIESES Almanachs automatisch
+auch die Best-Practices-Seite erzwingt (erst Almanach, dann Best Practices). Dort steht "wie macht man
+es von vornherein richtig" inkl. **Entscheidungsbaum** (CLAUDE.md vs. rule vs. Hook vs. Skill vs.
+Output-Style vs. settings), Verbindlichkeits-Spektrum, Befolgungs-Techniken, Defense-in-Depth.
+Ergaenzend komponentenweise: `best-practices/02-skills`, `03-agents`, `06-commands`, `07-settings`,
+`08-kontext`, `09-token-effizienz`, `10-arbeitsweise`.
 
-| Almanach-Abschnitt | Best-Practice-Gegenstueck |
-|--------------------|---------------------------|
-| 1. CLAUDE.md (Groesse/Context-Rot/Compact) | `best-practices/08-kontext/` + `09-token-effizienz/` |
-| 2. Regel-Dateien / path-scoped | `best-practices/08-kontext/` + `10-arbeitsweise/` |
-| 3. settings.json / Permissions | `best-practices/07-settings/` |
-| 4. Skills | `best-practices/02-skills/` |
-| 5. Commands & Agents | `best-practices/06-commands/` + `03-agents/` |
-| 6. Memory | `best-practices/08-kontext/` |
-| 7. Plugins | `best-practices/04-plugins/` |
-| Hooks/MCP/Python (verwandt) | `01-hooks/` · `05-mcp/` + eigene Almanache |
+**🔗 Bezugs-Tabelle (Bug-Abschnitt ↔ Best-Practice-Abschnitt):**
 
-(Eine vollstaendige wechselseitige Abschnitts-Bezugs-Tabelle in allen 7 BP-Dateien waere
-unverhaeltnismaessig — dieser Almanach buendelt mehrere BP-Kategorien. Bei einer kuenftigen
-fokussierten `best-practices`-Runde fuer einen Teilbereich kann die Tabelle dort verfeinert werden.)
+| Bug-Abschnitt (hier) | Best-Practice-Abschnitt (best-practices-claude-config.md) |
+|----------------------|----------------------------------------------------------|
+| 1. CLAUDE.md | 0. Entscheidungsbaum · 2. Befolgung · 3. Token/Zwei-Schichten · 5. Robustheit |
+| 2. Regel-Dateien / path-scoped | 3. Token/Zwei-Schichten · 5. Robustheit |
+| 3. settings.json / Permissions | 1. Verbindlichkeits-Spektrum · 6. Defense-in-Depth |
+| 4. Skills | 0. Entscheidungsbaum · 7. Neueste 2.1.x-Features |
+| 5. Commands & Agents | 0. Entscheidungsbaum · 5. Robustheit (Subagent-Vererbung) |
+| 6. Auto-Memory / MEMORY.md | 3. Token/Zwei-Schichten |
+| 7. Plugins | 6. Defense-in-Depth (externer Code) |
+| 8. Plattform-Fallen | 3. (BOM/JSON) |
+| 9. Fix-Status | 7. Neueste 2.1.x-Features |
 
 ---
 
