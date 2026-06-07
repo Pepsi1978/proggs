@@ -52,5 +52,10 @@ namespace VoiceAgent.Services
         // in AUFGABE/FRAGE/PLAUDEREI ein (statt es aus der Antwort zu raten). Macht die Live-Sonde exakt.
         public bool IntentDetection { get; set; } = true;
         public string IntentModel { get; set; } = "gemini-3.1-flash-lite";
+
+        // ----- Zeit -----
+        // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
+        // die System-Zeitzone dieses PCs; sonst eine TimeZoneInfo-Id (z.B. "W. Europe Standard Time").
+        public string TimeZoneId { get; set; } = string.Empty;
     }
 }

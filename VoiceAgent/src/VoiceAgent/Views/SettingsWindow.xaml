@@ -105,6 +105,14 @@
                 <Slider x:Name="EndpointWaitSlider" Minimum="1000" Maximum="10000"
                         TickFrequency="250" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
 
+                <!-- 6. Zeitzone (damit der Agent die echte Uhrzeit kennt) -->
+                <TextBlock Text="Zeitzone (fuer Uhrzeit-Fragen)" Style="{StaticResource Section}"/>
+                <TextBlock Text="Der Agent kennt die echte Uhrzeit nur, wenn die Zeitzone stimmt. Standard: Systemzeit dieses PCs."
+                           Style="{StaticResource Label}"/>
+                <CheckBox x:Name="AutoTimeZoneBox" Foreground="#E4E6EB" Margin="0,4,0,6"
+                          Content="Automatisch (Systemzeit dieses PCs)" Click="AutoTimeZone_Click"/>
+                <ComboBox x:Name="TimeZoneBox"/>
+
             </StackPanel>
         </ScrollViewer>
 

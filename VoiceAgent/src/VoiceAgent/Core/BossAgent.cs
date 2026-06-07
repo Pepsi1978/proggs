@@ -19,14 +19,16 @@ namespace VoiceAgent.Core
         private readonly string _systemPrompt;
         private readonly AgentMemory? _memory;
         private readonly SubAgentRegistry? _subAgents;
+        private readonly string? _timeZoneId;
         private readonly List<LlmMessage> _history = new();
 
-        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null)
+        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null)
         {
             _provider = provider;
             _systemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? BossAgentPrompt.Default : systemPrompt!;
             _memory = memory;
             _subAgents = subAgents;
+            _timeZoneId = timeZoneId;
         }
 
         public IReadOnlyList<LlmMessage> History => _history;
@@ -37,8 +39,11 @@ namespace VoiceAgent.Core
         /// <summary>System-Prompt + bisheriger Verlauf — die vollstaendige Nachrichtenliste fuers LLM.</summary>
         public IReadOnlyList<LlmMessage> BuildMessages()
         {
-            // System-Prompt + Gedaechtnis-Block (Fakten + letzte Gespraeche) ueber Sessions hinweg.
-            var systemText = _systemPrompt + (_memory?.ContextBlock() ?? string.Empty);
+            // System-Prompt + aktuelle Echtzeit (LLM kennt die Uhrzeit sonst nicht, raet sie) +
+            // Gedaechtnis-Block (Fakten + letzte Gespraeche) ueber Sessions hinweg.
+            var systemText = _systemPrompt
+                + TimeContext.BuildBlock(_timeZoneId)
+                + (_memory?.ContextBlock() ?? string.Empty);
             var list = new List<LlmMessage>(_history.Count + 1)
             {
                 new LlmMessage(LlmRole.System, systemText)

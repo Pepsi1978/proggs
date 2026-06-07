@@ -69,7 +69,7 @@ namespace VoiceAgent
 
         private void BuildAgents()
         {
-            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory, _subAgents);
+            _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId);
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));

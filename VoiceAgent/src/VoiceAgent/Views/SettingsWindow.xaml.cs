@@ -59,6 +59,15 @@ namespace VoiceAgent.Views
                 SilenceMsSlider.Value = _settings.SilenceMs;
                 MinUtteranceSlider.Value = _settings.MinUtteranceMs;
                 EndpointWaitSlider.Value = _settings.EndpointMaxWaitMs;
+
+                TimeZoneBox.ItemsSource = TimeZoneInfo.GetSystemTimeZones();
+                TimeZoneBox.DisplayMemberPath = nameof(TimeZoneInfo.DisplayName);
+                TimeZoneBox.SelectedValuePath = nameof(TimeZoneInfo.Id);
+                bool autoTz = string.IsNullOrWhiteSpace(_settings.TimeZoneId);
+                AutoTimeZoneBox.IsChecked = autoTz;
+                TimeZoneBox.SelectedValue = autoTz ? TimeZoneInfo.Local.Id : _settings.TimeZoneId;
+                TimeZoneBox.IsEnabled = !autoTz;
+
                 _ready = true;            // ab jetzt existieren ALLE Controls -> Label-Updates erlaubt
                 UpdateSliderLabels();
             }
@@ -92,6 +101,9 @@ namespace VoiceAgent.Views
                 _settings.SilenceMs = (int)SilenceMsSlider.Value;
                 _settings.MinUtteranceMs = (int)MinUtteranceSlider.Value;
                 _settings.EndpointMaxWaitMs = (int)EndpointWaitSlider.Value;
+                _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
+                    ? string.Empty
+                    : (TimeZoneBox.SelectedValue as string ?? string.Empty);
 
                 Config.Save(_settings);
                 Config.SaveApiKey("groq", GroqKeyBox.Text?.Trim() ?? "");
@@ -119,6 +131,10 @@ namespace VoiceAgent.Views
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateSliderLabels();
+
+        // Auto-Zeitzone an/aus: die manuelle Auswahl ist nur bei abgeschaltetem "Automatisch" aktiv.
+        private void AutoTimeZone_Click(object sender, RoutedEventArgs e)
+            => TimeZoneBox.IsEnabled = AutoTimeZoneBox.IsChecked != true;
 
         /// <summary>Aktualisiert die Live-Wertanzeige neben den Empfindlichkeits-Schiebereglern.</summary>
         private void UpdateSliderLabels()
