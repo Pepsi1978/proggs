@@ -185,7 +185,15 @@ $ti_extra"
         ;;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
+    */claude.md|claude.md|*/rules/*.md|*/settings.json|settings.json|*/settings.local.json|*/settings-reference.json|*/skill.md|*/commands/*.md|*/agents/*.md)
+        # Claude-Code-Konfiguration: CLAUDE.md, rules/*.md, settings(.local/-reference).json, SKILL.md, commands/*.md, agents/*.md.
+        # Hooks (.ps1/.sh) faengt der claudehooks-Case oben ab; MEMORY.md bewusst NICHT (zu haeufig automatisch beschrieben).
+        slug="claudeconfig"; file="claude-config.md"; name="Claude-Code Konfiguration und Regeln (CLAUDE.md/Rules/Settings/Skills/Commands/Agents)";;
 esac
+# Selbst-Ausschluss: Almanach-/Best-Practices-.md duerfen claudeconfig NIE triggern (sind selbst .md).
+if [ "$slug" = "claudeconfig" ]; then
+    case "$fpl" in */bugs/*|*/best-practices/*) slug=""; file=""; name="";; esac
+fi
 [ -n "$slug" ] || exit 0
 
 # Kategorie-robust (2026-06-03): Almanache liegen in Kategorie-Unterordnern (bugs/<kategorie>/<file>).

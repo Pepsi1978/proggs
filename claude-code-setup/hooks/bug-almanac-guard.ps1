@@ -164,6 +164,18 @@ try {
         }
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
+    } elseif (($fpl -notmatch '/(bugs|best-practices)/') -and (
+                $fpl -match '(^|/)claude\.md$' -or
+                $fpl -match '/rules/[^/]+\.md$' -or
+                $fpl -match '(^|/)settings\.json$' -or
+                $fpl -match '(^|/)settings\.local\.json$' -or
+                $fpl -match '(^|/)settings-reference\.json$' -or
+                $fpl -match '/skill\.md$' -or
+                $fpl -match '/(commands|agents)/[^/]+\.md$')) {
+        # Claude-Code-Konfiguration: CLAUDE.md, rules/*.md (~/.claude + claude-code-setup), settings(.local/-reference).json,
+        # SKILL.md, commands/*.md, agents/*.md. AUSGESCHLOSSEN: bugs/** und best-practices/** (sind selbst .md -> kein Selbst-Trigger).
+        # Hooks (.ps1/.sh) faengt der claudehooks-Zweig oben ab; MEMORY.md bewusst NICHT (zu haeufig automatisch beschrieben).
+        $slug = 'claudeconfig'; $file = 'claude-config.md'; $name = 'Claude-Code Konfiguration und Regeln (CLAUDE.md/Rules/Settings/Skills/Commands/Agents)'
     }
     if (-not $slug) { exit 0 }
 
