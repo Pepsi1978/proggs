@@ -28,6 +28,8 @@ namespace VoiceAgent.Core
 
         private DateTimeOffset _lastActivity;
         private bool _disposed;
+        private long _speechBlocks;       // Diagnose: wie viele Sprach-Bloecke seit dem letzten Log
+        private long _lastDiagAt;
 
         /// <summary>Weckwort erkannt — der Agent ist jetzt wach (Argument: erkanntes Keyword).</summary>
         public event Action<string>? Woke;
@@ -58,7 +60,19 @@ namespace VoiceAgent.Core
             if (!_vad.IsSpeech(samples)) return false;   // Vorfilter: nur Sprache zur Engine (§4)
 
             string? keyword = _engine.Accept(samples);
-            if (string.IsNullOrEmpty(keyword)) return false;
+            if (string.IsNullOrEmpty(keyword))
+            {
+                // Diagnose: Sprache gehoert, aber (noch) kein Weckwort. Throttled, damit das Log
+                // nicht ueberlaeuft. Zeigt sofort, ob das Modell die Aussprache nicht erkennt.
+                _speechBlocks++;
+                if (_speechBlocks - _lastDiagAt >= 40)
+                {
+                    _lastDiagAt = _speechBlocks;
+                    Log.Info("Wake-Lauschen: Sprache gehoert, aber Weckwort nicht erkannt",
+                        new { speechBlocks = _speechBlocks });
+                }
+                return false;
+            }
 
             State = WakeState.Awake;
             _lastActivity = _now();
@@ -83,6 +97,21 @@ namespace VoiceAgent.Core
             if (State != WakeState.Awake) return;
             if ((_now() - _lastActivity).TotalMilliseconds >= _timeoutMs)
                 Sleep("Timeout");
+        }
+
+        /// <summary>
+        /// Manuell wecken (z.B. Nutzer schaltet das Mikrofon per Klick an). Direkter Sprech-Modus
+        /// OHNE Weckwort — feuert KEIN Woke-Event (kein Sound/Greeting), startet aber das Wachfenster.
+        /// Das ist der zuverlaessige Pfad, falls das Weckwort mal nicht anspringt.
+        /// </summary>
+        public void ForceAwake()
+        {
+            if (_disposed) return;
+            _lastActivity = _now();
+            if (State == WakeState.Awake) return;
+            State = WakeState.Awake;
+            Probe.State("Sleeping", "Awake", new { reason = "manuell" });
+            Log.Info("Manuell geweckt (Mikrofon-Schalter) — direkter Sprech-Modus");
         }
 
         /// <summary>Sofort in den Ruhezustand zuruecksetzen (z.B. wenn das Feature deaktiviert wird).</summary>

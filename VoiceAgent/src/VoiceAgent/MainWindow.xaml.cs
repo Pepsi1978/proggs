@@ -86,7 +86,7 @@ namespace VoiceAgent
 
                 RebuildListener();
 
-                MicToggle.IsChecked = _settings.MicEnabled;
+                MicToggle.IsChecked = !_settings.WakeWordEnabled && _settings.MicEnabled;  // Weckwort-Modus startet im Ruhezustand
                 UpdateMicLabel();
                 StartClock();
                 Log.Info("MainWindow geladen — Voice-Loop bereit.");
@@ -130,8 +130,10 @@ namespace VoiceAgent
             _listener.OnUtterance += OnUtterance;
             _listener.OnFrame += OnAudioFrame;       // roher Stream fuer das Weckwort-Lauschen
             _listener.Start();
-            _listener.SetEnabled(_settings.MicEnabled);
             RebuildWakeController();
+            // Im Weckwort-Modus laeuft die Aufnahme IMMER (Hintergrund-Lauschen, auch im Ruhezustand);
+            // ohne Weckwort steuert der Mikrofon-Schalter die Aufnahme wie bisher.
+            _listener.SetEnabled(_settings.WakeWordEnabled || _settings.MicEnabled);
         }
 
         /// <summary>
@@ -185,6 +187,8 @@ namespace VoiceAgent
             try
             {
                 _justWoke = true;
+                MicToggle.IsChecked = true;   // Schalter zeigt: jetzt wach
+                UpdateMicLabel();
                 // Observability-Checkpoint (Intent-Verifikation): erwartet vs. tatsaechlich.
                 Log.Info("CHECKPOINT: Weckwort erkannt",
                     new { step = "Weckwort erkannt", expected = _settings.WakeWord, actual = keyword, ok = true });
@@ -203,8 +207,10 @@ namespace VoiceAgent
 
         private void OnSlept() => Dispatcher.InvokeAsync(() =>
         {
+            MicToggle.IsChecked = false;   // Schalter zeigt: ruht wieder
+            UpdateMicLabel();
             SetStatus("Ruhe — sag das Weckwort");
-            Append("System", "(Ich ruhe wieder — sag das Weckwort, um mich zu wecken.)");
+            Append("System", "(Ich ruhe wieder — sag das Weckwort oder klick das Mikrofon an.)");
         });
 
         private void OnClosed(object? sender, EventArgs e)
@@ -218,13 +224,30 @@ namespace VoiceAgent
         private void MicToggle_Click(object sender, RoutedEventArgs e)
         {
             bool on = MicToggle.IsChecked == true;
+            if (_settings.WakeWordEnabled && _wake != null)
+            {
+                // Weckwort-Modus: der Schalter weckt MANUELL (an) bzw. schickt zurueck in Ruhe (aus).
+                // Das ist der zuverlaessige Direkt-Pfad — funktioniert auch, wenn das Weckwort mal
+                // nicht anspringt. Die Aufnahme laeuft weiter (Hintergrund-Lauschen), wird NIE abgeschaltet.
+                if (on) _wake.ForceAwake(); else _wake.ForceSleep();
+                _listener?.SetEnabled(true);
+                UpdateMicLabel();
+                if (on) { SetStatus("Wach — sprich einfach los"); Append("System", "(Mikrofon an — ich hoere zu.)"); }
+                return;
+            }
             _settings.MicEnabled = on;
             _listener?.SetEnabled(on);
             Config.Save(_settings);
             UpdateMicLabel();
         }
 
-        private void UpdateMicLabel() => MicToggle.Content = _settings.MicEnabled ? "🎙 Mikrofon: an" : "🎙 Mikrofon: aus";
+        private void UpdateMicLabel()
+        {
+            if (_settings.WakeWordEnabled)
+                MicToggle.Content = (_wake?.State == WakeState.Awake) ? "🎙 Wach — hoert zu" : "🎙 Ruht — sag „Okay Computer“";
+            else
+                MicToggle.Content = _settings.MicEnabled ? "🎙 Mikrofon: an" : "🎙 Mikrofon: aus";
+        }
 
         private void StartClock()
         {
@@ -599,7 +622,9 @@ namespace VoiceAgent
         // ---------- Helfer ----------
 
         private void PauseMic() => _listener?.SetEnabled(false);
-        private void ResumeMic() { if (_settings.MicEnabled) _listener?.SetEnabled(true); }
+        // Im Weckwort-Modus laeuft die Aufnahme immer weiter (Hintergrund-Lauschen / weiter wach),
+        // sonst nur wenn das Mikrofon manuell an ist.
+        private void ResumeMic() { if (_settings.WakeWordEnabled || _settings.MicEnabled) _listener?.SetEnabled(true); }
 
         private static void TryDelete(string path)
         {
