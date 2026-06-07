@@ -12,6 +12,20 @@
 	const PREVIEW_CHARS = 140;
 	const MIN_CHARS = 6;
 
+	// Toleranter Textvergleich: contenteditable-Felder (ChatGPT/Claude/Gemini) geben
+	// beim Zuruecklesen nicht 1:1 denselben String zurueck, den man hineingeschrieben
+	// hat (\n<->Zeilenumbruch, geschuetzte Leerzeichen, getrimmte Zeilen). Darum wird
+	// fuer den Snapshot-Abgleich normalisiert (Whitespace kollabiert), statt strikt ===.
+	function normText(s) {
+		return String(s || "")
+			.replace(/[​-‍﻿]/g, "")
+			.replace(/\s+/g, " ")
+			.trim();
+	}
+	function sameText(a, b) {
+		return normText(a) === normText(b);
+	}
+
 	function setColors(btn, bg, fg) {
 		if (!btn) return;
 		btn.style.setProperty("background", bg, "important");
@@ -180,7 +194,7 @@
 		if (
 			geminiSnap &&
 			geminiSnap.el === el &&
-			current === geminiSnap.corrected
+			sameText(current, geminiSnap.corrected)
 		) {
 			console.log(
 				"[Overlays] Gemini-Toggle AN: Text bereits korrigiert — kein erneuter Aufruf.",
@@ -190,7 +204,7 @@
 		}
 
 		// Bekannter Originaltext? Dann gecachte Korrektur sofort einsetzen (kein API-Call).
-		if (geminiSnap && geminiSnap.el === el && current === geminiSnap.original) {
+		if (geminiSnap && geminiSnap.el === el && sameText(current, geminiSnap.original)) {
 			console.log(
 				"[Overlays] Gemini-Toggle AN: bekannter Originaltext — Korrektur aus Cache (kein API-Call).",
 			);
@@ -231,7 +245,7 @@
 				throw new Error(
 					"Eingabefeld hat den korrigierten Text nicht uebernommen.",
 				);
-			geminiSnap = { el, original: current, corrected };
+			geminiSnap = { el, original: current, corrected: ED().readPromptText(el) };
 			console.log("[Overlays] Gemini-Toggle AN: korrigiert", {
 				origLen: current.length,
 				corrLen: corrected.length,
@@ -262,7 +276,7 @@
 			return;
 		}
 		const live = ED().readPromptText(el);
-		if (live !== geminiSnap.corrected) {
+		if (!sameText(live, geminiSnap.corrected)) {
 			// Nutzer hat seit der Korrektur manuell editiert -> nicht ueberschreiben.
 			console.log(
 				"[Overlays] Gemini-Toggle AUS: Feldtext seit Korrektur geaendert — Original NICHT ueberschrieben.",
