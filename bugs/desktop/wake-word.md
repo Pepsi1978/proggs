@@ -1,0 +1,230 @@
+# Bekannte Bugs: Wake-Word-Detection / Keyword-Spotting in .NET (C#/WPF)
+
+> **PFLICHT-LESEN vor Arbeit an Wake-Word / Keyword-Spotting in einer .NET-Desktop-App.**
+> Stand: zuletzt recherchiert am **2026-06-08** fuer
+> **.NET 10.0.204** (`net10.0-windows`, WPF) · **sherpa-onnx** NuGet `org.k2fsa.sherpa.onnx` **1.13.2** (14.05.2026, Apache-2.0) ·
+> **NAudio 2.2.1** · **Picovoice Porcupine .NET 4.0.2** · **NanoWakeWord** (.NET Standard 2.0).
+> Zielprojekt: **VoiceAgent** (`~/proggs/VoiceAgent`). Gegenseite (Praevention):
+> `best-practices/projekt-code/desktop/best-practices-wake-word.md`.
+
+---
+
+## TL;DR — die 5 wichtigsten Regeln
+
+1. **Engine-Wahl: sherpa-onnx** (Apache-2.0, open vocabulary, custom Wake Word via `text2token` OHNE Retraining). Porcupine nur, wenn man den Free-Tier-Ablauf **30.06.2026** akzeptiert; openWakeWord-Pretrained-Modelle sind **CC-BY-NC-SA** (nicht kommerziell).
+2. **DLL-Hoelle ist das #1-Deployment-Risiko:** `onnxruntime.dll` in `System32` schlaegt deine mit (Windows-Suchpriorität) → `DllNotFoundException`/falsche Version. `SetDllDirectory`/`AddDllDirectory` + Plattform-Runtime-Paket `…runtime.win-x64` + `CopyLocalLockFileAssemblies` bei single-file publish.
+3. **Audio-Format ist nicht verhandelbar:** sherpa/Porcupine/openWakeWord wollen **16 kHz, mono, 16-bit PCM**. Porcupine **exakt 512 Samples/Frame**, openWakeWord **exakt 1280 Samples (80 ms)**. NAudio liefert oft 48 kHz → **MediaFoundationResampler** dazwischen.
+4. **`reset_stream()` ist Pflicht** direkt nach jeder Keyword-Erkennung bei sherpa-onnx — sonst feuert die naechste Erkennung nicht zuverlaessig.
+5. **Self-Trigger beim Sprechen:** Die App weckt sich beim TTS selbst, wenn das Weckwort vorgelesen wird. Wake-Listener waehrend TTS pausieren ODER Acoustic Echo Cancellation/Double-Talk-Detection. Threshold-Ziel: FA < 0,5/h, FR < 5 %.
+
+---
+
+## A. Deployment / native DLLs (sherpa-onnx, .NET/WPF) — die teuerste Fehlerklasse
+
+### 1. DllNotFoundException durch aelteres `onnxruntime.dll` in System32   [⭐ HAEUFIG]
+**Symptom:** Laeuft auf dem Dev-Rechner, crasht beim Nutzer mit `DllNotFoundException` oder einem ONNX-Versions-/Entry-Point-Fehler — obwohl die DLL "daneben liegt".
+**Ursache:** Windows-DLL-Suchpriorität laedt eine aeltere/konfligierende `onnxruntime.dll` aus `C:\Windows\System32` BEVOR die mitgelieferte gefunden wird (oft von anderer Software dort abgelegt).
+**Versionen:** sherpa-onnx alle (1.13.2 betroffen) — Windows-Plattformverhalten, **per Design, kein Fix**.
+**FIX:** Beim App-Start den eigenen DLL-Ordner explizit voranstellen: `SetDllDirectory(appDir)` bzw. `AddDllDirectory` + `SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_*)`. Native DLLs in einen kontrollierten Unterordner legen und diesen registrieren. NIE auf den System-Suchpfad verlassen. Siehe `best-practices-wake-word.md` §1.
+**Quelle:** k2-fsa/sherpa-onnx GitHub-Issues (Windows-DLL-loading); claude-mem #13843/#13845.
+
+### 2. Native DLLs fehlen im single-file publish
+**Symptom:** `dotnet publish -p:PublishSingleFile=true` erzeugt eine EXE, die beim Start die nativen sherpa/onnx-DLLs nicht findet.
+**Ursache:** Native Libraries werden NICHT automatisch in die single-file-EXE eingebettet/extrahiert; sie fallen aus dem Publish-Output.
+**Versionen:** sherpa-onnx alle — per Design der .NET-single-file-Mechanik.
+**FIX:** `<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>` setzen und/oder `IncludeNativeLibrariesForSelfExtract=true`; native DLLs als `Content`/`None` mit `CopyToOutputDirectory=PreserveNewest` mitgeben und neben die EXE deployen. Nach jedem Release-Build verifizieren, dass die DLLs im Output liegen.
+**Quelle:** claude-mem #13843; .NET-Doku single-file native libs.
+
+### 3. x86 Calling-Convention-Mismatch (stdcall vs. cdecl)
+**Symptom:** Auf **x86**-Builds Laufzeitfehler/Stack-Korruption beim ersten nativen Aufruf; auf x64 unauffaellig.
+**Ursache:** Mismatch zwischen managed P/Invoke-Annahme (stdcall) und der nativen C-API (cdecl) auf x86.
+**Versionen:** sherpa-onnx x86 — historisch; x64 nicht betroffen.
+**FIX:** **win-x64 verwenden** (Standard fuer den VoiceAgent — `net10.0-windows`, x64). x86 meiden; falls unvermeidbar, korrektes `CallingConvention.Cdecl` sicherstellen.
+**Quelle:** k2-fsa GitHub-Issues; claude-mem #13843.
+
+### 4. Plattform-Runtime-Paket separat noetig
+**Symptom:** Nur `org.k2fsa.sherpa.onnx` referenziert → keine nativen Binaries, Ladefehler.
+**Ursache:** Das Haupt-NuGet-Paket enthaelt die nativen Windows-Binaries NICHT — die liegen im Runtime-Paket.
+**Versionen:** alle.
+**FIX:** Zusaetzlich `org.k2fsa.sherpa.onnx.runtime.win-x64` referenzieren (passend zur RID). Versionen von Haupt- und Runtime-Paket **identisch** halten (Mismatch → Entry-Point-Fehler).
+**Quelle:** claude-mem #13843/#13840.
+
+---
+
+## B. Audio-Capture (NAudio) — Format, Threading, Geraete
+
+### 5. NAudio `WaveInEvent` blockiert bei USB-Mikrofon-Abzug   [⭐ HAEUFIG]
+**Symptom:** App haengt/blockiert (z. B. an `DeviceCount`/Init), wenn das USB-Mikrofon abgezogen oder umgesteckt wird.
+**Ursache:** Windows-WaveIn-API blockiert bei Geraetewechsel; kein sauberer Abbruch — bekannte NAudio/Win-API-Limitation.
+**Versionen:** NAudio 2.2.1 — Win-API-bedingt, kein einfacher Fix.
+**FIX:** Geraete-Hotplug ueber `MMDeviceEnumerator`/`IMMNotificationClient` ueberwachen, Capture bei Geraetewechsel sauber stoppen/neu starten; Init in Try/Catch mit Timeout, NICHT im UI-Thread blockieren. (Erinnert an Memory `reference_chrome_mic_silent_after_usb_change` — gleiche Geraete-Klasse.)
+**Quelle:** NAudio-Issues; claude-mem #13845.
+
+### 6. Sample-Rate-Mismatch: NAudio liefert 48 kHz, Engine will 16 kHz
+**Symptom:** Wake-Word wird nie erkannt, obwohl Audio ankommt; Erkennungsrate praktisch 0.
+**Ursache:** Mikrofon laeuft mit 44,1/48 kHz, die KWS-Engine erwartet zwingend 16 kHz mono. Ungesampletes Audio = Garbage fuer das Modell.
+**Versionen:** unabhaengig.
+**FIX:** `MediaFoundationResampler` (Quality 1–60, ~60 = beste) 48 kHz → 16 kHz mono 16-bit, ODER `WaveInEvent` direkt mit `WaveFormat(16000, 16, 1)` initialisieren, wenn das Geraet es unterstuetzt. Resampling VOR der Frame-Zerlegung.
+**Quelle:** claude-mem #13845/#13839.
+
+### 7. Cross-Thread-UI-Zugriff aus `DataAvailable`
+**Symptom:** `InvalidOperationException` (UI-Thread) oder sporadische Crashes beim UI-Update aus dem Audio-Callback.
+**Ursache:** `DataAvailable`/Capture laeuft auf einem eigenen Thread; direkter Zugriff auf WPF-UI ist verboten.
+**Versionen:** unabhaengig (WPF).
+**FIX:** UI-Updates ueber `Dispatcher.Invoke/BeginInvoke` marshallen. Audio-Verarbeitung off-UI-thread halten, nur Ergebnis-Events auf den Dispatcher.
+**Quelle:** claude-mem #13845; WPF-Threading.
+
+### 8. PvRecorder vs. NAudio (nur bei Picovoice relevant)
+**Symptom:** Frame-Drift/falsche Frame-Groessen bei Porcupine, wenn man NAudio direkt durchreicht.
+**Ursache:** Picovoice empfiehlt offiziell **PvRecorder** fuer die Mikrofon-Erfassung; NAudio geht, braucht aber manuelles Frame-Buffering auf exakt 512 Samples.
+**Versionen:** Porcupine .NET 4.0.2.
+**FIX:** Bei Porcupine PvRecorder nutzen ODER mit NAudio `WaveFormat(16000,16,1)` + eigenem Ring-Buffer exakt 512-Sample-Frames bilden. (Beim VoiceAgent ohnehin sherpa-onnx → entfaellt.)
+**Quelle:** Picovoice-Doku; claude-mem #13845/#13839.
+
+---
+
+## C. sherpa-onnx KeywordSpotter — API-Fallen
+
+### 9. `reset_stream()` Pflicht nach jeder Erkennung   [⭐ HAEUFIG]
+**Symptom:** Erstes Weckwort wird erkannt, danach keine weiteren Erkennungen mehr (oder erst nach langer Pause).
+**Ursache:** Der Keyword-Stream muss nach einem Treffer explizit zurueckgesetzt werden, sonst bleibt der interne Decoder-Zustand "verbraucht".
+**Versionen:** sherpa-onnx alle (1.13.2).
+**FIX:** Direkt nach `OnWakeWord`/Treffer `spotter.Reset(stream)` (C#-Aequivalent zu `reset_stream()`) aufrufen, bevor weiter gefuettert wird.
+**Quelle:** sherpa-onnx Python/C#-Beispiele; claude-mem #13845.
+
+### 10. `keywords.txt`-Format mit Sonder-Prefixen
+**Symptom:** Custom Wake Word wird nie/kaum erkannt oder feuert staendig (zu viele False Positives).
+**Ursache:** Das `keywords.txt`-Format hat Steuer-Syntax, die leicht falsch geschrieben wird: `:boost`, `#threshold`, `@original-phrase`. Falsche Tokenisierung (ohne `text2token`) → unbrauchbare Phoneme.
+**Versionen:** sherpa-onnx alle.
+**FIX:** Keywords mit dem `text2token`-Tool aus dem Klartext erzeugen. Pro Zeile: Tokens, dann optional `:boost` (Erkennungs-Boost), `#threshold` (Schwelle), `@original` (Original-Phrase fuers Logging). Threshold pro Wake Word kalibrieren (siehe Bug 20).
+**Quelle:** sherpa-onnx KWS-Doku; claude-mem #13845.
+
+### 11. Modellwahl + custom Wake Word ohne Retraining
+**Symptom:** Unklar, wie "Okay Computer" ohne 90-Min-Training geht.
+**Ursache:** Wissensluecke — sherpa-onnx kann open-vocabulary KWS.
+**Versionen:** Modell `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` (3,3 M Parameter, EN).
+**FIX:** Modell bundeln (`CopyToOutputDirectory`), Wake Word via `text2token` in Tokens wandeln — **kein** Modell-Retraining noetig. 3,3 M Parameter = geringer CPU/RAM-Verbrauch, 100 % offline.
+**Quelle:** claude-mem #13837/#13840.
+
+### 12. dotnet-examples ohne Mikrofon-KWS-Beispiel in C#
+**Symptom:** Man sucht im `dotnet-examples`-Repo ein `keyword-spotting-from-microphone`-C#-Beispiel und findet keins.
+**Ursache:** Es gibt nur Python-`KeywordSpotter`-Beispiele; der C#-Mikrofon-Pfad muss selbst gebaut werden (NAudio → Frames → `AcceptWaveform`).
+**Versionen:** Stand 2026-06 weiterhin so.
+**FIX:** Python-Beispiel als Vorlage nehmen, C#-Wrapper selbst schreiben (siehe `best-practices-wake-word.md` §3 fuer das Grundgeruest `WakeWordListener`).
+**Quelle:** claude-mem #13836.
+
+---
+
+## D. openWakeWord / NanoWakeWord — Lizenz & Pipeline
+
+### 13. Pretrained-Modelle sind CC-BY-NC-SA 4.0 (nicht kommerziell)   [⭐ HAEUFIG/RECHTLICH]
+**Symptom:** Man baut auf `alexa`/`hey_jarvis`/`hey_marvin`/`hey_mycroft` und merkt zu spaet, dass es nicht kommerziell nutzbar ist.
+**Ursache:** Der openWakeWord-**Code** ist Apache-2.0, aber die **vortrainierten Modelle** sind CC-BY-NC-SA 4.0 (unklare Trainingsdaten-Lizenz).
+**Versionen:** openWakeWord/NanoWakeWord aktuell.
+**FIX:** Fuer kommerzielle/eigene Wake Words eigenes Modell trainieren (Colab, 75–90 Min, synthetische TTS-Daten → Apache-2.0-Ergebnis) ODER **HeyBuddy** (Apache-2.0 fuer Code UND Modelle) nutzen. Fuer den VoiceAgent ist sherpa-onnx der einfachere Weg (kein Training).
+**Quelle:** claude-mem #13836/#13839.
+
+### 14. openWakeWord-Chunk-Groesse 1280 Samples non-negotiable
+**Symptom:** Erkennung schlaegt fehl, obwohl Audio 16 kHz mono ist.
+**Ursache:** Die `melspectrogram.onnx`-Vorverarbeitung erwartet **exakt 1280 Samples (80 ms @ 16 kHz)** pro Chunk; abweichende Groessen brechen die 3-Stufen-Pipeline (melspectrogram → Feature-Extractor → Classifier).
+**Versionen:** openWakeWord/NanoWakeWord alle.
+**FIX:** Ring-Buffer auf exakt 1280-Sample-Chunks; NanoWakeWord uebernimmt das Preprocessing, wenn man korrekt fuettert.
+**Quelle:** claude-mem #13845/#13839.
+
+---
+
+## E. Picovoice Porcupine — Lizenz-Deadline & Audio
+
+### 15. Free-Tier-AccessKeys werden am 30.06.2026 abgeschaltet   [⭐ ZEITKRITISCH]
+**Symptom:** Bestehende Free-Tier-`AccessKey`s funktionieren nach dem 30.06.2026 nicht mehr; App faellt aus.
+**Ursache:** Picovoice stellt den Free-Tier ein (Umstieg auf 7-Tage-Trial fuer Teams).
+**Versionen:** alle Porcupine-Free-Tier-Keys. **Verifiziert 2026-06-08** (Picovoice-Mails, HN, Home-Assistant-Community).
+**FIX:** Fuer dauerhafte, kostenlose, kommerziell nutzbare Loesung → **sherpa-onnx** (Apache-2.0) statt Porcupine. Wer bei Porcupine bleibt, braucht ab dann einen bezahlten Plan.
+**Quelle:** https://community.home-assistant.io/t/fyi-picovoice-confirmed-free-tier-accesskeys-will-stop-working-after-june-30-2026/1012744 · https://news.ycombinator.com/item?id=48248969
+
+### 16. Free-Tier-Limit: 3 aktive Nutzer/Monat
+**Symptom:** App funktioniert beim Entwickler, scheitert beim 4. Nutzer.
+**Ursache:** Free-Tier erlaubt nur 3 aktive Nutzer pro Monat (30-Tage-Reset); naechste Stufe ~$899/Monat.
+**Versionen:** bis 30.06.2026 (danach siehe Bug 15).
+**FIX:** Fuer >3 Nutzer kein Free-Tier — Engine wechseln (sherpa-onnx) oder bezahlen.
+**Quelle:** claude-mem #13834/#13839.
+
+### 17. Porcupine-Audioformat exakt 512 Samples/Frame
+**Symptom:** `invalid frame length`-Fehler.
+**Ursache:** `Porcupine.FrameLength` ist **exakt 512 Samples**, 16 kHz mono 16-bit PCM (`short[]`); Abweichung wirft.
+**Versionen:** Porcupine .NET 4.0.2.
+**FIX:** Audio in exakt 512-Sample-Frames buffern (PvRecorder macht das; mit NAudio selbst ring-buffern). Niemals Roh-Frames variabler Laenge durchreichen.
+**Quelle:** claude-mem #13834/#13843.
+
+### 18. `.ppn`-Modelle sind plattformspezifisch
+**Symptom:** Auf Windows trainiertes `.ppn` laeuft nicht auf anderer Plattform/Arch.
+**Ursache:** Custom-Wake-Word-Dateien werden plattform-/arch-spezifisch erzeugt.
+**Versionen:** alle.
+**FIX:** Pro Zielplattform das passende `.ppn` erzeugen/bundlen. (Beim reinen Windows-VoiceAgent unkritisch.)
+**Quelle:** claude-mem #13839/#13840.
+
+---
+
+## F. Voice-Assistant-Design (engine-uebergreifend)
+
+### 19. Self-Trigger waehrend TTS-Ausgabe   [⭐ HAEUFIG]
+**Symptom:** Die App weckt sich selbst, wenn sie das Weckwort vorliest oder darueber spricht; Endlos-/Doppel-Trigger.
+**Ursache:** Das Mikrofon hoert die eigene Lautsprecher-Ausgabe (kein akustischer Echo-Schutz).
+**Versionen:** unabhaengig.
+**FIX:** Wake-Listener waehrend aktiver TTS-Ausgabe pausieren (einfachster, robuster Weg) ODER Acoustic Echo Cancellation + Double-Talk-Detection fuer echtes Barge-in. Fuer den VoiceAgent: Sleeping-Mode pausiert Transkription, beim TTS-Greeting den KWS kurz stummschalten.
+**Quelle:** claude-mem #13845.
+
+### 20. Threshold-Tuning / Kalibrierung
+**Symptom:** Entweder reagiert das Weckwort kaum (zu hoch) oder staendig auf Zufallsgeraeusche (zu niedrig).
+**Ursache:** Default-Threshold passt selten zu Stimme/Mikro/Raum.
+**Versionen:** unabhaengig.
+**FIX:** Kalibrierungs-Phase: mehrere Wake-Word-Aufnahmen → Recognition-Scores messen → Threshold automatisch setzen. Zielmetrik: **False-Accept < 0,5/Stunde, False-Reject < 5 %**. Pro Wake Word in `keywords.txt` via `#threshold` feinjustieren.
+**Quelle:** claude-mem #13845/#13834.
+
+---
+
+## Fix-Status (Stand 2026-06-08)
+
+| Frueherer Bug | Status | Bezug |
+|---------------|--------|-------|
+| sherpa-onnx NuGet aktuell? | **1.13.2 ist die aktuellste** (14.05.2026, Apache-2.0) — verifiziert via nuget.org | Bug 1–4, 9–12 |
+| Picovoice Free-Tier | **Wird 30.06.2026 abgeschaltet** — verifiziert (HN + Home Assistant) | Bug 15/16 |
+
+**Noch NICHT "gefixt" (Workaround bleibt aktiv — per Design / Plattformverhalten):**
+- Bug 1 (System32-DLL-Prioritaet), Bug 2 (single-file native DLLs), Bug 4 (Runtime-Paket): Windows-/.NET-Mechanik, kein Fix erwartet → Workarounds dauerhaft.
+- Bug 5 (NAudio USB-Hotplug): Win-API-Limitation.
+- Bug 6/14/17 (feste Sample-/Frame-Groessen): per Design der Modelle.
+- Bug 9 (`reset_stream`), Bug 10 (`keywords.txt`-Syntax): API-Vertrag, kein Bug im engeren Sinn.
+- Bug 13 (CC-BY-NC-SA-Modelle): Lizenz, aendert sich nicht.
+- Bug 19/20 (Self-Trigger/Threshold): inhaerente KWS-Designthemen.
+
+**Ehrlichkeits-Hinweis:** Die zwei zeitkritischen Fakten (NuGet-Version, Picovoice-Deadline) sind live verifiziert. Die uebrigen Eintraege stammen aus der Researcher-Schwarm-Recherche der Vor-Session (claude-mem #13831–#13845) und sind als Deployment-/API-/Lizenz-Gotchas dokumentiert, nicht als "in Version X gefixt" — sie bleiben gueltig.
+
+---
+
+## Kopplung zur Best-Practices-Gegenseite (`best-practices/projekt-code/desktop/best-practices-wake-word.md`)
+
+| Almanach-Bug | Best-Practice-Abschnitt (Praevention) |
+|--------------|----------------------------------------|
+| 1, 2, 3, 4 (DLLs) | §1 Native-DLL-Handling |
+| 5, 6, 7, 8, 14, 17 (Audio) | §2 Audio-Pipeline |
+| 9, 10, 11, 12 (KeywordSpotter) | §3 KeywordSpotter-Geruest |
+| 13, 15, 16 (Lizenz/Engine) | §0 Engine-Entscheidung |
+| 19, 20 (Design) | §4 Voice-Assistant-Verhalten |
+| (alle, Frueherkennung) | §5 Observability |
+
+---
+
+## Pflicht-Checkliste vor Wake-Word-Arbeit im VoiceAgent
+
+- [ ] Engine bewusst gewaehlt? (sherpa-onnx = Apache-2.0 + custom Wake Word ohne Training; Porcupine-Deadline 30.06.2026 bedacht; openWakeWord-Pretrained = nicht kommerziell)
+- [ ] Beide NuGet-Pakete drin: `org.k2fsa.sherpa.onnx` **und** `…runtime.win-x64`, **gleiche Version**?
+- [ ] DLL-Suchpfad beim Start gesetzt (`SetDllDirectory`/`AddDllDirectory`), nicht auf System32 verlassen?
+- [ ] single-file publish: `CopyLocalLockFileAssemblies` + native DLLs im Output verifiziert?
+- [ ] Audio-Pipeline: 16 kHz mono 16-bit, Resampler falls Mikro 48 kHz, korrekte Frame-Groesse (sherpa flexibel, Porcupine 512, openWakeWord 1280)?
+- [ ] `reset_stream()` nach jeder Erkennung?
+- [ ] UI-Updates aus Audio-Callback via `Dispatcher`?
+- [ ] Self-Trigger: Wake-Listener waehrend TTS pausiert / AEC?
+- [ ] Threshold kalibriert (FA < 0,5/h, FR < 5 %)?
+- [ ] USB-Mic-Hotplug abgefangen (kein UI-Block)?
+- [ ] Observability-Sonden gesetzt (z. B. CHECKPOINT "Weckwort erkannt") gemaess Observability-First?
