@@ -16,17 +16,7 @@ namespace VoiceAgent.Tests
         }
 
         [Fact]
-        public void IsCapabilityQuestion_True_ForCapabilityAsks()
-        {
-            Assert.True(AgentCapabilities.IsCapabilityQuestion("Was kannst du eigentlich?"));
-            Assert.True(AgentCapabilities.IsCapabilityQuestion("Kannst du mich erinnern?"));
-        }
-
-        [Fact]
-        public void IsCapabilityQuestion_False_ForNormalTalk()
-        {
-            Assert.False(AgentCapabilities.IsCapabilityQuestion("Wie spaet ist es?"));
-            Assert.False(AgentCapabilities.IsCapabilityQuestion(""));
-        }
+        public void BuildBlock_MentionsReminders()
+            => Assert.Contains("Erinnerung", AgentCapabilities.BuildBlock());
     }
 }

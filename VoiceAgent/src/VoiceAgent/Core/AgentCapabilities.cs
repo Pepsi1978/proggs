@@ -8,10 +8,10 @@ namespace VoiceAgent.Core
     /// Verwaltet die externe Faehigkeiten-Datei (capabilities.md, liegt neben der EXE): was kann
     /// der Agent, was (noch) nicht. Die Datei wird beim Start EINMAL eingelesen und gecached.
     ///
-    /// Kontext-schonend (Frank-Wunsch 2026-06-07): Die Liste wird NICHT bei jedem Turn in den
-    /// Prompt gehaengt, sondern NUR dann, wenn der Nutzer tatsaechlich nach den Faehigkeiten fragt
-    /// (IsCapabilityQuestion). So bleibt der normale Kontext schlank, die Selbstauskunft ist aber
-    /// jederzeit abrufbar.
+    /// Die Liste wird bei JEDEM Turn in den System-Prompt gehaengt, damit der Agent NIE falsch
+    /// verneint. (Eine fruehere "nur bei kannst-du-Frage"-Heuristik war zu fragil und verpasste
+    /// Formulierungen wie "...erinnern kannst" -> der Agent verneinte faelschlich. capabilities.md
+    /// ist kompakt genug, um verlaesslich bei jedem Turn dabei zu sein.)
     ///
     /// ============================ PFLEGE-REGEL (Frank, 2026-06-07) ============================
     /// capabilities.md ist die EINE Quelle der Wahrheit ueber den Funktionsumfang. Bei JEDEM
@@ -38,23 +38,7 @@ namespace VoiceAgent.Core
         /// <summary>Der gecachte Faehigkeiten-Text (Datei oder Fallback). Wird einmal gelesen.</summary>
         public static string Content => _cached ??= ReadFileOrFallback().Trim();
 
-        /// <summary>
-        /// Erkennt, ob der Nutzer nach den Faehigkeiten fragt — nur dann wird die Liste in den
-        /// Prompt eingefuegt (Kontext sparen). Public static = isoliert testbar.
-        /// </summary>
-        public static bool IsCapabilityQuestion(string? userText)
-        {
-            if (string.IsNullOrWhiteSpace(userText)) return false;
-            var t = userText.ToLowerInvariant();
-            return t.Contains("was kannst du") || t.Contains("was du kannst") || t.Contains("was du alles")
-                || t.Contains("kannst du") || t.Contains("kannst du das")
-                || t.Contains("bist du in der lage") || t.Contains("wozu bist du")
-                || t.Contains("faehigkeit") || t.Contains("fähigkeit")
-                || t.Contains("welche funktion") || t.Contains("was beherrschst du")
-                || t.Contains("was geht alles");
-        }
-
-        /// <summary>Baut den Faehigkeiten-Block fuer den System-Prompt (nur bei Bedarf aufrufen).</summary>
+        /// <summary>Baut den Faehigkeiten-Block fuer den System-Prompt.</summary>
         public static string BuildBlock()
         {
             return "\n\nDEINE AKTUELLEN FAEHIGKEITEN (verlaesslich — antworte NUR auf dieser Basis: " +
