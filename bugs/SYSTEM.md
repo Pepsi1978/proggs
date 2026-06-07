@@ -31,6 +31,8 @@ jeder erlebte Bug verdichtet einen bestehenden. Verwandt — aber getrennt:
 ├── SYSTEM.md                    ← dieses Dokument
 ├── OFFENE-ALMANACHE-PROMPTS.md  ← fertige Recherche-Prompts fuer offene Bereiche
 ├── check-coupling.py            ← Health-Check der Bug↔Best-Practices-Kopplung
+├── repair-bug-cases.py          ← Wartung: kaputte JSON-Zeilen in bug-cases.jsonl reparieren/quarantaenieren (--apply)
+├── analyze-blocks.py            ← Auswertung: Block-Log -> Almanach-Kandidaten + aktivste Bereiche
 ├── android/                     ← Kategorie-Ordner (eine Datei = ein Thema)
 │   ├── kotlin.md · jetpack-compose.md · android-platform.md · firebase-billing.md
 ├── android-build/               ← gradle.md · r8.md
