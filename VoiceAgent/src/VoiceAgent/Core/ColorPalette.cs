@@ -26,6 +26,7 @@ namespace VoiceAgent.Core
             new("Pink",    "#EC407A"),
             new("Tuerkis", "#26C6DA"),
             new("Blau",    "#5C6BC0"),
+            new("Grau",    "#9AA0AA"),
             new("Weiss",   "#E4E6EB"),
         };
     }
