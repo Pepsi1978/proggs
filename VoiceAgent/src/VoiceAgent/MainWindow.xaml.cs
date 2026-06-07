@@ -23,6 +23,7 @@ namespace VoiceAgent
         private AppSettings _settings = new();
         private BossAgent? _agent;
         private EndpointDetector? _endpoint;
+        private IntentDetector? _intentDetector;
         private GoogleTtsClient? _tts;
         private GroqWhisperClient? _stt;
         private AlwaysOnListener? _listener;
@@ -70,6 +71,7 @@ namespace VoiceAgent
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
+            _intentDetector = new IntentDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel));
             _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
             _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage);
         }
@@ -289,12 +291,21 @@ namespace VoiceAgent
         private async Task RespondAndSpeakAsync(string text)
         {
             if (_agent == null) return;
+            // Erst VERSTEHEN: Intent exakt per LLM-Detektor klassifizieren (wenn aktiviert),
+            // sonst spaeter heuristisch aus der Antwort ableiten.
+            bool exactIntent = _settings.IntentDetection && _intentDetector != null;
+            if (exactIntent)
+            {
+                SetStatus("Verstehe, was du willst …");
+                var kind = await _intentDetector!.ClassifyAsync(text);
+                _turn?.UnderstoodExact(kind);
+            }
             SetStatus("Denke nach …");
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var reply = await _agent.RespondAsync(text);
             sw.Stop();
-            _turn?.Understood(reply);                                                  // Aufgabe/Frage/Plauderei erkannt?
-            _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds); // welches Gehirn, wie schnell
+            if (!exactIntent) _turn?.Understood(reply);                                  // Fallback: heuristisch aus der Antwort
+            _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds);  // welches Gehirn, wie schnell, Rueckfrage?
             Append("Agent", reply);
             SetStatus("Spreche …");
             bool spoke = await SpeakAsync(reply);

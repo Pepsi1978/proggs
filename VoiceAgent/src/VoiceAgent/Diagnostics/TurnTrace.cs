@@ -78,24 +78,31 @@ namespace VoiceAgent.Diagnostics
         /// </summary>
         public void Understood(string reply)
         {
-            (_intent, _askedBack) = Classify(reply);
-            Log.Info("VERSTANDEN", new
-            {
-                intent = _intent.ToString(),
-                askedBack = _askedBack,
-                method = "heuristic"
-            });
+            _intent = Classify(reply).kind;
+            Log.Info("VERSTANDEN", new { intent = _intent.ToString(), method = "heuristic" });
+        }
+
+        /// <summary>
+        /// Exakte Intent-Einordnung durch den LLM-Intent-Detektor (statt aus der Antwort zu raten).
+        /// Wird VOR der Antwort aufgerufen — "erst verstehen, dann antworten".
+        /// </summary>
+        public void UnderstoodExact(IntentKind kind)
+        {
+            _intent = kind;
+            Log.Info("VERSTANDEN", new { intent = _intent.ToString(), method = "llm" });
         }
 
         /// <summary>Schritt 4 (Manifest): die erzeugte Antwort + welches LLM + Latenz.</summary>
         public void Responded(string reply, string provider, double elapsedMs)
         {
             _responded = !string.IsNullOrWhiteSpace(reply);
+            _askedBack = Classify(reply).askedBack;   // hat der Agent eine Rueckfrage gestellt?
             Log.Info("GEANTWORTET", new
             {
                 provider,
                 elapsedMs,
                 chars = reply?.Length ?? 0,
+                askedBack = _askedBack,
                 preview = Preview(reply)
             });
         }

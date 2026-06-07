@@ -47,5 +47,10 @@ namespace VoiceAgent.Services
         // FERTIG/WEITER ist eine triviale Aufgabe -> eigenes, guenstiges + schnelles Gemini-Modell,
         // unabhaengig vom (evtl. teureren) Haupt-Gehirn. In den Einstellungen aenderbar.
         public string EndpointModel { get; set; } = "gemini-3.1-flash-lite";
+
+        // Intent-Erkennung: ein eigenes billiges Gemini-Modell ordnet die Aussage VOR der Antwort
+        // in AUFGABE/FRAGE/PLAUDEREI ein (statt es aus der Antwort zu raten). Macht die Live-Sonde exakt.
+        public bool IntentDetection { get; set; } = true;
+        public string IntentModel { get; set; } = "gemini-3.1-flash-lite";
     }
 }
