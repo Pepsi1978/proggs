@@ -230,27 +230,31 @@ fi
 # (= Almanach gelesen ODER Notaus). Greift NUR wenn Almanach existiert+gelesen, Notaus aus und eine
 # best-practices-<almKey>.md unter best-practices/projekt-code/ existiert. Sonst (keine BP-Datei): durchlassen.
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
-    bpRoot="$HOME/proggs/best-practices/projekt-code"
-    bpPath="$(find "$bpRoot" -name "best-practices-$almKey.md" -type f 2>/dev/null | head -1 || true)"
-    if [ -n "$bpPath" ]; then
-        bpRel="best-practices/${bpPath#*/best-practices/}"
-        bpReadMarker="$TMP/bug-almanac-bp-read-$almKey.flag"
-        # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
-        if [ ! -f "$bpReadMarker" ]; then
+    bpReadMarker="$TMP/bug-almanac-bp-read-$almKey.flag"
+    # Lazy (Perf): den find-Verzeichnis-Scan NUR ausfuehren, wenn die BP-Datei in dieser Session noch
+    # nicht als gelesen markiert ist. Marker schon da (haeufigster Fall nach einmaligem BP-Lesen +
+    # vielen Folge-Edits) -> find entfaellt komplett. Verhaltensneutral: das Ergebnis wuerde dann
+    # ohnehin nur zu "kein Block" fuehren.
+    if [ ! -f "$bpReadMarker" ]; then
+        bpRoot="$HOME/proggs/best-practices/projekt-code"
+        bpPath="$(find "$bpRoot" -name "best-practices-$almKey.md" -type f 2>/dev/null | head -1 || true)"
+        if [ -n "$bpPath" ]; then
+            bpRel="best-practices/${bpPath#*/best-practices/}"
+            # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
             tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
             if [ -n "$tpath" ] && [ -f "$tpath" ]; then
                 if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices-'"$almKey"'\.md' "$tpath" 2>/dev/null; then
                     touch "$bpReadMarker" 2>/dev/null || true
                 fi
             fi
-        fi
-        if [ ! -f "$bpReadMarker" ]; then
-            stateDir="$HOME/.claude/state"
-            mkdir -p "$stateDir" 2>/dev/null || true
-            echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-            reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
-            python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
-            exit 0
+            if [ ! -f "$bpReadMarker" ]; then
+                stateDir="$HOME/.claude/state"
+                mkdir -p "$stateDir" 2>/dev/null || true
+                echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+                reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+                python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
+                exit 0
+            fi
         fi
     fi
 fi

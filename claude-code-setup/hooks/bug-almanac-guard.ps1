@@ -226,15 +226,19 @@ try {
     # (= Almanach gelesen ODER Notaus). Greift NUR wenn Almanach existiert+gelesen, Notaus aus und eine
     # best-practices-<almKey>.md unter best-practices/projekt-code/ existiert. Sonst (keine BP-Datei): durchlassen.
     if ($almanachExists -and -not $disabled -and (Test-Path $readMarker)) {
-        $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices/projekt-code"
-        $bpItem = $null
-        try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -Filter ("best-practices-" + $almKey + ".md") -File -ErrorAction SilentlyContinue | Select-Object -First 1 } } catch {}
-        if ($bpItem) {
-            $bpRel = (($bpItem.FullName -replace '\\','/') -replace '.*?/best-practices/', 'best-practices/')
-            $bpReadMarker = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $almKey + ".flag")
+        $bpReadMarker = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $almKey + ".flag")
+        # Lazy (Perf): den rekursiven BP-Verzeichnis-Scan NUR ausfuehren, wenn die BP-Datei in dieser
+        # Session noch nicht als gelesen markiert ist. Ist der Marker schon da (haeufigster Fall nach
+        # einmaligem BP-Lesen + vielen Folge-Edits), entfaellt der Scan komplett — verhaltensneutral,
+        # weil sein Ergebnis dann ohnehin nur zu "kein Block" fuehren wuerde.
+        if (-not (Test-Path $bpReadMarker)) {
+            $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices/projekt-code"
+            $bpItem = $null
+            try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -Filter ("best-practices-" + $almKey + ".md") -File -ErrorAction SilentlyContinue | Select-Object -First 1 } } catch {}
+            if ($bpItem) {
+                $bpRel = (($bpItem.FullName -replace '\\','/') -replace '.*?/best-practices/', 'best-practices/')
 
-            # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
-            if (-not (Test-Path $bpReadMarker)) {
+                # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
                 try {
                     $tp = [string]$data.transcript_path
                     if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
@@ -244,9 +248,8 @@ try {
                         }
                     }
                 } catch {}
-            }
 
-            if (-not (Test-Path $bpReadMarker)) {
+                if (-not (Test-Path $bpReadMarker)) {
                 try {
                     $stateDir = Join-Path $env:USERPROFILE ".claude/state"
                     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
@@ -260,8 +263,9 @@ try {
                         permissionDecisionReason = $reason
                     }
                 }
-                Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
-                exit 0
+                    Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
+                    exit 0
+                }
             }
         }
     }
