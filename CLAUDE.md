@@ -30,6 +30,30 @@
 - Format: "💡 **Intelligenz-Vorschlag N**: [Was] → [Konkreter Vorschlag] — Soll ich das umsetzen?"
 - Mindestens 1 pro Session, gerne 3-5. Kommen NACH der Status-Meldung, nie mittendrin.
 
+## Observability-First (verbindlicher Standard — KRITISCH)
+
+> Volltext (immer geladen): `~/.claude/rules/observability-first.md`. Verbindlich AUSSERHALB der
+> geschuetzten 3-Direktiven-Trinitaet. Adressat ist Claude Code selbst. Gesetzt 2026-06-07.
+
+Bei JEDEM **qualifizierten** Software-Projekt (mehr als ein Mini-Fix: >1 Datei, App mit Oberflaeche,
+eigene Logik/Zustand/Persistenz/I-O, ~>150 Zeilen oder >1 Sitzung) ist der **allererste Schritt — VOR
+jeder Feature-Arbeit — die Beobachtungsschicht**. Sonden weglassen nur bei Wegwerf-Skript / Mini-Fix
+(dann in einem Satz begruenden). Im Zweifel: Sonden einbauen.
+
+- **Strukturiertes Logging**: JSON-Lines (`ts`, `level`, `module`, `fn`, `msg`, `ctx`, `trace`),
+  fester Log-Pfad beim Start EINMAL ausgeben (`Log: <Pfad>`), Rotation, stdout-Spiegelung, Level umschaltbar.
+- **Globaler Fehler-Faenger**: nichts stirbt still — jeder Crash hinterlaesst Kontext im Log.
+- **Logik-Sonden** (Herzstueck, faengt STILLE Fehler): Vor-/Nachbedingungen, Invarianten,
+  Zustandsuebergaenge, Sanity-/Range-Checks, Entscheidungs-Logging — via `probe(bedingung, meldung, kontext)`.
+- **Live-Monitoring**: Android `adb logcat -s FRANK_APP`, Windows `Get-Content <log> -Wait -Tail 20`, macOS/Linux `tail -f <log>`.
+- **Lebende Sonden**: jeder Commit, der Logik aendert/hinzufuegt, zieht die Sonden MIT (neue → neue Sonden,
+  geaenderte → anpassen, geloeschte → entfernen). Stale-Probe-Schutz: veraltete Sonden = Fehlalarme.
+- **Zwei Zuruf-Hebel**: „durchsuche das Log und fixe" (Root-Cause-Fix bis 2 saubere Durchlaeufe),
+  „auditiere die Sondenabdeckung" (Luecken + tote Sonden finden).
+- **Sicherheit**: keine Secrets/PII roh ins Log; Log-Pfad in `.gitignore`.
+- **Selbst-Check vor „fertig"** (pro qualifiziertem Commit): Logschicht existiert, provozierter Fehler
+  landet mit Kontext im Log, Live-Tail geht, neue Logik instrumentiert, betroffene Sonden aktualisiert, keine toten Sonden.
+
 ## Commit + Push nach JEDER Aenderung (KRITISCH — FUNDAMENTALE REGEL)
 
 > **Diese Regel ist so fundamental wie Atmen: Nach JEDER abgeschlossenen Aenderung — egal wie klein —
