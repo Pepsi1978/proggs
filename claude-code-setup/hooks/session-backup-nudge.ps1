@@ -13,6 +13,10 @@ $ErrorActionPreference = "Stop"
 
 try {
     $stdin = [Console]::In.ReadToEnd()
+    if ([string]::IsNullOrWhiteSpace($stdin)) {
+        # Windows/pwsh Stop-Hook bekommt stdin manchmal NICHT via Console.In (Almanach 12.4 / #46601)
+        try { $stdin = $input | Out-String } catch {}
+    }
     if ([string]::IsNullOrWhiteSpace($stdin)) { exit 0 }
 
     $data = $null
