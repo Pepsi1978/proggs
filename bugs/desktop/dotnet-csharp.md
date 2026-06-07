@@ -228,8 +228,9 @@ richtig macht*. Wechselseitig gepflegt:
 **Symptom:** `SetText`/`SetDataObject` haengt hunderte ms und wirft "OpenClipboard Failed" — oft durch RDP-Sync, Editoren, Debugger.
 **Ursache:** Nur EIN Thread systemweit darf das Clipboard offen haben.
 **Versionen:** alle WPF inkl. .NET 8 (dotnet/wpf#9901 **OPEN**) — Win32-Beschraenkung.
-**FIX:** Retry-Schleife (3-10×, ~100 ms) ODER `Clipboard.SetDataObject(data, copy:true, retryCount:10, retryDelay:100)`-Overload. NIE ein einzelner Aufruf ohne Retry. `FrameworkCompatibilityPreferences.ShouldThrowOnCopyOrCutFailure` bewusst setzen.
-**Quelle:** dotnet/wpf#9901
+**FIX:** Eigene Retry-Schleife (3-10×, ~100 ms via `await Task.Delay`) um `Clipboard.SetDataObject(data, copy:true)`. NIE ein einzelner Aufruf ohne Retry. `FrameworkCompatibilityPreferences.ShouldThrowOnCopyOrCutFailure` bewusst setzen.
+**⚠️ WinForms-vs-WPF-Falle (eigener Vorfall 2026-06-07, TVO PromptInputWindow):** Die 4-Argument-Overload mit eingebautem Retry `Clipboard.SetDataObject(data, copy, retryTimes, retryDelay)` gibt es NUR in `System.Windows.Forms.Clipboard` — das WPF-`System.Windows.Clipboard` kennt nur `(data)` und `(data, copy)`. Ein 4-arg-Aufruf in einer WPF-Datei wirft Compile-Error **CS1501** ("Keine Ueberladung … nimmt 4 Argumente an"). In WPF also IMMER die Schleife von Hand. Selbst wenn das Projekt `UseWindowsForms=true` hat, loest `Clipboard` ohne Namespace-Qualifizierung auf `System.Windows.Clipboard` auf, solange nur `using System.Windows;` (nicht `System.Windows.Forms`) im File steht.
+**Quelle:** dotnet/wpf#9901 + eigener Vorfall 2026-06-07
 
 ### 4.2 Clipboard-Restore-Timing (Paste-and-Restore)  ⭐ relevant fuer Voice-Overlays
 **Symptom:** Nach "altes Clipboard sichern → eigenen Text einfuegen → wiederherstellen" ist der restaurierte Inhalt leer/falsch.

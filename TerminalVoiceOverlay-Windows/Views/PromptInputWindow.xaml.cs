@@ -243,41 +243,66 @@ public partial class PromptInputWindow : Window
     /// <summary>
     /// Kopiert den angezeigten Eingabe-Text in die System-Zwischenablage —
     /// danach ueberall mit Strg+V einfuegbar. Die Zwischenablage kann jederzeit
-    /// von einem anderen Prozess gesperrt sein (CLIPBRD_E_CANT_OPEN), daher der
-    /// SetDataObject-Overload mit Retry-Schleife (Bug-Almanach C#/.NET §4.1).
+    /// von einem anderen Prozess gesperrt sein (CLIPBRD_E_CANT_OPEN), daher die
+    /// eigene Retry-Schleife in TrySetClipboardTextAsync (Bug-Almanach C#/.NET §4.1).
     /// </summary>
-    private void BtnCopy_Click(object sender, RoutedEventArgs e)
+    private async void BtnCopy_Click(object sender, RoutedEventArgs e)
     {
         var text = InputBox.Text ?? string.Empty;
         if (string.IsNullOrEmpty(text)) return;
-        try
-        {
-            Clipboard.SetDataObject(text, true, 10, 100);
+        if (await TrySetClipboardTextAsync(text))
             UpdatePreview("Text kopiert — überall mit Strg+V einfügbar.");
-        }
-        catch
-        {
+        else
             UpdatePreview("Kopieren fehlgeschlagen — Zwischenablage gerade belegt.");
+    }
+
+    /// <summary>
+    /// Setzt Text mit eigener Retry-Schleife in die Zwischenablage
+    /// (CLIPBRD_E_CANT_OPEN, Bug-Almanach C#/.NET §4.1). WICHTIG: die
+    /// 4-Argument-Overload SetDataObject(data, copy, retryTimes, retryDelay)
+    /// gibt es NUR in System.Windows.Forms.Clipboard, NICHT im WPF-Clipboard
+    /// (System.Windows.Clipboard) — darum hier die Schleife von Hand. Task.Delay
+    /// statt Thread.Sleep, damit der UI-Thread nicht blockiert.
+    /// </summary>
+    private static async Task<bool> TrySetClipboardTextAsync(string text)
+    {
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            try
+            {
+                Clipboard.SetDataObject(text, true);
+                return true;
+            }
+            catch
+            {
+                await Task.Delay(100);
+            }
         }
+        return false;
     }
 
     /// <summary>
     /// Fuegt den Text aus der System-Zwischenablage an der Cursor-Position ins
-    /// Eingabefeld ein (Gegenstueck zum Kopieren). Clipboard-Zugriff in try/catch,
-    /// da die Zwischenablage gesperrt sein kann (Bug-Almanach C#/.NET §4.1).
+    /// Eingabefeld ein (Gegenstueck zum Kopieren). Clipboard-Lesen in einer
+    /// Retry-Schleife, da die Zwischenablage gesperrt sein kann (Almanach §4.1).
     /// </summary>
-    private void BtnPaste_Click(object sender, RoutedEventArgs e)
+    private async void BtnPaste_Click(object sender, RoutedEventArgs e)
     {
-        try
+        for (int attempt = 0; attempt < 10; attempt++)
         {
-            if (!Clipboard.ContainsText()) return;
-            var text = Clipboard.GetText();
-            if (!string.IsNullOrEmpty(text)) AppendText(text);
+            try
+            {
+                if (!Clipboard.ContainsText()) return;
+                var text = Clipboard.GetText();
+                if (!string.IsNullOrEmpty(text)) AppendText(text);
+                return;
+            }
+            catch
+            {
+                await Task.Delay(100);
+            }
         }
-        catch
-        {
-            UpdatePreview("Einfügen fehlgeschlagen — Zwischenablage gerade belegt.");
-        }
+        UpdatePreview("Einfügen fehlgeschlagen — Zwischenablage gerade belegt.");
     }
 
     /// <summary>
