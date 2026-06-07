@@ -1,88 +1,65 @@
-# Session Handoff — 2026-06-07 ~22:45
+# Session Handoff — 2026-06-08 ~01:45
 
 ## Ziel
-Franks eigenes sprachgesteuertes Agent-System "VoiceAgent" (WPF/.NET 10, Windows-only,
-~/proggs/VoiceAgent/) iterativ ausbauen und Bugs fixen. Frank testet die App live (publish/VoiceAgent.exe)
-und gibt Feature-Wuensche per Voice/Text.
+VoiceAgent (Windows WPF, .NET 10) Wake-Word-Feature "Okay Computer" zum zuverlaessigen Laufen bringen.
+Frank-Workflow: Hoeren laeuft immer im Hintergrund; "Okay Computer" -> Erkennungston (Piep) -> ab Piep
+SOFORT normal sprechen (wie manueller Mikrofon-Knopf). KEIN gesprochenes "Ja". Mic-Schalter = manueller
+Direkt-Sprech-Modus (zuverlaessiger Fallback).
 
 ## Aktueller Status
-- ALLES committet+gepusht+gebaut+getestet (54 Tests gruen). publish/VoiceAgent.exe ist aktuell.
-- Heute gebaut (Commits #41615-#41629):
-  - Observability-Schicht: JSON-Lines-Log (Diagnostics/Log.cs), Probe-Sonden (Probe.cs), globaler
-    Fehler-Faenger (App.xaml.cs, DispatcherUnhandled e.Handled=true), Live-Turn-Trace (TurnTrace.cs,
-    turn:N-Korrelation), In-App Log-Viewer (Views/LogViewerWindow, "Live-Log"-Button).
-  - LLM-Intent-Detektor (Core/IntentDetector.cs: AUFGABE/FRAGE/PLAUDEREI, eigenes billiges Gemini,
-    method:llm; klassifiziert VOR der Antwort).
-  - Voice-Empfindlichkeit als Schieberegler in Settings (+ RebuildListener uebernimmt live).
-  - Gedaechtnis Stufe 1 (Core/AgentMemory.cs: Fakten + letzte 12 Runden, JSON, in System-Prompt).
-  - Unteragenten-Grundgeruest (ISubAgent/SubAgentRegistry; NoteSubAgent + ReminderSubAgent;
-    BossAgent.HandleAsync delegiert bei Intent=Task, Trace-Zeile DELEGIERT).
-  - Uhr oben im Fenster; farbige Gespraechsanzeige (RichTextBox, Du=Cyan/Agent=Orange, in Settings
-    via ColorPalette waehlbar); Zeitzone in Settings (auto/manuell).
-  - Proaktive Erinnerung + Enterprise-Sound (Services/Audio/Chime.cs NAudio-Zweiton). ZWEI-SCHRITT-
-    Dialog: bei Faelligkeit ertoent der Chime und WIEDERHOLT sich jede Minute (Mic an, KEINE Ansage),
-    bis Frank reagiert; seine naechste Aeusserung (Voice/Text) loest erst die Ansage aus
-    (MainWindow: _pendingReminder, _reminderPingTimer, TryStartReminderPing/StartPinging/
-    OnReminderPing/StopPinging/AnnounceReminderAsync; Queue fuer mehrere faellige).
-  - SELBST-AUSKUNFT: Core/AgentCapabilities.cs liest externe src/VoiceAgent/capabilities.md (Content,
-    liegt neben EXE, beim Start gecacht). Nur bei "kannst du...?"-Fragen (IsCapabilityQuestion) in
-    den Prompt — nicht bei jedem Turn (Kontext sparen).
-  - Fixes: Settings-Crash (NullRef in Slider-ValueChanged waehrend XAML-Load -> _ready-Guard,
-    Almanach dotnet-csharp 2.10); LLM-Zeit-Halluzination (Core/TimeContext.cs faedelt Echtzeit+Zeitzone
-    in jeden System-Prompt); BossAgentTests-Regression (StartsWith statt Equal).
-- In Arbeit: NICHTS offen. Alle Aufgaben abgeschlossen.
+- Wake-Word-Feature komplett gebaut + 4x gefixt. Alle Commits gepusht, EXE neu gebaut.
+- ERLEDIGT (Commits): #46610 Feature, #46611 Mic-Schalter-Fallback+Hintergrund-Lauschen,
+  #46612 VAD-Vorfilter entfernt (DER Erkennungs-Killer), #46613 kein "Ja"-Greeting + nach Piep
+  sofort sprechbereit (ClearBuffer statt _justWoke-Ueberspringen).
+- EXE: VoiceAgent/publish/VoiceAgent.exe (79.7 MB, self-contained single-file) NEU gebaut, startet sauber.
+- WARTET AUF: Franks Live-Test der NEUESTEN EXE (#46613): "Okay Computer" -> Piep abwarten -> sprechen.
+  Beim letzten Test (#46612-Stand) wurde Weckwort ERKANNT, aber die Aussage NACH dem Piep verworfen
+  (Bug, in #46613 behoben). #46613 noch NICHT von Frank live bestaetigt.
 
 ## Relevante Dateien
-- VoiceAgent/src/VoiceAgent/MainWindow.xaml(.cs) — Voice-Loop, Uhr, Farben (Append/RichTextBox),
-  Reminder-Zwei-Schritt-Flow, Clock+Reminder-Timer.
-- Core/: BossAgent (HandleAsync+Memory+Capabilities+Time), IntentDetector, EndpointDetector,
-  AgentMemory, ReminderService, ReminderSubAgent, NoteSubAgent, AgentCapabilities, TimeContext, ColorPalette.
-- Diagnostics/: Log, Probe, TurnTrace, LogFormatter.
-- Services/: Config, AppSettings, GroqWhisperClient, Llm/(Gemini/Claude/OpenAi/Factory), GoogleTtsClient,
-  Audio/(AlwaysOnListener, AudioPlayer, Chime).
-- Views/: SettingsWindow, LogViewerWindow.
-- src/VoiceAgent/capabilities.md — Faehigkeiten-Datei (PFLEGE-REGEL: bei JEDEM Feature aktualisieren!).
-- docs/2026-06-07-hauptagent-design.md = Manifest. Keys: ~/SK/VoiceAgent/keys.json.
+- VoiceAgent/src/VoiceAgent/Core/WakeWordController.cs — Sleep/Wake-State, ProcessFrame (KEIN VAD-Filter mehr), ForceAwake
+- VoiceAgent/src/VoiceAgent/MainWindow.xaml.cs — OnWokeAsync (nur Ton+ClearBuffer+ResumeMic), HandleUtteranceAsync (kein _justWoke), MicToggle_Click (ForceAwake/ForceSleep)
+- VoiceAgent/src/VoiceAgent/Services/Audio/AlwaysOnListener.cs — OnFrame-Event + ClearBuffer()
+- VoiceAgent/src/VoiceAgent/Services/Audio/SherpaWakeWordEngine.cs — sherpa-onnx KWS-Wrapper
+- VoiceAgent/src/VoiceAgent/assets/wakeword-model/ — int8-Modell + keywords.txt (NUR "▁OKAY ▁COMP U TER", KEIN @-Marker)
+- bugs/desktop/wake-word.md — Almanach (33 Bugs); best-practices/projekt-code/desktop/best-practices-wake-word.md
+- publish.ps1 — baut die EXE. Test-Kalibrierung: C:/Users/barwa/AppData/Local/Temp/wake-smoke/
 
 ## Getroffene Entscheidungen
-- .NET 10, WPF, auf main (kein Branch). Grosse Features bewusst als "Stufe 1" (ehrlich kommuniziert):
-  Gedaechtnis ohne Vektor-Retrieval; Unteragenten ohne Computer Use.
-- LLM kennt Uhrzeit UND eigene Faehigkeiten NICHT von sich aus -> beides per Kontext-Block in den
-  System-Prompt (TimeContext IMMER; AgentCapabilities NUR bei Frage, kontextschonend = lossless).
-- Bei .NET test-vor-commit (siehe Fehlgeschlagene Ansaetze).
+- sherpa-onnx KWS (gigaspeech-3.3M int8, englisch, Apache-2.0), gebundelt ~5MB, kein LFS.
+- Modell ist ENGLISCH -> Wake-Word "Okay Computer" englische Phonetik. Engine erkennt saubere
+  englische Aussprache einwandfrei (TTS-Kontrolltest bei jeder Schwelle erkannt).
+- Nach jedem Commit baubarer Apps IMMER die EXE neu bauen (Frank-Regel, [[feedback_build_exe_after_every_commit]]).
 
-## Fehlgeschlagene Ansaetze (NICHT wiederholen)
-- commit-before-build strikt befolgt -> 2x rote Commits gepusht (BossAgentTests: System-Prompt um
-  Zeit-/Faehigkeiten-Block erweitert, aber Tests pruefen mit Assert.Equal exakt -> brach).
-  LEHRE: Bei VoiceAgent (.NET, Solo-Session, kein Deploy) `dotnet test` LOKAL VOR dem Commit, dann
-  committen+pushen. Die commit-before-build-Regel zielt auf parallele Android-AAB-Builds; .NET-Desktop
-  ist davon nicht betroffen. (Offener Harness-Vorschlag, von Frank noch nicht bestaetigt.)
-- Bei System-Prompt-Aenderungen IMMER pruefen, ob BossAgentTests (Equal auf msgs[0].Text) brechen ->
-  StartsWith nutzen.
+## Fehlgeschlagene Ansaetze (WICHTIG — NICHT wiederholen)
+- VAD-/Energie-Vorfilter VOR der Streaming-KWS-Engine: zerstoert die Erkennung komplett (verworfene
+  Bloecke zerstueckeln den Stream). Bug #33. NIE wieder Frames vor einem Streaming-KWS verwerfen.
+- @original-Marker in keywords.txt (z.B. "@OKAY COMPUTER"): sherpa 1.13.2 parst es als Tokens -> Init-Fehler. Bug #32.
+- _justWoke (erste Aussage nach Wecken ueberspringen): verwarf Franks echte Anfrage. Entfernt in #46613.
+- "Ja?"-Greeting + PauseMic nach Wake: verschluckte/verzoegerte Franks Anfrage. Entfernt.
+- dotnet new console im Sandbox schlaegt fehl (Template-Engine) -> csproj/Program.cs manuell schreiben.
+- curl auf GitHub-Releases blockiert -> gh release download nutzen.
 
 ## Wichtige Recherche-Ergebnisse
-- WPF: Slider/CheckBox/ComboBox-Event-Handler feuern WAEHREND InitializeComponent (Property-Coercion).
-  Guard mit _ready-Flag (nicht nur ein Control auf null pruefen). -> Almanach bugs/desktop/dotnet-csharp.md 2.10.
-- Single-File: capabilities.md neben der EXE via Environment.ProcessPath finden (nicht Assembly.Location).
-- NAudio Chime: SignalGenerator + .Take(TimeSpan) + ConcatenatingSampleProvider + WaveOutEvent (Feld halten).
+- Kontroll-Test (datengetrieben): TTS-"Okay Computer" Batch ERKANNT, Streaming-ohne-VAD ERKANNT,
+  Streaming-MIT-VAD NICHT erkannt -> VAD war der Killer.
+- Live-Pfad (raw PCM -> PcmConverter -> 100ms-Bloecke ohne VAD) erkennt "OKAY COMPUTER" -> Live-Pfad ok.
 
 ## Naechste Schritte (priorisiert)
-1. (offener Intelligenz-Vorschlag 1) Mic waehrend des Chime (~300ms) kurz muten, damit der Chime sich
-   nicht selbst als Reaktion triggern kann (Zwei-Schritt-Dialog "zu 100%").
-2. (offener Intelligenz-Vorschlag 2) capabilities.md-Pflege als kurze VoiceAgent-Projektregel festschreiben.
-3. Reminder-Liste in der App (anstehende sehen/loeschen); wiederkehrende Erinnerungen.
-4. Latenz: Endpoint- + Intent-Check in EINEN Gemini-Call buendeln (aktuell bis 3 Calls/Turn).
-5. Grosse Stufen: Gedaechtnis Stufe 2 (Vektor-Retrieval, Hermes-Niveau); Unteragenten Stufe 2 (Computer Use, abgesichert).
+1. Franks Live-Test der EXE #46613 abwarten/auswerten: "Okay Computer" -> Piep -> sprechen ->
+   wird die Aussage JETZT verarbeitet? Log live mitlesen:
+   Get-Content "$env:LOCALAPPDATA\VoiceAgent\logs\voiceagent.log" -Wait -Tail 20  (auf CHECKPOINT/gehoert/geantwortet achten)
+2. Falls Weckwort bei Franks Stimme grenzwertig erkannt wird: keywords.txt Threshold/Boost justieren
+   (z.B. "▁OKAY ▁COMP U TER :2.0 #0.15"), EXE neu bauen.
+3. Falls ok: Feature als fertig markieren, project_voiceagent_wakeword_feature.md aktualisieren.
 
 ## Offene Fragen
-- Frank wollte live testen (kannst du... / Uhrzeit / Erinnerung). Die 2 Intelligenz-Vorschlaege
-  (Mic-Mute, Pflege-Regel) warten auf Franks Zustimmung.
+- Funktioniert der Live-Flow (#46613) mit Franks echter Stimme? (einziger unbestaetigter Punkt)
 
 ## Anker
 - Branch: main
 - Letzte Commits:
-4e93b9de #41629 - VoiceAgent: two-step reminder dialog (chime repeats every min until reaction -> readout)
-7118cf07 #41628 - VoiceAgent: agent self-awareness via external capabilities.md (only on "kannst du" asks)
-a3cb3ba8 #41627 - VoiceAgent: proactive reminders stage 1 (ReminderSubAgent + chime + proactive TTS)
-88b5252d #41626 - VoiceAgent: color-coded conversation (RichTextBox), you=cyan/agent=orange, selectable
-b5b779f7 #41625 - VoiceAgent: live clock in main window header
+  7e1882d0 #46613 - nach dem Wecken sofort sprechbereit, kein Ja, ClearBuffer
+  062c37c3 #46612 - VAD-Vorfilter entfernt (Erkennungs-Killer), Bug #33
+  7fd626cd #46611 - Mic-Schalter Direkt-Modus + Hintergrund-Lauschen
+  6578d090 #46610 - Wake-Word-Feature (sherpa-onnx)
