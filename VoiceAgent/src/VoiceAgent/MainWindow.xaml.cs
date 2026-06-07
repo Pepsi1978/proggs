@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,9 +34,11 @@ namespace VoiceAgent
         private readonly AudioPlayer _player = new();
         private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
         private SubAgentRegistry? _subAgents;         // Unteragenten, die der Hauptagent dirigiert
-        private ReminderService? _reminderService;    // geplante Erinnerungen (zeitgesteuert)
-        private readonly Chime _chime = new();        // Enterprise-Sound fuer proaktive Meldungen
-        private bool _proactiveBusy;                  // verhindert ueberlappende proaktive Meldungen
+        private ReminderService? _reminderService;                // geplante Erinnerungen (zeitgesteuert)
+        private readonly Chime _chime = new();                    // Enterprise-Sound fuer proaktive Meldungen
+        private Reminder? _pendingReminder;                       // faellig, wartet auf Franks Reaktion
+        private readonly Queue<Reminder> _reminderQueue = new();  // weitere faellige, noch nicht angesagt
+        private DispatcherTimer? _reminderPingTimer;              // wiederholt den Sound jede Minute bis Reaktion
 
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
@@ -105,7 +108,7 @@ namespace VoiceAgent
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { _clockTimer?.Stop(); CancelSafetyTimer(); _listener?.Dispose(); _player.Stop(); }
+            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _listener?.Dispose(); _player.Stop(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
         }
 
@@ -143,35 +146,68 @@ namespace VoiceAgent
         }
 
         /// <summary>Prueft jede Sekunde, ob eine Erinnerung faellig ist (nur wenn gerade nichts laeuft).</summary>
-        private async void CheckReminders()
+        /// <summary>Sammelt faellige Erinnerungen und stoesst den Ping-Vorgang an (jede Sekunde aufgerufen).</summary>
+        private void CheckReminders()
         {
-            if (_busy || _proactiveBusy || _reminderService == null) return;
+            if (_reminderService == null) return;
             try
             {
-                var due = _reminderService.TakeDue(DateTimeOffset.Now);
-                if (due.Count == 0) return;
-                _proactiveBusy = true;
-                try { foreach (var r in due) await SpeakProactiveAsync(r); }
-                finally { _proactiveBusy = false; }
+                foreach (var r in _reminderService.TakeDue(DateTimeOffset.Now)) _reminderQueue.Enqueue(r);
+                TryStartReminderPing();
             }
             catch (Exception ex) { Log.Error("CheckReminders fehlgeschlagen", ex); }
         }
 
-        /// <summary>Der Agent meldet sich PROAKTIV: Enterprise-Sound, Anzeige im Chat, dann Vorlesen.</summary>
-        private async Task SpeakProactiveAsync(Reminder r)
+        /// <summary>
+        /// Zwei-Schritt-Erinnerung Schritt 1: Sound ertoenen lassen und so lange jede Minute
+        /// WIEDERHOLEN, bis Frank reagiert. KEINE Ansage, Mikrofon bleibt an (Frank soll antworten).
+        /// Die Ansage (Schritt 2) kommt erst, wenn Frank etwas sagt (siehe AnnounceReminderAsync).
+        /// </summary>
+        private void TryStartReminderPing()
         {
+            if (_pendingReminder != null || _reminderQueue.Count == 0 || _busy) return;
+            _pendingReminder = _reminderQueue.Dequeue();
+            Log.Info("Erinnerung faellig — Ping startet, warte auf Reaktion", new { _pendingReminder.Text });
+            Append("System", "(Erinnerung faellig — sag kurz Bescheid, dann sage ich dir, worum es geht.)");
+            StartPinging();
+        }
+
+        private void StartPinging()
+        {
+            _chime.Play();   // sofort einmal
+            _reminderPingTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _reminderPingTimer.Tick -= OnReminderPing;   // doppelte Registrierung vermeiden
+            _reminderPingTimer.Tick += OnReminderPing;
+            _reminderPingTimer.Start();
+        }
+
+        private void OnReminderPing(object? sender, EventArgs e)
+        {
+            if (_pendingReminder == null) { StopPinging(); return; }
+            _chime.Play();   // alle 60 s wiederholen, bis Frank reagiert (falls er den Sound verpasst hat)
+        }
+
+        private void StopPinging() => _reminderPingTimer?.Stop();
+
+        /// <summary>Schritt 2: Frank hat reagiert — jetzt erst die Erinnerung vorlesen, dann ggf. die naechste.</summary>
+        private async Task AnnounceReminderAsync(Reminder r)
+        {
+            _busy = true;
             PauseMic();
             try
             {
                 var msg = $"Du wolltest, dass ich dich erinnere: {r.Text}";
-                _chime.Play();                       // Enterprise-Sound -> "der Agent will sprechen"
-                Append("Agent", "Erinnerung: " + r.Text);
-                Log.Info("Proaktive Erinnerung ausgeloest", new { r.Text });
-                await Task.Delay(900);               // Signalton ausklingen lassen, dann sprechen
+                Append("Agent", msg);
+                Log.Info("Erinnerung bestaetigt — Ansage", new { r.Text });
                 await SpeakAsync(msg);
             }
-            catch (Exception ex) { Log.Error("Proaktive Erinnerung fehlgeschlagen", ex); }
-            finally { ResumeMic(); }
+            catch (Exception ex) { Log.Error("Erinnerungs-Ansage fehlgeschlagen", ex); }
+            finally
+            {
+                _busy = false;
+                ResumeMic();
+                TryStartReminderPing();   // falls weitere Erinnerungen warten
+            }
         }
 
         private void LogButton_Click(object sender, RoutedEventArgs e)
@@ -226,6 +262,15 @@ namespace VoiceAgent
                 {
                     if (!string.IsNullOrEmpty(_pending)) StartSafetyTimer();   // Aussage offen lassen
                     else SetStatus("Bereit");
+                    return;
+                }
+
+                // Wartet eine Erinnerung auf Bestaetigung? Dann ist DIESE Aeusserung Franks Reaktion
+                // ("ja, was gibt es?") -> jetzt erst die Erinnerung ansagen, kein normaler Turn.
+                if (_pendingReminder != null)
+                {
+                    var pend = _pendingReminder; _pendingReminder = null; StopPinging();
+                    await AnnounceReminderAsync(pend);
                     return;
                 }
 
@@ -342,6 +387,16 @@ namespace VoiceAgent
         {
             var text = InputBox.Text?.Trim();
             if (string.IsNullOrEmpty(text) || _agent == null || _busy) return;
+
+            // Wartet eine Erinnerung auf Bestaetigung? Dann loest diese Eingabe die Ansage aus.
+            if (_pendingReminder != null)
+            {
+                var pend = _pendingReminder; _pendingReminder = null; StopPinging();
+                InputBox.Clear();
+                Append("Du", text);
+                await AnnounceReminderAsync(pend);
+                return;
+            }
 
             CancelSafetyTimer();
             _pending = string.Empty;
