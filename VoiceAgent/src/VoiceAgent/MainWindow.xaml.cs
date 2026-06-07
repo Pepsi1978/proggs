@@ -55,8 +55,7 @@ namespace VoiceAgent
         private bool _suppressSelection;              // unterdrueckt SelectionChanged beim Neu-Befuellen der Liste
 
         private WakeWordController? _wake;            // Weckwort-Zustandsautomat (null = Feature aus / Init fehlgeschlagen)
-        private readonly Chime _wakeChime = new("wakeword.wav");  // Bestaetigungston beim Wecken
-        private bool _justWoke;                       // die erste Aussage nach dem Wecken = Weckwort-Phrase -> ueberspringen
+        private readonly Chime _wakeChime = new("wakeword.wav");  // Erkennungston beim Wecken
 
         public MainWindow()
         {
@@ -186,21 +185,21 @@ namespace VoiceAgent
         {
             try
             {
-                _justWoke = true;
                 MicToggle.IsChecked = true;   // Schalter zeigt: jetzt wach
                 UpdateMicLabel();
                 // Observability-Checkpoint (Intent-Verifikation): erwartet vs. tatsaechlich.
                 Log.Info("CHECKPOINT: Weckwort erkannt",
                     new { step = "Weckwort erkannt", expected = _settings.WakeWord, actual = keyword, ok = true });
-                SetStatus("Wach — ich hoere zu");
-                Append("System", $"({_settings.WakeWord} erkannt — ich hoere zu)");
-                if (_settings.WakeChimeEnabled) _wakeChime.Play();   // sofortiger Bestaetigungston
-                if (_settings.WakeGreetingEnabled)
-                {
-                    PauseMic();                 // waehrend des Greetings nicht mithoeren (Self-Trigger §5)
-                    try { await SpeakAsync("Ja?"); }
-                    finally { ResumeMic(); }
-                }
+                SetStatus("Ton kommt — gleich sprechen");
+                // NUR ein kurzer Erkennungston (KEIN gesprochenes Wort — Frank-Wunsch 2026-06-08).
+                // Waehrend des Tons nicht mithoeren; danach den Buffer leeren (Weckwort-Phrase + Ton
+                // verwerfen) und ab JETZT sofort normal hoeren — exakt wie ein manueller Knopfdruck.
+                PauseMic();
+                if (_settings.WakeChimeEnabled) _wakeChime.Play();
+                await Task.Delay(650);          // Piepton ausklingen lassen
+                _listener?.ClearBuffer();       // "Okay Computer" + Ton verwerfen -> frischer Start
+                ResumeMic();                    // ab JETZT hoeren -> sofort lossprechen
+                SetStatus("Wach — sprich jetzt");
             }
             catch (Exception ex) { Log.Error("Weckwort-Reaktion fehlgeschlagen", ex); }
         }
@@ -380,8 +379,10 @@ namespace VoiceAgent
             // erst wecken, dann die Anfrage sprechen). Im wachen Zustand: Aktivitaet melden.
             if (_settings.WakeWordEnabled && _wake != null)
             {
+                // Ruht -> Aussage ignorieren (Wecken laeuft ueber das Hintergrund-Lauschen).
+                // Wach -> sofort normal verarbeiten (kein Ueberspringen): die Weckwort-Phrase ist
+                // beim Wecken bereits aus dem Buffer verworfen worden (siehe OnWokeAsync).
                 if (_wake.State == WakeState.Sleeping) { TryDelete(wavPath); return; }
-                if (_justWoke) { _justWoke = false; _wake.NotifyActivity(); TryDelete(wavPath); return; }
                 _wake.NotifyActivity();
             }
 

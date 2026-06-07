@@ -68,6 +68,16 @@ namespace VoiceAgent.Services.Audio
                 lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; }
         }
 
+        /// <summary>
+        /// Verwirft die gerade laufende Aufnahme (Buffer + Vorlauf), ohne die Aufnahme zu stoppen.
+        /// Genutzt direkt nach dem Wecken: die Weckwort-Phrase ("Okay Computer") und der Erkennungston
+        /// werden verworfen, damit ab da ein frischer Sprech-Start beginnt (wie ein Knopfdruck).
+        /// </summary>
+        public void ClearBuffer()
+        {
+            lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; }
+        }
+
         public void Start()
         {
             try

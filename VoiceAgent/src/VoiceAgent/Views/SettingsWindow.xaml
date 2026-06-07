@@ -114,10 +114,8 @@
                 <TextBlock Text="Weckwort-Text (englische Aussprache — Erkennung ist auf „Okay Computer“ eingestellt; anderes Wort siehe assets/wakeword-model/README.md)"
                            Style="{StaticResource Label}" TextWrapping="Wrap"/>
                 <TextBox x:Name="WakeWordBox"/>
-                <CheckBox x:Name="WakeChimeBox" Foreground="#E4E6EB" Margin="0,4,0,2"
-                          Content="Bestaetigungston beim Wecken"/>
-                <CheckBox x:Name="WakeGreetingBox" Foreground="#E4E6EB" Margin="0,2,0,6"
-                          Content="Kurze gesprochene Begruessung beim Wecken (&#8222;Ja?&#8220;)"/>
+                <CheckBox x:Name="WakeChimeBox" Foreground="#E4E6EB" Margin="0,4,0,6"
+                          Content="Erkennungston beim Wecken (danach sofort sprechen)"/>
                 <TextBlock x:Name="WakeTimeoutLabel" Style="{StaticResource Label}"/>
                 <Slider x:Name="WakeTimeoutSlider" Minimum="15000" Maximum="180000"
                         TickFrequency="5000" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>

@@ -62,8 +62,7 @@ namespace VoiceAgent.Services
         // keywords.txt neu erzeugen (siehe assets/wakeword-model/README.md).
         public string WakeWord { get; set; } = "Okay Computer";
         public int WakeTimeoutMs { get; set; } = 60000;        // aktives Fenster nach dem Wecken (60 s)
-        public bool WakeChimeEnabled { get; set; } = true;     // Bestaetigungston beim Wecken
-        public bool WakeGreetingEnabled { get; set; } = true;  // kurze gesprochene Begruessung beim Wecken
+        public bool WakeChimeEnabled { get; set; } = true;     // Erkennungston beim Wecken (danach sofort sprechen)
 
         // ----- Zeit -----
         // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
