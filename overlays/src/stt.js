@@ -262,7 +262,7 @@
 		const profile = OV.activeProfile;
 		if (
 			profile?.gemini &&
-			OV.storage.get("autoGeminiCorrection", true) &&
+			OV.storage.get("autoGeminiCorrection", false) &&
 			OV.gemini &&
 			text.length >= MIN_CHARS_FOR_REWRITE
 		) {
@@ -286,6 +286,8 @@
 		const ok = await ED().setViaPaste(el, combined);
 		removeLivePreview();
 		if (ok) {
+			// Neue Spracheingabe -> alter Gemini-Snapshot (Original/Korrektur) ist hinfaellig.
+			OV.actions?.resetGeminiSnapshot?.();
 			setMicState("idle");
 			const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
 			OV.toast(

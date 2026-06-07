@@ -132,28 +132,166 @@
 		);
 	}
 
-	// ── Gemini-Toggle (Auto-Korrektur an/aus) ──
+	// ── Gemini-Toggle (Auto-Korrektur an/aus + Live-Korrektur des Feldtexts) ──
+	// Der Schalter macht ZWEIERLEI:
+	//   1) persistente Einstellung "autoGeminiCorrection" (Default AUS) — steuert, ob
+	//      KUENFTIGE Spracheingaben automatisch korrigiert werden (gelesen in stt.js).
+	//   2) Live auf den AKTUELL im Feld stehenden Text: AN korrigiert ihn sofort, AUS
+	//      stellt den urspruenglichen (rohen) Text wieder her.
+	// Der Snapshot merkt sich Original + Korrektur, damit man verlustfrei hin- und
+	// herspringen kann — beim zweiten Mal ohne erneuten Gemini-Aufruf (instant).
+	// Er ist nur gueltig, solange der Feldtext exakt einem der beiden Werte entspricht;
+	// hat der Nutzer manuell editiert, wird nichts ueberschrieben.
+	let geminiSnap = null; // { el, original, corrected }
+
+	function resetGeminiSnapshot() {
+		geminiSnap = null;
+	}
+
 	function renderGeminiToggle(btn) {
 		OV.setSvgIcon(btn, OV.ICONS.spellcheck, OV.ICON_FALLBACK.spellcheck);
 		btn.style.setProperty("border-color", "transparent", "important");
-		if (OV.storage.get("autoGeminiCorrection", true)) {
+		if (OV.storage.get("autoGeminiCorrection", false)) {
 			setColors(btn, "#22c55e", "#fff");
-			btn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+			btn.title =
+				"Gemini-Korrektur AN – Klicken stellt den Originaltext wieder her";
 		} else {
 			setColors(btn, "#94a3b8", "#fff");
-			btn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+			btn.title =
+				"Gemini-Korrektur AUS – Klicken korrigiert den aktuellen Text";
 		}
 	}
+
+	// AN: korrigiert den aktuell im Feld stehenden Text sofort per Gemini und merkt
+	// sich Original + Korrektur. Springt instant zurueck auf die Korrektur, wenn der
+	// gleiche Originaltext schon einmal korrigiert wurde (kein erneuter API-Call).
+	async function geminiCorrectCurrent(btn) {
+		const el = ED().getUserTargetEditable();
+		if (!el) {
+			OV.toast(
+				"✅ Gemini-Korrektur aktiviert. (Kein Eingabefeld fuer die Sofort-Korrektur gefunden — beim naechsten Sprechen wird automatisch korrigiert.)",
+				3500,
+			);
+			return;
+		}
+		const current = ED().readPromptText(el);
+
+		// Schon korrigiert (Feldtext == Korrektur)? Dann nichts tun.
+		if (
+			geminiSnap &&
+			geminiSnap.el === el &&
+			current === geminiSnap.corrected
+		) {
+			console.log(
+				"[Overlays] Gemini-Toggle AN: Text bereits korrigiert — kein erneuter Aufruf.",
+			);
+			OV.toast("✅ Gemini-Korrektur aktiviert.", 1600);
+			return;
+		}
+
+		// Bekannter Originaltext? Dann gecachte Korrektur sofort einsetzen (kein API-Call).
+		if (geminiSnap && geminiSnap.el === el && current === geminiSnap.original) {
+			console.log(
+				"[Overlays] Gemini-Toggle AN: bekannter Originaltext — Korrektur aus Cache (kein API-Call).",
+			);
+			const ok = await ED().setViaPaste(el, geminiSnap.corrected);
+			OV.toast(
+				ok
+					? "✨ Korrektur wieder eingesetzt. Nochmal klicken = Original."
+					: "⚠️ Konnte korrigierten Text nicht einsetzen.",
+				2400,
+			);
+			return;
+		}
+
+		if (!current || current.length < MIN_CHARS) {
+			console.log(
+				"[Overlays] Gemini-Toggle AN: Feldtext zu kurz fuer Sofort-Korrektur:",
+				current.length,
+			);
+			geminiSnap = null;
+			OV.toast(
+				`✅ Gemini-Korrektur aktiviert. (Text zu kurz (${current.length}) fuer die Sofort-Korrektur.)`,
+				3000,
+			);
+			return;
+		}
+		if (!OV.gemini) {
+			OV.toast("⚠️ Gemini nicht verfuegbar.", 3000);
+			return;
+		}
+
+		await withBusy(btn, async () => {
+			OV.toast("✨ Gemini korrigiert den aktuellen Text…", 2500);
+			const result = await OV.gemini.rewriteGrammarSmart(current);
+			const corrected = (result || "").trim();
+			if (!corrected) throw new Error("Gemini lieferte keinen Text zurueck.");
+			const ok = await ED().setViaPaste(el, corrected);
+			if (!ok)
+				throw new Error(
+					"Eingabefeld hat den korrigierten Text nicht uebernommen.",
+				);
+			geminiSnap = { el, original: current, corrected };
+			console.log("[Overlays] Gemini-Toggle AN: korrigiert", {
+				origLen: current.length,
+				corrLen: corrected.length,
+			});
+			OV.toast("✨ Text korrigiert. Nochmal klicken = Original zurueck.", 2600);
+		});
+	}
+
+	// AUS: stellt den gemerkten Originaltext wieder her — aber nur, wenn der Feldtext
+	// seit der Korrektur unveraendert ist (sonst hat der Nutzer manuell editiert und
+	// wir ueberschreiben nichts). Der Snapshot bleibt erhalten, damit ein erneutes AN
+	// die Korrektur instant aus dem Cache holen kann.
+	async function geminiRestoreOriginal() {
+		if (!geminiSnap) {
+			console.log(
+				"[Overlays] Gemini-Toggle AUS: kein Snapshot — nichts wiederherzustellen.",
+			);
+			OV.toast("❌ Gemini-Korrektur deaktiviert.", 1800);
+			return;
+		}
+		const el = geminiSnap.el;
+		if (!OV.editable.isVisible(el)) {
+			console.log(
+				"[Overlays] Gemini-Toggle AUS: Zielfeld nicht mehr sichtbar — kein Restore.",
+			);
+			geminiSnap = null;
+			OV.toast("❌ Gemini-Korrektur deaktiviert.", 1800);
+			return;
+		}
+		const live = ED().readPromptText(el);
+		if (live !== geminiSnap.corrected) {
+			// Nutzer hat seit der Korrektur manuell editiert -> nicht ueberschreiben.
+			console.log(
+				"[Overlays] Gemini-Toggle AUS: Feldtext seit Korrektur geaendert — Original NICHT ueberschrieben.",
+			);
+			geminiSnap = null;
+			OV.toast(
+				"❌ Gemini-Korrektur deaktiviert. (Feld wurde manuell geaendert — Original nicht ueberschrieben.)",
+				4000,
+			);
+			return;
+		}
+		const ok = await ED().setViaPaste(el, geminiSnap.original);
+		console.log("[Overlays] Gemini-Toggle AUS: Original wiederhergestellt", {
+			ok,
+		});
+		OV.toast(
+			ok
+				? "↩️ Originaltext wiederhergestellt."
+				: "⚠️ Konnte den Originaltext nicht wiederherstellen.",
+			2400,
+		);
+	}
+
 	async function toggleGemini(btn) {
-		const next = !OV.storage.get("autoGeminiCorrection", true);
+		const next = !OV.storage.get("autoGeminiCorrection", false);
 		await OV.storage.set("autoGeminiCorrection", next);
 		renderGeminiToggle(btn);
-		OV.toast(
-			next
-				? "✅ Gemini-Korrektur aktiviert"
-				: "❌ Gemini-Korrektur deaktiviert",
-			2000,
-		);
+		if (next) await geminiCorrectCurrent(btn);
+		else await geminiRestoreOriginal();
 	}
 
 	// ── ChatGPT: Memory-Prompt ──
@@ -304,6 +442,7 @@ Zielgruppe, Kontext, Format und Ton duerfen niemals abweichen.
 		clear,
 		renderGeminiToggle,
 		toggleGemini,
+		resetGeminiSnapshot,
 		memory,
 		promptFrank: (btn) => runPromptBuilder(btn, buildFinalPrompt, "Frank"),
 		promptGeneral: (btn) =>
