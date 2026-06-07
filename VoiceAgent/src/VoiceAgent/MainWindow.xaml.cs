@@ -33,6 +33,9 @@ namespace VoiceAgent
         private readonly AudioPlayer _player = new();
         private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
         private SubAgentRegistry? _subAgents;         // Unteragenten, die der Hauptagent dirigiert
+        private ReminderService? _reminderService;    // geplante Erinnerungen (zeitgesteuert)
+        private readonly Chime _chime = new();        // Enterprise-Sound fuer proaktive Meldungen
+        private bool _proactiveBusy;                  // verhindert ueberlappende proaktive Meldungen
 
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
@@ -54,7 +57,9 @@ namespace VoiceAgent
                 _settings = Config.Load();
                 _memory = new AgentMemory();   // laedt Fakten + letzte Gespraeche aus frueheren Sessions
                 _subAgents = new SubAgentRegistry();
-                _subAgents.Register(new NoteSubAgent(_memory));   // erster Demo-Unteragent (merkt sich Notizen)
+                _reminderService = new ReminderService();
+                _subAgents.Register(new ReminderSubAgent(_reminderService));   // Erinnerungen (zeitgesteuert)
+                _subAgents.Register(new NoteSubAgent(_memory));                // Notizen
                 BuildAgents();
 
                 RebuildListener();
@@ -120,7 +125,7 @@ namespace VoiceAgent
         private void StartClock()
         {
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _clockTimer.Tick += (_, __) => UpdateClock();
+            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); };
             _clockTimer.Start();
             UpdateClock();
         }
@@ -135,6 +140,38 @@ namespace VoiceAgent
                 ClockText.Text = now.ToString("ddd, dd.MM.yyyy  HH:mm:ss", new System.Globalization.CultureInfo("de-DE"));
             }
             catch { /* Uhr ist unkritisch — nie crashen */ }
+        }
+
+        /// <summary>Prueft jede Sekunde, ob eine Erinnerung faellig ist (nur wenn gerade nichts laeuft).</summary>
+        private async void CheckReminders()
+        {
+            if (_busy || _proactiveBusy || _reminderService == null) return;
+            try
+            {
+                var due = _reminderService.TakeDue(DateTimeOffset.Now);
+                if (due.Count == 0) return;
+                _proactiveBusy = true;
+                try { foreach (var r in due) await SpeakProactiveAsync(r); }
+                finally { _proactiveBusy = false; }
+            }
+            catch (Exception ex) { Log.Error("CheckReminders fehlgeschlagen", ex); }
+        }
+
+        /// <summary>Der Agent meldet sich PROAKTIV: Enterprise-Sound, Anzeige im Chat, dann Vorlesen.</summary>
+        private async Task SpeakProactiveAsync(Reminder r)
+        {
+            PauseMic();
+            try
+            {
+                var msg = $"Du wolltest, dass ich dich erinnere: {r.Text}";
+                _chime.Play();                       // Enterprise-Sound -> "der Agent will sprechen"
+                Append("Agent", "Erinnerung: " + r.Text);
+                Log.Info("Proaktive Erinnerung ausgeloest", new { r.Text });
+                await Task.Delay(900);               // Signalton ausklingen lassen, dann sprechen
+                await SpeakAsync(msg);
+            }
+            catch (Exception ex) { Log.Error("Proaktive Erinnerung fehlgeschlagen", ex); }
+            finally { ResumeMic(); }
         }
 
         private void LogButton_Click(object sender, RoutedEventArgs e)
