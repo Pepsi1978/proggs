@@ -25,7 +25,8 @@ bugs/
 ├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS)
 ├── web/              Chrome-Erweiterungen, TypeScript/Node  (+ Tampermonkey geplant)
 ├── peripherie/       Elgato Stream-Deck-Plugin
-└── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
+├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
+└── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
 ```
 
 Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
@@ -96,6 +97,12 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Claude-Harness — Hooks** (PowerShell/Bash) | [`claude-tooling/claude-hooks.md`](claude-tooling/claude-hooks.md) | 2026-06-01 | ~45 | `~/.claude/hooks/*.ps1`, `*.sh`, `settings.json` hooks-Sektion · „Hook", „SessionStart", „PreToolUse", „PostToolUse", „SubagentStop" |
 | **MCP-Server-Bau** (Model Context Protocol, TS-SDK 1.27.1 + python-sdk) | [`claude-tooling/mcp-server.md`](claude-tooling/mcp-server.md) | 2026-06-03 | ~59 | `.mcp.json`, MCP-Server-Quellcode (`*.ts`/`*.py` mit `@modelcontextprotocol/sdk`/`McpServer`/`StdioServerTransport`/`FastMCP`/`stdio_server` — per Content-Probe) · „MCP", „Model Context Protocol", „stdio", „Streamable HTTP", „tool schema", „registerTool", „isError", „inputSchema" · Best-Practices: `best-practices/projekt-code/claude-tooling/mcp-server/` (Server-Bau-Seite) + `best-practices/05-mcp/` (Client/Konfig-Seite) |
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`claude-tooling/python-windows.md`](claude-tooling/python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
+
+### 🎨 `assets/` — Icons & Medien-Assets
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **App-Icon-Building** (Windows `.ico`, Android Adaptive Icons, macOS `.icns`) | [`assets/icon-building.md`](assets/icon-building.md) | 2026-06-07 | ~30 | `*.ico`, `*.icns`, `ic_launcher*.xml`, `*.iconset/`, `<ApplicationIcon>` · „Icon", „App-Icon", „.ico", „.icns", „Adaptive Icon", „mipmap", „Icon-Cache", „schwarze/transparente Ecken", „Verknuepfung/Shortcut-Icon", „iconutil", „Squircle", „Pillow ICO" |
 
 ---
 
