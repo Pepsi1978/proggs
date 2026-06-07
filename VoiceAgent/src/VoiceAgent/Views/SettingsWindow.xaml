@@ -105,6 +105,23 @@
                 <Slider x:Name="EndpointWaitSlider" Minimum="1000" Maximum="10000"
                         TickFrequency="250" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
 
+                <!-- 5b. Weckwort -->
+                <TextBlock Text="Weckwort" Style="{StaticResource Section}"/>
+                <TextBlock Text="Wenn aktiv, ruht der Agent und reagiert erst, wenn das Weckwort faellt. Danach hoert er fuer eine Weile normal zu, dann ruht er wieder."
+                           Style="{StaticResource Label}" TextWrapping="Wrap"/>
+                <CheckBox x:Name="WakeWordEnabledBox" Foreground="#E4E6EB" Margin="0,6,0,6"
+                          Content="Weckwort-Modus aktivieren"/>
+                <TextBlock Text="Weckwort-Text (englische Aussprache — Erkennung ist auf „Okay Computer“ eingestellt; anderes Wort siehe assets/wakeword-model/README.md)"
+                           Style="{StaticResource Label}" TextWrapping="Wrap"/>
+                <TextBox x:Name="WakeWordBox"/>
+                <CheckBox x:Name="WakeChimeBox" Foreground="#E4E6EB" Margin="0,4,0,2"
+                          Content="Bestaetigungston beim Wecken"/>
+                <CheckBox x:Name="WakeGreetingBox" Foreground="#E4E6EB" Margin="0,2,0,6"
+                          Content="Kurze gesprochene Begruessung beim Wecken (&#8222;Ja?&#8220;)"/>
+                <TextBlock x:Name="WakeTimeoutLabel" Style="{StaticResource Label}"/>
+                <Slider x:Name="WakeTimeoutSlider" Minimum="15000" Maximum="180000"
+                        TickFrequency="5000" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
                 <!-- 6. Zeitzone (damit der Agent die echte Uhrzeit kennt) -->
                 <TextBlock Text="Zeitzone (fuer Uhrzeit-Fragen)" Style="{StaticResource Section}"/>
                 <TextBlock Text="Der Agent kennt die echte Uhrzeit nur, wenn die Zeitzone stimmt. Standard: Systemzeit dieses PCs."

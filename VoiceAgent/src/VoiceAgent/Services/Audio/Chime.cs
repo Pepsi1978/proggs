@@ -16,13 +16,17 @@ namespace VoiceAgent.Services.Audio
     {
         private WaveOutEvent? _wo;
         private IDisposable? _reader;
+        private readonly string _fileName;
 
-        private static string SoundPath
+        /// <param name="fileName">WAV-Dateiname in assets/ neben der EXE (Default: Erinnerungston).</param>
+        public Chime(string fileName = "message1.wav") => _fileName = fileName;
+
+        private string SoundPath
         {
             get
             {
                 var dir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-                return Path.Combine(dir, "assets", "message1.wav");
+                return Path.Combine(dir, "assets", _fileName);
             }
         }
 

@@ -54,7 +54,7 @@ Das gigaspeech-Modell ist **BPE-basiert** — roher Klartext in `keywords.txt` w
 ```
 sherpa-onnx-cli text2token --tokens tokens.txt --tokens-type bpe --bpe-model bpe.model keywords_raw.txt keywords.txt
 ```
-Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Feintuning ohne Modell-Neutraining. Quelle: KWS Doku · offiziell.
+Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Feintuning ohne Modell-Neutraining. **Die fertige keywords.txt enthaelt NUR BPE-Tokens — keinen `@original`-Marker** (sherpa 1.13.2 parst `@...` sonst als Tokens → Init-Fehler, Almanach #32). `result.Keyword` liefert die de-tokenisierte Phrase trotzdem. Quelle: KWS Doku · offiziell; eigener Smoke-Test.
 
 ### 1.4 Float-Format & Lifecycle
 - PCM16 → float: **`/ 32768f`** (nicht 32767 — sonst mappt −32768 unter −1,0). Erster `AcceptWaveform`-Param = **echte** Aufnahme-Rate (sherpa resampled intern), nicht blind 16000.

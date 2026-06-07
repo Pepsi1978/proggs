@@ -60,6 +60,12 @@ namespace VoiceAgent.Views
                 MinUtteranceSlider.Value = _settings.MinUtteranceMs;
                 EndpointWaitSlider.Value = _settings.EndpointMaxWaitMs;
 
+                WakeWordEnabledBox.IsChecked = _settings.WakeWordEnabled;
+                WakeWordBox.Text = _settings.WakeWord;
+                WakeChimeBox.IsChecked = _settings.WakeChimeEnabled;
+                WakeGreetingBox.IsChecked = _settings.WakeGreetingEnabled;
+                WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
+
                 TimeZoneBox.ItemsSource = TimeZoneInfo.GetSystemTimeZones();
                 TimeZoneBox.DisplayMemberPath = nameof(TimeZoneInfo.DisplayName);
                 TimeZoneBox.SelectedValuePath = nameof(TimeZoneInfo.Id);
@@ -112,6 +118,12 @@ namespace VoiceAgent.Views
                 _settings.SilenceMs = (int)SilenceMsSlider.Value;
                 _settings.MinUtteranceMs = (int)MinUtteranceSlider.Value;
                 _settings.EndpointMaxWaitMs = (int)EndpointWaitSlider.Value;
+
+                _settings.WakeWordEnabled = WakeWordEnabledBox.IsChecked == true;
+                _settings.WakeWord = string.IsNullOrWhiteSpace(WakeWordBox.Text) ? "Okay Computer" : WakeWordBox.Text.Trim();
+                _settings.WakeChimeEnabled = WakeChimeBox.IsChecked == true;
+                _settings.WakeGreetingEnabled = WakeGreetingBox.IsChecked == true;
+                _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
                     ? string.Empty
                     : (TimeZoneBox.SelectedValue as string ?? string.Empty);
@@ -160,6 +172,7 @@ namespace VoiceAgent.Views
             SilenceMsLabel.Text = $"Pause bis eine Aussage endet: {SilenceMsSlider.Value:F0} ms";
             MinUtteranceLabel.Text = $"Kuerzeste erkannte Aussage: {MinUtteranceSlider.Value:F0} ms";
             EndpointWaitLabel.Text = $"Sicherheitsnetz nach langer Pause: {EndpointWaitSlider.Value:F0} ms";
+            WakeTimeoutLabel.Text = $"Wachfenster nach dem Wecken: {WakeTimeoutSlider.Value / 1000:F0} s";
         }
 
         // Event-Handler: async void ist hier ok, Body komplett in try/catch (Almanach §7.2).

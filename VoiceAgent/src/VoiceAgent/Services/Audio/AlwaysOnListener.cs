@@ -22,6 +22,15 @@ namespace VoiceAgent.Services.Audio
         /// <summary>Gemeldet, wenn eine vollstaendige Aussage als WAV-Datei vorliegt (Pfad).</summary>
         public event Action<string>? OnUtterance;
 
+        /// <summary>
+        /// Roher 16-kHz-mono-16-bit-PCM-Block bei JEDEM Mikrofon-Callback (buffer, gueltige Byte-Anzahl).
+        /// Genutzt fuer kontinuierliches Wake-Word-Lauschen (WakeWordController).
+        /// WICHTIG: Der Puffer wird von NAudio wiederverwendet — der Abonnent MUSS die Bytes
+        /// sofort verarbeiten/kopieren (PcmConverter erzeugt ohnehin ein neues float[]),
+        /// niemals die Referenz fuer spaeter behalten.
+        /// </summary>
+        public event Action<byte[], int>? OnFrame;
+
         private const int SampleRate = 16000;
         private const int PreRollMs = 400;                          // Vorlauf gegen verschluckte Anlaute
         private static readonly int PreRollBytes = SampleRate * 2 * PreRollMs / 1000;
@@ -88,6 +97,10 @@ namespace VoiceAgent.Services.Audio
             if (_disposed || !_enabled) return;
             try
             {
+                // Rohen Frame fuer das Wake-Word-Lauschen weitergeben (vor der Stille-Logik).
+                // Abonnent kopiert sofort (siehe OnFrame-Doku).
+                OnFrame?.Invoke(e.Buffer, e.BytesRecorded);
+
                 float rms = ComputeRms(e.Buffer, e.BytesRecorded);
                 bool silent = rms < _silenceThreshold;
                 var now = DateTime.UtcNow;

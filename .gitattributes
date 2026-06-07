@@ -39,3 +39,7 @@
 BestJournalFrank/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
 BestJournalAndroid/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
 *.aar filter=lfs diff=lfs merge=lfs -text
+# VoiceAgent Wake-Word-Modell (~5 MB, klein genug fuer normales Git — kein LFS, damit der Build keinen LFS-Pull braucht)
+VoiceAgent/**/*.onnx binary
+VoiceAgent/**/*.model binary
+*.wav binary

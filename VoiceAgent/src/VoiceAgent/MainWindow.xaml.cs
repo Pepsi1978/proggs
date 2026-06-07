@@ -54,6 +54,10 @@ namespace VoiceAgent
         private bool _ready;                          // true erst NACH dem Laden — Guard gegen Handler beim XAML-Load (§2.10)
         private bool _suppressSelection;              // unterdrueckt SelectionChanged beim Neu-Befuellen der Liste
 
+        private WakeWordController? _wake;            // Weckwort-Zustandsautomat (null = Feature aus / Init fehlgeschlagen)
+        private readonly Chime _wakeChime = new("wakeword.wav");  // Bestaetigungston beim Wecken
+        private bool _justWoke;                       // die erste Aussage nach dem Wecken = Weckwort-Phrase -> ueberspringen
+
         public MainWindow()
         {
             InitializeComponent();
@@ -124,13 +128,88 @@ namespace VoiceAgent
             catch (Exception ex) { Log.Error("MainWindow: alten Listener schliessen fehlgeschlagen", ex); }
             _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs);
             _listener.OnUtterance += OnUtterance;
+            _listener.OnFrame += OnAudioFrame;       // roher Stream fuer das Weckwort-Lauschen
             _listener.Start();
             _listener.SetEnabled(_settings.MicEnabled);
+            RebuildWakeController();
         }
+
+        /// <summary>
+        /// (Re)baut den Weckwort-Zustandsautomaten anhand der Einstellungen. Schlaegt die
+        /// Initialisierung fehl (Modell/Native), wird das Feature deaktiviert und die App
+        /// laeuft im normalen Modus weiter (Funktionserhalt, Direktive #3) — kein Crash.
+        /// </summary>
+        private void RebuildWakeController()
+        {
+            if (_wake != null) { _wake.Woke -= OnWoke; _wake.Slept -= OnSlept; try { _wake.Dispose(); } catch { } _wake = null; }
+            if (!_settings.WakeWordEnabled) return;
+            try
+            {
+                string modelDir = Path.Combine(AppContext.BaseDirectory, "assets", "wakeword-model");
+                var engine = new SherpaWakeWordEngine(modelDir);
+                var vad = new EnergyVadGate(_settings.SilenceThreshold);
+                _wake = new WakeWordController(engine, vad, _settings.WakeTimeoutMs);
+                _wake.Woke += OnWoke;
+                _wake.Slept += OnSlept;
+                Log.Info("Weckwort aktiv — Agent ruht, bis das Weckwort faellt", new { _settings.WakeWord });
+                Append("System", $"Weckwort aktiv: sag „{_settings.WakeWord}“, um mich zu wecken.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Weckwort-Initialisierung fehlgeschlagen — Feature aus, App laeuft normal weiter", ex);
+                _wake = null;
+                Append("System", "Weckwort konnte nicht geladen werden — ich verarbeite wie gewohnt jede Aussage.");
+            }
+        }
+
+        // ---------- Weckwort: roher Audio-Stream (Listener-Thread) ----------
+
+        private void OnAudioFrame(byte[] buffer, int count)
+        {
+            var wake = _wake;
+            if (wake == null) return;
+            try
+            {
+                // KWS ist leichtgewichtig (int8-3.3M); synchron im Audio-Thread ok. Bei Bedarf
+                // spaeter ueber einen bounded Channel<T> entkoppeln (Best-Practice §3).
+                float[] samples = PcmConverter.Pcm16ToFloat(buffer, count);
+                wake.ProcessFrame(samples);   // bei Treffer feuert Woke (-> Dispatcher)
+            }
+            catch (Exception ex) { Log.Error("Weckwort: Frame-Verarbeitung fehlgeschlagen", ex); }
+        }
+
+        private void OnWoke(string keyword) => Dispatcher.InvokeAsync(() => _ = OnWokeAsync(keyword));
+
+        private async Task OnWokeAsync(string keyword)
+        {
+            try
+            {
+                _justWoke = true;
+                // Observability-Checkpoint (Intent-Verifikation): erwartet vs. tatsaechlich.
+                Log.Info("CHECKPOINT: Weckwort erkannt",
+                    new { step = "Weckwort erkannt", expected = _settings.WakeWord, actual = keyword, ok = true });
+                SetStatus("Wach — ich hoere zu");
+                Append("System", $"({_settings.WakeWord} erkannt — ich hoere zu)");
+                if (_settings.WakeChimeEnabled) _wakeChime.Play();   // sofortiger Bestaetigungston
+                if (_settings.WakeGreetingEnabled)
+                {
+                    PauseMic();                 // waehrend des Greetings nicht mithoeren (Self-Trigger §5)
+                    try { await SpeakAsync("Ja?"); }
+                    finally { ResumeMic(); }
+                }
+            }
+            catch (Exception ex) { Log.Error("Weckwort-Reaktion fehlgeschlagen", ex); }
+        }
+
+        private void OnSlept() => Dispatcher.InvokeAsync(() =>
+        {
+            SetStatus("Ruhe — sag das Weckwort");
+            Append("System", "(Ich ruhe wieder — sag das Weckwort, um mich zu wecken.)");
+        });
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _listener?.Dispose(); _player.Stop(); }
+            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
         }
 
@@ -150,7 +229,7 @@ namespace VoiceAgent
         private void StartClock()
         {
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); };
+            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); _wake?.Tick(); };
             _clockTimer.Start();
             UpdateClock();
         }
@@ -271,6 +350,17 @@ namespace VoiceAgent
         {
             CancelSafetyTimer();   // neues Haeppchen → Sicherheitsnetz zuruecksetzen
             if (_busy || _stt == null) { TryDelete(wavPath); return; }
+
+            // Weckwort-Gating: im Ruhezustand wird die Aussage NICHT verarbeitet (das Wecken
+            // laeuft kontinuierlich ueber OnAudioFrame). Direkt nach dem Wecken ist die erste
+            // Aussage die Weckwort-Phrase selbst — die wird uebersprungen (Zwei-Phasen-Modell:
+            // erst wecken, dann die Anfrage sprechen). Im wachen Zustand: Aktivitaet melden.
+            if (_settings.WakeWordEnabled && _wake != null)
+            {
+                if (_wake.State == WakeState.Sleeping) { TryDelete(wavPath); return; }
+                if (_justWoke) { _justWoke = false; _wake.NotifyActivity(); TryDelete(wavPath); return; }
+                _wake.NotifyActivity();
+            }
 
             _busy = true;
             PauseMic();   // waehrend Transkription/Check/Sprechen nicht mithoeren

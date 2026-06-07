@@ -96,7 +96,7 @@
 **Symptom:** Custom Wake Word wird nie/kaum erkannt oder feuert staendig (zu viele False Positives).
 **Ursache:** Das `keywords.txt`-Format hat Steuer-Syntax, die leicht falsch geschrieben wird: `:boost`, `#threshold`, `@original-phrase`. Falsche Tokenisierung (ohne `text2token`) → unbrauchbare Phoneme.
 **Versionen:** sherpa-onnx alle.
-**FIX:** Keywords mit dem `text2token`-Tool aus dem Klartext erzeugen. Pro Zeile: Tokens, dann optional `:boost` (Erkennungs-Boost), `#threshold` (Schwelle), `@original` (Original-Phrase fuers Logging). Threshold pro Wake Word kalibrieren (siehe Bug 20).
+**FIX:** Keywords mit `text2token` (oder sentencepiece + bpe.model) aus dem Klartext erzeugen. Pro Zeile NUR die BPE-Tokens, optional `:boost` (Erkennungs-Boost) und `#threshold` (Schwelle). **ACHTUNG: keinen `@original`-Marker anhaengen** — siehe Bug 32 (fuehrt mit gigaspeech-3.3M zum Init-Fehler). Threshold pro Wake Word kalibrieren (siehe Bug 20).
 **Quelle:** sherpa-onnx KWS-Doku; claude-mem #13845.
 
 ### 11. Modellwahl + custom Wake Word ohne Retraining
@@ -264,6 +264,13 @@
 **Versionen:** .NET single-file (8–10).
 **FIX:** Modell-/Asset-Pfade ueber **`AppContext.BaseDirectory`** aufloesen. Siehe §6.
 **Quelle:** Microsoft Learn (single-file deployment) · offiziell.
+
+### 32. `@original`-Marker in keywords.txt wird als Tokens fehlinterpretiert   [⭐ EIGENER VORFALL]
+**Symptom:** KeywordSpotter-Init schlaegt fehl: `Cannot find ID for token COMPUTER at line: ▁OKAY ▁COMP U TER @OKAY COMPUTER` → `Encode keywords failed`.
+**Ursache:** Die `@original-phrase`-Syntax (aus aelterer/anderer Doku) wird von sherpa-onnx 1.13.2 mit dem gigaspeech-3.3M-Modell NICHT als Anzeige-Marker, sondern als zusaetzliche **Tokens** geparst — die Klartext-Woerter (`@OKAY`, `COMPUTER`) stehen nicht in tokens.txt → Init bricht ab.
+**Versionen:** verifiziert sherpa-onnx 1.13.2 + sherpa-onnx-kws-zipformer-gigaspeech-3.3M (eigener Smoke-Test 2026-06-08).
+**FIX:** keywords.txt enthaelt pro Zeile NUR die BPE-Tokens (`▁OKAY ▁COMP U TER`), optional `:boost`/`#threshold`. KEIN `@...`. `result.Keyword` liefert trotzdem die de-tokenisierte Phrase ("OKAY COMPUTER", `▁` → Leerzeichen). Siehe `best-practices-wake-word.md` §1.3.
+**Quelle:** Eigener Vorfall — durch Engine-Smoke-Test VOR der Integration gefunden (Observability/Verifikation).
 
 ---
 

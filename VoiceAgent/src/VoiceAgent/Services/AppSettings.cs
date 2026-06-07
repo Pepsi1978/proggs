@@ -53,6 +53,18 @@ namespace VoiceAgent.Services
         public bool IntentDetection { get; set; } = true;
         public string IntentModel { get; set; } = "gemini-3.1-flash-lite";
 
+        // ----- Wake-Word ("Okay Computer") -----
+        // Wenn an, hoert der Agent im Ruhezustand nur auf das Weckwort und verarbeitet erst
+        // danach (fuer WakeTimeoutMs) normal. Wenn aus, wird wie bisher JEDE Aussage verarbeitet.
+        public bool WakeWordEnabled { get; set; } = false;     // Opt-in: bestehendes Verhalten bleibt Default
+        // Anzeige-/Greeting-Text des aktiven Weckworts. Die ERKENNUNG nutzt die gebundelte,
+        // vor-tokenisierte keywords.txt (englische Phonetik, gigaspeech). Anderes Wort:
+        // keywords.txt neu erzeugen (siehe assets/wakeword-model/README.md).
+        public string WakeWord { get; set; } = "Okay Computer";
+        public int WakeTimeoutMs { get; set; } = 60000;        // aktives Fenster nach dem Wecken (60 s)
+        public bool WakeChimeEnabled { get; set; } = true;     // Bestaetigungston beim Wecken
+        public bool WakeGreetingEnabled { get; set; } = true;  // kurze gesprochene Begruessung beim Wecken
+
         // ----- Zeit -----
         // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
         // die System-Zeitzone dieses PCs; sonst eine TimeZoneInfo-Id (z.B. "W. Europe Standard Time").

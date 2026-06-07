@@ -18,11 +18,22 @@
     <Content Include="capabilities.md" CopyToOutputDirectory="PreserveNewest" />
     <!-- Erinnerungs-Signalton (Frank's WAV): wird neben die EXE kopiert und vom Chime abgespielt. -->
     <Content Include="assets\message1.wav" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Wake-Word-Bestaetigungston: wird beim Erkennen des Weckworts abgespielt. -->
+    <Content Include="assets\wakeword.wav" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Wake-Word-Modell (sherpa-onnx KWS, int8). Als Content neben die EXE kopieren — die native
+         API erwartet Dateipfade, NICHT embedded (Best-Practice wake-word §6). -->
+    <Content Include="assets\wakeword-model\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <!-- Wake-Word-Erkennung: Meta-Paket + Windows-x64-Runtime (gleiche Version, Almanach #4).
+         Apache-2.0, 100 % offline. Bei Release-Publish: RID win-x64 + <SelfContained>true</SelfContained>
+         explizit setzen (seit .NET 8 impliziert RID kein self-contained mehr — Almanach #29);
+         KEIN PublishTrimmed (WPF, Almanach §1.5/#30). -->
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.2" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx.runtime.win-x64" Version="1.13.2" />
   </ItemGroup>
 
 </Project>
