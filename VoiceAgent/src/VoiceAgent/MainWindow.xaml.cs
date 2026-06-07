@@ -79,8 +79,27 @@ namespace VoiceAgent
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            // Vollwertiges Einstellungs-Fenster folgt in Etappe 5.
-            Append("System", "Einstellungen folgen in Etappe 5. API-Schluessel bis dahin in ~/SK/VoiceAgent/keys.json.");
+            var dlg = new Views.SettingsWindow(_settings) { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                try
+                {
+                    // Frisch laden und alle Clients neu erzeugen — neue Keys/Modell/Stimme greifen sofort.
+                    _settings = Config.Load();
+                    _agent = new BossAgent(LlmProviderFactory.Create(_settings), _settings.SystemPrompt);
+                    _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
+                    _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage);
+                    _listener?.SetEnabled(_settings.MicEnabled);
+                    MicToggle.IsChecked = _settings.MicEnabled;
+                    UpdateMicLabel();
+                    Append("System", "Einstellungen gespeichert und uebernommen.");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("MainWindow: Uebernehmen der Einstellungen fehlgeschlagen", ex);
+                    Append("Fehler", ex.Message);
+                }
+            }
         }
 
         // ---------- Sprach-Eingang (vom Listener-Thread) ----------

@@ -1,0 +1,89 @@
+<Window x:Class="VoiceAgent.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="VoiceAgent — Einstellungen" Height="720" Width="660"
+        WindowStartupLocation="CenterOwner" Background="#15171C">
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#23262E"/>
+            <Setter Property="Foreground" Value="#E4E6EB"/>
+            <Setter Property="BorderBrush" Value="#333845"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style x:Key="Section" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#E4E6EB"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,16,0,8"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9AA0AA"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,4,0,2"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- 1. System-Prompt -->
+                <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}" Margin="0,0,0,8"/>
+                <TextBlock Text="Wie sich dein Assistent verhaelt. Leer lassen = eingebauter Standard."
+                           Style="{StaticResource Label}"/>
+                <TextBox x:Name="PromptBox" AcceptsReturn="True" TextWrapping="Wrap"
+                         Height="150" VerticalScrollBarVisibility="Auto"/>
+
+                <!-- 2. API-Schluessel -->
+                <TextBlock Text="API-Schluessel" Style="{StaticResource Section}"/>
+                <TextBlock Text="Werden sicher in ~/SK/VoiceAgent/keys.json gespeichert (nie im Projekt)."
+                           Style="{StaticResource Label}"/>
+                <TextBlock Text="Groq (Transkription)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="GroqKeyBox"/>
+                <TextBlock Text="Google Cloud (Sprachausgabe)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="GoogleKeyBox"/>
+                <TextBlock Text="Gemini (Gehirn — Standard)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="GeminiKeyBox"/>
+                <TextBlock Text="Claude (optional)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="ClaudeKeyBox"/>
+                <TextBlock Text="OpenAI (optional)" Style="{StaticResource Label}"/>
+                <TextBox x:Name="OpenAiKeyBox"/>
+
+                <!-- 3. Modell-Auswahl -->
+                <TextBlock Text="Gehirn (Modell)" Style="{StaticResource Section}"/>
+                <TextBlock Text="Anbieter" Style="{StaticResource Label}"/>
+                <ComboBox x:Name="ProviderBox"/>
+                <TextBlock Text="Modell-Bezeichnung" Style="{StaticResource Label}"/>
+                <TextBox x:Name="ModelBox"/>
+
+                <!-- 4. Sprachausgabe -->
+                <TextBlock Text="Sprachausgabe (Stimme)" Style="{StaticResource Section}"/>
+                <TextBlock Text="Eine der 30 deutschen Chirp-3-HD-Stimmen" Style="{StaticResource Label}"/>
+                <ComboBox x:Name="VoiceBox"/>
+                <Button x:Name="PreviewButton" Content="Probehoeren" HorizontalAlignment="Left"
+                        Margin="0,8,0,0" Padding="14,5" Click="Preview_Click"/>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Abbrechen" Padding="16,6" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button Content="Speichern" Padding="18,6" Click="Save_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
