@@ -20,18 +20,19 @@ namespace VoiceAgent.Core
         private readonly AgentMemory? _memory;
         private readonly SubAgentRegistry? _subAgents;
         private readonly string? _timeZoneId;
-        private readonly List<LlmMessage> _history = new();
+        private readonly ChatSession _session;
 
-        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null)
+        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null, ChatSession? session = null)
         {
             _provider = provider;
             _systemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? BossAgentPrompt.Default : systemPrompt!;
             _memory = memory;
             _subAgents = subAgents;
             _timeZoneId = timeZoneId;
+            _session = session ?? new ChatSession();   // entkoppelt: aktive Session wird hereingereicht
         }
 
-        public IReadOnlyList<LlmMessage> History => _history;
+        public IReadOnlyList<LlmMessage> History => _session.History;
 
         /// <summary>Name des aktiven LLM-Providers (fuer die Turn-Trace: welches Gehirn hat geantwortet).</summary>
         public string ProviderName => _provider.Name;
@@ -48,11 +49,18 @@ namespace VoiceAgent.Core
                 + AgentCapabilities.BuildBlock()
                 + TimeContext.BuildBlock(_timeZoneId)
                 + (_memory?.ContextBlock() ?? string.Empty);
-            var list = new List<LlmMessage>(_history.Count + 1)
+            var list = new List<LlmMessage>(_session.History.Count + 2)
             {
                 new LlmMessage(LlmRole.System, systemText)
             };
-            list.AddRange(_history);
+            if (!string.IsNullOrWhiteSpace(_session.Summary))
+                list.Add(new LlmMessage(LlmRole.System,
+                    "ZUSAMMENFASSUNG DES BISHERIGEN GESPRAECHS (aeltere Teile dieser Session):\n" + _session.Summary));
+            list.AddRange(_session.History);
+            // Live-Sonde: jeder Turn protokolliert, wie viel Kontext mitgeht
+            // (haette den Settings-Bug sofort sichtbar gemacht — messages waere auf 0 gefallen).
+            Log.Info("CHECKPOINT Kontext-Block gebaut",
+                new { messages = _session.History.Count, hasSummary = !string.IsNullOrWhiteSpace(_session.Summary) });
             return list;
         }
 
@@ -61,12 +69,12 @@ namespace VoiceAgent.Core
         {
             Log.Info($"BossAgent: Eingabe empfangen ({userText?.Length ?? 0} Zeichen)");
             Probe.That(!string.IsNullOrWhiteSpace(userText), "BossAgent: leere Eingabe an den Hauptagenten");
-            _history.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
+            _session.History.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
             try
             {
                 var reply = await _provider.ChatAsync(BuildMessages(), ct).ConfigureAwait(false);
                 Probe.That(!string.IsNullOrWhiteSpace(reply), "BossAgent: LLM lieferte eine leere Antwort", new { provider = _provider.Name });
-                _history.Add(new LlmMessage(LlmRole.Assistant, reply));
+                _session.History.Add(new LlmMessage(LlmRole.Assistant, reply));
                 _memory?.RecordTurn(userText ?? string.Empty, reply);   // ueber Sessions hinweg merken
                 Log.Info($"BossAgent: Antwort erzeugt ({reply.Length} Zeichen) via {_provider.Name}");
                 return reply;
@@ -95,8 +103,8 @@ namespace VoiceAgent.Core
                     try
                     {
                         var subReply = await sub.HandleAsync(userText, ct).ConfigureAwait(false);
-                        _history.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
-                        _history.Add(new LlmMessage(LlmRole.Assistant, subReply));
+                        _session.History.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
+                        _session.History.Add(new LlmMessage(LlmRole.Assistant, subReply));
                         _memory?.RecordTurn(userText ?? string.Empty, subReply);
                         return new AgentReply(subReply, sub.Name);
                     }
@@ -113,8 +121,9 @@ namespace VoiceAgent.Core
         /// <summary>Setzt den Gespraechsverlauf zurueck (neues Gespraech).</summary>
         public void Reset()
         {
-            _history.Clear();
-            Log.Info("BossAgent: Gespraechsverlauf zurueckgesetzt");
+            _session.History.Clear();
+            _session.Summary = "";
+            Log.Info("BossAgent: Verlauf der aktiven Session zurueckgesetzt");
         }
     }
 }
