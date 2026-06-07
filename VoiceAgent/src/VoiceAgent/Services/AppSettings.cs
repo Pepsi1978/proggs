@@ -36,7 +36,7 @@ namespace VoiceAgent.Services
         // ----- Mikrofon / Voice-Loop -----
         public bool MicEnabled { get; set; } = true;
         public double SilenceThreshold { get; set; } = 0.012;  // RMS-Schwelle: darunter = Stille
-        public int SilenceMs { get; set; } = 1000;             // Stille-Dauer bis ein Sprech-Haeppchen endet
+        public int SilenceMs { get; set; } = 3000;             // Stille-Dauer bis ein Sprech-Haeppchen endet (3s: erlaubt Gedankenpausen)
         public int MinUtteranceMs { get; set; } = 350;         // kuerzere Schnipsel ignorieren (Huster etc.)
 
         // Semantische Endpunkt-Erkennung: nach einer Pause prueft das LLM, ob der Gedanke

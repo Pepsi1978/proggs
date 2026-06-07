@@ -11,6 +11,9 @@ namespace VoiceAgent.Services.Audio
     /// einer Aussage und meldet jede fertige Aussage als WAV-Datei ueber das OnUtterance-
     /// Event. Bei deaktiviertem Mikrofon (SetEnabled(false)) wird pausiert.
     ///
+    /// Pre-Roll: die letzten ~400 ms vor dem Sprechbeginn werden mitgepuffert, damit der
+    /// leise Wort-Anlaut nicht verschluckt wird (sonst gehen die ersten Worte verloren).
+    ///
     /// Robust gegen Geraete-Wechsel/-Abziehen (Almanach §9.5): alle NAudio-Aufrufe in
     /// try/catch, Fehler werden geloggt statt geworfen.
     /// </summary>
@@ -20,6 +23,8 @@ namespace VoiceAgent.Services.Audio
         public event Action<string>? OnUtterance;
 
         private const int SampleRate = 16000;
+        private const int PreRollMs = 400;                          // Vorlauf gegen verschluckte Anlaute
+        private static readonly int PreRollBytes = SampleRate * 2 * PreRollMs / 1000;
 
         private readonly float _silenceThreshold;
         private readonly int _silenceMs;
@@ -27,6 +32,7 @@ namespace VoiceAgent.Services.Audio
 
         private WaveInEvent? _waveIn;
         private readonly List<byte> _buffer = new();
+        private readonly List<byte> _preRoll = new();
         private readonly object _gate = new();
         private bool _inSpeech;
         private DateTime _lastVoiceUtc = DateTime.UtcNow;
@@ -46,7 +52,7 @@ namespace VoiceAgent.Services.Audio
             _enabled = on;
             Log.Info($"AlwaysOnListener: Mikrofon {(on ? "an" : "aus")}");
             if (!on)
-                lock (_gate) { _buffer.Clear(); _inSpeech = false; }
+                lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; }
         }
 
         public void Start()
@@ -65,7 +71,7 @@ namespace VoiceAgent.Services.Audio
                         Log.Error("AlwaysOnListener: RecordingStopped mit Fehler", e.Exception);
                 };
                 _waveIn.StartRecording();
-                Log.Info("AlwaysOnListener: Daueraufnahme gestartet (16 kHz mono)");
+                Log.Info($"AlwaysOnListener: Daueraufnahme gestartet (16 kHz mono, Stille-Ende nach {_silenceMs} ms, Pre-Roll {PreRollMs} ms)");
             }
             catch (Exception ex)
             {
@@ -84,15 +90,23 @@ namespace VoiceAgent.Services.Audio
 
                 lock (_gate)
                 {
+                    // Vor dem Sprechbeginn laufend einen kurzen Vorlauf mitfuehren.
+                    if (!_inSpeech)
+                        AppendToPreRoll(e.Buffer, e.BytesRecorded);
+
                     if (!silent)
                     {
                         if (!_inSpeech)
                         {
                             _inSpeech = true;
                             _buffer.Clear();
+                            _buffer.AddRange(_preRoll);   // Anlaut aus dem Vorlauf uebernehmen
                             _speechStartUtc = now;
                         }
-                        AppendBytes(e.Buffer, e.BytesRecorded);
+                        else
+                        {
+                            AppendBytes(e.Buffer, e.BytesRecorded);
+                        }
                         _lastVoiceUtc = now;
                     }
                     else if (_inSpeech)
@@ -114,11 +128,19 @@ namespace VoiceAgent.Services.Audio
             for (int i = 0; i < count; i++) _buffer.Add(buffer[i]);
         }
 
+        private void AppendToPreRoll(byte[] buffer, int count)
+        {
+            for (int i = 0; i < count; i++) _preRoll.Add(buffer[i]);
+            if (_preRoll.Count > PreRollBytes)
+                _preRoll.RemoveRange(0, _preRoll.Count - PreRollBytes);
+        }
+
         // Aufruf erfolgt unter _gate-Lock.
         private void FinalizeUtterance(DateTime now)
         {
             byte[] pcm = _buffer.ToArray();
             _buffer.Clear();
+            _preRoll.Clear();
             _inSpeech = false;
 
             double durationMs = (now - _speechStartUtc).TotalMilliseconds;
