@@ -92,9 +92,9 @@ namespace VoiceAgent.Views
                 EndpointWaitSlider.Value = _settings.EndpointMaxWaitMs;
 
                 WakeWordEnabledBox.IsChecked = _settings.WakeWordEnabled;
-                // Auswahlliste unterstuetzter Weckwoerter (jedes ist vor-tokenisiert -> Erkennung folgt).
+                // Editierbare Auswahlliste: kuratierte Vorschlaege im Dropdown, eigener Text moeglich.
                 WakeWordBox.ItemsSource = WakeWords.Names;
-                WakeWordBox.SelectedItem = WakeWords.Canonical(_settings.WakeWord);
+                WakeWordBox.Text = WakeWords.Canonical(_settings.WakeWord);   // Vorschlag ODER frei eingetippt
                 WakeChimeBox.IsChecked = _settings.WakeChimeEnabled;
                 WakeSleepChimeBox.IsChecked = _settings.WakeSleepChimeEnabled;
                 WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
@@ -147,6 +147,24 @@ namespace VoiceAgent.Views
         {
             try
             {
+                // Weckwort (editierbar: Vorschlag ODER eigener Text) ZUERST pruefen, bevor etwas
+                // gespeichert wird: bei aktivem Weckwort-Modus muss das (englische) Modell es erkennen
+                // koennen — sonst klare Meldung statt stillem Ausfall.
+                var wakeWordInput = (WakeWordBox.Text ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(wakeWordInput)) wakeWordInput = WakeWords.Default;
+                if (WakeWordEnabledBox.IsChecked == true)
+                {
+                    string wakeModelDir = System.IO.Path.Combine(AppContext.BaseDirectory, "assets", "wakeword-model");
+                    if (!WakeWords.CanRecognize(wakeWordInput, wakeModelDir))
+                    {
+                        MessageBox.Show(this,
+                            $"Das Weckwort „{wakeWordInput}“ kann das (englische) Modell nicht erkennen.\n\n" +
+                            "Bitte ein englisch klingendes Wort ohne Umlaute/Sonderzeichen wählen (z. B. „Hey Buddy“).",
+                            "Weckwort nicht erkennbar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;   // nicht speichern, Fenster offen lassen
+                    }
+                }
+
                 // Prompt: wenn unveraendert == Standard, leer speichern, damit kuenftige
                 // Standard-Verbesserungen automatisch greifen.
                 var prompt = PromptBox.Text ?? string.Empty;
@@ -170,7 +188,7 @@ namespace VoiceAgent.Views
                 _settings.EndpointMaxWaitMs = (int)EndpointWaitSlider.Value;
 
                 _settings.WakeWordEnabled = WakeWordEnabledBox.IsChecked == true;
-                _settings.WakeWord = WakeWordBox.SelectedItem as string ?? WakeWords.Default;
+                _settings.WakeWord = WakeWords.Canonical(wakeWordInput);   // kuratiert kanonisch, frei getrimmt durchgereicht
                 _settings.WakeChimeEnabled = WakeChimeBox.IsChecked == true;
                 _settings.WakeSleepChimeEnabled = WakeSleepChimeBox.IsChecked == true;
                 _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
