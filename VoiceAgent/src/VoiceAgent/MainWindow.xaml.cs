@@ -343,7 +343,8 @@ namespace VoiceAgent
         {
             try { _listener?.Dispose(); }
             catch (Exception ex) { Log.Error("MainWindow: alten Listener schliessen fehlgeschlagen", ex); }
-            _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs);
+            _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs,
+                _settings.MinVoicedMs, _settings.MinVoicedRatio);
             _listener.OnUtterance += OnUtterance;
             _listener.OnFrame += OnAudioFrame;       // roher Stream fuer das Weckwort-Lauschen
             _listener.Start();

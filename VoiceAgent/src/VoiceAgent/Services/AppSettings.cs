@@ -39,6 +39,17 @@ namespace VoiceAgent.Services
         public int SilenceMs { get; set; } = 3000;             // Stille-Dauer bis ein Sprech-Haeppchen endet (3s: erlaubt Gedankenpausen)
         public int MinUtteranceMs { get; set; } = 350;         // kuerzere Schnipsel ignorieren (Huster etc.)
 
+        // ----- Sprachgehalt-Vorfilter (gegen Whisper-Stille-Halluzination, Almanach groq-transkription §2.1/2.2) -----
+        // Ein kurzer Geraeusch-Peak (Tastatur, Tuerklicken) startet die Aufnahme; danach folgt fast
+        // nur Stille. MinUtteranceMs misst nur die DAUER, nicht den Sprachgehalt — so ein fast-stiller
+        // Clip rutscht durch und Whisper halluziniert dann "Vielen Dank". Diese beiden Schwellen messen,
+        // wie viel ECHTE Stimme in der fertigen Aussage steckt, und verwerfen sprach-arme Aussagen VOR
+        // dem Senden an Groq. Konservativ eingestellt (echte kurze Befehle wie "ja"/"stop" bleiben erhalten).
+        // WICHTIG: betrifft NUR die an Groq gesendete Aussage — NICHT den kontinuierlichen Wake-Word-Stream
+        // (Wake-Almanach Bug #33: kein Frame-Filtering vor dem Streaming-KWS). 0 = Filter aus.
+        public int MinVoicedMs { get; set; } = 200;            // Mindest-Summe an lauter (Sprach-)Zeit in der Aussage
+        public double MinVoicedRatio { get; set; } = 0.15;     // Mindest-Anteil lauter Zeit an der Gesamtdauer (15%)
+
         // Semantische Endpunkt-Erkennung: nach einer Pause prueft das LLM, ob der Gedanke
         // abgeschlossen ist (FERTIG) oder ob nur eine Denkpause vorliegt (WEITER → weiter zuhoeren).
         public bool SemanticEndpointing { get; set; } = true;

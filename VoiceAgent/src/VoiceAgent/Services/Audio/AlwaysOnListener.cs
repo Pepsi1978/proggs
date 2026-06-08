@@ -38,6 +38,8 @@ namespace VoiceAgent.Services.Audio
         private readonly float _silenceThreshold;
         private readonly int _silenceMs;
         private readonly int _minUtteranceMs;
+        private readonly int _minVoicedMs;          // Sprachgehalt-Vorfilter (Schicht 1, groq-transkription §2.1)
+        private readonly double _minVoicedRatio;    // Mindest-Anteil lauter Zeit; 0 = Filter aus
 
         private WaveInEvent? _waveIn;
         private readonly List<byte> _buffer = new();
@@ -46,18 +48,25 @@ namespace VoiceAgent.Services.Audio
         private bool _inSpeech;
         private DateTime _lastVoiceUtc = DateTime.UtcNow;
         private DateTime _speechStartUtc = DateTime.UtcNow;
+        private double _voicedMs;                   // aufsummierte LAUTE (Sprach-)Zeit der laufenden Aussage
         private volatile bool _enabled = true;
         private volatile bool _disposed;
 
-        public AlwaysOnListener(double silenceThreshold, int silenceMs, int minUtteranceMs)
+        public AlwaysOnListener(double silenceThreshold, int silenceMs, int minUtteranceMs,
+                                int minVoicedMs = 0, double minVoicedRatio = 0.0)
         {
             _silenceThreshold = (float)silenceThreshold;
             _silenceMs = silenceMs;
             _minUtteranceMs = minUtteranceMs;
+            _minVoicedMs = minVoicedMs;
+            _minVoicedRatio = minVoicedRatio;
             // Sanity-Sonden: unsinnige Konfigwerte wuerden die Stille-Erkennung lautlos lahmlegen.
             Probe.That(_silenceThreshold > 0f, "AlwaysOnListener: silenceThreshold <= 0 — Sprache wird evtl. nie erkannt", new { silenceThreshold });
             Probe.That(silenceMs > 0, "AlwaysOnListener: silenceMs <= 0 — Aussage-Ende wird evtl. nie erkannt", new { silenceMs });
             Probe.That(minUtteranceMs >= 0, "AlwaysOnListener: minUtteranceMs negativ", new { minUtteranceMs });
+            Probe.That(minVoicedMs >= 0 && minVoicedRatio >= 0.0 && minVoicedRatio <= 1.0,
+                "AlwaysOnListener: Voiced-Filter-Schwellen unplausibel (minVoicedMs<0 oder Ratio nicht in [0,1])",
+                new { minVoicedMs, minVoicedRatio });
         }
 
         public void SetEnabled(bool on)
@@ -65,7 +74,7 @@ namespace VoiceAgent.Services.Audio
             _enabled = on;
             Log.Info($"AlwaysOnListener: Mikrofon {(on ? "an" : "aus")}");
             if (!on)
-                lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; }
+                lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; _voicedMs = 0; }
         }
 
         /// <summary>
@@ -75,7 +84,7 @@ namespace VoiceAgent.Services.Audio
         /// </summary>
         public void ClearBuffer()
         {
-            lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; }
+            lock (_gate) { _buffer.Clear(); _preRoll.Clear(); _inSpeech = false; _voicedMs = 0; }
         }
 
         public void Start()
@@ -123,16 +132,21 @@ namespace VoiceAgent.Services.Audio
 
                     if (!silent)
                     {
+                        // Schicht 1 (groq-transkription §2.1): Dauer dieses LAUTEN Blocks fuer den
+                        // Sprachgehalt-Vorfilter aufsummieren. 16-bit mono: count/2 Samples / Rate.
+                        double blockMs = e.BytesRecorded / 2.0 / SampleRate * 1000.0;
                         if (!_inSpeech)
                         {
                             _inSpeech = true;
                             _buffer.Clear();
                             _buffer.AddRange(_preRoll);   // Anlaut aus dem Vorlauf uebernehmen
                             _speechStartUtc = now;
+                            _voicedMs = blockMs;          // neue Aussage: laute Zeit ab erstem lauten Block
                         }
                         else
                         {
                             AppendBytes(e.Buffer, e.BytesRecorded);
+                            _voicedMs += blockMs;         // weitere laute Zeit aufsummieren
                         }
                         _lastVoiceUtc = now;
                     }
@@ -166,14 +180,36 @@ namespace VoiceAgent.Services.Audio
         private void FinalizeUtterance(DateTime now)
         {
             byte[] pcm = _buffer.ToArray();
+            double voicedMs = _voicedMs;          // vor dem Zuruecksetzen sichern (Schicht 1)
             _buffer.Clear();
             _preRoll.Clear();
             _inSpeech = false;
+            _voicedMs = 0;
 
             double durationMs = (now - _speechStartUtc).TotalMilliseconds;
             if (pcm.Length == 0 || durationMs < _minUtteranceMs)
             {
                 Log.Info($"AlwaysOnListener: Aussage zu kurz ({durationMs:F0} ms) — ignoriert");
+                return;
+            }
+
+            // Schicht 1 (Almanach groq-transkription §2.1/2.2): Sprachgehalt-Vorfilter. Eine Aussage,
+            // die zwar lang genug ist, aber kaum echte Stimme enthaelt (kurzer Peak + viel Stille),
+            // loest bei Whisper die Stille-Halluzination aus ("Vielen Dank"). Solche sprach-armen
+            // Aussagen GAR NICHT erst an Groq senden (spart zudem die 10-s-Mindestabrechnung).
+            // Konservativ: echte (auch leise/kurze) Sprache hat genug Voiced-Zeit und bleibt erhalten.
+            // Betrifft NUR den STT-Pfad — der kontinuierliche Wake-Word-Stream (OnFrame) ist davon
+            // unberuehrt (Wake-Almanach Bug #33: kein Frame-Filtering vor dem Streaming-KWS).
+            double voicedRatio = durationMs > 0 ? voicedMs / durationMs : 0.0;
+            // Sanity-Sonde: die laute Zeit kann nie groesser als die Gesamtdauer sein (+1 ms Toleranz).
+            Probe.That(voicedMs <= durationMs + 1.0,
+                "AlwaysOnListener: voicedMs > durationMs — Zaehlfehler im Voiced-Vorfilter",
+                new { voicedMs, durationMs });
+            bool tooLittleVoice = (_minVoicedMs > 0 && voicedMs < _minVoicedMs)
+                               || (_minVoicedRatio > 0.0 && voicedRatio < _minVoicedRatio);
+            if (tooLittleVoice)
+            {
+                Log.Info($"AlwaysOnListener: sprach-arm verworfen (laut {voicedMs:F0}/{durationMs:F0} ms = {voicedRatio:P0}) — vor Groq gefiltert (Stille-Halluzinations-Schutz)");
                 return;
             }
 
