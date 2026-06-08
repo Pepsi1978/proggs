@@ -82,6 +82,7 @@ namespace VoiceAgent.Views
                 WakeWordEnabledBox.IsChecked = _settings.WakeWordEnabled;
                 WakeWordBox.Text = _settings.WakeWord;
                 WakeChimeBox.IsChecked = _settings.WakeChimeEnabled;
+                WakeSleepChimeBox.IsChecked = _settings.WakeSleepChimeEnabled;
                 WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
 
                 TimeZoneBox.ItemsSource = TimeZoneInfo.GetSystemTimeZones();
@@ -140,6 +141,7 @@ namespace VoiceAgent.Views
                 _settings.WakeWordEnabled = WakeWordEnabledBox.IsChecked == true;
                 _settings.WakeWord = string.IsNullOrWhiteSpace(WakeWordBox.Text) ? "Okay Computer" : WakeWordBox.Text.Trim();
                 _settings.WakeChimeEnabled = WakeChimeBox.IsChecked == true;
+                _settings.WakeSleepChimeEnabled = WakeSleepChimeBox.IsChecked == true;
                 _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
                     ? string.Empty
