@@ -555,6 +555,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         #if DEBUG
                         NSLog("Transcript: %@", transcript)
                         #endif
+                        // Stille-Schutz (Schicht 1/2): kein Sprachinhalt / alles als Halluzination
+                        // gefiltert -> NICHTS einfuegen (kein einsames " ; "), Cache nicht mit
+                        // Leerstring ueberschreiben, Aufnahme still als erledigt abschliessen (.idle).
+                        if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            self.isProcessing = false
+                            if wasBtw { self.panel.setBtwMicState(.idle) } else { self.panel.setMicState(.idle) }
+                            return
+                        }
                         self.lastRawTranscript = transcript
                         // Re-Correct-Cache fuer Profile-Wechsel: Roh-Whisper-
                         // Text merken — bleibt im Cache bis eine neue
