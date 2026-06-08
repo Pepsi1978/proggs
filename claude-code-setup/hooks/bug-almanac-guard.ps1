@@ -141,12 +141,14 @@ try {
         } else {
             $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
         }
-    } elseif ($fpl -match '\.user\.js$') {
-        $slug = 'tampermonkey'; $file = 'tampermonkey.md'; $name = 'Tampermonkey/Userscripts'
+    } elseif ($fpl -match '\.ic(o|ns)$') {
+        # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung, kein Konflikt. Icon-Build-Skripte werden zusaetzlich im .py-Zweig per Content-Probe erkannt.
+        $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
     } elseif ($fpl -match '\.xaml$' -or $fpl -match '\.csproj$' -or $fpl -match '\.cs$') {
-        # .cs: Groq-Whisper-Transkriptions-Pfad (GroqWhisperClient/audio/transcriptions/api.groq.com)? -> groq-transkription.md, sonst dotnet-csharp.md.
-        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-Code). FAIL-OPEN.
-        $groqSignal = $false
+        # .cs: Content-Probe -> Groq-Whisper-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
+        #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN.
+        $groqSignal = $false; $wakeSignal = $false
         if ($fpl -match '\.cs$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -157,9 +159,12 @@ try {
                 if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
             } catch {}
             if ($probe -match 'GroqWhisperClient' -or $probe -match 'audio/transcriptions' -or $probe -match 'api\.groq\.com') { $groqSignal = $true }
+            if ($probe -match 'KeywordSpotter|sherpa[-_.]?onnx|Porcupine|NanoWakeWord|OpenWakeWord|WakeWord|wake[-_]word') { $wakeSignal = $true }
         }
         if ($groqSignal) {
             $slug = 'groq'; $file = 'groq-transkription.md'; $name = 'Groq Whisper Transkription (Audio/STT)'
+        } elseif ($wakeSignal) {
+            $slug = 'wakeword'; $file = 'wake-word.md'; $name = 'Wake-Word / Keyword-Spotting (.NET/C#)'
         } else {
             $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
         }
@@ -175,8 +180,13 @@ try {
             if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
         } catch {}
         if ($probe -match 'FastMCP' -or $probe -match 'mcp\.server' -or $probe -match 'from mcp' -or $probe -match 'import mcp' -or $probe -match 'stdio_server') { $mcpPy = $true }
+        # Icon-Build-Skript (Pillow-Alpha-Check/iconutil/Android-adaptive/WPF-ApplicationIcon)? -> icon-building.md. Eindeutige Icon-Signale.
+        $iconPy = $false
+        if ($probe -match 'icns|iconutil|getchannel|ic_launcher|ApplicationIcon') { $iconPy = $true }
         if ($mcpPy) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($iconPy) {
+            $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
         } else {
             $slug = 'python'; $file = 'python-windows.md'; $name = 'Python (Windows-Encoding/Cross-Platform-Scripting)'
         }

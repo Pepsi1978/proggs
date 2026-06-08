@@ -154,12 +154,14 @@ $ti_extra"
             slug="typescript"; file="typescript.md"; name="TypeScript / Node"
         fi
         ;;
-    *.user.js)
-        slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
+    *.ico|*.icns)
+        # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung. Icon-Build-Skripte zusaetzlich per .py-Content-Probe.
+        slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)";;
     *.xaml|*.csproj|*.cs)
-        # .cs: Groq-Whisper-Transkriptions-Pfad (GroqWhisperClient/audio/transcriptions/api.groq.com)? -> groq-transkription.md, sonst dotnet-csharp.md.
-        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-Code). FAIL-OPEN (trap).
-        groqSignal=0
+        # .cs: Content-Probe -> Groq-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
+        #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN (trap).
+        groqSignal=0; wakeSignal=0
         case "$fpl" in
           *.cs)
             probe=""
@@ -178,10 +180,15 @@ $ti_extra"
             case "$probe" in
               *GroqWhisperClient*|*audio/transcriptions*|*api.groq.com*) groqSignal=1;;
             esac
+            case "$probe" in
+              *KeywordSpotter*|*sherpa-onnx*|*sherpa.onnx*|*sherpa_onnx*|*SherpaOnnx*|*Porcupine*|*NanoWakeWord*|*OpenWakeWord*|*WakeWord*|*wakeword*|*wake-word*|*wake_word*) wakeSignal=1;;
+            esac
             ;;
         esac
         if [ "$groqSignal" -eq 1 ]; then
             slug="groq"; file="groq-transkription.md"; name="Groq Whisper Transkription (Audio/STT)"
+        elif [ "$wakeSignal" -eq 1 ]; then
+            slug="wakeword"; file="wake-word.md"; name="Wake-Word / Keyword-Spotting (.NET/C#)"
         else
             slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)"
         fi
@@ -205,8 +212,15 @@ $ti_extra"
         case "$probe" in
           *FastMCP*|*mcp.server*|*"from mcp"*|*"import mcp"*|*stdio_server*) mcpPy=1;;
         esac
+        # Icon-Build-Skript (Pillow-Alpha-Check/iconutil/Android-adaptive/WPF-ApplicationIcon)? -> icon-building.md.
+        iconPy=0
+        case "$probe" in
+          *icns*|*iconutil*|*getchannel*|*ic_launcher*|*ApplicationIcon*) iconPy=1;;
+        esac
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$iconPy" -eq 1 ]; then
+            slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
         else
             slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)"
         fi
