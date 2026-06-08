@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using VoiceAgent.Core;
@@ -60,8 +62,87 @@ namespace VoiceAgent
         public MainWindow()
         {
             InitializeComponent();
+            SourceInitialized += OnSourceInitialized;   // Taskleisten-Icon setzen, sobald das HWND existiert
             Loaded += OnLoaded;
             Closed += OnClosed;
+        }
+
+        // ---------- Taskleisten-Icon (ICON_BIG zuverlaessig setzen) ----------
+
+        private const int WM_SETICON = 0x0080;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int ExtractIconEx(string lpszFile, int nIconIndex,
+            out IntPtr phiconLarge, out IntPtr phiconSmall, uint nIcons);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        private IntPtr _taskbarIconBig;     // selbst gesetzte Icons — am Ende per DestroyIcon freigeben (GDI-Hygiene, Almanach §9.4)
+        private IntPtr _taskbarIconSmall;
+
+        /// <summary>
+        /// Setzt das Taskleisten-Icon explizit, sobald das HWND existiert.
+        ///
+        /// Root Cause (bug-almanac dotnet-csharp, neu 2026-06-08): WPFs <c>Window.Icon</c> belegt den
+        /// ICON_SMALL-Slot (Titelleiste + Fenster-Vorschau) zuverlaessig, aber NICHT immer den
+        /// ICON_BIG-Slot, den die Taskleiste fuer den laufenden Fenster-Button nutzt. Folge: die
+        /// Taskleiste zeigt das generische Windows-Default-Symbol, obwohl Vorschau und das angepinnte
+        /// Symbol (= eingebettetes Exe-Icon) korrekt sind. Fix: beide Icons direkt aus der eingebetteten
+        /// Exe-Icon-Ressource (<c>&lt;ApplicationIcon&gt;</c>) via <see cref="ExtractIconEx"/> laden und per
+        /// WM_SETICON setzen — das ist genau das Icon, das angepinnt bereits stimmt.
+        /// <c>Environment.ProcessPath</c> ist single-file-sicher (Almanach §1.1).
+        /// </summary>
+        private void OnSourceInitialized(object? sender, EventArgs e)
+        {
+            try
+            {
+                string? exe = Environment.ProcessPath;
+                Probe.That(!string.IsNullOrEmpty(exe),
+                    "Taskleisten-Icon: Environment.ProcessPath leer", new { exe });
+                if (string.IsNullOrEmpty(exe)) return;
+
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero) return;
+
+                int count = ExtractIconEx(exe, 0, out IntPtr hBig, out IntPtr hSmall, 1);
+                if (hBig != IntPtr.Zero)
+                {
+                    SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, hBig);
+                    _taskbarIconBig = hBig;
+                }
+                if (hSmall != IntPtr.Zero)
+                {
+                    SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, hSmall);
+                    _taskbarIconSmall = hSmall;
+                }
+
+                // Live-Logik-Sonde (Intent: "App-Symbol in der Taskleiste sichtbar, nicht generisch").
+                Log.Info("CHECKPOINT Taskleisten-Icon gesetzt", new
+                {
+                    step = "Taskleisten-Icon setzen",
+                    intent = "App-Symbol in der Taskleiste sichtbar (nicht generisch)",
+                    expected = "grosses Icon (ICON_BIG) gesetzt",
+                    big = hBig != IntPtr.Zero,
+                    small = hSmall != IntPtr.Zero,
+                    ok = hBig != IntPtr.Zero,
+                    extractedGroups = count,
+                    exe
+                });
+                if (hBig == IntPtr.Zero)
+                    Log.Error("Taskleisten-Icon: ExtractIconEx lieferte kein grosses Icon — Taskleiste bleibt generisch",
+                        null, new { exe, extractedGroups = count });
+            }
+            catch (Exception ex)
+            {
+                // Funktionserhaltend: schlaegt das explizite Setzen fehl, bleibt das WPF-Window.Icon aktiv (kein Crash).
+                Log.Error("Taskleisten-Icon konnte nicht gesetzt werden (Window.Icon bleibt aktiv)", ex);
+            }
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -216,6 +297,9 @@ namespace VoiceAgent
         {
             try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
+            // Selbst gesetzte Taskleisten-Icons freigeben (GDI-Handle-Limit, Almanach §9.4).
+            try { if (_taskbarIconBig != IntPtr.Zero) DestroyIcon(_taskbarIconBig); if (_taskbarIconSmall != IntPtr.Zero) DestroyIcon(_taskbarIconSmall); }
+            catch (Exception ex) { Log.Error("MainWindow: Icon-Freigabe-Fehler", ex); }
         }
 
         // ---------- Mikrofon-Schalter ----------
