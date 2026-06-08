@@ -621,6 +621,18 @@ public partial class PromptBoardPanel : Window
                 }
                 catch (Exception ex) { Console.WriteLine($"Slot delete failed: {ex.Message}"); }
             };
+            // Drag&Drop: Prompt von einer Zahl auf eine andere ziehen → verschieben
+            // (Ziel leer) bzw. tauschen (Ziel belegt). MoveAsync setzt frische
+            // Zeitstempel, danach sofort Cloud-Sync → anderer PC zieht es nach.
+            _inputWindow.SlotMoveRequested += async (from, to) =>
+            {
+                try
+                {
+                    await VoiceServiceProvider.Slots.MoveAsync(from, to);
+                    SlotsSyncRequested?.Invoke();
+                }
+                catch (Exception ex) { Console.WriteLine($"Slot move failed: {ex.Message}"); }
+            };
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;

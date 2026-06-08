@@ -701,6 +701,14 @@ public partial class PromptInputWindow : Window
     /// <summary>X geklickt: loesche Slot <paramref name="number"/> dauerhaft.</summary>
     public event Action<int>? SlotDeleteRequested;
 
+    /// <summary>
+    /// Per Drag&amp;Drop einen gespeicherten Prompt von Slot <c>From</c> auf Slot
+    /// <c>To</c> gezogen (Frank-Wunsch 2026-06-08). Ziel leer → verschieben,
+    /// Ziel belegt → tauschen. Das PromptBoardPanel ruft daraufhin
+    /// <c>PromptSlotService.MoveAsync</c> und stoesst den Cloud-Sync an.
+    /// </summary>
+    public event Action<int, int>? SlotMoveRequested;
+
     private int? _selectedSlot;
     private readonly Dictionary<int, string> _slotContents = new();
     /// <summary>Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.</summary>
@@ -708,6 +716,18 @@ public partial class PromptInputWindow : Window
     private readonly Dictionary<int, Button> _slotButtons = new();
     private Button? _slotSaveButton;
     private Button? _slotDeleteButton;
+
+    // ── Drag&Drop der Zahlen-Slots (belegten Prompt auf andere Zahl ziehen) ──
+    /// <summary>Eigenes Clipboard-Format, damit nur unsere Slot-Drags akzeptiert werden.</summary>
+    private const string SlotDragFormat = "TVO_PromptSlotNumber";
+    /// <summary>Mausposition beim Druecken auf einen belegten Slot (Drag-Schwelle).</summary>
+    private System.Windows.Point _slotDragStartPoint;
+    /// <summary>Slot-Nummer, auf der ein moeglicher Drag „scharf" gemacht wurde (nur belegte).</summary>
+    private int? _slotDragArmedNumber;
+    /// <summary>True direkt nach einem echten Drag — unterdrueckt den darauf folgenden Klick.</summary>
+    private bool _slotDragJustHappened;
+    /// <summary>Cyan-Rahmen, der den moeglichen Ablege-Slot beim Drueberziehen markiert.</summary>
+    private static readonly Brush SlotDropTarget = new SolidColorBrush(Color.FromRgb(0x33, 0xC4, 0xFF));
     /// <summary>Zeigt „wann gespeichert" fuer den gewaehlten belegten Slot, rechts neben dem X.</summary>
     private TextBlock? _slotTimeLabel;
 
@@ -746,10 +766,19 @@ public partial class PromptInputWindow : Window
         for (int n = 1; n <= PromptSlotService.SlotCount; n++)
         {
             var btn = CreateSlotButton(n.ToString(), SlotGrey,
-                $"Slot {n} — klick speichert/laedt hier deinen Prompt-Zwischenspeicher.");
+                $"Slot {n} — Klick speichert/laedt. Belegten Slot auf eine andere Zahl ziehen: " +
+                "auf leere Zahl = verschieben, auf belegte Zahl = tauschen.");
             btn.Tag = n;
             btn.Margin = new Thickness(0, 0, 7, 0);
             btn.Click += OnSlotNumberClick;
+            // Drag&Drop: belegten Slot „greifen" und auf eine andere Zahl ziehen.
+            btn.AllowDrop = true;
+            btn.PreviewMouseLeftButtonDown += OnSlotPreviewMouseDown;
+            btn.PreviewMouseMove += OnSlotPreviewMouseMove;
+            btn.PreviewMouseLeftButtonUp += OnSlotPreviewMouseUp;
+            btn.DragOver += OnSlotDragOver;
+            btn.DragLeave += OnSlotDragLeave;
+            btn.Drop += OnSlotDrop;
             _slotButtons[n] = btn;
             SlotBar.Children.Add(btn);
         }
@@ -857,6 +886,10 @@ public partial class PromptInputWindow : Window
     /// </summary>
     private void OnSlotNumberClick(object sender, RoutedEventArgs e)
     {
+        // Wurde gerade per Drag&Drop ein Slot verschoben, feuert WPF danach noch
+        // den Klick auf den Quell-Button — den ignorieren, sonst wuerde der Slot
+        // ausgewaehlt/geladen statt verschoben.
+        if (_slotDragJustHappened) { _slotDragJustHappened = false; return; }
         if (sender is not Button btn || btn.Tag is not int n) return;
         if (n < 1 || n > PromptSlotService.SlotCount) return;
         _selectedSlot = n;
@@ -908,5 +941,125 @@ public partial class PromptInputWindow : Window
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");
         SlotDeleteRequested?.Invoke(n);
+    }
+
+    // ── Drag&Drop der Zahlen-Slots ──────────────────────────────────────────
+
+    /// <summary>Maus auf einem Slot gedrueckt: nur BELEGTE Slots „scharf" machen
+    /// (ein leerer Slot hat nichts zu ziehen). Merkt den Startpunkt fuer die
+    /// Drag-Schwelle. Verhindert den normalen Klick NICHT (kein e.Handled).</summary>
+    private void OnSlotPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int n) return;
+        bool hasContent = _slotContents.TryGetValue(n, out var t) && !string.IsNullOrEmpty(t);
+        if (!hasContent) { _slotDragArmedNumber = null; return; }
+        _slotDragArmedNumber = n;
+        _slotDragStartPoint = e.GetPosition(null);
+    }
+
+    /// <summary>Taste losgelassen ohne Drag: Scharfstellung verwerfen (normaler Klick folgt).</summary>
+    private void OnSlotPreviewMouseUp(object sender, MouseButtonEventArgs e)
+        => _slotDragArmedNumber = null;
+
+    /// <summary>Maus mit gedrueckter Taste ueber die Schwelle bewegt → modaler Drag
+    /// startet. DoDragDrop laeuft nur auf dem UI-Thread (Bug-Almanach §14.8); die
+    /// eigentliche Persistenz passiert danach async ueber das Move-Event.</summary>
+    private void OnSlotPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_slotDragArmedNumber is not int from) return;
+        if (e.LeftButton != MouseButtonState.Pressed) { _slotDragArmedNumber = null; return; }
+
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - _slotDragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - _slotDragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        _slotDragArmedNumber = null;
+        _slotDragJustHappened = true; // den nachlaufenden Klick auf den Quell-Button schlucken
+        try
+        {
+            var data = new DataObject(SlotDragFormat, from);
+            DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Slot drag failed: {ex.Message}");
+        }
+        finally
+        {
+            // Flag mit Background-Prioritaet zuruecksetzen: laeuft NACH einem evtl.
+            // nachlaufenden Klick (Input-Prioritaet), aber auch dann, wenn gar kein
+            // Klick kommt — so bleibt nie ein Folge-Klick faelschlich blockiert.
+            Dispatcher.BeginInvoke(new Action(() => _slotDragJustHappened = false),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>Waehrend des Ziehens: markiert den moeglichen Ziel-Slot cyan und
+    /// signalisiert, ob hier abgelegt werden darf.</summary>
+    private void OnSlotDragOver(object sender, DragEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int to ||
+            !e.Data.GetDataPresent(SlotDragFormat))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+        int from = (int)e.Data.GetData(SlotDragFormat)!;
+        if (from == to)
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.Move;
+            btn.BorderBrush = SlotDropTarget;
+            btn.BorderThickness = new Thickness(2);
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>Cursor verlaesst den Slot: Drop-Markierung zuruecksetzen
+    /// (UpdateSlotVisuals stellt Auswahl-/Belegt-Rahmen wieder her).</summary>
+    private void OnSlotDragLeave(object sender, DragEventArgs e) => UpdateSlotVisuals();
+
+    /// <summary>Auf einem Slot abgelegt: lokal verschieben (Ziel leer) bzw. tauschen
+    /// (Ziel belegt), Anzeige auffrischen und das Move-Event feuern — das
+    /// PromptBoardPanel persistiert via PromptSlotService.MoveAsync + Cloud-Sync.</summary>
+    private void OnSlotDrop(object sender, DragEventArgs e)
+    {
+        UpdateSlotVisuals(); // Drop-Markierung entfernen
+        if (sender is not Button btn || btn.Tag is not int to ||
+            !e.Data.GetDataPresent(SlotDragFormat)) return;
+        int from = (int)e.Data.GetData(SlotDragFormat)!;
+        if (from == to) return;
+        if (!(_slotContents.TryGetValue(from, out var fromText) && !string.IsNullOrEmpty(fromText)))
+            return; // Quelle unerwartet leer
+
+        bool targetOccupied = _slotContents.TryGetValue(to, out var toText) && !string.IsNullOrEmpty(toText);
+
+        // Lokalen Cache spiegeln zu PromptSlotService.MoveAsync: Ziel bekommt den
+        // gezogenen Text, Quelle den alten Ziel-Text (leer = verschieben, belegt = tauschen).
+        var now = DateTime.UtcNow;
+        _slotContents[to] = fromText;
+        _slotTimestamps[to] = now;
+        if (targetOccupied)
+        {
+            _slotContents[from] = toText!;
+            _slotTimestamps[from] = now;
+        }
+        else
+        {
+            _slotContents.Remove(from);
+            _slotTimestamps.Remove(from);
+        }
+
+        _selectedSlot = to; // Auswahl auf das Ziel ziehen
+        UpdateSlotVisuals();
+        UpdatePreview(targetOccupied
+            ? $"Slot {from} und {to} getauscht."
+            : $"Prompt von Slot {from} nach {to} verschoben.");
+        SlotMoveRequested?.Invoke(from, to);
     }
 }

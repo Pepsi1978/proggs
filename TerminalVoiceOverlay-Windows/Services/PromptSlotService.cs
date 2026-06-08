@@ -148,6 +148,61 @@ public sealed class PromptSlotService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Verschiebt den Prompt von Slot <paramref name="from"/> nach Slot
+    /// <paramref name="to"/> (Drag&amp;Drop in der Zahlen-Leiste, Frank-Wunsch 2026-06-08).
+    /// <para>
+    /// Ist <paramref name="to"/> LEER → reines Verschieben: <paramref name="from"/>
+    /// wird zum Tombstone (leerer Text), damit das Leeren beim Cloud-Merge
+    /// geraeteuebergreifend gewinnt — genau wie bei <see cref="DeleteAsync"/>.
+    /// </para>
+    /// <para>
+    /// Ist <paramref name="to"/> BELEGT → Tauschen: <paramref name="from"/> erhaelt
+    /// den bisherigen Text von <paramref name="to"/>. Kein Prompt geht verloren.
+    /// </para>
+    /// Beide Slots bekommen einen frischen Zeitstempel, damit die Aenderung beim
+    /// Last-Write-Wins-Merge auf anderen PCs uebernommen wird. Alles atomar im
+    /// selben Semaphor-Gate, damit kein halber Zustand persistiert/gesynct wird.
+    /// </summary>
+    public async Task MoveAsync(int from, int to, CancellationToken ct = default)
+    {
+        if (from == to) return;
+        if (from is < 1 or > SlotCount || to is < 1 or > SlotCount) return;
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+
+            string TextOf(int n)
+            {
+                var e = entries.FirstOrDefault(x => x.Number == n);
+                return e?.Text ?? string.Empty;
+            }
+
+            string fromText = TextOf(from);
+            // Nichts zu verschieben, wenn die Quelle leer ist (Tombstone/unbelegt).
+            if (string.IsNullOrEmpty(fromText)) return;
+            string toText = TextOf(to); // leer => Move, belegt => Swap
+
+            var now = DateTime.UtcNow;
+
+            void Upsert(int number, string text)
+            {
+                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now };
+                int idx = entries.FindIndex(x => x.Number == number);
+                if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
+            }
+
+            Upsert(to, fromText);   // Ziel bekommt den gezogenen Prompt
+            Upsert(from, toText);   // Quelle bekommt den alten Ziel-Text (leer = Tombstone = Move)
+
+            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            Console.WriteLine(
+                $"PromptSlot move {from}->{to} ({(string.IsNullOrEmpty(toText) ? "move" : "swap")})");
+        }
+        finally { _gate.Release(); }
+    }
+
     /// <summary>Ersetzt den gesamten lokalen Stand durch eine gemergte Liste (Cloud-Sync).</summary>
     public async Task ReplaceAllAsync(IEnumerable<PromptSlotEntry> entries, CancellationToken ct = default)
     {
