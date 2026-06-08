@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -97,26 +98,51 @@ namespace VoiceAgent.Services.Llm
             if (!string.IsNullOrWhiteSpace(accountId))
                 req.Headers.TryAddWithoutValidation("ChatGPT-Account-ID", accountId);
 
-            using var resp = await SharedHttp.SendAsync(req, ct).ConfigureAwait(false);
-            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            // ResponseHeadersRead: Body wird erst beim Lesen gestreamt (SSE).
+            using var resp = await SharedHttp
+                .SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct)
+                .ConfigureAwait(false);
 
-            if (resp.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                Log.Error($"Codex 401 (Token abgelehnt): {body}");
-                throw new Exception("Codex hat den Zugang abgelehnt (401). Bitte in den Einstellungen neu per Geraetecode anmelden.");
-            }
-            if (resp.StatusCode == HttpStatusCode.Forbidden)
-            {
-                Log.Error($"Codex 403 (Cloudflare/originator): {body}");
-                throw new Exception("Codex-Zugang blockiert (403). Der originator/Account-Header wurde abgelehnt.");
-            }
             if (!resp.IsSuccessStatusCode)
             {
+                var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    Log.Error($"Codex 401 (Token abgelehnt): {body}");
+                    throw new Exception("Codex hat den Zugang abgelehnt (401). Bitte in den Einstellungen neu per Geraetecode anmelden.");
+                }
+                if (resp.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    Log.Error($"Codex 403 (Cloudflare/originator): {body}");
+                    throw new Exception("Codex-Zugang blockiert (403). Der originator/Account-Header wurde abgelehnt.");
+                }
                 Log.Error($"Codex API Fehler {(int)resp.StatusCode}: {body}");
                 throw new Exception($"Codex API Fehler {(int)resp.StatusCode}: {body}");
             }
 
-            return ExtractText(body);
+            // Erfolg = SSE-Stream. Text aus den response.output_text.delta-Events sammeln.
+            using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            var sb = new StringBuilder();
+            string? failure = null;
+            string? line;
+            while ((line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
+            {
+                if (line.Length == 0 || !line.StartsWith("data:", StringComparison.Ordinal)) continue;
+                var data = line.Substring(5).Trim();
+                if (data.Length == 0 || data == "[DONE]") continue;
+                AccumulateSseEvent(data, sb, ref failure);
+            }
+
+            if (failure != null)
+            {
+                Log.Error($"Codex Stream-Fehler: {failure}");
+                throw new Exception($"Codex-Antwort fehlgeschlagen: {failure}");
+            }
+
+            var text = sb.ToString().Trim();
+            if (string.IsNullOrEmpty(text)) throw new Exception("Kein Text in Codex-Antwort");
+            return text;
         }
 
         /// <summary>
@@ -154,6 +180,9 @@ namespace VoiceAgent.Services.Llm
                     ? (object)input
                     : new[] { new { role = "user", content = new[] { new { type = "input_text", text = "" } } } },
                 ["store"] = false,
+                // Das ChatGPT-Backend (codex/responses) liefert AUSSCHLIESSLICH einen SSE-Stream
+                // und antwortet sonst mit 400 "Stream must be set to true" — daher Pflicht.
+                ["stream"] = true,
                 ["reasoning"] = new { effort, summary = "auto" },
                 ["include"] = new[] { "reasoning.encrypted_content" },
             };
@@ -162,17 +191,52 @@ namespace VoiceAgent.Services.Llm
         }
 
         /// <summary>
-        /// Extrahiert den Antworttext aus einer /responses-JSON-Antwort: aus dem output[]-Array die
-        /// "message"-Items (role assistant), darin die Text-Parts (type "output_text"/"text").
-        /// reasoning-Items werden uebersprungen. Public static = isoliert testbar.
+        /// Verarbeitet EIN SSE-data-JSON des /responses-Streams (stream:true):
+        /// haengt Text aus "response.output_text.delta" an, erkennt "response.failed"/"response.error"
+        /// (-> failure) und nutzt "response.completed" als Fallback, falls keine Deltas kamen.
+        /// Unvollstaendige/fremde Events werden ignoriert. Public static = isoliert testbar.
         /// </summary>
-        public static string ExtractText(string responseJson)
+        public static void AccumulateSseEvent(string sseJson, StringBuilder sb, ref string? failure)
         {
-            using var doc = JsonDocument.Parse(responseJson);
-            var root = doc.RootElement;
+            try
+            {
+                using var doc = JsonDocument.Parse(sseJson);
+                var root = doc.RootElement;
+                var type = root.TryGetProperty("type", out var t) ? t.GetString() : null;
+                switch (type)
+                {
+                    case "response.output_text.delta":
+                        if (root.TryGetProperty("delta", out var d) && d.ValueKind == JsonValueKind.String)
+                            sb.Append(d.GetString());
+                        break;
+                    case "response.failed":
+                    case "response.error":
+                        if (root.TryGetProperty("response", out var rf) && rf.TryGetProperty("error", out var errObj))
+                            failure = errObj.TryGetProperty("message", out var m) ? m.GetString() : errObj.ToString();
+                        else if (root.TryGetProperty("error", out var e2))
+                            failure = e2.TryGetProperty("message", out var m2) ? m2.GetString() : e2.ToString();
+                        else
+                            failure = "unbekannter Fehler";
+                        break;
+                    case "response.completed":
+                        // Fallback: kamen keine Deltas, Text aus dem fertigen response.output[] holen.
+                        if (sb.Length == 0 && root.TryGetProperty("response", out var resp))
+                            sb.Append(ExtractTextFromOutput(resp));
+                        break;
+                }
+            }
+            catch (JsonException) { /* unvollstaendige Zeile -> ignorieren (naechster Chunk folgt) */ }
+        }
 
-            if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
-                throw new Exception("Unerwartete Codex-Antwort: kein output-Array");
+        /// <summary>
+        /// Extrahiert den Antworttext aus einem Element mit "output"-Array: "message"-Items
+        /// (role assistant), darin die Text-Parts (type "output_text"/"text"). reasoning-Items
+        /// werden uebersprungen. Tolerant: leer, wenn nichts da ist.
+        /// </summary>
+        public static string ExtractTextFromOutput(JsonElement el)
+        {
+            if (!el.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
+                return string.Empty;
 
             var sb = new StringBuilder();
             foreach (var item in output.EnumerateArray())
@@ -190,8 +254,17 @@ namespace VoiceAgent.Services.Llm
                         sb.Append(t.GetString());
                 }
             }
+            return sb.ToString().Trim();
+        }
 
-            var text = sb.ToString().Trim();
+        /// <summary>
+        /// Extrahiert Text aus einer kompletten /responses-JSON-Antwort (Objekt mit output[]).
+        /// Wirft, wenn kein Text gefunden wird. Public static = isoliert testbar.
+        /// </summary>
+        public static string ExtractText(string responseJson)
+        {
+            using var doc = JsonDocument.Parse(responseJson);
+            var text = ExtractTextFromOutput(doc.RootElement);
             if (string.IsNullOrEmpty(text)) throw new Exception("Kein Text in Codex-Antwort");
             return text;
         }
