@@ -35,6 +35,13 @@ namespace VoiceAgent.Core
         /// <summary>Eine vom Nutzer noch zu bestaetigende Aufgabe (Unteragent + originaler Auftragstext).</summary>
         private sealed record PendingAction(ISubAgent Sub, string Task);
 
+        /// <summary>
+        /// Ein selbst-bestaetigender Unteragent (HandlesOwnConfirmation), der auf eine Folge-Antwort
+        /// wartet (z.B. Computer Use auf "ja, ausfuehren"). Die naechste Eingabe geht direkt an ihn —
+        /// auch wenn sie nicht als Aufgabe erkannt wird.
+        /// </summary>
+        private ISubAgent? _awaitingFollowup;
+
         /// <summary>True, solange eine Verstaendnis-Rueckfrage auf Antwort wartet (fuer UI/Tests).</summary>
         public bool HasPendingConfirmation => _pending != null;
 
@@ -122,6 +129,15 @@ namespace VoiceAgent.Core
         /// </summary>
         private async Task<Route> DecideRouteAsync(string userText, IntentKind intent, CancellationToken ct)
         {
+            // 0) Wartet ein selbst-bestaetigender Unteragent (z.B. Computer Use) auf eine Folge-Antwort?
+            //    Dann geht die Eingabe direkt an ihn — egal ob als Aufgabe erkannt oder nicht.
+            if (_awaitingFollowup != null)
+            {
+                if (_awaitingFollowup.AwaitingFollowup)
+                    return new Route(RouteKind.ExecuteConfirmed, _awaitingFollowup, userText, null);
+                _awaitingFollowup = null;
+            }
+
             // 1) Offene Verstaendnis-Rueckfrage? Zuerst Ja/Nein deuten.
             if (_pending != null)
             {
@@ -164,6 +180,11 @@ namespace VoiceAgent.Core
 
                 if (sub != null)
                 {
+                    // Selbst-bestaetigende Helfer (z.B. Computer Use) ueberspringen das generische Gate
+                    // und machen ihre Bestaetigung intern (erst Befehl ableiten, dann konkret zeigen).
+                    if (sub.HandlesOwnConfirmation)
+                        return new Route(RouteKind.ExecuteConfirmed, sub, userText, null);
+
                     string question;
                     try { question = sub.ConfirmationQuestion(userText); }
                     catch (Exception ex)
@@ -231,6 +252,7 @@ namespace VoiceAgent.Core
                 Probe.That(!string.IsNullOrWhiteSpace(subReply),
                     "BossAgent: Unteragent lieferte leere Antwort nach Bestaetigung", new { sub = sub.Name });
                 RecordTurn(userText, subReply);
+                _awaitingFollowup = sub.AwaitingFollowup ? sub : null;   // wartet der Helfer noch auf "ja"/"nein"?
                 return new AgentReply(subReply, sub.Name);
             }
             catch (Exception ex)
@@ -271,6 +293,7 @@ namespace VoiceAgent.Core
                 viaFallback = true;
             }
             if (!viaFallback) RecordTurn(userText, reply);
+            _awaitingFollowup = sub.AwaitingFollowup ? sub : null;   // wartet der Helfer noch auf "ja"/"nein"?
             yield return reply;
         }
 
@@ -325,6 +348,7 @@ namespace VoiceAgent.Core
             _session.History.Clear();
             _session.Summary = "";
             _pending = null;   // offene Rueckfrage gehoert nicht in ein neues Gespraech
+            _awaitingFollowup = null;
             Log.Info("BossAgent: Verlauf der aktiven Session zurueckgesetzt");
         }
     }

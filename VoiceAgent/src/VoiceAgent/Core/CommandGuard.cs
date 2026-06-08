@@ -85,6 +85,14 @@ namespace VoiceAgent.Core
             new(@"\b(new-item|move-item|copy-item)\b.*(\$env:windir|system32|c:\\windows)", RegexOptions.Compiled),
         };
 
+        /// <summary>Parst den Einstellungs-String ("off"/"safe"/"full") in die Stufe. Unbekannt => Off (sicher).</summary>
+        public static ComputerUseMode ParseMode(string? mode) => mode?.Trim().ToLowerInvariant() switch
+        {
+            "safe" => ComputerUseMode.Safe,
+            "full" => ComputerUseMode.Full,
+            _ => ComputerUseMode.Off,
+        };
+
         /// <summary>Beurteilt einen Befehl unter der gegebenen Stufe. Trifft KEINE Ausfuehrung.</summary>
         public static CommandVerdict Evaluate(string? command, ComputerUseMode mode)
         {

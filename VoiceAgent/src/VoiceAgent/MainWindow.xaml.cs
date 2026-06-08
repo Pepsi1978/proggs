@@ -38,6 +38,7 @@ namespace VoiceAgent
         private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
         private SubAgentRegistry? _subAgents;         // Unteragenten, die der Hauptagent dirigiert
         private CustomAgentStore? _customAgents;      // per Sprache angelegte, persistente Helfer-Definitionen
+        private readonly ShellExecutor _shell = new();   // fuehrt Computer-Use-Befehle aus (nach Guard-Freigabe)
         private ReminderService? _reminderService;                // geplante Erinnerungen (zeitgesteuert)
         private readonly Chime _chime = new();                    // Enterprise-Sound fuer proaktive Meldungen
         private Reminder? _pendingReminder;                       // faellig, wartet auf Franks Reaktion
@@ -305,6 +306,12 @@ namespace VoiceAgent
                     new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel),   // billig: Definition ableiten
                     () => LlmProviderFactory.Create(_settings),                                // Haupt-Provider fuer den neuen Helfer
                     _subAgents, _customAgents));
+                // Computer Use: steuert auf Wunsch den Rechner. Stufe (Aus/Sicher/Vollzugriff) wird LIVE aus
+                // den Einstellungen gelesen; der CommandGuard entscheidet, der ShellExecutor fuehrt aus.
+                _subAgents.Register(new ComputerUseSubAgent(
+                    new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel),   // billig: Befehl ableiten
+                    () => CommandGuard.ParseMode(_settings.ComputerUseMode),                   // aktuelle Stufe (live)
+                    (cmd, token) => _shell.RunAsync(cmd, 20000, token)));                      // Ausfuehrung
 
                 _sessionStore = new SessionStore();
                 _sessions = new SessionManager(_sessionStore);

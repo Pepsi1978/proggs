@@ -29,6 +29,20 @@ namespace VoiceAgent.Core
         /// </summary>
         string ConfirmationQuestion(string task) => "Soll ich das fuer dich erledigen?";
 
+        /// <summary>
+        /// Wenn true, macht der Unteragent seine Bestaetigung SELBST (mehrstufig, z.B. um erst den
+        /// konkreten Befehl abzuleiten und ihn dann zu zeigen) — der Hauptagent ueberspringt dann
+        /// das generische Gate und ruft den Unteragenten direkt. Default false (normales Gate).
+        /// </summary>
+        bool HandlesOwnConfirmation => false;
+
+        /// <summary>
+        /// True, solange der Unteragent auf eine Folge-Antwort (z.B. "ja ausfuehren") wartet. Der
+        /// Hauptagent leitet die naechste Eingabe dann direkt an ihn weiter — auch wenn sie nicht
+        /// als Aufgabe erkannt wird. Default false.
+        /// </summary>
+        bool AwaitingFollowup => false;
+
         /// <summary>Fuehrt die Aufgabe aus und liefert eine kurze, vorlesbare Antwort.</summary>
         Task<string> HandleAsync(string task, CancellationToken ct = default);
     }
