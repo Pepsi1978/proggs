@@ -56,6 +56,36 @@
             </Setter>
         </Style>
 
+        <!-- Mikrofon-Schalter: abgerundet wie die Buttons (Radius 8), in BEIDEN Zustaenden rund.
+             Zustand wird ueber die Farbe gezeigt (Ruhe = hell, wach/aktiv = dunkel) statt ueber
+             den eckigen WPF-Default-Stil. -->
+        <Style x:Key="FlatToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="#37322B"/>
+            <Setter Property="Background" Value="#ECE7DD"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" CornerRadius="8" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#E0D9CC"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#1F1B16"/>
+                                <Setter TargetName="b" Property="TextElement.Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Abgerundete, helle Texteingabe -->
         <Style x:Key="RoundedInput" TargetType="TextBox">
             <Setter Property="BorderBrush" Value="#E0D9CC"/>
@@ -173,9 +203,8 @@
                 <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"
                         Margin="0,0,8,0" Style="{StaticResource FlatButton}" Click="LogButton_Click"/>
                 <ToggleButton x:Name="MicToggle" DockPanel.Dock="Right" Content="🎙 Mikrofon: an"
-                              Margin="0,0,8,0" Padding="12,6" Background="#ECE7DD" Foreground="#37322B"
-                              BorderThickness="0" Cursor="Hand" Click="MicToggle_Click"/>
-                <Border DockPanel.Dock="Right" x:Name="ContextPill" CornerRadius="11" Background="#F4EAD6"
+                              Margin="0,0,8,0" Style="{StaticResource FlatToggle}" Click="MicToggle_Click"/>
+                <Border DockPanel.Dock="Right" x:Name="ContextPill" CornerRadius="8" Background="#F4EAD6"
                         Padding="11,4" Margin="0,0,8,0" VerticalAlignment="Center">
                     <TextBlock x:Name="ContextPillText" Foreground="#9A6B2F" FontSize="12" Text="◐ Kontext 0%"/>
                 </Border>
