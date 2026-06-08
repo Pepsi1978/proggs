@@ -33,6 +33,8 @@
     <Content Include="assets\message1.wav" CopyToOutputDirectory="PreserveNewest" />
     <!-- Wake-Word-Bestaetigungston: wird beim Erkennen des Weckworts abgespielt. -->
     <Content Include="assets\wakeword.wav" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Einschlafton (abfallend): beim automatischen Stille-Timeout, wenn der Agent aufhoert zuzuhoeren. -->
+    <Content Include="assets\sleep.wav" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Wake-Word-Modell (sherpa-onnx KWS, int8). Als Content neben die EXE kopieren — die native
          API erwartet Dateipfade, NICHT embedded (Best-Practice wake-word §6). -->
     <Content Include="assets\wakeword-model\**\*" CopyToOutputDirectory="PreserveNewest" />

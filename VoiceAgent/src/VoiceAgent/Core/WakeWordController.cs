@@ -33,8 +33,13 @@ namespace VoiceAgent.Core
 
         /// <summary>Weckwort erkannt — der Agent ist jetzt wach (Argument: erkanntes Keyword).</summary>
         public event Action<string>? Woke;
-        /// <summary>Zurueck in den Ruhezustand (Stille-Timeout abgelaufen).</summary>
-        public event Action? Slept;
+        /// <summary>
+        /// Zurueck in den Ruhezustand. Argument = Grund: "Timeout" (Wachfenster nach Stille
+        /// automatisch abgelaufen) oder "manuell" (Nutzer hat selbst abgeschaltet / Feature aus).
+        /// Der Grund erlaubt es dem Consumer, NUR beim automatischen Timeout einen Einschlafton
+        /// zu spielen — nicht beim bewussten Abschalten.
+        /// </summary>
+        public event Action<string>? Slept;
 
         public WakeState State { get; private set; } = WakeState.Sleeping;
 
@@ -126,7 +131,7 @@ namespace VoiceAgent.Core
             _engine.Reset();   // Erkennungs-Zustand sauber zuruecksetzen
             Probe.State("Awake", "Sleeping", new { reason });
             Log.Info("Zurueck im Ruhezustand (lausche aufs Weckwort)", new { reason });
-            Slept?.Invoke();
+            Slept?.Invoke(reason);
         }
 
         public void Dispose()

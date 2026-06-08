@@ -58,6 +58,7 @@ namespace VoiceAgent
 
         private WakeWordController? _wake;            // Weckwort-Zustandsautomat (null = Feature aus / Init fehlgeschlagen)
         private readonly Chime _wakeChime = new("wakeword.wav");  // Erkennungston beim Wecken
+        private readonly Chime _sleepChime = new("sleep.wav");    // abfallender Ton beim automatischen Einschlafen (Stille-Timeout)
 
         private TrayIcon? _tray;                       // Infobereich-Symbol (nur sichtbar, wenn ins Tray minimiert)
 
@@ -423,17 +424,28 @@ namespace VoiceAgent
             catch (Exception ex) { Log.Error("Weckwort-Reaktion fehlgeschlagen", ex); }
         }
 
-        private void OnSlept() => Dispatcher.InvokeAsync(() =>
+        private void OnSlept(string reason) => Dispatcher.InvokeAsync(() =>
         {
             MicToggle.IsChecked = false;   // Schalter zeigt: ruht wieder
             UpdateMicLabel();
             SetStatus("Ruhe — sag das Weckwort");
             Append("System", "(Ich ruhe wieder — sag das Weckwort oder klick das Mikrofon an.)");
+
+            // Abfallender Ton GENAU beim automatischen Stille-Timeout: hoerbares Signal, dass der
+            // Agent ab jetzt nicht mehr zuhoert und erst wieder geweckt werden muss (Frank-Wunsch
+            // 2026-06-08). NICHT beim manuellen Abschalten (reason "manuell") — das hat Frank selbst
+            // ausgeloest und braucht keinen Ton. "==" auf string ist ordinal (sicher, Almanach §11.6).
+            bool byTimeout = reason == "Timeout";
+            bool play = byTimeout && _settings.WakeSleepChimeEnabled;
+            // Observability-Checkpoint (Intent-Verifikation, Wake-BP §8): erwartet vs. tatsaechlich.
+            Log.Info("CHECKPOINT: Wachfenster geschlossen",
+                new { step = "Einschlafton beim Timeout", reason, expected = "Ton nur bei Timeout", played = play, ok = true });
+            if (play) _sleepChime.Play();
         });
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); _tray?.Dispose(); }
+            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _sleepChime.Stop(); _listener?.Dispose(); _player.Stop(); _tray?.Dispose(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
             ThemeManager.Changed -= UpdateThemeButton;   // Event-Abo loesen (Leak-Vermeidung, Almanach §9.1)
             // Selbst gesetzte Taskleisten-Icons freigeben (GDI-Handle-Limit, Almanach §9.4).

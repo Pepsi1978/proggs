@@ -74,6 +74,11 @@ namespace VoiceAgent.Services
         public string WakeWord { get; set; } = "Okay Computer";
         public int WakeTimeoutMs { get; set; } = 60000;        // aktives Fenster nach dem Wecken (60 s)
         public bool WakeChimeEnabled { get; set; } = true;     // Erkennungston beim Wecken (danach sofort sprechen)
+        // Abfallender "Einschlaf"-Ton, wenn das Wachfenster nach Stille automatisch ablaeuft (WakeTimeoutMs)
+        // und der Agent vom Zuhoeren zurueck in den Ruhezustand wechselt. Signalisiert hoerbar: "ab jetzt
+        // hoere ich nicht mehr zu — du musst mich erst wieder wecken." NUR beim automatischen Timeout, NICHT
+        // beim manuellen Abschalten (da hat es Frank ja selbst getan). Default an.
+        public bool WakeSleepChimeEnabled { get; set; } = true;
 
         // ----- Zeit -----
         // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
