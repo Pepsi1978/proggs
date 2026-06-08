@@ -247,6 +247,22 @@ namespace VoiceAgent.Views
             }
         }
 
+        /// <summary>
+        /// Beim Umschalten auf Codex das Modell-Feld auf ein gueltiges Codex-Modell vorbelegen,
+        /// wenn dort noch ein fremdes (z. B. Gemini-)Modell steht — sonst antwortet Codex mit 400.
+        /// Guard gegen XAML-Load-Feuern (§2.10).
+        /// </summary>
+        private void ProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_ready) return;
+            if ((ProviderBox.SelectedItem as string) == "codex")
+            {
+                var m = (ModelBox.Text ?? string.Empty).Trim();
+                if (!m.StartsWith("gpt", StringComparison.OrdinalIgnoreCase))
+                    ModelBox.Text = CodexModels.Default;   // gpt-5.5 vorbelegen
+            }
+        }
+
         /// <summary>Zeigt den Codex-Anmeldestatus und schaltet den Abmelden-Button entsprechend.</summary>
         private void RefreshCodexStatus()
         {

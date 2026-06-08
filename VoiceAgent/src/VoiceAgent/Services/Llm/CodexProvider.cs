@@ -36,11 +36,29 @@ namespace VoiceAgent.Services.Llm
 
         public CodexProvider(string model, string effort)
         {
-            _model = string.IsNullOrWhiteSpace(model) ? CodexModels.Default : model.Trim();
+            _model = NormalizeModel(model);
+            // Sonde: Wenn ein fremdes Modell auf den Default gemappt wurde, sichtbar machen.
+            if (!string.Equals(_model, (model ?? "").Trim(), StringComparison.Ordinal))
+                Log.Warn($"Codex: '{model}' ist kein Codex-Modell — nutze '{_model}'. " +
+                         "(In den Einstellungen als Modell z. B. gpt-5.5 eintragen.)");
             _effort = NormalizeEffort(effort);
         }
 
         public string Name => "Codex";
+
+        /// <summary>
+        /// Codex akzeptiert nur eigene Modelle (gpt-5.5, gpt-5.4, gpt-5.3-codex …). Ein fremdes Modell
+        /// — etwa wenn von Gemini auf Codex umgestellt wird, ohne das Modell-Feld zu aendern — wuerde
+        /// einen HTTP 400 ausloesen ("model is not supported"). Statt zu scheitern faellt ein Nicht-gpt-
+        /// Modell (oder leeres) funktionserhaltend auf den Codex-Default zurueck.
+        /// </summary>
+        public static string NormalizeModel(string? model)
+        {
+            var m = (model ?? "").Trim();
+            if (m.Length == 0 || !m.StartsWith("gpt", StringComparison.OrdinalIgnoreCase))
+                return CodexModels.Default;
+            return m;
+        }
 
         /// <summary>
         /// Codex-Backend akzeptiert low/medium/high; "minimal" wird (wie in Hermes) auf "low"
