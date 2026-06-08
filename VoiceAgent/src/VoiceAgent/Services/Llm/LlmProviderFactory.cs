@@ -16,6 +16,9 @@ namespace VoiceAgent.Services.Llm
             {
                 "claude" => new ClaudeProvider(Config.ReadApiKey("claude"), settings.LlmModel),
                 "openai" => new OpenAiProvider(Config.ReadApiKey("openai"), settings.LlmModel),
+                // Codex nutzt das ChatGPT-Abo (Geraetecode-Login) statt eines API-Schluessels,
+                // daher kein Config.ReadApiKey — die Tokens liegen in ~/SK/VoiceAgent/codex-auth.json.
+                "codex" => new CodexProvider(settings.LlmModel, settings.CodexEffort),
                 _ => new GeminiProvider(Config.ReadApiKey("gemini"), settings.LlmModel),
             };
         }

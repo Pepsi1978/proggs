@@ -198,6 +198,22 @@
                         <TextBlock Text="Modell für Endpunkt-Check (FERTIG/WEITER — immer Gemini, günstig + schnell)" Style="{StaticResource Label}"/>
                         <TextBox x:Name="EndpointModelBox" MaxWidth="460" HorizontalAlignment="Left"/>
 
+                        <!-- Codex (OpenAI über ChatGPT-Abo, Anmeldung per Gerätecode wie bei Hermes).
+                             Nur relevant, wenn oben als Anbieter "codex" gewählt ist. -->
+                        <TextBlock Text="Codex (ChatGPT-Abo per Gerätecode)" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Nutzt dein ChatGPT-Abo statt eines API-Schlüssels. Einmal anmelden: Code im Browser bestätigen. Modelle z. B. gpt-5.5 (oben als Modell eintragen)."
+                                   Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Button x:Name="CodexLoginButton" Content="Per Gerätecode anmelden"
+                                    Click="CodexLogin_Click" Padding="14,7" MinWidth="200"/>
+                            <Button x:Name="CodexLogoutButton" Content="Abmelden"
+                                    Click="CodexLogout_Click" Padding="14,7" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="CodexStatusText" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource TextMuted}" FontSize="12.5"/>
+                        <TextBlock Text="Denk-Aufwand (Effort)" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="CodexEffortBox" MaxWidth="360" HorizontalAlignment="Left"/>
+
                         <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}"/>
                         <TextBlock Text="Wie sich dein Assistent verhält. Leer lassen = eingebauter Standard."
                                    Style="{StaticResource Label}"/>

@@ -5,6 +5,7 @@ using VoiceAgent.Core;
 using VoiceAgent.Diagnostics;
 using VoiceAgent.Services;
 using VoiceAgent.Services.Audio;
+using VoiceAgent.Services.Llm;
 
 namespace VoiceAgent.Views
 {
@@ -60,11 +61,21 @@ namespace VoiceAgent.Views
                 ProviderBox.Items.Add("gemini");
                 ProviderBox.Items.Add("claude");
                 ProviderBox.Items.Add("openai");
+                ProviderBox.Items.Add("codex");
                 ProviderBox.SelectedItem = _settings.LlmProvider;
                 if (ProviderBox.SelectedItem == null) ProviderBox.SelectedIndex = 0;
 
                 ModelBox.Text = _settings.LlmModel;
                 EndpointModelBox.Text = _settings.EndpointModel;
+
+                // Codex: Effort-Auswahl (volle Stufen) + Anmeldestatus.
+                CodexEffortBox.Items.Clear();
+                CodexEffortBox.Items.Add("low");
+                CodexEffortBox.Items.Add("medium");
+                CodexEffortBox.Items.Add("high");
+                CodexEffortBox.SelectedItem = CodexProvider.NormalizeEffort(_settings.CodexEffort);
+                if (CodexEffortBox.SelectedItem == null) CodexEffortBox.SelectedItem = "medium";
+                RefreshCodexStatus();
 
                 VoiceBox.ItemsSource = GoogleTtsVoices.All;
                 VoiceBox.DisplayMemberPath = nameof(GoogleTtsVoice.DisplayName);
@@ -129,6 +140,7 @@ namespace VoiceAgent.Views
                 _settings.EndpointModel = string.IsNullOrWhiteSpace(EndpointModelBox.Text)
                     ? AppSettings.DefaultGeminiModel
                     : EndpointModelBox.Text.Trim();
+                _settings.CodexEffort = CodexProvider.NormalizeEffort(CodexEffortBox.SelectedItem as string);
                 _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
 
                 _settings.SemanticEndpointing = SemanticEndpointBox.IsChecked == true;
@@ -232,6 +244,68 @@ namespace VoiceAgent.Views
             finally
             {
                 PreviewButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>Zeigt den Codex-Anmeldestatus und schaltet den Abmelden-Button entsprechend.</summary>
+        private void RefreshCodexStatus()
+        {
+            bool loggedIn = CodexAuth.IsLoggedIn();
+            CodexStatusText.Text = loggedIn
+                ? "✓ Bei Codex angemeldet (läuft über dein ChatGPT-Abo)."
+                : "Nicht angemeldet. Per Gerätecode anmelden, dann oben als Anbieter „codex“ wählen.";
+            CodexLogoutButton.IsEnabled = loggedIn;
+        }
+
+        // Geraetecode-Anmeldung. Event-Handler: async void ist hier ok, Body komplett in try/catch (Almanach §7.2).
+        private async void CodexLogin_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                CodexLoginButton.IsEnabled = false;
+                CodexStatusText.Text = "Fordere Gerätecode an…";
+
+                var info = await CodexAuth.RequestDeviceCodeAsync();
+
+                // Browser auf die Bestätigungs-Seite öffnen (Standard-Browser via Shell).
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(info.VerificationUrl)
+                    { UseShellExecute = true });
+                }
+                catch (Exception ex) { Log.Warn($"Codex: Browser öffnen fehlgeschlagen ({ex.Message})"); }
+
+                CodexStatusText.Text = $"Im Browser ({info.VerificationUrl}) diesen Code eingeben: {info.UserCode}\nWarte auf Bestätigung…";
+                MessageBox.Show(this,
+                    $"Im Browser diese Seite öffnen:\n{info.VerificationUrl}\n\nUnd diesen Code eingeben:\n\n    {info.UserCode}\n\nDanach hier warten — die Anmeldung wird automatisch erkannt.",
+                    "Codex-Anmeldung per Gerätecode", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                await CodexAuth.PollForTokensAsync(info);
+
+                RefreshCodexStatus();
+                CodexStatusText.Text = "✓ Codex-Anmeldung erfolgreich. Anbieter „codex“ wählen und Modell (z. B. gpt-5.5) eintragen.";
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Codex-Anmeldung fehlgeschlagen", ex);
+                CodexStatusText.Text = "Anmeldung fehlgeschlagen: " + ex.Message;
+            }
+            finally
+            {
+                CodexLoginButton.IsEnabled = true;
+            }
+        }
+
+        private void CodexLogout_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                CodexAuth.Logout();
+                RefreshCodexStatus();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Codex-Abmelden fehlgeschlagen", ex);
             }
         }
     }

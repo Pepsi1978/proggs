@@ -16,8 +16,15 @@ namespace VoiceAgent.Services
         public const string DefaultSttLanguage = "de";
 
         // ----- Gehirn (LLM) -----
-        public string LlmProvider { get; set; } = "gemini";        // "gemini" | "claude" | "openai"
+        public string LlmProvider { get; set; } = "gemini";        // "gemini" | "claude" | "openai" | "codex"
         public string LlmModel { get; set; } = DefaultGeminiModel;
+
+        /// <summary>
+        /// Denk-Aufwand fuer Codex (OpenAI ueber ChatGPT-Abo): "low" | "medium" | "high".
+        /// Wird als reasoning.effort an chatgpt.com/backend-api/codex/responses geschickt.
+        /// Gilt nur, wenn LlmProvider == "codex".
+        /// </summary>
+        public string CodexEffort { get; set; } = "medium";
 
         /// <summary>
         /// System-Prompt des Hauptagenten. Leer = der eingebaute Standard-Prompt
