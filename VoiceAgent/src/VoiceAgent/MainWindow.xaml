@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VoiceAgent"
         mc:Ignorable="d"
-        Title="VoiceAgent" Height="640" Width="980"
+        Title="VoiceAgent" Height="940" Width="1500"
+        MinHeight="480" MinWidth="760"
+        WindowStartupLocation="CenterScreen"
         Icon="/assets/voiceagent.ico"
         Background="{DynamicResource WindowBackground}"
         FontFamily="Segoe UI">
