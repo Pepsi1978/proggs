@@ -280,6 +280,13 @@
 **FIX:** KEIN Block-verwerfender Vorfilter vor einem Streaming-KWS. ALLE Audio-Frames kontinuierlich an die Engine geben. Ein VAD darf hoechstens fuer Endpointing/Schlaf-nach-Stille genutzt werden — NIEMALS um einzelne Frames aus dem Engine-Stream zu nehmen. (Effizienz: das int8-3.3M-Modell ist leicht genug fuer Dauerbetrieb; VAD-Sparen lohnt den Erkennungsverlust nicht.) Siehe `best-practices-wake-word.md` §4.
 **Quelle:** Eigener Vorfall — kostete mehrere Fehlversuche, weil mein eigener Best-Practices-Eintrag den VAD-Vorfilter faelschlich empfahl. Lehre: VAD-vor-Streaming-KWS ist ein bekanntes Anti-Pattern.
 
+### 34. Weckwort-Aenderung in den Einstellungen wirkungslos — `keywords.txt` bleibt fest   [⭐ EIGENER VORFALL]
+**Symptom:** Der Nutzer aendert das Weckwort in den App-Einstellungen (z.B. von "Okay Computer" auf "Computer"), aber die Erkennung hoert weiter auf das ALTE Wort. Das neue Wort weckt nie.
+**Ursache:** Das KWS-Modell erkennt **BPE-Tokens** aus `keywords.txt` (z.B. `▁OKAY ▁COMP U TER`), NICHT den Klartext. Das `WakeWord`-Setting war nur Anzeige-/Greeting-Text; die `keywords.txt` blieb fest die gebundelte Datei. Aendern des Settings-Texts beruehrt die Tokens nicht → Erkennung unveraendert.
+**Versionen:** sherpa-onnx KWS alle — prinzipbedingt (Tokens != Klartext, vgl. #10). Eigener Vorfall VoiceAgent 2026-06-08.
+**FIX (funktionserhaltend):** Beim Setzen des Weckworts die `keywords.txt` aus dem gewaehlten Wort NEU erzeugen (BPE-tokenisiert) und die Engine damit neu laden. Es gibt KEINE Laufzeit-`text2token`-Funktion in der sherpa C-API; `Microsoft.ML.Tokenizers` (SentencePiece) ist schwergewichtig (Google.Protobuf) und hat keine offensichtliche Stream-Factory. Pragmatisch + robust: gaengige Weckwoerter EINMAL vorab mit demselben `bpe.model` tokenisieren (Python sentencepiece) und als kuratierte Auswahlliste anbieten; beim Speichern die fertige `keywords.txt` (nur BPE-Tokens, KEIN `@original` — #32) in einen BESCHREIBBAREN Pfad (`%LOCALAPPDATA%`) schreiben und der Engine via `KeywordsFile` uebergeben. So sind die Tokens garantiert die vom Modell erwarteten. Freie Texteingabe braucht einen echten C#-SentencePiece-Encoder (offen). Verifiziert: `wakeword-keywords.txt` = `▁COMP U TER` fuer "Computer", Engine laedt es.
+**Quelle:** Eigener Vorfall (VoiceAgent #46648) — Token-Pipeline per Log + erzeugter Datei verifiziert.
+
 ---
 
 ## Fix-Status (Stand 2026-06-08)
