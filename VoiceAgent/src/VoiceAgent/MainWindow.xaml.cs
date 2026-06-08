@@ -37,6 +37,7 @@ namespace VoiceAgent
         private readonly AudioPlayer _player = new();
         private AgentMemory? _memory;                 // persistentes Langzeit-Gedaechtnis (ueber Sessions)
         private SubAgentRegistry? _subAgents;         // Unteragenten, die der Hauptagent dirigiert
+        private CustomAgentStore? _customAgents;      // per Sprache angelegte, persistente Helfer-Definitionen
         private ReminderService? _reminderService;                // geplante Erinnerungen (zeitgesteuert)
         private readonly Chime _chime = new();                    // Enterprise-Sound fuer proaktive Meldungen
         private Reminder? _pendingReminder;                       // faellig, wartet auf Franks Reaktion
@@ -294,6 +295,16 @@ namespace VoiceAgent
                 _reminderService = new ReminderService();
                 _subAgents.Register(new ReminderSubAgent(_reminderService));   // Erinnerungen (zeitgesteuert)
                 _subAgents.Register(new NoteSubAgent(_memory));                // Notizen
+
+                // Benutzerdefinierte Helfer (per Sprache angelegt) laden + registrieren — bleiben ueber Neustarts erhalten.
+                _customAgents = new CustomAgentStore();
+                foreach (var def in _customAgents.All)
+                    _subAgents.Register(new PromptSubAgent(def, LlmProviderFactory.Create(_settings)));
+                // Der "Helfer-Baumeister" legt zur Laufzeit neue Helfer an (Vision: dynamisch eigene Unteragenten bauen).
+                _subAgents.Register(new AgentBuilderSubAgent(
+                    new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel),   // billig: Definition ableiten
+                    () => LlmProviderFactory.Create(_settings),                                // Haupt-Provider fuer den neuen Helfer
+                    _subAgents, _customAgents));
 
                 _sessionStore = new SessionStore();
                 _sessions = new SessionManager(_sessionStore);
@@ -997,14 +1008,18 @@ namespace VoiceAgent
             SetStatus("Denke nach …");
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            // Routing-Entscheidung ist synchron; die Antwort kommt als STROM (zeitechtes Vorlesen).
+            // Routing-Entscheidung ist synchron; die Antwort kommt als Token-STROM.
             var response = await _agent.HandleStreamingAsync(text, intent);   // delegiert ggf. an einen Unteragenten
             if (response.DelegatedTo != null) _turn?.Delegated(response.DelegatedTo);
 
-            // Antwort satzweise segmentieren, parallel synthetisieren + sequenziell vorlesen und
-            // den vollen Text fuer UI/Verlauf sammeln. Der erste Ton kommt bereits nach dem ersten Satz.
+            // Antwort LIVE mitlesbar: jeder fertige Satz wird SOFORT an eine wachsende Agent-Zeile
+            // angehaengt — sobald er aus dem Strom kommt (das ist VOR dem Vorlesen, der Producer laeuft
+            // dem Audio voraus). So sieht Frank die schriftliche Antwort zeitgenau, waehrend/bevor sie
+            // gesprochen wird (Frank-Wunsch 2026-06-08) — nicht erst, wenn alles fertig gesprochen ist.
+            // Beim ersten Satz schaltet die Statuszeile live auf "Spreche". Parallel sammeln wir den
+            // vollen Text fuer den Turn-Trace.
             var sb = new System.Text.StringBuilder();
-            bool startedSpeaking = false;
+            Run? agentRun = null;
             var sentences = SentenceSegmenter.Segment(response.Text);
             var speaker = new StreamingSpeaker(_tts, _player);
 
@@ -1016,11 +1031,21 @@ namespace VoiceAgent
                     onSentence: s =>
                     {
                         lock (sb) { if (sb.Length > 0) sb.Append(' '); sb.Append(s); }
-                        if (!startedSpeaking)
+                        // UI nur auf dem UI-Thread anfassen (onSentence laeuft im Producer-Thread).
+                        Dispatcher.InvokeAsync(() =>
                         {
-                            startedSpeaking = true;
-                            Dispatcher.InvokeAsync(() => SetStatus("Spreche …"));
-                        }
+                            if (agentRun == null)
+                            {
+                                agentRun = BeginAgentLine();   // erste Agent-Zeile; waechst mit jedem Satz
+                                SetStatus("Spreche …");        // ab jetzt kommt Ton -> Status live
+                                agentRun.Text = s;
+                            }
+                            else
+                            {
+                                agentRun.Text += " " + s;
+                            }
+                            ConversationBox.ScrollToEnd();
+                        });
                     });
             }
             catch (Exception ex)
@@ -1033,8 +1058,6 @@ namespace VoiceAgent
             lock (sb) { reply = sb.ToString().Trim(); }
             if (string.IsNullOrEmpty(reply))
                 Append("Fehler", "Es gab ein Problem bei der Antwort — siehe Log.");
-            else
-                Append("Agent", reply);
 
             if (!exactIntent) _turn?.Understood(reply);                                  // Fallback: heuristisch aus der Antwort
             _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds);  // welches Gehirn, wie schnell, Rueckfrage?
@@ -1080,6 +1103,23 @@ namespace VoiceAgent
         private static void TryDelete(string path)
         {
             try { if (File.Exists(path)) File.Delete(path); } catch { /* egal */ }
+        }
+
+        /// <summary>
+        /// Beginnt eine LIVE-wachsende Agent-Zeile (zum satzweisen Mitlesen waehrend des Vorlesens)
+        /// und liefert den Text-Run, der mit jedem eintreffenden Satz erweitert wird. Farbe wie eine
+        /// normale Agent-Zeile (aus den Einstellungen). Nur auf dem UI-Thread aufrufen.
+        /// </summary>
+        private Run BeginAgentLine()
+        {
+            var brush = new SolidColorBrush(ParseColor(_settings.AgentColor, Color.FromRgb(0x9A, 0x6B, 0x2F)));
+            var textRun = new Run(string.Empty) { Foreground = brush };
+            var para = new Paragraph();
+            para.Inlines.Add(new Run("Agent: ") { FontWeight = FontWeights.Bold, Foreground = brush });
+            para.Inlines.Add(textRun);
+            ConversationBox.Document.Blocks.Add(para);
+            ConversationBox.ScrollToEnd();
+            return textRun;
         }
 
         private void Append(string who, string text)
