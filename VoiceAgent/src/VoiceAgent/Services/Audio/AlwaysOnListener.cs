@@ -31,6 +31,13 @@ namespace VoiceAgent.Services.Audio
         /// </summary>
         public event Action<byte[], int>? OnFrame;
 
+        /// <summary>
+        /// Gemeldet im MOMENT des Sprechbeginns (erster lauter Block einer neuen Aussage) — fuer eine
+        /// ZEITGENAUE Live-Statusanzeige ("Hoert zu" ab der ersten Millisekunde, nicht erst nach
+        /// dem Stille-Ende). Feuert vom Audio-Thread (Abonnent muss auf den UI-Thread marshallen).
+        /// </summary>
+        public event Action? OnSpeechStart;
+
         private const int SampleRate = 16000;
         private const int PreRollMs = 400;                          // Vorlauf gegen verschluckte Anlaute
         private static readonly int PreRollBytes = SampleRate * 2 * PreRollMs / 1000;
@@ -123,6 +130,7 @@ namespace VoiceAgent.Services.Audio
                 float rms = ComputeRms(e.Buffer, e.BytesRecorded);
                 bool silent = rms < _silenceThreshold;
                 var now = DateTime.UtcNow;
+                bool speechJustStarted = false;   // Event erst NACH dem Lock feuern (kein Deadlock-Risiko)
 
                 lock (_gate)
                 {
@@ -138,6 +146,7 @@ namespace VoiceAgent.Services.Audio
                         if (!_inSpeech)
                         {
                             _inSpeech = true;
+                            speechJustStarted = true;     // -> sofort "Hoert zu" anzeigen (zeitgenau)
                             _buffer.Clear();
                             _buffer.AddRange(_preRoll);   // Anlaut aus dem Vorlauf uebernehmen
                             _speechStartUtc = now;
@@ -157,6 +166,9 @@ namespace VoiceAgent.Services.Audio
                             FinalizeUtterance(now);
                     }
                 }
+
+                // Sprechbeginn live melden (ausserhalb des Locks): Statuszeile sofort auf "Hoert zu".
+                if (speechJustStarted) OnSpeechStart?.Invoke();
             }
             catch (Exception ex)
             {

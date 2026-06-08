@@ -103,7 +103,7 @@ namespace VoiceAgent
                 if (!toTray) return;   // klassisches Minimieren in die Taskleiste
 
                 EnsureTray();
-                _tray?.Show(_trayHintShown ? null : "Läuft weiter im Hintergrund — Doppelklick zum Öffnen.");
+                _tray?.Show(_trayHintShown ? null : "Läuft weiter im Hintergrund. Doppelklick zum Öffnen.");
                 _trayHintShown = true;
                 Hide();                // aus der Taskleiste nehmen; Fenster bleibt offen -> App laeuft weiter
             }
@@ -156,7 +156,7 @@ namespace VoiceAgent
             try
             {
                 EnsureTray();
-                _tray?.Show(_trayHintShown ? null : "VoiceAgent läuft im Hintergrund — Doppelklick zum Öffnen.");
+                _tray?.Show(_trayHintShown ? null : "VoiceAgent läuft im Hintergrund. Doppelklick zum Öffnen.");
                 _trayHintShown = true;
                 Hide();   // aus der Taskleiste nehmen; App laeuft im Hintergrund weiter
                 Log.Info("CHECKPOINT Autostart minimiert ins Tray", new
@@ -303,7 +303,7 @@ namespace VoiceAgent
                 UpdateMicLabel();
                 StartClock();
                 Log.Info("MainWindow geladen — Voice-Loop bereit.");
-                Append("System", "Bereit. Sprich einfach los — Gedankenpausen sind erlaubt. Oder tippe unten.");
+                Append("System", "Bereit. Sprich einfach los, Gedankenpausen sind erlaubt. Oder tippe unten.");
 
                 _ready = true;            // ab jetzt duerfen die Sidebar-Handler feuern
                 RefreshSessionList();
@@ -348,6 +348,7 @@ namespace VoiceAgent
                 _settings.MinVoicedMs, _settings.MinVoicedRatio);
             _listener.OnUtterance += OnUtterance;
             _listener.OnFrame += OnAudioFrame;       // roher Stream fuer das Weckwort-Lauschen
+            _listener.OnSpeechStart += OnSpeechStart; // zeitgenaue Live-Statusanzeige beim Sprechbeginn
             _listener.Start();
             RebuildWakeController();
             // Im Weckwort-Modus laeuft die Aufnahme IMMER (Hintergrund-Lauschen, auch im Ruhezustand);
@@ -379,7 +380,7 @@ namespace VoiceAgent
             {
                 Log.Error("Weckwort-Initialisierung fehlgeschlagen — Feature aus, App laeuft normal weiter", ex);
                 _wake = null;
-                Append("System", "Weckwort konnte nicht geladen werden — ich verarbeite wie gewohnt jede Aussage.");
+                Append("System", "Weckwort konnte nicht geladen werden, ich verarbeite wie gewohnt jede Aussage.");
             }
         }
 
@@ -399,6 +400,20 @@ namespace VoiceAgent
             catch (Exception ex) { Log.Error("Weckwort: Frame-Verarbeitung fehlgeschlagen", ex); }
         }
 
+        /// <summary>
+        /// Zeitgenaue Live-Statusanzeige: SOFORT beim Sprechbeginn "Hoert zu" (nicht erst nach dem
+        /// 3-s-Stille-Ende, wie es vorher passierte). Feuert vom Audio-Thread -> auf den UI-Thread
+        /// marshallen (Wake-Almanach Bug 7). Nicht im Ruhezustand und nicht waehrend einer laufenden
+        /// Verarbeitung anzeigen (sonst falsche/ueberschriebene Statuszeile).
+        /// </summary>
+        private void OnSpeechStart() => Dispatcher.InvokeAsync(() =>
+        {
+            if (_busy) return;   // gerade Transkription/Antwort -> Statuszeile nicht ueberschreiben
+            // Im Weckwort-Ruhezustand hoert der Agent NICHT zu (er wartet aufs Weckwort).
+            if (_settings.WakeWordEnabled && _wake != null && _wake.State == WakeState.Sleeping) return;
+            SetStatus("Hört zu …");
+        });
+
         private void OnWoke(string keyword) => Dispatcher.InvokeAsync(() => _ = OnWokeAsync(keyword));
 
         private async Task OnWokeAsync(string keyword)
@@ -410,7 +425,7 @@ namespace VoiceAgent
                 // Observability-Checkpoint (Intent-Verifikation): erwartet vs. tatsaechlich.
                 Log.Info("CHECKPOINT: Weckwort erkannt",
                     new { step = "Weckwort erkannt", expected = _settings.WakeWord, actual = keyword, ok = true });
-                SetStatus("Ton kommt — gleich sprechen");
+                SetStatus("Ton kommt, gleich sprechen");
                 // NUR ein kurzer Erkennungston (KEIN gesprochenes Wort — Frank-Wunsch 2026-06-08).
                 // Waehrend des Tons nicht mithoeren; danach den Buffer leeren (Weckwort-Phrase + Ton
                 // verwerfen) und ab JETZT sofort normal hoeren — exakt wie ein manueller Knopfdruck.
@@ -419,7 +434,7 @@ namespace VoiceAgent
                 await Task.Delay(650);          // Piepton ausklingen lassen
                 _listener?.ClearBuffer();       // "Okay Computer" + Ton verwerfen -> frischer Start
                 ResumeMic();                    // ab JETZT hoeren -> sofort lossprechen
-                SetStatus("Wach — sprich jetzt");
+                SetStatus("Wach, sprich jetzt");
             }
             catch (Exception ex) { Log.Error("Weckwort-Reaktion fehlgeschlagen", ex); }
         }
@@ -428,8 +443,8 @@ namespace VoiceAgent
         {
             MicToggle.IsChecked = false;   // Schalter zeigt: ruht wieder
             UpdateMicLabel();
-            SetStatus("Ruhe — sag das Weckwort");
-            Append("System", "(Ich ruhe wieder — sag das Weckwort oder klick das Mikrofon an.)");
+            SetStatus($"Ruhe, sag „{_settings.WakeWord}“");
+            Append("System", "(Ich ruhe wieder, sag das Weckwort oder klick das Mikrofon an.)");
 
             // Abfallender Ton GENAU beim automatischen Stille-Timeout: hoerbares Signal, dass der
             // Agent ab jetzt nicht mehr zuhoert und erst wieder geweckt werden muss (Frank-Wunsch
@@ -466,7 +481,7 @@ namespace VoiceAgent
                 if (on) _wake.ForceAwake(); else _wake.ForceSleep();
                 _listener?.SetEnabled(true);
                 UpdateMicLabel();
-                if (on) { SetStatus("Wach — sprich einfach los"); Append("System", "(Mikrofon an — ich hoere zu.)"); }
+                if (on) { SetStatus("Wach, sprich einfach los"); Append("System", "(Mikrofon an, ich höre zu.)"); }
                 return;
             }
             _settings.MicEnabled = on;
@@ -527,7 +542,7 @@ namespace VoiceAgent
             if (_pendingReminder != null || _reminderQueue.Count == 0 || _busy) return;
             _pendingReminder = _reminderQueue.Dequeue();
             Log.Info("Erinnerung faellig — Ping startet, warte auf Reaktion", new { _pendingReminder.Text });
-            Append("System", "(Erinnerung faellig — sag kurz Bescheid, dann sage ich dir, worum es geht.)");
+            Append("System", "(Erinnerung fällig, sag kurz Bescheid, dann sage ich dir, worum es geht.)");
             StartPinging();
         }
 
@@ -622,7 +637,7 @@ namespace VoiceAgent
             {
                 Log.Error("MainWindow: Einstellungen oeffnen/uebernehmen fehlgeschlagen", ex);
                 Append("Fehler", "Einstellungen konnten nicht geoeffnet werden: " + ex.Message);
-                SetStatus("Fehler — siehe Log");
+                SetStatus("Fehler, siehe Log");
             }
         }
 
@@ -652,7 +667,9 @@ namespace VoiceAgent
             PauseMic();   // waehrend Transkription/Check/Sprechen nicht mithoeren
             try
             {
-                SetStatus("Hoere zu …");
+                // "Hoert zu" zeigt jetzt OnSpeechStart live waehrend des Sprechens an; ab hier wird
+                // die fertige Aufnahme in Text umgewandelt -> der naechste echte Schritt.
+                SetStatus("Schreibe mit …");
                 string segment = await _stt.TranscribeAsync(wavPath);
                 TryDelete(wavPath);
 
@@ -703,7 +720,7 @@ namespace VoiceAgent
                 _turn?.Complete();
                 _turn = null;
                 Append("Fehler", ex.Message);
-                SetStatus("Fehler — siehe Log");
+                SetStatus("Fehler, siehe Log");
                 _pending = string.Empty;
             }
             finally
@@ -816,7 +833,7 @@ namespace VoiceAgent
                 _turn?.Failed("text", ex);
                 _turn?.Complete();
                 Append("Fehler", ex.Message);
-                SetStatus("Fehler — siehe Log");
+                SetStatus("Fehler, siehe Log");
             }
             finally
             {
