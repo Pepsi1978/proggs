@@ -45,6 +45,16 @@ namespace TerminalVoiceOverlay.Services
         private const double CompressionRatioMax = 2.4;   // Wiederholungs-Halluzination ("danke danke danke")
         private const double MiniNoiseDurSec     = 0.4;   // sehr kurzes Segment + Stille-Verdacht
 
+        // ----- Sprachinhalt-Vorfilter (Schicht 1): reine Stille gar nicht erst senden -----
+        // Whisper halluziniert bei Stille Floskeln ("Vielen Dank") MIT hoher Confidence -> das
+        // Confidence-Gate (Schicht 2) greift dann nicht, und bei ultrakurzen Clips fehlen oft die
+        // Segmente ganz. Deshalb VOR dem Senden pruefen, ob ueberhaupt genug LAUTE (Sprach-)Zeit
+        // im Clip ist. Konservativ: trennt reine Stille (~0 ms laut) von echter kurzer Sprache wie
+        // "ja"/"stop" (>150 ms laut). Nur ABSOLUTE laute Zeit (keine Ratio) -> echte Aufnahmen mit
+        // langen Denkpausen bleiben erhalten (sie haben echte Sprache irgendwo drin).
+        private const double SpeechRmsThreshold = 0.015;  // RMS ueber diesem Wert gilt als "laut"
+        private const int    MinSpeechMs        = 150;    // Mindest-Summe lauter Zeit, sonst nicht senden
+
         public GroqWhisperClient(string apiKey, string model, string language, string url)
         {
             _apiKey = apiKey;
@@ -61,6 +71,12 @@ namespace TerminalVoiceOverlay.Services
             // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
             // Sharing zwischen Versuchen sicher.
             byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
+            // erst senden. Faengt "Knopf gedrueckt, nichts gesagt" -> Whisper haette sonst Stille als
+            // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch behandelt es
+            // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
+            if (!HasSpeechContent(fileBytes))
+                throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
             return await TranscribeWithRetry(fileBytes, 0);
         }
 
@@ -190,6 +206,38 @@ namespace TerminalVoiceOverlay.Services
                 // wirklich unbrauchbar -> nichts Verwertbares
             }
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Prueft, ob eine 16-bit-PCM-mono-WAV genug echten Sprachinhalt enthaelt, um an Groq gesendet
+        /// zu werden (Schicht 1). Misst die aufsummierte LAUTE Zeit in 20-ms-Frames (RMS &gt; Schwelle):
+        /// echte kurze Aussagen ueberschreiten <see cref="MinSpeechMs"/>, reine Stille nicht. Liest die
+        /// Sample-Rate aus dem WAV-Header (Bytes 24-27); nimmt mono 16-bit an (so nimmt der AudioRecorder auf).
+        /// </summary>
+        private static bool HasSpeechContent(byte[] wav)
+        {
+            const int headerSize = 44;
+            if (wav.Length <= headerSize + 4) return false;   // kein/zu wenig Audio
+            int sampleRate = wav[24] | (wav[25] << 8) | (wav[26] << 16) | (wav[27] << 24);
+            if (sampleRate <= 0) sampleRate = 16000;
+            int frameSamples = Math.Max(1, sampleRate * 20 / 1000);   // 20-ms-Frames
+            int frameBytes = frameSamples * 2;
+            double voicedMs = 0;
+            for (int i = headerSize; i + frameBytes <= wav.Length; i += frameBytes)
+            {
+                double sumSq = 0;
+                for (int s = 0; s < frameSamples; s++)
+                {
+                    int idx = i + s * 2;
+                    short sample = (short)(wav[idx] | (wav[idx + 1] << 8));
+                    double f = sample / 32768.0;
+                    sumSq += f * f;
+                }
+                double rms = Math.Sqrt(sumSq / frameSamples);
+                if (rms > SpeechRmsThreshold) voicedMs += 20;
+            }
+            Console.WriteLine($"Groq-Vorfilter: laute Zeit {voicedMs:F0} ms (Schwelle {MinSpeechMs} ms) -> {(voicedMs >= MinSpeechMs ? "senden" : "verworfen")}.");
+            return voicedMs >= MinSpeechMs;
         }
     }
 
