@@ -31,5 +31,14 @@ namespace VoiceAgent.Core
             }
             return null;
         }
+
+        /// <summary>Findet einen Unteragenten anhand seines Namens (case-insensitiv) — fuer den LLM-Router.</summary>
+        public ISubAgent? FindByName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            foreach (var a in _agents)
+                if (string.Equals(a.Name, name, System.StringComparison.OrdinalIgnoreCase)) return a;
+            return null;
+        }
     }
 }

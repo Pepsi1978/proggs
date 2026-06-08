@@ -21,6 +21,7 @@ namespace VoiceAgent.Core
         private readonly string _systemPrompt;
         private readonly AgentMemory? _memory;
         private readonly SubAgentRegistry? _subAgents;
+        private readonly SubAgentRouter? _router;
         private readonly string? _timeZoneId;
         private readonly ChatSession _session;
 
@@ -37,12 +38,13 @@ namespace VoiceAgent.Core
         /// <summary>True, solange eine Verstaendnis-Rueckfrage auf Antwort wartet (fuer UI/Tests).</summary>
         public bool HasPendingConfirmation => _pending != null;
 
-        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null, ChatSession? session = null)
+        public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null, ChatSession? session = null, SubAgentRouter? router = null)
         {
             _provider = provider;
             _systemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? BossAgentPrompt.Default : systemPrompt!;
             _memory = memory;
             _subAgents = subAgents;
+            _router = router;   // optional: LLM-Helfer-Auswahl; null => nur Stichwort-Matching
             _timeZoneId = timeZoneId;
             _session = session ?? new ChatSession();   // entkoppelt: aktive Session wird hereingereicht
         }
@@ -114,10 +116,11 @@ namespace VoiceAgent.Core
 
         /// <summary>
         /// Entscheidet, was mit der Eingabe geschehen soll (und mutiert dabei die offene Rueckfrage
-        /// _pending). KEINE Ausfuehrung, KEIN LLM-Call — nur die Entscheidung. So nutzen HandleAsync
-        /// (synchron) und HandleStreaming (gestreamt) GENAU dieselbe Gate-Logik (Manifest Abschnitt 6).
+        /// _pending). KEINE Ausfuehrung der Aufgabe — nur die Entscheidung (inkl. LLM-Helfer-Auswahl).
+        /// So nutzen HandleAsync (synchron) und HandleStreamingAsync (gestreamt) GENAU dieselbe
+        /// Gate-Logik (Manifest Abschnitt 6).
         /// </summary>
-        private Route DecideRoute(string userText, IntentKind intent)
+        private async Task<Route> DecideRouteAsync(string userText, IntentKind intent, CancellationToken ct)
         {
             // 1) Offene Verstaendnis-Rueckfrage? Zuerst Ja/Nein deuten.
             if (_pending != null)
@@ -145,10 +148,20 @@ namespace VoiceAgent.Core
                 }
             }
 
-            // 2) Neue Aufgabe erkannt + zustaendiger Unteragent -> ZUERST zurueckfragen.
-            if (intent == IntentKind.Task && _subAgents != null)
+            // 2) Neue Aufgabe erkannt -> zustaendigen Unteragenten finden (erst LLM-Router, dann Stichwort).
+            if (intent == IntentKind.Task && _subAgents != null && _subAgents.All.Count > 0)
             {
-                var sub = _subAgents.Find(userText);
+                ISubAgent? sub = null;
+
+                if (_router != null)
+                {
+                    var name = await _router.RouteAsync(userText, _subAgents.All, ct).ConfigureAwait(false);
+                    if (name != null) sub = _subAgents.FindByName(name);
+                }
+
+                // Fallback (funktionserhaltend): Stichwort-Matching, wenn der Router nichts/keinen Treffer lieferte.
+                sub ??= _subAgents.Find(userText);
+
                 if (sub != null)
                 {
                     string question;
@@ -175,7 +188,7 @@ namespace VoiceAgent.Core
         /// </summary>
         public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
         {
-            var route = DecideRoute(userText, intent);
+            var route = await DecideRouteAsync(userText, intent, ct).ConfigureAwait(false);
             switch (route.Kind)
             {
                 case RouteKind.ExecuteConfirmed:
@@ -194,9 +207,9 @@ namespace VoiceAgent.Core
         /// Routing-Entscheidung (Rueckfrage/Delegation) ist synchron und steht sofort fest; nur die
         /// Selbstantwort des Hauptagenten wird — wenn der Provider es kann — tokenweise gestreamt.
         /// </summary>
-        public AgentStream HandleStreaming(string userText, IntentKind intent, CancellationToken ct = default)
+        public async Task<AgentStream> HandleStreamingAsync(string userText, IntentKind intent, CancellationToken ct = default)
         {
-            var route = DecideRoute(userText, intent);
+            var route = await DecideRouteAsync(userText, intent, ct).ConfigureAwait(false);
             return route.Kind switch
             {
                 RouteKind.ExecuteConfirmed =>

@@ -329,9 +329,13 @@ namespace VoiceAgent
         private void BuildAgents()
         {
             _provider = LlmProviderFactory.Create(_settings);
+            // LLM-Helfer-Auswahl auf billigem Modell (wie der IntentDetector); null => nur Stichwort-Matching.
+            var router = _settings.SubAgentRouting
+                ? new SubAgentRouter(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel))
+                : null;
             // WICHTIG (Settings-Fix): die AKTIVE Session wird hereingereicht — beim erneuten BuildAgents
             // (z.B. nach dem Speichern der Einstellungen) bleibt derselbe Verlauf erhalten.
-            _agent = new BossAgent(_provider, _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId, _sessions?.Active);
+            _agent = new BossAgent(_provider, _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId, _sessions?.Active, router);
             // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
             // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
@@ -889,7 +893,7 @@ namespace VoiceAgent
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
             // Routing-Entscheidung ist synchron; die Antwort kommt als STROM (zeitechtes Vorlesen).
-            var response = _agent.HandleStreaming(text, intent);   // delegiert ggf. an einen Unteragenten
+            var response = await _agent.HandleStreamingAsync(text, intent);   // delegiert ggf. an einen Unteragenten
             if (response.DelegatedTo != null) _turn?.Delegated(response.DelegatedTo);
 
             // Antwort satzweise segmentieren, parallel synthetisieren + sequenziell vorlesen und

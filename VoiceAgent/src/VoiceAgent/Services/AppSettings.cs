@@ -64,6 +64,11 @@ namespace VoiceAgent.Services
         public bool IntentDetection { get; set; } = true;
         public string IntentModel { get; set; } = "gemini-3.1-flash-lite";
 
+        // Helfer-Auswahl per LLM: der Hauptagent waehlt den passenden Unteragenten anhand seiner
+        // Beschreibung (versteht freie Formulierungen), statt nur nach Stichwort. Faellt bei Fehler
+        // oder fehlender Auswahl auf das bisherige Stichwort-Matching zurueck. Nutzt das IntentModel.
+        public bool SubAgentRouting { get; set; } = true;
+
         // ----- Wake-Word ("Okay Computer") -----
         // Wenn an, hoert der Agent im Ruhezustand nur auf das Weckwort und verarbeitet erst
         // danach (fuer WakeTimeoutMs) normal. Wenn aus, wird wie bisher JEDE Aussage verarbeitet.
