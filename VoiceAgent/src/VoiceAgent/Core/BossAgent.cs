@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using VoiceAgent.Diagnostics;
@@ -105,9 +107,19 @@ namespace VoiceAgent.Core
         /// falls delegiert — den Namen des Unteragenten (fuer die Turn-Trace). Faellt bei einem
         /// Fehler des Unteragenten sicher auf den Hauptagenten zurueck (kein Funktionsverlust).
         /// </summary>
-        public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
+        // ---- Routing-Entscheidung (gemeinsam fuer den synchronen UND den gestreamten Pfad) ----
+
+        private enum RouteKind { ExecuteConfirmed, Declined, AskBack, MainAgent }
+        private sealed record Route(RouteKind Kind, ISubAgent? Sub, string? Task, string? Text);
+
+        /// <summary>
+        /// Entscheidet, was mit der Eingabe geschehen soll (und mutiert dabei die offene Rueckfrage
+        /// _pending). KEINE Ausfuehrung, KEIN LLM-Call — nur die Entscheidung. So nutzen HandleAsync
+        /// (synchron) und HandleStreaming (gestreamt) GENAU dieselbe Gate-Logik (Manifest Abschnitt 6).
+        /// </summary>
+        private Route DecideRoute(string userText, IntentKind intent)
         {
-            // ---- 1) Steht eine Verstaendnis-Rueckfrage offen? Dann zuerst Ja/Nein deuten. ----
+            // 1) Offene Verstaendnis-Rueckfrage? Zuerst Ja/Nein deuten.
             if (_pending != null)
             {
                 var decision = ConfirmationDetector.Interpret(userText);
@@ -115,19 +127,17 @@ namespace VoiceAgent.Core
                 switch (decision)
                 {
                     case ConfirmationDetector.Decision.Yes:
-                        return await ExecutePendingAsync(userText, ct).ConfigureAwait(false);
-
+                    {
+                        var p = _pending; _pending = null;
+                        return new Route(RouteKind.ExecuteConfirmed, p.Sub, p.Task, null);
+                    }
                     case ConfirmationDetector.Decision.No:
                     {
-                        var declinedSub = _pending.Sub.Name;
-                        _pending = null;
-                        const string declined = "Alles klar, dann lasse ich das.";
-                        RecordTurn(userText, declined);
-                        Log.Info("BossAgent: Aufgabe nach Rueckfrage abgelehnt", new { sub = declinedSub });
-                        return new AgentReply(declined, null);
+                        var name = _pending.Sub.Name; _pending = null;
+                        Log.Info("BossAgent: Aufgabe nach Rueckfrage abgelehnt", new { sub = name });
+                        return new Route(RouteKind.Declined, null, null, "Alles klar, dann lasse ich das.");
                     }
-
-                    default: // Unclear -> Rueckfrage fallen lassen, Eingabe als NEUES Thema behandeln (kein Haengenbleiben)
+                    default: // Unclear -> Rueckfrage fallen lassen, Eingabe als NEUES Thema behandeln
                         Log.Info("BossAgent: Rueckfrage unbeantwortet -> als neues Thema behandelt",
                             new { sub = _pending.Sub.Name });
                         _pending = null;
@@ -135,7 +145,7 @@ namespace VoiceAgent.Core
                 }
             }
 
-            // ---- 2) Neue Aufgabe erkannt + zustaendiger Unteragent -> ZUERST zurueckfragen (NICHT ausfuehren). ----
+            // 2) Neue Aufgabe erkannt + zustaendiger Unteragent -> ZUERST zurueckfragen.
             if (intent == IntentKind.Task && _subAgents != null)
             {
                 var sub = _subAgents.Find(userText);
@@ -150,39 +160,142 @@ namespace VoiceAgent.Core
                     }
                     _pending = new PendingAction(sub, userText);
                     Probe.Decision("Aufgabe", "Rueckfrage gestellt (noch nicht ausgefuehrt)", new { sub = sub.Name });
-                    RecordTurn(userText, question);
                     Log.Info($"BossAgent: Rueckfrage zu Unteragent '{sub.Name}' gestellt");
-                    return new AgentReply(question, null);
+                    return new Route(RouteKind.AskBack, sub, userText, question);
                 }
             }
 
-            // ---- 3) Sonst: Hauptagent antwortet selbst. ----
-            return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
+            // 3) Sonst: Hauptagent antwortet selbst.
+            return new Route(RouteKind.MainAgent, null, userText, null);
         }
 
         /// <summary>
-        /// Fuehrt die zuvor zurueckgefragte Aufgabe aus, nachdem der Nutzer bestaetigt hat.
-        /// Faellt bei einem Fehler des Unteragenten sicher auf den Hauptagenten zurueck
-        /// (funktionserhaltend — nichts geht verloren).
+        /// Verarbeitet eine Eingabe und liefert die KOMPLETTE Antwort auf einmal (nicht gestreamt).
+        /// Gleiche Gate-Logik wie HandleStreaming — fuer Aufrufer/Tests, die den Volltext brauchen.
         /// </summary>
-        private async Task<AgentReply> ExecutePendingAsync(string userText, CancellationToken ct)
+        public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
         {
-            var pending = _pending!;
-            _pending = null;   // Rueckfrage ist beantwortet — egal wie es ausgeht
-            Log.Info($"BossAgent: Aufgabe bestaetigt -> delegiere an '{pending.Sub.Name}'");
+            var route = DecideRoute(userText, intent);
+            switch (route.Kind)
+            {
+                case RouteKind.ExecuteConfirmed:
+                    return await ExecuteConfirmedAsync(route.Sub!, route.Task!, userText, ct).ConfigureAwait(false);
+                case RouteKind.Declined:
+                case RouteKind.AskBack:
+                    RecordTurn(userText, route.Text!);
+                    return new AgentReply(route.Text!, null);
+                default:
+                    return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
+            }
+        }
+
+        /// <summary>
+        /// Wie HandleAsync, aber liefert die Antwort als STROM (fuers zeitechte Vorlesen). Die
+        /// Routing-Entscheidung (Rueckfrage/Delegation) ist synchron und steht sofort fest; nur die
+        /// Selbstantwort des Hauptagenten wird — wenn der Provider es kann — tokenweise gestreamt.
+        /// </summary>
+        public AgentStream HandleStreaming(string userText, IntentKind intent, CancellationToken ct = default)
+        {
+            var route = DecideRoute(userText, intent);
+            return route.Kind switch
+            {
+                RouteKind.ExecuteConfirmed =>
+                    new AgentStream(route.Sub!.Name, ExecuteConfirmedStream(route.Sub!, route.Task!, userText, ct)),
+                RouteKind.Declined or RouteKind.AskBack =>
+                    new AgentStream(null, SingleChunkRecorded(userText, route.Text!, ct)),
+                _ =>
+                    new AgentStream(null, MainAgentStream(userText, ct)),
+            };
+        }
+
+        /// <summary>Fuehrt die bestaetigte Aufgabe aus (komplette Antwort). Fehler-Fallback auf den Hauptagenten.</summary>
+        private async Task<AgentReply> ExecuteConfirmedAsync(ISubAgent sub, string task, string userText, CancellationToken ct)
+        {
+            Log.Info($"BossAgent: Aufgabe bestaetigt -> delegiere an '{sub.Name}'");
             try
             {
-                var subReply = await pending.Sub.HandleAsync(pending.Task, ct).ConfigureAwait(false);
+                var subReply = await sub.HandleAsync(task, ct).ConfigureAwait(false);
                 Probe.That(!string.IsNullOrWhiteSpace(subReply),
-                    "BossAgent: Unteragent lieferte leere Antwort nach Bestaetigung", new { sub = pending.Sub.Name });
-                RecordTurn(userText, subReply);   // Verlauf: Nutzer-"Ja" + Ergebnis
-                return new AgentReply(subReply, pending.Sub.Name);
+                    "BossAgent: Unteragent lieferte leere Antwort nach Bestaetigung", new { sub = sub.Name });
+                RecordTurn(userText, subReply);
+                return new AgentReply(subReply, sub.Name);
             }
             catch (Exception ex)
             {
-                Log.Error($"BossAgent: bestaetigter Unteragent '{pending.Sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
+                Log.Error($"BossAgent: bestaetigter Unteragent '{sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
                 return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
             }
+        }
+
+        // ---- Stream-Varianten (yield) ----
+
+        /// <summary>Gibt einen fertigen Text als EINEN Chunk aus und schreibt den Turn in den Verlauf.</summary>
+        private async IAsyncEnumerable<string> SingleChunkRecorded(string userText, string text,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return text;
+            RecordTurn(userText, text);
+            await Task.CompletedTask.ConfigureAwait(false);   // haelt die Methode async (kein CS1998)
+        }
+
+        /// <summary>Fuehrt die bestaetigte Aufgabe aus und gibt das Ergebnis als EINEN Chunk aus (Fehler-Fallback auf Hauptagent).</summary>
+        private async IAsyncEnumerable<string> ExecuteConfirmedStream(ISubAgent sub, string task, string userText,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            Log.Info($"BossAgent: Aufgabe bestaetigt -> delegiere an '{sub.Name}'");
+            string reply;
+            bool viaFallback = false;
+            try
+            {
+                reply = await sub.HandleAsync(task, ct).ConfigureAwait(false);
+                Probe.That(!string.IsNullOrWhiteSpace(reply),
+                    "BossAgent: Unteragent lieferte leere Antwort nach Bestaetigung", new { sub = sub.Name });
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"BossAgent: bestaetigter Unteragent '{sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
+                reply = await RespondAsync(userText, ct).ConfigureAwait(false);   // RespondAsync schreibt History selbst
+                viaFallback = true;
+            }
+            if (!viaFallback) RecordTurn(userText, reply);
+            yield return reply;
+        }
+
+        /// <summary>
+        /// Der Hauptagent antwortet selbst. Streamt tokenweise, wenn der Provider IStreamingLlmProvider
+        /// implementiert; sonst Fallback auf ChatAsync (ein Chunk). Schreibt den vollen Turn am Ende in
+        /// Verlauf + Gedaechtnis (der Iterator laeuft, waehrend der Consumer liest).
+        /// </summary>
+        private async IAsyncEnumerable<string> MainAgentStream(string userText,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            Probe.That(!string.IsNullOrWhiteSpace(userText), "BossAgent: leere Eingabe an den Hauptagenten (Stream)");
+            _session.History.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
+            var messages = BuildMessages();
+            var sb = new StringBuilder();
+
+            if (_provider is IStreamingLlmProvider streaming)
+            {
+                await foreach (var delta in streaming.StreamAsync(messages, ct).WithCancellation(ct).ConfigureAwait(false))
+                {
+                    if (string.IsNullOrEmpty(delta)) continue;
+                    sb.Append(delta);
+                    yield return delta;
+                }
+            }
+            else
+            {
+                var full = await _provider.ChatAsync(messages, ct).ConfigureAwait(false);
+                sb.Append(full);
+                yield return full;
+            }
+
+            var reply = sb.ToString();
+            Probe.That(!string.IsNullOrWhiteSpace(reply),
+                "BossAgent: LLM lieferte eine leere Antwort (Stream)", new { provider = _provider.Name });
+            _session.History.Add(new LlmMessage(LlmRole.Assistant, reply));
+            _memory?.RecordTurn(userText ?? string.Empty, reply);
+            Log.Info($"BossAgent: Stream-Antwort erzeugt ({reply.Length} Zeichen) via {_provider.Name}");
         }
 
         /// <summary>Schreibt einen Nutzer/Antwort-Turn in Verlauf UND Langzeitgedaechtnis (eine Stelle, konsistent).</summary>

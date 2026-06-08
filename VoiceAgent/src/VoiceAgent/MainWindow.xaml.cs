@@ -861,15 +861,48 @@ namespace VoiceAgent
             }
             SetStatus("Denke nach …");
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var result = await _agent.HandleAsync(text, intent);   // delegiert ggf. an einen Unteragenten
+
+            // Routing-Entscheidung ist synchron; die Antwort kommt als STROM (zeitechtes Vorlesen).
+            var response = _agent.HandleStreaming(text, intent);   // delegiert ggf. an einen Unteragenten
+            if (response.DelegatedTo != null) _turn?.Delegated(response.DelegatedTo);
+
+            // Antwort satzweise segmentieren, parallel synthetisieren + sequenziell vorlesen und
+            // den vollen Text fuer UI/Verlauf sammeln. Der erste Ton kommt bereits nach dem ersten Satz.
+            var sb = new System.Text.StringBuilder();
+            bool startedSpeaking = false;
+            var sentences = SentenceSegmenter.Segment(response.Text);
+            var speaker = new StreamingSpeaker(_tts, _player);
+
+            bool spoke = false;
+            try
+            {
+                spoke = await speaker.SpeakStreamAsync(
+                    sentences, _settings.TtsLanguageCode, _settings.TtsVoiceName,
+                    onSentence: s =>
+                    {
+                        lock (sb) { if (sb.Length > 0) sb.Append(' '); sb.Append(s); }
+                        if (!startedSpeaking)
+                        {
+                            startedSpeaking = true;
+                            Dispatcher.InvokeAsync(() => SetStatus("Spreche …"));
+                        }
+                    });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("MainWindow: Antwort-Stream fehlgeschlagen", ex);
+            }
             sw.Stop();
-            var reply = result.Text;
-            if (result.DelegatedTo != null) _turn?.Delegated(result.DelegatedTo);
+
+            string reply;
+            lock (sb) { reply = sb.ToString().Trim(); }
+            if (string.IsNullOrEmpty(reply))
+                Append("Fehler", "Es gab ein Problem bei der Antwort — siehe Log.");
+            else
+                Append("Agent", reply);
+
             if (!exactIntent) _turn?.Understood(reply);                                  // Fallback: heuristisch aus der Antwort
             _turn?.Responded(reply, _agent.ProviderName, sw.Elapsed.TotalMilliseconds);  // welches Gehirn, wie schnell, Rueckfrage?
-            Append("Agent", reply);
-            SetStatus("Spreche …");
-            bool spoke = await SpeakAsync(reply);
             _turn?.Spoke(_settings.TtsVoiceName, spoke);
 
             // Nach dem Sprechen: Session sichern, Titel ggf. setzen, bei Bedarf im Hintergrund komprimieren.
