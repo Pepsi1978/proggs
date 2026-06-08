@@ -76,6 +76,11 @@ namespace VoiceAgent.Services
         // oder fehlender Auswahl auf das bisherige Stichwort-Matching zurueck. Nutzt das IntentModel.
         public bool SubAgentRouting { get; set; } = true;
 
+        // Computer Use: ob/wie der Agent den Rechner steuern darf (3 Stufen nach Hermes-Vorbild).
+        // "off"  = aus (Default, sicher), "safe" = gefaehrliche Befehle erst nach gesprochenem "Ja",
+        // "full" = Vollzugriff (alles ausser der Hardline-Blocklist). Wird zu ComputerUseMode geparst.
+        public string ComputerUseMode { get; set; } = "off";
+
         // ----- Wake-Word ("Okay Computer") -----
         // Wenn an, hoert der Agent im Ruhezustand nur auf das Weckwort und verarbeitet erst
         // danach (fuer WakeTimeoutMs) normal. Wenn aus, wird wie bisher JEDE Aussage verarbeitet.
