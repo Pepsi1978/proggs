@@ -59,6 +59,8 @@ namespace VoiceAgent
         private WakeWordController? _wake;            // Weckwort-Zustandsautomat (null = Feature aus / Init fehlgeschlagen)
         private readonly Chime _wakeChime = new("wakeword.wav");  // Erkennungston beim Wecken
 
+        private TrayIcon? _tray;                       // Infobereich-Symbol (nur sichtbar, wenn ins Tray minimiert)
+
         public MainWindow()
         {
             InitializeComponent();
@@ -66,7 +68,76 @@ namespace VoiceAgent
             ContentRendered += OnContentRendered;       // Re-Apply nach 1. Rendern (Win11-Taskleisten-Cache, #11308)
             Loaded += OnLoaded;
             Closed += OnClosed;
+            StateChanged += OnStateChanged;             // Minimieren -> ggf. ins Tray verstecken
             ThemeManager.Changed += UpdateThemeButton;  // Topbar-Symbol bei jedem Theme-Wechsel nachziehen
+        }
+
+        // ---------- Minimieren ins Tray (Infobereich-Symbol) ----------
+
+        /// <summary>
+        /// Reagiert auf das Minimieren des Fensters. Ist „Beim Minimieren ins Tray" aktiv, wird das
+        /// Fenster aus der Taskleiste genommen (<see cref="Window.Hide"/>) und nur das Tray-Symbol
+        /// gezeigt. Sonst bleibt das klassische Verhalten (Minimieren in die Taskleiste).
+        ///
+        /// Live-Logik-Sonde (Intent-Verifikation, observability-live-logic-probes): protokolliert
+        /// „erwartet vs. tatsaechlich", damit live pruefbar ist, ob die gewaehlte Einstellung greift.
+        /// </summary>
+        private void OnStateChanged(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (WindowState != WindowState.Minimized) return;
+
+                bool toTray = _settings.MinimizeToTray;
+                Log.Info("CHECKPOINT Fenster minimiert", new
+                {
+                    step = "Minimieren",
+                    intent = "Tray-Symbol statt Taskleiste, wenn so eingestellt",
+                    expected = toTray ? "ins Tray verstecken" : "in der Taskleiste lassen",
+                    actual = toTray ? "ins Tray verstecken" : "in der Taskleiste lassen",
+                    minimizeToTray = toTray,
+                    ok = true
+                });
+
+                if (!toTray) return;   // klassisches Minimieren in die Taskleiste
+
+                EnsureTray();
+                _tray?.Show(_trayHintShown ? null : "Läuft weiter im Hintergrund — Doppelklick zum Öffnen.");
+                _trayHintShown = true;
+                Hide();                // aus der Taskleiste nehmen; Fenster bleibt offen -> App laeuft weiter
+            }
+            catch (Exception ex) { Log.Error("Minimieren ins Tray fehlgeschlagen (App laeuft weiter)", ex); }
+        }
+
+        private bool _trayHintShown;   // den Hinweis-Ballon nur beim ersten Mal zeigen
+
+        /// <summary>Legt das Tray-Symbol bei Bedarf an und verdrahtet Oeffnen/Beenden (idempotent).</summary>
+        private void EnsureTray()
+        {
+            if (_tray != null) return;
+            _tray = new TrayIcon();
+            _tray.OpenRequested += RestoreFromTray;
+            _tray.ExitRequested += ExitFromTray;
+        }
+
+        /// <summary>Holt das Fenster aus dem Tray zurueck (Doppelklick / „Oeffnen") und blendet das Symbol aus.</summary>
+        private void RestoreFromTray()
+        {
+            try
+            {
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+                Topmost = true; Topmost = false;   // kurz nach vorne holen, ohne dauerhaft Topmost zu sein
+                _tray?.Hide();
+            }
+            catch (Exception ex) { Log.Error("Fenster aus Tray wiederherstellen fehlgeschlagen", ex); }
+        }
+
+        /// <summary>„Beenden" aus dem Tray-Menue: App wirklich schliessen (Fenster ist evtl. versteckt).</summary>
+        private void ExitFromTray()
+        {
+            try { Show(); Close(); } catch (Exception ex) { Log.Error("Beenden aus Tray fehlgeschlagen", ex); }
         }
 
         // ---------- Taskleisten-Icon (ICON_BIG zuverlaessig setzen) ----------
@@ -327,7 +398,7 @@ namespace VoiceAgent
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); }
+            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); _tray?.Dispose(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
             ThemeManager.Changed -= UpdateThemeButton;   // Event-Abo loesen (Leak-Vermeidung, Almanach §9.1)
             // Selbst gesetzte Taskleisten-Icons freigeben (GDI-Handle-Limit, Almanach §9.4).

@@ -53,6 +53,15 @@
                            Style="{StaticResource Label}"/>
                 <ComboBox x:Name="ThemeBox" SelectionChanged="ThemeBox_SelectionChanged"/>
 
+                <!-- 0b. Fenster-Verhalten beim Minimieren -->
+                <TextBlock Text="Beim Minimieren" Style="{StaticResource Section}"/>
+                <TextBlock Text="Was passiert, wenn du das Fenster klein machst (minimierst)."
+                           Style="{StaticResource Label}"/>
+                <CheckBox x:Name="MinimizeToTrayBox" Margin="0,4,0,2"
+                          Content="Nur als Symbol im Infobereich (Tray) zeigen — nicht in der Taskleiste"/>
+                <TextBlock Text="Aus: klassisch in die Taskleiste. Ein: verschwindet aus der Taskleiste, Doppelklick aufs Tray-Symbol holt es zurück."
+                           Style="{StaticResource Label}" TextWrapping="Wrap"/>
+
                 <!-- 1. System-Prompt -->
                 <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}"/>
                 <TextBlock Text="Wie sich dein Assistent verhaelt. Leer lassen = eingebauter Standard."

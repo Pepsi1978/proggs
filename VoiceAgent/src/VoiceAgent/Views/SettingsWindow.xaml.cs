@@ -43,6 +43,8 @@ namespace VoiceAgent.Views
                     if ((string)it.Tag! == curTheme) { ThemeBox.SelectedItem = it; break; }
                 if (ThemeBox.SelectedItem == null) ThemeBox.SelectedIndex = 0;
 
+                MinimizeToTrayBox.IsChecked = _settings.MinimizeToTray;
+
                 PromptBox.Text = string.IsNullOrWhiteSpace(_settings.SystemPrompt)
                     ? BossAgentPrompt.Default
                     : _settings.SystemPrompt;
@@ -143,6 +145,7 @@ namespace VoiceAgent.Views
                 _settings.UserColor = UserColorBox.SelectedValue as string ?? "#4FC3F7";
                 _settings.AgentColor = AgentColorBox.SelectedValue as string ?? "#F97316";
                 _settings.Theme = (ThemeBox.SelectedItem as ComboBoxItem)?.Tag as string ?? "light";
+                _settings.MinimizeToTray = MinimizeToTrayBox.IsChecked == true;
 
                 Config.Save(_settings);
                 Config.SaveApiKey("groq", GroqKeyBox.Text?.Trim() ?? "");

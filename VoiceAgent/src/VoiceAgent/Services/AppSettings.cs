@@ -73,6 +73,12 @@ namespace VoiceAgent.Services
         public string UserColor { get; set; } = "#4FC3F7";   // was Frank sagt (Cyan)
         public string AgentColor { get; set; } = "#F97316";  // was der Agent antwortet (Orange)
 
+        // ----- Fenster-Verhalten -----
+        // true  = beim Minimieren NUR ins Infobereich-Symbol (Tray) verstecken (aus der Taskleiste),
+        //         per Doppelklick aufs Tray-Symbol oder Kontextmenue wieder oeffnen.
+        // false = normales Minimieren in die Taskleiste (klassisches Verhalten).
+        public bool MinimizeToTray { get; set; } = true;
+
         // ----- Erscheinungsbild (Hell/Dunkel-Profil) -----
         // "light" = warmes helles Profil (Standard, bisheriges Verhalten),
         // "dark"  = dunkles Profil, "system" = folgt dem Windows-Theme.
