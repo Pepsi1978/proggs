@@ -478,7 +478,8 @@ namespace VoiceAgent
         private void UpdateMicLabel()
         {
             if (_settings.WakeWordEnabled)
-                MicToggle.Content = (_wake?.State == WakeState.Awake) ? "🎙 Wach — hoert zu" : "🎙 Ruht — sag „Okay Computer“";
+                // Zeigt das TATSAECHLICH eingestellte Weckwort (nicht hartcodiert), Komma statt Gedankenstrich.
+                MicToggle.Content = (_wake?.State == WakeState.Awake) ? "🎙 Wach, hört zu" : $"🎙 Ruht, sag „{_settings.WakeWord}“";
             else
                 MicToggle.Content = _settings.MicEnabled ? "🎙 Mikrofon: an" : "🎙 Mikrofon: aus";
         }
