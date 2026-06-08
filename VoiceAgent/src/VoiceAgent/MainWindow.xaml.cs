@@ -43,6 +43,12 @@ namespace VoiceAgent
         private readonly Queue<Reminder> _reminderQueue = new();  // weitere faellige, noch nicht angesagt
         private DispatcherTimer? _reminderPingTimer;              // wiederholt den Sound jede Minute bis Reaktion
 
+        // ----- Generischer proaktiver Funkspruch-Kanal (nicht nur Erinnerungen) -----
+        private readonly ProactiveChannel _proactive = new();     // beliebige Quellen koennen proaktiv melden
+        private ProactiveMessage? _pendingProactive;              // wartet auf Franks Reaktion
+        private DispatcherTimer? _proactivePingTimer;             // wiederholt den Funkspruch-Sound bis Reaktion
+        private DispatcherTimer? _followupTimer;                  // erster Producer: Nachfass bei offener Rueckfrage
+
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
         private CancellationTokenSource? _safetyCts;  // Sicherheitsnetz-Timer nach "WEITER"
@@ -469,7 +475,7 @@ namespace VoiceAgent
 
         private void OnClosed(object? sender, EventArgs e)
         {
-            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _sleepChime.Stop(); _listener?.Dispose(); _player.Stop(); _tray?.Dispose(); }
+            try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); _proactivePingTimer?.Stop(); _followupTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _sleepChime.Stop(); _listener?.Dispose(); _player.Stop(); _tray?.Dispose(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
             ThemeManager.Changed -= UpdateThemeButton;   // Event-Abo loesen (Leak-Vermeidung, Almanach §9.1)
             // Selbst gesetzte Taskleisten-Icons freigeben (GDI-Handle-Limit, Almanach §9.4).
@@ -511,7 +517,7 @@ namespace VoiceAgent
         private void StartClock()
         {
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); _wake?.Tick(); };
+            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); CheckProactive(); _wake?.Tick(); };
             _clockTimer.Start();
             UpdateClock();
         }
@@ -611,6 +617,87 @@ namespace VoiceAgent
                 _busy = false;
                 ResumeMic();
                 TryStartReminderPing();   // falls weitere Erinnerungen warten
+            }
+        }
+
+        // ---------- Generischer proaktiver Funkspruch (Manifest: Agent meldet sich von selbst) ----------
+
+        /// <summary>
+        /// Holt — jede Sekunde — die naechste proaktive Meldung aus dem Kanal und startet den
+        /// Funkspruch (Sound, dann warten auf Franks Reaktion). Erinnerungen haben Vorrang; wird
+        /// nur aktiv, wenn gerade nichts laeuft (kein Reminder/keine Meldung pending, nicht busy).
+        /// </summary>
+        private void CheckProactive()
+        {
+            try
+            {
+                if (_pendingProactive != null || _pendingReminder != null || _busy || _reminderQueue.Count > 0) return;
+                if (!_proactive.TryTake(out var msg)) return;
+                _pendingProactive = msg;
+                Log.Info("Proaktive Meldung faellig — Funkspruch startet, warte auf Reaktion", new { msg.Reason, msg.Text });
+                Append("System", "(Der Agent möchte dir etwas sagen, sag kurz Bescheid.)");
+                StartProactivePing();
+            }
+            catch (Exception ex) { Log.Error("CheckProactive fehlgeschlagen", ex); }
+        }
+
+        private void StartProactivePing()
+        {
+            _chime.Play();   // Funkspruch-Sound sofort
+            _proactivePingTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _proactivePingTimer.Tick -= OnProactivePing;
+            _proactivePingTimer.Tick += OnProactivePing;
+            _proactivePingTimer.Start();
+        }
+
+        private void OnProactivePing(object? sender, EventArgs e)
+        {
+            if (_pendingProactive == null) { _proactivePingTimer?.Stop(); return; }
+            _chime.Play();   // alle 60 s wiederholen, bis Frank reagiert
+        }
+
+        /// <summary>Frank hat auf den Funkspruch reagiert — jetzt die Meldung ansagen.</summary>
+        private async Task AnnounceProactiveAsync(ProactiveMessage m)
+        {
+            _busy = true;
+            PauseMic();
+            try
+            {
+                Append("Agent", m.Text);
+                Log.Info("Proaktive Meldung — Ansage", new { m.Reason, m.Text });
+                await SpeakAsync(m.Text);
+            }
+            catch (Exception ex) { Log.Error("Proaktive Ansage fehlgeschlagen", ex); }
+            finally
+            {
+                _busy = false;
+                ResumeMic();
+                CheckProactive();   // falls weitere Meldungen warten
+            }
+        }
+
+        /// <summary>
+        /// Erster echter Producer des Funkspruch-Kanals: Hat der Agent eine Verstaendnis-Rueckfrage
+        /// gestellt und Frank reagiert ~45 s nicht, meldet sich der Agent EINMAL proaktiv und fragt
+        /// nach. Verbindet die Rueckfrage-Bremse mit dem proaktiven Kanal.
+        /// </summary>
+        private void ArmFollowupIfPending()
+        {
+            _followupTimer?.Stop();
+            if (_agent?.HasPendingConfirmation != true) return;
+            _followupTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
+            _followupTimer.Tick -= OnFollowupTick;
+            _followupTimer.Tick += OnFollowupTick;
+            _followupTimer.Start();
+        }
+
+        private void OnFollowupTick(object? sender, EventArgs e)
+        {
+            _followupTimer?.Stop();
+            if (_agent?.HasPendingConfirmation == true && !_busy
+                && _pendingProactive == null && _pendingReminder == null)
+            {
+                _proactive.Post("Wegen vorhin, soll ich das noch erledigen, oder sollen wir es lassen?", "followup-rueckfrage");
             }
         }
 
@@ -716,6 +803,14 @@ namespace VoiceAgent
                 {
                     var pend = _pendingReminder; _pendingReminder = null; StopPinging();
                     await AnnounceReminderAsync(pend);
+                    return;
+                }
+
+                // Wartet eine proaktive Meldung auf Reaktion? Dann ist DIESE Aeusserung Franks Reaktion.
+                if (_pendingProactive != null)
+                {
+                    var p = _pendingProactive; _pendingProactive = null; _proactivePingTimer?.Stop();
+                    await AnnounceProactiveAsync(p);
                     return;
                 }
 
@@ -843,6 +938,16 @@ namespace VoiceAgent
                 return;
             }
 
+            // Wartet eine proaktive Meldung? Dann loest diese Eingabe die Ansage aus.
+            if (_pendingProactive != null)
+            {
+                var p = _pendingProactive; _pendingProactive = null; _proactivePingTimer?.Stop();
+                InputBox.Clear();
+                Append("Du", text);
+                await AnnounceProactiveAsync(p);
+                return;
+            }
+
             CancelSafetyTimer();
             _pending = string.Empty;
             InputBox.Clear();
@@ -942,6 +1047,9 @@ namespace VoiceAgent
             _sessions?.SaveActive();
             RefreshContextMeter();
             RefreshSessionList();
+
+            // Hat der Agent eine Rueckfrage gestellt? Dann nach ~45 s Stille einmal proaktiv nachfassen.
+            ArmFollowupIfPending();
 
             SetStatus("Bereit");
         }
