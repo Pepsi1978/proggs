@@ -63,6 +63,7 @@ namespace VoiceAgent
         {
             InitializeComponent();
             SourceInitialized += OnSourceInitialized;   // Taskleisten-Icon setzen, sobald das HWND existiert
+            ContentRendered += OnContentRendered;       // Re-Apply nach 1. Rendern (Win11-Taskleisten-Cache, #11308)
             Loaded += OnLoaded;
             Closed += OnClosed;
             ThemeManager.Changed += UpdateThemeButton;  // Topbar-Symbol bei jedem Theme-Wechsel nachziehen
@@ -87,34 +88,59 @@ namespace VoiceAgent
         private IntPtr _taskbarIconBig;     // selbst gesetzte Icons — am Ende per DestroyIcon freigeben (GDI-Hygiene, Almanach §9.4)
         private IntPtr _taskbarIconSmall;
 
-        /// <summary>
-        /// Setzt das Taskleisten-Icon explizit, sobald das HWND existiert.
-        ///
-        /// Root Cause (bug-almanac dotnet-csharp, neu 2026-06-08): WPFs <c>Window.Icon</c> belegt den
-        /// ICON_SMALL-Slot (Titelleiste + Fenster-Vorschau) zuverlaessig, aber NICHT immer den
-        /// ICON_BIG-Slot, den die Taskleiste fuer den laufenden Fenster-Button nutzt. Folge: die
-        /// Taskleiste zeigt das generische Windows-Default-Symbol, obwohl Vorschau und das angepinnte
-        /// Symbol (= eingebettetes Exe-Icon) korrekt sind. Fix: beide Icons direkt aus der eingebetteten
-        /// Exe-Icon-Ressource (<c>&lt;ApplicationIcon&gt;</c>) via <see cref="ExtractIconEx"/> laden und per
-        /// WM_SETICON setzen — das ist genau das Icon, das angepinnt bereits stimmt.
-        /// <c>Environment.ProcessPath</c> ist single-file-sicher (Almanach §1.1).
-        /// </summary>
         private void OnSourceInitialized(object? sender, EventArgs e)
         {
             // Titelleiste passend zum aktiven Theme einfaerben (Almanach §2.7 — erst bei vorhandenem
             // HWND). Intern abgesichert, daher zuerst und unabhaengig vom Icon-Block.
             ThemeManager.ApplyTitleBar(this);
+            ApplyTaskbarIcon("SourceInitialized");
+        }
+
+        /// <summary>
+        /// Re-Apply des Taskleisten-Icons NACH dem ersten Rendern — erst dann existiert der
+        /// Taskleisten-Button. Auf Windows 11 wird die Taskleiste frueher initialisiert und cached ihr
+        /// Default-Icon, wenn der Start laenger beschaeftigt ist (OnLoaded laedt Settings/Memory/
+        /// Subagenten); das in SourceInitialized gesetzte Icon wird dann von der Taskleiste ueberschrieben
+        /// (dotnet/wpf #11308, #11222). Darum hier erneut setzen, plus ein Idle-Re-Apply als
+        /// Sicherheitsnetz, falls der UI-Thread beim Rendern noch belegt war.
+        /// </summary>
+        private void OnContentRendered(object? sender, EventArgs e)
+        {
+            ApplyTaskbarIcon("ContentRendered");
+            Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,
+                new Action(() => ApplyTaskbarIcon("ApplicationIdle")));
+        }
+
+        /// <summary>
+        /// Setzt das Taskleisten-Icon (ICON_BIG + ICON_SMALL) explizit per WM_SETICON aus dem
+        /// eingebetteten Exe-Icon (<c>&lt;ApplicationIcon&gt;</c>, via <see cref="ExtractIconEx"/> —
+        /// genau das Icon, das angepinnt bereits stimmt). <c>Environment.ProcessPath</c> ist
+        /// single-file-sicher (Almanach §1.1).
+        ///
+        /// Root Cause (bug-almanac dotnet-csharp §6.6, 2026-06-08): WPFs <c>Window.Icon</c> belegt nur
+        /// den ICON_SMALL-Slot (Titel/Vorschau) zuverlaessig; den ICON_BIG-Slot der Taskleiste nicht.
+        /// Zusaetzlich cached die Win11-Taskleiste ihr Default-Icon, wenn das Setzen zu frueh passiert —
+        /// darum wird diese Methode mehrfach aufgerufen (SourceInitialized + ContentRendered + Idle).
+        /// Idempotent: vorher gesetzte HICONs werden vor dem Neusetzen per DestroyIcon freigegeben (§9.4).
+        /// </summary>
+        private void ApplyTaskbarIcon(string source)
+        {
             try
             {
                 string? exe = Environment.ProcessPath;
                 Probe.That(!string.IsNullOrEmpty(exe),
-                    "Taskleisten-Icon: Environment.ProcessPath leer", new { exe });
+                    "Taskleisten-Icon: Environment.ProcessPath leer", new { exe, source });
                 if (string.IsNullOrEmpty(exe)) return;
 
                 IntPtr hwnd = new WindowInteropHelper(this).Handle;
                 if (hwnd == IntPtr.Zero) return;
 
                 int count = ExtractIconEx(exe, 0, out IntPtr hBig, out IntPtr hSmall, 1);
+
+                // Vorher selbst gesetzte HICONs freigeben (GDI-Hygiene bei wiederholtem Apply, §9.4).
+                if (_taskbarIconBig != IntPtr.Zero && _taskbarIconBig != hBig) DestroyIcon(_taskbarIconBig);
+                if (_taskbarIconSmall != IntPtr.Zero && _taskbarIconSmall != hSmall) DestroyIcon(_taskbarIconSmall);
+
                 if (hBig != IntPtr.Zero)
                 {
                     SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, hBig);
@@ -132,6 +158,7 @@ namespace VoiceAgent
                     step = "Taskleisten-Icon setzen",
                     intent = "App-Symbol in der Taskleiste sichtbar (nicht generisch)",
                     expected = "grosses Icon (ICON_BIG) gesetzt",
+                    source,
                     big = hBig != IntPtr.Zero,
                     small = hSmall != IntPtr.Zero,
                     ok = hBig != IntPtr.Zero,
@@ -140,12 +167,12 @@ namespace VoiceAgent
                 });
                 if (hBig == IntPtr.Zero)
                     Log.Error("Taskleisten-Icon: ExtractIconEx lieferte kein grosses Icon — Taskleiste bleibt generisch",
-                        null, new { exe, extractedGroups = count });
+                        null, new { exe, source, extractedGroups = count });
             }
             catch (Exception ex)
             {
                 // Funktionserhaltend: schlaegt das explizite Setzen fehl, bleibt das WPF-Window.Icon aktiv (kein Crash).
-                Log.Error("Taskleisten-Icon konnte nicht gesetzt werden (Window.Icon bleibt aktiv)", ex);
+                Log.Error("Taskleisten-Icon konnte nicht gesetzt werden (Window.Icon bleibt aktiv)", ex, new { source });
             }
         }
 

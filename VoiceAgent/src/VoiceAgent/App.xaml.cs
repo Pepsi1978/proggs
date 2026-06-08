@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -16,6 +17,10 @@ namespace VoiceAgent;
 /// </summary>
 public partial class App : Application
 {
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    private static extern void SetCurrentProcessExplicitAppUserModelID(
+        [MarshalAs(UnmanagedType.LPWStr)] string appID);
+
     protected override void OnStartup(StartupEventArgs e)
     {
         // Handler ZUERST verkabeln, damit auch fruehe Startfehler erfasst werden.
@@ -24,6 +29,13 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         Log.Info("App-Start: globaler Fehler-Faenger verkabelt");
+
+        // Stabile AppUserModelID VOR dem ersten Fenster setzen: gibt der App eine eindeutige
+        // Taskleisten-Identitaet. Ohne sie leitet Windows 11 eine implizite ID ab und zeigt fuer
+        // den laufenden Fenster-Button teils ein generisches Default-Icon (zweite Ursache neben dem
+        // Icon-Timing, bug-almanac dotnet-csharp §6.6). Defensiv: bei Fehler laeuft die App weiter.
+        try { SetCurrentProcessExplicitAppUserModelID("Frank.VoiceAgent"); }
+        catch (Exception ex) { Log.Error("AppUserModelID konnte nicht gesetzt werden", ex); }
 
         // Theme VOR dem ersten Fenster anwenden, damit die DynamicResource-Farben von Anfang
         // an existieren (kein Aufblitzen im falschen Profil). Defensiv: bei Fehler bleibt die
