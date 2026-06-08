@@ -367,6 +367,20 @@ richtig macht*. Wechselseitig gepflegt:
 **FIX (funktionserhaltend):** Im `SourceInitialized` (HWND existiert) beide Icons explizit via `WM_SETICON` setzen. Robust + ohne Zusatzpaket: `ExtractIconEx(Environment.ProcessPath, 0, out hBig, out hSmall, 1)` laedt genau das eingebettete Exe-Icon (das angepinnt bereits stimmt). `Environment.ProcessPath` ist single-file-sicher (§1.1). `Window.Icon` im XAML als Fallback/Design-Time belassen. Selbst gesetzte HICONs am Ende per `DestroyIcon` freigeben (§9.4). NICHT mit AppUserModelID/Grouping verwechseln: ein AUMID-Mismatch erzeugt einen SEPARATEN Button mit dem (korrekten) Window-Icon — nicht das generische Symbol.
 **Quelle:** Win32 WM_SETICON/ExtractIconEx (learn.microsoft.com) + Frank-Vorfall 2026-06-08 (VoiceAgent #46616).
 
+### 6.7 `UseWindowsForms=true` + `UseWPF=true` + ImplicitUsings → `Color`/`MessageBox`/`Application` mehrdeutig (CS0104)  ⭐ WICHTIG
+**Symptom:** Sobald man fuer ein Tray-Icon (`System.Windows.Forms.NotifyIcon`) `<UseWindowsForms>true</>` zu einem WPF-Projekt mit `<ImplicitUsings>enable</>` hinzufuegt, brechen ploetzlich bestehende WPF-Dateien mit CS0104: „`Color` ist eine mehrdeutige Referenz zwischen `System.Windows.Media.Color` und `System.Drawing.Color`" (gleiches fuer `MessageBox`, `Application`, `Point`, `Size`).
+**Ursache:** Das Windows-Desktop-SDK fuegt bei `UseWindowsForms=true` + ImplicitUsings die GLOBALEN usings `System.Drawing` UND `System.Windows.Forms` hinzu. Die kollidieren mit den WPF-Namespaces, die die bestehenden Dateien per `using System.Windows;`/`System.Windows.Media;` ziehen. `UseWPF` fuegt selbst KEINE impliziten usings hinzu — daher fiel es vorher nicht auf.
+**Versionen:** .NET 6–10, WPF+WinForms im selben Projekt mit ImplicitUsings — per Design.
+**FIX (funktionserhaltend):** Die zwei globalen usings im csproj entfernen und nur lokal (file-scoped) im Tray-Code ziehen:
+```xml
+<ItemGroup>
+  <Using Remove="System.Drawing" />
+  <Using Remove="System.Windows.Forms" />
+</ItemGroup>
+```
+Alternativ einzelne Stellen voll qualifizieren (`System.Windows.MessageBox.Show`) — aber `<Using Remove>` ist sauberer (eine Stelle, alle WPF-Dateien bleiben unveraendert). NotifyIcon bleibt voll nutzbar (lokales `using System.Windows.Forms;` in der Tray-Datei). WinForms-NotifyIcon ist dem eigenen `Shell_NotifyIcon`-Nachbau vorzuziehen: es re-registriert nach Explorer-Neustart selbst (§6.1) und liefert ein funktionierendes Tray-Kontextmenue (§6.3). Begleit-Warnung `WFO0003` (High-DPI-Manifest) ist bei reiner WPF-App mit nur Tray-Icon irrelevant (Manifest fuer WPF `PerMonitorV2` behalten, §3.1).
+**Quelle:** eigener Vorfall 2026-06-08 (VoiceAgent #46622: Minimieren-ins-Tray) · https://learn.microsoft.com/en-us/dotnet/core/project-sdk/overview#implicit-using-directives
+
 ---
 
 ## 7. async/await, Threading, Dispatcher
