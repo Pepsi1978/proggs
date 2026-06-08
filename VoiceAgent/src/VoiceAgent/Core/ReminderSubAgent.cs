@@ -8,10 +8,11 @@ using VoiceAgent.Diagnostics;
 namespace VoiceAgent.Core
 {
     /// <summary>
-    /// Unteragent fuer Erinnerungen: erkennt "erinnere mich um HH:MM / in N Minuten an X",
-    /// parst Zeitpunkt + Text und legt eine Erinnerung an. Zur faelligen Zeit meldet sich der
-    /// Agent dann PROAKTIV (Enterprise-Sound + Ansage) — das macht das MainWindow ueber den
-    /// ReminderService. Reines In-App-Verhalten, KEIN Computer Use.
+    /// Unteragent fuer Erinnerungen. Versteht konkrete Zeiten ("um HH:MM", "in N Minuten"),
+    /// grobe Tageszeiten ("vormittag/mittag/nachmittag/abend", optional mit "morgen") UND
+    /// Erinnerungen OHNE Uhrzeit ("beim naechsten Start" bzw. gar keine Zeit) — die kommen dann
+    /// beim naechsten vollstaendigen App-Start (Sound + Ansage, ueber MainWindow/ReminderService).
+    /// Der Agent besteht NICHT mehr auf einer exakten Uhrzeit. Reines In-App-Verhalten, KEIN Computer Use.
     /// </summary>
     public sealed class ReminderSubAgent : ISubAgent
     {
@@ -19,7 +20,7 @@ namespace VoiceAgent.Core
         public ReminderSubAgent(ReminderService service) => _service = service;
 
         public string Name => "Erinnerung";
-        public string Description => "Merkt sich zeitgesteuerte Erinnerungen und meldet sich proaktiv, wenn sie faellig sind.";
+        public string Description => "Merkt sich Erinnerungen (mit Uhrzeit, grober Tageszeit oder beim naechsten Start) und meldet sich proaktiv.";
 
         private static readonly string[] Triggers =
             { "erinner", "wecke mich", "wecker", "sag mir bescheid", "sag bescheid" };
@@ -33,41 +34,89 @@ namespace VoiceAgent.Core
             return false;
         }
 
-        /// <summary>Spezifische Rueckfrage: nennt Zeitpunkt und Inhalt, falls erkennbar.</summary>
+        /// <summary>Wie eine Erinnerung terminiert ist.</summary>
+        public enum WhenKind { AtTime, NextStart }
+
+        /// <summary>Geplante Terminierung + bereinigter Erinnerungstext (an EINER Stelle entschieden,
+        /// damit Rueckfrage und Ausfuehrung garantiert konsistent sind).</summary>
+        public readonly record struct Plan(WhenKind When, DateTimeOffset DueUtc, string Text);
+
+        /// <summary>
+        /// Entscheidet, WANN erinnert wird: konkrete Zeit/Tageszeit -> AtTime; "beim Start" ODER
+        /// GAR KEINE Zeit erkannt -> NextStart (Default — statt auf einer Uhrzeit zu bestehen).
+        /// </summary>
+        public static Plan BuildPlan(string task, DateTimeOffset now)
+        {
+            var text = ExtractReminderText(task);
+            var due = ParseDueTime(task, now);
+            if (due != null) return new Plan(WhenKind.AtTime, due.Value, text);
+            // Keine Zeit erkannt (auch "beim Start"): beim naechsten vollstaendigen App-Start melden.
+            return new Plan(WhenKind.NextStart, default, text);
+        }
+
+        /// <summary>Spezifische Rueckfrage: nennt Zeitpunkt/Tageszeit bzw. "beim naechsten Start".</summary>
         public string ConfirmationQuestion(string task)
         {
-            var due = ParseDueTime(task, DateTimeOffset.Now);
-            var text = ExtractReminderText(task);
-            if (due == null)
-                return "Wann soll ich dich erinnern? Sag zum Beispiel: in zehn Minuten, oder um 22 Uhr.";
-
-            var when = due.Value.ToString("HH:mm", new CultureInfo("de-DE"));
-            return string.IsNullOrWhiteSpace(text)
+            var plan = BuildPlan(task, DateTimeOffset.Now);
+            if (plan.When == WhenKind.NextStart)
+            {
+                var baseQ = string.IsNullOrWhiteSpace(plan.Text)
+                    ? "Soll ich dich beim nächsten Programmstart erinnern?"
+                    : $"Soll ich dich beim nächsten Programmstart daran erinnern: {plan.Text}?";
+                // Hat Frank "beim Start" ausdruecklich gesagt, reicht das. Sonst (gar keine Zeit
+                // genannt) zusaetzlich die Alternativen anbieten, statt auf einer Uhrzeit zu bestehen.
+                return IsNextStartRequest(task)
+                    ? baseQ
+                    : baseQ + " Oder sag eine Zeit, zum Beispiel: morgen vormittag, heute abend, oder um neun Uhr.";
+            }
+            var when = plan.DueUtc.ToString("HH:mm", new CultureInfo("de-DE"));
+            return string.IsNullOrWhiteSpace(plan.Text)
                 ? $"Soll ich dich um {when} Uhr erinnern?"
-                : $"Soll ich dich um {when} Uhr daran erinnern: {text}?";
+                : $"Soll ich dich um {when} Uhr daran erinnern: {plan.Text}?";
         }
 
         public Task<string> HandleAsync(string task, CancellationToken ct = default)
         {
-            var due = ParseDueTime(task, DateTimeOffset.Now);
-            if (due == null)
+            var plan = BuildPlan(task, DateTimeOffset.Now);
+            Log.Info("Reminder geplant", new
             {
-                Probe.That(false, "ReminderSubAgent: keine Zeit erkannt", new { task });
-                return Task.FromResult("Ich konnte keine Zeit erkennen. Sag zum Beispiel: erinnere mich um 22 Uhr 15 ans Essen, oder in zehn Minuten.");
+                when = plan.When.ToString(),
+                due = plan.When == WhenKind.AtTime ? plan.DueUtc.ToString("u") : "beim-naechsten-start",
+                plan.Text
+            });
+
+            if (plan.When == WhenKind.NextStart)
+            {
+                _service.Add(new Reminder { Text = plan.Text, OnNextStart = true });
+                return Task.FromResult($"Alles klar, ich erinnere dich beim nächsten Programmstart daran: {plan.Text}");
             }
 
-            var text = ExtractReminderText(task);
-            _service.Add(new Reminder { Text = text, DueUtc = due.Value });
-
-            var culture = new CultureInfo("de-DE");
-            var when = due.Value.ToString("HH:mm", culture);
-            return Task.FromResult($"Alles klar, ich erinnere dich um {when} Uhr daran: {text}");
+            _service.Add(new Reminder { Text = plan.Text, DueUtc = plan.DueUtc });
+            var when = plan.DueUtc.ToString("HH:mm", new CultureInfo("de-DE"));
+            return Task.FromResult($"Alles klar, ich erinnere dich um {when} Uhr daran: {plan.Text}");
         }
 
         /// <summary>
-        /// Liest einen Zeitpunkt aus dem Text. Unterstuetzt "in N Minuten/Stunden" und
-        /// "um HH:MM" / "um HH Uhr". Liegt die absolute Zeit heute schon in der Vergangenheit,
-        /// wird der naechste Tag genommen. Public static = isoliert testbar. null = nichts erkannt.
+        /// Erkennt den Wunsch "beim naechsten (App-/Programm-)Start erinnern". Umlaut-tolerant,
+        /// weil die Transkription Umlaute liefert (naechsten/laeuft/...), Tests aber ASCII nutzen koennen.
+        /// </summary>
+        public static bool IsNextStartRequest(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var t = text.ToLowerInvariant();
+            return Regex.IsMatch(t,
+                @"(beim|zum)\s+(n(ä|ae)chsten\s+)?(programm)?start"
+              + @"|(beim|zum)\s+(hochfahren|neustart|hochfaehren)"
+              + @"|n(ä|ae)chsten?\s+mal"
+              + @"|wenn\s+(du|das programm|die app|der computer|der rechner)\s+(startest|startet|hochf(ä|ae)hrt|l(ä|ae)uft|l(ä|ae)dt|geladen)"
+              + @"|wenn ich (wiederkomme|zur(ü|ue)ck|wieder da)");
+        }
+
+        /// <summary>
+        /// Liest einen Zeitpunkt aus dem Text: "in N Minuten/Stunden", "um HH:MM"/"um HH Uhr",
+        /// und grobe Tageszeiten (vormittag/mittag/nachmittag/abend/frueh), optional mit "morgen".
+        /// Liegt die Zeit heute schon in der Vergangenheit, wird der naechste Tag genommen.
+        /// Public static = isoliert testbar. null = nichts erkannt (-> beim naechsten Start, siehe BuildPlan).
         /// </summary>
         public static DateTimeOffset? ParseDueTime(string text, DateTimeOffset now)
         {
@@ -101,6 +150,41 @@ namespace VoiceAgent.Core
                 return BuildAbsolute(now, h, 0);
             }
 
+            // "morgen" = naechster Tag. NICHT "am morgen"/"morgens" (das ist die Tageszeit "frueh").
+            bool tomorrow = Regex.IsMatch(t, @"\bmorgen\b") && !Regex.IsMatch(t, @"\bam\s+morgen\b");
+
+            // grobe Tageszeit (vormittag/mittag/nachmittag/abend/frueh)
+            int? hour = TimeOfDayHour(t);
+            if (hour != null)
+            {
+                var due = BuildAbsolute(now, hour.Value, 0);
+                if (due != null && tomorrow && due.Value.Date == now.Date)
+                    due = due.Value.AddDays(1);   // "morgen vormittag" sicher auf den naechsten Tag
+                return due;
+            }
+
+            // "morgen" allein (ohne Tageszeit) -> morgen vormittag (grober Default, faellt beim
+            // naechsten App-Start nach 9 Uhr auf; vorher fangt der Sekundentakt es ab).
+            if (tomorrow)
+            {
+                var due = BuildAbsolute(now, 9, 0);
+                if (due != null && due.Value.Date == now.Date) due = due.Value.AddDays(1);
+                return due;
+            }
+
+            return null;
+        }
+
+        /// <summary>Grobe Tageszeit -> volle Stunde. null = keine Tageszeit erkannt.
+        /// Nachmittag VOR Mittag pruefen (sonst matcht "mittag" in "nachmittag").</summary>
+        public static int? TimeOfDayHour(string t)
+        {
+            if (string.IsNullOrWhiteSpace(t)) return null;
+            if (Regex.IsMatch(t, @"\bvormittags?\b|\bam vormittag\b")) return 9;
+            if (Regex.IsMatch(t, @"\bnachmittags?\b|\bam nachmittag\b")) return 15;
+            if (Regex.IsMatch(t, @"\bmittags?\b|\bam mittag\b|\bzu mittag\b")) return 12;
+            if (Regex.IsMatch(t, @"\babends?\b|\bam abend\b")) return 19;
+            if (Regex.IsMatch(t, @"\b(frü|frue)h\b|\bfrü?hmorgens\b|\bmorgens\b|\bam morgen\b")) return 8;
             return null;
         }
 
@@ -112,7 +196,8 @@ namespace VoiceAgent.Core
             return due;
         }
 
-        /// <summary>Schneidet Trigger- und Zeit-Phrasen weg, sodass die eigentliche Erinnerung bleibt. Testbar.</summary>
+        /// <summary>Schneidet Trigger-, Zeit-, Tageszeit- und Start-Phrasen weg, sodass die eigentliche
+        /// Erinnerung bleibt. Testbar.</summary>
         public static string ExtractReminderText(string task)
         {
             if (string.IsNullOrWhiteSpace(task)) return "";
@@ -120,6 +205,11 @@ namespace VoiceAgent.Core
             s = Regex.Replace(s, @"(?i)\b(erinnere?\s+mich|erinner\s+mich|wecke?\s+mich|sag\s+mir\s+bescheid|sag\s+bescheid|bitte)\b", " ");
             s = Regex.Replace(s, @"(?i)\bin\s+\d+\s*(minuten|minute|min|stunden|stunde|std)\b", " ");
             s = Regex.Replace(s, @"(?i)\bum\s+\d{1,2}([:.\s]\s*\d{2})?\s*(uhr)?\b", " ");
+            // Tageszeit-/Tag-/Start-Phrasen ebenfalls entfernen, damit nur der Inhalt bleibt.
+            s = Regex.Replace(s, @"(?i)\b(morgen|heute|vormittags?|nachmittags?|mittags?|abends?|(frü|frue)h|frü?hmorgens|morgens)\b", " ");
+            s = Regex.Replace(s, @"(?i)\bam (vormittag|nachmittag|mittag|abend|morgen)\b|\bzu mittag\b", " ");
+            s = Regex.Replace(s, @"(?i)\b(beim|zum) (n(ä|ae)chsten )?(programm)?(start|hochfahren|neustart|mal)\b", " ");
+            s = Regex.Replace(s, @"(?i)\bwenn (du|das programm|die app|der computer|der rechner) (startest|startet|hochf(ä|ae)hrt|l(ä|ae)uft|l(ä|ae)dt|geladen ist)\b", " ");
             s = Regex.Replace(s, @"(?i)^\s*(daran[:,]?|dass|an|dran[:,]?)\s+", " ");
             s = Regex.Replace(s, @"\s+", " ").Trim().Trim(',', '.', ':', ' ');
             return s.Length > 0 ? s : task.Trim();

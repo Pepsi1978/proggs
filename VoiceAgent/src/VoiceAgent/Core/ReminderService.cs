@@ -34,10 +34,26 @@ namespace VoiceAgent.Core
             Save();
         }
 
-        /// <summary>Faellige, noch nicht ausgeloeste Erinnerungen — markiert sie als erledigt und speichert.</summary>
+        /// <summary>Faellige, noch nicht ausgeloeste ZEITgesteuerte Erinnerungen — markiert sie als erledigt und speichert.</summary>
         public List<Reminder> TakeDue(DateTimeOffset now)
         {
-            var due = _items.Where(r => !r.Done && r.DueUtc <= now).ToList();
+            // OnNextStart-Erinnerungen sind NICHT zeitgesteuert -> hier ausschliessen (kommen beim App-Start).
+            var due = _items.Where(r => !r.Done && !r.OnNextStart && r.DueUtc <= now).ToList();
+            if (due.Count > 0)
+            {
+                foreach (var r in due) r.Done = true;
+                Save();
+            }
+            return due;
+        }
+
+        /// <summary>
+        /// Start-Erinnerungen (OnNextStart): beim vollstaendigen App-Start einmalig faellig.
+        /// Markiert sie als erledigt und speichert (kommen also nur EINMAL beim naechsten Start).
+        /// </summary>
+        public List<Reminder> TakeStartReminders()
+        {
+            var due = _items.Where(r => !r.Done && r.OnNextStart).ToList();
             if (due.Count > 0)
             {
                 foreach (var r in due) r.Done = true;

@@ -313,6 +313,11 @@ namespace VoiceAgent
                 // Windows-Autostart (--minimized): das Hauptfenster direkt unsichtbar ins Tray
                 // nehmen, sobald die Einstellungen geladen sind und das Tray-Symbol bereit ist.
                 if (App.StartMinimizedToTray) StartHiddenInTray();
+
+                // Proaktive Start-Erinnerungen ("erinnere mich beim naechsten Start" / ohne Uhrzeit):
+                // ERST wenn die App wirklich vollstaendig geladen+gerendert ist (ApplicationIdle =
+                // Dispatcher-Queue leer), dann Sound + Nachricht (Frank-Wunsch 2026-06-08).
+                Dispatcher.InvokeAsync(CheckStartReminders, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             }
             catch (Exception ex)
             {
@@ -530,6 +535,27 @@ namespace VoiceAgent
                 TryStartReminderPing();
             }
             catch (Exception ex) { Log.Error("CheckReminders fehlgeschlagen", ex); }
+        }
+
+        /// <summary>
+        /// Beim vollstaendigen App-Start einmalig: "beim-naechsten-Start"-Erinnerungen (ohne Uhrzeit)
+        /// faellig stellen und proaktiv melden — Sound + Nachricht ueber dieselbe Ping-Mechanik wie
+        /// zeitgesteuerte Erinnerungen. Frank wird so an Offenes erinnert, sobald die App hochgefahren ist.
+        /// </summary>
+        private void CheckStartReminders()
+        {
+            if (_reminderService == null) return;
+            try
+            {
+                var due = _reminderService.TakeStartReminders();
+                if (due.Count == 0) return;
+                foreach (var r in due) _reminderQueue.Enqueue(r);
+                // Observability-Checkpoint (Intent-Verifikation): erwartet vs. tatsaechlich.
+                Log.Info("CHECKPOINT: Start-Erinnerungen faellig",
+                    new { step = "Start-Erinnerung beim App-Start", count = due.Count, expected = "Sound + Ansage beim vollstaendigen Start", ok = true });
+                TryStartReminderPing();
+            }
+            catch (Exception ex) { Log.Error("CheckStartReminders fehlgeschlagen", ex); }
         }
 
         /// <summary>
