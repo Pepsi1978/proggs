@@ -352,6 +352,13 @@ richtig macht*. Wechselseitig gepflegt:
 **FIX:** Beim ersten Start Shortcut mit AUMID + CLSID anlegen; `CreateToastNotifier(aumid)` mit derselben AUMID. Einfacher: `CommunityToolkit`-Helper.
 **Quelle:** https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/send-local-toast-other-apps
 
+### 6.6 WPF: Taskleisten-Icon der LAUFENDEN App generisch, obwohl Vorschau + angepinntes Symbol korrekt  ⭐ HAEUFIG
+**Symptom:** Bei geoeffneter WPF-App zeigt der Taskleisten-Button das generische Windows-Default-Symbol. Die Fenster-Vorschau (Thumbnail-Titel) UND das angepinnte/geschlossene Symbol zeigen dagegen das richtige App-Icon. `Window.Icon` UND `<ApplicationIcon>` sind korrekt gesetzt, die `.ico` enthaelt alle Groessen (16/32/48/64/128/256).
+**Ursache:** Windows nutzt zwei getrennte Icon-Slots: `ICON_SMALL` (16px — Titelleiste + Thumbnail) und `ICON_BIG` (32px — Taskleisten-Button). WPFs `Window.Icon` belegt den ICON_SMALL-Slot zuverlaessig, den ICON_BIG-Slot aber NICHT immer — dann faellt die Taskleiste auf das Default-Symbol zurueck. Erklaert exakt, warum Vorschau (SMALL) stimmt, Taskleiste (BIG) aber generisch ist.
+**Versionen:** WPF auf .NET (beobachtet .NET 10, single-file self-contained) — 2026-06-08, Frank-Vorfall (VoiceAgent).
+**FIX (funktionserhaltend):** Im `SourceInitialized` (HWND existiert) beide Icons explizit via `WM_SETICON` setzen. Robust + ohne Zusatzpaket: `ExtractIconEx(Environment.ProcessPath, 0, out hBig, out hSmall, 1)` laedt genau das eingebettete Exe-Icon (das angepinnt bereits stimmt). `Environment.ProcessPath` ist single-file-sicher (§1.1). `Window.Icon` im XAML als Fallback/Design-Time belassen. Selbst gesetzte HICONs am Ende per `DestroyIcon` freigeben (§9.4). NICHT mit AppUserModelID/Grouping verwechseln: ein AUMID-Mismatch erzeugt einen SEPARATEN Button mit dem (korrekten) Window-Icon — nicht das generische Symbol.
+**Quelle:** Win32 WM_SETICON/ExtractIconEx (learn.microsoft.com) + Frank-Vorfall 2026-06-08 (VoiceAgent #46616).
+
 ---
 
 ## 7. async/await, Threading, Dispatcher
