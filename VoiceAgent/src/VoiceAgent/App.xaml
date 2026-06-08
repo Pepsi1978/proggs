@@ -4,6 +4,13 @@
              xmlns:local="clr-namespace:VoiceAgent"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <!-- Helles Profil als Basis: garantiert, dass ALLE Theme-Farbschluessel existieren,
+                 auch falls der ThemeManager zur Laufzeit ausfaellt (Defense in Depth, Direktive #3).
+                 Der ThemeManager legt beim Start das effektive Profil (Hell/Dunkel) darueber. -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Light.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

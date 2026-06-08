@@ -72,5 +72,12 @@ namespace VoiceAgent.Services
         // ----- Farben im Gespraech (in den Einstellungen waehlbar) -----
         public string UserColor { get; set; } = "#4FC3F7";   // was Frank sagt (Cyan)
         public string AgentColor { get; set; } = "#F97316";  // was der Agent antwortet (Orange)
+
+        // ----- Erscheinungsbild (Hell/Dunkel-Profil) -----
+        // "light" = warmes helles Profil (Standard, bisheriges Verhalten),
+        // "dark"  = dunkles Profil, "system" = folgt dem Windows-Theme.
+        // Wird vom ThemeManager beim Start angewendet und ueber den Topbar-Schalter
+        // bzw. die Einstellungen gesetzt.
+        public string Theme { get; set; } = "light";
     }
 }

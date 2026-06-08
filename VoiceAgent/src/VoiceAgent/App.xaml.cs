@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using VoiceAgent.Diagnostics;
+using VoiceAgent.Services;
 
 namespace VoiceAgent;
 
@@ -23,6 +24,13 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         Log.Info("App-Start: globaler Fehler-Faenger verkabelt");
+
+        // Theme VOR dem ersten Fenster anwenden, damit die DynamicResource-Farben von Anfang
+        // an existieren (kein Aufblitzen im falschen Profil). Defensiv: bei Fehler bleibt die
+        // App lauffaehig (ThemeManager faengt intern ab), notfalls im hellen Standard.
+        try { ThemeManager.Apply(Config.Load().Theme); }
+        catch (Exception ex) { Log.Error("Theme beim Start anwenden fehlgeschlagen", ex); }
+
         base.OnStartup(e); // verarbeitet StartupUri (MainWindow)
     }
 

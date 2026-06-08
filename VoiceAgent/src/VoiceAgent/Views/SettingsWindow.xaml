@@ -6,12 +6,13 @@
         mc:Ignorable="d"
         Title="VoiceAgent — Einstellungen" Height="720" Width="660"
         Icon="/assets/voiceagent.ico"
-        WindowStartupLocation="CenterOwner" Background="#15171C">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource WindowBackground}">
     <Window.Resources>
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#23262E"/>
-            <Setter Property="Foreground" Value="#E4E6EB"/>
-            <Setter Property="BorderBrush" Value="#333845"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
             <Setter Property="Padding" Value="6,4"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
             <Setter Property="FontSize" Value="13"/>
@@ -21,14 +22,17 @@
             <Setter Property="Margin" Value="0,0,0,4"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
         <Style x:Key="Section" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#E4E6EB"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,16,0,8"/>
         </Style>
         <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#9AA0AA"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,4,0,2"/>
         </Style>
@@ -43,8 +47,14 @@
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
 
+                <!-- 0. Erscheinungsbild (Hell/Dunkel) -->
+                <TextBlock Text="Erscheinungsbild" Style="{StaticResource Section}" Margin="0,0,0,8"/>
+                <TextBlock Text="Helles oder dunkles Profil — oder automatisch nach dem Windows-Theme."
+                           Style="{StaticResource Label}"/>
+                <ComboBox x:Name="ThemeBox" SelectionChanged="ThemeBox_SelectionChanged"/>
+
                 <!-- 1. System-Prompt -->
-                <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}" Margin="0,0,0,8"/>
+                <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}"/>
                 <TextBlock Text="Wie sich dein Assistent verhaelt. Leer lassen = eingebauter Standard."
                            Style="{StaticResource Label}"/>
                 <TextBox x:Name="PromptBox" AcceptsReturn="True" TextWrapping="Wrap"
@@ -84,9 +94,9 @@
                 <!-- 5. Spracherkennung (Empfindlichkeit) -->
                 <TextBlock Text="Spracherkennung (Empfindlichkeit)" Style="{StaticResource Section}"/>
 
-                <CheckBox x:Name="SemanticEndpointBox" Foreground="#E4E6EB" Margin="0,4,0,2"
+                <CheckBox x:Name="SemanticEndpointBox" Margin="0,4,0,2"
                           Content="Gedankenpausen abwarten (semantischer Endpunkt-Check)"/>
-                <CheckBox x:Name="IntentDetectionBox" Foreground="#E4E6EB" Margin="0,4,0,8"
+                <CheckBox x:Name="IntentDetectionBox" Margin="0,4,0,8"
                           Content="Absicht erkennen (Aufgabe/Frage/Plauderei — fuer die Live-Sonde)"/>
 
                 <TextBlock x:Name="SilenceThresholdLabel" Style="{StaticResource Label}"/>
@@ -109,12 +119,12 @@
                 <TextBlock Text="Weckwort" Style="{StaticResource Section}"/>
                 <TextBlock Text="Wenn aktiv, ruht der Agent und reagiert erst, wenn das Weckwort faellt. Danach hoert er fuer eine Weile normal zu, dann ruht er wieder."
                            Style="{StaticResource Label}" TextWrapping="Wrap"/>
-                <CheckBox x:Name="WakeWordEnabledBox" Foreground="#E4E6EB" Margin="0,6,0,6"
+                <CheckBox x:Name="WakeWordEnabledBox" Margin="0,6,0,6"
                           Content="Weckwort-Modus aktivieren"/>
                 <TextBlock Text="Weckwort-Text (englische Aussprache — Erkennung ist auf „Okay Computer“ eingestellt; anderes Wort siehe assets/wakeword-model/README.md)"
                            Style="{StaticResource Label}" TextWrapping="Wrap"/>
                 <TextBox x:Name="WakeWordBox"/>
-                <CheckBox x:Name="WakeChimeBox" Foreground="#E4E6EB" Margin="0,4,0,6"
+                <CheckBox x:Name="WakeChimeBox" Margin="0,4,0,6"
                           Content="Erkennungston beim Wecken (danach sofort sprechen)"/>
                 <TextBlock x:Name="WakeTimeoutLabel" Style="{StaticResource Label}"/>
                 <Slider x:Name="WakeTimeoutSlider" Minimum="15000" Maximum="180000"
@@ -124,7 +134,7 @@
                 <TextBlock Text="Zeitzone (fuer Uhrzeit-Fragen)" Style="{StaticResource Section}"/>
                 <TextBlock Text="Der Agent kennt die echte Uhrzeit nur, wenn die Zeitzone stimmt. Standard: Systemzeit dieses PCs."
                            Style="{StaticResource Label}"/>
-                <CheckBox x:Name="AutoTimeZoneBox" Foreground="#E4E6EB" Margin="0,4,0,6"
+                <CheckBox x:Name="AutoTimeZoneBox" Margin="0,4,0,6"
                           Content="Automatisch (Systemzeit dieses PCs)" Click="AutoTimeZone_Click"/>
                 <ComboBox x:Name="TimeZoneBox"/>
 

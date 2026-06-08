@@ -7,13 +7,13 @@
         mc:Ignorable="d"
         Title="VoiceAgent" Height="640" Width="980"
         Icon="/assets/voiceagent.ico"
-        Background="#FBFAF8"
+        Background="{DynamicResource WindowBackground}"
         FontFamily="Segoe UI">
     <Window.Resources>
-        <!-- Flache, abgerundete Buttons (helle Variante) -->
+        <!-- Flache, abgerundete Buttons (Farben aus dem aktiven Theme) -->
         <Style x:Key="FlatButton" TargetType="Button">
-            <Setter Property="Foreground" Value="#37322B"/>
-            <Setter Property="Background" Value="#ECE7DD"/>
+            <Setter Property="Foreground" Value="{DynamicResource ButtonForeground}"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -26,7 +26,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#E0D9CC"/>
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -34,10 +34,10 @@
             </Setter>
         </Style>
 
-        <!-- Dunkler Akzent-Button (Neue Session) -->
+        <!-- Akzent-Button (Neue Session / Senden) -->
         <Style x:Key="DarkButton" TargetType="Button" BasedOn="{StaticResource FlatButton}">
-            <Setter Property="Background" Value="#1F1B16"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentButtonForeground}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -48,7 +48,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#332C24"/>
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource AccentButtonHoverBackground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -56,42 +56,12 @@
             </Setter>
         </Style>
 
-        <!-- Mikrofon-Schalter: abgerundet wie die Buttons (Radius 8), in BEIDEN Zustaenden rund.
-             Zustand wird ueber die Farbe gezeigt (Ruhe = hell, wach/aktiv = dunkel) statt ueber
-             den eckigen WPF-Default-Stil. -->
-        <Style x:Key="FlatToggle" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="#37322B"/>
-            <Setter Property="Background" Value="#ECE7DD"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="b" CornerRadius="8" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#E0D9CC"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#1F1B16"/>
-                                <Setter TargetName="b" Property="TextElement.Foreground" Value="White"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Abgerundete, helle Texteingabe -->
+        <!-- Abgerundete Texteingabe -->
         <Style x:Key="RoundedInput" TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="#E0D9CC"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#37322B"/>
-            <Setter Property="CaretBrush" Value="#37322B"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -107,10 +77,10 @@
             </Setter>
         </Style>
 
-        <!-- Sessions-Listeneintrag: abgerundet, Hover, aktiv = Terracotta -->
+        <!-- Sessions-Listeneintrag: abgerundet, Hover, aktiv = Akzent -->
         <Style x:Key="SessionItem" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="0,1"/>
-            <Setter Property="Foreground" Value="#37322B"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -119,11 +89,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#ECE7DD"/>
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource ListItemHoverBackground}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#E3DDD0"/>
-                                <Setter TargetName="b" Property="TextElement.Foreground" Value="#9A6B2F"/>
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource ListItemSelectedBackground}"/>
+                                <Setter TargetName="b" Property="TextElement.Foreground" Value="{DynamicResource AccentText}"/>
                                 <Setter TargetName="b" Property="TextElement.FontWeight" Value="SemiBold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -139,25 +109,26 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ============ Sidebar: Sessions (Layout C, warm-hell) ============ -->
-        <Border Grid.Column="0" Background="#F3F0EA" BorderBrush="#E7E2D8" BorderThickness="0,0,1,0">
+        <!-- ============ Sidebar: Sessions ============ -->
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+                BorderBrush="{DynamicResource SidebarBorder}" BorderThickness="0,0,1,0">
             <DockPanel Margin="12">
                 <Button DockPanel.Dock="Top" x:Name="NewSessionButton" Content="＋  Neue Session"
                         Click="NewSessionButton_Click" Height="36" Margin="0,0,0,10"
                         Style="{StaticResource DarkButton}"/>
 
-                <Border DockPanel.Dock="Top" CornerRadius="10" Background="#E9E5DC" Margin="0,0,0,12">
+                <Border DockPanel.Dock="Top" CornerRadius="10" Background="{DynamicResource SearchBackground}" Margin="0,0,0,12">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Left" Text="🔍" Margin="9,0,4,0"
-                                   VerticalAlignment="Center" Foreground="#8A8275"/>
+                                   VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}"/>
                         <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0"
-                                 Foreground="#37322B" CaretBrush="#37322B" Padding="2,7,8,7"
+                                 Foreground="{DynamicResource TextPrimary}" CaretBrush="{DynamicResource TextPrimary}" Padding="2,7,8,7"
                                  VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged"
                                  ToolTip="Sessions durchsuchen…"/>
                     </DockPanel>
                 </Border>
 
-                <TextBlock DockPanel.Dock="Top" Text="SESSIONS" FontSize="10" Foreground="#A8A090"
+                <TextBlock DockPanel.Dock="Top" Text="SESSIONS" FontSize="10" Foreground="{DynamicResource TextFaint}"
                            Margin="2,0,0,6"/>
                 <ListBox x:Name="SessionList" BorderThickness="0" Background="Transparent"
                          ItemContainerStyle="{StaticResource SessionItem}"
@@ -193,29 +164,34 @@
             <!-- Kopfzeile: Status + Uhr + Kontext-Pille + Schalter -->
             <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,12">
                 <TextBlock x:Name="StatusText" DockPanel.Dock="Left"
-                           Text="Bereit" FontSize="13" Foreground="#8A8275"
+                           Text="Bereit" FontSize="13" Foreground="{DynamicResource TextMuted}"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="ClockText" DockPanel.Dock="Left" Margin="16,0,0,0"
-                           FontSize="13" FontWeight="SemiBold" Foreground="#37322B"
+                           FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
                            VerticalAlignment="Center"/>
                 <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="⚙  Einstellungen"
                         Style="{StaticResource FlatButton}" Click="SettingsButton_Click"/>
+                <Button x:Name="ThemeButton" DockPanel.Dock="Right" Content="🌙"
+                        Margin="0,0,8,0" Style="{StaticResource FlatButton}" Click="ThemeButton_Click"
+                        ToolTip="Zwischen hellem und dunklem Profil umschalten"/>
                 <Button x:Name="LogButton" DockPanel.Dock="Right" Content="Live-Log"
                         Margin="0,0,8,0" Style="{StaticResource FlatButton}" Click="LogButton_Click"/>
                 <ToggleButton x:Name="MicToggle" DockPanel.Dock="Right" Content="🎙 Mikrofon: an"
-                              Margin="0,0,8,0" Style="{StaticResource FlatToggle}" Click="MicToggle_Click"/>
-                <Border DockPanel.Dock="Right" x:Name="ContextPill" CornerRadius="8" Background="#F4EAD6"
+                              Margin="0,0,8,0" Padding="12,6" Background="{DynamicResource ButtonBackground}"
+                              Foreground="{DynamicResource ButtonForeground}"
+                              BorderThickness="0" Cursor="Hand" Click="MicToggle_Click"/>
+                <Border DockPanel.Dock="Right" x:Name="ContextPill" CornerRadius="11" Background="{DynamicResource PillBackground}"
                         Padding="11,4" Margin="0,0,8,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="ContextPillText" Foreground="#9A6B2F" FontSize="12" Text="◐ Kontext 0%"/>
+                    <TextBlock x:Name="ContextPillText" Foreground="{DynamicResource AccentText}" FontSize="12" Text="◐ Kontext 0%"/>
                 </Border>
             </DockPanel>
 
             <!-- Gespraechsverlauf -->
-            <Border Grid.Row="1" Background="White" CornerRadius="12" Padding="12"
-                    BorderBrush="#ECE6DB" BorderThickness="1">
+            <Border Grid.Row="1" Background="{DynamicResource CardBackground}" CornerRadius="12" Padding="12"
+                    BorderBrush="{DynamicResource CardBorder}" BorderThickness="1">
                 <RichTextBox x:Name="ConversationBox" IsReadOnly="True"
                              VerticalScrollBarVisibility="Auto" BorderThickness="0"
-                             Background="Transparent" Foreground="#37322B" FontSize="14">
+                             Background="Transparent" Foreground="{DynamicResource TextPrimary}" FontSize="14">
                     <RichTextBox.Resources>
                         <Style TargetType="Paragraph">
                             <Setter Property="Margin" Value="0,0,0,8"/>

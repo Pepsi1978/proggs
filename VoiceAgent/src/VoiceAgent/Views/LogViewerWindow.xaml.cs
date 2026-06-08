@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 using VoiceAgent.Diagnostics;
+using VoiceAgent.Services;
 
 namespace VoiceAgent.Views
 {
@@ -25,6 +26,7 @@ namespace VoiceAgent.Views
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             _timer.Tick += (_, __) => Pump();
             Loaded += OnLoaded;
+            SourceInitialized += (_, __) => ThemeManager.ApplyTitleBar(this);   // Titelleiste passend zum Theme (§2.7)
             Closed += (_, __) => _timer.Stop();   // DispatcherTimer-Leak vermeiden (Almanach §9.2)
         }
 

@@ -1,0 +1,52 @@
+<!--
+  Dunkles Profil — Franks etablierte App-Dunkeltoene (bisher in Einstellungen/Live-Log
+  hartcodiert) als zentrale Brush-Ressourcen. Gleiche x:Key-Namen wie Light.xaml, damit
+  DynamicResource zur Laufzeit lueckenlos umschaltet.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Flaechen / Hintergruende -->
+    <SolidColorBrush x:Key="WindowBackground" Color="#15171C"/>
+    <SolidColorBrush x:Key="SidebarBackground" Color="#1B1E24"/>
+    <SolidColorBrush x:Key="SidebarBorder" Color="#2A2E37"/>
+    <SolidColorBrush x:Key="CardBackground" Color="#1E2128"/>
+    <SolidColorBrush x:Key="CardBorder" Color="#2E323C"/>
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#E4E6EB"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#9AA0AA"/>
+    <SolidColorBrush x:Key="TextFaint" Color="#6B7280"/>
+    <SolidColorBrush x:Key="AccentText" Color="#E0A56A"/>
+
+    <!-- Flache Buttons (neutral) -->
+    <SolidColorBrush x:Key="ButtonBackground" Color="#2A2E37"/>
+    <SolidColorBrush x:Key="ButtonForeground" Color="#E4E6EB"/>
+    <SolidColorBrush x:Key="ButtonHoverBackground" Color="#353A45"/>
+
+    <!-- Akzent-Button (Neue Session / Senden) — im Dunkeln eine warme Terracotta-Flaeche,
+         damit der Akzent sichtbar bleibt (ein fast-schwarzer Button wuerde verschwinden). -->
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="#B5703A"/>
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="AccentButtonHoverBackground" Color="#C68146"/>
+
+    <!-- Eingabefelder -->
+    <SolidColorBrush x:Key="InputBackground" Color="#23262E"/>
+    <SolidColorBrush x:Key="InputBorder" Color="#333845"/>
+    <SolidColorBrush x:Key="SearchBackground" Color="#23262E"/>
+
+    <!-- Sessions-Liste -->
+    <SolidColorBrush x:Key="ListItemHoverBackground" Color="#2A2E37"/>
+    <SolidColorBrush x:Key="ListItemSelectedBackground" Color="#313742"/>
+
+    <!-- Kontext-Pille -->
+    <SolidColorBrush x:Key="PillBackground" Color="#332B1E"/>
+
+    <!-- Live-Log (Mono-Konsole) -->
+    <SolidColorBrush x:Key="LogBackground" Color="#0E1014"/>
+    <SolidColorBrush x:Key="LogForeground" Color="#C8CDD6"/>
+
+    <!-- Markierungsfarbe fuer "ist dieses Theme dunkel?" (vom ThemeManager gelesen) -->
+    <sys:Boolean xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="ThemeIsDark">True</sys:Boolean>
+
+</ResourceDictionary>

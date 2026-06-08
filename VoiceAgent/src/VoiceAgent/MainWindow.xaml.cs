@@ -65,6 +65,7 @@ namespace VoiceAgent
             SourceInitialized += OnSourceInitialized;   // Taskleisten-Icon setzen, sobald das HWND existiert
             Loaded += OnLoaded;
             Closed += OnClosed;
+            ThemeManager.Changed += UpdateThemeButton;  // Topbar-Symbol bei jedem Theme-Wechsel nachziehen
         }
 
         // ---------- Taskleisten-Icon (ICON_BIG zuverlaessig setzen) ----------
@@ -100,6 +101,9 @@ namespace VoiceAgent
         /// </summary>
         private void OnSourceInitialized(object? sender, EventArgs e)
         {
+            // Titelleiste passend zum aktiven Theme einfaerben (Almanach §2.7 — erst bei vorhandenem
+            // HWND). Intern abgesichert, daher zuerst und unabhaengig vom Icon-Block.
+            ThemeManager.ApplyTitleBar(this);
             try
             {
                 string? exe = Environment.ProcessPath;
@@ -175,6 +179,7 @@ namespace VoiceAgent
                 _ready = true;            // ab jetzt duerfen die Sidebar-Handler feuern
                 RefreshSessionList();
                 RefreshContextMeter();
+                UpdateThemeButton();      // Sonne/Mond passend zum (in App.OnStartup gesetzten) Theme
             }
             catch (Exception ex)
             {
@@ -297,6 +302,7 @@ namespace VoiceAgent
         {
             try { _clockTimer?.Stop(); _reminderPingTimer?.Stop(); CancelSafetyTimer(); _wake?.Dispose(); _wakeChime.Stop(); _listener?.Dispose(); _player.Stop(); }
             catch (Exception ex) { Log.Error("MainWindow: Aufraeumen-Fehler", ex); }
+            ThemeManager.Changed -= UpdateThemeButton;   // Event-Abo loesen (Leak-Vermeidung, Almanach §9.1)
             // Selbst gesetzte Taskleisten-Icons freigeben (GDI-Handle-Limit, Almanach §9.4).
             try { if (_taskbarIconBig != IntPtr.Zero) DestroyIcon(_taskbarIconBig); if (_taskbarIconSmall != IntPtr.Zero) DestroyIcon(_taskbarIconSmall); }
             catch (Exception ex) { Log.Error("MainWindow: Icon-Freigabe-Fehler", ex); }
@@ -417,6 +423,31 @@ namespace VoiceAgent
             }
         }
 
+        // ---------- Hell/Dunkel-Profil ----------
+
+        /// <summary>Topbar-Schalter: wechselt zwischen hellem und dunklem Profil und merkt es sich.</summary>
+        private void ThemeButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _settings.Theme = ThemeManager.Toggle();   // faerbt ALLE Fenster um, liefert "light"/"dark"
+                Config.Save(_settings);
+                Log.Info("Theme per Topbar-Schalter gewechselt", new { _settings.Theme });
+            }
+            catch (Exception ex) { Log.Error("Theme-Umschalten fehlgeschlagen", ex); }
+        }
+
+        /// <summary>Zeigt das passende Symbol: Mond bietet Wechsel zu dunkel an, Sonne zu hell.</summary>
+        private void UpdateThemeButton()
+        {
+            try
+            {
+                ThemeButton.Content = ThemeManager.IsDark ? "☀" : "🌙";
+                ThemeButton.ToolTip = ThemeManager.IsDark ? "Zum hellen Profil wechseln" : "Zum dunklen Profil wechseln";
+            }
+            catch (Exception ex) { Log.Error("Theme-Symbol aktualisieren fehlgeschlagen", ex); }
+        }
+
         private void LogButton_Click(object sender, RoutedEventArgs e)
         {
             // Nicht-modal (Show, nicht ShowDialog): Frank kann gleichzeitig sprechen und mitlesen.
@@ -433,6 +464,7 @@ namespace VoiceAgent
                 if (dlg.ShowDialog() == true)
                 {
                     _settings = Config.Load();
+                    ThemeManager.Apply(_settings.Theme);   // evtl. im Dialog gewaehltes Profil sofort anwenden
                     BuildAgents();
                     RebuildListener();   // geaenderte Empfindlichkeit sofort uebernehmen
                     MicToggle.IsChecked = _settings.MicEnabled;
@@ -844,22 +876,27 @@ namespace VoiceAgent
         /// <summary>Kleiner modaler Text-Dialog (bewusst ohne Microsoft.VisualBasic-Dependency).</summary>
         private string? PromptText(string title, string initial)
         {
+            // Farben aus dem aktiven Theme (Fallback: helle Werte), damit der Dialog im Dunkelmodus mitzieht.
+            Brush B(string key, byte r, byte g, byte b)
+                => Application.Current.Resources[key] as Brush ?? new SolidColorBrush(Color.FromRgb(r, g, b));
+
             var win = new Window
             {
                 Title = title, Width = 380, Height = 150, Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xFA, 0xF8))
+                Background = B("WindowBackground", 0xFB, 0xFA, 0xF8)
             };
+            win.SourceInitialized += (_, __) => ThemeManager.ApplyTitleBar(win);   // Titelleiste passend (§2.7)
             var grid = new System.Windows.Controls.Grid { Margin = new Thickness(12) };
             grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             var tb = new System.Windows.Controls.TextBox
             {
                 Text = initial, FontSize = 14, Padding = new Thickness(6, 4, 6, 4),
-                Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
-                Foreground = new SolidColorBrush(Color.FromRgb(0x37, 0x32, 0x2B)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0xD9, 0xCC)),
+                Background = B("InputBackground", 0xFF, 0xFF, 0xFF),
+                Foreground = B("TextPrimary", 0x37, 0x32, 0x2B),
+                BorderBrush = B("InputBorder", 0xE0, 0xD9, 0xCC),
                 VerticalContentAlignment = VerticalAlignment.Center
             };
             System.Windows.Controls.Grid.SetRow(tb, 0);
