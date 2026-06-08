@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using VoiceAgent.Core;
@@ -98,6 +99,21 @@ namespace VoiceAgent.Views
                 WakeSleepChimeBox.IsChecked = _settings.WakeSleepChimeEnabled;
                 WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
 
+                // Computer Use: Stufe Aus/Sicher/Vollzugriff. Tag = Roh-Wert fuer CommandGuard.ParseMode.
+                ComputerUseModeBox.Items.Clear();
+                ComputerUseModeBox.Items.Add(new ComboBoxItem { Content = "Aus — steuert den Rechner nicht", Tag = "off" });
+                ComputerUseModeBox.Items.Add(new ComboBoxItem { Content = "Sicher — heikle Befehle erst nach „Ja“", Tag = "safe" });
+                ComputerUseModeBox.Items.Add(new ComboBoxItem { Content = "Vollzugriff — direkt (außer Sperrliste)", Tag = "full" });
+                string curCu = CommandGuard.ParseMode(_settings.ComputerUseMode) switch
+                {
+                    Core.ComputerUseMode.Safe => "safe",
+                    Core.ComputerUseMode.Full => "full",
+                    _ => "off",
+                };
+                foreach (ComboBoxItem it in ComputerUseModeBox.Items)
+                    if ((string)it.Tag! == curCu) { ComputerUseModeBox.SelectedItem = it; break; }
+                if (ComputerUseModeBox.SelectedItem == null) ComputerUseModeBox.SelectedIndex = 0;
+
                 TimeZoneBox.ItemsSource = TimeZoneInfo.GetSystemTimeZones();
                 TimeZoneBox.DisplayMemberPath = nameof(TimeZoneInfo.DisplayName);
                 TimeZoneBox.SelectedValuePath = nameof(TimeZoneInfo.Id);
@@ -119,6 +135,7 @@ namespace VoiceAgent.Views
 
                 _ready = true;            // ab jetzt existieren ALLE Controls -> Label-Updates erlaubt
                 UpdateSliderLabels();
+                _ = InitModelDropdownsAsync();   // Modell-Dropdowns live befuellen (behaelt gespeicherte Auswahl)
             }
             catch (Exception ex)
             {
@@ -157,6 +174,7 @@ namespace VoiceAgent.Views
                 _settings.WakeChimeEnabled = WakeChimeBox.IsChecked == true;
                 _settings.WakeSleepChimeEnabled = WakeSleepChimeBox.IsChecked == true;
                 _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
+                _settings.ComputerUseMode = (ComputerUseModeBox.SelectedItem as ComboBoxItem)?.Tag as string ?? "off";
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
                     ? string.Empty
                     : (TimeZoneBox.SelectedValue as string ?? string.Empty);
@@ -250,19 +268,60 @@ namespace VoiceAgent.Views
         }
 
         /// <summary>
-        /// Beim Umschalten auf Codex das Modell-Feld auf ein gueltiges Codex-Modell vorbelegen,
-        /// wenn dort noch ein fremdes (z. B. Gemini-)Modell steht — sonst antwortet Codex mit 400.
+        /// Bei Anbieter-Wechsel die Modell-Liste des neuen Anbieters laden und ein GUELTIGES Modell
+        /// waehlen — verhindert Modell/Anbieter-Mismatch (war Ursache des Codex-400).
         /// Guard gegen XAML-Load-Feuern (§2.10).
         /// </summary>
         private void ProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!_ready) return;
-            if ((ProviderBox.SelectedItem as string) == "codex")
+            _ = FillMainModelsAsync(forceValid: true);
+        }
+
+        /// <summary>Beim Oeffnen: beide Modell-Dropdowns live befuellen, gespeicherte Auswahl behalten.</summary>
+        private async System.Threading.Tasks.Task InitModelDropdownsAsync()
+        {
+            await FillMainModelsAsync(forceValid: false).ConfigureAwait(true);
+            await FillEndpointModelsAsync().ConfigureAwait(true);
+        }
+
+        /// <summary>
+        /// Fuellt das Haupt-Modell-Dropdown mit den Modellen des aktuellen Anbieters (live + Fallback).
+        /// forceValid=true (Anbieter-Wechsel): passt das aktuelle Modell nicht zur Liste, wird das erste
+        /// gueltige genommen. forceValid=false (Oeffnen): die gespeicherte Auswahl bleibt erhalten.
+        /// </summary>
+        private async System.Threading.Tasks.Task FillMainModelsAsync(bool forceValid)
+        {
+            try
             {
-                var m = (ModelBox.Text ?? string.Empty).Trim();
-                if (!m.StartsWith("gpt", StringComparison.OrdinalIgnoreCase))
-                    ModelBox.Text = CodexModels.Default;   // gpt-5.5 vorbelegen
+                var provider = (ProviderBox.SelectedItem as string) ?? "gemini";
+                var current = (ModelBox.Text ?? string.Empty).Trim();
+                var list = await ModelCatalog.GetModelsAsync(provider).ConfigureAwait(true);
+                ModelBox.ItemsSource = list;
+                if (ListContains(list, current)) ModelBox.Text = current;          // gueltig -> behalten
+                else if (forceValid && list.Count > 0) ModelBox.Text = list[0];    // Wechsel -> gueltiges Default
+                else ModelBox.Text = current;                                      // Oeffnen -> eigenes behalten (editierbar)
             }
+            catch (Exception ex) { Log.Error("Modell-Dropdown laden fehlgeschlagen", ex); }
+        }
+
+        /// <summary>Fuellt das Endpunkt-Modell-Dropdown — IMMER Gemini-Flash, unabhaengig vom Anbieter.</summary>
+        private async System.Threading.Tasks.Task FillEndpointModelsAsync()
+        {
+            try
+            {
+                var current = (EndpointModelBox.Text ?? string.Empty).Trim();
+                var list = await ModelCatalog.GeminiFlashAsync().ConfigureAwait(true);
+                EndpointModelBox.ItemsSource = list;
+                EndpointModelBox.Text = !string.IsNullOrEmpty(current) ? current : (list.Count > 0 ? list[0] : string.Empty);
+            }
+            catch (Exception ex) { Log.Error("Endpunkt-Modell-Dropdown laden fehlgeschlagen", ex); }
+        }
+
+        private static bool ListContains(IReadOnlyList<string> list, string value)
+        {
+            foreach (var s in list) if (string.Equals(s, value, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         /// <summary>Zeigt den Codex-Anmeldestatus und schaltet den Abmelden-Button entsprechend.</summary>
