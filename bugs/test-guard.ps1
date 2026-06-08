@@ -20,7 +20,7 @@ $bugsDir = Join-Path $env:USERPROFILE "proggs/bugs"
 function Test-AlmExists([string]$name) { [bool](Get-ChildItem -Path $bugsDir -Recurse -Filter $name -File -ErrorAction SilentlyContinue | Select-Object -First 1) }
 $haveKotlin = Test-AlmExists "kotlin.md"
 $mapMissing = $null
-foreach ($pair in @(@('Foo.swift','swift-appkit.md'), @('app.ts','typescript.md'), @('x.user.js','tampermonkey.md'))) {
+foreach ($pair in @(@('Foo.swift','swift-appkit.md'), @('app.ts','typescript.md'), @('app.rs','rust.md'))) {
     if (-not (Test-AlmExists $pair[1])) { $mapMissing = $pair; break }
 }
 

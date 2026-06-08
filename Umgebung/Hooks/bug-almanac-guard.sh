@@ -30,8 +30,6 @@ case "$fpl" in
         slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
     *.ts|*.tsx|*tsconfig.json)
         slug="typescript"; file="typescript.md"; name="TypeScript / Node";;
-    *.user.js)
-        slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
     *.xaml|*.csproj|*.cs)
         slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)";;
     */hooks/*.ps1|*/hooks/*.sh)

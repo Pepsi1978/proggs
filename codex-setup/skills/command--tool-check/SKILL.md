@@ -77,7 +77,7 @@ Detect language(s) automatically. If the project exists on BOTH macOS and Window
 
 **Express-Modus** (Dateien unter 200 Zeilen ODER Benutzer sagt "schneller Check"):
 Pre-Scan + 1 kombinierter Loop (Surface + Deep zusammen). Kein Architektur- oder Optik-Loop.
-Spart 2/3 der Zeit. Ideal fuer Tampermonkey-Skripte, Configs, kleine Utilities.
+Spart 2/3 der Zeit. Ideal fuer Skripte, Configs, kleine Utilities.
 
 **Klein (unter 10 Dateien):** Read all files. All 4 loops.
 **Mittel (10-30 Dateien):** Entry points + core logic first. Secondary files on demand.

@@ -53,7 +53,7 @@ Die Statusline zeigt unten in jeder Gemini-CLI-Session: `🤖 Modell | ⚡ Effor
 | `rules/` | Regeln und Direktiven (19 Dateien) | Superintelligenz, Selbstbeobachtung, Resilient Bugfixing, Sprach-Regeln, Intent-Tracking, etc. |
 | `agents/` | Custom Agenten (15 Stueck) | architect, batch-reviewer, challenger, code-reviewer, coder, debugger, env-checker, evolution-analyst, intelligence-researcher, mar-reviewer, optimizer, quality-gate, researcher, tester, ui-polisher |
 | `commands/` | Slash-Commands | `/self-improve`, `/tool-check`, `/geminiception` |
-| `skills/` | Custom Skills (6 Stueck) | auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja |
+| `skills/` | Custom Skills (5 Stueck) | auto-verify-iterate, cross-platform, undo-changes, android-clean-architecture, android-ninja |
 | `hooks/` | Hook-Skripte (.ps1 + .sh Paare) | 22 Hooks fuer 17 Event-Typen |
 | `bridges/` | CLI-Bruecken (read-only Sync) | claude-delta-bridge, codex-delta-bridge |
 | `state/` | Delta-State-Tracking | claude-delta-state.json, codex-delta-state.json |

@@ -13,7 +13,6 @@
   claude-code-setup/               # Claude Code config sync (hooks, rules, agents, settings)
   ClaudeCodexVoiceOverlay-macOS/   # Swift voice overlay
   ClaudeVoiceOverlay-Windows/      # C#/WPF voice overlay
-  Tampermonkey/                    # Browser userscripts (JavaScript)
   QuizVerse/                       # Kotlin quiz app
   mcp-code-search/                 # Local semantic search server
   tools/                           # Shared utilities
@@ -25,7 +24,6 @@
 |---------|-------|------|------|
 | BestJournalAndroid | `cd BestJournalAndroid && ./gradlew assembleDebug` | `./gradlew test` | `./gradlew lint` |
 | BestJournalFrank | `cd BestJournalFrank && ./gradlew assembleDebug` | `./gradlew test` | `./gradlew lint` |
-| Tampermonkey | N/A | Manual browser test | `bunx biome check <file>` |
 | C#/WPF | `dotnet build -c Release` | `dotnet test` | `dotnet format analyzers` |
 
 ## Files Agents Must NEVER Modify

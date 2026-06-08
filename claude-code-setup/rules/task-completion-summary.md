@@ -189,7 +189,6 @@ Bezugspunkt richtet sich nach dem aktuellen Arbeitskontext:
 |--------------------|------------------------------|
 | Android-App (BestJournal, Entropie Reductor, …) | Features, UX, Performance, Stabilität der App |
 | Desktop-App (TVO, PromptBoard, …) | Features, UX, Cross-Platform-Verhalten |
-| Tampermonkey-Skripte | Robustheit, neue Use-Cases, Browser-Kompatibilität |
 | Harness / Regeln / Hooks / Skills | Weitere Harness-Verbesserungen, fehlende Guards, neue Skills |
 | Doku / README | Klarheit, Vollständigkeit, fehlende Teile |
 

@@ -110,7 +110,6 @@ SHORT_DESCRIPTION_OVERRIDES = {
     "spreadsheets": "Create and edit spreadsheets with formulas and charts",
     "string-extraktor": "Extract and normalize Android string resources",
     "superintelligenz": "Apply the top-level superintelligence directive",
-    "tampermonkey-version": "Bump Tampermonkey versions consistently",
     "undo-changes": "Safely revert changes with git revert workflows",
     "übersetzung": "Translate Android strings into the supported locales",
 }

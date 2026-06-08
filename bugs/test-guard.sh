@@ -54,7 +54,7 @@ fi
 
 # Bereich ohne Almanach dynamisch waehlen (fuer Hinweis-Test)
 missing=""
-for pair in "Foo.swift:swift-appkit.md" "app.ts:typescript.md" "x.user.js:tampermonkey.md"; do
+for pair in "Foo.swift:swift-appkit.md" "app.ts:typescript.md" "app.rs:rust.md"; do
     f="${pair%%:*}"; md="${pair##*:}"
     if [ -z "$(alm_path "$md")" ]; then missing="$f"; break; fi
 done

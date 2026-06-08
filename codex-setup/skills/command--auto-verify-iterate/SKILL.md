@@ -11,7 +11,7 @@ Dieses Skill gilt AUTOMATISCH nach JEDER Programmieraufgabe:
 - Neues Feature implementiert
 - Bug gefixt
 - Code refactored
-- Skript geaendert (Tampermonkey, Shell, PowerShell, etc.)
+- Skript geaendert (Shell, PowerShell, etc.)
 - UI-Elemente erstellt oder geaendert
 
 NICHT bei: Fragen beantworten, Recherche, reine Dokumentation, Erklärungen.
@@ -42,7 +42,6 @@ Code geschrieben
 - Syntax pruefen: Keine Fehler in der Konsole?
 - Abhaengigkeiten: Alle Imports, Packages, NuGet-Pakete vorhanden?
 - Berechtigungen: Alle noetigen Grants, Entitlements, Permissions gesetzt?
-  - Tampermonkey: `@grant` Eintraege vollstaendig?
   - macOS: Entitlements-Datei korrekt? Accessibility-Berechtigung erwaehnt?
   - Windows: Manifest-Datei aktuell? Smart App Control beachtet?
 
@@ -88,7 +87,6 @@ Erst wenn alle Pruefungen bestanden sind:
 
 - NIEMALS "fertig" sagen ohne die Schritte 1-3 durchlaufen zu haben
 - NIEMALS Probleme ignorieren die in Schritt 1-2 gefunden wurden
-- Bei Tampermonkey-Skripten: Versionsnummer MUSS erhoeht sein (tampermonkey-version Skill)
 - Bei Cross-Platform Aenderungen: Beide Plattformen pruefen (cross-platform Skill)
 - Lieber einmal zu viel pruefen als einmal zu wenig
 

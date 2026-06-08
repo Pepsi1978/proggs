@@ -123,7 +123,6 @@ Suche findet die Dateien in EINEM Aufruf statt mit geratenen Namen herumzuprobie
 | C# Code (PromptBoard, TVO) | Gut | Hybrid — semantisch fuer Logik/Patterns |
 | XAML (Markup) | **Schlecht** | Grep-only (XML hat per Design keine Semantik) |
 | TypeScript/Node | Sehr gut | Semantisch zuerst, Grep als Fallback |
-| Tampermonkey JS (eine grosse .user.js) | Mittel | Grep fuer Symbole, semantisch nur fuer Intent |
 | PowerShell-Hooks | **Schlecht** | Grep-only (kein gutes Embedding/Tool-Support) |
 | Bash-Hooks | Mittel | Hybrid |
 | Markdown/Regeln/Doku | Gut | Semantisch fuer Themensuche |

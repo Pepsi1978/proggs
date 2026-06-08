@@ -38,7 +38,7 @@ damit die Recherche nicht vermischt: Bugs landen im Almanach, Arbeitsweise in be
 ## Reihenfolge-Empfehlung (nach Hebel)
 
 Python ⭐ → Jetpack Compose ⭐ → Android-Framework → Firebase/Billing → Swift/AppKit →
-Tampermonkey → TypeScript → Stream-Deck → MCP-Server. (Gradle-Best-Practices siehe ganz unten.)
+TypeScript → Stream-Deck → MCP-Server. (Gradle-Best-Practices siehe ganz unten.)
 
 ---
 
@@ -174,28 +174,6 @@ Speichere unter best-practices/projekt-code/web/best-practices-typescript.md und
 
 ---
 
-## 7. Tampermonkey / Userscripts
-
-**🐛 Bug-Prompt:**
-```
-Starte den Skill bug-almanach-recherche fuer Tampermonkey/Userscripts.
-
-ZIEL = REINE BUGSUCHE: Finde gezielt die bekannten BUGS, Fehler und Fallstricke — was in der Praxis SCHIEFGEHT — plus funktionserhaltende Loesung. NICHT Best Practices (getrennt), sondern konkrete Fehlerquellen: GM_-API ohne @grant, @match/@include greift nicht, unsafeWindow-Probleme, SPA-DOM-Timing (Element noch nicht da), MutationObserver-Lecks, CSP blockiert Inline-Code, setInterval/setTimeout-Drosselung in Hintergrund-Tabs.
-
-Scripts in ~/proggs/Tampermonkey (*.user.js). Tampermonkey-Engine-/Browser-Version beruecksichtigen. Lege bugs/web/tampermonkey.md an, trage ihn in bugs/README.md ein und ergaenze das Pfad-Mapping im bug-almanac-guard-Hook (*.user.js). Grenze klar gegen chrome-extensions.md (MV3) ab — hier nur Userscripts. Am Ende committen und pushen.
-```
-
-**✅ Best-Practices-Prompt:**
-```
-Starte den Best-Practices-Skill fuer Tampermonkey/Userscripts (Projekt-Code-Seite, NICHT Harness).
-
-ZIEL = BEST PRACTICES: Recherchiere, WIE MAN USERSCRIPTS AM BESTEN UND RICHTIG SCHREIBT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": robustes Warten aufs DOM (MutationObserver-Pattern statt fixe Delays), korrekter @grant/GM_-API-Einsatz, saubere Persistenz (GM_setValue), wartbare Skript-Struktur, sichere Update-Mechanik (@version/@updateURL).
-
-Scripts in ~/proggs/Tampermonkey. Speichere unter best-practices/projekt-code/web/best-practices-tampermonkey.md und koppele wechselseitig mit bugs/web/tampermonkey.md. Am Ende committen und pushen.
-```
-
----
-
 ## 8. Stream-Deck-Plugin (Elgato)
 
 **🐛 Bug-Prompt:**
@@ -267,7 +245,6 @@ Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleich
 | Firebase/Billing | ⬜ | ⬜ |
 | Swift/AppKit | ⬜ | ⬜ |
 | TypeScript/Node | ⬜ | ⬜ |
-| Tampermonkey | ⬜ | ⬜ |
 | Stream-Deck | ⬜ | ⬜ |
 | MCP-Server | ⬜ | ⬜ |
 

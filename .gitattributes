@@ -1,6 +1,6 @@
 # Automatische Zeilenende-Normalisierung
 * text=auto
-# JavaScript (Tampermonkey) - immer LF
+# JavaScript - immer LF
 *.js text eol=lf
 *.json text eol=lf
 # C# / Windows-Projekte - CRLF

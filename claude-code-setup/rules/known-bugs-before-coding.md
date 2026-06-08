@@ -126,11 +126,11 @@ Write/Edit nicht → `permissionDecision:deny`; kein `jq` in `.sh`; `additionalC
 | Chrome-/Browser-Erweiterung (manifest.json, content scripts, service worker, chrome.storage, Overlays) | `~/proggs/bugs/web/chrome-extensions.md` |
 | Eigene Hooks / Regeln / Settings / Skills / Agents / MCP (Harness) | `~/proggs/bugs/claude-tooling/*.md` (+ Best-Practices) |
 | Komplett neue Programmiersprache (erste `.rs`/`.go`/`.rb`/`.java`/`.cpp`/… Datei) | noch keiner — Guard blockt generisch, dann Recherche oder Quittung |
-| Weitere Bereiche (Android, WPF, Swift, TS, Tampermonkey, Hooks, Gradle …) | `~/proggs/bugs/<kategorie>/<bereich>.md` (bei erster echter Arbeit anlegen, siehe README) |
+| Weitere Bereiche (Android, WPF, Swift, TS, Hooks, Gradle …) | `~/proggs/bugs/<kategorie>/<bereich>.md` (bei erster echter Arbeit anlegen, siehe README) |
 
 Erkennungssignale fuer "Chrome-Extension-Arbeit": eine `manifest.json` mit
 `manifest_version`, Dateien in einem Extension-/Overlay-Ordner, `chrome.*`-APIs,
-`*.user.js`, oder der Nutzer nennt Erweiterung/Extension/Overlay-Plugin.
+oder der Nutzer nennt Erweiterung/Extension/Overlay-Plugin.
 
 ---
 

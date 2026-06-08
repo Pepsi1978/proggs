@@ -7,7 +7,7 @@ description: >-
   ~/proggs/bugs/SYSTEM.md). Nutze diesen Skill IMMER wenn der Benutzer einen neuen
   Bug-Almanach anlegen will oder die bekannten Bugs einer beliebigen Software/Technologie
   recherchieren will — egal welche: Claude-Hooks, Kotlin, Gradle, Jetpack Compose, Swift,
-  .NET/WPF, TypeScript, Chrome-Erweiterungen, Tampermonkey, Rust, Go oder was auch immer.
+  .NET/WPF, TypeScript, Chrome-Erweiterungen, Rust, Go oder was auch immer.
   Auch dann, wenn das known-bugs-before-coding-System einen neuen Bereich OHNE Almanach
   erkennt und der Benutzer sein OK zur Recherche gibt. Trigger-Phrasen (immer auch mit
   konkretem Software-Namen): "recherchiere Bugs fuer/nach Swift", "Bugs fuer Kotlin",

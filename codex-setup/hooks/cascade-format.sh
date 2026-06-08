@@ -6,7 +6,6 @@
 # FIXED: Pipeline-Exit-Code-Bugs bei cargo/go (Audit Finding #1, #3)
 # FIXED: Shell-Injection via FILE_PATH (Audit Finding #2)
 # FIXED: ktlint --relative entfernt (Audit Finding #4)
-# FIXED: Tampermonkey .user.js Ausnahme (Audit Finding #6)
 # FIXED: Leerer stdin behandelt (Audit Finding #13)
 
 set +e  # Nie crashen
@@ -24,8 +23,6 @@ LINT_CMD=""
 LINT_FAILED=0
 RESULT=""
 
-# Tampermonkey .user.js: ueberspringen — nutzt eslint per AGENTS.md
-[[ "$FILE_PATH" == *.user.js ]] && exit 0
 
 case "$EXT" in
     kt|kts)

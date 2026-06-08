@@ -383,7 +383,7 @@ Write-Host "  Setup abgeschlossen!" -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Blue
 Write-Host ""
 Write-Host "  Plugins:        31 (24 official + 7 superpowers-marketplace)"
-Write-Host "  Skills:          6 (auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja)"
+Write-Host "  Skills:          5 (auto-verify-iterate, cross-platform, undo-changes, android-clean-architecture, android-ninja)"
 Write-Host "  Hooks:          $hookCount Dateien deployed nach ~/.Gemini/hooks/"
 Write-Host "  MCP Server:      sequential-thinking"
 Write-Host "  Security:        Parry (Prompt-Injection-Scanner)"

@@ -35,7 +35,6 @@ mkdir -p \
     ~/.Gemini/hooks/prompt-injection-defender/prompt-injection-defender \
     ~/.Gemini/skills/auto-verify-iterate \
     ~/.Gemini/skills/cross-platform \
-    ~/.Gemini/skills/tampermonkey-version \
     ~/.Gemini/skills/undo-changes \
     ~/.Gemini/agent-memory/shared
 ok "Alle Verzeichnisse erstellt"
@@ -174,7 +173,7 @@ ok "Commands kopiert"
 step "9/11" "Skills nach ~/.Gemini/skills/ kopieren"
 
 # Verzeichnis-basierte Skills
-for skill_dir in auto-verify-iterate cross-platform tampermonkey-version undo-changes; do
+for skill_dir in auto-verify-iterate cross-platform undo-changes; do
     SRC_DIR="$SCRIPT_DIR/skills/$skill_dir"
     DST_DIR=~/.Gemini/skills/$skill_dir
     if [ -d "$SRC_DIR" ]; then

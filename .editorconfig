@@ -12,7 +12,7 @@ end_of_line = lf
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-# JavaScript (Tampermonkey-Skripte)
+# JavaScript (Chrome-Erweiterungen etc.)
 [*.js]
 indent_size = 2
 end_of_line = lf

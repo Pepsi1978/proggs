@@ -23,7 +23,7 @@ bugs/
 ├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing
 ├── android-build/    Gradle/AGP, R8/ProGuard
 ├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS)
-├── web/              Chrome-Erweiterungen, TypeScript/Node  (+ Tampermonkey geplant)
+├── web/              Chrome-Erweiterungen, TypeScript/Node
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
 └── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
@@ -120,7 +120,6 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
 |------|---------|------------------|-------------------------------------------|
-| · | **Tampermonkey / Userscripts** | `web/tampermonkey.md` | `*.user.js` · „Tampermonkey", „Userscript", „Greasemonkey" |
 
 > **Fertige Recherche-Prompts** fuer alle offenen Bereiche (Almanach + Best-Practices,
 > Copy-Paste fuer parallele Sessions): siehe [`OFFENE-ALMANACHE-PROMPTS.md`](OFFENE-ALMANACHE-PROMPTS.md).

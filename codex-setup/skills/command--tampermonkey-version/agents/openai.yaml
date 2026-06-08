@@ -1,7 +1,0 @@
-interface:
-  display_name: "command--command--tampermonkey-version"
-  short_description: "Use AUTOMATICALLY whenever ANY Tampermonkey userscript"
-  default_prompt: "Use $command--tampermonkey-version for this task."
-
-policy:
-  allow_implicit_invocation: false

@@ -183,7 +183,7 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
 - Bei neuen Projekten: `architect` Agent + Recherche-Agent **parallel** starten.
 - Bei Bugs: `debugger` Agent nutzen (kann selbst Sub-Agenten fuer konkurrierende Hypothesen spawnen).
 - `coder` Agent hat `isolation: worktree` — mehrere Coder koennen sicher parallel an verschiedenen Dateien arbeiten.
-- **Ausnahmen wo kein quality-gate noetig ist**: Reine Config-Aenderungen, CLAUDE.md-Updates, Memory-Updates, Tampermonkey-Skripte mit nur Version-Bump.
+- **Ausnahmen wo kein quality-gate noetig ist**: Reine Config-Aenderungen, CLAUDE.md-Updates, Memory-Updates.
 
 ## Skill-Erstellung
 - Wenn ein neuer Skill erstellt, bearbeitet oder getestet werden soll, MUSS immer der `/skill-creator:skill-creator` Skill verwendet werden.

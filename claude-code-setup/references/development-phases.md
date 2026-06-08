@@ -15,7 +15,6 @@
 | **Web/TypeScript** | `npm run build`, Bundle-Groesse, Environment Vars, Security Headers, SSL |
 | **Rust** | `cargo build --release`, Clippy streng, Binary-Groesse, Cross-Compilation |
 | **Go** | `go build -ldflags="-s -w"`, go vet + staticcheck, Cross-Compilation |
-| **Tampermonkey** | Version-Bump, console.log entfernen, @match pruefen, @grant minimieren |
 
 ## Phase 4: Vermarktung (andere Projekttypen)
 
@@ -24,7 +23,6 @@
 | **C#/WPF** | Windows-Distribution (Microsoft Store vs. Website vs. Winget), Installer-Practices |
 | **Swift/macOS** | Mac App Store ASO, Notarization-Workflow, Indie-Mac-Communities |
 | **Web/TypeScript** | SEO, Product Hunt, Indie Hackers, Landing Page Best Practices |
-| **Tampermonkey** | GreasyFork/OpenUserJS Listing, Reddit-Communities |
 | **CLI-Tool** | Package Manager (npm/cargo/brew), GitHub Releases, awesome-lists |
 | **Open Source** | GitHub-Sichtbarkeit, README-Design, Contributing Guide |
 
@@ -48,7 +46,7 @@ Fuer andere: `📦 Phase [N] ([Name]) — [Projekt] v[Version] | [Projekttyp]`
 ## Entwicklungsphase (IMMER AKTUELL HALTEN)
 - **Aktuelle Phase**: 1 (Projekt-Setup)
 - **Phase gestartet am**: [Datum]
-- **Projekttyp**: [Android/Kotlin | C#/WPF | Swift/macOS | Web/TS | Rust | Go | Tampermonkey]
+- **Projekttyp**: [Android/Kotlin | C#/WPF | Swift/macOS | Web/TS | Rust | Go]
 - **Version**: v0.1.0
 - **Letzter Arbeitsstand**: Projekt gerade erstellt
 - **Naechster Schritt**: [Erster konkreter Schritt]

@@ -81,7 +81,6 @@ Umgebung/
 | `sound-search` | 5 KB | Freesound.org-Suche für Sound-Effekte |
 | `string-extraktor` | 213 KB | Hardcodes → strings.xml für Android i18n |
 | `superintelligenz` | 3 KB | Direktive #1: Intelligenteste Umgebung der Welt |
-| `tampermonkey-version` | 2 KB | Tampermonkey-Version-Bumping |
 | `undo-changes` | 4 KB | Sicheres Revert per `git revert` |
 | `übersetzung` | 138 KB | Android-Strings in 30+ Locales übersetzen |
 

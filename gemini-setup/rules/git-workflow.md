@@ -51,7 +51,6 @@ NIEMALS blind `checkout --ours/--theirs` verwenden.
 
 | Projekttyp | Lint-Befehl |
 |------------|-------------|
-| Tampermonkey (JS) | `bunx biome check <file>` |
 | C# / .NET | `dotnet build` |
 | TypeScript | `tsc --noEmit` |
 | Rust | `cargo clippy -- -D warnings` |
@@ -108,7 +107,7 @@ NIEMALS blind `checkout --ours/--theirs` verwenden.
 
 ## 6. Edit + Version-Bump atomar ausfuehren
 
-Bei Tampermonkey-Skripten (und generell bei Batch-Edits ueber mehrere Dateien) muessen
+Bei Batch-Edits ueber mehrere gleichartige Dateien muessen
 Edit + Version-Bump als zusammengehoeriger Schritt geplant werden.
 
 **Regeln:**
@@ -117,7 +116,7 @@ Edit + Version-Bump als zusammengehoeriger Schritt geplant werden.
   nicht alle Edit-1 parallel und dann alle Edit-2 parallel
 - Alternativ: Coder-Agent pro Datei — der kann mehrere Edits hintereinander machen
 
-**Vorfall:** 9 Tampermonkey-Skripte parallel editiert, danach Version-Bump fehlgeschlagen
+**Vorfall:** 9 gleichartige Skript-Dateien parallel editiert, danach Version-Bump fehlgeschlagen
 weil alle Dateien nach dem ersten Edit "stale" waren (9 extra Reads noetig).
 
 ---

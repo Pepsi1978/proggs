@@ -53,7 +53,7 @@ Die Statusline zeigt unten in jeder Claude-Code-Session: `🤖 Modell | ⚡ Effo
 | `rules/` | Regeln und Direktiven (19 Dateien) | Superintelligenz, Selbstbeobachtung, Resilient Bugfixing, Sprach-Regeln, Intent-Tracking, etc. |
 | `agents/` | Custom Opus/Sonnet Agenten (15 Stueck) | architect, batch-reviewer, challenger, code-reviewer, coder, debugger, env-checker, evolution-analyst, intelligence-researcher, mar-reviewer, optimizer, quality-gate, researcher, tester, ui-polisher |
 | `commands/` | Slash-Commands | `/self-improve` (v5.19), `/tool-check`, `/claudeception` |
-| `skills/` | Custom Skills (6 Stueck) | auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja |
+| `skills/` | Custom Skills (5 Stueck) | auto-verify-iterate, cross-platform, undo-changes, android-clean-architecture, android-ninja |
 | `hooks/` | Hook-Skripte (.ps1 + .sh Paare) | 22 Hooks fuer 17 Event-Typen |
 | `bridges/` | CLI-Bruecken (read-only Sync) | codex-delta-bridge, gemini-delta-bridge |
 | `state/` | Delta-State-Tracking | codex-delta-state.json, gemini-delta-state.json |

@@ -80,7 +80,7 @@ Scope: 51+ Ergebnisse
 
 **Regel:** Gleiche Aenderung an 3+ Dateien → IMMER Python-Batch-Script. NIEMALS parallele Coder-Agents.
 
-> Vorfall 2026-03-28: 5 parallele Coder-Agents fuer Tampermonkey-Skripte.
+> Vorfall 2026-03-28: 5 parallele Coder-Agents fuer mehrere gleichartige Skript-Dateien.
 > 4 von 5 vergassen UI_IDS-Eintraege, 2 fuegten fehlerhaften Code ein.
 > Python-Batch danach: 0 Fehler in allen 10 Dateien.
 

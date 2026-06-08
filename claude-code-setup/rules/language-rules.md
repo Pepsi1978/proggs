@@ -21,7 +21,7 @@ paths:
 
 # Programmiersprachen-Regeln (Referenz)
 
-> Konsolidiert aus: cpp, csharp, go, java, kotlin, rust, swift, typescript, tampermonkey
+> Konsolidiert aus: cpp, csharp, go, java, kotlin, rust, swift, typescript
 
 ---
 
@@ -131,14 +131,3 @@ paths:
 - Lint: `bunx biome check .`
 - Format: `bunx biome format --write .` oder `npx prettier --write .`
 
----
-
-## Tampermonkey Scripts
-
-- **IMMER** Version-Nummern bumpen bei JEDER Aenderung (sowohl @name als auch @version)
-- Commit-Format: `#NNN - Description` (sequentielle Nummerierung)
-- Repository: https://github.com/Pepsi1978/proggs
-- Gemeinsame UI-Patterns (Buttons, Overlays) konsistent halten
-- Lint: `bunx biome check <file>`
-- Format: `bunx biome format --write <file>`
-- Test: Manuell im Browser testen (kein automatisiertes Framework)
