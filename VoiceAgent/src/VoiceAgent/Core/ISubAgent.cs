@@ -22,6 +22,13 @@ namespace VoiceAgent.Core
         /// <summary>Ob dieser Unteragent die Aufgabe uebernehmen kann.</summary>
         bool CanHandle(string task);
 
+        /// <summary>
+        /// Kurze, vorlesbare Verstaendnis-Rueckfrage, die der Hauptagent stellt, BEVOR der
+        /// Unteragent die Aufgabe ausfuehrt (Manifest Abschnitt 6: erst zurueckfragen, dann tun).
+        /// Default ist generisch; Unteragenten duerfen eine spezifischere Formulierung liefern.
+        /// </summary>
+        string ConfirmationQuestion(string task) => "Soll ich das fuer dich erledigen?";
+
         /// <summary>Fuehrt die Aufgabe aus und liefert eine kurze, vorlesbare Antwort.</summary>
         Task<string> HandleAsync(string task, CancellationToken ct = default);
     }

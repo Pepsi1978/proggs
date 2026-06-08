@@ -22,6 +22,19 @@ namespace VoiceAgent.Core
         private readonly string? _timeZoneId;
         private readonly ChatSession _session;
 
+        /// <summary>
+        /// Offene Verstaendnis-Rueckfrage: ein Unteragent wartet auf das "Ja" des Nutzers,
+        /// bevor er die Aufgabe ausfuehrt (Manifest Abschnitt 6: erst zurueckfragen, dann tun).
+        /// null = keine offene Rueckfrage.
+        /// </summary>
+        private PendingAction? _pending;
+
+        /// <summary>Eine vom Nutzer noch zu bestaetigende Aufgabe (Unteragent + originaler Auftragstext).</summary>
+        private sealed record PendingAction(ISubAgent Sub, string Task);
+
+        /// <summary>True, solange eine Verstaendnis-Rueckfrage auf Antwort wartet (fuer UI/Tests).</summary>
+        public bool HasPendingConfirmation => _pending != null;
+
         public BossAgent(ILlmProvider provider, string? systemPrompt, AgentMemory? memory = null, SubAgentRegistry? subAgents = null, string? timeZoneId = null, ChatSession? session = null)
         {
             _provider = provider;
@@ -94,28 +107,90 @@ namespace VoiceAgent.Core
         /// </summary>
         public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
         {
+            // ---- 1) Steht eine Verstaendnis-Rueckfrage offen? Dann zuerst Ja/Nein deuten. ----
+            if (_pending != null)
+            {
+                var decision = ConfirmationDetector.Interpret(userText);
+                Probe.Decision("Rueckfrage-Antwort", decision.ToString(), new { sub = _pending.Sub.Name });
+                switch (decision)
+                {
+                    case ConfirmationDetector.Decision.Yes:
+                        return await ExecutePendingAsync(userText, ct).ConfigureAwait(false);
+
+                    case ConfirmationDetector.Decision.No:
+                    {
+                        var declinedSub = _pending.Sub.Name;
+                        _pending = null;
+                        const string declined = "Alles klar, dann lasse ich das.";
+                        RecordTurn(userText, declined);
+                        Log.Info("BossAgent: Aufgabe nach Rueckfrage abgelehnt", new { sub = declinedSub });
+                        return new AgentReply(declined, null);
+                    }
+
+                    default: // Unclear -> Rueckfrage fallen lassen, Eingabe als NEUES Thema behandeln (kein Haengenbleiben)
+                        Log.Info("BossAgent: Rueckfrage unbeantwortet -> als neues Thema behandelt",
+                            new { sub = _pending.Sub.Name });
+                        _pending = null;
+                        break;
+                }
+            }
+
+            // ---- 2) Neue Aufgabe erkannt + zustaendiger Unteragent -> ZUERST zurueckfragen (NICHT ausfuehren). ----
             if (intent == IntentKind.Task && _subAgents != null)
             {
                 var sub = _subAgents.Find(userText);
                 if (sub != null)
                 {
-                    Log.Info($"BossAgent: delegiere an Unteragent '{sub.Name}'");
-                    try
-                    {
-                        var subReply = await sub.HandleAsync(userText, ct).ConfigureAwait(false);
-                        _session.History.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
-                        _session.History.Add(new LlmMessage(LlmRole.Assistant, subReply));
-                        _memory?.RecordTurn(userText ?? string.Empty, subReply);
-                        return new AgentReply(subReply, sub.Name);
-                    }
+                    string question;
+                    try { question = sub.ConfirmationQuestion(userText); }
                     catch (Exception ex)
                     {
-                        Log.Error($"BossAgent: Unteragent '{sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
-                        // Fallback: nichts geht verloren, der Hauptagent antwortet selbst.
+                        Log.Error($"BossAgent: ConfirmationQuestion von '{sub.Name}' warf — generische Rueckfrage", ex);
+                        question = "Soll ich das fuer dich erledigen?";
                     }
+                    _pending = new PendingAction(sub, userText);
+                    Probe.Decision("Aufgabe", "Rueckfrage gestellt (noch nicht ausgefuehrt)", new { sub = sub.Name });
+                    RecordTurn(userText, question);
+                    Log.Info($"BossAgent: Rueckfrage zu Unteragent '{sub.Name}' gestellt");
+                    return new AgentReply(question, null);
                 }
             }
+
+            // ---- 3) Sonst: Hauptagent antwortet selbst. ----
             return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
+        }
+
+        /// <summary>
+        /// Fuehrt die zuvor zurueckgefragte Aufgabe aus, nachdem der Nutzer bestaetigt hat.
+        /// Faellt bei einem Fehler des Unteragenten sicher auf den Hauptagenten zurueck
+        /// (funktionserhaltend — nichts geht verloren).
+        /// </summary>
+        private async Task<AgentReply> ExecutePendingAsync(string userText, CancellationToken ct)
+        {
+            var pending = _pending!;
+            _pending = null;   // Rueckfrage ist beantwortet — egal wie es ausgeht
+            Log.Info($"BossAgent: Aufgabe bestaetigt -> delegiere an '{pending.Sub.Name}'");
+            try
+            {
+                var subReply = await pending.Sub.HandleAsync(pending.Task, ct).ConfigureAwait(false);
+                Probe.That(!string.IsNullOrWhiteSpace(subReply),
+                    "BossAgent: Unteragent lieferte leere Antwort nach Bestaetigung", new { sub = pending.Sub.Name });
+                RecordTurn(userText, subReply);   // Verlauf: Nutzer-"Ja" + Ergebnis
+                return new AgentReply(subReply, pending.Sub.Name);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"BossAgent: bestaetigter Unteragent '{pending.Sub.Name}' schlug fehl — Hauptagent uebernimmt", ex);
+                return new AgentReply(await RespondAsync(userText, ct).ConfigureAwait(false), null);
+            }
+        }
+
+        /// <summary>Schreibt einen Nutzer/Antwort-Turn in Verlauf UND Langzeitgedaechtnis (eine Stelle, konsistent).</summary>
+        private void RecordTurn(string userText, string reply)
+        {
+            _session.History.Add(new LlmMessage(LlmRole.User, userText ?? string.Empty));
+            _session.History.Add(new LlmMessage(LlmRole.Assistant, reply));
+            _memory?.RecordTurn(userText ?? string.Empty, reply);
         }
 
         /// <summary>Setzt den Gespraechsverlauf zurueck (neues Gespraech).</summary>
@@ -123,6 +198,7 @@ namespace VoiceAgent.Core
         {
             _session.History.Clear();
             _session.Summary = "";
+            _pending = null;   // offene Rueckfrage gehoert nicht in ein neues Gespraech
             Log.Info("BossAgent: Verlauf der aktiven Session zurueckgesetzt");
         }
     }

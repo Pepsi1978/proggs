@@ -33,6 +33,20 @@ namespace VoiceAgent.Core
             return false;
         }
 
+        /// <summary>Spezifische Rueckfrage: nennt Zeitpunkt und Inhalt, falls erkennbar.</summary>
+        public string ConfirmationQuestion(string task)
+        {
+            var due = ParseDueTime(task, DateTimeOffset.Now);
+            var text = ExtractReminderText(task);
+            if (due == null)
+                return "Wann soll ich dich erinnern? Sag zum Beispiel: in zehn Minuten, oder um 22 Uhr.";
+
+            var when = due.Value.ToString("HH:mm", new CultureInfo("de-DE"));
+            return string.IsNullOrWhiteSpace(text)
+                ? $"Soll ich dich um {when} Uhr erinnern?"
+                : $"Soll ich dich um {when} Uhr daran erinnern: {text}?";
+        }
+
         public Task<string> HandleAsync(string task, CancellationToken ct = default)
         {
             var due = ParseDueTime(task, DateTimeOffset.Now);

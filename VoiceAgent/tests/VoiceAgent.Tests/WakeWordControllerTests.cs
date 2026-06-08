@@ -93,7 +93,7 @@ namespace VoiceAgent.Tests
             var engine = new FakeWakeWordEngine();
             var c = new WakeWordController(engine, new FakeVad(), 60000, () => now);
             bool slept = false;
-            c.Slept += () => slept = true;
+            c.Slept += _ => slept = true;   // Slept ist Action<string> (reason) — Argument hier ignoriert
             engine.TriggerWake();
             c.ProcessFrame(Frame());
 

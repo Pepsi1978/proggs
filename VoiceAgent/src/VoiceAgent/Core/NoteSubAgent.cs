@@ -32,6 +32,15 @@ namespace VoiceAgent.Core
             return false;
         }
 
+        /// <summary>Spezifische Rueckfrage: nennt, was gemerkt werden soll.</summary>
+        public string ConfirmationQuestion(string task)
+        {
+            var note = ExtractNote(task);
+            return string.IsNullOrWhiteSpace(note)
+                ? "Soll ich mir das merken?"
+                : $"Soll ich mir merken: {note}?";
+        }
+
         public Task<string> HandleAsync(string task, CancellationToken ct = default)
         {
             var note = ExtractNote(task);
