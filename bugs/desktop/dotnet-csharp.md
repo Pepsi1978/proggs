@@ -114,6 +114,14 @@ richtig macht*. Wechselseitig gepflegt:
 **FIX:** `<StripSymbols>false</StripSymbols>` bzw. `DebugSymbols` nicht auf false; PDB-Verhalten ueber `DebugType` steuern.
 **Quelle:** https://learn.microsoft.com/en-us/dotnet/core/compatibility/deployment/8.0/stripsymbols-default
 
+### 1.9 Single-File-Publish kopiert `<Content>`-Dateien NICHT zuverlaessig neben die EXE  ⭐ WICHTIG
+**Symptom:** `dotnet build` legt Content-Dateien (z.B. ML-Modelle, Sounds) korrekt nach `bin/...` ab und alles funktioniert; nach `dotnet publish -p:PublishSingleFile=true` fehlen genau diese Dateien neben der EXE — der Ziel-Unterordner wird zwar ANGELEGT, bleibt aber LEER. Zur Laufzeit `FileNotFoundException` beim Laden (Pfad via `AppContext.BaseDirectory`).
+**Konkreter Vorfall 2026-06-08 (VoiceAgent):** `assets/wakeword-model/encoder.onnx` fehlte im publish → `SherpaWakeWordEngine` warf FileNotFound → das Weckwort-Feature deaktivierte sich still (catch + Fallback), die App zeigte „ruht — sag Weckwort", verarbeitete aber JEDE Aussage. `bin/Release` hatte alle 7 Modelldateien, `publish/assets/wakeword-model/` war leer.
+**Ursache:** `<Content Include="..\**\*" CopyToOutputDirectory="PreserveNewest" />` steuert primaer den BUILD-Output. Beim Single-File-Publish werden Wildcard-Content-Ordner nicht zuverlaessig in den Publish-Output uebernommen (bekannte single-file-Eigenheit; native Libs sind embedded, lose Content-Dateien aber nicht).
+**Versionen:** .NET 6–10, `PublishSingleFile=true` (+ `IncludeNativeLibrariesForSelfExtract`/`EnableCompressionInSingleFile`).
+**FIX (funktionserhaltend):** Im Publish-Skript NACH `dotnet publish` die Content-Assets EXPLIZIT neben die EXE spiegeln (`Copy-Item src\...\assets\* $out\assets -Recurse -Force`) und das Vorhandensein der Schluesseldatei verifizieren (`Test-Path encoder.onnx`, sonst Warnung). Ergaenzend `CopyToPublishDirectory="PreserveNewest"` am Content-Item setzen. Native-API-Modelle gehoeren als lose Dateien neben die EXE, nicht embedded (vgl. wake-word-Almanach §6).
+**Quelle:** eigener Vorfall 2026-06-08 (VoiceAgent, per Observability-Sonde lokalisiert: „Wake-Word-Modelldatei fehlt: encoder.onnx") · https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview
+
 ---
 
 ## 2. WPF Overlay-spezifisch (Topmost, Transparenz, Airspace, DWM)
