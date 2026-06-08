@@ -144,7 +144,25 @@ try {
     } elseif ($fpl -match '\.user\.js$') {
         $slug = 'tampermonkey'; $file = 'tampermonkey.md'; $name = 'Tampermonkey/Userscripts'
     } elseif ($fpl -match '\.xaml$' -or $fpl -match '\.csproj$' -or $fpl -match '\.cs$') {
-        $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
+        # .cs: Groq-Whisper-Transkriptions-Pfad (GroqWhisperClient/audio/transcriptions/api.groq.com)? -> groq-transkription.md, sonst dotnet-csharp.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-Code). FAIL-OPEN.
+        $groqSignal = $false
+        if ($fpl -match '\.cs$') {
+            $probe = ""
+            try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            if ($probe -match 'GroqWhisperClient' -or $probe -match 'audio/transcriptions' -or $probe -match 'api\.groq\.com') { $groqSignal = $true }
+        }
+        if ($groqSignal) {
+            $slug = 'groq'; $file = 'groq-transkription.md'; $name = 'Groq Whisper Transkription (Audio/STT)'
+        } else {
+            $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
+        }
     } elseif ($fpl -match '\.py$') {
         # .py: MCP-Server-Quelle (mcp/FastMCP)? -> mcp-server.md, sonst python-windows.md. FAIL-OPEN.
         $mcpPy = $false

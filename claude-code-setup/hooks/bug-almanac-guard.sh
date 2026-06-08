@@ -157,7 +157,35 @@ $ti_extra"
     *.user.js)
         slug="tampermonkey"; file="tampermonkey.md"; name="Tampermonkey/Userscripts";;
     *.xaml|*.csproj|*.cs)
-        slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)";;
+        # .cs: Groq-Whisper-Transkriptions-Pfad (GroqWhisperClient/audio/transcriptions/api.groq.com)? -> groq-transkription.md, sonst dotnet-csharp.md.
+        # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-Code). FAIL-OPEN (trap).
+        groqSignal=0
+        case "$fpl" in
+          *.cs)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in
+              *GroqWhisperClient*|*audio/transcriptions*|*api.groq.com*) groqSignal=1;;
+            esac
+            ;;
+        esac
+        if [ "$groqSignal" -eq 1 ]; then
+            slug="groq"; file="groq-transkription.md"; name="Groq Whisper Transkription (Audio/STT)"
+        else
+            slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)"
+        fi
+        ;;
     *.py)
         # .py: MCP-Server-Quelle (mcp/FastMCP)? -> mcp-server.md, sonst python-windows.md. FAIL-OPEN (trap).
         mcpPy=0
