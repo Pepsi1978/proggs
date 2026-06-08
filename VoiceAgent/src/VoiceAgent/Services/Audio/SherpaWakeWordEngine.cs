@@ -34,10 +34,11 @@ namespace VoiceAgent.Services.Audio
 
         /// <summary>
         /// Erstellt die Engine. <paramref name="modelDir"/> enthaelt encoder.onnx, decoder.onnx,
-        /// joiner.onnx, tokens.txt und keywords.txt. Wirft bei fehlenden Dateien oder
-        /// Native-Init-Fehlern — der Aufrufer behandelt das (Wake-Word aus).
+        /// joiner.onnx und tokens.txt. <paramref name="keywordsFile"/> ist die (vor-tokenisierte)
+        /// keywords.txt fuer das aktuell gewaehlte Weckwort — null = die gebundelte im modelDir.
+        /// Wirft bei fehlenden Dateien oder Native-Init-Fehlern — der Aufrufer behandelt das (Wake-Word aus).
         /// </summary>
-        public SherpaWakeWordEngine(string modelDir, int numThreads = 1)
+        public SherpaWakeWordEngine(string modelDir, int numThreads = 1, string? keywordsFile = null)
         {
             EnsureDllSearchPath();
 
@@ -45,7 +46,11 @@ namespace VoiceAgent.Services.Audio
             string decoder  = Path.Combine(modelDir, "decoder.onnx");
             string joiner   = Path.Combine(modelDir, "joiner.onnx");
             string tokens   = Path.Combine(modelDir, "tokens.txt");
-            string keywords = Path.Combine(modelDir, "keywords.txt");
+            // keywords.txt folgt dem gewaehlten Weckwort (separater, beschreibbarer Pfad) — sonst
+            // die gebundelte Datei im modelDir (Default "Okay Computer").
+            string keywords = string.IsNullOrWhiteSpace(keywordsFile)
+                ? Path.Combine(modelDir, "keywords.txt")
+                : keywordsFile!;
 
             // Sonden: fehlende Modelldateien sind die haeufigste stille Ursache (#11/§6).
             foreach (var (path, label) in new[]

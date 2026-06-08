@@ -394,7 +394,10 @@ namespace VoiceAgent
             try
             {
                 string modelDir = Path.Combine(AppContext.BaseDirectory, "assets", "wakeword-model");
-                var engine = new SherpaWakeWordEngine(modelDir);
+                // keywords.txt aus dem GEWAEHLTEN Weckwort erzeugen (BPE-tokenisiert), damit die
+                // Erkennung dem Einstellungs-Weckwort folgt — vorher war keywords.txt fest "Okay Computer".
+                string keywordsFile = WakeWords.EnsureKeywordsFile(_settings.WakeWord, modelDir);
+                var engine = new SherpaWakeWordEngine(modelDir, 1, keywordsFile);
                 var vad = new EnergyVadGate(_settings.SilenceThreshold);
                 _wake = new WakeWordController(engine, vad, _settings.WakeTimeoutMs);
                 _wake.Woke += OnWoke;

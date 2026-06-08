@@ -336,9 +336,9 @@
 
                         <CheckBox x:Name="WakeWordEnabledBox" Margin="0,4,0,8"
                                   Content="Weckwort-Modus aktivieren"/>
-                        <TextBlock Text="Weckwort-Text (englische Aussprache — Erkennung ist auf „Okay Computer“ eingestellt; anderes Wort siehe assets/wakeword-model/README.md)"
+                        <TextBlock Text="Weckwort (englische Aussprache — das Modell ist englisch). Wähle eines aus; die Erkennung wird beim Speichern sofort darauf umgestellt."
                                    Style="{StaticResource Label}"/>
-                        <TextBox x:Name="WakeWordBox" MaxWidth="420" HorizontalAlignment="Left"/>
+                        <ComboBox x:Name="WakeWordBox" MaxWidth="420" HorizontalAlignment="Left"/>
 
                         <TextBlock Text="Töne" Style="{StaticResource Section}"/>
                         <CheckBox x:Name="WakeChimeBox" Margin="0,4,0,6"
