@@ -32,6 +32,19 @@
 
 ---
 
+## 🔗 Bezug zu den Best Practices ([`best-practices/projekt-code/desktop/best-practices-groq-transkription.md`](../../best-practices/projekt-code/desktop/best-practices-groq-transkription.md))
+
+Der Almanach sagt *was schiefgeht*; die Best-Practices-Datei sagt *wie man es von vornherein richtig macht*.
+
+| Bug-Abschnitt (hier) | Praevention in best-practices-groq-transkription.md |
+|----------------------|------------------------------------------------------|
+| §1 Stille-Halluzination, §1.2 temperature, §1.3 prompt, §1.4 Repetition | BP 1 Aufnahme/Preprocessing, BP 2 Request-Konfig, BP 3 Nachfilter |
+| §2 Abwehr-Kette (Vorfilter/Confidence/Blocklist) | BP 1 (Vorfilter), BP 3 (Confidence-Gate + Blocklist) |
+| §3 Groq-Parameter/Format/Modell | BP 2 Request-Konfig, BP 4 Performance |
+| §4 Rate-Limits/Kosten/Fehlercodes/Endpoint | BP 5 .NET-Resilienz, BP 7 Kosten, BP 8 Integration |
+
+---
+
 ## 1. Stille-Halluzination (das Kernproblem)
 
 ### 1.1 Whisper erfindet bei Stille Outro-Floskeln  ⭐ HAEUFIG / Franks Vorfall
