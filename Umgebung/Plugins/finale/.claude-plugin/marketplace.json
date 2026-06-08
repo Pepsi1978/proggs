@@ -1,0 +1,18 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+	"name": "local",
+	"version": "1.0.0",
+	"description": "Lokaler Marktplatz für Franks eigene Plugins.",
+	"owner": {
+		"name": "Frank",
+		"email": "barwandt@gmail.com"
+	},
+	"plugins": [
+		{
+			"name": "finale",
+			"description": "Closed-Loop-Pipeline, die eine deutsche Android-App vor der Google-Play-Veröffentlichung vollständig durchleuchtet, rechtssicher macht und layout-stabil mehrsprachig übersetzt — ausschließlich Text-Änderungen, niemals Funktion oder Optik, bis 0 offene Findings.",
+			"source": "./Plugin",
+			"category": "development"
+		}
+	]
+}
