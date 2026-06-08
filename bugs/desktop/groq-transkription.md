@@ -132,7 +132,16 @@ Mini-Noise: segment_dauer < 0.4 s  UND  no_speech_prob > 0.6
 **KRITISCH:** UND, nicht ODER. Echte leise Sprache hat zwar evtl. erhoehtes `no_speech_prob`, aber
 ein gutes (nicht so negatives) `avg_logprob` → bleibt erhalten. Mit ODER fielen Fluester-Segmente raus.
 Zu aggressiv? Zuerst `no_speech`-Schwelle auf 0.7 anheben, NICHT `avg_logprob` lockern.
-**Quelle:** [Groq STT Docs](https://console.groq.com/docs/speech-to-text) · [Groq Cookbook](https://deepwiki.com/groq/groq-api-cookbook/2-speech-and-audio-processing) · [gradio VAD](https://www.gradio.app/guides/automatic-voice-detection)
+**⭐ WICHTIG — das Gate allein faengt REINE Stille NICHT (verifiziert 2026-06-08, Push-to-Talk-Overlay):**
+Bei „Aufnahme gestartet, aber NICHTS gesagt" halluziniert Whisper die Floskel mit **HOHER** Confidence —
+also **niedrigem** `no_speech_prob` UND **gutem** `avg_logprob`. Die UND-Bedingung greift dann nicht, das
+Segment ueberlebt. Verschaerfend: **ultrakurze Clips liefern oft GAR KEINE `segments`** (nur top-level
+`text`), sodass jeder Segment-Filter ins Leere laeuft und der top-level-Fallback die Floskel durchreicht.
+**Konsequenz:** Fuer den „nichts gesagt"-Fall ist NICHT das Confidence-Gate die Loesung, sondern der
+**Sprachgehalt-Vorfilter §2.1 VOR dem Senden** (gar nicht erst an Groq schicken). Bei Push-to-Talk genuegt
+ein Vorfilter auf **absolute** laute Zeit (z.B. ≥150 ms RMS-aktiv) — KEINE Voiced-Ratio (sonst fielen echte
+Aufnahmen mit langen Denkpausen heraus). Das Confidence-Gate bleibt fuer Pausen MITTEN in echter Sprache zustaendig.
+**Quelle:** [Groq STT Docs](https://console.groq.com/docs/speech-to-text) · [Groq Cookbook](https://deepwiki.com/groq/groq-api-cookbook/2-speech-and-audio-processing) · [gradio VAD](https://www.gradio.app/guides/automatic-voice-detection) · Franks Live-Test 2026-06-08 (TVO/CVO)
 
 ### 2.4 Floskel-Blocklist (letzter Filter, mehrsprachig + normalisiert)
 **Problem:** Vereinzelte Floskeln rutschen trotz §2.1–2.3 durch.
