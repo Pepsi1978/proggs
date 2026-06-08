@@ -26,7 +26,8 @@ bugs/
 ├── web/              Chrome-Erweiterungen, TypeScript/Node
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
-└── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
+├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
+└── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OAuth/Device-Code, ...)
 ```
 
 Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
@@ -109,6 +110,31 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
 | **App-Icon-Building** (Windows `.ico`, Android Adaptive Icons, macOS `.icns`) | [`assets/icon-building.md`](assets/icon-building.md) | 2026-06-07 | ~30 | `*.ico`, `*.icns`, `ic_launcher*.xml`, `*.iconset/`, `<ApplicationIcon>` · „Icon", „App-Icon", „.ico", „.icns", „Adaptive Icon", „mipmap", „Icon-Cache", „schwarze/transparente Ecken", „Verknuepfung/Shortcut-Icon", „iconutil", „Squircle", „Pillow ICO" |
+
+---
+
+### 🔌 `apis/` — LLM-/HTTP-API-Integration & Authentifizierung
+
+> Querschnitts-Bereich (kein sauberes Datei-Pattern): wird NICHT vom `bug-almanac-guard` erzwungen,
+> sondern über diesen Index + die Stichwort-Trigger gefunden. Vor Arbeit an einer API-Anbindung die
+> passende Datei lesen. Reihenfolge bei eigenem Code: zuerst `api-integration-general.md` (gilt immer),
+> dann die anbieterspezifische Datei, bei Login `oauth-device-code.md`.
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
+|---------|-------|-------|------|----------------------------------|
+| **Anbieterübergreifend** (Rate-Limit/Retry/SSE/Timeout/HttpClient/Secrets) | [`apis/api-integration-general.md`](apis/api-integration-general.md) | 2026-06-08 | ~20 | „API integrieren", „429", „Rate Limit", „Retry", „Backoff", „SSE", „Streaming", „Timeout", „HttpClient", „API-Key", „Idempotency" |
+| **OpenAI API** | [`apis/openai-api.md`](apis/openai-api.md) | 2026-06-08 | 26 | „OpenAI", „GPT", „Responses API", „Chat Completions", „o1/o3/o4", „reasoning_effort", „max_completion_tokens", „Azure OpenAI" |
+| **Anthropic Claude API** | [`apis/anthropic-api.md`](apis/anthropic-api.md) | 2026-06-08 | 30 | „Anthropic", „Claude API", „Messages API", „anthropic-version", „x-api-key", „tool_use", „prompt caching", „extended thinking" |
+| **Google Gemini API** | [`apis/google-gemini-api.md`](apis/google-gemini-api.md) | 2026-06-08 | 22 | „Gemini", „google-genai", „generativelanguage", „thinkingBudget", „safetySettings", „Vertex" |
+| **Groq API** | [`apis/groq-api.md`](apis/groq-api.md) | 2026-06-08 | 21 | „Groq", „LPU", „api.groq.com", „model_decommissioned", „whisper-large-v3", „TPM" |
+| **OpenRouter** (Aggregator) | [`apis/openrouter-api.md`](apis/openrouter-api.md) | 2026-06-08 | 18 | „OpenRouter", „openrouter.ai", „HTTP-Referer", „provider routing", „:free", „:nitro" |
+| **xAI Grok API** | [`apis/xai-grok-api.md`](apis/xai-grok-api.md) | 2026-06-08 | 15 | „Grok", „xAI", „api.x.ai", „grok-4", „Live Search" |
+| **Mistral API** | [`apis/mistral-api.md`](apis/mistral-api.md) | 2026-06-08 | 24 | „Mistral", „api.mistral.ai", „Codestral", „FIM", „tool_call_id 9 Zeichen", „La Plateforme" |
+| **DeepSeek API** | [`apis/deepseek-api.md`](apis/deepseek-api.md) | 2026-06-08 | 14 | „DeepSeek", „deepseek-reasoner", „reasoning_content", „deepseek-chat", „V3/V4" |
+| **Lokale OpenAI-kompatible Server** (Ollama, LM Studio, vLLM, llama.cpp) | [`apis/local-openai-compatible.md`](apis/local-openai-compatible.md) | 2026-06-08 | 20 | „Ollama", „LM Studio", „vLLM", „llama.cpp", „localhost:11434", „num_ctx", „local LLM" |
+| **Weitere LLM-APIs** (Cohere, Together, Fireworks, Perplexity, Bedrock, Azure, Cerebras, Vertex, HF) | [`apis/other-llm-apis.md`](apis/other-llm-apis.md) | 2026-06-08 | Survey | „Cohere", „Together", „Fireworks", „Perplexity", „Bedrock", „Cerebras", „Vertex AI", „SigV4" |
+| **OAuth / Device-Code / PKCE / Token-Refresh** | [`apis/oauth-device-code.md`](apis/oauth-device-code.md) | 2026-06-08 | ~30 | „OAuth", „Device Code", „RFC 8628", „PKCE", „Token Refresh", „refresh token rotation", „Login einbauen" |
+| **CLI-Impersonation / Abo-OAuth** (Codex-Abo, Hermes-Trick, Anthropic-Ban) | [`apis/cli-impersonation-subscription-auth.md`](apis/cli-impersonation-subscription-auth.md) | 2026-06-08 | — | „als Codex CLI ausgeben", „ChatGPT-Abo per Geraetekode", „Hermes", „Codex device-auth", „Abo statt API-Key", „Copilot-Token" |
 
 ---
 
