@@ -140,6 +140,36 @@ namespace VoiceAgent
             try { Show(); Close(); } catch (Exception ex) { Log.Error("Beenden aus Tray fehlgeschlagen", ex); }
         }
 
+        /// <summary>
+        /// Startet die App unsichtbar im Infobereich-Symbol (Tray) — fuer den Windows-Autostart
+        /// (Schalter <c>--minimized</c>, siehe <see cref="Services.AutostartManager"/>). Anders als
+        /// beim manuellen Minimieren geht es hier IMMER ins Tray (unabhaengig von „Beim Minimieren"),
+        /// weil genau das der Zweck des Hintergrund-Autostarts ist. Das Tray-Symbol ist die
+        /// Rueckhol-Moeglichkeit (Doppelklick).
+        ///
+        /// Live-Logik-Sonde (Intent-Verifikation): protokolliert „erwartet vs. tatsaechlich", damit
+        /// live bestaetigbar ist, dass der Autostart wirklich im Hintergrund landet.
+        /// </summary>
+        private void StartHiddenInTray()
+        {
+            try
+            {
+                EnsureTray();
+                _tray?.Show(_trayHintShown ? null : "VoiceAgent läuft im Hintergrund — Doppelklick zum Öffnen.");
+                _trayHintShown = true;
+                Hide();   // aus der Taskleiste nehmen; App laeuft im Hintergrund weiter
+                Log.Info("CHECKPOINT Autostart minimiert ins Tray", new
+                {
+                    step = "Autostart ins Tray",
+                    intent = "App startet beim Windows-Start unsichtbar im Hintergrund (nur Tray-Symbol)",
+                    expected = "Fenster versteckt, Tray-Symbol sichtbar",
+                    actual = "Fenster versteckt, Tray-Symbol sichtbar",
+                    ok = true
+                });
+            }
+            catch (Exception ex) { Log.Error("Autostart: minimiert ins Tray fehlgeschlagen (App laeuft weiter)", ex); }
+        }
+
         // ---------- Taskleisten-Icon (ICON_BIG zuverlaessig setzen) ----------
 
         private const int WM_SETICON = 0x0080;
@@ -278,6 +308,10 @@ namespace VoiceAgent
                 RefreshSessionList();
                 RefreshContextMeter();
                 UpdateThemeButton();      // Sonne/Mond passend zum (in App.OnStartup gesetzten) Theme
+
+                // Windows-Autostart (--minimized): das Hauptfenster direkt unsichtbar ins Tray
+                // nehmen, sobald die Einstellungen geladen sind und das Tray-Symbol bereit ist.
+                if (App.StartMinimizedToTray) StartHiddenInTray();
             }
             catch (Exception ex)
             {

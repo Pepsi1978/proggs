@@ -44,6 +44,8 @@ namespace VoiceAgent.Views
                 if (ThemeBox.SelectedItem == null) ThemeBox.SelectedIndex = 0;
 
                 MinimizeToTrayBox.IsChecked = _settings.MinimizeToTray;
+                // Autostart: Wahrheit ist die Registry (HKCU\...\Run), nicht settings.json — direkt lesen.
+                AutostartBox.IsChecked = AutostartManager.IsEnabled();
 
                 PromptBox.Text = string.IsNullOrWhiteSpace(_settings.SystemPrompt)
                     ? BossAgentPrompt.Default
@@ -148,6 +150,8 @@ namespace VoiceAgent.Views
                 _settings.MinimizeToTray = MinimizeToTrayBox.IsChecked == true;
 
                 Config.Save(_settings);
+                // Windows-Autostart direkt in die Registry schreiben (Single Source of Truth).
+                AutostartManager.SetEnabled(AutostartBox.IsChecked == true);
                 Config.SaveApiKey("groq", GroqKeyBox.Text?.Trim() ?? "");
                 Config.SaveApiKey("google", GoogleKeyBox.Text?.Trim() ?? "");
                 Config.SaveApiKey("gemini", GeminiKeyBox.Text?.Trim() ?? "");

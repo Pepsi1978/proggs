@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,6 +22,13 @@ public partial class App : Application
     private static extern void SetCurrentProcessExplicitAppUserModelID(
         [MarshalAs(UnmanagedType.LPWStr)] string appID);
 
+    /// <summary>
+    /// true, wenn die App mit dem Schalter <c>--minimized</c> gestartet wurde (Windows-Autostart,
+    /// siehe <see cref="AutostartManager"/>). Dann geht das Hauptfenster beim Laden direkt unsichtbar
+    /// ins Infobereich-Symbol (Tray) und laeuft im Hintergrund (siehe MainWindow.OnLoaded).
+    /// </summary>
+    public static bool StartMinimizedToTray { get; private set; }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         // Handler ZUERST verkabeln, damit auch fruehe Startfehler erfasst werden.
@@ -29,6 +37,12 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         Log.Info("App-Start: globaler Fehler-Faenger verkabelt");
+
+        // Autostart-Schalter auswerten: kam die App per Windows-Autostart (--minimized) hoch,
+        // startet sie unsichtbar im Tray (Hintergrund). Defensiv: e.Args kann leer sein.
+        StartMinimizedToTray = e.Args?.Any(
+            a => string.Equals(a, AutostartManager.MinimizedArg, StringComparison.OrdinalIgnoreCase)) == true;
+        if (StartMinimizedToTray) Log.Info("App-Start: --minimized erkannt — Hauptfenster startet im Tray");
 
         // Stabile AppUserModelID VOR dem ersten Fenster setzen: gibt der App eine eindeutige
         // Taskleisten-Identitaet. Ohne sie leitet Windows 11 eine implizite ID ab und zeigt fuer

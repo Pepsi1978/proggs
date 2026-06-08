@@ -62,6 +62,15 @@
                 <TextBlock Text="Aus: klassisch in die Taskleiste. Ein: verschwindet aus der Taskleiste, Doppelklick aufs Tray-Symbol holt es zurück."
                            Style="{StaticResource Label}" TextWrapping="Wrap"/>
 
+                <!-- 0c. Autostart beim Windows-Start -->
+                <TextBlock Text="Beim Windows-Start" Style="{StaticResource Section}"/>
+                <TextBlock Text="Den VoiceAgent automatisch starten, wenn du dich bei Windows anmeldest."
+                           Style="{StaticResource Label}"/>
+                <CheckBox x:Name="AutostartBox" Margin="0,4,0,2"
+                          Content="Automatisch mit Windows starten — minimiert im Hintergrund (Infobereich/Tray)"/>
+                <TextBlock Text="Die App startet dann unsichtbar als Tray-Symbol und läuft im Hintergrund. Doppelklick aufs Symbol holt das Fenster nach vorne."
+                           Style="{StaticResource Label}" TextWrapping="Wrap"/>
+
                 <!-- 1. System-Prompt -->
                 <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}"/>
                 <TextBlock Text="Wie sich dein Assistent verhaelt. Leer lassen = eingebauter Standard."
