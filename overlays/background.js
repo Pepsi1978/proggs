@@ -24,6 +24,48 @@ function withTimeout(promise, ms, label) {
 	return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Confidence-Gate fuer Groq verbose_json (Schicht 2 gegen Stille-Halluzination).
+// UND-Logik, NICHT ODER: nur verwerfen wenn HOHES no_speech_prob UND schlechtes
+// avg_logprob — so bleibt echte leise Sprache (gutes avg_logprob) erhalten.
+// Ultrakurze Clips liefern oft KEINE segments -> top-level text durchreichen
+// (reine Stille ist bereits durch Schicht 1 im Content-Script gefiltert).
+// Quelle: bugs/desktop/groq-transkription.md §2.3.
+function filterTranscription(j) {
+	const segs = Array.isArray(j?.segments) ? j.segments : null;
+	if (!segs || segs.length === 0) return String(j?.text || "").trim();
+	const kept = [];
+	for (const s of segs) {
+		const noSpeech = Number(s?.no_speech_prob ?? 0);
+		const avgLp = Number(s?.avg_logprob ?? 0);
+		const compR = Number(s?.compression_ratio ?? 0);
+		const dur = Number(s?.end ?? 0) - Number(s?.start ?? 0);
+		const segText = String(s?.text ?? "");
+		// Stille: hohes no_speech UND schlechtes avg_logprob
+		if (noSpeech > 0.6 && avgLp < -1.0) {
+			console.log(
+				`[Overlays] STT-Segment verworfen (Stille): no_speech=${noSpeech.toFixed(2)} avg_lp=${avgLp.toFixed(2)} "${segText.trim()}"`,
+			);
+			continue;
+		}
+		// Repetition ("danke danke danke…")
+		if (compR > 2.4) {
+			console.log(
+				`[Overlays] STT-Segment verworfen (Repetition): compression_ratio=${compR.toFixed(2)} "${segText.trim()}"`,
+			);
+			continue;
+		}
+		// Mini-Noise: sehr kurzes Segment mit Stille-Verdacht
+		if (dur > 0 && dur < 0.4 && noSpeech > 0.6) {
+			console.log(
+				`[Overlays] STT-Segment verworfen (Mini-Noise): dur=${dur.toFixed(2)}s no_speech=${noSpeech.toFixed(2)} "${segText.trim()}"`,
+			);
+			continue;
+		}
+		kept.push(segText);
+	}
+	return kept.join("").trim();
+}
+
 // ── Groq Whisper Speech-to-Text ──
 // Audio kommt als data-URL (base64) vom Content-Script, damit es ueber
 // chrome.runtime.sendMessage serialisierbar ist.
@@ -40,7 +82,11 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 		form.append("file", blob, "recording.webm");
 		form.append("model", model || "whisper-large-v3-turbo");
 		form.append("language", lang || "de");
-		form.append("response_format", "text");
+		// verbose_json liefert pro Segment no_speech_prob/avg_logprob/compression_ratio
+		// (bei Groq ohne Mehrkosten/-latenz vs. text) -> Confidence-Gate moeglich.
+		// temperature=0 als sinnvolle Basis. Siehe bugs/desktop/groq-transkription.md §2.3/§3.1.
+		form.append("response_format", "verbose_json");
+		form.append("temperature", "0");
 
 		const r = await withTimeout(
 			fetch(GROQ_URL, {
@@ -51,16 +97,24 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 			REQUEST_TIMEOUT_MS,
 			"Groq",
 		);
-		const text = await r.text();
+		const raw = await r.text();
 		if (!r.ok) {
-			let msg = text.slice(0, 400) || "HTTP " + r.status;
+			let msg = raw.slice(0, 400) || "HTTP " + r.status;
 			try {
-				const j = JSON.parse(text);
+				const j = JSON.parse(raw);
 				if (j?.error?.message) msg = j.error.message;
 			} catch {}
 			return { ok: false, error: msg };
 		}
-		return { ok: true, text: (text || "").trim() };
+		// Schicht 2: Stille-/Repetitions-Segmente herausfiltern (funktionserhaltend).
+		let text;
+		try {
+			text = filterTranscription(JSON.parse(raw));
+		} catch {
+			// Kein JSON (sollte bei verbose_json nicht passieren) -> roh durchreichen.
+			text = (raw || "").trim();
+		}
+		return { ok: true, text };
 	} catch (e) {
 		return { ok: false, error: String(e?.message || e) };
 	}

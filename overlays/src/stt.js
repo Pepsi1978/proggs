@@ -21,6 +21,16 @@
 	const supportedWebSpeech = !!SpeechRecognitionAPI;
 	const MIN_CHARS_FOR_REWRITE = 6;
 
+	// ── Stille-Halluzination-Schutz (Schicht 1: Sprachinhalt-Vorfilter) ──
+	// Whisper/Groq erfindet bei Stille Floskeln ("Vielen Dank"). Reine Stille gar
+	// nicht erst senden — das Confidence-Gate (Schicht 2 im Service Worker) faengt
+	// reine Stille NICHT (Whisper halluziniert dort mit HOHER Confidence).
+	// Nur ABSOLUTE laute Zeit messen (keine Ratio), da Toggle-Mic mit Denkpausen.
+	// Konservativ: kurze Befehle ("ja"/"stop") bleiben erhalten.
+	// Quelle: bugs/desktop/groq-transkription.md §2.1/§2.3
+	const MIN_SPEECH_MS = 150; // min. absolute Sprechzeit zum Senden
+	const SPEECH_RMS_THRESHOLD = 0.015; // RMS-Schwelle wie TVO/VoiceAgent
+
 	let micBtn = null;
 	let wantsRecording = false;
 	let mediaRecorder = null;
@@ -209,6 +219,63 @@
 		});
 	}
 
+	// Misst die ABSOLUTE laute Zeit (ms) im aufgenommenen Audio. Das Blob ist
+	// komprimiert (webm/opus), daher per Web Audio dekodieren und RMS pro 20ms-Frame
+	// messen. Gibt -1 zurueck, wenn nicht messbar (dann NICHT filtern -> senden).
+	async function measureSpeechMs(blob) {
+		const AC = window.AudioContext || window.webkitAudioContext;
+		if (!AC) return -1;
+		const ctx = new AC();
+		try {
+			const arrayBuf = await blob.arrayBuffer();
+			const audioBuf = await ctx.decodeAudioData(arrayBuf);
+			const data = audioBuf.getChannelData(0); // erste Spur reicht
+			const sr = audioBuf.sampleRate;
+			const frame = Math.max(1, Math.round(sr * 0.02)); // 20ms-Frames
+			let voicedFrames = 0;
+			for (let i = 0; i + frame <= data.length; i += frame) {
+				let sum = 0;
+				for (let j = 0; j < frame; j++) {
+					const s = data[i + j];
+					sum += s * s;
+				}
+				if (Math.sqrt(sum / frame) >= SPEECH_RMS_THRESHOLD) voicedFrames++;
+			}
+			return voicedFrames * 20; // ms aktiver Sprache
+		} finally {
+			try {
+				ctx.close();
+			} catch {}
+		}
+	}
+
+	// Schicht 1: erst pruefen, ob ueberhaupt genug Sprache drin ist. Reine Stille
+	// (Knopf gedrueckt, nichts gesagt) gar nicht an Groq senden — verhindert die
+	// "Vielen Dank"-Halluzination, spart zudem die 10s-Mindestabrechnung.
+	async function maybeTranscribe(audioBlob) {
+		let speechMs = -1;
+		try {
+			speechMs = await measureSpeechMs(audioBlob);
+		} catch (e) {
+			// Decode fehlgeschlagen -> NICHT filtern (funktionserhaltend, nie echte
+			// Sprache verwerfen), einfach senden.
+			console.warn(
+				"[Overlays] Sprachgehalt-Messung fehlgeschlagen, sende trotzdem:",
+				e,
+			);
+		}
+		if (speechMs >= 0 && speechMs < MIN_SPEECH_MS) {
+			console.log(
+				`[Overlays] STT: nur ${Math.round(speechMs)}ms Sprache (< ${MIN_SPEECH_MS}ms) -> nicht gesendet (Stille-Schutz)`,
+			);
+			setMicState("idle");
+			removeLivePreview();
+			OV.toast("🤫 Keine Sprache erkannt — nichts gesendet.", 2000);
+			return;
+		}
+		transcribe(audioBlob);
+	}
+
 	async function transcribe(audioBlob) {
 		setMicState("working", "Whisper transkribiert…");
 		setLivePreviewWaiting();
@@ -349,7 +416,7 @@
 						type: mediaRecorder.mimeType || "audio/webm",
 					});
 					audioChunks = [];
-					transcribe(audioBlob);
+					maybeTranscribe(audioBlob);
 				};
 				mediaRecorder.start(1000);
 				setMicState("listening");
