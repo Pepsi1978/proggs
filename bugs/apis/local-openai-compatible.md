@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit mit lokalen/selbst-gehosteten OpenAI-kompatiblen Servern: **Ollama, LM Studio,
 > vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am
-> 2026-06-08. Zweite Seite: noch keine `best-practices-local-openai-compatible.md`.
+> 2026-06-08. Zweite Seite: `best-practices/projekt-code/apis/best-practices-local-openai-compatible.md`.
 
 ## TL;DR — die 6 wichtigsten Regeln
 
@@ -151,3 +151,7 @@
 - [ ] First-Request-Timeout ≥ 60 s, Modell vorgeladen, `keep_alive` bewusst (Client-`5m`-Override geprüft)?
 - [ ] vLLM Tool-Flags gesetzt? `/v1/models` zum Verifizieren des Namens?
 - [ ] `logprobs`/`n` nicht blind vorausgesetzt?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-local-openai-compatible.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

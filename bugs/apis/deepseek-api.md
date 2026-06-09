@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit an einer DeepSeek-Integration (api.deepseek.com). Stand: zuletzt
 > recherchiert am 2026-06-08. Versions-Anker: `deepseek-chat` (V3) + `deepseek-reasoner` (R1) — beide
-> Deprecation 2026-07-24, danach V4-flash/-pro. Zweite Seite: noch keine `best-practices-deepseek-api.md`.
+> Deprecation 2026-07-24, danach V4-flash/-pro. Zweite Seite: `best-practices/projekt-code/apis/best-practices-deepseek-api.md`.
 > Compliance-Hinweis: Hosting in China — bei personenbezogenen Daten relevant.
 
 ## TL;DR — die 4 wichtigsten Regeln
@@ -120,3 +120,7 @@
 - [ ] `max_tokens` explizit (dynamisch), `finish_reason:length`-Check?
 - [ ] 402 ≠ 401 unterschieden, Backoff bei 429/503?
 - [ ] Streaming: reasoning_content + content getrennt akkumuliert?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-deepseek-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

@@ -1,7 +1,7 @@
 # Bekannte Bugs: Mistral AI API (Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Mistral-Integration (api.mistral.ai / La Plateforme).
-> Stand: zuletzt recherchiert am 2026-06-08. Zweite Seite: noch keine `best-practices-mistral-api.md`.
+> Stand: zuletzt recherchiert am 2026-06-08. Zweite Seite: `best-practices/projekt-code/apis/best-practices-mistral-api.md`.
 
 ## TL;DR — die 5 wichtigsten Regeln
 
@@ -166,3 +166,7 @@
 - [ ] Codestral/FIM am richtigen Endpunkt + Key?
 - [ ] `mistral-common`-Tokenizer für Counts, Modell-Version gepinnt?
 - [ ] `Retry-After`/`X-RateLimit-Remaining` beachtet (Workspace-weit)?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-mistral-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

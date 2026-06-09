@@ -40,7 +40,7 @@
 - Batch API fuer nicht-zeitkritische Massen-Workloads: 50 % Rabatt, eigene hoehere Limits, Fenster 24 h–7 Tage, JSONL bis 50.000 Zeilen/200 MB (Chat, Vision, Audio). Rabatt stapelt NICHT mit Prompt-Caching. Quelle: https://console.groq.com/docs/batch · offiziell
 - Native SDKs nutzen (`pip install groq` / `npm i groq-sdk`), Key per `GROQ_API_KEY`-Env; SDKs bringen Retries und sync/async-Clients mit — Timeout/`max_retries` pro Request bzw. Client setzen. Quelle: https://console.groq.com/docs/libraries · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/groq-api.md`) |
 |---|---|
 | 1 OpenAI-Kompatibilitaetslayer | 1, 2, 3 (Abschn. 1) |

@@ -41,7 +41,7 @@
 - First-Request-Timeout grosszuegig (≥ 60 s): bei vLLM/llama.cpp laedt das Modell beim Start, bei Ollama/LM-Studio-JIT erst beim ersten Request (Cold-Start) — Folge-Requests sind schnell. Quelle: https://lmstudio.ai/docs/app/api/ttl-and-auto-evict · offiziell
 - Compat-Layer ist „best-effort": nicht jeder Parameter wird umgesetzt (`logprobs`/`n` koennen still verworfen werden). Feature-Set pro Server-Version gegen die Doku der genutzten Version pruefen, nicht auf vollstaendige OpenAI-Paritaet verlassen. Quelle: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/local-openai-compatible.md`) |
 |---|---|
 | 1 base_url & /v1 | A1, A2, A3 |

@@ -35,7 +35,7 @@
 - `response_format: {type: "json_schema", json_schema: {...}}` mit `strict: true`, `additionalProperties: false`, klaren Property-Descriptions + `required`; funktioniert mit `stream: true`. Fuer Non-Streaming Response-Healing-Plugin gegen kaputtes JSON. Quelle: https://openrouter.ai/docs/guides/features/structured-outputs · offiziell
 - Usage-Accounting im `usage`-Feld der Response (native Tokenizer = Abrechnungsgrundlage); spaeter via `/api/v1/generation?id=...` auditierbar. `:free` = 20 RPM, 50 RPD (<10 USD gekauft) bzw. 1000 RPD (>=10 USD). Limits/Credits per `GET /api/v1/key` pruefen; 402 (leeres Guthaben) NICHT als 429 retrien. Quelle: https://openrouter.ai/docs/api/reference/limits · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/openrouter-api.md`) |
 |---|---|
 | 1 Unified Gateway & Attribution-Header | A1, A2 |

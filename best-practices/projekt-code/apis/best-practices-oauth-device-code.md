@@ -24,7 +24,7 @@
 ## 7. OAuth 2.1 / Security-BCP (RFC 9700) — heute Pflicht
 - PKCE für ALLE Auth-Code-Flows; Exact-Match Redirect-URIs (außer Loopback-Port); KEIN Implicit/ROPC; Refresh-Token sender-constrained (mTLS/DPoP) ODER rotierend; Bearer NIE in URL-Query (nur Header); Authorization-Server-Metadata (RFC 8414) auswerten; Scope-Minimierung + Incremental Authorization. Quelle: https://datatracker.ietf.org/doc/html/rfc9700 · https://oauth.net/2.1/ · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/oauth-device-code.md`) |
 |---|---|
 | 3 Device-Polling | A1–A7 |

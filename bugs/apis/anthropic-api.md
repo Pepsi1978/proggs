@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit an einer Anthropic-Claude-API-Integration (Client-seitig).
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
-> Pflichtwert), aktuelle Modelle Opus 4.x/Sonnet 4.6. Zweite Seite: noch keine `best-practices-anthropic-api.md`.
+> Pflichtwert), aktuelle Modelle Opus 4.x/Sonnet 4.6. Zweite Seite: `best-practices/projekt-code/apis/best-practices-anthropic-api.md`.
 
 ## TL;DR — die 5 wichtigsten Regeln
 
@@ -200,3 +200,7 @@
 - [ ] Prompt Caching: TTL/Mindest-Tokens/Prefix-Stabilität beachtet, `usage`-Cache-Felder monitort?
 - [ ] thinking-Blocks unverändert in History echoed?
 - [ ] 429/529 unterschieden, `anthropic-ratelimit-*` gelesen, SDK `max_retries` nicht doppelt?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-anthropic-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

@@ -24,7 +24,7 @@
 ## 7. SDK-Konfiguration
 - Default `max_retries=2` (Connection/408/409/429/≥500) + exp. Backoff; KEINE eigene Retry-Schleife darüber stapeln (sonst stille 10-min-Hangs). Default-Timeout 10 Min, bei Reasoning/xhigh erhöhen. Quelle: https://github.com/openai/openai-python · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/openai-api.md`) |
 |---|---|
 | 1 Responses API | A1–A4 |

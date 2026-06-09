@@ -55,7 +55,7 @@
 - Fuer Nicht-Chat-Tasks (Text-to-Image, Embeddings, Speech) die **HF Inference-Clients** (Python/JS) nutzen — der OpenAI-Kompat-Endpunkt deckt nur Chat-Completions ab. Quelle: https://huggingface.co/docs/inference-providers/en/index · offiziell
 - **Fine-grained HF-Token** mit `Make calls to Inference Providers`-Recht erstellen; keine separaten Provider-Keys noetig (kein Markup auf Provider-Preise). Quelle: https://huggingface.co/docs/inference-providers/en/index · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice (Anbieter) | Bug-Abschnitt (`bugs/apis/other-llm-apis.md`) |
 |---|---|
 | 1 Cohere | 1. Cohere |

@@ -37,7 +37,7 @@
 - `streamGenerateContent` mit `?alt=sse` aufrufen und zeilenweise parsen (Default ist fortlaufendes JSON-Array); letzten Chunk auf `finishReason` pruefen. Quelle: https://ai.google.dev/gemini-api/docs/deprecations · offiziell
 - Clientseitiges Rate-Limiting + Exponential-Backoff bei 429 (Free ~60 RPM/Modell); Billing aktivieren (auch fuer Free-Tier) und Timeout/Retry im SDK konfigurieren. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
 |---|---|
 | 1 SDK & Client | A1, A2, A3, C8 |

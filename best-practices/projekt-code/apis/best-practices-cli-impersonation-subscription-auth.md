@@ -42,7 +42,7 @@
 - CLIs aendern Client-ID/Originator/Endpunkte/Runtime regelmaessig — wer eine Signatur nachbaut, hat dauerhaften Wartungsaufwand und ploetzliche Totalausfaelle. Robuster: API-Key-Pfad als Fallback fest einbauen. Quelle: https://hermesagents.net/blog/hermes-proxy-claude-pro-aider-cline-codex · community
 - Auffaellige Nutzungsmuster loesen Ban-Heuristik + Refresh-Token-Revocation aus — defensives, abo-konformes Volumen einhalten und Account-Risiko ehrlich gegen den Nutzen abwaegen. Quelle: bugs/apis/cli-impersonation-subscription-auth.md (E2) · belegt
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/cli-impersonation-subscription-auth.md`) |
 |---|---|
 | 1 Rechtlicher Rahmen | TL;DR 1/3/5, A1, B2, C1, Fix-Status, Checkliste |

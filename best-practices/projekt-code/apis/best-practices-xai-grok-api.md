@@ -34,7 +34,7 @@
 - Drei gleichberechtigte Wege: natives `xai-sdk` (Python), OpenAI-SDK mit `base_url=https://api.x.ai/v1`, `@ai-sdk/xai` (JS). Anthropic-Pfad NICHT mehr — deprecatet. Quelle: https://docs.x.ai/developers/quickstart · offiziell
 - Key via console.x.ai erzeugen, als `XAI_API_KEY` exportieren; Header `Authorization: Bearer xai-...` exakt (Whitespace trimmen). Quelle: https://console.x.ai/team/default/api-keys · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/xai-grok-api.md`) |
 |---|---|
 | 1 Modellwahl & Pinning | 1 |

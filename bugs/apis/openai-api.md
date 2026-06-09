@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an einer OpenAI-API-Integration (Client-seitig: eigener Code ruft die API).
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: API-Stand Juni 2026 (Responses API +
 > Chat Completions parallel, GPT-5.x aktuell, GPT-4o/4.1/o4-mini in der API ~16./17.02.2026 retired).
-> Zweite Seite (wie macht man es richtig): noch keine `best-practices-openai-api.md` — bei Bedarf anlegen.
+> Zweite Seite (wie macht man es richtig): `best-practices/projekt-code/apis/best-practices-openai-api.md`.
 
 ## TL;DR — die 5 wichtigsten Regeln
 
@@ -212,3 +212,7 @@
 - [ ] 429: `retry-after-ms`/`x-ratelimit-*` + Backoff mit Jitter?
 - [ ] strict-Schema: `additionalProperties:false` + alle Keys `required`, `refusal` geprüft?
 - [ ] SDK-Timeouts/Retries explizit (kein doppelter Backoff)?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-openai-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

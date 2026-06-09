@@ -143,3 +143,7 @@
 - [ ] Nicht unterstützte Params (logprobs/n/name) entfernt?
 - [ ] Whisper: gechunkt + Timestamp-Offset + `no_speech_prob`-Filter?
 - [ ] `reasoning_content` vor Folge-Request gestrippt?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-groq-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

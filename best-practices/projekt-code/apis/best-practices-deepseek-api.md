@@ -38,7 +38,7 @@
 - V4 hat jetzt HARTE Concurrency-Limits (account-weit, key-unabhaengig): v4-pro 500, v4-flash 2.500 gleichzeitige Requests. Bei Ueberschreitung HTTP 429 → exponentielles Backoff; bei dauerhaftem Bedarf kostenlosen Capacity-Expansion-Request stellen. Quelle: https://api-docs.deepseek.com/quick_start/rate_limit · offiziell
 - Streaming: `delta.reasoning_content` und `delta.content` getrennt akkumulieren (beide koennen null sein), SSE-Keep-alive-Kommentare (`: keep-alive`) ignorieren; Server schliesst nach 10 min ohne Inferenz-Start. `max_tokens` explizit setzen und auf `finish_reason:"length"` pruefen (Defaults schneiden sonst ab). Quelle: https://api-docs.deepseek.com/quick_start/rate_limit · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/deepseek-api.md`) |
 |---|---|
 | 1 Modelle & Kontext | 8, 9, Fix-Status (Deprecation 2026-07-24) |

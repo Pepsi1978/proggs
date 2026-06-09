@@ -31,7 +31,7 @@
 - Loggen: Request-IDs, Rate-Limit-Header, Latenz-Perzentile — NIE Secrets (Authorization-Header redacten). Fehler-BODY parsen (nicht nur Statuscode): anbieterspezifisches `error.type/.message/.code`.
 - `finish_reason:"length"` kann Tool-Call still droppen → partiellen State ausgeben + als truncated markieren. Quelle: https://github.com/google/adk-python/issues/4482 · extern
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/api-integration-general.md`) |
 |---|---|
 | 1–2 Rate-Limiting/Retry | A1–A6, B1–B3 |

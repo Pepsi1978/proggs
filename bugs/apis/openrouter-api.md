@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit an einer OpenRouter-Integration (Aggregator/Gateway, EIN OpenAI-kompatibler
 > Endpunkt für viele Anbieter). Stand: zuletzt recherchiert am 2026-06-08.
-> Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: noch keine `best-practices-openrouter-api.md`.
+> Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/projekt-code/apis/best-practices-openrouter-api.md`.
 
 ## TL;DR — die 5 wichtigsten Regeln
 
@@ -128,3 +128,7 @@ Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträg
 - [ ] SSE: `:`-Kommentarzeilen übersprungen, `[DONE]` + Mid-Stream-`error` behandelt?
 - [ ] Modell-Liste via `/api/v1/models` (nicht hardcoded), Fallback-`models`-Array?
 - [ ] 402 ≠ 429 unterschieden, `error.metadata.provider_name` ausgewertet?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-openrouter-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).

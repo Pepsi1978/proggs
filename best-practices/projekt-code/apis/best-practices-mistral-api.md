@@ -35,7 +35,7 @@
 - Streaming: `stream:true` im JSON-Body, `stream_options:{include_usage:true}` fuer Usage; `[DONE]`-Terminator separat behandeln (nicht parsen), Tool-Deltas ueber `index` akkumulieren. Quelle: https://docs.mistral.ai/api/endpoint/chat · offiziell
 - OCR: aktuelle Modelle `mistral-ocr-2512` (OCR 3) bzw. `mistral-ocr-2505`; Annotations fuer strukturierte Dokument-Extraktion mit json_schema kombinieren. Quelle: https://docs.mistral.ai/studio-api/document-processing/basic_ocr · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/mistral-api.md`) |
 |---|---|
 | 1 Modell-Auswahl & Pinning | 22, 23 |

@@ -17,7 +17,7 @@
 ## Batch API & Token-Counting
 - Batch API für 50 % Ersparnis (async, bis 100k Req/256 MB, 24h-Fenster, Ergebnisse 29 Tage); Batch + 1h-Cache kombinieren; `max_tokens:0`/`stream:true` im Batch nicht erlaubt, `max_tokens>=1` Pflicht. Token-Counting vorab; Tool-Use addiert System-Prompt-Tokens (Opus 4.8: 290 auto/none, 410 any/tool). Quelle: https://platform.claude.com/docs/en/build-with-claude/batch-processing · offiziell
 
-## Bezug zum Bug-Almanach
+## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/anthropic-api.md`) |
 |---|---|
 | Prompt Caching | 14–17 |

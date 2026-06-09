@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an einer Integration eines hier gelisteten Anbieters. Stand: zuletzt
 > recherchiert am 2026-06-08. Survey der wichtigen Anbieter, die NICHT eine eigene Datei haben
 > (OpenAI/Anthropic/Gemini/Groq/OpenRouter/Grok/Mistral/DeepSeek/lokal: siehe jeweils eigene Datei).
-> Zweite Seite: noch keine eigene best-practices-Datei.
+> Zweite Seite: `best-practices/projekt-code/apis/best-practices-other-llm-apis.md`.
 
 ## TL;DR — Auswahl & wichtigste Fallen
 
@@ -102,3 +102,7 @@ Sonst per Design / Plattform-Verhalten. **Ehrlichkeits-Hinweis:** Azure-Details 
 - [ ] Modell-ID-Format korrekt (Fireworks-Pfad, Bedrock-Geo-Präfix-Profil) + nicht hardcoded?
 - [ ] Rate-Limit-Eigenheit (Together-dynamisch, Cerebras-8k-free, Fireworks-6k) eingeplant?
 - [ ] Token-Ablauf bei Vertex (1 h) über ADC/Library gelöst?
+
+## 🔗 Bezug zu Best Practices
+
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-other-llm-apis.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
