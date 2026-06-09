@@ -18,6 +18,7 @@ namespace VoiceAgent.Views
     {
         private readonly AppSettings _settings;
         private readonly AudioPlayer _previewPlayer = new();
+        private readonly Chime _chimePreview = new();   // spielt den ausgewaehlten Start-/Stop-Ton zum Probehoeren
         private bool _ready;   // true erst NACH Populate — verhindert NullRef in ValueChanged waehrend XAML-Load
         private readonly string _originalTheme;   // fuer "Abbrechen": Live-Vorschau zuruecksetzen
 
@@ -29,6 +30,8 @@ namespace VoiceAgent.Views
             Loaded += (_, __) => Populate();
             // Titelleiste passend zum aktiven Theme (Almanach §2.7 — erst bei vorhandenem HWND).
             SourceInitialized += (_, __) => ThemeManager.ApplyTitleBar(this);
+            // Vorhoer-Wiedergabe beim Schliessen stoppen (WaveOut-Handle freigeben, Almanach §9.4).
+            Closed += (_, __) => { try { _chimePreview.Stop(); _previewPlayer.Stop(); } catch { /* unkritisch */ } };
         }
 
         private void Populate()
@@ -97,6 +100,19 @@ namespace VoiceAgent.Views
                 WakeWordBox.Text = WakeWords.Canonical(_settings.WakeWord);   // Vorschlag ODER frei eingetippt
                 WakeChimeBox.IsChecked = _settings.WakeChimeEnabled;
                 WakeSleepChimeBox.IsChecked = _settings.WakeSleepChimeEnabled;
+
+                // Ton-Auswahl: je 30 kurze Toene aus assets/sounds/* + Standard voran (ChimeLibrary).
+                StartSoundBox.ItemsSource = ChimeLibrary.StartSounds();
+                StartSoundBox.DisplayMemberPath = nameof(ChimeSound.DisplayName);
+                StartSoundBox.SelectedValuePath = nameof(ChimeSound.RelativePath);
+                StartSoundBox.SelectedValue = _settings.WakeChimeSound;
+                if (StartSoundBox.SelectedValue == null) StartSoundBox.SelectedIndex = 0;
+                StopSoundBox.ItemsSource = ChimeLibrary.StopSounds();
+                StopSoundBox.DisplayMemberPath = nameof(ChimeSound.DisplayName);
+                StopSoundBox.SelectedValuePath = nameof(ChimeSound.RelativePath);
+                StopSoundBox.SelectedValue = _settings.WakeSleepChimeSound;
+                if (StopSoundBox.SelectedValue == null) StopSoundBox.SelectedIndex = 0;
+
                 WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
 
                 // Computer Use: Stufe Aus/Sicher/Vollzugriff. Tag = Roh-Wert fuer CommandGuard.ParseMode.
@@ -191,6 +207,8 @@ namespace VoiceAgent.Views
                 _settings.WakeWord = WakeWords.Canonical(wakeWordInput);   // kuratiert kanonisch, frei getrimmt durchgereicht
                 _settings.WakeChimeEnabled = WakeChimeBox.IsChecked == true;
                 _settings.WakeSleepChimeEnabled = WakeSleepChimeBox.IsChecked == true;
+                _settings.WakeChimeSound = StartSoundBox.SelectedValue as string ?? "wakeword.wav";
+                _settings.WakeSleepChimeSound = StopSoundBox.SelectedValue as string ?? "sleep.wav";
                 _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
                 _settings.ComputerUseMode = (ComputerUseModeBox.SelectedItem as ComboBoxItem)?.Tag as string ?? "off";
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
@@ -282,6 +300,30 @@ namespace VoiceAgent.Views
             finally
             {
                 PreviewButton.IsEnabled = true;
+            }
+        }
+
+        // Start-Ton probehoeren. Event-Handler: Body komplett in try/catch (Almanach §7.2).
+        private void PreviewStartSound_Click(object sender, RoutedEventArgs e)
+            => PreviewChime(StartSoundBox.SelectedValue as string, "Start");
+
+        // Stop-Ton probehoeren.
+        private void PreviewStopSound_Click(object sender, RoutedEventArgs e)
+            => PreviewChime(StopSoundBox.SelectedValue as string, "Stop");
+
+        private void PreviewChime(string? relativePath, string which)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return;
+            try
+            {
+                _chimePreview.FileName = relativePath;
+                _chimePreview.Play();
+                // Observability-Checkpoint (Intent-Verifikation): was wurde vorgehoert?
+                Log.Info("CHECKPOINT: Ton-Vorhoeren", new { step = "Ton vorhoeren", which, file = relativePath, ok = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SettingsWindow: Ton-Vorhoeren fehlgeschlagen", ex);
             }
         }
 

@@ -291,6 +291,7 @@ namespace VoiceAgent
             try
             {
                 _settings = Config.Load();
+                ApplyChimeSounds();            // gewaehlte Start-/Stop-Toene auf die Chimes uebernehmen
                 _memory = new AgentMemory();   // laedt Fakten + letzte Gespraeche aus frueheren Sessions
                 _subAgents = new SubAgentRegistry();
                 _reminderService = new ReminderService();
@@ -754,6 +755,14 @@ namespace VoiceAgent
             catch (Exception ex) { Log.Error("MainWindow: Log-Viewer oeffnen fehlgeschlagen", ex); }
         }
 
+        // Uebernimmt die in den Einstellungen gewaehlten Start-/Stop-Toene auf die Chime-Instanzen.
+        // Leerer Wert -> bisheriger Standard. Wird beim Laden und nach dem Speichern aufgerufen.
+        private void ApplyChimeSounds()
+        {
+            _wakeChime.FileName = string.IsNullOrWhiteSpace(_settings.WakeChimeSound) ? "wakeword.wav" : _settings.WakeChimeSound;
+            _sleepChime.FileName = string.IsNullOrWhiteSpace(_settings.WakeSleepChimeSound) ? "sleep.wav" : _settings.WakeSleepChimeSound;
+        }
+
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             // Auch das OEFFNEN in try/catch: ein Fehler im Settings-Fenster darf die App nie killen.
@@ -763,6 +772,7 @@ namespace VoiceAgent
                 if (dlg.ShowDialog() == true)
                 {
                     _settings = Config.Load();
+                    ApplyChimeSounds();                    // evtl. neu gewaehlte Start-/Stop-Toene sofort uebernehmen
                     ThemeManager.Apply(_settings.Theme);   // evtl. im Dialog gewaehltes Profil sofort anwenden
                     BuildAgents();
                     RebuildListener();   // geaenderte Empfindlichkeit sofort uebernehmen

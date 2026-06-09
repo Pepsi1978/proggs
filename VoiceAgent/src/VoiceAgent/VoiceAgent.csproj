@@ -35,6 +35,9 @@
     <Content Include="assets\wakeword.wav" CopyToOutputDirectory="PreserveNewest" />
     <!-- Einschlafton (abfallend): beim automatischen Stille-Timeout, wenn der Agent aufhoert zuzuhoeren. -->
     <Content Include="assets\sleep.wav" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Auswaehlbare Start-/Stop-Toene (CC0, Freesound). Ordner-Scan zur Laufzeit (ChimeLibrary).
+         CopyToPublishDirectory zusaetzlich, damit sie beim Single-File-Publish nicht fehlen (Almanach §1.9). -->
+    <Content Include="assets\sounds\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Wake-Word-Modell (sherpa-onnx KWS, int8). Als Content neben die EXE kopieren — die native
          API erwartet Dateipfade, NICHT embedded (Best-Practice wake-word §6). -->
     <Content Include="assets\wakeword-model\**\*" CopyToOutputDirectory="PreserveNewest" />

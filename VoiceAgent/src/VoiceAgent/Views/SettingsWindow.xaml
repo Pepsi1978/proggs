@@ -384,6 +384,19 @@
                         <TextBlock Text="Der abfallende Ton signalisiert dir hörbar: ab jetzt hört der Agent nicht mehr zu — du musst ihn erst wieder wecken."
                                    Style="{StaticResource Label}"/>
 
+                        <TextBlock Text="Start-Ton (ich höre zu)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StartSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewStartSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Stop-Ton (ich höre nicht mehr zu)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StopSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewStopSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Wähle aus je 30 kurzen Tönen. Mit „Anhören“ kannst du jeden Ton probehören, bevor du ihn übernimmst."
+                                   Style="{StaticResource Label}"/>
+
                         <TextBlock Text="Wachfenster" Style="{StaticResource Section}"/>
                         <TextBlock x:Name="WakeTimeoutLabel" Style="{StaticResource Label}"/>
                         <Slider x:Name="WakeTimeoutSlider" Minimum="15000" Maximum="180000"

@@ -36,6 +36,15 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "  WARNUNG: Wake-Word-Modell fehlt weiterhin — Weckwort wuerde ausfallen!" -ForegroundColor Red
     }
 
+    # Start-/Stop-Toene neben der EXE verifizieren (Auswahl in den Einstellungen, ChimeLibrary).
+    $startN = @(Get-ChildItem (Join-Path $dstAssets "sounds\start") -Filter *.mp3 -ErrorAction SilentlyContinue).Count
+    $stopN  = @(Get-ChildItem (Join-Path $dstAssets "sounds\stop")  -Filter *.mp3 -ErrorAction SilentlyContinue).Count
+    if ($startN -gt 0 -and $stopN -gt 0) {
+        Write-Host "  OK: Toene vorhanden ($startN Start-, $stopN Stop-Toene)" -ForegroundColor Green
+    } else {
+        Write-Host "  WARNUNG: Start-/Stop-Toene fehlen ($startN/$stopN) — nur der Standard-Ton waehlbar!" -ForegroundColor Red
+    }
+
     $exe = Get-Item (Join-Path $out "VoiceAgent.exe")
     Write-Host "`nErfolgreich gebaut!" -ForegroundColor Green
     Write-Host "Datei:   $($exe.FullName)"

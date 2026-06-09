@@ -16,17 +16,23 @@ namespace VoiceAgent.Services.Audio
     {
         private WaveOutEvent? _wo;
         private IDisposable? _reader;
-        private readonly string _fileName;
 
-        /// <param name="fileName">WAV-Dateiname in assets/ neben der EXE (Default: Erinnerungston).</param>
-        public Chime(string fileName = "message1.wav") => _fileName = fileName;
+        /// <summary>
+        /// Datei relativ zu assets/ neben der EXE. Setzbar, damit der gewaehlte Ton zur Laufzeit
+        /// umgestellt werden kann (z.B. "wakeword.wav" oder "sounds/start/07_blip.mp3"). Unterpfade
+        /// mit '/' funktionieren ueber Path.Combine auf Windows. AudioFileReader spielt WAV und MP3.
+        /// </summary>
+        public string FileName { get; set; }
+
+        /// <param name="fileName">Datei relativ zu assets/ neben der EXE (Default: Erinnerungston).</param>
+        public Chime(string fileName = "message1.wav") => FileName = fileName;
 
         private string SoundPath
         {
             get
             {
                 var dir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-                return Path.Combine(dir, "assets", _fileName);
+                return Path.Combine(dir, "assets", FileName);
             }
         }
 
