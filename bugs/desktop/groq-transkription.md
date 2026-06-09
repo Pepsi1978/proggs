@@ -148,6 +148,18 @@ Segment ueberlebt. Verschaerfend: **ultrakurze Clips liefern oft GAR KEINE `segm
 **Sprachgehalt-Vorfilter §2.1 VOR dem Senden** (gar nicht erst an Groq schicken). Bei Push-to-Talk genuegt
 ein Vorfilter auf **absolute** laute Zeit (z.B. ≥150 ms RMS-aktiv) — KEINE Voiced-Ratio (sonst fielen echte
 Aufnahmen mit langen Denkpausen heraus). Das Confidence-Gate bleibt fuer Pausen MITTEN in echter Sprache zustaendig.
+
+**⭐ ZWEITE LUECKE — Trailing-Halluzination NACH echter Sprache (verifiziert 2026-06-09, overlays):**
+Frank sprach einen echten Satz, machte dann am Ende eine Pause (Mic lief weiter), stoppte — Whisper haengte
+ein halluziniertes **„Ja"** an. Weder Schicht 1 noch 2 faengt das: Der **Vorfilter §2.1 greift NICHT**
+(Gesamt-Sprachgehalt ist hoch — der echte Satz), und das **Confidence-Gate greift NICHT** (das Trailing-Wort
+kommt mit HOHER Confidence). Eine reine Floskel-Blocklist (§2.4) wuerde ein ECHTES „Ja" mitloeschen → kein
+Funktionserhalt. **Loesung = SCHICHT 3: Segment-Audio-Abgleich.** `verbose_json` liefert pro Segment
+`start`/`end`; pruefe das Zeitfenster gegen die eigene RMS-/Voiced-Timeline der Aufnahme — ist es dort
+praktisch still (< ~10 % laute Frames), ist das Segment eine Halluzination und wird verworfen; echtes Wort
+hat Schall im Fenster → bleibt. Sicherung: wuerde der Abgleich ALLE Segmente verwerfen (Whisper-Timestamps
+koennen driften), Roh-Transkript behalten statt den Satz zu verlieren. Gilt plattformuebergreifend
+(Desktop wie Browser); im Browser ist die Voiced-Timeline ohnehin aus §2.1 vorhanden.
 **Quelle:** [Groq STT Docs](https://console.groq.com/docs/speech-to-text) · [Groq Cookbook](https://deepwiki.com/groq/groq-api-cookbook/2-speech-and-audio-processing) · [gradio VAD](https://www.gradio.app/guides/automatic-voice-detection) · Franks Live-Test 2026-06-08 (TVO/CVO)
 
 ### 2.4 Floskel-Blocklist (letzter Filter, mehrsprachig + normalisiert)
