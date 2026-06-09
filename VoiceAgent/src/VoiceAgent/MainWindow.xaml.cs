@@ -374,7 +374,8 @@ namespace VoiceAgent
             _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
             _intentDetector = new IntentDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel));
             _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
-            _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage);
+            _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage,
+                                         url: null, voicedRmsThreshold: _settings.SilenceThreshold);
         }
 
         /// <summary>
