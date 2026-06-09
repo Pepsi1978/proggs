@@ -35,6 +35,21 @@ projekt-code/
 ├── android-build/
 │   ├── best-practices-gradle.md               ← Gradle/AGP/R8/KSP (Stand 2026-06-02)
 │   └── best-practices-r8.md                    ← R8 Shrinker/Optimizer — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
+├── apis/                                       ← LLM-/Provider-APIs (Stand 2026-06-09) — 1:1-Mirror zu bugs/apis/
+│   ├── best-practices-api-integration-general.md  ← anbieteruebergreifend (Resilienz/Rate-Limit/SSE/Timeout/Secrets)
+│   ├── best-practices-multi-provider.md        ← Provider-Gateway/Fallback-Architektur (ungepaart, kein Bug-Almanach)
+│   ├── best-practices-openai-api.md            ← Responses API/Structured Outputs/Caching
+│   ├── best-practices-anthropic-api.md         ← Messages API/Tool Use/Prompt Caching
+│   ├── best-practices-google-gemini-api.md     ← generateContent/responseSchema/thinkingLevel
+│   ├── best-practices-groq-api.md              ← OpenAI-Layer/Batch/Whisper
+│   ├── best-practices-openrouter-api.md        ← Gateway/Provider-Routing/Fallback
+│   ├── best-practices-xai-grok-api.md          ← grok-4.x/reasoning_effort/Live Search
+│   ├── best-practices-mistral-api.md           ← json_schema/Codestral-FIM/prompt_cache_key
+│   ├── best-practices-deepseek-api.md          ← deepseek-reasoner/reasoning_content/KV-Cache
+│   ├── best-practices-local-openai-compatible.md  ← Ollama/llama.cpp/LM Studio/vLLM
+│   ├── best-practices-other-llm-apis.md        ← Cohere/Together/Fireworks/Perplexity/Bedrock/Azure/Cerebras/Vertex/HF
+│   ├── best-practices-oauth-device-code.md     ← OAuth-Geraetecode-Flow
+│   └── best-practices-cli-impersonation-subscription-auth.md  ← CLI-Abo-Auth (ToS beachten)
 ├── desktop/
 │   ├── best-practices-dotnet-csharp.md
 │   └── best-practices-swift-appkit.md         ← macOS Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
@@ -51,6 +66,7 @@ projekt-code/
 Vorhandene Kategorien & Dateien:
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing) ·
 **android-build** (-gradle, -r8) ·
+**apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth) ·
 **desktop** (-dotnet-csharp, -swift-appkit) ·
 **web** (-chrome-extensions, -typescript) ·
 **peripherie** (-stream-deck) ·
