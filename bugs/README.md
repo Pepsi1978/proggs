@@ -27,7 +27,8 @@ bugs/
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
 ├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
-└── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OAuth/Device-Code, ...)
+├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OAuth/Device-Code, ...)
+└── agents/           Multi-Agenten-Systeme (Boss-/Orchestrator-Agent, Sub-Agent-Spawning, Intent, Tool-Calling)
 ```
 
 Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
@@ -135,6 +136,18 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Weitere LLM-APIs** (Cohere, Together, Fireworks, Perplexity, Bedrock, Azure, Cerebras, Vertex, HF) | [`apis/other-llm-apis.md`](apis/other-llm-apis.md) | 2026-06-08 | Survey | „Cohere", „Together", „Fireworks", „Perplexity", „Bedrock", „Cerebras", „Vertex AI", „SigV4" |
 | **OAuth / Device-Code / PKCE / Token-Refresh** | [`apis/oauth-device-code.md`](apis/oauth-device-code.md) | 2026-06-08 | ~30 | „OAuth", „Device Code", „RFC 8628", „PKCE", „Token Refresh", „refresh token rotation", „Login einbauen" |
 | **CLI-Impersonation / Abo-OAuth** (Codex-Abo, Hermes-Trick, Anthropic-Ban) | [`apis/cli-impersonation-subscription-auth.md`](apis/cli-impersonation-subscription-auth.md) | 2026-06-08 | — | „als Codex CLI ausgeben", „ChatGPT-Abo per Geraetekode", „Hermes", „Codex device-auth", „Abo statt API-Key", „Copilot-Token" |
+
+---
+
+### 🤖 `agents/` — Multi-Agenten-Systeme & Orchestrierung
+
+> Querschnitts-/Konzept-Bereich (kein sauberes Datei-Pattern, wie `apis/`): wird NICHT vom
+> `bug-almanac-guard` erzwungen, sondern ueber diesen Index + Stichwort-Trigger gefunden. Vor dem
+> Bau eines Haupt-/Boss-/Orchestrator-Agenten ZUERST den Almanach, DANN die Best-Practices lesen.
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
+|---------|-------|-------|------|----------------------------------|
+| **Boss-/Orchestrator-Agent** (Multi-Agenten-System: Intent-Verstehen, Delegation/Routing, Sub-Agent-Spawning, Tool-Calling, menschlicher Dialog, State/Reliability/Security) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~50 | „Boss-Agent", „Orchestrator", „Supervisor-Agent", „Multi-Agent", „Sub-Agent bauen/spawnen", „Agent baut Agenten", „Intent verstehen", „Delegation", „Handoff", „LangGraph", „CrewAI", „AutoGen", „OpenAI Agents SDK", „Claude Agent SDK", „natuerliche Sprache verstehen", „menschlich antworten" · Best-Practices: `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md` |
 
 ---
 
