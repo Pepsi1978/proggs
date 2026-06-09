@@ -19,6 +19,11 @@ final class GroqWhisperClient {
     private static let avgLogProbMin = -1.0
     private static let compressionRatioMax = 2.4
     private static let miniNoiseDurSec = 0.4
+    // Schicht 3 (Segment-Audio-Abgleich, Almanach §2.3 "zweite Luecke"): Trailing-/Pausen-Halluzination
+    // ("Ja" am Ende nach echtem Satz) kommt mit HOHER Confidence -> Schicht 2 faengt sie nicht. Jedes
+    // Segment gegen die echte Audio-Lautstaerke pruefen — stilles Zeitfenster = Halluzination.
+    private static let frameMs = 20
+    private static let segVoicedRatio = 0.10
 
     init(apiKey: String) {
         self.apiKey = apiKey
@@ -85,9 +90,11 @@ final class GroqWhisperClient {
 
             if (200...299).contains(statusCode), let data = data {
                 let raw = String(data: data, encoding: .utf8) ?? ""
-                // Schicht 2: Confidence-Gate. Bleibt Text uebrig -> .success(text). Alles Stille/
-                // halluziniert -> leer -> .success("") (der AppDelegate-Leer-Guard fuegt nichts ein).
-                let filtered = GroqWhisperClient.filterTranscription(raw)
+                // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (Segment-Audio-Abgleich).
+                let voiced = GroqWhisperClient.buildVoicedTimeline(audioData)
+                // Schicht 2 (Confidence-Gate) + Schicht 3 (Audio-Abgleich). Bleibt Text uebrig ->
+                // .success(text). Alles Stille/halluziniert -> leer -> .success("") (Leer-Guard fuegt nichts ein).
+                let filtered = GroqWhisperClient.filterTranscription(raw, voiced)
                 completion(.success(filtered))
                 return
             }
@@ -112,7 +119,7 @@ final class GroqWhisperClient {
     /// Schicht 2: wendet das Confidence-Gate auf die verbose_json-Antwort an und gibt die
     /// verbleibenden Segment-Texte zusammengefuegt zurueck. Funktionserhaltend: ohne Segment-
     /// Metadaten wird der top-level Text durchgelassen; bei nicht-parsebarem JSON top-level "text".
-    private static func filterTranscription(_ json: String) -> String {
+    private static func filterTranscription(_ json: String, _ voiced: [Bool]?) -> String {
         guard let data = json.data(using: .utf8) else { return "" }
         guard let parsed = try? JSONDecoder().decode(VerboseResponse.self, from: data) else {
             return extractFallbackText(data)
@@ -120,17 +127,84 @@ final class GroqWhisperClient {
         guard let segments = parsed.segments, !segments.isEmpty else {
             return (parsed.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        var parts: [String] = []
-        var dropped = 0
+        // Schicht 2: Confidence-Gate. Halluzinationen mit hoher "keine Sprache"-Wahrscheinlichkeit raus.
+        var afterConfidence: [Segment] = []
+        var droppedConfidence = 0
         for seg in segments {
-            if isHallucination(seg) { dropped += 1; continue }
+            if isHallucination(seg) { droppedConfidence += 1; continue }
+            afterConfidence.append(seg)
+        }
+        // Schicht 3: Audio-Abgleich. Trailing-/Pausen-Halluzination mit HOHER Confidence (die Schicht 2
+        // ueberlebt) verwerfen, wenn ihr Zeitfenster im echten Audio still war.
+        var kept: [Segment] = []
+        var droppedAudio = 0
+        if let voiced = voiced {
+            for seg in afterConfidence {
+                if !segmentHasSpeech(seg, voiced) { droppedAudio += 1; continue }
+                kept.append(seg)
+            }
+        } else {
+            kept = afterConfidence
+        }
+        // Drift-Sicherung (funktionserhaltend): verwirft der Audio-Abgleich ALLE Segmente, obwohl das
+        // Confidence-Gate noch welche liess, ist vermutlich das Zeitstempel-Alignment verschoben ->
+        // die Confidence-gefilterten behalten statt den Satz zu verlieren.
+        var finalSegs = kept
+        if kept.isEmpty && !afterConfidence.isEmpty && voiced != nil {
+            NSLog("Groq: Audio-Abgleich (Schicht 3) verwarf alle Segmente -> Fallback auf Confidence-gefilterte (Zeitstempel-Drift?).")
+            finalSegs = afterConfidence
+        }
+        var parts: [String] = []
+        for seg in finalSegs {
             let t = (seg.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             if !t.isEmpty { parts.append(t) }
         }
-        if dropped > 0 {
-            NSLog("Groq: %d Halluzinations-Segment(e) verworfen (Stille-Schutz).", dropped)
+        if droppedConfidence > 0 || droppedAudio > 0 {
+            NSLog("Groq: %d Confidence- + %d Audio-Segment(e) verworfen (Stille-Schutz).", droppedConfidence, droppedAudio)
         }
         return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Schicht 3: Voiced-Timeline aus den WAV-Bytes (16-bit mono PCM) — pro 20-ms-Frame true, wenn der
+    /// RMS-Pegel ueber der Stille-Schwelle liegt. Liest die Sample-Rate aus dem Header (Bytes 24-27).
+    /// Bei jedem Problem nil -> dann kein Audio-Abgleich (funktionserhaltend).
+    private static func buildVoicedTimeline(_ wav: Data) -> [Bool]? {
+        let bytes = [UInt8](wav)
+        let headerSize = 44
+        guard bytes.count > headerSize + 4 else { return nil }
+        let sampleRate = Int(bytes[24]) | (Int(bytes[25]) << 8) | (Int(bytes[26]) << 16) | (Int(bytes[27]) << 24)
+        let rate = sampleRate > 0 ? sampleRate : 16000
+        let frameSamples = max(1, rate * frameMs / 1000)
+        let frameBytes = frameSamples * 2
+        let frameCount = (bytes.count - headerSize) / frameBytes
+        guard frameCount > 0 else { return nil }
+        var voiced = [Bool](repeating: false, count: frameCount)
+        for f in 0..<frameCount {
+            let baseB = headerSize + f * frameBytes
+            var sumSq = 0.0
+            for s in 0..<frameSamples {
+                let idx = baseB + s * 2
+                let sample = Int16(bitPattern: UInt16(bytes[idx]) | (UInt16(bytes[idx + 1]) << 8))
+                let v = Double(sample) / 32768.0
+                sumSq += v * v
+            }
+            voiced[f] = (sumSq / Double(frameSamples)).squareRoot() > speechRmsThreshold
+        }
+        return voiced
+    }
+
+    /// True, wenn das Zeitfenster [start,end] eines Segments genug laute Frames hat (>= segVoicedRatio).
+    /// Ungueltige/leere Fenster werden NICHT verworfen (funktionserhaltend).
+    private static func segmentHasSpeech(_ seg: Segment, _ voiced: [Bool]) -> Bool {
+        let start = seg.start ?? 0
+        let end = seg.end ?? 0
+        guard end > start else { return true }
+        let startF = max(0, Int(start * 1000.0 / Double(frameMs)))
+        let endF = min(voiced.count, Int((end * 1000.0 / Double(frameMs)).rounded(.up)))
+        guard endF > startF else { return true }
+        var v = 0
+        for i in startF..<endF where voiced[i] { v += 1 }
+        return Double(v) / Double(endF - startF) >= segVoicedRatio
     }
 
     /// Halluzinations-Heuristik fuer EIN Segment. Stille-Regel UND-verknuepft (schuetzt leise Sprache).
