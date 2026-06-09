@@ -280,9 +280,11 @@ statt Exception (community #1370708).
 **Symptom:** Modell serialisiert Tool-Calls als Legacy-`<invoke>`-XML-Text statt strukturiertem
 tool_use-Block → ganze Antwort wird verworfen / „tool call could not be parsed". Opus 4.7
 funktioniert im selben Setup.
-**Versionen:** Opus 4.8 — Claude Code **#63604** (OPEN), Desktop **#64658** (OPEN). Verwandt: Opus
-4.7 mischt XML in JSON-Args **#49747** (OPEN); Opus 4.7 leerer tool_use **#61133** (CLOSED **COMPLETED**
-2026-05-21 → gefixt).
+**Versionen:** Opus 4.8 — Claude Code **#63604** (OPEN), Desktop **#64658** (OPEN), „fails to use
+tools / softbricks context" **#63364** (OPEN), „responses not displayed after tool use — quota
+consumed" **#64129** (OPEN). Verwandt: Opus 4.7 mischt XML in JSON-Args **#49747** (OPEN); Opus 4.7
+leerer tool_use **#61133** (CLOSED **COMPLETED** 2026-05-21 → gefixt). Interleaved-thinking ist auf
+Opus 4.8 automatisch aktiv und kann den tool_use-Stream zusaetzlich korrumpieren (OmniRoute #3415).
 **FIX (funktionserhaltend):** Args/Antwort defensiv parsen (strukturierte UND XML-Form akzeptieren
 + normalisieren); bei Parse-Fehler **interleaved-thinking abschalten** und retry; Payload kuerzen;
 fuer tool-lastige Turns ggf. auf 4.7 ausweichen bis Fix.
@@ -346,6 +348,28 @@ Turn startet; await-Barrier; Session-Level-Lock/Serialisierung.
 (LLM-Ketten werfen keine Exceptions).
 **FIX:** Jedes Tool-Result auf Fehler-Marker pruefen, Completion verifizieren, nicht blind weiterketten.
 **Quelle:** Future AGI „How Tool Chaining Fails in Production".
+
+### 4.10 AKTUELL: Opus 4.8 deklariert Arbeit als „verified/done" ohne den Build zu laufen  [⭐ HAEUFIG]
+**Symptom:** Opus 4.8 meldet eine Aufgabe als „verified"/„done", ohne den kanonischen Build/Test
+tatsaechlich ausgefuehrt zu haben (false-green). Opus 4.7 tat das im selben Setup nicht.
+**Ursache:** Modell-Regression im Verifikations-/Abschluss-Verhalten — eine spezielle Auspraegung von
+4.5 („claimed but didn't do").
+**Versionen:** Opus 4.8 — Claude Code **#63861** (OPEN, bestaetigt 2026-06-09).
+**FIX (funktionserhaltend):** Tool-Wirkung **programmatisch** verifizieren (Build/Test/Lint als
+rules-based Check), NIE dem „done" des Modells vertrauen (vgl. Verifikations-Pflicht, Observability-
+First Live-Logik-Sonden, `superpowers:verification-before-completion`).
+**Quelle:** anthropics/claude-code #63861.
+
+### 4.11 Opus 4.8: Sampling-Parameter und erzwungenes tool_choice werfen HTTP 400
+**Symptom:** `temperature`/`top_p`/`top_k`/Prefill auf Opus 4.8 → HTTP 400. Und: `tool_choice:
+{"type":"any"|"tool"}` ist mit Extended/Interleaved Thinking NICHT kompatibel → 400.
+**Ursache:** Opus 4.8 nutzt adaptives Thinking als einzigen Modus; Sampling-Controls und erzwungene
+Tool-Wahl kollidieren damit.
+**Versionen:** Opus 4.8 (per Design). Quelle extern/Doku.
+**FIX:** Auf Opus 4.8 KEINE Sampling-Parameter senden — stattdessen `effort`/Prompting nutzen.
+Wer Slot-Extraktion strikt erzwingen will (`tool_choice: any` + `strict`), muss Thinking abschalten
+oder die Tool-Wahl per User-Message steuern.
+**Quelle:** Anthropic Tool-Use-Doku (forced-tool-use + extended thinking); LaoZhang (extern).
 
 ---
 
@@ -554,6 +578,9 @@ geteilte Credential-Set ueber alle User.
 | Bug | Repo / Issue | Status |
 |---|---|---|
 | Opus 4.8 fehlerhafte tool_use-Bloecke | anthropics/claude-code #63604, #64658 | **OPEN** |
+| Opus 4.8 fails to use tools / softbricks context | anthropics/claude-code #63364 | **OPEN** |
+| Opus 4.8 Antwort nach Tool-Use stumm, Quota verbraucht | anthropics/claude-code #64129 | **OPEN** |
+| Opus 4.8 false-green „verified/done" ohne Build | anthropics/claude-code #63861 | **OPEN** |
 | Opus 4.7 XML in JSON-Args | anthropics/claude-code #49747 | **OPEN** |
 | Cowork Subagent-Spawn broken (0 Token) | anthropics/claude-code #55712 | **OPEN** |
 | Subagents „prompt too long" bei vielen MCP-Servern | anthropics/claude-code #37793 | **OPEN** |

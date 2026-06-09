@@ -147,7 +147,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
 |---------|-------|-------|------|----------------------------------|
-| **Boss-/Orchestrator-Agent** (Multi-Agenten-System: Intent-Verstehen, Delegation/Routing, Sub-Agent-Spawning, Tool-Calling, menschlicher Dialog, State/Reliability/Security) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~50 | „Boss-Agent", „Orchestrator", „Supervisor-Agent", „Multi-Agent", „Sub-Agent bauen/spawnen", „Agent baut Agenten", „Intent verstehen", „Delegation", „Handoff", „LangGraph", „CrewAI", „AutoGen", „OpenAI Agents SDK", „Claude Agent SDK", „natuerliche Sprache verstehen", „menschlich antworten" · Best-Practices: `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md` |
+| **Boss-/Orchestrator-Agent** (Multi-Agenten-System: Intent-Verstehen, Delegation/Routing, Sub-Agent-Spawning, Tool-Calling, menschlicher Dialog, State/Reliability/Security) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~55 | „Boss-Agent", „Orchestrator", „Supervisor-Agent", „Multi-Agent", „Sub-Agent bauen/spawnen", „Agent baut Agenten", „Intent verstehen", „Delegation", „Handoff", „LangGraph", „CrewAI", „AutoGen", „OpenAI Agents SDK", „Claude Agent SDK", „natuerliche Sprache verstehen", „menschlich antworten" · Best-Practices: `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md` |
 
 ---
 

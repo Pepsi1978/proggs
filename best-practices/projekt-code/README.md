@@ -27,6 +27,8 @@ Kategorie-Wechsel ist unkritisch: `check-coupling.py` paart ueber den Software-N
 ```
 projekt-code/
 ├── README.md                                  ← diese Datei
+├── agents/
+│   └── best-practices-orchestrator-agent.md   ← Boss-/Orchestrator-Agent im Multi-Agenten-System (Stand 2026-06-09) — Gegenstueck zu bugs/agents/orchestrator-agent.md
 ├── android/
 │   ├── best-practices-kotlin.md
 │   ├── best-practices-jetpack-compose.md      ← Android-UI (Stand 2026-06-02, BOM 2025.01.01 / 2026.03.00)
@@ -64,6 +66,7 @@ projekt-code/
 ```
 
 Vorhandene Kategorien & Dateien:
+**agents** (-orchestrator-agent) ·
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing) ·
 **android-build** (-gradle, -r8) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth) ·
