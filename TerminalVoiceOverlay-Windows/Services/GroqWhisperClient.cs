@@ -55,6 +55,13 @@ namespace TerminalVoiceOverlay.Services
         private const double SpeechRmsThreshold = 0.015;  // RMS ueber diesem Wert gilt als "laut"
         private const int    MinSpeechMs        = 150;    // Mindest-Summe lauter Zeit, sonst nicht senden
 
+        // ----- Segment-Audio-Abgleich (Schicht 3, Almanach §2.3 "zweite Luecke") -----
+        // Trailing-/Pausen-Halluzination ("Ja" am Ende nach echtem Satz) kommt mit HOHER Confidence
+        // -> das Confidence-Gate (Schicht 2) faengt sie nicht. Loesung: jedes Segment gegen die echte
+        // Audio-Lautstaerke pruefen — ist sein Zeitfenster praktisch still, ist es eine Halluzination.
+        private const int    FrameMs        = 20;    // RMS-Fenster (gleich wie HasSpeechContent)
+        private const double SegVoicedRatio = 0.10;  // < 10% laute Frames im Segment-Fenster = still
+
         public GroqWhisperClient(string apiKey, string model, string language, string url)
         {
             _apiKey = apiKey;
@@ -111,10 +118,13 @@ namespace TerminalVoiceOverlay.Services
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                // Confidence-Gate anwenden (Schicht 2). Bleibt nach dem Filtern Text uebrig -> zurueck.
-                // Ist alles Stille/halluziniert -> leer: verhaelt sich wie bisher die "leere Antwort"
+                // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (16-bit mono WAV), damit
+                // FilterTranscription jedes Segment gegen die echte Lautstaerke abgleichen kann.
+                bool[]? voiced = BuildVoicedTimeline(fileBytes);
+                // Confidence-Gate (Schicht 2) + Audio-Abgleich (Schicht 3) anwenden. Bleibt Text uebrig
+                // -> zurueck. Alles Stille/halluziniert -> leer: wie bisher die "leere Antwort"
                 // (gleiche Exception, gleicher Aufrufer-catch) — funktionserhaltend.
-                var text = FilterTranscription(json);
+                var text = FilterTranscription(json, voiced);
                 if (!string.IsNullOrEmpty(text))
                     return text;
                 throw new Exception("Leere Antwort von Groq");
@@ -137,7 +147,7 @@ namespace TerminalVoiceOverlay.Services
         /// unerwartetem Format auf den Roh-Text zurueck (nie verlieren); ohne Segment-Metadaten wird
         /// der top-level Text ungefiltert durchgelassen.
         /// </summary>
-        private static string FilterTranscription(string json)
+        private static string FilterTranscription(string json, bool[]? voiced)
         {
             GroqVerboseResponse? parsed;
             try
@@ -156,27 +166,101 @@ namespace TerminalVoiceOverlay.Services
                 return (parsed?.Text ?? string.Empty).Trim();
             }
 
-            var sb = new StringBuilder();
-            int kept = 0, dropped = 0;
+            // Schicht 2: Confidence-Gate. Halluzinationen mit hoher "keine Sprache"-Wahrscheinlichkeit raus.
+            var afterConfidence = new List<GroqSegment>();
+            int droppedConfidence = 0;
             foreach (var seg in parsed.Segments)
             {
-                if (IsHallucination(seg))
-                {
-                    dropped++;
-                    continue;
-                }
-                var t = seg.Text?.Trim();
-                if (!string.IsNullOrEmpty(t))
-                {
-                    if (sb.Length > 0) sb.Append(' ');
-                    sb.Append(t);
-                }
-                kept++;
+                if (IsHallucination(seg)) { droppedConfidence++; continue; }
+                afterConfidence.Add(seg);
             }
 
-            if (dropped > 0)
-                Console.WriteLine($"Groq: {dropped} Halluzinations-Segment(e) verworfen, {kept} behalten (Stille-Schutz).");
+            // Schicht 3: Audio-Abgleich. Trailing-/Pausen-Halluzination mit HOHER Confidence (die
+            // Schicht 2 ueberlebt) verwerfen, wenn ihr Zeitfenster im echten Audio still war.
+            var kept = new List<GroqSegment>();
+            int droppedAudio = 0;
+            if (voiced != null)
+            {
+                foreach (var seg in afterConfidence)
+                {
+                    if (!SegmentHasSpeech(seg, voiced)) { droppedAudio++; continue; }
+                    kept.Add(seg);
+                }
+            }
+            else
+            {
+                kept.AddRange(afterConfidence);
+            }
+
+            // Drift-Sicherung (funktionserhaltend): Wuerde der Audio-Abgleich ALLE Segmente verwerfen,
+            // obwohl das Confidence-Gate noch welche liess, ist vermutlich das Whisper-Zeitstempel-
+            // Alignment verschoben -> lieber die Confidence-gefilterten behalten als den Satz verlieren.
+            var finalSegs = kept;
+            if (kept.Count == 0 && afterConfidence.Count > 0 && voiced != null)
+            {
+                Console.WriteLine("Groq: Audio-Abgleich (Schicht 3) verwarf alle Segmente -> Fallback auf Confidence-gefilterte (Zeitstempel-Drift?).");
+                finalSegs = afterConfidence;
+            }
+
+            var sb = new StringBuilder();
+            foreach (var seg in finalSegs)
+            {
+                var t = seg.Text?.Trim();
+                if (string.IsNullOrEmpty(t)) continue;
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(t);
+            }
+
+            if (droppedConfidence > 0 || droppedAudio > 0)
+                Console.WriteLine($"Groq: {droppedConfidence} Confidence- + {droppedAudio} Audio-Segment(e) verworfen, {finalSegs.Count} behalten (Stille-Schutz).");
             return sb.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Baut aus den WAV-Bytes (16-bit mono PCM) eine Voiced-Timeline: pro 20-ms-Frame true, wenn
+        /// der RMS-Pegel ueber der Stille-Schwelle liegt. Liest die Sample-Rate aus dem Header (Bytes
+        /// 24-27). Bei jedem Problem null -> dann kein Audio-Abgleich (funktionserhaltend).
+        /// </summary>
+        private static bool[]? BuildVoicedTimeline(byte[] wav)
+        {
+            const int headerSize = 44;
+            if (wav.Length <= headerSize + 4) return null;
+            int sampleRate = wav[24] | (wav[25] << 8) | (wav[26] << 16) | (wav[27] << 24);
+            if (sampleRate <= 0) sampleRate = 16000;
+            int frameSamples = Math.Max(1, sampleRate * FrameMs / 1000);
+            int frameBytes = frameSamples * 2;
+            int frameCount = (wav.Length - headerSize) / frameBytes;
+            if (frameCount <= 0) return null;
+            var voiced = new bool[frameCount];
+            for (int f = 0; f < frameCount; f++)
+            {
+                int baseB = headerSize + f * frameBytes;
+                double sumSq = 0;
+                for (int s = 0; s < frameSamples; s++)
+                {
+                    int idx = baseB + s * 2;
+                    short sample = (short)(wav[idx] | (wav[idx + 1] << 8));
+                    double v = sample / 32768.0;
+                    sumSq += v * v;
+                }
+                voiced[f] = Math.Sqrt(sumSq / frameSamples) > SpeechRmsThreshold;
+            }
+            return voiced;
+        }
+
+        /// <summary>
+        /// True, wenn das Zeitfenster [Start,End] eines Segments genug laute Frames hat (>= SegVoicedRatio).
+        /// Ungueltige/leere Fenster werden NICHT verworfen (funktionserhaltend).
+        /// </summary>
+        private static bool SegmentHasSpeech(GroqSegment seg, bool[] voiced)
+        {
+            if (!(seg.End > seg.Start)) return true;
+            int startF = Math.Max(0, (int)(seg.Start * 1000.0 / FrameMs));
+            int endF = Math.Min(voiced.Length, (int)Math.Ceiling(seg.End * 1000.0 / FrameMs));
+            if (endF <= startF) return true;
+            int v = 0;
+            for (int i = startF; i < endF; i++) if (voiced[i]) v++;
+            return (double)v / (endF - startF) >= SegVoicedRatio;
         }
 
         /// <summary>

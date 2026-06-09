@@ -9,6 +9,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>ClaudeVoiceOverlay</RootNamespace>
     <AssemblyName>ClaudeVoiceOverlay</AssemblyName>
+    <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

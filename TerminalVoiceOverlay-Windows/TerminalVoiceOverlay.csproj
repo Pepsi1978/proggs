@@ -18,6 +18,9 @@
     <RootNamespace>TerminalVoiceOverlay</RootNamespace>
     <AssemblyName>TerminalVoiceOverlay</AssemblyName>
     <Product>Spracheingabe - Terminal</Product>
+    <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
+    <Version>1.1.0</Version>
     <AssemblyTitle>Spracheingabe - Terminal</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>
