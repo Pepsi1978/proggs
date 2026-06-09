@@ -32,38 +32,47 @@ function withTimeout(promise, ms, label) {
 // Quelle: bugs/desktop/groq-transkription.md §2.3.
 function filterTranscription(j) {
 	const segs = Array.isArray(j?.segments) ? j.segments : null;
-	if (!segs || segs.length === 0) return String(j?.text || "").trim();
+	if (!segs || segs.length === 0)
+		return { text: String(j?.text || "").trim(), segments: [] };
 	const kept = [];
 	for (const s of segs) {
 		const noSpeech = Number(s?.no_speech_prob ?? 0);
 		const avgLp = Number(s?.avg_logprob ?? 0);
 		const compR = Number(s?.compression_ratio ?? 0);
-		const dur = Number(s?.end ?? 0) - Number(s?.start ?? 0);
+		const start = Number(s?.start ?? 0);
+		const end = Number(s?.end ?? 0);
+		const dur = end - start;
 		const segText = String(s?.text ?? "");
+		// Diagnose: alle Segmente mit Metadaten loggen (hilft beim Kalibrieren).
+		console.log(
+			`[Overlays] STT-Segment: no_speech=${noSpeech.toFixed(2)} avg_lp=${avgLp.toFixed(2)} comp=${compR.toFixed(2)} ${start.toFixed(2)}-${end.toFixed(2)}s "${segText.trim()}"`,
+		);
 		// Stille: hohes no_speech UND schlechtes avg_logprob
 		if (noSpeech > 0.6 && avgLp < -1.0) {
-			console.log(
-				`[Overlays] STT-Segment verworfen (Stille): no_speech=${noSpeech.toFixed(2)} avg_lp=${avgLp.toFixed(2)} "${segText.trim()}"`,
-			);
+			console.log("[Overlays]   -> verworfen (Stille-Confidence)");
 			continue;
 		}
 		// Repetition ("danke danke danke…")
 		if (compR > 2.4) {
-			console.log(
-				`[Overlays] STT-Segment verworfen (Repetition): compression_ratio=${compR.toFixed(2)} "${segText.trim()}"`,
-			);
+			console.log("[Overlays]   -> verworfen (Repetition)");
 			continue;
 		}
 		// Mini-Noise: sehr kurzes Segment mit Stille-Verdacht
 		if (dur > 0 && dur < 0.4 && noSpeech > 0.6) {
-			console.log(
-				`[Overlays] STT-Segment verworfen (Mini-Noise): dur=${dur.toFixed(2)}s no_speech=${noSpeech.toFixed(2)} "${segText.trim()}"`,
-			);
+			console.log("[Overlays]   -> verworfen (Mini-Noise)");
 			continue;
 		}
-		kept.push(segText);
+		kept.push({ text: segText, start, end });
 	}
-	return kept.join("").trim();
+	// Segmente mit Zeitstempeln zurueckgeben -> das Content-Script gleicht sie
+	// in Schicht 3 gegen das echte Audio ab (Trailing-Halluzination "Ja").
+	return {
+		text: kept
+			.map((s) => s.text)
+			.join("")
+			.trim(),
+		segments: kept,
+	};
 }
 
 // ── Groq Whisper Speech-to-Text ──
@@ -107,14 +116,14 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 			return { ok: false, error: msg };
 		}
 		// Schicht 2: Stille-/Repetitions-Segmente herausfiltern (funktionserhaltend).
-		let text;
+		// segments (mit Zeitstempeln) gehen ans Content-Script fuer den Audio-Abgleich (Schicht 3).
 		try {
-			text = filterTranscription(JSON.parse(raw));
+			const r2 = filterTranscription(JSON.parse(raw));
+			return { ok: true, text: r2.text, segments: r2.segments };
 		} catch {
 			// Kein JSON (sollte bei verbose_json nicht passieren) -> roh durchreichen.
-			text = (raw || "").trim();
+			return { ok: true, text: (raw || "").trim(), segments: [] };
 		}
-		return { ok: true, text };
 	} catch (e) {
 		return { ok: false, error: String(e?.message || e) };
 	}

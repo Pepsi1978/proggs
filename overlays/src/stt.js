@@ -219,29 +219,37 @@
 		});
 	}
 
-	// Misst die ABSOLUTE laute Zeit (ms) im aufgenommenen Audio. Das Blob ist
-	// komprimiert (webm/opus), daher per Web Audio dekodieren und RMS pro 20ms-Frame
-	// messen. Gibt -1 zurueck, wenn nicht messbar (dann NICHT filtern -> senden).
-	async function measureSpeechMs(blob) {
+	// Analysiert das aufgenommene Audio: Das Blob ist komprimiert (webm/opus), daher
+	// per Web Audio dekodieren und RMS pro 20ms-Frame messen. Liefert eine Voiced-Timeline
+	// (1 = lauter Frame) PLUS die absolute laute Zeit. Gibt null zurueck, wenn nicht
+	// messbar (dann wird NICHT gefiltert -> senden, funktionserhaltend).
+	const FRAME_MS = 20;
+	async function analyzeAudio(blob) {
 		const AC = window.AudioContext || window.webkitAudioContext;
-		if (!AC) return -1;
+		if (!AC) return null;
 		const ctx = new AC();
 		try {
 			const arrayBuf = await blob.arrayBuffer();
 			const audioBuf = await ctx.decodeAudioData(arrayBuf);
 			const data = audioBuf.getChannelData(0); // erste Spur reicht
 			const sr = audioBuf.sampleRate;
-			const frame = Math.max(1, Math.round(sr * 0.02)); // 20ms-Frames
+			const frame = Math.max(1, Math.round(sr * (FRAME_MS / 1000))); // 20ms
+			const count = Math.floor(data.length / frame);
+			const voiced = new Uint8Array(count);
 			let voicedFrames = 0;
-			for (let i = 0; i + frame <= data.length; i += frame) {
+			for (let f = 0; f < count; f++) {
 				let sum = 0;
+				const base = f * frame;
 				for (let j = 0; j < frame; j++) {
-					const s = data[i + j];
+					const s = data[base + j];
 					sum += s * s;
 				}
-				if (Math.sqrt(sum / frame) >= SPEECH_RMS_THRESHOLD) voicedFrames++;
+				if (Math.sqrt(sum / frame) >= SPEECH_RMS_THRESHOLD) {
+					voiced[f] = 1;
+					voicedFrames++;
+				}
 			}
-			return voicedFrames * 20; // ms aktiver Sprache
+			return { speechMs: voicedFrames * FRAME_MS, voiced, frameMs: FRAME_MS };
 		} finally {
 			try {
 				ctx.close();
@@ -249,13 +257,33 @@
 		}
 	}
 
+	// Schicht 3: Abgleich Whisper-Segment <-> echtes Audio. Ein Segment, dessen
+	// Zeitfenster [start,end] im aufgenommenen Audio praktisch still war (< 10% laute
+	// Frames), ist eine Trailing-/Pausen-Halluzination ("Ja", "Vielen Dank") — Whisper
+	// erzeugt sie mit HOHER Confidence, daher faengt das Confidence-Gate (Schicht 2)
+	// sie nicht. Echtes Wort hat Schall im Fenster -> bleibt (funktionserhaltend).
+	const SEG_VOICED_RATIO = 0.1;
+	function segmentHasSpeech(seg, analysis) {
+		const start = Number(seg?.start);
+		const end = Number(seg?.end);
+		if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start)
+			return true; // kein verwertbarer Zeitstempel -> nicht verwerfen
+		const { voiced, frameMs } = analysis;
+		const startF = Math.max(0, Math.floor((start * 1000) / frameMs));
+		const endF = Math.min(voiced.length, Math.ceil((end * 1000) / frameMs));
+		if (endF <= startF) return true;
+		let v = 0;
+		for (let i = startF; i < endF; i++) if (voiced[i]) v++;
+		return v / (endF - startF) >= SEG_VOICED_RATIO;
+	}
+
 	// Schicht 1: erst pruefen, ob ueberhaupt genug Sprache drin ist. Reine Stille
 	// (Knopf gedrueckt, nichts gesagt) gar nicht an Groq senden — verhindert die
 	// "Vielen Dank"-Halluzination, spart zudem die 10s-Mindestabrechnung.
 	async function maybeTranscribe(audioBlob) {
-		let speechMs = -1;
+		let analysis = null;
 		try {
-			speechMs = await measureSpeechMs(audioBlob);
+			analysis = await analyzeAudio(audioBlob);
 		} catch (e) {
 			// Decode fehlgeschlagen -> NICHT filtern (funktionserhaltend, nie echte
 			// Sprache verwerfen), einfach senden.
@@ -264,19 +292,19 @@
 				e,
 			);
 		}
-		if (speechMs >= 0 && speechMs < MIN_SPEECH_MS) {
+		if (analysis && analysis.speechMs < MIN_SPEECH_MS) {
 			console.log(
-				`[Overlays] STT: nur ${Math.round(speechMs)}ms Sprache (< ${MIN_SPEECH_MS}ms) -> nicht gesendet (Stille-Schutz)`,
+				`[Overlays] STT: nur ${Math.round(analysis.speechMs)}ms Sprache (< ${MIN_SPEECH_MS}ms) -> nicht gesendet (Stille-Schutz)`,
 			);
 			setMicState("idle");
 			removeLivePreview();
 			OV.toast("🤫 Keine Sprache erkannt — nichts gesendet.", 2000);
 			return;
 		}
-		transcribe(audioBlob);
+		transcribe(audioBlob, analysis);
 	}
 
-	async function transcribe(audioBlob) {
+	async function transcribe(audioBlob, analysis) {
 		setMicState("working", "Whisper transkribiert…");
 		setLivePreviewWaiting();
 		OV.toast("🎧 Whisper transkribiert…", 2000);
@@ -302,7 +330,35 @@
 			return;
 		}
 
-		const text = (res.text || "").trim();
+		// Schicht 3: Segmente gegen das echte Audio abgleichen (Trailing-/Pausen-
+		// Halluzination wie "Ja" entfernen). Nur wenn wir Audio analysieren konnten
+		// UND der Worker Segmente mit Zeitstempeln lieferte.
+		let text;
+		if (analysis && Array.isArray(res.segments) && res.segments.length) {
+			const kept = res.segments.filter((s) => {
+				const ok = segmentHasSpeech(s, analysis);
+				if (!ok)
+					console.log(
+						`[Overlays] STT-Segment verworfen (Audio still ${Number(s.start).toFixed(2)}-${Number(s.end).toFixed(2)}s): "${String(s.text || "").trim()}"`,
+					);
+				return ok;
+			});
+			text = kept
+				.map((s) => s.text || "")
+				.join("")
+				.trim();
+			// Sicherung: Wuerde der Abgleich ALLES verwerfen, obwohl Sprache da war,
+			// ist vermutlich das Whisper-Zeitstempel-Alignment verschoben -> lieber das
+			// Roh-Transkript nehmen als einen echten Satz zu verlieren (funktionserhaltend).
+			if (!text && (res.text || "").trim()) {
+				console.warn(
+					"[Overlays] Audio-Abgleich verwarf alle Segmente -> Fallback auf Roh-Transkript",
+				);
+				text = (res.text || "").trim();
+			}
+		} else {
+			text = (res.text || "").trim();
+		}
 		if (!text) {
 			setMicState("idle");
 			removeLivePreview();
