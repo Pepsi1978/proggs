@@ -358,14 +358,22 @@ private fun TabItem(
  */
 private fun subIconsFor(parentTab: String): List<SubIconMeta> =
     when (parentTab) {
+        // Frank-Wunsch 2026-06-09: Entropie + Thesen sind vom Aufgaben- in den
+        // Forscher-Bereich umgezogen. Aufgaben behaelt nur "Journal" (Slot 1, Buch-
+        // Icon); Slot 2/3 sind frei und zeigen generische "bald verfuegbar"-Platzhalter.
         Routes.TASKS ->
             listOf(
-                // Frank-Wunsch 2026-05-24: Journal bekommt das Buch-Icon (vorher bei
-                // Entropie). Entropie ("Stoerungen") bekommt ein Warndreieck mit
-                // Ausrufezeichen. Thesen bleibt die Gluehbirne.
                 SubIconMeta(Icons.Outlined.Book, "Journal"),
+                SubIconMeta(Icons.Outlined.Inbox, "2"),
+                SubIconMeta(Icons.Outlined.Insights, "3"),
+            )
+        // Frank-Wunsch 2026-06-09: Forscher bekommt Entropie (Slot 1, Warndreieck mit
+        // Ausrufezeichen) und Thesen (Slot 2, Gluehbirne); Slot 3 bleibt Platzhalter.
+        Routes.SCIENTIST ->
+            listOf(
                 SubIconMeta(Icons.Outlined.Warning, "Entropie"),
                 SubIconMeta(Icons.Outlined.Lightbulb, "Thesen"),
+                SubIconMeta(Icons.Outlined.Insights, "3"),
             )
         else ->
             listOf(

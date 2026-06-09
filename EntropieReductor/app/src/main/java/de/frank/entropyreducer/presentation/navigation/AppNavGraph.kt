@@ -241,16 +241,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                         nav.tabSwitch(route)
                     }
                 }
-                // Frank-Wunsch 2026-05-24: Sub-Bereich 1 war der Loop-Reiter. Die
-                // Loop-Aufgaben sind jetzt ein Akkordeon-Dropdown im Aufgaben-Reiter
-                // (TasksScreen), darum ist Slot 1 leer und heisst "Journal" — er
-                // routet ueber den SubAreaScreen-Platzhalter (else-Zweig unten).
-                // Sub-Bereich 2 = Tagebuch ("Entropie"), Sub-Bereich 3 = Thesen.
-                // Frank-Wunsch 2026-05-24: Slot 1 = "Journal" zeigt die aus
-                // BestJournal Frank gespiegelten Tagebucheintraege (read-only).
+                // Aufgaben-Slot 1 = "Journal" zeigt die aus BestJournal Frank
+                // gespiegelten Tagebucheintraege (read-only), eigener Screen.
+                // Frank-Wunsch 2026-06-09: Entropie + Thesen sind in den Forscher-
+                // Bereich umgezogen — Forscher-Slot 1 = Tagebuch ("Entropie"),
+                // Forscher-Slot 2 = Thesen. Aufgaben-Slot 2/3 und Forscher-Slot 3
+                // sind jetzt leere Platzhalter (else-Zweig unten via SubAreaScreen).
                 val isJournal = parent == Routes.TASKS && index == 1
-                val isTagebuch = parent == Routes.TASKS && index == 2
-                val isThesen = parent == Routes.TASKS && index == 3
+                val isTagebuch = parent == Routes.SCIENTIST && index == 1
+                val isThesen = parent == Routes.SCIENTIST && index == 2
                 if (isJournal) {
                     de.frank.entropyreducer.presentation.journal.JournalScreen(
                         onSwitchSub = { p, i ->

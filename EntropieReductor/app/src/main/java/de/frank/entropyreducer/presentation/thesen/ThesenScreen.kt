@@ -86,8 +86,8 @@ import org.json.JSONObject
  * Symbol-Kategorien folgen in einer naechsten Iteration (1:1-Portierung der
  * BestJournalFrank-Thesenfunktion ist umfangreich).
  *
- * Die App-Farbe folgt der Aufgaben-Akzentfarbe (orange) damit der Tab visuell in den
- * Aufgaben-Bereich passt. CosmosBottomBar laeuft im Sub-Mode mit forcedSubMode=TASKS.
+ * Die App-Farbe folgt der Forscher-Akzentfarbe (violett) damit der Tab visuell in den
+ * Forscher-Bereich passt. CosmosBottomBar laeuft im Sub-Mode mit forcedSubMode=SCIENTIST.
  */
 @Composable
 fun ThesenScreen(
@@ -194,7 +194,7 @@ fun ThesenScreen(
         title = "Thesen",
         bottomBar = {
             CosmosBottomBar(
-                currentTab = Routes.TASKS,
+                currentTab = Routes.SCIENTIST,
                 micState =
                     when (voiceState) {
                         VoiceCaptureState.RECORDING -> MicState.RECORDING
@@ -209,9 +209,10 @@ fun ThesenScreen(
                 // KEIN Mikrofon zu sehen.
                 onMicClick = { actionsExpanded = !actionsExpanded },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
-                forcedSubMode = Routes.TASKS,
-                // Thesen ist Sub-Bereich 3 unter Aufgaben → dauerhaft hervorheben.
-                selectedSubIndex = 3,
+                forcedSubMode = Routes.SCIENTIST,
+                // Frank-Wunsch 2026-06-09: Thesen ist jetzt Sub-Bereich 2 unter
+                // Forscher → dauerhaft hervorheben.
+                selectedSubIndex = 2,
             )
         },
     ) { padding ->
@@ -1102,6 +1103,6 @@ internal fun formatThesenTimestamp(ts: Long): String {
 private fun formatTimestamp(ts: Long): String = formatThesenTimestamp(ts)
 
 /** Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche
- * Farbe wie der Aufgaben-Tab-Sub-Modus in der BottomBar (kraeftiges Orange
- * #EA580C, nicht das frueher genutzte hellere #FF9800). */
-internal val ThesenAccent: Color = Color(0xFFEA580C)
+ * Frank-Wunsch 2026-06-09: Farbe wie der Forscher-Tab-Sub-Modus in der BottomBar
+ * (Violett #A78BFA) — nach dem Umzug von Aufgaben (orange) in den Forscher-Bereich. */
+internal val ThesenAccent: Color = Color(0xFFA78BFA)
