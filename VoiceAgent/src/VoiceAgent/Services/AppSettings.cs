@@ -103,6 +103,10 @@ namespace VoiceAgent.Services
         // Auswaehlbar in den Einstellungen aus assets/sounds/stop (siehe ChimeLibrary).
         public string WakeSleepChimeSound { get; set; } = "sleep.wav";
 
+        // Melde-Ton: wird gespielt, wenn der Agent PROAKTIV etwas sagen will (Erinnerung/Funkspruch).
+        // Pfad relativ zu assets/ (Default: bisheriger Ton). Auswaehlbar aus assets/sounds/message.
+        public string ChimeSound { get; set; } = "message1.wav";
+
         // ----- Zeit -----
         // Damit der Agent die echte Uhrzeit kennt (LLMs raten sie sonst). Leer = automatisch
         // die System-Zeitzone dieses PCs; sonst eine TimeZoneInfo-Id (z.B. "W. Europe Standard Time").

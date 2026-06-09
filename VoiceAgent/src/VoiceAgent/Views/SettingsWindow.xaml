@@ -394,6 +394,11 @@
                             <ComboBox x:Name="StopSoundBox" Width="360" HorizontalAlignment="Left"/>
                             <Button Content="▶ Anhören" Click="PreviewStopSound_Click" Padding="12,5" Margin="8,0,0,6"/>
                         </StackPanel>
+                        <TextBlock Text="Melde-Ton (wenn der Agent von sich aus etwas sagt — z. B. Erinnerung)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="MessageSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewMessageSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
                         <TextBlock Text="Wähle aus je 30 kurzen Tönen. Mit „Anhören“ kannst du jeden Ton probehören, bevor du ihn übernimmst."
                                    Style="{StaticResource Label}"/>
 

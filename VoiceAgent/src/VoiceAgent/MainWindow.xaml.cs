@@ -28,6 +28,12 @@ namespace VoiceAgent
     public partial class MainWindow : Window
     {
         private AppSettings _settings = new();
+
+        // Sichtbare App-Version (aus der Assembly = <Version> der csproj abgeleitet, nicht hartkodiert).
+        // Wird in der Titelleiste angezeigt und beim Start geloggt (Regel: version-bump-visible-always).
+        private static readonly string AppVersion =
+            System.Reflection.Assembly.GetExecutingAssembly().GetName().Version is { } v
+                ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
         private BossAgent? _agent;
         private EndpointDetector? _endpoint;
         private IntentDetector? _intentDetector;
@@ -73,6 +79,7 @@ namespace VoiceAgent
         public MainWindow()
         {
             InitializeComponent();
+            Title = $"VoiceAgent v{AppVersion}";          // Version sichtbar in der Titelleiste (Regel: version-bump-visible-always)
             SourceInitialized += OnSourceInitialized;   // Taskleisten-Icon setzen, sobald das HWND existiert
             ContentRendered += OnContentRendered;       // Re-Apply nach 1. Rendern (Win11-Taskleisten-Cache, #11308)
             Loaded += OnLoaded;
@@ -290,8 +297,9 @@ namespace VoiceAgent
         {
             try
             {
+                Log.Info("VoiceAgent gestartet", new { version = AppVersion });   // Version ins Log (Observability)
                 _settings = Config.Load();
-                ApplyChimeSounds();            // gewaehlte Start-/Stop-Toene auf die Chimes uebernehmen
+                ApplyChimeSounds();            // gewaehlte Start-/Stop-/Melde-Toene auf die Chimes uebernehmen
                 _memory = new AgentMemory();   // laedt Fakten + letzte Gespraeche aus frueheren Sessions
                 _subAgents = new SubAgentRegistry();
                 _reminderService = new ReminderService();
@@ -761,6 +769,7 @@ namespace VoiceAgent
         {
             _wakeChime.FileName = string.IsNullOrWhiteSpace(_settings.WakeChimeSound) ? "wakeword.wav" : _settings.WakeChimeSound;
             _sleepChime.FileName = string.IsNullOrWhiteSpace(_settings.WakeSleepChimeSound) ? "sleep.wav" : _settings.WakeSleepChimeSound;
+            _chime.FileName = string.IsNullOrWhiteSpace(_settings.ChimeSound) ? "message1.wav" : _settings.ChimeSound;
         }
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)

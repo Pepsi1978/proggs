@@ -24,6 +24,10 @@ namespace VoiceAgent.Services.Audio
         public static IReadOnlyList<ChimeSound> StopSounds()
             => Build("sounds/stop", new ChimeSound("Standard – Einschlafton", "sleep.wav"));
 
+        /// <summary>Melde-Toene (proaktiver Funkspruch/Erinnerung): Standard (message1.wav) + assets/sounds/message.</summary>
+        public static IReadOnlyList<ChimeSound> MessageSounds()
+            => Build("sounds/message", new ChimeSound("Standard – Funkspruch-Ton", "message1.wav"));
+
         private static string AssetsDir
         {
             get

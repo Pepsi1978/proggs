@@ -112,6 +112,11 @@ namespace VoiceAgent.Views
                 StopSoundBox.SelectedValuePath = nameof(ChimeSound.RelativePath);
                 StopSoundBox.SelectedValue = _settings.WakeSleepChimeSound;
                 if (StopSoundBox.SelectedValue == null) StopSoundBox.SelectedIndex = 0;
+                MessageSoundBox.ItemsSource = ChimeLibrary.MessageSounds();
+                MessageSoundBox.DisplayMemberPath = nameof(ChimeSound.DisplayName);
+                MessageSoundBox.SelectedValuePath = nameof(ChimeSound.RelativePath);
+                MessageSoundBox.SelectedValue = _settings.ChimeSound;
+                if (MessageSoundBox.SelectedValue == null) MessageSoundBox.SelectedIndex = 0;
 
                 WakeTimeoutSlider.Value = _settings.WakeTimeoutMs;
 
@@ -209,6 +214,7 @@ namespace VoiceAgent.Views
                 _settings.WakeSleepChimeEnabled = WakeSleepChimeBox.IsChecked == true;
                 _settings.WakeChimeSound = StartSoundBox.SelectedValue as string ?? "wakeword.wav";
                 _settings.WakeSleepChimeSound = StopSoundBox.SelectedValue as string ?? "sleep.wav";
+                _settings.ChimeSound = MessageSoundBox.SelectedValue as string ?? "message1.wav";
                 _settings.WakeTimeoutMs = (int)WakeTimeoutSlider.Value;
                 _settings.ComputerUseMode = (ComputerUseModeBox.SelectedItem as ComboBoxItem)?.Tag as string ?? "off";
                 _settings.TimeZoneId = AutoTimeZoneBox.IsChecked == true
@@ -310,6 +316,10 @@ namespace VoiceAgent.Views
         // Stop-Ton probehoeren.
         private void PreviewStopSound_Click(object sender, RoutedEventArgs e)
             => PreviewChime(StopSoundBox.SelectedValue as string, "Stop");
+
+        // Melde-Ton (proaktiver Funkspruch) probehoeren.
+        private void PreviewMessageSound_Click(object sender, RoutedEventArgs e)
+            => PreviewChime(MessageSoundBox.SelectedValue as string, "Melde");
 
         private void PreviewChime(string? relativePath, string which)
         {
