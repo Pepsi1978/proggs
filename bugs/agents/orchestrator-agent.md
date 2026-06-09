@@ -3,6 +3,12 @@
 > **PFLICHT-LESEN vor Arbeit an einem Haupt-/Boss-/Orchestrator-Agenten**, der natuerliche
 > Sprache versteht, sich menschlich unterhaelt, Aufgaben auf Tools/Worker abbildet und/oder
 > selbst Unteragenten baut, spawnt und nutzt.
+> **Geltungsbereich:** gilt fuer Agenten INNERHALB von Claude Code (Agent-Tool / Claude Agent SDK)
+> UND fuer **EXTERNE, selbst gebaute** Boss-Agenten in eigenen Apps — C#/.NET, TS/JS, Python;
+> framework-basiert (Semantic Kernel, MS Agent Framework, LangGraph, CrewAI, OpenAI/Vercel AI SDK …)
+> ODER **from-scratch** gegen die rohen LLM-APIs (das VoiceAgent-Muster: eigene Loop, direkte HTTP-Calls).
+> Sektionen 1–7 sind weitgehend plattform-/framework-uebergreifend; **Sektion 8** sammelt die
+> Bugs, die spezifisch beim Bau EXTERNER/selbstgebauter Agenten auftreten.
 > **Stand:** recherchiert am 2026-06-09. Anker: Claude Code **2.1.169** (Opus 4.x) + die
 > aktuellen Versionen (Juni 2026) der Frameworks LangGraph (~1.0/0.4), CrewAI (~0.105+),
 > AutoGen/AG2 (1.0 GA, Maintenance), Microsoft Agent Framework, OpenAI Agents SDK (~0.7),
@@ -552,6 +558,118 @@ geteilte Credential-Set ueber alle User.
 
 ---
 
+## 8. Externe / selbst gebaute Boss-Agenten (eigene App, ausserhalb Claude Code)
+
+> Diese Sektion ist fuer Agenten, die du SELBST in einem eigenen Tool baust (z.B. VoiceAgent in
+> C#/.NET). Die Sektionen 1–7 gelten weiter; hier kommen die Bugs dazu, die genau dann auftreten,
+> wenn DU die Mechanik (Loop, State, Tool-Dispatch, Streaming) selbst implementierst oder ein
+> Nicht-Claude-Framework nutzt.
+
+### 8.1 From-scratch Agent-Loop gegen rohe LLM-APIs (das VoiceAgent-Muster)  [⭐ HAEUFIG]
+Wer die agentic Loop selbst baut (`while stop_reason == "tool_use"`: Tool ausfuehren → `tool_result`
+zurueck → wiederholen), faellt typisch in diese Fallen:
+- **Orphaned `tool_use` nach eigenem Kontext-Trimming → HTTP 400** („Each `tool_use` block must have a
+  corresponding `tool_result` block"). Ursache: beim Trimmen/Compaction wird ein assistant-Turn mit
+  `tool_use` gekuerzt, das zugehoerige `tool_result` fehlt. FIX: tool_use/tool_result-Paare IMMER
+  zusammen behalten/entfernen; `tool_result` muss erstes content-Item im naechsten user-Turn sein.
+  (claude-code #8004, #29598 — CLOSED NOT_PLANNED = Protokoll-Falle, „Fix" ist die Best-Practice.)
+- **`max_tokens` kappt den tool_use-Block → unparsebares JSON.** FIX: nach jeder Antwort `stop_reason`
+  pruefen; bei `max_tokens` NICHT parsen/ausfuehren — `max_tokens` erhoehen und Turn wiederholen.
+- **Endlosschleife mangels Exit-Condition.** FIX: hartes `max_iterations` (10–25 je nach Task) +
+  Wall-Clock-Timeout (30–60s) + Loop-Erkennung (gleicher Tool-Call+Args mehrfach → abbrechen).
+- **SSE-Streaming: `partial_json` mitten im Token geparst → Crash.** FIX: `input_json_delta`-Chunks
+  pro content_block-Index akkumulieren, erst bei `content_block_stop` `json.loads`; SSE strikt nach
+  `\n\n`-Delimiter parsen.
+- **Duplicate `tool_use`-IDs bei parallelen Calls** (claude-code #21089, NOT_PLANNED). FIX: IMMER die
+  vom Modell gelieferte `tool_use.id` / OpenAI `call_id` durchreichen, nie selbst neu vergeben.
+- **`strict: true` + `pattern` im Schema → 400** („string patterns are not supported"). FIX: `pattern`
+  entfernen oder `strict` weglassen.
+- **OpenAI Responses-API**: `function_call_output` braucht passende `call_id`; alle parallelen Outputs
+  gemeinsam vor dem naechsten Request senden. Bei Interrupt waehrend Tool-Call: `function_call` ohne
+  `function_call_output` → „400 No tool output found".
+- **Tool-Fehler**: kein Auto-Retry — Fehler als `tool_result` mit `is_error: true` zurueckgeben, damit
+  das Modell selbst korrigiert. **Instruktionen NIE in `tool_result`** (untrusted; gegen Prompt-Injection).
+**Quelle:** Anthropic „How tool use works" / „Troubleshooting tool use" / „Handling stop reasons"
+(offiziell); claude-code #8004/#29598/#21089; litellm #22946.
+
+### 8.2 C#/.NET — Semantic Kernel / Microsoft Agent Framework
+> Framework-Wahl Juni 2026: **Microsoft Agent Framework** (1.0 GA am 2026-04-02, faktisch „SK v2") ist
+> die Empfehlung fuer NEUE .NET-Projekte; Semantic Kernel bleibt >=1 Jahr supported (Bestandscode).
+- **CVE-2026-25592 — Arbitrary File Write via Function Calling (RCE-Vektor).** FIX: Upgrade auf
+  **Semantic Kernel 1.71.0+** (funktionserhaltend). Betrifft SK .NET < 1.71.0.
+- **ResponseFormat (structured output) + Function Calling am selben Agent → HTTP 500** (SK #9768,
+  CLOSED COMPLETED 2025-04-08). FIX: nicht gleichzeitig setzen — erst Tools, dann separater Call mit
+  ResponseFormat; oder gefixte Version.
+- **SK schiebt User-Message zwischen Tool-Responses → HTTP 400** (SK #7626, COMPLETED 2024-09-09).
+  FIX: ChatHistory so halten, dass alle Tool-Responses zusammenhaengen; gefixte Version.
+- **AzureAIInference-Connector + Mistral/Llama: Function Calling wird nicht ausgeloest** (SK #9933/#10221,
+  COMPLETED). FIX: SK/Connector aktualisieren oder OpenAI/AzureOpenAI-Connector nutzen.
+- **`AgentGroupChat.IsComplete` bleibt nach Termination `true`** → wiederverwendete Instanz antwortet
+  nicht mehr. FIX: vor erneutem Invoke `chat.IsComplete = false`. (verwandt SK #10491, COMPLETED.)
+- **.NET-Default `RequirePlanSignoff = true`** (Python false) → Magentic-Workflow pausiert ungewollt
+  auf Human-Review. FIX: `.RequirePlanSignoff(false)` wenn kein HITL gewuenscht.
+- **Breaking Changes**: `ToolCallBehavior` → `FunctionChoiceBehavior`; vor jedem SK-Update den
+  Migration-Guide pruefen.
+**Quelle:** learn.microsoft.com (Agent Framework / SK Function-Choice-Behaviors, offiziell);
+microsoft/semantic-kernel #9768/#7626/#9933/#10491; CVE-2026-25592 Advisory; MS Security Blog 2026-05-07.
+
+### 8.3 Voice-First Boss-Agent — Orchestrierung im laufenden Sprach-Gespraech
+- **Tool-Result bei User-Interrupt verloren → Doppel-Ausfuehrung** (livekit/agents #3702, CLOSED
+  COMPLETED 2026-03-14). FIX: Tool-Result vor dem Reply-Task in den Kontext committen (Result-Stashing/
+  Platzhalter), Tool idempotent machen.
+- **Permanenter Hang bei Interrupt waehrend langem Tool-Call** (openai.responses): `function_call` ohne
+  `function_call_output` → „400 No tool output found", Agent fuer Rest der Session tot (livekit #5092,
+  COMPLETED). FIX: bei Interrupt den Call abschliessen+Output einsetzen ODER Call+Output gemeinsam aus
+  dem Kontext entfernen.
+- **Preemptive Generation halluziniert das Tool-Ergebnis** auf stale Kontext (agents-js #1365). FIX:
+  Preemptive-Gen blockieren, solange ein Tool-Call in-flight ist.
+- **Handoff-Race bei parallelen Tool-Calls** (livekit #5150, **OPEN**). FIX: bei Handoff den parallelen
+  Reply-Task gar nicht erst starten.
+- **Content + tool_calls in EINEM Turn falsch verwaltet** (pipecat #2787). FIX: Text- und Tool-Teil
+  getrennt in den Kontext schreiben.
+**Quelle:** LiveKit Supervisor-/Handoff-Pattern, Pipecat Function-Calling, OpenAI Realtime-Prompting
+(offiziell); livekit/agents #3702/#5092/#5150; agents-js #1365; pipecat #2787.
+
+### 8.4 Lokale / Multi-Provider Boss-Agenten (eigene App)
+- **Ollama silent context truncation** — Default `num_ctx` 2048/4096, aelteste Messages werden im
+  Agent-Loop OHNE Fehler verworfen (ollama #2714/#6286). FIX: `num_ctx` pro Request explizit setzen
+  (gewinnt vor Env/Modelfile).
+- **vLLM kein `strict`-Mode bei `tool_choice=auto`** → Args verletzen das Schema. FIX: Schema-Validierung
+  im Orchestrator nachschalten / guided decoding.
+- **vLLM Streaming-Tool-Call ohne `"type":"function"` im ersten Chunk** (vllm #16340) / Parser fuellt
+  `tool_calls` nicht (Qwen/DSML/Olmo: #29192/#41240/#32534). FIX: Client tolerant machen, korrekten
+  Tool-Parser pro Modell waehlen, Plain-Content als Fallback durchsuchen.
+- **Per-Provider Arg-Format**: OpenAI liefert `arguments` als JSON-**String** (parsen!), Anthropic/Google
+  als geparstes **Objekt**. FIX: im Orchestrator EINE normalisierte Tool-Call-Struktur erzwingen.
+- **Kleine/quantisierte Modelle** (~8B) brechen Tool-Calling. FIX: tool-faehiges Modell waehlen
+  (Llama 3.1 8B-Instruct/Mistral 7B), bei komplexen Tasks zur Cloud eskalieren.
+- **Determinismus**: `temperature=0`/`seed` garantieren NICHTS — Tool-Calls validieren statt auf
+  Wiederholung vertrauen.
+**Quelle:** Ollama/LM Studio/vLLM-Docs (offiziell); ollama #2714/#6286; vllm #16340/#29192/#41240/#32534;
+LiteLLM-Routing (offiziell); RouteLLM arXiv 2406.18665.
+
+### 8.5 JavaScript / TypeScript (Vercel AI SDK / Mastra / OpenAI Agents JS)
+- **AI SDK v6: `tool().parameters` wird nicht gelesen** (`inputSchema` undefined) → alle Tool-Calls
+  brechen (vercel/ai #13460, **OPEN**). FIX: auf `inputSchema:` umstellen.
+- **AI SDK v6 + Zod + Anthropic: leeres `input_schema` → 400** (#12020). FIX: Schema explizit als
+  JSON-Schema setzen / Patch.
+- **zod-to-json-schema inkompatibel mit Zod v4** (#7189). FIX: bei Zod v3 bleiben oder natives
+  `z.toJSONSchema`. (OpenAI Agents JS erfordert Zod v4 — Konflikt beachten.)
+- **`stopWhen` ignoriert `useChat` `maxSteps`** (#7502, **OPEN**). FIX: Stopp serverseitig nur ueber
+  `stopWhen` regeln.
+- **Infinite Loop bei Tool-Fehler** (#9384, CLOSED COMPLETED 2025-10-15). FIX: Step-Limit + defensives
+  try/catch im Tool-`execute`.
+- **`AI_NoOutputGeneratedError`** wenn `stepCountIs` mit Tool-Call als letztem Step trifft (#13075).
+  FIX: Stop so legen, dass ein Text-Step folgt.
+- **ESM/CJS SyntaxError** in `@openai/agents` (node 22/Lambda) (#245). FIX: ESM-Setup/Transpile anpassen.
+**Best-Practice-Kern (offiziell):** Loop-Kontrolle ueber `stopWhen: stepCountIs(n)` (Default 20 als
+Runaway-Schutz), `prepareStep` fuer Kontext-/Modell-Steuerung pro Step, Zod-Tool-Schemas, `abortSignal`
+durchreichen (+ `onAbort`-Cleanup).
+**Quelle:** ai-sdk.dev / mastra.ai / OpenAI Agents JS (offiziell); vercel/ai #13460/#12020/#7189/#7502/
+#9384/#13075; openai-agents-js #245.
+
+---
+
 ## Fix-Status (hart per `gh` geprueft am 2026-06-09)
 
 > Trennung: *gefixt* (Changelog/Issue COMPLETED) vs. *bleibt aktiv* (OPEN oder CLOSED NOT_PLANNED =
@@ -569,6 +687,13 @@ geteilte Credential-Set ueber alle User.
 | AutoGen GroupChatManager ignoriert is_termination_msg | microsoft/autogen #802 | COMPLETED 2023-11-29 (alt) |
 | OpenAI Agents SDK nested-handoff-history drops content | openai/openai-agents-python #3319 | COMPLETED 2026-05-10 (jetzt opt-in!) |
 | Opus 4.7 tool_use leer/„could not be parsed" | anthropics/claude-code #61133 | COMPLETED 2026-05-21 |
+| .NET SK: ResponseFormat + Function Calling → 500 | microsoft/semantic-kernel #9768 | COMPLETED 2025-04-08 |
+| .NET SK: User-Message zwischen Tool-Responses → 400 | microsoft/semantic-kernel #7626 | COMPLETED 2024-09-09 |
+| .NET SK: AzureAIInference Mistral/Llama Function Calling | microsoft/semantic-kernel #9933, #10491 | COMPLETED |
+| .NET SK: Arbitrary File Write via Function Calling | CVE-2026-25592 | gefixt ab SK 1.71.0 |
+| Voice: Tool-Result bei Interrupt verloren → Doppel-Exec | livekit/agents #3702 | COMPLETED 2026-03-14 |
+| Voice: Hang bei Interrupt waehrend Tool-Call | livekit/agents #5092 | COMPLETED 2026-03-13 |
+| TS: AI SDK infinite loop bei Tool-Fehler | vercel/ai #9384 | COMPLETED 2025-10-15 |
 
 > ⚠️ **Achtung Regression durch Fix:** Nach #3319 ist `nest_handoff_history` im OpenAI Agents SDK
 > **opt-in (Default AUS)**. Wer auf das alte Default-Verhalten baute, muss `RunConfig(nest_handoff_history=True)`
@@ -594,6 +719,11 @@ geteilte Credential-Set ueber alle User.
 | LangGraph 1.0.6 Infinite-Loop-Regression | langchain-ai/langgraph #6731 | CLOSED **NOT_PLANNED** (war 1.0.6; 0.6 ok) |
 | CrewAI hierarchical delegation faellt aus | crewAIInc/crewAI #4783 | CLOSED **NOT_PLANNED** |
 | AutoGen SelectorGroupChat ignoriert selector_func | microsoft/autogen #4289 | CLOSED **NOT_PLANNED** |
+| Voice: Handoff-Race bei parallelen Tool-Calls | livekit/agents #5150 | **OPEN** |
+| TS: AI SDK v6 `tool().parameters` nicht gelesen | vercel/ai #13460 | **OPEN** |
+| TS: AI SDK `stopWhen` ignoriert useChat `maxSteps` | vercel/ai #7502 | **OPEN** |
+| From-scratch: orphaned tool_use nach Trimming → 400 | anthropics/claude-code #8004, #29598 | CLOSED **NOT_PLANNED** (Protokoll-Falle) |
+| From-scratch: Duplicate tool_use-IDs (parallel) | anthropics/claude-code #21089 | CLOSED **NOT_PLANNED** (Protokoll-Falle) |
 
 **Ehrlichkeit/Methodik:** Die obigen Status sind am 2026-06-09 per `gh issue view` hart verifiziert.
 Nicht jede von den Researchern genannte Nummer wurde einzeln per `gh` geprueft (Stichprobe der

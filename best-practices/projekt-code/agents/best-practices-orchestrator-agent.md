@@ -189,6 +189,65 @@ Schritt-Sequenz** (Agent darf valide Umwege finden); Konsistenz via pass@k / pas
 
 ---
 
+## 7. Externe / selbst gebaute Boss-Agenten (eigene App, ausserhalb Claude Code)
+
+> Die Sektionen 1–6 gelten plattform-/framework-uebergreifend. Hier die Praxis fuer Agenten, die du
+> SELBST in einem eigenen Tool baust (z.B. VoiceAgent in C#/.NET) — framework-basiert ODER from-scratch.
+
+### 7a. From-scratch Agent-Loop gegen rohe LLM-APIs (das VoiceAgent-Muster)
+| Praxis | Warum / Vorteil | Quelle (Flag) |
+|---|---|---|
+| **Loop = `while stop_reason == "tool_use"`**: Tool ausfuehren → `tool_result` im naechsten user-Turn → wiederholen; Loop endet bei jedem anderen `stop_reason` | kanonisches minimales Muster, kein Framework noetig | Anthropic „How tool use works" (`offiziell`) |
+| **Hartes `max_iterations` (10–25) + Wall-Clock-Timeout (30–60s) + Loop-Erkennung** (gleicher Call+Args) | gegen Endlosschleife/Kosten — du baust den Stop selbst | Anthropic Building-Effective-Agents (`offiziell`) |
+| **`stop_reason` nach JEDER Antwort pruefen**; bei `max_tokens` NICHT parsen → `max_tokens` hoch + retry | abgeschnittenes tool_use-JSON nie ans Tool geben | Anthropic „Handling stop reasons" (`offiziell`) |
+| **tool_use/tool_result-Paare beim Trimmen zusammen halten**; `tool_result` = erstes content-Item im user-Turn; jede ID genau ein Result; Modell-IDs durchreichen (nie neu vergeben) | gegen „400: tool_use without tool_result" und Duplicate-ID-Fehler | claude-code #8004/#29598/#21089 (`extern`) |
+| **SSE**: `partial_json` pro content_block-Index akkumulieren, erst bei `content_block_stop` parsen; nach `\n\n` trennen | gegen mid-token-JSON-Crash | Anthropic Streaming (`offiziell`) |
+| **Tool-Fehler als `tool_result` mit `is_error:true`** (kein Auto-Retry!); **Instruktionen NIE in tool_result** | Modell korrigiert sich selbst; Injection-Schutz | Anthropic „Troubleshooting tool use" (`offiziell`) |
+| **OpenAI Responses-API**: `function_call_output` mit passender `call_id`, alle parallelen Outputs gemeinsam senden; stateful-by-default spart eigenes State-Mgmt | sauberes Loop-Design | OpenAI (`offiziell`) |
+| **429 in derselben Iteration mit Backoff retrien**, Iterations-Counter nur bei Erfolg hoch | keine „falsch verbrauchten" Iterationen | extern |
+
+### 7b. C#/.NET (Semantic Kernel / Microsoft Agent Framework)
+| Praxis | Warum / Vorteil | Quelle (Flag) |
+|---|---|---|
+| **MS Agent Framework (1.0 GA 2026-04-02) fuer NEUE .NET-Projekte**; SK fuer Bestandscode | „SK v2", kombiniert Agent-Abstraktion + Workflows | learn.microsoft.com (`offiziell`) |
+| **Magentic-Orchestrierung** fuer offene Aufgaben (`MagenticWorkflowBuilder`) + `.WithMaxRounds(10).WithMaxStalls(3).WithMaxResets(2)` | Boss plant/delegiert/synthetisiert mit hartem Budget | MS Agent Framework (`offiziell`) |
+| **`.RequirePlanSignoff(false)` setzen** wenn kein HITL gewuenscht (.NET-Default ist `true`!) | sonst pausiert der Workflow ungewollt | MS Agent Framework .NET (`offiziell`) |
+| **`FunctionChoiceBehavior.Auto()/.Required()/.None()`**; Funktionen explizit per Liste begrenzen | `.Required()` wird nur im 1. Request advertised → kein Loop | Semantic Kernel (`offiziell`) |
+| **Parallele Tool-Calls**: `AllowParallelCalls=true` UND `AllowConcurrentInvocation=true` (beide!) | sonst sequentiell | Semantic Kernel (`offiziell`) |
+| **Provider-agnostisch via `Microsoft.Extensions.AI`** (`IChatClient` + `.UseFunctionInvocation().UseOpenTelemetry()`) | ein Client fuer OpenAI/Anthropic/Azure + Telemetrie als Middleware | learn.microsoft.com (`offiziell`) |
+| **`[Description]` auf jede Function + jeden Parameter** | steuert Tool-Auswahl | SK/Extensions.AI (`offiziell`) |
+| **SK >= 1.71.0** (CVE-2026-25592); `AgentGroupChat.IsComplete=false` vor Reuse; ResponseFormat NICHT mit Function Calling kombinieren; Migration-Guide vor Updates | bekannte .NET-Fallen (alle gefixt, aber Version/Reihenfolge beachten) | SK-Issues/CVE (`offiziell`) |
+
+### 7c. Voice-First Boss-Agent (Orchestrierung im Gespraech)
+| Praxis | Warum / Vorteil | Quelle (Flag) |
+|---|---|---|
+| **Supervisor-Pattern statt Handoff**: Boss behaelt Session, delegiert an kurzlebige Tasks mit **typed results** (Dataclasses), State via `chat_ctx` | kein Agent-Swap-Overhead, keine Routing-Latenz, kein fragiles NLP-Parsen | LiveKit (`offiziell`) |
+| **Lange Tool-Calls async** (`cancel_on_interruption=False`, `timeout_secs`, Zwischenstaende `is_final=False`) + **Result-Stashing** (Platzhalter-Output sofort in Kontext) | Gespraech friert nicht ein; Tool-Result bei Interrupt nicht verloren | Pipecat (`offiziell`) |
+| **Kurze Preambles/Filler direkt vor dem Tool-Call** („ich schaue nach") — kein Chain-of-Thought vorlesen | wirkt responsiv, senkt empfundene Latenz | OpenAI Realtime-Prompting (`offiziell`) |
+| **Routing als Klartext-Regeln + Beispielphrasen** (nicht Pseudocode); Clarification nur bei niedriger Confidence | Realtime-Modell folgt natuerlicher Sprache zuverlaessiger; jede Rueckfrage kostet einen Turn | OpenAI/LiveKit (`offiziell`) |
+| **Bei Handoff den parallelen Reply-Task NICHT starten**; Preemptive-Gen blockieren solange Tool in-flight | gegen Handoff-Race + halluziniertes Tool-Ergebnis | livekit #5150 / agents-js #1365 (`extern`) |
+| **>20 Exchanges: async zusammenfassen** vor komplexen Multi-Task-Workflows; Persona frueh „verriegeln" | gegen Token-Explosion + Persona-Drift (Voice hat keinen visuellen Kontext) | LiveKit (`offiziell`) |
+
+### 7d. Lokale / Multi-Provider Boss-Agenten
+| Praxis | Warum / Vorteil | Quelle (Flag) |
+|---|---|---|
+| **Ollama `num_ctx` pro Request explizit setzen** (Default 2048/4096) | gegen stille Context-Truncation im Loop | Ollama-Docs (`offiziell`) |
+| **LiteLLM/Gateway als Provider-Abstraktion** + getrennte `context_window_fallbacks` vs. `fallbacks` | ein Codepfad; lokal-zu-klein → Auto-Eskalation zur Cloud statt Hard-Fail | LiteLLM (`offiziell`) |
+| **Router: lokal/billig zuerst, Eskalation bei Bedarf** (RouteLLM ~95% GPT-4-Qualitaet bei 26% teurer Calls) | Kosten runter ohne Qualitaetsverlust | RouteLLM arXiv (`extern`) |
+| **Tool-Arg-Format pro Provider normalisieren** (OpenAI=JSON-String, Anthropic/Google=Objekt) auf EINE Struktur | haeufigster Migrationsbug | extern |
+| **Tool-faehiges Modell waehlen** (Llama 3.1 8B-Instruct/Mistral 7B); kleine/quantisierte brechen Tool-Calling; vLLM hat kein `strict` → Schema im Orchestrator validieren | weniger fehlerhafte Tool-Calls | Ollama/vLLM-Docs (`offiziell`) |
+
+### 7e. JavaScript / TypeScript (Vercel AI SDK / Mastra / OpenAI Agents JS)
+| Praxis | Warum / Vorteil | Quelle (Flag) |
+|---|---|---|
+| **Loop-Kontrolle via `stopWhen: stepCountIs(n)`** (Default 20 Runaway-Schutz), nicht altes `maxSteps` | praeziser, kombinierbarer Stopp | ai-sdk.dev (`offiziell`) |
+| **`prepareStep`** fuer Kontext-Pruning + Modell-Routing pro Step | haelt lange Loops im Token-Limit | ai-sdk.dev (`offiziell`) |
+| **Tools mit Zod-`inputSchema` + `execute`** (v6: `inputSchema`, nicht `parameters`!) | typsicher; Tool ohne `execute` = Handoff-Signal | ai-sdk.dev (`offiziell`) |
+| **`abortSignal` durchreichen + Cleanup in `onAbort`** (nicht `onFinish`); Abort NICHT mit resumable streams | saubere Terminierung bis zur API | ai-sdk.dev (`offiziell`) |
+| **Mastra** fuer deterministische Graph-Orchestrierung (`.then()/.branch()/.parallel()`); **OpenAI Agents JS** `handoff` vs. `agent.asTool()` (braucht Zod v4) | explizite Kontrolle statt reines LLM-Loop-Steuern | mastra.ai / OpenAI (`offiziell`) |
+
+---
+
 ## Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach-Abschnitt
 
 | Best-Practice (hier) | Bug-Almanach-Abschnitt (`bugs/agents/orchestrator-agent.md`) |
@@ -199,6 +258,7 @@ Schritt-Sequenz** (Agent darf valide Umwege finden); Konsistenz via pass@k / pas
 | 4. Tool-Calling robust | 4. Tool-Calling & Task-Mapping (4.1–4.11) |
 | 5. Menschlicher Dialog | 5. Conversational Naturalness (5.1–5.8) |
 | 6. State/Reliability/Evals/Security | 6. State/Memory/Kontext + 7. Reliability/Observability/Security |
+| 7. Externe / selbst gebaute Boss-Agenten (7a from-scratch · 7b .NET · 7c Voice · 7d lokal/Multi-Provider · 7e TS/JS) | 8. Externe / selbst gebaute Boss-Agenten (8.1–8.5) |
 
 ## Wichtigste Quellen (offiziell)
 - Anthropic: „Building Effective Agents", „How we built our multi-agent research system",
