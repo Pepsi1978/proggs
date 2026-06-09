@@ -364,6 +364,19 @@ constructor(
             }
         }
 
+        // --- Mentalboard (v12+) ---
+        // DataStore-basiert wie Tagebuch. restoreMentals ergaenzt nur fehlende IDs —
+        // lokale Reihenfolge/Edits gewinnen (konservativ).
+        if (payload.mentals.isNotEmpty()) {
+            inserted +=
+                de.frank.entropyreducer.presentation.mental.restoreMentals(
+                    appContext,
+                    payload.mentals.map {
+                        de.frank.entropyreducer.presentation.mental.Mental(id = it.id, text = it.text)
+                    },
+                )
+        }
+
         // --- Aufgaben-Nachtraege (v6+) ---
         // Existenz-basiert: id ist UUID, Doppelung quasi unmoeglich. Wenn lokal vorhanden,
         // gewinnt der lokale Stand (Inline-Edits seit letztem Backup).

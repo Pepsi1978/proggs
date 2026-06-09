@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Warning
@@ -364,7 +365,8 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
         Routes.TASKS ->
             listOf(
                 SubIconMeta(Icons.Outlined.Book, "Journal"),
-                SubIconMeta(Icons.Outlined.Inbox, "2"),
+                // Frank-Wunsch 2026-06-09: Slot 2 = Mentalboard.
+                SubIconMeta(Icons.Outlined.Psychology, "Mental"),
                 SubIconMeta(Icons.Outlined.Insights, "3"),
             )
         // Frank-Wunsch 2026-06-09: Forscher bekommt Entropie (Slot 1, Warndreieck mit

@@ -317,9 +317,16 @@ constructor(
             val amazfitDailyBackups =
                 amazfitDailyDaoLazy.get().getAll().first().map { it.toBackup() }
 
+            // Frank-Wunsch 2026-06-09: Mentalboard-Eintraege (Aufgaben-Reiter "Mental") ins
+            // Haupt-Backup. DataStore-basiert wie Tagebuch/Thesen — Context-Zugriff genuegt.
+            val mentalBackups =
+                de.frank.entropyreducer.presentation.mental.mentalsFlow(appContext).first().map {
+                    BackupMental(id = it.id, text = it.text)
+                }
+
             val payload =
                 BackupPayload(
-                    version = 11,
+                    version = 12,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -340,6 +347,7 @@ constructor(
                     promptTriggers = triggerBackups,
                     recurringTemplates = recurringTemplateBackups,
                     amazfitDaily = amazfitDailyBackups,
+                    mentals = mentalBackups,
                 )
             // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
             // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per

@@ -139,7 +139,20 @@ data class BackupPayload(
      * Default = emptyList damit aeltere Backups (v1-v10) lesbar bleiben.
      */
     val amazfitDaily: List<BackupAmazfitDaily> = emptyList(),
+    /**
+     * Schema v12 (Frank-Wunsch 2026-06-09): Mentalboard-Eintraege (Aufgaben-Reiter "Mental").
+     * Frei sortierte Liste kurzer Saetze — die Reihenfolge ergibt sich aus der Listen-Position.
+     * Default emptyList damit aeltere Backups (v1-v11) weiterhin lesbar bleiben.
+     */
+    val mentals: List<BackupMental> = emptyList(),
 )
+
+/**
+ * Schema v12 (Frank-Wunsch 2026-06-09): ein Mentalboard-Eintrag. Nur id + Satz; die
+ * Reihenfolge ergibt sich aus der Listen-Position im Backup.
+ */
+@Serializable
+data class BackupMental(val id: String, val text: String)
 
 /**
  * Schema v10: 1:1-Spiegel der RecurringTemplateEntity (Sprint 2.8). nextOccurrenceAt

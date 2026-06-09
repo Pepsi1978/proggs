@@ -248,6 +248,8 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 // Forscher-Slot 2 = Thesen. Aufgaben-Slot 2/3 und Forscher-Slot 3
                 // sind jetzt leere Platzhalter (else-Zweig unten via SubAreaScreen).
                 val isJournal = parent == Routes.TASKS && index == 1
+                // Frank-Wunsch 2026-06-09: Aufgaben-Slot 2 = Mentalboard.
+                val isMental = parent == Routes.TASKS && index == 2
                 val isTagebuch = parent == Routes.SCIENTIST && index == 1
                 val isThesen = parent == Routes.SCIENTIST && index == 2
                 if (isJournal) {
@@ -294,6 +296,16 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                         },
                         onSwitchTab = onSwitchTabFromSub,
                         onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
+                    )
+                } else if (isMental) {
+                    de.frank.entropyreducer.presentation.mental.MentalBoardScreen(
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = onSwitchTabFromSub,
                     )
                 } else {
                     SubAreaScreen(
