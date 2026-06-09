@@ -10,23 +10,40 @@ namespace VoiceAgent.Services.Audio
     public sealed record ChimeSound(string DisplayName, string RelativePath);
 
     /// <summary>
-    /// Listet die verfuegbaren Start-/Stop-Toene. Scannt assets/sounds/start bzw. assets/sounds/stop
-    /// neben der EXE (Single-File-sicher via Environment.ProcessPath, Almanach dotnet §1.1/§31) und
-    /// stellt den bisherigen Standard-Ton voran. Crasht nie — liefert im Fehlerfall mindestens den Standard.
+    /// Listet die verfuegbaren Toene fuer die drei Auswahllisten (Start/Stop/Melde). JEDE Liste enthaelt
+    /// ihren bisherigen Standard-Ton voran PLUS ALLE heruntergeladenen Toene aus allen drei Ordnern
+    /// (assets/sounds/start|stop|message) — so sind alle 90 Toene ueberall verfuegbar (Frank-Wunsch).
+    /// Scannt neben der EXE (Single-File-sicher via Environment.ProcessPath, Almanach dotnet §1.1/§31).
+    /// Crasht nie — liefert im Fehlerfall mindestens den Standard.
     /// </summary>
     public static class ChimeLibrary
     {
-        /// <summary>Start-Toene (ich-hoere-zu): Standard (wakeword.wav) + Inhalt von assets/sounds/start.</summary>
+        /// <summary>Start-Toene (ich-hoere-zu): Standard (wakeword.wav) + alle heruntergeladenen Toene.</summary>
         public static IReadOnlyList<ChimeSound> StartSounds()
-            => Build("sounds/start", new ChimeSound("Standard – Okay-Computer-Ton", "wakeword.wav"));
+            => WithDefault(new ChimeSound("Standard – Okay-Computer-Ton", "wakeword.wav"));
 
-        /// <summary>Stop-Toene (ich-hoere-nicht-mehr-zu): Standard (sleep.wav) + Inhalt von assets/sounds/stop.</summary>
+        /// <summary>Stop-Toene (ich-hoere-nicht-mehr-zu): Standard (sleep.wav) + alle heruntergeladenen Toene.</summary>
         public static IReadOnlyList<ChimeSound> StopSounds()
-            => Build("sounds/stop", new ChimeSound("Standard – Einschlafton", "sleep.wav"));
+            => WithDefault(new ChimeSound("Standard – Einschlafton", "sleep.wav"));
 
-        /// <summary>Melde-Toene (proaktiver Funkspruch/Erinnerung): Standard (message1.wav) + assets/sounds/message.</summary>
+        /// <summary>Melde-Toene (proaktiver Funkspruch/Erinnerung): Standard (message1.wav) + alle heruntergeladenen Toene.</summary>
         public static IReadOnlyList<ChimeSound> MessageSounds()
-            => Build("sounds/message", new ChimeSound("Standard – Funkspruch-Ton", "message1.wav"));
+            => WithDefault(new ChimeSound("Standard – Funkspruch-Ton", "message1.wav"));
+
+        private static IReadOnlyList<ChimeSound> WithDefault(ChimeSound categoryDefault)
+        {
+            var list = new List<ChimeSound> { categoryDefault };
+            list.AddRange(AllSounds());
+            return list;
+        }
+
+        // Alle Toene aus allen drei Ordnern — damit jeder Picker das komplette Repertoire zeigt.
+        private static IEnumerable<ChimeSound> AllSounds()
+        {
+            foreach (var s in Scan("sounds/start", "Start")) yield return s;
+            foreach (var s in Scan("sounds/stop", "Stop")) yield return s;
+            foreach (var s in Scan("sounds/message", "Melde")) yield return s;
+        }
 
         private static string AssetsDir
         {
@@ -37,9 +54,9 @@ namespace VoiceAgent.Services.Audio
             }
         }
 
-        private static IReadOnlyList<ChimeSound> Build(string subDir, ChimeSound legacyDefault)
+        private static List<ChimeSound> Scan(string subDir, string categoryLabel)
         {
-            var list = new List<ChimeSound> { legacyDefault };
+            var list = new List<ChimeSound>();
             try
             {
                 var full = Path.Combine(AssetsDir, subDir.Replace('/', Path.DirectorySeparatorChar));
@@ -55,7 +72,7 @@ namespace VoiceAgent.Services.Audio
                     {
                         n++;
                         var rel = subDir + "/" + Path.GetFileName(f);   // Chime erwartet '/' relativ zu assets/
-                        list.Add(new ChimeSound(Nicify(Path.GetFileNameWithoutExtension(f), n), rel));
+                        list.Add(new ChimeSound(Nicify(Path.GetFileNameWithoutExtension(f), n, categoryLabel), rel));
                     }
                 }
             }
@@ -66,17 +83,17 @@ namespace VoiceAgent.Services.Audio
             return list;
         }
 
-        // "07_analog_bass_sweeps" -> "Ton 7 – Analog bass sweeps"; kryptische Namen -> "Ton N".
-        private static string Nicify(string fileBase, int n)
+        // "07_analog_bass_sweeps" + Label "Start" -> "Start 7 – Analog bass sweeps"; kryptisch -> "Start 7".
+        private static string Nicify(string fileBase, int n, string categoryLabel)
         {
             var name = fileBase;
             int us = name.IndexOf('_');
             if (us is >= 1 and <= 3 && int.TryParse(name.AsSpan(0, us), out _)) name = name[(us + 1)..];
             name = name.Replace('_', ' ').Replace('-', ' ').Trim();
             int letters = name.Count(char.IsLetter);
-            if (letters < 3) return $"Ton {n}";                         // kein sinnvoller Klartext-Name
+            if (letters < 3) return $"{categoryLabel} {n}";                  // kein sinnvoller Klartext-Name
             name = char.ToUpperInvariant(name[0]) + name[1..];
-            return $"Ton {n} – {name}";
+            return $"{categoryLabel} {n} – {name}";
         }
     }
 }
