@@ -1,21 +1,21 @@
-# RESUME: Best-Practices apis/ — Stand 2026-06-08
+# RESUME: Best-Practices apis/ — FERTIG (Stand 2026-06-09)
 
-Bug-Almanache `bugs/apis/` sind komplett (13 Dateien, #46647).
+Bug-Almanache `bugs/apis/` (13) und Best-Practices `best-practices/projekt-code/apis/` (14)
+sind komplett und wechselseitig verlinkt. `python3 bugs/check-coupling.py` → alle 13 apis/-Paare [OK].
 
-## BP-Dateien FERTIG (mit dedizierter Research):
-- best-practices-api-integration-general.md (Resilienz/Rate-Limit/SSE/Timeout/Pooling/Secrets)
-- best-practices-multi-provider.md (Architektur/Gateway/Fallback)
-- best-practices-openai-api.md
-- best-practices-anthropic-api.md
-- best-practices-oauth-device-code.md
+## Erledigt
+- Alle 14 BP-Dateien vorhanden (13 als 1:1-Mirror zu bugs/apis/ + multi-provider, ungepaart):
+  api-integration-general, multi-provider, openai-api, anthropic-api, google-gemini-api,
+  groq-api, openrouter-api, xai-grok-api, mistral-api, deepseek-api, local-openai-compatible,
+  other-llm-apis, oauth-device-code, cli-impersonation-subscription-auth. (#46656/#46657)
+- Bidirektionale Bezugs-Tabellen: BP-Dateien tragen "🔗 Bezug zum Bug-Almanach" (Mapping-Tabelle),
+  Bug-Dateien tragen "🔗 Bezug zu Best Practices" (Verweis auf die BP-Datei, DRY ohne Duplikation).
+  Veraltete "noch keine best-practices"-Header in den Bug-Dateien korrigiert. (#46658)
+- best-practices/projekt-code/README.md um apis/-Kategorie erweitert (Baum + Kategorien-Liste). (#46659)
 
-## BP-Dateien NOCH OFFEN (Research stoppte bei 99% Token / 2 Researcher rate-limited):
-Gemini, Groq, OpenRouter, xAI Grok, Mistral, DeepSeek, lokale Server, weitere APIs (Cohere/Together/
-Fireworks/Perplexity/Bedrock/Azure/Cerebras/Vertex/HF), CLI-Impersonation.
-→ Prävention steht bereits in den FIX-Feldern der jeweiligen `bugs/apis/<x>.md`. Beim Fortsetzen
-entweder daraus ableiten ODER pro Anbieter 1 Researcher (max 5 parallel wegen RPM).
-
-## NOCH ZU TUN beim Fortsetzen:
-- Fehlende BP-Dateien schreiben (1:1 Mirror zu bugs/apis/ — Franks Wunsch).
-- Bidirektionale Bezugs-Tabellen in die 5 bestehenden BUG-Dateien einfügen (BP↔Bug), dann `python3 bugs/check-coupling.py`.
-- best-practices/projekt-code/README.md + apis/-Sektion eintragen.
+## Hinweis (anderer Scope — NICHT apis/)
+check-coupling.py meldet noch 3 vorbestehende Drift-Faelle ausserhalb apis/:
+- desktop/best-practices-groq-transkription.md (BP ohne 🔗-Tabelle)
+- assets/icon-building.md + best-practices-icon-building.md (beide ohne 🔗-Tabelle)
+- desktop/wake-word.md + best-practices-wake-word.md (beide ohne 🔗-Tabelle)
+Diese gehoeren zu desktop/ bzw. assets/ und waren schon vor der apis/-Arbeit offen.
