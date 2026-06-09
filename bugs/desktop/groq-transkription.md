@@ -109,6 +109,13 @@ einmal zu viel senden als echte kurze Sprache verwerfen. Optional Silero-VAD (ON
 `VadSharp`/`ManySpeech.SileroVad`) fuer hoehere Genauigkeit; reines RMS-Gate reicht als erster Schritt.
 **Heuristik-Werte (16 kHz mono):** Frame 20 ms; RMS-aktiv wenn ueber bestehender `SilenceThreshold`;
 adaptiver Noise-Floor (`thr ≈ 3× noise`, `noise = 0.95·noise + 0.05·cur` nur in Stille) macht es robust.
+**Im Browser / Chrome-Erweiterung (verifiziert 2026-06-09, overlays):** `MediaRecorder` liefert
+KOMPRIMIERTES `audio/webm;codecs=opus` — RMS NICHT direkt auf dem Blob messbar. Erst per Web Audio
+dekodieren: `await new AudioContext().decodeAudioData(await blob.arrayBuffer())`, dann `getChannelData(0)`
+(Float32) und RMS pro 20-ms-Frame (`frame = round(sampleRate*0.02)`), aktive Frames zaehlen. Vorfilter
+gehoert ins **Content-Script** (DOM/Web-Audio da) VOR dem `sendMessage` an den Service Worker — der SW
+hat kein Web-Audio. Schwellen wie Desktop: RMS ≥ 0.015, min. 150 ms absolute laute Zeit (Toggle-Mic =
+keine Ratio). Decode-Fehler -> NICHT filtern, trotzdem senden (funktionserhaltend).
 **Quelle:** [snakers4/silero-vad](https://github.com/snakers4/silero-vad) · [Picovoice VAD-Guide](https://picovoice.ai/blog/complete-guide-voice-activity-detection-vad/) · [dev.to Voice-AI-Guide](https://dev.to/programmerraja/2025-voice-ai-guide-how-to-make-your-own-real-time-voice-agent-part-3-3ocb)
 
 ### 2.2 Mindest-Sprechdauer-Gate
