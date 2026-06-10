@@ -1,0 +1,5 @@
+{"step":"collect","source":"strings.xml","urls_found":10,"note":"github.io legal web pages + http schema (ignored)"}
+{"step":"collect","source":"java","urls_found":9,"note":"api.groq, gmail/googleapis, play subscriptions x3, findahelpline, w3.org ssml ns"}
+{"step":"collect","source":"legal-html-de-en-ko","urls_unique":18,"note":"authority links, google policies, mailto x2"}
+{"step": "live-check-done", "total": 33, "dead": 3, "privacy_live": true, "deletion_kw": true}
+{"step": "recheck-patch", "dead_after_recheck": 0, "note": "3 false positives corrected to ok"}

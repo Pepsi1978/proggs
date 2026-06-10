@@ -1,0 +1,477 @@
+{
+ "ai_improved_suffix_marker": {
+  "de": "✨ KI-verbessert",
+  "br": "✨ Melhorado com IA",
+  "pt": "✨ Melhorado com IA"
+ },
+ "ai_limit_yearly": {
+  "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+  "br": "Assinatura anual, %1$s/ano (economize 37\\u00A0%%)",
+  "pt": "Subscrição anual, %1$s/ano (economize 37\\u00A0%%)"
+ },
+ "ai_limits_dialog_body": {
+  "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+  "br": "COM ASSINATURA PREMIUM\\n\\nPor dia, você tem disponível:\\n• Até 150 análises de dashboard por perfil de IA (4 perfis predefinidos juntos até 600/dia; mais 150/dia por cada perfil personalizado criado)\\n• Até 150 melhorias de texto\\n\\nComo funciona em detalhes:\\n• Solicitações 1 a 30: na mais alta qualidade de IA\\n• Solicitações 31 a 100: na qualidade padrão rápida\\n• Na 101ª solicitação: pausa única de 30 min\\n• Solicitações 101 a 150: qualidade padrão rápida\\n• A partir da 151ª: sem mais solicitações até amanhã\\n\\nAlém disso, para todos os usuários:\\n• No máximo 50 solicitações de IA por hora — depois pausa de 5 min\\n\\nQuando as cotas são renovadas?\\nTodo dia à meia-noite (seu horário local) começa uma nova cota completa.\\n\\n──────────\\n\\nSEM ASSINATURA\\n\\n• 5 análises de dashboard por semana por perfil\\n• 5 melhorias de texto por semana\\n• Sempre na qualidade padrão rápida\\n• Renovadas toda segunda-feira à meia-noite (seu horário local)\\n\\n──────────\\n\\nA maioria dos usuários não chegará a esses limites no dia a dia.",
+  "pt": "COM SUBSCRICAO PREMIUM\\n\\nPor dia, tens disponível:\\n• 150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.\\n• Até 150 melhorias de texto\\n\\nComo funciona em detalhe:\\n• Pedidos 1 a 30: na mais alta qualidade de IA\\n• Pedidos 31 a 100: na qualidade padrão rápida\\n• No 101.º pedido: pausa única de 30 min\\n• Pedidos 101 a 150: qualidade padrão rápida\\n• A partir do 151.º: sem mais pedidos até amanhã\\n\\nAlém disso, para todos os utilizadores:\\n• No máximo 50 pedidos de IA por hora — depois pausa de 5 min\\n\\nQuando são repostas as quotas?\\nTodos os dias à meia-noite (hora local) começa uma nova quota completa.\\n\\n──────────\\n\\nSEM SUBSCRICAO\\n\\n• 5 análises de dashboard por semana por perfil\\n• 5 melhorias de texto por semana\\n• Sempre na qualidade padrão rápida\\n• Reposta todas as segundas-feiras à meia-noite (hora local)\\n\\n──────────\\n\\nA maioria dos utilizadores não chegará a estes limites no dia a dia."
+ },
+ "ai_prompt_custom_intro": {
+  "de": "Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst UND Aufgaben-Bearbeiter.\\n\\nARBEITSWEISE IN ZWEI SCHRITTEN:\\n\\nSCHRITT 1 — KONTEXT AUFNEHMEN:\\nLies zuerst ALLE Tagebucheinträge des Nutzers vollständig durch. Verstehe die Situation, die Muster, die Themen, die genannten Dinge, Probleme, Wünsche. Die Einträge sind dein KONTEXT, dein Startpunkt, deine Grundlage. Sie begrenzen dich aber nicht.\\n\\nSCHRITT 2 — AUFGABE AUSFÜHREN:\\n%1$s\\n\\nDas oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.\\n\\nKERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:\\nDer gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.\\n\\nWichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag \\\"Ziele\\\": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag \\\"Sport\\\": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.\\n\\nENTSCHEIDEND:\\n- Steht im Auftrag \\\"analysiere\\\", \\\"fasse zusammen\\\", \\\"was fällt auf\\\" — bleib dicht an den Einträgen.\\n- Steht im Auftrag \\\"recherchiere\\\", \\\"finde Alternativen\\\", \\\"schlage vor\\\", \\\"empfehle\\\", \\\"ergänze\\\", \\\"was wäre wenn\\\", \\\"neue Ideen\\\" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.\\n- Der Auftrag hat Vorrang. Die Einträge sind das Fundament, nicht die Wand.",
+  "br": "Você é um analista de diário inteligente e atento, E um executor de tarefas.\\n\\nMÉTODO DE TRABALHO EM DUAS ETAPAS :\\n\\nETAPA 1 — LEVAR O CONTEXTO EM CONTA :\\nLeia primeiro TODAS as entradas de diário do usuário na íntegra. Entenda a situação, os padrões, os temas, as coisas mencionadas, os problemas e os desejos. As entradas são seu CONTEXTO, seu ponto de partida, sua base. Mas elas não te limitam.\\n\\nETAPA 2 — EXECUTAR A TAREFA :\\n%1$s\\n\\nO que está acima é sua verdadeira MISSÃO. Execute essa missão apoiando-se no contexto da etapa 1. Se a missão pede pesquisas, ideias, alternativas, sugestões, recomendações ou informações novas, forneça-as ATIVAMENTE, mesmo que não constem nas entradas. As entradas informam seu resultado, não o limitam.\\n\\nREGRA FUNDAMENTAL — O PERFIL COBRE PELO MENOS 50 POR CENTO :\\nO conjunto do resultado (análise global, melhores ações, categorias, conselhos, progressos) DEVE estar vinculado à missão do usuário em pelo menos 50 por cento. Descobertas, pontos ou temas sem relação com a missão devem ser descartados — não preencha o resultado com temas de vida gerais só para completar o JSON. É melhor menos pontos com uma relação clara do que muitas generalidades.\\n\\nImportante para o idioma: expresse a relação de forma VARIADA. Use sinônimos, termos relacionados, campos temáticos e perífrases. Não repita mecanicamente as palavras exatas da missão — pareceria insistente. Exemplo missão «objetivos»: fale também de projetos, aspirações, o que você quer alcançar, seu rumo, suas etapas de desenvolvimento. Exemplo missão «esporte»: fale também de movimento, treino, atividade física, resistência, condicionamento, saúde. A relação com o perfil deve ser PERCEPTÍVEL, não literal.\\n\\nESSENCIAL :\\n- Se a missão diz «analise», «resuma», «o que se destaca» — mantenha-se próximo das entradas.\\n- Se a missão diz «pesquise», «busque alternativas», «proponha», «recomende», «complete», «e se», «ideias novas» — vá ATIVAMENTE além das entradas e traga conteúdos novos.\\n- A missão manda. As entradas são o fundamento, não o muro.",
+  "pt": "És um analista de diário inteligente e atento E também executor de tarefas.\\n\\nTRABALHO EM DOIS PASSOS:\\n\\nPASSO 1 — ABSORVER O CONTEXTO:\\nLê PRIMEIRO TODAS as entradas de diário do utilizador, na íntegra. Percebe a situação, padrões, temas, coisas mencionadas, problemas, desejos. As entradas são o teu CONTEXTO, o teu ponto de partida, a tua base. Mas não te limitam.\\n\\nPASSO 2 — EXECUTAR A TAREFA:\\n%1$s\\n\\nIsso aí em cima é a tua VERDADEIRA tarefa. Executa-a a partir do contexto do passo 1. Se a tarefa pedir pesquisa, ideias, alternativas, sugestões, recomendações ou informação nova, ENTREGA isso ATIVAMENTE, mesmo que não apareça nas entradas. As entradas alimentam a tua saída, não a limitam.\\n\\nREGRA CENTRAL — O PERFIL TEM PELO MENOS 50 POR CENTO DE PESO:\\nA saída inteira (análise geral, ações principais, categorias, conselhos, progressos) DEVE estar claramente ligada à tarefa do utilizador em pelo menos 50 por cento. Ideias, pontos ou temas SEM ligação à tarefa — deixa-os de fora. Não enchas a saída com temas genéricos da vida só para o JSON ficar cheio. Menos pontos com foco claro é melhor do que muitos genéricos.\\n\\nIMPORTANTE — linguagem: Expressa a ligação de forma VARIADA. Usa sinónimos, termos relacionados, vizinhanças temáticas e paráfrases. NÃO repitas mecanicamente as palavras exatas da tarefa — isso soa forçado. Exemplo tarefa «metas»: fala também de planos, desejos, ambições, o que queres alcançar, a tua direção, passos de crescimento. Exemplo tarefa «desporto»: fala também de movimento, treino, atividade física, resistência, forma, saúde. A ligação ao perfil deve SENTIR-SE, não ser literal.\\n\\nDECISIVO:\\n- Se a tarefa disser «analisa», «resume», «o que se destaca» — fica perto das entradas.\\n- Se a tarefa disser «pesquisa», «procura alternativas», «sugere», «recomenda», «acrescenta», «e se», «ideias novas» — VAI ATIVAMENTE para além das entradas e traz conteúdo próprio novo.\\n- A tarefa tem prioridade. As entradas são a base, não o tecto."
+ },
+ "ai_prompt_entropy_intro": {
+  "de": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes Ratschlags-Dashboard im JSON-Format.\\n\\nWAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:\\nAlles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+  "br": "Você é um conselheiro de vida empático e muito inteligente, e também um analista de padrões.\\n\\nSUA TAREFA:\\nAnalise as entradas de diário de um usuário. Encontre as fontes recorrentes de estresse, desordem e carga. Crie com isso um painel de conselhos estruturado em JSON.\\n\\nO QUE PROCURAMOS — CARGA PESSOAL:\\nTudo o que gera desordem, estresse, perda de energia, dor, problemas de sono, carga emocional ou perda de controle na vida do usuário.",
+  "pt": "És um conselheiro de vida empático e muito inteligente, e também um analista de padrões.\\n\\nSUA TAREFA:\\nAnalise as entradas de diário de um utilizador. Encontra as fontes recorrentes de stress, desordem e carga. Cria com isso um painel de conselhos estruturado em JSON.\\n\\nO QUE PROCURAMOS — CARGA PESSOAL:\\nTudo o que gera desordem, stress, perda de energia, dor, problemas de sono, carga emocional ou perda de controle na vida do utilizador."
+ },
+ "ai_prompt_goals_definition": {
+  "de": "DEFINITION — WAS IST EIN ZIEL:\\nAlles, was der Nutzer erreichen, verändern, anfangen, beenden, verbessern oder aufbauen möchte. Auch indirekte Hinweise zählen:\\n- Direkt: \\\"Ich will abnehmen\\\", \\\"Ich muss den Zahnarzt anrufen\\\"\\n- Indirekt: \\\"Wäre schön, mal wieder laufen zu gehen\\\" = Ziel Fitness\\n- Klagen: \\\"Mein Schlaf ist so schlecht\\\" = implizites Ziel Schlafverbesserung\\n- Träume: \\\"Irgendwann möchte ich nach Schweden\\\" = Langfrist-Ziel Reise",
+  "br": "DEFINIÇÃO — O QUE É UMA META:\\nTudo o que o usuário quer atingir, mudar, começar, terminar, melhorar ou construir. Pistas indiretas também contam:\\n- Direto: «Quero perder peso», «Preciso ligar para o dentista»\\n- Indireto: «Seria bom voltar a correr» = meta de bem-estar\\n- Queixas: «Durmo muito mal» = meta implícita de melhorar o sono\\n- Sonhos: «Um dia quero ir à Suécia» = meta de longo prazo de viagem",
+  "pt": "DEFINIÇÃO — O QUE É UMA META:\\nTudo o que o utilizador quer atingir, mudar, começar, terminar, melhorar ou construir. Pistas indiretas também contam:\\n- Direto: «Quero perder peso», «Preciso ligar para o dentista»\\n- Indireto: «Seria bom voltar a correr» = meta de bem-estar\\n- Queixas: «Durmo muito mal» = meta implícita de melhorar o sono\\n- Sonhos: «Um dia quero ir à Suécia» = meta de longo prazo de viagem"
+ },
+ "ai_prompt_insight_intro": {
+  "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+  "br": "Você é um analista empático e profundo de padrões para o desenvolvimento pessoal.\\n\\nSUA TAREFA:\\nAnalise as entradas de diário de um usuário. Encontre ali padrões ocultos, formas recorrentes de pensar e agir, crenças inconscientes, padrões emocionais e forças pessoais. Torne visível ao usuário o que ele pode aprender sobre si mesmo, coisas que talvez não tenha percebido ao escrever. Crie com isso um painel de autoconhecimento estruturado em JSON.",
+  "pt": "És um analista empático e profundo de padrões para o desenvolvimento pessoal.\\n\\nSUA TAREFA:\\nAnalise as entradas de diário de um utilizador. Encontra ali padrões ocultos, formas recorrentes de pensar e agir, crenças inconscientes, padrões emocionais e forças pessoais. Torna visível ao utilizador o que ele pode aprender sobre si mesmo, coisas que talvez não tenha percebido ao escrever. Cria com isso um painel de autoconhecimento estruturado em JSON."
+ },
+ "ai_prompt_no_dates_rule": {
+  "de": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben verwenden — weder \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" noch \\\"Eintrag vom 3. April\\\", \\\"am 23.04.\\\", \\\"vom 28.4.\\\" oder ähnliche Verweise auf konkrete Eintragsdaten. Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen vorgelesen unnatürlich und brechen den Erkenntnisfluss.\\n\\nFORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\\n- FALSCH: \\\"Einträge vom 3.4., 28.4. und 23.4. belegen, dass dein Biorhythmus durch späte Schlafzeiten leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\n- FALSCH: \\\"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\\\"\\n- RICHTIG: \\\"Deine Borreliose hängt direkt mit dem Bewegungsmangel zusammen.\\\"\\n- FALSCH: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du bei den Intervallläufen am 24.04. gespürt hast.\\\"\\n- RICHTIG: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du beim Intervalltraining spürst.\\\"\\n\\nDie inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. Du kannst weiterhin allgemeine zeitliche Bezüge nutzen (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"). Datumsangaben gehören NUR in das \\\"herleitung\\\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt).",
+  "br": "REGRA TTS — SEM DATAS NO TEXTO :\nNUNCA use datas, dias ou semanas nos campos de texto visíveis (nomes de categorias, títulos, descrições, conselhos, resumos, análise global, gesamtanalyse, genese). As datas tornam o texto TTS ilegível e são exibidas separadamente na interface. SEM formulações como «no dia 3 de maio», «semana 18», «na terça-feira», «no dia 5 deste mês». Os dados continuam válidos em chaves JSON como datum, mas NUNCA nos campos de texto visíveis. Exceção: «este mês», «esta semana», «recentemente», «ultimamente» são permitidos.",
+  "pt": "SEM DATAS (OBRIGATÓRIO — PROIBIÇÃO DE DATAS NOS TEXTOS VISÍVEIS):\\nEm TODOS os campos de texto visíveis (descricao, explicacao, resumo, analise_geral) NÃO PODES usar referências a datas — nem «3.4.», «23.04.», «28.4.» nem «entrada de 3 de abril», «em 23.04.», «de 28.4.» ou referências semelhantes a datas concretas de entradas. Estes textos são lidos em voz alta para o utilizador — cadeias de datas soam pouco naturais e quebram o fio da ideia.\\n\\nEM VEZ DISSO, EXPRESSA A IDEIA PURA:\\n- ERRADO: «As entradas de 3.4., 28.4. e 23.4. mostram que o teu biorritmo sofre com deitares-te tarde.»\\n- CERTO: «Deitares-te tarde destrói sistematicamente o teu biorritmo.»\\n- ERRADO: «A entrada de 30 liga a tua doença diretamente à falta de exercício.»\\n- CERTO: «A tua doença está ligada diretamente à falta de movimento.»\\n- ERRADO: «Correr é a chave para a clareza mental que sentiste nas corridas de 24.04.»\\n- CERTO: «Correr é a chave para a clareza mental que sentes nos treinos intervalados.»\\n\\nA ideia permanece — só as datas concretas saem. Podes ainda usar referências temporais gerais («recorrente», «recentemente», «ao longo de vários dias»). As datas só pertencem ao campo «herleitung» (proveniência, uso interno, não exibido)."
+ },
+ "ai_prompt_response_language": {
+  "de": "ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.",
+  "br": "IDIOMA DA RESPOSTA: responda totalmente em português do Brasil. Todos os textos e títulos devem estar em português, em nenhum outro idioma.",
+  "pt": "IDIOMA DA RESPOSTA: responde totalmente em português de Portugal. Todos os textos e títulos devem estar em português, em nenhum outro idioma."
+ },
+ "churn_auto_renew_note": {
+  "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+  "br": "Sua assinatura se renova automaticamente pelo Google Play. Você pode cancelar a qualquer momento.",
+  "pt": "A tua subscrição se renova automaticamente pelo Google Play. Podes cancelar a qualquer momento."
+ },
+ "churn_cancel_sub": {
+  "de": "Abo kündigen",
+  "br": "Cancelar assinatura",
+  "pt": "Cancelar subscrição"
+ },
+ "churn_discount_badge": {
+  "de": "<xliff:g id=\"percent\" example=\"50\">%1$d</xliff:g>%% SPAREN",
+  "br": "<xliff:g id=\"percent\" example=\"50\">%1$d</xliff:g>\\u00A0%% DE DESCONTO",
+  "pt": "<xliff:g id=\"percent\" example=\"50\">%1$d</xliff:g>\\u00A0%% DE DESCONTO"
+ },
+ "churn_google_play_redirect": {
+  "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.",
+  "br": "Você vai ser redirecionado para o Google Play para gerenciar sua assinatura. Suas entradas de diário continuam intactas.",
+  "pt": "Vais ser redirecionado para o Google Play para gerir a tua subscrição. As tuas entradas de diário continuam intactas."
+ },
+ "churn_instead_of": {
+  "de": "statt ",
+  "br": "em vez de ",
+  "pt": "em vez de "
+ },
+ "churn_offer_auto_renew": {
+  "de": "Verlängert sich automatisch, jederzeit kündbar",
+  "br": "Se renova automaticamente, cancelável a qualquer momento",
+  "pt": "Se renova automaticamente, cancelável a qualquer momento"
+ },
+ "churn_offer_feature_perspectives": {
+  "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+  "br": "Todos os perfis de IA (4 predefinidos + ilimitados personalizados)",
+  "pt": "Todos os perfis de IA (4 predefinidos + ilimitados próprios)"
+ },
+ "churn_pause_sub": {
+  "de": "Oder Abo bei Google Play pausieren",
+  "br": "Ou pause a assinatura no Google Play",
+  "pt": "Ou pause a subscrição no Google Play"
+ },
+ "churn_promo_months_remaining": {
+  "de": "Noch <xliff:g id=\"months\" example=\"2\">%1$d</xliff:g> Monate — danach <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> pro Monat",
+  "br": "Faltam <xliff:g id=\"months\" example=\"2\">%1$d</xliff:g> meses — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> por mês",
+  "pt": "Faltam <xliff:g id=\"months\" example=\"2\">%1$d</xliff:g> meses — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> por mês"
+ },
+ "churn_promo_one_month_remaining": {
+  "de": "Noch 1 Monat — danach <xliff:g id=\"base_price\" example=\"3,99 €\">%1$s</xliff:g> pro Monat",
+  "br": "Falta 1 mês — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%1$s</xliff:g> por mês",
+  "pt": "Falta 1 mês — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%1$s</xliff:g> por mês"
+ },
+ "churn_promo_phase_ends": {
+  "de": "Endet am <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g> — danach <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> pro Monat",
+  "br": "Encerra em <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g> — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> por mês",
+  "pt": "Termina em <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g> — depois <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> por mês"
+ },
+ "churn_switch_yearly": {
+  "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+  "br": "Ou mude para o plano anual e economize ainda mais",
+  "pt": "Ou mude para o plano anual e economize ainda mais"
+ },
+ "consent_card1_body": {
+  "de": "Deine Einträge bleiben auf deinem Gerät.",
+  "br": "Suas entradas ficam no seu dispositivo.",
+  "pt": "As tuas entradas ficam no teu dispositivo."
+ },
+ "consent_card3_title": {
+  "de": "Anonyme Statistiken",
+  "br": "Estatísticas anônimas",
+  "pt": "Estatísticas anónimas"
+ },
+ "consent_confirmation": {
+  "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.",
+  "br": "Ao tocar em «Concordar e começar» você confirma ter lido a política de privacidade, os termos de uso e o aviso legal, e concorda com o tratamento de dados descrito. Você pode alterar sua decisão a qualquer momento nas configurações.",
+  "pt": "Ao tocar em «Aceitar e começar» confirmas ter lido a política de privacidade, os termos de utilização e a informação legal, e aceitas o tratamento de dados descrito. Podes alterar a tua decisão a qualquer momento nas definições."
+ },
+ "consent_footer_link_agb": {
+  "de": "Nutzungsbedingungen",
+  "br": "Termos de uso",
+  "pt": "Termos de Utilização"
+ },
+ "consent_footer_link_datenschutz": {
+  "de": "Datenschutz",
+  "br": "Privacidade",
+  "pt": "Privacidade"
+ },
+ "consent_footer_link_impressum": {
+  "de": "Impressum",
+  "br": "Informações legais",
+  "pt": "Impressum"
+ },
+ "consent_toggle_analytics_body": {
+  "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+  "br": "Firebase Analytics — nos ajuda a melhorar o aplicativo. Sem conteúdo pessoal, apenas contagens anônimas de toques. Transferência de dados: Google EUA (Data Privacy Framework).",
+  "pt": "Firebase Analytics — ajuda-nos a melhorar a aplicação. Sem conteúdo pessoal, apenas contagens anónimas de toques. Transferência de dados: Google EUA (Data Privacy Framework)."
+ },
+ "consent_toggle_do_not_sell_body": {
+  "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+  "br": "Opt-out da Califórnia (CCPA/CPRA 2026). Quando ativo, todos os processamentos de dados opcionais são desativados — apenas funções locais permanecem.",
+  "pt": "Opt-out da Califórnia (CCPA/CPRA 2026). Quando ativo, todos os processamentos de dados opcionais são desativados — apenas funções locais permanecem."
+ },
+ "consent_toggle_drive_body": {
+  "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.",
+  "br": "Salva as entradas criptografadas no seu próprio Google Drive. Você mantém o controle total — o arquivo fica na sua conta, não conosco.",
+  "pt": "Guarda as entradas encriptadas no teu próprio Google Drive. Mantens o controlo total — o ficheiro fica na tua conta, não connosco."
+ },
+ "dashboard_gemini_unavailable": {
+  "de": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+  "br": "O Gemini não está disponível agora, tente de novo em um instante.",
+  "pt": "O Gemini não está disponível agora, tente de novo num instante."
+ },
+ "dashboard_premium_upsell_body": {
+  "de": "Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.",
+  "br": "Com o Premium você recebe análises generosas de quantos perfis quiser.",
+  "pt": "Com o Premium recebes análises generosas de quantos perfis quiseres."
+ },
+ "dev_seed_delete_all_action": {
+  "de": "Alle Einträge löschen",
+  "br": null,
+  "pt": null
+ },
+ "entry_delete_message": {
+  "de": "Diesen Eintrag unwiderruflich löschen?",
+  "br": "Excluir esta entrada de forma permanente?",
+  "pt": "Eliminar esta entrada de forma permanente?"
+ },
+ "follow_up_delete_confirm_text": {
+  "de": "Möchtest du Nachtrag <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g> wirklich unwiderruflich löschen?",
+  "br": "Tem certeza que quer excluir o complemento <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g> permanentemente?",
+  "pt": "Tens a certeza de que queres eliminar permanentemente o complemento <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g>?"
+ },
+ "follow_up_premium_body": {
+  "de": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+  "br": "Com o Premium você pode adicionar quantos complementos quiser a cada entrada do seu diário.",
+  "pt": "Com o Premium podes adicionar tantos complementos quantos quiseres a cada entrada do teu diário."
+ },
+ "follow_up_premium_hint": {
+  "de": "ab dem zweiten Nachtrag",
+  "br": "a partir do segundo complemento",
+  "pt": "a partir do segundo complemento"
+ },
+ "follow_up_premium_later": {
+  "de": "Später entscheiden",
+  "br": "Decidir depois",
+  "pt": "Decidir mais tarde"
+ },
+ "follow_up_premium_title": {
+  "de": "Unbegrenzte Nachträge",
+  "br": "Complementos ilimitados",
+  "pt": "Complementos ilimitados"
+ },
+ "journal_drive_backup_current": {
+  "de": "Backup aktuell, alle Einträge gesichert",
+  "br": "Backup em dia, todas suas entradas estão salvas",
+  "pt": "Backup em dia, todas as tuas entradas estão guardadas"
+ },
+ "journal_transcribed_with": {
+  "de": "Transkribiert mit %1$s",
+  "br": "Transcrito com %1$s",
+  "pt": "Transcrito com %1$s"
+ },
+ "onboarding_feature_secure": {
+  "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+  "br": "Seus dados ficam com você, criptografados e seguros",
+  "pt": "Os teus dados ficam contigo, criptografados e seguros"
+ },
+ "onboarding_feature_secure__privacy": {
+  "de": null,
+  "br": null,
+  "pt": null
+ },
+ "onboarding_free_after_trial": {
+  "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+  "br": "Depois você continua usando o Best Journal,\\ngratuito, com um número limitado de chamadas de IA por semana.",
+  "pt": "Depois continuas a usar o Best Journal,\\ngratuito, com um número limitado de chamadas de IA por semana."
+ },
+ "onboarding_free_trial": {
+  "de": "Kostenlos, jederzeit kündbar",
+  "br": "Gratuito, cancele a qualquer momento",
+  "pt": "Gratuito, cancelável a qualquer momento"
+ },
+ "onboarding_premium_feature_noads": {
+  "de": "Keine Werbung, ungestört schreiben und reflektieren",
+  "br": "Sem anúncios, escreva e reflita sem interrupções",
+  "pt": "Sem anúncios, escreve e reflita sem interrupções"
+ },
+ "onboarding_start_free": {
+  "de": "Kostenlos starten",
+  "br": "Começar grátis",
+  "pt": "Começar grátis"
+ },
+ "onboarding_try_premium": {
+  "de": "8 Tage gratis, danach ab 3,99 €/Monat",
+  "br": "8 dias grátis, depois a partir de R$​3,99/mês",
+  "pt": "8 dias grátis, depois a partir de 3,99 €/mês"
+ },
+ "paywall_day7": {
+  "de": "Tag 7",
+  "br": "Dia 7",
+  "pt": "Dia 7"
+ },
+ "paywall_exit_bonus_days": {
+  "de": "+ %1$d Tage extra Testzeit",
+  "br": "+ %1$d dias extras de teste",
+  "pt": "+ %1$d dias extras de teste"
+ },
+ "paywall_exit_discount": {
+  "de": "Rabatt für %1$d Monate",
+  "br": "Desconto por %1$d meses",
+  "pt": "Desconto por %1$d meses"
+ },
+ "paywall_exit_price_comparison": {
+  "de": "Nur %1$s statt %2$s pro Monat",
+  "br": "Só %1$s em vez de %2$s por mês",
+  "pt": "Só %1$s em vez de %2$s por mês"
+ },
+ "paywall_exit_start_discount": {
+  "de": "Zahlungspflichtig — 2 Monate zum halben Preis",
+  "br": "Com pagamento — 2 meses pela metade do preço",
+  "pt": "Com obrigação de pagamento — 2 meses a metade do preço"
+ },
+ "paywall_feature_profiles": {
+  "de": "Unbegrenzte individuelle KI-Profile",
+  "br": "Perfis de análise personalizados ilimitados",
+  "pt": "Perfis de análise personalizados ilimitados"
+ },
+ "paywall_first_payment": {
+  "de": "Erste Zahlung",
+  "br": "Primeiro pagamento",
+  "pt": "Primeiro pagamento"
+ },
+ "paywall_free_note": {
+  "de": "Die App funktioniert auch ohne Abo weiter.",
+  "br": "O aplicativo continua funcionando sem assinatura.",
+  "pt": "A aplicação continua a funcionar sem subscrição."
+ },
+ "paywall_from_per_day": {
+  "de": "Jahresabo, %1$s pro Jahr",
+  "br": "A partir de %1$s por dia",
+  "pt": "A partir de %1$s por dia"
+ },
+ "paywall_headline_clarity_sub": {
+  "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+  "br": "A IA reconhece padrões que passam despercebidos",
+  "pt": "A IA reconhece padrões que passam despercebidos"
+ },
+ "paywall_instead_per_month": {
+  "de": "Spare %1$d%% gegenüber dem Monatsabo",
+  "br": "Economize %1$d%% vs. plano mensal",
+  "pt": "Poupe %1$d%% vs. plano mensal"
+ },
+ "paywall_legal_hint": {
+  "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+  "br": "Ao assinar, você aceita os %1$s. Seu direito de arrependimento de 14 dias está descrito lá.",
+  "pt": "Ao subscrever, aceitas os %1$s. O teu direito de rescisão de 14 dias está descrito aí."
+ },
+ "paywall_monthly_plan": {
+  "de": "Monatsabo, %1$s pro Monat",
+  "br": "Assinatura mensal, %1$s por mês",
+  "pt": "Subscrição mensal, %1$s por mês"
+ },
+ "paywall_reminder": {
+  "de": "Erinnerung",
+  "br": "Lembrete",
+  "pt": "Lembrete"
+ },
+ "paywall_with_limited": {
+  "de": "mit eingeschränkten Limits.",
+  "br": "com limites reduzidos.",
+  "pt": "com limites reduzidos."
+ },
+ "paywall_yearly_note": {
+  "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar",
+  "br": "Depois %1$s por ano, renovação automática\nCancele a qualquer momento durante o período de teste",
+  "pt": "Depois %1$s por ano, renova-se automaticamente\\nPodes cancelar a qualquer momento durante o período de teste"
+ },
+ "permission_rationale_microphone": {
+  "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+  "br": "Para que você possa ditar suas entradas por voz, precisamos de acesso ao seu microfone.",
+  "pt": "Para poderes ditar as tuas entradas do diário por voz, precisamos de acesso ao teu microfone."
+ },
+ "privacy_gate_gemini_body": {
+  "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern.",
+  "br": "Que bom que você quer usar os recursos inteligentes do Best Journal! Para resumos, retrospectivas, insights do dashboard e melhorias de texto, seus textos são enviados de forma criptografada ao Google Gemini.\n\n✓ Sem treinamento de IA com seus dados\n✓ As solicitações não são armazenadas permanentemente\n✓ Criptografado conforme o EU-US Data Privacy Framework\n\nAviso importante: Como suas entradas de diário podem conter dados especialmente sensíveis (saúde, religião, relacionamentos pessoais — Art. 9 LGPD), pedimos aqui o seu consentimento expresso para o processamento por IA. Os resultados da IA são sugestões, não aconselhamento profissional e não substituem um especialista.\n\nVocê pode alterar isso a qualquer momento nas configurações.",
+  "pt": "Que bom que queres usar as funcionalidades inteligentes do Best Journal! Para resumos, retrospetivas, perspetivas do dashboard e melhorias de texto, os teus textos são enviados de forma encriptada para o Google Gemini.\\n\\n✓ Sem treino de IA com os teus dados\\n✓ Os pedidos não são armazenados permanentemente\\n✓ Encriptado segundo o EU-US Data Privacy Framework\\n\\nNota importante: como as tuas entradas de diário podem conter dados especialmente sensíveis (saúde, religião, relações pessoais — art. 9.º RGPD), pedimos aqui o teu consentimento expresso para o tratamento por IA. Os resultados da IA são sugestões, não aconselhamento profissional, e não substituem um especialista.\\n\\nPodes alterar isto a qualquer momento nas definições."
+ },
+ "privacy_gate_groq_body": {
+  "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+  "br": "Para a transcrição na nuvem, sua gravação de voz é enviada criptografada ao Groq, Inc. (Mountain View, EUA) e convertida em texto lá. O arquivo de áudio é excluído após o processamento e não é usado para treinamento.\\n\\nAlternativa: use a transcrição local no dispositivo (offline, sem transferência de dados), ajustável em Configurações → IA.",
+  "pt": "Para a transcrição na cloud, a tua gravação de voz é enviada cifrada ao Groq, Inc. (Mountain View, EUA) e aí convertida em texto. O ficheiro de áudio é eliminado após o processamento e não é utilizado para treino.\\n\\nAlternativa: usa a transcrição local no dispositivo (offline, sem transferência de dados), ajustável em Definições → IA."
+ },
+ "privacy_gate_tts_body": {
+  "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+  "br": "Para a leitura em voz alta, o texto é enviado criptografado à Microsoft Bing Speech (EUA) e retornado como áudio. Base jurídica: estrutura EU-US Data Privacy Framework + cláusulas contratuais padrão.",
+  "pt": "Para a leitura em voz alta, o texto é enviado cifrado à Microsoft Bing Speech (EUA) e devolvido como áudio. Base jurídica: EU-US Data Privacy Framework + cláusulas contratuais-tipo."
+ },
+ "profile_entropy_long": {
+  "de": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\\n\\nDu bekommst:\\n\\n• Eine Analyse deiner größten Belastungsquellen\\n• 5 konkrete Maßnahmen zum Aufräumen\\n• Tipps, die dir im Alltag helfen können\\n\\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+  "br": "A IA busca ativamente estresse, sobrecarga e desordem nas suas entradas.\n\nVocê recebe:\n\n• Uma análise das suas maiores fontes de sobrecarga\n• 5 medidas concretas para organizar\n• Dicas que podem ajudar no dia a dia\n\nIdeal quando você sente que tudo está ficando demais.",
+  "pt": "A IA procura especificamente stress, pressão e confusão nas tuas entradas.\\n\\nObtens:\\n\\n• Uma análise das tuas maiores fontes de pressão\\n• 5 medidas concretas para organizar as ideias\\n• Dicas que te podem ajudar no dia a dia\\n\\nIdeal quando tens a sensação de que está tudo a ficar demasiado."
+ },
+ "prompt_clear_confirm_text": {
+  "de": "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+  "br": "A análise individual será excluída permanentemente. Tem certeza que quer continuar?",
+  "pt": "A análise individual será eliminada permanentemente. Tens a certeza de que queres continuar?"
+ },
+ "retro_benefit_weekly": {
+  "de": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+  "br": "Retrospectivas semanais ilimitadas, além das 2 primeiras semanas",
+  "pt": "Retrospetivas semanais ilimitadas, além das 2 primeiras semanas"
+ },
+ "retro_premium_unlock": {
+  "de": "Mit Premium alle Rückblicke freischalten",
+  "br": "Desbloqueie todas as retrospectivas com o Premium",
+  "pt": "Desbloqueie todas as retrospetivas com o Premium"
+ },
+ "settings_analytics_title": {
+  "de": "Anonyme Statistik",
+  "br": "Estatísticas anônimas",
+  "pt": "Estatísticas anónimas"
+ },
+ "settings_auto_lock": {
+  "de": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+  "br": "Bloqueia automaticamente após 60 segundos em segundo plano",
+  "pt": "Bloqueia automaticamente após 60 segundos em segundo plano"
+ },
+ "settings_crisis_dialog_body": {
+  "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr.",
+  "br": "Best Journal é um app de diário e não substitui apoio psicológico ou médico profissional. As análises geradas por IA não são terapia.\\n\\nSe você estiver em uma crise aguda ou tiver pensamentos de se machucar ou de suicídio: você não precisa passar por isso só. Há ajuda gratuita, anônima e disponível 24/7.",
+  "pt": "Best Journal é uma app de diário e não substitui apoio psicológico ou médico profissional. As análises geradas por IA não são terapia.\\n\\nSe estiveres numa crise aguda ou tiveres pensamentos de autoagressão ou suicídio: não tens de passar por isto só. Existe ajuda gratuita, anónima e disponível 24/7."
+ },
+ "settings_delete_account_confirm_body": {
+  "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+  "br": "Esta ação é irreversível e exclui:\\n\\n• Todas as entradas, fotos e vídeos locais\\n• Sua conta do Firebase\\n• O backup do aplicativo no Google Drive\\n\\nO aplicativo reiniciará como uma nova instalação.",
+  "pt": "Esta ação é irreversível e elimina:\\n\\n• Todas as entradas, fotografias e vídeos locais\\n• A tua conta Firebase\\n• A cópia de segurança da aplicação no Google Drive\\n\\nA aplicação reinicia como uma nova instalação."
+ },
+ "settings_delete_account_subtitle": {
+  "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+  "br": "Remove de forma irreversível todos os dados locais, sua conta do Google e o backup do Drive",
+  "pt": "Remove de forma irreversível todos os dados locais, a tua conta Google e a cópia de segurança do Drive"
+ },
+ "settings_entries_auto_loaded": {
+  "de": "Einträge werden bei der Anmeldung automatisch geladen",
+  "br": "As entradas são carregadas automaticamente ao entrar na conta",
+  "pt": "As entradas são carregadas automaticamente ao entrar na conta"
+ },
+ "settings_feedback_dialog_desc": {
+  "de": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+  "br": "Sua mensagem para os desenvolvedores — a gente lê tudo e responde pessoalmente!",
+  "pt": "A tua mensagem para os desenvolvedores — nós lê tudo e responde pessoalmente!"
+ },
+ "settings_legal_online_label": {
+  "de": "Online-Version:",
+  "br": "Versão online:",
+  "pt": "Versão online:"
+ },
+ "settings_legal_section_header": {
+  "de": "Rechtliche Dokumente",
+  "br": "Documentos jurídicos",
+  "pt": "Documentos legais"
+ },
+ "settings_premium_cancelled_desc": {
+  "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.",
+  "br": "Seus recursos Premium ficam disponíveis até o fim do período de cobrança. Você pode desfazer o cancelamento pelo Google Play.",
+  "pt": "As tuas funcionalidades Premium ficam disponíveis até ao fim do período de faturação. Podes cancelar a rescisão através do Google Play."
+ },
+ "settings_premium_cancelled_until": {
+  "de": "Premium-Abo gekündigt — läuft noch bis <xliff:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</xliff:g>",
+  "br": "Assinatura Premium cancelada — válida até <xliff:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</xliff:g>",
+  "pt": "Subscrição Premium cancelada — válida até <xliff:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</xliff:g>"
+ },
+ "settings_premium_desc": {
+  "de": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+  "br": "Todos os recursos desbloqueados, IA todos os dias, exportação PDF e mais.",
+  "pt": "Todas as funcionalidades desbloqueadas, IA todos os dias, exportação PDF e mais."
+ },
+ "settings_premium_feature_5_perspectives": {
+  "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+  "br": "Todos os perfis de IA (4 predefinidos + ilimitados personalizados)",
+  "pt": "Todos os perfis de IA (4 predefinidos + ilimitados próprios)"
+ },
+ "settings_premium_feature_improve_desc": {
+  "de": "KI verbessert deine Einträge auf Wunsch.",
+  "br": "A IA aprimora suas entradas sempre que você quiser.",
+  "pt": "A IA melhora as tuas entradas a pedido."
+ },
+ "settings_premium_feature_profiles": {
+  "de": "Unbegrenzte individuelle KI-Profile",
+  "br": "Perfis personalizados ilimitados",
+  "pt": "Perfis personalizados ilimitados"
+ },
+ "settings_premium_lifetime": {
+  "de": "Lifetime-Zugang aktiv",
+  "br": "Acesso vitalício ativo",
+  "pt": "Acesso vitalício ativo"
+ },
+ "settings_premium_lifetime_desc": {
+  "de": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+  "br": "Compra única, todos os recursos desbloqueados permanentemente.",
+  "pt": "Compra única, todas as funcionalidades desbloqueadas permanentemente."
+ },
+ "settings_revoke_email_body": {
+  "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+  "br": "Por meio desta notifico minha desistência do contrato relativo aos recursos Premium do Best Journal.\\n\\nRemetente (conta Google): %1$s\\nMomento da desistência: %2$s\\n\\nEssa desistência foi acionada em duas etapas pelo botão de desistência no aplicativo, em conformidade com o § 356a BGB, e enviada automaticamente pela API do Gmail.",
+  "pt": "Pela presente notifico a minha livre resolução do contrato relativo às funcionalidades Premium do Best Journal.\\n\\nRemetente (conta Google): %1$s\\nMomento da resolução: %2$s\\n\\nEsta resolução foi acionada em duas etapas através do botão de resolução da aplicação, em conformidade com o § 356a BGB, e enviada automaticamente através da API do Gmail."
+ },
+ "settings_revoke_subtitle": {
+  "de": "§ 356a BGB — Widerruf direkt per App",
+  "br": "Compra Premium",
+  "pt": "Compra Premium"
+ },
+ "settings_unlock_premium": {
+  "de": "Premium freischalten",
+  "br": "Desbloquear Premium",
+  "pt": "Desbloquear Premium"
+ },
+ "transcription_model_groq": {
+  "de": "whisper-large-v3-turbo",
+  "br": "Groq Whisper Large V3 Turbo",
+  "pt": "Groq Whisper Large V3 Turbo"
+ },
+ "urgency_high": {
+  "de": "Dringend — Sofort handeln",
+  "br": "Urgente — agir agora",
+  "pt": "Urgente — agir agora"
+ },
+ "legend_high_burden": {
+  "de": "Hoch (67–100%) — Sofort handeln",
+  "br": "Alta (67–100\\u00A0%%) — agir agora",
+  "pt": "Alta (67–100\\u00A0%%) — agir agora"
+ }
+}

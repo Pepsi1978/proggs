@@ -1,0 +1,333 @@
+{
+  "worker": "w1-manifest-build",
+  "layer1_manifest": {
+    "permissions": [
+      {
+        "name": "android.permission.INTERNET",
+        "impliedFeature": "Netzwerkzugriff (Groq-Whisper-Cloud, Firebase AI/Gemini, Google Drive, Gmail-Versand, Bing-TTS)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.ACCESS_NETWORK_STATE",
+        "impliedFeature": "Netzwerkstatus pruefen (online/offline fuer Sync/Cloud-Calls)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.RECORD_AUDIO",
+        "impliedFeature": "Sprachaufnahme fuer Tagebuch-Diktat (lokales Sherpa-ONNX-Whisper + Groq-Cloud-Transkription)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.CAMERA",
+        "impliedFeature": "Foto-Aufnahme fuer Tagebucheintraege (FileProvider photos/)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.POST_NOTIFICATIONS",
+        "impliedFeature": "Erinnerungen/Reviews (taeglich, woechentlich, monatlich, jaehrlich)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+        "impliedFeature": "Reminder-Alarme nach Reboot/Zeitzonen-/Zeitwechsel neu setzen (BootReminderReceiver)",
+        "runtimePermission": false
+      }
+    ],
+    "usesFeatures": [
+      {
+        "name": "android.hardware.camera",
+        "required": false
+      },
+      {
+        "name": "android.hardware.camera.autofocus",
+        "required": false
+      },
+      {
+        "name": "android.hardware.microphone",
+        "required": false
+      }
+    ],
+    "queries": [
+      "com.google.android.gms (GMS-Verfuegbarkeitscheck)"
+    ],
+    "applicationName": ".BestJournalApp (Hilt @HiltAndroidApp)",
+    "activities": [
+      {
+        "name": ".MainActivity",
+        "exported": true,
+        "reason": "LAUNCHER, einzige Activity, Single-Activity-Compose-Architektur",
+        "intentFilter": "MAIN/LAUNCHER"
+      }
+    ],
+    "receivers": [
+      {
+        "name": ".util.ReminderReceiver",
+        "exported": false,
+        "purpose": "Taegliche Tagebuch-Erinnerung"
+      },
+      {
+        "name": ".util.WeeklyReviewReceiver",
+        "exported": false,
+        "purpose": "Woechentliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.MonthlyReviewReceiver",
+        "exported": false,
+        "purpose": "Monatliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.YearlyReviewReceiver",
+        "exported": false,
+        "purpose": "Jaehrliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.BootReminderReceiver",
+        "exported": true,
+        "purpose": "Alarme nach BOOT_COMPLETED/TIMEZONE_CHANGED/TIME_SET neu planen",
+        "intentFilter": "BOOT_COMPLETED, TIMEZONE_CHANGED, TIME_SET",
+        "note": "exported=true ist fuer BOOT_COMPLETED systembedingt noetig; nimmt nur System-Broadcasts entgegen, geringes Risiko"
+      }
+    ],
+    "providers": [
+      {
+        "name": "androidx.core.content.FileProvider",
+        "authorities": "ApplicationId.fileprovider",
+        "exported": false,
+        "grantUriPermissions": true,
+        "exportedPaths": "files-path 'photos' zeigt auf photos/ (interner App-Speicher, Tagebuch-Fotos); via grantUriPermission temporaer fuer Kamera/Teilen freigegeben"
+      }
+    ],
+    "backup": {
+      "allowBackup": true,
+      "fullBackupContent": "@xml/backup_rules (API kleiner/gleich 30)",
+      "dataExtractionRules": "@xml/data_extraction_rules (API groesser/gleich 31, cloud-backup + device-transfer)",
+      "rulesSummary": "Eingeschlossen ins Cloud-Backup/Geraetetransfer: Tagebuch-DB entropy_journal_db (Eintraege) + Profil/Settings-SharedPreferences. Ausgeschlossen: dashboard_db, retrospective_db (regenerieren aus Eintraegen) UND entropy_journal_secure_prefs (verschluesselte Prefs mit Tokens/Keys).",
+      "sensitiveDataInBackup": "JA. Die kompletten Tagebuch-Eintraege (entropy_journal_db) sowie das Nutzerprofil wandern ins Google-Cloud-Backup. Das sind potenziell hoechst-sensible, ggf. Art.9-DSGVO-Daten (Gesundheit, Gefuehle, Stimmung). API-Keys/Tokens in entropy_journal_secure_prefs sind korrekt AUSGESCHLOSSEN.",
+      "dsgvoRisk": "MITTEL-HOCH: Tagebuchinhalte im Google-Auto-Backup koennen besondere Kategorien personenbezogener Daten enthalten. Muss in der Datenschutzerklaerung adressiert werden (Google als Auftragsverarbeiter des Backups, Speicherort, Verschluesselung). Empfehlung an Legal-Worker: pruefen ob Tagebuch-DB im Cloud-Backup gewuenscht/dokumentiert ist oder ob fuer Art.9-Daten ein Ausschluss sinnvoller waere."
+    },
+    "cleartextTraffic": false,
+    "networkSecurityConfig": "@xml/network_security_config: base-config cleartextTrafficPermitted=false, nur System-Trust-Anchors (kein User-CA, kein Cert-Pinning). Gut fuer DSGVO/Sicherheit.",
+    "enableOnBackInvokedCallback": true,
+    "supportsRtl": true,
+    "intentFilters": [
+      "MAIN/LAUNCHER (MainActivity)",
+      "BOOT_COMPLETED + TIMEZONE_CHANGED + TIME_SET (BootReminderReceiver)"
+    ]
+  },
+  "layer2_dependencies": {
+    "sdks": [
+      {
+        "lib": "com.google.firebase:firebase-analytics",
+        "capability": "Nutzungs-Analytics/Event-Tracking (onboarding, entry_created/improved/deleted, paywall_shown, cta_clicked, trial_started)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Analytics)",
+        "activelyUsed": true,
+        "note": "AnalyticsTracker.kt + EdgeTtsPlayer.kt feuern logEvent breitflaechig. ConsentViewModel existiert. Consent-Gating MUSS vom Legal-Worker geprueft werden (DSGVO Art.6/7, ePrivacy/TTDSG)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-ai (Gemini)",
+        "capability": "KI-Textverbesserung/Analysen der Tagebuch-Eintraege via Google Gemini (Firebase AI Logic)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase AI / Gemini-Cloud)",
+        "activelyUsed": true,
+        "note": "FirebaseAiService.kt aktiv. Tagebuchinhalte gehen zur KI-Verarbeitung an Google, Art.13/28-Pflicht (Auftragsverarbeiter, Drittlandtransfer USA)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-functions",
+        "capability": "Cloud Functions Aufruf (SubscriptionStatusService, Abo-Status serverseitig pruefen)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Functions)",
+        "activelyUsed": true,
+        "note": "SubscriptionStatusService.kt importiert firebase."
+      },
+      {
+        "lib": "com.google.firebase:firebase-config (Remote Config)",
+        "capability": "Feature-Flags/Remote-Konfiguration",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Remote Config)",
+        "activelyUsed": true,
+        "note": "In BestJournalApp.kt initialisiert (5 firebase-Imports)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-appcheck-playintegrity",
+        "capability": "App-Attestierung (Schutz der Backend-Calls vor Missbrauch)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Play Integrity / App Check)",
+        "activelyUsed": true,
+        "note": "debug-Variante firebase-appcheck-debug separat. Play-Integrity-Token = geraetebezogen."
+      },
+      {
+        "lib": "com.android.billingclient:billing-ktx 7.1.1",
+        "capability": "In-App-Kauf / Abo (Paywall: Trial, Monthly, Yearly, Lifetime)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play Billing",
+        "activelyUsed": true,
+        "note": "BillingManager.kt aktiv. UWG/Paywall-relevant fuer Werbeaussagen-Check."
+      },
+      {
+        "lib": "com.google.android.play:review-ktx 2.0.2",
+        "capability": "In-App-Bewertungsdialog",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play",
+        "activelyUsed": true,
+        "note": "Import in 1 Datei bestaetigt."
+      },
+      {
+        "lib": "com.google.apis:google-api-services-drive",
+        "capability": "Google-Drive-Backup/Restore der Tagebuchdaten",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Drive (Nutzer-eigener Speicher)",
+        "activelyUsed": true,
+        "note": "DriveBackupManager.kt + DriveRestoreManager.kt aktiv. Daten liegen im Drive des Nutzers. Auftragsverarbeitung Google."
+      },
+      {
+        "lib": "androidx.credentials + googleid + play-services-auth 21.3.0",
+        "capability": "Google-Sign-In via Credential Manager (Konto fuer Drive/Gmail/Abo-Status)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Identity",
+        "activelyUsed": true,
+        "note": "ConsentViewModel + Drive/Gmail-Pfade nutzen das Konto."
+      },
+      {
+        "lib": "Retrofit 2.11.0 + OkHttp 4.12.0 + Moshi",
+        "capability": "REST-Client fuer Groq-Whisper-Cloud + Gmail-API + sonstige HTTP-Calls",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Groq (api.groq.com), Google Gmail API",
+        "activelyUsed": true,
+        "note": "GroqApi.kt (4 Imports), NetworkModule.kt, RevokeSender/FeedbackSender. okhttp-logging-interceptor enthalten. Legal-Worker: pruefen ob Logging in Release deaktiviert (Datenleck-Risiko)."
+      },
+      {
+        "lib": "Sherpa-ONNX 1.12.34 (lokale AAR)",
+        "capability": "LOKALE Whisper-Spracherkennung (on-device, KEIN Datenabfluss)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "LocalWhisperTranscriber.kt. Datenschutzfreundliche On-Device-Alternative zur Groq-Cloud. noCompress onnx/txt gesetzt."
+      },
+      {
+        "lib": "androidx.room 2.7.0",
+        "capability": "Lokale Datenbanken (entropy_journal_db, dashboard_db, retrospective_db)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Room-DAO/Entities, ksp room.schemaLocation gesetzt."
+      },
+      {
+        "lib": "androidx.security:security-crypto 1.1.0-alpha06",
+        "capability": "EncryptedSharedPreferences (entropy_journal_secure_prefs, Tokens/Keys verschluesselt)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "DEPRECATED laut Android-Rules (Empfehlung DataStore+Tink), Hinweis fuer Best-Practices, kein Rechtsrisiko. Korrekt vom Backup ausgeschlossen."
+      },
+      {
+        "lib": "androidx.biometric 1.2.0-alpha05",
+        "capability": "Biometrischer App-Lock (Tagebuch hinter Fingerabdruck/Gesicht)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "App-Lock = positives Datenschutz-Feature."
+      },
+      {
+        "lib": "Microsoft Bing Edge TTS (kein Gradle-SDK, direkter WSS-Call)",
+        "capability": "Text-to-Speech (Vorlesen) ueber wss://speech.platform.bing.com",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Microsoft (Bing/Azure Edge TTS)",
+        "activelyUsed": true,
+        "note": "EdgeTtsPlayer.kt: Text (potenziell Tagebuchinhalt) wird zur Sprachsynthese an Microsoft-Server gesendet. NICHT als Gradle-Dependency sichtbar, in SDK-/Drittanbieter-Listen leicht uebersehen. Legal-Worker: in Datenschutzerklaerung als Microsoft-Datenfluss aufnehmen; pruefen ob inoffizieller Bing-Endpunkt AGB-konform ist."
+      },
+      {
+        "lib": "Coil 3.0.4 (coil-compose + coil-video)",
+        "capability": "Bild-/Video-Thumbnail-Laden (lokale Tagebuch-Fotos)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Aktive Nutzung angenommen (Foto-Feature vorhanden); nicht per Import-Grep gegengeprueft."
+      },
+      {
+        "lib": "Lottie 6.6.4",
+        "capability": "Vektor-Animationen (UI)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": "unbekannt",
+        "note": "Deklariert; keine Import-Stichprobe gemacht. Kein Rechtsrisiko."
+      },
+      {
+        "lib": "kotlinx-coroutines (core/android/play-services)",
+        "capability": "Async/Nebenlaeufigkeit",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Standard."
+      }
+    ],
+    "appId": "com.bestjournal.app (debug: com.bestjournal.app.debug)",
+    "namespace": "com.bestjournal.app",
+    "versionName": "0.21.10",
+    "versionCode": 291,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "compileSdk": 36,
+    "r8Enabled": true,
+    "r8Details": "release: isMinifyEnabled=true, isShrinkResources=true, proguard-android-optimize + proguard-rules.pro; debug: minify=false, applicationIdSuffix .debug",
+    "javaTarget": "17",
+    "buildToolVersions": {
+      "agp": "8.7.3",
+      "kotlin": "2.1.0",
+      "ksp": "2.1.0-1.0.29",
+      "composeBom": "2025.01.01",
+      "firebaseBom": "34.11.0"
+    },
+    "secretsHandling": "Alle Secrets (google-services.json debug/release, Keystores, keystore.properties) liegen ausserhalb des Repos in HOME/SK/BestJournalAndroid/ und werden per syncSecretsFromSk-Task beim preBuild kopiert. Debug-Keystore-Passwort android steht im Build-Skript (Standard-Debug, unkritisch). Release-Signing aus SK/keystore.properties. KEINE echten Secrets im Repo. Konform mit secrets-in-sk-folder-Regel."
+  },
+  "externalEndpoints": [
+    {
+      "domain": "api.groq.com",
+      "purpose": "Whisper-Cloud-Transkription der Sprachaufnahmen (OpenAI-kompatible API), Tagebuch-Audio/Text geht an Groq Inc. (USA)",
+      "file": "util/Constants.kt:5, data/remote/groq/GroqApi.kt"
+    },
+    {
+      "domain": "speech.platform.bing.com (wss)",
+      "purpose": "Microsoft Bing/Edge Text-to-Speech (Vorlesen), Text geht zur Sprachsynthese an Microsoft",
+      "file": "util/EdgeTtsPlayer.kt:98"
+    },
+    {
+      "domain": "gmail.googleapis.com",
+      "purpose": "E-Mail-Versand ueber das Google-Konto des Nutzers: App-Feedback (FeedbackSender) und Konto-/Zugriffs-Widerruf-Nachricht (RevokeSender), Scope gmail.send",
+      "file": "data/remote/FeedbackSender.kt:19-20, data/remote/RevokeSender.kt:32-33"
+    },
+    {
+      "domain": "www.googleapis.com (Drive + Gmail-Scopes)",
+      "purpose": "Google-Drive-Backup/Restore + OAuth-Scope-URLs (gmail.send)",
+      "file": "data/remote/RevokeSender.kt:33, FeedbackSender.kt:20, DriveBackupManager/DriveRestoreManager"
+    },
+    {
+      "domain": "play.google.com/store/account/subscriptions",
+      "purpose": "Deep-Link zum Abo-Management des Nutzers (Kuendigungs-/Churn-Flow)",
+      "file": "ui/screens/settings/ChurnFlowDialog.kt:228/261, SettingsViewModel.kt:393"
+    },
+    {
+      "domain": "findahelpline.com",
+      "purpose": "Externer Link zu Krisen-/Hilfetelefonen (CrisisHelpDialog), Schutz-Feature, kein Datenabfluss von Nutzerdaten",
+      "file": "ui/components/CrisisHelpDialog.kt:133"
+    },
+    {
+      "domain": "www.w3.org/2001/10/synthesis",
+      "purpose": "KEIN Endpunkt, nur SSML-XML-Namespace im Edge-TTS-Request",
+      "file": "util/EdgeTtsPlayer.kt:159"
+    }
+  ],
+  "criticalObservations": [
+    "DSGVO-Datenfluesse an Dritte (Art.13/28 + Drittlandtransfer): (1) Groq/USA = Cloud-Whisper-Transkription von Sprache/Tagebuch, (2) Google Firebase AI/Gemini/USA = KI-Verarbeitung der Eintraege, (3) Microsoft Bing/Azure = Text-to-Speech, (4) Firebase Analytics/Google = Nutzungs-Tracking, (5) Google Drive/Gmail = Backup + E-Mail-Versand. ALLE muessen in der Datenschutzerklaerung als Empfaenger/Auftragsverarbeiter genannt sein.",
+    "Cloud-Backup enthaelt die komplette Tagebuch-DB (entropy_journal_db) + Profil = potenziell Art.9-DSGVO-Daten (Gesundheit/Stimmung) im Google-Auto-Backup. Secure-Prefs (Tokens) sind korrekt ausgeschlossen, aber die Inhalte selbst nicht. Legal-Worker: Backup-Strategie fuer besondere Datenkategorien bewerten.",
+    "Firebase Analytics feuert breitflaechig (Onboarding, Eintraege, Paywall, CTA-Klicks). Ein ConsentViewModel existiert. Ob Analytics WIRKLICH erst nach Einwilligung startet (setAnalyticsCollectionEnabled-Gating), MUSS vom Legal-/Consent-Worker an der Laufzeit-Logik verifiziert werden (ePrivacy/TTDSG-Einwilligung).",
+    "okhttp-logging-interceptor ist eingebunden. Legal/Security-Worker pruefen, ob HTTP-Bodies (mit Tagebuchinhalten/Tokens) in Release-Logs landen koennen (Datenleck-Risiko); in Release sollte das Level NONE sein.",
+    "Microsoft Bing Edge-TTS-Endpunkt ist KEINE Gradle-Dependency, sondern ein inoffizieller WSS-Call (speech.platform.bing.com). Hohes Risiko, dass dieser Drittanbieter-Datenfluss in SDK-Inventaren uebersehen wird; zusaetzlich AGB-/Nutzungsrechts-Frage des inoffiziellen Endpunkts.",
+    "Versionsstand 0.21.10 (versionCode 291), targetSdk 36/minSdk 26, R8 vollstaendig aktiv (Code+Resource-Shrinking) mit umfangreichen Keep-Regeln. Build-Toolchain bewusst auf AGP 8.7.3 / Kotlin 2.1.0 / Compose BOM 2025.01.01 (NICHT die in den Rules genannten 9.1/2.3, entspricht dem dokumentierten Projekt-Soll, kein Bug).",
+    "BootReminderReceiver ist exported=true (systembedingt fuer BOOT_COMPLETED noetig); MainActivity exported=true (LAUNCHER). Alle uebrigen Receiver und der FileProvider sind exported=false. Keine offene Angriffsflaeche erkennbar."
+  ],
+  "plugin_bugs_observed": [
+    "Spec-Luecke: Die Aufgabenstellung listet nur Gradle-deklarierte SDKs als Drittanbieter-Quellen, aber der rechtlich relevanteste Datenfluss (Microsoft Bing Edge-TTS) ist ein direkter WSS-Call OHNE Gradle-Dependency. Der Roentgen-Skill sollte den https/wss-Grep (Layer-5) EXPLIZIT als gleichwertige Quelle fuer Drittanbieter-Datenabfluss behandeln, sonst wird ein Microsoft-Processor im DSGVO-Audit uebersehen.",
+    "Redundanz/Unschaerfe: sendsDataToThirdParty bei Google-Drive/Gmail ist mehrdeutig, die Daten gehen in den EIGENEN Drive/das eigene Gmail des Nutzers (Auftragsverarbeitung Google), nicht an einen fremden Empfaenger. Das Schema sollte zwischen Empfaenger=Drittanbieter-Service des Anbieters und Speicher/Konto des Nutzers selbst unterscheiden, damit der Legal-Worker die Art.13-Empfaengerliste korrekt ableitet."
+  ]
+}

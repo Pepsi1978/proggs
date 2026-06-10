@@ -1,0 +1,111 @@
+{
+  "formatKeysCount": 83,
+  "deBareKeys": [],
+  "locales": {
+    "ar": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "bn": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "en": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "es": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "fr": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "gu": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "hi": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "in": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "it": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "ja": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "kn": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "ko": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "ml": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "mr": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "nl": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "pl": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "pt-rBR": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "pt-rPT": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "ta": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "te": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "th": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "tr": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "uk": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "ur": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "zh-rCN": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    },
+    "zh-rTW": {
+      "crashRiskBarePct": [],
+      "specifierMismatch": []
+    }
+  },
+  "totalCrashRiskFindings": 0
+}

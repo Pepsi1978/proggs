@@ -1,0 +1,251 @@
+{
+  "max_bytes": 180000,
+  "bucket_count": 11,
+  "total_files": 143,
+  "missing_paths": [],
+  "oversize_files": [
+    {
+      "file": "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\settings\\SettingsScreen.kt",
+      "bytes": 289218,
+      "note": "groesser als max_bytes -> Worker MUSS per Range/Grep/Python lesen, NIE voll"
+    },
+    {
+      "file": "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\dashboard\\DashboardScreen.kt",
+      "bytes": 193013,
+      "note": "groesser als max_bytes -> Worker MUSS per Range/Grep/Python lesen, NIE voll"
+    }
+  ],
+  "buckets": [
+    {
+      "index": 0,
+      "bytes": 289218,
+      "est_tokens": 72304,
+      "file_count": 1,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\settings\\SettingsScreen.kt"
+      ]
+    },
+    {
+      "index": 1,
+      "bytes": 193013,
+      "est_tokens": 48253,
+      "file_count": 1,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\dashboard\\DashboardScreen.kt"
+      ]
+    },
+    {
+      "index": 2,
+      "bytes": 179960,
+      "est_tokens": 44990,
+      "file_count": 3,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\retrospective\\RetrospectiveScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\journal\\JournalScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\dao\\EntryPhotoDao.kt"
+      ]
+    },
+    {
+      "index": 3,
+      "bytes": 179999,
+      "est_tokens": 44999,
+      "file_count": 4,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\entrydetail\\EntryDetailScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\billing\\BillingManager.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\TtsVoiceRegistry.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\onboarding\\OnboardingViewModel.kt"
+      ]
+    },
+    {
+      "index": 4,
+      "bytes": 179971,
+      "est_tokens": 44992,
+      "file_count": 5,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\settings\\SettingsViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\settings\\ChurnFlowDialog.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\paywall\\PaywallScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\googledrive\\DriveBackupManager.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\di\\AuthModule.kt"
+      ]
+    },
+    {
+      "index": 5,
+      "bytes": 179974,
+      "est_tokens": 44993,
+      "file_count": 6,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\journal\\JournalViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\entrydetail\\EntryDetailViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\onboarding\\OnboardingScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\entrydetail\\FollowUpComponents.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\PrivacyGateDialog.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\NoEntriesException.kt"
+      ]
+    },
+    {
+      "index": 6,
+      "bytes": 179990,
+      "est_tokens": 44997,
+      "file_count": 7,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\SyncWithDriveUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\AdviceRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\GenerateRetrospectiveUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\dashboard\\DashboardViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\consent\\ConsentScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\PdfExporter.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\SuccessAnimation.kt"
+      ]
+    },
+    {
+      "index": 7,
+      "bytes": 179978,
+      "est_tokens": 44994,
+      "file_count": 12,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\retrospective\\RetrospectiveViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\splash\\SplashScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\settings\\AchievementsSection.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\PrivacyPreferencesSheet.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\ai\\AiUsageTracker.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\googledrive\\DriveRestoreManager.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\EdgeTtsPlayer.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\ThemeSchemes.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\navigation\\AppNavGraph.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\prefs\\CustomAnalysesStore.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\AnalyticsTracker.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\StreakEvolution.kt"
+      ]
+    },
+    {
+      "index": 8,
+      "bytes": 179981,
+      "est_tokens": 44995,
+      "file_count": 17,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\MainActivity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\Constants.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\entrydetail\\ShareEntryDialog.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiLimitsDisclaimerRow.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AdviceCategoryCard.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\DailyReminderManager.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\FreeLimitIndicator.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\Theme.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\AppDatabase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\TranscriptionRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\consent\\LegalDocumentScreen.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\TimelineItem.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\retrospective\\RetrospectiveParser.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\seed\\TestDataSeeder.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\CrisisHelpDialog.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\audio\\WavSpeechAnalyzer.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\RevokeSender.kt"
+      ]
+    },
+    {
+      "index": 9,
+      "bytes": 179969,
+      "est_tokens": 44992,
+      "file_count": 43,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\whisper\\LocalWhisperTranscriber.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\DateTimeFormatter.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\consent\\ConsentViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\ImproveTextUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\paywall\\PaywallViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\SubscriptionStatusService.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\AudioRecorderHelper.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\SummarizeEntryUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\BestJournalApp.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\ai\\FirebaseAiService.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\AchievementTracker.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\navigation\\BottomNavBar.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiGeneratedBadge.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\PhotoRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\ai\\AiRateLimiter.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\Color.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\AuthRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\FeedbackSender.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\Typography.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AnimatedMicButton.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\ParticleBackground.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\TwinklingStars.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiLimitReachedSheet.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\SunMoonToggle.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiImprovedFooter.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiInfoBanner.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\JournalRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\dao\\JournalEntryDao.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\ReminderReceiver.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\journal\\RecordingOverlay.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\dashboard\\AdviceDetailSheet.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\PulsingOrb.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\InAppReviewHelper.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\ShimmerLoadingEffect.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\StreakTracker.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\WaveformVisualizer.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\DailyPromptProvider.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\GlassmorphismModifiers.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\dao\\RetrospectiveDao.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\di\\FirebaseModule.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\EntryFollowUpRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\FloatingActionButtonAnimated.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\HapticUtils.kt"
+      ]
+    },
+    {
+      "index": 10,
+      "bytes": 50477,
+      "est_tokens": 12619,
+      "file_count": 44,
+      "files": [
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\BootReminderReceiver.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\WeeklyReviewReceiver.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\di\\DatabaseModule.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\PrivacyGateHelper.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\MonthlyReviewReceiver.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\YearlyReviewReceiver.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\SyncProgressHolder.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\ThreeDCard.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\di\\NetworkModule.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\repository\\RetrospectiveRepository.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\AnalyzeEntropyUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\ProfileTheme.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\EncryptedPrefsProvider.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\AiOutputDisclaimer.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\RetrospectiveDatabase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\DashboardDatabase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\di\\AppModule.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\groq\\GroqTranscriptionResponse.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\dao\\EntryFollowUpDao.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\DeviceLocale.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\NeonDivider.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\model\\AdviceBlock.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\components\\GlassCard.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\AppTheme.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\entity\\RetrospectiveSummaryEntity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\entity\\EntryFollowUpEntity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\ProfileChangeBus.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\dao\\AdviceDashboardDao.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\entity\\EntryPhotoEntity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\util\\NetworkUtils.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\model\\AdviceCategory.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\entity\\JournalEntryEntity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\RecordAudioUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\remote\\groq\\GroqApi.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\SignInWithGoogleUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\model\\JournalEntry.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\data\\local\\entity\\AdviceBlockEntity.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\screens\\splash\\SplashViewModel.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\TranscribeAudioUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\GenerateAdviceUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\usecase\\SaveJournalEntryUseCase.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\ui\\theme\\Shape.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\domain\\model\\UserProfile.kt",
+        "C:/Users/barwa/proggs/BestJournalAndroid/app/src/main/java\\com\\bestjournal\\app\\billing\\SubscriptionState.kt"
+      ]
+    }
+  ]
+}

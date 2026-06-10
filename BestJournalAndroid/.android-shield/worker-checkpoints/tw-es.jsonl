@@ -1,0 +1,3 @@
+{"ts":"2026-06-10","worker":"tw-es","step":"start","note":"read job-plan + de-ref + es.md + inspected target; 36 keys present, paywall_monthly_note absent (NEW), plurals DE-stale, ai_limits stale missing +150/profile clause"}
+{"ts": "2026-06-10", "worker": "tw-es", "step": "applied", "applied_count": 37, "new_inserts": ["paywall_monthly_note"]}
+{"ts":"2026-06-10","worker":"tw-es","step":"verified","note":"FIN-051c ALL PASSED; apostrophes OK 0 unescaped; 35 strings+2 plurals; paywall_monthly_note NEW; ai_limits 150x4 incl +150/profile clause"}

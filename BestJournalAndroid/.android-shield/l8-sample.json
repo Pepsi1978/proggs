@@ -1,0 +1,126 @@
+{
+ "br": {
+  "prompt_cat_self_reflection": {
+   "de": "Selbstreflexion",
+   "br": "Autorreflexão"
+  },
+  "settings_legal_online_label": {
+   "de": "Online-Version:",
+   "br": "Versão online:"
+  },
+  "nav_dashboard": {
+   "de": "Dashboard",
+   "br": "Painel"
+  },
+  "dashboard_legend": {
+   "de": "Legende",
+   "br": "Legenda"
+  },
+  "settings_feedback": {
+   "de": "Feedback",
+   "br": "Feedback"
+  },
+  "json_key_derivation_date": {
+   "de": "datum",
+   "br": "data"
+  },
+  "profile_custom_rename": {
+   "de": "Umbenennen",
+   "br": "Renomear"
+  },
+  "retro_photos_videos": {
+   "de": "Fotos &amp; Videos",
+   "br": "Fotos e vídeos"
+  },
+  "settings_revoke_subtitle": {
+   "de": "§ 356a BGB — Widerruf direkt per App",
+   "br": "Compra Premium"
+  },
+  "json_key_trend": {
+   "de": "trend",
+   "br": "tendencia"
+  },
+  "follow_up_delete_confirm_text": {
+   "de": "Möchtest du Nachtrag <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g> wirklich unwiderruflich löschen?",
+   "br": "Tem certeza que quer excluir o complemento <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g> permanentemente?"
+  },
+  "achievements_unlocked_at": {
+   "de": "Freigeschaltet am %1$s",
+   "br": "Desbloqueada em %1$s"
+  },
+  "legend_priority_medium": {
+   "de": "Orange = Mittel — Bald angehen",
+   "br": "Laranja = média — tratar em breve"
+  },
+  "ai_retro_year_task": {
+   "de": "AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für <xliff:g id=\"year\" example=\"2026\">%1$d</xliff:g> zusammen.",
+   "br": "TAREFA: resuma as retrospectivas mensais a seguir em uma retrospectiva anual estruturada para <xliff:g id=\"year\" example=\"2026\">%1$d</xliff:g>."
+  },
+  "profile_entropy_desc": {
+   "de": "Erkennt Stress, Unordnung und Belastung",
+   "br": "Detecta estresse, desordem e carga"
+  }
+ },
+ "pt": {
+  "prompt_cat_self_reflection": {
+   "de": "Selbstreflexion",
+   "pt": "Autorreflexão"
+  },
+  "settings_legal_online_label": {
+   "de": "Online-Version:",
+   "pt": "Versão online:"
+  },
+  "nav_dashboard": {
+   "de": "Dashboard",
+   "pt": "Painel"
+  },
+  "dashboard_legend": {
+   "de": "Legende",
+   "pt": "Legenda"
+  },
+  "settings_feedback": {
+   "de": "Feedback",
+   "pt": "Feedback"
+  },
+  "json_key_derivation_date": {
+   "de": "datum",
+   "pt": "data"
+  },
+  "profile_custom_rename": {
+   "de": "Umbenennen",
+   "pt": "Mudar o nome"
+  },
+  "retro_photos_videos": {
+   "de": "Fotos &amp; Videos",
+   "pt": "Fotos e vídeos"
+  },
+  "settings_revoke_subtitle": {
+   "de": "§ 356a BGB — Widerruf direkt per App",
+   "pt": "Compra Premium"
+  },
+  "json_key_trend": {
+   "de": "trend",
+   "pt": "tendencia"
+  },
+  "follow_up_delete_confirm_text": {
+   "de": "Möchtest du Nachtrag <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g> wirklich unwiderruflich löschen?",
+   "pt": "Tens a certeza de que queres eliminar permanentemente o complemento <xliff:g id=\"ordinal\" example=\"1\">%1$s</xliff:g>?"
+  },
+  "achievements_unlocked_at": {
+   "de": "Freigeschaltet am %1$s",
+   "pt": "Desbloqueada em %1$s"
+  },
+  "legend_priority_medium": {
+   "de": "Orange = Mittel — Bald angehen",
+   "pt": "Laranja = média — tratar em breve"
+  },
+  "ai_retro_year_task": {
+   "de": "AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für <xliff:g id=\"year\" example=\"2026\">%1$d</xliff:g> zusammen.",
+   "pt": "TAREFA: resume as retrospetivas mensais a seguir numa retrospetiva anual estruturada para <xliff:g id=\"year\" example=\"2026\">%1$d</xliff:g>."
+  },
+  "profile_entropy_desc": {
+   "de": "Erkennt Stress, Unordnung und Belastung",
+   "pt": "Detecta stress, desordem e carga"
+  }
+ }
+}

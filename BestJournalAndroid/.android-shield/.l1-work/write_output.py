@@ -1,0 +1,276 @@
+# -*- coding: utf-8 -*-
+import json, os, tempfile
+
+base = os.path.expanduser('~/proggs/BestJournalAndroid/.android-shield')
+outdir = os.path.join(base, 'worker-outputs')
+outpath = os.path.join(outdir, 'phase1b-xling-L1.json')
+
+# ---- shared (systematic, same in all 3 langs) STALE findings ----
+def stale_findings():
+    return [
+        {
+            "key": "settings_revoke_subtitle",
+            "deText": "§ 356a BGB — Widerruf direkt per App",
+            "locText": "<übersetzt 'Premium-Kauf' statt Widerruf-Hinweis>",
+            "problem": "STALE/FALSCH: Untertitel des gesetzlichen Widerruf-Buttons (§ 356a BGB) zeigt 'Premium-Kauf'. In ALLEN 3 Sprachen identisch -> DE-String wurde NACH der Uebersetzung geaendert. Nutzer findet den Widerruf-Hinweis nicht; rechtlich relevanter Pflicht-Hinweis fehlt.",
+            "severity": "🟥",
+            "suggestedFix": "Neu uebersetzen aus aktuellem DE: '§ 356a BGB — Widerruf direkt per App' (NUR Vorschlag; Anwendung ueber den uebersetzung-Skill)."
+        },
+        {
+            "key": "settings_revoke_confirm_title",
+            "deText": "Vertrag widerrufen?",
+            "locText": "<übersetzt 'E-Mail an den Support öffnen?'>",
+            "problem": "STALE: Bestaetigungs-Titel des Widerrufs-Dialogs (§ 356a BGB-Flow) zeigt 'E-Mail an Support oeffnen?' statt 'Vertrag widerrufen?'. In allen 3 Sprachen identisch -> DE nach Uebersetzung geaendert.",
+            "severity": "🟥",
+            "suggestedFix": "Neu uebersetzen: 'Vertrag widerrufen?'."
+        },
+        {
+            "key": "settings_revoke_confirm_body",
+            "deText": "Mit einem Klick auf „Widerruf bestätigen“ senden wir deinen Widerruf direkt an dev.app.support@gmail.com. ...",
+            "locText": "<beschreibt ALTEN Flow: 'Deine E-Mail-App öffnet sich mit vorbereiteter Nachricht'>",
+            "problem": "STALE + MECHANISMUS-WIDERSPRUCH: DE beschreibt jetzt 'wir senden den Widerruf direkt' (automatischer Versand). Alle 3 Uebersetzungen beschreiben den ALTEN 'deine E-Mail-App oeffnet sich'-Flow. Der § 356a-Widerrufsmechanismus wird also anders beschrieben als im aktuellen DE/im tatsaechlichen Verhalten.",
+            "severity": "🟥",
+            "suggestedFix": "Neu uebersetzen aus aktuellem DE (direkter Versand via Gmail-API, zweistufiger Button)."
+        },
+        {
+            "key": "privacy_gate_tts_title",
+            "deText": "Premium-Stimmen aktivieren",
+            "locText": "<übersetzt 'Text an Microsoft senden?'>",
+            "problem": "STALE: Titel zeigt 'Text an Microsoft senden?' statt 'Premium-Stimmen aktivieren'. In allen 3 Sprachen identisch -> DE nach Uebersetzung geaendert. (Privacy-naher TTS-Consent-Dialog.)",
+            "severity": "🟧",
+            "suggestedFix": "Neu uebersetzen: 'Premium-Stimmen aktivieren'."
+        },
+    ]
+
+def common_legal_issues(lang):
+    issues = stale_findings()
+    # consent_toggle_do_not_sell_body — systematic omission
+    issues.append({
+        "key": "consent_toggle_do_not_sell_body",
+        "deText": "...Bei Aktivierung werden alle optionalen Cloud-Funktionen deaktiviert... Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+        "locText": "<stark gekuerzt: 'Kalifornien Opt-out (CCPA/CPRA 2026). Bei Aktivierung alle optionalen Datenverarbeitungen aus — nur lokale Funktionen bleiben.'>",
+        "problem": "INHALTSVERLUST (systematisch in allen 3 Sprachen): Der CCPA/CPRA-Kernsatz 'Best Journal verkauft/vermarktet deine Daten nirgendwo auf der Welt' UND die Erlaeuterung 'nur fuer Kalifornien-Einwohner, sonst ignorieren' fehlen. Zusaetzlich erfundenes Jahr '2026' (steht nicht im DE). Das 'Do Not Sell'-Versprechen ist im CCPA-Kontext rechtlich bedeutsam.",
+        "severity": "🟧",
+        "suggestedFix": "Vollstaendige Uebersetzung des DE-Textes inkl. 'verkauft/vermarktet deine Daten nirgendwo'-Satz; '2026' entfernen."
+    })
+    # onboarding_feature_secure — generalization
+    issues.append({
+        "key": "onboarding_feature_secure",
+        "deText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+        "locText": "<übersetzt 'Deine Daten bleiben bei dir, verschlüsselt und sicher'>",
+        "problem": "CLAIM-VERSCHIEBUNG (systematisch alle 3): DE unterscheidet 'lokal gespeichert' UND 'KI-Anfragen verschluesselt'. Uebersetzung verallgemeinert zu 'Daten bleiben bei dir, verschluesselt und sicher' — die Praezision (lokal vs. verschluesselte KI-Anfragen, die ja AUSSER Haus gehen) geht verloren. Datenschutz-Claim sollte zur tatsaechlichen Architektur passen.",
+        "severity": "🟨",
+        "suggestedFix": "Genauer: 'Deine Daten sind lokal gespeichert; KI-Anfragen werden verschluesselt uebertragen.'"
+    })
+    # privacy_gate_groq_body — omits EU SCCs
+    issues.append({
+        "key": "privacy_gate_groq_body",
+        "deText": "...✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)...",
+        "locText": "<umformuliert, nennt Groq/USA + Loeschung + kein Training, aber OHNE 'Rechtsgrundlage: EU SCCs'>",
+        "problem": "OMISSION (systematisch alle 3): Die explizite Rechtsgrundlage 'Standardvertragsklauseln (EU SCCs)' fehlt in der Uebersetzung, obwohl sie im DE als Aufzaehlungspunkt steht. Bei Drittland-Transfer (USA) ist die Rechtsgrundlage ein relevanter DSGVO-Hinweis.",
+        "severity": "🟨",
+        "suggestedFix": "Rechtsgrundlage ergaenzen: 'Rechtsgrundlage: EU-Standardvertragsklauseln (SCCs).'"
+    })
+    # consent_confirmation — button label
+    issues.append({
+        "key": "consent_confirmation",
+        "deText": "Mit „Loslegen“ bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast...",
+        "locText": "<referenziert Button 'Zustimmen und starten' statt 'Loslegen'>",
+        "problem": "BUTTON-LABEL-MISMATCH (alle 3): Der Bestaetigungstext zitiert den Button als 'Zustimmen und starten', der DE-Button heisst 'Loslegen'. Die drei Pflichtdokumente (Datenschutz, Nutzungsbedingungen, Impressum) sind aber korrekt genannt. Inhaltlich-rechtlich ok, nur das zitierte Button-Label weicht ab.",
+        "severity": "🟨",
+        "suggestedFix": "Button-Bezeichnung an den tatsaechlichen Button angleichen (entweder DE-Button auf 'Zustimmen und starten' oder Zitat auf 'Loslegen')."
+    })
+    # paywall_from_per_day year vs day
+    issues.append({
+        "key": "paywall_from_per_day",
+        "deText": "Jahresabo, %1$s pro Jahr",
+        "locText": "<übersetzt 'ab %1$s pro Tag'>",
+        "problem": "EINHEITEN-MISMATCH (alle 3): DE sagt 'pro Jahr', alle 3 Uebersetzungen sagen 'pro Tag'. Konsistent in allen Sprachen -> evtl. bewusste Anpassung an den Anzeigekontext (Tagespreis-Framing), aber widerspricht dem DE-Wortlaut. Bei Preisangaben (UWG/Preisklarheit) sollte Einheit eindeutig stimmen.",
+        "severity": "🟨",
+        "suggestedFix": "Klaeren ob 'pro Tag' oder 'pro Jahr' gemeint ist und DE + Uebersetzungen angleichen."
+    })
+    # delete_account_confirm_body — Firebase + dropped reassurance
+    issues.append({
+        "key": "settings_delete_account_confirm_body",
+        "deText": "...• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto) • Deine App-Anmeldung ... Dein Google-Konto selbst bleibt bestehen.",
+        "locText": "<listet 'dein Firebase-Konto', laesst 'Audio-Aufnahmen' + 'App-Anmeldung' + 'Google-Konto bleibt bestehen' weg>",
+        "problem": "INHALTS-/TERMINOLOGIE-PROBLEM (alle 3): Uebersetzung fuehrt internen Begriff 'Firebase-Konto' ein (nicht nutzergerecht), laesst 'Audio-Aufnahmen' und 'App-Anmeldung' weg und vor allem die Beruhigung 'Dein Google-Konto selbst bleibt bestehen'. Damit unklar, ob das Google-Konto betroffen ist.",
+        "severity": "🟧",
+        "suggestedFix": "An DE angleichen: Audio-Aufnahmen + App-Anmeldung nennen, 'Firebase-Konto' vermeiden, 'Google-Konto bleibt bestehen' ergaenzen."
+    })
+    # settings_delete_account_subtitle — CONTRADICTION
+    issues.append({
+        "key": "settings_delete_account_subtitle",
+        "deText": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+        "locText": "<übersetzt: 'Löscht alle lokalen Daten, DEIN GOOGLE-KONTO und das Drive-Backup unwiderruflich'>",
+        "problem": "WIDERSPRUCH zum DE (alle 3): DE sagt 'Google-Konto bleibt bestehen'. Uebersetzung sagt das Gegenteil: loescht 'dein Google-Konto'. Falsche, alarmierende Aussage — suggeriert dem Nutzer, die Konto-Loeschung loescht sein gesamtes Google-Konto.",
+        "severity": "🟥",
+        "suggestedFix": "Korrekt: '...unwiderruflich. Dein Google-Konto selbst bleibt bestehen.' ('Google-Konto loeschen' streichen)."
+    })
+    return issues
+
+def lang_block(lang, extra_issues, identical_legit, untranslated, rtl_issues, sample_issues,
+               digit_system='western', numbers_detail=''):
+    return {
+        "legalKeysChecked": 95,
+        "legalKeyIssues": common_legal_issues(lang) + extra_issues,
+        "numbersCheckAiLimits": {
+            "allPresent": True,
+            "digitSystem": digit_system,
+            "detail": numbers_detail
+        },
+        "identicalClassification": {
+            "legit": identical_legit,
+            "untranslated": untranslated
+        },
+        "rtlIssues": rtl_issues,
+        "sampleQuality": {"checked": 15, "issues": sample_issues}
+    }
+
+# ----- AR -----
+ar = lang_block(
+    "ar",
+    extra_issues=[
+        {
+            "key": "ai_prompt_custom_intro",
+            "deText": "Du bist ein intelligenter... Tagebuch-Analyst UND Aufgaben-Bearbeiter. (lange 2-Schritt-Anweisung mit '50-Prozent'-Kernregel + variantenreicher Sprache)",
+            "locText": "<stark gekuerzt; nennt nur 'Tagebuch-Analyst', laesst 'Aufgaben-Bearbeiter' + variantenreiche Sprachregel weg; Tippfehler 'aقرأ' (lateinisches a am Zeilenanfang)>",
+            "problem": "KI-Prompt (nicht nutzersichtbar): AR ist deutlich gekuerzt ggü. DE; 'UND Aufgaben-Bearbeiter' und der grosse Sprach-/Varianten-Block fehlen. Zusaetzlich Tippfehler: ein lateinisches 'a' vor 'قرأ'. Kann die Prompt-Wirkung (aktives Ueber-die-Eintraege-hinausgehen) abschwaechen.",
+            "severity": "🟨",
+            "suggestedFix": "Vollstaendiger uebersetzen (Aufgaben-Bearbeiter + 50%-Regel + Varianten-Sprache) und Tippfehler 'aقرأ' -> 'اقرأ' korrigieren."
+        }
+    ],
+    identical_legit=[
+        "ai_prompt_rerank_actions_header (DE-Geruest-Header im KI-Prompt; AR-Antwort wird per ai_prompt_response_language erzwungen)",
+        "ai_prompt_rerank_entries_header (dito)",
+        "ai_prompt_rerank_user_focus_header (dito)",
+        "settings_about_version (Versionsstring 'Best Journal V0.21.9')"
+    ],
+    untranslated=[],
+    rtl_issues=[
+        "0 Platzhalter-/xliff-Probleme in den Legal-Keys: alle %1$s/%1$d und <g>-Tags stimmen 1:1 mit DE; Bidi-Verlaeufe intakt (RLM vor Latin-Tokens wie Google Play vorhanden, z.B. churn_pause_sub, dashboard_gemini_unavailable)."
+    ],
+    sample_issues=[
+        "Keine echten Qualitaetsprobleme: Stichprobe (15) fluessig, kein Maschinen-Artefakt, kein Sprachmix. (Die maschinellen 'Latin-words'-Treffer waren nur xliff-Attribute model/example — kein Befund.)"
+    ],
+    numbers_detail="ai_limits_dialog_body: alle 150/600/30/101/151/50/5 vorhanden, westliche Ziffern (0-9); Mitternacht als 0:00 dargestellt."
+)
+
+# ----- UR -----
+ur = lang_block(
+    "ur",
+    extra_issues=[
+        {
+            "key": "privacy_gate_gemini_body",
+            "deText": "...(Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO)...",
+            "locText": "<inhaltlich vollständig, aber 'DSGVOآرٹ. 9' ohne Leerzeichen zwischen 'DSGVO' und 'آرٹ' (Art.)>",
+            "problem": "Inhaltlich VOLLSTAENDIG und korrekt (kein Training, nicht gespeichert, DPF, Art. 9, 'Vorschlaege keine Beratung'). Nur typografischer Mangel: 'DSGVO' und 'آرٹ. 9' sind ohne Leerzeichen zusammengeklebt (RTL/LTR-Verkettung). Reine Darstellung, kein Rechts-Substanz-Problem.",
+            "severity": "🟨",
+            "suggestedFix": "Leerzeichen einfuegen: 'DSGVO آرٹ. 9' bzw. 'آرٹیکل 9 DSGVO'."
+        }
+    ],
+    identical_legit=[
+        "27x json_key_* / json_value_* (JSON-Feldnamen, die die App exakt nach DE parst — MUESSEN identisch bleiben, sonst bricht das Parsing: kategorien, beschreibung, hoch, ...)",
+        "settings_about_version (Versionsstring)"
+    ],
+    untranslated=[],
+    rtl_issues=[
+        "2 Bidi-Hinweise (🟨, kein funktionaler Bruch): paywall_exit_discount ('%1$d مہینوں کے لیے چھوٹ') und paywall_from_per_day ('%1$s فی دن سے شروع') beginnen mit einem lateinischen Format-Platzhalter ohne RLM/RLE-Marker -> Zahl/Waehrung rendert am visuellen Satzanfang LTR, kann in RTL leicht verrutscht wirken.",
+        "Sonstige Legal-Keys: Platzhalter/xliff 1:1 zu DE; RLM-Marker an mehreren Stellen korrekt (z.B. churn_pause_sub, journal_transcribed_with)."
+    ],
+    sample_issues=[
+        "privacy_gate_tts_title (in Stichprobe gefunden): zeigt 'Text an Microsoft senden?' statt 'Premium-Stimmen aktivieren' -> als STALE-Befund oben (privacy_gate_tts_title) erfasst.",
+        "settings_revoke_confirm_title (in Stichprobe gefunden): zeigt 'E-Mail an Support oeffnen?' statt 'Vertrag widerrufen?' -> als STALE-Befund oben erfasst.",
+        "Kein Hindi-/Devanagari-Mix; uebrige Stichproben fluessig und natuerlich (Verb-Endstellung korrekt)."
+    ],
+    numbers_detail="ai_limits_dialog_body: alle 150/600/30/101/151/50/5 vorhanden, westliche Ziffern (0-9); Mitternacht als 'رات 12:00 بجے' (natuerliches Urdu)."
+)
+
+# ----- TR -----
+tr = lang_block(
+    "tr",
+    extra_issues=[
+        {
+            "key": "legend_high_burden (+14 weitere legend_*)",
+            "deText": "Hoch (67–100%) — Sofort handeln  [DE: einfaches %]",
+            "locText": "Yüksek (67–100\\u00A0%%) — şimdi harekete geç  [TR: doppeltes %%]",
+            "problem": "TR-SPEZIFISCHER ESCAPING-BUG: 15 reine legend_*-Strings (kein Format-Arg) enthalten literal '%%'. In Android werden '%%' in NICHT-Format-Strings NICHT zusammengefasst -> dem Nutzer wird '67–100 %%' mit zwei Prozentzeichen angezeigt. ar/ur korrekt mit einfachem '%'. Betroffen: legend_activity_high/medium/low, legend_reflection_deep/aware/surface, legend_blocked_range, legend_in_progress_range, legend_progress_range, legend_high/medium/low_focus, legend_high/medium/low_burden.",
+            "severity": "🟨",
+            "suggestedFix": "In allen 15 TR legend_*-Strings '%%' -> '%' aendern (einfaches Prozentzeichen, wie ar/ur)."
+        },
+        {
+            "key": "privacy_gate_gemini_body",
+            "deText": "...Art. 9 DSGVO... KI-Ausgaben sind Vorschläge...",
+            "locText": "<inhaltlich vollständig; nutzt aber 'KI' statt des sonst in TR verwendeten 'YZ'>",
+            "problem": "Inhaltlich VOLLSTAENDIG/korrekt (GDPR Md. 9, DPF, kein Training, 'Vorschlaege keine Beratung', Apostrophe escaped). Nur Konsistenz: dieser eine String nutzt die deutsche Abkuerzung 'KI', waehrend TR sonst durchgaengig 'YZ' fuer KI verwendet.",
+            "severity": "🟨",
+            "suggestedFix": "'KI' -> 'YZ' in diesem String fuer Konsistenz."
+        },
+        {
+            "key": "ai_prompt_no_dates_rule",
+            "deText": "...Datumsangaben gehören NUR in das \"herleitung\"-Feld...",
+            "locText": "<verweist auf JSON-Feld \"datum\" statt \"herleitung\">",
+            "problem": "KI-Prompt (nicht nutzersichtbar): TR ist umformuliert und verweist auf das Feld 'datum' statt wie DE auf 'herleitung'. Beide meinen das versteckte Metadaten-Feld, aber die Feldnamen-Abweichung koennte die KI verwirren, welches Feld gemeint ist.",
+            "severity": "🟨",
+            "suggestedFix": "Feldname an DE angleichen ('herleitung') oder pruefen, welches Feld die App tatsaechlich erwartet."
+        }
+    ],
+    identical_legit=[
+        "entry_camera ('Kamera' — im Tuerkischen identisches Wort)",
+        "label_premium / settings_premium_section ('Premium' — Lehnwort, identisch)",
+        "label_video / retro_cd_video ('Video' — identisch)",
+        "settings_about_version (Versionsstring)"
+    ],
+    untranslated=[],
+    rtl_issues=[],  # tr is LTR
+    sample_issues=[
+        "Keine echten Qualitaetsprobleme in der Stichprobe (15): fluessig, natuerlich, kein Sprachmix. (Die maschinellen 'Latin-words'-Flags sind FALSE POSITIVES — Tuerkisch ist Lateinschrift; Treffer wie 'Giri'/'isel' sind nur Wortfragmente.)",
+        "Apostrophe nach Eigennamen durchgaengig korrekt escaped (Best Journal\\'ı, Google Play\\'e, €\\'dan); İ/ı-Schreibung in Schluesselwoertern korrekt (İptal/İlk/İstek)."
+    ],
+    numbers_detail="ai_limits_dialog_body: alle 150/600/30/101/151/50/5 vorhanden, westliche Ziffern; Mitternacht als 'gece yarısı'. 4 (Profile) korrekt."
+)
+
+result = {
+    "worker": "l1",
+    "languages": ["ar", "ur", "tr"],
+    "summary": {
+        "note": "Maschinell vorgeprueft (nicht wiederholt): Vollstaendigkeit (nur 5x dev_seed_* fehlen ueberall, bekannt), XML-Validitaet, naked %, Apostrophe (0). Alle 95 Legal-Keys in allen 3 Sprachen paarweise semantisch geprueft.",
+        "systematicCrossLanguageFindings": [
+            "STALE-DRIFT (RED): settings_revoke_subtitle, settings_revoke_confirm_title, settings_revoke_confirm_body, privacy_gate_tts_title sind in ar+ur+tr IDENTISCH veraltet -> der DE-Quelltext wurde NACH der Uebersetzung geaendert. Betrifft mit hoher Wahrscheinlichkeit ALLE 26 Sprachen. Besonders kritisch: § 356a-BGB-Widerruf-Flow (Untertitel 'Premium-Kauf', Bestaetigungstitel/-text beschreiben alten 'E-Mail-App'-Mechanismus statt des aktuellen Direktversands).",
+            "WIDERSPRUCH (RED): settings_delete_account_subtitle sagt in allen 3 Sprachen 'loescht dein Google-Konto', DE sagt 'Google-Konto bleibt bestehen'.",
+            "OMISSION (ORANGE): consent_toggle_do_not_sell_body laesst in allen 3 Sprachen den CCPA-Kernsatz 'verkauft deine Daten nirgendwo' weg + erfindet Jahr '2026'.",
+            "OMISSION (ORANGE): settings_delete_account_confirm_body fuehrt 'Firebase-Konto' ein und laesst die 'Google-Konto bleibt bestehen'-Beruhigung + Audio-Aufnahmen weg (alle 3).",
+            "OMISSION (YELLOW): privacy_gate_groq_body laesst die Rechtsgrundlage 'EU SCCs' weg (alle 3).",
+            "Diese Befunde sind KEINE reinen Uebersetzungsfehler einzelner Sprachen, sondern teils Quell-Drift bzw. systematische Kuerzungen — Empfehlung: zuerst DE-Quelle pruefen/fixen, dann Delta-Uebersetzung ueber den uebersetzung-Skill."
+        ]
+    },
+    "perLanguage": {"ar": ar, "ur": ur, "tr": tr},
+    "selbstbeobachtung": [
+        "Der entscheidende Mehrwert kam aus der Stichproben-Phase: privacy_gate_tts_title und settings_revoke_confirm_title fielen NUR in der Zufallsstichprobe auf und fuehrten zur Cross-Check-Verifikation, die den systematischen STALE-Drift (DE nach Uebersetzung geaendert) in allen 3 Sprachen aufdeckte — der wichtigste Befund. Lehre: Stichproben ausserhalb der Legal-Key-Liste lohnen sich, weil rechtsnahe Bugs auch in 'nicht-legal' markierten Keys (Titel/Bestaetigungen) sitzen.",
+        "Die maschinelle 'identicalToDe'-Liste war fuer ur (28) zunaechst alarmierend, war aber zu 100% legitim (json_key/value-Feldnamen muessen DE-identisch bleiben). Ohne den Blick auf den tatsaechlichen Inhalt haette man hier faelschlich 'unuebersetzt' gemeldet — Inhalt schlaegt Statistik.",
+        "Der TR-'%%'-Bug war maschinell NICHT als 'naked %' erkennbar (technisch 'escaped'), ist aber fuer den Nutzer ein sichtbarer Doppel-Prozent-Fehler. Ein reiner naked-%-Check uebersieht Ueber-Escaping in Nicht-Format-Strings."
+    ],
+    "plugin_bugs_observed": [
+        "Hinweis (kein Plugin-Bug): legal-keys-Liste enthaelt einen Nicht-Schluessel-Eintrag 'onboarding_feature_secure__privacy' (doppelter Unterstrich), der in DE nicht existiert — vermutlich Notiz/Tippfehler in der Schluesselliste. Der reale Schluessel ist 'onboarding_feature_secure'.",
+        "Hinweis: 'ai_prompt_insight_intro / profile_insight_*' und 'urgency_high / legend_high_burden' in der legal-keys-Liste sind kombinierte Notiz-Eintraege mit ' / ' bzw. Wildcard '*' — als getrennte konkrete Keys interpretiert (insgesamt 95 konkrete Keys + 1 Wildcard profile_insight_*)."
+    ]
+}
+
+# atomic write
+os.makedirs(outdir, exist_ok=True)
+fd, tmp = tempfile.mkstemp(dir=outdir, suffix='.tmp')
+with os.fdopen(fd, 'w', encoding='utf-8') as f:
+    json.dump(result, f, ensure_ascii=False, indent=2)
+os.replace(tmp, outpath)
+print('Wrote', outpath)
+# validate
+with open(outpath, 'r', encoding='utf-8') as f:
+    json.load(f)
+print('JSON valid OK')
+# quick counts
+for lang in ['ar','ur','tr']:
+    b = result['perLanguage'][lang]
+    sev = {}
+    for it in b['legalKeyIssues']:
+        sev[it['severity']] = sev.get(it['severity'],0)+1
+    print(f"{lang}: {len(b['legalKeyIssues'])} legalKeyIssues -> {sev}")

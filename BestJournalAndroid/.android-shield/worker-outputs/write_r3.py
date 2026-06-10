@@ -1,0 +1,239 @@
+# -*- coding: utf-8 -*-
+import json, os, tempfile, io, sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+OUT = os.path.expanduser('~/proggs/BestJournalAndroid/.android-shield/worker-outputs/phase1b-recht-abo.json')
+
+PW = "app/src/main/java/com/bestjournal/app/ui/screens/paywall/PaywallScreen.kt"
+CH = "app/src/main/java/com/bestjournal/app/ui/screens/settings/ChurnFlowDialog.kt"
+ST = "app/src/main/res/values/strings.xml"
+CN = "app/src/main/java/com/bestjournal/app/util/Constants.kt"
+SS = "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsScreen.kt"
+SUB = "app/src/main/java/com/bestjournal/app/billing/SubscriptionState.kt"
+
+findings = [
+    # ── F1: Churn-Flow Dark-Pattern (asymmetrische Buttons + Confirmshaming) ──
+    {
+        "findingId": "F1",
+        "riskLevel": "\U0001F7E7",
+        "category": "DarkPattern",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": CH,
+        "line": 1089,
+        "currentText": "TextButton(onClick = onConfirmCancel ...) { Text(stringResource(R.string.action_go_google_play) [\"Zu Google Play\"], color = onSurfaceVariant.copy(alpha = 0.6f) ...) }  // Subdued grey link instead of the previous red, so it does not compete visually with the primary \"Bleiben\"-Button above.",
+        "context": "Churn-Flow Step 3 (Endgueltige Kuendigungs-Bestaetigung 'Bist du sicher?'). Der STAY-Button 'Doch lieber bleiben' (churn_stay, ChurnFlowDialog.kt:1066-1083) ist ein gefuellter, primary-farbiger, PULSIEREND animierter Button (scale(stayButtonScale)); der ECHTE Kuendigungsweg 'Zu Google Play' (Z.1089-1095) ist ein TextButton mit alpha 0.6. Vorgelagert: Confirmshaming-Titel 'Schade, dass du gehst' (churn_sorry_title strings.xml:1172) + 4-stufiger Flow mit Grund-Umfrage (Step 1) und Retention-Angebot (Step 2).",
+        "rationale": "Asymmetrische Choice-Architecture am Entscheidungspunkt: der Erhalt-Weg wird optisch maximal hervorgehoben (gefuellt+primary+Pulsanimation), der Kuendigungsweg bewusst entwertet (grau, alpha 0.6, flacher TextButton). Der Code-Kommentar (Z.1087-1088) gibt die Absicht ausdruecklich zu ('so it does not compete visually'). In Kombination mit Confirmshaming-Titel und mehrstufiger Obstruktion erfuellt das die anerkannten Dark-Pattern-Merkmale 'Confirmshaming' + 'Obstruction'/'Nagging' nach EU UCPD (RL 2005/29/EG, irrefuehrende/aggressive Geschaeftspraktik), Para 4a UWG und der EU-Digital-Fairness-Pruefung von Kuendigungsfluessen. Para 312k BGB verlangt zudem, dass die Kuendigung ebenso einfach wie der Abschluss moeglich sein muss; die optische Entwertung des Kuendigungspfads konterkariert das.",
+        "invasivityLevel": "layout-required",
+        "suggestedFixes": [
+            {"fix": "Beiden Aktionen am Step 3 gleiches visuelles Gewicht geben: 'Zu Google Play' ebenfalls als gefuellten/OutlinedButton in voller Lesbarkeit (alpha 1.0, gleiche Hoehe/Form wie 'Doch lieber bleiben'); die Pulsanimation vom Stay-Button entfernen. invasiveSnippet (Skizze): ersetze den TextButton(Z.1089) durch `OutlinedButton(onClick = onConfirmCancel, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.action_go_google_play)) }` und entferne `.scale(stayButtonScale)` aus dem Stay-Button (Z.1070).", "lengthDeltaPct": 0},
+            {"fix": "Minimal (text/style-only, falls Layout-Umbau zu invasiv): alpha von 0.6f auf 1.0f anheben (Z.1092) und die Pulsanimation am Stay-Button deaktivieren, damit kein optisches Gefaelle bleibt. Confirmshaming-Titel 'Schade, dass du gehst' (strings.xml:1172) auf neutral aendern, z.B. 'Abo verwalten'.", "lengthDeltaPct": 0},
+            {"fix": "Grund-Umfrage (Step 1) ueberspringbar machen: einen 'Ueberspringen / Direkt kuendigen'-Pfad von Step 0 direkt zu Step 3 anbieten (kein Pflicht-Survey vor der Kuendigung). Reduziert die Obstruktion von 4 auf 2 Schritte.", "lengthDeltaPct": 0}
+        ],
+        "impactWithoutFix": "Abmahnrisiko (Verbraucherschutzverbaende / Wettbewerber) wegen aggressiver/irrefuehrender Kuendigungserschwerung; erhoehtes Risiko unter der laufenden EU-Digital-Fairness-Initiative gegen Dark Patterns in Kuendigungsfluessen. Der dokumentierte Vorsatz im Code-Kommentar waere in einem Verfahren ein belastendes Beweismittel."
+    },
+    # ── D1: Monats-Abo ohne eigene Auto-Renewal-Zeile ──
+    {
+        "findingId": "D1",
+        "riskLevel": "\U0001F7E7",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": PW,
+        "line": 528,
+        "currentText": "OutlinedButton(onClick = { ... launchPurchase(\"monthly\") }) { Text(stringResource(R.string.paywall_monthly_plan, displayMonthlyPrice) [\"Monatsabo, %1$s pro Monat\"]) }  // keine angrenzende Verlaengerungs-/Kuendigungszeile",
+        "context": "Kauf-Pfad paywall-monthly. Der einzige Auto-Renewal-Hinweis (paywall_yearly_note strings.xml:1108 = 'Danach %1$s pro Jahr, verlaengert sich automatisch / In der Testphase jederzeit kuendbar') steht bei PaywallScreen.kt:461-466 UEBER dem JAHRES-Button und ist textuell ans Jahresabo gebunden. Neben dem Monats-Button (Z.528-540) steht KEIN 'verlaengert sich automatisch monatlich'-Hinweis. Die Verlaengerungs-Info haengt am Lesen der Jahres-Note + dem optionalen Nutzungsbedingungen-Link (Z.670-680).",
+        "rationale": "Para 312d BGB i.V.m. Art. 246a Para 1 EGBGB verlangt, dass Laufzeit, automatische Verlaengerung und Kuendigungsbedingungen VOR Vertragsschluss klar und verstaendlich gegeben werden - pro Vertragsart. Die Google-Play-Subscriptions-Policy verlangt ebenfalls, Auto-Renewal pro Plan klar zu kommunizieren. Da die Auto-Renewal-Angabe ausschliesslich am Jahres-Plan haengt, fehlt sie fuer den Monats-Plan an der Stelle der Kaufentscheidung. (Der Para-312j-Bestellbutton selbst wird vom Google-Play-Sheet uebernommen - das schliesst aber die in-App-Transparenzluecke beim Monats-Plan nicht.)",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"fix": "Eigene Verlaengerungszeile unter dem Monats-Button einfuegen: neuer String paywall_monthly_note = 'Verlaengert sich automatisch monatlich, jederzeit ueber Google Play kuendbar.' und unter PaywallScreen.kt:540 als labelSmall rendern (analog paywall_yearly_note).", "lengthDeltaPct": 6},
+            {"fix": "Den bestehenden Auto-Renewal-Satz plan-neutral formulieren und EINMAL ueber beiden Buttons platzieren: 'Abos verlaengern sich automatisch (monatlich bzw. jaehrlich) und sind jederzeit ueber Google Play kuendbar.' - deckt Monat und Jahr ab.", "lengthDeltaPct": 4},
+            {"fix": "Minimal: den Monats-Button-Text um den Verlaengerungshinweis ergaenzen: paywall_monthly_plan = 'Monatsabo, %1$s pro Monat - verlaengert sich automatisch'.", "lengthDeltaPct": 3}
+        ],
+        "impactWithoutFix": "Abmahnrisiko wegen unvollstaendiger Abo-Pflichtangaben beim Monats-Plan (Para 312d/Art. 246a EGBGB); moegliche Play-Policy-Beanstandung (Auto-Renewal nicht pro Plan klar)."
+    },
+    # ── D2: 356 Abs.5 Sofort-Verzicht fehlt (irrefuehrender Code-Kommentar) ──
+    {
+        "findingId": "D2",
+        "riskLevel": "\U0001F7E7",
+        "category": "BGB",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": ST,
+        "line": 1100,
+        "currentText": "<!-- Para 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28) - VOR launchPurchaseFlow -->  <string name=\"paywall_purchase_loading_toast\">Kaufvorgang wird geladen, bitte versuche es gleich nochmal.</string>",
+        "context": "Alle Kauf-Pfade (paywall-monthly/yearly/lifetime, exit-discount), insbesondere paywall-lifetime (sofortige, vollstaendige Freischaltung digitaler Inhalte). Der Kommentar Z.1100 behauptet einen 'Sofort-Verzichts-Dialog' VOR launchPurchaseFlow - der einzige String darunter ist aber ein reiner Lade-Toast. Eine Code-Suche in PaywallScreen.kt + PaywallViewModel.kt nach einem Verzichts-/Einwilligungsdialog vor launchPurchaseFlow ergab KEINEN solchen Dialog (das einzige Dialog( in PaywallScreen.kt:703 ist der Exit-Intent-Rabattdialog).",
+        "rationale": "Bei sofortiger Bereitstellung digitaler Inhalte erlischt das Widerrufsrecht nach Para 356 Abs. 5 BGB NUR, wenn der Verbraucher (a) ausdruecklich zustimmt, dass mit der Ausfuehrung VOR Ablauf der Widerrufsfrist begonnen wird, UND (b) seine Kenntnis vom Verlust des Widerrufsrechts bestaetigt. Der vorhandene Hinweis paywall_legal_hint (Z.1115) nennt nur das '14-taegige Widerrufsrecht' und verweist auf die Nutzungsbedingungen - er holt KEINE ausdrueckliche Verzichts-/Kenntnis-Bestaetigung ein. Damit fehlt fuer den Lifetime-Kauf (sofort voll freigeschaltet) und fuer Abos mit Sofortzugang die Para-356-Abs.5-Einwilligung. Folge: das Widerrufsrecht erlischt NICHT - der Nutzer kann auch nach sofortiger Nutzung widerrufen, was der Anbieter wirtschaftlich nicht eingeplant hat; zugleich Widerspruch zwischen '14 Tage Widerruf' und faktischer Sofort-Freischaltung. Der irrefuehrende Kommentar suggeriert faelschlich Compliance.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+            {"fix": "Echten Para-356-Abs.5-Einwilligungsdialog VOR launchPurchaseFlow einbauen (mind. fuer Lifetime, empfohlen fuer alle Sofort-Zugang-Kaeufe): Checkbox + Bestaetigung. invasiveSnippet (Skizze): vor `viewModel.launchPurchaseFlow(...)` einen AlertDialog mit neuem String paywall_immediate_provision_consent = 'Ich verlange ausdruecklich die sofortige Bereitstellung der Premium-Inhalte und bestaetige, dass mein Widerrufsrecht mit vollstaendiger Vertragserfuellung erlischt.' + Pflicht-Checkbox; Kauf erst nach Bestaetigung ausloesen.", "lengthDeltaPct": 0},
+            {"fix": "Falls Sofort-Verzicht NICHT gewollt: den irrefuehrenden Kommentar (Z.1100) entfernen und das 14-taegige Widerrufsrecht aktiv gewaehren (kein Erloeschen) - dann ist der Status korrekt, aber der Anbieter traegt das Widerrufsrisiko bei Sofortnutzung. Konsistenz von paywall_legal_hint sicherstellen.", "lengthDeltaPct": 0},
+            {"fix": "Hybrid: Abos (Zugang ohnehin laufzeitgebunden) ohne Verzicht lassen, NUR fuer den Lifetime-Einmalkauf den Para-356-Abs.5-Verzichtsdialog einbauen - das ist der wirtschaftlich kritische Fall (Einmalzahlung + sofortiger Dauerzugang).", "lengthDeltaPct": 0}
+        ],
+        "impactWithoutFix": "Beim Lifetime-Einmalkauf bleibt das 14-Tage-Widerrufsrecht bestehen (Erloeschen nicht wirksam herbeigefuehrt) -> Rueckabwicklungsrisiko trotz Sofortnutzung. Abmahnrisiko wegen widerspruechlicher/unvollstaendiger Widerrufsinformation; stale Code-Kommentar verschleiert die Luecke fuer kuenftige Sessions."
+    },
+    # ── E1: Grace-Period / On-Hold / Paused nicht modelliert ──
+    {
+        "findingId": "E1",
+        "riskLevel": "\U0001F7E7",
+        "category": "PlayPolicy",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": SUB,
+        "line": 3,
+        "currentText": "sealed class SubscriptionState { data object Free : SubscriptionState(); data object Subscribed : SubscriptionState() }",
+        "context": "Globale Abo-Zustandsmodellierung. SubscriptionState ist binaer (nur Free/Subscribed). Google-Play-Zustaende GRACE_PERIOD / ON_HOLD / PAUSED sind NICHT als eigene Zugriffsentscheidung modelliert. Serverseitig (SubscriptionStatusService/BillingManager.kt:450-456) wird nur SUBSCRIPTION_STATE_EXPIRED gesondert behandelt -> Free; andere Nicht-Aktiv-Zustaende fallen durch. Pause wird zwar angeboten (churn_pause_sub -> Google Play), aber kein eigener App-Zustand dafuer.",
+        "rationale": "Die Google Play Subscriptions Policy verlangt korrektes Verhalten waehrend der Grace Period (Zahlung fehlgeschlagen, Zugang soll WEITERLAUFEN, bis Play die Zahlung mehrfach erneut versucht) und On-Hold/Paused. Bei binaerem Free/Subscribed-Modell besteht das Risiko, dass ein Nutzer in der Play-Grace-Period (sollte Premium behalten) zu frueh auf Free herabgestuft wird - ein konkreter Verbrauchernachteil (bezahlte Leistung faellt waehrend des Zahlungs-Retry-Fensters weg) und ein Play-Policy-Verstoss. Para 241 Abs. 2 / 280 BGB (Nebenpflichten, vertragsgemaesse Leistung) stuetzt zusaetzlich den Verbraucheranspruch auf ungestoerten Zugang in der Grace Period.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+            {"fix": "SubscriptionState um GracePeriod (Zugang AKTIV) und OnHold/Paused (Zugang gesperrt, aber nicht 'Free') erweitern und das Cloud-Mapping entsprechend ergaenzen. invasiveSnippet (Skizze): `sealed class SubscriptionState { data object Free; data object Subscribed; data object GracePeriod; data object OnHold }` + im SubscriptionStatusService SUBSCRIPTION_STATE_IN_GRACE_PERIOD -> GracePeriod (Feature-Zugang wie Subscribed), ON_HOLD/PAUSED -> OnHold.", "lengthDeltaPct": 0},
+            {"fix": "Minimal-invasiv ohne neue States: in der Zugriffslogik GRACE_PERIOD wie Subscribed behandeln (Zugang halten), bis Play EXPIRED meldet - d.h. nur EXPIRED (nicht 'alles ausser aktiv') fuehrt zu Free. So wird das Fruehzeitig-Downgrade in der Grace Period verhindert.", "lengthDeltaPct": 0},
+            {"fix": "Gezielter Code-Review von BillingManager.kt:450-456 + SubscriptionStatusService: pruefen, welcher _subscriptionState bei purchaseToken-Antworten fuer grace/on-hold/paused gesetzt wird, und sicherstellen, dass kein Nicht-aktiv-Zustand faelschlich auf Free faellt.", "lengthDeltaPct": 0}
+        ],
+        "impactWithoutFix": "Nutzer in der Play-Grace-Period verlieren bezahlten Premium-Zugang vorzeitig (Verbrauchernachteil + Play-Policy-Verstoss); Pausierte Abos koennen falsch dargestellt werden. Risiko von Beschwerden/Erstattungsforderungen und Play-Beanstandung."
+    },
+    # ── E2: Kein manueller Restore-Purchases-Button ──
+    {
+        "findingId": "E2",
+        "riskLevel": "\U0001F7E8",
+        "category": "PlayPolicy",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": SS,
+        "line": 0,
+        "currentText": "(kein UI-Element) - SettingsViewModel.restorePurchases() existiert (SettingsViewModel.kt:133), ist aber an KEINEN Button gebunden. Restore laeuft nur automatisch: billingManager.restorePurchases() bei App-Start (MainActivity.kt:211) + refreshSubscriptionStatus() beim Oeffnen der Einstellungen.",
+        "context": "Wiederherstellung von Kaeufen. Grep nach 'restore'/'Wiederherstell' in SettingsScreen.kt + strings.xml ergab KEINEN user-ausloesbaren 'Kaeufe wiederherstellen'-Button. Nur Auto-Restore.",
+        "rationale": "Google Play empfiehlt/erwartet einen vom Nutzer ausloesbaren Weg, frueher gekaufte Berechtigungen wiederherzustellen (Geraetewechsel, Neuinstallation, Konto-Resync). Faellt der automatische Restore aus (z.B. Play-Cache, falsches Konto initial), hat der Nutzer KEINE manuelle Moeglichkeit - der bezahlte Lifetime-Kauf oder das aktive Abo wirken dann verloren. Verbraucherrechtlich (Para 241 Abs. 2 BGB) ist der ungehinderte Zugang zur bezahlten Leistung geschuldet; das Fehlen eines Wiederherstellungs-Buttons erschwert die Durchsetzung.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+            {"fix": "Vorhandene SettingsViewModel.restorePurchases() an einen sichtbaren Button im Abo-/Premium-Bereich der Einstellungen binden. invasiveSnippet (Skizze): neuer String settings_restore_purchases = 'Kaeufe wiederherstellen' + `TextButton(onClick = { viewModel.restorePurchases() }) { Text(stringResource(R.string.settings_restore_purchases)) }` mit Erfolgs-/Fehlermeldung (Snackbar). Logik existiert bereits - nur UI-Verdrahtung.", "lengthDeltaPct": 0},
+            {"fix": "Button kontextsensitiv auch auf der Paywall anzeigen ('Bereits gekauft? Wiederherstellen'), damit Nutzer mit aktivem Abo/Lifetime nicht erneut zur Kasse geleitet werden.", "lengthDeltaPct": 0},
+            {"fix": "Minimal: im Premium-Bereich der Einstellungen einen Hinweis + Button platzieren, der refreshSubscriptionStatus() + restorePurchases() manuell anstoesst und das Ergebnis sichtbar zurueckmeldet.", "lengthDeltaPct": 0}
+        ],
+        "impactWithoutFix": "Bei fehlgeschlagenem Auto-Restore (Geraetewechsel/Neuinstallation) erscheint die bezahlte Berechtigung als verloren -> Support-Aufwand, Erstattungs-/Doppelkauf-Beschwerden, moegliche Play-Beanstandung."
+    },
+    # ── E3 / PAngV: hardcodierte Retention-Fallback-Preise ──
+    {
+        "findingId": "E3",
+        "riskLevel": "\U0001F7E8",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": CH,
+        "line": 689,
+        "currentText": "val displayRetentionPrice = retentionPrice ?: run { if (subscriptionType == YEARLY) Constants.RETENTION_YEARLY_PRICE else Constants.RETENTION_MONTHLY_PRICE }  // Constants.kt:128-129: RETENTION_MONTHLY_PRICE=\"2,99 EUR\", RETENTION_YEARLY_PRICE=\"22,49 EUR\"",
+        "context": "Kauf-Pfad churn-retention (Retention-Rabattangebot im Kuendigungs-Flow). Der Live-Play-Preis (retentionPrice) wird zuerst genutzt (Elvis ?:); NUR wenn er noch null ist (Play-Antwort steht aus), faellt die Anzeige auf den hardcodierten EUR-Wert zurueck (ChurnFlowDialog.kt:692-693). Die Konstanten sind feste deutsche EUR-Preise (Constants.kt:128-129).",
+        "rationale": "Para 1 PAngV / Para 5 UWG: angezeigte Preise muessen dem tatsaechlich geforderten Gesamtpreis in der jeweiligen Waehrung/Region entsprechen. Der Fallback '2,99 EUR'/'22,49 EUR' ist deutsch-locale-fix und stimmt fuer Nutzer ausserhalb der Eurozone bzw. mit abweichendem regionalem Play-Preis NICHT. Zwar greift er nur kurz (bis Play den Live-Preis liefert), aber in diesem Fenster kann einem Nutzer ein falscher regionaler Preis im Retention-Angebot angezeigt werden -> Irrefuehrungsrisiko. (Risiko geringer als bei reinem Hardcode, da Live-Preis Vorrang hat.)",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"fix": "Statt eines festen EUR-Fallbacks bei noch nicht geladenem Preis ein neutrales Lade-Platzhalter-Symbol anzeigen (Ellipsis '...', analog zur Haupt-Paywall PaywallScreen.kt:128) und die CTA erst aktivieren, wenn der echte Play-Preis vorliegt. invasiveSnippet: `val displayRetentionPrice = retentionPrice ?: \"\\u2026\"`.", "lengthDeltaPct": 0},
+            {"fix": "Den Retention-CTA deaktivieren/ausblenden, solange retentionPrice == null (kein Angebot mit potenziell falschem Preis zeigen).", "lengthDeltaPct": 0},
+            {"fix": "Falls ein Fallback noetig bleibt: ihn als unverbindlich kennzeichnen ('ca.' bzw. 'Preis wird geladen') statt als exakten Betrag, damit kein konkreter Falschpreis suggeriert wird.", "lengthDeltaPct": 2}
+        ],
+        "impactWithoutFix": "Kurzzeitige Anzeige eines falschen regionalen Preises im Retention-Angebot fuer Nicht-EUR-Nutzer -> PAngV/UWG-Irrefuehrungsrisiko; geringe, aber reale Abmahn-/Beschwerdegefahr."
+    },
+    # ── F2 / UWG cross-ref: 'ohne Werbung' hohle Premium-Leistung ──
+    {
+        "findingId": "F2",
+        "riskLevel": "\U0001F7E8",
+        "category": "DarkPattern",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": ST,
+        "line": 1124,
+        "currentText": "<string name=\"paywall_feature_noads\">Spreche oder schreibe ungestoert, ohne Werbung</string>  (+ onboarding_premium_feature_noads strings.xml:1080 = 'Keine Werbung, ungestoert schreiben und reflektieren')",
+        "context": "Premium-Feature-Liste auf der Paywall + Onboarding. 'ohne Werbung' / 'Keine Werbung' wird als BEZAHLTER Premium-Vorteil beworben. Verifiziert: 0 Werbe-SDK in app/src/main (grep nach gms.ads/admob/ironsource/applovin/unity-ads/InterstitialAd/AdView/MobileAds = 0 Treffer) UND 0 Werbe-Dependency in build.gradle.kts / libs.versions.toml. Die Free-Variante zeigt also ebenfalls KEINE Werbung.",
+        "rationale": "Para 5 UWG (irrefuehrende geschaeftliche Handlung) / EU UCPD: 'ohne Werbung' als kostenpflichtigen Vorteil zu bewerben, obwohl die App generell (auch gratis) keine Werbung enthaelt, suggeriert einen Mehrwert, den der Kauf nicht liefert (hohle Leistung). Das kann die Kaufentscheidung beeinflussen. Primaere Zustaendigkeit: UWG-Werbeaussagen-Audit (R2, siehe r2-uwg.jsonl) - hier als abo-bezogener Cross-Ref dokumentiert, da es in der Premium-Benefit-Liste steht.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"fix": "Den Punkt 'ohne Werbung' aus der Premium-Liste (paywall_feature_noads + onboarding_premium_feature_noads) ENTFERNEN, da werbefrei kein exklusiver Premium-Vorteil ist (auch Free ist werbefrei).", "lengthDeltaPct": -100},
+            {"fix": "Umformulieren zu einer App-weiten Eigenschaft (kein Premium-exklusiver Claim), z.B. als allgemeiner Hinweis 'Best Journal ist komplett werbefrei' AUSSERHALB der Premium-Leistungsliste.", "lengthDeltaPct": 0},
+            {"fix": "Falls kuenftig Werbung im Free-Tier geplant ist: erst dann den Claim als Premium-Vorteil zulassen - solange keine Ads existieren, nicht als Kaufargument fuehren.", "lengthDeltaPct": 0}
+        ],
+        "impactWithoutFix": "UWG-Para-5-Abmahnrisiko wegen hohler Premium-Leistung ('ad-free' ohne existierende Werbung). Cross-Ref zu R2-UWG - dort fuehrende Bewertung."
+    }
+]
+
+purchasePathAudit = [
+    {
+        "path": "paywall-monthly",
+        "mandatoryInfoComplete": False,
+        "gaps": [
+            "Keine angrenzende Auto-Renewal-/Verlaengerungszeile am Monats-Button (D1). Verlaengerungs-Info haengt am Jahres-Note + optionalem Terms-Link.",
+            "Para-356-Abs.5-Sofort-Verzicht fehlt, falls Monatsabo Sofortzugang gewaehrt (D2 - relevant v.a. fuer sofort freigeschaltete Inhalte)."
+        ]
+    },
+    {
+        "path": "paywall-yearly",
+        "mandatoryInfoComplete": True,
+        "gaps": [
+            "Auto-Renewal + 'jederzeit kuendbar' korrekt am Jahres-Plan (paywall_yearly_note). Trial-Timeline (Heute/Tag7-Erinnerung/Tag8-Erste Zahlung) transparent. Para-312j ueber Play-Sheet. Einzig Para-356-Abs.5-Verzicht bei Sofortzugang offen (D2)."
+        ]
+    },
+    {
+        "path": "lifetime",
+        "mandatoryInfoComplete": False,
+        "gaps": [
+            "Para-356-Abs.5-Verzicht FEHLT - kritisch, da Einmalkauf + sofortige vollstaendige Freischaltung digitaler Inhalte (D2). Ohne ausdrueckliche Verzichts-/Kenntnis-Bestaetigung erlischt das 14-Tage-Widerrufsrecht nicht.",
+            "paywall_lifetime_note ('Kein Abo, keine Verlaengerung') korrekt, aber minimal."
+        ]
+    },
+    {
+        "path": "churn-retention",
+        "mandatoryInfoComplete": False,
+        "gaps": [
+            "Hardcodierter EUR-Fallback-Preis (2,99/22,49 EUR) bei noch nicht geladenem Live-Preis -> moegliche regionale Falschanzeige (E3).",
+            "Retention-Angebot eingebettet in den als Dark-Pattern bewerteten Churn-Flow (F1)."
+        ]
+    },
+    {
+        "path": "exit-discount",
+        "mandatoryInfoComplete": True,
+        "gaps": [
+            "CTA paywall_exit_start_discount = 'Zahlungspflichtig - 2 Monate zum halben Preis' erfuellt Para-312j-Button-Loesung vorbildlich. Streichpreis-Logik 'Nur X statt Y' wird aus Live-Monatspreis abgeleitet (halfMonthlyPrice) - kein Schein-Streichpreis. Para-356-Abs.5-Verzicht bei Sofortzugang theoretisch offen (D2)."
+        ]
+    }
+]
+
+verifiedOk = [
+    "Para 312j BGB (Button-Loesung) ERFUELLT: ALLE app-eigenen Kauf-CTAs (monthly PaywallScreen.kt:529-531, yearly :473-475, lifetime :569-571, exit-discount :829-835) rufen viewModel.launchPurchaseFlow(...) -> oeffnen das Google-Play-Billing-Sheet, das die 'zahlungspflichtig bestellen'-Bestaetigung uebernimmt. KEIN app-nativer Button loest eine Zahlungspflicht ohne diese Bestaetigung aus.",
+    "Onboarding-CTA 'Kostenlos starten' (onboarding_start_free, OnboardingScreen.kt:907) ist UNKRITISCH: onClick=onStartTrial (Z.893) ruft nur analyticsTracker.trackTrialStartedOnboarding() + saveGoals() + completeOnboarding() + onFinished() - KEINE Billing-/Purchase-Logik (OnboardingViewModel.kt enthaelt 0 billing/purchase/subscribe-Aufrufe). Der Button startet nur die kostenlose App - daher ist 'Kostenlos starten' korrekt und kein Para-312j-Verstoss.",
+    "paywall_exit_start_discount (strings.xml:1144) = 'Zahlungspflichtig - 2 Monate zum halben Preis' erfuellt die Para-312j-Button-Loesung vorbildlich (klares 'Zahlungspflichtig'-Praefix).",
+    "Para 356a BGB In-App-Widerruf (Pflicht ab 19.06.2026) korrekt umgesetzt: zweistufiger AlertDialog (SettingsScreen.kt:3613ff), Confirm-Button (Z.3634-3637) versendet via Gmail-API die Widerrufserklaerung an den Support UND eine separate Eingangsbestaetigung an den Nutzer (settings_revoke_confirm_user_body) mit Zeitstempel. Hinweis 'Abos zusaetzlich ueber Google Play kuendigen' (settings_revoke_confirm_body) korrekt (Widerruf != Abo-Kuendigung).",
+    "Para 312k BGB Kuendigung: Kuendigung wird an die echte Google-Play-Abo-Seite delegiert (play.google.com/store/account/subscriptions via ChurnFlowDialog.kt onConfirmCancel) - policy-konforme Stelle, keine in-app Sackgasse. (Optische Entwertung des Pfads aber als F1 bemaengelt.)",
+    "Preisanzeige PAngV: Haupt-Paywall-Preise kommen LIVE aus Google Play formattedPrice; hardcodierte EUR-Fallbacks (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY) werden auf der Haupt-Paywall NICHT gezeigt (Ellipsis bis geladen, PaywallScreen.kt:128). Nur der Retention-Fallback ist betroffen (E3).",
+    "paywall_yearly_note (strings.xml:1108) korrekte Abo-Pflichtangabe am Jahres-Plan: Preis + 'verlaengert sich automatisch' + 'In der Testphase jederzeit kuendbar'.",
+    "Trial-Transparenz: Timeline 'Heute / Tag 7 Erinnerung / Tag 8 Erste Zahlung' (paywall_day7/reminder/day8/first_payment) kommuniziert die automatische Umwandlung Trial->Bezahlabo transparent; verbraucherfreundliche Tag-7-Erinnerung vor Abbuchung.",
+    "Churn auto-renew + Datenerhalt-Hinweise korrekt: churn_auto_renew_note (1163), churn_google_play_redirect (467 - 'Deine Tagebucheintraege bleiben natuerlich erhalten'), settings_premium_cancelled_desc (483 - Restlaufzeit + Reaktivierung via Play).",
+    "Kauf-Fehlerpfade ohne Geld-Verlust: acknowledgePurchase mit 3 Retries + PREF_PENDING_ACK_TOKEN-Recovery beim naechsten Start (verhindert Auto-Refund); isPurchaseInFlight-Guard gegen Doppel-Tap (BillingManager.kt)."
+]
+
+plugin_bugs_observed = [
+    "Input recht-input-abo.json (mandatoryDisclosures.gaps) beschreibt den Para-356-Abs.5-Punkt als 'closed (D1-Fix 2026-05-31)', aber die Quell-Verifikation zeigt: der Verzichts-Dialog existiert NICHT (nur ein Lade-Toast unter dem irrefuehrenden Kommentar strings.xml:1100). Der Input uebernahm den optimistischen Code-Kommentar ungeprueft. Empfehlung: Worker-Inputs sollten 'verifiedInSource'-Flags pro Disclosure tragen, damit nachgelagerte Worker nicht auf stale Kommentare vertrauen.",
+    "Input nennt fuer den Churn-Cancel-CTA durchgaengig alpha 0.6 (ChurnFlowDialog.kt:1087). In der aktuellen Datei gibt es ZWEI verschiedene Cancel-Stellen: der Step-0-Overview-Link mit alpha 0.8f (Z.504, 'Frank-Wahl Option [3]') und der entscheidende Step-3-Link mit alpha 0.6f (Z.1092). Ein partieller Fix wurde an EINER Stelle gemacht, am Entscheidungspunkt aber nicht. Worker-Schema sollte mehrere Vorkommen desselben Patterns getrennt fuehren (Zeilen-Liste statt Einzelzeile)."
+]
+
+output = {
+    "worker": "r3-abo",
+    "findings": findings,
+    "purchasePathAudit": purchasePathAudit,
+    "verifiedOk": verifiedOk,
+    "plugin_bugs_observed": plugin_bugs_observed
+}
+
+# atomic write
+d = os.path.dirname(OUT)
+with tempfile.NamedTemporaryFile('w', dir=d, suffix='.tmp', delete=False, encoding='utf-8') as tmp:
+    json.dump(output, tmp, ensure_ascii=False, indent=2)
+    tmp.write('\n')
+    tmp_path = tmp.name
+os.replace(tmp_path, OUT)
+
+# validate
+with open(OUT, 'r', encoding='utf-8') as f:
+    chk = json.load(f)
+print("WRITTEN OK ->", OUT)
+print("findings:", len(chk['findings']), "| purchasePaths:", len(chk['purchasePathAudit']),
+      "| verifiedOk:", len(chk['verifiedOk']), "| plugin_bugs:", len(chk['plugin_bugs_observed']))
+for fnd in chk['findings']:
+    print(" ", fnd['findingId'], fnd['riskLevel'], fnd['category'], "->", fnd['invasivityLevel'])

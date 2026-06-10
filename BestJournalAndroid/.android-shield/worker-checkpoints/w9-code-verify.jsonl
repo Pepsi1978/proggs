@@ -1,0 +1,8 @@
+{"claim": "A-unbegrenzt-vs-limits", "note": "Constants: SUB 30/101/151, hourly 50 premium; MAX_ENTRIES Int.MAX_VALUE; dialog 1199 matches code; profiles unlimited (DASHBOARD_SCENARIO_COUNT=5 fixed but custom list dynamic)"}
+{"claim": "D-groq-audio-delete", "note": "audioFile.delete() in JournalVM 485(success)+504(fail), EntryDetailVM 584+605, SettingsVM 1103+1117. TTS file.delete() onCompletion/onError EdgeTtsPlayer 290/294"}
+{"claim": "E-edge-tts", "note": "EdgeTtsPlayer sends entry text to wss://speech.platform.bing.com; gated EdgeTts privacy gate in Dashboard/EntryDetail/Retro screens; default OFF; only voice/locale/error in analytics not text"}
+{"claim": "F-okhttp-logging", "note": "NetworkModule.kt:32-33 Level.BODY only if BuildConfig.DEBUG else Level.NONE — no body leak in release"}
+{"claim": "G-no-ads", "note": "grep admob/gms.ads/applovin/ironsource/etc = EMPTY. No ad SDK anywhere. Free tier shows no ads either"}
+{"claim": "H-analytics-consent", "note": "BestJournalApp.kt:44-45 setAnalyticsCollectionEnabled(false default) BEFORE other Firebase calls; ConsentVM:134 sets it post-consent"}
+{"claim": "B-data-flow-gating", "note": "Per-service PrivacyGateState.run() re-checks hasConsented EACH call (PrivacyGateDialog:180); Drive gated SyncWithDriveUseCase:43 default false; all defaults false"}
+{"claim": "C-gemini-no-training", "note": "FirebaseAiService:49 GenerativeBackend.googleAI() = Firebase AI Logic Gemini Developer API backend (NOT vertexAI); App Check enforced; models gemini-3.1-flash-lite/2.5-flash-lite"}

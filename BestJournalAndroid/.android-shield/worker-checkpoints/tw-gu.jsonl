@@ -1,0 +1,3 @@
+{"ts":"2026-06-10","stage":"started","lang":"gu","keys_total":36,"plurals_total":2,"new_key":"paywall_monthly_note","note":"sources loaded, gu-ref read, target verified, no prior checkpoint"}
+{"ts":"2026-06-10","stage":"applied","lang":"gu","replaced":35,"inserted":1,"plurals":2,"errors":0}
+{"ts":"2026-06-10","stage":"verified","lang":"gu","pass":true,"keys":"34/34","plurals":"2/2","corruption":"clean","output":"worker-outputs/phase3-tw-gu.json"}

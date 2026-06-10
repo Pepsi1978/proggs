@@ -1,0 +1,183 @@
+{
+ "nl": {
+  "identicalToDe": [
+   "achievement_secret",
+   "ai_prompt_rerank_actions_header",
+   "ai_prompt_rerank_entries_header",
+   "ai_prompt_rerank_user_focus_header",
+   "cd_night",
+   "churn_automatic",
+   "consent_details_expand",
+   "custom_relevant_label",
+   "dashboard_analysis_fallback",
+   "dashboard_title",
+   "dashboard_tts_stop",
+   "entry_cd_photo_page",
+   "entry_tts_stop",
+   "json_key_derivation_date",
+   "json_key_item_title",
+   "json_key_trend",
+   "label_photo",
+   "label_premium",
+   "label_video",
+   "legend_urgent",
+   "month_april",
+   "month_july",
+   "month_june",
+   "month_november",
+   "month_october",
+   "month_september",
+   "nav_dashboard",
+   "retro_cd_photo",
+   "retro_cd_video",
+   "retro_photo_n",
+   "retro_tts_stop",
+   "settings_about_version",
+   "settings_automatic",
+   "settings_dashboard_section",
+   "settings_feedback",
+   "settings_premium_section",
+   "splash_start",
+   "summary_relevant",
+   "theme_one_dark"
+  ],
+  "formatArgMismatch": [
+   {
+    "key": "ai_prompt_custom_schema",
+    "de": [],
+    "loc": [
+     "%1$s",
+     "%1$s"
+    ]
+   }
+  ],
+  "missingKeys": [
+   "dev_seed_add_action",
+   "dev_seed_cancel_action",
+   "dev_seed_delete_all_action",
+   "dev_seed_dialog_message",
+   "dev_seed_dialog_title"
+  ],
+  "nakedPercentKeys": [],
+  "unescapedApostrophes": 0
+ },
+ "pl": {
+  "identicalToDe": [
+   "ai_prompt_rerank_actions_header",
+   "ai_prompt_rerank_entries_header",
+   "ai_prompt_rerank_user_focus_header",
+   "consent_footer_link_impressum",
+   "json_key_trend",
+   "label_premium",
+   "label_record",
+   "settings_about_version",
+   "settings_account",
+   "settings_premium_section",
+   "splash_start",
+   "theme_one_dark"
+  ],
+  "formatArgMismatch": [
+   {
+    "key": "dashboard_profile_focus_summary",
+    "de": [],
+    "loc": [
+     "%1$s"
+    ]
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "de": [],
+    "loc": [
+     "%1$s",
+     "%1$s"
+    ]
+   },
+   {
+    "key": "dashboard_profile_focus_entropy",
+    "de": [],
+    "loc": [
+     "%1$s"
+    ]
+   },
+   {
+    "key": "dashboard_profile_focus_goals",
+    "de": [],
+    "loc": [
+     "%1$s"
+    ]
+   },
+   {
+    "key": "dashboard_profile_focus_insight",
+    "de": [],
+    "loc": [
+     "%1$s"
+    ]
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "de": [],
+    "loc": [
+     "%1$s"
+    ]
+   }
+  ],
+  "missingKeys": [
+   "dev_seed_add_action",
+   "dev_seed_cancel_action",
+   "dev_seed_delete_all_action",
+   "dev_seed_dialog_message",
+   "dev_seed_dialog_title"
+  ],
+  "nakedPercentKeys": [],
+  "unescapedApostrophes": 0
+ },
+ "uk": {
+  "identicalToDe": [
+   "json_key_trend",
+   "settings_about_version"
+  ],
+  "formatArgMismatch": [],
+  "missingKeys": [
+   "dev_seed_add_action",
+   "dev_seed_cancel_action",
+   "dev_seed_delete_all_action",
+   "dev_seed_dialog_message",
+   "dev_seed_dialog_title"
+  ],
+  "nakedPercentKeys": [],
+  "unescapedApostrophes": 0
+ },
+ "in": {
+  "identicalToDe": [
+   "ai_prompt_rerank_actions_header",
+   "ai_prompt_rerank_entries_header",
+   "ai_prompt_rerank_user_focus_header",
+   "entry_camera",
+   "entry_cd_photo_page",
+   "label_photo",
+   "label_premium",
+   "label_video",
+   "month_april",
+   "month_july",
+   "month_june",
+   "month_november",
+   "month_october",
+   "month_september",
+   "retro_cd_photo",
+   "retro_cd_video",
+   "retro_photo_n",
+   "settings_about_version",
+   "settings_premium_section"
+  ],
+  "formatArgMismatch": [],
+  "missingKeys": [
+   "dev_seed_add_action",
+   "dev_seed_cancel_action",
+   "dev_seed_delete_all_action",
+   "dev_seed_dialog_message",
+   "dev_seed_dialog_title"
+  ],
+  "nakedPercentKeys": [],
+  "unescapedApostrophes": 0
+ }
+}

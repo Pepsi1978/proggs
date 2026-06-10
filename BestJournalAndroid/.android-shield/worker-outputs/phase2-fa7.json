@@ -1,0 +1,44 @@
+{
+  "worker": "fa7",
+  "file": "app/src/main/res/values/strings.xml",
+  "applied": [
+    {
+      "findingId": "B7",
+      "key": "settings_report_ai_confirm_body",
+      "line": 639,
+      "change": "Service-Zusage zu Erwartungs-Aussage: 'Wir antworten in der Regel innerhalb von 24 Stunden an Werktagen.'",
+      "patchKind": "text-replace"
+    },
+    {
+      "findingId": "C1/C2",
+      "key": "consent_card3_title",
+      "line": 615,
+      "change": "'Anonyme Statistiken' -> 'Pseudonyme Statistiken' (Firebase Analytics ist pseudonym)",
+      "patchKind": "text-replace"
+    },
+    {
+      "findingId": "D1",
+      "key": "paywall_monthly_note",
+      "line": 1496,
+      "change": "Preis sichtbar gemacht: 'Danach %1$s pro Monat, verlaengert sich automatisch\\nJederzeit kuendbar' (analog yearly-Note)",
+      "patchKind": "text-replace"
+    }
+  ],
+  "validation": {
+    "xml_parse": "OK",
+    "checks": [
+      "xml-parse",
+      "text-present-x3",
+      "format-string-integrity"
+    ],
+    "fix1_present": true,
+    "fix2_present": true,
+    "fix3_present": true,
+    "fix3_placeholder_count": 1,
+    "fix3_newline_literal": true,
+    "status": "passed",
+    "retries": 0
+  },
+  "commitGemacht": false,
+  "plugin_bugs_observed": []
+}

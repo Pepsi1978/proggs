@@ -1,0 +1,3 @@
+{"ts":"2026-06-11","step":"inspected","lang":"ur","strings_present":34,"strings_missing":["paywall_monthly_note"],"plurals_present":2,"gemini_dsgvo_issue":"DSGVOArt.9 no-space confirmed, will fix to 'DSGVO Art. 9'","note":"34 replace + 1 new + 2 plurals = 37"}
+{"ts":"2026-06-11","step":"applied","lang":"ur","applied":37,"new":["paywall_monthly_note"],"note":"34 replaced + 1 new + 2 plurals"}
+{"ts":"2026-06-11","step":"verified","lang":"ur","verdict":"PASS","errors":0,"warnings":0,"output":"worker-outputs/phase3-tw-ur.json"}

@@ -1,0 +1,13 @@
+{
+  "worker": "fa6",
+  "applied": [
+    {
+      "findingId": "C5",
+      "change": "Added <meta-data android:name=\"firebase_analytics_collection_enabled\" android:value=\"false\" /> as a direct child of <application> (after the FileProvider) in app/src/main/AndroidManifest.xml. Poka-Yoke (Defense in Depth, TDDDG §25): closes the SDK-init window before BestJournalApp.onCreate; runtime consent flow (setAnalyticsCollectionEnabled(true) after consent) unchanged."
+    }
+  ],
+  "validation": {
+    "xmlValid": true
+  },
+  "plugin_bugs_observed": []
+}

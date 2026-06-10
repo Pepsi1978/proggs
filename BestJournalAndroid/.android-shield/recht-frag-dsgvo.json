@@ -1,0 +1,119 @@
+{
+  "findings": [
+    {
+      "findingId": "C1",
+      "riskLevel": "🟥 high",
+      "category": "DSGVO",
+      "jurisdiction": "EU",
+      "affectedLangs": [
+        "ar",
+        "bn",
+        "es",
+        "fr",
+        "gu",
+        "hi",
+        "id",
+        "it",
+        "kn",
+        "ml",
+        "mr",
+        "nl",
+        "pl",
+        "pt-PT",
+        "ta",
+        "te",
+        "th",
+        "tr",
+        "uk",
+        "ur",
+        "zh-CN",
+        "zh-TW"
+      ],
+      "file": "assets/legal/<lang>/PRIVACY.html",
+      "problem": "22 von 27 Sprachdateien enthalten NICHT die drei in Commit #945 nachgezogenen Abschnitte: (1) Art.-9-DSGVO-Warnung zu moodTag (Stimmungswert = psychischer Gesundheitszustand), (2) präzisierte Standort-Offenlegung (COARSE_LOCATION), (3) Churn-Survey-Abschnitt (§ 5.7a, Firebase-Ereignis churn_reason_selected). Byte-Größen bestätigen: aktualisierte Versionen 50–74 KB, nicht aktualisierte 5–10 KB. Marker-Grep (moodTag/Whisper/Art.9/Churn) schlägt in allen 22 Sprachen auf 0 an.",
+      "rationale": "Art. 9 DSGVO verlangt explizite Offenlegung der Verarbeitung besonderer Datenkategorien (psychischer Gesundheitszustand) in der Datenschutzerklärung — sprachunabhängig. Fehlende oder veraltete Übersetzungen stellen keine gültige Unterrichtung nach Art. 13/14 DSGVO dar. Aufsichtsbehörden können den Markteintritt blockieren. Bußgeld-Risiko bis 4 % des weltweiten Jahresumsatzes (Art. 83 DSGVO).",
+      "invasivityLevel": "text-only",
+      "impact": "Kritisch für EU-Markteintritt. Alle 22 nicht aktualisierten Sprachen müssen vor Play-Store-Veröffentlichung aktualisiert werden. Umsetzung: uebersetzung-Skill mit den drei neuen DE/EN-Abschnitten als Vorlage über die 22 Sprachen ausrollen."
+    },
+    {
+      "findingId": "C2",
+      "riskLevel": "🟧 medium",
+      "category": "DSGVO",
+      "jurisdiction": "EU",
+      "affectedLangs": [
+        "ja"
+      ],
+      "file": "assets/legal/ja/PRIVACY.html",
+      "problem": "Japanische PRIVACY.html (74 KB) enthält zwar den Art.-9-GDPR-Hinweis für Audio-Aufnahmen und allgemeine Gesundheitsdaten, aber NICHT: (1) die spezifische moodTag-Art.-9-Warnung (Stimmungswert = psychischer Gesundheitszustand im System-Backup), (2) den Churn-Survey-Abschnitt (§ 5.7a). Grep auf 'moodTag', 'キャンセル.*理由', 'churn_reason_selected' liefert 0 Treffer.",
+      "rationale": "Japan ist relevanter Markt; APPI (Act on Protection of Personal Information) fordert ebenfalls Offenlegung der Verarbeitungszwecke. Die fehlende moodTag-Warnung ist eine inhaltliche Lücke gegenüber DE/EN/KO/pt-BR. Geringeres Bußgeld-Risiko als EU, aber Vertrauensschaden möglich.",
+      "invasivityLevel": "text-only",
+      "impact": "Vor Marktstart Japan: Zwei Abschnitte aus DE als Vorlage ins Japanische übersetzen und in ja/PRIVACY.html ergänzen."
+    },
+    {
+      "findingId": "C3",
+      "riskLevel": "🟨 low",
+      "category": "DSGVO",
+      "jurisdiction": "EU",
+      "affectedLangs": [],
+      "file": "app/src/main/res/values[-XX]/strings.xml",
+      "problem": "strings.xml-Übersetzungen: privacy_gate_gemini_body enthält in ALLEN 27 Sprachvarianten einen Art.-9-Hinweis (sprachspezifische Formulierungen wie 'المادة 9', 'Pasal 9 GDPR', 'ст. 9 GDPR' etc. — Grep auf englische Marker unterschätzte initial die Abdeckung). churn_*-Strings sind ebenfalls in allen 27 Sprachen vorhanden. Kein Handlungsbedarf bei strings.xml.",
+      "rationale": "Vollständige strings.xml-Abdeckung bestätigt — kein Risiko.",
+      "invasivityLevel": "text-only",
+      "impact": "Keine Aktion erforderlich."
+    }
+  ],
+  "langs_with_update": [
+    "de",
+    "en",
+    "ko",
+    "pt-BR"
+  ],
+  "langs_partial_update": [
+    "ja"
+  ],
+  "langs_without_update": [
+    "ar",
+    "bn",
+    "es",
+    "fr",
+    "gu",
+    "hi",
+    "id",
+    "it",
+    "kn",
+    "ml",
+    "mr",
+    "nl",
+    "pl",
+    "pt-PT",
+    "ta",
+    "te",
+    "th",
+    "tr",
+    "uk",
+    "ur",
+    "zh-CN",
+    "zh-TW"
+  ],
+  "summary": {
+    "total_langs": 27,
+    "fully_updated": 4,
+    "partially_updated": 1,
+    "not_updated": 22,
+    "strings_xml_art9_coverage": "27/27 (alle Sprachen — unterschiedliche Schreibweisen)"
+  },
+  "plugin_bugs_observed": [
+    {
+      "bug_id": "PB-01",
+      "description": "Grep auf feste englische Marker ('Art. 9', 'Article 9') unterschätzte die Abdeckung in strings.xml erheblich: Arabisch nutzt 'المادة 9', Indonesisch 'Pasal 9 GDPR', Russisch/Ukrainisch 'ст. 9 GDPR'. Für mehrsprachige Rechtstext-Prüfungen müssen Sprach-Fallbacks oder semantische Muster (z.B. 'GDPR.*9|9.*GDPR') verwendet werden.",
+      "severity": "mittel",
+      "impact": "Falsch-Negativ-Rate bei reinem Englisch-Grep über lokalisierte Dateien"
+    },
+    {
+      "bug_id": "PB-02",
+      "description": "Byte-Größen-Heuristik ist ein zuverlässiger Schnell-Filter für HTML-Rechtstexte: aktualisierte Versionen waren 5–15x größer als veraltete. Empfehlung: als primären Vorfilter in künftigen Rechtstext-Audits einsetzen, Marker-Grep nur zur Verifikation.",
+      "severity": "info",
+      "impact": "Positiv — Methode für zukünftige Phase-Worker dokumentiert"
+    }
+  ]
+}

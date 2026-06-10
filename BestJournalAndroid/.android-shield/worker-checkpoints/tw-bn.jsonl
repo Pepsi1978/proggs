@@ -1,0 +1,7 @@
+{"stage": "start", "target": "C:\\Users\\barwa/proggs/BestJournalAndroid\\app/src/main/res/values-bn/strings.xml", "keys": 34, "plurals": 2}
+{"stage": "progress", "applied_so_far": 10}
+{"stage": "progress", "applied_so_far": 19}
+{"stage": "progress", "applied_so_far": 29}
+{"stage": "strings_plurals_done", "applied": 33, "plurals_done": 2, "skipped": []}
+{"stage": "written", "applied": 33, "plurals_done": 2, "inserted_new": ["paywall_monthly_note"]}
+{"stage":"verified","scope_pass":true,"bare_percent_in_scope":0,"note":"bare-% keys are pre-existing legend_/reminder keys, out of scope"}

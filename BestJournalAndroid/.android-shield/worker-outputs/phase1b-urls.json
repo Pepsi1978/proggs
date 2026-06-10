@@ -1,0 +1,415 @@
+{
+  "worker": "w10-urls",
+  "urls": [
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/privacy-de.html",
+      "category": "privacy-policy-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_datenschutz_de)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/privacy-de.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/privacy-en.html",
+      "category": "privacy-policy-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_datenschutz_en)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/privacy-en.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/privacy-ko.html",
+      "category": "privacy-policy-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_datenschutz_ko)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/privacy-ko.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/agb-de.html",
+      "category": "terms-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_agb_de)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/agb-de.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/agb-en.html",
+      "category": "terms-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_agb_en)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/agb-en.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/agb-ko.html",
+      "category": "terms-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_agb_ko)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/agb-ko.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/imprint-de.html",
+      "category": "imprint-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_impressum_de)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/imprint-de.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/imprint-en.html",
+      "category": "imprint-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_impressum_en)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/imprint-en.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/imprint-ko.html",
+      "category": "imprint-web",
+      "foundIn": [
+        "res/values/strings.xml (legal_url_impressum_ko)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/imprint-ko.html",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/",
+      "category": "legal-landing-web",
+      "foundIn": [
+        "res/values/strings.xml (settings_legal_online_url)"
+      ],
+      "status": 200,
+      "finalUrl": "https://pepsi1978.github.io/proggs/bestjournal/",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://play.google.com/store/account/subscriptions",
+      "category": "store-link",
+      "foundIn": [
+        "java/.../SettingsViewModel.kt:393",
+        "java/.../ChurnFlowDialog.kt:228",
+        "java/.../ChurnFlowDialog.kt:261"
+      ],
+      "status": 200,
+      "finalUrl": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fplay.google.com%2Fstore%2Faccount%2Fsubscriptions&dsh=S-297942557%3A1781119482894751&followup=https%3A%2F%2Fplay.google.com%2Fstore%2Faccount%2Fsubscriptions&osid=1&passive=1209600&flowName=GlifWebSignIn&flowEntry=ServiceLogin&ifkv=AcDsRvwR1CGfLJQz9hGY9nPoNWjewKpZWWEWwg6cECjGCxwLIW6vzFkQHUkoSSGYYCGUGPAkjOjl",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://findahelpline.com/",
+      "category": "crisis-helpline",
+      "foundIn": [
+        "java/.../CrisisHelpDialog.kt:133",
+        "assets/legal/de/DATENSCHUTZ.html",
+        "assets/legal/en/PRIVACY.html",
+        "assets/legal/ko/PRIVACY.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://findahelpline.com/",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://groq.com/privacy-policy/",
+      "category": "third-party-policy",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://groq.com/privacy-policy",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://firebase.google.com/support/privacy",
+      "category": "third-party-policy",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://firebase.google.com/support/privacy",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://policies.google.com/privacy",
+      "category": "third-party-policy",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://policies.google.com/privacy",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://privacy.microsoft.com/de-de/privacystatement",
+      "category": "third-party-policy",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.microsoft.com/de-de/privacy/privacystatement",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://play.google.com/about/play-terms/",
+      "category": "third-party-policy",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html",
+        "assets/legal/de/NUTZUNGSBEDINGUNGEN.html",
+        "assets/legal/en/TERMS.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://play.google.com/about/play-terms/",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://myaccount.google.com",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.google.com/account/about/?hl=en-US",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://myaccount.google.com/permissions",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmyaccount.google.com%2Fpermissions&dsh=S889950890%3A1781119487081953&followup=https%3A%2F%2Fmyaccount.google.com%2Fpermissions&osid=1&passive=1209600&flowName=GlifWebSignIn&flowEntry=ServiceLogin&ifkv=AcDsRvzosx4zfqKEz5o4ZgLge2ybAVx5j5slolDbn7zc3ZLU5RU0O2Z2z-UKNln65L2mf-dvG0KoiQ",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://datenschutz.hessen.de",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://datenschutz.hessen.de",
+      "errorClass": "ok",
+      "note": "GET 200 bei Re-Check (Python-Truststore lehnt unvollstaendige Zertifikatskette ab, Browser akzeptiert via AIA — kein toter Link)"
+    },
+    {
+      "url": "https://www.cai.gouv.qc.ca",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.cai.gouv.qc.ca",
+      "errorClass": "ok",
+      "note": "GET 200 bei Re-Check (initialer DNS-Fehler war transient)"
+    },
+    {
+      "url": "https://www.priv.gc.ca",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.priv.gc.ca",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://www.oaic.gov.au",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.oaic.gov.au",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://www.privacy.org.nz",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.privacy.org.nz",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://www.ppc.go.jp",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.ppc.go.jp",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://inforegulator.org.za",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://inforegulator.org.za",
+      "errorClass": "ok",
+      "note": "via HEAD"
+    },
+    {
+      "url": "https://www.gob.mx",
+      "category": "authority-link",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html",
+        "assets/legal/en/PRIVACY.html"
+      ],
+      "status": 200,
+      "finalUrl": "https://www.gob.mx",
+      "errorClass": "ok",
+      "note": "GET 200; Server lehnt HEAD ab (404 nur auf HEAD) — Link ist live"
+    },
+    {
+      "url": "mailto:dev.app.support@gmail.com",
+      "category": "support-kontakt-mail",
+      "foundIn": [
+        "res/values/strings.xml? (no)",
+        "java/.../SettingsScreen.kt:3773",
+        "assets/legal/de/*.html",
+        "assets/legal/en/*.html",
+        "assets/legal/ko/*.html"
+      ],
+      "status": 0,
+      "finalUrl": "mailto:dev.app.support@gmail.com",
+      "errorClass": "ok",
+      "note": "mailto syntax valid"
+    },
+    {
+      "url": "mailto:poststelle@datenschutz.hessen.de",
+      "category": "authority-mail",
+      "foundIn": [
+        "assets/legal/de/DATENSCHUTZ.html"
+      ],
+      "status": 0,
+      "finalUrl": "mailto:poststelle@datenschutz.hessen.de",
+      "errorClass": "ok",
+      "note": "mailto syntax valid"
+    },
+    {
+      "url": "https://api.groq.com/openai/v1/",
+      "category": "api-endpoint",
+      "foundIn": [
+        "java/.../util/Constants.kt:5"
+      ],
+      "status": 0,
+      "finalUrl": "https://api.groq.com/openai/v1/",
+      "errorClass": "not-checked",
+      "note": "API/namespace endpoint — not live-checked per spec"
+    },
+    {
+      "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      "category": "api-endpoint",
+      "foundIn": [
+        "java/.../RevokeSender.kt:32",
+        "java/.../FeedbackSender.kt:19"
+      ],
+      "status": 0,
+      "finalUrl": "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      "errorClass": "not-checked",
+      "note": "API/namespace endpoint — not live-checked per spec"
+    },
+    {
+      "url": "https://www.googleapis.com/auth/gmail.send",
+      "category": "api-endpoint",
+      "foundIn": [
+        "java/.../RevokeSender.kt:33",
+        "java/.../FeedbackSender.kt:20"
+      ],
+      "status": 0,
+      "finalUrl": "https://www.googleapis.com/auth/gmail.send",
+      "errorClass": "not-checked",
+      "note": "API/namespace endpoint — not live-checked per spec"
+    },
+    {
+      "url": "http://www.w3.org/2001/10/synthesis",
+      "category": "xml-namespace",
+      "foundIn": [
+        "java/.../EdgeTtsPlayer.kt:159 (SSML namespace, not a link)"
+      ],
+      "status": 0,
+      "finalUrl": "http://www.w3.org/2001/10/synthesis",
+      "errorClass": "not-checked",
+      "note": "API/namespace endpoint — not live-checked per spec"
+    }
+  ],
+  "playStoreRequirements": {
+    "publicPrivacyUrl": {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/privacy-de.html",
+      "live": true,
+      "status": 200
+    },
+    "accountDeletionUrl": {
+      "url": "https://pepsi1978.github.io/proggs/bestjournal/privacy-de.html",
+      "live": true,
+      "containsDeletionInstructions": true,
+      "matchedKeywords": [
+        "lösch",
+        "delete",
+        "entfern",
+        "konto lösch",
+        "account"
+      ],
+      "note": "No dedicated deletion-URL string in app; deletion guidance is inside the privacy page (verified via GET). Play also requires in-app deletion path."
+    }
+  },
+  "deadUrls": [],
+  "plugin_bugs_observed": [],
+  "selbstbeobachtung": [
+    "Alle nutzer-sichtbaren Pflicht-Links (Datenschutz/AGB/Impressum) zeigen auf pepsi1978.github.io/proggs/bestjournal/ mit den Dateinamen privacy-/agb-/imprint-<lang>.html — andere Sprachen lesen die In-App-HTML-Assets, der Web-Fallback existiert nur fuer de/en/ko.",
+    "Es gibt KEINE eigene Account-Loeschungs-URL als String; die Loeschanleitung steckt in der Datenschutz-Webseite — fuer die Play-Console-Pflicht reicht das nur, wenn dort eine klare Loeschanleitung steht (per GET geprueft).",
+    "API-Endpunkte (api.groq.com, gmail.googleapis.com, googleapis auth-scope, w3.org SSML-Namespace) wurden korrekt nicht live geprueft."
+  ],
+  "summary": {
+    "total_unique_urls": 33,
+    "live_checked": 27,
+    "dead_count": 0,
+    "verification_note": "3 zunaechst als tot markierte Behoerden-Referenzlinks (datenschutz.hessen.de SSL, cai.gouv.qc.ca DNS, gob.mx HEAD-404) per Re-Check als LIVE bestaetigt — alle 200 via GET. Keine toten Pflicht-Links."
+  }
+}

@@ -1,0 +1,144 @@
+{
+	"scope": "Play-Policy / Permissions / Data-Safety / Version-Drift",
+	"permissionRationales": {
+		"microphone": true,
+		"camera": true,
+		"location": true,
+		"notifications": true,
+		"status": "alle-vorhanden",
+		"note": "Alle 4 Strings in values/strings.xml Zeilen 698-701 vorhanden und korrekt formuliert."
+	},
+	"permissionFeatureMatch": [
+		{
+			"permission": "RECORD_AUDIO",
+			"featureFound": true,
+			"evidence": "LocalWhisperTranscriber.kt, RecordAudioUseCase.kt, TranscriptionRepository.kt — aktiv genutzt fuer Sprachdiktierung"
+		},
+		{
+			"permission": "CAMERA",
+			"featureFound": true,
+			"evidence": "EntryDetailScreen.kt enthaelt Kamera-Aufruf fuer Foto-Eintraege"
+		},
+		{
+			"permission": "ACCESS_COARSE_LOCATION",
+			"featureFound": false,
+			"evidence": "KEIN FusedLocationProviderClient, kein LocationRequest, keine Location-Dependency in build.gradle.kts oder libs.versions.toml. Keine Location-UseCase/Repository-Dateien gefunden. Permission im Manifest (Zeile 8) ohne korrespondierenden Code-Pfad. VERWAISTE PERMISSION — OFFENER BEFUND."
+		},
+		{
+			"permission": "POST_NOTIFICATIONS",
+			"featureFound": true,
+			"evidence": "NotificationManager/NotificationCompat in BestJournalApp.kt, SettingsScreen.kt, BootReminderReceiver — aktiv fuer Reminder-Funktionalitaet"
+		},
+		{
+			"permission": "INTERNET",
+			"featureFound": true,
+			"evidence": "Firebase, Gemini, Groq, Google Drive — alle APIs nutzen Netzwerkzugang"
+		},
+		{
+			"permission": "ACCESS_NETWORK_STATE",
+			"featureFound": true,
+			"evidence": "Standard-Companion zu INTERNET; Netzwerkstatus-Checks fuer Offline-Fallback"
+		},
+		{
+			"permission": "RECEIVE_BOOT_COMPLETED",
+			"featureFound": true,
+			"evidence": "BootReminderReceiver — stellt Reminder nach Neustart und Zeitzonaenderung wieder her"
+		}
+	],
+	"bootReceiverExported": {
+		"exported": true,
+		"assessment": "OK — BOOT_COMPLETED-Receiver MUSS exported=true sein (Systemintent kommt von aussen). Kein Sicherheitsrisiko: keine sensiblen Daten exponiert, kein Intent-Filter der Drittapps missbraeuchlich ansprechen koennten. TIMEZONE_CHANGED ebenfalls Systemintent. Bewertung: legitim und korrekt.",
+		"intentFilters": ["BOOT_COMPLETED", "TIMEZONE_CHANGED"]
+	},
+	"dataSafety": {
+		"checklistFound": true,
+		"location": "play-store-metadata/data-safety-checklist.md",
+		"coversAllTypes": false,
+		"coveredTypes": [
+			"Audio files (Groq STT — transient, service provider)",
+			"App interactions (Firebase Analytics — consent-gated)",
+			"Other user-generated content (Gemini AI summaries)",
+			"Device or other IDs (Firebase Instance ID, App Check, Android Advertising ID)",
+			"Crash logs (Firebase Crashlytics — laut Checkliste deklariert)",
+			"Files and docs (Google Drive Backup — user-controlled)"
+		],
+		"gaps": [
+			"LOCATION-DATEN: ACCESS_COARSE_LOCATION im Manifest, aber kein Location-Datentyp in der Data-Safety-Checkliste deklariert. Falls Feature existiert: Deklaration fehlt. Falls verwaist: Permission entfernen.",
+			"CRASHLYTICS CODE vs. CHECKLISTE: Data-Safety listet Crashlytics als aktiv (Crash logs), aber kein Crashlytics-SDK-Import in build.gradle.kts/libs.versions.toml und keine Crashlytics-Klassen im Kotlin-Code gefunden. Entweder Checkliste veraltet oder SDK wird via Firebase BOM mitgezogen ohne Initialisierung — Konsistenz klaeren.",
+			"STIMMUNGS-/HEALTH-DATEN: Unter Health Apps Declaration erwaehnt, aber kein eigener Play-Data-Safety-Eintrag fuer Health and fitness (Mood/Stimmung). Da Daten nur lokal bleiben und nie uebertragen werden, ist das formal kein Play-Pflicht-GAP — sollte aber dokumentiert sein."
+		]
+	},
+	"versionDrift": {
+		"deVersion": "V0.21.9",
+		"localizedVersions": "V0.21.9 in DE, EN, FR, TR geprueft — alle einheitlich",
+		"drift": false,
+		"note": "Kein Drift festgestellt. Alle geprueften Locale-Dateien (values/values-en/values-fr/values-tr) zeigen einheitlich Best Journal V0.21.9. D1-Befund aus dem Vorabaudit ist RESOLVED."
+	},
+	"r8Proguard": {
+		"minifyEnabled": false,
+		"shrinkResourcesEnabled": false,
+		"affectsBuilds": ["release (Zeile 98-99)", "debug (Zeile 107)"],
+		"securityNote": "SICHERHEITSHINWEIS (kein Rechtsverstoß): Release-Build hat isMinifyEnabled=false und isShrinkResources=false. Der Quellcode ist im APK/AAB unverschleiert und mit Tools wie jadx vollstaendig lesbar. Erhoehtes Risiko fuer Reverse-Engineering (API-Keys, Geschaeftslogik). Gradle-Kommentar Zeile 97 verweist auf PS-001 als deferred-to-release-build — noch nicht umgesetzt. Empfehlung: R8 vor Public Release aktivieren und ProGuard-Regeln fuer Firebase/Hilt/Room testen.",
+		"finding": "PS-001 (R8/Obfuskierung) laut Gradle-Kommentar als deferred markiert — bleibt offener Befund"
+	},
+	"crashlytics": {
+		"inDataSafetyChecklist": true,
+		"inKotlinCode": false,
+		"inBuildGradle": false,
+		"assessment": "INKONSISTENZ: Data-Safety-Checkliste deklariert Crashlytics als aktiv (Zeile 70), aber kein SDK-Import in build.gradle.kts oder libs.versions.toml und keine Crashlytics-Klassen im Kotlin-Code gefunden. Moeglicherweise via Firebase BOM mitgezogen aber nicht initialisiert — oder bereits entfernt aber Checkliste nicht aktualisiert. Klaerung erforderlich."
+	},
+	"verified": [
+		{
+			"finding": "T-001 Permission-Rationales vollstaendig",
+			"codeStatus": "resolved",
+			"severity": "info",
+			"evidence": "Alle 4 Strings (Mikrofon, Kamera, Standort, Benachrichtigungen) in values/strings.xml Zeilen 698-701 vorhanden"
+		},
+		{
+			"finding": "VERWAISTE PERMISSION: ACCESS_COARSE_LOCATION",
+			"codeStatus": "open",
+			"severity": "mittel",
+			"evidence": "Permission im Manifest (Zeile 8), aber kein FusedLocationProviderClient, keine Location-Dependency in Gradle, keine Location-Datei im Java-Tree. Entweder ungenutztes geplantes Feature oder vergessene Permission aus alter Version. Empfehlung: Permission entfernen bis Feature implementiert ist. Play Console kann Permission ohne erklaerbare Nutzung ablehnen."
+		},
+		{
+			"finding": "BootReminderReceiver exported=true",
+			"codeStatus": "resolved",
+			"severity": "info",
+			"evidence": "Notwendig fuer BOOT_COMPLETED/TIMEZONE_CHANGED Systemintents. Kein Sicherheitsrisiko identifiziert."
+		},
+		{
+			"finding": "Data-Safety: Location-Datentyp fehlt in Checkliste",
+			"codeStatus": "open",
+			"severity": "mittel",
+			"evidence": "ACCESS_COARSE_LOCATION im Manifest, aber kein Location-Datentyp in data-safety-checklist.md. Entweder Permission entfernen (bevorzugt falls verwaist) oder Datentyp in Checkliste erganzen."
+		},
+		{
+			"finding": "Crashlytics: Checkliste vs. Code-Realitaet inkonsistent",
+			"codeStatus": "open",
+			"severity": "niedrig",
+			"evidence": "Data-Safety-Checkliste nennt Crashlytics als aktiv (Crash logs), aber kein SDK-Import oder Initialisierung im Code gefunden. Synchronisierung erforderlich."
+		},
+		{
+			"finding": "PS-001 R8/Obfuskierung im Release-Build deaktiviert",
+			"codeStatus": "open",
+			"severity": "niedrig",
+			"evidence": "Gradle Zeile 97-99: isMinifyEnabled=false fuer Release. Code unverschleiert. Kein Rechtsverstoß, aber Security-Risiko vor Public Release."
+		},
+		{
+			"finding": "D1 Version-Label-Drift",
+			"codeStatus": "resolved",
+			"severity": "info",
+			"evidence": "Alle geprueften Locale-Dateien (DE/EN/FR/TR) zeigen einheitlich V0.21.9. Kein Drift vorhanden."
+		}
+	],
+	"topRisks": [
+		"VERWAISTE PERMISSION ACCESS_COARSE_LOCATION — kann Play-Policy-Ablehnung verursachen wenn keine nachweisbare Nutzung im Code vorliegt",
+		"Data-Safety fehlt Location-Datentyp — Inkonsistenz mit Manifest die bei Play-Review auffallen kann",
+		"R8/Obfuskierung deaktiviert im Release-Build — PS-001 noch offen, Code lesbar",
+		"Crashlytics-Deklaration in Data-Safety moeglicherweise veraltet/inkonsistent mit Code-Realitaet"
+	],
+	"plugin_bugs_observed": [
+		"Heredoc-Syntax mit einfachen Anführungszeichen in Python-Strings bricht Bash-Shell (PYEOF-Heredoc). Workaround: Write-Tool statt Bash-Python-Heredoc verwenden.",
+		"Data-Safety-Checkliste liegt in play-store-metadata/ (nicht in .android-shield/) — find-Pfad musste angepasst werden."
+	]
+}

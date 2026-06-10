@@ -1,0 +1,136 @@
+{
+	"auditDate": "2026-05-27",
+	"mode": "audit-only (finale, Verifikation gegen aktuellen Code)",
+	"appVersion": "0.21.9 (code 290)",
+	"auditedAgainst": "aktueller Code-Stand v0.21.9 — NICHT nur alte Reports",
+	"method": "5 parallele Verifikations-Worker (3 crashten via FIN-048, vom Orchestrator selbst uebernommen) + Orchestrator-Eigenpruefung",
+	"auditedJurisdictions": [
+		"DE",
+		"AT",
+		"CH",
+		"EU",
+		"GB",
+		"US",
+		"JP",
+		"KR",
+		"BR"
+	],
+	"disclaimer": "Technische Pruefhilfe, KEINE anwaltliche Beratung. Vor Release Fachanwalt fuer IT-Recht konsultieren.",
+	"openFindings": [
+		{
+			"id": "Z1",
+			"sev": "🟠 HOCH",
+			"cat": "Cross-Lingual/Lokalisierung",
+			"title": "values-ru enthaelt komplett UKRAINISCHEN Text",
+			"evidence": "ru/action_cancel='Скасувати' (ukr.), settings_title='Налаштування' (ukr.) — identisch mit values-uk. Alle 1106 Strings betroffen.",
+			"decision": "Frank: ru ins Russische uebersetzen (uebersetzung-Skill) ODER ru-Locale entfernen falls RU-Nutzer nicht bedient werden.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "E1",
+			"sev": "🟠 HOCH",
+			"cat": "Play-Policy/Permissions",
+			"title": "Verwaiste Permission ACCESS_COARSE_LOCATION",
+			"evidence": "Im Manifest deklariert, aber kein FusedLocationProvider, keine Location-Dependency, kein Location-Code. Play kann Permission ohne Nutzung ablehnen.",
+			"decision": "Frank: Permission entfernen (falls kein Standort-Feature geplant) ODER Feature implementieren + in Data-Safety deklarieren.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "G1",
+			"sev": "🟠 HOCH",
+			"cat": "Play Data Deletion Policy",
+			"title": "Keine oeffentliche Web-URL fuer Datenloeschung",
+			"evidence": "In-App-Loeschung vollstaendig (loescht auch Drive-Backup), aber kein Web-Link. Play verlangt seit 05/2024 zusaetzlich eine oeffentliche Loesch-URL.",
+			"decision": "Frank: Loesch-Anfrage-Seite auf github.io ergaenzen (analog zu den Legal-URLs) und im Play-Console Data-Safety-Formular eintragen.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "E2",
+			"sev": "🟡 MITTEL",
+			"cat": "Play Data-Safety",
+			"title": "Location-Datentyp fehlt in data-safety-checklist.md",
+			"evidence": "Folge von E1 — solange COARSE_LOCATION im Manifest steht, muss der Datentyp deklariert sein.",
+			"decision": "Mit E1 zusammen loesen (Permission weg → kein Eintrag noetig).",
+			"codeStatus": "open"
+		},
+		{
+			"id": "E3",
+			"sev": "🟡 MITTEL",
+			"cat": "Play Data-Safety",
+			"title": "Crashlytics in Checkliste, aber nicht im Code",
+			"evidence": "data-safety-checklist.md nennt Crashlytics (Crash logs), aber kein SDK-Import/Init im Code gefunden.",
+			"decision": "Frank: klaeren ob Crashlytics aktiv ist (via Firebase BOM?) — Checkliste oder Code angleichen.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "D1",
+			"sev": "🟡 MITTEL",
+			"cat": "BGB §312j Button-Loesung",
+			"title": "Sekundaere CTAs ohne Zahlungspflicht-Label",
+			"evidence": "Hauptbuttons korrekt ('Zahlungspflichtig abonnieren'). Aber 'Abo starten' (follow_up_premium_subscribe, retro_start_sub), 'Angebot annehmen' (churn_accept_offer), 'Premium entdecken' (dashboard) ohne Label.",
+			"decision": "Frank/Code: pruefen ob diese Buttons DIREKT den Play-Billing-Kauf ausloesen oder nur zur Paywall/zum Widerrufs-Dialog navigieren. Bei direktem Kauf: Label ergaenzen. Bei Navigation: konform.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "Z2",
+			"sev": "🟡 MITTEL",
+			"cat": "KI-Qualitaet (kein Recht)",
+			"title": "Deutscher AI-Prompt-Header in 7 Sprachen",
+			"evidence": "ai_prompt_rerank_entries_header enthaelt 'TAGEBUCHEINTRAEGE' (deutsch) in nl, ar, hi, pl, ta, th, in. Wird an Gemini gesendet — kein Rechtstext-Leak, aber schlechtere KI-Antworten.",
+			"decision": "Optional via uebersetzung-Skill nachziehen.",
+			"codeStatus": "open"
+		},
+		{
+			"id": "B1",
+			"sev": "🟢 NIEDRIG",
+			"cat": "UWG/HWG grenzwertige Werbung",
+			"title": "Verbleibende milde Werbe-Claims",
+			"evidence": "'Stress abbauen' (Onboarding-Ziel-Label), 'Die KI erzaehlt deine Geschichte', 'Hoehere Qualitaet fuer deine Spracheintraege'. Die schweren 🟥-Uebertreibungen (verborgene Denk-/Gefuehlsmuster, unbewusste Staerken, Klarheit/Selbsterkenntnis) sind bereits ENTSCHAERFT.",
+			"decision": "Frank-Ermessen: vertretbar als Werbesprache mit vorhandenen HWG-Disclaimern. Optional weiter entschaerfen.",
+			"codeStatus": "open-optional"
+		},
+		{
+			"id": "B2",
+			"sev": "🟢 NIEDRIG",
+			"cat": "Markenrecht",
+			"title": "'Gemini' ohne 'Google'-Praefix an 2 Stellen",
+			"evidence": "dashboard_gemini_unavailable (DE), settings_ai_gemini_title (DE+EN). Sonst korrekt 'Google Gemini'.",
+			"decision": "Optional 'Google' ergaenzen fuer Markenkonsistenz.",
+			"codeStatus": "open-optional"
+		},
+		{
+			"id": "Z3",
+			"sev": "🟢 NIEDRIG",
+			"cat": "Security (kein Recht)",
+			"title": "R8/ProGuard im Release-Build deaktiviert (PS-001)",
+			"evidence": "isMinifyEnabled=false, isShrinkResources=false. Code im AAB unverschleiert lesbar.",
+			"decision": "Frank: vor Public-Release R8 aktivieren + ProGuard-Regeln (Room/Hilt/Firebase/Billing) testen.",
+			"codeStatus": "open"
+		}
+	],
+	"confirmedCorrectOrFixed": [
+		"DSGVO-Verweis-Architektur KORREKT: 22 Kurz-PRIVACY.html verweisen per href auf DE+EN-Vollversion. Alle 9 Online-URLs (privacy/agb/imprint x de/en/ko) leben (HTTP 200). C1-Finding '22 Sprachen unvollstaendig' ist FALSE-POSITIVE (FIN-050).",
+		"DE/EN/KO Vollversionen komplett (Art.9 moodTag, Standort, Churn-Survey).",
+		"4-vs-5-Perspektiven GELOEST: beide Stellen 'Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)'.",
+		"§356a Widerrufsbutton vollstaendig (zweistufig 'Vertrag widerrufen'→'Widerruf bestaetigen' + Gmail-Eingangsbestaetigung).",
+		"§356 Sofortleistungs-Verzicht-Checkbox vorhanden.",
+		"Hauptkauf-Buttons mit Zahlungspflicht-Label.",
+		"Permission-Rationales (Mikrofon/Kamera/Standort/Benachrichtigung) vorhanden.",
+		"HWG-Disclaimer vollstaendig ('Keine Therapie — ersetzt keine professionelle Beratung').",
+		"EU AI Act Art.50 KI-Kennzeichnung in allen 27 Sprachen.",
+		"Churn-Dark-Pattern (alpha 0.35f) gefixt.",
+		"Version-Label-Drift behoben (alle V0.21.9).",
+		"Cross-Lingual vollstaendig: 1106 Keys in allen Sprachen (Delta 11 = translatable=false URLs/Copyright). Ausnahme: ru-Bug (Z1).",
+		"Account-Loeschung In-App inkl. Drive-Backup-Loeschung vor signOut.",
+		"Auto-Backup in DE-Datenschutzerklaerung dokumentiert (System-Backup, Google Drive).",
+		"Groq korrekt mit EU-SCCs (nicht DPF) — fruehere Korrektur haelt."
+	],
+	"marketSubmitTodos": [
+		"UK Art. 27 Vertreter — Empfehlung Option B: UK in Play-Console-Laenderverteilung ausschliessen (App verarbeitet Gesundheits-/Stimmungsdaten).",
+		"Health Apps Declaration im Play Console ausfuellen (App inferiert Stimmung/Gesundheit via KI).",
+		"Laender mit harter Sprach-/Registrierungspflicht in Play-Console ausschliessen: TR (VERBIS/KVKK), KR (PIPA), BR (ANPD-SCC), SA (PDPL) — Sprachen bleiben fuer Nutzer in zugelassenen Laendern.",
+		"Play Data Safety Form final ausfuellen (Art.9: Stimmung/Audio/Standort) — konsistent mit DSE.",
+		"Pricing pro Land + Promos als letzter Schritt vor Public Release."
+	],
+	"verdict": "Aus technischer Sicht in den geprueften Dateien keine offensichtlichen Release-BLOCKER auf Code-Ebene. 3 HOCH-Punkte (ru-Lokalisierung, verwaiste Location-Permission, Account-Loesch-Web-URL) und einige MITTEL/NIEDRIG-Punkte vor Release adressieren. Verbindliche Freigabe nur nach anwaltlicher Pruefung."
+}

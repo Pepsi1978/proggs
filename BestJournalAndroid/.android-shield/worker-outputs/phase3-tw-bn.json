@@ -1,0 +1,30 @@
+{
+	"worker": "tw-bn",
+	"lang": "bn",
+	"translated": 34,
+	"pluralsDone": 2,
+	"newKeys": ["paywall_monthly_note"],
+	"verification": {
+		"xml_valid": true,
+		"all_target_keys_present": true,
+		"missing_strings": [],
+		"missing_plurals": [],
+		"identical_to_de": [],
+		"fmt_mismatch_in_scope": [],
+		"bare_percent_in_scope": 0,
+		"scope_pass": true,
+		"note": "16 bare-% findings are pre-existing out-of-scope keys (legend_* + settings_reminder_time, the tr 'legend-percent-fix' family); none belong to this job's 34 strings or 2 plurals. All in-scope keys clean."
+	},
+	"legal_checks": {
+		"delete_account_google_konto_bleibt_bestehen": "rendered as 'তোমার Google-অ্যাকাউন্ট নিজে অক্ষুণ্ণ থাকে' in both settings_delete_account_confirm_body and _subtitle",
+		"revoke_356a_bezug": "settings_revoke_subtitle = '§ ৩৫৬a BGB — ...'; settings_revoke_confirm_body references § ১৬",
+		"do_not_sell_no_invented_year": "consent_toggle_do_not_sell_body: CCPA/CPRA kept, no year invented"
+	},
+	"script_notes": {
+		"register": "informal তুমি (tumi) throughout",
+		"numerals": "Arabic 0-9 in placeholders (%1$s/%1$d) and counts; Bengali numerals only inside no-dates example strings to mirror DE date examples",
+		"tech_terms": "Firebase, Google, Microsoft, Groq, AI, JSON, HTTPS/TLS, CCPA/CPRA, EU SCCs, BGB kept as-is (authentic code-mixing)",
+		"placeholders": "%1$s / %1$d preserved exactly per FIN-049; no bare % introduced; \\n preserved"
+	},
+	"plugin_bugs_observed": []
+}

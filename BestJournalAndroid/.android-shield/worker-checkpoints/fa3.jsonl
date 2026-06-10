@@ -1,0 +1,2 @@
+{"ts":"2026-06-10T00:00:00Z","worker":"fa3","step":"located","findingId":"D1-ui","yearly_note_line":462,"monthly_button_end_line":540,"note":"yearly-note ist simples Text-Composable Z.461-466, unconditional. Beide Plaene gleichzeitig sichtbar, kein Plan-Auswahl-State. monthly-note analog direkt nach Monthly-OutlinedButton einfuegen."}
+{"ts": "2026-06-10T00:00:00Z", "worker": "fa3", "step": "done", "findingId": "D1-ui", "lines": "542-547", "validated": true}

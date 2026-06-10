@@ -1,0 +1,13 @@
+{
+  "worker": "fa3",
+  "applied": [
+    {
+      "findingId": "D1-ui",
+      "file": "app/src/main/java/com/bestjournal/app/ui/screens/paywall/PaywallScreen.kt",
+      "change": "Auto-Renewal-Hinweiszeile fuer Monats-Plan eingefuegt direkt nach dem Monthly-OutlinedButton, 1:1 Optik der yearly-Note (Text/labelSmall/onSurfaceVariant/Center) mit stringResource(R.string.paywall_monthly_note, displayMonthlyPrice). Sichtbarkeit analog yearly-Note: unconditional beim Monats-Block (es gibt keinen Plan-Auswahl-State, beide Plaene gleichzeitig sichtbar).",
+      "lines": "542-547"
+    }
+  ],
+  "skipped": [],
+  "plugin_bugs_observed": []
+}

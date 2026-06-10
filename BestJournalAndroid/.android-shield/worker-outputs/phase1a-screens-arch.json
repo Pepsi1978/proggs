@@ -1,0 +1,454 @@
+{
+  "worker": "w6-screens-arch",
+  "navigation": {
+    "startDestination": "splash",
+    "navHostNote": "Single NavHost, no global Scaffold. 'main' route hosts a 4-page HorizontalPager (Retrospective=0, Dashboard=1, Journal=2, Settings=3) with BottomNavBar; initialTab default=2 (Journal). The 4 main screens are reachable only via swipe/bottom-nav inside 'main', NOT as separate nav routes.",
+    "routes": [
+      {
+        "route": "splash",
+        "screen": "SplashScreen",
+        "args": []
+      },
+      {
+        "route": "consent",
+        "screen": "ConsentScreen",
+        "args": []
+      },
+      {
+        "route": "legal/datenschutz",
+        "screen": "LegalDocumentScreen(Datenschutz)",
+        "args": []
+      },
+      {
+        "route": "legal/nutzungsbedingungen",
+        "screen": "LegalDocumentScreen(Nutzungsbedingungen)",
+        "args": []
+      },
+      {
+        "route": "legal/impressum",
+        "screen": "LegalDocumentScreen(Impressum)",
+        "args": []
+      },
+      {
+        "route": "onboarding",
+        "screen": "OnboardingScreen",
+        "args": []
+      },
+      {
+        "route": "main",
+        "screen": "Pager[Retrospective,Dashboard,Journal,Settings]",
+        "args": [
+          "initialTab"
+        ]
+      },
+      {
+        "route": "entry_detail/{entryId}?searchQuery={searchQuery}",
+        "screen": "EntryDetailScreen",
+        "args": [
+          "entryId:Long",
+          "searchQuery:String=empty"
+        ]
+      },
+      {
+        "route": "paywall?source={source}",
+        "screen": "PaywallScreen",
+        "args": [
+          "source:String=limit_reached"
+        ]
+      }
+    ]
+  },
+  "screens": [
+    {
+      "name": "SplashScreen",
+      "file": "ui/screens/splash/SplashScreen.kt",
+      "route": "splash",
+      "entryPoints": [
+        "app start (startDestination)"
+      ],
+      "purpose": "Branding splash; routes to Consent / Onboarding / Main based on first-run + consent-shown + onboarding-completed prefs."
+    },
+    {
+      "name": "ConsentScreen",
+      "file": "ui/screens/consent/ConsentScreen.kt",
+      "route": "consent",
+      "entryPoints": [
+        "Splash (first run, consent not shown)"
+      ],
+      "purpose": "Granular DSGVO consent (analytics, Groq, Gemini, Edge-TTS toggles, default OFF) with links to legal docs; provable timestamp+policy-version persisted."
+    },
+    {
+      "name": "LegalDocumentScreen",
+      "file": "ui/screens/consent/LegalDocumentScreen.kt",
+      "route": "legal/{datenschutz|nutzungsbedingungen|impressum}",
+      "entryPoints": [
+        "ConsentScreen.onOpenDocument",
+        "SettingsScreen.onNavigateToLegal",
+        "PaywallScreen.onOpenTerms"
+      ],
+      "purpose": "Renders one of three legal documents (privacy policy, terms, imprint) with back nav."
+    },
+    {
+      "name": "OnboardingScreen",
+      "file": "ui/screens/onboarding/OnboardingScreen.kt",
+      "route": "onboarding",
+      "entryPoints": [
+        "Splash",
+        "ConsentScreen.onContinue"
+      ],
+      "purpose": "Goal-selection onboarding; saves goals to prefs for paywall personalization; marks onboarding completed."
+    },
+    {
+      "name": "RetrospectiveScreen",
+      "file": "ui/screens/retrospective/RetrospectiveScreen.kt",
+      "route": "main(pager page 0)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "Weekly/monthly/yearly AI-generated retrospectives with photo collage; review gated behind paywall (source=review_locked)."
+    },
+    {
+      "name": "DashboardScreen",
+      "file": "ui/screens/dashboard/DashboardScreen.kt",
+      "route": "main(pager page 1)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "AI entropy analysis dashboard: category advice blocks, top-5 actions, scenario switching, manual refresh limit (3); paywall sources weekly_review/first_analysis/free_limit. OVERSIZE 193KB."
+    },
+    {
+      "name": "JournalScreen",
+      "file": "ui/screens/journal/JournalScreen.kt",
+      "route": "main(pager page 2, default)",
+      "entryPoints": [
+        "main pager (default tab)",
+        "app default landing"
+      ],
+      "purpose": "Core journal: voice recording -> Groq transcription -> Gemini text improvement -> save entry; entry list; streaks/achievements; opens EntryDetail and Paywall."
+    },
+    {
+      "name": "SettingsScreen",
+      "file": "ui/screens/settings/SettingsScreen.kt",
+      "route": "main(pager page 3)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "Settings hub: profile/sign-in, theme, reminders, biometric lock, Drive backup (photos/videos), PDF export, custom analyses, consent revoke, subscription mgmt/churn, legal links, crisis help. OVERSIZE 289KB."
+    },
+    {
+      "name": "EntryDetailScreen",
+      "file": "ui/screens/entrydetail/EntryDetailScreen.kt",
+      "route": "entry_detail/{entryId}",
+      "entryPoints": [
+        "JournalScreen.onEntryClick(entryId, searchQuery)"
+      ],
+      "purpose": "View/edit a journal entry: original vs AI-improved text, photos, follow-ups (Nachtraege), re-improve/summarize/analyze AI actions, delete, share; paywall source nachtrag_upsell."
+    },
+    {
+      "name": "PaywallScreen",
+      "file": "ui/screens/paywall/PaywallScreen.kt",
+      "route": "paywall?source={source}",
+      "entryPoints": [
+        "Dashboard",
+        "Journal",
+        "Settings",
+        "Retrospective",
+        "EntryDetail (all via onNavigateToPaywall)"
+      ],
+      "purpose": "Premium subscription paywall (monthly/yearly/lifetime via Google Play Billing); headline personalized by onboarding goal; source param tracks trigger origin for analytics."
+    }
+  ],
+  "dialogs": [
+    {
+      "file": "ui/screens/settings/SettingsScreen.kt",
+      "dialogs": [
+        "Clear-data confirm AlertDialog",
+        "Sign-out AlertDialog",
+        "PDF export confirm AlertDialog",
+        "Scenario-info AlertDialog",
+        "Revoke-consent AlertDialog",
+        "Revoke-success AlertDialog",
+        "Revoke-error AlertDialog (no-email)",
+        "ChurnFlowDialog",
+        "CrisisHelpDialog",
+        "PrivacyPreferencesSheet"
+      ]
+    },
+    {
+      "file": "ui/screens/dashboard/DashboardScreen.kt",
+      "dialogs": [
+        "~8 AlertDialogs incl. AdviceDerivationDialog (how advice was derived)",
+        "category/scenario info dialogs",
+        "AdviceDetailSheet (ModalBottomSheet)"
+      ]
+    },
+    {
+      "file": "ui/screens/dashboard/AdviceDetailSheet.kt",
+      "dialogs": [
+        "AdviceDetailSheet (ModalBottomSheet)"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/EntryDetailScreen.kt",
+      "dialogs": [
+        "delete-confirm AlertDialog",
+        "AI-action dialogs (improve/summarize)",
+        "follow-up dialogs (via FollowUpComponents)"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/FollowUpComponents.kt",
+      "dialogs": [
+        "FollowUpDialog",
+        "FollowUpDeleteConfirmDialog",
+        "FollowUpPremiumUpsellDialog"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/ShareEntryDialog.kt",
+      "dialogs": [
+        "ShareEntryDialog (share text + photos via Intent/FileProvider)"
+      ]
+    },
+    {
+      "file": "ui/screens/settings/ChurnFlowDialog.kt",
+      "dialogs": [
+        "ChurnFlowDialog (multi-step: Overview->Reason->RetentionOffer->Confirm cancel)"
+      ]
+    },
+    {
+      "file": "ui/components/CrisisHelpDialog.kt",
+      "dialogs": [
+        "CrisisHelpDialog (emergency phone/web links - mental-health crisis)"
+      ]
+    },
+    {
+      "file": "ui/components/PrivacyGateDialog.kt",
+      "dialogs": [
+        "PrivacyGateDialog (per-use cloud-service consent gate)",
+        "PrivacyGateHost"
+      ]
+    },
+    {
+      "file": "ui/components/PrivacyPreferencesSheet.kt",
+      "dialogs": [
+        "PrivacyPreferencesSheet (ModalBottomSheet, granular consent incl. do-not-sell for en-US)"
+      ]
+    },
+    {
+      "file": "ui/components/AiLimitReachedSheet.kt",
+      "dialogs": [
+        "AiLimitReachedSheet (ModalBottomSheet, AI usage limit reached)"
+      ]
+    },
+    {
+      "file": "ui/components/AiLimitsDisclaimerRow.kt",
+      "dialogs": [
+        "AiLimitsDialog (explains AI usage limits/fair-use)"
+      ]
+    },
+    {
+      "file": "ui/screens/paywall/PaywallScreen.kt",
+      "dialogs": [
+        "billing/error AlertDialog"
+      ]
+    },
+    {
+      "file": "ui/screens/retrospective/RetrospectiveScreen.kt",
+      "dialogs": [
+        "retrospective detail/info dialogs"
+      ]
+    },
+    {
+      "file": "ui/screens/journal/JournalScreen.kt",
+      "dialogs": [
+        "permission/recording dialogs"
+      ]
+    }
+  ],
+  "viewModels": [
+    {
+      "name": "SplashViewModel",
+      "responsibility": "Reads consent-shown & onboarding-completed prefs to decide start route."
+    },
+    {
+      "name": "ConsentViewModel",
+      "responsibility": "Holds granular consent toggles (analytics/Groq/Gemini/TTS); persists choices + audit timestamp via prefs & PrivacyGateHelper; injects FirebaseAnalytics."
+    },
+    {
+      "name": "OnboardingViewModel",
+      "responsibility": "Tracks selected goals, saves goals + onboarding-completed flag; fires analytics events."
+    },
+    {
+      "name": "JournalViewModel",
+      "responsibility": "Recording state machine (IDLE->RECORDING->TRANSCRIBING->IMPROVING->PREVIEW->SAVING); orchestrates audio record + Groq transcription + Gemini improve + save; streaks/achievements; AI tiered-access checks."
+    },
+    {
+      "name": "EntryDetailViewModel",
+      "responsibility": "Loads/edits one entry, photos, follow-ups; AI improve/summarize/analyze with rate-limiter; delete + share; Drive sync."
+    },
+    {
+      "name": "DashboardViewModel",
+      "responsibility": "AI entropy analysis + advice generation; manual-refresh limit (3); scenario/custom-profile switching; AI usage tracking + tiered access; auto-update toggle."
+    },
+    {
+      "name": "RetrospectiveViewModel",
+      "responsibility": "Weekly/monthly/yearly summaries from repository; generates retrospectives via use case; photo collage; billing-gated; waits for Drive restore."
+    },
+    {
+      "name": "SettingsViewModel",
+      "responsibility": "All settings state: profile/auth, theme, reminder, biometric lock, Drive backup (photos/videos), PDF export, subscription/churn, consent revoke; injects 3 DAOs + DriveBackupManager + DailyReminderManager + PdfExporter."
+    },
+    {
+      "name": "PaywallViewModel",
+      "responsibility": "Subscription prices (monthly/yearly/lifetime) from BillingManager; personalizes headline by onboarding goal; tracks paywall source for analytics."
+    }
+  ],
+  "roomEntities": [
+    {
+      "entity": "JournalEntryEntity",
+      "table": "journal_entries",
+      "sensitiveFields": [
+        "rawText (raw diary text)",
+        "improvedText (AI-rewritten diary)",
+        "displayText",
+        "summary",
+        "title",
+        "followUpText",
+        "moodTag (mood/emotion)",
+        "adviceCategoryTags",
+        "audioDurationSeconds",
+        "isSynced(->Drive)"
+      ]
+    },
+    {
+      "entity": "EntryFollowUpEntity",
+      "table": "entry_follow_ups",
+      "sensitiveFields": [
+        "text (follow-up diary text)",
+        "rawText",
+        "improvedText (AI)",
+        "entryId(FK CASCADE)"
+      ]
+    },
+    {
+      "entity": "EntryPhotoEntity",
+      "table": "entry_photos",
+      "sensitiveFields": [
+        "filePath (path to user photo/video)",
+        "isVideo",
+        "entryId(FK CASCADE)"
+      ]
+    },
+    {
+      "entity": "RetrospectiveSummaryEntity",
+      "table": "retrospective_summaries",
+      "sensitiveFields": [
+        "title",
+        "summaryText (AI summary of personal diary periods)",
+        "periodLabel"
+      ]
+    },
+    {
+      "entity": "AdviceBlockEntity",
+      "table": "advice_blocks",
+      "sensitiveFields": [
+        "categorySummary",
+        "adviceJson (AI advice on personal life)",
+        "overallAnalysis (AI psych analysis)",
+        "topActionsJson",
+        "entropyLevel"
+      ]
+    }
+  ],
+  "useCases": [
+    "RecordAudioUseCase: wraps AudioRecorderHelper - start/stop mic recording, expose amplitude+duration.",
+    "TranscribeAudioUseCase: speech-to-text via TranscriptionRepository (Groq Whisper, api.groq.com).",
+    "ImproveTextUseCase: rewrites diary text via FirebaseAiService (Gemini); chunks long text; locale-aware prompt.",
+    "SummarizeEntryUseCase: AI summary/title for an entry+follow-ups via FirebaseAiService (Gemini), retries.",
+    "AnalyzeEntropyUseCase: runs AI entropy analysis over all entries via AdviceRepository; tier/rate-limited (cost control).",
+    "GenerateAdviceUseCase: exposes Flow of advice blocks from AdviceRepository (local cache).",
+    "GenerateRetrospectiveUseCase: AI weekly/monthly/yearly retrospectives via FirebaseAiService (Gemini), concurrent w/ Semaphore.",
+    "SaveJournalEntryUseCase: persists a JournalEntry via JournalRepository (Room).",
+    "SignInWithGoogleUseCase: Google sign-in/sign-out + stored profile via AuthRepository (Credential Manager).",
+    "SyncWithDriveUseCase: zips DB+custom-analyses, backup/restore/merge to Google Drive; consent-gated (NeedConsentException).",
+    "SyncProgressHolder: singleton StateFlow exposing Drive upload/download progress across ViewModels (helper, not a UseCase)."
+  ],
+  "repositories": [
+    "JournalRepository: CRUD for journal entries (Room JournalEntryDao).",
+    "EntryFollowUpRepository: CRUD for entry follow-ups (Nachtraege).",
+    "PhotoRepository: manage entry photos/videos (file paths + EntryPhotoDao).",
+    "RetrospectiveRepository: weekly/monthly/yearly retrospective summaries (RetrospectiveDao).",
+    "AdviceRepository: advice/dashboard blocks + entropy analysis cache (AdviceDashboardDao).",
+    "AuthRepository: Google sign-in state + stored UserProfile (Credential Manager).",
+    "TranscriptionRepository: audio->text via Groq Whisper API (returns TranscriptionResult)."
+  ],
+  "diExternalServices": [
+    {
+      "service": "Groq API (Whisper transcription)",
+      "baseUrl": "https://api.groq.com/openai/v1/ (Constants.GROQ_BASE_URL)",
+      "module": "NetworkModule (Retrofit+OkHttp+Moshi)"
+    },
+    {
+      "service": "Firebase Analytics",
+      "baseUrl": "Firebase SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "FirebaseAiService (Gemini via Firebase AI / Vertex)",
+      "baseUrl": "Firebase SDK (server-side Gemini)",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Firebase Cloud Functions getSubscriptionStatus",
+      "baseUrl": "europe-west1 (Belgium, DSGVO)",
+      "module": "FirebaseModule (SubscriptionStatusService)"
+    },
+    {
+      "service": "Google Play Billing (BillingManager)",
+      "baseUrl": "Play Billing SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Google Drive backup (DriveBackupManager/DriveRestoreManager)",
+      "baseUrl": "Google Drive API",
+      "module": "used via SyncWithDriveUseCase / SettingsViewModel"
+    },
+    {
+      "service": "Google Credential Manager (sign-in)",
+      "baseUrl": "AndroidX Credentials",
+      "module": "AuthModule"
+    },
+    {
+      "service": "EncryptedSharedPreferences (secrets/prefs store)",
+      "baseUrl": "local (AES256_GCM)",
+      "module": "AppModule - NOTE: EncryptedSharedPreferences+MasterKeys is DEPRECATED API"
+    }
+  ],
+  "backgroundJobs": [
+    {
+      "name": "DailyReminderManager",
+      "trigger": "AlarmManager.setExactAndAllowWhileIdle (RTC_WAKEUP), rescheduled on boot",
+      "purpose": "Daily journaling reminder notification at user-set hour/minute. NO WorkManager in project."
+    },
+    {
+      "name": "Drive sync (SyncWithDriveUseCase)",
+      "trigger": "manual / app lifecycle (coroutine, not WorkManager)",
+      "purpose": "Backup/restore encrypted DB+photos+videos to user's Google Drive."
+    }
+  ],
+  "criticalObservations": [
+    "ALL local user data is highly sensitive personal-diary content: raw + AI-improved diary text, mood tags, follow-ups, AI psychological entropy analysis & advice, photos AND videos (file paths), and AI period-summaries. This is GDPR Art.9-adjacent (mental-health/emotional data) - central to the rechtssicherheit audit.",
+    "Three separate Room DBs (AppDatabase, DashboardDatabase, RetrospectiveDatabase) - all local, no server copy of diary content; only subscription status goes to a Firebase Function (europe-west1).",
+    "Cloud AI processing of diary content: text is sent to Groq (api.groq.com, US-based) for transcription and to Firebase/Gemini for improve/summarize/analyze/retrospective. Each cloud service is gated by granular consent (ConsentScreen + per-use PrivacyGateDialog, default OFF). Marketing/privacy claims must match: Groq is a US processor; Gemini via Firebase AI.",
+    "Paywall is reachable from 5 screens with 10 distinct source values (limit_reached, weekly_review, first_analysis, free_limit, review_locked, custom_analyses_limit, churn_yearly_switch, settings_tap, pdf_export, nachtrag_upsell) - relevant for UWG/feature-claim mapping of which features are premium-gated.",
+    "Subscription cancellation has a dedicated multi-step ChurnFlowDialog with a retention offer (Overview->Reason->RetentionOffer->Confirm) - check it does not constitute a dark pattern / make cancellation harder than signup (EU UCPD, BGH).",
+    "CrisisHelpDialog provides emergency mental-health phone/web links - supports the sensitive-data classification and any 'this app is not medical advice' disclaimer obligations (AiLimitsDisclaimer present).",
+    "EncryptedSharedPreferences + MasterKeys (deprecated security-crypto API) is the secrets/prefs store - works but flagged for future migration to DataStore+Tink (Android rule)."
+  ],
+  "plugin_bugs_observed": [
+    "Worker cwd reset to ~/proggs between Bash calls (NOT the app root given in the briefing): the first tool batch using relative 'app/src/main/java' failed with 'Path does not exist'. Recommendation: orchestrator should inject ABSOLUTE paths into the worker prompt examples, or worker must always prefix BestJournalAndroid/. Cost one round-trip.",
+    "Inline heredoc (<< 'PYEOF') with a large Python script containing an apostrophe (the word user's) failed with bash 'unexpected EOF while looking for matching quote' - the surrounding Bash-tool quoting interacted badly with the heredoc. Robust fix: Write the Python to a .py file then run it, instead of inline heredoc. This is the recurring 100%-match bug-case for this worker class.",
+    "OVERSIZE-rule (FIN-048) worked as intended: Grep with -C/head_limit + Python head-slices on SettingsScreen.kt (289KB) and DashboardScreen.kt (193KB) returned full dialog/nav maps without ever loading them into context - lossless, no crash, whole Layer-3+4 scan stayed well under limit."
+  ]
+}

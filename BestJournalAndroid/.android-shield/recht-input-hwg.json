@@ -1,0 +1,478 @@
+{
+  "findings": [
+    {
+      "key": "profile_entropy_long",
+      "line": 390,
+      "text": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Eintraegen. Du bekommst: eine Analyse deiner groessten Belastungsquellen, 5 konkrete Massnahmen zum Aufraeumen, Tipps die dir im Alltag helfen koennen. Ideal wenn du das Gefuehl hast, dass gerade alles zu viel wird.",
+      "category": "health-language",
+      "risk": "HOCH",
+      "rationale": "KI gibt '5 konkrete Massnahmen' + 'Tipps' bei Stress/'alles zu viel'. Grenzt an Gesundheits-/Psychoberatung. HWG-/Haftungsrisiko fuer KI-Ratschlaege; Disclaimer 'kein Ersatz fuer professionelle Hilfe' dringend noetig."
+    },
+    {
+      "key": "ai_prompt_entropy_intro",
+      "line": 914,
+      "text": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst. ... Finde wiederkehrende Quellen von Stress, Unordnung und Belastung ... Schmerz, Schlafprobleme, emotionale Belastung ...",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt laesst die KI als 'Lebensberater' agieren und aktiv 'Schmerz, Schlafprobleme, emotionale Belastung' analysieren + 'Ratschlaege' geben (prioritaet 'hoch=sofort handeln'). Gesundheitsnahe Beratung durch KI (HWG/SB-243-Grenzbereich). Risiko, dass Ausgaben wie medizinische/psychologische Empfehlungen wirken. Disclaimer (KI keine Therapie) MUSS an der Ausgabe sichtbar sein."
+    },
+    {
+      "key": "ai_prompt_no_dates_rule",
+      "line": 808,
+      "text": "... 'Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.' ... 'Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.' ... 'Laufen ist der Schluessel zur mentalen Klarheit ...'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt-BEISPIELE stellen KAUSALE Gesundheitsaussagen als Vorbild hin: 'Borreliose haengt direkt mit Bewegungsmangel zusammen', 'Laufen ist der Schluessel zur mentalen Klarheit'. Das traniert die KI darauf, medizinische Kausalzusammenhaenge zu behaupten (HWG/Heilaussagen-Risiko). Auch wenn nur Stil-Beispiel: die Modell-Ausgabe kann solche Aussagen produzieren. Disclaimer zwingend an Ausgabe."
+    },
+    {
+      "key": "ai_prompt_custom_intro",
+      "line": 933,
+      "text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Custom-Profil laesst die KI frei recherchieren/empfehlen mit nutzerdefiniertem Fokus-Text (%1$s). Nutzer koennte als Fokus Gesundheits-/Rechts-/Finanzberatung eingeben -> KI gibt aktive Empfehlungen ueber die Tagebuchdaten hinaus. Unkontrollierter Beratungs-Output ohne fachlichen Disclaimer (HWG/Rechtsdienstleistung/Finanzberatung-Risiko). Braucht generellen 'keine Fachberatung'-Hinweis an JEDER KI-Ausgabe."
+    },
+    {
+      "key": "ai_limits_dialog_body",
+      "line": 1199,
+      "text": "150 Anfragen pro Tag und Profil; 4 vordefinierte zusammen 600/Tag; +150/Tag je eigenem Profil; 1-30 hoechste Qualitaet; 31-100 Standard; 30-Min-Pause bei 101; ab 151 Stopp bis morgen; max 50 Anfragen/Stunde -> 5-Min-Pause; OHNE ABO 5 Dashboard-Analysen/Woche/Profil + 5 Textverbesserungen/Woche; 'Die meisten Nutzer werden diese Grenzen nicht erreichen.'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Sehr konkrete KI-Kontingent-/Drosselungs-Aussage (UWG 5) mit vielen ueberpruefbaren Zahlen (150/Tag/Profil, 600/Tag, Qualitaetsstufen 1-30/31-100, 30-Min-Pause bei 101, Stopp ab 151, 50/Stunde, 5-Min-Pause, Free 5/Woche). JEDE Zahl muss exakt der Code-Implementierung entsprechen - Abweichung = Irrefuehrung. Kritisch: Wechselwirkung mit 'Unbegrenzt'-Werbung. Satz 'Die meisten Nutzer werden diese Grenzen nicht erreichen' ist Verharmlosung - vertretbar, pruefen. Hauptrisiko: Konsistenz Code<->Text."
+    },
+    {
+      "key": "journal_rate_limit",
+      "line": 111,
+      "text": "Kurze Pause: Noch %1$d Minuten bis zur naechsten Verbesserung.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Belegt KI-Rate-Limit. Muss gegen Marketing 'jeden Eintrag/taeglich' abgeglichen werden (UWG §5 Irrefuehrung ueber Leistungsumfang)."
+    },
+    {
+      "key": "dashboard_loading_auto_update",
+      "line": 277,
+      "text": "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "'nach jedem neuen Eintrag automatisch' kollidiert potenziell mit dashboard_limit_daily/weekly. Pruefen ob 'jedem' durch Limits eingeschraenkt."
+    },
+    {
+      "key": "profile_entropy_desc",
+      "line": 383,
+      "text": "Erkennt Stress, Unordnung und Belastung",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Explizit 'Stress'/'Belastung' — mentale-Last-Sprache. HWG-Grenzbereich: darf nicht als Therapie/Heilung verstanden werden. Disclaimer noetig."
+    },
+    {
+      "key": "profile_insight_desc",
+      "line": 384,
+      "text": "Macht wiederkehrende Denk- und Gefuehlsmuster sichtbar",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Denk- und Gefuehlsmuster' — psychologisch-therapienahe Sprache. Grenzbereich mentale Gesundheit."
+    },
+    {
+      "key": "profile_insight_long",
+      "line": 391,
+      "text": "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt: Denkmuster und Ueberzeugungen, wiederkehrende Gefuehle und Reaktionen, Staerken, Werte die dein Handeln antreiben. Fuer alle die sich selbst besser verstehen und innerlich wachsen wollen.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Denkmuster, Ueberzeugungen, innerlich wachsen' — Selbsterkenntnis/Psychoanalyse-naehe. Klarstellen dass keine Therapie/Diagnose."
+    },
+    {
+      "key": "legend_burden_scale",
+      "line": 323,
+      "text": "Belastungs-Skala",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Belastung' quantifiziert auf Skala — Naehe zu Stress-/Gesundheitsmessung. Keine Diagnose, aber Grenzbereich."
+    },
+    {
+      "key": "legend_burden_desc",
+      "line": 324,
+      "text": "Der Halbkreis zeigt wie stark dich dieses Thema belastet:",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Misst psychische Belastung. Grenzbereich mentale Gesundheit — kein medizinisches Mess-Versprechen sein lassen."
+    },
+    {
+      "key": "legend_high_burden",
+      "line": 325,
+      "text": "Hoch (67-100%) — Sofort handeln",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Sofort handeln' bei hoher Belastung — Handlungsanweisung im Wohlbefindens-Kontext, grenzt an Gesundheitsempfehlung."
+    },
+    {
+      "key": "urgency_high",
+      "line": 339,
+      "text": "Dringend — Sofort handeln",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Dringlichkeits-/Handlungsaufforderung der KI; im Stress/Belastungs-Kontext als Gesundheitsrat lesbar."
+    },
+    {
+      "key": "dashboard_profile_focus_entropy",
+      "line": 959,
+      "text": "Sortiert dein Leben: erkennt Stress, Unordnung und Belastung und zeigt was du loslassen oder klaeren kannst.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'erkennt Stress und zeigt was du loslassen kannst' grenzt an Wohlbefindens-/Selbsthilfe-Versprechen (HWG-Grenzbereich). Als Feature-Beschreibung einer KI ohne Therapieanspruch sollte klar bleiben, dass es um Tagebuch-Reflexion geht, nicht um Stressbehandlung."
+    },
+    {
+      "key": "ai_prompt_insight_intro",
+      "line": 904,
+      "text": "Du bist ein einfuehlsamer, tiefgruendiger Muster-Analyst fuer persoenliche Entwicklung. ... unbewusste Ueberzeugungen, emotionale Reaktionsmuster ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Psychotherapie-nahe Begriffe ('unbewusste Ueberzeugungen', 'emotionale Reaktionsmuster', 'wohlwollender Spiegel'). KI erstellt psychologisch anmutende Profile. HWG-Grenzbereich - als KI-Selbsterkenntnis vermarktet, aber Naehe zu Psychoanalyse dokumentieren."
+    },
+    {
+      "key": "ai_prompt_goals_definition",
+      "line": 897,
+      "text": "'Mein Schlaf ist so schlecht' = implizites Ziel Schlafverbesserung ... 'Ich will abnehmen' ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Prompt leitet KI an, Gesundheits-/Koerperziele ('abnehmen', 'Schlafverbesserung') zu erkennen und zu verfolgen. Bewegt sich in Wellness-Beratung. Grenzbereich HWG; Ausgaben sollten keine konkreten medizinischen Empfehlungen geben."
+    },
+    {
+      "key": "onboarding_goal_stress",
+      "line": 1063,
+      "text": "Stress abbauen",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Onboarding-Ziel 'Stress abbauen' positioniert die App als Stress-Reduktions-Werkzeug. HWG-Grenzbereich: gesundheitsbezogener Nutzen. Im Zusammenspiel mit Paywall (paywall_headline_stress) und KI-Analysen als Wirkungsaussage wertbar. Disclaimer entschaerft, das Ziel selbst bleibt ein Wellness-Wirkversprechen."
+    },
+    {
+      "key": "ai_banner_body",
+      "line": 1203,
+      "text": "Intelligente Lebensratschlaege aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Intelligente Lebensratschlaege aus deinen Mustern' ist eine Beratungs-/Coaching-Aussage (HWG/Produkthaftungs-Naehe). Positiv: direkt anschliessend der Disclaimer 'keine professionelle Beratung'. MITTEL, weil 'Lebensratschlaege' eine aktive Empfehlungsfunktion benennt; Disclaimer muss unmittelbar sichtbar bleiben."
+    },
+    {
+      "key": "ai_limit_body",
+      "line": 1191,
+      "text": "Ohne Abo hast du 5 Textverbesserungen pro Woche und 5 Dashboard-Aktualisierungen pro Woche je Profil. Mit dem Premium-Abo: bis zu 150 pro Tag.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "KI-Limit-Aussage mit Zahlen (5/Woche Free, 'bis zu 150 pro Tag' Premium). UWG 5: Zahlen muessen der tatsaechlichen Drosselung entsprechen. 'bis zu 150' korrekt relativiert. ABER kollidiert mit 'Unbegrenzt'-Claims (retro_benefit_weekly, paywall_feature_profiles) - interner Widerspruch. Konsistenzpruefung kritisch."
+    },
+    {
+      "key": "profile_style_advisor",
+      "line": 1414,
+      "text": "- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefuehl von Klarheit und Ordnung",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'im Stil eines Lebensberaters' schreiben und Verbesserungen vorschlagen. HWG/Produkthaftungs-Naehe ('Lebensberater' + 'was verbessert werden kann' erzeugt beratende Ausgaben). KEINE medizinische Diagnose-Anweisung (positiv). MITTEL: ratgebende Ausgaben koennten ohne Disclaimer als professionelle Beratung missverstanden werden - Health-Disclaimer (1487/1488) entschaerft."
+    },
+    {
+      "key": "profile_style_insight",
+      "line": 1415,
+      "text": "- Schreibe im Stil einer tiefgruendigen Selbsterkenntnis-Erzaehlung, decke Denkmuster, wiederkehrende Gefuehle und verborgene Staerken auf",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'Denkmuster, wiederkehrende Gefuehle und verborgene Staerken aufdecken'. Psychologie-nahe Analyse-Anweisung (HWG-Grenze). Keine Diagnose, aber introspektive/psychologisierende Ausgaben. MITTEL - durch Disclaimer abgesichert; pruefen dass KI keine pathologisierenden Aussagen generiert."
+    },
+    {
+      "key": "profile_style_custom",
+      "line": 1417,
+      "text": "- PROFIL-STIL (Custom): Schreibe diesen Rueckblick mit klarem Bezug zum Benutzer-Auftrag ... Benutzer-Auftrag (zur Orientierung): %1$s",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt mit eingebettetem frei waehlbarem Benutzer-Auftrag (%1$s). Produkthaftungs-/Inhalts-Risiko: Nutzer koennten ueber den Custom-Auftrag die KI zu medizinischen/therapeutischen Ratschlaegen anweisen - das Prompt enthaelt KEINE Schutz-/Verbots-Klausel gegen gesundheitsbezogene Ausgaben. Empfehlung: pruefen ob ein Guardrail (keine Diagnosen/med. Ratschlaege) fehlt. MITTEL."
+    },
+    {
+      "key": "journal_ai_improving",
+      "line": 40,
+      "text": "KI verbessert Text — bitte warten",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Verarbeitung von Nutzertext. Cloud-Verarbeitung (Gemini/Groq) impliziert; muss von AI-Transparenz (EU AI Act Art. 50) abgedeckt sein."
+    },
+    {
+      "key": "label_improved",
+      "line": 51,
+      "text": "✨ KI verbessert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Kennzeichnung des verbesserten Texts — positiv fuer EU AI Act Art. 50(4) Transparenz."
+    },
+    {
+      "key": "legend_categories_desc",
+      "line": 334,
+      "text": "Kategorien werden dynamisch erstellt — die KI erkennt Themen in deinen Eintraegen und erstellt passende Kategorien. Neue Themen fuehren automatisch zu neuen Symbolen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Faehigkeitsbeschreibung 'erkennt Themen/automatisch'. Erklaert KI-Verhalten — eher unkritisch."
+    },
+    {
+      "key": "dashboard_loading_profile_switch",
+      "line": 275,
+      "text": "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'nach jedem Profilwechsel automatisch' — gleiche moegliche Limit-Kollision wie auto_update."
+    },
+    {
+      "key": "settings_premium_feature_reviews",
+      "line": 497,
+      "text": "Alle Rueckblicke ausfuehrlich mit KI erstellt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI erstellt Rueckblicke. 'ausfuehrlich' Werbewort, eher unkritisch."
+    },
+    {
+      "key": "settings_premium_feature_reviews_desc",
+      "line": 498,
+      "text": "Die KI erzaehlt deine Geschichte",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Emotionales KI-Versprechen 'erzaehlt deine Geschichte' — Marketing, niedrig."
+    },
+    {
+      "key": "settings_premium_feature_patterns_desc",
+      "line": 500,
+      "text": "Die KI kann Muster und Zusammenhaenge in deinen Eintraegen sichtbar machen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Vorsichtig formuliert ('kann ... sichtbar machen') — kein Garantieversprechen, gut."
+    },
+    {
+      "key": "profile_entropy",
+      "line": 378,
+      "text": "Raeume dein Leben auf",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Profil-Name. Wohlbefindens-naher Slogan, metaphorisch (Aufraeumen). Niedrig."
+    },
+    {
+      "key": "dashboard_inner_mirror",
+      "line": 256,
+      "text": "Innerer Spiegel",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbstreflexions-Metapher. Wohlbefindens-nah aber unkritisch."
+    },
+    {
+      "key": "legend_reflection_desc",
+      "line": 294,
+      "text": "Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbstreflexions-Metrik. Unkritisch."
+    },
+    {
+      "key": "settings_crisis_dialog_body",
+      "line": 770,
+      "text": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie. ... Gedanken an Selbstverletzung oder Suizid ... kostenlose, anonyme Hilfe - rund um die Uhr.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: expliziter HWG/SB-243-Disclaimer ('ersetzt keine Beratung', 'keine Therapie') + Krisen-Hotlines. Positiv-Fund. Sicherstellen, dass dieser Disclaimer auch dort erscheint, wo KI-Analysen ausgegeben werden, nicht nur im Krisendialog."
+    },
+    {
+      "key": "settings_crisis_subtitle",
+      "line": 768,
+      "text": "Wichtige Hotlines im Notfall",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Krisen-/Notfall-Sprache. Unbedenklich (Schutzfunktion), aber HWG-relevant gelistet. Grenzfall."
+    },
+    {
+      "key": "dashboard_profile_focus_insight",
+      "line": 960,
+      "text": "Tiefgruendige Selbsterkenntnis: Denkmuster und verborgene Staerken.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Psychologie-naher Wortlaut ('Denkmuster', 'Selbsterkenntnis'). Grenzfall - Reflexions-Feature, kein Heilversprechen, aber HWG-Naehe dokumentieren."
+    },
+    {
+      "key": "ai_generated_tooltip",
+      "line": 785,
+      "text": "Dieser Inhalt wurde von einem KI-System (Google Gemini) erstellt und kann Fehler enthalten. Bitte eigenstaendig pruefen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: KI-Kennzeichnung (AI Act Art.50, Pflicht ab 02.08.2026) + Fehlerhinweis. Positiv-Fund."
+    },
+    {
+      "key": "limit_used_of_max",
+      "line": 796,
+      "text": "%1$d von %2$d genutzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Nutzungslimit-Zaehler (X von Y). Bestaetigt, dass es ein begrenztes KI-Kontingent gibt. Direkt relevant fuer die 'unbegrenzt'-Pruefung anderer Marketing-Strings - ein Limit existiert also."
+    },
+    {
+      "key": "ai_prompt_goals_intro",
+      "line": 896,
+      "text": "Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker. ... Verfolge den Fortschritt ueber mehrere Eintraege hinweg.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Rolle als 'Ziel-Analyst'. Unkritisch (kein Gesundheitsbezug), dokumentiert aber die KI-Faehigkeitszusage 'Fortschritts-Tracking' - muss mit Marketing uebereinstimmen."
+    },
+    {
+      "key": "ai_prompt_response_language",
+      "line": 805,
+      "text": "ANTWORTSPRACHE: Antworte vollstaendig auf Deutsch. ...",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Sprach-Steuer-Prompt. Unkritisch, aber translatable (wird in 26 Sprachen lokalisiert) - bei Lokalisierung muss 'Deutsch' durch die jeweilige Zielsprache ersetzt werden, sonst antwortet die KI in falscher Sprache. Funktions-Hinweis."
+    },
+    {
+      "key": "paywall_headline_stress",
+      "line": 1128,
+      "text": "Mehr Klarheit im Alltag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Personalisierte Paywall-Headline zum Stress-Ziel. 'Mehr Klarheit' = milde Wohlbefindens-Nutzenaussage. Grenzfall mit gesundheitlichem Beiklang."
+    },
+    {
+      "key": "paywall_headline_stress_sub",
+      "line": 1129,
+      "text": "Erkenne was dich taeglich beschaeftigt und bringe es auf den Punkt.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Sub-Headline Stress-Ziel. Mentale-Entlastungs-Sprache, kein konkretes Heilversprechen. Grenzfall, HWG-Naehe."
+    },
+    {
+      "key": "paywall_headline_clarity",
+      "line": 1130,
+      "text": "Verstehe dich selbst besser",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbsterkenntnis-Versprechen. Wohlbefindens-Sprache an HWG-Grenze, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth",
+      "line": 1132,
+      "text": "Entdecke das Gute in jedem Tag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Positiv-Psychologie-Sprache. Wohlbefindens-Beiklang, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth_sub",
+      "line": 1133,
+      "text": "Dein persoenlicher Raum fuer Dankbarkeit und Wachstum",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "'Dankbarkeit und Wachstum' = Wellness-/Selbstoptimierungs-Sprache. Milde, Grenzfall."
+    },
+    {
+      "key": "churn_offer_feature_ai",
+      "line": 1176,
+      "text": "Taegliche KI-Analysen",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Im Retention-Kontext beworbenes KI-Analyse-Feature. HWG-Grenze nur mit Analyse-Inhalten (Lebensratschlaege); selbst neutral. Auch subscription-relevant."
+    },
+    {
+      "key": "ai_output_health_disclaimer",
+      "line": 1487,
+      "text": "Keine Therapie - ersetzt keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekter HWG-Schutz-Disclaimer (kurz). Positiv-Fund/Schutzmassnahme - richtige Abgrenzung. Kein Risiko."
+    },
+    {
+      "key": "ai_output_health_disclaimer_long",
+      "line": 1488,
+      "text": "Best Journal ist ein Tagebuch und kein Therapieangebot. KI-Analysen sind Anregungen zur Selbstreflexion und ersetzen keine professionelle psychologische oder medizinische Beratung. Bei akuten Problemen wende dich an eine Fachperson oder die Krisenhilfe in deinen Einstellungen.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Ausfuehrlicher HWG-Disclaimer mit Krisenhilfe-Verweis. Vorbildliche Schutzmassnahme. Pruefen ob 'Krisenhilfe in deinen Einstellungen' tatsaechlich existiert (sonst Irrefuehrung); Existenz von Code-Worker zu verifizieren."
+    },
+    {
+      "key": "ai_limits_disclaimer",
+      "line": 1197,
+      "text": "KI-Tageskontingent fuer intensive Nutzung.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Kurz-Disclaimer zum Tageskontingent. Positiv (Transparenz)."
+    },
+    {
+      "key": "ai_banner_title",
+      "line": 1202,
+      "text": "Dein Tagebuch wird von KI unterstuetzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Transparenzhinweis (positiv, AI-Act Art.50-Naehe - Offenlegung KI-Einsatz)."
+    },
+    {
+      "key": "profile_style_coach",
+      "line": 1416,
+      "text": "- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persoenlichen Zielen auf und ermutige weiterzumachen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: 'motivierender Ziel-Begleiter'. Coaching-Sprache, harmlos/motivierend, keine medizinisch-therapeutische Anweisung."
+    },
+    {
+      "key": "profile_style_chronicler",
+      "line": 1413,
+      "text": "- Schreibe im Stil einer zusammenfassenden Erzaehlung, fasse die wichtigsten Ereignisse und Gefuehle zusammen, wie ein persoenlicher Chronist",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: zusammenfassende Erzaehlung. Neutral, keine Beratungs-/Diagnose-Anweisung."
+    },
+    {
+      "key": "retro_weekly_p1",
+      "line": 1022,
+      "text": "Die KI fasst deine Woche zu einer persoenlichen Erzaehlung zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung (Zusammenfassung). Neutral."
+    },
+    {
+      "key": "retro_yearly_p2",
+      "line": 1030,
+      "text": "Die KI fasst die grossen Themen deines Jahres zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung Jahresrueckblick. Neutral."
+    }
+  ],
+  "aiServices": [
+    {
+      "service": "Groq API (Whisper transcription)",
+      "baseUrl": "https://api.groq.com/openai/v1/ (Constants.GROQ_BASE_URL)",
+      "module": "NetworkModule (Retrofit+OkHttp+Moshi)"
+    },
+    {
+      "service": "Firebase Analytics",
+      "baseUrl": "Firebase SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "FirebaseAiService (Gemini via Firebase AI / Vertex)",
+      "baseUrl": "Firebase SDK (server-side Gemini)",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Firebase Cloud Functions getSubscriptionStatus",
+      "baseUrl": "europe-west1 (Belgium, DSGVO)",
+      "module": "FirebaseModule (SubscriptionStatusService)"
+    },
+    {
+      "service": "Google Play Billing (BillingManager)",
+      "baseUrl": "Play Billing SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Google Drive backup (DriveBackupManager/DriveRestoreManager)",
+      "baseUrl": "Google Drive API",
+      "module": "used via SyncWithDriveUseCase / SettingsViewModel"
+    },
+    {
+      "service": "Google Credential Manager (sign-in)",
+      "baseUrl": "AndroidX Credentials",
+      "module": "AuthModule"
+    },
+    {
+      "service": "EncryptedSharedPreferences (secrets/prefs store)",
+      "baseUrl": "local (AES256_GCM)",
+      "module": "AppModule - NOTE: EncryptedSharedPreferences+MasterKeys is DEPRECATED API"
+    }
+  ]
+}

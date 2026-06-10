@@ -1,0 +1,9 @@
+{
+  "xmlValid": true,
+  "allKeysPresent": true,
+  "noneIdenticalToDe": true,
+  "placeholdersMatch": true,
+  "legendSinglePercent": true,
+  "apostropheClean": true,
+  "errorCount": 0
+}

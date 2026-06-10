@@ -1,0 +1,8 @@
+{"worker": "r3-abo", "checkpoint": "start", "note": "inputs read, beginning source verification"}
+{"worker": "r3-abo", "checkpoint": "p1-312j-onboarding", "note": "onboarding_start_free onClick=onStartTrial -> no billing, only completeOnboarding+onFinished. Button label OK."}
+{"worker": "r3-abo", "checkpoint": "p2-356-waiver", "note": "Comment claims Sofort-Verzichts-Dialog but only loading-toast exists; NO 356 Abs.5 waiver text before purchase. 356a in-app button exists (Settings)."}
+{"worker": "r3-abo", "checkpoint": "p3-states-restore-freq", "note": "Verifying grace/on-hold states, manual restore button, frequency capping"}
+{"worker": "r3-abo", "checkpoint": "p4-356a-noads", "note": "Verifying 356a wiring + ohne-Werbung claim vs ad SDK presence"}
+{"worker": "r3-abo", "checkpoint": "p5-356a-verified", "note": "356a button fully wired: 2-stage dialog -> Gmail send revocation + separate Eingangsbestaetigung to user w/ timestamp. POSITIVE."}
+{"worker": "r3-abo", "checkpoint": "p6-noads-verified", "note": "0 ad-SDK in app/src/main + 0 ad build-dep. ohne-Werbung is hollow paid benefit (UWG, R2 owns; cross-ref)."}
+{"worker": "r3-abo", "checkpoint": "done", "note": "output written + validated, 8 findings"}

@@ -1,0 +1,1043 @@
+{
+ "scanned": 1170,
+ "stringNodes": 1087,
+ "pluralItems": 12,
+ "arrayItems": 71,
+ "corruptionSignatures": [
+  {
+   "key": "action_undo",
+   "kind": "string",
+   "reason": "ends_with_halant=True",
+   "sample": "પૂર્વવત્"
+  },
+  {
+   "key": "action_go_google_play",
+   "kind": "string",
+   "reason": "latin_fragment=['Play']",
+   "sample": "Google Play પર જાઓ"
+  },
+  {
+   "key": "journal_achievement_unlocked",
+   "kind": "string",
+   "reason": "latin_fragment=['Achievement']",
+   "sample": "Achievement અનલૉક થઈ!"
+  },
+  {
+   "key": "journal_text_upsell_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે તમે દરેક નોંધ સુધારી શકો છો."
+  },
+  {
+   "key": "journal_discover_premium",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium શોધો →"
+  },
+  {
+   "key": "journal_streak_premium",
+   "kind": "string",
+   "reason": "latin_fragment=['Streak', 'Premium']",
+   "sample": "Streak સુરક્ષા: Premium સાથે ઉપલબ્ધ"
+  },
+  {
+   "key": "entry_tts_generating",
+   "kind": "string",
+   "reason": "latin_fragment=['Text', 'Speech']",
+   "sample": "કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\\u20"
+  },
+  {
+   "key": "share_footer",
+   "kind": "string",
+   "reason": "latin_fragment=['BestJournal']",
+   "sample": "BestJournal App ની ડાયરી નોંધ"
+  },
+  {
+   "key": "dashboard_weekly_review_upsell_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "તમારો આ અઠવાડિયો ઘણો સઘળો રહ્યો. Premium સાથે તમે સંપૂર્ણ વિ"
+  },
+  {
+   "key": "dashboard_discover_premium",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium શોધો"
+  },
+  {
+   "key": "dashboard_premium_upsell_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે તને જોઈએ તેટલા પ્રોફાઇલમાંથી ઉદાર વિશ્લેષણો મળે"
+  },
+  {
+   "key": "dashboard_tts_wait",
+   "kind": "string",
+   "reason": "latin_fragment=['Text', 'Speech']",
+   "sample": "કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\\u20"
+  },
+  {
+   "key": "profiles_premium_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે તું તારે જેટલી જોઈએ એટલી કસ્ટમ વિશ્લેષણ પ્રોફાઇ"
+  },
+  {
+   "key": "churn_google_play_redirect",
+   "kind": "string",
+   "reason": "latin_fragment=['manage', 'Play', 'redirect']",
+   "sample": "Abo manage કરવા Google Play પર redirect. ડાયરી નોંધો સ્વાભાવ"
+  },
+  {
+   "key": "settings_premium_lifetime",
+   "kind": "string",
+   "reason": "latin_fragment=['Lifetime']",
+   "sample": "Lifetime ઍક્સેસ ચાલુ"
+  },
+  {
+   "key": "settings_premium_active",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સબ્સ્ક્રિપ્શન ચાલુ"
+  },
+  {
+   "key": "settings_manage_subscription",
+   "kind": "string",
+   "reason": "latin_fragment=['manage']",
+   "sample": "સબ્સ્ક્રિપ્શન manage કરો"
+  },
+  {
+   "key": "settings_export_pdf_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['document', 'export']",
+   "sample": "બધી ડાયરી નોંધો અને ફોટો PDF document તરીકે export."
+  },
+  {
+   "key": "settings_premium_feature_pdf",
+   "kind": "string",
+   "reason": "latin_fragment=['Export']",
+   "sample": "ફોટો સહ PDF Export"
+  },
+  {
+   "key": "settings_premium_feature_pdf_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['document']",
+   "sample": "ફોટો સાથે document તરીકે ડાયરી"
+  },
+  {
+   "key": "settings_unlock_premium",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium ખોલો"
+  },
+  {
+   "key": "settings_export_what",
+   "kind": "string",
+   "reason": "latin_fragment=['export']",
+   "sample": "શું export કરવું?"
+  },
+  {
+   "key": "settings_exporting",
+   "kind": "string",
+   "reason": "latin_fragment=['Export']",
+   "sample": "Export થઈ રહ્યું છે\\u2026"
+  },
+  {
+   "key": "settings_export_entries_photos_pdf",
+   "kind": "string",
+   "reason": "latin_fragment=['export']",
+   "sample": "ડાયરી નોંધો અને ફોટો PDF export"
+  },
+  {
+   "key": "settings_export_data",
+   "kind": "string",
+   "reason": "latin_fragment=['export']",
+   "sample": "ડેટા export"
+  },
+  {
+   "key": "settings_export_entries_photos_pdf_full",
+   "kind": "string",
+   "reason": "latin_fragment=['export']",
+   "sample": "ફોટો સહ ડાયરી નોંધો PDF export"
+  },
+  {
+   "key": "settings_feedback_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['bugs']",
+   "sample": "સૂચનો, ઇચ્છાઓ, સુધારા, bugs 🐞"
+  },
+  {
+   "key": "settings_feedback_allow_gmail",
+   "kind": "string",
+   "reason": "latin_fragment=['Gmail']",
+   "sample": "Gmail ઍક્સેસ આપો અને ફરી પ્રયાસ કરો."
+  },
+  {
+   "key": "settings_feedback_api_error",
+   "kind": "string",
+   "reason": "latin_fragment=['Gmail']",
+   "sample": "Gmail ભૂલ %1$d: %2$s"
+  },
+  {
+   "key": "settings_feedback_confirm_body",
+   "kind": "string",
+   "reason": "latin_fragment=['FRANK']",
+   "sample": "આ સંદેશ તેં ડેવલપરને મોકલ્યો છે.\\nએ તને વ્યક્તિગત રીતે જવાબ "
+  },
+  {
+   "key": "ai_prompt_language_override",
+   "kind": "string",
+   "reason": "empty=True",
+   "sample": ""
+  },
+  {
+   "key": "ai_prompt_no_dates_rule",
+   "kind": "string",
+   "reason": "latin_fragment=['herleitung']",
+   "sample": "TTS-મૈત્રીપૂર્ણ (ફરજિયાત — દૃશ્યમાન ટેક્સ્ટમાં તારીખ પ્રતિબં"
+  },
+  {
+   "key": "ai_prompt_rerank_system",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON', 'JSON', 'titel', 'beschreibung', 'erklaerung', 'JSON', 'titel', 'beschreibung', 'erklaerung', 'beschreibung', 'beschreibung', 'erklaerung', 'JSON', 'markdown']",
+   "sample": "તમે પ્રોફાઇલ રિ-રેન્કર છો. તમને ડેશબોર્ડ વિશ્લેષણમાંથી 5 ટોચ"
+  },
+  {
+   "key": "ai_prompt_rerank_instruction",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON']",
+   "sample": "ગોઠવો અને ફોકસ બહારની વધુમાં વધુ 2 એન્ટ્રી બદલો. બરાબર 5 એન્"
+  },
+  {
+   "key": "ai_prompt_fresh_custom",
+   "kind": "string",
+   "reason": "latin_fragment=['User', 'User']",
+   "sample": "તાજો વ્યક્તિગત વિશ્લેષણ — User ના ફોકસ આધારે સંપૂર્ણ નવું, સ"
+  },
+  {
+   "key": "ai_prompt_check_custom",
+   "kind": "string",
+   "reason": "latin_fragment=['User']",
+   "sample": "ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. User ના ઉલ્લેખ કરેલ ફોક"
+  },
+  {
+   "key": "ai_prompt_goals_intro",
+   "kind": "string",
+   "reason": "latin_fragment=['User', 'JSON']",
+   "sample": "તમે એક સચેત, પ્રેરણાદાયક લક્ષ્ય-વિશ્લેષક અને પ્રગતિ-ટ્રૅકર છ"
+  },
+  {
+   "key": "ai_prompt_goals_definition",
+   "kind": "string",
+   "reason": "latin_fragment=['User', 'Sweden']",
+   "sample": "વ્યાખ્યા — લક્ષ્ય શું છે:\\nUser જે કાંઈ મેળવવા, બદલવા, શરૂ ક"
+  },
+  {
+   "key": "ai_prompt_goals_schema",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON', 'gesamtanalyse', 'massnahmen', 'kategorien', 'gesamtanalyse', 'massnahmen', 'titel', 'beschreibung', 'erklaerung', 'kategorien', 'name', 'icon', 'material', 'icon', 'farbe', 'entropie', 'level', 'zusammenfassung', 'ratschlaege', 'titel', 'beschreibung', 'prioritaet', 'hoch', 'mittel', 'niedrig', 'verknuepfung', 'herleitung', 'datum', 'zusammenfassung', 'hoch', 'mittel', 'niedrig']",
+   "sample": "JSON આઉટપુટ સ્કીમા:\\n{\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"t"
+  },
+  {
+   "key": "ai_prompt_goals_output",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON', 'Backtick']",
+   "sample": "આઉટપુટ: ફક્ત JSON. Backtick નહીં. { થી શરૂ."
+  },
+  {
+   "key": "ai_prompt_insight_attitude",
+   "kind": "string",
+   "reason": "latin_fragment=['THAMAARI', 'DRISHTIKON', 'Tame', 'SHREYO', 'ECHCHHH', 'DARPAN', 'User', 'Nondhamaa', 'Tame', 'Jolao', 'Chho', 'PRAAMAANIKTAPOORVAK', 'BATAVO', 'PARAN', 'SADAA', 'VIKASH', 'SATHE', 'PRATYEK', 'TARANSHEELATA', 'ENEE', 'JAATANE', 'VADHARE', 'SAMAJVAAMAA', 'MADAD', 'KARE', 'MUSHKEL', 'NAMUNAAO', 'SPASHT', 'BATAVO', 'PARAN', 'RACHNAATMAK', 'AAROP', 'VINAA', 'FOKUS', 'User', 'POTAANAA', 'SHABDOMAATHHI', 'POTAANEE', 'JAATE', 'VISHE', 'SHIKHI', 'SHAKE', 'CHHE', 'TAME', 'SHHODHO', 'CHHO', 'VARAAVAR', 'LAGNIYO', 'KEVALEE', 'BHAAVANAO', 'VARAAVAR', 'AAVe', 'CHHE', 'VICHAAR', 'NAMUNAAO', 'User', 'POTAANEE', 'JAATE', 'ANYA', 'SANSAAR', 'VISHE', 'KEVAREE', 'REETHNEE', 'SOCHE', 'CHHE', 'AVOIDANCE', 'NAMUNAAO', 'User', 'AVOIDANCE', 'KARE', 'CHHE', 'VISHE', 'KYaarey', 'LIKHTU', 'NATHI', 'SHAKTIYO', 'User', 'SAARI', 'REETHNEE', 'KARE', 'CHHE', 'JYAARE', 'POTANE', 'DIKHAATU', 'NATHI', 'MULYO', 'USER', 'VAASTAV', 'MAHATTVAPOORN', 'CHHE', 'KARNI', 'DWARA', 'DIKHAAY', 'VAATOTHEE', 'NAHI', 'TRIGGER', 'MAZABOOT', 'PRATIKRIYAAO', 'TRIGKKAR', 'KARE', 'CHHE', 'SAKARAATMAK', 'NAKARAATMAK', 'VIRODHAAABHAAS', 'User', 'KAIK', 'KAHE', 'PARAN', 'ALAAG', 'REETHNEE', 'VAARTALE', 'JARURIYAAT', 'LINES', 'VAHCCHE', 'JAROOREEYAT', 'DIKHAAY', 'CHHE', 'VIKASH', 'USER', 'DRASHTI', 'BAADLAI', 'CHHE']",
+   "sample": "THAMAARI DRISHTIKON:\\nTame EK SHREYO-ECHCHHH DARPAN CHO. Use"
+  },
+  {
+   "key": "ai_prompt_insight_rules",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON', 'User', 'JSON']",
+   "sample": "ભાષા નિયમો (JSON ના દરેક ટેક્સ્ટ ફીલ્ડ માટે લાગુ):\\n- સરળ, સ"
+  },
+  {
+   "key": "ai_prompt_entropy_intro",
+   "kind": "string",
+   "reason": "latin_fragment=['User', 'JSON', 'User']",
+   "sample": "તમે સહાનુભૂતિ ધરાવતા, ઊંડા જ્ઞાની જીવન-સલાહકાર અને પૅટર્ન-વિ"
+  },
+  {
+   "key": "ai_prompt_entropy_rules",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON', 'JSON', 'gesamt', 'entropie', 'entropie', 'level', 'JSON']",
+   "sample": "ભાષાના નિયમો (JSONમાં બધા ટેક્સ્ટ ફીલ્ડ માટે લાગુ):\\n- સરળ, "
+  },
+  {
+   "key": "ai_prompt_summary_intro",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON']",
+   "sample": "તમે એક ધ્યાનશીલ, સંગઠિત ડાયરી-વિશ્લેષક છો.\\n\\nતમારું કાર્ય:\\"
+  },
+  {
+   "key": "ai_prompt_custom_intro",
+   "kind": "string",
+   "reason": "latin_fragment=['JSON']",
+   "sample": "તમે એક બુદ્ધિશાળી, સચેત ડાયરી-વિશ્લેષક અને કાર્ય-નિર્વાહક છો"
+  },
+  {
+   "key": "ai_prompt_custom_headings",
+   "kind": "string",
+   "reason": "latin_fragment=['PASANDITA', 'SHIRSHAKO', 'AVASHYAK', 'RITE', 'BANAVO', 'User', 'EXACTLY', 'KHAY', 'Mukhya', 'Parinamo', 'Vishleshhan', 'JEVA', 'SAMANYA', 'SHIRSHAKO', 'NAHI', 'BADALAmaa', 'SARJANASHEOL', 'SPASHT', 'SHIRSHAKO', 'FOCUS', 'PRATIBIMBIT', 'KARE', 'UDAAHARAN', 'Machhimari', 'Sauthee', 'Mota', 'Shikar', 'Thamaaro', 'Machhimari', 'Aavaloo', 'Badhaa', 'Parinamo', 'Uugh', 'Gunavatta', 'Thamaari', 'Uugh', 'Padhdhati', 'Uugh', 'Vishleshhan', 'Badhaa', 'Uugh', 'Avlokan', 'Vadhare', 'Kaam', 'Sauthee', 'Moto', 'Samay', 'Khaau', 'Thamaro', 'Bhaaran', 'Aavaloo', 'Badhaa', 'Bhaaran', 'Mudda']",
+   "sample": "મહત્વપૂર્ણ — ગતિશીલ શીર્ષકો:\\nડૅશબોર્ડ માટે ત્રણ PASANDITA S"
+  },
+  {
+   "key": "retro_premium_unlock",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે બધી સમીક્ષાઓ અનલૉક કરો"
+  },
+  {
+   "key": "retro_share_header",
+   "kind": "string",
+   "reason": "latin_fragment=['BestJournal']",
+   "sample": "BestJournal App તરફથી સમીક્ષા"
+  },
+  {
+   "key": "retro_unlock_premium_short",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium અનલૉક કરો"
+  },
+  {
+   "key": "retro_cd_premium_required",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium જરૂરી છે"
+  },
+  {
+   "key": "retro_premium_reviews_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે AI તમારી ડાયરી એન્ટ્રીઓમાંથી આપમેળે સમીક્ષાઓ બન"
+  },
+  {
+   "key": "onboarding_how_step4_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "AI Dashboard તમારી એન્ટ્રીઓ વચ્ચેના સંબંધો દર્શાવે છે."
+  },
+  {
+   "key": "onboarding_premium_feature_dashboard",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "દરેક નવી એન્ટ્રી પર આપમેળે Dashboard અપડેટ"
+  },
+  {
+   "key": "onboarding_free_after_trial",
+   "kind": "string",
+   "reason": "latin_fragment=['Call']",
+   "sample": "ત્યાર પછી Best Journal ચાલુ રાખો,\\nઅઠવાડિયે મર્યાદિત AI-Call"
+  },
+  {
+   "key": "onboarding_without_premium",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium વિના ચાલુ રાખો"
+  },
+  {
+   "key": "onboarding_premium_profiles",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "તમારા જીવનમાં ઊંડી સમજ માટે 4 સ્માર્ટ Dashboard પ્રોફાઇલ"
+  },
+  {
+   "key": "paywall_free_note",
+   "kind": "string",
+   "reason": "latin_fragment=['Subscription']",
+   "sample": "App Subscription વગર પણ ચાલુ રહે છે."
+  },
+  {
+   "key": "paywall_feature_dashboard",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "નવી એન્ટ્રીઓ પછી AI-Dashboard અપડેટ"
+  },
+  {
+   "key": "churn_auto_renew_note",
+   "kind": "string",
+   "reason": "latin_fragment=['Play']",
+   "sample": "તમારું સબ્સ્ક્રિપ્શન Google Play દ્વારા આપમેળે રિન્યૂ થાય છે"
+  },
+  {
+   "key": "churn_offer_feature_voice",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium વૉઇસ ઓળખ"
+  },
+  {
+   "key": "churn_pause_sub",
+   "kind": "string",
+   "reason": "latin_fragment=['Play']",
+   "sample": "અથવા Google Play પર સબ્સ્ક્રિપ્શન થોભાવો"
+  },
+  {
+   "key": "ai_limit_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "સબ્સ્ક્રિપ્શન વિના તમારી પાસે દર અઠવાડિયે 5 ટેક્સ્ટ સુધારા અ"
+  },
+  {
+   "key": "notif_weekly_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "જુઓ આ અઠવાડિયે તમને શું સ્પર્શ્યું, તમારા Dashboard પર નવી સ"
+  },
+  {
+   "key": "achievement_reflectionmaster_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard']",
+   "sample": "50 Dashboard વિશ્લેષણ કર્યા"
+  },
+  {
+   "key": "profile_style_custom",
+   "kind": "string",
+   "reason": "latin_fragment=['Custom']",
+   "sample": "\\n- પ્રોફાઇલ-શૈલી (Custom): આ સમીક્ષા વપરાશકર્તાના કાર્ય સાથ"
+  },
+  {
+   "key": "consent_card2_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft', 'Edge', 'Data', 'Privacy', 'Framework', 'SCCs']",
+   "sample": "વૈકલ્પિક રીતે ટેક્સ્ટ Google Gemini ને અને મોટેથી વાંચવાનો ટ"
+  },
+  {
+   "key": "consent_card3_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Analytics']",
+   "sample": "Firebase Analytics, વૈકલ્પિક, સેટિંગ્સમાં ગમે ત્યારે બદલી શક"
+  },
+  {
+   "key": "privacy_gate_groq_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Mountain', 'View', 'Settings']",
+   "sample": "ક્લાઉડ ટ્રાન્સક્રિપ્શન માટે તમારું વૉઇસ રેકોર્ડિંગ એન્ક્રિપ્"
+  },
+  {
+   "key": "privacy_gate_gemini_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Dashboard', 'Data', 'Privacy', 'Framework', 'GDPR', 'Settings']",
+   "sample": "સારું છે કે તમે Best Journal ની સ્માર્ટ સુવિધાઓ વાપરવા ઇચ્છો"
+  },
+  {
+   "key": "privacy_gate_tts_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft']",
+   "sample": "ટેક્સ્ટ Microsoft ને મોકલવો?"
+  },
+  {
+   "key": "privacy_gate_tts_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft', 'Bing', 'Speech', 'Data', 'Privacy', 'Framework', 'Standard', 'Contractual', 'Clauses']",
+   "sample": "વાંચીને સંભળાવવા માટે ટેક્સ્ટ એન્ક્રિપ્ટેડ સ્વરૂપમાં Microso"
+  },
+  {
+   "key": "settings_analytics_subtitle",
+   "kind": "string",
+   "reason": "latin_fragment=['Analytics']",
+   "sample": "ભૂલ વિશ્લેષણ અને ઉત્પાદન સુધારણા માટે Firebase Analytics"
+  },
+  {
+   "key": "settings_report_ai_confirm_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Support']",
+   "sample": "Support ને ઇમેઇલ ખોલવો?"
+  },
+  {
+   "key": "settings_report_ai_confirm_body",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail']",
+   "sample": "તમારી ઇમેઇલ ઍપ dev.app.support@gmail.com ને તૈયાર સંદેશ સાથે"
+  },
+  {
+   "key": "settings_report_ai_no_email",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail']",
+   "sample": "કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને જાણ dev.app.support@gmail.c"
+  },
+  {
+   "key": "settings_revoke_subtitle",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium ખરીદી"
+  },
+  {
+   "key": "settings_revoke_confirm_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Support']",
+   "sample": "Support ને ઇમેઇલ ખોલવો?"
+  },
+  {
+   "key": "settings_revoke_confirm_body",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail', 'Play', 'Subscriptions']",
+   "sample": "તમારી ઇમેઇલ ઍપ dev.app.support@gmail.com ને તૈયાર સંદેશ સાથે"
+  },
+  {
+   "key": "settings_revoke_no_email",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail']",
+   "sample": "કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને રદ dev.app.support@gmail.co"
+  },
+  {
+   "key": "settings_revoke_email_subject",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Best Journal Premium કરાર રદ"
+  },
+  {
+   "key": "settings_revoke_email_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium', 'Gmail']",
+   "sample": "આ દ્વારા હું Best Journal ની Premium સુવિધાઓ સંબંધિત મારા કર"
+  },
+  {
+   "key": "settings_revoke_confirm_user_body",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail', 'Play', 'Store', 'Subscriptions', 'Frank', 'Barwandt']",
+   "sample": "નમસ્તે,\\n\\n%1$sની તમારી રદ કરવાની જાણ અમને મળી ગઈ છે. આ § 35"
+  },
+  {
+   "key": "settings_revoke_no_account",
+   "kind": "string",
+   "reason": "latin_fragment=['Settings', 'support', 'gmail']",
+   "sample": "સાઇન-ઇન થયેલ Google ખાતાનું સરનામું મળ્યું નથી. કૃપા કરીને S"
+  },
+  {
+   "key": "settings_revoke_success_body",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail']",
+   "sample": "તમારી રદ કરવાની જાણ dev.app.support@gmail.com પર મોકલવામાં આ"
+  },
+  {
+   "key": "settings_revoke_error_body",
+   "kind": "string",
+   "reason": "latin_fragment=['support', 'gmail']",
+   "sample": "સ્વચાલિત મોકલાણ નિષ્ફળ ગયું: %1$s\\n\\nવૈકલ્પિક રીતે તમે dev.a"
+  },
+  {
+   "key": "settings_crisis_hotline_de_name",
+   "kind": "string",
+   "reason": "latin_fragment=['Telefonseelsorge']",
+   "sample": "Telefonseelsorge જર્મની"
+  },
+  {
+   "key": "settings_crisis_open_findahelpline",
+   "kind": "string",
+   "reason": "latin_fragment=['findahelpline']",
+   "sample": "findahelpline.com ખોલો"
+  },
+  {
+   "key": "settings_ccpa_do_not_sell_subtitle",
+   "kind": "string",
+   "reason": "latin_fragment=['CCPA', 'CPRA']",
+   "sample": "કેલિફોર્નિયાના રહેવાસીઓ માટે (CCPA/CPRA 2026). સક્રિય હોય ત્"
+  },
+  {
+   "key": "settings_ccpa_do_not_sell_confirmation",
+   "kind": "string",
+   "reason": "latin_fragment=['Sell']",
+   "sample": "Do-Not-Sell ચાલુ — બધી ક્લાઉડ સેવાઓ બંધ છે."
+  },
+  {
+   "key": "settings_ccpa_do_not_sell_off_confirmation",
+   "kind": "string",
+   "reason": "latin_fragment=['Sell']",
+   "sample": "Do-Not-Sell બંધ કર્યું."
+  },
+  {
+   "key": "settings_delete_account_force_local",
+   "kind": "string",
+   "reason": "latin_fragment=['Backup']",
+   "sample": "ફક્ત સ્થાનિક ભૂંસો (Drive Backup સચવાય છે)"
+  },
+  {
+   "key": "consent_toggle_analytics_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Analytics', 'Data', 'Privacy', 'Framework']",
+   "sample": "Firebase Analytics — એપ્લિકેશનને સુધારવામાં અમને મદદ કરે છે."
+  },
+  {
+   "key": "consent_toggle_tts_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft', 'Edge']",
+   "sample": "મોટેથી વાંચન (Microsoft Edge TTS)"
+  },
+  {
+   "key": "consent_toggle_tts_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft']",
+   "sample": "કુદરતી અવાજમાં એન્ટ્રીઓ વાંચે છે. ટેક્સ્ટને Microsoft (USA) "
+  },
+  {
+   "key": "consent_toggle_do_not_sell_body",
+   "kind": "string",
+   "reason": "latin_fragment=['CCPA', 'CPRA']",
+   "sample": "કેલિફોર્નિયા ઑપ્ટ-આઉટ (CCPA/CPRA 2026). સક્રિય હોય ત્યારે, બ"
+  },
+  {
+   "key": "settings_ai_tts_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Edge']",
+   "sample": "મોટેથી વાંચન (Edge TTS)"
+  },
+  {
+   "key": "settings_ai_tts_subtitle",
+   "kind": "string",
+   "reason": "latin_fragment=['Microsoft']",
+   "sample": "વૉઇસ આઉટપુટ માટે Microsoft USA ને ટેક્સ્ટ મોકલો"
+  },
+  {
+   "key": "follow_up_premium_body",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સાથે દરેક ડાયરી એન્ટ્રીમાં અમર્યાદ વધારાની નોંધો ઉમે"
+  },
+  {
+   "key": "follow_up_premium_subscribe",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium લો"
+  },
+  {
+   "key": "follow_up_premium_subtext",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium પ્લાન સાથે અમર્યાદ વધારાની નોંધો અનલૉક કરો."
+  },
+  {
+   "key": "follow_up_premium_title",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium']",
+   "sample": "Premium સુવિધા"
+  },
+  {
+   "key": "ai_limits_dialog_body",
+   "kind": "string",
+   "reason": "box_drawing=─; repeat_symbols=['─', '─']",
+   "sample": "PREMIUM સબ્સ્ક્રિપ્શન સાથે\\n\\nદરરોજ તમારા માટે ઉપલબ્ધ:\\n• દર"
+  },
+  {
+   "key": "ai_limits_dialog_body",
+   "kind": "string",
+   "reason": "latin_fragment=['PREMIUM', 'SUBSCRIPTION']",
+   "sample": "PREMIUM સબ્સ્ક્રિપ્શન સાથે\\n\\nદરરોજ તમારા માટે ઉપલબ્ધ:\\n• દર"
+  },
+  {
+   "key": "consent_info_system_backup_body",
+   "kind": "string",
+   "reason": "latin_fragment=['System', 'Backup', 'Backup']",
+   "sample": "જો તમે ઉપકરણ-સેટિંગ્સમાં Android System-Backup ચાલુ કર્યું હ"
+  },
+  {
+   "key": "settings_open_system_backup_settings_label",
+   "kind": "string",
+   "reason": "latin_fragment=['System', 'Backup']",
+   "sample": "Android System-Backup સંચાલિત કરો"
+  },
+  {
+   "key": "settings_open_system_backup_settings_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Backup']",
+   "sample": "Android સિસ્ટમ-સેટિંગ્સ ખોલે છે, જ્યાં તમે Best Journal માટે"
+  },
+  {
+   "key": "error_no_backup_settings_available",
+   "kind": "string",
+   "reason": "latin_fragment=['Backup']",
+   "sample": "આ ઉપકરણ પર Backup-સેટિંગ્સ ઉપલબ્ધ નથી."
+  },
+  {
+   "key": "settings_premium_cancelled_desc",
+   "kind": "string",
+   "reason": "latin_fragment=['Premium', 'Play']",
+   "sample": "તમારી Premium સુવિધાઓ બિલિંગ સમયગાળાના અંત સુધી ઉપલબ્ધ રહેશે"
+  }
+ ],
+ "lowGujaratiRatio": [
+  {
+   "key": "app_name",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 11,
+   "sample": "Best Journal"
+  },
+  {
+   "key": "label_premium",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 7,
+   "sample": "Premium"
+  },
+  {
+   "key": "transcription_model_groq",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 22,
+   "sample": "Groq Whisper Large V3 Turbo"
+  },
+  {
+   "key": "settings_premium_section",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 7,
+   "sample": "Premium"
+  },
+  {
+   "key": "settings_export",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 6,
+   "sample": "Export"
+  },
+  {
+   "key": "settings_export_dialog_title",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 9,
+   "sample": "PDF Export"
+  },
+  {
+   "key": "settings_export_action",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 6,
+   "sample": "Export"
+  },
+  {
+   "key": "achievements_title",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 12,
+   "sample": "Achievements"
+  },
+  {
+   "key": "settings_about_version",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 12,
+   "sample": "Best Journal V0.21.9"
+  },
+  {
+   "key": "weekday_abbreviations[0]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_mon"
+  },
+  {
+   "key": "weekday_abbreviations[1]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_tue"
+  },
+  {
+   "key": "weekday_abbreviations[2]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_wed"
+  },
+  {
+   "key": "weekday_abbreviations[3]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_thu"
+  },
+  {
+   "key": "weekday_abbreviations[4]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_fri"
+  },
+  {
+   "key": "weekday_abbreviations[5]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_sat"
+  },
+  {
+   "key": "weekday_abbreviations[6]",
+   "kind": "array",
+   "ratio": 0.0,
+   "letters": 18,
+   "sample": "@string/day_abbrev_sun"
+  },
+  {
+   "key": "ai_retro_month_format",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 338,
+   "sample": "FORMAT (KRPAYAA SARVAR PAALO):\\n1. CHHOTA STICHPUNKTE (4-6 M"
+  },
+  {
+   "key": "ai_retro_month_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 604,
+   "sample": "NIYAMO:\\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE V"
+  },
+  {
+   "key": "ai_retro_year_format",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 326,
+   "sample": "FORMAT (KRPAYAA SARVAR PAALO):\\n1. CHHOTA STICHPUNKTE (5-8 M"
+  },
+  {
+   "key": "ai_retro_year_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 615,
+   "sample": "NIYAMO:\\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE V"
+  },
+  {
+   "key": "ai_prompt_insight_intro",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 405,
+   "sample": "Tame EK SAANVEDANAASHEEL, GAHAANAA NAMUNAAO-VISHLESHHAK CHO "
+  },
+  {
+   "key": "ai_prompt_insight_attitude",
+   "kind": "string",
+   "ratio": 0.19,
+   "letters": 1052,
+   "sample": "THAMAARI DRISHTIKON:\\nTame EK SHREYO-ECHCHHH DARPAN CHO. Use"
+  },
+  {
+   "key": "ai_prompt_insight_entry_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 605,
+   "sample": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane "
+  },
+  {
+   "key": "ai_prompt_insight_schema_header",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 1006,
+   "sample": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"tre"
+  },
+  {
+   "key": "ai_prompt_insight_schema_fields",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 831,
+   "sample": "4) \\\"fortschritte\\\" (ARRAY, 0-8 NONDHO)\\n   VYAKTIGAT SHAKTI"
+  },
+  {
+   "key": "ai_prompt_insight_schema_categories",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 2341,
+   "sample": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OL"
+  },
+  {
+   "key": "ai_prompt_insight_output",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 427,
+   "sample": "SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\\n\\\"be"
+  },
+  {
+   "key": "ai_prompt_entropy_entry_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 615,
+   "sample": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane "
+  },
+  {
+   "key": "ai_prompt_entropy_schema_header",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 650,
+   "sample": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"tre"
+  },
+  {
+   "key": "ai_prompt_entropy_schema_fields",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 678,
+   "sample": "4) \\\"fortschritte\\\" (ARRAY, 0-5 NONDHO)\\n   OLAKHO JE BHAARN"
+  },
+  {
+   "key": "ai_prompt_entropy_schema_categories",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 1657,
+   "sample": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OL"
+  },
+  {
+   "key": "ai_prompt_entropy_output",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 183,
+   "sample": "OUTPUT FORMAT — SAKHAT NIYAMO:\\n- MAATR JSON OBJECT SATHE JA"
+  },
+  {
+   "key": "ai_prompt_summary_entry_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 588,
+   "sample": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane "
+  },
+  {
+   "key": "ai_prompt_summary_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 562,
+   "sample": "BHAASHAA NIYAMO (JSON MAA SARAVE TEXT FIELDS MAATE LAAGU):\\n"
+  },
+  {
+   "key": "ai_prompt_summary_schema_header",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 869,
+   "sample": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"tre"
+  },
+  {
+   "key": "ai_prompt_summary_schema_fields",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 754,
+   "sample": "4) \\\"fortschritte\\\" (ARRAY, 0-5 NONDHO)\\n   VARAAVAR AAVTAA "
+  },
+  {
+   "key": "ai_prompt_summary_schema_categories",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 2013,
+   "sample": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OL"
+  },
+  {
+   "key": "ai_prompt_summary_output",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 427,
+   "sample": "SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\\n\\\"be"
+  },
+  {
+   "key": "ai_prompt_custom_headings",
+   "kind": "string",
+   "ratio": 0.14,
+   "letters": 438,
+   "sample": "મહત્વપૂર્ણ — ગતિશીલ શીર્ષકો:\\nડૅશબોર્ડ માટે ત્રણ PASANDITA S"
+  },
+  {
+   "key": "ai_prompt_custom_rules",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 366,
+   "sample": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane "
+  },
+  {
+   "key": "ai_prompt_custom_schema",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 1096,
+   "sample": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"Fokus-REL"
+  },
+  {
+   "key": "ai_prompt_custom_output",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 202,
+   "sample": "SHABDONI SANKHYA-NIYAM: top_massnahmen ane ratschlaege MAA \\"
+  },
+  {
+   "key": "settings_revoke_email_subject",
+   "kind": "string",
+   "ratio": 0.25,
+   "letters": 24,
+   "sample": "Best Journal Premium કરાર રદ"
+  },
+  {
+   "key": "settings_crisis_hotline_de_name",
+   "kind": "string",
+   "ratio": 0.27,
+   "letters": 22,
+   "sample": "Telefonseelsorge જર્મની"
+  },
+  {
+   "key": "settings_crisis_open_findahelpline",
+   "kind": "string",
+   "ratio": 0.2,
+   "letters": 20,
+   "sample": "findahelpline.com ખોલો"
+  },
+  {
+   "key": "settings_ccpa_do_not_sell_title",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 30,
+   "sample": "Do Not Sell My Personal Information"
+  },
+  {
+   "key": "consent_toggle_do_not_sell_title",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 30,
+   "sample": "Do Not Sell My Personal Information"
+  },
+  {
+   "key": "follow_up_premium_subscribe",
+   "kind": "string",
+   "ratio": 0.22,
+   "letters": 9,
+   "sample": "Premium લો"
+  },
+  {
+   "key": "datetime_months_relative[one]",
+   "kind": "plural",
+   "ratio": 0.0,
+   "letters": 8,
+   "sample": "vor %1$d Monat"
+  },
+  {
+   "key": "datetime_months_relative[other]",
+   "kind": "plural",
+   "ratio": 0.0,
+   "letters": 10,
+   "sample": "vor %1$d Monaten"
+  },
+  {
+   "key": "datetime_years_relative[one]",
+   "kind": "plural",
+   "ratio": 0.0,
+   "letters": 7,
+   "sample": "vor %1$d Jahr"
+  },
+  {
+   "key": "datetime_years_relative[other]",
+   "kind": "plural",
+   "ratio": 0.0,
+   "letters": 9,
+   "sample": "vor %1$d Jahren"
+  },
+  {
+   "key": "consent_info_system_backup_title",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 19,
+   "sample": "Android System-Backup"
+  },
+  {
+   "key": "consent_footer_link_impressum",
+   "kind": "string",
+   "ratio": 0.0,
+   "letters": 9,
+   "sample": "Impressum"
+  }
+ ],
+ "verdict": "163 Funde"
+}

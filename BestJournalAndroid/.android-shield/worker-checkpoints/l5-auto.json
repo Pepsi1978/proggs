@@ -1,0 +1,63 @@
+{
+ "numCheck": {
+  "de": {
+   "150": 4,
+   "600": 1,
+   "30": 2,
+   "101": 2,
+   "151": 1,
+   "50": 1,
+   "5": 3
+  },
+  "ja": {
+   "150": 4,
+   "600": 1,
+   "30": 2,
+   "101": 2,
+   "151": 1,
+   "50": 1,
+   "5": 3
+  },
+  "ko": {
+   "150": 4,
+   "600": 1,
+   "30": 2,
+   "101": 2,
+   "151": 1,
+   "50": 1,
+   "5": 3
+  },
+  "zh-rCN": {
+   "150": 4,
+   "600": 1,
+   "30": 2,
+   "101": 2,
+   "151": 1,
+   "50": 1,
+   "5": 3
+  },
+  "zh-rTW": {
+   "150": 4,
+   "600": 1,
+   "30": 2,
+   "101": 2,
+   "151": 1,
+   "50": 1,
+   "5": 3
+  }
+ },
+ "cnTwLegalIdentical": [
+  "churn_discount_badge",
+  "churn_instead_of",
+  "paywall_day7",
+  "paywall_first_payment",
+  "paywall_from_per_day",
+  "paywall_reminder",
+  "paywall_with_limited",
+  "settings_legal_section_header",
+  "transcription_model_groq"
+ ],
+ "cnTwLegalCompared": 93,
+ "cnTwAllShared": 1087,
+ "cnTwAllIdentical": 187
+}

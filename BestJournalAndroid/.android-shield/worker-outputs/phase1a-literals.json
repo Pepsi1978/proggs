@@ -1,0 +1,75 @@
+{
+  "worker": "w8-literals",
+  "hardcodedLiterals": [
+    {
+      "file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/FollowUpComponents.kt",
+      "line": 824,
+      "text": "fun germanNumberWord(n): ones=[eins,zwei,drei,vier,fuenf,...], teens=[zehn,elf,zwoelf,...], tens=[zwanzig,dreissig,...] -> e.g. „Nachtrag Eins“",
+      "component": "Text (follow-up label via germanNumberWord)",
+      "userVisible": true,
+      "debugOnly": false,
+      "note": "LOCALE-GUARDED: EntryDetailScreen.kt:879 calls it only `if (isGermanLocale)`, with non-German fallback to digits. NOT an i18n leak — German is intentional only for de-locale."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/util/TtsVoiceRegistry.kt",
+      "line": 69,
+      "text": "genderLabel(): \"de\" -> if FEMALE \"weiblich\" else \"männlich\" (one branch of a full per-locale when: en/es/fr/it/pt/nl/pl/ru/tr/sv/no/da/fi/uk/ja/ko/zh/hi/ar/th/vi/id/ms + else)",
+      "component": "voice picker display label (SettingsScreen.kt:1051/1091 via displayName)",
+      "userVisible": true,
+      "debugOnly": false,
+      "note": "LOCALE-SWITCHED IN CODE: deliberate multi-locale table, German is correct for de. NOT an i18n leak — not R.string but locale-keyed; every supported language present."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/util/TtsVoiceRegistry.kt",
+      "line": 110,
+      "text": "qualityLabel(): \"de\" -> \"sehr natürlich\" (one branch of full per-locale when, all 24+ langs present)",
+      "component": "voice picker quality label",
+      "userVisible": true,
+      "debugOnly": false,
+      "note": "LOCALE-SWITCHED IN CODE — same as genderLabel. NOT an i18n leak."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/domain/model/AdviceCategory.kt",
+      "line": 8,
+      "text": "enum displayName: SLEEP=\"Schlaf\", WORK=\"Arbeit\", FITNESS=\"Fitness\", NUTRITION=\"Ernährung\", MENTAL_HEALTH=\"Mentale Gesundheit\", RELATIONSHIPS=\"Beziehungen\", HOME=\"Zuhause\", PERSONAL_GROWTH=\"Persönliche Entwicklung\"",
+      "component": "enum displayName field",
+      "userVisible": false,
+      "debugOnly": false,
+      "note": "INTERNAL KEY ONLY: used solely at AdviceCategory.kt:19 `it.displayName.equals(name, ignoreCase=true)` for category lookup. The RENDERED path uses a separate `category.displayNameResId` via context.getString() (JournalViewModel.kt:300). So this German string is a matching key, NOT shown to the user."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/data/repository/AdviceRepository.kt",
+      "line": 409,
+      "text": "sb.appendLine(\"Aktualisiere und ERWEITERE die bisherige Analyse mit den neuen Einträgen.\") + line 410 \"Behalte wichtige Erkenntnisse bei und ergänze neue Muster.\"",
+      "component": "AI prompt builder (sent to LLM)",
+      "userVisible": false,
+      "debugOnly": false,
+      "note": "AI PROMPT TEXT sent to the model, never rendered in UI. German prompt is intended (instructs model); the LLM output itself is localized separately."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/data/local/dao/RetrospectiveDao.kt",
+      "line": 41,
+      "text": "SQL: WHERE title IN ('Ein Anfang voller kleiner Wunder','Stürme und stille Siege','Farben des Alltags','Ein Monat wie ein guter Roman','Ein Jahr, das alles verändert hat')",
+      "component": "Room @Query (seed-data dedup matching)",
+      "userVisible": false,
+      "debugOnly": false,
+      "note": "SQL literal used to detect placeholder/seed retrospective titles. Internal data-matching, not UI text."
+    },
+    {
+      "file": "app/src/main/java/com/bestjournal/app/ui/screens/retrospective/RetrospectiveParser.kt",
+      "line": 118,
+      "text": "keyword lists: liebe/herz/zuneigung/nähe..., arbeit/beruf/job/karriere/büro..., natur/wandern/draußen/wald/berg..., feier/geburtstag/jubiläum..., frühling/sommer/sonne..., blühen/blume/garten..., gedanken/reflekt/seele/gefühl... (lines 118-164)",
+      "component": "theme-classification keyword matching",
+      "userVisible": false,
+      "debugOnly": false,
+      "note": "Lowercase German keyword arrays for content-theme detection in retrospective parsing. Internal NLP heuristic, not UI text."
+    }
+  ],
+  "stringResourceCallCount": 837,
+  "totalUserVisibleNonDebug": 3,
+  "plugin_bugs_observed": [
+    "FIN-037: Grep auf named-Parameter (text=/title=/label=) ist verrauscht — Compose-Animations-`label = \"...\"` (rememberInfiniteTransition/animate*) dominieren die Treffer und sind NIE nutzersichtbar. Empfehlung fuer kuenftige Worker-Prompts: Animations-label per Negativ-Filter (`rememberInfiniteTransition|animate.*label =`) ausschliessen, sonst frisst head_limit echte Treffer.",
+    "FIN-037: Der praeziseste Single-Pass fuer i18n-Leaks in DE-Apps ist der Umlaut-/ss-Sweep (\"[A-Za-z][^\"]*[äöüÄÖÜß][^\"]*\") — er fand ALLE relevanten Faelle in EINEM Grep, waehrend die 9 Standardmuster fast nur Symbole/Interpolation lieferten. Sollte als ERSTER Pattern-Durchlauf laufen.",
+    "FIN-037: 'userVisible' laesst sich aus einem Literal allein NICHT bestimmen — AdviceCategory.displayName SIEHT nutzersichtbar aus, ist aber nur ein Lookup-Key (echte Anzeige via displayNameResId). Ein reiner Grep-Worker wuerde das falsch als Leak melden; Kontext-Read der Verwendungsstelle ist Pflicht, bevor userVisible=true gesetzt wird."
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "ar": {
+    "keyCount": 1085,
+    "missingKeys": [
+      "dev_seed_add_action",
+      "dev_seed_cancel_action",
+      "dev_seed_delete_all_action",
+      "dev_seed_dialog_message",
+      "dev_seed_dialog_title"
+    ],
+    "identicalToDe": [
+      "ai_prompt_rerank_actions_header",
+      "ai_prompt_rerank_entries_header",
+      "ai_prompt_rerank_user_focus_header",
+      "settings_about_version"
+    ],
+    "formatArgMismatch": [],
+    "nakedPercentKeys": [],
+    "unescapedApostrophes": 0
+  },
+  "ur": {
+    "keyCount": 1085,
+    "missingKeys": [
+      "dev_seed_add_action",
+      "dev_seed_cancel_action",
+      "dev_seed_delete_all_action",
+      "dev_seed_dialog_message",
+      "dev_seed_dialog_title"
+    ],
+    "identicalToDe": [
+      "json_key_categories",
+      "json_key_category_advices",
+      "json_key_category_color",
+      "json_key_category_entropy_level",
+      "json_key_category_icon",
+      "json_key_category_name",
+      "json_key_category_summary",
+      "json_key_derivation_date",
+      "json_key_derivation_summary",
+      "json_key_heading_analysis",
+      "json_key_heading_results",
+      "json_key_heading_top5",
+      "json_key_item_connection",
+      "json_key_item_derivation",
+      "json_key_item_description",
+      "json_key_item_explanation",
+      "json_key_item_priority",
+      "json_key_item_reference",
+      "json_key_item_title",
+      "json_key_overall_analysis",
+      "json_key_overall_entropy",
+      "json_key_progress",
+      "json_key_top_actions",
+      "json_key_trend",
+      "json_value_priority_high",
+      "json_value_priority_low",
+      "json_value_priority_medium",
+      "settings_about_version"
+    ],
+    "formatArgMismatch": [],
+    "nakedPercentKeys": [],
+    "unescapedApostrophes": 0
+  },
+  "tr": {
+    "keyCount": 1085,
+    "missingKeys": [
+      "dev_seed_add_action",
+      "dev_seed_cancel_action",
+      "dev_seed_delete_all_action",
+      "dev_seed_dialog_message",
+      "dev_seed_dialog_title"
+    ],
+    "identicalToDe": [
+      "entry_camera",
+      "label_premium",
+      "label_video",
+      "retro_cd_video",
+      "settings_about_version",
+      "settings_premium_section"
+    ],
+    "formatArgMismatch": [],
+    "nakedPercentKeys": [],
+    "unescapedApostrophes": 0
+  }
+}

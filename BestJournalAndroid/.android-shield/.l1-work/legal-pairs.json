@@ -1,0 +1,1253 @@
+{
+  "concreteKeys": [
+    "ai_improved_suffix_marker",
+    "ai_limit_yearly",
+    "ai_limits_dialog_body",
+    "ai_prompt_custom_intro",
+    "ai_prompt_entropy_intro",
+    "ai_prompt_goals_definition",
+    "ai_prompt_insight_intro",
+    "ai_prompt_no_dates_rule",
+    "ai_prompt_response_language",
+    "churn_auto_renew_note",
+    "churn_cancel_sub",
+    "churn_discount_badge",
+    "churn_google_play_redirect",
+    "churn_instead_of",
+    "churn_offer_auto_renew",
+    "churn_offer_feature_perspectives",
+    "churn_pause_sub",
+    "churn_promo_months_remaining",
+    "churn_promo_one_month_remaining",
+    "churn_promo_phase_ends",
+    "churn_switch_yearly",
+    "consent_card1_body",
+    "consent_card3_title",
+    "consent_confirmation",
+    "consent_footer_link_agb",
+    "consent_footer_link_datenschutz",
+    "consent_footer_link_impressum",
+    "consent_toggle_analytics_body",
+    "consent_toggle_do_not_sell_body",
+    "consent_toggle_drive_body",
+    "dashboard_gemini_unavailable",
+    "dashboard_premium_upsell_body",
+    "dev_seed_delete_all_action",
+    "entry_delete_message",
+    "follow_up_delete_confirm_text",
+    "follow_up_premium_body",
+    "follow_up_premium_hint",
+    "follow_up_premium_later",
+    "follow_up_premium_title",
+    "journal_drive_backup_current",
+    "journal_transcribed_with",
+    "legend_high_burden",
+    "onboarding_feature_secure",
+    "onboarding_feature_secure__privacy",
+    "onboarding_free_after_trial",
+    "onboarding_free_trial",
+    "onboarding_premium_feature_noads",
+    "onboarding_start_free",
+    "onboarding_try_premium",
+    "paywall_day7",
+    "paywall_exit_bonus_days",
+    "paywall_exit_discount",
+    "paywall_exit_price_comparison",
+    "paywall_exit_start_discount",
+    "paywall_feature_profiles",
+    "paywall_first_payment",
+    "paywall_free_note",
+    "paywall_from_per_day",
+    "paywall_headline_clarity_sub",
+    "paywall_instead_per_month",
+    "paywall_legal_hint",
+    "paywall_monthly_plan",
+    "paywall_reminder",
+    "paywall_with_limited",
+    "paywall_yearly_note",
+    "permission_rationale_microphone",
+    "privacy_gate_gemini_body",
+    "privacy_gate_groq_body",
+    "privacy_gate_tts_body",
+    "profile_entropy_long",
+    "prompt_clear_confirm_text",
+    "retro_benefit_weekly",
+    "retro_premium_unlock",
+    "settings_analytics_title",
+    "settings_auto_lock",
+    "settings_crisis_dialog_body",
+    "settings_delete_account_confirm_body",
+    "settings_delete_account_subtitle",
+    "settings_entries_auto_loaded",
+    "settings_feedback_dialog_desc",
+    "settings_legal_online_label",
+    "settings_legal_section_header",
+    "settings_premium_cancelled_desc",
+    "settings_premium_cancelled_until",
+    "settings_premium_desc",
+    "settings_premium_feature_5_perspectives",
+    "settings_premium_feature_improve_desc",
+    "settings_premium_feature_profiles",
+    "settings_premium_lifetime",
+    "settings_premium_lifetime_desc",
+    "settings_revoke_email_body",
+    "settings_revoke_subtitle",
+    "settings_unlock_premium",
+    "transcription_model_groq",
+    "urgency_high"
+  ],
+  "wildcards": [
+    "profile_insight_*"
+  ],
+  "langs": {
+    "ar": {
+      "ai_improved_suffix_marker": {
+        "de": "✨ KI-verbessert",
+        "loc": "✨ مُحسَّن بالذكاء الاصطناعي"
+      },
+      "ai_limit_yearly": {
+        "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+        "loc": "اشتراك سنوي، %1$s سنويا (وفّر 37\\u00A0%%)"
+      },
+      "ai_limits_dialog_body": {
+        "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+        "loc": "مع الاشتراك المميّز\\n\\nيتوفّر لك يوميًا:\\n• 150 طلبًا في اليوم لكل ملف — للملفّات الأربعة المحددة مسبقًا معًا 600/اليوم، بالإضافة إلى 150/اليوم لكل ملف مخصّص تنشئه.\\n• ما يصل إلى 150 تحسينًا للنص\\n\\nكيف يسير ذلك بالتفصيل:\\n• الطلبات 1 إلى 30: بأعلى جودة للذكاء الاصطناعي\\n• الطلبات 31 إلى 100: بجودة قياسية سريعة\\n• عند الطلب 101: إيقاف مؤقت لمرة واحدة مدّته 30 دقيقة\\n• الطلبات 101 إلى 150: جودة قياسية سريعة\\n• من الطلب 151: لا مزيد من الطلبات حتى الغد\\n\\nينطبق أيضًا على جميع المستخدمين:\\n• بحد أقصى 50 طلب ذكاء اصطناعي في الساعة — ثم إيقاف مؤقت لمدة 5 دقائق\\n\\nمتى تُعاد الحصص؟\\nكل يوم عند 0:00 (بتوقيتك المحلي) تبدأ حصّة جديدة كاملة.\\n\\n──────────\\n\\nبدون اشتراك\\n\\n• 5 تحليلات للوحة التحكم في الأسبوع لكل ملف تعريف\\n• 5 تحسينات للنص في الأسبوع\\n• دائمًا بجودة قياسية سريعة\\n• تُعاد كل يوم اثنين عند 0:00 (بتوقيتك المحلي)\\n\\n──────────\\n\\nمعظم المستخدمين في حياتهم اليومية لن يصلوا إلى هذه الحدود."
+      },
+      "ai_prompt_custom_intro": {
+        "de": "Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst UND Aufgaben-Bearbeiter.\\n\\nARBEITSWEISE IN ZWEI SCHRITTEN:\\n\\nSCHRITT 1 — KONTEXT AUFNEHMEN:\\nLies zuerst ALLE Tagebucheinträge des Nutzers vollständig durch. Verstehe die Situation, die Muster, die Themen, die genannten Dinge, Probleme, Wünsche. Die Einträge sind dein KONTEXT, dein Startpunkt, deine Grundlage. Sie begrenzen dich aber nicht.\\n\\nSCHRITT 2 — AUFGABE AUSFÜHREN:\\n%1$s\\n\\nDas oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.\\n\\nKERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:\\nDer gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.\\n\\nWichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag \\\"Ziele\\\": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag \\\"Sport\\\": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.\\n\\nENTSCHEIDEND:\\n- Steht im Auftrag \\\"analysiere\\\", \\\"fasse zusammen\\\", \\\"was fällt auf\\\" — bleib dicht an den Einträgen.\\n- Steht im Auftrag \\\"recherchiere\\\", \\\"finde Alternativen\\\", \\\"schlage vor\\\", \\\"empfehle\\\", \\\"ergänze\\\", \\\"was wäre wenn\\\", \\\"neue Ideen\\\" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.\\n- Der Auftrag hat Vorrang. Die Einträge sind das Fundament, nicht die Wand.",
+        "loc": "أنت محلّل مذكرات ذكي ويقظ.\\n\\nالخطوة الأولى، استيعاب السياق:\\naقرأ جميع التسجيلات بتمعّن. افهم ما يهمّ المستخدم وما يشغله.\\n\\nالخطوة الثانية، تنفيذ المهمّة:\\n%1$s\\n\\nالقاعدة الجوهرية:\\nيجب أن يرتكز 50 بالمئة على الأقلّ من التحليل على محتوى التسجيلات الفعلي. لا تختلق نتائج غير موجودة في التسجيلات.\\n\\nمهمّ في التمييز:\\n- «حلّل» = استخرج من التسجيلات ما يتّصل بالمحور واعرضه.\\n- «ابحث» = أضف معلومات خارجية يطلبها المحور، مع الإشارة الواضحة إلى أنّها من خارج التسجيلات."
+      },
+      "ai_prompt_entropy_intro": {
+        "de": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes Ratschlags-Dashboard im JSON-Format.\\n\\nWAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:\\nAlles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+        "loc": "أنت مستشار حياة متعاطف وذكي ومحلّل أنماط.\\n\\nمهمّتك:\\nحلّل تسجيلات المستخدم. اعثر على مصادر متكرّرة للتوتّر والفوضى والعبء. أنشئ لوحة توصيات مهيكلة بصيغة JSON.\\n\\nما نبحث عنه، العبء الشخصي:\\nكلّ ما يحدث فوضى أو توتّرا أو استنزافا أو ألما أو مشاكل نوم أو عبئا انفعاليا أو فقدان تحكّم في حياة المستخدم."
+      },
+      "ai_prompt_goals_definition": {
+        "de": "DEFINITION — WAS IST EIN ZIEL:\\nAlles, was der Nutzer erreichen, verändern, anfangen, beenden, verbessern oder aufbauen möchte. Auch indirekte Hinweise zählen:\\n- Direkt: \\\"Ich will abnehmen\\\", \\\"Ich muss den Zahnarzt anrufen\\\"\\n- Indirekt: \\\"Wäre schön, mal wieder laufen zu gehen\\\" = Ziel Fitness\\n- Klagen: \\\"Mein Schlaf ist so schlecht\\\" = implizites Ziel Schlafverbesserung\\n- Träume: \\\"Irgendwann möchte ich nach Schweden\\\" = Langfrist-Ziel Reise",
+        "loc": "التعريف، ما الهدف:\\nكلّ ما يريد المستخدم تحقيقه أو تغييره أو بدأه أو إنهاءه أو تحسينه أو بناءه. الإشارات غير المباشرة تحتسب أيضا:\\n- مباشر: «أريد إنقاص وزني»، «عليّ الاتّصال بطبيب الأسنان»\\n- غير مباشر: «أتمنّى لو أعود للجري» = هدف لياقة\\n- شكاوى: «نومي سيّئ» = هدف ضمني لتحسين النوم\\n- أحلام: «يوما ما أودّ زيارة السويد» = هدف سفر طويل الأمد"
+      },
+      "ai_prompt_insight_intro": {
+        "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+        "loc": "أنت محلّل أنماط متعاطف وبعيد النظر للنموّ الشخصي.\\n\\nمهمّتك:\\nحلّل تسجيلات المستخدم. اعثر على أنماط خفيّة، أفكار وأفعال متكرّرة، معتقدات غير واعية، أنماط انفعاليّة ونقاط قوّة شخصية. أظهر للمستخدم ما يمكن أن يتعلّمه عن نفسه، وهو ما قد لا يدركه أثناء الكتابة. أنشئ لوحة معرفة ذات مهيكلة بصيغة JSON."
+      },
+      "ai_prompt_no_dates_rule": {
+        "de": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben verwenden — weder \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" noch \\\"Eintrag vom 3. April\\\", \\\"am 23.04.\\\", \\\"vom 28.4.\\\" oder ähnliche Verweise auf konkrete Eintragsdaten. Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen vorgelesen unnatürlich und brechen den Erkenntnisfluss.\\n\\nFORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\\n- FALSCH: \\\"Einträge vom 3.4., 28.4. und 23.4. belegen, dass dein Biorhythmus durch späte Schlafzeiten leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\n- FALSCH: \\\"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\\\"\\n- RICHTIG: \\\"Deine Borreliose hängt direkt mit dem Bewegungsmangel zusammen.\\\"\\n- FALSCH: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du bei den Intervallläufen am 24.04. gespürt hast.\\\"\\n- RICHTIG: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du beim Intervalltraining spürst.\\\"\\n\\nDie inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. Du kannst weiterhin allgemeine zeitliche Bezüge nutzen (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"). Datumsangaben gehören NUR in das \\\"herleitung\\\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt).",
+        "loc": "لا تستخدم التواريخ الصريحة في حقول النصوص الظاهرة للمستخدم. عبّر بالنسبية: «مؤخّرا»، «في الأسبوع الماضي»، «أخيرا». التواريخ فقط في حقل «tarikh» المخصّص لذلك."
+      },
+      "ai_prompt_response_language": {
+        "de": "ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.",
+        "loc": "لغة الردّ: أجب بالكامل باللغة العربية. يجب أن تكون جميع النصوص والعناوين بالعربية الفصحى، بدون أي لغة أخرى."
+      },
+      "churn_auto_renew_note": {
+        "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+        "loc": "يتجدّد اشتراكك تلقائيا عبر Google Play. يمكنك الإلغاء في أيّ وقت."
+      },
+      "churn_cancel_sub": {
+        "de": "Abo kündigen",
+        "loc": "إلغاء الاشتراك"
+      },
+      "churn_discount_badge": {
+        "de": "<g id=\"percent\" example=\"50\">%1$d</g>%% SPAREN",
+        "loc": "وفّر <g id=\"percent\" example=\"50\">%1$d</g>\\u00A0%%"
+      },
+      "churn_google_play_redirect": {
+        "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.",
+        "loc": "ستوجّه الآن إلى Google Play لإدارة اشتراكك. تسجيلاتك تبقى محفوظة بالطبع."
+      },
+      "churn_instead_of": {
+        "de": "statt ",
+        "loc": "بدلا من "
+      },
+      "churn_offer_auto_renew": {
+        "de": "Verlängert sich automatisch, jederzeit kündbar",
+        "loc": "يتجدّد تلقائيا، يمكن الإلغاء في أيّ وقت"
+      },
+      "churn_offer_feature_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)"
+      },
+      "churn_pause_sub": {
+        "de": "Oder Abo bei Google Play pausieren",
+        "loc": "أو أوقف الاشتراك مؤقّتا عبر Google Play\\u200E"
+      },
+      "churn_promo_months_remaining": {
+        "de": "Noch <g id=\"months\" example=\"2\">%1$d</g> Monate — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "متبقي <g id=\"months\" example=\"2\">%1$d</g> أشهر — ثم <g id=\"base_price\" example=\"3,99 €\">%2$s</g> شهرياً"
+      },
+      "churn_promo_one_month_remaining": {
+        "de": "Noch 1 Monat — danach <g id=\"base_price\" example=\"3,99 €\">%1$s</g> pro Monat",
+        "loc": "متبقي شهر واحد — ثم <g id=\"base_price\" example=\"3,99 €\">%1$s</g> شهرياً"
+      },
+      "churn_promo_phase_ends": {
+        "de": "Endet am <g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "ينتهي في <g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> — ثم <g id=\"base_price\" example=\"3,99 €\">%2$s</g> شهريًا"
+      },
+      "churn_switch_yearly": {
+        "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+        "loc": "أو انتقل إلى الاشتراك السنوي ووفّر أكثر"
+      },
+      "consent_card1_body": {
+        "de": "Deine Einträge bleiben auf deinem Gerät.",
+        "loc": "تبقى إدخالاتك على جهازك."
+      },
+      "consent_card3_title": {
+        "de": "Anonyme Statistiken",
+        "loc": "إحصائيات مجهولة"
+      },
+      "consent_confirmation": {
+        "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.",
+        "loc": "بالنقر على «الموافقة والبدء» تؤكد أنك قرأت سياسة الخصوصية وشروط الاستخدام والبيان القانوني، وتوافق على معالجة البيانات الموضحة. يمكنك تغيير قرارك في أي وقت من الإعدادات."
+      },
+      "consent_footer_link_agb": {
+        "de": "Nutzungsbedingungen",
+        "loc": "شروط الاستخدام"
+      },
+      "consent_footer_link_datenschutz": {
+        "de": "Datenschutz",
+        "loc": "الخصوصية"
+      },
+      "consent_footer_link_impressum": {
+        "de": "Impressum",
+        "loc": "معلومات قانونية"
+      },
+      "consent_toggle_analytics_body": {
+        "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+        "loc": "Firebase Analytics — يساعدنا على تحسين التطبيق. لا يوجد محتوى شخصي، فقط عدد نقرات مجهولة. نقل البيانات: Google الولايات المتحدة (Data Privacy Framework)."
+      },
+      "consent_toggle_do_not_sell_body": {
+        "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+        "loc": "إلغاء الاشتراك في كاليفورنيا (CCPA/CPRA 2026). عند التفعيل، يتم تعطيل جميع معالجات البيانات الاختيارية — تبقى الميزات المحلية فقط."
+      },
+      "consent_toggle_drive_body": {
+        "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.",
+        "loc": "يحفظ المدخلات مشفرة في Google Drive الخاص بك. تحتفظ بالتحكم الكامل — يوجد الملف في حسابك، وليس لدينا."
+      },
+      "dashboard_gemini_unavailable": {
+        "de": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+        "loc": "\\u200FGemini غير متاح حاليا، حاول مجددا بعد قليل."
+      },
+      "dashboard_premium_upsell_body": {
+        "de": "Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.",
+        "loc": "مع Premium، تحصل على تحليلات وفيرة من أي عدد من الملفات الشخصية."
+      },
+      "dev_seed_delete_all_action": {
+        "de": "Alle Einträge löschen",
+        "loc": null
+      },
+      "entry_delete_message": {
+        "de": "Diesen Eintrag unwiderruflich löschen?",
+        "loc": "هل تريد حذف هذا التسجيل نهائيا؟"
+      },
+      "follow_up_delete_confirm_text": {
+        "de": "Möchtest du Nachtrag <g id=\"ordinal\" example=\"1\">%1$s</g> wirklich unwiderruflich löschen?",
+        "loc": "هل تريد حذف الملاحظة اللاحقة <g id=\"ordinal\" example=\"1\">%1$s</g> نهائياً؟"
+      },
+      "follow_up_premium_body": {
+        "de": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+        "loc": "مع Premium يمكنك إضافة ملاحظات لاحقة بلا حدود لكل تدوينة في يومياتك."
+      },
+      "follow_up_premium_hint": {
+        "de": "ab dem zweiten Nachtrag",
+        "loc": "ابتداءً من الملاحظة اللاحقة الثانية"
+      },
+      "follow_up_premium_later": {
+        "de": "Später entscheiden",
+        "loc": "قرر لاحقاً"
+      },
+      "follow_up_premium_title": {
+        "de": "Unbegrenzte Nachträge",
+        "loc": "ملاحظات لاحقة غير محدودة"
+      },
+      "journal_drive_backup_current": {
+        "de": "Backup aktuell, alle Einträge gesichert",
+        "loc": "النسخة الاحتياطية محدّثة، جميع التسجيلات محفوظة"
+      },
+      "journal_transcribed_with": {
+        "de": "Transkribiert mit %1$s",
+        "loc": "تم النسخ بواسطة %1$s"
+      },
+      "legend_high_burden": {
+        "de": "Hoch (67–100%) — Sofort handeln",
+        "loc": "مرتفع (67–100\\u00A0%)، تصرّف فورا"
+      },
+      "onboarding_feature_secure": {
+        "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+        "loc": "بياناتك تبقى عندك، مشفّرة وآمنة"
+      },
+      "onboarding_feature_secure__privacy": {
+        "de": null,
+        "loc": null,
+        "note": "NOT_IN_DE"
+      },
+      "onboarding_free_after_trial": {
+        "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+        "loc": "تستمرّ في استخدام Best Journal بعد ذلك،\\nمجانا مع حدّ أسبوعي لاستخدام الذكاء الاصطناعي."
+      },
+      "onboarding_free_trial": {
+        "de": "Kostenlos, jederzeit kündbar",
+        "loc": "مجاني، قابل للإلغاء في أي وقت"
+      },
+      "onboarding_premium_feature_noads": {
+        "de": "Keine Werbung, ungestört schreiben und reflektieren",
+        "loc": "بلا إعلانات، اكتب وتأمّل بهدوء"
+      },
+      "onboarding_start_free": {
+        "de": "Kostenlos starten",
+        "loc": "ابدأ مجانا"
+      },
+      "onboarding_try_premium": {
+        "de": "8 Tage gratis, danach ab 3,99 €/Monat",
+        "loc": "8 أيام مجانية، ثم من 3.99 € شهريًا"
+      },
+      "paywall_day7": {
+        "de": "Tag 7",
+        "loc": "اليوم 7"
+      },
+      "paywall_exit_bonus_days": {
+        "de": "+ %1$d Tage extra Testzeit",
+        "loc": "+ %1$d أيام تجربة إضافية"
+      },
+      "paywall_exit_discount": {
+        "de": "Rabatt für %1$d Monate",
+        "loc": "خصم لمدّة %1$d أشهر"
+      },
+      "paywall_exit_price_comparison": {
+        "de": "Nur %1$s statt %2$s pro Monat",
+        "loc": "فقط %1$s بدلا من %2$s شهريا"
+      },
+      "paywall_exit_start_discount": {
+        "de": "Zahlungspflichtig — 2 Monate zum halben Preis",
+        "loc": "مدفوع — شهران بنصف الثمن"
+      },
+      "paywall_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "ملفات تحليل شخصية غير محدودة"
+      },
+      "paywall_first_payment": {
+        "de": "Erste Zahlung",
+        "loc": "الدفعة الأولى"
+      },
+      "paywall_free_note": {
+        "de": "Die App funktioniert auch ohne Abo weiter.",
+        "loc": "يعمل التطبيق بدون اشتراك أيضًا."
+      },
+      "paywall_from_per_day": {
+        "de": "Jahresabo, %1$s pro Jahr",
+        "loc": "من %1$s يوميا"
+      },
+      "paywall_headline_clarity_sub": {
+        "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+        "loc": "الذكاء الاصطناعي يكشف الأنماط التي تفوتك"
+      },
+      "paywall_instead_per_month": {
+        "de": "Spare %1$d%% gegenüber dem Monatsabo",
+        "loc": "وفِّر %1$d%% مقارنةً بالخطة الشهرية"
+      },
+      "paywall_legal_hint": {
+        "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+        "loc": "بالاشتراك فإنك توافق على %1$s. حقك في الرجوع عن العقد خلال 14 يومًا موضّح هناك."
+      },
+      "paywall_monthly_plan": {
+        "de": "Monatsabo, %1$s pro Monat",
+        "loc": "اشتراك شهري، %1$s شهريا"
+      },
+      "paywall_reminder": {
+        "de": "Erinnerung",
+        "loc": "تذكير"
+      },
+      "paywall_with_limited": {
+        "de": "mit eingeschränkten Limits.",
+        "loc": "مع حدود استخدام."
+      },
+      "paywall_yearly_note": {
+        "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar",
+        "loc": "ثم %1$s سنويًا، يتجدد تلقائيًا\\nقابل للإلغاء في أي وقت خلال فترة التجربة"
+      },
+      "permission_rationale_microphone": {
+        "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+        "loc": "لكي تتمكّن من إملاء تسجيلات يومياتك بالصوت، نحتاج إلى الوصول إلى الميكروفون."
+      },
+      "privacy_gate_gemini_body": {
+        "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern.",
+        "loc": "يسعدنا أنك تريد استخدام الميزات الذكية لـ ‏Best Journal! لإنشاء الملخصات والمراجعات ورؤى لوحة التحكم وتحسينات النص، تُرسَل نصوصك مشفرة إلى Google Gemini.\\n\\n\\u2713 لا تدريب للذكاء الاصطناعي على بياناتك\\n\\u2713 لا تُحفظ الطلبات بشكل دائم\\n\\u2713 مشفرة وفق إطار خصوصية البيانات بين الاتحاد الأوروبي والولايات المتحدة\\n\\nملاحظة مهمة: نظرًا لأن مدخلات يومياتك قد تحتوي على بيانات حساسة (الصحة، الدين، العلاقات الشخصية — المادة 9 من اللائحة العامة لحماية البيانات)، نطلب موافقتك الصريحة على معالجة الذكاء الاصطناعي. مخرجات الذكاء الاصطناعي هي اقتراحات، وليست استشارة مهنية ولا تغني عن المتخصصين.\\n\\nيمكنك تغيير ذلك في أي وقت من الإعدادات."
+      },
+      "privacy_gate_groq_body": {
+        "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+        "loc": "لنسخ النص من الصوت عبر السحابة، يُرسل تسجيلك الصوتي مشفرًا إلى Groq, Inc. (ماونتن فيو، الولايات المتحدة) ويُحوَّل هناك إلى نص. يُحذف الملف الصوتي بعد المعالجة ولا يُستخدم للتدريب.\\n\\nبديل: استخدم النسخ المحلي على الجهاز (دون اتصال، بدون نقل بيانات)، قابل للتبديل في الإعدادات → الذكاء الاصطناعي."
+      },
+      "privacy_gate_tts_body": {
+        "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+        "loc": "للقراءة بصوت عالٍ، يُرسل النص مشفرًا إلى Microsoft Bing Speech (الولايات المتحدة) ويعود كملف صوتي. الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية."
+      },
+      "profile_entropy_long": {
+        "de": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\\n\\nDu bekommst:\\n\\n• Eine Analyse deiner größten Belastungsquellen\\n• 5 konkrete Maßnahmen zum Aufräumen\\n• Tipps, die dir im Alltag helfen können\\n\\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+        "loc": "يبحث الذكاء الاصطناعي بدقة عن التوتر والإجهاد والفوضى في مدخلاتك.\\n\\nستحصل على:\\n\\n\\u2022 تحليل لأكبر مصادر الضغط لديك\\n\\u2022 5 إجراءات ملموسة للترتيب\\n\\u2022 نصائح يمكنها مساعدتك في حياتك اليومية\\n\\nمثالي عندما تشعر أن كل شيء أصبح أكثر من اللازم."
+      },
+      "prompt_clear_confirm_text": {
+        "de": "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+        "loc": "سيُحذف التحليل المخصص نهائياً. هل تريد المتابعة فعلاً؟"
+      },
+      "retro_benefit_weekly": {
+        "de": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+        "loc": "مراجعات أسبوعية لا محدودة، ليس فقط أوّل أسبوعين"
+      },
+      "retro_premium_unlock": {
+        "de": "Mit Premium alle Rückblicke freischalten",
+        "loc": "افتح كلّ المراجعات مع المميّز"
+      },
+      "settings_analytics_title": {
+        "de": "Anonyme Statistik",
+        "loc": "إحصائيات مجهولة"
+      },
+      "settings_auto_lock": {
+        "de": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+        "loc": "قفل تلقائي بعد 60 ثانية في الخلفية"
+      },
+      "settings_crisis_dialog_body": {
+        "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr.",
+        "loc": "Best Journal هو تطبيق يوميات ولا يُغني عن الدعم النفسي أو الطبي المتخصص. التحليلات التي ينشئها الذكاء الاصطناعي ليست علاجًا.\\n\\nإذا كنت تمر بأزمة حادة أو تراودك أفكار بإيذاء النفس أو الانتحار، فلا يجب أن تواجه ذلك وحدك. المساعدة المجانية والمجهولة متاحة على مدار الساعة."
+      },
+      "settings_delete_account_confirm_body": {
+        "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+        "loc": "هذا الإجراء لا يمكن التراجع عنه ويحذف:\\n\\n• جميع إدخالات المذكرات والصور ومقاطع الفيديو المحلية\\n• حسابك في Firebase\\n• النسخة الاحتياطية للتطبيق في Google Drive\\n\\nسيعيد التطبيق التشغيل كتثبيت جديد."
+      },
+      "settings_delete_account_subtitle": {
+        "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+        "loc": "يحذف بشكل نهائي جميع البيانات المحلية وحسابك في Google والنسخة الاحتياطية في Drive"
+      },
+      "settings_entries_auto_loaded": {
+        "de": "Einträge werden bei der Anmeldung automatisch geladen",
+        "loc": "تحمّل التسجيلات تلقائيا عند تسجيل الدخول"
+      },
+      "settings_feedback_dialog_desc": {
+        "de": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+        "loc": "رسالتك إلى المطوّرين، نقرأ كل شيء ونردّ شخصيا!"
+      },
+      "settings_legal_online_label": {
+        "de": "Online-Version:",
+        "loc": "النسخة الإلكترونية:"
+      },
+      "settings_legal_section_header": {
+        "de": "Rechtliche Dokumente",
+        "loc": "الوثائق القانونية"
+      },
+      "settings_premium_cancelled_desc": {
+        "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.",
+        "loc": "ستبقى ميزات Premium متاحة حتى نهاية فترة الفوترة. يمكنك التراجع عن الإلغاء عبر Google Play."
+      },
+      "settings_premium_cancelled_until": {
+        "de": "Premium-Abo gekündigt — läuft noch bis <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g>",
+        "loc": "تم إلغاء اشتراك Premium — ساري حتى <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g>"
+      },
+      "settings_premium_desc": {
+        "de": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+        "loc": "جميع الميزات مفتوحة، الذكاء الاصطناعي كل يوم، تصدير PDF والمزيد."
+      },
+      "settings_premium_feature_5_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)"
+      },
+      "settings_premium_feature_improve_desc": {
+        "de": "KI verbessert deine Einträge auf Wunsch.",
+        "loc": "يحسّن الذكاء الاصطناعي تسجيلاتك عند الطلب."
+      },
+      "settings_premium_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "ملفات شخصية غير محدودة"
+      },
+      "settings_premium_lifetime": {
+        "de": "Lifetime-Zugang aktiv",
+        "loc": "وصول مدى الحياة مفعّل"
+      },
+      "settings_premium_lifetime_desc": {
+        "de": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+        "loc": "شراء لمرة واحدة، جميع الميزات مفتوحة بشكل دائم."
+      },
+      "settings_revoke_email_body": {
+        "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+        "loc": "أُعلن بموجب هذا عدولي عن العقد الذي أبرمته بشأن ميزات Premium في Best Journal.\\n\\nالمرسل (حساب Google): %1$s\\nوقت العدول: %2$s\\n\\nتم إرسال هذا العدول تلقائيًا عبر Gmail API بعد تأكيده من خلال زر العدول ثنائي الخطوة داخل التطبيق والمتوافق مع § 356a BGB."
+      },
+      "settings_revoke_subtitle": {
+        "de": "§ 356a BGB — Widerruf direkt per App",
+        "loc": "شراء Premium"
+      },
+      "settings_unlock_premium": {
+        "de": "Premium freischalten",
+        "loc": "افتح المميّز"
+      },
+      "transcription_model_groq": {
+        "de": "whisper-large-v3-turbo",
+        "loc": "Groq Whisper Large V3 Turbo"
+      },
+      "urgency_high": {
+        "de": "Dringend — Sofort handeln",
+        "loc": "عاجل، تصرّف فورا"
+      }
+    },
+    "ur": {
+      "ai_improved_suffix_marker": {
+        "de": "✨ KI-verbessert",
+        "loc": "✨ AI سے بہتر کیا گیا"
+      },
+      "ai_limit_yearly": {
+        "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+        "loc": "سالانہ سبسکرپشن، %1$s/سال (37%% بچائیں)"
+      },
+      "ai_limits_dialog_body": {
+        "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+        "loc": "پریمیم سبسکرپشن کے ساتھ\\n\\nفی دن تمہارے لیے دستیاب:\\n• فی دن فی پروفائل 150 درخواستیں — 4 پہلے سے طے شدہ پروفائلز کے لیے مجموعاً 600/دن، نیز ہر اپنے بنائے پروفائل کے لیے 150/دن اضافی۔\\n• 150 تک متن بہتری\\n\\nیہ تفصیل میں کیسے کام کرتا ہے:\\n• درخواستیں 1 سے 30: سب سے اعلیٰ AI معیار میں\\n• درخواستیں 31 سے 100: تیز معیاری معیار میں\\n• 101 ویں درخواست پر: ایک بار 30 منٹ کا وقفہ\\n• درخواستیں 101 سے 150: تیز معیاری معیار\\n• درخواست 151 کے بعد: کل تک کوئی مزید درخواست نہیں\\n\\nنیز تمام صارفین کے لیے:\\n• فی گھنٹہ زیادہ سے زیادہ 50 AI درخواستیں — پھر 5 منٹ کا وقفہ\\n\\nکوٹے کب دوبارہ ترتیب ہوتے ہیں؟\\nہر روز رات 12:00 بجے (تمہارا مقامی وقت) ایک نیا مکمل کوٹہ شروع ہوتا ہے۔\\n\\n──────────\\n\\nسبسکرپشن کے بغیر\\n\\n• فی ہفتہ فی پروفائل 5 ڈیش بورڈ تجزیے\\n• فی ہفتہ 5 متن بہتری\\n• ہمیشہ تیز معیاری معیار میں\\n• ہر پیر رات 12:00 بجے (تمہارا مقامی وقت) دوبارہ ترتیب\\n\\n──────────\\n\\nروزمرہ استعمال میں اکثر صارفین ان حدوں تک نہیں پہنچتے۔"
+      },
+      "ai_prompt_custom_intro": {
+        "de": "Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst UND Aufgaben-Bearbeiter.\\n\\nARBEITSWEISE IN ZWEI SCHRITTEN:\\n\\nSCHRITT 1 — KONTEXT AUFNEHMEN:\\nLies zuerst ALLE Tagebucheinträge des Nutzers vollständig durch. Verstehe die Situation, die Muster, die Themen, die genannten Dinge, Probleme, Wünsche. Die Einträge sind dein KONTEXT, dein Startpunkt, deine Grundlage. Sie begrenzen dich aber nicht.\\n\\nSCHRITT 2 — AUFGABE AUSFÜHREN:\\n%1$s\\n\\nDas oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.\\n\\nKERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:\\nDer gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.\\n\\nWichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag \\\"Ziele\\\": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag \\\"Sport\\\": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.\\n\\nENTSCHEIDEND:\\n- Steht im Auftrag \\\"analysiere\\\", \\\"fasse zusammen\\\", \\\"was fällt auf\\\" — bleib dicht an den Einträgen.\\n- Steht im Auftrag \\\"recherchiere\\\", \\\"finde Alternativen\\\", \\\"schlage vor\\\", \\\"empfehle\\\", \\\"ergänze\\\", \\\"was wäre wenn\\\", \\\"neue Ideen\\\" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.\\n- Der Auftrag hat Vorrang. Die Einträge sind das Fundament, nicht die Wand.",
+        "loc": "آپ ایک ذہین، توجہ دینے والے ڈائری تجزیہ کار اور کام انجام دینے والے ہیں۔\\n\\nدو مراحل میں کام:\\n\\nمرحلہ 1 — سیاق و سباق جذب کرنا:\\nپہلے صارف کے تمام ڈائری اندراجات مکمل پڑھیں۔ صورتحال، نمونے، موضوعات، ذکر کردہ چیزیں، مسائل، خواہشات سمجھیں۔ اندراجات آپ کا سیاق و سباق، آپ کا نقطہ آغاز، آپ کی بنیاد ہیں۔ لیکن وہ آپ کو محدود نہیں کرتے۔\\n\\nمرحلہ 2 — کام انجام دینا:\\n%1$s\\n\\nاوپر آپ کا اصل کام ہے۔ مرحلہ 1 کے سیاق و سباق کی بنیاد پر اسے انجام دیں۔ اگر کام تحقیق، خیالات، متبادل، تجاویز، سفارشات یا نئی معلومات مانگتا ہے، تو فعال طور پر فراہم کریں، چاہے وہ اندراجات میں نہ ہوں۔ اندراجات آپ کے آؤٹ پٹ کو معلومات دیتے ہیں، اسے محدود نہیں کرتے۔\\n\\nبنیادی اصول — پروفائل کم از کم 50 فیصد لاتا ہے:\\nمکمل آؤٹ پٹ (مجموعی تجزیہ، اعلیٰ کام، زمرے، مشورے، پیشرفت) صارف کے کام سے کم از کم 50 فیصد واضح طور پر منسلک ہونا چاہیے۔ کام سے کوئی بامعنی ربط نہ رکھنے والی بصیرتیں، نکات یا موضوعات چھوڑ دیں — JSON کو بھرنے کے لیے عام زندگی کے موضوعات سے نہ بھریں۔ واضح فوکس کے ساتھ کم نکات عام بہت سے سے بہتر ہیں۔\\n\\nاہم — زبان: ربط کو متنوع طریقے سے ظاہر کریں۔ مترادفات، متعلقہ اصطلاحات، موضوعی پڑوس اور تبدیلی استعمال کریں۔ کام کے الفاظ کی میکانیکی تکرار نہ کریں — یہ زبردستی لگتا ہے۔ مثال کام «اہداف»: منصوبے، خواہشات، عزائم، جو حاصل کرنا چاہتے ہیں، آپ کی سمت، ترقی کے قدم کے بارے میں بھی بات کریں۔ مثال کام «کھیل»: حرکت، تربیت، جسمانی سرگرمی، برداشت، فٹنس، صحت کے بارے میں بھی بات کریں۔ پروفائل-ربط محسوس ہونا چاہیے، حرف بہ حرف نہیں۔\\n\\nفیصلہ کن:\\n- اگر کام کہتا ہے «تجزیہ کریں»، «خلاصہ کریں»، «کیا نمایاں ہے» — اندراجات کے قریب رہیں۔\\n- اگر کام کہتا ہے «تحقیق کریں»، «متبادل تلاش کریں»، «تجویز کریں»، «سفارش کریں»، «اضافہ کریں»، «اگر کیا»، «نئے خیالات» — اندراجات سے فعال طور پر آگے بڑھیں اور اپنا نیا مواد شامل کریں۔\\n- کام کو ترجیح۔ اندراجات بنیاد ہیں، چھت نہیں۔"
+      },
+      "ai_prompt_entropy_intro": {
+        "de": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes Ratschlags-Dashboard im JSON-Format.\\n\\nWAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:\\nAlles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+        "loc": "آپ ایک ہمدرد، ذہین زندگی کے مشیر اور نمونہ تجزیہ کار ہیں۔\\n\\nآپ کا کام:\\nصارف کے ڈائری اندراجات کا تجزیہ کریں۔ تناؤ، بے ترتیبی اور بوجھ کے بار بار آنے والے ذرائع تلاش کریں۔ اس سے JSON فارمیٹ میں ایک منظم مشورہ ڈیش بورڈ بنائیں۔\\n\\nہم کیا تلاش کر رہے ہیں — ذاتی بوجھ:\\nہر وہ چیز جو صارف کی زندگی میں بے ترتیبی، تناؤ، توانائی کی کمی، درد، نیند کی مسائل، جذباتی بوجھ یا قابو کھونے کا سبب بنتی ہے۔"
+      },
+      "ai_prompt_goals_definition": {
+        "de": "DEFINITION — WAS IST EIN ZIEL:\\nAlles, was der Nutzer erreichen, verändern, anfangen, beenden, verbessern oder aufbauen möchte. Auch indirekte Hinweise zählen:\\n- Direkt: \\\"Ich will abnehmen\\\", \\\"Ich muss den Zahnarzt anrufen\\\"\\n- Indirekt: \\\"Wäre schön, mal wieder laufen zu gehen\\\" = Ziel Fitness\\n- Klagen: \\\"Mein Schlaf ist so schlecht\\\" = implizites Ziel Schlafverbesserung\\n- Träume: \\\"Irgendwann möchte ich nach Schweden\\\" = Langfrist-Ziel Reise",
+        "loc": "تعریف — ہدف کیا ہے:\\nہر وہ چیز جو صارف حاصل کرنا، تبدیل کرنا، شروع کرنا، ختم کرنا، بہتر کرنا یا بنانا چاہتا ہے۔ غیر مستقیم اشارے بھی گنتے ہیں:\\n- براہ راست: \\\"میں وزن کم کرنا چاہتا ہوں\\\"، \\\"مجھے دانتوں کے ڈاکٹر کو فون کرنا ہے\\\"\\n- بالواسطہ: \\\"دوبارہ دوڑنا اچھا لگے گا\\\" = ہدف فٹنس\\n- شکایات: \\\"میری نیند بہت خراب ہے\\\" = مضمر ہدف نیند بہتری\\n- خواب: \\\"کسی دن سویڈن جانا چاہتا ہوں\\\" = طویل مدتی ہدف سفر"
+      },
+      "ai_prompt_insight_intro": {
+        "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+        "loc": "آپ ذاتی ترقی کے لیے ایک ہمدرد، گہرائی والے نمونہ تجزیہ کار ہیں۔\\n\\nآپ کا کام:\\nصارف کے ڈائری اندراجات کا تجزیہ کریں۔ اس میں پوشیدہ نمونے، بار بار آنے والے سوچ اور رویے، لاشعوری عقائد، جذباتی ردعمل کے نمونے اور ذاتی خوبیاں تلاش کریں۔ صارف کو وہ باتیں نظر آنے دیں جو وہ اپنے بارے میں سیکھ سکتے ہیں — وہ باتیں جو شاید لکھتے وقت انہیں خود بھی معلوم نہیں تھیں۔ اس سے JSON فارمیٹ میں منظم خودشناسی ڈیش بورڈ بنائیں۔"
+      },
+      "ai_prompt_no_dates_rule": {
+        "de": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben verwenden — weder \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" noch \\\"Eintrag vom 3. April\\\", \\\"am 23.04.\\\", \\\"vom 28.4.\\\" oder ähnliche Verweise auf konkrete Eintragsdaten. Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen vorgelesen unnatürlich und brechen den Erkenntnisfluss.\\n\\nFORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\\n- FALSCH: \\\"Einträge vom 3.4., 28.4. und 23.4. belegen, dass dein Biorhythmus durch späte Schlafzeiten leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\n- FALSCH: \\\"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\\\"\\n- RICHTIG: \\\"Deine Borreliose hängt direkt mit dem Bewegungsmangel zusammen.\\\"\\n- FALSCH: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du bei den Intervallläufen am 24.04. gespürt hast.\\\"\\n- RICHTIG: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du beim Intervalltraining spürst.\\\"\\n\\nDie inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. Du kannst weiterhin allgemeine zeitliche Bezüge nutzen (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"). Datumsangaben gehören NUR in das \\\"herleitung\\\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt).",
+        "loc": "TTS-دوست (لازمی — مرئی متن میں تاریخوں پر پابندی):\\nتمام مرئی متن کے فیلڈز (تفصیل، وضاحت، خلاصہ، مجموعی تجزیہ) میں تاریخوں کے حوالے استعمال نہ کریں — نہ «3.4.»، «23.04.»، «28.4.» اور نہ «3 اپریل کا اندراج»، «23.04. کو»، «28.4. سے» یا کسی مخصوص اندراج کی تاریخ کا کوئی اشارہ۔ یہ متن صارف کو پڑھ کر سنائے جاتے ہیں — تاریخوں کی لڑیاں سن کر غیر فطری لگتی ہیں اور بصیرت کا بہاؤ ٹوٹ جاتا ہے۔\\n\\nاس کے بجائے خالص بصیرت بیان کریں:\\n- غلط: «3.4.، 28.4. اور 23.4. کے اندراج ظاہر کرتے ہیں کہ دیر سے سونے کی وجہ سے آپ کا حیاتیاتی نظام متاثر ہو رہا ہے۔»\\n- درست: «دیر سے سونا منظم طریقے سے آپ کا حیاتیاتی نظام تباہ کر رہا ہے۔»\\n- غلط: «30 تاریخ کا اندراج آپ کی بیماری کو براہ راست ورزش کی کمی سے جوڑتا ہے۔»\\n- درست: «آپ کی بیماری براہ راست حرکت کی کمی سے منسلک ہے۔»\\n- غلط: «دوڑ ذہنی صفائی کی کنجی ہے، جو آپ نے 24.04. کی وقفہ دوڑ میں محسوس کی۔»\\n- درست: «دوڑ ذہنی صفائی کی کنجی ہے، جو آپ وقفہ تربیت میں محسوس کرتے ہیں۔»\\n\\nبصیرت باقی رہتی ہے — صرف مخصوص تاریخیں نکل جاتی ہیں۔ عمومی وقت کے حوالے جیسے «بار بار»، «حال ہی میں»، «کئی دنوں سے» استعمال کیے جا سکتے ہیں۔ تاریخیں صرف «herleitung» فیلڈ میں آتی ہیں (ماخذ، اندرونی استعمال، دکھایا نہیں جاتا)۔"
+      },
+      "ai_prompt_response_language": {
+        "de": "ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.",
+        "loc": "جواب کی زبان: مکمل طور پر اردو میں جواب دیں۔ تمام متن اور عنوانات اردو میں ہونے چاہیے، کوئی دوسری زبان نہیں۔"
+      },
+      "churn_auto_renew_note": {
+        "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+        "loc": "آپ کی سبسکرپشن Google Play کے ذریعے خودکار تجدید ہوتی ہے۔ منسوخی کسی بھی وقت ممکن ہے۔"
+      },
+      "churn_cancel_sub": {
+        "de": "Abo kündigen",
+        "loc": "سبسکرپشن منسوخ کریں"
+      },
+      "churn_discount_badge": {
+        "de": "<g id=\"percent\" example=\"50\">%1$d</g>%% SPAREN",
+        "loc": "<g id=\"percent\" example=\"50\">%1$d</g>%% بچائیں"
+      },
+      "churn_google_play_redirect": {
+        "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.",
+        "loc": "آپ کو اپنا سبسکرپشن منظم کرنے کے لیے Google Play پر بھیجا جائے گا۔ آپ کے ڈائری اندراجات یقیناً محفوظ رہیں گے۔"
+      },
+      "churn_instead_of": {
+        "de": "statt ",
+        "loc": "بجائے "
+      },
+      "churn_offer_auto_renew": {
+        "de": "Verlängert sich automatisch, jederzeit kündbar",
+        "loc": "خودکار تجدید، کسی بھی وقت منسوخ کریں"
+      },
+      "churn_offer_feature_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "تمام AI پروفائلز (4 پہلے سے طے شدہ + لامحدود اپنے)"
+      },
+      "churn_pause_sub": {
+        "de": "Oder Abo bei Google Play pausieren",
+        "loc": "‏Google Play پر سبسکرپشن روکیں"
+      },
+      "churn_promo_months_remaining": {
+        "de": "Noch <g id=\"months\" example=\"2\">%1$d</g> Monate — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "<g id=\"months\" example=\"2\">%1$d</g> مہینے باقی — پھر <g id=\"base_price\" example=\"3,99 €\">%2$s</g> ماہانہ"
+      },
+      "churn_promo_one_month_remaining": {
+        "de": "Noch 1 Monat — danach <g id=\"base_price\" example=\"3,99 €\">%1$s</g> pro Monat",
+        "loc": "1 مہینہ باقی — پھر <g id=\"base_price\" example=\"3,99 €\">%1$s</g> ماہانہ"
+      },
+      "churn_promo_phase_ends": {
+        "de": "Endet am <g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "<g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> کو ختم — پھر <g id=\"base_price\" example=\"3,99 €\">%2$s</g> ماہانہ"
+      },
+      "churn_switch_yearly": {
+        "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+        "loc": "یا سالانہ پلان پر جائیں اور مزید بچائیں"
+      },
+      "consent_card1_body": {
+        "de": "Deine Einträge bleiben auf deinem Gerät.",
+        "loc": "آپ کی اندراجات آپ کے آلے پر رہتی ہیں۔"
+      },
+      "consent_card3_title": {
+        "de": "Anonyme Statistiken",
+        "loc": "گمنام شماریات"
+      },
+      "consent_confirmation": {
+        "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.",
+        "loc": "\\\"اتفاق اور شروع کریں\\\" پر ٹیپ کرنے سے آپ تصدیق کرتے ہیں کہ آپ نے رازداری پالیسی، استعمال کی شرائط اور قانونی نوٹس پڑھ لیا ہے اور بیان کردہ ڈیٹا پروسیسنگ پر رضامند ہیں۔ آپ اپنا فیصلہ ترتیبات میں کسی بھی وقت تبدیل کر سکتے ہیں۔"
+      },
+      "consent_footer_link_agb": {
+        "de": "Nutzungsbedingungen",
+        "loc": "استعمال کی شرائط"
+      },
+      "consent_footer_link_datenschutz": {
+        "de": "Datenschutz",
+        "loc": "رازداری"
+      },
+      "consent_footer_link_impressum": {
+        "de": "Impressum",
+        "loc": "قانونی نوٹس"
+      },
+      "consent_toggle_analytics_body": {
+        "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+        "loc": "Firebase Analytics — ایپ کو بہتر بنانے میں ہماری مدد کرتا ہے۔ کوئی ذاتی مواد نہیں، صرف گمنام ٹیپ گنتی۔ ڈیٹا منتقلی: Google USA (Data Privacy Framework)۔"
+      },
+      "consent_toggle_do_not_sell_body": {
+        "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+        "loc": "کیلیفورنیا آپٹ آؤٹ (CCPA/CPRA 2026)۔ جب فعال ہو، تمام اختیاری ڈیٹا پروسیسنگ غیر فعال کر دی جاتی ہے — صرف مقامی فیچرز باقی رہتے ہیں۔"
+      },
+      "consent_toggle_drive_body": {
+        "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.",
+        "loc": "اندراجات کو خفیہ کردہ شکل میں آپ کے اپنے Google Drive میں محفوظ کرتا ہے۔ آپ مکمل کنٹرول برقرار رکھتے ہیں — فائل آپ کے اکاؤنٹ میں ہے، ہمارے پاس نہیں۔"
+      },
+      "dashboard_gemini_unavailable": {
+        "de": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+        "loc": "‏Gemini ابھی دستیاب نہیں، برائے کرم کچھ دیر بعد دوبارہ کوشش کریں۔"
+      },
+      "dashboard_premium_upsell_body": {
+        "de": "Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.",
+        "loc": "Premium کے ساتھ آپ کو جتنے چاہیں پروفائلز سے فراخ تجزیے ملتے ہیں۔"
+      },
+      "dev_seed_delete_all_action": {
+        "de": "Alle Einträge löschen",
+        "loc": null
+      },
+      "entry_delete_message": {
+        "de": "Diesen Eintrag unwiderruflich löschen?",
+        "loc": "یہ اندراج مستقل طور پر حذف کریں؟"
+      },
+      "follow_up_delete_confirm_text": {
+        "de": "Möchtest du Nachtrag <g id=\"ordinal\" example=\"1\">%1$s</g> wirklich unwiderruflich löschen?",
+        "loc": "کیا آپ واقعی اضافی نوٹ <g id=\"ordinal\" example=\"1\">%1$s</g> کو ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟"
+      },
+      "follow_up_premium_body": {
+        "de": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+        "loc": "Premium کے ساتھ آپ اپنی ہر ڈائری اندراج میں جتنے چاہیں اضافی نوٹ شامل کر سکتے ہیں۔"
+      },
+      "follow_up_premium_hint": {
+        "de": "ab dem zweiten Nachtrag",
+        "loc": "دوسرے اضافی نوٹ سے"
+      },
+      "follow_up_premium_later": {
+        "de": "Später entscheiden",
+        "loc": "بعد میں فیصلہ کریں"
+      },
+      "follow_up_premium_title": {
+        "de": "Unbegrenzte Nachträge",
+        "loc": "لامحدود اضافی نوٹ"
+      },
+      "journal_drive_backup_current": {
+        "de": "Backup aktuell, alle Einträge gesichert",
+        "loc": "بیک اپ تازہ ہے، تمام اندراجات محفوظ ہیں"
+      },
+      "journal_transcribed_with": {
+        "de": "Transkribiert mit %1$s",
+        "loc": "‏%1$s کے ذریعے نقل کیا گیا"
+      },
+      "legend_high_burden": {
+        "de": "Hoch (67–100%) — Sofort handeln",
+        "loc": "زیادہ (67–100%) — فوری اقدام کریں"
+      },
+      "onboarding_feature_secure": {
+        "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+        "loc": "آپ کا ڈیٹا آپ کے پاس رہتا ہے، خفیہ اور محفوظ"
+      },
+      "onboarding_feature_secure__privacy": {
+        "de": null,
+        "loc": null,
+        "note": "NOT_IN_DE"
+      },
+      "onboarding_free_after_trial": {
+        "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+        "loc": "اس کے بعد آپ Best Journal استعمال کرتے رہیں،\\nہر ہفتے محدود AI کالز کے ساتھ مفت۔"
+      },
+      "onboarding_free_trial": {
+        "de": "Kostenlos, jederzeit kündbar",
+        "loc": "مفت، کسی بھی وقت منسوخ کریں"
+      },
+      "onboarding_premium_feature_noads": {
+        "de": "Keine Werbung, ungestört schreiben und reflektieren",
+        "loc": "کوئی اشتہار نہیں، بغیر رکاوٹ لکھیں اور غور کریں"
+      },
+      "onboarding_start_free": {
+        "de": "Kostenlos starten",
+        "loc": "مفت شروع کریں"
+      },
+      "onboarding_try_premium": {
+        "de": "8 Tage gratis, danach ab 3,99 €/Monat",
+        "loc": "8 دن مفت، پھر 3,99 €/ماہ سے"
+      },
+      "paywall_day7": {
+        "de": "Tag 7",
+        "loc": "دن 7"
+      },
+      "paywall_exit_bonus_days": {
+        "de": "+ %1$d Tage extra Testzeit",
+        "loc": "+ %1$d دن اضافی آزمائشی مدت"
+      },
+      "paywall_exit_discount": {
+        "de": "Rabatt für %1$d Monate",
+        "loc": "%1$d مہینوں کے لیے چھوٹ"
+      },
+      "paywall_exit_price_comparison": {
+        "de": "Nur %1$s statt %2$s pro Monat",
+        "loc": "صرف %1$s بجائے %2$s فی ماہ"
+      },
+      "paywall_exit_start_discount": {
+        "de": "Zahlungspflichtig — 2 Monate zum halben Preis",
+        "loc": "ادائیگی کے ساتھ — 2 ماہ آدھی قیمت پر"
+      },
+      "paywall_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "لامحدود ذاتی تجزیاتی پروفائلز"
+      },
+      "paywall_first_payment": {
+        "de": "Erste Zahlung",
+        "loc": "پہلی ادائیگی"
+      },
+      "paywall_free_note": {
+        "de": "Die App funktioniert auch ohne Abo weiter.",
+        "loc": "یہ ایپ سبسکرپشن کے بغیر بھی کام کرتی رہے گی۔"
+      },
+      "paywall_from_per_day": {
+        "de": "Jahresabo, %1$s pro Jahr",
+        "loc": "%1$s فی دن سے شروع"
+      },
+      "paywall_headline_clarity_sub": {
+        "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+        "loc": "‏AI وہ نمونے پہچانتا ہے جو آپ سے پوشیدہ رہتے ہیں"
+      },
+      "paywall_instead_per_month": {
+        "de": "Spare %1$d%% gegenüber dem Monatsabo",
+        "loc": "ماہانہ پلان کے مقابلے میں %1$d%% کی بچت"
+      },
+      "paywall_legal_hint": {
+        "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+        "loc": "سبسکرائب کرنے سے تم %1$s قبول کرتے ہو۔ تمہارا 14 دن کا معاہدہ منسوخی کا حق وہاں بیان کیا گیا ہے۔"
+      },
+      "paywall_monthly_plan": {
+        "de": "Monatsabo, %1$s pro Monat",
+        "loc": "ماہانہ پلان، %1$s فی ماہ"
+      },
+      "paywall_reminder": {
+        "de": "Erinnerung",
+        "loc": "یاد دہانی"
+      },
+      "paywall_with_limited": {
+        "de": "mit eingeschränkten Limits.",
+        "loc": "محدود حدود کے ساتھ۔"
+      },
+      "paywall_yearly_note": {
+        "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar",
+        "loc": "بعد میں %1$s سالانہ، خودکار تجدید\\nآزمائشی مدت میں کسی بھی وقت منسوخ کریں"
+      },
+      "permission_rationale_microphone": {
+        "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+        "loc": "تاکہ تم اپنے ڈائری اندراجات آواز سے بول کر لکھ سکو، ہمیں تمہارے مائیکروفون تک رسائی درکار ہے۔"
+      },
+      "privacy_gate_gemini_body": {
+        "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern.",
+        "loc": "اچھا لگا کہ آپ ‏Best Journal کی ذہین خصوصیات استعمال کرنا چاہتے ہیں! خلاصوں، جائزوں، ڈیش بورڈ بصیرت اور متن کی بہتری کے لیے آپ کے متون کو محفوظ طریقے سے ‏Google Gemini کو بھیجا جاتا ہے۔\\n\\n✓ آپ کے ڈیٹا سے ‏KI تربیت نہیں\\n✓ درخواستیں مستقل طور پر محفوظ نہیں کی جاتیں\\n✓ ‏EU-US Data Privacy Framework کے مطابق خفیہ کاری\\n\\nاہم نوٹ: چونکہ آپ کے ڈائری اندراجات میں خاص طور پر حساس ڈیٹا ہو سکتا ہے (صحت، مذہب، ذاتی تعلقات — ‏DSGVOآرٹ. 9)، ہم آپ سے ‏KI پروسیسنگ کے لیے واضح رضامندی مانگتے ہیں۔ ‏KI نتائج تجاویز ہیں، پیشہ ورانہ مشورہ نہیں، اور کسی ماہر کا متبادل نہیں۔\\n\\nآپ اسے کسی بھی وقت ترتیبات میں تبدیل کر سکتے ہیں۔"
+      },
+      "privacy_gate_groq_body": {
+        "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+        "loc": "کلاؤڈ ٹرانسکرپشن کے لیے آپ کی آواز کی ریکارڈنگ خفیہ کر کے Groq, Inc. (ماؤنٹین ویو، امریکہ) کو بھیجی جاتی ہے اور وہاں متن میں تبدیل کی جاتی ہے۔ آڈیو فائل پروسیسنگ کے بعد حذف کر دی جاتی ہے اور تربیت کے لیے استعمال نہیں ہوتی۔\\n\\nمتبادل: آلے پر مقامی ٹرانسکرپشن استعمال کریں (آف لائن، ڈیٹا منتقل نہیں ہوتا)، Settings → AI میں تبدیل کیا جا سکتا ہے۔"
+      },
+      "privacy_gate_tts_body": {
+        "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+        "loc": "پڑھ کر سنانے کے لیے متن خفیہ کر کے Microsoft Bing Speech (امریکہ) کو بھیجا جاتا ہے اور آڈیو کے طور پر واپس آتا ہے۔ قانونی بنیاد: EU-US Data Privacy Framework + Standard Contractual Clauses۔"
+      },
+      "profile_entropy_long": {
+        "de": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\\n\\nDu bekommst:\\n\\n• Eine Analyse deiner größten Belastungsquellen\\n• 5 konkrete Maßnahmen zum Aufräumen\\n• Tipps, die dir im Alltag helfen können\\n\\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+        "loc": "KI آپ کے اندراجات میں خاص طور پر تناؤ، بوجھ اور بے ترتیبی کی تلاش کرتی ہے۔\\n\\nآپ کو ملے گا:\\n\\n• آپ کے سب سے بڑے بوجھ کے ذرائع کا تجزیہ\\n• صورتحال درست کرنے کے لیے 5 ٹھوس اقدامات\\n• وہ مشورے جو روزمرہ زندگی میں مدد کر سکتے ہیں\\n\\nمثالی ہے جب آپ کو لگے کہ سب کچھ بہت زیادہ ہو رہا ہے۔"
+      },
+      "prompt_clear_confirm_text": {
+        "de": "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+        "loc": "ذاتی تجزیہ ہمیشہ کے لیے حذف ہو جائے گا۔ کیا آپ واقعی جاری رکھنا چاہتے ہیں؟"
+      },
+      "retro_benefit_weekly": {
+        "de": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+        "loc": "لامحدود ہفتہ وار جائزے، صرف پہلے 2 ہفتے نہیں"
+      },
+      "retro_premium_unlock": {
+        "de": "Mit Premium alle Rückblicke freischalten",
+        "loc": "‏Premium کے ساتھ تمام جائزے کھولیں"
+      },
+      "settings_analytics_title": {
+        "de": "Anonyme Statistik",
+        "loc": "گمنام شماریات"
+      },
+      "settings_auto_lock": {
+        "de": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+        "loc": "پس منظر میں 60 سیکنڈ کے بعد خودکار لاک ہوتا ہے"
+      },
+      "settings_crisis_dialog_body": {
+        "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr.",
+        "loc": "Best Journal ایک جرنل ایپ ہے اور یہ پیشہ ورانہ نفسیاتی یا طبی مدد کا متبادل نہیں ہے۔ AI سے تیار کردہ تجزیے علاج نہیں ہیں۔\\n\\nاگر آپ شدید بحران میں ہیں یا خود کو نقصان پہنچانے یا خودکشی کے خیالات آ رہے ہیں، تو آپ کو یہ سب اکیلے نہیں جھیلنا چاہیے۔ مفت، گمنام مدد 24/7 دستیاب ہے۔"
+      },
+      "settings_delete_account_confirm_body": {
+        "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+        "loc": "یہ عمل واپس نہیں کیا جا سکتا اور درج ذیل کو حذف کرتا ہے:\\n\\n• تمام مقامی ڈائری اندراجات، تصاویر اور ویڈیوز\\n• آپ کا Firebase اکاؤنٹ\\n• ایپ کا Google Drive بیک اپ\\n\\nاس کے بعد ایپ نئے انسٹالیشن کے طور پر دوبارہ شروع ہو گی۔"
+      },
+      "settings_delete_account_subtitle": {
+        "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+        "loc": "تمام مقامی ڈیٹا، Google اکاؤنٹ اور Drive بیک اپ کو مستقل طور پر حذف کرتا ہے"
+      },
+      "settings_entries_auto_loaded": {
+        "de": "Einträge werden bei der Anmeldung automatisch geladen",
+        "loc": "لاگ ان پر اندراجات خودکار لوڈ ہوتے ہیں"
+      },
+      "settings_feedback_dialog_desc": {
+        "de": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+        "loc": "ڈیولپرز کو آپ کا پیغام — ہم سب کچھ پڑھتے ہیں اور ذاتی طور پر جواب دیتے ہیں!"
+      },
+      "settings_legal_online_label": {
+        "de": "Online-Version:",
+        "loc": "آن لائن ورژن:"
+      },
+      "settings_legal_section_header": {
+        "de": "Rechtliche Dokumente",
+        "loc": "قانونی دستاویزات"
+      },
+      "settings_premium_cancelled_desc": {
+        "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.",
+        "loc": "آپ کی ‏Premium خصوصیات بلنگ مدت کے اختتام تک دستیاب رہیں گی۔ آپ ‏Google Play کے ذریعے منسوخی کو واپس لے سکتے ہیں۔"
+      },
+      "settings_premium_cancelled_until": {
+        "de": "Premium-Abo gekündigt — läuft noch bis <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g>",
+        "loc": "Premium سبسکرپشن منسوخ — <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g> تک ساری رہے گی"
+      },
+      "settings_premium_desc": {
+        "de": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+        "loc": "تمام خصوصیات کھلی، ہر دن AI، PDF ایکسپورٹ اور مزید۔"
+      },
+      "settings_premium_feature_5_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "تمام AI پروفائلز (4 پہلے سے طے شدہ + لامحدود اپنے)"
+      },
+      "settings_premium_feature_improve_desc": {
+        "de": "KI verbessert deine Einträge auf Wunsch.",
+        "loc": "AI تمہاری درخواست پر اندراجات بہتر بناتا ہے۔"
+      },
+      "settings_premium_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "لامحدود ذاتی پروفائلز"
+      },
+      "settings_premium_lifetime": {
+        "de": "Lifetime-Zugang aktiv",
+        "loc": "‏Lifetime رسائی فعال"
+      },
+      "settings_premium_lifetime_desc": {
+        "de": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+        "loc": "ایک بار کی خریداری، تمام خصوصیات مستقل طور پر کھل جاتی ہیں۔"
+      },
+      "settings_revoke_email_body": {
+        "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+        "loc": "اس کے ذریعے میں Best Journal کی Premium خصوصیات سے متعلق اپنے معاہدے سے دستبرداری کی اطلاع دیتا ہوں۔\\n\\nبھیجنے والا (Google اکاؤنٹ): %1$s\\nدستبرداری کا وقت: %2$s\\n\\nیہ دستبرداری ایپ میں موجود § 356a BGB کے مطابق دو مرحلہ وار دستبرداری کے بٹن کے ذریعے شروع کی گئی اور Gmail API کے ذریعے خودکار طور پر بھیجی گئی۔"
+      },
+      "settings_revoke_subtitle": {
+        "de": "§ 356a BGB — Widerruf direkt per App",
+        "loc": "Premium خریداری"
+      },
+      "settings_unlock_premium": {
+        "de": "Premium freischalten",
+        "loc": "‏Premium کھولیں"
+      },
+      "transcription_model_groq": {
+        "de": "whisper-large-v3-turbo",
+        "loc": "Groq Whisper Large V3 Turbo"
+      },
+      "urgency_high": {
+        "de": "Dringend — Sofort handeln",
+        "loc": "فوری — ابھی اقدام کریں"
+      }
+    },
+    "tr": {
+      "ai_improved_suffix_marker": {
+        "de": "✨ KI-verbessert",
+        "loc": "✨ YZ ile geliştirildi"
+      },
+      "ai_limit_yearly": {
+        "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+        "loc": "Yıllık abonelik, %1$s/yıl (37\\u00A0%% tasarruf)"
+      },
+      "ai_limits_dialog_body": {
+        "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+        "loc": "PREMIUM ABONELİKLE\\n\\nHer gün kullanımına açık:\\n• Günde 150 istek hakkı profil başına — 4 hazır profille 600/gün, oluşturduğun her kişisel profil için ek 150/gün.\\n• 150 adede kadar metin geliştirme\\n\\nAyrıntılı işleyiş:\\n• 1–30. istekler: en yüksek YZ kalitesinde\\n• 31–100. istekler: hızlı standart kalitede\\n• 101. istekte: tek seferlik 30 dak. mola\\n• 101–150. istekler: hızlı standart kalite\\n• 151. istekten itibaren: yarına kadar istek yok\\n\\nAyrıca tüm kullanıcılar için:\\n• Saatte en fazla 50 YZ isteği — ardından 5 dak. mola\\n\\nKotalar ne zaman sıfırlanır?\\nHer gün gece yarısı (yerel saatinle) yeni tam kota başlar.\\n\\n──────────\\n\\nABONELİK OLMADAN\\n\\n• Profil başına haftada 5 gösterge paneli analizi\\n• Haftada 5 metin geliştirme\\n• Her zaman hızlı standart kalitede\\n• Her Pazartesi gece yarısı (yerel saatinle) sıfırlanır\\n\\n──────────\\n\\nGünlük yaşamda kullanıcıların büyük çoğunluğu bu sınırlarla hiç karşılaşmaz."
+      },
+      "ai_prompt_custom_intro": {
+        "de": "Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst UND Aufgaben-Bearbeiter.\\n\\nARBEITSWEISE IN ZWEI SCHRITTEN:\\n\\nSCHRITT 1 — KONTEXT AUFNEHMEN:\\nLies zuerst ALLE Tagebucheinträge des Nutzers vollständig durch. Verstehe die Situation, die Muster, die Themen, die genannten Dinge, Probleme, Wünsche. Die Einträge sind dein KONTEXT, dein Startpunkt, deine Grundlage. Sie begrenzen dich aber nicht.\\n\\nSCHRITT 2 — AUFGABE AUSFÜHREN:\\n%1$s\\n\\nDas oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.\\n\\nKERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:\\nDer gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.\\n\\nWichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag \\\"Ziele\\\": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag \\\"Sport\\\": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.\\n\\nENTSCHEIDEND:\\n- Steht im Auftrag \\\"analysiere\\\", \\\"fasse zusammen\\\", \\\"was fällt auf\\\" — bleib dicht an den Einträgen.\\n- Steht im Auftrag \\\"recherchiere\\\", \\\"finde Alternativen\\\", \\\"schlage vor\\\", \\\"empfehle\\\", \\\"ergänze\\\", \\\"was wäre wenn\\\", \\\"neue Ideen\\\" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.\\n- Der Auftrag hat Vorrang. Die Einträge sind das Fundament, nicht die Wand.",
+        "loc": "Akıllı, dikkatli bir günlük analisti VE görev uygulayıcısısın.\\n\\nİKİ ADIMDA ÇALIŞMA:\\n\\nADIM 1 — BAĞLAMI KAVRA:\\nÖnce kullanıcının TÜM günlük girişlerini baştan sona oku. Durumu, örüntüleri, temaları, bahsedilen şeyleri, sorunları, istekleri anla. Girişler senin BAĞLAMIN, başlangıç noktanın, temelin. Ama seni sınırlamaz.\\n\\nADIM 2 — GÖREVİ UYGULA:\\n%1$s\\n\\nYukarıdaki senin asıl GÖREVİN. Bu görevi Adım 1\\'deki bağlam temelinde gerçekleştir. Görev araştırma, fikir, alternatif, öneri, tavsiye veya yeni bilgi gerektiriyorsa bunları AKTİF olarak sun, girişlerde geçmeseler bile. Girişler çıktını yönlendirir, kısıtlamaz.\\n\\nÇEKİRDEK KURAL — PROFİL EN AZ YÜZDE ELLİ TAŞIR:\\nTüm çıktı (genel analiz, önemli içgörüler, kategoriler, tavsiyeler, gelişimler) net biçimde kullanıcının göreviyle bağlantılı olmalı, en az yüzde elli. Görevle içeriksel bağı OLMAYAN bulguları, noktaları veya temaları çıkar — JSON\\'u doldurmak için genel yaşam temalarıyla doldurma. Az ama derin bağlı nokta, çok ama genel olandan iyidir.\\n\\nDil için önemli: Bağı VARIANTLI biçimde ifade et. Eş anlamlılar, ilgili terimler, tematik yakınlıklar ve açıklamalar kullan. Görevin tam sözcüklerini mekanik olarak TEKRARLAMA — bu baskıcı görünür. Görev \"Hedefler\" ise şunlardan da söz et: planlar, istekler, hırslar, ulaşmak istediklerin, yolun, gelişim adımların. Görev \"Spor\" ise şunlardan da söz et: hareket, antrenman, fiziksel aktivite, dayanıklılık, kondisyon, sağlık. Profil bağlantısı HİSSEDİLMELİ, harfi harfine değil.\\n\\nBELİRLEYİCİ:\\n- Görev \"analiz et\", \"özetle\", \"dikkat çeken nedir\" diyorsa — girişlere yakın kal.\\n- Görev \"araştır\", \"alternatif bul\", \"öner\", \"tavsiye et\", \"tamamla\", \"ya olsaydı\", \"yeni fikirler\" diyorsa — girişlerin ötesine AKTİF geç ve yeni içerik getir.\\n- Görev önceliklidir. Girişler temeldir, duvar değil."
+      },
+      "ai_prompt_entropy_intro": {
+        "de": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes Ratschlags-Dashboard im JSON-Format.\\n\\nWAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:\\nAlles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+        "loc": "Empatik, çok zeki bir yaşam danışmanı ve örüntü analistisin.\\n\\nGÖREVİN:\\nKullanıcının günlük girişlerini incele. Yinelenen stres, düzensizlik ve yük kaynaklarını bul. Bunlardan JSON biçiminde yapılandırılmış bir tavsiye paneli oluştur.\\n\\nARADIĞIMIZ — KİŞİSEL YÜK:\\nKullanıcının hayatında düzensizlik, stres, enerji kaybı, acı, uyku sorunları, duygusal yük veya kontrol kaybı yaratan her şey."
+      },
+      "ai_prompt_goals_definition": {
+        "de": "DEFINITION — WAS IST EIN ZIEL:\\nAlles, was der Nutzer erreichen, verändern, anfangen, beenden, verbessern oder aufbauen möchte. Auch indirekte Hinweise zählen:\\n- Direkt: \\\"Ich will abnehmen\\\", \\\"Ich muss den Zahnarzt anrufen\\\"\\n- Indirekt: \\\"Wäre schön, mal wieder laufen zu gehen\\\" = Ziel Fitness\\n- Klagen: \\\"Mein Schlaf ist so schlecht\\\" = implizites Ziel Schlafverbesserung\\n- Träume: \\\"Irgendwann möchte ich nach Schweden\\\" = Langfrist-Ziel Reise",
+        "loc": "TANIM — HEDEF NEDİR:\\nKullanıcının ulaşmak, değiştirmek, başlatmak, bitirmek, iyileştirmek veya kurmak istediği her şey. Dolaylı ipuçları da sayılır:\\n- Doğrudan: «Kilo vermek istiyorum», «Dişçiyi aramalıyım»\\n- Dolaylı: «Yeniden koşmak güzel olurdu» = form hedefi\\n- Şikâyetler: «Uykum çok kötü» = örtük uyku iyileştirme hedefi\\n- Hayaller: «Bir gün İsveç\\'e gitmek istiyorum» = uzun vadeli seyahat hedefi"
+      },
+      "ai_prompt_insight_intro": {
+        "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+        "loc": "Kişisel gelişim için empatik, derin bir örüntü analistisin.\\n\\nGÖREVİN:\\nKullanıcının günlük girişlerini incele. Gizli örüntüleri, yinelenen düşünce ve davranış biçimlerini, bilinçdışı inançları, duygusal tepki örüntülerini ve kişisel güçleri bul. Yazarken kullanıcıya fark etmediği ama kendisi hakkında öğrenebileceklerini görünür kıl. Bunlardan JSON biçiminde yapılandırılmış bir öz farkındalık paneli oluştur."
+      },
+      "ai_prompt_no_dates_rule": {
+        "de": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben verwenden — weder \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" noch \\\"Eintrag vom 3. April\\\", \\\"am 23.04.\\\", \\\"vom 28.4.\\\" oder ähnliche Verweise auf konkrete Eintragsdaten. Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen vorgelesen unnatürlich und brechen den Erkenntnisfluss.\\n\\nFORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\\n- FALSCH: \\\"Einträge vom 3.4., 28.4. und 23.4. belegen, dass dein Biorhythmus durch späte Schlafzeiten leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\n- FALSCH: \\\"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\\\"\\n- RICHTIG: \\\"Deine Borreliose hängt direkt mit dem Bewegungsmangel zusammen.\\\"\\n- FALSCH: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du bei den Intervallläufen am 24.04. gespürt hast.\\\"\\n- RICHTIG: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du beim Intervalltraining spürst.\\\"\\n\\nDie inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. Du kannst weiterhin allgemeine zeitliche Bezüge nutzen (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"). Datumsangaben gehören NUR in das \\\"herleitung\\\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt).",
+        "loc": "TARİH YASAĞI (KESİN KURAL): Görünür metinde — başlıklar, madde işaretleri, açıklamalar, özet metni — hiçbir tarih, gün adı, ay adı, yıl veya zaman ifadesi kullanma. Tarihler yalnızca gizli makine meta verisi olarak mevcuttur ve her zaman JSON alanı \\\"datum\\\" içinde görünmez biçimde saklanmalıdır. Kural ihlalleri: \\\"3 Mayıs\\'ta\\\", \\\"Geçen salı\\\", \\\"Nisan ayı başında\\\", \\\"bu hafta\\\", \\\"son 30 günde\\\" gibi ifadeler yasaktır. Girişlerin içeriğine atıfta bulun, tarihine değil."
+      },
+      "ai_prompt_response_language": {
+        "de": "ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.",
+        "loc": "YANIT DİLİ: tamamen Türkçe yanıtla. Tüm metinler ve başlıklar Türkçe olmalı, başka dil olmamalı."
+      },
+      "churn_auto_renew_note": {
+        "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+        "loc": "Aboneliğin Google Play üzerinden otomatik yenilenir. İstediğin zaman iptal edilebilir."
+      },
+      "churn_cancel_sub": {
+        "de": "Abo kündigen",
+        "loc": "Aboneliği iptal et"
+      },
+      "churn_discount_badge": {
+        "de": "<g id=\"percent\" example=\"50\">%1$d</g>%% SPAREN",
+        "loc": "<g id=\"percent\" example=\"50\">%1$d</g>\\u00A0%% TASARRUF"
+      },
+      "churn_google_play_redirect": {
+        "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.",
+        "loc": "Aboneliği yönetmek için Google Play\\'e yönlendirileceksin. Günlük girişlerin elbette duruyor."
+      },
+      "churn_instead_of": {
+        "de": "statt ",
+        "loc": "yerine "
+      },
+      "churn_offer_auto_renew": {
+        "de": "Verlängert sich automatisch, jederzeit kündbar",
+        "loc": "Otomatik yenilenir, istediğin zaman iptal"
+      },
+      "churn_offer_feature_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "Tüm YZ profilleri (4 hazır + sınırsız kişisel)"
+      },
+      "churn_pause_sub": {
+        "de": "Oder Abo bei Google Play pausieren",
+        "loc": "Veya Google Play\\'de aboneliği duraklat"
+      },
+      "churn_promo_months_remaining": {
+        "de": "Noch <g id=\"months\" example=\"2\">%1$d</g> Monate — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "<g id=\"months\" example=\"2\">%1$d</g> ay kaldı — sonra ayda <g id=\"base_price\" example=\"3,99 €\">%2$s</g>"
+      },
+      "churn_promo_one_month_remaining": {
+        "de": "Noch 1 Monat — danach <g id=\"base_price\" example=\"3,99 €\">%1$s</g> pro Monat",
+        "loc": "1 ay kaldı — sonra ayda <g id=\"base_price\" example=\"3,99 €\">%1$s</g>"
+      },
+      "churn_promo_phase_ends": {
+        "de": "Endet am <g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> — danach <g id=\"base_price\" example=\"3,99 €\">%2$s</g> pro Monat",
+        "loc": "<g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</g> tarihinde sona eriyor — ardından aylık <g id=\"base_price\" example=\"3,99 €\">%2$s</g>"
+      },
+      "churn_switch_yearly": {
+        "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+        "loc": "Veya yıllık abonelik ile daha da tasarruf et"
+      },
+      "consent_card1_body": {
+        "de": "Deine Einträge bleiben auf deinem Gerät.",
+        "loc": "Girişlerin cihazında kalır."
+      },
+      "consent_card3_title": {
+        "de": "Anonyme Statistiken",
+        "loc": "Anonim istatistikler"
+      },
+      "consent_confirmation": {
+        "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.",
+        "loc": "«Kabul et ve başla»ya dokunarak gizlilik politikasını, kullanım koşullarını ve yasal bilgileri okuduğunu ve açıklanan veri işleme faaliyetlerini kabul ettiğini onaylarsın. Kararını istediğin zaman ayarlardan değiştirebilirsin."
+      },
+      "consent_footer_link_agb": {
+        "de": "Nutzungsbedingungen",
+        "loc": "Kullanım Koşulları"
+      },
+      "consent_footer_link_datenschutz": {
+        "de": "Datenschutz",
+        "loc": "Gizlilik"
+      },
+      "consent_footer_link_impressum": {
+        "de": "Impressum",
+        "loc": "Künye"
+      },
+      "consent_toggle_analytics_body": {
+        "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+        "loc": "Firebase Analytics — uygulamayı iyileştirmemize yardımcı olur. Kişisel içerik yok, yalnızca anonim dokunma sayıları. Veri aktarımı: Google ABD (Data Privacy Framework)."
+      },
+      "consent_toggle_do_not_sell_body": {
+        "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+        "loc": "Kaliforniya devre dışı bırakma (CCPA/CPRA 2026). Aktifken tüm isteğe bağlı veri işlemleri devre dışıdır — yalnızca yerel özellikler kalır."
+      },
+      "consent_toggle_drive_body": {
+        "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.",
+        "loc": "Girdileri kendi Google Drive’ına şifreli olarak kaydeder. Tam kontrol sende — dosya senin hesabında, bizde değil."
+      },
+      "dashboard_gemini_unavailable": {
+        "de": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+        "loc": "Gemini şu an ulaşılamıyor, biraz sonra tekrar dene."
+      },
+      "dashboard_premium_upsell_body": {
+        "de": "Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.",
+        "loc": "Premium ile istediğin kadar profilden geniş kapsamlı analizler alırsın."
+      },
+      "dev_seed_delete_all_action": {
+        "de": "Alle Einträge löschen",
+        "loc": null
+      },
+      "entry_delete_message": {
+        "de": "Diesen Eintrag unwiderruflich löschen?",
+        "loc": "Bu girişi kalıcı olarak silmek istiyor musun?"
+      },
+      "follow_up_delete_confirm_text": {
+        "de": "Möchtest du Nachtrag <g id=\"ordinal\" example=\"1\">%1$s</g> wirklich unwiderruflich löschen?",
+        "loc": "<g id=\"ordinal\" example=\"1\">%1$s</g>. eklemeyi kalıcı olarak silmek istiyor musun?"
+      },
+      "follow_up_premium_body": {
+        "de": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+        "loc": "Premium ile her günlük girdisine istediğin kadar ekleme yapabilirsin."
+      },
+      "follow_up_premium_hint": {
+        "de": "ab dem zweiten Nachtrag",
+        "loc": "ikinci eklemeden itibaren"
+      },
+      "follow_up_premium_later": {
+        "de": "Später entscheiden",
+        "loc": "Daha sonra karar ver"
+      },
+      "follow_up_premium_title": {
+        "de": "Unbegrenzte Nachträge",
+        "loc": "Sınırsız ekleme"
+      },
+      "journal_drive_backup_current": {
+        "de": "Backup aktuell, alle Einträge gesichert",
+        "loc": "Yedek güncel, tüm girişlerin güvende"
+      },
+      "journal_transcribed_with": {
+        "de": "Transkribiert mit %1$s",
+        "loc": "%1$s ile çözümlendi"
+      },
+      "legend_high_burden": {
+        "de": "Hoch (67–100%) — Sofort handeln",
+        "loc": "Yüksek (67–100\\u00A0%%) — şimdi harekete geç"
+      },
+      "onboarding_feature_secure": {
+        "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+        "loc": "Verilerin sende kalır, şifreli ve güvenli"
+      },
+      "onboarding_feature_secure__privacy": {
+        "de": null,
+        "loc": null,
+        "note": "NOT_IN_DE"
+      },
+      "onboarding_free_after_trial": {
+        "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+        "loc": "Sonra Best Journal\\'ı kullanmaya devam edersin,\\nücretsiz, haftada sınırlı YZ çağrısıyla."
+      },
+      "onboarding_free_trial": {
+        "de": "Kostenlos, jederzeit kündbar",
+        "loc": "Ücretsiz, istediğin zaman iptal edilebilir"
+      },
+      "onboarding_premium_feature_noads": {
+        "de": "Keine Werbung, ungestört schreiben und reflektieren",
+        "loc": "Reklam yok, kesintisiz yaz ve düşün"
+      },
+      "onboarding_start_free": {
+        "de": "Kostenlos starten",
+        "loc": "Ücretsiz başla"
+      },
+      "onboarding_try_premium": {
+        "de": "8 Tage gratis, danach ab 3,99 €/Monat",
+        "loc": "8 gün ücretsiz, ardından aylık 3,99 €\\'dan itibaren"
+      },
+      "paywall_day7": {
+        "de": "Tag 7",
+        "loc": "Gün 7"
+      },
+      "paywall_exit_bonus_days": {
+        "de": "+ %1$d Tage extra Testzeit",
+        "loc": "+ %1$d ek deneme günü"
+      },
+      "paywall_exit_discount": {
+        "de": "Rabatt für %1$d Monate",
+        "loc": "%1$d ay için indirim"
+      },
+      "paywall_exit_price_comparison": {
+        "de": "Nur %1$s statt %2$s pro Monat",
+        "loc": "Ayda %2$s yerine sadece %1$s"
+      },
+      "paywall_exit_start_discount": {
+        "de": "Zahlungspflichtig — 2 Monate zum halben Preis",
+        "loc": "Ücretli — 2 ay yarı fiyatına"
+      },
+      "paywall_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "Sınırsız özel analiz profili"
+      },
+      "paywall_first_payment": {
+        "de": "Erste Zahlung",
+        "loc": "İlk ödeme"
+      },
+      "paywall_free_note": {
+        "de": "Die App funktioniert auch ohne Abo weiter.",
+        "loc": "Uygulama abonelik olmadan da çalışmaya devam eder."
+      },
+      "paywall_from_per_day": {
+        "de": "Jahresabo, %1$s pro Jahr",
+        "loc": "Günde %1$s\\'den itibaren"
+      },
+      "paywall_headline_clarity_sub": {
+        "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+        "loc": "YZ gizli kalan örüntüleri tanır"
+      },
+      "paywall_instead_per_month": {
+        "de": "Spare %1$d%% gegenüber dem Monatsabo",
+        "loc": "Aylık plana göre %1$d%% tasarruf"
+      },
+      "paywall_legal_hint": {
+        "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+        "loc": "Abone olarak %1$s kabul edersin. 14 günlük cayma hakkın orada açıklanır."
+      },
+      "paywall_monthly_plan": {
+        "de": "Monatsabo, %1$s pro Monat",
+        "loc": "Aylık abonelik, ayda %1$s"
+      },
+      "paywall_reminder": {
+        "de": "Erinnerung",
+        "loc": "Hatırlatma"
+      },
+      "paywall_with_limited": {
+        "de": "mit eingeschränkten Limits.",
+        "loc": "sınırlı limitlerle."
+      },
+      "paywall_yearly_note": {
+        "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar",
+        "loc": "Ardından yılda %1$s, otomatik olarak yenilenir\nDeneme süresinde istediğin zaman iptal edilebilir"
+      },
+      "permission_rationale_microphone": {
+        "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+        "loc": "Günlük girişlerini sesle dikte edebilmek için mikrofonuna erişmemiz gerekiyor."
+      },
+      "privacy_gate_gemini_body": {
+        "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern.",
+        "loc": "Best Journal\\'ın akıllı özelliklerini kullanmak istediğin için harika! Özetler, geriye dönük bakışlar, panel içgörüleri ve metin geliştirmeleri için metinlerin şifrelenerek Google Gemini\\'ye gönderilir.\n\n✓ Verilerinle KI eğitimi yapılmaz\n✓ İstekler kalıcı olarak saklanmaz\n✓ AB-ABD Veri Gizliliği Çerçevesi\\'ne göre şifrelenir\n\nÖnemli Not: Günlük girişlerin özellikle hassas veriler içerebileceğinden (sağlık, din, kişisel ilişkiler — GDPR Md. 9), KI işleme için açık onayını istiyoruz. KI çıktıları öneridir, profesyonel tavsiye değildir ve bir uzmanın yerini tutmaz.\n\nBunu istediğin zaman Ayarlar\\'dan değiştirebilirsin."
+      },
+      "privacy_gate_groq_body": {
+        "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+        "loc": "Bulut transkripsiyonu için ses kaydın şifrelenmiş olarak Groq, Inc.\\'e (Mountain View, ABD) gönderilir ve orada metne dönüştürülür. Ses dosyası işlendikten sonra silinir ve eğitim için kullanılmaz.\\n\\nAlternatif: cihazda yerel transkripsiyonu kullan (çevrimdışı, veri aktarımı yok), Ayarlar → Yapay zekâ bölümünden ayarlanabilir."
+      },
+      "privacy_gate_tts_body": {
+        "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+        "loc": "Sesli okuma için metin şifrelenmiş olarak Microsoft Bing Speech\\'e (ABD) gönderilir ve ses olarak geri döner. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri."
+      },
+      "profile_entropy_long": {
+        "de": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\\n\\nDu bekommst:\\n\\n• Eine Analyse deiner größten Belastungsquellen\\n• 5 konkrete Maßnahmen zum Aufräumen\\n• Tipps, die dir im Alltag helfen können\\n\\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+        "loc": "KI, günlük girişlerindeki stresi, yükü ve düzensizliği arar.\n\nŞunları elde edersin:\n\n• En büyük yük kaynaklarının analizi\n• Düzeni sağlamak için 5 somut adım\n• Günlük hayatta yardımcı olabilecek ipuçları\n\nHer şeyin çok fazla geldiğini hissediyorsan idealdir."
+      },
+      "prompt_clear_confirm_text": {
+        "de": "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+        "loc": "Kişisel analiz kalıcı olarak silinecek. Devam etmek istiyor musun?"
+      },
+      "retro_benefit_weekly": {
+        "de": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+        "loc": "Sınırsız haftalık geri bakış, sadece ilk 2 hafta değil"
+      },
+      "retro_premium_unlock": {
+        "de": "Mit Premium alle Rückblicke freischalten",
+        "loc": "Tüm geri bakışları Premium ile aç"
+      },
+      "settings_analytics_title": {
+        "de": "Anonyme Statistik",
+        "loc": "Anonim istatistikler"
+      },
+      "settings_auto_lock": {
+        "de": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+        "loc": "Arka planda 60 saniye sonra otomatik kilitlenir"
+      },
+      "settings_crisis_dialog_body": {
+        "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr.",
+        "loc": "Best Journal bir günlük uygulamasıdır ve profesyonel psikolojik ya da tıbbi desteğin yerine geçmez. Yapay zekâ tarafından oluşturulan analizler terapi değildir.\\n\\nAkut bir kriz içindeysen veya kendine zarar verme ya da intihar düşüncelerin varsa: bunu tek başına yaşamak zorunda değilsin. Ücretsiz ve anonim yardım 7/24 ulaşılabilir."
+      },
+      "settings_delete_account_confirm_body": {
+        "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+        "loc": "Bu işlem geri alınamaz ve şunları siler:\\n\\n• Tüm yerel günlük girişleri, fotoğraflar ve videolar\\n• Firebase hesabın\\n• Uygulamanın Google Drive yedeği\\n\\nUygulama, yeni bir kurulum gibi yeniden başlar."
+      },
+      "settings_delete_account_subtitle": {
+        "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+        "loc": "Tüm yerel verileri, Google hesabını ve Drive yedeğini geri dönüşü olmadan siler"
+      },
+      "settings_entries_auto_loaded": {
+        "de": "Einträge werden bei der Anmeldung automatisch geladen",
+        "loc": "Girişler oturum açıldığında otomatik yüklenir"
+      },
+      "settings_feedback_dialog_desc": {
+        "de": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+        "loc": "Geliştiricilere mesajın — hepsini okuyup kişisel cevap veriyoruz!"
+      },
+      "settings_legal_online_label": {
+        "de": "Online-Version:",
+        "loc": "Çevrimiçi sürüm:"
+      },
+      "settings_legal_section_header": {
+        "de": "Rechtliche Dokumente",
+        "loc": "Yasal Belgeler"
+      },
+      "settings_premium_cancelled_desc": {
+        "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.",
+        "loc": "Premium özelliklerini faturalandırma döneminin sonuna kadar kullanabilirsin. İptali Google Play üzerinden geri alabilirsin."
+      },
+      "settings_premium_cancelled_until": {
+        "de": "Premium-Abo gekündigt — läuft noch bis <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g>",
+        "loc": "Premium abonelik iptal edildi — <g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</g> tarihine kadar geçerli"
+      },
+      "settings_premium_desc": {
+        "de": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+        "loc": "Tüm özellikler açık, her gün YZ, PDF dışa aktarma ve daha fazlası."
+      },
+      "settings_premium_feature_5_perspectives": {
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "loc": "Tüm YZ profilleri (4 hazır + sınırsız kişisel)"
+      },
+      "settings_premium_feature_improve_desc": {
+        "de": "KI verbessert deine Einträge auf Wunsch.",
+        "loc": "İstediğinde YZ girişlerini geliştirir."
+      },
+      "settings_premium_feature_profiles": {
+        "de": "Unbegrenzte individuelle KI-Profile",
+        "loc": "Sınırsız özel profil"
+      },
+      "settings_premium_lifetime": {
+        "de": "Lifetime-Zugang aktiv",
+        "loc": "Ömür boyu erişim etkin"
+      },
+      "settings_premium_lifetime_desc": {
+        "de": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+        "loc": "Tek seferlik ödeme, tüm özellikler kalıcı olarak açık."
+      },
+      "settings_revoke_email_body": {
+        "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+        "loc": "İşbu bildirimle Best Journal\\'ın Premium özelliklerine ilişkin sözleşmeden caydığımı bildiririm.\\n\\nGönderen (Google hesabı): %1$s\\nCayma zamanı: %2$s\\n\\nBu cayma, uygulamadaki § 356a BGB uyumlu iki aşamalı cayma düğmesi üzerinden başlatılmış ve Gmail API aracılığıyla otomatik olarak gönderilmiştir."
+      },
+      "settings_revoke_subtitle": {
+        "de": "§ 356a BGB — Widerruf direkt per App",
+        "loc": "Premium satın alma"
+      },
+      "settings_unlock_premium": {
+        "de": "Premium freischalten",
+        "loc": "Premium\\'u aç"
+      },
+      "transcription_model_groq": {
+        "de": "whisper-large-v3-turbo",
+        "loc": "Groq Whisper Large V3 Turbo"
+      },
+      "urgency_high": {
+        "de": "Dringend — Sofort handeln",
+        "loc": "Acil — şimdi harekete geç"
+      }
+    }
+  }
+}

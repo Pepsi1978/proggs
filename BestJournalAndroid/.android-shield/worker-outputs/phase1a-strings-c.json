@@ -1,0 +1,602 @@
+{
+  "worker": "w4-strings-c",
+  "lineRange": "1001-1494",
+  "stringsReviewed": 246,
+  "findings": [
+    {
+      "key": "onboarding_goal_stress",
+      "line": 1063,
+      "text": "Stress abbauen",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Onboarding-Ziel 'Stress abbauen' positioniert die App als Stress-Reduktions-Werkzeug. HWG-Grenzbereich: gesundheitsbezogener Nutzen. Im Zusammenspiel mit Paywall (paywall_headline_stress) und KI-Analysen als Wirkungsaussage wertbar. Disclaimer entschaerft, das Ziel selbst bleibt ein Wellness-Wirkversprechen."
+    },
+    {
+      "key": "paywall_headline_stress",
+      "line": 1128,
+      "text": "Mehr Klarheit im Alltag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Personalisierte Paywall-Headline zum Stress-Ziel. 'Mehr Klarheit' = milde Wohlbefindens-Nutzenaussage. Grenzfall mit gesundheitlichem Beiklang."
+    },
+    {
+      "key": "paywall_headline_stress_sub",
+      "line": 1129,
+      "text": "Erkenne was dich taeglich beschaeftigt und bringe es auf den Punkt.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Sub-Headline Stress-Ziel. Mentale-Entlastungs-Sprache, kein konkretes Heilversprechen. Grenzfall, HWG-Naehe."
+    },
+    {
+      "key": "paywall_headline_clarity",
+      "line": 1130,
+      "text": "Verstehe dich selbst besser",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbsterkenntnis-Versprechen. Wohlbefindens-Sprache an HWG-Grenze, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth",
+      "line": 1132,
+      "text": "Entdecke das Gute in jedem Tag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Positiv-Psychologie-Sprache. Wohlbefindens-Beiklang, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth_sub",
+      "line": 1133,
+      "text": "Dein persoenlicher Raum fuer Dankbarkeit und Wachstum",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "'Dankbarkeit und Wachstum' = Wellness-/Selbstoptimierungs-Sprache. Milde, Grenzfall."
+    },
+    {
+      "key": "churn_offer_feature_ai",
+      "line": 1176,
+      "text": "Taegliche KI-Analysen",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Im Retention-Kontext beworbenes KI-Analyse-Feature. HWG-Grenze nur mit Analyse-Inhalten (Lebensratschlaege); selbst neutral. Auch subscription-relevant."
+    },
+    {
+      "key": "ai_banner_body",
+      "line": 1203,
+      "text": "Intelligente Lebensratschlaege aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Intelligente Lebensratschlaege aus deinen Mustern' ist eine Beratungs-/Coaching-Aussage (HWG/Produkthaftungs-Naehe). Positiv: direkt anschliessend der Disclaimer 'keine professionelle Beratung'. MITTEL, weil 'Lebensratschlaege' eine aktive Empfehlungsfunktion benennt; Disclaimer muss unmittelbar sichtbar bleiben."
+    },
+    {
+      "key": "ai_output_health_disclaimer",
+      "line": 1487,
+      "text": "Keine Therapie - ersetzt keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekter HWG-Schutz-Disclaimer (kurz). Positiv-Fund/Schutzmassnahme - richtige Abgrenzung. Kein Risiko."
+    },
+    {
+      "key": "ai_output_health_disclaimer_long",
+      "line": 1488,
+      "text": "Best Journal ist ein Tagebuch und kein Therapieangebot. KI-Analysen sind Anregungen zur Selbstreflexion und ersetzen keine professionelle psychologische oder medizinische Beratung. Bei akuten Problemen wende dich an eine Fachperson oder die Krisenhilfe in deinen Einstellungen.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Ausfuehrlicher HWG-Disclaimer mit Krisenhilfe-Verweis. Vorbildliche Schutzmassnahme. Pruefen ob 'Krisenhilfe in deinen Einstellungen' tatsaechlich existiert (sonst Irrefuehrung); Existenz von Code-Worker zu verifizieren."
+    },
+    {
+      "key": "onboarding_feature_secure",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "Doppel-Claim 'Daten lokal gespeichert' + 'KI-Anfragen verschluesselt'. Beide ueberpruefbare Tatsachenbehauptungen (UWG 5). App hat laut Memory Google-Drive-Backup + Gemini-Anfragen - 'lokal gespeichert' kann irrefuehrend sein wenn Cloud-Backup existiert. Gegen tatsaechliche Speicherung/Transportverschluesselung verifizieren."
+    },
+    {
+      "key": "retro_benefit_weekly",
+      "line": 1035,
+      "text": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Absolutheitsclaim (UWG 5). Kollidiert potenziell mit KI-Tageskontingent (ai_limits_dialog_body: 150/Tag/Profil + Pausen). Pruefen ob Wochenrueckblicke wirklich ohne Limit erzeugbar sind. Irrefuehrungsrisiko."
+    },
+    {
+      "key": "paywall_feature_profiles",
+      "line": 1125,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Claim fuer KI-Profile (UWG 5). Spannung zum dokumentierten Tageskontingent (150/Tag pro Profil). Anzahl Profile evtl. unbegrenzt, Nutzung aber limitiert - Verbraucher koennte 'unbegrenzt' als unbegrenzte Nutzung missverstehen."
+    },
+    {
+      "key": "churn_offer_feature_perspectives",
+      "line": 1177,
+      "text": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'unbegrenzt eigene' KI-Profile im Retention-Angebot (UWG 5). Gleiche Spannung zum Tageskontingent. Zahl '4 vordefiniert' muss mit tatsaechlicher Profil-Anzahl uebereinstimmen."
+    },
+    {
+      "key": "paywall_feature_followups",
+      "line": 1420,
+      "text": "Unbegrenzte Nachtraege zu jedem Tagebucheintrag",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Unbegrenzt'-Claim fuer Nachtraege (UWG 5). Nachtraege vermutlich nur Text (kein KI-Limit) -> MITTEL. Ueberpruefbare Absolutheitsbehauptung; bestaetigen dass keine Obergrenze existiert."
+    },
+    {
+      "key": "settings_premium_feature_followups_desc",
+      "line": 1422,
+      "text": "So viele Nachtraege pro Eintrag wie du moechtest",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Umschreibung von 'unbegrenzt'. Gleiche Absolutheitsbehauptung wie paywall_feature_followups (UWG 5). Wahrheit/Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_improve",
+      "line": 1076,
+      "text": "KI-Textverbesserung taeglich, jeder Eintrag wird klarer und ausdrucksstaerker",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Erfolgszusage 'jeder Eintrag wird klarer und ausdrucksstaerker' (UWG 5). 'jeder Eintrag' ist Allaussage; KI-Ergebnis nicht garantiert. 'taeglich' (Premium-Feature)."
+    },
+    {
+      "key": "onboarding_premium_feature_noads",
+      "line": 1080,
+      "text": "Keine Werbung, ungestoert schreiben und reflektieren",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Keine Werbung'-Claim (UWG 5, ueberpruefbar). Muss stimmen dass Premium werbefrei ist. Leicht verifizierbar."
+    },
+    {
+      "key": "paywall_feature_noads",
+      "line": 1124,
+      "text": "Spreche oder schreibe ungestoert, ohne Werbung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'ohne Werbung'-Claim (UWG 5). Verifikationspflicht wie onboarding_premium_feature_noads. Hinweis: 'Spreche' Imperativ-Tippfehler (-> other-Finding)."
+    },
+    {
+      "key": "onboarding_premium_feature_patterns",
+      "line": 1079,
+      "text": "Muster sichtbar machen: Die KI zeigt wiederkehrende Denk- und Gefuehlsmuster in deinen Eintraegen",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktionsversprechen 'KI zeigt Denk-/Gefuehlsmuster' (UWG 5 + HWG-Grenze, psychologie-naher Nutzen). Muss durch tatsaechliche Feature-Faehigkeit gedeckt sein."
+    },
+    {
+      "key": "paywall_feature_patterns",
+      "line": 1119,
+      "text": "Erkenne wiederkehrende Muster in deinem Denken",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktions-/Nutzenversprechen 'Muster in deinem Denken erkennen' (UWG 5 + HWG-Grenze). Verifikationspflicht wie patterns-Feature im Onboarding."
+    },
+    {
+      "key": "paywall_headline_clarity_sub",
+      "line": 1131,
+      "text": "Die KI erkennt Muster, die dir verborgen bleiben",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Starke Erfolgszusage 'KI erkennt Muster, die dir verborgen bleiben' (UWG 5). Behauptet ueber menschliche Selbstwahrnehmung hinausgehende Faehigkeit - schwer beweisbar. Pruefen ob abschwaechbar."
+    },
+    {
+      "key": "onboarding_feature_speech",
+      "line": 1060,
+      "text": "Sprich oder schreib, die KI versteht beides",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsaussage 'die KI versteht beides' (UWG 5). Ueblich, leicht belegbar."
+    },
+    {
+      "key": "onboarding_feature_profiles",
+      "line": 1085,
+      "text": "4 intelligente Analyse-Profile fuer verschiedene Perspektiven",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Analyse-Profile' (UWG 5). Muss mit tatsaechlicher Profil-Anzahl uebereinstimmen (vgl. churn '4 vordefiniert'). Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_profiles",
+      "line": 1091,
+      "text": "4 intelligente Dashboard-Profile fuer tiefe Einblicke in dein Leben",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Dashboard-Profile' + 'tiefe Einblicke' (UWG 5). Konsistenz mit anderen Profil-Zahlen pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_pdf",
+      "line": 1090,
+      "text": "PDF-Export mit Fotos, sichere deine Eintraege als Dokument",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsversprechen PDF-Export mit Fotos (UWG 5, leicht verifizierbar)."
+    },
+    {
+      "key": "retro_weekly_p3",
+      "line": 1024,
+      "text": "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Eintraege hast",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Konkrete Funktionszusage mit Bedingung (UWG 5). Positiv: Bedingung transparent. Pruefen dass Automatik so laeuft."
+    },
+    {
+      "key": "retro_premium_reviews_desc",
+      "line": 1034,
+      "text": "Mit Premium erstellt die KI automatisch Rueckblicke aus deinen Tagebucheintraegen:",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'automatisch'-Funktionszusage Premium-Rueckblicke (UWG 5). Verifizieren dass Automatik existiert."
+    },
+    {
+      "key": "onboarding_free_trial",
+      "line": 1081,
+      "text": "Kostenlos, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "'Kostenlos, jederzeit kuendbar' im Onboarding OHNE Preis-/Laufzeit-/Verlaengerungsangabe an dieser Stelle. Abo-Recht (312j BGB Button-Loesung, Google-Play-Policy): vor Trial-Start muessen Folgepreis, Verlaengerungsintervall und Zahlungspflicht klar genannt sein. 'Kostenlos' ohne Hinweis auf anschliessende Zahlungspflicht ist abmahngefaehrdet."
+    },
+    {
+      "key": "onboarding_start_free",
+      "line": 1083,
+      "text": "Kostenlos starten",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "CTA-Button 'Kostenlos starten' (312j Abs.3 BGB Button-Loesung). Wenn er ein kostenpflichtiges Trial-Abo startet, muss die Beschriftung die Zahlungspflicht erkennen lassen. 'Kostenlos starten' allein kann gegen die Button-Loesung verstossen. Pruefen was der Button ausloest."
+    },
+    {
+      "key": "onboarding_try_premium",
+      "line": 1092,
+      "text": "8 Tage gratis, danach ab 3,99 EUR/Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Trial+Preis '8 Tage gratis, danach ab 3,99 EUR/Monat'. Positiv: Preis + Trialdauer. Aber 'ab 3,99' (Ab-Preis) + fehlende Verlaengerungs-/Kuendigungsangabe an dieser Stelle. Konsistenz 8 Tage vs. Tag-7/Tag-8-Logik pruefen."
+    },
+    {
+      "key": "onboarding_free_after_trial",
+      "line": 1082,
+      "text": "Danach nutzt du Best Journal weiter, kostenlos mit begrenzten KI-Aufrufen pro Woche.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: nach Trial kostenlose Weiternutzung mit Limit. Positiv (entschaerft 'kostenlos starten'). Sicherstellen dass Trial NICHT automatisch in Bezahlabo uebergeht ohne aktive Zustimmung (sonst Widerspruch zu paywall_first_payment/Tag-8)."
+    },
+    {
+      "key": "paywall_yearly_note",
+      "line": 1108,
+      "text": "Danach %1$s pro Jahr, verlaengert sich automatisch / In der Testphase jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Abo-Pflichtangabe: Preis + 'verlaengert sich automatisch' + 'jederzeit kuendbar'. Positiv-Fund. Platzhalter %1$s muss zur Laufzeit gefuellt werden."
+    },
+    {
+      "key": "paywall_monthly_plan",
+      "line": 1110,
+      "text": "Monatsabo, %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Preisangabe Monatsabo mit Platzhalter. Pruefen dass Verlaengerungs-/Kuendigungshinweis in der Naehe steht (paywall_yearly_note deckt nur Jahr ab; fuer Monat fehlt evtl. expliziter Auto-Renewal-Hinweis)."
+    },
+    {
+      "key": "paywall_first_payment",
+      "line": 1107,
+      "text": "Erste Zahlung",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Teil der Trial-Timeline (Heute/Tag 7 Erinnerung/Tag 8 Erste Zahlung). Belegt automatische Umwandlung Trial->Bezahlabo an Tag 8. Zulaessig WENN vorher klar; in Kombination mit 'Kostenlos starten' muss Zahlungspflicht VOR Klick erkennbar sein. Timeline selbst transparent (positiv), abhaengig vom Button-Wording."
+    },
+    {
+      "key": "paywall_day7",
+      "line": 1104,
+      "text": "Tag 7",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline-Label. Positiv: Erinnerung an Tag 7 vor Abbuchung ist verbraucherfreundlich/Play-konform. Kontext."
+    },
+    {
+      "key": "paywall_reminder",
+      "line": 1105,
+      "text": "Erinnerung",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline: Erinnerung vor erster Zahlung. Positiv. Kontext-Fund."
+    },
+    {
+      "key": "paywall_legal_hint",
+      "line": 1115,
+      "text": "Mit dem Abo akzeptierst du die %1$s. Dein 14-taegiges Widerrufsrecht ist dort beschrieben.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Widerrufs-/AGB-Hinweis. Positiv: nennt 14-taegiges Widerrufsrecht + verlinkt Nutzungsbedingungen. ABER bei sofortiger Bereitstellung digitaler Inhalte muss der Verbraucher dem Verlust des Widerrufsrechts ausdruecklich zustimmen (356 Abs.5 BGB) - siehe Kommentar paywall_purchase_loading_toast (Sofort-Verzichts-Dialog, line 1100). Pruefen ob Verzicht korrekt eingeholt wird; sonst Widerspruch '14 Tage Widerruf' vs. Sofort-Freischaltung."
+    },
+    {
+      "key": "paywall_exit_discount",
+      "line": 1142,
+      "text": "Rabatt fuer %1$d Monate",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Intent-Rabatt (UWG 5/PreisangabenVO). Bei Rabattwerbung muessen Referenzpreis + Geltungsdauer klar sein. Pruefen dass urspruenglicher Preis + Rabatthoehe transparent (vgl. paywall_exit_price_comparison)."
+    },
+    {
+      "key": "paywall_exit_price_comparison",
+      "line": 1143,
+      "text": "Nur %1$s statt %2$s pro Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Streichpreis-Werbung 'Nur X statt Y' (PreisangabenVO/UWG 5). Der durchgestrichene Referenzpreis muss tatsaechlich der zuvor/regulaer geforderte Preis sein. Irrefuehrungsrisiko bei Schein-Streichpreisen. Verifizieren."
+    },
+    {
+      "key": "paywall_exit_start_discount",
+      "line": 1144,
+      "text": "Zahlungspflichtig - 2 Monate zum halben Preis",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "CTA mit 'Zahlungspflichtig'-Praefix. Positiv-Fund: erfuellt Button-Loesung (312j BGB) vorbildlich. Kontrast zu 'Kostenlos starten' (1083) ohne diesen Hinweis - Inkonsistenz dokumentieren."
+    },
+    {
+      "key": "churn_auto_renew_note",
+      "line": 1163,
+      "text": "Dein Abo verlaengert sich automatisch ueber Google Play. Die Kuendigung ist jederzeit moeglich.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Auto-Renewal- + Kuendigungs-Info. Positiv-Fund."
+    },
+    {
+      "key": "churn_offer_auto_renew",
+      "line": 1179,
+      "text": "Verlaengert sich automatisch, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Pflichtangabe im Retention-Angebot. Positiv."
+    },
+    {
+      "key": "churn_promo_one_month_remaining",
+      "line": 1158,
+      "text": "Noch 1 Monat - danach %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis transparent (xliff:g). Positiv."
+    },
+    {
+      "key": "churn_promo_months_remaining",
+      "line": 1159,
+      "text": "Noch %1$d Monate - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis (2 Platzhalter, xliff:g). Positiv-transparent."
+    },
+    {
+      "key": "churn_promo_phase_ends",
+      "line": 1160,
+      "text": "Endet am %1$s - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Enddatum + Folgepreis transparent. Positiv."
+    },
+    {
+      "key": "churn_pause_sub",
+      "line": 1182,
+      "text": "Oder Abo bei Google Play pausieren",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Verweist korrekt auf Google-Play-Abo-Verwaltung (Pause). Positiv."
+    },
+    {
+      "key": "churn_cancel_sub",
+      "line": 1164,
+      "text": "Abo kuendigen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Kuendigungs-Aktion vorhanden (Kuendigungsbutton-Pflicht 312k BGB ueber Google Play erfuellt). Positiv."
+    },
+    {
+      "key": "ai_limit_yearly",
+      "line": 1193,
+      "text": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Ersparnis-Claim 'spare 37 Prozent' (UWG 5/PreisangabenVO). Prozent muss rechnerisch gegen Monatspreis x12 stimmen. Pruefen dass 37 Prozent aus tatsaechlichen Preisen folgt - sonst irrefuehrend. %% korrekt escaped."
+    },
+    {
+      "key": "churn_switch_yearly",
+      "line": 1181,
+      "text": "Oder zum Jahresabo wechseln und noch mehr sparen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Spar-Aussage ohne konkrete Zahl. Milde Werbung; pruefen dass Jahresabo tatsaechlich guenstiger ist."
+    },
+    {
+      "key": "paywall_free_note",
+      "line": 1114,
+      "text": "Die App funktioniert auch ohne Abo weiter.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: App ohne Abo nutzbar. Positiv-Fund (ehrliche Free-Tier-Kommunikation)."
+    },
+    {
+      "key": "ai_limit_body",
+      "line": 1191,
+      "text": "Ohne Abo hast du 5 Textverbesserungen pro Woche und 5 Dashboard-Aktualisierungen pro Woche je Profil. Mit dem Premium-Abo: bis zu 150 pro Tag.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "KI-Limit-Aussage mit Zahlen (5/Woche Free, 'bis zu 150 pro Tag' Premium). UWG 5: Zahlen muessen der tatsaechlichen Drosselung entsprechen. 'bis zu 150' korrekt relativiert. ABER kollidiert mit 'Unbegrenzt'-Claims (retro_benefit_weekly, paywall_feature_profiles) - interner Widerspruch. Konsistenzpruefung kritisch."
+    },
+    {
+      "key": "ai_limits_disclaimer",
+      "line": 1197,
+      "text": "KI-Tageskontingent fuer intensive Nutzung.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Kurz-Disclaimer zum Tageskontingent. Positiv (Transparenz)."
+    },
+    {
+      "key": "ai_limits_dialog_body",
+      "line": 1199,
+      "text": "150 Anfragen pro Tag und Profil; 4 vordefinierte zusammen 600/Tag; +150/Tag je eigenem Profil; 1-30 hoechste Qualitaet; 31-100 Standard; 30-Min-Pause bei 101; ab 151 Stopp bis morgen; max 50 Anfragen/Stunde -> 5-Min-Pause; OHNE ABO 5 Dashboard-Analysen/Woche/Profil + 5 Textverbesserungen/Woche; 'Die meisten Nutzer werden diese Grenzen nicht erreichen.'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Sehr konkrete KI-Kontingent-/Drosselungs-Aussage (UWG 5) mit vielen ueberpruefbaren Zahlen (150/Tag/Profil, 600/Tag, Qualitaetsstufen 1-30/31-100, 30-Min-Pause bei 101, Stopp ab 151, 50/Stunde, 5-Min-Pause, Free 5/Woche). JEDE Zahl muss exakt der Code-Implementierung entsprechen - Abweichung = Irrefuehrung. Kritisch: Wechselwirkung mit 'Unbegrenzt'-Werbung. Satz 'Die meisten Nutzer werden diese Grenzen nicht erreichen' ist Verharmlosung - vertretbar, pruefen. Hauptrisiko: Konsistenz Code<->Text."
+    },
+    {
+      "key": "ai_banner_title",
+      "line": 1202,
+      "text": "Dein Tagebuch wird von KI unterstuetzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Transparenzhinweis (positiv, AI-Act Art.50-Naehe - Offenlegung KI-Einsatz)."
+    },
+    {
+      "key": "profile_style_advisor",
+      "line": 1414,
+      "text": "- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefuehl von Klarheit und Ordnung",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'im Stil eines Lebensberaters' schreiben und Verbesserungen vorschlagen. HWG/Produkthaftungs-Naehe ('Lebensberater' + 'was verbessert werden kann' erzeugt beratende Ausgaben). KEINE medizinische Diagnose-Anweisung (positiv). MITTEL: ratgebende Ausgaben koennten ohne Disclaimer als professionelle Beratung missverstanden werden - Health-Disclaimer (1487/1488) entschaerft."
+    },
+    {
+      "key": "profile_style_insight",
+      "line": 1415,
+      "text": "- Schreibe im Stil einer tiefgruendigen Selbsterkenntnis-Erzaehlung, decke Denkmuster, wiederkehrende Gefuehle und verborgene Staerken auf",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'Denkmuster, wiederkehrende Gefuehle und verborgene Staerken aufdecken'. Psychologie-nahe Analyse-Anweisung (HWG-Grenze). Keine Diagnose, aber introspektive/psychologisierende Ausgaben. MITTEL - durch Disclaimer abgesichert; pruefen dass KI keine pathologisierenden Aussagen generiert."
+    },
+    {
+      "key": "profile_style_coach",
+      "line": 1416,
+      "text": "- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persoenlichen Zielen auf und ermutige weiterzumachen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: 'motivierender Ziel-Begleiter'. Coaching-Sprache, harmlos/motivierend, keine medizinisch-therapeutische Anweisung."
+    },
+    {
+      "key": "profile_style_chronicler",
+      "line": 1413,
+      "text": "- Schreibe im Stil einer zusammenfassenden Erzaehlung, fasse die wichtigsten Ereignisse und Gefuehle zusammen, wie ein persoenlicher Chronist",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: zusammenfassende Erzaehlung. Neutral, keine Beratungs-/Diagnose-Anweisung."
+    },
+    {
+      "key": "profile_style_custom",
+      "line": 1417,
+      "text": "- PROFIL-STIL (Custom): Schreibe diesen Rueckblick mit klarem Bezug zum Benutzer-Auftrag ... Benutzer-Auftrag (zur Orientierung): %1$s",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt mit eingebettetem frei waehlbarem Benutzer-Auftrag (%1$s). Produkthaftungs-/Inhalts-Risiko: Nutzer koennten ueber den Custom-Auftrag die KI zu medizinischen/therapeutischen Ratschlaegen anweisen - das Prompt enthaelt KEINE Schutz-/Verbots-Klausel gegen gesundheitsbezogene Ausgaben. Empfehlung: pruefen ob ein Guardrail (keine Diagnosen/med. Ratschlaege) fehlt. MITTEL."
+    },
+    {
+      "key": "retro_weekly_p1",
+      "line": 1022,
+      "text": "Die KI fasst deine Woche zu einer persoenlichen Erzaehlung zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung (Zusammenfassung). Neutral."
+    },
+    {
+      "key": "retro_yearly_p2",
+      "line": 1030,
+      "text": "Die KI fasst die grossen Themen deines Jahres zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung Jahresrueckblick. Neutral."
+    },
+    {
+      "key": "onboarding_feature_secure__privacy",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Datenschutz-Doppelclaim (zusaetzlich zur marketing-Bewertung): 'lokal gespeichert' + 'verschluesselt'. DSGVO/UWG: beide technisch belegbar. Konflikt mit dokumentiertem Google-Drive-Backup (restoreFromDrive) - bei Cloud-Sicherung ist 'lokal gespeichert' unvollstaendig/irrefuehrend. 'KI-Anfragen verschluesselt' = Transportverschluesselung zu Gemini? Genau belegen. HOCH wegen Datenschutz-Relevanz + moeglichem Widerspruch zur Cloud-Backup-Funktion."
+    },
+    {
+      "key": "settings_legal_section_header",
+      "line": 1469,
+      "text": "Rechtliche Dokumente",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Header Rechtsdokumente-Sektion. Positiv: Rechtsdokumente in Settings erreichbar."
+    },
+    {
+      "key": "settings_legal_online_label",
+      "line": 1471,
+      "text": "Online-Version:",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Label fuer Online-Rechtsdokumente. Positiv (Verfuegbarkeit)."
+    },
+    {
+      "key": "consent_footer_link_datenschutz",
+      "line": 1491,
+      "text": "Datenschutz",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Datenschutz. Positiv-Fund (Pflichtdokument verlinkt)."
+    },
+    {
+      "key": "consent_footer_link_impressum",
+      "line": 1492,
+      "text": "Impressum",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Impressum. Positiv (Impressumspflicht)."
+    },
+    {
+      "key": "consent_footer_link_agb",
+      "line": 1493,
+      "text": "Nutzungsbedingungen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link AGB. Positiv. Konsistent mit paywall_legal_hint_link (1116) ('Nutzungsbedingungen')."
+    },
+    {
+      "key": "dev_seed_delete_all_action",
+      "line": 1435,
+      "text": "Alle Eintraege loeschen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "DEBUG-only Loesch-Aktion (nur Debug-Builds sichtbar laut Kommentar). Keine 'unwiderruflich'-Warnung, aber Debug-Tool. Produktiver Loesch-/Account-Flow steht in diesem Bereich nicht - von anderem Worker/Code zu pruefen."
+    },
+    {
+      "key": "paywall_legal_hint__fmt",
+      "line": 1115,
+      "text": "formatted=false mit %1$s",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "String hat formatted=false UND verwendet %1$s. Bei formatted=false interpretiert Android Positionsargumente NICHT automatisch - Entwickler muss manuell formatieren. Pruefen dass der Code die Ersetzung selbst uebernimmt, sonst erscheint woertlich '%1$s'. Vermutlich Absicht, verifizieren."
+    },
+    {
+      "key": "ai_limit_yearly__fmt",
+      "line": 1193,
+      "text": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "Enthaelt %1$s (Positionsargument) UND %% (escaped Prozent) im selben String OHNE formatted=false - korrekt: bei aktivem Formatting muss Prozent als %% escaped sein. Kein Bug, Positiv-Bestaetigung."
+    },
+    {
+      "key": "paywall_feature_noads__typo",
+      "line": 1124,
+      "text": "Spreche oder schreibe ungestoert, ohne Werbung",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Grammatik/Imperativ-Inkonsistenz: 'Spreche' (sollte 'Sprich') + 'schreibe' (sollte 'schreib'). App nutzt sonst 'Sprich' (onboarding_feature_speech 1060). Kein Rechtsrisiko, sprachliche Inkonsistenz/Qualitaet."
+    },
+    {
+      "key": "prompts_arrays_block",
+      "line": 1313,
+      "text": "string-arrays prompts_self_reflection/gratitude/future/relationships (je 16 Items, Du-Form)",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "4 Tagesimpuls-Arrays (je 16 Items, ausschliesslich Du-Form Reflexionsfragen). Inhaltlich harmlos, KEINE Heilversprechen/medizinischen Aussagen. Du-Konsistenz durchgaengig. Nur gezaehlt; dokumentiert wegen Pflicht plurals/arrays vollstaendig zu pruefen."
+    }
+  ],
+  "duSieStats": {
+    "du": 1,
+    "sie": 0,
+    "mixedKeys": []
+  },
+  "plurals_arrays_reviewed": 10,
+  "plugin_bugs_observed": [
+    "FIN-037: 'Unbegrenzt'-Werbung (retro_benefit_weekly 1035, paywall_feature_profiles 1125, churn_offer_feature_perspectives 1177, paywall_feature_followups 1420) steht in direktem Spannungsverhaeltnis zur KI-Kontingent-Aussage ai_limits_dialog_body (1199, 150/Tag/Profil). Empfehlung Phase-2: dedizierter Cross-Check 'Unbegrenzt-Claims vs. echte Limits'; ein Worker mit nur strings.xml-Sicht kann die echten Caps nicht verifizieren - braucht Billing-/Limit-Code-Worker.",
+    "Button-Wording-Inkonsistenz ist ein systematisches Muster: 'Kostenlos starten' (1083, OHNE Zahlungspflicht-Hinweis) vs. 'Zahlungspflichtig - 2 Monate zum halben Preis' (1144, MIT Hinweis). Roentgen-Output sollte CTAs separat als 'Button-Loesung 312j'-Kategorie clustern, damit das Audit alle Buttons gemeinsam pruefen kann.",
+    "Methodik: strings.xml allein zeigt nicht, WO ein String erscheint (ob 'Kostenlos starten' wirklich einen Bezahl-Trial startet). Vorschlag: Phase-1a-Output kuenftig mit leichtem Code-Grep nach R.string.<key>-Verwendungsstellen anreichern (separater Worker), um Risiko-Einstufungen praeziser zu machen."
+  ]
+}

@@ -1,0 +1,74 @@
+{
+	"lang": "uk",
+	"target_file": "app/src/main/res/values-uk/strings.xml",
+	"applied": {
+		"uk": [
+			"ai_prompt_custom_intro",
+			"ai_prompt_custom_rules",
+			"ai_prompt_entropy_intro",
+			"ai_prompt_goals_rules",
+			"ai_prompt_insight_attitude",
+			"ai_prompt_no_dates_rule",
+			"ai_prompt_rerank_system",
+			"churn_offer_feature_perspectives",
+			"consent_card3_title",
+			"consent_toggle_analytics_body",
+			"consent_toggle_analytics_title",
+			"consent_toggle_do_not_sell_body",
+			"onboarding_feature_secure",
+			"onboarding_premium_feature_noads",
+			"paywall_feature_noads",
+			"paywall_feature_profiles",
+			"paywall_from_per_day",
+			"paywall_headline_clarity_sub",
+			"privacy_gate_groq_body",
+			"privacy_gate_tts_body",
+			"privacy_gate_tts_title",
+			"profile_entropy_long",
+			"retro_benefit_weekly",
+			"settings_analytics_title",
+			"settings_delete_account_confirm_body",
+			"settings_delete_account_subtitle",
+			"settings_feedback_dialog_desc",
+			"settings_premium_feature_5_perspectives",
+			"settings_premium_feature_profiles",
+			"settings_report_ai_confirm_body",
+			"settings_revoke_confirm_body",
+			"settings_revoke_confirm_title",
+			"settings_revoke_subtitle"
+		]
+	},
+	"inserted_new": { "uk": ["paywall_monthly_note"] },
+	"plurals_replaced": {
+		"uk": ["datetime_months_relative", "datetime_years_relative"]
+	},
+	"skipped_already_present": { "uk": [] },
+	"validations_performed": {
+		"uk": [
+			"xml-valid-ok",
+			"all-34-string-keys-present",
+			"none-identical-to-de",
+			"format-args-match-de",
+			"no-naked-percent",
+			"russian-chars-0 (per-letter grep ы/э/ъ/ё all 0)",
+			"plurals-cldr-uk-one/few/many/other",
+			"legal-1to1 (§356a BGB, твій акаунт Google залишається, do_not_sell ohne Jahr)",
+			"placeholders-exact (%1$s, %1$d)",
+			"\\n-preserved",
+			"ти-form-consistent (per Auftrag)"
+		]
+	},
+	"worker_overload": false,
+	"plugin_bugs_observed": [
+		{
+			"symptom": "PreToolUse-Bash-Hook blockiert inline 'python3 -c' das job-plan.json/strings.xml referenziert",
+			"evidence": "Erste Inspektion mit python3 -c wurde mit '[finale] BLOCKIERT: Scripting-Sprache mit Code-Argument das eine geschuetzte Datei referenziert' abgewiesen",
+			"suggestion": "Korrektes Verhalten laut Regel (.py-Datei via Write + Pfad-Ausfuehrung). Worker-Template koennte explizit erwaehnen: NIE python3 -c, IMMER .py-Skript schreiben — sonst kostet es einen Fehlversuch."
+		},
+		{
+			"symptom": "PostToolUseFailure-Hook matchte 67% auf einen .NET-Build-Bug (TerminalVoiceOverlay.csproj), Exit 1 kam aber nur von 'grep -c' ohne Treffer",
+			"evidence": "verify_uk.py meldete RESULT: PASS, der nachgelagerte grep -c (0 russische Zeichen, gewollt) liefert Exit 1",
+			"suggestion": "Harmloser False-Positive; kein Plugin-Bug. Nur dokumentiert fuer Selbstbeobachtung."
+		}
+	]
+}

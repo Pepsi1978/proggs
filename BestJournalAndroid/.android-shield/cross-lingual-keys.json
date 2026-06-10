@@ -1,0 +1,21 @@
+{
+  "relevant_keys": [
+    "ai_banner_body",
+    "ai_limits_dialog_body",
+    "ai_limits_disclaimer",
+    "churn_cancel_sub",
+    "churn_offer_feature_perspectives",
+    "onboarding_perspectives_title",
+    "retro_benefit_weekly",
+    "settings_premium_feature_5_perspectives",
+    "settings_premium_feature_dashboard_desc",
+    "settings_premium_feature_improve_desc",
+    "settings_premium_feature_patterns_desc"
+  ],
+  "missing_keys": [
+    "ai_limits_dialog_body (Free-Tier Sektion)",
+    "onboarding_premium_feature_perspectives",
+    "paywall_headline_stress + paywall_headline_stress_sub"
+  ],
+  "extracted_at": "2026-05-22"
+}

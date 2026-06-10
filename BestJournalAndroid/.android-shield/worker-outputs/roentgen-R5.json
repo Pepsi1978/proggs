@@ -1,0 +1,215 @@
+{
+	"hiddenFeatures": [
+		{
+			"type": "debug_seed_button",
+			"name": "Test-Daten-Seed-Button (DEBUG)",
+			"file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalScreen.kt",
+			"purpose": "Im Debug-Build erscheint in der Journal-Kopfzeile ein IconButton der Testeintraege per toggleTestDataSeed() einfuegt oder entfernt. In Release-Builds unsichtbar.",
+			"userVisibleText": []
+		},
+		{
+			"type": "debug_groq_bypass",
+			"name": "Groq-API immer aktiv im Debug-Build",
+			"file": "app/src/main/java/com/bestjournal/app/data/repository/TranscriptionRepository.kt",
+			"purpose": "BuildConfig.DEBUG umgeht die Abo-Pruefung: Debug-Builds greifen immer auf Groq whisper-large-v3-turbo zu, ohne aktives Abo.",
+			"userVisibleText": [
+				{
+					"text": "// Debug builds always use Groq — mirrors Frank's behaviour so developers can exercise the hosted whisper-large-v3-turbo path without juggling",
+					"file_line": "app/src/main/java/com/bestjournal/app/data/repository/TranscriptionRepository.kt:41"
+				}
+			]
+		},
+		{
+			"type": "ccpa_do_not_sell",
+			"name": "CCPA/CPRA 2026 Do-Not-Sell-Toggle",
+			"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+			"purpose": "Ein einziger Schalter deaktiviert alle Cloud-KI-Dienste (Groq, Gemini, Edge-TTS) und Firebase Analytics gleichzeitig. Gedacht fuer Nutzer aus Kalifornien (CCPA/CPRA 2026). Nutzer muss pro Dienst explizit neu einwilligen.",
+			"userVisibleText": [
+				{
+					"text": "// CCPA/CPRA 2026 (California): \"Do Not Sell My Personal Information\" toggle.",
+					"file_line": "app/src/main/java/com/bestjournal/app/util/Constants.kt:~68"
+				}
+			]
+		},
+		{
+			"type": "dsgvo_consent_versioning",
+			"name": "DSGVO-Einwilligungs-Versionierung (Art. 7 DSGVO)",
+			"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+			"purpose": "CURRENT_POLICY_VERSION = 3.1 erzwingt Re-Consent wenn sich Datenschutzrichtlinie oder SDK-Oberflaeche wesentlich aendert. Audit-Trail mit Epochen-Timestamp gespeichert.",
+			"userVisibleText": [
+				{
+					"text": "const val CURRENT_POLICY_VERSION = \"3.1\"",
+					"file_line": "app/src/main/java/com/bestjournal/app/util/Constants.kt:~76"
+				}
+			]
+		},
+		{
+			"type": "spam_protection",
+			"name": "Stundenlimit fuer KI-Anfragen",
+			"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+			"purpose": "Freemium-Nutzer max. 30 KI-Anfragen/Stunde, Premium-Nutzer max. 50. Verhindert Missbrauch waehrend offener Trial-Periode.",
+			"userVisibleText": [
+				{
+					"text": "const val SPAM_HOURLY_AI_LIMIT = 30",
+					"file_line": "app/src/main/java/com/bestjournal/app/util/Constants.kt:~83"
+				},
+				{
+					"text": "const val SPAM_HOURLY_AI_LIMIT_PREMIUM = 50",
+					"file_line": "app/src/main/java/com/bestjournal/app/util/Constants.kt:~84"
+				}
+			]
+		}
+	],
+	"workers": [],
+	"receivers": [
+		{
+			"class": "BootReminderReceiver",
+			"file": "app/src/main/java/com/bestjournal/app/util/BootReminderReceiver.kt:13",
+			"trigger": "Intent.ACTION_BOOT_COMPLETED",
+			"purpose": "Nach Geraete-Neustart alle vier Alarm-Typen neu planen. Verhindert, dass Erinnerungen nach Reboot stumm bleiben.",
+			"reschedules": [
+				"daily_reminder",
+				"weekly_review",
+				"monthly_review",
+				"yearly_review"
+			]
+		},
+		{
+			"class": "ReminderReceiver",
+			"file": "app/src/main/java/com/bestjournal/app/util/ReminderReceiver.kt",
+			"trigger": "AlarmManager (taeglich, benutzer-konfigurierbare Uhrzeit)",
+			"purpose": "Sendet taeglich die Tagebuch-Erinnerungsbenachrichtigung mit rotierendem Body-Text (5 Varianten: body_0 bis body_4).",
+			"channel": "daily_reminder"
+		},
+		{
+			"class": "WeeklyReviewReceiver",
+			"file": "app/src/main/java/com/bestjournal/app/util/WeeklyReviewReceiver.kt",
+			"trigger": "AlarmManager (woechentlich, Standard: Sonntag 15:00)",
+			"purpose": "Sendet Benachrichtigung fuer Wochenrueckblick. Plant sich selbst +7 Tage weiter.",
+			"channel": "weekly_review"
+		},
+		{
+			"class": "MonthlyReviewReceiver",
+			"file": "app/src/main/java/com/bestjournal/app/util/MonthlyReviewReceiver.kt",
+			"trigger": "AlarmManager (monatlich, Standard: letzter Tag des Monats 15:00)",
+			"purpose": "Sendet Benachrichtigung fuer Monatsrueckblick.",
+			"channel": "monthly_review"
+		},
+		{
+			"class": "YearlyReviewReceiver",
+			"file": "app/src/main/java/com/bestjournal/app/util/YearlyReviewReceiver.kt",
+			"trigger": "AlarmManager (jaehrlich, Standard: letzter Tag des Jahres 15:00)",
+			"purpose": "Sendet Benachrichtigung fuer Jahresrueckblick.",
+			"channel": "yearly_review"
+		}
+	],
+	"notificationChannels": [
+		{
+			"id": "daily_reminder",
+			"name_text": "Tägliche Erinnerung",
+			"desc_text": "Erinnert dich täglich ans Tagebuchschreiben",
+			"importance": "DEFAULT",
+			"notification_title": "Zeit für dein Tagebuch",
+			"notification_bodies": [
+				"Was bewegt dich heute?",
+				"Ein Moment für dich, halte ihn fest",
+				"Dein zukünftiges Ich wird dir danken",
+				"Nur ein Gedanke reicht, leg los",
+				"Was war heute dein Highlight?"
+			],
+			"file_line": "app/src/main/res/values/strings.xml:1232"
+		},
+		{
+			"id": "weekly_review",
+			"name_text": "Wöchentlicher Rückblick",
+			"desc_text": "Dein Wochenrückblick jeden Sonntag um 15:00 Uhr",
+			"importance": "DEFAULT",
+			"notification_title": "Dein Wochenrückblick",
+			"notification_body": "Schau dir an was dich diese Woche bewegt hat, dein Dashboard hat neue Einsichten.",
+			"file_line": "app/src/main/res/values/strings.xml:1234"
+		},
+		{
+			"id": "monthly_review",
+			"name_text": "Monatsrückblick",
+			"desc_text": "Benachrichtigung wenn dein Monatsrückblick fertig ist",
+			"importance": "DEFAULT",
+			"notification_title": "Dein Monatsrückblick",
+			"notification_body": "Ein ganzer Monat voller Erinnerungen wartet auf dich.",
+			"file_line": "app/src/main/res/values/strings.xml:1236"
+		},
+		{
+			"id": "yearly_review",
+			"name_text": "Jahresrückblick",
+			"desc_text": "Benachrichtigung wenn dein Jahresrückblick fertig ist",
+			"importance": "DEFAULT",
+			"notification_title": "Dein Jahresrückblick",
+			"notification_body": "Ein ganzes Jahr voller Erinnerungen, schau zurück auf deine Reise.",
+			"file_line": "app/src/main/res/values/strings.xml:1238"
+		}
+	],
+	"featureFlags": [
+		{
+			"key": "groq_api_key",
+			"constant": "REMOTE_CONFIG_GROQ_KEY",
+			"source": "FirebaseRemoteConfig",
+			"purpose": "API-Key fuer Groq whisper-large-v3-turbo Cloud-Transkription. Wird per fetchAndActivate() zur Laufzeit geladen. Kein Key oder leerer Key = Fallback auf lokales Whisper.",
+			"file_line": "app/src/main/java/com/bestjournal/app/data/repository/TranscriptionRepository.kt:54"
+		}
+	],
+	"accountDeletion": {
+		"present": true,
+		"file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsViewModel.kt:885",
+		"flow": "4-stufig: (1) Drive appDataFolder via deleteAllAppData() mit 2-Pass-Verifikation loeschen (laeuft VOR signOut, da signOut den Google-Account-Token benoetigt); (2) filesDir/photos/ rekursiv loeschen; (3) cacheDir vollstaendig loeschen (Aufnahmen, TTS-Cache, drive_merge_temp.db); (4) signOut() leert Room-DBs, EncryptedPrefs, Alarme und startet den App-Prozess neu. Bei Drive-Fehler: Fehlerdialog mit Retry-Option und forceLocalDelete-Fallback (SettingsScreen.kt:3974+3983).",
+		"ui_trigger": "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsScreen.kt:3917"
+	},
+	"backupExport": {
+		"present": true,
+		"type": "Google Drive (appDataFolder, nicht sichtbar fuer Nutzer im Drive)",
+		"manager_backup": "app/src/main/java/com/bestjournal/app/data/remote/googledrive/DriveBackupManager.kt",
+		"manager_restore": "app/src/main/java/com/bestjournal/app/data/remote/googledrive/DriveRestoreManager.kt",
+		"sync_usecase": "app/src/main/java/com/bestjournal/app/domain/usecase/SyncWithDriveUseCase.kt",
+		"backup_files": [
+			"bestjournal_backup.db (Room-Datenbank)",
+			"bestjournal_photos.zip (Foto-Anhaenge)",
+			"photo_*-Dateien (Einzelfotos/Videos)",
+			"Retrospective-Daten"
+		],
+		"photo_backup_prefs": "PREF_BACKUP_PHOTOS (Standard: true), PREF_BACKUP_VIDEOS (Standard: true)",
+		"trigger": "SyncWithDriveUseCase — automatisch mit 30 Sekunden Debounce (SYNC_DEBOUNCE_MS) nach Aenderungen",
+		"guard": "PREF_DRIVE_BACKUP_ENABLED muss true sein, sonst kein Sync",
+		"notes": "Kein manueller PDF- oder JSON-Export. Kein WAL-Checkpoint-Aufruf vor Backup explizit gefunden (Risiko: letzter WAL-Frame fehlt im Backup — siehe LEARNINGS)."
+	},
+	"transcription": {
+		"local_or_cloud": "dual: Cloud-first (Groq whisper-large-v3-turbo), Fallback lokal (sherpa-onnx Whisper base INT8)",
+		"cloud_api": "https://api.groq.com/openai/v1/audio/transcriptions",
+		"cloud_model": "whisper-large-v3-turbo",
+		"local_model_files": [
+			"whisper/base-encoder.int8.onnx",
+			"whisper/base-decoder.int8.onnx",
+			"whisper/base-tokens.txt"
+		],
+		"local_framework": "sherpa-onnx (com.k2fsa.sherpa.onnx)",
+		"gate": "Groq aktiv fuer: Abonnenten, Trial-Nutzer, Debug-Builds. Freemium nach Trial-Ablauf: nur lokal. Groq-Key wird per Firebase Remote Config verteilt (nicht hardcodiert).",
+		"size_limit_groq": "25 MB (~14+ Minuten Aufnahme); darueber direkt lokal",
+		"max_recording_minutes": 10,
+		"sample_rate": 16000,
+		"channels": 1,
+		"file_line": "app/src/main/java/com/bestjournal/app/data/repository/TranscriptionRepository.kt:39"
+	},
+	"cameraUsage": "Kamera fuer Foto-/Video-Anhaenge an Tagebucheintraege (EntryDetailScreen.kt). Ansatz: klassischer Intent (ACTION_IMAGE_CAPTURE via MediaStore), kein CameraX. Erstellt FileProvider-URI in filesDir/photos/. Speichert Kopie automatisch in DCIM/Camera. Video-Aufnahme ebenfalls unterstuetzt. PhotoRepository.kt verwaltet Dateipfade.",
+	"observations": [
+		"WorkManager wird NICHT verwendet — alle zeitgesteuerten Aufgaben laufen ueber AlarmManager + BroadcastReceiver.",
+		"Kein App-Widget (GlanceAppWidget, AppWidgetProvider) vorhanden.",
+		"Kein TileService (Quick-Settings-Kachel) vorhanden.",
+		"Keine App-Shortcuts (ShortcutManager) vorhanden.",
+		"Einziger Firebase-Remote-Config-Wert ist groq_api_key — kein umfassendes Feature-Flag-System.",
+		"CCPA-Do-Not-Sell-Schalter ist ein verstecktes Sicherheitsnetz: ein Toggle deaktiviert alle Cloud-KI-Dienste gleichzeitig.",
+		"Konto-Loeschung hat robuste 4-stufige Implementierung mit Drive-Verifikation und forciertem Fallback.",
+		"Transkription ist dual: Cloud (Groq) primaer, lokal (sherpa-onnx Whisper base INT8) als Fallback. ACHTUNG: Modell-Dateien muessen zur Laufzeit in assets/ vorhanden sein.",
+		"WAL-Checkpoint vor Drive-Backup nicht explizit im Quellcode gefunden — Risiko wie in LEARNINGS dokumentiert (feedback_wal_checkpoint_close_room.md).",
+		"Taeglich-Erinnerungs-Body rotiert zufaellig unter 5 Varianten — subtile Personalisierung die nutzerfreundlich wirkt."
+	],
+	"plugin_bugs_observed": [
+		"Kein Plugin-Bug waehrend dieser Ausfuehrung beobachtet. Token-Disziplin FIN-048 eingehalten: keine Datei vollstaendig gelesen, nur gezielte Greps + Read mit Offset/Limit-Parametern."
+	]
+}

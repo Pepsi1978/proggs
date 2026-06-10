@@ -1,0 +1,573 @@
+{
+ "pairs": {
+  "ai_improved_suffix_marker": {
+   "de": "✨ KI-verbessert",
+   "ta": "✨ AI-மேம்படுத்தப்பட்டது",
+   "te": "✨ AI-మెరుగుపరచబడింది",
+   "th": "✨ ปรับปรุงด้วย AI"
+  },
+  "ai_limit_yearly": {
+   "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+   "ta": "ஆண்டு சந்தா, %1$s/ஆண்டு (37%% சேமிக்கவும்)",
+   "te": "వార్షిక సబ్‌స్క్రిప్షన్, %1$s/సంవత్సరం (37%% ఆదా)",
+   "th": "รายปี %1$s ต่อปี (ประหยัด 37\\u00A0%%)"
+  },
+  "ai_limits_dialog_body": {
+   "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+   "ta": "PREMIUM சந்தாவுடன்\\n\\nதினசரி கிடைப்பவை:\\n• ஒவ்வொரு சுயவிவரத்திற்கும் 150 கோரிக்கைகள் — 4 முன்வரையறை சுயவிவரங்களுக்கு சேர்த்து 600/நாள், மேலும் நீ உருவாக்கும் ஒவ்வொரு சொந்த சுயவிவரத்திற்கும் 150/நாள்.\\n• 150 வரை உரை மேம்பாடுகள்\\n\\nவிரிவான விவரம்:\\n• கோரிக்கைகள் 1 முதல் 30 வரை: உயர்ந்த AI தரம்\\n• கோரிக்கைகள் 31 முதல் 100 வரை: வேகமான நிலையான தரம்\\n• 101வது கோரிக்கையில்: ஒருமுறை 30 நிமிட இடைவேளை\\n• கோரிக்கைகள் 101 முதல் 150 வரை: வேகமான நிலையான தரம்\\n• 151வது கோரிக்கையிலிருந்து: நாளை வரை மேலும் கோரிக்கைகள் இல்லை\\n\\nஅனைத்து பயனர்களுக்கும் பொருந்தும்:\\n• மணிக்கு அதிகபட்சம் 50 AI கோரிக்கைகள் — பிறகு 5 நிமிட இடைவேளை\\n\\nஒதுக்கீடு எப்போது மீட்டமைக்கப்படும்?\\nதினசரி 0:00 மணிக்கு (உன் உள்ளூர் நேரம்) புதிய முழு ஒதுக்கீடு தொடங்கும்.\\n\\n──────────\\n\\nசந்தா இல்லாமல்\\n\\n• ஒவ்வொரு சுயவிவரத்திற்கும் வாரத்திற்கு 5 டாஷ்போர்டு பகுப்பாய்வுகள்\\n• வாரத்திற்கு 5 உரை மேம்பாடுகள்\\n• எப்போதும் வேகமான நிலையான தரத்தில்\\n• ஒவ்வொரு திங்கட்கிழமை 0:00 மணிக்கு (உன் உள்ளூர் நேரம்) மீட்டமைக்கப்படும்\\n\\n──────────\\n\\nபெரும்பாலான பயனர்கள் அன்றாட வாழ்வில் இந்த வரம்புகளை அடைய மாட்டார்கள்.",
+   "te": "PREMIUM సభ్యత్వంతో\\n\\nరోజుకు అందుబాటులో ఉంటుంది:\\n• రోజుకు ప్రతి ప్రొఫైల్‌కు 150 అభ్యర్థనలు — 4 ముందే నిర్వచించిన ప్రొఫైల్‌లకు కలిపి 600/రోజు, నీవు సృష్టించే ప్రతి స్వంత ప్రొఫైల్‌కు 150/రోజు.\\n• 150 వరకు వచన మెరుగుదలలు\\n\\nఇది ఎలా పని చేస్తుందో:\\n• అభ్యర్థనలు 1 నుండి 30: అత్యధిక AI నాణ్యత\\n• అభ్యర్థనలు 31 నుండి 100: వేగవంతమైన ప్రామాణిక నాణ్యత\\n• 101వ అభ్యర్థనకు: ఒకసారి 30 నిమిషాల విరామం\\n• అభ్యర్థనలు 101 నుండి 150: వేగవంతమైన ప్రామాణిక నాణ్యత\\n• 151వ అభ్యర్థన నుండి: రేపటివరకు మరిన్ని అభ్యర్థనలు లేవు\\n\\nఅందరు వినియోగదారులకు వర్తిస్తుంది:\\n• గంటకు గరిష్టంగా 50 AI అభ్యర్థనలు — తర్వాత 5 నిమిషాల విరామం\\n\\nకోటా ఎప్పుడు రీసెట్ అవుతుంది?\\nప్రతిరోజూ 0:00 (నీ స్థానిక సమయం) వద్ద కొత్త పూర్తి కోటా మొదలవుతుంది.\\n\\n──────────\\n\\nసభ్యత్వం లేకుండా\\n\\n• ప్రతి ప్రొఫైల్‌కు వారానికి 5 డ్యాష్‌బోర్డ్ విశ్లేషణలు\\n• వారానికి 5 వచన మెరుగుదలలు\\n• ఎల్లప్పుడూ వేగవంతమైన ప్రామాణిక నాణ్యతలో\\n• ప్రతి సోమవారం 0:00 (నీ స్థానిక సమయం) రీసెట్\\n\\n──────────\\n\\nసాధారణ వినియోగంలో చాలా మంది వినియోగదారులు ఈ పరిమితులను ఎప్పుడూ ఎదుర్కోరు.",
+   "th": "ด้วยการสมัครสมาชิก Premium\n\nสิ่งที่คุณได้รับต่อวัน:\n• 150 คำขอต่อวันต่อโปรไฟล์ — 4 โปรไฟล์ที่กำหนดไว้รวม 600/วัน บวก 150/วันสำหรับโปรไฟล์กำหนดเองแต่ละรายการที่คุณสร้าง\n• การปรับปรุงข้อความสูงสุด 150 ครั้ง\n\nรายละเอียด:\n• คำขอที่ 1-30: คุณภาพ AI สูงสุด\n• คำขอที่ 31-100: คุณภาพมาตรฐานรวดเร็ว\n• คำขอที่ 101: หยุดพัก 30 นาทีครั้งเดียว\n• คำขอที่ 101-150: คุณภาพมาตรฐานรวดเร็ว\n• ตั้งแต่คำขอที่ 151: ไม่รับคำขออีกจนถึงวันพรุ่งนี้\n\nสำหรับผู้ใช้ทุกคน:\n• สูงสุด 50 คำขอ AI ต่อชั่วโมง — จากนั้นพักชั่วคราว 5 นาที\n\nโควต้าจะรีเซ็ตเมื่อไหร่?\nทุกวันเวลา 0:00 น. (เวลาท้องถิ่นของคุณ) โควต้าเต็มใหม่จะเริ่มต้น\n\n──────────\n\nไม่มีการสมัครสมาชิก\n\n• 5 การวิเคราะห์แดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์\n• 5 การปรับปรุงข้อความต่อสัปดาห์\n• คุณภาพมาตรฐานรวดเร็วเสมอ\n• รีเซ็ตทุกวันจันทร์เวลา 0:00 น. (เวลาท้องถิ่นของคุณ)\n\n──────────\n\nผู้ใช้ส่วนใหญ่ในชีวิตประจำวันจะไม่ถึงขีดจำกัดเหล่านี้"
+  },
+  "ai_prompt_custom_intro": {
+   "de": "Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst UND Aufgaben-Bearbeiter.\\n\\nARBEITSWEISE IN ZWEI SCHRITTEN:\\n\\nSCHRITT 1 — KONTEXT AUFNEHMEN:\\nLies zuerst ALLE Tagebucheinträge des Nutzers vollständig durch. Verstehe die Situation, die Muster, die Themen, die genannten Dinge, Probleme, Wünsche. Die Einträge sind dein KONTEXT, dein Startpunkt, deine Grundlage. Sie begrenzen dich aber nicht.\\n\\nSCHRITT 2 — AUFGABE AUSFÜHREN:\\n%1$s\\n\\nDas oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.\\n\\nKERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:\\nDer gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.\\n\\nWichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag \\\"Ziele\\\": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag \\\"Sport\\\": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.\\n\\nENTSCHEIDEND:\\n- Steht im Auftrag \\\"analysiere\\\", \\\"fasse zusammen\\\", \\\"was fällt auf\\\" — bleib dicht an den Einträgen.\\n- Steht im Auftrag \\\"recherchiere\\\", \\\"finde Alternativen\\\", \\\"schlage vor\\\", \\\"empfehle\\\", \\\"ergänze\\\", \\\"was wäre wenn\\\", \\\"neue Ideen\\\" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.\\n- Der Auftrag hat Vorrang. Die Einträge sind das Fundament, nicht die Wand.",
+   "ta": "நீங்கள் ஒரு அறிவார்ந்த, கவனமுள்ள நாட்குறிப்பு பகுப்பாய்வாளர் மற்றும் பணி-செயலாக்கியர்.\\n\\nரண்டு கட்ட செயல்முறை:\\n\\nகட்டம் 1 — சூழல் புரிந்துகொள்ளுதல்:\\nமுதலில் பயனரின் அனைத்து நாட்குறிப்பு பதிவுகளையும் முழுமையாக படிக்கவும். எந்த தலைப்புகள் தோன்றுகின்றன? என்ன வடிவங்கள் திரும்பவும் வருகின்றன? எந்த விஷயங்கள் முக்கியமானவை? ஒட்டுமொத்த வாழ்க்கை சூழலை புரிந்துகொள்ளவும்.\\n\\nகட்டம் 2 — பணி செயல்படுத்துதல்:\\n%1$s\\n\\nமுக்கிய விதி — சுயவிவர பயன்பாடு 50%%:\\nபதிவுகள் 50%% அளவிற்கு மேல் நேரடியாக பணியுடன் தொடர்பில்லாத சுயவிவர தரவை பயன்படுத்தவும். பதிவுகள் என்ன சொல்கின்றன, சுயவிவரம் அவற்றை எவ்வாறு வடிகட்டுகிறது என்ற ஒரு சமநிலை இருக்க வேண்டும்.\\n\\nவெவ்வேறு வெளிப்பாடு:\\nஒவ்வொரு பதிலும் புதிதாக வரவேண்டும். முன்பு நீங்கள் ஒரே மாதிரியான வெளிப்பாடு, ஒரே தொடக்க வாக்கியங்கள், ஒரே கட்டமைப்பை பயன்படுத்தியிருந்தால், இப்போது வேறு வழியில் செய்யவும்.\\n\\nமுக்கியம்:\\nபதிவுகளிலிருந்து குறிப்பிட்ட, உண்மையான தரவை பயன்படுத்தவும். பொதுவான, வெற்று வாக்கியங்கள் வேண்டாம்.",
+   "te": "మీరు తెలివైన, దృష్టిగల డైరీ విశ్లేషకుడు మరియు పని అమలు చేసేవారు.\\n\\nరెండు దశలలో పని చేయండి:\\n\\nదశ 1 — సందర్భం గ్రహించండి:\\nముందుగా వినియోగదారు అన్ని డైరీ నమోదులను పూర్తిగా చదవండి. పరిస్థితి, పర్యాయక్రమాలు, విషయాలు, పేర్కొన్న విషయాలు, సమస్యలు, కోరికలు అర్థం చేసుకోండి. నమోదులు మీ సందర్భం, ప్రారంభ బిందువు, ప్రాతిపదిక. అవి మీకు పరిమితి విధించవు.\\n\\nదశ 2 — పనిని అమలు చేయండి:\\n%1$s\\n\\nఇది మీ అసలు పని. దశ 1 నుండి సందర్భం ఆధారంగా ఈ పనిని అమలు చేయండి. పని పరిశోధన, ఆలోచనలు, ప్రత్యామ్నాయాలు, సూచనలు, సిఫారసులు లేదా కొత్త సమాచారం అడిగితే, నమోదులలో లేకపోయినా సక్రియంగా అందించండి. నమోదులు మీ అవుట్‌పుట్‌కి సమాచారం అందిస్తాయి, పరిమితి విధించవు.\\n\\nముఖ్య నియమం — ప్రొఫైల్ కనీసం 50 శాతం భరిస్తుంది:\\nమొత్తం అవుట్‌పుట్ (gesamtanalyse, top_massnahmen, kategorien, ratschlaege, fortschritte) కనీసం 50 శాతం స్పష్టంగా వినియోగదారు పనితో అనుసంధానించబడి ఉండాలి. పనికి సంబంధించని అంశాలను వదిలివేయండి. తక్కువ అంశాలు స్పష్టమైన సంబంధంతో సాధారణ అంశాల కంటే మేలు.\\n\\nభాష గురించి ముఖ్యమైన విషయం: సంబంధాన్ని వైవిధ్యంగా వ్యక్తీకరించండి. పర్యాయపదాలు, సంబంధిత పదాలు, అర్థపూర్వక చుట్టుపక్కల మాటలు ఉపయోగించండి. పనిలోని ఖచ్చితమైన మాటలను యాంత్రికంగా పునరావృతం చేయవద్దు.",
+   "th": "คุณคือนักวิเคราะห์บันทึกที่ฉลาดและใส่ใจ และผู้ดำเนินงานตามภารกิจ\\n\\nวิธีทำงาน 2 ขั้นตอน:\\n\\nขั้นตอนที่ 1 — รับบริบท:\\nอ่านบันทึกประจำวันทั้งหมดของผู้ใช้ให้ครบ ทำความเข้าใจสถานการณ์ แพตเทิร์น หัวข้อ สิ่งที่กล่าวถึง ปัญหา ความต้องการ บันทึกเป็นบริบท จุดเริ่มต้น และรากฐานของคุณ แต่ไม่จำกัดคุณ\\n\\nขั้นตอนที่ 2 — ดำเนินงานตามภารกิจ:\\n%1$s\\n\\nนั่นคือภารกิจจริงของคุณ ดำเนินงานตามภารกิจนี้บนพื้นฐานของบริบทจากขั้นตอนที่ 1 หากภารกิจต้องการการวิจัย ไอเดีย ทางเลือก ข้อเสนอแนะ คำแนะนำ หรือข้อมูลใหม่ ให้ส่งมอบสิ่งเหล่านั้นอย่างแข็งขัน แม้ว่าจะไม่มีในบันทึก บันทึกช่วยให้ข้อมูลเอาต์พุตของคุณ ไม่ใช่จำกัดมัน\\n\\nกฎหลัก — โปรไฟล์มีส่วนอย่างน้อย 50 เปอร์เซ็นต์:\\nเอาต์พุตทั้งหมด (การวิเคราะห์รวม มาตรการสูงสุด หมวดหมู่ คำแนะนำ ความก้าวหน้า) ต้องเชื่อมโยงอย่างชัดเจนกับภารกิจของผู้ใช้อย่างน้อย 50 เปอร์เซ็นต์ ข้อมูลเชิงลึก ประเด็น หรือหัวข้อที่ไม่มีความเชื่อมโยงกับภารกิจให้ละทิ้ง ไม่เติมเอาต์พุตด้วยหัวข้อชีวิตทั่วไปเพียงเพื่อให้ JSON เต็ม ดีกว่าที่จะมีประเด็นน้อยกว่าที่มีความเชื่อมโยงชัดเจนมากกว่าประเด็นทั่วไปมากมาย\\n\\nสำคัญเกี่ยวกับภาษา: แสดงความเชื่อมโยงอย่างหลากหลาย ใช้คำพ้อง คำที่เกี่ยวข้อง และหัวข้อที่ใกล้เคียง อย่าทำซ้ำคำจากภารกิจแบบกลไก ความเชื่อมโยงกับโปรไฟล์ต้องรู้สึกได้ ไม่ใช่คำต่อคำ\\n\\nสิ่งสำคัญ:\\n- หากภารกิจกล่าวว่า «วิเคราะห์», «สรุป», «สังเกตอะไรบ้าง» — ยึดถือบันทึกอย่างใกล้ชิด\\n- หากภารกิจกล่าวว่า «ค้นคว้า», «หาทางเลือก», «แนะนำ», «เสนอแนะ», «เพิ่มเติม», «ถ้าหาก», «ไอเดียใหม่» — ก้าวข้ามบันทึกอย่างแข็งขันและนำเนื้อหาใหม่มาเสนอ\\n- ภารกิจมีความสำคัญกว่า บันทึกคือรากฐาน ไม่ใช่กำแพง"
+  },
+  "ai_prompt_entropy_intro": {
+   "de": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes Ratschlags-Dashboard im JSON-Format.\\n\\nWAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:\\nAlles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+   "ta": "நீங்கள் ஒரு அக்கறையுள்ள, மிகவும் அறிவார்ந்த வாழ்க்கை ஆலோசகர் மற்றும் வடிவ பகுப்பாய்வாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். திரும்பி வரும் மன அழுத்தம், கலைவரம் மற்றும் சுமை மூலங்களை கண்டறியவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட ஆலோசனை டாஷ்போர்டை உருவாக்கவும்.\\n\\nநாம் தேடுவது — தனிப்பட்ட சுமை:\\nகலைவரம், மன அழுத்தம், ஆற்றல் இழப்பு, வலி, தூக்க சிக்கல்கள், உணர்வு சுமை அல்லது பயனரின் வாழ்க்கையில் கட்டுப்பாட்டை இழப்பு ஏற்படுத்துவது அனைத்தும்.",
+   "te": "మీరు సానుభూతిగల, అత్యంత తెలివైన జీవిత సలహాదారు మరియు పర్యాయక్రమ విశ్లేషకుడు.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను విశ్లేషించండి. ఒత్తిడి, అస్తవ్యస్తత మరియు భారం యొక్క పునరావృత మూలాలను కనుగొనండి. దీని నుండి JSON ఫార్మాట్‌లో నిర్మాణాత్మక సలహా డ్యాష్‌బోర్డ్‌ని సృష్టించండి.\\n\\nమనం ఏమి వెతుకుతున్నాం — వ్యక్తిగత భారం:\\nవినియోగదారు జీవితంలో అస్తవ్యస్తత, ఒత్తిడి, శక్తి నష్టం, నొప్పి, నిద్ర సమస్యలు, భావోద్వేగ భారం లేదా నియంత్రణ నష్టాన్ని సృష్టించే ప్రతిదీ.",
+   "th": "คุณคือที่ปรึกษาชีวิตและนักวิเคราะห์แพตเทิร์นที่เห็นอกเห็นใจและฉลาดมาก\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกของผู้ใช้ หาแหล่งความเครียด ความวุ่นวาย และภาระที่วนซ้ำ สร้างแดชบอร์ดคำแนะนำที่มีโครงสร้างใน JSON\\n\\nเรามองหา ภาระส่วนตัว:\\nทุกอย่างที่สร้างความวุ่นวาย ความเครียด การเสียพลัง ความปวด ปัญหานอน ภาระอารมณ์ หรือการสูญเสียการควบคุม"
+  },
+  "ai_prompt_goals_definition": {
+   "de": "DEFINITION — WAS IST EIN ZIEL:\\nAlles, was der Nutzer erreichen, verändern, anfangen, beenden, verbessern oder aufbauen möchte. Auch indirekte Hinweise zählen:\\n- Direkt: \\\"Ich will abnehmen\\\", \\\"Ich muss den Zahnarzt anrufen\\\"\\n- Indirekt: \\\"Wäre schön, mal wieder laufen zu gehen\\\" = Ziel Fitness\\n- Klagen: \\\"Mein Schlaf ist so schlecht\\\" = implizites Ziel Schlafverbesserung\\n- Träume: \\\"Irgendwann möchte ich nach Schweden\\\" = Langfrist-Ziel Reise",
+   "ta": "வரையறை — என்ன ஒரு இலக்கு:\\nபயனர் அடைய, மாற்ற, தொடங்க, முடிக்க, மேம்படுத்த அல்லது கட்டி எழுப்ப விரும்புவது அனைத்தும். மறைமுகமான குறிப்புகளும் கணக்கில் வரும்:\\n- நேரடி: \\\"நான் உடல் எடையை குறைக்க விரும்புகிறேன்\\\", \\\"பல் மருத்துவரை அழைக்க வேண்டும்\\\"\\n- மறைமுகம்: \\\"ஓடச் செல்வது நல்லது\\\" = உடற்பயிற்சி இலக்கு\\n- புலம்பல்கள்: \\\"என் தூக்கம் மிகவும் மோசமாக இருக்கிறது\\\" = உட்புக்கிய தூக்கம் மேம்பாடு இலக்கு\\n- கனவுகள்: \\\"ஒரு நாள் ஸ்வீடன் போகவேண்டும்\\\" = நீண்ட கால பயண இலக்கு",
+   "te": "నిర్వచనం — లక్ష్యం అంటే ఏమిటి:\\nవినియోగదారు సాధించాలని, మార్చాలని, ప్రారంభించాలని, ముగించాలని, మెరుగుపరచాలని లేదా నిర్మించాలని కోరుకునే ప్రతిదీ. పరోక్ష సూచనలు కూడా లెక్కలోకి వస్తాయి:\\n- ప్రత్యక్షం: \\\"నేను బరువు తగ్గాలనుకుంటున్నాను\\\", \\\"నేను దంత వైద్యుడికి కాల్ చేయాలి\\\"\\n- పరోక్షం: \\\"మళ్లీ పరిగెత్తడానికి వెళ్లడం బాగుంటుంది\\\" = ఫిట్‌నెస్ లక్ష్యం\\n- ఫిర్యాదులు: \\\"నా నిద్ర చాలా చెడ్డగా ఉంది\\\" = నిద్ర మెరుగుదల అంతర్గత లక్ష్యం\\n- కలలు: \\\"ఎప్పుడైనా నేను స్వీడన్‌కి వెళ్లాలనుకుంటున్నాను\\\" = దీర్ఘకాలిక ప్రయాణ లక్ష్యం",
+   "th": "คำจำกัดความ เป้าหมายคืออะไร:\\nทุกอย่างที่ผู้ใช้ต้องการบรรลุ เปลี่ยน เริ่ม จบ ปรับปรุง หรือสร้าง สัญญาณทางอ้อมก็นับ:\\n- ตรง ๆ: «ฉันอยากลดน้ำหนัก» «ฉันต้องโทรหาหมอฟัน»\\n- ทางอ้อม: «อยากกลับไปวิ่งอีก» = เป้าหมายด้านฟิตเนส\\n- บ่น: «นอนไม่ค่อยหลับ» = เป้าหมายแฝงด้านการนอน\\n- ฝัน: «สักวันอยากไปสวีเดน» = เป้าหมายเดินทางระยะยาว"
+  },
+  "ai_prompt_insight_intro": {
+   "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+   "ta": "நீங்கள் தனிப்பட்ட வளர்ச்சிக்கான ஒரு அக்கறையுள்ள, ஆழமான வடிவ பகுப்பாய்வாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். மறைந்த வடிவங்கள், திரும்பி வரும் சிந்தனை மற்றும் நடத்தை முறைகள், மயக்கமான நம்பிக்கைகள், உணர்வு எதிர்வினை வடிவங்கள் மற்றும் தனிப்பட்ட பலங்களை கண்டறியவும். பயனர் எழுதும்போது தமக்குத் தெரியாத விஷயங்களை — அவர் தங்களைப் பற்றி கற்றுக்கொள்ள முடியும் என்பதை — தெளிவாக காட்டவும். இவற்றிலிருந்து JSON வடிவத்தில் கட்டமைக்கப்பட்ட சுய அறிவு டாஷ்போர்டை உருவாக்கவும்.",
+   "te": "మీరు వ్యక్తిగత అభివృద్ధి కోసం సానుభూతి, లోతైన పర్యాయక్రమ విశ్లేషకుడు.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను విశ్లేషించండి. వాటిలో గుప్త పర్యాయక్రమాలు, పునరావృతమయ్యే ఆలోచనా మరియు ప్రవర్తన విధానాలు, అచేతన నమ్మకాలు, భావోద్వేగ ప్రతిస్పందన పర్యాయక్రమాలు మరియు వ్యక్తిగత శక్తులను కనుగొనండి. వినియోగదారు తన గురించి నేర్చుకోగలిగే విషయాలను కనిపించేలా చేయండి — రాసేటప్పుడు అతనికి తెలియని విషయాలు. దీని నుండి JSON ఫార్మాట్‌లో నిర్మాణాత్మక స్వీయ-అవగాహన డ్యాష్‌బోర్డ్‌ని సృష్టించండి.",
+   "th": "คุณคือนักวิเคราะห์แพตเทิร์นด้านการเติบโตส่วนตัวที่เห็นอกเห็นใจและมองลึก\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกของผู้ใช้ หาแพตเทิร์นที่ซ่อน ความคิดและการกระทำที่วนซ้ำ ความเชื่อที่ไม่รู้ตัว แพตเทิร์นปฏิกิริยา และจุดแข็ง แสดงให้ผู้ใช้เห็นสิ่งที่เขาอาจไม่ตระหนักตอนเขียน สร้างแดชบอร์ดการรู้จักตนเองใน JSON"
+  },
+  "ai_prompt_no_dates_rule": {
+   "de": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben verwenden — weder \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" noch \\\"Eintrag vom 3. April\\\", \\\"am 23.04.\\\", \\\"vom 28.4.\\\" oder ähnliche Verweise auf konkrete Eintragsdaten. Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen vorgelesen unnatürlich und brechen den Erkenntnisfluss.\\n\\nFORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\\n- FALSCH: \\\"Einträge vom 3.4., 28.4. und 23.4. belegen, dass dein Biorhythmus durch späte Schlafzeiten leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\n- FALSCH: \\\"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\\\"\\n- RICHTIG: \\\"Deine Borreliose hängt direkt mit dem Bewegungsmangel zusammen.\\\"\\n- FALSCH: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du bei den Intervallläufen am 24.04. gespürt hast.\\\"\\n- RICHTIG: \\\"Laufen ist der Schlüssel zur mentalen Klarheit, die du beim Intervalltraining spürst.\\\"\\n\\nDie inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. Du kannst weiterhin allgemeine zeitliche Bezüge nutzen (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"). Datumsangaben gehören NUR in das \\\"herleitung\\\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt).",
+   "ta": "குரல் வாசிப்பு நட்பு (கட்டாயம் — தேதி தடை):\\nஅனைத்து தெரியும் உரை வயல்களிலும் (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) தேதிகளை பயன்படுத்தாதீர்கள். \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" அல்லது \\\"3ம் தேதி பதிவு\\\", \\\"23.04ல்\\\", \\\"28.4 முதல்\\\" போன்ற குறிப்பிட்ட பதிவு தேதிகள் வேண்டாம். இந்த உரைகள் பயனருக்கு வாசிக்கப்படும் — தேதி வரிசைகள் வாசிக்கப்படும்போது இயற்கையற்று ஒலிக்கும் மற்றும் அறிவு ஓட்டத்தை உடைக்கும்.\\n\\nபதிலாக தூய அறிவை வெளிப்படுத்தவும்:\\n- தவறு: \\\"3.4., 28.4. மற்றும் 23.4. பதிவுகள் காட்டுகின்றன, உங்கள் உயிரியல் தாளம் தாமதமான தூக்கத்தால் பாதிக்கப்படுகிறது.\\\"\\n- சரி: \\\"தாமதமான தூக்கம் உங்கள் உயிரியல் தாளத்தை முறையாக சீரழிக்கிறது.\\\"\\n- தவறு: \\\"30ம் தேதி பதிவு உங்கள் நோயை விளையாட்டு குறைவுடன் நேரடியாக இணைக்கிறது.\\\"\\n- சரி: \\\"உங்கள் உடல் பிரச்சினை இயக்கக் குறைவுடன் நேரடியாக தொடர்புடையது.\\\"\\n\\nஉள்ளடக்க அறிவு தொடரும் — குறிப்பிட்ட தேதி குறிப்புகள் மட்டும் நீக்கப்படும். பொதுவான நேர குறிப்புகளை தொடர்ந்து பயன்படுத்தலாம் (\\\"திரும்பவும்\\\", \\\"சமீபத்தில்\\\", \\\"பல நாட்களாக\\\"). தேதிகள் \\\"herleitung\\\" வயலில் மட்டும் சேர்க்கவும் (உள் பயன்பாடு, காட்டப்படாது).",
+   "te": "TTS చదవడానికి అనుకూలం (తప్పనిసరి — కనిపించే వచనాలలో తేదీ నిషేధం):\\nALL కనిపించే వచన ఫీల్డ్‌లలో (వివరణ, వివరించు, సారాంశం, మొత్తం_విశ్లేషణ) తేదీ సూచనలు ఉపయోగించకూడదు — \\\"3.4.\\\", \\\"23.04.\\\", \\\"28.4.\\\", \\\"24.04.\\\", \\\"30.4.\\\" కాదు, \\\"3 ఏప్రిల్ నమోదు\\\", \\\"23.04. న\\\", \\\"28.4. నుండి\\\" లేదా నిర్దిష్ట నమోదు తేదీలకు సూచించే ఏదైనా కాదు. ఈ వచనాలు వినియోగదారుకు చదివి వినిపించబడతాయి — తేదీ శ్రేణులు చదివినప్పుడు అసహజంగా అనిపించి అంతర్దృష్టి ప్రవాహాన్ని విచ్ఛిన్నం చేస్తాయి.\\n\\nబదులుగా శుద్ధమైన అంతర్దృష్టిని వ్యక్తీకరించండి:\\n- తప్పు: \\\"3.4., 28.4. మరియు 23.4. నమోదులు మీ జీవ లయ ఆలస్యమైన నిద్ర వేళల వల్ల దెబ్బతింటోందని నిరూపిస్తున్నాయి.\\\"\\n- సరైనది: \\\"ఆలస్యమైన నిద్ర వేళలు మీ జీవ లయను క్రమంగా నాశనం చేస్తున్నాయి.\\\"\\n- తప్పు: \\\"30 వ నమోదు మీ బోరేలియాను నేరుగా వ్యాయామ లేమితో అనుసంధానిస్తుంది.\\\"\\n- సరైనది: \\\"మీ బోరేలియా నేరుగా శారీరక కదలిక లేమితో సంబంధం కలిగి ఉంది.\\\"\\n\\nమొత్తం అంతర్దృష్టి మిగిలి ఉంటుంది — నిర్దిష్ట తేదీ సూచనలు మాత్రమే తొలగిపోతాయి. సాధారణ కాల సూచనలు ఉపయోగించవచ్చు (\\\"పునరావృతంగా\\\", \\\"ఇటీవల\\\", \\\"అనేక రోజులలో\\\"). తేదీలు \\\"herleitung\\\" ఫీల్డ్‌లో మాత్రమే చేర్చాలి (అంతర్గతంగా ఉపయోగించబడతాయి, ప్రదర్శించబడవు).",
+   "th": "TTS-อ่านออกเสียง (บังคับ — ห้ามใส่วันที่ในข้อความที่แสดงผล):\\nในช่องข้อความที่มองเห็นได้ทั้งหมด (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) ห้ามใส่วันที่ไม่ว่าจะเป็น «3.4.», «23.04.», «28.4.», «24.04.», «30.4.» หรือ «Eintrag vom 3. April», «am 23.04.», «vom 28.4.» หรือการอ้างถึงวันที่เฉพาะเจาะจงใด ๆ ข้อความเหล่านี้จะถูกอ่านออกเสียงให้ผู้ใช้ฟัง — การระบุวันที่ฟังดูไม่เป็นธรรมชาติและขัดจังหวะการรับรู้ข้อมูล\\n\\nจงกล่าวถึงข้อมูลเชิงลึกโดยตรง:\\n- ผิด: «รายการวันที่ 3.4., 28.4. และ 23.4. แสดงให้เห็นว่านาฬิกาชีวภาพของคุณเสียหายจากการนอนดึก»\\n- ถูก: «การนอนดึกทำลายนาฬิกาชีวภาพของคุณอย่างเป็นระบบ»\\n- ผิด: «รายการวันที่ 30 เชื่อมโรค Borreliose ของคุณกับการขาดกีฬาโดยตรง»\\n- ถูก: «โรค Borreliose ของคุณเชื่อมโยงโดยตรงกับการขาดการเคลื่อนไหว»\\n\\nข้อมูลเชิงลึกยังคงอยู่ เพียงแต่ตัดการอ้างอิงวันที่เฉพาะเจาะจงออก คุณยังใช้การอ้างอิงเวลาทั่วไปได้ («ซ้ำ ๆ», «ล่าสุด», «หลายวัน») วันที่ควรอยู่เฉพาะในช่อง «herleitung» (ที่มา ใช้ภายใน ไม่แสดงผล) เท่านั้น"
+  },
+  "ai_prompt_response_language": {
+   "de": "ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.",
+   "ta": "பதில் மொழி: தமிழில் முழுமையாக பதிலளிக்கவும். அனைத்து உரைகளும் தலைப்புகளும் தமிழில் இருக்க வேண்டும், வேறு மொழி வேண்டாம்.",
+   "te": "సమాధాన భాష: పూర్తిగా తెలుగులో సమాధానం ఇవ్వండి. అన్ని టెక్స్ట్‌లు మరియు శీర్షికలు తెలుగులో ఉండాలి, ఇంకే భాష ఉండకూడదు.",
+   "th": "ภาษาของคำตอบ: ตอบทั้งหมดเป็นภาษาไทย ข้อความและหัวเรื่องทุกตัวต้องเป็นภาษาไทย ไม่ใช้ภาษาอื่น"
+  },
+  "churn_auto_renew_note": {
+   "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+   "ta": "உங்கள் சந்தா Google Play மூலம் தானாக புதுப்பிக்கப்படும். எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்.",
+   "te": "మీ సబ్‌స్క్రిప్షన్ Google Play ద్వారా స్వయంచాలకంగా పునరుద్ధరిస్తుంది. ఎప్పుడైనా రద్దు చేయవచ్చు.",
+   "th": "การสมัครต่ออายุอัตโนมัติผ่าน Google Play ยกเลิกได้ทุกเมื่อ"
+  },
+  "churn_cancel_sub": {
+   "de": "Abo kündigen",
+   "ta": "சந்தாவை ரத்து செய்",
+   "te": "సబ్‌స్క్రిప్షన్ రద్దు చేయండి",
+   "th": "ยกเลิกการสมัคร"
+  },
+  "churn_discount_badge": {
+   "de": "%1$d%% SPAREN",
+   "ta": "%1$d%% சேமிக்கவும்",
+   "te": "%1$d%% ఆదా చేయండి",
+   "th": "ประหยัด %1$d\\u00A0%%"
+  },
+  "churn_google_play_redirect": {
+   "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.",
+   "ta": "உங்கள் சந்தாவை நிர்வகிக்க Google Play-க்கு திருப்பி விடப்படுவீர்கள். உங்கள் நாட்குறிப்பு பதிவுகள் நிச்சயமாக சேமிக்கப்பட்டிருக்கும்.",
+   "te": "మీ సబ్‌స్క్రిప్షన్‌ని నిర్వహించడానికి మీరు Google Play కి దారిమార్చబడతారు. మీ డైరీ నమోదులు సహజంగా ఉంటాయి.",
+   "th": "คุณกำลังถูกนำไปที่ Google Play เพื่อจัดการการสมัครสมาชิก บันทึกของคุณยังคงอยู่"
+  },
+  "churn_instead_of": {
+   "de": "statt ",
+   "ta": "பதிலாக ",
+   "te": "బదులుగా ",
+   "th": "แทน "
+  },
+  "churn_offer_auto_renew": {
+   "de": "Verlängert sich automatisch, jederzeit kündbar",
+   "ta": "தானாக புதுப்பிக்கப்படும், எப்போதும் ரத்து செய்யலாம்",
+   "te": "స్వయంచాలకంగా పునరుద్ధరిస్తుంది, ఎప్పుడైనా రద్దు చేయవచ్చు",
+   "th": "ต่ออายุอัตโนมัติ ยกเลิกได้ทุกเมื่อ"
+  },
+  "churn_offer_feature_perspectives": {
+   "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+   "ta": "அனைத்து AI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)",
+   "te": "అన్ని AI ప్రొఫైల్‌లు (4 ముందే నిర్వచించబడినవి + అపరిమిత స్వంతవి)",
+   "th": "โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)"
+  },
+  "churn_pause_sub": {
+   "de": "Oder Abo bei Google Play pausieren",
+   "ta": "அல்லது Google Play-ல் சந்தாவை இடைநிறுத்தவும்",
+   "te": "లేదా Google Play లో సబ్‌స్క్రిప్షన్ పాజ్ చేయండి",
+   "th": "หรือหยุดการสมัครชั่วคราวใน Google Play"
+  },
+  "churn_promo_months_remaining": {
+   "de": "Noch %1$d Monate — danach %2$s pro Monat",
+   "ta": "%1$d மாதங்கள் மீதம் — பிறகு மாதம் %2$s",
+   "te": "%1$d నెలలు మిగిలాయి — తర్వాత నెలకు %2$s",
+   "th": "เหลือ %1$d เดือน — จากนั้น %2$s ต่อเดือน"
+  },
+  "churn_promo_one_month_remaining": {
+   "de": "Noch 1 Monat — danach %1$s pro Monat",
+   "ta": "1 மாதம் மீதம் — பிறகு மாதம் %1$s",
+   "te": "1 నెల మిగిలింది — తర్వాత నెలకు %1$s",
+   "th": "เหลือ 1 เดือน — จากนั้น %1$s ต่อเดือน"
+  },
+  "churn_promo_phase_ends": {
+   "de": "Endet am %1$s — danach %2$s pro Monat",
+   "ta": "%1$s அன்று முடிவடையும் — பின்னர் மாதம் %2$s",
+   "te": "%1$s న ముగుస్తుంది — తర్వాత నెలకు %2$s",
+   "th": "สิ้นสุด %1$s — หลังจากนั้น %2$s ต่อเดือน"
+  },
+  "churn_switch_yearly": {
+   "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+   "ta": "அல்லது ஆண்டு சந்தாவிற்கு மாறி இன்னும் சேமிக்கவும்",
+   "te": "లేదా వార్షిక సబ్‌స్క్రిప్షన్‌కి మారండి మరియు మరింత ఆదా చేయండి",
+   "th": "หรือเปลี่ยนเป็นรายปีและประหยัดเพิ่ม"
+  },
+  "consent_card1_body": {
+   "de": "Deine Einträge bleiben auf deinem Gerät.",
+   "ta": "உங்கள் பதிவுகள் உங்கள் சாதனத்திலேயே இருக்கும்.",
+   "te": "మీ ఎంట్రీలు మీ పరికరంలోనే ఉంటాయి.",
+   "th": "บันทึกของคุณยังอยู่ในอุปกรณ์"
+  },
+  "consent_card3_title": {
+   "de": "Anonyme Statistiken",
+   "ta": "அடையாளமற்ற புள்ளிவிவரங்கள்",
+   "te": "అనామక గణాంకాలు",
+   "th": "สถิติแบบไม่ระบุตัวตน"
+  },
+  "consent_confirmation": {
+   "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.",
+   "ta": "\\\"ஒப்புக்கொண்டு தொடங்கு\\\" என்பதைத் தட்டுவதன் மூலம் நீங்கள் தனியுரிமைக் கொள்கை, பயன்பாட்டு விதிமுறைகள் மற்றும் சட்டப்பூர்வ தகவலைப் படித்ததாகவும், விவரித்த தரவு செயலாக்கத்திற்கு ஒப்புக்கொள்கிறீர்கள் என்றும் உறுதிப்படுத்துகிறீர்கள். உங்கள் முடிவை அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.",
+   "te": "\\\"అంగీకరించి ప్రారంభించండి\\\"ని నొక్కడం ద్వారా మీరు గోప్యతా విధానం, ఉపయోగ నిబంధనలు మరియు చట్టపరమైన సమాచారం చదివారని మరియు వివరించిన డేటా ప్రాసెసింగ్‌కు అంగీకరిస్తున్నారని నిర్ధారిస్తున్నారు. మీ నిర్ణయాన్ని సెట్టింగ్స్‌లో ఎప్పుడైనా మార్చవచ్చు.",
+   "th": "การแตะ \\\"ยอมรับและเริ่มต้น\\\" ยืนยันว่าคุณได้อ่านนโยบายความเป็นส่วนตัว เงื่อนไขการใช้งาน และประกาศทางกฎหมายแล้ว และยอมรับการประมวลผลข้อมูลตามที่อธิบายไว้ คุณสามารถเปลี่ยนการตัดสินใจได้ตลอดในการตั้งค่า"
+  },
+  "consent_footer_link_agb": {
+   "de": "Nutzungsbedingungen",
+   "ta": "பயன்பாட்டு விதிமுறைகள்",
+   "te": "వినియోగ నిబంధనలు",
+   "th": "ข้อกำหนดการใช้งาน"
+  },
+  "consent_footer_link_datenschutz": {
+   "de": "Datenschutz",
+   "ta": "தனியுரிமை",
+   "te": "గోప్యతా విధానం",
+   "th": "นโยบายความเป็นส่วนตัว"
+  },
+  "consent_footer_link_impressum": {
+   "de": "Impressum",
+   "ta": "வெளியீட்டாளர் தகவல்",
+   "te": "Impressum",
+   "th": "ข้อมูลผู้ให้บริการ"
+  },
+  "consent_toggle_analytics_body": {
+   "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+   "ta": "Firebase Analytics — பயன்பாட்டை மேம்படுத்த எங்களுக்கு உதவுகிறது. தனிப்பட்ட உள்ளடக்கம் இல்லை, அநாமதேய தொடுதல் எண்ணிக்கை மட்டுமே. தரவு பரிமாற்றம்: Google USA (Data Privacy Framework).",
+   "te": "Firebase Analytics — యాప్‌ను మెరుగుపరచడంలో మాకు సహాయపడుతుంది. వ్యక్తిగత కంటెంట్ లేదు, కేవలం అనామక ట్యాప్ గణనలు. డేటా బదిలీ: Google USA (Data Privacy Framework).",
+   "th": "Firebase Analytics — ช่วยให้เราปรับปรุงแอปได้ดีขึ้น ไม่มีเนื้อหาส่วนตัว มีเพียงจำนวนการแตะแบบไม่ระบุตัวตน การถ่ายโอนข้อมูล: Google สหรัฐอเมริกา (Data Privacy Framework)"
+  },
+  "consent_toggle_do_not_sell_body": {
+   "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+   "ta": "கலிபோர்னியா விலகல் (CCPA/CPRA 2026). செயல்படுத்தும்போது, அனைத்து விருப்பத்தேர்வு தரவு செயலாக்கமும் முடக்கப்படுகிறது — உள்ளூர் அம்சங்கள் மட்டுமே இருக்கும்.",
+   "te": "కాలిఫోర్నియా ఆప్ట్-అవుట్ (CCPA/CPRA 2026). యాక్టివ్‌గా ఉన్నప్పుడు, అన్ని ఐచ్ఛిక డేటా ప్రాసెసింగ్‌లు నిష్క్రియం చేయబడతాయి — స్థానిక ఫీచర్లు మాత్రమే మిగిలి ఉంటాయి.",
+   "th": "การเลือกไม่เข้าร่วมของแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน การประมวลผลข้อมูลเสริมทั้งหมดจะถูกปิดใช้งาน — เหลือเพียงฟีเจอร์ภายในเครื่อง"
+  },
+  "consent_toggle_drive_body": {
+   "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.",
+   "ta": "உள்ளீடுகளை குறியாக்கம் செய்து உங்கள் சொந்த Google Drive இல் சேமிக்கிறது. நீங்கள் முழு கட்டுப்பாட்டை வைத்திருக்கிறீர்கள் — கோப்பு உங்கள் கணக்கில் உள்ளது, எங்களிடம் இல்லை.",
+   "te": "ఎంట్రీలను మీ స్వంత Google Drive‌లో ఎన్క్రిప్ట్ చేసి సేవ్ చేస్తుంది. మీరు పూర్తి నియంత్రణను కలిగి ఉంటారు — ఫైల్ మీ ఖాతాలో ఉంటుంది, మా వద్ద కాదు.",
+   "th": "บันทึกรายการแบบเข้ารหัสใน Google Drive ของคุณเอง คุณรักษาการควบคุมเต็มรูปแบบ — ไฟล์อยู่ในบัญชีของคุณ ไม่ใช่ที่เรา"
+  },
+  "dashboard_gemini_unavailable": {
+   "de": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+   "ta": "Gemini இப்போது கிடைக்கவில்லை, சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.",
+   "te": "Gemini ప్రస్తుతం అందుబాటులో లేదు, దయచేసి కొద్దిసేపట్లో మళ్లీ ప్రయత్నించండి.",
+   "th": "ขณะนี้ Gemini ใช้งานไม่ได้ ลองใหม่ภายหลัง"
+  },
+  "dashboard_premium_upsell_body": {
+   "de": "Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.",
+   "ta": "Premium மூலம் நீ விரும்பும் அளவு சுயவிவரங்களிலிருந்து உதாரமான பகுப்பாய்வுகளைப் பெறுவாய்.",
+   "te": "Premium తో నీవు కావలసినన్ని ప్రొఫైల్స్ నుండి ఉదారంగా విశ్లేషణలు పొందుతావు.",
+   "th": "ด้วย Premium คุณจะได้รับการวิเคราะห์มากมายจากจำนวนโปรไฟล์เท่าไหร่ก็ได้"
+  },
+  "dev_seed_delete_all_action": {
+   "de": "Alle Einträge löschen",
+   "ta": "__MISSING__",
+   "te": "__MISSING__",
+   "th": "__MISSING__"
+  },
+  "entry_delete_message": {
+   "de": "Diesen Eintrag unwiderruflich löschen?",
+   "ta": "இந்த பதிவை நிரந்தரமாக நீக்கவா?",
+   "te": "ఈ నమోదును శాశ్వతంగా తొలగించాలా?",
+   "th": "ลบบันทึกนี้ถาวรหรือไม่?"
+  },
+  "follow_up_delete_confirm_text": {
+   "de": "Möchtest du Nachtrag %1$s wirklich unwiderruflich löschen?",
+   "ta": "%1$s நிரந்தரமாக நீக்கப்படும். இதை மீண்டும் செயல்தவிர்க்க இயலாது.",
+   "te": "%1$s శాశ్వతంగా తొలగించబడుతుంది. దీన్ని తిరిగి రద్దు చేయలేరు.",
+   "th": "ต้องการลบบันทึกเพิ่มเติม %1$s อย่างถาวรหรือไม่?"
+  },
+  "follow_up_premium_body": {
+   "de": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+   "ta": "Premium மூலம் ஒவ்வொரு டைரி பதிவிலும் எத்தனை வேண்டுமானாலும் கூடுதல் குறிப்புகள் சேர்க்கலாம்.",
+   "te": "Premium తో ప్రతి డైరీ ఎంట్రీకి నీకు కావాల్సినన్ని అనుసరణ గమనికలు జోడించవచ్చు.",
+   "th": "ด้วย Premium คุณสามารถเพิ่มบันทึกเพิ่มเติมได้ไม่จำกัดในทุกบันทึกของไดอารี"
+  },
+  "follow_up_premium_hint": {
+   "de": "ab dem zweiten Nachtrag",
+   "ta": "இரண்டாவது குறிப்பிலிருந்து",
+   "te": "రెండవ గమనిక నుండి",
+   "th": "ตั้งแต่บันทึกเพิ่มเติมที่สองเป็นต้นไป"
+  },
+  "follow_up_premium_later": {
+   "de": "Später entscheiden",
+   "ta": "பின்னர் முடிவெடுக்கிறேன்",
+   "te": "తర్వాత నిర్ణయిస్తాను",
+   "th": "ตัดสินใจทีหลัง"
+  },
+  "follow_up_premium_title": {
+   "de": "Unbegrenzte Nachträge",
+   "ta": "வரம்பற்ற கூடுதல் குறிப்புகள்",
+   "te": "అపరిమిత అనుసరణ గమనికలు",
+   "th": "บันทึกเพิ่มเติมไม่จำกัด"
+  },
+  "journal_drive_backup_current": {
+   "de": "Backup aktuell, alle Einträge gesichert",
+   "ta": "காப்புப்பிரதி தற்போதைய நிலையில் உள்ளது",
+   "te": "బ్యాకప్ ప్రస్తుతం, అన్ని నమోదులు సురక్షితం",
+   "th": "สำรองข้อมูลเป็นปัจจุบัน บันทึกทั้งหมดปลอดภัย"
+  },
+  "journal_transcribed_with": {
+   "de": "Transkribiert mit %1$s",
+   "ta": "%1$s மூலம் படியெடுக்கப்பட்டது",
+   "te": "%1$s తో లిప్యంతరీకరించబడింది",
+   "th": "ถอดข้อความโดย %1$s"
+  },
+  "legend_high_burden": {
+   "de": "Hoch (67–100%) — Sofort handeln",
+   "ta": "அதிகம் (67–100%) — உடனடியாக செயல்படவும்",
+   "te": "అధికం (67–100%) — వెంటనే చర్య తీసుకోండి",
+   "th": "สูง (67–100\\u00A0%%) จัดการทันที"
+  },
+  "onboarding_feature_secure": {
+   "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+   "ta": "உங்கள் தரவு உங்களிடமே இருக்கும், குறியாக்கம் செய்யப்பட்டு பாதுகாப்பாக",
+   "te": "మీ డేటా మీతోనే ఉంటుంది, ఎన్‌క్రిప్ట్ మరియు సురక్షితం",
+   "th": "ข้อมูลของคุณอยู่กับคุณ เข้ารหัสและปลอดภัย"
+  },
+  "onboarding_free_after_trial": {
+   "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+   "ta": "பிறகு Best Journal-ஐ தொடர்ந்து பயன்படுத்தலாம்,\\nவாரத்திற்கு வரையறுக்கப்பட்ட KI அழைப்புகளுடன் இலவசமாக.",
+   "te": "తర్వాత మీరు Best Journal ని కొనసాగిస్తారు,\\nవారానికి పరిమిత AI కాల్‌లతో ఉచితంగా.",
+   "th": "หลังจากนั้นใช้ Best Journal ต่อไปได้\\nฟรี พร้อมขีดจำกัด AI รายสัปดาห์"
+  },
+  "onboarding_free_trial": {
+   "de": "Kostenlos, jederzeit kündbar",
+   "ta": "இலவசம், எப்போது வேண்டுமானாலும் ரத்துசெய்யலாம்",
+   "te": "ఉచితం, ఎప్పుడైనా రద్దు చేయవచ్చు",
+   "th": "ฟรี ยกเลิกได้ทุกเวลา"
+  },
+  "onboarding_premium_feature_noads": {
+   "de": "Keine Werbung, ungestört schreiben und reflektieren",
+   "ta": "விளம்பரங்கள் இல்லை, தொந்தரவின்றி எழுதவும் மற்றும் சிந்திக்கவும்",
+   "te": "ప్రకటనలు లేవు, అంతరాయం లేకుండా రాయండి మరియు ప్రతిబింబించండి",
+   "th": "ไม่มีโฆษณา เขียนและใคร่ครวญอย่างสงบ"
+  },
+  "onboarding_start_free": {
+   "de": "Kostenlos starten",
+   "ta": "இலவசமாக தொடங்கவும்",
+   "te": "ఉచితంగా ప్రారంభించండి",
+   "th": "เริ่มฟรี"
+  },
+  "onboarding_try_premium": {
+   "de": "8 Tage gratis, danach ab 3,99 €/Monat",
+   "ta": "8 நாட்கள் இலவசம், பிறகு மாதத்திற்கு 3,99 \\u20ac முதல்",
+   "te": "8 రోజులు ఉచితం, తర్వాత నెలకు 3,99 € నుండి",
+   "th": "ทดลอง 8 วันฟรี จากนั้น 3.99 €/เดือน"
+  },
+  "paywall_day7": {
+   "de": "Tag 7",
+   "ta": "நாள் 7",
+   "te": "రోజు 7",
+   "th": "วันที่ 7"
+  },
+  "paywall_exit_bonus_days": {
+   "de": "+ %1$d Tage extra Testzeit",
+   "ta": "+ %1$d கூடுதல் சோதனை நாட்கள்",
+   "te": "+ %1$d రోజుల అదనపు ట్రయల్ సమయం",
+   "th": "+ %1$d วันทดลองเพิ่ม"
+  },
+  "paywall_exit_discount": {
+   "de": "Rabatt für %1$d Monate",
+   "ta": "%1$d மாதங்களுக்கு தள்ளுபடி",
+   "te": "%1$d నెలలకి రాయితీ",
+   "th": "ส่วนลด %1$d เดือน"
+  },
+  "paywall_exit_price_comparison": {
+   "de": "Nur %1$s statt %2$s pro Monat",
+   "ta": "மாதத்திற்கு %2$s பதிலாக வெறும் %1$s",
+   "te": "నెలకి %2$s బదులు కేవలం %1$s",
+   "th": "เพียง %1$s แทน %2$s ต่อเดือน"
+  },
+  "paywall_exit_start_discount": {
+   "de": "Zahlungspflichtig — 2 Monate zum halben Preis",
+   "ta": "கட்டண கடமை — 2 மாதங்கள் பாதி விலையில்",
+   "te": "చెల్లింపు అవసరం — 2 నెలలు సగం ధరకు",
+   "th": "ชำระเงิน — 2 เดือนในราคาครึ่งหนึ่ง"
+  },
+  "paywall_feature_profiles": {
+   "de": "Unbegrenzte individuelle KI-Profile",
+   "ta": "வரம்பற்ற தனிப்பட்ட பகுப்பாய்வு சுயவிவரங்கள்",
+   "te": "అపరిమిత అనుకూల విశ్లేషణ ప్రొఫైల్స్",
+   "th": "โปรไฟล์วิเคราะห์ที่กำหนดเองไม่จำกัด"
+  },
+  "paywall_first_payment": {
+   "de": "Erste Zahlung",
+   "ta": "முதல் கட்டணம்",
+   "te": "మొదటి చెల్లింపు",
+   "th": "ชำระครั้งแรก"
+  },
+  "paywall_free_note": {
+   "de": "Die App funktioniert auch ohne Abo weiter.",
+   "ta": "சந்தா இல்லாமலும் App தொடர்ந்து செயல்படும்.",
+   "te": "యాప్ సబ్‌స్క్రిప్షన్ లేకుండా కూడా పని చేస్తుంది.",
+   "th": "แอปใช้งานได้ต่อแม้ไม่มีสมาชิก"
+  },
+  "paywall_from_per_day": {
+   "de": "Jahresabo, %1$s pro Jahr",
+   "ta": "நாளுக்கு %1$s முதல்",
+   "te": "రోజుకి %1$s నుండి",
+   "th": "เริ่มต้น %1$s ต่อวัน"
+  },
+  "paywall_headline_clarity_sub": {
+   "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+   "ta": "KI உங்களுக்கு மறைந்திருக்கும் வடிவங்களை கண்டறிகிறது",
+   "te": "AI మీకు గుప్తంగా ఉన్న పర్యాయక్రమాలను గుర్తిస్తుంది",
+   "th": "AI รู้จักแพตเทิร์นที่ซ่อน"
+  },
+  "paywall_instead_per_month": {
+   "de": "Spare %1$d%% gegenüber dem Monatsabo",
+   "ta": "மாதாந்திர திட்டத்தை விட %1$d%% சேமிப்பு",
+   "te": "నెలవారీ ప్లాన్ కంటే %1$d%% ఆదా",
+   "th": "ประหยัด %1$d%% เทียบกับแผนรายเดือน"
+  },
+  "paywall_legal_hint": {
+   "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+   "ta": "சந்தா செலுத்துவதன் மூலம் நீ %1$s ஏற்கிறாய். உனது 14 நாள் ஒப்பந்த ரத்து உரிமை அங்கே விவரிக்கப்பட்டுள்ளது.",
+   "te": "సబ్‌స్క్రైబ్ చేయడం ద్వారా నువ్వు %1$s అంగీకరిస్తావు. నీ 14 రోజుల ఒప్పందం ఉపసంహరణ హక్కు అక్కడ వివరించబడింది.",
+   "th": "เมื่อสมัครสมาชิก คุณยอมรับ%1$s สิทธิ์การเพิกถอนภายใน 14 วันอธิบายไว้ที่นั่น"
+  },
+  "paywall_monthly_plan": {
+   "de": "Monatsabo, %1$s pro Monat",
+   "ta": "மாத சந்தா, மாதத்திற்கு %1$s",
+   "te": "నెలవారీ సబ్‌స్క్రిప్షన్, నెలకి %1$s",
+   "th": "รายเดือน %1$s ต่อเดือน"
+  },
+  "paywall_reminder": {
+   "de": "Erinnerung",
+   "ta": "நினைவூட்டல்",
+   "te": "జ్ఞాపిక",
+   "th": "การเตือน"
+  },
+  "paywall_with_limited": {
+   "de": "mit eingeschränkten Limits.",
+   "ta": "வரையறுக்கப்பட்ட வரம்புகளுடன்.",
+   "te": "పరిమితులతో.",
+   "th": "พร้อมข้อจำกัดการใช้งาน"
+  },
+  "paywall_yearly_note": {
+   "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar",
+   "ta": "பிறகு ஆண்டுக்கு %1$s, தானாக புதுப்பிக்கப்படும்\\nசோதனை காலத்தில் எப்போது வேண்டுமானாலும் ரத்துசெய்யலாம்",
+   "te": "తర్వాత సంవత్సరానికి %1$s, స్వయంచాలకంగా పునరుద్ధరించబడుతుంది\\nపరీక్ష దశలో ఎప్పుడైనా రద్దు చేయవచ్చు",
+   "th": "จากนั้น %1$s ต่อปี ต่ออายุอัตโนมัติ\\nยกเลิกได้ทุกเวลาในช่วงทดลอง"
+  },
+  "permission_rationale_microphone": {
+   "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+   "ta": "நாட்குறிப்பு பதிவுகளை குரலால் படிக்க உன் மைக்ரோஃபோனை அணுக அனுமதி தேவை.",
+   "te": "నీ డైరీ నమోదులను గళంతో చెప్పేందుకు మైక్రోఫోన్ ఉపయోగించాల్సి ఉంటుంది.",
+   "th": "เพื่อให้คุณบันทึกรายการไดอารีด้วยเสียง เราต้องการสิทธิ์เข้าถึงไมโครโฟนของคุณ"
+  },
+  "privacy_gate_gemini_body": {
+   "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern.",
+   "ta": "Best Journal-இன் நுண்ணறிவு அம்சங்களை பயன்படுத்த விரும்புவதற்கு நன்றி! சுருக்கங்கள், பின்னோக்குப் பார்வைகள், Dashboard நுண்ணறிவுகள் மற்றும் உரை மேம்பாடுகளுக்காக உங்கள் உரைகள் குறியாக்கப்பட்டு Google Gemini-க்கு அனுப்பப்படும்.\\n\\n\\u2713 உங்கள் தரவுகளால் KI பயிற்சி இல்லை\\n\\u2713 கோரிக்கைகள் நிரந்தரமாக சேமிக்கப்படுவதில்லை\\n\\u2713 EU-US Data Privacy Framework-படி குறியாக்கப்பட்டது\\n\\nமுக்கியமான குறிப்பு: உங்கள் நாட்குறிப்பு பதிவுகளில் மிகவும் உணர்திறன் வாய்ந்த தரவு இருக்கலாம் (உடல்நலம், சமயம், தனிப்பட்ட உறவுகள் \\u2014 Art. 9 DSGVO), எனவே KI செயலாக்கத்திற்கு உங்கள் வெளிப்படையான ஒப்புதலை இங்கே கேட்கிறோம். KI வெளியீடுகள் பரிந்துரைகள் மட்டுமே, தொழில்முறை ஆலோசனை அல்ல, நிபுணரை மாற்றாது.\\n\\nஇதை எப்போது வேண்டுமானாலும் அமைப்புகளில் மாற்றலாம்.",
+   "te": "Best Journal యొక్క తెలివైన ఫీచర్లు ఉపయోగించాలని కోరుకుంటున్నందుకు ధన్యవాదాలు! సారాంశాలు, సమీక్షలు, డ్యాష్‌బోర్డ్ అంతర్దృష్టులు మరియు వచన మెరుగుదలల కోసం మీ వచనాలు గుప్తీకరించబడి Google Gemini కి పంపబడతాయి.\\n\\n✓ మీ డేటాతో KI శిక్షణ లేదు\\n✓ అభ్యర్థనలు శాశ్వతంగా నిల్వ చేయబడవు\\n✓ EU-US Data Privacy Framework ప్రకారం గుప్తీకరించబడింది\\n\\nముఖ్యమైన గమనిక: మీ డైరీ ఎంట్రీలు ముఖ్యంగా సున్నితమైన డేటాను కలిగి ఉండవచ్చు (ఆరోగ్యం, మతం, వ్యక్తిగత సంబంధాలు — Art. 9 GDPR), కాబట్టి KI ప్రాసెసింగ్ కు మీ స్పష్టమైన అనుమతి అడుగుతున్నాం. KI అవుట్‌పుట్‌లు సూచనలు మాత్రమే, వృత్తిపరమైన సలహా కాదు మరియు నిపుణులను భర్తీ చేయవు.\\n\\nమీరు దీన్ని సెట్టింగ్‌లలో ఎప్పుడైనా మార్చవచ్చు.",
+   "th": "ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน ข้อมูลเชิงลึกจากแดชบอร์ด และการปรับปรุงข้อความ ข้อความของคุณจะถูกส่งไปยัง Google Gemini แบบเข้ารหัส\\n\\n✓ AI ไม่ใช้ข้อมูลของคุณในการฝึก\\n✓ คำขอไม่ถูกจัดเก็บถาวร\\n✓ เข้ารหัสตาม EU-US Data Privacy Framework\\n\\nหมายเหตุสำคัญ: เนื่องจากบันทึกของคุณอาจมีข้อมูลที่ละเอียดอ่อนเป็นพิเศษ (สุขภาพ ศาสนา ความสัมพันธ์ส่วนตัว) เราจึงขอความยินยอมของคุณสำหรับการประมวลผลด้วย AI ผลลัพธ์จาก AI เป็นข้อเสนอแนะ ไม่ใช่คำแนะนำจากผู้เชี่ยวชาญ\\n\\nคุณสามารถเปลี่ยนแปลงได้ทุกเวลาในการตั้งค่า"
+  },
+  "privacy_gate_groq_body": {
+   "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+   "ta": "கிளவுட் டிரான்ஸ்கிரிப்ஷனுக்காக உங்கள் குரல் பதிவு குறியாக்கப்பட்டு Groq, Inc.-க்கு (Mountain View, USA) அனுப்பப்பட்டு அங்கு உரையாக மாற்றப்படும். ஆடியோ கோப்பு செயலாக்கத்திற்குப் பிறகு அழிக்கப்படும், பயிற்சிக்குப் பயன்படுத்தப்படாது.\\n\\nமாற்று: சாதனத்தில் உள்ளமை டிரான்ஸ்கிரிப்ஷனைப் பயன்படுத்துங்கள் (ஆஃப்லைன், தரவு பரிமாற்றம் இல்லை), Settings → AI-ல் மாற்றலாம்.",
+   "te": "క్లౌడ్ ట్రాన్స్‌క్రిప్షన్ కోసం మీ వాయిస్ రికార్డింగ్ ఎన్‌క్రిప్ట్ చేయబడి Groq, Inc.-కి (Mountain View, USA) పంపబడి అక్కడ టెక్స్ట్‌గా మార్చబడుతుంది. ఆడియో ఫైల్ ప్రాసెసింగ్ తర్వాత తొలగించబడుతుంది మరియు శిక్షణ కోసం ఉపయోగించబడదు.\\n\\nప్రత్యామ్నాయం: పరికరంలో స్థానిక ట్రాన్స్‌క్రిప్షన్ ఉపయోగించండి (ఆఫ్‌లైన్, డేటా బదిలీ లేదు), Settings → AI లో మార్చవచ్చు.",
+   "th": "สำหรับการถอดเสียงบนคลาวด์ การบันทึกเสียงของคุณจะถูกส่งแบบเข้ารหัสไปยัง Groq, Inc. (เมาน์เทนวิว สหรัฐอเมริกา) และแปลงเป็นข้อความที่นั่น ไฟล์เสียงจะถูกลบหลังการประมวลผลและไม่ใช้ในการฝึกโมเดล\\n\\nทางเลือก: ใช้การถอดเสียงในเครื่อง (ออฟไลน์ ไม่มีการส่งข้อมูล) ตั้งค่าได้ใน การตั้งค่า → AI"
+  },
+  "privacy_gate_tts_body": {
+   "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+   "ta": "வாசித்துக் காட்ட, உரை குறியாக்கப்பட்டு Microsoft Bing Speech-க்கு (USA) அனுப்பப்பட்டு ஆடியோவாகத் திரும்பி வரும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses.",
+   "te": "చదివి వినిపించడానికి టెక్స్ట్ ఎన్‌క్రిప్ట్ చేయబడి Microsoft Bing Speech-కి (USA) పంపబడి ఆడియోగా తిరిగి ఇవ్వబడుతుంది. చట్టపరమైన ఆధారం: EU-US Data Privacy Framework + Standard Contractual Clauses.",
+   "th": "สำหรับการอ่านออกเสียง ข้อความจะถูกส่งแบบเข้ารหัสไปยัง Microsoft Bing Speech (สหรัฐอเมริกา) และส่งกลับเป็นเสียง ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน"
+  },
+  "profile_entropy_long": {
+   "de": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\\n\\nDu bekommst:\\n\\n• Eine Analyse deiner größten Belastungsquellen\\n• 5 konkrete Maßnahmen zum Aufräumen\\n• Tipps, die dir im Alltag helfen können\\n\\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+   "ta": "KI உங்கள் பதிவுகளில் மன அழுத்தம், சுமை மற்றும் குழப்பத்தை திட்டமிட்டுத் தேடுகிறது.\\n\\nநீங்கள் பெறுவது:\\n\\n\\u2022 உங்கள் மிகப்பெரிய சுமை மூலங்களின் பகுப்பாய்வு\\n\\u2022 ஒழுங்கமைக்க 5 உறுதியான வழிகள்\\n\\u2022 அன்றாட வாழ்வில் உதவும் குறிப்புகள்\\n\\nஎல்லாம் மிகவும் அதிகமாகி விட்டது என்று நீங்கள் உணரும்போது சிறந்தது.",
+   "te": "KI మీ ఎంట్రీలలో ఒత్తిడి, భారం మరియు అస్తవ్యస్తత కోసం చురుగ్గా వెతుకుతుంది.\\n\\nమీకు లభిస్తుంది:\\n\\n• మీ అతిపెద్ద భారానికి కారణాల విశ్లేషణ\\n• వ్యవస్థీకృత చేయడానికి 5 నిర్దిష్ట చర్యలు\\n• రోజువారీ జీవితంలో మీకు సహాయపడే చిట్కాలు\\n\\nప్రస్తుతం అన్నీ ఎక్కువగా అనిపిస్తున్నాయని మీకు అనిపిస్తే ఇది అనువైనది.",
+   "th": "AI ค้นหาความเครียด ภาระ และความวุ่นวายในบันทึกของคุณโดยเฉพาะ\\n\\nคุณจะได้รับ:\\n\\n• การวิเคราะห์แหล่งที่มาของภาระหนักที่สุด\\n• 5 มาตรการที่เป็นรูปธรรมเพื่อจัดการ\\n• เคล็ดลับที่ช่วยในชีวิตประจำวัน\\n\\nเหมาะสำหรับเมื่อคุณรู้สึกว่าทุกอย่างมากเกินไป"
+  },
+  "prompt_clear_confirm_text": {
+   "de": "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+   "ta": "இந்தப் பதிவை நிராகரிக்க விரும்புகிறாயா?",
+   "te": "నీవు నిజంగా ఈ ఎంట్రీని విసర్జించాలనుకుంటున్నావా?",
+   "th": "การวิเคราะห์ส่วนตัวจะถูกลบอย่างถาวร ต้องการดำเนินการต่อหรือไม่?"
+  },
+  "retro_benefit_weekly": {
+   "de": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+   "ta": "வரம்பற்ற வார மீள்பார்வைகள், முதல் 2 வாரங்கள் மட்டும் அல்ல",
+   "te": "అపరిమిత వారపు అవలోకనాలు, మొదటి 2 వారాలు మాత్రమే కాదు",
+   "th": "ทบทวนรายสัปดาห์ไม่จำกัด ไม่เฉพาะ 2 สัปดาห์แรก"
+  },
+  "retro_premium_unlock": {
+   "de": "Mit Premium alle Rückblicke freischalten",
+   "ta": "Premium மூலம் அனைத்து மீள்பார்வைகளையும் திறக்கவும்",
+   "te": "Premium తో అన్ని అవలోకనాలను అన్‌లాక్ చేయండి",
+   "th": "ปลดล็อกการทบทวนทั้งหมดด้วย Premium"
+  },
+  "settings_analytics_title": {
+   "de": "Anonyme Statistik",
+   "ta": "அடையாளமற்ற புள்ளிவிவரங்கள்",
+   "te": "అనామక గణాంకాలు",
+   "th": "สถิติแบบไม่ระบุตัวตน"
+  },
+  "settings_auto_lock": {
+   "de": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+   "ta": "பின்னணியில் 60 வினாடிகளுக்குப் பிறகு தானாக பூட்டும்",
+   "te": "బ్యాక్‌గ్రౌండ్‌లో 60 సెకన్ల తర్వాత స్వయంచాలకంగా లాక్ అవుతుంది",
+   "th": "ล็อกอัตโนมัติหลัง 60 วินาทีเมื่ออยู่เบื้องหลัง"
+  },
+  "settings_crisis_dialog_body": {
+   "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr.",
+   "ta": "Best Journal ஒரு நாட்குறிப்பு ஆப். இது தொழில்முறை உளவியல் அல்லது மருத்துவ உதவிக்கு மாற்றாகாது. AI உருவாக்கும் பகுப்பாய்வுகள் சிகிச்சை அல்ல.\\n\\nநீங்கள் கடுமையான நெருக்கடியில் இருந்தாலோ, சுயகாயம் அல்லது தற்கொலை பற்றிய எண்ணங்கள் வந்தாலோ, இதை நீங்கள் தனியாகச் சமாளிக்க வேண்டியதில்லை. இலவசமாகவும் பெயர் வெளியிடாமலும் உதவி 24/7 கிடைக்கும்.",
+   "te": "Best Journal ఒక జర్నల్ యాప్. ఇది నిపుణుల మానసిక లేదా వైద్య సహాయానికి ప్రత్యామ్నాయం కాదు. AI రూపొందించిన విశ్లేషణలు థెరపీ కావు.\\n\\nమీరు తీవ్రమైన సంక్షోభంలో ఉన్నా లేదా స్వీయహాని లేదా ఆత్మహత్య ఆలోచనలు వస్తున్నా, దీనిని మీరు ఒంటరిగా ఎదుర్కోవాల్సిన అవసరం లేదు. ఉచితంగా, గోప్యంగా సహాయం 24/7 అందుబాటులో ఉంది.",
+   "th": "Best Journal เป็นแอปบันทึกประจำวัน และไม่สามารถทดแทนคำปรึกษาด้านจิตวิทยาหรือการแพทย์จากผู้เชี่ยวชาญได้ การวิเคราะห์ที่สร้างโดย AI ไม่ใช่การบำบัด\\n\\nหากคุณกำลังอยู่ในภาวะวิกฤตรุนแรง หรือมีความคิดทำร้ายตนเองหรือฆ่าตัวตาย คุณไม่จำเป็นต้องเผชิญเรื่องนี้เพียงลำพัง มีความช่วยเหลือฟรีแบบไม่ระบุตัวตนตลอด 24 ชั่วโมง"
+  },
+  "settings_delete_account_confirm_body": {
+   "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+   "ta": "இந்தச் செயலை மீட்க முடியாது மற்றும் நீக்குவது:\\n\\n• அனைத்து உள்ளமை நாட்குறிப்புப் பதிவுகள், புகைப்படங்கள் மற்றும் வீடியோக்கள்\\n• உங்கள் Firebase கணக்கு\\n• பயன்பாட்டின் Google Drive காப்புப்பிரதி\\n\\nஅதன்பிறகு பயன்பாடு புதிய நிறுவலாக மீண்டும் தொடங்கும்.",
+   "te": "ఈ చర్య తిరిగి పొందలేనిది మరియు వీటిని తొలగిస్తుంది:\\n\\n• అన్ని స్థానిక డైరీ ఎంట్రీలు, ఫోటోలు మరియు వీడియోలు\\n• మీ Firebase ఖాతా\\n• యాప్ యొక్క Google Drive బ్యాకప్\\n\\nయాప్ కొత్త ఇన్‌స్టాలేషన్‌గా మళ్లీ ప్రారంభమవుతుంది.",
+   "th": "การกระทำนี้ย้อนกลับไม่ได้ และจะลบ:\\n\\n• บันทึกไดอารี่ ภาพถ่าย และวิดีโอในเครื่องทั้งหมด\\n• บัญชี Firebase ของคุณ\\n• ข้อมูลสำรองของแอปใน Google Drive\\n\\nแอปจะเริ่มใหม่เสมือนเป็นการติดตั้งใหม่"
+  },
+  "settings_delete_account_subtitle": {
+   "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+   "ta": "அனைத்து உள்ளமை தரவு, Google கணக்கு மற்றும் Drive காப்புப்பிரதியை நிரந்தரமாக நீக்குகிறது",
+   "te": "అన్ని స్థానిక డేటా, Google ఖాతా మరియు Drive బ్యాకప్‌ను శాశ్వతంగా తొలగిస్తుంది",
+   "th": "ลบข้อมูลทั้งหมดในเครื่อง บัญชี Google และข้อมูลสำรองใน Drive อย่างถาวร"
+  },
+  "settings_entries_auto_loaded": {
+   "de": "Einträge werden bei der Anmeldung automatisch geladen",
+   "ta": "உள்நுழைவில் பதிவுகள் தானாக ஏற்றப்படும்",
+   "te": "సైన్ ఇన్ చేసినప్పుడు నమోదులు స్వయంచాలకంగా లోడ్ అవుతాయి",
+   "th": "บันทึกจะโหลดอัตโนมัติเมื่อเข้าสู่ระบบ"
+  },
+  "settings_feedback_dialog_desc": {
+   "de": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+   "ta": "டெவலப்பர்களுக்கு உங்கள் செய்தி — நாங்கள் அனைத்தையும் படிக்கிறோம் மற்றும் தனிப்பட்டு பதிலளிக்கிறோம்!",
+   "te": "డెవలపర్‌లకి మీ సందేశం — మేము అన్నీ చదువుతాము మరియు వ్యక్తిగతంగా సమాధానం ఇస్తాము!",
+   "th": "ข้อความถึงนักพัฒนา เราอ่านทั้งหมดและตอบด้วยตนเอง!"
+  },
+  "settings_legal_online_label": {
+   "de": "Online-Version:",
+   "ta": "ஆன்லைன் பதிப்பு:",
+   "te": "ఆన్‌లైన్ వెర్షన్:",
+   "th": "เวอร์ชันออนไลน์:"
+  },
+  "settings_legal_section_header": {
+   "de": "Rechtliche Dokumente",
+   "ta": "சட்ட ஆவணங்கள்",
+   "te": "చట్టపరమైన పత్రాలు",
+   "th": "เอกสารทางกฎหมาย"
+  },
+  "settings_premium_cancelled_desc": {
+   "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen.",
+   "ta": "கட்டண காலம் முடியும் வரை உங்கள் Premium அம்சங்கள் கிடைக்கும். Google Play மூலம் ரத்துசெய்தலை மீண்டும் செயல்படுத்தலாம்.",
+   "te": "మీ Premium ఫీచర్లు బిల్లింగ్ వ్యవధి ముగిసేవరకు అందుబాటులో ఉంటాయి. మీరు Google Play ద్వారా రద్దును రద్దు చేసుకోవచ్చు.",
+   "th": "ฟีเจอร์ Premium ของคุณยังคงใช้งานได้จนถึงสิ้นรอบบิลปัจจุบัน คุณสามารถยกเลิกการยกเลิกได้ผ่าน Google Play"
+  },
+  "settings_premium_cancelled_until": {
+   "de": "Premium-Abo gekündigt — läuft noch bis %1$s",
+   "ta": "பிரீமியம் சந்தா ரத்து — %1$s வரை செல்லுபடியாகும்",
+   "te": "ప్రీమియం సభ్యత్వం రద్దు — %1$s వరకు చెల్లుబాటు అవుతుంది",
+   "th": "ยกเลิก Premium แล้ว — ยังใช้ได้ถึง %1$s"
+  },
+  "settings_premium_desc": {
+   "de": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+   "ta": "அனைத்து அம்சங்களும் திறக்கப்பட்டன, தினமும் AI, PDF ஏற்றுமதி மேலும் பலவும்.",
+   "te": "అన్ని ఫీచర్లు అన్‌లాక్, ప్రతిరోజూ AI, PDF ఎగుమతి మరియు ఇంకా చాలా.",
+   "th": "ปลดล็อกทุกฟีเจอร์ AI ทุกวัน ส่งออก PDF และอื่นๆ"
+  },
+  "settings_premium_feature_5_perspectives": {
+   "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+   "ta": "அனைத்து AI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)",
+   "te": "అన్ని AI ప్రొఫైల్‌లు (4 ముందే నిర్వచించబడినవి + అపరిమిత స్వంతవి)",
+   "th": "โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)"
+  },
+  "settings_premium_feature_improve_desc": {
+   "de": "KI verbessert deine Einträge auf Wunsch.",
+   "ta": "AI கோரிக்கையின் பேரில் உன் பதிவுகளை மேம்படுத்துகிறது.",
+   "te": "AI నీ నమోదులను కోరినప్పుడు మెరుగుపరుస్తుంది.",
+   "th": "AI ปรับปรุงบันทึกของคุณตามต้องการ"
+  },
+  "settings_premium_feature_profiles": {
+   "de": "Unbegrenzte individuelle KI-Profile",
+   "ta": "வரம்பற்ற தனிப்பட்ட சுயவிவரங்கள்",
+   "te": "అపరిమిత అనుకూల ప్రొఫైల్స్",
+   "th": "โปรไฟล์ที่กำหนดเองไม่จำกัด"
+  },
+  "settings_premium_lifetime": {
+   "de": "Lifetime-Zugang aktiv",
+   "ta": "வாழ்நாள் அணுகல் செயலில்",
+   "te": "జీవితకాల ప్రవేశం సక్రియం",
+   "th": "สิทธิ์ตลอดชีพเปิดใช้งานแล้ว"
+  },
+  "settings_premium_lifetime_desc": {
+   "de": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+   "ta": "ஒரே வாங்கல், அனைத்து அம்சங்களும் நிரந்தரமாக திறக்கப்பட்டுள்ளன.",
+   "te": "ఒక్క కొనుగోలు, అన్ని ఫీచర్లు శాశ్వతంగా అన్‌లాక్.",
+   "th": "ซื้อครั้งเดียว ปลดล็อกทุกฟีเจอร์อย่างถาวร"
+  },
+  "settings_revoke_email_body": {
+   "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+   "ta": "இதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் திரும்பப் பெறுவதை அறிவிக்கிறேன்.\\n\\nஅனுப்புநர் (Google கணக்கு): %1$s\\nதிரும்பப் பெறும் நேரம்: %2$s\\n\\nஇந்த திரும்பப் பெறல், பயன்பாட்டின் § 356a BGB-க்கு உடன்பட்ட இரு-அடுக்கு திரும்பப் பெறும் பொத்தானின் மூலம் தொடங்கப்பட்டு Gmail API வழியாக தானாக அனுப்பப்பட்டது.",
+   "te": "దీని ద్వారా Best Journal యొక్క Premium ఫీచర్లకు సంబంధించిన నా ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\\n\\nపంపినవారు (Google ఖాతా): %1$s\\nఉపసంహరణ సమయం: %2$s\\n\\nఈ ఉపసంహరణ యాప్‌లోని § 356a BGB‌కు అనుగుణమైన రెండు-దశల ఉపసంహరణ బటన్ ద్వారా ప్రారంభించబడింది మరియు Gmail API ద్వారా స్వయంచాలకంగా పంపబడింది.",
+   "th": "ข้าพเจ้าขอแจ้งการถอนตัวจากสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal ผ่านหนังสือนี้\\n\\nผู้ส่ง (บัญชี Google): %1$s\\nเวลาที่ถอนตัว: %2$s\\n\\nการถอนตัวนี้ถูกดำเนินการแบบสองขั้นตอนผ่านปุ่มถอนตัวในแอปที่สอดคล้องกับ § 356a BGB และส่งโดยอัตโนมัติผ่าน Gmail API"
+  },
+  "settings_revoke_subtitle": {
+   "de": "§ 356a BGB — Widerruf direkt per App",
+   "ta": "Premium வாங்குதல்",
+   "te": "Premium కొనుగోలు",
+   "th": "การซื้อ Premium"
+  },
+  "settings_unlock_premium": {
+   "de": "Premium freischalten",
+   "ta": "Premium திறக்கவும்",
+   "te": "Premium అన్‌లాక్ చేయండి",
+   "th": "ปลดล็อก Premium"
+  },
+  "transcription_model_groq": {
+   "de": "whisper-large-v3-turbo",
+   "ta": "Groq Whisper Large V3 Turbo",
+   "te": "Groq Whisper Large V3 Turbo",
+   "th": "Groq Whisper Large V3 Turbo"
+  },
+  "urgency_high": {
+   "de": "Dringend — Sofort handeln",
+   "ta": "அவசரம் — உடனடியாக செயல்படவும்",
+   "te": "అత్యవసరం — వెంటనే చర్య",
+   "th": "เร่งด่วน จัดการทันที"
+  }
+ },
+ "errors": {},
+ "absentInDe": [
+  "onboarding_feature_secure__privacy",
+  "profile_insight_*"
+ ]
+}

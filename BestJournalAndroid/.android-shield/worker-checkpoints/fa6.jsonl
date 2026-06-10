@@ -1,0 +1,2 @@
+{"worker":"fa6","step":"pre-edit","findingId":"C5","file":"app/src/main/AndroidManifest.xml","note":"manifest read (74 lines), almanac+bp kurzcheck read, applying meta-data before </application>"}
+{"worker": "fa6", "step": "done", "findingId": "C5", "xmlValid": true}

@@ -1,0 +1,248 @@
+# -*- coding: utf-8 -*-
+"""R2-UWG Werbeaussage-vs-Code-Realitaet Matrix builder. Atomic write."""
+import json
+import os
+import tempfile
+
+OUT = os.path.expanduser(
+    "~/proggs/BestJournalAndroid/.android-shield/worker-outputs/phase1b-recht-uwg.json"
+)
+STRINGS = "app/src/main/res/values/strings.xml"
+CONST = "app/src/main/java/com/bestjournal/app/util/Constants.kt"
+TRACKER = "app/src/main/java/com/bestjournal/app/data/remote/ai/AiUsageTracker.kt"
+LIMITER = "app/src/main/java/com/bestjournal/app/data/remote/ai/AiRateLimiter.kt"
+STORE = "app/src/main/java/com/bestjournal/app/data/prefs/CustomAnalysesStore.kt"
+EDVM = "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailViewModel.kt"
+
+# ── Code reality, verified by Grep/Read this session ──
+# Constants.kt: SUB_PREMIUM_LIMIT=30(98), SUB_COOLDOWN_AT=101(99), SUB_HARD_LIMIT=151(100),
+#   COOLDOWN_MINUTES=30(103), SPAM_HOURLY_AI_LIMIT=30(236), SPAM_HOURLY_AI_LIMIT_PREMIUM=50(237),
+#   FREE_WEEKLY_DASHBOARD_LIMIT=5(84), FREE_WEEKLY_TEXT_LIMIT=5(85), FREE_WEEKLY_REVIEW_COUNT=2(83),
+#   MAX_ENTRIES_*_ANALYSIS=Int.MAX_VALUE(88-90), DASHBOARD_SCENARIO_COUNT=5(62), FIRST_CUSTOM_SCENARIO_INDEX=4(73)
+# AiRateLimiter.kt: Subscribed -> getTextAccessResult/getDashboardAccessResult with SUB_* (25-30,59-64);
+#   hourly spam -> Cooldown(minutesLeft=5) for premium too (17-21,51-55)
+# AiUsageTracker.kt: computeTieredResult HardLimitReached when count>=hardLimit (310); per-scenario dashboard buckets (104-108)
+# CustomAnalysesStore.kt: add() NO cap (188-203); SettingsScreen free cap customList.size>=2 (1787)
+# EntryDetailViewModel.kt: follow-up free cap existing>=1 (326), premium unlimited
+# No ad SDK: build.gradle.kts/libs.versions.toml/source = EMPTY (only gms.google-services Firebase). Corroborated by W9 G-no-ads.
+# Disclaimer present at AI output: AiGeneratedBadge used in Dashboard/Retro/EntryDetail/FollowUp; AiOutputDisclaimer.kt exists.
+# Voice: LocalWhisperTranscriber base model (free) vs Groq whisper-large-v3-turbo (premium) -> comparative substantiated.
+
+claimMatrix = [
+    {"claim": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+     "source": "retro_benefit_weekly@1035", "codeReality": "Reviews: kein Anzahl-Cap fuer Premium (GenerateRetrospectiveUseCase:189 gated nur fuer !isPremium auf FREE_WEEKLY_REVIEW_COUNT=2). ABER jede Review-Generierung ist eine KI-Anfrage und zaehlt gegen das harte Tageskontingent (SUB_HARD_LIMIT=151/Tag/Profil, AiRateLimiter:59-64).",
+     "gap": "'Unbegrenzt' suggeriert grenzenlose Erzeugung; faktisch hartes 150/Tag-Kontingent + 50/Stunde, das auch Rueckblicke verbraucht.", "risk": "HOCH"},
+    {"claim": "Unbegrenzte individuelle KI-Profile",
+     "source": "settings_premium_feature_profiles@505 / paywall_feature_profiles@1125",
+     "codeReality": "Profil-ANZAHL ist fuer Premium unbegrenzt (CustomAnalysesStore.add() hat keinen Cap; Free-Cap customList.size>=2 SettingsScreen:1787). Aber Profil-NUTZUNG ist hart begrenzt: 150 Anfragen/Tag/Profil (SUB_HARD_LIMIT=151).",
+     "gap": "'Unbegrenzt' ohne Zusatz ist zweideutig: zutreffend fuer Anzahl, NICHT fuer Nutzung. Verbraucher erwartet unbegrenzte Nutzung.", "risk": "HOCH"},
+    {"claim": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+     "source": "settings_premium_feature_5_perspectives@495 / churn_offer_feature_perspectives@1177",
+     "codeReality": "4 vordefiniert = korrekt (FIRST_CUSTOM_SCENARIO_INDEX=4). 'unbegrenzt eigene' = Anzahl korrekt unbegrenzt, Nutzung 150/Tag/Profil.",
+     "gap": "Zahl '4' stimmt. 'unbegrenzt eigene' gleiche Anzahl-vs-Nutzung-Zweideutigkeit.", "risk": "HOCH"},
+    {"claim": "150/Tag/Profil; 600/Tag (4 Profile); +150/Tag je eigenem; 1-30 hoechste; 31-100 Standard; 30-Min-Pause bei 101; ab 151 Stopp; 50/Stunde -> 5-Min-Pause; Free 5/Woche/Profil + 5 Text/Woche; Reset Mo 0:00",
+     "source": "ai_limits_dialog_body@1199",
+     "codeReality": "ALLE Zahlen EXAKT: SUB_PREMIUM_LIMIT=30, SUB_COOLDOWN_AT=101, SUB_HARD_LIMIT=151, COOLDOWN_MINUTES=30, SPAM_HOURLY_AI_LIMIT_PREMIUM=50 (minutesLeft=5), FREE_WEEKLY_DASHBOARD_LIMIT=5 (per scenario), FREE_WEEKLY_TEXT_LIMIT=5, Reset next MONDAY. 4*150=600 stimmt.",
+     "gap": "KEINE Luecke. Dieser Dialog IST die korrekte Fair-Use-Offenlegung.", "risk": "OK"},
+    {"claim": "Unbegrenzte Nachtraege zu jedem Tagebucheintrag / So viele Nachtraege wie du moechtest",
+     "source": "paywall_feature_followups@1420 / settings_premium_feature_followups_desc@1422",
+     "codeReality": "Nachtrag-ANZAHL fuer Premium unbegrenzt (EntryDetailViewModel:326 gated nur Free existing>=1). Nachtrag-Erstellung ist reiner Text, KEIN KI-Kontingent.",
+     "gap": "Im Wesentlichen zutreffend. Nur Folge-KI-Analyse des Nachtrags faellt unters Tageskontingent, das Hinzufuegen selbst nicht.", "risk": "NIEDRIG"},
+    {"claim": "Keine Werbung / ohne Werbung (Premium-Benefit)",
+     "source": "onboarding_premium_feature_noads@1080 / paywall_feature_noads@1124",
+     "codeReality": "KEIN Werbe-SDK in build.gradle.kts/libs.versions.toml/Quellcode (nur gms.google-services=Firebase). Free-Tier zeigt ebenfalls KEINE Werbung. Bestaetigt durch W9 G-no-ads.",
+     "gap": "'ohne Werbung' suggeriert einen Unterschied, den es nicht gibt (Free ist auch werbefrei) = hohler/irrefuehrender Benefit.", "risk": "MITTEL"},
+    {"claim": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+     "source": "onboarding_feature_secure@1061",
+     "codeReality": "Lokal: standardmaessig zutreffend (Drive-Backup default OFF, gated SyncWithDriveUseCase:43, W9-B). KI-Anfragen: Transportverschluesselung HTTPS (Groq) / WSS (Edge-TTS) / Firebase AI Logic (Gemini) — NICHT Ende-zu-Ende; Inhalte werden bei US-Anbietern (Groq) verarbeitet.",
+     "gap": "'lokal gespeichert' uebergeht das optionale Cloud-Backup. 'verschluesselt' ist technisch Transport-, nicht E2E-Verschluesselung; Daten verlassen das Geraet zur KI-Verarbeitung.", "risk": "HOCH"},
+    {"claim": "KI jeden Tag / Taegliche KI-Textverbesserung / Taegliche Dashboard-Analysen / jeden Eintrag verbessern",
+     "source": "settings_premium_desc@485, settings_premium_feature_improve@491, settings_premium_feature_dashboard@493, journal_text_upsell_body@97",
+     "codeReality": "Taeglich zutreffend, aber mit Drosselung: 30-Min-Pause bei 101. Anfrage, 5-Min-Pause bei 50/Stunde, Stopp ab 151/Tag/Profil (gilt auch Premium, AiRateLimiter).",
+     "gap": "'jeden/taeglich' ohne Hinweis suggeriert pausen-/grenzenlose Nutzung; Fair-Use-Pausen existieren. Dialog (ai_limits_dialog_body) klaert auf, ist aber nicht unmittelbar an diesen Stellen.", "risk": "NIEDRIG"},
+    {"claim": "Praezisere Spracherkennung / Hoehere Qualitaet fuer deine Spracheintraege",
+     "source": "settings_premium_feature_voice@503 / settings_premium_feature_voice_desc@504",
+     "codeReality": "Free=LocalWhisperTranscriber (sherpa-onnx whisper/base int8). Premium=Groq whisper-large-v3-turbo (Constants:6). large-v3-turbo ist objektiv groesseres/genaueres Modell als base.",
+     "gap": "Komparativ ist durch Modellstufe substantiiert. Belastbar.", "risk": "OK"},
+    {"claim": "Die KI erkennt Muster, die dir verborgen bleiben / Erkenne wiederkehrende Muster in deinem Denken",
+     "source": "paywall_headline_clarity_sub@1131 / paywall_feature_patterns@1119 / onboarding_premium_feature_patterns@1079",
+     "codeReality": "Feature existiert (Dashboard-Entropie-Analyse via Gemini). KI-Output traegt Disclaimer (AiGeneratedBadge in DashboardScreen + AiOutputDisclaimer.kt: 'kann Fehler enthalten, bitte eigenstaendig pruefen', ai_banner_body 'keine professionelle Beratung').",
+     "gap": "'erkennt Muster, die dir verborgen bleiben' ist starke, schwer beweisbare Wirkungszusage; durch Output-Disclaimer abgemildert, aber Headline selbst absolut formuliert.", "risk": "MITTEL"},
+    {"claim": "wir lesen alles und antworten persoenlich (+ innerhalb 24 Std an Werktagen)",
+     "source": "settings_feedback_dialog_desc@527 (+settings_report_ai_confirm_body@639)",
+     "codeReality": "Reines Versprechen ohne Code-Garantie (Feedback geht per E-Mail/Function an Entwickler).",
+     "gap": "Einzelentwickler kann 'alles + persoenlich + 24 Std an Werktagen' faktisch evtl. nicht durchhalten -> Gefahr unhaltbarer Reaktionszeitzusage.", "risk": "MITTEL"},
+    {"claim": "Dein Tagebuch kennt dich besser als je zuvor",
+     "source": "streak_desc_365@136",
+     "codeReality": "Gamification-Spruch (365-Tage-Streak). Keine echte Profilbildungs-Funktion dahinter ausser der bestehenden KI-Analyse.",
+     "gap": "Metaphorisch; impliziert leichte Profiling-Konnotation, aber klar als Motivationstext erkennbar.", "risk": "NIEDRIG"},
+    {"claim": "Custom-Profil: KI liefert AKTIV Recherche/Empfehlungen + frei waehlbarer Benutzer-Auftrag (%1$s) ohne Themen-Guardrail",
+     "source": "ai_prompt_custom_intro@933 / profile_style_custom@1417",
+     "codeReality": "System-Prompt erlaubt freie Nutzer-Fokus-Eingabe ohne Verbotsklausel gegen Gesundheits-/Rechts-/Finanzberatung. Globaler Output-Disclaimer (ai_banner_body, AiGeneratedBadge, CrisisHelpDialog) vorhanden.",
+     "gap": "Kein Inline-Guardrail im Custom-Prompt; Nutzer koennte KI zu fachlichen Ratschlaegen anweisen. Globaler Disclaimer mildert, aber keine prompt-seitige Schranke.", "risk": "MITTEL"},
+]
+
+findings = [
+    {
+        "findingId": "B1", "riskLevel": "🟥", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 1035, "stringKey": "retro_benefit_weekly",
+        "currentText": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+        "codeReality": "Reviews haben fuer Premium keinen Anzahl-Cap (GenerateRetrospectiveUseCase.kt:189 gated nur !isPremium auf FREE_WEEKLY_REVIEW_COUNT=2). ABER jede Rueckblick-Generierung ist eine KI-Anfrage und zaehlt gegen das harte Tageskontingent: 150/Tag/Profil, Stopp ab 151 (Constants.kt:100 SUB_HARD_LIMIT=151; AiRateLimiter.kt:59-64) plus 50 Anfragen/Stunde (Constants.kt:237).",
+        "gap": "Das Wort 'Unbegrenzt' verspricht grenzenlose Erzeugung. Tatsaechlich existiert ein hartes Tages- und Stundenkontingent, das auch das Erstellen von Wochenrueckblicken verbraucht. Es ist also nicht 'unbegrenzt'.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber wesentliche Merkmale/Umfang der Leistung): Eine absolute 'Unbegrenzt'-Zusage neben einem in der App selbst dokumentierten 150/Tag-Limit ist eine Fehlvorstellung ueber den Leistungsumfang. Kein unmittelbarer Fair-Use-Hinweis an der Werbestelle (der Erklaer-Dialog ai_limits_dialog_body liegt separat).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Wochenrueckblicke ohne festes Wochenlimit – nicht nur die ersten 2 Wochen (faire Tageskontingente gelten)", "lengthDeltaPct": 18, "rationale": "Behaelt den Verkaufsvorteil (kein 2-Wochen-Deckel wie Free), ersetzt das absolute 'Unbegrenzt' durch die zutreffende Aussage + dezenten Fair-Use-Verweis.", "stillSafe": True},
+            {"text": "Alle Wochenrueckblicke statt nur der ersten 2 – im Rahmen deines KI-Tageskontingents", "lengthDeltaPct": 5, "rationale": "Kurz, marketingstark ('Alle'), nennt die Kontingent-Bindung knapp.", "stillSafe": True},
+            {"text": "Wochenrueckblicke für deinen gesamten Zeitraum, nicht nur 2 Wochen", "lengthDeltaPct": -8, "rationale": "Vermeidet 'unbegrenzt' ganz und betont stattdessen den echten Vorteil (gesamter Zeitraum vs. 2 Wochen).", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Ein Mitbewerber oder Abmahnverein laesst die App in-app das 150/Tag-Limit anzeigen, stellt es der Werbung 'Unbegrenzt' gegenueber und mahnt wegen irrefuehrender Spitzenstellungs-/Unbegrenztheitswerbung ab (UWG §5). Abmahnkosten + Unterlassungserklaerung mit Vertragsstrafe.",
+    },
+    {
+        "findingId": "B2", "riskLevel": "🟥", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 505, "stringKey": "settings_premium_feature_profiles",
+        "currentText": "Unbegrenzte individuelle KI-Profile",
+        "codeReality": "Profil-ANZAHL ist fuer Premium tatsaechlich unbegrenzt (CustomAnalysesStore.kt add() hat keinen Cap; Free-Cap ist customList.size>=2, SettingsScreen.kt:1787). ABER die NUTZUNG jedes Profils ist hart begrenzt: 150 KI-Anfragen pro Tag und Profil (Constants.kt:100 SUB_HARD_LIMIT=151), 600/Tag fuer die 4 vordefinierten zusammen, +150/Tag je eigenem Profil.",
+        "gap": "'Unbegrenzt' ohne Zusatz ist zweideutig: Es trifft auf die Anzahl der Profile zu, NICHT auf deren Nutzung. Ein durchschnittlicher Verbraucher liest 'unbegrenzte Profile' als 'unbegrenzt nutzbare Profile'.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1: Wesentliche Einschraenkung (150/Tag/Profil) wird durch den absoluten Begriff 'Unbegrenzt' verschleiert. Auch §5a (Vorenthalten wesentlicher Information) greift, da die Nutzungsgrenze an der Werbestelle fehlt. Identischer Wortlaut auch paywall_feature_profiles@1125.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Beliebig viele eigene KI-Profile anlegen (je Profil 150 KI-Analysen/Tag)", "lengthDeltaPct": 60, "rationale": "Praezise: 'beliebig viele' = Anzahl-Vorteil bleibt; nennt die Nutzungsgrenze konkret und ehrlich.", "stillSafe": True},
+            {"text": "So viele eigene KI-Profile wie du willst – mit fairem Tageskontingent pro Profil", "lengthDeltaPct": 55, "rationale": "Marketingstark ('so viele wie du willst'), Fair-Use knapp erwaehnt ohne abschreckende Zahl.", "stillSafe": True},
+            {"text": "Eigene KI-Profile ohne Anzahllimit", "lengthDeltaPct": 0, "rationale": "Minimaler Eingriff: verschiebt 'unbegrenzt' praezise auf 'Anzahllimit', sodass die Aussage nur noch das meint, was im Code stimmt (die Anzahl).", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Verbraucherschuetzer testet Premium, stoesst nach 150 Anfragen pro Profil auf 'keine weiteren Anfragen bis morgen' und mahnt wegen irrefuehrender Werbung mit 'Unbegrenzt' ab. Besonders heikel, weil die App das Limit selbst klar dokumentiert – Vorsatz/Fahrlaessigkeit leicht nachweisbar.",
+    },
+    {
+        "findingId": "B3", "riskLevel": "🟥", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 495, "stringKey": "settings_premium_feature_5_perspectives",
+        "currentText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "codeReality": "'4 vordefiniert' ist korrekt (Constants.kt:73 FIRST_CUSTOM_SCENARIO_INDEX=4, DASHBOARD_SCENARIO_COUNT=5 – Indizes 0..3 fest). 'unbegrenzt eigene' = Anzahl korrekt unbegrenzt (CustomAnalysesStore.add() ohne Cap), aber Nutzung 150/Tag/Profil (SUB_HARD_LIMIT=151).",
+        "gap": "Zahl '4' stimmt. 'unbegrenzt eigene' wiederholt die Anzahl-vs-Nutzung-Zweideutigkeit aus B2.",
+        "rationale": "UWG §5 Abs. 1: gleiche absolute 'unbegrenzt'-Aussage wie B2. Identischer Wortlaut auch churn_offer_feature_perspectives@1177 (Retention-Angebot – dort besonders sensibel, da Halte-Anreiz).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Alle KI-Profile (4 vordefinierte + beliebig viele eigene)", "lengthDeltaPct": 5, "rationale": "Behaelt Struktur und Zahl '4', ersetzt 'unbegrenzt' durch 'beliebig viele' (= Anzahl, was zutrifft).", "stillSafe": True},
+            {"text": "Alle KI-Profile: 4 vordefinierte plus eigene ohne Anzahllimit", "lengthDeltaPct": 8, "rationale": "Praezisiert 'ohne Anzahllimit', sodass die Aussage nur die Anzahl betrifft.", "stillSafe": True},
+            {"text": "Alle 4 vordefinierten KI-Profile + so viele eigene wie du brauchst", "lengthDeltaPct": 12, "rationale": "Marketingstark, vermeidet das juristisch heikle 'unbegrenzt'.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Im Retention-/Kuendigungsdialog (churn_offer) ist eine irrefuehrende 'unbegrenzt'-Zusage doppelt riskant: irrefuehrende Werbung (UWG §5) plus moeglicher Vorwurf einer unlauteren Halte-Taktik, wenn der Bleibe-Anreiz auf einer Falschaussage beruht.",
+    },
+    {
+        "findingId": "B4", "riskLevel": "🟥", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 1061, "stringKey": "onboarding_feature_secure",
+        "currentText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+        "codeReality": "'Lokal gespeichert': standardmaessig zutreffend – Tagebuch in lokalen Room-DBs, Google-Drive-Backup ist OPTIONAL und default AUS (PREF_DRIVE_BACKUP_ENABLED default false, SyncWithDriveUseCase.kt:43; W9-Befund B). 'KI-Anfragen verschluesselt': es ist Transportverschluesselung – HTTPS zu Groq (api.groq.com, USA, Constants.kt:5), WSS zu Edge-TTS, Firebase AI Logic zu Gemini. KEINE Ende-zu-Ende-Verschluesselung; die Inhalte werden bei Drittanbietern im Klartext verarbeitet.",
+        "gap": "(1) 'lokal gespeichert' verschweigt das aktivierbare Cloud-Backup. (2) 'verschluesselt' suggeriert dem Laien Schutz vor dem KI-Anbieter; tatsaechlich verlassen die Daten das Geraet und werden bei US-Diensten verarbeitet – nur der Transportweg ist verschluesselt.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber Eigenschaften/Sicherheit). Datenschutz-Werbung mit 'verschluesselt'/'sicher' ist ein bekanntes Abmahnfeld, weil Verbraucher Transport- mit Inhaltsverschluesselung verwechseln. Aussage muss die tatsaechliche Verarbeitungslage abbilden.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Deine Eintraege bleiben auf dem Geraet; KI-Anfragen werden verschluesselt uebertragen", "lengthDeltaPct": 12, "rationale": "'verschluesselt uebertragen' ist die ehrliche Transport-Formulierung; 'bleiben auf dem Geraet' stimmt im Default und bleibt vertrauensbildend.", "stillSafe": True},
+            {"text": "Daten standardmaessig nur lokal – KI-Anfragen laufen verschluesselt ueber sichere Verbindungen", "lengthDeltaPct": 30, "rationale": "'standardmaessig nur lokal' deckt das optionale Drive-Backup ehrlich ab, ohne den Vertrauensvorteil zu verlieren.", "stillSafe": True},
+            {"text": "Deine Eintraege speichern wir lokal auf deinem Geraet; fuer KI-Funktionen werden sie verschluesselt an unsere KI-Dienste gesendet", "lengthDeltaPct": 80, "rationale": "Maximale Ehrlichkeit (nennt KI-Dienste), passend wenn das Onboarding etwas mehr Erklaertext vertraegt.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Abmahnung wegen irrefuehrender Sicherheitswerbung: 'verschluesselt' + 'lokal' erwecken den Eindruck, die Daten verliessen das Geraet nie bzw. seien gegen den KI-Anbieter geschuetzt. Datenschutz-/Verbraucherverbaende greifen solche Aussagen gezielt auf; zusaetzlich Reputationsrisiko bei sensiblen Tagebuchdaten (Art.9-naehe).",
+    },
+    {
+        "findingId": "B5", "riskLevel": "🟧", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 1080, "stringKey": "onboarding_premium_feature_noads",
+        "currentText": "Keine Werbung, ungestoert schreiben und reflektieren",
+        "codeReality": "KEIN Werbe-SDK im gesamten Projekt: build.gradle.kts, gradle/libs.versions.toml und der Quellcode enthalten kein AdMob/com.google.android.gms.ads/AppLovin/IronSource/Unity-Ads (nur com.google.gms.google-services = Firebase, kein Ads-Modul). Bestaetigt durch Schwester-Worker W9 (G-no-ads: 'No ad SDK anywhere. Free tier shows no ads either'). Die Free-Version zeigt also ebenfalls keine Werbung.",
+        "gap": "'Keine Werbung' wird als bezahlter Premium-Vorteil beworben, obwohl es ueberhaupt keine Werbung gibt – auch nicht in Free. Es wird ein Unterschied/Mehrwert suggeriert, der nicht existiert.",
+        "rationale": "UWG §5 Abs. 1 (irrefuehrende Werbung mit Selbstverstaendlichkeiten/nicht vorhandenem Vorteil) und §5 Abs. 2 (Werbung, die zur Annahme verleitet, ein Vorteil sei dem Bezahlangebot vorbehalten). Ein als Premium-Benefit verkaufter 'Wegfall' von etwas, das nie existierte, ist eine Fehlvorstellung ueber den Wert des Abos. Identisch paywall_feature_noads@1124.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Ungestoert schreiben und reflektieren", "lengthDeltaPct": -35, "rationale": "Streicht die hohle 'keine Werbung'-Aussage und behaelt den realen, positiven Nutzen (Ruhe/Fokus). Sauberste Loesung.", "stillSafe": True},
+            {"text": "Komplett werbefrei – wie die ganze App", "lengthDeltaPct": -20, "rationale": "Falls 'werbefrei' als Vertrauensmerkmal bleiben soll: ehrlich klarstellen, dass die GESAMTE App werbefrei ist (kein Premium-exklusiver Vorteil).", "stillSafe": True},
+            {"text": "Voller Fokus auf dich – keine Ablenkungen", "lengthDeltaPct": -25, "rationale": "Emotionaler Premium-Nutzen ohne die juristisch heikle Werbe-Differenzierungs-Behauptung.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Abmahnung wegen Werbung mit einer Selbstverstaendlichkeit / nicht existierendem Vorteil (UWG §5). Verbraucher koennte argumentieren, er habe das Abo (auch) wegen 'keine Werbung' gekauft, obwohl Free identisch werbefrei ist – Rueckabwicklungs-/Erstattungsforderungen denkbar.",
+    },
+    {
+        "findingId": "B6", "riskLevel": "🟧", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 1131, "stringKey": "paywall_headline_clarity_sub",
+        "currentText": "Die KI erkennt Muster, die dir verborgen bleiben",
+        "codeReality": "Mustererkennung existiert als Feature (Dashboard-Entropie-Analyse via Gemini; DashboardScreen rendert Kategorie-Bloecke + Top-5-Aktionen). Jeder KI-Output traegt einen Disclaimer (AiGeneratedBadge.kt wird in DashboardScreen/RetrospectiveScreen/EntryDetailScreen verwendet; AiOutputDisclaimer.kt; ai_generated_tooltip@785 'kann Fehler enthalten. Bitte eigenstaendig pruefen'; ai_banner_body@1203 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung').",
+        "gap": "'erkennt Muster, die dir verborgen bleiben' ist eine starke, kaum objektiv beweisbare Wirkungszusage (die KI sehe mehr als der Nutzer selbst). Der Output-Disclaimer mildert, aber die Werbe-Headline selbst ist absolut formuliert.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (unhaltbare Wirkungs-/Spitzenzusage): Behauptungen ueber eine die menschliche Selbstwahrnehmung uebersteigende Erkennungsleistung sind schwer belegbar. Zulaessige Anpreisung endet dort, wo eine konkrete, nachpruefbare Tatsachenbehauptung suggeriert wird.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Die KI macht wiederkehrende Muster in deinen Eintraegen sichtbar", "lengthDeltaPct": 8, "rationale": "'macht sichtbar' beschreibt die echte Funktion, ohne die unbeweisbare 'verborgen'-Spitzenzusage. Bleibt attraktiv.", "stillSafe": True},
+            {"text": "Entdecke Muster in deinen Eintraegen, die im Alltag leicht untergehen", "lengthDeltaPct": 18, "rationale": "Relativiert von 'dir verborgen' (absolut) zu 'im Alltag leicht untergehen' (plausibel, belegbar).", "stillSafe": True},
+            {"text": "Erkenne Zusammenhaenge in deinen Gedanken, die du sonst uebersiehst", "lengthDeltaPct": 5, "rationale": "Weicher formuliert ('sonst uebersiehst' statt 'verborgen bleiben'), behaelt den Aha-Nutzen.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Beanstandung als unbelegte Wirkungszusage. Geringeres, aber reales Risiko: schwer, im Streitfall den Beweis zu fuehren, dass die KI Muster erkennt, die dem Nutzer tatsaechlich 'verborgen' waren. Abschwaechung kostet nichts und beseitigt die Angriffsflaeche.",
+    },
+    {
+        "findingId": "B7", "riskLevel": "🟧", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 527, "stringKey": "settings_feedback_dialog_desc",
+        "currentText": "Deine Nachricht an die Entwickler - wir lesen alles und antworten persoenlich!",
+        "codeReality": "Reines Leistungsversprechen ohne technische Garantie (Feedback wird per E-Mail/Cloud-Function an den Entwickler zugestellt). Verstaerkt durch settings_report_ai_confirm_body@639 'wir antworten innerhalb von 24 Stunden an Werktagen' – eine konkrete Reaktionszeit-Zusage.",
+        "gap": "'wir lesen alles und antworten persoenlich' + '24 Stunden an Werktagen' sind verbindliche Zusagen. Bei einem Einzelentwickler ist eine ausnahmslose persoenliche Antwort innerhalb 24 Std faktisch kaum durchhaltbar.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber den Umfang des Kundendienstes): Eine pauschale Antwort-/Reaktionszeitzusage, die regelmaessig nicht eingehalten wird, ist irrefuehrend. Konkrete Zeitfenster ('24 Stunden') sind besonders angreifbar.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Deine Nachricht an die Entwickler – wir lesen jede Nachricht und melden uns so schnell wie moeglich.", "lengthDeltaPct": 5, "rationale": "Behaelt die persoenliche, nahbare Note ('wir lesen jede Nachricht'), ersetzt die harte 'antworten persoenlich'-Garantie durch ein realistisches 'so schnell wie moeglich'.", "stillSafe": True},
+            {"text": "Schreib uns – wir lesen jede Rueckmeldung und antworten in der Regel innerhalb weniger Werktage.", "lengthDeltaPct": 8, "rationale": "'in der Regel' + 'wenige Werktage' ist haltbar und ehrlich; ersetzt die starre 24-Std-Zusage (ebenfalls @639 anpassen).", "stillSafe": True},
+            {"text": "Dein direkter Draht zu den Entwicklern – wir lesen alles und antworten so oft wir koennen persoenlich.", "lengthDeltaPct": 6, "rationale": "'so oft wir koennen' relativiert die Ausnahmslosigkeit, behaelt aber den persoenlichen Charakter als Verkaufsargument.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Ein Nutzer, der keine (rechtzeitige) Antwort erhaelt, kann die Zusage als irrefuehrend ruegen; Mitbewerber koennen die '24-Stunden'-Aussage abmahnen. Geringer Aufwand zur Entschaerfung, vermeidbares Risiko.",
+    },
+    {
+        "findingId": "B8", "riskLevel": "🟧", "category": "UWG", "language": "de", "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml", "line": 933, "stringKey": "ai_prompt_custom_intro",
+        "currentText": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+        "codeReality": "Der Custom-Profil-System-Prompt erlaubt einen frei waehlbaren Nutzer-Fokus (%1$s, profile_style_custom@1417) und weist die KI an, aktiv zu empfehlen – OHNE Inline-Verbotsklausel gegen Gesundheits-/Rechts-/Finanzberatung. Globaler Output-Disclaimer ist vorhanden (ai_banner_body@1203 'keine professionelle Beratung', AiGeneratedBadge an allen KI-Ausgaben, CrisisHelpDialog).",
+        "gap": "Ohne prompt-seitigen Guardrail kann ein Nutzer die KI per Custom-Auftrag zu medizinischen/rechtlichen/finanziellen Ratschlaegen anweisen. Der globale Disclaimer mildert, ersetzt aber keine inhaltliche Schranke im Prompt.",
+        "rationale": "UWG §5/§5a in Verbindung mit HWG-/Rechtsdienstleistungs-/Finanzberatungs-Grenzen: Wird die KI als aktiver Empfehlungs-/Beratungs-Generator vermarktet/eingesetzt, ohne fachliche Schranke, koennen Ausgaben als professionelle Beratung (miss)verstanden werden. Defensiver Guardrail ist die Poka-Yoke-Loesung.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+            {"text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen. Gib dabei KEINE medizinischen, rechtlichen oder finanziellen Diagnosen oder verbindlichen Ratschlaege; verweise bei solchen Themen auf Fachpersonen.", "lengthDeltaPct": 55, "rationale": "Behaelt die aktive, hilfreiche Funktion und ergaenzt einen klaren Themen-Guardrail (Poka-Yoke) – die KI bleibt nuetzlich, gibt aber keine Fachberatung aus.", "stillSafe": True},
+            {"text": "Liefere AKTIV Ideen, Alternativen und Vorschlaege, auch ueber die Eintraege hinaus – aber formuliere sie als unverbindliche Anregungen und keine fachliche (medizinische/rechtliche/finanzielle) Beratung.", "lengthDeltaPct": 30, "rationale": "Kompakter Guardrail, der den Beratungs-Charakter entschaerft, ohne die Kernfunktion zu beschneiden.", "stillSafe": True},
+            {"text": "Liefere AKTIV Recherche, Ideen und Vorschlaege ueber die Eintraege hinaus. Bei gesundheits-, rechts- oder finanzbezogenen Themen bleibe allgemein und empfiehl, Fachleute hinzuzuziehen.", "lengthDeltaPct": 20, "rationale": "Minimaler, klarer Schutz fuer genau die kritischen Themenfelder; Funktion bleibt voll erhalten.", "stillSafe": True},
+        ],
+        "impactWithoutFix": "Erzeugt die KI auf einen Custom-Auftrag hin eine konkrete Gesundheits-/Heilaussage oder Rechtsempfehlung, drohen HWG-/RDG-Risiken und Produkthaftungs-/UWG-Vorwuerfe. Ein Inline-Guardrail ist eine billige, funktionserhaltende Absicherung (Direktive #3 Poka-Yoke).",
+    },
+]
+
+verifiedOk = [
+    {"stringKey": "ai_limits_dialog_body", "line": 1199, "note": "ALLE Zahlen exakt zur Code-Realitaet: 150/Tag/Profil (SUB_HARD_LIMIT=151 -> 150 effektiv), 600/Tag (4x150), +150/eigenes Profil, 1-30 hoechste (SUB_PREMIUM_LIMIT=30), 31-100 Standard, 30-Min-Pause bei 101 (SUB_COOLDOWN_AT=101 + COOLDOWN_MINUTES=30), 101-150 Standard, ab 151 Stopp, 50/Stunde -> 5-Min-Pause (SPAM_HOURLY_AI_LIMIT_PREMIUM=50, minutesLeft=5), Free 5/Woche/Profil (FREE_WEEKLY_DASHBOARD_LIMIT=5 per scenario) + 5 Text/Woche, Reset Montag 0:00. Dies IST die korrekte Fair-Use-Offenlegung."},
+    {"stringKey": "ai_limit_body", "line": 1191, "note": "5/Woche Free + 'bis zu 150 pro Tag' Premium korrekt relativiert ('bis zu'), deckt sich mit FREE_WEEKLY_*_LIMIT=5 und SUB_HARD_LIMIT=151. 'pro Woche je Profil' beim Dashboard stimmt (per-scenario buckets)."},
+    {"stringKey": "limit_used_of_max", "line": 796, "note": "X von Y genutzt-Zaehler bestaetigt, dass ein begrenztes Kontingent existiert und transparent angezeigt wird. Konsistent."},
+    {"stringKey": "settings_premium_feature_voice / _voice_desc", "line": 503, "note": "'Praezisere Spracherkennung'/'Hoehere Qualitaet' substantiiert: Free=lokales Whisper base int8 (LocalWhisperTranscriber), Premium=Groq whisper-large-v3-turbo (Constants:6). large-v3-turbo ist objektiv genaueres Modell -> Komparativ belastbar."},
+    {"stringKey": "ai_generated_tooltip", "line": 785, "note": "Vorbildlicher KI-Disclaimer (Google Gemini genannt, 'kann Fehler enthalten, bitte eigenstaendig pruefen'). Erfuellt EU AI Act Art.50 Transparenz; wird via AiGeneratedBadge an allen KI-Ausgaben gerendert."},
+    {"stringKey": "ai_banner_body", "line": 1203, "note": "Enthaelt 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.' -> zentraler Health/Beratungs-Disclaimer, der die Lebensberater-/Muster-Prompts (ai_prompt_entropy_intro, ai_prompt_insight_intro, profile_style_advisor/insight) substanziell entschaerft."},
+    {"stringKey": "paywall_feature_followups / settings_premium_feature_followups_desc", "line": 1420, "note": "'Unbegrenzte Nachtraege' fuer Premium im Wesentlichen zutreffend: Nachtrag-Anzahl ohne Cap (EntryDetailViewModel:326 gated nur Free existing>=1), Nachtrag ist reiner Text ohne KI-Kontingent. NIEDRIG-Restrisiko, kein Fix noetig (nur die KI-Folgeanalyse faellt unters Tageslimit)."},
+    {"stringKey": "ai_limits_disclaimer / ai_banner_title", "line": 1197, "note": "Kurz-Disclaimer 'KI-Tageskontingent fuer intensive Nutzung' + 'Dein Tagebuch wird von KI unterstuetzt' = ehrliche Transparenz, positiv."},
+    {"stringKey": "onboarding_feature_profiles / onboarding_premium_profiles", "line": 1085, "note": "'4 intelligente Analyse-/Dashboard-Profile' konsistent mit FIRST_CUSTOM_SCENARIO_INDEX=4 (Indizes 0..3). Zahl korrekt."},
+    {"stringKey": "retro_weekly_p3", "line": 1024, "note": "'Jeden Sonntag automatisch, wenn mindestens 2 Eintraege' = transparente Bedingung, deckt sich mit Weekly-Review-Automatik. Korrekt."},
+]
+
+plugin_bugs_observed = []
+
+selbstbeobachtung = [
+    "Der ai_limits_dialog_body ist ein vorbildliches Beispiel: er nennt JEDE Zahl, die exakt im Code steht (150/600/30/101/151/50/5). Das macht die 'Unbegrenzt'-Werbung an anderen Stellen umso angreifbarer – die App weiss intern genau, dass es Grenzen gibt. Kernspannung dieses Audits: korrekte Fair-Use-Offenlegung an EINER Stelle, absolute 'Unbegrenzt'-Werbung an mehreren anderen.",
+    "Die Anzahl-vs-Nutzung-Unterscheidung war entscheidend: 'unbegrenzte Profile/Nachtraege' ist fuer die ANZAHL korrekt (kein Code-Cap), nur die NUTZUNG ist gedeckelt. Pauschal 'irrefuehrend' waere falsch gewesen – die Fixes praezisieren gezielt auf 'Anzahl', statt die Aussage zu kastrieren.",
+    "Cross-Worker-Verifikation (W9 G-no-ads) hat meinen 'ohne Werbung'-Befund unabhaengig bestaetigt. Das erhoeht die Sicherheit, dass kein Ad-SDK in einem anderen Layer uebersehen wurde – nuetzlich, da ich nur die UWG-Schicht pruefe.",
+]
+
+out = {
+    "worker": "r2-uwg",
+    "claimMatrix": claimMatrix,
+    "findings": findings,
+    "verifiedOk": verifiedOk,
+    "plugin_bugs_observed": plugin_bugs_observed,
+    "selbstbeobachtung": selbstbeobachtung,
+}
+
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(OUT), suffix=".tmp")
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    json.dump(out, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+os.replace(tmp, OUT)
+
+# validate
+with open(OUT, "r", encoding="utf-8") as f:
+    json.load(f)
+print("OK findings=%d verifiedOk=%d matrix=%d -> %s" % (len(findings), len(verifiedOk), len(claimMatrix), OUT))

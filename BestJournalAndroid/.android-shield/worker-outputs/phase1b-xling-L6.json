@@ -1,0 +1,362 @@
+{
+ "worker": "L6",
+ "phase": "1b-cross-lingual-legal",
+ "date": "2026-06-10",
+ "languages": [
+  "en",
+  "es",
+  "fr",
+  "it"
+ ],
+ "scope": "AUDIT ONLY — no app file modified",
+ "matrixBaseline": {
+  "note": "Alle 4 Sprachen vollstaendig ausser 5x dev_seed_* (bekannt/dev-only). formatArgMismatch=0, nakedPercentKeys=0, unescapedApostrophes=0, missingPlurals=0, missingArrays=0 fuer alle 4.",
+  "identicalToDe": {
+   "en": 29,
+   "es": 14,
+   "fr": 8,
+   "it": 14
+  }
+ },
+ "legalKeysReviewed": 93,
+ "legalKeysListedTotal": 95,
+ "legalKeysNote": "2 Listeneintraege sind Composite/illustrativ ('ai_prompt_insight_intro / profile_insight_*', 'urgency_high / legend_high_burden') -> nicht als Einzel-Key pruefbar. 93 echte Keys tief geprueft.",
+ "perLanguage": {
+  "en": {
+   "role": "Legal-Fallback-Sprache — hoechste Praezision",
+   "overallVerdict": "SEHR GUT — EN ist bei ALLEN 93 Legal-Keys konsistent mit DE. Keine deutschen Saetze, kein Feature-Verlust ausser 1 MEDIUM (Custom-Profil-Klausel in ai_limits). Fallback-tauglich.",
+   "legalKeyIssues": [
+    {
+     "key": "ai_limits_dialog_body",
+     "severity": "MEDIUM",
+     "type": "feature-claim-divergence",
+     "finding": "EN nennt nur '150 per AI profile (with 4 profiles: 600/day)'. Die DE-Klausel '+150/Tag fuer JEDES eigene Profil das du erstellst' FEHLT in EN (150 erscheint 3x statt 4x). EN unterspezifiziert die Custom-Profil-Limits ggü DE.",
+     "deReference": "150 Anfragen pro Tag und Profil — fuer die 4 vordefinierten zusammen 600/Tag, plus 150/Tag fuer jedes eigene Profil",
+     "legalRisk": "Gering (Unter-Versprechen, nicht Ueber-Versprechen), aber Inkonsistenz DE<->EN bei Limit-Beschreibung",
+     "recommendation": "EN um Custom-Profil-Klausel ergaenzen damit Limit-Aussage mit DE deckungsgleich"
+    }
+   ],
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body",
+    "requiredNumbers": [
+     150,
+     600,
+     30,
+     101,
+     151,
+     50,
+     5
+    ],
+    "method": "regex standalone-int count, clean itertext extraction (no xliff dup artifact)",
+    "present": "ALLE 7 vorhanden (150x3, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3)",
+    "numbersMissing": [],
+    "thresholdsIntact": true,
+    "note": "Keine falsche/fehlende Zahl. 150 nur 3x weil Custom-Profil-Satz fehlt (siehe legalKeyIssues)."
+   },
+   "identicalClassification": {
+    "total": 29,
+    "legitimate": 29,
+    "trulyUntranslated": 0,
+    "breakdown": "Loanwords/intl. Begriffe (Dashboard, Premium, Video, Original, Achievements, Details, Relevant, Feedback, Theme, Start, Neutral, Text), json_key_* (icon/name/trend - muessen literal bleiben), EN-Monatsnamen (April, August, November, September), Brand (Google Drive Backup, Best Journal V0.21.9, Themes Manager, Atelier).",
+    "verdict": "Trotz hoher Zahl (29) NULL peinliche deutsche Saetze. Alle legitim."
+   },
+   "formalityConsistency": {
+    "note": "Englisch kennt kein du/Sie — neutral 'you' durchgaengig. Kein Issue.",
+    "verdict": "OK"
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "EXZELLENT — alle akkurat (z.B. 'Your California Privacy Choices', 'AI companion for everyday life'), korrekte Placeholders, kein Restdeutsch."
+   }
+  },
+  "es": {
+   "role": "Spanisch",
+   "overallVerdict": "GUT mit Befunden — Kern-Legal (Widerruf, Auto-Renewal, Art.9-Gate, Krisen-Disclaimer) korrekt, ABER 2 HIGH (Account-Loeschung) + mehrere stale/gekuerzte Strings.",
+   "legalKeyIssues": [
+    {
+     "key": "settings_delete_account_subtitle",
+     "severity": "HIGH",
+     "type": "factual-contradiction",
+     "finding": "ES sagt 'Elimina ... tu cuenta de Google ...' — behauptet das GOOGLE-KONTO werde geloescht. DE/EN sagen das GEGENTEIL ('Google account is not affected / bleibt bestehen').",
+     "legalRisk": "Hoch — falsche Aussage ueber Account-Loeschungsumfang (Play Data-Safety/Verbrauchertaeuschung). Verifiziert in raw values-es.",
+     "recommendation": "ES an DE/EN angleichen: nur lokale Daten + Drive-Backup, Google-Konto bleibt unberuehrt."
+    },
+    {
+     "key": "settings_delete_account_confirm_body",
+     "severity": "HIGH",
+     "type": "factual-divergence+leaked-term",
+     "finding": "ES listet 'Tu cuenta de Firebase' als geloescht (interner Begriff, nicht nutzerfreundlich) und LAESST die DE/EN-Zusicherung 'Google-Konto bleibt bestehen' weg.",
+     "legalRisk": "Hoch — Loeschungsumfang weicht ab, 'Firebase-Konto' verwirrt.",
+     "recommendation": "Vom DE/EN-Wortlaut neu uebersetzen (audio/video/lokale Daten + App-Drive-Backup, Google-Konto bleibt)."
+    },
+    {
+     "key": "settings_revoke_subtitle",
+     "severity": "HIGH",
+     "type": "mislabel-legal-feature",
+     "finding": "ES='Compra Premium' (Premium-Kauf) statt DE/EN-Label '§356a BGB — Widerruf direkt per App'. Der Widerruf-Button traegt in ES das falsche Label.",
+     "legalRisk": "Hoch — gesetzliches Widerrufsrecht (356a BGB) ist fuer spanischsprachige Nutzer als 'Widerruf' NICHT erkennbar.",
+     "recommendation": "ES-Subtitle auf Widerruf/desistimiento + Gesetzesbezug setzen (analog DE/EN)."
+    },
+    {
+     "key": "consent_toggle_do_not_sell_body",
+     "severity": "MEDIUM",
+     "type": "content-shortening",
+     "finding": "ES stark gekuerzt ('Opt-out California (CCPA/CPRA 2026)...') — verliert 'nur fuer Kalifornien-Einwohner'-Hinweis UND die 'verkaufen Daten nirgends auf der Welt'-Zusicherung. DE+EN voll.",
+     "legalRisk": "Mittel — CCPA-Text (US-Kalifornien), EU-Nutzer kaum betroffen, aber Trust-/UWG-Aussage fehlt.",
+     "recommendation": "Volle DE/EN-Fassung uebernehmen."
+    },
+    {
+     "key": "privacy_gate_groq_body",
+     "severity": "MEDIUM",
+     "type": "legal-basis-label-missing",
+     "finding": "ES nennt KEINE Rechtsgrundlage fuer den Groq-USA-Transfer; DE/EN nennen 'Standard Contractual Clauses (EU SCCs)'. (ES nennt Entity 'Groq, Inc. Mountain View' + Loeschung+kein-Training korrekt.)",
+     "legalRisk": "Mittel — DSGVO Art.44 Transfer-Rechtsgrundlage fehlt im ES-Gate-Text.",
+     "recommendation": "EU-SCC-Label im ES-Groq-Gate ergaenzen."
+    },
+    {
+     "key": "ai_prompt_no_dates_rule",
+     "severity": "MEDIUM",
+     "type": "stale-shorter-variant",
+     "finding": "ES ist gekuerzte aeltere Variante OHNE die FALSCH/RICHTIG-Beispiele (DE/EN/IT haben sie). Referenziert andere Feldnamen (genese/datum).",
+     "legalRisk": "Niedrig — interner AI-Prompt, nicht nutzerseitig. Funktionale Divergenz (KI-Compliance-Beispiele fehlen).",
+     "recommendation": "Vom aktuellen DE-Prompt neu uebersetzen."
+    }
+   ],
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body",
+    "requiredNumbers": [
+     150,
+     600,
+     30,
+     101,
+     151,
+     50,
+     5
+    ],
+    "method": "regex standalone-int count, clean itertext extraction (no xliff dup artifact)",
+    "present": "ALLE 7 vorhanden (150x3, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3)",
+    "numbersMissing": [],
+    "thresholdsIntact": true,
+    "note": "Wie EN: 150 nur 3x (Custom-Profil-Klausel fehlt). Schwellen 30/100/101/150/151, 50/h, 5/Woche intakt."
+   },
+   "identicalClassification": {
+    "total": 14,
+    "legitimate": 14,
+    "trulyUntranslated": 0,
+    "breakdown": "Foto/Fotos/Foto %1$d (korrektes Spanisch), Video, Original, Premium, Galería->Original, Brand 'Best Journal V0.21.9', Atelier. Alle Cognates/Loanwords/Brand.",
+    "verdict": "NULL unuebersetzte deutsche Saetze."
+   },
+   "formalityConsistency": {
+    "register": "informal tú",
+    "informalHits": 156,
+    "formalUstedHitsReal": 0,
+    "verdict": "KONSISTENT informell (tú) — passend zu DE-Du. Kein usted."
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "GUT — akkurate Uebersetzungen, korrekte Placeholders/%%, kein Restdeutsch."
+   }
+  },
+  "fr": {
+   "role": "Franzoesisch",
+   "overallVerdict": "GUT mit Befunden — gleiche 3 HIGH-Muster wie ES (Account-Loeschung + Widerruf-Subtitle), Kern-Legal sonst korrekt. Plus 1 LOW Formality-Ausrutscher.",
+   "legalKeyIssues": [
+    {
+     "key": "settings_delete_account_subtitle",
+     "severity": "HIGH",
+     "type": "factual-contradiction",
+     "finding": "FR='Supprime ... ton compte Google ...' — behauptet GOOGLE-KONTO werde geloescht; DE/EN sagen Gegenteil ('Google account is not affected'). Verifiziert in raw values-fr.",
+     "legalRisk": "Hoch — falscher Loeschungsumfang.",
+     "recommendation": "An DE/EN angleichen (Google-Konto bleibt)."
+    },
+    {
+     "key": "settings_delete_account_confirm_body",
+     "severity": "HIGH",
+     "type": "factual-divergence+leaked-term",
+     "finding": "FR listet 'ton compte Firebase' (interner Begriff) als geloescht und laesst 'Google-Konto bleibt'-Zusicherung weg.",
+     "legalRisk": "Hoch.",
+     "recommendation": "Vom DE/EN-Wortlaut neu uebersetzen."
+    },
+    {
+     "key": "settings_revoke_subtitle",
+     "severity": "HIGH",
+     "type": "mislabel-legal-feature",
+     "finding": "FR='Achat Premium' statt '§356a BGB — Widerruf'. Widerruf-Button falsch beschriftet.",
+     "legalRisk": "Hoch — Widerrufsrecht fuer FR-Nutzer nicht als rétractation erkennbar.",
+     "recommendation": "FR-Subtitle auf rétractation + §356a-Bezug (analog DE/EN)."
+    },
+    {
+     "key": "consent_toggle_do_not_sell_body",
+     "severity": "MEDIUM",
+     "type": "content-shortening",
+     "finding": "FR stark gekuerzt — verliert Kalifornien-Hinweis + 'verkaufen Daten nirgends'-Zusicherung. DE+EN voll.",
+     "legalRisk": "Mittel (CCPA-Text).",
+     "recommendation": "Volle DE/EN-Fassung."
+    },
+    {
+     "key": "privacy_gate_groq_body",
+     "severity": "MEDIUM",
+     "type": "legal-basis-label-missing",
+     "finding": "FR nennt keine Rechtsgrundlage fuer Groq-USA-Transfer (DE/EN='EU SCCs').",
+     "legalRisk": "Mittel — Art.44 Transfer-Grundlage fehlt.",
+     "recommendation": "EU-SCC-Label im FR-Groq-Gate ergaenzen."
+    },
+    {
+     "key": "ai_prompt_no_dates_rule",
+     "severity": "MEDIUM",
+     "type": "stale-shorter-variant",
+     "finding": "FR gekuerzte aeltere Variante ohne FALSCH/RICHTIG-Beispiele.",
+     "legalRisk": "Niedrig (interner Prompt).",
+     "recommendation": "Vom aktuellen DE-Prompt neu uebersetzen."
+    }
+   ],
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body",
+    "requiredNumbers": [
+     150,
+     600,
+     30,
+     101,
+     151,
+     50,
+     5
+    ],
+    "method": "regex standalone-int count, clean itertext extraction (no xliff dup artifact)",
+    "present": "ALLE 7 vorhanden (150x4, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3)",
+    "numbersMissing": [],
+    "thresholdsIntact": true,
+    "note": "FR behaelt — wie DE/IT — die Custom-Profil-Klausel (150 4x). Vollstaendiger als EN/ES."
+   },
+   "identicalClassification": {
+    "total": 8,
+    "legitimate": 8,
+    "trulyUntranslated": 0,
+    "breakdown": "Analyse (FR=analyse), Galerie (FR=galerie), Original, Premium, Brand 'Best Journal V0.21.9', Atelier. Alle korrekte FR-Cognates/Brand.",
+    "verdict": "Niedrigste identical-Zahl, NULL unuebersetzt."
+   },
+   "formalityConsistency": {
+    "register": "informal tu",
+    "informalHits": 192,
+    "formalVousHitsReal": 1,
+    "issue": {
+     "severity": "LOW",
+     "key_context": "1x 'Vous devez etre connecte' in Gmail-/Support-Fehlerstring",
+     "finding": "Einzelner Ausrutscher ins formelle vous in sonst 100% tu-Datei.",
+     "recommendation": "Auf 'Tu dois etre connecte' aendern fuer Konsistenz."
+    },
+    "verdict": "Ueberwiegend konsistent tu (passend zu DE-Du), 1 isolierter vous-Ausrutscher."
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "GUT — akkurat, U+202F/U+00A0 schmale Leerzeichen korrekt vor : ! gesetzt (FR-Typografie), kein Restdeutsch."
+   }
+  },
+  "it": {
+   "role": "Italienisch",
+   "overallVerdict": "GUT mit Befunden — gleiche 3 HIGH-Muster wie ES/FR (Account-Loeschung + Widerruf-Subtitle), Kern-Legal sonst korrekt. ai_limits vollstaendig (mit Custom-Profil).",
+   "legalKeyIssues": [
+    {
+     "key": "settings_delete_account_subtitle",
+     "severity": "HIGH",
+     "type": "factual-contradiction",
+     "finding": "IT='Rimuove ... il tuo account Google ...' — behauptet GOOGLE-KONTO werde geloescht; DE/EN Gegenteil. Verifiziert in raw values-it.",
+     "legalRisk": "Hoch — falscher Loeschungsumfang.",
+     "recommendation": "An DE/EN angleichen (Google-Konto bleibt)."
+    },
+    {
+     "key": "settings_delete_account_confirm_body",
+     "severity": "HIGH",
+     "type": "factual-divergence+leaked-term",
+     "finding": "IT listet 'il tuo account Firebase' (interner Begriff) und laesst 'Google-Konto bleibt'-Zusicherung weg.",
+     "legalRisk": "Hoch.",
+     "recommendation": "Vom DE/EN-Wortlaut neu uebersetzen."
+    },
+    {
+     "key": "settings_revoke_subtitle",
+     "severity": "HIGH",
+     "type": "mislabel-legal-feature",
+     "finding": "IT='Acquisto Premium' statt '§356a BGB — Widerruf'. Widerruf-Button falsch beschriftet.",
+     "legalRisk": "Hoch — Widerrufsrecht fuer IT-Nutzer nicht als recesso erkennbar.",
+     "recommendation": "IT-Subtitle auf recesso + §356a-Bezug (analog DE/EN)."
+    },
+    {
+     "key": "consent_toggle_do_not_sell_body",
+     "severity": "MEDIUM",
+     "type": "content-shortening",
+     "finding": "IT stark gekuerzt — verliert Kalifornien-Hinweis + 'verkaufen Daten nirgends'-Zusicherung. DE+EN voll.",
+     "legalRisk": "Mittel (CCPA-Text).",
+     "recommendation": "Volle DE/EN-Fassung."
+    },
+    {
+     "key": "privacy_gate_groq_body",
+     "severity": "MEDIUM",
+     "type": "legal-basis-label-missing",
+     "finding": "IT nennt keine Rechtsgrundlage fuer Groq-USA-Transfer (DE/EN='EU SCCs'). (Entity 'Groq, Inc. Mountain View' + Loeschung+kein-Training korrekt.)",
+     "legalRisk": "Mittel — Art.44 Transfer-Grundlage fehlt.",
+     "recommendation": "EU-SCC-Label im IT-Groq-Gate ergaenzen."
+    }
+   ],
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body",
+    "requiredNumbers": [
+     150,
+     600,
+     30,
+     101,
+     151,
+     50,
+     5
+    ],
+    "method": "regex standalone-int count, clean itertext extraction (no xliff dup artifact)",
+    "present": "ALLE 7 vorhanden (150x4, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3)",
+    "numbersMissing": [],
+    "thresholdsIntact": true,
+    "note": "IT behaelt Custom-Profil-Klausel (150 4x). Vollstaendiger als EN/ES. Ordinalformen '101ª/151ª' korrekt."
+   },
+   "identicalClassification": {
+    "total": 14,
+    "legitimate": 14,
+    "trulyUntranslated": 0,
+    "breakdown": "Dashboard, Foto/Video (korrektes IT), Premium, Feedback, Brand 'Best Journal V0.21.9', Atelier. Alle korrekt.",
+    "verdict": "NULL unuebersetzte deutsche Saetze."
+   },
+   "formalityConsistency": {
+    "register": "informal tu",
+    "informalHits": 174,
+    "formalLeiHitsReal": 0,
+    "verdict": "VOLL KONSISTENT informell (tu), 0x Lei/Voi — passend zu DE-Du."
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "GUT — akkurat, Apostroph-Elisionen (L'IA, dell'app) korrekt mit U+2019, kein Restdeutsch."
+   }
+  }
+ },
+ "apostropheSpotCheck": {
+  "es": "0 Elisionsformen (korrekt — Spanisch hat keine l'/d'-Elision). Kein 'lapp'-Problem.",
+  "fr": "50 Elisionen (l'IA, d'analyse, t'aider) alle mit typografischem U+2019 korrekt geschrieben, NICHT weggelassen.",
+  "it": "12 Elisionen (dell'app, un'app, all'indirizzo) alle mit U+2019 korrekt.",
+  "verdict": "Kein Apostroph weggelassen. Matrix 'unescapedApostrophes=0' korrekt, weil U+2019 statt ASCII verwendet (kein XML-Escape noetig)."
+ },
+ "crossLanguagePattern": {
+  "finding": "Die 3 HIGH-Befunde treten IDENTISCH in es/fr/it auf, NICHT in en. en stimmt bei allen Legal-Keys mit DE ueberein.",
+  "rootCauseHypothesis": "es/fr/it tragen mehrere stale Strings aus einer FRUEHEREN DE-Generation (vor der Korrektur 'Google-Konto bleibt' + vor §356a-Subtitle + vor ai_limits-Custom-Profil). en wurde mit der aktuellen DE-Version synchronisiert, es/fr/it nicht durchgaengig.",
+  "impact": "Account-Loeschungsumfang (Play Data-Safety) und Widerrufs-Discoverability (356a BGB) sind in 3 Sprachen falsch/unauffindbar."
+ },
+ "topFindings": [
+  "HIGH (es/fr/it): settings_delete_account_subtitle + _confirm_body behaupten das Google-Konto werde geloescht — GEGENTEIL von DE/EN. Falscher Loeschungsumfang + interner Begriff 'Firebase-Konto'.",
+  "HIGH (es/fr/it): settings_revoke_subtitle = 'Premium-Kauf' statt '§356a BGB Widerruf' — gesetzlicher Widerruf-Button in 3 Sprachen mislabeled/unauffindbar.",
+  "MEDIUM (en+es): ai_limits_dialog_body laesst Custom-Profil-Klausel (+150/Tag pro eigenem Profil) weg (150 3x statt 4x). Alle 7 Pflichtzahlen aber vorhanden, Schwellen intakt.",
+  "MEDIUM (es/fr/it): consent_toggle_do_not_sell_body (CCPA) stark gekuerzt; privacy_gate_groq_body ohne EU-SCC-Rechtsgrundlage-Label.",
+  "POSITIV: 14-Tage-Widerruf (paywall_legal_hint), Auto-Renewal, Art.9-Gemini-Gate, Krisen-Disclaimer in ALLEN 4 juristisch korrekt. EN durchgehend Fallback-tauglich."
+ ],
+ "plugin_bugs_observed": [
+  "KEIN Plugin-Bug. Anmerkung zum eigenen Vorgehen: erste itertext-Variante mit ET.tostring+tail verdoppelte Tail-Text bei <xliff:g>-Strings (z.B. 'pro Monat pro Monat'); auf el.itertext() umgestellt -> sauber. Betraf nur meine Extraktion, NICHT die strings.xml (raw DE verifiziert korrekt).",
+  "Anmerkung: legal-keys-Liste enthaelt 2 Composite-Eintraege mit ' / ' (z.B. 'ai_prompt_insight_intro / profile_insight_*') die keine echten Einzel-Keys sind — als 93 echte Keys behandelt."
+ ],
+ "selbstbeobachtung_FIN037": [
+  "Die identische Cross-Language-Signatur der 3 HIGH-Befunde (nur es/fr/it, nie en) war der entscheidende Hebel: statt 4x isoliert zu pruefen, zeigte das Muster sofort die Root Cause (stale Generation) — ein Cross-Lingual-Worker sollte IMMER nach sprachuebergreifenden Mustern suchen, nicht nur pro Sprache.",
+  "Der itertext-Verdopplungsartefakt haette ohne Roh-XML-Gegencheck zu einem Falschbefund (verdoppelter Text) gefuehrt. Lehre: bei <xliff:g>-haltigen Strings immer gegen die raw-Quelle verifizieren bevor ein Issue gemeldet wird (Direktive #3: Root Cause vor Symptom).",
+  "Der Zahlen-Check profitierte davon, NICHT nur Praesenz sondern HAEUFIGKEIT (150 4x vs 3x) zu zaehlen — dadurch wurde die Feature-Claim-Divergenz sichtbar, die eine reine Ja/Nein-Praesenzpruefung verpasst haette."
+ ]
+}

@@ -1,0 +1,149 @@
+{
+  "worker": "tw-hi",
+  "language": "hi",
+  "target_file": "app/src/main/res/values-hi/strings.xml",
+  "applied": {
+    "hi": [
+      "ai_limits_dialog_body",
+      "ai_prompt_custom_intro",
+      "ai_prompt_custom_rules",
+      "ai_prompt_entropy_intro",
+      "ai_prompt_goals_rules",
+      "ai_prompt_insight_attitude",
+      "ai_prompt_no_dates_rule",
+      "ai_prompt_rerank_actions_header",
+      "ai_prompt_rerank_entries_header",
+      "ai_prompt_rerank_system",
+      "ai_prompt_rerank_user_focus_header",
+      "churn_offer_feature_perspectives",
+      "consent_card3_title",
+      "consent_toggle_analytics_body",
+      "consent_toggle_analytics_title",
+      "consent_toggle_do_not_sell_body",
+      "onboarding_feature_secure",
+      "onboarding_premium_feature_noads",
+      "paywall_feature_noads",
+      "paywall_feature_profiles",
+      "paywall_from_per_day",
+      "paywall_headline_clarity_sub",
+      "paywall_monthly_note",
+      "privacy_gate_groq_body",
+      "privacy_gate_tts_body",
+      "privacy_gate_tts_title",
+      "profile_entropy_long",
+      "retro_benefit_weekly",
+      "settings_analytics_title",
+      "settings_delete_account_confirm_body",
+      "settings_delete_account_subtitle",
+      "settings_feedback_dialog_desc",
+      "settings_premium_feature_5_perspectives",
+      "settings_premium_feature_profiles",
+      "settings_report_ai_confirm_body",
+      "settings_revoke_confirm_body",
+      "settings_revoke_confirm_title",
+      "settings_revoke_subtitle",
+      "datetime_months_relative",
+      "datetime_years_relative"
+    ]
+  },
+  "inserted_new": {
+    "hi": [
+      "paywall_monthly_note"
+    ]
+  },
+  "replaced_existing": {
+    "hi": [
+      "ai_limits_dialog_body",
+      "ai_prompt_custom_intro",
+      "ai_prompt_custom_rules",
+      "ai_prompt_entropy_intro",
+      "ai_prompt_goals_rules",
+      "ai_prompt_insight_attitude",
+      "ai_prompt_no_dates_rule",
+      "ai_prompt_rerank_actions_header",
+      "ai_prompt_rerank_entries_header",
+      "ai_prompt_rerank_system",
+      "ai_prompt_rerank_user_focus_header",
+      "churn_offer_feature_perspectives",
+      "consent_card3_title",
+      "consent_toggle_analytics_body",
+      "consent_toggle_analytics_title",
+      "consent_toggle_do_not_sell_body",
+      "onboarding_feature_secure",
+      "onboarding_premium_feature_noads",
+      "paywall_feature_noads",
+      "paywall_feature_profiles",
+      "paywall_from_per_day",
+      "paywall_headline_clarity_sub",
+      "privacy_gate_groq_body",
+      "privacy_gate_tts_body",
+      "privacy_gate_tts_title",
+      "profile_entropy_long",
+      "retro_benefit_weekly",
+      "settings_analytics_title",
+      "settings_delete_account_confirm_body",
+      "settings_delete_account_subtitle",
+      "settings_feedback_dialog_desc",
+      "settings_premium_feature_5_perspectives",
+      "settings_premium_feature_profiles",
+      "settings_report_ai_confirm_body",
+      "settings_revoke_confirm_body",
+      "settings_revoke_confirm_title",
+      "settings_revoke_subtitle",
+      "datetime_months_relative",
+      "datetime_years_relative"
+    ]
+  },
+  "skipped_already_present": {
+    "hi": []
+  },
+  "plurals_updated": {
+    "hi": [
+      "datetime_months_relative",
+      "datetime_years_relative"
+    ]
+  },
+  "validations_performed": {
+    "hi": [
+      "xml-valid",
+      "all-40-keys-present",
+      "none-identical-to-DE",
+      "format-args-exact(%1$s/%1$d)",
+      "no-bare-percent",
+      "length-plausibility>=50%-of-DE",
+      "devanagari-present-all",
+      "no-unescaped-apostrophes",
+      "rerank-headers-translated(was-DE)",
+      "plurals-datetime-translated(was-DE)",
+      "ai_limits_dialog_body-full(150x4 + text-improvement-bullet)",
+      "no-duplicate-keys"
+    ]
+  },
+  "counts": {
+    "strings": 38,
+    "plurals": 2,
+    "total": 40
+  },
+  "special_cases_handled": {
+    "ai_limits_dialog_body": "full text, all bullets, 150 appears 4x, Bis-zu-150-Text-Verbesserungen bullet present",
+    "ai_prompt_no_dates_rule": "full (no shortening), all FALSCH/RICHTIG examples kept",
+    "ai_prompt_custom_intro": "full 2-step context framing, %1$s preserved",
+    "rerank_headers_3": "translated from stale German to Hindi",
+    "paywall_from_per_day": "corrected to Jahresabo/per-year (old hi said per-day)",
+    "paywall_monthly_note": "newly inserted, \\n preserved",
+    "legal_1to1": "delete_account Google-Konto-bleibt, revoke §356a BGB, do_not_sell no-year"
+  },
+  "worker_overload": false,
+  "plugin_bugs_observed": [
+    {
+      "symptom": "pretooluse-bash hook blocked 'python3 -c' whose inline code STRING referenced app/.../strings.xml path",
+      "evidence": "[finale] BLOCKIERT: Scripting-Sprache mit Code-Argument das eine geschuetzte Datei referenziert",
+      "suggestion": "Erwartetes Verhalten per Brief (Python als .py via Write). Hinweis: auch reine Inspektions-/Checkpoint-Skripte muessen als .py-Datei laufen, nie inline -c, sobald der Pfad-String im Code steht."
+    },
+    {
+      "symptom": "Python double-quoted string data file broke on escaped-quote sequence \\\\\\\" (\\\\ + closing quote)",
+      "evidence": "SyntaxError: unexpected character after line continuation character",
+      "suggestion": "Translation payloads with embedded \\\" and \\n are far safer as a .json data file than a .py module; switched to JSON and it loaded cleanly."
+    }
+  ]
+}

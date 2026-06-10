@@ -1,0 +1,97 @@
+{
+  "findings": [
+    {
+      "findingId": "A1",
+      "riskLevel": "🟧",
+      "category": "HWG",
+      "language": "de",
+      "file": "values/strings.xml",
+      "line": 390,
+      "currentText": "Tipps, die dir sofort helfen können",
+      "problem": "Im Kontext des Entropie-Profils (Stress, Belastung) kann 'sofort helfen' als therapeutisches Wirkungsversprechen missverstanden werden. HWG §3 verbietet Aussagen, die bei funktionellen Beschwerden oder Befindlichkeitsstörungen eine unmittelbare Wirkung suggerieren.",
+      "suggestedFixes": [
+        {
+          "text": "Tipps zum Ordnen deiner Gedanken",
+          "rationale": "Neutral formuliert, kein Wirkungsversprechen, beschreibt die Funktion (Reflexion) statt ein Ergebnis (Heilung/Linderung)."
+        },
+        {
+          "text": "Konkrete Ansätze zum Reflektieren und Priorisieren",
+          "rationale": "Betont den Tagebuch-Charakter, kein medizinischer Claim."
+        }
+      ],
+      "invasivityLevel": "text-only",
+      "impact": "Mittel — steht in Profil-Langbeschreibung, die nur sieht wer das Profil in den Einstellungen aufklappt. Nicht auf Paywall-Ebene."
+    },
+    {
+      "findingId": "A2",
+      "riskLevel": "🟧",
+      "category": "HWG",
+      "language": "de",
+      "file": "values/strings.xml",
+      "line": 1062,
+      "currentText": "Dein persönliches KI-Tagebuch für Klarheit und Veränderung",
+      "problem": "'Veränderung' ist im Onboarding-Kontext neben Stressabbau-Zielen (Zeile 1066) problematisch: Es kann als Versprechen einer psychischen Verhaltens- oder Persönlichkeitsveränderung gelesen werden — ein mittelbares Wirkungsversprechen nach HWG §3 Abs. 1.",
+      "suggestedFixes": [
+        {
+          "text": "Dein persönliches KI-Tagebuch für Reflexion und Alltag",
+          "rationale": "Reflexion ist neutral und beschreibt den Journaling-Prozess ohne Therapieversprechen."
+        },
+        {
+          "text": "Dein persönliches KI-Tagebuch für Gedanken und Erinnerungen",
+          "rationale": "Rein deskriptiv, kein Ergebnisversprechen."
+        }
+      ],
+      "invasivityLevel": "text-only",
+      "impact": "Hoch — Onboarding-Subtitle, erste Aussage die jeder neue Nutzer liest."
+    },
+    {
+      "findingId": "B1",
+      "riskLevel": "🟨",
+      "category": "UWG",
+      "language": "de",
+      "file": "values/strings.xml",
+      "line": 1082,
+      "currentText": "Persönliche Muster erkennen, die KI findet verborgene Denk- und Gefühlsmuster",
+      "problem": "UWG §5: 'verborgene Denk- und Gefühlsmuster' impliziert eine psychoanalytische Tiefenanalyse. Kann als übertriebene Leistungsbehauptung eingestuft werden, wenn die KI (Gemini) schlicht Häufigkeitsmuster in Text erkennt, keine klinisch validierten psychologischen Muster.",
+      "suggestedFixes": [
+        {
+          "text": "Muster in deinen Einträgen erkennen — die KI hebt häufige Themen und Formulierungen hervor",
+          "rationale": "Beschreibt präzise was technisch passiert, ohne psychologische Tiefenwirkung zu versprechen."
+        }
+      ],
+      "invasivityLevel": "text-only",
+      "impact": "Niedrig — Premium-Feature-Liste im Onboarding, für Nutzer erkennbar als Marketing."
+    },
+    {
+      "findingId": "C1",
+      "riskLevel": "🟨",
+      "category": "HWG",
+      "language": "de",
+      "file": "values/strings.xml",
+      "line": 268,
+      "currentText": "Alle Empfehlungen (dashboard_all_recommendations)",
+      "problem": "Der Begriff 'Empfehlungen' im Dashboard-Kontext (KI-generierte Analysen bei Stress/Belastung) kann als medizinische Handlungsempfehlung missverstanden werden. HWG §3 erfasst auch indirekte Empfehlungsaussagen im Anwendungsfeld psychischer Befindlichkeit.",
+      "suggestedFixes": [
+        {
+          "text": "Alle Anregungen",
+          "rationale": "Anregungen ist rechtlich unkritisch und sprachlich natürlich."
+        },
+        {
+          "text": "Alle Hinweise",
+          "rationale": "Neutral, kein Behandlungscharakter."
+        }
+      ],
+      "invasivityLevel": "text-only",
+      "impact": "Niedrig — UI-Label, Kontext ist klar Tagebuch-Analyse."
+    }
+  ],
+  "assessment": "HWG/UWG-Gesamtbewertung: Die App enthält keine direkten Heilversprechen, keine Diagnose- oder Therapieaussagen, keine Nennung von Krankheitsbildern (Depression, Burnout, Angststörung) in Marketing-Claims. Bestehende Disclaimer sind qualitativ gut (ai_output_health_disclaimer, ai_generated_badge/tooltip, settings_crisis_dialog_body). Zwei mittlere HWG-Risiken (A1: 'sofort helfen', A2: 'Veränderung' im Onboarding), zwei niedrige Hinweise (B1: 'verborgene Muster' UWG, C1: 'Empfehlungen' HWG) — alle behebbar durch reine Textänderung ohne Code-Eingriff. Disclaimer-Lücke: Nicht verifizierbar ob ai_output_health_disclaimer bei JEDER Dashboard-Analyse-Ausgabe sichtbar eingeblendet wird oder nur in Settings. Empfehlung: Priorisierung A2 (Onboarding, höchste Reichweite), dann A1.",
+  "plugin_bugs_observed": [
+    {
+      "bug_id": "POB-001",
+      "description": "Worker A (Orchestrator) ist laut scan_method im Marketing-Fragment abgestürzt ('Worker A crashed, Bug #3'). Fragment wurde via orchestrator-direct-grep als Fallback befüllt. Fehlertoleranz-Mechanismus hat funktioniert, Absturzursache aber unklar.",
+      "severity": "mittel",
+      "recommendation": "Worker-A-Absturzursache analysieren; ggf. Memory-Limit oder Timeout zu niedrig bei der Marketing-Extraktion."
+    }
+  ]
+}

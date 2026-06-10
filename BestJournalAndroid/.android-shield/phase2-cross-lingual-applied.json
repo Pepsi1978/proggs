@@ -1,0 +1,95 @@
+{
+  "phase": 2,
+  "task": "cross-lingual-corrections",
+  "applied_at": "2026-05-22",
+  "total": 12,
+  "applied": 12,
+  "failed": 0,
+  "xml_valid": true,
+  "findings": [
+    {
+      "id": "CL-001",
+      "locale": "kn",
+      "key": "ai_limits_dialog_body",
+      "status": "applied",
+      "change": "99% claim removed -> ಹೆಚ್ಚಿನ ಬಳಕೆದಾರರು ಈ ಮಿತಿಗಳನ್ನು ತಲುಪುವುದಿಲ್ಲ."
+    },
+    {
+      "id": "CL-002",
+      "locale": "pt-rBR",
+      "key": "ai_limits_dialog_body",
+      "status": "applied",
+      "change": "99% claim removed -> A maioria dos usuários não chegará a esses limites no dia a dia."
+    },
+    {
+      "id": "CL-003",
+      "locale": "pt-rPT",
+      "key": "ai_limits_dialog_body",
+      "status": "applied",
+      "change": "Full text restored with formatted=false, 99% claim replaced with non-quantified statement using pt-PT vocabulary"
+    },
+    {
+      "id": "CL-004",
+      "locale": "gu",
+      "key": "churn_cancel_sub",
+      "status": "applied",
+      "change": "Recycling emoji replaced with proper Gujarati text: સબ્સ્ક્રિપ્શન રદ કરો"
+    },
+    {
+      "id": "CL-005",
+      "locale": "gu",
+      "key": "retro_benefit_weekly",
+      "status": "applied",
+      "change": "Garbled text replaced with proper Gujarati: અમર્યાદિત સાપ્તાહિક સમીક્ષાઓ, ફક્ત પ્રથમ 2 અઠવાડિયા નહીં"
+    },
+    {
+      "id": "CL-006",
+      "locale": "ru",
+      "key": "churn_cancel_sub",
+      "status": "applied",
+      "change": "Ukrainian text (Скасувати підписку) replaced with Russian: Отменить подписку"
+    },
+    {
+      "id": "CL-007",
+      "locale": "kn",
+      "key": "onboarding_perspectives_title",
+      "status": "applied",
+      "change": "Incorrect text replaced with correct Kannada: ವಿವಿಧ ದೃಷ್ಟಿಕೋನಗಳು"
+    },
+    {
+      "id": "CL-008",
+      "locale": "bn",
+      "key": "ai_banner_body",
+      "status": "applied",
+      "change": "Disclaimer bullet updated: সমস্ত AI আউটপুট পরামর্শ, পেশাদার পরামর্শ নয়।"
+    },
+    {
+      "id": "CL-009",
+      "locale": "pt-rPT",
+      "key": "ai_banner_body",
+      "status": "applied",
+      "change": "Added missing separator: gratuito.\n• Todas (was: gratuito Todas)"
+    },
+    {
+      "id": "CL-010",
+      "locale": "ta",
+      "key": "churn_offer_feature_perspectives",
+      "status": "applied",
+      "change": "KI -> AI standardized"
+    },
+    {
+      "id": "CL-011",
+      "locale": "ta",
+      "key": "settings_premium_feature_5_perspectives",
+      "status": "applied",
+      "change": "KI -> AI standardized"
+    },
+    {
+      "id": "CL-012",
+      "locale": "ta",
+      "key": "settings_premium_feature_improve_desc",
+      "status": "applied",
+      "change": "KI -> AI + விரும்பும்போது -> கோரிக்கையின் பேரில் (on demand)"
+    }
+  ]
+}

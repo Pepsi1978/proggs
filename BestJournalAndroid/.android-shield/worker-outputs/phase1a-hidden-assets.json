@@ -1,0 +1,367 @@
+{
+  "worker": "w7-hidden-assets",
+  "hiddenFeatures": {
+    "receivers": [
+      {
+        "name": "BootReminderReceiver",
+        "purpose": "Re-schedules all alarms after BOOT_COMPLETED / TIMEZONE_CHANGED / TIME_CHANGED via DailyReminderManager (daily + weekly + monthly + yearly).",
+        "notifications": "none directly (re-scheduler only)",
+        "manifestRegistered": false,
+        "note": "not in manifest grep result - verify registration"
+      },
+      {
+        "name": "ReminderReceiver",
+        "purpose": "Daily journal reminder; picks 1 of 5 rotating message bodies; reschedules next 24h alarm; logs FirebaseAnalytics 'reminder_notification_shown'.",
+        "channelId": "daily_reminder",
+        "notificationId": 2001,
+        "manifestRegistered": true,
+        "exported": false
+      },
+      {
+        "name": "WeeklyReviewReceiver",
+        "purpose": "Weekly review notification; opens app tab 0; logs 'weekly_review_notification_shown'.",
+        "channelId": "weekly_review",
+        "notificationId": 2002
+      },
+      {
+        "name": "MonthlyReviewReceiver",
+        "purpose": "Monthly review notification + reschedules next month (fromUserToggle=false).",
+        "channelId": "monthly_review",
+        "notificationId": 2003
+      },
+      {
+        "name": "YearlyReviewReceiver",
+        "purpose": "Yearly review notification + reschedules next year (fromUserToggle=false).",
+        "channelId": "yearly_review",
+        "notificationId": 2004
+      }
+    ],
+    "notificationChannels": [
+      {
+        "id": "daily_reminder",
+        "name": "Taegliche Erinnerung",
+        "purpose": "Daily journaling reminder"
+      },
+      {
+        "id": "weekly_review",
+        "name": "Woechentlicher Rueckblick",
+        "purpose": "Weekly review prompt"
+      },
+      {
+        "id": "monthly_review",
+        "name": "Monatsrueckblick",
+        "purpose": "Monthly review prompt"
+      },
+      {
+        "id": "yearly_review",
+        "name": "Jahresrueckblick",
+        "purpose": "Yearly review prompt"
+      }
+    ],
+    "channelCreation": "BestJournalApp.createNotificationChannels() onCreate, guarded by SDK>=O",
+    "debugOnlyFeatures": [
+      {
+        "feature": "Test-Daten-Generator button (seed fake journal entries) + 'Alle Einträge löschen' action (Commit #1289)",
+        "file": "JournalScreen.kt:334 (IconButton) + :183 (AlertDialog)",
+        "guardVerified": true,
+        "note": "DOUBLE-guarded: both the toolbar IconButton AND the dialog are inside `if (BuildConfig.DEBUG)`. seedTestData()/deleteAllEntriesNow() reachable ONLY from this debug dialog. NO Play-Store risk - fake-data generator cannot appear in release build."
+      },
+      {
+        "feature": "OkHttp logging interceptor Level.BODY",
+        "file": "di/NetworkModule.kt:32",
+        "guardVerified": true,
+        "note": "BODY logging only in DEBUG, NONE in release"
+      },
+      {
+        "feature": "Firebase App Check debug provider",
+        "file": "BestJournalApp.kt:64",
+        "guardVerified": true,
+        "note": "debug provider via reflection only in DEBUG"
+      },
+      {
+        "feature": "AI paywall bypass (isDebug allows transcription without subscription/trial)",
+        "file": "data/repository/TranscriptionRepository.kt:74",
+        "guardVerified": true,
+        "note": "isDebug=BuildConfig.DEBUG used to bypass paywall in debug only - correct"
+      }
+    ],
+    "accountDeletion": {
+      "present": true,
+      "path": "Settings -> 'Konto löschen' -> deleteAccount(); confirm dialog -> progress dialog -> app restart",
+      "wording": "Title: 'Wirklich alle App-Daten löschen?' | Body: 'Dieser Vorgang ist unwiderruflich und löscht: Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen; Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto); Deine App-Anmeldung. Dein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.' | Confirm: 'Ja, alles löschen'",
+      "cloudDataCovered": "YES - DriveBackupManager.deleteAllAppData() runs FIRST and is VERIFIED (re-lists appDataFolder, fails loudly if files remain). On Drive-delete failure: honest error dialog ('Ohne vollständige Löschung wäre die Meldung „unwiderruflich entfernt\" nicht korrekt') with retry / local-only / abort options. Then wipes filesDir/photos, cacheDir (incl drive_merge_temp.db full DB copy), Room DBs, encrypted prefs, alarms via signOut().",
+      "gaps": [
+        "BootReminderReceiver/review-receivers manifest registration not seen in this audit (only ReminderReceiver exported=false found) - verify the 4 review receivers are declared or scheduled purely via explicit PendingIntent (latter does not require manifest entry).",
+        "Google Play Console also requires a web-based account-deletion URL (out of code scope - tracked separately)."
+      ]
+    },
+    "dataExport": {
+      "present": true,
+      "type": "PDF (journal entries + optional photos)",
+      "path": "Settings -> 'Daten exportieren' / 'PDF-Export' -> exportToPdf() -> PdfExporter.export()",
+      "premiumGated": true,
+      "note": "Art. 20 portability satisfied; PDF export is a premium feature (paywall_feature_pdf). No JSON export."
+    },
+    "widgets": "NONE - no GlanceAppWidget, TileService, AppWidgetProvider or ShortcutManager found",
+    "featureFlags": "FirebaseRemoteConfig used ONLY in TranscriptionRepository (Whisper model/gating), NOT a general feature-flag/remote-kill system",
+    "fileProviderPaths": [
+      "files-path name='photos' path='photos/' (authority ${applicationId}.fileprovider) - shares ONLY photos dir, narrow scope, no cacheDir/files over-share"
+    ]
+  },
+  "layer1_5_assets": {
+    "localeFolders": 27,
+    "totalFiles": 81,
+    "sizeMatrix": {
+      "ar": {
+        "imprint": 4761,
+        "privacy": 7424,
+        "terms": 5984
+      },
+      "bn": {
+        "imprint": 5432,
+        "privacy": 9309,
+        "terms": 7894
+      },
+      "de": {
+        "privacy": 48991,
+        "imprint": 5273,
+        "terms": 17412
+      },
+      "en": {
+        "imprint": 5025,
+        "privacy": 54666,
+        "terms": 16487
+      },
+      "es": {
+        "imprint": 4133,
+        "privacy": 6215,
+        "terms": 5039
+      },
+      "fr": {
+        "imprint": 4140,
+        "privacy": 6370,
+        "terms": 5235
+      },
+      "gu": {
+        "imprint": 5238,
+        "privacy": 8867,
+        "terms": 7562
+      },
+      "hi": {
+        "imprint": 5377,
+        "privacy": 9374,
+        "terms": 7825
+      },
+      "id": {
+        "imprint": 4024,
+        "privacy": 5974,
+        "terms": 4964
+      },
+      "it": {
+        "imprint": 4108,
+        "privacy": 6145,
+        "terms": 4894
+      },
+      "ja": {
+        "imprint": 4725,
+        "privacy": 74204,
+        "terms": 6977
+      },
+      "kn": {
+        "imprint": 5433,
+        "privacy": 9329,
+        "terms": 8029
+      },
+      "ko": {
+        "imprint": 3933,
+        "privacy": 72107,
+        "terms": 4822
+      },
+      "ml": {
+        "imprint": 5577,
+        "privacy": 10210,
+        "terms": 8823
+      },
+      "mr": {
+        "imprint": 5289,
+        "privacy": 8921,
+        "terms": 7894
+      },
+      "nl": {
+        "imprint": 4008,
+        "privacy": 5999,
+        "terms": 4856
+      },
+      "pl": {
+        "imprint": 4017,
+        "privacy": 6010,
+        "terms": 4986
+      },
+      "pt-BR": {
+        "imprint": 3981,
+        "privacy": 67958,
+        "terms": 4900
+      },
+      "pt-PT": {
+        "imprint": 4061,
+        "privacy": 6201,
+        "terms": 4967
+      },
+      "ta": {
+        "imprint": 5805,
+        "privacy": 10214,
+        "terms": 9046
+      },
+      "te": {
+        "imprint": 5420,
+        "privacy": 9402,
+        "terms": 7913
+      },
+      "th": {
+        "imprint": 5334,
+        "privacy": 9599,
+        "terms": 7752
+      },
+      "tr": {
+        "imprint": 3917,
+        "privacy": 5813,
+        "terms": 4832
+      },
+      "uk": {
+        "imprint": 4910,
+        "privacy": 7666,
+        "terms": 6600
+      },
+      "ur": {
+        "imprint": 4524,
+        "privacy": 7281,
+        "terms": 6042
+      },
+      "zh-CN": {
+        "imprint": 3757,
+        "privacy": 5516,
+        "terms": 4380
+      },
+      "zh-TW": {
+        "imprint": 3751,
+        "privacy": 5636,
+        "terms": 4376
+      }
+    },
+    "fullVersions": [
+      "de",
+      "en",
+      "ko",
+      "ja",
+      "pt-BR"
+    ],
+    "fullVersionsNote": "User stated 3 full versions (de/en/ko). REALITY: 5 full standalone PRIVACY versions by byte-size: de(48991) en(54666) ko(72107) ja(74204) pt-BR(67958). ja+pt-BR have NO reference-link and are self-contained full policies. This EXCEEDS the stated baseline (more coverage, not a defect). The other 22 locales are genuine short summaries (5.5-10.2KB).",
+    "referenceArchitectureVerified": {
+      "fr": {
+        "hasReferenceLink": true,
+        "linkTarget": "file:///android_asset/legal/en/PRIVACY.html + de/DATENSCHUTZ.html",
+        "linkLanguage": "fr",
+        "clauseFound": true,
+        "clause": "'consulte la version complète en anglais ou en allemand'"
+      },
+      "ja": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - external regulator/helpline links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 74KB policy, not a summary"
+      },
+      "ur": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "ur",
+        "clauseFound": true,
+        "clause": "'مکمل انگریزی یا جرمن ورژن دیکھیں'"
+      },
+      "pt-BR": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - ANPD/CVV links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 68KB policy, not a summary"
+      },
+      "zh-CN": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "zh",
+        "clauseFound": true,
+        "clause": "'完整英文版或德文版'"
+      },
+      "gu": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "gu",
+        "clauseFound": true,
+        "clause": "'અંગ્રેજી અથવા જર્મન સંપૂર્ણ સંસ્કરણ'"
+      }
+    },
+    "loaderLogic": {
+      "file": "ui/screens/consent/LegalDocumentScreen.kt (enum LegalDocument)",
+      "localeMapping": "4-tier: de->legal/de/<de-name>; en->legal/en/<en-name>; other UI lang->localized summary via summaryFolderFor(); else->en full fallback. Handles pt-BR/pt-PT, zh CN+SG->zh-CN HK/MO/TW->zh-TW, legacy in->id.",
+      "fallback": "onlyIfTranslated() gate + TRANSLATED_SUMMARIES set (25 entries) guarantees no blank WebView; unknown locale falls back to en full versions (Poka-Yoke)",
+      "security": "WebView JS disabled, defaultTextEncoding utf-8, only file:// loads in-WebView, external (mailto/https) open in system browser",
+      "reachableFrom": [
+        "ConsentScreen (onboarding, lines 365-372: Datenschutz/Nutzungsbedingungen/Impressum)",
+        "SettingsScreen (line 4059, footer order Datenschutz/Nutzungsbedingungen/Impressum)",
+        "routes legal/datenschutz, legal/nutzungsbedingungen, legal/impressum"
+      ],
+      "docMismatch": "Inline doc comment (lines 64-73) describes a 3-tier model (de+en full, rest summaries) but ja & pt-BR are actually full standalone docs loaded through the tier-3 path. Functionally correct (full file loads regardless); documentation is just slightly behind reality."
+    },
+    "deVollversionChecks": {
+      "datenschutz": {
+        "verantwortlicher": true,
+        "anschrift": true,
+        "zweck": true,
+        "rechtsgrundlagen": true,
+        "empfaenger": true,
+        "drittland": true,
+        "subprocessorsNamed": "Google, Gemini, Groq, Firebase all present",
+        "speicherdauer": true,
+        "betroffenenrechte": true,
+        "datenuebertragbarkeit_art20": true,
+        "beschwerderecht": true,
+        "kontakt": true
+      },
+      "impressum": {
+        "name": true,
+        "anschrift": true,
+        "email": true,
+        "ddg_para5": true
+      },
+      "nutzungsbedingungen": {
+        "widerrufsbelehrung": true,
+        "frist_14_tage": true,
+        "musterFormular": true,
+        "para_312g_bgb": true,
+        "digitaleInhalte_clause": true
+      }
+    },
+    "whisperFolder": {
+      "path": "assets/whisper/",
+      "files": [
+        "base-decoder.int8.onnx (~130 MB)",
+        "base-encoder.int8.onnx (~29 MB)",
+        "base-tokens.txt (~817 KB)"
+      ],
+      "purpose": "sherpa-onnx Whisper 'base' int8 model for on-device offline speech-to-text (privacy-preserving local transcription, no cloud)"
+    }
+  },
+  "criticalObservations": [
+    "POSITIVE: Debug-Test-Daten-Generator + 'Alle Einträge löschen' are DOUBLE-guarded by BuildConfig.DEBUG (JournalScreen.kt:183 + :334). Fake-data generator and bulk-delete cannot appear in a release build - NO Play-Store risk.",
+    "POSITIVE: Account deletion (DSGVO Art.17) is best-in-class: Drive cloud backup deleted FIRST + VERIFIED, honest error dialog never falsely claims 'unwiderruflich entfernt', wipes local photos/cache (incl full DB copy in drive_merge_temp.db)/Room/prefs/alarms.",
+    "POSITIVE: DE full legal docs are complete - DATENSCHUTZ has all DSGVO sections incl named subprocessors (Google/Gemini/Groq/Firebase) + Drittland/SCC; IMPRESSUM §5 DDG; NUTZUNGSBEDINGUNGEN §312g BGB Widerrufsbelehrung + Muster-Formular.",
+    "FACTUAL CORRECTION: 5 full PRIVACY versions exist (de/en/ko/ja/pt-BR), not 3 as stated. ja+pt-BR are self-contained full policies WITHOUT a reference link. This is MORE coverage, not less - the FIN-050 reference architecture is intact for the remaining 22 short summaries (all verified to carry working en+de links + native-language conflict clause).",
+    "MINOR DOC DRIFT: LegalDocumentScreen.kt comment (lines 64-73) still describes a 3-tier/summaries model; ja+pt-BR are full docs loaded via the summary path. Cosmetic only - loading works correctly. Could realign comment for accuracy.",
+    "FileProvider shares ONLY the photos/ dir (narrow, secure). PDF export is the only data-export path (Art.20) and is premium-gated; there is no JSON export."
+  ],
+  "plugin_bugs_observed": [
+    "FIN-OBS-W7-1: Inline Bash heredoc (Bash tool) mangled the Python escape sequence rel.replace('\\\\','/') into a single backslash, causing a SyntaxError - the known-error hook matched it at 67%. Workaround: write Python to a file in the write-zone and run it. Recommendation: worker prompt should instruct 'write Python scripts to .android-shield/*.py and execute, never inline heredoc with backslash escapes on Windows Git-Bash'.",
+    "FIN-OBS-W7-2: Grep tool requires an ABSOLUTE path on Windows; the relative app/src/main/java path failed because cwd is C:/Users/barwa/proggs (parent of APP-ROOT). The worker prompt gives APP-ROOT but the harness cwd is one level up - prompts should state that Grep/Glob need the full C:/.../BestJournalAndroid/... path.",
+    "FIN-OBS-W7-3: Worker baseline assumption ('3 full legal versions') was outdated vs. code reality (5). Audit prompts that hard-code a baseline count should phrase it as 'verify the count' (which this one did) rather than 'confirm 3' - good prompt design; keep it."
+  ]
+}

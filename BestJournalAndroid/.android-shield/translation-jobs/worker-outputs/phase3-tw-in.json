@@ -1,0 +1,30 @@
+{
+	"worker": "tw-in",
+	"lang": "in",
+	"translated": 37,
+	"pluralsDone": 2,
+	"newKeys": ["paywall_monthly_note"],
+	"verification": {
+		"xmlValid": true,
+		"keysPresent": "37/37",
+		"pluralsPresent": "2/2",
+		"noneIdenticalToDE": true,
+		"formatArgsIdentical": true,
+		"noBarePercent": true,
+		"noDuplicateKeys": true,
+		"rerankHeadersTranslated": [
+			"ai_prompt_rerank_actions_header",
+			"ai_prompt_rerank_entries_header",
+			"ai_prompt_rerank_user_focus_header"
+		],
+		"legalChecks": {
+			"delete_account": "Akun Google-mu sendiri tetap ada",
+			"revoke_356a": "§ 356a BGB present",
+			"do_not_sell_no_fake_year": true
+		},
+		"result": "PASS"
+	},
+	"register": "kamu (informal, consistent with existing values-in)",
+	"pluralForm": "Indonesian CLDR 'other' only (one-item plurals)",
+	"plugin_bugs_observed": []
+}

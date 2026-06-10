@@ -1,0 +1,2 @@
+{"worker": "fa4", "findingId": "A7", "stage": "located", "file": "app/src/main/java/com/bestjournal/app/ui/screens/dashboard/DashboardScreen.kt", "dialog_line": 2221, "content_end_line": 2319, "existing_usage_line": 1455, "existing_call_style": "com.bestjournal.app.ui.components.AiOutputDisclaimer()", "import_needed": false, "note": "fully-qualified call, no import needed"}
+{"worker": "fa4", "findingId": "A7", "stage": "applied", "file": "app/src/main/java/com/bestjournal/app/ui/screens/dashboard/DashboardScreen.kt", "inserted_lines": "2320-2321", "validated": true}

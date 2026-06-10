@@ -1,0 +1,91 @@
+{
+	"worker": "tw-ptbr",
+	"language": "pt-rBR",
+	"phase": "phase3",
+	"target_file": "app/src/main/res/values-pt-rBR/strings.xml",
+	"units_total": 36,
+	"applied": {
+		"pt-rBR": [
+			"ai_prompt_custom_intro",
+			"ai_prompt_custom_rules",
+			"ai_prompt_entropy_intro",
+			"ai_prompt_goals_rules",
+			"ai_prompt_insight_attitude",
+			"ai_prompt_no_dates_rule",
+			"ai_prompt_rerank_system",
+			"churn_offer_feature_perspectives",
+			"consent_card3_title",
+			"consent_toggle_analytics_body",
+			"consent_toggle_analytics_title",
+			"consent_toggle_do_not_sell_body",
+			"onboarding_feature_secure",
+			"onboarding_premium_feature_noads",
+			"paywall_feature_noads",
+			"paywall_feature_profiles",
+			"paywall_from_per_day",
+			"paywall_headline_clarity_sub",
+			"paywall_monthly_note",
+			"privacy_gate_groq_body",
+			"privacy_gate_tts_body",
+			"privacy_gate_tts_title",
+			"profile_entropy_long",
+			"retro_benefit_weekly",
+			"settings_analytics_title",
+			"settings_delete_account_confirm_body",
+			"settings_delete_account_subtitle",
+			"settings_feedback_dialog_desc",
+			"settings_premium_feature_5_perspectives",
+			"settings_premium_feature_profiles",
+			"settings_report_ai_confirm_body",
+			"settings_revoke_confirm_body",
+			"settings_revoke_confirm_title",
+			"settings_revoke_subtitle",
+			"datetime_months_relative",
+			"datetime_years_relative"
+		]
+	},
+	"newly_inserted": ["paywall_monthly_note"],
+	"replaced_strings_count": 33,
+	"plurals_replaced": ["datetime_months_relative", "datetime_years_relative"],
+	"skipped_already_present": {},
+	"validations_performed": {
+		"pt-rBR": [
+			"apostrophes-ok-0-unescaped",
+			"xml-parse-ok",
+			"all-34-string-keys-present",
+			"both-plurals-have-one-other",
+			"no-string-identical-to-de",
+			"format-args-identical-to-de",
+			"no-bare-percent",
+			"no-raw-newlines-in-string-values",
+			"no-nested-string-tags",
+			"rerank_system-rebuilt-459char-stub-to-2034char-with-literal-backslash-n",
+			"legal-1to1-delete_account-conta-do-Google-em-si-permanece",
+			"legal-1to1-revoke-356a-BGB",
+			"legal-do_not_sell-no-invented-year",
+			"BR-terminology-configuracoes-usuario-aplicativo-salvar-excluir-voce",
+			"no-pt-PT-contamination-in-my-keys"
+		]
+	},
+	"worker_overload": false,
+	"plugin_bugs_observed": [
+		{
+			"symptom": "finale pretooluse-bash.sh blockiert JEDES inline 'python3 -c' das einen geschuetzten Pfad (auch nur READEND, z.B. ET.parse zum Inspizieren) referenziert. Auch reine Lese-Skripte zum Verifizieren werden geblockt.",
+			"evidence": "Block-Meldung bei cp_ptbr-Checkpoint (Schreiben) UND bei reinem Inspektions-Snippet (locate definicoes). Workaround: jedes Snippet als .py via Write-Tool ablegen und dann ausfuehren.",
+			"suggestion": "Der Worker-Auftrag schreibt 'Python als .py via Write' ohnehin vor — Hinweis ist konsistent. Evtl. read-only-Python (kein open(...,'w'), kein os.replace) vom Block ausnehmen, um Inspektion zu erleichtern; sonst entstehen viele Wegwerf-.py-Dateien im translation-jobs-Ordner."
+		},
+		{
+			"symptom": "Vor-Befund bestaetigt: ai_prompt_rerank_system war pt-rBR ein 459-Zeichen-Stub mit ROHEN Newlines (echte \\n-Bytes) statt Literal-Escape — genau die Fehlerklasse die FIN-049/Auftrag (c) adressiert.",
+			"evidence": "Roh-Scan vor dem Fix: contains raw newline? True, len 459. Nach Fix: len 2034, keine rohen Newlines (Regex-Check auf \\n-Bytes zwischen >...< = 0).",
+			"suggestion": "Andere Sprachen mit demselben rerank-Stub pruefen (Audit deutete an, dass pt-rBR betroffen war — moeglicherweise weitere). Ein globaler Pre-Audit auf 'rohe Newlines innerhalb von <string>-Werten' ueber alle values-*/ wuerde solche Stubs flaechig finden."
+		}
+	],
+	"notes": [
+		"paywall_from_per_day war stale ('A partir de %1$s por dia') -> ersetzt durch aktuelles DE 'Jahresabo, %1$s pro Jahr' = 'Assinatura anual, %1$s por ano'.",
+		"settings_delete_account_* waren stale (alte Firebase/Google-Konto-Formulierung) -> auf aktuelles DE gebracht, Rechtsaussage 'sua conta do Google em si permanece' 1:1.",
+		"settings_revoke_subtitle war stale ('Compra Premium') -> '§ 356a do BGB — revogação diretamente pelo aplicativo'.",
+		"consent_toggle_do_not_sell_body war erfundener Stub mit Jahr '2026' -> auf vollstaendigen DE-Text gebracht, ohne Jahr, Kalifornien-Bezug 1:1.",
+		"Vorbestehende PT-PT-Spur 'definições' nur in 3 NICHT-beauftragten Keys (ai_prompt_*_schema_header) — bewusst NICHT angefasst (keine anderen Keys).",
+		"Platzhalter %1$s (5 Strings) und %1$d (2 Plurals) zeichengenau uebernommen; keine nackten % im gesamten Job."
+	]
+}

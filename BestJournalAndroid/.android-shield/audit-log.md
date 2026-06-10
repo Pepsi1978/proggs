@@ -277,3 +277,25 @@ App-Architektur-Klarstellung von Frank (relevant für Phase 3 + zukünftige Audi
 - Separate Seiten: privacy-en.html, privacy-de.html, privacy-ko.html, account-deletion.html
 - Empfehlung: URL erreichbar und grundlegend nutzbar. AGB-Dokument muss noch ergänzt werden. HTML-Anchors für Deep-Linking empfohlen (#impressum, #datenschutz, #agb).
 - recht-report.json Update: URL-001 checkedByUrlChecker=true, httpStatus=200, containsPrivacyPolicy=true, containsImprint=true, containsTerms=false
+
+## 2026-06-10T19:01:50Z · Lauf-Start (Run cbf88768)
+- Modus: default (Vollscan, Phasen 0-5)
+- Trigger: /finale:run — finaler Play-Store-Rechtssicherheits-Scan
+- Phase 0: alle 4 Skills OK; alle 4 SHAs geaendert seit Lauf 2026-05-22 (Skill-Updates 2026-05-27)
+- Empfehlung: Vollscan (App-Aenderungen seit 22.05.: R8, gu-Reparatur, Paywall-Link, String-Cleanup)
+
+## 2026-06-10T20:04:41Z - Phase 1 + 1.5 abgeschlossen
+- Phase 1A: 8 Roentgen-Worker (Manifest/Strings x3/Paywall/Screens/Hidden+Assets/Literals), roentgen-report.json 150KB
+- Phase 1B-DE: 4 Recht-Worker (DSGVO/UWG/Abo/HWG-AI) + Code-Verify + URL-Check
+- Phase 1B-XLing: 8 Sprach-Worker, alle 26 Locales, 95 Legal-Keys pro Sprache tief geprueft
+- Maschinell: Vollstaendigkeits-/Format-/Apostroph-Matrix ueber 26 Locales (cross-lingual-matrix-2026-06-10.json)
+- Ergebnis: recht-report.json mit 44 Findings (DE 31 + XLing 13 Bundles), 0 Worker-Crashes, 0 Resumes
+
+## 2026-06-10T23:11:04Z - orchestrator-resume-after-crash | phase=3-wave4 | scope=tr,uk,ur,zh-rCN,zh-rTW | worker=tw-tr,tw-uk,tw-ur,tw-zhcn,tw-zhtw | reason=session-limit (0 output) | action=respawn identical scope
+
+## 2026-06-10T23:23:55Z - loop-converged (Run cbf88768)
+- Phase 2: 28 DE/Code-Fixes via 7 fix-applier (Triage: 10 Karten-Entscheidungen Frank, Bulk 29, 2 invasive mit Zustimmung)
+- Phase 3: 964 Uebersetzungseinheiten, 26 Sprachen, 4 Wellen, Commits #46685-#46688
+- Phase 4: assembleDebug SUCCESS 25s; Matrix final 0/0/0/0; Spot-Checks alle gruen
+- Phase 5: openFindingsCount=0, manualPending=1 (E1 Grace-Period), RUN-ISSUES-2026-06-11.md geschrieben
+- Resumes: 1 (Session-Limit, 5 Worker-Respawn, 0 Datenverlust)
