@@ -5,13 +5,23 @@
 > Chat Completions parallel, GPT-5.x aktuell, GPT-4o/4.1/o4-mini in der API ~16./17.02.2026 retired).
 > Zweite Seite (wie macht man es richtig): `best-practices/projekt-code/apis/best-practices-openai-api.md`.
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Modellname NIE hartkodieren.** GPT-4o/4.1/o4-mini sind in der API Mitte Feb 2026 retired → 404. Aus Config beziehen, Deprecations-Seite prüfen.
-2. **Parameter modellabhängig mappen.** reasoning-Modelle (o-Reihe, gpt-5): kein `temperature`/`top_p`, `max_completion_tokens` statt `max_tokens`, `developer` statt `system` (o1-mini: keins von beidem). Responses API: `max_output_tokens`.
-3. **`max_completion_tokens` deckt reasoning-Tokens mit ab** → zu klein = leere/`incomplete` Antwort bei voller Abrechnung. Großzügig setzen, `usage.completion_tokens_details.reasoning_tokens` + `status: incomplete` prüfen.
-4. **Streaming:** Tool-Argumente kommen als JSON-Fragmente → pro `index` akkumulieren, NIE einzelne Chunks parsen. `data: [DONE]` ist kein JSON. `usage` nur mit `stream_options.include_usage=true` im letzten Chunk.
-5. **429 mit Header behandeln:** `retry-after-ms` bzw. `x-ratelimit-*` lesen, exponential Backoff MIT Jitter. RPM vs. TPM unterscheiden.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | 404 `model_not_found` | Modellname aus Config, Deprecations-Seite prüfen (4o/4.1/o4-mini retired) | H22 |
+| 2 | reasoning-Modell (o-Reihe/gpt-5) | Kein `temperature`/`top_p`; `max_completion_tokens`; `developer`-Rolle | A1, B5, B6 |
+| 3 | `status: incomplete` / leere Antwort | Token-Budget großzügig, reasoning-Tokens zählen mit | A2 |
+| 4 | Streaming Tool-Args | Pro `index` akkumulieren, erst nach Stream-Ende parsen | C8, C9 |
+| 5 | Streaming-Parser crasht | `data: [DONE]` ist kein JSON; abfangen vor Parse | C11 |
+| 6 | `usage` ist null beim Streaming | `stream_options.include_usage=true` setzen | C10 |
+| 7 | 400 nach `tool_calls` | Für jede `tool_call_id` eine `tool`-Antwort anhängen | D12, D13 |
+| 8 | 429 Rate-Limit | `retry-after-ms`/`x-ratelimit-*` lesen, Backoff mit Jitter, RPM≠TPM | F17, F18 |
+| 9 | `strict:true`-Schema | `additionalProperties:false` + alle Keys `required`, `refusal` prüfen | G19, G21 |
 
 ---
 

@@ -9,13 +9,27 @@
 
 ---
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Engine-Wahl: sherpa-onnx** (Apache-2.0, open vocabulary, custom Wake Word via `text2token` OHNE Retraining). Porcupine nur, wenn man den Free-Tier-Ablauf **30.06.2026** akzeptiert; openWakeWord-Pretrained-Modelle sind **CC-BY-NC-SA** (nicht kommerziell).
-2. **DLL-Hoelle ist das #1-Deployment-Risiko:** `onnxruntime.dll` in `System32` schlaegt deine mit (Windows-Suchpriorität) → `DllNotFoundException`/falsche Version. `SetDllDirectory`/`AddDllDirectory` + Plattform-Runtime-Paket `…runtime.win-x64` + `CopyLocalLockFileAssemblies` bei single-file publish.
-3. **Audio-Format ist nicht verhandelbar:** sherpa/Porcupine/openWakeWord wollen **16 kHz, mono, 16-bit PCM**. Porcupine **exakt 512 Samples/Frame**, openWakeWord **exakt 1280 Samples (80 ms)**. NAudio liefert oft 48 kHz → **MediaFoundationResampler** dazwischen.
-4. **`reset_stream()` ist Pflicht** direkt nach jeder Keyword-Erkennung bei sherpa-onnx — sonst feuert die naechste Erkennung nicht zuverlaessig.
-5. **Self-Trigger beim Sprechen:** Die App weckt sich beim TTS selbst, wenn das Weckwort vorgelesen wird. Wake-Listener waehrend TTS pausieren ODER Acoustic Echo Cancellation/Double-Talk-Detection. Threshold-Ziel: FA < 0,5/h, FR < 5 %.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Engine waehlen | sherpa-onnx (Apache-2.0, Wake Word ohne Training); openWakeWord-Pretrained = nicht kommerziell | §13 |
+| 2 | Crash beim Nutzer, `DllNotFoundException` | `SetDllDirectory`/`AddDllDirectory`, nie auf System32-`onnxruntime.dll` verlassen | §1 |
+| 3 | single-file publish | `CopyLocalLockFileAssemblies` + native DLLs im Output verifizieren | §2 |
+| 4 | Nur Meta-NuGet referenziert | Auch `…runtime.win-x64`, gleiche Version | §4 |
+| 5 | Wake Word nie erkannt | Audio MUSS 16 kHz mono 16-bit sein → `MediaFoundationResampler` | §6 |
+| 6 | Nur erstes Weckwort erkannt | `Reset(stream)` nach jedem Treffer (sonst Dauerfeuer/Stillstand) | §9 |
+| 7 | Keywords werden nie erkannt | `while (spotter.IsReady(stream)) Decode(stream)` — nie ein einzelner Decode | §21 |
+| 8 | Streaming-KWS erkennt live nicht | KEIN VAD-/Block-Vorfilter vor Streaming-KWS — alle Frames durchreichen | §33 |
+| 9 | App weckt sich beim TTS selbst | Wake-Listener waehrend TTS pausieren / AEC | §19 |
+| 10 | Custom Wake Word einrichten | Via `text2token`, keywords.txt nur Tokens, KEIN `@original`-Marker | §10, §32 |
+| 11 | UI-Update aus Audio-Callback | Via `Dispatcher.InvokeAsync` marshallen | §7 |
+| 12 | RID gesetzt, startet nicht beim Nutzer | `<SelfContained>true</SelfContained>` explizit; `PublishTrimmed` bei WPF verboten | §29, §30 |
+| 13 | Porcupine genutzt | Free-Tier-Keys enden 30.06.2026; Frame exakt 512 Samples | §15, §17 |
 
 ---
 

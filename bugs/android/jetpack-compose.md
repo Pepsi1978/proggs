@@ -35,16 +35,29 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 
 ---
 
-## ⚡ TL;DR — die wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Nie State in der Composition schreiben** (Backwards Write) → Endlosschleife/ANR (§1.1). Schreiben nur in Event-Lambdas/Effekten.
-2. **Lazy-Listen IMMER mit stabilem, eindeutigem `key = { it.id }`** — sonst Scroll-Sprung, State-Mismatch, kaputte Item-Animation (§4.1); Duplikat-Keys = **Crash** (§4.2).
-3. **`remember` ueberlebt keine Rotation/Process-Death/Recycling** → `rememberSaveable` (klein!) oder ViewModel (§2.1/§2.6/§2.9). Grosser Saveable-State = `TransactionTooLargeException` (§2.7).
-4. **`LaunchedEffect`-Key = alle im Block gelesenen veraenderlichen Werte.** `LaunchedEffect(Unit)`/`(true)` ist "so verdaechtig wie `while(true)`" (§3.1); Wert-ohne-Restart → `rememberUpdatedState` (§3.3).
-5. **Stabilitaet:** `List`/`Map`/`Set`/`var`-Klassen sind unstable → kein Skip; Strong Skipping vergleicht unstable Params per `===` (neue Instanz/`copy()` = trotzdem Recompose). `@Immutable`/`ImmutableList` nutzen (§1.2/§1.3).
-6. **Modifier-Reihenfolge ist Logik:** Layout → Dekoration (`clip`→`background`→`border`) → Interaktion (`clickable`) (§5.1).
-7. **Performance IMMER im Release-Build (R8) messen** — Compose im Debug ist by-design langsam (§10.1). Hochfrequente Reads in `graphicsLayer{}/offset{}`-Lambdas deferren (§10.3).
-8. **Scaffold-`innerPadding` IMMER anwenden** — sonst Content unter TopBar/hinter NavBar (verschaerft durch Android-15-edge-to-edge) (§8.1).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Endlos-Recompose / ANR / OOM | State nie in Composition schreiben, nur in Events/Effekten | §1.1 |
+| 2 | Lazy-Liste (Insert/Reorder, Item-Anim) | Immer stabiler `key = { it.id }` an `items()` | §4.1 |
+| 3 | Crash „Key … was already used" | Keys eindeutig machen (`distinctBy`/zusammengesetzt) | §4.2 |
+| 4 | State weg nach Rotation/Recycling | `rememberSaveable` (klein!) oder ViewModel statt `remember` | §2.1 |
+| 5 | Crash `TransactionTooLargeException` | Nur IDs/kleine Werte saven, grosses in ViewModel/Room | §2.7 |
+| 6 | Effekt stale / `LaunchedEffect(Unit)` | Key = alle gelesenen veraenderlichen Werte | §3.1 |
+| 7 | Langlebiger Effekt nutzt alten Wert | `rememberUpdatedState` statt Effekt-Neustart | §3.3 |
+| 8 | Coroutine im Composable-Body | `LaunchedEffect`/`rememberCoroutineScope` nur in Callbacks | §3.5 |
+| 9 | Composable skippt nicht (`List`/`copy()`) | `ImmutableList`/`@Immutable`; Strong Skipping cmp per `===` | §1.2 |
+| 10 | Modifier-Reihenfolge falsch | Layout → `clip`→`background`→`border` → `clickable` | §5.1 |
+| 11 | „Compose ist langsam" | Performance NUR im Release-Build (R8) messen | §10.1 |
+| 12 | Jank beim Scrollen/Animieren | Hochfrequente Reads in `graphicsLayer{}`/`offset{}` deferren | §10.3 |
+| 13 | Content unter TopBar/hinter NavBar | Scaffold-`innerPadding` IMMER anwenden | §8.1 |
+| 14 | Crash „infinity constraints" | Kein verschachteltes gleichachsiges Scrollen | §6.1 |
+| 15 | type-safe Nav crasht (custom Typ) | Eigenen `NavType` per `typeMap` registrieren | §7.4 |
 
 ---
 

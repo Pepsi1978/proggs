@@ -12,15 +12,29 @@
 
 ---
 
-## ⚡ Die wichtigsten Regeln (TL;DR — zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Jeder Hook endet mit `exit 0`** — ausser er soll *bewusst blockieren*, dann `exit 2`
-   (NICHT `exit 1`!). `exit 1` blockiert NICHT und kann Turns vorzeitig beenden.
-2. **Kontext fuer Claude nur via** `{"hookSpecificOutput":{"hookEventName":"...","additionalContext":"..."}}`.
-   Flaches `additionalContext` oder plain stdout wird oft still ignoriert.
-3. **Nach Hook-Aenderung Session neu starten** — die Hook-Config ist gecacht.
-4. **Ein JSON-Syntaxfehler in settings.json killt ALLE Hooks still** — immer validieren.
-5. **stdin (das Event-JSON) robust lesen** und bei leerem/falschem Input sauber `exit 0`.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): **Hochrisiko-Bereich (Stufe C)** — vor echter
+> Arbeit hier ist der VOLLTEXT Pflicht (`Read` ohne `limit`); dieser Kurzcheck dient nur der
+> Schnell-Orientierung. Bei JEDEM Fehler im Bereich gilt ebenfalls Volltext-Pflicht (Stufe B).
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Hook soll blockieren | `exit 2` zum Blocken, NIE `exit 1` (blockiert nicht) | §1.1 |
+| 2 | Hook endet normal | Standalone-Hook IMMER mit `exit 0` beenden | §1.1 |
+| 3 | Kontext an Claude geben | Nur `hookSpecificOutput.{hookEventName,additionalContext}` | §2.1 |
+| 4 | PowerShell-JSON-Output | `ConvertTo-Json -Depth 5` (sonst flach) | §2.2 |
+| 5 | Hook tut nichts nach Edit | Session neu starten — Config ist gecacht | §4.1 |
+| 6 | settings.json geaendert | Ein JSON-Fehler killt ALLE Hooks still — validieren | §3.1 |
+| 7 | stdin (Event-JSON) lesen | Robust lesen, bei leer/falsch sauber `exit 0` | §5.2 |
+| 8 | Windows: settings schreiben | UTF-8-BOM bricht Parse — BOM-frei speichern | §12.1 |
+| 9 | Windows-Hook starten | Immer `pwsh`, nie `powershell.exe` | §12.2 |
+| 10 | Stop-Hook bauen | ZUERST `stop_hook_active` pruefen (sonst Endlosschleife) | §6.1 |
+| 11 | SubagentStop/Stop-Hook | Input-Guard noetig (feuert auch ohne Trigger) | §7.2 |
+| 12 | SessionStart-Hook | Kein `type:"prompt"` (kein ToolUseContext) | §8.1 |
+| 13 | matcher setzen | Exakt `Edit|Write`, MCP mit `.*`-Suffix | §9.1 |
+| 14 | Bash-`.sh`-Hook | `+x`, LF (kein CRLF), kein zwingendes `jq` | §13.2 |
+| 15 | "Hook error" trotz exit 0 | Falsches Label (Regression) — nicht als Fehler werten | §11.1 |
 
 ---
 

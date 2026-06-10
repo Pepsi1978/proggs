@@ -14,16 +14,24 @@ kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal richtig setzt
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`kotlin { jvmToolchain(21) }`** + **`compilerOptions {}`** (nicht `kotlinOptions {}` — das wird in 2.3 ERROR).
-2. **`when` als Expression** ohne `else` bei sealed/enum — Compiler erzwingt Vollstaendigkeit. Erwartbare Fehler als **sealed-Hierarchie** modellieren, nicht werfen.
-3. **Coroutines:** Dispatcher injizieren, strukturierte Scopes, `CancellationException` re-werfen, kein `GlobalScope`, kein `runBlocking` auf Main.
-4. **Flow→Compose:** `collectAsStateWithLifecycle()` + `stateIn(..., WhileSubscribed(5000), initial)`; one-shot-Events via `Channel`+`receiveAsFlow()`.
-5. **Compose:** Strong Skipping ist seit Kotlin 2.0.20 Default, ersetzt aber kein `@Immutable`/`ImmutableList`; `rememberSaveable` fuer User-State; teure Reads via Lambda-Modifier deferred.
-6. **Immutability by default:** read-only `List`/`Set`/`Map`, `buildList{}`, `val`; `kotlinx.collections.immutable` v.a. fuer Compose-Stabilitaet.
-7. **Build:** KSP2 statt KAPT (KSP1 ab 2.3 inkompatibel), Compose-Compiler als Gradle-Plugin + Metrics, R8 fullMode mit schmalen keep-Rules, Configuration- + Build-Cache an.
-8. **`value class`** fuer typsichere IDs; `require/check/error` fuer Vorbedingungen; `!!` vermeiden.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Gradle-Build konfigurieren | `kotlin { jvmToolchain(21) }` + `compilerOptions {}` (kein `kotlinOptions` — 2.3 ERROR) | §1, §10 |
+| 2 | Verzweigung ueber sealed/enum | `when` als Expression ohne `else` — Exhaustiveness erzwungen | §1 |
+| 3 | Coroutine starten | Dispatcher injizieren, strukturierte Scopes, `CancellationException` re-werfen, kein `GlobalScope`/`runBlocking` | §2 |
+| 4 | Flow in Compose anzeigen | `collectAsStateWithLifecycle()` + `stateIn(.., WhileSubscribed(5000), initial)` | §5 |
+| 5 | One-shot-Events | `Channel`+`receiveAsFlow()`, nicht SharedFlow | §2, §5 |
+| 6 | Compose-Stabilitaet | Strong Skipping ersetzt kein `@Immutable`/`ImmutableList`; `rememberSaveable` fuer User-State | §6, §7 |
+| 7 | Collections deklarieren | Read-only `List`/`Set`/`Map`, `buildList{}`, `val`; immutable fuer Compose | §4 |
+| 8 | Annotation-Processing | KSP2 statt KAPT (KSP1 ab 2.3 inkompatibel) | §10 |
+| 9 | Release minifizieren | R8 fullMode, schmale keep-Rules, Release IMMER testen | §10 |
+| 10 | Typsichere IDs / Vorbedingungen | `value class` fuer IDs; `require/check/error`; `!!` vermeiden | §1, §3 |
 
 ---
 

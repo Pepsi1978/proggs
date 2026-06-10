@@ -13,18 +13,26 @@ WPF auf .NET, WinUI 3 / Windows App SDK **1.8**, Windows 10/11. Kontext: self-co
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal richtig setzt
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Async durchgaengig:** `await` statt `.Result`/`.Wait()`; in Library-/Service-Code konsequent `ConfigureAwait(false)`; in UI-Code (ViewModels/Code-Behind) NICHT. `async Task` statt `async void` (Ausnahme: echte Event-Handler). `offiziell`
-2. **Ein langlebiger `HttpClient`** (`SocketsHttpHandler { PooledConnectionLifetime = 2-15 min }`) oder `IHttpClientFactory` mit Typed Clients (Groq/Gemini je einer) — nie `new HttpClient()` pro Call. `offiziell`
-3. **Resilience:** `Microsoft.Extensions.Http.Resilience` → `AddStandardResilienceHandler()`; bei POST (Whisper-Upload!) Retries via `DisableForUnsafeHttpMethods()` abschalten. `offiziell`
-4. **`JsonSerializerOptions` als statische Instanz** mit `JsonSerializerDefaults.Web` (camelCase + case-insensitive); `MakeReadOnly()` zum Einfrieren; Source-Gen-Context fuer Start/Trim. `offiziell`
-5. **`TimeProvider` injizieren** statt `DateTime.Now`/`Timer` — testbar mit `FakeTimeProvider`. `offiziell`
-6. **Single-File:** `Environment.ProcessPath` statt `Assembly.Location`; WPF **kein** `PublishTrimmed`/`PublishAot`; Publish explizit `-r win-x64 --self-contained true`. `offiziell`
-7. **Overlay = WPF** (WinUI 3 kann kein echtes Transparenz-/Click-through-Overlay, kein packaged Single-File). `offiziell`
-8. **Generic Host (`Microsoft.Extensions.Hosting`) auch im Desktop** für DI + Config + Logging; Constructor-Injection in Windows/ViewModels. `offiziell`
-9. **`.editorconfig` + `<AnalysisLevel>latest-recommended</>` + `<EnforceCodeStyleInBuild>` + `<TreatWarningsAsErrors>`** — die modernen Patterns per Build erzwingen (CA2007, CA1816, CA1851, CA2016, CA1848, SYSLIB-Source-Gen). `offiziell`
-10. **Kultur/Typen:** `StringComparison.Ordinal(IgnoreCase)` explizit, `CultureInfo.InvariantCulture` für Maschinendaten, `decimal` für Geld, `DateTimeOffset` für Zeitpunkte, `private readonly object _lock` (nie `lock(this)`). `offiziell`
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Async-Code schreiben | `await` statt `.Result`; in Lib `ConfigureAwait(false)`, `async Task` statt `void` | §1 |
+| 2 | HTTP-Client anlegen | Ein langlebiger Client `PooledConnectionLifetime`; Typed Clients pro API | §2 |
+| 3 | API-Calls absichern | `AddStandardResilienceHandler()`; bei POST `DisableForUnsafeHttpMethods()` | §2 |
+| 4 | JSON (de)serialisieren | `JsonSerializerOptions` statisch, `JsonSerializerDefaults.Web`, `MakeReadOnly()` | §3 |
+| 5 | Zeit/Timer im Code | `TimeProvider` injizieren statt `DateTime.Now`/`Timer` | §1 |
+| 6 | Single-File veroeffentlichen | `Environment.ProcessPath`; WPF kein Trim/AOT; `--self-contained true` | §7 |
+| 7 | Overlay/Transparenz bauen | Overlay = WPF, nie WinUI 3 (kein echtes Click-through) | §6 |
+| 8 | App-Struktur/DI aufsetzen | Generic Host fuer DI/Config/Logging; Constructor-Injection | §9 |
+| 9 | Projekt-Defaults setzen | `AnalysisLevel latest-recommended` + `TreatWarningsAsErrors` | §8 |
+| 10 | Strings/Zahlen/Locks | `StringComparison.Ordinal`, `InvariantCulture`, `decimal`, `_lock`-Objekt | §4 |
+| 11 | WPF MVVM bauen | `CommunityToolkit.Mvvm`: `[ObservableProperty]`, `[RelayCommand]` | §5 |
+| 12 | Tests/Mocking | NSubstitute statt Moq; `FakeTimeProvider` fuer Zeit-Tests | §8 |
 
 ---
 

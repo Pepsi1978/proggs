@@ -11,22 +11,24 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal richtig setzt
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Nie rohe Stille an Groq senden.** Sprachgehalt-/VAD-Vorfilter VOR dem Request — verhindert
-   Halluzinationen UND spart Geld (Min-Billing 10 s/Clip). `offiziell`+`extern`
-2. **`response_format=verbose_json`** statt `text` — bei Groq ohne Mehrlatenz/-kosten, liefert die
-   Confidence-Felder zum Filtern. `segment`-Timestamps ja, `word`-Timestamps nur bei Bedarf (Extra-Latenz). `offiziell`
-3. **Confidence-Gate mit UND:** `no_speech_prob > 0.6` UND `avg_logprob < -1.0` verwerfen;
-   `compression_ratio > 2.4` gegen Repetition. AND schuetzt leise Sprache. `offiziell`
-4. **Mehrsprachige Floskel-Blocklist** als letzter Filter — nur bei kurz + Stille-Kontext greifen lassen. `extern`
-5. **Modell `whisper-large-v3-turbo`** ($0.04/h, 216x, WER ~12 %) als Default fuers Diktat; `v3` nur
-   wenn maximale Genauigkeit/Translation noetig. `offiziell`
-6. **`language="de"` (ISO-639-1), `temperature=0`**, `prompt` (≤224 Tokens) nur fuer Eigennamen/Schreibweisen. `offiziell`
-7. **.NET-Resilienz:** statischer `HttpClient` + `SocketsHttpHandler(PooledConnectionLifetime)`;
-   **Upload-POST NICHT automatisch retryen** (Doppel-Transkription/-Abrechnung); `retry-after` bei 429 auswerten. `offiziell`
-8. **16 kHz mono PCM16, KEIN Denoise/AGC/Normalisierung** vor Whisper (schadet der Genauigkeit). WAV = Latenz, FLAC = Groesse. `offiziell`+`extern`
-9. **Batch API** (50 % guenstiger) fuer nicht-Echtzeit-Transkripte; fuer Live ungeeignet. `offiziell`
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Clip an Groq senden | Nie rohe Stille — Sprachgehalt-/VAD-Vorfilter VOR dem Request | §1 |
+| 2 | Response-Format | `response_format=verbose_json` (Confidence-Felder, kein `word`-Timestamp) | §2 |
+| 3 | Nachfilter Confidence | UND: `no_speech_prob>0.6` UND `avg_logprob<-1.0`; `compression_ratio>2.4` | §3 |
+| 4 | Letzter Filter | Mehrsprachige Floskel-Blocklist nur bei kurz + Stille-Kontext | §3 |
+| 5 | Modell waehlen | `whisper-large-v3-turbo` als Default; `v3` nur fuer max. Genauigkeit/Translation | §2 |
+| 6 | Request-Params | `language="de"` (ISO-639-1), `temperature=0`, `prompt` nur Eigennamen | §2 |
+| 7 | Audio aufnehmen | 16 kHz mono PCM16, KEIN Denoise/AGC/Normalisierung; WAV=Latenz | §1 |
+| 8 | .NET HTTP-Resilienz | Statischer `HttpClient`+`SocketsHttpHandler`; Upload-POST NICHT retryen; `retry-after` lesen | §5 |
+| 9 | JSON-DTOs | System.Text.Json Source-Gen, snake_case via `[JsonPropertyName]` | §6 |
+| 10 | Kosten senken | VAD-Vorfilter (groesster Hebel), kurze Clips buendeln (Min-Billing 10 s); Batch API 50 % guenstiger | §7 |
 
 ---
 

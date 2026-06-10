@@ -12,18 +12,26 @@
 
 ---
 
-## ⚡ TL;DR — die wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **K2 ist seit Kotlin 2.0 default und nicht abschaltbar** — strengere Inferenz/Smart-Cast/
-   Exhaustiveness. Brechenden Code explizit typisieren, NICHT entfernen.
-2. **Coroutines: `CancellationException` NIE verschlucken** (`catch(e){ if(e is CancellationException) throw e }`),
-   nie `GlobalScope`/eigenes `Job()` an Builder, nie `runBlocking` auf Main.
-3. **Flow in Compose: `collectAsStateWithLifecycle()`** (nicht `collectAsState`), `StateFlow` mit
-   `WhileSubscribed(5000)` (nicht `0`).
-4. **Compose-Stabilitaet:** instabile Parameter (alle `List`/`Map`, `var`-Klassen) verhindern Skipping
-   → `@Immutable`/`ImmutableList`. `remember` ueberlebt keine Rotation → `rememberSaveable`.
-5. **Release-Crashes (R8):** kotlinx.serialization/Reflection/Coroutines brauchen keep-Rules — NIE die Klasse entfernen.
-6. **KSP-Version MUSS exakt zur Kotlin-Version passen**; Compose-Compiler ist seit 2.0 ein Gradle-Plugin (kein `composeOptions` mehr).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Code baute unter 1.9, bricht unter 2.0 | K2 ist default, nicht abschaltbar — explizit typisieren, nie Code entfernen | §1.1 |
+| 2 | `catch(e: Exception)` um Coroutine | `CancellationException` re-werfen, nie verschlucken | §2.1 |
+| 3 | Coroutine-Scope/Builder | Kein `GlobalScope`, kein eigenes `Job()` an Builder, kein `runBlocking` auf Main | §2.2, §2.6 |
+| 4 | Flow in Compose sammeln | `collectAsStateWithLifecycle()`, nie `collectAsState()` | §4.1 |
+| 5 | StateFlow via `stateIn` | `WhileSubscribed(5000)`, nie `0` | §4.2 |
+| 6 | Composable recomposed staendig | Instabile Params (`List`/`var`) → `@Immutable`/`ImmutableList` | §6.1 |
+| 7 | User-State weg nach Rotation | `rememberSaveable` statt `remember` | §7.1 |
+| 8 | `LaunchedEffect(Unit)`/`(true)` | Alle veraenderlichen Werte als Keys — sonst verdaechtig | §8.1 |
+| 9 | Release-Crash nur minifiziert | R8 keep-Rules fuer Serialization/Reflection/Coroutines, nie Klasse loeschen | §10.3 |
+| 10 | KSP `too old`-Fehler | KSP-Version exakt zur Kotlin-Version; KSP1 endet ab Kotlin 2.3 | §10.1 |
+| 11 | Compose-Build-Konflikt | Compose-Compiler ist Gradle-Plugin, `composeOptions` entfernen | §10.2 |
+| 12 | JVM-Target inkonsistent | `kotlin { jvmToolchain(17) }` statt source/targetCompatibility | §10.4 |
 
 ---
 

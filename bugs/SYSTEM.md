@@ -2,7 +2,8 @@
 
 > Stand: 2026-06-01 (v1), erweitert 2026-06-02 (Kopplung mit Best-Practices, §9), erweitert
 > 2026-06-07 (das LESEN der Best-Practices-Datei wird jetzt vom Guard MIT-erzwungen — erst Almanach,
-> dann Best Practices, dann coden; §3/§4/§9). Entwickelt mit Frank, ausgeloest durch den
+> dann Best Practices, dann coden; §3/§4/§9), erweitert 2026-06-10 (**Digest-Modell**: Kurzcheck-
+> Sektionen in allen Almanachen + Best-Practices, 3 Lese-Stufen A/B/C; §11). Entwickelt mit Frank, ausgeloest durch den
 > Chrome-Extension-Verschwind-Bug (~1h verloren, weil der dokumentierte Workaround
 > nicht VORHER nachgeschlagen wurde). Dieses Dokument beschreibt, wie das System
 > arbeitet. Es ist die Referenz fuer kuenftige Verbesserungen.
@@ -59,7 +60,7 @@ drei Schichten, die unabhaengig voneinander greifen:
 | # | Name | Mechanismus | Wann | Poka-Yoke |
 |---|------|-------------|------|-----------|
 | 1 | **Praesenz** | `bug-almanac-index` Hook (SessionStart) liest `README.md` und blendet die Liste der vorhandenen Almanache + erwarteten Bereiche ein | bei JEDEM Session-Start (auch nach Compaction) | Stufe 1–2: das System ist immer im Blick |
-| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde — und (seit 2026-06-07) danach weiter, solange die zugehoerige `best-practices-<bereich>.md` (falls vorhanden) nicht gelesen wurde. Read einer `bugs/<X>.md` bzw. `best-practices-<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den jeweiligen "gelesen"-Marker und gibt frei (1x pro Bereich/Session; Reihenfolge erst Almanach, dann Best Practices). **Kein Almanach vorhanden (seit 2026-06-07): ebenfalls BLOCKIERT** — bis eine bewusste Quittung `bug-almanac-ack-<slug>.flag` (im TEMP) gesetzt ist (von mir NACH Franks Entscheidung: Recherche ODER bewusst verzichten) oder der Notaus aktiv ist. Damit ist der "neuer Bereich"-Trigger nicht mehr zahnlos (frueher nur `additionalContext`, wurde uebersehen — im Block-Log nie ein "kein-almanach"-Eintrag). Zusaetzlich erkennt der Guard **komplett neue Sprachen generisch** ueber die Endung (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.h/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`), sodass auch eine erste Rust-/Go-Datei Zaehne bekommt statt still durchzurutschen. Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
+| 2 | **Erzwingung** | `bug-almanac-guard` Hook (PreToolUse auf Read/Edit/Write/MultiEdit/Bash) **BLOCKIERT** Edit/Write/MultiEdit (`permissionDecision:deny`), solange der passende Almanach in dieser Session nicht gelesen wurde — seit 2026-06-10 genuegt dafuer der **Kurzcheck** (`Read` mit `limit=80`); HOCHRISIKO-Bereiche verlangen den Volltext (full-Marker, §11) — und (seit 2026-06-07) danach weiter, solange die zugehoerige `best-practices-<bereich>.md` (falls vorhanden) nicht gelesen wurde. Read einer `bugs/<X>.md` bzw. `best-practices-<X>.md` ODER ein Bash-`cat`/`bat`/`less` darauf setzt den jeweiligen "gelesen"-Marker und gibt frei (1x pro Bereich/Session; Reihenfolge erst Almanach, dann Best Practices). **Kein Almanach vorhanden (seit 2026-06-07): ebenfalls BLOCKIERT** — bis eine bewusste Quittung `bug-almanac-ack-<slug>.flag` (im TEMP) gesetzt ist (von mir NACH Franks Entscheidung: Recherche ODER bewusst verzichten) oder der Notaus aktiv ist. Damit ist der "neuer Bereich"-Trigger nicht mehr zahnlos (frueher nur `additionalContext`, wurde uebersehen — im Block-Log nie ein "kein-almanach"-Eintrag). Zusaetzlich erkennt der Guard **komplett neue Sprachen generisch** ueber die Endung (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.h/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`), sodass auch eine erste Rust-/Go-Datei Zaehne bekommt statt still durchzurutschen. Jeder Block wird nach `~/.claude/state/bug-almanac-blocks.log` protokolliert. Notaus: `bug-almanac-disable.flag` im TEMP. FAIL-OPEN bei jedem Hook-Fehler. | sobald eine bereichstypische Datei angefasst wird | **Stufe 2 (Erzwingung)**: blockiert am konkreten Ausloeser |
 | 2b | **Fehler-Bruecke** | `bug-case-auto-writer` Hook (PostToolUseFailure) verbindet die reaktive `bug-cases.jsonl` mit dem proaktiven Almanach: bei einem NEUEN Fehler (kein bekannter Fix) haengt er einen "ALMANACH-BRUECKE"-Hinweis an (passenden `bugs/<bereich>.md` pruefen; bei hartnaeckigem Fehler ohne Almanach → Recherche mit Franks OK). | bei jedem Tool-Fehler | Stufe 1–2: verbindet beide Ebenen |
 | 3 | **Verhalten** | Regel `~/.claude/rules/known-bugs-before-coding.md` | immer geladen | Stufe 1: Verhaltensanweisung |
 
@@ -84,7 +85,7 @@ gespiegelt in `claude-code-setup/hooks/`.
 1. Bereich + (falls relevant) Version erkennen — woran arbeite ich?
 2. Greift das System? (siehe §6 Schwelle) — bei trivialem Kleinkram: nein, weiter.
 3. Almanach im Index vorhanden?
-   ├─ JA  → komplett lesen → Version live abgleichen
+   ├─ JA  → Kurzcheck lesen (Read mit limit=80; HOCHRISIKO-Bereich: Volltext, §11) → Version live abgleichen
    │        ├─ gleiche/aeltere Version als dokumentiert → weiter zu 3b
    │        └─ neuere Version als dokumentiert → Frank melden, OK fuer kurzen
    │           Re-Check einholen (existieren die Bugs noch? neue dazugekommen?) → weiter zu 3b
@@ -98,7 +99,8 @@ gespiegelt in `claude-code-setup/hooks/`.
     → JA: komplett lesen (wie man es von vornherein richtig macht). Der Guard erzwingt das
       ohnehin in der Reihenfolge erst Almanach, dann Best Practices. → NEIN: nur Almanach zaehlt.
 4. ARBEITEN — mit den bekannten Bugs UND den Best Practices im Kopf, damit Fehler gar nicht erst entstehen.
-5. Tritt ein Fehler auf → ZUERST Almanach pruefen: ist das ein bekannter Bug?
+5. Tritt ein Fehler auf → STUFE B: SOFORT den VOLLTEXT des Almanachs lesen (Read ohne limit)
+   → ist das ein bekannter Bug?
    └─ ja → dokumentierte Loesung sofort anwenden (schnellster Pfad).
 6. Neuen Bug erlebt (oder im Netz beste Loesung gefunden)
    → NUR wenn es ein HARTER, sicher bestaetigter Bug ist (reproduzierbar, eindeutig
@@ -228,6 +230,9 @@ Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
   gepflegt werden muss.
 - Schwellen-Erkennung („echte Bereichsarbeit vs. Kleinkram") laeuft ueber mein
   Urteil; falls das in der Praxis zu oft daneben liegt, schaerfen wir nach.
+- **GESCHLOSSEN am 2026-06-10 (Digest-Modell, §11):** Der Volltext-Lese-Zwang fuer ALLE
+  Bereiche kostete ~16k-23k Tokens pro Bereich/Session. Jetzt: Kurzcheck vorab (Stufe A),
+  Volltext nur bei Fehler (B) und Hochrisiko (C).
 - **GESCHLOSSEN am 2026-06-07:** Frueher rutschten (a) erkannte Bereiche OHNE Almanach
   und (b) komplett neue Sprachen ohne Mapping still durch (nur Hinweis bzw. gar nichts).
   Jetzt blockiert der Guard beide Faelle mit Quittung, und eine generische Endungs-Whitelist
@@ -236,3 +241,43 @@ Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
   dann bewusst Almanach anlegen lassen. Restkante, bewusst akzeptiert.
 - Das System wird in Aktion erprobt und nach Direktive #1 (Superintelligenz)
   iterativ verbessert.
+
+---
+
+## 11. Das Digest-Modell (Stufe A/B/C — seit 2026-06-10)
+
+**Problem (Frank, 2026-06-10):** Der Volltext-Lese-Zwang kostete pro Bereich und Session
+~16.000-23.000 Tokens (Almanache sind 7-90 KB gross), obwohl die meisten Aufgaben fehlerfrei
+durchlaufen. Zu viel immer-geladener Ballast senkt zudem die Genauigkeit (Context-Rot).
+
+**Loesung:** Jeder Almanach und jede Best-Practices-Datei traegt oben eine kompakte
+**„⚡ Kurzcheck"-Sektion** (Erkennungssignale + Sofort-Regeln). Drei Stufen regeln den Lese-Umfang:
+
+| Stufe | Wann | Was lesen | Erzwingung |
+|-------|------|-----------|------------|
+| **A** | vor jeder echten Arbeit im Bereich | NUR den Kurzcheck (`Read` mit `limit=80`) — erst Almanach, dann Best Practices | Guard: read-Marker (jedes Read setzt ihn) |
+| **B** | ab dem ERSTEN Fehler im Bereich | VOLLTEXT des Almanachs (`Read` ohne `limit`) | `bug-case-auto-writer` haengt an jeden Tool-Fehler den Stufe-B-Hinweis |
+| **C** | Hochrisiko-Bereiche: `r8`, `firebase-billing`, `claude-hooks`, `claude-config` | VOLLTEXT schon VORAB | Guard: full-Marker — der Read-Zweig setzt ihn nur bei `Read` ohne `limit` (oder `limit>=500`); Bash-`cat`/`bat`/`less` zaehlt als Volltext |
+
+**Format der Kurzcheck-Sektion (verbindlich, auch fuer neue Almanache):**
+
+- Ueberschrift woertlich: `## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)`
+- Position: direkt NACH dem einleitenden Blockquote (Stand-Header), VOR dem ersten `---`
+- Blockquote mit Digest-Modell-Verweis auf §11 (Hochrisiko-Variante bei Stufe-C-Bereichen)
+- Tabelle `| # | Signal / Situation | Sofort-Regel | Volltext |` (Best-Practices-Dateien:
+  `| # | Situation | Best Practice (Kurzform) | Volltext |`), 5-15 Zeilen, wichtigste/
+  haeufigste Fallen zuerst (⭐/KRITISCH), Volltext-Spalte = Abschnittsnummer der Datei
+- Sektion gesamt <= 30 Zeilen und vollstaendig innerhalb der **ersten 80 Zeilen** der Datei
+  (der Stufe-A-Read ist `limit=80` — was darunter liegt, wird nicht gesehen!)
+- Pflege: Jeder neue Top-Bug wird AUCH im Kurzcheck ergaenzt; der `bug-almanach-recherche`-Skill
+  legt die Sektion bei neuen Almanachen direkt mit an.
+
+**Marker-Mechanik im Guard:** `bug-almanac-read-<key>.flag` (jedes Read) +
+`bug-almanac-full-<key>.flag` (nur Volltext-Read; Transcript-Fallback erkennt ein Read ohne
+`limit`-Feld). Beide loescht der Index-Hook bei Session-Start (Wildcard `bug-almanac-*.flag`).
+Die Hochrisiko-Liste lebt in BEIDEN Guard-Varianten (`$highRiskKeys` in der .ps1, `case`-Liste
+in der .sh) und in der Regel `known-bugs-before-coding.md` — alle drei synchron halten.
+
+**Verlustfrei (lossless-context-principle):** Nichts wird weggeworfen — der Volltext bleibt die
+Referenz, ist per Pfad jederzeit erreichbar und bei B/C weiterhin erzwungen. Der Kurzcheck ist
+die Erkennungs-Antenne fuer stille Fehler bei ~3-5 % der frueheren Token-Kosten.

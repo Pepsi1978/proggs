@@ -10,13 +10,22 @@
 > haben 2026 aktiv mit Client-Identity-Checks, Token-Revocation und Bans reagiert. Diese Datei
 > dokumentiert die Mechanik UND die realen Bruchstellen/Risiken — nicht als Empfehlung.
 
-## TL;DR — die 5 wichtigsten Erkenntnisse
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Codex CLI „Sign in with ChatGPT" ist der OFFIZIELLE, erlaubte Abo-OAuth-Flow** (Client-ID `app_EMoamEEZ73f0CkXaXp7hrann`, `auth.openai.com`, PKCE, Callback-Port 1455, `originator=codex_cli_rs`, Tokens in `~/.codex/auth.json`). Headless: `codex login --device-auth` (Admin-Freigabe nötig).
-2. **Der „Hermes"-Trick** nutzt EXAKT diesen Codex-Flow (gleiche Client-ID/Originator/Runtime) und stellt einen lokalen OpenAI-kompatiblen Proxy bereit → beliebige Tools zapfen das ChatGPT-Abo an. Bricht, sobald OpenAI Client-ID/Originator/Endpunkt ändert.
-3. **Anthropic blockt das seit 09.01.2026 server-seitig** (Client-Identity-Check: „This credential is only authorized for use with Claude Code"), verschärfte ToS Feb 2026, widerruft Refresh-Tokens, bannt teils binnen 20 Min. Header-Spoofing reicht nicht mehr.
-4. **Copilot-Abo als LLM-Backend** (copilot-api) via GitHub-Token + Editor-Imitations-Header — Grauzone, Account-Sperr-Risiko.
-5. **Funktionserhaltender, legaler Ausweg:** API-Key statt Abo-OAuth in Drittsoftware ODER ausschließlich die offizielle CLI (läuft auch remote per SSH).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Abo statt API-Key in Drittsoftware geplant | Erst Legalitaet pruefen — oft ToS-Verstoss | TL;DR, Checkliste |
+| 2 | ⭐ Claude Pro/Max OAuth in Drittsoftware | Seit 09.01.2026 geblockt + Ban — NICHT bauen | §C1 |
+| 3 | "only authorized for use with Claude Code" (403) | Harter Client-Block, kein Retry — auf API-Key | §C1, §E2 |
+| 4 | Codex „Sign in with ChatGPT" (offiziell) | Erlaubt; Port 1455, `~/.codex/auth.json` | §A1 |
+| 5 | Headless/SSH-Login schlaegt fehl | `codex login --device-auth` (Admin-Freigabe) | §A2 |
+| 6 | Ploetzlich 401/403 nach Anbieter-Update | Client-ID/Originator/Endpoint hat sich geaendert | §E1 |
+| 7 | `auth.json`/Tokens ablegen | Wie Passwort: nie committen, nie loggen | §A1, Checkliste |
+| 8 | Legaler, stabiler Ausweg | API-Key ODER offizielle CLI (auch per SSH) | §E3 |
 
 ---
 

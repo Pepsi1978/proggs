@@ -14,19 +14,28 @@ VoiceAgent **1.2.0**.
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal richtig setzt
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Zustandsautomat Idle → Listening → Thinking → Speaking** — der Follow-up-Timer laeuft
-   AUSSCHLIESSLICH im Idle und zaehlt ab Antwort-ENDE (Alexa 5 s, Google 8 s). `offiziell`
-2. **Rede ist heilig:** Eine Aufnahme, die im Wachfenster begann, wird IMMER verarbeitet.
-   Max-Utterance-Deckel (15–30 s) finalisiert + verarbeitet, verwirft nie. `offiziell`+`extern`
-3. **Stille-Pause: 300–550 ms Konversation, 1000–2000 ms Diktat** — plus semantisches
-   Endpointing (FERTIG/WEITER) als Netz gegen Gedankenpausen. `offiziell`
-4. **Latenz-Budget pro Stufe** (Ziel Voice-to-Voice < 1 s): Turn-Detection 50–100 ms,
-   STT 50–200 ms, LLM-TTFT 100–200 ms, TTS-TTFB 50–80 ms. Zwischenschritte aufs kleinste
-   ausreichende Modell/den niedrigsten Effort. `extern` (LiveKit/channel.tel/Sierra)
-5. **Streaming + Ueberlappung ueberall**: LLM-Token satzweise an TTS, Audio abspielen waehrend
-   der Rest entsteht, EIN offener Audio-Output (PCM, gleiches Format) gegen Klicks. `offiziell`
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Session-Lebenszyklus bauen | FSM Idle→Listening→Thinking→Speaking, Timer nur im Idle | §1 |
+| 2 | Follow-up-Fenster setzen | Nach JEDER Antwort oeffnen, ab Antwort-Ende zaehlen | §1 |
+| 3 | Im Fenster begonnene Rede | IMMER verarbeiten, nie still verwerfen | §1 |
+| 4 | Stille-Pause dimensionieren | 300–550 ms Dialog, 1000–2000 ms Diktat + semantisches Netz | §2 |
+| 5 | Endpointing robust machen | Drei Schichten: Energie + Transkript + LLM-Check (FERTIG/WEITER) | §2 |
+| 6 | Endlos-Aufnahme verhindern | Max-Utterance-Deckel 15–30 s, finalisieren UND verarbeiten | §2 |
+| 7 | Daueraufnahme stabil halten | EINE WaveInEvent-Instanz, Watchdog, Stop/Dispose serialisieren | §3 |
+| 8 | Windows-Audio einrichten | AGC/Boost/Ducking/Exclusive aus (mmsys.cpl, einmalig) | §3 |
+| 9 | Latenz minimieren | Budget < 1 s, Zwischenschritte aufs kleinste Modell/Effort | §4 |
+| 10 | Pipeline schnell machen | Parallelisieren statt verketten, Streaming + Ueberlappung | §4 |
+| 11 | Gapless-Audio sichern | EIN offener Output, BufferedWaveProvider, LINEAR16/PCM | §4 |
+| 12 | Barge-in ermoeglichen | Stufe 1 Mute-Trade-off, Stufe 3 echtes Barge-in mit AEC | §5 |
+| 13 | STT-Requests fuer Voice | `language=de` explizit, Timeout 5–10 s, EIN HttpClient | §6 |
+| 14 | Frueherkennung sichern | Jeden FSM-Uebergang + Stufen-Latenz als CHECKPOINT loggen | §7 |
 
 ---
 

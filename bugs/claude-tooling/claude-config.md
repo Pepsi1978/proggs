@@ -16,15 +16,29 @@
 
 ---
 
-## ⚡ TL;DR (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **CLAUDE.md ist KEINE erzwungene Config** — sie kommt als User-Message nach dem System-Prompt ("treated as context, not enforced configuration"). Verhalten, das ZWINGEND laufen muss, gehoert in einen **Hook**, nicht in CLAUDE.md/Rule.
-2. **Alles immer-Geladene kostet bei jedem Turn Tokens** (Context-Rot). CLAUDE.md wird IMMER voll geladen → Ziel **< 200 Zeilen**, Detail in Regel-Dateien/Skills auslagern. `@import` spart KEINE Tokens (laedt trotzdem voll).
-3. **Ein einziger JSON-Fehler ODER ein UTF-8-BOM macht `settings.json` STILL ungueltig** → alle Settings/Hooks/Permissions weg, keine Warnung. JSON nie mit `sed`/`echo` schreiben, immer validieren + BOM-frei speichern.
-4. **`MEMORY.md` laedt nur die ersten ~200 Zeilen / 25 KB** — Rest faellt still weg (genau die Session-Start-Warnung "27.2KB > 24.4KB"). Index kurz halten, Detail in Topic-Dateien.
-5. **`paths:`-Frontmatter ist eine Falle**: in **Skills** macht es den Skill undiscoverable (#49835 OPEN); in Rules greift es nur projektweit + nur bei *Read*, nicht *Write*. User-Level-Regeln (`~/.claude/rules/`) IMMER ohne `paths:` lassen.
-6. **Subagents erben CLAUDE.md/Rules NICHT** (#29423 OPEN) und Custom-Agents werden NICHT als `subagent_type` erkannt — mit `general-purpose` + Prompt starten, Kontext per `subagent-context`-Hook injizieren.
-7. **`allow`-Liste ist KEINE Whitelist** (erst recht nicht unter `bypassPermissions`) — Sperren nur via `deny`.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): **Hochrisiko-Bereich (Stufe C)** — vor echter
+> Arbeit hier ist der VOLLTEXT Pflicht (`Read` ohne `limit`); dieser Kurzcheck dient nur der
+> Schnell-Orientierung. Bei JEDEM Fehler im Bereich gilt ebenfalls Volltext-Pflicht (Stufe B).
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Verhalten MUSS immer laufen | Hook statt CLAUDE.md (CLAUDE.md ist advisory) | §1.1 |
+| 2 | CLAUDE.md waechst | Ziel < 200 Zeilen, Detail in Rules/Skills (Context-Rot) | §1.2 |
+| 3 | Token sparen via `@import` | Spart KEINE Tokens — laedt voll; nur path-scoped/Skill spart | §1.3 |
+| 4 | settings.json schreiben | Ein JSON-Fehler ODER BOM killt ALLES still — validieren | §3.1 |
+| 5 | Windows: settings/.mcp.json | UTF-8-BOM bricht Parse — BOM-frei speichern | §3.2 |
+| 6 | `MEMORY.md` pflegen | Nur erste ~200 Zeilen / 25 KB laden — Index kurz | §6.1 |
+| 7 | User-Rule mit `paths:` | NIE `paths:` user-level (ignoriert) | §2.1 |
+| 8 | path-scoped Rule | Triggert nur bei Read, nicht Write; Globs quoten | §2.2 |
+| 9 | Skill mit `paths:` | ENTFERNEN — macht Skill undiscoverable | §4.1 |
+| 10 | Skill `description` | Einzeilig in Quotes, Trigger front-loaden | §4.2 |
+| 11 | Subagent braucht Kontext | Erbt CLAUDE.md/Rules nicht — per Hook injizieren | §2.4 |
+| 12 | Custom-Agent starten | `general-purpose` + Prompt, nie Custom-`subagent_type` | §5.1 |
+| 13 | `allow`-Liste setzen | Keine Whitelist — Sperren nur via `deny` | §3.6 |
+| 14 | Config-/Skill-Datei (Win) | LF halten (CRLF bricht Edit-Tool) | §8.1 |
+| 15 | Subagent crasht (0 Token) | `ENABLE_TOOL_SEARCH` + `tools:`-Whitelist | §5.4 |
 
 ---
 

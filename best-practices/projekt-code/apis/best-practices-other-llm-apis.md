@@ -3,6 +3,23 @@
 > Gegenstueck zu `bugs/apis/other-llm-apis.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
 > Ein Abschnitt pro Anbieter — gleiche Anbieter-Liste wie die Bug-Datei.
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Cohere RAG/Tools | Native v2-API; `response_format`-Schema; `strict:true` | §1 |
+| 2 | Together Traffic | Gleichmaessig senden; 429+503 getrennt mit Backoff; `x-ratelimit-reset` | §2 |
+| 3 | Fireworks | Voller Pfad-ID; Structured Output; On-Demand statt Serverless | §3 |
+| 4 | Perplexity | `search_*` via `extra_body`; `enable_search_classifier` nutzen | §4 |
+| 5 | Bedrock | `Converse`-API; SigV4/IAM; Cross-Region Inference Profiles | §5 |
+| 6 | Azure OpenAI | Deployment-Name statt Modell; `api-version` aktuell; AzureOpenAI-Client | §6 |
+| 7 | Cerebras/Vertex | Modell-IDs nicht hardcoden; Vertex via ADC/SA, kein Key | §7, §8 |
+| 8 | HF Providers | Router-Endpunkt + HF-Token; Provider per Suffix (`:cheapest`) | §9 |
+
 ## 1. Cohere (Command, Rerank, Embed)
 - Fuer RAG/Citations/Connectors die **native v2-API** nutzen, nicht den OpenAI-Kompat-Layer — `connectors`, `documents`, `citation_options` fehlen dort. Quelle: https://docs.cohere.com/docs/compatibility-api · offiziell
 - **Structured Outputs** ueber `response_format` mit JSON-Schema setzen (garantiert Schema-Konformitaet, kein nachgelagertes Validieren noetig). Quelle: https://docs.cohere.com/docs/compatibility-api · offiziell

@@ -22,31 +22,31 @@
 
 ---
 
-## TL;DR — die 8 wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Overlay-Panel:** `.nonactivatingPanel` NUR im init-`styleMask` setzen; `isFloatingPanel=true`,
-   `becomesKeyOnlyIfNeeded=true`, **`hidesOnDeactivate=false`** (NSPanel-Default ist `true`!),
-   `collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary]`, `level=.floating`. Anzeigen mit
-   `orderFrontRegardless()`, NIE `NSApp.activate(...)`. Borderless → `canBecomeKey` ueberschreiben. (→ A)
-2. **Concurrency:** "Single-threaded first" — `-default-isolation MainActor` +
-   `NonisolatedNonsendingByDefault` aktivieren, dann faellt `DispatchQueue.main.async`-Boilerplate weg.
-   `async` fuer Latenz, `@concurrent` NUR fuer nachgewiesene CPU-Last. (→ B)
-3. **Off-Main-Callbacks** (AVAudioEngine-Tap): per `AsyncStream`/`Task { @MainActor }` bruecken —
-   **NIE `MainActor.assumeIsolated`** (Crash, weil nicht auf Main). On-Main C-Callbacks (Carbon-Hotkey):
-   `assumeIsolated` ist hier korrekt. (→ B)
-4. **Accessibility (VoiceOver):** Custom-gezeichnete Buttons sind fuer VoiceOver UNSICHTBAR.
-   `NSAccessibilityButton`-Protokoll adoptieren ODER `isAccessibilityElement=true` + Rolle + Label +
-   `accessibilityPerformPress()` setzen. Status per `accessibilityValue` + `NSAccessibility.post`. (→ C)
-5. **Permissions:** Just-in-time anfragen (nie alle beim Launch), pro Permission ein eigener Erklaer-Schritt,
-   bei Denial NIE crashen (Graceful Degradation + Direkt-Button ins richtige Settings-Pane). Accessibility
-   nach Erteilen **pollen** (Trust-Latenz). (→ D)
-6. **Architektur:** AppDelegate = nur Composition-Root, Services hinter Protokollen injizieren (kein
-   `.shared`-Singleton), State in EINEM `@Observable` ViewModel — nicht in der View. (→ E)
-7. **Audio:** Tap mit `inputNode.outputFormat(forBus:0)`, `AVAudioConverter` fuer 16 kHz, **`AVAudioEngineConfigurationChange`
-   behandeln** (Geraetewechsel — fehlt aktuell!), `Thread.sleep` durch `removeTap`+Continuation ersetzen. (→ F)
-8. **Build/Signing:** mit echtem Zertifikat signieren (stabile TCC-Identitaet), `codesign` als LETZTER
-   Schritt, **kein `codesign --deep` zum Signieren** (seit macOS 13 deprecated), `ditto` statt `zip`,
-   stabile `CFBundleIdentifier`. (→ G)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Overlay-Panel bauen | `.nonactivatingPanel` nur im Init; `hidesOnDeactivate=false` | §A |
+| 2 | Overlay anzeigen | `orderFrontRegardless()`, NIE `NSApp.activate(...)` | §A |
+| 3 | Über allen Spaces/Fullscreen schweben | `[.canJoinAllSpaces,.fullScreenAuxiliary]`, `level=.floating` | §A |
+| 4 | Borderless mit Textfeld-Fokus | `canBecomeKey` überschreiben (sonst nie key-fähig) | §A |
+| 5 | Position über Monitore robust halten | Gegen `visibleFrame` prüfen, auf Hauptschirm zurückfallen | §A |
+| 6 | Concurrency aufsetzen | `-default-isolation MainActor`, single-threaded first | §B |
+| 7 | Off-Main-Callback (Audio-Tap) brücken | `AsyncStream`/`Task{@MainActor}`, NIE `assumeIsolated` | §B |
+| 8 | On-Main C-Callback (Carbon-Hotkey) | `MainActor.assumeIsolated` hier korrekt | §B |
+| 9 | Custom-gezeichneter Button | Label + Rolle + `accessibilityPerformPress()` setzen | §C |
+| 10 | Status visuell ändern (Aufnahme) | `accessibilityValue` + `NSAccessibility.post` | §C |
+| 11 | Permissions anfragen | Just-in-time, nie alle beim Launch, bei Denial nicht crashen | §D |
+| 12 | Accessibility nach Erteilen | Trust-Status pollen (verzögertes Live-Update) | §D |
+| 13 | App-Struktur | AppDelegate=Composition-Root, Services per Protokoll-DI | §E |
+| 14 | State halten | EIN `@Observable` ViewModel, nicht in der View | §E |
+| 15 | Audio-Tap | Format vom Node; `AVAudioEngineConfigurationChange` behandeln | §F |
+| 16 | Aufnahme stoppen | `removeTap`+Continuation statt `Thread.sleep` | §F |
+| 17 | Build/Signing | echtes Zertifikat, codesign zuletzt, KEIN `--deep`, `ditto` | §G |
 
 ---
 

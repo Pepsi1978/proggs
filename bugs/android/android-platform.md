@@ -44,33 +44,28 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 
 ---
 
-## ⚡ TL;DR — die wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **targetSdk 36 erzwingt Migration, nicht nur Empfehlung.** Edge-to-Edge (8.1),
-   Predictive Back (8.2), FGS-Typen+Permissions (3.1/3.2), `SCHEDULE_EXACT_ALARM`
-   default-denied (6.4), `RECEIVER_EXPORTED`-Pflicht (6.7), 16-KB-Page-Size (8.3) und
-   Large-Screen-Orientation-Ignoranz (8.5) sind **per Design** ab API 35/36 — kein „Bug
-   der gefixt wird", sondern Pflicht-Umbau. Bei jeder dieser Stellen funktionserhaltend
-   migrieren, nie Funktion entfernen.
-2. **FGS = drei Dinge gleichzeitig oder Crash:** `foregroundServiceType` im Manifest +
-   passende `FOREGROUND_SERVICE_*`-Permission + Typ-Arg in `startForeground()`. Und
-   `startForeground()` muss binnen ~5 s nach `startForegroundService()` kommen, sonst ANR.
-3. **`fallbackToDestructiveMigration()` ist Datenverlust, kein Fix.** Bei jeder
-   `@Database`-`version`-Erhoehung eine echte `Migration`/`@AutoMigration` schreiben.
-   Vor jedem DB-Datei-Backup (Drive-Upload!) **WAL-Checkpoint** erzwingen (`Room.close()`
-   oder `PRAGMA wal_checkpoint(TRUNCATE)`), sonst fehlen frische Writes (5.7).
-4. **PendingIntent braucht ab Android 12 zwingend `FLAG_IMMUTABLE` oder `FLAG_MUTABLE`**
-   (6.1). **POST_NOTIFICATIONS** ab Android 13 zur Laufzeit anfragen, sonst werden
-   Notifications **still** verworfen (2.1). **Ohne Notification-Channel** (ab Android 8)
-   erscheint gar nichts (6.2).
-5. **Background-Arbeit ist nie garantiert sofort.** WorkManager-Constraints/Doze/
-   App-Standby-Buckets/force-stop verzoegern oder stoppen Worker. Nichts auf exaktes
-   Timing bauen; Stop-Grund via `WorkInfo.getStopReason()` loggen; nach Boot/force-stop
-   re-enqueuen.
-6. **Lifecycle-Disziplin gegen Leaks & Crashes:** jedes `registerX` braucht ein
-   `unregisterX`; Flows mit `repeatOnLifecycle(STARTED)` sammeln; vor UI-Zugriff aus
-   async Callbacks `isFinishing/isDestroyed` pruefen; ViewModel ueberlebt Config-Change
-   aber NICHT Process Death → `SavedStateHandle`/Persistenz.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | targetSdk 35/36 — Edge-to-Edge, Insets ueberlappen | WindowInsets behandeln; nie Funktion entfernen | §8.1 |
+| 2 | targetSdk 36 — eigene `onBackPressed()`-Logik tot | Auf `OnBackPressedCallback`/`BackHandler` migrieren | §8.2 |
+| 3 | Foreground Service startet/crasht | Manifest-Typ + `FOREGROUND_SERVICE_*`-Permission + Typ-Arg, alle drei | §3.1, §3.2 |
+| 4 | `startForegroundService()` ohne sofortiges `startForeground()` | Binnen ~5 s `startForeground()` ganz am Anfang | §3.5 |
+| 5 | `@Database`-`version` erhoeht | Echte `Migration`/`@AutoMigration`, nie destruktiv | §5.1, §5.2 |
+| 6 | DB-Datei-Backup / Drive-Upload | Vorher WAL-Checkpoint (`close()` / `wal_checkpoint(TRUNCATE)`) | §5.7 |
+| 7 | `PendingIntent` ab Android 12 | Immer `FLAG_IMMUTABLE` (oder bewusst `FLAG_MUTABLE`) | §6.1 |
+| 8 | Notification erscheint nicht | Channel (ab 8) + `POST_NOTIFICATIONS` runtime (ab 13) | §6.2, §2.1 |
+| 9 | Exakter Alarm feuert nicht (Android 14) | `canScheduleExactAlarms()` pruefen, sonst Request | §6.4 |
+| 10 | `registerReceiver()` crasht (Android 14) | Export-Flag via `ContextCompat.registerReceiver` | §6.7 |
+| 11 | Background-Worker stoppt/laeuft nie | Kein Timing-Verlass; `getStopReason()` loggen; nach Boot re-enqueue | §4.3, §4.5, §4.10 |
+| 12 | Flow-Collection / `registerX` ohne Cleanup | `repeatOnLifecycle(STARTED)`; jedes `registerX` braucht `unregisterX` | §1.4, §1.8 |
+| 13 | State nach Hintergrund-Kill weg | ViewModel ueberlebt nicht Process Death → `SavedStateHandle`/Persistenz | §1.5, §1.6 |
+| 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 
 ---
 

@@ -4,13 +4,21 @@
 > Endpunkt für viele Anbieter). Stand: zuletzt recherchiert am 2026-06-08.
 > Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/projekt-code/apis/best-practices-openrouter-api.md`.
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`HTTP-Referer` + `X-Title`-Header IMMER senden** — sonst strippt OpenRouter bei Non-localhost-Keys still den Antwort-Content (Erfolg, aber leer!).
-2. **Provider-Routing bewusst steuern:** Default-Load-Balancing + `allow_fallbacks` springt still auf anderes Backend mit anderem Verhalten/Quantisierung. `provider.order` + `allow_fallbacks:false` für Determinismus, `provider.quantizations:["fp16","bf16"]` gegen Garbage.
-3. **`provider.require_parameters:true`** — sonst werden nicht unterstützte Params (`response_format`, `stop`, …) still ignoriert.
-4. **Modell-String `anbieter/modell`**, `:free` = 50 RPD (bzw. 1000 nach ≥10 USD Kauf). Modell-Liste via `/api/v1/models` re-fetchen — Slugs verschwinden.
-5. **SSE:** `: OPENROUTER PROCESSING`-Kommentarzeilen überspringen, `[DONE]` abfangen, Mid-Stream-Fehler als `error`-Event (HTTP 200) behandeln.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Antwort erfolgreich aber `content` leer ⭐ | `HTTP-Referer` + `X-Title` im Client-Konstruktor immer senden | §A |
+| 2 | Schwankende Qualität / anderes Backend ⭐ | `provider.order` + `allow_fallbacks:false` für Determinismus | §B |
+| 3 | Garbled/CJK-Output | `provider.quantizations:["fp16","bf16"]` als Allowlist | §B |
+| 4 | `response_format`/`stop` wirkt nicht | `provider.require_parameters:true` setzen | §B |
+| 5 | SSE-Parser bricht ⭐ | `:`-Kommentarzeilen überspringen, `[DONE]` + Mid-Stream-`error` (HTTP 200) | §D |
+| 6 | 429 / 402 | `:free`=50 RPD; 402 ≠ 429; `error.metadata.provider_name` auswerten | §E/§F |
+| 7 | Modell-String / 404 | `anbieter/modell`, Liste via `/api/v1/models`, Fallback-`models`-Array | §F |
 
 ---
 

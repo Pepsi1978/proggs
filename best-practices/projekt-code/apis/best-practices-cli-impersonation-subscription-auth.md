@@ -3,6 +3,23 @@
 > Gegenstueck zu `bugs/apis/cli-impersonation-subscription-auth.md`. (Researcher-Recherche 2026-06-09.)
 > Hinweis: ToS/Rechtslage je Anbieter beachten — dies ist technische Doku, keine Rechtsberatung.
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Abo-OAuth in eigener App | Legalitaet/Anwendungsfall zuerst klaeren | §1 |
+| 2 | OAuth in Headless/CI | Device-Code-Flow bzw. `claude setup-token` nutzen | §2 |
+| 3 | Token-Refresh speichern | Immer mergen, refresh_token nie ueberschreiben | §3 |
+| 4 | Tokens ablegen | Wie Passwort; Keyring > Klartext, nie committen | §4 |
+| 5 | Header/Client-Identitaet | Header-Imitation ist keine Dauerstrategie | §5 |
+| 6 | Mehrere Credentials gesetzt | Praezedenz beachten — sonst stiller 401 | §6 |
+| 7 | 401/403 behandeln | 401 = Refresh; 403-Client-Block = umstellen | §7 |
+| 8 | Abo-Limits respektieren | Cachen statt hammern; API-Key-Fallback einbauen | §8 |
+
 ## 1. Rechtlicher Rahmen ZUERST klaeren (defensiv)
 - Offizielle CLI mit eigenem Abo-OAuth ist erlaubt. Abo-OAuth-Tokens (Free/Pro/Max) in Drittsoftware sind bei Anthropic ein ToS-Verstoss und werden server-seitig geblockt — fuer eigene Apps/Agents stattdessen API-Key oder die offizielle CLI nutzen. Quelle: https://platform.claude.com/docs/en/manage-claude/authentication · offiziell
 - Codex-Plugin-Doku schraenkt selbst ein: nur „personal development use", nicht fuer kommerzielle Mehr-Nutzer-Dienste oder API-Resale. Vor jeder Nutzung pruefen, ob der Anwendungsfall (privat vs. kommerziell, ein Nutzer vs. viele) ueberhaupt zulaessig ist. Quelle: https://github.com/numman-ali/opencode-openai-codex-auth · community

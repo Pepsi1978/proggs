@@ -5,14 +5,23 @@
 > Verwandt: das „als offizielle CLI ausgeben"-Muster siehe `cli-impersonation-subscription-auth.md`.
 > Zweite Seite: `best-practices/projekt-code/apis/best-practices-oauth-device-code.md`.
 
-## TL;DR — die 6 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`slow_down` → `interval += 5` (kumulativ)**, niemals ignorieren. `authorization_pending` ist KEIN Fehler — weiterpollen.
-2. **`grant_type` = volle URN** `urn:ietf:params:oauth:grant-type:device_code` (nicht `device_code`).
-3. **PKCE:** `code_challenge = BASE64URL(SHA256(verifier))` **ohne Padding**, `S256`, Verifier 43–128 Zeichen, zwischen Auth- und Token-Request persistieren.
-4. **Refresh = Single-Flight-Mutex pro Account** — sonst Token-Family-Revoke bei paralleler Rotation. Neuen Refresh-Token speichern. `invalid_grant` = Re-Auth, kein blindes Retry.
-5. **Loopback:** dynamischer Port + `state` (CSRF) + exaktes Redirect-Matching; `SO_EXCLUSIVEADDRUSE` (Windows).
-6. **Tokens nur in OS-Keychain/DPAPI/Secret-Service** — nie Klartext/JSON, nie in URL/Logs. `offline_access` für Refresh-Token.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | ⭐ KRITISCH: paralleler Token-Refresh | Single-Flight-Mutex pro Account, sonst Family-Revoke | §D1 |
+| 2 | ⭐ `slow_down` beim Polling | `interval += 5` kumulativ, nie ignorieren | §A1 |
+| 3 | ⭐ `authorization_pending` | KEIN Fehler — weiterpollen | §A2 |
+| 4 | ⭐ `code_challenge` bauen | Base64url OHNE Padding, `S256` | §B1, §B4 |
+| 5 | Refresh liefert `invalid_grant` | Tokens verwerfen + Re-Auth, kein Retry-Loop | §D5 |
+| 6 | Neuen Refresh-Token nach Rotation | Atomar speichern, alten verwerfen | §D2 |
+| 7 | `grant_type` setzen | Volle URN `urn:...:device_code` | §A4 |
+| 8 | Loopback-Redirect / Token-Ablage | Dyn. Port + `state`; Tokens nur in OS-Keychain | §C1, §C3, §E1 |
+| 9 | Device-Flow aktivieren | Nur fuer echte input-constrained Geraete (Phishing) | §A8 |
 
 ---
 

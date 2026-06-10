@@ -22,25 +22,29 @@
 
 ---
 
-## TL;DR — die 5 wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **TCC bindet Permissions an die Code-Signatur + Bundle-ID + Pfad.** Bei `swiftc`-/ad-hoc-Builds
-   erzeugt JEDER Rebuild eine neue Identitaet → Mikrofon-/Accessibility-Grants verschwinden. Gegenmittel:
-   **stabile Bundle-ID festschreiben**, mit **Apple-Development/Developer-ID signieren** (statt ad-hoc),
-   App an **festem Pfad** halten; im Notfall `tccutil reset <Service> <bundle-id>`. (→ Sektion H, ⭐)
-2. **Permission-Pflicht-Keys/Entitlements nicht vergessen:** ohne `NSMicrophoneUsageDescription` in der
-   Info.plist **crasht** die App beim ersten Mic-Zugriff; ohne korrekt eingebettete Info.plist erscheint
-   **gar kein Prompt**. (→ E1/E2, ⭐)
-3. **NSPanel wird nie key:** fuer Textfeld-Fokus im Overlay MUSS man `canBecomeKey` UND `canBecomeMain`
-   in der NSPanel-Subklasse auf `true` ueberschreiben; `.nonactivatingPanel`-Bit **schon im Init** setzen,
-   nie nachtraeglich per `setStyleMask`. (→ A1/A2)
-4. **`NSApp.activate(ignoringOtherApps:)` ist ab macOS 14 deprecated/wirkungslos.** `.accessory`-Apps
-   brauchen zum Vordergrundholen temporaer `.regular` + parameterloses `activate()`. (→ A4/A3)
-5. **Globale Tastatur:** `NSEvent`-Global-Monitor braucht **Accessibility**, `CGEventTap` braucht
-   **Input Monitoring** (zwei verschiedene TCC-Kategorien!); Event-Taps werden vom System bei Timeout
-   **still deaktiviert** → im Callback `tapDisabledByTimeout` abfangen und `CGEvent.tapEnable` neu setzen.
-   Carbon `RegisterEventHotKey` braucht keine Permission, aber Sequoia 15.0/15.1 blockierte ⌥-/⌥⇧-only
-   Hotkeys (gefixt ab 15.2). (→ Sektion D)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Permission weg nach jedem Rebuild (Mic/AX) | Stabile Bundle-ID + echtes Zertifikat, fester Pfad | §H1 |
+| 2 | App crasht beim ersten Mic-Zugriff | `NSMicrophoneUsageDescription` in Info.plist setzen | §E1 |
+| 3 | `swiftc`-Binary zeigt nie Mic-Prompt | Info.plist mit Bundle-ID einbetten; `.app` per `open` starten | §E2 |
+| 4 | Textfeld im Overlay nicht fokussierbar | `canBecomeKey` UND `canBecomeMain` in NSPanel `true` | §A1 |
+| 5 | Panel zeigt Fokus, tippt aber nicht | `.nonactivatingPanel` im Init setzen, nie per `setStyleMask` | §A2 |
+| 6 | App kommt nicht in den Vordergrund | Kein `activate(ignoringOtherApps:)` — parameterlos `activate()` | §A4 |
+| 7 | Hotkeys/Tap sterben nach Stunden/Sleep | Im Callback `tapDisabledByTimeout` abfangen + `tapEnable` | §D4 |
+| 8 | CGEventTap-Callbacks feuern nie | Input Monitoring (nicht Accessibility) anfordern | §D5 |
+| 9 | ⌥/⌥⇧-only Hotkey scheitert (Fehler -9868) | Auf 15.0/15.1 ⌘ oder ⌃ dazunehmen (gefixt ab 15.2) | §D1 |
+| 10 | Overlay verschwindet bei Space/Fullscreen | Hohes Level + `[.canJoinAllSpaces, .stationary]` | §B2 |
+| 11 | Overlay ragt aus Monitor / springt raus | Position immer auf `visibleFrame` klemmen (nicht löschen) | §B5 |
+| 12 | TCC verweigert nach Info.plist-Edit still | Reihenfolge: bauen → plist final → DANN signieren | §H4 |
+| 13 | AVAudioEngine-Tap crasht (Sample-Rate) | Tap-Format `inputNode.outputFormat(forBus:0)` nehmen | §E4 |
+| 14 | Aufnahme tot nach AirPods/USB-Wechsel | `AVAudioEngineConfigurationChange` behandeln, Tap neu | §E5 |
+| 15 | `codesign --deep` zum Signieren | Top-Bundle ohne `--deep`, Nested einzeln innen→außen | §G6 |
 
 ---
 

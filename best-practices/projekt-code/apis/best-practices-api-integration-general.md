@@ -4,6 +4,22 @@
 > Timeouts/Pooling/Secrets von vornherein richtig. Quellen: AWS Builders' Library, Google SRE Book,
 > Stripe, Microsoft Learn, IETF, Polly. (Researcher-Recherche 2026-06-08.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Rate-Limiting | Token-Bucket, proaktiv per `RateLimit-Remaining` | §1 |
+| 2 | Retry-Strategie | Capped Backoff+Jitter, Retry-Budget, nur 429/5xx | §2 |
+| 3 | Idempotenz | Idempotency-Key pro Operation; nur idempotent retrien | §3 |
+| 4 | Timeouts/Resilienz | Connect/Read/Total getrennt; Circuit Breaker | §4 |
+| 5 | SSE robust | Zeilenpuffer, `[DONE]`, Proxy-Buffering aus | §5 |
+| 6 | .NET Pooling | Singleton/`IHttpClientFactory` + PooledConnLifetime | §6 |
+| 7 | Secrets/Logging | Secrets redacten; Fehler-Body parsen | §7 |
+
 ## 1. Client-seitiges Rate-Limiting
 - **Token-/Leaky-Bucket clientseitig**, proaktiv via `RateLimit-Remaining`-Header drosseln (z. B. <10 % Restbudget) BEVOR 429 kommt; adaptive Throttling (Google SRE „Handling Overload"). Quelle: https://sre.google/sre-book/handling-overload/ · offiziell
 - `x-ratelimit-*` (RPM/TPM/RPD) getrennt beobachten, knappste Dimension drosseln. Quelle: https://http.dev/x-ratelimit-remaining · extern

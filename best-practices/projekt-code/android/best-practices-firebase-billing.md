@@ -17,40 +17,31 @@
 > (`offiziell`); Community/Engineering-Blogs (RevenueCat, Adapty) = `extern` (sekundaer, ueberstimmt nie das
 > Offizielle). Jeder Punkt traegt sein `offiziell`/`extern`-Label + Quelle.
 
----
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-## ⚡ TL;DR — die Defaults, die man einmal verinnerlicht
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
 
-**Billing (Client):**
-1. **Genau EIN BillingClient als App-Scope-Singleton** (Application-Context, ein zentraler
-   `PurchasesUpdatedListener`) — nie pro Activity, sonst doppelte Callbacks. `billing-ktx` suspend-APIs nutzen.
-2. **`enablePendingPurchases(PendingPurchasesParams…)`** ist ab v7 Pflicht. Calls erst nach
-   `onBillingSetupFinished(OK)`. **Lazy-Reconnect via `isReady()`** vor jedem Call statt Reconnect im
-   Disconnect-Callback (verhindert Reconnect-Loops).
-3. **Kauf-Flow:** vom Main-Thread, `offerToken` bei Abos Pflicht, `setObfuscatedAccountId()` fuer
-   Fraud-Schutz. In `onPurchasesUpdated`: responseCode + `PurchaseState` pruefen — **nur `PURCHASED`
-   freischalten**, `PENDING` speichern & abwarten, `USER_CANCELED` still, null-safe.
-4. **Acknowledge binnen 3 Tagen, idempotent** (`isAcknowledged()` pruefen); `consumeAsync` nur fuer
-   Consumables. **Beim App-Start/`onResume` `queryPurchasesAsync` (SUBS + INAPP)** zur Recovery
-   unacknowledgter Kaeufe.
-
-**Billing (Server — die eigentliche Wahrheit):**
-5. **Der Server ist Source of Truth, der Client nur schnelle Anzeige.** purchaseToken serverseitig per
-   **`purchases.subscriptionsv2.get`** (NICHT v1) bzw. `purchases.products.get` verifizieren.
-6. **RTDN ueber Pub/Sub → Cloud Function**, idempotent per `messageId`/`eventTimeMillis`, nach JEDER
-   Notification frischer `get`. **Voided Purchases API** fuer Refunds. `linkedPurchaseToken` bei
-   Upgrade/Resignup auswerten (kein Doppel-Entitlement). Entitlement nur serverseitig schreiben.
-
-**Firebase:**
-7. **Alles ueber die BOM** (`platform(firebase-bom)`), Firebase-Deps OHNE eigene Version; ab BOM 34.x kein
-   `-ktx`-Suffix mehr.
-8. **App Check ZUERST** in `Application.onCreate()` installieren (vor allen anderen Diensten); Debug-Provider
-   nur im Debug-Build (Token in Konsole), Enforcement gestaffelt (erst Metriken, dann pro Dienst).
-9. **Remote Config:** XML-Defaults, „load for next startup" statt synchron blockieren, `minimumFetchInterval`
-   in Prod ~12h. **Cloud Functions:** Region binden (`getInstance(region)`), `enforceAppCheck`, Secrets im
-   Secret Manager. **SHAs:** Debug- + Upload- + **Play-App-Signing-Key** in Firebase (sonst brechen
-   Auth/App Check nur nach Release lautlos).
-10. **DSGVO:** Consent Mode v2 — Default-Consent VOR der Init (Manifest), keine PII in Analytics/Crashlytics.
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | BillingClient bauen | Genau EIN App-Scope-Singleton, ein zentraler Listener | §1 |
+| 2 | Client konfigurieren | `enablePendingPurchases(PendingPurchasesParams…)` Pflicht ab v7 | §1 |
+| 3 | Verbindung pflegen | Lazy-Reconnect via `isReady()`, nicht im Disconnect-Callback | §1 |
+| 4 | Kauf-Flow starten | Main-Thread, `offerToken` bei Abos, `setObfuscatedAccountId()` | §1 |
+| 5 | `onPurchasesUpdated` | Nur `PURCHASED` freischalten, `PENDING` abwarten, null-safe | §1 |
+| 6 | Kauf gewaehren | Binnen 3 Tagen idempotent acknowledgen; `consumeAsync` nur Consumables | §1 |
+| 7 | App-Start/`onResume` | `queryPurchasesAsync` (SUBS+INAPP) zur Recovery | §1 |
+| 8 | Entitlement-Wahrheit | Server ist Source of Truth, Client nur Anzeige | §2 |
+| 9 | Token verifizieren | `purchases.subscriptionsv2.get` (NICHT v1) | §2 |
+| 10 | RTDN verarbeiten | Idempotent per `messageId`, nach jeder Notification frischer `get` | §2 |
+| 11 | Plan-Wechsel/Resignup | `linkedPurchaseToken` auswerten, kein Doppel-Entitlement | §2 |
+| 12 | Firebase-Deps | Alle ueber BOM ohne Version; kein `-ktx` ab BOM 34 | §7 |
+| 13 | App Check init | ZUERST in `Application.onCreate()`, vor allen Diensten | §6 |
+| 14 | App Check Enforcement | Gestaffelt: erst Metriken, dann pro Dienst | §6 |
+| 15 | Remote Config | XML-Defaults, nicht beim Start blockieren, Prod-Intervall ~12h | §6 |
+| 16 | SHA-Keys | Debug+Upload+Play-App-Signing in Firebase, sonst Release still kaputt | §7 |
+| 17 | DSGVO | Consent Mode v2: Default-Consent VOR Init (Manifest), keine PII | §7 |
 
 ---
 

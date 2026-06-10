@@ -14,24 +14,28 @@ typischen „läuft in Debug, bricht in Release"-Bugs **gar nicht erst entstehen
 
 ---
 
-## TL;DR — die 8 wichtigsten Release-Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **R8 NIE abschalten als „Fix".** `isMinifyEnabled = false` / `-keep **` wirft alle Größen-,
-   Performance- und Obfuskations-Vorteile weg — das ist Funktionsverlust, kein Fix (Direktive #3).
-2. **Ein grüner Debug-Build beweist NICHTS** — Debug hat `isMinifyEnabled = false`, R8 läuft dort nie.
-   Immer einen minified, „release-like" Build testen (Abschnitt A).
-3. **Inkrementell einführen:** shrinking → obfuscation → optimization, nach jedem Schritt testen.
-4. **consumer-rules zuerst, Codegen statt Reflection** — eigene Modelle annotations-gesteuert halten,
-   nie pauschal `-keep` (Abschnitt C).
-5. **keep-Regeln so ENG wie möglich** — `-keepclassmembers` + `-if` statt `-keep class pkg.** { *; }`
-   (Abschnitt D). Neu: **R8 Configuration Analyzer** flaggt zu breite Regeln ohne Crash.
-6. **`getDefaultProguardFile("proguard-android-optimize.txt")`** (nicht `proguard-android.txt`),
-   `-assumenosideeffects` nur mit exakten Signaturen (Abschnitt E).
-7. **mapping.txt + Crash-Reporting vor dem Rollout aufsetzen** — Mapping ist im AAB automatisch dabei,
-   Crashlytics-Plugin v3+, `-keepattributes SourceFile,LineNumberTable`, mapping pro Version archivieren
-   (Abschnitt G).
-8. **Vor dem vollen Rollout: internen/geschlossenen Track + Pre-Launch-Report + staged rollout** als
-   Sicherheitsnetz gegen R8-bedingte Release-Crashes (Abschnitt B).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | R8 bricht etwas | NIE abschalten — Root-Cause (keep-Regel) fixen | §A |
+| 2 | Testen | Debug beweist nichts — minified „release-like" Build | §A |
+| 3 | R8 einführen | Inkrementell: shrinking → obfuscation → optimization | §A |
+| 4 | Vor Rollout | Interner/geschlossener Track + Pre-Launch + staged rollout | §B |
+| 5 | Serialisierung/Reflection | consumer-rules + Codegen statt Reflection, eigene Modelle halten | §C |
+| 6 | keep-Regel schreiben | so eng wie möglich, `-keepclassmembers`+`-if` statt `{ *; }` | §D |
+| 7 | ProGuard-Basisdatei | `proguard-android-optimize.txt`, nie `proguard-android.txt` | §E |
+| 8 | `-assumenosideeffects` | nur exakte Signaturen, NIE `*`-Wildcard | §E |
+| 9 | Resource-Shrinking | minify+shrink beide true, dyn. Res in `<pkg>.keep.xml` | §F |
+| 10 | Crash-Reporting | mapping.txt im AAB, Crashlytics v3+, `SourceFile,LineNumberTable` | §G |
+| 11 | mapping.txt | pro Version extern archivieren (wird überschrieben) | §G |
+| 12 | Baseline Profile | gegen unobfuskierten Build, <1,5 MB, in CI | §H |
+| 13 | AGP 8.7.3 + ServiceLoader | #389737060 → auf ≥8.9.1 heben | §I |
+| 14 | CI / Vor Release | minified Release bauen+testen, Pflicht-Checkliste | §I, §J |
 
 ---
 

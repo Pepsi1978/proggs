@@ -2,6 +2,23 @@
 
 > Gegenstueck zu `bugs/apis/mistral-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Modell waehlen | Datierte Version pinnen (`-2512`), `-latest` nur Dev | §1 |
+| 2 | Strukturierte Ausgabe | `json_schema` statt `json_object` (Schema-garantiert) | §2 |
+| 3 | Tool-Calling | Pro Call eine `tool`-Antwort, IDs durchreichen; rekursiv | §3 |
+| 4 | Code-Completion | FIM am Codestral-Endpunkt + eigener Key | §4 |
+| 5 | Token sparen | `prompt_cache_key` bei gemeinsamem Praefix (10 % Kosten) | §5 |
+| 6 | Rate Limits | Pro Workspace; bei 429 `Retry-After` + Backoff | §6 |
+| 7 | SDK-Setup | `RetryConfig`; Stream-Timeouts hoch (~10 min Inaktivitaet) | §7 |
+| 8 | Streaming/OCR | `stream:true` im Body; `include_usage`; OCR mit json_schema | §8 |
+
 ## 1. Modell-Auswahl & Pinning
 - Aktuelle Modelle 2026: **Mistral Large 3** (v25.12, generalistisch/multimodal), **Mistral Medium 3.5** (v26.04, agentic+coding), **Mistral Small 4** (v26.03, hybrid effizient), **Magistral Medium 1.2** (v25.09, Reasoning), **Codestral** (v25.08, Code-Completion), **Devstral 2** (v25.12, SWE-Agenten), **Ministral 3** (v25.12, 3/8/14B). Quelle: https://docs.mistral.ai/getting-started/models/models_overview/ · offiziell
 - In Produktion datierte Versionen pinnen (z. B. `mistral-large-2512`), `-latest` nur in Dev — Mistral mustert Modelle aggressiv aus (Small 3.2, Magistral 1.1, alte Devstral durch 2026 sunsetted). Quelle: https://docs.mistral.ai/getting-started/changelog · offiziell

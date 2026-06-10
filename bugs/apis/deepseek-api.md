@@ -5,12 +5,21 @@
 > Deprecation 2026-07-24, danach V4-flash/-pro. Zweite Seite: `best-practices/projekt-code/apis/best-practices-deepseek-api.md`.
 > Compliance-Hinweis: Hosting in China — bei personenbezogenen Daten relevant.
 
-## TL;DR — die 4 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`reasoning_content`-Umkehr je Generation:** R1/`deepseek-reasoner` → `reasoning_content` in History = 400 (strippen!). V3.2/V4 Thinking+Tool-Use → `reasoning_content` MUSS zurück (sonst 400). Code muss die Generation kennen.
-2. **`deepseek-reasoner` unterstützt KEIN `tool_choice`** → 400 (noch OFFEN). Für Tools `deepseek-chat`/V3.
-3. **Reasoner ignoriert/blockt Sampling-Params** (`temperature`/`top_p`/penalties wirkungslos; `logprobs`/`top_logprobs` → Error). Nicht senden.
-4. **Niedrige `max_tokens`-Defaults** (chat: 4k, reasoner: 32k) + Prepaid (402 ≠ 401) + 429/503 unter Last → Backoff.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | R1/`deepseek-reasoner` History 400 ⭐ | `reasoning_content` aus History strippen | §A |
+| 2 | V3.2/V4 Thinking+Tool-Use 400 ⭐ | Umkehr: `reasoning_content` MUSS zurückgeschickt werden | §A |
+| 3 | Tool-Calling nötig | `deepseek-chat`/V3 nutzen — reasoner kann kein `tool_choice` (400) | §B |
+| 4 | Sampling beim Reasoner | `temperature`/`top_p`/penalties weglassen; `logprobs` wirft Error | §C |
+| 5 | Antwort abgeschnitten | `max_tokens` explizit/dynamisch hoch, `finish_reason:length` prüfen | §D |
+| 6 | 402 wirkt wie Auth-Fehler | 402 (Guthaben leer) ≠ 401; Backoff bei 429/503 | §E |
+| 7 | Streaming Reasoner | `delta.reasoning_content` + `delta.content` getrennt akkumulieren | §F |
 
 ---
 

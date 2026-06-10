@@ -5,13 +5,22 @@
 > (altes `google-generativeai`/`@google/generative-ai` deprecated seit 30.11.2025), Modelle Gemini
 > 2.5/3.x. Zweite Seite: `best-practices/projekt-code/apis/best-practices-google-gemini-api.md`.
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Neues SDK `google-genai` verwenden** (`from google import genai; client = genai.Client(...)`). Altes SDK ist tot.
-2. **Thinking-Tokens zählen gegen `maxOutputTokens`** (anders als OpenAI!) → bei kleinem Limit kommt `finishReason: MAX_TOKENS` + leerer Text. `thinkingConfig.thinkingBudget` setzen, `maxOutputTokens` großzügig.
-3. **200 OK ≠ Text vorhanden.** Vor `response.text`-Zugriff `promptFeedback.blockReason` und `candidate.finishReason` (SAFETY/RECITATION/MAX_TOKENS) prüfen — sonst Crash.
-4. **Function-Schema nur OpenAPI-Subset** (kein `default`/`oneOf`/`anyOf`/`maximum`). Nesting max 32.
-5. **Modellnamen pinnen** (nicht `-latest`); 2.0-flash Shutdown 01.06.2026, alte 1.0/1.5 schon weg.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | ⭐ 200 OK + leerer Text / Crash | Vor `response.text`: blockReason + finishReason | §D10, §B5 |
+| 2 | ⭐ `finishReason: MAX_TOKENS`, leer | Thinking frisst Budget — `maxOutputTokens` hoch | §B4 |
+| 3 | SDK-Init bricht | Neues `google-genai`, `genai.Client(...)` | §A1, §A2 |
+| 4 | 400 INVALID_ARGUMENT bei Tools | Schema auf OpenAPI-Subset, Nesting ≤ 32 | §E11, §E12 |
+| 5 | ⭐ 404 NOT_FOUND auf Modell | IDs pinnen (nicht `-latest`); Deprecations | §G17, §G18 |
+| 6 | 403 PERMISSION_DENIED trotz Key | Billing + API aktivieren, Key→Projekt | §C6 |
+| 7 | Streaming liefert Muell | `?alt=sse` anhaengen, zeilenweise parsen | §I21 |
+| 8 | API-Key uebergeben | Header `x-goog-api-key`, nie `?key=` Query | §C8 |
 
 ---
 

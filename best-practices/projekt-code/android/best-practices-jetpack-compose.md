@@ -22,19 +22,28 @@
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal verinnerlicht
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Unidirektionaler Datenfluss (UDF):** State fliesst runter, Events fliessen rauf. „State is; events happen." Business-Logik gehoert NIE ins Composable.
-2. **State-Hoisting:** internen State durch `value: T` + `onValueChange: (T) -> Unit` ersetzen, auf den niedrigsten gemeinsamen Vorfahren von Lesern UND Schreibern heben. Stateless Content-Composable vom stateful Wrapper trennen.
-3. **EIN immutable UI-State pro Screen** (`data class`/sealed interface), via `StateFlow` + `stateIn(viewModelScope, WhileSubscribed(5000), initial)`, in der UI mit **`collectAsStateWithLifecycle()`** gelesen. One-shot-Events als konsumierbarer State, NICHT per Channel/`LaunchedEffect(Unit)`.
-4. **Stabilitaet:** `List`/`Map`/`Set` sind unstable → `ImmutableList`/`persistentListOf` oder `@Immutable`-Wrapper. Strong Skipping vergleicht unstable Params per `===` → `copy()`/neue Instanz = trotzdem Recompose; es ersetzt `@Immutable` NICHT. Nur echte `val`-Klassen annotieren (nie luegen).
-5. **State-APIs:** `var x by remember { mutableStateOf(...) }` (Imports!); `remember(key)` wenn vom Parameter abhaengig; `rememberSaveable` nur fuer kleine Werte/IDs; `mutableStateListOf` statt `mutableStateOf(list)`; `mutableIntStateOf` & Co. gegen Autoboxing; `derivedStateOf` NUR wenn der Output seltener wechselt als der Input.
-6. **Side-Effects — richtige API je Fall:** `LaunchedEffect(echteKeys)`, `rememberUpdatedState` fuer langlebige Effekte, `rememberCoroutineScope` NUR in Callbacks, `DisposableEffect` mit symmetrischem `onDispose`, `snapshotFlow` (Reads im Block), `produceState` (modelliert State, keine Events). Kritische Arbeit in `viewModelScope`/WorkManager.
-7. **Lazy-Listen:** IMMER stabiler, eindeutiger `key = { it.id }` (+ `contentType`); kein verschachteltes gleichachsiges Scrollen; `fillParentMaxSize()` in Lazy-Items; Pager `beyondViewportPageCount` klein.
-8. **Modifier:** Reihenfolge ist Logik — Layout → Dekoration (`clip`→`background`→`border`) → Interaktion (`clickable`). Eigene Modifier via `Modifier.Node`, nicht `composed {}`.
-9. **Material3/Insets:** `dynamicColor` mit API-Guard + statisches Fallback; `enableEdgeToEdge()` + Scaffold-`innerPadding` IMMER anwenden (keine Doppel-Insets); M3-Komponenten haben eigene Insets.
-10. **Navigation:** type-safe Routes (`@Serializable`), nur IDs navigieren, geteiltes ViewModel am Parent-`NavBackStackEntry`, Tab-State via `saveState`/`restoreState`/`launchSingleTop`.
-11. **Performance:** IMMER im **Release-Build (R8)** messen; Baseline Profiles; hochfrequente Reads in Lambda-Modifiern (`graphicsLayer{}`/`offset{}`/`drawBehind{}`) deferren; teure Arbeit `remember`n; `@Preview` stateless; Compiler-Reports auf Release.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Architektur/State-Fluss | UDF: State runter, Events rauf; Business-Logik nie ins Composable | §1 |
+| 2 | State geteilt/zu tief | State-Hoisting (`value`+`onValueChange`) auf gemeinsamen Vorfahren | §1 |
+| 3 | Screen-State + ViewModel-Grenze | EIN immutable State; `collectAsStateWithLifecycle()` + `stateIn` | §1 |
+| 4 | Composable skippt nicht | `ImmutableList`/`@Immutable`; `@Immutable` nie luegen | §2 |
+| 5 | `remember`/`rememberSaveable` | `by remember { mutableStateOf }` (Imports!); Saveable nur klein | §3 |
+| 6 | Liste reaktiv halten | `mutableStateListOf` statt `mutableStateOf(list)` | §3 |
+| 7 | Side-Effect waehlen | Richtige API je Fall; Keys = gelesene Werte; kritisch in `viewModelScope` | §4 |
+| 8 | Lazy-Liste / Pager | Stabiler eindeutiger `key`+`contentType`; `fillParentMaxSize()` | §5 |
+| 9 | Modifier-Reihenfolge | Layout → `clip`→`background`→`border` → `clickable`; eigene via `Modifier.Node` | §6 |
+| 10 | Theming / Insets | `dynamicColor`+API-Guard; Scaffold-`innerPadding`, keine Doppel-Insets | §7 |
+| 11 | Navigation | type-safe Routes, nur IDs; geteiltes VM am Parent-Entry | §8 |
+| 12 | Tablet/Foldable | `windowSizeClass` statt `Configuration.orientation` | §9 |
+| 13 | Animation | `animate*AsState` deklarativ binden, nicht in `SideEffect`/`LaunchedEffect` | §10 |
+| 14 | Performance/Preview | Release (R8) messen; Reads deferren; `@Preview` stateless | §11 |
 
 ---
 

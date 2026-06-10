@@ -2,6 +2,22 @@
 
 > Gegenstueck zu `bugs/apis/groq-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | OpenAI-Drop-in | `base_url=.../openai/v1`; nicht unterstützte Felder gar nicht senden | §1 |
+| 2 | Modell/Output-Tokens | Dynamisch von `/models`; `max_completion_tokens` ans Output-Limit | §2 |
+| 3 | Rate-Limits | Alle Header überwachen, token-bewusst pre-throttlen; `retry-after` zuerst | §3 |
+| 4 | Tool/Structured Output | Striktes Schema; strict-Mode nur gpt-oss-20b/-120b, sonst Repair-Loop | §4/§5 |
+| 5 | Streaming/Chat | `stream=true`; `temperature` bewusst >0 (echte 0 → `1e-8`) | §6 |
+| 6 | Whisper | 16 kHz Mono FLAC, chunken, `verbose_json`; min. 10 s Abrechnung | §7 |
+| 7 | Massen-Workloads | Batch API (50 % Rabatt); native SDKs mit Retries nutzen | §8 |
+
 ## 1. OpenAI-Kompatibilitaetslayer richtig nutzen
 - `base_url=https://api.groq.com/openai/v1` setzen, API-Key per `api_key`-Parameter — der Drop-in-Migrationspfad ist offiziell unterstuetzt. Quelle: https://console.groq.com/docs/openai · offiziell
 - Nicht unterstuetzte Felder erst gar nicht senden: `logprobs`, `logit_bias`, `top_logprobs`, `messages[].name`, `n>1` sowie `vtt`/`srt` als Audio-Format (alles 400). Quelle: https://console.groq.com/docs/openai · offiziell

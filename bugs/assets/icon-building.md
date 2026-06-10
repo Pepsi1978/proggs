@@ -12,23 +12,22 @@
 
 ---
 
-## ⚡ Die wichtigsten Regeln (TL;DR — zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Schwarze/eckige Ecken = fehlendes Alpha.** Die Quelle ist opak (Alpha=255) oder
-   abgeflacht (JPEG/RGB). Fix: Quelle als **PNG mit echtem Alpha (RGBA)**, Ecken auf
-   Alpha=0. Prüfen: `img.getchannel("A").getextrema()` — min muss 0 sein. (§1, §2)
-2. **Nie selbst runden, wo das OS maskiert.** Android + macOS-Tahoe + iOS maskieren
-   selbst → **volles Quadrat** liefern. Eigene Rundung = Doppelrundung/Artefakte.
-   Ausnahme: Windows-`.ico` + klassisches macOS-`.icns` brauchen die Form **eingebacken**. (§2, §6, §7)
-3. **Windows-Icon-Cache: `ie4uinit` reicht NICHT.** Es zeichnet nur neu, loescht die
-   Cache-DBs nicht. Verlaesslich: Explorer beenden → `iconcache_*.db` + `thumbcache_*.db`
-   + `IconCache.db` loeschen → Explorer neu. Und: Verknuepfung cacht ueber **IconLocation-PFAD**
-   → gleicher Pfad = altes Icon bleibt; neuen Schluessel erzwingen (`.exe,0` oder neuer Dateiname). (§4)
-4. **Konverter flachen Alpha auf Schwarz/Weiss ab.** NIE `-flatten` / `-background <farbe>`
-   / `-border` (ImageMagick), immer `img.convert("RGBA")` + explizite `sizes` (Pillow). (§3, §8)
-5. **WPF: `ApplicationIcon` (.exe) UND `Window.Icon` (Titelleiste) — Icon-Datei als
-   `Resource`, NICHT `Content`** (sonst bricht es im single-file-Publish). `.ico` multi-res
-   16/24/32/48/256 aus ≥512px-Quelle. (§5)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Schwarze/eckige Ecken | Quelle als PNG mit echtem Alpha (RGBA), Ecken Alpha=0 | §2.1 |
+| 2 | OS maskiert (Android/iOS/macOS-Tahoe) | Volles Quadrat liefern, nie selbst runden | §2.2 |
+| 3 | Windows-`.ico`/klassisches `.icns` | Form/Padding als Alpha einbacken (einmal) | §2.2 |
+| 4 | Icon wechselt nicht (Windows) | Cache-DBs löschen + Explorer neu, nicht nur `ie4uinit` | §4 |
+| 5 | Verknüpfung zeigt altes Icon | Neuen IconLocation-Schlüssel: `<App>.exe,0` | §4.3 |
+| 6 | Konverter macht Ecken schwarz/weiss | Kein `-flatten`/`-background`/`-border`; Pillow `convert("RGBA")` + `sizes` | §3, §8 |
+| 7 | WPF Icon fehlt/single-file bricht | `ApplicationIcon` + `Window.Icon`, Datei als `Resource` | §5.1, §5.2 |
+| 8 | Android Motiv abgeschnitten | Kernmotiv in 66dp-Safe-Zone, Background opak ohne Rundung | §6.1, §6.2 |
 
 ---
 

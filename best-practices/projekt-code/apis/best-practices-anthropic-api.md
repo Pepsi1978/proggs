@@ -2,6 +2,22 @@
 
 > Gegenstück zu `bugs/apis/anthropic-api.md`. Offiziell (platform.claude.com). (Researcher-Recherche 2026-06-08.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Prompt Caching | `cache_control` auf letzten STATISCHEN Block, Mindest-Tokens beachten | Prompt Caching |
+| 2 | Tool Use | Detaillierte Descriptions (3–4 Sätze), `strict:true`, Tools namespacen | Tool Use |
+| 3 | Tool-Fehler | Via `is_error:true` + lehrreiche Meldung (Claude retryt 2–3×) | Tool Use |
+| 4 | Extended Thinking (Opus 4.8/4.7) | Nur Adaptive Thinking + `effort`; thinking-Blöcke 1:1 in History | Extended Thinking |
+| 5 | Message-Struktur | Keine `tool`/`function`-Rollen; `system` Top-Level (Array für Caching) | Message-Struktur & Streaming |
+| 6 | Streaming bei hohem max_tokens | SDK `.stream()` + `get_final_message()` (vermeidet Timeouts) | Message-Struktur & Streaming |
+| 7 | Async / Kostenersparnis | Batch API = 50 %; mit 1h-Cache kombinieren | Batch API & Token-Counting |
+
 ## Prompt Caching
 - `cache_control` IMMER auf den letzten STATISCHEN Block (Reihenfolge tools→system→messages), NIE auf wechselnden Inhalt. Mindest-Tokens beachten (Opus 4.8/Sonnet 4.6 = 1024; Opus 4.7/4.6 + Haiku 4.5 = 4096; Haiku 3.5 = 2048) sonst stiller Miss. 5m-TTL (Default, write 1,25×) bei <5-Min-Takt; 1h (write 2,0×) bei Agentic/>5 Min; Read immer 0,1×. Max 4 Breakpoints; Pre-Warming mit `max_tokens:0`; Tool-JSON-Key-Reihenfolge stabil. `usage`-Felder (cache_creation/cache_read_input_tokens) monitoren. Invalidierung: Tool-Defs ändern→ganzer Cache weg. Quelle: https://platform.claude.com/docs/en/build-with-claude/prompt-caching · offiziell
 

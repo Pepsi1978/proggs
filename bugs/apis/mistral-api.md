@@ -3,13 +3,22 @@
 > PFLICHT-LESEN vor Arbeit an einer Mistral-Integration (api.mistral.ai / La Plateforme).
 > Stand: zuletzt recherchiert am 2026-06-08. Zweite Seite: `best-practices/projekt-code/apis/best-practices-mistral-api.md`.
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`tool_call_id` muss EXAKT 9 Zeichen `[a-zA-Z0-9]` sein** — OpenAI-Style-IDs (`call_abc…`, UUIDs) → 400/422. Vom Modell zurückgegebene IDs unverändert durchreichen.
-2. **Anzahl `tool_calls` = Anzahl `tool`-Antworten**, jede mit passendem `tool_call_id` — sonst „Not the same number of function calls and responses".
-3. **JSON-Mode braucht das Wort „JSON" im Prompt** — sonst Endlos-Whitespace-Stream.
-4. **Codestral hat eigenen Endpunkt + eigenen Key** (`codestral.mistral.ai`, FIM unter `/v1/fim/completions`).
-5. **Eigener Tokenizer** (`mistral-common`) — OpenAI-Token-Counts passen nicht; Kontext-Überschreitung → hartes 400.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Tool-Calling (400/422) ⭐ | `tool_call_id` = exakt 9 Zeichen `[a-zA-Z0-9]`, unveraendert durchreichen | §4 |
+| 2 | "number of function calls" ⭐ | Pro `tool_call` genau eine `tool`-Antwort, gleiche Anzahl | §5 |
+| 3 | JSON-Mode haengt ⭐ | Wort „JSON" muss im Prompt stehen, sonst Whitespace-Stream | §14 |
+| 4 | Codestral / FIM (404) | Eigener Endpunkt+Key, FIM unter `/v1/fim/completions` | §2, §20 |
+| 5 | Token-Count / 400 | `mistral-common`-Tokenizer; Kontext-Ueberschreitung = hartes 400 | §12, §13 |
+| 6 | Modell „not found" (400/404) ⭐ | Datierte Version pinnen, Aliase zentral; aggressive Deprecations | §22, §23 |
+| 7 | 401 bei Auth | Nur nackten Key; `Bearer` genau einmal; Key zum Endpunkt | §1, §2 |
+| 8 | 429 trotz normaler Last | Workspace-weite Limits; `Retry-After`/`X-RateLimit-Remaining` | §21 |
 
 ---
 

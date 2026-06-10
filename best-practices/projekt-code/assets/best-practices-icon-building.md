@@ -8,13 +8,20 @@ Android 16 (API 36), macOS 15 Sequoia + macOS 26 Tahoe.
 
 ---
 
-## TL;DR — die Defaults, die man einmal richtig setzt
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **EIN Master-Asset:** 1024×1024 PNG mit **straight (unpremultiplied) Alpha**, quadratisch, Motiv in der Safe-Zone. Daraus alle Plattform-Formate ableiten — nie pro Plattform neu malen.
-2. **Alpha ist Pflicht.** Quelle nie als JPEG/abgeflachtes PNG. KI-Output (DALL-E/Midjourney/Nano Banana) hat **kein** Alpha → Hintergrund vor Verwendung entfernen. Nach jeder Konvertierung Alpha prüfen (`Image.getchannel("A").getextrema()` → min == 0).
-3. **Nie selbst runden, wo das OS maskiert** (Android, iOS, macOS Tahoe = volles Quadrat liefern). Nur Windows-`.ico` und klassisches macOS-`.icns` brauchen Form/Padding **eingebacken**.
-4. **Konverter ohne Alpha-Flatten:** Pillow `img.convert("RGBA")` + explizite `sizes`; ImageMagick nur `-define icon:auto-resize=...`, NIEMALS `-flatten`/`-border`/`-background <farbe>`.
-5. **Nach Icon-Änderung auf Windows den Cache verlässlich leeren** (DBs + Explorer-Neustart) und IconLocation auf einen frischen Schlüssel (`<App>.exe,0`) — `ie4uinit` allein reicht nicht.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Asset für alle Plattformen | EIN 1024² PNG, straight Alpha, quadratisch, Motiv in Safe-Zone | TL;DR 1 |
+| 2 | KI-Output / JPEG als Quelle | Nie ohne Alpha; nach Konvertierung min==0 prüfen | TL;DR 2 |
+| 3 | OS maskiert (Android/iOS/Tahoe) | Volles Quadrat liefern, nie selbst runden | TL;DR 3 |
+| 4 | `.ico`-Konvertierung | Pillow `convert("RGBA")` + `sizes`; IM kein `-flatten`/`-background` | TL;DR 4, Pillow-Workflow |
+| 5 | WPF Icon einbinden | `ApplicationIcon` + `Window.Icon`, Datei als `Resource` | WPF |
+| 6 | Icon-Änderung auf Windows | Cache-DBs + Explorer neu, IconLocation `<App>.exe,0` | TL;DR 5, WPF |
 
 ---
 

@@ -4,14 +4,22 @@
 > vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am
 > 2026-06-08. Zweite Seite: `best-practices/projekt-code/apis/best-practices-local-openai-compatible.md`.
 
-## TL;DR — die 6 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`base_url` IMMER mit `/v1`** (Ollama `:11434/v1`, LM Studio `:1234/v1`, llama.cpp `:8080/v1`); `127.0.0.1` statt `localhost` (IPv6-`::1`-Falle).
-2. **API-Key nie leer** — Platzhalter `"not-needed"`/`"ollama"`; leerer String crasht openai-python ≥ 2.34.0.
-3. **Ollama `/v1` ignoriert `num_ctx`** → stille Truncation auf ~4096. Kontext über Modelfile/`OLLAMA_CONTEXT_LENGTH` setzen.
-4. **Cold-Start:** erster Request-Timeout ≥ 60 s; Modell vorladen; `keep_alive` bewusst (Client sendet oft still `5m`).
-5. **vLLM-Tools:** `--enable-auto-tool-choice` UND `--tool-call-parser <parser>` (sonst ignoriert).
-6. **`logprobs`/`n` über `/v1` oft still verworfen** — für Token-Wahrscheinlichkeiten native API.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | 404 / connection refused ⭐ | `base_url` mit `/v1`; `127.0.0.1` statt `localhost` | §1, §2 |
+| 2 | SDK crasht "Missing credentials" ⭐ | API-Key nie leer — Platzhalter `"ollama"` setzen | §4 |
+| 3 | Langer Prompt abgeschnitten ⭐ | Ollama ignoriert `num_ctx`: Modelfile/`OLLAMA_CONTEXT_LENGTH` | §5 |
+| 4 | Erster Request timeout ⭐ | Timeout ≥ 60 s; Modell vorladen; `keep_alive` bewusst | §8 |
+| 5 | vLLM Tool-Calls ignoriert ⭐ | `--enable-auto-tool-choice` UND `--tool-call-parser` | §9 |
+| 6 | `logprobs`/`n` fehlen | Ueber `/v1` still verworfen → native API | §14, §15 |
+| 7 | "model not found" | Modell pullen/laden; vLLM `--served-model-name`, `/v1/models` | §7, §18 |
+| 8 | json_schema+grammar-Fehler | llama.cpp: nur EINS angeben, nicht beides | §13 |
 
 ---
 

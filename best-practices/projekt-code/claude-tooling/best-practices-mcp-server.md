@@ -24,20 +24,29 @@
 
 ---
 
-## TL;DR — die 12 wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Transport nach Einsatz waehlen:** lokal/Single-User (Claude Code/Desktop) → **stdio**; Remote/Multi-User/Cloud → **Streamable HTTP**. **SSE ist deprecated** — fuer Neues nie SSE. → A
-2. **stdout gehoert bei stdio AUSSCHLIESSLICH dem JSON-RPC-Stream.** Alle Logs auf **stderr** (`console.error`) oder ueber die **logging-Capability**. → D, A
-3. **`registerTool` statt deprecated `server.tool()`** — `{ title, description, inputSchema, outputSchema, annotations }` an einem Ort. → B
-4. **Tool-Beschreibungen sind das wichtigste Asset:** schreibe sie, wie du ein Tool einem neuen Kollegen erklaerst — impliziten Kontext explizit machen. Jedes Feld mit `.describe()` (Einheit, Format, Beispiel). → B
-5. **Enge Typen:** Top-Level immer flaches `z.object({})`, `z.enum` statt freier Strings, Constraints, Defaults; nur breit unterstuetzte JSON-Schema-Keywords. → B
-6. **Wenige maechtige Workflow-Tools** statt API-1:1-Wrapper; Tool-Anzahl bewusst begrenzen, namespacen. → C
-7. **Token-effiziente Antworten:** Pagination/Limit/`response_format`-Enum, kompakte Outputs (Claude Code kappt bei **25.000 Token**). → C
-8. **Fehler richtig propagieren:** fachliche Fehler als `{ isError:true, content:[…] }` (Modell korrigiert sich selbst), Protokoll-Verletzungen als JSON-RPC-`McpError`. Nie leeres `catch{}`. → D
-9. **Prozess-Resilienz:** `uncaughtException`/`unhandledRejection`-Handler (loggen, nicht crashen), jeden Handler in `try/catch`, kein floating Promise. → D
-10. **`.mcp.json`: absolute Pfade**, auf Windows `npx`/`bunx` in `cmd /c … -y`, nie auf `cwd` verlassen, JSON valide (kein BOM/Trailing-Comma), Secrets via `${VAR}` aus der Umgebung. → E
-11. **Sicherheit:** stdio liest Secrets aus der Umgebung (kein OAuth); Remote-HTTP = OAuth 2.1 + PKCE + Audience-Bindung + Origin-/DNS-Rebinding-Schutz (im TS-SDK **default AUS** → aktiv setzen). Nie Token-Passthrough. → F
-12. **Erst MCP Inspector, dann Client:** Tools/Schema lokal im Inspector pruefen, dann `claude mcp add` + `/mcp`. SDK-Version pinnen, Releases/Spec-Revision verfolgen. → G
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Transport waehlen | Lokal → stdio; Remote → Streamable HTTP; nie SSE | §A1 |
+| 2 | Logging bei stdio | stdout NUR JSON-RPC; Logs auf stderr/logging-Capability | §D4 |
+| 3 | Tool registrieren | `registerTool` statt deprecated `server.tool()` | §B1 |
+| 4 | Tool-Beschreibung | Erklaeren wie einem Kollegen; jedes Feld `.describe()` | §B2, §B3 |
+| 5 | Input-Schema | Top-Level flaches `z.object`; enums/Constraints; kein Union | §B4 |
+| 6 | Tool-Name | Nur `[a-zA-Z0-9_]{1,64}`, snake_case, namespacen | §B6 |
+| 7 | Wie viele Tools | Wenige Workflow-Tools statt API-1:1-Wrapper | §C1 |
+| 8 | Grosse Antworten | Pagination/Limit; <25k Token (Claude Code kappt) | §C3 |
+| 9 | Fehler propagieren | Fachlich → `isError:true`; Protokoll → `McpError`; nie leeres catch | §D1 |
+| 10 | Prozess-Resilienz | `uncaughtException`/`unhandledRejection` loggen, nicht crashen | §D5 |
+| 11 | Langlaufende Tools | `resetTimeoutOnProgress:true` explizit + Progress + maxTotalTimeout | §D7 |
+| 12 | `.mcp.json` | Absolute Pfade; Windows `cmd /c … -y`; valide; Secrets `${VAR}` | §E2, §E8 |
+| 13 | Lazy Init + Shutdown | Schwere Init lazy; SIGTERM/SIGINT-Cleanup awaiten | §A6, §A7 |
+| 14 | Sicherheit | stdio: Secrets aus Umgebung; HTTP: OAuth2.1/PKCE/DNS-Rebinding aktiv | §F1, §F5 |
+| 15 | Vor dem Client | Erst MCP Inspector testen; SDK exakt pinnen | §G1, §G5 |
 
 ---
 

@@ -40,7 +40,9 @@ Die Gegenseite (Best-Practices) spiegelt dieselben Kategorien:
 
 1. **Vor** echter Arbeit an einem technischen Bereich: pruefen, ob es hier einen
    Almanach fuer den Bereich gibt (diese Liste).
-2. **Almanach vorhanden** → komplett lesen, Versionen abgleichen, DANN arbeiten.
+2. **Almanach vorhanden** → den **Kurzcheck** lesen (`Read` mit `limit=80`; Hochrisiko-Bereiche
+   r8/firebase-billing/claude-hooks/claude-config: VOLLTEXT), Versionen abgleichen, DANN arbeiten.
+   Bei JEDEM Fehler im Bereich: VOLLTEXT nachlesen (Digest-Modell, [`SYSTEM.md`](SYSTEM.md) §11).
 3. **Kein Almanach** → der Guard BLOCKIERT den Edit (seit 2026-06-07). Frank Bescheid geben
    und entscheiden: entweder nach seinem **OK** den Skill `bug-almanach-recherche` starten und
    einen Almanach anlegen, ODER (bei Kleinkram / bewusstem Verzicht) die Quittung

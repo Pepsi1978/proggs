@@ -5,15 +5,22 @@
 > 2026-06-08. Anbieterspezifika: siehe die jeweilige Datei in `bugs/apis/`.
 > Zweite Seite: `best-practices/projekt-code/apis/best-practices-api-integration-general.md`.
 
-## TL;DR — die 7 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **429-Backoff:** `Retry-After` BEIDE Formate parsen (Sekunden ODER HTTP-Datum) und respektieren; `wait = max(retry_after, exp_backoff)`; immer Jitter (gegen Thundering Herd). RPM ≠ TPM ≠ RPD.
-2. **Retries nur für 429 + 5xx (+ Anthropic 529)** — NIE 400/401/403/422. Nicht-idempotente POSTs nur mit Idempotency-Key wiederholen.
-3. **SSE korrekt parsen:** Zeilenpuffer (Events splitten über TCP-Pakete), `data:`-Präfix + Doppel-Newline, `[DONE]` abfangen, Mid-Stream-`error`-Event behandeln, Kommentarzeilen (`:`) überspringen.
-4. **Timeouts getrennt:** Connect/Read/Total — lange Streams dürfen NICHT am Read-Timeout sterben.
-5. **.NET `HttpClient` als Singleton/`IHttpClientFactory`** (nie `new` pro Request → Socket-Exhaustion); `PooledConnectionLifetime` gegen stale DNS.
-6. **Secrets:** API-Key nie im Client (Mobile/Browser/Desktop) — BFF-Pattern; nie in Logs/Stacktraces/Telemetrie.
-7. **Fehler-Body parsen** (nicht nur Statuscode) — anbieterspezifisches `error.type`/`.message`/`.code`.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | 429 / Backoff bauen | `Retry-After` beide Formate; Jitter immer | §A1, §A3 |
+| 2 | Retry-Whitelist | Nur 429+5xx(+529), nie 4xx; POST=Idempotency-Key | §B1, §B2 |
+| 3 | ⭐ SSE-Event ueber TCP-Pakete | Zeilenpuffer, erst bei Doppel-Newline parsen | §C4, §C1 |
+| 4 | ⭐ `[DONE]`-Marker im Stream | Vor `JSON.parse` abfangen + Stream schliessen | §C2 |
+| 5 | ⭐ Langer Stream stirbt (~5 min) | Read-Timeout separat/hoch, getrennt von Total | §D1 |
+| 6 | ⭐ .NET HttpClient pro Request | Singleton/`IHttpClientFactory` + PooledConnLifetime | §E1, §E2 |
+| 7 | ⭐ API-Key im Client (Mobile/Browser) | Nie einbetten — BFF-Pattern, Key serverseitig | §F1 |
+| 8 | Fehler behandeln | Fehler-Body parsen, nicht nur Statuscode | §G1 |
 
 ---
 

@@ -16,15 +16,29 @@
 
 ---
 
-## TL;DR — die 7 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Ordnername = UUID.** Der Ordner muss `<plugin-uuid>.sdPlugin` heissen (grosses **P** und **D**), und `<plugin-uuid>` muss EXAKT der `manifest.json`-UUID gleichen. Stimmt es nicht → Plugin erscheint **ohne Fehlermeldung gar nicht**. UUIDs nur `[a-z0-9.-]`, reverse-DNS, alles klein. Action-UUID muss mit der Plugin-UUID praefixiert sein. (A1–A3)
-2. **Image-Pfade OHNE Dateiendung, Code-/PI-Pfade MIT.** `Icon`/`State.Image`/`CategoryIcon` ohne `.png`; `CodePath`/`PropertyInspectorPath` mit `.html`/`.js`. Verwechslung → Bild fehlt oder Plugin laedt nicht. (A5, B-Gruppe)
-3. **`context` ist NICHT persistent.** Nach App-/Plugin-Neustart oder Reconnect bekommt dieselbe Taste oft einen NEUEN `context`. Niemals extern speichern. Alte Timer/Polls auf totem context = Ghost-Contexts → bei `willDisappear` stoppen. (D3, D4, E4)
-4. **`setSettings` ueberschreibt das GANZE Objekt — kein Merge.** Immer aktuelle Settings nehmen, Feld aendern, komplettes Objekt zurueckschreiben (`{...current, feld: x}`). `getSettings` ist asynchron → Wert kommt erst via `didReceiveSettings`. (G1, G2)
-5. **`setTitle` verliert gegen User-Titel; manifest-Titel-Settings cachen pro Taste.** Wenn dynamische Titel zwingend sind: ganze Taste als SVG via `setImage()` rendern + `setTitle("")`. (E1, E2)
-6. **Node-Plugins: `--no-addons` erzwungen → native `.node`-Module sind verboten.** Jeder ungefangene Crash beim Start → Restart-Loop. Globale `uncaughtException`/`unhandledRejection`-Handler + `streamDeck.logger` (nie `console.log`). (I1, I5, J7)
-7. **Aenderungen erscheinen nicht?** Stream Deck cached Plugins. `streamdeck restart <uuid>` bzw. Software komplett beenden (haelt Datei-Locks). Manifest-`UTF-8 OHNE BOM`. App nicht elevated/als Admin starten. (E2, K2, K6, N1)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Plugin erscheint gar nicht, keine Fehlermeldung | Ordner `<uuid>.sdPlugin` == manifest-UUID, nur `[a-z0-9.-]` | §A1–A3 |
+| 2 | Bild fehlt oder Plugin laedt nicht | Image-Pfade OHNE Endung, `CodePath`/PI-Pfad MIT Endung | §A5 |
+| 3 | manifest.json laedt nicht trotz gueltigem Inhalt | Als UTF-8 OHNE BOM speichern, JSON validieren | §A10, K2 |
+| 4 | `context` extern gespeichert / nach Neustart tot | Nie extern persistieren, nach Reconnect Zustand neu aufbauen | §D3, E4 |
+| 5 | Timer/Polls laufen auf totem context weiter | Bei `willDisappear` Timer stoppen + aus Map entfernen | §D4 |
+| 6 | `willAppear` feuert mehrfach / je Geraet | Pro context idempotent registrieren, nie eine Instanz annehmen | §D1 |
+| 7 | Tastendruck loest doppelt aus | Handler nur EINMAL binden + keyDown debouncen (~75 ms) | §C5, D5 |
+| 8 | Felder verschwinden nach `setSettings` | Ganzes Objekt schreiben `{...current, feld}`, aus Event-Args lesen | §G1, G2 |
+| 9 | API-Key pro Instanz weg / im Export sichtbar | Secrets NUR via `setGlobalSettings`, nie Action-Settings/Bundle | §G5, N2 |
+| 10 | `setTitle` wirkt nicht / Custom-Title weg | Taste als SVG via `setImage()` + `setTitle("")` nur bei echtem Text | §E1, Z4 |
+| 11 | Editor friert ein bei haeufigem Update | `setState`/`setImage` dedupen, < 10 Calls/s halten | §E5, M1 |
+| 12 | Polling-Plugin wird traege im Hintergrund | Chromium drosselt Timer → SSE/`EventSource` statt `setInterval` | §M2 |
+| 13 | Node-Plugin crasht in Restart-Loop / `--no-addons` | Globale `uncaughtException`/`unhandledRejection`, keine `.node`-Module | §I1, I2 |
+| 14 | Aenderung erscheint nicht | `streamdeck restart <uuid>`, Software beenden (Lock), nicht als Admin | §E2, K6, N1 |
+| 15 | Packen scheitert / Plugin laedt nicht | `streamdeck validate` → `pack`, nie `Compress-Archive` | §J1, K3 |
 
 ---
 

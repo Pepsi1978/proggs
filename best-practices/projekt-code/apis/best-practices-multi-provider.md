@@ -4,6 +4,21 @@
 > LLM-Anbieter sauber unterstützt. Quellen: Vercel AI SDK, AWS Bedrock Converse, LiteLLM (offiziell);
 > Engineering-Blogs als extern. (Researcher-Recherche 2026-06-08.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Mehrere Provider anbinden | Unified-Interface/Adapter (Vercel AI SDK, Bedrock Converse, LiteLLM) | §A |
+| 2 | Gateway ja/nein | Erst ab >1 Provider ODER >einige 100 $/Monat; darunter direkte SDKs | §B |
+| 3 | Fallback bauen | Drei GETRENNTE Typen: general / content_policy / context_window | §C |
+| 4 | Resilienz | retries + timeout + allowed_fails + cooldown + geordnete Fallback-Liste | §C |
+| 5 | Konfiguration | Modelle/Keys/Endpunkte aus Config/Env; Routing-Strategie explizit wählen | §D |
+| 6 | Modellwahl | Capability-Detection (Tools/JSON/Image?) + Kosten-/Latenz-Routing nach Task | §E |
+
 ## A. Provider-Abstraktion
 1. **Unified-Interface/Adapter** gegen EIN normalisiertes Interface (Messages/Tools/Streaming anbieterübergreifend). Reife Umsetzungen: Vercel AI SDK (`LanguageModel`-Spec), AWS Bedrock `Converse`, LiteLLM. Anbieterwechsel mit ~2 Zeilen. Quelle: https://ai-sdk.dev/docs/foundations/providers-and-models · offiziell
 2. **Eigene Adapter** für Nicht-Standard-Backends (Ollama/self-hosted) gegen die offene Spec, statt Kern verbiegen. · offiziell

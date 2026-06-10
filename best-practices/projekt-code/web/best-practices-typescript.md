@@ -19,16 +19,34 @@
 
 ---
 
-## TL;DR — die 8 wichtigsten Regeln (zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **tsconfig: Strenge EXPLIZIT machen.** `strict: true` + die NICHT-in-strict-Flags `noUncheckedIndexedAccess` und `exactOptionalPropertyTypes`; die TS-6.0-Defaults (`module`/`target`/`types`/`rootDir`) festnageln statt floaten lassen. → A
-2. **ESM-first.** `"type": "module"`, `moduleResolution: nodenext`, relative Imports mit `.js`-Endung (auch bei `.ts`-Quelle), `import.meta.dirname` statt `__dirname`-Workaround. → B
-3. **`exports`-Map richtig: `types` ZUERST, `default` ZULETZT.** Reihenfolge ist load-bearing. Fuer NEUE Pakete ESM-only publizieren — der einzige sichere Weg, den Dual-Package-Hazard ganz zu vermeiden. → B, G
-4. **Aussengrenzen typsicher.** `unknown` statt `any` an jeder Grenze (`JSON.parse`, `fetch().json()`), Laufzeit-Validierung (Zod/Valibot/ArkType) + Typ aus dem Schema ableiten, Discriminated Union mit `never`-Exhaustiveness. → C
-5. **Async sauber.** Jedes Promise behandeln (`no-floating-promises`), `Promise.allSettled` wo Teilfehler zaehlen, `AbortSignal.timeout()` fuer Timeouts, `await using` fuer Cleanup, `unhandledRejection` NUR fuer geordneten Shutdown. → D
-6. **Dependency-Hygiene.** `package-lock.json` committen, `npm ci` (nicht `npm install`) in CI, `@types/node`-Major == Node-Major, `overrides` statt `--force`, `save-exact`. → E
-7. **Built-ins statt Pakete.** `node:test`, globales `fetch`, `AbortSignal.timeout`, `crypto.randomUUID`, `--env-file`, `parseArgs`. `node file.ts` spart den Build-Step, prueft aber KEINE Typen → separater `tsc --noEmit`. → F
-8. **Build/Publish trennen + verifizieren.** `tsc --noEmit` ist die einzige Typecheck-Wahrheit (kein Bundler ersetzt das); `attw` + `publint` in CI; `files`-Allowlist + `npm pack --dry-run`; `npm publish --provenance`. → G
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | tsconfig anlegen | `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` explizit | §A |
+| 2 | TS-6.0-Defaults | `module`/`target`/`types`/`rootDir` festnageln, nicht floaten lassen | §A |
+| 3 | `moduleResolution` waehlen | `nodenext` (Node/Library), `bundler` nur bei Bundler-Emit | §A |
+| 4 | ESM-Setup | `"type": "module"`, relative Imports mit `.js`-Endung | §B |
+| 5 | `__dirname` gebraucht | `import.meta.dirname` statt `fileURLToPath`-Workaround | §B |
+| 6 | `exports`-Map schreiben | `types` ZUERST, `default` ZULETZT — Reihenfolge load-bearing | §B, §G |
+| 7 | Neues Paket publizieren | ESM-only — vermeidet Dual-Package-Hazard ganz | §B, §G |
+| 8 | Externe Daten (`JSON.parse`/`fetch`) | `unknown` + Laufzeit-Validierung (Zod), Typ aus Schema | §C |
+| 9 | "eins von mehreren" modellieren | Discriminated Union + `never`-Exhaustiveness im `default` | §C |
+| 10 | IDs als nackte `string` | Branded Types (`unique symbol`), null Laufzeit-Overhead | §C |
+| 11 | Promises | Jedes behandeln (`no-floating-promises`), nie floaten | §D |
+| 12 | Mehrere Tasks, Teilfehler zaehlen | `Promise.allSettled`, nicht `Promise.all` | §D |
+| 13 | Timeout/Cleanup | `AbortSignal.timeout()`, `await using` fuers Cleanup | §D |
+| 14 | `unhandledRejection`-Handler | NUR geordneter Shutdown, kein Catch-all-Schlucker | §D |
+| 15 | CI-Install | `package-lock.json` committen, `npm ci` statt `npm install` | §E |
+| 16 | `@types/node` | Major == Node-Major (24) pinnen | §E |
+| 17 | Peer-Dep-Konflikt | `overrides` statt `--force`; `save-exact` | §E |
+| 18 | Einfache Calls/CLI | Built-ins: `fetch`, `AbortSignal.timeout`, `parseArgs`, `node:test` | §F |
+| 19 | `node file.ts` ausfuehren | Prueft KEINE Typen → separat `tsc --noEmit` | §F |
+| 20 | Build/Publish | `tsc --noEmit` als Wahrheit; `attw`+`publint`; `files`-Allowlist | §G |
 
 ---
 

@@ -23,39 +23,29 @@
 
 ---
 
-## ⚡ TL;DR — die Defaults, die man einmal verinnerlicht
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Architektur:** 3 Layer (UI → Domain optional → Data), Abhaengigkeiten zeigen IMMER nach unten.
-   UDF: State runter, Events rauf. Single Source of Truth, immutable State. Single-Module ist fuer
-   beide Apps korrekt — nicht verfrueht modularisieren.
-2. **UI-State:** immutable `UiState` (`data class`/`sealed interface`), `StateFlow` via
-   `stateIn(viewModelScope, WhileSubscribed(5000), initial)`, in der UI mit
-   **`collectAsStateWithLifecycle()`** lesen. Kein `Context`/`View`/`Activity` im ViewModel.
-3. **Lifecycle:** Flows mit `repeatOnLifecycle(STARTED)` bzw. `collectAsStateWithLifecycle` sammeln
-   (NIE `launchWhenX` — deprecated, Producer laeuft weiter). In Fragments `viewLifecycleOwner`.
-   Jedes `registerX` braucht ein `unregisterX`; `registerForActivityResult` IMMER frueh registrieren.
-   ViewModel ueberlebt Config-Change, NICHT Process Death → `SavedStateHandle` + Persistenz.
-4. **Room:** jede `version`-Erhoehung braucht einen echten Migrationspfad (`@AutoMigration` zuerst,
-   sonst `Migration(N,M)`); **nie** `fallbackToDestructiveMigration` in Prod; `exportSchema=true` +
-   Schema-JSONs einchecken + `MigrationTestHelper`; **WAL-Checkpoint vor jedem DB-Backup/Drive-Upload**;
-   DB als Hilt-`@Singleton`; DAO `suspend`/`Flow` (off-main); Room **≥ 2.7.2** als Quick-Win.
-5. **WorkManager** ist der Default fuer garantierte Background-Arbeit (ueberlebt Prozess/Reboot);
-   Coroutine nur fuer foreground-gebundene Arbeit, FGS nur fuer sofort+sichtbar+lang. Periodic-Minimum
-   15 min (keine Timing-Garantie). `enqueueUniqueWork` + `ExistingPeriodicWorkPolicy.UPDATE`. Expedited
-   mit `OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST`. `@HiltWorker` + `Configuration.Provider`
-   + Default-Initializer im Manifest entfernen. `getStopReason()` loggen.
-6. **FGS = drei Dinge gleichzeitig** (`foregroundServiceType` im Manifest + `FOREGROUND_SERVICE_*`-
-   Permission + Typ-Arg in `startForeground()`) und `startForeground()` binnen ~5 s. dataSync 6 h /
-   shortService 3 min Timeout → `onTimeout()`→`stopSelf()`. Notifications: Channel ab Android 8 Pflicht,
-   `POST_NOTIFICATIONS` ab 13 zur Laufzeit, kein Trampolin (PendingIntent.getActivity direkt).
-7. **Permissions:** moderner `ActivityResultContracts.RequestPermission`-Flow (frueh registrieren),
-   jede Permission einzeln pruefen, permanently-denied erkennen → App-Settings, inkrementell anfragen
-   (Background-Location separat). **Photo Picker** statt `READ_MEDIA_*` wo moeglich. PendingIntent IMMER
-   `FLAG_IMMUTABLE`. AlarmManager nur fuer echte Uhrzeit-Wecker; `canScheduleExactAlarms()` pruefen.
-8. **targetSdk 36 ist Pflicht-Umbau, kein Bug:** Edge-to-Edge (`enableEdgeToEdge()` + Insets), Predictive
-   Back (`OnBackPressedCallback`/`BackHandler`), adaptive Layouts (`WindowSizeClass`) auf grossen Screens,
-   16-KB-Page-Size fuer native `.so`. Storage: nur `filesDir`/`getExternalFilesDir`/SAF/Photo Picker +
-   FileProvider — kein `WRITE_/MANAGE_EXTERNAL_STORAGE`.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | App-Struktur planen | 3 Layer (UI→Domain optional→Data), UDF, Single-Module ok | §1 |
+| 2 | UI-State im ViewModel | Immutable `UiState`, `stateIn(WhileSubscribed(5000))`, kein Context | §1.3 |
+| 3 | State in Compose lesen | Immer `collectAsStateWithLifecycle()`, nie `collectAsState()` | §2.3 |
+| 4 | Flow im UI sammeln | `repeatOnLifecycle(STARTED)`, nie `launchWhenX`; Fragment: `viewLifecycleOwner` | §2.1 |
+| 5 | `registerForActivityResult` / `registerX` | Frueh + symmetrisch registrieren; jedes hat ein `unregisterX` | §2.6 |
+| 6 | Process Death absichern | `SavedStateHandle` + Persistenz; kein `Context`/`View` im ViewModel | §2.5 |
+| 7 | `@Database`-`version` erhoeht | Echter Migrationspfad, `exportSchema=true`, `MigrationTestHelper` | §3.1, §3.3, §3.4 |
+| 8 | DB-Backup / Drive-Upload | WAL-Checkpoint vorher; nie `fallbackToDestructiveMigration` in Prod | §3.5, §3.2 |
+| 9 | DB-Instanz erzeugen / DAO | Hilt-`@Singleton`; DAO `suspend`/`Flow` (off-main) | §3.7, §3.8 |
+| 10 | Garantierte Background-Arbeit | WorkManager (ueberlebt Prozess/Reboot); `getStopReason()` loggen | §4.1, §4.8 |
+| 11 | `@HiltWorker` nutzen | `Configuration.Provider` + Default-Initializer im Manifest entfernen | §4.9 |
+| 12 | Foreground-Service bauen | Drei Dinge gleichzeitig + `startForeground()` binnen ~5 s | §5.1, §5.2 |
+| 13 | Notifications senden | Channel (ab 8) + `POST_NOTIFICATIONS` (ab 13) + kein Trampolin | §5.7, §5.8, §5.9 |
+| 14 | Permission anfragen | `RequestPermission`-Flow, einzeln pruefen, permanently-denied erkennen | §6.1 |
+| 15 | targetSdk-36-Migration | Edge-to-Edge, Predictive Back, adaptive Layouts, 16-KB, FileProvider | §7 |
 
 ---
 

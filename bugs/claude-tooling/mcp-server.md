@@ -24,23 +24,29 @@
 
 ---
 
-## ⚡ Die wichtigsten Regeln (TL;DR — zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Bei stdio: stdout gehoert AUSSCHLIESSLICH dem JSON-RPC-Stream.** Jedes `console.log`/
-   `print`/Banner/Pretty-Print auf stdout zerstoert die Verbindung (`-32000 Connection closed`).
-   ALLE Logs auf **stderr** (`console.error`/`console.warn`). Das ist mit Abstand der #1-Bug (1.1).
-2. **`.mcp.json`: niemals nackte Befehlsnamen** (`"command":"npx"`/`"bun"`) — auf Windows
-   `spawn ENOENT`. `npx`/`bunx` in `cmd /c` wrappen, oder absolute Pfade (5.1, 6.1, eigener Vorfall #1556).
-3. **Fehler nie verschlucken.** Erwartbare Tool-Fehler als `{ isError: true, content:[…] }`
-   zurueckgeben (Modell kann sich korrigieren); Protokoll-Verletzungen als JSON-RPC-`error`.
-   Leeres `try/catch` = Client sieht „Erfolg", Tool tat nichts (4.1, 4.2).
-4. **`uncaughtException`/`unhandledRejection`-Handler installieren** — sonst killt eine
-   Exception den ganzen Server still, kein Auto-Reconnect bei stdio (4.4, 7.1).
-5. **Tool-Schema: Top-Level immer `z.object({…})`.** `z.discriminatedUnion`/Union/transform
-   werden STILL zu `properties:{}` verworfen (auf 1.27.1 noch aktiv — 3.2). Tool-Namen nur
-   `[a-zA-Z0-9_]{1,64}` (3.7). `server.tool` ist deprecated → `registerTool` (3.3).
-6. **`resetTimeoutOnProgress` ist opt-in** — langlaufende Tools brechen sonst nach 60s ab (7.2).
-7. **1.27.1 ist sicher gegen UriTemplate-ReDoS (CVE-2026-0621, gefixt 1.25.2)** — NICHT downgraden (8.1).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | `-32000 Connection closed` / „Invalid JSON-RPC" bei stdio | stdout NUR JSON-RPC; alle Logs auf stderr | §1.1 |
+| 2 | Dependency druckt heimlich auf stdout (dotenv-Banner) | `dotenv {quiet:true}`; `console.log=console.error` oben | §1.2 |
+| 3 | `.mcp.json` startet Server nicht / `spawn ENOENT` | Absolute Pfade; `npx`/`bunx` in `cmd /c … -y` wrappen | §5.1, §6.1 |
+| 4 | `.mcp.json` laedt KEINEN Server | Kein Trailing-Comma, kein BOM; JSON validieren | §5.5 |
+| 5 | Tool-Call gibt „Erfolg", tat aber nichts | Fehler nie verschlucken; loggen + `isError:true` | §4.1 |
+| 6 | Fachlicher vs Protokoll-Fehler | Fachlich → `isError:true`; Protokoll → JSON-RPC-`error` | §4.2 |
+| 7 | Server stirbt still, „disconnected" | `uncaughtException`/`unhandledRejection` loggen, nicht crashen | §4.4, §7.1 |
+| 8 | Tool-Schema kommt leer an (`properties:{}`) | Top-Level flaches `z.object`; kein discriminatedUnion (1.27.1) | §3.2 |
+| 9 | Tool wird vom Client abgelehnt | Tool-Name nur `[a-zA-Z0-9_]{1,64}` | §3.7 |
+| 10 | `server.tool()` deprecated, Schema verschwindet | Auf `registerTool` migrieren | §3.3 |
+| 11 | Langlaufendes Tool bricht nach 60s ab | `resetTimeoutOnProgress:true` + Progress senden (opt-in!) | §7.2 |
+| 12 | Server-Start zu langsam → Session FAILED | Schwere Init lazy, nicht vor `initialize`-Response | §7.3 |
+| 13 | Windows: Umlaute/Emoji im Output kaputt | UTF-8 explizit (`setEncoding('utf8')`/`PYTHONIOENCODING`) | §6.4 |
+| 14 | `ERR_MODULE_NOT_FOUND` (ESM) | `"type":"module"`, lokale Imports mit `.js`-Endung | §8.7 |
+| 15 | `npm audit` HIGH (UriTemplate-ReDoS) | SDK ≥1.25.2 — 1.27.1 sicher, NICHT downgraden | §8.1 |
 
 ---
 

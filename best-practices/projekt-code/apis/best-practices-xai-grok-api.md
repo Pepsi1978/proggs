@@ -2,6 +2,23 @@
 
 > Gegenstueck zu `bugs/apis/xai-grok-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Modellwahl | `grok-4.3` explizit pinnen, nie retired Slugs | §1 |
+| 2 | Denktiefe | `reasoning_effort` gilt jetzt auch für 4.3 (`none/low/medium/high`) | §2 |
+| 3 | Structured Outputs | `json_schema`; Limits 2048 Zeichen/256 Items/64 Props, kein zirkulärer `$ref` | §3 |
+| 4 | Tools | Tool-Args immer strict → Schema einfach halten; `messages` pflegen | §4 |
+| 5 | Live Search | Nur EIN Domain-Filter (≤5); Verbrauch überwachen | §5 |
+| 6 | Streaming | Bei Reasoning Timeout hochsetzen; für Tools/Output `stream=false` | §6 |
+| 7 | Rate-Limits | Eigenes Exp-Backoff (kein Retry-Header); Reasoning-Tokens in TPM | §7 |
+| 8 | SDK & Auth | `xai-sdk`/OpenAI-`/v1`/`@ai-sdk/xai`; Anthropic-Pfad deprecatet | §8 |
+
 ## 1. Modellwahl & Pinning
 - Standard fuer Chat/Coding ist `grok-4.3` (1M Kontext, $1.25/$2.50 pro 1M In/Out) — explizit pinnen, nie auf retired Slugs verlassen. Quelle: https://docs.x.ai/developers/models · offiziell
 - Aktuelle Familie: `grok-4.3` (kein Reasoning-Flag noetig, steuerbar), `grok-4.20-0309-reasoning`/`-non-reasoning`, `grok-4.20-multi-agent-0309` (Research/Orchestrierung), `grok-build-0.1` (256k, guenstiger). Wissensstand Nov 2024 — fuer Aktuelles Live Search nutzen. Quelle: https://docs.x.ai/developers/models · offiziell

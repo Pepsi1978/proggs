@@ -18,19 +18,29 @@
 
 ---
 
-## ⚡ TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Der Wachfenster-Timer laeuft NUR im echten Leerlauf.** Er zaehlt ab Antwort-ENDE (Alexa: 5 s
-   danach, Google: 8 s) — niemals waehrend der Nutzer spricht oder der Agent arbeitet/antwortet. (§1.1)
-2. **Eine Aufnahme, die im Wachfenster BEGANN, wird IMMER fertig verarbeitet** — nie beim
-   Fenster-Ablauf wegwerfen. Stilles Verwerfen von Nutzer-Rede ist der Todsuende-Bug. (§1.2)
-3. **Reines RMS-Energie-Endpointing braucht IMMER einen harten Max-Deckel** (15–30 s):
-   Tastatur/Atmen/TV halten sonst die Aufnahme endlos offen ("er hoert zu, nichts passiert"). (§2.1)
-4. **Stille-Pause fuer Konversation: 300–550 ms, Diktat 1000–2000 ms** — 3 s+ macht jede Antwort
-   traege. Semantisches Endpointing (FERTIG/WEITER) faengt Gedankenpausen ab. (§2.2)
-5. **Latenz-Budget je Stufe kennen:** Endpoint ≤ Stille-Pause, STT ~200 ms (Groq), LLM-Zwischenschritte
-   minimal (kleinstes ausreichendes Modell/Effort!), TTS-TTFB ~500 ms (Chirp3 REST). Sequenzielle
-   LLM-Ketten sind der haeufigste Budget-Killer. (§4)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Fenster laeuft ab waehrend Nutzer spricht ⭐⭐ | Timer NUR im Idle ticken, ab Antwort-Ende zaehlen | §1.1 |
+| 2 | Fertige Aufnahme im Schlaf still geloescht ⭐⭐ | Im Fenster begonnene Rede IMMER verarbeiten, nie verwerfen | §1.2 |
+| 3 | Aufnahme bleibt endlos offen (Luefter/TV) ⭐⭐ | Harter Max-Deckel 15–30 s, dann finalisieren UND verarbeiten | §2.1 |
+| 4 | Agent traege ODER schneidet im Satz ab | Stille 300–550 ms Dialog, 1000–2000 ms Diktat + semantisches Netz | §2.2 |
+| 5 | Erste Antwort dauert viele Sekunden ⭐ | Zwischenschritte aufs kleinste Modell/niedrigsten Effort, parallelisieren | §4.1 |
+| 6 | Follow-up/zweiter Befehl wird ignoriert | Fenster nach JEDER Antwort oeffnen, History kurz (3–5) | §1.3 |
+| 7 | Fremdgespraech als Befehl, Session bricht ab | Wake-Word 3+ Silben, Confidence-Gate im Fenster | §1.4 |
+| 8 | Leise Wort-Enden fehlen / Status flattert | Hysterese (Dual-Threshold), Frames 20–30 ms | §2.3 |
+| 9 | Schwelle stimmt nach lauter TTS nicht mehr | AGC/Boost an 3 Stellen pruefen, relative Schwellen statt fester | §2.4 |
+| 10 | DataAvailable versiegt still, Mikro taub | Watchdog: kein Event N s → Capture neu starten | §3.1 |
+| 11 | AccessViolation/Deadlock bei Stop/USB-Abzug | Stop/Dispose serialisieren, NIE im Callback disposen | §3.2 |
+| 12 | Nutzer kann Agent nicht unterbrechen | Partial Ducking statt Mute; echtes Barge-in braucht AEC | §5.1 |
+| 13 | Klicks/Luecken zwischen Saetzen | EIN offener Output, BufferedWaveProvider, PCM statt MP3 | §4.3 |
+| 14 | Einzelwort ("ja") in falscher Sprache | `language=de` IMMER explizit, nie Auto-Detect | §6.1 |
+| 15 | Haengender STT friert Turn 60 s ein | Groq-Timeout auf 5–10 s, EIN statischer HttpClient | §6.2 |
 
 ---
 

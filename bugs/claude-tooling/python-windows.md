@@ -17,25 +17,31 @@
 
 ---
 
-## ⚡ Die wichtigsten Regeln (TL;DR — zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`open()` IMMER mit `encoding='utf-8'`** — sonst cp1252-Default auf Windows. Lesen von
-   evtl. BOM-Dateien: `encoding='utf-8-sig'`. Das ist der eine Fix, der ueber alle
-   Versionen traegt.
-2. **JSON: `json.dump(data, f, ensure_ascii=False)` PLUS `open(..., encoding='utf-8')`** —
-   beides noetig. `ensure_ascii=False` allein crasht trotzdem (Datei-Encoding bleibt cp1252).
-3. **Atomar schreiben** (gegen abgeschnittene Dateien bei Crash): Tempfile im SELBEN
-   Verzeichnis (`dir=`) → `write` → `flush` → `os.fsync` → `close` → **`os.replace`**
-   (nicht `os.rename`). JSON vorher per `json.dumps` zu String, nicht inkrementell dumpen.
-4. **`subprocess(..., text=True, encoding='utf-8', errors='replace')`** — sonst cp1252/OEM-
-   Mismatch. `print()`/`logging` mit Umlauten/Emoji crasht bei Pipe/Redirect → `encoding='utf-8'`
-   bzw. `sys.stdout.reconfigure(encoding='utf-8')`.
-5. **Pfade**: nie `/c/Users/...` (Git-Bash-Stil) im Python-Code — Python crasht mit
-   `FileNotFoundError`. Stattdessen `os.path.expanduser('~')` / `pathlib.Path`. Backslash-
-   Literale als Raw-String (`r"C:\Users\neu"`) oder `/`.
-6. **Globale Notbremse fuer Fremdcode ohne `encoding=`**: `PYTHONUTF8=1` (oder `python -X utf8`)
-   stellt `open()`, stdio und `subprocess` auf UTF-8. Beim Entwickeln Fallen aufspueren mit
-   `-X warn_default_encoding` / `PYTHONWARNDEFAULTENCODING=1` (`EncodingWarning`, ab 3.10).
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Jedes `open()` | Immer `encoding='utf-8'` (Lesen evtl. `utf-8-sig`) | §1.1 |
+| 2 | JSON schreiben | `ensure_ascii=False` UND `encoding='utf-8'` (beides) | §1.5 |
+| 3 | Datei beginnt mit `﻿` | BOM-Datei lesen mit `encoding='utf-8-sig'` | §2.1 |
+| 4 | Kritische Datei/Config | Atomar: temp im selben Ordner → flush → fsync → `os.replace` | §5.1 |
+| 5 | finaler Datei-Tausch | `os.replace` (nie `os.rename` — failt auf Windows) | §5.2 |
+| 6 | `subprocess` aufrufen | `text=True, encoding='utf-8', errors='replace'`, Args als Liste | §1.6 |
+| 7 | `print()`/`logging` + Emoji | `sys.stdout.reconfigure(encoding='utf-8')` / `FileHandler(encoding=)` | §1.4 |
+| 8 | Pfad im Python-Code | NIE `/c/Users/...` — `pathlib`/`expanduser`, Backslash als Raw | §3.1 |
+| 9 | Backslash-Pfad-Literal | Raw-String `r"..."` oder `/` (sonst `\U`/`\n`-Escape) | §3.2 |
+| 10 | generierte Text-/JSON-Datei | `newline='\n'` (sonst CRLF auf Windows) | §4.2 |
+| 11 | CSV schreiben | `open(..., newline='')` (sonst Leerzeilen) | §4.1 |
+| 12 | parallele Schreiber | `filelock` + atomar (kein `fcntl`/`msvcrt` direkt) | §5.8 |
+| 13 | `re.sub`-Replacement | NIE Raw-String mit `\U`-Escape mischen — Lambda nutzen | §9.1 |
+| 14 | Fremdcode ohne `encoding=` | Notbremse `PYTHONUTF8=1` / `python -X utf8` | §1.3 |
+| 15 | `python`/`pip` auf Windows | `py -3` + `python -m pip` (nicht MS-Store-Stub) | §6.1 |
+
+---
 
 > **Warum derselbe Code auf macOS laeuft, auf Windows crasht:** macOS/Linux haben UTF-8 als
 > Locale-Default ueberall; Windows nutzt die ANSI-Codepage (cp1252) fuer Dateien/Streams und

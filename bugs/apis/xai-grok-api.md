@@ -4,12 +4,21 @@
 > 2026-06-08. Versions-Anker: aktuell `grok-4.3`; 8 ältere Slugs am 15.05.2026 retired (lösen still auf
 > 4.3 um). Zweite Seite: `best-practices/projekt-code/apis/best-practices-xai-grok-api.md`.
 
-## TL;DR — die 4 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Stille Modell-Retirement (15.05.2026):** 8 alte Slugs (grok-3, grok-4-0709, grok-4-fast-*, grok-code-fast-1 …) lösen weiter auf, redirecten aber still auf `grok-4.3` → Rechnung steigt, Qualität ändert sich, KEIN Fehler. `grok-4.3` explizit pinnen + `reasoning_effort` bewusst setzen.
-2. **`reasoning_effort` nur bei `grok-3-mini(-fast)`** — bei grok-4/4.3 wirft es einen Error.
-3. **Streaming unterstützt KEIN `response_format`/Tool-Calling** — für structured outputs/Tools `stream=false`.
-4. **429 unabhängig vom Restbudget, KEINE Retry-Header** — eigenes Exponential-Backoff bauen; Reasoning- + gecachte Tokens zählen in TPM.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Alter Slug läuft fehlerfrei ⭐ | 8 Slugs still auf `grok-4.3` redirected — explizit pinnen, Kosten/Qualität prüfen | §A |
+| 2 | `reasoning_effort` setzen | Bewusst `none/low/medium/high`; bei grok-4 nur korrekt für 4.3 | §A |
+| 3 | Tools / structured outputs ⭐ | Streaming kann das nicht → `stream=false` | §B/§C |
+| 4 | Schema für Tools/Output | Strict-Regeln (kein leeres `enum`/`anyOf`, `prefixItems` statt Array-`items`) | §C |
+| 5 | 429 trotz Restbudget ⭐ | Eigenes Exp-Backoff, keine Retry-Header; Reasoning-Tokens in TPM | §D |
+| 6 | Endpunkt-Wahl | OpenAI-kompatibler `/v1`, nicht der deprecatete Anthropic-Pfad | §E |
+| 7 | Live/Web-Search | Nur EIN Domain-Filter (≤5 Domains), Verbrauch überwachen | §F |
 
 ---
 

@@ -2,6 +2,23 @@
 
 > Gegenstueck zu `bugs/apis/openrouter-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Attribution | `HTTP-Referer` + `X-Title` im Client-Konstruktor (sonst Content leer) | §1 |
+| 2 | Routing | `provider.order` + `allow_fallbacks:false` für Determinismus | §2 |
+| 3 | Qualität/Datenschutz | `quantizations`-Allowlist, `data_collection:"deny"` für Compliance | §3 |
+| 4 | Kosten/Speed | `:floor`/`:nitro` bzw. `sort`; `max_price` als Preisdeckel | §4 |
+| 5 | Modell-Routing | `anbieter/modell`, Liste via `/api/v1/models`, `models`-Fallback-Array | §5 |
+| 6 | Streaming/SSE | `:`-Kommentare überspringen, `[DONE]` + Mid-Stream-`error` prüfen | §6 |
+| 7 | Tool Calling | OpenAI-Shape; Args pro `index` über Chunks akkumulieren | §7 |
+| 8 | Output/Limits | `json_schema` + `strict:true`; `:free`=20 RPM/50 RPD; 402 ≠ 429 | §8 |
+
 ## 1. Unified Gateway & Attribution-Header
 - Base-URL `https://openrouter.ai/api/v1`, Auth via `Authorization: Bearer <OPENROUTER_API_KEY>`; als OpenAI-Drop-in den Base-URL umstellen, sonst offizielle SDKs (`@openrouter/sdk`, `openrouter`) fuer Typsicherheit. Quelle: https://openrouter.ai/docs/quickstart · offiziell
 - `HTTP-Referer` (deine Site) + `X-Title` (App-Name) bei jedem Request mitsenden — aktiviert Leaderboard/Attribution; ohne werden Antworten bei Non-localhost-Keys still leer. Header im Client-Konstruktor (`default_headers`) setzen, nicht per Request-Override. Quelle: https://openrouter.ai/docs/quickstart · offiziell

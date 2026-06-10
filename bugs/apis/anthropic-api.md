@@ -4,13 +4,23 @@
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
 > Pflichtwert), aktuelle Modelle Opus 4.x/Sonnet 4.6. Zweite Seite: `best-practices/projekt-code/apis/best-practices-anthropic-api.md`.
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`x-api-key`-Header (NICHT `Authorization: Bearer`)** + `anthropic-version: 2023-06-01` sind Pflicht bei direktem HTTP.
-2. **`system` ist Top-Level-Parameter, NICHT eine Message-Rolle.** `max_tokens` ist Pflicht. Rollen müssen user/assistant alternieren, erste Message = `user`.
-3. **Tool Use:** jeder `tool_use`-Block braucht ein `tool_result` mit EXAKT passender ID in der nächsten user-Message. Beim Kürzen/Compacten NIE nur eine Seite entfernen.
-4. **Streaming:** Tool-Args via `input_json_delta` erst bei `content_block_stop` parsen; Fehler können NACH HTTP-200 als SSE-`error`-Event kommen; auf `message_stop` warten.
-5. **Prompt Caching:** Default-TTL 5 Min, Mindest-Tokens (1024 Opus/Sonnet, 2048 Haiku), byte-identischer Prefix nötig — sonst stiller Cache-Miss bei vollem Preis.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Direkter HTTP-Call | `x-api-key` (nicht Bearer) + `anthropic-version: 2023-06-01` | §1, §2 |
+| 2 | 400 Messages-Struktur | `system` Top-Level, `max_tokens` Pflicht, Rollen alternieren | §3, §4, §5 |
+| 3 | 400 tool_use/tool_result | Paarweise + ID-gematcht; beim Compacten nie nur eine Seite | §7 |
+| 4 | Streaming Tool-Args | `input_json_delta` erst bei `content_block_stop` parsen | §9 |
+| 5 | Fehler nach HTTP-200 | SSE-`error`-Event behandeln, auf `message_stop` warten | §10, §11 |
+| 6 | Prompt Caching greift nicht | TTL 5 Min, Mindest-Tokens, byte-identischer Prefix | §14, §15, §16 |
+| 7 | Multi-Turn mit thinking | thinking-Blocks unverändert 1:1 in History zurück | §20 |
+| 8 | 429/529 | `anthropic-ratelimit-*`+`retry-after` lesen, 529≠500≠504 | §21, §22 |
+| 9 | Doppelte Retries / Hangs | SDK `max_retries=2`; bei eigener Retry-Logik `max_retries=0` | §26 |
 
 ---
 

@@ -13,26 +13,29 @@
 
 ---
 
-## ⚡ Die wichtigsten Regeln (TL;DR — zuerst lesen)
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **`.Result`/`.Wait()` auf dem UI-Thread = Deadlock.** Async durchgaengig `await`en; in
-   Bibliotheks-Code `ConfigureAwait(false)`. (§7.1)
-2. **Single-File:** `Assembly.Location` ist leer → `Environment.ProcessPath` /
-   `AppContext.BaseDirectory` nutzen. Native Libs brauchen `IncludeNativeLibrariesForSelfExtract`. (§1)
-3. **WPF + Trimming/ReadyToRun = kaputt.** `PublishTrimmed` fuer WPF NICHT verwenden. (§1.5)
-4. **WinUI 3 ist NICHT single-file-faehig** und hat **kein** echtes Transparenz-/Click-through-
-   Overlay. Fuer Overlays WPF nehmen. (§12.1, §2.6)
-5. **Clipboard kann jederzeit gesperrt sein** (`CLIPBRD_E_CANT_OPEN`) → IMMER Retry-Schleife. (§4.1)
-6. **Overlay-Topmost** geht bei `ShowInTaskbar=false` verloren und gegen Fullscreen → per
-   `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)` periodisch re-applizieren. (§2.1, §2.2)
-7. **Per-Monitor-DPI** braucht `app.manifest` (`PerMonitorV2`); Positionieren ueber Monitore
-   mit `SetWindowPos`/physische Pixel, nicht `Window.Left/Top`. (§3)
-8. **`new HttpClient()` pro Request** erschoepft Sockets → ein statischer Client mit
-   `SocketsHttpHandler.PooledConnectionLifetime`. (§8.1)
-9. **`SetForegroundWindow` tut nichts** bei Foreground-Lock → `AttachThreadInput`-Trick oder
-   Trigger aus eigenem Prozess. (§5.5)
-10. **`dotnet publish` ist in .NET 8 jetzt Release-default**, und `-r RID` allein impliziert
-    KEIN self-contained mehr → explizit `--self-contained true`. (§13)
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | `.Result`/`.Wait()` auf UI-Thread | Durchgaengig `await`; in Lib `ConfigureAwait(false)` | §7.1 |
+| 2 | Single-File: `Assembly.Location` leer | `Environment.ProcessPath` statt `Assembly.Location` nutzen | §1.1 |
+| 3 | Content-Dateien fehlen nach Publish | Assets im Publish-Skript explizit neben EXE spiegeln | §1.9 |
+| 4 | WPF veroeffentlichen | Kein `PublishTrimmed`/AOT bei WPF verwenden | §1.5 |
+| 5 | Transparentes Click-through-Overlay | Overlay in WPF bauen, nicht WinUI 3 | §12.7 |
+| 6 | Clipboard-Zugriff | IMMER Retry-Schleife um jeden Clipboard-Aufruf | §4.1 |
+| 7 | Overlay liegt nicht obenauf | `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)` periodisch setzen | §2.1 |
+| 8 | Scharfe Anzeige ueber Monitore | `app.manifest PerMonitorV2`; Position per physische Pixel | §3.1 |
+| 9 | Viele HTTP-Calls (Whisper/Gemini) | Ein statischer Client mit `PooledConnectionLifetime` | §8.1 |
+| 10 | `SetForegroundWindow` wirkt nicht | `AttachThreadInput`-Trick oder Trigger aus eigenem Prozess | §5.5 |
+| 11 | Event-Handler feuert beim XAML-Laden | `_ready`-Flag; Handler returnt solange false | §2.10 |
+| 12 | `UseWindowsForms` + ImplicitUsings (CS0104) | Globale `Using Remove` fuer Drawing/Forms im csproj | §6.7 |
+| 13 | `dotnet publish` self-contained | `--self-contained true` explizit (RID impliziert es nicht) | §13.1 |
+| 14 | Memory-Leak bei Events/Timern | Im `Dispose`/`Unloaded` immer `-=` und `Stop()` | §9.1 |
+| 15 | `Process.Start(url)` wirft | `new ProcessStartInfo(url){ UseShellExecute = true }` | §13.8 |
 
 ---
 

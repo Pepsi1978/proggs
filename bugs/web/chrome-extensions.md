@@ -15,23 +15,29 @@
 > Gegenstueck (Praevention, „so baut man es von vornherein richtig"):
 > `best-practices/projekt-code/web/best-practices-chrome-extensions.md` (Bezugs-Tabelle unten).
 
----
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-## TL;DR — die 8 wichtigsten Regeln
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektuere
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
 
-1. **Der Service Worker stirbt staendig (nach ~30 s Idle).** NIE State in globalen Variablen
-   halten → immer `chrome.storage`. Event-Listener IMMER synchron im Top-Level registrieren.
-2. **`setTimeout`/`setInterval` ueberleben den SW nicht** → `chrome.alarms` (Minimum 30 s ab Chrome 120).
-3. **Async-Antwort auf `onMessage`** braucht `return true` (oder ab Chrome 148 ein zurueckgegebenes
-   Promise). Sonst „The message port closed before a response was received."
-4. **Content Scripts laufen im Isolated World** — kein Zugriff auf Seiten-JS; und sie fehlen in
-   bereits offenen Tabs nach Install/Update → per `scripting.executeScript` nachinjizieren (mit Guard).
-5. **Erweiterung verschwindet/instabil?** ZUERST den Ordner-PFAD wechseln, nicht an ID/Code doktern (Punkt 1).
-6. **Mikrofon/Audio gehen nicht im SW** — `getUserMedia`/Audio brauchen Offscreen-Document oder Content-Script.
-   Geht der Ton nicht (Button wird rot)? ZUERST Chrome-Mic-Auswahl pruefen, nicht den Code.
-7. **MV2 ist seit Chrome 139 (Juli 2025) komplett tot.** Jeder MV2-Workaround ist obsolet — alles MV3.
-8. **Die Erweiterung ist NICHT vertraulich** — keine API-Keys ins Bundle; jede Permission begruenden;
-   `externally_connectable`/`onMessage` IMMER den `sender` validieren.
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Erweiterung verschwindet/instabil nach Neustart | ZUERST Ordner-Pfad wechseln, NICHT ID/Code | #1 |
+| 2 | Laedt nicht / instabil | Keine `_`-Dateien im Ordner (ausser `_locales`) | #2 |
+| 3 | State (Login/Abo/Tab) ploetzlich weg | Nie globale Vars → `chrome.storage`; SW stirbt nach 30s | #3 |
+| 4 | Event feuert nach SW-Neustart nicht | Alle Listener synchron im Top-Level registrieren | #5 |
+| 5 | Timer feuert nie | `chrome.alarms` statt `setTimeout`/`setInterval` (min 30s) | #6, #7 |
+| 6 | „message port closed before response" | Async `onMessage`: `return true` (oder Promise ab 148) | #14 |
+| 7 | Erweiterung reagiert nicht in offenen Tabs | Per `executeScript` nachinjizieren + Doppel-Guard | #17 |
+| 8 | Seiten-JS-Variable ist `undefined` | Content-Script im Isolated World; `world:"MAIN"` noetig | #18 |
+| 9 | „Extension context invalidated" | `chrome.runtime?.id` pruefen / try-catch + Cleanup | #19 |
+| 10 | Mikrofon/Audio geht nicht | Nicht im SW → Offscreen-Doc/Content-Script | #48 |
+| 11 | Button wird rot, aber kein Ton | ZUERST Chrome-Mic-Auswahl pruefen, NICHT den Code | #54 |
+| 12 | WebSocket-Handshake schlaegt fehl | Host als `wss://` in `host_permissions` (MV3) | #53 |
+| 13 | `storage.sync.set` QUOTA-Fehler | 8 KB/Item: pro Datensatz EIN Key | #28, #37 |
+| 14 | Erweiterung nach Update deaktiviert | Neue Permission als `optional_permissions` | #40 |
+| 15 | Sicherheit / Store | `sender` validieren, keine Secrets im Bundle; MV2 ist tot (≥139) | #55, #58, #64 |
 
 ---
 

@@ -41,25 +41,28 @@ Gegenstueck. Konkret referenziert: `kotlin.md` §10.1 (KSP↔Kotlin), §10.3 (R8
 
 ---
 
-## TL;DR — die 7 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Daemon-Crash-Klassiker (betrifft euer Setup):** Sobald `org.gradle.jvmargs` gesetzt ist,
-   gehen Gradles Defaults verloren — IMMER `-XX:MaxMetaspaceSize` mitsetzen, sonst "Daemon
-   disappeared unexpectedly" (gradle#19750, **offen/per Design**). → §6.1.
-2. **AGP-Version diktiert die Mindest-Gradle- und JDK-Version.** Vor jedem AGP-Bump die Matrix
-   pruefen (§1). AGP 9.0 verlangt **Gradle 9.1.0** + den Wrapper-Bump.
-3. **AGP 9.0 ist ein harter Schnitt** (§2): neue DSL als Default, `proguard-android.txt` verboten,
-   `strictFullModeForKeepRules`, viele Defaults gekippt, Variant-API entfernt. Mit dem AGP-Upgrade
-   als EIN Block planen — nicht nebenbei.
-4. **R8 (Release) shrinkt per Reflection/Resource-Name geladene Dinge weg** (§7) — Symptom erst
-   im Release-Build/Play-Store, nie im Debug. keep-Rules eng halten, dynamische Ressourcen schuetzen.
-5. **KSP-Incremental-Bug trifft eure exakte Version** (§8.2, ksp#2252): bei "stale generated code"
-   reflexartig `clean` (EntropieReductor mit `ksp.incremental=true` ist am anfaelligsten).
-6. **Version-Catalog/BOM:** BOM-gemanagte Libs im Catalog OHNE eigene Version notieren, `platform(...)`
-   nicht vergessen, BOM auf JEDER Configuration deklarieren (auch `androidTestImplementation`) (§9).
-7. **Windows-Build-Fallen** (§11): `MaxMetaspaceSize` (s.o.), `options.encoding = "UTF-8"` pro Task
-   (das blosse `-Dfile.encoding` ist unzuverlaessig), Defender-Ausnahme fuer `build/` + `.gradle/`,
-   `gradlew` muss LF haben.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | `org.gradle.jvmargs` gesetzt | `-XX:MaxMetaspaceSize` mitsetzen, sonst Daemon-Crash | §6.1 |
+| 2 | AGP-Bump geplant | Erst Matrix pruefen: Mindest-Gradle + JDK | §1, §1.1 |
+| 3 | AGP-9.0-Upgrade | Als EIN Block planen (neue DSL, ProGuard, Variant-API) | §2 |
+| 4 | "ClassCastException ... BaseExtension" | Build-Logic auf Public-DSL + androidComponents | §2.1 |
+| 5 | keep-Regel haelt Ctor nicht (AGP 9) | Regel praezisieren: `-keep class A { <init>(); }` | §2.4 |
+| 6 | Release/Play-Store-Crash, Debug ok | R8: keep-Rules eng, dynamische Res schuetzen | §7 |
+| 7 | Gson/Moshi verliert generische Typen | `-keepattributes Signature,InnerClasses,EnclosingMethod` | §7.1 |
+| 8 | Per Name geladene Ressource fehlt (AGP 9) | `res/raw/keep.xml` mit `tools:keep=...` | §7.5 |
+| 9 | "Missing classes ... running R8" | Regeln aus `missing_rules.txt`, KEIN `-dontwarn`-Flood | §7.4 |
+| 10 | "stale generated code" / KSP-Output fehlt | Reflexartig `clean` (KSP-2.1.0-1.0.29 betroffen) | §8.2 |
+| 11 | Kotlin 2.3 / AGP 9.0 Upgrade | `ksp.useKSP2=true` im selben Schnitt | §8.1 |
+| 12 | BOM-Lib ohne Version unaufloesbar | `platform(...)` + BOM auf JEDER Configuration | §9.3, §9.4 |
+| 13 | Windows: Umlaute werden Muell | `options.encoding = "UTF-8"` pro JavaCompile-Task | §11.5 |
+| 14 | Windows: "Unable to delete" bei clean | `gradlew --stop` + Defender-Ausnahme `build/`+`.gradle/` | §11.2 |
 
 ---
 

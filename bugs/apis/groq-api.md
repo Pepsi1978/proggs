@@ -6,13 +6,22 @@
 > Verwandt: Whisper-Halluzination siehe auch `desktop/groq-transkription.md`. Zweite Seite: noch keine
 > `best-practices-groq-api.md` (Transkriptions-BP existiert: `best-practices/projekt-code/desktop/best-practices-groq-transkription.md`).
 
-## TL;DR — die 5 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Groq ist OpenAI-kompatibel** (`base_url=https://api.groq.com/openai/v1`), aber `logprobs`/`logit_bias`/`top_logprobs`/`messages[].name` werfen 400, `n>1` verboten, `temperature=0` → intern `1e-8`.
-2. **VIER Rate-Limits gleichzeitig** (RPM/RPD/TPM/TPD, organisationsweit) — 429 sobald EINES feuert. Häufigste Falle: TPM bottleneckt trotz freiem RPM.
-3. **Modelle werden SCHNELL ausgemustert** (`model_decommissioned`, 400). Modell-ID NIE hartkodieren — dynamisch von `/models` ziehen.
-4. **Output-`max_tokens` < Kontextfenster** (z. B. Llama-3.3-70b: 32k Output bei 131k Kontext). Pro Modell aus Tabelle setzen.
-5. **Whisper:** 413 oft früher als dokumentiert → chunken; Timestamps beim Chunking per `timeOffsetSec` korrigieren; `verbose_json` + `no_speech_prob` gegen Stille-Halluzination.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | OpenAI-Client gegen Groq | `logprobs`/`logit_bias`/`top_logprobs`/`name` weglassen, `n=1` | §1 |
+| 2 | `temperature=0` gesetzt | Kleinen Float >0 setzen, kein echter Determinismus | §1 |
+| 3 | 429 trotz freiem RPM ⭐ | TPM bottleneckt — token-bewusst pre-throttlen, alle 4 Header prüfen | §2 |
+| 4 | Modell-ID im Code | Nie hartkodieren — dynamisch von `/models` ziehen | §3 |
+| 5 | `max_tokens` setzen ⭐ | Output-Limit pro Modell, nicht ans Kontextfenster koppeln | §6 |
+| 6 | Whisper-Upload >24 MB | Chunken (16 kHz mono) + `timeOffsetSec` für Timestamps | §4 |
+| 7 | Whisper halluziniert bei Stille | `verbose_json` + `no_speech_prob`/`avg_logprob`-Filter | §4 |
+| 8 | Tool-Calling / Folge-Request | Striktes OpenAI-Schema; `reasoning_content` vorher strippen | §5 |
 
 ---
 

@@ -3,6 +3,22 @@
 > Gegenstück zu `bugs/apis/oauth-device-code.md`. Offiziell: RFC 8252/8628/7636/9700/6749, oauth.net,
 > Auth0/Okta/Google. (Researcher-Recherche 2026-06-08.)
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Kurzcheck = Stufe-A-Pflichtlektüre
+> (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
+> Hochrisiko-Arbeit (Stufe C).
+
+| # | Situation | Best Practice (Kurzform) | Volltext |
+|---|-----------|--------------------------|----------|
+| 1 | Flow waehlen | Browser → Code+PKCE; Headless → Device-Grant | §1 |
+| 2 | PKCE bauen | S256, Base64url ohne Padding, Verifier 43–128 | §2 |
+| 3 | Device-Polling | `pending`→weiter, `slow_down`→+5 s, dann stoppen | §3 |
+| 4 | Token-Refresh | Single-Flight-Mutex, neuen Token sofort speichern | §4 |
+| 5 | Tokens speichern | OS-Store (Keychain/DPAPI/Secret Service) | §5 |
+| 6 | Loopback-Redirect | `127.0.0.1` + dyn. Port, `state` pruefen | §6 |
+| 7 | OAuth 2.1 / RFC 9700 | PKCE ueberall, kein Implicit, Bearer nie in URL | §7 |
+
 ## 1. Flow-Wahl
 - **Lokaler Browser → Authorization Code + PKCE** im System-Browser (nie embedded Webview!). **Headless/SSH/IoT → Device Authorization Grant** (RFC 8628). Quelle: RFC 8252 · https://datatracker.ietf.org/doc/html/rfc8252 · offiziell
 

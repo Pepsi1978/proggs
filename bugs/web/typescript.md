@@ -7,16 +7,33 @@
 
 ---
 
-## TL;DR — die 8 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **TS 6.0 ist ein Bruch-Release ohne neue Engine:** Defaults haben sich geaendert (`strict`=true, `types`=`[]`, `module`/`target`/`rootDir` neu) und ein Schwung Optionen ist **deprecated** (z.B. `moduleResolution node10`, `baseUrl`, `target es5`, `outFile`). `ignoreDeprecations` unterdrueckt NUR die Deprecation-Fehler, NICHT die Default-Aenderungen. In TS 7.0 ("Corsa", Go-Port) sind die Deprecations **ganz weg**. → Abschnitt A + B.
-2. **Node 24 erlaubt `require(esm)` synchron** — der alte `ERR_REQUIRE_ESM`-Schmerz ist zu ~90% weg. Was bleibt: **Top-Level-await** im Graphen (`ERR_REQUIRE_ASYNC_MODULE`), ESM↔CJS-Zyklen, und neu der **Dual-Package-Hazard**, weil `require` jetzt die `import`-Condition treffen kann. → Abschnitt C.
-3. **`strict` allein macht nicht typsicher.** `noUncheckedIndexedAccess` und `exactOptionalPropertyTypes` sind **nicht** in `strict` — genau die zwei haeufigsten Laufzeit-Crash-Quellen. `any` leakt trotz `noImplicitAny` (JSON.parse, Drittanbieter-Returns). → Abschnitt D.
-4. **`unhandledRejection` killt den Prozess** (Default seit Node 15). Vergessenes `await`/`.catch` = Crash. `process.on('unhandledRejection')` nur zum geordneten Shutdown, NIE als stiller Schlucker. → Abschnitt E.
-5. **npm 7+ erzwingt peer-deps strikt** (`ERESOLVE`). `--legacy-peer-deps` (chirurgisch) statt `--force` (Holzhammer, baut kaputte Trees). → Abschnitt F.
-6. **`@types/node`-Major MUSS dem Node-Major entsprechen** (Node 24 → `@types/node@24`); npm haelt das NICHT automatisch synchron. → Abschnitt F.
-7. **`tsc` aus dem PATH (global 6.0.2) ≠ lokales `tsc`** — immer `npx tsc` / `./node_modules/.bin/tsc`. Das Beispielprojekt hat genau diesen Mismatch (`peerDependencies: typescript ^5`, global 6.0.2). → F18.
-8. **Bun ≠ Node:** `.ts`-Imports + `module: Preserve`/`bundler` laufen in Bun, brechen in Node (`ERR_MODULE_NOT_FOUND`). Native Module (`better-sqlite3`) haben unter Bun ABI-Mismatch → `bun:sqlite` oder unter Node bauen. → Abschnitt H.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | TS-6.0-Upgrade: `process`/`Buffer`/`describe` fehlen | `types: ["node"]` explizit setzen (Default ist `[]`) | §A1 |
+| 2 | TS-6.0-Upgrade: ploetzlich Massen-Typfehler | `strict` ist jetzt Default `true`; schrittweise migrieren | §A2 |
+| 3 | TS-6.0: `module`/`target`/`rootDir` floaten | Alle Verhaltens-Defaults EXPLIZIT festnageln | §A3, §A4 |
+| 4 | `ignoreDeprecations` gesetzt | Unterdrueckt nur Deprecations, NICHT Default-Aenderungen | §B |
+| 5 | `moduleResolution: node`/`node10`/`classic` | Auf `nodenext` (Node) oder `bundler` (Bun) umstellen | §B7 |
+| 6 | `ERR_REQUIRE_ASYNC_MODULE` bei `require(esm)` | Top-Level-await im Graphen → auf `await import()` | §C15 |
+| 7 | ESM `ERR_MODULE_NOT_FOUND` | Relative Imports brauchen `.js`-Endung (auch bei `.ts`) | §C17 |
+| 8 | `__dirname is not defined` in ESM | `import.meta.dirname` statt CJS-Globals | §C18 |
+| 9 | `instanceof` false / Singleton doppelt | Dual-Package-Hazard; ESM-only oder State stateless | §C19 |
+| 10 | `JSON.parse`/`.json()` weiterverwenden | Sofort als `unknown`, dann validieren — nie `any` | §D24 |
+| 11 | `arr[i]`/`obj[key]` crasht zur Laufzeit | `noUncheckedIndexedAccess: true` (NICHT in `strict`) | §D27 |
+| 12 | `as`/`!`/`as unknown as T` benutzt | Echten Guard/`satisfies`/Validierung statt Behauptung | §D29, §D30, §D31 |
+| 13 | Prozess crasht mit exit 1 | Floating Promise; jedes `await`/`.catch`, kein stiller Schlucker | §E40 |
+| 14 | `forEach` mit async-Callback | Wartet NICHT → `for...of`+`await` oder `Promise.all` | §E43 |
+| 15 | `npm error ERESOLVE` | `--legacy-peer-deps` (chirurgisch), NIE `--force` | §F53, §F54 |
+| 16 | Typfehler nach Node-Upgrade | `@types/node`-Major == Node-Major (24) pinnen | §F55 |
+| 17 | `tsc` inkonsistent | Immer `npx tsc`/`./node_modules/.bin/tsc`, nie global | §F67 |
+| 18 | Code laeuft in Bun, bricht in Node | `.ts`-Imports/`bundler` sind Bun-only; native Module gegen Node bauen | §H79, §H80, §H75 |
+| 19 | Import bricht nur im Linux-CI | Datei-Casing konsistent; `forceConsistentCasingInFileNames` | §I84 |
 
 ---
 
