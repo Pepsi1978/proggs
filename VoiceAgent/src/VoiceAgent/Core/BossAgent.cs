@@ -64,13 +64,16 @@ namespace VoiceAgent.Core
         /// <summary>System-Prompt + bisheriger Verlauf — die vollstaendige Nachrichtenliste fuers LLM.</summary>
         public IReadOnlyList<LlmMessage> BuildMessages()
         {
-            // System-Prompt + Faehigkeiten (damit der Agent NIE falsch verneint) + aktuelle Echtzeit
-            // (LLM kennt die Uhrzeit sonst nicht) + Gedaechtnis-Block ueber Sessions.
+            // System-Prompt + Faehigkeiten (damit der Agent NIE falsch verneint) + LIVE-Helfer-Liste
+            // + aktuelle Echtzeit (LLM kennt die Uhrzeit sonst nicht) + Gedaechtnis-Block.
             // Faehigkeiten IMMER mitgeben: die fruehere "nur bei Frage"-Heuristik war zu fragil
             // (verpasste Formulierungen wie "...erinnern kannst" -> Agent verneinte faelschlich).
-            // capabilities.md ist kompakt genug, um verlaesslich bei jedem Turn dabei zu sein.
+            // Die Helfer-Liste kommt LIVE aus der Registry (Vorfall 2026-06-10: die statische
+            // capabilities.md war veraltet und der Agent verneinte den Helfer-Baumeister) —
+            // dieselbe Quelle, ueber die delegiert wird, kann nicht von der Realitaet abweichen.
             var systemText = _systemPrompt
                 + AgentCapabilities.BuildBlock()
+                + AgentCapabilities.BuildHelpersBlock(_subAgents?.All)
                 + TimeContext.BuildBlock(_timeZoneId)
                 + (_memory?.ContextBlock() ?? string.Empty);
             var list = new List<LlmMessage>(_session.History.Count + 2)

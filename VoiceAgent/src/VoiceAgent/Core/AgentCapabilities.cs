@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using VoiceAgent.Diagnostics;
 
 namespace VoiceAgent.Core
@@ -45,6 +47,25 @@ namespace VoiceAgent.Core
                    "erfinde nichts dazu und verneine nichts, das hier als koennend steht):\n" + Content;
         }
 
+        /// <summary>
+        /// Baut die LIVE-Liste der einsatzbereiten Helfer DIREKT aus der SubAgent-Registry —
+        /// derselben Quelle, ueber die der Boss tatsaechlich delegiert. Diese Liste kann NIE
+        /// veralten (Poka-Yoke Stufe 3): die statische capabilities.md hatte am 2026-06-10
+        /// faelschlich behauptet, der Agent koenne keine Unteragenten bauen — weil die
+        /// Hand-Pflege bei neuen Features vergessen wurde. Public static = isoliert testbar.
+        /// </summary>
+        public static string BuildHelpersBlock(IReadOnlyList<ISubAgent>? agents)
+        {
+            if (agents == null || agents.Count == 0) return string.Empty;
+            var sb = new StringBuilder();
+            sb.Append("\n\nDEINE EINSATZBEREITEN HELFER (LIVE aus dem System erzeugt — verbindlich: ")
+              .Append("JEDEN dieser Helfer hast du JETZT und kannst ihn sofort beauftragen; ")
+              .Append("verneine KEINEN davon):\n");
+            foreach (var a in agents)
+                sb.Append("- ").Append(a.Name).Append(": ").Append(a.Description).Append('\n');
+            return sb.ToString();
+        }
+
         private static string ReadFileOrFallback()
         {
             try
@@ -65,13 +86,15 @@ namespace VoiceAgent.Core
         }
 
         // Eingebauter Minimal-Fallback, falls capabilities.md fehlt — die App bleibt funktionsfaehig.
+        // WICHTIG: nichts faelschlich verneinen — die Helfer (Unteragenten bauen, Computer Use,
+        // Erinnerungen, Notizen) kommen verbindlich aus der LIVE-Liste (BuildHelpersBlock).
         private const string Fallback =
 @"Das kann ich JETZT:
 - Per Sprache und Text reden, vorlesen, die echte Uhrzeit nennen.
 - Notizen merken und mich an Frueheres erinnern (Gedaechtnis).
 - Zeitgesteuerte Erinnerungen anlegen und mich proaktiv mit Signalton melden.
+- Alle unten in der LIVE-Helfer-Liste genannten Helfer sofort beauftragen (z. B. neue Unteragenten bauen, Computer Use sofern in den Einstellungen aktiviert).
 Das kann ich NOCH NICHT:
-- Den Computer wirklich steuern (Computer Use).
-- Zur Laufzeit selbst neue Unteragenten bauen.";
+- Im Internet surfen oder Webseiten lesen.";
     }
 }

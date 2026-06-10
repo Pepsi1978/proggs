@@ -18,5 +18,40 @@ namespace VoiceAgent.Tests
         [Fact]
         public void BuildBlock_MentionsReminders()
             => Assert.Contains("Erinnerung", AgentCapabilities.BuildBlock());
+
+        // ---- LIVE-Helfer-Liste (Vorfall 2026-06-10: statische capabilities.md war veraltet,
+        // der Agent verneinte den Helfer-Baumeister). Die Liste kommt aus der Registry und
+        // muss JEDEN registrierten Helfer mit Name + Zustaendigkeit nennen. ----
+
+        private sealed class FakeSub : ISubAgent
+        {
+            public string Name { get; init; } = "Fake";
+            public string Description { get; init; } = "Tut Testdinge.";
+            public bool CanHandle(string task) => false;
+            public Task<string> HandleAsync(string task, CancellationToken ct = default)
+                => Task.FromResult("ok");
+        }
+
+        [Fact]
+        public void BuildHelpersBlock_ListsEveryRegisteredAgentWithDescription()
+        {
+            var agents = new List<ISubAgent>
+            {
+                new FakeSub { Name = "Helfer-Baumeister", Description = "Legt auf Wunsch neue, eigene Helfer an." },
+                new FakeSub { Name = "Erinnerung", Description = "Merkt sich Erinnerungen." },
+            };
+            var block = AgentCapabilities.BuildHelpersBlock(agents);
+            Assert.Contains("EINSATZBEREITEN HELFER", block);
+            Assert.Contains("Helfer-Baumeister: Legt auf Wunsch neue, eigene Helfer an.", block);
+            Assert.Contains("Erinnerung: Merkt sich Erinnerungen.", block);
+            Assert.Contains("verneine KEINEN", block);   // die Anweisung gegen falsches Verneinen
+        }
+
+        [Fact]
+        public void BuildHelpersBlock_EmptyWhenNoAgents()
+        {
+            Assert.Equal(string.Empty, AgentCapabilities.BuildHelpersBlock(null));
+            Assert.Equal(string.Empty, AgentCapabilities.BuildHelpersBlock(new List<ISubAgent>()));
+        }
     }
 }
