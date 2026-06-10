@@ -45,6 +45,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -685,13 +686,9 @@ private fun StepRetentionOffer(
     onPauseSubscription: () -> Unit,
     onDecline: () -> Unit,
 ) {
-    // Calculate fallback retention price from current price
-    val displayRetentionPrice =
-        retentionPrice
-            ?: run {
-                if (subscriptionType == SubscriptionType.YEARLY) Constants.RETENTION_YEARLY_PRICE
-                else Constants.RETENTION_MONTHLY_PRICE
-            }
+    // Use the live Play price; if it is missing, show a neutral placeholder
+    // instead of a hardcoded EUR amount (matching the main paywall).
+    val displayRetentionPrice = retentionPrice ?: "…"
 
     val isYearly = subscriptionType == SubscriptionType.YEARLY
     val periodLabel =
@@ -1008,21 +1005,6 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
         ),
         label = "stayHeartScale",
     )
-    // Loop-7 #2 (Frank, 2026-04-30): the "Doch lieber bleiben" CTA gets
-    // the same gentle breathing scale as the "Premium starten" button on
-    // the paywall — a slow 1.00 ↔ 1.03 pulse, calm enough to feel
-    // inviting rather than nagging. The button itself is now content-
-    // sized (no longer full-width) so the visual weight matches the text.
-    val stayButtonScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.03f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "stayButtonScale",
-    )
-
     Column(
         modifier = Modifier.fillMaxWidth().padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1065,9 +1047,7 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
 
         Button(
             onClick = onGoBack,
-            modifier = Modifier
-                .wrapContentWidth()
-                .scale(stayButtonScale),
+            modifier = Modifier.fillMaxWidth(),
             colors =
                 ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(14.dp),
@@ -1082,15 +1062,21 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Subdued grey link instead of the previous red, so it does not
-        // compete visually with the primary "Bleiben"-Button above.
-        TextButton(onClick = onConfirmCancel, modifier = Modifier.wrapContentWidth()) {
+        OutlinedButton(
+            onClick = onConfirmCancel,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = 28.dp,
+                vertical = 10.dp,
+            ),
+        ) {
             Text(
                 stringResource(R.string.action_go_google_play),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
             )
         }
     }

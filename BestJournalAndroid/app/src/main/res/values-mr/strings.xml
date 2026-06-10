@@ -569,37 +569,37 @@
          JSON-KEYS for AI response (Dashboard).
          ════════════════════════════════════════════════════════════════════ -->
     <!-- Top-level JSON keys -->
-    <string name="json_key_overall_analysis">एकूण_विश्लेषण</string>
-    <string name="json_key_top_actions">शीर्ष_उपाय</string>
-    <string name="json_key_categories">श्रेण्या</string>
-    <string name="json_key_heading_top5">शीर्षक_शीर्ष5</string>
-    <string name="json_key_heading_analysis">शीर्षक_विश्लेषण</string>
-    <string name="json_key_heading_results">शीर्षक_परिणाम</string>
-    <string name="json_key_progress">प्रगती</string>
-    <string name="json_key_overall_entropy">एकूण_एन्ट्रोपी</string>
-    <string name="json_key_trend">कल</string>
+    <string name="json_key_overall_analysis">samagra_vishleshan</string>
+    <string name="json_key_top_actions">mukhya_kadam</string>
+    <string name="json_key_categories">shreniyaan</string>
+    <string name="json_key_heading_top5">shirshak_top5</string>
+    <string name="json_key_heading_analysis">shirshak_vishleshan</string>
+    <string name="json_key_heading_results">shirshak_natije</string>
+    <string name="json_key_progress">pragati</string>
+    <string name="json_key_overall_entropy">samagra_entropy</string>
+    <string name="json_key_trend">rujhan</string>
     <!-- Category-level JSON keys -->
-    <string name="json_key_category_name">नाव</string>
-    <string name="json_key_category_icon">चिन्ह</string>
-    <string name="json_key_category_color">रंग</string>
-    <string name="json_key_category_entropy_level">एन्ट्रोपी_स्तर</string>
-    <string name="json_key_category_summary">सारांश</string>
-    <string name="json_key_category_advices">सल्ले</string>
+    <string name="json_key_category_name">naam</string>
+    <string name="json_key_category_icon">aikan</string>
+    <string name="json_key_category_color">rang</string>
+    <string name="json_key_category_entropy_level">entropy_star</string>
+    <string name="json_key_category_summary">saaraansh</string>
+    <string name="json_key_category_advices">sujhaav</string>
     <!-- Item-level JSON keys (advice, action, progress) -->
-    <string name="json_key_item_title">शीर्षक</string>
-    <string name="json_key_item_description">वर्णन</string>
-    <string name="json_key_item_explanation">स्पष्टीकरण</string>
-    <string name="json_key_item_reference">संदर्भ</string>
-    <string name="json_key_item_priority">प्राधान्य</string>
-    <string name="json_key_item_connection">संबंध</string>
-    <string name="json_key_item_derivation">व्युत्पत्ती</string>
+    <string name="json_key_item_title">shirshak</string>
+    <string name="json_key_item_description">vivaran</string>
+    <string name="json_key_item_explanation">vyaakhya</string>
+    <string name="json_key_item_reference">sandarbh</string>
+    <string name="json_key_item_priority">prathamikta</string>
+    <string name="json_key_item_connection">sambandh</string>
+    <string name="json_key_item_derivation">vyutpatti</string>
     <!-- Derivation-level JSON keys -->
-    <string name="json_key_derivation_date">तारीख</string>
-    <string name="json_key_derivation_summary">सारांश</string>
+    <string name="json_key_derivation_date">tareekh</string>
+    <string name="json_key_derivation_summary">saaraansh</string>
     <!-- Enum values (priorities) -->
-    <string name="json_value_priority_high">उच्च</string>
-    <string name="json_value_priority_medium">मध्यम</string>
-    <string name="json_value_priority_low">कमी</string>
+    <string name="json_value_priority_high">uchch</string>
+    <string name="json_value_priority_medium">madhyam</string>
+    <string name="json_value_priority_low">kam</string>
     <string name="ai_prompt_fresh_summary">नवीन सारांश — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
     <string name="ai_prompt_fresh_insight">नवीन आत्म-ज्ञान विश्लेषण — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
     <string name="ai_prompt_fresh_goals">नवीन लक्ष्य विश्लेषण — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>

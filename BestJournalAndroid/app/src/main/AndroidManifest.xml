@@ -69,6 +69,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Poka-Yoke (C5, §25 TDDDG): Analytics stays disabled at SDK init until runtime consent
+             enables it (BestJournalApp.onCreate: setAnalyticsCollectionEnabled(true) after consent). -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
     </application>
 
 </manifest>

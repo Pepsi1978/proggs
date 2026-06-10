@@ -2316,6 +2316,9 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                com.bestjournal.app.ui.components.AiOutputDisclaimer()
             }
         },
         confirmButton = {

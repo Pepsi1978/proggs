@@ -539,6 +539,13 @@ fun PaywallScreen(
                     )
                 }
 
+                Text(
+                    text = stringResource(R.string.paywall_monthly_note, displayMonthlyPrice),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── Divider with "oder" separator ──
