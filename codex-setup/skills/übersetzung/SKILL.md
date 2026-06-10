@@ -1,6 +1,6 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 26 Sprachen aus der mitgelieferten Referenzdatei übersetzung-global.md (im Skill-Ordner). Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: "Übersetzt Android strings.xml in alle unterstützten Locales mit parallelen Workern und Verifikation. Nutze diesen Skill bei Strings übersetzen, Übersetzung starten, neue Strings, alle Strings, Lokalisierung, i18n oder mehrsprachiger App."
 ---
 
 # Uebersetzungs-Skill: Android strings.xml in 26 Sprachen

@@ -64,18 +64,18 @@ function Find-PluginRoot {
 # ============================================================================
 
 function Test-ServiceHealthy {
-    param([string]$Host, [int]$Port)
+    param([string]$HostName, [int]$Port)
 
     # Method 1: HTTP
     try {
-        $r = Invoke-WebRequest -Uri "http://${Host}:${Port}/api/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+        $r = Invoke-WebRequest -Uri "http://${HostName}:${Port}/api/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
         if ($r.StatusCode -eq 200) { return $true }
     } catch { }
 
     # Method 2: TCP
     try {
         $tcp = New-Object System.Net.Sockets.TcpClient
-        $tcp.Connect($Host, $Port)
+        $tcp.Connect($HostName, $Port)
         $tcp.Close()
         return $true
     } catch { }
@@ -88,7 +88,7 @@ function Test-ServiceHealthy {
 # ============================================================================
 
 function Patch-PluginHooks {
-    param([string]$HooksJson, [string]$Host, [int]$Port)
+    param([string]$HooksJson, [string]$HostName, [int]$Port)
 
     if (-not (Test-Path $HooksJson)) { return }
     $content = Get-Content $HooksJson -Raw -ErrorAction SilentlyContinue
@@ -96,7 +96,7 @@ function Patch-PluginHooks {
     if ($content -match "curl -sf.*:${Port}/api/health.*exit 0") { return }
     if ($content -notmatch 'worker-service\.cjs" start') { return }
 
-    $fallback = "|| { sleep 2 && curl -sf http://${Host}:${Port}/api/health >/dev/null 2>&1 && exit 0 || exit 1; }"
+    $fallback = "|| { sleep 2 && curl -sf http://${HostName}:${Port}/api/health >/dev/null 2>&1 && exit 0 || exit 1; }"
     $patched = $content `
         -replace '(worker-service\.cjs" start)"', "`$1 $fallback""" `
         -replace '(worker-service\.cjs" hook codex context)"', "`$1 $fallback"""
@@ -117,18 +117,18 @@ foreach ($svc in $services) {
         "codex-mem-worker" {
             $pluginRoot = Find-PluginRoot -Vendor "thedotmack/codex-mem" -Marker "scripts\worker-service.cjs"
             if (-not $pluginRoot) { continue }
-            Patch-PluginHooks -HooksJson (Join-Path $pluginRoot "hooks\hooks.json") -Host $svc.Host -Port $svc.Port
+            Patch-PluginHooks -HooksJson (Join-Path $pluginRoot "hooks\hooks.json") -HostName $svc.Host -Port $svc.Port
         }
     }
 
     # Phase 1: Quick check
-    if (Test-ServiceHealthy -Host $svc.Host -Port $svc.Port) { continue }
+    if (Test-ServiceHealthy -HostName $svc.Host -Port $svc.Port) { continue }
 
     # Phase 2: Passive wait (3s)
     $ready = $false
     for ($i = 1; $i -le 6; $i++) {
         Start-Sleep -Milliseconds 500
-        if (Test-ServiceHealthy -Host $svc.Host -Port $svc.Port) { $ready = $true; break }
+        if (Test-ServiceHealthy -HostName $svc.Host -Port $svc.Port) { $ready = $true; break }
     }
     if ($ready) { continue }
 
@@ -149,7 +149,7 @@ foreach ($svc in $services) {
                     Start-Process -FilePath $bunPath -ArgumentList $workerScript, "--daemon" -WindowStyle Hidden -ErrorAction SilentlyContinue
                     for ($i = 1; $i -le 8; $i++) {
                         Start-Sleep -Milliseconds 500
-                        if (Test-ServiceHealthy -Host $svc.Host -Port $svc.Port) { break }
+                        if (Test-ServiceHealthy -HostName $svc.Host -Port $svc.Port) { break }
                     }
                 }
             }

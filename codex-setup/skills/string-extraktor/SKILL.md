@@ -1,6 +1,6 @@
 ---
 name: string-extraktor
-description: "Use to find hardcoded Android UI strings and prepare missing German string resources for i18n."
+description: "Findet hardcodierte Android-Strings und erstellt deutsche strings.xml-Ressourcen als Vorstufe zur Übersetzung. Nutze diesen Skill bei Strings finden, String-Extraktion, i18n-Audit, hardcodierten Strings oder Internationalisierung vorbereiten."
 ---
 
 # String-Extraktor: Deutsche Strings finden, pruefen und erstellen

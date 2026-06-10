@@ -103,7 +103,7 @@ function Ensure-CodexGitLockConfig {
     $pathValue = '"' + $binPath + ";" + $localBinPath + ';${PATH}"'
 
     $content = Set-TomlSectionKey -Content $content -Section "shell_environment_policy" -Key "inherit" -Value '"all"'
-    $content = Set-TomlSectionKey -Content $content -Section "shell_environment_policy.set" -Key "PATH" -Value $pathValue
+    $content = Set-TomlSectionKey -Content $content -Section "shell_environment_policy.set" -Key "Path" -Value $pathValue
 
     $hookPath = Join-Path $env:USERPROFILE ".codex\hooks\codex-git-multi-session-lock.cmd"
     $hookCommand = 'cmd /d /s /c ""{0}""' -f $hookPath

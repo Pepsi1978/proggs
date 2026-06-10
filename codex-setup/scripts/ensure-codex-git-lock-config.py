@@ -29,8 +29,9 @@ def set_toml_section_key(text: str, section: str, key: str, value: str) -> str:
             next_section_index = i
             break
 
+    key_normalized = key.lower()
     for i in range(section_index + 1, next_section_index):
-        if lines[i].split("=", 1)[0].strip() == key:
+        if lines[i].split("=", 1)[0].strip().lower() == key_normalized:
             lines[i] = f"{key} = {value}"
             return "\n".join(lines).rstrip() + "\n"
 
@@ -38,12 +39,18 @@ def set_toml_section_key(text: str, section: str, key: str, value: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def ensure_config(config_path: pathlib.Path, path_value: str, hook_command: str, hook_marker: str) -> None:
+def ensure_config(
+    config_path: pathlib.Path,
+    path_key: str,
+    path_value: str,
+    hook_command: str,
+    hook_marker: str,
+) -> None:
     config_path.parent.mkdir(parents=True, exist_ok=True)
     content = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
 
     content = set_toml_section_key(content, "shell_environment_policy", "inherit", '"all"')
-    content = set_toml_section_key(content, "shell_environment_policy.set", "PATH", toml_basic(path_value))
+    content = set_toml_section_key(content, "shell_environment_policy.set", path_key, toml_basic(path_value))
 
     hook_command_line = f"command = {toml_basic(hook_command)}"
     hook_command_pattern = re.compile(
@@ -74,12 +81,13 @@ statusMessage = "Checking git multi-session lock"
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, type=pathlib.Path)
+    parser.add_argument("--path-key", default="PATH")
     parser.add_argument("--path-value", required=True)
     parser.add_argument("--hook-command", required=True)
     parser.add_argument("--hook-marker", required=True)
     args = parser.parse_args()
 
-    ensure_config(args.config, args.path_value, args.hook_command, args.hook_marker)
+    ensure_config(args.config, args.path_key, args.path_value, args.hook_command, args.hook_marker)
     return 0
 
 

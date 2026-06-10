@@ -1,8 +1,6 @@
 ---
 name: agent-briefing
-description: >
-  Erstellt ein kurzes Situational-Awareness-Briefing fuer Subagent-Prompts mit Branch,
-  letzten Commits, offenen Fehlern und Datei-Ownership.
+description: "Erstellt ein kompaktes Situational-Awareness-Briefing für Subagent-Prompts. Nutze diesen Skill vor jedem Subagent-Start, wenn Branch, letzte Commits, offene Fehler, Datei-Ownership oder Projektkontext in den Agent-Prompt sollen."
 ---
 
 # Agent-Briefing Skill — Luftfahrt-CRM fuer Subagents

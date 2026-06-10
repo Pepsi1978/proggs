@@ -34,6 +34,39 @@
       "verification": "node --check passed for bridge-registry.mjs, audit-claude-delta.mjs, audit-gemini-delta.mjs, and bootstrap-report.mjs; JSON bridge files parse; audit-claude-delta scan produces candidates; bootstrap-report emits Codex bridge metadata.",
       "portability_notes": "Other CLI setups can copy the pattern: registry helper plus per-peer bridge JSON plus Git-based scanner, with foreign sources read-only and replacement candidates requiring confirmation.",
       "resilience_summary": "Defense in depth: bridge registry is machine-readable, audit scripts classify risk, README documents commands, validate-codex-setup now checks bridge infrastructure, and ledgers record the environment fix."
+    },
+    {
+      "id": "envfix-codex-mem-worker-guard-hostname-2026-06-10",
+      "summary": "Fix codex-mem worker guard PowerShell Host variable collision",
+      "context": "User reported a previous CLI crash and asked to continue fixing broken skills and hooks. Hook logs showed repeated codex-mem-worker-guard shim failures on 2026-06-09.",
+      "symptom": "SessionStart log contained: codex-mem-worker-guard shim failed: Cannot overwrite variable Host because it is read-only or constant.",
+      "root_cause": "claude-mem-worker-guard.ps1 used a parameter named Host in Test-ServiceHealthy and Patch-PluginHooks. PowerShell reserves System.Management.Automation.Internal.Host.InternalHost as a read-only automatic variable, so binding -Host failed before the worker guard could run.",
+      "fixed_at": "2026-06-10T11:25:00+02:00",
+      "verification": "Parsed ~/.codex/config.toml with tomllib, confirmed all registered hook scripts exist, confirmed no remaining -Host parameter references in active and repo guard scripts, and prepared direct hook execution verification.",
+      "portability_notes": "PowerShell hook functions must avoid automatic variable names such as Host, Error, PID, HOME, and args. Mirror active hook fixes into codex-setup/hooks so restore/sync does not reintroduce the bug.",
+      "resilience_summary": "Renamed function parameters to HostName in both active and repo guard scripts, updated call sites, and hardened active hook commands with -NoProfile to reduce profile-output interference."
+    },
+    {
+      "id": "envfix-windows-path-key-2026-06-10",
+      "summary": "Fix Windows Codex shell PATH casing for command discovery",
+      "context": "During the hook and skill recovery run, node, where.exe, and rg were not discoverable by command name even though their directories existed in the process PATH.",
+      "symptom": "Commands failed with 'The term node/where.exe/rg is not recognized', while explicit paths such as C:/Program Files/nodejs/node.exe worked.",
+      "root_cause": "~/.codex/config.toml set shell_environment_policy.set.PATH on Windows. PowerShell command discovery in this Codex-launched process used the canonical Path variable; copying PATH into Path immediately restored node.exe and where.exe resolution.",
+      "fixed_at": "2026-06-10T11:32:00+02:00",
+      "verification": "~/.codex/config.toml now parses and contains shell_environment_policy.set.Path. In a process where Path was aligned to PATH, node v24.15.0, where.exe, and rg 15.1.0 resolved correctly. Existing running tool processes may need a fresh Codex start to inherit the fixed key.",
+      "portability_notes": "Windows restore code should write Path, while Unix restore code should keep PATH. The shared Python helper now supports a path key and replaces old casing case-insensitively.",
+      "resilience_summary": "Updated active config, Windows restore script, and the shared ensure-codex-git-lock-config helper so future restores do not recreate the uppercase-PATH failure mode."
+    },
+    {
+      "id": "envfix-skill-frontmatter-session-scorer-2026-06-10",
+      "summary": "Fix Codex skill frontmatter and active session scorer validation errors",
+      "context": "The Codex setup validator still reported 13 errors after hook repair during a full skills/hooks recovery run.",
+      "symptom": "Validator reported long or YAML-fragile local skill descriptions and an active session-scorer.ts that still referenced whiteboard-insert side effects.",
+      "root_cause": "Several deployed local skills had frontmatter descriptions over the validator limit or inline YAML-fragile ': ' text. The active session-scorer.ts had drifted behind the repo side-effect-free version.",
+      "fixed_at": "2026-06-10T11:40:00+02:00",
+      "verification": "validate-codex-setup.mjs now reports 543 repo skills, 555 local skills, 0 errors, 0 warnings. Select-String confirms the active session-scorer.ts no longer contains whiteboard-insert, Insert-WhiteboardEntry, or insertViaWhiteboardInsert.",
+      "portability_notes": "Keep Skill descriptions short, one-line, and quoted. Restore scripts must copy repo hook sources to the active runtime so validator state cannot drift.",
+      "resilience_summary": "Batch-normalized 11 local skill frontmatters, mirrored the four repo-backed skill sources, and redeployed the repo session-scorer.ts to the active hook directory."
     }
   ]
 }

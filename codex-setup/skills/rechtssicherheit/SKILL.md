@@ -1,16 +1,6 @@
 ---
 name: rechtssicherheit
-description: >
-  Use for Android privacy, legal-text, Google Play Data Safety, permissions,
-  SDK-data-flow, consent, account-deletion, imprint/Impressum, terms/AGB,
-  withdrawal/Widerruf, DSGVO/GDPR, CCPA, PIPL, DPDP, APPI, PIPA, LGPD, and
-  release-readiness audits. Triggers: "Rechtssicherheit", "DSGVO-Check",
-  "abmahnungssicher", "Abmahnungscheck", "Play-Store rechtskonform",
-  "Data-Safety-Check", "Impressum prüfen", "Widerruf prüfen", "AGB prüfen",
-  "Account-Löschung prüfen". Performs research-backed compliance scans,
-  compares code, manifest, SDKs, permissions, app documents, store metadata,
-  and maintains `<WORKSPACE_ROOT>/tools/rechtssicherheit.md`. Technical
-  checking aid only; never legal advice.
+description: "Prüft Android-Apps technisch auf Datenschutz-, Impressums-, Widerrufs-, Play-Compliance- und Abmahnrisiken. Nutze diesen Skill bei Rechtssicherheit, DSGVO, Abmahnungscheck, Data Safety, Play-Store-Compliance oder Release-Audit."
 invocation: user
 ---
 
