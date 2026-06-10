@@ -99,7 +99,11 @@ fun TagebuchScreen(
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val entries by tagebuchEntriesFlow(context).collectAsStateWithLifecycle(initialValue = emptyList())
+    // Stabiler Flow (Bug-Almanach jetpack-compose.md Kurzcheck #16 / §2.14): den rohen cold
+    // Flow NICHT pro Recomposition neu bauen, sonst verpasst collectAsStateWithLifecycle
+    // Emissionen (gespeicherte Aenderung erscheint erst beim naechsten Tap). remember stabilisiert ihn.
+    val entriesStream = remember(context) { tagebuchEntriesFlow(context) }
+    val entries by entriesStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
     var inputDialogOpen by remember { mutableStateOf(false) }
     // Frank-Wunsch 2026-05-18 Folgeauftrag: Erst nur Mic-Button anzeigen.
