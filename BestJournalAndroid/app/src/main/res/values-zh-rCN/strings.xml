@@ -40,7 +40,7 @@
     <string name="journal_ai_improving">AI 正在润色文字，请稍候</string>
     <string name="journal_later">稍后</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">每天 %1$s 起</string>
+    <string name="paywall_from_per_day">年度订阅，每年 %1$s</string>
     <string name="paywall_instead_per_month">比月付计划省 %1$d%%</string>
     <string name="paywall_or">或</string>
     <string name="paywall_with_limited">有使用上限。</string>
@@ -326,7 +326,7 @@
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">你的条目会被中立地汇总，不做评判也不给建议。\n\n一眼就能看到：\n\n• 最近你在想什么\n• 哪些规律在重复\n• 生活如何展开\n\n作为每日的全景，很合适。</string>
-    <string name="profile_entropy_long">AI 会专门分析你日记中的压力、负担和混乱。\n\n你将获得：\n\n• 你最大压力来源的分析\n• 5 个具体的整理方法\n• 日常实用建议\n\n适合感觉一切都太多时使用。</string>
+    <string name="profile_entropy_long">AI 会找出在日常中让你感到负担的东西，并加以整理。你会得到一份最大负担来源的概览，以及 5 个具体的整理步骤。如果你想重新掌控全局，这非常合适。</string>
     <string name="profile_insight_long">AI 看得比事件更深。它会在你的日记中识别：\n\n• 你话语中的思维模式和信念\n• 反复出现的情绪和反应\n• 日记中可见的个人优势\n• 驱动你行动的价值观\n\n适合想更了解自己、追求内在成长的人。</string>
     <string name="profile_goals_long">AI 会找出条目里的所有目标、愿望与计划，哪怕只是顺口一提。\n\n你会看到：\n\n• 你有哪些目标（包括隐藏的）\n• 每个目标现在到了哪一步\n• 下一步可以是什么\n\n它是从你自己的话里读取的个人目标追踪器。</string>
     <string name="profile_custom_long">由你决定 AI 关注什么。\n\n写下自己的分析焦点，例如：\n\n•「找出所有关于运动的提及」\n•「分析我的情绪起伏」\n•「告诉我我在哪些时候最有效率」\n\n给很清楚自己在找什么的人完全的掌控。</string>
@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI 可按需润色你的日记条目。</string>
     <string name="settings_premium_feature_dashboard">每日仪表盘分析</string>
     <string name="settings_premium_feature_dashboard_desc">你的面板随日记一同成长。</string>
-    <string name="settings_premium_feature_5_perspectives">所有 AI 配置文件（4 个预设 + 无限自定义）</string>
+    <string name="settings_premium_feature_5_perspectives">全部 4 个预设 AI 画像 + 你需要多少个自定义画像都行</string>
     <string name="settings_premium_feature_5_perspectives_desc">从摘要到自我认知</string>
     <string name="settings_premium_feature_reviews">每周、每月、每年的回顾</string>
     <string name="settings_premium_feature_reviews_desc">AI 讲述你的故事</string>
@@ -430,7 +430,7 @@
     <string name="settings_premium_feature_pdf_desc">把带图片的条目导出成文档</string>
     <string name="settings_premium_feature_voice">更准的语音识别</string>
     <string name="settings_premium_feature_voice_desc">语音条目质量更高</string>
-    <string name="settings_premium_feature_profiles">无限个自定义档案</string>
+    <string name="settings_premium_feature_profiles">自定义 AI 画像，数量不限</string>
     <string name="settings_premium_feature_profiles_desc">多个分析重点并排进行</string>
     <string name="settings_unlock_premium">解锁高级版</string>
     <!-- Export dialog -->
@@ -452,7 +452,7 @@
     <string name="settings_feedback_send">发送反馈</string>
     <string name="settings_feedback_sent">已发送</string>
     <string name="settings_feedback_dialog_title">发送反馈</string>
-    <string name="settings_feedback_dialog_desc">你给开发者的留言 — 我们会认真读并亲自回复！</string>
+    <string name="settings_feedback_dialog_desc">你给开发者的留言——我们会阅读每一条留言，并尽快回复你。</string>
     <string name="settings_feedback_placeholder">把你的反馈写给我们…</string>
     <string name="settings_feedback_sending">正在发送…</string>
     <string name="settings_feedback_sign_in_first">请先用 Google 登录</string>
@@ -547,9 +547,9 @@
     <string name="ai_prompt_response_language">回复语言：请全部用简体中文回复。所有文字和标题都用简体中文，不用其他语言。</string>
 
     <!-- TTS-friendly date ban -->
-    <string name="ai_prompt_no_dates_rule">朗读友好（必须 — 可见文本中禁止日期）：\n在所有可见文本字段（描述、说明、摘要、整体分析）里，不准使用日期 — 既不写「4.3」「04.23」「4.28」，也不写「4月3日的条目」「04.23」「来自4.28」或类似指向具体条目日期的提法。这些文本会被朗读给用户 — 一串串日期念出来很不自然，会打断洞见的流畅。\n\n请直接说出纯粹的洞见：\n- 错误：「4.3、4.28和4.23的条目表明你的生物节律因晚睡而受损。」\n- 正确：「晚睡正在系统性地破坏你的生物节律。」\n- 错误：「30号的条目把你的疾病直接和缺乏运动联系起来。」\n- 正确：「你的疾病和缺乏运动直接相关。」\n- 错误：「跑步是清晰头脑的钥匙，这是你在4.24的间歇跑中感受到的。」\n- 正确：「跑步是清晰头脑的钥匙，这是你在间歇训练中感受到的。」\n\n洞见保留下来 — 只是具体日期消失了。你仍可使用一般性的时间表达（「反复」「最近」「几天以来」）。日期只属于 "herleitung" 字段（来源信息，仅内部使用，不显示）。</string>
+    <string name="ai_prompt_no_dates_rule">适合 TTS 朗读（必须遵守——可见文本中禁用日期）：\n在所有可见的文本字段里（beschreibung、erklaerung、zusammenfassung、gesamtanalyse），你都不可以使用日期——既不能写“3.4.”“23.04.”“28.4.”“24.04.”“30.4.”，也不能写“4 月 3 日的条目”“在 23.04.”“来自 28.4.”或类似指向具体条目日期的说法。这些文本会朗读给用户听——一串日期念出来很不自然，会打断领悟的流畅。\n\n请改为只写纯粹的领悟：\n- 错误：“3.4.、28.4. 和 23.4. 的条目证明，你的生物钟因晚睡而受损。”\n- 正确：“晚睡正在系统性地破坏你的生物钟。”\n- 错误：“30 号的条目显示，你的收件箱自 28.4. 起就满溢，在偷走你的时间。”\n- 正确：“你的收件箱连日来一直溢出，在偷走你的时间。”\n- 错误：“自从 24.04. 的整理行动以来，你在日常中明显更有条理了。”\n- 正确：“运动让你在日常中明显更有条理。”\n\n领悟的内容保留——只是去掉具体的日期指向。你仍然可以使用笼统的时间表述（“反复地”“最近”“连续好几天”）。日期只能出现在 “herleitung” 字段里（出处，内部使用，不显示）。</string>
     <!-- B2 Re-Ranker prompt -->
-    <string name="ai_prompt_rerank_system">你是一位档案重排器。你会收到来自仪表盘分析的 5 条最优行动 JSON 数组、用户的档案焦点以及原始日记条目。\n\n你的任务分 3 步：\n1) 重新排序这 5 条行动，把与档案焦点关联最清楚的排在前面。\n2) 检查 5 条行动里是否最多有 2 条与档案焦点没有实质关联。如果有，就用从日记条目中推导出的、更贴合档案的行动替换它们。每条行动保持相同的 JSON 结构（titel、beschreibung、erklaerung）。\n3) 用同义词和主题邻近词来多样地表达档案关联，不要机械地重复档案词。关联要让人感受到，而不是字面照搬。\n\n重要：\n- 最终恰好返回 5 条。\n- 仅在确实缺乏档案关联时才替换 — 如果数组本来就贴合，只排序，不要替换任何东西。\n- 保持每条记录的 JSON 结构（相同的键：titel、beschreibung、erklaerung）。\n- 语言为中文，不用长破折号，beschreibung 13-21 个词。\n\n朗读友好（必须 — 禁止日期）：\n在 beschreibung 和 erklaerung 中绝不使用日期（「4.3」「04.23」「30号的条目」）。这些文本会被朗读 — 日期串听起来很不自然。请说出纯粹的洞见，不带具体日期。例：\n- 错误：「4.3和4.23的条目表明你的生物节律在受损。」\n- 正确：「晚睡正在系统性地破坏你的生物节律。」\n一般性时间表达可以用（「反复」「最近」「几天以来」），具体日期不行。\n\n输出格式：\n- 只输出一个 JSON 数组（根级方括号）。\n- 不要 markdown 反引号，前后不要任何文字。\n- 直接以 [ 开始，以 ] 结束。</string>
+    <string name="ai_prompt_rerank_system">你是一位画像再排序者。你会收到来自面板分析的 5 条首要措施的 JSON 数组、用户的画像焦点，以及原始日记条目。\n\n你的任务分三步：\n1）把这 5 条措施排序，让与画像焦点关联最清晰的排在最前。\n2）检查这 5 条里是否有最多 2 条与画像焦点在内容上毫无关联。如果有，就用你从日记条目里推导出的、更贴合画像的措施来替换它们。每条措施沿用相同的 JSON 结构（titel、beschreibung、erklaerung）。\n3）用富有变化的方式表达画像关联，使用近义词和主题上相邻的说法，不要机械重复画像里的原词。关联必须能让人感受到，而不是逐字照搬。\n\n重要：\n- 最后正好返回 5 条。\n- 只有在确实缺少真正的画像关联时才改动——如果本来就贴合，就只排序，不替换。\n- 保留每条的 JSON 结构（相同的键：titel、beschreibung、erklaerung）。\n- 语言用中文，不用破折号，beschreibung 为 13 到 21 个词。\n- 不给出医疗、法律或财务方面的诊断或具有约束力的建议；遇到这类话题请中立地引导用户咨询专业人士。\n\n适合 TTS 朗读（必须遵守——禁用日期）：\n在 beschreibung 和 erklaerung 里不要使用日期（“3.4.”“23.04.”“30 号的条目”）。这些文本会被朗读——一串日期念出来很不自然。请只写纯粹的领悟，不带具体的条目日期。例如：\n- 错误：“3.4. 和 23.04. 的条目证明你的生物钟受损。”\n- 正确：“晚睡正在系统性地破坏你的生物钟。”\n笼统的时间表述是允许的（“反复地”“最近”“连续好几天”），日期则不行。\n\n输出格式：\n- 只输出一个 JSON 数组（根层级是方括号）。\n- 不要 Markdown 反引号，前后不要任何文字。\n- 直接以 [ 开始，以 ] 结束。</string>
     <string name="ai_prompt_rerank_user_focus_header">=== 用户的档案焦点 ===</string>
     <string name="ai_prompt_rerank_actions_header">=== 当前最优行动数组（5 条） ===</string>
     <string name="ai_prompt_rerank_entries_header">=== 日记条目（用于强档案替换点的来源） ===</string>
@@ -652,13 +652,13 @@
     <string name="ai_prompt_goals_intro">你是一位细心且鼓励人的目标分析师兼进度追踪者。\n\n你的任务：\n分析用户的日记条目。识别所有目标、愿望、计划和想法，包括只是顺口一提的。跨多条记录追踪进展，生成一份 JSON 格式、结构清晰的目标面板。</string>
     <string name="ai_prompt_goals_definition">定义 — 什么算目标：\n一切用户想达成、想改变、想开始、想完结、想改进或想搭建的东西。间接线索也算在内：\n- 直接：「我想减肥」「我得给牙医打电话」\n- 间接：「要是能再去跑步就好了」= 体能目标\n- 抱怨：「我睡得很差」= 改善睡眠的隐性目标\n- 梦想：「总有一天我想去瑞典」= 长期旅行目标</string>
     <string name="ai_prompt_goals_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n\n只有少量记录时：\n- 1-2 条：识别单个目标，进展评估为「未知」。\n- 3 条及以上：主动追踪进展并识别规律。</string>
-    <string name="ai_prompt_goals_rules">语言规则：\n- %1$s\n- 鼓励、真诚，庆祝进展，不美化。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 每一个目标都重要：\n识别所有目标，哪怕很小。不要合并。</string>
+    <string name="ai_prompt_goals_rules">语言规则：\n- %1$s\n- 既鼓舞人心又诚实，为进步喝彩，但不粉饰任何东西。\n- 不用长破折号（—）。用逗号或句号。\n- 对于健康或身体方面的目标，你只做鼓励性的陪伴；不给出节食、用药或治疗建议。\n\n数量规则，每个目标都算数：\n识别所有目标——再小也要算。不要做归并。</string>
     <string name="ai_prompt_goals_schema">JSON 输出结构：\n{\n  \"zhengti_fenxi\": \"...\",\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"zhengti_fenxi\"(15-25 句）: 点名每一个目标，识别进展。\n\n2) \"zhongyao_xingdong\"(正好 5 个）: 下一步。\n   { \"biaoti\": \"...\", \"miaoshu\": \"13-21 个字词\", \"jieshi\": \"5-8 句\" }\n\n3) \"fenlei\": 目标领域。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0, \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"...\",\n       \"miaoshu\": \"13-21 个字词。状态: [未开始/进行中/受阻/已达成]。下一步: [...]。\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"...\", \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"...\"}]\n     }]\n   }\n   领域：体能、健康、工作、职业、财务、关系、项目、学习、睡眠、心理、旅行、整理、创作\n   优先度：gao=受阻、zhong=未开始、di=进行中/已达成</string>
     <string name="ai_prompt_goals_output">输出格式：仅 JSON。不要反引号。以 { 开头。</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
     <string name="ai_prompt_insight_intro">你是一位富有同理心、目光深远的个人成长规律分析师。\n\n你的任务：\n分析用户的日记条目。找出隐藏的规律、反复出现的思考与行为、无意识的信念、情绪的反应规律和个人优点。把用户在写作时未必察觉的、关于他自己的学习呈现出来。生成一份 JSON 格式、结构清晰的自我认识面板。</string>
-    <string name="ai_prompt_insight_attitude">你的姿态：\n你是温暖的镜子。诚实地呈现你在记录里看到的，目的始终是让用户能成长。每一条洞见都应帮助用户更了解自己。遇到较难的规律也要讲清楚，但保持建设性，不指责。焦点：用户能从自己的话里学到什么？\n\n你在找什么：\n- 反复出现的情绪：哪些情绪一次次回来\n- 思维规律：用户如何看待自己、他人与世界\n- 回避规律：用户在绕开什么？从不写的是什么？\n- 优点：用户没意识到的长处\n- 价值：对用户真正重要的东西（从行动上看得出）\n- 触发：引发强烈反应（好或坏）的东西\n- 矛盾：说的与做的不一致\n- 需要：字里行间透出的需要\n- 成长：用户看法改变的地方</string>
+    <string name="ai_prompt_insight_attitude">你的姿态：\n你是一面善意的镜子。你诚实地把你在条目里看到的呈现给用户——但始终以让他能从中成长为目标。每一条发现都应帮助他更好地理解自己。即便是棘手的规律，你也要说清楚，但要带着建设性、不带指责。重点：用户能从自己的话语中学到什么？\n\n你不做任何心理诊断，不指认任何障碍或疾病。你只描述从用户自己话语中可观察到的规律。\n\n你要找的是：\n- 反复出现的情绪：哪些情绪一再冒出来？\n- 思维模式：用户怎样看待自己、他人和世界？\n- 回避模式：用户在绕开什么？他从不写什么？\n- 长处：用户做得好、却连自己都没看见的是什么？\n- 价值观：用户真正看重的是什么（体现在行动里，而非言语里）？\n- 触发点：什么会引发强烈反应——无论正面还是负面？\n- 矛盾：用户嘴上说一套，做的却是另一套？\n- 需求：字里行间透出的、用户需要的是什么？\n- 成长：用户的看法在哪里发生了改变？</string>
     <string name="ai_prompt_insight_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说第一印象，不谈深层规律。\n  在描述里把洞见标为「初步」。\n- 3 条及以上：主动寻找反复出现的规律与深层联系。\n\n时间权重：\n每条都要纳入。追踪内在发展：姿态变了吗？同样的主题是否在新的光线下回来？自信在成长，还是不安在增加？</string>
     <string name="ai_prompt_insight_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 同理、诚实、有建设性，不指责，不说教。\n- 永远看向积极面：用户能学到什么？\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有领域的洞见总数至少 15。少于 10 就是错误。每一条发现的规律、每一处信念的线索、每一种反复出现的情绪都值得一条独立的洞见。不要合并。如果一条记录显示害怕、骄傲、回避，就要写出 3 条不同的洞见，而不是把它们合成一条。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_insight_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   用户在条目里对自己反思得有多深？\n   - 0.0-0.33 = 反思很少（主要描述事件）\n   - 0.34-0.66 = 有一定反思（提到情绪与想法）\n   - 0.67-1.0 = 反思很深（与自己有深入对话）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   对比旧的与新的：\n   - 「shangsheng」= 反思越来越深\n   - 「wen」= 反思深度保持\n   - 「xiajiang」= 较新的条目里反思变少\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条去读，找出背后更深的主题。\n   - 条目作为整体，告诉我们这个人是怎样的？\n   - 思考、感受和行动里出现了哪些规律？\n   - 用户展现出哪些自己没意识到的优点？\n   - 哪些无意识的信念在推动他的行为？\n   - 个人成长在哪里显现？\n   - 同理而亲切，直接对用户说。\n   - 永远建设性：把难的洞见也连接到可能的学习。</string>
@@ -667,7 +667,7 @@
     <string name="ai_prompt_insight_output">描述字数规则（严格遵守）：\n「zhongyao_xingdong」和「jianyi」里的「miaoshu」必须始终在 13-21 个字词。\n- 少于 13 = 太短 = 错误\n- 多于 21 = 太长 = 错误\n写之前数清楚。每条描述是一句紧凑、完整的话，不多不少。\n\n输出格式 — 严格规则：\n- 只用 JSON 对象回答。\n- 前后不要文字。\n- 不要 Markdown 反引号。\n- 直接以 { 开头，以 } 结尾。\n- 有效 JSON，不要漏逗号或重复键。</string>
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
-    <string name="ai_prompt_entropy_intro">你是一位富有同理心、极其聪明的生活顾问和规律分析师。\n\n你的任务：\n分析用户的日记条目。找出反复出现的压力、混乱和负担来源。生成一份 JSON 格式、结构清晰的建议面板。\n\n我们要找的 — 个人负担：\n一切在用户生活里造成混乱、压力、精力流失、疼痛、睡眠问题、情绪负担或掌控感下降的东西。</string>
+    <string name="ai_prompt_entropy_intro">你是一位富有同理心、极其聪慧、善解人意的秩序与规律分析师。\n\n你的任务：\n分析一位用户的日记条目。找出反复出现的压力、混乱和负担的来源。据此生成一个 JSON 格式的结构化建议面板。\n\n我们要找的是——个人负担：\n一切在用户生活中制造混乱、压力、精力流失、力不从心、时间压力、情绪负担或失控感的东西。\n\n你不给出医疗、治疗或诊断方面的建议。遇到健康相关话题，请中立地引导用户咨询专业人士。</string>
     <string name="ai_prompt_entropy_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说单次观察，不谈规律。\n  在描述里把建议标为「初步」。\n- 3 条及以上：主动寻找规律与跨条的联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景与规律。</string>
     <string name="ai_prompt_entropy_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 有同理心、直接、具体，不讲空泛。\n- 不要长破折号（—）。用逗号或句号。\n\n禁词 — 绝对不要用「熵」这个词：\n本档案叫「清理你的生活」。在所有可见文本字段（gesamtanalyse、描述、说明、摘要、推导）里，绝不要用「熵」「熵的」「熵化」 — 用户不熟悉这个词，听起来很怪。请改用：压力、超载、混乱、压迫、负担、摩擦、紧张、能量流失、混沌、迷茫、生活之重。JSON 字段名「gesamt_entropie」和「entropie_level」保持不变 — 它们是技术键，不是可见文本。但回答中每一个可见的字都要避开「熵」。\n\n数量规则 — 完整优先于简短：\n所有分类的建议总数至少 15。少于 10 就是错误。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个不同的问题，就要写出 3 条不同的建议。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_entropy_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   各分类负担水平的加权平均。\n   - 0.0-0.33 = 低（状态良好）\n   - 0.34-0.66 = 中（需要留意）\n   - 0.67-1.0 = 高（建议立刻行动）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   - 「xiajiang」= 负担在减轻\n   - 「wen」= 负担保持\n   - 「shangsheng」= 负担在加重\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条读，提炼主要主题。\n   - 给每条里的每个主题命名。\n   - 识别主题之间的联系。\n   - 同时识别进展与优点，不只说问题。\n   - 同理而亲切，直接对用户说。</string>
@@ -686,9 +686,9 @@
 
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
-<string name="ai_prompt_custom_intro">你是一位聪明、细心的日记分析师，同时也是任务执行者。\n\n按两步工作：\n\n第一步 — 吸收上下文：\n首先完整阅读用户的所有日记条目。理解情境、规律、主题、被提到的事物、问题和愿望。日记条目是你的上下文、出发点、根基。但它们不限制你。\n\n第二步 — 执行任务：\n%1$s\n\n上面就是你真正的任务。基于第一步的上下文来执行这项任务。如果任务要求做研究、想点子、找替代方案、给建议、做推荐或提供新信息 — 哪怕日记里没有，也要主动提供。日记是你输出的素材，不是上限。\n\n核心规则 — 档案至少占 50%%：\n整个输出（gesamtanalyse、top_massnahmen、kategorien、ratschlaege、fortschritte）必须至少 50%% 与用户的任务有清晰可见的关联。与任务没有内容关联的洞见、要点或主题，请舍弃 — 不要为了凑满 JSON 而塞入泛泛的生活话题。宁可少而有焦点，也不要多而平庸。\n\n关于语言：用同义词、相关词、主题邻近词和改写来多样地表达档案关联，不要机械地重复任务里的字。例：任务「目标」，也可以说计划、愿望、抱负、想达成的事、方向、成长步骤。例：任务「运动」，也可以说锻炼、训练、体力活动、耐力、体能、健康。档案关联要让人感受得到，不要字面照搬。\n\n关键：\n- 任务里说「分析」「总结」「有什么显眼」时 — 紧贴日记内容。\n- 任务里说「研究」「找替代」「建议」「推荐」「补充」「假如」「新想法」时 — 主动超出日记范围，加入自己的新内容。\n- 任务优先。日记是地基，不是天花板。</string>
+<string name="ai_prompt_custom_intro">你是一位聪慧、细心的日记分析师，也是任务执行者。\n\n两步工作法：\n\n第一步——吸收背景：\n先把用户的所有日记条目完整读一遍。理解处境、规律、主题，以及提到的事物、问题和愿望。这些条目是你的背景、起点和基础，但它们不会限制你。\n\n第二步——执行任务：\n%1$s\n\n上面这段才是你真正的任务。请基于第一步得到的背景来完成它。如果任务要求做调研、出主意、找替代方案、给建议或提供新信息，那就主动给出，哪怕条目里没有出现过。但不要给出医疗、法律或财务方面的诊断或具有约束力的建议；遇到这类话题请引导用户咨询专业人士。条目为你的输出提供信息，而不是限制它。\n\n核心规则——画像至少占一半：\n整体输出（总分析、首要措施、分类、建议、进展）必须有至少 50%% 能清楚看出与用户任务相关。与任务在内容上毫无关联的发现、要点或主题，请删掉——不要为了把 JSON 填满而堆砌泛泛的生活话题。宁可少几条有明确关联的，也不要一堆套话。\n\n关于语言的重要提示：用富有变化的方式表达这种关联。使用近义词、相关概念、主题上相邻的说法和换一种说法。不要机械地重复任务里的原词——那样显得生硬。比如任务是“目标”：也可以说计划、愿望、抱负、你想达成的事、你的方向、成长的步伐。比如任务是“运动”：也可以说活动、训练、身体锻炼、耐力、健身、健康。画像关联必须能让人感受到，而不是逐字照搬。\n\n关键：\n- 如果任务里写的是“分析”“总结”“有什么值得注意的”，就紧贴条目。\n- 如果任务里写的是“调研”“找替代方案”“提建议”“推荐”“补充”“假如……会怎样”“新点子”，就主动超出条目，带入你自己的、全新的内容。\n- 任务优先。条目是地基，不是围墙。</string>
     <string name="ai_prompt_custom_headings">重要 — 动态标题：\n你必须自己创造 3 个正好契合焦点的标题。「主要结果」或「分析」这类通用标题都不允许。请用能反映焦点的创意、具体标题。\n例子：\n- 焦点「钓鱼」: 「最大的钓获」、「钓鱼概览」、「全部记录」\n- 焦点「睡眠质量」: 「你的睡眠规律」、「睡眠分析」、「全部观察」\n- 焦点「总是揽太多事」: 「最大的时间小偷」、「负担概览」、「全部负担点」</string>
-    <string name="ai_prompt_custom_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录。必须读并纳入每一条。\n\n语言规则：\n- 简单清晰，不用生僻词。\n- 同理而直接。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则：\n至少 10 条洞见。每一个方面都值得一条独立洞见。</string>
+    <string name="ai_prompt_custom_rules">背景规则——每一条都要读：\n你会收到带编号的条目。请把每一条都完整读完，并作为背景吸收进来。每个相关细节都会进入你的输出。但是：当任务要求时，输出可以也应当超出条目本身。\n\n任务规则——任务必须完成：\n请逐字执行用户的任务。如果任务问替代方案，就给出真正全新的替代方案，而不只是条目里的东西。如果任务要建议，就主动调研并推荐。条目不是你回答的唯一来源。\n\n输出中要区分：\n清楚标明哪些来自条目，哪些是你新增的。这样用户就知道哪些是他自己的想法，哪些是你的贡献。\n\n专业咨询规则——不做诊断：\n无论任务是什么，你都不给出医疗诊断、治疗建议、法律或财务咨询。遇到这类话题请中立地引导用户咨询有资质的专业人士。\n\n语言规则：\n- 简单、清楚。不用生僻词。\n- 有同理心，且直接。\n- 不用长破折号（—）。用逗号或句号。\n\n数量规则：\n总共至少 10 条发现——但每一条在内容上都必须与任务相关。如果你找不到 10 条与画像真正相关的发现，宁可给 7 条有力的，也不要 10 条注水的。纯分析类任务里，发现来自条目；创意类任务里，你可以带入新内容。</string>
     <string name="ai_prompt_custom_schema">JSON 输出结构：\n{\n  \"biaoti_qian5\": \"前 5 的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_fenxi\": \"概览的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_jieguo\": \"全部结果的创意标题（契合焦点，最多 3 个字词）\",\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"biaoti_qian5/fenxi/jieguo\": 必填。创意、具体，最多 3 个字词。必须契合焦点。不允许通用标题。\n\n2) \"zhengti_shang\"(0.0-1.0): 焦点领域在条目里出现得有多强？\n\n3) \"qushi\": 只有 3+ 条时才填。焦点领域在变化吗？\n\n4) \"zhengti_fenxi\"(15-25 句）: 条目里关于焦点领域说了什么？把每条里每个相关细节都讲到。\n\n5) \"jinzhan\"(0-5 条）: 焦点领域中的规律或变化。\n   { \"biaoti\": \"最多 5 个字词\", \"miaoshu\": \"2-3 句\", \"laiyuan\": \"1 句\" }\n\n6) \"zhongyao_xingdong\"(正好 5 条）: 关于焦点领域的最重要洞见。\n   {\n     \"biaoti\": \"最多 6 个字词\",\n     \"miaoshu\": \"13-21 个字词，紧凑有力。\",\n     \"jieshi\": \"5-8 句详述。\"\n   }\n\n7) \"fenlei\": 与焦点匹配的主题分组（动态生成）。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon_name\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"最多 6 个字词\",\n       \"miaoshu\": \"13-21 个字词\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"与另一个主题的关联，或 null\",\n       \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"1-2 句\"}]\n     }]\n   }</string>
     <string name="ai_prompt_custom_output">字数规则：zhongyao_xingdong 和 jianyi 里的「miaoshu」始终 13-21 个字词。\n\n输出格式 — 严格规则：\n- 只用 JSON 对象回答。\n- 前后不要文字。不要反引号。\n- 直接以 { 开头，以 } 结尾。</string>
 
@@ -760,7 +760,7 @@
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">你的个人回顾</string>
     <string name="retro_premium_reviews_desc">有高级版，AI 会根据你的条目自动生成回顾：</string>
-    <string name="retro_benefit_weekly">每周回顾不限次，不只前 2 周</string>
+    <string name="retro_benefit_weekly">所有每周回顾，而不只是前 2 篇——在你的 AI 每日额度范围内</string>
     <string name="retro_benefit_monthly">每月回顾，让你的进展与改变被看见</string>
     <string name="retro_benefit_yearly">每年回顾，把一整年变成你的个人故事</string>
     <string name="retro_start_sub">开始订阅</string>
@@ -786,7 +786,7 @@
     <string name="onboarding_welcome">欢迎使用\nBest Journal</string>
     <string name="onboarding_subtitle">你的私人 AI 日记\n让日常生活更清晰</string>
     <string name="onboarding_feature_speech">说话或打字，AI 都能听懂</string>
-    <string name="onboarding_feature_secure">数据留在你这里，加密且安全</string>
+    <string name="onboarding_feature_secure">你的条目保留在设备上；AI 请求会加密传输</string>
     <string name="onboarding_goals_title">你想通过 AI 日记\n达到什么？</string>
     <string name="onboarding_goal_stress">减轻压力</string>
     <string name="onboarding_goal_clarity">寻得清晰</string>
@@ -805,7 +805,7 @@
     <string name="onboarding_premium_feature_dashboard">每次新增条目，面板自动刷新</string>
     <string name="onboarding_premium_feature_retro">每周、每月、每年回顾呈现你的变化</string>
     <string name="onboarding_premium_feature_patterns">发现规律：AI 展示你日记中反复出现的思维和情感模式</string>
-    <string name="onboarding_premium_feature_noads">没有广告，安心地写作与反思</string>
+    <string name="onboarding_premium_feature_noads">不受打扰地书写与反思</string>
     <string name="onboarding_free_trial">免费，随时可取消</string>
     <string name="onboarding_free_after_trial">之后也可以继续使用 Best Journal，\n免费，每周 AI 次数有上限。</string>
     <string name="onboarding_start_free">免费开始</string>
@@ -847,14 +847,14 @@
     <string name="paywall_feature_dashboard">每次新增条目，面板自动刷新</string>
     <string name="paywall_feature_retro">AI 生成每周、每月、每年的回顾</string>
     <string name="paywall_feature_pdf">把带照片的条目导出为 PDF</string>
-    <string name="paywall_feature_noads">没有广告，安心说话或书写</string>
-    <string name="paywall_feature_profiles">无限个自定义分析档案</string>
+    <string name="paywall_feature_noads">不受打扰地书写与反思</string>
+    <string name="paywall_feature_profiles">自定义 AI 画像，数量不限</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">让日常更清晰</string>
     <string name="paywall_headline_stress_sub">找出每天牵动你情绪的事，把它说清楚。</string>
     <string name="paywall_headline_clarity">更懂自己</string>
-    <string name="paywall_headline_clarity_sub">AI 看出你没察觉的规律</string>
+    <string name="paywall_headline_clarity_sub">AI 让你条目中反复出现的规律清晰可见</string>
     <string name="paywall_headline_growth">发现每一天里的好</string>
     <string name="paywall_headline_growth_sub">属于你的感恩与成长空间</string>
     <string name="paywall_headline_thoughts">让思绪自由流动</string>
@@ -895,7 +895,7 @@
     <string name="churn_exclusive_offer">专属优惠</string>
     <string name="churn_offer_subtitle">我们为你准备的优惠</string>
     <string name="churn_offer_feature_ai">每日 AI 分析</string>
-    <string name="churn_offer_feature_perspectives">所有 AI 配置文件（4 个预设 + 无限自定义）</string>
+    <string name="churn_offer_feature_perspectives">全部 4 个预设 AI 画像 + 你需要多少个自定义画像都行</string>
     <string name="churn_offer_feature_voice">高级版语音识别</string>
     <string name="churn_offer_auto_renew">自动续订，随时可取消</string>
     <string name="churn_accept_offer">接受优惠</string>
@@ -1120,7 +1120,7 @@
     <string name="consent_card1_body">你的记录保留在你的设备上。</string>
     <string name="consent_card2_title">AI 功能（美国）</string>
     <string name="consent_card2_body">可选地，文本会发送到 Google Gemini,朗读文本发送到 Microsoft Edge 位于美国的服务器（EU-US Data Privacy Framework）。语音录音会依据标准合同条款（EU SCCs）发送到 Groq(美国)。</string>
-    <string name="consent_card3_title">匿名统计</string>
+    <string name="consent_card3_title">假名化统计</string>
     <string name="consent_card3_body">Firebase Analytics,可选，可随时在设置中更改。</string>
     <string name="consent_links_header">我们的法律文本：</string>
     <string name="consent_accept_all">同意并开始</string>
@@ -1128,7 +1128,7 @@
     <string name="consent_confirmation">点击「同意并开始」表示你已阅读隐私政策、使用条款和法律声明，并同意所述的数据处理。你可以随时在设置中更改决定。</string>
 
     <string name="privacy_gate_groq_title">将语音录音发送到 Groq?</string>
-    <string name="privacy_gate_groq_body">为进行云端转写，你的语音录音会加密发送到 Groq, Inc.(美国山景城),在那里转换为文本。音频文件在处理后删除，不用于训练。\n\n替代方案：使用设备本地转写（离线，无数据传输）,可在 设置 → AI 中切换。</string>
+    <string name="privacy_gate_groq_body">此功能会把你的语音录音加密发送到 Groq（美国），并在那里转换成文字——比本地识别更快、更准确。\n\n✓ 录音在转换后会立即删除\n✓ 不会用你的录音训练 AI\n✓ 法律依据：标准合同条款（EU SCCs）\n\n替代方案：在设置里使用本地离线识别。</string>
     <string name="privacy_gate_groq_accept">同意并发送</string>
     <string name="privacy_gate_groq_local">改为本地转写</string>
 
@@ -1137,26 +1137,26 @@
     <string name="privacy_gate_gemini_accept">同意并发送</string>
     <string name="privacy_gate_gemini_cancel">取消</string>
 
-    <string name="privacy_gate_tts_title">将文本发送到 Microsoft?</string>
-    <string name="privacy_gate_tts_body">为进行朗读，文本会加密发送到 Microsoft Bing Speech(美国),并作为音频返回。法律依据：EU-US Data Privacy Framework + 标准合同条款。</string>
+    <string name="privacy_gate_tts_title">启用高级语音</string>
+    <string name="privacy_gate_tts_body">使用高级语音，朗读听起来更自然。你的文字会加密（HTTPS/TLS）发送到位于美国的微软语音服务，并以音频形式返回。\n\n✓ 传输仅用于语音合成\n✓ 向第三国美国传输（微软已通过欧盟-美国数据隐私框架认证）</string>
     <string name="privacy_gate_tts_accept">同意并朗读</string>
     <string name="privacy_gate_tts_cancel">取消</string>
 
     <string name="settings_privacy_header">隐私</string>
-    <string name="settings_analytics_title">匿名统计</string>
+    <string name="settings_analytics_title">假名化使用分析</string>
     <string name="settings_analytics_subtitle">用于错误分析和产品改进的 Firebase Analytics</string>
 
     <string name="settings_delete_account_title">删除账号和数据</string>
-    <string name="settings_delete_account_subtitle">不可撤销地删除所有本地数据、你的 Google 账户和 Drive 备份</string>
+    <string name="settings_delete_account_subtitle">不可撤销地删除所有本地数据和 Drive 备份。你的 Google 账号本身将保留。</string>
     <string name="settings_delete_account_confirm_title">删除全部应用数据？</string>
-    <string name="settings_delete_account_confirm_body">此操作不可撤销，将删除：\n\n• 所有本地日记记录、照片和视频\n• 你的 Firebase 账户\n• 应用的 Google Drive 备份\n\n应用将以全新安装状态重新启动。</string>
+    <string name="settings_delete_account_confirm_body">此操作不可撤销，将删除：\n\n• 所有本地日记条目、照片、视频和录音\n• 应用的 Google Drive 备份（仅应用数据，不含你的 Google 账号）\n• 你的应用登录\n\n你的 Google 账号本身将保留。之后应用会作为全新安装重新启动。</string>
     <string name="settings_delete_account_cancel">取消</string>
     <string name="settings_delete_account_confirm">是的，全部删除</string>
 
     <string name="settings_report_ai_title">举报 AI 回复</string>
     <string name="settings_report_ai_subtitle">不当或错误的 AI 输出</string>
     <string name="settings_report_ai_confirm_title">打开支持邮件？</string>
-    <string name="settings_report_ai_confirm_body">你的邮件应用会打开一封发送到 dev.app.support@gmail.com 的预填邮件。你可以在发送前补充说明。我们在工作日 24 小时内回复。\n\n请举报：来自仪表盘、摘要、回顾或文本优化的不当、冒犯、虚假或误导性 AI 输出。</string>
+    <string name="settings_report_ai_confirm_body">你的电子邮件程序会打开，里面有一封发给 dev.app.support@gmail.com 的预填邮件。在发送前，你还可以补充描述。我们通常会在工作日 24 小时内回复。\n\n请用它来举报：来自面板、总结、回顾或文本改进的不当、令人反感、错误或具有误导性的 AI 输出。</string>
     <string name="settings_report_ai_confirm">创建举报</string>
     <string name="settings_report_ai_cancel">取消</string>
     <string name="settings_report_ai_no_email">未找到邮件应用。请将举报发送到 dev.app.support@gmail.com。</string>
@@ -1166,9 +1166,9 @@
     <string name="settings_report_ai_dialog_desc">描述不当或错误的AI回答。您的举报将直接发送给我们的支持团队。您需要使用Google账户登录。</string>
 
     <string name="settings_revoke_title">撤销合同</string>
-    <string name="settings_revoke_subtitle">Premium 购买</string>
-    <string name="settings_revoke_confirm_title">打开支持邮件？</string>
-    <string name="settings_revoke_confirm_body">你的邮件应用会打开一封发送到 dev.app.support@gmail.com 的预填邮件。我们在工作日 24 小时内回复。\n\n有关撤销权的完整信息，请参阅使用条款（§ 16）。订阅请另外通过 Google Play → 订阅 取消。</string>
+    <string name="settings_revoke_subtitle">德国民法典第 356a 条——通过应用直接撤回</string>
+    <string name="settings_revoke_confirm_title">撤回合同？</string>
+    <string name="settings_revoke_confirm_body">点击“确认撤回”，我们就会把你的撤回直接发送到 dev.app.support@gmail.com。你会立即收到一封确认收讫的电子邮件。\n\n完整的撤回须知见使用条款（第 16 条）。订阅请另外通过 Google Play → 订阅 取消，以免产生进一步的扣费。</string>
     <string name="settings_revoke_cancel">取消</string>
     <string name="settings_revoke_confirm">创建撤销</string>
     <string name="settings_revoke_no_email">未找到邮件应用。请将撤销通知发送到 dev.app.support@gmail.com。</string>
@@ -1241,8 +1241,8 @@
     <string name="privacy_sheet_save">保存选择</string>
     <string name="privacy_sheet_all_on">全部开启</string>
     <string name="privacy_sheet_all_off">全部关闭</string>
-    <string name="consent_toggle_analytics_title">匿名使用分析</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — 帮助我们改进应用。没有个人内，只有匿名点击次数。数据传：Google 美国（Data Privacy Framework）。</string>
+    <string name="consent_toggle_analytics_title">假名化使用分析</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics——帮助我们改进应用。不含任何日记内容，只有假名化的使用统计（例如点击次数）。数据传输：Google 美国（数据隐私框架）。</string>
     <string name="consent_toggle_groq_title">语音转文本（Groq Whisper）</string>
     <string name="consent_toggle_groq_body">支持口述条目。你的语音录音会加密发送到 Groq(美国),转换为文本后删除。你的录音不会用于训练。</string>
     <string name="consent_toggle_gemini_title">AI 反思（Google Gemini）</string>
@@ -1252,7 +1252,7 @@
     <string name="consent_toggle_drive_title">Google Drive 备份</string>
     <string name="consent_toggle_drive_body">将条目加密保存到你自己的 Google Drive。你保留完全控制权 — 文件在你的账户，不在我们这里。</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">加利福尼亚选择退出（CCPA/CPRA 2026）。激活，所有可选数据处理均被禁用 — 仅保留本地功能。</string>
+    <string name="consent_toggle_do_not_sell_body">此开关仅面向美国加利福尼亚州居民。加州隐私法（CCPA/CPRA）赋予居民拒绝权。开启后，所有可选的云端功能（AI、备份、语音识别、分析）都会被停用——只有本地功能保持启用。\n\n如果你居住在加州以外，可以忽略此开关：Best Journal 不会在世界上任何地方出售或交易你的数据。</string>
     <string name="consent_btn_accept_all">全部接受</string>
     <string name="consent_btn_save_selection">保存我的选择</string>
     <string name="consent_btn_minimum_only">全部拒绝</string>
@@ -1377,12 +1377,10 @@
     <string name="settings_legal_section_header">法律文件</string>
     <string name="settings_legal_online_label">在线版本：</string>
     <plurals name="datetime_months_relative">
-        <item quantity="one">vor %1$d Monat</item>
-        <item quantity="other">vor %1$d Monaten</item>
+        <item quantity="other">%1$d 个月前</item>
     </plurals>
     <plurals name="datetime_years_relative">
-        <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
+        <item quantity="other">%1$d 年前</item>
     </plurals>
     <string name="ai_limits_disclaimer">AI 每日配额，满足高强度使用需求。</string>
     <string name="ai_limits_dialog_title">AI 每日配额是如何运作的？</string>
@@ -1421,4 +1419,5 @@
     <string name="settings_premium_cancelled_until">高级版订阅已取消 — 有效期至 <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">主题</string>
     <string name="settings_themes_manager">主题管理器</string>
+    <string name="paywall_monthly_note">之后每月 %1$s，自动续订\n随时可取消</string>
 </resources>
