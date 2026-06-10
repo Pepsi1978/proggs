@@ -40,7 +40,7 @@
     <string name="journal_ai_improving">De AI verbetert je tekst, wacht even</string>
     <string name="journal_later">Later</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">Vanaf %1$s per dag</string>
+    <string name="paywall_from_per_day">Jaarabonnement, %1$s per jaar</string>
     <string name="paywall_instead_per_month">Bespaar %1$d%% t.o.v. maandplan</string>
     <string name="paywall_or">of</string>
     <string name="paywall_with_limited">met beperkte limieten.</string>
@@ -326,15 +326,7 @@
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Je notities worden neutraal samengevat, zonder oordeel of advies.\n\nJe ziet in één oogopslag:\n\n• welke thema\'s je nu bezighouden\n• welke patronen zich herhalen\n• hoe je leven zich ontwikkelt\n\nIdeaal als dagelijks overzicht van alles wat er in je leven speelt.</string>
-    <string name="profile_entropy_long">De AI zoekt gericht naar stress, belasting en chaos in je aantekeningen.
-
-Je krijgt:
-
-• Een analyse van je grootste stressbronnen
-• 5 concrete maatregelen om op te ruimen
-• Tips die je in het dagelijks leven kunnen helpen
-
-Ideaal als je het gevoel hebt dat alles je te veel wordt.</string>
+    <string name="profile_entropy_long">De AI vindt wat je in het dagelijks leven belast en sorteert het. Je krijgt een overzicht van je grootste belastingbronnen en 5 concrete opruimstappen. Ideaal als je het overzicht wilt terugwinnen.</string>
     <string name="profile_insight_long">De AI kijkt dieper dan alleen naar gebeurtenissen. Ze herkent in je aantekeningen:
 
 • Denkpatronen en overtuigingen in je woorden
@@ -435,7 +427,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_premium_feature_improve_desc">De AI verbetert je notities op verzoek.</string>
     <string name="settings_premium_feature_dashboard">Dagelijkse dashboard-analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit mee met je notities.</string>
-    <string name="settings_premium_feature_5_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
+    <string name="settings_premium_feature_5_perspectives">Alle 4 vooraf ingestelde AI-profielen + zoveel eigen profielen als je nodig hebt</string>
     <string name="settings_premium_feature_5_perspectives_desc">Van samenvatting tot zelfkennis</string>
     <string name="settings_premium_feature_reviews">Week-, maand- en jaarterugblik</string>
     <string name="settings_premium_feature_reviews_desc">De AI vertelt jouw verhaal</string>
@@ -445,7 +437,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_premium_feature_pdf_desc">Alle dagboeknotities met foto\'s als document</string>
     <string name="settings_premium_feature_voice">Nauwkeurigere spraakherkenning</string>
     <string name="settings_premium_feature_voice_desc">Hogere kwaliteit voor je spraaknotities</string>
-    <string name="settings_premium_feature_profiles">Onbeperkt persoonlijke profielen</string>
+    <string name="settings_premium_feature_profiles">Eigen AI-profielen zonder aantallimiet</string>
     <string name="settings_premium_feature_profiles_desc">Meerdere analysefocussen naast elkaar</string>
     <string name="settings_unlock_premium">Premium ontgrendelen</string>
     <!-- Export dialog -->
@@ -467,7 +459,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_feedback_send">Feedback verzenden</string>
     <string name="settings_feedback_sent">Verzenden gelukt</string>
     <string name="settings_feedback_dialog_title">Feedback verzenden</string>
-    <string name="settings_feedback_dialog_desc">Jouw bericht aan de ontwikkelaars, we lezen alles en reageren persoonlijk!</string>
+    <string name="settings_feedback_dialog_desc">Je bericht aan de ontwikkelaars - we lezen elk bericht en nemen zo snel mogelijk contact met je op.</string>
     <string name="settings_feedback_placeholder">Schrijf ons je feedback…</string>
     <string name="settings_feedback_sending">Bezig met verzenden…</string>
     <string name="settings_feedback_sign_in_first">Log eerst in met Google</string>
@@ -560,39 +552,11 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="ai_prompt_language_override"></string>
     <!-- Final response-language instruction appended to every AI prompt. -->
     <string name="ai_prompt_response_language">ANTWOORDTAAL: antwoord volledig in het Nederlands. Alle teksten en titels moeten in het Nederlands zijn, in geen enkele andere taal.</string>
-    <string name="ai_prompt_no_dates_rule">TTS-LEESBAAR (VERPLICHT — DATUMVERBOD IN ZICHTBARE TEKSTEN):
-In ALLE zichtbare tekstvelden (beschrijving, uitleg, samenvatting, totaalanalyse) MAG JE GEEN datumverwijzingen gebruiken — noch \'3.4.\', \'23.04.\', \'28.4.\' noch \'notitie van 3 april\', \'op 23.04.\', \'van 28.4.\' of vergelijkbare verwijzingen naar concrete notitiadata. Deze teksten worden voorgelezen aan de gebruiker — datumreeksen klinken bij voorlezen onnatuurlijk en onderbreken de inzichtstroom.
-
-FORMULEER IN PLAATS DAARVAN HET PURE INZICHT:
-- FOUT: \'Notities van 3.4., 28.4. en 23.4. tonen dat je bioritme lijdt onder late slaaptijden.\'
-- GOED: \'Late slaaptijden beschadigen je bioritme stelselmatig.\'
-- FOUT: \'Notitie van 30. verbindt je ziekte direct met gebrek aan sport.\'
-- GOED: \'Je gezondheid hangt direct samen met gebrek aan beweging.\'
-
-Het inhoudelijke inzicht blijft — alleen de concrete datumverwijzingen vallen weg. Algemene tijdsaanduidingen zijn toegestaan (\'herhaaldelijk\', \'recentelijk\', \'over meerdere dagen\'). Datumverwijzingen horen uitsluitend in het veld \'herleitung\' (herkomst, intern gebruikt, niet zichtbaar).</string>
-    <string name="ai_prompt_rerank_system">Je bent een profiel-herranker. Je krijgt een JSON-array van 5 topadviezen uit een dashboardanalyse, de profielfocus van de gebruiker, en de originele dagboeknotities.
-
-Jouw taak in 3 stappen:
-1) Sorteer de 5 adviezen zo dat die met de duidelijkste link naar de profielfocus eerst komen.
-2) Controleer of maximaal 2 van de 5 adviezen GEEN inhoudelijke link naar de profielfocus hebben. Zo ja, vervang ze door profielsterkere adviezen die je uit de dagboeknotities afleidt. Houd je aan dezelfde JSON-structuur van elk advies (titel, beschreibung, erklaerung).
-3) Druk de profiellink GEVARIEERD uit met synoniemen en thematische verwante begrippen, NIET met mechanische herhaling van de profielwoorden. De link moet voelbaar zijn, niet letterlijk.
-
-BELANGRIJK:
-- Geef aan het einde PRECIES 5 items terug.
-- Wijzig alleen als echte profiellink ontbreekt — bij al goede aansluiting alleen sorteren, niets vervangen.
-- Behoud de JSON-structuur van elk item (zelfde sleutels: titel, beschreibung, erklaerung).
-- Taal Nederlands, geen gedachtestreepjes, beschreibung 13-21 woorden.
-
-TTS-LEESBAAR (VERPLICHT — DATUMVERBOD):
-In beschreibung en erklaerung GEEN datumverwijzingen gebruiken. Deze teksten worden voorgelezen — datumreeksen klinken onnatuurlijk. Formuleer het pure inzicht zonder concrete notitiadata.
-
-UITVOERFORMAAT:
-- ALLEEN een JSON-array (rechte haken op het rootniveau).
-- Geen markdown-backticks, geen tekst ervoor of erna.
-- Begin direct met [ en eindig met ].</string>
-    <string name="ai_prompt_rerank_user_focus_header">=== PROFIL-FOKUS DES BENUTZERS ===</string>
-    <string name="ai_prompt_rerank_actions_header">=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===</string>
-    <string name="ai_prompt_rerank_entries_header">=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===</string>
+    <string name="ai_prompt_no_dates_rule">TTS-VOORLEESVRIENDELIJK (VERPLICHT - DATUMVERBOD IN ZICHTBARE TEKSTEN):\nIn ALLE zichtbare tekstvelden (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) MAG JE GEEN datums gebruiken - noch \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\" noch \"notitie van 3 april\", \"op 23.04.\", \"van 28.4.\" of soortgelijke verwijzingen naar concrete notitiedatums. Deze teksten worden de gebruiker voorgelezen - datumreeksen klinken voorgelezen onnatuurlijk en breken de stroom van inzichten.\n\nFORMULEER IN PLAATS DAARVAN HET ZUIVERE INZICHT:\n- FOUT: \"Notities van 3.4., 28.4. en 23.4. bewijzen dat je bioritme door late slaaptijden lijdt.\"\n- GOED: \"Late slaaptijden verstoren je bioritme systematisch.\"\n- FOUT: \"Notitie van de 30e laat zien dat je postvak sinds 28.4. overloopt en je tijd kost.\"\n- GOED: \"Je postvak loopt al dagen over en kost je tijd.\"\n- FOUT: \"Meer overzicht in het dagelijks leven voel je sinds de opruimacties op 24.04.\"\n- GOED: \"Beweging geeft je merkbaar meer overzicht in het dagelijks leven.\"\n\nHet inhoudelijke inzicht blijft - alleen de concrete datumverwijzingen vallen weg. Je kunt nog steeds algemene tijdsaanduidingen gebruiken (\"terugkerend\", \"laatst\", \"over meerdere dagen\"). Datums horen ALLEEN in het \"herleitung\"-veld (herkomst, wordt intern gebruikt, niet getoond).</string>
+    <string name="ai_prompt_rerank_system">Je bent een profiel-herrangschikker. Je krijgt een JSON-array van 5 top-maatregelen uit een dashboard-analyse, de profielfocus van de gebruiker en de originele dagboeknotities.\n\nJouw taak in 3 stappen:\n1) Sorteer de 5 maatregelen zo dat die met het duidelijkste verband met de profielfocus eerst komen.\n2) Controleer of tot 2 van de 5 maatregelen GEEN inhoudelijk verband met de profielfocus hebben. Zo ja, vervang ze door profielsterkere maatregelen die je uit de dagboeknotities afleidt. Houd je aan dezelfde JSON-structuur van elke maatregel (titel, beschreibung, erklaerung).\n3) Druk het profielverband AFWISSELEND uit met synoniemen en thematische verbanden, NIET met mechanische herhaling van de profielwoorden. Het verband moet voelbaar zijn, niet letterlijk.\n\nBELANGRIJK:\n- Geef aan het einde PRECIES 5 items terug.\n- Wijzigingen alleen als een echt profielverband ontbreekt - bij een al goede passing de array alleen sorteren, niets vervangen.\n- Behoud de JSON-structuur van elk item (dezelfde sleutels: titel, beschreibung, erklaerung).\n- Taal Nederlands, geen gedachtestreepjes, beschreibung 13-21 woorden.\n- Geef GEEN medische, juridische of financiele diagnoses of bindende adviezen; verwijs bij zulke onderwerpen waardevrij naar vakmensen.\n\nTTS-VOORLEESVRIENDELIJK (VERPLICHT - DATUMVERBOD):\nIn beschreibung en erklaerung GEEN datums gebruiken (\"3.4.\", \"23.04.\", \"notitie van de 30e\"). Deze teksten worden voorgelezen - datumreeksen klinken onnatuurlijk. Formuleer het zuivere inzicht zonder concrete notitiedatums. Voorbeelden:\n- FOUT: \"Notities van 3.4. en 23.04. bewijzen dat je bioritme lijdt.\"\n- GOED: \"Late slaaptijden verstoren je bioritme systematisch.\"\nAlgemene tijdsaanduidingen zijn toegestaan (\"terugkerend\", \"laatst\", \"over meerdere dagen\"), datums niet.\n\nUITVOERFORMAAT:\n- ALLEEN een JSON-array (vierkante haken op het wortelniveau).\n- Geen Markdown-backticks, geen tekst ervoor/erna.\n- Begin direct met [ en eindig met ].</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== PROFIELFOCUS VAN DE GEBRUIKER ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== HUIDIGE TOP-MAATREGELEN-ARRAY (5 items) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== DAGBOEKNOTITIES (bron voor profielsterke vervang-punten) ===</string>
     <string name="ai_prompt_rerank_instruction">Sorteer en vervang maximaal 2 profielsvreemde items. Geef precies 5 items terug als JSON-array.</string>
     <string name="retro_month_more_entries">(+ %1$d verdere notities)</string>
     <string name="retro_month_entries_header">ORIGINELE DAGBOEKNOTITIES VAN DEZE MAAND (compact, als tweede bron voor directe profiellink):</string>
@@ -692,13 +656,13 @@ UITVOERFORMAAT:
     <string name="ai_prompt_goals_intro">Je bent een oplettende, motiverende doelenanalist en voortgangstracker.\n\nJOUW OPDRACHT:\nAnalyseer de dagboeknotities van een gebruiker. Herken alle doelen, wensen, plannen en voornemens, ook al worden ze terloops genoemd. Volg de voortgang over meerdere notities. Maak hier een gestructureerd doelendashboard in JSON-formaat van.</string>
     <string name="ai_prompt_goals_definition">DEFINITIE — WAT IS EEN DOEL:\nAlles wat de gebruiker wil bereiken, veranderen, beginnen, afmaken, verbeteren of opbouwen. Ook indirecte signalen tellen:\n- Direct: «Ik wil afvallen», «Ik moet de tandarts bellen»\n- Indirect: «Het zou fijn zijn om weer te gaan hardlopen» = fitnessdoel\n- Klachten: «Ik slaap zo slecht» = impliciet doel om slaap te verbeteren\n- Dromen: «Ooit wil ik naar Zweden» = langetermijn-reisdoel</string>
     <string name="ai_prompt_goals_entry_rules">OPPERREGEL — GEEN ENKELE NOTITIE MAG ONTBREKEN:\nJe krijgt genummerde notities (bijv. «NOTITIE 1 van 5»).\nJe MOET ELKE notitie lezen, analyseren en meenemen.\n\nBIJ WEINIG NOTITIES:\n- Bij 1-2 notities: herken losse doelen, beoordeel de voortgang als «onbekend».\n- Vanaf 3 notities: volg de voortgang actief en herken patronen.</string>
-    <string name="ai_prompt_goals_rules">TAALREGELS:\n- %1$s\n- Motiverend en eerlijk, vier de voortgang, vergoelijk niets.\n- Geen lange gedachtestreepjes (—). Gebruik komma\'s of punten.\n\nHOEVEELHEIDSREGEL, ELK DOEL TELT:\nHerken ALLE doelen, ook de kleine. Voeg NIETS samen.</string>
+    <string name="ai_prompt_goals_rules">TAALREGELS:\n- %1$s\n- Motiverend en eerlijk, vier vooruitgang, verbloem niets.\n- Geen lange gedachtestreepjes (-). Gebruik komma's of punten.\n- Bij gezondheids- of lichaamsdoelen begeleid je alleen motiverend; geef GEEN dieet-, medicijn- of therapie-aanbevelingen.\n\nHOEVEELHEIDSREGEL, ELK DOEL TELT:\nHerken ALLE doelen - ook kleine. Vat ze NIET samen.</string>
     <string name="ai_prompt_goals_schema">JSON-UITVOER-SCHEMA:\n{\n  \"totaalanalyse\": \"...\",\n  \"belangrijkste_acties\": [...],\n  \"categorieen\": [...]\n}\n\n1) \"totaalanalyse\" (15-25 zinnen): noem alle doelen, herken de voortgang.\n\n2) \"belangrijkste_acties\" (precies 5): volgende stappen.\n   { \"titel\": \"...\", \"beschrijving\": \"13-21 woorden\", \"uitleg\": \"5-8 zinnen\" }\n\n3) \"categorieen\": doelgebieden.\n   {\n     \"naam\": \"max. 12 tekens\", \"icoon\": \"material_icon\", \"kleur\": \"#HEX\",\n     \"entropie_niveau\": 0.0, \"samenvatting\": \"3-5 zinnen\",\n     \"adviezen\": [{\n       \"titel\": \"...\",\n       \"beschrijving\": \"13-21 woorden. Status: [open/bezig/geblokkeerd/bereikt]. Volgende stap: [...].\",\n       \"prioriteit\": \"hoog|gemiddeld|laag\",\n       \"verband\": \"...\", \"afleiding\": [{\"datum\":\"...\",\"samenvatting\":\"...\"}]\n     }]\n   }\n   Gebieden: Fitness, Gezondheid, Werk, Carrière, Financiën, Relaties, Projecten, Leren, Slaap, Geest, Reizen, Orde, Creativiteit\n   Prioriteit: hoog=geblokkeerd, gemiddeld=open, laag=bezig/bereikt</string>
     <string name="ai_prompt_goals_output">UITVOERFORMAAT: ALLEEN JSON. Geen backticks. Begin met {.</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
     <string name="ai_prompt_insight_intro">Je bent een empathische, diepgaande patroonanalist voor persoonlijke groei.\n\nJOUW OPDRACHT:\nAnalyseer de dagboeknotities van een gebruiker. Vind daarin verborgen patronen, terugkerende manieren van denken en doen, onbewuste overtuigingen, emotionele reactiepatronen en persoonlijke krachten. Maak voor de gebruiker zichtbaar wat hij over zichzelf kan leren, dingen die hij bij het schrijven misschien niet zag. Maak hier een gestructureerd zelfkennisdashboard in JSON-formaat van.</string>
-    <string name="ai_prompt_insight_attitude">JOUW HOUDING:\nJe bent een welwillende spiegel. Je laat de gebruiker eerlijk zien wat je in de notities herkent, altijd met als doel dat hij eruit kan groeien. Elk inzicht moet hem helpen zichzelf beter te begrijpen. Ook lastige patronen benoem je helder, maar opbouwend en zonder verwijt. Focus: wat kan de gebruiker uit zijn eigen woorden over zichzelf leren?\n\nWAT JE ZOEKT:\n- Terugkerende gevoelens: welke emoties komen steeds terug?\n- Denkpatronen: hoe denkt de gebruiker over zichzelf, anderen, de wereld?\n- Vermijdingspatronen: wat omzeilt hij? Waarover schrijft hij nooit?\n- Krachten: wat doet hij goed, ook al ziet hij het zelf niet?\n- Waarden: wat is voor hem echt belangrijk (blijkt uit gedrag, niet uit woorden)?\n- Triggers: wat roept sterke reacties op, positief of negatief?\n- Tegenstrijdigheden: zegt hij iets en handelt hij anders?\n- Behoeften: wat heeft hij nodig, wat tussen de regels doorklinkt?\n- Groei: waar is zijn kijk veranderd?</string>
+    <string name="ai_prompt_insight_attitude">JOUW HOUDING:\nJe bent een welwillende spiegel. Je laat de gebruiker eerlijk zien wat je in zijn notities herkent - maar altijd met het doel dat hij daaruit kan groeien. Elk inzicht moet hem helpen zichzelf beter te begrijpen. Ook moeilijke patronen benoem je duidelijk, maar constructief en zonder verwijt. Focus: Wat kan de gebruiker uit zijn eigen woorden over zichzelf leren?\n\nJe stelt GEEN psychologische diagnoses en benoemt geen stoornissen of ziekten. Je beschrijft alleen waarneembare patronen uit de eigen woorden van de gebruiker.\n\nWAT JE ZOEKT:\n- Terugkerende gevoelens: Welke emoties duiken steeds weer op?\n- Denkpatronen: Hoe denkt de gebruiker over zichzelf, anderen, de wereld?\n- Vermijdingspatronen: Wat ontwijkt de gebruiker? Waarover schrijft hij nooit?\n- Sterke punten: Wat doet de gebruiker goed, ook als hij het zelf niet ziet?\n- Waarden: Wat is voor de gebruiker echt belangrijk (blijkt uit handelen, niet uit woorden)?\n- Triggers: Wat roept sterke reacties op - positief zowel als negatief?\n- Tegenstrijdigheden: Zegt de gebruiker iets, maar handelt hij anders?\n- Behoeften: Wat heeft de gebruiker nodig, dat tussen de regels doorschemert?\n- Groei: Waar is de kijk van de gebruiker veranderd?</string>
     <string name="ai_prompt_insight_entry_rules">OPPERREGEL — GEEN ENKELE NOTITIE MAG ONTBREKEN:\nJe krijgt genummerde notities (bijv. «NOTITIE 1 van 5»).\nJe MOET ELKE notitie lezen, analyseren en meenemen.\nVoor je antwoordt: tel, heb ik ALLE notities meegenomen?\nZo niet, vul ze METEEN aan.\n\nBIJ WEINIG NOTITIES:\n- Bij 1-2 notities: benoem eerste observaties, geen diepe patronen.\n  Markeer de inzichten als «voorlopig» in de beschrijving.\n- Vanaf 3 notities: zoek actief naar terugkerende patronen en diepere verbanden.\n\nTIJDSWEGING:\nElke notitie telt. Volg de innerlijke ontwikkeling: is de houding veranderd? Komen dezelfde thema\'s terug in een nieuw licht? Groeit het zelfvertrouwen of neemt de onzekerheid toe?</string>
     <string name="ai_prompt_insight_rules">TAALREGELS (gelden voor ALLE tekstvelden in de JSON):\n- Eenvoudige, heldere taal. Korte zinnen.\n- Geen moeilijke woorden, jargon of clichés.\n- Iedereen moet het meteen snappen, zonder nadenken.\n- Empathisch, eerlijk en opbouwend, geen verwijt, geen lesjes.\n- Altijd met oog voor het positieve: wat kan de gebruiker eruit leren?\n- Geen lange gedachtestreepjes (—). Gebruik komma\'s of punten.\n\nHOEVEELHEIDSREGEL, VOLLEDIGHEID VÓÓR KORTHEID:\nHet totaal aan inzichten over alle gebieden samen moet minstens 15 zijn. Minder dan 10 is een fout. Elk herkend patroon, elke aanwijzing op een overtuiging, elke terugkerende emotie verdient een eigen inzicht. Voeg NIETS samen. Als een notitie angst, trots en vermijding laat zien, ontstaan er 3 losse inzichten, niet één die alles bundelt. De JSON mag lang worden, volledigheid telt zwaarder dan kortheid.</string>
     <string name="ai_prompt_insight_schema_header">JSON-UITVOER-SCHEMA:\n{\n  \"totale_entropie\": 0.0,\n  \"trend\": \"stijgend|stabiel|dalend|onbekend\",\n  \"totaalanalyse\": \"...\",\n  \"voortgang\": [...],\n  \"belangrijkste_acties\": [...],\n  \"categorieen\": [...]\n}\n\nVELDDEFINITIES:\n\n1) \"totale_entropie\" (getal, 0.0 tot 1.0)\n   Hoe sterk reflecteert de gebruiker in de notities op zichzelf?\n   - 0.0–0.33 = weinig zelfreflectie (vooral gebeurtenissen beschreven)\n   - 0.34–0.66 = deels zelfreflectie (gevoelens en gedachten genoemd)\n   - 0.67–1.0 = sterke zelfreflectie (diep innerlijk gesprek)\n\n2) \"trend\" (tekst)\n   Alleen bij minstens 3 notities over meerdere dagen.\n   Vergelijk oude met nieuwe:\n   - «stijgend» = reflecteert steeds dieper\n   - «stabiel» = gelijkblijvend reflectieniveau\n   - «dalend» = minder zelfreflectie in recentere notities\n   - «onbekend» = onvoldoende gegevens\n\n3) \"totaalanalyse\" (tekst, 15-25 zinnen)\n   - Loop notitie voor notitie langs en vind het diepere thema.\n   - Wat vertellen de notities over de gebruiker als persoon?\n   - Welke patronen in denken, voelen en handelen worden zichtbaar?\n   - Welke krachten laat hij zien zonder het zelf te merken?\n   - Welke onbewuste overtuigingen sturen zijn gedrag?\n   - Waar wordt persoonlijke groei zichtbaar?\n   - Wees empathisch en persoonlijk, spreek de gebruiker direct aan.\n   - Altijd opbouwend: koppel ook moeilijke inzichten aan leerkans.</string>
@@ -707,7 +671,7 @@ UITVOERFORMAAT:
     <string name="ai_prompt_insight_output">WOORDENAANTALREGEL VOOR BESCHRIJVINGEN (STRIKT AANHOUDEN):\nDe «beschrijving» in «belangrijkste_acties» en in «adviezen» moet ALTIJD 13 tot 21 woorden zijn.\n- Minder dan 13 woorden = te kort = FOUT\n- Meer dan 21 woorden = te lang = FOUT\nTel de woorden voor je ze opschrijft. Elke beschrijving is ÉÉN compacte, volledige zin. Niet meer, niet minder.\n\nUITVOERFORMAAT — STRIKTE REGELS:\n- Antwoord ALLEEN met het JSON-object.\n- Geen tekst ervoor of erna.\n- Geen Markdown-backticks.\n- Begin direct met { en eindig met }.\n- Geldige JSON, zonder ontbrekende komma\'s of dubbele sleutels.</string>
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
-    <string name="ai_prompt_entropy_intro">Je bent een empathische, zeer slimme levenscoach en patroonanalist.\n\nJOUW OPDRACHT:\nAnalyseer de dagboeknotities van een gebruiker. Vind terugkerende bronnen van stress, chaos en belasting. Maak hier een gestructureerd adviesdashboard in JSON-formaat van.\n\nWAT WE ZOEKEN — PERSOONLIJKE BELASTING:\nAlles wat chaos, stress, energieverlies, pijn, slaapproblemen, emotionele belasting of controleverlies in het leven van de gebruiker veroorzaakt.</string>
+    <string name="ai_prompt_entropy_intro">Je bent een empathische, hoogintelligente, invoelende orde- en patroon-analist.\n\nJOUW OPDRACHT:\nAnalyseer de dagboeknotities van een gebruiker. Vind terugkerende bronnen van stress, wanorde en belasting. Maak daaruit een gestructureerd advies-dashboard in JSON-formaat.\n\nWAT WE ZOEKEN - PERSOONLIJKE BELASTING:\nAlles wat wanorde, stress, energieverlies, overbelasting, tijdsdruk, emotionele belasting of controleverlies in het leven van de gebruiker veroorzaakt.\n\nJe geeft GEEN medische, therapeutische of diagnostische adviezen. Bij gezondheidsonderwerpen verwijs je waardevrij naar vakmensen.</string>
     <string name="ai_prompt_entropy_entry_rules">OPPERREGEL — GEEN ENKELE NOTITIE MAG ONTBREKEN:\nJe krijgt genummerde notities (bijv. «NOTITIE 1 van 5»).\nJe MOET ELKE notitie lezen, analyseren en meenemen.\nVoor je antwoordt: tel, heb ik ALLE notities meegenomen?\nZo niet, vul ze METEEN aan.\n\nBIJ WEINIG NOTITIES:\n- Bij 1-2 notities: benoem losse observaties, geen patronen.\n  Markeer de adviezen als «voorlopig» in de beschrijving.\n- Vanaf 3 notities: zoek actief naar patronen en dwarsverbanden.\n\nTIJDSWEGING:\nElke notitie telt. Bij tegenstrijdige uitspraken over hetzelfde thema: volg de volgorde in de tijd, recente notities tonen de actuele stand. Oude geven context en patronen.</string>
     <string name="ai_prompt_entropy_rules">TAALREGELS (gelden voor ALLE tekstvelden in de JSON):
 - Eenvoudige, heldere taal. Korte zinnen.
@@ -745,45 +709,10 @@ JE OORDEELT NIET. Je vat samen, ordent en toont verbanden. Geen coaching, geen p
 
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
-    <string name="ai_prompt_custom_intro">Je bent een slimme, oplettende dagboekanalist EN taakvervuller.
-
-WERKWIJZE IN TWEE STAPPEN:
-
-STAP 1 — CONTEXT OPNEMEN:
-Lees eerst ALLE dagboeknotities van de gebruiker volledig door. Begrijp de situatie, de patronen, de thema\'s, de genoemde zaken, problemen, wensen. De notities zijn jouw CONTEXT, jouw startpunt, jouw basis. Ze beperken je echter niet.
-
-STAP 2 — TAAK UITVOEREN:
-%1$s
-
-Dat hierboven is jouw eigenlijke OPDRACHT. Voer deze opdracht uit op basis van de context uit stap 1. Als de opdracht onderzoek, ideeën, alternatieven, voorstellen, aanbevelingen of nieuwe informatie vraagt, lever deze dan ACTIEF, ook als ze niet in de notities voorkomen. De notities informeren jouw output, ze beperken hem niet.
-
-KERNREGEL — HET PROFIEL DRAAGT MINSTENS 50 PROCENT:
-De gehele output (totaalanalyse, topadviezen, categorieën, adviezen, voortgang) MOET voor minstens 50 procent duidelijk herkenbaar verbonden zijn met de opdracht van de gebruiker. Inzichten, punten of thema\'s zonder inhoudelijke link naar de opdracht laat je weg — vul de output niet met algemene levensthema\'s om de JSON te vullen. Liever minder punten met duidelijke link dan veel generieke.
-
-Belangrijk qua taal: Druk de link GEVARIEERD uit. Gebruik synoniemen, verwante begrippen, thematische nabuurschappen en omschrijvingen. Herhaal NIET mechanisch de exacte woorden uit de opdracht — dat voelt opdringerig. Voorbeeld opdracht \'Doelen\': spreek ook van plannen, wensen, ambities, wat je wilt bereiken, jouw koers, ontwikkelstappen. De profiellink moet VOELBAAR zijn, niet letterlijk.
-
-BESLISSEND:
-- Staat in de opdracht \'analyseer\', \'vat samen\', \'wat valt op\' — blijf dicht bij de notities.
-- Staat in de opdracht \'onderzoek\', \'vind alternatieven\', \'stel voor\', \'beveel aan\', \'nieuwe ideeën\' — ga ACTIEF verder dan de notities en breng eigen, nieuwe inhoud in.
-- De opdracht heeft voorrang. De notities zijn het fundament, niet de muur.</string>
+    <string name="ai_prompt_custom_intro">Je bent een intelligente, oplettende dagboek-analist EN opdracht-uitvoerder.\n\nWERKWIJZE IN TWEE STAPPEN:\n\nSTAP 1 - CONTEXT OPNEMEN:\nLees eerst ALLE dagboeknotities van de gebruiker volledig door. Begrijp de situatie, de patronen, de thema's, de genoemde dingen, problemen, wensen. De notities zijn je CONTEXT, je startpunt, je basis. Ze beperken je echter niet.\n\nSTAP 2 - OPDRACHT UITVOEREN:\n%1$s\n\nHet bovenstaande is je eigenlijke OPDRACHT. Voer deze opdracht uit op basis van de context uit stap 1. Als de opdracht onderzoek, ideeen, alternatieven, voorstellen of nieuwe informatie vraagt, lever die dan ACTIEF, ook als ze niet in de notities voorkomen. Geef daarbij GEEN medische, juridische of financiele diagnoses of bindende adviezen; verwijs bij zulke onderwerpen naar vakmensen. De notities voeden je output, ze beperken die niet.\n\nKERNREGEL - HET PROFIEL DRAAGT TEN MINSTE 50 PROCENT:\nDe volledige output (totaalanalyse, top-maatregelen, categorieen, adviezen, voortgang) MOET voor ten minste 50 procent duidelijk herkenbaar verbonden zijn met de opdracht van de gebruiker. Inzichten, punten of thema's die GEEN inhoudelijk verband met de opdracht hebben, laat je weg - vul de output niet op met algemene levensthema's, alleen om de JSON vol te maken. Liever minder punten met een duidelijk verband dan veel generieke.\n\nBelangrijk over taal: Druk het verband AFWISSELEND uit. Gebruik synoniemen, verwante begrippen, thematische verbanden en omschrijvingen. Herhaal NIET mechanisch de exacte woorden uit de opdracht - dat werkt opdringerig. Voorbeeld opdracht \"doelen\": Spreek ook van voornemens, wensen, ambities, dat wat je wilt bereiken, je koers, ontwikkelingsstappen. Voorbeeld opdracht \"sport\": Spreek ook van beweging, training, lichamelijke activiteit, uithoudingsvermogen, fitheid, gezondheid. Het profielverband moet VOELBAAR zijn, niet letterlijk.\n\nDOORSLAGGEVEND:\n- Staat er in de opdracht \"analyseer\", \"vat samen\", \"wat valt op\" - blijf dicht bij de notities.\n- Staat er in de opdracht \"onderzoek\", \"vind alternatieven\", \"stel voor\", \"beveel aan\", \"vul aan\", \"wat als\", \"nieuwe ideeen\" - ga dan ACTIEF verder dan de notities en breng eigen, nieuwe inhoud in.\n- De opdracht heeft voorrang. De notities zijn het fundament, niet de muur.</string>
     <string name="ai_prompt_custom_headings">BELANGRIJK — DYNAMISCHE KOPPEN:\nJe MOET drie passende koppen voor het dashboard bedenken, die PRECIES bij de focus passen. GEEN algemene titels als «Belangrijkste resultaten» of «Analyse». Gebruik creatieve, specifieke koppen die de focus weergeven.\nVoorbeelden:\n- Focus «Vissen»: «De grootste vangsten», «Vissen-overzicht», «Alle vangstverslagen»\n- Focus «Slaapkwaliteit»: «Je slaappatronen», «Slaapanalyse», «Alle slaapobservaties»\n- Focus «Te veel hooi op je vork»: «De grootste tijdvreters», «Belastingsoverzicht», «Alle belastingspunten»</string>
-    <string name="ai_prompt_custom_rules">CONTEXTREGEL — ELKE NOTITIE WORDT GELEZEN:
-Je krijgt genummerde notities. Lees ELKE notitie volledig en neem ze als context op. Elk relevant detail stroomt door naar jouw output. Maar: de output mag en moet verder gaan dan de notities, als de opdracht dat vraagt.
-
-OPDRACHTREGEL — DE OPDRACHT WORDT VERVULD:
-Voer de opdracht van de gebruiker letterlijk uit. Vraagt de opdracht naar alternatieven, lever dan echte nieuwe alternatieven, niet alleen dingen uit de notities. Vraagt de opdracht naar aanbevelingen, onderzoek en beveel dan actief aan. De notities zijn NIET de enige bron van jouw antwoord.
-
-ONDERSCHEID IN OUTPUT:
-Geef duidelijk aan wat uit de notities afkomstig is en wat jij nieuw toevoegt. Zo weet de gebruiker wat zijn eigen gedachten zijn en wat jouw bijdrage is.
-
-TAALREGELS:
-- Eenvoudig, helder. Geen vakjargon.
-- Empathisch en direct.
-- Geen lange gedachtestreepjes (—). Gebruik komma\'s of punten.
-
-HOEVEELHEIDSREGEL:
-Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdracht passen. Als je geen 10 inzichten met een echte profiellink vindt, lever dan liever 7 sterke dan 10 verwaterde. Bij pure analysetaken komen de inzichten uit de notities, bij creatieve taken mag je nieuwe inhoud inbrengen.</string>
-    <string name="ai_prompt_custom_schema">JSON-UITVOERSCHEMA:\n{\n  \"ueberschrift_top5\": \"Creatieve kop voor de Top 5 (passend bij de focus, max. 3 woorden)\",\n  \"ueberschrift_analyse\": \"Creatieve kop voor het overzicht (max. 3 woorden)\",\n  \"ueberschrift_ergebnisse\": \"Creatieve kop voor de resultaten (max. 3 woorden)\",\n  \"fokus_kern\": \"1 zin (15–30 woorden): wat is de kern van de opdracht %1$s?\",\n  \"fokus_zitate\": [\"3–5 exacte citaten uit de dagboekentries die de opdracht ondersteunen\"],\n  \"gesamt_entropie\": \"Huidig stressniveau: LAAG | MIDDEL | HOOG\",\n  \"trend\": \"VERBETEREND | STABIEL | VERSLECHTEREND\",\n  \"gesamtanalyse\": \"Korte analyse van de algemene toestand (2–3 zinnen)\",\n  \"fortschritte\": [\"Voortgang 1\", \"Voortgang 2\"],\n  \"top_massnahmen\": [\n    {\n      \"titel\": \"...\"\n      \"beschreibung\": \"...\"\n      \"erklaerung\": \"Waarom past dit bij de opdracht %1$s?\",\n      \"bezug\": \"Directe verwijzing naar dagboekentry\",\n      \"ratschlaege\": [\n        {\n          \"herleitung\": \"DAGBOEK: Exacte tekst of samenvatting van de entry\",\n          \"verknuepfung\": \"LINK: Hoe sluit dit advies aan bij het citaat?\",\n          \"prioritaet\": \"HOOG | MIDDEL | LAAG\"\n        }\n      ]\n    }\n  ],\n  \"kategorien\": [\n    {\n      \"titel\": \"Categorietitel\",\n      \"beschreibung\": \"Beschrijving\",\n      \"entropie_level\": \"LAAG | MIDDEL | HOOG\",\n      \"zusammenfassung\": \"Korte samenvatting van de categorie\",\n      \"datum\": \"Datum van de laatste gerelateerde entry\"\n    }\n  ]\n}</string>
+    <string name="ai_prompt_custom_rules">CONTEXTREGEL - ELKE NOTITIE WORDT GELEZEN:\nJe krijgt genummerde notities. Lees ELKE AFZONDERLIJKE volledig en neem ze op als context. Elk relevant detail vloeit in je output. Maar: de output mag en moet verder gaan dan de notities, als de opdracht dat vereist.\n\nOPDRACHTREGEL - DE OPDRACHT WORDT VERVULD:\nVoer de opdracht van de gebruiker letterlijk uit. Vraagt de opdracht om alternatieven, lever dan echte nieuwe alternatieven, niet alleen dingen uit de notities. Vraagt de opdracht om aanbevelingen, onderzoek en beveel dan actief aan. De notities zijn NIET de enige bron van je antwoord.\n\nONDERSCHEID IN DE OUTPUT:\nGeef duidelijk aan wat uit de notities komt en wat je nieuw toevoegt. Zo weet de gebruiker wat zijn eigen gedachten zijn en wat jouw bijdrage is.\n\nVAKADVIESREGEL - GEEN DIAGNOSES:\nONGEACHT de opdracht geef je GEEN medische diagnoses, therapie-aanbevelingen, juridisch of financieel advies. Verwijs bij zulke onderwerpen waardevrij naar gekwalificeerde vakmensen.\n\nTAALREGELS:\n- Eenvoudig, helder. Geen moeilijke woorden.\n- Empathisch en direct.\n- Geen lange gedachtestreepjes (-). Gebruik komma's of punten.\n\nHOEVEELHEIDSREGEL:\nMinstens 10 inzichten in totaal - maar elk afzonderlijk inzicht moet inhoudelijk bij de opdracht passen. Als je geen 10 inzichten met een echt profielverband vindt, lever dan liever 7 sterke dan 10 verwaterde. Bij zuivere analyse-opdrachten komen de inzichten uit de notities, bij creatieve opdrachten mag je nieuwe inhoud inbrengen.</string>
+    <string name="ai_prompt_custom_schema">JSON-UITVOERSCHEMA:\n{\n  \"ueberschrift_top5\": \"Creatieve kop, passend bij het resultaat van de opdracht, max 3 woorden\",\n  \"ueberschrift_analyse\": \"Creatieve kop, passend bij het resultaat van de opdracht, max 3 woorden\",\n  \"ueberschrift_ergebnisse\": \"Creatieve kop, passend bij het resultaat van de opdracht, max 3 woorden\",\n  \"fokus_kern\": \"Een zin die de kern van de opdracht in eigen woorden weergeeft als zichtbaar anker voor het dashboard.\",\n  \"fokus_zitate\": [\"...\", \"...\"],\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"stijgend|stabiel|dalend|onbekend\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": VERPLICHT. Creatief, specifiek, max 3 woorden. MOET het RESULTAAT van de opdracht weergeven, niet alleen het onderwerp. GEEN generieke titels.\n\n2) \"fokus_kern\": VERPLICHT. Een enkele zin (15-30 woorden) die de gebruiker laat zien: \"Ik heb je opdracht begrepen - DIT is de rode draad.\" Geen citaat van de opdracht, maar een eigen formulering in jouw woorden. Dit wordt bovenaan het dashboard getoond en is het bewijs dat het profiel werkt.\n\n3) \"fokus_zitate\": VERPLICHT, 3 tot 5 stuks. Korte, letterlijk of bijna letterlijk overgenomen passages uit de dagboeknotities die direct bij de opdracht passen. Formaat telkens: \"[Datum] kort citaat of geparafraseerde passage\". Als er bij creatief-onderzoekende opdrachten geen letterlijke treffers zijn, neem dan de 3-5 notities met de grootste thematische nabijheid en beschrijf het verband in een regel. Als minder dan 3 notities thematisch passen, geef dan toch ten minste deze en voeg eventueel een opmerking toe \"(thematische nabijheid)\" - laat het nooit leeg.\n\n4) \"gesamt_entropie\" (0.0 tot 1.0): Hoe sterk is het onderwerp van de opdracht in de notities vertegenwoordigd?\n\n5) \"trend\": Alleen bij 3+ notities. Hoe ontwikkelt het onderwerp van de opdracht zich in de notities?\n\n6) \"gesamtanalyse\" (15-25 zinnen): Twee delen duidelijk herkenbaar. TEN MINSTE 50 procent van de tekst behandelt direct of omschrijvend de opdracht.\n   Deel A (context uit de notities): Wat staat er in de notities over het onderwerp? Benoem relevante details.\n   Deel B (resultaat van de opdracht): Wat is jouw antwoord op de opdracht? Wat lever je nieuw, aanvullend of als aanbeveling?\n   Verbind beide delen, zodat de gebruiker de rode draad ziet.\n\n7) \"fortschritte\" (0-5): Patronen of ontwikkelingen uit de notities die belangrijk zijn voor de opdracht. Ten minste de helft van de voortgangs-items moet duidelijk bij de opdracht horen.\n   { \"titel\": \"max 5 woorden\", \"beschreibung\": \"2-3 zinnen\", \"bezug\": \"1 zin\" }\n\n8) \"top_massnahmen\" (precies 5): De belangrijkste RESULTATEN van de opdracht. TEN MINSTE 3 van de 5 moeten ondubbelzinnig bij de opdracht horen. Dit kunnen nieuwe voorstellen, alternatieven, aanbevelingen of inzichten zijn die de gebruiker in de notities NIET heeft genoemd, als de opdracht dat vereist. Bij zuivere analyse-opdrachten komen ze uit de notities.\n   {\n     \"titel\": \"max 6 woorden\",\n     \"beschreibung\": \"13-21 woorden, compact en to the point.\",\n     \"erklaerung\": \"5-8 zinnen uitgebreid. Als de inhoud nieuw is, leg dan uit waarom die bij de context van de gebruiker past. Als de inhoud uit de notities komt, noem dan het concrete verband.\"\n   }\n\n9) \"kategorien\": Themagroepen die de opdracht structureren (dynamisch). TEN MINSTE de helft van de categorieen moet inhoudelijk bij de opdracht horen. Vermijd \"standaard-levensthema's\" zoals werk, slaap, vrije tijd, als ze niet bij de opdracht passen.\n   {\n     \"name\": \"max 12 tekens\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 zinnen\",\n     \"ratschlaege\": [{\n       \"titel\": \"max 6 woorden\",\n       \"beschreibung\": \"13-21 woorden\",\n       \"prioritaet\": \"hoog|middel|laag\",\n       \"verknuepfung\": \"Verbinding met een ander thema of null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1-2 zinnen\"}]\n     }]\n   }\n\nHERLEIDING - HERKOMST VAN DE INHOUD:\n- Komt de inhoud uit een notitie: \"datum\" op de notitiedatum zetten, \"zusammenfassung\" geeft het concrete verband.\n- Is de inhoud nieuw (bijv. een onderzocht alternatief, een eigen voorstel): \"datum\" op \"neu\" zetten, \"zusammenfassung\" legt in 1-2 zinnen uit waarom dit voorstel bij de context van de gebruiker past.</string>
     <string name="ai_prompt_custom_output">WOORDENAANTALREGEL: «beschrijving» in belangrijkste_acties en adviezen ALTIJD 13-21 woorden.\n\nUITVOERFORMAAT — STRIKTE REGELS:\n- Antwoord ALLEEN met het JSON-object.\n- Geen tekst ervoor of erna. Geen backticks.\n- Begin direct met { en eindig met }.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -854,7 +783,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Jouw persoonlijke terugblikken</string>
     <string name="retro_premium_reviews_desc">Met Premium maakt de AI automatisch terugblikken op basis van je dagboeknotities:</string>
-    <string name="retro_benefit_weekly">Onbeperkte weekterugblikken, niet alleen de eerste 2 weken</string>
+    <string name="retro_benefit_weekly">Alle weekoverzichten in plaats van alleen de eerste 2 - binnen je dagelijkse AI-contingent</string>
     <string name="retro_benefit_monthly">Maandterugblikken die je voortgang en veranderingen zichtbaar maken</string>
     <string name="retro_benefit_yearly">Jaarterugblikken, je hele jaar als persoonlijk verhaal</string>
     <string name="retro_start_sub">Abonnement starten</string>
@@ -881,7 +810,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="onboarding_subtitle">Je persoonlijk AI-dagboek
 voor meer duidelijkheid in het dagelijks leven</string>
     <string name="onboarding_feature_speech">Praat of schrijf, de AI begrijpt beide</string>
-    <string name="onboarding_feature_secure">Je gegevens blijven bij jou, versleuteld en veilig</string>
+    <string name="onboarding_feature_secure">Je notities blijven op het apparaat; AI-verzoeken worden versleuteld verzonden</string>
     <string name="onboarding_goals_title">Wat wil je bereiken\nmet het AI-dagboek?</string>
     <string name="onboarding_goal_stress">Stress verminderen</string>
     <string name="onboarding_goal_clarity">Helderheid vinden</string>
@@ -900,7 +829,7 @@ voor meer duidelijkheid in het dagelijks leven</string>
     <string name="onboarding_premium_feature_dashboard">Automatische dashboard-updates bij elke nieuwe notitie</string>
     <string name="onboarding_premium_feature_retro">Week-, maand- en jaarterugblikken laten je ontwikkeling zien</string>
     <string name="onboarding_premium_feature_patterns">Patronen zichtbaar maken: De AI toont terugkerende denk- en gevoelspatronen in je aantekeningen</string>
-    <string name="onboarding_premium_feature_noads">Geen reclame, schrijf en reflecteer ongestoord</string>
+    <string name="onboarding_premium_feature_noads">Ongestoord schrijven en reflecteren</string>
     <string name="onboarding_free_trial">Gratis, op elk moment opzegbaar</string>
     <string name="onboarding_free_after_trial">Daarna gebruik je Best Journal verder,\ngratis met een beperkt aantal AI-oproepen per week.</string>
     <string name="onboarding_start_free">Gratis beginnen</string>
@@ -943,14 +872,14 @@ Tijdens de proefperiode op elk moment opzegbaar</string>
     <string name="paywall_feature_dashboard">Automatische dashboard-updates na elke notitie</string>
     <string name="paywall_feature_retro">Week-, maand- en jaarterugblikken met AI</string>
     <string name="paywall_feature_pdf">Exporteer je notities met foto\'s als pdf</string>
-    <string name="paywall_feature_noads">Praat of schrijf ongestoord, zonder reclame</string>
-    <string name="paywall_feature_profiles">Onbeperkt persoonlijke analyseprofielen</string>
+    <string name="paywall_feature_noads">Ongestoord schrijven en reflecteren</string>
+    <string name="paywall_feature_profiles">Eigen AI-profielen zonder aantallimiet</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Meer helderheid in het dagelijks leven</string>
     <string name="paywall_headline_stress_sub">Herken wat je dagelijks bezighoudt en breng het onder woorden.</string>
     <string name="paywall_headline_clarity">Begrijp jezelf beter</string>
-    <string name="paywall_headline_clarity_sub">De AI herkent patronen die jou ontgaan</string>
+    <string name="paywall_headline_clarity_sub">De AI maakt terugkerende patronen in je notities zichtbaar</string>
     <string name="paywall_headline_growth">Ontdek het goede in elke dag</string>
     <string name="paywall_headline_growth_sub">Je persoonlijke ruimte voor dankbaarheid en groei</string>
     <string name="paywall_headline_thoughts">Laat je gedachten stromen</string>
@@ -991,7 +920,7 @@ Tijdens de proefperiode op elk moment opzegbaar</string>
     <string name="churn_exclusive_offer">Aanbieding voor jou</string>
     <string name="churn_offer_subtitle">Ons aanbod voor jou</string>
     <string name="churn_offer_feature_ai">Dagelijkse AI-analyses</string>
-    <string name="churn_offer_feature_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
+    <string name="churn_offer_feature_perspectives">Alle 4 vooraf ingestelde AI-profielen + zoveel eigen profielen als je nodig hebt</string>
     <string name="churn_offer_feature_voice">Premium-spraakherkenning</string>
     <string name="churn_offer_auto_renew">Wordt automatisch verlengd, op elk moment opzegbaar</string>
     <string name="churn_accept_offer">Aanbieding accepteren</string>
@@ -1220,7 +1149,7 @@ Met Premium: tot 150 per dag.</string>
     <string name="consent_card1_body">Je invoer blijft op je apparaat.</string>
     <string name="consent_card2_title">AI-functies (VS)</string>
     <string name="consent_card2_body">Optioneel worden teksten verzonden naar Google Gemini en voorgelezen teksten naar Microsoft Edge in de VS (EU-US Data Privacy Framework). Spraakopnames gaan naar Groq (VS) onder Standaard Contractbepalingen (EU SCCs).</string>
-    <string name="consent_card3_title">Anonieme statistieken</string>
+    <string name="consent_card3_title">Pseudonieme statistieken</string>
     <string name="consent_card3_body">Firebase Analytics, optioneel, op elk moment aan te passen in de instellingen.</string>
     <string name="consent_links_header">Onze juridische teksten:</string>
     <string name="consent_accept_all">Akkoord en beginnen</string>
@@ -1228,7 +1157,7 @@ Met Premium: tot 150 per dag.</string>
     <string name="consent_confirmation">Door op \"Akkoord en beginnen\" te tikken bevestig je dat je het privacybeleid, de gebruiksvoorwaarden en het impressum hebt gelezen en akkoord gaat met de beschreven gegevensverwerking. Je kunt je beslissing op elk moment aanpassen in de instellingen.</string>
 
     <string name="privacy_gate_groq_title">Spraakopname naar Groq sturen?</string>
-    <string name="privacy_gate_groq_body">Voor cloud-transcriptie wordt je spraakopname versleuteld naar Groq, Inc. (Mountain View, VS) verzonden en daar naar tekst omgezet. Het audiobestand wordt na verwerking verwijderd en niet voor training gebruikt.\n\nAlternatief: gebruik lokale transcriptie op het apparaat (offline, geen gegevensoverdracht), instelbaar bij Instellingen → AI.</string>
+    <string name="privacy_gate_groq_body">Deze functie stuurt je spraakopname versleuteld naar Groq (VS) en zet die daar om in tekst - sneller en nauwkeuriger dan de lokale herkenning.\n\n\u2713 Opname wordt na de omzetting meteen verwijderd\n\u2713 Geen AI-training met je opnames\n\u2713 Rechtsgrondslag: standaardcontractbepalingen (EU SCC's)\n\nAlternatief: lokale offline-herkenning in de instellingen.</string>
     <string name="privacy_gate_groq_accept">Akkoord en verzenden</string>
     <string name="privacy_gate_groq_local">In plaats daarvan lokaal transcriberen</string>
 
@@ -1245,26 +1174,26 @@ Je kunt dit op elk moment wijzigen in de instellingen.</string>
     <string name="privacy_gate_gemini_accept">Akkoord en verzenden</string>
     <string name="privacy_gate_gemini_cancel">Annuleren</string>
 
-    <string name="privacy_gate_tts_title">Tekst naar Microsoft sturen?</string>
-    <string name="privacy_gate_tts_body">Voor voorlezen wordt de tekst versleuteld naar Microsoft Bing Speech (VS) verzonden en als audio teruggegeven. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen.</string>
+    <string name="privacy_gate_tts_title">Premium-stemmen activeren</string>
+    <string name="privacy_gate_tts_body">Met de premium-stemmen klinkt het voorlezen natuurlijker. Je tekst wordt versleuteld (HTTPS/TLS) naar een Microsoft-spraakdienst in de VS gestuurd en als audio teruggegeven.\n\n\u2713 Overdracht uitsluitend voor de spraaksynthese\n\u2713 Doorgifte naar derde land VS (Microsoft is gecertificeerd volgens het EU-US Data Privacy Framework)</string>
     <string name="privacy_gate_tts_accept">Akkoord en voorlezen</string>
     <string name="privacy_gate_tts_cancel">Annuleren</string>
 
     <string name="settings_privacy_header">Privacy</string>
-    <string name="settings_analytics_title">Anonieme statistieken</string>
+    <string name="settings_analytics_title">Pseudonieme gebruiksanalyse</string>
     <string name="settings_analytics_subtitle">Firebase Analytics voor foutanalyse en productverbetering</string>
 
     <string name="settings_delete_account_title">Account en data wissen</string>
-    <string name="settings_delete_account_subtitle">Verwijdert onomkeerbaar alle lokale gegevens, je Google-account en de Drive-back-up</string>
+    <string name="settings_delete_account_subtitle">Verwijdert alle lokale gegevens en de Drive-back-up onomkeerbaar. Je Google-account zelf blijft bestaan.</string>
     <string name="settings_delete_account_confirm_title">Alle app-gegevens verwijderen?</string>
-    <string name="settings_delete_account_confirm_body">Deze actie is onomkeerbaar en verwijdert:\n\n• Alle lokale dagboekinvoer, foto\'s en video\'s\n• Je Firebase-account\n• De Google Drive-back-up van de app\n\nDe app start daarna opnieuw op als verse installatie.</string>
+    <string name="settings_delete_account_confirm_body">Deze handeling is onomkeerbaar en verwijdert:\n\n\u2022 Alle lokale dagboeknotities, foto's, video's en audio-opnames\n\u2022 De Google Drive-back-up van de app (alleen de app-gegevens, niet je Google-account)\n\u2022 Je app-aanmelding\n\nJe Google-account zelf blijft bestaan. De app start daarna opnieuw als verse installatie.</string>
     <string name="settings_delete_account_cancel">Annuleren</string>
     <string name="settings_delete_account_confirm">Ja, alles verwijderen</string>
 
     <string name="settings_report_ai_title">AI-antwoord melden</string>
     <string name="settings_report_ai_subtitle">Ongepaste of foutieve AI-uitvoer</string>
     <string name="settings_report_ai_confirm_title">E-mail naar support openen?</string>
-    <string name="settings_report_ai_confirm_body">Je e-mailapp opent met een voorbereid bericht aan dev.app.support@gmail.com. Je kunt de beschrijving aanvullen voordat je verzendt. We reageren binnen 24 uur op werkdagen.\n\nMeld hier: ongepaste, aanstootgevende, onjuiste of misleidende AI-uitvoer uit het dashboard, samenvattingen, terugblikken of tekstverbetering.</string>
+    <string name="settings_report_ai_confirm_body">Je e-mailprogramma opent met een voorbereid bericht aan dev.app.support@gmail.com. Je kunt de beschrijving nog aanvullen voordat je verzendt. We antwoorden doorgaans binnen 24 uur op werkdagen.\n\nMeld hiermee: ongepaste, aanstootgevende, onjuiste of misleidende AI-uitvoer uit dashboard, samenvattingen, terugblikken of de tekstverbetering.</string>
     <string name="settings_report_ai_confirm">Melding aanmaken</string>
     <string name="settings_report_ai_cancel">Annuleren</string>
     <string name="settings_report_ai_no_email">Geen e-mailapp gevonden. Stuur de melding naar dev.app.support@gmail.com.</string>
@@ -1274,9 +1203,9 @@ Je kunt dit op elk moment wijzigen in de instellingen.</string>
     <string name="settings_report_ai_dialog_desc">Beschrijf het ongepaste of onjuiste AI-antwoord. Je melding wordt direct naar ons supportteam gestuurd. Je moet ingelogd zijn met je Google-account.</string>
 
     <string name="settings_revoke_title">Herroeping</string>
-    <string name="settings_revoke_subtitle">Premium-aankoop</string>
-    <string name="settings_revoke_confirm_title">E-mail naar support openen?</string>
-    <string name="settings_revoke_confirm_body">Je e-mailapp opent met een voorbereid bericht aan dev.app.support@gmail.com. We reageren binnen 24 uur op werkdagen.\n\nVolledige informatie over het herroepingsrecht (EU-richtlijn 2011/83) vind je in de gebruiksvoorwaarden (§ 16). Zeg abonnementen ook op via Google Play → Abonnementen.</string>
+    <string name="settings_revoke_subtitle">\u00a7 356a BGB - herroeping direct via de app</string>
+    <string name="settings_revoke_confirm_title">Contract herroepen?</string>
+    <string name="settings_revoke_confirm_body">Met een klik op \u201eHerroeping bevestigen\u201c sturen we je herroeping direct naar dev.app.support@gmail.com. Je krijgt meteen een ontvangstbevestiging per e-mail.\n\nDe volledige herroepingsinstructie vind je in de gebruiksvoorwaarden (\u00a7 16). Abonnementen graag daarnaast via Google Play \u2192 Abonnementen opzeggen, zodat er geen verdere afrekeningen plaatsvinden.</string>
     <string name="settings_revoke_cancel">Annuleren</string>
     <string name="settings_revoke_confirm">Herroeping aanmaken</string>
     <string name="settings_revoke_no_email">Geen e-mailapp gevonden. Stuur de herroeping naar dev.app.support@gmail.com.</string>
@@ -1349,8 +1278,8 @@ Wat wil je doen?</string>
     <string name="privacy_sheet_save">Selectie opslaan</string>
     <string name="privacy_sheet_all_on">Alles aan</string>
     <string name="privacy_sheet_all_off">Alles uit</string>
-    <string name="consent_toggle_analytics_title">Anonieme gebruiksanalyse</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — helpt ons de app te verbeteren. Geen persoonlijke inhoud, alleen anonieme tel-tikken. Gegevensoverdracht: Google VS (Data Privacy Framework).</string>
+    <string name="consent_toggle_analytics_title">Pseudonieme gebruiksanalyse</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics - helpt ons de app te verbeteren. Geen dagboekinhoud, alleen pseudonieme gebruiksstatistieken (bijv. klik-aantallen). Datatransport: Google VS (Data Privacy Framework).</string>
     <string name="consent_toggle_groq_title">Spraak-naar-tekst (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">Maakt het dicteren van notities mogelijk. Je spraakopname wordt versleuteld verzonden naar Groq (VS), omgezet in tekst en daarna verwijderd. Je opnames worden NIET gebruikt voor training.</string>
     <string name="consent_toggle_gemini_title">AI-reflecties (Google Gemini)</string>
@@ -1360,7 +1289,7 @@ Wat wil je doen?</string>
     <string name="consent_toggle_drive_title">Google Drive back-up</string>
     <string name="consent_toggle_drive_body">Slaat notities versleuteld op in je eigen Google Drive. Jij behoudt de volledige controle — het bestand staat in jouw account, niet bij ons.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">Californische opt-out (CCPA/CPRA 2026). Indien actief worden alle optionele gegevensverwerkingen uitgeschakeld — alleen lokale functies blijven.</string>
+    <string name="consent_toggle_do_not_sell_body">Deze schakelaar is alleen bedoeld voor inwoners van de Amerikaanse staat Californie. De Californische privacywet (CCPA/CPRA) geeft inwoners een recht van bezwaar. Bij activering worden alle optionele cloudfuncties (AI, back-up, spraakherkenning, analyse) uitgeschakeld - alleen lokale functies blijven actief.\n\nWoon je buiten Californie, dan kun je deze schakelaar negeren: Best Journal verkoopt of vermarkt je gegevens nergens ter wereld.</string>
     <string name="consent_btn_accept_all">Alles accepteren</string>
     <string name="consent_btn_save_selection">Mijn selectie opslaan</string>
     <string name="consent_btn_minimum_only">Alles weigeren</string>
@@ -1485,12 +1414,12 @@ Wat wil je doen?</string>
     <string name="settings_legal_section_header">Juridische documenten</string>
     <string name="settings_legal_online_label">Online-versie:</string>
     <plurals name="datetime_months_relative">
-        <item quantity="one">vor %1$d Monat</item>
-        <item quantity="other">vor %1$d Monaten</item>
+        <item quantity="one">%1$d maand geleden</item>
+        <item quantity="other">%1$d maanden geleden</item>
     </plurals>
     <plurals name="datetime_years_relative">
-        <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
+        <item quantity="one">%1$d jaar geleden</item>
+        <item quantity="other">%1$d jaar geleden</item>
     </plurals>
     <string name="ai_limits_disclaimer">Dagelijks AI-contingent voor intensief gebruik.</string>
     <string name="ai_limits_dialog_title">Hoe werkt het dagelijkse AI-contingent?</string>
@@ -1534,4 +1463,5 @@ Wat wil je doen?</string>
     <string name="settings_premium_cancelled_until">Premium-abonnement opgezegd — actief tot <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Thema</string>
     <string name="settings_themes_manager">Themabeheer</string>
+    <string name="paywall_monthly_note">Daarna %1$s per maand, wordt automatisch verlengd\nOp elk moment opzegbaar</string>
 </resources>

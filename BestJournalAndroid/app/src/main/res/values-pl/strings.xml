@@ -40,7 +40,7 @@
     <string name="journal_ai_improving">SI poprawia tekst, chwila cierpliwości</string>
     <string name="journal_later">Później</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">Od %1$s dziennie</string>
+        <string name="paywall_from_per_day">Abonament roczny, %1$s rocznie</string>
     <string name="paywall_instead_per_month">Oszczędź %1$d%% vs. plan miesięczny</string>
     <string name="paywall_or">lub</string>
     <string name="paywall_with_limited">z ograniczonymi limitami.</string>
@@ -326,7 +326,7 @@
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Twoje wpisy są streszczane neutralnie, bez oceniania i rad.\n\nWidzisz od razu:\n\n• jakie tematy Cię teraz zajmują\n• jakie wzorce się powtarzają\n• jak zmienia się Twoje życie\n\nIdealne jako codzienny przegląd tego, co się u Ciebie dzieje.</string>
-    <string name="profile_entropy_long">AI szuka w Twoich wpisach stresu, obciążenia i chaosu.\n\nOtrzymasz:\n\n• Analizę głównych źródeł obciążenia\n• 5 konkretnych kroków do posprzatania\n• Wskazówki pomocne w codziennym życiu\n\nIdealnie, gdy masz wrażenie, że wszystkiego jest za dużo.</string>
+        <string name="profile_entropy_long">AI znajduje to, co obciąża Cię w codzienności, i porządkuje to. Otrzymujesz przegląd swoich największych źródeł obciążenia i 5 konkretnych kroków do uporządkowania. Idealnie, gdy chcesz odzyskać przegląd.</string>
     <string name="profile_insight_long">AI sięga głębiej niż tylko do wydarzeń. W Twoich wpisach dostrzega:\n\n• Wzorce myślenia i przekonania w Twoich słowach\n• Powtarzające się uczucia i reakcje\n• Mocne strony widoczne w Twoich wpisach\n• Wartości kierujące Twoim działaniem\n\nDla tych, którzy chcą się lepiej poznać i rozwijać się.</string>
     <string name="profile_goals_long">SI odnajdzie w Twoich wpisach wszystkie cele, pragnienia i plany, nawet te wspomniane mimochodem.\n\nZobaczysz:\n\n• jakie masz cele (również ukryte)\n• jak daleko jesteś w każdym z nich\n• jaki może być Twój następny krok\n\nOsobisty tracker celów, który czyta w Twoich własnych słowach.</string>
     <string name="profile_custom_long">Sam decydujesz, na czym SI ma się skupić.\n\nWpisz własny temat analizy, na przykład:\n\n• «Znajdź wszystkie wzmianki o sporcie»\n• «Przeanalizuj moje wahania nastroju»\n• «Pokaż, kiedy jestem najbardziej produktywny»\n\nPełna kontrola dla tych, którzy wiedzą, czego szukają.</string>
@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI ulepsza Twoje wpisy na życzenie.</string>
     <string name="settings_premium_feature_dashboard">Codzienne analizy panelu</string>
     <string name="settings_premium_feature_dashboard_desc">Twój panel rośnie razem z Twoimi wpisami.</string>
-    <string name="settings_premium_feature_5_perspectives">Wszystkie profile AI (4 predefiniowane + nieograniczone własne)</string>
+        <string name="settings_premium_feature_5_perspectives">Wszystkie 4 predefiniowane profile AI + tyle własnych, ile potrzebujesz</string>
     <string name="settings_premium_feature_5_perspectives_desc">Od podsumowania do samopoznania</string>
     <string name="settings_premium_feature_reviews">Podsumowania tygodniowe, miesięczne i roczne</string>
     <string name="settings_premium_feature_reviews_desc">SI opowiada Twoją historię</string>
@@ -430,7 +430,7 @@
     <string name="settings_premium_feature_pdf_desc">Wszystkie wpisy ze zdjęciami jako dokument</string>
     <string name="settings_premium_feature_voice">Dokładniejsze rozpoznawanie mowy</string>
     <string name="settings_premium_feature_voice_desc">Wyższa jakość dla nagrań głosowych</string>
-    <string name="settings_premium_feature_profiles">Nieograniczone własne profile</string>
+        <string name="settings_premium_feature_profiles">Własne profile AI bez limitu liczby</string>
     <string name="settings_premium_feature_profiles_desc">Wiele kierunków analizy obok siebie</string>
     <string name="settings_unlock_premium">Odblokuj Premium</string>
     <!-- Export dialog -->
@@ -452,7 +452,7 @@
     <string name="settings_feedback_send">Wyślij opinię</string>
     <string name="settings_feedback_sent">Wysłano</string>
     <string name="settings_feedback_dialog_title">Wyślij opinię</string>
-    <string name="settings_feedback_dialog_desc">Twoja wiadomość do deweloperów — czytamy wszystko i odpowiadamy osobiście!</string>
+        <string name="settings_feedback_dialog_desc">Twoja wiadomość do deweloperów — czytamy każdą wiadomość i odzywamy się tak szybko, jak to możliwe.</string>
     <string name="settings_feedback_placeholder">Napisz do nas swoją opinię…</string>
     <string name="settings_feedback_sending">Wysyłanie…</string>
     <string name="settings_feedback_sign_in_first">Najpierw zaloguj się przez Google</string>
@@ -547,11 +547,11 @@
     <string name="ai_prompt_response_language">JĘZYK ODPOWIEDZI: odpowiadaj w całości po polsku. Wszystkie teksty i tytuły muszą być po polsku, w żadnym innym języku.</string>
 
     <!-- New AI prompt keys -->
-    <string name="ai_prompt_no_dates_rule">ZASADA DOTYCZĄCA DAT:\nNie używaj dat ani znaczników czasu w odpowiedzi. Żadnych sformułowań takich jak \"W dniu [data]\" lub \"W [miesiąc]\" — pisz o wydarzeniach bezpośrednio, bez podawania dat.</string>
-    <string name="ai_prompt_rerank_system">Jesteś asystentem optymalizacji. Otrzymujesz listę 5 działań i codzienne wpisy z dziennika. Twoim zadaniem jest: (1) sprawdzić, czy działania pasują do profilu użytkownika (%1$s), (2) zastąpić słabiej dopasowane pozycje lepszymi działaniami z wpisów dziennika, (3) zachować kolejność według trafności i priorytetu. Odpowiadaj WYŁĄCZNIE prawidłowym JSON-em.</string>
-    <string name="ai_prompt_rerank_user_focus_header">=== PROFIL-FOKUS DES BENUTZERS ===</string>
-    <string name="ai_prompt_rerank_actions_header">=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===</string>
-    <string name="ai_prompt_rerank_entries_header">=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===</string>
+        <string name="ai_prompt_no_dates_rule">PRZYJAZNE DLA CZYTANIA NA GŁOS (OBOWIĄZKOWE — ZAKAZ DAT W WIDOCZNYCH TEKSTACH):\nWe WSZYSTKICH widocznych polach tekstowych (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) NIE WOLNO Ci używać dat — ani „3.4.\", „23.04.\", „28.4.\", „24.04.\", „30.4.\", ani „wpis z 3 kwietnia\", „w dniu 23.04.\", „z 28.4.\" czy podobnych odniesień do konkretnych dat wpisów. Te teksty są czytane użytkownikowi na głos — ciągi dat brzmią nienaturalnie i przerywają płynność wglądu.\n\nZAMIAST TEGO SFORMUŁUJ CZYSTY WGLĄD:\n- ŹLE: „Wpisy z 3.4., 28.4. i 23.4. dowodzą, że Twój biorytm cierpi przez późne godziny snu.\"\n- DOBRZE: „Późne godziny snu systematycznie niszczą Twój biorytm.\"\n- ŹLE: „Wpis z 30. pokazuje, że Twoja skrzynka od 28.4. się przepełnia i kradnie Ci czas.\"\n- DOBRZE: „Twoja skrzynka od dni się przepełnia i kradnie Ci czas.\"\n- ŹLE: „Więcej przeglądu w codzienności czujesz od akcji porządkowych z 24.04.\"\n- DOBRZE: „Ruch daje Ci wyczuwalnie więcej przeglądu w codzienności.\"\n\nTreściowy wgląd zostaje — odpadają tylko konkretne odniesienia do dat. Nadal możesz używać ogólnych odniesień czasowych („powracający\", „ostatnio\", „przez kilka dni\"). Daty należą TYLKO do pola „herleitung\" (proweniencja, używane wewnętrznie, niewyświetlane).</string>
+        <string name="ai_prompt_rerank_system">Jesteś re-rankerem profilowym. Otrzymujesz tablicę JSON z 5 najważniejszymi działaniami z analizy pulpitu, fokus profilu użytkownika oraz oryginalne wpisy dziennika.\n\nTwoje zadanie w 3 krokach:\n1) Posortuj 5 działań tak, aby te o najwyraźniejszym powiązaniu z fokusem profilu były pierwsze.\n2) Sprawdź, czy do 2 z 5 działań NIE ma treściowego powiązania z fokusem profilu. Jeśli tak, zastąp je mocniejszymi profilowo działaniami, które wyprowadzisz z wpisów dziennika. Trzymaj się tej samej struktury JSON każdego działania (titel, beschreibung, erklaerung).\n3) Wyrażaj powiązanie z profilem RÓŻNORODNIE, używając synonimów i sąsiedztw tematycznych, NIE mechanicznego powtarzania słów profilu. Powiązanie musi być wyczuwalne, nie dosłowne.\n\nWAŻNE:\n- Na końcu zwróć DOKŁADNIE 5 wpisów.\n- Zmiany tylko, gdy brakuje prawdziwego powiązania z profilem — przy już dobrym dopasowaniu tylko sortuj tablicę, nic nie zastępuj.\n- Zachowaj strukturę JSON każdego wpisu (te same klucze: titel, beschreibung, erklaerung).\n- Język polski, bez myślników, beschreibung 13-21 słów.\n- Nie podawaj ŻADNYCH diagnoz ani wiążących porad medycznych, prawnych czy finansowych; w takich tematach odsyłaj neutralnie do specjalistów.\n\nPRZYJAZNE DLA CZYTANIA NA GŁOS (OBOWIĄZKOWE — ZAKAZ DAT):\nW beschreibung i erklaerung NIE używaj dat („3.4.\", „23.04.\", „wpis z 30.\"). Te teksty są czytane na głos — ciągi dat brzmią nienaturalnie. Sformułuj czysty wgląd bez konkretnych dat wpisów. Przykłady:\n- ŹLE: „Wpisy z 3.4. i 23.04. dowodzą, że Twój biorytm cierpi.\"\n- DOBRZE: „Późne godziny snu systematycznie niszczą Twój biorytm.\"\nOgólne odniesienia czasowe są dozwolone („powracający\", „ostatnio\", „przez kilka dni\"), daty nie.\n\nFORMAT WYJŚCIA:\n- TYLKO tablica JSON (nawiasy kwadratowe na poziomie głównym).\n- Bez backticków Markdown, bez tekstu przed/po.\n- Zacznij bezpośrednio od [ i zakończ na ].</string>
+        <string name="ai_prompt_rerank_user_focus_header">=== FOKUS PROFILU UŻYTKOWNIKA ===</string>
+        <string name="ai_prompt_rerank_actions_header">=== AKTUALNA TABLICA NAJWAŻNIEJSZYCH DZIAŁAŃ (5 wpisów) ===</string>
+        <string name="ai_prompt_rerank_entries_header">=== WPISY DZIENNIKA (źródło mocnych profilowo punktów zastępczych) ===</string>
     <string name="ai_prompt_rerank_instruction">Wróć do zoptymalizowanej listy 5 działań jako tablica JSON. Każde działanie musi zawierać te same pola co oryginał. Zastąp słabiej dopasowane pozycje lepszymi działaniami z wpisów dziennika — jeśli takie istnieją. Zachowaj kolejność: najważniejsze działanie na pierwszym miejscu.</string>
     <string name="retro_month_entries_header">Wpisy w tym miesiącu</string>
     <string name="dashboard_active_profile_label">Aktywny profil: %1$s</string>
@@ -559,10 +559,10 @@
     <string name="dashboard_profile_entropy">Uporządkuj swoje życie</string>
     <string name="dashboard_profile_insight">Samopoznanie</string>
     <string name="dashboard_profile_goals">Cele osobiste</string>
-    <string name="dashboard_profile_focus_summary">Twoje podsumowanie skupia się na: %1$s</string>
-    <string name="dashboard_profile_focus_entropy">Twoja analiza porządku skupia się na: %1$s</string>
-    <string name="dashboard_profile_focus_insight">Twoje samopoznanie skupia się na: %1$s</string>
-    <string name="dashboard_profile_focus_goals">Twoje cele skupiają się na: %1$s</string>
+        <string name="dashboard_profile_focus_summary">Narracyjne podsumowanie najważniejszych wydarzeń.</string>
+        <string name="dashboard_profile_focus_entropy">Porządkuje Twoje życie: rozpoznaje stres, bałagan i obciążenie oraz pokazuje, co możesz odpuścić lub wyjaśnić.</string>
+        <string name="dashboard_profile_focus_insight">Głębokie samopoznanie: wzorce myślenia i ukryte mocne strony.</string>
+        <string name="dashboard_profile_focus_goals">Motywujący towarzysz celów z widokiem postępów.</string>
     <string name="dashboard_empty_custom_title">Profil bez tekstu skupienia</string>
     <string name="dashboard_empty_custom_message">Ten profil nie ma jeszcze zdefiniowanego tekstu skupienia. Dodaj tekst skupienia w ustawieniach profilu, aby spersonalizować analizę.</string>
 
@@ -650,13 +650,13 @@
     <string name="ai_prompt_goals_intro">Jesteś uważnym, motywującym analitykiem celów oraz trackerem postępu.\n\nTWOJE ZADANIE:\nPrzeanalizuj wpisy dziennika użytkownika. Rozpoznaj wszystkie cele, pragnienia, plany i zamiary, nawet wspomniane mimochodem. Śledź postęp w wielu wpisach. Utwórz z tego strukturalny panel celów w formacie JSON.</string>
     <string name="ai_prompt_goals_definition">DEFINICJA — CZYM JEST CEL:\nWszystko, co użytkownik chce osiągnąć, zmienić, zacząć, zakończyć, poprawić lub zbudować. Liczą się też sygnały pośrednie:\n- Wprost: «Chcę schudnąć», «Muszę zadzwonić do dentysty»\n- Pośrednio: «Fajnie byłoby znów pobiegać» = cel formy\n- Skargi: «Źle śpię» = ukryty cel poprawy snu\n- Marzenia: «Kiedyś chcę pojechać do Szwecji» = długoterminowy cel podróży</string>
     <string name="ai_prompt_goals_entry_rules">ZASADA NADRZĘDNA — ŻADEN WPIS NIE MOŻE ZOSTAĆ POMINIĘTY:\nOtrzymujesz ponumerowane wpisy (np. «WPIS 1 z 5»).\nMUSISZ przeczytać, zanalizować i uwzględnić KAŻDY.\n\nPRZY KILKU WPISACH:\n- Przy 1-2 wpisach: rozpoznaj pojedyncze cele, oceń postęp jako «nieznany».\n- Od 3 wpisów: aktywnie śledź postęp i rozpoznaj wzorce.</string>
-    <string name="ai_prompt_goals_rules">ZASADY JĘZYKOWE:\n- %1$s\n- Motywujące i uczciwe, celebruj postępy, nie koloryzuj.\n- Bez długich myślników (—). Używaj przecinków lub kropek.\n\nZASADA ILOŚCI, KAŻDY CEL SIĘ LICZY:\nRozpoznaj WSZYSTKIE cele, także drobne. NIE łącz.</string>
+        <string name="ai_prompt_goals_rules">ZASADY JĘZYKOWE:\n- %1$s\n- Motywująco i uczciwie, świętuj postęp, nie koloryzuj niczego.\n- Bez długich myślników (—). Używaj przecinków lub kropek.\n- Przy celach zdrowotnych lub dotyczących ciała towarzyszysz tylko motywująco; NIE podajesz zaleceń dietetycznych, lekowych ani terapeutycznych.\n\nZASADA ILOŚCI, KAŻDY CEL SIĘ LICZY:\nRozpoznaj WSZYSTKIE cele — także drobne. NIE łącz ich.</string>
     <string name="ai_prompt_goals_schema">SCHEMAT WYJŚCIA JSON:\n{\n  \"analiza_ogolna\": \"...\",\n  \"kluczowe_dzialania\": [...],\n  \"kategorie\": [...]\n}\n\n1) \"analiza_ogolna\" (15-25 zdań): nazwij wszystkie cele, rozpoznaj postęp.\n\n2) \"kluczowe_dzialania\" (dokładnie 5): następne kroki.\n   { \"tytul\": \"...\", \"opis\": \"13-21 słów\", \"wyjasnienie\": \"5-8 zdań\" }\n\n3) \"kategorie\": obszary celów.\n   {\n     \"nazwa\": \"maks. 12 znaków\", \"ikona\": \"material_icon\", \"kolor\": \"#HEX\",\n     \"poziom_entropii\": 0.0, \"podsumowanie\": \"3-5 zdań\",\n     \"rady\": [{\n       \"tytul\": \"...\",\n       \"opis\": \"13-21 słów. Status: [otwarty/w toku/zablokowany/osiągnięty]. Następny krok: [...].\",\n       \"priorytet\": \"wysoki|sredni|niski\",\n       \"powiazanie\": \"...\", \"wyprowadzenie\": [{\"data\":\"...\",\"podsumowanie\":\"...\"}]\n     }]\n   }\n   Obszary: Forma, Zdrowie, Praca, Kariera, Finanse, Relacje, Projekty, Nauka, Sen, Psyche, Podróże, Porządek, Kreatywność\n   Priorytet: wysoki=zablokowany, sredni=otwarty, niski=w toku/osiągnięty</string>
     <string name="ai_prompt_goals_output">FORMAT WYJŚCIA: TYLKO JSON. Bez backticków. Zaczyna się od {.</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
     <string name="ai_prompt_insight_intro">Jesteś empatycznym, głębokim analitykiem wzorców dla rozwoju osobistego.\n\nTWOJE ZADANIE:\nPrzeanalizuj wpisy dziennika użytkownika. Znajdź ukryte wzorce, powtarzające się sposoby myślenia i reagowania, nieświadome przekonania, wzorce emocjonalne i mocne strony. Pokaż użytkownikowi to, czego może nauczyć się o sobie, rzeczy, których może nie był świadomy podczas pisania. Utwórz z tego strukturalny panel samowiedzy w formacie JSON.</string>
-    <string name="ai_prompt_insight_attitude">TWOJA POSTAWA:\nJesteś życzliwym lustrem. Uczciwie pokazujesz, co widzisz we wpisach, zawsze z celem, by użytkownik mógł rosnąć. Każdy wgląd ma mu pomóc lepiej zrozumieć siebie. Trudne wzorce też nazywasz jasno, ale konstruktywnie i bez zarzutu. Skupienie: czego użytkownik może nauczyć się o sobie z własnych słów?\n\nCZEGO SZUKASZ:\n- Powtarzające się emocje: jakie wracają stale?\n- Wzorce myślenia: jak myśli o sobie, innych, świecie?\n- Wzorce unikania: czego omija? O czym nigdy nie pisze?\n- Mocne strony: co robi dobrze, nawet jeśli tego nie widzi?\n- Wartości: co jest dla niego naprawdę ważne (widać po działaniach)?\n- Wyzwalacze: co wywołuje silne reakcje, pozytywne i negatywne?\n- Sprzeczności: mówi jedno, robi drugie?\n- Potrzeby: co widać między wierszami?\n- Wzrost: gdzie zmieniło się jego spojrzenie?</string>
+        <string name="ai_prompt_insight_attitude">TWOJA POSTAWA:\nJesteś życzliwym lustrem. Uczciwie pokazujesz użytkownikowi, co widzisz w jego wpisach — ale zawsze z celem, by mógł z tego rosnąć. Każdy wgląd ma mu pomóc lepiej zrozumieć samego siebie. Także trudne wzorce nazywasz jasno, ale konstruktywnie i bez zarzutu. Skupienie: czego użytkownik może nauczyć się o sobie z własnych słów?\n\nNIE stawiasz żadnych diagnoz psychologicznych i nie nazywasz zaburzeń ani chorób. Opisujesz tylko obserwowalne wzorce z własnych słów użytkownika.\n\nCZEGO SZUKASZ:\n- Powtarzające się uczucia: jakie emocje wracają wciąż na nowo?\n- Wzorce myślenia: jak użytkownik myśli o sobie, innych, świecie?\n- Wzorce unikania: czego użytkownik omija? O czym nigdy nie pisze?\n- Mocne strony: co użytkownik robi dobrze, nawet jeśli sam tego nie widzi?\n- Wartości: co jest dla użytkownika naprawdę ważne (widać po działaniu, nie po słowach)?\n- Wyzwalacze: co wywołuje silne reakcje — pozytywne i negatywne?\n- Sprzeczności: czy użytkownik mówi jedno, a działa inaczej?\n- Potrzeby: czego użytkownik potrzebuje, co przebija między wierszami?\n- Wzrost: gdzie zmieniło się spojrzenie użytkownika?</string>
     <string name="ai_prompt_insight_entry_rules">ZASADA NADRZĘDNA — ŻADEN WPIS NIE MOŻE ZOSTAĆ POMINIĘTY:\nOtrzymujesz ponumerowane wpisy (np. «WPIS 1 z 5»).\nMUSISZ przeczytać, zanalizować i uwzględnić KAŻDY.\nZanim odpowiesz, policz: czy uwzględniłem WSZYSTKIE?\nJeśli brakuje, uzupełnij NATYCHMIAST.\n\nPRZY KILKU WPISACH:\n- Przy 1-2 wpisach: nazwij pierwsze spostrzeżenia, bez głębokich wzorców.\n  Oznacz wglądy jako «wstępne» w opisie.\n- Od 3 wpisów: aktywnie szukaj powtarzających się wzorców i głębszych powiązań.\n\nWAGA CZASU:\nKażdy wpis musi być uwzględniony. Śledź wewnętrzny rozwój: czy postawa się zmieniła? Czy te same tematy wracają w nowym świetle? Czy rośnie pewność siebie, czy niepewność?</string>
     <string name="ai_prompt_insight_rules">ZASADY JĘZYKOWE (dotyczą WSZYSTKICH pól tekstowych w JSON):\n- Prosty, jasny język. Krótkie zdania.\n- Bez trudnych słów, żargonu, frazesów.\n- Każdy powinien zrozumieć od razu, bez zastanawiania.\n- Empatyczne, uczciwe, konstruktywne, bez zarzutu, bez pouczania.\n- Zawsze z okiem na pozytyw: czego użytkownik może się nauczyć?\n- Bez długich myślników (—). Używaj przecinków lub kropek.\n\nZASADA ILOŚCI, KOMPLETNOŚĆ PRZED ZWIĘZŁOŚCIĄ:\nŁączna liczba wglądów we wszystkich obszarach musi wynosić co najmniej 15. Mniej niż 10 to błąd. Każdy rozpoznany wzorzec, każdy ślad przekonania, każda powtarzająca się emocja zasługują na własny wgląd. NIE łącz. Jeśli wpis pokazuje strach, dumę i unikanie, powstają 3 osobne wglądy, nie jeden zbiorczy. JSON może stać się długi, kompletność jest ważniejsza od zwięzłości.</string>
     <string name="ai_prompt_insight_schema_header">SCHEMAT WYJŚCIA JSON:\n{\n  \"calkowita_entropia\": 0.0,\n  \"trend\": \"rosnacy|stabilny|malejacy|nieznany\",\n  \"analiza_ogolna\": \"...\",\n  \"postepy\": [...],\n  \"kluczowe_dzialania\": [...],\n  \"kategorie\": [...]\n}\n\nDEFINICJE PÓL:\n\n1) \"calkowita_entropia\" (liczba, 0.0 do 1.0)\n   Jak mocno użytkownik refleksjuje nad sobą we wpisach?\n   - 0.0–0.33 = mała autorefleksja (głównie opis zdarzeń)\n   - 0.34–0.66 = częściowa autorefleksja (wspomina emocje i myśli)\n   - 0.67–1.0 = silna autorefleksja (głęboki dialog z sobą)\n\n2) \"trend\" (tekst)\n   Tylko gdy są co najmniej 3 wpisy z kilku dni.\n   Porównaj starsze z nowszymi:\n   - «rosnacy» = refleksja coraz głębsza\n   - «stabilny» = stały poziom refleksji\n   - «malejacy» = mniej autorefleksji w nowszych\n   - «nieznany» = za mało danych\n\n3) \"analiza_ogolna\" (tekst, 15-25 zdań)\n   - Przejdź wpis po wpisie i znajdź głębszy temat.\n   - Co wpisy mówią o użytkowniku jako osobie?\n   - Które wzorce myślenia, odczuwania i działania stają się widoczne?\n   - Jakie mocne strony pokazuje, nawet tego nie zauważając?\n   - Jakie nieświadome przekonania kierują zachowaniem?\n   - Gdzie widać wzrost osobisty?\n   - Pisz empatycznie i osobiście, zwracaj się wprost do użytkownika.\n   - Zawsze konstruktywnie: nawet trudne wglądy łącz z szansą nauki.</string>
@@ -665,7 +665,7 @@
     <string name="ai_prompt_insight_output">REGUŁA LICZBY SŁÓW DLA OPISÓW (PRZESTRZEGAJ ŚCIŚLE):\n«opis» w «kluczowe_dzialania» i w «rady» musi ZAWSZE mieć 13 do 21 słów.\n- Mniej niż 13 słów = za krótko = BŁĄD\n- Więcej niż 21 słów = za długo = BŁĄD\nLicz słowa przed zapisaniem. Każdy opis to JEDNO zwarte, pełne zdanie. Nie więcej, nie mniej.\n\nFORMAT WYJŚCIA — ŚCISŁE ZASADY:\n- Odpowiedz TYLKO obiektem JSON.\n- Bez tekstu przed ani po.\n- Bez backticków Markdowna.\n- Zaczynaj bezpośrednio od { i kończ na }.\n- Poprawny JSON, bez brakujących przecinków i zdublowanych kluczy.</string>
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
-    <string name="ai_prompt_entropy_intro">Jesteś empatycznym, bardzo inteligentnym doradcą życiowym i analitykiem wzorców.\n\nTWOJE ZADANIE:\nPrzeanalizuj wpisy dziennika użytkownika. Znajdź powtarzające się źródła stresu, bałaganu i obciążenia. Utwórz z tego strukturalny panel rad w formacie JSON.\n\nCZEGO SZUKAMY — OBCIĄŻENIE OSOBISTE:\nWszystko, co w życiu użytkownika generuje bałagan, stres, utratę energii, ból, problemy ze snem, ciężar emocjonalny lub utratę kontroli.</string>
+        <string name="ai_prompt_entropy_intro">Jesteś empatycznym, bardzo inteligentnym, wrażliwym analitykiem porządku i wzorców.\n\nTWOJE ZADANIE:\nPrzeanalizuj wpisy dziennika użytkownika. Znajdź powtarzające się źródła stresu, bałaganu i obciążenia. Utwórz z tego strukturalny panel rad w formacie JSON.\n\nCZEGO SZUKAMY — OBCIĄŻENIE OSOBISTE:\nWszystko, co w życiu użytkownika generuje bałagan, stres, utratę energii, przeciążenie, presję czasu, ciężar emocjonalny lub utratę kontroli.\n\nNIE podajesz żadnych porad medycznych, terapeutycznych ani diagnostycznych. W tematach zdrowotnych odsyłasz neutralnie do specjalistów.</string>
     <string name="ai_prompt_entropy_entry_rules">ZASADA NADRZĘDNA — ŻADEN WPIS NIE MOŻE ZOSTAĆ POMINIĘTY:\nOtrzymujesz ponumerowane wpisy (np. «WPIS 1 z 5»).\nMUSISZ przeczytać, zanalizować i uwzględnić KAŻDY.\nZanim odpowiesz, policz: czy uwzględniłem WSZYSTKIE?\nJeśli brakuje, uzupełnij NATYCHMIAST.\n\nPRZY KILKU WPISACH:\n- Przy 1-2 wpisach: nazywaj pojedyncze spostrzeżenia, nie wzorce.\n  Oznacz rady jako «wstępne» w opisie.\n- Od 3 wpisów: aktywnie szukaj wzorców i powiązań przekrojowych.\n\nWAGA CZASU:\nKażdy wpis musi być uwzględniony. Przy sprzecznych wypowiedziach na ten sam temat: patrz na kolejność w czasie, nowsze pokazują stan obecny. Starsze dają kontekst i wzorce.</string>
     <string name="ai_prompt_entropy_rules">ZASADY:\n- Pisz w języku polskim.\n- Używaj form grzecznościowych (ty/twój).\n- Każde działanie musi wynikać konkretnie z wpisów.\n- Używaj formatu Markdown (nagłówki, punkty).\n- Cytuj bezpośrednio z wpisów.\n- Unikaj pustych fraz i ogólników.\n- Min. 800 słów.\nZAKAZ SŁÓW:\nNigdy nie używaj słów \"entropia\", \"entropyczny\", \"entropowany\" ani ich pochodnych.\nZamiast tego używaj: obciążenie, stres, nieład, presja, ciężar, tarcie, napięcie, utrata energii, chaos, zamieszanie, bałagan, ciężar życia, brzemię.\nNazwy pól JSON \"gesamt_entropie\" i \"entropie_level\" pozostają niezmienione jako klucze techniczne.</string>
     <string name="ai_prompt_entropy_schema_header">SCHEMAT WYJŚCIA JSON:\n{\n  \"calkowita_entropia\": 0.0,\n  \"trend\": \"rosnacy|stabilny|malejacy|nieznany\",\n  \"analiza_ogolna\": \"...\",\n  \"postepy\": [...],\n  \"kluczowe_dzialania\": [...],\n  \"kategorie\": [...]\n}\n\nDEFINICJE PÓL:\n\n1) \"calkowita_entropia\" (liczba, 0.0 do 1.0)\n   Średnia ważona poziomów obciążenia we wszystkich kategoriach.\n   - 0.0–0.33 = niski (dobry stan)\n   - 0.34–0.66 = średni (wymaga uwagi)\n   - 0.67–1.0 = wysoki (zaleca się działanie od razu)\n\n2) \"trend\" (tekst)\n   Tylko gdy są co najmniej 3 wpisy z kilku dni.\n   - «malejacy» = obciążenie spada\n   - «stabilny» = obciążenie bez zmian\n   - «rosnacy» = obciążenie rośnie\n   - «nieznany» = za mało danych\n\n3) \"analiza_ogolna\" (tekst, 15-25 zdań)\n   - Przejdź wpis po wpisie i wyciągnij główny temat.\n   - Nazwij KAŻDY temat z KAŻDEGO wpisu po imieniu.\n   - Rozpoznaj powiązania między tematami.\n   - Rozpoznaj też POSTĘPY i MOCNE STRONY, nie tylko problemy.\n   - Pisz empatycznie i osobiście, zwracaj się wprost do użytkownika.</string>
@@ -684,10 +684,10 @@
 
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
-<string name="ai_prompt_custom_intro">Jesteś osobistym asystentem analizy dziennika z konkretnym zadaniem do wykonania.\n\nMETODA DWUETAPOWA:\nKROK 1 — PRZECZYTAJ WSZYSTKO: Najpierw przeczytaj wszystkie wpisy z dziennika, aby zrozumieć kontekst, wzorce i istotę życia użytkownika.\nKROK 2 — WYKONAJ ZADANIE: Następnie wykonaj dokładnie to zadanie: %1$s\n\nPrzynajmniej 50%% treści musi bezpośrednio odnosić się do zadania. Wyrażaj się różnorodnie — unikaj powtórzeń.</string>
+    <string name="ai_prompt_custom_intro">Jesteś inteligentnym, uważnym analitykiem dziennika ORAZ wykonawcą zadań.\n\nMETODA W DWÓCH KROKACH:\n\nKROK 1 — PRZYJMIJ KONTEKST:\nNajpierw przeczytaj w całości WSZYSTKIE wpisy użytkownika. Zrozum sytuację, wzorce, tematy, wymienione rzeczy, problemy, pragnienia. Wpisy są Twoim KONTEKSTEM, Twoim punktem wyjścia, Twoją podstawą. Nie ograniczają Cię jednak.\n\nKROK 2 — WYKONAJ ZADANIE:\n%1$s\n\nPowyższe to Twoje właściwe ZADANIE. Wykonaj je na bazie kontekstu z kroku 1. Jeśli zadanie wymaga researchu, pomysłów, alternatyw, sugestii lub nowych informacji, dostarcz je AKTYWNIE, nawet jeśli nie pojawiają się we wpisach. Nie podawaj przy tym ŻADNYCH diagnoz ani wiążących porad medycznych, prawnych czy finansowych; w takich tematach odsyłaj do specjalistów. Wpisy informują Twój wynik, nie ograniczają go.\n\nZASADA KLUCZOWA — PROFIL STANOWI CO NAJMNIEJ 50 PROCENT:\nCały wynik (analiza ogólna, najważniejsze działania, kategorie, porady, postępy) MUSI w co najmniej 50 procentach być wyraźnie powiązany z zadaniem użytkownika. Wnioski, punkty lub tematy, które NIE mają treściowego związku z zadaniem, pomiń — nie wypełniaj wyniku ogólnymi tematami życiowymi tylko po to, by JSON był pełny. Lepiej mniej punktów z jasnym powiązaniem niż wiele ogólnikowych.\n\nWażne co do języka: wyrażaj powiązanie RÓŻNORODNIE. Używaj synonimów, pokrewnych pojęć, sąsiedztw tematycznych i parafraz. NIE powtarzaj mechanicznie dokładnych słów z zadania — to brzmi nachalnie. Przykład zadania „cele\": mów też o zamierzeniach, pragnieniach, ambicjach, o tym, co chcesz osiągnąć, o swoim kursie, krokach rozwoju. Przykład zadania „sport\": mów też o ruchu, treningu, aktywności fizycznej, wytrzymałości, kondycji, zdrowiu. Powiązanie z profilem musi być WYCZUWALNE, nie dosłowne.\n\nDECYDUJĄCE:\n- Jeśli w zadaniu jest „analizuj\", „podsumuj\", „co rzuca się w oczy\" — trzymaj się blisko wpisów.\n- Jeśli w zadaniu jest „zbadaj\", „znajdź alternatywy\", „zaproponuj\", „poleć\", „uzupełnij\", „co by było gdyby\", „nowe pomysły\" — wyjdź AKTYWNIE poza wpisy i wnieś własne, nowe treści.\n- Zadanie ma pierwszeństwo. Wpisy są fundamentem, nie murem.</string>
     <string name="ai_prompt_custom_headings">WAŻNE — DYNAMICZNE TYTUŁY:\nMUSISZ wymyślić trzy pasujące tytuły do panelu, które DOKŁADNIE pasują do tematu użytkownika. BRAK tytułów ogólnych jak «Najważniejsze wyniki» czy «Analiza». Użyj kreatywnych, specyficznych tytułów odzwierciedlających temat.\nPrzykłady:\n- Temat «Wędkowanie»: «Największe połowy», «Przegląd łowisk», «Wszystkie raporty»\n- Temat «Jakość snu»: «Twoje wzorce snu», «Analiza snu», «Wszystkie obserwacje»\n- Temat «Zbyt wiele na raz»: «Największe pochłaniacze czasu», «Przegląd obciążenia», «Wszystkie punkty obciążenia»</string>
-    <string name="ai_prompt_custom_rules">ZASADA KONTEKSTU: Przeczytaj każdy wpis, aby zrozumieć pełny kontekst — nawet wpisy niezwiązane bezpośrednio z zadaniem pomagają zrozumieć wzorce.\nZASADA ZADANIA: Wykonaj zadanie dosłownie i kompletnie. Nie interpretuj go szerzej ani węziej.\nROZRÓŻNIENIE W WYNIKACH:\n- Oznacz wyraźnie, co pochodzi z wpisów dziennika (DZIENNIK:), a co jest nową sugestią (SUGESTIA:).\n- Używaj języka polskiego, form grzecznościowych (ty/twój).\n- Format Markdown (nagłówki, punkty, pogrubienia).\nZASADA ILOŚCI: Minimum 10 działań, ale tylko te z wyraźnym powiązaniem z profilem. 7 mocnych > 10 rozcieńczonych.</string>
-    <string name="ai_prompt_custom_schema">SCHEMAT WYJŚCIA JSON:\n{\n  \"ueberschrift_top5\": \"Kreatywny nagłówek dla Top 5 (pasujący do skupienia, maks. 3 słowa)\",\n  \"ueberschrift_analyse\": \"Kreatywny nagłówek dla przeglądu (maks. 3 słowa)\",\n  \"ueberschrift_ergebnisse\": \"Kreatywny nagłówek dla wyników (maks. 3 słowa)\",\n  \"fokus_kern\": \"1 zdanie (15–30 słów): jaka jest istota zadania %1$s?\",\n  \"fokus_zitate\": [\"3–5 dokładnych cytatów z wpisów dziennika, które wspierają zadanie\"],\n  \"gesamt_entropie\": \"Obecny poziom stresu: NISKI | ŚREDNI | WYSOKI\",\n  \"trend\": \"POPRAWIAJĄCY SIĘ | STABILNY | POGARSZAJĄCY SIĘ\",\n  \"gesamtanalyse\": \"Krótka analiza ogólnego stanu (2–3 zdania)\",\n  \"fortschritte\": [\"Postęp 1\", \"Postęp 2\"],\n  \"top_massnahmen\": [\n    {\n      \"titel\": \"...\"\n      \"beschreibung\": \"...\"\n      \"erklaerung\": \"Dlaczego to pasuje do zadania %1$s?\",\n      \"bezug\": \"Bezpośrednie odniesienie do wpisu dziennika\",\n      \"ratschlaege\": [\n        {\n          \"herleitung\": \"DZIENNIK: Dokładny tekst lub streszczenie wpisu\",\n          \"verknuepfung\": \"POWIĄZANIE: Jak ta rada wynika z cytatu?\",\n          \"prioritaet\": \"WYSOKI | ŚREDNI | NISKI\"\n        }\n      ]\n    }\n  ],\n  \"kategorien\": [\n    {\n      \"titel\": \"Tytuł kategorii\",\n      \"beschreibung\": \"Opis\",\n      \"entropie_level\": \"NISKI | ŚREDNI | WYSOKI\",\n      \"zusammenfassung\": \"Krótkie podsumowanie kategorii\",\n      \"datum\": \"Data ostatniego powiązanego wpisu\"\n    }\n  ]\n}</string>
+        <string name="ai_prompt_custom_rules">ZASADA KONTEKSTU — KAŻDY WPIS JEST CZYTANY:\nOtrzymujesz ponumerowane wpisy. Przeczytaj KAŻDY POJEDYNCZY w całości i przyjmij je jako kontekst. Każdy istotny szczegół wpływa na Twój wynik. Ale: wynik może i powinien wychodzić poza wpisy, jeśli zadanie tego wymaga.\n\nZASADA ZADANIA — ZADANIE ZOSTAJE SPEŁNIONE:\nWykonaj zadanie użytkownika dosłownie. Jeśli zadanie prosi o alternatywy, dostarcz prawdziwe nowe alternatywy, nie tylko rzeczy z wpisów. Jeśli zadanie prosi o rekomendacje, zbadaj i poleć aktywnie. Wpisy NIE są jedynym źródłem Twojej odpowiedzi.\n\nROZRÓŻNIENIE W WYNIKU:\nOznacz wyraźnie, co pochodzi z wpisów, a co dodajesz od siebie. Dzięki temu użytkownik wie, które myśli są jego własne, a co jest Twoim wkładem.\n\nZASADA PORADNICTWA SPECJALISTYCZNEGO — ŻADNYCH DIAGNOZ:\nNIEZALEŻNIE od zadania nie podajesz ŻADNYCH diagnoz medycznych, zaleceń terapeutycznych, porad prawnych ani finansowych. W takich tematach odsyłaj neutralnie do wykwalifikowanych specjalistów.\n\nZASADY JĘZYKOWE:\n- Prosto, jasno. Bez słów obcych.\n- Empatycznie i bezpośrednio.\n- Bez długich myślników (—). Używaj przecinków lub kropek.\n\nZASADA ILOŚCI:\nCo najmniej 10 wniosków łącznie — ale każdy pojedynczy musi treściowo pasować do zadania. Jeśli nie znajdziesz 10 wniosków z prawdziwym powiązaniem z profilem, dostarcz lepiej 7 mocnych niż 10 rozcieńczonych. Przy czysto analitycznych zadaniach wnioski pochodzą z wpisów, przy zadaniach kreatywnych możesz wnosić nowe treści.</string>
+        <string name="ai_prompt_custom_schema">SCHEMAT WYJŚCIA JSON:\n{\n  \"ueberschrift_top5\": \"Kreatywny nagłówek pasujący do wyniku zadania, maks. 3 słowa\",\n  \"ueberschrift_analyse\": \"Kreatywny nagłówek pasujący do wyniku zadania, maks. 3 słowa\",\n  \"ueberschrift_ergebnisse\": \"Kreatywny nagłówek pasujący do wyniku zadania, maks. 3 słowa\",\n  \"fokus_kern\": \"Jedno zdanie oddające istotę zadania własnymi słowami — jako widoczna kotwica dla pulpitu.\",\n  \"fokus_zitate\": [\"...\", \"...\"],\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"rosnący|stabilny|malejący|nieznany\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": OBOWIĄZKOWE. Kreatywne, konkretne, maks. 3 słowa. MUSI odzwierciedlać WYNIK zadania, nie tylko temat. ŻADNYCH ogólnych tytułów.\n\n2) \"fokus_kern\": OBOWIĄZKOWE. Pojedyncze zdanie (15–30 słów), które pokazuje użytkownikowi: „Zrozumiałem Twoje zadanie — TO jest myśl przewodnia.\" Nie cytat zadania, lecz własne sformułowanie Twoimi słowami. Wyświetla się u góry pulpitu i jest dowodem, że profil działa.\n\n3) \"fokus_zitate\": OBOWIĄZKOWE, od 3 do 5 sztuk. Krótkie, dosłownie lub niemal dosłownie wzięte fragmenty z wpisów dziennika, które bezpośrednio pasują do zadania. Format każdego: „[data] krótki cytat lub sparafrazowany fragment\". Jeśli przy zadaniach kreatywno-badawczych nie ma dosłownych trafień, weź 3–5 wpisów o największej bliskości tematycznej i opisz powiązanie w jednej linii. Jeśli mniej niż 3 wpisy pasują tematycznie, mimo to podaj przynajmniej te i ewentualnie dodaj wskazówkę „(bliskość tematyczna)\" — nigdy nie zostawiaj pustego.\n\n4) \"gesamt_entropie\" (0.0 do 1.0): jak silnie temat zadania jest reprezentowany we wpisach?\n\n5) \"trend\": tylko przy 3+ wpisach. Jak rozwija się temat zadania we wpisach?\n\n6) \"gesamtanalyse\" (15–25 zdań): dwie części wyraźnie rozpoznawalne. CO NAJMNIEJ 50 procent tekstu dotyczy bezpośrednio lub parafrazując zadania.\n   Część A (kontekst z wpisów): co stoi we wpisach na ten temat? Nazwij istotne szczegóły.\n   Część B (wynik zadania): jaka jest Twoja odpowiedź na zadanie? Co dostarczasz nowego, dodatkowo lub jako rekomendację?\n   Połącz obie części, aby użytkownik widział myśl przewodnią.\n\n7) \"fortschritte\" (0–5): wzorce lub rozwój z wpisów, ważne dla zadania. Co najmniej połowa wpisów postępu musi wyraźnie należeć do zadania.\n   { \"titel\": \"maks. 5 słów\", \"beschreibung\": \"2–3 zdania\", \"bezug\": \"1 zdanie\" }\n\n8) \"top_massnahmen\" (dokładnie 5): najważniejsze WYNIKI zadania. CO NAJMNIEJ 3 z 5 muszą jednoznacznie należeć do zadania. Mogą to być nowe propozycje, alternatywy, rekomendacje lub wnioski, których użytkownik NIE wspomniał we wpisach, jeśli zadanie tego wymaga. Przy czysto analitycznych zadaniach pochodzą z wpisów.\n   {\n     \"titel\": \"maks. 6 słów\",\n     \"beschreibung\": \"13–21 słów, zwięźle na temat.\",\n     \"erklaerung\": \"5–8 zdań szczegółowo. Jeśli treść jest nowa, uzasadnij, dlaczego pasuje do kontekstu użytkownika. Jeśli treść pochodzi z wpisów, podaj konkretne powiązanie.\"\n   }\n\n9) \"kategorien\": grupy tematyczne strukturyzujące zadanie (dynamiczne). CO NAJMNIEJ połowa kategorii musi treściowo należeć do zadania. Zrezygnuj ze „standardowych tematów życiowych\" jak praca, sen, czas wolny, jeśli nie pasują do zadania.\n   {\n     \"name\": \"maks. 12 znaków\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3–5 zdań\",\n     \"ratschlaege\": [{\n       \"titel\": \"maks. 6 słów\",\n       \"beschreibung\": \"13–21 słów\",\n       \"prioritaet\": \"wysoki|średni|niski\",\n       \"verknuepfung\": \"Powiązanie z innym tematem lub null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1–2 zdania\"}]\n     }]\n   }\n\nWYWÓD — POCHODZENIE TREŚCI:\n- Jeśli treść pochodzi z wpisu: ustaw „datum\" na datę wpisu, „zusammenfassung\" podaje konkretne powiązanie.\n- Jeśli treść jest nowa (np. zbadana alternatywa, własna propozycja): ustaw „datum\" na „neu\", „zusammenfassung\" wyjaśnia w 1–2 zdaniach, dlaczego ta propozycja pasuje do kontekstu użytkownika.</string>
     <string name="ai_prompt_custom_output">REGUŁA LICZBY SŁÓW: «opis» w kluczowe_dzialania i rady ZAWSZE 13-21 słów.\n\nFORMAT WYJŚCIA — ŚCISŁE ZASADY:\n- Odpowiedz TYLKO obiektem JSON.\n- Bez tekstu przed ani po. Bez backticków.\n- Zaczynaj bezpośrednio od { i kończ na }.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -758,7 +758,7 @@
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Twoje osobiste podsumowania</string>
     <string name="retro_premium_reviews_desc">Z Premium SI tworzy automatycznie podsumowania z Twoich wpisów:</string>
-    <string name="retro_benefit_weekly">Nieograniczone podsumowania tygodniowe, nie tylko pierwsze 2 tygodnie</string>
+        <string name="retro_benefit_weekly">Wszystkie podsumowania tygodniowe zamiast tylko pierwszych 2 — w ramach Twojego dziennego limitu AI</string>
     <string name="retro_benefit_monthly">Podsumowania miesięczne pokazujące postępy i zmiany</string>
     <string name="retro_benefit_yearly">Podsumowania roczne, cały rok jako osobista opowieść</string>
     <string name="retro_start_sub">Rozpocznij subskrypcję</string>
@@ -784,7 +784,7 @@
     <string name="onboarding_welcome">Witaj w\nBest Journal</string>
     <string name="onboarding_subtitle">Twój osobisty dziennik AI\ndla większej jasności w codziennym życiu</string>
     <string name="onboarding_feature_speech">Mów lub pisz, SI rozumie jedno i drugie</string>
-    <string name="onboarding_feature_secure">Twoje dane zostają u Ciebie, szyfrowane i bezpieczne</string>
+        <string name="onboarding_feature_secure">Twoje wpisy zostają na urządzeniu; zapytania AI są przesyłane w postaci zaszyfrowanej</string>
     <string name="onboarding_goals_title">Co chcesz osiągnąć\nz dziennikiem SI?</string>
     <string name="onboarding_goal_stress">Zmniejszyć stres</string>
     <string name="onboarding_goal_clarity">Znaleźć jasność</string>
@@ -803,7 +803,7 @@
     <string name="onboarding_premium_feature_dashboard">Automatyczne odświeżanie panelu przy każdym nowym wpisie</string>
     <string name="onboarding_premium_feature_retro">Podsumowania tygodniowe, miesięczne i roczne pokazują Twój rozwój</string>
     <string name="onboarding_premium_feature_patterns">Wzorce na wierzch: AI pokazuje powtarzające się wzorce myślenia i odczuwania w Twoich wpisach</string>
-    <string name="onboarding_premium_feature_noads">Bez reklam, pisz i refleksjuj w spokoju</string>
+        <string name="onboarding_premium_feature_noads">Pisz i refleksjuj bez zakłóceń</string>
     <string name="onboarding_free_trial">Bezpłatnie, anuluj kiedy chcesz</string>
     <string name="onboarding_free_after_trial">Potem korzystasz z Best Journal dalej,\nza darmo z ograniczoną liczbą zapytań SI na tydzień.</string>
     <string name="onboarding_start_free">Zacznij za darmo</string>
@@ -845,14 +845,14 @@
     <string name="paywall_feature_dashboard">Automatyczne odświeżanie panelu po każdym wpisie</string>
     <string name="paywall_feature_retro">Podsumowania tygodniowe, miesięczne i roczne z SI</string>
     <string name="paywall_feature_pdf">Eksportuj wpisy ze zdjęciami jako PDF</string>
-    <string name="paywall_feature_noads">Mów lub pisz w spokoju, bez reklam</string>
-    <string name="paywall_feature_profiles">Nieograniczone własne profile analizy</string>
+        <string name="paywall_feature_noads">Pisz i refleksjuj bez zakłóceń</string>
+        <string name="paywall_feature_profiles">Własne profile AI bez limitu liczby</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Więcej jasności na co dzień</string>
     <string name="paywall_headline_stress_sub">Rozpoznaj, co Cię codziennie zajmuje, i ujmij to w słowa.</string>
     <string name="paywall_headline_clarity">Lepiej zrozum siebie</string>
-    <string name="paywall_headline_clarity_sub">SI rozpoznaje wzorce, które umykają</string>
+        <string name="paywall_headline_clarity_sub">AI uwidacznia powracające wzorce w Twoich wpisach</string>
     <string name="paywall_headline_growth">Odkryj dobre w każdym dniu</string>
     <string name="paywall_headline_growth_sub">Twoja osobista przestrzeń wdzięczności i rozwoju</string>
     <string name="paywall_headline_thoughts">Pozwól myślom płynąć</string>
@@ -893,7 +893,7 @@
     <string name="churn_exclusive_offer">Oferta dla Ciebie</string>
     <string name="churn_offer_subtitle">Nasza oferta dla Ciebie</string>
     <string name="churn_offer_feature_ai">Codzienne analizy AI</string>
-    <string name="churn_offer_feature_perspectives">Wszystkie profile AI (4 predefiniowane + nieograniczone własne)</string>
+        <string name="churn_offer_feature_perspectives">Wszystkie 4 predefiniowane profile AI + tyle własnych, ile potrzebujesz</string>
     <string name="churn_offer_feature_voice">Rozpoznawanie mowy Premium</string>
     <string name="churn_offer_auto_renew">Odnawia się automatycznie, anulujesz w każdej chwili</string>
     <string name="churn_accept_offer">Przyjmij ofertę</string>
@@ -1130,7 +1130,7 @@ Z Premium: do 150 dziennie.</string>
     <string name="consent_card1_body">Twoje wpisy pozostają na Twoim urządzeniu.</string>
     <string name="consent_card2_title">Funkcje AI (USA)</string>
     <string name="consent_card2_body">Opcjonalnie teksty są wysyłane do Google Gemini, a teksty do odczytu do Microsoft Edge w USA (EU-US Data Privacy Framework). Nagrania głosowe trafiają do Groq (USA) na podstawie standardowych klauzul umownych (EU SCCs).</string>
-    <string name="consent_card3_title">Anonimowe statystyki</string>
+        <string name="consent_card3_title">Pseudonimowe statystyki</string>
     <string name="consent_card3_body">Firebase Analytics, opcjonalnie, możesz zmienić w dowolnej chwili w ustawieniach.</string>
     <string name="consent_links_header">Nasze dokumenty prawne:</string>
     <string name="consent_accept_all">Zgadzam się i zaczynam</string>
@@ -1138,7 +1138,7 @@ Z Premium: do 150 dziennie.</string>
     <string name="consent_confirmation">Dotykając „Zgadzam się i zaczynam\" potwierdzasz zapoznanie się z polityką prywatności, warunkami użytkowania oraz notą prawną i akceptujesz opisane przetwarzanie danych. Swoją decyzję możesz zmienić w każdej chwili w ustawieniach.</string>
 
     <string name="privacy_gate_groq_title">Wysłać nagranie głosu do Groq?</string>
-    <string name="privacy_gate_groq_body">W celu transkrypcji w chmurze Twoje nagranie głosu jest wysyłane zaszyfrowane do Groq, Inc. (Mountain View, USA) i zamieniane na tekst. Plik audio jest usuwany po przetworzeniu i nie jest używany do trenowania.\n\nAlternatywa: użyj lokalnej transkrypcji na urządzeniu (offline, bez przesyłania danych), ustawialnej w Ustawienia → AI.</string>
+        <string name="privacy_gate_groq_body">Ta funkcja wysyła Twoje nagranie głosu w postaci zaszyfrowanej do Groq (USA) i zamienia je tam na tekst — szybciej i dokładniej niż rozpoznawanie lokalne.\n\n✓ Nagranie jest usuwane od razu po zamianie\n✓ Brak trenowania AI na Twoich nagraniach\n✓ Podstawa prawna: standardowe klauzule umowne (EU SCCs)\n\nAlternatywa: lokalne rozpoznawanie offline w ustawieniach.</string>
     <string name="privacy_gate_groq_accept">Zgadzam się i wysyłam</string>
     <string name="privacy_gate_groq_local">Transkrybuj lokalnie</string>
 
@@ -1147,26 +1147,26 @@ Z Premium: do 150 dziennie.</string>
     <string name="privacy_gate_gemini_accept">Zgadzam się i wysyłam</string>
     <string name="privacy_gate_gemini_cancel">Anuluj</string>
 
-    <string name="privacy_gate_tts_title">Wysłać tekst do Microsoftu?</string>
-    <string name="privacy_gate_tts_body">Do odczytu na głos tekst jest wysyłany zaszyfrowany do Microsoft Bing Speech (USA) i zwracany jako audio. Podstawa prawna: EU-US Data Privacy Framework + standardowe klauzule umowne.</string>
+        <string name="privacy_gate_tts_title">Włącz głosy Premium</string>
+        <string name="privacy_gate_tts_body">Z głosami Premium czytanie na głos brzmi naturalniej. Twój tekst jest wysyłany w postaci zaszyfrowanej (HTTPS/TLS) do usługi mowy Microsoft w USA i zwracany jako audio.\n\n✓ Przesył wyłącznie w celu syntezy mowy\n✓ Przekazanie do państwa trzeciego USA (Microsoft jest certyfikowany w ramach EU-US Data Privacy Framework)</string>
     <string name="privacy_gate_tts_accept">Zgadzam się i czytaj</string>
     <string name="privacy_gate_tts_cancel">Anuluj</string>
 
     <string name="settings_privacy_header">Prywatność</string>
-    <string name="settings_analytics_title">Anonimowe statystyki</string>
+        <string name="settings_analytics_title">Pseudonimowa analiza użytkowania</string>
     <string name="settings_analytics_subtitle">Firebase Analytics do analizy błędów i ulepszania produktu</string>
 
     <string name="settings_delete_account_title">Usuń konto i dane</string>
-    <string name="settings_delete_account_subtitle">Nieodwracalnie usuwa wszystkie lokalne dane, Twoje konto Google i kopię zapasową Drive</string>
+        <string name="settings_delete_account_subtitle">Nieodwracalnie usuwa wszystkie lokalne dane i kopię zapasową Drive. Samo Twoje konto Google pozostaje.</string>
     <string name="settings_delete_account_confirm_title">Usunąć wszystkie dane aplikacji?</string>
-    <string name="settings_delete_account_confirm_body">Ta operacja jest nieodwracalna i usuwa:\n\n• Wszystkie lokalne wpisy, zdjęcia i filmy\n• Twoje konto Firebase\n• Kopię zapasową aplikacji w Google Drive\n\nAplikacja uruchomi się ponownie jako świeża instalacja.</string>
+        <string name="settings_delete_account_confirm_body">Ta operacja jest nieodwracalna i usuwa:\n\n• Wszystkie lokalne wpisy dziennika, zdjęcia, filmy i nagrania audio\n• Kopię zapasową aplikacji w Google Drive (tylko dane aplikacji, nie Twoje konto Google)\n• Twoje logowanie do aplikacji\n\nSamo Twoje konto Google pozostaje. Aplikacja uruchomi się następnie od nowa jako świeża instalacja.</string>
     <string name="settings_delete_account_cancel">Anuluj</string>
     <string name="settings_delete_account_confirm">Tak, usuń wszystko</string>
 
     <string name="settings_report_ai_title">Zgłoś odpowiedź AI</string>
     <string name="settings_report_ai_subtitle">Nieodpowiednia lub błędna odpowiedź AI</string>
     <string name="settings_report_ai_confirm_title">Otworzyć e-mail do pomocy technicznej?</string>
-    <string name="settings_report_ai_confirm_body">Twoja aplikacja pocztowa otworzy się z przygotowaną wiadomością do dev.app.support@gmail.com. Możesz uzupełnić opis przed wysłaniem. Odpowiadamy w ciągu 24 godzin w dni robocze.\n\nZgłoś tutaj: nieodpowiednie, obraźliwe, nieprawdziwe lub wprowadzające w błąd odpowiedzi AI z pulpitu, podsumowań, retrospekcji lub poprawy tekstu.</string>
+        <string name="settings_report_ai_confirm_body">Otworzy się Twój program pocztowy z przygotowaną wiadomością do dev.app.support@gmail.com. Możesz jeszcze uzupełnić opis przed wysłaniem. Zwykle odpowiadamy w ciągu 24 godzin w dni robocze.\n\nZgłaszaj w ten sposób: nieodpowiednie, obraźliwe, nieprawdziwe lub wprowadzające w błąd wyniki AI z pulpitu, podsumowań, retrospekcji lub poprawy tekstu.</string>
     <string name="settings_report_ai_confirm">Utwórz zgłoszenie</string>
     <string name="settings_report_ai_cancel">Anuluj</string>
     <string name="settings_report_ai_no_email">Nie znaleziono aplikacji pocztowej. Wyślij zgłoszenie na dev.app.support@gmail.com.</string>
@@ -1176,9 +1176,9 @@ Z Premium: do 150 dziennie.</string>
     <string name="settings_report_ai_dialog_desc">Opisz nieodpowiednią lub błędną odpowiedź AI. Twoje zgłoszenie zostanie wysłane bezpośrednio do naszego zespołu wsparcia. Musisz być zalogowany na swoje konto Google.</string>
 
     <string name="settings_revoke_title">Odstąpienie od umowy</string>
-    <string name="settings_revoke_subtitle">Zakup Premium</string>
-    <string name="settings_revoke_confirm_title">Otworzyć e-mail do pomocy technicznej?</string>
-    <string name="settings_revoke_confirm_body">Twoja aplikacja pocztowa otworzy się z przygotowaną wiadomością do dev.app.support@gmail.com. Odpowiadamy w ciągu 24 godzin w dni robocze.\n\nPełne informacje o prawie odstąpienia od umowy (dyrektywa UE 2011/83) znajdziesz w warunkach użytkowania (§ 16). Abonamenty anuluj dodatkowo w Google Play → Subskrypcje.</string>
+        <string name="settings_revoke_subtitle">§ 356a BGB (niem. KC) — odstąpienie bezpośrednio przez aplikację</string>
+        <string name="settings_revoke_confirm_title">Odstąpić od umowy?</string>
+        <string name="settings_revoke_confirm_body">Klikając „Potwierdź odstąpienie\", wysyłamy Twoje odstąpienie bezpośrednio do dev.app.support@gmail.com. Od razu otrzymasz potwierdzenie wpłynięcia e-mailem.\n\nPełne pouczenie o prawie odstąpienia od umowy znajdziesz w warunkach użytkowania (§ 16). Abonamenty anuluj dodatkowo w Google Play → Subskrypcje, aby nie dochodziło do dalszych rozliczeń.</string>
     <string name="settings_revoke_cancel">Anuluj</string>
     <string name="settings_revoke_confirm">Utwórz odstąpienie</string>
     <string name="settings_revoke_no_email">Nie znaleziono aplikacji pocztowej. Wyślij odstąpienie na dev.app.support@gmail.com.</string>
@@ -1251,8 +1251,8 @@ Co chcesz zrobić?</string>
     <string name="privacy_sheet_save">Zapisz wybór</string>
     <string name="privacy_sheet_all_on">Włącz wszystko</string>
     <string name="privacy_sheet_all_off">Wyłącz wszystko</string>
-    <string name="consent_toggle_analytics_title">Anonimowa analiza użytkowania</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — pomaga nam ulepszać aplikację. Żadnych treści osobistych, tylko anonimowe liczby kliknięć. Transfer danych: Google USA (Data Privacy Framework).</string>
+        <string name="consent_toggle_analytics_title">Pseudonimowa analiza użytkowania</string>
+        <string name="consent_toggle_analytics_body">Firebase Analytics — pomaga nam ulepszać aplikację. Żadnych treści dziennika, tylko pseudonimowe statystyki użytkowania (np. liczby kliknięć). Transfer danych: Google USA (Data Privacy Framework).</string>
     <string name="consent_toggle_groq_title">Mowa na tekst (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">Pozwala dyktować wpisy. Twoje nagranie głosowe jest wysyłane zaszyfrowane do Groq (USA), zamieniane na tekst, a następnie usuwane. Twoje nagrania NIE są używane do trenowania.</string>
     <string name="consent_toggle_gemini_title">Refleksje AI (Google Gemini)</string>
@@ -1262,7 +1262,7 @@ Co chcesz zrobić?</string>
     <string name="consent_toggle_drive_title">Kopia zapasowa Google Drive</string>
     <string name="consent_toggle_drive_body">Zapisuje wpisy zaszyfrowane w Twoim własnym Google Drive. Zachowujesz pełną kontrolę — plik jest na Twoim koncie, nie u nas.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">Opt-out Kalifornii (CCPA/CPRA 2026). Gdy aktywne, wszystkie opcjonalne przetwarzania danych są wyłączone — pozostają tylko funkcje lokalne.</string>
+        <string name="consent_toggle_do_not_sell_body">Ten przełącznik jest przeznaczony tylko dla mieszkańców amerykańskiego stanu Kalifornia. Kalifornijska ustawa o ochronie danych (CCPA/CPRA) przyznaje mieszkańcom prawo do sprzeciwu. Po aktywacji wszystkie opcjonalne funkcje chmurowe (AI, kopia zapasowa, rozpoznawanie mowy, analiza) zostają wyłączone — aktywne pozostają tylko funkcje lokalne.\n\nJeśli mieszkasz poza Kalifornią, możesz zignorować ten przełącznik: Best Journal nigdzie na świecie nie sprzedaje ani nie wprowadza do obrotu Twoich danych.</string>
     <string name="consent_btn_accept_all">Akceptuj wszystko</string>
     <string name="consent_btn_save_selection">Zapisz mój wybór</string>
     <string name="consent_btn_minimum_only">Odrzuć wszystko</string>
@@ -1397,13 +1397,17 @@ Co chcesz zrobić?</string>
     <string name="prompt_stop_button_label">Stop</string>
     <string name="settings_legal_section_header">Dokumenty prawne</string>
     <string name="settings_legal_online_label">Wersja online:</string>
-    <plurals name="datetime_months_relative">
-        <item quantity="one">vor %1$d Monat</item>
-        <item quantity="other">vor %1$d Monaten</item>
+        <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d miesiąc temu</item>
+        <item quantity="few">%1$d miesiące temu</item>
+        <item quantity="many">%1$d miesięcy temu</item>
+        <item quantity="other">%1$d miesiąca temu</item>
     </plurals>
-    <plurals name="datetime_years_relative">
-        <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
+        <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d rok temu</item>
+        <item quantity="few">%1$d lata temu</item>
+        <item quantity="many">%1$d lat temu</item>
+        <item quantity="other">%1$d roku temu</item>
     </plurals>
     <string name="ai_limits_disclaimer">Dzienny limit AI dla intensywnego użytkowania.</string>
     <string name="ai_limits_dialog_title">Jak działa dzienny limit AI?</string>
@@ -1429,4 +1433,5 @@ Co chcesz zrobić?</string>
     <string name="settings_premium_cancelled_until">Subskrypcja Premium anulowana — aktywna do <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Motyw</string>
     <string name="settings_themes_manager">Menedżer motywów</string>
+    <string name="paywall_monthly_note">Następnie %1$s miesięcznie, odnawia się automatycznie\nMożesz anulować w każdej chwili</string>
 </resources>
