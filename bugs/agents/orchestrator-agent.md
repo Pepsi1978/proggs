@@ -21,27 +21,29 @@
 
 ---
 
-## TL;DR — die 7 wichtigsten Regeln
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
-1. **Verstehen ist nicht Umsetzen.** Der haeufigste Fehler ist nicht ein Crash, sondern dass
-   der Agent etwas ANDERES tut als gemeint (Intent-Misclassification, ueber-woertliche oder
-   ueber-liberale Auslegung). Gegenmittel: **Plan/Read-back vor Ausfuehrung** + bei Unsicherheit
-   **nachfragen statt raten** (AskUserQuestion) + **Scope als Constraint** in den Prompt.
-2. **Jede Schleife braucht eine Stop-Bedingung — das Limit ist nur das Sicherheitsnetz.**
-   Endlos-Delegation, Handoff-Ping-Pong und Tool-Loops sind die Top-Architektur-Bugs.
-3. **Sub-Agenten erben einen riesigen Start-Sockel und haben KEIN Auto-Compact.** Spawnen mit
-   vollem Kontext/allen Tool-Schemas → „Prompt is too long" bevor die Aufgabe beginnt. Tools-
-   Whitelist, schlanker Prompt, File-as-Memory, Orchestrator-Resume.
-4. **Sub-Agent-Output ist KEINE vertrauenswuerdige Wahrheit.** Stille Fehler + Error-
-   Amplifikation (bis 17x) + Prompt-Injection propagieren durch die Kette. Verifizieren +
-   typed-schema-validieren zwischen Agenten.
-5. **Tool-Args VOR Ausfuehrung gegen striktes Schema validieren** + Retry-mit-Fehlerkontext.
-   Faengt kaputtes JSON, Schema-Mismatch und (aktuell!) die Opus-4.8-tool_use-Regression.
-6. **Zu viele Tools verschlechtern die Auswahl drastisch** (43%→2% bei 4→51 Tools). Gruppieren,
-   <20 pro Call, progressive disclosure / Tool-Search.
-7. **Menschlicher Dialog braucht aktive Pflege:** Persona-Anker re-injizieren (Drift), History
-   zusammenfassen (Lost-in-Conversation, ~39% Genauigkeitsverlust), bei Voice satzweise streamen
-   + Barge-In <150ms.
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
+> (Stufe A, `Read` mit `limit=80`). Der Volltext darunter ist Pflicht bei JEDEM Fehler in
+> diesem Bereich (Stufe B). Der Kurzcheck ersetzt den Volltext nicht.
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | Vager/mehrdeutiger Befehl | Plan/Read-back zeigen, bei Unsicherheit nachfragen statt raten | §1.1 |
+| 2 | Agent tut etwas anderes als gemeint | Intent + betroffene Dateien vor Ausfuehrung bestaetigen | §1.3 |
+| 3 | Agent erweitert Umfang eigenmaechtig | Scope als expliziten Constraint in den Prompt | §1.4 |
+| 4 | Schleife/Delegation terminiert nicht | Echte Stop-Bedingung; Limit nur als Sicherheitsnetz | §2.1 |
+| 5 | Parallele Worker schreiben denselben State-Key | Reducer `Annotated[list, operator.add]` setzen | §2.5 |
+| 6 | Sub-Agent spawnen | Schlanker Prompt + tools-Whitelist; KEIN Voll-Kontext | §3.1 |
+| 7 | Viele MCP-Server, Sub crasht bei 0 Token | tools-Whitelist + Tool-Search (deferred Schemas) | §3.2 |
+| 8 | Opus 4.8 tool_use kaputt/legacy-XML | Defensiv parsen; interleaved-thinking aus + retry | §4.1 |
+| 9 | Opus 4.8 meldet „verified/done" | Build/Test programmatisch verifizieren, nie dem Modell trauen | §4.10 |
+| 10 | Opus 4.8 + temperature/top_p/tool_choice | KEINE Sampling-Parameter senden (HTTP 400) | §4.11 |
+| 11 | Tool-Args vor Ausfuehrung | Gegen striktes Schema validieren + Retry mit Fehlerkontext | §4.3 |
+| 12 | Tool-Auswahl wird schlecht | <20 Tools/Call; progressive disclosure / Tool-Search | §4.7 |
+| 13 | Langer Dialog, Agent vergisst/driftet | Persona re-injizieren; Recap+Snowball; Sycophancy meiden | §5.1 |
+| 14 | Sub-Agent-Output uebernehmen | Untrusted: Verifier + typed-schema (Error-Amplifikation 17x) | §7.1 |
+| 15 | From-scratch Loop: orphaned tool_use → 400 | tool_use/tool_result-Paare zusammen halten/trimmen | §8.1 |
 
 ---
 
@@ -275,6 +277,22 @@ Nested Chats sind (verhindert Selbst-Rekursion, autogen #3287); OpenAI Agents SD
 (Default 10 Turns) mit `error_handlers={"max_turns": ...}` abfangen → kontrollierten Final-Output
 statt Exception (community #1370708).
 **Quelle:** crewAI #3847; AG2 Nested-Chats-Doku/#3287; OpenAI community #1370708.
+
+### 3.9 Statische Faehigkeiten-Doku veraltet → Boss verneint eigene Features  [⭐ EIGENER VORFALL 2026-06-10]
+**Symptom:** Der Boss-Agent behauptet im Gespraech, er koenne KEINE Unteragenten bauen / keinen
+Computer steuern — obwohl AgentBuilder + ComputerUse laengst registriert sind und funktionieren.
+Der Nutzer verliert das Vertrauen ("weiss der Agent ueberhaupt, was er kann?").
+**Ursache:** Die Faehigkeiten-Selbstauskunft kam aus einer STATISCHEN, von Hand gepflegten Datei
+(capabilities.md, Stand VOR dem Feature-Einbau) mit der Anweisung "verneine nichts, das hier
+steht — erfinde nichts dazu". Der Agent gehorchte der veralteten Doku statt der Realitaet.
+Klassischer Stale-Probe-Fall: Hand-Pflege-Regeln werden bei Feature-Commits vergessen.
+**Versionen:** VoiceAgent ≤ 1.2.0; Architektur-Falle in jedem Agenten mit statischer Capability-Doku.
+**FIX (Poka-Yoke Stufe 3 — kann nicht erneut veralten):** Die Helfer-/Tool-Liste fuer den
+System-Prompt LIVE aus derselben Registry generieren, ueber die der Boss tatsaechlich delegiert
+(`AgentCapabilities.BuildHelpersBlock(subAgents.All)` aus Name + Description jedes ISubAgent).
+Die statische Datei nur noch fuer GRUNDfaehigkeiten; settings-abhaengige Features ("wenn in den
+Einstellungen aktiviert") als Bedingung formulieren statt als NOCH-NICHT. Gefixt VoiceAgent 1.2.1 (#46677).
+**Quelle:** eigener Vorfall (Frank-Transkript 2026-06-10: "Nein, das kann ich noch nicht").
 
 ---
 
