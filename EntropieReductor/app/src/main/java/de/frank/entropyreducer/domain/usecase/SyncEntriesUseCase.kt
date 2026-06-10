@@ -377,6 +377,39 @@ constructor(
                 )
         }
 
+        // --- Ideen-Eintraege (v13+, Frank-Wunsch 2026-06-10) ---
+        // DataStore-basiert wie Tagebuch (1:1-Klon). Existenz-Strategie: lokale Edits gewinnen,
+        // vorhandene Eintraege werden NICHT ueberschrieben (konservativ, wie beim Tagebuch).
+        if (payload.ideenEntries.isNotEmpty()) {
+            val existingIdeenMap =
+                de.frank.entropyreducer.presentation.ideen
+                    .ideenEntriesFlow(appContext)
+                    .first()
+                    .associateBy { it.id }
+            for (b in payload.ideenEntries) {
+                if (existingIdeenMap[b.id] != null) continue
+                de.frank.entropyreducer.presentation.ideen.addIdeenEntry(
+                    appContext,
+                    de.frank.entropyreducer.presentation.ideen.IdeenEntry(
+                        id = b.id,
+                        timestampMs = b.timestampMs,
+                        title = b.title,
+                        text = b.text,
+                        summary = b.summary,
+                        followups =
+                            b.followups.map { f ->
+                                de.frank.entropyreducer.presentation.ideen.IdeenFollowup(
+                                    id = f.id,
+                                    createdAtMs = f.createdAtMs,
+                                    text = f.text,
+                                )
+                            },
+                    ),
+                )
+                inserted++
+            }
+        }
+
         // --- Aufgaben-Nachtraege (v6+) ---
         // Existenz-basiert: id ist UUID, Doppelung quasi unmoeglich. Wenn lokal vorhanden,
         // gewinnt der lokale Stand (Inline-Edits seit letztem Backup).

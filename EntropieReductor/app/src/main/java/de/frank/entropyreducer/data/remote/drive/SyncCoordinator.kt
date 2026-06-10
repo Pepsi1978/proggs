@@ -324,9 +324,31 @@ constructor(
                     BackupMental(id = it.id, text = it.text)
                 }
 
+            // Frank-Wunsch 2026-06-10: Ideen-Eintraege (Aufgaben-Reiter "Ideen", 1:1-Klon des
+            // Tagebuch-Bereichs) ins Haupt-Backup. DataStore-basiert wie Tagebuch/Thesen/Mental.
+            val ideenBackups =
+                de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow(appContext).first().map {
+                    e ->
+                    BackupIdeenEntry(
+                        id = e.id,
+                        timestampMs = e.timestampMs,
+                        title = e.title,
+                        text = e.text,
+                        summary = e.summary,
+                        followups =
+                            e.followups.map { f ->
+                                BackupIdeenFollowup(
+                                    id = f.id,
+                                    createdAtMs = f.createdAtMs,
+                                    text = f.text,
+                                )
+                            },
+                    )
+                }
+
             val payload =
                 BackupPayload(
-                    version = 12,
+                    version = 13,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -348,6 +370,7 @@ constructor(
                     recurringTemplates = recurringTemplateBackups,
                     amazfitDaily = amazfitDailyBackups,
                     mentals = mentalBackups,
+                    ideenEntries = ideenBackups,
                 )
             // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
             // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per

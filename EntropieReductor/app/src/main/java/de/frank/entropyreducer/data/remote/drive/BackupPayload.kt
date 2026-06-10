@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 11,
+    val version: Int = 13,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -145,6 +145,12 @@ data class BackupPayload(
      * Default emptyList damit aeltere Backups (v1-v11) weiterhin lesbar bleiben.
      */
     val mentals: List<BackupMental> = emptyList(),
+    /**
+     * Schema v13 (Frank-Wunsch 2026-06-10): Ideen-Eintraege (Aufgaben-Reiter "Ideen", 1:1-Klon
+     * des Tagebuch/Entropie-Bereichs). Inkl. KI-Zusammenfassung und allen Nachtraegen pro Eintrag.
+     * Default emptyList damit aeltere Backups (v1-v12) weiterhin lesbar bleiben.
+     */
+    val ideenEntries: List<BackupIdeenEntry> = emptyList(),
 )
 
 /**
@@ -268,6 +274,25 @@ data class BackupTagebuchEntry(
 /** Schema v6: einzelner Nachtrag im Tagebuch. */
 @Serializable
 data class BackupTagebuchFollowup(val id: String, val createdAtMs: Long, val text: String)
+
+/**
+ * Schema v13 (Frank-Wunsch 2026-06-10): Ideen-Eintrag (Aufgaben-Reiter "Ideen", 1:1-Klon des
+ * Tagebuch/Entropie-Bereichs). Gleiches Format wie BackupTagebuchEntry — Titel, Text, optionale
+ * KI-Zusammenfassung und Nachtraege.
+ */
+@Serializable
+data class BackupIdeenEntry(
+    val id: String,
+    val timestampMs: Long,
+    val title: String,
+    val text: String,
+    val summary: String? = null,
+    val followups: List<BackupIdeenFollowup> = emptyList(),
+)
+
+/** Schema v13: einzelner Nachtrag in den Ideen. */
+@Serializable
+data class BackupIdeenFollowup(val id: String, val createdAtMs: Long, val text: String)
 
 /** Schema v6: Nachtrag zu einer Aufgabe (entropy_entry_followups). */
 @Serializable

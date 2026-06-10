@@ -24,6 +24,7 @@ import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.dashboard4.HealthConnectDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.OuraDetailScreen
 import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalendarScreen
+import de.frank.entropyreducer.presentation.ideen.IdeenScreen
 import de.frank.entropyreducer.presentation.insights.InsightBoardScreen
 import de.frank.entropyreducer.presentation.insights.RepertoireScreen
 import de.frank.entropyreducer.presentation.settings.SettingsHomeScreen
@@ -155,6 +156,17 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             )
         }
         composable(
+            route = Routes.IDEE_ENTRY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.ideen.IdeenEntryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(
             route = Routes.JOURNAL_ENTRY_DETAIL_PATTERN,
             arguments = listOf(navArgument("sourceId") { type = NavType.StringType }),
         ) {
@@ -249,6 +261,8 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val isJournal = parent == Routes.SCIENTIST && index == 3
                 // Frank-Wunsch 2026-06-09: Aufgaben-Slot 2 = Mentalboard.
                 val isMental = parent == Routes.TASKS && index == 2
+                // Frank-Wunsch 2026-06-10: Aufgaben-Slot 3 = Ideen (1:1-Klon des Entropie-Bereichs).
+                val isIdeen = parent == Routes.TASKS && index == 3
                 val isTagebuch = parent == Routes.SCIENTIST && index == 1
                 val isThesen = parent == Routes.SCIENTIST && index == 2
                 if (isJournal) {
@@ -305,6 +319,21 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             }
                         },
                         onSwitchTab = onSwitchTabFromSub,
+                    )
+                } else if (isIdeen) {
+                    IdeenScreen(
+                        onBack = {
+                            nav.popBackStack()
+                            Unit
+                        },
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = onSwitchTabFromSub,
+                        onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
                     )
                 } else {
                     SubAreaScreen(
