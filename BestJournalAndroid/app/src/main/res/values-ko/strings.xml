@@ -40,7 +40,7 @@
     <string name="journal_ai_improving">AI가 글을 다듬고 있어요. 잠시만 기다려 주세요</string>
     <string name="journal_later">나중에</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">하루 %1$s부터</string>
+    <string name="paywall_from_per_day">연간 구독, 연 %1$s</string>
     <string name="paywall_instead_per_month">월정액 대비 %1$d%% 절약</string>
     <string name="paywall_or">또는</string>
     <string name="paywall_with_limited">제한된 한도로.</string>
@@ -326,7 +326,7 @@
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">기록은 평가나 조언 없이 중립적으로 요약돼요.\n\n한눈에 보여요:\n\n• 지금 당신을 차지하는 주제\n• 되풀이되는 흐름\n• 삶이 어떻게 흘러가는지\n\n일상의 큰 그림을 매일 확인하는 데 딱 맞아요.</string>
-    <string name="profile_entropy_long">KI가 일기 속 스트레스, 부담, 혼란을 집중적으로 찾아요.\n\n받게 되는 것:\n\n• 주요 부담 원인 분석\n• 정리를 위한 구체적인 조치 5가지\n• 일상에서 도움이 되는 팁\n\n모든 것이 너무 많다고 느껴질 때 딱 맞아요.</string>
+    <string name="profile_entropy_long">AI가 일상에서 당신을 짓누르는 것을 찾아 정리해 줘요. 가장 큰 부담 원인의 개요와 구체적인 정리 단계 5가지를 받게 돼요. 다시 개관을 되찾고 싶을 때 딱 맞아요.</string>
     <string name="profile_insight_long">KI가 단순한 사건 이상을 살펴봐요. 일기에서 발견하는 것:\n\n• 말 속의 사고 패턴과 신념\n• 반복되는 감정과 반응\n• 일기에서 드러나는 강점\n• 행동을 이끄는 가치관\n\n자신을 더 잘 이해하고 내면적으로 성장하고 싶은 모든 분을 위해.</string>
     <string name="profile_goals_long">AI는 기록에서 모든 목표, 바람, 계획을 찾아내요. 스쳐 지나간 이야기도요.\n\n볼 수 있어요:\n\n• 지금 가지고 있는 목표 (숨은 것까지)\n• 각 목표에서의 진행 상태\n• 다음으로 내디딜 수 있는 한 걸음\n\n당신의 말에서 읽어 내는 개인 목표 추적기예요.</string>
     <string name="profile_custom_long">AI가 무엇에 집중할지 직접 정해요.\n\n자신의 분석 주제를 적어 주세요. 예를 들어:\n\n• 「운동에 대한 모든 언급을 찾아 줘」\n• 「내 기분 변화를 분석해 줘」\n• 「내가 가장 생산적인 때를 보여 줘」\n\n원하는 것을 정확히 아는 사람을 위한 완전한 자유.</string>
@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI가 요청 시 기록을 개선해 드려요.</string>
     <string name="settings_premium_feature_dashboard">매일 대시보드 분석</string>
     <string name="settings_premium_feature_dashboard_desc">대시보드가 기록과 함께 성장해요.</string>
-    <string name="settings_premium_feature_5_perspectives">모든 AI 프로필 (기본 4개 + 무제한 직접 만들기)</string>
+    <string name="settings_premium_feature_5_perspectives">미리 정의된 AI 프로필 4가지 전부 + 필요한 만큼 직접 만드는 프로필</string>
     <string name="settings_premium_feature_5_perspectives_desc">요약부터 자기 이해까지</string>
     <string name="settings_premium_feature_reviews">주간·월간·연간 돌아보기</string>
     <string name="settings_premium_feature_reviews_desc">AI가 당신의 이야기를 들려줘요</string>
@@ -430,7 +430,7 @@
     <string name="settings_premium_feature_pdf_desc">사진이 담긴 모든 기록을 문서로</string>
     <string name="settings_premium_feature_voice">더 정확한 음성 인식</string>
     <string name="settings_premium_feature_voice_desc">음성 기록의 품질이 더 높아져요</string>
-    <string name="settings_premium_feature_profiles">무제한 맞춤 프로필</string>
+    <string name="settings_premium_feature_profiles">개수 제한 없는 나만의 AI 프로필</string>
     <string name="settings_premium_feature_profiles_desc">여러 분석 관점을 동시에</string>
     <string name="settings_unlock_premium">프리미엄 열기</string>
     <!-- Export dialog -->
@@ -452,7 +452,7 @@
     <string name="settings_feedback_send">의견 보내기</string>
     <string name="settings_feedback_sent">보내기 완료</string>
     <string name="settings_feedback_dialog_title">의견 보내기</string>
-    <string name="settings_feedback_dialog_desc">개발자에게 보내는 메시지예요. 모두 읽고 직접 답해요!</string>
+    <string name="settings_feedback_dialog_desc">개발자에게 보내는 메시지예요 — 모든 메시지를 읽고 최대한 빨리 답해 드려요.</string>
     <string name="settings_feedback_placeholder">의견을 적어 주세요…</string>
     <string name="settings_feedback_sending">보내는 중…</string>
     <string name="settings_feedback_sign_in_first">먼저 Google로 로그인해 주세요</string>
@@ -545,8 +545,8 @@
     <string name="ai_prompt_language_override"></string>
     <!-- Final response-language instruction appended to every AI prompt. -->
     <string name="ai_prompt_response_language">답변 언어: 한국어로만 답해 주세요. 모든 글과 제목은 한국어여야 하고 다른 언어는 쓰지 마세요.</string>
-    <string name="ai_prompt_no_dates_rule">날짜 금지(엄격한 규칙): 보이는 텍스트에서, 즉 제목, 항목, 설명, 요약에서 날짜, 요일, 월, 연도 또는 시간 표현을 사용하지 마세요. 날짜는 숨겨진 기계 메타데이터로만 존재하며 항상 JSON 필드 \"datum\" 안에 보이지 않게 저장해야 해요. 규칙 위반 예시: \"5월 3일에\", \"지난 화요일\", \"4월 초에\", \"이번 주\", \"최근 30일\" 같은 표현은 금지예요. 날짜가 아닌 기록의 내용을 참조하세요.</string>
-    <string name="ai_prompt_rerank_system">당신은 프로필 재정렬 담당자예요. 대시보드 분석에서 나온 상위 5개 조치로 이루어진 JSON 배열, 사용자의 프로필 초점, 그리고 원본 일기 기록을 받아요.\n\n3단계로 할 일:\n1) 프로필 초점과의 연관성이 가장 뚜렷한 조치가 앞에 오도록 5개 조치를 정렬하세요.\n2) 5개 중 최대 2개가 프로필 초점과 실질적인 연관이 없는지 확인하세요. 그렇다면 일기 기록에서 프로필에 더 잘 맞는 조치로 교체하세요. 각 조치의 같은 JSON 구조(titel, beschreibung, erklaerung)를 유지하세요.\n3) 프로필 연관성을 다양하게 표현하세요. 동의어와 주제적 인접어를 쓰고, 프로필 단어를 기계적으로 반복하지 마세요. 연관성은 느껴져야 하고, 글자 그대로가 아니어도 돼요.\n\n중요:\n- 정확히 5개를 반환하세요.\n- 실제 프로필 연관이 없을 때만 변경하세요. 이미 잘 맞는다면 배열만 정렬하고 교체하지 마세요.\n- 각 항목의 JSON 구조를 유지하세요(같은 키: titel, beschreibung, erklaerung).\n- 언어: 한국어, 긴 줄표 없이, beschreibung 13-21단어.\n\n날짜 금지:\nbeschreibung과 erklaerung에 날짜(\"3.4.\", \"23.04.\", \"30.기록\")를 쓰지 마세요. 이 텍스트는 소리 내어 읽혀요. 날짜 없이 순수한 통찰을 표현하세요.\n\n출력 형식:\n- JSON 배열(대괄호가 루트)만 출력하세요.\n- Markdown 백틱, 앞뒤 텍스트 없이.\n- 바로 [로 시작해 ]로 끝내세요.</string>
+    <string name="ai_prompt_no_dates_rule">TTS 낭독 친화 (필수 — 노출 텍스트에서 날짜 금지):\n모든 노출 텍스트 필드(설명, 해설, 요약, 종합 분석)에서 날짜를 사용해서는 안 됩니다 — \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\"도, \"4월 3일 기록\", \"23.04.에\", \"28.4.의\" 같은 구체적 기록 날짜 언급도 안 됩니다. 이 텍스트들은 사용자에게 낭독됩니다 — 날짜의 나열은 낭독 시 부자연스럽고 통찰의 흐름을 끊습니다.\n\n대신 순수한 통찰을 표현하세요:\n- 틀림: \"3.4., 28.4., 23.4. 기록은 늦은 취침으로 생체 리듬이 무너진다는 것을 보여줍니다.\"\n- 맞음: \"늦은 취침이 당신의 생체 리듬을 체계적으로 무너뜨립니다.\"\n- 틀림: \"30일 기록은 28.4.부터 받은편지함이 넘쳐 시간을 빼앗는다는 것을 보여줍니다.\"\n- 맞음: \"받은편지함이 며칠째 넘쳐 당신의 시간을 빼앗습니다.\"\n- 틀림: \"24.04.의 정리 작업 이후로 일상에서 더 큰 개관을 느낍니다.\"\n- 맞음: \"움직임이 일상에서 눈에 띄게 더 큰 개관을 만들어 줍니다.\"\n\n내용상의 통찰은 그대로 두고 — 구체적 날짜 언급만 빼세요. 일반적인 시간 표현은 계속 사용할 수 있습니다(\"반복적으로\", \"최근\", \"여러 날에 걸쳐\"). 날짜는 오직 \"herleitung\" 필드에만 넣습니다(출처, 내부적으로 사용되며 표시되지 않음).</string>
+    <string name="ai_prompt_rerank_system">당신은 프로필 리랭커입니다. 대시보드 분석에서 나온 5개의 주요 조치 JSON 배열, 사용자의 프로필 초점, 그리고 원본 일기 기록을 받습니다.\n\n당신의 임무는 3단계입니다:\n1) 프로필 초점과 가장 분명한 연관성을 가진 조치가 먼저 오도록 5개의 조치를 정렬하세요.\n2) 5개 조치 중 최대 2개가 프로필 초점과 내용상 연관이 없는지 확인하세요. 그렇다면 일기 기록에서 끌어낸 더 프로필에 맞는 조치로 교체하세요. 각 조치의 동일한 JSON 구조(titel, beschreibung, erklaerung)를 지키세요.\n3) 프로필 연관성을 동의어와 주제적 인접성으로 다채롭게 표현하고, 프로필 단어를 기계적으로 반복하지 마세요. 연관성은 글자 그대로가 아니라 느껴져야 합니다.\n\n중요:\n- 마지막에 정확히 5개의 항목을 반환하세요.\n- 진짜 프로필 연관성이 빠진 경우에만 변경하세요 — 이미 잘 맞으면 배열을 정렬만 하고 아무것도 교체하지 마세요.\n- 각 항목의 JSON 구조(같은 키: titel, beschreibung, erklaerung)를 유지하세요.\n- 언어는 한국어, 줄표 금지, beschreibung은 13~21단어.\n- 의학적, 법률적, 재정적 진단이나 확정적 조언을 하지 말고, 그런 주제에서는 가치 중립적으로 전문가를 안내하세요.\n\nTTS 낭독 친화 (필수 — 날짜 금지):\nbeschreibung과 erklaerung에서 날짜를 사용하지 마세요(\"3.4.\", \"23.04.\", \"30일 기록\"). 이 텍스트들은 낭독됩니다 — 날짜 나열은 부자연스럽습니다. 구체적 기록 날짜 없이 순수한 통찰을 표현하세요. 예시:\n- 틀림: \"3.4.와 23.04. 기록은 생체 리듬이 무너진다는 것을 보여줍니다.\"\n- 맞음: \"늦은 취침이 당신의 생체 리듬을 체계적으로 무너뜨립니다.\"\n일반적인 시간 표현은 허용되며(\"반복적으로\", \"최근\", \"여러 날에 걸쳐\"), 날짜는 안 됩니다.\n\n출력 형식:\n- JSON 배열만(루트 수준의 대괄호).\n- 마크다운 백틱 금지, 앞뒤 텍스트 금지.\n- [ 로 바로 시작해서 ] 로 끝내세요.</string>
     <string name="ai_prompt_rerank_user_focus_header">=== 사용자 프로필 초점 ===</string>
     <string name="ai_prompt_rerank_actions_header">=== 현재 상위 조치 배열(5개) ===</string>
     <string name="ai_prompt_rerank_entries_header">=== 일기 기록(프로필에 맞는 대체 항목의 출처) ===</string>
@@ -649,13 +649,13 @@
     <string name="ai_prompt_goals_intro">당신은 섬세하고 격려가 있는 목표 분석가이자 진전 추적자예요.\n\n할 일:\n사용자의 일기 기록을 분석해 주세요. 스쳐 지나간 말까지 포함해 모든 목표, 바람, 계획, 의도를 알아차려 주세요. 여러 기록에 걸쳐 진전을 따라가고, JSON 형식의 짜임새 있는 목표 대시보드를 만들어 주세요.</string>
     <string name="ai_prompt_goals_definition">정의 — 목표란:\n사용자가 이루고 싶고, 바꾸고 싶고, 시작하거나 끝내고 싶고, 개선하고 쌓고 싶은 모든 것. 간접적인 실마리도 포함돼요:\n- 직접: 「살 빼고 싶다」, 「치과에 전화해야 해」\n- 간접: 「다시 달리기 하면 좋겠다」= 체력 목표\n- 불평: 「잠이 너무 안 와」= 잠을 개선하고 싶다는 숨은 목표\n- 꿈: 「언젠가 스웨덴에 가고 싶어」= 장기 여행 목표</string>
     <string name="ai_prompt_goals_entry_rules">최우선 규칙 — 어떤 기록도 빠뜨리지 마세요:\n번호가 매겨진 기록을 받아요(예: 「기록 1/5」).\n모든 기록을 읽고, 분석하고, 반영해야 해요.\n\n기록이 적을 때:\n- 1-2개: 개별 목표를 알아차리고, 진전은 「모름」으로 평가하세요.\n- 3개 이상: 진전을 적극적으로 따라가고 흐름을 알아차리세요.</string>
-    <string name="ai_prompt_goals_rules">언어 규칙:\n- %1$s\n- 격려하고 정직하게. 진전을 기뻐하고, 꾸미지 마세요.\n- 긴 줄표(—)는 쓰지 마세요. 쉼표나 마침표를 쓰세요.\n\n양의 규칙, 모든 목표가 소중해요:\n작은 것까지 모든 목표를 알아차리세요. 합치지 마세요.</string>
+    <string name="ai_prompt_goals_rules">언어 규칙:\n- %1$s\n- 동기를 부여하면서 정직하게, 진전을 축하하되 미화하지 마세요.\n- 긴 줄표(—) 금지. 쉼표나 마침표를 사용하세요.\n- 건강이나 신체 목표에서는 동기 부여로만 함께하고, 식이·약물·치료 권고는 하지 마세요.\n\n분량 규칙, 모든 목표가 중요합니다:\n작은 것까지 모든 목표를 알아차리세요. 요약하지 마세요.</string>
     <string name="ai_prompt_goals_schema">JSON 출력 구조:\n{\n  \"jeonche_bunseok\": \"...\",\n  \"jueoyo_haengdong\": [...],\n  \"kategori\": [...]\n}\n\n1) \"jeonche_bunseok\" (15-25문장): 모든 목표를 이름으로 부르고 진전을 알아차리세요.\n\n2) \"jueoyo_haengdong\" (정확히 5개): 다음 단계.\n   { \"jemok\": \"...\", \"seolmyeong\": \"13-21단어\", \"sangse\": \"5-8문장\" }\n\n3) \"kategori\": 목표 영역.\n   {\n     \"ireum\": \"최대 12자\", \"aikon\": \"material_icon\", \"saekkkal\": \"#HEX\",\n     \"entropi_sujun\": 0.0, \"yoyak\": \"3-5문장\",\n     \"jo_eon\": [{\n       \"jemok\": \"...\",\n       \"seolmyeong\": \"13-21단어. 상태: [열림/진행 중/막힘/달성]. 다음 단계: [...].\",\n       \"usun\": \"nopeum|botong|najeum\",\n       \"yeon_gyeol\": \"...\", \"yuchul\": [{\"nalja\":\"...\",\"yoyak\":\"...\"}]\n     }]\n   }\n   영역: 체력, 건강, 일, 커리어, 돈, 관계, 프로젝트, 학습, 잠, 마음, 여행, 정리, 창작\n   우선: nopeum=막힘, botong=열림, najeum=진행 중/달성</string>
     <string name="ai_prompt_goals_output">출력 형식: JSON만. 백틱 쓰지 마세요. {로 시작하세요.</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
     <string name="ai_prompt_insight_intro">당신은 사람의 성장을 위한 공감이 깊고 섬세한 흐름 분석가예요.\n\n할 일:\n사용자의 일기 기록을 분석해 주세요. 숨은 흐름, 되풀이되는 생각과 행동, 무의식의 믿음, 감정의 반응 흐름, 개인의 강점을 찾아 주세요. 쓸 때는 알아차리지 못했던 것도 자기 자신에 대한 배움으로 보이게 해 주세요. JSON 형식의 짜임새 있는 자기 이해 대시보드를 만들어 주세요.</string>
-    <string name="ai_prompt_insight_attitude">태도:\n당신은 따뜻한 거울이에요. 기록에서 보이는 것을 정직하게 전하고, 늘 성장에 도움이 되는 것을 목적으로 해요. 모든 통찰이 스스로를 더 깊이 이해하는 데 도움이 되어야 해요. 어려운 흐름도 분명히 이름 붙이되, 건설적으로, 탓하지 않고요. 초점: 사용자는 자신의 말에서 무엇을 배울 수 있을까요?\n\n찾는 것:\n- 되풀이되는 감정: 어떤 감정이 계속 돌아오나?\n- 생각의 흐름: 자신, 타인, 세상을 어떻게 보나?\n- 피함의 흐름: 무엇을 피하나. 무엇에 대해서는 절대 쓰지 않나?\n- 강점: 스스로도 모르게 잘하는 것이 무엇인가?\n- 가치: 정말 중요한 것(행동에서 드러나요)\n- 방아쇠: 강한 반응을 일으키는 것 — 좋은 것도 나쁜 것도\n- 모순: 말과 행동이 다른가?\n- 필요: 줄 사이로 비치는 것\n- 성장: 보는 시선이 바뀐 곳</string>
+    <string name="ai_prompt_insight_attitude">당신의 태도:\n당신은 호의적인 거울입니다. 사용자의 기록에서 알아차린 것을 정직하게 보여주되, 언제나 그가 그로부터 성장할 수 있도록 합니다. 모든 통찰은 그가 자기 자신을 더 잘 이해하도록 도와야 합니다. 어려운 패턴도 분명히 짚되, 건설적으로 그리고 비난 없이 합니다. 초점: 사용자가 자기 자신의 말에서 자신에 대해 무엇을 배울 수 있는가?\n\n당신은 심리학적 진단을 하지 않으며 장애나 질병을 언급하지 않습니다. 사용자 자신의 말에서 관찰되는 패턴만 묘사합니다.\n\n당신이 찾는 것:\n- 반복되는 감정: 어떤 감정이 계속해서 나타나는가?\n- 사고 패턴: 사용자는 자신, 타인, 세상을 어떻게 생각하는가?\n- 회피 패턴: 사용자는 무엇을 피하는가? 무엇에 대해서는 결코 쓰지 않는가?\n- 강점: 사용자가 스스로는 보지 못하더라도 잘하는 것은 무엇인가?\n- 가치: 사용자에게 진짜 중요한 것은 무엇인가(말이 아니라 행동으로 드러남)?\n- 계기: 무엇이 강한 반응을 불러일으키는가 — 긍정적이든 부정적이든?\n- 모순: 사용자가 말은 이렇게 하면서 다르게 행동하는가?\n- 필요: 행간에서 비치는, 사용자가 필요로 하는 것은 무엇인가?\n- 성장: 사용자의 관점이 어디에서 변했는가?</string>
     <string name="ai_prompt_insight_entry_rules">최우선 규칙 — 어떤 기록도 빠뜨리지 마세요:\n번호가 매겨진 기록을 받아요(예: 「기록 1/5」).\n모든 기록을 읽고, 분석하고, 반영해야 해요.\n답하기 전에 세어 보세요: 모든 기록을 반영했나요?\n빠진 게 있다면 바로 추가해 주세요.\n\n기록이 적을 때:\n- 1-2개: 첫 관찰을 이름 붙이고, 깊은 흐름은 다루지 마세요.\n  통찰은 설명에서 「잠정」이라고 표시하세요.\n- 3개 이상: 되풀이되는 흐름과 깊은 연결을 적극적으로 찾으세요.\n\n시간 가중치:\n모든 기록을 반영해 주세요. 내면의 변화를 따라가세요: 태도가 바뀌었나요? 같은 주제가 새로운 빛으로 돌아오나요? 자신감이 자라나요, 아니면 불안이 커지나요?</string>
     <string name="ai_prompt_insight_rules">언어 규칙(JSON의 모든 문자열 항목에 적용):\n- 쉽고 또렷한 말. 짧은 문장.\n- 어려운 말, 전문 용어, 상투어는 쓰지 마세요.\n- 누구나 고민 없이 바로 이해할 수 있게.\n- 공감하고 정직하고 건설적으로, 탓하지 말고 훈계하지 마세요.\n- 늘 긍정을 향해: 사용자는 무엇을 배울 수 있을까요?\n- 긴 줄표(—)는 쓰지 마세요. 쉼표나 마침표를 쓰세요.\n\n양의 규칙, 빠짐없음이 짧음보다 앞서요:\n모든 영역에 걸친 통찰의 합은 최소 15. 10 미만은 오류. 알아차린 모든 흐름, 믿음의 단서, 되풀이되는 감정은 각기 고유한 통찰에 값해요. 합치지 마세요. 하나의 기록에 두려움, 자부심, 피함이 있으면 3개의 서로 다른 통찰이 나와요. 모두 묶는 하나가 아니에요. JSON은 길어져도 됩니다. 빠짐없음이 짧음보다 더 중요해요.</string>
     <string name="ai_prompt_insight_schema_header">JSON 출력 구조:\n{\n  \"jeonche_entropi\": 0.0,\n  \"gyeonghyang\": \"sangseung|antei|hara|moreum\",\n  \"jeonche_bunseok\": \"...\",\n  \"jinjeon\": [...],\n  \"jueoyo_haengdong\": [...],\n  \"kategori\": [...]\n}\n\n항목 정의:\n\n1) \"jeonche_entropi\" (숫자, 0.0-1.0)\n   사용자가 기록에서 얼마나 자기를 돌아보는가?\n   - 0.0-0.33 = 자기성찰이 적음(주로 사건을 묘사)\n   - 0.34-0.66 = 일부 자기성찰(감정과 생각을 언급)\n   - 0.67-1.0 = 깊은 자기성찰(자신과의 깊은 대화)\n\n2) \"gyeonghyang\" (글)\n   며칠에 걸쳐 3개 이상의 기록이 있을 때만.\n   예전 것과 최근 것을 비교해 주세요:\n   - 「sangseung」 = 점점 더 깊이 돌아봄\n   - 「antei」 = 꾸준한 수준의 성찰\n   - 「hara」 = 최근에는 자기성찰이 줄어듦\n   - 「moreum」 = 자료가 부족\n\n3) \"jeonche_bunseok\" (글, 15-25문장)\n   - 기록을 하나씩 따라가며 더 깊은 주제를 찾아 주세요.\n   - 기록은 사용자에 대해 한 사람으로서 무엇을 말해 주나요?\n   - 생각, 감정, 행동의 어떤 흐름이 드러나나요?\n   - 스스로 모르고도 어떤 강점을 보이나요?\n   - 어떤 무의식의 믿음이 행동을 이끄나요?\n   - 개인의 성장은 어디에 보이나요?\n   - 공감하고 개인적으로, 직접 말해 주세요.\n   - 언제나 건설적으로: 어려운 통찰도 배움의 기회와 이어 주세요.</string>
@@ -664,7 +664,7 @@
     <string name="ai_prompt_insight_output">설명의 단어 수 규칙(엄격히 지킴):\n「jueoyo_haengdong」과 「jo_eon」의 「seolmyeong」은 언제나 13-21단어 사이여야 해요.\n- 13단어 미만 = 너무 짧음 = 오류\n- 21단어 초과 = 너무 김 = 오류\n쓰기 전에 단어를 세어 보세요. 각 설명은 하나의 탄탄한 완결된 문장이에요. 더 많아도, 적어도 안 돼요.\n\n출력 형식 — 엄격한 규칙:\n- JSON 객체만으로 답해요.\n- 앞뒤에 글을 두지 마세요.\n- Markdown 백틱은 쓰지 마세요.\n- {로 바로 시작해 }로 끝내세요.\n- 유효한 JSON, 빠진 쉼표나 중복 키는 없도록.</string>
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
-    <string name="ai_prompt_entropy_intro">당신은 공감이 깊고 매우 명민한 삶의 조언가이자 흐름 분석가예요.\n\n할 일:\n사용자의 일기 기록을 분석해 주세요. 되풀이되는 스트레스, 어지러움, 부담의 원천을 찾고, JSON 형식의 짜임새 있는 조언 대시보드를 만들어 주세요.\n\n찾는 것 — 개인의 부담:\n사용자의 삶에서 어지러움, 스트레스, 기운 빠짐, 통증, 잠의 문제, 감정의 무게, 통제를 잃는 느낌을 만드는 모든 것.</string>
+    <string name="ai_prompt_entropy_intro">당신은 공감 능력이 뛰어나고 매우 똑똑하며 섬세한 정리·패턴 분석가입니다.\n\n당신의 임무:\n사용자의 일기 기록을 분석하세요. 스트레스, 혼란, 부담의 반복되는 원인을 찾으세요. 이를 바탕으로 JSON 형식의 구조화된 조언 대시보드를 만드세요.\n\n우리가 찾는 것 — 개인적 부담:\n사용자의 삶에서 혼란, 스트레스, 에너지 소모, 과부하, 시간 압박, 정서적 부담, 통제력 상실을 일으키는 모든 것.\n\n당신은 의학적, 치료적, 진단적 조언을 하지 않습니다. 건강 관련 주제에서는 가치 중립적으로 전문가를 안내하세요.</string>
     <string name="ai_prompt_entropy_entry_rules">최우선 규칙 — 어떤 기록도 빠뜨리지 마세요:\n번호가 매겨진 기록을 받아요(예: 「기록 1/5」).\n모든 기록을 읽고, 분석하고, 반영해야 해요.\n답하기 전에 세어 보세요: 모든 기록을 반영했나요?\n빠진 게 있다면 바로 추가해 주세요.\n\n기록이 적을 때:\n- 1-2개: 단독 관찰을 이름 붙이고, 흐름으로 말하지 마세요.\n  조언은 설명에서 「잠정」이라고 표시하세요.\n- 3개 이상: 흐름과 가로지르는 연결을 적극적으로 찾으세요.\n\n시간 가중치:\n모든 기록을 반영해 주세요. 같은 주제에 대한 엇갈림은 시간 순으로 보세요. 최근 기록이 지금의 상태를, 오래된 기록은 배경과 흐름을 줘요.</string>
     <string name="ai_prompt_entropy_rules">언어 규칙(JSON의 모든 문자열 항목에 적용):\n- 쉽고 또렷한 말. 짧은 문장.\n- 어려운 말, 전문 용어, 상투어는 쓰지 마세요.\n- 누구나 고민 없이 바로 이해할 수 있게.\n- 공감하고 직접적이며 구체적으로, 일반론은 피해요.\n- 긴 줄표(—)는 쓰지 마세요. 쉼표나 마침표를 쓰세요.\n\n단어 금지 — \"엔트로피\"라는 단어는 절대 쓰지 마세요:\n이 프로필의 이름은 \"삶 정리하기\"예요. 모든 보이는 텍스트(전체 분석, 설명, erklaerung, 요약, 유래)에서 절대 \"엔트로피\", \"엔트로픽\" 등의 단어를 쓰지 마세요. 사용자에게 낯선 개념이에요. 대신 다음 표현을 쓰세요: 부담, 스트레스, 혼란, 압박, 짐, 마찰, 긴장, 에너지 손실, 혼돈, 어수선함, 뒤죽박죽, 삶의 무게. JSON 필드명 \"gesamt_entropie\"와 \"entropie_level\"은 그대로 유지해요. 기술적인 키이지 보이는 텍스트가 아니에요. 하지만 답변의 모든 보이는 단어는 \"엔트로피\"를 피해요.\n\n수량 규칙, 빠짐없음이 짧음보다 앞서요:\n모든 카테고리에 걸친 조언의 합은 최소 15. 10 미만은 오류. 어떤 단서, 관찰, 문제도 각기 고유한 조언에 값해요. 합치지 마세요. 하나의 기록에 3개의 문제가 있으면 3개의 서로 다른 조언이 나와요. JSON은 길어져도 됩니다. 완전함이 간결함보다 중요해요.</string>
     <string name="ai_prompt_entropy_schema_header">JSON 출력 구조:\n{\n  \"jeonche_entropi\": 0.0,\n  \"gyeonghyang\": \"sangseung|antei|hara|moreum\",\n  \"jeonche_bunseok\": \"...\",\n  \"jinjeon\": [...],\n  \"jueoyo_haengdong\": [...],\n  \"kategori\": [...]\n}\n\n항목 정의:\n\n1) \"jeonche_entropi\" (숫자, 0.0-1.0)\n   카테고리별 부담 수준의 가중 평균.\n   - 0.0-0.33 = 낮음(양호)\n   - 0.34-0.66 = 보통(주의 필요)\n   - 0.67-1.0 = 높음(지금 바로 움직이는 것이 좋아요)\n\n2) \"gyeonghyang\" (글)\n   며칠에 걸쳐 3개 이상의 기록이 있을 때만.\n   - 「hara」 = 부담이 줄고 있음\n   - 「antei」 = 부담이 비슷함\n   - 「sangseung」 = 부담이 늘고 있음\n   - 「moreum」 = 자료가 부족\n\n3) \"jeonche_bunseok\" (글, 15-25문장)\n   - 기록을 하나씩 따라가며 주된 주제를 꺼내 주세요.\n   - 각 기록의 모든 주제를 이름으로 부르세요.\n   - 주제 사이의 연결을 알아차리세요.\n   - 문제뿐 아니라 나아짐과 강점도 알아차리세요.\n   - 공감하고 개인적으로, 직접 말해 주세요.</string>
@@ -683,9 +683,9 @@
 
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
-<string name="ai_prompt_custom_intro">당신은 예리하고 섬세한 일기 분석가예요.\n\n2단계 접근:\n\n━━ 1단계: 맥락 ━━\n먼저 기록 전체를 읽고, 사용자의 삶을 전반적으로 파악하세요.\n모든 주요 주제, 사건, 감정, 행동을 기록해 두세요.\n이것이 기준이 돼요.\n\n━━ 2단계: 과제 ━━\n이제 사용자의 개인 주제에 집중하세요:\n%1$s\n\n바로 이 주제에 맞춰 일기 기록을 분석하고, JSON 형식의 짜임새 있는 대시보드를 만들어 주세요.\n\n비율 규칙:\n주제 관련 내용이 최소 50%%를 차지해야 해요. 주제와 무관한 내용은 짧게, 배경으로만요.\n\n다양한 표현:\n\"~분석\"이나 \"~요약\" 같은 반복적인 제목 패턴은 쓰지 마세요. 주제에 딱 맞는 창의적인 제목을 써요.\n\n중요:\n결과는 주제에 집중해야 하지만, 기록 전체의 맥락을 바탕으로 해야 해요. 두 단계 모두 필수예요.</string>
+<string name="ai_prompt_custom_intro">당신은 똑똑하고 세심한 일기 분석가이자 작업 수행자입니다.\n\n두 단계 작업 방식:\n\n1단계 — 맥락 파악:\n먼저 사용자의 모든 일기 기록을 빠짐없이 읽으세요. 상황, 패턴, 주제, 언급된 것들, 문제, 바람을 이해하세요. 기록은 당신의 맥락이자 출발점이자 토대입니다. 하지만 당신을 제한하지는 않습니다.\n\n2단계 — 작업 수행:\n%1$s\n\n위 내용이 당신의 실제 임무입니다. 1단계의 맥락을 바탕으로 이 임무를 수행하세요. 임무가 조사, 아이디어, 대안, 제안, 새로운 정보를 요구한다면, 기록에 없더라도 이를 적극적으로 제공하세요. 이때 의학적, 법률적, 재정적 진단이나 확정적인 조언은 하지 말고, 그런 주제에서는 전문가를 안내하세요. 기록은 당신의 결과물에 정보를 주지만, 결과물을 제한하지는 않습니다.\n\n핵심 규칙 — 프로필이 최소 50퍼센트를 차지합니다:\n전체 결과물(종합 분석, 주요 조치, 카테고리, 조언, 진전)은 최소 50퍼센트가 사용자의 임무와 분명히 연결되어야 합니다. 임무와 내용상 관련이 없는 통찰, 항목, 주제는 빼세요 — JSON을 채우려고 일반적인 삶의 주제로 결과물을 부풀리지 마세요. 막연한 항목 여러 개보다 분명히 연결된 항목 몇 개가 낫습니다.\n\n언어에 관한 중요 사항: 연관성을 다채롭게 표현하세요. 동의어, 관련 표현, 주제적 인접성, 바꿔 말하기를 활용하세요. 임무의 단어를 기계적으로 똑같이 반복하지 마세요 — 그러면 강압적으로 느껴집니다. 임무 예시 \"목표\": 계획, 바람, 포부, 이루고 싶은 것, 나아갈 방향, 발전 단계로도 표현하세요. 임무 예시 \"운동\": 움직임, 훈련, 신체 활동, 지구력, 체력, 건강으로도 표현하세요. 프로필 연관성은 글자 그대로가 아니라 느껴져야 합니다.\n\n결정적인 점:\n- 임무에 \"분석하라\", \"요약하라\", \"무엇이 눈에 띄는가\"가 있으면 — 기록에 가깝게 머무르세요.\n- 임무에 \"조사하라\", \"대안을 찾아라\", \"제안하라\", \"추천하라\", \"보완하라\", \"만약 ~라면\", \"새로운 아이디어\"가 있으면 — 기록을 적극적으로 넘어서 당신만의 새로운 내용을 제시하세요.\n- 임무가 우선입니다. 기록은 토대이지 벽이 아닙니다.</string>
     <string name="ai_prompt_custom_headings">중요 — 동적인 제목:\n주제에 「정확히」 맞는 적절한 제목 세 가지를 직접 만들어 주세요. 「주요 결과」나 「분석」 같은 일반 제목은 안 돼요. 주제를 비추는 창의적이고 구체적인 제목을 써요.\n예시:\n- 주제 「낚시」: 「가장 큰 손맛」, 「낚시 한눈에」, 「모든 낚시 보고」\n- 주제 「잠의 질」: 「당신의 잠의 흐름」, 「잠의 분석」, 「모든 관찰」\n- 주제 「너무 많이 떠안기」: 「가장 큰 시간 도둑」, 「부담 한눈에」, 「모든 부담 지점」</string>
-    <string name="ai_prompt_custom_rules">맥락 규칙:\n모든 기록을 읽고, 분석하고, 반영해야 해요. 기록 하나도 빠뜨리지 마세요.\n답하기 전에 세어 보세요: 모든 기록을 반영했나요? 빠진 게 있다면 바로 추가해 주세요.\n\n과제 규칙:\n주제와 관련된 모든 것을 찾아내세요. 직접적인 언급도, 간접적인 연결도요.\n최소 50%는 주제 관련이어야 해요. 주제와 무관한 내용은 짧게, 배경으로만요.\n\n구별:\n주제 관련: 주제를 직접 다루거나 분명히 연결된 것.\n배경 맥락: 전반적인 삶의 맥락으로, 주제와 직접 연결되지 않는 것.\n\n언어 규칙(JSON의 모든 문자열 항목에 적용):\n- 쉽고 또렷한 말. 짧은 문장.\n- 어려운 말, 전문 용어, 상투어는 쓰지 마세요.\n- 누구나 고민 없이 바로 이해할 수 있게.\n- 공감하고 직접적이며 구체적으로, 일반론은 피해요.\n- 긴 줄표(—)는 쓰지 마세요. 쉼표나 마침표를 쓰세요.\n\n양의 규칙, 빠짐없음이 짧음보다 앞서요:\n주제 관련 통찰의 합은 최소 10. 어떤 단서, 관찰, 연결도 각기 고유한 통찰에 값해요. 합치지 마세요.</string>
+    <string name="ai_prompt_custom_rules">맥락 규칙 — 모든 기록을 읽습니다:\n번호가 매겨진 기록을 받습니다. 하나하나 빠짐없이 읽고 맥락으로 받아들이세요. 관련된 모든 세부 사항이 결과물에 반영됩니다. 다만 임무가 요구한다면 결과물은 기록을 넘어설 수 있고 그래야 합니다.\n\n임무 규칙 — 임무를 완수합니다:\n사용자의 임무를 문자 그대로 수행하세요. 임무가 대안을 묻는다면 기록에 있는 것뿐 아니라 진짜 새로운 대안을 제시하세요. 임무가 추천을 묻는다면 적극적으로 조사하고 추천하세요. 기록이 답변의 유일한 출처가 아닙니다.\n\n결과물에서의 구분:\n기록에서 나온 것과 당신이 새로 더한 것을 분명히 표시하세요. 그래야 사용자가 어느 것이 자기 생각이고 어느 것이 당신의 기여인지 압니다.\n\n전문 상담 규칙 — 진단 금지:\n임무와 무관하게 의학적 진단, 치료 권고, 법률·재정 상담은 하지 않습니다. 그런 주제에서는 가치 중립적으로 자격 있는 전문가를 안내하세요.\n\n언어 규칙:\n- 쉽고 명확하게. 외래어 사용 금지.\n- 공감하면서도 직접적으로.\n- 긴 줄표(—) 금지. 쉼표나 마침표를 사용하세요.\n\n분량 규칙:\n전체적으로 최소 10개의 통찰 — 다만 하나하나가 내용상 임무에 맞아야 합니다. 진짜 프로필 연관성이 있는 통찰을 10개 찾지 못하면, 희석된 10개보다 강한 7개를 제시하세요. 순수 분석 임무에서는 통찰이 기록에서 나오고, 창의적 임무에서는 새로운 내용을 제시해도 됩니다.</string>
     <string name="ai_prompt_custom_schema">JSON 출력 구조:\n{\n  \"ueberschrift_top5\": \"톱 5의 창의적 제목(주제에 맞게, 최대 3단어)\",\n  \"ueberschrift_analyse\": \"한눈에의 창의적 제목(주제에 맞게, 최대 3단어)\",\n  \"ueberschrift_ergebnisse\": \"모든 결과의 창의적 제목(주제에 맞게, 최대 3단어)\",\n  \"fokus_kern\": \"...\",\n  \"fokus_zitate\": [...],\n  \"gesamt_entropie\": 0.0,\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": 필수. 창의적이고 구체적, 최대 3단어. 주제에 맞아야 해요. 일반 제목 없어요.\n\n2) \"fokus_kern\" (3-5문장): 주제에 대한 핵심 진술. 이 사람에게 이 주제는 지금 어떤 의미인가요?\n\n3) \"fokus_zitate\" (1-3개): 주제를 가장 잘 담아낸 기록 인용.\n   { \"nalja\": \"날짜\", \"yoyak\": \"인용 또는 한 문장 요약\" }\n\n4) \"gesamt_entropie\" (0.0-1.0): 주제 영역이 기록에 얼마나 나타나나요?\n\n5) \"gesamtanalyse\" (15-25문장): 기록은 주제에 대해 무엇을 말하나요? 각 기록의 관련된 세부를 이름으로 부르세요.\n\n6) \"fortschritte\" (0-5개): 주제 영역에서의 흐름이나 변화.\n   { \"jemok\": \"최대 5단어\", \"seolmyeong\": \"2-3문장\", \"chamjo\": \"1문장\" }\n\n7) \"top_massnahmen\" (정확히 5개): 주제 영역의 가장 중요한 통찰.\n   {\n     \"jemok\": \"최대 6단어\",\n     \"seolmyeong\": \"13-21단어. 짧고 콕 집어서.\",\n     \"sangse\": \"5-8문장의 자세한 설명.\"\n   }\n\n8) \"kategorien\": 주제에 맞는 주제 그룹(동적으로 만드세요).\n   {\n     \"ireum\": \"최대 12자\", \"aikon\": \"material_icon_name\", \"saekkkal\": \"#HEX\",\n     \"entropi_sujun\": 0.0,\n     \"yoyak\": \"3-5문장\",\n     \"jo_eon\": [{\n       \"jemok\": \"최대 6단어\",\n       \"seolmyeong\": \"13-21단어\",\n       \"usun\": \"nopeum|botong|najeum\",\n       \"yeon_gyeol\": \"다른 주제와의 연결 또는 null\",\n       \"yuchul\": [{\"nalja\":\"...\",\"yoyak\":\"1-2문장\"}]\n     }]\n   }\n\n추론 요약:\n결과를 쓰기 전에 먼저 이렇게 정리해 보세요(이 단계는 JSON에 들어가지 않아요):\n- 이 주제와 관련해서 각 기록에서 무엇을 알아챘나요?\n- 어떤 사건, 생각, 행동이 주제에 해당하나요?\n- 어디에서 흐름이나 변화가 보이나요?\n그런 다음 그 내용을 바탕으로 JSON을 만드세요.</string>
     <string name="ai_prompt_custom_output">단어 수 규칙: jueoyo_haengdong와 jo_eon의 「seolmyeong」은 언제나 13-21단어.\n\n출력 형식 — 엄격한 규칙:\n- JSON 객체만으로 답해요.\n- 앞뒤에 글을 두지 마세요. 백틱은 쓰지 마세요.\n- {로 바로 시작해 }로 끝내세요.</string>
 
@@ -757,7 +757,7 @@
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">나만의 돌아보기</string>
     <string name="retro_premium_reviews_desc">프리미엄이면 AI가 일기 기록에서 자동으로 돌아보기를 만들어 줘요:</string>
-    <string name="retro_benefit_weekly">처음 2주 이후에도 무제한 주간 돌아보기</string>
+    <string name="retro_benefit_weekly">처음 2주만이 아니라 모든 주간 돌아보기 — AI 일일 한도 범위 안에서</string>
     <string name="retro_benefit_monthly">진전과 변화를 보여 주는 월간 돌아보기</string>
     <string name="retro_benefit_yearly">한 해를 한 편의 이야기로 담는 연간 돌아보기</string>
     <string name="retro_start_sub">구독 시작</string>
@@ -783,7 +783,7 @@
     <string name="onboarding_welcome">Best Journal에\n오신 것을 환영해요</string>
     <string name="onboarding_subtitle">더 명확한 일상을 위한\n나만의 AI 일기</string>
     <string name="onboarding_feature_speech">말하거나 쓰세요. AI는 둘 다 알아들어요</string>
-    <string name="onboarding_feature_secure">내 데이터는 내 곁에. 암호화되어 안전해요</string>
+    <string name="onboarding_feature_secure">기록은 기기에 남고, AI 요청은 암호화되어 전송돼요</string>
     <string name="onboarding_goals_title">AI 일기로\n무엇을 이루고 싶으세요?</string>
     <string name="onboarding_goal_stress">스트레스 줄이기</string>
     <string name="onboarding_goal_clarity">또렷함 찾기</string>
@@ -802,7 +802,7 @@
     <string name="onboarding_premium_feature_dashboard">새 기록마다 대시보드가 자동으로 새로 고쳐져요</string>
     <string name="onboarding_premium_feature_retro">주간·월간·연간 돌아보기가 성장을 보여 줘요</string>
     <string name="onboarding_premium_feature_patterns">패턴 파악: KI가 일기 속 반복되는 사고·감정 패턴을 보여줘요</string>
-    <string name="onboarding_premium_feature_noads">광고 없이 쓰고 돌아볼 수 있어요</string>
+    <string name="onboarding_premium_feature_noads">방해 없이 쓰고 돌아봐요</string>
     <string name="onboarding_free_trial">무료, 언제든 취소 가능</string>
     <string name="onboarding_free_after_trial">이후에도 Best Journal을 계속 쓸 수 있어요.\n무료로, 주마다 AI 이용 횟수에 한도가 있어요.</string>
     <string name="onboarding_start_free">무료로 시작</string>
@@ -844,14 +844,14 @@
     <string name="paywall_feature_dashboard">기록마다 대시보드를 자동으로 새로 고침</string>
     <string name="paywall_feature_retro">AI가 만드는 주간·월간·연간 돌아보기</string>
     <string name="paywall_feature_pdf">사진과 함께 기록을 PDF로 내보내기</string>
-    <string name="paywall_feature_noads">광고 없이 말하고 적기</string>
-    <string name="paywall_feature_profiles">무제한 맞춤 분석 프로필</string>
+    <string name="paywall_feature_noads">방해 없이 쓰고 돌아봐요</string>
+    <string name="paywall_feature_profiles">개수 제한 없는 나만의 AI 프로필</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">일상의 명료함</string>
     <string name="paywall_headline_stress_sub">매일 나를 사로잡는 것을 파악하고 핵심을 짚어요.</string>
     <string name="paywall_headline_clarity">자신을 더 잘 이해해요</string>
-    <string name="paywall_headline_clarity_sub">AI가 숨겨진 흐름을 알아차려요</string>
+    <string name="paywall_headline_clarity_sub">AI가 기록 속 반복되는 패턴을 보여줘요</string>
     <string name="paywall_headline_growth">하루의 좋은 것을 발견해요</string>
     <string name="paywall_headline_growth_sub">감사와 성장을 위한 나만의 공간</string>
     <string name="paywall_headline_thoughts">생각이 흐르게 두어요</string>
@@ -892,7 +892,7 @@
     <string name="churn_exclusive_offer">특별 제안</string>
     <string name="churn_offer_subtitle">특별히 준비한 혜택이에요</string>
     <string name="churn_offer_feature_ai">매일 AI 분석</string>
-    <string name="churn_offer_feature_perspectives">모든 AI 프로필 (기본 4개 + 무제한 직접 만들기)</string>
+    <string name="churn_offer_feature_perspectives">미리 정의된 AI 프로필 4가지 전부 + 필요한 만큼 직접 만드는 프로필</string>
     <string name="churn_offer_feature_voice">프리미엄 음성 인식</string>
     <string name="churn_offer_auto_renew">자동 갱신, 언제든 해지</string>
     <string name="churn_accept_offer">제안 받아들이기</string>
@@ -1128,7 +1128,7 @@ Premium: 하루 최대 150회.</string>
     <string name="consent_confirmation">「동의하고 시작하기」를 누르면 개인정보 처리방침, 이용약관, 법적 고지를 읽었고 설명된 데이터 처리에 동의함을 확인해요. 설정에서 언제든 변경할 수 있어요.</string>
 
     <string name="privacy_gate_groq_title">음성 녹음을 Groq에 보낼까요?</string>
-    <string name="privacy_gate_groq_body">클라우드 전사를 위해 음성 녹음이 암호화되어 Groq, Inc. (마운틴뷰, 미국)로 전송되어 텍스트로 변환돼요. 오디오 파일은 처리 후 삭제되며 학습에 사용되지 않아요.\n\n대안: 기기 내 로컬 전사(오프라인, 데이터 전송 없음)를 사용하세요. 설정 → AI 에서 전환할 수 있어요.</string>
+    <string name="privacy_gate_groq_body">이 기능은 음성 녹음을 암호화하여 Groq(미국)으로 보내 그곳에서 텍스트로 변환해요 — 로컬 인식보다 빠르고 정확해요.\n\n✓ 녹음은 변환 후 즉시 삭제돼요\n✓ 당신의 녹음으로 AI를 학습하지 않아요\n✓ 법적 근거: 표준 계약 조항(EU SCC)\n\n대안: 설정에서 로컬 오프라인 인식.</string>
     <string name="privacy_gate_groq_accept">동의하고 전송</string>
     <string name="privacy_gate_groq_local">로컬로 전사하기</string>
 
@@ -1137,26 +1137,26 @@ Premium: 하루 최대 150회.</string>
     <string name="privacy_gate_gemini_accept">동의하고 전송</string>
     <string name="privacy_gate_gemini_cancel">취소</string>
 
-    <string name="privacy_gate_tts_title">텍스트를 Microsoft에 보낼까요?</string>
-    <string name="privacy_gate_tts_body">읽어주기를 위해 텍스트가 암호화되어 Microsoft Bing Speech(미국)로 전송되고 오디오로 반환돼요. 법적 근거: EU-US Data Privacy Framework + 표준 계약 조항.</string>
+    <string name="privacy_gate_tts_title">프리미엄 음성 켜기</string>
+    <string name="privacy_gate_tts_body">프리미엄 음성을 쓰면 읽어주기가 더 자연스럽게 들려요. 당신의 텍스트가 암호화되어(HTTPS/TLS) 미국의 Microsoft 음성 서비스로 전송되고 오디오로 반환돼요.\n\n✓ 전송은 오직 음성 합성을 위한 것이에요\n✓ 제3국(미국) 이전(Microsoft는 EU-US Data Privacy Framework 인증을 받았어요)</string>
     <string name="privacy_gate_tts_accept">동의하고 읽어주기</string>
     <string name="privacy_gate_tts_cancel">취소</string>
 
     <string name="settings_privacy_header">개인정보</string>
-    <string name="settings_analytics_title">익명 통계</string>
+    <string name="settings_analytics_title">익명 사용 분석</string>
     <string name="settings_analytics_subtitle">오류 분석과 제품 개선을 위한 Firebase Analytics</string>
 
     <string name="settings_delete_account_title">계정과 데이터 삭제</string>
-    <string name="settings_delete_account_subtitle">모든 로컬 데이터, Google 계정, Drive 백업을 되돌릴 수 없이 삭제해요</string>
+    <string name="settings_delete_account_subtitle">모든 로컬 데이터와 Drive 백업을 되돌릴 수 없이 삭제합니다. Google 계정 자체는 유지됩니다.</string>
     <string name="settings_delete_account_confirm_title">모든 앱 데이터를 삭제할까요?</string>
-    <string name="settings_delete_account_confirm_body">이 작업은 되돌릴 수 없으며 다음을 삭제해요:\n\n• 모든 로컬 일기 기록, 사진, 동영상\n• Firebase 계정\n• 앱의 Google Drive 백업\n\n앱은 새 설치 상태로 다시 시작해요.</string>
+    <string name="settings_delete_account_confirm_body">이 작업은 되돌릴 수 없으며 다음을 삭제합니다:\n\n• 모든 로컬 일기 기록, 사진, 동영상, 음성 녹음\n• 앱의 Google Drive 백업(앱 데이터만, Google 계정은 아님)\n• 앱 로그인\n\nGoogle 계정 자체는 유지됩니다. 이후 앱은 새 설치 상태로 다시 시작합니다.</string>
     <string name="settings_delete_account_cancel">취소</string>
     <string name="settings_delete_account_confirm">예, 모두 삭제</string>
 
     <string name="settings_report_ai_title">AI 응답 신고</string>
     <string name="settings_report_ai_subtitle">부적절하거나 잘못된 AI 출력</string>
     <string name="settings_report_ai_confirm_title">지원팀에 이메일을 열까요?</string>
-    <string name="settings_report_ai_confirm_body">이메일 앱이 dev.app.support@gmail.com 로 작성된 메시지와 함께 열려요. 보내기 전에 설명을 추가할 수 있어요. 영업일 기준 24시간 내에 답장해요.\n\n다음을 신고해 주세요: 대시보드, 요약, 회고, 텍스트 개선에서 나온 부적절하거나 공격적이거나 잘못된 AI 출력.</string>
+    <string name="settings_report_ai_confirm_body">dev.app.support@gmail.com 으로 미리 작성된 메시지와 함께 이메일 앱이 열려요. 보내기 전에 설명을 더 추가할 수 있어요. 보통 영업일 기준 24시간 내에 답해 드려요.\n\n대시보드, 요약, 돌아보기, 텍스트 개선에서 나온 부적절하거나, 불쾌하거나, 잘못되었거나, 오해를 부르는 AI 출력을 신고해 주세요.</string>
     <string name="settings_report_ai_confirm">신고 작성</string>
     <string name="settings_report_ai_cancel">취소</string>
     <string name="settings_report_ai_no_email">이메일 앱을 찾을 수 없어요. dev.app.support@gmail.com 로 신고를 보내주세요.</string>
@@ -1166,9 +1166,9 @@ Premium: 하루 최대 150회.</string>
     <string name="settings_report_ai_dialog_desc">부적절하거나 잘못된 AI 응답을 설명해 주세요. 신고는 지원팀에 직접 전송됩니다. Google 계정으로 로그인되어 있어야 합니다。</string>
 
     <string name="settings_revoke_title">청약 철회</string>
-    <string name="settings_revoke_subtitle">Premium 구매</string>
-    <string name="settings_revoke_confirm_title">지원팀에 이메일을 열까요?</string>
-    <string name="settings_revoke_confirm_body">이메일 앱이 dev.app.support@gmail.com 로 작성된 메시지와 함께 열려요. 영업일 기준 24시간 내에 답장해요.\n\n청약 철회 권리에 관한 자세한 정보는 이용약관(§ 16)에서 확인할 수 있어요. 구독은 Google Play → 정기 결제 에서도 취소해 주세요.</string>
+    <string name="settings_revoke_subtitle">독일 민법 제356a조 — 앱으로 바로 철회</string>
+    <string name="settings_revoke_confirm_title">계약을 철회하시겠습니까?</string>
+    <string name="settings_revoke_confirm_body">\"철회 확인\"을 누르면 당신의 철회를 dev.app.support@gmail.com 으로 바로 보냅니다. 즉시 이메일로 접수 확인을 받습니다.\n\n전체 철회 안내는 이용약관(§ 16)에서 확인할 수 있습니다. 추가 결제가 발생하지 않도록 구독은 Google Play → 정기 결제 에서도 함께 취소해 주세요.</string>
     <string name="settings_revoke_cancel">취소</string>
     <string name="settings_revoke_confirm">철회 작성</string>
     <string name="settings_revoke_no_email">이메일 앱을 찾을 수 없어요. 철회 요청을 dev.app.support@gmail.com 로 보내주세요.</string>
@@ -1242,7 +1242,7 @@ Premium: 하루 최대 150회.</string>
     <string name="privacy_sheet_all_on">모두 켜기</string>
     <string name="privacy_sheet_all_off">모두 끄기</string>
     <string name="consent_toggle_analytics_title">익명 사용 분석</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — 앱 개선에 도움이 됩니다. 개인 콘텐츠 없이 익명 탭 횟수만 수집합니다. 데이터 전송: Google 미국 (Data Privacy Framework).</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 앱을 개선하는 데 도움이 됩니다. 일기 내용은 없고, 익명 사용 통계(예: 클릭 수)만 수집합니다. 데이터 전송: Google 미국(Data Privacy Framework).</string>
     <string name="consent_toggle_groq_title">음성-텍스트 변환 (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">항목 받아쓰기를 허용합니다. 음성 녹음은 암호화되어 Groq (미국)에 전송되고, 텍스트로 변환된 후 삭제됩니다. 귀하의 녹음은 학습에 사용되지 않습니다.</string>
     <string name="consent_toggle_gemini_title">AI 성찰 (Google Gemini)</string>
@@ -1252,7 +1252,7 @@ Premium: 하루 최대 150회.</string>
     <string name="consent_toggle_drive_title">Google 드라이브 백업</string>
     <string name="consent_toggle_drive_body">항목을 암호화하여 귀하의 Google 드라이브에 저장합니다. 완전한 제어권을 유지합니다 — 파일은 귀하의 계정에 있으며, 저희에게 있지 않습니다.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">캘리포니아 옵트아웃 (CCPA/CPRA 2026). 활성화되면 모든 선택적 데이터 처리가 비활성화되고 — 로컬 기능만 남습니다.</string>
+    <string name="consent_toggle_do_not_sell_body">이 스위치는 미국 캘리포니아주 주민만을 위한 것입니다. 캘리포니아 개인정보보호법(CCPA/CPRA)은 주민에게 거부 권리를 부여합니다. 활성화하면 모든 선택적 클라우드 기능(AI, 백업, 음성 인식, 분석)이 비활성화되고 — 로컬 기능만 유지됩니다.\n\n캘리포니아 밖에 거주한다면 이 스위치를 무시해도 됩니다. Best Journal은 당신의 데이터를 전 세계 어디에서도 판매하거나 거래하지 않습니다.</string>
     <string name="consent_btn_accept_all">모두 수락</string>
     <string name="consent_btn_save_selection">내 선택 저장</string>
     <string name="consent_btn_minimum_only">모두 거부</string>
@@ -1377,12 +1377,10 @@ Premium: 하루 최대 150회.</string>
     <string name="settings_legal_section_header">법적 문서</string>
     <string name="settings_legal_online_label">온라인 버전:</string>
     <plurals name="datetime_months_relative">
-        <item quantity="one">vor %1$d Monat</item>
-        <item quantity="other">vor %1$d Monaten</item>
+        <item quantity="other">%1$d개월 전</item>
     </plurals>
     <plurals name="datetime_years_relative">
-        <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
+        <item quantity="other">%1$d년 전</item>
     </plurals>
     <string name="ai_limits_disclaimer">집중적인 사용을 위한 일일 AI 한도.</string>
     <string name="ai_limits_dialog_title">일일 AI 할당량은 어떻게 작동하나요?</string>
@@ -1451,4 +1449,5 @@ Premium: 하루 최대 150회.</string>
     <string name="settings_premium_cancelled_until">프리미엄 구독 취소됨 — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g>까지 이용 가능</string>
     <string name="settings_theme">테마</string>
     <string name="settings_themes_manager">테마 관리자</string>
+    <string name="paywall_monthly_note">이후 월 %1$s, 자동으로 갱신돼요\n언제든 해지할 수 있어요</string>
 </resources>

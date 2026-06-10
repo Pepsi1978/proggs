@@ -40,7 +40,7 @@
     <string name="journal_ai_improving">AI sedang memperbaiki teks, harap tunggu</string>
     <string name="journal_later">Nanti</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">Mulai dari %1$s per hari</string>
+    <string name="paywall_from_per_day">Langganan tahunan, %1$s per tahun</string>
     <string name="paywall_instead_per_month">Hemat %1$d%% vs. paket bulanan</string>
     <string name="paywall_or">atau</string>
     <string name="paywall_with_limited">dengan batas penggunaan.</string>
@@ -326,7 +326,7 @@
 
     <!-- Profile long descriptions (settings) -->
     <string name="profile_summary_long">Entrimu dirangkum netral, tanpa penilaian atau saran.\n\nKamu melihat sekaligus:\n\n• Apa yang sedang menyibukkanmu\n• Pola apa yang berulang\n• Bagaimana hidupmu berkembang\n\nSempurna sebagai gambaran harian semua yang terjadi di hidupmu.</string>
-    <string name="profile_entropy_long">AI mencari stres, beban, dan kekacauan dalam catatanmu secara spesifik.\n\nKamu akan mendapatkan:\n\n\u2022 Analisis sumber beban terbesar\n\u2022 5 langkah konkret untuk membereskan segalanya\n\u2022 Tips yang bisa membantu dalam keseharianmu\n\nIdeal jika kamu merasa semuanya terasa terlalu berat saat ini.</string>
+    <string name="profile_entropy_long">AI menemukan apa yang membebanimu dalam keseharian, lalu menatanya. Kamu mendapat gambaran sumber beban terbesarmu dan 5 langkah bersih-bersih yang konkret. Ideal jika kamu ingin merebut kembali gambaran besarnya.</string>
     <string name="profile_insight_long">AI melihat lebih dalam dari sekadar peristiwa. AI mengenali dalam catatanmu:\n\n\u2022 Pola pikir dan keyakinan dalam kata-katamu\n\u2022 Perasaan dan reaksi yang berulang\n\u2022 Kekuatan yang terlihat dalam catatanmu\n\u2022 Nilai-nilai yang mendorong tindakanmu\n\nUntuk semua orang yang ingin memahami diri sendiri lebih baik dan berkembang secara batin.</string>
     <string name="profile_goals_long">AI menemukan semua target, keinginan, dan rencana di entrimu, bahkan yang disebut sekilas.\n\nKamu melihat:\n\n• Target apa saja yang kamu punya (termasuk yang tersembunyi)\n• Kamu sudah sampai mana di setiap target\n• Langkah berikutnya bisa apa\n\nPelacak target pribadi yang membaca dari kata-katamu sendiri.</string>
     <string name="profile_custom_long">Kamu yang menentukan apa yang harus diperhatikan AI.\n\nTulis fokus analisismu, contohnya:\n\n• «Temukan semua sebutan olahraga»\n• «Analisis naik-turun suasana hatiku»\n• «Tunjukkan kapan aku paling produktif»\n\nKontrol penuh untuk yang tahu persis apa yang dicari.</string>
@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI memperbaiki entri kamu sesuai permintaan.</string>
     <string name="settings_premium_feature_dashboard">Analisis dashboard harian</string>
     <string name="settings_premium_feature_dashboard_desc">Dasbor kamu berkembang bersama entri-entrimu.</string>
-    <string name="settings_premium_feature_5_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
+    <string name="settings_premium_feature_5_perspectives">Semua 4 profil AI bawaan + sebanyak yang kamu butuhkan sendiri</string>
     <string name="settings_premium_feature_5_perspectives_desc">Dari ringkasan hingga pengenalan diri</string>
     <string name="settings_premium_feature_reviews">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="settings_premium_feature_reviews_desc">AI menceritakan kisahmu</string>
@@ -430,7 +430,7 @@
     <string name="settings_premium_feature_pdf_desc">Entri bergambar sebagai dokumen</string>
     <string name="settings_premium_feature_voice">Pengenalan suara lebih akurat</string>
     <string name="settings_premium_feature_voice_desc">Kualitas lebih tinggi untuk entri suaramu</string>
-    <string name="settings_premium_feature_profiles">Profil khusus tanpa batas</string>
+    <string name="settings_premium_feature_profiles">Profil AI sendiri tanpa batas jumlah</string>
     <string name="settings_premium_feature_profiles_desc">Beberapa fokus analisis berdampingan</string>
     <string name="settings_unlock_premium">Buka Premium</string>
     <!-- Export dialog -->
@@ -452,7 +452,7 @@
     <string name="settings_feedback_send">Kirim masukan</string>
     <string name="settings_feedback_sent">Terkirim</string>
     <string name="settings_feedback_dialog_title">Kirim masukan</string>
-    <string name="settings_feedback_dialog_desc">Pesanmu ke pengembang, kami baca semua dan balas pribadi!</string>
+    <string name="settings_feedback_dialog_desc">Pesanmu untuk para pengembang — kami membaca setiap pesan dan membalas secepat mungkin.</string>
     <string name="settings_feedback_placeholder">Tulis masukanmu di sini…</string>
     <string name="settings_feedback_sending">Mengirim…</string>
     <string name="settings_feedback_sign_in_first">Silakan masuk dengan Google dulu</string>
@@ -546,11 +546,11 @@
     <!-- Final response-language instruction appended to every AI prompt. -->
     <string name="ai_prompt_response_language">BAHASA JAWABAN: Jawab sepenuhnya dalam bahasa Indonesia. Semua teks dan judul harus dalam bahasa Indonesia, tanpa bahasa lain.</string>
 
-    <string name="ai_prompt_no_dates_rule">ATURAN TTS: Jangan tulis tanggal, angka, atau kode teknis dalam teks yang terlihat. Ganti dengan: \"baru-baru ini\", \"minggu ini\", \"kemarin\".</string>
-    <string name="ai_prompt_rerank_system">Kamu adalah sistem pemeringkat ulang yang presisi. Kamu menerima fokus profil pengguna, 5 tindakan utama saat ini, dan entri jurnal sebagai sumber. Tugasmu: ganti maksimal 2 tindakan yang paling tidak relevan dengan profil dengan tindakan yang lebih kuat dari profil dari entri jurnal. Kembalikan tepat 5 tindakan sebagai array JSON. Pertahankan format persis seperti input.</string>
-    <string name="ai_prompt_rerank_user_focus_header">=== PROFIL-FOKUS DES BENUTZERS ===</string>
-    <string name="ai_prompt_rerank_actions_header">=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===</string>
-    <string name="ai_prompt_rerank_entries_header">=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===</string>
+    <string name="ai_prompt_no_dates_rule">RAMAH DIBACAKAN TTS (WAJIB — LARANGAN TANGGAL DALAM TEKS YANG TERLIHAT):\nDi SEMUA bidang teks yang terlihat (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) kamu TIDAK BOLEH menggunakan tanggal — baik \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\" maupun \"entri tertanggal 3 April\", \"pada 23.04.\", \"dari 28.4.\" atau rujukan serupa pada tanggal entri yang konkret. Teks ini dibacakan kepada pengguna — rentetan tanggal terdengar tidak alami saat dibacakan dan memutus alur wawasan.\n\nALIH-ALIH, RUMUSKAN WAWASAN MURNINYA:\n- SALAH: \"Entri dari 3.4., 28.4., dan 23.4. membuktikan bahwa bioritmemu terganggu oleh waktu tidur yang terlambat.\"\n- BENAR: \"Waktu tidur yang terlambat menghancurkan bioritmemu secara sistematis.\"\n- SALAH: \"Entri dari tanggal 30 menunjukkan kotak masukmu meluap sejak 28.4. dan merampas waktumu.\"\n- BENAR: \"Kotak masukmu meluap sejak berhari-hari dan merampas waktumu.\"\n- SALAH: \"Kamu merasa lebih punya gambaran dalam keseharian sejak aksi bersih-bersih pada 24.04.\"\n- BENAR: \"Gerak memberimu gambaran yang terasa lebih jelas dalam keseharian.\"\n\nWawasan isinya tetap — hanya rujukan tanggal konkret yang ditiadakan. Kamu tetap boleh memakai rujukan waktu umum (\"berulang\", \"terakhir\", \"selama beberapa hari\"). Tanggal HANYA boleh ada di bidang \"herleitung\" (provenansi, digunakan internal, tidak ditampilkan).</string>
+    <string name="ai_prompt_rerank_system">Kamu adalah Profile Re-Ranker. Kamu menerima sebuah array JSON berisi 5 tindakan utama dari analisis dasbor, fokus profil pengguna, dan entri buku harian asli.\n\nTugasmu dalam 3 langkah:\n1) Urutkan ke-5 tindakan agar yang punya kaitan paling jelas dengan fokus profil muncul lebih dulu.\n2) Periksa apakah hingga 2 dari 5 tindakan TIDAK punya kaitan isi dengan fokus profil. Jika ya, ganti dengan tindakan yang lebih kuat secara profil, yang kamu turunkan dari entri buku harian. Patuhi struktur JSON yang sama untuk setiap tindakan (titel, beschreibung, erklaerung).\n3) Ungkapkan kaitan profil secara BERVARIASI dengan sinonim dan kedekatan tematik, BUKAN dengan pengulangan kata profil secara mekanis. Kaitan harus terasa, bukan harfiah.\n\nPENTING:\n- Kembalikan PERSIS 5 entri di akhir.\n- Ubah hanya jika kaitan profil yang nyata tidak ada — jika kecocokannya sudah baik, cukup urutkan array, jangan ganti apa pun.\n- Pertahankan struktur JSON tiap entri (kunci yang sama: titel, beschreibung, erklaerung).\n- Bahasa Indonesia, tanpa tanda pisah, beschreibung 13-21 kata.\n- JANGAN memberikan diagnosis atau saran mengikat soal medis, hukum, atau keuangan; untuk topik semacam itu, arahkan secara netral ke tenaga ahli.\n\nRAMAH DIBACAKAN TTS (WAJIB — LARANGAN TANGGAL):\nDi beschreibung dan erklaerung JANGAN gunakan tanggal (\"3.4.\", \"23.04.\", \"entri dari tanggal 30\"). Teks ini dibacakan — rentetan tanggal terdengar tidak alami. Rumuskan wawasan murninya tanpa tanggal entri konkret. Contoh:\n- SALAH: \"Entri dari 3.4. dan 23.04. membuktikan bahwa bioritmemu terganggu.\"\n- BENAR: \"Waktu tidur yang terlambat menghancurkan bioritmemu secara sistematis.\"\nRujukan waktu umum diperbolehkan (\"berulang\", \"terakhir\", \"selama beberapa hari\"), tanggal tidak.\n\nFORMAT KELUARAN:\n- HANYA sebuah array JSON (tanda kurung siku di level akar).\n- Tanpa backtick Markdown, tanpa teks sebelum/sesudah.\n- Mulai langsung dengan [ dan akhiri dengan ].</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== FOKUS PROFIL PENGGUNA ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== ARRAY TINDAKAN UTAMA SAAT INI (5 entri) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ENTRI BUKU HARIAN (sumber untuk poin pengganti yang kuat secara profil) ===</string>
     <string name="ai_prompt_rerank_instruction">Peringkat ulang dan ganti maksimal 2 item yang paling tidak relevan dengan profil. Kembalikan 5 item sebagai array JSON.</string>
     <string name="retro_month_more_entries">(+ %1$d entri lainnya)</string>
     <string name="retro_month_entries_header">Entri bulan ini</string>
@@ -650,13 +650,13 @@
     <string name="ai_prompt_goals_intro">Kamu adalah analis target dan pelacak kemajuan yang penuh perhatian dan memotivasi.\n\nTUGASMU:\nAnalisis entri pengguna. Kenali semua target, keinginan, rencana, dan ide, termasuk yang disebut sekilas. Lacak kemajuan melintasi beberapa entri. Buat dasbor target terstruktur dalam JSON.</string>
     <string name="ai_prompt_goals_definition">DEFINISI, apa itu target:\nSegalanya yang ingin dicapai, diubah, dimulai, diakhiri, diperbaiki, atau dibangun pengguna. Petunjuk tidak langsung juga dihitung:\n- Langsung: «Aku mau turunkan berat badan», «Aku harus telepon dokter gigi»\n- Tidak langsung: «Andai bisa lari lagi» = target kebugaran\n- Keluhan: «Tidurku buruk» = target tersirat perbaikan tidur\n- Mimpi: «Suatu hari ingin ke Swedia» = target perjalanan jangka panjang</string>
     <string name="ai_prompt_goals_entry_rules">ATURAN TERTINGGI, tidak boleh ada entri terlewat:\nKamu akan menerima entri bernomor (misal «ENTRI 1 dari 5»).\nHarus membaca, menganalisis, dan menyertakan setiap entri.\n\nJika entri sedikit:\n- 1-2 entri: Kenali target individual, nilai kemajuan «tidak diketahui».\n- 3+ entri: Lacak kemajuan aktif dan kenali pola.</string>
-    <string name="ai_prompt_goals_rules">ATURAN BAHASA:\n- %1$s\n- Memotivasi dan jujur, rayakan kemajuan, jangan menutupi.\n- Tanpa tanda pisah panjang (—). Pakai koma atau titik.\n\nATURAN KUANTITAS, setiap target berarti:\nKenali semua target, sekalipun kecil. Jangan digabung.</string>
+    <string name="ai_prompt_goals_rules">ATURAN BAHASA:\n- %1$s\n- Memotivasi dan jujur, rayakan kemajuan, jangan memperhalus apa pun.\n- Tanpa tanda pisah panjang (—). Gunakan koma atau titik.\n- Pada tujuan kesehatan atau tubuh, kamu hanya mendampingi secara memotivasi; JANGAN memberikan rekomendasi diet, obat, atau terapi.\n\nATURAN JUMLAH, SETIAP TUJUAN BERARTI:\nKenali SEMUA tujuan — termasuk yang kecil. JANGAN merangkum.</string>
     <string name="ai_prompt_goals_schema">STRUKTUR JSON:\n{\n  \"analisis_menyeluruh\": \"...\",\n  \"tindakan_utama\": [...],\n  \"kategori\": [...]\n}\n\n1) \"analisis_menyeluruh\" (15-25 kalimat): Sebut setiap target, kenali kemajuan.\n\n2) \"tindakan_utama\" (tepat 5): Langkah berikutnya.\n   { \"judul\": \"...\", \"deskripsi\": \"13-21 kata\", \"penjelasan\": \"5-8 kalimat\" }\n\n3) \"kategori\": Bidang target.\n   {\n     \"nama\": \"maks 12 karakter\", \"ikon\": \"material_icon\", \"warna\": \"#HEX\",\n     \"level_entropi\": 0.0, \"ringkasan\": \"3-5 kalimat\",\n     \"saran\": [{\n       \"judul\": \"...\",\n       \"deskripsi\": \"13-21 kata. Status: [terbuka/berjalan/terhambat/tercapai]. Langkah berikutnya: [...].\",\n       \"prioritas\": \"tinggi|sedang|rendah\",\n       \"keterkaitan\": \"...\", \"penurunan\": [{\"tanggal\":\"...\",\"ringkasan\":\"...\"}]\n     }]\n   }\n   Bidang: Kebugaran, Kesehatan, Kerja, Karier, Keuangan, Hubungan, Proyek, Belajar, Tidur, Psike, Perjalanan, Keteraturan, Kreativitas\n   Prioritas: tinggi=terhambat, sedang=terbuka, rendah=berjalan/tercapai</string>
     <string name="ai_prompt_goals_output">FORMAT: JSON saja. Tanpa backticks. Mulai dengan {.</string>
 
     <!-- Self-Insight Analysis System Prompt -->
     <string name="ai_prompt_insight_intro">Kamu adalah analis pola pengembangan pribadi yang empatik dan bernuansa dalam.\n\nTUGASMU:\nAnalisis entri pengguna. Temukan pola tersembunyi, cara berpikir dan bertindak yang berulang, keyakinan tak sadar, pola reaksi emosional, dan kekuatan pribadi. Perlihatkan kepada pengguna yang mungkin tak disadarinya saat menulis. Buat dasbor pengenalan diri terstruktur dalam JSON.</string>
-    <string name="ai_prompt_insight_attitude">SIKAPMU:\nKamu cermin yang bersahabat. Kamu tunjukkan dengan jujur apa yang kau lihat di entri, tujuan selalu agar pengguna bisa tumbuh. Setiap wawasan membantu ia memahami diri lebih baik. Pola sulit kau sebut dengan jelas tapi konstruktif tanpa menghakimi. Fokus: Apa yang pengguna pelajari tentang dirinya dari kata-katanya sendiri?\n\nYANG DICARI:\n- Perasaan berulang\n- Pola pikir: bagaimana pengguna memandang diri, orang lain, dunia\n- Pola penghindaran: apa yang ia hindari, tak pernah tulis\n- Kekuatan yang tak ia sadari\n- Nilai yang mendorong tindakannya\n- Pemicu reaksi kuat positif maupun negatif\n- Kontradiksi: berkata satu, bertindak lain\n- Kebutuhan yang terpancar di antara baris\n- Tempat pandangannya berubah</string>
+    <string name="ai_prompt_insight_attitude">SIKAPMU:\nKamu adalah cermin yang baik hati. Kamu menunjukkan kepada pengguna secara jujur apa yang kamu kenali dalam entrinya — tapi selalu dengan tujuan agar ia bisa tumbuh darinya. Setiap wawasan harus membantunya memahami dirinya sendiri lebih baik. Pola yang sulit pun kamu sebut dengan jelas, tapi konstruktif dan tanpa menyalahkan. Fokus: Apa yang bisa dipelajari pengguna tentang dirinya dari kata-katanya sendiri?\n\nKamu TIDAK membuat diagnosis psikologis dan tidak menyebut gangguan atau penyakit. Kamu hanya menggambarkan pola yang dapat diamati dari kata-kata pengguna sendiri.\n\nYANG KAMU CARI:\n- Perasaan berulang: Emosi mana yang muncul lagi dan lagi?\n- Pola pikir: Bagaimana pengguna berpikir tentang dirinya, orang lain, dunia?\n- Pola penghindaran: Apa yang dihindari pengguna? Tentang apa ia tidak pernah menulis?\n- Kekuatan: Apa yang dilakukan pengguna dengan baik, meski ia sendiri tidak melihatnya?\n- Nilai: Apa yang benar-benar penting bagi pengguna (terlihat dari tindakan, bukan kata)?\n- Pemicu: Apa yang memicu reaksi kuat — baik positif maupun negatif?\n- Kontradiksi: Apakah pengguna mengatakan sesuatu, tapi bertindak berbeda?\n- Kebutuhan: Apa yang dibutuhkan pengguna, yang tersirat di antara baris?\n- Pertumbuhan: Di mana sudut pandang pengguna telah berubah?</string>
     <string name="ai_prompt_insight_entry_rules">ATURAN TERTINGGI, tidak boleh ada entri terlewat:\nKamu menerima entri bernomor.\nHarus membaca, menganalisis, menyertakan setiap entri.\nSebelum menjawab hitung: sudah semua entri saya pertimbangkan?\nJika terlewat tambahkan segera.\n\nJika entri sedikit:\n- 1-2 entri: sebut kesan pertama, bukan pola dalam.\n  Tandai wawasan sebagai «awal» di deskripsi.\n- 3+ entri: cari pola berulang dan hubungan mendalam aktif.\n\nPembobotan waktu:\nSetiap entri harus disertakan. Lacak perkembangan batin: apakah sikap berubah? Apakah tema sama muncul dalam cahaya baru? Apakah kepercayaan diri tumbuh atau ketidakpastian bertambah?</string>
     <string name="ai_prompt_insight_rules">ATURAN BAHASA (untuk SEMUA field teks JSON):\n- Sederhana, jelas. Kalimat pendek.\n- Tanpa kata asing, istilah teknis, atau frasa klise.\n- Siapa pun paham tanpa berpikir.\n- Empatik, jujur, konstruktif, tanpa menghakimi, tanpa menggurui.\n- Selalu lihat sisi positif.\n- Tanpa tanda pisah panjang (—).\n\nATURAN KUANTITAS, kelengkapan sebelum singkat:\nTotal wawasan lintas bidang minimal 15. Kurang dari 10 itu salah. Setiap pola, setiap jejak keyakinan, setiap emosi berulang pantas jadi wawasan tersendiri. Jangan gabung. Jika entri menunjukkan takut, bangga, hindar, buat 3 wawasan berbeda. JSON boleh panjang, kelengkapan lebih penting daripada singkat.</string>
     <string name="ai_prompt_insight_schema_header">STRUKTUR JSON:\n{\n  \"entropi_total\": 0.0,\n  \"tren\": \"tumbuh|stabil|menurun|tidak_diketahui\",\n  \"analisis_menyeluruh\": \"...\",\n  \"kemajuan\": [...],\n  \"tindakan_utama\": [...],\n  \"kategori\": [...]\n}\n\nDEFINISI FIELD:\n\n1) \"entropi_total\" (angka 0.0-1.0)\n   Seberapa dalam pengguna merefleksikan diri di entri?\n   - 0.0-0.33 = refleksi sedikit\n   - 0.34-0.66 = sebagian\n   - 0.67-1.0 = dalam\n\n2) \"tren\" (teks)\n   Hanya jika 3+ entri lintas hari.\n   - «tumbuh» = refleksi makin dalam\n   - «stabil» = level sama\n   - «menurun» = refleksi berkurang di entri baru\n   - «tidak_diketahui» = data tidak cukup\n\n3) \"analisis_menyeluruh\" (teks 15-25 kalimat)\n   - Baca entri per entri, temukan tema lebih dalam di baliknya.\n   - Apa yang entri secara keseluruhan katakan tentang pengguna?\n   - Pola apa dalam pikiran, perasaan, tindakan yang tampak?\n   - Kekuatan apa yang muncul tanpa ia sadari?\n   - Keyakinan tak sadar apa yang mengarahkan perilaku?\n   - Pertumbuhan pribadi terlihat di mana?\n   - Empatik dan pribadi, sapa pengguna langsung.\n   - Selalu konstruktif: kaitkan wawasan sulit dengan pelajaran.</string>
@@ -665,7 +665,7 @@
     <string name="ai_prompt_insight_output">ATURAN JUMLAH KATA (KETAT):\n«deskripsi» di «tindakan_utama» dan «saran» selalu 13-21 kata.\n- Kurang dari 13 = salah\n- Lebih dari 21 = salah\nHitung sebelum menulis. Setiap deskripsi satu kalimat padat utuh.\n\nFORMAT KELUARAN, aturan ketat:\n- Balas hanya dengan objek JSON.\n- Tanpa teks sebelum/sesudah.\n- Tanpa Markdown backticks.\n- Mulai langsung dengan { akhiri dengan }.\n- JSON valid tanpa koma hilang atau kunci ganda.</string>
 
     <!-- Entropy Analysis System Prompt -->
-    <string name="ai_prompt_entropy_intro">Kamu adalah penasihat hidup yang empatik dan sangat cerdas serta analis pola.\n\nTUGASMU:\nAnalisis entri pengguna. Temukan sumber stres, kekacauan, dan beban yang berulang. Buat dasbor saran terstruktur dalam JSON.\n\nYANG KITA CARI, beban pribadi:\nSegalanya yang menimbulkan kekacauan, stres, kehilangan energi, rasa sakit, masalah tidur, beban emosional, atau hilangnya kendali.</string>
+    <string name="ai_prompt_entropy_intro">Kamu adalah analis keteraturan dan pola yang empatik, sangat cerdas, dan penuh perhatian.\n\nTUGASMU:\nAnalisis entri buku harian seorang pengguna. Temukan sumber stres, kekacauan, dan beban yang berulang. Buat dari itu sebuah dasbor saran terstruktur dalam format JSON.\n\nYANG KITA CARI — BEBAN PRIBADI:\nSegala hal yang menimbulkan kekacauan, stres, kehilangan energi, kewalahan, tekanan waktu, beban emosional, atau hilangnya kendali dalam hidup pengguna.\n\nKamu TIDAK memberikan saran medis, terapeutik, atau diagnostik. Untuk topik kesehatan, arahkan secara netral ke tenaga ahli.</string>
     <string name="ai_prompt_entropy_entry_rules">ATURAN TERTINGGI, tidak boleh ada entri terlewat:\nKamu menerima entri bernomor.\nHarus membaca, menganalisis, menyertakan setiap entri.\nSebelum menjawab hitung.\nJika terlewat tambahkan segera.\n\nJika entri sedikit:\n- 1-2 entri: pengamatan tunggal, bukan pola.\n  Tandai saran sebagai «awal».\n- 3+ entri: cari pola dan keterkaitan lintas entri.\n\nPembobotan waktu:\nSetiap entri harus disertakan. Jika pernyataan bertentangan dalam tema sama, perhatikan urutan waktu.</string>
     <string name="ai_prompt_entropy_rules">ATURAN BAHASA:\n- Sederhana, kalimat pendek.\n- Tanpa kata asing.\n- Empatik, langsung, konkret.\n- Tanpa tanda pisah panjang (—).\n\nLARANGAN KATA: Jangan pernah gunakan kata \"ENTROPI\" dalam teks yang terlihat pengguna. Ganti dengan sinonim deskriptif: \"struktur\", \"pola\", \"keseimbangan\", \"kejelasan\".\n\nATURAN KUANTITAS, kelengkapan sebelum singkat:\nTotal saran lintas kategori minimal 15. Kurang dari 10 salah. Setiap petunjuk, observasi, masalah pantas jadi saran tersendiri. Jangan gabung.</string>
     <string name="ai_prompt_entropy_schema_header">STRUKTUR JSON:\n{\n  \"entropi_total\": 0.0,\n  \"tren\": \"naik|stabil|turun|tidak_diketahui\",\n  \"analisis_menyeluruh\": \"...\",\n  \"kemajuan\": [...],\n  \"tindakan_utama\": [...],\n  \"kategori\": [...]\n}\n\nDEFINISI FIELD:\n\n1) \"entropi_total\" (angka 0.0-1.0)\n   Rata-rata berbobot dari level beban semua kategori.\n   - 0.0-0.33 = rendah (kondisi baik)\n   - 0.34-0.66 = sedang\n   - 0.67-1.0 = tinggi (disarankan segera bertindak)\n\n2) \"tren\" (teks)\n   Hanya jika 3+ entri.\n   - «turun» = beban berkurang\n   - «stabil» = tetap\n   - «naik» = beban bertambah\n   - «tidak_diketahui» = data tidak cukup\n\n3) \"analisis_menyeluruh\" (teks 15-25 kalimat)\n   - Baca entri per entri, ekstrak tema utama.\n   - Sebut setiap tema di setiap entri dengan nama.\n   - Kenali keterkaitan antar tema.\n   - Kenali juga kemajuan dan kekuatan, bukan hanya masalah.\n   - Empatik dan pribadi.</string>
@@ -684,9 +684,9 @@
 
     <!-- Custom Analysis System Prompt -->
     <!-- %1$s = user-defined focus text -->
-<string name="ai_prompt_custom_intro">Kamu adalah analis jurnal yang cerdas dan penuh perhatian.\n\nDUA LANGKAH:\n1. Baca semua entri secara menyeluruh.\n2. Analisis secara ketat berdasarkan fokus pengguna:\n%1$s\n\nATURAN INTI: Minimal 50%% dari semua konten (tindakan, kategori, analisis) harus berhubungan langsung dengan fokus ini. Buat dasbor terstruktur dalam JSON.</string>
+<string name="ai_prompt_custom_intro">Kamu adalah analis buku harian yang cerdas dan jeli SEKALIGUS pelaksana tugas.\n\nCARA KERJA DALAM DUA LANGKAH:\n\nLANGKAH 1 — MENYERAP KONTEKS:\nBaca dulu SEMUA entri buku harian pengguna secara lengkap. Pahami situasinya, polanya, temanya, hal-hal yang disebut, masalah, keinginan. Entri adalah KONTEKSmu, titik awalmu, dasarmu. Tapi entri tidak membatasimu.\n\nLANGKAH 2 — MENJALANKAN TUGAS:\n%1$s\n\nYang di atas adalah TUGASmu yang sebenarnya. Jalankan tugas ini berdasarkan konteks dari Langkah 1. Jika tugas meminta riset, ide, alternatif, saran, atau informasi baru, maka sajikan itu secara AKTIF, meski tidak muncul dalam entri. Jangan memberikan diagnosis atau saran mengikat soal medis, hukum, atau keuangan; untuk topik semacam itu, arahkan ke tenaga ahli. Entri memberi informasi pada hasilmu, bukan membatasinya.\n\nATURAN INTI — PROFIL MENANGGUNG SETIDAKNYA 50 PERSEN:\nSeluruh hasil (analisis keseluruhan, tindakan utama, kategori, saran, kemajuan) HARUS setidaknya 50 persen jelas terkait dengan tugas pengguna. Wawasan, poin, atau tema yang TIDAK punya kaitan isi dengan tugas, tinggalkan saja — jangan isi hasil dengan tema kehidupan umum hanya agar JSON penuh. Lebih baik sedikit poin dengan kaitan jelas daripada banyak yang generik.\n\nPenting soal bahasa: Ungkapkan kaitan itu secara BERVARIASI. Gunakan sinonim, istilah terkait, kedekatan tematik, dan parafrasa. JANGAN mengulang kata-kata persis dari tugas secara mekanis — itu terasa memaksa. Contoh tugas \"Tujuan\": bicarakan juga rencana, keinginan, ambisi, hal yang ingin kamu capai, arahmu, langkah perkembangan. Contoh tugas \"Olahraga\": bicarakan juga gerak, latihan, aktivitas fisik, daya tahan, kebugaran, kesehatan. Kaitan profil harus TERASA, bukan harfiah.\n\nYANG MENENTUKAN:\n- Jika tugas berbunyi \"analisis\", \"rangkum\", \"apa yang menonjol\" — tetaplah dekat dengan entri.\n- Jika tugas berbunyi \"riset\", \"cari alternatif\", \"sarankan\", \"rekomendasikan\", \"lengkapi\", \"bagaimana jika\", \"ide baru\" — melangkahlah secara AKTIF melampaui entri dan bawa isi baru milikmu sendiri.\n- Tugas yang diutamakan. Entri adalah fondasi, bukan tembok.</string>
     <string name="ai_prompt_custom_headings">PENTING, JUDUL DINAMIS:\nKamu harus membuat 3 judul yang tepat cocok dengan fokus pengguna. Judul umum seperti «Hasil utama» atau «Analisis» tidak diperbolehkan.\nContoh:\n- Fokus «Memancing»: «Tangkapan terbesar», «Gambaran memancing», «Semua catatan»\n- Fokus «Kualitas tidur»: «Pola tidurmu», «Analisis tidur», «Semua pengamatan»\n- Fokus «Terlalu banyak komitmen»: «Pencuri waktu terbesar», «Gambaran beban», «Semua titik beban»</string>
-    <string name="ai_prompt_custom_rules">ATURAN TERTINGGI, tidak boleh ada entri terlewat:\nEntri bernomor. Baca dan sertakan setiap entri.\n\nATURAN KONTEKS: Entri dari hari yang tidak relevan tetap harus dipertimbangkan — mungkin mengandung sinyal lemah yang relevan.\n\nATURAN TUGAS: Fokus pengguna adalah konteks utama analisis. Semua yang tidak terkait tetap boleh muncul, tapi lebih singkat.\n\nPEMBEDAAN: Bedakan antara \"terkait fokus\" dan \"tidak terkait fokus\". Jangan campur keduanya dalam satu item.\n\nATURAN BAHASA DAN KUANTITAS:\n- Sederhana, tanpa kata asing.\n- Empatik dan langsung.\n- Tanpa tanda pisah panjang (—).\n- Minimal 10 wawasan. Setiap aspek pantas jadi wawasan tersendiri.</string>
+    <string name="ai_prompt_custom_rules">ATURAN KONTEKS — SETIAP ENTRI DIBACA:\nKamu menerima entri bernomor. Baca SETIAP SATU secara lengkap dan serap sebagai konteks. Setiap detail relevan mengalir ke hasilmu. Tapi: hasil boleh dan harus melampaui entri jika tugas menuntutnya.\n\nATURAN TUGAS — TUGAS DIPENUHI:\nJalankan tugas pengguna secara harfiah. Jika tugas menanyakan alternatif, sajikan alternatif baru yang nyata, bukan hanya hal dari entri. Jika tugas meminta rekomendasi, riset dan rekomendasikan secara aktif. Entri BUKAN satu-satunya sumber jawabanmu.\n\nPEMBEDAAN DALAM HASIL:\nTandai dengan jelas mana yang berasal dari entri dan mana yang kamu tambahkan baru. Dengan begitu pengguna tahu mana pikirannya sendiri dan mana kontribusimu.\n\nATURAN KONSULTASI AHLI — TANPA DIAGNOSIS:\nTERLEPAS dari tugas, kamu TIDAK memberikan diagnosis medis, rekomendasi terapi, atau nasihat hukum maupun keuangan. Untuk topik semacam itu, arahkan secara netral ke tenaga ahli yang berkualitas.\n\nATURAN BAHASA:\n- Sederhana, jelas. Tanpa kata asing.\n- Empatik dan langsung.\n- Tanpa tanda pisah panjang (—). Gunakan koma atau titik.\n\nATURAN JUMLAH:\nSetidaknya 10 wawasan total — tapi tiap satu harus cocok dengan tugas secara isi. Jika kamu tidak menemukan 10 wawasan dengan kaitan profil yang nyata, lebih baik sajikan 7 yang kuat daripada 10 yang encer. Untuk tugas analisis murni, wawasan berasal dari entri; untuk tugas kreatif, kamu boleh membawa isi baru.</string>
     <string name="ai_prompt_custom_schema">STRUKTUR JSON:\n{\n  \"ueberschrift_top5\": \"Judul kreatif untuk 5 teratas (sesuai fokus, maks 3 kata)\",\n  \"ueberschrift_analyse\": \"Judul kreatif untuk ikhtisar (maks 3 kata)\",\n  \"ueberschrift_ergebnisse\": \"Judul kreatif untuk semua hasil (maks 3 kata)\",\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"naik|stabil|turun|tidak_diketahui\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) «ueberschrift_top5/analyse/ergebnisse»: WAJIB. Kreatif, spesifik, maks 3 kata. Harus cocok dengan fokus.\n\n2) «gesamt_entropie» (0.0-1.0): Seberapa kuat bidang fokus hadir?\n\n3) «trend»: Hanya 3+ entri. Apakah bidang fokus berubah?\n\n4) «gesamtanalyse» (15-25 kalimat): Apa yang entri katakan tentang bidang fokus?\n\n5) «fortschritte» (0-5): Pola atau perkembangan di bidang fokus.\n   {\n     \"judul\": \"maks 5 kata\",\n     \"deskripsi\": \"2-3 kalimat\",\n     \"fokus_kern\": \"1 kalimat inti terkait fokus\",\n     \"fokus_zitate\": [\"kutipan relevan dari entri\"],\n     \"herleitung\": \"cara item ini diturunkan dari entri\",\n     \"referensi\": \"1 kalimat\"\n   }\n\n6) «top_massnahmen» (tepat 5): Wawasan paling penting di bidang fokus.\n   {\n     \"judul\": \"maks 6 kata\",\n     \"deskripsi\": \"13-21 kata, padat dan tajam.\",\n     \"fokus_kern\": \"1 kalimat inti terkait fokus\",\n     \"fokus_zitate\": [\"kutipan relevan dari entri\"],\n     \"herleitung\": \"cara item ini diturunkan dari entri\",\n     \"penjelasan\": \"5-8 kalimat rinci.\"\n   }\n\n7) «kategorien»: Grup tema yang cocok dengan fokus (dinamis).\n   {\n     \"nama\": \"maks 12 karakter\", \"ikon\": \"material_icon_name\", \"warna\": \"#HEX\",\n     \"level_entropi\": 0.0,\n     \"ringkasan\": \"3-5 kalimat\",\n     \"saran\": [{\n       \"judul\": \"maks 6 kata\",\n       \"deskripsi\": \"13-21 kata\",\n       \"prioritas\": \"tinggi|sedang|rendah\",\n       \"keterkaitan\": \"keterkaitan dengan tema lain atau null\",\n       \"penurunan\": [{\"tanggal\":\"...\",\"ringkasan\":\"1-2 kalimat\"}]\n     }]\n   }</string>
     <string name="ai_prompt_custom_output">ATURAN KATA: «deskripsi» di tindakan_utama dan saran selalu 13-21 kata.\n\nFORMAT KELUARAN, aturan ketat:\n- Hanya JSON.\n- Tanpa teks di luar. Tanpa backticks.\n- Mulai dengan { akhiri dengan }.</string>
 
@@ -758,7 +758,7 @@
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">Tinjauan pribadimu</string>
     <string name="retro_premium_reviews_desc">Dengan Premium AI membuat tinjauan otomatis dari entrimu:</string>
-    <string name="retro_benefit_weekly">Tinjauan mingguan tanpa batas, bukan hanya 2 minggu pertama</string>
+    <string name="retro_benefit_weekly">Semua tinjauan mingguan, bukan hanya 2 yang pertama – dalam rangka kuota AI harianmu</string>
     <string name="retro_benefit_monthly">Tinjauan bulanan menunjukkan kemajuan dan perubahan</string>
     <string name="retro_benefit_yearly">Tinjauan tahunan mengubah tahunmu jadi kisah pribadi</string>
     <string name="retro_start_sub">Mulai langganan</string>
@@ -784,7 +784,7 @@
     <string name="onboarding_welcome">Selamat datang di\nBest Journal</string>
     <string name="onboarding_subtitle">Jurnal AI pribadimu\nuntuk lebih jernih dalam keseharian</string>
     <string name="onboarding_feature_speech">Bicara atau tulis, AI memahami keduanya</string>
-    <string name="onboarding_feature_secure">Datamu tetap di tanganmu, terenkripsi dan aman</string>
+    <string name="onboarding_feature_secure">Entrimu tetap di perangkat; permintaan AI dikirim secara terenkripsi</string>
     <string name="onboarding_goals_title">Apa yang ingin kamu capai\ndengan jurnal AI?</string>
     <string name="onboarding_goal_stress">Mengurangi stres</string>
     <string name="onboarding_goal_clarity">Menemukan kejernihan</string>
@@ -803,7 +803,7 @@
     <string name="onboarding_premium_feature_dashboard">Pembaruan otomatis dasbor setiap entri baru</string>
     <string name="onboarding_premium_feature_retro">Tinjauan mingguan, bulanan, dan tahunan menunjukkan perkembanganmu</string>
     <string name="onboarding_premium_feature_patterns">Buat pola terlihat: AI menampilkan pola pikir dan perasaan yang berulang dalam catatanmu</string>
-    <string name="onboarding_premium_feature_noads">Tanpa iklan, tulis dan renungkan dengan tenang</string>
+    <string name="onboarding_premium_feature_noads">Menulis dan merefleksi tanpa gangguan</string>
     <string name="onboarding_free_trial">Gratis, bisa dibatalkan kapan saja</string>
     <string name="onboarding_free_after_trial">Setelah itu kamu terus pakai Best Journal,\ngratis dengan batas AI per minggu.</string>
     <string name="onboarding_start_free">Mulai gratis</string>
@@ -850,14 +850,14 @@
     <string name="paywall_feature_dashboard">Pembaruan dasbor otomatis setelah setiap entri</string>
     <string name="paywall_feature_retro">Tinjauan mingguan, bulanan, dan tahunan dengan AI</string>
     <string name="paywall_feature_pdf">Ekspor entri bergambar sebagai PDF</string>
-    <string name="paywall_feature_noads">Bicara atau tulis dengan tenang, tanpa iklan</string>
-    <string name="paywall_feature_profiles">Profil analisis khusus tanpa batas</string>
+    <string name="paywall_feature_noads">Menulis dan merefleksi tanpa gangguan</string>
+    <string name="paywall_feature_profiles">Profil AI sendiri tanpa batas jumlah</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Lebih jernih dalam keseharian</string>
     <string name="paywall_headline_stress_sub">Kenali apa yang paling menyibukkan pikiranmu sehari-hari dan ungkapkan dengan tepat.</string>
     <string name="paywall_headline_clarity">Pahami dirimu lebih baik</string>
-    <string name="paywall_headline_clarity_sub">AI mengenali pola yang tersembunyi</string>
+    <string name="paywall_headline_clarity_sub">AI membuat pola berulang dalam entrimu terlihat</string>
     <string name="paywall_headline_growth">Temukan hal baik di setiap hari</string>
     <string name="paywall_headline_growth_sub">Ruang pribadimu untuk syukur dan pertumbuhan</string>
     <string name="paywall_headline_thoughts">Biarkan pikiranmu mengalir</string>
@@ -898,7 +898,7 @@
     <string name="churn_exclusive_offer">Penawaran untukmu</string>
     <string name="churn_offer_subtitle">Penawaran kami untukmu</string>
     <string name="churn_offer_feature_ai">Analisis AI harian</string>
-    <string name="churn_offer_feature_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
+    <string name="churn_offer_feature_perspectives">Semua 4 profil AI bawaan + sebanyak yang kamu butuhkan sendiri</string>
     <string name="churn_offer_feature_voice">Pengenalan suara Premium</string>
     <string name="churn_offer_auto_renew">Diperpanjang otomatis, bisa dibatalkan kapan saja</string>
     <string name="churn_accept_offer">Terima penawaran</string>
@@ -1123,7 +1123,7 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="consent_card1_body">Catatanmu tetap di perangkatmu.</string>
     <string name="consent_card2_title">Fitur AI (AS)</string>
     <string name="consent_card2_body">Secara opsional, teks dikirim ke Google Gemini dan teks untuk dibacakan ke Microsoft Edge di AS (EU-US Data Privacy Framework). Rekaman suara dikirim ke Groq (AS) berdasarkan Klausul Kontrak Standar (EU SCCs).</string>
-    <string name="consent_card3_title">Statistik anonim</string>
+    <string name="consent_card3_title">Statistik pseudonim</string>
     <string name="consent_card3_body">Firebase Analytics, opsional, bisa diubah kapan saja di pengaturan.</string>
     <string name="consent_links_header">Dokumen hukum kami:</string>
     <string name="consent_accept_all">Setuju dan mulai</string>
@@ -1131,7 +1131,7 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="consent_confirmation">Dengan menekan \"Setuju dan mulai\" kamu mengonfirmasi telah membaca kebijakan privasi, syarat penggunaan, dan keterangan hukum, dan menyetujui pemrosesan data yang dijelaskan. Kamu bisa mengubah keputusanmu kapan saja di pengaturan.</string>
 
     <string name="privacy_gate_groq_title">Kirim rekaman suara ke Groq?</string>
-    <string name="privacy_gate_groq_body">Untuk transkripsi cloud, rekaman suaramu dikirim terenkripsi ke Groq, Inc. (Mountain View, AS) dan diubah menjadi teks di sana. File audio dihapus setelah pemrosesan dan tidak dipakai untuk pelatihan.\n\nAlternatif: gunakan transkripsi lokal di perangkat (offline, tanpa transfer data), bisa diatur di Pengaturan → AI.</string>
+    <string name="privacy_gate_groq_body">Fungsi ini mengirim rekaman suaramu secara terenkripsi ke Groq (AS) dan mengubahnya menjadi teks di sana — lebih cepat dan lebih akurat daripada pengenalan lokal.\n\n✓ Rekaman langsung dihapus setelah diubah\n✓ Tanpa pelatihan AI dengan rekamanmu\n✓ Dasar hukum: Klausul Kontrak Standar (EU SCC)\n\nAlternatif: Pengenalan offline lokal di Pengaturan.</string>
     <string name="privacy_gate_groq_accept">Setuju dan kirim</string>
     <string name="privacy_gate_groq_local">Transkripsi lokal saja</string>
 
@@ -1140,26 +1140,26 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="privacy_gate_gemini_accept">Setuju dan kirim</string>
     <string name="privacy_gate_gemini_cancel">Batal</string>
 
-    <string name="privacy_gate_tts_title">Kirim teks ke Microsoft?</string>
-    <string name="privacy_gate_tts_body">Untuk pembacaan suara, teks dikirim terenkripsi ke Microsoft Bing Speech (AS) dan dikembalikan sebagai audio. Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar.</string>
+    <string name="privacy_gate_tts_title">Aktifkan suara Premium</string>
+    <string name="privacy_gate_tts_body">Dengan suara Premium, pembacaan terdengar lebih alami. Teksmu dikirim secara terenkripsi (HTTPS/TLS) ke layanan suara Microsoft di AS dan dikembalikan sebagai audio.\n\n✓ Transfer semata-mata untuk sintesis suara\n✓ Transfer ke negara ketiga AS (Microsoft tersertifikasi di bawah EU-US Data Privacy Framework)</string>
     <string name="privacy_gate_tts_accept">Setuju dan bacakan</string>
     <string name="privacy_gate_tts_cancel">Batal</string>
 
     <string name="settings_privacy_header">Privasi</string>
-    <string name="settings_analytics_title">Statistik anonim</string>
+    <string name="settings_analytics_title">Analisis penggunaan pseudonim</string>
     <string name="settings_analytics_subtitle">Firebase Analytics untuk analisis kesalahan dan peningkatan produk</string>
 
     <string name="settings_delete_account_title">Hapus akun dan data</string>
-    <string name="settings_delete_account_subtitle">Menghapus semua data lokal, akun Google, dan cadangan Drive secara permanen</string>
+    <string name="settings_delete_account_subtitle">Menghapus semua data lokal dan cadangan Drive secara permanen. Akun Google-mu sendiri tetap ada.</string>
     <string name="settings_delete_account_confirm_title">Hapus semua data aplikasi?</string>
-    <string name="settings_delete_account_confirm_body">Tindakan ini tidak bisa dibatalkan dan menghapus:\n\n• Semua catatan jurnal, foto, dan video lokal\n• Akun Firebase-mu\n• Cadangan aplikasi di Google Drive\n\nAplikasi akan memulai ulang sebagai instalasi baru.</string>
+    <string name="settings_delete_account_confirm_body">Tindakan ini tidak dapat dibatalkan dan menghapus:\n\n• Semua entri buku harian, foto, video, dan rekaman audio lokal\n• Cadangan Google Drive milik aplikasi (hanya data aplikasi, bukan akun Google-mu)\n• Login aplikasimu\n\nAkun Google-mu sendiri tetap ada. Setelah itu aplikasi mulai ulang sebagai instalasi baru.</string>
     <string name="settings_delete_account_cancel">Batal</string>
     <string name="settings_delete_account_confirm">Ya, hapus semua</string>
 
     <string name="settings_report_ai_title">Laporkan jawaban AI</string>
     <string name="settings_report_ai_subtitle">Keluaran AI yang tidak pantas atau salah</string>
     <string name="settings_report_ai_confirm_title">Buka email ke dukungan?</string>
-    <string name="settings_report_ai_confirm_body">Aplikasi emailmu terbuka dengan pesan siap kirim ke dev.app.support@gmail.com. Kamu bisa menambahkan deskripsi sebelum mengirim. Kami membalas dalam 24 jam pada hari kerja.\n\nLaporkan di sini: keluaran AI yang tidak pantas, menyinggung, salah, atau menyesatkan dari dasbor, ringkasan, retrospeksi, atau penyempurnaan teks.</string>
+    <string name="settings_report_ai_confirm_body">Program email-mu akan terbuka dengan pesan yang sudah disiapkan untuk dev.app.support@gmail.com. Kamu masih bisa melengkapi deskripsinya sebelum mengirim. Kami biasanya membalas dalam 24 jam pada hari kerja.\n\nGunakan ini untuk melaporkan: keluaran AI yang tidak pantas, menyinggung, salah, atau menyesatkan dari Dasbor, Ringkasan, Tinjauan, atau peningkatan teks.</string>
     <string name="settings_report_ai_confirm">Buat laporan</string>
     <string name="settings_report_ai_cancel">Batal</string>
     <string name="settings_report_ai_no_email">Aplikasi email tidak ditemukan. Kirim laporan ke dev.app.support@gmail.com.</string>
@@ -1169,9 +1169,9 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="settings_report_ai_dialog_desc">Jelaskan respons AI yang tidak pantas atau salah. Laporan Anda dikirim langsung ke tim dukungan kami. Anda harus masuk dengan akun Google Anda.</string>
 
     <string name="settings_revoke_title">Pembatalan kontrak</string>
-    <string name="settings_revoke_subtitle">Pembelian Premium</string>
-    <string name="settings_revoke_confirm_title">Buka email ke dukungan?</string>
-    <string name="settings_revoke_confirm_body">Aplikasi emailmu terbuka dengan pesan siap kirim ke dev.app.support@gmail.com. Kami membalas dalam 24 jam pada hari kerja.\n\nInformasi lengkap tentang hak pembatalan ada di syarat penggunaan (§ 16). Untuk langganan, batalkan juga lewat Google Play → Langganan.</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — Penarikan langsung lewat aplikasi</string>
+    <string name="settings_revoke_confirm_title">Tarik kontrak?</string>
+    <string name="settings_revoke_confirm_body">Dengan mengeklik „Konfirmasi penarikan", kami mengirim penarikanmu langsung ke dev.app.support@gmail.com. Kamu langsung menerima konfirmasi penerimaan melalui email.\n\nPetunjuk penarikan lengkap ada di Ketentuan Penggunaan (§ 16). Untuk langganan, harap batalkan juga melalui Google Play → Langganan agar tidak ada penagihan lebih lanjut.</string>
     <string name="settings_revoke_cancel">Batal</string>
     <string name="settings_revoke_confirm">Buat pembatalan</string>
     <string name="settings_revoke_no_email">Aplikasi email tidak ditemukan. Kirim pembatalan ke dev.app.support@gmail.com.</string>
@@ -1244,8 +1244,8 @@ Apa yang ingin kamu lakukan?</string>
     <string name="privacy_sheet_save">Simpan pilihan</string>
     <string name="privacy_sheet_all_on">Aktifkan semua</string>
     <string name="privacy_sheet_all_off">Nonaktifkan semua</string>
-    <string name="consent_toggle_analytics_title">Analisis penggunaan anonim</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — membantu kami meningkatkan aplikasi. Tidak ada konten pribadi, hanya jumlah ketukan anonim. Transfer data: Google AS (Data Privacy Framework).</string>
+    <string name="consent_toggle_analytics_title">Analisis penggunaan pseudonim</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — membantu kami meningkatkan aplikasi. Tanpa isi buku harian, hanya statistik penggunaan pseudonim (mis. jumlah klik). Transfer data: Google AS (Data Privacy Framework).</string>
     <string name="consent_toggle_groq_title">Ucapan-ke-teks (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">Memungkinkan dikte entri. Rekaman suaramu dikirim terenkripsi ke Groq (AS), diubah menjadi teks, lalu dihapus. Rekamanmu TIDAK digunakan untuk pelatihan.</string>
     <string name="consent_toggle_gemini_title">Refleksi AI (Google Gemini)</string>
@@ -1255,7 +1255,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="consent_toggle_drive_title">Cadangan Google Drive</string>
     <string name="consent_toggle_drive_body">Menyimpan entri terenkripsi di Google Drive milikmu sendiri. Kamu tetap memegang kendali penuh — file berada di akunmu, bukan di tempat kami.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">Opsi keluar California (CCPA/CPRA 2026). Jika aktif, semua pemrosesan data opsional dinonaktifkan — hanya fitur lokal yang tersisa.</string>
+    <string name="consent_toggle_do_not_sell_body">Sakelar ini hanya ditujukan untuk penduduk negara bagian California, AS. Undang-undang privasi California (CCPA/CPRA) memberi penduduk hak untuk menolak. Saat diaktifkan, semua fungsi cloud opsional (AI, cadangan, pengenalan suara, analisis) dinonaktifkan — hanya fungsi lokal yang tetap aktif.\n\nJika kamu tinggal di luar California, kamu bisa mengabaikan sakelar ini: Best Journal tidak menjual atau memasarkan datamu di mana pun di dunia.</string>
     <string name="consent_btn_accept_all">Terima semua</string>
     <string name="consent_btn_save_selection">Simpan pilihanku</string>
     <string name="consent_btn_minimum_only">Tolak semua</string>
@@ -1385,13 +1385,11 @@ Apa yang ingin kamu lakukan?</string>
     <string name="prompt_stop_button_label">Berhenti</string>
     <string name="settings_legal_section_header">Dokumen Hukum</string>
     <string name="settings_legal_online_label">Versi online:</string>
-    <plurals name="datetime_months_relative">
-        <item quantity="one">vor %1$d Monat</item>
-        <item quantity="other">vor %1$d Monaten</item>
+        <plurals name="datetime_months_relative">
+        <item quantity="other">%1$d bulan lalu</item>
     </plurals>
-    <plurals name="datetime_years_relative">
-        <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
+        <plurals name="datetime_years_relative">
+        <item quantity="other">%1$d tahun lalu</item>
     </plurals>
     <string name="ai_limits_disclaimer">Kuota AI harian untuk penggunaan intensif.</string>
     <string name="ai_limits_dialog_title">Bagaimana kuota AI harian bekerja?</string>
@@ -1418,4 +1416,5 @@ Apa yang ingin kamu lakukan?</string>
     <string name="settings_premium_cancelled_until">Langganan Premium dibatalkan — berlaku hingga <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Pengelola Tema</string>
+    <string name="paywall_monthly_note">Setelah itu %1$s per bulan, diperpanjang otomatis\nDapat dibatalkan kapan saja</string>
 </resources>
