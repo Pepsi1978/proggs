@@ -16,6 +16,7 @@ interface GroqApi {
         @Part file: MultipartBody.Part,
         @Part("model") model: RequestBody,
         @Part("language") language: RequestBody,
-        @Part("response_format") responseFormat: RequestBody
+        @Part("response_format") responseFormat: RequestBody,
+        @Part("temperature") temperature: RequestBody
     ): GroqTranscriptionResponse
 }
