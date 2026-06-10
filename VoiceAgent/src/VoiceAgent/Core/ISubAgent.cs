@@ -23,11 +23,18 @@ namespace VoiceAgent.Core
         bool CanHandle(string task);
 
         /// <summary>
+        /// Die generische Default-Rueckfrage. Benannt, damit der Hauptagent erkennt, wann ein
+        /// Helfer KEINE spezifische Frage liefert — dann darf er die Frage durch die VERSTANDENE
+        /// Rueckfrage des Verstehens-Schritts ersetzen (Read-back statt Rohtext-Echo, Almanach 1.3).
+        /// </summary>
+        const string GenericConfirmationQuestion = "Soll ich das fuer dich erledigen?";
+
+        /// <summary>
         /// Kurze, vorlesbare Verstaendnis-Rueckfrage, die der Hauptagent stellt, BEVOR der
         /// Unteragent die Aufgabe ausfuehrt (Manifest Abschnitt 6: erst zurueckfragen, dann tun).
         /// Default ist generisch; Unteragenten duerfen eine spezifischere Formulierung liefern.
         /// </summary>
-        string ConfirmationQuestion(string task) => "Soll ich das fuer dich erledigen?";
+        string ConfirmationQuestion(string task) => GenericConfirmationQuestion;
 
         /// <summary>
         /// Wenn true, macht der Unteragent seine Bestaetigung SELBST (mehrstufig, z.B. um erst den

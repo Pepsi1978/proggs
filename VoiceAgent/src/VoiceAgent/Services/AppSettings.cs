@@ -1,6 +1,20 @@
 namespace VoiceAgent.Services
 {
     /// <summary>
+    /// Anbieter + Modell fuer EINE Rolle des Hauptagenten (z. B. Verstehen, Agenten-Bau).
+    /// Leere Felder = die Rolle nutzt ihre eingebaute, sinnvolle Vorgabe
+    /// (siehe LlmProviderFactory.ResolveRole) — so bleiben alte settings.json gueltig.
+    /// </summary>
+    public sealed class ModelRoleSetting
+    {
+        public string Provider { get; set; } = string.Empty;   // "gemini" | "claude" | "openai" | "codex"
+        public string Model { get; set; } = string.Empty;
+
+        /// <summary>True, wenn beide Felder bewusst gesetzt sind (sonst greift die Vorgabe).</summary>
+        public bool IsSet => !string.IsNullOrWhiteSpace(Provider) && !string.IsNullOrWhiteSpace(Model);
+    }
+
+    /// <summary>
     /// Persistente Benutzer-Einstellungen des Hauptagenten. Wird als JSON unter
     /// %LOCALAPPDATA%\VoiceAgent\settings.json gespeichert. API-Schluessel liegen
     /// NICHT hier, sondern in ~/SK/VoiceAgent/keys.json (siehe Config).
@@ -75,6 +89,22 @@ namespace VoiceAgent.Services
         // Beschreibung (versteht freie Formulierungen), statt nur nach Stichwort. Faellt bei Fehler
         // oder fehlender Auswahl auf das bisherige Stichwort-Matching zurueck. Nutzt das IntentModel.
         public bool SubAgentRouting { get; set; } = true;
+
+        // ----- Tiefes Verstehen + Modelle pro Rolle (Boss-Agent-Ueberarbeitung Phase 1) -----
+        // Tiefes Verstehen: ein STARKES Modell (Brain-Rolle) versteht jede Aussage strukturiert
+        // (Intent, Ziel-Helfer, normalisierter Auftrag, Zeit, Rueckfrage) BEVOR geroutet wird.
+        // Ersetzt bei Erfolg den 3-Topf-IntentDetector; bei Fehler greift verlustfrei die alte Pipeline.
+        public bool DeepUnderstanding { get; set; } = true;
+
+        // Jede Rolle des Hauptagenten kann ein eigenes Gehirn bekommen (Frank stellt final ein).
+        // Leer = sinnvolle Vorgabe (LlmProviderFactory.ResolveRole): Builder->Codex (wenn angemeldet),
+        // Brain->starkes Modell (Codex/Claude, sonst Haupt-Gehirn), Endpoint/Intent->bisherige Werte.
+        // Die Sprechen-Rolle (gesprochene Antwort) bleibt LlmProvider/LlmModel oben.
+        public ModelRoleSetting RoleBrain { get; set; } = new();        // Verstehen/Orchestrieren
+        public ModelRoleSetting RoleBuilder { get; set; } = new();      // Agenten-Bau
+        public ModelRoleSetting RoleComputerUse { get; set; } = new();  // Befehls-Ableitung Computer Use
+        public ModelRoleSetting RoleEndpoint { get; set; } = new();     // FERTIG/WEITER-Endpunkt-Check
+        public ModelRoleSetting RoleIntent { get; set; } = new();       // Intent-Klassifikation + Helfer-Router
 
         // Computer Use: ob/wie der Agent den Rechner steuern darf (3 Stufen nach Hermes-Vorbild).
         // "off"  = aus (Default, sicher), "safe" = gefaehrliche Befehle erst nach gesprochenem "Ja",

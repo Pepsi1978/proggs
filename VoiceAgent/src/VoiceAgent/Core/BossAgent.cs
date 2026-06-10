@@ -127,8 +127,17 @@ namespace VoiceAgent.Core
         /// So nutzen HandleAsync (synchron) und HandleStreamingAsync (gestreamt) GENAU dieselbe
         /// Gate-Logik (Manifest Abschnitt 6).
         /// </summary>
-        private async Task<Route> DecideRouteAsync(string userText, IntentKind intent, CancellationToken ct)
+        private async Task<Route> DecideRouteAsync(string userText, IntentKind intent, Understanding? understanding, CancellationToken ct)
         {
+            // Verstandener Intent hat Vorrang: das Brain-Modell (Verstehens-Schritt) ist genauer
+            // als der 3-Topf-Detektor. Der alte Intent bleibt Fallback (funktionserhaltend).
+            if (understanding != null && understanding.Kind != IntentKind.Unknown && understanding.Kind != intent)
+            {
+                Probe.Decision("Verstehen ueberstimmt Intent", $"{intent} -> {understanding.Kind}",
+                    new { confidence = understanding.Confidence });
+                intent = understanding.Kind;
+            }
+
             // 0) Wartet ein selbst-bestaetigender Unteragent (z.B. Computer Use) auf eine Folge-Antwort?
             //    Dann geht die Eingabe direkt an ihn — egal ob als Aufgabe erkannt oder nicht.
             if (_awaitingFollowup != null)
@@ -142,8 +151,30 @@ namespace VoiceAgent.Core
             if (_pending != null)
             {
                 var decision = ConfirmationDetector.Interpret(userText);
-                Probe.Decision("Rueckfrage-Antwort", decision.ToString(), new { sub = _pending.Sub.Name });
-                switch (decision)
+
+                // Negation-mit-Korrektur (Almanach 5.5): "nein, mach es um 10 Uhr" ist KEIN Abbruch,
+                // sondern eine Korrektur — die alte Rueckfrage wird verworfen und die korrigierte
+                // Aussage unten NEU geroutet. Nur ein REINES Nein ("nein", "nein danke", "lass es")
+                // bricht ab. Das Wegwerfen der Korrektur war der belegte Killer-Bug im Transkript.
+                bool correction = decision == ConfirmationDetector.Decision.No
+                                  && !ConfirmationDetector.IsPureDecline(userText)
+                                  && intent == IntentKind.Task;
+                Probe.Decision("Rueckfrage-Antwort", correction ? "Korrektur" : decision.ToString(),
+                    new { sub = _pending.Sub.Name });
+
+                if (correction)
+                {
+                    Log.Info("CHECKPOINT Korrektur erkannt", new
+                    {
+                        step = "Negation mit Korrektur",
+                        intent = "Korrektur neu routen statt Aufgabe abbrechen",
+                        expected = "altes Pending verworfen, korrigierte Aufgabe geht in Schritt 2",
+                        sub = _pending.Sub.Name,
+                        ok = true
+                    });
+                    _pending = null;   // faellt unten in Schritt 2 (Neu-Routing der Korrektur)
+                }
+                else switch (decision)
                 {
                     case ConfirmationDetector.Decision.Yes:
                     {
@@ -164,38 +195,60 @@ namespace VoiceAgent.Core
                 }
             }
 
-            // 2) Neue Aufgabe erkannt -> zustaendigen Unteragenten finden (erst LLM-Router, dann Stichwort).
+            // 2) Neue Aufgabe erkannt -> zustaendigen Unteragenten finden.
+            //    Reihenfolge: Verstehens-Hint -> LLM-Router -> Stichwort (jede Stufe ist Fallback der vorigen).
             if (intent == IntentKind.Task && _subAgents != null && _subAgents.All.Count > 0)
             {
+                // Der normalisierte Auftrag des Verstehens-Schritts (korrigierte Worte, aufgeloeste
+                // Bezuege, explizite Zeit) wird geroutet UND ausgefuehrt — Rohtext bleibt Fallback.
+                var task = !string.IsNullOrWhiteSpace(understanding?.Auftrag) ? understanding!.Auftrag! : userText;
+
                 ISubAgent? sub = null;
 
-                if (_router != null)
+                if (!string.IsNullOrWhiteSpace(understanding?.ZielAgent))
                 {
-                    var name = await _router.RouteAsync(userText, _subAgents.All, ct).ConfigureAwait(false);
+                    sub = _subAgents.FindByName(understanding!.ZielAgent!);
+                    if (sub != null)
+                        Probe.Decision("Helfer-Wahl", "Verstehens-Schritt", new { sub = sub.Name });
+                    else
+                        Log.Warn($"BossAgent: Verstehens-Schritt nannte unbekannten Helfer '{understanding.ZielAgent}' — Router uebernimmt");
+                }
+
+                if (sub == null && _router != null)
+                {
+                    var name = await _router.RouteAsync(task, _subAgents.All, ct).ConfigureAwait(false);
                     if (name != null) sub = _subAgents.FindByName(name);
                 }
 
-                // Fallback (funktionserhaltend): Stichwort-Matching, wenn der Router nichts/keinen Treffer lieferte.
-                sub ??= _subAgents.Find(userText);
+                // Fallback (funktionserhaltend): Stichwort-Matching auf Auftrag UND Rohtext.
+                sub ??= _subAgents.Find(task) ?? _subAgents.Find(userText);
 
                 if (sub != null)
                 {
                     // Selbst-bestaetigende Helfer (z.B. Computer Use) ueberspringen das generische Gate
                     // und machen ihre Bestaetigung intern (erst Befehl ableiten, dann konkret zeigen).
                     if (sub.HandlesOwnConfirmation)
-                        return new Route(RouteKind.ExecuteConfirmed, sub, userText, null);
+                        return new Route(RouteKind.ExecuteConfirmed, sub, task, null);
 
                     string question;
-                    try { question = sub.ConfirmationQuestion(userText); }
+                    try { question = sub.ConfirmationQuestion(task); }
                     catch (Exception ex)
                     {
                         Log.Error($"BossAgent: ConfirmationQuestion von '{sub.Name}' warf — generische Rueckfrage", ex);
-                        question = "Soll ich das fuer dich erledigen?";
+                        question = ISubAgent.GenericConfirmationQuestion;
                     }
-                    _pending = new PendingAction(sub, userText);
+                    // Read-back aus dem VERSTANDENEN Intent (Almanach 1.3): liefert der Helfer nur die
+                    // generische Frage, nimmt der Boss die Rueckfrage des Verstehens-Schritts — die nennt
+                    // das Verstandene statt den Rohtext zu echoen. Spezifische Helfer-Fragen (z.B. die
+                    // Erinnerungs-Frage mit Uhrzeit) bleiben, denn sie entstehen aus dem normalisierten Auftrag.
+                    if (question == ISubAgent.GenericConfirmationQuestion
+                        && !string.IsNullOrWhiteSpace(understanding?.Rueckfrage))
+                        question = understanding!.Rueckfrage!;
+
+                    _pending = new PendingAction(sub, task);
                     Probe.Decision("Aufgabe", "Rueckfrage gestellt (noch nicht ausgefuehrt)", new { sub = sub.Name });
                     Log.Info($"BossAgent: Rueckfrage zu Unteragent '{sub.Name}' gestellt");
-                    return new Route(RouteKind.AskBack, sub, userText, question);
+                    return new Route(RouteKind.AskBack, sub, task, question);
                 }
             }
 
@@ -207,9 +260,13 @@ namespace VoiceAgent.Core
         /// Verarbeitet eine Eingabe und liefert die KOMPLETTE Antwort auf einmal (nicht gestreamt).
         /// Gleiche Gate-Logik wie HandleStreaming — fuer Aufrufer/Tests, die den Volltext brauchen.
         /// </summary>
-        public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
+        public Task<AgentReply> HandleAsync(string userText, IntentKind intent, CancellationToken ct = default)
+            => HandleAsync(userText, intent, null, ct);
+
+        /// <summary>Wie oben, zusaetzlich mit dem Ergebnis des Verstehens-Schritts (Brain-Modell).</summary>
+        public async Task<AgentReply> HandleAsync(string userText, IntentKind intent, Understanding? understanding, CancellationToken ct = default)
         {
-            var route = await DecideRouteAsync(userText, intent, ct).ConfigureAwait(false);
+            var route = await DecideRouteAsync(userText, intent, understanding, ct).ConfigureAwait(false);
             switch (route.Kind)
             {
                 case RouteKind.ExecuteConfirmed:
@@ -228,9 +285,13 @@ namespace VoiceAgent.Core
         /// Routing-Entscheidung (Rueckfrage/Delegation) ist synchron und steht sofort fest; nur die
         /// Selbstantwort des Hauptagenten wird — wenn der Provider es kann — tokenweise gestreamt.
         /// </summary>
-        public async Task<AgentStream> HandleStreamingAsync(string userText, IntentKind intent, CancellationToken ct = default)
+        public Task<AgentStream> HandleStreamingAsync(string userText, IntentKind intent, CancellationToken ct = default)
+            => HandleStreamingAsync(userText, intent, null, ct);
+
+        /// <summary>Wie oben, zusaetzlich mit dem Ergebnis des Verstehens-Schritts (Brain-Modell).</summary>
+        public async Task<AgentStream> HandleStreamingAsync(string userText, IntentKind intent, Understanding? understanding, CancellationToken ct = default)
         {
-            var route = await DecideRouteAsync(userText, intent, ct).ConfigureAwait(false);
+            var route = await DecideRouteAsync(userText, intent, understanding, ct).ConfigureAwait(false);
             return route.Kind switch
             {
                 RouteKind.ExecuteConfirmed =>

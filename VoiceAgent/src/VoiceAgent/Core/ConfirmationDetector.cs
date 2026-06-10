@@ -81,6 +81,30 @@ namespace VoiceAgent.Core
             return Decision.Unclear;
         }
 
+        // Fuellwoerter, die ein reines Nein begleiten duerfen, ohne dass es eine neue Anweisung wird.
+        private static readonly string[] FillerWords =
+        {
+            "danke", "schon", "mal", "jetzt", "bitte", "das", "es", "doch", "erstmal",
+            "lieber", "dann", "ach", "ok", "okay", "ne", "noe", "wirklich", "echt"
+        };
+
+        /// <summary>
+        /// True, wenn die Antwort ein REINES Nein ist (nur Ablehnungs- und Fuellwoerter, keine
+        /// neue Anweisung). Nur dann darf eine offene Aufgabe abgebrochen werden — "nein, mach es
+        /// um 10 Uhr" ist KEIN Abbruch, sondern eine Korrektur (Almanach orchestrator-agent 5.5).
+        /// Public static = isoliert testbar.
+        /// </summary>
+        public static bool IsPureDecline(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return true;
+            var norm = Normalize(text);
+            foreach (var p in NoPhrases) norm = norm.Replace(p, " ");
+            foreach (var t in norm.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                if (!NoWords.Contains(t) && !FillerWords.Contains(t))
+                    return false;   // es steckt mehr drin als ein Nein -> moegliche Korrektur
+            return true;
+        }
+
         /// <summary>Kleinschreibung, Satzzeichen weg (Umlaute bleiben), Mehrfach-Leerzeichen zusammen.</summary>
         private static string Normalize(string text)
         {

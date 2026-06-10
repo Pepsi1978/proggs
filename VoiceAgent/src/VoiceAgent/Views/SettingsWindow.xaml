@@ -191,13 +191,59 @@
                         <TextBlock Text="Gehirn (KI-Modell)" Style="{StaticResource PageTitle}"/>
                         <TextBlock Text="Welches Modell antwortet und wie sich der Assistent verhält." Style="{StaticResource PageSubtitle}"/>
 
-                        <TextBlock Text="Anbieter" Style="{StaticResource SectionFirst}"/>
+                        <TextBlock Text="Anbieter (Sprechen — die gesprochene Antwort)" Style="{StaticResource SectionFirst}"/>
                         <ComboBox x:Name="ProviderBox" MaxWidth="360" HorizontalAlignment="Left"
                                   SelectionChanged="ProviderBox_SelectionChanged"/>
                         <TextBlock Text="Modell-Bezeichnung (Liste passt sich dem Anbieter an)" Style="{StaticResource Label}"/>
                         <ComboBox x:Name="ModelBox" IsEditable="True" MaxWidth="460" HorizontalAlignment="Left"/>
-                        <TextBlock Text="Modell für Endpunkt-Check (FERTIG/WEITER — immer Gemini, günstig + schnell)" Style="{StaticResource Label}"/>
-                        <ComboBox x:Name="EndpointModelBox" IsEditable="True" MaxWidth="460" HorizontalAlignment="Left"/>
+
+                        <!-- Modelle pro Rolle: jede Aufgabe des Hauptagenten bekommt ihr eigenes Gehirn.
+                             Die Dropdowns zeigen die EFFEKTIV aufgeloesten Werte (Vorgaben), Frank stellt final ein. -->
+                        <TextBlock Text="Modelle pro Rolle" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Für jede Aufgabe des Hauptagenten ein eigenes Gehirn. Verstehen braucht ein starkes Modell, Sprechen ein schnelles."
+                                   Style="{StaticResource Label}"/>
+                        <CheckBox x:Name="DeepUnderstandingBox" Content="Tiefes Verstehen (strukturierter Verstehens-Schritt vor jeder Antwort)"
+                                  Margin="0,6,0,4"/>
+                        <Grid Margin="0,6,0,0" MaxWidth="640" HorizontalAlignment="Left">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="Anbieter" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" Margin="0,0,8,2"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Modell" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Verstehen &amp; Orchestrieren" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="1" Grid.Column="1" x:Name="BrainProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="1" Grid.Column="2" x:Name="BrainModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Agenten-Bau" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="2" Grid.Column="1" x:Name="BuilderProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="2" Grid.Column="2" x:Name="BuilderModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Computer-Steuerung" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="3" Grid.Column="1" x:Name="CuProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="3" Grid.Column="2" x:Name="CuModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Endpunkt-Check (FERTIG/WEITER)" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="4" Grid.Column="1" x:Name="EndpointProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="4" Grid.Column="2" x:Name="EndpointModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Intent &amp; Helfer-Wahl" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="5" Grid.Column="1" x:Name="IntentProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="5" Grid.Column="2" x:Name="IntentModelBox" IsEditable="True" Margin="0,0,0,6"/>
+                        </Grid>
 
                         <!-- Codex (OpenAI über ChatGPT-Abo, Anmeldung per Gerätecode wie bei Hermes).
                              Nur relevant, wenn oben als Anbieter "codex" gewählt ist. -->

@@ -70,7 +70,15 @@ namespace VoiceAgent.Views
                 if (ProviderBox.SelectedItem == null) ProviderBox.SelectedIndex = 0;
 
                 ModelBox.Text = _settings.LlmModel;
-                EndpointModelBox.Text = _settings.EndpointModel;
+
+                // Modelle pro Rolle: zeigt die EFFEKTIV aufgeloesten Werte (gesetzte Rolle oder Vorgabe),
+                // damit Frank immer sieht, welches Gehirn wo arbeitet — und es pro Rolle umstellen kann.
+                DeepUnderstandingBox.IsChecked = _settings.DeepUnderstanding;
+                PopulateRoleRow(BrainProviderBox, BrainModelBox, ModelRole.Brain);
+                PopulateRoleRow(BuilderProviderBox, BuilderModelBox, ModelRole.Builder);
+                PopulateRoleRow(CuProviderBox, CuModelBox, ModelRole.ComputerUse);
+                PopulateRoleRow(EndpointProviderBox, EndpointModelBox, ModelRole.Endpoint);
+                PopulateRoleRow(IntentProviderBox, IntentModelBox, ModelRole.Intent);
 
                 // Codex: Effort-Auswahl (volle Stufen) + Anmeldestatus.
                 CodexEffortBox.Items.Clear();
@@ -195,10 +203,32 @@ namespace VoiceAgent.Views
                 _settings.LlmModel = string.IsNullOrWhiteSpace(ModelBox.Text)
                     ? AppSettings.DefaultGeminiModel
                     : ModelBox.Text.Trim();
-                _settings.EndpointModel = string.IsNullOrWhiteSpace(EndpointModelBox.Text)
-                    ? AppSettings.DefaultGeminiModel
-                    : EndpointModelBox.Text.Trim();
                 _settings.CodexEffort = CodexProvider.NormalizeEffort(CodexEffortBox.SelectedItem as string);
+
+                // Modelle pro Rolle speichern. Die Legacy-Felder (EndpointModel/IntentModel) bleiben
+                // synchron, damit alte Fallback-Pfade konsistent sind (funktionserhaltend).
+                _settings.DeepUnderstanding = DeepUnderstandingBox.IsChecked == true;
+                _settings.RoleBrain = ReadRole(BrainProviderBox, BrainModelBox);
+                _settings.RoleBuilder = ReadRole(BuilderProviderBox, BuilderModelBox);
+                _settings.RoleComputerUse = ReadRole(CuProviderBox, CuModelBox);
+                _settings.RoleEndpoint = ReadRole(EndpointProviderBox, EndpointModelBox);
+                _settings.RoleIntent = ReadRole(IntentProviderBox, IntentModelBox);
+                if (_settings.RoleEndpoint.Provider == "gemini" && _settings.RoleEndpoint.IsSet)
+                    _settings.EndpointModel = _settings.RoleEndpoint.Model;
+                if (_settings.RoleIntent.Provider == "gemini" && _settings.RoleIntent.IsSet)
+                    _settings.IntentModel = _settings.RoleIntent.Model;
+                Log.Info("CHECKPOINT Modelle pro Rolle gespeichert", new
+                {
+                    step = "Rollen-Modelle speichern",
+                    intent = "jede Rolle bekommt das von Frank gewaehlte Gehirn",
+                    brain = $"{_settings.RoleBrain.Provider}/{_settings.RoleBrain.Model}",
+                    builder = $"{_settings.RoleBuilder.Provider}/{_settings.RoleBuilder.Model}",
+                    computerUse = $"{_settings.RoleComputerUse.Provider}/{_settings.RoleComputerUse.Model}",
+                    endpoint = $"{_settings.RoleEndpoint.Provider}/{_settings.RoleEndpoint.Model}",
+                    intentRole = $"{_settings.RoleIntent.Provider}/{_settings.RoleIntent.Model}",
+                    deepUnderstanding = _settings.DeepUnderstanding,
+                    ok = true
+                });
                 _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
 
                 _settings.SemanticEndpointing = SemanticEndpointBox.IsChecked == true;
@@ -348,12 +378,63 @@ namespace VoiceAgent.Views
             _ = FillMainModelsAsync(forceValid: true);
         }
 
-        /// <summary>Beim Oeffnen: beide Modell-Dropdowns live befuellen, gespeicherte Auswahl behalten.</summary>
+        /// <summary>Beim Oeffnen: alle Modell-Dropdowns live befuellen, gespeicherte Auswahl behalten.</summary>
         private async System.Threading.Tasks.Task InitModelDropdownsAsync()
         {
             await FillMainModelsAsync(forceValid: false).ConfigureAwait(true);
-            await FillEndpointModelsAsync().ConfigureAwait(true);
+            // Rollen-Zeilen nacheinander (schont die Anbieter-APIs; Fehler je Zeile unkritisch).
+            await FillRoleModelsAsync(BrainProviderBox, BrainModelBox, forceValid: false).ConfigureAwait(true);
+            await FillRoleModelsAsync(BuilderProviderBox, BuilderModelBox, forceValid: false).ConfigureAwait(true);
+            await FillRoleModelsAsync(CuProviderBox, CuModelBox, forceValid: false).ConfigureAwait(true);
+            await FillRoleModelsAsync(EndpointProviderBox, EndpointModelBox, forceValid: false).ConfigureAwait(true);
+            await FillRoleModelsAsync(IntentProviderBox, IntentModelBox, forceValid: false).ConfigureAwait(true);
         }
+
+        // ---------- Modelle pro Rolle (Boss-Agent-Ueberarbeitung Phase 1) ----------
+
+        private static readonly string[] Providers = { "gemini", "claude", "openai", "codex" };
+
+        /// <summary>
+        /// Befuellt eine Rollen-Zeile (Anbieter + Modell) mit dem EFFEKTIV aufgeloesten Wert
+        /// (gesetzte Rolle oder eingebaute Vorgabe) und verdrahtet den Anbieter-Wechsel.
+        /// </summary>
+        private void PopulateRoleRow(ComboBox providerBox, ComboBox modelBox, ModelRole role)
+        {
+            providerBox.Items.Clear();
+            foreach (var p in Providers) providerBox.Items.Add(p);
+            var (prov, model) = LlmProviderFactory.ResolveRole(_settings, role);
+            providerBox.SelectedItem = prov;
+            if (providerBox.SelectedItem == null) providerBox.SelectedIndex = 0;
+            modelBox.Text = model;
+            // Anbieter-Wechsel: Modell-Liste neu laden + gueltiges Modell waehlen (Guard gegen XAML-Load, §2.10).
+            providerBox.SelectionChanged += (_, __) =>
+            {
+                if (_ready) _ = FillRoleModelsAsync(providerBox, modelBox, forceValid: true);
+            };
+        }
+
+        /// <summary>Modell-Liste einer Rollen-Zeile zum gewaehlten Anbieter laden (live + Fallback).</summary>
+        private async System.Threading.Tasks.Task FillRoleModelsAsync(ComboBox providerBox, ComboBox modelBox, bool forceValid)
+        {
+            try
+            {
+                var provider = providerBox.SelectedItem as string ?? "gemini";
+                var current = (modelBox.Text ?? string.Empty).Trim();
+                var list = await ModelCatalog.GetModelsAsync(provider).ConfigureAwait(true);
+                modelBox.ItemsSource = list;
+                if (ListContains(list, current)) modelBox.Text = current;          // gueltig -> behalten
+                else if (forceValid && list.Count > 0) modelBox.Text = list[0];    // Wechsel -> gueltiges Default
+                else modelBox.Text = current;                                      // Oeffnen -> eigenes behalten (editierbar)
+            }
+            catch (Exception ex) { Log.Error("Rollen-Modell-Dropdown laden fehlgeschlagen", ex); }
+        }
+
+        /// <summary>Liest eine Rollen-Zeile als persistente Einstellung aus.</summary>
+        private static ModelRoleSetting ReadRole(ComboBox providerBox, ComboBox modelBox) => new()
+        {
+            Provider = providerBox.SelectedItem as string ?? "gemini",
+            Model = (modelBox.Text ?? string.Empty).Trim(),
+        };
 
         /// <summary>
         /// Fuellt das Haupt-Modell-Dropdown mit den Modellen des aktuellen Anbieters (live + Fallback).
@@ -373,19 +454,6 @@ namespace VoiceAgent.Views
                 else ModelBox.Text = current;                                      // Oeffnen -> eigenes behalten (editierbar)
             }
             catch (Exception ex) { Log.Error("Modell-Dropdown laden fehlgeschlagen", ex); }
-        }
-
-        /// <summary>Fuellt das Endpunkt-Modell-Dropdown — IMMER Gemini-Flash, unabhaengig vom Anbieter.</summary>
-        private async System.Threading.Tasks.Task FillEndpointModelsAsync()
-        {
-            try
-            {
-                var current = (EndpointModelBox.Text ?? string.Empty).Trim();
-                var list = await ModelCatalog.GeminiFlashAsync().ConfigureAwait(true);
-                EndpointModelBox.ItemsSource = list;
-                EndpointModelBox.Text = !string.IsNullOrEmpty(current) ? current : (list.Count > 0 ? list[0] : string.Empty);
-            }
-            catch (Exception ex) { Log.Error("Endpunkt-Modell-Dropdown laden fehlgeschlagen", ex); }
         }
 
         private static bool ListContains(IReadOnlyList<string> list, string value)

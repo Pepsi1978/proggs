@@ -37,6 +37,7 @@ namespace VoiceAgent
         private BossAgent? _agent;
         private EndpointDetector? _endpoint;
         private IntentDetector? _intentDetector;
+        private UnderstandingDetector? _understanding;   // Verstehens-Gehirn (Brain-Rolle, starkes Modell)
         private GoogleTtsClient? _tts;
         private GroqWhisperClient? _stt;
         private AlwaysOnListener? _listener;
@@ -311,14 +312,15 @@ namespace VoiceAgent
                 foreach (var def in _customAgents.All)
                     _subAgents.Register(new PromptSubAgent(def, LlmProviderFactory.Create(_settings)));
                 // Der "Helfer-Baumeister" legt zur Laufzeit neue Helfer an (Vision: dynamisch eigene Unteragenten bauen).
+                // Modell pro Rolle: Agenten-Bau laeuft auf der Builder-Rolle (Default: Codex), in den Einstellungen waehlbar.
                 _subAgents.Register(new AgentBuilderSubAgent(
-                    new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel),   // billig: Definition ableiten
+                    LlmProviderFactory.CreateForRole(_settings, ModelRole.Builder),            // Builder-Rolle: Definition ableiten
                     () => LlmProviderFactory.Create(_settings),                                // Haupt-Provider fuer den neuen Helfer
                     _subAgents, _customAgents));
                 // Computer Use: steuert auf Wunsch den Rechner. Stufe (Aus/Sicher/Vollzugriff) wird LIVE aus
                 // den Einstellungen gelesen; der CommandGuard entscheidet, der ShellExecutor fuehrt aus.
                 _subAgents.Register(new ComputerUseSubAgent(
-                    new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel),   // billig: Befehl ableiten
+                    LlmProviderFactory.CreateForRole(_settings, ModelRole.ComputerUse),        // Rolle: Befehl ableiten
                     () => CommandGuard.ParseMode(_settings.ComputerUseMode),                   // aktuelle Stufe (live)
                     (cmd, token) => _shell.RunAsync(cmd, 20000, token)));                      // Ausfuehrung
 
@@ -361,18 +363,22 @@ namespace VoiceAgent
 
         private void BuildAgents()
         {
-            _provider = LlmProviderFactory.Create(_settings);
-            // LLM-Helfer-Auswahl auf billigem Modell (wie der IntentDetector); null => nur Stichwort-Matching.
+            _provider = LlmProviderFactory.Create(_settings);   // Sprechen-Rolle: die gesprochene Antwort
+            // LLM-Helfer-Auswahl auf der Intent-Rolle; null => nur Stichwort-Matching.
             var router = _settings.SubAgentRouting
-                ? new SubAgentRouter(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel))
+                ? new SubAgentRouter(LlmProviderFactory.CreateForRole(_settings, ModelRole.Intent))
                 : null;
             // WICHTIG (Settings-Fix): die AKTIVE Session wird hereingereicht — beim erneuten BuildAgents
             // (z.B. nach dem Speichern der Einstellungen) bleibt derselbe Verlauf erhalten.
             _agent = new BossAgent(_provider, _settings.SystemPrompt, _memory, _subAgents, _settings.TimeZoneId, _sessions?.Active, router);
-            // Endpunkt-Check laeuft immer auf einem guenstigen, schnellen Gemini-Modell
-            // (unabhaengig vom Haupt-Gehirn) — separat in den Einstellungen waehlbar.
-            _endpoint = new EndpointDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.EndpointModel));
-            _intentDetector = new IntentDetector(new GeminiProvider(Config.ReadApiKey("gemini"), _settings.IntentModel));
+            // Endpunkt-Check laeuft auf der Endpunkt-Rolle (Default: guenstiges, schnelles Gemini-Modell).
+            _endpoint = new EndpointDetector(LlmProviderFactory.CreateForRole(_settings, ModelRole.Endpoint));
+            _intentDetector = new IntentDetector(LlmProviderFactory.CreateForRole(_settings, ModelRole.Intent));
+            // Tiefes Verstehen: das Brain-Modell (Verstehens/Orchestrier-Rolle, STARKES Modell) deutet
+            // jede Aussage strukturiert, BEVOR geroutet wird. Aus/Fehler => alte Pipeline (verlustfrei).
+            _understanding = _settings.DeepUnderstanding
+                ? new UnderstandingDetector(LlmProviderFactory.CreateForRole(_settings, ModelRole.Brain), _settings.TimeZoneId)
+                : null;
             _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
             _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage,
                                          url: null, voicedRmsThreshold: _settings.SilenceThreshold);
@@ -1025,11 +1031,23 @@ namespace VoiceAgent
         private async Task RespondAndSpeakAsync(string text)
         {
             if (_agent == null) return;
-            // Erst VERSTEHEN: Intent exakt per LLM-Detektor klassifizieren (wenn aktiviert),
-            // sonst spaeter heuristisch aus der Antwort ableiten.
+            // Erst VERSTEHEN: 1) Tiefes Verstehen (Brain-Rolle, strukturiert: Intent + Ziel-Helfer +
+            // normalisierter Auftrag + Rueckfrage). 2) Fallback bei Aus/Fehler: der bisherige
+            // 3-Topf-IntentDetector (funktionserhaltend, Direktive #3).
             bool exactIntent = _settings.IntentDetection && _intentDetector != null;
             IntentKind intent = IntentKind.Unknown;
-            if (exactIntent)
+            Understanding? understanding = null;
+            if (_understanding != null)
+            {
+                SetStatus("Verstehe, was du willst …");
+                understanding = await _understanding.AnalyzeAsync(text, _sessions?.Active, _subAgents?.All);
+                if (understanding != null)
+                {
+                    intent = understanding.Kind;
+                    _turn?.UnderstoodExact(intent);
+                }
+            }
+            if (understanding == null && exactIntent)
             {
                 SetStatus("Verstehe, was du willst …");
                 intent = await _intentDetector!.ClassifyAsync(text);
@@ -1039,7 +1057,7 @@ namespace VoiceAgent
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
             // Routing-Entscheidung ist synchron; die Antwort kommt als Token-STROM.
-            var response = await _agent.HandleStreamingAsync(text, intent);   // delegiert ggf. an einen Unteragenten
+            var response = await _agent.HandleStreamingAsync(text, intent, understanding);   // delegiert ggf. an einen Unteragenten
             if (response.DelegatedTo != null) _turn?.Delegated(response.DelegatedTo);
 
             // Antwort LIVE mitlesbar: jeder fertige Satz wird SOFORT an eine wachsende Agent-Zeile
