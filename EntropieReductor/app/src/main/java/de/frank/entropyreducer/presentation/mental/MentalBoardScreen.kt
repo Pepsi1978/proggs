@@ -20,13 +20,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -185,10 +187,27 @@ fun MentalBoardScreen(
 
     val stored by mentalsFlow(context).collectAsStateWithLifecycle(initialValue = emptyList())
 
-    // Lokale Arbeitskopie fuer fluessiges Drag & Drop. Wird mit dem DataStore-Flow
-    // synchronisiert (add/delete/Reorder von aussen), aber waehrend des Ziehens fuehrend.
-    var working by remember { mutableStateOf(stored) }
-    androidx.compose.runtime.LaunchedEffect(stored) { working = stored }
+    // Bugfix 2026-06-10 (Frank): Neu gespeicherte/geaenderte Mentals erschienen erst, wenn man
+    // danach einen anderen Eintrag antippte. Ursache: eine lokale `working`-Kopie, die nur per
+    // LaunchedEffect(stored) nachgezogen wurde — sie aktualisierte sich nicht zuverlaessig SOFORT
+    // nach add/update/delete, sondern erst bei einer spaeteren, unabhaengigen Recomposition.
+    // Loesung (wie das funktionierende Tagebuch): AUSSERHALB eines aktiven Drag-Vorgangs IMMER
+    // direkt `stored` anzeigen -> add/update/delete sind sofort sichtbar. Nur WAEHREND des Ziehens
+    // haelt `dragOrder` die fluessige lokale Reihenfolge.
+    var dragOrder by remember { mutableStateOf<List<Mental>?>(null) }
+    val displayed = dragOrder ?: stored
+
+    // `dragOrder` zuruecksetzen, sobald (a) der gespeicherte Stand die gezogene Reihenfolge
+    // erreicht hat (gleiche IDs in gleicher Folge), ODER (b) sich der Eintrags-BESTAND geaendert
+    // hat (add/delete) — dann hat `stored` Vorrang und die Aenderung wird sofort sichtbar.
+    androidx.compose.runtime.LaunchedEffect(stored) {
+        val d = dragOrder ?: return@LaunchedEffect
+        val dIds = d.map { it.id }
+        val sIds = stored.map { it.id }
+        if (dIds == sIds || dIds.toSet() != sIds.toSet()) {
+            dragOrder = null
+        }
+    }
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Mental?>(null) }
@@ -198,12 +217,12 @@ fun MentalBoardScreen(
         rememberReorderableLazyListState(lazyListState) { from, to ->
             val fromId = from.key as? String ?: return@rememberReorderableLazyListState
             val toId = to.key as? String ?: return@rememberReorderableLazyListState
-            val list = working.toMutableList()
+            val list = (dragOrder ?: stored).toMutableList()
             val fromIdx = list.indexOfFirst { it.id == fromId }
             val toIdx = list.indexOfFirst { it.id == toId }
             if (fromIdx in list.indices && toIdx in list.indices) {
                 list.add(toIdx, list.removeAt(fromIdx))
-                working = list
+                dragOrder = list
             }
         }
 
@@ -228,7 +247,7 @@ fun MentalBoardScreen(
                     .background(if (cosmos.isDark) Color(0xFF15182A) else Color(0xFFF6F7FB))
                     .padding(padding)
         ) {
-            if (working.isEmpty()) {
+            if (displayed.isEmpty()) {
                 EmptyState(onAdd = { showAddDialog = true })
             } else {
                 LazyColumn(
@@ -237,9 +256,9 @@ fun MentalBoardScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(working, key = { it.id }) { mental ->
+                    items(displayed, key = { it.id }) { mental ->
                         ReorderableItem(reorderState, key = mental.id) { isDragging ->
-                            val position = working.indexOfFirst { it.id == mental.id } + 1
+                            val position = displayed.indexOfFirst { it.id == mental.id } + 1
                             MentalRow(
                                 position = position,
                                 text = mental.text,
@@ -248,7 +267,12 @@ fun MentalBoardScreen(
                                 dragModifier =
                                     Modifier.longPressDraggableHandle(
                                         onDragStopped = {
-                                            scope.launch { reorderMentals(context, working) }
+                                            // Gezogene Reihenfolge persistieren; der Flow liefert
+                                            // sie danach als `stored` zurueck (siehe LaunchedEffect
+                                            // oben, der dragOrder dann freigibt).
+                                            dragOrder?.let { order ->
+                                                scope.launch { reorderMentals(context, order) }
+                                            }
                                         }
                                     ),
                             )
@@ -438,20 +462,31 @@ private fun MentalEditDialog(
                 minLines = 2,
             )
         },
+        // Frank-Wunsch 2026-06-10: Statt Text-Buttons nur Icons — Diskette zum Speichern
+        // (rechts), Papierkorb zum Loeschen (links). KEIN "Abbrechen" mehr: ein Tipp in den
+        // leeren Raum schliesst den Dialog ueber onDismissRequest.
         confirmButton = {
-            TextButton(
-                onClick = { onSave(text) },
+            IconButton(
+                onClick = { if (text.isNotBlank()) onSave(text) },
                 enabled = text.isNotBlank(),
             ) {
-                Text("Speichern", color = if (text.isNotBlank()) MentalAccent else cosmosDisabled())
+                Icon(
+                    imageVector = Icons.Outlined.Save,
+                    contentDescription = "Speichern",
+                    tint = if (text.isNotBlank()) MentalAccent else cosmosDisabled(),
+                )
             }
         },
         dismissButton = {
-            Row {
-                if (onDelete != null) {
-                    TextButton(onClick = onDelete) { Text("Loeschen", color = Color(0xFFE53935)) }
+            // Papierkorb nur beim Bearbeiten (onDelete != null), nicht beim Neuanlegen.
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = "Loeschen",
+                        tint = Color(0xFFE53935),
+                    )
                 }
-                TextButton(onClick = onDismiss) { Text("Abbrechen") }
             }
         },
     )
