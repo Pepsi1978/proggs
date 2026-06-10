@@ -97,7 +97,11 @@ class VoiceCaptureViewModel @Inject constructor(
         viewModelScope.launch {
             transcribe(file)
                 .onSuccess { transcript ->
-                    pendingCallback?.invoke(transcript.trim())
+                    // Anti-Halluzinations-Kette kann leer liefern (Stille/alles
+                    // gefiltert) — dann den Callback gar nicht aufrufen, sonst
+                    // wuerde ein leerer Text ins Ziel-Feld eingefuegt.
+                    val trimmed = transcript.trim()
+                    if (trimmed.isNotEmpty()) pendingCallback?.invoke(trimmed)
                     pendingCallback = null
                     _state.value = VoiceCaptureState.IDLE
                 }
