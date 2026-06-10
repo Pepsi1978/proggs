@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CalendarViewWeek
 import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -173,14 +174,23 @@ private data class SubSlotMeta(
 private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
     return when (parent) {
         // Frank-Wunsch 2026-06-10: Journal zog in den Forscher-Bereich um (Slot 3,
-        // eigener Screen). TASKS-Slot 1/3 sind jetzt leere Platzhalter; Slot 2
-        // (Mental) routet nicht hierdurch. Beim Forscher routen Slot 1 (Entropie),
+        // eigener Screen). An seiner alten Stelle: TASKS-Slot 1 = "Priorität"
+        // (vorerst Platzhalter). Slot 2 (Mental) routet nicht hierdurch; Slot 3
+        // bleibt leerer Platzhalter. Beim Forscher routen Slot 1 (Entropie),
         // Slot 2 (Thesen) und Slot 3 (Journal) ueber eigene Screens.
-        Routes.TASKS -> SubSlotMeta(
-            icon = Icons.Outlined.Lightbulb,
-            title = "Bereich $index",
-            teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
-        )
+        Routes.TASKS -> when (index) {
+            1 -> SubSlotMeta(
+                icon = Icons.Outlined.Flag,
+                title = "Priorität",
+                teaser = "Deine wichtigsten Aufgaben und Themen — priorisiert auf einen " +
+                    "Blick. Inhalt folgt in einem der nächsten Updates.",
+            )
+            else -> SubSlotMeta(
+                icon = Icons.Outlined.Lightbulb,
+                title = "Bereich $index",
+                teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
+            )
+        }
         Routes.ANALYSIS -> when (index) {
             1 -> SubSlotMeta(
                 icon = Icons.Outlined.CalendarViewWeek,

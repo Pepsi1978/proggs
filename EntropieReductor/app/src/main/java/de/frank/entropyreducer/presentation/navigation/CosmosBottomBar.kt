@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -360,10 +361,11 @@ private fun TabItem(
 private fun subIconsFor(parentTab: String): List<SubIconMeta> =
     when (parentTab) {
         // Frank-Wunsch 2026-06-10: Journal ist vom Aufgaben- in den Forscher-Bereich
-        // umgezogen (Slot 3). Aufgaben-Slot 1 ist frei (Platzhalter), Slot 2 = Mental.
+        // umgezogen (Slot 3). An seiner Stelle: Slot 1 = "Priorität" (Flaggen-Icon,
+        // vorerst Platzhalter-Screen). Slot 2 = Mental.
         Routes.TASKS ->
             listOf(
-                SubIconMeta(Icons.Outlined.Inbox, "1"),
+                SubIconMeta(Icons.Outlined.Flag, "Priorität"),
                 // Frank-Wunsch 2026-06-09: Slot 2 = Mentalboard.
                 SubIconMeta(Icons.Outlined.Psychology, "Mental"),
                 SubIconMeta(Icons.Outlined.Insights, "3"),
