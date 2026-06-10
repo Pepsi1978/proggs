@@ -16,9 +16,6 @@
 
 # --- Fehlerresilienz: Niemals die Session blockieren ---
 $ErrorActionPreference = "SilentlyContinue"
-# UTF-8-Ausgabe erzwingen: sonst verfaelscht PowerShell Sonderzeichen auf stdout
-# (Pfeil/Blitz/Gluehbirne -> ? bzw. als 0x1A JSON-Bruch). try/catch = Graceful Degradation.
-try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 try {
 
 # --- Pfade ---
@@ -35,14 +32,12 @@ function Write-Log($msg) {
 }
 
 # --- stdin lesen (JSON vom Hook-Event) ---
-# ROBUST 2026-05-30: Je nach Invokation liefert mal [Console]::In, mal $input den
-# stdin. Empirisch: Claude-Code-Produktion + manche pwsh-Aufrufe -> $input;
-# andere Aufrufer (z.B. Git-Bash-Pipe nach `pwsh -File`) -> [Console]::In.
-# Daher BEIDE versuchen und das nicht-leere Ergebnis nehmen (Defense in Depth).
 $inputJson = ""
-try { $inputJson = [Console]::In.ReadToEnd() } catch {}
-if ([string]::IsNullOrWhiteSpace($inputJson)) {
-    try { $inputJson = $input | Out-String } catch {}
+try {
+    $inputJson = $input | Out-String
+} catch {
+    Write-Log "WARN: stdin konnte nicht gelesen werden"
+    exit 0
 }
 
 if ([string]::IsNullOrWhiteSpace($inputJson)) {
@@ -79,7 +74,6 @@ if ($errorText.Length -lt 20) {
 # --- LUECKE 6: Pattern-Matching gegen bestehende Bug-Cases ---
 $matchedCase = $null
 $matchedScore = 0
-$corruptLines = 0   # Frueherkennung kaputter DB-Zeilen (2026-06-07)
 
 if (Test-Path $bugCasesPath) {
     $existingCases = Get-Content $bugCasesPath -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -88,7 +82,7 @@ if (Test-Path $bugCasesPath) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
 
         $case = $null
-        try { $case = $line | ConvertFrom-Json } catch { $corruptLines++; continue }
+        try { $case = $line | ConvertFrom-Json } catch { continue }
 
         if (-not $case.symptom) { continue }
 
@@ -125,11 +119,6 @@ if (Test-Path $bugCasesPath) {
     }
 }
 
-# Frueherkennung: kaputte DB-Zeilen wurden uebersprungen -> Reparatur-Hinweis ins Log (kein Block, kein DB-Schreibzugriff im Hot-Path).
-if ($corruptLines -gt 0) {
-    Write-Log "WARN: $corruptLines kaputte JSON-Zeile(n) in bug-cases.jsonl uebersprungen. Reparatur: python3 ~/proggs/bugs/repair-bug-cases.py --apply"
-}
-
 # --- Entscheidung: Match gefunden oder neuer Fall? ---
 $outputJson = $null
 
@@ -145,7 +134,8 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
     if ($matchedCase.prevention_rule) {
         $fixAdvice += "Praevention: $($matchedCase.prevention_rule)`n"
     }
-    $fixAdvice += "WENDE DIESEN FIX ZUERST AN bevor du eine neue Hypothese versuchst."
+    $fixAdvice += "WENDE DIESEN FIX ZUERST AN bevor du eine neue Hypothese versuchst.`n"
+    $fixAdvice += "STUFE B (Digest-Modell): Greift der Fix nicht und der Fehler betrifft einen Almanach-Bereich, lies JETZT den VOLLTEXT des passenden bugs/<kategorie>/<bereich>.md (Read ohne limit) - der Kurzcheck reicht ab dem ersten Fehler nicht mehr."
 
     # Ausgabe als additionalContext fuer Claude
     $output = @{
@@ -210,10 +200,8 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
 
         # Claude informieren dass ein neuer Fall erfasst wurde
         $infoText = "Bug-Case automatisch erfasst (Tool: $toolName). "
-        $infoText += "Wiederhole den fehlgeschlagenen Aufruf nicht unveraendert, analysiere erst kurz die Ursache. "
-        $infoText += "Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld 'auto_captured: true' suchen). "
-        # ALMANACH-BRUECKE (2026-06-07): reaktive bug-cases.jsonl <-> proaktiver bugs/-Almanach verbinden.
-        $infoText += "ALMANACH-BRUECKE: Pruefe ausserdem den passenden Bug-Almanach (~/proggs/bugs/<bereich>.md, Index bugs/README.md) - ist das ein bereits bekannter Bug mit dokumentierter Loesung? Falls fuer den Bereich noch KEIN Almanach existiert UND der Fehler hartnaeckig ist (>=2x), Frank kurz um OK fragen und dann den Skill 'bug-almanach-recherche' starten."
+        $infoText += "STUFE B (Digest-Modell): Existiert fuer den betroffenen Bereich ein Bug-Almanach (bugs/<kategorie>/<bereich>.md), lies JETZT dessen VOLLTEXT (Read ohne limit) - der Kurzcheck reicht ab dem ersten Fehler nicht mehr. "
+        $infoText += "Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld 'auto_captured: true' suchen)."
 
         $output = @{
             hookSpecificOutput = @{

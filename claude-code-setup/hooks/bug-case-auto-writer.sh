@@ -64,11 +64,9 @@ import json, sys, re, os
 
 error_text = sys.argv[1]
 bug_path = sys.argv[2]
-log_path = sys.argv[3] if len(sys.argv) > 3 else ''
 
 best_score = 0
 best_case = None
-corrupt = 0  # Frueherkennung kaputter DB-Zeilen (2026-06-07)
 
 try:
     with open(bug_path, 'r', encoding='utf-8') as f:
@@ -79,7 +77,6 @@ try:
             try:
                 case = json.loads(line)
             except:
-                corrupt += 1
                 continue
 
             symptom = case.get('symptom', '')
@@ -108,26 +105,13 @@ try:
                 except:
                     pass
 
-    if corrupt and log_path:
-        try:
-            with open(log_path, 'a', encoding='utf-8') as lf:
-                lf.write('[repair-hint] WARN: %d kaputte JSON-Zeile(n) in bug-cases.jsonl uebersprungen. Reparatur: python3 ~/proggs/bugs/repair-bug-cases.py --apply\n' % corrupt)
-        except:
-            pass
-
     if best_case and best_score >= 0.5:
         print(f'MATCH|{best_score}|{best_case.get(\"symptom\",\"\")}|{best_case.get(\"root_cause\",\"\")}|{best_case.get(\"fix\",\"\")}|{best_case.get(\"prevention\",best_case.get(\"prevention_rule\",\"\"))}')
     else:
         print('NOMATCH')
 except Exception as e:
     print('NOMATCH')
-" "$ERROR_TEXT" "$BUG_CASES" "$LOG_FILE" 2>/dev/null)
-
-    # Windows Git Bash: Python-Stdout liefert \r\n; $() entfernt nur das \n.
-    # Ein trailing \r wuerde sonst auf dem letzten read-Feld (MATCHED_PREVENTION)
-    # landen und als Stoer-Zeichen in der injizierten Meldung erscheinen
-    # (jq+read-CR-Fehlerklasse, Audit 2026-05-24). Auf macOS ein No-Op.
-    MATCH_RESULT="${MATCH_RESULT%$'\r'}"
+" "$ERROR_TEXT" "$BUG_CASES" 2>/dev/null)
 
     if [[ "$MATCH_RESULT" == MATCH* ]]; then
         IFS='|' read -r _ MATCHED_SCORE MATCHED_SYMPTOM MATCHED_ROOT MATCHED_FIX MATCHED_PREVENTION <<< "$MATCH_RESULT"
@@ -143,7 +127,7 @@ if [ -n "$MATCHED_SYMPTOM" ] && [ "$MATCHED_SCORE" != "0" ]; then
     if [ -n "$MATCHED_PREVENTION" ]; then
         FIX_ADVICE="$FIX_ADVICE\nPraevention: $MATCHED_PREVENTION"
     fi
-    FIX_ADVICE="$FIX_ADVICE\nWENDE DIESEN FIX ZUERST AN bevor du eine neue Hypothese versuchst."
+    FIX_ADVICE="$FIX_ADVICE\nWENDE DIESEN FIX ZUERST AN bevor du eine neue Hypothese versuchst.\nSTUFE B (Digest-Modell): Greift der Fix nicht und der Fehler betrifft einen Almanach-Bereich, lies JETZT den VOLLTEXT des passenden bugs/<kategorie>/<bereich>.md (Read ohne limit) - der Kurzcheck reicht ab dem ersten Fehler nicht mehr."
 
     # JSON-Output fuer Claude
     python3 -c "
@@ -196,7 +180,7 @@ with open(path, 'a', encoding='utf-8') as f:
         # Claude informieren
         python3 -c "
 import json
-out = {'hookSpecificOutput': {'hookEventName': 'PostToolUseFailure', 'additionalContext': 'Bug-Case automatisch erfasst (Tool: $TOOL_NAME). Wiederhole den fehlgeschlagenen Aufruf nicht unveraendert, analysiere erst kurz die Ursache. Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld auto_captured: true suchen). ALMANACH-BRUECKE: Pruefe ausserdem den passenden Bug-Almanach (~/proggs/bugs/<bereich>.md, Index bugs/README.md) - ist das ein bereits bekannter Bug mit dokumentierter Loesung? Falls fuer den Bereich noch KEIN Almanach existiert UND der Fehler hartnaeckig ist (>=2x), Frank kurz um OK fragen und dann den Skill bug-almanach-recherche starten.'}}
+out = {'hookSpecificOutput': {'hookEventName': 'PostToolUseFailure', 'additionalContext': 'Bug-Case automatisch erfasst (Tool: $TOOL_NAME). STUFE B (Digest-Modell): Existiert fuer den betroffenen Bereich ein Bug-Almanach (bugs/<kategorie>/<bereich>.md), lies JETZT dessen VOLLTEXT (Read ohne limit) - der Kurzcheck reicht ab dem ersten Fehler nicht mehr. Nach dem Fix: Bitte Root Cause und Fix in bug-cases.jsonl nachtragen (Feld auto_captured: true suchen).'}}
 print(json.dumps(out))
 " 2>/dev/null
     else

@@ -22,12 +22,37 @@ Das Inhaltsverzeichnis aller Almanache (sortiert nach Plattform, mit Erkennungs-
 liegt in `~/proggs/bugs/README.md`.
 
 **BEVOR** mit einem Bereich gearbeitet wird, fuer den ein Almanach existiert, MUSS
-dieser ZUERST komplett gelesen werden — als Pflicht-Vorstufe, noch vor der ersten
-Code-Aenderung. So werden bekannte Fehler gar nicht erst gemacht, statt sie
-hinterher zu debuggen.
+dessen **Kurzcheck** ZUERST gelesen werden — als Pflicht-Vorstufe, noch vor der ersten
+Code-Aenderung (Digest-Modell, siehe unten). So werden bekannte Fehler gar nicht erst
+gemacht, statt sie hinterher zu debuggen.
 
 Das ist der Unterschied zu `bug-cases.jsonl`: jene wird REAKTIV nach einem Fehler
 durchsucht; der Almanach wird PROAKTIV vor der Arbeit gelesen.
+
+---
+
+## Das Digest-Modell: 3 Stufen (seit 2026-06-10)
+
+Jeder Almanach und jede Best-Practices-Datei traegt oben eine kompakte
+**"Kurzcheck"-Sektion** (Erkennungssignale + Sofort-Regeln als Tabelle, vollstaendig
+innerhalb der ersten 80 Zeilen). Wie viel gelesen werden muss, haengt von der Stufe ab:
+
+| Stufe | Wann | Was lesen | Erzwungen durch |
+|-------|------|-----------|-----------------|
+| **A — Kurzcheck vorab** | vor JEDER echten Arbeit im Bereich | NUR den Kurzcheck: `Read` mit `limit=80` auf den Almanach, danach ebenso auf die Best-Practices-Datei | `bug-almanac-guard` (read-Marker) |
+| **B — Volltext bei Fehler** | ab dem ERSTEN Fehler im Bereich | SOFORT den VOLLTEXT des Almanachs (`Read` ohne `limit`) — der Kurzcheck reicht ab jetzt nicht mehr | `bug-case-auto-writer` (Stufe-B-Hinweis bei jedem Tool-Fehler) + Entropie-Reduktions-Regel |
+| **C — Volltext bei Hochrisiko** | vor Arbeit in einem Hochrisiko-Bereich | den VOLLTEXT des Almanachs schon VORAB (`Read` ohne `limit`) | `bug-almanac-guard` (full-Marker; ein Read ohne `limit` bzw. mit `limit>=500` setzt ihn) |
+
+**Hochrisiko-Bereiche (Stufe C):** `r8`, `firebase-billing`, `claude-hooks`, `claude-config` —
+tickende/teure Fehlerklassen (Release-Crashes, Geld/Abos, Harness-Totalausfall). Die Liste lebt
+im `bug-almanac-guard` (`$highRiskKeys` in der .ps1 bzw. `case`-Liste in der .sh) und hier —
+beide synchron halten.
+
+**Warum (Stand 2026-06-10):** Der fruehere Volltext-Zwang fuer ALLE Bereiche kostete
+~16.000-23.000 Tokens pro Bereich und Session (plus Context-Rot). Der Kurzcheck (~500 Tokens)
+erhaelt die Erkennungsfaehigkeit fuer stille Fehler — und die Erkennung ist das Entscheidende.
+Verlustfrei nach dem Lossless-Prinzip: Der Volltext bleibt per Pfad jederzeit erreichbar und
+wird bei Fehlern (Stufe B) und Hochrisiko (Stufe C) weiterhin erzwungen.
 
 ---
 
@@ -36,7 +61,7 @@ durchsucht; der Almanach wird PROAKTIV vor der Arbeit gelesen.
 | Schicht | Mechanismus | Wann |
 |---------|-------------|------|
 | 1 — Praesenz | `bug-almanac-index` Hook (SessionStart) blendet die Almanach-Liste ein | jeder Session-Start |
-| 2 — Erzwingung | `bug-almanac-guard` Hook (PreToolUse Edit/Write) BLOCKIERT bereichstypische Edits. **Almanach vorhanden:** bis ZUERST der Almanach UND DANN (falls vorhanden) die Best-Practices-Datei gelesen wurde. **KEIN Almanach (seit 2026-06-07):** bis eine bewusste Quittung gesetzt ist (siehe unten) — der "neuer Bereich"-Trigger ist damit nicht mehr zahnlos. Erkennt auch komplett neue Sprachen generisch (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`) | bei Datei-Beruehrung |
+| 2 — Erzwingung | `bug-almanac-guard` Hook (PreToolUse Edit/Write) BLOCKIERT bereichstypische Edits. **Almanach vorhanden:** bis ZUERST der Almanach-Kurzcheck UND DANN (falls vorhanden) der Best-Practices-Kurzcheck gelesen wurde (Stufe A, `Read` mit `limit=80`); bei Hochrisiko-Bereichen zusaetzlich bis der Almanach-VOLLTEXT gelesen wurde (Stufe C, full-Marker). **KEIN Almanach (seit 2026-06-07):** bis eine bewusste Quittung gesetzt ist (siehe unten) — der "neuer Bereich"-Trigger ist damit nicht mehr zahnlos. Erkennt auch komplett neue Sprachen generisch (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`) | bei Datei-Beruehrung |
 | 2b — Fehler-Bruecke | `bug-case-auto-writer` Hook (PostToolUseFailure) verweist bei einem neuen Fehler zusaetzlich auf den passenden Almanach und stoesst bei hartnaeckigem Fehler ohne Almanach eine Recherche an | bei jedem Tool-Fehler |
 | 3 — Verhalten | diese Regel | immer geladen |
 
@@ -48,12 +73,15 @@ durchsucht; der Almanach wird PROAKTIV vor der Arbeit gelesen.
 2. Greift es ueberhaupt? Bei trivialem Kleinkram (einzelner String, Doku, Kommentar,
    Versions-Bump) NEIN — weiter ohne Almanach. Sonst:
 3. Im Index (`bugs/README.md`) pruefen, ob ein Almanach fuer den Bereich existiert.
-4. **Almanach vorhanden** → komplett lesen, das `Versionen:`-Feld pro Bug gegen die
-   aktuell benutzte Version abgleichen (Version live ermitteln, z.B. `chrome --version`,
-   `./gradlew --version`). Arbeite ich mit einer neueren Version als im Stand-Header
-   dokumentiert → Frank melden, OK fuer einen kurzen Re-Check einholen. **Dann — noch vor
-   der ersten Code-Aenderung — die zugehoerige Best-Practices-Datei lesen (zweite Seite,
-   siehe unten), DANN mit dem Wissen arbeiten.**
+4. **Almanach vorhanden** → Stufe waehlen (Digest-Modell, siehe oben):
+   - **Normaler Bereich (Stufe A):** NUR den Kurzcheck lesen (`Read` mit `limit=80`) — die
+     ersten 80 Zeilen enthalten auch den Stand-Header fuer den Versions-Abgleich (Version live
+     ermitteln, z.B. `chrome --version`, `./gradlew --version`). Arbeite ich mit einer neueren
+     Version als dokumentiert → Frank melden, OK fuer einen kurzen Re-Check einholen.
+   - **Hochrisiko-Bereich (Stufe C: r8, firebase-billing, claude-hooks, claude-config):**
+     den VOLLTEXT lesen (`Read` ohne `limit`) + `Versionen:`-Feld pro Bug abgleichen.
+   **Dann — noch vor der ersten Code-Aenderung — die zugehoerige Best-Practices-Datei lesen
+   (Kurzcheck mit `limit=80` reicht; zweite Seite, siehe unten), DANN mit dem Wissen arbeiten.**
 5. **Kein Almanach** → der Guard BLOCKIERT jetzt den Edit (seit 2026-06-07, Quittungs-Mechanismus
    — frueher nur ein leicht zu uebersehender Hinweis). Reaktion: Frank melden ("neuer Bereich X,
    kein Almanach"), auf seine Entscheidung warten, dann EINEN der beiden Wege gehen:
@@ -67,8 +95,10 @@ durchsucht; der Almanach wird PROAKTIV vor der Arbeit gelesen.
      den exakten Pfad). Das ist eine **bewusste** Geste nach dem Gespraech mit Frank — niemals
      reflexhaft, nur um den Block loszuwerden. Danach ist der Bereich fuer die Session frei.
    Notaus bei echtem Fehlalarm des Guards: leere Datei `bug-almanac-disable.flag` im TEMP.
-6. Tritt waehrend der Arbeit ein Fehler auf → ZUERST pruefen, ob es ein bekannter Bug
-   aus dem Almanach ist → dokumentierte Loesung sofort anwenden (schnellster Pfad).
+6. Tritt waehrend der Arbeit ein Fehler auf → **Stufe B: SOFORT den VOLLTEXT des Almanachs
+   lesen** (`Read` ohne `limit`) — ab dem ersten Fehler reicht der Kurzcheck nicht mehr.
+   ZUERST pruefen, ob es ein bekannter Bug aus dem Almanach ist → dokumentierte Loesung
+   sofort anwenden (schnellster Pfad).
    Der `bug-case-auto-writer`-Hook erinnert bei einem neuen Fehler aktiv daran (Schicht 2b,
    "ALMANACH-BRUECKE"-Hinweis). Ist der Fehler **hartnaeckig** (taucht >=2x auf) UND existiert
    fuer den Bereich noch KEIN Almanach: das ist ein starkes Signal fuer eine Recherche —
@@ -89,12 +119,14 @@ Web-Lookup mitten im Debuggen einer laufenden Aufgabe bleibt frei.
 Zu (fast) jedem Almanach `bugs/<kategorie>/<bereich>.md` gibt es eine Best-Practices-Datei
 `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`. Der Almanach sagt *was
 schiefgeht und wie man es loest*; die Best-Practices sagen *wie man es von vornherein richtig
-macht, damit der Bug gar nicht erst entsteht*. **Beide werden VOR der Arbeit gelesen — in dieser
-Reihenfolge: erst Almanach, dann Best Practices, dann coden.**
+macht, damit der Bug gar nicht erst entsteht*. **Beide Kurzchecks werden VOR der Arbeit gelesen —
+in dieser Reihenfolge: erst Almanach, dann Best Practices, dann coden (Stufe A; bei
+Hochrisiko-Bereichen gilt fuer den Almanach Volltext-Pflicht, Stufe C).**
 
 Der `bug-almanac-guard` erzwingt genau diese Reihenfolge: er blockiert bereichstypische Edits, bis
 ZUERST der Almanach UND DANN (falls vorhanden) die Best-Practices-Datei in dieser Session per Read
-geoeffnet wurde (jedes Lesen gibt frei, gilt pro Bereich 1x/Session). Existiert keine
+geoeffnet wurde (jedes Lesen gibt frei — Kurzcheck per `limit=80` genuegt ausser bei Stufe C;
+gilt pro Bereich 1x/Session). Existiert keine
 Best-Practices-Datei fuer den Bereich, zaehlt nur der Almanach. Notaus bei Fehlalarm:
 leere Datei `bug-almanac-disable.flag` im TEMP-Verzeichnis anlegen.
 
@@ -113,6 +145,9 @@ passenden Almanach lesen und sein Wissen nutzen — nicht aus dem Gedaechtnis ar
 | CLAUDE.md, Regel, Settings, Skill, Command, Agent | `bugs/claude-tooling/claude-config.md` + `best-practices/projekt-code/claude-tooling/best-practices-claude-config.md` |
 | Einen MCP-Server | `bugs/claude-tooling/mcp-server.md` |
 | Ein Python-Hilfsskript | `bugs/claude-tooling/python-windows.md` |
+
+(`claude-hooks` und `claude-config` sind **Stufe-C-Bereiche** → VOLLTEXT lesen;
+`mcp-server` und `python-windows`: Kurzcheck genuegt, Stufe A.)
 
 Der `bug-almanac-guard` erzwingt das ohnehin (er blockiert Edits an `/hooks/*`, `/rules/*.md`,
 `settings.json` etc.), aber das Prinzip gilt bewusst: das dokumentierte Bug-Wissen verhindert,
@@ -149,8 +184,11 @@ oder der Nutzer nennt Erweiterung/Extension/Overlay-Plugin.
 
 ## Was NIEMALS passieren darf
 
-- ❌ An einem Bereich arbeiten, fuer den ein Almanach existiert, ohne ihn vorher zu lesen
-- ❌ Den Almanach lesen, aber die zugehoerige Best-Practices-Datei ueberspringen — beide gehoeren VOR die Arbeit (erst Almanach, dann Best Practices)
+- ❌ An einem Bereich arbeiten, fuer den ein Almanach existiert, ohne vorher mindestens dessen Kurzcheck zu lesen (Stufe A)
+- ❌ Nach einem Fehler im Bereich einfach weiterarbeiten, ohne den VOLLTEXT des Almanachs gelesen zu haben (Stufe B)
+- ❌ In einem Hochrisiko-Bereich (r8, firebase-billing, claude-hooks, claude-config) nur den Kurzcheck lesen — Stufe C verlangt den Volltext
+- ❌ Beim Ergaenzen eines Almanachs die Kurzcheck-Sektion vergessen — ein neuer Top-Bug gehoert auch in den Kurzcheck, wenn er zu den wichtigsten zaehlt
+- ❌ Den Kurzcheck-Almanach lesen, aber die zugehoerige Best-Practices-Datei (Kurzcheck) ueberspringen — beide gehoeren VOR die Arbeit (erst Almanach, dann Best Practices)
 - ❌ Einen erlebten Bug fixen, ohne ihn anschliessend im passenden Almanach zu ergaenzen
 - ❌ Den Almanach als "nice to have" behandeln — das Vorab-Lesen ist Pflicht
 - ❌ Eine gezielte Almanach-Recherche ohne Franks OK starten

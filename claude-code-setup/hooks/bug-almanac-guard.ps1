@@ -38,6 +38,8 @@ try {
                 $an = $m.Groups[1].Value
                 if ($an -ne 'readme' -and $an -ne 'system') {
                     New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-read-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                    # cat/bat/less liest immer den Volltext -> auch den full-Marker setzen (Digest-Modell Stufe C).
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-full-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
                 }
             }
             # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
@@ -61,6 +63,13 @@ try {
             if ($almName -ne 'readme' -and $almName -ne 'system') {
                 $rm = Join-Path $env:TEMP ("bug-almanac-read-" + $almName + ".flag")
                 New-Item -ItemType File -Path $rm -Force -ErrorAction SilentlyContinue | Out-Null
+                # Digest-Modell: Volltext-Read (kein limit ODER limit >= 500) setzt zusaetzlich den
+                # full-Marker (Stufe C). Kurzcheck-Read (z.B. limit=80) setzt nur den read-Marker.
+                $lim = 0
+                try { if ($data.tool_input.limit) { $lim = [int]$data.tool_input.limit } } catch {}
+                if ($lim -le 0 -or $lim -ge 500) {
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-full-" + $almName + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                }
             }
         }
         # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
@@ -256,6 +265,11 @@ try {
     $almKey = ($file -replace '\.md$', '').ToLower()
     $readMarker = Join-Path $env:TEMP ("bug-almanac-read-" + $almKey + ".flag")
     $seenMarker = Join-Path $env:TEMP ("bug-almanac-seen-" + $slug + ".flag")
+    # Digest-Modell Stufe C: Hochrisiko-Bereiche (tickende/teure Fehlerklassen: Release, Geld, Harness)
+    # verlangen den VOLLTEXT (full-Marker), nicht nur den Kurzcheck. Liste = almKey (Dateiname ohne .md).
+    $highRiskKeys = @('r8', 'firebase-billing', 'claude-hooks', 'claude-config')
+    $isHighRisk = $highRiskKeys -contains $almKey
+    $fullMarker = Join-Path $env:TEMP ("bug-almanac-full-" + $almKey + ".flag")
 
     # ── Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen ──
     # Der Read-Zweig dieses Hooks setzt den Marker nur, wenn der Read-Hook tatsaechlich feuert.
@@ -286,7 +300,11 @@ try {
             if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
             Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug") -Encoding UTF8 -ErrorAction SilentlyContinue
         } catch {}
-        $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        $reason = if ($isHighRisk) {
+            "STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        } else {
+            "STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe A, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber der Kurzcheck von " + $almRel + " wurde in dieser Session noch NICHT gelesen. Lies JETZT NUR den Kurzcheck: Read auf ~/proggs/" + $almRel + " mit limit=80 (die Kurzcheck-Sektion oben in der Datei; der Volltext ist NICHT noetig - er wird erst beim ERSTEN FEHLER im Bereich Pflicht, Stufe B). DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        }
         $out = @{
             hookSpecificOutput = @{
                 hookEventName            = "PreToolUse"
@@ -296,6 +314,40 @@ try {
         }
         Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
         exit 0
+    }
+
+    # ── Stufe C (Digest-Modell): Hochrisiko-Bereich verlangt den VOLLTEXT, nicht nur den Kurzcheck ──
+    # Erreicht nur, wenn der read-Marker existiert (Kurzcheck oder mehr gelesen). Fehlt der full-Marker,
+    # wird bei Hochrisiko-Bereichen blockiert, bis ein Volltext-Read (Read ohne limit) erkannt wurde.
+    if ($almanachExists -and -not $disabled -and $isHighRisk -and (Test-Path $readMarker) -and -not (Test-Path $fullMarker)) {
+        # Transcript-Fallback (analog Almanach): ein Volltext-Read (Read OHNE limit-Feld im input-Objekt)
+        # kann vom Read-Zweig verpasst worden sein (Matcher-Cache / Read+Edit-Race).
+        try {
+            $tp = [string]$data.transcript_path
+            if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
+                $pat = 'file_path"\s*:\s*"[^"]*bugs[\\/]+(?:[^"\\/]+[\\/]+)*' + [regex]::Escape($almKey) + '\.md"(?![^}]*"limit"\s*:)'
+                if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
+                    New-Item -ItemType File -Path $fullMarker -Force -ErrorAction SilentlyContinue | Out-Null
+                }
+            }
+        } catch {}
+        if (-not (Test-Path $fullMarker)) {
+            try {
+                $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+                if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+                Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (stufe-c-volltext)") -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch {}
+            $reason = "STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '" + $name + "' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von " + $almRel + " ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+            $out = @{
+                hookSpecificOutput = @{
+                    hookEventName            = "PreToolUse"
+                    permissionDecision       = "deny"
+                    permissionDecisionReason = $reason
+                }
+            }
+            Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
+            exit 0
+        }
     }
 
     # ── BP-ERZWINGUNG (zweite Seite der Medaille): Almanach gelesen, aber die Best-Practices-Datei noch nicht ──
@@ -332,7 +384,7 @@ try {
                     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
                     Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (best-practices)") -Encoding UTF8 -ErrorAction SilentlyContinue
                 } catch {}
-                $reason = "STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '" + $name + "' ist gelesen - aber die zugehoerige Best-Practices-Datei " + $bpRel + " in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/" + $bpRel + " mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+                $reason = "STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '" + $name + "' ist gelesen - aber die zugehoerige Best-Practices-Datei " + $bpRel + " in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/" + $bpRel + " mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
                 $out = @{
                     hookSpecificOutput = @{
                         hookEventName            = "PreToolUse"

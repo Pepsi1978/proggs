@@ -414,28 +414,6 @@
 				]
 			}
 		],
-		"WorktreeCreate": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "echo 'Worktree-Hook: Neuer Worktree erstellt. Whiteboard: ~/proggs/.claude/agent-memory/shared/MEMORY.md'",
-						"timeout": 3
-					}
-				]
-			}
-		],
-		"WorktreeRemove": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "echo 'Worktree-Hook: Worktree entfernt. Whiteboard: ~/proggs/.claude/agent-memory/shared/MEMORY.md'",
-						"timeout": 3
-					}
-				]
-			}
-		],
 		"PostCompact": [
 			{
 				"hooks": [

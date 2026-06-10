@@ -34,6 +34,8 @@ if [ "$tool" = "Bash" ]; then
             echo "$matches" | sed -E 's#.*/([a-z0-9._-]+)\.md#\1#' | while read -r an; do
                 if [ -n "$an" ] && [ "$an" != "readme" ] && [ "$an" != "system" ]; then
                     touch "$TMP/bug-almanac-read-$an.flag" 2>/dev/null || true
+                    # cat/bat/less liest immer den Volltext -> auch den full-Marker setzen (Digest-Modell Stufe C).
+                    touch "$TMP/bug-almanac-full-$an.flag" 2>/dev/null || true
                 fi
             done
         fi
@@ -57,6 +59,17 @@ if [ "$tool" = "Read" ]; then
     almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/(.*/)?([^/]+)\.md$#\3#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
         touch "$TMP/bug-almanac-read-$almName.flag" 2>/dev/null || true
+        # Digest-Modell: Volltext-Read (kein limit ODER limit >= 500) setzt zusaetzlich den full-Marker
+        # (Stufe C). Kurzcheck-Read (z.B. limit=80) setzt nur den read-Marker.
+        lim=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); print(int((d.get('tool_input') or {}).get('limit') or 0))
+except Exception:
+    print(0)
+" 2>/dev/null || echo 0)
+        if [ "${lim:-0}" -le 0 ] || [ "${lim:-0}" -ge 500 ]; then
+            touch "$TMP/bug-almanac-full-$almName.flag" 2>/dev/null || true
+        fi
     fi
     # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
     bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices-([a-z0-9._-]+)\.md$#\1#p')
@@ -276,6 +289,11 @@ if [ -n "$almanachPath" ]; then almRel="bugs/${almanachPath#"$bugsRoot"/}"; else
 almKey=$(echo "$file" | sed 's/\.md$//' | tr '[:upper:]' '[:lower:]')
 readMarker="$TMP/bug-almanac-read-$almKey.flag"
 seenMarker="$TMP/bug-almanac-seen-$slug.flag"
+# Digest-Modell Stufe C: Hochrisiko-Bereiche (tickende/teure Fehlerklassen: Release, Geld, Harness)
+# verlangen den VOLLTEXT (full-Marker), nicht nur den Kurzcheck. Liste = almKey (Dateiname ohne .md).
+isHighRisk=0
+case "$almKey" in r8|firebase-billing|claude-hooks|claude-config) isHighRisk=1;; esac
+fullMarker="$TMP/bug-almanac-full-$almKey.flag"
 disabled=0; [ -f "$TMP/bug-almanac-disable.flag" ] && disabled=1
 
 # -- Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen --
@@ -299,9 +317,45 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     stateDir="$HOME/.claude/state"
     mkdir -p "$stateDir" 2>/dev/null || true
     echo "$(date '+%Y-%m-%d %H:%M') $slug" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-    reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    if [ "$isHighRisk" -eq 1 ]; then
+        reason="STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    else
+        reason="STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe A, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber der Kurzcheck von $almRel wurde in dieser Session noch NICHT gelesen. Lies JETZT NUR den Kurzcheck: Read auf ~/proggs/$almRel mit limit=80 (die Kurzcheck-Sektion oben in der Datei; der Volltext ist NICHT noetig - er wird erst beim ERSTEN FEHLER im Bereich Pflicht, Stufe B). DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    fi
     python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
     exit 0
+fi
+
+# -- Stufe C (Digest-Modell): Hochrisiko-Bereich verlangt den VOLLTEXT, nicht nur den Kurzcheck --
+# Erreicht nur, wenn der read-Marker existiert (Kurzcheck oder mehr gelesen). Fehlt der full-Marker,
+# wird bei Hochrisiko-Bereichen blockiert, bis ein Volltext-Read (Read ohne limit) erkannt wurde.
+if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ "$isHighRisk" -eq 1 ] && [ -f "$readMarker" ] && [ ! -f "$fullMarker" ]; then
+    # Transcript-Fallback (analog Almanach): ein Volltext-Read (Read OHNE limit-Feld im input-Objekt)
+    # kann vom Read-Zweig verpasst worden sein (Matcher-Cache / Read+Edit-Race).
+    tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
+    if [ -n "$tpath" ] && [ -f "$tpath" ]; then
+        if python3 - "$tpath" "$almKey" <<'PYEOF' 2>/dev/null
+import re, sys
+path, key = sys.argv[1], sys.argv[2]
+pat = re.compile('file_path"\\s*:\\s*"[^"]*bugs[/\\\\]+(?:[^"/\\\\]+[/\\\\]+)*' + re.escape(key) + '\\.md"(?![^}]*"limit"\\s*:)')
+try:
+    with open(path, encoding='utf-8', errors='ignore') as f:
+        sys.exit(0 if any(pat.search(line) for line in f) else 1)
+except Exception:
+    sys.exit(1)
+PYEOF
+        then
+            touch "$fullMarker" 2>/dev/null || true
+        fi
+    fi
+    if [ ! -f "$fullMarker" ]; then
+        stateDir="$HOME/.claude/state"
+        mkdir -p "$stateDir" 2>/dev/null || true
+        echo "$(date '+%Y-%m-%d %H:%M') $slug (stufe-c-volltext)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+        reason="STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '$name' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von $almRel ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+        python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
+        exit 0
+    fi
 fi
 
 # -- BP-ERZWINGUNG (zweite Seite der Medaille): Almanach gelesen, aber best-practices-<bereich>.md noch nicht --
@@ -330,7 +384,7 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
                 stateDir="$HOME/.claude/state"
                 mkdir -p "$stateDir" 2>/dev/null || true
                 echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-                reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+                reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
                 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
                 exit 0
             fi
