@@ -25,6 +25,7 @@ namespace VoiceAgent.Tests
             public bool Executed;
             public string Name => "Fake";
             public string Description => "Test-Unteragent";
+            public string HowTo => "Sag 'test'.";
             public bool CanHandle(string task) => task.ToLowerInvariant().Contains("test");
             public string ConfirmationQuestion(string task) => "Soll ich das testen?";
             public Task<string> HandleAsync(string task, CancellationToken ct = default)

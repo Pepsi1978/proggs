@@ -27,6 +27,7 @@ namespace VoiceAgent.Tests
         {
             public string Name { get; init; } = "Fake";
             public string Description { get; init; } = "Tut Testdinge.";
+            public string HowTo { get; init; } = "Sag 'mach Testdinge'.";
             public bool CanHandle(string task) => false;
             public Task<string> HandleAsync(string task, CancellationToken ct = default)
                 => Task.FromResult("ok");
@@ -45,6 +46,9 @@ namespace VoiceAgent.Tests
             Assert.Contains("Helfer-Baumeister: Legt auf Wunsch neue, eigene Helfer an.", block);
             Assert.Contains("Erinnerung: Merkt sich Erinnerungen.", block);
             Assert.Contains("verneine KEINEN", block);   // die Anweisung gegen falsches Verneinen
+            // Das WIE muss mitkommen (Frank 2026-06-10): Anwendungs-Beispiele pro Helfer.
+            Assert.Contains("So nutzt man ihn:", block);
+            Assert.Contains("Sag 'mach Testdinge'.", block);
         }
 
         [Fact]

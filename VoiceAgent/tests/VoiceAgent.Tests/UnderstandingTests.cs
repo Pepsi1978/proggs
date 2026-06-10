@@ -91,6 +91,7 @@ namespace VoiceAgent.Tests
             public string? LastConfirmationTask;
             public string Name => "Erinnerung";
             public string Description => "Merkt sich Erinnerungen.";
+            public string HowTo => "Sag 'erinnere mich an X'.";
             public bool CanHandle(string task) => task.ToLowerInvariant().Contains("erinner");
             public string ConfirmationQuestion(string task)
             {
@@ -186,6 +187,7 @@ namespace VoiceAgent.Tests
         {
             public string Name => "Notiz";
             public string Description => "Notizen.";
+            public string HowTo => "Sag 'notiere X'.";
             public bool CanHandle(string task) => task.Contains("notiere");
             public Task<string> HandleAsync(string task, CancellationToken ct = default)
                 => Task.FromResult("Notiert.");

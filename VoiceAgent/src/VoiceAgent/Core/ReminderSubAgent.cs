@@ -22,6 +22,8 @@ namespace VoiceAgent.Core
         public string Name => "Erinnerung";
         public string Description => "Merkt sich Erinnerungen (mit Uhrzeit, grober Tageszeit oder beim naechsten Start) und meldet sich proaktiv.";
 
+        public string HowTo => "Sag z. B. 'erinnere mich um 22:15 ans Essen', 'erinnere mich morgen Vormittag an den Anruf' oder ohne Zeit 'erinnere mich beim naechsten Start an X' — zur faelligen Zeit ertoent ein Signalton, bis der Nutzer reagiert.";
+
         private static readonly string[] Triggers =
             { "erinner", "wecke mich", "wecker", "sag mir bescheid", "sag bescheid" };
 

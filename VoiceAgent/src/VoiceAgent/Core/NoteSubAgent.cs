@@ -19,6 +19,8 @@ namespace VoiceAgent.Core
         public string Name => "Notiz";
         public string Description => "Merkt sich Notizen und Fakten dauerhaft im Gedaechtnis.";
 
+        public string HowTo => "Sag z. B. 'merk dir, dass mein Auto in Reihe 7 steht' oder 'notier: Geschenk fuer Mama besorgen' — der Fakt bleibt dauerhaft im Gedaechtnis, auch ueber Neustarts.";
+
         // "erinnere mich" bewusst NICHT hier — das gehoert dem ReminderSubAgent (zeitgesteuert).
         private static readonly string[] Triggers =
             { "merk dir", "merke dir", "notiz", "notier", "schreib dir auf", "behalte" };

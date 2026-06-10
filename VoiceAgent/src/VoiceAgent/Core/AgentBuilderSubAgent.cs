@@ -36,6 +36,8 @@ namespace VoiceAgent.Core
         public string Name => "Helfer-Baumeister";
         public string Description => "Legt auf Wunsch neue, eigene Helfer an (z. B. einen Uebersetzer oder Koch-Berater).";
 
+        public string HowTo => "Sag z. B. 'bau mir einen Uebersetzer-Helfer' oder 'erstelle einen Helfer fuer Kochrezepte' — der neue Helfer wird sofort angelegt, ist ab dann ansprechbar und bleibt ueber Neustarts erhalten.";
+
         private static readonly string[] BuildVerbs =
             { "bau", "erstell", "leg ", "erzeug", "richte", "mach mir ein", "neuen helfer", "neuen assistent" };
         private static readonly string[] HelperWords =

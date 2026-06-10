@@ -41,6 +41,8 @@ namespace VoiceAgent.Core
         public string Name => "Computer";
         public string Description => "Steuert auf Wunsch den Rechner: oeffnet Programme, fuehrt Befehle aus, erledigt Dinge am PC.";
 
+        public string HowTo => "Sag z. B. 'oeffne den Taschenrechner' oder 'leg einen Ordner Projekte auf dem Desktop an' — der Befehl wird abgeleitet und vor heiklen Aktionen erst laut bestaetigt. Funktioniert nur, wenn Computer Use in den Einstellungen aktiviert ist (Stufe Sicher oder Vollzugriff).";
+
         private static readonly string[] Triggers =
         {
             "oeffne", "öffne", "starte", "fuehr", "führ", "ausfuehren", "ausführen", "befehl",

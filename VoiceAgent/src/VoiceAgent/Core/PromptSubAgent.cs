@@ -29,6 +29,12 @@ namespace VoiceAgent.Core
         public string Name => _def.Name;
         public string Description => _def.Description;
 
+        // Anwendungs-Beispiele aus der Definition: die Trigger-Stichwoerter sind genau die
+        // Woerter, mit denen der Nutzer diesen selbstgebauten Helfer anspricht.
+        public string HowTo => (_def.Triggers != null && _def.Triggers.Count > 0)
+            ? $"Sprich ihn ueber Stichwoerter wie {string.Join(", ", _def.Triggers)} an — die Aufgabe geht dann direkt an diesen Helfer."
+            : "Nenne sein Fachgebiet in deiner Aufgabe — sie geht dann direkt an diesen Helfer.";
+
         public bool CanHandle(string task)
         {
             if (string.IsNullOrWhiteSpace(task) || _def.Triggers == null) return false;

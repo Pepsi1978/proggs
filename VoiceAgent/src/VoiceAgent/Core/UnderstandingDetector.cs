@@ -108,9 +108,13 @@ namespace VoiceAgent.Core
             if (agents != null && agents.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Verfuegbare Helfer (Name: Zustaendigkeit):");
+                sb.AppendLine("Verfuegbare Helfer (Name: Zustaendigkeit | Anwendungs-Beispiele):");
+                // HowTo mitgeben: die Beispiel-Saetze machen die zielAgent-Zuordnung freier
+                // Formulierungen treffsicherer (gleiche Quelle wie der Boss-Prompt — Registry).
                 foreach (var a in agents)
-                    sb.AppendLine($"- {a.Name}: {a.Description}");
+                    sb.AppendLine(string.IsNullOrWhiteSpace(a.HowTo)
+                        ? $"- {a.Name}: {a.Description}"
+                        : $"- {a.Name}: {a.Description} | {a.HowTo}");
             }
 
             sb.AppendLine();

@@ -19,6 +19,17 @@ namespace VoiceAgent.Core
         /// <summary>Wofuer der Unteragent zustaendig ist (fuer Mensch + spaetere LLM-Auswahl).</summary>
         string Description { get; }
 
+        /// <summary>
+        /// WIE man diesen Helfer anspricht: 1-2 konkrete Beispiel-Saetze + was dann passiert.
+        /// ABSICHTLICH OHNE Default (Frank-Anforderung 2026-06-10): jeder neue Helfer MUSS sein
+        /// Anwendungs-Wissen mitliefern, sonst kompiliert das Projekt nicht (Poka-Yoke Stufe 3 —
+        /// das "Wie" kann nie wieder vergessen werden). Geht mit Name+Description LIVE in den
+        /// System-Prompt des Boss (AgentCapabilities.BuildHelpersBlock) und ins Verstehens-Gehirn:
+        /// der Agent kann dem Nutzer erklaeren, wie man ihn nutzt, und routet freie
+        /// Formulierungen besser.
+        /// </summary>
+        string HowTo { get; }
+
         /// <summary>Ob dieser Unteragent die Aufgabe uebernehmen kann.</summary>
         bool CanHandle(string task);
 

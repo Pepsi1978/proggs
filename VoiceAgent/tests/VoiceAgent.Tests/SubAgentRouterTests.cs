@@ -16,6 +16,7 @@ namespace VoiceAgent.Tests
             public bool Executed;
             public string Name { get; }
             public string Description => $"Helfer {Name}";
+            public string HowTo => $"Sag '{Name}'.";
             public bool CanHandle(string task) => _keyword;
             public string ConfirmationQuestion(string task) => $"Soll ich {Name} machen?";
             public Task<string> HandleAsync(string task, CancellationToken ct = default)

@@ -60,9 +60,15 @@ namespace VoiceAgent.Core
             var sb = new StringBuilder();
             sb.Append("\n\nDEINE EINSATZBEREITEN HELFER (LIVE aus dem System erzeugt — verbindlich: ")
               .Append("JEDEN dieser Helfer hast du JETZT und kannst ihn sofort beauftragen; ")
-              .Append("verneine KEINEN davon):\n");
+              .Append("verneine KEINEN davon. Zu jedem steht, WIE man ihn nutzt — erklaere das ")
+              .Append("dem Nutzer auf Nachfrage mit genau diesen Beispielen):\n");
             foreach (var a in agents)
-                sb.Append("- ").Append(a.Name).Append(": ").Append(a.Description).Append('\n');
+            {
+                sb.Append("- ").Append(a.Name).Append(": ").Append(a.Description);
+                if (!string.IsNullOrWhiteSpace(a.HowTo))
+                    sb.Append(" | So nutzt man ihn: ").Append(a.HowTo);
+                sb.Append('\n');
+            }
             return sb.ToString();
         }
 
