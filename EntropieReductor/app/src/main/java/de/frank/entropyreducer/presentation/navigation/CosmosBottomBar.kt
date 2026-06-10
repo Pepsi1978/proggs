@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Flag
@@ -369,7 +370,7 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
                 // Frank-Wunsch 2026-06-09: Slot 2 = Mentalboard.
                 SubIconMeta(Icons.Outlined.Psychology, "Mental"),
                 // Frank-Wunsch 2026-06-10: Slot 3 = Ideen (Gluehbirne) — 1:1-Klon des Entropie-Bereichs.
-                SubIconMeta(Icons.Outlined.Lightbulb, "Ideen"),
+                SubIconMeta(Icons.Outlined.AutoAwesome, "Ideen"),
             )
         // Frank-Wunsch 2026-06-09: Forscher bekommt Entropie (Slot 1, Warndreieck mit
         // Ausrufezeichen) und Thesen (Slot 2, Gluehbirne). Frank-Wunsch 2026-06-10:

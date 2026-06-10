@@ -21,7 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoFixHigh
-import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
@@ -228,7 +228,7 @@ fun IdeenScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Lightbulb,
+                        imageVector = Icons.Outlined.AutoAwesome,
                         contentDescription = null,
                         tint = IdeenAccent,
                         modifier = Modifier.size(64.dp),
@@ -437,7 +437,7 @@ private fun TimelineEntryRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Lightbulb,
+                    imageVector = Icons.Outlined.AutoAwesome,
                     contentDescription = null,
                     tint = IdeenAccent,
                     modifier = Modifier.size(20.dp),
