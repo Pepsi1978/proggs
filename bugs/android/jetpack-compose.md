@@ -58,6 +58,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 13 | Content unter TopBar/hinter NavBar | Scaffold-`innerPadding` IMMER anwenden | §8.1 |
 | 14 | Crash „infinity constraints" | Kein verschachteltes gleichachsiges Scrollen | §6.1 |
 | 15 | type-safe Nav crasht (custom Typ) | Eigenen `NavType` per `typeMap` registrieren | §7.4 |
+| 16 | Gespeicherte Aenderung (DataStore/Room) erscheint erst beim naechsten Tap | Flow per `remember(context){…}` / ViewModel-`stateIn` stabil halten — NIE roh im Composable-Body neu bauen | §2.14 |
 
 ---
 
@@ -199,6 +200,15 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **Versionen:** per Design; `collectAsStateWithLifecycle` ab `lifecycle-runtime-compose` 2.6+ (in 2.8.7 vorhanden). *(Grenzfall Flow→Compose — Flow-Mechanik selbst siehe kotlin.md §5.)*
 **FIX:** Auf Android `collectAsStateWithLifecycle()`; `collectAsState` nur fuer Nicht-Android-Targets (KMP/Desktop).
 **Quelle:** medium.com/androiddevelopers/consuming-flows-safely-in-jetpack-compose-cde014d0d5a3
+
+### 2.14 Roher (cold) Flow im Composable-Body neu erzeugt → `collectAsStateWithLifecycle` verpasst Emissionen   ⭐ HAEUFIG / TÜCKISCH
+**Symptom:** Eine per DataStore/Room/Flow gespeicherte Aenderung (add/update/delete) erscheint NICHT sofort in der Liste. Erst eine *unabhaengige* Recomposition (Tap auf ein anderes Element, Dialog oeffnen) zeigt den neuen Stand. Die Anzeige scheint „mit dem gespeicherten Wert nichts zu tun zu haben".
+**Ursache:** Der Flow wird DIREKT im Composable-Body erzeugt — z.B. `val s by mentalsFlow(context).collectAsStateWithLifecycle(...)` oder `context.store.data.map{}.collectAsStateWithLifecycle(...)`. Bei JEDER Recomposition entsteht ein NEUES Flow-Objekt → `collectAsStateWithLifecycle` (intern `produceState` mit dem Flow als Key) re-keyed staendig → die laufende Collection-Subscription ist instabil und faengt die Emission nach dem Write nicht zuverlaessig. Erst eine unabhaengige Recomposition startet eine frische Subscription, die den Store frisch liest.
+**Tueckisch:** Ein zweiter Screen mit IDENTISCHEM Code kann „funktionieren", wenn er durch viele andere States/Folge-Updates ohnehin staendig recomposed — der Bug ist dann nur verdeckt, nicht weg.
+**Versionen:** per Design, 1.6 → 1.10 (DataStore/Room/jeder cold Flow).
+**FIX (funktionserhaltend):** Flow EINMAL stabil halten — `val f = remember(context) { mentalsFlow(context) }; val s by f.collectAsStateWithLifecycle(initial)`. Sauberste Form: Flow im ViewModel als `stateIn(viewModelScope, WhileSubscribed(5000), initial)` exponieren und `vm.x.collectAsStateWithLifecycle()`. NIE den rohen cold Flow pro Recomposition neu im Composable bauen. (Verwandt: kotlin.md §4.4, §4.2.)
+**Verifikation:** Logcat-Sonde `onEach { Log.d }` am Flow + `Log.d` am Write → nach „WRITTEN" muss SOFORT ein „emit" folgen.
+**Quelle:** developer.android.com/develop/ui/compose/state; medium.com/androiddevelopers/consuming-flows-safely-in-jetpack-compose-cde014d0d5a3 — eigener Vorfall EntropieReductor Mentalboard 2026-06-10 (2x aufgetreten: erster Fix zielte faelschlich auf eine `working`-Zwischenkopie statt auf die Flow-Stabilitaet).
 
 ---
 
