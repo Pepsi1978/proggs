@@ -47,6 +47,7 @@ namespace VoiceAgent.Services.Audio
         private readonly int _minUtteranceMs;
         private readonly int _minVoicedMs;          // Sprachgehalt-Vorfilter (Schicht 1, groq-transkription §2.1)
         private readonly double _minVoicedRatio;    // Mindest-Anteil lauter Zeit; 0 = Filter aus
+        private readonly int _maxUtteranceMs;       // harter Deckel pro Aussage (0 = aus) — Endlos-Aufnahmen unmoeglich
 
         private WaveInEvent? _waveIn;
         private readonly List<byte> _buffer = new();
@@ -60,13 +61,14 @@ namespace VoiceAgent.Services.Audio
         private volatile bool _disposed;
 
         public AlwaysOnListener(double silenceThreshold, int silenceMs, int minUtteranceMs,
-                                int minVoicedMs = 0, double minVoicedRatio = 0.0)
+                                int minVoicedMs = 0, double minVoicedRatio = 0.0, int maxUtteranceMs = 0)
         {
             _silenceThreshold = (float)silenceThreshold;
             _silenceMs = silenceMs;
             _minUtteranceMs = minUtteranceMs;
             _minVoicedMs = minVoicedMs;
             _minVoicedRatio = minVoicedRatio;
+            _maxUtteranceMs = maxUtteranceMs;
             // Sanity-Sonden: unsinnige Konfigwerte wuerden die Stille-Erkennung lautlos lahmlegen.
             Probe.That(_silenceThreshold > 0f, "AlwaysOnListener: silenceThreshold <= 0 — Sprache wird evtl. nie erkannt", new { silenceThreshold });
             Probe.That(silenceMs > 0, "AlwaysOnListener: silenceMs <= 0 — Aussage-Ende wird evtl. nie erkannt", new { silenceMs });
@@ -75,6 +77,13 @@ namespace VoiceAgent.Services.Audio
                 "AlwaysOnListener: Voiced-Filter-Schwellen unplausibel (minVoicedMs<0 oder Ratio nicht in [0,1])",
                 new { minVoicedMs, minVoicedRatio });
         }
+
+        /// <summary>
+        /// True, solange gerade eine Aussage aufgenommen wird (Sprechbeginn erkannt, Ende noch
+        /// nicht). Fuer den Wachfenster-Lebenszyklus: solange Frank spricht, darf das
+        /// Wake-Fenster NICHT ablaufen (Voice-Pipeline-BP: Timer nur im echten Leerlauf).
+        /// </summary>
+        public bool IsCapturing { get { lock (_gate) return _inSpeech; } }
 
         public void SetEnabled(bool on)
         {
@@ -158,6 +167,15 @@ namespace VoiceAgent.Services.Audio
                             _voicedMs += blockMs;         // weitere laute Zeit aufsummieren
                         }
                         _lastVoiceUtc = now;
+                        // Harter Deckel (Voice-Pipeline-Almanach): findet die Stille-Erkennung kein
+                        // Ende (Tastatur/Atmen halten _lastVoiceUtc frisch), wird die Aussage hier
+                        // finalisiert und VERARBEITET — der Rest laeuft als neue Aussage weiter.
+                        // Ohne Deckel entstanden 41-s-/131-s-Endlos-Aufnahmen (Log 2026-06-10).
+                        if (_maxUtteranceMs > 0 && (now - _speechStartUtc).TotalMilliseconds >= _maxUtteranceMs)
+                        {
+                            Log.Info($"AlwaysOnListener: Max-Aufnahmedauer erreicht ({_maxUtteranceMs} ms) — Aussage wird verarbeitet, Aufnahme laeuft weiter");
+                            FinalizeUtterance(now);
+                        }
                     }
                     else if (_inSpeech)
                     {

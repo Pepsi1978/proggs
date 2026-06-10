@@ -44,7 +44,11 @@ namespace VoiceAgent.Services.Llm
                 "openai" => new OpenAiProvider(Config.ReadApiKey("openai"), model),
                 // Codex nutzt das ChatGPT-Abo (Geraetecode-Login) statt eines API-Schluessels,
                 // daher kein Config.ReadApiKey — die Tokens liegen in ~/SK/VoiceAgent/codex-auth.json.
-                "codex" => new CodexProvider(model, settings.CodexEffort),
+                // Brain-Rolle (Verstehens-Schritt) laeuft latenzkritisch in JEDEM Voice-Turn und ist
+                // ein JSON-Klassifikationsjob: Effort "low" statt des globalen CodexEffort (Frank:
+                // "high") — gemessen 6,6 s pro Turn mit high (Log 2026-06-10), das Modell bleibt
+                // gpt-5.5 (stark, Almanach 1.1). Builder/ComputerUse behalten den vollen Effort.
+                "codex" => new CodexProvider(model, role == ModelRole.Brain ? "low" : settings.CodexEffort),
                 _ => new GeminiProvider(Config.ReadApiKey("gemini"), model),
             };
         }

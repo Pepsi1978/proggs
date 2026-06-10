@@ -60,6 +60,7 @@ namespace VoiceAgent
 
         private bool _busy;                          // verhindert ueberlappende Verarbeitung (nur UI-Thread)
         private string _pending = string.Empty;      // gesammelte Sprech-Haeppchen einer noch offenen Aussage
+        private bool _speechBeganAwake;              // begann die laufende Aufnahme im WACHEN Zustand? (kein stilles Verwerfen nach Timeout)
         private CancellationTokenSource? _safetyCts;  // Sicherheitsnetz-Timer nach "WEITER"
         private TurnTrace? _turn;                     // aktueller Sprach-Turn (Live-Logik-Sonde)
         private DispatcherTimer? _clockTimer;         // live Uhr oben im Fenster
@@ -394,7 +395,7 @@ namespace VoiceAgent
             try { _listener?.Dispose(); }
             catch (Exception ex) { Log.Error("MainWindow: alten Listener schliessen fehlgeschlagen", ex); }
             _listener = new AlwaysOnListener(_settings.SilenceThreshold, _settings.SilenceMs, _settings.MinUtteranceMs,
-                _settings.MinVoicedMs, _settings.MinVoicedRatio);
+                _settings.MinVoicedMs, _settings.MinVoicedRatio, _settings.MaxUtteranceMs);
             _listener.OnUtterance += OnUtterance;
             _listener.OnFrame += OnAudioFrame;       // roher Stream fuer das Weckwort-Lauschen
             _listener.OnSpeechStart += OnSpeechStart; // zeitgenaue Live-Statusanzeige beim Sprechbeginn
@@ -460,6 +461,16 @@ namespace VoiceAgent
         /// </summary>
         private void OnSpeechStart() => Dispatcher.InvokeAsync(() =>
         {
+            // Wachfenster-Lebenszyklus (Voice-Pipeline-BP, Alexa/Google-Muster): Sprechbeginn ist
+            // Aktivitaet — das Fenster wird verlaengert, BEVOR irgendein Guard greift. Zusaetzlich
+            // merken wir uns pro Aufnahme, ob sie im WACHEN Zustand begann: nur dann darf sie
+            // nach einem zwischenzeitlichen Timeout trotzdem verarbeitet werden (kein stilles
+            // Wegwerfen von Franks Rede — der belegte Bug vom 2026-06-10, 41,8-s-Aufnahme).
+            if (_settings.WakeWordEnabled && _wake != null)
+            {
+                _speechBeganAwake = _wake.State == WakeState.Awake;   // pro Aufnahme neu bewertet
+                if (_speechBeganAwake) _wake.NotifyActivity();
+            }
             if (_busy) return;   // gerade Transkription/Antwort -> Statuszeile nicht ueberschreiben
             // Im Weckwort-Ruhezustand hoert der Agent NICHT zu (er wartet aufs Weckwort).
             if (_settings.WakeWordEnabled && _wake != null && _wake.State == WakeState.Sleeping) return;
@@ -554,7 +565,17 @@ namespace VoiceAgent
         private void StartClock()
         {
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _clockTimer.Tick += (_, __) => { UpdateClock(); CheckReminders(); CheckProactive(); _wake?.Tick(); };
+            _clockTimer.Tick += (_, __) =>
+            {
+                UpdateClock(); CheckReminders(); CheckProactive();
+                // Wachfenster-Lebenszyklus (Voice-Pipeline-BP, Alexa/Google: Timer zaehlt ab
+                // Antwort-ENDE und NUR im Leerlauf): solange Frank spricht (laufende Aufnahme)
+                // oder der Agent arbeitet/antwortet (_busy), gilt das als Aktivitaet — der
+                // 60-s-Countdown startet erst danach neu. Vorher schlief der Agent mitten in
+                // Franks Rede ein und die fertige Aufnahme wurde verworfen (Bug 2026-06-10).
+                if (_busy || (_listener?.IsCapturing ?? false)) _wake?.NotifyActivity();
+                _wake?.Tick();
+            };
             _clockTimer.Start();
             UpdateClock();
         }
@@ -821,9 +842,18 @@ namespace VoiceAgent
             if (_settings.WakeWordEnabled && _wake != null)
             {
                 // Ruht -> Aussage ignorieren (Wecken laeuft ueber das Hintergrund-Lauschen).
-                // Wach -> sofort normal verarbeiten (kein Ueberspringen): die Weckwort-Phrase ist
-                // beim Wecken bereits aus dem Buffer verworfen worden (siehe OnWokeAsync).
-                if (_wake.State == WakeState.Sleeping) { TryDelete(wavPath); return; }
+                // AUSNAHME (Defense in Depth, Voice-Pipeline-BP): begann die Aufnahme, als der
+                // Agent noch WACH war, wird sie auch nach einem zwischenzeitlichen Fenster-Timeout
+                // verarbeitet — Franks angefangene Rede darf NIE still im Muell landen (belegter
+                // Bug 2026-06-10). Der Agent wacht dafuer wieder auf (Gespraech laeuft ja weiter).
+                if (_wake.State == WakeState.Sleeping)
+                {
+                    if (!_speechBeganAwake) { TryDelete(wavPath); return; }
+                    Log.Info("Wachfenster: Aussage begann im wachen Zustand — wird trotz Timeout verarbeitet (kein stilles Verwerfen)");
+                    _wake.ForceAwake();
+                    UpdateMicLabel();
+                }
+                _speechBeganAwake = false;   // verbraucht — naechste Aufnahme bewertet neu
                 _wake.NotifyActivity();
             }
 

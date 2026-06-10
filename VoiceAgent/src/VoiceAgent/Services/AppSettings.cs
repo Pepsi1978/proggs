@@ -57,8 +57,18 @@ namespace VoiceAgent.Services
         // ----- Mikrofon / Voice-Loop -----
         public bool MicEnabled { get; set; } = true;
         public double SilenceThreshold { get; set; } = 0.012;  // RMS-Schwelle: darunter = Stille
-        public int SilenceMs { get; set; } = 3000;             // Stille-Dauer bis ein Sprech-Haeppchen endet (3s: erlaubt Gedankenpausen)
+        // Stille-Dauer bis ein Sprech-Haeppchen endet. 1,2 s statt frueher 3 s (Voice-Pipeline-
+        // Recherche 2026-06-10: Konversation 300-550 ms, Diktat 1000-2000 ms). Gedankenpausen
+        // bleiben sicher: der semantische Endpoint-Check sagt bei halben Saetzen "WEITER" und
+        // sammelt weiter, das Sicherheitsnetz (EndpointMaxWaitMs) flusht notfalls. 3 s machten
+        // jede Antwort traege UND liessen Hintergrundgeraeusche die Aufnahme endlos offen halten.
+        public int SilenceMs { get; set; } = 1200;
         public int MinUtteranceMs { get; set; } = 350;         // kuerzere Schnipsel ignorieren (Huster etc.)
+        // Harter Deckel pro Aussage (Voice-Pipeline-Almanach: Azure segmentiert intern ~15 s,
+        // Rhasspy nutzt timeout 30 s). Findet die Stille-Erkennung KEIN Ende (Tastatur/Atmen
+        // ueber der Schwelle), wird die Aussage hier finalisiert und VERARBEITET — nie verworfen.
+        // Verhindert die beobachteten 41-s-/131-s-Endlos-Aufnahmen (Log 2026-06-10). 0 = aus.
+        public int MaxUtteranceMs { get; set; } = 30000;
 
         // ----- Sprachgehalt-Vorfilter (gegen Whisper-Stille-Halluzination, Almanach groq-transkription §2.1/2.2) -----
         // Ein kurzer Geraeusch-Peak (Tastatur, Tuerklicken) startet die Aufnahme; danach folgt fast
