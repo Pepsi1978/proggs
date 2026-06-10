@@ -241,13 +241,12 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                         nav.tabSwitch(route)
                     }
                 }
-                // Aufgaben-Slot 1 = "Journal" zeigt die aus BestJournal Frank
-                // gespiegelten Tagebucheintraege (read-only), eigener Screen.
-                // Frank-Wunsch 2026-06-09: Entropie + Thesen sind in den Forscher-
+                // Frank-Wunsch 2026-06-10: "Journal" (read-only Spiegel der BestJournal-
+                // Frank-Eintraege, eigener Screen) ist vom Aufgaben- in den Forscher-
                 // Bereich umgezogen — Forscher-Slot 1 = Tagebuch ("Entropie"),
-                // Forscher-Slot 2 = Thesen. Aufgaben-Slot 2/3 und Forscher-Slot 3
-                // sind jetzt leere Platzhalter (else-Zweig unten via SubAreaScreen).
-                val isJournal = parent == Routes.TASKS && index == 1
+                // Forscher-Slot 2 = Thesen, Forscher-Slot 3 = Journal. Aufgaben-Slot 1
+                // und Slot 3 sind leere Platzhalter (else-Zweig unten via SubAreaScreen).
+                val isJournal = parent == Routes.SCIENTIST && index == 3
                 // Frank-Wunsch 2026-06-09: Aufgaben-Slot 2 = Mentalboard.
                 val isMental = parent == Routes.TASKS && index == 2
                 val isTagebuch = parent == Routes.SCIENTIST && index == 1

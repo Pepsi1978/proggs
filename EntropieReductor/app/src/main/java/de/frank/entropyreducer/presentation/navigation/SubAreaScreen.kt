@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CalendarViewWeek
 import androidx.compose.material.icons.outlined.DirectionsRun
@@ -48,11 +47,10 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * lila, Biomarker rosé). So sieht der Benutzer sofort was hier mal kommen wird,
  * ohne dass es nach "Bug" aussieht.
  *
- * Inhalte: TASKS-Slot 1 = "Journal" routet NICHT hierdurch (eigener Screen).
- * Frank-Wunsch 2026-06-09: Entropie + Thesen zogen in den Forscher-Bereich um —
- * FORSCHER-Slot 1 (Tagebuch/"Entropie") und FORSCHER-Slot 2 (Thesen) routen NICHT
- * hierdurch (eigene Screens). Platzhalter sind jetzt: TASKS-Slot 2/3, FORSCHER-Slot 3
- * und die Slots der Tabs Analyse/Biomarker.
+ * Frank-Wunsch 2026-06-10: Journal zog (nach Entropie + Thesen am 2026-06-09) eben-
+ * falls in den Forscher-Bereich um. FORSCHER-Slot 1 (Tagebuch/"Entropie"), Slot 2
+ * (Thesen) und Slot 3 (Journal) routen NICHT hierdurch (eigene Screens). Platzhalter
+ * sind jetzt: TASKS-Slot 1/3 und die Slots der Tabs Analyse/Biomarker.
  *
  * Navigation:
  * - Zurueck-Geste → popBackStack → zurueck zum Parent-Tab
@@ -174,23 +172,15 @@ private data class SubSlotMeta(
  */
 private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
     return when (parent) {
-        // Frank-Wunsch 2026-06-09: TASKS-Slot 1 = "Journal" hat einen eigenen Screen;
-        // TASKS-Slot 2/3 sind jetzt leere Platzhalter (Entropie/Thesen zogen zum
-        // Forscher). Beim Forscher routen Slot 1 (Entropie) + Slot 2 (Thesen) ueber
-        // eigene Screens — nur SCIENTIST-Slot 3 nutzt diesen Platzhalter.
-        Routes.TASKS -> when (index) {
-            1 -> SubSlotMeta(
-                icon = Icons.Outlined.Book,
-                title = "Journal",
-                teaser = "Dein persönliches Journal — Raum für Gedanken, Notizen und " +
-                    "Rückblicke. Inhalt folgt in einem der nächsten Updates.",
-            )
-            else -> SubSlotMeta(
-                icon = Icons.Outlined.Lightbulb,
-                title = "Bereich $index",
-                teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
-            )
-        }
+        // Frank-Wunsch 2026-06-10: Journal zog in den Forscher-Bereich um (Slot 3,
+        // eigener Screen). TASKS-Slot 1/3 sind jetzt leere Platzhalter; Slot 2
+        // (Mental) routet nicht hierdurch. Beim Forscher routen Slot 1 (Entropie),
+        // Slot 2 (Thesen) und Slot 3 (Journal) ueber eigene Screens.
+        Routes.TASKS -> SubSlotMeta(
+            icon = Icons.Outlined.Lightbulb,
+            title = "Bereich $index",
+            teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
+        )
         Routes.ANALYSIS -> when (index) {
             1 -> SubSlotMeta(
                 icon = Icons.Outlined.CalendarViewWeek,

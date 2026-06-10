@@ -75,15 +75,16 @@ fun JournalScreen(
         compactHeader = true,
         bottomBar = {
             CosmosBottomBar(
-                currentTab = Routes.TASKS,
+                currentTab = Routes.SCIENTIST,
                 micState = MicState.IDLE,
                 onTabSelected = { route -> onSwitchTab(route) },
                 // Journal ist read-only — der Mic-Knopf hat hier keine Funktion.
                 onMicClick = {},
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
-                forcedSubMode = Routes.TASKS,
-                // Journal ist Sub-Bereich 1 unter Aufgaben → dauerhaft hervorheben.
-                selectedSubIndex = 1,
+                forcedSubMode = Routes.SCIENTIST,
+                // Frank-Wunsch 2026-06-10: Journal ist Sub-Bereich 3 unter Forscher
+                // (vom Aufgaben-Bereich umgezogen) → dauerhaft hervorheben.
+                selectedSubIndex = 3,
             )
         },
     ) { padding ->
@@ -334,7 +335,9 @@ private fun sectionLabelFor(timestamp: Long): String {
     }
 }
 
-internal val JournalAccent: Color = Color(0xFFEA580C)
+// Frank-Wunsch 2026-06-10: Journal lebt jetzt im Forscher-Bereich → Akzent
+// von Aufgaben-Orange auf Forscher-Violett umgefaerbt (wie Entropie/Thesen).
+internal val JournalAccent: Color = Color(0xFFA78BFA)
 
 internal fun formatJournalTimestamp(ts: Long): String =
     SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.GERMANY).format(Date(ts))
