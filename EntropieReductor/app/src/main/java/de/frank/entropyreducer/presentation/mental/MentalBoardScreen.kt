@@ -1,7 +1,6 @@
 package de.frank.entropyreducer.presentation.mental
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +53,6 @@ import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -106,7 +104,6 @@ internal suspend fun addMental(context: Context, text: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing + Mental.create(clean))
     }
-    Log.d("MentalBoard", "addMental WRITTEN: '$clean'")
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
@@ -117,7 +114,6 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
     }
-    Log.d("MentalBoard", "updateMental WRITTEN: id=$id '$clean'")
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
@@ -196,18 +192,10 @@ fun MentalBoardScreen(
     // eine unabhaengige Recomposition (Tap auf einen anderen Eintrag) startete eine frische
     // Subscription, die den aktuellen Stand frisch las — exakt Franks Symptom. Das Tagebuch hat
     // denselben Code, dort wird der Bug nur durch viele andere States + KI-Folge-Updates verdeckt.
-    // Fix: Flow EINMAL per remember(context) stabil halten (Bug-Almanach kotlin.md §4.4 +
-    // developer.android.com/develop/ui/compose/state). Logik-Sonde (LOGCAT-Tag "MentalBoard")
-    // macht live sichtbar, dass der Flow nach jedem Speichern emittiert.
-    val mentalsStream =
-        remember(context) {
-            mentalsFlow(context).onEach { list ->
-                Log.d(
-                    "MentalBoard",
-                    "flow emit: ${list.size} Eintraege -> ${list.map { it.text.take(15) }}",
-                )
-            }
-        }
+    // Fix (verifiziert 2026-06-10 per Logcat: emit folgt sofort auf jeden Write): Flow EINMAL per
+    // remember(context) stabil halten (Bug-Almanach kotlin.md §4.4 + jetpack-compose.md §2.14 +
+    // developer.android.com/develop/ui/compose/state).
+    val mentalsStream = remember(context) { mentalsFlow(context) }
     val stored by mentalsStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // Lokale Drag-Reihenfolge: NUR waehrend eines aktiven Drag-Vorgangs gesetzt. Ausserhalb des
@@ -492,10 +480,13 @@ private fun MentalEditDialog(
                 enabled = text.isNotBlank(),
                 modifier = Modifier.size(56.dp),
             ) {
+                // Frank-Wunsch 2026-06-10: Diskette IMMER voll orange in voller Staerke — auch im
+                // "Neues Mental"-Dialog (vorher bei leerem Text abgeschwaecht/durchsichtig). Gleiche
+                // Farbe und Staerke wie im Bearbeiten-Dialog.
                 Icon(
                     imageVector = Icons.Outlined.Save,
                     contentDescription = "Speichern",
-                    tint = if (text.isNotBlank()) MentalAccent else MentalAccent.copy(alpha = 0.4f),
+                    tint = MentalAccent,
                     modifier = Modifier.size(32.dp),
                 )
             }
