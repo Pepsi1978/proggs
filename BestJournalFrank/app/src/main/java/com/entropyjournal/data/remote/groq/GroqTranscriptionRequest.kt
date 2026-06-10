@@ -20,6 +20,12 @@ object GroqTranscriptionRequest {
     fun createLanguagePart() =
         Constants.GROQ_LANGUAGE.toRequestBody("text/plain".toMediaType())
 
+    // Schicht 2: verbose_json liefert die Confidence-Felder (no_speech_prob, avg_logprob,
+    // compression_ratio) fuers Anti-Halluzinations-Gate — bei Groq ohne Mehrlatenz/-kosten.
     fun createResponseFormatPart() =
-        "json".toRequestBody("text/plain".toMediaType())
+        "verbose_json".toRequestBody("text/plain".toMediaType())
+
+    // temperature=0 als Basis (verhindert Stille-Halluzination nicht allein, aber sinnvoll).
+    fun createTemperaturePart() =
+        "0".toRequestBody("text/plain".toMediaType())
 }
