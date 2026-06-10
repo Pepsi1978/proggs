@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.mental
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +54,7 @@ import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -104,6 +106,7 @@ internal suspend fun addMental(context: Context, text: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing + Mental.create(clean))
     }
+    Log.d("MentalBoard", "addMental WRITTEN: '$clean'")
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
@@ -114,6 +117,7 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
     }
+    Log.d("MentalBoard", "updateMental WRITTEN: id=$id '$clean'")
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
@@ -185,15 +189,29 @@ fun MentalBoardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val stored by mentalsFlow(context).collectAsStateWithLifecycle(initialValue = emptyList())
+    // Bugfix 2026-06-10 (Frank, 2. Versuch — Root Cause KORRIGIERT): Der erste Fix war an der
+    // falschen Stelle. Echte Ursache: `mentalsFlow(context)` wurde bei JEDER Recomposition NEU
+    // erzeugt → `collectAsStateWithLifecycle` bekam jedes Mal ein neues Flow-Objekt → die laufende
+    // DataStore-Subscription war instabil und verpasste die Emission nach add/update/delete. Erst
+    // eine unabhaengige Recomposition (Tap auf einen anderen Eintrag) startete eine frische
+    // Subscription, die den aktuellen Stand frisch las — exakt Franks Symptom. Das Tagebuch hat
+    // denselben Code, dort wird der Bug nur durch viele andere States + KI-Folge-Updates verdeckt.
+    // Fix: Flow EINMAL per remember(context) stabil halten (Bug-Almanach kotlin.md §4.4 +
+    // developer.android.com/develop/ui/compose/state). Logik-Sonde (LOGCAT-Tag "MentalBoard")
+    // macht live sichtbar, dass der Flow nach jedem Speichern emittiert.
+    val mentalsStream =
+        remember(context) {
+            mentalsFlow(context).onEach { list ->
+                Log.d(
+                    "MentalBoard",
+                    "flow emit: ${list.size} Eintraege -> ${list.map { it.text.take(15) }}",
+                )
+            }
+        }
+    val stored by mentalsStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    // Bugfix 2026-06-10 (Frank): Neu gespeicherte/geaenderte Mentals erschienen erst, wenn man
-    // danach einen anderen Eintrag antippte. Ursache: eine lokale `working`-Kopie, die nur per
-    // LaunchedEffect(stored) nachgezogen wurde — sie aktualisierte sich nicht zuverlaessig SOFORT
-    // nach add/update/delete, sondern erst bei einer spaeteren, unabhaengigen Recomposition.
-    // Loesung (wie das funktionierende Tagebuch): AUSSERHALB eines aktiven Drag-Vorgangs IMMER
-    // direkt `stored` anzeigen -> add/update/delete sind sofort sichtbar. Nur WAEHREND des Ziehens
-    // haelt `dragOrder` die fluessige lokale Reihenfolge.
+    // Lokale Drag-Reihenfolge: NUR waehrend eines aktiven Drag-Vorgangs gesetzt. Ausserhalb des
+    // Ziehens wird direkt `stored` angezeigt -> add/update/delete sind sofort sichtbar.
     var dragOrder by remember { mutableStateOf<List<Mental>?>(null) }
     val displayed = dragOrder ?: stored
 
@@ -466,31 +484,34 @@ private fun MentalEditDialog(
         // (rechts), Papierkorb zum Loeschen (links). KEIN "Abbrechen" mehr: ein Tipp in den
         // leeren Raum schliesst den Dialog ueber onDismissRequest.
         confirmButton = {
+            // Frank-Wunsch 2026-06-10: groessere Icons. Diskette IMMER orange — bei leerem Text
+            // nur abgeschwaecht (statt grau), damit sie auch im "Neues Mental"-Dialog klar sichtbar
+            // ist. Icon 32dp im 56dp-Touch-Target.
             IconButton(
                 onClick = { if (text.isNotBlank()) onSave(text) },
                 enabled = text.isNotBlank(),
+                modifier = Modifier.size(56.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Save,
                     contentDescription = "Speichern",
-                    tint = if (text.isNotBlank()) MentalAccent else cosmosDisabled(),
+                    tint = if (text.isNotBlank()) MentalAccent else MentalAccent.copy(alpha = 0.4f),
+                    modifier = Modifier.size(32.dp),
                 )
             }
         },
         dismissButton = {
-            // Papierkorb nur beim Bearbeiten (onDelete != null), nicht beim Neuanlegen.
+            // Papierkorb nur beim Bearbeiten (onDelete != null), nicht beim Neuanlegen. Groesser.
             if (onDelete != null) {
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(56.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "Loeschen",
                         tint = Color(0xFFE53935),
+                        modifier = Modifier.size(32.dp),
                     )
                 }
             }
         },
     )
 }
-
-@Composable
-private fun cosmosDisabled(): Color = LocalCosmos.current.textSecondary.copy(alpha = 0.5f)
