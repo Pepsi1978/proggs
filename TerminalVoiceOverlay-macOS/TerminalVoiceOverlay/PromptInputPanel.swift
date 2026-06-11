@@ -86,6 +86,14 @@ final class PromptInputPanel: NSPanel {
     /// True solange der Backfill bestehender Slots laeuft (sequentiell, gedrosselt).
     private var backfillRunning = false
     private var slotButtons: [Int: NSButton] = [:]
+    /// Eigenes gestyltes Tooltip-Fenster (weiss, abgerundet, Schatten, im
+    /// Vordergrund) — Ersatz fuer den nicht gestaltbaren NSToolTip, 1:1 zur
+    /// Windows-Optik (Frank-Wunsch 2026-06-11).
+    private lazy var tooltipPanel = SlotTooltipPanel()
+    /// Verzoegerungs-Timer fuer die Einblendung (~130ms wie unter Windows).
+    private var hoverTimer: Timer?
+    /// Aktuell mit der Maus ueberfahrener Slot (oder nil).
+    private var hoveredSlot: Int?
     private let slotSaveButton = NSButton()
     private let slotDeleteButton = NSButton()
     /// Zeigt „wann gespeichert" fuer den gewaehlten belegten Slot, rechts neben dem X.
@@ -138,6 +146,15 @@ final class PromptInputPanel: NSPanel {
     // Damit das Eingabefeld den Fokus bekommen kann (statt das Promptboard).
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    // Wird das Eingabe-Panel ausgeblendet, MUSS ein evtl. offener Slot-Tooltip
+    // mit verschwinden — sonst bliebe das kleine Fenster sichtbar haengen.
+    override func orderOut(_ sender: Any?) {
+        super.orderOut(sender)
+        hoverTimer?.invalidate(); hoverTimer = nil
+        hoveredSlot = nil
+        tooltipPanel.orderOut(nil)
+    }
 
     // MARK: - Public API
 
@@ -591,11 +608,14 @@ final class PromptInputPanel: NSPanel {
         var row1Views: [NSView] = []
         var row2Views: [NSView] = []
         for n in 1...PromptSlotStore.slotCount {
-            let btn = NSButton()
+            let btn = HoverButton()
+            // Kein System-Tooltip (leerer String) — die Anzeige uebernimmt der
+            // eigene gestylte Tooltip ueber die Hover-Erkennung (handleSlotHover).
             configureSlotButton(btn, title: "\(n)", textColor: Self.slotGrey,
-                tooltip: "Slot \(n) — klick speichert/laedt hier deinen Prompt-Zwischenspeicher.",
+                tooltip: "",
                 action: #selector(onSlotNumberClick(_:)))
             btn.tag = n
+            btn.onHover = { [weak self] inside in self?.handleSlotHover(n, inside: inside) }
             slotButtons[n] = btn
             // 1-15 in die obere Reihe, 16-30 in die untere.
             if n <= Self.slotsPerRow { row1Views.append(btn) } else { row2Views.append(btn) }
@@ -659,7 +679,7 @@ final class PromptInputPanel: NSPanel {
         btn.isBordered = false
         btn.target = self
         btn.action = action
-        btn.toolTip = tooltip
+        btn.toolTip = tooltip.isEmpty ? nil : tooltip
         btn.translatesAutoresizingMaskIntoConstraints = false
         btn.wantsLayer = true
         btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
@@ -698,9 +718,8 @@ final class PromptInputPanel: NSPanel {
             btn.layer?.backgroundColor = isSelected
                 ? NSColor(calibratedWhite: 0.26, alpha: 1).cgColor
                 : NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
-            // Hover-Tooltip: bei belegtem Slot die KI-Zusammenfassung (falls
-            // vorhanden), sonst der Standard-Hinweis.
-            btn.toolTip = slotTooltip(n, hasContent: hasContent)
+            // Kein System-Tooltip mehr — die Anzeige uebernimmt das eigene
+            // gestylte Tooltip-Fenster ueber die Hover-Erkennung (handleSlotHover).
         }
         let hasSelection = (selectedSlot != nil)
         slotSaveButton.isHidden = !hasSelection
@@ -726,20 +745,42 @@ final class PromptInputPanel: NSPanel {
         return btn.subviews.compactMap { $0 as? NSTextField }.first
     }
 
-    /// Hover-Tooltip eines Slot-Buttons: bei belegtem Slot mit vorhandener
-    /// KI-Zusammenfassung die 6-8-Wort-Summary, sonst der Standard-Hinweis.
-    private func slotTooltip(_ n: Int, hasContent: Bool) -> String? {
-        // Nur belegte Slots MIT Zusammenfassung zeigen ein Tooltip-Fenster.
-        // Leere (und noch nicht zusammengefasste) zeigen KEINS (Frank-Wunsch
-        // 2026-06-11) — nil entfernt den Tooltip.
-        if hasContent, let s = slotSummaries[n], !s.isEmpty { return s }
-        return nil
+    /// Reaktion auf Maus-Hover ueber einen Slot. Nur belegte Slots MIT
+    /// Zusammenfassung zeigen nach kurzer Verzoegerung (~130ms wie Windows) das
+    /// eigene gestylte Tooltip-Fenster; leere oder noch nicht zusammengefasste
+    /// Slots zeigen NICHTS (Frank-Wunsch). Verlassen blendet sofort aus.
+    private func handleSlotHover(_ n: Int, inside: Bool) {
+        if !inside {
+            hoverTimer?.invalidate(); hoverTimer = nil
+            if hoveredSlot == n {
+                hoveredSlot = nil
+                tooltipPanel.orderOut(nil)
+            }
+            return
+        }
+        hoveredSlot = n
+        hoverTimer?.invalidate()
+        guard let summary = slotSummaries[n], !summary.isEmpty,
+              !(slotContents[n]?.isEmpty ?? true) else {
+            tooltipPanel.orderOut(nil)
+            return
+        }
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.13, repeats: false) { [weak self] _ in
+            guard let self = self, self.hoveredSlot == n,
+                  let btn = self.slotButtons[n], let win = btn.window else { return }
+            let screenRect = win.convertToScreen(btn.convert(btn.bounds, to: nil))
+            self.tooltipPanel.show(text: summary, above: screenRect)
+        }
     }
 
-    /// Aktualisiert den Tooltip eines einzelnen Slot-Buttons (nach Summary-Update).
+    /// Aktualisiert das offene Tooltip-Fenster live, falls die Maus gerade ueber
+    /// genau diesem Slot steht und seine Summary frisch erzeugt wurde (Backfill
+    /// oder direkt nach dem Speichern).
     private func applySlotTooltip(_ n: Int) {
-        let hasContent = !(slotContents[n]?.isEmpty ?? true)
-        slotButtons[n]?.toolTip = slotTooltip(n, hasContent: hasContent)
+        guard hoveredSlot == n, let summary = slotSummaries[n], !summary.isEmpty,
+              let btn = slotButtons[n], let win = btn.window else { return }
+        let screenRect = win.convertToScreen(btn.convert(btn.bounds, to: nil))
+        tooltipPanel.show(text: summary, above: screenRect)
     }
 
     /// Stoesst den Backfill an: erzeugt fuer alle belegten Slots OHNE
@@ -991,5 +1032,101 @@ final class SubmitTextView: NSTextView {
             return
         }
         super.doCommand(by: selector)
+    }
+}
+
+/// NSButton, der Maus-Eintritt/-Austritt ueber eine NSTrackingArea meldet —
+/// Grundlage fuer das eigene Tooltip-Fenster (der System-NSToolTip laesst sich
+/// nicht im App-Stil gestalten).
+final class HoverButton: NSButton {
+    var onHover: ((Bool) -> Void)?
+    private var hoverTrackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let ta = hoverTrackingArea { removeTrackingArea(ta) }
+        let ta = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil)
+        addTrackingArea(ta)
+        hoverTrackingArea = ta
+    }
+
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
+}
+
+/// Kleines, selbst gezeichnetes Tooltip-Fenster im App-Stil — 1:1 Pendant zum
+/// gestylten WPF-Tooltip unter Windows (weiss, abgerundete Ecken, Schatten,
+/// dunkle Schrift). Borderless, nonactivating, hohes Fenster-Level → schwebt im
+/// Vordergrund ueber dem Overlay und klaut keinen Fokus.
+final class SlotTooltipPanel: NSPanel {
+    private let container = NSView()
+    private let label = NSTextField(wrappingLabelWithString: "")
+
+    init() {
+        super.init(contentRect: NSRect(x: 0, y: 0, width: 200, height: 40),
+                   styleMask: [.borderless, .nonactivatingPanel],
+                   backing: .buffered, defer: false)
+        isFloatingPanel = true
+        level = .popUpMenu          // ueber dem Overlay (.floating)
+        backgroundColor = .clear
+        isOpaque = false
+        hasShadow = true            // Fenster-Schatten folgt der runden, opaken Flaeche
+        ignoresMouseEvents = true   // Tooltip faengt keine Klicks/Hover ab
+        hidesOnDeactivate = false
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.white.cgColor
+        container.layer?.cornerRadius = 8
+        container.layer?.borderColor = NSColor(calibratedWhite: 0.82, alpha: 1).cgColor
+        container.layer?.borderWidth = 1
+
+        label.font = NSFont.systemFont(ofSize: 13)
+        label.textColor = NSColor(calibratedWhite: 0.12, alpha: 1)
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.isEditable = false
+        label.isSelectable = false
+        label.maximumNumberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        contentView = container
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 11),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -11),
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 7),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -7),
+        ])
+    }
+
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+
+    /// Zeigt den Tooltip mit `text`, ueber `screenRect` (Button-Rahmen in
+    /// Bildschirmkoordinaten) zentriert. Klemmt in den sichtbaren Bildschirm und
+    /// weicht nach unten aus, wenn oben kein Platz ist.
+    func show(text: String, above screenRect: NSRect) {
+        label.stringValue = text
+        label.preferredMaxLayoutWidth = 360
+        container.layoutSubtreeIfNeeded()
+        let fit = container.fittingSize
+        let w = min(max(fit.width, 70), 384)
+        let h = max(fit.height, 26)
+        var x = screenRect.midX - w / 2
+        var y = screenRect.maxY + 6   // y waechst nach oben -> oberhalb des Buttons
+        let screen = NSScreen.screens.first {
+            $0.frame.contains(NSPoint(x: screenRect.midX, y: screenRect.midY))
+        } ?? NSScreen.main
+        if let vf = screen?.visibleFrame {
+            x = Swift.max(vf.minX + 4, Swift.min(x, vf.maxX - w - 4))
+            if y + h > vf.maxY { y = screenRect.minY - h - 6 }  // sonst unterhalb
+            y = Swift.max(vf.minY + 4, y)
+        }
+        setFrame(NSRect(x: x, y: y, width: w, height: h), display: true)
+        orderFront(nil)
     }
 }
