@@ -24,9 +24,10 @@ final class PromptSlotStore {
 
     static let shared = PromptSlotStore()
 
-    /// Anzahl der Slots (1…15). Zentral, damit UI und Validierung dieselbe
-    /// Quelle nutzen.
-    static let slotCount = 15
+    /// Anzahl der Slots (1…30, in der UI als zwei Reihen 1…15 / 16…30).
+    /// Zentral, damit UI und Validierung dieselbe Quelle nutzen — bytegenau
+    /// synchron zur Windows-Variante (PromptSlotService.SlotCount).
+    static let slotCount = 30
 
     private let baseDir: URL
     private let slotsFileURL: URL

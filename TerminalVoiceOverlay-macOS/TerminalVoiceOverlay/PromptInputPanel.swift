@@ -78,6 +78,8 @@ final class PromptInputPanel: NSPanel {
     private static let slotGold = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
     private static let slotGrey = NSColor(calibratedWhite: 0.55, alpha: 1)
     private static let slotRed = NSColor(calibratedRed: 1.0, green: 0.27, blue: 0.27, alpha: 1)
+    /// Wieviele Slots je Reihe — 15 oben (1-15), 15 unten (16-30).
+    private static let slotsPerRow = 15
 
     private static let slotTimeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -560,11 +562,14 @@ final class PromptInputPanel: NSPanel {
         updateSlotVisuals()
     }
 
-    /// Baut die untere Leiste: Zahlen 1…15, danach Diskette und X. Diskette
-    /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
-    /// Zahl (Frank-Wunsch).
+    /// Baut die untere Leiste: Zahlen 1-30 in zwei Reihen (1-15 oben,
+    /// 16-30 unten). Diskette und X liegen EINMAL rechts daneben (vertikal
+    /// zentriert ueber beide Reihen) und gelten fuer den gewaehlten Slot egal
+    /// in welcher Reihe. Sie sind anfangs versteckt — sie erscheinen erst nach
+    /// Auswahl einer Zahl (Frank-Wunsch).
     private func buildSlotBar() -> NSView {
-        var views: [NSView] = []
+        var row1Views: [NSView] = []
+        var row2Views: [NSView] = []
         for n in 1...PromptSlotStore.slotCount {
             let btn = NSButton()
             configureSlotButton(btn, title: "\(n)", textColor: Self.slotGrey,
@@ -572,7 +577,8 @@ final class PromptInputPanel: NSPanel {
                 action: #selector(onSlotNumberClick(_:)))
             btn.tag = n
             slotButtons[n] = btn
-            views.append(btn)
+            // 1-15 in die obere Reihe, 16-30 in die untere.
+            if n <= Self.slotsPerRow { row1Views.append(btn) } else { row2Views.append(btn) }
         }
         configureSlotButton(slotSaveButton, title: "💾", textColor: Self.slotGold,
             tooltip: "Aktuellen Prompt im gewaehlten Slot dauerhaft speichern.",
@@ -594,9 +600,31 @@ final class PromptInputPanel: NSPanel {
         spacer.translatesAutoresizingMaskIntoConstraints = false
         spacer.widthAnchor.constraint(equalToConstant: 8).isActive = true
 
-        let bar = NSStackView(views: views + [spacer, slotSaveButton, slotDeleteButton, slotTimeLabel])
+        // Zwei Zahlen-Reihen untereinander: 1-15 oben, 16-30 unten.
+        let row1 = NSStackView(views: row1Views)
+        row1.orientation = .horizontal
+        row1.spacing = 7
+        row1.alignment = .centerY
+        let row2 = NSStackView(views: row2Views)
+        row2.orientation = .horizontal
+        row2.spacing = 7
+        row2.alignment = .centerY
+        let rows = NSStackView(views: [row1, row2])
+        rows.orientation = .vertical
+        rows.spacing = 6
+        rows.alignment = .leading
+
+        // Gemeinsame Aktions-Buttons (Diskette/X/Zeit) EINMAL, vertikal
+        // zentriert ueber beide Reihen — gelten fuer den gewaehlten Slot
+        // egal in welcher Reihe.
+        let actions = NSStackView(views: [slotSaveButton, slotDeleteButton, slotTimeLabel])
+        actions.orientation = .horizontal
+        actions.spacing = 7
+        actions.alignment = .centerY
+
+        let bar = NSStackView(views: [rows, spacer, actions])
         bar.orientation = .horizontal
-        bar.spacing = 7
+        bar.spacing = 0
         bar.alignment = .centerY
         return bar
     }
