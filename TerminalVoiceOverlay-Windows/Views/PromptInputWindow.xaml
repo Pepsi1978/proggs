@@ -110,6 +110,43 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Tooltip im App-Stil (Frank-Wunsch 2026-06-11): weisser Hintergrund,
+             abgerundete Ecken, dezenter Rahmen + Schatten, dunkle Schrift —
+             kein eckiger Standard-Kasten. Gilt implizit fuer ALLE Tooltips im
+             Eingabefenster (Slot-Zusammenfassungen UND Toolbar-Buttons).
+             Der Opened-Handler (SlotToolTip_Opened) schiebt das Popup-HWND auf
+             HWND_TOPMOST — sonst rutscht der Tooltip hinter das Topmost-Overlay
+             (gleiches Problem + Loesung wie ForcePopupTopmost bei den Menues). -->
+        <Style TargetType="ToolTip">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <EventSetter Event="Opened" Handler="SlotToolTip_Opened"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="#FFFFFFFF"
+                                CornerRadius="8"
+                                BorderBrush="#FFD0D0D0"
+                                BorderThickness="1"
+                                Padding="11,7"
+                                MaxWidth="380">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#FF000000"
+                                                  BlurRadius="12"
+                                                  ShadowDepth="2"
+                                                  Opacity="0.30"/>
+                            </Border.Effect>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       TextWrapping="Wrap"
+                                       Foreground="#FF1E1E1E"
+                                       FontFamily="Segoe UI"
+                                       FontSize="13"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Halbtransparenter Container, gleiche Optik wie PromptBoardPanel,

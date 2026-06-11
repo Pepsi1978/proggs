@@ -917,6 +917,31 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
+    /// Opened-Handler des Tooltip-Styles (XAML EventSetter). Schiebt das native
+    /// Popup-HWND des Tooltips auf HWND_TOPMOST. Hintergrund: dieses Fenster
+    /// laeuft mit Topmost="True"/ShowActivated="False" — der Tooltip-Popup erbt
+    /// das nicht zuverlaessig und erscheint sonst HINTER dem Overlay (Frank-Bug
+    /// 2026-06-11: "Tooltip springt in den Hintergrund"). Gleiche Loesung wie
+    /// ForcePopupTopmost bei den Kontextmenues im PromptBoardPanel.
+    /// </summary>
+    private void SlotToolTip_Opened(object sender, RoutedEventArgs e)
+    {
+        ForceToolTipTopmost(sender as System.Windows.Media.Visual);
+    }
+
+    private static void ForceToolTipTopmost(System.Windows.Media.Visual? popupVisual)
+    {
+        if (popupVisual is null) return;
+        if (PresentationSource.FromVisual(popupVisual) is not System.Windows.Interop.HwndSource hwndSource) return;
+        if (hwndSource.Handle == IntPtr.Zero) return;
+        NativeMethods.Win32.SetWindowPos(
+            hwndSource.Handle,
+            NativeMethods.Win32.HWND_TOPMOST,
+            0, 0, 0, 0,
+            NativeMethods.Win32.SWP_NOMOVE | NativeMethods.Win32.SWP_NOSIZE | NativeMethods.Win32.SWP_NOACTIVATE);
+    }
+
+    /// <summary>
     /// Klick auf eine Zahl: auswaehlen, Diskette/X einblenden. Hat der Slot
     /// bereits einen gespeicherten Prompt, wird er sofort ins Eingabefeld
     /// geladen (Zwischenspeicher abrufen — Frank-Wunsch). Leere Slots lassen
