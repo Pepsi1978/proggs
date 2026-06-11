@@ -20,6 +20,16 @@ public sealed class PromptSlotEntry
     public int Number { get; set; }
     public string Text { get; set; } = string.Empty;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// KI-generierte Kurz-Zusammenfassung (6-8 Woerter) WOFUER dieser Prompt
+    /// da ist — wird als Hover-Tooltip ueber dem belegten Slot angezeigt.
+    /// Leer bei Tombstones und bei Eintraegen, die vor diesem Feature
+    /// gespeichert wurden (Fallback: Standard-Tooltip). Reist im JSON
+    /// (camelCase <c>summary</c>) mit ins Drive-Backup und ist bytegenau
+    /// kompatibel zur macOS-Variante (PBSlotEntry.summary).
+    /// </summary>
+    public string Summary { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -108,6 +118,36 @@ public sealed class PromptSlotService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Wie <see cref="LoadMapAndTimesAsync"/>, liefert zusaetzlich die
+    /// KI-Zusammenfassungen pro belegtem Slot — fuer die Hover-Tooltips der
+    /// Zahlen-Leiste. Nur Slots mit nicht-leerer Summary erscheinen im
+    /// Summary-Dictionary.
+    /// </summary>
+    public async Task<(Dictionary<int, string> Map, Dictionary<int, DateTime> Times, Dictionary<int, string> Summaries)>
+        LoadMapTimesSummariesAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            var map = new Dictionary<int, string>();
+            var times = new Dictionary<int, DateTime>();
+            var summaries = new Dictionary<int, string>();
+            foreach (var e in entries)
+            {
+                if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                {
+                    map[e.Number] = e.Text;
+                    times[e.Number] = e.UpdatedAt;
+                    if (!string.IsNullOrWhiteSpace(e.Summary)) summaries[e.Number] = e.Summary;
+                }
+            }
+            return (map, times, summaries);
+        }
+        finally { _gate.Release(); }
+    }
+
     /// <summary>Liefert ALLE Eintraege roh (inkl. Tombstones) — fuer den Cloud-Merge.</summary>
     public async Task<List<PromptSlotEntry>> LoadEntriesAsync(CancellationToken ct = default)
     {
@@ -124,9 +164,41 @@ public sealed class PromptSlotService
         try
         {
             var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow };
+            // Neuer Text -> alte Summary ist ungueltig und wird geleert. Die
+            // frische 6-8-Wort-Zusammenfassung holt der Aufrufer gleich danach
+            // per Gemini und schreibt sie ueber SetSummaryAsync nach.
+            var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow, Summary = string.Empty };
             int idx = entries.FindIndex(e => e.Number == number);
             if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
+            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
+    /// Aktualisiert NUR die KI-Zusammenfassung eines belegten Slots — aber nur,
+    /// wenn dessen gespeicherter Text noch exakt <paramref name="forText"/>
+    /// entspricht. So landet eine Summary, die fuer einen alten Text generiert
+    /// wurde, nie auf einem inzwischen geaenderten Slot (der Gemini-Call ist
+    /// asynchron und kann den schnelleren Re-Save ueberholen). Bumpt
+    /// <c>UpdatedAt</c>, damit die Summary per Cloud-Merge auf andere Geraete
+    /// wandert. No-op bei leerem/geaendertem Slot.
+    /// </summary>
+    public async Task SetSummaryAsync(int number, string forText, string summary, CancellationToken ct = default)
+    {
+        if (number is < 1 or > SlotCount) return;
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            int idx = entries.FindIndex(e => e.Number == number);
+            if (idx < 0) return;
+            var e = entries[idx];
+            if (string.IsNullOrEmpty(e.Text)) return;                    // Tombstone
+            if (!string.Equals(e.Text, forText, StringComparison.Ordinal)) return; // Text inzwischen geaendert
+            e.Summary = summary ?? string.Empty;
+            e.UpdatedAt = DateTime.UtcNow;
+            entries[idx] = e;
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
@@ -181,23 +253,33 @@ public sealed class PromptSlotService
                 var e = entries.FirstOrDefault(x => x.Number == n);
                 return e?.Text ?? string.Empty;
             }
+            string SummaryOf(int n)
+            {
+                var e = entries.FirstOrDefault(x => x.Number == n);
+                return e?.Summary ?? string.Empty;
+            }
 
             string fromText = TextOf(from);
             // Nichts zu verschieben, wenn die Quelle leer ist (Tombstone/unbelegt).
             if (string.IsNullOrEmpty(fromText)) return;
             string toText = TextOf(to); // leer => Move, belegt => Swap
 
+            // Summaries reisen mit dem Text mit, damit der Hover-Tooltip nach
+            // Verschieben/Tauschen weiter zum richtigen Prompt passt.
+            string fromSummary = SummaryOf(from);
+            string toSummary = SummaryOf(to);
+
             var now = DateTime.UtcNow;
 
-            void Upsert(int number, string text)
+            void Upsert(int number, string text, string summary)
             {
-                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now };
+                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now, Summary = summary ?? string.Empty };
                 int idx = entries.FindIndex(x => x.Number == number);
                 if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
             }
 
-            Upsert(to, fromText);   // Ziel bekommt den gezogenen Prompt
-            Upsert(from, toText);   // Quelle bekommt den alten Ziel-Text (leer = Tombstone = Move)
+            Upsert(to, fromText, fromSummary);   // Ziel bekommt den gezogenen Prompt + Summary
+            Upsert(from, toText, toSummary);     // Quelle bekommt den alten Ziel-Text + Summary (leer = Tombstone = Move)
 
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
             Console.WriteLine(

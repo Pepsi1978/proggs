@@ -702,6 +702,14 @@ public partial class PromptInputWindow : Window
     public event Action<int>? SlotDeleteRequested;
 
     /// <summary>
+    /// Eine frisch per Gemini erzeugte 6-8-Wort-Zusammenfassung steht bereit
+    /// (number, fuer-diesen-Text, summary). Das PromptBoardPanel persistiert sie
+    /// via <c>PromptSlotService.SetSummaryAsync</c> und stoesst den Cloud-Sync
+    /// an, damit der Hover-Tooltip auch ins Drive-Backup wandert.
+    /// </summary>
+    public event Action<int, string, string>? SlotSummaryRequested;
+
+    /// <summary>
     /// Per Drag&amp;Drop einen gespeicherten Prompt von Slot <c>From</c> auf Slot
     /// <c>To</c> gezogen (Frank-Wunsch 2026-06-08). Ziel leer → verschieben,
     /// Ziel belegt → tauschen. Das PromptBoardPanel ruft daraufhin
@@ -713,6 +721,8 @@ public partial class PromptInputWindow : Window
     private readonly Dictionary<int, string> _slotContents = new();
     /// <summary>Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.</summary>
     private readonly Dictionary<int, DateTime> _slotTimestamps = new();
+    /// <summary>KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.</summary>
+    private readonly Dictionary<int, string> _slotSummaries = new();
     private readonly Dictionary<int, Button> _slotButtons = new();
     private Button? _slotSaveButton;
     private Button? _slotDeleteButton;
@@ -741,7 +751,8 @@ public partial class PromptInputWindow : Window
     /// der belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein
     /// und laesst die aktuelle Auswahl/Diskette unveraendert.
     /// </summary>
-    public void SetSlotContents(Dictionary<int, string> map, Dictionary<int, DateTime>? timestamps = null)
+    public void SetSlotContents(Dictionary<int, string> map, Dictionary<int, DateTime>? timestamps = null,
+        Dictionary<int, string>? summaries = null)
     {
         _slotContents.Clear();
         foreach (var kv in map)
@@ -752,6 +763,12 @@ public partial class PromptInputWindow : Window
         if (timestamps != null)
         {
             foreach (var kv in timestamps) _slotTimestamps[kv.Key] = kv.Value;
+        }
+        _slotSummaries.Clear();
+        if (summaries != null)
+        {
+            foreach (var kv in summaries)
+                if (!string.IsNullOrWhiteSpace(kv.Value)) _slotSummaries[kv.Key] = kv.Value;
         }
         UpdateSlotVisuals();
     }
@@ -851,6 +868,9 @@ public partial class PromptInputWindow : Window
             bool selected = _selectedSlot == n;
             btn.BorderBrush = selected ? SlotGold : SlotClear;
             btn.BorderThickness = new Thickness(selected ? 2 : 0);
+            // Hover-Tooltip: bei belegtem Slot die KI-Zusammenfassung (falls
+            // vorhanden), sonst der Standard-Hinweis.
+            btn.ToolTip = SlotTooltip(n, hasContent);
         }
 
         bool hasSelection = _selectedSlot.HasValue;
@@ -881,6 +901,19 @@ public partial class PromptInputWindow : Window
                 _slotTimeLabel.Visibility = Visibility.Collapsed;
             }
         }
+    }
+
+    /// <summary>
+    /// Liefert den Hover-Tooltip eines Slot-Buttons: bei belegtem Slot mit
+    /// vorhandener KI-Zusammenfassung die 6-8-Wort-Summary, sonst den
+    /// Standard-Hinweis (speichern/laden/ziehen).
+    /// </summary>
+    private string SlotTooltip(int n, bool hasContent)
+    {
+        if (hasContent && _slotSummaries.TryGetValue(n, out var s) && !string.IsNullOrWhiteSpace(s))
+            return s;
+        return $"Slot {n} — Klick speichert/laedt. Belegten Slot auf eine andere Zahl ziehen: " +
+               "auf leere Zahl = verschieben, auf belegte Zahl = tauschen.";
     }
 
     /// <summary>
@@ -926,9 +959,44 @@ public partial class PromptInputWindow : Window
         }
         _slotContents[n] = text;
         _slotTimestamps[n] = DateTime.UtcNow;
+        _slotSummaries.Remove(n);   // alte Summary passt nicht mehr zum neuen Text
         UpdateSlotVisuals();
         UpdatePreview($"In Slot {n} gespeichert.");
         SlotSaveRequested?.Invoke(n, text);
+        // Frische 6-8-Wort-Zusammenfassung asynchron per Gemini holen
+        // (best-effort, blockiert das Speichern nicht). Fire-and-forget mit
+        // eigenem try/catch in der Methode — kein unbehandeltes async void.
+        _ = RequestSlotSummaryAsync(n, text);
+    }
+
+    /// <summary>
+    /// Holt asynchron eine 6-8-Wort-Zusammenfassung fuer den gerade
+    /// gespeicherten Slot von Gemini, zeigt sie als Hover-Tooltip an und
+    /// meldet sie via <see cref="SlotSummaryRequested"/> zur Persistenz +
+    /// Cloud-Sync. Best-effort: kein Gemini-Key oder Fehler -> der Slot bleibt
+    /// voll nutzbar, der Tooltip faellt auf den Standardtext zurueck. Wird nur
+    /// angewandt, wenn der Slot noch exakt diesen Text haelt (der Benutzer
+    /// koennte den Slot in der Zwischenzeit ueberschrieben haben — dann waere
+    /// die Summary veraltet).
+    /// </summary>
+    private async Task RequestSlotSummaryAsync(int n, string text)
+    {
+        var gemini = VoiceServiceProvider.Gemini;
+        if (gemini is null) return;
+        try
+        {
+            var summary = await gemini.GenerateSlotSummaryAsync(text);
+            if (string.IsNullOrWhiteSpace(summary)) return;
+            if (!(_slotContents.TryGetValue(n, out var cur) && string.Equals(cur, text, StringComparison.Ordinal)))
+                return; // Slot inzwischen geaendert — Summary verwerfen
+            _slotSummaries[n] = summary;
+            if (_slotButtons.TryGetValue(n, out var btn)) btn.ToolTip = summary;
+            SlotSummaryRequested?.Invoke(n, text, summary);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Slot summary failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -942,6 +1010,7 @@ public partial class PromptInputWindow : Window
         if (_selectedSlot is not int n) return;
         _slotContents.Remove(n);
         _slotTimestamps.Remove(n);
+        _slotSummaries.Remove(n);
         ClearInput();
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");
@@ -1046,18 +1115,26 @@ public partial class PromptInputWindow : Window
 
         // Lokalen Cache spiegeln zu PromptSlotService.MoveAsync: Ziel bekommt den
         // gezogenen Text, Quelle den alten Ziel-Text (leer = verschieben, belegt = tauschen).
+        // Summaries vor dem Ueberschreiben sichern, damit der Hover-Tooltip mit
+        // dem Prompt mitwandert (deckungsgleich zu PromptSlotService.MoveAsync).
+        _slotSummaries.TryGetValue(from, out var fromSummary);
+        _slotSummaries.TryGetValue(to, out var toSummary);
+
         var now = DateTime.UtcNow;
         _slotContents[to] = fromText;
         _slotTimestamps[to] = now;
+        if (!string.IsNullOrWhiteSpace(fromSummary)) _slotSummaries[to] = fromSummary; else _slotSummaries.Remove(to);
         if (targetOccupied)
         {
             _slotContents[from] = toText!;
             _slotTimestamps[from] = now;
+            if (!string.IsNullOrWhiteSpace(toSummary)) _slotSummaries[from] = toSummary; else _slotSummaries.Remove(from);
         }
         else
         {
             _slotContents.Remove(from);
             _slotTimestamps.Remove(from);
+            _slotSummaries.Remove(from);
         }
 
         _selectedSlot = to; // Auswahl auf das Ziel ziehen

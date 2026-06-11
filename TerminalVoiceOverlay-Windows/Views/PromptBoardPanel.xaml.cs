@@ -633,6 +633,18 @@ public partial class PromptBoardPanel : Window
                 }
                 catch (Exception ex) { Console.WriteLine($"Slot move failed: {ex.Message}"); }
             };
+            // Frisch generierte KI-Zusammenfassung persistieren (nur wenn der Text
+            // noch passt) und SOFORT Cloud-Sync anstossen, damit der Hover-Tooltip
+            // auch ins Drive-Backup wandert und auf andere Geraete synct.
+            _inputWindow.SlotSummaryRequested += async (number, text, summary) =>
+            {
+                try
+                {
+                    await VoiceServiceProvider.Slots.SetSummaryAsync(number, text, summary);
+                    SlotsSyncRequested?.Invoke();
+                }
+                catch (Exception ex) { Console.WriteLine($"Slot summary save failed: {ex.Message}"); }
+            };
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;
@@ -895,8 +907,8 @@ public partial class PromptBoardPanel : Window
     {
         try
         {
-            var (map, times) = await VoiceServiceProvider.Slots.LoadMapAndTimesAsync().ConfigureAwait(false);
-            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times));
+            var (map, times, summaries) = await VoiceServiceProvider.Slots.LoadMapTimesSummariesAsync().ConfigureAwait(false);
+            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times, summaries));
         }
         catch (Exception ex)
         {

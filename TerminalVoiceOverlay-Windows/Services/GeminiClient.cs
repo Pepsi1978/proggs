@@ -255,6 +255,53 @@ Der zu verarbeitende Whisper-Text folgt nun:
         }
 
         /// <summary>
+        /// Erzeugt eine kompakte Zusammenfassung von 6-8 deutschen Woertern,
+        /// die beschreibt WOFUER ein gespeicherter Prompt da ist bzw. was er
+        /// bewirkt. Wird als Hover-Tooltip ueber dem belegten Prompt-
+        /// Zwischenspeicher-Slot angezeigt. Leerer Rueckgabewert bei Fehler
+        /// oder leerem Input — der Tooltip faellt dann auf den Standardtext
+        /// zurueck, die Slot-Funktion bleibt davon unberuehrt (best-effort).
+        /// </summary>
+        public async Task<string> GenerateSlotSummaryAsync(string text)
+        {
+            string trimmed = (text ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return string.Empty;
+
+            const string summaryPrompt =
+                "Fasse in 6 bis 8 deutschen Woertern zusammen, WOFUER der folgende " +
+                "Prompt da ist bzw. was er bewirkt. STRENGE REGELN: 6 bis 8 Woerter. " +
+                "Keine Anfuehrungszeichen. Kein Punkt am Ende. Kein Praefix wie " +
+                "'Zusammenfassung:'. Nur die nackte Wortgruppe zurueckgeben.\n\nPROMPT:\n";
+            try
+            {
+                string raw = await SendWithRetry(summaryPrompt + trimmed, 0);
+                return SanitizeSummary(raw);
+            }
+            catch
+            {
+                // Best-effort: bei jedem Fehler leere Summary — der Slot bleibt
+                // nutzbar, der Tooltip faellt auf den Standardtext zurueck.
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Saeubert die Gemini-Antwort fuer die Slot-Summary: trimmt
+        /// Anfuehrungszeichen und Schlusspunkt, klemmt auf maximal 8 Woerter.
+        /// Liefert leer wenn nichts Brauchbares uebrig bleibt.
+        /// </summary>
+        private static string SanitizeSummary(string raw)
+        {
+            string s = (raw ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '‚', '‘');
+            if (s.EndsWith(".")) s = s.Substring(0, s.Length - 1).Trim();
+            var words = s.Split(new[] { ' ', '\t', '\n', '\r' },
+                                StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return string.Empty;
+            if (words.Length > 8) words = words[..8];
+            return string.Join(" ", words);
+        }
+
+        /// <summary>
         /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
         /// Promptboard-Datenbank. Hilft beim Debuggen warum die Historie-
         /// Titel manchmal nicht von Gemini kommen — Append-only, atomar
