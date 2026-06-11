@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,6 +94,7 @@ fun SettingsScreen(
     state: UiState,
     onToggleService: (Boolean) -> Unit,
     onTestTrigger: () -> Unit,
+    onEndAssistant: () -> Unit,
     onToggleFavorit: (String) -> Unit,
     onAddWord: (String, WakeLang, Boolean) -> Unit,
     onUpdateWord: (String, String) -> Unit,
@@ -110,7 +112,7 @@ fun SettingsScreen(
             .padding(bottom = 30.dp),
     ) {
         AppHeader(onOpenSetup)
-        HeroCard(onTestTrigger)
+        HeroCard(onTestTrigger, onEndAssistant)
         if (!state.targetAvailable) TargetWarningCard()
         Spacer(Modifier.height(14.dp))
         ServiceCard(state, onToggleService, onRetryModels)
@@ -188,7 +190,7 @@ private fun AppHeader(onOpenSetup: () -> Unit) {
 }
 
 @Composable
-private fun HeroCard(onTestTrigger: () -> Unit) {
+private fun HeroCard(onTestTrigger: () -> Unit, onEndAssistant: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -237,6 +239,21 @@ private fun HeroCard(onTestTrigger: () -> Unit) {
         }
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            // Not-Aus-Rückfallebene: beendet die ChatGPT-Voice-Session WIRKLICH
+            // (Rück-Geste/Wegwischen lassen sie sonst im Hintergrund weiterlaufen).
+            Button(
+                onClick = onEndAssistant,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VK.Surface3,
+                    contentColor = Color(0xFFF87171),
+                ),
+                shape = RoundedCornerShape(100.dp),
+            ) {
+                Icon(Icons.Rounded.StopCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text("Voice beenden", style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+            }
+            Spacer(Modifier.size(10.dp))
             Button(
                 onClick = onTestTrigger,
                 colors = ButtonDefaults.buttonColors(

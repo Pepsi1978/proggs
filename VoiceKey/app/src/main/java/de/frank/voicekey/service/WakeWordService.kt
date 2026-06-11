@@ -65,6 +65,18 @@ class WakeWordService : LifecycleService() {
             return START_NOT_STICKY
         }
 
+        if (intent?.action == ACTION_END_ASSISTANT) {
+            // Not-Aus aus der Notification: ChatGPT-Voice-Session wirklich beenden.
+            val a11y = de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance
+            if (a11y != null) {
+                a11y.endAssistantSession()
+            } else {
+                Obs.w("WakeWordService", "onStartCommand", "Not-Aus angefordert, aber Bedienungshilfe nicht aktiv")
+                updateNotification("Not-Aus braucht die Bedienungshilfe. App öffnen → Einrichtung.")
+            }
+            return START_STICKY
+        }
+
         // startForeground SOFORT (binnen ~5 s Pflicht) und mit explizitem Mic-Typ (Almanach §4).
         ServiceCompat.startForeground(
             this,
@@ -183,6 +195,11 @@ class WakeWordService : LifecycleService() {
             Intent(this, WakeWordService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE,
         )
+        val endAssistantIntent = PendingIntent.getService(
+            this, 2,
+            Intent(this, WakeWordService::class.java).setAction(ACTION_END_ASSISTANT),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
         return NotificationCompat.Builder(this, VoiceKeyApp.CHANNEL_SERVICE)
             .setSmallIcon(de.frank.voicekey.R.drawable.ic_stat_mic)
             .setContentTitle("VoiceKey")
@@ -190,6 +207,7 @@ class WakeWordService : LifecycleService() {
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .addAction(0, "Assistent beenden", endAssistantIntent)
             .addAction(0, "Stopp", stopIntent)
             .build()
     }
@@ -209,6 +227,7 @@ class WakeWordService : LifecycleService() {
 
     companion object {
         const val ACTION_STOP = "de.frank.voicekey.action.STOP"
+        const val ACTION_END_ASSISTANT = "de.frank.voicekey.action.END_ASSISTANT"
         private const val NOTIFICATION_ID = 1001
         private const val MIC_HANDOFF_DELAY_MS = 450L
         private const val REARM_DELAY_MS = 5_000L

@@ -35,9 +35,11 @@ data class PermissionsState(
     val notifications: Boolean = false,
     val overlay: Boolean = false,
     val battery: Boolean = false,
+    val assistKill: Boolean = false,
 ) {
-    val grantedCount: Int get() = listOf(mic, notifications, overlay, battery).count { it }
-    val allGranted: Boolean get() = grantedCount == 4
+    val total: Int get() = 5
+    val grantedCount: Int get() = listOf(mic, notifications, overlay, battery, assistKill).count { it }
+    val allGranted: Boolean get() = grantedCount == total
 }
 
 data class UiState(
@@ -113,8 +115,32 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
             notifications = granted(context, Manifest.permission.POST_NOTIFICATIONS),
             overlay = Settings.canDrawOverlays(context),
             battery = power.isIgnoringBatteryOptimizations(context.packageName),
+            assistKill = isAccessibilityEnabled(context),
         )
         targetAvailable.value = AssistantLauncher.isTargetAvailable(context)
+    }
+
+    private fun isAccessibilityEnabled(context: Context): Boolean {
+        if (de.frank.voicekey.a11y.VoiceKeyAccessibilityService.isEnabled) return true
+        val enabled = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ) ?: return false
+        return enabled.contains("${context.packageName}/") && enabled.contains("VoiceKeyAccessibilityService")
+    }
+
+    /** Not-Aus: beendet die ChatGPT-Voice-Session wirklich (per Bedienungshilfe). */
+    fun endAssistant(context: Context) {
+        val a11y = de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance
+        if (a11y != null) {
+            a11y.endAssistantSession()
+        } else {
+            Obs.w("WakeWordViewModel", "endAssistant", "Bedienungshilfe nicht aktiv — öffne Einstellungen")
+            context.startActivity(
+                android.content.Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
     }
 
     private fun granted(context: Context, permission: String): Boolean =

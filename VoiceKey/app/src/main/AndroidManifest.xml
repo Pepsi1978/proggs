@@ -71,6 +71,24 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!--
+          Not-Aus-Rückfallebene (Bedienungshilfe): drückt auf Kommando den echten
+          "Beenden"-Knopf der ChatGPT-Voice-UI — Rück-Geste/Wegwischen beenden die
+          Session sonst NICHT (am Gerät verifiziert).
+        -->
+        <service
+            android:name=".a11y.VoiceKeyAccessibilityService"
+            android:exported="false"
+            android:label="VoiceKey Not-Aus"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/voicekey_a11y_config" />
+        </service>
+
         <!-- Dienst nach Neustart wieder starten (zeigt Tipp-Notification, da Mic-FGS nicht aus BOOT startbar). -->
         <receiver
             android:name=".service.BootReceiver"

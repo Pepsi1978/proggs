@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ fun SetupScreen(
     onRequestNotifications: () -> Unit,
     onRequestOverlay: () -> Unit,
     onRequestBattery: () -> Unit,
+    onRequestAssistKill: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -71,21 +73,22 @@ fun SetupScreen(
         Text("Einrichtung", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Damit VoiceKey zuverlässig lauschen und ChatGPT aus dem Hintergrund starten kann, braucht die App vier Freigaben.",
+            "Damit VoiceKey zuverlässig lauschen, ChatGPT starten und auch wieder beenden kann, braucht die App fünf Freigaben.",
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(18.dp))
 
         val granted = permissions.grantedCount
+        val total = permissions.total
         Row(Modifier.fillMaxWidth()) {
             Text(
-                buildString { append(granted); append(" von 4 erteilt") },
+                buildString { append(granted); append(" von "); append(total); append(" erteilt") },
                 style = MaterialTheme.typography.bodySmall,
                 color = VK.PrimarySoft,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
-            Text("${granted * 25} %", style = MaterialTheme.typography.bodySmall, color = VK.TextMid)
+            Text("${granted * 100 / total} %", style = MaterialTheme.typography.bodySmall, color = VK.TextMid)
         }
         Spacer(Modifier.height(8.dp))
         Box(
@@ -97,7 +100,7 @@ fun SetupScreen(
         ) {
             Box(
                 Modifier
-                    .fillMaxWidth(fraction = (granted / 4f).coerceAtLeast(0.02f))
+                    .fillMaxWidth(fraction = (granted.toFloat() / total).coerceAtLeast(0.02f))
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .background(Brush.horizontalGradient(listOf(VK.OrbDeep, VK.PrimarySoft))),
@@ -132,6 +135,13 @@ fun SetupScreen(
             description = "Verhindert, dass One UI den Lausch-Dienst im Hintergrund beendet.",
             granted = permissions.battery,
             onGrant = onRequestBattery,
+        )
+        PermCard(
+            icon = Icons.Rounded.StopCircle,
+            title = "Not-Aus (Bedienungshilfe)",
+            description = "Beendet die ChatGPT-Voice-Session wirklich, wenn du auf „Voice beenden" tippst. Aktiviere dafür „VoiceKey Not-Aus" in den Bedienungshilfen.",
+            granted = permissions.assistKill,
+            onGrant = onRequestAssistKill,
         )
 
         VersionFooter()

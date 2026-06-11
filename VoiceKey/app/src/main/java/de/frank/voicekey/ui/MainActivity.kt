@@ -95,12 +95,16 @@ private fun VoiceKeyApp(viewModel: WakeWordViewModel) {
                         Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
                     )
                 },
+                onRequestAssistKill = {
+                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                },
             )
         } else {
             SettingsScreen(
                 state = state,
                 onToggleService = viewModel::setServiceEnabled,
                 onTestTrigger = { viewModel.testTrigger(context) },
+                onEndAssistant = { viewModel.endAssistant(context) },
                 onToggleFavorit = viewModel::toggleFavorit,
                 onAddWord = viewModel::addWord,
                 onUpdateWord = viewModel::updateWord,
