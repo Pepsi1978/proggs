@@ -51,6 +51,7 @@ object VK {
     val OrbDark = Color(0xFF9A3412)
 }
 
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 private fun outfit(weight: FontWeight) = Font(
     R.font.outfit_variable,
     weight = weight,
