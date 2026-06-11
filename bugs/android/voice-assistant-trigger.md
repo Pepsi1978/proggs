@@ -28,6 +28,8 @@
 | 8 | Folge-App (ChatGPT) bekommt Mic nicht / Init-Fehler | Nach `release()` 300–500 ms warten (HAL-Flush ab Android 16 async) | §8 |
 | 9 | ChatGPT bekommt nur Stille | `setPrivacySensitive(true)` auf Wake-Word-App entfernen | §9 |
 | 10 | Suche nach `chatgpt://`-Voice-Deep-Link | Existiert offiziell nicht; kein Hotword — nur Assist-Geste/UI | §10 |
+| 11 | Fremde ChatGPT-Voice-Session BEENDEN | Kugel hat KEINEN Beenden-Knopf, In-App-„Beenden" stoppt Aufnahme nicht zuverlaessig; `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session beendet sie | §11 |
+| 12 | „Laeuft ChatGPT-Voice noch?" zuverlaessig erkennen | `AudioManager.mode == MODE_IN_COMMUNICATION` (echtes Telefonat = `MODE_IN_CALL`); `isClientSilenced`/`micSilenced` ist FLAKY, nicht als Gate nutzen | §12 |
 
 ---
 
@@ -121,3 +123,52 @@ Default-Assistant) oder das Voice-Widget/Quick-Settings-Tile.
 `adb shell dumpsys package com.openai.chatgpt` (Activities/Intent-Filter/Schemes),
 `adb shell cmd shortcut get-shortcuts com.openai.chatgpt`.
 **Versionen:** ChatGPT-App ab v1.2025.070. **Quelle:** community.openai.com Feature-Requests; 9to5google.com/2025/03/14.
+
+## §11 — Fremde ChatGPT-Voice-Session aus der eigenen App BEENDEN (Fold 6 verifiziert 2026-06-11) ⭐
+**Symptom:** Die ChatGPT-Voice-Kugel wegwischen oder die eigene App schliessen beendet die
+Session NICHT — ChatGPT hoert im Hintergrund weiter zu (Foreground-Dienst). Nur „aus dem
+Speicher werfen" (Recents-Karte) stoppt es zuverlaessig.
+**Root Cause / Geraete-Befunde (Galaxy Fold 6, One UI 8 / Android 16, live verifiziert):**
+- Die Kugel ist `com.openai.chatgpt/com.openai.voice.assistant.AssistantActivity` und hat **nur
+  einen `content-desc="In App öffnen"`-Knopf — KEINEN „Beenden"**. Erst die volle App
+  (`MainActivity`) zeigt unten rechts `content-desc="Beenden"`.
+- Selbst ein synthetischer Tipp auf diesen In-App-„Beenden"-Knopf **stoppte die Aufnahme nicht
+  zuverlaessig** (Audio blieb `MODE_IN_COMMUNICATION`), waehrend der Nachbar-Knopf „Mikrofon
+  ausschalten" sofort reagierte. UI-Klicken ist also kein verlaesslicher Beenden-Weg.
+- Eine normale App **darf** ChatGPT nicht `force-stop`-en (nur Shell-UID 2000 → Shizuku/Root;
+  `am force-stop com.openai.chatgpt` wirkt, setzt Audio sofort auf `MODE_NORMAL` — aber Shizuku
+  ohne Root ist auf One UI 8 nicht persistent, siehe §3). `killBackgroundProcesses` greift nicht
+  (Foreground-Dienst). Audio-Focus stoppt keine fremde Aufnahme.
+- **Was zuverlaessig wirkt (der Fix):** ChatGPT meldet eine **MediaSession „VoiceModeService"**
+  als Media-Button-Empfaenger an. Ein **`KEYCODE_HEADSETHOOK`** (Code 79) an diese Session
+  beendet die Voice-Session sauber (Audio → `MODE_NORMAL`). `KEYCODE_MEDIA_PAUSE`(127)/`STOP`(86)/
+  `PLAY_PAUSE`(85) und `media dispatch` werden **ignoriert** bzw. fehlen (`media`-Binary auf One UI
+  nicht vorhanden). Der Teardown dauert **1–3 s** — erst danach faellt der Audio-Modus, deshalb mit
+  Verzoegerung verifizieren und ggf. einen zweiten Headsethook senden.
+**Fix (funktionserhaltend, kein Sonderrecht):**
+`AudioManager.dispatchMediaKeyEvent(KeyEvent(ACTION_DOWN, KEYCODE_HEADSETHOOK))` + ACTION_UP —
+nur senden, wenn `mode == MODE_IN_COMMUNICATION` (verhindert Start einer neuen Session und schont
+echte Telefonate = `MODE_IN_CALL`). Umsetzung: `VoiceKey/.../trigger/AssistantStopper.kt`.
+Alternativweg (falls dispatch je OEM-blockiert): MediaController via `NotificationListenerService` →
+`MediaSessionManager.getActiveSessions(listener)` → Controller von `com.openai.chatgpt` →
+`dispatchMediaButtonEvent(HEADSETHOOK)`.
+**Diagnose-Befehle:** `adb shell dumpsys media_session` (zeigt „Media button session is
+com.openai.chatgpt/VoiceModeService"), `adb shell dumpsys audio | grep "Actual mode"`,
+`adb shell input keyevent 79` (manuell testen). **Quelle:** developer.android.com/reference/android/media/AudioManager#dispatchMediaKeyEvent ; MediaSessionManager-Doku; Geraete-Verifikation.
+
+## §12 — „Laeuft die fremde Voice-Session noch?" — `micSilenced` ist FLAKY, Audio-Modus ist zuverlaessig
+**Symptom:** Ein Not-Aus, der am stummgeschalteten eigenen Mic (`AudioRecordingCallback.isClientSilenced`)
+erkennt „ChatGPT hat das Mic", greift unzuverlaessig — das Signal kippt hin und her (`silenced:true`
+→ kurz darauf `false`), obwohl ChatGPT weiter zuhoert, und blockiert dann den Beenden-Flow
+(„keine laufende Session"). Zusaetzlich: ein Guard `if (mode == MODE_IN_COMMUNICATION) abort("Telefonat")`
+blockiert den Beenden-Flow GENAU dann, wenn ChatGPT-Voice laeuft (ChatGPT setzt selbst
+`MODE_IN_COMMUNICATION`).
+**Root Cause:** `isClientSilenced` haengt am eigenen Aufnahmezustand (wird beim Re-Arm/Stop der
+eigenen Engine zuruckgesetzt) und an Androids Concurrent-Capture-Policy → kein verlaesslicher
+Proxy fuer „fremde Session aktiv". Und `MODE_IN_COMMUNICATION` ist der VoIP-Modus — ChatGPT-Voice,
+NICHT ein GSM-Telefonat (das ist `MODE_IN_CALL`).
+**Fix:** Session-aktiv-Erkennung ueber `AudioManager.mode == MODE_IN_COMMUNICATION`. Echte
+Telefonate ueber `MODE_IN_CALL` ausschliessen (passiert automatisch, da nur auf `IN_COMMUNICATION`
+reagiert wird). `micSilenced` nur noch fuer Observability/Logging, nie als Entscheidungs-Gate.
+**Versionen:** Android 10+ (Audio-Modi seit jeher); verifiziert One UI 8 / Android 16.
+**Quelle:** developer.android.com/reference/android/media/AudioManager (MODE_IN_COMMUNICATION vs MODE_IN_CALL).

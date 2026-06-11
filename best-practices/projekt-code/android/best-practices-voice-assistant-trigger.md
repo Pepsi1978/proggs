@@ -32,6 +32,7 @@
 | 7 | Samsung One UI killt den Dienst | Akku „Uneingeschraenkt" + aus Tiefschlaf-Liste raus + Adaptiver Akku AUS (In-App-Setup-Screen) | §3.3 |
 | 8 | Mikrofon an ChatGPT uebergeben | `stop()` → `release()` → **300–500 ms warten** → DANN Assist ausloesen | §4 |
 | 9 | Wake-Word-App `setPrivacySensitive` | NIEMALS `true` (sperrt ChatGPT vom Mic aus) | §4.2 |
+| 10 | Fremde Voice-Session WIEDER beenden | `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session (`AudioManager.dispatchMediaKeyEvent`); Erkennung via `mode == MODE_IN_COMMUNICATION`, nicht via `micSilenced` | §1.4 |
 
 ---
 
@@ -66,6 +67,39 @@ Drei gangbare Wege (mit ehrlichen Trade-offs):
 
 **Persistenz-Faustregel:** Anspruch „jederzeit per Weckwort, ohne Gefummel" → **Accessibility (1.2)**.
 Shizuku nur bei Root oder bewusst akzeptierter Reboot-Fummelei.
+
+### 1.4 Eine laufende fremde Voice-Session (ChatGPT) WIEDER beenden — der saubere Weg
+
+Spiegelbild zum Ausloesen. Am Galaxy Fold 6 (One UI 8 / Android 16) verifiziert (2026-06-11).
+Reihenfolge der Robustheit:
+
+1. **Bester Weg — Media-Button `KEYCODE_HEADSETHOOK` (kein Sonderrecht, `offiziell`):** ChatGPT-Voice
+   meldet eine MediaSession `VoiceModeService` an. Ein Headsethook beendet die Session zuverlaessig
+   (Audio → `MODE_NORMAL`). `PAUSE`/`STOP`/`PLAY_PAUSE` ignoriert ChatGPT.
+   ```kotlin
+   val am = ctx.getSystemService(AudioManager::class.java)
+   if (am.mode == AudioManager.MODE_IN_COMMUNICATION) {       // nur wenn ChatGPT-Voice laeuft
+       val t = SystemClock.uptimeMillis()
+       am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_HEADSETHOOK, 0))
+       am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP,   KeyEvent.KEYCODE_HEADSETHOOK, 0))
+   }
+   ```
+   Teardown dauert 1–3 s → verzoegert ueber den Audio-Modus verifizieren, sonst zweiten Druck senden.
+   (`developer.android.com/reference/android/media/AudioManager#dispatchMediaKeyEvent`)
+2. **Erkennung „laeuft noch?":** `AudioManager.mode == MODE_IN_COMMUNICATION` (zuverlaessig). NICHT
+   `AudioRecordingCallback.isClientSilenced`/`micSilenced` (flaky). Echtes GSM-Telefonat = `MODE_IN_CALL`
+   → durch das `IN_COMMUNICATION`-Gate automatisch ausgenommen.
+3. **Trigger „Kugel weggewischt":** `AccessibilityService` beobachtet `TYPE_WINDOW_STATE_CHANGED`/
+   `TYPE_WINDOWS_CHANGED`; verschwindet ChatGPTs Fenster, waehrend `IN_COMMUNICATION` noch gilt →
+   Headsethook senden. (Manueller Not-Aus-Knopf braucht KEINE Bedienungshilfe — `dispatchMediaKeyEvent`
+   reicht.)
+4. **Fallback, falls dispatch je OEM-blockiert:** `NotificationListenerService` +
+   `MediaSessionManager.getActiveSessions(listener)` → Controller von `com.openai.chatgpt` →
+   `controller.dispatchMediaButtonEvent(HEADSETHOOK)` (gezielt an die Session).
+5. **Was NICHT zu empfehlen ist:** ChatGPTs UI-Knoepfe klicken (Kugel hat keinen Beenden-Knopf,
+   In-App-„Beenden" stoppt die Aufnahme nicht zuverlaessig); Recents-Karte per A11y wegwischen
+   (One-UI-Recents ist oft Secure-Window → Karten im A11y-Tree nicht lesbar, fragil); `force-stop`
+   via Shizuku (zuverlaessig, aber One UI 8 haelt Shizuku ohne Root nicht persistent, siehe Almanach §3).
 
 ## 2. Wake-Word-Engine
 
