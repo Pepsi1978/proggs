@@ -69,7 +69,7 @@ class WakeWordService : LifecycleService() {
         super.onCreate()
         serviceRunning = true
         repository = WakeWordRepository(applicationContext)
-        engine = VoskWakeEngine(onWakeWord = ::onWakeWordHit)
+        engine = VoskWakeEngine(onWakeWord = ::onWakeWordHit, onStopWord = ::onStopWordHit)
         LibVosk.setLogLevel(LogLevel.WARNINGS)
         getSystemService(android.media.AudioManager::class.java)
             .registerAudioRecordingCallback(recordingCallback, android.os.Handler(mainLooper))
@@ -157,7 +157,7 @@ class WakeWordService : LifecycleService() {
                 return
             }
 
-            engine.start(setups)
+            engine.start(setups, STOP_WORDS_BY_LANG)
             val active = favoritesByLang.values.flatten().joinToString(", ")
             updateNotification("Lauscht auf: $active")
         }
@@ -165,6 +165,12 @@ class WakeWordService : LifecycleService() {
 
     /** Wird im Audio-Thread aufgerufen — postet nur, blockiert nie (Deadlock-Schutz). */
     private fun onWakeWordHit(phrase: String, lang: WakeLang) {
+        // Laeuft schon eine ChatGPT-Voice-Session, NICHT neu starten — sonst wuerde "ok chatty
+        // beenden" ChatGPT erneut oeffnen. Das Wake-Wort wird dann einfach ueberhoert.
+        if (AssistantStopper.isVoiceSessionActive(this)) {
+            Obs.d("WakeWordService", "onWakeWordHit", "Wake-Wort ignoriert — ChatGPT-Session laeuft bereits", mapOf("phrase" to phrase))
+            return
+        }
         if (!triggering.compareAndSet(false, true)) {
             Obs.d("WakeWordService", "onWakeWordHit", "Treffer ignoriert — Trigger laeuft bereits")
             return
@@ -183,6 +189,12 @@ class WakeWordService : LifecycleService() {
             }
             if (repository.serviceEnabled.first()) restartEngine()
         }
+    }
+
+    /** Beenden-Sprachbefehl ("beenden"/"stopp") erkannt -> ChatGPT-Voice per Headsethook beenden. */
+    private fun onStopWordHit(phrase: String, lang: WakeLang) {
+        Obs.i("WakeWordService", "onStopWordHit", "Beenden-Wort erkannt", mapOf("phrase" to phrase, "lang" to lang))
+        AssistantStopper.endVoiceSession(this, "Sprachbefehl: $phrase")
     }
 
     private fun launchTrampoline() {
@@ -250,6 +262,16 @@ class WakeWordService : LifecycleService() {
     companion object {
         const val ACTION_STOP = "de.frank.voicekey.action.STOP"
         const val ACTION_END_ASSISTANT = "de.frank.voicekey.action.END_ASSISTANT"
+
+        /**
+         * Beenden-Sprachbefehle pro Sprache (zusaetzlich zu den Wake-Woertern in der Grammatik).
+         * Bewusst knappe, eindeutige Woerter, damit sie nicht mitten im ChatGPT-Gespraech
+         * versehentlich ausloesen. Wirkt nur, wenn gerade eine Session laeuft.
+         */
+        private val STOP_WORDS_BY_LANG = mapOf(
+            WakeLang.DE to listOf("beenden", "stopp"),
+            WakeLang.EN to listOf("stop"),
+        )
 
         /** true = unsere Aufnahme ist stummgeschaltet, eine andere App (ChatGPT) hat das Mic. */
         @Volatile

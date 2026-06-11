@@ -22,21 +22,31 @@ import org.vosk.Recognizer
  */
 class VoskWakeEngine(
     private val onWakeWord: (phrase: String, lang: WakeLang) -> Unit,
+    private val onStopWord: (phrase: String, lang: WakeLang) -> Unit,
 ) {
 
-    private data class LangSetup(val model: Model, val phrases: List<String>)
+    private data class LangSetup(val model: Model, val phrases: List<String>, val stopPhrases: List<String>)
 
     @Volatile private var running = false
     private var audioThread: Thread? = null
 
     /** Startet das Lauschen. Pro Sprache: geladenes Modell + aktive Phrasen (lowercase-Match). */
-    fun start(setups: Map<WakeLang, Pair<Model, List<String>>>) {
+    fun start(
+        setups: Map<WakeLang, Pair<Model, List<String>>>,
+        stopPhrases: Map<WakeLang, List<String>>,
+    ) {
         if (running) {
             Obs.w("VoskWakeEngine", "start", "Engine laeuft bereits — Start ignoriert")
             return
         }
         val active = setups
-            .mapValues { (_, v) -> LangSetup(v.first, v.second.map { it.trim().lowercase() }.filter { it.isNotEmpty() }) }
+            .mapValues { (lang, v) ->
+                LangSetup(
+                    v.first,
+                    v.second.map { it.trim().lowercase() }.filter { it.isNotEmpty() },
+                    (stopPhrases[lang] ?: emptyList()).map { it.trim().lowercase() }.filter { it.isNotEmpty() },
+                )
+            }
             .filterValues { it.phrases.isNotEmpty() }
         if (!Obs.probe(active.isNotEmpty(), "Keine aktiven Wake-Woerter — Engine startet nicht", "VoskWakeEngine", "start")) return
 
@@ -59,6 +69,7 @@ class VoskWakeEngine(
             setups.forEach { (lang, setup) ->
                 val grammar = JSONArray().apply {
                     setup.phrases.forEach { put(it) }
+                    setup.stopPhrases.forEach { put(it) }
                     put("[unk]")
                 }.toString()
                 recognizers[lang] = Recognizer(setup.model, SAMPLE_RATE.toFloat(), grammar)
@@ -95,18 +106,31 @@ class VoskWakeEngine(
                 for ((lang, recognizer) in recognizers) {
                     if (recognizer.acceptWaveForm(buffer, read)) {
                         val text = extractText(recognizer.result)
-                        val hit = setups.getValue(lang).phrases.firstOrNull { text.contains(it) }
-                        if (hit != null) {
+                        val setup = setups.getValue(lang)
+                        // Beenden-Wort hat Vorrang: "ok chatty beenden" soll stoppen, nicht starten.
+                        val stopHit = setup.stopPhrases.firstOrNull { text.contains(it) }
+                        val wakeHit = setup.phrases.firstOrNull { text.contains(it) }
+                        if (stopHit != null) {
                             Obs.checkpoint(
-                                step = "Wake-Word erkannt",
-                                intent = "Gesprochenes Favoriten-Wort wird erkannt",
-                                expected = hit,
-                                actual = hit,
+                                step = "Beenden-Wort erkannt",
+                                intent = "Gesprochenes Beenden-Wort wird erkannt",
+                                expected = stopHit,
+                                actual = stopHit,
                                 ctx = mapOf("lang" to lang, "rohtext" to text),
                             )
                             recognizers.values.forEach { it.reset() }
-                            onWakeWord(hit, lang)
-                            if (!running) break // Service stoppt die Engine nach einem Treffer
+                            onStopWord(stopHit, lang)
+                        } else if (wakeHit != null) {
+                            Obs.checkpoint(
+                                step = "Wake-Word erkannt",
+                                intent = "Gesprochenes Favoriten-Wort wird erkannt",
+                                expected = wakeHit,
+                                actual = wakeHit,
+                                ctx = mapOf("lang" to lang, "rohtext" to text),
+                            )
+                            recognizers.values.forEach { it.reset() }
+                            onWakeWord(wakeHit, lang)
+                            if (!running) break // Service stoppt die Engine nach einem Wake-Treffer
                         }
                     }
                 }
