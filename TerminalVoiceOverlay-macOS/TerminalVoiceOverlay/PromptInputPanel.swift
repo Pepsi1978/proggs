@@ -81,6 +81,10 @@ final class PromptInputPanel: NSPanel {
     private var slotTimestamps: [Int: Date] = [:]
     /// KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.
     private var slotSummaries: [Int: String] = [:]
+    /// Slots, fuer die gerade eine Summary erzeugt wird — verhindert Doppel-Calls.
+    private var summaryInFlight: Set<Int> = []
+    /// True solange der Backfill bestehender Slots laeuft (sequentiell, gedrosselt).
+    private var backfillRunning = false
     private var slotButtons: [Int: NSButton] = [:]
     private let slotSaveButton = NSButton()
     private let slotDeleteButton = NSButton()
@@ -574,6 +578,8 @@ final class PromptInputPanel: NSPanel {
         slotTimestamps = timestamps
         slotSummaries = summaries.filter { !$0.value.isEmpty }
         updateSlotVisuals()
+        // Bestehende belegte Slots ohne Zusammenfassung nachtraeglich auffuellen.
+        maybeBackfillSummaries()
     }
 
     /// Baut die untere Leiste: Zahlen 1-30 in zwei Reihen (1-15 oben,
@@ -731,6 +737,49 @@ final class PromptInputPanel: NSPanel {
     private func applySlotTooltip(_ n: Int) {
         let hasContent = !(slotContents[n]?.isEmpty ?? true)
         slotButtons[n]?.toolTip = slotTooltip(n, hasContent: hasContent)
+    }
+
+    /// Stoesst den Backfill an: erzeugt fuer alle belegten Slots OHNE
+    /// Zusammenfassung nachtraeglich eine — auch fuer Prompts aus der Zeit vor
+    /// diesem Feature (Frank-Wunsch 2026-06-11). Laeuft nur einmal gleichzeitig;
+    /// ohne Gemini-Handler passiert nichts.
+    private func maybeBackfillSummaries() {
+        guard !backfillRunning, onGenerateSlotSummary != nil else { return }
+        let todo = slotContents.keys
+            .filter { slotSummaries[$0] == nil && !summaryInFlight.contains($0) }
+            .sorted()
+        guard !todo.isEmpty else { return }
+        backfillRunning = true
+        backfillNext(todo)
+    }
+
+    /// Arbeitet die Backfill-Liste SEQUENTIELL ab (eine Summary nach der
+    /// anderen, mit 0,6s Pause) — sanfte Drosselung gegen Gemini-Rate-Limits.
+    /// Nutzt denselben Pfad wie ein frisches Speichern.
+    private func backfillNext(_ remaining: [Int]) {
+        var rest = remaining
+        guard !rest.isEmpty else { backfillRunning = false; return }
+        let n = rest.removeFirst()
+        guard let text = slotContents[n], !text.isEmpty, slotSummaries[n] == nil,
+              !summaryInFlight.contains(n), let gen = onGenerateSlotSummary else {
+            backfillNext(rest)
+            return
+        }
+        summaryInFlight.insert(n)
+        gen(text) { [weak self] summary in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.summaryInFlight.remove(n)
+                if !summary.isEmpty, self.slotContents[n] == text {
+                    self.slotSummaries[n] = summary
+                    self.applySlotTooltip(n)
+                    self.onSlotSummary?(n, text, summary)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    self.backfillNext(rest)
+                }
+            }
+        }
     }
 
     /// Klick auf eine Zahl: auswaehlen, Diskette/X einblenden. Hat der Slot
