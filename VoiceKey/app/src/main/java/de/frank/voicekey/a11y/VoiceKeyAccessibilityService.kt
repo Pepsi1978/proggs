@@ -65,7 +65,7 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     private fun isChatGptWindowVisible(): Boolean =
-        windows.any { it.root?.packageName == AppTarget.CHATGPT.packageName }
+        allRoots().any { it.packageName == AppTarget.CHATGPT.packageName }
 
     /**
      * Prueft mit Schutzvorkehrungen, ob die ChatGPT-Session unsichtbar weiterlaeuft,
@@ -163,10 +163,20 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
         handler.postDelayed({ attempt(step + 1) }, STEP_DELAY_MS)
     }
 
+    /** Alle erreichbaren Fenster-Wurzeln (windows-API + aktives Fenster als Fallback). */
+    private fun allRoots(): List<AccessibilityNodeInfo> {
+        val roots = windows.mapNotNull { it.root }.toMutableList()
+        rootInActiveWindow?.let { active ->
+            if (roots.none { it.packageName == active.packageName && it.windowId == active.windowId }) {
+                roots.add(active)
+            }
+        }
+        return roots
+    }
+
     /** Sucht in allen Fenstern einen Knoten, dessen Beschriftung "Beenden"/"End"/"Stop"/"Close" ist. */
     private fun findEndButton(): AccessibilityNodeInfo? {
-        windows.forEach { window ->
-            val root = window.root ?: return@forEach
+        allRoots().forEach { root ->
             val match = findNode(root) { node ->
                 if (!node.isClickable && !node.isFocusable) return@findNode false
                 val label = (node.contentDescription ?: node.text ?: "").toString().trim().lowercase()
@@ -192,8 +202,7 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
         val screenArea = metrics.widthPixels.toLong() * metrics.heightPixels.toLong()
         var best: AccessibilityNodeInfo? = null
         var bestArea = Long.MAX_VALUE
-        windows.forEach { window ->
-            val root = window.root ?: return@forEach
+        allRoots().forEach { root ->
             if (root.packageName != AppTarget.CHATGPT.packageName) return@forEach
             collectClickable(root) { node ->
                 val rect = android.graphics.Rect()
