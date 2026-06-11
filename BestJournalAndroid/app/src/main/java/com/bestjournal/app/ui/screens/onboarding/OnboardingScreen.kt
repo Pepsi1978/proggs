@@ -162,12 +162,6 @@ fun OnboardingScreen(
                 3 -> ProfilesPage(isActive = isActive)
                 4 -> TrialPage(
                     isActive = isActive,
-                    onStartTrial = {
-                        viewModel.analyticsTracker.trackTrialStartedOnboarding()
-                        viewModel.saveGoals()
-                        viewModel.completeOnboarding()
-                        onFinished()
-                    },
                     onSkip = {
                         viewModel.analyticsTracker.trackOnboardingSkipped(4)
                         viewModel.saveGoals()
@@ -778,7 +772,7 @@ private fun ProfileCard(profile: ProfileInfo) {
 // ─── Page 5: Trial CTA ─────────────────────────────────────
 
 @Composable
-private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () -> Unit) {
+private fun TrialPage(isActive: Boolean, onSkip: () -> Unit) {
     val visible = remember { mutableStateOf(false) }
     LaunchedEffect(isActive) {
         if (isActive) {
@@ -793,6 +787,7 @@ private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () ->
     val benefits = listOf(
         stringResource(R.string.onboarding_premium_feature_improve),
         stringResource(R.string.onboarding_premium_profiles),
+        stringResource(R.string.onboarding_premium_profiles_unlimited),
         stringResource(R.string.onboarding_premium_feature_dashboard),
         stringResource(R.string.onboarding_premium_feature_retro),
         stringResource(R.string.onboarding_premium_feature_patterns),
@@ -840,27 +835,10 @@ private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () ->
 
                 Text(
                     stringResource(R.string.onboarding_try_premium),
-                    style = MaterialTheme.typography.headlineMedium.copy(
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    stringResource(R.string.onboarding_free_trial),
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = WarmCopper,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                Text(
-                    stringResource(R.string.onboarding_free_after_trial),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
                 )
             }
@@ -890,7 +868,7 @@ private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () ->
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(
-                    onClick = onStartTrial,
+                    onClick = onSkip,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -904,21 +882,11 @@ private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () ->
                     )
                 ) {
                     Text(
-                        stringResource(R.string.onboarding_start_free),
+                        stringResource(R.string.onboarding_without_premium),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
-                    )
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                TextButton(onClick = onSkip) {
-                    Text(
-                        stringResource(R.string.onboarding_without_premium),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
                     )
                 }
             }

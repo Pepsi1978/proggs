@@ -1089,7 +1089,8 @@
     <string name="onboarding_perspectives_title">Verschiedene Blickwinkel auf\ndein Leben</string>
     <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
     <string name="onboarding_premium_profiles">4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
-    <string name="onboarding_try_premium">8 Tage gratis, danach ab 3,99 €/Monat</string>
+    <string name="onboarding_premium_profiles_unlimited">Eigene KI-Profile ohne Anzahllimit</string>
+    <string name="onboarding_try_premium">Premium bietet unter anderem:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
