@@ -12,8 +12,13 @@ android {
         applicationId = "de.frank.voicekey"
         minSdk = 34
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+
+        // Vosk liefert native .so — auf die real genutzten ABIs beschraenken (Fold 6 = arm64).
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -23,6 +28,7 @@ android {
         }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -32,6 +38,13 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    packaging {
+        resources {
+            // JNA/Vosk bringen doppelte Meta-Dateien mit.
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -43,6 +56,7 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.service)
     implementation(libs.activity.compose)
 
     implementation(platform(libs.compose.bom))
@@ -54,4 +68,9 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.coroutines.android)
+    implementation(libs.datastore.preferences)
+
+    // Wake-Word-Engine: Vosk (offline, frei definierbare Keywords, EN + DE Modelle).
+    implementation(libs.vosk.android)
+    implementation(libs.jna) { artifact { type = "aar" } }
 }

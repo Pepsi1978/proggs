@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 private const val TAG = "VOICEKEY"
 private const val CHATGPT_PKG = "com.openai.chatgpt"
 private const val PROXY_ACTIVITY = "com.openai.feature.assistant.impl.AssistantProxyActivity"
+private const val ASSISTANT_ACTIVITY = "com.openai.voice.assistant.AssistantActivity"
 
 /**
  * Phase-1-De-Risking-Test: Welcher Intent-Weg oeffnet aus einer normalen App (ohne Sonderrechte)
@@ -60,8 +61,9 @@ class MainActivity : ComponentActivity() {
             "assist_plain" ->
                 Intent(Intent.ACTION_ASSIST).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             "assist_pkg" ->
-                Intent(Intent.ACTION_ASSIST)
-                    .setPackage(CHATGPT_PKG)
+                // DIREKTER Component-Start der Voice-Mode-Activity (die KEYCODE_ASSIST oeffnet).
+                Intent()
+                    .setClassName(CHATGPT_PKG, ASSISTANT_ACTIVITY)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             "assist_component" ->
                 Intent(Intent.ACTION_ASSIST)
