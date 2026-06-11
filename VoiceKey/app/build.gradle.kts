@@ -12,8 +12,8 @@ android {
         applicationId = "de.frank.voicekey"
         minSdk = 34
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
 
         // Vosk liefert native .so — auf die real genutzten ABIs beschraenken (Fold 6 = arm64).
         ndk {
@@ -38,6 +38,8 @@ android {
 
     buildFeatures {
         compose = true
+        // Sichtbare Version in der UI kommt aus BuildConfig (version-bump-visible-Regel).
+        buildConfig = true
     }
 
     packaging {
