@@ -1058,6 +1058,7 @@
     <string name="onboarding_welcome">Willkommen bei\nBest Journal</string>
     <string name="onboarding_subtitle">Dein persönliches KI-Tagebuch\nfür mehr Klarheit im Alltag</string>
     <string name="onboarding_feature_speech">Sprich oder schreib, die KI versteht beides</string>
+    <string name="onboarding_feature_listen">Lass dir deine Einträge vorlesen</string>
     <string name="onboarding_feature_secure">Deine Einträge bleiben auf dem Gerät; KI-Anfragen werden verschlüsselt übertragen</string>
     <string name="onboarding_goals_title">Was möchtest du mit dem\nKI-Tagebuch erreichen?</string>
     <string name="onboarding_goal_stress">Stress abbauen</string>

@@ -298,6 +298,7 @@ private fun WelcomePage(isActive: Boolean) {
         // Three benefit rows — staggered entrance
         val benefits = listOf(
             stringResource(R.string.onboarding_feature_speech),
+            stringResource(R.string.onboarding_feature_listen),
             stringResource(R.string.onboarding_feature_profiles),
             stringResource(R.string.onboarding_feature_secure)
         )
