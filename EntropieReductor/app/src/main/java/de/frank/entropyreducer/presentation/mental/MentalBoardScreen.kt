@@ -47,6 +47,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
@@ -217,6 +218,10 @@ fun MentalBoardScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Mental?>(null) }
+    // Bugfix 2026-06-11 (Frank): "+ Neues Mental" und der Mic-Button oeffneten nur den
+    // Tipp-Dialog — die Sprachaufnahme (Groq Whisper Large V3 Turbo) fehlte. Beide Wege
+    // oeffnen jetzt wie bei Ideen/Loop die Auswahl "Schreiben" / "Aufnehmen".
+    var micActionsOpen by remember { mutableStateOf(false) }
 
     val lazyListState = rememberLazyListState()
     val reorderState =
@@ -239,7 +244,7 @@ fun MentalBoardScreen(
                 currentTab = Routes.TASKS,
                 micState = MicState.IDLE,
                 onTabSelected = { route -> onSwitchTab(route) },
-                onMicClick = { showAddDialog = true },
+                onMicClick = { micActionsOpen = !micActionsOpen },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
                 // Mentalboard ist Sub-Bereich 2 unter Aufgaben → dauerhaft hervorheben.
@@ -254,7 +259,7 @@ fun MentalBoardScreen(
                     .padding(padding)
         ) {
             if (displayed.isEmpty()) {
-                EmptyState(onAdd = { showAddDialog = true })
+                EmptyState(onAdd = { micActionsOpen = true })
             } else {
                 LazyColumn(
                     state = lazyListState,
@@ -285,10 +290,22 @@ fun MentalBoardScreen(
                         }
                     }
                     item(key = "__add_button__") {
-                        AddMentalCard(onClick = { showAddDialog = true })
+                        AddMentalCard(onClick = { micActionsOpen = true })
                     }
                 }
             }
+
+            // Schreiben/Aufnehmen-Auswahl wie bei Ideen/Loop (Frank-Wunsch 2026-06-11):
+            // "Schreiben" oeffnet den bisherigen "Neues Mental"-Dialog (orange Diskette),
+            // "Aufnehmen" transkribiert per Groq Whisper und speichert direkt als Mental.
+            MicCaptureActions(
+                visible = micActionsOpen,
+                accent = MentalAccent,
+                onTextCommit = { text, _ -> scope.launch { addMental(context, text) } },
+                onClose = { micActionsOpen = false },
+                onWriteClick = { showAddDialog = true },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 

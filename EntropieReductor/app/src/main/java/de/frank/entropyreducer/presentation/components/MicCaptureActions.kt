@@ -84,6 +84,11 @@ fun MicCaptureActions(
     // Aufgaben-Reiter oeffnet damit ein Review-Fenster zum Pruefen/Verbessern/
     // Benennen). Ist er null, bleibt das alte Verhalten (Direkt-Speichern).
     onReviewTranscript: ((transcript: String) -> Unit)? = null,
+    // Frank-Wunsch 2026-06-11 (Mentalboard): wenn gesetzt, oeffnet der "Schreiben"-Button
+    // NICHT den eingebauten TextInputDialog, sondern ruft diesen Callback auf — das
+    // Mentalboard zeigt damit seinen eigenen "Neues Mental"-Dialog (orange Diskette).
+    // null = altes Verhalten (eingebauter Dialog), alle anderen Reiter unveraendert.
+    onWriteClick: (() -> Unit)? = null,
     voiceVm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
@@ -144,7 +149,14 @@ fun MicCaptureActions(
             // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon-Tint immer Schwarz,
             // analog zum schwarzen Mic-Symbol im zentralen BottomBar-Button.
             tint = Color.Black,
-            onClick = { inputDialogOpen = true },
+            onClick = {
+                if (onWriteClick != null) {
+                    onWriteClick()
+                    onClose()
+                } else {
+                    inputDialogOpen = true
+                }
+            },
         )
         FabActionButton(
             icon = recordIcon,
