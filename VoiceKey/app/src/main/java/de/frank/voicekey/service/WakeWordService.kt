@@ -66,6 +66,7 @@ class WakeWordService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        serviceRunning = true
         repository = WakeWordRepository(applicationContext)
         engine = VoskWakeEngine(onWakeWord = ::onWakeWordHit)
         LibVosk.setLogLevel(LogLevel.WARNINGS)
@@ -251,6 +252,7 @@ class WakeWordService : LifecycleService() {
         getSystemService(android.media.AudioManager::class.java)
             .unregisterAudioRecordingCallback(recordingCallback)
         micSilenced = false
+        serviceRunning = false
         Obs.i("WakeWordService", "onDestroy", "Dienst beendet, Mikrofon freigegeben")
         super.onDestroy()
     }
@@ -262,6 +264,10 @@ class WakeWordService : LifecycleService() {
         /** true = unsere Aufnahme ist stummgeschaltet, eine andere App (ChatGPT) hat das Mic. */
         @Volatile
         var micSilenced: Boolean = false
+
+        /** true = der Wake-Word-Dienst lebt (fuer das Session-laeuft-Gate des Not-Aus). */
+        @Volatile
+        var serviceRunning: Boolean = false
         private const val NOTIFICATION_ID = 1001
         private const val MIC_HANDOFF_DELAY_MS = 450L
         private const val REARM_DELAY_MS = 5_000L

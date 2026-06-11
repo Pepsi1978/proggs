@@ -104,6 +104,20 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
             Obs.d("VoiceKeyA11y", "endAssistantSession", "Lauf ignoriert — Sequenz aktiv")
             return
         }
+        // SCHUTZ: Nie eine NEUE Session starten, wenn gar keine laeuft. Laeuft unser
+        // Wake-Dienst und das Mic ist frei, ist sicher keine ChatGPT-Session aktiv.
+        val sessionLikelyRunning = isChatGptWindowVisible() ||
+            de.frank.voicekey.service.WakeWordService.micSilenced ||
+            !de.frank.voicekey.service.WakeWordService.serviceRunning
+        if (!sessionLikelyRunning) {
+            Obs.checkpoint(
+                step = "Assistent beendet",
+                intent = "Not-Aus soll die ChatGPT-Voice-Session beenden",
+                expected = "beendet",
+                actual = "keine laufende Session — nichts zu tun",
+            )
+            return
+        }
         killRunning = true
         Obs.i("VoiceKeyA11y", "endAssistantSession", "Not-Aus gestartet")
         attempt(step = 0)
