@@ -815,7 +815,8 @@
     <string name="onboarding_perspectives_title">Berbagai sudut pandang tentang\nkehidupanmu</string>
     <string name="onboarding_premium_feature_pdf">Ekspor PDF dengan foto, simpan entrimu sebagai dokumen</string>
     <string name="onboarding_premium_profiles">5 profil dasbor cerdas untuk wawasan dalam</string>
-    <string name="onboarding_try_premium">8 hari gratis, lalu mulai dari \u20ac3,99/bulan</string>
+    <string name="onboarding_premium_profiles_unlimited">Profil AI sendiri tanpa batas jumlah</string>
+    <string name="onboarding_try_premium">Premium menawarkan, antara lain:</string>
 
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">Agar kamu bisa mendiktekan entri jurnalmu lewat suara, kami butuh akses ke mikrofon kamu.</string>

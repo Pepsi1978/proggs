@@ -870,7 +870,8 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
     <string name="onboarding_perspectives_title">Diverse prospettive sulla\ntua vita</string>
     <string name="onboarding_premium_feature_pdf">Esportazione PDF con foto, salva le tue voci come documento</string>
     <string name="onboarding_premium_profiles">5 profili intelligenti della dashboard per uno sguardo profondo sulla tua vita</string>
-    <string name="onboarding_try_premium">8 giorni gratis, poi a partire da 3,99\u00a0\u20ac/mese</string>
+    <string name="onboarding_premium_profiles_unlimited">Profili IA personali senza limite di numero</string>
+    <string name="onboarding_try_premium">Premium offre, tra l\'altro:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

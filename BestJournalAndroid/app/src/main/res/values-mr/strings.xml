@@ -990,7 +990,8 @@ herleitung — सामग्रीचा स्रोत:
     <string name="onboarding_perspectives_title">तुमच्या जीवनावर\nवेगवेगळे दृष्टिकोन</string>
     <string name="onboarding_premium_feature_pdf">फोटोसह PDF निर्यात, तुमच्या नोंदी दस्तऐवज म्हणून सुरक्षित करा</string>
     <string name="onboarding_premium_profiles">तुमच्या जीवनात सखोल दृष्टीसाठी 5 बुद्धिमान डॅशबोर्ड प्रोफाइल</string>
-    <string name="onboarding_try_premium">8 दिवस मोफत, नंतर €3.99/महिन्यापासून</string>
+    <string name="onboarding_premium_profiles_unlimited">संख्या-मर्यादेविना स्वतःचे AI प्रोफाइल</string>
+    <string name="onboarding_try_premium">Premium मध्ये इतर गोष्टींसह समाविष्ट आहे:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

@@ -822,7 +822,8 @@ kişisel KI günlüğün</string>
     <string name="onboarding_perspectives_title">Hayatına farklı\nbakış açıları</string>
     <string name="onboarding_premium_feature_pdf">Fotoğraflı PDF dışa aktarım, girişlerini belge olarak sakla</string>
     <string name="onboarding_premium_profiles">Hayatına derin bir bakış için 5 akıllı panel profili</string>
-    <string name="onboarding_try_premium">8 gün ücretsiz, ardından aylık 3,99 €\'dan itibaren</string>
+    <string name="onboarding_premium_profiles_unlimited">Sayı sınırı olmadan kendi YZ profillerin</string>
+    <string name="onboarding_try_premium">Premium başka şeylerin yanı sıra şunları sunar:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

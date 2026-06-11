@@ -817,7 +817,8 @@
     <string name="onboarding_perspectives_title">從不同角度\n看見自己的生活</string>
     <string name="onboarding_premium_feature_pdf">帶照片的 PDF 匯出，把條目儲存成文件</string>
     <string name="onboarding_premium_profiles">5 種面板模板，讓你深入看自己的生活</string>
-    <string name="onboarding_try_premium">免費試用 8 天，之後每月從 3.99 € 起</string>
+    <string name="onboarding_premium_profiles_unlimited">自訂 AI 設定檔，沒有數量上限</string>
+    <string name="onboarding_try_premium">進階版包含（部分）：</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

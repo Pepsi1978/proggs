@@ -773,7 +773,8 @@
     <string name="onboarding_perspectives_title">നിന്റെ ജീവിതത്തിന്\nവിവിധ കാഴ്ചപ്പാടുകൾ</string>
     <string name="onboarding_premium_feature_pdf">ഫോട്ടോകളോടെ PDF Export, നിങ്ങളുടെ എൻട്രികൾ ഒരു ഡോക്യുമെൻ്‍ോ ആക്കൂ</string>
     <string name="onboarding_premium_profiles">ജീവിതത്തിൽ ആഴമായ ഉൾക്കാഴ്ചകൾക്ക് 5 ബുദ്ധിമാൻ ഡാഷ്ബോർഡ് പ്രൊഫൈലുകൾ</string>
-    <string name="onboarding_try_premium">8 ദിവസം സൗജന്യം, പിന്നീട് 3.99 €/മാസം</string>
+    <string name="onboarding_premium_profiles_unlimited">"എണ്ണപരിധിയില്ലാതെ സ്വന്തം AI പ്രൊഫൈലുകൾ"</string>
+    <string name="onboarding_try_premium">Premium നൽകുന്ന ചില സവിശേഷതകൾ:</string>
 
     <!-- PAYWALL -->
     <string name="paywall_prices_loading">വിലകൾ ലോഡ് ചെയ്യുന്നു\u2026</string>

@@ -792,7 +792,8 @@
     <string name="onboarding_perspectives_title">તમારા જીવન પર\nવિવિધ દ્રષ્ટિકોણ</string>
     <string name="onboarding_premium_feature_pdf">ફોટા સાથે PDF એક્સપોર્ટ, તમારી એન્ટ્રીઓ દસ્તાવેજ તરીકે સાચવો</string>
     <string name="onboarding_premium_profiles">તમારા જીવનમાં ઊંડી સમજ માટે 4 સ્માર્ટ Dashboard પ્રોફાઇલ</string>
-    <string name="onboarding_try_premium">8 દિવસ મફત, પછી 3.99 €/મહિનાથી</string>
+    <string name="onboarding_premium_profiles_unlimited">સંખ્યા-મર્યાદા વગર પોતાનાં AI પ્રોફાઇલ</string>
+    <string name="onboarding_try_premium">Premium સામેલ કરે છે, અન્ય બાબતો ઉપરાંત:</string>
 
     
     <string name="paywall_prices_loading">કિંમતો લોડ થઈ રહી છે…</string>

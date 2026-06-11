@@ -814,7 +814,8 @@
     <string name="onboarding_perspectives_title">人生へのさまざまな\n視点</string>
     <string name="onboarding_premium_feature_pdf">写真つきPDF出力で、記録を文書として保存</string>
     <string name="onboarding_premium_profiles">人生を深く見る5つの知的ダッシュボードプロフィール</string>
-    <string name="onboarding_try_premium">8日間無料、その後月額3.99ユーロから</string>
+    <string name="onboarding_premium_profiles_unlimited">件数制限のないオリジナルAIプロフィール</string>
+    <string name="onboarding_try_premium">プレミアムでできること（一例）：</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

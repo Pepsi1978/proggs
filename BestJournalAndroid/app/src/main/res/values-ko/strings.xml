@@ -814,7 +814,8 @@
     <string name="onboarding_perspectives_title">삶을 바라보는\n다양한 시각</string>
     <string name="onboarding_premium_feature_pdf">사진 포함 PDF 내보내기로 기록을 문서로 보관</string>
     <string name="onboarding_premium_profiles">삶을 깊이 들여다보는 5가지 대시보드 프로필</string>
-    <string name="onboarding_try_premium">8일 무료 체험, 이후 월 3.99€부터</string>
+    <string name="onboarding_premium_profiles_unlimited">개수 제한 없는 나만의 AI 프로필</string>
+    <string name="onboarding_try_premium">프리미엄 혜택 예시:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

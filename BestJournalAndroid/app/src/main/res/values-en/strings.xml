@@ -845,7 +845,8 @@ for more clarity every day</string>
     <string name="onboarding_perspectives_title">Different perspectives on\nyour life</string>
     <string name="onboarding_premium_feature_pdf">PDF export with photos — save your entries as a document</string>
     <string name="onboarding_premium_profiles">5 smart dashboard profiles for deep insights into your life</string>
-    <string name="onboarding_try_premium">8 days free, then from €3.99/month</string>
+    <string name="onboarding_premium_profiles_unlimited">Your own AI profiles with no limit on number</string>
+    <string name="onboarding_try_premium">Premium offers, among other things:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

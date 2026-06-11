@@ -814,7 +814,8 @@
     <string name="onboarding_perspectives_title">มุมมองที่หลากหลายต่อ\nชีวิตของคุณ</string>
     <string name="onboarding_premium_feature_pdf">ส่งออก PDF พร้อมภาพ เก็บบันทึกเป็นเอกสาร</string>
     <string name="onboarding_premium_profiles">5 โปรไฟล์แดชบอร์ดอัจฉริยะให้มุมมองลึก</string>
-    <string name="onboarding_try_premium">ทดลอง 8 วันฟรี จากนั้น 3.99 €/เดือน</string>
+    <string name="onboarding_premium_profiles_unlimited">โปรไฟล์ AI ของคุณเองโดยไม่จำกัดจำนวน</string>
+    <string name="onboarding_try_premium">พรีเมียมมีฟีเจอร์ต่างๆ เช่น:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

@@ -814,7 +814,8 @@
     <string name="onboarding_perspectives_title">अपनी ज़िंदगी के\nअलग-अलग नज़रिए</string>
     <string name="onboarding_premium_feature_pdf">फोटो के साथ PDF एक्सपोर्ट, अपनी एंट्री दस्तावेज़ के रूप में</string>
     <string name="onboarding_premium_profiles">5 स्मार्ट डैशबोर्ड प्रोफ़ाइल, गहरी जानकारी</string>
-    <string name="onboarding_try_premium">8 दिन free, फिर 3.99 €/महीने से</string>
+    <string name="onboarding_premium_profiles_unlimited">अपने AI प्रोफ़ाइल बिना संख्या-सीमा के</string>
+    <string name="onboarding_try_premium">Premium में अन्य बातों के अलावा शामिल है:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

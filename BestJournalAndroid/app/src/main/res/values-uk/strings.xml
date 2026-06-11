@@ -825,7 +825,8 @@
     <string name="onboarding_perspectives_title">Різні точки зору на\nтвоє життя</string>
     <string name="onboarding_premium_feature_pdf">Експорт у PDF з фото, збережіть записи як документ</string>
     <string name="onboarding_premium_profiles">5 розумних профілів панелі для глибокого погляду на життя</string>
-    <string name="onboarding_try_premium">8 днів безкоштовно, далі від 3,99 €/місяць</string>
+    <string name="onboarding_premium_profiles_unlimited">Власні профілі ШІ без обмеження кількості</string>
+    <string name="onboarding_try_premium">Преміум пропонує, зокрема:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

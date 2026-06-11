@@ -751,7 +751,8 @@
     <string name="onboarding_perspectives_title">నీ జీవితంపై\nవిభిన్న కోణాలు</string>
     <string name="onboarding_premium_feature_pdf">ఫోటోలతో PDF ఎగుమతి, మీ నమోదులను డాక్యుమెంట్‌గా సేవ్ చేయండి</string>
     <string name="onboarding_premium_profiles">మీ జీవితంలోకి లోతైన అంతర్దృష్టుల కోసం 5 తెలివైన డ్యాష్‌బోర్డ్ ప్రొఫైల్‌లు</string>
-    <string name="onboarding_try_premium">8 రోజులు ఉచితం, తర్వాత నెలకు 3,99 € నుండి</string>
+    <string name="onboarding_premium_profiles_unlimited">సంఖ్యా పరిమితి లేకుండా సొంత AI ప్రొఫైల్‌లు</string>
+    <string name="onboarding_try_premium">ప్రీమియం వీటితో పాటు ఇతరత్రా అందిస్తుంది:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

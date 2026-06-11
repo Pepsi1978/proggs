@@ -815,7 +815,8 @@
     <string name="onboarding_perspectives_title">Różne perspektywy na\nTwoje życie</string>
     <string name="onboarding_premium_feature_pdf">Eksport PDF ze zdjęciami, zachowaj wpisy jako dokument</string>
     <string name="onboarding_premium_profiles">5 inteligentnych profili panelu dla głębokiego spojrzenia na życie</string>
-    <string name="onboarding_try_premium">8 dni za darmo, później od 3,99 €/miesiąc</string>
+    <string name="onboarding_premium_profiles_unlimited">Własne profile AI bez limitu liczby</string>
+    <string name="onboarding_try_premium">Premium oferuje między innymi:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

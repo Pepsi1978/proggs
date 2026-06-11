@@ -843,7 +843,8 @@
     <string name="onboarding_perspectives_title">உன் வாழ்வில்\nவெவ்வேறு கோணங்கள்</string>
     <string name="onboarding_premium_feature_pdf">புகைப்படங்களுடன் PDF ஏற்றுமதி, உங்கள் பதிவுகளை ஆவணமாக காப்பிடுங்கள்</string>
     <string name="onboarding_premium_profiles">உங்கள் வாழ்வில் ஆழமான நுண்ணறிவுகளுக்கான 5 அறிவார்ந்த டாஷ்போர்டு சுயவிவரங்கள்</string>
-    <string name="onboarding_try_premium">8 நாட்கள் இலவசம், பிறகு மாதத்திற்கு 3,99 \u20ac முதல்</string>
+    <string name="onboarding_premium_profiles_unlimited">எண்ணிக்கை வரம்பின்றி சொந்த AI சுயவிவரங்கள்</string>
+    <string name="onboarding_try_premium">பிரீமியம் மற்றவற்றுடன் வழங்குகிறது:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

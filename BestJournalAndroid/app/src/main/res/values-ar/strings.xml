@@ -814,7 +814,8 @@
     <string name="onboarding_perspectives_title">زوايا مختلفة\nعلى حياتك</string>
     <string name="onboarding_premium_feature_pdf">تصدير PDF مع الصور، احفظ تسجيلاتك كمستند</string>
     <string name="onboarding_premium_profiles">5 ملفّات لوحة تحكم ذكية لرؤى عميقة في حياتك</string>
-    <string name="onboarding_try_premium">8 أيام مجانية، ثم من 3.99 € شهريًا</string>
+    <string name="onboarding_premium_profiles_unlimited">ملفات ذكاء اصطناعي خاصة بك دون حدّ للعدد</string>
+    <string name="onboarding_try_premium">‏Premium يقدّم من بين أمور أخرى:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

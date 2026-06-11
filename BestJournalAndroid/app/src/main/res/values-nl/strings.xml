@@ -841,7 +841,8 @@ voor meer duidelijkheid in het dagelijks leven</string>
     <string name="onboarding_perspectives_title">Verschillende invalshoeken op\njouw leven</string>
     <string name="onboarding_premium_feature_pdf">Pdf-export met foto\'s, bewaar je notities als document</string>
     <string name="onboarding_premium_profiles">5 slimme dashboardprofielen voor een diepe blik op je leven</string>
-    <string name="onboarding_try_premium">8 dagen gratis, daarna vanaf 3,99 €/maand</string>
+    <string name="onboarding_premium_profiles_unlimited">Eigen AI-profielen zonder aantallimiet</string>
+    <string name="onboarding_try_premium">Premium biedt onder andere:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

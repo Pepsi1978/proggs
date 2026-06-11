@@ -818,7 +818,8 @@
     <string name="onboarding_perspectives_title">ನಿಮ್ಮ ಜೀವನದ ಮೇಲೆ\nವಿವಿಧ ದೃಷ್ಟಿಕೋನಗಳು</string>
     <string name="onboarding_premium_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ PDF ರಫ್ತು, ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ ಉಳಿಸಿ</string>
     <string name="onboarding_premium_profiles">ನಿಮ್ಮ ಜೀವನಕ್ಕೆ ಆಳವಾದ ಒಳನೋಟಗಳಿಗಾಗಿ 5 ಬುದ್ಧಿವಂತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
-    <string name="onboarding_try_premium">8 ದಿನ ಉಚಿತ, ನಂತರ ತಿಂಗಳಿಗೆ ₹3.99 ರಿಂದ</string>
+    <string name="onboarding_premium_profiles_unlimited">ಸಂಖ್ಯಾ ಮಿತಿ ಇಲ್ಲದ ಸ್ವಂತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="onboarding_try_premium">Premium ಒದಗಿಸುವ ಸೌಲಭ್ಯಗಳಲ್ಲಿ ಕೆಲವು:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

@@ -818,7 +818,8 @@
     <string name="onboarding_perspectives_title">তোমার জীবনের\nবিভিন্ন দৃষ্টিভঙ্গি</string>
     <string name="onboarding_premium_feature_pdf">ছবি সহ পিডিএফ-এক্সপোর্ট, তোমার লেখা নথি হিসেবে সুরক্ষিত করো</string>
     <string name="onboarding_premium_profiles">তোমার জীবনের গভীর অন্তর্দৃষ্টির জন্য 5টি স্মার্ট ড্যাশবোর্ড-প্রোফাইল</string>
-    <string name="onboarding_try_premium">8 দিন বিনামূল্যে, তারপর মাসে 3.99 €</string>
+    <string name="onboarding_premium_profiles_unlimited">সংখ্যার সীমা ছাড়াই নিজের AI-প্রোফাইল</string>
+    <string name="onboarding_try_premium">প্রিমিয়াম অন্যান্য সুবিধার মধ্যে দেয়:</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL

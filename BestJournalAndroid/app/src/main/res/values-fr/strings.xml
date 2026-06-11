@@ -826,7 +826,8 @@ pour plus de clarté au quotidien</string>
     <string name="onboarding_perspectives_title">Différents regards sur\nta vie</string>
     <string name="onboarding_premium_feature_pdf">Export PDF avec photos, sauvegarde tes entrées en document</string>
     <string name="onboarding_premium_profiles">5 profils de tableau de bord intelligents pour des aperçus profonds de ta vie</string>
-    <string name="onboarding_try_premium">8 jours gratuits, ensuite à partir de 3,99 €/mois</string>
+    <string name="onboarding_premium_profiles_unlimited">Tes propres profils IA sans limite de nombre</string>
+    <string name="onboarding_try_premium">Premium offre entre autres :</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
