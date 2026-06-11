@@ -118,7 +118,7 @@ class VoskWakeEngine(
                                 actual = stopHit,
                                 ctx = mapOf("lang" to lang, "rohtext" to text),
                             )
-                            recognizers.values.forEach { it.reset() }
+                            recognizer.reset() // NUR den feuernden Erkenner — sonst verwirft ein Wake-Treffer den parallelen Beenden-Treffer der anderen Sprache
                             onStopWord(stopHit, lang)
                         } else if (wakeHit != null) {
                             Obs.checkpoint(
@@ -128,7 +128,7 @@ class VoskWakeEngine(
                                 actual = wakeHit,
                                 ctx = mapOf("lang" to lang, "rohtext" to text),
                             )
-                            recognizers.values.forEach { it.reset() }
+                            recognizer.reset() // NUR den feuernden Erkenner — sonst verwirft ein Wake-Treffer den parallelen Beenden-Treffer der anderen Sprache
                             onWakeWord(wakeHit, lang)
                             if (!running) break // Service stoppt die Engine nach einem Wake-Treffer
                         }
