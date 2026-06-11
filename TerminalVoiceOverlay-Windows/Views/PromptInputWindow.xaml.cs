@@ -723,6 +723,10 @@ public partial class PromptInputWindow : Window
     private readonly Dictionary<int, DateTime> _slotTimestamps = new();
     /// <summary>KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.</summary>
     private readonly Dictionary<int, string> _slotSummaries = new();
+    /// <summary>Slots, fuer die gerade eine Summary erzeugt wird — verhindert Doppel-Calls.</summary>
+    private readonly HashSet<int> _summaryInFlight = new();
+    /// <summary>True solange der Backfill bestehender Slots laeuft (sequentiell, gedrosselt).</summary>
+    private bool _backfillRunning;
     private readonly Dictionary<int, Button> _slotButtons = new();
     private Button? _slotSaveButton;
     private Button? _slotDeleteButton;
@@ -771,6 +775,8 @@ public partial class PromptInputWindow : Window
                 if (!string.IsNullOrWhiteSpace(kv.Value)) _slotSummaries[kv.Key] = kv.Value;
         }
         UpdateSlotVisuals();
+        // Bestehende belegte Slots ohne Zusammenfassung nachtraeglich auffuellen.
+        MaybeBackfillSummaries();
     }
 
     /// <summary>
@@ -1022,6 +1028,48 @@ public partial class PromptInputWindow : Window
         {
             Console.WriteLine($"Slot summary failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Stoesst den Backfill an: erzeugt fuer alle belegten Slots OHNE
+    /// Zusammenfassung nachtraeglich eine — auch fuer Prompts, die vor diesem
+    /// Feature gespeichert wurden (Frank-Wunsch 2026-06-11). Laeuft nur einmal
+    /// gleichzeitig; ohne Gemini-Key passiert nichts.
+    /// </summary>
+    private void MaybeBackfillSummaries()
+    {
+        if (_backfillRunning) return;
+        if (VoiceServiceProvider.Gemini is null) return;
+        var todo = _slotContents.Keys
+            .Where(n => !_slotSummaries.ContainsKey(n) && !_summaryInFlight.Contains(n))
+            .OrderBy(n => n)
+            .ToList();
+        if (todo.Count == 0) return;
+        _ = BackfillSummariesAsync(todo);
+    }
+
+    /// <summary>
+    /// Arbeitet die Backfill-Liste SEQUENTIELL ab (eine Summary nach der
+    /// anderen, mit kleiner Pause) — sanfte Drosselung gegen Gemini-Rate-Limits.
+    /// Nutzt denselben Pfad wie ein frisches Speichern (RequestSlotSummaryAsync):
+    /// Summary erzeugen, Tooltip setzen, persistieren + Cloud-Sync.
+    /// </summary>
+    private async Task BackfillSummariesAsync(List<int> slots)
+    {
+        _backfillRunning = true;
+        try
+        {
+            foreach (var n in slots)
+            {
+                if (!_slotContents.TryGetValue(n, out var text) || string.IsNullOrWhiteSpace(text)) continue;
+                if (_slotSummaries.ContainsKey(n) || _summaryInFlight.Contains(n)) continue;
+                _summaryInFlight.Add(n);
+                try { await RequestSlotSummaryAsync(n, text); }
+                finally { _summaryInFlight.Remove(n); }
+                await Task.Delay(600); // Drosselung: nicht alle Slots gleichzeitig an Gemini
+            }
+        }
+        finally { _backfillRunning = false; }
     }
 
     /// <summary>
