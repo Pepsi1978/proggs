@@ -492,7 +492,7 @@
     <string name="settings_premium_feature_improve_desc">KI verbessert deine Einträge auf Wunsch.</string>
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit deinen Einträgen.</string>
-    <string name="settings_premium_feature_5_perspectives">Alle 4 vordefinierten KI-Profile + so viele eigene wie du brauchst</string>
+    <string name="settings_premium_feature_5_perspectives">Alle 4 vordefinierten KI-Profile</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Zusammenfassung bis Selbsterkenntnis</string>
     <string name="settings_premium_feature_reviews">Alle Rückblicke ausführlich mit KI erstellt</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
