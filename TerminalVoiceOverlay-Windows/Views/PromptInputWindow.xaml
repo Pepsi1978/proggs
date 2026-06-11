@@ -78,6 +78,9 @@
              Auswahl wird ueber BorderBrush/BorderThickness vom Code-Behind
              gesetzt (goldener Rahmen), belegt/leer ueber Foreground. -->
         <Style x:Key="SlotButton" TargetType="Button">
+            <!-- Tooltip beim ersten Hover schneller einblenden: Standard ist
+                 400ms, hier ~ein Drittel (130ms) auf Frank-Wunsch 2026-06-11. -->
+            <Setter Property="ToolTipService.InitialShowDelay" Value="130"/>
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="26"/>
             <Setter Property="Background" Value="#FF2D2D2D"/>
