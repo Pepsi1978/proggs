@@ -31,6 +31,26 @@ Rules:
 - If the info doesn't exist, say so immediately. Don't keep searching.
 - Stay tightly scoped — you're a scout, not an architect.
 
+## Best-Practices-Kandidaten markieren (PFLICHT — Research-Persistenz)
+
+Am ENDE jedes Ergebnisses zwei kurze Bloecke anfuegen (Regel `research-persistence.md`:
+Recherchen duerfen nicht verkommen — der Hauptagent arbeitet sie in `best-practices/`
+und `bugs/` ein):
+
+```
+BEST-PRACTICES-KANDIDATEN:
+- [wiederverwendbares Finding] | Quelle: [URL] | Version: [Software-Version]
+(oder: KEINE)
+BUG-KANDIDATEN:
+- [Bug/Falle/Workaround] | Versionen: [betroffen] | Quelle: [URL]
+(oder: KEINE)
+```
+
+- Kandidaten = Findings, die ueber die aktuelle Aufgabe hinaus wiederverwendbar sind
+  (Patterns, API-Empfehlungen, bekannte Bugs, Versions-Fallen, Policy-Wissen).
+- Quellen-URL + Software-Version IMMER mitgeben (spaetere Nachpruefbarkeit).
+- Kurz halten — die Bloecke zaehlen zum 100-Zeilen-Antwortlimit.
+
 ## Bulk Research Chunking (PFLICHT bei grossen Recherche-Aufgaben)
 
 Wenn du grosse Mengen recherchieren sollst (50+ Fakten, 50+ Fragen validieren, etc.):

@@ -37,6 +37,11 @@ Agent, Aufgabe, Fehler, Neuversuch-Ergebnis.
 
 ## 2. Researcher-Limits: Absturzsicher durch Design
 
+> **Research-Persistenz (NEU 2026-06-11):** Nach JEDEM Researcher-Einsatz pruefen, ob die
+> Ergebnisse Best-Practices-tauglich sind → dann IMMER in `best-practices/` (+ Bugs in
+> `bugs/`) einarbeiten, Kurzcheck UND Volltext. Vollstaendige Regel:
+> `~/.claude/rules/research-persistence.md`. Recherchen duerfen nicht verkommen.
+
 > Vorfall 2026-03-28: 5 Researcher mit je 100 Fragen → alle abgestuerzt.
 > 5 Researcher mit je 50 Fragen → alle erfolgreich.
 
