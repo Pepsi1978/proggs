@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AIがご希望に応じて日記の記録を改善します。</string>
     <string name="settings_premium_feature_dashboard">毎日のダッシュボード分析</string>
     <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたの記録とともに進化します。</string>
-    <string name="settings_premium_feature_5_perspectives">あらかじめ用意された4つのAIプロフィール + 必要なだけのオリジナル</string>
+    <string name="settings_premium_feature_5_perspectives">あらかじめ用意された4つのAIプロフィール</string>
     <string name="settings_premium_feature_5_perspectives_desc">要約から自己理解まで</string>
     <string name="settings_premium_feature_reviews">週・月・年の振り返り</string>
     <string name="settings_premium_feature_reviews_desc">AIがあなたの物語を語ります</string>
@@ -1281,7 +1281,7 @@ Premiumでは：1日最大150件。</string>
     <string name="dev_seed_ai_no_entries">AIがテスト用エントリを返しませんでした</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">すべての日記エントリーに無制限の追記</string>
+    <string name="paywall_feature_followups">日記エントリーに好きなだけ追記</string>
     <string name="settings_premium_feature_followups">無制限の追記</string>
     <string name="settings_premium_feature_followups_desc">エントリーごとに好きなだけ追記できます</string>
 

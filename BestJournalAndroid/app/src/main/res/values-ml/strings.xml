@@ -397,7 +397,7 @@
     <string name="settings_premium_feature_improve_desc">AI ആവശ്യപ്പെടുമ്പോൾ നിന്റെ എൻട്രികൾ മെച്ചപ്പെടുത്തും.</string>
     <string name="settings_premium_feature_dashboard">ദൈനംദിന ഡാഷ്‌ബോർഡ് വിശകലനങ്ങൾ</string>
     <string name="settings_premium_feature_dashboard_desc">നിന്റെ ഡാഷ്‌ബോർഡ് നിന്റെ എൻട്രികൾക്കൊപ്പം വളരുന്നു.</string>
-    <string name="settings_premium_feature_5_perspectives">"എല്ലാ 4 മുൻനിശ്ചയിച്ച AI പ്രൊഫൈലുകളും + നിങ്ങൾക്ക് വേണ്ടത്ര സ്വന്തമായവയും"</string>
+    <string name="settings_premium_feature_5_perspectives">എല്ലാ 4 മുൻനിശ്ചയിച്ച AI പ്രൊഫൈലുകൾ</string>
     <string name="settings_premium_feature_5_perspectives_desc">സംഗ്രഹം മുതൽ ആത്മജ്ഞാനം വരെ</string>
     <string name="settings_premium_feature_reviews">ആഴ്ച, മാസ, വർഷ അവലോകനങ്ങൾ</string>
     <string name="settings_premium_feature_reviews_desc">AI നിങ്ങളുടെ കഥ പറയുന്നു</string>
@@ -1220,7 +1220,7 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="dev_seed_ai_no_entries">AI ടെസ്റ്റ് എൻട്രികൾ നൽകിയില്ല</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">ഓരോ ഡയറി എൻട്രിക്കും പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
+    <string name="paywall_feature_followups">നിങ്ങൾക്ക് വേണ്ടത്ര ഡയറി കുറിപ്പുകൾ ചേർക്കൂ</string>
     <string name="settings_premium_feature_followups">പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
     <string name="settings_premium_feature_followups_desc">ഓരോ എൻട്രിയിലും ആവശ്യമുള്ളത്ര അധിക കുറിപ്പുകൾ</string>
 

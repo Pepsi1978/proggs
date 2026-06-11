@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">চাইলেই এআই তোমার লেখা উন্নত করে দেয়।</string>
     <string name="settings_premium_feature_dashboard">প্রতিদিন ড্যাশবোর্ড বিশ্লেষণ</string>
     <string name="settings_premium_feature_dashboard_desc">তোমার লেখার সাথে সাথে তোমার ড্যাশবোর্ডও বাড়তে থাকে।</string>
-    <string name="settings_premium_feature_5_perspectives">৪টি পূর্বনির্ধারিত AI-প্রোফাইল + তোমার যত দরকার তত নিজের প্রোফাইল</string>
+    <string name="settings_premium_feature_5_perspectives">4টি পূর্বনির্ধারিত AI-প্রোফাইল</string>
     <string name="settings_premium_feature_5_perspectives_desc">সারসংক্ষেপ থেকে আত্মজ্ঞান পর্যন্ত</string>
     <string name="settings_premium_feature_reviews">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="settings_premium_feature_reviews_desc">এআই তোমার গল্প বলে</string>
@@ -1294,7 +1294,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="dev_seed_ai_no_entries">AI কোনো পরীক্ষামূলক এন্ট্রি ফেরত দেয়নি</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">প্রতিটি ডায়েরি এন্ট্রিতে আনলিমিটেড সংযোজন</string>
+    <string name="paywall_feature_followups">তুমি যত চাও তত ডায়েরি সংযোজন</string>
     <string name="settings_premium_feature_followups">আনলিমিটেড সংযোজন</string>
     <string name="settings_premium_feature_followups_desc">প্রতিটি এন্ট্রিতে যত খুশি সংযোজন</string>
 

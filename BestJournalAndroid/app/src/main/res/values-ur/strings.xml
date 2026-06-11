@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI تمہاری درخواست پر اندراجات بہتر بناتا ہے۔</string>
     <string name="settings_premium_feature_dashboard">روزانہ ڈیش بورڈ تجزیات</string>
     <string name="settings_premium_feature_dashboard_desc">تمہارا ڈیش بورڈ تمہاری اندراجات کے ساتھ بڑھتا ہے۔</string>
-    <string name="settings_premium_feature_5_perspectives">تمام 4 پہلے سے طے شدہ AI پروفائلز + جتنے اپنے بنانا چاہیں</string>
+    <string name="settings_premium_feature_5_perspectives">تمام 4 پہلے سے طے شدہ AI پروفائلز</string>
     <string name="settings_premium_feature_5_perspectives_desc">خلاصے سے خودآگاہی تک</string>
     <string name="settings_premium_feature_reviews">ہفتہ وار، ماہانہ اور سالانہ جائزے</string>
     <string name="settings_premium_feature_reviews_desc">‏AI آپ کی کہانی بیان کرتا ہے</string>
@@ -1297,7 +1297,7 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="dev_seed_ai_no_entries">AI نے کوئی ٹیسٹ اندراج واپس نہیں کیا</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">ہر ڈائری اندراج میں لامحدود اضافے</string>
+    <string name="paywall_feature_followups">جتنے چاہیں ڈائری اندراجات میں اضافے کریں</string>
     <string name="settings_premium_feature_followups">لامحدود اضافے</string>
     <string name="settings_premium_feature_followups_desc">فی اندراج جتنے چاہیں اضافے</string>
 

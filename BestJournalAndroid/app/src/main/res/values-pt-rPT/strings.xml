@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">A IA melhora as tuas entradas a pedido.</string>
     <string name="settings_premium_feature_dashboard">Análises diárias no painel</string>
     <string name="settings_premium_feature_dashboard_desc">O teu painel cresce com as tuas entradas.</string>
-    <string name="settings_premium_feature_5_perspectives">Os 4 perfis de IA predefinidos + tantos próprios quantos precisares</string>
+    <string name="settings_premium_feature_5_perspectives">Os 4 perfis de IA predefinidos</string>
     <string name="settings_premium_feature_5_perspectives_desc">De resumo a autoconhecimento</string>
     <string name="settings_premium_feature_reviews">Retrospetivas semanal, mensal e anual</string>
     <string name="settings_premium_feature_reviews_desc">A IA conta sua história</string>
@@ -1286,7 +1286,7 @@ O que queres fazer?</string>
     <string name="dev_seed_ai_no_entries">A IA não devolveu entradas de teste</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Complementos ilimitados para cada entrada</string>
+    <string name="paywall_feature_followups">Tantos complementos quantos quiseres nas entradas</string>
     <string name="settings_premium_feature_followups">Complementos ilimitados</string>
     <string name="settings_premium_feature_followups_desc">Tantos complementos por entrada quantos quiseres</string>
 

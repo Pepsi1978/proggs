@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI가 요청 시 기록을 개선해 드려요.</string>
     <string name="settings_premium_feature_dashboard">매일 대시보드 분석</string>
     <string name="settings_premium_feature_dashboard_desc">대시보드가 기록과 함께 성장해요.</string>
-    <string name="settings_premium_feature_5_perspectives">미리 정의된 AI 프로필 4가지 전부 + 필요한 만큼 직접 만드는 프로필</string>
+    <string name="settings_premium_feature_5_perspectives">미리 정의된 AI 프로필 4가지 전부</string>
     <string name="settings_premium_feature_5_perspectives_desc">요약부터 자기 이해까지</string>
     <string name="settings_premium_feature_reviews">주간·월간·연간 돌아보기</string>
     <string name="settings_premium_feature_reviews_desc">AI가 당신의 이야기를 들려줘요</string>
@@ -1281,7 +1281,7 @@ Premium: 하루 최대 150회.</string>
     <string name="dev_seed_ai_no_entries">AI가 테스트 항목을 반환하지 않았어요</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">모든 일기 항목에 무제한으로 추가 기록</string>
+    <string name="paywall_feature_followups">일기 항목에 원하는 만큼 추가 기록</string>
     <string name="settings_premium_feature_followups">무제한 추가 기록</string>
     <string name="settings_premium_feature_followups_desc">항목마다 원하는 만큼 추가 기록할 수 있어요</string>
 

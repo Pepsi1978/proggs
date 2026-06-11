@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">L\'IA migliora le tue voci su richiesta.</string>
     <string name="settings_premium_feature_dashboard">Analisi giornaliere della dashboard</string>
     <string name="settings_premium_feature_dashboard_desc">La tua dashboard cresce insieme alle tue voci.</string>
-    <string name="settings_premium_feature_5_perspectives">Tutti e 4 i profili IA predefiniti + quanti ne vuoi di tuoi</string>
+    <string name="settings_premium_feature_5_perspectives">Tutti e 4 i profili IA predefiniti</string>
     <string name="settings_premium_feature_5_perspectives_desc">Dal riepilogo alla conoscenza di s\u00e9</string>
     <string name="settings_premium_feature_reviews">Retrospettive settimanale, mensile e annuale</string>
     <string name="settings_premium_feature_reviews_desc">L\'IA racconta la tua storia</string>
@@ -1355,7 +1355,7 @@ Cosa vuoi fare?</string>
     <string name="dev_seed_ai_no_entries">L’IA non ha restituito voci di test</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Annotazioni illimitate per ogni voce del diario</string>
+    <string name="paywall_feature_followups">Tutte le annotazioni che vuoi per ogni voce del diario</string>
     <string name="settings_premium_feature_followups">Annotazioni illimitate</string>
     <string name="settings_premium_feature_followups_desc">Quante annotazioni per voce vuoi</string>
 

@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI கோரிக்கையின் பேரில் உன் பதிவுகளை மேம்படுத்துகிறது.</string>
     <string name="settings_premium_feature_dashboard">தினசரி டாஷ்போர்டு பகுப்பாய்வுகள்</string>
     <string name="settings_premium_feature_dashboard_desc">உன் டாஷ்போர்டு உன் பதிவுகளுடன் வளர்கிறது.</string>
-    <string name="settings_premium_feature_5_perspectives">முன்வரையறுக்கப்பட்ட 4 AI சுயவிவரங்கள் + உங்களுக்குத் தேவையான அளவு சொந்தவை</string>
+    <string name="settings_premium_feature_5_perspectives">முன்வரையறுக்கப்பட்ட 4 AI சுயவிவரங்கள்</string>
     <string name="settings_premium_feature_5_perspectives_desc">சுருக்கம் முதல் சுய உணர்வு வரை</string>
     <string name="settings_premium_feature_reviews">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
     <string name="settings_premium_feature_reviews_desc">KI உங்கள் கதையை சொல்கிறது</string>
@@ -1310,7 +1310,7 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="dev_seed_ai_no_entries">AI சோதனை பதிவுகளைத் திருப்பவில்லை</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">ஒவ்வொரு நாட்குறிப்பிற்கும் வரம்பற்ற கூடுதல் குறிப்புகள்</string>
+    <string name="paywall_feature_followups">நீங்கள் விரும்பும் அளவு நாட்குறிப்புக் கூடுதல் குறிப்புகள்</string>
     <string name="settings_premium_feature_followups">வரம்பற்ற கூடுதல் குறிப்புகள்</string>
     <string name="settings_premium_feature_followups_desc">ஒரு பதிவில் விரும்பும் அளவு கூடுதல் குறிப்புகள்</string>
 

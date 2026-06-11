@@ -427,7 +427,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_premium_feature_improve_desc">De AI verbetert je notities op verzoek.</string>
     <string name="settings_premium_feature_dashboard">Dagelijkse dashboard-analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit mee met je notities.</string>
-    <string name="settings_premium_feature_5_perspectives">Alle 4 vooraf ingestelde AI-profielen + zoveel eigen profielen als je nodig hebt</string>
+    <string name="settings_premium_feature_5_perspectives">Alle 4 vooraf ingestelde AI-profielen</string>
     <string name="settings_premium_feature_5_perspectives_desc">Van samenvatting tot zelfkennis</string>
     <string name="settings_premium_feature_reviews">Week-, maand- en jaarterugblik</string>
     <string name="settings_premium_feature_reviews_desc">De AI vertelt jouw verhaal</string>
@@ -1318,7 +1318,7 @@ Wat wil je doen?</string>
     <string name="dev_seed_ai_no_entries">AI heeft geen testitems teruggegeven</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Onbeperkt aanvullingen bij elke dagboeknotitie</string>
+    <string name="paywall_feature_followups">Zoveel aanvullingen als je wilt bij elke dagboeknotitie</string>
     <string name="settings_premium_feature_followups">Onbeperkt aanvullingen</string>
     <string name="settings_premium_feature_followups_desc">Zoveel aanvullingen per notitie als je wilt</string>
 

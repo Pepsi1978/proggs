@@ -427,7 +427,7 @@ Para quem quer se entender melhor e crescer internamente.</string>
     <string name="settings_premium_feature_improve_desc">A IA aprimora suas entradas sempre que você quiser.</string>
     <string name="settings_premium_feature_dashboard">Análises diárias no painel</string>
     <string name="settings_premium_feature_dashboard_desc">Seu painel cresce conforme você registra suas entradas.</string>
-    <string name="settings_premium_feature_5_perspectives">Todos os 4 perfis de IA predefinidos + quantos próprios você precisar</string>
+    <string name="settings_premium_feature_5_perspectives">Todos os 4 perfis de IA predefinidos</string>
     <string name="settings_premium_feature_5_perspectives_desc">Do resumo ao autoconhecimento</string>
     <string name="settings_premium_feature_reviews">Retrospectivas semanal, mensal e anual</string>
     <string name="settings_premium_feature_reviews_desc">A IA conta sua história</string>
@@ -1299,7 +1299,7 @@ O que você quer fazer?</string>
     <string name="dev_seed_ai_no_entries">A IA não retornou entradas de teste</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Complementos ilimitados em cada entrada do diário</string>
+    <string name="paywall_feature_followups">Quantos complementos você quiser nas entradas do diário</string>
     <string name="settings_premium_feature_followups">Complementos ilimitados</string>
     <string name="settings_premium_feature_followups_desc">Quantos complementos por entrada você quiser</string>
 

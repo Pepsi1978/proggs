@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI ulepsza Twoje wpisy na życzenie.</string>
     <string name="settings_premium_feature_dashboard">Codzienne analizy panelu</string>
     <string name="settings_premium_feature_dashboard_desc">Twój panel rośnie razem z Twoimi wpisami.</string>
-        <string name="settings_premium_feature_5_perspectives">Wszystkie 4 predefiniowane profile AI + tyle własnych, ile potrzebujesz</string>
+        <string name="settings_premium_feature_5_perspectives">Wszystkie 4 predefiniowane profile AI</string>
     <string name="settings_premium_feature_5_perspectives_desc">Od podsumowania do samopoznania</string>
     <string name="settings_premium_feature_reviews">Podsumowania tygodniowe, miesięczne i roczne</string>
     <string name="settings_premium_feature_reviews_desc">SI opowiada Twoją historię</string>
@@ -1302,7 +1302,7 @@ Co chcesz zrobić?</string>
     <string name="dev_seed_ai_no_entries">AI nie zwróciła wpisów testowych</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Nieograniczone uzupełnienia do każdego wpisu</string>
+    <string name="paywall_feature_followups">Tyle uzupełnień do wpisów, ile zechcesz</string>
     <string name="settings_premium_feature_followups">Nieograniczone uzupełnienia</string>
     <string name="settings_premium_feature_followups_desc">Tyle uzupełnień na wpis, ile chcesz</string>
 

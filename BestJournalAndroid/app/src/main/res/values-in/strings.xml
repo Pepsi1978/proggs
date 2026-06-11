@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI memperbaiki entri kamu sesuai permintaan.</string>
     <string name="settings_premium_feature_dashboard">Analisis dashboard harian</string>
     <string name="settings_premium_feature_dashboard_desc">Dasbor kamu berkembang bersama entri-entrimu.</string>
-    <string name="settings_premium_feature_5_perspectives">Semua 4 profil AI bawaan + sebanyak yang kamu butuhkan sendiri</string>
+    <string name="settings_premium_feature_5_perspectives">Semua 4 profil AI bawaan</string>
     <string name="settings_premium_feature_5_perspectives_desc">Dari ringkasan hingga pengenalan diri</string>
     <string name="settings_premium_feature_reviews">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="settings_premium_feature_reviews_desc">AI menceritakan kisahmu</string>
@@ -1292,7 +1292,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="dev_seed_ai_no_entries">AI tidak mengembalikan entri uji</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Tambahan tak terbatas untuk setiap catatan harian</string>
+    <string name="paywall_feature_followups">Sebanyak yang kamu mau catatan harian tambahan</string>
     <string name="settings_premium_feature_followups">Tambahan tak terbatas</string>
     <string name="settings_premium_feature_followups_desc">Sebanyak yang kamu mau di setiap catatan</string>
 

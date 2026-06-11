@@ -402,7 +402,7 @@
     <string name="settings_premium_feature_improve_desc">AI నీ నమోదులను కోరినప్పుడు మెరుగుపరుస్తుంది.</string>
     <string name="settings_premium_feature_dashboard">ప్రతిరోజూ డాష్‌బోర్డ్ విశ్లేషణలు</string>
     <string name="settings_premium_feature_dashboard_desc">నీ డ్యాష్‌బోర్డ్ నీ నమోదులతో పాటు పెరుగుతుంది.</string>
-    <string name="settings_premium_feature_5_perspectives">అన్ని 4 ముందే నిర్వచించబడిన AI ప్రొఫైల్‌లు + మీకు కావలసినన్ని సొంతవి</string>
+    <string name="settings_premium_feature_5_perspectives">అన్ని 4 ముందే నిర్వచించబడిన AI ప్రొఫైల్‌లు</string>
     <string name="settings_premium_feature_5_perspectives_desc">సారాంశం నుండి స్వీయ-అంతర్దృష్టి వరకు</string>
     <string name="settings_premium_feature_reviews">వారపు, నెలవారీ మరియు వార్షిక అవలోకనాలు</string>
     <string name="settings_premium_feature_reviews_desc">AI మీ కథను చెబుతుంది</string>
@@ -1214,7 +1214,7 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="dev_seed_ai_no_entries">AI పరీక్ష ఎంట్రీలను తిరిగి ఇవ్వలేదు</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">ప్రతి జర్నల్ ఎంట్రీకి అపరిమిత అదనపు నోట్స్</string>
+    <string name="paywall_feature_followups">నీకు కావలసినన్ని జర్నల్ అదనపు నోట్స్</string>
     <string name="settings_premium_feature_followups">అపరిమిత అదనపు నోట్స్</string>
     <string name="settings_premium_feature_followups_desc">ఒక ఎంట్రీలో ఎన్ని కావాలంటే అన్ని అదనపు నోట్స్</string>
 

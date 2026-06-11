@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">يحسّن الذكاء الاصطناعي تسجيلاتك عند الطلب.</string>
     <string name="settings_premium_feature_dashboard">تحليلات لوحة التحكم اليومية</string>
     <string name="settings_premium_feature_dashboard_desc">تنمو لوحة التحكم مع تسجيلاتك.</string>
-    <string name="settings_premium_feature_5_perspectives">جميع الملفات الشخصية الذكية الأربعة المعرّفة مسبقاً + ما تحتاجه من ملفات خاصة بك</string>
+    <string name="settings_premium_feature_5_perspectives">جميع الملفات الشخصية الذكية الأربعة المعرّفة مسبقاً</string>
     <string name="settings_premium_feature_5_perspectives_desc">من الملخص إلى معرفة الذات</string>
     <string name="settings_premium_feature_reviews">مراجعات أسبوعية وشهرية وسنوية</string>
     <string name="settings_premium_feature_reviews_desc">الذكاء الاصطناعي يروي قصّتك</string>
@@ -1298,7 +1298,7 @@
     <string name="dev_seed_ai_no_entries">لم يُرجع الذكاء الاصطناعي أي إدخالات اختبار</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">إضافات غير محدودة لكل تدوينة في اليوميات</string>
+    <string name="paywall_feature_followups">أضف ما تشاء من إضافات لكل تدوينة في اليوميات</string>
     <string name="settings_premium_feature_followups">إضافات غير محدودة</string>
     <string name="settings_premium_feature_followups_desc">أضف إلى كل تدوينة قدر ما تشاء</string>
 

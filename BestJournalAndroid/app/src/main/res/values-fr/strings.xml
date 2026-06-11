@@ -427,7 +427,7 @@ Pour ceux qui veulent mieux se connaître et grandir intérieurement.</string>
     <string name="settings_premium_feature_improve_desc">L\'IA améliore tes entrées sur demande.</string>
     <string name="settings_premium_feature_dashboard">Analyses du tableau de bord quotidiennes</string>
     <string name="settings_premium_feature_dashboard_desc">Ton tableau de bord s\'enrichit à chaque entrée.</string>
-    <string name="settings_premium_feature_5_perspectives">Les 4 profils IA prédéfinis + autant de profils personnels que tu en as besoin</string>
+    <string name="settings_premium_feature_5_perspectives">Les 4 profils IA prédéfinis</string>
     <string name="settings_premium_feature_5_perspectives_desc">Du résumé à la connaissance de soi</string>
     <string name="settings_premium_feature_reviews">Rétrospectives hebdo, mensuelles et annuelles</string>
     <string name="settings_premium_feature_reviews_desc">L\'IA raconte ton histoire</string>
@@ -1303,7 +1303,7 @@ Que veux-tu faire ?</string>
     <string name="dev_seed_ai_no_entries">L’IA n’a renvoyé aucune entrée de test</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Compléments illimités pour chaque entrée</string>
+    <string name="paywall_feature_followups">Autant de compléments que tu veux pour chaque entrée</string>
     <string name="settings_premium_feature_followups">Compléments illimités</string>
     <string name="settings_premium_feature_followups_desc">Autant de compléments par entrée que tu veux</string>
     <string name="entry_journal_entry_title">Entrée du journal</string>

@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಬಯಸಿದಾಗ ಸುಧಾರಿಸುತ್ತದೆ.</string>
     <string name="settings_premium_feature_dashboard">ದೈನಂದಿನ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು</string>
     <string name="settings_premium_feature_dashboard_desc">ನಿಮ್ಮ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನಿಮ್ಮ ನಮೂದುಗಳೊಂದಿಗೆ ಬೆಳೆಯುತ್ತದೆ.</string>
-    <string name="settings_premium_feature_5_perspectives">ಎಲ್ಲ 4 ಪೂರ್ವನಿರ್ಧಾರಿತ AI ಪ್ರೊಫೈಲ್‌ಗಳು + ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಸ್ವಂತ</string>
+    <string name="settings_premium_feature_5_perspectives">ಎಲ್ಲ 4 ಪೂರ್ವನಿರ್ಧಾರಿತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
     <string name="settings_premium_feature_5_perspectives_desc">ಸಾರಾಂಶದಿಂದ ಆತ್ಮಜ್ಞಾನದವರೆಗೆ</string>
     <string name="settings_premium_feature_reviews">ವಾರ, ತಿಂಗಳು ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು</string>
     <string name="settings_premium_feature_reviews_desc">AI ನಿಮ್ಮ ಕಥೆಯನ್ನು ಹೇಳುತ್ತದೆ</string>
@@ -1286,7 +1286,7 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="dev_seed_ai_no_entries">AI ಪರೀಕ್ಷಾ ದಾಖಲೆಗಳನ್ನು ಹಿಂತಿರುಗಿಸಲಿಲ್ಲ</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">ಪ್ರತಿ ಡೈರಿ ನಮೂದಿಗೆ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
+    <string name="paywall_feature_followups">ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಡೈರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಸೇರಿಸಿ</string>
     <string name="settings_premium_feature_followups">ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
     <string name="settings_premium_feature_followups_desc">ಪ್ರತಿ ನಮೂದಿನಲ್ಲಿ ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
 

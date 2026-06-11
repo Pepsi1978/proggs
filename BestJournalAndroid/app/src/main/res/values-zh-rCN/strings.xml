@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI 可按需润色你的日记条目。</string>
     <string name="settings_premium_feature_dashboard">每日仪表盘分析</string>
     <string name="settings_premium_feature_dashboard_desc">你的面板随日记一同成长。</string>
-    <string name="settings_premium_feature_5_perspectives">全部 4 个预设 AI 画像 + 你需要多少个自定义画像都行</string>
+    <string name="settings_premium_feature_5_perspectives">全部 4 个预设 AI 画像</string>
     <string name="settings_premium_feature_5_perspectives_desc">从摘要到自我认知</string>
     <string name="settings_premium_feature_reviews">每周、每月、每年的回顾</string>
     <string name="settings_premium_feature_reviews_desc">AI 讲述你的故事</string>
@@ -1281,7 +1281,7 @@
     <string name="dev_seed_ai_no_entries">AI 未返回测试条目</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">每篇日记可无限补充</string>
+    <string name="paywall_feature_followups">每篇日记，想补充多少就补充多少</string>
     <string name="settings_premium_feature_followups">无限补充</string>
     <string name="settings_premium_feature_followups_desc">每篇日记想加多少补充就加多少</string>
 

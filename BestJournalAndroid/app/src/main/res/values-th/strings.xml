@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI ปรับปรุงบันทึกของคุณตามต้องการ</string>
     <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดทุกวัน</string>
     <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดของคุณเติบโตไปพร้อมกับบันทึก</string>
-    <string name="settings_premium_feature_5_perspectives">โปรไฟล์ AI ที่กำหนดไว้ล่วงหน้าทั้ง 4 แบบ + สร้างเองได้มากเท่าที่คุณต้องการ</string>
+    <string name="settings_premium_feature_5_perspectives">โปรไฟล์ AI ที่กำหนดไว้ล่วงหน้าทั้ง 4 แบบ</string>
     <string name="settings_premium_feature_5_perspectives_desc">จากสรุปถึงการรู้จักตัวเอง</string>
     <string name="settings_premium_feature_reviews">ทบทวนรายสัปดาห์ เดือน และปี</string>
     <string name="settings_premium_feature_reviews_desc">AI เล่าเรื่องของคุณ</string>
@@ -1289,7 +1289,7 @@
     <string name="dev_seed_ai_no_entries">AI ไม่ได้ส่งรายการทดสอบกลับมา</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">เพิ่มข้อความได้ไม่จำกัดในทุกบันทึก</string>
+    <string name="paywall_feature_followups">เพิ่มข้อความในบันทึกได้มากเท่าที่คุณต้องการ</string>
     <string name="settings_premium_feature_followups">เพิ่มข้อความได้ไม่จำกัด</string>
     <string name="settings_premium_feature_followups_desc">เพิ่มข้อความในแต่ละบันทึกได้ตามที่ต้องการ</string>
 

@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">La IA mejora tus entradas cuando lo deseas.</string>
     <string name="settings_premium_feature_dashboard">Análisis diarios del panel</string>
     <string name="settings_premium_feature_dashboard_desc">Tu panel crece con tus entradas.</string>
-    <string name="settings_premium_feature_5_perspectives">Los 4 perfiles de IA predefinidos + tantos propios como necesites</string>
+    <string name="settings_premium_feature_5_perspectives">Los 4 perfiles de IA predefinidos</string>
     <string name="settings_premium_feature_5_perspectives_desc">Desde resumen hasta autoconocimiento</string>
     <string name="settings_premium_feature_reviews">Retrospectivas semanal, mensual y anual</string>
     <string name="settings_premium_feature_reviews_desc">La IA cuenta tu historia</string>
@@ -1282,7 +1282,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="dev_seed_ai_no_entries">La IA no devolvió entradas de prueba</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Notas adicionales ilimitadas en cada entrada</string>
+    <string name="paywall_feature_followups">Tantas notas adicionales como quieras en cada entrada</string>
     <string name="settings_premium_feature_followups">Notas adicionales ilimitadas</string>
     <string name="settings_premium_feature_followups_desc">Tantas notas adicionales por entrada como quieras</string>
     <string name="entry_journal_entry_title">Entrada del diario</string>

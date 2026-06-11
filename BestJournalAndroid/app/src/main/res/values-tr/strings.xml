@@ -427,7 +427,7 @@ Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
     <string name="settings_premium_feature_improve_desc">İstediğinde YZ girişlerini geliştirir.</string>
     <string name="settings_premium_feature_dashboard">Günlük gösterge paneli analizleri</string>
     <string name="settings_premium_feature_dashboard_desc">Gösterge panelin girişlerinle birlikte büyür.</string>
-    <string name="settings_premium_feature_5_perspectives">4 hazır YZ profilinin tümü + ihtiyacın kadar kendi profilin</string>
+    <string name="settings_premium_feature_5_perspectives">4 hazır YZ profilinin tümü</string>
     <string name="settings_premium_feature_5_perspectives_desc">Özetten öz farkındalığa</string>
     <string name="settings_premium_feature_reviews">Haftalık, aylık ve yıllık geri bakış</string>
     <string name="settings_premium_feature_reviews_desc">YZ senin hikâyeni anlatır</string>
@@ -1299,7 +1299,7 @@ Ne yapmak istersin?</string>
     <string name="dev_seed_ai_no_entries">AI test kaydı döndürmedi</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Her günlük girdisine sınırsız ekleme</string>
+    <string name="paywall_feature_followups">Günlük girdilerine istediğin kadar ekleme</string>
     <string name="settings_premium_feature_followups">Sınırsız eklemeler</string>
     <string name="settings_premium_feature_followups_desc">Girdi başına istediğin kadar ekleme</string>
 

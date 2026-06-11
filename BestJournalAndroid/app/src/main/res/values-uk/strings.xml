@@ -427,7 +427,7 @@
     <string name="settings_premium_feature_improve_desc">ШІ вдосконалює твої записи на прохання.</string>
     <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
     <string name="settings_premium_feature_dashboard_desc">Твій дашборд зростає разом із твоїми записами.</string>
-    <string name="settings_premium_feature_5_perspectives">Усі 4 попередньо визначені профілі ШІ + стільки власних, скільки тобі потрібно</string>
+    <string name="settings_premium_feature_5_perspectives">Усі 4 попередньо визначені профілі ШІ</string>
     <string name="settings_premium_feature_5_perspectives_desc">Від підсумку до самопізнання</string>
     <string name="settings_premium_feature_reviews">Підсумки тижня, місяця і року</string>
     <string name="settings_premium_feature_reviews_desc">ШІ розповідає вашу історію</string>
@@ -1310,7 +1310,7 @@
     <string name="dev_seed_ai_no_entries">ШІ не повернув тестових записів</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Необмежені доповнення до кожного запису щоденника</string>
+    <string name="paywall_feature_followups">Стільки доповнень до записів щоденника, скільки забажаєте</string>
     <string name="settings_premium_feature_followups">Необмежені доповнення</string>
     <string name="settings_premium_feature_followups_desc">Стільки доповнень на запис, скільки забажаєш</string>
 

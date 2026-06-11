@@ -474,7 +474,7 @@ For everyone who wants to understand themselves better and grow from within.</st
     <string name="settings_premium_feature_improve_desc">AI improves your entries on request.</string>
     <string name="settings_premium_feature_dashboard">Daily dashboard analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with your entries.</string>
-    <string name="settings_premium_feature_5_perspectives">All 4 predefined AI profiles + as many of your own as you need</string>
+    <string name="settings_premium_feature_5_perspectives">All 4 predefined AI profiles</string>
     <string name="settings_premium_feature_5_perspectives_desc">From summary to self-discovery</string>
     <string name="settings_premium_feature_reviews">Weekly, monthly, and yearly reviews</string>
     <string name="settings_premium_feature_reviews_desc">The AI tells your story</string>
@@ -1344,7 +1344,7 @@ You can change this at any time in the settings.</string>
     <string name="dev_seed_ai_no_entries">AI returned no test entries</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">Unlimited follow-ups for every journal entry</string>
+    <string name="paywall_feature_followups">As many follow-ups as you like for every journal entry</string>
     <string name="settings_premium_feature_followups">Unlimited follow-ups</string>
     <string name="settings_premium_feature_followups_desc">As many follow-ups per entry as you want</string>
     <string name="ai_retro_copied_message">Copied to clipboard</string>

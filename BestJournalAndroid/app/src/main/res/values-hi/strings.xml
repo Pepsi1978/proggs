@@ -420,7 +420,7 @@
     <string name="settings_premium_feature_improve_desc">AI तुम्हारी एंट्री को ज़रूरत पड़ने पर बेहतर बनाता है।</string>
     <string name="settings_premium_feature_dashboard">रोज़ाना डैशबोर्ड विश्लेषण</string>
     <string name="settings_premium_feature_dashboard_desc">तुम्हारा डैशबोर्ड तुम्हारी एंट्रियों के साथ बढ़ता है।</string>
-    <string name="settings_premium_feature_5_perspectives">सभी 4 पूर्व-निर्धारित AI प्रोफ़ाइल + जितने अपने आपको चाहिए</string>
+    <string name="settings_premium_feature_5_perspectives">सभी 4 पूर्व-निर्धारित AI प्रोफ़ाइल</string>
     <string name="settings_premium_feature_5_perspectives_desc">Summary से self-knowledge तक</string>
     <string name="settings_premium_feature_reviews">हफ्तावार, माहवार और सालाना समीक्षा</string>
     <string name="settings_premium_feature_reviews_desc">AI आपकी कहानी सुनाता है</string>
@@ -1285,7 +1285,7 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="dev_seed_ai_no_entries">AI ने कोई टेस्ट प्रविष्टि नहीं लौटाई</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
-    <string name="paywall_feature_followups">हर डायरी एंट्री के लिए असीमित अतिरिक्त नोट्स</string>
+    <string name="paywall_feature_followups">जितने चाहें उतने डायरी अतिरिक्त नोट्स</string>
     <string name="settings_premium_feature_followups">असीमित अतिरिक्त नोट्स</string>
     <string name="settings_premium_feature_followups_desc">हर एंट्री में जितने चाहें उतने अतिरिक्त नोट्स</string>
 
