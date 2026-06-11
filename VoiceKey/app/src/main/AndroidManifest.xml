@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Vosk-Sprachmodelle (DE+EN) werden beim ersten Start heruntergeladen. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Dauerhaftes Mikrofon im Hintergrund (Wake-Word-Lauschen). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
