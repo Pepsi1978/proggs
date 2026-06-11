@@ -110,15 +110,17 @@ class VoskWakeEngine(
                         // Beenden-Wort hat Vorrang: "ok chatty beenden" soll stoppen, nicht starten.
                         val stopHit = setup.stopPhrases.firstOrNull { text.contains(it) }
                         val wakeHit = setup.phrases.firstOrNull { text.contains(it) }
-                        if (stopHit != null) {
+                        // Beenden NUR mit Wake-Wort davor ("ok chatty beenden"). "beenden" allein
+                        // loest bewusst NICHT aus (kein Fehlstopp, wenn das Wort im Gespraech faellt).
+                        if (stopHit != null && wakeHit != null) {
                             Obs.checkpoint(
                                 step = "Beenden-Wort erkannt",
-                                intent = "Gesprochenes Beenden-Wort wird erkannt",
+                                intent = "Wake-Wort + Beenden-Wort beendet die Session",
                                 expected = stopHit,
                                 actual = stopHit,
-                                ctx = mapOf("lang" to lang, "rohtext" to text),
+                                ctx = mapOf("lang" to lang, "wake" to wakeHit, "rohtext" to text),
                             )
-                            recognizer.reset() // NUR den feuernden Erkenner — sonst verwirft ein Wake-Treffer den parallelen Beenden-Treffer der anderen Sprache
+                            recognizer.reset() // nur den feuernden Erkenner zuruecksetzen
                             onStopWord(stopHit, lang)
                         } else if (wakeHit != null) {
                             Obs.checkpoint(
