@@ -728,9 +728,12 @@ final class PromptInputPanel: NSPanel {
 
     /// Hover-Tooltip eines Slot-Buttons: bei belegtem Slot mit vorhandener
     /// KI-Zusammenfassung die 6-8-Wort-Summary, sonst der Standard-Hinweis.
-    private func slotTooltip(_ n: Int, hasContent: Bool) -> String {
+    private func slotTooltip(_ n: Int, hasContent: Bool) -> String? {
+        // Nur belegte Slots MIT Zusammenfassung zeigen ein Tooltip-Fenster.
+        // Leere (und noch nicht zusammengefasste) zeigen KEINS (Frank-Wunsch
+        // 2026-06-11) — nil entfernt den Tooltip.
         if hasContent, let s = slotSummaries[n], !s.isEmpty { return s }
-        return "Slot \(n) — klick speichert/laedt hier deinen Prompt-Zwischenspeicher."
+        return nil
     }
 
     /// Aktualisiert den Tooltip eines einzelnen Slot-Buttons (nach Summary-Update).

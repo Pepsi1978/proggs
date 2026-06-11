@@ -914,12 +914,14 @@ public partial class PromptInputWindow : Window
     /// vorhandener KI-Zusammenfassung die 6-8-Wort-Summary, sonst den
     /// Standard-Hinweis (speichern/laden/ziehen).
     /// </summary>
-    private string SlotTooltip(int n, bool hasContent)
+    private string? SlotTooltip(int n, bool hasContent)
     {
+        // Nur belegte Slots MIT vorhandener Zusammenfassung zeigen ein Tooltip-
+        // Fenster. Leere Slots (und noch nicht zusammengefasste) zeigen KEINS
+        // (Frank-Wunsch 2026-06-11) — null => WPF blendet gar nichts ein.
         if (hasContent && _slotSummaries.TryGetValue(n, out var s) && !string.IsNullOrWhiteSpace(s))
             return s;
-        return $"Slot {n} — Klick speichert/laedt. Belegten Slot auf eine andere Zahl ziehen: " +
-               "auf leere Zahl = verschieben, auf belegte Zahl = tauschen.";
+        return null;
     }
 
     /// <summary>
