@@ -42,7 +42,10 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-effort_upper="${effort^^}"
+# POSIX-Uppercase via tr — NICHT ${effort^^} (bash 4): macOS hat bash 3.2,
+# dort wirft ${v^^} "bad substitution" → effort_upper blieb leer → Statusline
+# zeigte nur das ⚡-Symbol ohne Wert (Frank-Bug-Report 2026-06-11).
+effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
 
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
 model="${model/ context)/)}"
@@ -108,7 +111,9 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-printf -v now_ts '%(%s)T' -1
+# date statt printf '%(%s)T' — letzteres ist bash 4.2+, faellt auf macOS bash 3.2
+# still aus (now_ts leer → alle Zeit-/Countdown-Berechnungen kaputt). Frank 2026-06-11.
+now_ts=$(date +%s)
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -419,8 +424,8 @@ if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Uhrzeit
-printf -v time '%(%H:%M)T' -1
+# Uhrzeit — date statt printf '%(%H:%M)T' (bash 4.2+, auf macOS bash 3.2 leer). Frank 2026-06-11.
+time=$(date +%H:%M)
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
