@@ -930,9 +930,30 @@ public partial class PromptInputWindow : Window
     /// 2026-06-11: "Tooltip springt in den Hintergrund"). Gleiche Loesung wie
     /// ForcePopupTopmost bei den Kontextmenues im PromptBoardPanel.
     /// </summary>
+    /// <summary>Aktuell offener Slot-Tooltip — fuer den koordinierten Topmost-Reassert.</summary>
+    private ToolTip? _openToolTip;
+
     private void SlotToolTip_Opened(object sender, RoutedEventArgs e)
     {
-        ForceToolTipTopmost(sender as System.Windows.Media.Visual);
+        _openToolTip = sender as ToolTip;
+        ForceToolTipTopmost(_openToolTip);
+    }
+
+    private void SlotToolTip_Closed(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(sender, _openToolTip)) _openToolTip = null;
+    }
+
+    /// <summary>
+    /// Schiebt einen aktuell offenen Slot-Tooltip erneut auf HWND_TOPMOST. Wird
+    /// vom Topmost-Reassert des OverlayWindows aufgerufen, NACHDEM dieses das
+    /// Eingabefenster nach ganz oben gekickt hat — sonst verschwindet der
+    /// Tooltip nach ~1 Reassert-Tick wieder hinter den Buttons (Frank-Bug
+    /// 2026-06-11: "nach einer Sekunde geht er in den Hintergrund").
+    /// </summary>
+    public void ReassertOpenToolTipTopmost()
+    {
+        if (_openToolTip is { IsOpen: true } tt) ForceToolTipTopmost(tt);
     }
 
     private static void ForceToolTipTopmost(System.Windows.Media.Visual? popupVisual)

@@ -2275,7 +2275,14 @@ namespace TerminalVoiceOverlay.Views
             {
                 ForceTopmost(this);
                 if (_promptPanel is { IsVisible: true } pp) ForceTopmost(pp);
-                if (_promptPanel?.InputWindow is { IsVisible: true } iw) ForceTopmost(iw);
+                if (_promptPanel?.InputWindow is { IsVisible: true } iw)
+                {
+                    ForceTopmost(iw);
+                    // NACH dem Fenster: einen offenen Slot-Tooltip wieder nach
+                    // ganz oben holen, sonst legt sich das gerade reasserte
+                    // Eingabefenster darueber (Frank-Bug 2026-06-11).
+                    iw.ReassertOpenToolTipTopmost();
+                }
             }
             catch (Exception ex)
             {

@@ -122,6 +122,7 @@
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="HasDropShadow" Value="True"/>
             <EventSetter Event="Opened" Handler="SlotToolTip_Opened"/>
+            <EventSetter Event="Closed" Handler="SlotToolTip_Closed"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToolTip">
