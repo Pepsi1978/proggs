@@ -48,11 +48,28 @@ class WakeWordService : LifecycleService() {
     private val triggering = AtomicBoolean(false)
     private val models = mutableMapOf<WakeLang, Model>()
 
+    /**
+     * Session-läuft-noch-Signal: Android schaltet unsere Aufnahme stumm, solange eine
+     * andere App (ChatGPT-Voice) das Mikrofon hat. Der A11y-Not-Aus nutzt das, um zu
+     * erkennen, dass die Kugel zwar weggewischt wurde, ChatGPT aber weiter zuhoert.
+     */
+    private val recordingCallback = object : android.media.AudioManager.AudioRecordingCallback() {
+        override fun onRecordingConfigChanged(configs: List<android.media.AudioRecordingConfiguration>) {
+            val silenced = configs.any { it.isClientSilenced }
+            if (silenced != micSilenced) {
+                micSilenced = silenced
+                Obs.i("WakeWordService", "onRecordingConfigChanged", "Mic-Status geaendert", mapOf("silenced" to silenced))
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         repository = WakeWordRepository(applicationContext)
         engine = VoskWakeEngine(onWakeWord = ::onWakeWordHit)
         LibVosk.setLogLevel(LogLevel.WARNINGS)
+        getSystemService(android.media.AudioManager::class.java)
+            .registerAudioRecordingCallback(recordingCallback, android.os.Handler(mainLooper))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -164,6 +181,13 @@ class WakeWordService : LifecycleService() {
                 triggering.set(false)
             }
             if (repository.serviceEnabled.first()) restartEngine()
+
+            // Schnell-Szenario: Kugel wurde sofort weggewischt, ChatGPT haelt das Mic
+            // trotzdem weiter -> Auto-Not-Aus pruefen (Kugel-sichtbar/Anruf prueft der A11y).
+            delay(2_000)
+            if (micSilenced) {
+                de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance?.requestAutoKillCheck("Re-Arm: Mic weiter stumm")
+            }
         }
     }
 
@@ -221,6 +245,9 @@ class WakeWordService : LifecycleService() {
         engine.stop()
         models.values.forEach { runCatching { it.close() } }
         models.clear()
+        getSystemService(android.media.AudioManager::class.java)
+            .unregisterAudioRecordingCallback(recordingCallback)
+        micSilenced = false
         Obs.i("WakeWordService", "onDestroy", "Dienst beendet, Mikrofon freigegeben")
         super.onDestroy()
     }
@@ -228,6 +255,10 @@ class WakeWordService : LifecycleService() {
     companion object {
         const val ACTION_STOP = "de.frank.voicekey.action.STOP"
         const val ACTION_END_ASSISTANT = "de.frank.voicekey.action.END_ASSISTANT"
+
+        /** true = unsere Aufnahme ist stummgeschaltet, eine andere App (ChatGPT) hat das Mic. */
+        @Volatile
+        var micSilenced: Boolean = false
         private const val NOTIFICATION_ID = 1001
         private const val MIC_HANDOFF_DELAY_MS = 450L
         private const val REARM_DELAY_MS = 5_000L

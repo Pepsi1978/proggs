@@ -139,7 +139,7 @@ fun SetupScreen(
         PermCard(
             icon = Icons.Rounded.StopCircle,
             title = "Not-Aus (Bedienungshilfe)",
-            description = "Beendet die ChatGPT-Voice-Session wirklich, wenn du auf „Voice beenden" tippst. Aktiviere dafür „VoiceKey Not-Aus" in den Bedienungshilfen.",
+            description = "Beendet die ChatGPT-Voice-Session wirklich, wenn du auf „Voice beenden“ tippst. Aktiviere dafür „VoiceKey Not-Aus“ in den Bedienungshilfen.",
             granted = permissions.assistKill,
             onGrant = onRequestAssistKill,
         )

@@ -42,11 +42,61 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
+    private var chatGptWindowVisible = false
+    private var lastAutoKillAt = 0L
+
+    /**
+     * AUTOMATIK (Frank-Wunsch): Kugel wegwischen = ChatGPT-Voice wirklich aus.
+     * Verschwindet das ChatGPT-Fenster, aber unsere Aufnahme bleibt stummgeschaltet
+     * (= ChatGPT hoert weiter zu), wird der Beenden-Flow automatisch ausgefuehrt.
+     */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Passiv — der Dienst handelt nur auf explizites Kommando (endAssistantSession).
+        if (event == null) return
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) return
+        val visibleNow = isChatGptWindowVisible()
+        if (chatGptWindowVisible && !visibleNow && !killRunning) {
+            handler.postDelayed({ requestAutoKillCheck("Kugel-Fenster verschwunden") }, 1_500)
+        }
+        chatGptWindowVisible = visibleNow
     }
 
     override fun onInterrupt() = Unit
+
+    private fun isChatGptWindowVisible(): Boolean =
+        windows.any { it.root?.packageName == AppTarget.CHATGPT.packageName }
+
+    /**
+     * Prueft mit Schutzvorkehrungen, ob die ChatGPT-Session unsichtbar weiterlaeuft,
+     * und beendet sie dann automatisch. Schutz: kein Eingriff waehrend Telefonaten,
+     * nicht waehrend eines laufenden Beenden-Flows, Abkuehlzeit gegen Doppel-Laeufe.
+     */
+    fun requestAutoKillCheck(reason: String) {
+        if (killRunning) return
+        if (System.currentTimeMillis() - lastAutoKillAt < AUTO_KILL_COOLDOWN_MS) return
+        val audio = getSystemService(android.media.AudioManager::class.java)
+        if (audio.mode == android.media.AudioManager.MODE_IN_CALL ||
+            audio.mode == android.media.AudioManager.MODE_IN_COMMUNICATION
+        ) {
+            Obs.d("VoiceKeyA11y", "requestAutoKillCheck", "Telefonat aktiv — kein Auto-Not-Aus")
+            return
+        }
+        if (isChatGptWindowVisible()) return // Kugel/App sichtbar -> Frank benutzt sie gerade
+        if (!de.frank.voicekey.service.WakeWordService.micSilenced) {
+            Obs.d("VoiceKeyA11y", "requestAutoKillCheck", "Mic frei — Session ist schon aus", mapOf("ausloeser" to reason))
+            return
+        }
+        lastAutoKillAt = System.currentTimeMillis()
+        Obs.checkpoint(
+            step = "Auto-Not-Aus",
+            intent = "Kugel weggewischt = ChatGPT-Voice geht wirklich aus",
+            expected = "wird beendet",
+            actual = "wird beendet",
+            ctx = mapOf("ausloeser" to reason),
+        )
+        endAssistantSession()
+    }
 
     /** Startet die Beenden-Sequenz. Mehrfach-Aufrufe während eines Laufs werden ignoriert. */
     fun endAssistantSession() {
@@ -180,6 +230,7 @@ class VoiceKeyAccessibilityService : AccessibilityService() {
     companion object {
         private const val MAX_STEPS = 8
         private const val STEP_DELAY_MS = 900L
+        private const val AUTO_KILL_COOLDOWN_MS = 10_000L
 
         @Volatile
         var instance: VoiceKeyAccessibilityService? = null
