@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.SystemClock
 import de.frank.voicekey.data.WakeLang
 import de.frank.voicekey.obs.Obs
 import org.json.JSONArray
@@ -97,44 +98,60 @@ class VoskWakeEngine(
             )
 
             val buffer = ShortArray(SAMPLE_RATE / 10) // 100 ms Audio pro Durchlauf
+            var lastWakeAtMs = 0L // koppelt "Wake + beenden" auch ueber getrennte Erkenner/Chunks
             while (running) {
                 val read = audio.read(buffer, 0, buffer.size)
                 if (read <= 0) {
                     Obs.w("VoskWakeEngine", "audioLoop", "AudioRecord.read lieferte $read — Schleife endet")
                     break
                 }
+                // Wake ("ok chatty") und Beenden ("beenden") landen oft in VERSCHIEDENEN Sprach-
+                // Erkennern (EN hoert "ok chatty [unk]", DE hoert "beenden"). Darum ZUERST alle
+                // Erkenner dieses Chunks zusammen auswerten, DANN entscheiden.
+                var chunkWake: String? = null
+                var chunkWakeLang: WakeLang? = null
+                var chunkStop: String? = null
+                var chunkStopLang: WakeLang? = null
+                var chunkText = ""
                 for ((lang, recognizer) in recognizers) {
-                    if (recognizer.acceptWaveForm(buffer, read)) {
-                        val text = extractText(recognizer.result)
-                        val setup = setups.getValue(lang)
-                        // Beenden-Wort hat Vorrang: "ok chatty beenden" soll stoppen, nicht starten.
-                        val stopHit = setup.stopPhrases.firstOrNull { text.contains(it) }
-                        val wakeHit = setup.phrases.firstOrNull { text.contains(it) }
-                        // Beenden NUR mit Wake-Wort davor ("ok chatty beenden"). "beenden" allein
-                        // loest bewusst NICHT aus (kein Fehlstopp, wenn das Wort im Gespraech faellt).
-                        if (stopHit != null && wakeHit != null) {
-                            Obs.checkpoint(
-                                step = "Beenden-Wort erkannt",
-                                intent = "Wake-Wort + Beenden-Wort beendet die Session",
-                                expected = stopHit,
-                                actual = stopHit,
-                                ctx = mapOf("lang" to lang, "wake" to wakeHit, "rohtext" to text),
-                            )
-                            recognizer.reset() // nur den feuernden Erkenner zuruecksetzen
-                            onStopWord(stopHit, lang)
-                        } else if (wakeHit != null) {
-                            Obs.checkpoint(
-                                step = "Wake-Word erkannt",
-                                intent = "Gesprochenes Favoriten-Wort wird erkannt",
-                                expected = wakeHit,
-                                actual = wakeHit,
-                                ctx = mapOf("lang" to lang, "rohtext" to text),
-                            )
-                            recognizer.reset() // NUR den feuernden Erkenner — sonst verwirft ein Wake-Treffer den parallelen Beenden-Treffer der anderen Sprache
-                            onWakeWord(wakeHit, lang)
-                            if (!running) break // Service stoppt die Engine nach einem Wake-Treffer
-                        }
+                    if (!recognizer.acceptWaveForm(buffer, read)) continue
+                    val text = extractText(recognizer.result)
+                    val setup = setups.getValue(lang)
+                    if (chunkStop == null) {
+                        setup.stopPhrases.firstOrNull { text.contains(it) }?.let { chunkStop = it; chunkStopLang = lang }
                     }
+                    if (chunkWake == null) {
+                        setup.phrases.firstOrNull { text.contains(it) }?.let { chunkWake = it; chunkWakeLang = lang }
+                    }
+                    if (text.isNotEmpty()) chunkText = text
+                    recognizer.reset() // nur die feuernden Erkenner; sonst wird der Parallel-Treffer verworfen
+                }
+                val nowMs = SystemClock.uptimeMillis()
+                if (chunkWake != null) lastWakeAtMs = nowMs
+                // Beenden NUR zusammen mit (kurz vorher gesagtem) Wake-Wort. "beenden" allein -> ignorieren.
+                if (chunkStop != null && nowMs - lastWakeAtMs <= WAKE_STOP_WINDOW_MS) {
+                    val sh = chunkStop!!
+                    val sl = chunkStopLang!!
+                    Obs.checkpoint(
+                        step = "Beenden-Wort erkannt",
+                        intent = "Wake-Wort + Beenden-Wort beendet die Session",
+                        expected = sh,
+                        actual = sh,
+                        ctx = mapOf("lang" to sl, "wake" to chunkWake, "rohtext" to chunkText),
+                    )
+                    onStopWord(sh, sl)
+                } else if (chunkWake != null) {
+                    val wh = chunkWake!!
+                    val wl = chunkWakeLang!!
+                    Obs.checkpoint(
+                        step = "Wake-Word erkannt",
+                        intent = "Gesprochenes Favoriten-Wort wird erkannt",
+                        expected = wh,
+                        actual = wh,
+                        ctx = mapOf("lang" to wl, "rohtext" to chunkText),
+                    )
+                    onWakeWord(wh, wl)
+                    if (!running) break // Service stoppt die Engine nach einem Wake-Treffer
                 }
             }
         } catch (e: Exception) {
@@ -163,5 +180,8 @@ class VoskWakeEngine(
 
     companion object {
         const val SAMPLE_RATE = 16_000
+
+        /** Max. Abstand zwischen Wake-Wort und Beenden-Wort, damit beide als ein Befehl zaehlen. */
+        private const val WAKE_STOP_WINDOW_MS = 1_500L
     }
 }
