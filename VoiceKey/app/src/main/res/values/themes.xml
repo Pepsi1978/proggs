@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose rendert die UI selbst; das Plattform-Theme braucht nur NoActionBar. -->
+    <style name="Theme.VoiceKey" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
