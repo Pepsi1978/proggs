@@ -757,10 +757,15 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
-    /// Baut die untere Leiste: Zahlen 1…15, danach Diskette und X. Diskette
-    /// und X sind anfangs versteckt — sie erscheinen erst nach Auswahl einer
-    /// Zahl (Frank-Wunsch).
+    /// Baut die untere Leiste: Zahlen 1-30 in zwei Reihen (1-15 oben in
+    /// SlotBarRow1, 16-30 unten in SlotBarRow2). Diskette und X liegen EINMAL
+    /// in der gemeinsamen Aktionsleiste (SlotActions) rechts daneben und gelten
+    /// fuer den gewaehlten Slot egal in welcher Reihe. Sie sind anfangs
+    /// versteckt — sie erscheinen erst nach Auswahl einer Zahl (Frank-Wunsch).
     /// </summary>
+    /// <summary>Wieviele Slots je Reihe — 15 oben (1-15), 15 unten (16-30).</summary>
+    private const int SlotsPerRow = 15;
+
     private void BuildSlotBar()
     {
         for (int n = 1; n <= PromptSlotService.SlotCount; n++)
@@ -780,20 +785,20 @@ public partial class PromptInputWindow : Window
             btn.DragLeave += OnSlotDragLeave;
             btn.Drop += OnSlotDrop;
             _slotButtons[n] = btn;
-            SlotBar.Children.Add(btn);
+            // 1-15 in die obere Reihe (SlotBarRow1), 16-30 in die untere (SlotBarRow2).
+            var targetRow = n <= SlotsPerRow ? SlotBarRow1 : SlotBarRow2;
+            targetRow.Children.Add(btn);
         }
 
-        // Kleiner Abstand zwischen Zahlen und den Aktions-Buttons.
-        SlotBar.Children.Add(new Border { Width = 8 });
-
-        // Diskette (Segoe-Fluent-Icons "Save" E74E) — gold.
+        // Diskette (Segoe-Fluent-Icons "Save" E74E) — gold. In die gemeinsame
+        // Aktionsleiste (SlotActions), die fuer beide Reihen gilt.
         _slotSaveButton = CreateSlotButton("", SlotGold,
             "Aktuellen Prompt im gewaehlten Slot dauerhaft speichern.");
         _slotSaveButton.FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
         _slotSaveButton.Margin = new Thickness(0, 0, 4, 0);
         _slotSaveButton.Visibility = Visibility.Collapsed;
         _slotSaveButton.Click += OnSlotSaveClick;
-        SlotBar.Children.Add(_slotSaveButton);
+        SlotActions.Children.Add(_slotSaveButton);
 
         // X — rot.
         _slotDeleteButton = CreateSlotButton("✕", SlotRed,
@@ -801,7 +806,7 @@ public partial class PromptInputWindow : Window
         _slotDeleteButton.FontWeight = FontWeights.Bold;
         _slotDeleteButton.Visibility = Visibility.Collapsed;
         _slotDeleteButton.Click += OnSlotDeleteClick;
-        SlotBar.Children.Add(_slotDeleteButton);
+        SlotActions.Children.Add(_slotDeleteButton);
 
         // Zeitstempel-Label rechts neben dem X — zeigt wann der Prompt im
         // gewaehlten Slot gespeichert wurde. Anfangs versteckt.
@@ -813,7 +818,7 @@ public partial class PromptInputWindow : Window
             Margin = new Thickness(4, 0, 0, 0),
             Visibility = Visibility.Collapsed,
         };
-        SlotBar.Children.Add(_slotTimeLabel);
+        SlotActions.Children.Add(_slotTimeLabel);
 
         UpdateSlotVisuals();
     }

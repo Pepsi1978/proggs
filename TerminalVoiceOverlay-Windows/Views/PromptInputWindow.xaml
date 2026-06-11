@@ -308,11 +308,15 @@
                        TextWrapping="NoWrap"
                        TextTrimming="CharacterEllipsis"/>
 
-            <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…15) ganz unten.
+            <!-- Zahlen-Leiste (Prompt-Zwischenspeicher 1…30) ganz unten.
+                 Zwei Reihen: 1…15 oben (SlotBarRow1), 16…30 unten (SlotBarRow2).
                  Eine Trennlinie grenzt sie sichtbar vom Eingabefeld ab — die
                  Slots sind unabhaengig von der Eingabe. Die Buttons werden im
-                 Code-Behind (BuildSlotBar) in den inneren StackPanel eingehaengt;
-                 Diskette und X erscheinen erst nach Auswahl einer Zahl. -->
+                 Code-Behind (BuildSlotBar) in die beiden Reihen eingehaengt.
+                 Diskette, X und Zeitstempel liegen EINMAL rechts daneben
+                 (SlotActions, vertikal zentriert ueber beide Reihen) und gelten
+                 fuer den aktuell gewaehlten Slot — egal in welcher Reihe.
+                 Sie erscheinen erst nach Auswahl einer Zahl. -->
             <StackPanel Grid.Row="4"
                         Orientation="Vertical"
                         Margin="4,8,0,0">
@@ -320,9 +324,23 @@
                         Background="#FF525252"
                         HorizontalAlignment="Stretch"
                         Margin="0,0,0,8"/>
-                <StackPanel x:Name="SlotBar"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <!-- Zwei Zahlen-Reihen untereinander: 1…15 / 16…30 -->
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel x:Name="SlotBarRow1"
+                                    Orientation="Horizontal"
+                                    Margin="0,0,0,6"/>
+                        <StackPanel x:Name="SlotBarRow2"
+                                    Orientation="Horizontal"/>
+                    </StackPanel>
+                    <!-- Gemeinsame Aktions-Buttons (Diskette/X/Zeit) — EINMAL,
+                         vertikal zentriert ueber beide Reihen. -->
+                    <StackPanel x:Name="SlotActions"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="8,0,0,0"/>
+                </StackPanel>
             </StackPanel>
         </Grid>
     </Border>

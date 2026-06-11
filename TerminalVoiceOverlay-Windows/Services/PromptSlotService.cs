@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace TerminalVoiceOverlay.Services;
 
 /// <summary>
-/// Ein einzelner Prompt-Zwischenspeicher-Slot (1…15). <c>Text == ""</c> ist ein
+/// Ein einzelner Prompt-Zwischenspeicher-Slot (1…30). <c>Text == ""</c> ist ein
 /// Tombstone: der Slot wurde geloescht, der Zeitstempel bleibt erhalten, damit
 /// das Loeschen beim Cloud-Merge geraeteuebergreifend gewinnt. Feldnamen sind
 /// bewusst flach + camelCase und damit bytegenau zur macOS-Variante
@@ -23,7 +23,7 @@ public sealed class PromptSlotEntry
 }
 
 /// <summary>
-/// Liest und schreibt die 15 Prompt-Zwischenspeicher-Slots aus einer JSON-Datei.
+/// Liest und schreibt die 30 Prompt-Zwischenspeicher-Slots aus einer JSON-Datei.
 /// Voellig analog zum <see cref="PromptHistoryService"/>: SemaphoreSlim-Gate,
 /// atomares Schreiben (Temp-Datei + File.Move overwrite), camelCase-JSON
 /// kompatibel zur macOS-Seite. Die Datei wird nach jedem Speichern/Loeschen
@@ -31,7 +31,10 @@ public sealed class PromptSlotEntry
 /// </summary>
 public sealed class PromptSlotService
 {
-    public const int SlotCount = 15;
+    // 30 Slots, in der UI als zwei Reihen dargestellt (1…15 oben, 16…30 unten).
+    // Zentrale Quelle fuer UI-Aufbau, Validierung und Cloud-Merge — bytegenau
+    // synchron zur macOS-Variante (PromptSlotStore.slotCount).
+    public const int SlotCount = 30;
 
     private readonly string _baseDir;
     private readonly string _slotsFilePath;
