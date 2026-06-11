@@ -15,6 +15,7 @@ import de.frank.voicekey.data.WakeWordRepository
 import de.frank.voicekey.obs.Obs
 import de.frank.voicekey.service.WakeWordService
 import de.frank.voicekey.trigger.AssistantLauncher
+import de.frank.voicekey.trigger.AssistantStopper
 import de.frank.voicekey.wake.ModelManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -138,18 +139,12 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
         return enabled.contains("${context.packageName}/") && enabled.contains("VoiceKeyAccessibilityService")
     }
 
-    /** Not-Aus: beendet die ChatGPT-Voice-Session wirklich (per Bedienungshilfe). */
+    /**
+     * Not-Aus: beendet die ChatGPT-Voice-Session wirklich (Headsethook an ChatGPTs
+     * Media-Session). Braucht KEINE Bedienungshilfe — wirkt immer, solange eine Session laeuft.
+     */
     fun endAssistant(context: Context) {
-        val a11y = de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance
-        if (a11y != null) {
-            a11y.endAssistantSession()
-        } else {
-            Obs.w("WakeWordViewModel", "endAssistant", "Bedienungshilfe nicht aktiv — öffne Einstellungen")
-            context.startActivity(
-                android.content.Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        }
+        AssistantStopper.endVoiceSession(context, "Not-Aus-Knopf (App)")
     }
 
     private fun granted(context: Context, permission: String): Boolean =

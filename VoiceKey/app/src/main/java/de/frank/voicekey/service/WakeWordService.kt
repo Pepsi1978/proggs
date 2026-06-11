@@ -18,6 +18,7 @@ import de.frank.voicekey.data.WakeWordRepository
 import de.frank.voicekey.obs.Obs
 import de.frank.voicekey.trigger.AssistantLauncher
 import de.frank.voicekey.trigger.AssistantLauncherActivity
+import de.frank.voicekey.trigger.AssistantStopper
 import de.frank.voicekey.wake.ModelManager
 import de.frank.voicekey.wake.VoskWakeEngine
 import kotlinx.coroutines.Dispatchers
@@ -85,14 +86,10 @@ class WakeWordService : LifecycleService() {
         }
 
         if (intent?.action == ACTION_END_ASSISTANT) {
-            // Not-Aus aus der Notification: ChatGPT-Voice-Session wirklich beenden.
-            val a11y = de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance
-            if (a11y != null) {
-                a11y.endAssistantSession()
-            } else {
-                Obs.w("WakeWordService", "onStartCommand", "Not-Aus angefordert, aber Bedienungshilfe nicht aktiv")
-                updateNotification("Not-Aus braucht die Bedienungshilfe. App öffnen → Einrichtung.")
-            }
+            // Not-Aus aus der Notification: ChatGPT-Voice per Headsethook beenden — zuverlaessig
+            // und OHNE Bedienungshilfe (AssistantStopper nutzt nur Standard-Audio-APIs).
+            Obs.i("WakeWordService", "onStartCommand", "Not-Aus angefordert (Notification)")
+            AssistantStopper.endVoiceSession(this, "Notification-Knopf")
             return START_STICKY
         }
 
@@ -185,13 +182,6 @@ class WakeWordService : LifecycleService() {
                 triggering.set(false)
             }
             if (repository.serviceEnabled.first()) restartEngine()
-
-            // Schnell-Szenario: Kugel wurde sofort weggewischt, ChatGPT haelt das Mic
-            // trotzdem weiter -> Auto-Not-Aus pruefen (Kugel-sichtbar/Anruf prueft der A11y).
-            delay(2_000)
-            if (micSilenced) {
-                de.frank.voicekey.a11y.VoiceKeyAccessibilityService.instance?.requestAutoKillCheck("Re-Arm: Mic weiter stumm")
-            }
         }
     }
 
