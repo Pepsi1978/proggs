@@ -794,6 +794,7 @@
     <string name="onboarding_subtitle">Ваш особистий ШІ-щоденник
 для більшої ясності в повсякденному житті</string>
     <string name="onboarding_feature_speech">Говоріть або пишіть, ШІ розуміє і те, і інше</string>
+    <string name="onboarding_feature_listen">Слухайте свої записи, озвучені голосом</string>
     <string name="onboarding_feature_secure">Твої записи лишаються на пристрої; запити до ШІ передаються в зашифрованому вигляді</string>
     <string name="onboarding_goals_title">Чого ви хочете досягти\nзі щоденником ШІ?</string>
     <string name="onboarding_goal_stress">Зменшити стрес</string>

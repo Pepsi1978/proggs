@@ -783,6 +783,7 @@
     <string name="onboarding_welcome">مرحبا بك في\nBest Journal</string>
     <string name="onboarding_subtitle">يومياتك الشخصية بالذكاء الاصطناعي\nللمزيد من الوضوح في حياتك اليومية</string>
     <string name="onboarding_feature_speech">تكلّم أو اكتب، الذكاء الاصطناعي يفهم الاثنين</string>
+    <string name="onboarding_feature_listen">دع الذكاء الاصطناعي يقرأ مدوّناتك بصوتٍ عالٍ</string>
     <string name="onboarding_feature_secure">تبقى مدوّناتك على الجهاز؛ وتُنقَل طلبات الذكاء الاصطناعي مشفّرة</string>
     <string name="onboarding_goals_title">ما الذي تريد تحقيقه\nمع مذكّرات الذكاء الاصطناعي؟</string>
     <string name="onboarding_goal_stress">تخفيف التوتّر</string>

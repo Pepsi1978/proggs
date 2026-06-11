@@ -761,6 +761,7 @@
     <string name="onboarding_welcome">Best Journal\nમાં સ્વાગત</string>
     <string name="onboarding_subtitle">સ્પષ્ટતા માટે તમારી અંગત AI ડાયરી\\nરોજિંદા જીવનમાં</string>
     <string name="onboarding_feature_speech">બોલો કે લખો, AI બંને સમજે છે</string>
+    <string name="onboarding_feature_listen">તમારી એન્ટ્રીઓ વાંચીને સંભળાવો</string>
     <string name="onboarding_feature_secure">તમારી નોંધો ઉપકરણ પર જ રહે છે; AI વિનંતીઓ એન્ક્રિપ્ટ કરીને મોકલાય છે</string>
     <string name="onboarding_goals_title">તમે AI-ડાયરી સાથે\nશું મેળવવા માંગો છો?</string>
     <string name="onboarding_goal_stress">તણાવ ઓછો કરવો</string>

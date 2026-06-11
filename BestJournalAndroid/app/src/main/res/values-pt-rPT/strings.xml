@@ -787,6 +787,7 @@
     <string name="onboarding_welcome">Bem-vindo ao\nBest Journal</string>
     <string name="onboarding_subtitle">O teu diário pessoal com IA\npara mais clareza no dia a dia</string>
     <string name="onboarding_feature_speech">Fale ou escreve, a IA entende os dois</string>
+    <string name="onboarding_feature_listen">Ouve as tuas entradas lidas em voz alta</string>
     <string name="onboarding_feature_secure">As tuas entradas ficam no dispositivo; os pedidos de IA são transmitidos cifrados</string>
     <string name="onboarding_goals_title">O que queres alcançar\ncom o diário de IA?</string>
     <string name="onboarding_goal_stress">Reduzir o stress</string>

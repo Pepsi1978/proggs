@@ -787,6 +787,7 @@
     <string name="onboarding_welcome">Best Journal এ\nস্বাগতম</string>
     <string name="onboarding_subtitle">তোমার ব্যক্তিগত KI-জার্নাল\nদৈনন্দিন জীবনে আরও স্পষ্টতার জন্য</string>
     <string name="onboarding_feature_speech">বলো বা লিখো, এআই দুটোই বোঝে</string>
+    <string name="onboarding_feature_listen">তোমার লেখাগুলো নিজের জন্য পড়িয়ে শোনো</string>
     <string name="onboarding_feature_secure">তোমার এন্ট্রি ডিভাইসেই থাকে; AI-অনুরোধ এনক্রিপ্ট করে পাঠানো হয়</string>
     <string name="onboarding_goals_title">তুমি এআই-দিনলিপি দিয়ে\nকী অর্জন করতে চাও?</string>
     <string name="onboarding_goal_stress">চাপ কমানো</string>

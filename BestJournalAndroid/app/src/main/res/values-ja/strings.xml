@@ -783,6 +783,7 @@
     <string name="onboarding_welcome">Best Journalへ\nようこそ</string>
     <string name="onboarding_subtitle">日常の明確さのための\nあなたのパーソナルAI日記</string>
     <string name="onboarding_feature_speech">話しても書いても、AIはどちらも分かります</string>
+    <string name="onboarding_feature_listen">日記を読み上げてもらえます</string>
     <string name="onboarding_feature_secure">あなたのエントリーは端末に残り、AIへのリクエストは暗号化して送信されます</string>
     <string name="onboarding_goals_title">AI日記で\n何を叶えたいですか？</string>
     <string name="onboarding_goal_stress">ストレスを減らす</string>

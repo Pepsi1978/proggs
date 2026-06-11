@@ -786,6 +786,7 @@
     <string name="onboarding_welcome">歡迎使用\nBest Journal</string>
     <string name="onboarding_subtitle">你的個人 AI 日記\n助你在日常生活中找到清晰</string>
     <string name="onboarding_feature_speech">說話或打字，AI 都能聽懂</string>
+    <string name="onboarding_feature_listen">讓應用程式為你朗讀日記</string>
     <string name="onboarding_feature_secure">你的條目留在裝置上；AI 請求以加密方式傳輸</string>
     <string name="onboarding_goals_title">你想透過 AI 日記\n達到什麼？</string>
     <string name="onboarding_goal_stress">減輕壓力</string>

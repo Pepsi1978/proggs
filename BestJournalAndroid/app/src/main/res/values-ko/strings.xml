@@ -783,6 +783,7 @@
     <string name="onboarding_welcome">Best Journal에\n오신 것을 환영해요</string>
     <string name="onboarding_subtitle">더 명확한 일상을 위한\n나만의 AI 일기</string>
     <string name="onboarding_feature_speech">말하거나 쓰세요. AI는 둘 다 알아들어요</string>
+    <string name="onboarding_feature_listen">일기를 읽어 주는 기능을 들어 보세요</string>
     <string name="onboarding_feature_secure">기록은 기기에 남고, AI 요청은 암호화되어 전송돼요</string>
     <string name="onboarding_goals_title">AI 일기로\n무엇을 이루고 싶으세요?</string>
     <string name="onboarding_goal_stress">스트레스 줄이기</string>

@@ -791,6 +791,7 @@ Para quem quer se entender melhor e crescer internamente.</string>
     <string name="onboarding_subtitle">Seu diário pessoal com IA
 para mais clareza no dia a dia</string>
     <string name="onboarding_feature_speech">Fale ou escreva, a IA entende os dois</string>
+    <string name="onboarding_feature_listen">Ouça suas entradas lidas em voz alta</string>
     <string name="onboarding_feature_secure">Suas entradas permanecem no dispositivo; as solicitações de IA são transmitidas de forma criptografada</string>
     <string name="onboarding_goals_title">O que você quer alcançar\ncom o diário de IA?</string>
     <string name="onboarding_goal_stress">Reduzir o estresse</string>

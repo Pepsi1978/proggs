@@ -959,6 +959,7 @@ herleitung — सामग्रीचा स्रोत:
     <string name="onboarding_welcome">Best Journal मध्ये\nस्वागत आहे</string>
     <string name="onboarding_subtitle">रोजच्या स्पष्टतेसाठी तुमची वैयक्तिक AI दैनंदिनी</string>
     <string name="onboarding_feature_speech">बोला किंवा लिहा, AI दोन्ही समजतो</string>
+    <string name="onboarding_feature_listen">तुमच्या नोंदी ऐका, AI वाचून दाखवेल</string>
     <string name="onboarding_feature_secure">तुमच्या नोंदी उपकरणावरच राहतात; AI विनंत्या एन्क्रिप्ट करून पाठवल्या जातात</string>
     <string name="onboarding_goals_title">AI दैनंदिनीने तुम्हाला\nकाय साध्य करायचे आहे?</string>
     <string name="onboarding_goal_stress">ताण कमी करा</string>

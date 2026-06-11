@@ -784,6 +784,7 @@
     <string name="onboarding_welcome">Witaj w\nBest Journal</string>
     <string name="onboarding_subtitle">Twój osobisty dziennik AI\ndla większej jasności w codziennym życiu</string>
     <string name="onboarding_feature_speech">Mów lub pisz, SI rozumie jedno i drugie</string>
+    <string name="onboarding_feature_listen">Pozwól, aby wpisy zostały Ci przeczytane na głos</string>
         <string name="onboarding_feature_secure">Twoje wpisy zostają na urządzeniu; zapytania AI są przesyłane w postaci zaszyfrowanej</string>
     <string name="onboarding_goals_title">Co chcesz osiągnąć\nz dziennikiem SI?</string>
     <string name="onboarding_goal_stress">Zmniejszyć stres</string>

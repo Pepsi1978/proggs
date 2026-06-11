@@ -812,6 +812,7 @@
     <string name="onboarding_welcome">Best Journal-க்கு\nவரவேற்கிறோம்</string>
     <string name="onboarding_subtitle">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு\nஅன்றாட வாழ்வில் தெளிவுக்காக</string>
     <string name="onboarding_feature_speech">பேசுங்கள் அல்லது எழுதுங்கள், KI இரண்டையும் புரிந்துகொள்கிறது</string>
+    <string name="onboarding_feature_listen">உங்கள் பதிவுகளை உங்களுக்கு வாசித்துக் காட்டச் செய்யுங்கள்</string>
     <string name="onboarding_feature_secure">உங்கள் பதிவுகள் சாதனத்திலேயே இருக்கும்; AI கோரிக்கைகள் குறியாக்கம் செய்யப்பட்டு அனுப்பப்படும்</string>
     <string name="onboarding_goals_title">KI நாட்குறிப்பால்\nநீங்கள் என்ன அடைய விரும்புகிறீர்கள்?</string>
     <string name="onboarding_goal_stress">மன அழுத்தத்தை குறைக்கவும்</string>

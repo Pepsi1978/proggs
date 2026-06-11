@@ -783,6 +783,7 @@
     <string name="onboarding_welcome">ยินดีต้อนรับสู่\nBest Journal</string>
     <string name="onboarding_subtitle">สมุดบันทึก AI ส่วนตัวของคุณ\nสำหรับความชัดเจนในชีวิตประจำวัน</string>
     <string name="onboarding_feature_speech">พูดหรือพิมพ์ AI เข้าใจทั้งสอง</string>
+    <string name="onboarding_feature_listen">ให้แอปอ่านบันทึกของคุณ</string>
     <string name="onboarding_feature_secure">บันทึกของคุณยังคงอยู่บนอุปกรณ์ คำขอ AI ถูกส่งแบบเข้ารหัส</string>
     <string name="onboarding_goals_title">คุณต้องการอะไรจาก\nสมุดบันทึก AI?</string>
     <string name="onboarding_goal_stress">ลดความเครียด</string>

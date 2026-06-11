@@ -810,6 +810,7 @@ JE OORDEELT NIET. Je vat samen, ordent en toont verbanden. Geen coaching, geen p
     <string name="onboarding_subtitle">Je persoonlijk AI-dagboek
 voor meer duidelijkheid in het dagelijks leven</string>
     <string name="onboarding_feature_speech">Praat of schrijf, de AI begrijpt beide</string>
+    <string name="onboarding_feature_listen">Laat je notities voorlezen</string>
     <string name="onboarding_feature_secure">Je notities blijven op het apparaat; AI-verzoeken worden versleuteld verzonden</string>
     <string name="onboarding_goals_title">Wat wil je bereiken\nmet het AI-dagboek?</string>
     <string name="onboarding_goal_stress">Stress verminderen</string>

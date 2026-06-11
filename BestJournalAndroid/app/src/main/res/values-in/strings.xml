@@ -784,6 +784,7 @@
     <string name="onboarding_welcome">Selamat datang di\nBest Journal</string>
     <string name="onboarding_subtitle">Jurnal AI pribadimu\nuntuk lebih jernih dalam keseharian</string>
     <string name="onboarding_feature_speech">Bicara atau tulis, AI memahami keduanya</string>
+    <string name="onboarding_feature_listen">Dengarkan entri kamu dibacakan</string>
     <string name="onboarding_feature_secure">Entrimu tetap di perangkat; permintaan AI dikirim secara terenkripsi</string>
     <string name="onboarding_goals_title">Apa yang ingin kamu capai\ndengan jurnal AI?</string>
     <string name="onboarding_goal_stress">Mengurangi stres</string>

@@ -839,6 +839,7 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
     <string name="onboarding_welcome">Benvenuto in\nBest Journal</string>
     <string name="onboarding_subtitle">Il tuo diario personale con IA\nper maggiore chiarezza nella vita quotidiana</string>
     <string name="onboarding_feature_speech">Parla o scrivi, l\'IA capisce entrambi</string>
+    <string name="onboarding_feature_listen">Fatti leggere le tue voci ad alta voce</string>
     <string name="onboarding_feature_secure">Le tue voci restano sul dispositivo; le richieste IA vengono trasmesse in modo cifrato</string>
     <string name="onboarding_goals_title">Cosa vuoi raggiungere\ncol diario IA?</string>
     <string name="onboarding_goal_stress">Ridurre lo stress</string>

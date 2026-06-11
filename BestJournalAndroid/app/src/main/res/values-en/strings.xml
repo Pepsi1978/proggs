@@ -814,6 +814,7 @@ For everyone who wants to understand themselves better and grow from within.</st
     <string name="onboarding_subtitle">Your personal AI journal
 for more clarity every day</string>
     <string name="onboarding_feature_speech">Speak or write — the AI understands both</string>
+    <string name="onboarding_feature_listen">Have your entries read aloud to you</string>
     <string name="onboarding_feature_secure">Your entries stay on the device; AI requests are transmitted encrypted</string>
     <string name="onboarding_goals_title">What do you want to achieve\nwith the AI journal?</string>
     <string name="onboarding_goal_stress">Reduce stress</string>

@@ -791,6 +791,7 @@ Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
     <string name="onboarding_subtitle">Günlük hayatında daha fazla netlik için
 kişisel KI günlüğün</string>
     <string name="onboarding_feature_speech">Konuş veya yaz, YZ ikisini de anlar</string>
+    <string name="onboarding_feature_listen">Girişlerini sesli olarak dinle</string>
     <string name="onboarding_feature_secure">Girişlerin cihazında kalır; YZ istekleri şifreli olarak aktarılır</string>
     <string name="onboarding_goals_title">YZ günlüğüyle\nneye ulaşmak istersin?</string>
     <string name="onboarding_goal_stress">Stresi azaltmak</string>

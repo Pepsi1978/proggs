@@ -795,6 +795,7 @@ Pour ceux qui veulent mieux se connaître et grandir intérieurement.</string>
     <string name="onboarding_subtitle">Ton journal intime personnel avec IA
 pour plus de clarté au quotidien</string>
     <string name="onboarding_feature_speech">Parle ou écris, l\'IA comprend les deux</string>
+    <string name="onboarding_feature_listen">Fais-toi lire tes entrées à voix haute</string>
     <string name="onboarding_feature_secure">Tes entrées restent sur l\'appareil ; les requêtes IA sont transmises de façon chiffrée</string>
     <string name="onboarding_goals_title">Que veux-tu atteindre\navec le journal IA\u202F?</string>
     <string name="onboarding_goal_stress">Réduire le stress</string>
