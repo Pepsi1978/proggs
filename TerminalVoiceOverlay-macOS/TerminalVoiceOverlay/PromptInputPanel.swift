@@ -51,9 +51,9 @@ final class PromptInputPanel: NSPanel {
     /// bewegen uns NIE selbst — die Andockung bleibt dadurch starr.
     var onGroupDragDelta: ((CGFloat, CGFloat) -> Void)?
 
-    // ── Prompt-Zwischenspeicher-Slots (1…15) ──
+    // ── Prompt-Zwischenspeicher-Slots (1…30) ──
     /// Wird ausgeloest wenn der Benutzer auf die Diskette klickt: speichere
-    /// `text` dauerhaft im Slot `number` (1…15). Der AppDelegate persistiert
+    /// `text` dauerhaft im Slot `number` (1…30). Der AppDelegate persistiert
     /// und stoesst SOFORT den Cloud-Sync an.
     var onSlotSave: ((Int, String) -> Void)?
     /// Wird ausgeloest wenn der Benutzer auf das X klickt: loesche Slot
@@ -70,7 +70,7 @@ final class PromptInputPanel: NSPanel {
     /// schreibt sie via `PromptSlotStore.setSummary` + Sofort-Sync.
     var onSlotSummary: ((Int, String, String) -> Void)?
 
-    /// Aktuell ausgewaehlte Slot-Nummer (1…15) oder nil. Bestimmt ob
+    /// Aktuell ausgewaehlte Slot-Nummer (1…30) oder nil. Bestimmt ob
     /// Diskette/X sichtbar sind und welcher Slot gespeichert/geloescht wird.
     private var selectedSlot: Int?
     /// Lokale Kopie der belegten Slots (Nummer → Text). Quelle fuer die
@@ -584,7 +584,7 @@ final class PromptInputPanel: NSPanel {
         appendText(text)
     }
 
-    // MARK: - Prompt-Zwischenspeicher-Slots (1…15)
+    // MARK: - Prompt-Zwischenspeicher-Slots (1…30)
 
     /// Wird vom AppDelegate aufgerufen — uebergibt den aktuellen Stand der
     /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
