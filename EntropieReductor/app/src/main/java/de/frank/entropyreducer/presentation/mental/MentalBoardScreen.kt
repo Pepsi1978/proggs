@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Save
@@ -66,8 +65,10 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
  * Saetze ("Mentals"). Liegt im Aufgaben-Bereich auf Sub-Reiter 2 ("Mental").
  *
  * Bedienung:
- * - "+ Neues Mental" am Ende der Liste oeffnet einen Dialog zum Eintippen EINES Satzes.
- *   Nach dem Speichern erscheint der Satz nummeriert (1., 2., 3., …) in der Liste.
+ * - Der Mic-Button in der BottomBar oeffnet die Auswahl "Schreiben" / "Aufnehmen"
+ *   (Frank-Wunsch 2026-06-11: der fruehere "+ Neues Mental"-Button ist entfernt, alles
+ *   laeuft ueber das Mikrofon). Nach dem Speichern erscheint der Satz nummeriert
+ *   (1., 2., 3., …) in der Liste.
  * - Tap auf einen Satz oeffnet einen Dialog zum Editieren ODER Loeschen.
  * - Langes Druecken auf einen Satz startet Drag & Drop: die Reihenfolge laesst sich
  *   beliebig umsortieren (Position 7 kann auf Position 1 wandern).
@@ -259,7 +260,7 @@ fun MentalBoardScreen(
                     .padding(padding)
         ) {
             if (displayed.isEmpty()) {
-                EmptyState(onAdd = { micActionsOpen = true })
+                EmptyState()
             } else {
                 LazyColumn(
                     state = lazyListState,
@@ -288,9 +289,6 @@ fun MentalBoardScreen(
                                     ),
                             )
                         }
-                    }
-                    item(key = "__add_button__") {
-                        AddMentalCard(onClick = { micActionsOpen = true })
                     }
                 }
             }
@@ -393,35 +391,7 @@ private fun MentalRow(
 }
 
 @Composable
-private fun AddMentalCard(onClick: () -> Unit) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(MentalAccent.copy(alpha = 0.12f))
-                .clickable { onClick() }
-                .padding(horizontal = 14.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = null,
-            tint = MentalAccent,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(Modifier.size(8.dp))
-        Text(
-            text = "Neues Mental",
-            style = MaterialTheme.typography.titleSmall,
-            color = MentalAccent,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-private fun EmptyState(onAdd: () -> Unit) {
+private fun EmptyState() {
     val cosmos = LocalCosmos.current
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
@@ -452,14 +422,12 @@ private fun EmptyState(onAdd: () -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Tippe auf \"Neues Mental\" und schreibe einen Satz. " +
+            text = "Tippe unten auf das Mikrofon und waehle Schreiben oder Aufnehmen. " +
                 "Spaeter kannst du Saetze per langem Druecken frei sortieren.",
             style = MaterialTheme.typography.bodyMedium,
             color = cosmos.textSecondary,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(24.dp))
-        AddMentalCard(onClick = onAdd)
     }
 }
 
