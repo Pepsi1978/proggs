@@ -10,6 +10,31 @@ struct PBSlotEntry: Codable, Equatable {
     var number: Int       // 1…15
     var text: String      // "" == geloescht (Tombstone)
     var updatedAt: Date
+    /// KI-Zusammenfassung (6-8 Woerter) WOFUER dieser Prompt da ist — als
+    /// Hover-Tooltip ueber dem belegten Slot. Leer bei Tombstones und bei
+    /// Eintraegen aus der Zeit vor diesem Feature. Reist im JSON (Key
+    /// `summary`) mit ins Drive-Backup; 1:1 zur Windows-Variante (Summary).
+    var summary: String = ""
+
+    enum CodingKeys: String, CodingKey { case number, text, updatedAt, summary }
+
+    init(number: Int, text: String, updatedAt: Date, summary: String = "") {
+        self.number = number
+        self.text = text
+        self.updatedAt = updatedAt
+        self.summary = summary
+    }
+
+    /// Toleranter Decoder: aeltere prompt-slots.json OHNE `summary`-Key (vor
+    /// diesem Feature) bleibt lesbar — fehlt der Key, ist die Summary leer,
+    /// statt dass das Decoding der ganzen Datei fehlschlaegt.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        text = try c.decode(String.self, forKey: .text)
+        updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+        summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
+    }
 }
 
 /// Liest und schreibt die 15 Prompt-Zwischenspeicher-Slots aus einer JSON-
@@ -86,6 +111,27 @@ final class PromptSlotStore {
         }
     }
 
+    /// Wie `loadMapAndTimes`, liefert zusaetzlich die KI-Zusammenfassungen pro
+    /// belegtem Slot — fuer die Hover-Tooltips der Zahlen-Leiste. Nur Slots mit
+    /// nicht-leerer Summary erscheinen im Summary-Dictionary.
+    func loadMapTimesSummaries(
+        completion: @escaping ([Int: String], [Int: Date], [Int: String]) -> Void
+    ) {
+        queue.async { [weak self] in
+            guard let self = self else { completion([:], [:], [:]); return }
+            let entries = self.loadUnlocked()
+            var map: [Int: String] = [:]
+            var times: [Int: Date] = [:]
+            var summaries: [Int: String] = [:]
+            for e in entries where !e.text.isEmpty && (1...Self.slotCount).contains(e.number) {
+                map[e.number] = e.text
+                times[e.number] = e.updatedAt
+                if !e.summary.isEmpty { summaries[e.number] = e.summary }
+            }
+            DispatchQueue.main.async { completion(map, times, summaries) }
+        }
+    }
+
     /// Liefert ALLE Eintraege roh (inkl. Tombstones mit leerem Text) — wird
     /// fuer den Cloud-Merge gebraucht, der die Zeitstempel vergleicht.
     func loadEntries(completion: @escaping ([PBSlotEntry]) -> Void) {
@@ -115,6 +161,33 @@ final class PromptSlotStore {
             } else {
                 entries.append(entry)
             }
+            self.saveUnlocked(entries)
+            DispatchQueue.main.async { completion() }
+        }
+    }
+
+    /// Aktualisiert NUR die KI-Summary eines belegten Slots — aber nur, wenn
+    /// dessen gespeicherter Text noch exakt `forText` entspricht (der Gemini-
+    /// Call ist asynchron und kann einen schnelleren Re-Save ueberholen).
+    /// Bumpt `updatedAt`, damit die Summary per Cloud-Merge auf andere Geraete
+    /// wandert. No-op bei leerem/geaendertem Slot.
+    func setSummary(number: Int, forText: String, summary: String,
+                    completion: @escaping () -> Void) {
+        guard (1...Self.slotCount).contains(number) else {
+            DispatchQueue.main.async { completion() }
+            return
+        }
+        queue.async { [weak self] in
+            guard let self = self else { DispatchQueue.main.async { completion() }; return }
+            var entries = self.loadUnlocked()
+            guard let idx = entries.firstIndex(where: { $0.number == number }),
+                  !entries[idx].text.isEmpty,
+                  entries[idx].text == forText else {
+                DispatchQueue.main.async { completion() }
+                return
+            }
+            entries[idx].summary = summary
+            entries[idx].updatedAt = Date()
             self.saveUnlocked(entries)
             DispatchQueue.main.async { completion() }
         }

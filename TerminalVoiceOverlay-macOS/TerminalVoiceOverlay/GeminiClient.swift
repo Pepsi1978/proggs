@@ -202,6 +202,46 @@ final class GeminiClient {
         return limited.joined(separator: " ")
     }
 
+    /// Erzeugt eine kompakte Zusammenfassung von 6-8 deutschen Woertern, die
+    /// beschreibt WOFUER ein gespeicherter Prompt da ist bzw. was er bewirkt.
+    /// Wird als Hover-Tooltip ueber dem belegten Slot angezeigt. Leerer
+    /// Rueckgabewert bei Fehler oder leerem Input — der Tooltip faellt dann auf
+    /// den Standardtext zurueck, die Slot-Funktion bleibt unberuehrt (best-effort).
+    func generateSlotSummary(_ text: String, completion: @escaping (String) -> Void) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { completion(""); return }
+
+        let prompt = """
+        Fasse in 6 bis 8 deutschen Woertern zusammen, WOFUER der folgende \
+        Prompt da ist bzw. was er bewirkt. STRENGE REGELN: 6 bis 8 Woerter. \
+        Keine Anfuehrungszeichen. Kein Punkt am Ende. Kein Praefix wie \
+        'Zusammenfassung:'. Nur die nackte Wortgruppe zurueckgeben.
+
+        PROMPT:
+        \(trimmed)
+        """
+
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            self.sendRequest(prompt: prompt, attempt: 0) { result in
+                switch result {
+                case .success(let raw): completion(GeminiClient.sanitizeSummary(raw))
+                case .failure: completion("")
+                }
+            }
+        }
+    }
+
+    static func sanitizeSummary(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let strip: Set<Character> = ["\"", "'", "“", "”", "‚", "‘"]
+        s = String(s.filter { !strip.contains($0) })
+        if s.hasSuffix(".") { s.removeLast() }
+        s = s.trimmingCharacters(in: .whitespaces)
+        let words = s.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard !words.isEmpty else { return "" }
+        return Array(words.prefix(8)).joined(separator: " ")
+    }
+
     private func sendRequest(prompt: String, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
         var urlComponents = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!
         urlComponents.queryItems = [URLQueryItem(name: "key", value: apiKey)]

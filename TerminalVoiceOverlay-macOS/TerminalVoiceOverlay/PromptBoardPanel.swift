@@ -1020,6 +1020,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     self?.onSlotsSyncRequested?()
                 }
             }
+            // Frische KI-Zusammenfassung persistieren (nur wenn der Text noch
+            // passt) und SOFORT Cloud-Sync — damit der Hover-Tooltip ins
+            // Drive-Backup wandert und auf andere Geraete synct.
+            panel.onSlotSummary = { [weak self] number, text, summary in
+                PromptSlotStore.shared.setSummary(number: number, forText: text, summary: summary) {
+                    self?.onSlotsSyncRequested?()
+                }
+            }
             inputPanel = panel
         }
         inputPanel?.dock(leftOf: self, force: true)
@@ -1027,8 +1035,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         inputPanel?.makeKeyAndOrderFront(nil)
         // Belegte Slots in die Zahlen-Leiste laden — bei jedem Oeffnen, damit
         // ein zwischenzeitlicher Cloud-Merge sofort sichtbar wird.
-        PromptSlotStore.shared.loadMapAndTimes { [weak self] map, times in
-            self?.inputPanel?.setSlotContents(map, timestamps: times)
+        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries in
+            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries)
         }
         inputPanelVisible = true
         updateStarVisual()
@@ -1222,8 +1230,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// nach (falls die Eingabe offen ist). Wird vom AppDelegate nach dem
     /// Cloud-Merge beim Start aufgerufen.
     func reloadSlots() {
-        PromptSlotStore.shared.loadMapAndTimes { [weak self] map, times in
-            self?.inputPanel?.setSlotContents(map, timestamps: times)
+        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries in
+            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries)
         }
     }
 

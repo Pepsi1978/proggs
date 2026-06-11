@@ -1152,6 +1152,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         input.onGeminiImprove = { [weak self] currentText, completion in
             self?.geminiImproveText(currentText, completion: completion)
         }
+        // Slot-Summary: 6-8-Wort-Zusammenfassung fuer den Hover-Tooltip.
+        // Best-effort — kein Gemini-Key -> leerer String -> Tooltip-Fallback.
+        input.onGenerateSlotSummary = { [weak self] text, completion in
+            guard let self = self, let gemini = self.geminiClient else {
+                completion("")
+                return
+            }
+            gemini.generateSlotSummary(text) { summary in completion(summary) }
+        }
     }
 
     /// Fuer den G-Button in der Eingabe-Toolbar: ruft Gemini mit dem

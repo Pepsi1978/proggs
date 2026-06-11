@@ -60,6 +60,16 @@ final class PromptInputPanel: NSPanel {
     /// `number` dauerhaft. AppDelegate persistiert + Sofort-Sync.
     var onSlotDelete: ((Int) -> Void)?
 
+    /// Wird beim Speichern eines Slots ausgeloest, um asynchron eine 6-8-Wort-
+    /// Zusammenfassung zu holen. Der Handler (AppDelegate) ruft Gemini und gibt
+    /// das Ergebnis via Completion zurueck. Best-effort: leerer String -> kein
+    /// Tooltip. Spiegelt das Muster von `onGeminiImprove`.
+    var onGenerateSlotSummary: ((String, @escaping (String) -> Void) -> Void)?
+    /// Eine frische Zusammenfassung steht bereit und soll persistiert werden
+    /// (number, fuer-diesen-Text, summary). Der Handler (PromptBoardPanel)
+    /// schreibt sie via `PromptSlotStore.setSummary` + Sofort-Sync.
+    var onSlotSummary: ((Int, String, String) -> Void)?
+
     /// Aktuell ausgewaehlte Slot-Nummer (1…15) oder nil. Bestimmt ob
     /// Diskette/X sichtbar sind und welcher Slot gespeichert/geloescht wird.
     private var selectedSlot: Int?
@@ -69,6 +79,8 @@ final class PromptInputPanel: NSPanel {
     private var slotContents: [Int: String] = [:]
     /// Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.
     private var slotTimestamps: [Int: Date] = [:]
+    /// KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.
+    private var slotSummaries: [Int: String] = [:]
     private var slotButtons: [Int: NSButton] = [:]
     private let slotSaveButton = NSButton()
     private let slotDeleteButton = NSButton()
@@ -556,9 +568,11 @@ final class PromptInputPanel: NSPanel {
     /// Wird vom AppDelegate aufgerufen — uebergibt den aktuellen Stand der
     /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
     /// laesst die aktuelle Auswahl/Diskette unveraendert.
-    func setSlotContents(_ map: [Int: String], timestamps: [Int: Date] = [:]) {
+    func setSlotContents(_ map: [Int: String], timestamps: [Int: Date] = [:],
+                         summaries: [Int: String] = [:]) {
         slotContents = map.filter { !$0.value.isEmpty }
         slotTimestamps = timestamps
+        slotSummaries = summaries.filter { !$0.value.isEmpty }
         updateSlotVisuals()
     }
 
@@ -678,6 +692,9 @@ final class PromptInputPanel: NSPanel {
             btn.layer?.backgroundColor = isSelected
                 ? NSColor(calibratedWhite: 0.26, alpha: 1).cgColor
                 : NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
+            // Hover-Tooltip: bei belegtem Slot die KI-Zusammenfassung (falls
+            // vorhanden), sonst der Standard-Hinweis.
+            btn.toolTip = slotTooltip(n, hasContent: hasContent)
         }
         let hasSelection = (selectedSlot != nil)
         slotSaveButton.isHidden = !hasSelection
@@ -701,6 +718,19 @@ final class PromptInputPanel: NSPanel {
 
     private func slotLabel(of btn: NSButton) -> NSTextField? {
         return btn.subviews.compactMap { $0 as? NSTextField }.first
+    }
+
+    /// Hover-Tooltip eines Slot-Buttons: bei belegtem Slot mit vorhandener
+    /// KI-Zusammenfassung die 6-8-Wort-Summary, sonst der Standard-Hinweis.
+    private func slotTooltip(_ n: Int, hasContent: Bool) -> String {
+        if hasContent, let s = slotSummaries[n], !s.isEmpty { return s }
+        return "Slot \(n) — klick speichert/laedt hier deinen Prompt-Zwischenspeicher."
+    }
+
+    /// Aktualisiert den Tooltip eines einzelnen Slot-Buttons (nach Summary-Update).
+    private func applySlotTooltip(_ n: Int) {
+        let hasContent = !(slotContents[n]?.isEmpty ?? true)
+        slotButtons[n]?.toolTip = slotTooltip(n, hasContent: hasContent)
     }
 
     /// Klick auf eine Zahl: auswaehlen, Diskette/X einblenden. Hat der Slot
@@ -734,9 +764,24 @@ final class PromptInputPanel: NSPanel {
         }
         slotContents[n] = text
         slotTimestamps[n] = Date()
+        slotSummaries.removeValue(forKey: n)   // alte Summary passt nicht mehr
         updateSlotVisuals()
         flashSlotButton(slotSaveButton, color: Self.slotGold)
         onSlotSave?(n, text)
+
+        // Frische 6-8-Wort-Zusammenfassung asynchron per Gemini holen
+        // (best-effort, blockiert das Speichern nicht). Nur anwenden, wenn der
+        // Slot noch exakt diesen Text haelt.
+        let savedText = text
+        onGenerateSlotSummary?(text) { [weak self] summary in
+            DispatchQueue.main.async {
+                guard let self = self, !summary.isEmpty else { return }
+                guard self.slotContents[n] == savedText else { return }
+                self.slotSummaries[n] = summary
+                self.applySlotTooltip(n)
+                self.onSlotSummary?(n, savedText, summary)
+            }
+        }
     }
 
     /// X: loescht den gewaehlten Slot dauerhaft. Laeuft IMMER durch wenn eine
@@ -748,6 +793,7 @@ final class PromptInputPanel: NSPanel {
         guard let n = selectedSlot else { return }
         slotContents.removeValue(forKey: n)
         slotTimestamps.removeValue(forKey: n)
+        slotSummaries.removeValue(forKey: n)
         // Geloeschten Prompt auch aus dem Eingabefeld entfernen.
         clearInput()
         updateSlotVisuals()
