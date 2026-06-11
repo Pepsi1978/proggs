@@ -46,6 +46,7 @@ class WakeWordService : LifecycleService() {
 
     private val engineMutex = Mutex()
     private val triggering = AtomicBoolean(false)
+    private val observerStarted = AtomicBoolean(false)
     private val models = mutableMapOf<WakeLang, Model>()
 
     /**
@@ -113,12 +114,14 @@ class WakeWordService : LifecycleService() {
             return START_STICKY
         }
 
-        // Ein einziger Beobachter: erste Emission startet die Engine, jede Wort-Änderung
-        // startet sie mit der neuen Favoriten-Grammatik neu.
-        lifecycleScope.launch(Dispatchers.Default) {
-            repository.words.collectLatest { words ->
-                if (triggering.get()) return@collectLatest // Trigger-Phase macht selbst weiter
-                restartEngine()
+        // Ein einziger Beobachter (onStartCommand kann mehrfach kommen!): erste Emission
+        // startet die Engine, jede Wort-Änderung startet sie mit neuer Grammatik neu.
+        if (observerStarted.compareAndSet(false, true)) {
+            lifecycleScope.launch(Dispatchers.Default) {
+                repository.words.collectLatest { words ->
+                    if (triggering.get()) return@collectLatest // Trigger-Phase macht selbst weiter
+                    restartEngine()
+                }
             }
         }
         return START_STICKY

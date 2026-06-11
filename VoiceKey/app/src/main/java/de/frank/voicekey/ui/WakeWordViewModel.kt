@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -82,6 +83,14 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
 
     init {
         ensureModels()
+        // Nach App-Update/Neuinstallation: Dienst wieder hochfahren, wenn der Schalter an ist
+        // (der Foreground-Service ueberlebt das Update nicht von selbst).
+        viewModelScope.launch {
+            if (repository.serviceEnabled.first()) {
+                Obs.i("WakeWordViewModel", "init", "Schalter ist an — starte Dienst nach App-Start")
+                WakeWordService.start(getApplication())
+            }
+        }
     }
 
     /** Modelle beim ersten Start automatisch herunterladen (DE + EN). */
