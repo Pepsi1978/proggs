@@ -88,18 +88,18 @@ fun AiLimitsDisclaimerRow(modifier: Modifier = Modifier) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringResource(R.string.ai_limits_disclaimer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(6.dp))
         Icon(
             imageVector = Icons.Rounded.Info,
             contentDescription = stringResource(R.string.ai_limits_dialog_title),
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = stringResource(R.string.ai_limits_disclaimer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
         )
     }
     if (showDialog) AiLimitsDialog(onDismiss = { showDialog = false })
