@@ -1417,7 +1417,7 @@
     <string name="profile_style_custom">\n- PROFIL-STIL (Custom): Schreibe diesen Rückblick mit klarem Bezug zum Benutzer-Auftrag. PFLICHT-REGELN:\n  1) MINDESTENS 60 Prozent des Rückblicks behandelt direkt oder umschreibend das Auftrags-Thema.\n  2) MINDESTENS EIN thematischer Abschnitt ist komplett dem Auftrags-Fokus gewidmet (Überschrift + Text).\n  3) Drücke den Profil-Bezug VARIANTENREICH aus mit Synonymen und thematischen Nachbarschaften, NICHT mit mechanischer Wortwiederholung.\n  4) Beobachtungen ohne Bezug zum Auftrag knapp halten oder ganz weglassen — lieber weniger Abschnitte mit echtem Bezug als viele generische.\n  Benutzer-Auftrag (zur Orientierung): \"%1$s\"</string>
 
     <!-- Premium feature: unlimited Nachträge per journal entry -->
-    <string name="paywall_feature_followups">Unbegrenzte Nachträge zu jedem Tagebucheintrag</string>
+    <string name="paywall_feature_followups">So viele Tagebuchnachträge, wie du möchtest</string>
     <string name="settings_premium_feature_followups">Unbegrenzte Nachträge</string>
     <string name="settings_premium_feature_followups_desc">So viele Nachträge pro Eintrag wie du möchtest</string>
 
