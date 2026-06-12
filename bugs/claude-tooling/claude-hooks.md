@@ -35,6 +35,7 @@
 | 13 | matcher setzen | Exakt `Edit|Write`, MCP mit `.*`-Suffix | §9.1 |
 | 14 | Bash-`.sh`-Hook | `+x`, LF (kein CRLF), kein zwingendes `jq` | §13.2 |
 | 15 | "Hook error" trotz exit 0 | Falsches Label (Regression) — nicht als Fehler werten | §11.1 |
+| 16 | Bash rundet Float → zeigt 0 | `printf "%.0f"` (bash 3.2) scheitert an `55.00000000000001` → Parameter-Expansion | §13.5 |
 
 ---
 
@@ -515,6 +516,25 @@ OHNE `exit 0`. Bei einem scheiternden Befehl (python3) loggte der trap, dann bee
 `set -e` das Skript mit non-zero → "hook error". Fix: **`exit 0` IN den trap** packen:
 `trap 'hook_log_warn "…"; exit 0' ERR`. So endet der Hook bei JEDEM unerwarteten Fehler
 graceful — genau wie die PS1-Variante via `try/catch` + finalem `exit 0`. Beim Debugging gefunden.
+
+### 13.5 `printf "%.0f"` (bash-3.2-builtin) gibt 0 bei langen Float-Artefakten  ⭐
+**Symptom:** Ein bash-Hook/eine Statusline zeigt `0` statt des echten gerundeten Wertes —
+aber NUR bei manchen Werten, andere (glatte Ganzzahlen) funktionieren. Wirkt sporadisch
+("ging am Anfang, dann nicht mehr").
+**Ursache:** Die bash-3.2-builtin `printf "%.0f"` (macOS-System-bash) wirft bei einem
+LANGEN Float wie `55.00000000000001` (typisches Floating-Point-Artefakt aus JSON/einer API)
+`printf: invalid number` und gibt `0` (rc=1) zurueck. Glatte Werte (`36`, `55`) parst sie
+problemlos. Locale-UNABHAENGIG — NICHT das de_DE-Komma-Problem (`,` vs `.`), sondern der
+begrenzte Float-Parser der alten builtin printf. `/usr/bin/printf` und neuere bash koennen es.
+**Versionen:** macOS bash 3.2 (System-Default `/bin/bash`), per Design.
+**FIX (funktionserhaltend):** Float-Rundung NICHT mit `printf "%.0f"`. Reine
+Parameter-Expansion (locale-unabhaengig + bash-3.2-fest): Ganzzahlteil `${v%%.*}` nehmen,
+an erster Nachkommastelle (`${v#*.}`, `[5-9]` → +1) aufrunden. Alternativ
+`LC_ALL=C awk 'BEGIN{printf "%.0f", v}'`. PowerShell `[int][Math]::Round(...)` ist nicht betroffen.
+**Eigener Vorfall (2026-06-12):** `statusline.sh` zeigte `7d 0%` statt `55%`, weil die API
+`seven_day.used_percentage` als `55.00000000000001` lieferte und dieser Float von der
+MAX-Logik als hoechster Wert ausgewaehlt wurde; der 5h-Wert war eine glatte Ganzzahl → funktionierte.
+Fix: `round_pct()` per Parameter-Expansion ersetzte alle 4 `printf "%.0f"`-Aufrufe.
 
 ---
 
