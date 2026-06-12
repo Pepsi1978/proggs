@@ -42,7 +42,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.WhisperMicButton
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -176,9 +176,10 @@ fun TagebuchEntryDetailScreen(
                 var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
                 // Standard ist IMMER die verbesserte Variante, sobald eine existiert
                 // (Frank-Wunsch 2026-06-01) — unabhängig vom isImproved-Flag.
-                var showImproved by remember(entry.id, entry.improvedText) {
-                    mutableStateOf(entry.improvedText != null)
-                }
+                var showImproved by
+                    remember(entry.id, entry.improvedText) {
+                        mutableStateOf(entry.improvedText != null)
+                    }
                 var entryImproving by remember(entry.id) { mutableStateOf(false) }
 
                 ImprovableEntryCard(
@@ -326,8 +327,8 @@ fun TagebuchEntryDetailScreen(
 }
 
 /**
- * KI-Zusammenfassung als Mini-Fliesstext (Frank-Wunsch 2026-05-23 — max 6 Zeilen,
- * keine Bullet-Points mehr). Migriert alte Bullet-Daten automatisch zu Fliesstext.
+ * KI-Zusammenfassung als Mini-Fliesstext (Frank-Wunsch 2026-05-23 — max 6 Zeilen, keine
+ * Bullet-Points mehr). Migriert alte Bullet-Daten automatisch zu Fliesstext.
  */
 @Composable
 private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> Unit) {
@@ -419,9 +420,9 @@ private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> 
 }
 
 /**
- * Migrations-Helper (Frank-Wunsch 2026-05-23): alte Bullet-Point-Daten werden zu
- * Fliesstext gejoined damit die UI keine Spruenge zwischen alten/neuen Eintraegen zeigt.
- * Neue Eintraege liefert das ViewModel bereits als Fliesstext — dann passiert hier nichts.
+ * Migrations-Helper (Frank-Wunsch 2026-05-23): alte Bullet-Point-Daten werden zu Fliesstext
+ * gejoined damit die UI keine Spruenge zwischen alten/neuen Eintraegen zeigt. Neue Eintraege
+ * liefert das ViewModel bereits als Fliesstext — dann passiert hier nichts.
  */
 private fun summaryAsProse(raw: String): String {
     val trimmed = raw.trim()
@@ -436,10 +437,10 @@ private fun summaryAsProse(raw: String): String {
 }
 
 /**
- * Eintrag-Karte mit optionalem Verbessert/Original-Tab (Frank-Wunsch 2026-05-23).
- * Wenn keine KI-Version vorhanden ist, wird unter dem editierbaren Originaltext ein
- * "Mit KI nachträglich verbessern"-Knopf gezeigt. Liegt eine improvedText-Variante
- * vor, erscheint oben ein Tab und der Knopf wird durch "Neu verbessern" ersetzt.
+ * Eintrag-Karte mit optionalem Verbessert/Original-Tab (Frank-Wunsch 2026-05-23). Wenn keine
+ * KI-Version vorhanden ist, wird unter dem editierbaren Originaltext ein "Mit KI nachträglich
+ * verbessern"-Knopf gezeigt. Liegt eine improvedText-Variante vor, erscheint oben ein Tab und der
+ * Knopf wird durch "Neu verbessern" ersetzt.
  */
 @Composable
 private fun ImprovableEntryCard(
@@ -460,11 +461,7 @@ private fun ImprovableEntryCard(
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                headerLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = TagebuchAccent,
-            )
+            Text(headerLabel, style = MaterialTheme.typography.titleMedium, color = TagebuchAccent)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = formatTagebuchTimestamp(timestampMs),
@@ -488,10 +485,7 @@ private fun ImprovableEntryCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (hasImproved) {
-                VariantTabRow(
-                    showImproved = showImproved,
-                    onToggle = onToggleVariant,
-                )
+                VariantTabRow(showImproved = showImproved, onToggle = onToggleVariant)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -519,26 +513,30 @@ private fun ImprovableEntryCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            ImproveButton(
-                isImproving = isImproving,
-                hasImproved = hasImproved,
-                onClick = onImprove,
-            )
+            ImproveButton(isImproving = isImproving, hasImproved = hasImproved, onClick = onImprove)
         }
     }
 }
 
 /**
- * Wiederverwendbarer Tab "Verbessert" / "Original" — orange Highlight unter dem
- * aktiven Tab, anderer Tab in Sekundärfarbe.
+ * Wiederverwendbarer Tab "Verbessert" / "Original" — orange Highlight unter dem aktiven Tab,
+ * anderer Tab in Sekundärfarbe.
  */
 @Composable
 private fun VariantTabRow(showImproved: Boolean, onToggle: () -> Unit) {
     val cosmos = LocalCosmos.current
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        TabChip(label = "Verbessert", active = showImproved, onClick = { if (!showImproved) onToggle() })
+        TabChip(
+            label = "Verbessert",
+            active = showImproved,
+            onClick = { if (!showImproved) onToggle() },
+        )
         Spacer(Modifier.width(6.dp))
-        TabChip(label = "Original", active = !showImproved, onClick = { if (showImproved) onToggle() })
+        TabChip(
+            label = "Original",
+            active = !showImproved,
+            onClick = { if (showImproved) onToggle() },
+        )
         Spacer(Modifier.weight(1f))
         Text(
             text = if (showImproved) "von Gemini" else "Roh-Transkript",
@@ -555,10 +553,9 @@ private fun TabChip(label: String, active: Boolean, onClick: () -> Unit) {
     val fg = if (active) TagebuchAccent else cosmos.textSecondary
     Box(
         modifier =
-            Modifier
-                .background(bg, RoundedCornerShape(50))
+            Modifier.background(bg, RoundedCornerShape(50))
                 .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
@@ -589,9 +586,7 @@ private fun ImproveButton(isImproving: Boolean, hasImproved: Boolean, onClick: (
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text =
-                    if (hasImproved) "Neu verbessern"
-                    else "Mit KI nachträglich verbessern",
+                text = if (hasImproved) "Neu verbessern" else "Mit KI nachträglich verbessern",
                 style = MaterialTheme.typography.labelMedium,
                 color = TagebuchAccent,
             )
@@ -659,7 +654,10 @@ private fun FollowupCard(
             Spacer(Modifier.height(8.dp))
 
             if (hasImproved) {
-                VariantTabRow(showImproved = showImproved, onToggle = { showImproved = !showImproved })
+                VariantTabRow(
+                    showImproved = showImproved,
+                    onToggle = { showImproved = !showImproved },
+                )
                 Spacer(Modifier.height(8.dp))
             }
 

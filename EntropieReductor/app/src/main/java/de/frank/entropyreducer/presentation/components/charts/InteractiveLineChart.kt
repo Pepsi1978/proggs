@@ -3,7 +3,6 @@ package de.frank.entropyreducer.presentation.components.charts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -39,8 +38,7 @@ import java.util.Locale
 /**
  * Interaktiver Linien-Chart mit Y-Achse, X-Achse und Tap-zu-Tooltip.
  *
- * Frank-Wunsch 2026-05-08: "Y-Skala muss da sein, Tap auf Punkt zeigt den Wert,
- * Datum sichtbar".
+ * Frank-Wunsch 2026-05-08: "Y-Skala muss da sein, Tap auf Punkt zeigt den Wert, Datum sichtbar".
  *
  * Zeichnet:
  * - Y-Achsen-Beschriftung links (Min/Mid/Max)
@@ -57,52 +55,58 @@ fun InteractiveLineChart(
     unit: String,
     modifier: Modifier = Modifier,
     height: Int = 180,
-    /** Frank-Wunsch 2026-05-09: bei Metriken wo niedriger besser ist (RHR, Schlafdefizit
-     *  etc.) faerbt die Trendlinie semantisch — fallend = Verbesserung = gruen.
-     *  Bei normalen Metriken (HRV, Schlafdauer) bleibt steigend = besser = gruen. */
+    /**
+     * Frank-Wunsch 2026-05-09: bei Metriken wo niedriger besser ist (RHR, Schlafdefizit etc.)
+     * faerbt die Trendlinie semantisch — fallend = Verbesserung = gruen. Bei normalen Metriken
+     * (HRV, Schlafdauer) bleibt steigend = besser = gruen.
+     */
     lowerIsBetter: Boolean = false,
-    /** Frank-Wunsch 2026-05-09: bei Schlafdauer sollen die Y-Achsen-Beschriftungen und
-     *  der Tooltip in Stunden statt Minuten formatiert werden. Wenn null wird der
-     *  Standard-Formatter `formatY` verwendet und die Einheit angehaengt. */
+    /**
+     * Frank-Wunsch 2026-05-09: bei Schlafdauer sollen die Y-Achsen-Beschriftungen und der Tooltip
+     * in Stunden statt Minuten formatiert werden. Wenn null wird der Standard-Formatter `formatY`
+     * verwendet und die Einheit angehaengt.
+     */
     valueFormatter: ((Double) -> String)? = null,
-    /** Frank-Wunsch 2026-05-09 (Abend): Tap auf den Chart soll die Detail-Seite
-     *  oeffnen — nicht mehr nur einen Tooltip auf dem Punkt zeigen. Wenn gesetzt,
-     *  ruft jede Tap-Geste sofort onClick() auf und der Tooltip-Modus ist deaktiviert.
-     *  So wird der ganze Graph durchklickbar, statt dass die innere pointerInput
-     *  die Klicks der umgebenden Card frisst. */
+    /**
+     * Frank-Wunsch 2026-05-09 (Abend): Tap auf den Chart soll die Detail-Seite oeffnen — nicht mehr
+     * nur einen Tooltip auf dem Punkt zeigen. Wenn gesetzt, ruft jede Tap-Geste sofort onClick()
+     * auf und der Tooltip-Modus ist deaktiviert. So wird der ganze Graph durchklickbar, statt dass
+     * die innere pointerInput die Klicks der umgebenden Card frisst.
+     */
     onClick: (() -> Unit)? = null,
 ) {
     val cosmos = LocalCosmos.current
     // Performance-Audit Loop 1 (2026-05-10): alle CPU-/Allokations-intensiven
     // Berechnungen ueber `points` in remember(points) vorberechnen, damit sie
     // nicht bei jeder Recomposition (z.B. durch animateXxxAsState) neu laufen.
-    val derived = remember(points) {
-        val safeList = points.filter { it.second.isFinite() }.sortedBy { it.first }
-        if (safeList.isEmpty()) ChartDerived.EMPTY
-        else {
-            val minVal = safeList.minOf { it.second }
-            val maxVal = safeList.maxOf { it.second }
-            val range = (maxVal - minVal).coerceAtLeast(1.0)
-            val rawValues = safeList.map { it.second }
-            val smaList = computeSma(rawValues, window = 14)
-            val smaSlopeVal = if (smaList.size >= 2) linearSlope(smaList) else 0.0
-            // Lineare Regression einmalig vorberechnen — frueher im Canvas-Lambda
-            val rawSlopeVal = if (safeList.size >= 2) linearSlope(rawValues) else 0.0
-            val rawMeanVal = if (rawValues.isNotEmpty()) rawValues.average() else 0.0
-            val xMeanVal = (safeList.size - 1) / 2.0
-            val interceptVal = rawMeanVal - rawSlopeVal * xMeanVal
-            ChartDerived(
-                safe = safeList,
-                minY = minVal,
-                maxY = maxVal,
-                rangeY = range,
-                sma = smaList,
-                smaSlope = smaSlopeVal,
-                rawSlope = rawSlopeVal,
-                intercept = interceptVal,
-            )
+    val derived =
+        remember(points) {
+            val safeList = points.filter { it.second.isFinite() }.sortedBy { it.first }
+            if (safeList.isEmpty()) ChartDerived.EMPTY
+            else {
+                val minVal = safeList.minOf { it.second }
+                val maxVal = safeList.maxOf { it.second }
+                val range = (maxVal - minVal).coerceAtLeast(1.0)
+                val rawValues = safeList.map { it.second }
+                val smaList = computeSma(rawValues, window = 14)
+                val smaSlopeVal = if (smaList.size >= 2) linearSlope(smaList) else 0.0
+                // Lineare Regression einmalig vorberechnen — frueher im Canvas-Lambda
+                val rawSlopeVal = if (safeList.size >= 2) linearSlope(rawValues) else 0.0
+                val rawMeanVal = if (rawValues.isNotEmpty()) rawValues.average() else 0.0
+                val xMeanVal = (safeList.size - 1) / 2.0
+                val interceptVal = rawMeanVal - rawSlopeVal * xMeanVal
+                ChartDerived(
+                    safe = safeList,
+                    minY = minVal,
+                    maxY = maxVal,
+                    rangeY = range,
+                    sma = smaList,
+                    smaSlope = smaSlopeVal,
+                    rawSlope = rawSlopeVal,
+                    intercept = interceptVal,
+                )
+            }
         }
-    }
     val safe = derived.safe
     if (safe.isEmpty()) {
         Text(
@@ -115,48 +119,56 @@ fun InteractiveLineChart(
     val minY = derived.minY
     val maxY = derived.maxY
     val rangeY = derived.rangeY
-    val firstDate = remember(safe) { Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate() }
-    val lastDate = remember(safe) { Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate() }
+    val firstDate =
+        remember(safe) {
+            Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate()
+        }
+    val lastDate =
+        remember(safe) {
+            Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate()
+        }
 
     // 9 Y-Achsen-Werte (Frank-Wunsch 2026-05-11: feiner als die alten 5 Ticks —
     // Sprung von 6h39 auf 9h03 war zu gross, Zwischenwerte fehlten). Reihenfolge
     // ist oben→unten: max, 87.5%, 75%, ..., 12.5%, min.
-    val yLabels = remember(minY, maxY, rangeY) {
-        listOf(
-            maxY,
-            minY + rangeY * 0.875,
-            minY + rangeY * 0.75,
-            minY + rangeY * 0.625,
-            minY + rangeY * 0.5,
-            minY + rangeY * 0.375,
-            minY + rangeY * 0.25,
-            minY + rangeY * 0.125,
-            minY,
-        )
-    }
+    val yLabels =
+        remember(minY, maxY, rangeY) {
+            listOf(
+                maxY,
+                minY + rangeY * 0.875,
+                minY + rangeY * 0.75,
+                minY + rangeY * 0.625,
+                minY + rangeY * 0.5,
+                minY + rangeY * 0.375,
+                minY + rangeY * 0.25,
+                minY + rangeY * 0.125,
+                minY,
+            )
+        }
 
     // Werte-Formatter: wenn extern gesetzt (z.B. fuer Schlafstunden) verwenden,
     // sonst Standard formatY + Einheit anhaengen.
-    val format: (Double) -> String = valueFormatter ?: { v ->
-        formatY(v) + if (unit.isNotBlank()) " $unit" else ""
-    }
+    val format: (Double) -> String =
+        valueFormatter ?: { v -> formatY(v) + if (unit.isNotBlank()) " $unit" else "" }
 
     val sma = derived.sma
     val smaSlope = derived.smaSlope
     val semanticSlope = if (lowerIsBetter) -smaSlope else smaSlope
-    val trendColor = when {
-        semanticSlope > 0.0 -> CosmosColors.Success
-        semanticSlope < 0.0 -> CosmosColors.Critical
-        else -> cosmos.textSecondary
-    }
+    val trendColor =
+        when {
+            semanticSlope > 0.0 -> CosmosColors.Success
+            semanticSlope < 0.0 -> CosmosColors.Critical
+            else -> cosmos.textSecondary
+        }
     // Lineare Regression: Slope wird im Composable-Scope verwendet,
     // Berechnung jetzt in derived.
     val rawSemanticSlope = if (lowerIsBetter) -derived.rawSlope else derived.rawSlope
-    val rawTrendColor = when {
-        rawSemanticSlope > 0.0 -> CosmosColors.Success
-        rawSemanticSlope < 0.0 -> CosmosColors.Critical
-        else -> cosmos.textSecondary
-    }
+    val rawTrendColor =
+        when {
+            rawSemanticSlope > 0.0 -> CosmosColors.Success
+            rawSemanticSlope < 0.0 -> CosmosColors.Critical
+            else -> cosmos.textSecondary
+        }
     // PathEffect einmalig allokieren — vorher 5x pro Frame im Canvas-Lambda.
     val gridDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(6f, 6f)) }
 
@@ -178,16 +190,10 @@ fun InteractiveLineChart(
             }
         }
         Spacer(Modifier.width(6.dp))
-        Box(
-            modifier = Modifier
-                .height(height.dp)
-                .fillMaxWidth(),
-        ) {
+        Box(modifier = Modifier.height(height.dp).fillMaxWidth()) {
             Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(height.dp)
-                    .pointerInput(safe, onClick) {
+                modifier =
+                    Modifier.fillMaxWidth().height(height.dp).pointerInput(safe, onClick) {
                         detectTapGestures { tap ->
                             if (onClick != null) {
                                 // Frank-Wunsch 2026-05-09 (Abend): Tap auf irgendeine
@@ -202,7 +208,7 @@ fun InteractiveLineChart(
                                 selectedIndex = idx
                             }
                         }
-                    },
+                    }
             ) {
                 val w = size.width
                 val h = size.height
@@ -213,7 +219,13 @@ fun InteractiveLineChart(
                 val gridLineColor = gridColor.copy(alpha = 0.3f)
                 for (n in 0..8) {
                     val yTick = h * (n / 8f)
-                    drawLine(gridLineColor, Offset(0f, yTick), Offset(w, yTick), 1f, pathEffect = gridDashEffect)
+                    drawLine(
+                        gridLineColor,
+                        Offset(0f, yTick),
+                        Offset(w, yTick),
+                        1f,
+                        pathEffect = gridDashEffect,
+                    )
                 }
                 // Datenlinie + Punkte
                 if (safe.size >= 2) {
@@ -264,7 +276,8 @@ fun InteractiveLineChart(
                     val rawSlope = derived.rawSlope
                     val stepXLin = w / (safe.size - 1).toFloat()
                     val yStart = h - ((intercept - minY) / rangeY * h).toFloat()
-                    val yEnd = h - ((intercept + rawSlope * (safe.size - 1) - minY) / rangeY * h).toFloat()
+                    val yEnd =
+                        h - ((intercept + rawSlope * (safe.size - 1) - minY) / rangeY * h).toFloat()
                     drawLine(
                         color = rawTrendColor,
                         start = Offset(0f, yStart),
@@ -298,14 +311,16 @@ fun InteractiveLineChart(
                 val (ts, value) = safe[idx]
                 val date = Instant.ofEpochMilli(ts).atZone(ZoneId.systemDefault()).toLocalDate()
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(4.dp)
-                        .background(
-                            color = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier =
+                        Modifier.align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .background(
+                                color =
+                                    if (cosmos.isDark) CosmosColors.BgDarkAccent
+                                    else CosmosColors.BgLightAccent,
+                                shape = RoundedCornerShape(8.dp),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "${date.format(SHORT_DATE)}: ${format(value)}",
@@ -344,21 +359,18 @@ private fun formatY(value: Double): String {
     }
 }
 
-private val SHORT_DATE: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("dd.MM", Locale.GERMANY)
+private val SHORT_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM", Locale.GERMANY)
 
 /**
- * Einfacher gleitender Durchschnitt (SMA) ueber ein festes Fenster.
- * Liefert eine Liste der Laenge `values.size - window + 1` — bei zu wenig
- * Datenpunkten wird eine leere Liste zurueckgegeben.
+ * Einfacher gleitender Durchschnitt (SMA) ueber ein festes Fenster. Liefert eine Liste der Laenge
+ * `values.size - window + 1` — bei zu wenig Datenpunkten wird eine leere Liste zurueckgegeben.
  *
  * Frank-Wunsch 2026-05-09: 14-Tage-Glaettung als Trendlinien-Basis.
  */
 /**
- * Vorberechnete Chart-Daten — Performance-Audit Loop 1 (2026-05-10).
- * Wird einmalig in remember(points) berechnet statt bei jeder Recomposition
- * neu. Sa fe ist die gefilterte+sortierte Punktliste, sma die 14-Tage-
- * Glaettung, intercept+slope die lineare Regression.
+ * Vorberechnete Chart-Daten — Performance-Audit Loop 1 (2026-05-10). Wird einmalig in
+ * remember(points) berechnet statt bei jeder Recomposition neu. Sa fe ist die gefilterte+sortierte
+ * Punktliste, sma die 14-Tage- Glaettung, intercept+slope die lineare Regression.
  */
 private data class ChartDerived(
     val safe: List<Pair<Long, Double>>,
@@ -371,16 +383,17 @@ private data class ChartDerived(
     val intercept: Double,
 ) {
     companion object {
-        val EMPTY = ChartDerived(
-            safe = emptyList(),
-            minY = 0.0,
-            maxY = 0.0,
-            rangeY = 1.0,
-            sma = emptyList(),
-            smaSlope = 0.0,
-            rawSlope = 0.0,
-            intercept = 0.0,
-        )
+        val EMPTY =
+            ChartDerived(
+                safe = emptyList(),
+                minY = 0.0,
+                maxY = 0.0,
+                rangeY = 1.0,
+                sma = emptyList(),
+                smaSlope = 0.0,
+                rawSlope = 0.0,
+                intercept = 0.0,
+            )
     }
 }
 
@@ -398,9 +411,9 @@ private fun computeSma(values: List<Double>, window: Int): List<Double> {
 }
 
 /**
- * Steigung (Slope) einer linearen Regression nach kleinste-Quadrate-Verfahren.
- * x-Werte sind Indizes (0, 1, 2, ...), y-Werte sind die uebergebenen Werte.
- * Vorzeichen entscheidet ueber Trend: positiv = steigend, negativ = fallend.
+ * Steigung (Slope) einer linearen Regression nach kleinste-Quadrate-Verfahren. x-Werte sind Indizes
+ * (0, 1, 2, ...), y-Werte sind die uebergebenen Werte. Vorzeichen entscheidet ueber Trend: positiv
+ * = steigend, negativ = fallend.
  */
 private fun linearSlope(values: List<Double>): Double {
     val n = values.size

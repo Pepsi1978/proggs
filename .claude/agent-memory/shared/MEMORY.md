@@ -204,6 +204,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"13686411-5971-42e4-aae0-2e4dc4abee8c","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/13686411-5971-42e4-aae0-2e4dc4abee8c.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"invalid_request","error_details":"400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 207552 tokens > 200000 maximum\"},\"request_id\":\"req_011CbkQ3PKZfmnBXMhhaRR7D\"... (truncated)
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
+### [2026-06-12 06:53] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)

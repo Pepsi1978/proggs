@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,13 +44,13 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Startbildschirm der App (Frank-Wunsch 2026-05-09): zeigt prominent den
- * Variant-Label (Debugversion / Performance Version / Release Version) damit
- * Frank die parallel installierten Builds sofort unterscheiden kann.
+ * Startbildschirm der App (Frank-Wunsch 2026-05-09): zeigt prominent den Variant-Label
+ * (Debugversion / Performance Version / Release Version) damit Frank die parallel installierten
+ * Builds sofort unterscheiden kann.
  *
- * Layout: zentriertes Logo + Titel + Variant-Label + Start-Button, ueber einem
- * dezenten Verlaufs-Hintergrund passend zum Cosmos-Theme. Tap auf "Start" ruft
- * onStart() auf — der ContainerComposable wechselt dann zur eigentlichen App.
+ * Layout: zentriertes Logo + Titel + Variant-Label + Start-Button, ueber einem dezenten
+ * Verlaufs-Hintergrund passend zum Cosmos-Theme. Tap auf "Start" ruft onStart() auf — der
+ * ContainerComposable wechselt dann zur eigentlichen App.
  */
 @Composable
 fun LaunchScreen(onStart: () -> Unit) {
@@ -62,63 +60,53 @@ fun LaunchScreen(onStart: () -> Unit) {
 
     // Sanfter Atemeffekt am Logo, damit der Bildschirm lebendig wirkt.
     val infinite = rememberInfiniteTransition(label = "launchPulse")
-    val logoScale by infinite.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(2400), RepeatMode.Reverse),
-        label = "logoBreath",
-    )
+    val logoScale by
+        infinite.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.06f,
+            animationSpec = infiniteRepeatable(tween(2400), RepeatMode.Reverse),
+            label = "logoBreath",
+        )
 
-    val backgroundBrush = remember(cosmos.isDark) {
-        if (cosmos.isDark) {
-            Brush.verticalGradient(
-                listOf(
-                    CosmosColors.BgDark,
-                    CosmosColors.BgDarkAccent,
-                    CosmosColors.BgDark,
-                ),
-            )
-        } else {
-            Brush.verticalGradient(
-                listOf(
-                    CosmosColors.BgLight,
-                    CosmosColors.BgLightAccent,
-                    CosmosColors.BgLight,
-                ),
-            )
+    val backgroundBrush =
+        remember(cosmos.isDark) {
+            if (cosmos.isDark) {
+                Brush.verticalGradient(
+                    listOf(CosmosColors.BgDark, CosmosColors.BgDarkAccent, CosmosColors.BgDark)
+                )
+            } else {
+                Brush.verticalGradient(
+                    listOf(CosmosColors.BgLight, CosmosColors.BgLightAccent, CosmosColors.BgLight)
+                )
+            }
         }
-    }
 
     val systemPadding: PaddingValues = WindowInsets.systemBars.asPaddingValues()
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundBrush),
+        modifier = Modifier.fillMaxSize().background(backgroundBrush),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(systemPadding)
-                .padding(horizontal = 32.dp),
+            modifier = Modifier.fillMaxWidth().padding(systemPadding).padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .graphicsLayer {
-                        scaleX = logoScale
-                        scaleY = logoScale
-                    }
-                    .background(
-                        brush = Brush.radialGradient(
-                            0f to CosmosColors.AccentPrimary,
-                            1f to CosmosColors.AccentPrimary.copy(alpha = 0.55f),
+                modifier =
+                    Modifier.size(112.dp)
+                        .graphicsLayer {
+                            scaleX = logoScale
+                            scaleY = logoScale
+                        }
+                        .background(
+                            brush =
+                                Brush.radialGradient(
+                                    0f to CosmosColors.AccentPrimary,
+                                    1f to CosmosColors.AccentPrimary.copy(alpha = 0.55f),
+                                ),
+                            shape = RoundedCornerShape(56.dp),
                         ),
-                        shape = RoundedCornerShape(56.dp),
-                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -144,10 +132,12 @@ fun LaunchScreen(onStart: () -> Unit) {
             // Variant-Label als prominentes Pill — damit Frank Debug und
             // Performance auf den ersten Blick unterscheiden kann.
             Box(
-                modifier = Modifier.background(
-                    color = CosmosColors.AccentPrimary.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(50),
-                ).padding(horizontal = 18.dp, vertical = 8.dp),
+                modifier =
+                    Modifier.background(
+                            color = CosmosColors.AccentPrimary.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(50),
+                        )
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = variantLabel,
@@ -159,24 +149,19 @@ fun LaunchScreen(onStart: () -> Unit) {
 
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = "v$versionName",
-                fontSize = 13.sp,
-                color = cosmos.textSecondary,
-            )
+            Text(text = "v$versionName", fontSize = 13.sp, color = cosmos.textSecondary)
 
             Spacer(Modifier.height(48.dp))
 
             Button(
                 onClick = onStart,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp),
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = CosmosColors.AccentPrimary,
-                    contentColor = Color.Black,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = CosmosColors.AccentPrimary,
+                        contentColor = Color.Black,
+                    ),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.PlayArrow,
@@ -184,11 +169,7 @@ fun LaunchScreen(onStart: () -> Unit) {
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.size(10.dp))
-                Text(
-                    text = "Start",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Text(text = "Start", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

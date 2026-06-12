@@ -154,11 +154,7 @@ internal fun OuraSleepScoreCard(
         Column {
             CardHeader(title = "Schlaf-Score", color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(
-                score = score?.toDouble(),
-                color = color,
-                last30 = last30Doubles,
-            )
+            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Doubles)
             StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
@@ -219,11 +215,7 @@ internal fun OuraActivityCard(
         Column {
             CardHeader(title = "Aktivität", color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(
-                score = score?.toDouble(),
-                color = color,
-                last30 = last30Doubles,
-            )
+            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Doubles)
             if (activity != null) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -385,8 +377,8 @@ private fun CardHeader(title: String, color: Color) {
 }
 
 /**
- * Score in grosser Zahl, rechtsbuendig. Frank-Wunsch 2026-05-18: nur die Zahl ohne "/100", der
- * Wert steht rechts. Hinter dem Wert die Abweichung zum 30-Tage-Mittel als reiner Text ohne
+ * Score in grosser Zahl, rechtsbuendig. Frank-Wunsch 2026-05-18: nur die Zahl ohne "/100", der Wert
+ * steht rechts. Hinter dem Wert die Abweichung zum 30-Tage-Mittel als reiner Text ohne
  * Hintergrundfeld — Plus in Gruen, Minus in Rot.
  */
 @Composable
@@ -405,8 +397,7 @@ private fun ScoreWithTrend(score: Double?, color: Color, last30: List<Double>) {
         if (score != null && last30.size >= 2) {
             val avg = last30.average()
             val delta = score - avg
-            val deltaColor =
-                if (delta >= 0) CosmosColors.Success else CosmosColors.Critical
+            val deltaColor = if (delta >= 0) CosmosColors.Success else CosmosColors.Critical
             Text(
                 text = "%+.1f".format(delta),
                 color = deltaColor,

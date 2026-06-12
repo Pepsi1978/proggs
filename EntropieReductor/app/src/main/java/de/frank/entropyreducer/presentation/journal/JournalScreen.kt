@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.prefs.JournalSyncStatus
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
@@ -52,10 +52,10 @@ import java.util.Locale
 /**
  * Journal-Reiter (Frank-Wunsch 2026-05-24) — Sub-Bereich Slot 1 des Aufgaben-Tabs.
  *
- * Zeigt die aus BestJournal Frank gespiegelten Tagebucheintraege read-only an. Optik 1:1
- * wie der Entropie-Reiter (Timeline mit Buch-Badge + Zeit-Sektionen). Ganz oben ein
- * Sync-Status-Kopf mit Zeitpunkt der letzten Synchronisierung + Anzahl neuer Eintraege.
- * Tippen auf einen Eintrag oeffnet den read-only Detail-Screen (mit Vorlesen).
+ * Zeigt die aus BestJournal Frank gespiegelten Tagebucheintraege read-only an. Optik 1:1 wie der
+ * Entropie-Reiter (Timeline mit Buch-Badge + Zeit-Sektionen). Ganz oben ein Sync-Status-Kopf mit
+ * Zeitpunkt der letzten Synchronisierung + Anzahl neuer Eintraege. Tippen auf einen Eintrag oeffnet
+ * den read-only Detail-Screen (mit Vorlesen).
  */
 @Composable
 fun JournalScreen(
@@ -129,7 +129,9 @@ fun JournalScreen(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     grouped.forEach { section ->
-                        item(key = "header-${section.label}") { SectionHeader(label = section.label) }
+                        item(key = "header-${section.label}") {
+                            SectionHeader(label = section.label)
+                        }
                         val lastIndex = section.entries.lastIndex
                         section.entries.forEachIndexed { index, e ->
                             val position =
@@ -162,7 +164,8 @@ private fun SyncStatusHeader(status: JournalSyncStatus) {
             "Noch nicht synchronisiert · 0 Einträge neu"
         } else {
             val ts =
-                SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.GERMANY).format(Date(status.lastSyncMs))
+                SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.GERMANY)
+                    .format(Date(status.lastSyncMs))
             val n = status.lastNewCount
             val neu = if (n == 1) "1 neuer Eintrag" else "$n Einträge neu"
             "Zuletzt synchronisiert: $ts  ·  $neu"
@@ -230,7 +233,9 @@ private fun TimelineEntryRow(
             }
             Box(
                 modifier =
-                    Modifier.size(36.dp).clip(CircleShape).background(JournalAccent.copy(alpha = 0.18f)),
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(JournalAccent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -297,20 +302,17 @@ private fun sectionLabelFor(timestamp: Long): String {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-    val yesterdayStart =
-        (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val yesterdayStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
     val dow = todayStart.get(Calendar.DAY_OF_WEEK)
     val daysSinceMonday = if (dow == Calendar.SUNDAY) 6 else dow - Calendar.MONDAY
     val thisWeekMonday =
         (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -daysSinceMonday) }
     val lastWeekMonday =
         (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -7) }
-    val twoWeeksAgo =
-        (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -14) }
+    val twoWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -14) }
     val threeWeeksAgo =
         (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -21) }
-    val fourWeeksAgo =
-        (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
+    val fourWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
     val sameMonth =
         entry.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)

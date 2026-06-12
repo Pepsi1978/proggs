@@ -1,17 +1,12 @@
 package de.frank.entropyreducer.presentation.amazfit
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,8 +26,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DirectionsRun
-import androidx.compose.material.icons.outlined.Fullscreen
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
@@ -45,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,22 +47,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.activity.compose.BackHandler
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
@@ -83,12 +75,16 @@ import de.frank.entropyreducer.presentation.dashboard4.formatPace
 import de.frank.entropyreducer.presentation.dashboard4.formatStartLabel
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
-import java.util.Locale
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 
 /**
- * Detail-Ansicht eines Workouts mit Hero-Pattern, Stats-Grid und visualisierten
- * Verlaufs-Daten. Frank-Wunsch 2026-05-09: schoenes Layout fuer den letzten Lauf
- * mit Pattern-Karten, Pulsverlauf-Chart, Splits-Tabelle und GPS-Track-Vorschau.
+ * Detail-Ansicht eines Workouts mit Hero-Pattern, Stats-Grid und visualisierten Verlaufs-Daten.
+ * Frank-Wunsch 2026-05-09: schoenes Layout fuer den letzten Lauf mit Pattern-Karten,
+ * Pulsverlauf-Chart, Splits-Tabelle und GPS-Track-Vorschau.
  */
 @Composable
 fun AmazfitTrainingDetailScreen(
@@ -125,7 +121,7 @@ fun AmazfitTrainingDetailScreen(
             text = {
                 Text(
                     "Möchtest du dieses Training wirklich komplett entfernen? " +
-                        "Diese Aktion kann nicht rückgängig gemacht werden.",
+                        "Diese Aktion kann nicht rückgängig gemacht werden."
                 )
             },
             confirmButton = {
@@ -133,7 +129,7 @@ fun AmazfitTrainingDetailScreen(
                     onClick = {
                         deleteDialogOpen = false
                         vm.deleteCurrentWorkout(onDeleted = onBack)
-                    },
+                    }
                 ) {
                     Text("Löschen", color = CosmosColors.Critical)
                 }
@@ -162,14 +158,14 @@ fun AmazfitTrainingDetailScreen(
     // ist schlimmer als gar kein Schloss. Wenn Frank Schloesser bei alten
     // Trainings will, einfach erneut editieren — dann werden die konkret
     // geaenderten Felder spezifisch markiert.
-    val editedLabels: Set<String> = remember(w?.manualOverrideFields) {
-        w?.manualOverrideFields
-            ?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?.toSet()
-            ?: emptySet()
-    }
+    val editedLabels: Set<String> =
+        remember(w?.manualOverrideFields) {
+            w?.manualOverrideFields
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.toSet() ?: emptySet()
+        }
 
     // Frank-Wunsch 2026-05-17 Iteration 7: Vollbild-State lebt auf Screen-Level
     // statt in den Cards. Cards im LazyColumn werden recycled (wenn sie aus
@@ -181,17 +177,18 @@ fun AmazfitTrainingDetailScreen(
     val hrValues = remember(hr) { hr.map { it.toDouble() } }
     val xLabelPuls: (Int) -> String = remember { { i -> "${i / 60} min" } }
     val totalKm = w?.distanceMeters?.takeIf { it > 0 }?.let { it / 1000.0 }
-    val xLabelTempo: (Int) -> String = remember(totalKm, tempoSec.size) {
-        { i ->
-            val lastIdx = (tempoSec.size - 1).coerceAtLeast(1)
-            if (totalKm != null) {
-                val km = (i.toDouble() / lastIdx) * totalKm
-                "Km ${"%.1f".format(km)}"
-            } else {
-                "Km ${i + 1}"
+    val xLabelTempo: (Int) -> String =
+        remember(totalKm, tempoSec.size) {
+            { i ->
+                val lastIdx = (tempoSec.size - 1).coerceAtLeast(1)
+                if (totalKm != null) {
+                    val km = (i.toDouble() / lastIdx) * totalKm
+                    "Km ${"%.1f".format(km)}"
+                } else {
+                    "Km ${i + 1}"
+                }
             }
         }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CosmosScaffold(
@@ -258,7 +255,13 @@ fun AmazfitTrainingDetailScreen(
                     return@LazyColumn
                 }
                 item { HeroCard(w, onEditClick = { editDialogOpen = true }) }
-                item { PaceAndHrGrid(w, editedLabels = editedLabels, onEditClick = { editDialogOpen = true }) }
+                item {
+                    PaceAndHrGrid(
+                        w,
+                        editedLabels = editedLabels,
+                        onEditClick = { editDialogOpen = true },
+                    )
+                }
                 item {
                     TerrainGrid(
                         w = w,
@@ -268,9 +271,20 @@ fun AmazfitTrainingDetailScreen(
                     )
                 }
                 item { TrainingseffektCard(w) }
-                if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city, onOpenFullscreen = { fullscreenChart = "gps" }) }
-                if (hr.isNotEmpty()) item { PulsverlaufCard(hr, onOpenFullscreen = { fullscreenChart = "puls" }) }
-                if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream, w.distanceMeters, onOpenFullscreen = { fullscreenChart = "tempo" }) }
+                if (gps.isNotEmpty())
+                    item {
+                        GpsTrackCard(gps, w.city, onOpenFullscreen = { fullscreenChart = "gps" })
+                    }
+                if (hr.isNotEmpty())
+                    item { PulsverlaufCard(hr, onOpenFullscreen = { fullscreenChart = "puls" }) }
+                if (tempoStream.size >= 10)
+                    item {
+                        TempoVerlaufCard(
+                            tempoStream,
+                            w.distanceMeters,
+                            onOpenFullscreen = { fullscreenChart = "tempo" },
+                        )
+                    }
                 if (splits.isNotEmpty()) item { SplitsCard(splits) }
                 item { SchwimmCard(w) }
                 item { Spacer(Modifier.height(40.dp)) }
@@ -281,38 +295,41 @@ fun AmazfitTrainingDetailScreen(
         // ALS ZWEITE Kinder kommen (z-order = render-order in Box). State
         // ueberlebt Rotation weil er auf Screen-Level lebt.
         when (fullscreenChart) {
-            "gps" -> if (gps.size >= 2) {
-                BackHandler { fullscreenChart = null }
-                GpsTrackFullscreen(gps) { fullscreenChart = null }
-            }
-            "puls" -> if (hr.isNotEmpty()) {
-                BackHandler { fullscreenChart = null }
-                ZoomableChartFullscreen(
-                    accent = CosmosColors.Critical,
-                    values = hrValues,
-                    yUnit = "bpm",
-                    yFormat = { it.toInt().toString() },
-                    xLabel = xLabelPuls,
-                    invertY = false,
-                    yPaddingFraction = 0.10,
-                    crosshairTooltip = { v, x -> "${v.toInt()} bpm · $x" },
-                    onClose = { fullscreenChart = null },
-                )
-            }
-            "tempo" -> if (tempoSec.size >= 10) {
-                BackHandler { fullscreenChart = null }
-                ZoomableChartFullscreen(
-                    accent = CosmosColors.AccentPrimary,
-                    values = tempoSec,
-                    yUnit = "min/km",
-                    yFormat = { formatPaceSec(it) },
-                    xLabel = xLabelTempo,
-                    invertY = true,
-                    yPaddingFraction = 0.05,
-                    crosshairTooltip = { v, x -> "${formatPaceSec(v)} · $x" },
-                    onClose = { fullscreenChart = null },
-                )
-            }
+            "gps" ->
+                if (gps.size >= 2) {
+                    BackHandler { fullscreenChart = null }
+                    GpsTrackFullscreen(gps) { fullscreenChart = null }
+                }
+            "puls" ->
+                if (hr.isNotEmpty()) {
+                    BackHandler { fullscreenChart = null }
+                    ZoomableChartFullscreen(
+                        accent = CosmosColors.Critical,
+                        values = hrValues,
+                        yUnit = "bpm",
+                        yFormat = { it.toInt().toString() },
+                        xLabel = xLabelPuls,
+                        invertY = false,
+                        yPaddingFraction = 0.10,
+                        crosshairTooltip = { v, x -> "${v.toInt()} bpm · $x" },
+                        onClose = { fullscreenChart = null },
+                    )
+                }
+            "tempo" ->
+                if (tempoSec.size >= 10) {
+                    BackHandler { fullscreenChart = null }
+                    ZoomableChartFullscreen(
+                        accent = CosmosColors.AccentPrimary,
+                        values = tempoSec,
+                        yUnit = "min/km",
+                        yFormat = { formatPaceSec(it) },
+                        xLabel = xLabelTempo,
+                        invertY = true,
+                        yPaddingFraction = 0.05,
+                        crosshairTooltip = { v, x -> "${formatPaceSec(v)} · $x" },
+                        onClose = { fullscreenChart = null },
+                    )
+                }
         }
     }
 }
@@ -327,10 +344,10 @@ private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(accent.copy(alpha = 0.18f)),
+                    modifier =
+                        Modifier.size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(accent.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -362,10 +379,10 @@ private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
                     }
                 }
                 Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.18f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(accent.copy(alpha = 0.18f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = sourceLabel(w.source),
@@ -376,7 +393,10 @@ private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 BigStat(
                     label = "Distanz",
                     value = w.distanceMeters?.let { formatDistance(it) } ?: "—",
@@ -409,25 +429,21 @@ private fun BigStat(
     // um den Editier-Dialog zu oeffnen (nur wenn onClick gesetzt ist — der
     // Biomarker-Uebersichts-Hero bleibt bewusst nicht antippbar).
     Column(
-        modifier = modifier.then(
-            if (onClick != null) {
-                Modifier.clip(RoundedCornerShape(8.dp)).clickable { onClick() }
-            } else {
-                Modifier
-            },
-        ),
+        modifier =
+            modifier.then(
+                if (onClick != null) {
+                    Modifier.clip(RoundedCornerShape(8.dp)).clickable { onClick() }
+                } else {
+                    Modifier
+                }
+            )
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = cosmos.textSecondary,
         )
-        Text(
-            text = value,
-            color = accent,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Text(text = value, color = accent, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -440,12 +456,13 @@ private fun PaceAndHrGrid(
     onEditClick: () -> Unit = {},
 ) {
     StatsGrid(
-        items = listOf(
-            "Ø Pace" to (w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—"),
-            "Maximale Pace" to (w.maxPaceSecPerKm?.let { formatPace(it) } ?: "—"),
-            "Ø Puls" to (w.avgHeartRate?.let { "$it bpm" } ?: "—"),
-            "Maximalpuls" to (w.maxHeartRate?.let { "$it bpm" } ?: "—"),
-        ),
+        items =
+            listOf(
+                "Ø Pace" to (w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—"),
+                "Maximale Pace" to (w.maxPaceSecPerKm?.let { formatPace(it) } ?: "—"),
+                "Ø Puls" to (w.avgHeartRate?.let { "$it bpm" } ?: "—"),
+                "Maximalpuls" to (w.maxHeartRate?.let { "$it bpm" } ?: "—"),
+            ),
         editedLabels = editedLabels,
         onItemClick = onEditClick,
     )
@@ -459,12 +476,13 @@ private fun TerrainGrid(
     onEditClick: () -> Unit = {},
 ) {
     StatsGrid(
-        items = listOf(
-            "Höhe ↑" to (w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—"),
-            "Höhe ↓" to (w.altitudeLossMeters?.let { "%.0f m".format(it) } ?: "—"),
-            "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
-            "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
-        ),
+        items =
+            listOf(
+                "Höhe ↑" to (w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—"),
+                "Höhe ↓" to (w.altitudeLossMeters?.let { "%.0f m".format(it) } ?: "—"),
+                "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
+                "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
+            ),
         editedLabels = editedLabels,
         onItemClick = onEditClick,
     )
@@ -491,16 +509,15 @@ private fun StatsGrid(
     val rows = items.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 row.forEach { (label, value) ->
                     // Frank-Wunsch 2026-05-17: Jedes Stat-Feld ist klickbar
                     // und oeffnet den Edit-Dialog. Stift-Icons sind raus —
                     // direkt auf die Wert-Box tippen.
-                    GlassCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onItemClick() },
-                    ) {
+                    GlassCard(modifier = Modifier.weight(1f).clickable { onItemClick() }) {
                         Column {
                             // Frank-Wunsch 2026-05-17 (Iteration 2): Kleines
                             // Schloss-Icon direkt im Label wenn dieses Feld
@@ -515,7 +532,8 @@ private fun StatsGrid(
                                 if (label in editedLabels) {
                                     Icon(
                                         imageVector = Icons.Outlined.Lock,
-                                        contentDescription = "Manuell editiert — vor Strava-Sync geschützt",
+                                        contentDescription =
+                                            "Manuell editiert — vor Strava-Sync geschützt",
                                         tint = accent,
                                         modifier = Modifier.size(12.dp),
                                     )
@@ -555,7 +573,12 @@ private fun TrainingseffektCard(w: AmazfitWorkoutEntity) {
             )
             Spacer(Modifier.height(8.dp))
             if (a != null) {
-                EffektBar(label = "Aerob", value = a, max = 5.0, accent = CosmosColors.AccentPrimary)
+                EffektBar(
+                    label = "Aerob",
+                    value = a,
+                    max = 5.0,
+                    accent = CosmosColors.AccentPrimary,
+                )
                 Spacer(Modifier.height(6.dp))
             }
             if (b != null) {
@@ -566,11 +589,21 @@ private fun TrainingseffektCard(w: AmazfitWorkoutEntity) {
 }
 
 @Composable
-private fun EffektBar(label: String, value: Double, max: Double, accent: androidx.compose.ui.graphics.Color) {
+private fun EffektBar(
+    label: String,
+    value: Double,
+    max: Double,
+    accent: androidx.compose.ui.graphics.Color,
+) {
     val cosmos = LocalCosmos.current
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary, modifier = Modifier.weight(1f))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = cosmos.textSecondary,
+                modifier = Modifier.weight(1f),
+            )
             Text(
                 "%.1f / %.1f".format(value, max),
                 style = MaterialTheme.typography.labelMedium,
@@ -580,17 +613,17 @@ private fun EffektBar(label: String, value: Double, max: Double, accent: android
         }
         Spacer(Modifier.height(4.dp))
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(cosmos.glassBorder.copy(alpha = 0.25f)),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(cosmos.glassBorder.copy(alpha = 0.25f))
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction = (value / max).coerceIn(0.0, 1.0).toFloat())
-                    .height(8.dp)
-                    .background(accent),
+                modifier =
+                    Modifier.fillMaxWidth(fraction = (value / max).coerceIn(0.0, 1.0).toFloat())
+                        .height(8.dp)
+                        .background(accent)
             )
         }
     }
@@ -599,15 +632,14 @@ private fun EffektBar(label: String, value: Double, max: Double, accent: android
 /* ============================== GPS-TRACK ============================== */
 
 /**
- * Strecken-Karte mit Satelliten-Layer (Frank-Wunsch 2026-05-17). Zeigt die GPS-
- * Punkte als Polyline auf einer Google-Maps-Satelliten-Karte mit Strassen-Namen
- * (HYBRID). Start-Punkt gruen, Ziel-Punkt rot — gleiche Farben wie zuvor bei
- * der Canvas-Vorschau. Kamera fittet automatisch auf die Strecken-Bounds, der
- * Benutzer kann mit Zwei-Finger-Geste zoomen und mit einem Finger verschieben.
+ * Strecken-Karte mit Satelliten-Layer (Frank-Wunsch 2026-05-17). Zeigt die GPS- Punkte als Polyline
+ * auf einer Google-Maps-Satelliten-Karte mit Strassen-Namen (HYBRID). Start-Punkt gruen, Ziel-Punkt
+ * rot — gleiche Farben wie zuvor bei der Canvas-Vorschau. Kamera fittet automatisch auf die
+ * Strecken-Bounds, der Benutzer kann mit Zwei-Finger-Geste zoomen und mit einem Finger verschieben.
  *
- * API-Key kommt aus ~/SK/EntropieReductor/maps-api-key.txt ueber den manifest-
- * Placeholder `mapsApiKey`. Bei leerem Key rendert die Karte einen grauen
- * Hintergrund + Google-Wasserzeichen, die Polyline ist trotzdem sichtbar.
+ * API-Key kommt aus ~/SK/EntropieReductor/maps-api-key.txt ueber den manifest- Placeholder
+ * `mapsApiKey`. Bei leerem Key rendert die Karte einen grauen Hintergrund + Google-Wasserzeichen,
+ * die Polyline ist trotzdem sichtbar.
  */
 @Composable
 private fun GpsTrackCard(
@@ -625,61 +657,54 @@ private fun GpsTrackCard(
                 fontWeight = FontWeight.SemiBold,
             )
             if (!city.isNullOrBlank()) {
-                Text(text = city, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+                Text(
+                    text = city,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
             }
             Spacer(Modifier.height(8.dp))
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.6f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBorder.copy(alpha = 0.08f)),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .aspectRatio(1.6f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(cosmos.glassBorder.copy(alpha = 0.08f))
             ) {
                 if (points.size >= 2) {
                     GpsTrackMap(points = points, fullscreen = false)
                     // Overlay-Box UEBER der Map faengt den Tap — GoogleMap
                     // wuerde sonst alle Touches schlucken.
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { onOpenFullscreen() },
-                    )
+                    Box(modifier = Modifier.matchParentSize().clickable { onOpenFullscreen() })
                 }
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "${points.size} GPS-Punkte · grün = Start, rot = Ziel · Tap auf Karte für Vollbild",
+                text =
+                    "${points.size} GPS-Punkte · grün = Start, rot = Ziel · Tap auf Karte für Vollbild",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
         }
     }
-
 }
 
 /**
- * Vollbild-Anzeige der GPS-Strecke. Wird vom AmazfitTrainingDetailScreen direkt
- * als Geschwister-Composable des Scaffold gerendert (kein Popup/Dialog) — damit
- * ueberlebt die Vollbild-Ansicht jede Configuration-Change.
+ * Vollbild-Anzeige der GPS-Strecke. Wird vom AmazfitTrainingDetailScreen direkt als
+ * Geschwister-Composable des Scaffold gerendert (kein Popup/Dialog) — damit ueberlebt die
+ * Vollbild-Ansicht jede Configuration-Change.
  */
 @Composable
-private fun GpsTrackFullscreen(
-    points: List<Pair<Double, Double>>,
-    onClose: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
-    ) {
+private fun GpsTrackFullscreen(points: List<Pair<Double, Double>>, onClose: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         GpsTrackMap(points = points, fullscreen = true)
         IconButton(
             onClick = onClose,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .size(48.dp)
-                .background(Color.Black.copy(alpha = 0.65f), CircleShape),
+            modifier =
+                Modifier.align(Alignment.TopStart)
+                    .padding(16.dp)
+                    .size(48.dp)
+                    .background(Color.Black.copy(alpha = 0.65f), CircleShape),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Close,
@@ -691,59 +716,64 @@ private fun GpsTrackFullscreen(
 }
 
 /**
- * Eigentliche Karten-Implementierung — getrennt von der Karte ausgelagert damit
- * der GoogleMap-Composable nicht jedes Mal neu komponiert wird wenn andere
- * Felder der Card aktualisiert werden.
+ * Eigentliche Karten-Implementierung — getrennt von der Karte ausgelagert damit der
+ * GoogleMap-Composable nicht jedes Mal neu komponiert wird wenn andere Felder der Card aktualisiert
+ * werden.
  *
- * Konvertiert Lat/Lon-Paare zu LatLng-Objekten, berechnet LatLngBounds und
- * fittet die Kamera einmalig beim ersten Render. Polyline-Farbe = Warning
- * (gleicher Akzent wie zuvor im Canvas). Marker fuer Start und Ziel.
+ * Konvertiert Lat/Lon-Paare zu LatLng-Objekten, berechnet LatLngBounds und fittet die Kamera
+ * einmalig beim ersten Render. Polyline-Farbe = Warning (gleicher Akzent wie zuvor im Canvas).
+ * Marker fuer Start und Ziel.
  */
 @Composable
 private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean) {
-    val latLngs = remember(points) {
-        points.map { com.google.android.gms.maps.model.LatLng(it.first, it.second) }
-    }
-    val bounds = remember(latLngs) {
-        val builder = com.google.android.gms.maps.model.LatLngBounds.builder()
-        latLngs.forEach { builder.include(it) }
-        builder.build()
-    }
+    val latLngs =
+        remember(points) {
+            points.map { com.google.android.gms.maps.model.LatLng(it.first, it.second) }
+        }
+    val bounds =
+        remember(latLngs) {
+            val builder = com.google.android.gms.maps.model.LatLngBounds.builder()
+            latLngs.forEach { builder.include(it) }
+            builder.build()
+        }
     val startLatLng = latLngs.first()
     val endLatLng = latLngs.last()
     // Initial-Kamera grob in der Mitte der Strecke. Der echte Bounds-Fit
     // passiert nach dem ersten Layout-Pass via moveCamera in onMapLoaded.
-    val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
-        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
-            com.google.android.gms.maps.model.LatLng(
-                (bounds.northeast.latitude + bounds.southwest.latitude) / 2.0,
-                (bounds.northeast.longitude + bounds.southwest.longitude) / 2.0,
-            ),
-            13f,
-        )
-    }
+    val cameraPositionState =
+        com.google.maps.android.compose.rememberCameraPositionState {
+            position =
+                com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+                    com.google.android.gms.maps.model.LatLng(
+                        (bounds.northeast.latitude + bounds.southwest.latitude) / 2.0,
+                        (bounds.northeast.longitude + bounds.southwest.longitude) / 2.0,
+                    ),
+                    13f,
+                )
+        }
     val mapProperties = remember {
         com.google.maps.android.compose.MapProperties(
-            mapType = com.google.maps.android.compose.MapType.HYBRID,
+            mapType = com.google.maps.android.compose.MapType.HYBRID
         )
     }
     // Frank-Wunsch 2026-05-17 (Iteration 3): In der eingebetteten Vorschau
     // sind ALLE Gesten deaktiviert — sonst frisst die GoogleMap-Composable
     // alle Touch-Events und der Tap-auf-Card-fuer-Vollbild funktioniert nicht.
     // Im Vollbild sind dafuer alle Steuer-Elemente und alle Gesten aktiv.
-    val uiSettings = remember(fullscreen) {
-        com.google.maps.android.compose.MapUiSettings(
-            zoomControlsEnabled = fullscreen,
-            myLocationButtonEnabled = false,
-            mapToolbarEnabled = fullscreen,
-            compassEnabled = fullscreen,
-            zoomGesturesEnabled = fullscreen,
-            scrollGesturesEnabled = fullscreen,
-            rotationGesturesEnabled = fullscreen,
-            tiltGesturesEnabled = fullscreen,
-            scrollGesturesEnabledDuringRotateOrZoom = fullscreen,
-        )
-    }
+    val uiSettings =
+        remember(fullscreen) {
+            com.google.maps.android.compose.MapUiSettings(
+                zoomControlsEnabled = fullscreen,
+                myLocationButtonEnabled = false,
+                mapToolbarEnabled = fullscreen,
+                compassEnabled = fullscreen,
+                zoomGesturesEnabled = fullscreen,
+                scrollGesturesEnabled = fullscreen,
+                rotationGesturesEnabled = fullscreen,
+                tiltGesturesEnabled = fullscreen,
+                scrollGesturesEnabledDuringRotateOrZoom = fullscreen,
+            )
+        }
     val accent = CosmosColors.Warning
     com.google.maps.android.compose.GoogleMap(
         modifier = Modifier.fillMaxSize(),
@@ -755,29 +785,27 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
             // Map ihre Pixel-Groesse nicht und newLatLngBounds wirft IllegalState.
             runCatching {
                 cameraPositionState.move(
-                    com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(bounds, 64),
+                    com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(bounds, 64)
                 )
             }
         },
     ) {
-        com.google.maps.android.compose.Polyline(
-            points = latLngs,
-            color = accent,
-            width = 10f,
-        )
+        com.google.maps.android.compose.Polyline(points = latLngs, color = accent, width = 10f)
         com.google.maps.android.compose.Marker(
             state = com.google.maps.android.compose.MarkerState(position = startLatLng),
             title = "Start",
-            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
-                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_GREEN,
-            ),
+            icon =
+                com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                    com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_GREEN
+                ),
         )
         com.google.maps.android.compose.Marker(
             state = com.google.maps.android.compose.MarkerState(position = endLatLng),
             title = "Ziel",
-            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
-                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_RED,
-            ),
+            icon =
+                com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                    com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_RED
+                ),
         )
     }
 }
@@ -813,11 +841,7 @@ private fun PulsverlaufCard(hr: List<Int>, onOpenFullscreen: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenFullscreen() },
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().clickable { onOpenFullscreen() }) {
                 ChartWithAxes(
                     accent = CosmosColors.Critical,
                     xCount = hr.size,
@@ -844,8 +868,8 @@ private fun PulsverlaufCard(hr: List<Int>, onOpenFullscreen: () -> Unit) {
 
 /**
  * Linien-Chart mit Achsen-Skalen (Y links, X unten), Hintergrund-Gridlines,
- * Start/Ende-Markierungen. Frank-Wunsch 2026-05-09: Skalen sichtbar fuer
- * Pulsverlauf und Tempo-Verlauf.
+ * Start/Ende-Markierungen. Frank-Wunsch 2026-05-09: Skalen sichtbar fuer Pulsverlauf und
+ * Tempo-Verlauf.
  */
 @Composable
 private fun ChartWithAxes(
@@ -874,13 +898,14 @@ private fun ChartWithAxes(
     // Performance-Audit Loop 2 (2026-05-10): Pfad einmalig allokieren statt
     // pro Frame. Iteration 8: textPaint und tooltipPaint auch outside.
     val seriesPath = remember { Path() }
-    val textPaint = remember(labelArgb) {
-        android.graphics.Paint().apply {
-            color = labelArgb
-            textSize = 24f
-            isAntiAlias = true
+    val textPaint =
+        remember(labelArgb) {
+            android.graphics.Paint().apply {
+                color = labelArgb
+                textSize = 24f
+                isAntiAlias = true
+            }
         }
-    }
     val tooltipTextPaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.WHITE
@@ -896,9 +921,10 @@ private fun ChartWithAxes(
         }
     }
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(cosmos.glassBorder.copy(alpha = 0.10f)),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(cosmos.glassBorder.copy(alpha = 0.10f))
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val padLeft = 56f
@@ -923,9 +949,7 @@ private fun ChartWithAxes(
                     end = Offset(size.width - padRight, y),
                     strokeWidth = 1f,
                 )
-                drawIntoCanvas {
-                    it.nativeCanvas.drawText(yFormat(v), 4f, y + 8f, textPaint)
-                }
+                drawIntoCanvas { it.nativeCanvas.drawText(yFormat(v), 4f, y + 8f, textPaint) }
             }
             // X-Gridlines + Beschriftung
             for (i in 0..xTickCount) {
@@ -938,12 +962,7 @@ private fun ChartWithAxes(
                     strokeWidth = 1f,
                 )
                 drawIntoCanvas {
-                    it.nativeCanvas.drawText(
-                        xLabel(idx),
-                        x - 18f,
-                        size.height - 6f,
-                        textPaint,
-                    )
+                    it.nativeCanvas.drawText(xLabel(idx), x - 18f, size.height - 6f, textPaint)
                 }
             }
             // Datenlinie — wiederverwendeter Pfad (Loop 2 Perf-Fix)
@@ -978,11 +997,7 @@ private fun ChartWithAxes(
                     strokeWidth = 2f,
                 )
                 // Dicker Akzent-Punkt darueber + weisser Kern
-                drawCircle(
-                    color = accent,
-                    radius = 14f,
-                    center = Offset(cx, cy),
-                )
+                drawCircle(color = accent, radius = 14f, center = Offset(cx, cy))
                 drawCircle(
                     color = androidx.compose.ui.graphics.Color.White,
                     radius = 6f,
@@ -1048,8 +1063,8 @@ private fun ChartWithAxes(
  * - Manuelles awaitPointerEvent ohne touchSlop fuer sofortige Reaktion
  * - LTTB-Decimation auf ~400 Punkte bei grossen Datensaetzen
  *
- * Wird als Screen-Level-Composable gerendert (kein Popup/Dialog) — Vollbild
- * ueberlebt damit jede Rotation.
+ * Wird als Screen-Level-Composable gerendert (kein Popup/Dialog) — Vollbild ueberlebt damit jede
+ * Rotation.
  */
 @Composable
 private fun ZoomableChartFullscreen(
@@ -1090,24 +1105,24 @@ private fun ZoomableChartFullscreen(
     val maxOffset = (1f - visibleFraction).coerceAtLeast(0f)
     val clampedOffset = offset.coerceIn(0f, maxOffset)
     val startIdx = (clampedOffset * (totalSize - 1)).toInt().coerceIn(0, totalSize - 2)
-    val endIdx = ((clampedOffset + visibleFraction) * (totalSize - 1))
-        .toInt()
-        .coerceIn(startIdx + 1, totalSize - 1)
+    val endIdx =
+        ((clampedOffset + visibleFraction) * (totalSize - 1))
+            .toInt()
+            .coerceIn(startIdx + 1, totalSize - 1)
 
     // Decimation: Bei mehr als 500 sichtbaren Punkten reduzieren wir auf ~400
     // via einfaches Sub-Sampling (jeder N-te). LTTB waere visuell schoener, aber
     // bei Pinch-Zoom-Performance ist Speed wichtiger als Visual-Perfektion.
-    val rawVisible = remember(values, startIdx, endIdx) {
-        values.subList(startIdx, endIdx + 1)
-    }
-    val visibleValues = remember(rawVisible) {
-        if (rawVisible.size <= 500) {
-            rawVisible.toList()
-        } else {
-            val step = rawVisible.size / 400
-            rawVisible.filterIndexed { i, _ -> i % step == 0 }
+    val rawVisible = remember(values, startIdx, endIdx) { values.subList(startIdx, endIdx + 1) }
+    val visibleValues =
+        remember(rawVisible) {
+            if (rawVisible.size <= 500) {
+                rawVisible.toList()
+            } else {
+                val step = rawVisible.size / 400
+                rawVisible.filterIndexed { i, _ -> i % step == 0 }
+            }
         }
-    }
     val visibleMin = visibleValues.min()
     val visibleMax = visibleValues.max()
     val rawSpan = (visibleMax - visibleMin).coerceAtLeast(0.0)
@@ -1121,188 +1136,204 @@ private fun ZoomableChartFullscreen(
     val decimationStep = if (rawVisible.size > 500) rawVisible.size / 400 else 1
     val xLabelWrapper: (Int) -> String = { i -> xLabel(startIdx + i * decimationStep) }
 
-    val crosshairLabel: String? = crosshairIdxInVisible?.takeIf { it in visibleValues.indices }?.let { idx ->
-        crosshairTooltip(visibleValues[idx], xLabelWrapper(idx))
-    }
+    val crosshairLabel: String? =
+        crosshairIdxInVisible
+            ?.takeIf { it in visibleValues.indices }
+            ?.let { idx -> crosshairTooltip(visibleValues[idx], xLabelWrapper(idx)) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                // GOOGLE-MAPS-SMOOTHNESS-HEBEL (Iteration 8):
-                // Manuelles awaitEachGesture mit Live-Pinch via graphicsLayer.
-                // Waehrend zwei Finger drauf sind: kein Re-Compute, nur
-                // GPU-Transform der gesamten Box (Bitmap-Skalierung wie Google
-                // Maps Tiles). Bei Pinch-End: konvertieren in echtes scale/offset.
-                .pointerInput(visibleValues.size, totalSize) {
-                    awaitEachGesture {
-                        val padLeftPx = 56f
-                        val padRightPx = 12f
-                        fun pointerXToIdx(xPx: Float): Int {
-                            val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
-                            val frac = ((xPx - padLeftPx) / w).coerceIn(0f, 1f)
-                            return (frac * (visibleValues.size - 1).coerceAtLeast(1))
-                                .toInt()
-                                .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
-                        }
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(12.dp)
+                    // GOOGLE-MAPS-SMOOTHNESS-HEBEL (Iteration 8):
+                    // Manuelles awaitEachGesture mit Live-Pinch via graphicsLayer.
+                    // Waehrend zwei Finger drauf sind: kein Re-Compute, nur
+                    // GPU-Transform der gesamten Box (Bitmap-Skalierung wie Google
+                    // Maps Tiles). Bei Pinch-End: konvertieren in echtes scale/offset.
+                    .pointerInput(visibleValues.size, totalSize) {
+                        awaitEachGesture {
+                            val padLeftPx = 56f
+                            val padRightPx = 12f
+                            fun pointerXToIdx(xPx: Float): Int {
+                                val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
+                                val frac = ((xPx - padLeftPx) / w).coerceIn(0f, 1f)
+                                return (frac * (visibleValues.size - 1).coerceAtLeast(1))
+                                    .toInt()
+                                    .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                            }
 
-                        val firstDown = awaitFirstDown(requireUnconsumed = false)
-                        crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
+                            val firstDown = awaitFirstDown(requireUnconsumed = false)
+                            crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
 
-                        // Direction-Lock fuer Single-Finger:
-                        // erste signifikante Bewegung entscheidet ob Crosshair
-                        // (X-dominant) oder Y-Pan (Y-dominant) fuer die ganze Geste.
-                        var singleFingerMode: String? = null // "x" oder "y"
-                        var movementAccumX = 0f
-                        var movementAccumY = 0f
+                            // Direction-Lock fuer Single-Finger:
+                            // erste signifikante Bewegung entscheidet ob Crosshair
+                            // (X-dominant) oder Y-Pan (Y-dominant) fuer die ganze Geste.
+                            var singleFingerMode: String? = null // "x" oder "y"
+                            var movementAccumX = 0f
+                            var movementAccumY = 0f
 
-                        val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                        val canvasH = size.height.toFloat().coerceAtLeast(1f)
+                            val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                            val canvasH = size.height.toFloat().coerceAtLeast(1f)
 
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val pressed = event.changes.filter { it.pressed }
-                            if (pressed.isEmpty()) break
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.filter { it.pressed }
+                                if (pressed.isEmpty()) break
 
-                            if (pressed.size >= 2) {
-                                // Pinch-Modus — LIVE-Modus via graphicsLayer.
-                                // KEIN scale/offset update hier, sondern nur
-                                // pinchScale/pinchPanX (= GPU-Transform).
-                                val p0 = pressed[0].position
-                                val p1 = pressed[1].position
-                                val newDist = (p0 - p1).getDistance().coerceAtLeast(1f)
-                                val newCentroid = androidx.compose.ui.geometry.Offset(
-                                    (p0.x + p1.x) / 2f,
-                                    (p0.y + p1.y) / 2f,
-                                )
+                                if (pressed.size >= 2) {
+                                    // Pinch-Modus — LIVE-Modus via graphicsLayer.
+                                    // KEIN scale/offset update hier, sondern nur
+                                    // pinchScale/pinchPanX (= GPU-Transform).
+                                    val p0 = pressed[0].position
+                                    val p1 = pressed[1].position
+                                    val newDist = (p0 - p1).getDistance().coerceAtLeast(1f)
+                                    val newCentroid =
+                                        androidx.compose.ui.geometry.Offset(
+                                            (p0.x + p1.x) / 2f,
+                                            (p0.y + p1.y) / 2f,
+                                        )
 
-                                if (!isPinching) {
-                                    // Pinch-Start: initialisiere Live-Transform
-                                    isPinching = true
-                                    crosshairIdxInVisible = null
+                                    if (!isPinching) {
+                                        // Pinch-Start: initialisiere Live-Transform
+                                        isPinching = true
+                                        crosshairIdxInVisible = null
+                                        pinchScale = 1f
+                                        pinchPanX = 0f
+                                        pinchPanY = 0f
+                                        pinchOriginX = (newCentroid.x / canvasW).coerceIn(0f, 1f)
+                                        pinchOriginY = (newCentroid.y / canvasH).coerceIn(0f, 1f)
+                                        pressed[0].consume()
+                                        pressed[1].consume()
+                                    } else {
+                                        // Live-Pinch — graphicsLayer-State updaten
+                                        val change0 = pressed[0].positionChange()
+                                        val change1 = pressed[1].positionChange()
+                                        val avgPanX = (change0.x + change1.x) / 2f
+                                        val avgPanY = (change0.y + change1.y) / 2f
+                                        // Distanz-Aenderung -> Zoom-Faktor
+                                        val prevP0 = pressed[0].previousPosition
+                                        val prevP1 = pressed[1].previousPosition
+                                        val prevDist =
+                                            (prevP0 - prevP1).getDistance().coerceAtLeast(1f)
+                                        val zoomDelta = newDist / prevDist
+                                        androidx.compose.runtime.snapshots.Snapshot
+                                            .withMutableSnapshot {
+                                                // Sehr weit gefasste Range damit
+                                                // waehrend Live-Pinch nichts clamped —
+                                                // erst beim Commit (Pinch-End) wird
+                                                // auf 1..200 begrenzt.
+                                                pinchScale =
+                                                    (pinchScale * zoomDelta).coerceIn(0.001f, 1000f)
+                                                pinchPanX += avgPanX
+                                                pinchPanY += avgPanY
+                                            }
+                                        pressed.forEach { it.consume() }
+                                    }
+                                } else if (pressed.size == 1 && !isPinching) {
+                                    // Single-Finger mit Direction-Lock
+                                    val change = pressed[0]
+                                    val delta = change.positionChange()
+                                    movementAccumX += kotlin.math.abs(delta.x)
+                                    movementAccumY += kotlin.math.abs(delta.y)
+
+                                    if (
+                                        singleFingerMode == null &&
+                                            (movementAccumX + movementAccumY) > 8f
+                                    ) {
+                                        // Genug Bewegung — Modus festlegen
+                                        singleFingerMode =
+                                            if (
+                                                movementAccumY > movementAccumX * 1.5f &&
+                                                    scale > 1.05f
+                                            )
+                                                "y"
+                                            else "x"
+                                    }
+
+                                    when (singleFingerMode) {
+                                        "y" -> {
+                                            // Frank-Wunsch 2026-05-17 Iteration 9:
+                                            // Inhalt folgt dem Finger (Strava-Pattern):
+                                            // Finger nach oben -> Graph wandert nach oben.
+                                            //
+                                            // Frank-Wunsch 2026-05-18: Bei invertY=true
+                                            // (Tempo-Chart: niedrigere Werte oben) muss
+                                            // das Vorzeichen umgedreht werden, sonst
+                                            // wandert der Inhalt entgegengesetzt zum
+                                            // Finger. Pulsverlauf (invertY=false) blieb
+                                            // korrekt, Tempoverlauf war verkehrt herum.
+                                            val rawDelta = delta.y / canvasH * 1.0f
+                                            val yShiftDelta = if (invertY) -rawDelta else rawDelta
+                                            androidx.compose.runtime.snapshots.Snapshot
+                                                .withMutableSnapshot {
+                                                    yShift =
+                                                        (yShift + yShiftDelta).coerceIn(-2f, 2f)
+                                                }
+                                        }
+                                        "x",
+                                        null -> {
+                                            crosshairIdxInVisible = pointerXToIdx(change.position.x)
+                                        }
+                                    }
+                                    change.consume()
+                                }
+                            }
+
+                            // ALLE Finger losgelassen — Pinch committen.
+                            if (isPinching) {
+                                // Konvertiere visualScale/pinchPanX in real scale/offset.
+                                // Mathematik: der Datenpunkt unter dem Pivot soll
+                                // an gleicher canvas-Position bleiben.
+                                val pivotFracCanvas = pinchOriginX
+                                // Aktueller visible-Anteil und visible-Start:
+                                val curVisible = (1f / scale).coerceIn(2f / totalSize.toFloat(), 1f)
+                                val curStart =
+                                    offset.coerceIn(0f, (1f - curVisible).coerceAtLeast(0f))
+                                val dataPivotFrac = curStart + pivotFracCanvas * curVisible
+
+                                val newScale = (scale * pinchScale).coerceIn(1f, 200f)
+                                val newVisible =
+                                    (1f / newScale).coerceIn(
+                                        2f / totalSize.coerceAtLeast(2).toFloat(),
+                                        1f,
+                                    )
+                                val newStartFromZoom = dataPivotFrac - pivotFracCanvas * newVisible
+                                val panFrac = -pinchPanX / canvasW * newVisible
+                                val newOffset =
+                                    (newStartFromZoom + panFrac).coerceIn(
+                                        0f,
+                                        (1f - newVisible).coerceAtLeast(0f),
+                                    )
+                                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                    scale = newScale
+                                    offset = newOffset
                                     pinchScale = 1f
                                     pinchPanX = 0f
                                     pinchPanY = 0f
-                                    pinchOriginX = (newCentroid.x / canvasW).coerceIn(0f, 1f)
-                                    pinchOriginY = (newCentroid.y / canvasH).coerceIn(0f, 1f)
-                                    pressed[0].consume(); pressed[1].consume()
-                                } else {
-                                    // Live-Pinch — graphicsLayer-State updaten
-                                    val change0 = pressed[0].positionChange()
-                                    val change1 = pressed[1].positionChange()
-                                    val avgPanX = (change0.x + change1.x) / 2f
-                                    val avgPanY = (change0.y + change1.y) / 2f
-                                    // Distanz-Aenderung -> Zoom-Faktor
-                                    val prevP0 = pressed[0].previousPosition
-                                    val prevP1 = pressed[1].previousPosition
-                                    val prevDist = (prevP0 - prevP1).getDistance().coerceAtLeast(1f)
-                                    val zoomDelta = newDist / prevDist
-                                    androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                        // Sehr weit gefasste Range damit
-                                        // waehrend Live-Pinch nichts clamped —
-                                        // erst beim Commit (Pinch-End) wird
-                                        // auf 1..200 begrenzt.
-                                        pinchScale = (pinchScale * zoomDelta).coerceIn(0.001f, 1000f)
-                                        pinchPanX += avgPanX
-                                        pinchPanY += avgPanY
-                                    }
-                                    pressed.forEach { it.consume() }
+                                    isPinching = false
                                 }
-                            } else if (pressed.size == 1 && !isPinching) {
-                                // Single-Finger mit Direction-Lock
-                                val change = pressed[0]
-                                val delta = change.positionChange()
-                                movementAccumX += kotlin.math.abs(delta.x)
-                                movementAccumY += kotlin.math.abs(delta.y)
-
-                                if (singleFingerMode == null && (movementAccumX + movementAccumY) > 8f) {
-                                    // Genug Bewegung — Modus festlegen
-                                    singleFingerMode = if (movementAccumY > movementAccumX * 1.5f && scale > 1.05f) "y" else "x"
-                                }
-
-                                when (singleFingerMode) {
-                                    "y" -> {
-                                        // Frank-Wunsch 2026-05-17 Iteration 9:
-                                        // Inhalt folgt dem Finger (Strava-Pattern):
-                                        // Finger nach oben -> Graph wandert nach oben.
-                                        //
-                                        // Frank-Wunsch 2026-05-18: Bei invertY=true
-                                        // (Tempo-Chart: niedrigere Werte oben) muss
-                                        // das Vorzeichen umgedreht werden, sonst
-                                        // wandert der Inhalt entgegengesetzt zum
-                                        // Finger. Pulsverlauf (invertY=false) blieb
-                                        // korrekt, Tempoverlauf war verkehrt herum.
-                                        val rawDelta = delta.y / canvasH * 1.0f
-                                        val yShiftDelta = if (invertY) -rawDelta else rawDelta
-                                        androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                            yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
-                                        }
-                                    }
-                                    "x", null -> {
-                                        crosshairIdxInVisible = pointerXToIdx(change.position.x)
-                                    }
-                                }
-                                change.consume()
-                            }
-                        }
-
-                        // ALLE Finger losgelassen — Pinch committen.
-                        if (isPinching) {
-                            // Konvertiere visualScale/pinchPanX in real scale/offset.
-                            // Mathematik: der Datenpunkt unter dem Pivot soll
-                            // an gleicher canvas-Position bleiben.
-                            val pivotFracCanvas = pinchOriginX
-                            // Aktueller visible-Anteil und visible-Start:
-                            val curVisible = (1f / scale).coerceIn(2f / totalSize.toFloat(), 1f)
-                            val curStart = offset.coerceIn(0f, (1f - curVisible).coerceAtLeast(0f))
-                            val dataPivotFrac = curStart + pivotFracCanvas * curVisible
-
-                            val newScale = (scale * pinchScale).coerceIn(1f, 200f)
-                            val newVisible = (1f / newScale).coerceIn(
-                                2f / totalSize.coerceAtLeast(2).toFloat(),
-                                1f,
-                            )
-                            val newStartFromZoom = dataPivotFrac - pivotFracCanvas * newVisible
-                            val panFrac = -pinchPanX / canvasW * newVisible
-                            val newOffset = (newStartFromZoom + panFrac).coerceIn(
-                                0f,
-                                (1f - newVisible).coerceAtLeast(0f),
-                            )
-                            androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                scale = newScale
-                                offset = newOffset
-                                pinchScale = 1f
-                                pinchPanX = 0f
-                                pinchPanY = 0f
-                                isPinching = false
                             }
                         }
                     }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onDoubleTap = {
-                            androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                scale = 1f
-                                offset = 0f
-                                yShift = 0f
-                                crosshairIdxInVisible = null
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                    scale = 1f
+                                    offset = 0f
+                                    yShift = 0f
+                                    crosshairIdxInVisible = null
+                                }
                             }
-                        },
-                    )
-                },
+                        )
+                    }
         ) {
             // GPU-Transform-Wrapper: waehrend Pinch wird die gesamte Chart-Box
             // uniform (x+y) skaliert wie Google Maps eine Bitmap. KEIN Re-Compute.
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
+                modifier =
+                    Modifier.fillMaxSize().graphicsLayer {
                         if (isPinching) {
                             scaleX = pinchScale
                             scaleY = pinchScale
@@ -1310,7 +1341,7 @@ private fun ZoomableChartFullscreen(
                             translationY = pinchPanY
                             transformOrigin = TransformOrigin(pinchOriginX, pinchOriginY)
                         }
-                    },
+                    }
             ) {
                 ChartWithAxes(
                     accent = accent,
@@ -1331,9 +1362,7 @@ private fun ZoomableChartFullscreen(
             }
         }
         Row(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (scale > 1.01f || clampedOffset > 0.001f || kotlin.math.abs(yShift) > 0.01f) {
@@ -1346,10 +1375,10 @@ private fun ZoomableChartFullscreen(
                             crosshairIdxInVisible = null
                         }
                     },
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(44.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                    modifier =
+                        Modifier.padding(end = 8.dp)
+                            .size(44.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Refresh,
@@ -1360,9 +1389,8 @@ private fun ZoomableChartFullscreen(
             }
             IconButton(
                 onClick = onClose,
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                modifier =
+                    Modifier.size(44.dp).background(Color.Black.copy(alpha = 0.55f), CircleShape),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
@@ -1377,9 +1405,8 @@ private fun ZoomableChartFullscreen(
 /* ============================== TEMPO-VERLAUF ============================== */
 
 /**
- * Tempo-Verlaufs-Chart als Linie. Frank-Wunsch 2026-05-09: Tempo soll auch
- * grafisch dargestellt werden, nicht nur als Tabelle.
- * Y-Achse INVERTIERT — niedrigere sec/km (= schneller) ist OBEN.
+ * Tempo-Verlaufs-Chart als Linie. Frank-Wunsch 2026-05-09: Tempo soll auch grafisch dargestellt
+ * werden, nicht nur als Tabelle. Y-Achse INVERTIERT — niedrigere sec/km (= schneller) ist OBEN.
  */
 @Composable
 private fun TempoVerlaufCard(
@@ -1433,11 +1460,7 @@ private fun TempoVerlaufCard(
             }
             Spacer(Modifier.height(8.dp))
             // Y invertiert: schneller (kleiner sec/km) ist OBEN auf der Y-Achse.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenFullscreen() },
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().clickable { onOpenFullscreen() }) {
                 ChartWithAxes(
                     accent = accent,
                     xCount = secPerKm.size,
@@ -1454,7 +1477,8 @@ private fun TempoVerlaufCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel · Tap auf Chart für Vollbild",
+                text =
+                    "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel · Tap auf Chart für Vollbild",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
@@ -1492,28 +1516,46 @@ private fun SplitsCard(splits: List<Double>) {
             val maxPace = secPerKm.max()
             val minPace = secPerKm.min()
             secPerKm.forEachIndexed { idx, sec ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                ) {
                     Text(
                         text = "Km ${idx + 1}",
                         style = MaterialTheme.typography.bodySmall,
                         color = cosmos.textSecondary,
                         modifier = Modifier.weight(0.18f),
                     )
-                    Box(modifier = Modifier.weight(0.55f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(cosmos.glassBorder.copy(alpha = 0.18f))) {
+                    Box(
+                        modifier =
+                            Modifier.weight(0.55f)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(cosmos.glassBorder.copy(alpha = 0.18f))
+                    ) {
                         // Frank-Wunsch 2026-05-09 (zweite Iteration): laengster Bar
                         // = 100% (langsamster Km), andere proportional davon.
                         // Beispiel: maxPace 9:25 (565 sec/km) = 100% Bar,
                         // 7:11 (431 sec/km) = 431/565 = 76% Bar.
                         val frac = (sec / maxPace).toFloat().coerceIn(0.0f, 1.0f)
                         // Farbverlauf relativ: gruen (schnellster) → rot (langsamster)
-                        val colorFrac = if (maxPace > minPace) ((sec - minPace) / (maxPace - minPace)).coerceIn(0.0, 1.0).toFloat() else 0.5f
-                        val barColor = lerpColor(
-                            androidx.compose.ui.graphics.Color(0xFF4CAF50),
-                            androidx.compose.ui.graphics.Color(0xFFFF9800),
-                            androidx.compose.ui.graphics.Color(0xFFEF5350),
-                            colorFrac,
+                        val colorFrac =
+                            if (maxPace > minPace)
+                                ((sec - minPace) / (maxPace - minPace)).coerceIn(0.0, 1.0).toFloat()
+                            else 0.5f
+                        val barColor =
+                            lerpColor(
+                                androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                                androidx.compose.ui.graphics.Color(0xFFFF9800),
+                                androidx.compose.ui.graphics.Color(0xFFEF5350),
+                                colorFrac,
+                            )
+                        Box(
+                            modifier =
+                                Modifier.fillMaxWidth(fraction = frac)
+                                    .height(10.dp)
+                                    .background(barColor)
                         )
-                        Box(modifier = Modifier.fillMaxWidth(fraction = frac).height(10.dp).background(barColor))
                     }
                     Text(
                         text = formatPace(sec),
@@ -1579,7 +1621,10 @@ private fun SchwimmCard(w: AmazfitWorkoutEntity) {
             Spacer(Modifier.height(6.dp))
             ValueRow("SWOLF", w.swolf?.takeIf { it > 0 }?.toString())
             ValueRow("Bahnen", w.poolLaps?.takeIf { it > 0 }?.toString())
-            ValueRow("Pool-Länge", w.poolLengthMeters?.takeIf { it > 0 }?.let { "%.0f m".format(it) })
+            ValueRow(
+                "Pool-Länge",
+                w.poolLengthMeters?.takeIf { it > 0 }?.let { "%.0f m".format(it) },
+            )
         }
     }
 }
@@ -1593,7 +1638,12 @@ private fun ValueRow(label: String, value: String?) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
-        Text(value, style = MaterialTheme.typography.bodySmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -1608,9 +1658,9 @@ private fun ValueRow(label: String, value: String?) {
  */
 
 /**
- * Parst Pulsverlauf. Format: "0,85;1,1;1,-1;1,2;..." wo erste Zahl ein
- * time-delta ist und zweite ein hr-delta. Erster hr-Wert ist absolut, alle
- * weiteren sind Deltas die akkumuliert werden muessen.
+ * Parst Pulsverlauf. Format: "0,85;1,1;1,-1;1,2;..." wo erste Zahl ein time-delta ist und zweite
+ * ein hr-delta. Erster hr-Wert ist absolut, alle weiteren sind Deltas die akkumuliert werden
+ * muessen.
  */
 private fun parsePipeIntList(s: String?): List<Int> {
     if (s.isNullOrBlank()) return emptyList()
@@ -1638,43 +1688,50 @@ private fun parsePipeIntList(s: String?): List<Int> {
 }
 
 /**
- * Frank-Wunsch 2026-05-16: Parst JSON-Array-Streams `[[ts, value], ...]`.
- * Liefert eine Liste der Values als Int. Defensiv: Plausibilitaets-Range.
+ * Frank-Wunsch 2026-05-16: Parst JSON-Array-Streams `[[ts, value], ...]`. Liefert eine Liste der
+ * Values als Int. Defensiv: Plausibilitaets-Range.
  */
-private fun parseJsonTimestampValueAsIntList(json: String, valueIndex: Int, minVal: Int, maxVal: Int): List<Int> {
+private fun parseJsonTimestampValueAsIntList(
+    json: String,
+    valueIndex: Int,
+    minVal: Int,
+    maxVal: Int,
+): List<Int> {
     val out = mutableListOf<Int>()
     runCatching {
-        val arr = Json.parseToJsonElement(json) as? JsonArray
-            ?: return emptyList()
+        val arr = Json.parseToJsonElement(json) as? JsonArray ?: return emptyList()
         for (item in arr) {
             val pair = item as? JsonArray ?: continue
-            val v = pair.getOrNull(valueIndex)?.let { el ->
-                runCatching {
-                    (el as? JsonPrimitive)?.intOrNull
-                        ?: (el as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt()
-                }.getOrNull()
-            } ?: continue
+            val v =
+                pair.getOrNull(valueIndex)?.let { el ->
+                    runCatching {
+                            (el as? JsonPrimitive)?.intOrNull
+                                ?: (el as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt()
+                        }
+                        .getOrNull()
+                } ?: continue
             if (v in minVal..maxVal) out.add(v)
         }
     }
     return out
 }
 
-/**
- * Wie oben, aber liefert Double-Werte (fuer Pace).
- */
-private fun parseJsonTimestampValueAsDoubleList(json: String, valueIndex: Int, minVal: Double, maxVal: Double): List<Double> {
+/** Wie oben, aber liefert Double-Werte (fuer Pace). */
+private fun parseJsonTimestampValueAsDoubleList(
+    json: String,
+    valueIndex: Int,
+    minVal: Double,
+    maxVal: Double,
+): List<Double> {
     val out = mutableListOf<Double>()
     runCatching {
-        val arr = Json.parseToJsonElement(json) as? JsonArray
-            ?: return emptyList()
+        val arr = Json.parseToJsonElement(json) as? JsonArray ?: return emptyList()
         for (item in arr) {
             val pair = item as? JsonArray ?: continue
-            val v = pair.getOrNull(valueIndex)?.let { el ->
-                runCatching {
-                    (el as? JsonPrimitive)?.doubleOrNull
-                }.getOrNull()
-            } ?: continue
+            val v =
+                pair.getOrNull(valueIndex)?.let { el ->
+                    runCatching { (el as? JsonPrimitive)?.doubleOrNull }.getOrNull()
+                } ?: continue
             if (v in minVal..maxVal) out.add(v)
         }
     }
@@ -1682,11 +1739,10 @@ private fun parseJsonTimestampValueAsDoubleList(json: String, valueIndex: Int, m
 }
 
 /**
- * Parst den hochaufgeloesten Pace-Stream aus dem Detail-Endpoint
- * `data.pace`. Format vermutlich "time_delta,pace_value;..." mit Werten in
- * Sekunden pro Meter (gleiche Einheit wie avg_pace) — konvertiert auf
- * Sekunden pro Kilometer durch ×1000. Defensiv: falls Werte gross genug
- * sind (>50), schon sec/km, kein zusaetzliches Skalieren.
+ * Parst den hochaufgeloesten Pace-Stream aus dem Detail-Endpoint `data.pace`. Format vermutlich
+ * "time_delta,pace_value;..." mit Werten in Sekunden pro Meter (gleiche Einheit wie avg_pace) —
+ * konvertiert auf Sekunden pro Kilometer durch ×1000. Defensiv: falls Werte gross genug sind (>50),
+ * schon sec/km, kein zusaetzliches Skalieren.
  */
 private fun parsePaceStream(s: String?): List<Double> {
     if (s.isNullOrBlank()) return emptyList()
@@ -1694,7 +1750,12 @@ private fun parsePaceStream(s: String?): List<Double> {
     // Frank-Wunsch 2026-05-16: Polar-Bulk-Import liefert Pace als JSON-Array
     // `[[ts, paceSecPerKm], ...]` direkt — bereits in sec/km, kein Skalieren noetig.
     if (trimmed.startsWith("[")) {
-        return parseJsonTimestampValueAsDoubleList(trimmed, valueIndex = 1, minVal = 150.0, maxVal = 1500.0)
+        return parseJsonTimestampValueAsDoubleList(
+            trimmed,
+            valueIndex = 1,
+            minVal = 150.0,
+            maxVal = 1500.0,
+        )
     }
     val out = mutableListOf<Double>()
     for (sample in s.split(";")) {
@@ -1713,11 +1774,9 @@ private fun parsePaceStream(s: String?): List<Double> {
 }
 
 /**
- * Parst kilo_pace / lap String. Format ist je nach Zepp-Version:
- *   "503.5;504.2;505.1"           — nur Pace-Werte
- *   "1000,503.5;2000,504.2"        — Distanz,Pace pro Kilometer-Marker
- *   "503.5|504.2"                  — alte Pipe-Variante
- * Wir nehmen pro Sample die LETZTE Zahl (= Pace bei Distanz-Marker-Format).
+ * Parst kilo_pace / lap String. Format ist je nach Zepp-Version: "503.5;504.2;505.1" — nur
+ * Pace-Werte "1000,503.5;2000,504.2" — Distanz,Pace pro Kilometer-Marker "503.5|504.2" — alte
+ * Pipe-Variante Wir nehmen pro Sample die LETZTE Zahl (= Pace bei Distanz-Marker-Format).
  */
 private fun parsePipeDoubleList(s: String?): List<Double> {
     if (s.isNullOrBlank()) return emptyList()
@@ -1733,9 +1792,8 @@ private fun parsePipeDoubleList(s: String?): List<Double> {
 
 /**
  * Parst GPS-Track. Format aus rolandsz/exporters/base_exporter.py:
- *   "latInt,lonInt;latInt,lonInt;..." mit Semikolon zwischen Punkten
- *   und Komma zwischen Lat und Lon je Punkt.
- * Werte sind DELTA-encoded (erster Punkt absolut), Skalierung ÷ 100_000_000.
+ * "latInt,lonInt;latInt,lonInt;..." mit Semikolon zwischen Punkten und Komma zwischen Lat und Lon
+ * je Punkt. Werte sind DELTA-encoded (erster Punkt absolut), Skalierung ÷ 100_000_000.
  */
 private fun parseGpsPoints(s: String?): List<Pair<Double, Double>> {
     if (s.isNullOrBlank()) return emptyList()
@@ -1746,8 +1804,7 @@ private fun parseGpsPoints(s: String?): List<Pair<Double, Double>> {
     if (trimmed.startsWith("[")) {
         val out = mutableListOf<Pair<Double, Double>>()
         runCatching {
-            val arr = Json.parseToJsonElement(trimmed)
-                as? JsonArray ?: return@runCatching
+            val arr = Json.parseToJsonElement(trimmed) as? JsonArray ?: return@runCatching
             for (item in arr) {
                 val pt = item as? JsonArray ?: continue
                 val lat = (pt.getOrNull(0) as? JsonPrimitive)?.doubleOrNull ?: continue
@@ -1789,47 +1846,42 @@ private fun parseGpsPoints(s: String?): List<Pair<Double, Double>> {
 private typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
 
 /**
- * Schaetzt VO2Max aus den ECHTEN Workout-Daten — kombiniert ACSM-Lauf-Formel
- * mit HR-Reserve nach Karvonen. Frank-Wunsch 2026-05-09: pro Lauf einen
- * eigenen Wert, nicht eine Konstante.
+ * Schaetzt VO2Max aus den ECHTEN Workout-Daten — kombiniert ACSM-Lauf-Formel mit HR-Reserve nach
+ * Karvonen. Frank-Wunsch 2026-05-09: pro Lauf einen eigenen Wert, nicht eine Konstante.
  *
- * Schritt 1: VO2 bei diesem Workout (ml/kg/min) aus Lauf-Geschwindigkeit:
- *   VO2_workout = 0.2 × Speed (m/min) + 3.5    [ACSM-Formel fuer Laufen]
+ * Schritt 1: VO2 bei diesem Workout (ml/kg/min) aus Lauf-Geschwindigkeit: VO2_workout = 0.2 × Speed
+ * (m/min) + 3.5 [ACSM-Formel fuer Laufen]
  *
- * Schritt 2: HR-Reserve-Anteil — wieviel % der HR-Reserve nutzt Frank waehrend
- * dieses Workouts? Wenn er bei moderater Belastung gleichen Speed schafft,
- * ist seine VO2Max hoeher als wenn er voll ausbelastet sein muesste:
- *   HR_reserve_anteil = (avg_HR − rest_HR) / (max_HR − rest_HR)
+ * Schritt 2: HR-Reserve-Anteil — wieviel % der HR-Reserve nutzt Frank waehrend dieses Workouts?
+ * Wenn er bei moderater Belastung gleichen Speed schafft, ist seine VO2Max hoeher als wenn er voll
+ * ausbelastet sein muesste: HR_reserve_anteil = (avg_HR − rest_HR) / (max_HR − rest_HR)
  *
- * Schritt 3: Hochrechnung auf Maximum:
- *   VO2Max ≈ VO2_workout / HR_reserve_anteil
+ * Schritt 3: Hochrechnung auf Maximum: VO2Max ≈ VO2_workout / HR_reserve_anteil
  *
- * HR_max = 180 (Frank's persoenlicher Maximalpuls — Frank-Info 2026-05-09)
- * HR_rest = 65 (Default — sollte spaeter aus AmazfitDaily kommen)
+ * HR_max = 180 (Frank's persoenlicher Maximalpuls — Frank-Info 2026-05-09) HR_rest = 65 (Default —
+ * sollte spaeter aus AmazfitDaily kommen)
  *
- * Verifikation Frank's Trailrunning 7.16km/3612s: speed=119 m/min,
- * VO2_workout=27.3, avg_HR=146, HR_reserve=0.70, VO2Max ≈ 39 — passt zu
- * Zepp-App-Anzeige 41 (kleine Abweichung wegen Hoehenmeter beim Trail).
+ * Verifikation Frank's Trailrunning 7.16km/3612s: speed=119 m/min, VO2_workout=27.3, avg_HR=146,
+ * HR_reserve=0.70, VO2Max ≈ 39 — passt zu Zepp-App-Anzeige 41 (kleine Abweichung wegen Hoehenmeter
+ * beim Trail).
  */
 /**
  * Schaetzt VO2Max nach der ACSM-Formel mit HR-Reserve-Hochrechnung.
  *
- * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop-
- * Snapshot fuer den Workout-Tag), nicht mehr hardcoded. Wenn fuer den
- * Workout-Tag KEIN Ruhepuls-Wert vorliegt (z.B. Polar-Bulk-Trainings vor der
- * Whoop-Anschaffung), liefert die Funktion "—" — KEIN Fake mit 65 bpm.
+ * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop- Snapshot fuer den
+ * Workout-Tag), nicht mehr hardcoded. Wenn fuer den Workout-Tag KEIN Ruhepuls-Wert vorliegt (z.B.
+ * Polar-Bulk-Trainings vor der Whoop-Anschaffung), liefert die Funktion "—" — KEIN Fake mit 65 bpm.
  *
- * Schritt 1 — VO2 bei diesem Workout (ml/kg/min):
- *   VO2_workout = 0.2 × Speed (m/min) + 3.5    [ACSM-Lauf-Formel]
+ * Schritt 1 — VO2 bei diesem Workout (ml/kg/min): VO2_workout = 0.2 × Speed (m/min) + 3.5
+ * [ACSM-Lauf-Formel]
  *
- * Schritt 2 — HR-Reserve-Anteil (Karvonen):
- *   HR_reserve_anteil = (avg_HR − Tages-Ruhepuls) / (max_HR − Tages-Ruhepuls)
+ * Schritt 2 — HR-Reserve-Anteil (Karvonen): HR_reserve_anteil = (avg_HR − Tages-Ruhepuls) / (max_HR
+ * − Tages-Ruhepuls)
  *
- * Schritt 3 — Hochrechnung auf Maximum:
- *   VO2Max ≈ VO2_workout / HR_reserve_anteil
+ * Schritt 3 — Hochrechnung auf Maximum: VO2Max ≈ VO2_workout / HR_reserve_anteil
  *
- * Korrektur +2 (Frank-Empirie 2026-05-09): empirischer Offset damit die
- * absoluten Werte zu Franks Zepp-App passen.
+ * Korrektur +2 (Frank-Empirie 2026-05-09): empirischer Offset damit die absoluten Werte zu Franks
+ * Zepp-App passen.
  *
  * HR_max = 180 (Frank's persoenlicher Maximalpuls)
  */
@@ -1861,25 +1913,23 @@ private fun estimateVo2Max(
 }
 
 /** VO2Max mit deutschem Komma-Format — Frank-Wunsch 2026-05-09: "40,8" statt "41". */
-private fun formatVo2(v: Double): String =
-    "%.1f".format(v).replace(".", ",")
+private fun formatVo2(v: Double): String = "%.1f".format(v).replace(".", ",")
 
 /**
- * Frank-Wunsch 2026-05-16: Quellenabhaengige Beschriftung des Workout-Chips
- * und des Default-Titels. Polar ist ab jetzt die alleinige Workout-Quelle.
+ * Frank-Wunsch 2026-05-16: Quellenabhaengige Beschriftung des Workout-Chips und des Default-Titels.
+ * Polar ist ab jetzt die alleinige Workout-Quelle.
  *
- * Frank-Update 2026-05-16 (Iteration 2): Frank verlangt dass die alten
- * Eintraege NICHT mehr als "T-Rex 3" angezeigt werden — sie sind aus seiner
- * Sicht ohnehin obsolet (werden beim naechsten erfolgreichen Polar-Bulk-
- * Import geloescht). Bis dahin sollen sie neutral "Polar" zeigen, da Frank
- * seine Trainings konzeptionell als Polar-Trainings sieht (sein H10 ist
- * ja immer dran, auch wenn die Aufzeichnung historisch ueber Zepp lief).
+ * Frank-Update 2026-05-16 (Iteration 2): Frank verlangt dass die alten Eintraege NICHT mehr als
+ * "T-Rex 3" angezeigt werden — sie sind aus seiner Sicht ohnehin obsolet (werden beim naechsten
+ * erfolgreichen Polar-Bulk- Import geloescht). Bis dahin sollen sie neutral "Polar" zeigen, da
+ * Frank seine Trainings konzeptionell als Polar-Trainings sieht (sein H10 ist ja immer dran, auch
+ * wenn die Aufzeichnung historisch ueber Zepp lief).
  *
- * - source startsWith "polar"   → "Polar"
- * - source == "health_connect"  → "Health Connect"
- * - source enthaelt "huami"     → "Polar" (frueher: "T-Rex 3", aufgehoben 2026-05-16)
- * - source == null oder leer    → "Polar"
- * - Sonstiges                   → "Polar"
+ * - source startsWith "polar" → "Polar"
+ * - source == "health_connect" → "Health Connect"
+ * - source enthaelt "huami" → "Polar" (frueher: "T-Rex 3", aufgehoben 2026-05-16)
+ * - source == null oder leer → "Polar"
+ * - Sonstiges → "Polar"
  */
 private fun sourceLabel(source: String?): String {
     if (source.isNullOrBlank()) return "Polar"

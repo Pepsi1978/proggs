@@ -30,7 +30,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,24 +42,24 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Sprint 6 (Frank-Wunsch 2026-05-22 abend): Einheitlicher Erfassungs-Dialog
- * fuer neue Aufgaben — kein Mic-Tap startet mehr sofort die Aufnahme. Statt
- * dessen oeffnet sich dieser Sheet mit zwei grossen Wahl-Tasten "Aufnehmen"
- * und "Schreiben", genau wie schon im Entropie-Reiter (Tagebuch).
+ * Sprint 6 (Frank-Wunsch 2026-05-22 abend): Einheitlicher Erfassungs-Dialog fuer neue Aufgaben —
+ * kein Mic-Tap startet mehr sofort die Aufnahme. Statt dessen oeffnet sich dieser Sheet mit zwei
+ * grossen Wahl-Tasten "Aufnehmen" und "Schreiben", genau wie schon im Entropie-Reiter (Tagebuch).
  *
  * Drei Modi:
- *  - CHOOSE:     2 grosse Buttons zur Auswahl
- *  - RECORDING:  Roter Stop-Button + "Sprich jetzt"-Hinweis (Whisper laeuft)
- *  - PROCESSING: Spinner waehrend Transkription
- *  - WRITING:    OutlinedTextField + Speichern-Button
+ * - CHOOSE: 2 grosse Buttons zur Auswahl
+ * - RECORDING: Roter Stop-Button + "Sprich jetzt"-Hinweis (Whisper laeuft)
+ * - PROCESSING: Spinner waehrend Transkription
+ * - WRITING: OutlinedTextField + Speichern-Button
  *
- * Nach erfolgreicher Erfassung liefert [onCommit] das Ergebnis mit der
- * passenden EntrySource (NUTZER_MIC fuer Aufnahme, NUTZER_TEXT fuer Schreiben).
+ * Nach erfolgreicher Erfassung liefert [onCommit] das Ergebnis mit der passenden EntrySource
+ * (NUTZER_MIC fuer Aufnahme, NUTZER_TEXT fuer Schreiben).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,16 +78,15 @@ fun EntryCaptureSheet(
     // Lokaler UI-Mode: CHOOSE / WRITING — RECORDING/PROCESSING kommen aus voiceState.
     var mode by remember { mutableStateOf(CaptureMode.CHOOSE) }
     var writeText by remember { mutableStateOf("") }
-    val micPermission = rememberMicPermissionState(
-        onAllGranted = { voiceVm.toggle { transcript -> onCommit(transcript, EntrySource.NUTZER_MIC) } },
-    )
+    val micPermission =
+        rememberMicPermissionState(
+            onAllGranted = {
+                voiceVm.toggle { transcript -> onCommit(transcript, EntrySource.NUTZER_MIC) }
+            }
+        )
 
     // Bei Fehler kurz anzeigen, dann auf CHOOSE zurueck.
-    LaunchedEffect(voiceError) {
-        voiceError?.let {
-            voiceVm.clearError()
-        }
-    }
+    LaunchedEffect(voiceError) { voiceError?.let { voiceVm.clearError() } }
 
     ModalBottomSheet(
         onDismissRequest = {
@@ -100,10 +98,7 @@ fun EntryCaptureSheet(
         containerColor = if (cosmos.isDark) Color(0xFF1B1F2E) else Color.White,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -123,16 +118,15 @@ fun EntryCaptureSheet(
                         bg = CosmosColors.Critical,
                         fg = Color.White,
                         onClick = {
-                            voiceVm.toggle { transcript -> onCommit(transcript, EntrySource.NUTZER_MIC) }
+                            voiceVm.toggle { transcript ->
+                                onCommit(transcript, EntrySource.NUTZER_MIC)
+                            }
                         },
                     )
                 }
                 voiceState == VoiceCaptureState.PROCESSING -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(
-                            color = accent,
-                            modifier = Modifier.size(28.dp),
-                        )
+                        CircularProgressIndicator(color = accent, modifier = Modifier.size(28.dp))
                         Spacer(Modifier.size(16.dp))
                         Text(
                             "Transkribiere…",
@@ -163,7 +157,11 @@ fun EntryCaptureSheet(
                             enabled = writeText.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(containerColor = accent),
                         ) {
-                            Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
                             Spacer(Modifier.size(8.dp))
                             Text("Speichern")
                         }
@@ -202,7 +200,10 @@ fun EntryCaptureSheet(
     }
 }
 
-private enum class CaptureMode { CHOOSE, WRITING }
+private enum class CaptureMode {
+    CHOOSE,
+    WRITING,
+}
 
 @Composable
 private fun BigActionTile(
@@ -214,19 +215,19 @@ private fun BigActionTile(
     onClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(bg)
-            .clickable { onClick() }
-            .padding(20.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(bg)
+                .clickable { onClick() }
+                .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(fg.copy(alpha = 0.18f)),
+                modifier =
+                    Modifier.size(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(fg.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

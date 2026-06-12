@@ -47,14 +47,9 @@ import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
-/**
- * Top-Liste der 7 Settings-Sektionen (Spec §6, Bild 16/26).
- */
+/** Top-Liste der 7 Settings-Sektionen (Spec §6, Bild 16/26). */
 @Composable
-fun SettingsHomeScreen(
-    onBack: () -> Unit,
-    onOpen: (String) -> Unit,
-) {
+fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "Einstellungen",
@@ -92,99 +87,102 @@ private data class SectionDef(
     val route: String,
 )
 
-private val sections = listOf(
-    SectionDef(
-        icon = Icons.Outlined.CalendarMonth,
-        accent = CosmosColors.AccentPrimary,
-        title = "Experiment-Kalender",
-        subtitle = "Tag/Wochen/Monatsansicht aller laufenden und vorgeschlagenen Hypothesen.",
-        route = Routes.EXPERIMENT_CALENDAR,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Lightbulb,
-        accent = CosmosColors.Warning,
-        title = "Insight Board",
-        subtitle = "Bestätigte Methoden, Beobachtungen und verworfene Ansätze.",
-        route = Routes.INSIGHT_BOARD,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.EmojiEvents,
-        accent = CosmosColors.Success,
-        title = "Mein Repertoire",
-        subtitle = "Deine bewaehrtesten Hebel — sortiert nach Wirkung × Wiederholung.",
-        route = Routes.REPERTOIRE,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Key,
-        accent = CosmosColors.AccentPrimary,
-        title = "API-Schlüssel",
-        subtitle = "Verwalte deine API-Schlüssel und verknuepfe deine bevorzugten Anbieter.",
-        route = Routes.SETTINGS_API,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Psychology,
-        accent = CosmosColors.AccentSecondary,
-        title = "KI-Modell-Auswahl",
-        subtitle = "Wähle das passende KI-Modell für deine Fragen und Aufgaben aus.",
-        route = Routes.SETTINGS_MODELS,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Person,
-        accent = CosmosColors.Success,
-        title = "Persönliches Profil",
-        subtitle = "Passe deine Vorlieben, Ziele und Einstellungen an.",
-        route = Routes.SETTINGS_PROFILE,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.ChatBubbleOutline,
-        accent = CosmosColors.Warning,
-        title = "Eigene Prompts",
-        subtitle = "Erstelle, verwalte und organisiere deine eigenen Prompt-Vorlagen.",
-        route = Routes.SETTINGS_PROMPTS,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Memory,
-        accent = CosmosColors.AccentPrimary,
-        title = "Gedächtnis",
-        subtitle = "Entscheide, was sich das Genie merken darf und wie es dich unterstuetzt.",
-        route = Routes.SETTINGS_MEMORY,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.AutoAwesome,
-        accent = CosmosColors.AccentSecondary,
-        title = "Genie-Codex",
-        subtitle = "Lege Verhaltensregeln, Werte und Antwortstil für das Genie fest.",
-        route = Routes.SETTINGS_CODEX,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Bolt,
-        accent = CosmosColors.AccentPrimary,
-        title = "KI-Trigger",
-        subtitle = "Beobachte und genehmige automatische Trigger, die das Genie aus deinen Daten ableitet.",
-        route = Routes.SETTINGS_TRIGGERS,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.Inventory2,
-        accent = CosmosColors.AccentSecondary,
-        title = "Archiv",
-        subtitle = "Erledigte Aufgaben mit deiner Lösungsmethode — Quelle für den Forscher.",
-        route = Routes.SETTINGS_ARCHIVE,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.IosShare,
-        accent = CosmosColors.Critical,
-        title = "Datenexport / Datenschutz",
-        subtitle = "Exportiere deine Daten oder überwache den Datenschutz.",
-        route = Routes.SETTINGS_EXPORT,
-    ),
-    SectionDef(
-        icon = Icons.Outlined.MonitorHeart,
-        accent = CosmosColors.AccentSecondary,
-        title = "Diagnose-Protokoll",
-        subtitle = "Fehler und Erfolge aller Verknuepfungen (Strava, Whoop, Oura, Drive, Kalender, KI-Schluessel) — siehst du warum etwas nicht aktualisiert.",
-        route = Routes.SETTINGS_DIAGNOSTICS,
-    ),
-)
+private val sections =
+    listOf(
+        SectionDef(
+            icon = Icons.Outlined.CalendarMonth,
+            accent = CosmosColors.AccentPrimary,
+            title = "Experiment-Kalender",
+            subtitle = "Tag/Wochen/Monatsansicht aller laufenden und vorgeschlagenen Hypothesen.",
+            route = Routes.EXPERIMENT_CALENDAR,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Lightbulb,
+            accent = CosmosColors.Warning,
+            title = "Insight Board",
+            subtitle = "Bestätigte Methoden, Beobachtungen und verworfene Ansätze.",
+            route = Routes.INSIGHT_BOARD,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.EmojiEvents,
+            accent = CosmosColors.Success,
+            title = "Mein Repertoire",
+            subtitle = "Deine bewaehrtesten Hebel — sortiert nach Wirkung × Wiederholung.",
+            route = Routes.REPERTOIRE,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Key,
+            accent = CosmosColors.AccentPrimary,
+            title = "API-Schlüssel",
+            subtitle = "Verwalte deine API-Schlüssel und verknuepfe deine bevorzugten Anbieter.",
+            route = Routes.SETTINGS_API,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Psychology,
+            accent = CosmosColors.AccentSecondary,
+            title = "KI-Modell-Auswahl",
+            subtitle = "Wähle das passende KI-Modell für deine Fragen und Aufgaben aus.",
+            route = Routes.SETTINGS_MODELS,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Person,
+            accent = CosmosColors.Success,
+            title = "Persönliches Profil",
+            subtitle = "Passe deine Vorlieben, Ziele und Einstellungen an.",
+            route = Routes.SETTINGS_PROFILE,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.ChatBubbleOutline,
+            accent = CosmosColors.Warning,
+            title = "Eigene Prompts",
+            subtitle = "Erstelle, verwalte und organisiere deine eigenen Prompt-Vorlagen.",
+            route = Routes.SETTINGS_PROMPTS,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Memory,
+            accent = CosmosColors.AccentPrimary,
+            title = "Gedächtnis",
+            subtitle = "Entscheide, was sich das Genie merken darf und wie es dich unterstuetzt.",
+            route = Routes.SETTINGS_MEMORY,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.AutoAwesome,
+            accent = CosmosColors.AccentSecondary,
+            title = "Genie-Codex",
+            subtitle = "Lege Verhaltensregeln, Werte und Antwortstil für das Genie fest.",
+            route = Routes.SETTINGS_CODEX,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Bolt,
+            accent = CosmosColors.AccentPrimary,
+            title = "KI-Trigger",
+            subtitle =
+                "Beobachte und genehmige automatische Trigger, die das Genie aus deinen Daten ableitet.",
+            route = Routes.SETTINGS_TRIGGERS,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.Inventory2,
+            accent = CosmosColors.AccentSecondary,
+            title = "Archiv",
+            subtitle = "Erledigte Aufgaben mit deiner Lösungsmethode — Quelle für den Forscher.",
+            route = Routes.SETTINGS_ARCHIVE,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.IosShare,
+            accent = CosmosColors.Critical,
+            title = "Datenexport / Datenschutz",
+            subtitle = "Exportiere deine Daten oder überwache den Datenschutz.",
+            route = Routes.SETTINGS_EXPORT,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.MonitorHeart,
+            accent = CosmosColors.AccentSecondary,
+            title = "Diagnose-Protokoll",
+            subtitle =
+                "Fehler und Erfolge aller Verknuepfungen (Strava, Whoop, Oura, Drive, Kalender, KI-Schluessel) — siehst du warum etwas nicht aktualisiert.",
+            route = Routes.SETTINGS_DIAGNOSTICS,
+        ),
+    )
 
 @Composable
 private fun SectionCard(
@@ -198,19 +196,25 @@ private fun SectionCard(
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.18f)),
+                modifier =
+                    Modifier.size(48.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                )
                 Spacer(Modifier.size(2.dp))
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
             }
             Icon(Icons.Outlined.ChevronRight, null, tint = cosmos.textSecondary)
         }

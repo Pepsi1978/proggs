@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,13 +32,13 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.launch
 
 /**
- * Frank-Wunsch 2026-05-31: Review-Fenster, das nach dem Einsprechen einer Aufgabe
- * erscheint (sobald das Transkript erkannt wurde). Frank kann:
- *  - den transkribierten Text pruefen und direkt bearbeiten,
- *  - ihn per "Mit KI verbessern" (Gemini) sprachlich aufwerten lassen
- *    (Inhalt + ungefaehre Laenge bleiben),
- *  - optional einen eigenen Titel eintippen (leer → KI erstellt den Titel),
- *  - speichern oder abbrechen.
+ * Frank-Wunsch 2026-05-31: Review-Fenster, das nach dem Einsprechen einer Aufgabe erscheint (sobald
+ * das Transkript erkannt wurde). Frank kann:
+ * - den transkribierten Text pruefen und direkt bearbeiten,
+ * - ihn per "Mit KI verbessern" (Gemini) sprachlich aufwerten lassen (Inhalt + ungefaehre Laenge
+ *   bleiben),
+ * - optional einen eigenen Titel eintippen (leer → KI erstellt den Titel),
+ * - speichern oder abbrechen.
  *
  * Vorbild: das Aufnahme-Fenster in BestJournalFrank.
  */

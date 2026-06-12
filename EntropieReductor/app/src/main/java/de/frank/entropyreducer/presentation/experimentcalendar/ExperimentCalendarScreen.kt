@@ -1,8 +1,8 @@
 package de.frank.entropyreducer.presentation.experimentcalendar
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +41,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.domain.model.HypothesisOutcome
@@ -68,8 +68,8 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 /**
- * Eigener App-Kalender (NICHT Google Calendar) — Spec §14.3.
- * Zeigt aktive + vorgeschlagene Hypothesen in Tag/Woche/Monat-Ansicht.
+ * Eigener App-Kalender (NICHT Google Calendar) — Spec §14.3. Zeigt aktive + vorgeschlagene
+ * Hypothesen in Tag/Woche/Monat-Ansicht.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +153,7 @@ fun ExperimentCalendarScreen(
             text = {
                 Text(
                     "Soll dieser Erfolg in dein Repertoire wandern? Bestehende Insights werden " +
-                        "automatisch erkannt und ihre Confidence wird neu berechnet.",
+                        "automatisch erkannt und ihre Confidence wird neu berechnet."
                 )
             },
             confirmButton = {
@@ -164,7 +164,8 @@ fun ExperimentCalendarScreen(
             dismissButton = {
                 TextButton(onClick = { vm.confirmInsightCreation(false) }) { Text("Später") }
             },
-            containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+            containerColor =
+                if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
         )
     }
 }
@@ -188,15 +189,16 @@ private fun ViewSwitcher(current: CalendarView, onSelect: (CalendarView) -> Unit
                             CalendarView.TAG -> "Tag"
                             CalendarView.WOCHE -> "Woche"
                             CalendarView.MONAT -> "Monat"
-                        },
+                        }
                     )
                 },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.20f),
-                    selectedLabelColor = LocalCosmos.current.textPrimary,
-                    containerColor = LocalCosmos.current.glassBg,
-                    labelColor = LocalCosmos.current.textSecondary,
-                ),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.20f),
+                        selectedLabelColor = LocalCosmos.current.textPrimary,
+                        containerColor = LocalCosmos.current.glassBg,
+                        labelColor = LocalCosmos.current.textSecondary,
+                    ),
             )
         }
     }
@@ -216,7 +218,8 @@ private fun HeaderRow(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
         }
         CalendarView.WOCHE -> {
             val wf = WeekFields.of(Locale.GERMANY)
-            title = "KW ${state.anchorDate.get(wf.weekOfWeekBasedYear())} / ${state.anchorDate.year}"
+            title =
+                "KW ${state.anchorDate.get(wf.weekOfWeekBasedYear())} / ${state.anchorDate.year}"
             onPrev = { vm.shiftAnchor(deltaWeeks = -1) }
             onNext = { vm.shiftAnchor(deltaWeeks = 1) }
         }
@@ -244,12 +247,12 @@ private fun HeaderRow(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
 }
 
 /**
- * Performance-Audit E3 (2026-05-10): Vorberechneter Datenzustand fuer eine
- * Kalender-Zelle. Wird einmal pro Recompose-Trigger in remember(...) erstellt,
- * statt 4 Map-Lookups + 1 Lambda pro Zelle pro Recomposition.
+ * Performance-Audit E3 (2026-05-10): Vorberechneter Datenzustand fuer eine Kalender-Zelle. Wird
+ * einmal pro Recompose-Trigger in remember(...) erstellt, statt 4 Map-Lookups + 1 Lambda pro Zelle
+ * pro Recomposition.
  *
- * @Immutable macht die Klasse fuer Compose stable — DayCell wird damit
- * skippable wenn sich die einzelne Zelle nicht aendert.
+ * @Immutable macht die Klasse fuer Compose stable — DayCell wird damit skippable wenn sich die
+ *   einzelne Zelle nicht aendert.
  */
 @androidx.compose.runtime.Immutable
 private data class DayCellState(
@@ -274,24 +277,32 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
     // Performance-Audit E3 (2026-05-10): 42 DayCellState-Objekte einmalig
     // vorberechnen. Vorher liefen 42 × 4 = 168 Map-Lookups pro Recomposition.
     // Jetzt nur bei tatsaechlicher State-/Grid-/Monat-/Heute-Aenderung.
-    val dayStates = remember(grid, month, today, state.hypothesesByDate, state.eventsByDate, state.shiftByDate, state.shiftRawByDate) {
-        grid.map { date ->
-            DayCellState(
-                date = date,
-                items = state.hypothesesByDate[date].orEmpty(),
-                events = state.eventsByDate[date].orEmpty(),
-                shift = state.shiftByDate[date],
-                shiftRaw = state.shiftRawByDate[date],
-                isCurrentMonth = YearMonth.from(date) == month,
-                isToday = date == today,
-            )
+    val dayStates =
+        remember(
+            grid,
+            month,
+            today,
+            state.hypothesesByDate,
+            state.eventsByDate,
+            state.shiftByDate,
+            state.shiftRawByDate,
+        ) {
+            grid.map { date ->
+                DayCellState(
+                    date = date,
+                    items = state.hypothesesByDate[date].orEmpty(),
+                    events = state.eventsByDate[date].orEmpty(),
+                    shift = state.shiftByDate[date],
+                    shiftRaw = state.shiftRawByDate[date],
+                    isCurrentMonth = YearMonth.from(date) == month,
+                    isToday = date == today,
+                )
+            }
         }
-    }
     // Performance-Audit E3 (2026-05-10): Map<LocalDate, () -> Unit> mit fertigen
     // Click-Lambdas. Vorher 42 neue Lambdas pro MonthView-Recomposition.
-    val onClickByDate: Map<LocalDate, () -> Unit> = remember(vm, grid) {
-        grid.associateWith { date -> { vm.selectDay(date) } }
-    }
+    val onClickByDate: Map<LocalDate, () -> Unit> =
+        remember(vm, grid) { grid.associateWith { date -> { vm.selectDay(date) } } }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Wochentag-Header
@@ -345,7 +356,8 @@ private fun DayCell(
 ) {
     val cosmos = LocalCosmos.current
     val borderColor = if (isToday) CosmosColors.AccentPrimary else cosmos.glassBorder
-    val textColor = if (isCurrentMonth) cosmos.textPrimary else cosmos.textSecondary.copy(alpha = 0.5f)
+    val textColor =
+        if (isCurrentMonth) cosmos.textPrimary else cosmos.textSecondary.copy(alpha = 0.5f)
     val shiftTint = shift?.let { shiftBackgroundFor(it) }
     val cellBg = shiftTint ?: cosmos.glassBg
     Box(
@@ -356,7 +368,7 @@ private fun DayCell(
             // Klick ist IMMER aktiv — auch für leere Tage und nur-Schicht-Tage,
             // damit das Tag-Detail-Sheet sich oeffnet (Frank-Wunsch 2026-05-08).
             .clickable(onClick = onClick)
-            .padding(4.dp),
+            .padding(4.dp)
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -384,11 +396,10 @@ private fun DayCell(
             // Hypothesen-Markers (farbiger Streifen) — max 2 sichtbar
             items.take(2).forEach { h ->
                 Box(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(colorForStatus(h.status)),
+                        .background(colorForStatus(h.status))
                 )
                 Spacer(Modifier.height(2.dp))
             }
@@ -398,13 +409,12 @@ private fun DayCell(
                     val visible = events.take(3)
                     visible.forEach { ev ->
                         Box(
-                            Modifier
-                                .size(5.dp)
+                            Modifier.size(5.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(
                                     if (ev.allDay) CosmosColors.AccentSecondary
-                                    else CosmosColors.AccentPrimary,
-                                ),
+                                    else CosmosColors.AccentPrimary
+                                )
                         )
                         Spacer(Modifier.width(2.dp))
                     }
@@ -430,7 +440,9 @@ private fun DayCell(
 
 /** Pastell-Hintergrund je Schicht — passt zum Cosmos-Theme. */
 @Composable
-private fun shiftBackgroundFor(shift: de.frank.entropyreducer.domain.model.ShiftCode): androidx.compose.ui.graphics.Color {
+private fun shiftBackgroundFor(
+    shift: de.frank.entropyreducer.domain.model.ShiftCode
+): androidx.compose.ui.graphics.Color {
     val cosmos = LocalCosmos.current
     return when (shift) {
         de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST ->
@@ -454,11 +466,11 @@ private fun shiftBadgeFor(shift: de.frank.entropyreducer.domain.model.ShiftCode)
     }
 
 /**
- * Anzeigetext für einen Tag im Kalender — kombiniert Schichtcode + Roh-Text
- * aus dem Google-Calendar-Eintrag. Logik:
- *  - Wenn Roh-Text vorhanden: nimm ihn (gekuerzt) — "Tag 1", "Nacht 2", "U", "X-Tag", "F".
- *  - Sonst: Fallback auf den Buchstaben aus dem Schichtcode-Enum.
- *  - Bei FREI ohne Roh-Text: leerer String (saubere Zelle).
+ * Anzeigetext für einen Tag im Kalender — kombiniert Schichtcode + Roh-Text aus dem
+ * Google-Calendar-Eintrag. Logik:
+ * - Wenn Roh-Text vorhanden: nimm ihn (gekuerzt) — "Tag 1", "Nacht 2", "U", "X-Tag", "F".
+ * - Sonst: Fallback auf den Buchstaben aus dem Schichtcode-Enum.
+ * - Bei FREI ohne Roh-Text: leerer String (saubere Zelle).
  */
 private fun shiftDisplayText(
     shift: de.frank.entropyreducer.domain.model.ShiftCode?,
@@ -474,13 +486,16 @@ private fun shiftDisplayText(
 }
 
 @Composable
-private fun shiftDisplayColor(shift: de.frank.entropyreducer.domain.model.ShiftCode?): androidx.compose.ui.graphics.Color {
+private fun shiftDisplayColor(
+    shift: de.frank.entropyreducer.domain.model.ShiftCode?
+): androidx.compose.ui.graphics.Color {
     return when (shift) {
         de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST -> CosmosColors.AccentPrimary
         de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST -> CosmosColors.AccentSecondary
         de.frank.entropyreducer.domain.model.ShiftCode.URLAUB -> CosmosColors.Success
         de.frank.entropyreducer.domain.model.ShiftCode.FREI -> CosmosColors.Success
-        de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> LocalCosmos.current.textSecondary
+        de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT ->
+            LocalCosmos.current.textSecondary
         null -> LocalCosmos.current.textSecondary
     }
 }
@@ -502,7 +517,11 @@ private fun WeekView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVie
 }
 
 @Composable
-private fun DayBlock(day: LocalDate, items: List<HypothesisEntity>, onClick: (HypothesisEntity) -> Unit) {
+private fun DayBlock(
+    day: LocalDate,
+    items: List<HypothesisEntity>,
+    onClick: (HypothesisEntity) -> Unit,
+) {
     val cosmos = LocalCosmos.current
     val isToday = day == LocalDate.now()
     GlassCard {
@@ -520,9 +539,7 @@ private fun DayBlock(day: LocalDate, items: List<HypothesisEntity>, onClick: (Hy
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
-                items.forEach { h ->
-                    HypothesisChip(h, onClick = { onClick(h) })
-                }
+                items.forEach { h -> HypothesisChip(h, onClick = { onClick(h) }) }
             }
         }
     }
@@ -538,13 +555,12 @@ private fun DayView(state: ExperimentCalendarUiState, vm: ExperimentCalendarView
 private fun HypothesisChip(h: HypothesisEntity, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     Box(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(colorForStatus(h.status).copy(alpha = 0.20f))
             .border(BorderStroke(1.dp, colorForStatus(h.status)), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(8.dp),
+            .padding(8.dp)
     ) {
         Column {
             Text(
@@ -554,8 +570,9 @@ private fun HypothesisChip(h: HypothesisEntity, onClick: () -> Unit) {
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = "Status: ${h.status.name.lowercase()}" +
-                    (h.outcome?.let { " · ${it.name.lowercase()}" } ?: ""),
+                text =
+                    "Status: ${h.status.name.lowercase()}" +
+                        (h.outcome?.let { " · ${it.name.lowercase()}" } ?: ""),
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -577,18 +594,18 @@ private fun HypothesisDetailContent(
     val cosmos = LocalCosmos.current
     // rememberSaveable: ueberlebt Foldable-Klappung + Drehung. Vorher (remember) gingen
     // ungespeicherte Notes + Slider-Werte beim Configuration Change verloren.
-    var notes by rememberSaveable(hypothesis.id) {
-        mutableStateOf(hypothesis.outcomeNotes.orEmpty())
-    }
-    var felt by rememberSaveable(hypothesis.id) {
-        mutableStateOf((hypothesis.felltEntropyChange ?: 0).toFloat())
-    }
+    var notes by
+        rememberSaveable(hypothesis.id) { mutableStateOf(hypothesis.outcomeNotes.orEmpty()) }
+    var felt by
+        rememberSaveable(hypothesis.id) {
+            mutableStateOf((hypothesis.felltEntropyChange ?: 0).toFloat())
+        }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .padding(bottom = 24.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
@@ -598,7 +615,11 @@ private fun HypothesisDetailContent(
             fontWeight = FontWeight.SemiBold,
         )
         if (hypothesis.description.isNotBlank()) {
-            Text(hypothesis.description, color = cosmos.textPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                hypothesis.description,
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
         if (hypothesis.rationale.isNotBlank()) {
             Text(
@@ -646,11 +667,12 @@ private fun HypothesisDetailContent(
             // Steps in 10er-Schritten (entspricht 21 Stop-Punkten -100,-90,...0,...,90,100)
             // damit Frank praezise einstellen kann ohne nano-fein navigieren zu müssen.
             steps = 19,
-            colors = SliderDefaults.colors(
-                thumbColor = CosmosColors.AccentPrimary,
-                activeTrackColor = CosmosColors.AccentPrimary,
-                inactiveTrackColor = cosmos.glassBorder,
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = CosmosColors.AccentPrimary,
+                    activeTrackColor = CosmosColors.AccentPrimary,
+                    inactiveTrackColor = cosmos.glassBorder,
+                ),
         )
 
         // Notes
@@ -659,12 +681,13 @@ private fun HypothesisDetailContent(
             onValueChange = { notes = it },
             label = { Text("Outcome-Notes") },
             modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = cosmos.textPrimary,
-                unfocusedTextColor = cosmos.textPrimary,
-                focusedBorderColor = CosmosColors.AccentPrimary,
-                unfocusedBorderColor = cosmos.glassBorder,
-            ),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = cosmos.textPrimary,
+                    unfocusedTextColor = cosmos.textPrimary,
+                    focusedBorderColor = CosmosColors.AccentPrimary,
+                    unfocusedBorderColor = cosmos.glassBorder,
+                ),
             minLines = 2,
         )
         TextButton(onClick = { onSetNotes(notes) }) { Text("Notes speichern") }
@@ -678,10 +701,11 @@ private fun HypothesisDetailContent(
         Button(
             onClick = onDelete,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
-                contentColor = CosmosColors.Critical,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
+                    contentColor = CosmosColors.Critical,
+                ),
         ) {
             Icon(Icons.Outlined.Delete, null)
             Spacer(Modifier.width(8.dp))
@@ -691,10 +715,7 @@ private fun HypothesisDetailContent(
 }
 
 @Composable
-private fun BiomarkerCompare(
-    before: BiomarkerSnapshotEntity?,
-    after: BiomarkerSnapshotEntity?,
-) {
+private fun BiomarkerCompare(before: BiomarkerSnapshotEntity?, after: BiomarkerSnapshotEntity?) {
     val cosmos = LocalCosmos.current
     GlassCard {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -704,9 +725,21 @@ private fun BiomarkerCompare(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            CompareRow("HRV", before?.hrvMs?.let { "%.1fms".format(it) }, after?.hrvMs?.let { "%.1fms".format(it) })
-            CompareRow("Recovery", before?.recoveryScore?.let { "$it%" }, after?.recoveryScore?.let { "$it%" })
-            CompareRow("Schlaf", before?.sleepPerformance?.let { "$it%" }, after?.sleepPerformance?.let { "$it%" })
+            CompareRow(
+                "HRV",
+                before?.hrvMs?.let { "%.1fms".format(it) },
+                after?.hrvMs?.let { "%.1fms".format(it) },
+            )
+            CompareRow(
+                "Recovery",
+                before?.recoveryScore?.let { "$it%" },
+                after?.recoveryScore?.let { "$it%" },
+            )
+            CompareRow(
+                "Schlaf",
+                before?.sleepPerformance?.let { "$it%" },
+                after?.sleepPerformance?.let { "$it%" },
+            )
         }
     }
 }
@@ -737,12 +770,13 @@ private fun CompareRow(label: String, beforeStr: String?, afterStr: String?) {
     }
 }
 
-private fun colorForStatus(s: HypothesisStatus) = when (s) {
-    HypothesisStatus.AKTIV -> CosmosColors.AccentPrimary
-    HypothesisStatus.VORGESCHLAGEN -> CosmosColors.AccentSecondary
-    HypothesisStatus.ABGESCHLOSSEN -> CosmosColors.Success
-    HypothesisStatus.ABGEBROCHEN -> CosmosColors.Critical
-}
+private fun colorForStatus(s: HypothesisStatus) =
+    when (s) {
+        HypothesisStatus.AKTIV -> CosmosColors.AccentPrimary
+        HypothesisStatus.VORGESCHLAGEN -> CosmosColors.AccentSecondary
+        HypothesisStatus.ABGESCHLOSSEN -> CosmosColors.Success
+        HypothesisStatus.ABGEBROCHEN -> CosmosColors.Critical
+    }
 
 private val MONTH_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMANY)
@@ -754,10 +788,10 @@ private val EVENT_TIME_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY)
 
 /**
- * Tag-Detail-Sheet (Frank-Wunsch 2026-05-08): zeigt für einen Datum-Tap im Kalender
- * alle wichtigen Infos auf einmal — Schicht aus dem Schicht-Kalender, Google-Calendar-
- * Events des Tages und alle Hypothesen die an diesem Tag aktiv/geplant sind. Tap auf
- * eine Hypothese-Card oeffnet das eigentliche Hypothese-Detail-Sheet.
+ * Tag-Detail-Sheet (Frank-Wunsch 2026-05-08): zeigt für einen Datum-Tap im Kalender alle wichtigen
+ * Infos auf einmal — Schicht aus dem Schicht-Kalender, Google-Calendar- Events des Tages und alle
+ * Hypothesen die an diesem Tag aktiv/geplant sind. Tap auf eine Hypothese-Card oeffnet das
+ * eigentliche Hypothese-Detail-Sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -778,10 +812,10 @@ private fun DayDetailSheet(
         containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLight,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .padding(bottom = 24.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header: Datum + Schicht-Pille
@@ -791,14 +825,14 @@ private fun DayDetailSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            val shiftLabel = shiftRaw?.takeIf { it.isNotBlank() }
-                ?: shift?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+            val shiftLabel =
+                shiftRaw?.takeIf { it.isNotBlank() }
+                    ?: shift?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
             if (!shiftLabel.isNullOrBlank()) {
                 Box(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
+                    Modifier.clip(RoundedCornerShape(50))
                         .background(CosmosColors.AccentPrimary.copy(alpha = 0.20f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "Schicht: $shiftLabel",
@@ -816,21 +850,18 @@ private fun DayDetailSheet(
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.labelMedium,
                 )
-                events.forEach { ev ->
-                    DayEventRow(ev)
-                }
+                events.forEach { ev -> DayEventRow(ev) }
             }
 
             // Hypothesen am Tag
             Text(
-                text = if (hypotheses.isEmpty()) "Keine Experimente am Tag"
-                else "Experimente (${hypotheses.size})",
+                text =
+                    if (hypotheses.isEmpty()) "Keine Experimente am Tag"
+                    else "Experimente (${hypotheses.size})",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelMedium,
             )
-            hypotheses.forEach { h ->
-                HypothesisChip(h, onClick = { onOpenHypothesis(h) })
-            }
+            hypotheses.forEach { h -> HypothesisChip(h, onClick = { onOpenHypothesis(h) }) }
         }
     }
 }
@@ -839,18 +870,19 @@ private fun DayDetailSheet(
 private fun DayEventRow(ev: de.frank.entropyreducer.data.local.entities.CalendarEventEntity) {
     val cosmos = LocalCosmos.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(cosmos.glassBg)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(cosmos.glassBg)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier
-                .size(8.dp)
+            Modifier.size(8.dp)
                 .clip(RoundedCornerShape(50))
-                .background(if (ev.allDay) CosmosColors.AccentSecondary else CosmosColors.AccentPrimary),
+                .background(
+                    if (ev.allDay) CosmosColors.AccentSecondary else CosmosColors.AccentPrimary
+                )
         )
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -860,17 +892,22 @@ private fun DayEventRow(ev: de.frank.entropyreducer.data.local.entities.Calendar
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
-            val sub = if (ev.allDay) {
-                "Ganztags"
-            } else {
-                val start = java.time.Instant.ofEpochMilli(ev.startMs)
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalTime().format(EVENT_TIME_FORMAT)
-                val end = java.time.Instant.ofEpochMilli(ev.endMs)
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalTime().format(EVENT_TIME_FORMAT)
-                "$start–$end"
-            }
+            val sub =
+                if (ev.allDay) {
+                    "Ganztags"
+                } else {
+                    val start =
+                        java.time.Instant.ofEpochMilli(ev.startMs)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalTime()
+                            .format(EVENT_TIME_FORMAT)
+                    val end =
+                        java.time.Instant.ofEpochMilli(ev.endMs)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalTime()
+                            .format(EVENT_TIME_FORMAT)
+                    "$start–$end"
+                }
             val location = ev.location?.takeIf { it.isNotBlank() }
             Text(
                 text = if (location != null) "$sub · $location" else sub,
@@ -880,4 +917,3 @@ private fun DayEventRow(ev: de.frank.entropyreducer.data.local.entities.Calendar
         }
     }
 }
-

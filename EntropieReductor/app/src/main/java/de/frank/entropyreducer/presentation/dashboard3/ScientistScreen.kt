@@ -1,17 +1,20 @@
 package de.frank.entropyreducer.presentation.dashboard3
 
 import android.Manifest
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -20,9 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -52,21 +54,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
@@ -87,9 +87,7 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 
-/**
- * Dashboard 3 — Wissenschaftler-Chat (Spec §12).
- */
+/** Dashboard 3 — Wissenschaftler-Chat (Spec §12). */
 @Composable
 fun ScientistScreen(
     onOpenSettings: () -> Unit,
@@ -112,17 +110,19 @@ fun ScientistScreen(
 
     // micPerm fuer die Hypothesen-Chat-Mic-Funktion bleibt — das Sheet-Mic ist
     // unabhaengig vom BottomBar-Mic.
-    val micPerm = rememberMicPermissionState(
-        onAllGranted = { /* aktuell nur fuer Hypothesen-Chat-Sheet */ },
-        onDenied = { denied ->
-            val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
-                "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen."
-            } else {
-                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
-            }
-            scope.launch { snackbar.showSnackbar(msg) }
-        },
-    )
+    val micPerm =
+        rememberMicPermissionState(
+            onAllGranted = { /* aktuell nur fuer Hypothesen-Chat-Sheet */ },
+            onDenied = { denied ->
+                val msg =
+                    if (Manifest.permission.RECORD_AUDIO in denied) {
+                        "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen."
+                    } else {
+                        "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
+                    }
+                scope.launch { snackbar.showSnackbar(msg) }
+            },
+        )
 
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
@@ -131,9 +131,7 @@ fun ScientistScreen(
         }
     }
 
-    LaunchedEffect(state.currentSessionId) {
-        vm.maybeKickoff()
-    }
+    LaunchedEffect(state.currentSessionId) { vm.maybeKickoff() }
 
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -205,13 +203,14 @@ fun ScientistScreen(
                 // Slot-Reuse durcheinanderbringen.
                 items(state.messages, key = { it.id }, contentType = { it.role }) { msg ->
                     when (msg.role) {
-                        ScientistRole.KI -> KiBubble(
-                            message = msg,
-                            hypotheses = state.hypothesesByMessageId[msg.id].orEmpty(),
-                            onTryHypothesis = { hypothesisToStart = it },
-                            onOpenHypothesis = { vm.openHypothesisDetail(it.id) },
-                            onDeleteHypothesis = { vm.requestDeleteHypothesis(it.id) },
-                        )
+                        ScientistRole.KI ->
+                            KiBubble(
+                                message = msg,
+                                hypotheses = state.hypothesesByMessageId[msg.id].orEmpty(),
+                                onTryHypothesis = { hypothesisToStart = it },
+                                onOpenHypothesis = { vm.openHypothesisDetail(it.id) },
+                                onDeleteHypothesis = { vm.requestDeleteHypothesis(it.id) },
+                            )
                         ScientistRole.NUTZER -> NutzerBubble(msg)
                     }
                 }
@@ -227,10 +226,13 @@ fun ScientistScreen(
             SnackbarHost(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
-            ) { Snackbar(it) }
+            ) {
+                Snackbar(it)
+            }
             // Frank-Wunsch 2026-05-22 Phase 2: einheitliche Mic-Aktion.
             // Akzentfarbe folgt der BottomBar (Cyan im Switcher, Lila im Sub-Modus).
-            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val switcher =
+                de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
             val accentColor = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFA78BFA)
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
@@ -287,7 +289,8 @@ fun ScientistScreen(
             dismissButton = {
                 TextButton(onClick = vm::dismissDeleteConfirmation) { Text("Abbrechen") }
             },
-            containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+            containerColor =
+                if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
         )
     }
 
@@ -300,9 +303,7 @@ fun ScientistScreen(
             onDraftChange = vm::setHypothesisDraft,
             isThinking = state.hypothesisIsThinking,
             micState = state.hypothesisMicState,
-            onMicClick = {
-                if (micPerm.check()) vm.onHypothesisMicClick() else micPerm.request()
-            },
+            onMicClick = { if (micPerm.check()) vm.onHypothesisMicClick() else micPerm.request() },
             onSend = vm::sendInHypothesisChat,
             onDismiss = vm::closeHypothesisDetail,
             onTryHypothesis = { hypothesisToStart = h },
@@ -324,8 +325,7 @@ private fun KiBubble(
         Column(modifier = Modifier.weight(0.85f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier
-                        .size(20.dp)
+                    Modifier.size(20.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(CosmosColors.AccentSecondary.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center,
@@ -348,14 +348,25 @@ private fun KiBubble(
             }
             Spacer(Modifier.height(4.dp))
             Box(
-                Modifier
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
+                Modifier.clip(
+                        RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 16.dp,
+                            bottomEnd = 16.dp,
+                            bottomStart = 16.dp,
+                        )
+                    )
                     .background(cosmos.glassBg)
                     .border(
                         BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.30f)),
-                        RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp),
+                        RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 16.dp,
+                            bottomEnd = 16.dp,
+                            bottomStart = 16.dp,
+                        ),
                     )
-                    .padding(12.dp),
+                    .padding(12.dp)
             ) {
                 Column {
                     if (message.content.isNotBlank()) {
@@ -383,11 +394,17 @@ private fun NutzerBubble(message: ScientistMessageEntity) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Spacer(Modifier.weight(0.15f))
         Box(
-            Modifier
-                .weight(0.85f)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
+            Modifier.weight(0.85f)
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 4.dp,
+                        bottomEnd = 16.dp,
+                        bottomStart = 16.dp,
+                    )
+                )
                 .background(CosmosColors.AccentSecondary.copy(alpha = 0.20f))
-                .padding(12.dp),
+                .padding(12.dp)
         ) {
             Text(
                 text = message.content,
@@ -408,8 +425,7 @@ private fun HypothesisCardInChat(
     val cosmos = LocalCosmos.current
     val isProposed = h.status == HypothesisStatus.VORGESCHLAGEN
     Box(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
             .border(
@@ -419,7 +435,7 @@ private fun HypothesisCardInChat(
             // Karte ist klickbar — oeffnet den Inline-Detail-Chat dieser Hypothese.
             // Loesch-Icon hat eigenen Click-Handler, daher kein Konflikt.
             .clickable(onClick = onOpen)
-            .padding(12.dp),
+            .padding(12.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -430,10 +446,7 @@ private fun HypothesisCardInChat(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(28.dp),
-                ) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Hypothese löschen",
@@ -462,8 +475,10 @@ private fun HypothesisCardInChat(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            val days = ((h.plannedEndDate - h.plannedStartDate) / TimeUnit.DAYS.toMillis(1)).toInt()
-                .coerceAtLeast(1)
+            val days =
+                ((h.plannedEndDate - h.plannedStartDate) / TimeUnit.DAYS.toMillis(1))
+                    .toInt()
+                    .coerceAtLeast(1)
             Text(
                 text = "Geplante Dauer: $days Tage",
                 color = cosmos.textSecondary,
@@ -477,7 +492,8 @@ private fun HypothesisCardInChat(
                     }
                 } else {
                     Text(
-                        text = "Status: ${h.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        text =
+                            "Status: ${h.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
                         color = CosmosColors.Success,
                         style = MaterialTheme.typography.labelMedium,
                     )
@@ -510,9 +526,9 @@ private fun ThinkingIndicator() {
 }
 
 /**
- * Frank-Wunsch 2026-05-09: Pop-up nach erfolgreicher Whisper-Transkription.
- * Zeigt das aufgenommene Transkript als editierbares Textfeld — Frank kann nochmal
- * korrigieren bevor er auf Senden drueckt. Cancel-Button verwirft die Aufnahme.
+ * Frank-Wunsch 2026-05-09: Pop-up nach erfolgreicher Whisper-Transkription. Zeigt das aufgenommene
+ * Transkript als editierbares Textfeld — Frank kann nochmal korrigieren bevor er auf Senden
+ * drueckt. Cancel-Button verwirft die Aufnahme.
  */
 @Composable
 private fun TranscriptEditDialog(
@@ -535,7 +551,8 @@ private fun TranscriptEditDialog(
         text = {
             Column {
                 Text(
-                    text = "Du kannst den Text noch anpassen, bevor er an den Wissenschaftler geht.",
+                    text =
+                        "Du kannst den Text noch anpassen, bevor er an den Wissenschaftler geht.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -544,31 +561,28 @@ private fun TranscriptEditDialog(
                     value = text,
                     onValueChange = onTextChange,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = cosmos.textPrimary,
-                        unfocusedTextColor = cosmos.textPrimary,
-                        focusedBorderColor = CosmosColors.AccentPrimary,
-                        unfocusedBorderColor = cosmos.glassBorder,
-                    ),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = cosmos.textPrimary,
+                            unfocusedTextColor = cosmos.textPrimary,
+                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            unfocusedBorderColor = cosmos.glassBorder,
+                        ),
                     shape = RoundedCornerShape(16.dp),
                     maxLines = 8,
                 )
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onSend,
-                enabled = text.isNotBlank(),
-            ) {
+            TextButton(onClick = onSend, enabled = text.isNotBlank()) {
                 Text("Senden", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen", color = cosmos.textSecondary)
-            }
+            TextButton(onClick = onDismiss) { Text("Abbrechen", color = cosmos.textSecondary) }
         },
-        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        containerColor =
+            if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
     )
 }
 
@@ -647,7 +661,8 @@ private fun StartHypothesisDialog(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Wähle einen Startzeitpunkt — du kannst ihn später im Experiment-Kalender korrigieren.",
+                    text =
+                        "Wähle einen Startzeitpunkt — du kannst ihn später im Experiment-Kalender korrigieren.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -660,10 +675,9 @@ private fun StartHypothesisDialog(
                 TextButton(onClick = { onConfirm(nextFreeBlock) }) { Text("Nächster Frei-Block") }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
-        },
-        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+        containerColor =
+            if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
     )
 }
 
@@ -695,13 +709,10 @@ private fun HypothesisDetailSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        containerColor =
+            if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             // Kopf — Hypothese im Detail
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -730,11 +741,10 @@ private fun HypothesisDetailSheet(
 
             // Beschreibung + Begruendung + Status (kompakt, scrollbar wenn lang)
             Column(
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .background(cosmos.glassBg, RoundedCornerShape(12.dp))
-                    .padding(12.dp),
+                    .padding(12.dp)
             ) {
                 if (hypothesis.description.isNotBlank()) {
                     Text(
@@ -751,11 +761,15 @@ private fun HypothesisDetailSheet(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                val days = ((hypothesis.plannedEndDate - hypothesis.plannedStartDate) / TimeUnit.DAYS.toMillis(1))
-                    .toInt().coerceAtLeast(1)
+                val days =
+                    ((hypothesis.plannedEndDate - hypothesis.plannedStartDate) /
+                            TimeUnit.DAYS.toMillis(1))
+                        .toInt()
+                        .coerceAtLeast(1)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "Geplante Dauer: $days Tage  ·  Status: ${hypothesis.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                    text =
+                        "Geplante Dauer: $days Tage  ·  Status: ${hypothesis.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -778,9 +792,7 @@ private fun HypothesisDetailSheet(
             // Verlauf der Diskussion zu dieser Hypothese
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp),
+                modifier = Modifier.fillMaxWidth().height(280.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
@@ -800,49 +812,71 @@ private fun HypothesisDetailSheet(
             // Eingabe-Zeile (Mic + Text + Send) speziell fuer diese Hypothese
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-                    .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .imePadding()
+                        .padding(
+                            bottom =
+                                WindowInsets.navigationBars
+                                    .asPaddingValues()
+                                    .calculateBottomPadding()
+                        ),
             ) {
                 OutlinedTextField(
                     value = draft,
                     onValueChange = onDraftChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Diskutiere diese Hypothese …", color = cosmos.textSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = cosmos.textPrimary,
-                        unfocusedTextColor = cosmos.textPrimary,
-                        focusedBorderColor = CosmosColors.AccentPrimary,
-                        unfocusedBorderColor = cosmos.glassBorder,
-                    ),
+                    placeholder = {
+                        Text("Diskutiere diese Hypothese …", color = cosmos.textSecondary)
+                    },
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = cosmos.textPrimary,
+                            unfocusedTextColor = cosmos.textPrimary,
+                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            unfocusedBorderColor = cosmos.glassBorder,
+                        ),
                     shape = RoundedCornerShape(20.dp),
                     maxLines = 4,
                 )
                 Spacer(Modifier.width(6.dp))
                 IconButton(
                     onClick = onMicClick,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING)
-                                CosmosColors.Critical.copy(alpha = 0.30f)
-                            else CosmosColors.AccentSecondary.copy(alpha = 0.20f),
-                        ),
+                    modifier =
+                        Modifier.size(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(
+                                if (
+                                    micState ==
+                                        de.frank.entropyreducer.presentation.components.MicState
+                                            .RECORDING
+                                )
+                                    CosmosColors.Critical.copy(alpha = 0.30f)
+                                else CosmosColors.AccentSecondary.copy(alpha = 0.20f)
+                            ),
                 ) {
                     Icon(
-                        imageVector = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
-                            Icons.Outlined.Stop
-                        } else {
-                            Icons.Outlined.Mic
-                        },
+                        imageVector =
+                            if (
+                                micState ==
+                                    de.frank.entropyreducer.presentation.components.MicState
+                                        .RECORDING
+                            ) {
+                                Icons.Outlined.Stop
+                            } else {
+                                Icons.Outlined.Mic
+                            },
                         contentDescription = "Mikrofon (Hypothese)",
-                        tint = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
-                            CosmosColors.Critical
-                        } else {
-                            CosmosColors.AccentSecondary
-                        },
+                        tint =
+                            if (
+                                micState ==
+                                    de.frank.entropyreducer.presentation.components.MicState
+                                        .RECORDING
+                            ) {
+                                CosmosColors.Critical
+                            } else {
+                                CosmosColors.AccentSecondary
+                            },
                     )
                 }
                 Spacer(Modifier.width(6.dp))
@@ -850,13 +884,13 @@ private fun HypothesisDetailSheet(
                 IconButton(
                     onClick = onSend,
                     enabled = canSend,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            if (canSend) CosmosColors.AccentPrimary
-                            else CosmosColors.AccentPrimary.copy(alpha = 0.30f),
-                        ),
+                    modifier =
+                        Modifier.size(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(
+                                if (canSend) CosmosColors.AccentPrimary
+                                else CosmosColors.AccentPrimary.copy(alpha = 0.30f)
+                            ),
                 ) {
                     Icon(Icons.Outlined.Send, "Senden", tint = CosmosColors.BgDark)
                 }
@@ -872,14 +906,25 @@ private fun HypothesisKiBubble(message: HypothesisMessageEntity) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.weight(0.85f)) {
             Box(
-                Modifier
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 14.dp))
+                Modifier.clip(
+                        RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 14.dp,
+                            bottomEnd = 14.dp,
+                            bottomStart = 14.dp,
+                        )
+                    )
                     .background(cosmos.glassBg)
                     .border(
                         BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.30f)),
-                        RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 14.dp),
+                        RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 14.dp,
+                            bottomEnd = 14.dp,
+                            bottomStart = 14.dp,
+                        ),
                     )
-                    .padding(10.dp),
+                    .padding(10.dp)
             ) {
                 MarkdownView(text = message.content)
             }
@@ -894,11 +939,17 @@ private fun HypothesisNutzerBubble(message: HypothesisMessageEntity) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Spacer(Modifier.weight(0.15f))
         Box(
-            Modifier
-                .weight(0.85f)
-                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 14.dp))
+            Modifier.weight(0.85f)
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 14.dp,
+                        topEnd = 4.dp,
+                        bottomEnd = 14.dp,
+                        bottomStart = 14.dp,
+                    )
+                )
                 .background(CosmosColors.AccentSecondary.copy(alpha = 0.20f))
-                .padding(10.dp),
+                .padding(10.dp)
         ) {
             Text(
                 text = message.content,
@@ -913,4 +964,3 @@ private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 private fun formatRelative(ms: Long): String =
     Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalTime().format(FORMATTER)
-

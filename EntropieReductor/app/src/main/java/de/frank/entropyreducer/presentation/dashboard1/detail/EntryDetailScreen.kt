@@ -25,9 +25,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Button
@@ -42,20 +42,19 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
@@ -72,8 +71,8 @@ import java.util.Locale
 /**
  * Vollbild-Detail-Screen einer Entropie-Aufgabe (Frank-Wunsch 2026-05-20).
  *
- * Aufbau-Reduktion 2026-05-22 (Frank-Wunsch): Zusammenfassung-Karte, Status-Buttons
- * und Vorlese-Zeile sind raus — sie reduzierten nicht die Entropie, sie erhoehten sie.
+ * Aufbau-Reduktion 2026-05-22 (Frank-Wunsch): Zusammenfassung-Karte, Status-Buttons und
+ * Vorlese-Zeile sind raus — sie reduzierten nicht die Entropie, sie erhoehten sie.
  *
  * Aktueller Aufbau:
  * 1. TopAppBar mit Zurück-Pfeil
@@ -102,7 +101,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
         viewModel.templateCreated.collect { success ->
             snackbar.showSnackbar(
                 if (success) "Findest du jetzt im Reiter Loop."
-                else "Konnte keine wiederkehrende Aufgabe anlegen.",
+                else "Konnte keine wiederkehrende Aufgabe anlegen."
             )
         }
     }
@@ -176,7 +175,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                         modifier = Modifier.fillMaxWidth(),
                                         textStyle =
                                             MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.Bold,
+                                                fontWeight = FontWeight.Bold
                                             ),
                                         colors =
                                             androidx.compose.material3.OutlinedTextFieldDefaults
@@ -192,7 +191,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                                 onClick = {
                                                     viewModel.updateTitle(titleDraft)
                                                     editingTitle = false
-                                                },
+                                                }
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Check,
@@ -284,10 +283,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                 // ── 2. Frist-Bereich (Frank-Wunsch 2026-05-22 dritte Iteration) ──
                 // Kalendersymbol zum Setzen einer Deadline. Kurze Restzeit erhoeht
                 // die Prio progressiv, < 24h hebt sie auf mindestens 95 an.
-                DueDateCard(
-                    dueAtMs = entry.dueAtMs,
-                    onChange = viewModel::setDueDate,
-                )
+                DueDateCard(dueAtMs = entry.dueAtMs, onChange = viewModel::setDueDate)
 
                 // ── 3. Zeitaufwand-Regler (Frank-Wunsch 2026-05-22) ──
                 // Exponentiell skalierter Schieberegler (5 min … 4 Wochen) plus
@@ -391,12 +387,13 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     shape = RoundedCornerShape(14.dp),
                     colors =
                         androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            contentColor = CosmosColors.AccentPrimary,
+                            contentColor = CosmosColors.AccentPrimary
                         ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.5.dp,
-                        color = CosmosColors.AccentPrimary,
-                    ),
+                    border =
+                        androidx.compose.foundation.BorderStroke(
+                            width = 1.5.dp,
+                            color = CosmosColors.AccentPrimary,
+                        ),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Repeat,
@@ -465,18 +462,38 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
 }
 
 /**
- * Diskrete, exponentiell wachsende Stop-Liste fuer den Zeitaufwand-Regler
- * (Frank-Wunsch 2026-05-22): am Anfang feine Minuten-Schritte, dann
- * Stunden, Tage, Wochen.
+ * Diskrete, exponentiell wachsende Stop-Liste fuer den Zeitaufwand-Regler (Frank-Wunsch
+ * 2026-05-22): am Anfang feine Minuten-Schritte, dann Stunden, Tage, Wochen.
  *
  * 24 Stops decken alles von 5 min bis 4 Wochen ab.
  */
-private val DURATION_STOPS: IntArray = intArrayOf(
-    5, 10, 15, 20, 30, 45,                              // Minuten (6)
-    60, 90, 120, 180, 240, 300, 420, 600, 720,          // Stunden 1-12h (9)
-    1440, 2160, 2880, 4320, 5760, 7200,                 // Tage 1-5 (6)
-    10080, 20160, 40320,                                // Wochen 1, 2, 4 (3)
-)
+private val DURATION_STOPS: IntArray =
+    intArrayOf(
+        5,
+        10,
+        15,
+        20,
+        30,
+        45, // Minuten (6)
+        60,
+        90,
+        120,
+        180,
+        240,
+        300,
+        420,
+        600,
+        720, // Stunden 1-12h (9)
+        1440,
+        2160,
+        2880,
+        4320,
+        5760,
+        7200, // Tage 1-5 (6)
+        10080,
+        20160,
+        40320, // Wochen 1, 2, 4 (3)
+    )
 
 private fun durationStopIndexFor(minutes: Int?): Int {
     if (minutes == null) return -1
@@ -515,20 +532,18 @@ private fun DurationEstimateCard(
     val cosmos = LocalCosmos.current
     val initialStop = remember(currentMinutes) { durationStopIndexFor(currentMinutes) }
     // Slider-Position in float Stop-Index. -1 = unbestimmt.
-    var sliderPos by remember(initialStop) {
-        mutableStateOf(if (initialStop < 0) 0f else initialStop.toFloat())
-    }
-    var manualText by remember(currentMinutes) {
-        mutableStateOf(currentMinutes?.toString() ?: "")
-    }
+    var sliderPos by
+        remember(initialStop) { mutableStateOf(if (initialStop < 0) 0f else initialStop.toFloat()) }
+    var manualText by remember(currentMinutes) { mutableStateOf(currentMinutes?.toString() ?: "") }
     // Frank-Wunsch 2026-05-22 (zweite Iteration): WAEHREND des Schiebens soll die
     // Anzeige live aktualisieren. Wir tracken den Drag-Status: solange Frank den
     // Finger auf dem Slider hat, zeigen wir sliderMinutes. Erst beim Loslassen
     // wird onChange aufgerufen und currentMinutes uebernommen.
     var isDragging by remember { mutableStateOf(false) }
-    val sliderMinutes = remember(sliderPos) {
-        DURATION_STOPS[sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)]
-    }
+    val sliderMinutes =
+        remember(sliderPos) {
+            DURATION_STOPS[sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)]
+        }
     // Live-Wert prioritisieren: solange gerade gezogen wird, IMMER sliderMinutes.
     // Sonst: currentMinutes (manuell gesetzt) > sliderMinutes (gerundeter Stop).
     val displayMinutes = if (isDragging) sliderMinutes else (currentMinutes ?: sliderMinutes)
@@ -572,11 +587,12 @@ private fun DurationEstimateCard(
                 },
                 valueRange = 0f..(DURATION_STOPS.lastIndex.toFloat()),
                 steps = DURATION_STOPS.size - 2,
-                colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = CosmosColors.AccentPrimary,
-                    activeTrackColor = CosmosColors.AccentPrimary,
-                    inactiveTrackColor = cosmos.glassBorder,
-                ),
+                colors =
+                    androidx.compose.material3.SliderDefaults.colors(
+                        thumbColor = CosmosColors.AccentPrimary,
+                        activeTrackColor = CosmosColors.AccentPrimary,
+                        inactiveTrackColor = cosmos.glassBorder,
+                    ),
             )
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -599,14 +615,18 @@ private fun DurationEstimateCard(
                     onValueChange = { manualText = it.filter { c -> c.isDigit() }.take(6) },
                     label = { Text("Manuell in Minuten") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
                     modifier = Modifier.weight(1f),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = cosmos.textPrimary,
-                        unfocusedTextColor = cosmos.textPrimary,
-                        focusedBorderColor = CosmosColors.AccentPrimary,
-                        unfocusedBorderColor = cosmos.glassBorder,
-                    ),
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = cosmos.textPrimary,
+                            unfocusedTextColor = cosmos.textPrimary,
+                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            unfocusedBorderColor = cosmos.glassBorder,
+                        ),
                 )
                 Spacer(Modifier.width(8.dp))
                 androidx.compose.material3.OutlinedButton(
@@ -616,44 +636,45 @@ private fun DurationEstimateCard(
                             onChange(parsed)
                             sliderPos = durationStopIndexFor(parsed).toFloat().coerceAtLeast(0f)
                         }
-                    },
-                ) { Text("Setzen") }
+                    }
+                ) {
+                    Text("Setzen")
+                }
                 Spacer(Modifier.width(6.dp))
                 androidx.compose.material3.TextButton(
                     onClick = {
                         onChange(null)
                         manualText = ""
                         sliderPos = 0f
-                    },
-                ) { Text("Loeschen", color = cosmos.textSecondary) }
+                    }
+                ) {
+                    Text("Loeschen", color = cosmos.textSecondary)
+                }
             }
         }
     }
 }
 
 /**
- * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist-Karte mit Kalender-Symbol.
- * Tap auf das Symbol oeffnet einen Material-DatePicker. Anzeige der Restzeit
- * direkt unter dem Datum — z.B. "in 3 Tagen" oder "ueberfaellig seit 2 h".
+ * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist-Karte mit Kalender-Symbol. Tap auf das Symbol
+ * oeffnet einen Material-DatePicker. Anzeige der Restzeit direkt unter dem Datum — z.B. "in 3
+ * Tagen" oder "ueberfaellig seit 2 h".
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun DueDateCard(
-    dueAtMs: Long?,
-    onChange: (Long?) -> Unit,
-) {
+private fun DueDateCard(dueAtMs: Long?, onChange: (Long?) -> Unit) {
     val cosmos = LocalCosmos.current
     var showPicker by remember { mutableStateOf(false) }
     val nowMs = remember { System.currentTimeMillis() }
-    val labelDate = remember(dueAtMs) {
-        dueAtMs?.let {
-            val df = java.text.SimpleDateFormat("d. MMM yyyy", java.util.Locale.GERMAN)
-            df.format(java.util.Date(it))
+    val labelDate =
+        remember(dueAtMs) {
+            dueAtMs?.let {
+                val df = java.text.SimpleDateFormat("d. MMM yyyy", java.util.Locale.GERMAN)
+                df.format(java.util.Date(it))
+            }
         }
-    }
-    val labelRelative = remember(dueAtMs, nowMs) {
-        dueAtMs?.let { formatRelativeDeadline(it - nowMs) }
-    }
+    val labelRelative =
+        remember(dueAtMs, nowMs) { dueAtMs?.let { formatRelativeDeadline(it - nowMs) } }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -684,9 +705,9 @@ private fun DueDateCard(
                 Text(
                     "$labelDate · $labelRelative",
                     style = MaterialTheme.typography.titleMedium,
-                    color = if ((dueAtMs - nowMs) < 24L * 60 * 60 * 1000)
-                        CosmosColors.Critical
-                    else cosmos.textPrimary,
+                    color =
+                        if ((dueAtMs - nowMs) < 24L * 60 * 60 * 1000) CosmosColors.Critical
+                        else cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(6.dp))
@@ -698,9 +719,10 @@ private fun DueDateCard(
     }
 
     if (showPicker) {
-        val datePickerState = androidx.compose.material3.rememberDatePickerState(
-            initialSelectedDateMillis = dueAtMs ?: System.currentTimeMillis(),
-        )
+        val datePickerState =
+            androidx.compose.material3.rememberDatePickerState(
+                initialSelectedDateMillis = dueAtMs ?: System.currentTimeMillis()
+            )
         androidx.compose.material3.DatePickerDialog(
             onDismissRequest = { showPicker = false },
             confirmButton = {
@@ -715,20 +737,25 @@ private fun DueDateCard(
                             val cal = java.util.Calendar.getInstance()
                             cal.timeInMillis = picked
                             // DatePicker liefert UTC-Mitternacht → in Lokalzeit umrechnen.
-                            val localCal = java.util.Calendar.getInstance().apply {
-                                set(
-                                    cal.get(java.util.Calendar.YEAR),
-                                    cal.get(java.util.Calendar.MONTH),
-                                    cal.get(java.util.Calendar.DAY_OF_MONTH),
-                                    23, 59, 59,
-                                )
-                                set(java.util.Calendar.MILLISECOND, 0)
-                            }
+                            val localCal =
+                                java.util.Calendar.getInstance().apply {
+                                    set(
+                                        cal.get(java.util.Calendar.YEAR),
+                                        cal.get(java.util.Calendar.MONTH),
+                                        cal.get(java.util.Calendar.DAY_OF_MONTH),
+                                        23,
+                                        59,
+                                        59,
+                                    )
+                                    set(java.util.Calendar.MILLISECOND, 0)
+                                }
                             onChange(localCal.timeInMillis)
                         }
                         showPicker = false
-                    },
-                ) { Text("Setzen", color = CosmosColors.AccentPrimary) }
+                    }
+                ) {
+                    Text("Setzen", color = CosmosColors.AccentPrimary)
+                }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showPicker = false }) {

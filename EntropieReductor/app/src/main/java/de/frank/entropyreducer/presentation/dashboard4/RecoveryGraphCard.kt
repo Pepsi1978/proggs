@@ -54,9 +54,9 @@ import java.util.Locale
  *
  * Pattern uebernommen 1:1 vom Tiefschlaf-Verlauf (DeepSleepGraphCard) — nur die Berechnung +
  * Ampel-Schwellen wurden gegen die Recovery-Doktrin getauscht:
- *  - 80-100 % → Gruen (Success)
- *  - 60-80 %  → Gelb (Warning)
- *  - unter 60 % → Rot (Critical)
+ * - 80-100 % → Gruen (Success)
+ * - 60-80 % → Gelb (Warning)
+ * - unter 60 % → Rot (Critical)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,9 +132,7 @@ internal fun RecoveryGraphCard(
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
                     selectedIndex = cardColors.colors[BiomarkerCardId.RECOVERY_GRAPH] ?: 0,
-                    onPick = { idx ->
-                        cardColors.setColor(BiomarkerCardId.RECOVERY_GRAPH, idx)
-                    },
+                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.RECOVERY_GRAPH, idx) },
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -243,9 +241,9 @@ private fun RecoveryBars(values: List<Double>) {
  * Frank-Wunsch 2026-06-01: offizielle WHOOP-Recovery-Ampel (vorher Doktrin-Schwellen 80/60).
  * Delegiert an die zentrale whoopRecoveryColor() — eine Quelle der Wahrheit fuer alle
  * Recovery-Faerbungen:
- *  - 67-100 % → Gruen
- *  - 34-66 %  → Gelb
- *  - 0-33 %   → Rot
+ * - 67-100 % → Gruen
+ * - 34-66 % → Gelb
+ * - 0-33 % → Rot
  */
 private fun recoveryBarColor(pct: Double): Color = whoopRecoveryColor(pct)
 

@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +29,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.domain.kiquestion.KiQuestion
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.WhisperMicButton
@@ -53,9 +52,9 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Helles Orange wie der TTS-Lautsprecher in BestJournalFrank (`FeatureAccentOrange`).
- * Frank-Wunsch 2026-05-23 (Folge-Iteration): das vorher genutzte 0xFFEA580C wirkt rot —
- * fuer alle Lautsprecher- und Refresh-Tints jetzt 0xFFFF8C00 (Dark Orange CSS).
+ * Helles Orange wie der TTS-Lautsprecher in BestJournalFrank (`FeatureAccentOrange`). Frank-Wunsch
+ * 2026-05-23 (Folge-Iteration): das vorher genutzte 0xFFEA580C wirkt rot — fuer alle Lautsprecher-
+ * und Refresh-Tints jetzt 0xFFFF8C00 (Dark Orange CSS).
  */
 private val SpeakerOrange: Color = Color(0xFFFF8C00)
 
@@ -63,14 +62,14 @@ private val SpeakerOrange: Color = Color(0xFFFF8C00)
  * Briefing-Panel (Frank-Wunsch 2026-05-23 + Folge-Iteration).
  *
  * Aufbau:
- *  1. Header "Briefing" + Pfeil → klappt das gesamte Panel auf/zu (default collapsed,
- *     damit die Aufgaben direkt unter dem Briefing-Header beginnen).
- *  2. Bei aufgeklapptem Panel:
+ * 1. Header "Briefing" + Pfeil → klappt das gesamte Panel auf/zu (default collapsed, damit die
+ *    Aufgaben direkt unter dem Briefing-Header beginnen).
+ * 2. Bei aufgeklapptem Panel:
  *     - Briefing-Text (oder Leerhinweis)
  *     - Dropdown "Antwort an die KI" — eingeklappt
  *     - Dropdown "KI-Frage des Moments" — eingeklappt
- *     - Toolbar mit kleinem Lautsprecher (helles Orange) + Refresh (helles Orange),
- *       linksbuendig direkt unter der KI-Frage
+ *     - Toolbar mit kleinem Lautsprecher (helles Orange) + Refresh (helles Orange), linksbuendig
+ *       direkt unter der KI-Frage
  */
 @Composable
 fun BriefingPanel(
@@ -114,7 +113,8 @@ fun BriefingPanel(
                 )
                 Icon(
                     imageVector = Icons.Outlined.ExpandMore,
-                    contentDescription = if (panelExpanded) "Briefing zuklappen" else "Briefing aufklappen",
+                    contentDescription =
+                        if (panelExpanded) "Briefing zuklappen" else "Briefing aufklappen",
                     tint = cosmos.textSecondary,
                     modifier = Modifier.size(22.dp).rotate(rootArrowRotation),
                 )
@@ -168,7 +168,7 @@ fun BriefingPanel(
                         Spacer(Modifier.height(8.dp))
                         CollapsibleSection(label = "Antwort an die KI") {
                             BriefingResponseInput(
-                                onSubmit = { resp -> vm.submitBriefingResponse(selected, resp) },
+                                onSubmit = { resp -> vm.submitBriefingResponse(selected, resp) }
                             )
                         }
                     }
@@ -249,8 +249,8 @@ fun BriefingPanel(
 }
 
 /**
- * Wiederverwendbares Dropdown — Pfeil rechts in Textfarbe (unauffaellig laut Frank-
- * Wunsch 2026-05-23 Folge-Iteration), Klick auf Kopfzeile klappt auf/zu.
+ * Wiederverwendbares Dropdown — Pfeil rechts in Textfarbe (unauffaellig laut Frank- Wunsch
+ * 2026-05-23 Folge-Iteration), Klick auf Kopfzeile klappt auf/zu.
  */
 @Composable
 private fun CollapsibleSection(
@@ -325,7 +325,7 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
                 draftState.value =
                     if (draftState.value.isBlank()) transcript
                     else "${draftState.value} $transcript"
-            },
+            }
         )
         Spacer(Modifier.size(6.dp))
         IconButton(
@@ -346,9 +346,7 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
     }
 }
 
-/**
- * Inhalt der KI-Frage (ohne aeussere Karte/Header — das macht CollapsibleSection).
- */
+/** Inhalt der KI-Frage (ohne aeussere Karte/Header — das macht CollapsibleSection). */
 @Composable
 private fun KiQuestionContent(
     question: KiQuestion,

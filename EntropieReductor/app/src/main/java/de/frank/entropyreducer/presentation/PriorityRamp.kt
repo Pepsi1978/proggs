@@ -7,18 +7,18 @@ import androidx.compose.ui.graphics.toArgb
 /**
  * Kontinuierliche Prioritaets-Farbrampe (Frank-Wunsch 2026-05-31).
  *
- * EINZIGE QUELLE fuer die Prioritaets-Verlaufsfarbe — wird sowohl von der
- * App-Aufgabenkarte (TasksScreen.EntropyEntryCard) als auch vom Home-Screen-
- * Widget (EntropyReducerRemoteViewsService) genutzt. Dadurch sind die Farben
- * GARANTIERT bit-identisch (Poka-Yoke Stufe 3): App und Widget koennen nie
- * auseinanderlaufen, weil beide dieselbe Funktion aufrufen.
+ * EINZIGE QUELLE fuer die Prioritaets-Verlaufsfarbe — wird sowohl von der App-Aufgabenkarte
+ * (TasksScreen.EntropyEntryCard) als auch vom Home-Screen- Widget
+ * (EntropyReducerRemoteViewsService) genutzt. Dadurch sind die Farben GARANTIERT bit-identisch
+ * (Poka-Yoke Stufe 3): App und Widget koennen nie auseinanderlaufen, weil beide dieselbe Funktion
+ * aufrufen.
  *
- * Der Score wird auf den naechsten 5%-Schritt gerundet (0,5,…,100), sodass
- * JEDER 5%-Schritt eine eigene, klar unterscheidbare Farbe hat. Drei Farb-
- * familien ueber je ~33,3 % des Bereichs (kein Blau):
- *  - 66,7..100 : Rot    — hellrot (66,7) → dunkelrot (100)
- *  - 33,3..66,7: Gelb   — hellgelb (33,3) → dunkelorange (66,7)
- *  - 0..33,3   : Gruen  — hellgruen (0) → dunkelgruen (33,3)
+ * Der Score wird auf den naechsten 5%-Schritt gerundet (0,5,…,100), sodass JEDER 5%-Schritt eine
+ * eigene, klar unterscheidbare Farbe hat. Drei Farb- familien ueber je ~33,3 % des Bereichs (kein
+ * Blau):
+ * - 66,7..100 : Rot — hellrot (66,7) → dunkelrot (100)
+ * - 33,3..66,7: Gelb — hellgelb (33,3) → dunkelorange (66,7)
+ * - 0..33,3 : Gruen — hellgruen (0) → dunkelgruen (33,3)
  */
 
 // Anker-Farben fuer die drei Farbfamilien. Innerhalb jeder Familie wird zwischen
@@ -51,8 +51,7 @@ fun priorityRampColor(score: Double): Color {
 }
 
 /**
- * ARGB-Int-Variante — fuer das klassische RemoteViews-Widget (kann keine
- * Compose-Color verwenden). Ruft dieselbe Funktion auf wie die App und
- * konvertiert nur das Ergebnis → identische Farbe.
+ * ARGB-Int-Variante — fuer das klassische RemoteViews-Widget (kann keine Compose-Color verwenden).
+ * Ruft dieselbe Funktion auf wie die App und konvertiert nur das Ergebnis → identische Farbe.
  */
 fun priorityRampArgb(score: Double): Int = priorityRampColor(score).toArgb()

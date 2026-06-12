@@ -47,19 +47,21 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.label
 
 /**
- * Bottom-Sheet-Editor fuer Vorlagen wiederkehrender Aufgaben (Sprint 2.6, Frank-Wunsch
- * 2026-05-22). Wird sowohl fuer Anlegen (initial = null) als auch Bearbeiten (initial != null)
- * verwendet.
+ * Bottom-Sheet-Editor fuer Vorlagen wiederkehrender Aufgaben (Sprint 2.6, Frank-Wunsch 2026-05-22).
+ * Wird sowohl fuer Anlegen (initial = null) als auch Bearbeiten (initial != null) verwendet.
  *
  * RRULE-Picker:
- *  - Tab "Täglich":      FREQ=DAILY[;INTERVAL=N]
- *  - Tab "Wöchentlich":  FREQ=WEEKLY[;INTERVAL=N];BYDAY=MO,DI,...
- *  - Tab "Monatlich":    FREQ=MONTHLY[;INTERVAL=N];BYMONTHDAY=N
+ * - Tab "Täglich": FREQ=DAILY[;INTERVAL=N]
+ * - Tab "Wöchentlich": FREQ=WEEKLY[;INTERVAL=N];BYDAY=MO,DI,...
+ * - Tab "Monatlich": FREQ=MONTHLY[;INTERVAL=N];BYMONTHDAY=N
  *
  * Tageszeit (timeOfDayMinutes) wird mit zwei Spinner-aehnlichen +/--Buttons fuer Stunden/Minuten
  * gewaehlt — keine externe Time-Picker-Dependency noetig.
  */
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
 @Composable
 fun RecurringTemplateEditorSheet(
     initial: RecurringTemplateEntity?,
@@ -87,9 +89,10 @@ fun RecurringTemplateEditorSheet(
 
     var timeOfDayMinutes by remember { mutableStateOf(initial?.timeOfDayMinutes ?: 480) }
 
-    val canSave = title.isNotBlank() &&
-        (freq != "WEEKLY" || weekdays.isNotEmpty()) &&
-        (freq != "MONTHLY" || (monthDay in 1..31))
+    val canSave =
+        title.isNotBlank() &&
+            (freq != "WEEKLY" || weekdays.isNotEmpty()) &&
+            (freq != "MONTHLY" || (monthDay in 1..31))
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -97,11 +100,11 @@ fun RecurringTemplateEditorSheet(
         containerColor = if (cosmos.isDark) Color(0xFF1B1F2E) else Color.White,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
         ) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -113,7 +116,11 @@ fun RecurringTemplateEditorSheet(
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Schließen", tint = cosmos.textSecondary)
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = "Schließen",
+                        tint = cosmos.textSecondary,
+                    )
                 }
             }
 
@@ -182,12 +189,13 @@ fun RecurringTemplateEditorSheet(
 
             IntervalStepper(
                 interval = interval,
-                unitLabel = when (freq) {
-                    "DAILY" -> "Tag(e)"
-                    "WEEKLY" -> "Woche(n)"
-                    "MONTHLY" -> "Monat(e)"
-                    else -> "Einheit(en)"
-                },
+                unitLabel =
+                    when (freq) {
+                        "DAILY" -> "Tag(e)"
+                        "WEEKLY" -> "Woche(n)"
+                        "MONTHLY" -> "Monat(e)"
+                        else -> "Einheit(en)"
+                    },
                 onChange = { interval = it.coerceIn(1, 30) },
             )
             Spacer(Modifier.height(12.dp))
@@ -210,7 +218,8 @@ fun RecurringTemplateEditorSheet(
 
             // Vorschau
             Text(
-                text = "Vorschau: ${humanReadable(buildRule(freq, interval, weekdays, monthDay))} um ${formatTime(timeOfDayMinutes)}",
+                text =
+                    "Vorschau: ${humanReadable(buildRule(freq, interval, weekdays, monthDay))} um ${formatTime(timeOfDayMinutes)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -223,21 +232,24 @@ fun RecurringTemplateEditorSheet(
                 Button(
                     onClick = {
                         val now = System.currentTimeMillis()
-                        val template = (initial ?: RecurringTemplateEntity(
-                            id = "",
-                            title = title,
-                            rrule = "FREQ=DAILY",
-                        )).copy(
-                            title = title.trim(),
-                            description = description.trim().ifBlank { null },
-                            category = category,
-                            priorityScore = priorityScore.toInt(),
-                            severity = severity.toInt(),
-                            estimatedDurationMinutes = durationText.toIntOrNull(),
-                            rrule = buildRule(freq, interval, weekdays, monthDay),
-                            timeOfDayMinutes = timeOfDayMinutes,
-                            updatedAt = now,
-                        )
+                        val template =
+                            (initial
+                                    ?: RecurringTemplateEntity(
+                                        id = "",
+                                        title = title,
+                                        rrule = "FREQ=DAILY",
+                                    ))
+                                .copy(
+                                    title = title.trim(),
+                                    description = description.trim().ifBlank { null },
+                                    category = category,
+                                    priorityScore = priorityScore.toInt(),
+                                    severity = severity.toInt(),
+                                    estimatedDurationMinutes = durationText.toIntOrNull(),
+                                    rrule = buildRule(freq, interval, weekdays, monthDay),
+                                    timeOfDayMinutes = timeOfDayMinutes,
+                                    updatedAt = now,
+                                )
                         onSave(template)
                     },
                     enabled = canSave,
@@ -274,11 +286,11 @@ private fun CategoryDropdown(selected: EntropyCategory, onSelect: (EntropyCatego
         EntropyCategory.values().forEach { cat ->
             val isSel = cat == selected
             Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
-                    .clickable { onSelect(cat) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                modifier =
+                    Modifier.clip(RoundedCornerShape(20.dp))
+                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .clickable { onSelect(cat) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = cat.label(),
@@ -298,12 +310,12 @@ private fun FreqTabs(selected: String, onSelect: (String) -> Unit) {
         tabs.forEach { (key, label) ->
             val isSel = selected == key
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
-                    .clickable { onSelect(key) }
-                    .padding(vertical = 10.dp),
+                modifier =
+                    Modifier.weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .clickable { onSelect(key) }
+                        .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -343,11 +355,11 @@ private fun IntervalStepper(interval: Int, unitLabel: String, onChange: (Int) ->
 @Composable
 private fun StepperButton(label: String, onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f))
-            .clickable { onClick() },
+        modifier =
+            Modifier.size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f))
+                .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(label, color = CosmosColors.AccentPrimary, fontWeight = FontWeight.Bold)
@@ -357,19 +369,26 @@ private fun StepperButton(label: String, onClick: () -> Unit) {
 @Composable
 private fun WeekdayPicker(selected: Set<String>, onChange: (Set<String>) -> Unit) {
     val cosmos = LocalCosmos.current
-    val days = listOf("MO" to "Mo", "TU" to "Di", "WE" to "Mi", "TH" to "Do", "FR" to "Fr", "SA" to "Sa", "SU" to "So")
+    val days =
+        listOf(
+            "MO" to "Mo",
+            "TU" to "Di",
+            "WE" to "Mi",
+            "TH" to "Do",
+            "FR" to "Fr",
+            "SA" to "Sa",
+            "SU" to "So",
+        )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         days.forEach { (key, label) ->
             val isSel = key in selected
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
-                    .clickable {
-                        onChange(if (isSel) selected - key else selected + key)
-                    }
-                    .padding(vertical = 10.dp),
+                modifier =
+                    Modifier.weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .clickable { onChange(if (isSel) selected - key else selected + key) }
+                        .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -452,29 +471,26 @@ private data class ParsedRule(
 )
 
 private fun parseRule(rrule: String): ParsedRule {
-    val parts = rrule.split(";")
-        .mapNotNull { it.split("=", limit = 2).takeIf { kv -> kv.size == 2 } }
-        .associate { it[0].uppercase() to it[1] }
+    val parts =
+        rrule
+            .split(";")
+            .mapNotNull { it.split("=", limit = 2).takeIf { kv -> kv.size == 2 } }
+            .associate { it[0].uppercase() to it[1] }
     return ParsedRule(
         freq = (parts["FREQ"] ?: "DAILY").uppercase(),
         interval = parts["INTERVAL"]?.toIntOrNull() ?: 1,
-        weekdays = parts["BYDAY"]
-            ?.split(",")
-            ?.mapNotNull { it.takeLast(2).uppercase().takeIf(::isWeekday) }
-            ?.toSet() ?: emptySet(),
+        weekdays =
+            parts["BYDAY"]
+                ?.split(",")
+                ?.mapNotNull { it.takeLast(2).uppercase().takeIf(::isWeekday) }
+                ?.toSet() ?: emptySet(),
         monthDay = parts["BYMONTHDAY"]?.toIntOrNull() ?: 1,
     )
 }
 
-private fun isWeekday(s: String): Boolean =
-    s in setOf("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+private fun isWeekday(s: String): Boolean = s in setOf("MO", "TU", "WE", "TH", "FR", "SA", "SU")
 
-private fun buildRule(
-    freq: String,
-    interval: Int,
-    weekdays: Set<String>,
-    monthDay: Int,
-): String {
+private fun buildRule(freq: String, interval: Int, weekdays: Set<String>, monthDay: Int): String {
     val sb = StringBuilder("FREQ=").append(freq)
     if (interval > 1) sb.append(";INTERVAL=").append(interval)
     if (freq == "WEEKLY" && weekdays.isNotEmpty()) {
@@ -488,5 +504,4 @@ private fun buildRule(
     return sb.toString()
 }
 
-private fun formatTime(minutes: Int): String =
-    "%02d:%02d".format(minutes / 60, minutes % 60)
+private fun formatTime(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)

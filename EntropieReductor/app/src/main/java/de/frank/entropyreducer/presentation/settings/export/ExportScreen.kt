@@ -51,11 +51,11 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Frank-Wunsch 2026-05-10: Drive-Backup-Bereich ist jetzt im
@@ -64,36 +64,59 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Text("Datenexport", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                    Text(
+                        "Datenexport",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                    )
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { /* Stufe 4 — JSON-Export */ },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Alle Daten als JSON exportieren (Stufe 4)") }
+                    ) {
+                        Text("Alle Daten als JSON exportieren (Stufe 4)")
+                    }
                 }
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Text("Löschen", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                    Text(
+                        "Löschen",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                    )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = { confirmDeleteEntries = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-                    ) { Text("Alle Einträge löschen") }
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = CosmosColors.Critical,
+                                contentColor = Color.White,
+                            ),
+                    ) {
+                        Text("Alle Einträge löschen")
+                    }
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = { confirmDeleteMemories = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-                    ) { Text("Alle Memory-Einträge löschen") }
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = CosmosColors.Critical,
+                                contentColor = Color.White,
+                            ),
+                    ) {
+                        Text("Alle Memory-Einträge löschen")
+                    }
                 }
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Alle Daten werden ausschliesslich lokal auf deinem Gerät gespeichert. Wenn du Drive-Backup aktiviert hast (Bereich „Google Drive Backup\" unter API-Schlüssel), wird zusätzlich eine JSON-Kopie deiner Einträge im appDataFolder deines Google-Kontos abgelegt — für dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
+                    text =
+                        "Alle Daten werden ausschliesslich lokal auf deinem Gerät gespeichert. Wenn du Drive-Backup aktiviert hast (Bereich „Google Drive Backup\" unter API-Schlüssel), wird zusätzlich eine JSON-Kopie deiner Einträge im appDataFolder deines Google-Kontos abgelegt — für dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -104,8 +127,12 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
     if (confirmDeleteEntries) {
         ConfirmDialog(
             title = "Alle Einträge löschen?",
-            text = "Diese Aktion kann nicht rückgängig gemacht werden. Bei aktivem Drive-Backup wird auch der Cloud-Stand entsprechend angepasst.",
-            onConfirm = { vm.deleteAllEntries(); confirmDeleteEntries = false },
+            text =
+                "Diese Aktion kann nicht rückgängig gemacht werden. Bei aktivem Drive-Backup wird auch der Cloud-Stand entsprechend angepasst.",
+            onConfirm = {
+                vm.deleteAllEntries()
+                confirmDeleteEntries = false
+            },
             onCancel = { confirmDeleteEntries = false },
         )
     }
@@ -113,21 +140,35 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
         ConfirmDialog(
             title = "Alle Memory-Einträge löschen?",
             text = "Diese Aktion kann nicht rückgängig gemacht werden.",
-            onConfirm = { vm.deleteAllMemories(); confirmDeleteMemories = false },
+            onConfirm = {
+                vm.deleteAllMemories()
+                confirmDeleteMemories = false
+            },
             onCancel = { confirmDeleteMemories = false },
         )
     }
 }
 
 @Composable
-private fun ConfirmDialog(title: String, text: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
+private fun ConfirmDialog(
+    title: String,
+    text: String,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onCancel,
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-            ) { Text("Löschen") }
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = CosmosColors.Critical,
+                        contentColor = Color.White,
+                    ),
+            ) {
+                Text("Löschen")
+            }
         },
         dismissButton = { TextButton(onClick = onCancel) { Text("Abbrechen") } },
         title = { Text(title) },

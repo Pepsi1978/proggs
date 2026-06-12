@@ -31,7 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorFollowupEntity
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -72,9 +72,8 @@ fun JournalEntryDetailScreen(
     // Standard ist "KI-verbessert", sobald eine verbesserte Variante existiert.
     val variantEntry = state.entry
     val improvedAvailable = !variantEntry?.improvedText.isNullOrBlank()
-    var showImproved by remember(variantEntry?.sourceId, improvedAvailable) {
-        mutableStateOf(improvedAvailable)
-    }
+    var showImproved by
+        remember(variantEntry?.sourceId, improvedAvailable) { mutableStateOf(improvedAvailable) }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize().padding(top = topInset)) {
@@ -97,7 +96,10 @@ fun JournalEntryDetailScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = { viewModel.speak(showImproved) }, modifier = Modifier.size(44.dp)) {
+                IconButton(
+                    onClick = { viewModel.speak(showImproved) },
+                    modifier = Modifier.size(44.dp),
+                ) {
                     when (state.ttsState) {
                         JournalTtsState.LOADING ->
                             CircularProgressIndicator(
@@ -181,11 +183,15 @@ fun JournalEntryDetailScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         if (hasImproved) {
-                            VariantTabRow(showImproved = showImproved, onToggle = { showImproved = !showImproved })
+                            VariantTabRow(
+                                showImproved = showImproved,
+                                onToggle = { showImproved = !showImproved },
+                            )
                             Spacer(Modifier.height(8.dp))
                         }
                         val body =
-                            if (showImproved && !entry.improvedText.isNullOrBlank()) entry.improvedText
+                            if (showImproved && !entry.improvedText.isNullOrBlank())
+                                entry.improvedText
                             else entry.displayText
                         Text(
                             text = body,
@@ -239,7 +245,10 @@ private fun FollowupCard(followup: JournalMirrorFollowupEntity, index: Int) {
             )
             Spacer(Modifier.height(8.dp))
             if (hasImproved) {
-                VariantTabRow(showImproved = showImproved, onToggle = { showImproved = !showImproved })
+                VariantTabRow(
+                    showImproved = showImproved,
+                    onToggle = { showImproved = !showImproved },
+                )
                 Spacer(Modifier.height(8.dp))
             }
             val body =
@@ -260,9 +269,17 @@ private fun FollowupCard(followup: JournalMirrorFollowupEntity, index: Int) {
 private fun VariantTabRow(showImproved: Boolean, onToggle: () -> Unit) {
     val cosmos = LocalCosmos.current
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        TabChip(label = "KI-verbessert", active = showImproved, onClick = { if (!showImproved) onToggle() })
+        TabChip(
+            label = "KI-verbessert",
+            active = showImproved,
+            onClick = { if (!showImproved) onToggle() },
+        )
         Spacer(Modifier.width(6.dp))
-        TabChip(label = "Original", active = !showImproved, onClick = { if (showImproved) onToggle() })
+        TabChip(
+            label = "Original",
+            active = !showImproved,
+            onClick = { if (showImproved) onToggle() },
+        )
     }
 }
 

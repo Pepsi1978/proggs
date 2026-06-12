@@ -369,7 +369,8 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
                 SubIconMeta(Icons.Outlined.Flag, "Priorität"),
                 // Frank-Wunsch 2026-06-09: Slot 2 = Mentalboard.
                 SubIconMeta(Icons.Outlined.Psychology, "Mental"),
-                // Frank-Wunsch 2026-06-10: Slot 3 = Ideen (Gluehbirne) — 1:1-Klon des Entropie-Bereichs.
+                // Frank-Wunsch 2026-06-10: Slot 3 = Ideen (Gluehbirne) — 1:1-Klon des
+                // Entropie-Bereichs.
                 SubIconMeta(Icons.Outlined.AutoAwesome, "Ideen"),
             )
         // Frank-Wunsch 2026-06-09: Forscher bekommt Entropie (Slot 1, Warndreieck mit

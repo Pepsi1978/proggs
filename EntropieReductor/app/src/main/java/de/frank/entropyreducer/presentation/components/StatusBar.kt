@@ -37,8 +37,8 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Status-Balken "Zustand jetzt" — Spec §4.1. Tap oeffnet ein Detail-Sheet
- * mit Aufschluesselung der drei Komponenten.
+ * Status-Balken "Zustand jetzt" — Spec §4.1. Tap oeffnet ein Detail-Sheet mit Aufschluesselung der
+ * drei Komponenten.
  */
 @Composable
 fun StatusBar(
@@ -48,26 +48,29 @@ fun StatusBar(
     breakdown: StatusBreakdown? = null,
 ) {
     var sheetOpen by remember { mutableStateOf(false) }
-    val animated by animateFloatAsState(
-        targetValue = (percent.coerceIn(0, 100) / 100f),
-        animationSpec = tween(durationMillis = 600),
-        label = "statusBar",
-    )
+    val animated by
+        animateFloatAsState(
+            targetValue = (percent.coerceIn(0, 100) / 100f),
+            animationSpec = tween(durationMillis = 600),
+            label = "statusBar",
+        )
     val cosmos = LocalCosmos.current
 
-    val gradient = Brush.horizontalGradient(
-        0f to CosmosColors.StatusRed,
-        0.33f to CosmosColors.StatusYellow,
-        0.66f to CosmosColors.StatusLightGreen,
-        1f to CosmosColors.StatusGreen,
-    )
+    val gradient =
+        Brush.horizontalGradient(
+            0f to CosmosColors.StatusRed,
+            0.33f to CosmosColors.StatusYellow,
+            0.66f to CosmosColors.StatusLightGreen,
+            1f to CosmosColors.StatusGreen,
+        )
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clickable(enabled = breakdown != null) { sheetOpen = true }
-            .padding(horizontal = 16.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clickable(enabled = breakdown != null) { sheetOpen = true }
+                .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -77,18 +80,18 @@ fun StatusBar(
         )
         Spacer(Modifier.width(12.dp))
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(50))
-                .background(cosmos.glassBg),
+            modifier =
+                Modifier.weight(1f)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(cosmos.glassBg)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(animated)
-                    .clip(RoundedCornerShape(50))
-                    .background(gradient),
+                modifier =
+                    Modifier.fillMaxHeight()
+                        .fillMaxWidth(animated)
+                        .clip(RoundedCornerShape(50))
+                        .background(gradient)
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -101,18 +104,12 @@ fun StatusBar(
     }
 
     if (sheetOpen && breakdown != null) {
-        StatusDetailSheet(
-            breakdown = breakdown,
-            onDismiss = { sheetOpen = false },
-        )
+        StatusDetailSheet(breakdown = breakdown, onDismiss = { sheetOpen = false })
     }
 }
 
 @Composable
-private fun StatusDetailSheet(
-    breakdown: StatusBreakdown,
-    onDismiss: () -> Unit,
-) {
+private fun StatusDetailSheet(breakdown: StatusBreakdown, onDismiss: () -> Unit) {
     val cosmos = LocalCosmos.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -139,16 +136,19 @@ private fun StatusDetailSheet(
             ComponentRow(
                 label = "Biomarker (40 %)",
                 value = breakdown.biomarkerScore?.let { "$it %" } ?: "Whoop nicht verbunden",
-                detail = buildString {
-                    breakdown.recoveryScore?.let { append("Recovery $it %  ") }
-                    breakdown.hrvMs?.let { append("HRV ${"%.1f".format(it)} ms  ") }
-                    breakdown.sleepPerformance?.let { append("Sleep $it %") }
-                }.trim(),
+                detail =
+                    buildString {
+                            breakdown.recoveryScore?.let { append("Recovery $it %  ") }
+                            breakdown.hrvMs?.let { append("HRV ${"%.1f".format(it)} ms  ") }
+                            breakdown.sleepPerformance?.let { append("Sleep $it %") }
+                        }
+                        .trim(),
             )
             ComponentRow(
                 label = "Aufgaben-Reduktion (35 %)",
                 value = "${breakdown.tasksScore} %",
-                detail = "${breakdown.openEntryCount} offen, ${breakdown.resolvedTodayCount} heute reduziert",
+                detail =
+                    "${breakdown.openEntryCount} offen, ${breakdown.resolvedTodayCount} heute reduziert",
             )
             ComponentRow(
                 label = "Kontext (25 %)",
@@ -157,8 +157,9 @@ private fun StatusDetailSheet(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Berechnungslogik gemäß Spec §4.1. Der Wert wird alle paar Minuten " +
-                    "neu berechnet sowie sofort nach jeder Status-Änderung eines Eintrags.",
+                text =
+                    "Berechnungslogik gemäß Spec §4.1. Der Wert wird alle paar Minuten " +
+                        "neu berechnet sowie sofort nach jeder Status-Änderung eines Eintrags.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -181,25 +182,21 @@ private fun ComponentRow(label: String, value: String, detail: String) {
     }
 }
 
-private fun shiftLabel(shift: ShiftCode): String = when (shift) {
-    ShiftCode.TAGDIENST -> "Tagdienst"
-    ShiftCode.NACHTDIENST -> "Nachtdienst"
-    ShiftCode.FREI -> "Frei"
-    ShiftCode.URLAUB -> "Urlaub"
-    ShiftCode.UNBEKANNT -> "Unbekannt"
-}
+private fun shiftLabel(shift: ShiftCode): String =
+    when (shift) {
+        ShiftCode.TAGDIENST -> "Tagdienst"
+        ShiftCode.NACHTDIENST -> "Nachtdienst"
+        ShiftCode.FREI -> "Frei"
+        ShiftCode.URLAUB -> "Urlaub"
+        ShiftCode.UNBEKANNT -> "Unbekannt"
+    }
 
 /** Variante als Ring für Recovery-Score (Dashboard 4). */
 @Composable
-fun RingPlaceholder(
-    score: Int,
-    modifier: Modifier = Modifier,
-) {
+fun RingPlaceholder(score: Int, modifier: Modifier = Modifier) {
     val cosmos = LocalCosmos.current
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(cosmos.glassBg),
+        modifier = modifier.clip(RoundedCornerShape(50)).background(cosmos.glassBg),
         contentAlignment = Alignment.Center,
     ) {
         Text(

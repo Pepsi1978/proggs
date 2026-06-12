@@ -41,43 +41,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
- * Mentalboard (Frank-Wunsch 2026-06-09): eine vom Benutzer frei sortierbare Liste kurzer
- * Saetze ("Mentals"). Liegt im Aufgaben-Bereich auf Sub-Reiter 2 ("Mental").
+ * Mentalboard (Frank-Wunsch 2026-06-09): eine vom Benutzer frei sortierbare Liste kurzer Saetze
+ * ("Mentals"). Liegt im Aufgaben-Bereich auf Sub-Reiter 2 ("Mental").
  *
  * Bedienung:
- * - Der Mic-Button in der BottomBar oeffnet die Auswahl "Schreiben" / "Aufnehmen"
- *   (Frank-Wunsch 2026-06-11: der fruehere "+ Neues Mental"-Button ist entfernt, alles
- *   laeuft ueber das Mikrofon). Nach dem Speichern erscheint der Satz nummeriert
- *   (1., 2., 3., …) in der Liste.
+ * - Der Mic-Button in der BottomBar oeffnet die Auswahl "Schreiben" / "Aufnehmen" (Frank-Wunsch
+ *   2026-06-11: der fruehere "+ Neues Mental"-Button ist entfernt, alles laeuft ueber das
+ *   Mikrofon). Nach dem Speichern erscheint der Satz nummeriert (1., 2., 3., …) in der Liste.
  * - Tap auf einen Satz oeffnet einen Dialog zum Editieren ODER Loeschen.
- * - Langes Druecken auf einen Satz startet Drag & Drop: die Reihenfolge laesst sich
- *   beliebig umsortieren (Position 7 kann auf Position 1 wandern).
+ * - Langes Druecken auf einen Satz startet Drag & Drop: die Reihenfolge laesst sich beliebig
+ *   umsortieren (Position 7 kann auf Position 1 wandern).
  *
- * Persistenz: DataStore (Datei "mental_board"), exakt analog zum Tagebuch/Thesen-Muster —
- * bewusst KEIN Room, weil die Haupt-DB mit destructive-fallback laeuft (eine fehlerhafte
- * Room-Migration wuerde alle echten Daten loeschen). Die Reihenfolge IST die Listenreihenfolge
- * (kein sortBy) — so ueberlebt das manuelle Sortieren App-Neustarts. Jede Aenderung stoesst
- * automatisch ein Drive-Backup an (triggerDriveBackup), damit das Board ins Cloud-Backup wandert.
+ * Persistenz: DataStore (Datei "mental_board"), exakt analog zum Tagebuch/Thesen-Muster — bewusst
+ * KEIN Room, weil die Haupt-DB mit destructive-fallback laeuft (eine fehlerhafte Room-Migration
+ * wuerde alle echten Daten loeschen). Die Reihenfolge IST die Listenreihenfolge (kein sortBy) — so
+ * ueberlebt das manuelle Sortieren App-Neustarts. Jede Aenderung stoesst automatisch ein
+ * Drive-Backup an (triggerDriveBackup), damit das Board ins Cloud-Backup wandert.
  *
  * Die Akzentfarbe folgt dem Aufgaben-Bereich (Orange #EA580C), weil der Reiter dort liegt.
  * CosmosBottomBar laeuft im Sub-Mode mit forcedSubMode=TASKS, selectedSubIndex=2.
@@ -95,7 +94,9 @@ data class Mental(val id: String, val text: String) {
 private val Context.mentalStore by preferencesDataStore(name = "mental_board")
 private val KEY_MENTALS = stringPreferencesKey("mentals_json")
 
-/** Liste in GESPEICHERTER Reihenfolge (NICHT sortiert — das manuelle Sortieren ist die Reihenfolge). */
+/**
+ * Liste in GESPEICHERTER Reihenfolge (NICHT sortiert — das manuelle Sortieren ist die Reihenfolge).
+ */
 internal fun mentalsFlow(context: Context): Flow<List<Mental>> =
     context.mentalStore.data.map { prefs -> parseMentals(prefs[KEY_MENTALS]) }
 
@@ -114,7 +115,8 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
     if (clean.isEmpty()) return
     context.mentalStore.edit { prefs ->
         val existing = parseMentals(prefs[KEY_MENTALS])
-        prefs[KEY_MENTALS] = serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
+        prefs[KEY_MENTALS] =
+            serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
     }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
@@ -346,8 +348,7 @@ private fun MentalRow(
     dragModifier: Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    val cardBg =
-        if (cosmos.isDark) Color(0xFF1E2336) else Color.White
+    val cardBg = if (cosmos.isDark) Color(0xFF1E2336) else Color.White
     Row(
         modifier =
             Modifier.fillMaxWidth()
@@ -355,7 +356,10 @@ private fun MentalRow(
                 .background(cardBg)
                 .then(
                     if (isDragging) {
-                        Modifier.background(MentalAccent.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                        Modifier.background(
+                            MentalAccent.copy(alpha = 0.12f),
+                            RoundedCornerShape(14.dp),
+                        )
                     } else {
                         Modifier
                     }
@@ -422,8 +426,9 @@ private fun EmptyState() {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Tippe unten auf das Mikrofon und waehle Schreiben oder Aufnehmen. " +
-                "Spaeter kannst du Saetze per langem Druecken frei sortieren.",
+            text =
+                "Tippe unten auf das Mikrofon und waehle Schreiben oder Aufnehmen. " +
+                    "Spaeter kannst du Saetze per langem Druecken frei sortieren.",
             style = MaterialTheme.typography.bodyMedium,
             color = cosmos.textSecondary,
             textAlign = TextAlign.Center,
@@ -466,7 +471,8 @@ private fun MentalEditDialog(
                 modifier = Modifier.size(56.dp),
             ) {
                 // Frank-Wunsch 2026-06-10: Diskette IMMER voll orange in voller Staerke — auch im
-                // "Neues Mental"-Dialog (vorher bei leerem Text abgeschwaecht/durchsichtig). Gleiche
+                // "Neues Mental"-Dialog (vorher bei leerem Text abgeschwaecht/durchsichtig).
+                // Gleiche
                 // Farbe und Staerke wie im Bearbeiten-Dialog.
                 Icon(
                     imageVector = Icons.Outlined.Save,

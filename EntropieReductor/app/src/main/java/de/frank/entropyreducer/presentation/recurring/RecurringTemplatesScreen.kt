@@ -20,20 +20,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,36 +43,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.domain.model.TimeBucket
-import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
-import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
-import de.frank.entropyreducer.presentation.dashboard1.CategoryIconCircle
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
+import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.color
 
 /**
  * Loop-Reiter (Frank-Wunsch 2026-05-22 Phase 2):
- *  - Aufgaben sehen 1:1 wie im Aufgaben-Reiter aus (GlassCard mit
- *    CategoryIconCircle + Kategorie-Pill + Titel + Beschreibung + Prio-Zahl).
- *  - Checkbox LINKS vor jeder Karte (statt Switch rechts).
- *  - Beim Aktivieren der Checkbox wird sofort eine Aufgabe in den Aufgaben-
- *    Reiter uebernommen (ueber GenerateRecurringInstancesUseCase im
- *    ViewModel — lastGeneratedAt=0 erzwingt die naechste Generierung).
- *  - Solange die Checkbox aktiv ist, wird nach Abschluss der Aufgabe die
- *    naechste Instanz nach RRULE erzeugt.
- *  - Mic ueber die BottomBar oeffnet die einheitlichen MicCaptureActions
- *    in Orange (Aufgaben-Sub-Akzent).
- *  - BottomBar bleibt sichtbar (forcedSubMode=Routes.TASKS).
+ * - Aufgaben sehen 1:1 wie im Aufgaben-Reiter aus (GlassCard mit CategoryIconCircle +
+ *   Kategorie-Pill + Titel + Beschreibung + Prio-Zahl).
+ * - Checkbox LINKS vor jeder Karte (statt Switch rechts).
+ * - Beim Aktivieren der Checkbox wird sofort eine Aufgabe in den Aufgaben- Reiter uebernommen
+ *   (ueber GenerateRecurringInstancesUseCase im ViewModel — lastGeneratedAt=0 erzwingt die naechste
+ *   Generierung).
+ * - Solange die Checkbox aktiv ist, wird nach Abschluss der Aufgabe die naechste Instanz nach RRULE
+ *   erzeugt.
+ * - Mic ueber die BottomBar oeffnet die einheitlichen MicCaptureActions in Orange
+ *   (Aufgaben-Sub-Akzent).
+ * - BottomBar bleibt sichtbar (forcedSubMode=Routes.TASKS).
  */
 @Composable
 fun RecurringTemplatesScreen(
@@ -109,12 +103,13 @@ fun RecurringTemplatesScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = 120.dp,
-                    ),
+                    contentPadding =
+                        androidx.compose.foundation.layout.PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = 120.dp,
+                        ),
                 ) {
                     items(templates) { t ->
                         TemplateAsTaskCard(
@@ -172,15 +167,13 @@ private fun EmptyHint(modifier: Modifier = Modifier) {
 }
 
 /**
- * Frank-Wunsch 2026-05-22 Phase 2 (Aufgabe 3 + 5): Loop-Pattern-Karte sieht
- * 1:1 wie die EntropyEntryCard im Aufgaben-Reiter aus — gleicher GlassCard,
- * CategoryIconCircle links, Kategorie-Pill, Titel, Beschreibung, grosse Prio-
- * Zahl rechts. Davor eine Checkbox; aktiv heisst "wird als Aufgabe uebernommen
- * und solange aktiv nach jedem Abschluss neu erstellt".
+ * Frank-Wunsch 2026-05-22 Phase 2 (Aufgabe 3 + 5): Loop-Pattern-Karte sieht 1:1 wie die
+ * EntropyEntryCard im Aufgaben-Reiter aus — gleicher GlassCard, CategoryIconCircle links,
+ * Kategorie-Pill, Titel, Beschreibung, grosse Prio- Zahl rechts. Davor eine Checkbox; aktiv heisst
+ * "wird als Aufgabe uebernommen und solange aktiv nach jedem Abschluss neu erstellt".
  *
- * Die RRULE-Beschreibung (Taeglich, Woechentlich …) erscheint als zweite Zeile
- * unter der Beschreibung, damit Frank auf einen Blick sieht wann der Eintrag
- * fällig wird.
+ * Die RRULE-Beschreibung (Taeglich, Woechentlich …) erscheint als zweite Zeile unter der
+ * Beschreibung, damit Frank auf einen Blick sieht wann der Eintrag fällig wird.
  */
 // Frank-Wunsch 2026-05-24: internal statt private, damit der Aufgaben-Reiter
 // (TasksScreen) die Loop-Karten 1:1 als Akkordeon-Dropdown wiederverwenden kann.
@@ -233,9 +226,8 @@ internal fun TemplateAsTaskCard(
     // Effektive Prioritaet = Live-Regler ?: gespeicherter Wert. Faerbt die Karte live.
     val effectivePriority = liveSlider?.toDouble() ?: template.priorityScore.toDouble()
     val ramp = priorityRampColor(effectivePriority)
-    val priorityBrush = remember(ramp) {
-        Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp))
-    }
+    val priorityBrush =
+        remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
     // Pausierte Vorlagen dezent ausgegraut.
     val cardAlpha = if (template.isActive) 1f else 0.5f
 
@@ -249,12 +241,12 @@ internal fun TemplateAsTaskCard(
                 val boxBg = if (template.isActive) loopAccent else cosmos.glassBg
                 val boxBorder = if (template.isActive) loopAccent else cosmos.textSecondary
                 Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(boxBg)
-                        .border(BorderStroke(2.dp, boxBorder), RoundedCornerShape(8.dp))
-                        .clickable(onClick = onToggleActive),
+                    modifier =
+                        Modifier.size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(boxBg)
+                            .border(BorderStroke(2.dp, boxBorder), RoundedCornerShape(8.dp))
+                            .clickable(onClick = onToggleActive),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -365,15 +357,11 @@ internal fun TemplateAsTaskCard(
                     },
                     valueRange = 0f..100f,
                     steps = 19,
-                    colors = SliderDefaults.colors(
-                        thumbColor = ramp,
-                        activeTrackColor = ramp,
-                    ),
+                    colors = SliderDefaults.colors(thumbColor = ramp, activeTrackColor = ramp),
                 )
             }
         }
     }
-
 }
 
 /** Waehlbare Wiederkehr-Intervalle in Tagen (Frank-Wunsch 2026-06-01). 1 = taeglich. */
@@ -381,24 +369,23 @@ internal val loopIntervalOptions = listOf(1, 2, 3, 5, 7, 10, 14, 30)
 
 /**
  * Frank-Wunsch 2026-06-01: deutlich groessere Bandbreite an Wiederkehr-Intervallen fuer das
- * Dropdown im Loop-Detail (vorher fehlten u.a. "alle 4 Tage" und "alle 6 Tage"). Liste aus
- * (Label, intervalDays): null = "KI entscheidet". Tage lueckenlos 1..31, danach Wochen- und
- * Monats-Schritte (als Tage gerechnet, da das Cooldown-Modell in Tagen ab letzter Erledigung
- * arbeitet). Deckt die gaengige Bandbreite (taeglich bis jaehrlich) ab.
+ * Dropdown im Loop-Detail (vorher fehlten u.a. "alle 4 Tage" und "alle 6 Tage"). Liste aus (Label,
+ * intervalDays): null = "KI entscheidet". Tage lueckenlos 1..31, danach Wochen- und Monats-Schritte
+ * (als Tage gerechnet, da das Cooldown-Modell in Tagen ab letzter Erledigung arbeitet). Deckt die
+ * gaengige Bandbreite (taeglich bis jaehrlich) ab.
  */
-internal val loopIntervalChoices: List<Pair<String, Int?>> =
-    buildList {
-        add("KI entscheidet" to null)
-        add("Täglich" to 1)
-        for (n in 2..31) add("Alle $n Tage" to n)
-        add("Alle 6 Wochen (42 Tage)" to 42)
-        add("Alle 8 Wochen (56 Tage)" to 56)
-        add("Alle 2 Monate (60 Tage)" to 60)
-        add("Alle 3 Monate (90 Tage)" to 90)
-        add("Alle 4 Monate (120 Tage)" to 120)
-        add("Alle 6 Monate (180 Tage)" to 180)
-        add("Jährlich (365 Tage)" to 365)
-    }
+internal val loopIntervalChoices: List<Pair<String, Int?>> = buildList {
+    add("KI entscheidet" to null)
+    add("Täglich" to 1)
+    for (n in 2..31) add("Alle $n Tage" to n)
+    add("Alle 6 Wochen (42 Tage)" to 42)
+    add("Alle 8 Wochen (56 Tage)" to 56)
+    add("Alle 2 Monate (60 Tage)" to 60)
+    add("Alle 3 Monate (90 Tage)" to 90)
+    add("Alle 4 Monate (120 Tage)" to 120)
+    add("Alle 6 Monate (180 Tage)" to 180)
+    add("Jährlich (365 Tage)" to 365)
+}
 
 /** Menschenlesbares Label fuer ein Intervall (intervalDays). null = KI entscheidet. */
 internal fun loopIntervalLabel(days: Int?): String =
@@ -407,23 +394,20 @@ internal fun loopIntervalLabel(days: Int?): String =
         ?: "KI entscheidet"
 
 /** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
-internal val loopBucketOptions = listOf(
-    TimeBucket.HEUTE,
-    TimeBucket.MORGEN,
-    TimeBucket.FREIBLOCK,
-    TimeBucket.SPAETER,
-)
+internal val loopBucketOptions =
+    listOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.SPAETER)
 
-internal fun loopBucketLabel(b: TimeBucket): String = when (b) {
-    TimeBucket.HEUTE -> "Heute"
-    TimeBucket.MORGEN -> "Morgen"
-    TimeBucket.FREIBLOCK -> "Freiblock"
-    TimeBucket.SPAETER -> "Später"
-}
+internal fun loopBucketLabel(b: TimeBucket): String =
+    when (b) {
+        TimeBucket.HEUTE -> "Heute"
+        TimeBucket.MORGEN -> "Morgen"
+        TimeBucket.FREIBLOCK -> "Freiblock"
+        TimeBucket.SPAETER -> "Später"
+    }
 
 /**
- * Kleine Perle im gleichen Stil wie die Prio-/Bucket-Perle der normalen Aufgaben-
- * Karte (glassBg-Hintergrund + textSecondary-Text). Frank-Wunsch 2026-05-31.
+ * Kleine Perle im gleichen Stil wie die Prio-/Bucket-Perle der normalen Aufgaben- Karte
+ * (glassBg-Hintergrund + textSecondary-Text). Frank-Wunsch 2026-05-31.
  */
 @Composable
 private fun LoopPearl(label: String, onClick: () -> Unit) {
@@ -431,10 +415,10 @@ private fun LoopPearl(label: String, onClick: () -> Unit) {
     val pillShape = remember { RoundedCornerShape(50) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(cosmos.glassBg, pillShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier =
+            Modifier.background(cosmos.glassBg, pillShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Text(
             text = label,
@@ -456,13 +440,14 @@ private fun priorityColor(score: Double): Color =
 
 /** Karten-Hintergrund-Tint identisch zur EntropyEntryCard-Logik. */
 private fun priorityCardTint(score: Double, isDark: Boolean): Color {
-    val base = when {
-        score >= 80.0 -> CosmosColors.PriorityRed
-        score >= 60.0 -> CosmosColors.PriorityOrange
-        score >= 40.0 -> CosmosColors.PriorityYellow
-        score >= 20.0 -> CosmosColors.PriorityGreen
-        else -> CosmosColors.PriorityBlue
-    }
+    val base =
+        when {
+            score >= 80.0 -> CosmosColors.PriorityRed
+            score >= 60.0 -> CosmosColors.PriorityOrange
+            score >= 40.0 -> CosmosColors.PriorityYellow
+            score >= 20.0 -> CosmosColors.PriorityGreen
+            else -> CosmosColors.PriorityBlue
+        }
     return base.copy(alpha = if (isDark) 0.14f else 0.18f)
 }
 
@@ -476,26 +461,34 @@ private inline fun <T> androidx.compose.foundation.lazy.LazyListScope.items(
 
 /**
  * RRULE → deutscher Klartext. Beispiele:
- * - "FREQ=DAILY"                   → "Täglich"
- * - "FREQ=WEEKLY;BYDAY=MO,WE,FR"   → "Wöchentlich: Mo, Mi, Fr"
- * - "FREQ=MONTHLY;BYMONTHDAY=1"    → "Monatlich am 1."
- * - unbekannte Regel               → die Original-Regel
+ * - "FREQ=DAILY" → "Täglich"
+ * - "FREQ=WEEKLY;BYDAY=MO,WE,FR" → "Wöchentlich: Mo, Mi, Fr"
+ * - "FREQ=MONTHLY;BYMONTHDAY=1" → "Monatlich am 1."
+ * - unbekannte Regel → die Original-Regel
  */
 internal fun humanReadable(rrule: String): String {
-    val parts = rrule.split(";")
-        .mapNotNull { part ->
-            val kv = part.split("=", limit = 2)
-            if (kv.size == 2) kv[0].uppercase() to kv[1] else null
-        }
-        .toMap()
+    val parts =
+        rrule
+            .split(";")
+            .mapNotNull { part ->
+                val kv = part.split("=", limit = 2)
+                if (kv.size == 2) kv[0].uppercase() to kv[1] else null
+            }
+            .toMap()
     val freq = parts["FREQ"] ?: return rrule
     val interval = parts["INTERVAL"]?.toIntOrNull() ?: 1
     val byDay = parts["BYDAY"]?.split(",")
     val byMonthDay = parts["BYMONTHDAY"]
-    val dayNamesShort = mapOf(
-        "MO" to "Mo", "TU" to "Di", "WE" to "Mi",
-        "TH" to "Do", "FR" to "Fr", "SA" to "Sa", "SU" to "So",
-    )
+    val dayNamesShort =
+        mapOf(
+            "MO" to "Mo",
+            "TU" to "Di",
+            "WE" to "Mi",
+            "TH" to "Do",
+            "FR" to "Fr",
+            "SA" to "Sa",
+            "SU" to "So",
+        )
     return when (freq) {
         "DAILY" -> if (interval == 1) "Täglich" else "Alle $interval Tage"
         "WEEKLY" -> {

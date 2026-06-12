@@ -31,7 +31,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import de.frank.entropyreducer.domain.model.TimeBucket
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -51,15 +50,14 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Vollbild-Detail einer Loop-Vorlage (Frank-Wunsch 2026-06-01).
  *
- * Frank wollte die Loop-Aufgaben NICHT mehr ueber die kleinen Perlen in der Karte
- * bearbeiten, sondern durch Reinklicken in die Karte ein eigenes Bearbeitungs-Fenster
- * oeffnen — genau wie bei den "Heute"-Aufgaben. Hier kann er ALLES einstellen:
- * Titel, Beschreibung, Wiederkehr-Intervall (alle N Tage / KI entscheidet), Prioritaet,
- * Ziel-Tag und aktiv/pausiert — plus Loeschen.
+ * Frank wollte die Loop-Aufgaben NICHT mehr ueber die kleinen Perlen in der Karte bearbeiten,
+ * sondern durch Reinklicken in die Karte ein eigenes Bearbeitungs-Fenster oeffnen — genau wie bei
+ * den "Heute"-Aufgaben. Hier kann er ALLES einstellen: Titel, Beschreibung, Wiederkehr-Intervall
+ * (alle N Tage / KI entscheidet), Prioritaet, Ziel-Tag und aktiv/pausiert — plus Loeschen.
  *
- * Nutzt das bestehende RecurringTemplatesViewModel (alle Setter ziehen offene Instanzen
- * im Aufgaben-Reiter automatisch mit). Die Vorlage wird per templateId aus dem
- * templates-Flow herausgefiltert, sodass Aenderungen sofort reaktiv erscheinen.
+ * Nutzt das bestehende RecurringTemplatesViewModel (alle Setter ziehen offene Instanzen im
+ * Aufgaben-Reiter automatisch mit). Die Vorlage wird per templateId aus dem templates-Flow
+ * herausgefiltert, sodass Aenderungen sofort reaktiv erscheinen.
  */
 @Composable
 fun LoopTemplateDetailScreen(
@@ -185,7 +183,10 @@ fun LoopTemplateDetailScreen(
                         valueRange = 0f..100f,
                         steps = 19,
                         colors =
-                            SliderDefaults.colors(thumbColor = loopAccent, activeTrackColor = loopAccent),
+                            SliderDefaults.colors(
+                                thumbColor = loopAccent,
+                                activeTrackColor = loopAccent,
+                            ),
                     )
                 }
             }

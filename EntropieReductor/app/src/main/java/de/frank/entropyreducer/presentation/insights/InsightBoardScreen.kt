@@ -1,8 +1,8 @@
 package de.frank.entropyreducer.presentation.insights
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
@@ -71,19 +71,16 @@ import de.frank.entropyreducer.presentation.theme.color
 import de.frank.entropyreducer.presentation.theme.label
 
 /**
- * Insight Board (Spec §14.2): drei kollabierbare Sektionen.
- * Frank-Wunsch 2026-05-09: Plus-Button rechts oben oeffnet ein Sheet zum
- * manuellen Hinzufuegen einer bestaetigten Methode per Mic + KI-Politur.
+ * Insight Board (Spec §14.2): drei kollabierbare Sektionen. Frank-Wunsch 2026-05-09: Plus-Button
+ * rechts oben oeffnet ein Sheet zum manuellen Hinzufuegen einer bestaetigten Methode per Mic +
+ * KI-Politur.
  */
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array.
 private val ALL_ENTROPY_CATEGORIES: List<EntropyCategory> = EntropyCategory.entries.toList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsightBoardScreen(
-    onBack: () -> Unit,
-    vm: InsightBoardViewModel = hiltViewModel(),
-) {
+fun InsightBoardScreen(onBack: () -> Unit, vm: InsightBoardViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -111,8 +108,20 @@ fun InsightBoardScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            section("Bestätigte Methoden", state.confirmed, Section.CONFIRMED, state.expandedSection, vm)
-            section("In Beobachtung", state.observation, Section.OBSERVATION, state.expandedSection, vm)
+            section(
+                "Bestätigte Methoden",
+                state.confirmed,
+                Section.CONFIRMED,
+                state.expandedSection,
+                vm,
+            )
+            section(
+                "In Beobachtung",
+                state.observation,
+                Section.OBSERVATION,
+                state.expandedSection,
+                vm,
+            )
             section("Verworfen", state.discarded, Section.DISCARDED, state.expandedSection, vm)
         }
     }
@@ -189,12 +198,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
 private fun SectionHeader(title: String, count: Int, isExpanded: Boolean, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(cosmos.glassBg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(cosmos.glassBg)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -222,7 +231,8 @@ private fun SectionHeader(title: String, count: Int, isExpanded: Boolean, onClic
 private fun EmptySection() {
     val cosmos = LocalCosmos.current
     Text(
-        text = "Noch nichts hier — schließe Hypothesen erfolgreich ab oder tippe auf das Plus-Symbol oben rechts, um eine Methode manuell hinzuzufügen.",
+        text =
+            "Noch nichts hier — schließe Hypothesen erfolgreich ab oder tippe auf das Plus-Symbol oben rechts, um eine Methode manuell hinzuzufügen.",
         color = cosmos.textSecondary,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -253,9 +263,7 @@ internal fun InsightCard(insight: InsightEntity, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    insight.additionalCategories.take(4).forEach { c ->
-                        AdditionalCategoryChip(c)
-                    }
+                    insight.additionalCategories.take(4).forEach { c -> AdditionalCategoryChip(c) }
                 }
             }
             Text(
@@ -274,11 +282,14 @@ internal fun InsightCard(insight: InsightEntity, onClick: () -> Unit) {
             }
             ConfidenceBar(insight.confidence)
             Text(
-                text = buildString {
-                    append("Versuche: ${insight.attemptCount} · Erfolge: ${insight.successCount}")
-                    insight.avgBiomarkerImpact?.let { append(" · $it") }
-                    if (insight.manualSource) append(" · manuell")
-                },
+                text =
+                    buildString {
+                        append(
+                            "Versuche: ${insight.attemptCount} · Erfolge: ${insight.successCount}"
+                        )
+                        insight.avgBiomarkerImpact?.let { append(" · $it") }
+                        if (insight.manualSource) append(" · manuell")
+                    },
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -291,11 +302,11 @@ private fun AdditionalCategoryChip(category: EntropyCategory) {
     val cosmos = LocalCosmos.current
     val color = category.color()
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.18f))
-            .border(BorderStroke(1.dp, color.copy(alpha = 0.45f)), RoundedCornerShape(8.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.18f))
+                .border(BorderStroke(1.dp, color.copy(alpha = 0.45f)), RoundedCornerShape(8.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(
             text = "+ ${category.label()}",
@@ -309,24 +320,20 @@ private fun AdditionalCategoryChip(category: EntropyCategory) {
 internal fun ConfidenceBar(percent: Int) {
     val cosmos = LocalCosmos.current
     val pct = percent.coerceIn(0, 100) / 100f
-    val color = when {
-        percent >= 70 -> CosmosColors.Success
-        percent >= 40 -> CosmosColors.Warning
-        else -> CosmosColors.Critical
-    }
+    val color =
+        when {
+            percent >= 70 -> CosmosColors.Success
+            percent >= 40 -> CosmosColors.Warning
+            else -> CosmosColors.Critical
+        }
     Box(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .height(6.dp)
             .clip(RoundedCornerShape(3.dp))
-            .background(cosmos.glassBorder),
+            .background(cosmos.glassBorder)
     ) {
         Box(
-            Modifier
-                .fillMaxWidth(pct)
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(color),
+            Modifier.fillMaxWidth(pct).height(6.dp).clip(RoundedCornerShape(3.dp)).background(color)
         )
     }
 }
@@ -347,11 +354,11 @@ private fun InsightDetailContent(
     var categoryMenu by rememberSaveable { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
-            .padding(bottom = 24.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+                .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         OutlinedTextField(
@@ -383,21 +390,22 @@ private fun InsightDetailContent(
             onValueChange = { confidence = it },
             onValueChangeFinished = { onAdjustConfidence(confidence.toInt()) },
             valueRange = 0f..100f,
-            colors = SliderDefaults.colors(
-                thumbColor = CosmosColors.AccentPrimary,
-                activeTrackColor = CosmosColors.AccentPrimary,
-                inactiveTrackColor = cosmos.glassBorder,
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = CosmosColors.AccentPrimary,
+                    activeTrackColor = CosmosColors.AccentPrimary,
+                    inactiveTrackColor = cosmos.glassBorder,
+                ),
         )
 
         Box {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(BorderStroke(1.dp, cosmos.glassBorder), RoundedCornerShape(12.dp))
-                    .clickable { categoryMenu = true }
-                    .padding(12.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(BorderStroke(1.dp, cosmos.glassBorder), RoundedCornerShape(12.dp))
+                        .clickable { categoryMenu = true }
+                        .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -435,8 +443,9 @@ private fun InsightDetailContent(
         )
 
         Text(
-            text = "Versuche: ${insight.attemptCount} · Erfolge: ${insight.successCount}" +
-                (insight.avgBiomarkerImpact?.let { " · $it" } ?: ""),
+            text =
+                "Versuche: ${insight.attemptCount} · Erfolge: ${insight.successCount}" +
+                    (insight.avgBiomarkerImpact?.let { " · $it" } ?: ""),
             color = cosmos.textSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -444,10 +453,11 @@ private fun InsightDetailContent(
         Button(
             onClick = onDelete,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
-                contentColor = CosmosColors.Critical,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
+                    contentColor = CosmosColors.Critical,
+                ),
         ) {
             Icon(Icons.Outlined.Delete, null)
             Spacer(Modifier.width(8.dp))
@@ -457,11 +467,10 @@ private fun InsightDetailContent(
 }
 
 /**
- * Sheet zum manuellen Hinzufuegen einer bestaetigten Methode (Frank-Wunsch
- * 2026-05-09). Der Mic-Button nimmt den Sprachtext per Whisper Large V3 Turbo
- * auf, das Transkript geht durch PolishMethodTextUseCase, dann sind Title/
- * Description/Categories editierbar — Frank kann alles nochmal anpassen vor
- * dem Speichern.
+ * Sheet zum manuellen Hinzufuegen einer bestaetigten Methode (Frank-Wunsch 2026-05-09). Der
+ * Mic-Button nimmt den Sprachtext per Whisper Large V3 Turbo auf, das Transkript geht durch
+ * PolishMethodTextUseCase, dann sind Title/ Description/Categories editierbar — Frank kann alles
+ * nochmal anpassen vor dem Speichern.
  */
 @Composable
 private fun AddMethodSheet(
@@ -478,20 +487,20 @@ private fun AddMethodSheet(
     var primaryMenu by rememberSaveable { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
-            .padding(bottom = 24.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+                .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f)),
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -525,11 +534,11 @@ private fun AddMethodSheet(
             AddMethodState.Closed -> Unit
             AddMethodState.Polishing -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(cosmos.glassBg)
-                        .padding(24.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(cosmos.glassBg)
+                            .padding(24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -549,11 +558,11 @@ private fun AddMethodSheet(
             }
             AddMethodState.Saving -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(cosmos.glassBg)
-                        .padding(24.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(cosmos.glassBg)
+                            .padding(24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -574,26 +583,24 @@ private fun AddMethodSheet(
             is AddMethodState.Ready -> {
                 // Mic-Button + Hinweis
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(cosmos.glassBg)
-                        .padding(16.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(cosmos.glassBg)
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    WhisperMicButton(
-                        onTranscript = onTranscript,
-                        size = 56.dp,
-                    )
+                    WhisperMicButton(onTranscript = onTranscript, size = 56.dp)
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        val hint = if (state.title.isBlank() && state.description.isBlank()) {
-                            "Tippe und sprich die Methode frei ein."
-                        } else if (state.usedAi) {
-                            "KI-Politur fertig. Du kannst noch anpassen."
-                        } else {
-                            "Roher Text übernommen — KI war nicht erreichbar."
-                        }
+                        val hint =
+                            if (state.title.isBlank() && state.description.isBlank()) {
+                                "Tippe und sprich die Methode frei ein."
+                            } else if (state.usedAi) {
+                                "KI-Politur fertig. Du kannst noch anpassen."
+                            } else {
+                                "Roher Text übernommen — KI war nicht erreichbar."
+                            }
                         Text(
                             hint,
                             color = cosmos.textPrimary,
@@ -627,12 +634,15 @@ private fun AddMethodSheet(
                 // Hauptkategorie als Dropdown
                 Box {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(BorderStroke(1.dp, cosmos.glassBorder), RoundedCornerShape(12.dp))
-                            .clickable { primaryMenu = true }
-                            .padding(12.dp),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(
+                                    BorderStroke(1.dp, cosmos.glassBorder),
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .clickable { primaryMenu = true }
+                                .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -643,7 +653,10 @@ private fun AddMethodSheet(
                         )
                         EntropyCategoryPill(category = state.primaryCategory)
                     }
-                    DropdownMenu(expanded = primaryMenu, onDismissRequest = { primaryMenu = false }) {
+                    DropdownMenu(
+                        expanded = primaryMenu,
+                        onDismissRequest = { primaryMenu = false },
+                    ) {
                         ALL_ENTROPY_CATEGORIES.forEach { c ->
                             DropdownMenuItem(
                                 text = { Text(c.label()) },
@@ -671,10 +684,11 @@ private fun AddMethodSheet(
                     onClick = onSave,
                     enabled = state.title.isNotBlank() || state.description.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentPrimary,
-                        contentColor = androidx.compose.ui.graphics.Color.White,
-                    ),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = CosmosColors.AccentPrimary,
+                            contentColor = androidx.compose.ui.graphics.Color.White,
+                        ),
                 ) {
                     Text("In bestätigte Methoden speichern")
                 }
@@ -684,8 +698,8 @@ private fun AddMethodSheet(
 }
 
 /**
- * Toggle-Reihe für Zusatzkategorien — alle Kategorien außer der Primary werden
- * als auswählbare Chips angezeigt. Tap toggelt drin/draußen.
+ * Toggle-Reihe für Zusatzkategorien — alle Kategorien außer der Primary werden als auswählbare
+ * Chips angezeigt. Tap toggelt drin/draußen.
  */
 @Composable
 private fun CategoryToggleRow(
@@ -695,10 +709,7 @@ private fun CategoryToggleRow(
 ) {
     val cosmos = LocalCosmos.current
     val all = remember { EntropyCategory.values().toList() }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
         all.chunked(3).forEach { row ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -708,26 +719,28 @@ private fun CategoryToggleRow(
                     val isPrimary = c == primary
                     val isSelected = selected.contains(c)
                     val color = c.color()
-                    val bg = when {
-                        isPrimary -> color.copy(alpha = 0.10f)
-                        isSelected -> color.copy(alpha = 0.30f)
-                        else -> cosmos.glassBg
-                    }
-                    val borderColor = when {
-                        isPrimary -> color.copy(alpha = 0.30f)
-                        isSelected -> color
-                        else -> cosmos.glassBorder
-                    }
+                    val bg =
+                        when {
+                            isPrimary -> color.copy(alpha = 0.10f)
+                            isSelected -> color.copy(alpha = 0.30f)
+                            else -> cosmos.glassBg
+                        }
+                    val borderColor =
+                        when {
+                            isPrimary -> color.copy(alpha = 0.30f)
+                            isSelected -> color
+                            else -> cosmos.glassBorder
+                        }
                     val textAlpha = if (isPrimary) 0.45f else 1f
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(10.dp))
-                            .let { if (!isPrimary) it.clickable { onToggle(c) } else it }
-                            .padding(horizontal = 8.dp, vertical = 8.dp)
-                            .wrapContentHeight(),
+                        modifier =
+                            Modifier.weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(bg)
+                                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(10.dp))
+                                .let { if (!isPrimary) it.clickable { onToggle(c) } else it }
+                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                                .wrapContentHeight(),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -739,9 +752,7 @@ private fun CategoryToggleRow(
                     }
                 }
                 // Auffuellen damit die Reihe immer 3 Slots breit ist
-                repeat(3 - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
             }
         }
     }

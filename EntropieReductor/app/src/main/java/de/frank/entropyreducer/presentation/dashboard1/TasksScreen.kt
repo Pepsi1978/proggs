@@ -2,7 +2,13 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 // Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
 // AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
-import de.frank.entropyreducer.presentation.priorityRampColor
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Check
@@ -37,7 +44,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
@@ -65,15 +71,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,6 +93,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.domain.model.EntropyCategory
@@ -106,6 +105,7 @@ import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
+import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.recurring.RecurringTemplatesViewModel
 import de.frank.entropyreducer.presentation.recurring.TemplateAsTaskCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -164,9 +164,7 @@ fun TasksScreen(
     // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
     // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: HEUTE.
     // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
-    var expandedSection by rememberSaveable {
-        mutableStateOf<String?>(TimeBucket.HEUTE.name)
-    }
+    var expandedSection by rememberSaveable { mutableStateOf<String?>(TimeBucket.HEUTE.name) }
 
     // Frank-Wunsch 2026-05-22 (Sprint 6 Iteration): Mic-Tap oeffnet jetzt die
     // einheitliche MicCaptureActions ueber der BottomBar — zwei runde Buttons
@@ -223,7 +221,8 @@ fun TasksScreen(
     // Nach Verarbeitung wird der Bus geleert, damit ein Configuration-Change
     // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
     val widgetDeepLink by
-        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsStateWithLifecycle()
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
+            .collectAsStateWithLifecycle()
     // Bugfix 2026-05-11: Konsolidierter Widget-Tap-Handler. Vorher zwei
     // LaunchedEffects (BucketPicker + Scroll), die race-conditions hatten —
     // einer hat den Bus gecleart bevor der andere reagieren konnte. Jetzt
@@ -288,7 +287,8 @@ fun TasksScreen(
         val link = widgetDeepLink ?: return@LaunchedEffect
         val isLoopAction =
             link.action ==
-                de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY ||
+                de.frank.entropyreducer.presentation.widget.WidgetIntents
+                    .ACTION_SET_LOOP_PRIORITY ||
                 link.action ==
                     de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET
         if (!isLoopAction) return@LaunchedEffect
@@ -319,9 +319,8 @@ fun TasksScreen(
     //    nicht mehr im allgemeinen Tool-Bereich rechts.
     //  - Heute-Icon zeigt einen kleinen orangen Punkt wenn neue HEUTE-Aufgaben
     //    eingegangen sind seit Frank das letzte Mal aufs Icon getippt hat.
-    val heuteCount = state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]
-        ?.size
-        ?: 0
+    val heuteCount =
+        state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]?.size ?: 0
     var lastSeenHeuteCount by remember { mutableStateOf(heuteCount) }
     val hasNewHeute = heuteCount > lastSeenHeuteCount
 
@@ -336,16 +335,17 @@ fun TasksScreen(
     // Alpha pulsiert zwischen 1.0 und 0.4 mit ~1.2s Periode, Reverse-Mode —
     // unaufdringlich, aber faengt das Auge wenn neue HEUTE-Aufgaben da sind.
     val badgeAnim = rememberInfiniteTransition(label = "heute-badge-pulse")
-    val badgeAlpha by badgeAnim.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.4f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "heute-badge-alpha",
-    )
+    val badgeAlpha by
+        badgeAnim.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.4f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "heute-badge-alpha",
+        )
 
     CosmosScaffold(
         title = "Aufgaben",
@@ -357,8 +357,7 @@ fun TasksScreen(
                         // Frank-Wunsch 2026-05-24: Sprung klappt den HEUTE-Block auf
                         // (Akkordeon — andere schliessen) und scrollt zu seinem Header.
                         lastSeenHeuteCount = heuteCount
-                        expandedSection =
-                            de.frank.entropyreducer.domain.model.TimeBucket.HEUTE.name
+                        expandedSection = de.frank.entropyreducer.domain.model.TimeBucket.HEUTE.name
                         scope.launch {
                             runCatching {
                                 listState.animateScrollToItem(
@@ -368,7 +367,7 @@ fun TasksScreen(
                                 )
                             }
                         }
-                    },
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Today,
@@ -393,8 +392,7 @@ fun TasksScreen(
             IconButton(
                 onClick = {
                     // Frank-Wunsch 2026-05-24: MORGEN-Block aufklappen + zum Header scrollen.
-                    expandedSection =
-                        de.frank.entropyreducer.domain.model.TimeBucket.MORGEN.name
+                    expandedSection = de.frank.entropyreducer.domain.model.TimeBucket.MORGEN.name
                     scope.launch {
                         runCatching {
                             listState.animateScrollToItem(
@@ -404,7 +402,7 @@ fun TasksScreen(
                             )
                         }
                     }
-                },
+                }
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Today,
@@ -421,10 +419,8 @@ fun TasksScreen(
             IconButton(
                 onClick = {
                     vm.refreshAll()
-                    scope.launch {
-                        snackbar.showSnackbar("Aufgaben werden aktualisiert …")
-                    }
-                },
+                    scope.launch { snackbar.showSnackbar("Aufgaben werden aktualisiert …") }
+                }
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
@@ -567,8 +563,7 @@ fun TasksScreen(
                                     count = list.size,
                                     expanded = sectionExpanded,
                                     onToggle = {
-                                        expandedSection =
-                                            if (sectionExpanded) null else bucket.name
+                                        expandedSection = if (sectionExpanded) null else bucket.name
                                     },
                                 )
                             }
@@ -614,7 +609,9 @@ fun TasksScreen(
                                                 }
                                             }
                                         val onPickBucket =
-                                            remember(entry.id) { { bucketPickerEntryId = entry.id } }
+                                            remember(entry.id) {
+                                                { bucketPickerEntryId = entry.id }
+                                            }
                                         val onSetPrio =
                                             remember(entry.id) {
                                                 { score: Double ->
@@ -632,7 +629,8 @@ fun TasksScreen(
                                         )
                                     }
                                 } else if (
-                                    bucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                                    bucket ==
+                                        de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
                                         hasPullableTasks
                                 ) {
                                     // HEUTE ist leer (alles erledigt) — Nachlade-Button statt
@@ -665,8 +663,7 @@ fun TasksScreen(
                                     count = recurringTemplates.size,
                                     expanded = loopExpanded,
                                     onToggle = {
-                                        expandedSection =
-                                            if (loopExpanded) null else SECTION_LOOP
+                                        expandedSection = if (loopExpanded) null else SECTION_LOOP
                                     },
                                 )
                             }
@@ -696,14 +693,10 @@ fun TasksScreen(
                                             onOpenDetail = { onOpenLoopDetail(template.id) },
                                             autoOpenPrioSlider =
                                                 prioPickerTemplateId == template.id,
-                                            onPrioSliderConsumed = {
-                                                prioPickerTemplateId = null
-                                            },
+                                            onPrioSliderConsumed = { prioPickerTemplateId = null },
                                             autoOpenBucketMenu =
                                                 bucketPickerTemplateId == template.id,
-                                            onBucketMenuConsumed = {
-                                                bucketPickerTemplateId = null
-                                            },
+                                            onBucketMenuConsumed = { bucketPickerTemplateId = null },
                                         )
                                     }
                                 } else {
@@ -746,10 +739,7 @@ fun TasksScreen(
                                         )
                                     }
                                 } else {
-                                    item(
-                                        key = "empty-resolved",
-                                        contentType = "bucket-empty",
-                                    ) {
+                                    item(key = "empty-resolved", contentType = "bucket-empty") {
                                         EmptyBucketHint()
                                     }
                                 }
@@ -770,7 +760,8 @@ fun TasksScreen(
             }
             // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion mit BottomBar-Farbe.
             // Switcher offen → Cyan (Uebersichts-Mic-Farbe), sonst Orange (Aufgaben-Sub).
-            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val switcher =
+                de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
             val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFEA580C)
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
@@ -840,7 +831,6 @@ fun TasksScreen(
             bucketPickerEntryId = null
         }
     }
-
 }
 
 @Composable
@@ -1358,10 +1348,10 @@ private fun iconForCategory(
     }
 
 /**
- * "Neue Aufgaben hinzufügen?"-Button (Frank-Wunsch 2026-05-23). Erscheint im
- * HEUTE-Bereich erst wenn alle HEUTE-Aufgaben erledigt sind — statt automatischer
- * Nachfuellung. Hellgelber Hintergrund, ruft vm.refillHeute() auf das 5 neue
- * Aufgaben aus den aelteren Bereichen nach HEUTE holt.
+ * "Neue Aufgaben hinzufügen?"-Button (Frank-Wunsch 2026-05-23). Erscheint im HEUTE-Bereich erst
+ * wenn alle HEUTE-Aufgaben erledigt sind — statt automatischer Nachfuellung. Hellgelber
+ * Hintergrund, ruft vm.refillHeute() auf das 5 neue Aufgaben aus den aelteren Bereichen nach HEUTE
+ * holt.
  */
 @Composable
 private fun RefillHeuteButton(onClick: () -> Unit) {
@@ -1391,12 +1381,7 @@ private fun RefillHeuteButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun BucketHeader(
-    bucket: TimeBucket,
-    count: Int,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
+private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onToggle: () -> Unit) {
     val label =
         when (bucket) {
             TimeBucket.HEUTE -> "HEUTE"
@@ -1427,10 +1412,10 @@ private fun ResolvedHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) 
 }
 
 /**
- * Gemeinsamer Akkordeon-Header fuer die Aufgabenbloecke (Frank-Wunsch 2026-05-24).
- * Klickbare Zeile mit Icon-Pille, Label, Count-Pille und einem Chevron das beim
- * Aufklappen sanft um 180° dreht. Im aufgeklappten Zustand bekommt die Zeile eine
- * zarte Akzent-Toenung, damit der aktive Block sofort erkennbar ist.
+ * Gemeinsamer Akkordeon-Header fuer die Aufgabenbloecke (Frank-Wunsch 2026-05-24). Klickbare Zeile
+ * mit Icon-Pille, Label, Count-Pille und einem Chevron das beim Aufklappen sanft um 180° dreht. Im
+ * aufgeklappten Zustand bekommt die Zeile eine zarte Akzent-Toenung, damit der aktive Block sofort
+ * erkennbar ist.
  */
 @Composable
 private fun AccordionHeaderRow(
@@ -1546,20 +1531,20 @@ private fun bucketAccent(bucket: TimeBucket): Color =
  */
 /**
  * Frank-Wunsch 2026-05-22 (vierte Iteration): Karten-Hintergrund folgt jetzt der
- * priorityScore-Farbe statt dem Time-Bucket. So sieht Frank auf einen Blick wie
- * wichtig eine Aufgabe ist, ohne die Prio-Zahl rechts ablesen zu muessen.
+ * priorityScore-Farbe statt dem Time-Bucket. So sieht Frank auf einen Blick wie wichtig eine
+ * Aufgabe ist, ohne die Prio-Zahl rechts ablesen zu muessen.
  *
- * Skala identisch zu priorityColor() in dieser Datei (Konsistenz mit der grossen
- * Prio-Zahl rechts auf der Karte):
- *  - 80-100  Rot     (sehr hohe Prio)
- *  - 60-80   Orange
- *  - 40-60   Gelb
- *  - 20-40   Gruen
- *  -  0-20   Blau    (geringste Prio)
+ * Skala identisch zu priorityColor() in dieser Datei (Konsistenz mit der grossen Prio-Zahl rechts
+ * auf der Karte):
+ * - 80-100 Rot (sehr hohe Prio)
+ * - 60-80 Orange
+ * - 40-60 Gelb
+ * - 20-40 Gruen
+ * - 0-20 Blau (geringste Prio)
  *
- * Alpha leicht hoeher als der frueher Bucket-Tint (light: 0.18, dark: 0.14),
- * damit der Farbunterschied zwischen 35/55/85 deutlich sichtbar ist — Frank
- * will den Stich wirklich erkennen koennen.
+ * Alpha leicht hoeher als der frueher Bucket-Tint (light: 0.18, dark: 0.14), damit der
+ * Farbunterschied zwischen 35/55/85 deutlich sichtbar ist — Frank will den Stich wirklich erkennen
+ * koennen.
  */
 private fun priorityCardTint(score: Double, isDark: Boolean): Color {
     val base =
@@ -1579,18 +1564,13 @@ private fun priorityCardTint(score: Double, isDark: Boolean): Color {
 // (Frank-Wunsch 2026-05-31). priorityRampColor() kommt jetzt via Import oben.
 
 /**
- * Frank-Wunsch 2026-06-01: Erledigungs-Zeitpunkt menschenlesbar (Tag + Uhrzeit) —
- * z.B. "01.06.2026 um 12:38". Quelle ist resolvedAt, das jeder Erledigen-Pfad setzt.
+ * Frank-Wunsch 2026-06-01: Erledigungs-Zeitpunkt menschenlesbar (Tag + Uhrzeit) — z.B. "01.06.2026
+ * um 12:38". Quelle ist resolvedAt, das jeder Erledigen-Pfad setzt.
  */
 private fun formatResolvedAt(ms: Long): String {
     val dt = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
-    return "%02d.%02d.%d um %02d:%02d".format(
-        dt.dayOfMonth,
-        dt.monthValue,
-        dt.year,
-        dt.hour,
-        dt.minute,
-    )
+    return "%02d.%02d.%d um %02d:%02d"
+        .format(dt.dayOfMonth, dt.monthValue, dt.year, dt.hour, dt.minute)
 }
 
 @Composable
@@ -1637,9 +1617,7 @@ private fun EntropyEntryCard(
     // Prioritaet sofort sichtbar; eine Prio-Zahl ist nicht mehr noetig.
     val ramp = priorityRampColor(effectivePriority)
     val priorityBrush =
-        remember(ramp) {
-            Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp))
-        }
+        remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
     GlassCard(
         modifier =
             Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
@@ -1659,8 +1637,7 @@ private fun EntropyEntryCard(
                 // (gleiche Farbe wie die KI-/Prio-Perlen = cosmos.glassBg) und eine graue
                 // Umrandung — damit klar als antippbares Feld erkennbar.
                 val checkBg =
-                    if (isResolved) CosmosColors.Success.copy(alpha = 0.85f)
-                    else cosmos.glassBg
+                    if (isResolved) CosmosColors.Success.copy(alpha = 0.85f) else cosmos.glassBg
                 val checkBorder = if (isResolved) CosmosColors.Success else cosmos.textSecondary
                 Box(
                     modifier =
@@ -1736,8 +1713,7 @@ private fun EntropyEntryCard(
             if (sliderActive) {
                 Spacer(Modifier.height(8.dp))
                 val sliderPos =
-                    liveSlider
-                        ?: (entry.manualPriorityScore ?: entry.priorityScore).toFloat()
+                    liveSlider ?: (entry.manualPriorityScore ?: entry.priorityScore).toFloat()
                 androidx.compose.material3.Slider(
                     value = sliderPos.coerceIn(0f, 100f),
                     onValueChange = { liveSlider = it },
@@ -1759,10 +1735,10 @@ private fun EntropyEntryCard(
 }
 
 /**
- * Kleine Perle (gleicher Stil wie die KI/manuell-Perle) die die Prioritaet zeigt:
- * "Priorität KI" wenn die KI bestimmt, sonst "Priorität <Wert>" bei manuellem Wert.
- * Klick oeffnet den Schieberegler. Die Perle selbst aendert ihre Farbe NICHT —
- * nur die Kachel dahinter faerbt sich (Frank-Wunsch 2026-05-31).
+ * Kleine Perle (gleicher Stil wie die KI/manuell-Perle) die die Prioritaet zeigt: "Priorität KI"
+ * wenn die KI bestimmt, sonst "Priorität <Wert>" bei manuellem Wert. Klick oeffnet den
+ * Schieberegler. Die Perle selbst aendert ihre Farbe NICHT — nur die Kachel dahinter faerbt sich
+ * (Frank-Wunsch 2026-05-31).
  */
 @Composable
 private fun PriorityPearl(label: String, onClick: () -> Unit) {
@@ -2310,15 +2286,12 @@ private fun formatBackupTime(epochMs: Long): String {
 }
 
 /**
- * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet ihren LazyColumn-
- * Index (Frank-Wunsch 2026-05-24, Akkordeon). Annahme: GENAU dieser Block ist
- * aufgeklappt, alle anderen Bloecke sind zugeklappt (= je 1 Header-Item) — der
- * Aufrufer klappt den Block vorher auf (expandedSection = bucketName).
- *   0: briefing
- *   1 + Position des Buckets in ALL_TIME_BUCKETS: dessen Header
- *   danach: die Eintraege des aufgeklappten Blocks
- * Liefert (Sektions-Schluessel, Item-Index) oder null wenn die Aufgabe in keinem
- * aktiven Bucket liegt.
+ * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet ihren LazyColumn- Index
+ * (Frank-Wunsch 2026-05-24, Akkordeon). Annahme: GENAU dieser Block ist aufgeklappt, alle anderen
+ * Bloecke sind zugeklappt (= je 1 Header-Item) — der Aufrufer klappt den Block vorher auf
+ * (expandedSection = bucketName). 0: briefing 1 + Position des Buckets in ALL_TIME_BUCKETS: dessen
+ * Header danach: die Eintraege des aufgeklappten Blocks Liefert (Sektions-Schluessel, Item-Index)
+ * oder null wenn die Aufgabe in keinem aktiven Bucket liegt.
  */
 private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<String, Int>? {
     val isEmpty =

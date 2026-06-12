@@ -1,7 +1,6 @@
 package de.frank.entropyreducer.presentation.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,17 +40,16 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Sub-Bereich-Platzhalter (Sprint 4, Frank-Wunsch 2026-05-22).
  *
- * Vorher (2026-05-17): rein weisse Flaeche mit dezentem Text. Frank wollte das
- * polierter haben — jetzt zeigt jeder Slot ein passendes Material-Icon in einem
- * Pastell-Kreis, einen aussagekraeftigen Titel und einen 1-2-Satz-Teaser. Die
- * Akzent-Farbe spiegelt die jeweilige Tab-Farbe wider (Analyse gruen, Forscher
- * lila, Biomarker rosé). So sieht der Benutzer sofort was hier mal kommen wird,
- * ohne dass es nach "Bug" aussieht.
+ * Vorher (2026-05-17): rein weisse Flaeche mit dezentem Text. Frank wollte das polierter haben —
+ * jetzt zeigt jeder Slot ein passendes Material-Icon in einem Pastell-Kreis, einen
+ * aussagekraeftigen Titel und einen 1-2-Satz-Teaser. Die Akzent-Farbe spiegelt die jeweilige
+ * Tab-Farbe wider (Analyse gruen, Forscher lila, Biomarker rosé). So sieht der Benutzer sofort was
+ * hier mal kommen wird, ohne dass es nach "Bug" aussieht.
  *
- * Frank-Wunsch 2026-06-10: Journal zog (nach Entropie + Thesen am 2026-06-09) eben-
- * falls in den Forscher-Bereich um. FORSCHER-Slot 1 (Tagebuch/"Entropie"), Slot 2
- * (Thesen) und Slot 3 (Journal) routen NICHT hierdurch (eigene Screens). Platzhalter
- * sind jetzt: TASKS-Slot 1/3 und die Slots der Tabs Analyse/Biomarker.
+ * Frank-Wunsch 2026-06-10: Journal zog (nach Entropie + Thesen am 2026-06-09) eben- falls in den
+ * Forscher-Bereich um. FORSCHER-Slot 1 (Tagebuch/"Entropie"), Slot 2 (Thesen) und Slot 3 (Journal)
+ * routen NICHT hierdurch (eigene Screens). Platzhalter sind jetzt: TASKS-Slot 1/3 und die Slots der
+ * Tabs Analyse/Biomarker.
  *
  * Navigation:
  * - Zurueck-Geste → popBackStack → zurueck zum Parent-Tab
@@ -69,13 +67,14 @@ fun SubAreaScreen(
     val cosmos = LocalCosmos.current
     val meta = subSlotMeta(parentTab, subIndex)
     val accent = subSlotAccent(parentTab)
-    val parentLabel = when (parentTab) {
-        Routes.TASKS -> "Aufgaben"
-        Routes.ANALYSIS -> "Analyse"
-        Routes.SCIENTIST -> "Forscher"
-        Routes.BIOMARKER -> "Biomarker"
-        else -> "Bereich"
-    }
+    val parentLabel =
+        when (parentTab) {
+            Routes.TASKS -> "Aufgaben"
+            Routes.ANALYSIS -> "Analyse"
+            Routes.SCIENTIST -> "Forscher"
+            Routes.BIOMARKER -> "Biomarker"
+            else -> "Bereich"
+        }
 
     CosmosScaffold(
         title = "$parentLabel · ${meta.title}",
@@ -92,24 +91,22 @@ fun SubAreaScreen(
         },
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(if (cosmos.isDark) Color(0xFF15182A) else Color(0xFFF6F7FB))
-                .padding(padding),
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(if (cosmos.isDark) Color(0xFF15182A) else Color(0xFFF6F7FB))
+                    .padding(padding),
             contentAlignment = Alignment.Center,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Icon-Kreis in Tab-Farbe (Pastell-Hintergrund)
                 Box(
-                    modifier = Modifier
-                        .size(112.dp)
-                        .clip(RoundedCornerShape(56.dp))
-                        .background(accent.copy(alpha = 0.16f)),
+                    modifier =
+                        Modifier.size(112.dp)
+                            .clip(RoundedCornerShape(56.dp))
+                            .background(accent.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -134,10 +131,10 @@ fun SubAreaScreen(
 
                 // "Bald verfuegbar"-Pill in Tab-Farbe
                 Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accent.copy(alpha = 0.18f))
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(12.dp))
+                            .background(accent.copy(alpha = 0.18f))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Bald verfügbar",
@@ -160,16 +157,11 @@ fun SubAreaScreen(
     }
 }
 
-private data class SubSlotMeta(
-    val icon: ImageVector,
-    val title: String,
-    val teaser: String,
-)
+private data class SubSlotMeta(val icon: ImageVector, val title: String, val teaser: String)
 
 /**
- * Frank-Wunsch 2026-05-22 (Sprint 4): pro leeren Sub-Slot eine passende Vorschau.
- * TASKS ist bereits komplett belegt (Tagebuch/Thesen/Wiederkehrend), wird hier
- * nur als Fallback gehalten.
+ * Frank-Wunsch 2026-05-22 (Sprint 4): pro leeren Sub-Slot eine passende Vorschau. TASKS ist bereits
+ * komplett belegt (Tagebuch/Thesen/Wiederkehrend), wird hier nur als Fallback gehalten.
  */
 private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
     return when (parent) {
@@ -178,95 +170,123 @@ private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
         // (vorerst Platzhalter). Slot 2 (Mental) routet nicht hierdurch; Slot 3
         // bleibt leerer Platzhalter. Beim Forscher routen Slot 1 (Entropie),
         // Slot 2 (Thesen) und Slot 3 (Journal) ueber eigene Screens.
-        Routes.TASKS -> when (index) {
-            1 -> SubSlotMeta(
-                icon = Icons.Outlined.Flag,
-                title = "Priorität",
-                teaser = "Deine wichtigsten Aufgaben und Themen — priorisiert auf einen " +
-                    "Blick. Inhalt folgt in einem der nächsten Updates.",
-            )
-            else -> SubSlotMeta(
+        Routes.TASKS ->
+            when (index) {
+                1 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Flag,
+                        title = "Priorität",
+                        teaser =
+                            "Deine wichtigsten Aufgaben und Themen — priorisiert auf einen " +
+                                "Blick. Inhalt folgt in einem der nächsten Updates.",
+                    )
+                else ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Lightbulb,
+                        title = "Bereich $index",
+                        teaser =
+                            "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
+                    )
+            }
+        Routes.ANALYSIS ->
+            when (index) {
+                1 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.CalendarViewWeek,
+                        title = "Wochenrückblick",
+                        teaser =
+                            "Auf einen Blick: Dein Entropie-Trend der letzten 7 Tage, " +
+                                "die wichtigsten Erfolge und was diese Woche besonders Energie gekostet hat.",
+                    )
+                2 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.CalendarMonth,
+                        title = "Monatsrückblick",
+                        teaser =
+                            "Monatsbilanz mit Vergleich zum Vormonat, KI-bewertete Highlights " +
+                                "und Empfehlungen für den nächsten Monat.",
+                    )
+                else ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Hub,
+                        title = "Korrelations-Matrix",
+                        teaser =
+                            "Welche Aufgaben-Kategorien beeinflussen welche Biomarker am stärksten — " +
+                                "datengestützte Muster aus deinen letzten 90 Tagen.",
+                    )
+            }
+        Routes.SCIENTIST ->
+            when (index) {
+                1 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Science,
+                        title = "Hypothesen-Archiv",
+                        teaser =
+                            "Alle laufenden und abgeschlossenen Experimente mit Ergebnis-Status, " +
+                                "Biomarker-Vergleich und Verlinkung zu beteiligten Aufgaben.",
+                    )
+                2 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Forum,
+                        title = "Forscher-Verlauf",
+                        teaser =
+                            "Frühere Diskussionen mit dem Forscher — durchsuchbar, " +
+                                "thematisch gruppiert, mit Querverweisen zu Hypothesen.",
+                    )
+                else ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Lightbulb,
+                        title = "Bestätigte Methoden",
+                        teaser =
+                            "Insight-Board mit allen Methoden die mehrfach erfolgreich " +
+                                "deine Entropie reduziert haben — sortiert nach Konfidenz.",
+                    )
+            }
+        Routes.BIOMARKER ->
+            when (index) {
+                1 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.NightsStay,
+                        title = "Schlafdetails",
+                        teaser =
+                            "REM-, Tief- und Leichtschlaf-Phasen im Verlauf, Schlafeffizienz und " +
+                                "Korrelationen zwischen Tagesaktivität und Schlafqualität.",
+                    )
+                2 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.DirectionsRun,
+                        title = "Trainings-Übersicht",
+                        teaser =
+                            "Alle Workouts mit GPS-Track, Pulsverlauf und Pace-Splits — " +
+                                "mit Trend-Vergleich und Training-Load-Score.",
+                    )
+                else ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.EmojiEvents,
+                        title = "Persönliche Bestleistungen",
+                        teaser =
+                            "Rekorde, Streaks und Meilensteine — automatisch erkannt aus deinen " +
+                                "Trainings, Biomarker-Werten und Erfolgs-Aufgaben.",
+                    )
+            }
+        else ->
+            SubSlotMeta(
                 icon = Icons.Outlined.Lightbulb,
                 title = "Bereich $index",
                 teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
             )
-        }
-        Routes.ANALYSIS -> when (index) {
-            1 -> SubSlotMeta(
-                icon = Icons.Outlined.CalendarViewWeek,
-                title = "Wochenrückblick",
-                teaser = "Auf einen Blick: Dein Entropie-Trend der letzten 7 Tage, " +
-                    "die wichtigsten Erfolge und was diese Woche besonders Energie gekostet hat.",
-            )
-            2 -> SubSlotMeta(
-                icon = Icons.Outlined.CalendarMonth,
-                title = "Monatsrückblick",
-                teaser = "Monatsbilanz mit Vergleich zum Vormonat, KI-bewertete Highlights " +
-                    "und Empfehlungen für den nächsten Monat.",
-            )
-            else -> SubSlotMeta(
-                icon = Icons.Outlined.Hub,
-                title = "Korrelations-Matrix",
-                teaser = "Welche Aufgaben-Kategorien beeinflussen welche Biomarker am stärksten — " +
-                    "datengestützte Muster aus deinen letzten 90 Tagen.",
-            )
-        }
-        Routes.SCIENTIST -> when (index) {
-            1 -> SubSlotMeta(
-                icon = Icons.Outlined.Science,
-                title = "Hypothesen-Archiv",
-                teaser = "Alle laufenden und abgeschlossenen Experimente mit Ergebnis-Status, " +
-                    "Biomarker-Vergleich und Verlinkung zu beteiligten Aufgaben.",
-            )
-            2 -> SubSlotMeta(
-                icon = Icons.Outlined.Forum,
-                title = "Forscher-Verlauf",
-                teaser = "Frühere Diskussionen mit dem Forscher — durchsuchbar, " +
-                    "thematisch gruppiert, mit Querverweisen zu Hypothesen.",
-            )
-            else -> SubSlotMeta(
-                icon = Icons.Outlined.Lightbulb,
-                title = "Bestätigte Methoden",
-                teaser = "Insight-Board mit allen Methoden die mehrfach erfolgreich " +
-                    "deine Entropie reduziert haben — sortiert nach Konfidenz.",
-            )
-        }
-        Routes.BIOMARKER -> when (index) {
-            1 -> SubSlotMeta(
-                icon = Icons.Outlined.NightsStay,
-                title = "Schlafdetails",
-                teaser = "REM-, Tief- und Leichtschlaf-Phasen im Verlauf, Schlafeffizienz und " +
-                    "Korrelationen zwischen Tagesaktivität und Schlafqualität.",
-            )
-            2 -> SubSlotMeta(
-                icon = Icons.Outlined.DirectionsRun,
-                title = "Trainings-Übersicht",
-                teaser = "Alle Workouts mit GPS-Track, Pulsverlauf und Pace-Splits — " +
-                    "mit Trend-Vergleich und Training-Load-Score.",
-            )
-            else -> SubSlotMeta(
-                icon = Icons.Outlined.EmojiEvents,
-                title = "Persönliche Bestleistungen",
-                teaser = "Rekorde, Streaks und Meilensteine — automatisch erkannt aus deinen " +
-                    "Trainings, Biomarker-Werten und Erfolgs-Aufgaben.",
-            )
-        }
-        else -> SubSlotMeta(
-            icon = Icons.Outlined.Lightbulb,
-            title = "Bereich $index",
-            teaser = "Inhalt folgt — dieser Slot ist für eine zukünftige Funktion reserviert.",
-        )
     }
 }
 
 /**
- * Akzent-Farbe pro Tab (gespiegelt aus CosmosBottomBar.subModeTint). Wird fuer
- * Icon-Tint, Pill-Hintergrund und Icon-Kreis-Hintergrund verwendet.
+ * Akzent-Farbe pro Tab (gespiegelt aus CosmosBottomBar.subModeTint). Wird fuer Icon-Tint,
+ * Pill-Hintergrund und Icon-Kreis-Hintergrund verwendet.
  */
-private fun subSlotAccent(parent: String): Color = when (parent) {
-    Routes.TASKS -> Color(0xFFEA580C)     // Orange
-    Routes.ANALYSIS -> Color(0xFF16A34A)  // Grün
-    Routes.SCIENTIST -> Color(0xFFA78BFA) // Violett
-    Routes.BIOMARKER -> Color(0xFFFB7185) // Rosé
-    else -> Color(0xFF0891B2)             // Cyan-600 (Default)
-}
+private fun subSlotAccent(parent: String): Color =
+    when (parent) {
+        Routes.TASKS -> Color(0xFFEA580C) // Orange
+        Routes.ANALYSIS -> Color(0xFF16A34A) // Grün
+        Routes.SCIENTIST -> Color(0xFFA78BFA) // Violett
+        Routes.BIOMARKER -> Color(0xFFFB7185) // Rosé
+        else -> Color(0xFF0891B2) // Cyan-600 (Default)
+    }

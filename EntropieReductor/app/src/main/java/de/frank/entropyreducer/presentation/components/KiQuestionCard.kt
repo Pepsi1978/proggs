@@ -2,8 +2,6 @@ package de.frank.entropyreducer.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,11 +35,10 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Kontextrelevante Frage der KI auf Dashboard 1 (Spec §10.4).
- * Frank-Wunsch 2026-05-08: sichtbares Antwort-Feld + Whisper-Mic + Send-Button.
- * Antwort wird durch submitAnswer-Callback an den ViewModel weitergereicht der
- * sie deduplizierungs-aware verarbeitet (kein Doppel-Eintrag wenn Antwort eine
- * existierende Aufgabe nennt).
+ * Kontextrelevante Frage der KI auf Dashboard 1 (Spec §10.4). Frank-Wunsch 2026-05-08: sichtbares
+ * Antwort-Feld + Whisper-Mic + Send-Button. Antwort wird durch submitAnswer-Callback an den
+ * ViewModel weitergereicht der sie deduplizierungs-aware verarbeitet (kein Doppel-Eintrag wenn
+ * Antwort eine existierende Aufgabe nennt).
  */
 @Composable
 fun KiQuestionCard(
@@ -82,14 +79,17 @@ fun KiQuestionCard(
             OutlinedTextField(
                 value = answer,
                 onValueChange = { answer = it },
-                placeholder = { Text("Tippe oder sprich deine Antwort …", color = cosmos.textSecondary) },
+                placeholder = {
+                    Text("Tippe oder sprich deine Antwort …", color = cosmos.textSecondary)
+                },
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = cosmos.textPrimary,
-                    unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentSecondary,
-                    unfocusedBorderColor = cosmos.glassBorder,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = cosmos.textPrimary,
+                        unfocusedTextColor = cosmos.textPrimary,
+                        focusedBorderColor = CosmosColors.AccentSecondary,
+                        unfocusedBorderColor = cosmos.glassBorder,
+                    ),
                 maxLines = 3,
             )
             Spacer(Modifier.height(8.dp))
@@ -112,13 +112,13 @@ fun KiQuestionCard(
                         }
                     },
                     enabled = answer.isNotBlank(),
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            if (answer.isNotBlank()) CosmosColors.AccentSecondary
-                            else CosmosColors.AccentSecondary.copy(alpha = 0.3f),
-                        ),
+                    modifier =
+                        Modifier.size(44.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (answer.isNotBlank()) CosmosColors.AccentSecondary
+                                else CosmosColors.AccentSecondary.copy(alpha = 0.3f)
+                            ),
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Send,
@@ -133,20 +133,20 @@ fun KiQuestionCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = CosmosColors.AccentPrimary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .clickable(onClick = onRefresh)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(50))
+                            .clickable(onClick = onRefresh)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                 )
                 Text(
                     text = "Später",
                     style = MaterialTheme.typography.bodyMedium,
                     color = CosmosColors.AccentSecondary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .clickable(onClick = onSnooze)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(50))
+                            .clickable(onClick = onSnooze)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }
         }

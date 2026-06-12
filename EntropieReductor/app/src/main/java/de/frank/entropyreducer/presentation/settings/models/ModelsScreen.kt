@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -18,11 +18,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.settings.ModelsViewModel
@@ -57,15 +57,16 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
             item {
                 ModelGroup(
                     title = "Gemini-Modell",
-                    options = listOf(
-                        // Gemini 3.x — neueste Generation
-                        "gemini-3-flash-preview",
-                        "gemini-3.1-flash-lite",
-                        // Gemini 2.x — bewaehrte Generation
-                        "gemini-2.5-flash",
-                        "gemini-2.5-flash-lite",
-                        "gemini-2.0-flash",
-                    ),
+                    options =
+                        listOf(
+                            // Gemini 3.x — neueste Generation
+                            "gemini-3-flash-preview",
+                            "gemini-3.1-flash-lite",
+                            // Gemini 2.x — bewaehrte Generation
+                            "gemini-2.5-flash",
+                            "gemini-2.5-flash-lite",
+                            "gemini-2.0-flash",
+                        ),
                     current = state.geminiModel,
                     onSelect = vm::setGemini,
                 )
@@ -81,7 +82,11 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Text("TTS-Stimme", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                        Text(
+                            "TTS-Stimme",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cosmos.textPrimary,
+                        )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "Wird beim ersten Verbinden mit der Google-TTS-API aus den verfügbaren Chirp-3-HD-Stimmen geladen. Stufe 4.",
@@ -96,7 +101,12 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun ModelGroup(title: String, options: List<String>, current: String, onSelect: (String) -> Unit) {
+private fun ModelGroup(
+    title: String,
+    options: List<String>,
+    current: String,
+    onSelect: (String) -> Unit,
+) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -105,7 +115,10 @@ private fun ModelGroup(title: String, options: List<String>, current: String, on
             options.forEach { opt ->
                 val active = opt == current
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onSelect(opt) }.padding(vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clickable { onSelect(opt) }
+                            .padding(vertical = 8.dp),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 ) {
                     androidx.compose.material3.RadioButton(
@@ -123,4 +136,3 @@ private fun ModelGroup(title: String, options: List<String>, current: String, on
         }
     }
 }
-

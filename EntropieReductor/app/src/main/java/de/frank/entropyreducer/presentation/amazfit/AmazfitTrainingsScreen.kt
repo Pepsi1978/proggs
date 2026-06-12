@@ -1,7 +1,6 @@
 package de.frank.entropyreducer.presentation.amazfit
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
@@ -45,15 +44,16 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Volle Liste aller Trainings von der Amazfit T-Rex 3, mit Filtern fuer Zeitraum
- * und Sportart. Erreichbar aus dem Biomarker-Screen ueber "Alle anzeigen ▸".
+ * Volle Liste aller Trainings von der Amazfit T-Rex 3, mit Filtern fuer Zeitraum und Sportart.
+ * Erreichbar aus dem Biomarker-Screen ueber "Alle anzeigen ▸".
  *
- * Frank-Wunsch 2026-05-09: ein eigener Sport-Bereich der nur fuer Sport da ist —
- * mit T-Rex-3-Vermerk damit klar ist woher die Werte kommen.
+ * Frank-Wunsch 2026-05-09: ein eigener Sport-Bereich der nur fuer Sport da ist — mit
+ * T-Rex-3-Vermerk damit klar ist woher die Werte kommen.
  */
 // Performance-Audit Loop 3 (2026-05-10): Range-Liste als top-level val statt
 // listOf(...)-Allokation pro Recomposition.
-private val ALL_RANGES: List<Range> = listOf(Range.LAST_30, Range.LAST_90, Range.LAST_365, Range.ALL)
+private val ALL_RANGES: List<Range> =
+    listOf(Range.LAST_30, Range.LAST_90, Range.LAST_365, Range.ALL)
 
 @Composable
 fun AmazfitTrainingsScreen(
@@ -84,9 +84,13 @@ fun AmazfitTrainingsScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp,
-            ),
+            contentPadding =
+                androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 0.dp,
+                    bottom = 16.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
@@ -99,10 +103,10 @@ fun AmazfitTrainingsScreen(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+                        modifier =
+                            Modifier.size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CosmosColors.Warning.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -133,7 +137,8 @@ fun AmazfitTrainingsScreen(
             item {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
+                    contentPadding =
+                        androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
                 ) {
                     items(items = ALL_RANGES, key = { it.name }) { range ->
                         val selected = state.rangeFilter == range
@@ -146,13 +151,17 @@ fun AmazfitTrainingsScreen(
                                         Range.LAST_90 -> "3 Monate"
                                         Range.LAST_365 -> "1 Jahr"
                                         Range.ALL -> "Alles"
-                                    },
+                                    }
                                 )
                             },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (selected) CosmosColors.Warning.copy(alpha = 0.18f) else Color.Transparent,
-                                labelColor = if (selected) CosmosColors.Warning else cosmos.textPrimary,
-                            ),
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    containerColor =
+                                        if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                        else Color.Transparent,
+                                    labelColor =
+                                        if (selected) CosmosColors.Warning else cosmos.textPrimary,
+                                ),
                         )
                     }
                 }
@@ -163,17 +172,23 @@ fun AmazfitTrainingsScreen(
                 item {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
                     ) {
                         item {
                             val selected = state.sportFilter == null
                             AssistChip(
                                 onClick = { vm.setSport(null) },
                                 label = { Text("Alle Sportarten") },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (selected) CosmosColors.Warning.copy(alpha = 0.18f) else Color.Transparent,
-                                    labelColor = if (selected) CosmosColors.Warning else cosmos.textPrimary,
-                                ),
+                                colors =
+                                    AssistChipDefaults.assistChipColors(
+                                        containerColor =
+                                            if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                            else Color.Transparent,
+                                        labelColor =
+                                            if (selected) CosmosColors.Warning
+                                            else cosmos.textPrimary,
+                                    ),
                             )
                         }
                         items(state.availableSports, key = { it.first }) { (type, name) ->
@@ -181,10 +196,15 @@ fun AmazfitTrainingsScreen(
                             AssistChip(
                                 onClick = { vm.setSport(type) },
                                 label = { Text(name) },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (selected) CosmosColors.Warning.copy(alpha = 0.18f) else Color.Transparent,
-                                    labelColor = if (selected) CosmosColors.Warning else cosmos.textPrimary,
-                                ),
+                                colors =
+                                    AssistChipDefaults.assistChipColors(
+                                        containerColor =
+                                            if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                            else Color.Transparent,
+                                        labelColor =
+                                            if (selected) CosmosColors.Warning
+                                            else cosmos.textPrimary,
+                                    ),
                             )
                         }
                     }

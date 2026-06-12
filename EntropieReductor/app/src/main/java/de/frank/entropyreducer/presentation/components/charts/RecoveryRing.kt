@@ -26,8 +26,8 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.whoopRecoveryColor
 
 /**
- * Whoop-stiliger Recovery-Ring (Spec §13.1). Score 0-100, Farbverlauf rot/gelb/grün,
- * 360°-Bogen mit weichen Spring-Aenderungen.
+ * Whoop-stiliger Recovery-Ring (Spec §13.1). Score 0-100, Farbverlauf rot/gelb/grün, 360°-Bogen mit
+ * weichen Spring-Aenderungen.
  */
 @Composable
 fun RecoveryRing(
@@ -38,27 +38,22 @@ fun RecoveryRing(
 ) {
     val cosmos = LocalCosmos.current
     val target = (score ?: 0).coerceIn(0, 100)
-    val animated by animateFloatAsState(
-        targetValue = target / 100f,
-        animationSpec = tween(durationMillis = 800),
-        label = "recoveryRing",
-    )
+    val animated by
+        animateFloatAsState(
+            targetValue = target / 100f,
+            animationSpec = tween(durationMillis = 800),
+            label = "recoveryRing",
+        )
     // Performance-Fix Loop 4.3: ringColor + Brush sind reine Funktionen von target.
     // Vorher wurde bei jedem Animations-Frame (60 fps × 800 ms tween = ~48 Frames)
     // listOf+ringColor.copy+Brush.sweepGradient neu allokiert. Mit remember(target)
     // bleiben sie ueber die Animation stabil; animated triggert nur das Canvas-Lambda.
     // Frank-Wunsch 2026-06-01: offizielle WHOOP-Recovery-Ampel (67/34-Schwellen).
     val ringColor = remember(target) { whoopRecoveryColor(target.toDouble()) }
-    val ringBrush = remember(ringColor) {
-        Brush.sweepGradient(
-            listOf(ringColor.copy(alpha = 0.4f), ringColor),
-        )
-    }
+    val ringBrush =
+        remember(ringColor) { Brush.sweepGradient(listOf(ringColor.copy(alpha = 0.4f), ringColor)) }
 
-    Box(
-        modifier = modifier.size(diameter.dp),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = modifier.size(diameter.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.size(diameter.dp)) {
             val stroke = 18.dp.toPx()
             // Hintergrundring (matt)

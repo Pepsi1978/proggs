@@ -35,19 +35,18 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import de.frank.entropyreducer.domain.model.EntropyCategory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
@@ -68,10 +67,10 @@ import java.time.format.DateTimeFormatter
  * Dashboard 2 — Entropie-Analyse (Spec §11).
  *
  * Aufbau:
- *  1. Status-Balken
- *  2. Schnellstatistik (Grid 2x2)
- *  3. Trend-Chart 30/90/365 Tage mit Schichtblock-Hintergrund
- *  4. Markdown-Analyse-Card mit „Jetzt analysieren"-Button
+ * 1. Status-Balken
+ * 2. Schnellstatistik (Grid 2x2)
+ * 3. Trend-Chart 30/90/365 Tage mit Schichtblock-Hintergrund
+ * 4. Markdown-Analyse-Card mit „Jetzt analysieren"-Button
  */
 @Composable
 fun AnalysisScreen(
@@ -122,7 +121,10 @@ fun AnalysisScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             Column(Modifier.fillMaxSize()) {
-                StatusBar(percent = state.statusBreakdown?.total ?: 50, breakdown = state.statusBreakdown)
+                StatusBar(
+                    percent = state.statusBreakdown?.total ?: 50,
+                    breakdown = state.statusBreakdown,
+                )
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -147,12 +149,16 @@ fun AnalysisScreen(
                                             selected = state.trendRange == r,
                                             onClick = { vm.setRange(r) },
                                             label = { Text(r.label) },
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.20f),
-                                                selectedLabelColor = cosmos.textPrimary,
-                                                containerColor = cosmos.glassBg,
-                                                labelColor = cosmos.textSecondary,
-                                            ),
+                                            colors =
+                                                FilterChipDefaults.filterChipColors(
+                                                    selectedContainerColor =
+                                                        CosmosColors.AccentPrimary.copy(
+                                                            alpha = 0.20f
+                                                        ),
+                                                    selectedLabelColor = cosmos.textPrimary,
+                                                    containerColor = cosmos.glassBg,
+                                                    labelColor = cosmos.textSecondary,
+                                                ),
                                             modifier = Modifier.padding(horizontal = 4.dp),
                                         )
                                     }
@@ -174,11 +180,13 @@ fun AnalysisScreen(
                             enabled = !state.isLoading,
                             modifier = Modifier.fillMaxWidth().height(54.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CosmosColors.AccentPrimary,
-                                contentColor = CosmosColors.BgDark,
-                                disabledContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.4f),
-                            ),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = CosmosColors.AccentPrimary,
+                                    contentColor = CosmosColors.BgDark,
+                                    disabledContainerColor =
+                                        CosmosColors.AccentPrimary.copy(alpha = 0.4f),
+                                ),
                         ) {
                             if (state.isLoading) {
                                 CircularProgressIndicator(
@@ -201,7 +209,8 @@ fun AnalysisScreen(
                             GlassCard {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(
-                                        text = "Letzte Analyse: ${formatTimestamp(state.markdownAt)}",
+                                        text =
+                                            "Letzte Analyse: ${formatTimestamp(state.markdownAt)}",
                                         color = cosmos.textSecondary,
                                         style = MaterialTheme.typography.labelMedium,
                                     )
@@ -213,7 +222,8 @@ fun AnalysisScreen(
                         item {
                             GlassCard {
                                 Text(
-                                    text = "Noch keine Analyse vorhanden. Tippe auf \"Jetzt analysieren\", um Muster, verborgene Zusammenhaenge und strategische Empfehlungen zu erhalten.",
+                                    text =
+                                        "Noch keine Analyse vorhanden. Tippe auf \"Jetzt analysieren\", um Muster, verborgene Zusammenhaenge und strategische Empfehlungen zu erhalten.",
                                     color = cosmos.textSecondary,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
@@ -227,10 +237,13 @@ fun AnalysisScreen(
             SnackbarHost(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
-            ) { Snackbar(it) }
+            ) {
+                Snackbar(it)
+            }
             // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion mit BottomBar-Farbe.
             // Switcher offen → Cyan, sonst Gruen (Analyse-Sub).
-            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val switcher =
+                de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
             val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFF16A34A)
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
@@ -269,13 +282,14 @@ private fun QuickStatsGrid(state: AnalysisUiState) {
     }
 }
 
-private fun entropyLevelLabel(load: Int): String = when {
-    load >= 80 -> "Sehr hoch — kritisch"
-    load >= 60 -> "Hoch — über Zielbereich"
-    load >= 40 -> "Mittel — Aufmerksamkeit"
-    load >= 20 -> "Niedrig — gut"
-    else -> "Sehr niedrig — exzellent"
-}
+private fun entropyLevelLabel(load: Int): String =
+    when {
+        load >= 80 -> "Sehr hoch — kritisch"
+        load >= 60 -> "Hoch — über Zielbereich"
+        load >= 40 -> "Mittel — Aufmerksamkeit"
+        load >= 20 -> "Niedrig — gut"
+        else -> "Sehr niedrig — exzellent"
+    }
 
 private fun openEntriesDetail(state: AnalysisUiState): String {
     val critical = state.criticalCount
@@ -298,10 +312,10 @@ private fun BigStatCard(
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(tint.copy(alpha = 0.18f)),
+                    modifier =
+                        Modifier.size(28.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(tint.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
@@ -364,11 +378,12 @@ private fun StatTile(title: String, value: String, modifier: Modifier = Modifier
 @Composable
 private fun TrendTile(deltaPct: Int, modifier: Modifier = Modifier) {
     val cosmos = LocalCosmos.current
-    val (icon, color) = when {
-        deltaPct > 5 -> Icons.Outlined.TrendingUp to CosmosColors.Critical
-        deltaPct < -5 -> Icons.Outlined.TrendingDown to CosmosColors.Success
-        else -> Icons.Outlined.TrendingFlat to CosmosColors.Warning
-    }
+    val (icon, color) =
+        when {
+            deltaPct > 5 -> Icons.Outlined.TrendingUp to CosmosColors.Critical
+            deltaPct < -5 -> Icons.Outlined.TrendingDown to CosmosColors.Success
+            else -> Icons.Outlined.TrendingFlat to CosmosColors.Warning
+        }
     GlassCard(modifier = modifier) {
         Column {
             Text(
@@ -379,8 +394,7 @@ private fun TrendTile(deltaPct: Int, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier
-                        .size(28.dp)
+                    Modifier.size(28.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(color.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
@@ -407,5 +421,8 @@ private val ALL_TREND_RANGES: List<TrendRange> = TrendRange.entries.toList()
 
 private fun formatTimestamp(ms: Long): String {
     if (ms == 0L) return "—"
-    return Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDateTime().format(FORMATTER)
+    return Instant.ofEpochMilli(ms)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime()
+        .format(FORMATTER)
 }

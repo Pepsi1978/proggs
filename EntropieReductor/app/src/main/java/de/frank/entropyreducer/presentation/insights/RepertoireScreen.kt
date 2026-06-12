@@ -15,18 +15,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
-/**
- * "Mein Repertoire" (Spec §14.1): nach Wirkung sortierte Liste der bestaetigten Insights.
- */
+/** "Mein Repertoire" (Spec §14.1): nach Wirkung sortierte Liste der bestaetigten Insights. */
 @Composable
 fun RepertoireScreen(
     onBack: () -> Unit,
@@ -48,7 +46,8 @@ fun RepertoireScreen(
             if (items.isEmpty()) {
                 GlassCard {
                     Text(
-                        text = "Noch keine bestätigten Methoden — schließe Hypothesen erfolgreich ab und Insights mit Confidence über 50 % landen hier.",
+                        text =
+                            "Noch keine bestätigten Methoden — schließe Hypothesen erfolgreich ab und Insights mit Confidence über 50 % landen hier.",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                     )
