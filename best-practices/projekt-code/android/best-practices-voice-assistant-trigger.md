@@ -33,6 +33,7 @@
 | 8 | Mikrofon an ChatGPT uebergeben | `stop()` → `release()` → **300–500 ms warten** → DANN Assist ausloesen | §4 |
 | 9 | Wake-Word-App `setPrivacySensitive` | NIEMALS `true` (sperrt ChatGPT vom Mic aus) | §4.2 |
 | 10 | Fremde Voice-Session WIEDER beenden | `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session (`AudioManager.dispatchMediaKeyEvent`); Erkennung via `mode == MODE_IN_COMMUNICATION`, nicht via `micSilenced` | §1.4 |
+| 11 | Dauer-Lauschen ohne Akkufresser/Waerme | Zweistufige Pipeline: WebRTC-VAD (`VERY_AGGRESSIVE`!) gate't die ASR; Pre-Roll ~300 ms; Silence-Hangover > ASR-Endpoint (~800 ms); Gate-Statistik-Sonde ins Log | §6 |
 
 ---
 
@@ -173,6 +174,43 @@ Nutzer durch diese Schritte fuehren (Deep-Links anbieten): App-Akku „Uneingesc
   `adb shell dumpsys package com.openai.chatgpt` (Activities, Intent-Filter `ASSIST`/`VOICE_COMMAND`,
   `<data scheme="chatgpt">`), `adb shell cmd shortcut get-shortcuts com.openai.chatgpt`.
 
+## 6. Low-Power Always-Listening — die „Ok Google"-Pipeline fuer normale Apps (NEU 2026-06-12)
+
+> Live umgesetzt + gemessen in VoiceKey 0.6.0 (Fold 6): 70–78 % CPU → **3,5–10,7 %**.
+
+### 6.1 Die Wahrheit ueber „Ok Google"
+Das echte „Ok Google" laeuft auf einem **Low-Power-DSP** im SoC (SoundTrigger HAL) — das Mikro ist
+fuer die CPU „aus". Die zugehoerige API (`AlwaysOnHotwordDetector`/`HotwordDetectionService`) ist
+seit Android 12 **@SystemApi, nur fuer die Default-Assistant-App**. Eine normale App kann das NICHT
+nutzen — ihr Mikro muss offen bleiben. (`offiziell`: source.android.com/docs/whatsnew/android-12-release)
+
+### 6.2 Stand der Technik fuer Dritt-Apps: zweistufige Pipeline
+```
+AudioRecord (16 kHz mono, 100-ms-Chunks)
+  └─> Stufe 1: WebRTC-VAD, Mode VERY_AGGRESSIVE   (GMM, µs pro Frame — quasi gratis)
+        └─ Stille  -> NICHTS rechnen (das ist die Ersparnis), Pre-Roll-Ring pflegen
+        └─ Sprache -> Stufe 2: ASR/KWS (Vosk-Grammatik o.ae.) fuettern
+```
+- **`Mode.VERY_AGGRESSIVE` ist Pflicht** — `NORMAL` laesst Raum-Rauschen als „Sprache" durch,
+  das Gate ist dann dauernd offen und die Pipeline spart NICHTS (Almanach §13, selbst erlebt).
+- **Pre-Roll-Puffer (~300 ms):** der VAD braucht ~50 ms zum Anschlagen; ohne Vorlauf fehlt der
+  Wortanfang („…k chatty") und die Erkennung leidet.
+- **Silence-Hangover > ASR-Endpoint:** Vosk finalisiert eine Aeusserung erst nach ~500 ms Stille —
+  das Gate muss laenger offen bleiben (800 ms), sonst kommt das Ergebnis nie.
+- **Gate-Statistik-Sonde** (Anteil offener Chunks pro 30 s) ins strukturierte Log — nur so ist
+  belegbar, dass das Gate wirklich spart (observability-first).
+- Lib: `com.github.gkonovalov.android-vad:webrtc:2.0.10` (MIT, 158 KB, JitPack — kein ONNX noetig).
+  Silero-VAD (gleiche Lib, `:silero`) ist genauer, braucht aber ONNX Runtime; fuers Gate vor einer
+  ASR reicht WebRTC voellig.
+
+### 6.3 Engine-Matrix fuer FREI waehlbare Wake-Woerter (DE+EN, Stand 2026-06)
+| Engine | Open-Vocab? | Deutsch? | Kosten/Risiko | Urteil |
+|--------|------------|----------|---------------|--------|
+| Picovoice Porcupine | Console-Training in Sekunden | ja | **Free Tier ENDET 30.06.2026** — Keys werden deaktiviert | fuer private Apps TOT |
+| sherpa-onnx KWS | ja (Token-Datei) | **nein** (nur ZH/EN) | frei (Apache-2.0) | fuer DE-Woerter riskant |
+| openWakeWord | nein (Colab-Training pro Wort) | trainierbar | frei | nur bei festem Wortschatz |
+| **Vosk-Grammatik + VAD-Gate** | **ja** (beliebige Woerter) | **ja** | frei; nackt ein Akkufresser — NUR mit Gate | **Default fuer frei waehlbare Woerter** |
+
 ---
 
 ## 🔗 Bezug zum Bug-Almanach ([`bugs/android/voice-assistant-trigger.md`](../../../bugs/android/voice-assistant-trigger.md))
@@ -184,6 +222,7 @@ Nutzer durch diese Schritte fuehren (Deep-Links anbieten): App-Akku „Uneingesc
 | §3 FGS korrekt + Samsung-Setup | #4 (FGS-Type), #5 (Hintergrund-Start), #6 (Samsung killt) |
 | §4 Mic-Übergabe | #8 (HAL-Delay), #9 (setPrivacySensitive) |
 | §5 ChatGPT-Einstiegspunkte | #10 (kein Deep-Link/Hotword) |
+| §6 Low-Power-Pipeline (VAD-Gate) | #13 (VAD NORMAL wirkungslos), #14 (Engine-Auswahl 2026) |
 
 ## Quellen
 - Assist/Intents + VoiceInteractionService: developer.android.com/develop/devices/assistant; /reference/android/service/voice/VoiceInteractionService
@@ -193,3 +232,7 @@ Nutzer durch diese Schritte fuehren (Deep-Links anbieten): App-Akku „Uneingesc
 - FGS microphone: developer.android.com/develop/background-work/services/fgs/service-types · Samsung: dontkillmyapp.com/samsung
 - Mic-Sharing: developer.android.com/media/platform/sharing-audio-input
 - ChatGPT als Default-Assistant: 9to5google.com/2025/03/14; howtogeek.com/set-chatgpt-default-voice-assistant-on-android
+- Low-Power (§6, Stand 2026-06-12): source.android.com/docs/whatsnew/android-12-release (AlwaysOnHotwordDetector @SystemApi);
+  github.com/gkonovalov/android-vad (WebRTC/Silero-VAD, Parameter); alphacephei.com/vosk/android (nicht fuer Always-on);
+  community.home-assistant.io/t/1012744 (Porcupine-Free-Tier-Ende 30.06.2026); k2-fsa.github.io/sherpa/onnx/kws (nur ZH/EN);
+  github.com/Re-MENTIA/openwakeword-android-kt

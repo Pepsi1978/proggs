@@ -4,7 +4,8 @@
 > ausloest, Wake-Word-Daueraufnahme, Foreground-Mic-Service, Mikrofon-Uebergabe zwischen Apps,
 > Shizuku/KEYCODE_ASSIST, Default-Assistant-Integration.
 >
-> **Stand:** 2026-06-11 (7-Researcher-Schwarm, offizielle Quellen + AOSP zuerst).
+> **Stand:** 2026-06-12 (Erstrecherche 2026-06-11, 7-Researcher-Schwarm; §13/§14 ergaenzt
+> 2026-06-12 nach Low-Power-Recherche + Live-Vorfall VoiceKey 0.6.0).
 > **Zielgeraet-Anker:** Samsung Galaxy S23 Ultra, One UI 6.1.1 / Android 14 (API 34).
 > ChatGPT-App ab v1.2025.070. Wake-Word: sherpa-onnx KWS / openWakeWord.
 >
@@ -30,6 +31,8 @@
 | 10 | Suche nach `chatgpt://`-Voice-Deep-Link | Existiert offiziell nicht; kein Hotword — nur Assist-Geste/UI | §10 |
 | 11 | Fremde ChatGPT-Voice-Session BEENDEN | Kugel hat KEINEN Beenden-Knopf, In-App-„Beenden" stoppt Aufnahme nicht zuverlaessig; `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session beendet sie | §11 |
 | 12 | „Laeuft ChatGPT-Voice noch?" zuverlaessig erkennen | `AudioManager.mode == MODE_IN_COMMUNICATION` (echtes Telefonat = `MODE_IN_CALL`); `isClientSilenced`/`micSilenced` ist FLAKY, nicht als Gate nutzen | §12 |
+| 13 | Dauer-Lauschen frisst Akku / Handy wird warm | ASR (Vosk) nie 24/7 nackt laufen lassen — WebRTC-VAD-Gate davor, Mode `VERY_AGGRESSIVE` (NORMAL laesst Raum-Rauschen durch = Gate dauernd offen) | §13 |
+| 14 | Wake-Word-Engine auswaehlen (2026) | Porcupine-Free-Tier ENDET 30.06.2026; sherpa-KWS hat kein DE-Modell; openWakeWord braucht Training pro Wort; fuer frei waehlbare Woerter: Vosk-Grammatik + VAD-Gate | §14 |
 
 ---
 
@@ -172,3 +175,43 @@ Telefonate ueber `MODE_IN_CALL` ausschliessen (passiert automatisch, da nur auf 
 reagiert wird). `micSilenced` nur noch fuer Observability/Logging, nie als Entscheidungs-Gate.
 **Versionen:** Android 10+ (Audio-Modi seit jeher); verifiziert One UI 8 / Android 16.
 **Quelle:** developer.android.com/reference/android/media/AudioManager (MODE_IN_COMMUNICATION vs MODE_IN_CALL).
+
+## §13 — WebRTC-VAD `Mode.NORMAL` laesst Raum-Rauschen durch → Sprach-Gate wirkungslos ⭐ SELBST ERLEBT
+**Symptom:** Trotz VAD-Gate vor der ASR bleibt die CPU-Last bei „Stille" hoch (VoiceKey: 70–78 %
+eines Cores, Handy wird warm) — als gaebe es das Gate nicht.
+**Root Cause:** Der WebRTC-VAD (GMM) ist bewusst „biased toward speech". Im Modus `NORMAL`
+klassifiziert er normales Raum-Rauschen (Luefter, Strasse, Tastatur) dauerhaft als Sprache; ein
+Silence-Hangover (noetig fuer die ASR-Finalisierung, z.B. 800 ms) haelt das Gate dann praktisch
+permanent offen → die ASR rechnet wie ohne Gate.
+**Fix (funktionserhaltend):** `Mode.VERY_AGGRESSIVE` (auch die Empfehlung der Lib-README).
+Normal gesprochene Wake-Woerter erkennt der strengste Modus zuverlaessig; False-Positives kosten
+nur kurz CPU (dahinter sitzt ja die ASR als zweiter Filter). Live gemessen (Fold 6, 2026-06-12):
+70–78 % CPU → **3,5–10,7 %**, Gate nur noch 18–24 % offen bei Buerogeraeuschen.
+**Pflicht-Begleiter:** (a) Gate-Statistik-Sonde ins Log (Anteil offener Chunks pro 30 s) — sonst
+ist „das Gate wirkt" nicht belegbar; (b) Silence-Hangover MUSS groesser sein als die
+Endpoint-Stille der ASR (Vosk ~500 ms → 800 ms), sonst wird die Aeusserung nie finalisiert;
+(c) Pre-Roll-Puffer (~300 ms), weil der VAD ~50 ms zum Anschlagen braucht (Wortanfang).
+**Versionen:** com.github.gkonovalov.android-vad:webrtc 2.0.10. **Quelle:** github.com/gkonovalov/android-vad
+(README: empfohlene Parameter); eigener Vorfall VoiceKey 0.6.0.
+
+## §14 — Wake-Word-Engine-Auswahl 2026: Porcupine-Free-Tier endet, DE-Luecken bei Alternativen
+**Symptom:** Suche nach einer energiesparenden Wake-Word-Engine fuer eine private App mit FREI
+waehlbaren (auch deutschen) Woertern.
+**Befunde (Researcher-Schwarm 2026-06-12):**
+- **Picovoice Porcupine:** technisch ideal (<4 % CPU RPi3, ~1 MB RAM, DE-Custom-Words in Sekunden),
+  aber der **Free Tier wird am 30.06.2026 abgeschaltet** — bestehende Free-AccessKeys werden
+  deaktiviert, SDK-Init schlaegt danach fehl. Kein Non-Commercial-Ersatz geplant. Fuer private
+  Apps damit tot. Quelle: community.home-assistant.io/t/1012744; picovoice.ai/docs/faq/general.
+- **sherpa-onnx KWS:** Apache-2.0, open-vocabulary, Android-AAR vorhanden — aber **nur ZH/EN-Modelle**,
+  keine deutschen Phoneme. Quelle: k2-fsa.github.io/sherpa/onnx/kws.
+- **openWakeWord (openwakeword-android-kt):** laeuft nativ (ONNX), braucht aber **Training pro
+  Wort** (Colab) — bricht das Feature „Nutzer tippt beliebiges Wort ein". Quelle: github.com/Re-MENTIA/openwakeword-android-kt.
+- **Vosk:** laut Hersteller explizit NICHT fuer Always-on gedacht (Akku) — als nackter
+  Dauerlauscher falsch, MIT VAD-Gate (§13) aber der einzige Open-Vocab-Weg fuer DE+EN.
+  Quelle: alphacephei.com/vosk/android.
+- **Das echte „Ok Google"** laeuft auf einem Low-Power-DSP (SoundTrigger HAL); die zugehoerige
+  API (`AlwaysOnHotwordDetector`) ist seit Android 12 **@SystemApi nur fuer die
+  Default-Assistant-App** — fuer normale Apps unerreichbar. Quelle: source.android.com/docs/whatsnew/android-12-release.
+**Fix/Entscheidung:** Fuer frei waehlbare Woerter: zweistufige Pipeline VAD→Vosk-Grammatik (§13).
+Nur bei festem Wortschatz lohnt openWakeWord (Training) als sparsamste freie Engine.
+**Versionen:** Stand 2026-06-12.
