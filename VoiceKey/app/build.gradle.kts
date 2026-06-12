@@ -29,8 +29,8 @@ android {
         applicationId = "de.frank.voicekey"
         minSdk = 34
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.7.0"
+        versionCode = 12
+        versionName = "0.7.1"
 
         // Vosk liefert native .so — auf die real genutzten ABIs beschraenken (Fold 6 = arm64).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }

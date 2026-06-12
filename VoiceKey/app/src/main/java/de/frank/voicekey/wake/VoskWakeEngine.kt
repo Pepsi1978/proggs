@@ -43,6 +43,12 @@ class VoskWakeEngine(
     private val onWakeWord: (phrase: String, lang: WakeLang) -> Unit,
     private val onStopWord: (phrase: String, lang: WakeLang) -> Unit,
     private val onEngineDied: (reason: String, uptimeMs: Long) -> Unit = { _, _ -> },
+    // Gate-Bypass: liefert true, solange eine fremde Voice-Session laeuft (ChatGPT hat das Mic,
+    // unsere Aufnahme ist gedaempft/stummgeschaltet). DANN das VAD-Gate AUSSETZEN und jeden Chunk
+    // an die Recognizer geben — sonst stuft das aggressive VAD das gedaempfte Session-Audio als
+    // Stille ein und "Wake-Wort + beenden" wird nie gehoert (Regression durch das Gate, 0.6.0).
+    // Im Normalbetrieb (keine Session) bleibt das Gate aktiv und spart Akku.
+    private val bypassGate: () -> Boolean = { false },
 ) {
 
     private data class LangSetup(
@@ -234,15 +240,22 @@ class VoskWakeEngine(
                 }
 
                 // ---- Sprach-Gate (Akku): erst der billige VAD, Vosk nur bei Sprache. ----
+                // Laeuft eine fremde Voice-Session (ChatGPT hat das Mic), Gate KOMPLETT umgehen:
+                // unser Audio ist dann gedaempft, das aggressive VAD wuerde es als Stille werten
+                // und
+                // "Wake-Wort + beenden" verschlucken. Im Normalbetrieb spart das Gate weiter Akku.
+                val bypass = bypassGate()
                 // Alle 20-ms-Frames durch den VAD schicken (sein eingebautes Glaetten ueber
                 // speech/silenceDurationMs braucht den kontinuierlichen Strom).
-                var speech = vad == null // ohne VAD: Gate immer offen (Verhalten wie frueher)
-                vad?.let { v ->
-                    var off = 0
-                    while (off + VAD_FRAME_SIZE <= read) {
-                        System.arraycopy(buffer, off, vadFrame, 0, VAD_FRAME_SIZE)
-                        if (v.isSpeech(vadFrame)) speech = true
-                        off += VAD_FRAME_SIZE
+                var speech = bypass || vad == null // bypass/ohne VAD: Gate offen (wie vor 0.6.0)
+                if (!bypass) {
+                    vad?.let { v ->
+                        var off = 0
+                        while (off + VAD_FRAME_SIZE <= read) {
+                            System.arraycopy(buffer, off, vadFrame, 0, VAD_FRAME_SIZE)
+                            if (v.isSpeech(vadFrame)) speech = true
+                            off += VAD_FRAME_SIZE
+                        }
                     }
                 }
                 statChunksTotal++

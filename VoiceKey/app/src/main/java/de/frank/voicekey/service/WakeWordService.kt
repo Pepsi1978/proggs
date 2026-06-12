@@ -99,6 +99,10 @@ class WakeWordService : LifecycleService() {
                 onWakeWord = ::onWakeWordHit,
                 onStopWord = ::onStopWordHit,
                 onEngineDied = ::onEngineDied,
+                // Laeuft ChatGPT-Voice (haelt unser Mic gedaempft = micSilenced), VAD-Gate
+                // aussetzen,
+                // damit "Wake-Wort + beenden" waehrend der Session gehoert wird (wie vor dem Gate).
+                bypassGate = { micSilenced || AssistantStopper.isVoiceSessionActive(this) },
             )
         LibVosk.setLogLevel(LogLevel.WARNINGS)
         getSystemService(android.media.AudioManager::class.java)
