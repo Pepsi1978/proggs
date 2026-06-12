@@ -218,3 +218,25 @@ Empfohlene Reihenfolge wenn Frank Zeit fuer Cleanup hat:
 - AGP, Compose BOM, targetSdk Updates → durchgefuehrt (Commits #2167-#2170).
 - 3 echte Bugfixes (Cancellation, Stale-Window, Doppel-Trigger-Race) → in
   `~/proggs/.claude/agent-memory/shared/bug-cases.jsonl` dokumentiert.
+
+---
+
+## ⚠️ PFLICHT für die nächste WINDOWS-Session: Debug-Keystore angleichen (2026-06-12)
+
+**Was passiert ist:** Franks Handy hatte EntropieReductor 0.12.6, signiert mit dem
+Windows-Debug-Keystore (Cert `A7:1F:7E:53…`, CN=Android Debug, C=DE). Der Mac nutzt
+`~/SK/EntropieReductor/entropiereductor.debug.keystore` (Cert `BC:5F:72:42…`) — die
+beiden "debug-shared"-Keystores waren NIE identisch. Folge: `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
+beim Mac-Update. Gelöst per Uninstall + Neuinstallation (Frank hatte Drive-Backup).
+
+**Aktueller Zustand:** Die App auf dem Handy ist jetzt mit dem **Mac-Keystore** signiert
+(`BC:5F:72:42:09:5F:65:52:28:A8:8E:2B:AF:4D:DE:C8:F8:EE:E6:58:CF:EF:BC:95:20:5E:47:84:98:B6:23:05`).
+
+**Pflicht-Schritte auf Windows (BEVOR dort gebaut+installiert wird):**
+1. Mac-Keystore nach Windows kopieren (z.B. via Google Drive/USB):
+   Mac: `~/SK/EntropieReductor/entropiereductor.debug.keystore`
+   → Windows: `C:\Users\barwa\SK\EntropieReductor\entropiereductor.debug.keystore` (ÜBERSCHREIBEN)
+2. Verifizieren: `keytool -list -keystore <pfad> -storepass android` → Fingerprint muss mit `BC:5F:72:42…` beginnen.
+3. Erst dann `gradlew installDebug` — sonst erneut INSTALL_FAILED + Datenverlust-Risiko.
+
+Almanach-Eintrag: `bugs/android-build/gradle.md` §13.

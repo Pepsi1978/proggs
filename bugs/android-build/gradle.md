@@ -63,6 +63,7 @@ Gegenstueck. Konkret referenziert: `kotlin.md` §10.1 (KSP↔Kotlin), §10.3 (R8
 | 12 | BOM-Lib ohne Version unaufloesbar | `platform(...)` + BOM auf JEDER Configuration | §9.3, §9.4 |
 | 13 | Windows: Umlaute werden Muell | `options.encoding = "UTF-8"` pro JavaCompile-Task | §11.5 |
 | 14 | Windows: "Unable to delete" bei clean | `gradlew --stop` + Defender-Ausnahme `build/`+`.gradle/` | §11.2 |
+| 15 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (Debug) | Keystore-Mismatch zwischen Rechnern — Fingerprints vergleichen, NIE reflexhaft deinstallieren | §13 |
 
 ---
 
@@ -779,6 +780,27 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 | Korrupter CC persistiert (§5.4) | CLOSED NOT_PLANNED 2023-02-24 — CC verwerfen | gradle#23802 |
 | CC sensitiv auf Property-Werte (§5.3) | CLOSED DUPLICATE 2025-02-03 — erwartetes Verhalten | gradle#32219 |
 | parallel clean/build Race (§6.4) | CLOSED NOT_PLANNED — `clean` separat | gradle#15163 |
+
+---
+
+## 13. Signing & adb-Install (Debug-Keystore ueber mehrere Rechner)
+
+### 13.1 `INSTALL_FAILED_UPDATE_INCOMPATIBLE` — Debug-Keystore-Mismatch zwischen Rechnern  ⭐ SELBST ERLEBT
+**Symptom:** `adb install -r` schlaegt fehl: "Existing package ... signatures do not match newer version; ignoring!" — obwohl es ein normaler Debug-Build derselben App ist.
+**Ursache:** Jede Maschine signiert Debug-Builds mit ihrem eigenen Keystore (Default `~/.android/debug.keystore` wird pro Maschine generiert). Ein "geteilter" Keystore in `~/SK/<projekt>/` hilft nur, wenn die DATEI auf allen Maschinen BYTE-IDENTISCH ist — eine namensgleiche, aber separat erzeugte Kopie hat einen anderen Key.
+**Diagnose (2 Minuten, bevor irgendetwas geloescht wird):**
+```bash
+adb shell pm path <paket>            # → /data/app/.../base.apk
+adb pull <pfad> /tmp/installed.apk
+apksigner verify --print-certs /tmp/installed.apk     # Cert der INSTALLIERTEN App
+keytool -list -keystore <kandidat>.keystore -storepass android   # Cert der Kandidaten
+```
+Fingerprints vergleichen — dann ist klar, WELCHER Rechner die installierte App signiert hat.
+**FIX (funktionserhaltend, in dieser Reihenfolge):**
+1. Den Keystore der Maschine besorgen, die die installierte App signiert hat → in `~/SK/<projekt>/` ALLER Maschinen ablegen (eine Wahrheit) → normales Update, kein Datenverlust.
+2. NUR wenn der fremde Keystore unerreichbar ist UND die Daten gesichert sind (z.B. Drive-Backup): mit Nutzer-OK deinstallieren + frisch installieren, danach Backup wiederherstellen. NIEMALS reflexhaft `adb uninstall`.
+**Poka-Yoke:** Nach jedem Keystore-Setup auf einer neuen Maschine: `keytool -list`-Fingerprint mit dem der anderen Maschine vergleichen (muss identisch sein). Vorfall: EntropieReductor 0.13.0, 2026-06-12 (Mac vs. Windows, Handy-App war Windows-signiert).
+**Versionen:** plattformuebergreifend, zeitlos (Android-Signatur-Modell).
 
 ---
 
