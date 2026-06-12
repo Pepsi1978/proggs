@@ -106,13 +106,13 @@ fun AmazfitTrainingsScreen(
                         modifier =
                             Modifier.size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+                                .background(LocalCosmos.current.warn.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.DirectionsRun,
                             contentDescription = null,
-                            tint = CosmosColors.Warning,
+                            tint = LocalCosmos.current.warn,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -157,10 +157,10 @@ fun AmazfitTrainingsScreen(
                             colors =
                                 AssistChipDefaults.assistChipColors(
                                     containerColor =
-                                        if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                        if (selected) LocalCosmos.current.warn.copy(alpha = 0.18f)
                                         else Color.Transparent,
                                     labelColor =
-                                        if (selected) CosmosColors.Warning else cosmos.textPrimary,
+                                        if (selected) LocalCosmos.current.warn else cosmos.textPrimary,
                                 ),
                         )
                     }
@@ -183,10 +183,10 @@ fun AmazfitTrainingsScreen(
                                 colors =
                                     AssistChipDefaults.assistChipColors(
                                         containerColor =
-                                            if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                            if (selected) LocalCosmos.current.warn.copy(alpha = 0.18f)
                                             else Color.Transparent,
                                         labelColor =
-                                            if (selected) CosmosColors.Warning
+                                            if (selected) LocalCosmos.current.warn
                                             else cosmos.textPrimary,
                                     ),
                             )
@@ -199,10 +199,10 @@ fun AmazfitTrainingsScreen(
                                 colors =
                                     AssistChipDefaults.assistChipColors(
                                         containerColor =
-                                            if (selected) CosmosColors.Warning.copy(alpha = 0.18f)
+                                            if (selected) LocalCosmos.current.warn.copy(alpha = 0.18f)
                                             else Color.Transparent,
                                         labelColor =
-                                            if (selected) CosmosColors.Warning
+                                            if (selected) LocalCosmos.current.warn
                                             else cosmos.textPrimary,
                                     ),
                             )

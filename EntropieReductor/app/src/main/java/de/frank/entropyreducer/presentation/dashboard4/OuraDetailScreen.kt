@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,7 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,22 +35,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.rememberCardColors
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 
 /**
  * Oura-Ring-Detail-Screen pro Metrik (Frank-Wunsch 2026-05-10, Etappe F).
  *
- * Zeigt fuer einen der vier Oura-Werte (Readiness, Schlaf-Score, Aktivität,
- * Resilienz) die komplette Historie als interaktiver Verlauf:
- *  - Header mit aktuellem Wert + Plus/Minus zum 30-Tage-Mittel
- *  - Range-Switcher 7T / 30T / 90T / Alle
- *  - Grosser Verlaufs-Balkenchart der gefilterten Werte
- *  - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum Vortag
+ * Zeigt fuer einen der vier Oura-Werte (Readiness, Schlaf-Score, Aktivität, Resilienz) die
+ * komplette Historie als interaktiver Verlauf:
+ * - Header mit aktuellem Wert + Plus/Minus zum 30-Tage-Mittel
+ * - Range-Switcher 7T / 30T / 90T / Alle
+ * - Grosser Verlaufs-Balkenchart der gefilterten Werte
+ * - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum Vortag
  *
  * Frank-Vorgabe: 30-Tage-Schnitt ist die Vergleichsbasis fuer das Plus/Minus.
  */
@@ -72,41 +71,46 @@ fun OuraDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
 
-    val title = when (metricKey) {
-        OuraMetricKey.READINESS -> "Readiness"
-        OuraMetricKey.SLEEP_SCORE -> "Schlaf-Score"
-        OuraMetricKey.ACTIVITY -> "Aktivität"
-        OuraMetricKey.RESILIENCE -> "Resilienz"
-        else -> "Oura"
-    }
+    val title =
+        when (metricKey) {
+            OuraMetricKey.READINESS -> "Readiness"
+            OuraMetricKey.SLEEP_SCORE -> "Schlaf-Score"
+            OuraMetricKey.ACTIVITY -> "Aktivität"
+            OuraMetricKey.RESILIENCE -> "Resilienz"
+            else -> "Oura"
+        }
 
     // Historie auf einheitliches Format (day, score) abbilden — Resilience nutzt
     // den Rang 0..4, Score-Karten den 0..100-Score.
-    val allPoints: List<Pair<String, Double>> = when (metricKey) {
-        OuraMetricKey.READINESS -> state.ouraReadinessHistory.mapNotNull {
-            it.score?.let { s -> it.day to s.toDouble() }
+    val allPoints: List<Pair<String, Double>> =
+        when (metricKey) {
+            OuraMetricKey.READINESS ->
+                state.ouraReadinessHistory.mapNotNull {
+                    it.score?.let { s -> it.day to s.toDouble() }
+                }
+            OuraMetricKey.SLEEP_SCORE ->
+                state.ouraSleepHistory.mapNotNull { it.score?.let { s -> it.day to s.toDouble() } }
+            OuraMetricKey.ACTIVITY ->
+                state.ouraActivityHistory.mapNotNull {
+                    it.score?.let { s -> it.day to s.toDouble() }
+                }
+            OuraMetricKey.RESILIENCE ->
+                state.ouraResilienceHistory.mapNotNull {
+                    levelToRank(it.level)?.let { r -> it.day to r }
+                }
+            else -> emptyList()
         }
-        OuraMetricKey.SLEEP_SCORE -> state.ouraSleepHistory.mapNotNull {
-            it.score?.let { s -> it.day to s.toDouble() }
-        }
-        OuraMetricKey.ACTIVITY -> state.ouraActivityHistory.mapNotNull {
-            it.score?.let { s -> it.day to s.toDouble() }
-        }
-        OuraMetricKey.RESILIENCE -> state.ouraResilienceHistory.mapNotNull {
-            levelToRank(it.level)?.let { r -> it.day to r }
-        }
-        else -> emptyList()
-    }
     val maxValue = if (metricKey == OuraMetricKey.RESILIENCE) 4.0 else 100.0
     val unit = if (metricKey == OuraMetricKey.RESILIENCE) "" else " /100"
 
     var range by remember { mutableStateOf(DetailRangeOura.THIRTY) }
-    val cutoffDays = when (range) {
-        DetailRangeOura.SEVEN -> 7
-        DetailRangeOura.THIRTY -> 30
-        DetailRangeOura.NINETY -> 90
-        DetailRangeOura.ALL -> Int.MAX_VALUE
-    }
+    val cutoffDays =
+        when (range) {
+            DetailRangeOura.SEVEN -> 7
+            DetailRangeOura.THIRTY -> 30
+            DetailRangeOura.NINETY -> 90
+            DetailRangeOura.ALL -> Int.MAX_VALUE
+        }
     val filtered = allPoints.takeLast(cutoffDays)
     val values = filtered.map { it.second }
     val minV = values.minOrNull()
@@ -144,10 +148,26 @@ fun OuraDetailScreen(
                     onPick = { idx -> cardColorAccess.setColor(ouraCardId, idx) },
                 )
             }
-            item { OuraDetailHeader(title = title, current = current, unit = unit, trendDelta = trendDelta, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+            item {
+                OuraDetailHeader(
+                    title = title,
+                    current = current,
+                    unit = unit,
+                    trendDelta = trendDelta,
+                    isResilience = metricKey == OuraMetricKey.RESILIENCE,
+                )
+            }
             item { OuraRangeSwitcher(current = range, onChange = { range = it }) }
             if (filtered.isNotEmpty()) {
-                item { OuraStatsRow(min = minV, max = maxV, avg = avgV, count = values.size, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+                item {
+                    OuraStatsRow(
+                        min = minV,
+                        max = maxV,
+                        avg = avgV,
+                        count = values.size,
+                        isResilience = metricKey == OuraMetricKey.RESILIENCE,
+                    )
+                }
                 item {
                     OuraVerlaufsChart(
                         points = filtered,
@@ -205,18 +225,22 @@ private fun OuraDetailHeader(
     isResilience: Boolean,
 ) {
     val cosmos = LocalCosmos.current
-    val accent = if (isResilience) {
-        levelToColorFromRank(current, cosmos.textSecondary)
-    } else {
-        scoreColor(current?.toInt())
-    }
+    val accent =
+        if (isResilience) {
+            levelToColorFromRank(current, cosmos.textSecondary)
+        } else {
+            scoreColor(current?.toInt())
+        }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = if (current == null) "—" else if (isResilience) levelToGerman(rankToLevel(current)) else current.toInt().toString(),
+                    text =
+                        if (current == null) "—"
+                        else if (isResilience) levelToGerman(rankToLevel(current))
+                        else current.toInt().toString(),
                     color = accent,
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
@@ -232,16 +256,18 @@ private fun OuraDetailHeader(
             }
             if (trendDelta != null) {
                 Spacer(Modifier.height(8.dp))
-                val trendColor = when {
-                    trendDelta > 0.5 -> CosmosColors.Success
-                    trendDelta < -0.5 -> CosmosColors.Critical
-                    else -> CosmosColors.AccentPrimary
-                }
-                val trendLabel = when {
-                    trendDelta > 0.5 -> "besser als 30-Tage-Mittel"
-                    trendDelta < -0.5 -> "schlechter als 30-Tage-Mittel"
-                    else -> "wie 30-Tage-Mittel"
-                }
+                val trendColor =
+                    when {
+                        trendDelta > 0.5 -> CosmosColors.Success
+                        trendDelta < -0.5 -> CosmosColors.Critical
+                        else -> CosmosColors.AccentPrimary
+                    }
+                val trendLabel =
+                    when {
+                        trendDelta > 0.5 -> "besser als 30-Tage-Mittel"
+                        trendDelta < -0.5 -> "schlechter als 30-Tage-Mittel"
+                        else -> "wie 30-Tage-Mittel"
+                    }
                 Text(
                     text = "${"%+.1f".format(trendDelta)} — $trendLabel",
                     color = trendColor,
@@ -261,10 +287,11 @@ private fun OuraRangeSwitcher(current: DetailRangeOura, onChange: (DetailRangeOu
                 selected = current == r,
                 onClick = { onChange(r) },
                 label = { Text(r.label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = CosmosColors.Success.copy(alpha = 0.2f),
-                    selectedLabelColor = CosmosColors.Success,
-                ),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CosmosColors.Success.copy(alpha = 0.2f),
+                        selectedLabelColor = CosmosColors.Success,
+                    ),
             )
         }
     }
@@ -279,16 +306,14 @@ private fun OuraStatsRow(
     isResilience: Boolean,
 ) {
     val cosmos = LocalCosmos.current
-    val format: (Double) -> String = if (isResilience) {
-        { levelToGerman(rankToLevel(it)) }
-    } else {
-        { it.toInt().toString() }
-    }
+    val format: (Double) -> String =
+        if (isResilience) {
+            { levelToGerman(rankToLevel(it)) }
+        } else {
+            { it.toInt().toString() }
+        }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             StatCol("Mittel", avg?.let(format) ?: "—")
             StatCol("Min", min?.let(format) ?: "—")
             StatCol("Max", max?.let(format) ?: "—")
@@ -302,16 +327,21 @@ private fun StatCol(label: String, value: String) {
     val cosmos = LocalCosmos.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
 /**
- * Verlaufs-Balkenchart fuer den Detail-Screen. Hoehe der Balken proportional
- * zum Wert. Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine eigene Farbe
- * abhaengig vom Wert (gleiche 80/60-Schwellen wie auf der Karte). `colorFor`
- * mappt einen Balkenwert auf seine Farbe. Damit zeigt der ganze Verlauf auf
- * einen Blick wo gute (gruen), mittlere (gelb) und schwache (rot) Tage waren.
+ * Verlaufs-Balkenchart fuer den Detail-Screen. Hoehe der Balken proportional zum Wert.
+ * Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine eigene Farbe abhaengig vom Wert (gleiche
+ * 80/60-Schwellen wie auf der Karte). `colorFor` mappt einen Balkenwert auf seine Farbe. Damit
+ * zeigt der ganze Verlauf auf einen Blick wo gute (gruen), mittlere (gelb) und schwache (rot) Tage
+ * waren.
  */
 @Composable
 private fun OuraVerlaufsChart(
@@ -323,7 +353,12 @@ private fun OuraVerlaufsChart(
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Text("Verlauf", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Verlauf",
+                style = MaterialTheme.typography.titleSmall,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(12.dp))
             // Chart-Bereich: Y-Achsen-Beschriftung links, Balken rechts.
             // Beide haben dieselbe feste Hoehe damit Achsen-Labels und Balken
@@ -353,10 +388,10 @@ private fun OuraVerlaufsChart(
                     ) {
                         repeat(5) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(cosmos.glassBorder.copy(alpha = 0.55f)),
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(cosmos.glassBorder.copy(alpha = 0.55f))
                             )
                         }
                     }
@@ -368,11 +403,11 @@ private fun OuraVerlaufsChart(
                         points.forEach { (_, v) ->
                             val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height((140.dp * frac).coerceAtLeast(2.dp))
-                                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
-                                    .background(colorFor(v).copy(alpha = 0.85f)),
+                                modifier =
+                                    Modifier.weight(1f)
+                                        .height((140.dp * frac).coerceAtLeast(2.dp))
+                                        .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                                        .background(colorFor(v).copy(alpha = 0.85f))
                             )
                         }
                     }
@@ -380,11 +415,22 @@ private fun OuraVerlaufsChart(
             }
             // Datums-Labels nur am Anfang und Ende damit's nicht ueberladen wirkt.
             Spacer(Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 val first = points.firstOrNull()?.first ?: ""
                 val last = points.lastOrNull()?.first ?: ""
-                Text(shortDate(first), style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
-                Text(shortDate(last), style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+                Text(
+                    shortDate(first),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+                Text(
+                    shortDate(last),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
             }
         }
     }
@@ -405,22 +451,24 @@ private fun OuraValueRow(
     // = gruen, Minus = rot. Bei Resilienz wird die Differenz uebersprungen
     // weil Levels nicht sauber als Plus/Minus-Differenz abbildbar sind.
     val delta: Double? = if (!isResilience && previousValue != null) value - previousValue else null
-    val deltaText: String = delta?.let {
-        val sign = if (it >= 0) "+" else ""
-        "$sign${it.toInt()}"
-    } ?: ""
-    val deltaColor: Color = when {
-        delta == null -> cosmos.textSecondary
-        delta > 0 -> CosmosColors.Success
-        delta < 0 -> CosmosColors.Critical
-        else -> cosmos.textSecondary
-    }
+    val deltaText: String =
+        delta?.let {
+            val sign = if (it >= 0) "+" else ""
+            "$sign${it.toInt()}"
+        } ?: ""
+    val deltaColor: Color =
+        when {
+            delta == null -> cosmos.textSecondary
+            delta > 0 -> CosmosColors.Success
+            delta < 0 -> CosmosColors.Critical
+            else -> cosmos.textSecondary
+        }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(cosmos.glassBg)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(cosmos.glassBg)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Frank-Wunsch 2026-05-16: Layout 1:1 wie ValueRow in BiomarkerDetailScreen —
@@ -440,9 +488,7 @@ private fun OuraValueRow(
         )
         if (deltaText.isNotBlank()) {
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .width(56.dp),
+                modifier = Modifier.padding(start = 8.dp).width(56.dp)
             ) {
                 Text(
                     text = deltaText,
@@ -456,15 +502,16 @@ private fun OuraValueRow(
 }
 
 /**
- * Frank-Wunsch 2026-05-16: gleiches Datums-Format wie Recovery-Detail —
- * "Sa 16.05.2026" mit Wochentag in deutscher Locale.
+ * Frank-Wunsch 2026-05-16: gleiches Datums-Format wie Recovery-Detail — "Sa 16.05.2026" mit
+ * Wochentag in deutscher Locale.
  */
 private fun formatRecoveryStyleDate(day: String): String {
     if (day.length != 10) return day
     return runCatching {
-        val date = java.time.LocalDate.parse(day)
-        date.format(OURA_VALUE_DATE_FMT)
-    }.getOrDefault(day)
+            val date = java.time.LocalDate.parse(day)
+            date.format(OURA_VALUE_DATE_FMT)
+        }
+        .getOrDefault(day)
 }
 
 private val OURA_VALUE_DATE_FMT: java.time.format.DateTimeFormatter =
@@ -478,9 +525,9 @@ private fun pickAccent(metricKey: String, current: Double?): Color =
     }
 
 /**
- * Y-Achsen-Beschriftungen fuer den Verlaufs-Chart (Frank-Vorgabe 2026-05-10).
- * Werden von oben nach unten ausgegeben (hoechster Wert oben). Score-Karten
- * nutzen 100/75/50/25/0, Resilienz nutzt 4/3/2/1/0 (Rang-Skala).
+ * Y-Achsen-Beschriftungen fuer den Verlaufs-Chart (Frank-Vorgabe 2026-05-10). Werden von oben nach
+ * unten ausgegeben (hoechster Wert oben). Score-Karten nutzen 100/75/50/25/0, Resilienz nutzt
+ * 4/3/2/1/0 (Rang-Skala).
  */
 private fun yAxisLabelsFor(metricKey: String, maxValue: Double): List<String> =
     if (metricKey == OuraMetricKey.RESILIENCE) {
@@ -492,12 +539,11 @@ private fun yAxisLabelsFor(metricKey: String, maxValue: Double): List<String> =
     }
 
 /**
- * Farbgebung pro Balken im Verlaufs-Chart (Frank-Vorgabe 2026-05-10): jeder
- * Balken bekommt seine eigene Farbe abhaengig vom Wert.
- *  - Score-Karten (Readiness, Schlaf-Score, Aktivität): scoreColor mit
- *    80/60-Schwellen (>=80 gruen, 60-79 gelb, <60 rot).
- *  - Resilienz: Rang-Mapping (0=rot, 1=gelb, 2=blau, 3-4=gruen) wie auf der
- *    Karte selbst.
+ * Farbgebung pro Balken im Verlaufs-Chart (Frank-Vorgabe 2026-05-10): jeder Balken bekommt seine
+ * eigene Farbe abhaengig vom Wert.
+ * - Score-Karten (Readiness, Schlaf-Score, Aktivität): scoreColor mit 80/60-Schwellen (>=80 gruen,
+ *   60-79 gelb, <60 rot).
+ * - Resilienz: Rang-Mapping (0=rot, 1=gelb, 2=blau, 3-4=gruen) wie auf der Karte selbst.
  */
 private fun colorForBar(metricKey: String): (Double) -> Color =
     if (metricKey == OuraMetricKey.RESILIENCE) {
@@ -506,7 +552,8 @@ private fun colorForBar(metricKey: String): (Double) -> Color =
                 0 -> CosmosColors.Critical
                 1 -> CosmosColors.Warning
                 2 -> CosmosColors.AccentPrimary
-                3, 4 -> CosmosColors.Success
+                3,
+                4 -> CosmosColors.Success
                 else -> CosmosColors.AccentPrimary
             }
         }
@@ -517,14 +564,15 @@ private fun colorForBar(metricKey: String): (Double) -> Color =
 private fun levelToColorFromRank(rank: Double?, fallback: Color): Color =
     levelToColor(rankToLevel(rank), fallback)
 
-private fun rankToLevel(rank: Double?): String? = when (rank?.toInt()) {
-    0 -> "limited"
-    1 -> "adequate"
-    2 -> "solid"
-    3 -> "strong"
-    4 -> "exceptional"
-    else -> null
-}
+private fun rankToLevel(rank: Double?): String? =
+    when (rank?.toInt()) {
+        0 -> "limited"
+        1 -> "adequate"
+        2 -> "solid"
+        3 -> "strong"
+        4 -> "exceptional"
+        else -> null
+    }
 
 private fun shortDate(day: String): String =
     if (day.length == 10) "${day.substring(8, 10)}.${day.substring(5, 7)}" else day

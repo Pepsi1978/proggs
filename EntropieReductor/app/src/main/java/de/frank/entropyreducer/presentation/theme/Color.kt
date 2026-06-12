@@ -3,46 +3,72 @@ package de.frank.entropyreducer.presentation.theme
 import androidx.compose.ui.graphics.Color
 import de.frank.entropyreducer.domain.model.EntropyCategory
 
-/** Neon Cosmos Palette — siehe Spec §3 und Referenzbilder 11-30. */
+/**
+ * "Glut"-Palette (2026-06-12) — warmes, tiefes Anthrazit + Orange-Glut. Quelle der Wahrheit:
+ * docs/mockup-neues-design.html (1:1-Vorlage, Hell + Dunkel). Ersetzt die alte "Neon
+ * Cosmos"-Palette (Galaxy-Navy + Cyan).
+ *
+ * WICHTIG: Akzente sind jetzt THEME-ABHAENGIG (Dark heller, Light tiefer) — in Composables IMMER
+ * ueber LocalCosmos.current.accent/accentTasks/... zugreifen. Die statischen Werte hier sind die
+ * DARK-Varianten (+ explizite *Light-Pendants) fuer Nicht-Compose-Kontexte (Widget, Notifications).
+ */
 object CosmosColors {
-    // Hintergruende — Dark
-    val BgDark = Color(0xFF0A0E1A)
-    val BgDarkMid = Color(0xFF0F1729)
-    val BgDarkAccent = Color(0xFF1A1F38)
+    // Hintergruende — Dark (warmes Anthrazit; Mockup --bg / card2 / --bg2)
+    val BgDark = Color(0xFF0B0A08)
+    val BgDarkMid = Color(0xFF12100D) // Screen-Hintergrund
+    val BgDarkAccent = Color(0xFF26211B) // Dialoge / Sheets (Mockup card2)
+    val BgDarkBar = Color(0xFF191613) // BottomBar / erhoehte Flaechen (Mockup bg2)
 
-    // Hintergruende — Light (Off-White mit dezenter Galaxy-Andeutung)
-    val BgLight = Color(0xFFF5F7FB)
-    val BgLightMid = Color(0xFFE8EDFA)
-    val BgLightAccent = Color(0xFFDCE3F5)
+    // Hintergruende — Light (warmes Papier-Weiss)
+    val BgLight = Color(0xFFFAF7F3) // Screen-Hintergrund
+    val BgLightMid = Color(0xFFF3EFE9)
+    val BgLightAccent = Color(0xFFF1ECE5) // BottomBar / erhoehte Flaechen (Mockup bg2)
 
-    // Glas-Flaechen
-    val GlassDark = Color(0x14FFFFFF) // weisses Overlay alpha 0.08
-    val GlassDarkBorder = Color(0x29FFFFFF) // weisses Overlay alpha 0.16 für 1dp Border
-    val GlassLight = Color(0xCCFFFFFF) // weiss alpha 0.80
-    val GlassLightBorder = Color(0x14000000) // schwarz alpha 0.08
+    // Karten — solide und warm statt "Glas" (Namen bleiben fuer Kompatibilitaet)
+    val GlassDark = Color(0xFF1D1A16) // Mockup --card dark
+    val GlassDarkBorder = Color(0x16FFF0E0) // warmweisser 1dp-Rand, alpha ~0.085
+    val GlassLight = Color(0xFFFFFFFF) // Mockup --card light: reines Weiss
+    val GlassLightBorder = Color(0x171E1812) // warmschwarzer Rand, alpha ~0.09
 
-    // Akzente (gleich in beiden Modi)
-    val AccentPrimary = Color(0xFF22D3EE) // Cyan
-    val AccentSecondary = Color(0xFFA78BFA) // Violett
-    val Success = Color(0xFF34D399) // Mintgruen
+    // Akzente — DARK-Werte (Light-Pendants darunter; theme-aware via LocalCosmos)
+    val AccentPrimary = Color(0xFFF97316) // Orange-Glut (Primaer)
+    val AccentSecondary = Color(0xFFA78BFA) // Violett (Forscher/KI)
+    val Success = Color(0xFF34C77B) // Smaragd
     val Warning = Color(0xFFFBBF24) // Bernstein
     val Critical = Color(0xFFF87171) // Korallrot
+
+    // Akzente — LIGHT-Pendants (Mockup [data-theme=light])
+    val AccentPrimaryLight = Color(0xFFEA580C)
+    val AccentSecondaryLight = Color(0xFF7C3AED)
+    val SuccessLight = Color(0xFF0F9D58)
+    val WarningLight = Color(0xFFD97706)
+    val CriticalLight = Color(0xFFDC2626)
+
+    // Tab-Farbklassen (Bottom-Bar Sub-Modi) — Dark / Light
+    val TabTasks = Color(0xFFF97316)
+    val TabTasksLight = Color(0xFFEA580C)
+    val TabAnalyse = Color(0xFF34C77B)
+    val TabAnalyseLight = Color(0xFF0F9D58)
+    val TabForscher = Color(0xFFA78BFA)
+    val TabForscherLight = Color(0xFF7C3AED)
+    val TabBio = Color(0xFFFB7185)
+    val TabBioLight = Color(0xFFE11D48)
 
     // Offizielle WHOOP-Recovery-Farben (Frank-Wunsch 2026-06-01). Kraeftiger als die
     // Cosmos-Pastelltoene oben — bewusst die Original-Whoop-Toene fuer alle
     // Erholungs-/Recovery-Anzeigen. Schwellen laut WHOOP: gruen 67-100 %, gelb 34-66 %,
-    // rot 0-33 %. Siehe whoopRecoveryColor() unten.
+    // rot 0-33 %. Siehe whoopRecoveryColor() unten. FUNKTIONAL — nicht Teil von Glut.
     val WhoopRecoveryGreen = Color(0xFF16EC06)
     val WhoopRecoveryYellow = Color(0xFFFFDE00)
     val WhoopRecoveryRed = Color(0xFFFF0026)
 
-    // Text
-    val TextPrimaryDark = Color(0xFFF8FAFC)
-    val TextSecondaryDark = Color(0xFF94A3B8)
-    val TextPrimaryLight = Color(0xFF0F172A)
-    val TextSecondaryLight = Color(0xFF475569)
+    // Text — warme Toene statt kaltem Blaugrau
+    val TextPrimaryDark = Color(0xFFF5F0E8)
+    val TextSecondaryDark = Color(0xFFA89F93)
+    val TextPrimaryLight = Color(0xFF221C15)
+    val TextSecondaryLight = Color(0xFF6F665B)
 
-    // Statusbalken-Stops (von 0% nach 100%)
+    // Statusbalken-Stops (von 0% nach 100%) — FUNKTIONAL, unveraendert
     val StatusRed = Color(0xFFF87171) // 0-20
     val StatusOrange = Color(0xFFFB923C) // 20-40
     val StatusYellow = Color(0xFFFBBF24) // 40-60
@@ -54,6 +80,7 @@ object CosmosColors {
     // Hinweis: Diese Skala ist BEWUSST anders herum als StatusRed/Green oben — beim Schweregrad
     // ist Rot schlecht, bei der Prio-Zahl ist Rot wichtig.
     // Frank-Wunsch 2026-05-10: geringste Prio ist Blau (kuehlste Farbe), Gruen liegt davor.
+    // FUNKTIONAL, unveraendert.
     val PriorityRed = Color(0xFFEF4444) // 80-100  (sehr wichtig)
     val PriorityOrange = Color(0xFFFB923C) // 60-80
     val PriorityYellow = Color(0xFFFBBF24) // 40-60
@@ -69,12 +96,13 @@ object CosmosColors {
     //  - MORGEN     = Gelb (vorbereitend)
     //  - FREIBLOCK  = Gruen (Schichtblock, ruhig)
     //  - SPAETER    = Blau (kuehl, kein Datum)
+    // FUNKTIONAL, unveraendert.
     val BucketHeuteTint = Color(0xFFF472B6) // Tailwind pink-400 — klar von Gelb unterschieden
     val BucketMorgenTint = Color(0xFFFBBF24)
     val BucketFreiblockTint = Color(0xFF22C55E)
     val BucketSpaeterTint = Color(0xFF60A5FA)
 
-    // Kategorie-Farben
+    // Kategorie-Farben — FUNKTIONAL, unveraendert
     val CatPhysical = Color(0xFFF87171)
     val CatMental = Color(0xFFA78BFA)
     val CatTemporal = Color(0xFFFBBF24)

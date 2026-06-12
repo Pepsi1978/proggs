@@ -21,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,12 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.rememberCardColors
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,16 +45,16 @@ import java.util.Locale
 /**
  * Detail-Screen fuer Health-Connect-Body-Composition-Werte (Frank-Wunsch 2026-05-10).
  *
- * Tap auf eine der Mini-Karten Gewicht / Koerperfett / Magermasse / Wasser /
- * Knochen oeffnet diesen Screen — analog zum Oura-Detail-Screen. Zeigt:
- *  - Header mit aktuellem Wert + Datum + Plus/Minus zum 30-Tage-Mittel
- *  - Range-Switcher 7T / 30T / 90T / Alle
- *  - Linien-Verlauf der gefilterten Werte (InteractiveLineChart)
- *  - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum 30-Tage-Mittel
- *  - Refresh-Button im Header (zieht aktuelle Daten aus Health Connect)
+ * Tap auf eine der Mini-Karten Gewicht / Koerperfett / Magermasse / Wasser / Knochen oeffnet diesen
+ * Screen — analog zum Oura-Detail-Screen. Zeigt:
+ * - Header mit aktuellem Wert + Datum + Plus/Minus zum 30-Tage-Mittel
+ * - Range-Switcher 7T / 30T / 90T / Alle
+ * - Linien-Verlauf der gefilterten Werte (InteractiveLineChart)
+ * - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum 30-Tage-Mittel
+ * - Refresh-Button im Header (zieht aktuelle Daten aus Health Connect)
  *
- * Frank-Vorgabe: bei Gewicht/Koerperfett ist niedriger besser (Diaet-Phase),
- * bei Magermasse/Wasser/Knochen ist hoeher besser (Muskelaufbau, Hydration).
+ * Frank-Vorgabe: bei Gewicht/Koerperfett ist niedriger besser (Diaet-Phase), bei
+ * Magermasse/Wasser/Knochen ist hoeher besser (Muskelaufbau, Hydration).
  */
 object HealthConnectMetricKey {
     const val WEIGHT = "hc_weight"
@@ -73,45 +72,53 @@ private data class HcMetricSpec(
     val lowerIsBetter: Boolean,
 )
 
-private fun specFor(metricKey: String): HcMetricSpec = when (metricKey) {
-    HealthConnectMetricKey.WEIGHT -> HcMetricSpec(
-        title = "Gewicht",
-        unit = "kg",
-        accent = CosmosColors.AccentPrimary,
-        lowerIsBetter = true,
-    )
-    HealthConnectMetricKey.BODY_FAT -> HcMetricSpec(
-        title = "Körperfett",
-        unit = "%",
-        accent = CosmosColors.Warning,
-        lowerIsBetter = true,
-    )
-    HealthConnectMetricKey.LEAN_BODY_MASS -> HcMetricSpec(
-        title = "Magermasse",
-        unit = "kg",
-        accent = CosmosColors.Success,
-        lowerIsBetter = false,
-    )
-    HealthConnectMetricKey.BODY_WATER -> HcMetricSpec(
-        title = "Körperwasser",
-        unit = "kg",
-        accent = CosmosColors.AccentSecondary,
-        lowerIsBetter = false,
-    )
-    HealthConnectMetricKey.BONE_MASS -> HcMetricSpec(
-        title = "Knochenmasse",
-        unit = "kg",
-        accent = CosmosColors.AccentPrimary,
-        lowerIsBetter = false,
-    )
-    HealthConnectMetricKey.MUSCLE_MASS -> HcMetricSpec(
-        title = "Muskelmasse",
-        unit = "kg",
-        accent = CosmosColors.Success,
-        lowerIsBetter = false,
-    )
-    else -> HcMetricSpec("Health Connect", "", CosmosColors.AccentPrimary, false)
-}
+@Composable
+private fun specFor(metricKey: String): HcMetricSpec =
+    when (metricKey) {
+        HealthConnectMetricKey.WEIGHT ->
+            HcMetricSpec(
+                title = "Gewicht",
+                unit = "kg",
+                accent = LocalCosmos.current.accent,
+                lowerIsBetter = true,
+            )
+        HealthConnectMetricKey.BODY_FAT ->
+            HcMetricSpec(
+                title = "Körperfett",
+                unit = "%",
+                accent = LocalCosmos.current.warn,
+                lowerIsBetter = true,
+            )
+        HealthConnectMetricKey.LEAN_BODY_MASS ->
+            HcMetricSpec(
+                title = "Magermasse",
+                unit = "kg",
+                accent = LocalCosmos.current.ok,
+                lowerIsBetter = false,
+            )
+        HealthConnectMetricKey.BODY_WATER ->
+            HcMetricSpec(
+                title = "Körperwasser",
+                unit = "kg",
+                accent = LocalCosmos.current.accentForscher,
+                lowerIsBetter = false,
+            )
+        HealthConnectMetricKey.BONE_MASS ->
+            HcMetricSpec(
+                title = "Knochenmasse",
+                unit = "kg",
+                accent = LocalCosmos.current.accent,
+                lowerIsBetter = false,
+            )
+        HealthConnectMetricKey.MUSCLE_MASS ->
+            HcMetricSpec(
+                title = "Muskelmasse",
+                unit = "kg",
+                accent = LocalCosmos.current.ok,
+                lowerIsBetter = false,
+            )
+        else -> HcMetricSpec("Health Connect", "", LocalCosmos.current.accent, false)
+    }
 
 @Composable
 fun HealthConnectDetailScreen(
@@ -132,80 +139,89 @@ fun HealthConnectDetailScreen(
     // einmalig in remember(metricKey, weight) berechnet statt bei jeder Recomposition
     // (z.B. bei Range-Filter-Click). Bei MUSCLE_MASS sparen wir O(N) Map-Aufbau +
     // O(M) List-Transform pro Recomposition.
-    val history: List<Pair<Long, Double>> = remember(metricKey, weight) {
-        when (metricKey) {
-            HealthConnectMetricKey.WEIGHT -> weight.history30d
-            HealthConnectMetricKey.BODY_FAT -> weight.bodyFatHistory30d
-            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
-            HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
-            HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
-            HealthConnectMetricKey.MUSCLE_MASS -> {
-                // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
-                // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
-                val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
-                weight.leanBodyMassHistory30d.map { (ts, lean) ->
-                    val bone = boneByMs[ts]
-                        ?: weight.boneMassHistory30d.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
-                    ts to (if (bone != null) lean - bone else lean)
+    val history: List<Pair<Long, Double>> =
+        remember(metricKey, weight) {
+            when (metricKey) {
+                HealthConnectMetricKey.WEIGHT -> weight.history30d
+                HealthConnectMetricKey.BODY_FAT -> weight.bodyFatHistory30d
+                HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
+                HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
+                HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
+                HealthConnectMetricKey.MUSCLE_MASS -> {
+                    // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
+                    // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
+                    val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
+                    weight.leanBodyMassHistory30d.map { (ts, lean) ->
+                        val bone =
+                            boneByMs[ts]
+                                ?: weight.boneMassHistory30d
+                                    .minByOrNull { kotlin.math.abs(it.first - ts) }
+                                    ?.second
+                        ts to (if (bone != null) lean - bone else lean)
+                    }
                 }
+                else -> emptyList()
             }
-            else -> emptyList()
         }
-    }
-    val latest: Double? = when (metricKey) {
-        HealthConnectMetricKey.WEIGHT -> weight.latestKg
-        HealthConnectMetricKey.BODY_FAT -> weight.latestBodyFatPercent
-        HealthConnectMetricKey.LEAN_BODY_MASS -> weight.latestLeanBodyMassKg
-        HealthConnectMetricKey.BODY_WATER -> weight.latestBodyWaterMassKg
-        HealthConnectMetricKey.BONE_MASS -> weight.latestBoneMassKg
-        HealthConnectMetricKey.MUSCLE_MASS -> {
-            val lean = weight.latestLeanBodyMassKg
-            val bone = weight.latestBoneMassKg
-            if (lean == null) null else if (bone != null) lean - bone else lean
+    val latest: Double? =
+        when (metricKey) {
+            HealthConnectMetricKey.WEIGHT -> weight.latestKg
+            HealthConnectMetricKey.BODY_FAT -> weight.latestBodyFatPercent
+            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.latestLeanBodyMassKg
+            HealthConnectMetricKey.BODY_WATER -> weight.latestBodyWaterMassKg
+            HealthConnectMetricKey.BONE_MASS -> weight.latestBoneMassKg
+            HealthConnectMetricKey.MUSCLE_MASS -> {
+                val lean = weight.latestLeanBodyMassKg
+                val bone = weight.latestBoneMassKg
+                if (lean == null) null else if (bone != null) lean - bone else lean
+            }
+            else -> null
         }
-        else -> null
-    }
-    val avg30: Double? = when (metricKey) {
-        HealthConnectMetricKey.WEIGHT -> weight.avg30dKg
-        HealthConnectMetricKey.BODY_FAT -> weight.avg30dBodyFatPercent
-        HealthConnectMetricKey.LEAN_BODY_MASS -> weight.avg30dLeanBodyMassKg
-        HealthConnectMetricKey.BODY_WATER -> weight.avg30dBodyWaterMassKg
-        HealthConnectMetricKey.BONE_MASS -> weight.avg30dBoneMassKg
-        HealthConnectMetricKey.MUSCLE_MASS -> {
-            val avgLean = weight.avg30dLeanBodyMassKg
-            val avgBone = weight.avg30dBoneMassKg
-            if (avgLean == null) null else if (avgBone != null) avgLean - avgBone else avgLean
+    val avg30: Double? =
+        when (metricKey) {
+            HealthConnectMetricKey.WEIGHT -> weight.avg30dKg
+            HealthConnectMetricKey.BODY_FAT -> weight.avg30dBodyFatPercent
+            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.avg30dLeanBodyMassKg
+            HealthConnectMetricKey.BODY_WATER -> weight.avg30dBodyWaterMassKg
+            HealthConnectMetricKey.BONE_MASS -> weight.avg30dBoneMassKg
+            HealthConnectMetricKey.MUSCLE_MASS -> {
+                val avgLean = weight.avg30dLeanBodyMassKg
+                val avgBone = weight.avg30dBoneMassKg
+                if (avgLean == null) null else if (avgBone != null) avgLean - avgBone else avgLean
+            }
+            else -> null
         }
-        else -> null
-    }
 
     // Frank-Wunsch 2026-05-10 abend: Default-Filter "Alle" statt "30T", damit
     // der ganze HC-Verlauf sofort sichtbar ist. 30T war frueher der Default
     // weil HC ohne PERMISSION_READ_HEALTH_DATA_HISTORY nur 30 Tage lieferte —
     // mit erteilter Permission ist diese Begrenzung weg.
     var range by remember { mutableStateOf(HcDetailRange.ALL) }
-    val cutoffDays = when (range) {
-        HcDetailRange.SEVEN -> 7
-        HcDetailRange.THIRTY -> 30
-        HcDetailRange.NINETY -> 90
-        HcDetailRange.ALL -> Int.MAX_VALUE
-    }
-    val cutoffMs = if (cutoffDays == Int.MAX_VALUE) 0L
+    val cutoffDays =
+        when (range) {
+            HcDetailRange.SEVEN -> 7
+            HcDetailRange.THIRTY -> 30
+            HcDetailRange.NINETY -> 90
+            HcDetailRange.ALL -> Int.MAX_VALUE
+        }
+    val cutoffMs =
+        if (cutoffDays == Int.MAX_VALUE) 0L
         else System.currentTimeMillis() - cutoffDays.toLong() * 24L * 60L * 60L * 1000L
     // Performance-Audit Loop 2 (2026-05-10): 6 Listenoperationen pro Recomposition
     // ueber bis zu 200 Datenpunkten — jetzt einmalig in remember(history, cutoffMs).
-    val stats = remember(history, cutoffMs) {
-        val filteredList = history.filter { it.first >= cutoffMs }
-        val valuesList = filteredList.map { it.second }
-        DetailStats(
-            filtered = filteredList,
-            values = valuesList,
-            minV = valuesList.minOrNull(),
-            maxV = valuesList.maxOrNull(),
-            avgV = valuesList.takeIf { it.isNotEmpty() }?.average(),
-            latestTs = history.maxByOrNull { it.first }?.first,
-        )
-    }
+    val stats =
+        remember(history, cutoffMs) {
+            val filteredList = history.filter { it.first >= cutoffMs }
+            val valuesList = filteredList.map { it.second }
+            DetailStats(
+                filtered = filteredList,
+                values = valuesList,
+                minV = valuesList.minOrNull(),
+                maxV = valuesList.maxOrNull(),
+                avgV = valuesList.takeIf { it.isNotEmpty() }?.average(),
+                latestTs = history.maxByOrNull { it.first }?.first,
+            )
+        }
     val filtered = stats.filtered
     val values = stats.values
     val minV = stats.minV
@@ -248,15 +264,16 @@ fun HealthConnectDetailScreen(
         // Gewichts-Detail-Screen. Mapping HC-MetricKey -> CardId fuer die
         // jeweilige Mini-Karte im Uebersichts-Screen.
         val cardColorAccess = rememberCardColors()
-        val targetCardId = when (metricKey) {
-            HealthConnectMetricKey.WEIGHT -> BiomarkerCardId.MINI_WEIGHT
-            HealthConnectMetricKey.BODY_FAT -> BiomarkerCardId.MINI_BODY_FAT
-            HealthConnectMetricKey.LEAN_BODY_MASS -> BiomarkerCardId.MINI_LEAN_BODY_MASS
-            HealthConnectMetricKey.BODY_WATER -> BiomarkerCardId.MINI_BODY_WATER
-            HealthConnectMetricKey.BONE_MASS -> BiomarkerCardId.MINI_BONE_MASS
-            HealthConnectMetricKey.MUSCLE_MASS -> BiomarkerCardId.MINI_MUSCLE_MASS
-            else -> metricKey
-        }
+        val targetCardId =
+            when (metricKey) {
+                HealthConnectMetricKey.WEIGHT -> BiomarkerCardId.MINI_WEIGHT
+                HealthConnectMetricKey.BODY_FAT -> BiomarkerCardId.MINI_BODY_FAT
+                HealthConnectMetricKey.LEAN_BODY_MASS -> BiomarkerCardId.MINI_LEAN_BODY_MASS
+                HealthConnectMetricKey.BODY_WATER -> BiomarkerCardId.MINI_BODY_WATER
+                HealthConnectMetricKey.BONE_MASS -> BiomarkerCardId.MINI_BONE_MASS
+                HealthConnectMetricKey.MUSCLE_MASS -> BiomarkerCardId.MINI_MUSCLE_MASS
+                else -> metricKey
+            }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -339,7 +356,8 @@ fun HealthConnectDetailScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Tippe oben rechts auf das Refresh-Symbol oder wechsle den Zeitraum.",
+                                text =
+                                    "Tippe oben rechts auf das Refresh-Symbol oder wechsle den Zeitraum.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = cosmos.textSecondary,
                             )
@@ -393,16 +411,18 @@ private fun HcDetailHeader(
             if (latest != null && avg30 != null) {
                 val diff = latest - avg30
                 val isImprovement = if (lowerIsBetter) diff < 0 else diff > 0
-                val color = when {
-                    diff == 0.0 -> cosmos.textSecondary
-                    isImprovement -> CosmosColors.Success
-                    else -> CosmosColors.Critical
-                }
+                val color =
+                    when {
+                        diff == 0.0 -> cosmos.textSecondary
+                        isImprovement -> LocalCosmos.current.ok
+                        else -> LocalCosmos.current.crit
+                    }
                 val sign = if (diff >= 0) "+" else "−"
                 val unitSuffix = if (unit.isNotBlank()) " $unit" else ""
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "$sign${"%.1f".format(kotlin.math.abs(diff))}$unitSuffix vs. 30-Tage-Mittel",
+                    text =
+                        "$sign${"%.1f".format(kotlin.math.abs(diff))}$unitSuffix vs. 30-Tage-Mittel",
                     style = MaterialTheme.typography.bodyMedium,
                     color = color,
                     fontWeight = FontWeight.SemiBold,
@@ -412,52 +432,75 @@ private fun HcDetailHeader(
     }
 }
 
-private enum class HcDetailRange { SEVEN, THIRTY, NINETY, ALL }
+private enum class HcDetailRange {
+    SEVEN,
+    THIRTY,
+    NINETY,
+    ALL,
+}
 
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array.
 private val ALL_HC_DETAIL_RANGES: List<HcDetailRange> = HcDetailRange.entries.toList()
 
 @Composable
 private fun HcRangeSwitcher(current: HcDetailRange, onChange: (HcDetailRange) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ALL_HC_DETAIL_RANGES.forEach { range ->
-            val label = when (range) {
-                HcDetailRange.SEVEN -> "7T"
-                HcDetailRange.THIRTY -> "30T"
-                HcDetailRange.NINETY -> "90T"
-                HcDetailRange.ALL -> "Alle"
-            }
+            val label =
+                when (range) {
+                    HcDetailRange.SEVEN -> "7T"
+                    HcDetailRange.THIRTY -> "30T"
+                    HcDetailRange.NINETY -> "90T"
+                    HcDetailRange.ALL -> "Alle"
+                }
             FilterChip(
                 selected = range == current,
                 onClick = { onChange(range) },
                 label = { Text(label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.20f),
-                    selectedLabelColor = CosmosColors.AccentPrimary,
-                ),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = LocalCosmos.current.accent.copy(alpha = 0.20f),
+                        selectedLabelColor = LocalCosmos.current.accent,
+                    ),
             )
         }
     }
 }
 
 @Composable
-private fun HcStatsRow(
-    min: Double?,
-    max: Double?,
-    avg: Double?,
-    count: Int,
-    unit: String,
-) {
+private fun HcStatsRow(min: Double?, max: Double?, avg: Double?, count: Int, unit: String) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            HcStatCell(label = "Min", value = min, unit = unit, color = cosmos.textPrimary, modifier = Modifier.weight(1f))
-            HcStatCell(label = "Mittel", value = avg, unit = unit, color = cosmos.textPrimary, modifier = Modifier.weight(1f))
-            HcStatCell(label = "Max", value = max, unit = unit, color = cosmos.textPrimary, modifier = Modifier.weight(1f))
-            HcStatCell(label = "Anzahl", value = count.toDouble(), unit = "", color = cosmos.textPrimary, modifier = Modifier.weight(1f), formatter = { "${it.toInt()}" })
+            HcStatCell(
+                label = "Min",
+                value = min,
+                unit = unit,
+                color = cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            HcStatCell(
+                label = "Mittel",
+                value = avg,
+                unit = unit,
+                color = cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            HcStatCell(
+                label = "Max",
+                value = max,
+                unit = unit,
+                color = cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            HcStatCell(
+                label = "Anzahl",
+                value = count.toDouble(),
+                unit = "",
+                color = cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+                formatter = { "${it.toInt()}" },
+            )
         }
     }
 }
@@ -501,11 +544,12 @@ private fun HcValueRow(
             "$sign${"%.1f".format(kotlin.math.abs(diff))}"
         }
     }
-    val deltaColor = if (deltaText != null && average != null) {
-        val diff = value - average
-        val isImprovement = if (lowerIsBetter) diff < 0 else diff > 0
-        if (isImprovement) CosmosColors.Success else CosmosColors.Critical
-    } else cosmos.textSecondary
+    val deltaColor =
+        if (deltaText != null && average != null) {
+            val diff = value - average
+            val isImprovement = if (lowerIsBetter) diff < 0 else diff > 0
+            if (isImprovement) LocalCosmos.current.ok else LocalCosmos.current.crit
+        } else cosmos.textSecondary
     GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -534,9 +578,9 @@ private fun HcValueRow(
 }
 
 /**
- * Vorberechnete Filter-Statistik fuer den HealthConnect-Detail-Screen.
- * Performance-Audit Loop 2 (2026-05-10): bundelt 6 Listenoperationen die
- * sonst pro Recomposition ueber bis zu 200 Datenpunkten liefen.
+ * Vorberechnete Filter-Statistik fuer den HealthConnect-Detail-Screen. Performance-Audit Loop 2
+ * (2026-05-10): bundelt 6 Listenoperationen die sonst pro Recomposition ueber bis zu 200
+ * Datenpunkten liefen.
  */
 private data class DetailStats(
     val filtered: List<Pair<Long, Double>>,
@@ -554,5 +598,4 @@ private val HC_DATE_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial
     SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
 }
 
-private fun formatHcDate(ms: Long): String =
-    HC_DATE_FMT.get()!!.format(Date(ms))
+private fun formatHcDate(ms: Long): String = HC_DATE_FMT.get()!!.format(Date(ms))

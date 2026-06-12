@@ -233,7 +233,7 @@ fun ScientistScreen(
             // Akzentfarbe folgt der BottomBar (Cyan im Switcher, Lila im Sub-Modus).
             val switcher =
                 de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val accentColor = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFA78BFA)
+            val accentColor = if (switcher.showSwitcher) LocalCosmos.current.accent else LocalCosmos.current.accentForscher
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = accentColor,
@@ -283,7 +283,7 @@ fun ScientistScreen(
             },
             confirmButton = {
                 TextButton(onClick = vm::confirmDeleteHypothesis) {
-                    Text("Löschen", color = CosmosColors.Critical)
+                    Text("Löschen", color = LocalCosmos.current.crit)
                 }
             },
             dismissButton = {
@@ -327,15 +327,15 @@ private fun KiBubble(
                 Box(
                     Modifier.size(20.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CosmosColors.AccentSecondary.copy(alpha = 0.25f)),
+                        .background(LocalCosmos.current.accentForscher.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("⚛", color = CosmosColors.AccentSecondary, fontSize = 12.sp)
+                    Text("⚛", color = LocalCosmos.current.accentForscher, fontSize = 12.sp)
                 }
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = "Wissenschaftler",
-                    color = CosmosColors.AccentSecondary,
+                    color = LocalCosmos.current.accentForscher,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -358,7 +358,7 @@ private fun KiBubble(
                     )
                     .background(cosmos.glassBg)
                     .border(
-                        BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.30f)),
+                        BorderStroke(1.dp, LocalCosmos.current.accent.copy(alpha = 0.30f)),
                         RoundedCornerShape(
                             topStart = 4.dp,
                             topEnd = 16.dp,
@@ -403,7 +403,7 @@ private fun NutzerBubble(message: ScientistMessageEntity) {
                         bottomStart = 16.dp,
                     )
                 )
-                .background(CosmosColors.AccentSecondary.copy(alpha = 0.20f))
+                .background(LocalCosmos.current.accentForscher.copy(alpha = 0.20f))
                 .padding(12.dp)
         ) {
             Text(
@@ -427,9 +427,9 @@ private fun HypothesisCardInChat(
     Box(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
+            .background(LocalCosmos.current.accent.copy(alpha = 0.10f))
             .border(
-                BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.40f)),
+                BorderStroke(1.dp, LocalCosmos.current.accent.copy(alpha = 0.40f)),
                 RoundedCornerShape(12.dp),
             )
             // Karte ist klickbar — oeffnet den Inline-Detail-Chat dieser Hypothese.
@@ -441,7 +441,7 @@ private fun HypothesisCardInChat(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Hypothese",
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
@@ -488,19 +488,19 @@ private fun HypothesisCardInChat(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isProposed) {
                     TextButton(onClick = onTry) {
-                        Text("Ausprobieren", color = CosmosColors.AccentPrimary)
+                        Text("Ausprobieren", color = LocalCosmos.current.accent)
                     }
                 } else {
                     Text(
                         text =
                             "Status: ${h.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                        color = CosmosColors.Success,
+                        color = LocalCosmos.current.ok,
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onOpen) {
-                    Text("Diskutieren", color = CosmosColors.AccentSecondary)
+                    Text("Diskutieren", color = LocalCosmos.current.accentForscher)
                 }
             }
         }
@@ -514,7 +514,7 @@ private fun ThinkingIndicator() {
         CircularProgressIndicator(
             modifier = Modifier.size(14.dp),
             strokeWidth = 2.dp,
-            color = CosmosColors.AccentSecondary,
+            color = LocalCosmos.current.accentForscher,
         )
         Spacer(Modifier.width(8.dp))
         Text(
@@ -565,7 +565,7 @@ private fun TranscriptEditDialog(
                         OutlinedTextFieldDefaults.colors(
                             focusedTextColor = cosmos.textPrimary,
                             unfocusedTextColor = cosmos.textPrimary,
-                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            focusedBorderColor = LocalCosmos.current.accent,
                             unfocusedBorderColor = cosmos.glassBorder,
                         ),
                     shape = RoundedCornerShape(16.dp),
@@ -575,7 +575,7 @@ private fun TranscriptEditDialog(
         },
         confirmButton = {
             TextButton(onClick = onSend, enabled = text.isNotBlank()) {
-                Text("Senden", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+                Text("Senden", color = LocalCosmos.current.accent, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
@@ -718,7 +718,7 @@ private fun HypothesisDetailSheet(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = "Hypothese im Detail",
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -733,7 +733,7 @@ private fun HypothesisDetailSheet(
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Hypothese löschen",
-                        tint = CosmosColors.Critical,
+                        tint = LocalCosmos.current.crit,
                     )
                 }
             }
@@ -776,7 +776,7 @@ private fun HypothesisDetailSheet(
                 if (hypothesis.status == HypothesisStatus.VORGESCHLAGEN) {
                     Spacer(Modifier.height(4.dp))
                     TextButton(onClick = onTryHypothesis) {
-                        Text("Ausprobieren", color = CosmosColors.AccentPrimary)
+                        Text("Ausprobieren", color = LocalCosmos.current.accent)
                     }
                 }
             }
@@ -833,7 +833,7 @@ private fun HypothesisDetailSheet(
                         OutlinedTextFieldDefaults.colors(
                             focusedTextColor = cosmos.textPrimary,
                             unfocusedTextColor = cosmos.textPrimary,
-                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            focusedBorderColor = LocalCosmos.current.accent,
                             unfocusedBorderColor = cosmos.glassBorder,
                         ),
                     shape = RoundedCornerShape(20.dp),
@@ -851,8 +851,8 @@ private fun HypothesisDetailSheet(
                                         de.frank.entropyreducer.presentation.components.MicState
                                             .RECORDING
                                 )
-                                    CosmosColors.Critical.copy(alpha = 0.30f)
-                                else CosmosColors.AccentSecondary.copy(alpha = 0.20f)
+                                    LocalCosmos.current.crit.copy(alpha = 0.30f)
+                                else LocalCosmos.current.accentForscher.copy(alpha = 0.20f)
                             ),
                 ) {
                     Icon(
@@ -873,9 +873,9 @@ private fun HypothesisDetailSheet(
                                     de.frank.entropyreducer.presentation.components.MicState
                                         .RECORDING
                             ) {
-                                CosmosColors.Critical
+                                LocalCosmos.current.crit
                             } else {
-                                CosmosColors.AccentSecondary
+                                LocalCosmos.current.accentForscher
                             },
                     )
                 }
@@ -888,8 +888,8 @@ private fun HypothesisDetailSheet(
                         Modifier.size(44.dp)
                             .clip(RoundedCornerShape(22.dp))
                             .background(
-                                if (canSend) CosmosColors.AccentPrimary
-                                else CosmosColors.AccentPrimary.copy(alpha = 0.30f)
+                                if (canSend) LocalCosmos.current.accent
+                                else LocalCosmos.current.accent.copy(alpha = 0.30f)
                             ),
                 ) {
                     Icon(Icons.Outlined.Send, "Senden", tint = CosmosColors.BgDark)
@@ -916,7 +916,7 @@ private fun HypothesisKiBubble(message: HypothesisMessageEntity) {
                     )
                     .background(cosmos.glassBg)
                     .border(
-                        BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.30f)),
+                        BorderStroke(1.dp, LocalCosmos.current.accent.copy(alpha = 0.30f)),
                         RoundedCornerShape(
                             topStart = 4.dp,
                             topEnd = 14.dp,
@@ -948,7 +948,7 @@ private fun HypothesisNutzerBubble(message: HypothesisMessageEntity) {
                         bottomStart = 14.dp,
                     )
                 )
-                .background(CosmosColors.AccentSecondary.copy(alpha = 0.20f))
+                .background(LocalCosmos.current.accentForscher.copy(alpha = 0.20f))
                 .padding(10.dp)
         ) {
             Text(

@@ -92,7 +92,7 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
-                                containerColor = CosmosColors.Critical,
+                                containerColor = LocalCosmos.current.crit,
                                 contentColor = Color.White,
                             ),
                     ) {
@@ -104,7 +104,7 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
-                                containerColor = CosmosColors.Critical,
+                                containerColor = LocalCosmos.current.crit,
                                 contentColor = Color.White,
                             ),
                     ) {
@@ -163,7 +163,7 @@ private fun ConfirmDialog(
                 onClick = onConfirm,
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.Critical,
+                        containerColor = LocalCosmos.current.crit,
                         contentColor = Color.White,
                     ),
             ) {

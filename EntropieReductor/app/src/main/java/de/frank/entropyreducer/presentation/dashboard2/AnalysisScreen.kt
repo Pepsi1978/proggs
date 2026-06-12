@@ -152,7 +152,7 @@ fun AnalysisScreen(
                                             colors =
                                                 FilterChipDefaults.filterChipColors(
                                                     selectedContainerColor =
-                                                        CosmosColors.AccentPrimary.copy(
+                                                        LocalCosmos.current.accent.copy(
                                                             alpha = 0.20f
                                                         ),
                                                     selectedLabelColor = cosmos.textPrimary,
@@ -182,10 +182,10 @@ fun AnalysisScreen(
                             shape = RoundedCornerShape(14.dp),
                             colors =
                                 ButtonDefaults.buttonColors(
-                                    containerColor = CosmosColors.AccentPrimary,
+                                    containerColor = LocalCosmos.current.accent,
                                     contentColor = CosmosColors.BgDark,
                                     disabledContainerColor =
-                                        CosmosColors.AccentPrimary.copy(alpha = 0.4f),
+                                        LocalCosmos.current.accent.copy(alpha = 0.4f),
                                 ),
                         ) {
                             if (state.isLoading) {
@@ -244,7 +244,7 @@ fun AnalysisScreen(
             // Switcher offen → Cyan, sonst Gruen (Analyse-Sub).
             val switcher =
                 de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFF16A34A)
+            val micAccent = if (switcher.showSwitcher) LocalCosmos.current.accent else LocalCosmos.current.accentAnalyse
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = micAccent,
@@ -263,7 +263,7 @@ private fun QuickStatsGrid(state: AnalysisUiState) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         BigStatCard(
             icon = Icons.Outlined.AutoAwesome,
-            tint = CosmosColors.AccentSecondary,
+            tint = LocalCosmos.current.accentForscher,
             title = "Gesamt-Entropie-Last",
             value = state.totalEntropyLoad.toString(),
             valueSuffix = "/100",
@@ -272,7 +272,7 @@ private fun QuickStatsGrid(state: AnalysisUiState) {
         )
         BigStatCard(
             icon = Icons.Outlined.Folder,
-            tint = CosmosColors.AccentPrimary,
+            tint = LocalCosmos.current.accent,
             title = "Offene Einträge",
             value = state.openCount.toString(),
             valueSuffix = "",
@@ -380,9 +380,9 @@ private fun TrendTile(deltaPct: Int, modifier: Modifier = Modifier) {
     val cosmos = LocalCosmos.current
     val (icon, color) =
         when {
-            deltaPct > 5 -> Icons.Outlined.TrendingUp to CosmosColors.Critical
-            deltaPct < -5 -> Icons.Outlined.TrendingDown to CosmosColors.Success
-            else -> Icons.Outlined.TrendingFlat to CosmosColors.Warning
+            deltaPct > 5 -> Icons.Outlined.TrendingUp to LocalCosmos.current.crit
+            deltaPct < -5 -> Icons.Outlined.TrendingDown to LocalCosmos.current.ok
+            else -> Icons.Outlined.TrendingFlat to LocalCosmos.current.warn
         }
     GlassCard(modifier = modifier) {
         Column {

@@ -184,7 +184,7 @@ private fun TokenRowCard(
                         text = "${row.todayTotal}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (row.limitReached) CosmosColors.Critical else CosmosColors.AccentPrimary,
+                        color = if (row.limitReached) LocalCosmos.current.crit else LocalCosmos.current.accent,
                     )
                     Text(
                         text = "Tokens heute",
@@ -224,9 +224,9 @@ private fun TokenRowCard(
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                     color =
                         when {
-                            row.limitProgressFraction >= 1f -> CosmosColors.Critical
-                            row.limitProgressFraction >= 0.8f -> CosmosColors.AccentPrimary
-                            else -> CosmosColors.AccentPrimary
+                            row.limitProgressFraction >= 1f -> LocalCosmos.current.crit
+                            row.limitProgressFraction >= 0.8f -> LocalCosmos.current.accent
+                            else -> LocalCosmos.current.accent
                         },
                 )
             }
@@ -275,8 +275,8 @@ private fun HistoryBars(bars: List<HistoryBar>) {
                                 .height(barHeight)
                                 .background(
                                     color =
-                                        if (bar.tokensTotal > 0) CosmosColors.AccentPrimary
-                                        else CosmosColors.AccentPrimary.copy(alpha = 0.2f),
+                                        if (bar.tokensTotal > 0) LocalCosmos.current.accent
+                                        else LocalCosmos.current.accent.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(2.dp),
                                 ),
                     )

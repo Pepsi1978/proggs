@@ -102,8 +102,8 @@ fun LaunchScreen(onStart: () -> Unit) {
                         .background(
                             brush =
                                 Brush.radialGradient(
-                                    0f to CosmosColors.AccentPrimary,
-                                    1f to CosmosColors.AccentPrimary.copy(alpha = 0.55f),
+                                    0f to LocalCosmos.current.accent,
+                                    1f to LocalCosmos.current.accent.copy(alpha = 0.55f),
                                 ),
                             shape = RoundedCornerShape(56.dp),
                         ),
@@ -134,14 +134,14 @@ fun LaunchScreen(onStart: () -> Unit) {
             Box(
                 modifier =
                     Modifier.background(
-                            color = CosmosColors.AccentPrimary.copy(alpha = 0.18f),
+                            color = LocalCosmos.current.accent.copy(alpha = 0.18f),
                             shape = RoundedCornerShape(50),
                         )
                         .padding(horizontal = 18.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = variantLabel,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -159,7 +159,7 @@ fun LaunchScreen(onStart: () -> Unit) {
                 shape = RoundedCornerShape(28.dp),
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentPrimary,
+                        containerColor = LocalCosmos.current.accent,
                         contentColor = Color.Black,
                     ),
             ) {

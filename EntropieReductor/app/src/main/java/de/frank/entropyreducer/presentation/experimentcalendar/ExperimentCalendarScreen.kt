@@ -158,7 +158,7 @@ fun ExperimentCalendarScreen(
             },
             confirmButton = {
                 TextButton(onClick = { vm.confirmInsightCreation(true) }) {
-                    Text("Ja, in Repertoire", color = CosmosColors.AccentPrimary)
+                    Text("Ja, in Repertoire", color = LocalCosmos.current.accent)
                 }
             },
             dismissButton = {
@@ -194,7 +194,7 @@ private fun ViewSwitcher(current: CalendarView, onSelect: (CalendarView) -> Unit
                 },
                 colors =
                     FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.20f),
+                        selectedContainerColor = LocalCosmos.current.accent.copy(alpha = 0.20f),
                         selectedLabelColor = LocalCosmos.current.textPrimary,
                         containerColor = LocalCosmos.current.glassBg,
                         labelColor = LocalCosmos.current.textSecondary,
@@ -355,7 +355,7 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    val borderColor = if (isToday) CosmosColors.AccentPrimary else cosmos.glassBorder
+    val borderColor = if (isToday) LocalCosmos.current.accent else cosmos.glassBorder
     val textColor =
         if (isCurrentMonth) cosmos.textPrimary else cosmos.textSecondary.copy(alpha = 0.5f)
     val shiftTint = shift?.let { shiftBackgroundFor(it) }
@@ -412,8 +412,8 @@ private fun DayCell(
                             Modifier.size(5.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    if (ev.allDay) CosmosColors.AccentSecondary
-                                    else CosmosColors.AccentPrimary
+                                    if (ev.allDay) LocalCosmos.current.accentForscher
+                                    else LocalCosmos.current.accent
                                 )
                         )
                         Spacer(Modifier.width(2.dp))
@@ -446,11 +446,11 @@ private fun shiftBackgroundFor(
     val cosmos = LocalCosmos.current
     return when (shift) {
         de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST ->
-            CosmosColors.AccentPrimary.copy(alpha = 0.15f)
+            LocalCosmos.current.accent.copy(alpha = 0.15f)
         de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST ->
-            CosmosColors.AccentSecondary.copy(alpha = 0.20f)
+            LocalCosmos.current.accentForscher.copy(alpha = 0.20f)
         de.frank.entropyreducer.domain.model.ShiftCode.URLAUB ->
-            CosmosColors.Success.copy(alpha = 0.18f)
+            LocalCosmos.current.ok.copy(alpha = 0.18f)
         de.frank.entropyreducer.domain.model.ShiftCode.FREI -> cosmos.glassBg
         de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> cosmos.glassBg
     }
@@ -490,10 +490,11 @@ private fun shiftDisplayColor(
     shift: de.frank.entropyreducer.domain.model.ShiftCode?
 ): androidx.compose.ui.graphics.Color {
     return when (shift) {
-        de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST -> CosmosColors.AccentPrimary
-        de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST -> CosmosColors.AccentSecondary
-        de.frank.entropyreducer.domain.model.ShiftCode.URLAUB -> CosmosColors.Success
-        de.frank.entropyreducer.domain.model.ShiftCode.FREI -> CosmosColors.Success
+        de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST -> LocalCosmos.current.accent
+        de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST ->
+            LocalCosmos.current.accentForscher
+        de.frank.entropyreducer.domain.model.ShiftCode.URLAUB -> LocalCosmos.current.ok
+        de.frank.entropyreducer.domain.model.ShiftCode.FREI -> LocalCosmos.current.ok
         de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT ->
             LocalCosmos.current.textSecondary
         null -> LocalCosmos.current.textSecondary
@@ -528,7 +529,7 @@ private fun DayBlock(
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = day.format(DAY_LONG_FORMAT) + if (isToday) " · Heute" else "",
-                color = if (isToday) CosmosColors.AccentPrimary else cosmos.textPrimary,
+                color = if (isToday) LocalCosmos.current.accent else cosmos.textPrimary,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -669,8 +670,8 @@ private fun HypothesisDetailContent(
             steps = 19,
             colors =
                 SliderDefaults.colors(
-                    thumbColor = CosmosColors.AccentPrimary,
-                    activeTrackColor = CosmosColors.AccentPrimary,
+                    thumbColor = LocalCosmos.current.accent,
+                    activeTrackColor = LocalCosmos.current.accent,
                     inactiveTrackColor = cosmos.glassBorder,
                 ),
         )
@@ -685,7 +686,7 @@ private fun HypothesisDetailContent(
                 OutlinedTextFieldDefaults.colors(
                     focusedTextColor = cosmos.textPrimary,
                     unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentPrimary,
+                    focusedBorderColor = LocalCosmos.current.accent,
                     unfocusedBorderColor = cosmos.glassBorder,
                 ),
             minLines = 2,
@@ -703,8 +704,8 @@ private fun HypothesisDetailContent(
             modifier = Modifier.fillMaxWidth(),
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
-                    contentColor = CosmosColors.Critical,
+                    containerColor = LocalCosmos.current.crit.copy(alpha = 0.20f),
+                    contentColor = LocalCosmos.current.crit,
                 ),
         ) {
             Icon(Icons.Outlined.Delete, null)
@@ -831,12 +832,12 @@ private fun DayDetailSheet(
             if (!shiftLabel.isNullOrBlank()) {
                 Box(
                     Modifier.clip(RoundedCornerShape(50))
-                        .background(CosmosColors.AccentPrimary.copy(alpha = 0.20f))
+                        .background(LocalCosmos.current.accent.copy(alpha = 0.20f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "Schicht: $shiftLabel",
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -881,7 +882,8 @@ private fun DayEventRow(ev: de.frank.entropyreducer.data.local.entities.Calendar
             Modifier.size(8.dp)
                 .clip(RoundedCornerShape(50))
                 .background(
-                    if (ev.allDay) CosmosColors.AccentSecondary else CosmosColors.AccentPrimary
+                    if (ev.allDay) LocalCosmos.current.accentForscher
+                    else LocalCosmos.current.accent
                 )
         )
         Spacer(Modifier.width(10.dp))

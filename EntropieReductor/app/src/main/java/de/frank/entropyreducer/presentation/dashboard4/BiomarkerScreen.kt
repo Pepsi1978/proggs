@@ -336,7 +336,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "HRV-Verlauf",
-                        accent = CosmosColors.AccentPrimary,
+                        accent = LocalCosmos.current.accent,
                         points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
                         unit = "ms",
@@ -346,7 +346,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Ruhepuls",
-                        accent = CosmosColors.Critical,
+                        accent = LocalCosmos.current.crit,
                         points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
                         unit = "bpm",
@@ -361,7 +361,7 @@ fun BiomarkerHostScreen(
                     // niedrigere Atemfrequenz im Schlaf = entspannter = besser.
                     MetricHistoryCard(
                         title = "Atemfrequenz",
-                        accent = CosmosColors.AccentPrimary,
+                        accent = LocalCosmos.current.accent,
                         points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
                         unit = "/min",
@@ -372,7 +372,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Sauerstoffsättigung",
-                        accent = CosmosColors.Success,
+                        accent = LocalCosmos.current.ok,
                         points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
                         unit = "%",
@@ -382,7 +382,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Hauttemperatur",
-                        accent = CosmosColors.Warning,
+                        accent = LocalCosmos.current.warn,
                         points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
                         unit = "°C",
@@ -403,7 +403,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Schlaf-Performance",
-                        accent = CosmosColors.Success,
+                        accent = LocalCosmos.current.ok,
                         points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
                         unit = "%",
@@ -414,7 +414,7 @@ fun BiomarkerHostScreen(
                     // Schlafdauer in Stunden statt Minuten (Frank-Wunsch 2026-05-09).
                     MetricHistoryCard(
                         title = "Schlafdauer",
-                        accent = CosmosColors.AccentSecondary,
+                        accent = LocalCosmos.current.accentForscher,
                         points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
                         unit = "min",
@@ -467,7 +467,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Schlafeffizienz",
-                        accent = CosmosColors.Success,
+                        accent = LocalCosmos.current.ok,
                         points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
                         unit = "%",
@@ -477,7 +477,7 @@ fun BiomarkerHostScreen(
                 item {
                     MetricHistoryCard(
                         title = "Schlafregelmäßigkeit",
-                        accent = CosmosColors.Success,
+                        accent = LocalCosmos.current.ok,
                         points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
                         unit = "%",
@@ -488,7 +488,7 @@ fun BiomarkerHostScreen(
                     MetricHistoryCard(
                         lowerIsBetter = true,
                         title = "Schlafdefizit",
-                        accent = CosmosColors.Warning,
+                        accent = LocalCosmos.current.warn,
                         points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
                         unit = "min",
@@ -506,7 +506,7 @@ fun BiomarkerHostScreen(
                         .toInstant().toEpochMilli()
                     MetricHistoryCard(
                         title = "Tagesumsatz",
-                        accent = CosmosColors.AccentPrimary,
+                        accent = LocalCosmos.current.accent,
                         points = historyLast70
                             .filter { it.capturedAt < todayStartMs }
                             .mapNotNull { snap ->
@@ -527,7 +527,7 @@ fun BiomarkerHostScreen(
                     // 2026-05-09: thematische Naehe.
                     MetricHistoryCard(
                         title = "Belastung",
-                        accent = CosmosColors.Warning,
+                        accent = LocalCosmos.current.warn,
                         points = state.chartData.pointsLast70["strain"] ?: emptyList(),
                         fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
                         unit = "",
@@ -594,7 +594,7 @@ fun BiomarkerHostScreen(
                                     androidx.compose.material3.CircularProgressIndicator(
                                         modifier = Modifier.height(16.dp).width(16.dp),
                                         strokeWidth = 2.dp,
-                                        color = CosmosColors.AccentPrimary,
+                                        color = LocalCosmos.current.accent,
                                     )
                                     Spacer(Modifier.width(10.dp))
                                 }
@@ -616,7 +616,7 @@ fun BiomarkerHostScreen(
             // Akzent folgt der BottomBar: Cyan im Switcher, Rosé im Sub-Modus.
             val switcher =
                 de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFFB7185)
+            val micAccent = if (switcher.showSwitcher) LocalCosmos.current.accent else LocalCosmos.current.accentBio
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = micAccent,
@@ -778,7 +778,7 @@ private fun MetricMiniCard(
     labelSuffix: String? = null,
 ) {
     val cosmos = LocalCosmos.current
-    val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
+    val deltaColor = if (deltaPositive) LocalCosmos.current.ok else LocalCosmos.current.crit
     val cardModifier = if (onClick != null) modifier.clickable { onClick() } else modifier
     GlassCard(modifier = cardModifier) {
         Column {
@@ -916,7 +916,7 @@ private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
                 androidx.compose.material3.TextButton(onClick = vm::goToToday) {
                     Text(
                         "Heute",
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -999,8 +999,8 @@ private fun MetricHistoryCard(
     val diffColor =
         when (isImprovement) {
             null -> cosmos.textSecondary
-            true -> CosmosColors.Success
-            false -> CosmosColors.Critical
+            true -> LocalCosmos.current.ok
+            false -> LocalCosmos.current.crit
         }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
@@ -1054,7 +1054,7 @@ private fun MetricHistoryCard(
                         modifier =
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
+                                .background(LocalCosmos.current.accent.copy(alpha = 0.10f))
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Row(
@@ -1068,13 +1068,13 @@ private fun MetricHistoryCard(
                             ) {
                                 Text(
                                     text = "Durchschnitt: ",
-                                    color = CosmosColors.AccentPrimary,
+                                    color = LocalCosmos.current.accent,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Medium,
                                 )
                                 Text(
                                     text = avgLabel,
-                                    color = CosmosColors.AccentPrimary,
+                                    color = LocalCosmos.current.accent,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -1148,11 +1148,11 @@ private fun CorrelationCard(state: BiomarkerUiState) {
     val (label, color) =
         when {
             r == null -> "Nicht genug Daten" to cosmos.textSecondary
-            r >= 0.5 -> "Starke positive Korrelation" to CosmosColors.Success
-            r >= 0.2 -> "Schwache positive Korrelation" to CosmosColors.AccentPrimary
+            r >= 0.5 -> "Starke positive Korrelation" to LocalCosmos.current.ok
+            r >= 0.2 -> "Schwache positive Korrelation" to LocalCosmos.current.accent
             r >= -0.2 -> "Keine klare Korrelation" to cosmos.textSecondary
-            r >= -0.5 -> "Schwache negative Korrelation" to CosmosColors.Warning
-            else -> "Starke negative Korrelation" to CosmosColors.Critical
+            r >= -0.5 -> "Schwache negative Korrelation" to LocalCosmos.current.warn
+            else -> "Starke negative Korrelation" to LocalCosmos.current.crit
         }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -1232,7 +1232,7 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
         }
     val deltaText = formatDelta(score?.toDouble(), avgRecovery, "")
     val deltaPositive = (score?.toDouble() ?: 0.0) > (avgRecovery ?: 0.0)
-    val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
+    val deltaColor = if (deltaPositive) LocalCosmos.current.ok else LocalCosmos.current.crit
     // Frank-Wunsch 2026-05-09 (Abend): Tap auf den Recovery-Ring oeffnet die
     // Recovery-Detail-Seite — wie alle anderen Charts im Biomarker-Bereich.
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenDetail(MetricKey.RECOVERY) }) {
@@ -1346,8 +1346,8 @@ private fun SkinTempDeltaCard(currentValue: Double?, delta: Double?, onClick: ()
     val bigDeltaColor =
         when {
             delta == null -> cosmos.textPrimary
-            delta < 0.0 -> CosmosColors.Success
-            delta > 0.0 -> CosmosColors.Critical
+            delta < 0.0 -> LocalCosmos.current.ok
+            delta > 0.0 -> LocalCosmos.current.crit
             else -> cosmos.textPrimary
         }
     // Frank-Wunsch 2026-05-11: "vs. 30-Tage-Mittel" gehoert auf eine eigene Zeile —
@@ -1492,7 +1492,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.HRV ->
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
-                    accent = CosmosColors.AccentPrimary,
+                    accent = LocalCosmos.current.accent,
                     points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
                     unit = "ms",
@@ -1502,7 +1502,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.RHR ->
                 MetricHistoryCard(
                     title = "Ruhepuls",
-                    accent = CosmosColors.Critical,
+                    accent = LocalCosmos.current.crit,
                     points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
                     unit = "bpm",
@@ -1513,7 +1513,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.RESPIRATORY ->
                 MetricHistoryCard(
                     title = "Atemfrequenz",
-                    accent = CosmosColors.AccentPrimary,
+                    accent = LocalCosmos.current.accent,
                     points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
                     unit = "/min",
@@ -1524,7 +1524,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SPO2 ->
                 MetricHistoryCard(
                     title = "Sauerstoffsättigung",
-                    accent = CosmosColors.Success,
+                    accent = LocalCosmos.current.ok,
                     points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
                     unit = "%",
@@ -1534,7 +1534,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SKIN_TEMP ->
                 MetricHistoryCard(
                     title = "Hauttemperatur",
-                    accent = CosmosColors.Warning,
+                    accent = LocalCosmos.current.warn,
                     points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
                     unit = "°C",
@@ -1552,7 +1552,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_PERFORMANCE ->
                 MetricHistoryCard(
                     title = "Schlaf-Performance",
-                    accent = CosmosColors.Success,
+                    accent = LocalCosmos.current.ok,
                     points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
                     unit = "%",
@@ -1562,7 +1562,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_TOTAL ->
                 MetricHistoryCard(
                     title = "Schlafdauer",
-                    accent = CosmosColors.AccentSecondary,
+                    accent = LocalCosmos.current.accentForscher,
                     points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
                     unit = "min",
@@ -1648,7 +1648,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_EFFICIENCY ->
                 MetricHistoryCard(
                     title = "Schlafeffizienz",
-                    accent = CosmosColors.Success,
+                    accent = LocalCosmos.current.ok,
                     points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
                     fullHistoryPoints =
                         state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
@@ -1659,7 +1659,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_CONSISTENCY ->
                 MetricHistoryCard(
                     title = "Schlafregelmäßigkeit",
-                    accent = CosmosColors.Success,
+                    accent = LocalCosmos.current.ok,
                     points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
                     fullHistoryPoints =
                         state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
@@ -1671,7 +1671,7 @@ private fun BiomarkerCardForId(
                 MetricHistoryCard(
                     lowerIsBetter = true,
                     title = "Schlafdefizit",
-                    accent = CosmosColors.Warning,
+                    accent = LocalCosmos.current.warn,
                     points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
                     unit = "min",
@@ -1684,7 +1684,7 @@ private fun BiomarkerCardForId(
                     // jetzt im VM vorberechnet (buildChartData). Tagesstart wird einmal pro
                     // combine-Emission ermittelt — der lokale remember{} entfaellt damit.
                     title = "Tagesumsatz",
-                    accent = CosmosColors.AccentPrimary,
+                    accent = LocalCosmos.current.accent,
                     points = state.chartData.pointsLast70["kilojoules"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["kilojoules"] ?: emptyList(),
                     unit = "kcal",
@@ -1694,7 +1694,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.STRAIN ->
                 MetricHistoryCard(
                     title = "Belastung",
-                    accent = CosmosColors.Warning,
+                    accent = LocalCosmos.current.warn,
                     points = state.chartData.pointsLast70["strain"] ?: emptyList(),
                     fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
                     unit = "",

@@ -97,7 +97,7 @@ fun StatusBar(
         Spacer(Modifier.width(12.dp))
         Text(
             text = "$percent %",
-            color = CosmosColors.AccentPrimary,
+            color = LocalCosmos.current.accent,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
         )
@@ -130,7 +130,7 @@ private fun StatusDetailSheet(breakdown: StatusBreakdown, onDismiss: () -> Unit)
                 text = "Gesamtwert: ${breakdown.total} %",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = CosmosColors.AccentPrimary,
+                color = LocalCosmos.current.accent,
             )
 
             ComponentRow(
@@ -173,7 +173,7 @@ private fun ComponentRow(label: String, value: String, detail: String) {
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, color = cosmos.textPrimary, style = MaterialTheme.typography.titleMedium)
-            Text(value, color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+            Text(value, color = LocalCosmos.current.accent, fontWeight = FontWeight.SemiBold)
         }
         if (detail.isNotBlank()) {
             Spacer(Modifier.height(2.dp))
@@ -201,7 +201,7 @@ fun RingPlaceholder(score: Int, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = "$score",
-            color = CosmosColors.Success,
+            color = LocalCosmos.current.ok,
             style = MaterialTheme.typography.displayLarge,
         )
     }

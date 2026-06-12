@@ -89,7 +89,7 @@ fun ArchiveScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = cosmos.textPrimary,
                     unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentPrimary,
+                    focusedBorderColor = LocalCosmos.current.accent,
                     unfocusedBorderColor = cosmos.glassBorder,
                 ),
             )
@@ -135,12 +135,12 @@ private fun ArchiveHeader(totalCount: Int) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f)),
+                    .background(LocalCosmos.current.accentForscher.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Outlined.Inventory2, null,
-                    tint = CosmosColors.AccentSecondary,
+                    tint = LocalCosmos.current.accentForscher,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -179,13 +179,13 @@ private fun MonthHeader(label: String, count: Int) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
+                .background(LocalCosmos.current.accentForscher.copy(alpha = 0.18f))
                 .padding(horizontal = 10.dp, vertical = 3.dp),
         ) {
             Text(
                 text = "$count",
                 style = MaterialTheme.typography.labelMedium,
-                color = CosmosColors.AccentSecondary,
+                color = LocalCosmos.current.accentForscher,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -249,7 +249,7 @@ private fun ArchiveEntryCard(
                 IconButton(onClick = onUnarchive) {
                     Icon(
                         Icons.Outlined.Unarchive, "Aus Archiv holen",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                     )
                 }
             }
@@ -267,14 +267,14 @@ private fun ArchiveEntryCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CosmosColors.Success.copy(alpha = 0.12f))
+                        .background(LocalCosmos.current.ok.copy(alpha = 0.12f))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
                     Column {
                         Text(
                             "So habe ich die Entropie gesenkt:",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CosmosColors.Success,
+                            color = LocalCosmos.current.ok,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(2.dp))
@@ -300,7 +300,7 @@ private fun EmptyArchiveState(hasFilter: Boolean) {
     ) {
         Icon(
             Icons.Outlined.Inventory2, null,
-            tint = CosmosColors.AccentSecondary,
+            tint = LocalCosmos.current.accentForscher,
             modifier = Modifier.size(72.dp),
         )
         Spacer(Modifier.height(16.dp))

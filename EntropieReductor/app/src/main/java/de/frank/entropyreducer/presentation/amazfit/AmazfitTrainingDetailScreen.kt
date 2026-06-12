@@ -131,7 +131,7 @@ fun AmazfitTrainingDetailScreen(
                         vm.deleteCurrentWorkout(onDeleted = onBack)
                     }
                 ) {
-                    Text("Löschen", color = CosmosColors.Critical)
+                    Text("Löschen", color = LocalCosmos.current.crit)
                 }
             },
             dismissButton = {
@@ -221,7 +221,7 @@ fun AmazfitTrainingDetailScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.DeleteOutline,
                                     contentDescription = null,
-                                    tint = CosmosColors.Critical,
+                                    tint = LocalCosmos.current.crit,
                                 )
                             },
                             onClick = {
@@ -304,7 +304,7 @@ fun AmazfitTrainingDetailScreen(
                 if (hr.isNotEmpty()) {
                     BackHandler { fullscreenChart = null }
                     ZoomableChartFullscreen(
-                        accent = CosmosColors.Critical,
+                        accent = LocalCosmos.current.crit,
                         values = hrValues,
                         yUnit = "bpm",
                         yFormat = { it.toInt().toString() },
@@ -319,7 +319,7 @@ fun AmazfitTrainingDetailScreen(
                 if (tempoSec.size >= 10) {
                     BackHandler { fullscreenChart = null }
                     ZoomableChartFullscreen(
-                        accent = CosmosColors.AccentPrimary,
+                        accent = LocalCosmos.current.accent,
                         values = tempoSec,
                         yUnit = "min/km",
                         yFormat = { formatPaceSec(it) },
@@ -339,7 +339,7 @@ fun AmazfitTrainingDetailScreen(
 @Composable
 private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
     val cosmos = LocalCosmos.current
-    val accent = CosmosColors.Warning
+    val accent = LocalCosmos.current.warn
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -505,7 +505,7 @@ private fun StatsGrid(
     onItemClick: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
-    val accent = CosmosColors.Warning
+    val accent = LocalCosmos.current.warn
     val rows = items.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { row ->
@@ -577,12 +577,12 @@ private fun TrainingseffektCard(w: AmazfitWorkoutEntity) {
                     label = "Aerob",
                     value = a,
                     max = 5.0,
-                    accent = CosmosColors.AccentPrimary,
+                    accent = LocalCosmos.current.accent,
                 )
                 Spacer(Modifier.height(6.dp))
             }
             if (b != null) {
-                EffektBar(label = "Anaerob", value = b, max = 5.0, accent = CosmosColors.Critical)
+                EffektBar(label = "Anaerob", value = b, max = 5.0, accent = LocalCosmos.current.crit)
             }
         }
     }
@@ -774,7 +774,7 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
                 scrollGesturesEnabledDuringRotateOrZoom = fullscreen,
             )
         }
-    val accent = CosmosColors.Warning
+    val accent = LocalCosmos.current.warn
     com.google.maps.android.compose.GoogleMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
@@ -837,13 +837,13 @@ private fun PulsverlaufCard(hr: List<Int>, onOpenFullscreen: () -> Unit) {
                 Text(
                     text = "Ø $avg · Max $max bpm",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                 )
             }
             Spacer(Modifier.height(8.dp))
             Box(modifier = Modifier.fillMaxWidth().clickable { onOpenFullscreen() }) {
                 ChartWithAxes(
-                    accent = CosmosColors.Critical,
+                    accent = LocalCosmos.current.crit,
                     xCount = hr.size,
                     yMin = (min - 5).coerceAtLeast(40).toDouble(),
                     yMax = (max + 5).coerceAtMost(220).toDouble(),
@@ -1423,7 +1423,7 @@ private fun TempoVerlaufCard(
     val avg = secPerKm.average()
     val min = secPerKm.min()
     val max = secPerKm.max()
-    val accent = CosmosColors.AccentPrimary
+    val accent = LocalCosmos.current.accent
     // Frank-Wunsch 2026-05-11: X-Achse zeigt echte Kilometer (z.B. "Km 0", "Km 1",
     // "Km 5.8") statt Sample-Index (frueher "Km 1" bis "Km 3011" weil pro Sample
     // ein Label). Wir interpolieren linear: Sample i steht fuer Position

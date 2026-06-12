@@ -67,7 +67,7 @@ fun EntryCaptureSheet(
     onDismiss: () -> Unit,
     onCommit: (text: String, source: EntrySource) -> Unit,
     title: String = "Neue Aufgabe",
-    accent: Color = CosmosColors.AccentPrimary,
+    accent: Color = LocalCosmos.current.accent,
     voiceVm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -95,7 +95,7 @@ fun EntryCaptureSheet(
             onDismiss()
         },
         sheetState = sheetState,
-        containerColor = if (cosmos.isDark) Color(0xFF1B1F2E) else Color.White,
+        containerColor = if (cosmos.isDark) Color(0xFF26211B) else Color.White,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -115,7 +115,7 @@ fun EntryCaptureSheet(
                         icon = Icons.Outlined.Stop,
                         label = "Aufnahme stoppen",
                         sublabel = "Sprich, ich höre zu. Tippe zum Beenden.",
-                        bg = CosmosColors.Critical,
+                        bg = LocalCosmos.current.crit,
                         fg = Color.White,
                         onClick = {
                             voiceVm.toggle { transcript ->

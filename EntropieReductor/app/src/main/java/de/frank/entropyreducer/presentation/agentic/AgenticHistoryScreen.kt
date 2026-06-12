@@ -241,10 +241,10 @@ private fun ExecutionRow(exec: PromptExecutionEntity, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     val statusColor =
         when (exec.status) {
-            ExecutionStatus.SUCCESS -> CosmosColors.AccentPrimary
+            ExecutionStatus.SUCCESS -> LocalCosmos.current.accent
             ExecutionStatus.RUNNING -> MaterialTheme.colorScheme.tertiary
-            ExecutionStatus.FAILED -> CosmosColors.Critical
-            ExecutionStatus.INTERRUPTED -> CosmosColors.Critical
+            ExecutionStatus.FAILED -> LocalCosmos.current.crit
+            ExecutionStatus.INTERRUPTED -> LocalCosmos.current.crit
             ExecutionStatus.CANCELLED -> MaterialTheme.colorScheme.outline
             ExecutionStatus.BLOCKED_BY_TOKEN_LIMIT,
             ExecutionStatus.BLOCKED_BY_PERMISSION,
@@ -307,7 +307,7 @@ private fun ExecutionRow(exec: PromptExecutionEntity, onClick: () -> Unit) {
                 Text(
                     text = "Fehler: $err",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                 )
             }
         }

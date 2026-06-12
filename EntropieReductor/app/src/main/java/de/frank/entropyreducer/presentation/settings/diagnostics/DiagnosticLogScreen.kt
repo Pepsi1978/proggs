@@ -48,9 +48,9 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticLevel
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogEntry
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.launch
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 
 /**
  * Diagnose-Protokoll (Frank-Wunsch 2026-05-23): Zeigt die internen Fehler- und Erfolgs-Meldungen
@@ -59,10 +59,7 @@ import kotlinx.coroutines.launch
  * Loeschen. So sieht Frank ohne Logcat sofort WARUM etwas nicht aktualisiert.
  */
 @Composable
-fun DiagnosticLogScreen(
-    onBack: () -> Unit,
-    viewModel: DiagnosticLogViewModel = hiltViewModel(),
-) {
+fun DiagnosticLogScreen(onBack: () -> Unit, viewModel: DiagnosticLogViewModel = hiltViewModel()) {
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -84,7 +81,10 @@ fun DiagnosticLogScreen(
                         val send =
                             Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "Entropie Reductor — Diagnose-Protokoll")
+                                putExtra(
+                                    Intent.EXTRA_SUBJECT,
+                                    "Entropie Reductor — Diagnose-Protokoll",
+                                )
                                 putExtra(Intent.EXTRA_TEXT, text)
                             }
                         context.startActivity(
@@ -148,7 +148,7 @@ fun DiagnosticLogScreen(
 @Composable
 private fun chipColors() =
     FilterChipDefaults.filterChipColors(
-        selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.22f),
+        selectedContainerColor = LocalCosmos.current.accent.copy(alpha = 0.22f),
         selectedLabelColor = LocalCosmos.current.textPrimary,
         labelColor = LocalCosmos.current.textSecondary,
     )
@@ -170,19 +170,12 @@ private fun LogEntryCard(entry: DiagnosticLogEntry) {
         Row(verticalAlignment = Alignment.Top) {
             Box(
                 modifier =
-                    Modifier.size(10.dp)
-                        .clip(CircleShape)
-                        .background(accent)
-                        .padding(top = 4.dp)
+                    Modifier.size(10.dp).clip(CircleShape).background(accent).padding(top = 4.dp)
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        area,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = accent,
-                    )
+                    Text(area, style = MaterialTheme.typography.labelLarge, color = accent)
                     Spacer(Modifier.weight(1f))
                     Text(
                         formatTime(entry.timestampMs),
@@ -196,16 +189,18 @@ private fun LogEntryCard(entry: DiagnosticLogEntry) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textPrimary,
                 )
-                entry.details?.takeIf { it.isNotBlank() }?.let { details ->
-                    Spacer(Modifier.size(6.dp))
-                    Text(
-                        details,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = cosmos.textSecondary,
-                        maxLines = if (expanded) Int.MAX_VALUE else 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                entry.details
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { details ->
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            details,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cosmos.textSecondary,
+                            maxLines = if (expanded) Int.MAX_VALUE else 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
             }
         }
     }

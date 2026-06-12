@@ -306,9 +306,9 @@ private fun WakeTimeTrendBadgePercent(delta: Double) {
     // Schnitt) ist GUT (gruen).
     val color =
         when {
-            delta > 0.5 -> CosmosColors.Critical
-            delta < -0.5 -> CosmosColors.Success
-            else -> CosmosColors.AccentPrimary
+            delta > 0.5 -> LocalCosmos.current.crit
+            delta < -0.5 -> LocalCosmos.current.ok
+            else -> LocalCosmos.current.accent
         }
     Box(
         modifier =
@@ -369,9 +369,9 @@ private fun WakeTimeHistoryRow(row: WakeTimeRow) {
     val deltaColor =
         when {
             row.deltaToPrevDay == null -> cosmos.textSecondary
-            row.deltaToPrevDay > 0.5 -> CosmosColors.Critical
-            row.deltaToPrevDay < -0.5 -> CosmosColors.Success
-            else -> CosmosColors.AccentPrimary
+            row.deltaToPrevDay > 0.5 -> LocalCosmos.current.crit
+            row.deltaToPrevDay < -0.5 -> LocalCosmos.current.ok
+            else -> LocalCosmos.current.accent
         }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

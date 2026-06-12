@@ -118,7 +118,7 @@ fun ApiKeysScreen(
                 ApiKeyCard(
                     title = "Groq API Key",
                     subtitle = "Für schnelle KI-Antworten über das Groq LLM API.",
-                    accent = CosmosColors.Critical,
+                    accent = LocalCosmos.current.crit,
                     value = state.groqKey,
                     onValueChange = vm::setGroq,
                     onSave = vm::saveGroq,
@@ -130,7 +130,7 @@ fun ApiKeysScreen(
                 ApiKeyCard(
                     title = "Gemini API Key",
                     subtitle = "Für fortschrittliche KI-Modelle von Google Gemini.",
-                    accent = CosmosColors.AccentSecondary,
+                    accent = LocalCosmos.current.accentForscher,
                     value = state.geminiKey,
                     onValueChange = vm::setGemini,
                     onSave = vm::saveGemini,
@@ -142,7 +142,7 @@ fun ApiKeysScreen(
                 ApiKeyCard(
                     title = "Google Cloud TTS API Key",
                     subtitle = "Für hochwertige Text-zu-Sprache Ausgaben (Chirp 3 HD).",
-                    accent = CosmosColors.AccentPrimary,
+                    accent = LocalCosmos.current.accent,
                     value = state.ttsKey,
                     onValueChange = vm::setTts,
                     onSave = vm::saveTts,
@@ -189,7 +189,7 @@ private fun ReloadAllDataCard(onReload: () -> Unit, message: String?) {
             Text(
                 "Alles neu laden",
                 style = MaterialTheme.typography.titleMedium,
-                color = CosmosColors.AccentPrimary,
+                color = LocalCosmos.current.accent,
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -267,12 +267,12 @@ private fun ApiKeyCard(
             when (status) {
                 ConnectionStatus.OK -> ConnectionLabel(
                     label = "Verbindung erfolgreich",
-                    color = CosmosColors.Success,
+                    color = LocalCosmos.current.ok,
                     icon = Icons.Outlined.CheckCircle,
                 )
                 ConnectionStatus.FAIL -> ConnectionLabel(
                     label = "Ungueltiger API-Schlüssel oder fehlende Berechtigungen",
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                     icon = Icons.Outlined.ErrorOutline,
                 )
                 ConnectionStatus.TESTING -> ConnectionLabel(
@@ -323,7 +323,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Text(
                 "Whoop OAuth",
                 style = MaterialTheme.typography.titleMedium,
-                color = CosmosColors.AccentSecondary,
+                color = LocalCosmos.current.accentForscher,
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -336,7 +336,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Text(
                 state.whoopRedirectUri,
                 style = MaterialTheme.typography.bodySmall,
-                color = CosmosColors.AccentPrimary,
+                color = LocalCosmos.current.accent,
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -374,7 +374,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     Button(
                         onClick = vm::disconnectWhoop,
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.crit),
                     ) {
                         Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -386,7 +386,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                             vm.buildWhoopAuthIntent()?.let { launcher.launch(it) }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentSecondary),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.accentForscher),
                     ) {
                         Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -396,7 +396,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             }
             if (state.whoopConnected) {
                 Spacer(Modifier.height(8.dp))
-                ConnectionLabel("Verbunden", CosmosColors.Success, Icons.Outlined.CheckCircle)
+                ConnectionLabel("Verbunden", LocalCosmos.current.ok, Icons.Outlined.CheckCircle)
             }
         }
     }
@@ -536,7 +536,7 @@ private fun StravaOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     Button(
                         onClick = vm::disconnectStrava,
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.crit),
                     ) {
                         Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -566,7 +566,7 @@ private fun StravaOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     } else {
                         "Verbunden"
                     },
-                    color = CosmosColors.Success,
+                    color = LocalCosmos.current.ok,
                     icon = Icons.Outlined.CheckCircle,
                 )
                 if (state.stravaLastSyncMs > 0L) {
@@ -625,7 +625,7 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Text(
                 "Google Calendar",
                 style = MaterialTheme.typography.titleMedium,
-                color = CosmosColors.AccentPrimary,
+                color = LocalCosmos.current.accent,
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -640,13 +640,13 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 Text(
                     "Verbunden mit ${state.calendarAccountEmail}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CosmosColors.Success,
+                    color = LocalCosmos.current.ok,
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = vm::disconnectGoogleCalendar,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.crit),
                 ) {
                     Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(6.dp))
@@ -656,7 +656,7 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 Button(
                     onClick = { launcher.launch(vm.calendarSignIn.signInIntent()) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentPrimary),
+                    colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.accent),
                 ) {
                     Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(6.dp))
@@ -691,14 +691,14 @@ private fun TtsVoiceCard(
                 Icon(
                     Icons.Outlined.RecordVoiceOver,
                     null,
-                    tint = CosmosColors.AccentPrimary,
+                    tint = LocalCosmos.current.accent,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.size(8.dp))
                 Text(
                     "Stimme",
                     style = MaterialTheme.typography.titleMedium,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -730,7 +730,7 @@ private fun TtsVoiceCard(
                     Text(
                         text = "Ändern",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (state.ttsSaved) CosmosColors.AccentPrimary else cosmos.textSecondary,
+                        color = if (state.ttsSaved) LocalCosmos.current.accent else cosmos.textSecondary,
                     )
                 }
             }
@@ -758,7 +758,7 @@ private fun TtsVoiceCard(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = CosmosColors.AccentPrimary,
+                            color = LocalCosmos.current.accent,
                         )
                         Spacer(Modifier.size(8.dp))
                         Text("Lade Audio …")
@@ -769,7 +769,7 @@ private fun TtsVoiceCard(
                         onClick = onStop,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = CosmosColors.AccentPrimary,
+                            containerColor = LocalCosmos.current.accent,
                             contentColor = Color.Black,
                         ),
                     ) {
@@ -787,7 +787,7 @@ private fun TtsVoiceCard(
                             Icons.Outlined.ErrorOutline,
                             null,
                             modifier = Modifier.size(18.dp),
-                            tint = CosmosColors.Critical,
+                            tint = LocalCosmos.current.crit,
                         )
                         Spacer(Modifier.size(6.dp))
                         Text("Erneut versuchen")
@@ -800,7 +800,7 @@ private fun TtsVoiceCard(
                 Text(
                     msg,
                     style = MaterialTheme.typography.bodySmall,
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                 )
             }
         }
@@ -860,8 +860,8 @@ private fun VoiceRow(
 ) {
     val cosmos = LocalCosmos.current
     val accent = when (voice.gender) {
-        VoiceGender.FEMALE -> CosmosColors.AccentPrimary
-        VoiceGender.MALE -> CosmosColors.AccentSecondary
+        VoiceGender.FEMALE -> LocalCosmos.current.accent
+        VoiceGender.MALE -> LocalCosmos.current.accentForscher
     }
     Row(
         modifier = Modifier
@@ -915,7 +915,7 @@ private fun formatRelativeTime(epochMs: Long): String {
 private fun OuraApiCard(vm: OuraApiViewModel, state: OuraApiUiState) {
     val cosmos = LocalCosmos.current
     var hidden by remember { mutableStateOf(true) }
-    val accent = CosmosColors.AccentPrimary
+    val accent = LocalCosmos.current.accent
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
@@ -983,7 +983,7 @@ private fun OuraApiCard(vm: OuraApiViewModel, state: OuraApiUiState) {
                         onClick = vm::disconnect,
                         modifier = Modifier.weight(1f),
                         enabled = !state.busy,
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                        colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.crit),
                     ) {
                         Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -1018,7 +1018,7 @@ private fun OuraApiCard(vm: OuraApiViewModel, state: OuraApiUiState) {
                 Spacer(Modifier.height(8.dp))
                 ConnectionLabel(
                     label = "Verbunden",
-                    color = CosmosColors.Success,
+                    color = LocalCosmos.current.ok,
                     icon = Icons.Outlined.CheckCircle,
                 )
                 if (state.lastSyncMs > 0) {
@@ -1050,7 +1050,7 @@ private fun HealthConnectApiCard(
     state: HealthConnectApiUiState,
 ) {
     val cosmos = LocalCosmos.current
-    val accent = CosmosColors.Success
+    val accent = LocalCosmos.current.ok
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.health.connect.client.PermissionController
             .createRequestPermissionResultContract(),
@@ -1083,13 +1083,13 @@ private fun HealthConnectApiCard(
             if (!state.available) {
                 Text(
                     text = "Health Connect ist auf diesem Geraet nicht verfuegbar.",
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
                 val statusText = if (state.allGranted) "Alle Berechtigungen erteilt"
                 else "${state.grantedCount} von ${state.totalCount} Berechtigungen erteilt"
-                val statusColor = if (state.allGranted) accent else CosmosColors.Warning
+                val statusColor = if (state.allGranted) accent else LocalCosmos.current.warn
                 Text(
                     text = statusText,
                     color = statusColor,

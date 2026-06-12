@@ -12,25 +12,38 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 /**
- * Eigene Theme-Erweiterungen — Brushes, Glas-Farben, etc. Statt Material You / dynamicColor, weil
- * das Design fix ist (siehe Spec §2).
+ * Eigene Theme-Erweiterungen — "Glut"-Design (2026-06-12, Mockup docs/mockup-neues-design.html).
+ * Statt Material You / dynamicColor, weil das Design fix ist.
+ *
+ * NEU (Glut): Die Akzente sind THEME-ABHAENGIG — Dark nutzt die helleren, Light die tieferen
+ * Varianten (exakt wie im Mockup). Composables greifen ueber LocalCosmos.current.accent /
+ * accentTasks / accentAnalyse / accentForscher / accentBio / ok / warn / crit zu.
  */
 data class CosmosThemeExt(
     val isDark: Boolean,
     val backgroundBrush: Brush,
-    val glassBg: androidx.compose.ui.graphics.Color,
-    val glassBorder: androidx.compose.ui.graphics.Color,
-    val textPrimary: androidx.compose.ui.graphics.Color,
-    val textSecondary: androidx.compose.ui.graphics.Color,
+    val glassBg: Color,
+    val glassBorder: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    // Glut: theme-abhaengige Akzente
+    val accent: Color, // Orange-Glut (Primaer)
+    val accentTasks: Color, // Tab-Klasse Aufgaben (= accent)
+    val accentAnalyse: Color, // Tab-Klasse Analyse (Smaragd)
+    val accentForscher: Color, // Tab-Klasse Forscher (Violett)
+    val accentBio: Color, // Tab-Klasse Biomarker (Rosé)
+    val ok: Color,
+    val warn: Color,
+    val crit: Color,
+    val barBg: Color, // BottomBar / erhoehte Flaechen (Mockup bg2)
+    val dialogBg: Color, // Dialoge / Sheets (Mockup card2)
 )
 
 val LocalCosmos =
@@ -43,13 +56,13 @@ val LocalCosmos =
 private val DarkScheme =
     darkColorScheme(
         primary = CosmosColors.AccentPrimary,
-        onPrimary = CosmosColors.BgDark,
+        onPrimary = Color(0xFF1C0E03),
         secondary = CosmosColors.AccentSecondary,
         onSecondary = CosmosColors.BgDark,
         tertiary = CosmosColors.Success,
-        background = CosmosColors.BgDark,
+        background = CosmosColors.BgDarkMid,
         onBackground = CosmosColors.TextPrimaryDark,
-        surface = CosmosColors.BgDarkMid,
+        surface = CosmosColors.GlassDark,
         onSurface = CosmosColors.TextPrimaryDark,
         surfaceVariant = CosmosColors.BgDarkAccent,
         onSurfaceVariant = CosmosColors.TextSecondaryDark,
@@ -59,19 +72,19 @@ private val DarkScheme =
 
 private val LightScheme =
     lightColorScheme(
-        primary = CosmosColors.AccentPrimary,
-        onPrimary = CosmosColors.BgDark,
-        secondary = CosmosColors.AccentSecondary,
-        onSecondary = CosmosColors.BgDark,
-        tertiary = CosmosColors.Success,
+        primary = CosmosColors.AccentPrimaryLight,
+        onPrimary = Color(0xFFFFF7F0),
+        secondary = CosmosColors.AccentSecondaryLight,
+        onSecondary = Color(0xFFFFF7F0),
+        tertiary = CosmosColors.SuccessLight,
         background = CosmosColors.BgLight,
         onBackground = CosmosColors.TextPrimaryLight,
-        surface = CosmosColors.BgLight,
+        surface = CosmosColors.GlassLight,
         onSurface = CosmosColors.TextPrimaryLight,
         surfaceVariant = CosmosColors.BgLightAccent,
         onSurfaceVariant = CosmosColors.TextSecondaryLight,
-        error = CosmosColors.Critical,
-        onError = CosmosColors.TextPrimaryDark,
+        error = CosmosColors.CriticalLight,
+        onError = Color(0xFFFFF7F0),
     )
 
 @Composable
@@ -81,41 +94,47 @@ fun EntropieReductorTheme(
 ) {
     val scheme = if (darkTheme) DarkScheme else LightScheme
 
-    // Galaxy-Gradient-Radius dynamisch an Bildschirmbreite koppeln:
-    // 1.5x die Bildschirmbreite wirkt auf S23 Ultra (~412dp), Fold 6 (~720dp)
-    // und Tab S9 (~840dp+) konsistent — der Roentgen-Bericht hatte den
-    // hardcoded 1500f-Pixel-Wert als Problem markiert.
-    val config = LocalConfiguration.current
-    val density = LocalDensity.current
-    val gradientRadiusPx = with(density) { (config.screenWidthDp.dp * 1.5f).toPx() }
-
+    // Glut: flacher, warmer Hintergrund (Mockup --bg) statt Galaxy-Radialverlauf.
     val ext =
-        CosmosThemeExt(
-            isDark = darkTheme,
-            backgroundBrush =
-                if (darkTheme) {
-                    // Radialer Verlauf von oben-mitte aus, Galaxy-Effekt
-                    Brush.radialGradient(
-                        0f to CosmosColors.BgDarkMid,
-                        0.6f to CosmosColors.BgDark,
-                        1f to CosmosColors.BgDark,
-                        center = Offset.Unspecified,
-                        radius = gradientRadiusPx,
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        0f to CosmosColors.BgLight,
-                        1f to CosmosColors.BgLightMid,
-                    )
-                },
-            glassBg = if (darkTheme) CosmosColors.GlassDark else CosmosColors.GlassLight,
-            glassBorder =
-                if (darkTheme) CosmosColors.GlassDarkBorder else CosmosColors.GlassLightBorder,
-            textPrimary =
-                if (darkTheme) CosmosColors.TextPrimaryDark else CosmosColors.TextPrimaryLight,
-            textSecondary =
-                if (darkTheme) CosmosColors.TextSecondaryDark else CosmosColors.TextSecondaryLight,
-        )
+        if (darkTheme) {
+            CosmosThemeExt(
+                isDark = true,
+                backgroundBrush = SolidColor(CosmosColors.BgDarkMid),
+                glassBg = CosmosColors.GlassDark,
+                glassBorder = CosmosColors.GlassDarkBorder,
+                textPrimary = CosmosColors.TextPrimaryDark,
+                textSecondary = CosmosColors.TextSecondaryDark,
+                accent = CosmosColors.AccentPrimary,
+                accentTasks = CosmosColors.TabTasks,
+                accentAnalyse = CosmosColors.TabAnalyse,
+                accentForscher = CosmosColors.TabForscher,
+                accentBio = CosmosColors.TabBio,
+                ok = CosmosColors.Success,
+                warn = CosmosColors.Warning,
+                crit = CosmosColors.Critical,
+                barBg = CosmosColors.BgDarkBar,
+                dialogBg = CosmosColors.BgDarkAccent,
+            )
+        } else {
+            CosmosThemeExt(
+                isDark = false,
+                backgroundBrush = SolidColor(CosmosColors.BgLight),
+                glassBg = CosmosColors.GlassLight,
+                glassBorder = CosmosColors.GlassLightBorder,
+                textPrimary = CosmosColors.TextPrimaryLight,
+                textSecondary = CosmosColors.TextSecondaryLight,
+                accent = CosmosColors.AccentPrimaryLight,
+                accentTasks = CosmosColors.TabTasksLight,
+                accentAnalyse = CosmosColors.TabAnalyseLight,
+                accentForscher = CosmosColors.TabForscherLight,
+                accentBio = CosmosColors.TabBioLight,
+                ok = CosmosColors.SuccessLight,
+                warn = CosmosColors.WarningLight,
+                crit = CosmosColors.CriticalLight,
+                barBg = CosmosColors.BgLightAccent,
+                dialogBg = Color.White,
+            )
+        }
 
     val view = LocalView.current
     if (!view.isInEditMode) {

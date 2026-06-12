@@ -176,7 +176,8 @@ private fun serializeMentals(mentals: List<Mental>): String {
 }
 
 /* Akzentfarbe — Aufgaben-Bereich (Orange #EA580C), weil das Mentalboard dort als Sub-Reiter liegt. */
-internal val MentalAccent: Color = Color(0xFFEA580C)
+internal val MentalAccent: Color
+    @Composable get() = LocalCosmos.current.accentTasks
 
 /* ============================== UI ============================== */
 
@@ -258,7 +259,7 @@ fun MentalBoardScreen(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .background(if (cosmos.isDark) Color(0xFF15182A) else Color(0xFFF6F7FB))
+                    .background(if (cosmos.isDark) Color(0xFF12100D) else Color(0xFFFAF7F3))
                     .padding(padding)
         ) {
             if (displayed.isEmpty()) {
@@ -348,7 +349,7 @@ private fun MentalRow(
     dragModifier: Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    val cardBg = if (cosmos.isDark) Color(0xFF1E2336) else Color.White
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
     Row(
         modifier =
             Modifier.fillMaxWidth()

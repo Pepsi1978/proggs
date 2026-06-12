@@ -93,7 +93,7 @@ fun SubAreaScreen(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .background(if (cosmos.isDark) Color(0xFF15182A) else Color(0xFFF6F7FB))
+                    .background(if (cosmos.isDark) Color(0xFF12100D) else Color(0xFFFAF7F3))
                     .padding(padding),
             contentAlignment = Alignment.Center,
         ) {
@@ -282,11 +282,12 @@ private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
  * Akzent-Farbe pro Tab (gespiegelt aus CosmosBottomBar.subModeTint). Wird fuer Icon-Tint,
  * Pill-Hintergrund und Icon-Kreis-Hintergrund verwendet.
  */
+@Composable
 private fun subSlotAccent(parent: String): Color =
     when (parent) {
-        Routes.TASKS -> Color(0xFFEA580C) // Orange
-        Routes.ANALYSIS -> Color(0xFF16A34A) // Grün
-        Routes.SCIENTIST -> Color(0xFFA78BFA) // Violett
-        Routes.BIOMARKER -> Color(0xFFFB7185) // Rosé
-        else -> Color(0xFF0891B2) // Cyan-600 (Default)
+        Routes.TASKS -> LocalCosmos.current.accentTasks // Orange
+        Routes.ANALYSIS -> LocalCosmos.current.accentAnalyse // Grün
+        Routes.SCIENTIST -> LocalCosmos.current.accentForscher // Violett
+        Routes.BIOMARKER -> LocalCosmos.current.accentBio // Rosé
+        else -> LocalCosmos.current.accent // Cyan-600 (Default)
     }

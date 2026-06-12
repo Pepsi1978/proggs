@@ -76,7 +76,7 @@ fun KiTriggersScreen(
                 )
             }
             if (state.pending.isNotEmpty()) {
-                item { SectionHeader("Vorgeschlagen", state.pending.size, CosmosColors.AccentSecondary) }
+                item { SectionHeader("Vorgeschlagen", state.pending.size, LocalCosmos.current.accentForscher) }
                 items(state.pending, key = { "p-${it.id}" }) { t ->
                     PendingTriggerCard(
                         trigger = t,
@@ -86,7 +86,7 @@ fun KiTriggersScreen(
                 }
             }
             if (state.active.isNotEmpty()) {
-                item { SectionHeader("Aktiv", state.active.size, CosmosColors.AccentPrimary) }
+                item { SectionHeader("Aktiv", state.active.size, LocalCosmos.current.accent) }
                 items(state.active, key = { "a-${it.id}" }) { t ->
                     ActiveTriggerCard(
                         trigger = t,
@@ -145,7 +145,7 @@ private fun PendingTriggerCard(
             Text(
                 trigger.name,
                 style = MaterialTheme.typography.titleSmall,
-                color = CosmosColors.AccentSecondary,
+                color = LocalCosmos.current.accentForscher,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(4.dp))
@@ -177,7 +177,7 @@ private fun PendingTriggerCard(
                     onClick = onApprove,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentPrimary,
+                        containerColor = LocalCosmos.current.accent,
                         contentColor = Color.Black,
                     ),
                 ) {
@@ -200,12 +200,12 @@ private fun ActiveTriggerCard(
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
-                Icon(Icons.Outlined.Bolt, null, tint = CosmosColors.AccentPrimary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Bolt, null, tint = LocalCosmos.current.accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(6.dp))
                 Text(
                     trigger.name,
                     style = MaterialTheme.typography.titleSmall,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.SemiBold,
                 )
             }

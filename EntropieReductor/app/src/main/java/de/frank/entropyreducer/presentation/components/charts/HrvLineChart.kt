@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
 fun HrvLineChart(
     values: List<Double>,
     modifier: Modifier = Modifier,
-    accent: Color = CosmosColors.AccentPrimary,
+    accent: Color = LocalCosmos.current.accent,
     title: String = "HRV (30 Tage)",
     unit: String = "ms",
     height: Int = 140,

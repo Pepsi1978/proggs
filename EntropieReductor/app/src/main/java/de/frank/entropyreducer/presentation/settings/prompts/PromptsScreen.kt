@@ -335,13 +335,13 @@ private fun CategoryAccordion(
                 Box(
                     modifier =
                         Modifier.clip(RoundedCornerShape(50))
-                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.2f))
+                            .background(LocalCosmos.current.accent.copy(alpha = 0.2f))
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         "$count",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -350,7 +350,7 @@ private fun CategoryAccordion(
                     Icon(
                         Icons.Outlined.Add,
                         contentDescription = "Neuer Prompt in ${category.label}",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                     )
                 }
                 Icon(
@@ -400,8 +400,8 @@ private fun PromptRow(
                     colors =
                         SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = CosmosColors.AccentPrimary,
-                            checkedBorderColor = CosmosColors.AccentPrimary,
+                            checkedTrackColor = LocalCosmos.current.accent,
+                            checkedBorderColor = LocalCosmos.current.accent,
                         ),
                 )
             }
@@ -422,8 +422,8 @@ private fun PromptRow(
                         Icons.Outlined.PlayArrow,
                         contentDescription = "Ausführen",
                         tint =
-                            if (prompt.isActive) CosmosColors.AccentPrimary
-                            else CosmosColors.AccentPrimary.copy(alpha = 0.35f),
+                            if (prompt.isActive) LocalCosmos.current.accent
+                            else LocalCosmos.current.accent.copy(alpha = 0.35f),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -431,7 +431,7 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.Edit,
                         contentDescription = "Bearbeiten",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -439,7 +439,7 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.Tune,
                         contentDescription = "Tool-Berechtigungen",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -447,7 +447,7 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.Schedule,
                         contentDescription = "Auto-Trigger",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -455,7 +455,7 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.DeleteOutline,
                         contentDescription = "Löschen",
-                        tint = CosmosColors.Critical,
+                        tint = LocalCosmos.current.crit,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -489,7 +489,7 @@ private fun EditDialog(
                 },
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentPrimary,
+                        containerColor = LocalCosmos.current.accent,
                         contentColor = Color.Black,
                     ),
             ) {

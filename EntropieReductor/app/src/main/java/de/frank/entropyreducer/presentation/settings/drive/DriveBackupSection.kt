@@ -125,10 +125,10 @@ private fun DriveBackupCard(
                     else -> Icons.Outlined.CloudSync
                 }
                 val tint = when {
-                    state.syncStatus is SyncStatus.Failed -> CosmosColors.Critical
-                    state.syncStatus is SyncStatus.Synced -> CosmosColors.Success
-                    state.syncStatus is SyncStatus.Running -> CosmosColors.AccentSecondary
-                    else -> CosmosColors.AccentPrimary
+                    state.syncStatus is SyncStatus.Failed -> LocalCosmos.current.crit
+                    state.syncStatus is SyncStatus.Synced -> LocalCosmos.current.ok
+                    state.syncStatus is SyncStatus.Running -> LocalCosmos.current.accentForscher
+                    else -> LocalCosmos.current.accent
                 }
                 Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp))
                 Spacer(Modifier.size(12.dp))
@@ -150,7 +150,7 @@ private fun DriveBackupCard(
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(20.dp),
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                     )
                 }
             }
@@ -175,7 +175,7 @@ private fun DriveBackupCard(
                     onClick = signInLauncher,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentPrimary,
+                        containerColor = LocalCosmos.current.accent,
                         contentColor = Color.Black,
                     ),
                 ) { Text("Mit Google verbinden") }
@@ -190,7 +190,7 @@ private fun DriveBackupCard(
                     Switch(
                         checked = state.driveBackupEnabled,
                         onCheckedChange = vm::toggleBackupEnabled,
-                        colors = SwitchDefaults.colors(checkedThumbColor = CosmosColors.AccentPrimary),
+                        colors = SwitchDefaults.colors(checkedThumbColor = LocalCosmos.current.accent),
                     )
                 }
                 Spacer(Modifier.height(8.dp))
@@ -210,7 +210,7 @@ private fun DriveBackupCard(
                 TextButton(
                     onClick = { vm.signOut() },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Vom Konto trennen", color = CosmosColors.Critical) }
+                ) { Text("Vom Konto trennen", color = LocalCosmos.current.crit) }
             }
         }
     }
@@ -223,7 +223,7 @@ private fun StatusBanner(message: String, onDismiss: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
+            .background(LocalCosmos.current.accent.copy(alpha = 0.10f))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -234,7 +234,7 @@ private fun StatusBanner(message: String, onDismiss: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         TextButton(onClick = onDismiss) {
-            Text("OK", color = CosmosColors.AccentPrimary, style = MaterialTheme.typography.labelMedium)
+            Text("OK", color = LocalCosmos.current.accent, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

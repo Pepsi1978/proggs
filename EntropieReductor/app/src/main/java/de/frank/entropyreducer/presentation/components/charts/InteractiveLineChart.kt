@@ -156,8 +156,8 @@ fun InteractiveLineChart(
     val semanticSlope = if (lowerIsBetter) -smaSlope else smaSlope
     val trendColor =
         when {
-            semanticSlope > 0.0 -> CosmosColors.Success
-            semanticSlope < 0.0 -> CosmosColors.Critical
+            semanticSlope > 0.0 -> LocalCosmos.current.ok
+            semanticSlope < 0.0 -> LocalCosmos.current.crit
             else -> cosmos.textSecondary
         }
     // Lineare Regression: Slope wird im Composable-Scope verwendet,
@@ -165,8 +165,8 @@ fun InteractiveLineChart(
     val rawSemanticSlope = if (lowerIsBetter) -derived.rawSlope else derived.rawSlope
     val rawTrendColor =
         when {
-            rawSemanticSlope > 0.0 -> CosmosColors.Success
-            rawSemanticSlope < 0.0 -> CosmosColors.Critical
+            rawSemanticSlope > 0.0 -> LocalCosmos.current.ok
+            rawSemanticSlope < 0.0 -> LocalCosmos.current.crit
             else -> cosmos.textSecondary
         }
     // PathEffect einmalig allokieren — vorher 5x pro Frame im Canvas-Lambda.

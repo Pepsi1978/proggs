@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
  * Wiederverwendbarer ViewModel fuer Whisper-Voice-Capture (Frank-Wunsch
@@ -138,17 +139,17 @@ fun WhisperMicButton(
     val state by vm.state.collectAsStateWithLifecycle()
     val (bg, icon, tint) = when (state) {
         VoiceCaptureState.IDLE -> Triple(
-            CosmosColors.AccentPrimary,
+            LocalCosmos.current.accent,
             Icons.Outlined.Mic,
             Color.White,
         )
         VoiceCaptureState.RECORDING -> Triple(
-            CosmosColors.Critical,
+            LocalCosmos.current.crit,
             Icons.Outlined.Stop,
             Color.White,
         )
         VoiceCaptureState.PROCESSING -> Triple(
-            CosmosColors.AccentSecondary,
+            LocalCosmos.current.accentForscher,
             Icons.Outlined.Mic,
             Color.White,
         )

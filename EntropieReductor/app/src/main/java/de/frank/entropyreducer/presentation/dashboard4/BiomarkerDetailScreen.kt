@@ -274,8 +274,8 @@ private fun ValueRow(
     else if (spec.lowerIsBetter) delta < 0
     else delta > 0
     val deltaColor = if (delta == null) cosmos.textSecondary
-    else if (deltaPositive) CosmosColors.Success
-    else CosmosColors.Critical
+    else if (deltaPositive) LocalCosmos.current.ok
+    else LocalCosmos.current.crit
 
     Row(
         modifier = Modifier
@@ -335,14 +335,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.HRV -> MetricSpec(
         title = "HRV",
         unit = "ms",
-        accent = CosmosColors.AccentPrimary,
+        accent = LocalCosmos.current.accent,
         extract = { it.hrvMs },
         format = { "%.1f ms".format(it) },
     )
     MetricKey.RHR -> MetricSpec(
         title = "Ruhepuls",
         unit = "bpm",
-        accent = CosmosColors.Critical,
+        accent = LocalCosmos.current.crit,
         extract = { it.restingHeartRate?.toDouble() },
         format = { "%.0f bpm".format(it) },
         lowerIsBetter = true,
@@ -350,14 +350,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_PERF -> MetricSpec(
         title = "Schlaf-Performance",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { it.sleepPerformance?.toDouble() },
         format = { "%.0f %%".format(it) },
     )
     MetricKey.SLEEP_TOTAL -> MetricSpec(
         title = "Schlafdauer",
         unit = "min",
-        accent = CosmosColors.AccentSecondary,
+        accent = LocalCosmos.current.accentForscher,
         // Frank-Wunsch 2026-05-16: Schlafdauer-Liste ohne Wachzeit anzeigen
         // (Tief + REM + Leicht). Whoop liefert totalInBedMilli — Wachzeit
         // wird hier aktiv subtrahiert damit Wert konsistent mit Hero+Pattern ist.
@@ -375,28 +375,28 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_REM -> MetricSpec(
         title = "REM-Schlaf",
         unit = "min",
-        accent = CosmosColors.AccentSecondary,
+        accent = LocalCosmos.current.accentForscher,
         extract = { it.sleepRemMinutes?.toDouble() },
         format = { "%.0f min".format(it) },
     )
     MetricKey.SLEEP_DEEP -> MetricSpec(
         title = "Tiefschlaf",
         unit = "min",
-        accent = CosmosColors.AccentPrimary,
+        accent = LocalCosmos.current.accent,
         extract = { it.sleepDeepMinutes?.toDouble() },
         format = { "%.0f min".format(it) },
     )
     MetricKey.SLEEP_LIGHT -> MetricSpec(
         title = "Leichtschlaf",
         unit = "min",
-        accent = CosmosColors.Warning,
+        accent = LocalCosmos.current.warn,
         extract = { it.sleepLightMinutes?.toDouble() },
         format = { "%.0f min".format(it) },
     )
     MetricKey.SLEEP_AWAKE -> MetricSpec(
         title = "Wachzeit",
         unit = "min",
-        accent = CosmosColors.Critical,
+        accent = LocalCosmos.current.crit,
         extract = { it.sleepAwakeMinutes?.toDouble() },
         format = { "%.0f min".format(it) },
         lowerIsBetter = true,
@@ -404,7 +404,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_DISTURBANCES -> MetricSpec(
         title = "Störungen",
         unit = "x",
-        accent = CosmosColors.Warning,
+        accent = LocalCosmos.current.warn,
         extract = { it.sleepDisturbances?.toDouble() },
         format = { "%.0f x".format(it) },
         lowerIsBetter = true,
@@ -412,14 +412,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.STRAIN -> MetricSpec(
         title = "Belastung",
         unit = "",
-        accent = CosmosColors.Warning,
+        accent = LocalCosmos.current.warn,
         extract = { it.dayStrain },
         format = { "%.1f".format(it) },
     )
     MetricKey.KILOJOULES -> MetricSpec(
         title = "Tagesumsatz",
         unit = "kcal",
-        accent = CosmosColors.AccentPrimary,
+        accent = LocalCosmos.current.accent,
         // Frank-Wunsch 2026-05-09: Anzeige in Kilokalorien statt Kilojoule
         // (Whoop liefert kJ, Faktor 4.184 fuer kcal). DB bleibt unveraendert in kJ.
         extract = { it.dayKilojoules?.div(4.184) },
@@ -428,7 +428,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.RECOVERY -> MetricSpec(
         title = "Recovery",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { it.recoveryScore?.toDouble() },
         format = { "%.0f %%".format(it) },
         // Frank-Wunsch 2026-06-01: Werte nach offizieller WHOOP-Ampel faerben
@@ -439,7 +439,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.RESPIRATORY -> MetricSpec(
         title = "Atemfrequenz",
         unit = "/min",
-        accent = CosmosColors.AccentPrimary,
+        accent = LocalCosmos.current.accent,
         extract = { it.respiratoryRate },
         format = { "%.1f /min".format(it) },
         // Frank-Wunsch 2026-05-16: steigende Atemfrequenz ist negativ — Trendlinie rot.
@@ -448,21 +448,21 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_CONSISTENCY -> MetricSpec(
         title = "Schlafregelmäßigkeit",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { it.sleepConsistencyPercent?.toDouble() },
         format = { "%.0f %%".format(it) },
     )
     MetricKey.SLEEP_EFFICIENCY -> MetricSpec(
         title = "Schlafeffizienz",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { it.sleepEfficiencyPercent?.toDouble() },
         format = { "%.0f %%".format(it) },
     )
     MetricKey.SLEEP_NEED -> MetricSpec(
         title = "Schlafbedarf",
         unit = "min",
-        accent = CosmosColors.AccentSecondary,
+        accent = LocalCosmos.current.accentForscher,
         extract = { it.sleepNeedMinutes?.toDouble() },
         format = { v ->
             val m = v.toInt()
@@ -472,7 +472,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_DEBT -> MetricSpec(
         title = "Schlafdefizit",
         unit = "min",
-        accent = CosmosColors.Warning,
+        accent = LocalCosmos.current.warn,
         extract = { it.sleepDebtMinutes?.toDouble() },
         format = { v ->
             val m = v.toInt()
@@ -484,14 +484,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SPO2 -> MetricSpec(
         title = "Sauerstoffsättigung",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { it.spo2Percent },
         format = { "%.1f %%".format(it) },
     )
     MetricKey.SKIN_TEMP -> MetricSpec(
         title = "Hauttemperatur",
         unit = "°C",
-        accent = CosmosColors.Warning,
+        accent = LocalCosmos.current.warn,
         extract = { it.skinTempCelsius },
         format = { "%.1f °C".format(it) },
         // Frank-Wunsch 2026-05-16: niedrigere Hauttemperatur ist im Schlafkontext
@@ -501,14 +501,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.MAX_HR -> MetricSpec(
         title = "Max. Herzfrequenz",
         unit = "bpm",
-        accent = CosmosColors.Critical,
+        accent = LocalCosmos.current.crit,
         extract = { it.maxHeartRate?.toDouble() },
         format = { "%.0f bpm".format(it) },
     )
     MetricKey.SLEEP_RESTORATIVE -> MetricSpec(
         title = "Erholsamer Schlaf",
         unit = "%",
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         extract = { snap ->
             val rem = snap.sleepRemMinutes ?: 0
             val deep = snap.sleepDeepMinutes ?: 0
@@ -522,7 +522,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.SLEEP_CYCLES -> MetricSpec(
         title = "Schlafzyklen",
         unit = "x",
-        accent = CosmosColors.AccentSecondary,
+        accent = LocalCosmos.current.accentForscher,
         extract = { it.sleepCycleCount?.toDouble() },
         format = { "%.0f x".format(it) },
     )
@@ -533,14 +533,14 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     MetricKey.VO2MAX -> MetricSpec(
         title = "VO2max",
         unit = "ml/(kg·min)",
-        accent = CosmosColors.AccentSecondary,
+        accent = LocalCosmos.current.accentForscher,
         extract = { null },
         format = { "${"%.1f".format(it).replace('.', ',')} ml/min" },
     )
     else -> MetricSpec(
         title = "Unbekannt",
         unit = "",
-        accent = CosmosColors.AccentPrimary,
+        accent = LocalCosmos.current.accent,
         extract = { null },
         format = { "%.1f".format(it) },
     )

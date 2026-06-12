@@ -100,8 +100,8 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                                     unfocusedContainerColor = Color.Transparent,
                                     focusedTextColor = cosmos.textPrimary,
                                     unfocusedTextColor = cosmos.textPrimary,
-                                    cursorColor = CosmosColors.AccentPrimary,
-                                    focusedIndicatorColor = CosmosColors.AccentPrimary,
+                                    cursorColor = LocalCosmos.current.accent,
+                                    focusedIndicatorColor = LocalCosmos.current.accent,
                                     unfocusedIndicatorColor = cosmos.glassBorder,
                                 ),
                         )
@@ -119,7 +119,7 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                                     androidx.compose.material3.CircularProgressIndicator(
                                         modifier = Modifier.size(14.dp),
                                         strokeWidth = 2.dp,
-                                        color = CosmosColors.AccentPrimary,
+                                        color = LocalCosmos.current.accent,
                                     )
                                     Spacer(Modifier.size(8.dp))
                                     Text("KI analysiert …")
@@ -132,7 +132,7 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                                 modifier = Modifier.weight(0.6f),
                                 colors =
                                     ButtonDefaults.buttonColors(
-                                        containerColor = CosmosColors.AccentPrimary,
+                                        containerColor = LocalCosmos.current.accent,
                                         contentColor = Color.Black,
                                     ),
                             ) {

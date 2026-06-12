@@ -97,7 +97,7 @@ fun RecurringTemplateEditorSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = if (cosmos.isDark) Color(0xFF1B1F2E) else Color.White,
+        containerColor = if (cosmos.isDark) Color(0xFF26211B) else Color.White,
     ) {
         Column(
             modifier =
@@ -288,7 +288,7 @@ private fun CategoryDropdown(selected: EntropyCategory, onSelect: (EntropyCatego
             Box(
                 modifier =
                     Modifier.clip(RoundedCornerShape(20.dp))
-                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .background(if (isSel) LocalCosmos.current.accent else cosmos.glassBg)
                         .clickable { onSelect(cat) }
                         .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
@@ -313,7 +313,7 @@ private fun FreqTabs(selected: String, onSelect: (String) -> Unit) {
                 modifier =
                     Modifier.weight(1f)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .background(if (isSel) LocalCosmos.current.accent else cosmos.glassBg)
                         .clickable { onSelect(key) }
                         .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
@@ -358,11 +358,11 @@ private fun StepperButton(label: String, onClick: () -> Unit) {
         modifier =
             Modifier.size(36.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f))
+                .background(LocalCosmos.current.accent.copy(alpha = 0.18f))
                 .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = CosmosColors.AccentPrimary, fontWeight = FontWeight.Bold)
+        Text(label, color = LocalCosmos.current.accent, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -386,7 +386,7 @@ private fun WeekdayPicker(selected: Set<String>, onChange: (Set<String>) -> Unit
                 modifier =
                     Modifier.weight(1f)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (isSel) CosmosColors.AccentPrimary else cosmos.glassBg)
+                        .background(if (isSel) LocalCosmos.current.accent else cosmos.glassBg)
                         .clickable { onChange(if (isSel) selected - key else selected + key) }
                         .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,

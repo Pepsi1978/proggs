@@ -65,7 +65,7 @@ internal fun RecoveryGraphCard(
     history: List<BiomarkerSnapshotEntity>,
 ) {
     val cosmos = LocalCosmos.current
-    val accent = CosmosColors.Success
+    val accent = LocalCosmos.current.ok
 
     val derived =
         remember(selectedSnapshot, history) {
@@ -251,9 +251,9 @@ private fun recoveryBarColor(pct: Double): Color = whoopRecoveryColor(pct)
 private fun RecoveryTrendBadgePercent(delta: Double) {
     val color =
         when {
-            delta > 0.5 -> CosmosColors.Success
-            delta < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            delta > 0.5 -> LocalCosmos.current.ok
+            delta < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Box(
         modifier =
@@ -312,9 +312,9 @@ private fun RecoveryHistoryRow(row: RecoveryRow) {
     val deltaColor =
         when {
             row.deltaToPrevDay == null -> cosmos.textSecondary
-            row.deltaToPrevDay > 0.5 -> CosmosColors.Success
-            row.deltaToPrevDay < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            row.deltaToPrevDay > 0.5 -> LocalCosmos.current.ok
+            row.deltaToPrevDay < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

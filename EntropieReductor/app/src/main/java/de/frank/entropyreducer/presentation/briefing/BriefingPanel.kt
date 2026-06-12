@@ -56,8 +56,8 @@ import java.util.Date
  * 2026-05-23 (Folge-Iteration): das vorher genutzte 0xFFEA580C wirkt rot — fuer alle Lautsprecher-
  * und Refresh-Tints jetzt 0xFFFF8C00 (Dark Orange CSS).
  */
-private val SpeakerOrange: Color = Color(0xFFFF8C00)
-
+private val SpeakerOrange: Color
+    @Composable get() = LocalCosmos.current.accent
 /**
  * Briefing-Panel (Frank-Wunsch 2026-05-23 + Folge-Iteration).
  *
@@ -100,14 +100,14 @@ fun BriefingPanel(
                 Icon(
                     Icons.Outlined.AutoAwesome,
                     null,
-                    tint = CosmosColors.AccentPrimary,
+                    tint = LocalCosmos.current.accent,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.size(8.dp))
                 Text(
                     "Briefing",
                     style = MaterialTheme.typography.titleMedium,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
@@ -158,7 +158,7 @@ fun BriefingPanel(
                             Text(
                                 text = state.errorMessage.orEmpty(),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CosmosColors.Critical,
+                                color = LocalCosmos.current.crit,
                             )
                         }
                     }
@@ -314,7 +314,7 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
                 OutlinedTextFieldDefaults.colors(
                     focusedTextColor = cosmos.textPrimary,
                     unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentPrimary,
+                    focusedBorderColor = LocalCosmos.current.accent,
                     unfocusedBorderColor = cosmos.glassBorder,
                 ),
             maxLines = 3,
@@ -339,7 +339,7 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
                 imageVector = Icons.AutoMirrored.Outlined.Send,
                 contentDescription = "Antwort senden",
                 tint =
-                    if (draftState.value.isNotBlank()) CosmosColors.AccentPrimary
+                    if (draftState.value.isNotBlank()) LocalCosmos.current.accent
                     else cosmos.textSecondary,
             )
         }
@@ -375,7 +375,7 @@ private fun KiQuestionContent(
                 OutlinedTextFieldDefaults.colors(
                     focusedTextColor = cosmos.textPrimary,
                     unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentSecondary,
+                    focusedBorderColor = LocalCosmos.current.accentForscher,
                     unfocusedBorderColor = cosmos.glassBorder,
                 ),
             maxLines = 3,
@@ -401,8 +401,8 @@ private fun KiQuestionContent(
                     Modifier.size(44.dp)
                         .clip(RoundedCornerShape(50))
                         .background(
-                            if (answer.isNotBlank()) CosmosColors.AccentSecondary
-                            else CosmosColors.AccentSecondary.copy(alpha = 0.3f)
+                            if (answer.isNotBlank()) LocalCosmos.current.accentForscher
+                            else LocalCosmos.current.accentForscher.copy(alpha = 0.3f)
                         ),
             ) {
                 Icon(
@@ -415,7 +415,7 @@ private fun KiQuestionContent(
             Text(
                 text = "Aktualisieren",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CosmosColors.AccentPrimary,
+                color = LocalCosmos.current.accent,
                 fontWeight = FontWeight.Medium,
                 modifier =
                     Modifier.clip(RoundedCornerShape(50))
@@ -425,7 +425,7 @@ private fun KiQuestionContent(
             Text(
                 text = "Später",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CosmosColors.AccentSecondary,
+                color = LocalCosmos.current.accentForscher,
                 fontWeight = FontWeight.Medium,
                 modifier =
                     Modifier.clip(RoundedCornerShape(50))

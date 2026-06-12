@@ -37,13 +37,13 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.components.rememberCardColors
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 
 /**
  * Tiefschlaf-Verlaufs-Pattern (Frank-Wunsch 2026-05-13).
@@ -102,7 +102,9 @@ internal fun DeepSleepGraphCard(
                     )
                 }
                 Text(
-                    text = derived.currentPercent?.let { "%.1f".format(it).replace('.', ',') + " %" } ?: "—",
+                    text =
+                        derived.currentPercent?.let { "%.1f".format(it).replace('.', ',') + " %" }
+                            ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -145,9 +147,7 @@ internal fun DeepSleepGraphCard(
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
                     selectedIndex = cardColors.colors[BiomarkerCardId.SLEEP_DEEP_GRAPH] ?: 0,
-                    onPick = { idx ->
-                        cardColors.setColor(BiomarkerCardId.SLEEP_DEEP_GRAPH, idx)
-                    },
+                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.SLEEP_DEEP_GRAPH, idx) },
                 )
                 Spacer(Modifier.height(12.dp))
                 // Interaktiver Linien-Verlauf wie beim HRV-Verlauf (Frank-Wunsch
@@ -177,16 +177,14 @@ data class DeepSleepDerived(
     val deltaVsAvg: Double?,
     val last30Percent: List<Double>,
     val historyRows: List<DeepSleepRow>,
-    /** Alle Naechte als (epochMs, Prozent) fuer den interaktiven Linien-Chart
-     *  im Detail-Sheet (Frank-Wunsch 2026-05-23, analog zum HRV-Verlauf). */
+    /**
+     * Alle Naechte als (epochMs, Prozent) fuer den interaktiven Linien-Chart im Detail-Sheet
+     * (Frank-Wunsch 2026-05-23, analog zum HRV-Verlauf).
+     */
     val chartPoints: List<Pair<Long, Double>>,
 )
 
-data class DeepSleepRow(
-    val date: LocalDate,
-    val percent: Double,
-    val deltaToPrevDay: Double?,
-)
+data class DeepSleepRow(val date: LocalDate, val percent: Double, val deltaToPrevDay: Double?)
 
 internal fun deepSleepDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
@@ -218,8 +216,9 @@ internal fun deepSleepDerived(
         val deltaPrev = if (prev != null) pct - prev else null
         rows += DeepSleepRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
     }
-    val chartPoints =
-        all.map { (date, pct) -> date.atStartOfDay(zone).toInstant().toEpochMilli() to pct }
+    val chartPoints = all.map { (date, pct) ->
+        date.atStartOfDay(zone).toInstant().toEpochMilli() to pct
+    }
     return DeepSleepDerived(
         currentPercent = current,
         avg30Percent = avg30,
@@ -299,9 +298,9 @@ private fun deepSleepBarColor(pct: Double): Color =
 private fun TrendBadgePercent(delta: Double) {
     val color =
         when {
-            delta > 0.5 -> CosmosColors.Success
-            delta < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            delta > 0.5 -> LocalCosmos.current.ok
+            delta < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Box(
         modifier =
@@ -360,9 +359,9 @@ private fun DeepSleepHistoryRow(row: DeepSleepRow) {
     val deltaColor =
         when {
             row.deltaToPrevDay == null -> cosmos.textSecondary
-            row.deltaToPrevDay > 0.5 -> CosmosColors.Success
-            row.deltaToPrevDay < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            row.deltaToPrevDay > 0.5 -> LocalCosmos.current.ok
+            row.deltaToPrevDay < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

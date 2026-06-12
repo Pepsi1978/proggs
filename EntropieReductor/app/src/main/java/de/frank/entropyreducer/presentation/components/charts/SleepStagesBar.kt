@@ -21,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
@@ -31,9 +30,9 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  */
 object SleepStageColors {
     val Deep: Color = Color(0xFF6366F1)
-    val Rem: Color = CosmosColors.AccentSecondary
-    val Light: Color = CosmosColors.AccentPrimary
-    val Awake: Color = CosmosColors.Warning
+    val Rem: Color = Color(0xFFA78BFA)
+    val Light: Color = Color(0xFF38BDF8)
+    val Awake: Color = Color(0xFFFBBF24)
 }
 
 /** Gestapelter horizontaler Bar für Schlafstadien (REM/Tief/Leicht/Wach). Spec §13.1 Punkt 6. */

@@ -135,7 +135,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
             val entry = state.entry
             if (entry == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CosmosColors.AccentPrimary)
+                    CircularProgressIndicator(color = LocalCosmos.current.accent)
                 }
                 return@Column
             }
@@ -182,9 +182,9 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                                 .colors(
                                                     focusedTextColor = cosmos.textPrimary,
                                                     unfocusedTextColor = cosmos.textPrimary,
-                                                    focusedBorderColor = CosmosColors.AccentPrimary,
+                                                    focusedBorderColor = LocalCosmos.current.accent,
                                                     unfocusedBorderColor = cosmos.glassBorder,
-                                                    cursorColor = CosmosColors.AccentPrimary,
+                                                    cursorColor = LocalCosmos.current.accent,
                                                 ),
                                         trailingIcon = {
                                             IconButton(
@@ -196,7 +196,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                                 Icon(
                                                     imageVector = Icons.Outlined.Check,
                                                     contentDescription = "Titel speichern",
-                                                    tint = CosmosColors.AccentPrimary,
+                                                    tint = LocalCosmos.current.accent,
                                                 )
                                             }
                                         },
@@ -267,7 +267,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                             Text(
                                 "Ausfuehrliche Beschreibung",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = CosmosColors.AccentSecondary,
+                                color = LocalCosmos.current.accentForscher,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Spacer(Modifier.height(6.dp))
@@ -306,7 +306,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                             Text(
                                 "KI-Begründung",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = CosmosColors.AccentSecondary,
+                                color = LocalCosmos.current.accentForscher,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Spacer(Modifier.height(4.dp))
@@ -320,7 +320,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                 Text(
                                     "KI-Notizen",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = CosmosColors.AccentSecondary,
+                                    color = LocalCosmos.current.accentForscher,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -354,7 +354,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                         Icon(
                             imageVector = Icons.Outlined.EditNote,
                             contentDescription = null,
-                            tint = CosmosColors.AccentPrimary,
+                            tint = LocalCosmos.current.accent,
                             modifier = Modifier.size(24.dp),
                         )
                         Spacer(Modifier.width(10.dp))
@@ -387,24 +387,24 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     shape = RoundedCornerShape(14.dp),
                     colors =
                         androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            contentColor = CosmosColors.AccentPrimary
+                            contentColor = LocalCosmos.current.accent
                         ),
                     border =
                         androidx.compose.foundation.BorderStroke(
                             width = 1.5.dp,
-                            color = CosmosColors.AccentPrimary,
+                            color = LocalCosmos.current.accent,
                         ),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Repeat,
                         contentDescription = null,
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "Aufgabe zu wiederkehrenden hinzufügen",
-                        color = CosmosColors.AccentPrimary,
+                        color = LocalCosmos.current.accent,
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium,
                     )
@@ -419,7 +419,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     shape = RoundedCornerShape(14.dp),
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = CosmosColors.Critical,
+                            containerColor = LocalCosmos.current.crit,
                             contentColor = Color.White,
                         ),
                 ) {
@@ -455,7 +455,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                         .clickable(enabled = false, onClick = {}),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = CosmosColors.AccentPrimary)
+                CircularProgressIndicator(color = LocalCosmos.current.accent)
             }
         }
     }
@@ -555,7 +555,7 @@ private fun DurationEstimateCard(
                 Text(
                     "Zeitaufwand",
                     style = MaterialTheme.typography.titleSmall,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
@@ -589,8 +589,8 @@ private fun DurationEstimateCard(
                 steps = DURATION_STOPS.size - 2,
                 colors =
                     androidx.compose.material3.SliderDefaults.colors(
-                        thumbColor = CosmosColors.AccentPrimary,
-                        activeTrackColor = CosmosColors.AccentPrimary,
+                        thumbColor = LocalCosmos.current.accent,
+                        activeTrackColor = LocalCosmos.current.accent,
                         inactiveTrackColor = cosmos.glassBorder,
                     ),
             )
@@ -624,7 +624,7 @@ private fun DurationEstimateCard(
                         androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                             focusedTextColor = cosmos.textPrimary,
                             unfocusedTextColor = cosmos.textPrimary,
-                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            focusedBorderColor = LocalCosmos.current.accent,
                             unfocusedBorderColor = cosmos.glassBorder,
                         ),
                 )
@@ -682,7 +682,7 @@ private fun DueDateCard(dueAtMs: Long?, onChange: (Long?) -> Unit) {
                 Text(
                     "Frist",
                     style = MaterialTheme.typography.titleSmall,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
@@ -690,7 +690,7 @@ private fun DueDateCard(dueAtMs: Long?, onChange: (Long?) -> Unit) {
                     Icon(
                         imageVector = Icons.Outlined.CalendarMonth,
                         contentDescription = "Frist setzen",
-                        tint = CosmosColors.AccentPrimary,
+                        tint = LocalCosmos.current.accent,
                     )
                 }
             }
@@ -706,7 +706,7 @@ private fun DueDateCard(dueAtMs: Long?, onChange: (Long?) -> Unit) {
                     "$labelDate · $labelRelative",
                     style = MaterialTheme.typography.titleMedium,
                     color =
-                        if ((dueAtMs - nowMs) < 24L * 60 * 60 * 1000) CosmosColors.Critical
+                        if ((dueAtMs - nowMs) < 24L * 60 * 60 * 1000) LocalCosmos.current.crit
                         else cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -754,7 +754,7 @@ private fun DueDateCard(dueAtMs: Long?, onChange: (Long?) -> Unit) {
                         showPicker = false
                     }
                 ) {
-                    Text("Setzen", color = CosmosColors.AccentPrimary)
+                    Text("Setzen", color = LocalCosmos.current.accent)
                 }
             },
             dismissButton = {
@@ -811,14 +811,14 @@ private fun FollowupCard(
                     Icon(
                         imageVector = Icons.Outlined.Book,
                         contentDescription = null,
-                        tint = CosmosColors.AccentSecondary,
+                        tint = LocalCosmos.current.accentForscher,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "Nachtrag ${germanNumberWord(index)}",
                         style = MaterialTheme.typography.titleSmall,
-                        color = CosmosColors.AccentSecondary,
+                        color = LocalCosmos.current.accentForscher,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -826,7 +826,7 @@ private fun FollowupCard(
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "Nachtrag löschen",
-                        tint = CosmosColors.Critical,
+                        tint = LocalCosmos.current.crit,
                     )
                 }
             }
@@ -846,7 +846,7 @@ private fun FollowupCard(
                 modifier = Modifier.fillMaxWidth(),
                 textStyle =
                     TextStyle(color = cosmos.textPrimary, fontSize = 15.sp, lineHeight = 22.sp),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(CosmosColors.AccentPrimary),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(LocalCosmos.current.accent),
                 keyboardOptions = KeyboardOptions.Default,
             )
         }

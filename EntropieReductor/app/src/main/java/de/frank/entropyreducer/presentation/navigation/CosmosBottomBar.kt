@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.components.MicButton
 import de.frank.entropyreducer.presentation.components.MicState
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
@@ -110,12 +109,8 @@ fun CosmosBottomBar(
     }
 
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val barBg =
-        if (cosmos.isDark) {
-            CosmosColors.BgDarkAccent.copy(alpha = 0.92f)
-        } else {
-            CosmosColors.BgLightAccent.copy(alpha = 0.92f)
-        }
+    // Glut: warme, solide Bar-Flaeche (Mockup --bg2) statt halbtransparentem Navy.
+    val barBg = cosmos.barBg.copy(alpha = 0.97f)
 
     Box(
         modifier =
@@ -141,7 +136,7 @@ fun CosmosBottomBar(
                     state = micState,
                     onClick = onMicClick,
                     size = 56.dp,
-                    accentColor = OverviewTint,
+                    accentColor = cosmos.accent,
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
@@ -191,11 +186,10 @@ fun CosmosBottomBar(
 
 @Composable
 private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
-    // Frank-Wunsch 2026-05-17 (vierte Praezisierung): In der Uebersicht sind ALLE
-    // vier Tabs in der gleichen hellblauen Akzent-Farbe (passend zum Mic-Button).
-    // Die Tab-spezifischen Farben (Orange/Gruen/Lila/Rosé) erscheinen ERST wenn
-    // ein Tab aktiv ist (Sub-Bar-Modus).
-    val overviewTint = OverviewTint
+    // Glut (2026-06-12): In der Uebersicht sind ALLE vier Tabs in Orange-Glut
+    // (= Primaerakzent, passend zum Mic-Button) — wie im Mockup. Die Tab-Farbklassen
+    // (Orange/Smaragd/Violett/Rosé) erscheinen ERST wenn ein Tab aktiv ist (Sub-Bar-Modus).
+    val overviewTint = LocalCosmos.current.accent
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -402,30 +396,23 @@ private fun parentMetaFor(tab: String): ParentMeta =
     }
 
 /**
- * Tab-Tint fuer Sub-Mode: gilt fuer Icons, Texte, Mic-Button (Frank-Wunsch 2026-05-17). Bewusst
- * kraeftige, dunklere Farben, damit sie auch auf dem hellgrauen Bar- Hintergrund gut lesbar bleiben
- * (Frank-Reklamation 2026-05-17: Mint und Cyan waren zu hell, der Text war kaum zu sehen). Lila und
- * Rosé hat Frank explizit als okay bestaetigt — die bleiben.
+ * Tab-Tint fuer Sub-Mode: gilt fuer Icons, Texte, Mic-Button (Frank-Wunsch 2026-05-17). Glut
+ * (2026-06-12): Theme-abhaengige Tab-Farbklassen aus dem Mockup — Dark nutzt die helleren, Light
+ * die tieferen Varianten (Orange/Smaragd/Violett/Rosé). Quelle: LocalCosmos.
  */
-private fun subModeTint(tab: String): Color =
-    when (tab) {
-        Routes.TASKS -> Color(0xFFEA580C) // Kraeftiges Orange (orange-600)
-        Routes.ANALYSIS -> Color(0xFF16A34A) // Mittleres Gruen (green-600), klar
-        // unterscheidbar vom Aufgaben-Orange
-        Routes.SCIENTIST -> Color(0xFFA78BFA) // Violett — Frank: "Lila ist okay"
-        Routes.BIOMARKER -> Color(0xFFFB7185) // Rosé — Frank: "Rot ist okay"
-        else -> CosmosColors.AccentPrimary
+@Composable
+private fun subModeTint(tab: String): Color {
+    val cosmos = LocalCosmos.current
+    return when (tab) {
+        Routes.TASKS -> cosmos.accentTasks // Orange-Glut
+        Routes.ANALYSIS -> cosmos.accentAnalyse // Smaragd
+        Routes.SCIENTIST -> cosmos.accentForscher // Violett — Frank: "Lila ist okay"
+        Routes.BIOMARKER -> cosmos.accentBio // Rosé — Frank: "Rot ist okay"
+        else -> cosmos.accent
     }
+}
 
 private val MAIN_TABS = setOf(Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER)
-
-/**
- * Akzent-Farbe in der 5-Tab-Uebersicht (Frank-Wunsch 2026-05-17, fuenfte Praezisierung): bewusst
- * dunkler als der Standard-Cyan-Akzent, damit die Beschriftungen unter den Icons auch auf dem
- * hellgrauen Bar-Hintergrund klar lesbar sind. Wird sowohl auf die 4 Tab-Icons/Texte als auch auf
- * den Mic-Button angewandt.
- */
-private val OverviewTint: Color = Color(0xFF0891B2) // cyan-600
 
 /**
  * Geteilter Switcher-State (5-Tab-Uebersicht vs. Sub-Bar). Wird per [CompositionLocalProvider] in

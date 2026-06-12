@@ -66,7 +66,7 @@ fun LoopTemplateDetailScreen(
     viewModel: RecurringTemplatesViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
-    val loopAccent = Color(0xFFEA580C)
+    val loopAccent = LocalCosmos.current.accentTasks
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val template = templates.firstOrNull { it.id == templateId }
 
@@ -243,9 +243,9 @@ fun LoopTemplateDetailScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Outlined.Delete, contentDescription = null, tint = CosmosColors.Critical)
+                Icon(Icons.Outlined.Delete, contentDescription = null, tint = LocalCosmos.current.crit)
                 Spacer(Modifier.height(0.dp))
-                Text("  Loop-Aufgabe löschen", color = CosmosColors.Critical)
+                Text("  Loop-Aufgabe löschen", color = LocalCosmos.current.crit)
             }
         }
     }

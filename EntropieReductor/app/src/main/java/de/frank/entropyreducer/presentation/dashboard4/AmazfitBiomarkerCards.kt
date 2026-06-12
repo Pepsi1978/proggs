@@ -61,13 +61,13 @@ internal fun AmazfitSectionHeader() {
             modifier =
                 Modifier.size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+                    .background(LocalCosmos.current.warn.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.MonitorHeart,
                 contentDescription = null,
-                tint = CosmosColors.Warning,
+                tint = LocalCosmos.current.warn,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -131,13 +131,13 @@ internal fun AmazfitTrainingsCard(
                     modifier =
                         Modifier.size(32.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+                            .background(LocalCosmos.current.warn.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.DirectionsRun,
                         contentDescription = null,
-                        tint = CosmosColors.Warning,
+                        tint = LocalCosmos.current.warn,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -152,7 +152,7 @@ internal fun AmazfitTrainingsCard(
                 if (workouts.isNotEmpty()) {
                     Text(
                         text = "Alle anzeigen ▸",
-                        color = CosmosColors.Warning,
+                        color = LocalCosmos.current.warn,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { onOpenAll() },
@@ -213,7 +213,7 @@ private fun LetzterLaufHero(
     onSaveOverrides: (ManualWorkoutOverrides) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val accent = CosmosColors.Warning
+    val accent = LocalCosmos.current.warn
     val heroShape = RoundedCornerShape(14.dp)
     // Frank-Wunsch 2026-05-17: Edit-Dialog auch in der Hero-Card (oben neben
     // dem Polar-Badge). Damit kann Frank das oberste Training direkt bearbeiten
@@ -473,7 +473,7 @@ internal fun AmazfitWorkoutRow(
             workout.avgHeartRate?.let {
                 Text(
                     text = "Ø $it bpm",
-                    color = CosmosColors.Critical,
+                    color = LocalCosmos.current.crit,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )

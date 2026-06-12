@@ -308,9 +308,9 @@ private fun RemTrendBadgePercent(delta: Double) {
     // weniger ist SCHLECHT (rot).
     val color =
         when {
-            delta > 0.5 -> CosmosColors.Success
-            delta < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            delta > 0.5 -> LocalCosmos.current.ok
+            delta < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Box(
         modifier =
@@ -369,9 +369,9 @@ private fun RemSleepHistoryRow(row: RemSleepRow) {
     val deltaColor =
         when {
             row.deltaToPrevDay == null -> cosmos.textSecondary
-            row.deltaToPrevDay > 0.5 -> CosmosColors.Success
-            row.deltaToPrevDay < -0.5 -> CosmosColors.Critical
-            else -> CosmosColors.AccentPrimary
+            row.deltaToPrevDay > 0.5 -> LocalCosmos.current.ok
+            row.deltaToPrevDay < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
         }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

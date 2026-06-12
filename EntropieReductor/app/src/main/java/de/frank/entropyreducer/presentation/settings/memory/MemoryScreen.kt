@@ -101,7 +101,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                         icon = Icons.Outlined.Add,
                         title = "Hinzufügen",
                         subtitle = "Manuell",
-                        accent = CosmosColors.AccentPrimary,
+                        accent = LocalCosmos.current.accent,
                         onClick = { adding = true },
                         modifier = Modifier.weight(1f),
                     )
@@ -109,7 +109,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                         icon = Icons.Outlined.RateReview,
                         title = "KI-Vorschläge",
                         subtitle = "Prüfen",
-                        accent = CosmosColors.AccentSecondary,
+                        accent = LocalCosmos.current.accentForscher,
                         onClick = { /* Stufe 4 */ },
                         modifier = Modifier.weight(1f),
                     )
@@ -117,7 +117,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                         icon = Icons.Outlined.AutoFixHigh,
                         title = "Aus Profil",
                         subtitle = if (isRegenerating) "Läuft …" else "Neu generieren",
-                        accent = CosmosColors.Success,
+                        accent = LocalCosmos.current.ok,
                         onClick = { if (!isRegenerating) profileVm.regenerateFromProfile() },
                         modifier = Modifier.weight(1f),
                     )
@@ -159,14 +159,14 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                                         onCheckedChange = { vm.toggle(m) },
                                         colors =
                                             SwitchDefaults.colors(
-                                                checkedThumbColor = CosmosColors.AccentPrimary
+                                                checkedThumbColor = LocalCosmos.current.accent
                                             ),
                                     )
                                     IconButton(onClick = { vm.delete(m) }) {
                                         Icon(
                                             Icons.Outlined.DeleteOutline,
                                             "Löschen",
-                                            tint = CosmosColors.Critical,
+                                            tint = LocalCosmos.current.crit,
                                         )
                                     }
                                 }
@@ -199,7 +199,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                     },
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = CosmosColors.AccentPrimary,
+                            containerColor = LocalCosmos.current.accent,
                             contentColor = Color.Black,
                         ),
                 ) {
@@ -278,9 +278,9 @@ private fun MemoryActionButton(
 private fun SourcePill(source: MemorySource) {
     val (label, color) =
         when (source) {
-            MemorySource.MANUELL -> "MANUELL" to CosmosColors.AccentPrimary
-            MemorySource.KI_VORSCHLAG -> "KI-VORSCHLAG" to CosmosColors.AccentSecondary
-            MemorySource.AUS_PROFIL -> "AUS PROFIL" to CosmosColors.Success
+            MemorySource.MANUELL -> "MANUELL" to LocalCosmos.current.accent
+            MemorySource.KI_VORSCHLAG -> "KI-VORSCHLAG" to LocalCosmos.current.accentForscher
+            MemorySource.AUS_PROFIL -> "AUS PROFIL" to LocalCosmos.current.ok
         }
     Text(
         text = label,
@@ -313,7 +313,7 @@ private fun ConfidenceBar(percent: Int) {
                     Modifier.fillMaxWidth(percent / 100f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(CosmosColors.AccentPrimary)
+                        .background(LocalCosmos.current.accent)
             )
         }
         Spacer(Modifier.width(6.dp))

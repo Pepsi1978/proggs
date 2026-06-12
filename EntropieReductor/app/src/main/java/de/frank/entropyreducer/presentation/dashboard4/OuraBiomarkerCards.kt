@@ -29,8 +29,8 @@ import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
 import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.presentation.components.GlassCard
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 
 /**
  * Oura-Ring-Karten fuer den Biomarker-Bildschirm.
@@ -51,7 +51,8 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * Aktivitaet behaelt Schritte und Aktive Kalorien als Chips, weil Frank diese explizit drinhaben
  * wollte.
  */
-private val OuraAccent: Color = CosmosColors.Success
+private val OuraAccent: Color
+    @Composable get() = CosmosColors.Success
 
 @Composable
 private fun OuraSourceLabel(text: String = "Oura Ring") {

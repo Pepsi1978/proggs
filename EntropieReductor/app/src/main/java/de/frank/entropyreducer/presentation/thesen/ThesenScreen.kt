@@ -1109,4 +1109,5 @@ private fun formatTimestamp(ts: Long): String = formatThesenTimestamp(ts)
  * Farbe wie der Forscher-Tab-Sub-Modus in der BottomBar (Violett #A78BFA) — nach dem Umzug von
  * Aufgaben (orange) in den Forscher-Bereich.
  */
-internal val ThesenAccent: Color = Color(0xFFA78BFA)
+internal val ThesenAccent: Color
+    @Composable get() = LocalCosmos.current.accentForscher

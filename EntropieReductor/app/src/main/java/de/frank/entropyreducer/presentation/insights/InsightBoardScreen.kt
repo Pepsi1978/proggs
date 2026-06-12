@@ -322,9 +322,9 @@ internal fun ConfidenceBar(percent: Int) {
     val pct = percent.coerceIn(0, 100) / 100f
     val color =
         when {
-            percent >= 70 -> CosmosColors.Success
-            percent >= 40 -> CosmosColors.Warning
-            else -> CosmosColors.Critical
+            percent >= 70 -> LocalCosmos.current.ok
+            percent >= 40 -> LocalCosmos.current.warn
+            else -> LocalCosmos.current.crit
         }
     Box(
         Modifier.fillMaxWidth()
@@ -377,7 +377,7 @@ private fun InsightDetailContent(
             colors = textFieldColors(cosmos),
         )
         TextButton(onClick = { onSaveText(title, description) }) {
-            Text("Text speichern", color = CosmosColors.AccentPrimary)
+            Text("Text speichern", color = LocalCosmos.current.accent)
         }
 
         Text(
@@ -392,8 +392,8 @@ private fun InsightDetailContent(
             valueRange = 0f..100f,
             colors =
                 SliderDefaults.colors(
-                    thumbColor = CosmosColors.AccentPrimary,
-                    activeTrackColor = CosmosColors.AccentPrimary,
+                    thumbColor = LocalCosmos.current.accent,
+                    activeTrackColor = LocalCosmos.current.accent,
                     inactiveTrackColor = cosmos.glassBorder,
                 ),
         )
@@ -455,8 +455,8 @@ private fun InsightDetailContent(
             modifier = Modifier.fillMaxWidth(),
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = CosmosColors.Critical.copy(alpha = 0.20f),
-                    contentColor = CosmosColors.Critical,
+                    containerColor = LocalCosmos.current.crit.copy(alpha = 0.20f),
+                    contentColor = LocalCosmos.current.crit,
                 ),
         ) {
             Icon(Icons.Outlined.Delete, null)
@@ -500,13 +500,13 @@ private fun AddMethodSheet(
                 modifier =
                     Modifier.size(40.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(CosmosColors.AccentPrimary.copy(alpha = 0.18f)),
+                        .background(LocalCosmos.current.accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Outlined.AutoAwesome,
                     contentDescription = null,
-                    tint = CosmosColors.AccentPrimary,
+                    tint = LocalCosmos.current.accent,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -545,7 +545,7 @@ private fun AddMethodSheet(
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = CosmosColors.AccentPrimary,
+                            color = LocalCosmos.current.accent,
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(
@@ -569,7 +569,7 @@ private fun AddMethodSheet(
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = CosmosColors.Success,
+                            color = LocalCosmos.current.ok,
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(
@@ -686,7 +686,7 @@ private fun AddMethodSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = CosmosColors.AccentPrimary,
+                            containerColor = LocalCosmos.current.accent,
                             contentColor = androidx.compose.ui.graphics.Color.White,
                         ),
                 ) {
@@ -763,6 +763,6 @@ private fun textFieldColors(cosmos: de.frank.entropyreducer.presentation.theme.C
     OutlinedTextFieldDefaults.colors(
         focusedTextColor = cosmos.textPrimary,
         unfocusedTextColor = cosmos.textPrimary,
-        focusedBorderColor = CosmosColors.AccentPrimary,
+        focusedBorderColor = LocalCosmos.current.accent,
         unfocusedBorderColor = cosmos.glassBorder,
     )

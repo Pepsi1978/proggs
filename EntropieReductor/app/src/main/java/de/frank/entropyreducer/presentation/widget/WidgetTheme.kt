@@ -60,13 +60,13 @@ data class WidgetPalette(
  * Dark-Mode (effectiveDark = true im Compose-Theme).
  */
 val WidgetDarkPalette = WidgetPalette(
-    bgRoot = Color(0xFF0E0B24),
-    surfaceCard = Color(0xFF1A1438),
-    surfaceMuted = Color(0xFF2A1F44),
-    textPrimary = Color(0xFFEAE6FF),
-    textSecondary = Color(0xFFA499D9),
-    accent = Color(0xFFB388FF),
-    border = Color(0xFF2A1F44),
+    bgRoot = Color(0xFF12100D),
+    surfaceCard = Color(0xFF1D1A16),
+    surfaceMuted = Color(0xFF26211B),
+    textPrimary = Color(0xFFF5F0E8),
+    textSecondary = Color(0xFFA89F93),
+    accent = Color(0xFFF97316),
+    border = Color(0xFF26211B),
     bucketHeute = Color(0xFFF472B6),
     bucketMorgen = Color(0xFFFBBF24),
     bucketFreiblock = Color(0xFF22C55E),
@@ -84,7 +84,7 @@ val WidgetDarkPalette = WidgetPalette(
     prioGreen = Color(0xFF22C55E),
     prioBlue = Color(0xFF3B82F6),
     severityFull = Color(0xFFFBBF24),
-    severityEmpty = Color(0xFF2A1F44),
+    severityEmpty = Color(0xFF26211B),
     cardTintAlpha = 0.12f,
     isDark = true,
 )
@@ -95,13 +95,13 @@ val WidgetDarkPalette = WidgetPalette(
  * etwas saettiger als im Dark-Mode damit die Bucket-Faerbung sichtbar bleibt.
  */
 val WidgetLightPalette = WidgetPalette(
-    bgRoot = Color(0xFFFAF7FF),
+    bgRoot = Color(0xFFFAF7F3),
     surfaceCard = Color(0xFFFFFFFF),
-    surfaceMuted = Color(0xFFEBE6F8),
-    textPrimary = Color(0xFF1E1A3A),
-    textSecondary = Color(0xFF6B6385),
-    accent = Color(0xFF7C3AED),
-    border = Color(0xFFD9D3EC),
+    surfaceMuted = Color(0xFFF1ECE5),
+    textPrimary = Color(0xFF221C15),
+    textSecondary = Color(0xFF6F665B),
+    accent = Color(0xFFEA580C),
+    border = Color(0xFFE5DED4),
     bucketHeute = Color(0xFFDB2777),
     bucketMorgen = Color(0xFFD97706),
     bucketFreiblock = Color(0xFF16A34A),
@@ -119,7 +119,7 @@ val WidgetLightPalette = WidgetPalette(
     prioGreen = Color(0xFF16A34A),
     prioBlue = Color(0xFF2563EB),
     severityFull = Color(0xFFD97706),
-    severityEmpty = Color(0xFFEBE6F8),
+    severityEmpty = Color(0xFFF1ECE5),
     cardTintAlpha = 0.18f,
     isDark = false,
 )

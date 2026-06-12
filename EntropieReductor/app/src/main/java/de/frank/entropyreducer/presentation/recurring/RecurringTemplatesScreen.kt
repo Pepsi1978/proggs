@@ -127,7 +127,7 @@ fun RecurringTemplatesScreen(
             // Frank-Wunsch 2026-05-22 Phase 2: Mic in Orange (Aufgaben-Sub).
             MicCaptureActions(
                 visible = micActionsOpen,
-                accent = Color(0xFFEA580C),
+                accent = LocalCosmos.current.accentTasks,
                 onTextCommit = { text, source ->
                     viewModel.createFromText(text = text, source = source)
                 },
@@ -148,7 +148,7 @@ private fun EmptyHint(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Outlined.Repeat,
             contentDescription = null,
-            tint = CosmosColors.AccentSecondary,
+            tint = LocalCosmos.current.accentForscher,
             modifier = Modifier.size(48.dp),
         )
         Spacer(Modifier.height(12.dp))
@@ -199,7 +199,7 @@ internal fun TemplateAsTaskCard(
     onBucketMenuConsumed: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
-    val loopAccent = Color(0xFFEA580C)
+    val loopAccent = LocalCosmos.current.accentTasks
 
     var sliderActive by remember(template.id) { mutableStateOf(false) }
     var liveSlider by remember(template.id) { mutableStateOf<Float?>(null) }
@@ -273,7 +273,7 @@ internal fun TemplateAsTaskCard(
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Löschen",
-                        tint = CosmosColors.Critical,
+                        tint = LocalCosmos.current.crit,
                         modifier = Modifier.size(18.dp),
                     )
                 }

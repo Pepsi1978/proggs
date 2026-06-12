@@ -146,9 +146,9 @@ fun CodexScreen(
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.AccentSecondary,
+                        containerColor = LocalCosmos.current.accentForscher,
                         contentColor = CosmosColors.BgDark,
-                        disabledContainerColor = CosmosColors.AccentSecondary.copy(alpha = 0.4f),
+                        disabledContainerColor = LocalCosmos.current.accentForscher.copy(alpha = 0.4f),
                     ),
                 ) {
                     if (state.isRunning) {

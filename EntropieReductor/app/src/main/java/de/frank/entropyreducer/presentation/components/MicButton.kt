@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.theme.CosmosColors
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 enum class MicState {
     IDLE,
@@ -79,17 +80,16 @@ fun MicButton(
     // Mic-Tint pro Tab (Frank-Wunsch 2026-05-17): Bottom-Bar gibt ueber
     // [accentColor] die aktive Tab-Farbe vor. Ohne Override fallen wir auf den
     // Cosmos-Primaer-Akzent zurueck.
-    val baseAccent = accentColor ?: CosmosColors.AccentPrimary
+    val baseAccent = accentColor ?: LocalCosmos.current.accent
     val accentBrush =
         remember(baseAccent) {
             Brush.radialGradient(0f to baseAccent, 1f to baseAccent.copy(alpha = 0.65f))
         }
-    val recordingBrush = remember {
-        Brush.radialGradient(
-            0f to CosmosColors.Critical,
-            1f to CosmosColors.Critical.copy(alpha = 0.7f),
-        )
-    }
+    val critColor = LocalCosmos.current.crit
+    val recordingBrush =
+        remember(critColor) {
+            Brush.radialGradient(0f to critColor, 1f to critColor.copy(alpha = 0.7f))
+        }
 
     Box(modifier = modifier.size(size + 32.dp), contentAlignment = Alignment.Center) {
         // Pulsierende Ringe bei Aufnahme
@@ -105,7 +105,7 @@ fun MicButton(
                             alpha = ringAlpha * 0.5f
                         }
                         .clip(CircleShape)
-                        .background(CosmosColors.Critical.copy(alpha = 0.3f))
+                        .background(LocalCosmos.current.crit.copy(alpha = 0.3f))
             )
         }
 

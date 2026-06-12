@@ -142,7 +142,7 @@ fun TaskCaptureReviewDialog(
                 error?.let {
                     Text(
                         text = it,
-                        color = CosmosColors.Critical,
+                        color = LocalCosmos.current.crit,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }

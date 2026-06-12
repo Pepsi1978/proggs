@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
@@ -38,7 +38,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +55,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
@@ -80,10 +80,10 @@ import org.json.JSONObject
 /**
  * Ideen-Bereich (Frank-Wunsch 2026-06-10) — Sub-Bereich 3 des Aufgaben-Tabs.
  *
- * 1:1-Klon des Entropie-/Tagebuch-Bereichs (Forscher-Slot 1): voller Funktionsumfang —
- * Texteingabe ueber Stift-Button, Whisper-Sprachaufnahme, Gemini-Text-Verbesserung,
- * Auto-Ueberschrift, KI-Zusammenfassung, TTS-Vorlesen, Detail-Screen mit Nachtraegen,
- * Zeit-Timeline. Eigener DataStore "ideen_entries" — voellig getrennt vom Tagebuch.
+ * 1:1-Klon des Entropie-/Tagebuch-Bereichs (Forscher-Slot 1): voller Funktionsumfang — Texteingabe
+ * ueber Stift-Button, Whisper-Sprachaufnahme, Gemini-Text-Verbesserung, Auto-Ueberschrift,
+ * KI-Zusammenfassung, TTS-Vorlesen, Detail-Screen mit Nachtraegen, Zeit-Timeline. Eigener DataStore
+ * "ideen_entries" — voellig getrennt vom Tagebuch.
  *
  * Die App-Farbe folgt der Aufgaben-Akzentfarbe (Orange #EA580C), weil der Reiter dort liegt.
  * CosmosBottomBar laeuft im Sub-Mode mit forcedSubMode=TASKS, selectedSubIndex=3.
@@ -100,7 +100,8 @@ fun IdeenScreen(
     val scope = rememberCoroutineScope()
     // Stabiler Flow (Bug-Almanach jetpack-compose.md Kurzcheck #16 / §2.14): den rohen cold
     // Flow NICHT pro Recomposition neu bauen, sonst verpasst collectAsStateWithLifecycle
-    // Emissionen (gespeicherte Aenderung erscheint erst beim naechsten Tap). remember stabilisiert ihn.
+    // Emissionen (gespeicherte Aenderung erscheint erst beim naechsten Tap). remember stabilisiert
+    // ihn.
     val entriesStream = remember(context) { ideenEntriesFlow(context) }
     val entries by entriesStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -215,7 +216,8 @@ fun IdeenScreen(
                 onMicClick = { actionsExpanded = !actionsExpanded },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
-                // Frank-Wunsch 2026-06-10: Ideen ist Sub-Bereich 3 unter Aufgaben → dauerhaft hervorheben.
+                // Frank-Wunsch 2026-06-10: Ideen ist Sub-Bereich 3 unter Aufgaben → dauerhaft
+                // hervorheben.
                 selectedSubIndex = 3,
             )
         },
@@ -359,8 +361,8 @@ fun IdeenScreen(
 }
 
 /**
- * Section-Header in der Zeit-gruppierten Liste — z.B. "Heute", "Diese Woche",
- * "Vor 2 Wochen", "Mai" oder "2024 — Dezember". Frank-Wunsch 2026-05-23.
+ * Section-Header in der Zeit-gruppierten Liste — z.B. "Heute", "Diese Woche", "Vor 2 Wochen", "Mai"
+ * oder "2024 — Dezember". Frank-Wunsch 2026-05-23.
  */
 @Composable
 private fun SectionHeader(label: String) {
@@ -378,30 +380,20 @@ private fun SectionHeader(label: String) {
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.size(8.dp))
-        Box(
-            modifier =
-                Modifier.weight(1f).height(1.dp).background(IdeenAccent.copy(alpha = 0.25f))
-        )
+        Box(modifier = Modifier.weight(1f).height(1.dp).background(IdeenAccent.copy(alpha = 0.25f)))
     }
 }
 
 /**
- * Eintrag plus Timeline-Rail links — 52dp Spalte mit durchgehender Linie und
- * zentriertem Buch-Badge. Frank-Wunsch 2026-05-23 (Vorbild BestJournalFrank).
+ * Eintrag plus Timeline-Rail links — 52dp Spalte mit durchgehender Linie und zentriertem
+ * Buch-Badge. Frank-Wunsch 2026-05-23 (Vorbild BestJournalFrank).
  */
 @Composable
-private fun TimelineEntryRow(
-    entry: IdeenEntry,
-    position: TimelinePosition,
-    onClick: () -> Unit,
-) {
+private fun TimelineEntryRow(entry: IdeenEntry, position: TimelinePosition, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     val lineColor = IdeenAccent.copy(alpha = 0.35f)
     Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 4.dp)) {
-        Box(
-            modifier = Modifier.width(52.dp).fillMaxHeight(),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(modifier = Modifier.width(52.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 if (position == TimelinePosition.ONLY) return@Canvas
                 val cx = size.width / 2f
@@ -482,10 +474,10 @@ private enum class TimelinePosition {
 private data class IdeenSection(val label: String, val entries: List<IdeenEntry>)
 
 /**
- * Gruppiert Eintraege nach Zeit-Sektionen (Frank-Wunsch 2026-05-23). Reihenfolge:
- * Heute, Gestern, Diese Woche, Letzte Woche, Vor 2/3/4 Wochen, Monatsname, Jahr — Monat.
- * Innerhalb der Sektion bleiben die Eintraege nach Timestamp absteigend sortiert.
- * Erwartet eine bereits nach Timestamp absteigend sortierte Eingabe.
+ * Gruppiert Eintraege nach Zeit-Sektionen (Frank-Wunsch 2026-05-23). Reihenfolge: Heute, Gestern,
+ * Diese Woche, Letzte Woche, Vor 2/3/4 Wochen, Monatsname, Jahr — Monat. Innerhalb der Sektion
+ * bleiben die Eintraege nach Timestamp absteigend sortiert. Erwartet eine bereits nach Timestamp
+ * absteigend sortierte Eingabe.
  */
 private fun groupEntriesBySection(entries: List<IdeenEntry>): List<IdeenSection> {
     if (entries.isEmpty()) return emptyList()
@@ -500,8 +492,8 @@ private fun groupEntriesBySection(entries: List<IdeenEntry>): List<IdeenSection>
 
 /**
  * Berechnet das Section-Label fuer einen Timestamp. Adaptiert aus
- * BestJournalFrank/DateTimeFormatter.getSectionLabel — erweitert um "Heute" und
- * "Gestern" am Anfang (Frank-Wunsch 2026-05-23, exakter Wortlaut "heute und gestern").
+ * BestJournalFrank/DateTimeFormatter.getSectionLabel — erweitert um "Heute" und "Gestern" am Anfang
+ * (Frank-Wunsch 2026-05-23, exakter Wortlaut "heute und gestern").
  */
 private fun sectionLabelFor(timestamp: Long): String {
     val now = java.util.Calendar.getInstance()
@@ -514,9 +506,7 @@ private fun sectionLabelFor(timestamp: Long): String {
             set(java.util.Calendar.MILLISECOND, 0)
         }
     val yesterdayStart =
-        (todayStart.clone() as java.util.Calendar).apply {
-            add(java.util.Calendar.DAY_OF_YEAR, -1)
-        }
+        (todayStart.clone() as java.util.Calendar).apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
     val dow = todayStart.get(java.util.Calendar.DAY_OF_WEEK)
     val daysSinceMonday =
         if (dow == java.util.Calendar.SUNDAY) 6 else dow - java.util.Calendar.MONDAY
@@ -607,9 +597,7 @@ private fun TextInputDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth().height(180.dp),
-                placeholder = {
-                    Text("Schreibe deine Idee, deinen Einfall oder Gedanken auf ...")
-                },
+                placeholder = { Text("Schreibe deine Idee, deinen Einfall oder Gedanken auf ...") },
             )
         },
         confirmButton = {
@@ -714,8 +702,10 @@ private fun TranscriptDialog(
             TextButton(
                 onClick = {
                     if (activeText.isNotBlank()) {
-                        // Original = editierter Roh-Text, Verbessert = Gemini-Resultat (falls vorhanden).
-                        // useImproved = welche Variante Frank gerade ansieht → wird als primaer uebernommen.
+                        // Original = editierter Roh-Text, Verbessert = Gemini-Resultat (falls
+                        // vorhanden).
+                        // useImproved = welche Variante Frank gerade ansieht → wird als primaer
+                        // uebernommen.
                         val original = editableText.trim().ifBlank { activeText.trim() }
                         onSave(original, improvedText?.trim(), useImproved && improvedText != null)
                     }
@@ -829,15 +819,15 @@ data class IdeenEntry(
      */
     val followups: List<IdeenFollowup> = emptyList(),
     /**
-     * KI-generierte Zusammenfassung (Frank-Wunsch 2026-05-20, 2026-05-23 auf Fliesstext).
-     * `null` = noch keine Zusammenfassung erstellt — der Detail-Screen zeigt dann einen
-     * Knopf "Mit KI zusammenfassen".
+     * KI-generierte Zusammenfassung (Frank-Wunsch 2026-05-20, 2026-05-23 auf Fliesstext). `null` =
+     * noch keine Zusammenfassung erstellt — der Detail-Screen zeigt dann einen Knopf "Mit KI
+     * zusammenfassen".
      */
     val summary: String? = null,
     /**
-     * Nachträgliche KI-Verbesserung des Eintrags-Texts (Frank-Wunsch 2026-05-23).
-     * `null` = noch nicht via KI verbessert; in der UI gibt es dann den Knopf
-     * "Mit KI nachträglich verbessern". Original-Text bleibt in [text].
+     * Nachträgliche KI-Verbesserung des Eintrags-Texts (Frank-Wunsch 2026-05-23). `null` = noch
+     * nicht via KI verbessert; in der UI gibt es dann den Knopf "Mit KI nachträglich verbessern".
+     * Original-Text bleibt in [text].
      */
     val improvedText: String? = null,
     val isImproved: Boolean = false,
@@ -860,8 +850,8 @@ data class IdeenEntry(
 }
 
 /**
- * Einzelner Nachtrag zu einem [IdeenEntry]. Hat ebenfalls einen eigenen KI-verbesserten
- * Text (Frank-Wunsch 2026-05-23) damit jeder Nachtrag separat nachgeschliffen werden kann.
+ * Einzelner Nachtrag zu einem [IdeenEntry]. Hat ebenfalls einen eigenen KI-verbesserten Text
+ * (Frank-Wunsch 2026-05-23) damit jeder Nachtrag separat nachgeschliffen werden kann.
  */
 data class IdeenFollowup(
     val id: String,
@@ -914,8 +904,8 @@ internal suspend fun deleteIdeenEntry(context: Context, id: String) {
  * werden, bleiben unveraendert. Wird sowohl vom Edit-Dialog (Text-Aenderung) als auch vom
  * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
  *
- * Frank-Wunsch 2026-05-23: Auch improvedText + isImproved werden hier durchgereicht damit
- * die KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat.
+ * Frank-Wunsch 2026-05-23: Auch improvedText + isImproved werden hier durchgereicht damit die
+ * KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat.
  */
 internal suspend fun updateIdeenEntry(
     context: Context,
@@ -926,7 +916,14 @@ internal suspend fun updateIdeenEntry(
     improvedText: String? = null,
     isImproved: Boolean? = null,
 ) {
-    if (text == null && title == null && summary == null && improvedText == null && isImproved == null) return
+    if (
+        text == null &&
+            title == null &&
+            summary == null &&
+            improvedText == null &&
+            isImproved == null
+    )
+        return
     context.ideenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
@@ -948,8 +945,8 @@ internal suspend fun updateIdeenEntry(
 }
 
 /**
- * Speichert die KI-Verbesserung eines Followups (Frank-Wunsch 2026-05-23).
- * Setzt improvedText + isImproved=true; rawText bleibt unveraendert.
+ * Speichert die KI-Verbesserung eines Followups (Frank-Wunsch 2026-05-23). Setzt improvedText +
+ * isImproved=true; rawText bleibt unveraendert.
  */
 internal suspend fun setIdeenFollowupImproved(
     context: Context,
@@ -979,11 +976,7 @@ internal suspend fun setIdeenFollowupImproved(
  * Hängt einen Nachtrag an einen Ideeneintrag an (Frank-Wunsch 2026-05-20). Der Nachtrag wird im
  * Detail-Screen als eigene Karte angezeigt.
  */
-internal suspend fun addIdeenFollowup(
-    context: Context,
-    entryId: String,
-    followup: IdeenFollowup,
-) {
+internal suspend fun addIdeenFollowup(context: Context, entryId: String, followup: IdeenFollowup) {
     context.ideenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
@@ -1109,7 +1102,10 @@ internal fun formatIdeenTimestamp(ts: Long): String {
 
 private fun formatTimestamp(ts: Long): String = formatIdeenTimestamp(ts)
 
-/** Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche
- * Frank-Wunsch 2026-06-09: Farbe wie der Forscher-Tab-Sub-Modus in der BottomBar
- * (Violett #A78BFA) — nach dem Umzug von Aufgaben (orange) in den Forscher-Bereich. */
-internal val IdeenAccent: Color = Color(0xFFEA580C)
+/**
+ * Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche Frank-Wunsch 2026-06-09:
+ * Farbe wie der Forscher-Tab-Sub-Modus in der BottomBar (Violett #A78BFA) — nach dem Umzug von
+ * Aufgaben (orange) in den Forscher-Bereich.
+ */
+internal val IdeenAccent: Color
+    @Composable get() = LocalCosmos.current.accentTasks

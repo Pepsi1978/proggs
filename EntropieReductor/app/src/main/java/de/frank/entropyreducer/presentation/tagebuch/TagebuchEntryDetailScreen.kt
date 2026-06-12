@@ -117,7 +117,7 @@ fun TagebuchEntryDetailScreen(
             val entry = state.entry
             if (entry == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CosmosColors.AccentPrimary)
+                    CircularProgressIndicator(color = LocalCosmos.current.accent)
                 }
                 return@Column
             }
@@ -296,7 +296,7 @@ fun TagebuchEntryDetailScreen(
                     shape = RoundedCornerShape(14.dp),
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = CosmosColors.Critical,
+                            containerColor = LocalCosmos.current.crit,
                             contentColor = Color.White,
                         ),
                 ) {
@@ -641,7 +641,7 @@ private fun FollowupCard(
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "Nachtrag löschen",
-                        tint = CosmosColors.Critical,
+                        tint = LocalCosmos.current.crit,
                     )
                 }
             }

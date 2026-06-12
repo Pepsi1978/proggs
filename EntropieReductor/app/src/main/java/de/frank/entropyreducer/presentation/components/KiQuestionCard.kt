@@ -56,14 +56,14 @@ fun KiQuestionCard(
                 Icon(
                     imageVector = Icons.Outlined.AutoAwesome,
                     contentDescription = null,
-                    tint = CosmosColors.AccentSecondary,
+                    tint = LocalCosmos.current.accentForscher,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = "KI-Frage des Moments",
                     style = MaterialTheme.typography.labelMedium,
-                    color = CosmosColors.AccentSecondary,
+                    color = LocalCosmos.current.accentForscher,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -87,7 +87,7 @@ fun KiQuestionCard(
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = cosmos.textPrimary,
                         unfocusedTextColor = cosmos.textPrimary,
-                        focusedBorderColor = CosmosColors.AccentSecondary,
+                        focusedBorderColor = LocalCosmos.current.accentForscher,
                         unfocusedBorderColor = cosmos.glassBorder,
                     ),
                 maxLines = 3,
@@ -116,8 +116,8 @@ fun KiQuestionCard(
                         Modifier.size(44.dp)
                             .clip(RoundedCornerShape(50))
                             .background(
-                                if (answer.isNotBlank()) CosmosColors.AccentSecondary
-                                else CosmosColors.AccentSecondary.copy(alpha = 0.3f)
+                                if (answer.isNotBlank()) LocalCosmos.current.accentForscher
+                                else LocalCosmos.current.accentForscher.copy(alpha = 0.3f)
                             ),
                 ) {
                     Icon(
@@ -131,7 +131,7 @@ fun KiQuestionCard(
                 Text(
                     text = "Aktualisieren",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.Medium,
                     modifier =
                         Modifier.clip(RoundedCornerShape(50))
@@ -141,7 +141,7 @@ fun KiQuestionCard(
                 Text(
                     text = "Später",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CosmosColors.AccentSecondary,
+                    color = LocalCosmos.current.accentForscher,
                     fontWeight = FontWeight.Medium,
                     modifier =
                         Modifier.clip(RoundedCornerShape(50))

@@ -128,7 +128,7 @@ private fun ModelGroup(
                     androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
                     Text(
                         text = opt,
-                        color = if (active) CosmosColors.AccentPrimary else cosmos.textPrimary,
+                        color = if (active) LocalCosmos.current.accent else cosmos.textPrimary,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

@@ -382,7 +382,7 @@ fun TasksScreen(
                                 .padding(top = 8.dp, end = 8.dp)
                                 .size(8.dp)
                                 .clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(Color(0xFFFF8C00).copy(alpha = badgeAlpha))
+                                .background(LocalCosmos.current.accent.copy(alpha = badgeAlpha))
                     )
                 }
             }
@@ -654,7 +654,7 @@ fun TasksScreen(
                         // (Verknuepfung lebt im RecurringTemplatesViewModel, unveraendert).
                         run {
                             val loopExpanded = expandedSection == SECTION_LOOP
-                            val loopAccent = Color(0xFFEA580C)
+                            val loopAccent = cosmos.accentTasks
                             item(key = "header-loop", contentType = "loop-header") {
                                 AccordionHeaderRow(
                                     label = "Loop",
@@ -762,7 +762,9 @@ fun TasksScreen(
             // Switcher offen → Cyan (Uebersichts-Mic-Farbe), sonst Orange (Aufgaben-Sub).
             val switcher =
                 de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFEA580C)
+            val micAccent =
+                if (switcher.showSwitcher) LocalCosmos.current.accent
+                else LocalCosmos.current.accentTasks
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = micAccent,
@@ -853,10 +855,10 @@ private fun MethodPromptDialog(
                     modifier =
                         Modifier.size(40.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(CosmosColors.AccentSecondary.copy(alpha = 0.2f)),
+                            .background(LocalCosmos.current.accentForscher.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("⚛", color = CosmosColors.AccentSecondary, fontSize = 22.sp)
+                    Text("⚛", color = LocalCosmos.current.accentForscher, fontSize = 22.sp)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -900,7 +902,7 @@ private fun MethodPromptDialog(
                             androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = cosmos.textPrimary,
                                 unfocusedTextColor = cosmos.textPrimary,
-                                focusedBorderColor = CosmosColors.AccentPrimary,
+                                focusedBorderColor = LocalCosmos.current.accent,
                                 unfocusedBorderColor = cosmos.glassBorder,
                             ),
                     )
@@ -927,7 +929,7 @@ private fun MethodPromptDialog(
             ) {
                 Text(
                     "Speichern",
-                    color = CosmosColors.AccentPrimary,
+                    color = LocalCosmos.current.accent,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -1113,7 +1115,7 @@ private fun EntryDetailSheet(
                         Text(
                             "KI-Begruendung",
                             style = MaterialTheme.typography.titleSmall,
-                            color = CosmosColors.AccentSecondary,
+                            color = LocalCosmos.current.accentForscher,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(4.dp))
@@ -1127,7 +1129,7 @@ private fun EntryDetailSheet(
                             Text(
                                 "KI-Notizen",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = CosmosColors.AccentSecondary,
+                                color = LocalCosmos.current.accentForscher,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Spacer(Modifier.height(4.dp))
@@ -1149,7 +1151,7 @@ private fun EntryDetailSheet(
                 shape = RoundedCornerShape(14.dp),
                 colors =
                     androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CosmosColors.Critical,
+                        containerColor = LocalCosmos.current.crit,
                         contentColor = androidx.compose.ui.graphics.Color.White,
                     ),
                 contentPadding =
@@ -1184,7 +1186,7 @@ private fun FollowupMicButton(onTranscript: (String) -> Unit) {
         modifier =
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
+                .background(LocalCosmos.current.accentForscher.copy(alpha = 0.18f))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1220,13 +1222,13 @@ private fun StatusButton(
 ) {
     val cosmos = LocalCosmos.current
     val selected = status == current
-    val accent = if (selected) CosmosColors.AccentPrimary else cosmos.textSecondary
+    val accent = if (selected) LocalCosmos.current.accent else cosmos.textSecondary
     Box(
         modifier =
             modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(
-                    if (selected) CosmosColors.AccentPrimary.copy(alpha = 0.18f) else cosmos.glassBg
+                    if (selected) LocalCosmos.current.accent.copy(alpha = 0.18f) else cosmos.glassBg
                 )
                 .clickable { onClick(status) }
                 .padding(vertical = 10.dp),
@@ -1281,7 +1283,7 @@ private fun CategoryFilterRow(
             CategoryFilterChip(
                 label = "Alle",
                 icon = Icons.Outlined.GridView,
-                tint = CosmosColors.AccentPrimary,
+                tint = LocalCosmos.current.accent,
                 selected = isAll,
                 onClick = onClearAll,
             )
@@ -1404,7 +1406,7 @@ private fun ResolvedHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) 
     AccordionHeaderRow(
         label = "ERLEDIGT",
         icon = Icons.Outlined.CheckCircle,
-        accent = CosmosColors.Success,
+        accent = LocalCosmos.current.ok,
         count = count,
         expanded = expanded,
         onToggle = onToggle,
@@ -1511,8 +1513,8 @@ private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.
 @Composable
 private fun bucketAccent(bucket: TimeBucket): Color =
     when (bucket) {
-        TimeBucket.HEUTE -> CosmosColors.AccentPrimary
-        TimeBucket.MORGEN -> CosmosColors.AccentSecondary
+        TimeBucket.HEUTE -> LocalCosmos.current.accent
+        TimeBucket.MORGEN -> LocalCosmos.current.accentForscher
         TimeBucket.FREIBLOCK -> CosmosColors.CatHealth
         TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
     }
@@ -1637,8 +1639,8 @@ private fun EntropyEntryCard(
                 // (gleiche Farbe wie die KI-/Prio-Perlen = cosmos.glassBg) und eine graue
                 // Umrandung — damit klar als antippbares Feld erkennbar.
                 val checkBg =
-                    if (isResolved) CosmosColors.Success.copy(alpha = 0.85f) else cosmos.glassBg
-                val checkBorder = if (isResolved) CosmosColors.Success else cosmos.textSecondary
+                    if (isResolved) LocalCosmos.current.ok.copy(alpha = 0.85f) else cosmos.glassBg
+                val checkBorder = if (isResolved) LocalCosmos.current.ok else cosmos.textSecondary
                 Box(
                     modifier =
                         Modifier.size(28.dp)
@@ -1874,13 +1876,13 @@ private fun BucketPickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Psychology,
                         contentDescription = null,
-                        tint = CosmosColors.AccentSecondary,
+                        tint = LocalCosmos.current.accentForscher,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "KI entscheiden lassen",
-                        color = CosmosColors.AccentSecondary,
+                        color = LocalCosmos.current.accentForscher,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -2090,10 +2092,10 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
             val pillShape = remember { RoundedCornerShape(50) }
             Text(
                 text = "Empfohlen",
-                color = CosmosColors.Success,
+                color = LocalCosmos.current.ok,
                 style = MaterialTheme.typography.labelSmall,
                 modifier =
-                    Modifier.background(CosmosColors.Success.copy(alpha = 0.15f), pillShape)
+                    Modifier.background(LocalCosmos.current.ok.copy(alpha = 0.15f), pillShape)
                         .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
@@ -2103,13 +2105,13 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
                 Icon(
                     imageVector = Icons.Outlined.MonitorHeart,
                     contentDescription = "Wearable-Bezug",
-                    tint = CosmosColors.AccentSecondary,
+                    tint = LocalCosmos.current.accentForscher,
                     modifier = Modifier.size(13.dp),
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
                     text = "Wearable",
-                    color = CosmosColors.AccentSecondary,
+                    color = LocalCosmos.current.accentForscher,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -2127,7 +2129,7 @@ private fun EmptyState() {
         Icon(
             imageVector = Icons.Outlined.Mic,
             contentDescription = null,
-            tint = CosmosColors.AccentPrimary,
+            tint = LocalCosmos.current.accent,
             modifier = Modifier.size(72.dp),
         )
         Spacer(Modifier.height(16.dp))
@@ -2161,26 +2163,26 @@ private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
             SyncStatus.Idle ->
                 Triple(
                     Icons.Outlined.CloudDone,
-                    CosmosColors.Success,
+                    LocalCosmos.current.ok,
                     if (lastBackupAtMs > 0L) "Backup: ${formatBackupTime(lastBackupAtMs)}"
                     else "Backup eingerichtet",
                 )
             SyncStatus.Pending ->
                 Triple(
                     Icons.Outlined.CloudSync,
-                    CosmosColors.AccentSecondary,
+                    LocalCosmos.current.accentForscher,
                     "Aenderung erfasst — Backup startet gleich",
                 )
             SyncStatus.Running ->
-                Triple(Icons.Outlined.CloudSync, CosmosColors.AccentPrimary, "Backup laeuft …")
+                Triple(Icons.Outlined.CloudSync, LocalCosmos.current.accent, "Backup laeuft …")
             is SyncStatus.Synced ->
                 Triple(
                     Icons.Outlined.CloudDone,
-                    CosmosColors.Success,
+                    LocalCosmos.current.ok,
                     "Im Backup gesichert: ${formatBackupTime(syncStatus.atEpochMs)}",
                 )
             is SyncStatus.Failed ->
-                Triple(Icons.Outlined.CloudOff, CosmosColors.Critical, "Backup fehlgeschlagen")
+                Triple(Icons.Outlined.CloudOff, LocalCosmos.current.crit, "Backup fehlgeschlagen")
         }
     Row(
         modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
@@ -2207,7 +2209,7 @@ private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
 private fun RescoreBanner(progress: RescoreProgress) {
     val cosmos = LocalCosmos.current
     val isFinished = progress.done + progress.failed >= progress.total
-    val accent = if (isFinished) CosmosColors.Success else CosmosColors.AccentPrimary
+    val accent = if (isFinished) LocalCosmos.current.ok else LocalCosmos.current.accent
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
