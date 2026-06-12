@@ -32,6 +32,7 @@
 | 11 | Fremde ChatGPT-Voice-Session BEENDEN | Kugel hat KEINEN Beenden-Knopf, In-App-„Beenden" stoppt Aufnahme nicht zuverlaessig; `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session beendet sie | §11 |
 | 12 | „Laeuft ChatGPT-Voice noch?" zuverlaessig erkennen | `AudioManager.mode == MODE_IN_COMMUNICATION` (echtes Telefonat = `MODE_IN_CALL`); `isClientSilenced`/`micSilenced` ist FLAKY, nicht als Gate nutzen | §12 |
 | 13 | Dauer-Lauschen frisst Akku / Handy wird warm | ASR (Vosk) nie 24/7 nackt laufen lassen — WebRTC-VAD-Gate davor, Mode `VERY_AGGRESSIVE` (NORMAL laesst Raum-Rauschen durch = Gate dauernd offen) | §13 |
+| 13b | VAD-Gate da, aber "Wake + beenden" geht waehrend Session nicht mehr | Gate WAEHREND fremder Session aussetzen (`micSilenced`/`MODE_IN_COMMUNICATION`) — gedaempftes Session-Audio wertet das Gate sonst als Stille | §13b |
 | 14 | Wake-Word-Engine auswaehlen (2026) | Porcupine-Free-Tier ENDET 30.06.2026; sherpa-KWS hat kein DE-Modell; openWakeWord braucht Training pro Wort; fuer frei waehlbare Woerter: Vosk-Grammatik + VAD-Gate | §14 |
 
 ---
@@ -193,6 +194,26 @@ Endpoint-Stille der ASR (Vosk ~500 ms → 800 ms), sonst wird die Aeusserung nie
 (c) Pre-Roll-Puffer (~300 ms), weil der VAD ~50 ms zum Anschlagen braucht (Wortanfang).
 **Versionen:** com.github.gkonovalov.android-vad:webrtc 2.0.10. **Quelle:** github.com/gkonovalov/android-vad
 (README: empfohlene Parameter); eigener Vorfall VoiceKey 0.6.0.
+
+## §13b — VAD-Gate VERSCHLUCKT „Wake-Wort + beenden" WAEHREND der fremden Session ⭐ SELBST ERLEBT (Regression)
+**Symptom:** „Wake-Wort + beenden" beendet die laufende ChatGPT-Voice-Session NICHT mehr — obwohl
+es vor Einbau des VAD-Gates (§13) zuverlaessig ging (am Geraet bestaetigt: alte Logs hatten
+„Wake-Wort ignoriert — Session laeuft bereits" + „Beenden-Wort erkannt" WAEHREND der Session).
+Nach dem Gate: im Session-Zeitraum (`micSilenced:true`) NULL Wort-Erkennungen im Log.
+**Root Cause:** Waehrend ChatGPT-Voice laeuft, haelt ChatGPT das Mic — Androids Concurrent-Capture
+daempft/stummschaltet unsere parallele Aufnahme (`isClientSilenced`). Dieses gedaempfte Audio stuft
+das `VERY_AGGRESSIVE`-VAD als Stille ein → Gate bleibt ZU → die Vosk-Recognizer werden NICHT mehr
+gefuettert → weder Wake- noch Stopp-Wort werden gehoert. Das Gate (gut fuer Akku) hat damit die
+Beenden-per-Sprache-Funktion als **Fix-Induced-Failure** gebrochen. WICHTIG: `micSilenced` heisst
+NICHT „nur Nullen" — die App bekommt weiterhin (gedaempftes) echtes Audio, die ASR kann es erkennen,
+nur das aggressive VAD filtert es weg.
+**Fix (funktionserhaltend):** Das VAD-Gate AUSSETZEN, solange eine fremde Session laeuft —
+Bypass-Bedingung `micSilenced || mode == MODE_IN_COMMUNICATION`. Dann laufen die Recognizer pro
+Chunk durch wie vor dem Gate; im Normalbetrieb (keine Session) bleibt das Gate aktiv und spart Akku.
+Beide Features (Akku-Sparen + Beenden-per-Sprache) bleiben erhalten.
+**Lehre:** Ein VAD-Gate vor einer ASR, die AUCH waehrend fremder Mic-Sessions hoeren soll, muss
+fuer diese Sessions deaktivierbar sein — sonst frisst es genau die Worte, die man dann braucht.
+**Versionen:** VoiceKey 0.6.0 (gebrochen) → 0.7.1 (gefixt). **Quelle:** eigener Vorfall + Geraete-Log Fold 6.
 
 ## §14 — Wake-Word-Engine-Auswahl 2026: Porcupine-Free-Tier endet, DE-Luecken bei Alternativen
 **Symptom:** Suche nach einer energiesparenden Wake-Word-Engine fuer eine private App mit FREI
