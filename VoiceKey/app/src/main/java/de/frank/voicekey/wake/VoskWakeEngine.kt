@@ -124,9 +124,11 @@ class VoskWakeEngine(
             VadWebRTC(
                 sampleRate = SampleRate.SAMPLE_RATE_16K,
                 frameSize = FrameSize.FRAME_SIZE_320, // 20 ms pro VAD-Frame
-                // NORMAL (durchlaessig): lieber Vosk einmal umsonst rechnen lassen als ein
-                // leise gesprochenes Wake-Wort am Gate zu verlieren.
-                mode = Mode.NORMAL,
+                // VERY_AGGRESSIVE ist Pflicht: NORMAL klassifizierte schon Raum-Rauschen als
+                // Sprache — das Gate war dauernd offen, Vosk lief wie ohne Gate (70 % CPU bei
+                // Stille, live gemessen 2026-06-12). Normal gesprochene Wake-Woerter erkennt
+                // auch der strengste Modus zuverlaessig.
+                mode = Mode.VERY_AGGRESSIVE,
                 speechDurationMs = VAD_SPEECH_MIN_MS,
                 silenceDurationMs = VAD_SILENCE_HANGOVER_MS,
             )
@@ -214,6 +216,10 @@ class VoskWakeEngine(
             val vadFrame = ShortArray(VAD_FRAME_SIZE) // wiederverwendet, keine Allokation im Loop
             val preRoll = ArrayDeque<ShortArray>() // letzte Stille-Chunks (Wortanfang-Vorlauf)
             var gateOpen = false
+            // Gate-Statistik-Sonde: belegt im Log, wie viel CPU das Sprach-Gate wirklich spart.
+            var statChunksTotal = 0
+            var statChunksOpen = 0
+            var statLastReportMs = SystemClock.uptimeMillis()
             var lastWakeAtMs = 0L // koppelt "Wake + beenden" auch ueber getrennte Erkenner/Chunks
             while (gen.active.get()) {
                 val read = audio.read(buffer, 0, buffer.size)
@@ -238,6 +244,23 @@ class VoskWakeEngine(
                         if (v.isSpeech(vadFrame)) speech = true
                         off += VAD_FRAME_SIZE
                     }
+                }
+                statChunksTotal++
+                if (speech) statChunksOpen++
+                val statNowMs = SystemClock.uptimeMillis()
+                if (statNowMs - statLastReportMs >= GATE_STAT_INTERVAL_MS) {
+                    Obs.d(
+                        "VoskWakeEngine",
+                        "audioLoop",
+                        "Sprach-Gate-Statistik",
+                        mapOf(
+                            "offenProzent" to (100 * statChunksOpen / maxOf(statChunksTotal, 1)),
+                            "chunks" to statChunksTotal,
+                        ),
+                    )
+                    statChunksTotal = 0
+                    statChunksOpen = 0
+                    statLastReportMs = statNowMs
                 }
                 if (!speech) {
                     if (gateOpen) {
@@ -382,5 +405,8 @@ class VoskWakeEngine(
 
         /** Vorlauf-Chunks (je 100 ms) fuer den Wortanfang vor dem VAD-Anschlag. */
         private const val PRE_ROLL_CHUNKS = 3
+
+        /** Abstand der Gate-Statistik-Logs (Beleg im Log, wie viel das Gate spart). */
+        private const val GATE_STAT_INTERVAL_MS = 30_000L
     }
 }
