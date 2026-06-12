@@ -4,9 +4,26 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Geteilter Debug-Keystore (EINE Signatur auf allen Maschinen): verhindert
+// INSTALL_FAILED_UPDATE_INCOMPATIBLE beim Mac<->Windows-Wechsel (bugs/android-build/gradle.md §13).
+// Fehlt die SK-Datei, faellt der Build auf den Maschinen-Default zurueck (laeuft, aber
+// maschinengebunden) — dann ~/SK/VoiceKey/debug-shared.keystore von der anderen Maschine kopieren.
+val sharedDebugKeystore = File(System.getProperty("user.home"), "SK/VoiceKey/debug-shared.keystore")
+
 android {
     namespace = "de.frank.voicekey"
     compileSdk = 36
+
+    signingConfigs {
+        getByName("debug") {
+            if (sharedDebugKeystore.exists()) {
+                storeFile = sharedDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "de.frank.voicekey"

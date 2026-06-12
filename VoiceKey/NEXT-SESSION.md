@@ -160,3 +160,17 @@ bauen, dass später weitere Ziele hinzukommen können. Start: nur ein fester Ein
 „ChatGPT Voice". Hinzufügen weiterer Apps später (Frank: lieber zentral verwaltet als per +-Button).
 ```
 ```
+
+---
+
+## Windows-Followup (2026-06-12): Geteilter Debug-Keystore
+
+Auf dem Mac eingerichtet: `~/SK/VoiceKey/debug-shared.keystore` (Fingerprint SHA-256
+`BC:5F:72:42:…:23:05`, identisch mit dem Mac-Default und dem EntropieReductor-SK-Keystore).
+`app/build.gradle.kts` signiert Debug-Builds jetzt damit, WENN die Datei existiert
+(sonst Maschinen-Default-Fallback).
+
+**Auf der Windows-Maschine einmalig:** Die Datei `debug-shared.keystore` vom Mac nach
+`C:\Users\barwa\SK\VoiceKey\debug-shared.keystore` kopieren. Danach signieren beide
+Maschinen identisch — kein `INSTALL_FAILED_UPDATE_INCOMPATIBLE` mehr beim Geraete-Wechsel
+(Almanach `bugs/android-build/gradle.md` §13; gleicher Vorfall wie EntropieReductor 0.13.0).
