@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entropie Reduktor — Neues Design „Glut"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0" rel="stylesheet">
+<style>
+/* ============ GLUT DESIGN SYSTEM ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+[data-theme="dark"]{
+  --page:#0B0A08;
+  --page-glow:radial-gradient(1200px 500px at 50% -10%, rgba(249,115,22,.07), transparent 70%);
+  --bg:#12100D;            /* Screen-Hintergrund */
+  --bg2:#191613;           /* erhöhte Fläche / BottomBar */
+  --card:#1D1A16;          /* Karten */
+  --card2:#26211B;         /* Dialoge / Sheets */
+  --line:rgba(255,240,224,.085);
+  --tx:#F5F0E8;  --tx2:#A89F93;  --tx3:#6E665B;
+  --primary:#F97316; --primary2:#FB923C; --onprimary:#1C0E03;
+  --acc-tasks:#F97316; --acc-analyse:#34C77B; --acc-forscher:#A78BFA; --acc-bio:#FB7185;
+  --ok:#34C77B; --warn:#FBBF24; --crit:#F87171;
+  --shadow:0 18px 50px rgba(0,0,0,.55);
+  --cardshadow:none;
+  --scrim:rgba(6,4,2,.62);
+}
+[data-theme="light"]{
+  --page:#F3EFE9;
+  --page-glow:radial-gradient(1200px 500px at 50% -10%, rgba(234,88,12,.06), transparent 70%);
+  --bg:#FAF7F3;
+  --bg2:#F1ECE5;
+  --card:#FFFFFF;
+  --card2:#FFFFFF;
+  --line:rgba(30,24,18,.09);
+  --tx:#221C15;  --tx2:#6F665B;  --tx3:#A39A8E;
+  --primary:#EA580C; --primary2:#F97316; --onprimary:#FFF7F0;
+  --acc-tasks:#EA580C; --acc-analyse:#0F9D58; --acc-forscher:#7C3AED; --acc-bio:#E11D48;
+  --ok:#0F9D58; --warn:#D97706; --crit:#DC2626;
+  --shadow:0 18px 50px rgba(60,40,20,.16);
+  --cardshadow:0 2px 10px rgba(60,40,20,.05);
+  --scrim:rgba(40,28,16,.45);
+}
+
+body{
+  font-family:'Manrope',sans-serif;
+  background:var(--page);
+  background-image:var(--page-glow);
+  background-repeat:no-repeat;
+  color:var(--tx);
+  transition:background .35s,color .35s;
+  padding-bottom:120px;
+}
+.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;
+  display:inline-block;vertical-align:middle;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;user-select:none}
+.ms.fill{font-variation-settings:'FILL' 1,'wght' 400}
+
+/* ---------- Seiten-Chrome (außerhalb der Phones) ---------- */
+.hero{max-width:1500px;margin:0 auto;padding:64px 32px 24px;text-align:center}
+.hero .overline{font-size:13px;letter-spacing:.35em;font-weight:800;color:var(--primary);text-transform:uppercase}
+.hero h1{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(44px,6vw,84px);font-weight:800;line-height:1.02;margin:14px 0 10px}
+.hero h1 em{font-style:normal;background:linear-gradient(110deg,var(--primary) 20%,var(--primary2) 60%,var(--warn));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--tx2);font-size:16.5px;max-width:680px;margin:0 auto 26px;line-height:1.6}
+.themewrap{display:flex;justify-content:center;gap:12px;margin-bottom:28px}
+.tbtn{display:flex;align-items:center;gap:9px;padding:13px 26px;border-radius:999px;font-family:'Manrope';font-size:14.5px;font-weight:800;cursor:pointer;border:1.5px solid var(--line);background:var(--card);color:var(--tx2);transition:.2s}
+.tbtn.on{background:linear-gradient(135deg,var(--primary),var(--primary2));color:var(--onprimary);border-color:transparent;box-shadow:0 8px 26px color-mix(in srgb,var(--primary) 40%,transparent)}
+.palette{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--tx2)}
+.sw i{width:52px;height:52px;border-radius:16px;border:1px solid var(--line);display:block}
+.toc{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;max-width:1100px;margin:18px auto 0}
+.toc a{font-size:12.5px;font-weight:700;color:var(--tx2);text-decoration:none;border:1px solid var(--line);background:var(--card);padding:7px 14px;border-radius:999px;transition:.2s}
+.toc a:hover{color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+
+.sec{max-width:1500px;margin:0 auto;padding:54px 32px 10px}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;flex-wrap:wrap}
+.sec-head .dot{width:14px;height:14px;border-radius:5px;background:var(--secacc,var(--primary));box-shadow:0 0 18px color-mix(in srgb,var(--secacc,var(--primary)) 60%,transparent)}
+.sec-head h2{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(28px,3.4vw,44px);font-weight:800}
+.sec-head .sub{color:var(--tx2);font-size:14px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:34px 28px;align-items:start;margin-top:26px}
+
+/* ---------- Phone-Frame ---------- */
+.frame{display:flex;flex-direction:column;gap:12px;min-width:0}
+.frame>figcaption{text-align:center;font-size:13px;font-weight:700;color:var(--tx2)}
+.frame>figcaption b{color:var(--tx);font-weight:800}
+.frame>figcaption span{display:block;font-size:11px;font-weight:600;color:var(--tx3);margin-top:2px}
+.screen{
+  --acc:var(--primary);
+  position:relative;display:flex;flex-direction:column;
+  border-radius:42px;border:9px solid #18140F;outline:1px solid var(--line);
+  background:var(--bg);overflow:hidden;box-shadow:var(--shadow);
+  min-height:740px;
+}
+[data-acc="tasks"] .screen,.screen[data-acc="tasks"]{--acc:var(--acc-tasks)}
+[data-acc="analyse"] .screen,.screen[data-acc="analyse"]{--acc:var(--acc-analyse)}
+[data-acc="forscher"] .screen,.screen[data-acc="forscher"]{--acc:var(--acc-forscher)}
+[data-acc="bio"] .screen,.screen[data-acc="bio"]{--acc:var(--acc-bio)}
+
+.sb{display:flex;justify-content:space-between;align-items:center;padding:12px 24px 2px;font-size:11.5px;font-weight:800;color:var(--tx2)}
+.sb .ms{font-size:14px}
+.appbar{display:flex;align-items:center;gap:10px;padding:12px 18px 8px}
+.appbar h3{font-size:19px;font-weight:800;letter-spacing:-.01em;flex:1;display:flex;align-items:center;gap:9px;min-width:0}
+.appbar h3 .ms{font-size:20px;color:var(--acc)}
+.appbar .ms.act{font-size:21px;color:var(--tx2)}
+.appbar .ms.back{font-size:22px;color:var(--tx2)}
+.content{flex:1;display:flex;flex-direction:column;gap:10px;padding:4px 14px 16px}
+
+/* ---------- Bausteine ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px 14px;box-shadow:var(--cardshadow)}
+.card .h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--acc);margin-bottom:8px}
+.card .h .ms{font-size:17px}
+.muted{color:var(--tx2)}.tiny{font-size:11px}.small{font-size:12px}.med{font-size:13px}
+.row{display:flex;align-items:center;gap:10px}.grow{flex:1;min-width:0}
+.col{display:flex;flex-direction:column;gap:4px}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.pill.tint{background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc)}
+.pill.line{border:1px solid var(--line);color:var(--tx2);background:var(--card)}
+.chiprow{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:6px 13px;border-radius:999px;font-size:11.5px;font-weight:700;border:1.2px solid var(--line);color:var(--tx2)}
+.chip.sel{background:color-mix(in srgb,var(--acc) 20%,transparent);border-color:color-mix(in srgb,var(--acc) 45%,transparent);color:var(--acc)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:12px 14px;font-size:13px;font-weight:800;letter-spacing:.01em}
+.btn .ms{font-size:18px}
+.btn.pri{background:linear-gradient(135deg,var(--primary) 10%,var(--primary2));color:var(--onprimary);box-shadow:0 7px 20px color-mix(in srgb,var(--primary) 32%,transparent)}
+.btn.acc{background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 70%,#fff));color:#14100A;box-shadow:0 7px 20px color-mix(in srgb,var(--acc) 30%,transparent)}
+[data-theme="light"] .btn.acc{color:#fff}
+.btn.ghost{border:1.5px solid color-mix(in srgb,var(--acc) 55%,transparent);color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.btn.danger{border:1.5px solid color-mix(in srgb,var(--crit) 45%,transparent);color:var(--crit);background:color-mix(in srgb,var(--crit) 8%,transparent)}
+.btn.sm{padding:8px 12px;font-size:12px;border-radius:11px}
+
+.input{border:1.5px solid var(--line);border-radius:13px;padding:11px 13px;font-size:12.5px;color:var(--tx3);background:color-mix(in srgb,var(--bg2) 50%,transparent)}
+.input.focus{border-color:var(--acc);color:var(--tx)}
+.input.area{min-height:74px}
+.input b{color:var(--tx);font-weight:700}
+
+.switch{width:42px;height:24px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);position:relative;flex-shrink:0}
+.switch::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--tx3);top:2px;left:3px;transition:.2s}
+.switch.on{background:color-mix(in srgb,var(--acc) 30%,transparent);border-color:transparent}
+.switch.on::after{left:20px;background:var(--acc)}
+
+.sliderbar{height:5px;border-radius:99px;background:color-mix(in srgb,var(--acc) 18%,var(--bg2));position:relative;margin:12px 2px 6px}
+.sliderbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--acc)}
+.sliderbar b{position:absolute;width:17px;height:17px;border-radius:50%;background:var(--acc);top:50%;transform:translate(-50%,-50%);box-shadow:0 2px 8px color-mix(in srgb,var(--acc) 60%,transparent)}
+
+.radio{width:19px;height:19px;border-radius:50%;border:2px solid var(--tx3);flex-shrink:0;display:grid;place-items:center}
+.radio.on{border-color:var(--acc)}
+.radio.on::after{content:'';width:9px;height:9px;border-radius:50%;background:var(--acc)}
+.checkbox{width:21px;height:21px;border-radius:7px;border:2px solid var(--tx3);flex-shrink:0;display:grid;place-items:center;color:transparent}
+.checkbox.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.checkbox .ms{font-size:15px;font-variation-settings:'wght' 700}
+
+/* Akkordeon-Header (Aufgaben-Buckets) */
+.acch{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:14px;background:color-mix(in srgb,var(--c,var(--tx3)) 11%,transparent);font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--c,var(--tx2))}
+.acch .ms{font-size:17px}
+.acch .cnt{margin-left:auto;background:color-mix(in srgb,var(--c) 20%,transparent);border-radius:99px;padding:2px 9px;font-size:11px}
+.acch .chev{font-size:19px;margin-left:2px}
+
+/* Aufgaben-Karte mit Prioritäts-Verlauf */
+.task{border-radius:16px;padding:11px 13px;border:1px solid var(--line);
+  background:linear-gradient(90deg, color-mix(in srgb,var(--ramp) 13%,var(--card)) 0%, color-mix(in srgb,var(--ramp) 42%,var(--card)) 100%)}
+.task .t{font-size:13px;font-weight:700;line-height:1.3}
+.pearl{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--bg) 55%,transparent);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:800;color:var(--tx2)}
+.pearl .ms{font-size:13px}
+
+/* Bottom-Bar */
+.bb{margin-top:auto;display:flex;align-items:center;justify-content:space-around;gap:2px;padding:9px 10px 20px;background:var(--bg2);border-radius:26px 26px 0 0;border-top:1px solid var(--line);position:relative}
+.tabi{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:800;color:var(--tabc,var(--tx3));width:60px;padding:7px 0;border-radius:12px}
+.tabi .ms{font-size:21px}
+.tabi.on{background:color-mix(in srgb,var(--tx) 8%,transparent)}
+.mic{width:56px;height:56px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;margin-top:-30px;
+  background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--micc,var(--primary)) 75%,#fff),var(--micc,var(--primary)) 65%);
+  color:#fff;box-shadow:0 8px 22px color-mix(in srgb,var(--micc,var(--primary)) 45%,transparent),0 0 0 6px color-mix(in srgb,var(--micc,var(--primary)) 10%,transparent)}
+.mic .ms{font-size:26px}
+[data-theme="light"] .mic{color:#fff}
+
+/* Dialog / Sheet Overlays im Frame */
+.scrim{position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(2.5px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:5}
+.scrim.bottom{align-items:flex-end;padding:0}
+.dlg{background:var(--card2);border:1px solid var(--line);border-radius:24px;padding:17px;width:100%;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow)}
+.dlg h4{font-size:15.5px;font-weight:800}
+.sheet{background:var(--card2);border:1px solid var(--line);border-bottom:none;border-radius:28px 28px 0 0;padding:10px 16px 26px;width:100%;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow)}
+.grab{width:42px;height:5px;border-radius:99px;background:var(--tx3);opacity:.5;margin:2px auto 6px}
+
+/* Charts */
+.gbar{display:flex;align-items:flex-end;gap:3px;height:54px}
+.gbar i{flex:1;border-radius:3px 3px 0 0;background:var(--acc);opacity:.9}
+.lchart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;font-weight:700;color:var(--tx2)}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+/* Statuszeile (Analyse) */
+.statusline{display:flex;align-items:center;gap:10px;padding:2px 4px}
+.statusline .bar{flex:1;height:8px;border-radius:99px;overflow:hidden;background:var(--bg2)}
+.statusline .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#F87171,#FBBF24 40%,#86EFAC 75%,#22C55E)}
+
+/* Timeline (Tagebuch/Ideen/Journal) */
+.tl{display:flex;gap:12px}
+.tl .rail{width:34px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.tl .rail i{flex:1;width:2px;background:color-mix(in srgb,var(--acc) 30%,transparent)}
+.tl .rail .badge{width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);display:grid;place-items:center;flex-shrink:0}
+.tl .rail .badge .ms{font-size:16px}
+.datesep{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:800;color:var(--acc);letter-spacing:.05em;margin:4px 2px 0}
+.datesep::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--acc) 25%,transparent)}
+
+/* Settings-Zeile */
+.setrow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:17px;padding:12px 13px;box-shadow:var(--cardshadow)}
+.setrow .ic{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:color-mix(in srgb,var(--c,var(--primary)) 15%,transparent);color:var(--c,var(--primary))}
+.setrow .ic .ms{font-size:21px}
+.setrow .t{font-size:13.5px;font-weight:800}
+.setrow .s{font-size:10.8px;color:var(--tx2);line-height:1.35;margin-top:1px}
+.setrow .chev{color:var(--tx3);font-size:20px;flex-shrink:0}
+
+/* Chat (Forscher) */
+.bub{max-width:86%;border-radius:18px;padding:11px 13px;font-size:12.5px;line-height:1.45}
+.bub.ki{align-self:flex-start;background:var(--card);border:1px solid color-mix(in srgb,var(--acc) 30%,var(--line));border-bottom-left-radius:6px}
+.bub.me{align-self:flex-end;background:color-mix(in srgb,var(--acc) 18%,var(--card));border:1px solid color-mix(in srgb,var(--acc) 25%,transparent);border-bottom-right-radius:6px}
+.bub .who{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;color:var(--acc);margin-bottom:5px}
+
+/* Ring (Recovery) */
+.ringwrap{position:relative;width:108px;height:108px;flex-shrink:0}
+.ringwrap svg{transform:rotate(-90deg)}
+.ringwrap .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.ringwrap .v b{font-size:26px;font-weight:800}
+.ringwrap .v span{font-size:9.5px;font-weight:700;color:var(--tx2);letter-spacing:.08em}
+
+/* Kalender */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px;font-weight:700;text-align:center}
+.cal .wd{color:var(--tx3);padding:3px 0;font-size:9.5px}
+.cal .d{aspect-ratio:1;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--bg2);color:var(--tx2);position:relative}
+.cal .d .dots{display:flex;gap:2px}
+.cal .d .dots i{width:4px;height:4px;border-radius:50%}
+.cal .d.today{outline:1.6px solid var(--acc);color:var(--acc)}
+
+/* Design-System Showcase-Karten */
+.ds{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:var(--cardshadow)}
+.ds h4{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800;margin-bottom:16px}
+.dsrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* Floating Toggle */
+.float-toggle{position:fixed;right:26px;bottom:26px;z-index:50;width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--primary),var(--primary2));color:var(--onprimary);
+  box-shadow:0 10px 30px color-mix(in srgb,var(--primary) 45%,transparent);display:grid;place-items:center;transition:transform .2s}
+.float-toggle:hover{transform:scale(1.08)}
+.float-toggle .ms{font-size:27px}
+
+footer{max-width:1500px;margin:60px auto 0;padding:0 32px;text-align:center;color:var(--tx3);font-size:12.5px;font-weight:600}
+</style>
+</head>
+<body>
+
+<button class="float-toggle" onclick="toggleTheme()" title="Hell/Dunkel umschalten"><span class="ms" id="ticon">light_mode</span></button>
+
+<header class="hero">
+  <div class="overline">Entropie Reduktor · Design-Vorschlag</div>
+  <h1>Das neue Design: <em>„Glut"</em></h1>
+  <p>Warmes, tiefes Anthrazit mit Orange-Glut für den Dunkelmodus — warmes Papier-Weiß für den Hellmodus.
+     Vier harmonisierte Tab-Farbklassen, ein durchgängiges Kartensystem, alle Ebenen der App.</p>
+  <div class="themewrap">
+    <button class="tbtn" id="btn-light" onclick="setTheme('light')"><span class="ms">light_mode</span> Hellmodus</button>
+    <button class="tbtn on" id="btn-dark" onclick="setTheme('dark')"><span class="ms">dark_mode</span> Dunkelmodus</button>
+  </div>
+  <div class="palette">
+    <div class="sw"><i style="background:linear-gradient(135deg,var(--primary),var(--primary2))"></i>Primär Orange</div>
+    <div class="sw"><i style="background:var(--acc-tasks)"></i>Aufgaben</div>
+    <div class="sw"><i style="background:var(--acc-analyse)"></i>Analyse</div>
+    <div class="sw"><i style="background:var(--acc-forscher)"></i>Forscher</div>
+    <div class="sw"><i style="background:var(--acc-bio)"></i>Biomarker</div>
+    <div class="sw"><i style="background:var(--bg)"></i>Hintergrund</div>
+    <div class="sw"><i style="background:var(--card)"></i>Karte</div>
+  </div>
+  <nav class="toc">
+    <a href="#design">Design-System</a><a href="#nav">Start &amp; Navigation</a><a href="#aufgaben">Aufgaben</a>
+    <a href="#analyse">Analyse</a><a href="#forscher">Forscher</a><a href="#bio">Biomarker</a>
+    <a href="#spezial">Spezialansichten</a><a href="#agentic">Prompts &amp; Verlauf</a><a href="#settings">Einstellungen</a>
+  </nav>
+</header>
+
+<!-- ============================================================ -->
+<section class="sec" id="design">
+  <div class="sec-head"><span class="dot"></span><h2>Design-System</h2><span class="sub">Die Bausteine, aus denen jeder Screen besteht</span></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(420px,1fr))">
+    <div class="ds">
+      <h4>Buttons &amp; Chips</h4>
+      <div class="col" style="gap:12px">
+        <div class="btn pri"><span class="ms">auto_awesome</span> Jetzt analysieren</div>
+        <div class="dsrow">
+          <div class="btn ghost sm" style="--acc:var(--acc-forscher)"><span class="ms">refresh</span> Neu erstellen</div>
+          <div class="btn danger sm"><span class="ms">delete</span> Eintrag löschen</div>
+        </div>
+        <div class="chiprow">
+          <span class="chip sel" style="--acc:var(--primary)">30 Tage</span><span class="chip">90 Tage</span><span class="chip">365 Tage</span>
+          <span class="chip sel" style="--acc:var(--acc-analyse)">Woche</span><span class="chip">Monat</span>
+        </div>
+        <div class="dsrow">
+          <span class="pill tint" style="--acc:var(--acc-bio)">Körperlich</span>
+          <span class="pill tint" style="--acc:var(--acc-forscher)">Mental</span>
+          <span class="pill tint" style="--acc:var(--warn)">Zeitlich</span>
+          <span class="pill tint" style="--acc:#F472B6">Emotional</span>
+          <span class="pill tint" style="--acc:var(--ok)">Gesundheitlich</span>
+        </div>
+      </div>
+    </div>
+    <div class="ds">
+      <h4>Eingaben &amp; Regler</h4>
+      <div class="col" style="gap:13px">
+        <div class="input focus" style="--acc:var(--primary)"><b>Morgens 20 Minuten lesen statt Handy</b></div>
+        <div class="input">Leer lassen → KI erstellt den Titel</div>
+        <div class="row"><span class="small" style="font-weight:800">Priorität: 75</span></div>
+        <div class="sliderbar" style="--acc:var(--primary)"><i style="width:75%"></i><b style="left:75%"></b></div>
+        <div class="row" style="justify-content:space-between"><span class="med" style="font-weight:700">Auto-Backup bei jeder Änderung</span><span class="switch on" style="--acc:var(--primary)"></span></div>
+        <div class="row" style="gap:14px"><span class="radio on" style="--acc:var(--primary)"></span><span class="med" style="font-weight:700">System</span><span class="radio"></span><span class="med muted">Hell</span><span class="radio"></span><span class="med muted">Dunkel</span></div>
+      </div>
+    </div>
+    <div class="ds">
+      <h4>Prioritäts-Verlauf auf Karten</h4>
+      <div class="col" style="gap:9px">
+        <div class="task" style="--ramp:#B91C1C"><div class="row"><span class="checkbox"></span><span class="t grow">Steuererklärung endlich abgeben</span></div><div class="row" style="margin-top:8px;justify-content:flex-end;gap:6px"><span class="pearl"><span class="ms">bolt</span>Priorität 92</span><span class="pearl"><span class="ms">auto_awesome</span>KI</span></div></div>
+        <div class="task" style="--ramp:#EA580C"><div class="row"><span class="checkbox"></span><span class="t grow">Werkstatt-Termin fürs Auto machen</span></div><div class="row" style="margin-top:8px;justify-content:flex-end;gap:6px"><span class="pearl"><span class="ms">bolt</span>Priorität 58</span><span class="pearl"><span class="ms">today</span>Heute</span></div></div>
+        <div class="task" style="--ramp:#16A34A"><div class="row"><span class="checkbox"></span><span class="t grow">Neue Laufschuhe aussuchen</span></div><div class="row" style="margin-top:8px;justify-content:flex-end;gap:6px"><span class="pearl"><span class="ms">bolt</span>Priorität 22</span><span class="pearl"><span class="ms">event</span>Später</span></div></div>
+        <div class="tiny muted" style="margin-top:4px">Der horizontale Farbverlauf bleibt erhalten: Dunkelrot = sehr wichtig, Grün = entspannt. Wirkt im neuen warmen Kartenton ruhiger.</div>
+      </div>
+    </div>
+    <div class="ds">
+      <h4>Typografie &amp; Karte</h4>
+      <div class="col" style="gap:10px">
+        <div style="font-size:24px;font-weight:800;letter-spacing:-.01em">Screen-Titel — Manrope 800</div>
+        <div style="font-size:14px;font-weight:700">Karten-Titel — Manrope 700</div>
+        <div class="small muted" style="line-height:1.5">Fließtext — Manrope 500. Ruhig, modern, sehr gut lesbar auf beiden Hintergründen. Sekundärtext bekommt einen warmen Graustich statt kaltem Blaugrau.</div>
+        <div class="card" style="margin-top:6px">
+          <div class="h" style="--acc:var(--primary)"><span class="ms">auto_awesome</span> KARTEN-LABEL IN AKZENTFARBE</div>
+          <div class="med" style="line-height:1.5">Karten sind matt und warm statt „Glas": klarer Rand, sanfter Schatten im Hellmodus, ruhige Tiefe im Dunkelmodus.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="nav">
+  <div class="sec-head"><span class="dot"></span><h2>Start &amp; Navigation</h2><span class="sub">Launch-Screen und die zweistufige Bottom-Bar</span></div>
+  <div class="grid">
+
+    <!-- LAUNCH -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <div class="content" style="align-items:center;justify-content:center;gap:18px;text-align:center">
+          <div style="width:116px;height:116px;border-radius:36px;display:grid;place-items:center;background:radial-gradient(circle at 32% 28%,var(--primary2),var(--primary) 70%);box-shadow:0 16px 44px color-mix(in srgb,var(--primary) 45%,transparent)">
+            <span class="ms" style="font-size:54px;color:#fff">auto_awesome</span>
+          </div>
+          <div>
+            <div style="font-size:29px;font-weight:800;letter-spacing:-.02em">Entropie Reduktor</div>
+            <div class="pill tint" style="--acc:var(--primary);margin-top:10px">Debugversion</div>
+            <div class="tiny muted" style="margin-top:8px">v0.12.0</div>
+          </div>
+          <div class="btn pri" style="width:86%;padding:16px;border-radius:18px;font-size:15px;margin-top:14px"><span class="ms">play_arrow</span> Start</div>
+        </div>
+      </div>
+      <figcaption><b>Launch-Screen</b><span>Logo-Glut, Varianten-Pille, Start-Button in Orange</span></figcaption>
+    </figure>
+
+    <!-- BOTTOM BAR ZUSTÄNDE -->
+    <figure class="frame" style="grid-column:span 1">
+      <div class="screen" style="min-height:740px;justify-content:flex-end;gap:14px;padding:16px 0 0;background:var(--bg)">
+        <div class="tiny muted" style="text-align:center;font-weight:800;letter-spacing:.1em">DIE 5 ZUSTÄNDE DER BOTTOM-BAR</div>
+        <div style="display:flex;flex-direction:column;gap:14px;padding:0 0 0">
+          <div>
+            <div class="tiny" style="padding:0 18px 5px;font-weight:800;color:var(--primary)">Übersicht — alle Tabs in Orange-Glut</div>
+            <nav class="bb" style="border-radius:22px;margin:0 10px">
+              <span class="tabi" style="--tabc:var(--primary)"><span class="ms">checklist</span>Aufgaben</span>
+              <span class="tabi" style="--tabc:var(--primary)"><span class="ms">analytics</span>Analyse</span>
+              <span class="mic"><span class="ms">mic</span></span>
+              <span class="tabi" style="--tabc:var(--primary)"><span class="ms">science</span>Forscher</span>
+              <span class="tabi" style="--tabc:var(--primary)"><span class="ms">monitor_heart</span>Biomarker</span>
+            </nav>
+          </div>
+          <div>
+            <div class="tiny" style="padding:0 18px 5px;font-weight:800;color:var(--acc-tasks)">Aufgaben aktiv — Priorität · Mental · Ideen</div>
+            <nav class="bb" style="border-radius:22px;margin:0 10px;--micc:var(--acc-tasks)">
+              <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+              <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+              <span class="mic"><span class="ms">mic</span></span>
+              <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+              <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+            </nav>
+          </div>
+          <div>
+            <div class="tiny" style="padding:0 18px 5px;font-weight:800;color:var(--acc-analyse)">Analyse aktiv — Smaragd</div>
+            <nav class="bb" style="border-radius:22px;margin:0 10px;--micc:var(--acc-analyse)">
+              <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">inbox</span>1</span>
+              <span class="tabi on" style="--tabc:var(--acc-analyse)"><span class="ms">analytics</span>Analyse</span>
+              <span class="mic"><span class="ms">mic</span></span>
+              <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">tune</span>2</span>
+              <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">insights</span>3</span>
+            </nav>
+          </div>
+          <div>
+            <div class="tiny" style="padding:0 18px 5px;font-weight:800;color:var(--acc-forscher)">Forscher aktiv — Entropie · Thesen · Journal</div>
+            <nav class="bb" style="border-radius:22px;margin:0 10px;--micc:var(--acc-forscher)">
+              <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">warning</span>Entropie</span>
+              <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">lightbulb</span>Thesen</span>
+              <span class="mic"><span class="ms">mic</span></span>
+              <span class="tabi on" style="--tabc:var(--acc-forscher)"><span class="ms">science</span>Forscher</span>
+              <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">book</span>Journal</span>
+            </nav>
+          </div>
+          <div>
+            <div class="tiny" style="padding:0 18px 5px;font-weight:800;color:var(--acc-bio)">Biomarker aktiv — Rosé</div>
+            <nav class="bb" style="border-radius:22px;margin:0 10px;--micc:var(--acc-bio)">
+              <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">inbox</span>1</span>
+              <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">tune</span>2</span>
+              <span class="mic"><span class="ms">mic</span></span>
+              <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">insights</span>3</span>
+              <span class="tabi on" style="--tabc:var(--acc-bio)"><span class="ms">monitor_heart</span>Biomarker</span>
+            </nav>
+          </div>
+        </div>
+        <div style="height:18px"></div>
+      </div>
+      <figcaption><b>Bottom-Bar — beide Modi</b><span>Übersicht in Orange, Sub-Bars in der jeweiligen Tab-Farbklasse, Mic färbt mit</span></figcaption>
+    </figure>
+
+    <!-- SUB-PLATZHALTER -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Aufgaben · Priorität</h3></header>
+        <div class="content" style="align-items:center;justify-content:center;gap:16px;text-align:center">
+          <div style="width:112px;height:112px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 15%,transparent)">
+            <span class="ms" style="font-size:50px;color:var(--acc)">flag</span>
+          </div>
+          <div style="font-size:21px;font-weight:800">Priorität</div>
+          <span class="pill tint">Bald verfügbar</span>
+          <div class="small muted" style="max-width:240px;line-height:1.55">Hier entsteht die Prioritäten-Zentrale: alle Aufgaben nach Wichtigkeit sortiert auf einen Blick.</div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-tasks)">
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+          <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+        </nav>
+      </div>
+      <figcaption><b>Sub-Bereich-Platzhalter</b><span>„Bald verfügbar"-Screens — Icon-Kreis und Pille in Tab-Farbe</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="aufgaben" style="--secacc:var(--acc-tasks)">
+  <div class="sec-head"><span class="dot"></span><h2>Aufgaben</h2><span class="sub">Orange Farbklasse — Hauptliste, Detail, Loop, Mental, Ideen</span></div>
+  <div class="grid">
+
+    <!-- TASKS SCREEN -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar">
+          <h3>Aufgaben</h3>
+          <span class="ms" style="color:var(--warn);font-size:20px">today</span>
+          <span class="ms" style="color:var(--ok);font-size:20px">event_upcoming</span>
+          <span class="ms act">refresh</span><span class="ms act">dark_mode</span><span class="ms act">settings</span>
+        </header>
+        <div class="content">
+          <div class="card" style="padding:11px 13px">
+            <div class="row"><span class="ms" style="color:var(--primary);font-size:18px">auto_awesome</span><span class="small grow" style="font-weight:800;color:var(--primary)">Briefing</span><span class="ms" style="color:var(--tx3);font-size:19px">expand_more</span></div>
+          </div>
+          <div class="acch" style="--c:var(--acc-tasks)"><span class="ms">today</span>HEUTE<span class="cnt">3</span><span class="ms chev">expand_less</span></div>
+          <div class="task" style="--ramp:#B91C1C"><div class="row"><span class="checkbox"></span><span class="t grow">Steuererklärung endlich abgeben</span></div><div class="row" style="margin-top:8px;justify-content:flex-end;gap:6px"><span class="pearl"><span class="ms">bolt</span>Priorität 92</span><span class="pearl"><span class="ms">auto_awesome</span>KI</span></div></div>
+          <div class="task" style="--ramp:#EA580C"><div class="row"><span class="checkbox"></span><span class="t grow">Keller ausmisten — Karton 3 und 4</span></div><div class="row" style="margin-top:8px;justify-content:flex-end;gap:6px"><span class="pearl"><span class="ms">bolt</span>Priorität 61</span><span class="pearl"><span class="ms">today</span>Heute</span></div></div>
+          <div class="task" style="--ramp:#FBBF24"><div class="row"><span class="checkbox on"><span class="ms">check</span></span><span class="t grow" style="opacity:.55;text-decoration:line-through">Rechnung Zahnarzt überweisen</span></div></div>
+          <div class="btn sm" style="background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);border-radius:12px"><span class="ms">add</span> Neue Aufgaben hinzufügen?</div>
+          <div class="acch" style="--c:var(--acc-forscher)"><span class="ms">event_upcoming</span>MORGEN<span class="cnt">2</span><span class="ms chev">expand_more</span></div>
+          <div class="acch" style="--c:var(--ok)"><span class="ms">beach_access</span>FREIBLOCK<span class="cnt">1</span><span class="ms chev">expand_more</span></div>
+          <div class="acch" style="--c:var(--tx3)"><span class="ms">schedule</span>SPÄTER<span class="cnt">7</span><span class="ms chev">expand_more</span></div>
+          <div class="acch" style="--c:var(--acc-tasks)"><span class="ms">repeat</span>LOOP<span class="cnt">4</span><span class="ms chev">expand_more</span></div>
+          <div class="acch" style="--c:var(--ok)"><span class="ms">check_circle</span>ERLEDIGT<span class="cnt">12</span><span class="ms chev">expand_more</span></div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-tasks)">
+          <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+        </nav>
+      </div>
+      <figcaption><b>Aufgaben — Hauptliste</b><span>Buckets als Akkordeons, Prioritäts-Verlauf auf den Karten, Briefing oben</span></figcaption>
+    </figure>
+
+    <!-- ENTRY DETAIL -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Eintrag</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="row" style="align-items:flex-start">
+              <div class="col grow" style="gap:7px">
+                <span class="pill tint" style="--acc:#F472B6">Emotional</span>
+                <div style="font-size:15.5px;font-weight:800;line-height:1.3">Steuererklärung endlich abgeben</div>
+                <div class="small muted" style="line-height:1.5">Liegt seit Wochen — Unterlagen sind fast vollständig, fehlt nur die Bescheinigung der Versicherung.</div>
+              </div>
+              <div class="col" style="align-items:center;gap:0;flex-shrink:0">
+                <div style="font-size:33px;font-weight:800;color:#EF4444">92</div>
+                <div class="tiny muted" style="font-weight:800">PRIO</div>
+              </div>
+            </div>
+            <div class="tiny muted" style="margin-top:10px;font-weight:700">Schweregrad: Hoch (8/10)</div>
+            <div style="display:flex;gap:3px;margin-top:6px">
+              <i style="flex:1;height:6px;border-radius:9px;background:#22C55E"></i><i style="flex:1;height:6px;border-radius:9px;background:#86EFAC"></i><i style="flex:1;height:6px;border-radius:9px;background:#FBBF24"></i><i style="flex:1;height:6px;border-radius:9px;background:#FB923C;outline:2px solid var(--tx)"></i><i style="flex:1;height:6px;border-radius:9px;background:#F87171"></i>
+            </div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">calendar_month</span> FRIST</div>
+            <div class="row"><span class="med grow" style="font-weight:700">Montag, 15.06.2026</span><span class="btn ghost sm">Setzen</span></div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">timer</span> ZEITAUFWAND</div>
+            <div class="row" style="justify-content:space-between"><span class="med" style="font-weight:800">≈ 2 Std 30 Min</span><span class="pill tint"><span class="ms" style="font-size:13px">auto_awesome</span> KI-Schätzung</span></div>
+            <div class="sliderbar"><i style="width:58%"></i><b style="left:58%"></b></div>
+          </div>
+          <div class="card"><div class="h" style="--acc:var(--acc-forscher)"><span class="ms">auto_awesome</span> KI-BEGRÜNDUNG</div>
+            <div class="small muted" style="line-height:1.5">Hohe Priorität: gesetzliche Frist, finanzielle Folgen bei Verzug, blockiert mental seit Wochen.</div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">edit_note</span> NACHTRAG EINSPRECHEN</div>
+            <div class="row"><span class="small muted grow">Halte neue Gedanken zum Eintrag fest …</span><span class="mic" style="width:44px;height:44px;margin:0"><span class="ms" style="font-size:21px">mic</span></span></div>
+          </div>
+          <div class="btn ghost"><span class="ms">repeat</span> Aufgabe zu wiederkehrenden hinzufügen</div>
+          <div class="btn danger"><span class="ms">delete</span> Eintrag löschen</div>
+        </div>
+      </div>
+      <figcaption><b>Eintrag — Detail</b><span>Hero-Karte mit Prio-Zahl &amp; Schweregrad, Frist, Zeitaufwand, KI-Begründung</span></figcaption>
+    </figure>
+
+    <!-- LOOP LISTE -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Loop</h3></header>
+        <div class="content">
+          <div class="task" style="--ramp:#EA580C">
+            <div class="row"><span style="width:26px;height:26px;border-radius:9px;background:var(--acc);display:grid;place-items:center;flex-shrink:0"><span class="ms" style="font-size:16px;color:#fff">repeat</span></span><span class="t grow">Wochenrückblick einsprechen</span><span class="ms" style="color:var(--crit);font-size:19px">delete</span></div>
+            <div class="row" style="margin-top:9px;gap:6px;flex-wrap:wrap"><span class="pearl"><span class="ms">update</span>Wöchentlich: So</span><span class="pearl"><span class="ms">bolt</span>Priorität 70</span><span class="pearl"><span class="ms">auto_awesome</span>KI</span></div>
+          </div>
+          <div class="task" style="--ramp:#FBBF24">
+            <div class="row"><span style="width:26px;height:26px;border-radius:9px;background:var(--acc);display:grid;place-items:center;flex-shrink:0"><span class="ms" style="font-size:16px;color:#fff">repeat</span></span><span class="t grow">Pflanzen gießen</span><span class="ms" style="color:var(--crit);font-size:19px">delete</span></div>
+            <div class="row" style="margin-top:9px;gap:6px;flex-wrap:wrap"><span class="pearl"><span class="ms">update</span>Alle 3 Tage</span><span class="pearl"><span class="ms">bolt</span>Priorität 35</span><span class="pearl"><span class="ms">today</span>Heute</span></div>
+          </div>
+          <div class="task" style="--ramp:#16A34A;opacity:.55">
+            <div class="row"><span style="width:26px;height:26px;border-radius:9px;border:2px solid var(--tx3);flex-shrink:0"></span><span class="t grow">Monatsfinanzen prüfen</span><span class="ms" style="color:var(--crit);font-size:19px">delete</span></div>
+            <div class="row" style="margin-top:9px;gap:6px;flex-wrap:wrap"><span class="pearl"><span class="ms">update</span>Monatlich am 1.</span><span class="pearl"><span class="ms">bolt</span>Priorität 28</span><span class="pearl"><span class="ms">pause</span>Pausiert</span></div>
+          </div>
+          <div class="card" style="text-align:center;padding:22px 16px;border-style:dashed">
+            <span class="ms" style="font-size:34px;color:var(--acc)">repeat</span>
+            <div class="med" style="font-weight:800;margin-top:8px">Wiederkehrende Aufgaben</div>
+            <div class="tiny muted" style="margin-top:4px;line-height:1.5">Tippe auf das Mikrofon und wähle „Schreiben" oder „Aufnehmen".</div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-tasks)">
+          <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+        </nav>
+      </div>
+      <figcaption><b>Loop — wiederkehrende Aufgaben</b><span>Aktiv-Schalter, Intervall-/Prio-/Bucket-Perlen, pausierte Karten gedimmt</span></figcaption>
+    </figure>
+
+    <!-- LOOP DETAIL -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Loop-Aufgabe</h3></header>
+        <div class="content">
+          <div class="card"><div class="h"><span class="ms">title</span> TITEL</div>
+            <div class="input focus"><b>Wochenrückblick einsprechen</b></div>
+            <div class="input" style="margin-top:8px">Beschreibung (optional)</div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">update</span> WIEDERKEHR</div>
+            <div class="small muted" style="line-height:1.5;margin-bottom:9px">Wie oft soll daraus automatisch eine neue Aufgabe entstehen?</div>
+            <div class="btn ghost sm" style="justify-content:space-between"><span>Wöchentlich: Sonntag</span><span class="ms">expand_more</span></div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">bolt</span> PRIORITÄT: 70</div>
+            <div class="sliderbar"><i style="width:70%"></i><b style="left:70%"></b></div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">flag</span> ZIEL-TAG</div>
+            <div class="chiprow"><span class="chip sel">KI</span><span class="chip">Heute</span><span class="chip">Morgen</span><span class="chip">Freiblock</span><span class="chip">Später</span></div>
+          </div>
+          <div class="card">
+            <div class="row" style="justify-content:space-between">
+              <div class="col"><span class="med" style="font-weight:800">Aktiv</span><span class="tiny muted">Erzeugt automatisch neue Aufgaben.</span></div>
+              <span class="switch on"></span>
+            </div>
+          </div>
+          <div class="btn danger"><span class="ms">delete</span> Loop-Aufgabe löschen</div>
+        </div>
+      </div>
+      <figcaption><b>Loop — Detail</b><span>Sektionen mit Orange-Labels, Chips, Slider und Aktiv-Schalter</span></figcaption>
+    </figure>
+
+    <!-- MENTAL -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Mental</h3></header>
+        <div class="content">
+          <div class="card" style="display:flex;flex-direction:row;align-items:center;gap:12px">
+            <span style="width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);display:grid;place-items:center;font-weight:800;font-size:14px;flex-shrink:0">1</span>
+            <span class="med grow" style="font-weight:700;line-height:1.4">Entropie sinkt nicht von allein — jeden Tag ein Stück.</span>
+            <span class="ms" style="color:var(--tx3);font-size:18px">drag_indicator</span>
+          </div>
+          <div class="card" style="display:flex;flex-direction:row;align-items:center;gap:12px">
+            <span style="width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);display:grid;place-items:center;font-weight:800;font-size:14px;flex-shrink:0">2</span>
+            <span class="med grow" style="font-weight:700;line-height:1.4">Erst das Schwerste, dann wird der Tag leicht.</span>
+            <span class="ms" style="color:var(--tx3);font-size:18px">drag_indicator</span>
+          </div>
+          <div class="card" style="display:flex;flex-direction:row;align-items:center;gap:12px;outline:2px solid color-mix(in srgb,var(--acc) 35%,transparent)">
+            <span style="width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;flex-shrink:0">3</span>
+            <span class="med grow" style="font-weight:700;line-height:1.4">Ruhe ist eine Fähigkeit, kein Zufall.</span>
+            <span class="ms" style="color:var(--acc);font-size:18px">drag_indicator</span>
+          </div>
+          <div class="card" style="display:flex;flex-direction:row;align-items:center;gap:12px">
+            <span style="width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);display:grid;place-items:center;font-weight:800;font-size:14px;flex-shrink:0">4</span>
+            <span class="med grow" style="font-weight:700;line-height:1.4">Whoop-Rot heißt: heute Tempo rausnehmen.</span>
+            <span class="ms" style="color:var(--tx3);font-size:18px">drag_indicator</span>
+          </div>
+          <div class="tiny muted" style="text-align:center;margin-top:6px">Lange drücken zum Sortieren · Tippen zum Bearbeiten</div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-tasks)">
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+        </nav>
+      </div>
+      <figcaption><b>Mentalboard</b><span>Nummerierte Merksätze, Drag &amp; Drop, dritte Karte gerade „gegriffen"</span></figcaption>
+    </figure>
+
+    <!-- IDEEN -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Ideen</h3></header>
+        <div class="content">
+          <div class="datesep">HEUTE</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">auto_awesome</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">App-Idee: Schicht-Wecker</div>
+              <div class="tiny muted" style="margin:3px 0 6px">12.06.2026 · 09:41</div>
+              <div class="small muted" style="line-height:1.5">Ein Wecker, der den Schichtplan aus dem Kalender liest und die Weckzeit automatisch …</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">auto_awesome</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Balkon-Bewässerung automatisieren</div>
+              <div class="tiny muted" style="margin:3px 0 6px">12.06.2026 · 07:12</div>
+              <div class="small muted" style="line-height:1.5">Tropfschlauch + Zeitschaltuhr, Wasserspeicher reicht für eine Woche Urlaub …</div>
+            </div>
+          </div>
+          <div class="datesep">GESTERN</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">auto_awesome</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Geschenk für Papa</div>
+              <div class="tiny muted" style="margin:3px 0 6px">11.06.2026 · 19:03</div>
+              <div class="small muted" style="line-height:1.5">Gravierte Taschenuhr oder gemeinsamer Werkstatt-Tag — beides notiert …</div>
+            </div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-tasks)">
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">checklist</span>Aufgaben</span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">flag</span>Priorität</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-tasks)"><span class="ms">psychology</span>Mental</span>
+          <span class="tabi on" style="--tabc:var(--acc-tasks)"><span class="ms">auto_awesome</span>Ideen</span>
+        </nav>
+      </div>
+      <figcaption><b>Ideen</b><span>Timeline mit Funken-Badges in Orange, Gruppierung nach Tagen</span></figcaption>
+    </figure>
+
+    <!-- CAPTURE SHEET -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Aufgaben</h3></header>
+        <div class="content" style="opacity:.35">
+          <div class="acch" style="--c:var(--acc-tasks)"><span class="ms">today</span>HEUTE<span class="cnt">3</span><span class="ms chev">expand_less</span></div>
+          <div class="task" style="--ramp:#B91C1C"><div class="row"><span class="checkbox"></span><span class="t grow">Steuererklärung endlich abgeben</span></div></div>
+          <div class="task" style="--ramp:#EA580C"><div class="row"><span class="checkbox"></span><span class="t grow">Keller ausmisten</span></div></div>
+        </div>
+        <div class="scrim bottom">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4 style="font-size:16px;font-weight:800">Neue Aufgabe</h4>
+            <div class="row" style="gap:10px;align-items:stretch">
+              <div class="grow" style="border-radius:20px;padding:18px 14px;background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 70%,#ffb27a));color:#fff;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 22px color-mix(in srgb,var(--acc) 35%,transparent)">
+                <span class="ms" style="font-size:30px">mic</span>
+                <div style="font-weight:800;font-size:14.5px">Aufnehmen</div>
+                <div style="font-size:11px;opacity:.9;line-height:1.4">Sprich rein, Whisper transkribiert.</div>
+              </div>
+              <div class="grow" style="border-radius:20px;padding:18px 14px;background:color-mix(in srgb,var(--acc) 13%,transparent);color:var(--acc);display:flex;flex-direction:column;gap:8px">
+                <span class="ms" style="font-size:30px">edit</span>
+                <div style="font-weight:800;font-size:14.5px">Schreiben</div>
+                <div style="font-size:11px;opacity:.85;line-height:1.4;color:var(--tx2)">Tippe deinen Text ein.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Erfassen — Bottom-Sheet</b><span>„Aufnehmen" als Glut-Kachel, „Schreiben" als sanfte Tönung</span></figcaption>
+    </figure>
+
+    <!-- REVIEW DIALOG -->
+    <figure class="frame" data-acc="tasks">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Aufgaben</h3></header>
+        <div class="content" style="opacity:.35">
+          <div class="acch" style="--c:var(--acc-tasks)"><span class="ms">today</span>HEUTE<span class="cnt">3</span><span class="ms chev">expand_less</span></div>
+          <div class="task" style="--ramp:#EA580C"><div class="row"><span class="checkbox"></span><span class="t grow">Keller ausmisten</span></div></div>
+        </div>
+        <div class="scrim">
+          <div class="dlg">
+            <h4>Aufgabe prüfen</h4>
+            <div class="input">Titel (optional) — leer lassen → KI erstellt den Titel</div>
+            <div class="input area focus"><b>Morgen unbedingt die Versicherung anrufen wegen der Bescheinigung für die Steuer und danach direkt alles hochladen</b></div>
+            <div class="row" style="color:var(--acc);font-weight:800;font-size:12.5px;gap:6px"><span class="ms" style="font-size:17px">auto_awesome</span> Mit KI verbessern</div>
+            <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
+              <span class="btn sm" style="color:var(--tx2)">Abbrechen</span>
+              <span class="btn acc sm" style="padding:9px 18px">Speichern</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Dialog „Aufgabe prüfen"</b><span>Transkript prüfen, optional KI-Verbesserung, dann speichern</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="analyse" style="--secacc:var(--acc-analyse)">
+  <div class="sec-head"><span class="dot"></span><h2>Analyse</h2><span class="sub">Smaragd Farbklasse — Zustand, Trend, KI-Analyse</span></div>
+  <div class="grid">
+
+    <!-- ANALYSIS SCREEN -->
+    <figure class="frame" data-acc="analyse">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Analyse</h3><span class="ms act">dark_mode</span><span class="ms act">settings</span></header>
+        <div class="content">
+          <div class="statusline">
+            <span class="tiny muted" style="font-weight:800;white-space:nowrap">Zustand jetzt</span>
+            <span class="bar"><i style="width:68%"></i></span>
+            <span class="med" style="font-weight:800;color:var(--acc)">68&nbsp;%</span>
+          </div>
+          <div class="row" style="gap:10px;align-items:stretch">
+            <div class="card grow">
+              <span style="width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--acc) 15%,transparent);display:grid;place-items:center;color:var(--acc)"><span class="ms" style="font-size:18px">speed</span></span>
+              <div class="tiny muted" style="margin-top:8px;font-weight:700">Gesamt-Entropie-Last</div>
+              <div style="font-size:25px;font-weight:800;margin-top:1px">42<span class="small muted">/100</span></div>
+              <div class="tiny" style="color:var(--ok);font-weight:700">Im Zielbereich</div>
+            </div>
+            <div class="card grow">
+              <span style="width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--crit) 15%,transparent);display:grid;place-items:center;color:var(--crit)"><span class="ms" style="font-size:18px">pending_actions</span></span>
+              <div class="tiny muted" style="margin-top:8px;font-weight:700">Offene Einträge</div>
+              <div style="font-size:25px;font-weight:800;margin-top:1px">13</div>
+              <div class="tiny" style="color:var(--crit);font-weight:700">2 kritisch — 11 normal</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row" style="margin-bottom:9px"><span class="med grow" style="font-weight:800">Trend</span><span class="chip sel" style="padding:4px 10px;font-size:10.5px">30 T</span><span class="chip" style="padding:4px 10px;font-size:10.5px">90 T</span><span class="chip" style="padding:4px 10px;font-size:10.5px">365 T</span></div>
+            <svg class="lchart" viewBox="0 0 300 90">
+              <line x1="0" y1="22" x2="300" y2="22" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <line x1="0" y1="45" x2="300" y2="45" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <line x1="0" y1="68" x2="300" y2="68" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <rect x="115" y="6" width="40" height="80" fill="var(--acc-forscher)" opacity=".10" rx="4"/>
+              <polyline points="0,62 30,55 60,58 90,42 120,47 150,33 180,38 210,26 240,30 270,20 300,24" fill="none" stroke="var(--acc)" stroke-width="2.4" stroke-linecap="round"/>
+              <polyline points="0,74 30,70 60,73 90,64 120,67 150,58 180,61 210,52 240,57 270,48 300,50" fill="none" stroke="var(--acc-forscher)" stroke-width="1.8" stroke-linecap="round" opacity=".75"/>
+            </svg>
+            <div class="legend" style="margin-top:8px"><span><i style="background:var(--acc)"></i>Gesamt</span><span><i style="background:var(--acc-forscher)"></i>Mental</span><span><i style="background:var(--acc-forscher);opacity:.15"></i>Schichtblock</span></div>
+          </div>
+          <div class="btn pri"><span class="ms">auto_awesome</span> Jetzt analysieren</div>
+          <div class="card">
+            <div class="tiny muted" style="font-weight:700;margin-bottom:7px">Letzte Analyse: 12.06.2026 · 08:15</div>
+            <div class="small" style="line-height:1.55"><b>Deine Entropie sinkt.</b> Die größten Hebel diese Woche: <b>Steuer-Block</b> (mental dominant) und unregelmäßiger Schlaf nach Nachtschichten. Empfehlung: Steuer morgen in den ersten Freiblock …</div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-analyse)">
+          <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">inbox</span>1</span>
+          <span class="tabi on" style="--tabc:var(--acc-analyse)"><span class="ms">analytics</span>Analyse</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">tune</span>2</span>
+          <span class="tabi" style="--tabc:var(--acc-analyse)"><span class="ms">insights</span>3</span>
+        </nav>
+      </div>
+      <figcaption><b>Analyse</b><span>Zustandsbalken, Quick-Stats, Trend-Chart mit Schichtblock, KI-Analyse</span></figcaption>
+    </figure>
+
+    <!-- STATUS SHEET -->
+    <figure class="frame" data-acc="analyse">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Analyse</h3></header>
+        <div class="content" style="opacity:.35">
+          <div class="statusline"><span class="tiny muted" style="font-weight:800">Zustand jetzt</span><span class="bar"><i style="width:68%"></i></span><span class="med" style="font-weight:800;color:var(--acc)">68&nbsp;%</span></div>
+          <div class="card" style="height:90px"></div>
+        </div>
+        <div class="scrim bottom">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4 style="font-size:15.5px;font-weight:800">Zustand jetzt — Aufschlüsselung</h4>
+            <div style="font-size:38px;font-weight:800;color:var(--acc)">68&nbsp;%</div>
+            <div class="col" style="gap:10px">
+              <div><div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Biomarker (40 %)</span><span class="small" style="font-weight:800;color:var(--ok)">81 %</span></div><div class="statusline" style="padding:4px 0 0"><span class="bar"><i style="width:81%"></i></span></div></div>
+              <div><div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Aufgaben-Reduktion (35 %)</span><span class="small" style="font-weight:800;color:var(--warn)">55 %</span></div><div class="statusline" style="padding:4px 0 0"><span class="bar"><i style="width:55%"></i></span></div></div>
+              <div><div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Kontext (25 %)</span><span class="small" style="font-weight:800;color:var(--ok)">66 %</span></div><div class="statusline" style="padding:4px 0 0"><span class="bar"><i style="width:66%"></i></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Zustand — Aufschlüsselung</b><span>Bottom-Sheet mit den drei Komponenten des Zustandswerts</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="forscher" style="--secacc:var(--acc-forscher)">
+  <div class="sec-head"><span class="dot"></span><h2>Forscher</h2><span class="sub">Violette Farbklasse — Wissenschaftler-Chat, Entropie, Thesen, Journal</span></div>
+  <div class="grid">
+
+    <!-- SCIENTIST CHAT -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Wissenschaftler</h3><span class="ms act">forum</span><span class="ms act">dark_mode</span><span class="ms act">settings</span></header>
+        <div class="content" style="gap:9px">
+          <div class="bub ki">
+            <div class="who"><span class="ms" style="font-size:14px">science</span> WISSENSCHAFTLER · vor 2 Min</div>
+            Deine HRV steigt an Tagen mit Abendspaziergang im Schnitt um <b>12&nbsp;%</b>. Das ist ein klares Muster über 3 Wochen.
+          </div>
+          <div class="bub ki" style="padding:0;overflow:hidden">
+            <div style="padding:11px 13px">
+              <div class="who"><span class="ms" style="font-size:14px">experiment</span> HYPOTHESE</div>
+              <div class="med" style="font-weight:800;margin-bottom:4px">Abendspaziergang senkt deine Schlaf-Entropie</div>
+              <div class="tiny muted" style="line-height:1.5">Begründung: HRV+12 %, Einschlafzeit −18 Min an Spaziergang-Tagen.<br>Geplante Dauer: 14 Tage · Status: vorgeschlagen</div>
+            </div>
+            <div class="row" style="border-top:1px solid var(--line);padding:9px 13px;justify-content:flex-end;gap:8px">
+              <span class="btn sm" style="color:var(--tx2)">Später</span>
+              <span class="btn acc sm" style="padding:8px 16px"><span class="ms" style="font-size:15px">rocket_launch</span> Ausprobieren</span>
+            </div>
+          </div>
+          <div class="bub me">Klingt gut — aber zählt auch Radfahren am Abend?</div>
+          <div class="bub ki">
+            <div class="who"><span class="ms" style="font-size:14px">science</span> WISSENSCHAFTLER</div>
+            Gute Frage! Die Datenlage für Radfahren ist dünner (4 Abende). Ich nehme es als Variante ins Experiment auf …
+          </div>
+          <div class="row" style="gap:7px;color:var(--acc);font-size:11.5px;font-weight:700;padding-left:6px">
+            <span class="ms" style="font-size:15px">more_horiz</span> Wissenschaftler denkt nach …
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-forscher)">
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">warning</span>Entropie</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">lightbulb</span>Thesen</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi on" style="--tabc:var(--acc-forscher)"><span class="ms">science</span>Forscher</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">book</span>Journal</span>
+        </nav>
+      </div>
+      <figcaption><b>Wissenschaftler — Chat</b><span>KI-Bubbles mit Violett-Rand, Hypothesen-Karte mit „Ausprobieren"</span></figcaption>
+    </figure>
+
+    <!-- HYPOTHESIS SHEET -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Wissenschaftler</h3></header>
+        <div class="content" style="opacity:.35"><div class="bub ki" style="height:64px"></div><div class="bub me" style="height:40px;width:60%"></div></div>
+        <div class="scrim bottom">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4 style="font-size:15.5px;font-weight:800">Hypothese im Detail</h4>
+            <div class="med" style="font-weight:800">Abendspaziergang senkt deine Schlaf-Entropie</div>
+            <div class="small muted" style="line-height:1.5"><b style="color:var(--acc)">Begründung:</b> HRV +12 %, Einschlafzeit −18 Min, Tiefschlaf +9 Min an Spaziergang-Tagen (21 Tage Datenbasis).</div>
+            <div class="chiprow"><span class="chip sel">Läuft</span><span class="chip">Bestätigt</span><span class="chip">Verworfen</span></div>
+            <div>
+              <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Gefühlte Entropie-Veränderung</span><span class="small" style="font-weight:800;color:var(--ok)">−40</span></div>
+              <div class="sliderbar"><i style="width:30%;left:20%;right:auto"></i><b style="left:30%"></b></div>
+            </div>
+            <div class="card" style="background:var(--bg2)">
+              <div class="h"><span class="ms">monitor_heart</span> BIOMARKER-VERGLEICH</div>
+              <div class="row" style="justify-content:space-between"><span class="small muted">HRV</span><span class="small" style="font-weight:800;color:var(--ok)">52 → 58 ms</span></div>
+              <div class="row" style="justify-content:space-between;margin-top:4px"><span class="small muted">Ruhepuls</span><span class="small" style="font-weight:800;color:var(--ok)">56 → 54 bpm</span></div>
+            </div>
+            <div class="btn danger sm"><span class="ms">delete</span> Hypothese löschen</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Hypothese — Detail-Sheet</b><span>Status-Chips, Gefühls-Slider, Biomarker-Vergleich</span></figcaption>
+    </figure>
+
+    <!-- TAGEBUCH / ENTROPIE -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Tagebuch</h3></header>
+        <div class="content">
+          <div class="datesep">HEUTE</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Unruhe vor der Spätschicht</div>
+              <div class="tiny muted" style="margin:3px 0 6px">12.06.2026 · 10:22</div>
+              <div class="small muted" style="line-height:1.5">Schon beim Aufstehen dieses Kreisen im Kopf wegen der Übergabe gestern. Ich merke, wie die Gedanken …</div>
+            </div>
+          </div>
+          <div class="datesep">GESTERN</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Streit mit dem Kollegen</div>
+              <div class="tiny muted" style="margin:3px 0 6px">11.06.2026 · 21:47</div>
+              <div class="small muted" style="line-height:1.5">Es ging um die Pausenregelung. Eigentlich eine Kleinigkeit, aber es hat mich den ganzen Abend …</div>
+            </div>
+          </div>
+          <div class="datesep">DIESE WOCHE</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Guter Lauf, klarer Kopf</div>
+              <div class="tiny muted" style="margin:3px 0 6px">09.06.2026 · 18:30</div>
+              <div class="small muted" style="line-height:1.5">Nach dem 8-km-Lauf war die innere Unordnung wie weggeblasen. Notiz an mich: Bewegung wirkt …</div>
+            </div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-forscher)">
+          <span class="tabi on" style="--tabc:var(--acc-forscher)"><span class="ms">warning</span>Entropie</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">lightbulb</span>Thesen</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">science</span>Forscher</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">book</span>Journal</span>
+        </nav>
+      </div>
+      <figcaption><b>Entropie — Tagebuch</b><span>Timeline mit Buch-Badges, Zeitgruppen „Heute / Gestern / Diese Woche"</span></figcaption>
+    </figure>
+
+    <!-- TAGEBUCH DETAIL -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Eintrag</h3><span class="ms act" style="color:var(--acc)">volume_up</span></header>
+        <div class="content">
+          <div class="card">
+            <div class="h"><span class="ms">summarize</span> ZUSAMMENFASSUNG</div>
+            <div class="small muted" style="line-height:1.55">Unruhe vor der Spätschicht durch ungeklärte Übergabe — Auslöser erkannt, Plan: 5 Minuten vor Schichtbeginn kurz mit der Kollegin sprechen.</div>
+            <div class="btn ghost sm" style="margin-top:10px"><span class="ms">refresh</span> Neu erstellen</div>
+          </div>
+          <div class="card">
+            <div class="row" style="margin-bottom:9px;gap:6px">
+              <span class="chip sel" style="padding:5px 13px">Verbessert</span><span class="chip" style="padding:5px 13px">Original</span>
+              <span class="tiny muted grow" style="text-align:right">von Gemini</span>
+            </div>
+            <div class="med" style="font-weight:800;margin-bottom:5px">Unruhe vor der Spätschicht</div>
+            <div class="small" style="line-height:1.6">Schon beim Aufstehen kreisten die Gedanken um die gestrige Übergabe. Das Muster ist bekannt: Unklarheit erzeugt bei mir innere Unordnung. Der konkrete Punkt ist die offene Frage zur Pausenregelung …</div>
+            <div class="btn ghost sm" style="margin-top:11px"><span class="ms">auto_fix_high</span> Mit KI nachträglich verbessern</div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="ms">post_add</span> NACHTRAG 1 · 14:05</div>
+            <div class="small muted" style="line-height:1.5">Mit Sandra gesprochen — Thema in 3 Minuten geklärt. Unruhe direkt weg.</div>
+          </div>
+          <div class="card"><div class="h"><span class="ms">edit_note</span> NACHTRAG EINSPRECHEN</div>
+            <div class="row"><span class="small muted grow">Neuen Gedanken festhalten …</span><span class="mic" style="width:44px;height:44px;margin:0;--micc:var(--acc-forscher)"><span class="ms" style="font-size:21px">mic</span></span></div>
+          </div>
+          <div class="btn danger"><span class="ms">delete</span> Eintrag löschen</div>
+        </div>
+      </div>
+      <figcaption><b>Tagebuch — Detail</b><span>Zusammenfassung, Verbessert/Original-Umschalter, Nachträge, Vorlesen</span></figcaption>
+    </figure>
+
+    <!-- THESEN -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Thesen</h3></header>
+        <div class="content">
+          <div class="datesep">DIESE WOCHE</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">lightbulb</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Kaffee nach 14 Uhr kostet mich Tiefschlaf</div>
+              <div class="tiny muted" style="margin:3px 0 6px">10.06.2026 · 16:20</div>
+              <div class="small muted" style="line-height:1.5">Drei Mal beobachtet: später Kaffee → Tiefschlaf unter 60 Minuten. Der Forscher soll das prüfen …</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">lightbulb</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Unordnung auf dem Schreibtisch = Unordnung im Kopf</div>
+              <div class="tiny muted" style="margin:3px 0 6px">08.06.2026 · 11:05</div>
+              <div class="small muted" style="line-height:1.5">Jedes Mal wenn der Tisch voll ist, fühlen sich auch kleine Aufgaben schwer an. Aufräumen als Erste-Hilfe …</div>
+            </div>
+          </div>
+          <div class="card" style="text-align:center;padding:20px;border-style:dashed">
+            <span class="ms" style="font-size:30px;color:var(--acc)">lightbulb</span>
+            <div class="tiny muted" style="margin-top:6px;line-height:1.5">Sprich neue Thesen einfach ein — der Forscher greift sie im Chat auf.</div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-forscher)">
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">warning</span>Entropie</span>
+          <span class="tabi on" style="--tabc:var(--acc-forscher)"><span class="ms">lightbulb</span>Thesen</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">science</span>Forscher</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">book</span>Journal</span>
+        </nav>
+      </div>
+      <figcaption><b>Thesen</b><span>Glühbirnen-Timeline — gleiche Struktur, eigener Sub-Bereich</span></figcaption>
+    </figure>
+
+    <!-- JOURNAL -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Journal</h3></header>
+        <div class="content">
+          <div class="row" style="gap:7px;padding:0 4px"><span class="ms" style="font-size:15px;color:var(--tx3)">sync</span><span class="tiny muted">Zuletzt synchronisiert: 12.06.2026 · 06:30 · 2 Einträge neu</span></div>
+          <div class="datesep">HEUTE</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Morgenroutine hält</div>
+              <div class="tiny muted" style="margin:3px 0 6px">12.06.2026 · 06:10</div>
+              <div class="small muted" style="line-height:1.5">Dritter Tag in Folge: Lesen statt Handy. Der Unterschied im Kopf ist deutlich spürbar, ruhiger Start …</div>
+            </div>
+          </div>
+          <div class="datesep">GESTERN</div>
+          <div class="tl">
+            <div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div>
+            <div class="card grow">
+              <div class="med" style="font-weight:800">Langer Tag, gutes Ende</div>
+              <div class="tiny muted" style="margin:3px 0 6px">11.06.2026 · 22:15</div>
+              <div class="small muted" style="line-height:1.5">Doppelschicht, aber der Abendspaziergang hat den Tag gerettet. Aus BestJournal übernommen …</div>
+            </div>
+          </div>
+          <div class="card" style="background:var(--bg2);border-style:dashed">
+            <div class="row" style="gap:8px"><span class="ms" style="color:var(--acc);font-size:18px">visibility</span><span class="tiny muted" style="line-height:1.5">Nur Lesen — Einträge kommen automatisch aus BestJournal Frank.</span></div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-forscher)">
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">warning</span>Entropie</span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">lightbulb</span>Thesen</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-forscher)"><span class="ms">science</span>Forscher</span>
+          <span class="tabi on" style="--tabc:var(--acc-forscher)"><span class="ms">book</span>Journal</span>
+        </nav>
+      </div>
+      <figcaption><b>Journal (Spiegel)</b><span>Sync-Status oben, gleiche Timeline — bewusst nur lesbar</span></figcaption>
+    </figure>
+
+    <!-- TRANSCRIPT DIALOG -->
+    <figure class="frame" data-acc="forscher">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Tagebuch</h3></header>
+        <div class="content" style="opacity:.35">
+          <div class="datesep">HEUTE</div>
+          <div class="tl"><div class="rail"><span class="badge"><span class="ms">book</span></span><i></i></div><div class="card grow" style="height:84px"></div></div>
+        </div>
+        <div class="scrim">
+          <div class="dlg">
+            <h4>Eintrag von der Aufnahme</h4>
+            <div class="row" style="gap:6px"><span class="chip sel" style="padding:5px 13px">Verbessert</span><span class="chip" style="padding:5px 13px">Original</span></div>
+            <div class="input area focus"><b>Heute Morgen wieder dieses Gedankenkreisen wegen der Übergabe. Ich schreibe es auf, um es loszulassen — das Muster kenne ich inzwischen gut.</b></div>
+            <div class="row" style="color:var(--acc);font-weight:800;font-size:12.5px;gap:6px"><span class="ms" style="font-size:17px">auto_fix_high</span> Text verbessern (Gemini)</div>
+            <div class="row" style="justify-content:flex-end;gap:8px">
+              <span class="btn sm" style="color:var(--tx2)">Abbrechen</span>
+              <span class="btn acc sm" style="padding:9px 18px">Speichern</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Dialog „Eintrag von der Aufnahme"</b><span>Whisper-Transkript mit Gemini-Verbesserung vor dem Speichern</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="bio" style="--secacc:var(--acc-bio)">
+  <div class="sec-head"><span class="dot"></span><h2>Biomarker</h2><span class="sub">Rosé Farbklasse — Whoop, Oura, Polar, Health Connect</span></div>
+  <div class="grid">
+
+    <!-- BIOMARKER DASHBOARD -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><h3>Biomarker</h3><span class="ms act">refresh</span><span class="ms act">ecg_heart</span><span class="ms act">settings</span></header>
+        <div class="content">
+          <div class="tiny muted" style="padding:0 4px">Zuletzt synchronisiert: vor 12 Minuten</div>
+          <div class="card">
+            <div class="row" style="gap:14px">
+              <div class="col grow" style="gap:5px">
+                <div class="h" style="margin:0"><span class="ms">favorite</span> GESAMTERHOLUNG</div>
+                <div class="med" style="font-weight:800;line-height:1.35">Dein Körper ist im Gleichgewicht.</div>
+                <div class="tiny" style="color:var(--ok);font-weight:700">+6 vs. 30-Tage-Mittel</div>
+              </div>
+              <div class="ringwrap">
+                <svg width="108" height="108" viewBox="0 0 108 108">
+                  <circle cx="54" cy="54" r="46" fill="none" stroke="color-mix(in srgb,var(--tx) 10%,transparent)" stroke-width="9"/>
+                  <circle cx="54" cy="54" r="46" fill="none" stroke="#16EC06" stroke-width="9" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="92"/>
+                </svg>
+                <div class="v"><b>68</b><span>RECOVERY</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="col grow"><div class="h" style="margin:0"><span class="ms">trending_up</span> ERHOLUNGSVERLAUF</div><div class="tiny muted">Recovery-Score pro Tag</div></div><span style="font-size:24px;font-weight:800;color:#16EC06">68&nbsp;%</span></div>
+            <div class="gbar" style="margin-top:10px">
+              <i style="height:60%;background:#FFDE00"></i><i style="height:42%;background:#FF0026"></i><i style="height:55%;background:#FFDE00"></i><i style="height:72%;background:#16EC06"></i><i style="height:80%;background:#16EC06"></i><i style="height:50%;background:#FFDE00"></i><i style="height:64%;background:#FFDE00"></i><i style="height:75%;background:#16EC06"></i><i style="height:88%;background:#16EC06"></i><i style="height:70%;background:#16EC06"></i><i style="height:36%;background:#FF0026"></i><i style="height:58%;background:#FFDE00"></i><i style="height:74%;background:#16EC06"></i><i style="height:68%;background:#16EC06"></i>
+            </div>
+            <div class="row" style="justify-content:space-between;margin-top:8px"><span class="tiny muted">30-Tage-Schnitt: 62 %</span><span class="pill tint" style="--acc:var(--ok)">▲ +4 %</span></div>
+          </div>
+          <div class="row" style="gap:10px;align-items:stretch">
+            <div class="card grow"><div class="tiny muted" style="font-weight:700">HRV</div><div style="font-size:22px;font-weight:800;margin-top:2px">58<span class="tiny muted"> ms</span></div><div class="gbar" style="height:26px;margin-top:6px;--acc:var(--acc-bio)"><i style="height:50%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:70%"></i><i style="height:78%"></i><i style="height:84%"></i><i style="height:90%"></i></div></div>
+            <div class="card grow"><div class="tiny muted" style="font-weight:700">Ruhepuls</div><div style="font-size:22px;font-weight:800;margin-top:2px">54<span class="tiny muted"> bpm</span></div><div class="gbar" style="height:26px;margin-top:6px;--acc:var(--acc-bio)"><i style="height:80%"></i><i style="height:74%"></i><i style="height:70%"></i><i style="height:66%"></i><i style="height:60%"></i><i style="height:56%"></i><i style="height:50%"></i></div></div>
+          </div>
+          <div class="card">
+            <div class="h" style="margin-bottom:9px"><span class="ms">bedtime</span> SCHLAFPHASEN</div>
+            <div style="display:flex;height:26px;border-radius:9px;overflow:hidden;font-size:9.5px;font-weight:800;color:#fff;text-align:center">
+              <span style="width:24%;background:#6366F1;display:grid;place-items:center">24%</span>
+              <span style="width:21%;background:var(--acc-forscher);display:grid;place-items:center">21%</span>
+              <span style="width:47%;background:#38BDF8;display:grid;place-items:center">47%</span>
+              <span style="width:8%;background:var(--warn);display:grid;place-items:center">8%</span>
+            </div>
+            <div class="legend" style="margin-top:8px"><span><i style="background:#6366F1"></i>Tief 1h 52m</span><span><i style="background:var(--acc-forscher)"></i>REM 1h 38m</span><span><i style="background:#38BDF8"></i>Leicht 3h 41m</span><span><i style="background:var(--warn)"></i>Wach 38m</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="col grow"><div class="tiny muted" style="font-weight:700">Oura · Readiness</div><div style="font-size:24px;font-weight:800;color:var(--ok)">82</div></div><div class="gbar" style="width:110px;height:30px;--acc:var(--acc-bio)"><i style="height:60%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:85%"></i><i style="height:74%"></i><i style="height:92%"></i></div></div>
+          </div>
+          <div class="card">
+            <div class="h" style="margin-bottom:6px"><span class="ms">sprint</span> LETZTES TRAINING · POLAR</div>
+            <div class="med" style="font-weight:800">Laufen</div>
+            <div class="row" style="gap:18px;margin-top:6px">
+              <div class="col"><span style="font-size:19px;font-weight:800">8,4 km</span><span class="tiny muted">Distanz</span></div>
+              <div class="col"><span style="font-size:19px;font-weight:800">47:12</span><span class="tiny muted">Dauer</span></div>
+              <div class="col"><span style="font-size:19px;font-weight:800;color:var(--crit)">Ø 148</span><span class="tiny muted">bpm</span></div>
+            </div>
+          </div>
+        </div>
+        <nav class="bb" style="--micc:var(--acc-bio)">
+          <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">inbox</span>1</span>
+          <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">tune</span>2</span>
+          <span class="mic"><span class="ms">mic</span></span>
+          <span class="tabi" style="--tabc:var(--acc-bio)"><span class="ms">insights</span>3</span>
+          <span class="tabi on" style="--tabc:var(--acc-bio)"><span class="ms">monitor_heart</span>Biomarker</span>
+        </nav>
+      </div>
+      <figcaption><b>Biomarker — Dashboard</b><span>Whoop-Ring mit Original-Ampelfarben, Verlaufs-Balken, Mini-Karten, Oura &amp; Polar</span></figcaption>
+    </figure>
+
+    <!-- METRIK DETAIL -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>HRV-Verlauf</h3></header>
+        <div class="content">
+          <div class="chiprow"><span class="chip">7 T</span><span class="chip sel">30 T</span><span class="chip">90 T</span><span class="chip">Alle</span></div>
+          <div class="row" style="gap:8px;align-items:stretch;text-align:center">
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Anzahl</div><div style="font-size:16px;font-weight:800">30</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Min</div><div style="font-size:16px;font-weight:800">41</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Mittel</div><div style="font-size:16px;font-weight:800;color:var(--acc)">55</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Max</div><div style="font-size:16px;font-weight:800">71</div></div>
+          </div>
+          <div class="card">
+            <svg class="lchart" viewBox="0 0 300 110">
+              <line x1="0" y1="25" x2="300" y2="25" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <line x1="0" y1="55" x2="300" y2="55" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <line x1="0" y1="85" x2="300" y2="85" stroke="currentColor" opacity=".08" stroke-dasharray="3 4"/>
+              <polyline points="0,78 25,72 50,80 75,62 100,68 125,52 150,60 175,44 200,50 225,38 250,45 275,30 300,36" fill="none" stroke="var(--acc)" stroke-width="2.4" stroke-linecap="round"/>
+              <polyline points="0,80 50,74 100,66 150,57 200,48 250,40 300,34" fill="none" stroke="var(--ok)" stroke-width="1.6" stroke-dasharray="5 4" opacity=".8"/>
+              <circle cx="225" cy="38" r="4" fill="var(--acc)"/>
+            </svg>
+            <div class="row" style="justify-content:space-between;margin-top:6px"><span class="tiny muted">13.05.</span><span class="pill tint" style="--acc:var(--ok)">Trend ▲ steigend</span><span class="tiny muted">12.06.</span></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="ms">list</span> ALLE WERTE (30)</div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">Fr 12.06.2026</span><span class="small" style="font-weight:800">58 ms</span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">Do 11.06.2026</span><span class="small" style="font-weight:800">61 ms</span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">Mi 10.06.2026</span><span class="small" style="font-weight:800">52 ms</span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px"><span class="small muted">Di 09.06.2026</span><span class="small" style="font-weight:800">49 ms</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Metrik — Detail</b><span>Zeitraum-Chips, Statistik, interaktiver Chart mit Trendlinie, Werteliste</span></figcaption>
+    </figure>
+
+    <!-- OURA DETAIL -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Readiness</h3></header>
+        <div class="content">
+          <div class="card" style="text-align:center;padding:20px">
+            <div style="font-size:46px;font-weight:800;color:var(--ok)">82</div>
+            <span class="pill tint" style="--acc:var(--ok)">▲ +5 vs. gestern</span>
+            <div class="tiny muted" style="margin-top:6px">Oura Ring · Stand: heute</div>
+          </div>
+          <div class="chiprow"><span class="chip">7 T</span><span class="chip sel">30 T</span><span class="chip">Alle</span></div>
+          <div class="row" style="gap:8px;align-items:stretch;text-align:center">
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Mittel</div><div style="font-size:16px;font-weight:800">76</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Min</div><div style="font-size:16px;font-weight:800">58</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Max</div><div style="font-size:16px;font-weight:800">88</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Werte</div><div style="font-size:16px;font-weight:800">30</div></div>
+          </div>
+          <div class="card">
+            <div class="h"><span class="ms">show_chart</span> VERLAUF</div>
+            <svg class="lchart" viewBox="0 0 300 90">
+              <polyline points="0,50 30,42 60,55 90,38 120,44 150,30 180,36 210,25 240,32 270,18 300,24" fill="none" stroke="var(--acc)" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card">
+            <div class="h"><span class="ms">list</span> ALLE WERTE</div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">Fr 12.06.</span><span class="small" style="font-weight:800">82 <span style="color:var(--ok)">▲</span></span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">Do 11.06.</span><span class="small" style="font-weight:800">77 <span style="color:var(--crit)">▼</span></span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px"><span class="small muted">Mi 10.06.</span><span class="small" style="font-weight:800">80 <span style="color:var(--ok)">▲</span></span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Oura — Detail</b><span>Großer Score mit Trend-Badge, Verlauf und Werteliste</span></figcaption>
+    </figure>
+
+    <!-- SPORT LISTE -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Sport (Polar)</h3></header>
+        <div class="content">
+          <div class="row" style="gap:8px;padding:0 4px"><span class="ms" style="color:var(--warn);font-size:19px">sprint</span><span class="small grow" style="font-weight:800">Alle Trainings</span><span class="tiny muted">18 von 142</span></div>
+          <div class="chiprow" style="--acc:var(--warn)"><span class="chip sel">30 Tage</span><span class="chip">3 Monate</span><span class="chip">1 Jahr</span><span class="chip">Alles</span></div>
+          <div class="chiprow" style="--acc:var(--warn)"><span class="chip sel">Alle Sportarten</span><span class="chip">Laufen</span><span class="chip">Rad</span><span class="chip">Kraft</span></div>
+          <div class="card">
+            <div class="row"><div class="col grow"><span class="med" style="font-weight:800">Laufen</span><span class="tiny muted">Fr 12.06. · 07:02 · 8,4 km · 47:12 · 5:37 /km</span></div><div class="col" style="align-items:flex-end"><span class="small" style="font-weight:800;color:var(--crit)">Ø 148 bpm</span><span class="tiny muted">VO₂max 46</span></div></div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="col grow"><span class="med" style="font-weight:800">Krafttraining</span><span class="tiny muted">Mi 10.06. · 18:30 · 52:00</span></div><div class="col" style="align-items:flex-end"><span class="small" style="font-weight:800;color:var(--crit)">Ø 121 bpm</span></div></div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="col grow"><span class="med" style="font-weight:800">Radfahren</span><span class="tiny muted">Di 09.06. · 16:44 · 24,1 km · 1:08:30</span></div><div class="col" style="align-items:flex-end"><span class="small" style="font-weight:800;color:var(--crit)">Ø 132 bpm</span></div></div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="col grow"><span class="med" style="font-weight:800">Laufen</span><span class="tiny muted">So 07.06. · 08:15 · 12,2 km · 1:11:05 · 5:50 /km</span></div><div class="col" style="align-items:flex-end"><span class="small" style="font-weight:800;color:var(--crit)">Ø 151 bpm</span><span class="tiny muted">VO₂max 45</span></div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Sport — alle Trainings</b><span>Zeitraum- &amp; Sportarten-Filter in Bernstein, Puls in Rot</span></figcaption>
+    </figure>
+
+    <!-- TRAINING DETAIL -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Laufen</h3><span class="ms act">more_vert</span></header>
+        <div class="content">
+          <div class="card">
+            <div class="row" style="gap:10px"><span style="width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--warn) 16%,transparent);display:grid;place-items:center;color:var(--warn)"><span class="ms" style="font-size:23px">sprint</span></span>
+              <div class="col grow"><span class="med" style="font-weight:800">Laufen · in Hannover</span><span class="tiny muted">Fr 12.06.2026 · 07:02 · Polar</span></div>
+            </div>
+            <div class="row" style="gap:22px;margin-top:12px">
+              <div class="col"><span style="font-size:26px;font-weight:800">8,4 km</span><span class="tiny muted">Distanz</span></div>
+              <div class="col"><span style="font-size:26px;font-weight:800">47:12</span><span class="tiny muted">Dauer</span></div>
+            </div>
+          </div>
+          <div class="row" style="gap:8px;align-items:stretch;text-align:center">
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Ø Pace</div><div style="font-size:14px;font-weight:800">5:37</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Max Puls</div><div style="font-size:14px;font-weight:800;color:var(--crit)">172</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">Kalorien</div><div style="font-size:14px;font-weight:800">612</div></div>
+            <div class="card grow" style="padding:10px 6px"><div class="tiny muted">VO₂max</div><div style="font-size:14px;font-weight:800">46</div></div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--warn)"><span class="ms">bolt</span> TRAININGSEFFEKT</div>
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Aerob</span><span class="small" style="font-weight:800;color:var(--primary)">3,4 / 5</span></div>
+            <div class="sliderbar" style="--acc:var(--primary);margin:8px 0"><i style="width:68%"></i></div>
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Anaerob</span><span class="small" style="font-weight:800;color:var(--crit)">1,2 / 5</span></div>
+            <div class="sliderbar" style="--acc:var(--crit);margin:8px 0 2px"><i style="width:24%"></i></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="height:110px;background:linear-gradient(135deg,#22301f,#17251c 50%,#1b2a30);position:relative">
+              <svg style="position:absolute;inset:0" width="100%" height="100%" viewBox="0 0 300 110"><polyline points="40,80 80,60 120,68 160,40 200,52 250,30 270,45" fill="none" stroke="var(--warn)" stroke-width="3" stroke-linecap="round"/></svg>
+              <span class="pill" style="position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.45);color:#fff">Strecke · Satellit</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--crit)"><span class="ms">ecg_heart</span> PULSVERLAUF</div>
+            <svg class="lchart" viewBox="0 0 300 70">
+              <polyline points="0,55 25,40 50,35 75,28 100,32 125,24 150,28 175,20 200,26 225,18 250,24 275,30 300,38" fill="none" stroke="var(--crit)" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Training — Detail</b><span>Hero-Stats, Trainingseffekt, Satelliten-Strecke, Pulsverlauf, Splits</span></figcaption>
+    </figure>
+
+    <!-- EDIT DIALOG -->
+    <figure class="frame" data-acc="bio">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Laufen</h3></header>
+        <div class="content" style="opacity:.35"><div class="card" style="height:120px"></div></div>
+        <div class="scrim">
+          <div class="dlg">
+            <h4>Trainingswerte bearbeiten</h4>
+            <div class="row" style="gap:8px"><div class="input grow focus"><b>47:12</b></div><div class="input grow">Distanz (km)</div></div>
+            <div class="row" style="gap:8px"><div class="input grow">Ø Pace (M:SS)</div><div class="input grow">Max Pace</div></div>
+            <div class="row" style="gap:8px"><div class="input grow">Ø Puls (bpm)</div><div class="input grow">Max Puls (bpm)</div></div>
+            <div class="row" style="gap:8px"><div class="input grow">Kalorien</div><div class="input grow">Schrittfrequenz</div></div>
+            <div class="tiny muted" style="line-height:1.45">Leere Felder bleiben unverändert. VO₂max wird immer automatisch berechnet.</div>
+            <div class="row" style="justify-content:flex-end;gap:8px"><span class="btn sm" style="color:var(--tx2)">Abbrechen</span><span class="btn acc sm" style="padding:9px 18px">Speichern</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Dialog „Trainingswerte bearbeiten"</b><span>Manuelle Overrides — geschützt vor dem nächsten Sync</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="spezial">
+  <div class="sec-head"><span class="dot"></span><h2>Spezialansichten</h2><span class="sub">Experiment-Kalender, Insight Board, Repertoire</span></div>
+  <div class="grid">
+
+    <!-- EXPERIMENT KALENDER -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Experiment-Kalender</h3><span class="ms act">today</span></header>
+        <div class="content">
+          <div class="chiprow" style="--acc:var(--primary)"><span class="chip">Tag</span><span class="chip">Woche</span><span class="chip sel">Monat</span></div>
+          <div class="row" style="justify-content:space-between;padding:0 4px"><span class="ms" style="color:var(--tx2)">chevron_left</span><span class="med" style="font-weight:800">Juni 2026</span><span class="ms" style="color:var(--tx2)">chevron_right</span></div>
+          <div class="card">
+            <div class="cal">
+              <span class="wd">Mo</span><span class="wd">Di</span><span class="wd">Mi</span><span class="wd">Do</span><span class="wd">Fr</span><span class="wd">Sa</span><span class="wd">So</span>
+              <span class="d">1</span><span class="d">2</span><span class="d" style="background:color-mix(in srgb,var(--primary) 12%,var(--bg2))">3</span><span class="d" style="background:color-mix(in srgb,var(--primary) 12%,var(--bg2))">4</span><span class="d">5</span><span class="d" style="background:color-mix(in srgb,var(--ok) 12%,var(--bg2))">6</span><span class="d" style="background:color-mix(in srgb,var(--ok) 12%,var(--bg2))">7</span>
+              <span class="d">8<span class="dots"><i style="background:var(--acc-forscher)"></i></span></span><span class="d">9<span class="dots"><i style="background:var(--acc-forscher)"></i><i style="background:var(--primary)"></i></span></span><span class="d" style="background:color-mix(in srgb,var(--acc-forscher) 14%,var(--bg2))">10</span><span class="d" style="background:color-mix(in srgb,var(--acc-forscher) 14%,var(--bg2))">11</span><span class="d today">12<span class="dots"><i style="background:var(--acc-forscher)"></i></span></span><span class="d">13</span><span class="d" style="background:color-mix(in srgb,var(--ok) 12%,var(--bg2))">14</span>
+              <span class="d">15<span class="dots"><i style="background:var(--primary)"></i></span></span><span class="d">16</span><span class="d" style="background:color-mix(in srgb,var(--primary) 12%,var(--bg2))">17</span><span class="d">18</span><span class="d">19<span class="dots"><i style="background:var(--acc-forscher)"></i></span></span><span class="d">20</span><span class="d">21</span>
+              <span class="d">22</span><span class="d" style="background:color-mix(in srgb,var(--acc-forscher) 14%,var(--bg2))">23</span><span class="d">24</span><span class="d">25<span class="dots"><i style="background:var(--primary)"></i></span></span><span class="d">26</span><span class="d" style="background:color-mix(in srgb,var(--ok) 12%,var(--bg2))">27</span><span class="d" style="background:color-mix(in srgb,var(--ok) 12%,var(--bg2))">28</span>
+              <span class="d">29</span><span class="d">30</span><span class="d" style="opacity:.3">1</span><span class="d" style="opacity:.3">2</span><span class="d" style="opacity:.3">3</span><span class="d" style="opacity:.3">4</span><span class="d" style="opacity:.3">5</span>
+            </div>
+            <div class="legend" style="margin-top:10px"><span><i style="background:var(--primary)"></i>Tagdienst</span><span><i style="background:var(--acc-forscher)"></i>Nachtdienst</span><span><i style="background:var(--ok)"></i>Frei/Urlaub</span><span><i style="background:var(--acc-forscher)"></i>· Experiment</span></div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--acc-forscher)"><span class="ms">experiment</span> HEUTE · 12.06.</div>
+            <div class="row"><span class="pill tint" style="--acc:var(--acc-forscher)">Abendspaziergang</span><span class="tiny muted">Tag 3 von 14</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Experiment-Kalender</b><span>Monatsgrid mit Schicht-Tönung, Experiment-Punkten und Heute-Ring</span></figcaption>
+    </figure>
+
+    <!-- INSIGHT BOARD -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Insight Board</h3><span class="ms act" style="color:var(--primary)">add_circle</span></header>
+        <div class="content">
+          <div class="acch" style="--c:var(--ok)"><span class="ms">verified</span>BESTÄTIGTE METHODEN<span class="cnt">3</span><span class="ms chev">expand_less</span></div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--ok)">86%</span><div class="col grow"><span class="med" style="font-weight:800">Abendspaziergang vor dem Schlafen</span><div class="row" style="gap:5px;margin-top:3px"><span class="pill tint" style="--acc:var(--ok);font-size:9.5px;padding:2px 8px">Gesundheitlich</span><span class="pill tint" style="--acc:var(--acc-forscher);font-size:9.5px;padding:2px 8px">+ Mental</span></div></div></div>
+            <div class="statusline" style="padding:8px 0 0"><span class="bar"><i style="width:86%;background:var(--ok)"></i></span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--ok)">74%</span><div class="col grow"><span class="med" style="font-weight:800">Schwerste Aufgabe zuerst</span><div class="row" style="gap:5px;margin-top:3px"><span class="pill tint" style="--acc:var(--acc-forscher);font-size:9.5px;padding:2px 8px">Mental</span></div></div></div>
+            <div class="statusline" style="padding:8px 0 0"><span class="bar"><i style="width:74%;background:var(--ok)"></i></span></div>
+          </div>
+          <div class="acch" style="--c:var(--warn)"><span class="ms">visibility</span>IN BEOBACHTUNG<span class="cnt">2</span><span class="ms chev">expand_less</span></div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--warn)">52%</span><div class="col grow"><span class="med" style="font-weight:800">Kein Kaffee nach 14 Uhr</span><div class="row" style="gap:5px;margin-top:3px"><span class="pill tint" style="--acc:var(--ok);font-size:9.5px;padding:2px 8px">Gesundheitlich</span></div></div></div>
+            <div class="statusline" style="padding:8px 0 0"><span class="bar"><i style="width:52%;background:var(--warn)"></i></span></div>
+          </div>
+          <div class="acch" style="--c:var(--crit)"><span class="ms">block</span>VERWORFEN<span class="cnt">1</span><span class="ms chev">expand_more</span></div>
+        </div>
+      </div>
+      <figcaption><b>Insight Board</b><span>Drei Sektionen mit Confidence-Prozent und Ampel-Balken</span></figcaption>
+    </figure>
+
+    <!-- REPERTOIRE -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Mein Repertoire</h3></header>
+        <div class="content">
+          <div class="card" style="background:linear-gradient(135deg,color-mix(in srgb,var(--ok) 14%,var(--card)),var(--card));border-color:color-mix(in srgb,var(--ok) 30%,var(--line))">
+            <div class="row"><span style="width:38px;height:38px;border-radius:50%;background:color-mix(in srgb,var(--ok) 18%,transparent);display:grid;place-items:center;color:var(--ok)"><span class="ms">emoji_events</span></span>
+              <div class="col grow"><span class="med" style="font-weight:800">Deine bewährtesten Hebel</span><span class="tiny muted">Sortiert nach Wirkung × Wiederholung</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--ok)">86%</span><div class="col grow"><span class="med" style="font-weight:800">Abendspaziergang vor dem Schlafen</span><span class="tiny muted">14 Versuche · 12 Erfolge</span></div><span class="ms" style="color:var(--tx3)">chevron_right</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--ok)">74%</span><div class="col grow"><span class="med" style="font-weight:800">Schwerste Aufgabe zuerst</span><span class="tiny muted">9 Versuche · 7 Erfolge</span></div><span class="ms" style="color:var(--tx3)">chevron_right</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span style="font-size:21px;font-weight:800;color:var(--ok)">68%</span><div class="col grow"><span class="med" style="font-weight:800">Schreibtisch leer = Kopf klar</span><span class="tiny muted">6 Versuche · 4 Erfolge</span></div><span class="ms" style="color:var(--tx3)">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Mein Repertoire</b><span>Bestätigte Methoden über 50 % — die persönliche Werkzeugkiste</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="agentic">
+  <div class="sec-head"><span class="dot"></span><h2>Prompts &amp; Verlauf</h2><span class="sub">Agentic-System — Ausführungen, Token, Trigger</span></div>
+  <div class="grid">
+
+    <!-- VERLAUF -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Verlauf — alle Prompts</h3></header>
+        <div class="content">
+          <div class="chiprow" style="--acc:var(--primary)"><span class="chip sel">Alle</span><span class="chip">Erfolge</span><span class="chip">Fehler</span><span class="chip">Token-Block</span><span class="chip">Laufend</span></div>
+          <div class="card" style="border-left:3px solid var(--ok)">
+            <div class="row"><span class="med grow" style="font-weight:800">Codex-Synthese</span><span class="pill tint" style="--acc:var(--ok)">Erfolg</span></div>
+            <div class="tiny muted" style="margin-top:4px">Heute 08:00 · Tokens: 14.205 · Tools: 6 · Gemini 3 Flash</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--ok)">
+            <div class="row"><span class="med grow" style="font-weight:800">Biomarker-Spike-Wächter</span><span class="pill tint" style="--acc:var(--ok)">Erfolg</span></div>
+            <div class="tiny muted" style="margin-top:4px">Heute 07:15 · Tokens: 3.880 · Tools: 2 · Gemini 3.1 Flash Lite</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--crit)">
+            <div class="row"><span class="med grow" style="font-weight:800">Thesen-Konsolidierung</span><span class="pill tint" style="--acc:var(--crit)">Fehler</span></div>
+            <div class="tiny muted" style="margin-top:4px">Gestern 19:00 · Tokens: 1.022 · Tools: 1</div>
+            <div class="tiny" style="color:var(--crit);margin-top:3px;font-weight:700">Fehler: API-Limit erreicht (429)</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--primary)">
+            <div class="row"><span class="med grow" style="font-weight:800">Insight-Update</span><span class="pill tint" style="--acc:var(--primary)">Läuft …</span></div>
+            <div class="tiny muted" style="margin-top:4px">Jetzt · Tokens: 2.114 · Tools: 3</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Verlauf — alle Prompts</b><span>Status-Filter, farbige Status-Kante an jeder Karte</span></figcaption>
+    </figure>
+
+    <!-- TOKEN STATS -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Token-Verbrauch</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="row"><span class="med grow" style="font-weight:800">Codex-Synthese</span><span style="font-size:17px;font-weight:800;color:var(--primary)">14.205</span></div>
+            <div class="tiny muted" style="margin-top:2px">Kategorie: Codex · Tokens heute</div>
+            <div class="row" style="justify-content:space-between;margin-top:8px"><span class="tiny muted">Limit: 50.000 / Tag</span><span class="tiny" style="font-weight:800;color:var(--ok)">28 %</span></div>
+            <div class="statusline" style="padding:4px 0 0"><span class="bar"><i style="width:28%;background:var(--primary)"></i></span></div>
+            <div class="gbar" style="height:34px;margin-top:10px;--acc:var(--primary)"><i style="height:30%"></i><i style="height:45%"></i><i style="height:20%"></i><i style="height:60%"></i><i style="height:38%"></i><i style="height:75%"></i><i style="height:52%"></i><i style="height:64%"></i><i style="height:42%"></i><i style="height:88%"></i><i style="height:56%"></i><i style="height:70%"></i></div>
+            <div class="tiny muted" style="margin-top:5px">30-Tage-Historie · Spitze: 41.300 Tokens</div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="med grow" style="font-weight:800">Biomarker-Spike-Wächter</span><span style="font-size:17px;font-weight:800;color:var(--crit)">49.880</span></div>
+            <div class="row" style="justify-content:space-between;margin-top:8px"><span class="tiny muted">Limit: 50.000 / Tag</span><span class="tiny" style="font-weight:800;color:var(--crit)">99 % — fast erreicht</span></div>
+            <div class="statusline" style="padding:4px 0 0"><span class="bar"><i style="width:99%;background:var(--crit)"></i></span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="med grow" style="font-weight:800">Insight-Update</span><span style="font-size:17px;font-weight:800;color:var(--primary)">2.114</span></div>
+            <div class="row" style="justify-content:space-between;margin-top:8px"><span class="tiny muted">Kein Limit gesetzt</span><span class="btn ghost sm" style="--acc:var(--primary);padding:5px 11px;font-size:11px">Limit setzen</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Token-Verbrauch</b><span>Top-Verbraucher oben, Limit-Balken, 30-Tage-Historie</span></figcaption>
+    </figure>
+
+    <!-- EXECUTION + PERMISSIONS DIALOG -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Eigene Prompts</h3></header>
+        <div class="content" style="opacity:.35"><div class="card" style="height:70px"></div><div class="card" style="height:70px"></div></div>
+        <div class="scrim">
+          <div class="dlg">
+            <h4>Schreibenden Tool-Aufruf bestätigen</h4>
+            <div class="small muted">Werkzeug: <b style="color:var(--tx)">memory_add</b></div>
+            <div class="card" style="background:var(--bg2);padding:10px 12px">
+              <div class="tiny muted" style="font-weight:700;margin-bottom:4px">Argumente (von Gemini vorgeschlagen):</div>
+              <div class="tiny" style="font-family:monospace;line-height:1.5">{ "text": "Frank schläft nach<br>&nbsp;&nbsp;Spätschichten im Schnitt 52 Min kürzer" }</div>
+            </div>
+            <div class="row" style="justify-content:flex-end;gap:8px">
+              <span class="btn danger sm">Ablehnen</span>
+              <span class="btn pri sm" style="padding:9px 18px"><span class="ms" style="font-size:15px">check</span> Genehmigen</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Dialog „Tool-Aufruf bestätigen"</b><span>Schreibende KI-Aktionen brauchen dein Okay — Orange = genehmigen</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="sec" id="settings">
+  <div class="sec-head"><span class="dot"></span><h2>Einstellungen</h2><span class="sub">Alle 13 Seiten des Einstellungs-Stacks</span></div>
+  <div class="grid">
+
+    <!-- SETTINGS HOME -->
+    <figure class="frame">
+      <div class="screen" style="min-height:980px">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Einstellungen</h3></header>
+        <div class="content" style="gap:9px">
+          <div class="setrow" style="--c:var(--primary)"><span class="ic"><span class="ms">calendar_month</span></span><div class="col grow"><span class="t">Experiment-Kalender</span><span class="s">Tag/Wochen/Monatsansicht aller laufenden Hypothesen.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--warn)"><span class="ic"><span class="ms">lightbulb</span></span><div class="col grow"><span class="t">Insight Board</span><span class="s">Bestätigte Methoden, Beobachtungen und verworfene Ansätze.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--ok)"><span class="ic"><span class="ms">emoji_events</span></span><div class="col grow"><span class="t">Mein Repertoire</span><span class="s">Deine bewährtesten Hebel — sortiert nach Wirkung × Wiederholung.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--primary)"><span class="ic"><span class="ms">key</span></span><div class="col grow"><span class="t">API-Schlüssel</span><span class="s">Verwalte deine API-Schlüssel und verknüpfe deine Anbieter.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--acc-forscher)"><span class="ic"><span class="ms">psychology</span></span><div class="col grow"><span class="t">KI-Modell-Auswahl</span><span class="s">Wähle das passende KI-Modell für deine Aufgaben aus.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--ok)"><span class="ic"><span class="ms">person</span></span><div class="col grow"><span class="t">Persönliches Profil</span><span class="s">Passe deine Vorlieben, Ziele und Einstellungen an.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--warn)"><span class="ic"><span class="ms">chat_bubble</span></span><div class="col grow"><span class="t">Eigene Prompts</span><span class="s">Erstelle und organisiere deine eigenen Prompt-Vorlagen.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--primary)"><span class="ic"><span class="ms">memory</span></span><div class="col grow"><span class="t">Gedächtnis</span><span class="s">Entscheide, was sich das Genie merken darf.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--acc-forscher)"><span class="ic"><span class="ms">auto_awesome</span></span><div class="col grow"><span class="t">Genie-Codex</span><span class="s">Verhaltensregeln, Werte und Antwortstil für das Genie.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--primary)"><span class="ic"><span class="ms">bolt</span></span><div class="col grow"><span class="t">KI-Trigger</span><span class="s">Beobachte und genehmige automatische Trigger.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--acc-forscher)"><span class="ic"><span class="ms">inventory_2</span></span><div class="col grow"><span class="t">Archiv</span><span class="s">Erledigte Aufgaben mit Lösungsmethode — Quelle für den Forscher.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--primary)"><span class="ic"><span class="ms">widgets</span></span><div class="col grow"><span class="t">Widget-Einstellungen</span><span class="s">Theme, Filter und Transparenz des Homescreen-Widgets.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--crit)"><span class="ic"><span class="ms">ios_share</span></span><div class="col grow"><span class="t">Datenexport / Datenschutz</span><span class="s">Exportiere deine Daten oder überwache den Datenschutz.</span></div><span class="ms chev">chevron_right</span></div>
+          <div class="setrow" style="--c:var(--acc-forscher)"><span class="ic"><span class="ms">monitor_heart</span></span><div class="col grow"><span class="t">Diagnose-Protokoll</span><span class="s">Fehler und Erfolge aller Verknüpfungen (Strava, Whoop, Oura, …).</span></div><span class="ms chev">chevron_right</span></div>
+        </div>
+      </div>
+      <figcaption><b>Einstellungen — Übersicht</b><span>Alle 13 Menüpunkte mit Icon-Kreis in eigener Akzentfarbe</span></figcaption>
+    </figure>
+
+    <!-- API KEYS -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>API-Schlüssel</h3></header>
+        <div class="content">
+          <div class="btn pri sm"><span class="ms">cloud_sync</span> Alle Daten neu laden</div>
+          <div class="card">
+            <div class="h" style="--acc:var(--primary)"><span class="ms">cloud_done</span> GOOGLE DRIVE BACKUP</div>
+            <div class="small" style="font-weight:700">barwandt@gmail.com</div>
+            <div class="tiny" style="color:var(--ok);font-weight:700;margin-top:2px">Synchronisiert um 11:02</div>
+            <div class="row" style="justify-content:space-between;margin-top:9px"><span class="small" style="font-weight:700">Auto-Backup bei jeder Änderung</span><span class="switch on" style="--acc:var(--primary)"></span></div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--crit)"><span class="ms">key</span> GROQ API KEY</div>
+            <div class="input">gsk_ ••••••••••••••••••••</div>
+            <div class="row" style="gap:8px;margin-top:9px"><span class="btn ghost sm grow" style="--acc:var(--primary)">Verbindung testen</span><span class="btn acc sm grow" style="--acc:var(--primary)">Speichern</span></div>
+            <div class="tiny" style="color:var(--ok);font-weight:700;margin-top:7px">✓ Verbindung erfolgreich</div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--acc-forscher)"><span class="ms">key</span> GEMINI API KEY</div>
+            <div class="input">AIza ••••••••••••••••••••</div>
+            <div class="tiny" style="color:var(--ok);font-weight:700;margin-top:7px">✓ Verbindung erfolgreich</div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--acc-forscher)"><span class="ms">watch</span> WHOOP</div>
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:700">Verbunden</span><span class="pill tint" style="--acc:var(--ok)">OAuth aktiv</span></div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--warn)"><span class="ms">directions_run</span> STRAVA · POLAR · OURA · HEALTH CONNECT</div>
+            <div class="tiny muted" style="line-height:1.5">Alle vier Quellen verbunden · letzter Sync vor 12 Minuten</div>
+          </div>
+          <div class="tiny muted" style="text-align:center;padding:0 12px;line-height:1.5">Deine API-Schlüssel werden mit AES-256-GCM auf deinem Gerät verschlüsselt.</div>
+        </div>
+      </div>
+      <figcaption><b>API-Schlüssel</b><span>Key-Karten mit Test/Speichern, Drive-Backup, alle Verbindungen</span></figcaption>
+    </figure>
+
+    <!-- MODELS -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>KI-Modell-Auswahl</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:10px">Whisper-Modell (Groq)</div>
+            <div class="row" style="padding:7px 0"><span class="radio on" style="--acc:var(--primary)"></span><span class="small" style="font-weight:700">whisper-large-v3-turbo</span></div>
+            <div class="row" style="padding:7px 0"><span class="radio"></span><span class="small muted">whisper-large-v3</span></div>
+          </div>
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:10px">Gemini-Modell</div>
+            <div class="row" style="padding:7px 0"><span class="radio on" style="--acc:var(--primary)"></span><span class="small" style="font-weight:700">gemini-3-flash-preview</span></div>
+            <div class="row" style="padding:7px 0"><span class="radio"></span><span class="small muted">gemini-3.1-flash-lite</span></div>
+            <div class="row" style="padding:7px 0"><span class="radio"></span><span class="small muted">gemini-2.5-flash</span></div>
+            <div class="row" style="padding:7px 0"><span class="radio"></span><span class="small muted">gemini-2.5-flash-lite</span></div>
+          </div>
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:10px">Sprache der Transkription</div>
+            <div class="row" style="padding:7px 0"><span class="radio on" style="--acc:var(--primary)"></span><span class="small" style="font-weight:700">Deutsch (de)</span></div>
+            <div class="row" style="padding:7px 0"><span class="radio"></span><span class="small muted">Automatisch erkennen</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>KI-Modell-Auswahl</b><span>Radiogruppen — aktive Auswahl in Orange</span></figcaption>
+    </figure>
+
+    <!-- PROFILE -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Persönliches Profil</h3></header>
+        <div class="content">
+          <div class="card grow" style="display:flex;flex-direction:column">
+            <div class="h" style="--acc:var(--primary)"><span class="ms">person</span> ÜBER MICH — WAS DIE KI WISSEN SOLL</div>
+            <div class="tiny muted" style="line-height:1.5;margin-bottom:9px">Du kannst hier auch deinen Memory-Export aus ChatGPT oder Claude einfügen.</div>
+            <div class="input area focus grow" style="min-height:220px;line-height:1.6"><b>Ich arbeite im Schichtdienst, 4 Tage Rhythmus. Sport ist mein wichtigster Ausgleich — Laufen und Kraft. Ziel: weniger offene Baustellen gleichzeitig, mehr Tiefschlaf …</b></div>
+          </div>
+          <div class="btn ghost" style="--acc:var(--acc-forscher)"><span class="ms">psychology</span> Aus Profil ins Gedächtnis übernehmen</div>
+          <div class="btn pri"><span class="ms">save</span> Speichern</div>
+        </div>
+      </div>
+      <figcaption><b>Persönliches Profil</b><span>Großes Freitext-Feld, Gedächtnis-Übernahme per KI</span></figcaption>
+    </figure>
+
+    <!-- PROMPTS -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Eigene Prompts</h3></header>
+        <div class="content">
+          <div class="tiny muted" style="padding:0 4px;line-height:1.5">Prompts wirken nur in ihrer Kategorie.</div>
+          <div class="row" style="padding:0 4px"><span class="small grow" style="font-weight:800;color:var(--primary)">AUFGABEN</span><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--primary) 18%,transparent);display:grid;place-items:center;color:var(--primary)"><span class="ms" style="font-size:16px">add</span></span></div>
+          <div class="card">
+            <div class="row"><span class="switch on" style="--acc:var(--primary)"></span><span class="med grow" style="font-weight:800">Morgen-Priorisierung</span>
+              <span class="ms" style="color:var(--primary);font-size:18px">edit</span><span class="ms" style="color:var(--primary);font-size:18px">build</span><span class="ms" style="color:var(--primary);font-size:18px">bolt</span><span class="ms" style="color:var(--crit);font-size:18px">delete</span></div>
+            <div class="tiny muted" style="margin-top:5px">Gemini 3.1 Flash Lite · Trigger: daily 06:30 · Trust-Modus aus</div>
+          </div>
+          <div class="row" style="padding:6px 4px 0"><span class="small grow" style="font-weight:800;color:var(--acc-forscher)">FORSCHER</span><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--acc-forscher) 18%,transparent);display:grid;place-items:center;color:var(--acc-forscher)"><span class="ms" style="font-size:16px">add</span></span></div>
+          <div class="card">
+            <div class="row"><span class="switch on" style="--acc:var(--acc-forscher)"></span><span class="med grow" style="font-weight:800">Insight-Update</span>
+              <span class="ms" style="color:var(--acc-forscher);font-size:18px">edit</span><span class="ms" style="color:var(--acc-forscher);font-size:18px">build</span><span class="ms" style="color:var(--acc-forscher);font-size:18px">bolt</span><span class="ms" style="color:var(--crit);font-size:18px">delete</span></div>
+            <div class="tiny muted" style="margin-top:5px">Gemini 2.5 Pro · Trigger: weekly SUN 19:00</div>
+          </div>
+          <div class="row" style="padding:6px 4px 0"><span class="small grow" style="font-weight:800;color:var(--acc-analyse)">ANALYSE</span><span style="width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--acc-analyse) 18%,transparent);display:grid;place-items:center;color:var(--acc-analyse)"><span class="ms" style="font-size:16px">add</span></span></div>
+          <div class="card" style="border-style:dashed;text-align:center;padding:18px">
+            <div class="tiny muted" style="line-height:1.5">Noch keine Prompts in dieser Kategorie.<br>Tippe auf das + im Kopf.</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Eigene Prompts</b><span>Nach Kategorie gruppiert — Kategorie-Header in Tab-Farbklasse</span></figcaption>
+    </figure>
+
+    <!-- MEMORY -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Gedächtnis</h3></header>
+        <div class="content">
+          <div class="row" style="gap:8px;align-items:stretch;text-align:center">
+            <div class="card grow" style="padding:12px 6px"><span class="ms" style="color:var(--primary);font-size:22px">add_circle</span><div class="tiny" style="font-weight:800;margin-top:5px">Hinzufügen</div><div class="tiny muted">Manuell</div></div>
+            <div class="card grow" style="padding:12px 6px"><span class="ms" style="color:var(--acc-forscher);font-size:22px">auto_awesome</span><div class="tiny" style="font-weight:800;margin-top:5px">KI-Vorschläge</div><div class="tiny muted">Prüfen</div></div>
+            <div class="card grow" style="padding:12px 6px"><span class="ms" style="color:var(--ok);font-size:22px">person</span><div class="tiny" style="font-weight:800;margin-top:5px">Aus Profil</div><div class="tiny muted">Neu generieren</div></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="pill tint" style="--acc:var(--primary);font-size:9px">MANUELL</span><span class="grow"></span><span class="switch on" style="--acc:var(--primary)"></span><span class="ms" style="color:var(--crit);font-size:18px">delete</span></div>
+            <div class="small" style="font-weight:700;margin-top:7px;line-height:1.45">Schichtdienst im 4-Tage-Rhythmus — Nachtschichten beachten.</div>
+            <div class="row" style="margin-top:7px;gap:8px"><span class="tiny muted">Vertrauen</span><span class="statusline grow" style="padding:0"><span class="bar"><i style="width:95%;background:var(--primary)"></i></span></span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="pill tint" style="--acc:var(--acc-forscher);font-size:9px">KI-VORSCHLAG</span><span class="grow"></span><span class="switch on" style="--acc:var(--primary)"></span><span class="ms" style="color:var(--crit);font-size:18px">delete</span></div>
+            <div class="small" style="font-weight:700;margin-top:7px;line-height:1.45">Reagiert stark auf späten Kaffee — Tiefschlaf sinkt messbar.</div>
+            <div class="row" style="margin-top:7px;gap:8px"><span class="tiny muted">Vertrauen</span><span class="statusline grow" style="padding:0"><span class="bar"><i style="width:70%;background:var(--acc-forscher)"></i></span></span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="pill tint" style="--acc:var(--ok);font-size:9px">AUS PROFIL</span><span class="grow"></span><span class="switch on" style="--acc:var(--primary)"></span><span class="ms" style="color:var(--crit);font-size:18px">delete</span></div>
+            <div class="small" style="font-weight:700;margin-top:7px;line-height:1.45">Sport (Laufen, Kraft) ist der wichtigste Ausgleich.</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Gedächtnis</b><span>Drei Quellen-Badges, Vertrauens-Balken, Schalter pro Eintrag</span></figcaption>
+    </figure>
+
+    <!-- CODEX -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Genie-Codex</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="h" style="--acc:var(--acc-forscher)"><span class="ms">auto_awesome</span> WAS DIE KI ÜBER DICH VERSTANDEN HAT</div>
+            <div class="tiny muted" style="line-height:1.5;margin-bottom:8px">Wird automatisch sonntags 19:00 aktualisiert. Letzte Synthese: 08.06.2026 · 19:00</div>
+            <div class="small" style="line-height:1.6">Frank arbeitet im Schichtdienst und kämpft vor allem mit <b>mentaler Entropie durch offene Aufgaben</b>. Bewegung ist sein stärkster Hebel. Er bevorzugt klare, direkte Antworten ohne Umschweife. Nachtschichten brauchen eigene Regeln …</div>
+            <div class="btn sm" style="background:linear-gradient(135deg,var(--acc-forscher),color-mix(in srgb,var(--acc-forscher) 65%,#fff));color:#1A1025;margin-top:11px;font-weight:800"><span class="ms">refresh</span> Jetzt aktualisieren</div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--acc-forscher)"><span class="ms">history</span> VERSIONSHISTORIE</div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">08.06.2026 · 19:00</span><span class="tiny" style="color:var(--acc-forscher);font-weight:800">Aktuell</span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line)"><span class="small muted">01.06.2026 · 19:00</span><span class="ms" style="color:var(--tx3);font-size:17px">chevron_right</span></div>
+            <div class="row" style="justify-content:space-between;padding:7px 2px"><span class="small muted">25.05.2026 · 19:00</span><span class="ms" style="color:var(--tx3);font-size:17px">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Genie-Codex</b><span>KI-Synthese in Violett, Versionshistorie darunter</span></figcaption>
+    </figure>
+
+    <!-- KI TRIGGER -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>KI-Trigger</h3></header>
+        <div class="content">
+          <div class="tiny muted" style="padding:0 4px;line-height:1.5">Die KI schlägt zweimal pro Woche neue Trigger vor — Mittwoch und Sonntag um 11:00.</div>
+          <div class="acch" style="--c:var(--acc-forscher)"><span class="ms">auto_awesome</span>VORGESCHLAGEN<span class="cnt">1</span></div>
+          <div class="card">
+            <div class="small" style="font-weight:800">Schlaf-Warnung nach Nachtschicht</div>
+            <div class="tiny muted" style="margin-top:5px;line-height:1.5"><b>Bedingung:</b> Tiefschlaf &lt; 60 Min nach Nachtschicht<br><b>Aktion:</b> Morgen-Briefing mit Schon-Empfehlung<br>Vorgeschlagen: 11.06.2026</div>
+            <div class="row" style="gap:8px;margin-top:10px"><span class="btn ghost sm grow" style="--acc:var(--crit)">Ablehnen</span><span class="btn pri sm grow">Annehmen</span></div>
+          </div>
+          <div class="acch" style="--c:var(--primary)"><span class="ms">bolt</span>AKTIV<span class="cnt">2</span></div>
+          <div class="card">
+            <div class="row"><span class="ms" style="color:var(--primary);font-size:18px">bolt</span><span class="small grow" style="font-weight:800">HRV-Einbruch → Tag entschärfen</span></div>
+            <div class="tiny muted" style="margin-top:5px">Zuletzt gefeuert: 09.06.2026, insgesamt 4×</div>
+            <div class="row" style="gap:8px;margin-top:9px"><span class="btn ghost sm grow" style="--acc:var(--warn)">Pausieren</span><span class="btn danger sm grow">Löschen</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>KI-Trigger</b><span>Vorgeschlagen vs. Aktiv — Annehmen in Orange</span></figcaption>
+    </figure>
+
+    <!-- ARCHIV -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Archiv</h3></header>
+        <div class="content">
+          <div class="input row" style="gap:8px"><span class="ms" style="font-size:18px">search</span> Suchen in Titel, Beschreibung oder Methode</div>
+          <div class="card">
+            <div class="row"><span class="med grow" style="font-weight:800">Werkstatt-Termin organisiert</span><span class="ms" style="color:var(--primary);font-size:19px">unarchive</span></div>
+            <div class="tiny muted" style="margin-top:3px">Erledigt am 28.05.2026</div>
+            <div style="background:color-mix(in srgb,var(--ok) 11%,transparent);border-radius:12px;padding:9px 11px;margin-top:9px">
+              <div class="tiny" style="font-weight:800;color:var(--ok);margin-bottom:3px">SO HABE ICH DIE ENTROPIE GESENKT:</div>
+              <div class="tiny muted" style="line-height:1.5">Direkt morgens angerufen statt aufzuschieben — 5 Minuten, Thema komplett weg.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="med grow" style="font-weight:800">Versicherungsunterlagen sortiert</span><span class="ms" style="color:var(--primary);font-size:19px">unarchive</span></div>
+            <div class="tiny muted" style="margin-top:3px">Erledigt am 21.05.2026</div>
+            <div style="background:color-mix(in srgb,var(--ok) 11%,transparent);border-radius:12px;padding:9px 11px;margin-top:9px">
+              <div class="tiny" style="font-weight:800;color:var(--ok);margin-bottom:3px">SO HABE ICH DIE ENTROPIE GESENKT:</div>
+              <div class="tiny muted" style="line-height:1.5">Timer auf 25 Minuten, ein Ordner pro Durchgang — Druck rausgenommen.</div>
+            </div>
+          </div>
+          <div class="tiny muted" style="text-align:center;line-height:1.5">Aufgaben werden 14 Tage nach Erledigung automatisch archiviert.</div>
+        </div>
+      </div>
+      <figcaption><b>Archiv</b><span>Suche oben, Lösungsmethoden grün hervorgehoben</span></figcaption>
+    </figure>
+
+    <!-- WIDGET -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Widget-Einstellungen</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:9px">Theme</div>
+            <div class="row" style="padding:6px 0"><span class="radio on" style="--acc:var(--primary)"></span><span class="small" style="font-weight:700">System</span><span class="tiny muted grow" style="text-align:right">Folgt dem Geräte-Theme</span></div>
+            <div class="row" style="padding:6px 0"><span class="radio"></span><span class="small muted">Hell</span></div>
+            <div class="row" style="padding:6px 0"><span class="radio"></span><span class="small muted">Dunkel</span></div>
+          </div>
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:9px">Anzeige-Filter</div>
+            <div class="row" style="padding:6px 0"><span class="radio on" style="--acc:var(--primary)"></span><span class="small" style="font-weight:700">Alle Aufgaben</span></div>
+            <div class="row" style="padding:6px 0"><span class="radio"></span><span class="small muted">Nur Heute</span></div>
+          </div>
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:4px">Transparenz</div>
+            <div class="row" style="justify-content:space-between"><span class="tiny muted">Deckend</span><span class="tiny muted">Durchsichtig</span></div>
+            <div class="sliderbar" style="--acc:var(--primary)"><i style="width:30%"></i><b style="left:30%"></b></div>
+          </div>
+          <div class="card">
+            <div class="med" style="font-weight:800;margin-bottom:9px">Vorschau</div>
+            <div style="border-radius:14px;background:var(--bg2);border:1px solid var(--line);padding:11px">
+              <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:800;color:var(--primary)">Aufgaben</span><span class="tiny muted">Heute</span></div>
+              <div class="task" style="--ramp:#EA580C;margin-top:8px;padding:9px 11px"><span class="t" style="font-size:12px">Beispiel-Aufgabe — so sieht eine Karte im Widget aus</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Widget-Einstellungen</b><span>Theme, Filter, Transparenz — mit Live-Vorschau</span></figcaption>
+    </figure>
+
+    <!-- EXPORT -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Datenexport / Datenschutz</h3></header>
+        <div class="content">
+          <div class="card">
+            <div class="h" style="--acc:var(--primary)"><span class="ms">ios_share</span> DATENEXPORT</div>
+            <div class="btn ghost" style="--acc:var(--primary)"><span class="ms">download</span> Alle Daten als JSON exportieren</div>
+          </div>
+          <div class="card">
+            <div class="h" style="--acc:var(--crit)"><span class="ms">delete_forever</span> LÖSCHEN</div>
+            <div class="col" style="gap:9px">
+              <div class="btn danger sm">Alle Einträge löschen</div>
+              <div class="btn danger sm">Alle Memory-Einträge löschen</div>
+            </div>
+          </div>
+          <div class="card" style="background:color-mix(in srgb,var(--ok) 8%,var(--card))">
+            <div class="row" style="gap:9px"><span class="ms" style="color:var(--ok);font-size:20px">verified_user</span>
+            <div class="tiny muted" style="line-height:1.55">Alle Daten werden ausschließlich lokal auf deinem Gerät gespeichert. API-Schlüssel sind AES-256-GCM-verschlüsselt.</div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Datenexport / Datenschutz</b><span>Export, rote Löschzone, Datenschutz-Hinweis</span></figcaption>
+    </figure>
+
+    <!-- DIAGNOSE -->
+    <figure class="frame">
+      <div class="screen">
+        <div class="sb"><span>11:38</span><span><span class="ms">wifi</span> <span class="ms">battery_5_bar</span></span></div>
+        <header class="appbar"><span class="ms back">arrow_back</span><h3>Diagnose-Protokoll</h3><span class="ms act">ios_share</span><span class="ms act">delete_sweep</span></header>
+        <div class="content">
+          <div class="chiprow" style="--acc:var(--primary)"><span class="chip sel">Alle</span><span class="chip">Whoop</span><span class="chip">Oura</span><span class="chip">Strava</span><span class="chip">Drive</span><span class="chip">KI</span></div>
+          <div class="card" style="border-left:3px solid var(--ok)">
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:800">Whoop-Sync erfolgreich</span><span class="tiny muted">11:26</span></div>
+            <div class="tiny muted" style="margin-top:3px">14 neue Recovery-Werte übernommen.</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--primary)">
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:800">Drive-Backup hochgeladen</span><span class="tiny muted">11:02</span></div>
+            <div class="tiny muted" style="margin-top:3px">Backup 2,4 MB · 1.204 Einträge.</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--warn)">
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:800">Oura: Rate-Limit nahe</span><span class="tiny muted">10:48</span></div>
+            <div class="tiny muted" style="margin-top:3px">Noch 12 Anfragen in diesem Fenster.</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--crit)">
+            <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:800">Strava-Sync fehlgeschlagen</span><span class="tiny muted">09:13</span></div>
+            <div class="tiny muted" style="margin-top:3px">Token abgelaufen — bitte neu verbinden.</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Diagnose-Protokoll</b><span>Bereichs-Filter, Level-Farben als linke Kanten</span></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ::APPEND:: -->
+
+<footer>
+  Mockup „Glut" · Entropie Reduktor · Hell-/Dunkelmodus oben oder unten rechts umschaltbar · Alle Screens, Menüs &amp; Dialoge der App
+</footer>
+
+<script>
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('btn-light').classList.toggle('on',t==='light');
+  document.getElementById('btn-dark').classList.toggle('on',t==='dark');
+  document.getElementById('ticon').textContent = t==='dark' ? 'light_mode' : 'dark_mode';
+}
+function toggleTheme(){
+  setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+</script>
+</body>
+</html>
