@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.domain.agentic
 
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.PromptExecutionEntity
 import de.frank.entropyreducer.data.local.entities.PromptExecutionStepEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
@@ -76,7 +78,7 @@ constructor(private val executionRepo: PromptExecutionRepository) {
         val existing = executionRepo.getById(executionId)
         if (existing == null) {
             // Direktive 3 Loop-1-Fix (war MED-4-Bug): nicht silent verwerfen.
-            android.util.Log.e(
+            Diag.e(DiagnosticArea.AGENTIC, 
                 "ExecutionLogger",
                 "complete() fuer unbekannte executionId=$executionId — " +
                     "Tokens und finalAnswer werden NICHT persistiert. " +
@@ -113,7 +115,7 @@ constructor(private val executionRepo: PromptExecutionRepository) {
         val existing = executionRepo.getById(executionId)
         if (existing == null) {
             // Direktive 3 Loop-1-Fix (war MED-4-Bug): nicht silent verwerfen.
-            android.util.Log.e(
+            Diag.e(DiagnosticArea.AGENTIC, 
                 "ExecutionLogger",
                 "fail() fuer unbekannte executionId=$executionId — " +
                     "Fehler-Begruendung wird NICHT persistiert: $errorMessage",

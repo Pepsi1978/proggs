@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.usecase.GenerateDailyBriefingUseCase
 import java.time.LocalDate
@@ -39,7 +40,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault()).toString()
             val storedDate = settings.dailyBriefingDateFlow.first()
             if (!force && storedDate == today) {
-                Log.i(TAG, "Tagesbriefing für $today existiert bereits — skip (force=false).")
+                Diag.i(DiagnosticArea.BRIEFING, TAG, "Tagesbriefing für $today existiert bereits — skip (force=false).")
                 return Result.success()
             }
 
@@ -47,7 +48,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             val text = result.getOrNull()
             if (text.isNullOrBlank()) {
                 val ex = result.exceptionOrNull()
-                Log.w(TAG, "Tagesbriefing-Generierung fehlgeschlagen: ${ex?.message}")
+                Diag.w(DiagnosticArea.BRIEFING, TAG, "Tagesbriefing-Generierung fehlgeschlagen: ${ex?.message}")
                 // Wenn API-Key fehlt: Worker NICHT retry-en — sonst lauft er endlos
                 // bis der Benutzer den Key hinterlegt. Erst beim naechsten Polling-
                 // Lauf (90 Min) wird neu versucht.
@@ -55,7 +56,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             }
 
             settings.setDailyBriefing(text, today, System.currentTimeMillis())
-            Log.i(TAG, "Tagesbriefing gespeichert (${text.length} Zeichen)")
+            Diag.i(DiagnosticArea.BRIEFING, TAG, "Tagesbriefing gespeichert (${text.length} Zeichen)")
 
             notifier.postOrDelay(
                 notificationId = NOTIFICATION_ID,
@@ -64,7 +65,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             )
             Result.success()
         } catch (t: Throwable) {
-            Log.e(TAG, "DailyBriefingWorker fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.BRIEFING, TAG, "DailyBriefingWorker fehlgeschlagen", t)
             Result.retry()
         }
     }

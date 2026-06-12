@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
@@ -23,6 +25,7 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +37,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * State der Aufgaben-Ansicht. @Immutable garantiert Compose dass equals()
@@ -325,7 +327,7 @@ class TasksViewModel @Inject constructor(
                 secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
                 return@launch
             }
-            android.util.Log.i(TAG, "Auto-Rescore startet — $openCount offene Eintraege werden mit neuer Doktrin neu bewertet")
+            Diag.i(DiagnosticArea.TASKS, TAG, "Auto-Rescore startet — $openCount offene Eintraege werden mit neuer Doktrin neu bewertet")
             rescoreAllOpenEntries(autoTriggered = true)
         }
     }
@@ -356,7 +358,7 @@ class TasksViewModel @Inject constructor(
                 settings.setTitleShortenV1Done(true)
                 return@launch
             }
-            android.util.Log.i(TAG, "Titel-Kuerzung startet — ${targets.size} lange Titel werden per KI gekuerzt")
+            Diag.i(DiagnosticArea.TASKS, TAG, "Titel-Kuerzung startet — ${targets.size} lange Titel werden per KI gekuerzt")
             var done = 0
             var failed = 0
             for (entry in targets) {
@@ -367,14 +369,14 @@ class TasksViewModel @Inject constructor(
                     done++
                 }.onFailure { ex ->
                     failed++
-                    android.util.Log.w(TAG, "Titel-Kuerzung fuer ${entry.id} fehlgeschlagen: ${ex.message}")
+                    Diag.w(DiagnosticArea.TASKS, TAG, "Titel-Kuerzung fuer ${entry.id} fehlgeschlagen: ${ex.message}")
                 }
                 // Sanfte Pause zwischen Calls — schont die Gemini-Quota bei vielen Aufgaben.
                 delay(200L)
             }
             // Marker setzen — auch wenn ein paar fehlgeschlagen sind (laeuft nicht ewig).
             settings.setTitleShortenV1Done(true)
-            android.util.Log.i(TAG, "Titel-Kuerzung fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
+            Diag.i(DiagnosticArea.TASKS, TAG, "Titel-Kuerzung fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
             // Widget aktualisieren, damit die gekuerzten Titel sofort 1:1 erscheinen.
             runCatching {
                 de.frank.entropyreducer.presentation.widget.WidgetUpdater.updateAll(getApplication())
@@ -411,7 +413,7 @@ class TasksViewModel @Inject constructor(
             for (entry in targets) {
                 process.rescoreExisting(entry).onFailure { ex ->
                     failed++
-                    android.util.Log.w(TAG, "Rescore fuer ${entry.id} fehlgeschlagen: ${ex.message}")
+                    Diag.w(DiagnosticArea.TASKS, TAG, "Rescore fuer ${entry.id} fehlgeschlagen: ${ex.message}")
                 }.onSuccess {
                     done++
                 }
@@ -425,7 +427,7 @@ class TasksViewModel @Inject constructor(
             if (autoTriggered) {
                 secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
             }
-            android.util.Log.i(TAG, "Rescore fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
+            Diag.i(DiagnosticArea.TASKS, TAG, "Rescore fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
             // Banner noch 3 Sekunden stehen lassen damit Frank das Ergebnis sieht.
             delay(3_000L)
             rescoreProgressFlow.value = null
@@ -603,7 +605,7 @@ class TasksViewModel @Inject constructor(
                 val question = generateKiQuestion(previousText)
                 kiQuestions.setCurrent(question)
             } catch (t: Throwable) {
-                android.util.Log.e("TasksViewModel", "refreshKiQuestion failed", t)
+                Diag.e(DiagnosticArea.TASKS, "TasksViewModel", "refreshKiQuestion failed", t)
             }
         }
     }
@@ -682,7 +684,7 @@ class TasksViewModel @Inject constructor(
                     ),
                 )
             } catch (t: Throwable) {
-                android.util.Log.e("TasksViewModel", "Memory speichern fehlgeschlagen", t)
+                Diag.e(DiagnosticArea.TASKS, "TasksViewModel", "Memory speichern fehlgeschlagen", t)
             }
             uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = "Antwort wird verarbeitet …")
             val newResult = process(answer.trim(), EntrySource.NUTZER_TEXT)

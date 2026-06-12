@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
@@ -43,7 +44,7 @@ class TriggerPollingWorker @AssistedInject constructor(
             if (active.isEmpty()) return Result.success()
             val latest = biomarkerDao.getLatest().first()
             if (latest == null) {
-                Log.i(TAG, "Kein Biomarker-Snapshot vorhanden, überspringe Polling.")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Kein Biomarker-Snapshot vorhanden, überspringe Polling.")
                 return Result.success()
             }
             val now = System.currentTimeMillis()
@@ -52,7 +53,7 @@ class TriggerPollingWorker @AssistedInject constructor(
                     now - trigger.lastTriggeredAt >= COOLDOWN_MS
                 if (!cooldownExpired) return@forEach
                 if (matchesCondition(trigger.condition, latest)) {
-                    Log.i(TAG, "Trigger '${trigger.name}' feuert: ${trigger.condition}")
+                    Diag.i(DiagnosticArea.AGENTIC, TAG, "Trigger '${trigger.name}' feuert: ${trigger.condition}")
                     triggerRepo.markFired(trigger, now)
                     notifier.postOrDelay(
                         notificationId = NOTIFICATION_BASE + trigger.id.hashCode().mod(1000),
@@ -63,7 +64,7 @@ class TriggerPollingWorker @AssistedInject constructor(
             }
             Result.success()
         } catch (t: Throwable) {
-            Log.e(TAG, "TriggerPollingWorker fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "TriggerPollingWorker fehlgeschlagen", t)
             Result.retry()
         }
     }

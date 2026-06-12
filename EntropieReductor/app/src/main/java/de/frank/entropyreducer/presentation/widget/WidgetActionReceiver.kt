@@ -7,6 +7,8 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.presentation.MainActivity
@@ -103,7 +105,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     )
                 }
             } catch (e: Exception) {
-                android.util.Log.e("WidgetActionReceiver", "completeTask fehlgeschlagen", e)
+                Diag.e(DiagnosticArea.APP, "WidgetActionReceiver", "completeTask fehlgeschlagen", e)
             } finally {
                 // Haekchen-Markierung loesen und Widget final refreshen (Aufgabe ist weg).
                 WidgetCheckState.clear(taskId)

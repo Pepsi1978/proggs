@@ -3,14 +3,17 @@ package de.frank.entropyreducer.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.database.sqlite.SQLiteDatabase
-import android.util.Log
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.MemorySource
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,8 +21,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Frank-Wunsch 2026-05-09 (Abend): Insights und Memories aus AppDatabase in
@@ -78,7 +79,7 @@ class InitialDataMigrator @Inject constructor(
             withContext(Dispatchers.IO) {
                 runCatching {
                     if (rescued.insights.isNotEmpty() || rescued.memories.isNotEmpty()) {
-                        Log.i(
+                        Diag.i(DiagnosticArea.DATABASE, 
                             TAG,
                             "Schreibe ${rescued.insights.size} Insight(s) und " +
                                 "${rescued.memories.size} Memory-Eintrag/-Eintraege " +
@@ -89,7 +90,7 @@ class InitialDataMigrator @Inject constructor(
                     }
                     prefs.edit { putBoolean(KEY_DONE, true) }
                 }.onFailure { ex ->
-                    Log.w(TAG, "Migration write fehlgeschlagen — wird beim naechsten Start erneut versucht", ex)
+                    Diag.w(DiagnosticArea.DATABASE, TAG, "Migration write fehlgeschlagen — wird beim naechsten Start erneut versucht", ex)
                 }
             }
         }
@@ -122,7 +123,7 @@ class InitialDataMigrator @Inject constructor(
 
             val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
             if (!dbFile.exists()) {
-                Log.d(TAG, "Alte DB-Datei existiert nicht — Erstinstall")
+                Diag.d(DiagnosticArea.DATABASE, TAG, "Alte DB-Datei existiert nicht — Erstinstall")
                 // Flag setzen, damit der Pre-Hilt-Read nicht bei jedem Start
                 // erneut Filesystem checkt. Erstinstall hat nichts zu migrieren.
                 prefs.edit { putBoolean(KEY_DONE, true) }
@@ -136,21 +137,21 @@ class InitialDataMigrator @Inject constructor(
                     SQLiteDatabase.OPEN_READONLY,
                 )
                 val insights = runCatching { readInsights(rawDb) }.getOrElse { ex ->
-                    Log.w(TAG, "Insights nicht lesbar — Tabelle existiert evtl nicht", ex)
+                    Diag.w(DiagnosticArea.DATABASE, TAG, "Insights nicht lesbar — Tabelle existiert evtl nicht", ex)
                     emptyList()
                 }
                 val memories = runCatching { readMemories(rawDb) }.getOrElse { ex ->
-                    Log.w(TAG, "Memories nicht lesbar — Tabelle existiert evtl nicht", ex)
+                    Diag.w(DiagnosticArea.DATABASE, TAG, "Memories nicht lesbar — Tabelle existiert evtl nicht", ex)
                     emptyList()
                 }
                 runCatching { rawDb.close() }
-                Log.i(
+                Diag.i(DiagnosticArea.DATABASE, 
                     TAG,
                     "Pre-Hilt-Read: ${insights.size} Insights, ${memories.size} Memories aus alter DB",
                 )
                 RescuedData(insights, memories)
             }.getOrElse { ex ->
-                Log.w(TAG, "Pre-Hilt-Read fehlgeschlagen", ex)
+                Diag.w(DiagnosticArea.DATABASE, TAG, "Pre-Hilt-Read fehlgeschlagen", ex)
                 null
             }
         }

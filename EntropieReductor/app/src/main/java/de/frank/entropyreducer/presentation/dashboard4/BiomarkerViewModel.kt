@@ -3,6 +3,8 @@ package de.frank.entropyreducer.presentation.dashboard4
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
@@ -329,10 +331,10 @@ constructor(
             // Fix: jeden Read in runCatching wrappen. Exception → null bzw. emptyList()
             // als Default, plus debug-Log. WeightState wird IMMER gesetzt.
             val tag = "BiomarkerVM"
-            android.util.Log.i(tag, "refreshWeight() start")
+            Diag.i(DiagnosticArea.BIOMARKER, tag, "refreshWeight() start")
             val available = healthConnect.isAvailable()
             if (!available) {
-                android.util.Log.i(tag, "refreshWeight: HC NOT available")
+                Diag.i(DiagnosticArea.BIOMARKER, tag, "refreshWeight: HC NOT available")
                 _weight.value = WeightState(healthConnectAvailable = false)
                 return@launch
             }
@@ -348,12 +350,12 @@ constructor(
                 runCatching { healthConnect.hasBoneMassReadPermission() }.getOrDefault(false)
             val historyOk =
                 runCatching { healthConnect.hasHistoryReadPermission() }.getOrDefault(false)
-            android.util.Log.i(
+            Diag.i(DiagnosticArea.BIOMARKER, 
                 tag,
                 "refreshWeight perms: weight=$weightOk bf=$bodyFatOk lean=$leanOk water=$waterOk bone=$boneOk hist=$historyOk",
             )
             if (!(weightOk && bodyFatOk && leanOk && waterOk && boneOk && historyOk)) {
-                android.util.Log.w(
+                Diag.w(DiagnosticArea.BIOMARKER, 
                     tag,
                     "refreshWeight: nicht alle Permissions erteilt — Karten zeigen 'Tippen'",
                 )
@@ -372,7 +374,7 @@ constructor(
                 block: suspend () -> T,
             ): kotlinx.coroutines.Deferred<T> = async {
                 runCatching { block() }
-                    .onFailure { android.util.Log.w(tag, "HC-Read '$label' fehlgeschlagen", it) }
+                    .onFailure { Diag.w(DiagnosticArea.BIOMARKER, tag, "HC-Read '$label' fehlgeschlagen", it) }
                     .getOrDefault(default)
             }
             val latestKgD =
@@ -433,7 +435,7 @@ constructor(
             val latestBone = latestBoneD.await()
             val avgBone = avgBoneD.await()
             val historyBone = historyBoneD.await()
-            android.util.Log.i(
+            Diag.i(DiagnosticArea.BIOMARKER, 
                 tag,
                 "refreshWeight done: latestKg=$latestKg latestBf=$latestBf historyKgCount=${historyKg.size}",
             )
@@ -464,7 +466,7 @@ constructor(
                 addAll("bone_mass", historyBone)
             }
             runCatching { hcValueDao.upsertAll(cacheRows) }
-                .onFailure { android.util.Log.w(tag, "HC-Cache-Write fehlgeschlagen", it) }
+                .onFailure { Diag.w(DiagnosticArea.BIOMARKER, tag, "HC-Cache-Write fehlgeschlagen", it) }
 
             // UI-State: HC-Live + Cache mergen. Bei doppeltem Timestamp gewinnt
             // der HC-Live-Wert (er ist frisch direkt aus der Quelle).
@@ -514,7 +516,7 @@ constructor(
                     lastReadAtMs = System.currentTimeMillis(),
                     isLoading = false,
                 )
-            android.util.Log.i(
+            Diag.i(DiagnosticArea.BIOMARKER, 
                 tag,
                 "refreshWeight merged: weight=${mergedKg.size} bodyFat=${mergedBf.size} lean=${mergedLean.size} water=${mergedWater.size} bone=${mergedBone.size}",
             )

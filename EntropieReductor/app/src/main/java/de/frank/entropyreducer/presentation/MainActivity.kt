@@ -6,16 +6,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
@@ -31,6 +33,8 @@ import de.frank.entropyreducer.presentation.widget.WidgetDeepLink
 import de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus
 import de.frank.entropyreducer.presentation.widget.WidgetIntents
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -39,8 +43,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Einzige Activity der App. Compose uebernimmt das gesamte Routing.
@@ -250,7 +252,7 @@ class StartupViewModel @Inject constructor(
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching { journalMirror.sync() }
                     .onFailure {
-                        android.util.Log.w("StartupViewModel", "Journal-Sync fehlgeschlagen", it)
+                        Diag.w(DiagnosticArea.APP, "StartupViewModel", "Journal-Sync fehlgeschlagen", it)
                     }
             }
             // Performance-Warmup: parallel zur Drive-Restore-Logik laeuft das

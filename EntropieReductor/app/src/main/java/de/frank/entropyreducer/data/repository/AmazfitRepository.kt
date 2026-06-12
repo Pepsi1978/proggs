@@ -1,7 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
-import android.util.Log
 import androidx.room.withTransaction
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.health.HealthConnectExerciseSession
 import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.local.AppDatabase
@@ -94,7 +95,7 @@ constructor(
      * cross-device wiederhergestellt.
      */
     suspend fun cleanupAllWorkoutsForMigration() {
-        Log.i(
+        Diag.i(DiagnosticArea.AMAZFIT, 
             TAG,
             "Workout-Cleanup-Migration: loesche alle amazfit_workouts und triggere Drive-Sync",
         )
@@ -118,7 +119,7 @@ constructor(
     suspend fun renameSportName(oldName: String, newName: String): Int {
         val changed = workoutDao.renameSportName(oldName, newName)
         if (changed > 0) {
-            Log.i(TAG, "Sport-Rename: $changed Workouts '$oldName' -> '$newName'")
+            Diag.i(DiagnosticArea.AMAZFIT, TAG, "Sport-Rename: $changed Workouts '$oldName' -> '$newName'")
             syncCoordinatorLazy.get().requestSync()
         }
         return changed
@@ -155,7 +156,7 @@ constructor(
     ): Boolean {
         val existing = workoutDao.getById(trackId)
         if (existing == null) {
-            Log.w(TAG, "applyManualOverrides: kein Workout mit trackId=$trackId")
+            Diag.w(DiagnosticArea.AMAZFIT, TAG, "applyManualOverrides: kein Workout mit trackId=$trackId")
             return false
         }
         val now = System.currentTimeMillis()
@@ -253,7 +254,7 @@ constructor(
                 createdAt = now,
             )
         workoutDao.upsert(updated)
-        Log.i(TAG, "Manual overrides applied to $trackId (fields=$mergedFields)")
+        Diag.i(DiagnosticArea.AMAZFIT, TAG, "Manual overrides applied to $trackId (fields=$mergedFields)")
         // Frank-Wunsch 2026-05-19: Sofort Drive-Backup ausloesen sobald ein
         // manueller Wert geaendert wird — der Edit darf bei einem Reinstall
         // nicht verloren gehen. Debounce in requestSync() (1500 ms) sorgt fuer
@@ -276,7 +277,7 @@ constructor(
      */
     suspend fun cleanupWorkoutsKeepRange(olderThanMs: Long, newerThanMs: Long): Int {
         val deleted = workoutDao.deleteOutsideRange(olderThanMs, newerThanMs)
-        Log.i(
+        Diag.i(DiagnosticArea.AMAZFIT, 
             TAG,
             "Workout-Cleanup-V2: $deleted Trainings geloescht " +
                 "(behalten: startMs zwischen $olderThanMs und $newerThanMs)",
@@ -330,7 +331,7 @@ constructor(
             }
         }
         if (changed > 0) {
-            Log.i("AmazfitRepo", "Frank-Sport-Overrides angewendet: $changed Zeilen korrigiert")
+            Diag.i(DiagnosticArea.AMAZFIT, "AmazfitRepo", "Frank-Sport-Overrides angewendet: $changed Zeilen korrigiert")
         }
         return changed
     }
@@ -348,14 +349,14 @@ constructor(
                 appSettings.setLastAmazfitSync(syncTs)
                 val stravaCount = mergeFromStrava(days = days.coerceAtMost(60))
                 if (stravaCount > 0) {
-                    Log.i(TAG, "Strava-Merge: $stravaCount Workouts importiert/aktualisiert")
+                    Diag.i(DiagnosticArea.AMAZFIT, TAG, "Strava-Merge: $stravaCount Workouts importiert/aktualisiert")
                     syncCoordinatorLazy.get().requestSync()
                 }
                 return@runCatchingCancellable stravaCount
             }
             .onFailure {
                 if (it !is kotlinx.coroutines.CancellationException) {
-                    Log.e(TAG, "Amazfit-Sync fehlgeschlagen", it)
+                    Diag.e(DiagnosticArea.AMAZFIT, TAG, "Amazfit-Sync fehlgeschlagen", it)
                 }
             }
 
@@ -379,12 +380,12 @@ constructor(
      */
     suspend fun mergeFromHealthConnect(days: Int = 30): Int {
         if (!healthConnect.isAvailable()) {
-            Log.d(TAG, "Health Connect nicht verfuegbar — kein Workout-Merge")
+            Diag.d(DiagnosticArea.AMAZFIT, TAG, "Health Connect nicht verfuegbar — kein Workout-Merge")
             return 0
         }
         val sessions = healthConnect.readExerciseSessions(days = days)
         if (sessions.isEmpty()) {
-            Log.d(TAG, "Health Connect lieferte keine Exercise-Sessions im ${days}-Tage-Fenster")
+            Diag.d(DiagnosticArea.AMAZFIT, TAG, "Health Connect lieferte keine Exercise-Sessions im ${days}-Tage-Fenster")
             return 0
         }
         // Existierende Workouts im gleichen Zeitfenster fuer Dedup.
@@ -400,14 +401,14 @@ constructor(
             if (isDuplicate) null else healthConnectSessionToEntity(session)
         }
         if (toInsert.isEmpty()) {
-            Log.d(
+            Diag.d(DiagnosticArea.AMAZFIT, 
                 TAG,
                 "Alle ${sessions.size} HC-Sessions sind bereits in der DB — keine neuen Workouts",
             )
             return 0
         }
         workoutDao.upsertAll(toInsert)
-        Log.i(
+        Diag.i(DiagnosticArea.AMAZFIT, 
             TAG,
             "Health-Connect-Workouts eingefuegt: ${toInsert.size} (von ${sessions.size} im HC-Fenster)",
         )
@@ -474,7 +475,7 @@ constructor(
         if (!repo.isAuthenticated()) return
         val elapsedByTrackId =
             repo.fetchElapsedDurations(days = 30).getOrElse {
-                Log.d(TAG, "Strava-Dauer-Backfill verschoben: ${it.message}")
+                Diag.d(DiagnosticArea.AMAZFIT, TAG, "Strava-Dauer-Backfill verschoben: ${it.message}")
                 return
             }
         val end = System.currentTimeMillis()
@@ -491,7 +492,7 @@ constructor(
             )
         }
         secrets.stravaElapsedBackfillDone = true
-        Log.i(
+        Diag.i(DiagnosticArea.AMAZFIT, 
             TAG,
             "Strava-Dauer-Backfill abgeschlossen: $updated Training(s) auf verstrichene Zeit korrigiert",
         )
@@ -514,7 +515,7 @@ constructor(
     suspend fun mergeFromStrava(days: Int = 60): Int {
         val repo = stravaRepo.get()
         if (!repo.isAuthenticated()) {
-            Log.d(TAG, "Strava: nicht verbunden — kein Strava-Merge")
+            Diag.d(DiagnosticArea.AMAZFIT, TAG, "Strava: nicht verbunden — kein Strava-Merge")
             return 0
         }
         // Frank-Wunsch 2026-05-24: einmaliger Dauer-Backfill bestehender Strava-Trainings
@@ -644,13 +645,13 @@ constructor(
                     toInsert += merged
                     if (isManual) {
                         protectedCount += 1
-                        Log.i(
+                        Diag.i(DiagnosticArea.AMAZFIT, 
                             TAG,
                             "Strava-Merge: ${strava.trackId} ist manuell editiert (manualOverridesMs=${existing.manualOverridesMs}) — Summary-Werte BLEIBEN, nur Streams aktualisiert",
                         )
                     } else {
                         replaceCount += 1
-                        Log.d(
+                        Diag.d(DiagnosticArea.AMAZFIT, 
                             TAG,
                             "Strava-Merge: ${strava.trackId} fresh-wins-if-not-null gemerged (kein manueller Edit)",
                         )
@@ -669,7 +670,7 @@ constructor(
                     it.first != strava.trackId
             }
             if (matchByTime != null) {
-                Log.d(
+                Diag.d(DiagnosticArea.AMAZFIT, 
                     TAG,
                     "Strava-Merge: ueberschreibe ${matchByTime.first} mit ${strava.trackId} (gleicher Start +/- 5 Min)",
                 )
@@ -691,7 +692,7 @@ constructor(
         if (toInsert.isNotEmpty()) {
             workoutDao.upsertAll(toInsert)
         }
-        Log.i(
+        Diag.i(DiagnosticArea.AMAZFIT, 
             TAG,
             "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben, " +
                 "$protectedCount mit manuellen Edits (nur Streams aktualisiert)",
@@ -802,7 +803,7 @@ constructor(
                 // 2026-05-17: Polar-Live-API entfernt — alte source="polar"-Eintraege
                 // verhalten sich jetzt wie polar-bulk (kein Online-Refresh moeglich).
                 if (source == "polar" || source == "polar-bulk") {
-                    Log.d(
+                    Diag.d(DiagnosticArea.AMAZFIT, 
                         TAG,
                         "Workout $trackId stammt aus Polar-Bulk-Import — kein API-Refresh moeglich",
                     )
@@ -832,7 +833,7 @@ constructor(
             }
             .onFailure {
                 if (it !is kotlinx.coroutines.CancellationException) {
-                    Log.w(TAG, "ensureWorkoutDetail fehlgeschlagen fuer $trackId: ${it.message}")
+                    Diag.w(DiagnosticArea.AMAZFIT, TAG, "ensureWorkoutDetail fehlgeschlagen fuer $trackId: ${it.message}")
                 }
             }
 
@@ -864,7 +865,7 @@ constructor(
         val after = workoutDao.count()
         val deleted = before - after
         if (deleted > 0) {
-            Log.i(
+            Diag.i(DiagnosticArea.AMAZFIT, 
                 TAG,
                 "Trainings-Retention: $deleted Workouts aelter als $TRAINING_RETENTION_DAYS Tage geloescht ($before -> $after)",
             )

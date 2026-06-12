@@ -2,11 +2,10 @@ package de.frank.entropyreducer.data.health
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.aggregate.AggregateMetric
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
@@ -22,6 +21,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import java.time.Instant
@@ -267,11 +267,11 @@ class HealthConnectManager @Inject constructor(
         )
         for (intent in candidates) {
             if (runCatching { context.startActivity(intent) }.isSuccess) {
-                Log.i(TAG, "Permissions-Editor geoeffnet via ${intent.action}")
+                Diag.i(DiagnosticArea.HEALTH_CONNECT, TAG, "Permissions-Editor geoeffnet via ${intent.action}")
                 return
             }
         }
-        Log.w(TAG, "Kein Permissions-Editor-Intent funktionierte — alle Fallbacks haben fehlgeschlagen")
+        Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "Kein Permissions-Editor-Intent funktionierte — alle Fallbacks haben fehlgeschlagen")
     }
 
     /**
@@ -308,10 +308,10 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        Log.d(TAG, "Weight read: ${response.records.size} records, latest=${response.records.firstOrNull()?.weight?.inKilograms}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "Weight read: ${response.records.size} records, latest=${response.records.firstOrNull()?.weight?.inKilograms}")
         response.records.firstOrNull()?.weight?.inKilograms
     }.onFailure {
-        Log.w(TAG, "readLatestWeightKg failed", it)
+        Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestWeightKg failed", it)
         diagnostics.error(
             DiagnosticArea.HEALTH_CONNECT,
             "Gewicht-Lesen fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
@@ -336,7 +336,7 @@ class HealthConnectManager @Inject constructor(
             ),
         )
         response.records.map { it.time.toEpochMilli() to it.weight.inKilograms }
-    }.onFailure { Log.w(TAG, "readWeightHistory failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readWeightHistory failed", it) }.getOrDefault(emptyList())
 
     /** Durchschnitt der letzten N Tage (oder null wenn keine Daten). */
     suspend fun averageWeightKg(days: Int = 730): Double? {
@@ -364,9 +364,9 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        Log.d(TAG, "BodyFat read: ${response.records.size} records, latest=${response.records.firstOrNull()?.percentage?.value}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "BodyFat read: ${response.records.size} records, latest=${response.records.firstOrNull()?.percentage?.value}")
         response.records.firstOrNull()?.percentage?.value
-    }.onFailure { Log.w(TAG, "readLatestBodyFatPercent failed", it) }.getOrNull()
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBodyFatPercent failed", it) }.getOrNull()
 
     /** Koerperfett-Verlauf der letzten N Tage. */
     suspend fun readBodyFatHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
@@ -382,7 +382,7 @@ class HealthConnectManager @Inject constructor(
             ),
         )
         response.records.map { it.time.toEpochMilli() to it.percentage.value }
-    }.onFailure { Log.w(TAG, "readBodyFatHistory failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBodyFatHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBodyFatPercent(days: Int = 730): Double? {
         val history = readBodyFatHistory(days)
@@ -408,9 +408,9 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        Log.d(TAG, "LeanBodyMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "LeanBodyMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
         response.records.firstOrNull()?.mass?.inKilograms
-    }.onFailure { Log.w(TAG, "readLatestLeanBodyMassKg failed", it) }.getOrNull()
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestLeanBodyMassKg failed", it) }.getOrNull()
 
     suspend fun readLeanBodyMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
@@ -425,7 +425,7 @@ class HealthConnectManager @Inject constructor(
             ),
         )
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
-    }.onFailure { Log.w(TAG, "readLeanBodyMassHistory failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLeanBodyMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageLeanBodyMassKg(days: Int = 730): Double? {
         val history = readLeanBodyMassHistory(days)
@@ -451,9 +451,9 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        Log.d(TAG, "BodyWaterMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "BodyWaterMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
         response.records.firstOrNull()?.mass?.inKilograms
-    }.onFailure { Log.w(TAG, "readLatestBodyWaterMassKg failed", it) }.getOrNull()
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBodyWaterMassKg failed", it) }.getOrNull()
 
     suspend fun readBodyWaterMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
@@ -468,7 +468,7 @@ class HealthConnectManager @Inject constructor(
             ),
         )
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
-    }.onFailure { Log.w(TAG, "readBodyWaterMassHistory failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBodyWaterMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBodyWaterMassKg(days: Int = 730): Double? {
         val history = readBodyWaterMassHistory(days)
@@ -491,9 +491,9 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        Log.d(TAG, "BoneMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "BoneMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
         response.records.firstOrNull()?.mass?.inKilograms
-    }.onFailure { Log.w(TAG, "readLatestBoneMassKg failed", it) }.getOrNull()
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBoneMassKg failed", it) }.getOrNull()
 
     suspend fun readBoneMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
@@ -508,7 +508,7 @@ class HealthConnectManager @Inject constructor(
             ),
         )
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
-    }.onFailure { Log.w(TAG, "readBoneMassHistory failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBoneMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBoneMassKg(days: Int = 730): Double? {
         val history = readBoneMassHistory(days)
@@ -538,7 +538,7 @@ class HealthConnectManager @Inject constructor(
                 ascendingOrder = false,
             ),
         ).records
-        Log.d(TAG, "ExerciseSessions read: ${sessions.size} im Fenster ${start} .. ${end}")
+        Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "ExerciseSessions read: ${sessions.size} im Fenster ${start} .. ${end}")
         sessions.map { session ->
             val sessionStart = session.startTime
             val sessionEnd = session.endTime
@@ -574,7 +574,7 @@ class HealthConnectManager @Inject constructor(
                 maxHeartRate = maxHr?.toInt(),
             )
         }
-    }.onFailure { Log.w(TAG, "readExerciseSessions failed", it) }.getOrDefault(emptyList())
+    }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readExerciseSessions failed", it) }.getOrDefault(emptyList())
 
     private companion object {
         const val TAG = "HealthConnectMgr"

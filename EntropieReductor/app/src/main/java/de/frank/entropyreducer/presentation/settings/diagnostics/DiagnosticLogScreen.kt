@@ -48,9 +48,9 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticLevel
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogEntry
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.launch
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 
 /**
  * Diagnose-Protokoll (Frank-Wunsch 2026-05-23): Zeigt die internen Fehler- und Erfolgs-Meldungen
@@ -212,6 +212,8 @@ private fun levelColor(level: DiagnosticLevel): Color =
         DiagnosticLevel.WARN -> CosmosColors.Warning
         DiagnosticLevel.SUCCESS -> CosmosColors.Success
         DiagnosticLevel.INFO -> CosmosColors.AccentPrimary
+        // DEBUG gedimmt — Entwickler-Details treten optisch hinter ERROR/WARN zurueck.
+        DiagnosticLevel.DEBUG -> CosmosColors.AccentPrimary.copy(alpha = 0.45f)
     }
 
 private fun formatTime(ms: Long): String {

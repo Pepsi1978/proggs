@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.domain.agentic.trigger
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
@@ -50,11 +51,11 @@ constructor(
             val now = System.currentTimeMillis()
             val due = triggerRepo.getDueCronTriggers(now)
             if (due.isEmpty()) {
-                Log.d(TAG, "Keine faelligen Trigger.")
+                Diag.d(DiagnosticArea.AGENTIC, TAG, "Keine faelligen Trigger.")
                 return Result.success()
             }
 
-            Log.i(TAG, "Faellige Trigger: ${due.size}")
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "Faellige Trigger: ${due.size}")
 
             for (trigger in due) {
                 // Direktive 3 Loop-2-Fix (war LOOP-2-3-Bug): Prompt.isActive
@@ -64,12 +65,12 @@ constructor(
                 // saved_prompts.isActive.
                 val prompt = promptRepo.getById(trigger.promptId)
                 if (prompt == null) {
-                    Log.w(TAG, "Trigger ${trigger.id} zeigt auf nicht-existenten Prompt — skip + reschedule")
+                    Diag.w(DiagnosticArea.AGENTIC, TAG, "Trigger ${trigger.id} zeigt auf nicht-existenten Prompt — skip + reschedule")
                     rescheduleNext(trigger, now)
                     continue
                 }
                 if (!prompt.isActive) {
-                    Log.i(
+                    Diag.i(DiagnosticArea.AGENTIC, 
                         TAG,
                         "Trigger ${trigger.id} fuer deaktivierten Prompt '${prompt.name}' " +
                             "uebersprungen. Trigger bleibt aktiv — feuert wieder sobald " +
@@ -78,13 +79,13 @@ constructor(
                     rescheduleNext(trigger, now)
                     continue
                 }
-                Log.i(TAG, "Starte Auto-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Starte Auto-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
                 runOne(trigger)
                 rescheduleNext(trigger, now)
             }
             Result.success()
         } catch (t: Throwable) {
-            Log.e(TAG, "AgenticTriggerWorker fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "AgenticTriggerWorker fehlgeschlagen", t)
             Result.retry()
         }
     }
@@ -99,7 +100,7 @@ constructor(
                 triggerSource = TriggerSource.SCHEDULED,
             ).collect { event ->
                 if (event is WorkflowEvent.Finished) {
-                    Log.i(
+                    Diag.i(DiagnosticArea.AGENTIC, 
                         TAG,
                         "Auto-Run beendet: status=${event.status}, " +
                             "tokens=${event.tokensTotal}, tools=${event.toolCallCount}",
@@ -107,7 +108,7 @@ constructor(
                 }
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "Auto-Run fuer ${trigger.id} fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "Auto-Run fuer ${trigger.id} fehlgeschlagen", t)
         }
     }
 

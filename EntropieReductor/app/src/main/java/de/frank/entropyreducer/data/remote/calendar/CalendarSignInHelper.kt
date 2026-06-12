@@ -2,7 +2,6 @@ package de.frank.entropyreducer.data.remote.calendar
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -11,6 +10,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,10 +52,10 @@ class CalendarSignInHelper @Inject constructor(
         } catch (e: ApiException) {
             val code = e.statusCode
             val codeName = GoogleSignInStatusCodes.getStatusCodeString(code)
-            Log.e(TAG, "Calendar Sign-In fehlgeschlagen: code=$code ($codeName), msg=${e.status.statusMessage}", e)
+            Diag.e(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Calendar Sign-In fehlgeschlagen: code=$code ($codeName), msg=${e.status.statusMessage}", e)
             SignInResult.Error(code, codeName)
         } catch (t: Throwable) {
-            Log.e(TAG, "Calendar Sign-In: unerwartete Exception", t)
+            Diag.e(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Calendar Sign-In: unerwartete Exception", t)
             SignInResult.Error(-1, t.message ?: "Unbekannter Fehler")
         }
     }

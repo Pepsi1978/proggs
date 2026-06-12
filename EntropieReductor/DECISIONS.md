@@ -241,3 +241,9 @@ Debug-Build ist nicht minified, Release-Build hat `isMinifyEnabled = true` + `is
 **Spec §18:** "Glance Widget".
 **Entschieden:** Widget-Composable bekommt EntropyEntryDao via `EntryPointAccessors.fromApplication()` mit eigenem `@EntryPoint`-Interface, nicht via `@AndroidEntryPoint` (das geht bei GlanceAppWidget nicht).
 **Begruendung:** GlanceAppWidget ist kein Android-Component im klassischen Sinn (keine Activity, kein Service), Hilt's `@AndroidEntryPoint` funktioniert nicht. EntryPoint-Interface ist die offizielle Hilt-Empfehlung fuer solche Faelle.
+
+## 39. Logging-Vereinheitlichung — statische Diag-Fassade statt Logger-Injection ueberall
+
+**Frank-Wunsch 2026-06-12:** "Logging vereinheitlichen — alle Log.*-Aufrufe auf den DiagnosticLogger umstellen, komplett."
+**Entschieden:** Alle 249 `android.util.Log`-Aufrufe (44 Dateien) laufen jetzt ueber die statische Fassade `Diag` (Timber-Muster, `data/diagnostics/Diag.kt`): `Diag.e(DiagnosticArea.X, TAG, msg, t)`. Die Fassade delegiert an den Hilt-Singleton `DiagnosticLogger` (alle 3 Schichten: Room-DB, Logcat, JSONL) und faellt vor `Diag.init()` (EntropyReducerApp.onCreate) verlustfrei auf pures Logcat zurueck. Dazu: 9 neue `DiagnosticArea`-Bereiche (OAUTH, AMAZFIT, POLAR, APP, BIOMARKER, TASKS, AGENTIC, DATABASE, BRIEFING), neues Level `DEBUG` (frueher Log.d), Logcat-Mapping INFO→Log.i korrigiert, DB-Limit 2000→4000.
+**Begruendung:** DiagnosticLogger ueberall zu injizieren haette ~40 Konstruktoren/Hilt-Graph-Stellen umgebaut und funktioniert nicht in fruehen Lifecycle-Phasen oder ausserhalb des Graphen. Die Fassade ist EIN Mechanismus fuer alle Aufrufstellen, der alte Klassen-Tag bleibt als `[Tag]`-Praefix erhalten (verlustfrei). Bewusste Ausnahme: `DiagnosticLogger` selbst loggt intern weiter pures Logcat (Endlosschleifen-Schutz).

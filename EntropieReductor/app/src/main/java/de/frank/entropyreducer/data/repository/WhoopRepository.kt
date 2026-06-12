@@ -1,6 +1,6 @@
 package de.frank.entropyreducer.data.repository
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
@@ -191,7 +191,7 @@ constructor(
                 if (workoutEntities.isNotEmpty()) {
                     workoutDao.upsertAll(workoutEntities)
                 }
-                Log.i(
+                Diag.i(DiagnosticArea.WHOOP, 
                     TAG,
                     "Whoop-Sync: ${snapshots.size} Snapshots + ${workoutEntities.size} Workouts geschrieben",
                 )
@@ -203,7 +203,7 @@ constructor(
                 diagnostics.success(DiagnosticArea.WHOOP, "Sync OK — $it Snapshots gespeichert")
             }
             .onFailure {
-                Log.e(TAG, "Whoop-Sync fehlgeschlagen", it)
+                Diag.e(DiagnosticArea.WHOOP, TAG, "Whoop-Sync fehlgeschlagen", it)
                 diagnostics.error(
                     DiagnosticArea.WHOOP,
                     "Sync fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
@@ -223,10 +223,10 @@ constructor(
                 val days =
                     java.time.temporal.ChronoUnit.DAYS.between(startOfWhoop, today.toLocalDate())
                         .toInt()
-                Log.i(TAG, "Full-Sync gestartet: $days Tage zurück")
+                Diag.i(DiagnosticArea.WHOOP, TAG, "Full-Sync gestartet: $days Tage zurück")
                 syncLastDays(days).getOrThrow()
             }
-            .onFailure { Log.e(TAG, "Whoop-Full-Sync fehlgeschlagen", it) }
+            .onFailure { Diag.e(DiagnosticArea.WHOOP, TAG, "Whoop-Full-Sync fehlgeschlagen", it) }
 
     private fun mapToSnapshot(
         cycle: WhoopCycle,
@@ -356,7 +356,7 @@ constructor(
             } catch (e: HttpException) {
                 if (e.code() == 429 && attempt < 3) {
                     val backoffMs = (1_000L shl attempt) // 1s, 2s, 4s
-                    Log.w(TAG, "Whoop 429 — backing off ${backoffMs}ms")
+                    Diag.w(DiagnosticArea.WHOOP, TAG, "Whoop 429 — backing off ${backoffMs}ms")
                     delay(backoffMs)
                     attempt++
                     continue

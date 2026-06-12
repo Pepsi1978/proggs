@@ -7,7 +7,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
-import de.frank.entropyreducer.domain.usecase.ForegroundSyncManager
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
@@ -15,6 +17,7 @@ import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.di.ApplicationScope
+import de.frank.entropyreducer.domain.usecase.ForegroundSyncManager
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +36,9 @@ import kotlinx.coroutines.launch
 class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    /** Logging-Vereinheitlichung 2026-06-12: speist die statische [Diag]-Fassade. */
+    @Inject lateinit var diagnosticLogger: DiagnosticLogger
 
     @Inject lateinit var scheduler: BackgroundScheduler
 
@@ -105,6 +111,11 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
         super.onCreate()
 
+        // Logging-Vereinheitlichung 2026-06-12: ab hier laufen ALLE Diag.x()-Aufrufe der App
+        // durch die drei Diagnose-Schichten (Room-DB, Logcat, JSONL). Vor diesem Punkt
+        // (TimeZone-Setup, Pre-Hilt-Datenrettung) faellt Diag verlustfrei auf Logcat zurueck.
+        Diag.init(diagnosticLogger)
+
         // Stufe 2 (Post-Hilt): geretete Daten via DAO in ScientistDatabase schreiben.
         // ScientistDatabase wird beim ersten DAO-Zugriff von Room geoeffnet,
         // dabei laeuft MIGRATION_1_2 und legt die neuen Tabellen an.
@@ -126,7 +137,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     promptExecutionRepo.markRunningAsInterrupted(System.currentTimeMillis())
                 }
                 .onFailure {
-                    android.util.Log.w(
+                    Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "markRunningAsInterrupted fehlgeschlagen",
                         it,
@@ -142,7 +153,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         applicationScope.launch {
             runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
                 .onFailure {
-                    android.util.Log.w(
+                    Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "RecurringCleanup fehlgeschlagen",
                         it,
@@ -158,7 +169,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         applicationScope.launch {
             runCatching { amazfitRepository.applyFrankSportOverrides() }
                 .onFailure {
-                    android.util.Log.w(
+                    Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "Sport-Override-Migration fehlgeschlagen",
                         it,
@@ -191,14 +202,14 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     if (!appSettings.isWorkoutCleanupV1Done()) {
                         val localCount = amazfitRepository.workoutCount()
                         if (localCount == 0) {
-                            android.util.Log.i(
+                            Diag.i(DiagnosticArea.APP, 
                                 "EntropyReducerApp",
                                 "Workout-Cleanup-Migration v1 uebersprungen — lokale DB leer, evtl. frische Installation; warte auf Drive-Restore",
                             )
                         } else {
                             amazfitRepository.cleanupAllWorkoutsForMigration()
                             appSettings.setWorkoutCleanupV1Done(true)
-                            android.util.Log.i(
+                            Diag.i(DiagnosticArea.APP, 
                                 "EntropyReducerApp",
                                 "Workout-Cleanup-Migration v1 abgeschlossen ($localCount Eintraege geraeumt) — Backup wird mit leerem Stand ueberschrieben",
                             )
@@ -206,7 +217,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     }
                 }
                 .onFailure {
-                    android.util.Log.w(
+                    Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "Workout-Cleanup-Migration fehlgeschlagen",
                         it,
@@ -228,7 +239,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         val renamedB =
                             amazfitRepository.renameSportName("Rudergeraet", "Crosstrainer")
                         appSettings.setSportRenameV1Done(true)
-                        android.util.Log.i(
+                        Diag.i(DiagnosticArea.APP, 
                             "EntropyReducerApp",
                             "Sport-Rename-V1 fertig: $renamedA Indoor-Rudern + $renamedB Rudergeraet -> Crosstrainer",
                         )
@@ -240,14 +251,14 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                                 "Trailrunning",
                             )
                         appSettings.setSportRenameV2Done(true)
-                        android.util.Log.i(
+                        Diag.i(DiagnosticArea.APP, 
                             "EntropyReducerApp",
                             "Sport-Rename-V2 fertig: $renamed Funktionelles Training -> Trailrunning",
                         )
                     }
                 }
                 .onFailure {
-                    android.util.Log.w("EntropyReducerApp", "Sport-Rename fehlgeschlagen", it)
+                    Diag.w(DiagnosticArea.APP, "EntropyReducerApp", "Sport-Rename fehlgeschlagen", it)
                 }
         }
 
@@ -275,7 +286,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         val deleted =
                             amazfitRepository.cleanupWorkoutsKeepRange(olderThanMs, newerThanMs)
                         appSettings.setWorkoutCleanupV2Done(true)
-                        android.util.Log.i(
+                        Diag.i(DiagnosticArea.APP, 
                             "EntropyReducerApp",
                             "Workout-Cleanup-V2 abgeschlossen — $deleted Trainings geloescht " +
                                 "(Fenster: $olderThanMs .. $newerThanMs)",
@@ -283,7 +294,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     }
                 }
                 .onFailure {
-                    android.util.Log.w("EntropyReducerApp", "Workout-Cleanup-V2 fehlgeschlagen", it)
+                    Diag.w(DiagnosticArea.APP, "EntropyReducerApp", "Workout-Cleanup-V2 fehlgeschlagen", it)
                 }
         }
 
@@ -300,13 +311,13 @@ class EntropyReducerApp : Application(), Configuration.Provider {
             kotlinx.coroutines.delay(8000L)
             runCatching {
                     val deleted = amazfitRepository.pruneOldTrainings()
-                    android.util.Log.i(
+                    Diag.i(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "Trainings-Retention (1 Jahr): $deleted Trainings entfernt",
                     )
                 }
                 .onFailure {
-                    android.util.Log.w(
+                    Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "Trainings-Retention fehlgeschlagen",
                         it,
@@ -336,7 +347,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                                 )
                             }
                             .onFailure {
-                                android.util.Log.w(
+                                Diag.w(DiagnosticArea.APP, 
                                     "EntropyReducerApp",
                                     "Foreground-Sync (8h-Throttle) fehlgeschlagen",
                                     it,

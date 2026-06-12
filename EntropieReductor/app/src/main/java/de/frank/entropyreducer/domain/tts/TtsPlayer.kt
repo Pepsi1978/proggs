@@ -3,8 +3,9 @@ package de.frank.entropyreducer.domain.tts
 import android.content.Context
 import android.media.MediaPlayer
 import android.util.Base64
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.SynthesizeRequest
 import de.frank.entropyreducer.data.remote.TtsAudioConfig
@@ -80,7 +81,7 @@ class TtsPlayer @Inject constructor(
             }
             TtsResult.Success
         } catch (e: Exception) {
-            Log.e(TAG, "TTS-Synthese fehlgeschlagen: ${e.message}", e)
+            Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-Synthese fehlgeschlagen: ${e.message}", e)
             onError?.invoke(e)
             TtsResult.Error(e.message ?: "Unbekannter Fehler")
         }
@@ -98,7 +99,7 @@ class TtsPlayer @Inject constructor(
     }
 
     private suspend fun synthesize(text: String, apiKey: String, voiceName: String): File {
-        Log.d(TAG, "Synthesize ${text.length} chars, voice=$voiceName")
+        Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "Synthesize ${text.length} chars, voice=$voiceName")
         val response = ttsApi.synthesize(
             apiKey = apiKey,
             request = SynthesizeRequest(
@@ -138,7 +139,7 @@ class TtsPlayer @Inject constructor(
                 cleanup(file)
             }
             setOnErrorListener { _, what, extra ->
-                Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
+                Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "MediaPlayer error what=$what extra=$extra")
                 onError?.invoke(IllegalStateException("MediaPlayer error $what/$extra"))
                 cleanup(file)
                 true

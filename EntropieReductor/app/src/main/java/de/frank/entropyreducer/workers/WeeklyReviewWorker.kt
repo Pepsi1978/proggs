@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.usecase.GenerateReviewUseCase
 import java.time.Instant
@@ -39,7 +40,7 @@ class WeeklyReviewWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault())
             val lastAt = settings.lastWeeklyReviewAtMsFlow.first()
             if (!force && lastAt > 0 && isSameWeek(today, lastAt)) {
-                Log.i(TAG, "Wochenrueckblick für KW ${weekOf(today)} existiert bereits (force=false).")
+                Diag.i(DiagnosticArea.BRIEFING, TAG, "Wochenrueckblick für KW ${weekOf(today)} existiert bereits (force=false).")
                 return Result.success()
             }
 
@@ -47,7 +48,7 @@ class WeeklyReviewWorker @AssistedInject constructor(
             val text = result.getOrNull()
             if (text.isNullOrBlank()) {
                 val ex = result.exceptionOrNull()
-                Log.w(TAG, "Wochenrueckblick leer: ${ex?.message}")
+                Diag.w(DiagnosticArea.BRIEFING, TAG, "Wochenrueckblick leer: ${ex?.message}")
                 // Bei fehlendem API-Key (IllegalStateException) NICHT retry-en —
                 // sonst Endlos-Loop. Bei echten Netz-/Server-Fehlern: retry.
                 if (ex is IllegalStateException) Result.success() else Result.retry()
@@ -61,7 +62,7 @@ class WeeklyReviewWorker @AssistedInject constructor(
                 Result.success()
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "WeeklyReviewWorker fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.BRIEFING, TAG, "WeeklyReviewWorker fehlgeschlagen", t)
             Result.retry()
         }
     }

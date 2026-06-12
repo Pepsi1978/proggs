@@ -1,11 +1,11 @@
 package de.frank.entropyreducer.data.remote.drive
 
 import android.content.Context
-import android.util.Log
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.services.drive.model.File as DriveFile
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
@@ -70,7 +70,7 @@ constructor(
         label: String,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "upload($label) start, payloadChars=${jsonContent.length}")
+            Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "upload($label) start, payloadChars=${jsonContent.length}")
             runUploadWithRetry(fileName, jsonContent, retryOn401 = true)
                 .onSuccess {
                     diagnostics.success(
@@ -100,27 +100,27 @@ constructor(
             if (fileName == mainFileName) {
                 secrets.driveLastBackupEpochMs = System.currentTimeMillis()
             }
-            Log.d(TAG, "upload($fileName) success")
+            Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "upload($fileName) success")
             Result.success(Unit)
         } catch (e: GoogleJsonResponseException) {
-            Log.e(TAG, "Google JSON error ($fileName): status=${e.statusCode} ${e.statusMessage}")
-            Log.e(TAG, "Body: ${e.details?.toString() ?: e.content ?: "(no body)"}")
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Google JSON error ($fileName): status=${e.statusCode} ${e.statusMessage}")
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Body: ${e.details?.toString() ?: e.content ?: "(no body)"}")
             if (e.statusCode == 401 && retryOn401) {
-                Log.w(TAG, "401 Unauthorized ($fileName) — Token invalidieren und einmal retry")
+                Diag.w(DiagnosticArea.DRIVE_BACKUP, TAG, "401 Unauthorized ($fileName) — Token invalidieren und einmal retry")
                 session.invalidateToken()
                 runUploadWithRetry(fileName, jsonContent, retryOn401 = false)
             } else {
                 Result.failure(e)
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "upload($fileName) failed: ${t.javaClass.simpleName}: ${t.message}", t)
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "upload($fileName) failed: ${t.javaClass.simpleName}: ${t.message}", t)
             Result.failure(t)
         }
     }
 
     private suspend fun doUpload(fileName: String, jsonContent: String) {
         val drive = session.get()
-        Log.d(TAG, "Drive client erhalten, listing existing backup files for $fileName…")
+        Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "Drive client erhalten, listing existing backup files for $fileName…")
 
         val matches =
             drive
@@ -133,19 +133,19 @@ constructor(
                 .execute()
                 .files
                 .orEmpty()
-        Log.d(TAG, "list($fileName) ok, ${matches.size} existing match(es)")
+        Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "list($fileName) ok, ${matches.size} existing match(es)")
 
         val media = ByteArrayContent("application/json", jsonContent.toByteArray(Charsets.UTF_8))
         val firstId = matches.firstOrNull()?.id
 
         if (firstId != null) {
-            Log.d(TAG, "update existing fileId=$firstId ($fileName)")
+            Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "update existing fileId=$firstId ($fileName)")
             drive.files().update(firstId, null, media).execute()
             matches.drop(1).forEach { stale ->
                 runCatching { drive.files().delete(stale.id).execute() }
             }
         } else {
-            Log.d(TAG, "create new file $fileName in appDataFolder")
+            Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "create new file $fileName in appDataFolder")
             val metadata =
                 DriveFile().apply {
                     name = fileName

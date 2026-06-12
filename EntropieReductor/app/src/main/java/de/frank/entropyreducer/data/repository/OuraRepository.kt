@@ -1,8 +1,10 @@
 package de.frank.entropyreducer.data.repository
 
-import android.util.Log
+import androidx.room.withTransaction
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
+import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.dao.OuraActivityDao
 import de.frank.entropyreducer.data.local.dao.OuraDailySleepDao
 import de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao
@@ -23,15 +25,13 @@ import de.frank.entropyreducer.data.remote.oura.OuraDailySleep
 import de.frank.entropyreducer.data.remote.oura.OuraSleep
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
-import androidx.room.withTransaction
-import de.frank.entropyreducer.data.local.AppDatabase
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import retrofit2.HttpException
 
 /**
  * Oura Cloud API v2 Anbindung (Frank-Wunsch 2026-05-10). Personal-Access-Token
@@ -170,7 +170,7 @@ class OuraRepository @Inject constructor(
         val startDate = startLocalDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val now = System.currentTimeMillis()
 
-        Log.i(TAG, "Oura Sync gestartet: $startDate bis $endDate ($days Tage)")
+        Diag.i(DiagnosticArea.OURA, TAG, "Oura Sync gestartet: $startDate bis $endDate ($days Tage)")
 
         // Personal Info immer am Anfang aktualisieren — minimal teuer (1 Request),
         // aber nuetzlich falls Frank Geburtstag hatte oder Gewicht aktualisiert hat.
@@ -198,7 +198,7 @@ class OuraRepository @Inject constructor(
         // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den
         // 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
         appSettings.setLastOuraSync(now)
-        Log.i(
+        Diag.i(DiagnosticArea.OURA, 
             TAG,
             "Oura Sync fertig: readiness=$readinessCount, sleepDay=$sleepDayCount, " +
                 "activity=$activityCount, resilience=$resilienceCount, " +
@@ -279,7 +279,7 @@ class OuraRepository @Inject constructor(
             } while (nextToken != null)
         } catch (e: HttpException) {
             if (e.code() == 404 || e.code() == 422) {
-                Log.w(TAG, "Resilience-Endpunkt nicht verfuegbar (HTTP ${e.code()}) — ueberspringe.")
+                Diag.w(DiagnosticArea.OURA, TAG, "Resilience-Endpunkt nicht verfuegbar (HTTP ${e.code()}) — ueberspringe.")
                 return 0
             }
             throw e

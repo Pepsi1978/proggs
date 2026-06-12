@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.room.withTransaction
@@ -16,6 +15,8 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
@@ -58,13 +59,13 @@ constructor(
 
     override suspend fun doWork(): Result {
         val zipUriString = inputData.getString(KEY_ZIP_URI)
-        Log.i(TAG, "Polar-Bulk-Worker: doWork gestartet — zipUriString=$zipUriString")
+        Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Worker: doWork gestartet — zipUriString=$zipUriString")
         if (zipUriString.isNullOrBlank()) {
-            Log.e(TAG, "Polar-Bulk-Import: kein zipUri uebergeben")
+            Diag.e(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import: kein zipUri uebergeben")
             return Result.failure()
         }
         val zipUri = Uri.parse(zipUriString)
-        Log.i(TAG, "Polar-Bulk-Worker: URI scheme=${zipUri.scheme} path=${zipUri.path}")
+        Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Worker: URI scheme=${zipUri.scheme} path=${zipUri.path}")
 
         // Frank-Bugfix 2026-05-16 (4. Iteration): Wir akzeptieren NUR noch
         // file://-URIs. Wenn aus irgendeinem Grund eine alte content://-URI
@@ -73,7 +74,7 @@ constructor(
         if (zipUri.scheme != "file") {
             val msg =
                 "Polar-Bulk-Worker erhielt ungueltige URI-Quelle '${zipUri.scheme}://' — erwartet wird file://. Bitte ZIP-Datei nochmal auswaehlen."
-            Log.e(TAG, msg)
+            Diag.e(DiagnosticArea.POLAR, TAG, msg)
             showFailureNotification("Quelle nicht unterstuetzt. Bitte erneut ZIP auswaehlen.")
             return Result.failure()
         }
@@ -108,7 +109,7 @@ constructor(
             // sollen die alten Eintraege NICHT geloescht werden — sonst hat
             // Frank am Ende eine LEERE Liste statt der frueheren T-Rex-3-Daten.
             if (allEntities.isEmpty()) {
-                Log.e(
+                Diag.e(DiagnosticArea.POLAR, 
                     TAG,
                     "Polar-Bulk-Import: 0 Trainings geparst von $totalSkipped Eintraegen — alte Daten bleiben erhalten",
                 )
@@ -121,7 +122,7 @@ constructor(
 
             // Erfolg-Fall: alte Daten weg, frische Polar-Daten rein.
             val deletedOld = workoutDao.deleteNonPolarWorkouts()
-            Log.i(TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
+            Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
 
             // Frank-Wunsch 2026-05-17: Manuell editierte Workouts NICHT
             // ueberschreiben. Wir filtern fresh-Eintraege deren trackId in der DB
@@ -131,7 +132,7 @@ constructor(
                 val existing = workoutDao.getById(fresh.trackId)
                 if (existing?.manualOverridesMs != null) {
                     protectedCount++
-                    Log.d(
+                    Diag.d(DiagnosticArea.POLAR, 
                         TAG,
                         "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert",
                     )
@@ -140,7 +141,7 @@ constructor(
             }
 
             appDatabase.withTransaction { workoutDao.upsertAll(safeEntities) }
-            Log.i(
+            Diag.i(DiagnosticArea.POLAR, 
                 TAG,
                 "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)",
             )
@@ -165,7 +166,7 @@ constructor(
         } catch (ce: kotlinx.coroutines.CancellationException) {
             throw ce
         } catch (t: Throwable) {
-            Log.e(TAG, "Polar-Bulk-Import fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import fehlgeschlagen", t)
             cacheFileToCleanup?.let { runCatching { it.delete() } }
             showFailureNotification(t.message ?: t.javaClass.simpleName)
             Result.failure()

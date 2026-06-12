@@ -1,21 +1,22 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.repository.KiQuestionRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.kiquestion.KiQuestionGenerator
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.flow.first
 
 /**
  * Prueft alle 30 Min die fuenf Trigger aus §10.4 und schreibt die naechste Frage in
@@ -40,7 +41,7 @@ class KiQuestionWorker @AssistedInject constructor(
             val now = System.currentTimeMillis()
             val dismissedUntil = repo.dismissedUntilMs.first()
             if (dismissedUntil > now) {
-                Log.i(TAG, "Frage ist noch snoozed bis ${java.util.Date(dismissedUntil)}")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Frage ist noch snoozed bis ${java.util.Date(dismissedUntil)}")
                 return Result.success()
             }
 
@@ -55,7 +56,7 @@ class KiQuestionWorker @AssistedInject constructor(
             val question = generator.generate(entries, latest, todayDay, tomorrowDay, now)
             repo.setCurrent(question)
             settings.setLastKiQuestionCheck(now)
-            Log.i(TAG, "KI-Frage-Check: ${question?.triggerKey ?: "keine Frage"}")
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "KI-Frage-Check: ${question?.triggerKey ?: "keine Frage"}")
 
             // Schichtbewusste Notification, nur bei neuer Frage.
             if (question != null && previous?.triggerKey != question.triggerKey) {
@@ -67,7 +68,7 @@ class KiQuestionWorker @AssistedInject constructor(
             }
             Result.success()
         } catch (e: Throwable) {
-            Log.e(TAG, "KI-Frage-Worker fehlgeschlagen", e)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "KI-Frage-Worker fehlgeschlagen", e)
             Result.retry()
         }
     }

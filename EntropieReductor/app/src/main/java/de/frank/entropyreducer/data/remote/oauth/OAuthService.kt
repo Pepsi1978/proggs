@@ -3,8 +3,9 @@ package de.frank.entropyreducer.data.remote.oauth
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -158,7 +159,7 @@ constructor(
         return suspendCancellableCoroutine { cont ->
             state.performActionWithFreshTokens(service) { accessToken, _, ex ->
                 if (ex != null) {
-                    Log.e(TAG, "Google-Token-Refresh fehlgeschlagen", ex)
+                    Diag.e(DiagnosticArea.OAUTH, TAG, "Google-Token-Refresh fehlgeschlagen", ex)
                     cont.resume(null)
                 } else {
                     saveGoogleAuthState(state)
@@ -175,7 +176,7 @@ constructor(
     fun buildWhoopAuthIntent(clientId: String, redirectUri: String): Intent {
         // Diagnostik: volle Client-ID + Laenge — UUIDs sind nicht geheim, tauchen in der
         // OAuth-URL im Browser ohnehin auf. Hilft den "client_does_not_exist"-Bug einzugrenzen.
-        Log.d(
+        Diag.d(DiagnosticArea.OAUTH, 
             TAG,
             "Whoop: buildAuthIntent — clientId='$clientId' (Länge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES",
         )
@@ -214,11 +215,11 @@ constructor(
     }
 
     suspend fun handleWhoopAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
-        Log.d(TAG, "Whoop: handleAuthResult — clientSecret-vorhanden=${clientSecret != null}")
+        Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop: handleAuthResult — clientSecret-vorhanden=${clientSecret != null}")
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
         if (ex != null) {
-            Log.e(
+            Diag.e(DiagnosticArea.OAUTH, 
                 TAG,
                 "Whoop: AuthorizationException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}",
             )
@@ -226,7 +227,7 @@ constructor(
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Whoop-Authorization-Antwort"))
         }
-        Log.d(
+        Diag.d(DiagnosticArea.OAUTH, 
             TAG,
             "Whoop: Authorization OK — code-Länge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}",
         )
@@ -239,14 +240,14 @@ constructor(
             } else {
                 resp.createTokenExchangeRequest()
             }
-        Log.d(
+        Diag.d(DiagnosticArea.OAUTH, 
             TAG,
             "Whoop: Token-Exchange-Request gebaut — additionalParams-Keys=${tokenRequest.additionalParameters.keys}",
         )
         val tokenResult = exchangeToken(tokenRequest)
         return tokenResult
             .onSuccess { tokenResp ->
-                Log.i(
+                Diag.i(DiagnosticArea.OAUTH, 
                     TAG,
                     "Whoop: Token-Exchange erfolgreich — access-Länge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}",
                 )
@@ -258,13 +259,13 @@ constructor(
                     tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
             }
             .onFailure { failure ->
-                Log.e(
+                Diag.e(DiagnosticArea.OAUTH, 
                     TAG,
                     "Whoop: Token-Exchange fehlgeschlagen — class=${failure.javaClass.simpleName}, message=${failure.message}",
                     failure,
                 )
                 if (failure is AuthorizationException) {
-                    Log.e(
+                    Diag.e(DiagnosticArea.OAUTH, 
                         TAG,
                         "Whoop: AuthException-Details — type=${failure.type} code=${failure.code} error=${failure.error} desc=${failure.errorDescription} uri=${failure.errorUri}",
                     )
@@ -293,12 +294,12 @@ constructor(
     suspend fun freshWhoopAccessToken(): String? {
         val state = loadWhoopAuthState()
         if (!state.isAuthorized) {
-            Log.d(TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")
+            Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")
             return null
         }
         val clientSecret = secrets.whoopClientSecret
         if (clientSecret.isNullOrBlank()) {
-            Log.e(TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
+            Diag.e(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
             throw IllegalStateException(
                 "Whoop-Client-Secret fehlt — bitte in den API-Schlüssel-Settings neu eingeben."
             )
@@ -317,10 +318,10 @@ constructor(
         // Token-Refresh entfernt. Token-Refresh laeuft 1x/Stunde — pro Aufruf wurde
         // ein 200-Zeichen-String allokiert nur fuer Logcat. Knappe Form unter Guard.
         if (de.frank.entropyreducer.BuildConfig.DEBUG) {
-            Log.d(TAG, "Whoop-Refresh: needsRefresh=$needsRefresh expiryDeltaMs=$expiryDeltaMs")
+            Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: needsRefresh=$needsRefresh expiryDeltaMs=$expiryDeltaMs")
         }
         if (rt.isNullOrBlank()) {
-            Log.e(
+            Diag.e(DiagnosticArea.OAUTH, 
                 TAG,
                 "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.",
             )
@@ -341,7 +342,7 @@ constructor(
             state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
                 if (ex != null) {
                     // Schicht 4 — Diagnose: alles was Whoop geschickt hat in den Log
-                    Log.e(
+                    Diag.e(DiagnosticArea.OAUTH, 
                         TAG,
                         "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}",
                         ex,
@@ -354,7 +355,7 @@ constructor(
                     // aber besser als Datenverlust.
                     cont.resume(null)
                 } else {
-                    Log.d(
+                    Diag.d(DiagnosticArea.OAUTH, 
                         TAG,
                         "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken?.length ?: 0})",
                     )
@@ -378,7 +379,7 @@ constructor(
      * aktuell, aber wir muessen nach jedem Refresh den State persistieren (saveStravaAuthState).
      */
     fun buildStravaAuthIntent(clientId: String, redirectUri: String): Intent {
-        Log.d(TAG, "Strava: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
+        Diag.d(DiagnosticArea.OAUTH, TAG, "Strava: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
         val request =
             AuthorizationRequest.Builder(
                     stravaConfig,
@@ -415,7 +416,7 @@ constructor(
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
         if (ex != null) {
-            Log.e(
+            Diag.e(DiagnosticArea.OAUTH, 
                 TAG,
                 "Strava: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}",
             )
@@ -435,7 +436,7 @@ constructor(
         val tokenResult = exchangeToken(tokenRequest)
         return tokenResult
             .onSuccess { tokenResp ->
-                Log.i(
+                Diag.i(DiagnosticArea.OAUTH, 
                     TAG,
                     "Strava: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}",
                 )
@@ -446,12 +447,12 @@ constructor(
                     val match = Regex("\"id\"\\s*:\\s*(\\d+)").find(json)
                     match?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
                         secrets.stravaAthleteId = it
-                        Log.d(TAG, "Strava: athleteId=$it gespeichert")
+                        Diag.d(DiagnosticArea.OAUTH, TAG, "Strava: athleteId=$it gespeichert")
                     }
                 }
             }
             .onFailure { failure ->
-                Log.e(TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
+                Diag.e(DiagnosticArea.OAUTH, TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
                 clearStravaAuthState()
             }
             .map { Unit }
@@ -464,12 +465,12 @@ constructor(
     suspend fun freshStravaAccessToken(): String? {
         val state = loadStravaAuthState()
         if (!state.isAuthorized) {
-            Log.d(TAG, "Strava-Refresh: kein AuthState — kein Token")
+            Diag.d(DiagnosticArea.OAUTH, TAG, "Strava-Refresh: kein AuthState — kein Token")
             return null
         }
         val clientSecret = secrets.stravaClientSecret
         if (clientSecret.isNullOrBlank()) {
-            Log.e(TAG, "Strava-Refresh: Client-Secret fehlt")
+            Diag.e(DiagnosticArea.OAUTH, TAG, "Strava-Refresh: Client-Secret fehlt")
             throw IllegalStateException(
                 "Strava-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben."
             )
@@ -479,14 +480,14 @@ constructor(
         return suspendCancellableCoroutine { cont ->
             state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
                 if (ex != null) {
-                    Log.e(
+                    Diag.e(DiagnosticArea.OAUTH, 
                         TAG,
                         "Strava-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}",
                         ex,
                     )
                     cont.resume(null)
                 } else {
-                    Log.d(TAG, "Strava-Token-Refresh OK — Laenge=${accessToken?.length ?: 0}")
+                    Diag.d(DiagnosticArea.OAUTH, TAG, "Strava-Token-Refresh OK — Laenge=${accessToken?.length ?: 0}")
                     saveStravaAuthState(state)
                     cont.resume(accessToken)
                 }
@@ -501,7 +502,7 @@ constructor(
         request: net.openid.appauth.TokenRequest
     ): Result<TokenResponse> = suspendCancellableCoroutine { cont ->
         val service = newService()
-        Log.d(
+        Diag.d(DiagnosticArea.OAUTH, 
             TAG,
             "exchangeToken — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}",
         )
@@ -509,7 +510,7 @@ constructor(
             if (resp != null) {
                 cont.resume(Result.success(resp))
             } else {
-                Log.e(
+                Diag.e(DiagnosticArea.OAUTH, 
                     TAG,
                     "exchangeToken FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}",
                 )
@@ -530,7 +531,7 @@ constructor(
         clientAuth: net.openid.appauth.ClientAuthentication,
     ): Result<TokenResponse> = suspendCancellableCoroutine { cont ->
         val service = newService()
-        Log.d(
+        Diag.d(DiagnosticArea.OAUTH, 
             TAG,
             "exchangeTokenWithAuth — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}",
         )
@@ -538,7 +539,7 @@ constructor(
             if (resp != null) {
                 cont.resume(Result.success(resp))
             } else {
-                Log.e(
+                Diag.e(DiagnosticArea.OAUTH, 
                     TAG,
                     "exchangeTokenWithAuth FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}",
                 )

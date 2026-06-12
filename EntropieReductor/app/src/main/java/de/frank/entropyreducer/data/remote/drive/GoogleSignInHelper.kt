@@ -2,7 +2,6 @@ package de.frank.entropyreducer.data.remote.drive
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -12,6 +11,8 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -59,10 +60,10 @@ class GoogleSignInHelper @Inject constructor(
         } catch (e: ApiException) {
             val code = e.statusCode
             val codeName = GoogleSignInStatusCodes.getStatusCodeString(code)
-            Log.e(TAG, "Sign-In fehlgeschlagen: code=$code ($codeName), statusMessage=${e.status.statusMessage}", e)
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Sign-In fehlgeschlagen: code=$code ($codeName), statusMessage=${e.status.statusMessage}", e)
             SignInResult.Error(code, codeName)
         } catch (t: Throwable) {
-            Log.e(TAG, "Sign-In: unerwartete Exception", t)
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Sign-In: unerwartete Exception", t)
             SignInResult.Error(-1, t.message ?: "Unbekannter Fehler")
         }
     }

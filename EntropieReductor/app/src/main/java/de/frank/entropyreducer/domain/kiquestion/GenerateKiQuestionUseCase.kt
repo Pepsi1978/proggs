@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.kiquestion
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.remote.GeminiApi
@@ -12,9 +13,9 @@ import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.EntryStatus
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 /**
  * Generiert die "KI-Frage des Moments" DYNAMISCH durch Gemini-API
@@ -80,7 +81,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
                 ?.trim()
                 ?.removePrefix("\"")?.removeSuffix("\"")
             if (text.isNullOrBlank()) {
-                Log.w(TAG, "Leere KI-Antwort — keine Frage anzeigen (Frank-Wunsch 2026-05-09)")
+                Diag.w(DiagnosticArea.AGENTIC, TAG, "Leere KI-Antwort — keine Frage anzeigen (Frank-Wunsch 2026-05-09)")
                 null
             } else {
                 KiQuestion(
@@ -91,7 +92,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "KI-Frage-Generierung fehlgeschlagen — keine Frage anzeigen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "KI-Frage-Generierung fehlgeschlagen — keine Frage anzeigen", t)
             null
         }
     }

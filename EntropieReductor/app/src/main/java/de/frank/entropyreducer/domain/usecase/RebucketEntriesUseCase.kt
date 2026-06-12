@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import javax.inject.Inject
 
 /**
@@ -20,7 +21,7 @@ class RebucketEntriesUseCase @Inject constructor(
 
     suspend operator fun invoke(): Int {
         val updated = balance()
-        Log.i(TAG, "Rebucketing: $updated Eintraege durch BalanceBucketsUseCase aktualisiert")
+        Diag.i(DiagnosticArea.TASKS, TAG, "Rebucketing: $updated Eintraege durch BalanceBucketsUseCase aktualisiert")
         return updated
     }
 

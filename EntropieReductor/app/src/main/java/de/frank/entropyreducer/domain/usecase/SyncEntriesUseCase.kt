@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.HypothesisDao
 import de.frank.entropyreducer.data.local.dao.HypothesisMessageDao
 import de.frank.entropyreducer.data.local.dao.InsightDao
@@ -255,7 +257,7 @@ constructor(
         // mit dem Polar-Stand — der Restore wird dann nur Polar-Workouts mergen.
         val workoutCleanupDone = appSettings.isWorkoutCleanupV1Done()
         if (workoutCleanupDone && payload.amazfitWorkouts.isNotEmpty()) {
-            android.util.Log.i(
+            Diag.i(DiagnosticArea.DRIVE_BACKUP, 
                 "SyncEntries",
                 "Restore: ueberspringe ${payload.amazfitWorkouts.size} Workouts aus Backup (Cleanup-Migration aktiv)",
             )
@@ -301,7 +303,7 @@ constructor(
             val dailyEntities = payload.amazfitDaily.map { it.toEntity() }
             amazfitDailyDao.upsertAll(dailyEntities)
             inserted += dailyEntities.size
-            android.util.Log.i(
+            Diag.i(DiagnosticArea.DRIVE_BACKUP, 
                 "SyncEntries",
                 "Restore: ${dailyEntities.size} Amazfit-Daily-Eintraege wiederhergestellt",
             )
@@ -580,7 +582,7 @@ constructor(
         val workoutsPayload =
             runCatching { json.decodeFromString(WorkoutsBackupPayload.serializer(), raw) }
                 .getOrElse {
-                    android.util.Log.w("SyncEntries", "Workouts-Backup nicht lesbar", it)
+                    Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Workouts-Backup nicht lesbar", it)
                     return 0
                 }
         if (workoutsPayload.workouts.isEmpty()) return 0
@@ -624,7 +626,7 @@ constructor(
                 }
             }
         amazfitWorkoutDao.upsertAll(merged)
-        android.util.Log.i(
+        Diag.i(DiagnosticArea.DRIVE_BACKUP, 
             "SyncEntries",
             "Restore: ${merged.size} Workouts aus separatem Backup wiederhergestellt",
         )
@@ -647,7 +649,7 @@ constructor(
                     )
                 }
                 .getOrElse {
-                    android.util.Log.w("SyncEntries", "Health-Backup nicht lesbar", it)
+                    Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Health-Backup nicht lesbar", it)
                     return 0
                 }
         var count = 0
@@ -694,7 +696,7 @@ constructor(
             ouraPersonalInfoDao.upsert(it.toEntity())
             count++
         }
-        android.util.Log.i("SyncEntries", "Restore: $count Whoop+Oura-Eintraege wiederhergestellt")
+        Diag.i(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Restore: $count Whoop+Oura-Eintraege wiederhergestellt")
         return count
     }
 

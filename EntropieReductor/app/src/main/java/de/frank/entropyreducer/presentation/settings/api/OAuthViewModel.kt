@@ -6,10 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.remote.calendar.CalendarSignInHelper
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import java.io.File
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,8 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import javax.inject.Inject
 
 /** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Strava. */
 data class OAuthUiState(
@@ -316,7 +318,7 @@ class OAuthViewModel @Inject constructor(
                 runCatching {
                     amazfitRepo.mergeFromStrava(days = 30)
                 }.getOrElse {
-                    android.util.Log.w("OAuthViewModel", "Strava-Sync fehlgeschlagen: ${it.message}")
+                    Diag.w(DiagnosticArea.OAUTH, "OAuthViewModel", "Strava-Sync fehlgeschlagen: ${it.message}")
                     -1
                 }
             }
@@ -350,7 +352,7 @@ class OAuthViewModel @Inject constructor(
      * dauert das 3-5 Sekunden. Solange zeigt die UI eine Status-Message.
      */
     fun startPolarBulkImport(zipUri: android.net.Uri) {
-        android.util.Log.i("OAuthViewModel", "Polar-Bulk: startPolarBulkImport Source-URI scheme=${zipUri.scheme} authority=${zipUri.authority}")
+        Diag.i(DiagnosticArea.OAUTH, "OAuthViewModel", "Polar-Bulk: startPolarBulkImport Source-URI scheme=${zipUri.scheme} authority=${zipUri.authority}")
         // SCHICHT 1: Alle frueheren Worker-Versuche canceln. Ohne das laufen
         // gescheiterte Versuche (z.B. mit alter Drive-URI) im Hintergrund weiter
         // und ueberlagern den frischen Start.
@@ -358,13 +360,13 @@ class OAuthViewModel @Inject constructor(
         _state.update { it.copy(message = "ZIP wird vorbereitet (Datei wird kopiert)…") }
         viewModelScope.launch {
             val cachedFile = runCatching { copyZipToCache(zipUri) }.getOrElse { t ->
-                android.util.Log.e("OAuthViewModel", "Polar-Bulk: Cache-Copy fehlgeschlagen", t)
+                Diag.e(DiagnosticArea.OAUTH, "OAuthViewModel", "Polar-Bulk: Cache-Copy fehlgeschlagen", t)
                 _state.update {
                     it.copy(message = "ZIP konnte nicht gelesen werden: ${t.message ?: t.javaClass.simpleName}")
                 }
                 return@launch
             }
-            android.util.Log.i("OAuthViewModel", "Polar-Bulk: Cache-Copy fertig — ${cachedFile.length() / 1024} KB unter ${cachedFile.absolutePath}")
+            Diag.i(DiagnosticArea.OAUTH, "OAuthViewModel", "Polar-Bulk: Cache-Copy fertig — ${cachedFile.length() / 1024} KB unter ${cachedFile.absolutePath}")
             val cacheUri = android.net.Uri.fromFile(cachedFile)
             scheduler.runPolarBulkImport(cacheUri)
             _state.update {

@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
 import de.frank.entropyreducer.data.remote.GeminiGenerationConfig
@@ -9,10 +10,10 @@ import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.EntropyCategory
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
 
 /**
  * Wandelt einen rohen Whisper-Transkript-Text einer manuell hinzugefuegten Methode
@@ -102,7 +103,7 @@ class PolishMethodTextUseCase @Inject constructor(
                 usedAi = true,
             )
         } catch (t: Throwable) {
-            Log.e(TAG, "Polish-API-Call fehlgeschlagen — Fallback auf rohen Text", t)
+            Diag.e(DiagnosticArea.GEMINI, TAG, "Polish-API-Call fehlgeschlagen — Fallback auf rohen Text", t)
             fallback(rawTranscript)
         }
     }

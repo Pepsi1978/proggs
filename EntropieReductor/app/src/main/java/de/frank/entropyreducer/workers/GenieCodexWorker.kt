@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.domain.usecase.GenieCodexSynthesizer
 
 /**
@@ -23,11 +24,11 @@ class GenieCodexWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return synth().fold(
             onSuccess = {
-                Log.i(TAG, "Codex-Synthese OK ($it)")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Codex-Synthese OK ($it)")
                 Result.success()
             },
             onFailure = {
-                Log.e(TAG, "Codex-Synthese fehlgeschlagen", it)
+                Diag.e(DiagnosticArea.AGENTIC, TAG, "Codex-Synthese fehlgeschlagen", it)
                 Result.retry()
             },
         )

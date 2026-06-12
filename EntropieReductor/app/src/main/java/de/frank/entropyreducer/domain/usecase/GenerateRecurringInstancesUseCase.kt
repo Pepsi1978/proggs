@@ -1,20 +1,21 @@
 package de.frank.entropyreducer.domain.usecase
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
-import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.EntrySource
+import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
-import kotlinx.coroutines.flow.first
-import org.dmfs.rfc5545.DateTime
-import org.dmfs.rfc5545.recur.RecurrenceRule
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
+import org.dmfs.rfc5545.DateTime
+import org.dmfs.rfc5545.recur.RecurrenceRule
 
 /**
  * Generiert beim App-Start (oder manuell) fuer alle aktiven RecurringTemplates
@@ -48,7 +49,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 totalCreated += created
             } catch (e: Exception) {
                 // Eine fehlerhafte Vorlage darf nicht alle anderen blockieren.
-                Log.w(
+                Diag.w(DiagnosticArea.TASKS, 
                     TAG,
                     "Vorlage '${template.title}' (${template.id}) uebersprungen: ${e.message}",
                 )
@@ -56,7 +57,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         }
 
         if (totalCreated > 0) {
-            Log.i(TAG, "Wiederkehrende Aufgaben: $totalCreated neue Eintraege erzeugt.")
+            Diag.i(DiagnosticArea.TASKS, TAG, "Wiederkehrende Aufgaben: $totalCreated neue Eintraege erzeugt.")
         }
         return totalCreated
     }
@@ -385,7 +386,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Cleanup fuer Vorlage '${template.title}' (${template.id}) fehlgeschlagen: ${e.message}")
+                Diag.w(DiagnosticArea.TASKS, TAG, "Cleanup fuer Vorlage '${template.title}' (${template.id}) fehlgeschlagen: ${e.message}")
             }
         }
     }
@@ -488,7 +489,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         )
                     }
                     entryRepo.delete(orphan)
-                    Log.i(
+                    Diag.i(DiagnosticArea.TASKS, 
                         TAG,
                         "Verwaiste Konvertierung '${orphan.title}' entfernt (Duplikat zu ${recInstance.id}).",
                     )
@@ -517,13 +518,13 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                             updatedAt = now,
                         ),
                     )
-                    Log.i(
+                    Diag.i(DiagnosticArea.TASKS, 
                         TAG,
                         "Verwaiste Konvertierung '${orphan.title}' in Loop-Instanz $recId umgewandelt.",
                     )
                 }
             } catch (e: Exception) {
-                Log.w(
+                Diag.w(DiagnosticArea.TASKS, 
                     TAG,
                     "Heilung fuer '${orphan.title}' (${orphan.id}) fehlgeschlagen: ${e.message}",
                 )

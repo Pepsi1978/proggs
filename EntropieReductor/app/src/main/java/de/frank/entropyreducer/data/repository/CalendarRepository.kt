@@ -1,6 +1,6 @@
 package de.frank.entropyreducer.data.repository
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
@@ -13,7 +13,6 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.calendar.ShiftCodeParser
 import de.frank.entropyreducer.domain.model.ShiftCode
 import de.frank.entropyreducer.util.runCatchingCancellable
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -21,6 +20,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Synchronisiert Ganztagestermine aus Google Calendar in den lokalen Cache.
@@ -224,14 +224,14 @@ class CalendarRepository @Inject constructor(
             eventDao.upsertAll(collectedEvents)
         }
         settings.setLastCalendarSync(syncedAt)
-        Log.i(TAG, "Calendar-Sync: ${daysByDate.size} Tage + ${collectedEvents.size} Events geschrieben")
+        Diag.i(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Calendar-Sync: ${daysByDate.size} Tage + ${collectedEvents.size} Events geschrieben")
         daysByDate.size
     }
         .onSuccess {
             diagnostics.success(DiagnosticArea.GOOGLE_CALENDAR, "Sync OK — $it Tage geladen")
         }
         .onFailure {
-            Log.e(TAG, "Calendar-Sync fehlgeschlagen", it)
+            Diag.e(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Calendar-Sync fehlgeschlagen", it)
             diagnostics.error(
                 DiagnosticArea.GOOGLE_CALENDAR,
                 "Sync fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",

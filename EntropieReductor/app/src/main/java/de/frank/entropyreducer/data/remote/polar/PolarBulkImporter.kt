@@ -2,9 +2,19 @@ package de.frank.entropyreducer.data.remote.polar
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import java.io.BufferedInputStream
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.zip.ZipInputStream
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -17,15 +27,6 @@ import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.BufferedInputStream
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.util.zip.ZipInputStream
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.math.abs
 
 /**
  * Polar-Flow-Bulk-Export Importer (Iteration 8 — Vollausbau).
@@ -82,7 +83,7 @@ class PolarBulkImporter @Inject constructor(
         zipUri: Uri,
         onProgress: (Progress) -> Unit = {},
     ): List<AmazfitWorkoutEntity> = withContext(Dispatchers.IO) {
-        Log.i(TAG, "Polar-Bulk-Importer: starte Import von $zipUri")
+        Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Importer: starte Import von $zipUri")
         val entities = mutableListOf<AmazfitWorkoutEntity>()
         var filesProcessed = 0
         var skipped = 0
@@ -118,7 +119,7 @@ class PolarBulkImporter @Inject constructor(
                     entities += entity
                     filesProcessed = 1
                     trainingEntriesSeen = 1
-                    Log.i(TAG, "Polar-Bulk: Direkt-TCX-Import erfolgreich")
+                    Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk: Direkt-TCX-Import erfolgreich")
                 }
             }
         } else {
@@ -162,7 +163,7 @@ class PolarBulkImporter @Inject constructor(
                             } catch (t: Throwable) {
                                 skipped++
                                 if (skipped <= 3) {
-                                    Log.w(TAG, "Polar-Bulk: Datei $name konnte nicht geparst werden — ${t.message}")
+                                    Diag.w(DiagnosticArea.POLAR, TAG, "Polar-Bulk: Datei $name konnte nicht geparst werden — ${t.message}")
                                 }
                             }
                             if (filesProcessed % 50 == 0 || filesProcessed < 50) {
@@ -177,7 +178,7 @@ class PolarBulkImporter @Inject constructor(
         }
 
         onProgress(Progress(filesProcessed, entities.size, skipped, finished = true))
-        Log.i(TAG, "Polar-Bulk-Import fertig: $entriesSeen Eintraege gesamt, $trainingEntriesSeen Trainings — ${entities.size} entities, $skipped uebersprungen")
+        Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import fertig: $entriesSeen Eintraege gesamt, $trainingEntriesSeen Trainings — ${entities.size} entities, $skipped uebersprungen")
         entities
     }
 
@@ -278,7 +279,7 @@ class PolarBulkImporter @Inject constructor(
                 event = parser.next()
             }
             if (startMs == 0L) {
-                Log.w(TAG, "TCX[$srcName]: kein Trackpoint mit Zeit gefunden")
+                Diag.w(DiagnosticArea.POLAR, TAG, "TCX[$srcName]: kein Trackpoint mit Zeit gefunden")
                 return@runCatching null
             }
             if (totalDistance == null && distPairs.isNotEmpty()) totalDistance = distPairs.last().second
@@ -286,7 +287,7 @@ class PolarBulkImporter @Inject constructor(
                 .atZone(ZoneId.systemDefault()).toLocalDate().toString()
             val endMs = (hrPairs.lastOrNull()?.first ?: gpsPoints.lastOrNull()?.tsMs ?: startMs)
             val durSec = totalSeconds ?: ((endMs - startMs) / 1000L).coerceAtLeast(0L)
-            Log.i(TAG, "TCX[$srcName]: trackpoints hr=${hrPairs.size} gps=${gpsPoints.size} alt=${altPairs.size} dist=${totalDistance} totalSec=$durSec sport=$sport")
+            Diag.i(DiagnosticArea.POLAR, TAG, "TCX[$srcName]: trackpoints hr=${hrPairs.size} gps=${gpsPoints.size} alt=${altPairs.size} dist=${totalDistance} totalSec=$durSec sport=$sport")
 
             // Stream-JSONs
             val hrJson = if (hrPairs.isNotEmpty())
@@ -424,7 +425,7 @@ class PolarBulkImporter @Inject constructor(
                 createdAt = System.currentTimeMillis(),
             )
         }.onFailure { ex ->
-            Log.w(TAG, "TCX[$srcName] Parse-Fehler: ${ex.message}")
+            Diag.w(DiagnosticArea.POLAR, TAG, "TCX[$srcName] Parse-Fehler: ${ex.message}")
         }.getOrNull()
     }
 

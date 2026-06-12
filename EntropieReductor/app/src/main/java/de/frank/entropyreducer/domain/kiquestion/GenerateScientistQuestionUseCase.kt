@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.kiquestion
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.remote.GeminiApi
@@ -15,8 +16,8 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.HypothesisStatus
 import de.frank.entropyreducer.domain.usecase.ScientistChatUseCase
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 /**
  * Generiert die "Forscher-Frage des Moments" — die proaktive Frage des Wissenschaftlers
@@ -96,7 +97,7 @@ class GenerateScientistQuestionUseCase @Inject constructor(
                 ?.trim()
                 ?.removePrefix("\"")?.removeSuffix("\"")
             if (text.isNullOrBlank()) {
-                Log.w(TAG, "Leere KI-Antwort — keine Forscher-Frage anzeigen")
+                Diag.w(DiagnosticArea.AGENTIC, TAG, "Leere KI-Antwort — keine Forscher-Frage anzeigen")
                 null
             } else {
                 KiQuestion(
@@ -107,7 +108,7 @@ class GenerateScientistQuestionUseCase @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "Forscher-Frage-Generierung fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "Forscher-Frage-Generierung fehlgeschlagen", t)
             null
         }
     }

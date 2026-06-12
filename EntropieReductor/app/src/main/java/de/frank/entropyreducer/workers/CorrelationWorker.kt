@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.domain.usecase.DetectCorrelationsUseCase
 
 /**
@@ -24,9 +25,9 @@ class CorrelationWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = try {
         val observations = detector()
-        Log.i(TAG, "Korrelations-Lauf fertig: ${observations.size} Beobachtungen.")
+        Diag.i(DiagnosticArea.BIOMARKER, TAG, "Korrelations-Lauf fertig: ${observations.size} Beobachtungen.")
         observations.forEach { obs ->
-            Log.i(
+            Diag.i(DiagnosticArea.BIOMARKER, 
                 TAG,
                 "Beobachtung: ${obs.stackType} -> ${obs.metric}, d=${"%.2f".format(obs.effectSize)}, " +
                     "n=${obs.nWith}/${obs.nWithout}, mean=${"%.1f".format(obs.meanWith)}/${"%.1f".format(obs.meanWithout)}",
@@ -34,7 +35,7 @@ class CorrelationWorker @AssistedInject constructor(
         }
         Result.success()
     } catch (t: Throwable) {
-        Log.e(TAG, "CorrelationWorker fehlgeschlagen", t)
+        Diag.e(DiagnosticArea.BIOMARKER, TAG, "CorrelationWorker fehlgeschlagen", t)
         Result.retry()
     }
 

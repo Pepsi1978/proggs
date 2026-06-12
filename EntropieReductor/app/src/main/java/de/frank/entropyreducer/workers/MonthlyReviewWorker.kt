@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.usecase.GenerateReviewUseCase
 import java.time.LocalDate
@@ -34,7 +35,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault())
             // Erst zwischen 1. und 7. eines Monats erlauben — danach nicht mehr nachholen.
             if (!force && today.dayOfMonth > 7) {
-                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spät für den Monatsrueckblick (force=false).")
+                Diag.i(DiagnosticArea.BRIEFING, TAG, "Heute ist der ${today.dayOfMonth}., zu spät für den Monatsrueckblick (force=false).")
                 return Result.success()
             }
             val lastAt = settings.lastMonthlyReviewAtMsFlow.first()
@@ -42,7 +43,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 java.time.Instant.ofEpochMilli(lastAt).atZone(ZoneId.systemDefault()).toLocalDate()
             } else null
             if (!force && lastDate?.year == today.year && lastDate.monthValue == today.monthValue) {
-                Log.i(TAG, "Monatsrueckblick für ${today.month} existiert bereits (force=false).")
+                Diag.i(DiagnosticArea.BRIEFING, TAG, "Monatsrueckblick für ${today.month} existiert bereits (force=false).")
                 return Result.success()
             }
 
@@ -50,7 +51,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
             val text = result.getOrNull()
             if (text.isNullOrBlank()) {
                 val ex = result.exceptionOrNull()
-                Log.w(TAG, "Monatsrueckblick leer: ${ex?.message}")
+                Diag.w(DiagnosticArea.BRIEFING, TAG, "Monatsrueckblick leer: ${ex?.message}")
                 // Bei fehlendem API-Key (IllegalStateException) NICHT retry-en —
                 // sonst Endlos-Loop. Bei echten Netz-/Server-Fehlern: retry.
                 if (ex is IllegalStateException) Result.success() else Result.retry()
@@ -64,7 +65,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 Result.success()
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "MonthlyReviewWorker fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.BRIEFING, TAG, "MonthlyReviewWorker fehlgeschlagen", t)
             Result.retry()
         }
     }

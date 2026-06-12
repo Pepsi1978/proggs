@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDao
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
@@ -83,7 +85,7 @@ constructor(
                 newCount
             }
                 .onFailure {
-                    android.util.Log.w("JournalMirrorRepo", "Journal-Sync fehlgeschlagen", it)
+                    Diag.w(DiagnosticArea.DATABASE, "JournalMirrorRepo", "Journal-Sync fehlgeschlagen", it)
                 }
         }
 

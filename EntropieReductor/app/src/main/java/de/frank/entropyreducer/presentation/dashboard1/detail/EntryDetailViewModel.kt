@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
@@ -14,8 +16,8 @@ import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.tts.TtsPlayer
-import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.tts.TtsResult
+import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -332,7 +334,7 @@ constructor(
         process.rescoreExisting(current, followupTexts)
             .onSuccess { reloadTrigger.value = System.currentTimeMillis() }
             .onFailure { ex ->
-                android.util.Log.w(
+                Diag.w(DiagnosticArea.APP, 
                     "EntryDetailVM",
                     "Rescore nach Nachtrag fehlgeschlagen: ${ex.message}",
                 )

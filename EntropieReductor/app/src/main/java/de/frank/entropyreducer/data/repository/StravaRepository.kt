@@ -1,6 +1,6 @@
 package de.frank.entropyreducer.data.repository
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
@@ -11,6 +11,11 @@ import de.frank.entropyreducer.data.remote.strava.StravaApi
 import de.frank.entropyreducer.data.remote.strava.StravaStream
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.JsonArray
@@ -18,11 +23,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Strava-Workout-Sync (Frank-Wunsch 2026-05-16).
@@ -77,7 +77,7 @@ class StravaRepository @Inject constructor(
         knownTrackIds: Set<String> = emptySet(),
     ): Result<List<AmazfitWorkoutEntity>> {
         if (!isAuthenticated()) {
-            Log.d(TAG, "Strava: nicht authentifiziert — kein Workout-Sync")
+            Diag.d(DiagnosticArea.STRAVA, TAG, "Strava: nicht authentifiziert — kein Workout-Sync")
             return Result.success(emptyList())
         }
         // Frank-Bugfix 2026-05-23: 429-Backoff — laeuft ein Cooldown, gar nicht erst syncen.
@@ -85,7 +85,7 @@ class StravaRepository @Inject constructor(
         val cooldownUntil = secrets.stravaRateLimitedUntilMs
         if (cooldownUntil > nowMs) {
             val minsLeft = ((cooldownUntil - nowMs) / 60_000L) + 1
-            Log.d(TAG, "Strava-Sync uebersprungen — Rate-Limit-Cooldown noch ~$minsLeft Min")
+            Diag.d(DiagnosticArea.STRAVA, TAG, "Strava-Sync uebersprungen — Rate-Limit-Cooldown noch ~$minsLeft Min")
             diagnostics.warn(
                 DiagnosticArea.STRAVA,
                 "Sync uebersprungen — Rate-Limit-Cooldown laeuft noch ~$minsLeft Min",
@@ -94,7 +94,7 @@ class StravaRepository @Inject constructor(
         }
         // Frank-Bugfix 2026-05-23: Dedup — laeuft schon ein Sync, diesen ueberspringen.
         if (!syncMutex.tryLock()) {
-            Log.d(TAG, "Strava-Sync uebersprungen — ein anderer Sync laeuft bereits")
+            Diag.d(DiagnosticArea.STRAVA, TAG, "Strava-Sync uebersprungen — ein anderer Sync laeuft bereits")
             diagnostics.info(DiagnosticArea.STRAVA, "Sync uebersprungen — laeuft bereits")
             return Result.success(emptyList())
         }
@@ -146,7 +146,7 @@ class StravaRepository @Inject constructor(
                 page += 1
                 delay(200L) // Rate-Limit-Schutz
             }
-            Log.i(TAG, "Strava-Dauer-Backfill: ${out.size} Activities gelistet (${days}d-Fenster)")
+            Diag.i(DiagnosticArea.STRAVA, TAG, "Strava-Dauer-Backfill: ${out.size} Activities gelistet (${days}d-Fenster)")
             out
         }.onFailure { handleSyncFailure(it) }
     }
@@ -169,7 +169,7 @@ class StravaRepository @Inject constructor(
             } else {
                 (System.currentTimeMillis() / 1000L) - (days.toLong() * 24L * 60L * 60L)
             }
-        Log.i(TAG, "Strava: hole Activities ab Unix-Zeit $afterEpoch (inkrementell=${lastSyncMs > 0L})")
+        Diag.i(DiagnosticArea.STRAVA, TAG, "Strava: hole Activities ab Unix-Zeit $afterEpoch (inkrementell=${lastSyncMs > 0L})")
 
         val summaries = mutableListOf<StravaActivitySummary>()
         var page = 1
@@ -185,7 +185,7 @@ class StravaRepository @Inject constructor(
             page += 1
             delay(200L) // Rate-Limit-Schutz
         }
-        Log.i(TAG, "Strava: ${summaries.size} Activities im ${days}-Tage-Fenster gefunden")
+        Diag.i(DiagnosticArea.STRAVA, TAG, "Strava: ${summaries.size} Activities im ${days}-Tage-Fenster gefunden")
 
         val results = mutableListOf<AmazfitWorkoutEntity>()
         var skipped = 0
@@ -201,24 +201,24 @@ class StravaRepository @Inject constructor(
             // Rate-Limit-Schutz: 200ms zwischen echten Activity-Calls, plus 5s-Pause nach je 25.
             if (results.isNotEmpty()) delay(200L)
             if (results.isNotEmpty() && results.size % 25 == 0) {
-                Log.d(TAG, "Strava: zusaetzliche 5s-Pause nach ${results.size} neuen Activities")
+                Diag.d(DiagnosticArea.STRAVA, TAG, "Strava: zusaetzliche 5s-Pause nach ${results.size} neuen Activities")
                 delay(5_000L)
             }
 
             val activityId = summary.id
             val detail = runCatching { api.getActivity(bearer, activityId) }
                 .getOrElse {
-                    Log.w(TAG, "Strava: getActivity($activityId) fehlgeschlagen — ${it.message}")
+                    Diag.w(DiagnosticArea.STRAVA, TAG, "Strava: getActivity($activityId) fehlgeschlagen — ${it.message}")
                     null
                 }
             val streams = runCatching { api.getStreams(bearer, activityId) }
                 .getOrElse {
-                    Log.w(TAG, "Strava: getStreams($activityId) fehlgeschlagen — ${it.message}")
+                    Diag.w(DiagnosticArea.STRAVA, TAG, "Strava: getStreams($activityId) fehlgeschlagen — ${it.message}")
                     emptyMap()
                 }
             val laps = runCatching { api.getLaps(bearer, activityId) }
                 .getOrElse {
-                    Log.w(TAG, "Strava: getLaps($activityId) fehlgeschlagen — ${it.message}")
+                    Diag.w(DiagnosticArea.STRAVA, TAG, "Strava: getLaps($activityId) fehlgeschlagen — ${it.message}")
                     emptyList()
                 }
 
@@ -227,7 +227,7 @@ class StravaRepository @Inject constructor(
 
         secrets.stravaLastSyncEpochMs = System.currentTimeMillis()
         secrets.stravaRateLimitedUntilMs = 0L // Erfolg -> evtl. bestehenden Cooldown aufheben
-        Log.i(TAG, "Strava-Sync abgeschlossen: ${results.size} neu, $skipped uebersprungen")
+        Diag.i(DiagnosticArea.STRAVA, TAG, "Strava-Sync abgeschlossen: ${results.size} neu, $skipped uebersprungen")
         diagnostics.success(
             DiagnosticArea.STRAVA,
             "Sync OK — ${summaries.size} Activities geprueft, ${results.size} neu geladen, " +
@@ -270,7 +270,7 @@ class StravaRepository @Inject constructor(
             val pauseText =
                 if (dailyExhausted) "Tageslimit erschoepft — pausiert bis Mitternacht UTC (~${cooldownMs / 60_000L} Min)"
                 else "15-Min-Limit erreicht — pausiert 16 Min"
-            Log.e(
+            Diag.e(DiagnosticArea.STRAVA, 
                 TAG,
                 "Strava 429 — Lese=$readUsage/$readLimit Gesamt=$overallUsage/$overallLimit; $pauseText",
             )
@@ -282,7 +282,7 @@ class StravaRepository @Inject constructor(
                 t,
             )
         } else {
-            Log.e(TAG, "Strava-Sync fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.STRAVA, TAG, "Strava-Sync fehlgeschlagen", t)
             diagnostics.error(
                 DiagnosticArea.STRAVA,
                 "Sync fehlgeschlagen: ${t.message ?: t::class.java.simpleName}",

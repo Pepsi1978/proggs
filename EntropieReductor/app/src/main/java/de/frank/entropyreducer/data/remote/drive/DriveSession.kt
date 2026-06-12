@@ -3,7 +3,6 @@ package de.frank.entropyreducer.data.remote.drive
 import android.accounts.Account
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.api.client.http.javanet.NetHttpTransport
@@ -11,13 +10,15 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * User braucht Sign-In bevor Drive ueberhaupt erreichbar ist. Wir werfen
@@ -74,27 +75,27 @@ class DriveSession @Inject constructor(
         currentToken = null
         if (!deadToken.isNullOrEmpty()) {
             runCatching { GoogleAuthUtil.clearToken(context, deadToken) }
-                .onFailure { Log.w(TAG, "clearToken fehlgeschlagen: ${it.message}") }
-            Log.d(TAG, "Token invalidiert, naechster get() holt frisch.")
+                .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, TAG, "clearToken fehlgeschlagen: ${it.message}") }
+            Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "Token invalidiert, naechster get() holt frisch.")
         }
     }
 
     private suspend fun build(): Drive = withContext(Dispatchers.IO) {
         val email = secrets.driveAccountEmail ?: throw DriveNotSignedInException()
-        Log.d(TAG, "Token-Request für $email, Scope=DRIVE_APPDATA")
+        Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "Token-Request für $email, Scope=DRIVE_APPDATA")
         val account = Account(email, "com.google")
         val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
         val token = try {
             GoogleAuthUtil.getToken(context, account, scope)
         } catch (e: UserRecoverableAuthException) {
-            Log.w(TAG, "Consent erforderlich: ${e.message}")
+            Diag.w(DiagnosticArea.DRIVE_BACKUP, TAG, "Consent erforderlich: ${e.message}")
             throw DriveConsentRequiredException(e.intent ?: Intent())
         } catch (t: Throwable) {
-            Log.e(TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
+            Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t
         }
         currentToken = token
-        Log.d(TAG, "Token erhalten (Länge=${token.length}), Drive-Client wird gebaut")
+        Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "Token erhalten (Länge=${token.length}), Drive-Client wird gebaut")
         Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
             request.headers.authorization = "Bearer $token"
         }

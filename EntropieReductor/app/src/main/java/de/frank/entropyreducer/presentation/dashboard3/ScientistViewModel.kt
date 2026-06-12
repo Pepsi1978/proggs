@@ -7,6 +7,8 @@ import androidx.room.withTransaction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
@@ -23,6 +25,8 @@ import de.frank.entropyreducer.domain.usecase.HypothesisChatUseCase
 import de.frank.entropyreducer.domain.usecase.ScientistChatUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,8 +38,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 @androidx.compose.runtime.Immutable
 data class ScientistUiState(
@@ -527,7 +529,7 @@ class ScientistViewModel @Inject constructor(
                 val q = generateScientistQuestion(avoidPreviousText = previousText)
                 scientistQuestions.setCurrent(q)
             } catch (t: Throwable) {
-                android.util.Log.e("ScientistViewModel", "refreshScientistQuestion failed", t)
+                Diag.e(DiagnosticArea.AGENTIC, "ScientistViewModel", "refreshScientistQuestion failed", t)
             }
         }
     }
@@ -567,7 +569,7 @@ class ScientistViewModel @Inject constructor(
                     ),
                 )
             } catch (t: Throwable) {
-                android.util.Log.e("ScientistViewModel", "Memory speichern fehlgeschlagen", t)
+                Diag.e(DiagnosticArea.AGENTIC, "ScientistViewModel", "Memory speichern fehlgeschlagen", t)
             }
             refreshScientistQuestion()
         }

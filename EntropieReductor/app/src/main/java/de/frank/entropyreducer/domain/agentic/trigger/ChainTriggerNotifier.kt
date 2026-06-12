@@ -1,7 +1,8 @@
 package de.frank.entropyreducer.domain.agentic.trigger
 
-import android.util.Log
 import dagger.Lazy
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
@@ -102,7 +103,7 @@ constructor(
         // Zyklus-Erkennung Schicht 1: gleiche Quelle in Cooldown blockiert
         val lastFire = recentlyFiredSources[promptId]
         if (lastFire != null && now - lastFire < CHAIN_COOLDOWN_MS) {
-            Log.w(
+            Diag.w(DiagnosticArea.AGENTIC, 
                 TAG,
                 "Chain-Notify fuer $promptId uebersprungen — schon in den letzten " +
                     "${CHAIN_COOLDOWN_MS / 1000}s gefeuert (Zyklus-Schutz)",
@@ -115,7 +116,7 @@ constructor(
             try {
                 val chainTriggers = triggerRepo.getChainTriggersAfter(promptId)
                 if (chainTriggers.isEmpty()) return@launch
-                Log.i(TAG, "Chain-Trigger nach Erfolg von $promptId: ${chainTriggers.size}")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Chain-Trigger nach Erfolg von $promptId: ${chainTriggers.size}")
                 for (trigger in chainTriggers) {
                     // Zyklus-Erkennung Schicht 2: target fan-out limit.
                     // Loop-4-Fix L4-1: check-then-add MUSS atomar sein, sonst
@@ -134,7 +135,7 @@ constructor(
                             }
                         }
                     if (!accepted) {
-                        Log.w(
+                        Diag.w(DiagnosticArea.AGENTIC, 
                             TAG,
                             "Chain-Ziel ${trigger.promptId} hat schon " +
                                 "$MAX_CHAIN_FIRES_PER_TARGET Trigger in der Cooldown-Periode — " +
@@ -146,7 +147,7 @@ constructor(
                     launch { concurrencyLimiter.withPermit { runChainOne(trigger) } }
                 }
             } catch (t: Throwable) {
-                Log.e(TAG, "ChainTriggerNotifier fehlgeschlagen", t)
+                Diag.e(DiagnosticArea.AGENTIC, TAG, "ChainTriggerNotifier fehlgeschlagen", t)
             }
         }
     }
@@ -159,13 +160,13 @@ constructor(
             // Chain-Trigger pruefen Prompt.isActive vor dem Start.
             val targetPrompt = promptRepo.getById(trigger.promptId)
             if (targetPrompt == null || !targetPrompt.isActive) {
-                Log.i(
+                Diag.i(DiagnosticArea.AGENTIC, 
                     TAG,
                     "Chain-Ziel ${trigger.promptId} existiert nicht oder ist deaktiviert — skip",
                 )
                 return
             }
-            Log.i(TAG, "Starte Chain-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "Starte Chain-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
             workflowRunnerLazy
                 .get()
                 .run(
@@ -175,7 +176,7 @@ constructor(
                 )
                 .collect { event ->
                     if (event is WorkflowEvent.Finished) {
-                        Log.i(
+                        Diag.i(DiagnosticArea.AGENTIC, 
                             TAG,
                             "Chain-Run beendet: status=${event.status}, " +
                                 "tokens=${event.tokensTotal}",
@@ -184,7 +185,7 @@ constructor(
                 }
             triggerRepo.markFired(trigger.id, System.currentTimeMillis(), null)
         } catch (t: Throwable) {
-            Log.e(TAG, "Chain-Run fuer ${trigger.id} fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "Chain-Run fuer ${trigger.id} fehlgeschlagen", t)
         }
     }
 

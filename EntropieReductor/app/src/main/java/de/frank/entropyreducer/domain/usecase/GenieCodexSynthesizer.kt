@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
-import android.util.Log
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.HypothesisDao
 import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
@@ -16,9 +17,9 @@ import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.HypothesisStatus
-import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 /**
  * Genie-Codex-Synthese (Spec §16.5). Wird sonntags 19:00 oder manuell ausgeloest.
@@ -109,10 +110,10 @@ class GenieCodexSynthesizer @Inject constructor(
             )
             codex.insert(version)
             settings.setLastCodexSynthese(now)
-            Log.i(TAG, "Genie-Codex-Synthese geschrieben (id=${version.id})")
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "Genie-Codex-Synthese geschrieben (id=${version.id})")
             Result.success(version.id)
         } catch (t: Throwable) {
-            Log.e(TAG, "Codex-Synthese fehlgeschlagen", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "Codex-Synthese fehlgeschlagen", t)
             Result.failure(t)
         }
     }

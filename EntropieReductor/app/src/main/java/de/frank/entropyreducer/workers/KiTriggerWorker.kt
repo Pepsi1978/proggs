@@ -1,12 +1,13 @@
 package de.frank.entropyreducer.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.domain.usecase.GenerateKiTriggersUseCase
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -29,13 +30,13 @@ class KiTriggerWorker @AssistedInject constructor(
             val force = inputData.getBoolean(KEY_FORCE, false)
             val today = LocalDate.now(ZoneId.systemDefault()).dayOfWeek
             if (!force && today != DayOfWeek.WEDNESDAY && today != DayOfWeek.SUNDAY) {
-                Log.i(TAG, "Heute ist $today, KI-Trigger-Engine pausiert (force=false).")
+                Diag.i(DiagnosticArea.AGENTIC, TAG, "Heute ist $today, KI-Trigger-Engine pausiert (force=false).")
                 return Result.success()
             }
 
             val result = generator()
             val count = result.getOrNull() ?: 0
-            Log.i(TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt (force=$force).")
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt (force=$force).")
             if (count > 0) {
                 notifier.postOrDelay(
                     notificationId = NOTIFICATION_ID,
@@ -47,7 +48,7 @@ class KiTriggerWorker @AssistedInject constructor(
             // das führt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
             Result.success()
         } catch (t: Throwable) {
-            Log.e(TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)
             Result.retry()
         }
     }
