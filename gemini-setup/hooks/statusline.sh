@@ -253,10 +253,35 @@ else
     five_h_resets="$five_h_resets_raw"
 fi
 
-# Prozent runden
-[ -n "$five_h_used" ] && five_h_used=$(printf "%.0f" "$five_h_used" 2>/dev/null)
-[ -n "$week_used" ]   && week_used=$(printf "%.0f"   "$week_used"   2>/dev/null)
-[ -n "$ctx_remaining" ] && ctx_remaining=$(printf "%.0f" "$ctx_remaining" 2>/dev/null)
+# Prozent runden — robust OHNE printf "%.0f".
+# Frank-Bug-Report 2026-06-12: Die 7d-Anzeige sprang auf 0%, obwohl der echte Wert
+# hoeher war (z.B. 55%). Root Cause: Die API liefert seven_day.used_percentage
+# gelegentlich als Floating-Point-Artefakt "55.00000000000001". Die bash-3.2-builtin
+# printf (macOS) kann so einen langen Float NICHT parsen ("invalid number") und gibt
+# 0 zurueck. Glatte Ganzzahlen funktionierten, der Float-7d-Wert nicht. Fix: reine
+# Parameter-Expansion — locale-unabhaengig und bash-3.2-fest, mit kaufmaennischer Rundung.
+round_pct() {
+    local v="$1"
+    [ -z "$v" ] && { echo ""; return; }
+    case "$v" in
+        *.*)
+            local int="${v%%.*}"
+            local frac="${v#*.}"
+            local neg=""
+            case "$int" in -*) neg="-"; int="${int#-}" ;; esac
+            int="${int:-0}"
+            case "$int" in ''|*[!0-9]*) echo ""; return ;; esac
+            case "$frac" in [5-9]*) int=$((int + 1)) ;; esac
+            echo "${neg}${int}"
+            ;;
+        *)
+            echo "$v"
+            ;;
+    esac
+}
+[ -n "$five_h_used" ] && five_h_used=$(round_pct "$five_h_used")
+[ -n "$week_used" ]   && week_used=$(round_pct "$week_used")
+[ -n "$ctx_remaining" ] && ctx_remaining=$(round_pct "$ctx_remaining")
 
 # Letzter Schutzwall vor der Anzeige (Schicht 2: Reaktiv) — falls trotz aller
 # Validierung ein Mullwert durchschluepft, lieber 100% als 1.778.368.200% zeigen.
