@@ -12,13 +12,11 @@ android {
         applicationId = "de.frank.voicekey"
         minSdk = 34
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.5.3"
+        versionCode = 10
+        versionName = "0.6.0"
 
         // Vosk liefert native .so — auf die real genutzten ABIs beschraenken (Fold 6 = arm64).
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     buildTypes {
@@ -31,7 +29,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -50,9 +48,7 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(21)
-}
+kotlin { jvmToolchain(21) }
 
 dependencies {
     implementation(libs.core.ktx)
@@ -75,4 +71,8 @@ dependencies {
     // Wake-Word-Engine: Vosk (offline, frei definierbare Keywords, EN + DE Modelle).
     implementation(libs.vosk.android)
     implementation(libs.jna) { artifact { type = "aar" } }
+
+    // Sprach-Gate VOR Vosk: WebRTC-VAD (158 KB, GMM) prueft fast gratis, ob ueberhaupt jemand
+    // spricht — Vosk rechnet nur noch bei Sprache statt 24/7 (Akku/Waerme, "Ok Google"-Prinzip).
+    implementation(libs.vad.webrtc)
 }

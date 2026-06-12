@@ -5,6 +5,10 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.SystemClock
+import com.konovalov.vad.webrtc.VadWebRTC
+import com.konovalov.vad.webrtc.config.FrameSize
+import com.konovalov.vad.webrtc.config.Mode
+import com.konovalov.vad.webrtc.config.SampleRate
 import de.frank.voicekey.data.WakeLang
 import de.frank.voicekey.obs.Obs
 import java.util.concurrent.atomic.AtomicBoolean
@@ -21,6 +25,13 @@ import org.vosk.Recognizer
  *
  * WICHTIG (Almanach §8/§9): KEIN setPrivacySensitive; nach stop() gibt der Audio-Thread das
  * Mikrofon vollstaendig frei, damit ChatGPT es uebernehmen kann.
+ *
+ * Akku/Waerme — Sprach-Gate ("Ok Google"-Prinzip): Ein WebRTC-VAD (GMM, Mikrosekunden pro Frame)
+ * prueft jeden 100-ms-Chunk, ob ueberhaupt jemand spricht. NUR bei Sprache laufen die teuren
+ * Vosk-Recognizer (neuronale ASR). In ruhiger Umgebung (nachts, Schreibtisch) spart das den
+ * Grossteil der CPU-Dauerlast. Ein Vorlauf-Ringpuffer fuettert beim Sprachbeginn die letzten Chunks
+ * nach, damit der Wortanfang nicht verloren geht; nach dem Sprachende bleibt das Gate lange genug
+ * offen, damit Vosk die Aeusserung mit Stille finalisieren kann.
  *
  * Resilienz: Jede Thread-Generation hat ihr EIGENES Stop-Flag — ein neuer start() kann einen alten,
  * im join-Timeout haengen gebliebenen Thread nie wiederbeleben (das frueher geteilte running-Flag
@@ -104,12 +115,39 @@ class VoskWakeEngine(
         }
     }
 
+    /**
+     * Sprach-Gate erzeugen. Schlaegt die VAD-Initialisierung fehl, lauscht die Engine OHNE Gate
+     * weiter (Graceful Degradation: lieber hoeherer Akkuverbrauch als gar kein Wake-Word).
+     */
+    private fun createVad(): VadWebRTC? =
+        try {
+            VadWebRTC(
+                sampleRate = SampleRate.SAMPLE_RATE_16K,
+                frameSize = FrameSize.FRAME_SIZE_320, // 20 ms pro VAD-Frame
+                // NORMAL (durchlaessig): lieber Vosk einmal umsonst rechnen lassen als ein
+                // leise gesprochenes Wake-Wort am Gate zu verlieren.
+                mode = Mode.NORMAL,
+                speechDurationMs = VAD_SPEECH_MIN_MS,
+                silenceDurationMs = VAD_SILENCE_HANGOVER_MS,
+            )
+        } catch (e: Exception) {
+            Obs.w(
+                "VoskWakeEngine",
+                "createVad",
+                "VAD-Init fehlgeschlagen — lausche ohne Sprach-Gate (hoeherer Akkuverbrauch)",
+                emptyMap(),
+                e,
+            )
+            null
+        }
+
     @SuppressLint("MissingPermission") // RECORD_AUDIO wird vom Service vor dem Start geprueft.
     private fun audioLoop(setups: Map<WakeLang, LangSetup>, gen: Generation) {
         val startedAt = SystemClock.uptimeMillis()
         var deathReason = "Audio-Schleife unerwartet beendet"
         val recognizers = mutableMapOf<WakeLang, Recognizer>()
         var audio: AudioRecord? = null
+        var vad: VadWebRTC? = null
         try {
             setups.forEach { (lang, setup) ->
                 val grammar =
@@ -128,6 +166,7 @@ class VoskWakeEngine(
                     mapOf("lang" to lang, "grammar" to grammar),
                 )
             }
+            vad = createVad()
 
             val minBuffer =
                 AudioRecord.getMinBufferSize(
@@ -167,10 +206,14 @@ class VoskWakeEngine(
                     mapOf(
                         "sprachen" to setups.keys.joinToString(),
                         "phrasen" to setups.values.sumOf { it.phrases.size },
+                        "sprachGate" to (vad != null),
                     ),
             )
 
             val buffer = ShortArray(SAMPLE_RATE / 10) // 100 ms Audio pro Durchlauf
+            val vadFrame = ShortArray(VAD_FRAME_SIZE) // wiederverwendet, keine Allokation im Loop
+            val preRoll = ArrayDeque<ShortArray>() // letzte Stille-Chunks (Wortanfang-Vorlauf)
+            var gateOpen = false
             var lastWakeAtMs = 0L // koppelt "Wake + beenden" auch ueber getrennte Erkenner/Chunks
             while (gen.active.get()) {
                 val read = audio.read(buffer, 0, buffer.size)
@@ -183,6 +226,41 @@ class VoskWakeEngine(
                     )
                     break
                 }
+
+                // ---- Sprach-Gate (Akku): erst der billige VAD, Vosk nur bei Sprache. ----
+                // Alle 20-ms-Frames durch den VAD schicken (sein eingebautes Glaetten ueber
+                // speech/silenceDurationMs braucht den kontinuierlichen Strom).
+                var speech = vad == null // ohne VAD: Gate immer offen (Verhalten wie frueher)
+                vad?.let { v ->
+                    var off = 0
+                    while (off + VAD_FRAME_SIZE <= read) {
+                        System.arraycopy(buffer, off, vadFrame, 0, VAD_FRAME_SIZE)
+                        if (v.isSpeech(vadFrame)) speech = true
+                        off += VAD_FRAME_SIZE
+                    }
+                }
+                if (!speech) {
+                    if (gateOpen) {
+                        gateOpen = false
+                        // Aeusserung ist laengst finalisiert (Hangover > Vosk-Endpoint) —
+                        // Reststate verwerfen, damit nichts in die naechste Aeusserung blutet.
+                        recognizers.values.forEach { runCatching { it.reset() } }
+                    }
+                    // Vorlauf-Ring pflegen: die letzten Chunks VOR dem Sprachbeginn.
+                    if (preRoll.size >= PRE_ROLL_CHUNKS) preRoll.removeFirst()
+                    preRoll.addLast(buffer.copyOf(read))
+                    continue // KEIN Vosk bei Stille — das ist die eigentliche Ersparnis
+                }
+                if (!gateOpen) {
+                    gateOpen = true
+                    // Wortanfang nachfuettern: VAD braucht ~50 ms zum Anschlagen, der Anfang
+                    // des Wake-Worts liegt noch im Vorlauf-Puffer.
+                    for (chunk in preRoll) {
+                        recognizers.values.forEach { it.acceptWaveForm(chunk, chunk.size) }
+                    }
+                    preRoll.clear()
+                }
+
                 // Wake ("ok chatty") und Beenden ("beenden") landen oft in VERSCHIEDENEN Sprach-
                 // Erkennern (EN hoert "ok chatty [unk]", DE hoert "beenden"). Darum ZUERST alle
                 // Erkenner dieses Chunks zusammen auswerten, DANN entscheiden.
@@ -259,6 +337,7 @@ class VoskWakeEngine(
                 Obs.w("VoskWakeEngine", "audioLoop", "Mic-Freigabe-Fehler", emptyMap(), e)
             }
             recognizers.values.forEach { runCatching { it.close() } }
+            vad?.let { runCatching { it.close() } }
             Obs.i("VoskWakeEngine", "audioLoop", "Audio-Thread beendet, Mikrofon freigegeben")
             // Unerwartetes Ende (stop() wurde NIE gerufen) -> Watchdog im Service informieren.
             // Ohne diese Meldung zeigte die Notification "Lauscht…", obwohl niemand mehr zuhoerte.
@@ -287,5 +366,21 @@ class VoskWakeEngine(
 
         /** Max. Abstand zwischen Wake-Wort und Beenden-Wort, damit beide als ein Befehl zaehlen. */
         private const val WAKE_STOP_WINDOW_MS = 1_500L
+
+        /** WebRTC-VAD-Framegroesse bei 16 kHz: 320 Samples = 20 ms (gueltig: 160/320/480). */
+        private const val VAD_FRAME_SIZE = 320
+
+        /** So viel Sprache muss der VAD hoeren, bevor das Gate oeffnet (Fehltrigger-Filter). */
+        private const val VAD_SPEECH_MIN_MS = 50
+
+        /**
+         * So lange bleibt das Gate nach dem letzten Sprach-Frame offen. MUSS groesser sein als
+         * Vosks Endpoint-Stille (~500 ms), sonst bekommt Vosk nie genug Stille, um die Aeusserung
+         * zu finalisieren — das Wake-Wort wuerde erst beim naechsten Sprechen gemeldet.
+         */
+        private const val VAD_SILENCE_HANGOVER_MS = 800
+
+        /** Vorlauf-Chunks (je 100 ms) fuer den Wortanfang vor dem VAD-Anschlag. */
+        private const val PRE_ROLL_CHUNKS = 3
     }
 }

@@ -18,8 +18,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // WebRTC-VAD (Sprach-Gate vor Vosk) wird nur ueber JitPack verteilt.
+        maven(url = "https://jitpack.io") {
+            content { includeGroupByRegex("com\\.github\\.gkonovalov.*") }
+        }
     }
 }
 
 rootProject.name = "VoiceKey"
+
 include(":app")
