@@ -27,8 +27,8 @@ import de.frank.voicekey.service.BootReceiver
 import de.frank.voicekey.ui.theme.VoiceKeyTheme
 
 /**
- * Compose-Host: NUR die Einstellungs-Oberflaeche (das Lauschen macht der WakeWordService).
- * Zeigt beim ersten Start den Berechtigungs-Assistenten, danach den Hauptbildschirm.
+ * Compose-Host: NUR die Einstellungs-Oberflaeche (das Lauschen macht der WakeWordService). Zeigt
+ * beim ersten Start den Berechtigungs-Assistenten, danach den Hauptbildschirm.
  */
 class MainActivity : ComponentActivity() {
 
@@ -45,11 +45,7 @@ class MainActivity : ComponentActivity() {
             viewModel.setServiceEnabled(true)
         }
 
-        setContent {
-            VoiceKeyTheme {
-                VoiceKeyApp(viewModel)
-            }
-        }
+        setContent { VoiceKeyTheme { VoiceKeyApp(viewModel) } }
     }
 
     override fun onResume() {
@@ -64,55 +60,66 @@ private fun VoiceKeyApp(viewModel: WakeWordViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        viewModel.refreshPermissions(context)
-    }
-    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        viewModel.refreshPermissions(context)
-    }
+    val micLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            viewModel.refreshPermissions(context)
+        }
+    val notificationLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            viewModel.refreshPermissions(context)
+        }
 
     // null = automatisch (Assistent solange Freigaben fehlen), sonst explizite Nutzer-Wahl.
     var setupVisible by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val showSetup = setupVisible ?: !state.permissions.allGranted
 
     Scaffold { innerPadding ->
-        // Compose-Kurzcheck #13: innerPadding IMMER anwenden, sonst liegt Content unter der Statusbar.
+        // Compose-Kurzcheck #13: innerPadding IMMER anwenden, sonst liegt Content unter der
+        // Statusbar.
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(innerPadding)) {
-        if (showSetup) {
-            BackHandler { setupVisible = false }
-            SetupScreen(
-                permissions = state.permissions,
-                onBack = { setupVisible = false },
-                onRequestMic = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                onRequestNotifications = { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                onRequestOverlay = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                    )
-                },
-                onRequestBattery = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
-                    )
-                },
-                onRequestAssistKill = {
-                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                },
-            )
-        } else {
-            SettingsScreen(
-                state = state,
-                onToggleService = viewModel::setServiceEnabled,
-                onTestTrigger = { viewModel.testTrigger(context) },
-                onEndAssistant = { viewModel.endAssistant(context) },
-                onToggleFavorit = viewModel::toggleFavorit,
-                onAddWord = viewModel::addWord,
-                onUpdateWord = viewModel::updateWord,
-                onRemoveWord = viewModel::removeWord,
-                onRetryModels = viewModel::ensureModels,
-                onOpenSetup = { setupVisible = true },
-            )
-        }
+            if (showSetup) {
+                BackHandler { setupVisible = false }
+                SetupScreen(
+                    permissions = state.permissions,
+                    onBack = { setupVisible = false },
+                    onRequestMic = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                    onRequestNotifications = {
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    },
+                    onRequestOverlay = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:${context.packageName}"),
+                            )
+                        )
+                    },
+                    onRequestBattery = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:${context.packageName}"),
+                            )
+                        )
+                    },
+                    onRequestAssistKill = {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    },
+                )
+            } else {
+                SettingsScreen(
+                    state = state,
+                    onToggleService = viewModel::setServiceEnabled,
+                    onTestTrigger = { viewModel.testTrigger(context) },
+                    onEndAssistant = { viewModel.endAssistant(context) },
+                    onToggleFavorit = viewModel::toggleFavorit,
+                    onAddWord = viewModel::addWord,
+                    onUpdateWord = viewModel::updateWord,
+                    onRemoveWord = viewModel::removeWord,
+                    onRetryModels = viewModel::ensureModels,
+                    onOpenSetup = { setupVisible = true },
+                )
+            }
         }
     }
 }

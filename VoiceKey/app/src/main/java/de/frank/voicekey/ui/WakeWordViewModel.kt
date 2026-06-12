@@ -27,8 +27,11 @@ import kotlinx.coroutines.launch
 
 sealed interface ModelUiState {
     data object Missing : ModelUiState
+
     data class Downloading(val percent: Int) : ModelUiState
+
     data object Ready : ModelUiState
+
     data object Error : ModelUiState
 }
 
@@ -39,9 +42,14 @@ data class PermissionsState(
     val battery: Boolean = false,
     val assistKill: Boolean = false,
 ) {
-    val total: Int get() = 5
-    val grantedCount: Int get() = listOf(mic, notifications, overlay, battery, assistKill).count { it }
-    val allGranted: Boolean get() = grantedCount == total
+    val total: Int
+        get() = 5
+
+    val grantedCount: Int
+        get() = listOf(mic, notifications, overlay, battery, assistKill).count { it }
+
+    val allGranted: Boolean
+        get() = grantedCount == total
 }
 
 data class UiState(
@@ -57,30 +65,34 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
 
     private val repository = WakeWordRepository(application)
 
-    private val modelStates = MutableStateFlow(
-        WakeLang.entries.associateWith { lang ->
-            if (ModelManager.isReady(application, lang)) ModelUiState.Ready else ModelUiState.Missing as ModelUiState
-        }
-    )
+    private val modelStates =
+        MutableStateFlow(
+            WakeLang.entries.associateWith { lang ->
+                if (ModelManager.isReady(application, lang)) ModelUiState.Ready
+                else ModelUiState.Missing as ModelUiState
+            }
+        )
     private val permissions = MutableStateFlow(PermissionsState())
     private val targetAvailable = MutableStateFlow(true)
 
-    val uiState: StateFlow<UiState> = combine(
-        repository.words,
-        repository.serviceEnabled,
-        modelStates,
-        permissions,
-        targetAvailable,
-    ) { words, enabled, models, perms, target ->
-        UiState(
-            words = words,
-            serviceEnabled = enabled,
-            models = models,
-            permissions = perms,
-            batteryUnrestricted = perms.battery,
-            targetAvailable = target,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
+    val uiState: StateFlow<UiState> =
+        combine(
+                repository.words,
+                repository.serviceEnabled,
+                modelStates,
+                permissions,
+                targetAvailable,
+            ) { words, enabled, models, perms, target ->
+                UiState(
+                    words = words,
+                    serviceEnabled = enabled,
+                    models = models,
+                    permissions = perms,
+                    batteryUnrestricted = perms.battery,
+                    targetAvailable = target,
+                )
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
 
     init {
         ensureModels()
@@ -105,9 +117,10 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
             if (modelStates.value[lang] is ModelUiState.Downloading) return@forEach
             setModelState(lang, ModelUiState.Downloading(0))
             viewModelScope.launch {
-                val ok = ModelManager.ensureModel(context, lang) { percent ->
-                    setModelState(lang, ModelUiState.Downloading(percent))
-                }
+                val ok =
+                    ModelManager.ensureModel(context, lang) { percent ->
+                        setModelState(lang, ModelUiState.Downloading(percent))
+                    }
                 setModelState(lang, if (ok) ModelUiState.Ready else ModelUiState.Error)
             }
         }
@@ -117,31 +130,36 @@ class WakeWordViewModel(application: Application) : AndroidViewModel(application
         modelStates.value = modelStates.value.toMutableMap().apply { put(lang, state) }
     }
 
-    /** Wird von der Activity in onResume aufgerufen — Berechtigungen koennen sich extern aendern. */
+    /**
+     * Wird von der Activity in onResume aufgerufen — Berechtigungen koennen sich extern aendern.
+     */
     fun refreshPermissions(context: Context) {
         val power = context.getSystemService(PowerManager::class.java)
-        permissions.value = PermissionsState(
-            mic = granted(context, Manifest.permission.RECORD_AUDIO),
-            notifications = granted(context, Manifest.permission.POST_NOTIFICATIONS),
-            overlay = Settings.canDrawOverlays(context),
-            battery = power.isIgnoringBatteryOptimizations(context.packageName),
-            assistKill = isAccessibilityEnabled(context),
-        )
+        permissions.value =
+            PermissionsState(
+                mic = granted(context, Manifest.permission.RECORD_AUDIO),
+                notifications = granted(context, Manifest.permission.POST_NOTIFICATIONS),
+                overlay = Settings.canDrawOverlays(context),
+                battery = power.isIgnoringBatteryOptimizations(context.packageName),
+                assistKill = isAccessibilityEnabled(context),
+            )
         targetAvailable.value = AssistantLauncher.isTargetAvailable(context)
     }
 
     private fun isAccessibilityEnabled(context: Context): Boolean {
         if (de.frank.voicekey.a11y.VoiceKeyAccessibilityService.isEnabled) return true
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-        ) ?: return false
-        return enabled.contains("${context.packageName}/") && enabled.contains("VoiceKeyAccessibilityService")
+        val enabled =
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            ) ?: return false
+        return enabled.contains("${context.packageName}/") &&
+            enabled.contains("VoiceKeyAccessibilityService")
     }
 
     /**
-     * Not-Aus: beendet die ChatGPT-Voice-Session wirklich (Headsethook an ChatGPTs
-     * Media-Session). Braucht KEINE Bedienungshilfe — wirkt immer, solange eine Session laeuft.
+     * Not-Aus: beendet die ChatGPT-Voice-Session wirklich (Headsethook an ChatGPTs Media-Session).
+     * Braucht KEINE Bedienungshilfe — wirkt immer, solange eine Session laeuft.
      */
     fun endAssistant(context: Context) {
         AssistantStopper.endVoiceSession(context, "Not-Aus-Knopf (App)")

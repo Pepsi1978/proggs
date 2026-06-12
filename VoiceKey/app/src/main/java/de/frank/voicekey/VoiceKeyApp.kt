@@ -25,17 +25,15 @@ class VoiceKeyApp : Application() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_SERVICE,
-                "Wake-Word-Dienst",
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply { description = "Dauerhafte Status-Anzeige, solange der Dienst lauscht" }
+                    CHANNEL_SERVICE,
+                    "Wake-Word-Dienst",
+                    NotificationManager.IMPORTANCE_LOW,
+                )
+                .apply { description = "Dauerhafte Status-Anzeige, solange der Dienst lauscht" }
         )
         manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_HINTS,
-                "Hinweise",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply { description = "Tipp nach Neustart und wichtige Hinweise" }
+            NotificationChannel(CHANNEL_HINTS, "Hinweise", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "Tipp nach Neustart und wichtige Hinweise" }
         )
     }
 

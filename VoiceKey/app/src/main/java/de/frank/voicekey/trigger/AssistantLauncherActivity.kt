@@ -9,10 +9,9 @@ import de.frank.voicekey.obs.Obs
 /**
  * Trampolin-Activity (transparent, showWhenLocked + turnScreenOn im Manifest):
  * - Bildschirm an & entsperrt -> feuert den Trigger sofort.
- * - Bildschirm aus/gesperrt -> weckt den Bildschirm; bei sicherem Lockscreen muss der
- *   Nutzer 1x per Fingerprint entsperren (Android-Plattformgrenze, NEXT-SESSION §3),
- *   danach feuert der Trigger automatisch.
- * Loest gleichzeitig das Background-Activity-Launch-Problem des Dienstes.
+ * - Bildschirm aus/gesperrt -> weckt den Bildschirm; bei sicherem Lockscreen muss der Nutzer 1x per
+ *   Fingerprint entsperren (Android-Plattformgrenze, NEXT-SESSION §3), danach feuert der Trigger
+ *   automatisch. Loest gleichzeitig das Background-Activity-Launch-Problem des Dienstes.
  */
 class AssistantLauncherActivity : ComponentActivity() {
 
@@ -35,12 +34,22 @@ class AssistantLauncherActivity : ComponentActivity() {
                 this,
                 object : KeyguardManager.KeyguardDismissCallback() {
                     override fun onDismissSucceeded() = fireAndFinish()
+
                     override fun onDismissCancelled() {
-                        Obs.w("AssistantLauncherActivity", "onDismissCancelled", "Entsperren abgebrochen — Trigger nicht gefeuert")
+                        Obs.w(
+                            "AssistantLauncherActivity",
+                            "onDismissCancelled",
+                            "Entsperren abgebrochen — Trigger nicht gefeuert",
+                        )
                         finish()
                     }
+
                     override fun onDismissError() {
-                        Obs.e("AssistantLauncherActivity", "onDismissError", "Keyguard-Dismiss-Fehler — Trigger nicht gefeuert")
+                        Obs.e(
+                            "AssistantLauncherActivity",
+                            "onDismissError",
+                            "Keyguard-Dismiss-Fehler — Trigger nicht gefeuert",
+                        )
                         finish()
                     }
                 },
