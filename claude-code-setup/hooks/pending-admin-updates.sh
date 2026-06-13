@@ -29,7 +29,8 @@ if [ "$(uname)" = "Darwin" ]; then
 else
     # Linux: check apt
     if command -v apt &>/dev/null; then
-        updates=$(apt list --upgradable 2>/dev/null | grep -c upgradable || echo 0)
+        # grep -c gibt bei 0 Treffern "0" UND exit 1 → "|| echo 0" ergaebe "0\n0" (Integer-Fehler).
+        updates=$(apt list --upgradable 2>/dev/null | grep -c upgradable) || updates=0
         if [ "$updates" -gt 0 ]; then
             update_list=$(apt list --upgradable 2>/dev/null | grep upgradable | awk -F'/' '{print $1}' | tr '\n' ', ' | sed 's/, $//')
             hook_log "found $updates apt updates: $update_list"

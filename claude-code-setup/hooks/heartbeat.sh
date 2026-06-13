@@ -182,7 +182,8 @@ check_brew_outdated() {
 
 check_claude_mem_worker() {
     local loaded
-    loaded=$(launchctl list 2>/dev/null | grep -c "com.claude-mem.worker" || echo "0")
+    # grep -c gibt bei 0 Treffern "0" UND exit 1 → "|| echo 0" ergaebe "0\n0" (Integer-Fehler).
+    loaded=$(launchctl list 2>/dev/null | grep -c "com.claude-mem.worker") || loaded=0
 
     if [ "$loaded" -gt 0 ]; then
         echo '"claude_mem_worker": {"status": "OK", "detail": "Worker loaded in launchd"}'

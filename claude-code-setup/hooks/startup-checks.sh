@@ -163,7 +163,9 @@ check_mirror_ledger() {
 
     local pattern="APPLIED: ${platform}/claude-code=PENDING"
     local count
-    count=$(grep -cF "$pattern" "$ledger" 2>/dev/null || echo 0)
+    # grep -c gibt bei 0 Treffern "0" UND exit 1 → "|| echo 0" haengte ein zweites "0"
+    # an (count="0\n0") → "[ : integer expression expected". "|| count=0" ergibt EINE Zahl.
+    count=$(grep -cF "$pattern" "$ledger" 2>/dev/null) || count=0
 
     if [ "$count" -gt 0 ]; then
         warnings+=("Mirror-Bridge: $count ausstehende Eintraege von anderen Plattformen")
