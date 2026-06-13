@@ -145,10 +145,10 @@ extension OverlayPanel {
     /// `panelHeight` muss vom Aufrufer mitgegeben werden (Konstante in init()).
     func canonicalVerticalOrigin(panelHeight: CGFloat) -> NSPoint {
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        // Windows-Wert: ColumnLeft = waX + waW - 96 - 27 (96 = panelWidth, 27 = rechter Abstand)
-        let x = screen.maxX - frame.width - 27
-        // y in macOS-Koordinaten: Top-Kante des Panels soll an
-        // (screen.maxY - verticalTopOffset) liegen, also origin = top - height.
+        // Windows: ColumnLeft = waX + waW - 96 - 27. HARTCODIERTE Saeulenbreite 96 —
+        // NICHT `frame.width` nutzen, weil das im HBar-Modus ~580 ist und dann
+        // die Saeule beim Switch zurueck weit links vom Bildschirm landen wuerde.
+        let x = screen.maxX - 96 - 27
         let topY = screen.maxY - OverlayBeam.verticalTopOffset
         let y = topY - panelHeight
         return NSPoint(x: x, y: y)

@@ -61,10 +61,10 @@ final class GroqWhisperClient {
         // verbose_json statt text: liefert die Confidence-Felder fuers Halluzinations-Gate,
         // bei Groq ohne Mehrlatenz/-kosten (nur word-Timestamps kosten extra — nicht angefordert).
         let fields: [(String, String)] = [
-            ("model", "whisper-large-v3"),
+            ("model", "whisper-large-v3-turbo"),
             ("language", "de"),
             ("response_format", "verbose_json"),
-            ("temperature", "0"),
+            ("temperature", "0")
         ]
         for (key, value) in fields {
             body.append(Data("--\(boundary)\r\n".utf8))

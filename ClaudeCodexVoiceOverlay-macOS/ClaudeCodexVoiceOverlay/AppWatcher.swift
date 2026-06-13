@@ -1,9 +1,35 @@
 import AppKit
 
 final class AppWatcher {
-    private let targetBundleIDs: Set<String> = ["com.anthropic.claudefordesktop", "com.openai.codex"]
-    var onTargetAppActivated: (() -> Void)?
-    var onTargetAppDeactivated: (() -> Void)?
+    /// Liste aller Electron-Ziel-Apps die wir als "Ziel" fuer Voice/Prompt-
+    /// Input erkennen (Claude Desktop, Codex). Wenn die front-most App KEINE
+    /// davon ist, wird beim activateTargetApp-Fallback eine willkuerliche aus
+    /// dem Hintergrund nach vorne geholt — was zu Beeps fuehrt weil Cmd+V dann
+    /// an der falschen Stelle landet (oft am Voice-Overlay selbst, das kein
+    /// Cmd+V-Handler hat → NSBeep).
+    ///
+    /// Pendant zur Terminal-Liste in `TerminalVoiceOverlay-macOS/AppWatcher`.
+    static let targetBundleIDs: Set<String> = [
+        "com.anthropic.claudefordesktop",   // Claude Desktop
+        "com.openai.codex",                 // Codex
+    ]
+
+    private(set) var lastActiveTargetBundleID: String?
+
+    /// Callback-Namen 1:1 wie im Terminal-Overlay (onTerminalActivated/
+    /// onTerminalDeactivated), damit der portierte AppDelegate unveraendert
+    /// bleibt. Hier feuern sie fuer Electron-Ziel-Apps statt Terminals.
+    var onTerminalActivated: (() -> Void)?
+    var onTerminalDeactivated: (() -> Void)?
+
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
+    static func isTargetApp(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        return targetBundleIDs.contains(id)
+    }
 
     func start() {
         let nc = NSWorkspace.shared.notificationCenter
@@ -14,31 +40,36 @@ final class AppWatcher {
 
         // Check initial state
         if let frontApp = NSWorkspace.shared.frontmostApplication,
-           let bundleID = frontApp.bundleIdentifier,
-           targetBundleIDs.contains(bundleID) {
-            InputController.lastActiveTargetBundleID = bundleID
-            onTargetAppActivated?()
+           Self.isTargetApp(frontApp.bundleIdentifier) {
+            lastActiveTargetBundleID = frontApp.bundleIdentifier
+            InputController.lastActiveTargetBundleID = frontApp.bundleIdentifier
+            onTerminalActivated?()
         }
-    }
-
-    deinit {
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 
     @objc private func appActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
-        if let bundleID = app.bundleIdentifier, targetBundleIDs.contains(bundleID) {
-            InputController.lastActiveTargetBundleID = bundleID
-            onTargetAppActivated?()
+        // Ignore our own process becoming active — otherwise every time we
+        // call NSApp.activate() (e.g. to force a modal dialog forward) we'd
+        // also fire onTerminalDeactivated and order our own panels out
+        // while the modal session is still opening. That race produced
+        // invisible-dialog/beep-loops in past builds.
+        if app.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return
+        }
+        if Self.isTargetApp(app.bundleIdentifier) {
+            lastActiveTargetBundleID = app.bundleIdentifier
+            InputController.lastActiveTargetBundleID = app.bundleIdentifier
+            onTerminalActivated?()
         } else {
-            onTargetAppDeactivated?()
+            onTerminalDeactivated?()
         }
     }
 
     @objc private func appTerminated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
-        if let bundleID = app.bundleIdentifier, targetBundleIDs.contains(bundleID) {
-            onTargetAppDeactivated?()
+        if Self.isTargetApp(app.bundleIdentifier) {
+            onTerminalDeactivated?()
         }
     }
 }
