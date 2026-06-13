@@ -36,3 +36,7 @@ BestJournalFrank/Screenshots/
 # Plattformspezifische Lock-Dateien (Cron/Scheduled-Tasks pro Rechner).
 .claude/scheduled_tasks.lock
 .superpowers/
+
+# Cowork-Push: Token-Datei (liegt in .git/, hier zusaetzlich als Defense-in-Depth)
+.cowork-credentials
+.git-credentials
