@@ -414,3 +414,14 @@ Ergaenzend komponentenweise: `best-practices/02-skills`, `03-agents`, `06-comman
 - [ ] **Plugin:** externer Code vor Installation gelesen/gescannt? `.sh` mit +x?
 - [ ] **Plattform:** Config-/Skill-Dateien LF + UTF-8 (ohne BOM)? `.mcp.json` mit absoluten Pfaden?
 - [ ] Aenderung committed + gepusht (+ Cross-Platform gespiegelt)?
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [orchestrator-agent](../agents/orchestrator-agent.md)
+- [cowork](cowork.md)

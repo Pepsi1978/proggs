@@ -302,3 +302,18 @@ Durchlauf gegen die aktuellen google/filament Issues + RELEASE_NOTES.md verifizi
 - [ ] **AR:** `resume()` in try/catch, `onException` gesetzt, ARCore-Play-Services-Version geprueft?
 - [ ] **Listen/ViewPager:** Create/Destroy serialisiert, Teardown vor Recreate?
 - [ ] **Engine-Thread** konsistent (Render-Loop und Modellwechsel nicht ueber Threadgrenzen mischen)?
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-dotnet-directx-windows](../desktop/3d-dotnet-directx-windows.md)
+- [3d-godot](../desktop/3d-godot.md)
+- [3d-metal-scenekit-macos](../desktop/3d-metal-scenekit-macos.md)
+- [3d-rust-wgpu-bevy](../desktop/3d-rust-wgpu-bevy.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

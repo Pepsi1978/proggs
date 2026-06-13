@@ -191,3 +191,18 @@
 - [ ] Android-Store-Build von Anfang an ueber `bevy_game_template` + xbuild-Fork planen (§12).
 - [ ] wgpu-Version NICHT manuell ueberschreiben — Bevy pinnt sie (§13).
 - [ ] Bei Versions-Update: Migration Guide lesen, BEVOR man Bugs vermutet (Ehrlichkeits-Hinweis).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-dotnet-directx-windows](3d-dotnet-directx-windows.md)
+- [3d-godot](3d-godot.md)
+- [3d-metal-scenekit-macos](3d-metal-scenekit-macos.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

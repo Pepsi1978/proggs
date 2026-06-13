@@ -260,3 +260,18 @@ auf offizielle Release-/Maintenance-Notes und Such-Zusammenfassungen. Als **unkl
 - [ ] **Optik nach Upgrade** 4.5→4.6 visuell gegengeprueft (Sky/VoxelGI/SDFGI) (§6).
 - [ ] **GI-Stabilitaet:** Bei Flackern TAA-Wechselwirkung getestet; statische Szenen lieber LightmapGI (§12).
 - [ ] **Renderer pro Zielplattform** getrennt visuell geprueft (Optik nicht portabel).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-dotnet-directx-windows](3d-dotnet-directx-windows.md)
+- [3d-metal-scenekit-macos](3d-metal-scenekit-macos.md)
+- [3d-rust-wgpu-bevy](3d-rust-wgpu-bevy.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

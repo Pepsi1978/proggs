@@ -257,3 +257,18 @@ Beide Aufrufe noetig (Windowing UND Input). Ggf. `Microsoft.Extensions.Dependenc
 - [ ] **D3D12 Debug-Layer + DRED aktiv?** Descriptor-Heap-Indizes/-Typen geprueft, lange Dispatches gesplittet (§12).
 - [ ] **Stride: Shader-Cache sauber?** Feature-Level >= 10_0, aktuelle Treiber (§13).
 - [ ] **COM-Lifecycle?** Alle D3D-Objekte per `using`/`Dispose`, Device zuletzt (§14).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-godot](3d-godot.md)
+- [3d-metal-scenekit-macos](3d-metal-scenekit-macos.md)
+- [3d-rust-wgpu-bevy](3d-rust-wgpu-bevy.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

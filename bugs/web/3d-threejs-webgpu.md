@@ -320,3 +320,18 @@ mehrere Quellen (Issue + Plugin-Beschreibung) bestaetigt, aber nicht an einem of
 - [ ] **macOS-fps:** 120Hz-Pflicht? → macOS 26 ODER Plugin (App-Store-Risiko bewusst) ODER 60fps akzeptieren (§1).
 - [ ] **Pixel-Ratio gedeckelt:** `Math.min(devicePixelRatio, 2)` (§13).
 - [ ] **Babylon:** Auf 9.2.1; Snapshot-Rendering nur fuer statische Szenen / FAST-Modus dynamisch (§14).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-dotnet-directx-windows](../desktop/3d-dotnet-directx-windows.md)
+- [3d-godot](../desktop/3d-godot.md)
+- [3d-metal-scenekit-macos](../desktop/3d-metal-scenekit-macos.md)
+- [3d-rust-wgpu-bevy](../desktop/3d-rust-wgpu-bevy.md)

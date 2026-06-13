@@ -352,3 +352,15 @@
 - [ ] Threshold kalibriert (FA < 0,5/h, FR < 5 %)?
 - [ ] USB-Mic-Hotplug abgefangen (kein UI-Block)?
 - [ ] Observability-Sonden gesetzt (z. B. CHECKPOINT "Weckwort erkannt") gemaess Observability-First?
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [voice-assistant-trigger](../android/voice-assistant-trigger.md)
+- [groq-transkription](groq-transkription.md)
+- [voice-pipeline](voice-pipeline.md)

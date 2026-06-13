@@ -227,3 +227,18 @@ Jeder Bug hat sein „Wie macht man es richtig"-Gegenstück in `best-practices/p
 - [ ] **Emissive HDR?** Für Glühen/Bloom KHR_materials_emissive_strength > 1, nicht nur emissiveFactor (clamped [0,1]).
 
 *Alle Quellen abgerufen am 2026-06-13. Engine-übergreifend; Versions-/Default-Angaben stammen aus offiziellen Release-/Doku-Quellen.*
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-dotnet-directx-windows](../desktop/3d-dotnet-directx-windows.md)
+- [3d-godot](../desktop/3d-godot.md)
+- [3d-metal-scenekit-macos](../desktop/3d-metal-scenekit-macos.md)
+- [3d-rust-wgpu-bevy](../desktop/3d-rust-wgpu-bevy.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

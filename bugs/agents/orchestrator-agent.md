@@ -799,3 +799,13 @@ STATE/RELIABILITY/SECURITY (Sektionen 6-7)
 Jeder spaeter SELBST erlebte Orchestrator-/Agenten-Bug wird hier ergaenzt (Bug + funktionserhaltende
 Loesung + Versionen/Frameworks), Stand-Header aktualisieren. Bei Versionssprung von Claude Code oder
 einem der Frameworks: kurzer Re-Check (Fix-Status per `gh`).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [claude-config](../claude-tooling/claude-config.md)

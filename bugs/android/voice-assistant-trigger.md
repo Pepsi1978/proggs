@@ -236,3 +236,15 @@ waehlbaren (auch deutschen) Woertern.
 **Fix/Entscheidung:** Fuer frei waehlbare Woerter: zweistufige Pipeline VAD→Vosk-Grammatik (§13).
 Nur bei festem Wortschatz lohnt openWakeWord (Training) als sparsamste freie Engine.
 **Versionen:** Stand 2026-06-12.
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [groq-transkription](../desktop/groq-transkription.md)
+- [voice-pipeline](../desktop/voice-pipeline.md)
+- [wake-word](../desktop/wake-word.md)

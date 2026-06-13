@@ -232,3 +232,18 @@
 - [ ] Drawable-Lifecycle diszipliniert (kein Timeout-NO, <=3 in-flight, nil abfangen)? (§11)
 - [ ] Grosse Modelle async off-main geladen, `[weak self]`, Textur-Budget geprueft? (§15)
 - [ ] Neuprojekt NICHT auf SceneKit (soft-deprecated)? (§14)
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [3d-filament-android](../android/3d-filament-android.md)
+- [3d-visual-quality](../assets/3d-visual-quality.md)
+- [3d-dotnet-directx-windows](3d-dotnet-directx-windows.md)
+- [3d-godot](3d-godot.md)
+- [3d-rust-wgpu-bevy](3d-rust-wgpu-bevy.md)
+- [3d-threejs-webgpu](../web/3d-threejs-webgpu.md)

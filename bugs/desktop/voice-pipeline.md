@@ -322,3 +322,15 @@ deren Stacks), keine Normen.
 - [ ] Windows: AGC/Boost/Ducking/Exclusive-Mode geprueft (mmsys.cpl)?
 - [ ] STT: language explizit, Timeout kurz, ein statischer HttpClient?
 - [ ] Nach neuem erlebtem Bug: Eintrag hier ergaenzen + Stand-Header aktualisieren.
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [voice-assistant-trigger](../android/voice-assistant-trigger.md)
+- [groq-transkription](groq-transkription.md)
+- [wake-word](wake-word.md)

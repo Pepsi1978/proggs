@@ -140,3 +140,24 @@ Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträg
 ## 🔗 Bezug zu Best Practices
 
 Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-openrouter-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [anthropic-api](anthropic-api.md)
+- [api-integration-general](api-integration-general.md)
+- [cli-impersonation-subscription-auth](cli-impersonation-subscription-auth.md)
+- [deepseek-api](deepseek-api.md)
+- [google-gemini-api](google-gemini-api.md)
+- [groq-api](groq-api.md)
+- [local-openai-compatible](local-openai-compatible.md)
+- [mistral-api](mistral-api.md)
+- [oauth-device-code](oauth-device-code.md)
+- [openai-api](openai-api.md)
+- [other-llm-apis](other-llm-apis.md)
+- [xai-grok-api](xai-grok-api.md)

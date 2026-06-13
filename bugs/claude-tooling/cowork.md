@@ -804,3 +804,13 @@ vornherein richtig macht). Wechselseitige Zuordnung:
 | §8 Live-Artefakte | §5 Live-Artefakte (Connectors ohne Rückfrage, CDN-Libs) |
 | §9 Sicherheit/Prompt-Injection | §6 Computer-Steuerung & Browser + §7 Grenzen/Datenschutz |
 | §10 Per-Design-Grenzen & Usage | §1 Voraussetzungen + §7 Grenzen (Compliance, höherer Verbrauch) |
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [claude-config](claude-config.md)

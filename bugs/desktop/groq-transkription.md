@@ -336,3 +336,16 @@ ausreichend Voiced-Dauer → bleibt erhalten.
 □ Min-Billing 10s bedacht (keine Flut winziger Clips) (§4.1)
 □ Funktionserhaltend: keine echte Sprache verworfen (konservative Schwellen)
 ```
+
+
+---
+
+<!-- verwandte-almanache (auto, bug-almanac-system) -->
+## 🔗 Verwandte Almanache (siehe auch)
+
+Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
+
+- [voice-assistant-trigger](../android/voice-assistant-trigger.md)
+- [groq-api](../apis/groq-api.md)
+- [voice-pipeline](voice-pipeline.md)
+- [wake-word](wake-word.md)
