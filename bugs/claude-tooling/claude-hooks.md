@@ -36,6 +36,7 @@
 | 14 | Bash-`.sh`-Hook | `+x`, LF (kein CRLF), kein zwingendes `jq` | §13.2 |
 | 15 | "Hook error" trotz exit 0 | Falsches Label (Regression) — nicht als Fehler werten | §11.1 |
 | 16 | Bash rundet Float → zeigt 0 | `printf "%.0f"` (bash 3.2) scheitert an `55.00000000000001` → Parameter-Expansion | §13.5 |
+| 17 | Statusline-rate_limit nach Account-Wechsel falsch | `account_fp` aus `~/.claude.json` (accountUuid), NICHT `.credentials.json` (macOS=Keychain → fehlt) | §13.6 |
 
 ---
 
@@ -535,6 +536,38 @@ an erster Nachkommastelle (`${v#*.}`, `[5-9]` → +1) aufrunden. Alternativ
 `seven_day.used_percentage` als `55.00000000000001` lieferte und dieser Float von der
 MAX-Logik als hoechster Wert ausgewaehlt wurde; der 5h-Wert war eine glatte Ganzzahl → funktionierte.
 Fix: `round_pct()` per Parameter-Expansion ersetzte alle 4 `printf "%.0f"`-Aufrufe.
+
+### 13.6 Statusline-`account_fp` auf macOS IMMER "default" → 7d-rate_limit nach Account-Wechsel falsch  ⭐
+**Symptom:** Die Statusline zeigt einen viel zu hohen 7-Tage-rate-limit (z.B. `7d 58%`), obwohl
+das aktuell eingeloggte Konto frisch ist (echter Wert z.B. `2%`). Tritt typischerweise nach einem
+**Account-Wechsel** auf. Der 5h-Wert ist korrekt — nur 7d ist falsch.
+**Ursache (zwei verkettete Root Causes):**
+1. **`account_fp` ist auf macOS IMMER "default".** Der Cross-Session-State (`~/.claude/state/rate-limits-*.json`)
+   trennt Konten ueber einen Account-Fingerprint, der bislang aus `~/.claude/.credentials.json`
+   gehasht wurde. **Auf macOS liegen die Credentials im Keychain — diese Datei existiert gar nicht**,
+   also blieb `account_fp` immer `"default"` und die ganze Account-Trennung war wirkungslos.
+2. **Das 7d-Fenster trennt nicht nach Konto.** Die MAX-Aggregation nimmt den hoechsten `seven_d`-Wert
+   im selben `seven_d_resets`-Fenster. Der woechentliche Reset ist eine **kalendarische Konstante**
+   (gleiche Uhrzeit/Wochentag) → altes UND neues Konto teilen denselben `seven_d_resets`-Timestamp.
+   Der 16h alte 58%-Wert des Vortags-Kontos kaperte so den frischen 2%-Wert. (Beim 5h-Wert faellt es
+   NICHT auf, weil sich die `five_h_resets`-Fenster zwischen Sessions unterscheiden → schon getrennt.)
+**Versionen:** macOS (Keychain), per Design; verschaerft durch parallele Sessions + Account-Wechsel.
+Latent auch auf Windows: der `.credentials.json`-Hash aendert sich bei JEDEM Token-Refresh
+(alle paar Stunden) → der fp flappte und schloss eigene gueltige State-Files faelschlich aus.
+**FIX (funktionserhaltend, 2 Schichten, lossless):**
+1. **Root Cause:** `account_fp` BEVORZUGT aus `~/.claude.json` → `.oauthAccount.accountUuid` bilden
+   (`jq -r '.oauthAccount.accountUuid // .userID // empty'`, dann hashen). Existiert auf BEIDEN
+   Plattformen, ist global ueber alle parallelen Sessions konstant und wechselt nur bei echtem
+   Account-Wechsel (stabil ueber Token-Refreshes). Fallback: `.credentials.json`-Datei-Hash (Windows), dann `"default"`.
+2. **Defense fuer 7d:** Das 7d-MAX zusaetzlich auf Dateien begrenzen, deren `ts_seen` innerhalb von
+   5h (18000s) der frischesten Session liegt — fuer den Fall, dass `account_fp` mal `"default"` bleibt.
+   Parallele Live-Sessions refreshen sekuendlich (immer frisch, bleiben drin); tote Vortags-Sessions
+   eines alten Kontos fallen raus. Lossless: kein echter aktueller Wert wird verworfen.
+Der bestehende Fremdkonto-Cleanup (loescht State-Files mit fremdem fp) greift nach Fix 1 endlich
+und raeumt die alten "default"-Reste proaktiv auf.
+**Eigener Vorfall (2026-06-13):** Statusline zeigte `7d 58%` statt `2%` nach Account-Wechsel.
+`account_fp` war auf macOS nie gesetzt (Keychain), 4 Vortags-State-Files (52-58%) teilten denselben
+`seven_d_resets` wie die 2 frischen (2%) und gewannen das MAX. Fix in `statusline.{sh,ps1}` umgesetzt + verifiziert.
 
 ---
 

@@ -121,22 +121,46 @@ now_ts=$(date +%s)
 # Account-Fingerprint (Frank-Bug-Report 2026-05-10): Nach Account-Wechsel
 # (Logout/Login mit anderem Account) zeigte die Statusline noch die rate_limits
 # vom alten Account, weil alte State-Files mit hohen Werten ueberlebten und im
-# MAX-Pass gewonnen haben. Fix: Hash der credentials.json als Fingerprint in
-# jedes State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN
-# Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
-# naechsten Cleanup geloescht). Wenn kein sha256sum verfuegbar oder Credentials
-# fehlen: Fingerprint = "default" (Verhalten wie vorher, kein Regression).
+# MAX-Pass gewonnen haben. Fix: Fingerprint des AKTUELLEN Accounts in jedes
+# State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN Fingerprint
+# beruecksichtigt — alte Account-Files werden ignoriert (und beim naechsten Cleanup
+# geloescht). Wenn keine Account-Quelle verfuegbar: Fingerprint = "default".
+#
+# ROOT-CAUSE-FIX (Frank-Bug-Report 2026-06-13): account_fp war auf macOS IMMER
+# "default", weil die Credentials dort im Keychain liegen und ~/.claude/.credentials.json
+# gar nicht existiert. Die ganze Account-Trennung war damit auf macOS wirkungslos.
+# Das fiel beim 7d-Wert auf: nach einem Account-Wechsel teilen altes und neues Konto
+# denselben kalendarischen seven_d_resets (Wochenreset zur selben Uhrzeit), sodass die
+# Fenster-Trennung den hohen Altwert nicht aussortierte → MAX zeigte 58% statt frischer 2%.
+# Fix: Fingerprint BEVORZUGT aus ~/.claude.json (.oauthAccount.accountUuid) — existiert
+# auf BEIDEN Plattformen, ist global ueber alle parallelen Sessions konstant und wechselt
+# beim Account-Wechsel. Fallback: .credentials.json-Datei-Hash (Windows), dann "default".
 account_fp="default"
-cred_file="$HOME/.claude/.credentials.json"
-if [ -f "$cred_file" ]; then
-    # Plattformuebergreifend: sha256sum (Linux/Git-Bash) ODER shasum -a 256 (macOS).
-    # Ohne Fallback wuerde der Fingerprint auf macOS immer "default" sein (Frank 2026-05-24).
+claude_json="$HOME/.claude.json"
+acct_uuid=""
+[ -f "$claude_json" ] && acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
+if [ -n "$acct_uuid" ]; then
+    # accountUuid hashen (nie roh ins State-File schreiben). sha256sum (Linux/Git-Bash)
+    # ODER shasum -a 256 (macOS) — ohne Fallback waere der fp auf macOS leer.
     if command -v sha256sum >/dev/null 2>&1; then
-        account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+        account_fp=$(printf '%s' "$acct_uuid" | sha256sum 2>/dev/null | cut -c1-16)
     elif command -v shasum >/dev/null 2>&1; then
-        account_fp=$(shasum -a 256 "$cred_file" 2>/dev/null | cut -c1-16)
+        account_fp=$(printf '%s' "$acct_uuid" | shasum -a 256 2>/dev/null | cut -c1-16)
     fi
     [ -z "$account_fp" ] && account_fp="default"
+else
+    # Fallback: credentials.json-Datei direkt hashen (wie bisher; unveraendert fuer
+    # Windows, wo die Datei existiert) — Datei-Hash statt String-Hash beibehalten,
+    # damit bestehende Windows-State-Files nicht invalidiert werden.
+    cred_file="$HOME/.claude/.credentials.json"
+    if [ -f "$cred_file" ]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+            account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+        elif command -v shasum >/dev/null 2>&1; then
+            account_fp=$(shasum -a 256 "$cred_file" 2>/dev/null | cut -c1-16)
+        fi
+        [ -z "$account_fp" ] && account_fp="default"
+    fi
 fi
 
 # Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
@@ -270,6 +294,7 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         # (zeigte 3D10H statt echter 1D23H). Die frischeste API-Antwort hat per
         # Definition den korrekten aktuellen Reset. Verbrauch bleibt max (zaehlt hoch).
         ($valid | max_by(.ts_seen // 0)) as $freshest |
+        ($freshest.ts_seen // 0) as $freshTs |
         ($freshest.five_h_resets // 0) as $freshR |
         ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
         ($freshest.seven_d_resets // 0) as $maxSR |
@@ -278,7 +303,17 @@ fresh=$(jq -sr --arg fp "$account_fp" '
         # aus dem VORHERIGEN Fenster mit hohem seven_d den frischen niedrigen Wert nach einem
         # 7d-Reset kapert (Frank-Bug-Report 2026-06-03: 48% statt 5%). Fallback auf alle wenn
         # kein gueltiges Fenster (maxSR=0) bekannt ist (lossless).
-        ($valid | (if $maxSR > 0 then map(select((.seven_d_resets // 0) == $maxSR)) else . end) | map(.seven_d // 0) | max) as $bestS |
+        #
+        # ZUSATZ-FILTER (Defense, Frank-Bug-Report 2026-06-13): Nach einem Account-Wechsel
+        # teilen altes und neues Konto denselben kalendarischen seven_d_resets, sodass die
+        # Fenster-Trennung den hohen Altwert NICHT aussortiert. Primaer faengt das jetzt der
+        # account_fp-Filter oben ab; falls der aber mal "default" bleibt (keine Account-Quelle
+        # lesbar), begrenzt dieser Frische-Filter das 7d-MAX zusaetzlich auf Dateien innerhalb
+        # von 5h (18000s) der frischesten Session. Parallele Live-Sessions refreshen sekuendlich
+        # (immer frisch, bleiben drin); tote Vortags-Sessions eines alten Kontos fallen raus.
+        # Lossless: kein echter aktueller Wert wird verworfen, nur veraltete Fremdkonto-Reste.
+        ($valid | (if $maxSR > 0 then map(select((.seven_d_resets // 0) == $maxSR)) else . end)
+                | map(select((.ts_seen // 0) >= ($freshTs - 18000))) | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)

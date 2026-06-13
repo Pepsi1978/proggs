@@ -154,19 +154,46 @@ try {
     # Account-Fingerprint (Frank-Bug-Report 2026-05-10): Nach Account-Wechsel
     # (Logout/Login mit anderem Account) zeigte die Statusline noch die rate_limits
     # vom alten Account, weil alte State-Files mit hohen Werten ueberlebten und im
-    # MAX-Pass gewonnen haben. Fix: Hash der credentials.json als Fingerprint in
-    # jedes State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN
-    # Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
-    # naechsten Cleanup geloescht).
+    # MAX-Pass gewonnen haben. Fix: Fingerprint des AKTUELLEN Accounts in jedes
+    # State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN Fingerprint
+    # beruecksichtigt — alte Account-Files werden ignoriert (und beim Cleanup geloescht).
+    #
+    # ROOT-CAUSE-FIX (Frank-Bug-Report 2026-06-13): Fingerprint BEVORZUGT aus
+    # ~/.claude.json (.oauthAccount.accountUuid) statt aus .credentials.json. Gruende:
+    #  (1) Auf macOS existiert .credentials.json gar nicht (Keychain) -> dort war der fp
+    #      IMMER "default", die Account-Trennung wirkungslos (7d zeigte 58% statt 2% nach
+    #      Account-Wechsel, weil altes+neues Konto denselben kalendarischen seven_d_resets teilen).
+    #  (2) Der .credentials.json-Hash aendert sich bei JEDEM Token-Refresh (alle paar Stunden)
+    #      -> der fp flappte und schloss eigene gueltige State-Files faelschlich aus.
+    #      accountUuid ist stabil ueber Token-Refreshes und wechselt nur bei echtem Account-Wechsel.
+    # Fallback: .credentials.json-Datei-Hash (wie bisher), dann "default".
     $accountFp = 'default'
-    $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
-    if (Test-Path $credFile) {
+    $acctUuid = $null
+    $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
+    if (Test-Path $claudeJson) {
         try {
-            $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
-            if ($hashObj -and $hashObj.Hash) {
-                $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
-            }
+            $cj = Get-Content -Raw -Encoding UTF8 -Path $claudeJson | ConvertFrom-Json
+            if ($cj.oauthAccount -and $cj.oauthAccount.accountUuid) { $acctUuid = [string]$cj.oauthAccount.accountUuid }
+            elseif ($cj.userID) { $acctUuid = [string]$cj.userID }
+        } catch { $acctUuid = $null }
+    }
+    if ($acctUuid) {
+        try {
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($acctUuid)
+            $hex = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
+            $accountFp = $hex.Substring(0, 16).ToLower()
         } catch { $accountFp = 'default' }
+    } else {
+        $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
+        if (Test-Path $credFile) {
+            try {
+                $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
+                if ($hashObj -and $hashObj.Hash) {
+                    $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
+                }
+            } catch { $accountFp = 'default' }
+        }
     }
 
     # 1. SCHREIBEN — nur wenn alle Werte plausibel sind (Schicht 1: Praeventiv).
@@ -316,16 +343,25 @@ try {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
             # 7d-Reset zuerst: aus der frischesten Session (accountweite Konstante, nicht max)
             $freshWeekResets = [long]$freshest.seven_d_resets
+            $freshWeekTs = [long]$freshest.ts_seen
             # 7d-Verbrauch NUR aus dem AKTUELLEN 7d-Fenster (gleiches seven_d_resets wie die
             # frischeste Session) — exakt analog zur 5h-Fenster-Logik oben. Verhindert dass eine
             # idle Session aus dem VORHERIGEN Fenster mit hohem seven_d den frischen niedrigen Wert
             # nach einem 7d-Reset kapert (Frank-Bug-Report 2026-06-03: zeigte 48% statt 5% nach
             # Reset — altes State-File mit seven_d_resets aus dem Vorfenster gewann beim globalen
             # MAX). Fallback auf alle Eintraege wenn kein gueltiges Fenster bekannt ist (lossless).
+            #
+            # ZUSATZ-FILTER (Defense, Frank-Bug-Report 2026-06-13): Nach einem Account-Wechsel
+            # teilen altes und neues Konto denselben kalendarischen seven_d_resets, sodass die
+            # Fenster-Trennung den hohen Altwert NICHT aussortiert. Primaer faengt das der
+            # account_fp-Filter ab; falls der mal "default" bleibt, begrenzt dieser Frische-Filter
+            # das 7d-MAX zusaetzlich auf Dateien innerhalb von 5h (18000s) der frischesten Session.
+            # Parallele Live-Sessions refreshen sekuendlich (bleiben drin); tote Vortags-Sessions
+            # eines alten Kontos fallen raus. Lossless: kein echter aktueller Wert wird verworfen.
             if ($freshWeekResets -gt 0) {
-                $weekCandidates = $allEntries | Where-Object { [long]$_.seven_d_resets -eq $freshWeekResets }
+                $weekCandidates = $allEntries | Where-Object { [long]$_.seven_d_resets -eq $freshWeekResets -and [long]$_.ts_seen -ge ($freshWeekTs - 18000) }
             } else {
-                $weekCandidates = $allEntries
+                $weekCandidates = $allEntries | Where-Object { [long]$_.ts_seen -ge ($freshWeekTs - 18000) }
             }
             $freshSeven = ($weekCandidates | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
 
