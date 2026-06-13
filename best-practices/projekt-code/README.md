@@ -54,15 +54,24 @@ projekt-code/
 │   └── best-practices-cli-impersonation-subscription-auth.md  ← CLI-Abo-Auth (ToS beachten)
 ├── desktop/
 │   ├── best-practices-dotnet-csharp.md
-│   └── best-practices-swift-appkit.md         ← macOS Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
+│   ├── best-practices-swift-appkit.md         ← macOS Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
+│   ├── best-practices-3d-metal-scenekit-macos.md  ← 3D nativ macOS (Stand 2026-06-13, Metal 4 / macOS 26 Tahoe) — SceneKit soft-deprecated, RealityKit ist der Weg
+│   ├── best-practices-3d-dotnet-directx-windows.md  ← 3D nativ Windows C#/.NET (Stand 2026-06-13, .NET 10 / Stride 4.3) — Stride/Silk.NET statt verwaistem Veldrid
+│   ├── best-practices-3d-rust-wgpu-bevy.md     ← 3D cross-platform Rust (Stand 2026-06-13, Bevy 0.18 / wgpu 29.x)
+│   └── best-practices-3d-godot.md              ← 3D cross-platform Godot (Stand 2026-06-13, Godot 4.6) — Forward+ Desktop, Mobile-Renderer Android
 ├── web/
 │   ├── best-practices-chrome-extensions.md    ← Chrome/Edge MV3 (Stand 2026-06-02, Chrome 148)
-│   └── best-practices-typescript.md           ← TypeScript/Node.js (Stand 2026-06-03, Node 24.15.0 / TS 6.0.2 / npm 11.12.0 / Bun 1.3.11)
+│   ├── best-practices-typescript.md           ← TypeScript/Node.js (Stand 2026-06-03, Node 24.15.0 / TS 6.0.2 / npm 11.12.0 / Bun 1.3.11)
+│   └── best-practices-3d-threejs-webgpu.md     ← 3D im Web/TS (Stand 2026-06-13, Three.js r842 / Babylon 9.2.1) — Tauri (Desktop) + Capacitor (Android)
+├── assets/
+│   ├── best-practices-icon-building.md
+│   └── best-practices-3d-visual-quality.md     ← engine-übergreifende 3D-Optik (Stand 2026-06-13) — PBR/IBL/Tonemapping/PostFX/glTF, edel vs. billig
 ├── peripherie/
 │   └── best-practices-stream-deck.md          ← Elgato Stream Deck Plugins (Stand 2026-06-03, Stream Deck 7.4.2 / @elgato/streamdeck 2.1.0 / SDKVersion 2+3)
 └── claude-tooling/
     ├── best-practices-mcp-server.md           ← MCP-Server-Bau (Stand 2026-06-03, MCP TS-SDK 1.27.1/1.29.0, zod v4, Spec 2025-11-25) — Gegenstueck zu bugs/claude-tooling/mcp-server.md
-    └── best-practices-python-windows.md       ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
+    ├── best-practices-python-windows.md       ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
+    └── best-practices-cowork.md               ← Cowork-Desktop-App nutzen (Stand 2026-06-13, Research-Preview/GA) — noch ungepaart (kein Bug-Almanach)
 ```
 
 Vorhandene Kategorien & Dateien:
@@ -70,10 +79,11 @@ Vorhandene Kategorien & Dateien:
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing) ·
 **android-build** (-gradle, -r8) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth) ·
-**desktop** (-dotnet-csharp, -swift-appkit) ·
-**web** (-chrome-extensions, -typescript) ·
+**desktop** (-dotnet-csharp, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
+**web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
+**assets** (-icon-building, -3d-visual-quality) ·
 **peripherie** (-stream-deck) ·
-**claude-tooling** (-mcp-server, -python-windows)
+**claude-tooling** (-mcp-server, -python-windows, -cowork)
 (jede Datei mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/<kategorie>/`).
 
 Dateiname-Konvention: `best-practices-<software>.md`. Inhalt beginnt mit
