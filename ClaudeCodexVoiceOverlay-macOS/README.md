@@ -4,19 +4,45 @@ Ein schwebendes macOS-Overlay fuer Spracheingabe in **Claude Desktop** (`com.ant
 
 ---
 
+> **Hinweis (2026-06):** Dieses Overlay wurde vollstaendig auf den
+> Funktionsumfang des `TerminalVoiceOverlay-macOS` gebracht. Frueher hatte es
+> nur fuenf Buttons; jetzt enthaelt es PromptBoard, Prompt-Historie, Gemini-
+> Profile, Push-to-Talk, Waveform, Einstellungs-Dialog, Google-Drive-Backup und
+> alle globalen Hotkeys. Der einzige Unterschied zum Terminal-Overlay ist die
+> Ziel-App-Erkennung (Electron-Apps statt Terminals) und die Lösch-Tastenkombi.
+
 ## Features
 
+### Sprache & Korrektur
 - **Voice-to-Text**: Mikrofon-Button druecken, sprechen, nochmal druecken — der transkribierte Text wird direkt eingefuegt
 - **Gemini-Korrektur** (optional): Verbessert Grammatik und erkennt falsch transkribierte englische Fachbegriffe — optimiert fuer Programmier-Kontext
+- **Gemini-Profile 1–10**: Verschiedene Korrektur-Profile (1=Standard, 2=Programmierung, 3=Meta, 4–10 frei belegbar). Linksklick auf ein Profil-Kaestchen schickt die letzte Aufnahme erneut durch das gewaehlte Profil (Re-Correct), Rechtsklick wechselt nur das Profil
 - **Whisper-Undo**: Falls die Gemini-Korrektur nicht gefaellt, kann der originale Whisper-Rohtext per W-Button eingefuegt werden
+- **BTW-Button**: Separate Aufnahme fuer kurze Zwischenfragen (wird mit `/btw` eingeleitet)
+- **Push-to-Talk**: Hotkey gedrueckt halten (≥500 ms) = Aufnahme laeuft solange gehalten; kurzer Tap = Start/Stop-Umschaltung
+- **Waveform**: Live-Pegelanzeige (14 Balken) waehrend der Aufnahme
 - **Auto-Enter**: Optionaler Toggle, der den Text nach dem Einfuegen automatisch absendet (Return-Taste)
 - **Audio-Feedback**: Systemton beim Start und Stopp der Aufnahme — kein Hinschauen noetig
-- **Leerzeichen zwischen Eingaben**: Bei mehreren aufeinanderfolgenden Spracheingaben wird automatisch ein Leerzeichen eingefuegt
+
+### PromptBoard (Prompt-Bibliothek)
+- **PromptBoard**: Verwaltet Kategorien und gespeicherte Prompts in einer SQLite-Datenbank, andockbar neben dem Overlay (Stern-Button)
+- **Always-On-Prompts**: Pre-/Post-Prompts, die automatisch vor/nach jedem Diktat mitgeschickt werden
+- **Prompt-Eingabefenster**: Grosses Freitext-Feld zum Tippen/Editieren mit Gemini-Verbesserung und Aufgaben-Trenner (`;`)
+- **Prompt-Historie**: Die letzten 100 Eingaben werden gespeichert (mit KI-generiertem 4-Wort-Titel), aeltere wandern in ein Markdown-Archiv
+- **Hotkey-Prompts**: Prompts koennen Tasten zugewiesen werden (Cmd+1..9, Cmd+Opt+A..Z) und per Hotkey sofort eingefuegt werden
+- **Google-Drive-Backup**: PromptBoard, Historie und Slots werden optional ueber Google Drive zwischen Geraeten synchronisiert
+
+### Overlay & Bedienung
+- **Copy/Paste/Screenshot**: Buttons zum Kopieren, Einfuegen, Bildschirmfoto aufnehmen und das letzte Foto einfuegen
+- **Orientierung umschalten**: Vertikale Saeule ↔ horizontale Leiste (⇄-Button oder Cmd+Shift+O)
+- **Auto-Hide / Collapsed-Pille**: Bei Inaktivitaet klappt das Overlay zu einer kleinen Mic-Pille zusammen
+- **Position merken**: Disketten-Button speichert die Overlay-Position (pro Orientierung)
 - **Automatische Sichtbarkeit**: Das Overlay erscheint nur, wenn Claude Desktop oder Codex aktiv ist, und versteckt sich automatisch
-- **Zeile loeschen**: X-Button loescht die aktuelle Eingabe im Textfeld (Cmd+A + Backspace)
+- **Zeile loeschen**: X-Button loescht die aktuelle Eingabe im Textfeld (Cmd+A + Backspace); gedrueckt halten loescht wiederholt
+- **Stream-Deck-Anbindung**: HTTP-Server auf `127.0.0.1:5723` fuer Auto-Enter-Status/Toggle
 - **Kein Dock-Icon**: Kein Dock-Icon, kein Cmd+Tab-Eintrag (LSUIElement)
 - **Menueleisten-Icon**: Zum Anzeigen und Beenden der App
-- **Koexistenz**: Kann gleichzeitig mit TerminalVoiceOverlay laufen
+- **Koexistenz**: Kann gleichzeitig mit TerminalVoiceOverlay laufen (siehe Hinweis weiter unten zu Hotkey-/Port-Kollisionen)
 
 ---
 
@@ -179,15 +205,40 @@ launchctl unload ~/Library/LaunchAgents/com.frank.claudecodexvoiceoverlay.plist
 
 ## Bedienung
 
-Das Overlay zeigt fuenf runde Buttons:
+Das Overlay zeigt (in der vertikalen Saeule) folgende Buttons:
 
 | Button | Funktion |
 |---|---|
-| **X** | Loescht die aktuelle Eingabe im Textfeld (Cmd+A + Backspace) |
+| **★ Stern** | PromptBoard / Prompt-Eingabe oeffnen, Always-On-Prompts aktivieren |
+| **⇄** | Orientierung umschalten (vertikal ↔ horizontal) |
 | **Mikrofon** 🎤 | Aufnahme starten/stoppen — transkribierter Text wird eingefuegt |
+| **BTW** | Zwischenfrage-Aufnahme (wird mit `/btw` eingeleitet) |
+| **1–10** | Gemini-Profil waehlen. Linksklick = Re-Correct der letzten Aufnahme, Rechtsklick = nur Profil wechseln |
 | **W** | Whisper-Undo: Ersetzt den Gemini-korrigierten Text durch den originalen Whisper-Rohtext |
 | **G** | Gemini-Korrektur an/aus (gruen = an, grau = aus) |
+| **X** | Loescht die aktuelle Eingabe (Cmd+A + Backspace); gedrueckt halten loescht wiederholt |
+| **Copy** | Auswahl in der Ziel-App kopieren (Cmd+C) |
+| **Paste** | Zwischenablage in die Ziel-App einfuegen (Cmd+V) |
+| **Screenshot** | Bildschirmfoto aufnehmen (nach ~/Pictures/Screenshots) |
+| **Insert-Screenshot** | Pfad des letzten Screenshots einfuegen |
 | **⏎** | Auto-Enter an/aus (gruen = an, grau = aus) — sendet Text nach dem Einfuegen automatisch ab |
+| **Diskette** | Aktuelle Overlay-Position merken (pro Orientierung); erneut = zuruecksetzen |
+
+### Globale Hotkeys
+
+Funktionieren systemweit, auch wenn das Overlay im Hintergrund ist (Carbon-API, keine Accessibility noetig):
+
+| Hotkey | Funktion |
+|---|---|
+| **Cmd+Shift+R** | Aufnahme umschalten (Tap) / Push-to-Talk (≥500 ms halten) |
+| **Cmd+Shift+S** | Screenshot aufnehmen |
+| **Cmd+Shift+I** | Letzten Screenshot einfuegen |
+| **Cmd+Shift+O** | Orientierung umschalten |
+| **Cmd+Shift+C** | Collapsed-Pille umschalten |
+| **Cmd+Shift+,** | Einstellungs-Dialog oeffnen |
+| **Cmd+Shift+E** | Release-Bundle-Ordner im Finder oeffnen |
+| **Cmd+1 … Cmd+9** | Prompt mit zugewiesener Nummer einfuegen |
+| **Cmd+Opt+A … Z** | Prompt mit zugewiesenem Buchstaben einfuegen |
 
 ### Mikrofon-Farben
 
@@ -232,23 +283,61 @@ ClaudeCodexVoiceOverlay-macOS/
   build.sh                  — Build-Skript (kompiliert die App)
   Info.plist                — App-Konfiguration (LSUIElement, Bundle-ID)
   ClaudeCodexVoiceOverlay/
-    main.swift              — Einstiegspunkt der App
-    AppDelegate.swift       — Zentrale App-Logik, Zustandsmanagement
-    OverlayPanel.swift      — Overlay-UI (fuenf runde Buttons, Pulse-Animation)
-    InputController.swift   — Tastatureingabe-Simulation (Cmd+V, Cmd+A, Return)
-    AudioRecorder.swift     — Mikrofon-Aufnahme via AVAudioEngine (WAV)
-    GroqWhisperClient.swift — Groq Whisper API-Client fuer Transkription
-    GeminiClient.swift      — Google Gemini API-Client fuer Textkorrektur (Programmier-Kontext)
-    Config.swift            — .env-Datei laden und parsen
-    AppWatcher.swift        — Erkennt aktive Ziel-Apps (Claude Desktop, Codex)
-    ErrorDescriptions.swift  — Benutzerfreundliche Fehlermeldungen fuer API-Fehler
+    main.swift                  — Einstiegspunkt + Single-Instance-Guard
+    AppDelegate.swift           — Zentrale App-Logik, Orchestrierung (definiert tvoDebug)
+    OverlayPanel.swift          — Overlay-UI (Buttons, Sektionen, Pulse/Waveform)
+    OverlayExtraButtons.swift   — Orientierungs-Toggle + Disketten-Button
+    OverlayCollapsedMic.swift   — Collapsed-Mic-Pille + Beam-Crossfade
+    OverlayOrientation.swift    — Orientierungs-/Positionslogik
+    OverlayHorizontalLayout.swift — Horizontales Leisten-Layout
+    OverlayGlideAnimation.swift — Glide-Animation beim Verschieben
+    WaveformView.swift          — 14-Balken-Pegelanzeige
+    InputController.swift       — Tastatureingabe fuer Electron (Cmd+V, Cmd+A+Backspace, Return)
+    AppWatcher.swift            — Erkennt aktive Ziel-Apps (Claude Desktop, Codex)
+    AudioRecorder.swift         — Mikrofon-Aufnahme via AVAudioEngine (WAV) + onLevel
+    GroqWhisperClient.swift     — Groq Whisper API-Client fuer Transkription
+    GeminiClient.swift          — Gemini-Client: Profile 1–10, Titel/Slot-Summary, Prompt-Engineer
+    Config.swift                — .env-Datei laden und parsen
+    ErrorDescriptions.swift     — Benutzerfreundliche Fehlermeldungen fuer API-Fehler
+    PushToTalkController.swift  — Push-to-Talk Hold-Erkennung
+    HotkeyRegistry.swift        — Globale Carbon-Hotkeys
+    AutoHideController.swift    — Auto-Collapse zur Mic-Pille
+    AutoEnterStatusServer.swift — HTTP-Server (127.0.0.1:5723) fuer Stream Deck
+    VoiceServiceProvider.swift  — Geteilter Audio/STT/Gemini-Locator
+    AlwaysOnPrefixService.swift — Pre/Post-Always-On-Prompt-Kette
+    PromptBoardModels.swift     — Datenmodelle (Kategorie, Prompt, Settings)
+    PromptBoardStore.swift      — SQLite-Persistenz fuer PromptBoard
+    PromptHistoryStore.swift    — Prompt-Historie (100 aktiv + MD-Archiv)
+    PromptSlotStore.swift       — Prompt-Zwischenspeicher-Slots
+    GoogleDriveBackupService.swift — Backup/Sync ueber Google Drive appDataFolder
+    PromptBoardPanel.swift      — PromptBoard-Hauptfenster
+    PromptInputPanel.swift      — Grosses Freitext-Eingabefenster
+    PromptHistoryPanel.swift    — Historie-Ansicht
+    PromptBoardDialogs.swift    — Prompt-Edit-/Historie-Edit-Dialoge
+    CommonDialogs.swift         — Bestaetigungs-/Text-Eingabe-Dialoge
+    SettingsDialog.swift        — Einstellungs-Dialog
 ```
+
+> **Datenspeicherung:** Alle lokalen Daten liegen unter
+> `~/Library/Application Support/ClaudeCodexVoiceOverlay/` (PromptBoard-DB,
+> `history/`, `slots/`) — bewusst getrennt vom TerminalVoiceOverlay, damit beide
+> Apps kollisionsfrei nebeneinander laufen. Sollen beide Overlays dieselbe
+> Prompt-Bibliothek teilen, koennen die Pfade in `PromptBoardStore`,
+> `PromptHistoryStore` und `PromptSlotStore` auf ein gemeinsames Verzeichnis
+> gezeigt werden.
+
+> **Gleichzeitiger Betrieb mit TerminalVoiceOverlay:** Beide Apps duerfen
+> parallel laufen (jedes Overlay zeigt sich nur ueber seinen eigenen Ziel-Apps).
+> Zwei prozessweite Ressourcen kollidieren aber: die **globalen Hotkeys** (wer
+> zuerst startet, gewinnt — die identischen Hotkeys der zweiten App feuern
+> nicht) und der **AutoEnter-Port 5723** (der zweite Bind schlaegt fehl, wird
+> aber sauber abgefangen — Stream Deck spricht mit der zuerst gestarteten App).
 
 ---
 
 ## Schwester-Projekte
 
-Dieses Projekt ist Teil einer Familie von Voice-Overlay-Apps. Alle teilen die gleiche Architektur und ca. 80% des Codes:
+Dieses Projekt ist Teil einer Familie von Voice-Overlay-Apps. Alle teilen die gleiche Architektur. Nach der Vollportierung (2026-06) teilt es ~95% des Codes mit `TerminalVoiceOverlay-macOS`:
 
 | Projekt | Plattform | Ziel-Apps | Sprache |
 |---|---|---|---|
@@ -276,7 +365,16 @@ Dieses Projekt ist Teil einer Familie von Voice-Overlay-Apps. Alle teilen die gl
 
 ---
 
-## Letzte Aenderungen (2026-03-12)
+## Letzte Aenderungen
+
+### 2026-06 — Vollportierung vom TerminalVoiceOverlay
+- Kompletter Funktionsumfang des `TerminalVoiceOverlay-macOS` uebernommen: PromptBoard (SQLite), Prompt-Historie + Archiv, Prompt-Slots, Gemini-Profile 1–10 + Re-Correct, BTW-Aufnahme, Push-to-Talk, Waveform, Copy/Paste/Screenshot, Orientierungs-Umschaltung, Collapsed-Pille/Auto-Hide, Disketten-Positionsspeicher, Einstellungs-Dialog, Google-Drive-Backup, AutoEnter-HTTP-Server, globale Carbon-Hotkeys
+- `InputController` um `clearAllInput` und einen robusten `activateTargetApp` (mit Fallback-Kette) erweitert; Lösch-Kombi bleibt Cmd+A+Backspace (Electron)
+- `AppWatcher` auf die Terminal-Overlay-Struktur gebracht (statische `targetBundleIDs`/`isTargetApp`, Eigen-Prozess-Ignorierung) mit Electron-App-IDs
+- Daten liegen app-spezifisch unter `~/Library/Application Support/ClaudeCodexVoiceOverlay/` (unabhaengig vom Terminal-Overlay)
+- `build.sh` kompiliert jetzt alle 34 Dateien und linkt zusaetzlich Carbon, Network und sqlite3
+
+### 2026-03-12
 
 - Fix: Force-unwrap in Config.swift durch sicheren Optional-Zugriff ersetzt
 - Fix: CoreFoundation takeRetainedValue → takeUnretainedValue (Crash-Verhinderung)
