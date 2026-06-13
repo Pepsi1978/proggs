@@ -40,13 +40,33 @@ SWIFT_FILES=(
     "$SRC_DIR/AudioRecorder.swift"
     "$SRC_DIR/GroqWhisperClient.swift"
     "$SRC_DIR/GeminiClient.swift"
-    "$SRC_DIR/InputController.swift"
+    "$SRC_DIR/TerminalController.swift"
     "$SRC_DIR/OverlayPanel.swift"
     "$SRC_DIR/OverlayOrientation.swift"
     "$SRC_DIR/OverlayGlideAnimation.swift"
     "$SRC_DIR/OverlayHorizontalLayout.swift"
+    "$SRC_DIR/OverlayCollapsedMic.swift"
+    "$SRC_DIR/OverlayExtraButtons.swift"
+    "$SRC_DIR/AutoEnterStatusServer.swift"
+    "$SRC_DIR/SettingsDialog.swift"
+    "$SRC_DIR/CommonDialogs.swift"
+    "$SRC_DIR/AutoHideController.swift"
+    "$SRC_DIR/WaveformView.swift"
     "$SRC_DIR/IconPaths.swift"
+    "$SRC_DIR/PushToTalkController.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
+    "$SRC_DIR/PromptBoardModels.swift"
+    "$SRC_DIR/PromptBoardStore.swift"
+    "$SRC_DIR/AlwaysOnPrefixService.swift"
+    "$SRC_DIR/VoiceServiceProvider.swift"
+    "$SRC_DIR/PromptBoardDialogs.swift"
+    "$SRC_DIR/GoogleDriveBackupService.swift"
+    "$SRC_DIR/PromptBoardPanel.swift"
+    "$SRC_DIR/PromptInputPanel.swift"
+    "$SRC_DIR/PromptHistoryStore.swift"
+    "$SRC_DIR/PromptHistoryPanel.swift"
+    "$SRC_DIR/PromptSlotStore.swift"
+    "$SRC_DIR/HotkeyRegistry.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )
@@ -58,6 +78,9 @@ swiftc \
     -framework AppKit \
     -framework AVFoundation \
     -framework CoreGraphics \
+    -framework Carbon \
+    -framework Network \
+    -lsqlite3 \
     "${SWIFT_FILES[@]}"
 
 # Copy entitlements and sign with persistent certificate (not ad-hoc)

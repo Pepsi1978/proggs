@@ -17,18 +17,34 @@ Direct `swiftc` results in ad-hoc signing → macOS revokes accessibility permis
 
 ## Architecture
 
+This app is a **full 1:1 port of `TerminalVoiceOverlay-macOS`** (same 34 source files,
+same UI, same features). The ONLY differences are the input layer (Electron vs terminal),
+the target apps, and per-app data isolation (see below).
+
+### Core
 | File | Purpose |
 |------|---------|
-| `Config.swift` | API keys from .env, configuration |
+| `Config.swift` | API keys from .env (`~/SK/VoiceOverlays/.env`), configuration |
 | `AudioRecorder.swift` | AVAudioEngine microphone recording |
 | `GroqWhisperClient.swift` | Groq Whisper API for speech-to-text |
 | `GeminiClient.swift` | Gemini API for text correction/formatting |
-| `InputController.swift` | CGEvent keyboard simulation for Electron apps (Cmd+A+Backspace to clear) |
-| `AppWatcher.swift` | NSWorkspace observer for target app detection |
-| `OverlayPanel.swift` | Floating NSPanel overlay UI |
-| `ErrorDescriptions.swift` | Extracted error description methods |
-| `AppDelegate.swift` | App lifecycle, hotkey registration, orchestration |
-| `main.swift` | Entry point |
+| `TerminalController.swift` | CGEvent keyboard sim — **Electron variant** (Cmd+A+Backspace). Class name kept identical to TVO so all call sites match; only the keystrokes differ. |
+| `AppWatcher.swift` | NSWorkspace observer; targets `com.anthropic.claudefordesktop` + `com.openai.codex` |
+| `AppDelegate.swift` | App lifecycle, hotkey registration, orchestration (defines `tvoDebug`) |
+| `ErrorDescriptions.swift` · `main.swift` | Error text · entry point |
+
+### Overlay UI
+`OverlayPanel`, `OverlayHorizontalLayout`, `OverlayOrientation`, `OverlayGlideAnimation`,
+`OverlayCollapsedMic`, `OverlayExtraButtons`, `WaveformView`, `IconPaths`, `AutoHideController`
+
+### Prompt board / history / slots (+ Google Drive backup)
+`PromptBoardPanel`, `PromptBoardStore`, `PromptBoardModels`, `PromptBoardDialogs`,
+`PromptInputPanel`, `PromptHistoryPanel`, `PromptHistoryStore`, `PromptSlotStore`,
+`GoogleDriveBackupService`
+
+### Input / hotkeys / dialogs / services
+`HotkeyRegistry` (Carbon), `PushToTalkController`, `SettingsDialog`, `CommonDialogs`,
+`AutoEnterStatusServer` (Network), `AlwaysOnPrefixService`, `VoiceServiceProvider`
 
 ## Key Patterns
 
@@ -38,21 +54,30 @@ Direct `swiftc` results in ad-hoc signing → macOS revokes accessibility permis
 - **Thread safety**: DispatchQueue.main.async for all UI updates
 - **Retries**: DispatchQueue.asyncAfter (never Thread.sleep on main thread)
 - **Code signing**: "Frank Local Dev" certificate (not ad-hoc)
+- **Build frameworks**: AppKit, AVFoundation, CoreGraphics, **Carbon** (hotkeys), **Network** (auto-enter server), **-lsqlite3** (prompt stores)
+
+## Data isolation from TVO (CRITICAL)
+
+Both apps run independently and must NOT overwrite each other's prompt data:
+- **UserDefaults**: separated automatically by bundle ID (`com.frank.ClaudeCodexVoiceOverlay`).
+- **Local stores**: `~/Library/Application Support/ClaudeCodexVoiceOverlay/` (TVO uses its own folder).
+- **Drive backup**: own filenames (`promptboard-backup-claudecodex.json`,
+  `prompt-history-claudecodex.json`, `prompt-slots-claudecodex.json`) in the shared `appDataFolder`.
+
+> To intentionally SHARE one prompt collection across both apps, revert these names/paths to TVO's.
 
 ## Sister Project (CRITICAL)
 
-**TerminalVoiceOverlay-macOS** shares ~80% of the code.
+**TerminalVoiceOverlay-macOS** shares ~80% of the code (now the full feature set).
 When changing ANY shared file, ALWAYS apply the same change to:
 `~/proggs/TerminalVoiceOverlay-macOS/`
 
-### Shared files (nearly identical):
-Config.swift, AudioRecorder.swift, GroqWhisperClient.swift, GeminiClient.swift,
-AppDelegate.swift, AppWatcher.swift, OverlayPanel.swift, ErrorDescriptions.swift, build.sh
-
-### Different files:
-- `InputController.swift` (this project) vs `TerminalController.swift` (Terminal)
-- Target apps: Electron apps vs terminals
-- Key combo: Cmd+A+Backspace (select all + delete) vs Ctrl+U (clear line)
+### Different files (this project vs Terminal):
+- `TerminalController.swift`: Electron keystrokes (Cmd+A+Backspace) vs terminal (Ctrl+U).
+  Same class name + API in both, only the keystrokes/comments differ.
+- `AppWatcher.swift`: target bundle IDs (Claude Desktop/Codex vs terminals).
+- Data paths/filenames are app-specific for isolation (see above).
+- `Info.plist` / `.entitlements` / `build.sh` APP_NAME carry the CVO identity.
 
 ## Windows Counterpart
 
