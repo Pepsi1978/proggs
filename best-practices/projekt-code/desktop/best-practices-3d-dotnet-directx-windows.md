@@ -175,3 +175,20 @@ Drei Stufen, von robust bis schlank:
 - DirectX 12 / Agility SDK: [DirectX Developer Blog](https://devblogs.microsoft.com/directx/agility-sdk-1-613-0/), [Work Graphs GPUOpen](https://gpuopen.com/news/microsoft-work-graphs-1-0-now-available/) — `offiziell`
 - glTF / SharpGLTF: [Khronos glTF PBR](https://www.khronos.org/gltf/pbr/), [SharpGLTF NuGet](https://www.nuget.org/packages/SharpGLTF.Core), [GitHub vpenades](https://github.com/vpenades/SharpGLTF) — `offiziell`
 - Deployment: [Single-file overview](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview), [Native AOT overview](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/), [Optimizing AOT](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/optimizing) — `offiziell`; [andrewlock.net .NET 10 Serie](https://andrewlock.net/exploring-dotnet-10-preview-features-7-packaging-self-contained-and-native-aot-dotnet-tools-for-nuget/) — `extern`
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+Die konkreten Fallen zu diesen Best Practices stehen im Bug-Almanach: `bugs/desktop/3d-dotnet-directx-windows.md`. Wer hier "wie macht man es richtig" liest, sollte dort "was geht schief" gegenlesen.
+
+| Best-Practice-Abschnitt | Verwandte Bugs (→ bugs/desktop/3d-dotnet-directx-windows.md) |
+|-------------------------|--------------------------------------------------------------|
+| §1 Stack-Wahl | §4 Silk.NET AOT, §8 Veldrid verwaist, §9 MonoGame D3D12-Reife, §13 Stride Shader-Cache, §14 Vortice COM-Lifecycle |
+| §2 PBR & Materialien | §1 Farbraum ausgewaschen/dunkel, §10 glTF KTX2, §11 glTF Material-Extensions |
+| §3 WPF-3D & Helix Toolkit | §7 Helix Viewport3DX schwarz/flackert |
+| §4 Asset-Pipeline (glTF) | §10 glTF KTX2 nicht geladen, §11 Material-Extensions fehlen |
+| §5 Beleuchtung & Postprocessing | §1 Farbraum/HDR, §2 Flip-Model-Swapchain sRGB |
+| §6 Single-.exe / Deployment | §3 Trimmer/AOT-Crash, §4 Silk.NET RegisterPlatform, §5 .NET-10 native-lib-search, §6 Single-file Temp-Extraktion |
+| §7 Performance | §12 D3D12 DEVICE_REMOVED/Descriptor/TDR, §14 COM-Leak |
+| §9 Haeufige Fallen (Tabelle) | Volltext + erweitert in den Bug-Almanach-Eintraegen §1-§14 |

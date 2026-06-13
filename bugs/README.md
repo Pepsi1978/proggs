@@ -20,13 +20,13 @@ Kategorie wechseln, ohne dass ein Hook angefasst werden muss.
 ```
 bugs/
 ├── README.md · SYSTEM.md · OFFENE-ALMANACHE-PROMPTS.md · check-coupling.py   (oben, kategorielos)
-├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing
+├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing, 3D (Filament/SceneView)
 ├── android-build/    Gradle/AGP, R8/ProGuard
-├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS)
-├── web/              Chrome-Erweiterungen, TypeScript/Node
+├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS), 3D (Metal/RealityKit, .NET/Stride, Rust wgpu/Bevy, Godot)
+├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/Babylon/WebGPU)
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
-├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns)
+├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns), 3D-Visuelle-Qualität (PBR/Licht/PostFX)
 ├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OAuth/Device-Code, ...)
 └── agents/           Multi-Agenten-Systeme (Boss-/Orchestrator-Agent, Sub-Agent-Spawning, Intent, Tool-Calling)
 ```
@@ -70,6 +70,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Android-Framework / Platform-SDK** (Runtime/Framework) | [`android/android-platform.md`](android/android-platform.md) | 2026-06-02 | 79 | `AndroidManifest.xml`, `*Service.kt`/`*Receiver.kt`/`*Worker.kt`/`*Database.kt`/`*Migration(s).kt` · „Lifecycle", „onDestroy", „Permission", „Foreground Service", „ANR", „WorkManager", „Doze", „Room", „Migration", „WAL", „PendingIntent", „AlarmManager", „Notification", „Scoped Storage", „targetSdk", „Edge-to-Edge", „16KB" |
 | **Firebase / Crashlytics / Play Billing** (Google-Backend-Dienste) | [`android/firebase-billing.md`](android/firebase-billing.md) | 2026-06-02 | 138 | `google-services.json`, `*Billing*.kt`/`*Subscription*.kt`/`*Purchase*.kt`, `BillingClient`, Cloud Functions · „Firebase", „Crashlytics", „FCM", „Firestore", „Billing", „Paywall", „App Check", „Remote Config", „acknowledge", „Proration", „RTDN", „firebase-ai", „Gemini" · Best-Practices: `best-practices/projekt-code/android/firebase-billing/` |
 | **Voice-Assistant-Auslösung + Wake-Word + Mic** (fremden Sprachassistenten per Weckwort starten) | [`android/voice-assistant-trigger.md`](android/voice-assistant-trigger.md) | 2026-06-11 | 10 | `*VoiceInteractionService*`, `*AccessibilityService*`, `*WakeWord*`/`*Hotword*`, `AndroidManifest.xml` mit `foregroundServiceType="microphone"` · „Wake-Word", „Hotword", „Weckwort", „Assist", „ACTION_ASSIST", „KEYCODE_ASSIST", „Shizuku", „VoiceInteractionService", „AudioRecord", „sherpa-onnx", „Porcupine", „openWakeWord", „Default-Assistant", „ChatGPT Voice", „Mikrofon" · Best-Practices: `best-practices/projekt-code/android/best-practices-voice-assistant-trigger.md` |
+| **3D auf Android — Filament / SceneView** (PBR-Echtzeit-3D mit Kotlin/Compose) | [`android/3d-filament-android.md`](android/3d-filament-android.md) | 2026-06-13 | 14 | `*.kt` mit `Filament`/`SceneView`/`ModelViewer`/`Engine`/`Renderer`, `*.filamat`/`*.mat`, `.glb`/`.gltf`/`.ktx` · „Filament", „SceneView", „matc", „cmgen", „IBL", „16-KB", „pageAlignSharedLibraries", „Vulkan", „OpenGL ES", „SwapChain", „setViewport" · Best-Practices: `best-practices/projekt-code/android/best-practices-3d-filament-android.md` |
 
 ### 🔧 `android-build/` — Build-Kette
 
@@ -87,6 +88,10 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Wake-Word / Keyword-Spotting (.NET, C#/WPF)** (sherpa-onnx, Porcupine, openWakeWord) | [`desktop/wake-word.md`](desktop/wake-word.md) | 2026-06-08 | 33 | `.cs`/`.csproj` mit `sherpa`/`KeywordSpotter`/`WakeWordListener`/`Porcupine`/`onnxruntime`, `keywords.txt` · „Wake Word", „Weckwort", „Keyword-Spotting", „KWS", „sherpa-onnx", „Porcupine", „openWakeWord", „NanoWakeWord", „text2token", „NAudio Resampler" · Hinweis: `.cs`-Erzwingung laeuft aktuell ueber `dotnet-csharp.md` (Content-Probe-Zweig optional) · Best-Practices: `best-practices/projekt-code/desktop/best-practices-wake-word.md` |
 | **Groq-Transkription (Whisper large-v3 / turbo)** (Speech-to-Text API, Always-On-Voice) | [`desktop/groq-transkription.md`](desktop/groq-transkription.md) | 2026-06-08 | ~25 | `.cs` mit `GroqWhisperClient`/`audio/transcriptions`/`whisper-large-v3`/`AlwaysOnListener` · „Groq", „Whisper", „Transkription", „Speech-to-Text", „STT", „no_speech_prob", „Halluzination bei Stille", „Vielen Dank bei Stille", „verbose_json", „VAD" · Hinweis: `.cs`-Erzwingung laeuft ueber `dotnet-csharp.md` · Best-Practices: `best-practices/projekt-code/desktop/best-practices-groq-transkription.md` |
 | **Voice-Agent-Sprachpipeline** (VAD/Endpointing, Wake-Wachfenster, Turn-Taking, Latenz, Barge-in) | [`desktop/voice-pipeline.md`](desktop/voice-pipeline.md) | 2026-06-10 | ~20 | `.cs` mit `AlwaysOnListener`/`WakeWordController`/`EndpointDetector`/`StreamingSpeaker` · „Voice Agent", „Sprachpipeline", „Endpointing", „VAD", „Wachfenster", „hoert zu aber nichts passiert", „Turn-Taking", „Barge-in", „Latenz Sprachassistent", „Stille-Erkennung" · Hinweis: `.cs`-Erzwingung laeuft ueber wake-word/groq/dotnet-Zweige · Best-Practices: `best-practices/projekt-code/desktop/best-practices-voice-pipeline.md` |
+| **3D auf macOS — Metal / SceneKit / RealityKit** (nativ schöne 3D-Apps, Swift) | [`desktop/3d-metal-scenekit-macos.md`](desktop/3d-metal-scenekit-macos.md) | 2026-06-13 | 18 | `*.swift` mit `Metal`/`MTKView`/`SceneKit`/`SCNView`/`RealityKit`/`RealityView`/`MetalFX`, `*.usdz`/`*.usd` · „Metal", „MetalFX", „SceneKit", „RealityKit", „RealityView", „USDZ", „EDR", „HDR", „IBL", „ImageBasedLight", „nextDrawable", „Tahoe Auto-Brightness" · Best-Practices: `best-practices/projekt-code/desktop/best-practices-3d-metal-scenekit-macos.md` |
+| **3D auf Windows — C#/.NET (DirectX/Stride/Silk.NET)** (nativ schöne 3D-Apps) | [`desktop/3d-dotnet-directx-windows.md`](desktop/3d-dotnet-directx-windows.md) | 2026-06-13 | 14 | `*.cs`/`*.csproj` mit `Stride`/`Silk.NET`/`Vortice`/`Veldrid`/`SharpDX`/`Direct3D`/`SwapChain`, `*.sdsl` · „DirectX 12", „D3D12", „Stride", „Silk.NET", „Vortice", „Veldrid", „MonoGame", „Helix", „NativeAOT", „PublishTrimmed", „DEVICE_REMOVED", „Flip-Model sRGB" · Best-Practices: `best-practices/projekt-code/desktop/best-practices-3d-dotnet-directx-windows.md` |
+| **3D mit Rust — wgpu / Bevy** (cross-platform schöne 3D-Apps) | [`desktop/3d-rust-wgpu-bevy.md`](desktop/3d-rust-wgpu-bevy.md) | 2026-06-13 | 13 | `*.rs` mit `bevy`/`wgpu`/`Camera3d`/`Mesh3d`/`MeshMaterial3d`/`PbrBundle`, `Cargo.toml` mit `bevy`/`wgpu` · „Bevy", „wgpu", „Solari", „TonyMcMapface", „Bloom", „hdr: true", „glTF #Scene0", „Required Components", „cargo-apk", „AAB", „xbuild" · Best-Practices: `best-practices/projekt-code/desktop/best-practices-3d-rust-wgpu-bevy.md` |
+| **3D mit Godot 4** (cross-platform schöne 3D-Apps) | [`desktop/3d-godot.md`](desktop/3d-godot.md) | 2026-06-13 | 12 | `*.gd`/`*.tscn`/`*.tres`/`project.godot`/`*.gdshader` · „Godot", „Forward+", „Mobile-Renderer", „Compatibility", „LightmapGI", „SDFGI", „VoxelGI", „SSR", „D3D12 Black-Screen", „Notarisierung", „UV2", „C# kein Web" · Best-Practices: `best-practices/projekt-code/desktop/best-practices-3d-godot.md` |
 
 ### 🌐 `web/` — Web & Browser
 
@@ -94,6 +99,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 |---------|-------|-------|------|-------------------------------------------|
 | **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`web/chrome-extensions.md`](web/chrome-extensions.md) | 2026-06-02 | 73 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
 | **Web — TypeScript / Node** (+ npm, Bun) | [`web/typescript.md`](web/typescript.md) | 2026-06-02 | 89 | `*.ts`, `*.tsx`, `tsconfig.json`, `package.json` · „TypeScript", „Node", „npm", „ESM", „CommonJS", „require(esm)", „Bun", „tsconfig", „strict", „moduleResolution", „peer dependency", „ERESOLVE", „unhandled rejection", „@types", „better-sqlite3" |
+| **3D im Web/TS — Three.js / Babylon / WebGPU** (schöne 3D-Apps, verpackt mit Tauri/Capacitor) | [`web/3d-threejs-webgpu.md`](web/3d-threejs-webgpu.md) | 2026-06-13 | 14 | `*.ts`/`*.tsx`/`*.js` mit `three`/`@babylonjs`/`@react-three/fiber`/`WebGPURenderer`/`GLTFLoader`/`KTX2Loader`, Tauri/Capacitor-Config · „Three.js", „Babylon.js", „WebGPU", „WebGL2", „R3F", „PMREMGenerator", „outputColorSpace", „ACESFilmic", „DRACOLoader", „KTX2", „Tauri", „Capacitor", „convertFileSrc", „TSL" · Best-Practices: `best-practices/projekt-code/web/best-practices-3d-threejs-webgpu.md` |
 
 ### 🎛️ `peripherie/` — Hardware-Peripherie
 
@@ -116,6 +122,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
 | **App-Icon-Building** (Windows `.ico`, Android Adaptive Icons, macOS `.icns`) | [`assets/icon-building.md`](assets/icon-building.md) | 2026-06-07 | ~30 | `*.ico`, `*.icns`, `ic_launcher*.xml`, `*.iconset/`, `<ApplicationIcon>` · „Icon", „App-Icon", „.ico", „.icns", „Adaptive Icon", „mipmap", „Icon-Cache", „schwarze/transparente Ecken", „Verknuepfung/Shortcut-Icon", „iconutil", „Squircle", „Pillow ICO" |
+| **Visuelle Qualität für 3D** (engine-übergreifend: PBR/Licht/PostFX/Assets) | [`assets/3d-visual-quality.md`](assets/3d-visual-quality.md) | 2026-06-13 | 13 | Normal-/Roughness-/Metallic-Maps, `.hdr`/`.exr`, `.gltf`/`.glb`/`.ktx2` · „PBR", „IBL", „HDRI", „Tonemapping", „ACES", „AgX", „PBR Neutral", „Linear/sRGB", „Color Management", „Normal Map Y-Flip", „TAA", „Shadow Acne", „KTX2", „Draco", „glTF-Transform" · Best-Practices: `best-practices/projekt-code/assets/best-practices-3d-visual-quality.md` |
 
 ---
 

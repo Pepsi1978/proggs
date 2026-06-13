@@ -243,3 +243,21 @@ skalieren, statt zu clippen. Headroom ist dynamisch (Helligkeit, Inhalt, andere 
 - Extern: createwithswift.com, rhonabwy.com, kodeco.com, medium (Andy Jazz, avihay, Dennis Ippel),
   zoewave.medium.com, dev.to/arshtechpro, learnopengl.com, github (BetterDisplay, RealityKitPostProcessMetal,
   blender-to-realitykit), gadgethacks/dpreview (Tahoe-EDR-Bug) `[extern]`
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+> Gegenseite (bekannte Fehler & Fallen): `bugs/desktop/3d-metal-scenekit-macos.md`.
+
+| Best-Practice-Abschnitt | Bug-Abschnitt (bugs/desktop/3d-metal-scenekit-macos.md §N) |
+|-------------------------|-----------------------------------------------------------|
+| §1 Framework-Wahl (SceneKit soft-deprecated) | §14 SceneKit fuer Neuprojekt waehlen |
+| §2 RealityKit auf macOS (RealityView, Migration) | §5 Collision/InputTarget, §6 ARView→RealityView |
+| §3 PBR & Materialien | §8b Normal-Map faelschlich als sRGB |
+| §4 Beleuchtung & IBL | §4 IBL Receiver vergessen, §7 Directional-Light-Schatten |
+| §5 Postprocessing & MetalFX | §10 MetalFX Ghosting/Flackern |
+| §6 Performance (Metal & RealityKit) | §11 nextDrawable Hang/nil, §12 Multi-Display-Stutter, §15 Speicher/Large-Model |
+| §7 Color Management — Display P3, EDR/HDR | §8 sRGB-Doppel-Gamma, §9 Tahoe-EDR/Auto-Brightness, §16 EDR vergessen |
+| §8 Asset-Pipeline (USDZ/glTF/Model I/O) | §1 USD Material-Linkage, §2 USDZ schwarz (RCP-Bundle), §3 USDZ-Web-URL schwarz, §13 glTF/OBJ-Import |
+| §9 Haeufige Fallen & Bugs | §1, §4, §5, §6, §9 (Sammelbezug) |

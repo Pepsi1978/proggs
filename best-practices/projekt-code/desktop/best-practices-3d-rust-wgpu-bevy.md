@@ -169,3 +169,20 @@ Quellen: Bevy Cheat Book "Slow Performance", GitHub Discussions #13325 (Material
 - github.com/CleanCut/bevy_template (compile-time-optimiertes Profil)
 - blog.erikhorton.com — Deploy Bevy to Android and WASM
 - gamefromscratch.com / alternativeto.net — Release-Berichterstattung
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+> Gegenseite (bekannte Bugs & Fallen): `bugs/desktop/3d-rust-wgpu-bevy.md`.
+
+| Best Practice (hier §) | Verwandter Bug-Almanach-Eintrag |
+|------------------------|----------------------------------|
+| §1 wgpu vs. Bevy | → bugs/desktop/3d-rust-wgpu-bevy.md §3 (Bundle-API), §13 (wgpu-Pinning) |
+| §2 PBR & Materialien | → bugs/desktop/3d-rust-wgpu-bevy.md §3 (Mesh3d/MeshMaterial3d), §5 (Emissive > 1.0), §7 (Sampler/Texturen) |
+| §3 Beleuchtung & GI | → bugs/desktop/3d-rust-wgpu-bevy.md §11 (Solari rendert nichts) |
+| §4 Postprocessing | → bugs/desktop/3d-rust-wgpu-bevy.md §4 (Bloom ohne HDR), §5 (Emissive), §6 (Bloom blass) |
+| §5 glTF-Asset-Pipeline | → bugs/desktop/3d-rust-wgpu-bevy.md §1 (fehlendes Label), §2 (180°-Koordinaten-Bug) |
+| §6 Cross-Platform-Build | → bugs/desktop/3d-rust-wgpu-bevy.md §8 (DX12 Resize-Crash), §12 (Android AAB) |
+| §7 Performance | → bugs/desktop/3d-rust-wgpu-bevy.md §9 (Material-Batching), §10 (Debug-Build) |
+| §8 Haeufige Fallen | → bugs/desktop/3d-rust-wgpu-bevy.md (Kurzcheck + §1, §4, §9, §10) |

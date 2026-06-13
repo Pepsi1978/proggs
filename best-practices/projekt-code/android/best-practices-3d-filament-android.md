@@ -236,3 +236,26 @@ Eigene Engine-Architektur, Spiel-aehnliche Render-Loop, kein AR, Custom-Postproc
 - Khronos KTX2/Basis (DeepWiki): https://deepwiki.com/KhronosGroup/glTF-Sample-Models/5.1-texture-compression-with-ktx2-and-basis-universal
 - A Guide to Filament for Android (V. Brandalise): https://victorbrandalise.com/a-guide-to-filament-for-android/
 - ARM — Save battery with ADPF: https://developer.arm.com/community/arm-community-blogs/b/mobile-graphics-and-gaming-blog/posts/save-battery-modern-graphics-mobile-adpf
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+(Gegenseite: `bugs/android/3d-filament-android.md` — was schiefgeht und wie man es fixt. Stand 2026-06-13.)
+
+| Best-Practice hier | Verhindert Bug-Almanach-Eintrag |
+|--------------------|----------------------------------|
+| §7/§8 16-KB-Page-Size, AGP, jniLibs | → §1 (Play-Upload abgelehnt; `filamat-android-lite` meiden, #9460) |
+| §8 Viewport nicht jeden Frame setzen | → §2 (setViewport Memory-Leak, #3381) |
+| §8 Eine Engine, Views/Scenes teilen | → §3 (SIGSEGV mehrere Views/Engines, #1344/#2364/#7303) |
+| §6/§8 Teardown-Reihenfolge, DisposableEffect | → §4 (GREF-overflow / Native Leak, #7394/#6936/#4881) |
+| §2 matc-Version == Runtime | → §5 (Material version mismatch, #4685/#4399) |
+| §8 Echtgeraet, UiHelper, Logcat | → §6 (Schwarzer Screen, #4692) |
+| §1/§9 GLES default, Vulkan+Fallback, matc-Optimierung | → §7 (Vulkan langsamer/Adreno-Crash, #4225/#7091/#5294/#6444/#8774) |
+| §5 glTF/KTX2-Pipeline, gltf-transform | → §8 (KTX2-Texturen schwarz, #4771 + Oekosystem) |
+| §7 Dynamic Resolution vorsichtig, Speicher monitoren | → §9 (DR Memory-Spikes, #1898/#5885) |
+| §8 SceneView >= 4.17.0 | → §10 (Transform-Drift rotation/scale) |
+| §1/§6 SceneView aktuell, Lifecycle, onException | → §11 (AR Resume / CameraNotAvailableException, #1752) |
+| §6/§8 Lifecycle-Guard, Teardown vor Recreate | → §12 (Quick create+detach Crash, #6933/#5543/#6604) |
+| §6 isOpaque=false, ClearOptions, Version | → §13 (Transparenz + Postprocessing, #1165) |
+| §6 Choreographer-Loop, konsistenter Thread | → §14 (Engine in HandlerThread SIGSEGV, #6534/#4168) |

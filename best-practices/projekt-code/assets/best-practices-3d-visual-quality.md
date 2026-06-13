@@ -267,3 +267,21 @@ gltf-transform optimize model.glb output.glb \
 - **[extern]** learnopengl.com (IBL), bruop.github.io (IBL Multiple Scattering), polycount Wiki (Normal Maps), box.co.uk / Hardware Times (AA-Vergleich), Catlike Coding (Post-Processing)
 
 *Alle Quellen abgerufen am 2026-06-13.*
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+Die typischen Fehler zu diesen Best Practices — „was geht schief und wie sieht es aus" — stehen im Bug-Almanach: `bugs/assets/3d-visual-quality.md`.
+
+| Best-Practices § | Thema | Bug-Almanach § |
+|------------------|-------|----------------|
+| §1 PBR-Materialien | metallic-Mittelwerte, eingebackene Schatten in baseColor | §12 |
+| §2 HDR/IBL | SSR-Randabriss → IBL-Fallback | §9 |
+| §3 Tonemapping | Highlights ausgefressen (Tonemapping aus); baseColor wird nicht 255 | §3, §4 |
+| §4 Linear/sRGB | verwaschen/überstrahlt (kein linearer Workflow); Daten-Maps als sRGB | §2, §11 |
+| §5 Postprocessing | Bloom-Reihenfolge falsch; Emissive ohne HDR-Strength | §13 |
+| §6 Schatten/CSM | CSM-Shimmering; Shadow Acne / Peter Panning | §5, §6 |
+| §7 Anti-Aliasing | MSAA in Deferred inkompatibel; TAA-Ghosting | §7, §8 |
+| §8 Asset-Pipeline | Normal-Map Y-Konvention/Tangenten; gltf-transform WebP-Bug; KTX2 sRGB-Tag | §1, §10, §11 |
+| §9 edel vs billig | Sammelt die Symptome aller obigen Fehler | §1–§13 |

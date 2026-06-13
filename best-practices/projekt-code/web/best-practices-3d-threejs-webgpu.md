@@ -212,3 +212,22 @@ Quelle: [utsubo 100 Three.js Tips 2026](https://www.utsubo.com/blog/threejs-best
 - R3F: fiber **v9.5+** + React 19; drei **9.116+**; postprocessing **3+**; rapier **2+**. WebGPU noch nicht voll.
 - Tauri: **v2.10.1** (2026-03-04), Desktop + Mobile stable.
 - Pipeline-Tool: gltf-transform (KTX2/Basis + Draco/meshopt).
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+Gegenseite (bekannte Bugs/Fallen, das WAS-schiefgeht): `bugs/web/3d-threejs-webgpu.md`.
+Jeder Best-Practice-Abschnitt hat dort einen oder mehrere konkrete Bug-Eintraege.
+
+| Best-Practice-Abschnitt (hier) | Bug-Almanach (→ `bugs/web/3d-threejs-webgpu.md`) |
+|--------------------------------|--------------------------------------------------|
+| §1 Bibliotheks-Wahl (R3F-Einschraenkung, Babylon) | §7 Firefox/R3F-WebGPU; §9 TSL; §14 Babylon WebGPU/Snapshot |
+| §2 WebGPU vs WebGL Strategie | §7 Firefox/R3F-WebGPU; §8 WebGPU async init |
+| §3 PBR/HDR/IBL (PMREMGenerator-Falle) | §5 Flache Reflexion / PMREM-Crash |
+| §4 Postprocessing (AA-Falle, Tone Mapping/Farbe, WebGPU-Pipeline) | §2 Aliasing; §3 Farben/Color-Space; §8 async init; §9 TSL/onBeforeCompile |
+| §5 glTF/Draco/KTX2 (Loader-Setup-Falle, detectSupport) | §4 Draco/KTX2-Loader; §10 detectSupport deprecated |
+| §6 Verpackung Desktop: Tauri 2 (macOS-Falle) | §1 macOS 60fps-Cap; §12 Tauri asset/CORS/WASM-Pfad |
+| §7 Verpackung Android: Capacitor | §11 WebGL context lost mobile; §13 Android-Performance |
+| §8 Performance (Draw Calls, dispose, Pixel-Ratio) | §6 Memory-Leak/dispose; §13 Android-Performance |
+| §9 Haeufige Fallen (Quick-Reference) | deckt §2-§6, §8, §10 ab (dort detailliert mit Quellen) |

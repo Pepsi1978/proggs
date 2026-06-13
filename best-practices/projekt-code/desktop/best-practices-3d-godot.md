@@ -271,3 +271,25 @@ Quellen: [Optimizing 3D performance — Godot Docs](https://docs.godotengine.org
 Die ausfuehrlichen offiziellen Doku-Seiten (renderers.html, releases/4.6) sind sehr gross; die hier
 zitierten Aussagen stammen aus den Such-Zusammenfassungen dieser offiziellen Quellen sowie den verlinkten
 GitHub-Issues. Vor kritischen Produktionsentscheidungen die jeweils verlinkten offiziellen Seiten direkt oeffnen.
+
+---
+
+## Bezug ↔ Bug-Almanach
+
+Die konkreten bekannten Bugs/Fallen (mit Symptom, Ursache, Fix-Status und Quellen) stehen in
+`bugs/desktop/3d-godot.md`. Querverweise:
+
+| Best-Practice (hier) | Bug-Almanach (→ bugs/desktop/3d-godot.md §N) |
+|----------------------|----------------------------------------------|
+| §1 Renderer-Wahl | §9 Mobile reduziert Android-Geraete, §11 Compatibility-Startzeit |
+| §2 PBR & Materialien | §7 Materialien weiss/flach nach Blender-Import |
+| §3 Beleuchtung & GI | §4 LightmapGI UV2 fehlt, §5 Compatibility-Lightmap-Bake kaputt, §6 Sky/GI-Regression, §12 VoxelGI/SDFGI-Flackern |
+| §4 Postprocessing (SSR) | §6 Sky/GI-Regression, §12 SSR/GI Frustum-Offset |
+| §5 glTF-Import | §7 Materialien weiss, §8 .blend-Import-Endlosschleife |
+| §6 Export macOS/Windows/Android | §1 D3D12 Black-Screen, §2 macOS-Signatur, §3 4.6.1-Editor-Binary, §9 Android-Geraete |
+| §7 GDScript vs C# | §10 C# kein Web / Android experimentell |
+| §8 Performance | §12 GI-Flackern (TAA-Wechselwirkung) |
+| §9 Haeufige Fallen | deckt sich mit Almanach-Kurzcheck (Stufe A) |
+
+**Empfohlene Basis fuer alle obigen Best Practices: Godot >= 4.6.2** (1. April 2026, 122 Fixes) —
+behebt u.a. die .blend-Import-Endlosschleife (§8) und mehrere Rendering-Regressionen.
