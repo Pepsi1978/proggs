@@ -508,3 +508,89 @@ claude agents --permission-mode bypassPermissions --model opus --effort high
 **3. Horizont-Scan (Querverweise):** Stop/SubagentStop `additionalContext` (-> 01-hooks), `requiredMinimumVersion` (-> 07-settings), `/plugin list` (-> 04-plugins), Grep/Glob via `--tools` (-> 03-agents). `[offiziell]`
 
 **Betrifft eigene Werkzeuge:** Das `ultracode`-Keyword ist der neue offizielle Trigger fuer Dynamic Workflows — die Parallelisierungs-Sektion in CLAUDE.md und `semicolon-task-separator.md` koennen es erwaehnen. `additionalContext`-Rueckgabe (2.1.163) ist relevant fuer `writeback-enforcer`/`memory-watchdog`.
+
+---
+
+# Cowork (Desktop-App) — Best Practices (fokussierter Lauf, Stand 2026-06-13)
+
+> Fokussierter Best-Practices-Lauf zum **Cowork-Modus der Claude-Desktop-App** (nicht Teil des
+> Claude-Code-Changelog-Deltas; eigener Versions-Anker = Stand der offiziellen Support-/Doku-Seiten,
+> April–Juni 2026). Quellen-Rangordnung wie üblich: offiziell (support.claude.com, claude.com/docs,
+> code.claude.com) = Grundwahrheit; extern nur ergänzend und gelabelt. Recherchiert mit 7 parallelen
+> Researchern (Opus, je ~7–13 Quellen).
+>
+> **Status-Hinweis:** Cowork startete Januar 2026 als Research Preview; die Produktseite
+> (claude.com/product/cowork) nennt es inzwischen "generally available", einzelne Teilfunktionen
+> (Computer-Use, Handy/Dispatch) bleiben Research Preview. Offizielle Quellen sind hier leicht uneinheitlich.
+
+## 1. Überblick & Einrichtung
+
+- **Was Cowork ist:** bringt die agentische Architektur von Claude Code in die Desktop-App, ohne Terminal — für nicht-programmierende Wissensarbeit. Claude plant mehrstufige Aufgaben, zerlegt sie in Sub-Agenten und liefert fertige Outputs direkt ins Dateisystem. Quelle: support.claude.com/en/articles/13345190 · Stand 2026-06 · `[offiziell]`
+- **Voraussetzungen:** nur Claude-Desktop-App für **macOS oder Windows** (kein Web, kein eigenständiges Mobile), bezahltes Abo (Pro, Max, Team, Enterprise), durchgehende Internetverbindung. App muss offen bleiben und der Rechner wach, sonst stoppt die Aufgabe. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
+- **Best Practice Einrichtung (4 Schritte):** 1) Cowork-Tab öffnen/App aktualisieren; 2) unter "Customize" die täglich genutzten Connectors aktivieren (+ optional Claude in Chrome); 3) einen **Arbeitsort** geben — lokaler Ordner ODER Projekt; 4) Aufgabe stellen. Je mehr verbunden, desto vollständiger Ende-zu-Ende. `/setup-cowork` startet die geführte Einrichtung. Quelle: claude.com/resources/tutorials/get-started-in-claude-cowork-in-three-steps · 2026-04-27 · `[offiziell]`
+- **Ordner vs. Projekt:** Ordner = Claude liest/schreibt dort, eng oder breit zuschneidbar. Projekt = Workspace mit eigenen Dateien, Instruktionen und **Memory**, das über Sessions bleibt. Memory gibt es NUR in Projekten, nicht über Standalone-Sessions. Quelle: support.claude.com/en/articles/14116274 · 2026-04-09 · `[offiziell]`
+- **Globale + Ordner-Instruktionen:** Unter Settings > Cowork globale Anweisungen (Tonfall, Format, Rolle) für jede Session; "Folder instructions" ergänzen projektspezifischen Kontext und kann Claude während der Session selbst aktualisieren. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
+- **Architektur (Sicherheits-Kern):** Agent-Loop + Dateioperationen laufen **nativ** auf dem Gerät (Permission-System auf App-Ebene); nur Shell/Code läuft in einer **isolierten Linux-VM** (Apple Virtualization.framework / Hyper-V). Fällt die VM aus, laufen Datei-/Web-Tools weiter, nur Shell/Code meldet "workspace unavailable". Quelle: support.claude.com/en/articles/14479288 · 2026-04-24 · `[offiziell]`
+- **Berechtigungsmodi:** "Ask before acting" (empfohlen, fragt vor jeder Aktion) vs. "Act without asking" (schneller, riskanter, nur unter Aufsicht + vertrauten Quellen). In BEIDEN Modi fragt Claude immer vor endgültigem **Löschen**. Quelle: support.claude.com/en/articles/13345190 + /13364135 · `[offiziell]`
+
+## 2. Skills & Plugins
+
+- **Skill = Verzeichnis + SKILL.md**, dynamisch geladen über **Progressive Disclosure** (Stufe 1: nur Name+Beschreibung ~100 Token; Stufe 2: voller SKILL.md; Stufe 3: References/Skripte bei Bedarf). Quelle: claude.com/docs/skills/overview · `[offiziell]`
+- **Voraussetzung:** "Code execution and file creation" muss aktiv sein (Settings > Capabilities; Team/Enterprise: Owner unter Organization settings > Skills). Quelle: support.claude.com/en/articles/12512180 · `[offiziell]`
+- **SKILL.md-Pflichtfelder:** YAML-Frontmatter `name` (nur a-z/0-9/Bindestrich, = Verzeichnisname) + `description`. **Beschreibungs-Limit in Claude.ai = 200 Zeichen** (obwohl Agent-Skills-Standard 1024 erlaubt) — Trigger-Beschreibungen knapp und keyword-stark halten. Struktur mit `scripts/`, `references/`, `assets/`; SKILL.md < 500 Zeilen, Detail auslagern und in SKILL.md erwähnen. Quelle: claude.com/docs/skills/how-to · `[offiziell]`
+- **Eigene Skills hochladen:** Customize > Skills > "+" > "Upload a skill" als **ZIP** (Ordnername = name-Feld, Skill-Ordner muss im ZIP enthalten sein), dann per Toggle aktivieren. Custom Skills sind privat zum Account. Quelle: support.claude.com/en/articles/12512180 · `[offiziell]`
+- **Plugin = Paket** aus Skills + MCP-Connectors + Sub-Agents + Slash-Commands + Hooks; file-based (Markdown + JSON, kein Build). Plugins laufen in Cowork und Code, **nicht in Chat** (dort Hooks/Sub-Agents ausgegraut, Skills funktionieren). Quelle: claude.com/docs/cowork/guide/plugins + github.com/anthropics/knowledge-work-plugins · `[offiziell]`
+- **Marketplaces:** Default "Knowledge Work" vorinstalliert; weitere Anthropic-Marktplätze (Financial Services, Legal, Life Sciences) und eigene **Git-Repos** als Marketplace (`owner/repo` oder URL) hinzufügbar. Limits: Plugin ≤200 MB/5.000 Dateien, ≤500 Plugins/Marketplace, ≤25 Marketplaces. Quelle: claude.com/docs/cowork/guide/plugins · `[offiziell]`
+- **Plugins/Skills in Cowork selbst bauen:** Plugin "Plugin Create" / `cowork-plugin-management` führt durch Discovery→Planung→Design→Implementierung→Packaging und liefert eine installierbare `.plugin`-Datei. "Customize" an einem Plugin öffnet eine neue Cowork-Session, in der Claude die Skills auf die tatsächlich genutzten Tools umschreibt. **Nur Desktop** (bearbeitet lokale Dateien). Quelle: claude.com/resources/tutorials/how-to-customize-plugins-in-cowork · `[offiziell]`
+
+## 3. Connectors & MCP
+
+- **Grundprinzip:** Claude **erbt pro Person die Rechte des Quellsystems** — kein Zugriff dort = kein Zugriff hier. Quelle: support.claude.com/en/articles/11176164 · `[offiziell]`
+- **Zwei Typen:** Remote-Connectors (Standard, überall inkl. Cowork, für Cloud/SaaS) vs. Desktop-Extensions (lokal, nur Claude Desktop + Code, NICHT Cowork-Web/claude.ai). Quelle: support.claude.com/en/articles/11725091 · 2026-04-15 · `[offiziell]`
+- **Wichtig für Cowork:** Remote-Connectors laufen über **Anthropics Cloud**, nicht über das lokale Netz — ein eigener MCP-Server muss aus Anthropics IP-Ranges über das öffentliche Internet erreichbar sein (sonst Anthropic-IPs in der Firewall allowlisten). Quelle: support.claude.com/en/articles/11175166 · 2026-04-02 · `[offiziell]`
+- **Gmail/Drive/Calendar Funktionsumfang:** Gmail = lesen/suchen, Entwürfe erstellen (**kein Versand durch Claude**), Labels/Threads; nur Anhang-Metadaten. Calendar = Events sehen/anlegen/ändern/löschen. Drive = Docs/Sheets/Slides/PDFs/Office lesen, Ordner/Upload; nur Textextraktion. Jede Aktion braucht Freigabe. Quelle: support.claude.com/en/articles/10166901 · `[offiziell]`
+- **Auth:** delegiertes Pro-Nutzer-OAuth, keine Service-Accounts; org-weite Aktivierung macht den Connector nur verfügbar, jeder Nutzer authentifiziert sich selbst. Tokens verschlüsselt, pro Nutzer gescoped. Quelle: support.claude.com/en/articles/14503689 · 2026-06 · `[offiziell]`
+- **Admin-Kontrollen (Team/Enterprise):** pro Connector "Always allow / Needs approval / Blocked" je Aktionskategorie, org-weit erzwungen. Bei 10+ aktiven Connectors "On demand"-Tool-Access nutzen, um Kontext zu sparen. Quelle: support.claude.com/en/articles/11176164 · `[offiziell]`
+
+## 4. Datei-Arbeit & Ergebnis-Dokumente
+
+- **Direktzugriff:** liest/schreibt in verbundenen Ordnern ohne Up-/Download; Ergebnisse landen direkt im Dateisystem. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
+- **Drei Mount-Modi pro Ordner:** read-only, read-write, read-write-no-delete — "Blast Radius" granular begrenzen. Quelle: anthropic.com/engineering/how-we-contain-claude · `[offiziell]`
+- **Erzeugbare Formate:** Excel (.xlsx mit echten Formeln/VLOOKUP/bedingter Formatierung/mehreren Tabs), PowerPoint (.pptx), Word (.docx), PDF, PNG-Visualisierungen, Python-Skripte. Konvertierung und Multi-Step-Pipelines (CSV→Modell→Memo→Deck). Quelle: support.claude.com/en/articles/12111783 · 2026-04-29 · `[offiziell]`
+- **Markdown "Edit with Claude":** Text markieren → gezielt an der Stelle editieren lassen, ohne die Passage im Thread zu beschreiben. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
+- **Best Practice:** dediziertes Arbeitsverzeichnis statt breitem Zugriff; sensible Dateien (Finanzen, Zugangsdaten, Personenakten) NICHT verbinden; wichtige Dateien sichern. Datei-Limit bei Erstellung 30 MB. Quelle: support.claude.com/en/articles/13364135 + /12111783 · `[offiziell]`
+
+## 5. Geplante Aufgaben & Live-Artefakte
+
+- **Scheduled Tasks** via `/schedule` oder Seitenleiste "Scheduled" > "+ New task". Kadenzen: stündlich, täglich, wöchentlich, werktags, manuell; Sonstiges (z.B. alle 6 h, Monatserster, einmaliger Lauf) per natürlicher Sprache. Cron in **lokaler Zeitzone**. Jeder Lauf startet **frisch ohne Erinnerung** → Prompt muss selbst-enthaltend sein (Connectors, Format, Präferenzen). Quelle: support.claude.com/en/articles/13854387 · 2026-04-09 + code.claude.com/docs/en/desktop-scheduled-tasks · `[offiziell]`
+- **Catch-up-Fallstrick:** Beim Aufwachen/App-Start wird **genau ein** verpasster Lauf nachgeholt (zuletzt verpasster Zeitpunkt der letzten 7 Tage), ältere verworfen → eine 9-Uhr-Aufgabe kann um 23 Uhr laufen. Gegenmittel: Zeit-Guardrails in den Prompt ("nur heutige Daten; nach 17 Uhr überspringen"). Quelle: code.claude.com/docs/en/desktop-scheduled-tasks · `[offiziell]`
+- **Live-Artefakte:** persistente, interaktive HTML-Seiten (Tracker, Dashboard), die sich beim Öffnen mit frischen Connector-/Datei-Daten aktualisieren; eigener "Live artifacts"-Tab mit Versionshistorie. Self-contained HTML, nur Chart.js/Grid.js/Mermaid per CDN erlaubt; Daten über `window.cowork.callMcpTool()`. Quelle: support.claude.com/en/articles/14729249 · 2026-04-24 · `[offiziell]`
+- **Artefakt-Vorsicht:** Artefakte nutzen freigegebene Connectors **ohne erneute Rückfrage** → bei datenverändernden Connectors aufpassen. Artefakte sind lokal, (noch) nicht teilbar. Quelle: support.claude.com/en/articles/14729249 · `[offiziell]`
+
+## 6. Computer-Steuerung & Browser
+
+- **Tool-Hierarchie (Best Practice):** 1) dedizierter **Connector** (schnell, präzise, API) → 2) **Claude in Chrome** (Web-App ohne Connector, DOM-bewusst) → 3) **Computer Use** (native Desktop-Apps, App-übergreifend; breitestes, langsamstes Mittel). Quelle: support.claude.com/en/articles/14128542 · 2026-04-24 · `[offiziell]`
+- **Computer Use:** Research Preview, **nur Pro/Max** (Team/Enterprise kein Zugriff). Aktivierung: Settings > General > "Computer use". **Tier-Modell:** Browser/Trading = "read" (nur sehen), Terminals/IDEs = "click" (nur klicken, kein Tippen), alles andere = "full". Keine Sandbox — läuft auf dem echten Desktop. Quelle: support.claude.com/en/articles/14128542 + code.claude.com/docs/en/computer-use · `[offiziell]`
+- **Claude in Chrome:** Beta, alle Bezahlpläne, **nur Google Chrome**. In Cowork: Settings > Connectors > Claude in Chrome > Configure; pro Konversation manuell aktivieren. JavaScript-Ausführung braucht separate Pro-Domain-Freigabe (zentrale Schutzschicht). Pro: nur Haiku 4.5. Quelle: support.claude.com/en/articles/12012173 + /12902446 · `[offiziell]`
+- **Link-Sicherheit (kritisch):** Web-Links in E-Mails/Nachrichten/Dokumenten gelten als verdächtig. **Niemals Links mit Computer-Use anklicken** — URL über die Chrome-MCP öffnen; volle URL vorher prüfen. Quelle: support.claude.com/en/articles/14128542 + MCP-Instruktionen · `[offiziell]`
+- **Keine Finanztransaktionen:** Claude führt nie Trades/Orders/Überweisungen aus; Trading-/Krypto-Apps standardmäßig blockiert. Quelle: support.claude.com/en/articles/14128542 + /12902446 · `[offiziell]`
+
+## 7. Grenzen, Datenschutz, Sicherheit
+
+- **Compliance-Blindspot:** Cowork-Aktivität ist NICHT in Compliance API / Audit-Logs / Daten-Exporten erfasst (alle Pläne inkl. Enterprise). Ersatz nur via OpenTelemetry (Team/Enterprise) — laut Anthropic "kein Ersatz für Audit-Logging". EDR sieht nicht in die VM. Quelle: support.claude.com/en/articles/14479288 + /13455879 · `[offiziell]`
+- **Lokale Datenhaltung:** Verlauf + Projektdaten (Tasks, Memory) liegen lokal, unterliegen NICHT der Standard-Retention und sind von Admins nicht zentral verwalt-/exportierbar. Task-Löschung: sofort aus Verlauf, Backend binnen 30 Tagen. Quelle: support.claude.com/en/articles/13455879 + /13345190 · `[offiziell]`
+- **Admin-Kontrolle grob:** Cowork org-weit an/aus (Organization settings > Capabilities), keine native Pro-Nutzer-Granularität (Enterprise nur über Gruppen/Custom Roles). Geräte-Kontrollen (lokale MCP / Desktop-Extensions abschalten) nur via **MDM** (`isLocalDevMcpEnabled`, `isDesktopExtensionEnabled`). Quelle: support.claude.com/en/articles/13455879 + /14479288 · `[offiziell]`
+- **Mehrschichtige Verteidigung:** RL-Training gegen bösartige Anweisungen, Content-Classifiers gegen Prompt-Injection, Lösch-Bestätigung, Computer-Use-Per-App-Freigabe. Anthropic betont ausdrücklich: "Risiko ist nicht null". Quelle: support.claude.com/en/articles/13364135 · `[offiziell]`
+- **Höherer Verbrauch:** Cowork verbraucht deutlich mehr Usage als Chat (Sub-Agenten, viele Tool-Calls) → einfache Aufgaben im normalen Chat, verwandte Arbeit in einer Session bündeln. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
+
+## Stolpersteine / Fallstricke (Kurzliste)
+
+- **App muss offen + Rechner wach** bleiben, sonst stoppen (auch geplante) Aufgaben. `[offiziell]`
+- **Windows-Installationsfallen:** "VM service not running" (alter .exe/Squirrel-Installer statt MSIX bzw. gestoppter CoworkVMService) und "EXDEV: cross-device link not permitted" (VM-Image kreuzt Laufwerksgrenze → Speicherort auf C:\ zurücksetzen). `[offiziell]`
+- **Prompt-Injection real:** PromptArmor demonstrierte ~48 h nach Launch eine Exfiltration über weißen 1-pt-Text in einem Word-Dokument (Upload von Finanzdaten via Files API). Bestätigt "Risiko nicht null". Quelle: winbuzzer.com / promptarmor.com · `[extern]`
+- **Möglicher Bug (unbestätigt):** GitHub-Issue zu "Personal plugin skills not mounted in Cowork container despite enabled in UI". `[extern, nicht verifiziert]` — relevant für Franks Frage "sind meine Skills in Cowork installiert".
+
+## Betrifft eigene Werkzeuge / Kopplung
+
+- **Bug-Almanach-Rückkopplung:** Es gibt KEINEN `bugs/<kategorie>/cowork.md`-Almanach. Per Kopplungsregel A wird hier NICHT im Vorbeigehen ein halber Almanach angelegt — stattdessen Vorschlag, mit `bug-almanach-recherche` einen Cowork-Almanach zu erstellen (Kandidaten: Windows-Install-Fehler, Prompt-Injection, Catch-up-Timing, Skill-Mount-Bug).
+- **Taxonomie:** Cowork wurde als Sammeleintrag in 12-neues abgelegt. Bei wachsender Bedeutung Promotion zu eigener Kategorie (z.B. `12-cowork`, "Neues" rückt auf 13) — siehe Vorschläge.
