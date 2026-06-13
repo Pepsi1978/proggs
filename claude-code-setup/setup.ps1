@@ -265,13 +265,11 @@ Write-Host "  Installiert: $Installed | Uebersprungen: $Skipped" -ForegroundColo
 Write-Host ""
 Write-Host "[6/8] MCP Server einrichten..." -ForegroundColor Yellow
 
-Write-Host "  sequential-thinking installieren ... " -NoNewline
-try {
-    claude mcp add --scope user sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking 2>&1 | Out-Null
-    Write-Host "OK" -ForegroundColor Green
-} catch {
-    Write-Host "(bereits installiert oder Fehler)" -ForegroundColor Yellow
-}
+# Keine MCP-Server hier installieren.
+# sequential-thinking wurde 2026-06-13 bewusst entfernt (redundant zu think-tank,
+# das dieselbe think-Funktion bietet). doctor-lite/startup-checks warnen aktiv davor —
+# ein erneutes Hinzufuegen wuerde die "wieder konfiguriert (redundant)"-Schleife reaktivieren.
+Write-Host "  keine MCP-Server via Setup (think-tank separat verwaltet)" -ForegroundColor Green
 
 # ---------------------------------------------------
 # 7. Security Tools (Parry)
@@ -385,7 +383,7 @@ Write-Host ""
 Write-Host "  Plugins:        31 (24 official + 7 superpowers-marketplace)"
 Write-Host "  Skills:          5 (auto-verify-iterate, cross-platform, undo-changes, android-clean-architecture, android-ninja)"
 Write-Host "  Hooks:          $hookCount Dateien deployed nach ~/.claude/hooks/"
-Write-Host "  MCP Server:      sequential-thinking"
+Write-Host "  MCP Server:      keine (think-tank separat verwaltet)"
 Write-Host "  Security:        Parry (Prompt-Injection-Scanner)"
 Write-Host "  Dev-Tools:       Bun, Deno, Rust, Docker, .NET SDK"
 Write-Host "  Agent Teams:     Aktiviert (experimentell)"
