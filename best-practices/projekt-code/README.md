@@ -71,7 +71,8 @@ projekt-code/
 └── claude-tooling/
     ├── best-practices-mcp-server.md           ← MCP-Server-Bau (Stand 2026-06-03, MCP TS-SDK 1.27.1/1.29.0, zod v4, Spec 2025-11-25) — Gegenstueck zu bugs/claude-tooling/mcp-server.md
     ├── best-practices-python-windows.md       ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
-    └── best-practices-cowork.md               ← Cowork-Desktop-App nutzen (Stand 2026-06-13, Research-Preview/GA) — noch ungepaart (kein Bug-Almanach)
+    ├── best-practices-cowork.md               ← Cowork-Desktop-App nutzen (Stand 2026-06-13, Research-Preview/GA) — noch ungepaart (kein Bug-Almanach)
+    └── best-practices-claude-code-desktop-vs-cli.md  ← Claude Code Desktop-App vs. CLI: was geht, was nur in der CLI (Stand 2026-06-13, Desktop-Redesign 14.04.2026) — ungepaart
 ```
 
 Vorhandene Kategorien & Dateien:
@@ -83,7 +84,7 @@ Vorhandene Kategorien & Dateien:
 **web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
 **assets** (-icon-building, -3d-visual-quality) ·
 **peripherie** (-stream-deck) ·
-**claude-tooling** (-mcp-server, -python-windows, -cowork)
+**claude-tooling** (-mcp-server, -python-windows, -cowork, -claude-code-desktop-vs-cli)
 (jede Datei mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/<kategorie>/`).
 
 Dateiname-Konvention: `best-practices-<software>.md`. Inhalt beginnt mit
