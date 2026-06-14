@@ -149,6 +149,7 @@ Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 | **Weitere LLM-APIs** (Cohere, Together, Fireworks, Perplexity, Bedrock, Azure, Cerebras, Vertex, HF) | [`apis/other-llm-apis.md`](apis/other-llm-apis.md) | 2026-06-08 | Survey | „Cohere", „Together", „Fireworks", „Perplexity", „Bedrock", „Cerebras", „Vertex AI", „SigV4" |
 | **OAuth / Device-Code / PKCE / Token-Refresh** | [`apis/oauth-device-code.md`](apis/oauth-device-code.md) | 2026-06-08 | ~30 | „OAuth", „Device Code", „RFC 8628", „PKCE", „Token Refresh", „refresh token rotation", „Login einbauen" |
 | **CLI-Impersonation / Abo-OAuth** (Codex-Abo, Hermes-Trick, Anthropic-Ban) | [`apis/cli-impersonation-subscription-auth.md`](apis/cli-impersonation-subscription-auth.md) | 2026-06-08 | — | „als Codex CLI ausgeben", „ChatGPT-Abo per Geraetekode", „Hermes", „Codex device-auth", „Abo statt API-Key", „Copilot-Token" |
+| **TTS-Provider** (Edge-TTS, Google Chirp 3 HD, Android-native) | [`apis/tts-provider.md`](apis/tts-provider.md) | 2026-06-14 | 17 | „TTS", „Text-to-Speech", „Vorlesen", „Vorlese-Funktion", „Edge-TTS", „Sec-MS-GEC", „No audio received", „Chirp 3 HD", „de-DE-Chirp3-HD", „SSML", „TextToSpeech", „Stimme/Voice", „ElevenLabs" |
 
 ---
 

@@ -51,7 +51,8 @@ projekt-code/
 │   ├── best-practices-local-openai-compatible.md  ← Ollama/llama.cpp/LM Studio/vLLM
 │   ├── best-practices-other-llm-apis.md        ← Cohere/Together/Fireworks/Perplexity/Bedrock/Azure/Cerebras/Vertex/HF
 │   ├── best-practices-oauth-device-code.md     ← OAuth-Geraetecode-Flow
-│   └── best-practices-cli-impersonation-subscription-auth.md  ← CLI-Abo-Auth (ToS beachten)
+│   ├── best-practices-cli-impersonation-subscription-auth.md  ← CLI-Abo-Auth (ToS beachten)
+│   └── best-practices-tts-provider.md          ← Edge-TTS + Google Chirp 3 HD (Stand 2026-06-14, dt. Stimmen; ElevenLabs ausgelassen) — Gegenstueck zu bugs/apis/tts-provider.md
 ├── desktop/
 │   ├── best-practices-dotnet-csharp.md
 │   ├── best-practices-swift-appkit.md         ← macOS Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
@@ -79,7 +80,7 @@ Vorhandene Kategorien & Dateien:
 **agents** (-orchestrator-agent) ·
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing) ·
 **android-build** (-gradle, -r8) ·
-**apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth) ·
+**apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
 **desktop** (-dotnet-csharp, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
 **web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
 **assets** (-icon-building, -3d-visual-quality) ·
