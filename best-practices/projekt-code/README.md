@@ -34,7 +34,8 @@ projekt-code/
 │   ├── best-practices-jetpack-compose.md      ← Android-UI (Stand 2026-06-02, BOM 2025.01.01 / 2026.03.00)
 │   ├── best-practices-android-platform.md     ← Framework/Platform-SDK (Stand 2026-06-02, targetSdk 36, Room 2.7.0, WorkManager 2.10.0)
 │   ├── best-practices-firebase-billing.md     ← Firebase + Play Billing (Stand 2026-06-02, Billing 7.1.1, Firebase BOM 34.11.0)
-│   └── best-practices-google-drive-backup.md  ← Drive-Backup/Cloud-Sync der Room-DB (Stand 2026-06-14, Drive REST v3 / appDataFolder; Orphan-Cleanup, Multi-Device, Quota-Unit-Modell ab Mai 2026, GoogleAuthUtil→AuthorizationClient) — Gegenstueck zu bugs/android/google-drive-backup.md
+│   ├── best-practices-google-drive-backup.md  ← Drive-Backup/Cloud-Sync der Room-DB (Stand 2026-06-14, Drive REST v3 / appDataFolder; Orphan-Cleanup, Multi-Device, Quota-Unit-Modell ab Mai 2026, GoogleAuthUtil→AuthorizationClient) — Gegenstueck zu bugs/android/google-drive-backup.md
+│   └── best-practices-workmanager-notifications.md  ← Reminder (AlarmManager one-shot+reschedule, Wochentag-Zeiten) + Hintergrund-Backups (WorkManager/UIDT) + Notifications/POST_NOTIFICATIONS + OEM-Killings (Stand 2026-06-14, targetSdk 35 / WorkManager 2.11.x) — Gegenstueck zu bugs/android/workmanager-notifications.md
 ├── android-build/
 │   ├── best-practices-gradle.md               ← Gradle/AGP/R8/KSP (Stand 2026-06-02)
 │   ├── best-practices-r8.md                    ← R8 Shrinker/Optimizer — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
@@ -80,7 +81,7 @@ projekt-code/
 
 Vorhandene Kategorien & Dateien:
 **agents** (-orchestrator-agent) ·
-**android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup) ·
+**android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup, -workmanager-notifications) ·
 **android-build** (-gradle, -r8, -play-store-release) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
 **desktop** (-dotnet-csharp, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
