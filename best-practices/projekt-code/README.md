@@ -58,6 +58,7 @@ projekt-code/
 │   └── best-practices-tts-provider.md          ← Edge-TTS + Google Chirp 3 HD (Stand 2026-06-14, dt. Stimmen; ElevenLabs ausgelassen) — Gegenstueck zu bugs/apis/tts-provider.md
 ├── desktop/
 │   ├── best-practices-dotnet-csharp.md
+│   ├── best-practices-windows-overlay.md      ← WPF-Overlay-Fenster (Stand 2026-06-14, .NET 10 / WPF, Win 10/11) — Always-on-top ohne Fokus-Klau, Click-through, globale Hotkeys, DPI/Multi-Monitor, Tray/Autostart/Single-Instance, Z-Order — Gegenstueck zu bugs/desktop/windows-overlay.md
 │   ├── best-practices-swift-appkit.md         ← macOS Swift/AppKit Overlay-Apps (Stand 2026-06-02, Swift 6.3.2 / Xcode 26.5, macOS 13+)
 │   ├── best-practices-3d-metal-scenekit-macos.md  ← 3D nativ macOS (Stand 2026-06-13, Metal 4 / macOS 26 Tahoe) — SceneKit soft-deprecated, RealityKit ist der Weg
 │   ├── best-practices-3d-dotnet-directx-windows.md  ← 3D nativ Windows C#/.NET (Stand 2026-06-13, .NET 10 / Stride 4.3) — Stride/Silk.NET statt verwaistem Veldrid
@@ -84,7 +85,7 @@ Vorhandene Kategorien & Dateien:
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup, -workmanager-notifications) ·
 **android-build** (-gradle, -r8, -play-store-release) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
-**desktop** (-dotnet-csharp, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
+**desktop** (-dotnet-csharp, -windows-overlay, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
 **web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
 **assets** (-icon-building, -3d-visual-quality) ·
 **peripherie** (-stream-deck) ·
