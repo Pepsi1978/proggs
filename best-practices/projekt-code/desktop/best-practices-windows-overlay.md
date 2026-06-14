@@ -321,11 +321,13 @@ Quellen: [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winu
 
 | Best-Practice-Abschnitt | Bug-Almanach-Abschnitt (`bugs/desktop/windows-overlay.md`) |
 |-------------------------|------------------------------------------------------------|
-| §2 (Always-on-top), §10 (Z-Order) | A1–A11 (Win11-Z-Order/ShowInTaskbar/NOACTIVATE/SetForegroundWindow/AppBar/Flash) |
-| §3 (Click-through), §5 (Transparenz) | C1–C11 (TRANSPARENT/LAYERED/Touch/Hover/Airspace/Blitz/runde Ecken/ClearType) |
-| §4 (Globale Hotkeys) | H1–H9 (RegisterHotKey/NOREPEAT/Unregister/LL-Hook-GC/Timeout/UIPI/F12/Push-to-Talk) |
-| §6 (Multi-Monitor & DPI) | D1–D8 (System-Aware-Default/Manifest/DIP-Pixel/DpiChanged/Mixed-HWND) |
-| §7–§9 (Tray/Autostart/Single-Instance) | T1–T10 (TaskbarCreated/Icon-DPI/GUID/Run-Quotes/StartupTask/Mutex/Activate) |
+| §2 (Always-on-top), §10 (Z-Order) | A1–A20 (Win11-Z-Order/ShowInTaskbar/NOACTIVATE/SetForegroundWindow/Topmost-vs-Topmost/Popup/Win+D/virt.Desktop/Monitor-Sleep/Secure-Desktop/Maximize) |
+| §3 (Click-through), §5 (Transparenz) | C1–C16 (TRANSPARENT/LAYERED/Touch/Hover/Airspace/Blitz/runde Ecken/IsHitTestVisible/DropShadow/Window-Sharing/RDP/Resize) |
+| §4 (Globale Hotkeys) | H1–H16 (RegisterHotKey/NOREPEAT/LL-Hook-GC/Timeout/UIPI/Push-to-Talk/SharpHook-Deploy/Multi-Window/Anti-Cheat/AltGr/NHotkey) |
+| §6 (Multi-Monitor & DPI) | D1–D16 (System-Aware/Manifest/DIP-Pixel/DpiChanged/Popup-DPI/ContextMenu/ToolWindow/MessageBox/CenterScreen/.NET7-Regression) |
+| §7–§9 (Tray/Autostart/Single-Instance) | T1–T22 (TaskbarCreated/Icon-DPI/GUID/Run-Quotes/Mutex/ContextMenu-Z/Doppelklick/Win11-ToolTip/Middle-Click/Pipe/MSIX/StartupApproved/Task-Scheduler) |
+| §5 (Transparenz & runde Ecken), §1 (Architektur) | W1–W10 (WindowChrome-Maße/NonClientFrameEdges/GlassFrame/Resize-Flacker/Mica-Acrylic-Lebenszyklus/Backdrop-Frame) |
+| §1 (Architektur), §7–§9 | P1–P9 (Fluent-Theme-Crash/.NET10-TextBox/High-Contrast/BinaryFormatter-Clipboard/Trimming-AOT/Single-File/ShutdownMode/Leaks) |
 
 > **Checkpoint:** Vollständig recherchiert (7 Researcher parallel, Microsoft Learn zuerst, Stand 2026-06-14,
 > .NET 10 / WPF, Windows 10/11). Kern für TVO/ClaudeVoiceOverlay: `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`-Topmost
