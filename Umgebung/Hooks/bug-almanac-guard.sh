@@ -98,6 +98,7 @@ case "$fpl" in
         # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
         # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
         composeSignal=0
+        hiltSignal=0
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -114,9 +115,17 @@ except Exception:
             probe="$probe
 $ti_extra"
             case "$probe" in *@Composable*|*setContent*) composeSignal=1;; esac
+            # Hilt/Dagger-DI-Signale (Annotationen im Datei-/Tool-Input) -> hilt-dagger.md (hat Vorrang).
+            case "$probe" in
+              *@HiltAndroidApp*|*@AndroidEntryPoint*|*@HiltViewModel*|*@HiltWorker*|*@InstallIn*|*@Module*|*@AssistedInject*|*@Provides*|*@Binds*) hiltSignal=1;;
+            esac
             ;;
         esac
-        if [ "$composeSignal" -eq 1 ]; then
+        # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
+        case "$fpl" in *module.kt) hiltSignal=1;; esac
+        if [ "$hiltSignal" -eq 1 ]; then
+            slug="hiltdagger"; file="hilt-dagger.md"; name="Hilt/Dagger Dependency Injection (KSP)"
+        elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
             slug="kotlin"; file="kotlin.md"; name="Kotlin (Sprache/K2/Coroutines/Compose-Kontext)"

@@ -103,6 +103,8 @@ try {
         # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
         # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
         $composeSignal = $false
+        $hiltSignal = $false
+        if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -113,8 +115,12 @@ try {
                 if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
             } catch {}
             if ($probe -match '@Composable' -or $probe -match 'setContent') { $composeSignal = $true }
+            # Hilt/Dagger-DI-Signale (Annotationen im Datei-/Tool-Input) -> hilt-dagger.md (hat Vorrang).
+            if ($probe -match '@HiltAndroidApp' -or $probe -match '@AndroidEntryPoint' -or $probe -match '@HiltViewModel' -or $probe -match '@HiltWorker' -or $probe -match '@InstallIn' -or $probe -match '@Module' -or $probe -match '@AssistedInject' -or $probe -match '@Provides' -or $probe -match '@Binds') { $hiltSignal = $true }
         }
-        if ($composeSignal) {
+        if ($hiltSignal) {
+            $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
+        } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {
             $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
