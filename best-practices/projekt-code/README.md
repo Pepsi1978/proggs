@@ -37,7 +37,8 @@ projekt-code/
 │   └── best-practices-google-drive-backup.md  ← Drive-Backup/Cloud-Sync der Room-DB (Stand 2026-06-14, Drive REST v3 / appDataFolder; Orphan-Cleanup, Multi-Device, Quota-Unit-Modell ab Mai 2026, GoogleAuthUtil→AuthorizationClient) — Gegenstueck zu bugs/android/google-drive-backup.md
 ├── android-build/
 │   ├── best-practices-gradle.md               ← Gradle/AGP/R8/KSP (Stand 2026-06-02)
-│   └── best-practices-r8.md                    ← R8 Shrinker/Optimizer — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
+│   ├── best-practices-r8.md                    ← R8 Shrinker/Optimizer — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
+│   └── best-practices-play-store-release.md    ← Play-Store-Veröffentlichung & Policy (Stand 2026-06-14, Tracks/Rollout/Data-Safety/FGS/Accessibility/PLR/Signing/ASO; targetSdk 35) — Gegenstueck zu bugs/android-build/play-store-release.md
 ├── apis/                                       ← LLM-/Provider-APIs (Stand 2026-06-09) — 1:1-Mirror zu bugs/apis/
 │   ├── best-practices-api-integration-general.md  ← anbieteruebergreifend (Resilienz/Rate-Limit/SSE/Timeout/Secrets)
 │   ├── best-practices-multi-provider.md        ← Provider-Gateway/Fallback-Architektur (ungepaart, kein Bug-Almanach)
@@ -80,7 +81,7 @@ projekt-code/
 Vorhandene Kategorien & Dateien:
 **agents** (-orchestrator-agent) ·
 **android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup) ·
-**android-build** (-gradle, -r8) ·
+**android-build** (-gradle, -r8, -play-store-release) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
 **desktop** (-dotnet-csharp, -swift-appkit, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
 **web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
