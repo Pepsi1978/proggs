@@ -132,6 +132,23 @@ Sein `~/proggs/CLAUDE.md`-Setup ist stark CLI-zentriert. Mapping:
 
 ---
 
+## §7 — Bezug zum Bug-Almanach (Gegenseite)
+
+Gegenseite: `bugs/claude-tooling/claude-code-desktop-vs-cli.md` (45+ belegte Fallen, mit Fix-Status).
+
+| Best-Practice-Abschnitt (hier) | Bug-Abschnitt (dort) |
+|--------------------------------|----------------------|
+| §1 Tabs/Voraussetzungen | §A (Installation/Start) |
+| §2 gemeinsame Configs | §C (Hooks/Settings), §E4 (MCP-Config-Trennung) |
+| §3.2/§6.2 Worktrees | §F (Worktrees) |
+| §3.7/§6.3 Preview | §H (Preview) |
+| §3.10 Computer Use | §G (Computer Use) |
+| §3.12/§6.6 Environments/Cloud | §I (Cloud/SSH/Session) |
+| §4 „NICHT im Desktop" | §J (Feature-Lücken) |
+| §5 Frank-Mapping (Hooks/Agent-Teams) | §C1/§C5, §J2 |
+| §6.8 Env-Editor | §B (PATH/Env, stille Killer) |
+| §6.9 für Skript/Batch CLI | §J1, §K1 |
+
 ## Quellen
 
 - Offizielle Doku „Desktop application", code.claude.com/docs/en/desktop — Feature-Vergleich + „What's not available in Desktop" (`offiziell`, abgerufen 2026-06-13)
