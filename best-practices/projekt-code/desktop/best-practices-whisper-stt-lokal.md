@@ -198,11 +198,13 @@ Quellen: [groq.com/pricing](https://groq.com/pricing) · [console.groq.com/docs/
 
 | Best-Practice-Abschnitt | Bug-Almanach-Abschnitt (`bugs/desktop/whisper-stt-lokal.md`) |
 |-------------------------|--------------------------------------------------------------|
-| §2 (Engine-Wahl), §4 (GPU/Quantisierung) | E1–E11 (cuDNN/CT2-Pin/Vulkan/WAV-Format/FLAC/Generator/Core-ML/Flash-Attn/Whisper.net) |
-| §5 (VAD & Anti-Halluzination), §3 (Modell/Deutsch) | H1–H9 (Stille-Halluzination/ZDF-Floskeln/Repetition/Drift/Sprach-Autodetect/en-only/Temperature/Atemgeräusche) |
-| §6 (Streaming/Echtzeit) | S1–S7 (Wort-Zersägen/erzwungene-Partials/Buffer-Freeze/RTF>1/Latenz-Floor/Pipeline-Buffering/Timestamps) |
-| §3 (Modellwahl), §4 (Quantisierung) | M1–M4 (OOM/int8-Degradation/Turbo-Übersetzung/Mac-faster-whisper) |
+| §2 (Engine-Wahl), §4 (GPU/Quantisierung) | E1–E29 (cuDNN/CT2-Pin/Vulkan/WAV/FLAC/Generator/Core-ML/Flash-Attn/whisper.cpp-VAD/Server-Leak/RTX50/Batched/Threads/hotwords) |
+| §5 (VAD & Anti-Halluzination), §3 (Modell/Deutsch) | H1–H17 (Stille-/ZDF-Halluzination/Repetition/Drift/Sprach-Autodetect/en-only/large-v3-Regression/no_speech-Loop/Kleinschreibung/ITN/Code-Switching/Dialekt) |
+| §6 (Streaming/Echtzeit) | S1–S19 (Wort-Zersägen/Partials/Buffer-Freeze/Latenz-Floor/VAC-512-Crash/Multi-Stream/WebM/WhisperLiveKit/WhisperLive) |
+| §3 (Modellwahl), §4 (Quantisierung) | M1–M9 (OOM/int8-Degradation/Turbo-Übersetzung/Mac-faster-whisper/primeline-CT2-Stopp/distil-Timestamps/NeMo) |
 | §7 (Lokal vs. Groq-Cloud) | C1–C6 (Latenz-Spikes/Netzausfall/10s-Abrechnung/Data-Retention/no_speech_prob) |
+| §2 (Engine-Wahl), §5 (VAD) | A1–A11 (Resampling/Float-Normalisierung/Stereo/NAudio-WASAPI/AVAudioEngine-AirPods/ffmpeg-Pegel/Overflow/AGC-Echo) |
+| §2 (Engine-Wahl: Whisper.net/WhisperKit) | N1–N14 (GpuDevice/CUDA-Runtime/Publish-Pfad/CorruptedWave/Concurrency · WhisperKit installTap/manifest.plist/ANE/Leak/Compile/v1.0-Breaking) |
 
 > **Checkpoint:** Vollständig recherchiert (7 Researcher parallel, offizielle Repos zuerst, Stand 2026-06-14).
 > Kern für Franks Overlays: **lokal als Default** — Mac whisper.cpp+Metal, Windows faster-whisper int8 (C# via
