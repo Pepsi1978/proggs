@@ -642,3 +642,38 @@
 - [ ] **Interceptors:** Token als Application-Interceptor, 401-Refresh per `Authenticator`; Retry/Timeout im Application-Layer; Logging an der richtigen Position. (I1, I2, I5, I6)
 - [ ] **Sicherheit:** HTTP-Logging in Release `Level.NONE` + `redactHeader`; falls Cert-Pinning → Backup-Pin gesetzt. (SEC1, SEC3)
 - [ ] **Annotationen:** `@FormUrlEncoded` bei `@Field`; baseUrl mit `/`, Endpoints ohne führenden `/`; `@Path`-Namen exakt. (A1, A4, A9)
+
+---
+
+## Bezug: Bug-Abschnitt ↔ Best-Practices
+
+> Gegenseite (wie macht man es richtig):
+> [`best-practices/projekt-code/android/best-practices-retrofit-okhttp-moshi.md`](../../best-practices/projekt-code/android/best-practices-retrofit-okhttp-moshi.md)
+> (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
+
+| Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |
+|----------------------|------------------------------------|
+| R1/R2/R3 Retrofit-R8 · R9 ProGuard | §5.1 mitgelieferte Keep-Regeln |
+| R5 codegen-Adapter · R6 Reflection-Modelle · R7 Enums | §2.1 codegen, §5.2/§5.3 Keeps |
+| R8 Missing class TLS-Provider | §5.4 dontwarn |
+| R10 missing_rules.txt | §5.5/§5.6 Release-Test/mapping |
+| M1 `@JsonClass` vergessen · M2 KSP-Migration | §2.1/§2.2 codegen/KSP |
+| M4 Adapter-Reihenfolge | §2.3 Adapter-Reihenfolge |
+| M5 Polymorphie | §2.5 Polymorphie/Enums |
+| D1/D2 null/Defaults · D4 `@Json` | §2.4 `@Json`/null-Safety, §2.7 DTO↔Domain |
+| D6 Enum-Fallback | §2.5 Enum-Fallback |
+| S1 suspend-Crash · S5 errorBody | §3.5 HttpException/IOException/errorBody |
+| S2 Response vs T | §3.2 Response vs T |
+| S3 204-NPE | §3.6 204→Unit |
+| S4 Result-Wrapper | §3.9 CallAdapter |
+| S6 Cancellation | §3.4 Cancellation rethrow |
+| S8 suspend/`Call<T>` | §3.1 suspend |
+| I1/I2 Auth/Redirect/401 | §4.2/§4.3 Token/Authenticator |
+| I3/I5 Logging | §4.4 Logging-Position |
+| I4 Body konsumiert | §4.7 peekBody |
+| I6/I7 proceed/Retry-Leak | §4.6 Retry+close |
+| L4/L5 Timeouts | §6.1/§6.2/§6.3 Timeouts |
+| L6/L7 Client/Pool | §1.1/§1.8 ein Client |
+| SEC1 Logging-Secrets | §6.4 sicheres Logging |
+| SEC2–SEC4 Pinning | §6.5/§6.6 Pinning |
+| A9 baseUrl | §1.6 baseUrl/Endpoints |
