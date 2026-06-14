@@ -99,6 +99,7 @@ case "$fpl" in
         # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
         composeSignal=0
         hiltSignal=0
+        netSignal=0
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -119,12 +120,18 @@ $ti_extra"
             case "$probe" in
               *@HiltAndroidApp*|*@AndroidEntryPoint*|*@HiltViewModel*|*@HiltWorker*|*@InstallIn*|*@Module*|*@AssistedInject*|*@Provides*|*@Binds*) hiltSignal=1;;
             esac
+            # Retrofit/OkHttp/Moshi-Networking-Signale -> retrofit-okhttp-moshi.md (nach Hilt, vor Compose/Kotlin).
+            case "$probe" in
+              *retrofit2*|*Retrofit.Builder*|*okhttp3*|*OkHttpClient*|*HttpLoggingInterceptor*|*CertificatePinner*|*@JsonClass*|*com.squareup.moshi*|*Moshi.Builder*|*@GET*|*@POST*|*@PUT*|*@DELETE*|*@PATCH*|*@FormUrlEncoded*|*@Multipart*) netSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
         case "$fpl" in *module.kt) hiltSignal=1;; esac
         if [ "$hiltSignal" -eq 1 ]; then
             slug="hiltdagger"; file="hilt-dagger.md"; name="Hilt/Dagger Dependency Injection (KSP)"
+        elif [ "$netSignal" -eq 1 ]; then
+            slug="networking"; file="retrofit-okhttp-moshi.md"; name="Android-Networking (Retrofit/OkHttp/Moshi)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else

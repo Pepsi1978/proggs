@@ -113,6 +113,7 @@ try {
         # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
         $composeSignal = $false
         $hiltSignal = $false
+        $netSignal = $false
         if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
@@ -126,9 +127,13 @@ try {
             if ($probe -match '@Composable' -or $probe -match 'setContent') { $composeSignal = $true }
             # Hilt/Dagger-DI-Signale (Annotationen im Datei-/Tool-Input) -> hilt-dagger.md (hat Vorrang).
             if ($probe -match '@HiltAndroidApp' -or $probe -match '@AndroidEntryPoint' -or $probe -match '@HiltViewModel' -or $probe -match '@HiltWorker' -or $probe -match '@InstallIn' -or $probe -match '@Module' -or $probe -match '@AssistedInject' -or $probe -match '@Provides' -or $probe -match '@Binds') { $hiltSignal = $true }
+            # Retrofit/OkHttp/Moshi-Networking-Signale -> retrofit-okhttp-moshi.md (nach Hilt, vor Compose/Kotlin).
+            if ($probe -match 'retrofit2' -or $probe -match 'Retrofit\.Builder' -or $probe -match 'okhttp3' -or $probe -match 'OkHttpClient' -or $probe -match 'HttpLoggingInterceptor' -or $probe -match 'CertificatePinner' -or $probe -match '@JsonClass' -or $probe -match 'com\.squareup\.moshi' -or $probe -match 'Moshi\.Builder' -or $probe -match '@GET' -or $probe -match '@POST' -or $probe -match '@PUT' -or $probe -match '@DELETE' -or $probe -match '@PATCH' -or $probe -match '@FormUrlEncoded' -or $probe -match '@Multipart') { $netSignal = $true }
         }
         if ($hiltSignal) {
             $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
+        } elseif ($netSignal) {
+            $slug = 'networking'; $file = 'retrofit-okhttp-moshi.md'; $name = 'Android-Networking (Retrofit/OkHttp/Moshi)'
         } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {
