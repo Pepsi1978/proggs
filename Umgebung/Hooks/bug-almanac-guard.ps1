@@ -105,6 +105,7 @@ try {
         $composeSignal = $false
         $hiltSignal = $false
         $netSignal = $false
+        $media3Signal = $false
         if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
@@ -120,11 +121,15 @@ try {
             if ($probe -match '@HiltAndroidApp' -or $probe -match '@AndroidEntryPoint' -or $probe -match '@HiltViewModel' -or $probe -match '@HiltWorker' -or $probe -match '@InstallIn' -or $probe -match '@Module' -or $probe -match '@AssistedInject' -or $probe -match '@Provides' -or $probe -match '@Binds') { $hiltSignal = $true }
             # Retrofit/OkHttp/Moshi-Networking-Signale -> retrofit-okhttp-moshi.md (nach Hilt, vor Compose/Kotlin).
             if ($probe -match 'retrofit2' -or $probe -match 'Retrofit\.Builder' -or $probe -match 'okhttp3' -or $probe -match 'OkHttpClient' -or $probe -match 'HttpLoggingInterceptor' -or $probe -match 'CertificatePinner' -or $probe -match '@JsonClass' -or $probe -match 'com\.squareup\.moshi' -or $probe -match 'Moshi\.Builder' -or $probe -match '@GET' -or $probe -match '@POST' -or $probe -match '@PUT' -or $probe -match '@DELETE' -or $probe -match '@PATCH' -or $probe -match '@FormUrlEncoded' -or $probe -match '@Multipart') { $netSignal = $true }
+            # Media3/ExoPlayer-Audio-Wiedergabe-Signale -> media3-exoplayer.md (nach Hilt/Net, vor Compose/Kotlin).
+            if ($probe -match 'media3' -or $probe -match 'ExoPlayer' -or $probe -match 'MediaSession' -or $probe -match 'MediaController' -or $probe -match 'MediaItem' -or $probe -match 'PlayerView' -or $probe -match 'DefaultLoadControl' -or $probe -match 'setMediaItem') { $media3Signal = $true }
         }
         if ($hiltSignal) {
             $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
         } elseif ($netSignal) {
             $slug = 'networking'; $file = 'retrofit-okhttp-moshi.md'; $name = 'Android-Networking (Retrofit/OkHttp/Moshi)'
+        } elseif ($media3Signal) {
+            $slug = 'media3'; $file = 'media3-exoplayer.md'; $name = 'Audio-Wiedergabe (Media3/ExoPlayer)'
         } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {

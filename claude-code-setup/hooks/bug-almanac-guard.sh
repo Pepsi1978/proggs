@@ -113,6 +113,7 @@ case "$fpl" in
         composeSignal=0
         hiltSignal=0
         netSignal=0
+        media3Signal=0
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -137,6 +138,10 @@ $ti_extra"
             case "$probe" in
               *retrofit2*|*Retrofit.Builder*|*okhttp3*|*OkHttpClient*|*HttpLoggingInterceptor*|*CertificatePinner*|*@JsonClass*|*com.squareup.moshi*|*Moshi.Builder*|*@GET*|*@POST*|*@PUT*|*@DELETE*|*@PATCH*|*@FormUrlEncoded*|*@Multipart*) netSignal=1;;
             esac
+            # Media3/ExoPlayer-Audio-Wiedergabe-Signale -> media3-exoplayer.md (nach Hilt/Net, vor Compose/Kotlin).
+            case "$probe" in
+              *media3*|*ExoPlayer*|*MediaSession*|*MediaController*|*MediaItem*|*PlayerView*|*DefaultLoadControl*|*setMediaItem*) media3Signal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
@@ -145,6 +150,8 @@ $ti_extra"
             slug="hiltdagger"; file="hilt-dagger.md"; name="Hilt/Dagger Dependency Injection (KSP)"
         elif [ "$netSignal" -eq 1 ]; then
             slug="networking"; file="retrofit-okhttp-moshi.md"; name="Android-Networking (Retrofit/OkHttp/Moshi)"
+        elif [ "$media3Signal" -eq 1 ]; then
+            slug="media3"; file="media3-exoplayer.md"; name="Audio-Wiedergabe (Media3/ExoPlayer)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
