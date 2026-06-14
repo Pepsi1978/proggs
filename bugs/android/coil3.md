@@ -515,3 +515,51 @@
 - [ ] **Video aus Netz:** Network-Fetcher UND VideoFrameDecoder zusammen. (D3)
 - [ ] **Preview:** `AsyncImagePreviewHandler`/`LocalInspectionMode` statt leerem Preview. (P1, P2)
 - [ ] **R8/Release:** R8 (nicht ProGuard); `-dontwarn coil3.PlatformContext` in 3.0.4 gesetzt; `META-INF/services` nicht excluden; Release-Build mit echtem Bild-Load getestet. (R1, R3)
+
+---
+
+## Bezug: Bug-Abschnitt ↔ Best-Practices
+
+> Gegenseite (wie macht man es richtig):
+> [`best-practices/projekt-code/android/best-practices-coil3.md`](../../best-practices/projekt-code/android/best-practices-coil3.md)
+> (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
+
+| Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |
+|----------------------|------------------------------------|
+| M1 Koordinaten/Imports | §2.2 coil-bom/gleiche Version |
+| M3 Coil/Factory weg | §1.1 EIN Init-Weg, §1.4 Library |
+| M4 PlatformContext | §7.4 Multiplatform |
+| M6 state StateFlow | §3.8 state beobachten |
+| M7 Default-Placeholder | §3.3 placeholder am Composable |
+| N1 kein Default-Fetcher · N6 INTERNET/Cleartext | §2.1 coil-network-okhttp |
+| N2 alpha-Artefakt | §2.2 coil-bom |
+| N3 ktor-Engine · N8 KMP | §2.3 Multiplatform ktor3 |
+| N7 Cache-Control ignoriert | §4.4 Cache-Control aus |
+| AI1 instabiler ImageRequest · AI4 Keyer | §3.5 model stabil |
+| AI2 3.1.0-Flicker | §3.6 SizeResolver |
+| AI3 crossfade Cache-Hit | §3.4 crossfade global |
+| AI5 Subcompose-Perf | §3.7 nicht in LazyList |
+| AI6 size/contentScale | §3.2 Größe + contentScale |
+| AI7 placeholderMemoryCacheKey | §3.3 placeholder/Key |
+| AI8 Empty/ORIGINAL | §3.1 AsyncImage, §3.6 SizeResolver |
+| P1–P3 Preview | §7.1 PreviewHandler |
+| C1 mehrere Loader | §1.1/§1.2 Singleton |
+| C2 zwei DiskCaches · C6 cacheDir-NPE | §4.2 Disk-Cache/EIN Dir |
+| C3 DiskCache-Format | §4.5 Force-Refresh |
+| C4 Größe im Key | §4.3 CachePolicy |
+| C5 Cache-Größe | §4.1 Memory-Cache |
+| OOM1 Size.ORIGINAL · OOM7 maxBitmapSize | §5.1 Zielgröße |
+| OOM2 Hardware-Bitmap | §5.2 allowHardware |
+| OOM3 BitmapPool entfernt | §5.4 kein BitmapPool |
+| OOM4 bitmapConfig | §5.3 RGB_565 |
+| OOM5 GIF-Speicher · OOM6 transformations | §5.5/§5.6 |
+| D1 VideoFrameDecoder · D4 ohne Extension | §6.1 manuell registrieren |
+| D3 Video aus Netz | §2.1 + §6.1 (Fetcher + Decoder) |
+| D5 GIF-Decoder | §6.4 GIF API-Level |
+| D6 components killt Defaults · D8 Reihenfolge | §6.5 Custom-Loader |
+| D7 coil-video Android-only | §6.6 Android-only |
+| D9 SVG viewBox · D10 SVG-String | §6.3 SVG |
+| R1/R2 PlatformContext · R3 ServiceLoader · R4 Release-Crash | §7.2 R8 |
+| R5 Mehrfach-Init/Leak | §1.1 EIN Init-Weg, §1.3 Application-Context |
+| R6 onSuccess/onError feuern nie | §7.5 Lifecycle |
+| Fix-Status / Upgrade | §8.1 Upgrade 3.5.0 |
