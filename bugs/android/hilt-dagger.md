@@ -672,9 +672,36 @@
 
 ---
 
-## Bezug: Bug-Abschnitt ↔ Best-Practices
+## 🔗 Bezug: Bug-Abschnitt ↔ Best-Practices
 
-> Eine eigene Best-Practices-Datei für Hilt existiert noch nicht; Hilt wird in
-> `best-practices/projekt-code/android/best-practices-kotlin.md` (Hilt-Zeile: „aktuelle, KSP2-fähige
-> Version; alle Processor auf `ksp`") gestreift. Bei Bedarf später `best-practices-hilt-dagger.md`
-> anlegen und hier eine wechselseitige Abschnitts-Bezugstabelle ergänzen.
+> Gegenseite (wie macht man es richtig):
+> [`best-practices/projekt-code/android/best-practices-hilt-dagger.md`](../../best-practices/projekt-code/android/best-practices-hilt-dagger.md)
+> (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
+
+| Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |
+|----------------------|------------------------------------|
+| V1 Metadata 2.1.0 · V2 KSP-Suffix | §1.4 KSP an Kotlin koppeln |
+| V3 Plugin fehlt · V5 Reihenfolge | §1.5 Gradle-Plugin · §1.6 Plugin-Reihenfolge |
+| V4 generierte Klassen fehlen | §1.2/§1.3 Dependency-Slots |
+| V6 KSP2-Inkompat | §1.1 KSP statt kapt (KSP2-Hinweis) |
+| V7 enableAggregatingTask | §1.7 enableAggregatingTask |
+| A1/A2 `@HiltAndroidApp`/Manifest | §3.4 `@HiltAndroidApp` |
+| A3 Fragment ohne Host-Activity | §3.5 `@AndroidEntryPoint` |
+| A4/A5 Field-Reihenfolge/private | §3.2 Field-Injection |
+| A6 BroadcastReceiver · A7 ContentProvider · A8 Accessor | §3.6 `@EntryPoint` |
+| M1 `@Binds` abstract · M9 Effizienz | §2.3/§2.4 `@Binds`/`@Provides` |
+| M2 fehlendes `@InstallIn` · M10 | §2.1 `@InstallIn` Component |
+| M3 Missing Binding | §2.3 Brücke wählen |
+| M4 Duplicate Bindings | §2.6 Qualifier |
+| M5 Scope-Mismatch · M6 ViewModelComponent | §2.2 Scopes sparsam |
+| M7 Context | §2.7 Context-Qualifier |
+| M8 leeres Multibinding | §2.8 Multibindings |
+| VM1/VM6 ViewModel | §4.1 `@HiltViewModel` |
+| VM3/VM7 geteilter Scope | §4.4 Nav-Graph teilen |
+| VM4 SavedStateHandle | §4.3 SavedStateHandle |
+| VM5 Assisted | §3.7/§4.5 Assisted Injection |
+| W1–W6 `@HiltWorker` | §6.1–6.3 `@HiltWorker` |
+| R1/R4 Release-R8 | (Almanach-spezifisch; BP §1.7 Aggregation als Prävention) |
+| R6 kapt+KSP | §1.1 KSP statt kapt |
+| MT1–MT5 Multi-Module | §5.1–5.7 Multi-Module |
+| MT6–MT11 Tests | §6.4–6.6 Test-Setup |
