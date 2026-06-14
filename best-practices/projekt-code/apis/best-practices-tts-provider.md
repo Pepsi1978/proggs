@@ -237,11 +237,14 @@
 
 | Best-Practice-Abschnitt | Bug-Almanach-Abschnitt (`bugs/apis/tts-provider.md`) |
 |-------------------------|------------------------------------------------------|
-| §1, §3 (Edge Auth/Streaming) | E1 (Sec-MS-GEC 403), E2 (Uhr/Clock-Skew), E3 (No audio received / Datacenter-IP), E4 (Chromium-Version), E5 (eigenes SSML) |
-| §4 (Chirp Format/SSML/Limit) | G1 (Streaming kein MP3), G2 (SSML nur synchron), G3 (5000-Byte / 2-Byte-Umlaute), G4 (Pause nur in `markup`), G5 (pitch nicht unterstützt) |
-| §7 (Offline-Fallback) | N1 (Engine nicht garantiert), N2 (LANG_MISSING_DATA) |
-| §8/§9 (Caching/Retry) | C1 (Cache-Key unvollständig), C2 (Retry bei 4xx zwecklos) |
-| §10 (Secrets) | S1 (API-Key in URL/Repo) |
+| §1, §3 (Edge Endpunkt/Auth/Streaming) | E1–E9 (Sec-MS-GEC/Clock-Skew/Datacenter-IP/UA/Origin/MUID/Rate-Limit/Frame-Parsing) |
+| §3, §5, §6 (Edge Stimmen/SSML/Text) | ET1–ET11 (Custom-SSML/Styles/Multilingual/Syntax/lange Texte/Escaping/UTF-8/Voice-ID/MP3-Knackser) |
+| §2, §4 (Chirp Endpunkt/Format/SSML/Limit) | G1–G14 (Streaming-MP3/SSML-sync/5000-Byte/markup-Pause/Locale/pitch/Base64/Long-Audio/Modellfamilien) |
+| §2, §4, §9, §10 (Google Auth/Limits/Retry/Secrets) | GA1–GA21 (Key-Leak/Restriktion/ADC/OAuth/Quota 200 RPM/Free-Tier/DSGVO/Region/languageCode) |
+| §7 (Offline-Fallback) | N1–N14 (Init-Race/setLanguage/Samsung-Engine/UtteranceListener/Doze/Offline-Stimme) |
+| §5, §8, §9, §11 (Pipeline/Caching/Retry/Architektur) | AC1–AC19 (MediaPlayer-State/Geister-Audio/Coroutine-Cancel/atomares Schreiben/Cache-Key/EncryptedPrefs/OkHttp-WS) |
+| §3, §5, §10, §11 (Edge im Browser/Latenz/Secrets/Architektur) | W1–W14 (SW-Lifecycle/Offscreen-Doc/Keepalive/AudioContext/decodeAudioData/crbug-1285664/Key-im-Bundle/CSP) |
+| §8/§9 (Caching/Retry) | C1 (Retry bei 4xx zwecklos), C2 (Fallback-Kette) |
 
 ---
 
