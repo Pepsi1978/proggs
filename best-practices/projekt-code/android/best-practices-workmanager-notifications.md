@@ -203,13 +203,14 @@
 | §1 (Architektur) | A1, W1 (WorkManager nicht zeitgenau) |
 | §2 (Reminder-Pattern) | A1 (setRepeating-Drift), A6 (DST), A7 (vergangener Trigger) |
 | §3 (Exact/Policy) | A2 (SecurityException), A3 (USE_EXACT_ALARM-Reject), A4 (Doze-9-Min), A5 (Permission-Widerruf) |
-| §4 (PendingIntent) | N4 (FLAG_IMMUTABLE), A8 (Request-Code-Kollision) |
-| §5 (Notifications) | N1–N9 (Channel-Immutability/POST_NOTIFICATIONS/Trampolin/Full-Screen/Heads-up) |
-| §6 (Reboot/Reschedule) | B1–B7 (BOOT_COMPLETED/Force-Stop/Update/Direct-Boot/exported/FGS-aus-Boot) |
-| §7 (WorkManager-Backup) | W1–W9 (Periodic-Timing/Constraints/Expedited/Quota/Hilt/Deadline) |
-| §8 (FGS/UIDT) | F1–F6 (dataSync-Timeout/Quota/UIDT/unsichtbarer FGS) |
-| §9 (OEM-Killings) | O1–O6 (OEM-Kills/OTA-Reset/Honor-Frequenz/Battery-Exemption) |
+| §4 (PendingIntent) | N4 (FLAG_IMMUTABLE), A8 (Request-Code-Kollision), A10 (cancel-Slot-Leak) |
+| §5 (Notifications) | N1–N21 (Channel-Immutability/POST_NOTIFICATIONS/Trampolin/Full-Screen/Heads-up/ID-Kollision/Gruppen/DND/Cooldown/Bitmap-Limit) |
+| §6 (Reboot/Reschedule) | B1–B17 (BOOT_COMPLETED/Force-Stop/Update/Direct-Boot/FBE/exported/FGS-aus-Boot/Action-Tippfehler) |
+| §7 (WorkManager-Backup) | W1–W25 (Periodic-Timing/Constraints/Expedited/Quota/Hilt-KSP/Init/Testing/Compose/R8) |
+| §8 (FGS/UIDT) | F1–F15 (dataSync-Timeout/6h-Budget/shortService/StartNotAllowed/Typ-Mismatch/While-in-use/UIDT) |
+| §9 (OEM-Killings) | O1–O18 (OEM-Kills/OTA-Reset/MIUI-Autostart/Samsung-Guardians/PowerGenie/ColorOS/FCM-Prio/dontkillmyapp-API) |
 
-> **Checkpoint:** Vollständig recherchiert (7 Researcher, offizielle Android-Quellen, Juni 2026).
+> **Checkpoint:** Vollständig recherchiert in 2 Durchläufen (Best-Practices + dedizierte Bug-Recherche,
+> je 7 Researcher; Bug-Lauf mit IssueTracker-/reale-Vorfälle-Fokus, Juni 2026).
 > Kern für BestJournal: Reminder von `setRepeating` auf **One-shot + Reschedule (inexakt, java.time)**
 > umstellen, Backups in **WorkManager** (UIDT fürs lange „Jetzt sichern"), beides getrennt halten.
