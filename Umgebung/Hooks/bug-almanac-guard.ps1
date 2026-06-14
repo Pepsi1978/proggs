@@ -95,10 +95,17 @@ try {
         $slug = 'r8'; $file = 'r8.md'; $name = 'R8 (Code-Shrinker/Optimizer/Obfuscator)'
     } elseif ($fpl -match 'build\.gradle(\.kts)?$' -or $fpl -match 'settings\.gradle(\.kts)?$' -or $fpl -match '/gradle/' -or $fpl -match 'gradle\.properties$' -or $fpl -match 'gradle-wrapper') {
         $slug = 'gradle'; $file = 'gradle.md'; $name = 'Build - Gradle (AGP/R8)'
-    } elseif ($fpl -match 'androidmanifest\.xml$' -or $fpl -match '(service|receiver|worker|migrations?|database)\.kt$') {
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker/Room-DB/Migration.
-        # Diese enthalten kein @Composable -> kein Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
-        $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager/Room-Runtime)'
+    } elseif ($fpl -match '(database|dao)\.kt$' -or $fpl -match 'migration[^/]*\.kt$') {
+        # Room-Persistenz (Dateiname): Database/DAO/Migration. MUSS vor dem androidplatform- und dem
+        # generischen .kt-Zweig stehen. Room hat seit 2026-06-15 einen eigenen Almanach (room.md);
+        # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
+        # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
+        $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
+    } elseif ($fpl -match 'androidmanifest\.xml$' -or $fpl -match '(service|receiver|worker)\.kt$') {
+        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
+        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
+        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+        $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
     } elseif ($fpl -match '\.kts?$') {
         # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
         # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
@@ -107,6 +114,7 @@ try {
         $netSignal = $false
         $media3Signal = $false
         $coilSignal = $false
+        $roomSignal = $false
         if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
@@ -126,6 +134,9 @@ try {
             if ($probe -match 'media3' -or $probe -match 'ExoPlayer' -or $probe -match 'MediaSession' -or $probe -match 'MediaController' -or $probe -match 'MediaItem' -or $probe -match 'PlayerView' -or $probe -match 'DefaultLoadControl' -or $probe -match 'setMediaItem') { $media3Signal = $true }
             # Coil-3-Bild-/Video-Laden-Signale -> coil3.md (nach Hilt/Net/Media3, vor Compose/Kotlin).
             if ($probe -match 'coil3' -or $probe -match 'io\.coil-kt' -or $probe -match 'AsyncImage' -or $probe -match 'rememberAsyncImagePainter' -or $probe -match 'SubcomposeAsyncImage' -or $probe -match 'ImageLoader' -or $probe -match 'ImageRequest' -or $probe -match 'SingletonImageLoader') { $coilSignal = $true }
+            # Room-Persistenz-Signale (Entity/DAO/Database/TypeConverter ohne *Dao.kt/*Database.kt-Dateinamen)
+            # -> room.md (nach Hilt/Net/Media3/Coil, vor Compose/Kotlin). @Query bewusst NICHT (Retrofit-Konflikt).
+            if ($probe -match '@Entity' -or $probe -match '@Dao' -or $probe -match '@Database' -or $probe -match '@TypeConverter' -or $probe -match '@ProvidedTypeConverter' -or $probe -match 'RoomDatabase' -or $probe -match 'androidx\.room' -or $probe -match '@PrimaryKey' -or $probe -match '@ColumnInfo' -or $probe -match '@Embedded' -or $probe -match '@AutoMigration' -or $probe -match '@Upsert') { $roomSignal = $true }
         }
         if ($hiltSignal) {
             $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
@@ -135,6 +146,8 @@ try {
             $slug = 'media3'; $file = 'media3-exoplayer.md'; $name = 'Audio-Wiedergabe (Media3/ExoPlayer)'
         } elseif ($coilSignal) {
             $slug = 'coil3'; $file = 'coil3.md'; $name = 'Bild-/Video-Laden (Coil 3)'
+        } elseif ($roomSignal) {
+            $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
         } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {

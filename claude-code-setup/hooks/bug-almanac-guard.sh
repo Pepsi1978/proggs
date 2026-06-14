@@ -103,10 +103,17 @@ case "$fpl" in
         slug="r8"; file="r8.md"; name="R8 (Code-Shrinker/Optimizer/Obfuscator)";;
     *build.gradle|*build.gradle.kts|*settings.gradle|*settings.gradle.kts|*/gradle/*|*gradle.properties|*gradle-wrapper*)
         slug="gradle"; file="gradle.md"; name="Build - Gradle (AGP/R8)";;
-    *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt|*migration.kt|*migrations.kt|*database.kt)
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker/Room-DB/Migration.
-        # Diese enthalten kein @Composable -> kein Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
-        slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager/Room-Runtime)";;
+    *database.kt|*dao.kt|*migration*.kt)
+        # Room-Persistenz (Dateiname): Database/DAO/Migration. MUSS vor dem androidplatform- und dem
+        # generischen .kt-Zweig stehen. Room hat seit 2026-06-15 einen eigenen Almanach (room.md);
+        # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
+        # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
+        slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)";;
+    *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt)
+        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
+        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
+        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+        slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)";;
     *.kt|*.kts)
         # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
         # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
@@ -115,6 +122,7 @@ case "$fpl" in
         netSignal=0
         media3Signal=0
         coilSignal=0
+        roomSignal=0
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -147,6 +155,11 @@ $ti_extra"
             case "$probe" in
               *coil3*|*io.coil-kt*|*AsyncImage*|*rememberAsyncImagePainter*|*SubcomposeAsyncImage*|*ImageLoader*|*ImageRequest*|*SingletonImageLoader*) coilSignal=1;;
             esac
+            # Room-Persistenz-Signale (Entity/DAO/Database/TypeConverter ohne *Dao.kt/*Database.kt-Dateinamen)
+            # -> room.md (nach Hilt/Net/Media3/Coil, vor Compose/Kotlin). @Query bewusst NICHT (Retrofit-Konflikt).
+            case "$probe" in
+              *@Entity*|*@Dao*|*@Database*|*@TypeConverter*|*@ProvidedTypeConverter*|*RoomDatabase*|*androidx.room*|*@PrimaryKey*|*@ColumnInfo*|*@Embedded*|*@AutoMigration*|*@Upsert*) roomSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
@@ -159,6 +172,8 @@ $ti_extra"
             slug="media3"; file="media3-exoplayer.md"; name="Audio-Wiedergabe (Media3/ExoPlayer)"
         elif [ "$coilSignal" -eq 1 ]; then
             slug="coil3"; file="coil3.md"; name="Bild-/Video-Laden (Coil 3)"
+        elif [ "$roomSignal" -eq 1 ]; then
+            slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
