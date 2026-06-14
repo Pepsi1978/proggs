@@ -101,6 +101,7 @@ case "$fpl" in
         hiltSignal=0
         netSignal=0
         media3Signal=0
+        coilSignal=0
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -129,6 +130,10 @@ $ti_extra"
             case "$probe" in
               *media3*|*ExoPlayer*|*MediaSession*|*MediaController*|*MediaItem*|*PlayerView*|*DefaultLoadControl*|*setMediaItem*) media3Signal=1;;
             esac
+            # Coil-3-Bild-/Video-Laden-Signale -> coil3.md (nach Hilt/Net/Media3, vor Compose/Kotlin).
+            case "$probe" in
+              *coil3*|*io.coil-kt*|*AsyncImage*|*rememberAsyncImagePainter*|*SubcomposeAsyncImage*|*ImageLoader*|*ImageRequest*|*SingletonImageLoader*) coilSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
@@ -139,6 +144,8 @@ $ti_extra"
             slug="networking"; file="retrofit-okhttp-moshi.md"; name="Android-Networking (Retrofit/OkHttp/Moshi)"
         elif [ "$media3Signal" -eq 1 ]; then
             slug="media3"; file="media3-exoplayer.md"; name="Audio-Wiedergabe (Media3/ExoPlayer)"
+        elif [ "$coilSignal" -eq 1 ]; then
+            slug="coil3"; file="coil3.md"; name="Bild-/Video-Laden (Coil 3)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
