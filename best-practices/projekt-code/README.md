@@ -37,7 +37,8 @@ projekt-code/
 │   ├── best-practices-google-drive-backup.md  ← Drive-Backup/Cloud-Sync der Room-DB (Stand 2026-06-14, Drive REST v3 / appDataFolder; Orphan-Cleanup, Multi-Device, Quota-Unit-Modell ab Mai 2026, GoogleAuthUtil→AuthorizationClient) — Gegenstueck zu bugs/android/google-drive-backup.md
 │   ├── best-practices-workmanager-notifications.md  ← Reminder (AlarmManager one-shot+reschedule, Wochentag-Zeiten) + Hintergrund-Backups (WorkManager/UIDT) + Notifications/POST_NOTIFICATIONS + OEM-Killings (Stand 2026-06-14, targetSdk 35 / WorkManager 2.11.x) — Gegenstueck zu bugs/android/workmanager-notifications.md
 │   ├── best-practices-hilt-dagger.md           ← Dependency Injection Hilt/Dagger + KSP (Stand 2026-06-14, Hilt 2.55 / hilt-nav-compose+hilt-work 1.2.0 / KSP 2.1.0-1.0.29 / Kotlin 2.1.0; Module/Scopes, Constructor-Injection, @HiltViewModel/hiltViewModel, Assisted, Multi-Module, KSP-statt-kapt, @HiltWorker, HiltAndroidRule-Tests; Upgrade-Hinweis androidx.hilt 1.3.0) — Gegenstueck zu bugs/android/hilt-dagger.md
-│   └── best-practices-retrofit-okhttp-moshi.md ← Networking/API-Layer (Stand 2026-06-14, Retrofit 2.11.0 / OkHttp 4.12.0 / Moshi 1.15.1 / KSP 2.1.0-1.0.29; Singleton-Client+Retrofit via Hilt, Moshi-codegen/KSP, suspend+sealed-Result, Authenticator/Interceptor-Reihenfolge, R8-Keep den Libs überlassen, callTimeout, Secret-sicheres Logging, Cert-Pinning) — Gegenstueck zu bugs/android/retrofit-okhttp-moshi.md
+│   ├── best-practices-retrofit-okhttp-moshi.md ← Networking/API-Layer (Stand 2026-06-14, Retrofit 2.11.0 / OkHttp 4.12.0 / Moshi 1.15.1 / KSP 2.1.0-1.0.29; Singleton-Client+Retrofit via Hilt, Moshi-codegen/KSP, suspend+sealed-Result, Authenticator/Interceptor-Reihenfolge, R8-Keep den Libs überlassen, callTimeout, Secret-sicheres Logging, Cert-Pinning) — Gegenstueck zu bugs/android/retrofit-okhttp-moshi.md
+│   └── best-practices-media3-exoplayer.md      ← Audio-Wiedergabe Media3/ExoPlayer (Stand 2026-06-14, media3 1.5.1 exoplayer/common/session; Use-Case TTS in Compose, teils Hintergrund; DefaultLifecycleObserver, release+null, ein Player wiederverwenden + Playlist-API, MediaSessionService+MediaController, handleAudioFocus+USAGE_MEDIA/SPEECH, Compose remember/DisposableEffect/ViewModel, LoadControl für kurze Clips; Hinweis Compose-State-Holder erst ab 1.6.0) — Gegenstueck zu bugs/android/media3-exoplayer.md
 ├── android-build/
 │   ├── best-practices-gradle.md               ← Gradle/AGP/R8/KSP (Stand 2026-06-02)
 │   ├── best-practices-r8.md                    ← R8 Shrinker/Optimizer — Play-Store-Release-Fokus, A–J (Stand 2026-06-03, AGP 8.7.3 / 8.10.0)
@@ -86,7 +87,7 @@ projekt-code/
 
 Vorhandene Kategorien & Dateien:
 **agents** (-orchestrator-agent) ·
-**android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup, -workmanager-notifications, -hilt-dagger, -retrofit-okhttp-moshi) ·
+**android** (best-practices-kotlin, -jetpack-compose, -android-platform, -firebase-billing, -voice-assistant-trigger, -3d-filament-android, -google-drive-backup, -workmanager-notifications, -hilt-dagger, -retrofit-okhttp-moshi, -media3-exoplayer) ·
 **android-build** (-gradle, -r8, -play-store-release) ·
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
 **desktop** (-dotnet-csharp, -windows-overlay, -swift-appkit, -macos-overlay, -whisper-stt-lokal, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·

@@ -522,3 +522,43 @@
 - [ ] **Quelle:** ByteArray via `ByteArrayDataSource` (kein `open()`) + `setMimeType`; lokal statt Netzwerk; `onPlayerError` mit `prepare()`-Retry. (A1, A2, A4, A7)
 - [ ] **Latenz:** eigener `DefaultLoadControl` `bufferForPlaybackMs ≈ 250` für kurze Clips (1.5.1-Default 2500). (A6, TTS2)
 - [ ] **Version:** media3 1.5.1 deckt TTS1/T5/A3/F6 ab; ein Upgrade auf ≥ 1.6.0 entschärft B3 + Buffer-Latenz ohne Code. (Fix-Status)
+
+---
+
+## Bezug: Bug-Abschnitt ↔ Best-Practices
+
+> Gegenseite (wie macht man es richtig):
+> [`best-practices/projekt-code/android/best-practices-media3-exoplayer.md`](../../best-practices/projekt-code/android/best-practices-media3-exoplayer.md)
+> (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
+
+| Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |
+|----------------------|------------------------------------|
+| L1 nie released · L5 stop vs release · L6 Doppel-Release | §2.2 release+null |
+| L2 falscher Lifecycle-Punkt | §2.1 DefaultLifecycleObserver |
+| L3 Hintergrund stoppt in onStop | §2.4 Vordergrund vs Hintergrund |
+| C1 Compose Mehrfach-Player · C3 toter Button | §7.1/§7.2 Player im ViewModel/remember |
+| C4 Compose-Thread | §3.1 ein Thread · §7.4 LaunchedEffect |
+| T1 wrong thread · T2 Background-Erstellung | §3.1 ein Thread |
+| T3 SurfaceView-Thread | §7.6 kein Surface (Audio) |
+| T4 Listener-Thread | §3.2 Listener-Thread |
+| T5 MediaSessionService Wrong-Thread (1.0.1) | §6.1 Service-Container |
+| F1 spielt über andere · F6 Focus-Resume | §4.1 handleAudioFocus |
+| F3 USAGE_ASSISTANT-Crash | §4.2 USAGE_MEDIA+SPEECH |
+| F4 playWhenReady täuscht | §4.4 isPlaying |
+| F5 becoming noisy | §4.3 becoming noisy |
+| B1 Player in VM | §6.1 MediaSessionService |
+| B2 Android14 FGS-Typ | §6.2 Manifest |
+| B3/B4/B5 FGS-Crashes | §4.1 handleAudioFocus · §6.2/§6.6 |
+| B6 onGetSession/Setup | §6.1 Service-Lifecycle |
+| B7 POST_NOTIFICATIONS | §6.2 Manifest/Permissions |
+| B8 Media-Button/Resume | §6.6 Media-Buttons/Resumption |
+| S3 Re-Use nach release | §5.1 eine Instanz |
+| S4 ohne prepare · S5 Replay · S6 nach stop | §5.3 prepare/play/replay |
+| S8 ConcatenatingMediaSource | §5.2 Playlist-API |
+| S9 rapide Clips/Race | §5.4 Clip-Zuordnung |
+| A1 ByteArray-Falle · A2 MIME | §5.6 ByteArrayDataSource |
+| A3 MP3 CBR (1.4.1) | §1.1 Version |
+| A4 Decoder-Init · A7 Endlos-Buffering | §8.1 Fehler/Retry |
+| A6/TTS2 Anlauf-Latenz | §5.5 LoadControl |
+| TTS1 STATE_ENDED kurz (1.1.1) | §1.1 Version · §5.4 |
+| TTS4 Pops/Tool-Wahl | §5.2 Playlist (gapless) |
