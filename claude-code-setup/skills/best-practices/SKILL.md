@@ -109,6 +109,11 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie). Bei **Projekt-Code**-
    Laeufen zusaetzlich die **Bug-Almanach-Rueckkopplung** ausfuehren (Abschnitt „Kopplung zum
    Bug-Almanach"): gefundene Bugs nach `bugs/<bereich>.md` zurueckschreiben + Bezugs-Tabellen synchron halten.
+   **Self-Test (seit 2026-06-15):** danach `python ~/proggs/bugs/health.py` laufen lassen — die coupling-Pruefung
+   faengt fehlende/asymmetrische Bezugs-Tabellen sofort (alle vier Checks muessen gruen sein). Wird dabei ein
+   SOFTWARE-gebundener Almanach neu angelegt/zurueckgekoppelt, traegt er das strukturierte
+   `> **Anker:** <label>=<version>`-Feld (SYSTEM.md §7) + ggf. einen `check-version-anchor.py`-Eintrag
+   (Details: Skill `bug-almanach-recherche`, Schritt 6, Punkte 3-5).
 6. **Auswertung ausgeben** (siehe Format unten).
 
 ## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)

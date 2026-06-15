@@ -239,6 +239,23 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
    Dateimuster einen Zweig ergaenzen (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE
    Kategorie) in BEIDEN Varianten + `claude-code-setup/hooks/` spiegeln. Ein blosser
    Kategorie-Wechsel einer bestehenden Datei braucht KEINE Hook-Aenderung.
+3. **Versions-Anker setzen (seit 2026-06-15, NUR software-gebundene Almanache):** Direkt unter
+   dem `Stand:`-Header ein maschinenlesbares Feld `> **Anker:** <label>=<version>` setzen
+   (SYSTEM.md §7). Wenn die INSTALLIERTE Version == der fuer den Almanach relevanten ist
+   (claude-code, python, node …): zusaetzlich einen Eintrag in `bugs/check-version-anchor.py` →
+   `ANCHORS` mit `live`-Tupel `(cmd, regex)` ergaenzen (Live-Abgleich). Bei PROJEKT-gebundenen
+   Bereichen (Gradle/.csproj/Toolchain pinnt die Version → installiert != relevant) `live: None`
+   (nur Anker-Vollstaendigkeit, kein Live-Abgleich → kein Falschalarm).
+4. **Semantischen Prompt-Trigger ergaenzen (seit 2026-06-15, Schicht 1b):** Falls der Bereich
+   eindeutige Stichwoerter hat, ihn in `~/.claude/hooks/bug-almanac-hint.py` → `AREAS` aufnehmen
+   (`"<kategorie>/<bereich>": ("<Anzeigename>", [eindeutige Mehrwort-Stichwoerter, lowercase])`),
+   damit der UserPromptSubmit-Trigger auch Konzept-/Planungsarbeit am neuen Bereich faengt (BEVOR
+   eine Datei beruehrt wird). Nach `claude-code-setup/hooks/` spiegeln. Stichwoerter spezifisch
+   halten (Mehrwort), damit keine Fehlalarme.
+5. **Self-Test (PFLICHT vor Commit):** `python bugs/health.py` laufen lassen — alle vier Checks
+   (coupling, guard-coverage, **version-anchor**, Stand-Verfall) muessen gruen sein. Ein neuer
+   Almanach ohne Bezugs-Tabelle, ohne Guard-Mapping oder (software-gebunden) ohne Anker-Feld
+   faellt hier sofort auf.
 
 ### Schritt 7 — Committen + pushen
 

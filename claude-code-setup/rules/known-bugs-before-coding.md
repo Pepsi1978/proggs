@@ -61,6 +61,7 @@ wird bei Fehlern (Stufe B) und Hochrisiko (Stufe C) weiterhin erzwungen.
 | Schicht | Mechanismus | Wann |
 |---------|-------------|------|
 | 1 — Praesenz | `bug-almanac-index` Hook (SessionStart) blendet die Almanach-Liste ein | jeder Session-Start |
+| 1b — Prompt-Trigger | `bug-almanac-hint` Hook (UserPromptSubmit, seit 2026-06-15) scannt den Prompt auf Bereichs-Stichwoerter und injiziert EINMALIG pro Bereich/Session einen passiven Almanach-Hinweis — faengt Konzept-/Planungsarbeit VOR dem ersten Datei-Edit (kein Block) | bei jedem Prompt |
 | 2 — Erzwingung | `bug-almanac-guard` Hook (PreToolUse Edit/Write) BLOCKIERT bereichstypische Edits. **Almanach vorhanden:** bis ZUERST der Almanach-Kurzcheck UND DANN (falls vorhanden) der Best-Practices-Kurzcheck gelesen wurde (Stufe A, `Read` mit `limit=80`); bei Hochrisiko-Bereichen zusaetzlich bis der Almanach-VOLLTEXT gelesen wurde (Stufe C, full-Marker). **KEIN Almanach (seit 2026-06-07):** bis eine bewusste Quittung gesetzt ist (siehe unten) — der "neuer Bereich"-Trigger ist damit nicht mehr zahnlos. Erkennt auch komplett neue Sprachen generisch (`.rs/.go/.rb/.java/.php/.lua/.c/.cpp/.dart/.vue/.svelte/.ex/.clj/.scala/.hs/.zig/.nim/.pl/.groovy`) | bei Datei-Beruehrung |
 | 2b — Fehler-Bruecke | `bug-case-auto-writer` Hook (PostToolUseFailure) verweist bei einem neuen Fehler zusaetzlich auf den passenden Almanach und stoesst bei hartnaeckigem Fehler ohne Almanach eine Recherche an | bei jedem Tool-Fehler |
 | 3 — Verhalten | diese Regel | immer geladen |

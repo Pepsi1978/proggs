@@ -71,3 +71,19 @@ Siehe `~/.claude/rules/cowork-git-push.md`. Kernpunkte für Cowork-Logik:
 
 ## Offene 4 Almanache aus Welle 3 (vom Skill nachzuholen, NICHT manuell)
 kotlin (Stand 2026-06-02), jetpack-compose (2026-06-02), gradle (2026-06-02), firebase-billing (2026-06-02).
+
+## Neues Logik-System (W3, 2026-06-15) — die Update-Skills MUESSEN es befolgen
+Die bestehenden Skills `bug-almanach-recherche` (Schritt 6, Punkte 3-5) und `best-practices` (Schritt 5)
+wurden 2026-06-15 an diese Mechanismen angepasst — die beiden NEUEN Update-Skills erben/uebernehmen sie:
+- **Versions-Anker (W3-1):** Jeder software-gebundene Almanach traegt `> **Anker:** <label>=<version>` unter
+  dem Stand-Header (SYSTEM.md §7). Bei Live-abgleichbarer Software (installiert==relevant): Eintrag in
+  `bugs/check-version-anchor.py` → `ANCHORS` mit `live`-Tupel; projekt-gebunden → `live: None`.
+- **Semantischer Prompt-Trigger (W3-2):** Neue/aktualisierte Bereiche mit eindeutigen Stichwoertern in
+  `~/.claude/hooks/bug-almanac-hint.py` → `AREAS` pflegen (+ Repo-Spiegelung).
+- **Self-Test:** Nach jeder Welle `python bugs/health.py` — alle VIER Checks gruen (coupling, guard-coverage,
+  version-anchor, Stand-Verfall), bevor committet wird.
+- **gh-Status-Pflicht (aus der claude-hooks-Re-Recherche 2026-06-15):** Researcher-Web-Snippets sind bei
+  Versions-/Status-Angaben unzuverlaessig; der Hauptagent verifiziert jeden Issue-Status HART per
+  `gh issue view <nr> --repo <org>/<repo> --json state,stateReason,closedAt` (NOT_PLANNED=won't fix,
+  COMPLETED=gefixt). Das war im claude-hooks-Lauf entscheidend (korrigierte mehrere Researcher-Angaben).
+- **Memory-Governance (W3-3):** Nicht Teil der Almanach/BP-Skills, aber verwandt: `claude-code-setup/tools/memory-staleness.py`.
