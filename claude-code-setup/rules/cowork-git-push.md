@@ -80,6 +80,16 @@ frisch aus GitHub aufgebaut.
   Mount-Arbeitsbaum (CRLF/LFS).
 - **Token:** persistent in `~/proggs/.git/credentials` — niemals roh ins Log.
 
+## Robustheit im Skript (Stand 2026-06-15, #46807)
+`ensure_setup` setzt zusaetzlich: `core.preloadIndex true`, `index.version 4`, `index.skipHash true`
+(ab Git 2.40), `gc.auto 0`, `safe.directory` fuer git-dir UND work-tree, sowie `GIT_TERMINAL_PROMPT=0`
+(kein Haengen an Auth-Prompts). fsmonitor/untrackedCache bewusst AUS (auf FUSE unzuverlaessig).
+
+**Falle 8 — origin wandert (Non-Fast-Forward):** `do_push_with_retry` setzt den eigenen Commit bei
+Ablehnung automatisch per **git-internem 3-Wege-Merge** (kein Worktree, KEIN Force) auf den frischen
+origin-Stand auf und pusht erneut — bis `COWORK_PUSH_RETRIES` (Default 3). Fremde Commits bleiben
+erhalten; bei echtem Konflikt (gleiche Datei beidseitig) sauberer Abbruch.
+
 ## Selbst-Check vor „gepusht"
 - [ ] `setup` lief, „Push-Zugang OK" gesehen?
 - [ ] Über `cowork-git.sh` gepusht (nicht nacktes git)?

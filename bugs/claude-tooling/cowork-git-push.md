@@ -262,6 +262,13 @@ Verfügung → Issue-Status aus den verlinkten Quellen, nicht per `gh` hart veri
 | §6/§7 Git-LFS | §G1–G4 |
 | §12 writeback · §13 case-insensitivity | §H2, §H3 |
 
+## Umsetzung im Skript (Stand 2026-06-15, #46807)
+`cowork-git.sh` deckt jetzt zusaetzlich ab: §15 Non-Fast-Forward → **Auto-Retry** (git-interner
+3-Wege-Merge, kein Force, erhaelt fremde Commits, `COWORK_PUSH_RETRIES`); §22 Performance →
+`core.preloadIndex`/`index.version 4`/`index.skipHash`/`gc.auto 0`; §20 dubious ownership →
+`safe.directory`-Vorsorge; plus `GIT_TERMINAL_PROMPT=0`. Deterministisch getestet (Non-FF-Retry
+erhaelt fremde Commits; echter Konflikt bricht sauber ab; Datenverlust-Waechter weiter aktiv).
+
 ## Pflicht-Checkliste vor `push` aus Cowork
 - [ ] `bash cowork-git.sh setup` lief, „Push-Zugang OK" gesehen.
 - [ ] Push über `cowork-git.sh` (nie nacktes `git push` aus der VM).

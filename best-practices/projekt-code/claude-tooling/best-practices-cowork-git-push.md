@@ -274,6 +274,11 @@ sauber mit `wsl --shutdown` abschließen.
 
 ---
 
+## Im Skript umgesetzt (Stand 2026-06-15, #46807)
+`cowork-git.sh` setzt jetzt um: §B2 Performance-Configs (preloadIndex/index.version 4/skipHash/gc.auto 0);
+§C4 `GIT_TERMINAL_PROMPT=0`; §D2 Non-Fast-Forward-Auto-Retry (git-interner 3-Wege-Merge, kein Force,
+erhaelt fremde Commits); §E4 `safe.directory`-Vorsorge. fsmonitor (§B3) bewusst weiterhin AUS.
+
 ## Bezug: Best-Practice ↔ Bug-Almanach (`bugs/claude-tooling/cowork-git-push.md`)
 
 | Best-Practice | adressiert Almanach-Abschnitt |
