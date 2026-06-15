@@ -248,6 +248,20 @@ durch eine git-Version behoben, sondern durch das Workaround-Skript `cowork-git.
 VM-Platte + Datenverlust-Wächter + git-internes Commit-Bauen). gh-CLI stand in der VM nicht zur
 Verfügung → Issue-Status aus den verlinkten Quellen, nicht per `gh` hart verifiziert.
 
+## Bezug: Bug-Abschnitt ↔ Best-Practice (`best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md`)
+
+| Bug-Abschnitt | Best-Practice |
+|---------------|---------------|
+| §1 Lock · §10 Truncation · §11 Stale · §18 Plumbing | §A1, §A2, §C1–C3 |
+| §4 fileMode/Symlinks | §B1 |
+| §22 Performance · §14 racy-git/Index | §B2, §B3 |
+| §8 CRLF · §9 Binär/Encoding | §B4, §F1, §F2 |
+| §2 Auth · §21 Klartext-Token | §C4, §E1–E3 |
+| §15 non-fast-forward · §16 Force · §17 Rebase | §D1–D3 |
+| §19 GIT_DIR/Work-Tree · §20 dubious ownership | §E4, §H1 |
+| §6/§7 Git-LFS | §G1–G4 |
+| §12 writeback · §13 case-insensitivity | §H2, §H3 |
+
 ## Pflicht-Checkliste vor `push` aus Cowork
 - [ ] `bash cowork-git.sh setup` lief, „Push-Zugang OK" gesehen.
 - [ ] Push über `cowork-git.sh` (nie nacktes `git push` aus der VM).
