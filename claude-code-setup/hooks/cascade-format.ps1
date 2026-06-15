@@ -27,6 +27,7 @@ $lintResult = $null
 $lintCmd = ""
 $lintFailed = $false
 
+# Tampermonkey .user.js: ueberspringen — nutzt eslint per CLAUDE.md
 if ($filePath -match '\.user\.js$') { exit 0 }
 
 switch ($ext) {

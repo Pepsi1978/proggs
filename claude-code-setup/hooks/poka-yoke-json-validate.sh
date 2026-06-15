@@ -26,3 +26,5 @@ else
     echo "Bitte die Datei sofort reparieren bevor weitergearbeitet wird."
     exit 0
 fi
+
+exit 0

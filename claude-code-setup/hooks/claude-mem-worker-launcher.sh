@@ -88,3 +88,5 @@ fi
 
 echo "$(LOG_PREFIX) Starting claude-mem worker: $BUN $WORKER_SCRIPT --daemon"
 exec "$BUN" "$WORKER_SCRIPT" --daemon
+
+exit 0

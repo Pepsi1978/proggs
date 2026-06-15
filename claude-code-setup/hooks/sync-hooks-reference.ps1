@@ -43,3 +43,5 @@ catch {
     # Silent failure — do not block session end
     exit 0
 }
+
+exit 0

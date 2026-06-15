@@ -106,3 +106,5 @@ case "$ACTION" in
         fi
         ;;
 esac
+
+exit 0

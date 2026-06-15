@@ -24,7 +24,7 @@ repo_dir="$HOME/proggs"
 staged=$(git -C "$repo_dir" diff --cached --name-only 2>/dev/null || true)
 if [ -z "$staged" ]; then exit 0; fi
 
-hook_files=$(echo "$staged" | grep -E '\.(ps1|sh)$' | grep -i 'hook' || true)
+hook_files=$(echo "$staged" | grep -E '\.(ps1|sh)$' | grep -i 'hook' | grep -v 'hook-log' || true)
 if [ -z "$hook_files" ]; then exit 0; fi
 
 # Check each staged hook file for exit 0

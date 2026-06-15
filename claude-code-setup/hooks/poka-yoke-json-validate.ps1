@@ -43,3 +43,5 @@ try {
     Write-Host "Bitte die Datei sofort reparieren bevor weitergearbeitet wird."
     exit 0  # Nicht blockieren, nur warnen
 }
+
+exit 0

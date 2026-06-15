@@ -27,3 +27,5 @@ fi
 
 echo ""
 echo "=== Setup Complete ==="
+
+exit 0

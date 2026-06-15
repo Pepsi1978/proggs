@@ -37,6 +37,7 @@
 | 15 | "Hook error" trotz exit 0 | Falsches Label (Regression) — nicht als Fehler werten | §11.1 |
 | 16 | Bash rundet Float → zeigt 0 | `printf "%.0f"` (bash 3.2) scheitert an `55.00000000000001` → Parameter-Expansion | §13.5 |
 | 17 | Statusline-rate_limit nach Account-Wechsel falsch | `account_fp` aus `~/.claude.json` (accountUuid), NICHT `.credentials.json` (macOS=Keychain → fehlt) | §13.6 |
+| 18 | Dot-sourced `.sh`-Bibliothek (hook-log/whiteboard-insert) | NIE top-level `exit` darin — killt in bash den `source`-Aufrufer (PS harmlos → Bug nur auf macOS) | §13.7 |
 
 ---
 
@@ -568,6 +569,28 @@ und raeumt die alten "default"-Reste proaktiv auf.
 **Eigener Vorfall (2026-06-13):** Statusline zeigte `7d 58%` statt `2%` nach Account-Wechsel.
 `account_fp` war auf macOS nie gesetzt (Keychain), 4 Vortags-State-Files (52-58%) teilten denselben
 `seven_d_resets` wie die 2 frischen (2%) und gewannen das MAX. Fix in `statusline.{sh,ps1}` umgesetzt + verifiziert.
+
+### 13.7 Top-Level `exit` in dot-sourced `.sh`-Bibliothek killt den Aufrufer (bash)  ⭐
+**Symptom:** Mehrere Guard-/Hook-Skripte (config-guard.sh, bash-guard.sh, disk-guard.sh,
+safety-gate.sh, memory-watchdog.sh …) tun NACH dem `source`-Aufruf einer geteilten
+Bibliothek (`whiteboard-insert.sh`/`hook-log.sh`) NICHTS mehr — alles nach `source <lib>`
+laeuft tot, ohne Fehlermeldung. Auf Windows (PS-Variante) faellt es NICHT auf.
+**Ursache:** bash `source`/`.` fuehrt das Skript im AKTUELLEN Shell-Kontext aus. Ein
+top-level `exit 0` in der Bibliothek beendet die AUFRUFENDE Shell, nicht nur die Lib.
+In PowerShell ist ein top-level `exit` in `. lib.ps1` dagegen empirisch HARMLOS (der Aufrufer
+laeuft weiter) — deshalb bleibt der Bug auf Windows unsichtbar und nur macOS/Linux sind betroffen.
+Typisch eingeschleppt, wenn ein Tool/Selbstverbesserung die Regel "Standalone-Hooks brauchen
+`exit 0` am Ende" blind auch auf BIBLIOTHEKEN anwendet (vgl. platform-and-paths: "exit 0 blind
+zu 5 Hooks → 3 davon Bibliotheken → 15 Hooks still tot").
+**Versionen:** bash per Design; PS harmlos. Eigener Vorfall 2026-06-15 (whiteboard-insert.ps1/.sh
+hatten ein top-level `exit 0`; in bash killte das jeden sourcenden Hook, empirisch via
+`bash -c 'source lib.sh; echo REACHED'` verifiziert — REACHED erschien nicht).
+**FIX (funktionserhaltend):** Dot-sourced Bibliotheken (`hook-log.*`, `whiteboard-insert.*`)
+enden nach ihren Funktionsdefinitionen OHNE top-level `exit`. Test:
+`bash -c 'source lib.sh; echo REACHED'` — fehlt `REACHED`, killt die Lib den Aufrufer.
+`hook-exit0-guard` muss Bibliotheken (`hook-log` etc.) vom exit-0-Zwang AUSNEHMEN
+(`grep -v 'hook-log'` / `-notmatch 'hook-log'`), sonst erzwingt der Guard genau diesen Bug.
+**Quelle:** eigener Vorfall 2026-06-15 (Hook-Drift-Aufloesung).
 
 ---
 

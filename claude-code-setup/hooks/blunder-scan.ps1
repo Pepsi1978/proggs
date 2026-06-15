@@ -86,3 +86,5 @@ $diffText
 } finally {
     Pop-Location
 }
+
+exit 0

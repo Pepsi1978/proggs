@@ -22,7 +22,7 @@ try {
     $staged = git -C "$env:USERPROFILE\proggs" diff --cached --name-only 2>$null
     if (-not $staged) { exit 0 }
 
-    $hookFiles = $staged | Where-Object { $_ -match '\.(ps1|sh)$' -and $_ -match 'hook' }
+    $hookFiles = $staged | Where-Object { $_ -match '\.(ps1|sh)$' -and $_ -match 'hook' -and $_ -notmatch 'hook-log' }
     if (-not $hookFiles -or $hookFiles.Count -eq 0) { exit 0 }
 
     # Check each staged hook file for exit 0
