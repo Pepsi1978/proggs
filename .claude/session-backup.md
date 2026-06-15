@@ -84,3 +84,18 @@ TODO (frische Session, eigener grosser Block):
 4. Committen+pushen (Cowork-Ordner-Inhalt gehoert ins Repo). Frank meldet, sobald hochgeladen/getestet.
 Hinweis: Diese gekuerzten Cowork-Skills existierten bisher NUR in der Desktop-App (nicht im Dateisystem) — sie
 werden also NEU erstellt (basierend auf den CLI-Skills), nicht editiert.
+
+## ZUSATZ-SPEZIFIKATION (Frank, 2026-06-15 spaet) — Cowork-Skills VOLL Cowork-tauglich
+Die gekuerzten Cowork-Skill-Varianten muessen DIREKT in der Claude-Cowork-Desktop-App lauffaehig sein —
+nicht nur inhaltlich gekuerzt, sondern Cowork-UMGEBUNGS-korrekt:
+- **Komplette neue W3-Logik anwenden** (Anker-Feld W3-1, check-version-anchor, bug-almanac-hint W3-2, health.py-Self-Test).
+- **Ordner-/Speicher-Bewusstsein:** Der Skill MUSS wissen, WAS er WO speichert (in Cowork laeuft alles ueber den
+  gemounteten `~/proggs/`-Ordner: Almanache `~/proggs/bugs/<kategorie>/<bereich>.md`, Best-Practices
+  `~/proggs/best-practices/projekt-code/<kategorie>/`, Tools `~/proggs/bugs/*.py`, Hooks-Pflege). Er muss auch
+  NEUE Ordner anlegen koennen (neue Kategorie/neuer Bereich) — explizit im Skill-Ablauf beschreiben.
+- **Cowork-Schreibfallen beachten** (rules/cowork-git-push.md): Mount-Bruecke kann Edit/Write abschneiden →
+  Dateiende pruefen (`tail -1`/`wc -l`) ODER git-intern bauen; Datei besser per `cat >` schreiben; ~45s-Shell-Limit.
+- **Abschluss IN Cowork:** Wenn der Skill durchgelaufen ist, MUSS er committen + pushen — ueber
+  `bash ~/proggs/cowork-git.sh push-files "#NNN - Text" <datei...>` (gezielt, Mount-schonend; NICHT nacktes git;
+  Datenverlust-Waechter greift). Vorher `bash ~/proggs/cowork-git.sh setup` ("Push-Zugang OK" abwarten).
+- Ziel bleibt: fertige ZIPs in `~/proggs/Cowork/` (Frank laedt sie per ZIP-Upload in die Desktop-App).
