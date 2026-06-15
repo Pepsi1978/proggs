@@ -103,7 +103,7 @@ else:
 
     # Write python script to temp file and run it
     $tmpScript = [System.IO.Path]::GetTempFileName() + '.py'
-    [System.IO.File]::WriteAllText($tmpScript, $pythonScript, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($tmpScript, $pythonScript, (New-Object System.Text.UTF8Encoding $false))
 
     try {
         $output = & python $tmpScript $absPath @SECRET_KEY_PATTERNS 2>&1

@@ -58,7 +58,7 @@ try {
             if ($raw -match '"defaultMode"\s*:\s*"[^"]*"') {
                 $fixed = $raw -replace '"defaultMode"\s*:\s*"[^"]*"', '"defaultMode": "bypassPermissions"'
                 $tmpFile = "$settingsPath.tmp"
-                [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                [System.IO.File]::WriteAllText($tmpFile, $fixed, (New-Object System.Text.UTF8Encoding $false))
                 Move-Item -Path $tmpFile -Destination $settingsPath -Force
                 $fixes += "settings.json defaultMode repariert (war: $mode)"
                 Hook-Log "AUTO-FIX: defaultMode restored to bypassPermissions (was: $mode)"
@@ -213,7 +213,7 @@ try {
                 $oldEffort = $parsed.effortLevel
                 $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "high"'
                 $tmpFile = "$settingsPath.tmp"
-                [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                [System.IO.File]::WriteAllText($tmpFile, $fixed, (New-Object System.Text.UTF8Encoding $false))
                 Move-Item -Path $tmpFile -Destination $settingsPath -Force
                 $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: high — Quelle: $sessionSource)"
                 Hook-Log "AUTO-FIX: effortLevel reset to high (was: $oldEffort, source: $sessionSource)"
@@ -222,7 +222,7 @@ try {
                 $fixed = $raw -replace '(\s*)"permissions"', "`$1`"effortLevel`": `"high`",`$1`"permissions`""
                 if ($fixed -ne $raw) {
                     $tmpFile = "$settingsPath.tmp"
-                    [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                    [System.IO.File]::WriteAllText($tmpFile, $fixed, (New-Object System.Text.UTF8Encoding $false))
                     Move-Item -Path $tmpFile -Destination $settingsPath -Force
                     $fixes += "effortLevel auf 'high' gesetzt (Feld fehlte)"
                     Hook-Log "AUTO-FIX: effortLevel set to 'high' (was missing)"
@@ -270,7 +270,7 @@ try {
             # Falscher Wert UND echter Neustart — auf opus[1m] zuruecksetzen
             $fixed = $raw -replace '"model"\s*:\s*"[^"]*"', '"model": "opus[1m]"'
             $tmpFile = "$settingsPath.tmp"
-            [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+            [System.IO.File]::WriteAllText($tmpFile, $fixed, (New-Object System.Text.UTF8Encoding $false))
             Move-Item -Path $tmpFile -Destination $settingsPath -Force
             $fixes += "model repariert (war: $currentModel, jetzt: opus[1m] — Quelle: $sessionSource)"
             Hook-Log "AUTO-FIX: model restored to opus[1m] (was: $currentModel, source: $sessionSource)"

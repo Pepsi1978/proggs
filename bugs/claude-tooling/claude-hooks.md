@@ -434,8 +434,22 @@ per `deny`+Begruendung umlenken.
 **Symptom:** Hooks (und MCP) werden still ignoriert; Claude faellt auf Defaults zurueck, ohne
 Fehlermeldung. Beim eigenen Lesen per Python: `Unexpected UTF-8 BOM (decode using utf-8-sig)`.
 **Ursache:** PowerShell `Out-File`/`>`/`Set-Content` (PS 5.1) schreibt UTF-8 MIT BOM
-(`EF BB BF`); strikte JSON-Parser verweigern ein BOM am Dateianfang.
-**Versionen:** Windows, per Design (Issue #9906; lokal 2026-05-22 und 2026-06-01).
+(`EF BB BF`); strikte JSON-Parser verweigern ein BOM am Dateianfang. **Zweite, tückische
+Quelle (2026-06-15 isoliert):** `[System.IO.File]::WriteAllText($p,$json,[System.Text.Encoding]::UTF8)`
+schreibt EBENFALLS einen BOM — denn `[System.Text.Encoding]::UTF8` ist `UTF8Encoding($true)`
+(emit BOM = an). Die naheliegende, "saubere" .NET-Methode ist also die Falle. KORREKT ist nur
+`(New-Object System.Text.UTF8Encoding $false)`. Da `WriteAllText` den Inhalt 1:1 schreibt
+(z.B. nach `$raw -replace …`), bleibt die TAB-Einrückung erhalten — am TAB+BOM-Muster erkennt
+man diese Quelle (ConvertTo-Json/biome wuerden Spaces erzeugen).
+**Versionen:** Windows, per Design (Issue #9906; lokal 2026-05-22, 2026-06-01).
+**Eigener Vorfall (2026-06-15):** `session-guard.ps1` reparierte defaultMode/effortLevel/model
+in `settings.json` per `$raw -replace` + `WriteAllText(…, [System.Text.Encoding]::UTF8)` an 4
+Stellen → bei JEDEM echten Neustart kam ein BOM in settings.json (TAB-Einrückung verraten von
+Claude Codes eigenem Writer, BOM von session-guard). Empirisch bewiesen (`EF BB BF` vs `7B 0A 09`),
+alle 4 Stellen + `redact-settings-reference.ps1` auf `UTF8Encoding $false` umgestellt. Der
+`poka-yoke-json-validate`-Hook (BOM-Stripper) bleibt als Defense-in-Depth-Schicht 2. Hinweis:
+`Out-File -Encoding UTF8` ist in **pwsh7 BOM-frei** (nur PS 5.1 schreibt damit BOM) — der
+Verursacher war hier NICHT Out-File, sondern WriteAllText mit dem falschen Encoding-Objekt.
 **FIX:** JSON nie mit `Out-File`/`>` schreiben. `Out-File -Encoding UTF8NoBOM` (PS6+) oder
 `[System.IO.File]::WriteAllText($p,$json,(New-Object System.Text.UTF8Encoding $False))`.
 Beim eigenen Python-Lesen `encoding='utf-8-sig'` (BOM-tolerant). Bestehende Datei BOM-strippen.
