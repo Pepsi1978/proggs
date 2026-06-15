@@ -5,6 +5,7 @@
 > statt sie hinterher teuer zu debuggen.
 >
 > **Stand:** recherchiert am **2026-06-02** fuer die LIVE-Versionen aus
+> **Anker:** billing=7.1.1  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > `~/proggs/BestJournalAndroid/gradle/libs.versions.toml`:
 > - **Google Play Billing Library 7.1.1** (`com.android.billingclient:billing-ktx`)
 > - **Firebase BOM 34.11.0** — eingebunden: `firebase-ai` (Gemini), App Check (Play Integrity + Debug),

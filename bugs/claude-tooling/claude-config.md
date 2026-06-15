@@ -10,6 +10,7 @@
 > Bei Ueberschneidung (z.B. `settings.json`-hooks-Sektion) gilt dort der jeweilige Almanach.
 >
 > **Stand:** recherchiert am **2026-06-07** fuer **Claude Code 2.1.168** (Windows/MINGW64,
+> **Anker:** claude-code=2.1.168  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > Node 24.15). Issue-Status hart per `gh issue view` verifiziert. Quellen: offizielle Doku
 > (code.claude.com/docs) + Changelog, GitHub-Issues (anthropics/claude-code), Community.
 > Loesungen sind funktionserhaltend (nie "Feature weglassen").

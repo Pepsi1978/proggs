@@ -8,6 +8,7 @@
 > (nie "Feature/encoding weglassen", nie Zeichen verwerfen).
 >
 > **Stand:** recherchiert am **2026-06-02** fuer **CPython 3.13.13** (live ermittelt:
+> **Anker:** python=3.13.13  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > `python --version`). Kern-Anker: auf dieser Version ist
 > `locale.getpreferredencoding(False)` = **cp1252**, `sys.stdout.encoding` = **cp1252**,
 > aber `sys.getfilesystemencoding()` = utf-8. Der **UTF-8-Mode wird erst ab Python 3.15

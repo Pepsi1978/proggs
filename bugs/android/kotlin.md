@@ -6,6 +6,7 @@
 > YouTrack/GitHub-Issues, Community + harter gh-Issue-Status.
 >
 > **Stand:** recherchiert am **2026-06-02** fuer **Kotlin 2.1.0** (Projekt-Plugin) bis **2.3.20**
+> **Anker:** kotlin=2.1.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (CLI), Compose BOM 2026.03, AGP 8.10, compileSdk 35–37. Versionsangaben pro Bug beachten —
 > viele K2-Punkte sind "per Design" (gewollte Breaking Changes), viele Coroutine/Compose-Fallen
 > sind versionsunabhaengig. Was schon gefixt ist: siehe Fix-Status-Sektion am Ende.

@@ -11,6 +11,7 @@
 > — Bezugstabelle „Bug-Abschnitt ↔ Best-Practice" ganz unten.
 >
 > **Stand:** recherchiert am **2026-06-02** (7-Researcher-Schwarm) fuer die real genutzten Versionen:
+> **Anker:** compose-bom=2025.01.01  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > - **BestJournalAndroid:** Compose **BOM 2025.01.01** (UI ~1.7.6, Material3 1.3.1), Kotlin 2.1.0,
 >   Compose-Compiler-Plugin 2.1.0, navigation-compose 2.8.7, lifecycle 2.8.7, AGP 8.7.3.
 > - **EntropieReductor:** Compose **BOM 2026.03.00** (UI ~1.10.x, Material3 1.4.0), Kotlin 2.1.0,

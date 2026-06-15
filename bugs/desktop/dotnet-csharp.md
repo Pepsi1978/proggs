@@ -6,6 +6,7 @@
 > "Feature weglassen".
 >
 > **Stand:** recherchiert am **2026-06-02** fuer **.NET 8 (net8.0-windows), SDK 10.0.204,
+> **Anker:** dotnet=8.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > C# 12, WPF auf .NET, WinUI 3 / Windows App SDK, Windows 10/11**. Kontext: self-contained
 > single-file Desktop-Overlays (TerminalVoiceOverlay, ClaudeVoiceOverlay, PromptBoard).
 > GitHub-Issue-Status am 2026-06-02 per `gh` verifiziert (OPEN/CLOSED je Bug vermerkt).

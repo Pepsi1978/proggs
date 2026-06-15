@@ -5,6 +5,7 @@
 > Loesungen** fuer macOS-Overlay-Apps, die mit Swift + AppKit gebaut werden.
 >
 > **Stand:** zuletzt recherchiert am **2026-06-02**.
+> **Anker:** swift=6.3.2  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > **Toolchain-Anker:** Xcode **26.5** / Swift **6.3.2** (Mai 2026; Swift 6.2 brachte main-actor-by-default).
 > **Projekt-Anker (Franks Overlay-Apps):** Build per `swiftc` von der Kommandozeile (KEIN Xcode-Projekt,
 > KEIN SwiftPM), Build-Target `arm64-apple-macos13.0` (macOS 13+), **unsandboxed**, Direktverteilung

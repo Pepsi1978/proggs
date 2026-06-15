@@ -5,6 +5,7 @@
 > Es geht hier um die **Build-Infrastruktur** — NICHT um die Kotlin-Sprache.
 >
 > **Stand:** recherchiert am 2026-06-02 fuer den real benutzten Stand der beiden Android-Projekte
+> **Anker:** gradle=8.11.1  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (live ermittelt):
 >
 > | | BestJournalAndroid (Play Store) | EntropieReductor (privat) |

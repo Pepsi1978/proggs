@@ -7,6 +7,7 @@
 > funktionserhaltend (nie "Feature weglassen").
 >
 > **Stand:** re-recherchiert am **2026-06-15** fuer Claude Code **v2.1.177** (7-Researcher-Schwarm,
+> **Anker:** claude-code=2.1.177  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > Issue-Status HART per `gh` verifiziert; Vorgaenger-Stand war 2026-06-01 / v2.1.159). Versionsangaben
 > pro Bug beachten — viele "per Design"-Fallen gelten dauerhaft, einige Bugs sind in
 > neueren Versionen gefixt, einige Regressionen sind in der v2.1.x-Reihe noch offen.

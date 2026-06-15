@@ -166,6 +166,18 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 - Die aktuell benutzte Version wird **live** ermittelt, nie in einer separaten Datei
   gepflegt (die wuerde veralten). Beim Lesen wird abgeglichen; ein Versionssprung
   loest einen kurzen Re-Check aus (mit Franks OK).
+- **Strukturiertes `Anker:`-Feld (seit 2026-06-15).** Software-gebundene Almanache tragen
+  direkt unter dem `Stand:`-Vermerk ein maschinenlesbares Feld
+  `> **Anker:** <label>=<version>` (mehrere kommagetrennt), z. B. `> **Anker:** claude-code=2.1.177`.
+  `bugs/check-version-anchor.py` (mitgefuehrt von `health.py`) prueft je Eintrag seiner kuratierten
+  Tabelle: (a) ist das Anker-Feld vorhanden? (b) — NUR wo die **installierte** Version == der fuer
+  den Almanach relevanten ist (claude-code, python) — stimmt die **Live-Version** (Major.Minor) noch
+  mit dem Anker? Bei projekt-gebundenen Bereichen (kotlin/gradle/compose/billing/dotnet/swift pinnt
+  das Projekt eine eigene Version via Gradle/.csproj/Toolchain) gibt es bewusst KEINEN Live-Abgleich
+  (sonst Falschalarm), nur die Anker-Vollstaendigkeit. So faellt ein Almanach auf, der zwar
+  datums-frisch (< 180d), aber versions-veraltet ist (z. B. neue Major-Version erschienen).
+  Neuen software-gebundenen Almanach anlegen → Eintrag in `ANCHORS` (in `check-version-anchor.py`)
+  ergaenzen UND das `Anker:`-Feld im Header setzen.
 
 ---
 
