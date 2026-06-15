@@ -26,8 +26,35 @@
 >   teilen die Electron-/Chromium-Basis (andere Fensterstruktur — §E5).
 >
 > **Wichtig:** Dies ist der reine **Bug-Almanach** (bekannte Fehler/Fallen/Workarounds). Die
-> Gegenseite (Best-Practices — "wie macht man es von vornherein richtig") wird in einem **getrennten
-> Lauf** angelegt; dieser Almanach enthaelt bewusst keine allgemeinen Best-Practice-Essays.
+> Gegenseite (Best-Practices — "wie macht man es von vornherein richtig") liegt seit **2026-06-15** in
+> [`best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md`](../../best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md);
+> dieser Almanach enthaelt bewusst keine allgemeinen Best-Practice-Essays.
+
+---
+
+## 🔗 Bezugstabelle: Bug-Sektion ↔ Best-Practice-Abschnitt
+
+> Gegenstück: [`best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md`](../../best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md).
+> Diese Tabelle in BEIDEN Dateien synchron halten.
+
+| Bug-Sektion (hier) | Thema | Best-Practice-Abschnitt (dort) |
+|--------------------|-------|--------------------------------|
+| K1 | Kernursache & symmetrischer Fix | §0, §2, §3, §5 |
+| F1–F6 | Fensterfindung / HWND-Hierarchie | §3.7 |
+| A1, A3, A4, T4 | SetForegroundWindow / AllowSetForegroundWindow / UIPI | §1.2 |
+| A2, A6 | AttachThreadInput / SetFocus | §1.3 |
+| A5 | Minimiert / Cold-Start (SW_RESTORE/WaitForInputIdle) | §1.4 |
+| A7, W1 | Overlay Topmost/NOACTIVATE, 24H2-Z-Order | §1.1 |
+| T1, T2, T3, E6 | SendInput / Scancode / Timing / Unicode | §2.1, §2.3 |
+| T5, U8, E1, E8 | Methodenvergleich (Value/TextPattern/WM_PASTE) | §2.4 |
+| C1, C2, C3, C5, C7 | Zwischenablage (Race/Restore/STA/Retry) | §2.2, §2.6 |
+| U1, U2, U7 | Chromium-A11y aus/lazy, Baum-Abbau | §3.4 |
+| U3, U4 | FocusedElement / Threading | §3.1 |
+| U5 | UIA 2.0 vs 3.0 / FlaUI | §3.3 |
+| U6 | FindFirst statt FindAll/Descendants | §3.2 |
+| M1, M4, F6 | wanderndes Feld / DPI / BoundingRectangle | §3.5 |
+| N1–N6 | .NET-10-Single-File-Deployment | §1.6 |
+| E4, E5 | Versions-Anker / App-Unterschiede | §0 |
 
 ---
 
