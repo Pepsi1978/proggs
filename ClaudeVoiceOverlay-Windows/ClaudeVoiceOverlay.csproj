@@ -20,18 +20,18 @@
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
          2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
-    <Version>2.0.2</Version>
+    <Version>2.0.3</Version>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.68.0.3568" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.74.0.4135" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
   </ItemGroup>
 
   <!-- PromptBoard.Core und PromptBoard.Data leben als Subprojekte direkt unter
