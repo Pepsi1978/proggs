@@ -30,6 +30,25 @@ if (-not (Test-Path $filePath)) {
     exit 0
 }
 
+# BOM-Schutz fuer Claude-Config-JSON (Poka-Yoke, Direktive #3): Ein anderer PostToolUse-Hook
+# (Formatter/Guard) kann nach einem Edit ein UTF-8-BOM (re-)einfuegen. Claude Codes strikter
+# JSON-Parser verwirft eine BOM-behaftete settings.json STILL -> alle Hooks tot, ohne Warnung
+# (claude-config.md 3.2). Wir entfernen das BOM hier automatisch, Root-Cause-unabhaengig.
+$isClaudeConfig = ($filePath -match '[\\/]\.claude[\\/]') -or
+                  ($filePath -match '[\\/]settings(\.local)?\.json$') -or
+                  ($filePath -match '[\\/]\.mcp\.json$') -or
+                  ($filePath -match 'claude-code-setup[\\/]')
+if ($isClaudeConfig) {
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($filePath)
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+            $text = [System.IO.File]::ReadAllText($filePath)   # .NET entfernt das BOM aus dem String
+            [System.IO.File]::WriteAllText($filePath, $text, (New-Object System.Text.UTF8Encoding $false))
+            Write-Host "POKA-YOKE: UTF-8-BOM aus $filePath entfernt (haette Claude Codes JSON-Parser still gebrochen)."
+        }
+    } catch { }
+}
+
 # JSON validieren
 try {
     $content = Get-Content -Path $filePath -Raw -Encoding UTF8

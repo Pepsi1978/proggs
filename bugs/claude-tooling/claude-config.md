@@ -153,7 +153,14 @@
 **Ursache:** PowerShell `Out-File`/`>`/`Set-Content` und Notepad schreiben UTF-8 **mit BOM**. Betrifft auch `.mcp.json`.
 **Versionen:** #9906 CLOSED **NOT_PLANNED** — per Design, Workaround bleibt dauerhaft.
 **FIX:** BOM-frei speichern. PowerShell: `[System.IO.File]::WriteAllText($p,$json,(New-Object System.Text.UTF8Encoding $false))`. Python schreiben: `encoding='utf-8'` (NICHT `utf-8-sig`); Python lesen: `encoding='utf-8-sig'` (BOM-tolerant). VS Code: "UTF-8" statt "UTF-8 with BOM".
-**Quelle:** #9906
+**Eigener Vorfall (2026-06-15):** Nach einem `Edit` auf `settings.json` tauchte ein BOM auf — ein
+PostToolUse-Hook (Formatter/Guard) fuegte es re-ein (exakter Einfueger nicht eindeutig isoliert;
+`biome` als Einzeltest ausgeschlossen, schreibt BOM-frei). **Poka-Yoke (Stufe 2):**
+`poka-yoke-json-validate.{ps1,sh}` strippt seitdem nach JEDEM Edit ein BOM aus Claude-Config-JSON
+(`settings*.json`, `.mcp.json`, alles unter `.claude/`/`claude-code-setup/`) automatisch,
+Root-Cause-unabhaengig. Beim eigenen Config-Edit: BOM per **Bash/Python** strippen (utf-8-sig lesen,
+utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter erneut).
+**Quelle:** #9906 · eigener Vorfall 2026-06-15
 
 ### 3.3 Falsches Permission-Pattern verwirft die GANZE Datei
 **Symptom:** Ein einziges falsch formatiertes Pattern (`Bash(mkdir*)` statt `Bash(mkdir:*)`, oder unescapte Quotes in einem persistierten Befehl) → komplette settings(.local).json wird still rejected ("Files with errors are skipped entirely"). Claude Code persistiert eigene allow-Eintraege teils selbst fehlerhaft (#33650).
