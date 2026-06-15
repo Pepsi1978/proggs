@@ -189,15 +189,20 @@ namespace ClaudeVoiceOverlay.Services
         {
             try
             {
-                // 1. Das bereits fokussierte Element (folgt dem Fokus automatisch)
+                // 1. Das bereits fokussierte Element (folgt dem Fokus automatisch).
+                //    Chromium meldet das contenteditable je nach ARIA-Rolle als Edit
+                //    (Chat/Cowork) ODER Group (Code-Tab 'Prompt') — daher ControlType-
+                //    tolerant. Hat das Element bereits den Tastaturfokus, landet Strg+V
+                //    ohnehin dort: SetFocus ist nur best-effort, das Ergebnis ist egal.
                 AutomationElement? focused = null;
                 try { focused = AutomationElement.FocusedElement; }
                 catch (Exception ex) { DiagLog.Write("UIA", "FocusedElement warf", ("err", ex.GetType().Name)); }
-                bool focusedIsField = focused != null && IsTextField(focused);
-                DiagLog.Write("UIA", "Pfad1 FocusedElement", ("el", Describe(focused)), ("isTextField", focusedIsField));
-                if (focusedIsField && TrySetFocus(focused!))
+                bool focusedUsable = focused != null && IsUsableFocusTarget(focused);
+                DiagLog.Write("UIA", "Pfad1 FocusedElement", ("el", Describe(focused)), ("usable", focusedUsable));
+                if (focusedUsable)
                 {
-                    DiagLog.Write("UIA", "Pfad1 OK: FocusedElement ist Textfeld -> fokussiert", ("el", Describe(focused)));
+                    TrySetFocus(focused!); // idempotent; Element ist bereits fokussiert
+                    DiagLog.Write("UIA", "Pfad1 OK: fokussiertes Eingabeziel akzeptiert", ("el", Describe(focused)));
                     return true;
                 }
 
@@ -213,7 +218,9 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     var field = root.FindFirst(TreeScope.Descendants, cond);
                     DiagLog.Write("UIA", "Pfad2 FindFirst(Descendants)", ("found", Describe(field)));
-                    if (field != null && TrySetFocus(field))
+                    if (field != null && IsPageRoot(field))
+                        DiagLog.Write("UIA", "Pfad2 verworfen: Treffer ist Seiten-Wurzel (RootWebArea), kein Feld");
+                    else if (field != null && TrySetFocus(field))
                     {
                         DiagLog.Write("UIA", "Pfad2 OK: Textfeld im Fensterbaum -> fokussiert", ("el", Describe(field)));
                         return true;
@@ -232,7 +239,9 @@ namespace ClaudeVoiceOverlay.Services
                     var rwRoot = AutomationElement.FromHandle(renderWidget);
                     var field2 = rwRoot?.FindFirst(TreeScope.Subtree, cond);
                     DiagLog.Write("UIA", "Pfad3 FindFirst(Subtree)", ("found", Describe(field2)));
-                    if (field2 != null && TrySetFocus(field2))
+                    if (field2 != null && IsPageRoot(field2))
+                        DiagLog.Write("UIA", "Pfad3 verworfen: Treffer ist Seiten-Wurzel (RootWebArea), kein Feld");
+                    else if (field2 != null && TrySetFocus(field2))
                     {
                         DiagLog.Write("UIA", "Pfad3 OK: Textfeld unter Render-Widget -> fokussiert", ("el", Describe(field2)));
                         return true;
@@ -248,13 +257,41 @@ namespace ClaudeVoiceOverlay.Services
             return false;
         }
 
-        private static bool IsTextField(AutomationElement el)
+        /// <summary>
+        /// Ist das (bereits fokussierte) Element ein brauchbares Einfuege-Ziel?
+        /// Chromium meldet dasselbe contenteditable je nach ARIA-Rolle als Edit,
+        /// Document ODER Group (Claude Chat/Cowork = Edit, Code-Tab 'Prompt' = Group)
+        /// — daher ControlType-tolerant. Ausgeschlossen wird nur die Seiten-Wurzel
+        /// (RootWebArea, bildschirmfuellend), die KEIN Eingabefeld ist (Root-Guard).
+        /// </summary>
+        private static bool IsUsableFocusTarget(AutomationElement el)
         {
             try
             {
-                var ct = el.Current.ControlType;
-                return (ct == ControlType.Edit || ct == ControlType.Document)
-                    && el.Current.IsKeyboardFocusable;
+                var c = el.Current;
+                if (!c.IsKeyboardFocusable) return false;
+                if (IsPageRoot(el)) return false;
+                var ct = c.ControlType;
+                return ct == ControlType.Edit || ct == ControlType.Document || ct == ControlType.Group;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Erkennt die Web-/contenteditable-Wurzel der ganzen Seite (KEIN echtes Feld):
+        /// Chromium gibt ihr stabil die AutomationId "RootWebArea"; als zusaetzliche
+        /// Absicherung gilt auch ein quasi bildschirmfuellendes Rechteck als Wurzel.
+        /// Verhindert, dass Pfad 2/3 faelschlich die ganze Render-Flaeche fokussieren
+        /// (Fokus weg vom echten Feld -> Strg+V verpufft).
+        /// </summary>
+        private static bool IsPageRoot(AutomationElement el)
+        {
+            try
+            {
+                var c = el.Current;
+                if (string.Equals(c.AutomationId, "RootWebArea", StringComparison.Ordinal)) return true;
+                var r = c.BoundingRectangle;
+                return !r.IsEmpty && r.Width >= 2400 && r.Height >= 1400; // ganze Render-Flaeche
             }
             catch { return false; }
         }
