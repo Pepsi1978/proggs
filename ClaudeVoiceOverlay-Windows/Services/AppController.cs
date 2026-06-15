@@ -82,12 +82,15 @@ namespace ClaudeVoiceOverlay.Services
         private static void PasteTextCore(string text, IntPtr appHwnd, bool autoEnter)
         {
             long myGen = Interlocked.Increment(ref _clipboardGen);
+            DiagLog.Write("Paste", "PasteText START",
+                ("hwnd", "0x" + appHwnd.ToInt64().ToString("X")),
+                ("len", text.Length), ("autoEnter", autoEnter));
 
             // 1. Zwischenablage setzen (STA-Thread → direkter Clipboard-Zugriff) + verifizieren
             string? previous = null;
             if (!SetClipboardText(text, out previous))
             {
-                Console.WriteLine("[AppController] PasteText: Clipboard.SetText fehlgeschlagen — abgebrochen.");
+                DiagLog.Write("Paste", "ABBRUCH: Clipboard.SetText fehlgeschlagen");
                 return;
             }
 
@@ -99,7 +102,7 @@ namespace ClaudeVoiceOverlay.Services
 
             // 4. Echtes Strg+V mit Hardware-Scancodes
             bool pasted = SendCtrlVScancode();
-            Console.WriteLine($"[AppController] paste sent={pasted} autoEnter={autoEnter} hwnd=0x{appHwnd.ToInt64():X}");
+            DiagLog.Write("Paste", "Strg+V gesendet", ("sent", pasted), ("autoEnter", autoEnter));
 
             // 5. Optionales Enter (separat, nach kurzer Verzoegerung)
             if (autoEnter)
@@ -188,10 +191,13 @@ namespace ClaudeVoiceOverlay.Services
             {
                 // 1. Das bereits fokussierte Element (folgt dem Fokus automatisch)
                 AutomationElement? focused = null;
-                try { focused = AutomationElement.FocusedElement; } catch { /* s.u. */ }
-                if (focused != null && IsTextField(focused) && TrySetFocus(focused))
+                try { focused = AutomationElement.FocusedElement; }
+                catch (Exception ex) { DiagLog.Write("UIA", "FocusedElement warf", ("err", ex.GetType().Name)); }
+                bool focusedIsField = focused != null && IsTextField(focused);
+                DiagLog.Write("UIA", "Pfad1 FocusedElement", ("el", Describe(focused)), ("isTextField", focusedIsField));
+                if (focusedIsField && TrySetFocus(focused!))
                 {
-                    Console.WriteLine("[AppController] UIA: FocusedElement ist Textfeld → fokussiert");
+                    DiagLog.Write("UIA", "Pfad1 OK: FocusedElement ist Textfeld -> fokussiert", ("el", Describe(focused)));
                     return true;
                 }
 
@@ -206,31 +212,38 @@ namespace ClaudeVoiceOverlay.Services
                 if (root != null)
                 {
                     var field = root.FindFirst(TreeScope.Descendants, cond);
+                    DiagLog.Write("UIA", "Pfad2 FindFirst(Descendants)", ("found", Describe(field)));
                     if (field != null && TrySetFocus(field))
                     {
-                        Console.WriteLine("[AppController] UIA: Textfeld im Fensterbaum gefunden → fokussiert");
+                        DiagLog.Write("UIA", "Pfad2 OK: Textfeld im Fensterbaum -> fokussiert", ("el", Describe(field)));
                         return true;
                     }
+                }
+                else
+                {
+                    DiagLog.Write("UIA", "Pfad2 uebersprungen: FromHandle=null", ("hwnd", "0x" + appHwnd.ToInt64().ToString("X")));
                 }
 
                 // 3. HWND-Notnagel: Render-Widget suchen, dann erneut UIA darauf
                 IntPtr renderWidget = FindRenderWidget(appHwnd);
+                DiagLog.Write("UIA", "Pfad3 RenderWidget", ("hwnd", "0x" + renderWidget.ToInt64().ToString("X")));
                 if (renderWidget != IntPtr.Zero)
                 {
                     var rwRoot = AutomationElement.FromHandle(renderWidget);
                     var field2 = rwRoot?.FindFirst(TreeScope.Subtree, cond);
+                    DiagLog.Write("UIA", "Pfad3 FindFirst(Subtree)", ("found", Describe(field2)));
                     if (field2 != null && TrySetFocus(field2))
                     {
-                        Console.WriteLine("[AppController] UIA: Textfeld unter Render-Widget gefunden → fokussiert");
+                        DiagLog.Write("UIA", "Pfad3 OK: Textfeld unter Render-Widget -> fokussiert", ("el", Describe(field2)));
                         return true;
                     }
                 }
 
-                Console.WriteLine("[AppController] UIA: kein Textfeld gefunden — Paste geht an aktuelles Fokus-Element");
+                DiagLog.Write("UIA", "KEIN Textfeld gefunden -> Paste geht an aktuelles Fokus-Element");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AppController] UIA-Fokus fehlgeschlagen: {ex.GetType().Name}: {ex.Message}");
+                DiagLog.Write("UIA", "FocusInputFieldUia-Ausnahme", ("err", ex.GetType().Name), ("msg", ex.Message));
             }
             return false;
         }
@@ -244,6 +257,33 @@ namespace ClaudeVoiceOverlay.Services
                     && el.Current.IsKeyboardFocusable;
             }
             catch { return false; }
+        }
+
+        /// <summary>
+        /// Kompakte, werf-freie Beschreibung eines UIA-Elements fuers Diagnose-Log:
+        /// ControlType, Name, AutomationId, ClassName, IsKeyboardFocusable, IsOffscreen
+        /// und BoundingRectangle (die y-Position verraet, ob es das untere Eingabefeld
+        /// oder z.B. der obere Code-Editor ist).
+        /// </summary>
+        private static string Describe(AutomationElement? el)
+        {
+            if (el == null) return "null";
+            try
+            {
+                var c = el.Current;
+                var r = c.BoundingRectangle;
+                string type = c.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? "?";
+                return $"type={type} name='{Trunc(c.Name, 40)}' autoId='{Trunc(c.AutomationId, 24)}' "
+                     + $"class='{Trunc(c.ClassName, 24)}' kbFocus={c.IsKeyboardFocusable} "
+                     + $"offscreen={c.IsOffscreen} rect=[{(int)r.X},{(int)r.Y},{(int)r.Width}x{(int)r.Height}]";
+            }
+            catch (Exception ex) { return "describe-failed:" + ex.GetType().Name; }
+        }
+
+        private static string Trunc(string? s, int max)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Length <= max ? s : s.Substring(0, max) + "...";
         }
 
         private static bool TrySetFocus(AutomationElement el)
