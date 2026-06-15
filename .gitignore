@@ -40,3 +40,8 @@ BestJournalFrank/Screenshots/
 # Cowork-Push: Token-Datei (liegt in .git/, hier zusaetzlich als Defense-in-Depth)
 .cowork-credentials
 .git-credentials
+
+# --- Cowork add: Build-/Abhaengigkeits-Artefakte (Android/Gradle/Node) ---
+**/build/
+**/.gradle/
+**/node_modul
