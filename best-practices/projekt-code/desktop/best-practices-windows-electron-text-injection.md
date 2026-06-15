@@ -46,7 +46,7 @@
 | 13 | Optionales Auto-Enter | **separater** `SendInput` (Enter↓/↑, Scancode) NACH kurzer Verzögerung — sonst trifft Enter ein leeres Feld. | §2.5 |
 | 14 | Schnelle Folge-Einfügungen | serielle Queue mit Sequenznummer; vor Strg+V gehaltene Modifier per KEYUP neutralisieren (PowerToys-Fix); kein paralleler Clipboard-Zugriff. | §2.6 |
 | 15 | Sender als Admin starten? | Nein — UIPI blockiert `SendInput` in nicht-elevated Ziel **stillschweigend** (kein Fehlercode). Gleiches Integritätslevel wie Claude. | §2.6, §1.2 |
-| 16 | Aktives Feld positions-unabhängig finden | **Primär** `AutomationElement.FocusedElement` auf eigenem Worker-Thread; prüfen `ControlType.Edit/Document` + `IsKeyboardFocusable`. | §3.1 |
+| 16 | Aktives Feld positions-unabhängig finden | **Primär** `AutomationElement.FocusedElement` auf eigenem Worker-Thread; prüfen `ControlType.Edit/Document/Group` (Code-Tab = Group!) + `IsKeyboardFocusable`; `RootWebArea` ausschliessen. | §3.1 |
 | 17 | Fokus liegt auf Container statt Feld | `TreeWalker.ControlViewWalker` / `FindFirst(Descendants, AndCondition(ControlType, IsKeyboardFocusable))`. | §3.2 |
 | 18 | UIA 2.0 oder 3.0? | Native UIA 3.0 — in .NET praktisch über **FlaUI.UIA3**. UIA 2.0 (`System.Windows.Automation`) nur Legacy. | §3.3 |
 | 19 | UIA-Baum leer? | Chromium baut A11y lazy auf; der erste UIA-Zugriff aktiviert ihn on-demand (WM_GETOBJECT). Notfall: Ziel mit `--force-renderer-accessibility` starten. | §3.4 |
@@ -266,6 +266,14 @@ es freigibt (wirft sonst `InvalidOperationException`/`ElementNotEnabledException
   exponiert), plus `IsKeyboardFocusable == true`, optional `IsTextPatternAvailable`. **Wichtig:** UIA-Aufrufe
   immer auf einem **eigenen Worker-Thread** (STA) ausführen, nie auf dem eigenen WPF-UI-Thread (sonst
   Deadlock-Gefahr). Quellen: [AutomationElement.FocusedElement](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.focusedelement) · `offiziell`; [IUIAutomation::GetFocusedElement](https://learn.microsoft.com/en-us/windows/win32/api/uiautomationclient/nf-uiautomationclient-iuiautomation-iuiautomation-getfocusedelement) · `offiziell`. Bug-Bezug: U3, U4.
+- **Praxis-Korrektur (real getroffen 2026-06-15, CVO #46796 v2.1.3):** Den ControlType-Filter NICHT auf
+  `Edit`/`Document` beschraenken. Chromium meldet dasselbe contenteditable je nach ARIA-Rolle auch als
+  **`Group`** — im Claude-**Code**-Tab ist das Feld 'Prompt' eine `Group` (Chat/Cowork = `Edit`). Akzeptiere
+  das **fokussierte** Element daher ControlType-tolerant (`Edit`/`Document`/`Group`) bei `IsKeyboardFocusable`;
+  es hat bereits den Fokus, `SetFocus` ist nur best-effort. Schliesse zwingend die Seiten-Wurzel aus
+  (**Root-Guard**: `AutomationId=="RootWebArea"` bzw. quasi bildschirmfuellendes Rect) — sonst fokussiert der
+  Fallback `FindFirst(Edit|Document)` die ganze Render-Flaeche (`RootWebArea`, z.B. 3840x2064) und Strg+V
+  verpufft. Bug-Bezug: U9.
 
 ### §3.2 Fokus liegt auf einem Container statt aufs Feld → gezielt suchen
 - Mit `TreeWalker.ControlViewWalker` navigieren (überspringt rein strukturelle Knoten — dieselbe View, die

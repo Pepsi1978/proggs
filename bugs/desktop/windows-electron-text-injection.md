@@ -118,6 +118,7 @@
 | 43 | DPI/Koordinaten im Single-File daneben | eigenes app.manifest (PerMonitorV2 + Win10/11-supportedOS) einbetten | N5 |
 | 44 | Overlay fällt auf 24H2 hinter Paint/Photos | 24H2-Z-Order-Regression → Topmost ereignisgetrieben re-asserten / Overlay vor Paste ausblenden | W1 |
 | 45 | Klappt nur als Nicht-Admin (Zukunft) | 24H2 „Administrator Protection" (aktuell deaktiviert, latent) → Sender nie elevated | W2 |
+| 46 | Code-Tab fuellt nicht, Chat/Cowork schon | Feld meldet sich als `Group` (nicht Edit/Document); FocusedElement-Filter tolerant (Edit/Document/Group) + `RootWebArea` ausschliessen | U9 |
 
 ---
 
@@ -463,6 +464,13 @@
 - **Versionen:** Per Design (MS-Spezifikation + Chromium-Pattern-Exposition), alle Versionen.
 - **FIX (der tragende Weg):** UIA nur zum FINDEN + FOKUSSIEREN nutzen: Edit-Element finden (U1/U6/U7), `SetFocus()`/Invoke → Caret im richtigen Feld. Dann Text per **Zwischenablage + echtem Strg+V** (Scancode-`SendInput`/`FlaUI.Keyboard`, T1/T2) einschleusen — robust fuer langen/Unicode-Text, alten Clipboard-Inhalt sichern/wiederherstellen (C2/C3). `ValuePattern.SetValue` zuerst versuchen (schneller Pfad), bei `false`/Exception auf Paste zurueckfallen. (= Symmetrie zu macOS: AX lokalisiert, der Text landet via gesetztem Wert/Tastatur.)
 - **Quelle:** Microsoft Learn ValuePattern.SetValue ("text input must be simulated") <https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.valuepattern.setvalue?view=windowsdesktop-8.0>; UI Automation TextPattern Overview <https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/ui-automation-textpattern-overview>
+
+### U9. Code-Tab-Feld meldet sich als `Group` (nicht Edit/Document) → reiner Edit/Document-Filter fokussiert faelschlich `RootWebArea` ⭐ HAEUFIG (real getroffen 2026-06-15, per Diagnose-Log belegt)
+- **Symptom:** Texteinfuegen klappt in **Chat** und **Cowork** zuverlaessig, aber im **Code**-Tab (Feld "Beschreibe eine Aufgabe oder stelle eine Frage") fast nie — nur direkt nach Tab-Wechsel mal kurz. `SendInput`-Strg+V meldet `sent=true`, trotzdem kommt nichts an.
+- **Ursache (per JSON-Diagnose-Log belegt):** Dasselbe `tiptap ProseMirror`-contenteditable meldet je nach ARIA-Rolle unterschiedliche UIA-ControlTypes: Chat/Cowork = `Edit` (name='Schreiben Sie Ihre Anfrage an Claude'), **Code-Tab = `Group`** (name='Prompt'). Ein FocusedElement-Filter, der NUR `Edit`/`Document` akzeptiert, verwirft das korrekt fokussierte Group-Feld → der Fallback `FindFirst(Edit|Document)` trifft als Erstes das **`RootWebArea`-Document** (AutomationId='RootWebArea', bildschirmfuellend, z.B. 3840x2064) und `SetFocus()` darauf nimmt den Fokus vom echten Feld weg → Strg+V verpufft im Seiten-Root. ("Kurz nach Tab-Wechsel ging es" = da war zufaellig noch das Edit-Feld fokussiert.)
+- **Versionen:** Claude Desktop 1.12603.1 (Electron 41 / Chromium 146); ARIA→UIA-Rollenabbildung ist per Design und kann sich je App-Update verschieben → ControlType nie hart auf Edit/Document einschraenken.
+- **FIX (funktionserhaltend):** (1) Das **fokussierte** Element ControlType-**tolerant** akzeptieren — `Edit` ODER `Document` ODER `Group`, sofern `IsKeyboardFocusable==true`; da es bereits den Fokus hat, ist `SetFocus` nur best-effort (Strg+V landet ohnehin dort). (2) **Root-Guard:** in JEDER Stufe das `RootWebArea` ausschliessen (`AutomationId=="RootWebArea"` ODER quasi bildschirmfuellendes Rechteck) — niemals die ganze Render-Flaeche fokussieren. Verifiziert per DiagLog (Group 'Prompt' → akzeptiert → Paste landet). CVO #46796 v2.1.3 — `AppController.FocusInputFieldUia` / `IsUsableFocusTarget` / `IsPageRoot`.
+- **Quelle:** eigene Laufzeit-Diagnose 2026-06-15 (`%LOCALAPPDATA%\ClaudeVoiceOverlay\diag.log`); Chromium Accessibility (contenteditable-Rollen) <https://chromium.googlesource.com/chromium/src/+/main/docs/accessibility/overview.md>
 
 ---
 
