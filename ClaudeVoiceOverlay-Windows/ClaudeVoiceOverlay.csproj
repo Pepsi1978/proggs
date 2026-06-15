@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>$(DotNetTfm)-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
@@ -26,12 +26,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.74.0.4135" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
+    <PackageReference Include="NAudio" Version="$(NAudioVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="$(GoogleApisDriveVersion)" />
+    <PackageReference Include="Google.Apis.Auth" Version="$(GoogleApisAuthVersion)" />
   </ItemGroup>
 
   <!-- PromptBoard.Core und PromptBoard.Data leben als Subprojekte direkt unter
