@@ -213,32 +213,25 @@ namespace ClaudeVoiceOverlay.Services
                     return true;
                 }
 
-                // Bug U9-Variante (Cowork nach beendeter Aufgabe, real getroffen 2026-06-15,
-                // per diag.log belegt): Der Fokus liegt direkt nach einer Cowork-Antwort auf dem
-                // 'Fortschritt N von N'-Button -> Pfad1 verworfen (korrekt). Frueher traf
-                // FindFirst(Edit|Document) als ERSTES die Seiten-Wurzel 'RootWebArea' (Document,
-                // bildschirmfuellend), die der Root-Guard verwarf -> FindFirst gab danach AUF, das
-                // echte ProseMirror-Edit dahinter wurde nie gefunden -> Strg+V verpuffte (Text kam
-                // erst nach manuellem Maus-Klick ins Feld). Fix: RootWebArea direkt aus der Suche
-                // ausschliessen, dann liefert FindFirst sofort das echte Feld. FindFirst + enger
-                // Scope bleibt erhalten (U6: kein teures FindAll/Descendants ueber den ganzen Baum).
-                var cond = new AndCondition(
-                    new OrCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)),
-                    new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true),
-                    new NotCondition(
-                        new PropertyCondition(AutomationElement.AutomationIdProperty, "RootWebArea")));
-
-                // 2. Im Baum des Top-Level-Fensters suchen (Fokus liegt auf Container)
+                // 2. Das echte Eingabefeld im Fensterbaum suchen (Fokus liegt auf einem Container).
+                //    Bug-Historie (real getroffen 2026-06-15, per diag.log belegt) — zwei Faelle:
+                //    (a) Cowork direkt nach beendeter Aufgabe: Fokus auf dem 'Fortschritt N von N'-
+                //        Button -> Pfad1 verworfen. Frueher traf FindFirst(Edit|Document) als ERSTES
+                //        die Seiten-Wurzel 'RootWebArea' (Document, bildschirmfuellend) und gab danach
+                //        auf -> echtes Feld nie gefunden.
+                //    (b) Code-Tab: Fokus auf dem bildschirmfuellenden Container 'dframe-main' -> Pfad1
+                //        verworfen. Das echte Feld ist dort eine GROUP (name='Prompt'), KEIN Edit/
+                //        Document -> die reine Edit/Document-Suche fand GAR NICHTS (null).
+                //    In beiden Faellen verpuffte Strg+V; Text kam erst nach manuellem Maus-Klick.
+                //    Fix: FindProseMirrorField() findet das echte 'tiptap ProseMirror'-contenteditable
+                //    ueber ALLE Tabs (Chat/Cowork=Edit, Code=Group) per ClassName und ueberspringt
+                //    bildschirmfuellende Container (RootWebArea / 'dframe-main').
                 var root = AutomationElement.FromHandle(appHwnd);
                 if (root != null)
                 {
-                    var field = root.FindFirst(TreeScope.Descendants, cond);
-                    DiagLog.Write("UIA", "Pfad2 FindFirst(Descendants)", ("found", Describe(field)));
-                    if (field != null && IsPageRoot(field))
-                        DiagLog.Write("UIA", "Pfad2 verworfen: Treffer ist Seiten-Wurzel (RootWebArea), kein Feld");
-                    else if (field != null && TrySetFocus(field))
+                    var field = FindProseMirrorField(root, TreeScope.Descendants);
+                    DiagLog.Write("UIA", "Pfad2 FindProseMirrorField(Descendants)", ("found", Describe(field)));
+                    if (field != null && TrySetFocus(field))
                     {
                         DiagLog.Write("UIA", "Pfad2 OK: Textfeld im Fensterbaum -> fokussiert", ("el", Describe(field)));
                         return true;
@@ -255,11 +248,9 @@ namespace ClaudeVoiceOverlay.Services
                 if (renderWidget != IntPtr.Zero)
                 {
                     var rwRoot = AutomationElement.FromHandle(renderWidget);
-                    var field2 = rwRoot?.FindFirst(TreeScope.Subtree, cond);
-                    DiagLog.Write("UIA", "Pfad3 FindFirst(Subtree)", ("found", Describe(field2)));
-                    if (field2 != null && IsPageRoot(field2))
-                        DiagLog.Write("UIA", "Pfad3 verworfen: Treffer ist Seiten-Wurzel (RootWebArea), kein Feld");
-                    else if (field2 != null && TrySetFocus(field2))
+                    var field2 = rwRoot != null ? FindProseMirrorField(rwRoot, TreeScope.Subtree) : null;
+                    DiagLog.Write("UIA", "Pfad3 FindProseMirrorField(Subtree)", ("found", Describe(field2)));
+                    if (field2 != null && TrySetFocus(field2))
                     {
                         DiagLog.Write("UIA", "Pfad3 OK: Textfeld unter Render-Widget -> fokussiert", ("el", Describe(field2)));
                         return true;
@@ -364,6 +355,60 @@ namespace ClaudeVoiceOverlay.Services
             {
                 DiagLog.Write("CHECKPOINT", step + " — Sonde warf", ("err", ex.GetType().Name));
             }
+        }
+
+        /// <summary>
+        /// Findet das echte Eingabefeld (tiptap/ProseMirror-contenteditable) im UIA-Teilbaum —
+        /// ROBUST ueber alle Claude-Tabs: Chromium exponiert dasselbe Feld je nach ARIA-Rolle als
+        /// ControlType Edit (Chat/Cowork, name='Schreiben Sie Ihre Anfrage an Claude') ODER Group
+        /// (Code-Tab, name='Prompt'). Deshalb:
+        ///   1. FindAll ueber focusable Edit/Document/Group (RootWebArea per Condition ausgeschlossen).
+        ///   2. Bildschirmfuellende Container (Seiten-Wurzel / 'dframe-main') per IsPageRoot ueberspringen.
+        ///   3. Bevorzugt das Element mit ClassName 'tiptap'/'ProseMirror' (stabiler Editor-Anker,
+        ///      sprach- und positions-unabhaengig); sonst das erste brauchbare Nicht-Root-Feld.
+        /// FindAll (statt FindFirst) ist noetig, weil das echte Feld unter mehreren focusable Containern
+        /// stehen kann und FindFirst sonst den falschen zuerst liefert. Die Condition ist eng (focusable,
+        /// kein Root) und der Pfad laeuft nur als Fallback (wenn Pfad1 versagt) — der U6-Performance-
+        /// Hinweis wird damit bewusst und begrenzt in Kauf genommen (Korrektheit > wenige ms).
+        /// </summary>
+        private static AutomationElement? FindProseMirrorField(AutomationElement root, TreeScope scope)
+        {
+            try
+            {
+                var cond = new AndCondition(
+                    new OrCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Group)),
+                    new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true),
+                    new NotCondition(
+                        new PropertyCondition(AutomationElement.AutomationIdProperty, "RootWebArea")));
+
+                AutomationElementCollection matches = root.FindAll(scope, cond);
+                AutomationElement? fallback = null;
+                foreach (AutomationElement el in matches)
+                {
+                    if (IsPageRoot(el)) continue; // RootWebArea (Rect-Regel) / 'dframe-main' etc. ueberspringen
+                    string cls = SafeClassName(el);
+                    if (cls.IndexOf("ProseMirror", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        cls.IndexOf("tiptap", StringComparison.OrdinalIgnoreCase) >= 0)
+                        return el;        // das echte contenteditable-Feld (Editor-Anker)
+                    fallback ??= el;      // erstes brauchbares Nicht-Root-Feld als Rueckfall merken
+                }
+                return fallback;
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("UIA", "FindProseMirrorField-Ausnahme", ("err", ex.GetType().Name));
+                return null;
+            }
+        }
+
+        /// <summary>Werf-freier ClassName-Zugriff (UIA-Property-Reads koennen werfen).</summary>
+        private static string SafeClassName(AutomationElement el)
+        {
+            try { return el.Current.ClassName ?? string.Empty; }
+            catch { return string.Empty; }
         }
 
         private static bool TrySetFocus(AutomationElement el)
