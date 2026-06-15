@@ -121,6 +121,38 @@ if [ -f "$WHITEBOARD" ]; then
     fi
 fi
 
+# --- Invariant 10: Hook-Drift aktiv<->repo (inhaltlich, EOL/BOM-normalisiert) (2026-06-15) ---
+# Faengt ab, wenn ein aktiver Hook (~/.claude/hooks/) inhaltlich von der Repo-Spiegelung
+# (claude-code-setup/hooks/) abweicht (real 2026-06-15: subagent-context 1 Monat alt + flaches
+# Schema -> Subagenten erbten das System nicht, monatelang unbemerkt). INHALTS-Vergleich (BOM via
+# utf-8-sig + CRLF->LF + trailing-newline normalisiert), damit reiner EOL-Drift KEINEN Fehlalarm
+# ausloest — sonst piept der Waechter dauernd und wird ignoriert (agent-knowledge-system.md S4).
+REPO_HOOKS="$HOME/proggs/claude-code-setup/hooks"
+if [ -d "$HOOKS_DIR" ] && [ -d "$REPO_HOOKS" ]; then
+    drift_hooks=""
+    drift_count=0
+    for rf in "$REPO_HOOKS"/*.ps1 "$REPO_HOOKS"/*.sh; do
+        [ -f "$rf" ] || continue
+        name=$(basename "$rf")
+        active="$HOOKS_DIR/$name"
+        [ -f "$active" ] || continue
+        if ! python3 - "$active" "$rf" 2>/dev/null <<'PYEOF'
+import sys
+def norm(p):
+    t = open(p, encoding='utf-8-sig').read()
+    return t.replace('\r\n', '\n').rstrip('\n')
+sys.exit(0 if norm(sys.argv[1]) == norm(sys.argv[2]) else 1)
+PYEOF
+        then
+            drift_hooks="$drift_hooks $name"
+            drift_count=$((drift_count + 1))
+        fi
+    done
+    if [ "$drift_count" -gt 0 ]; then
+        violations+=("HOOK-DRIFT: $drift_count Hook(s) weichen aktiv<->repo ab (Inhalt):$drift_hooks — Repo<->aktiv spiegeln!")
+    fi
+fi
+
 # --- Output ---
 if [ ${#violations[@]} -gt 0 ]; then
     echo ""

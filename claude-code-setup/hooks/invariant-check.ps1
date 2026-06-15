@@ -177,6 +177,36 @@ if ($content) {
     }
 }
 
+# --- Invariant 10: Hook-Drift aktiv<->repo (inhaltlich, EOL/BOM-normalisiert) (2026-06-15) ---
+# Faengt den Fall, dass ein aktiver Hook (~/.claude/hooks/) inhaltlich von der Repo-Spiegelung
+# (claude-code-setup/hooks/) abweicht (real 2026-06-15: subagent-context war 1 Monat alt + nutzte
+# das flache Schema -> Subagenten erbten das System nicht, monatelang unbemerkt). INHALTS-Vergleich
+# (BOM via utf-8-sig + CRLF->LF + trailing-newline normalisiert), damit reiner EOL-Drift KEINEN
+# Fehlalarm ausloest — sonst piept der Waechter dauernd und wird ignoriert (agent-knowledge-system.md S4).
+$repoHooks = Join-Path $env:USERPROFILE "proggs\claude-code-setup\hooks"
+if ((Test-Path $hooksDir) -and (Test-Path $repoHooks)) {
+    function Get-NormHook($p) {
+        try {
+            $t = [System.IO.File]::ReadAllText($p)        # erkennt+entfernt BOM automatisch
+            $t = $t.TrimStart([char]0xFEFF)               # Sicherheitsnetz fuer BOM
+            $t = $t -replace "`r`n", "`n"                 # CRLF -> LF
+            return $t.TrimEnd("`n")                       # trailing newlines egal
+        } catch { return $null }
+    }
+    $driftHooks = @()
+    foreach ($rf in (Get-ChildItem "$repoHooks\*.ps1", "$repoHooks\*.sh" -ErrorAction SilentlyContinue)) {
+        $active = Join-Path $hooksDir $rf.Name
+        if (Test-Path $active) {
+            $na = Get-NormHook $active
+            $nr = Get-NormHook $rf.FullName
+            if ($null -ne $na -and $null -ne $nr -and $na -ne $nr) { $driftHooks += $rf.Name }
+        }
+    }
+    if ($driftHooks.Count -gt 0) {
+        $violations += "HOOK-DRIFT: $($driftHooks.Count) Hook(s) weichen aktiv<->repo ab (Inhalt): $($driftHooks -join ', ') — Repo<->aktiv spiegeln!"
+    }
+}
+
 # --- Output ---
 if ($violations.Count -gt 0) {
     Write-Host ""
