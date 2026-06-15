@@ -57,3 +57,13 @@ die 2 NEUEN Update-Skills (Almanach-Welle + Best-Practices-Welle, Cowork-tauglic
   #46810 W3-3 memory-staleness.py + governance convention
   #46809 W3-2 semantic prompt-trigger bug-almanac-hint
   #46808 W3-1 version-anchor check + Anker fields
+
+## NACHTRAG (Frank, 2026-06-15 spaet) — Cowork/Desktop-Skill-Varianten ebenfalls anpassen
+Frank nutzt in Claude COWORK (Desktop-App) GEKUERZTE Varianten derselben Skills: bug-almanach-recherche
+("Bug einmal nach"), research/researcher, best-practices. Diese gekuerzten Cowork-Versionen muessen
+EBENFALLS an das neue W3-Logik-System angepasst werden (Anker-Feld W3-1, check-version-anchor, bug-almanac-hint
+W3-2, health.py-Self-Test — soweit in der gekuerzten Form sinnvoll/anwendbar).
+ACHTUNG — Speicherort NICHT eindeutig gefunden: `~/proggs/Cowork/` enthaelt nur eine README (keine Skills);
+Cowork-Skills werden per ZIP in die Desktop-App hochgeladen, die Quelle der gekuerzten Skills liegt vermutlich
+woanders. FRISCHE SESSION: ZUERST Frank nach dem genauen Speicherort/Quellordner der gekuerzten Cowork-Skill-
+Varianten fragen, DANN analog zu W3-5 anpassen. Gehoert thematisch zur Update-Skills-/Skill-Konsistenz-Arbeit.
