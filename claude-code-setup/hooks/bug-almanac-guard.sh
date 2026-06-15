@@ -109,20 +109,31 @@ case "$fpl" in
         # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
         # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
         slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)";;
-    *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt)
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
-        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
-        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+    *androidmanifest.xml)
+        # Manifest separat (keine .kt): Platform-SDK (Permissions/Services/Receiver/Edge-to-Edge/targetSdk).
+        # Der frueher hier mitgefangene service/receiver/worker.kt-Teil wandert in den .kt-case unten als
+        # Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) — so
+        # verdeckt service.kt/worker.kt nicht mehr die feature-spezifischen Android-Almanache.
         slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)";;
     *.kt|*.kts)
-        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
-        # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
+        # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben, dann nach Prioritaet routen.
+        # FAIL-OPEN (trap). Reihenfolge strikt funktionserhaltend: die spezifischen Feature-Signale
+        # (voice/workmanager/drive) stehen VOR dem service/worker-Dateiname-Fallback, alle bestehenden
+        # Signale (hilt/net/media3/coil/room/compose) bleiben unveraendert dahinter.
         composeSignal=0
         hiltSignal=0
         netSignal=0
         media3Signal=0
         coilSignal=0
         roomSignal=0
+        voiceSignal=0
+        workmanagerSignal=0
+        driveSignal=0
+        filamentSignal=0
+        # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
+        # spezifischeres Feature-Signal davor zieht).
+        androidPlatformName=0
+        case "$fpl" in *service.kt|*receiver.kt|*worker.kt) androidPlatformName=1;; esac
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -160,11 +171,35 @@ $ti_extra"
             case "$probe" in
               *@Entity*|*@Dao*|*@Database*|*@TypeConverter*|*@ProvidedTypeConverter*|*RoomDatabase*|*androidx.room*|*@PrimaryKey*|*@ColumnInfo*|*@Embedded*|*@AutoMigration*|*@Upsert*) roomSignal=1;;
             esac
+            # Voice-Assistant-Ausloesung / Wake-Word / Mic -> voice-assistant-trigger.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *VoiceInteractionService*|*AccessibilityService*|*WakeWord*|*Hotword*|*KEYCODE_ASSIST*|*ACTION_ASSIST*|*sherpa-onnx*|*sherpa.onnx*|*sherpa_onnx*|*Porcupine*|*OpenWakeWord*|*NanoWakeWord*|*Shizuku*) voiceSignal=1;;
+            esac
+            # WorkManager & Notifications -> workmanager-notifications.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *WorkManager*|*PeriodicWorkRequest*|*OneTimeWorkRequest*|*CoroutineWorker*|*enqueueUnique*|*setExactAndAllowWhileIdle*|*setAndAllowWhileIdle*|*AlarmManager*|*NotificationChannel*|*NotificationCompat*|*NotificationManagerCompat*|*SCHEDULE_EXACT_ALARM*) workmanagerSignal=1;;
+            esac
+            # Google-Drive-Backup & Cloud-Sync -> google-drive-backup.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *appDataFolder*|*DriveScopes*|*DRIVE_APPDATA*|*com.google.api.services.drive*|*google-api-services-drive*|*AuthorizationClient*|*GoogleAuthUtil*) driveSignal=1;;
+            esac
+            # 3D auf Android (Filament/SceneView) -> 3d-filament-android.md (vor Compose/Kotlin).
+            case "$probe" in
+              *com.google.android.filament*|*Filament*|*ModelViewer*|*io.github.sceneview*|*SceneView*|*rememberEngine*) filamentSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
         case "$fpl" in *module.kt) hiltSignal=1;; esac
-        if [ "$hiltSignal" -eq 1 ]; then
+        if [ "$voiceSignal" -eq 1 ]; then
+            slug="voiceassistant"; file="voice-assistant-trigger.md"; name="Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)"
+        elif [ "$workmanagerSignal" -eq 1 ]; then
+            slug="workmanager"; file="workmanager-notifications.md"; name="WorkManager & Notifications (Reminder/Hintergrund)"
+        elif [ "$driveSignal" -eq 1 ]; then
+            slug="drivebackup"; file="google-drive-backup.md"; name="Google-Drive-Backup & Cloud-Sync (Android)"
+        elif [ "$androidPlatformName" -eq 1 ]; then
+            slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)"
+        elif [ "$hiltSignal" -eq 1 ]; then
             slug="hiltdagger"; file="hilt-dagger.md"; name="Hilt/Dagger Dependency Injection (KSP)"
         elif [ "$netSignal" -eq 1 ]; then
             slug="networking"; file="retrofit-okhttp-moshi.md"; name="Android-Networking (Retrofit/OkHttp/Moshi)"
@@ -174,6 +209,8 @@ $ti_extra"
             slug="coil3"; file="coil3.md"; name="Bild-/Video-Laden (Coil 3)"
         elif [ "$roomSignal" -eq 1 ]; then
             slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)"
+        elif [ "$filamentSignal" -eq 1 ]; then
+            slug="filament"; file="3d-filament-android.md"; name="3D auf Android (Filament/SceneView)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
@@ -181,11 +218,45 @@ $ti_extra"
         fi
         ;;
     *.swift|*.xcodeproj*|*/info.plist|info.plist|*.entitlements)
-        slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
+        # .swift: Content-Probe -> macOS-Overlay (NSPanel/...) / 3D-Metal-SceneKit (MTKView/SceneKit/RealityKit)
+        #         / On-Device-Whisper (whisper.cpp/WhisperKit) -> sonst swift-appkit.md. Probe nur bei .swift
+        #         (xcodeproj/plist/entitlements enthalten keinen Swift-Code). FAIL-OPEN (trap).
+        macOverlaySignal=0; metalSignal=0; whisperSignal=0
+        case "$fpl" in
+          *.swift)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in *whisper.cpp*|*WhisperKit*|*whisperkit*|*ggml*) whisperSignal=1;; esac
+            case "$probe" in *nonactivatingPanel*|*NSPanel*|*collectionBehavior*|*canJoinAllSpaces*|*orderFrontRegardless*|*ignoresMouseEvents*|*LSUIElement*|*CGEventTap*) macOverlaySignal=1;; esac
+            case "$probe" in *MTKView*|*MTLDevice*|*MTLCreateSystemDefaultDevice*|*SceneKit*|*SCNView*|*RealityKit*|*RealityView*|*MetalFX*|*MetalKit*) metalSignal=1;; esac
+            ;;
+        esac
+        if [ "$whisperSignal" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
+        elif [ "$macOverlaySignal" -eq 1 ]; then
+            slug="macosoverlay"; file="macos-overlay.md"; name="macOS-Overlay-Fenster (Swift/AppKit)"
+        elif [ "$metalSignal" -eq 1 ]; then
+            slug="metalmacos"; file="3d-metal-scenekit-macos.md"; name="3D auf macOS (Metal/SceneKit/RealityKit)"
+        else
+            slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)"
+        fi
+        ;;
     *.ts|*.tsx|*tsconfig.json)
         # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog Compose-Probe). FAIL-OPEN (trap).
         mcpSignal=0
+        threejsSignal=0
         case "$fpl" in
           *.ts|*.tsx)
             probe=""
@@ -204,10 +275,16 @@ $ti_extra"
             case "$probe" in
               *@modelcontextprotocol/sdk*|*McpServer*|*StdioServerTransport*|*StreamableHTTPServerTransport*|*setRequestHandler*) mcpSignal=1;;
             esac
+            # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
+            case "$probe" in
+              *THREE.*|*three/examples*|*@react-three/fiber*|*@react-three/drei*|*@babylonjs*|*WebGPURenderer*|*GLTFLoader*|*KTX2Loader*|*PMREMGenerator*) threejsSignal=1;;
+            esac
             ;;
         esac
         if [ "$mcpSignal" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$threejsSignal" -eq 1 ]; then
+            slug="threejs"; file="3d-threejs-webgpu.md"; name="3D im Web (Three.js/Babylon/WebGPU)"
         else
             slug="typescript"; file="typescript.md"; name="TypeScript / Node"
         fi
@@ -219,7 +296,7 @@ $ti_extra"
         # .cs: Content-Probe -> Groq-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN (trap).
-        groqSignal=0; wakeSignal=0
+        groqSignal=0; wakeSignal=0; whisperSignal=0; dxSignal=0; winOverlaySignal=0
         case "$fpl" in
           *.cs)
             probe=""
@@ -241,12 +318,30 @@ $ti_extra"
             case "$probe" in
               *KeywordSpotter*|*sherpa-onnx*|*sherpa.onnx*|*sherpa_onnx*|*SherpaOnnx*|*Porcupine*|*NanoWakeWord*|*OpenWakeWord*|*WakeWord*|*wakeword*|*wake-word*|*wake_word*) wakeSignal=1;;
             esac
+            # On-Device-Whisper / lokale Transkription -> whisper-stt-lokal.md (nach groq/wake; lokal, NICHT Cloud).
+            case "$probe" in
+              *Whisper.net*|*WhisperFactory*|*whisper.cpp*|*GgmlType*|*CTranslate2*|*faster-whisper*|*faster_whisper*) whisperSignal=1;;
+            esac
+            # 3D auf Windows (.NET DirectX/Stride/Silk.NET) -> 3d-dotnet-directx-windows.md.
+            case "$probe" in
+              *Stride.*|*Silk.NET*|*Vortice*|*Veldrid*|*SharpDX*|*Direct3D*|*D3D12*|*MonoGame*) dxSignal=1;;
+            esac
+            # Windows-Overlay-Fenster (WPF: always-on-top/click-through/global Hotkey) -> windows-overlay.md.
+            case "$probe" in
+              *WS_EX_NOACTIVATE*|*WS_EX_TOOLWINDOW*|*WS_EX_TRANSPARENT*|*WS_EX_LAYERED*|*RegisterHotKey*|*WH_KEYBOARD_LL*|*SetWindowPos*|*WindowChrome*|*AllowsTransparency*) winOverlaySignal=1;;
+            esac
             ;;
         esac
         if [ "$groqSignal" -eq 1 ]; then
             slug="groq"; file="groq-transkription.md"; name="Groq Whisper Transkription (Audio/STT)"
         elif [ "$wakeSignal" -eq 1 ]; then
             slug="wakeword"; file="wake-word.md"; name="Wake-Word / Keyword-Spotting (.NET/C#)"
+        elif [ "$whisperSignal" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
+        elif [ "$dxSignal" -eq 1 ]; then
+            slug="dxwindows"; file="3d-dotnet-directx-windows.md"; name="3D auf Windows (.NET DirectX/Stride/Silk.NET)"
+        elif [ "$winOverlaySignal" -eq 1 ]; then
+            slug="winoverlay"; file="windows-overlay.md"; name="Windows-Overlay-Fenster (C#/WPF)"
         else
             slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)"
         fi
@@ -275,14 +370,24 @@ $ti_extra"
         case "$probe" in
           *icns*|*iconutil*|*getchannel*|*ic_launcher*|*ApplicationIcon*) iconPy=1;;
         esac
+        # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
+        whisperPy=0
+        case "$probe" in
+          *faster_whisper*|*faster-whisper*|*whisper.cpp*|*WhisperModel*|*ctranslate2*|*pywhispercpp*) whisperPy=1;;
+        esac
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
         elif [ "$iconPy" -eq 1 ]; then
             slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
+        elif [ "$whisperPy" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
         else
             slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)"
         fi
         ;;
+    *.gd|*.tscn|*.tres|*.gdshader|*project.godot)
+        # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
+        slug="godot"; file="3d-godot.md"; name="3D mit Godot 4";;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
     */claude.md|claude.md|*/rules/*.md|*/settings.json|settings.json|*/settings.local.json|*/settings-reference.json|*/skill.md|*/commands/*.md|*/agents/*.md)
@@ -293,6 +398,33 @@ esac
 # Selbst-Ausschluss: Almanach-/Best-Practices-.md duerfen claudeconfig NIE triggern (sind selbst .md).
 if [ "$slug" = "claudeconfig" ]; then
     case "$fpl" in */bugs/*|*/best-practices/*) slug=""; file=""; name="";; esac
+fi
+
+# -- Rust-3D (Bevy/wgpu) VOR der generischen Endungs-Erkennung --
+# 3d-rust-wgpu-bevy.md existiert, rust.md NICHT. Ohne diesen Check liefe eine .rs-Datei in den generischen
+# rust.md-Platzhalter -> Fehlalarm "kein Almanach", obwohl 3d-rust-wgpu-bevy.md da ist. Greift nur bei
+# 3D-Signal; reines Rust faellt unveraendert in den generischen rust.md-Platzhalter.
+if [ -z "$slug" ]; then
+    case "$fpl" in
+        *.rs|*cargo.toml)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in
+              *bevy*|*wgpu*|*Camera3d*|*Mesh3d*|*MeshMaterial3d*|*PbrBundle*|*StandardMaterial*) slug="3drust"; file="3d-rust-wgpu-bevy.md"; name="3D mit Rust (wgpu/Bevy)";;
+            esac
+            ;;
+    esac
 fi
 
 # -- Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. --

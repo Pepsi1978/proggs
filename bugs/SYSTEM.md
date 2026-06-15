@@ -218,6 +218,12 @@ beiden Dateien, ob die Bezugs-Tabelle in BEIDEN vorhanden ist. Rein lesend, imme
 (blockiert nie eine Session), meldet Drift per `[DRIFT]`-Zeile. Manuell oder im Rahmen eines
 Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
 
+**Guard-Coverage-Check.** `python3 bugs/check-guard-coverage.py` prueft, ob JEDER Almanach vom
+`bug-almanac-guard` ueber ein Dateimuster/Inhalts-Signal erzwungen wird (`[OK]`), bewusst als
+Querschnitt gelistet ist (`[BEWUSST]`, Allowlist im Skript) oder ungemappt durchrutscht
+(`[LUECKE]`). Rein lesend, immer `exit 0`. Nach jedem neuen Almanach ausfuehren: zeigt er `[LUECKE]`,
+im Guard ein Signal ergaenzen ODER (bei echtem Querschnitt) in die Allowlist aufnehmen.
+
 ---
 
 ## 10. Bewusste Grenzen von v1 (kommende Verbesserungen)
@@ -228,6 +234,22 @@ Wartungslaufs ausfuehren, damit die Verlinkung nicht still auseinanderlaeuft.
   der Hook sucht die Almanach-Datei rekursiv unter `bugs/` (kategorie-robust). Spaeter
   evtl. auch das Dateimuster-Mapping aus `README.md` auslesen, damit nur eine Stelle
   gepflegt werden muss.
+- **GESCHLOSSEN am 2026-06-15 (Coverage-Selbsttest, Poka-Yoke Stufe 3):** Bislang konnte ein
+  Almanach existieren, ohne dass der Guard ihn je erzwingt (kein passendes Dateimuster/Signal) —
+  er rutschte still durch ODER wurde vom uebergeordneten Sprach-Almanach verdeckt (wie frueher
+  `room` unter `android-platform`). Jetzt prueft `python3 bugs/check-guard-coverage.py` jeden
+  Almanach gegen das Guard-Mapping und meldet `[OK]`/`[BEWUSST]`/`[LUECKE]` — kuenftige ungemappte
+  Almanache fallen sofort auf. Im selben Zug 13 Luecken geschlossen: Inhalts-Erkennung im Guard
+  fuer `voice-assistant-trigger`, `workmanager-notifications`, `google-drive-backup`,
+  `3d-filament-android` (.kt), `windows-overlay`, `3d-dotnet-directx-windows`, `whisper-stt-lokal`
+  (.cs), `macos-overlay`, `3d-metal-scenekit-macos` (.swift), `3d-threejs-webgpu` (.ts) + Dateiname-
+  Zweige fuer `3d-godot` (.gd/.tscn/.gdshader) und `3d-rust-wgpu-bevy` (.rs/Cargo.toml mit Bevy/wgpu —
+  behebt den frueheren `rust.md`-Fehlalarm). Strikt funktionserhaltend (service/worker.kt ohne
+  Feature-Signal bleibt `android-platform`, reines Rust faellt weiter in den `rust.md`-Platzhalter,
+  alle bestehenden Signale unveraendert). Bewusst NICHT datei-erzwungen bleiben Querschnitts-/
+  Prozess-Almanache (`apis/*`, `agents/orchestrator-agent`, `cowork`, `claude-code-desktop-vs-cli`,
+  `voice-pipeline`, `3d-visual-quality`, `play-store-release`) — sie stehen in der Allowlist des
+  Coverage-Skripts und werden ueber Index + Stichworte gefunden.
 - Schwellen-Erkennung („echte Bereichsarbeit vs. Kleinkram") laeuft ueber mein
   Urteil; falls das in der Praxis zu oft daneben liegt, schaerfen wir nach.
 - **GESCHLOSSEN am 2026-06-10 (Digest-Modell, §11):** Der Volltext-Lese-Zwang fuer ALLE

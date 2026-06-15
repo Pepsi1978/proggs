@@ -57,6 +57,11 @@ Session-Hook (`bug-almanac-index`) blendet diese Liste beim Start ein · Datei-H
 Fehler-Hook (`bug-case-auto-writer`) verweist bei neuen Fehlern auf den Almanach ·
 Regel `known-bugs-before-coding.md` als Verhaltensschicht.
 
+**Wartung (Poka-Yoke Stufe 3):** `python3 bugs/check-guard-coverage.py` prueft, ob JEDER
+Almanach vom `bug-almanac-guard` auch wirklich erzwungen wird — meldet `[OK]` / `[BEWUSST]`
+(Querschnitt, Allowlist) / `[LUECKE]`. Nach jedem neuen Almanach ausfuehren, damit kein Almanach
+unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
+
 ---
 
 ## ✅ Vorhandene Almanache (nach Kategorie)

@@ -110,20 +110,30 @@ try {
         # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
         # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
         $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
-    } elseif ($fpl -match 'androidmanifest\.xml$' -or $fpl -match '(service|receiver|worker)\.kt$') {
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
-        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
-        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+    } elseif ($fpl -match 'androidmanifest\.xml$') {
+        # Manifest separat (keine .kt): Platform-SDK (Permissions/Services/Receiver/Edge-to-Edge/targetSdk).
+        # Der frueher hier mitgefangene (service|receiver|worker).kt-Teil wandert in den .kt-Block unten
+        # als Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) —
+        # so verdeckt 'service.kt'/'worker.kt' nicht mehr die feature-spezifischen Android-Almanache.
         $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
     } elseif ($fpl -match '\.kts?$') {
-        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
-        # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
+        # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben (existierende Datei + Tool-Input),
+        # dann nach Prioritaet routen. FAIL-OPEN (try/catch). Reihenfolge strikt funktionserhaltend: die
+        # spezifischen Feature-Signale (voice/workmanager/drive) stehen VOR dem service/worker-Dateiname-
+        # Fallback, alle bestehenden Signale (hilt/net/media3/coil/room/compose) bleiben unveraendert dahinter.
         $composeSignal = $false
         $hiltSignal = $false
         $netSignal = $false
         $media3Signal = $false
         $coilSignal = $false
         $roomSignal = $false
+        $voiceSignal = $false
+        $workmanagerSignal = $false
+        $driveSignal = $false
+        $filamentSignal = $false
+        # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
+        # spezifischeres Feature-Signal davor zieht).
+        $androidPlatformName = ($fpl -match '(service|receiver|worker)\.kt$')
         if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
@@ -146,8 +156,24 @@ try {
             # Room-Persistenz-Signale (Entity/DAO/Database/TypeConverter ohne *Dao.kt/*Database.kt-Dateinamen)
             # -> room.md (nach Hilt/Net/Media3/Coil, vor Compose/Kotlin). @Query bewusst NICHT (Retrofit-Konflikt).
             if ($probe -match '@Entity' -or $probe -match '@Dao' -or $probe -match '@Database' -or $probe -match '@TypeConverter' -or $probe -match '@ProvidedTypeConverter' -or $probe -match 'RoomDatabase' -or $probe -match 'androidx\.room' -or $probe -match '@PrimaryKey' -or $probe -match '@ColumnInfo' -or $probe -match '@Embedded' -or $probe -match '@AutoMigration' -or $probe -match '@Upsert') { $roomSignal = $true }
+            # Voice-Assistant-Ausloesung / Wake-Word / Mic -> voice-assistant-trigger.md (spezifisch, VOR android-platform).
+            if ($probe -match 'VoiceInteractionService' -or $probe -match 'AccessibilityService' -or $probe -match 'WakeWord' -or $probe -match 'Hotword' -or $probe -match 'KEYCODE_ASSIST' -or $probe -match 'ACTION_ASSIST' -or $probe -match 'sherpa[-_.]?onnx' -or $probe -match 'Porcupine' -or $probe -match 'OpenWakeWord' -or $probe -match 'NanoWakeWord' -or $probe -match 'Shizuku') { $voiceSignal = $true }
+            # WorkManager & Notifications -> workmanager-notifications.md (spezifisch, VOR android-platform).
+            if ($probe -match 'WorkManager' -or $probe -match 'PeriodicWorkRequest' -or $probe -match 'OneTimeWorkRequest' -or $probe -match 'CoroutineWorker' -or $probe -match 'enqueueUnique' -or $probe -match 'setExactAndAllowWhileIdle' -or $probe -match 'setAndAllowWhileIdle' -or $probe -match 'AlarmManager' -or $probe -match 'NotificationChannel' -or $probe -match 'NotificationCompat' -or $probe -match 'NotificationManagerCompat' -or $probe -match 'SCHEDULE_EXACT_ALARM') { $workmanagerSignal = $true }
+            # Google-Drive-Backup & Cloud-Sync -> google-drive-backup.md (spezifisch, VOR android-platform).
+            if ($probe -match 'appDataFolder' -or $probe -match 'DriveScopes' -or $probe -match 'DRIVE_APPDATA' -or $probe -match 'com\.google\.api\.services\.drive' -or $probe -match 'google-api-services-drive' -or $probe -match 'AuthorizationClient' -or $probe -match 'GoogleAuthUtil') { $driveSignal = $true }
+            # 3D auf Android (Filament/SceneView) -> 3d-filament-android.md (vor Compose/Kotlin).
+            if ($probe -match 'com\.google\.android\.filament' -or $probe -match 'Filament' -or $probe -match 'ModelViewer' -or $probe -match 'io\.github\.sceneview' -or $probe -match 'SceneView' -or $probe -match 'rememberEngine') { $filamentSignal = $true }
         }
-        if ($hiltSignal) {
+        if ($voiceSignal) {
+            $slug = 'voiceassistant'; $file = 'voice-assistant-trigger.md'; $name = 'Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)'
+        } elseif ($workmanagerSignal) {
+            $slug = 'workmanager'; $file = 'workmanager-notifications.md'; $name = 'WorkManager & Notifications (Reminder/Hintergrund)'
+        } elseif ($driveSignal) {
+            $slug = 'drivebackup'; $file = 'google-drive-backup.md'; $name = 'Google-Drive-Backup & Cloud-Sync (Android)'
+        } elseif ($androidPlatformName) {
+            $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
+        } elseif ($hiltSignal) {
             $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
         } elseif ($netSignal) {
             $slug = 'networking'; $file = 'retrofit-okhttp-moshi.md'; $name = 'Android-Networking (Retrofit/OkHttp/Moshi)'
@@ -157,17 +183,48 @@ try {
             $slug = 'coil3'; $file = 'coil3.md'; $name = 'Bild-/Video-Laden (Coil 3)'
         } elseif ($roomSignal) {
             $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
+        } elseif ($filamentSignal) {
+            $slug = 'filament'; $file = '3d-filament-android.md'; $name = '3D auf Android (Filament/SceneView)'
         } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {
             $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
         }
     } elseif ($fpl -match '\.swift$' -or $fpl -match '\.xcodeproj' -or $fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
-        $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
+        # .swift: Content-Probe -> macOS-Overlay (NSPanel/...) / 3D-Metal-SceneKit (MTKView/SceneKit/RealityKit)
+        #         / On-Device-Whisper (whisper.cpp/WhisperKit) -> sonst swift-appkit.md. Probe nur bei .swift
+        #         (xcodeproj/plist/entitlements enthalten keinen Swift-Code). FAIL-OPEN.
+        $macOverlaySignal = $false; $metalSignal = $false; $whisperSignal = $false
+        if ($fpl -match '\.swift$') {
+            $probe = ""
+            try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            # On-Device-Whisper zuerst (eindeutigste Signale).
+            if ($probe -match 'whisper\.cpp' -or $probe -match 'WhisperKit' -or $probe -match 'whisperkit' -or $probe -match 'ggml' -or $probe -match 'CoreML.*[Ww]hisper') { $whisperSignal = $true }
+            # macOS-Overlay-Fenster (NSPanel/nonactivating/collectionBehavior/click-through).
+            if ($probe -match 'nonactivatingPanel' -or $probe -match 'NSPanel' -or $probe -match 'collectionBehavior' -or $probe -match 'canJoinAllSpaces' -or $probe -match 'orderFrontRegardless' -or $probe -match 'ignoresMouseEvents' -or $probe -match 'LSUIElement' -or $probe -match 'CGEventTap') { $macOverlaySignal = $true }
+            # 3D auf macOS (Metal/SceneKit/RealityKit).
+            if ($probe -match 'MTKView' -or $probe -match 'MTLDevice' -or $probe -match 'MTLCreateSystemDefaultDevice' -or $probe -match 'SceneKit' -or $probe -match 'SCNView' -or $probe -match 'RealityKit' -or $probe -match 'RealityView' -or $probe -match 'MetalFX' -or $probe -match 'MetalKit') { $metalSignal = $true }
+        }
+        if ($whisperSignal) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
+        } elseif ($macOverlaySignal) {
+            $slug = 'macosoverlay'; $file = 'macos-overlay.md'; $name = 'macOS-Overlay-Fenster (Swift/AppKit)'
+        } elseif ($metalSignal) {
+            $slug = 'metalmacos'; $file = '3d-metal-scenekit-macos.md'; $name = '3D auf macOS (Metal/SceneKit/RealityKit)'
+        } else {
+            $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
+        }
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
         # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum Compose-Probe). FAIL-OPEN.
         $mcpSignal = $false
+        $threejsSignal = $false
         if ($fpl -match '\.tsx?$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -178,9 +235,13 @@ try {
                 if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
             } catch {}
             if ($probe -match '@modelcontextprotocol/sdk' -or $probe -match 'McpServer' -or $probe -match 'StdioServerTransport' -or $probe -match 'StreamableHTTPServerTransport' -or $probe -match 'setRequestHandler') { $mcpSignal = $true }
+            # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
+            if ($probe -match 'THREE\.' -or $probe -match 'three/examples' -or $probe -match '@react-three/fiber' -or $probe -match '@react-three/drei' -or $probe -match '@babylonjs' -or $probe -match 'WebGPURenderer' -or $probe -match 'GLTFLoader' -or $probe -match 'KTX2Loader' -or $probe -match 'PMREMGenerator') { $threejsSignal = $true }
         }
         if ($mcpSignal) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($threejsSignal) {
+            $slug = 'threejs'; $file = '3d-threejs-webgpu.md'; $name = '3D im Web (Three.js/Babylon/WebGPU)'
         } else {
             $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
         }
@@ -191,7 +252,7 @@ try {
         # .cs: Content-Probe -> Groq-Whisper-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN.
-        $groqSignal = $false; $wakeSignal = $false
+        $groqSignal = $false; $wakeSignal = $false; $whisperSignal = $false; $dxSignal = $false; $winOverlaySignal = $false
         if ($fpl -match '\.cs$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -203,11 +264,23 @@ try {
             } catch {}
             if ($probe -match 'GroqWhisperClient' -or $probe -match 'audio/transcriptions' -or $probe -match 'api\.groq\.com') { $groqSignal = $true }
             if ($probe -match 'KeywordSpotter|sherpa[-_.]?onnx|Porcupine|NanoWakeWord|OpenWakeWord|WakeWord|wake[-_]word') { $wakeSignal = $true }
+            # On-Device-Whisper / lokale Transkription -> whisper-stt-lokal.md (nach groq/wake; lokal, NICHT Cloud).
+            if ($probe -match 'Whisper\.net' -or $probe -match 'WhisperFactory' -or $probe -match 'whisper\.cpp' -or $probe -match 'GgmlType' -or $probe -match 'CTranslate2' -or $probe -match 'faster[-_]whisper') { $whisperSignal = $true }
+            # 3D auf Windows (.NET DirectX/Stride/Silk.NET) -> 3d-dotnet-directx-windows.md.
+            if ($probe -match 'Stride\.' -or $probe -match 'Silk\.NET' -or $probe -match 'Vortice' -or $probe -match 'Veldrid' -or $probe -match 'SharpDX' -or $probe -match 'Direct3D' -or $probe -match 'D3D12' -or $probe -match 'MonoGame') { $dxSignal = $true }
+            # Windows-Overlay-Fenster (WPF: always-on-top/click-through/global Hotkey) -> windows-overlay.md.
+            if ($probe -match 'WS_EX_NOACTIVATE' -or $probe -match 'WS_EX_TOOLWINDOW' -or $probe -match 'WS_EX_TRANSPARENT' -or $probe -match 'WS_EX_LAYERED' -or $probe -match 'RegisterHotKey' -or $probe -match 'WH_KEYBOARD_LL' -or $probe -match 'SetWindowPos' -or $probe -match 'WindowChrome' -or $probe -match 'AllowsTransparency') { $winOverlaySignal = $true }
         }
         if ($groqSignal) {
             $slug = 'groq'; $file = 'groq-transkription.md'; $name = 'Groq Whisper Transkription (Audio/STT)'
         } elseif ($wakeSignal) {
             $slug = 'wakeword'; $file = 'wake-word.md'; $name = 'Wake-Word / Keyword-Spotting (.NET/C#)'
+        } elseif ($whisperSignal) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
+        } elseif ($dxSignal) {
+            $slug = 'dxwindows'; $file = '3d-dotnet-directx-windows.md'; $name = '3D auf Windows (.NET DirectX/Stride/Silk.NET)'
+        } elseif ($winOverlaySignal) {
+            $slug = 'winoverlay'; $file = 'windows-overlay.md'; $name = 'Windows-Overlay-Fenster (C#/WPF)'
         } else {
             $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
         }
@@ -226,13 +299,21 @@ try {
         # Icon-Build-Skript (Pillow-Alpha-Check/iconutil/Android-adaptive/WPF-ApplicationIcon)? -> icon-building.md. Eindeutige Icon-Signale.
         $iconPy = $false
         if ($probe -match 'icns|iconutil|getchannel|ic_launcher|ApplicationIcon') { $iconPy = $true }
+        # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
+        $whisperPy = $false
+        if ($probe -match 'faster_whisper' -or $probe -match 'faster-whisper' -or $probe -match 'whisper\.cpp' -or $probe -match 'WhisperModel' -or $probe -match 'ctranslate2' -or $probe -match 'pywhispercpp') { $whisperPy = $true }
         if ($mcpPy) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
         } elseif ($iconPy) {
             $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
+        } elseif ($whisperPy) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
         } else {
             $slug = 'python'; $file = 'python-windows.md'; $name = 'Python (Windows-Encoding/Cross-Platform-Scripting)'
         }
+    } elseif ($fpl -match '\.(gd|tscn|tres|gdshader)$' -or $fpl -match '(^|/)project\.godot$') {
+        # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
+        $slug = 'godot'; $file = '3d-godot.md'; $name = '3D mit Godot 4'
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
     } elseif (($fpl -notmatch '/(bugs|best-practices)/') -and (
@@ -247,6 +328,24 @@ try {
         # SKILL.md, commands/*.md, agents/*.md. AUSGESCHLOSSEN: bugs/** und best-practices/** (sind selbst .md -> kein Selbst-Trigger).
         # Hooks (.ps1/.sh) faengt der claudehooks-Zweig oben ab; MEMORY.md bewusst NICHT (zu haeufig automatisch beschrieben).
         $slug = 'claudeconfig'; $file = 'claude-config.md'; $name = 'Claude-Code Konfiguration und Regeln (CLAUDE.md/Rules/Settings/Skills/Commands/Agents)'
+    }
+
+    # ── Rust-3D (Bevy/wgpu) VOR der generischen Endungs-Erkennung ──
+    # 3d-rust-wgpu-bevy.md existiert, rust.md NICHT. Ohne diesen Check liefe eine .rs-Datei in den
+    # generischen rust.md-Platzhalter -> Fehlalarm "kein Almanach", obwohl 3d-rust-wgpu-bevy.md da ist.
+    # Greift nur bei 3D-Signal; reines Rust faellt unveraendert in den generischen rust.md-Platzhalter.
+    if (-not $slug -and ($fpl -match '\.rs$' -or $fpl -match '(^|/)cargo\.toml$')) {
+        $probe = ""
+        try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($probe -match '\bbevy\b' -or $probe -match '\bwgpu\b' -or $probe -match 'Camera3d' -or $probe -match 'Mesh3d' -or $probe -match 'MeshMaterial3d' -or $probe -match 'PbrBundle' -or $probe -match 'StandardMaterial') {
+            $slug = '3drust'; $file = '3d-rust-wgpu-bevy.md'; $name = '3D mit Rust (wgpu/Bevy)'
+        }
     }
 
     # ── Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. ──
