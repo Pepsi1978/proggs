@@ -96,7 +96,6 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-05-10, /self-improve Thorough): 3 SubagentStop-Endlosschleife-Eintraege (2026-04-15 22:18, 22:18, 22:30) — GEFIXT 2026-04-20 durch Compound Effect #5: agent_id-Guard in memory-watchdog.ps1+.sh und writeback-enforcer.ps1+.sh + neue Regel hook-input-validation.md. Hook feuert nur noch bei echten SubagentStop-Events. Fehlerklasse durch Poka-Yoke Stufe 3 eliminiert. Siehe Forschung & Intelligence #5 fuer Beweiskette. -->
 <!-- ARCHIV (2026-05-10): 1x StopFailure Rate-Limit (b6155c28, macOS, "resets 10am") — temporaer, kein dauerhaftes Problem -->
 
-### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
 
 <!-- ARCHIV (2026-05-10, /self-improve Thorough): 35 Spam-Eintraege archiviert: -->
 <!--   - 30x startup-checks.ps1 Speicherplatz 95-96% (2026-04-27 bis 2026-05-10) — Disk-Spam — Root Cause: 96% Speicher dauerhaft, Spam-Filter im Hook fehlt -->
@@ -124,79 +123,11 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Fix-Vorschlag:** (1) Konflikt-Marker entfernt 2026-05-10 (manuell). (2) auto-sync.ps1 erweitern: vor pull pruefen ob Datei Konflikt-Marker enthaelt → wenn ja, lautstark melden statt still scheitern. (3) Whiteboard-Insert mit File-Lock absichern (Mutex auf .lock-Datei) damit parallele Inserts serialisiert werden.
 **Status:** TEILWEISE GEFIXT (Konflikt entfernt 2026-05-10) — Praevention noch offen
 
-### 2026-05-10 19:29 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:30 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:30 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:31 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:32 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:33 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 19:35 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 21:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-10 22:16 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-10 22:24 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-10 22:24 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-11 01:19 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-11 18:59 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-13 18:42 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-14 18:56 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-14 18:56 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
-### 2026-05-15 10:38 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-15 10:56 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-15 13:14 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-15 13:33 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
-### 2026-05-16 10:16 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-16 10:16 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--Users-barwa settings.local.json erstellt; Projekt C--Users-barwa--claude-double-shot-latte settings.local.json erstellt; Projekt C--Users-barwa--claude-mem-observer-sessions settings.local.json erstellt; Projekt C--Users-barwa-proggs settings.local.json erstellt — Status: AUTO-GEFIXT
-### 2026-05-16 10:27 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-16 10:34 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-16 10:44 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-16 12:36 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-16 14:00 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-16 14:19 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-16 15:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-16 19:11 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-16 20:03 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
-### 2026-05-16 20:06 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-16 21:28 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-16 23:23 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-17 11:13 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-17 11:23 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-17 19:38 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-17 20:01 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-17 20:45 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-17 20:57 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-05-17 21:33 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
-### 2026-05-18 10:23 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-18 10:44 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-18 10:50 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
 ### 2026-05-18 11:01 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ### 2026-05-18 11:11 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-05-18 11:49 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-18 13:08 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-05-18 14:24 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-05-18 14:44 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-18 15:07 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-18 16:35 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-18 17:55 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-18 18:51 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-18 19:10 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-18 20:21 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-21 18:23 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-22 20:32 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (transienter API-Rate-Limit, kein Harness-Bug, geprueft 2026-05-30)
-### 2026-05-23 08:47 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-23 09:00 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-23 11:19 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-23 13:58 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-23 20:39 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
-### 2026-05-23 23:32 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
-### 2026-05-24 10:32 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 98%
-### 2026-05-24 10:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-24 11:03 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-30 16:26 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
 ### 2026-05-30 16:26 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: GEFIXT (2026-05-30 geprueft: rebase laeuft sauber durch, war transienter Parallel-Session-Konflikt)
-### 2026-05-30 17:36 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-06-05 18:04 — Hook: plugin-health-check.sh — Auto-repaired 25 plugin .sh files with missing +x permission in /Users/frank/.claude/plugins/cache — Status: AUTO-GEFIXT
 
 ### 2026-06-05 18:05 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
@@ -204,7 +135,6 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"13686411-5971-42e4-aae0-2e4dc4abee8c","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/13686411-5971-42e4-aae0-2e4dc4abee8c.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"invalid_request","error_details":"400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 207552 tokens > 200000 maximum\"},\"request_id\":\"req_011CbkQ3PKZfmnBXMhhaRR7D\"... (truncated)
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
-### [2026-06-12 06:53] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 
 ### 2026-06-13 06:46 — StopFailure: API/Rate-Limit Error — Status: TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
@@ -212,7 +142,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"13686411-5971-42e4-aae0-2e4dc4abee8c","transcript_path":"/Users/frank/.claude/projects/-Users-frank--claude-mem-observer-sessions/13686411-5971-42e4-aae0-2e4dc4abee8c.jsonl","cwd":"/Users/frank/.claude-mem/observer-sessions","hook_event_name":"StopFailure","error":"invalid_request","error_details":"400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 212077 tokens > 200000 maximum\"},\"request_id\":\"req_011Cbzem3WYyU6QmjZWoVBuC\"... (truncated)
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** TRANSIENT (externer API-Rate-Limit, kein Harness-Bug)
-### [2026-06-13 06:53] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-06-15 18:28 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -255,6 +185,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 ---
 
+<!-- ARCHIV (2026-06-15, Welle 2 Entruempelung): 71 einzeilige Auto-Log-Spam-Eintraege entfernt (startup-checks Speicherplatz-KRITISCH, memory-watchdog Write-Back AUTO-LOGGED, session-guard effortLevel/settings.local AUTO-GEFIXT, StopFailure transient/archiviert) — alle erledigt/informativ, kein Fix-Wert. stopfailure-logger hat Rate-Limiting (1/h); Disk-Vollstand ist bekanntes separates Thema. -->
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
