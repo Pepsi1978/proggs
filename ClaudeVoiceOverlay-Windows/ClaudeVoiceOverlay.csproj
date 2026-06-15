@@ -7,15 +7,52 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Per-Monitor DPI Awareness V2: bei aktivem UseWindowsForms muss
+         die High-DPI-Konfiguration ueber diese csproj-Property laufen, NICHT
+         ueber den Manifest-Block <dpiAwareness>. Sonst meldet der Compiler
+         WFAC010. WPF-Windows in derselben Application erben den Modus
+         automatisch. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>ClaudeVoiceOverlay</RootNamespace>
     <AssemblyName>ClaudeVoiceOverlay</AssemblyName>
+    <Product>Spracheingabe - Claude</Product>
     <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
-         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
-    <Version>1.1.0</Version>
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
+         2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
+         (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
+    <Version>2.0.0</Version>
+    <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
+    <Company>Voice Overlay</Company>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.68.0.3568" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+  </ItemGroup>
+
+  <!-- PromptBoard.Core und PromptBoard.Data leben als Subprojekte direkt unter
+       diesem Hauptprojekt. Das WPF-SDK wuerde sonst alle .cs-Files in den
+       Unterverzeichnissen automatisch als Quelle des Haupt-Assemblies aufnehmen
+       — und dieselben Typen kaemen ein zweites Mal ueber die ProjectReferences
+       rein (CS0436). Wir schliessen die Subprojekt-Verzeichnisse darum explizit aus. -->
+  <ItemGroup>
+    <Compile Remove="PromptBoard.Core\**\*" />
+    <Compile Remove="PromptBoard.Data\**\*" />
+    <Page Remove="PromptBoard.Core\**\*" />
+    <Page Remove="PromptBoard.Data\**\*" />
+    <None Remove="PromptBoard.Core\**\*" />
+    <None Remove="PromptBoard.Data\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Core\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Data\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="PromptBoard.Core\PromptBoard.Core.csproj" />
+    <ProjectReference Include="PromptBoard.Data\PromptBoard.Data.csproj" />
   </ItemGroup>
 
 </Project>

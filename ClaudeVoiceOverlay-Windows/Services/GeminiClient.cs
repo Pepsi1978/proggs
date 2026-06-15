@@ -13,7 +13,18 @@ namespace ClaudeVoiceOverlay.Services
         private readonly string _apiKey;
         private readonly string _model;
         private readonly string _thinkingLevel;
-        private readonly HttpClient _http;
+        // Geteilter HttpClient ueber alle GeminiClient-Instanzen. Pro Voice-
+        // Submit baut OverlayWindow eine neue GeminiClient-Instanz (weil der
+        // API-Key zentral aus dem PromptBoard-Settings-Dialog frisch gelesen
+        // wird). Mit einem privaten HttpClient pro Instanz wuerde jeder
+        // Voice-Submit eine neue Socket-Pool-Sitzung anlegen — bei vielen
+        // schnellen Aufnahmen drohen ausgehende TCP-Ports im TIME_WAIT-Zustand
+        // zu erschoepfen. Das HttpClient-Objekt selbst haelt keine Auth — die
+        // steckt in der URL pro Aufruf — also ist Sharing sicher.
+        private static readonly HttpClient SharedHttp = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(120)
+        };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 5;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000, 16000, 32000 };
@@ -45,39 +56,314 @@ AUSGABEFORMAT:
 TEXT_START
 ";
 
+        // Prompt-Engineer-Template fuer den PromptBoard-Edit-Dialog (G-Button).
+        // Wandelt einen roh-transkribierten Whisper-Text in einen kopierfertigen
+        // Claude-Code-CLI-Prompt um. Bewusst getrennt vom Diktat-Cleanup-Template
+        // oben — das Overlay-Diktat soll weiter den lockeren Cleanup nutzen,
+        // der PromptBoard-Editor will dagegen einen strukturierten Prompt.
+        private const string ClaudeCodePromptEngineerTemplate = @"Du bist ein international anerkannter Prompt-Engineer mit Spezialisierung auf Programmier-Prompts für Claude Code in der CLI-Umgebung. Deine einzige Aufgabe ist es, einen per Whisper eingesprochenen, roh transkribierten Text in einen präzisen, sofort im Claude-Code-CLI-Fenster einsetzbaren Prompt umzuwandeln.
+
+Vorgehen:
+
+1. Erfasse die programmiertechnische Absicht des Textes: Was soll gebaut, geändert, debuggt oder refaktoriert werden? Welche Dateien, Sprachen, Frameworks, Pfade, Tools sind gemeint?
+
+2. Korrigiere Whisper-Transkriptionsfehler nicht nur nach allgemeiner Sprachlogik, sondern explizit nach Programmier-Logik. Wenn ein Wort im Code-Kontext sinnlos wirkt, prüfe phonetisch, ob ein Programmier-Begriff gemeint ist. Typische Whisper-Verwechslungen, an denen du dich orientierst:
+   - ""Brunch"" → branch
+   - ""Mörsch"" / ""März"" → merge
+   - ""Komitee"" → commit
+   - ""Reposi-Tory"" / ""Repo-Story"" → repository / repo
+   - ""Busch"" → push
+   - ""Pull-Anforderung"" / ""Pullrikwest"" → pull request
+   - ""A-Sync"" / ""Async-hron"" → async
+   - ""Funkschon"" → function
+   - ""Wert"" / ""Lett"" → var / let / const
+   - ""Klosure"" → closure
+   - ""Daiwa"" / ""Daiver"" → diff
+   - ""Cäsch"" → cache
+   - ""Kju"" → queue
+   - ""Schell"" → shell
+   - ""Endpoint"" / ""End-Punkt"" → endpoint
+   - Tool-/Library-Namen wie npm, pnpm, Vite, Docker, Tampermonkey, ESLint, Prettier, Jest, Vitest, FastAPI, Tailwind etc. phonetisch erkennen.
+   Bei mehrdeutigen Stellen wähle die im Kontext plausibelste Programmier-Bedeutung.
+
+3. Strukturiere den fertigen Prompt programmierfreundlich für Claude Code:
+   - Klare Aufgabe im Imperativ (""Implementiere…"", ""Refaktoriere…"", ""Debugge…"", ""Erstelle…"")
+   - Sofern erkennbar: Dateipfade, Funktions-/Modulnamen, Sprache, Framework, Versionen
+   - Akzeptanzkriterien: Was muss am Ende funktionieren oder getestet sein?
+   - Wenn sinnvoll: Hinweis auf bestehende Konventionen / Code-Stil beibehalten
+   - Wenn die Aufgabe komplex ist: explizit ""Erstelle erst einen Plan, dann implementiere"" oder ""Schreibe Tests"" ergänzen
+   - Edge-Cases nennen, wenn sie aus dem Original ableitbar sind
+
+4. Sprache des Output-Prompts: Deutsch. Technische Fachbegriffe (function, branch, commit, async, hook, endpoint, …) bleiben Englisch.
+
+5. Länge: so kurz wie möglich, so lang wie nötig. Keine Floskeln, kein Vorgeplänkel, keine Meta-Kommentare über deine Arbeit.
+
+Output-Format (exakt so):
+
+[Der fertige, kopierfertige Claude-Code-CLI-Prompt – direkt loslegen, kein ""Hier ist…""]
+
+Annahmen (nur falls vorhanden, sonst diesen Block komplett weglassen):
+- [phonetisch oder inhaltlich getroffene Annahme 1]
+- [phonetisch oder inhaltlich getroffene Annahme 2]
+
+Gib ausschließlich den umgewandelten Prompt (plus optional den Annahmen-Block) zurück. Keine Einleitung, keine Bestätigung, keine Erklärung deiner Arbeit.
+
+Der zu verarbeitende Whisper-Text folgt nun:
+";
+
         public GeminiClient(string apiKey, string model, string thinkingLevel)
         {
             _apiKey = apiKey;
             _model = model;
             _thinkingLevel = thinkingLevel;
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+            // HttpClient wird statisch geteilt (siehe SharedHttp).
         }
 
-        /// Pfad zur externen Gemini-Korrektur-Prompt-Datei. Wird bei JEDEM
+        /// Basis-Verzeichnis fuer alle Gemini-Korrektur-Prompts. Wird bei JEDEM
         /// CorrectTextAsync-Aufruf neu gelesen — Aenderungen wirken sofort
-        /// ohne App-Neustart. Fehlt die Datei: Fallback auf eingebauten
-        /// PromptTemplate (kein Bruch).
-        private static string GeminiPromptFilePath
+        /// ohne App-Neustart.
+        private static string GeminiPromptDir
             => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "SK", "VoiceOverlays", "gemini-correction-prompt.txt");
+                            "SK", "VoiceOverlays");
 
-        private static string? LoadGeminiCorrectionPrompt()
+        /// <summary>
+        /// Mappt eine Profil-Nummer auf den Dateinamen der zugehoerigen
+        /// Prompt-Datei. Profile 1-3 haben semantische Namen (Standard,
+        /// Programmierung, Meta), Profile 4-10 haben numerische Slots, die
+        /// der Benutzer spaeter mit eigenen Prompt-Dateien fuellen kann.
+        /// Falls die profilspezifische Datei fehlt, faellt der Aufrufer auf
+        /// die alte Sammeldatei zurueck (Backward Compat) und am Ende auf
+        /// den eingebauten PromptTemplate-Konstanten.
+        /// </summary>
+        private static string ProfilePromptFileName(int profile) => profile switch
+        {
+            1 => "gemini-correction-prompt-standard.txt",
+            2 => "gemini-correction-prompt-programmierung.txt",
+            3 => "gemini-correction-prompt-meta.txt",
+            >= 4 and <= 10 => $"gemini-correction-prompt-{profile:D2}.txt",
+            _ => "gemini-correction-prompt-standard.txt"
+        };
+
+        // Mtime-getriebener Cache fuer die Korrektur-Prompt-Dateien. Frueher
+        // las jeder Voice-Submit die Datei neu von Disk — bei OneDrive-
+        // Materialisierung oder Antivirus-Hooks kostete das messbar 5-50 ms
+        // Latenz vor dem eigentlichen Gemini-Call. Jetzt: erste Anfrage liest
+        // einmal, folgende Anfragen vergleichen nur den File.GetLastWriteTimeUtc-
+        // Zeitstempel (in-process, kein Disk-Read). Aenderungen an der Datei
+        // wirken weiter sofort — wir lesen neu sobald die mtime sich verschiebt.
+        // Direktive-3-Resilienz: thread-safe per ConcurrentDictionary, jeder
+        // Path hat seinen eigenen Eintrag; bei Datei-loescht-und-neu-erstellt
+        // ist die mtime des neuen Files anders, also wird automatisch geladen.
+        private sealed class CachedPrompt
+        {
+            public DateTime MtimeUtc;
+            public string? Text;
+        }
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedPrompt> _promptCache
+            = new(StringComparer.OrdinalIgnoreCase);
+
+        private static string? ReadPromptFileCached(string path)
         {
             try
             {
-                if (!File.Exists(GeminiPromptFilePath)) return null;
-                var text = File.ReadAllText(GeminiPromptFilePath);
-                return string.IsNullOrWhiteSpace(text) ? null : text;
+                if (!File.Exists(path)) return null;
+                var mtime = File.GetLastWriteTimeUtc(path);
+                if (_promptCache.TryGetValue(path, out var cached) && cached.MtimeUtc == mtime)
+                    return cached.Text;
+                var text = File.ReadAllText(path);
+                _promptCache[path] = new CachedPrompt { MtimeUtc = mtime, Text = text };
+                return text;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? LoadGeminiCorrectionPrompt(int profile)
+        {
+            try
+            {
+                // 1) Profil-spezifische Datei
+                var profilePath = Path.Combine(GeminiPromptDir, ProfilePromptFileName(profile));
+                var text = ReadPromptFileCached(profilePath);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+
+                // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
+                var legacyPath = Path.Combine(GeminiPromptDir, "gemini-correction-prompt.txt");
+                text = ReadPromptFileCached(legacyPath);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+
+                return null;
             }
             catch { return null; }
         }
 
-        public async Task<string> CorrectTextAsync(string text)
+        public async Task<string> CorrectTextAsync(string text, int profile = 1)
         {
-            // Externe Korrektur-Prompt-Datei hat Vorrang — Frank kann sie
-            // jederzeit pflegen ohne Rebuild. Fallback: eingebauter Template.
-            var template = LoadGeminiCorrectionPrompt() ?? PromptTemplate;
+            // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank
+            // kann sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-
+            // Sammeldatei, dann eingebauter Template.
+            var template = LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
             return await SendWithRetry(template + text + "\nTEXT_END", 0);
+        }
+
+        /// <summary>
+        /// Wandelt einen roh-transkribierten Whisper-Text in einen
+        /// kopierfertigen Claude-Code-CLI-Prompt um. Wird vom PromptBoard-
+        /// Edit-Dialog beim Klick auf "G" verwendet — getrennt vom Overlay-
+        /// Diktat-Cleanup, damit beide Pfade unabhaengig optimierbar bleiben.
+        /// </summary>
+        public async Task<string> BuildClaudeCodePromptAsync(string rawWhisperText)
+        {
+            return await SendWithRetry(ClaudeCodePromptEngineerTemplate + rawWhisperText, 0);
+        }
+
+        /// <summary>
+        /// Erzeugt einen kompakten Titel von maximal 4 Woertern auf Deutsch
+        /// fuer einen gegebenen Prompt. Wird fuer die Prompt-Historie
+        /// verwendet, damit der Benutzer die Eintraege auf einen Blick
+        /// wiedererkennen kann. Fallback auf die ersten 4 Woerter des Texts
+        /// wenn die Gemini-Antwort leer oder ungueltig ist — die Historie
+        /// darf nie wegen einer fehlgeschlagenen Titel-Generierung blockieren.
+        /// </summary>
+        public async Task<string> GenerateTitleAsync(string text)
+        {
+            string trimmed = (text ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return string.Empty;
+
+            const string titlePrompt =
+                "Erstelle einen sehr kompakten Titel auf Deutsch fuer den folgenden " +
+                "Prompt. STRENGE REGELN: Maximal 4 Woerter. Keine Anfuehrungszeichen. " +
+                "Kein Punkt am Ende. Keine Aufzaehlungen, kein Praefix wie 'Titel:'. " +
+                "Nur die nackten 1-4 Woerter zurueckgeben.\n\nPROMPT:\n";
+            try
+            {
+                string raw = await SendWithRetry(titlePrompt + trimmed, 0);
+                string sanitized = SanitizeTitle(raw, trimmed);
+                LogTitle($"OK raw=[{raw.Replace('\n', ' ')}] → [{sanitized}]");
+                return sanitized;
+            }
+            catch (Exception ex)
+            {
+                // Bei jedem Fehler still auf den lokalen Fallback ausweichen,
+                // ABER den Fehler in eine Log-Datei schreiben damit der
+                // Benutzer (und ich beim Debuggen) den Grund sehen kann.
+                LogTitle($"FAIL {ex.GetType().Name}: {ex.Message}");
+                return FallbackTitleFromText(trimmed);
+            }
+        }
+
+        /// <summary>
+        /// Erzeugt eine kompakte Zusammenfassung von 6-8 deutschen Woertern,
+        /// die beschreibt WOFUER ein gespeicherter Prompt da ist bzw. was er
+        /// bewirkt. Wird als Hover-Tooltip ueber dem belegten Prompt-
+        /// Zwischenspeicher-Slot angezeigt. Leerer Rueckgabewert bei Fehler
+        /// oder leerem Input — der Tooltip faellt dann auf den Standardtext
+        /// zurueck, die Slot-Funktion bleibt davon unberuehrt (best-effort).
+        /// </summary>
+        public async Task<string> GenerateSlotSummaryAsync(string text)
+        {
+            string trimmed = (text ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return string.Empty;
+
+            const string summaryPrompt =
+                "Fasse in 6 bis 8 deutschen Woertern zusammen, WOFUER der folgende " +
+                "Prompt da ist bzw. was er bewirkt. STRENGE REGELN: 6 bis 8 Woerter. " +
+                "Keine Anfuehrungszeichen. Kein Punkt am Ende. Kein Praefix wie " +
+                "'Zusammenfassung:'. Nur die nackte Wortgruppe zurueckgeben.\n\nPROMPT:\n";
+            try
+            {
+                string raw = await SendWithRetry(summaryPrompt + trimmed, 0);
+                return SanitizeSummary(raw);
+            }
+            catch
+            {
+                // Best-effort: bei jedem Fehler leere Summary — der Slot bleibt
+                // nutzbar, der Tooltip faellt auf den Standardtext zurueck.
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Saeubert die Gemini-Antwort fuer die Slot-Summary: trimmt
+        /// Anfuehrungszeichen und Schlusspunkt, klemmt auf maximal 8 Woerter.
+        /// Liefert leer wenn nichts Brauchbares uebrig bleibt.
+        /// </summary>
+        private static string SanitizeSummary(string raw)
+        {
+            string s = (raw ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '‚', '‘');
+            if (s.EndsWith(".")) s = s.Substring(0, s.Length - 1).Trim();
+            var words = s.Split(new[] { ' ', '\t', '\n', '\r' },
+                                StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return string.Empty;
+            if (words.Length > 8) words = words[..8];
+            return string.Join(" ", words);
+        }
+
+        /// <summary>
+        /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
+        /// Promptboard-Datenbank. Hilft beim Debuggen warum die Historie-
+        /// Titel manchmal nicht von Gemini kommen — Append-only, atomar
+        /// pro Zeile, schluckt selbst alle Fehler still.
+        /// </summary>
+        private static void LogTitle(string line)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard", "history");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "title-debug.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch { /* Diagnostics must never break the main flow. */ }
+        }
+
+        private static string SanitizeTitle(string raw, string fallbackSource)
+        {
+            string s = (raw ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '‚', '‘');
+            if (s.EndsWith(".")) s = s.Substring(0, s.Length - 1).Trim();
+            // Auf maximal 4 Woerter clampen.
+            var words = s.Split(new[] { ' ', '\t', '\n', '\r' },
+                                StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return FallbackTitleFromText(fallbackSource);
+            if (words.Length > 4) words = words[..4];
+            return string.Join(" ", words);
+        }
+
+        internal static string FallbackTitleFromText(string text)
+        {
+            var words = (text ?? string.Empty)
+                .Split(new[] { ' ', '\t', '\n', '\r' },
+                       StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "Ohne Titel";
+            if (words.Length > 4) words = words[..4];
+            return string.Join(" ", words);
+        }
+
+        /// <summary>
+        /// Baut die generationConfig — thinkingConfig wird NUR mitgesendet
+        /// wenn ein ThinkingLevel gesetzt ist. Modelle wie gemini-2.5-flash
+        /// rejecten den Parameter mit "Thinking level is not supported for
+        /// this model" wenn er drin ist; Pro- und Flash-Thinking-Modelle
+        /// brauchen ihn dagegen. Mit einem Dictionary statt anonymem Typ
+        /// koennen wir den Schluessel bedingt weglassen.
+        /// </summary>
+        private System.Collections.Generic.Dictionary<string, object> BuildGenerationConfig()
+        {
+            var cfg = new System.Collections.Generic.Dictionary<string, object>
+            {
+                ["maxOutputTokens"] = 8192,
+            };
+            if (!string.IsNullOrWhiteSpace(_thinkingLevel))
+            {
+                cfg["thinkingConfig"] = new { thinkingLevel = _thinkingLevel };
+            }
+            return cfg;
         }
 
         private async Task<string> SendWithRetry(string prompt, int attempt)
@@ -94,16 +380,12 @@ TEXT_START
                         parts = new[] { new { text = prompt } }
                     }
                 },
-                generationConfig = new
-                {
-                    maxOutputTokens = 8192,
-                    thinkingConfig = new { thinkingLevel = _thinkingLevel }
-                }
+                generationConfig = BuildGenerationConfig()
             };
 
             var json = JsonSerializer.Serialize(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync(url, content);
+            var response = await SharedHttp.PostAsync(url, content);
             var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)

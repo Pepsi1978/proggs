@@ -29,7 +29,7 @@ namespace ClaudeVoiceOverlay.Services
         {
             // Groq (erforderlich)
             GroqApiKey = GetRequired(env, "GROQ_API_KEY");
-            WhisperModel = Get(env, "WHISPER_MODEL", "whisper-large-v3");
+            WhisperModel = Get(env, "WHISPER_MODEL", "whisper-large-v3-turbo");
             WhisperLang = Get(env, "WHISPER_LANG", "de");
             WhisperUrl = Get(env, "WHISPER_URL", "https://api.groq.com/openai/v1/audio/transcriptions");
 

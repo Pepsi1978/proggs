@@ -1,10 +1,20 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Windows;
 using ClaudeVoiceOverlay.NativeMethods;
 
 namespace ClaudeVoiceOverlay.Services
 {
+    /// <summary>
+    /// Beobachtet das aktive Vordergrund-Fenster und meldet, wenn eine der
+    /// Ziel-Apps (Claude Desktop, Codex) nach vorne kommt bzw. den Fokus
+    /// verliert. Schwester-Klasse zu TerminalVoiceOverlay/TerminalWatcher —
+    /// identische Mechanik (SetWinEventHook + PID-Cache), nur andere
+    /// Ziel-Prozesse. Die oeffentliche API (AppActivated/AppDeactivated,
+    /// ActiveAppHwnd, GetMonitorWorkArea) ist deckungsgleich mit der des
+    /// TerminalWatcher, damit das gemeinsame OverlayWindow 1:1 funktioniert.
+    /// </summary>
     public sealed class AppWatcher : IDisposable
     {
         private readonly string[] _targetProcessNames;
@@ -12,6 +22,18 @@ namespace ClaudeVoiceOverlay.Services
         private Win32.WinEventDelegate? _winEventDelegate;
         private IntPtr _hookHandle;
         private IntPtr _lastAppHwnd;
+
+        // PID -> (isTarget, expiry). EVENT_SYSTEM_FOREGROUND feuert bei JEDEM
+        // Alt+Tab und jedem Mausklick auf ein anderes Top-Level-Window — beim
+        // Arbeiten zwischen Browser, Editor und Claude kommen 10-50 Events pro
+        // Minute. Ohne Cache macht jeder Event einen Process.GetProcessById-
+        // Aufruf (OpenProcess + QueryFullProcessImageName + Dispose), je
+        // 0.5-1.5 ms inkl. Handle-Allokation. Mit 1-Sekunde-TTL bleibt die
+        // Reaktion auf neu gestartete Ziel-Apps sofort (1x reinklicken = die
+        // Cache-Miss-Latenz). PID-Reuse-Risiko: Windows recycelt PIDs nicht
+        // binnen 1 s, daher praktisch unsichtbar.
+        private static readonly ConcurrentDictionary<uint, (bool IsTarget, long ExpiryTicks)> _pidCache = new();
+        private const long PidCacheTtlTicks = TimeSpan.TicksPerSecond * 1; // 1 s
 
         public event Action<IntPtr>? AppActivated;
         public event Action? AppDeactivated;
@@ -56,14 +78,20 @@ namespace ClaudeVoiceOverlay.Services
         {
             if (hwnd == IntPtr.Zero) return;
 
+            // BeginInvoke statt Invoke: Dieser Callback laeuft auf dem
+            // System-weiten WinEvent-Hook-Thread. Synchron auf den UI-Thread
+            // zu warten staut bei beschaeftigtem UI alle System-Foreground-
+            // Events auf — Alt+Tab und Fenster-Wechsel werden global langsam.
+            // BeginInvoke postet asynchron und der Hook-Thread kehrt sofort
+            // zurueck. Reihenfolge bleibt erhalten (Dispatcher-Queue ist FIFO).
             if (IsTargetAppWindow(hwnd))
             {
                 _lastAppHwnd = hwnd;
-                Application.Current?.Dispatcher.Invoke(() => AppActivated?.Invoke(hwnd));
+                Application.Current?.Dispatcher.BeginInvoke(() => AppActivated?.Invoke(hwnd));
             }
             else
             {
-                Application.Current?.Dispatcher.Invoke(() => AppDeactivated?.Invoke());
+                Application.Current?.Dispatcher.BeginInvoke(() => AppDeactivated?.Invoke());
             }
         }
 
@@ -72,6 +100,15 @@ namespace ClaudeVoiceOverlay.Services
             Win32.GetWindowThreadProcessId(hwnd, out uint pid);
             if (pid == 0) return false;
 
+            // Cache-Lookup. Treffer + nicht abgelaufen -> direkt zurueck, kein
+            // Win32-Roundtrip. Der Cache-Miss-Pfad erfasst auch das negative
+            // Ergebnis (NICHT-Ziel-Prozesse) — das ist der haeufigste Pfad
+            // (Browser, Editor) und profitiert am meisten vom Cache.
+            long now = DateTime.UtcNow.Ticks;
+            if (_pidCache.TryGetValue(pid, out var cached) && cached.ExpiryTicks > now)
+                return cached.IsTarget;
+
+            bool isTarget = false;
             try
             {
                 using var proc = Process.GetProcessById((int)pid);
@@ -79,15 +116,30 @@ namespace ClaudeVoiceOverlay.Services
                 foreach (var target in _targetProcessNames)
                 {
                     if (name.Equals(target, StringComparison.OrdinalIgnoreCase))
-                        return true;
+                    {
+                        isTarget = true;
+                        break;
+                    }
                 }
             }
             catch
             {
-                // Process may have exited
+                // Process may have exited — Default-Fall: NICHT-Ziel.
             }
 
-            return false;
+            // Cache schreiben — auch negative Ergebnisse. Ein simpler Sweep
+            // beim Schreiben begrenzt das Wachstum auf ein paar hundert
+            // Eintraege selbst nach Stunden — kein dediziertes LRU noetig.
+            _pidCache[pid] = (isTarget, now + PidCacheTtlTicks);
+            if (_pidCache.Count > 256)
+            {
+                foreach (var kv in _pidCache)
+                {
+                    if (kv.Value.ExpiryTicks <= now)
+                        _pidCache.TryRemove(kv.Key, out _);
+                }
+            }
+            return isTarget;
         }
 
         public static Rect GetMonitorWorkArea(IntPtr hwnd)

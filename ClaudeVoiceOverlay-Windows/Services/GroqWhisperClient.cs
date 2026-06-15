@@ -17,7 +17,19 @@ namespace ClaudeVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
-        private readonly HttpClient _http;
+
+        // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
+        // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
+        // KEIN konkretes Problem — aber: kuenftiges Settings-Reload (z.B. Wechsel
+        // des Whisper-Endpoints) wuerde mit per-instance HttpClient pro Reload
+        // einen neuen Socket-Pool aufmachen und alte Verbindungen erst nach
+        // TIME_WAIT freigeben. Statisch geteilt wie bei GeminiClient.SharedHttp
+        // ist die kanonische .NET-Loesung. Authorization-Header wird pro Request
+        // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
+        private static readonly HttpClient SharedHttp = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(180)
+        };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 3;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
@@ -56,21 +68,26 @@ namespace ClaudeVoiceOverlay.Services
             _model = model;
             _language = language;
             _url = url;
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(180) };
         }
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
+            // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
+            // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
+            // Disk — bei 3 Retries und ~1 MB Audio entstehen 3 MB unnoetige
+            // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
+            // Sharing zwischen Versuchen sicher.
+            byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath);
             // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
             // erst senden. Faengt "Knopf gedrueckt, nichts gesagt" -> Whisper haette sonst Stille als
-            // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch tippt NICHTS.
-            var fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch behandelt es
+            // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
             if (!HasSpeechContent(fileBytes))
                 throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
-            return await TranscribeWithRetry(wavFilePath, 0);
+            return await TranscribeWithRetry(fileBytes, 0);
         }
 
-        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt)
+        private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
         {
             using var content = new MultipartFormDataContent();
 
@@ -84,8 +101,7 @@ namespace ClaudeVoiceOverlay.Services
             content.Add(new StringContent("verbose_json"), "response_format");
             content.Add(new StringContent("0"), "temperature");
 
-            // Add file
-            var fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            // Add file (Bytes wurden vom Aufrufer einmalig geladen)
             var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(fileContent, "file", "recording.wav");
@@ -96,7 +112,7 @@ namespace ClaudeVoiceOverlay.Services
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            var response = await _http.SendAsync(request);
+            var response = await SharedHttp.SendAsync(request);
             var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)
@@ -118,7 +134,7 @@ namespace ClaudeVoiceOverlay.Services
             {
                 Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
-                return await TranscribeWithRetry(wavFilePath, attempt + 1);
+                return await TranscribeWithRetry(fileBytes, attempt + 1);
             }
 
             var errorBody = await response.Content.ReadAsStringAsync();

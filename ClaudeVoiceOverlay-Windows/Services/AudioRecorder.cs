@@ -34,7 +34,7 @@ namespace ClaudeVoiceOverlay.Services
         {
             if (IsRecording) return;
 
-            _tempFile = Path.Combine(Path.GetTempPath(), $"cvo_recording_{Guid.NewGuid():N}.wav");
+            _tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
 
             var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
             _writer = new WaveFileWriter(_tempFile, waveFormat);
