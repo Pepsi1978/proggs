@@ -2,78 +2,87 @@
 
 > Adressat: Claude, wenn es in **Cowork** (Desktop-App, Linux-Hilfsumgebung auf Windows) arbeitet.
 > In Cowork läuft Git NICHT direkt auf dem Windows-Ordner, sondern über eine gemountete Brücke
-> (virtiofs/CBFS) zu einer kleinen Linux-VM. Diese Brücke verzerrt, wie Dateien aussehen, und
-> bringt mehrere Fallen mit. Diese Regel hält fest, wie aus Cowork zuverlässig committet/gepusht wird.
-> Gesetzt 2026-06-15, nachdem ein echter Testpush fünf Probleme nacheinander aufgedeckt hat.
+> (virtiofs/CBFS) zu einer kleinen Linux-VM. Diese Brücke ist beim **Lesen UND Schreiben** kürzlich
+> geänderter Dateien unzuverlässig (Truncation, Padding, Versions-Flackern, Linter-Interferenz) und
+> erlaubt **kein Löschen/Umbenennen** aus der VM. Diese Regel hält fest, wie aus Cowork zuverlässig
+> committet/gepusht wird, OHNE Daten zu verlieren.
+> Gesetzt 2026-06-15; gehärtet nach mehreren echten Test-Pushes (Datenverlust-Wächter, push-files).
 
 ## Die eine Regel
 **Aus Cowork wird NIEMALS mit nacktem `git commit`/`git push` gearbeitet, sondern IMMER über
-`bash ~/proggs/cowork-git.sh`.** Das Skript fängt alle bekannten Mount-Fallen ab. Nacktes git
-aus der VM hängt an nicht löschbaren Locks, bläht den Commit mit Schein-Änderungen auf oder sprengt
-GitHubs 100-MB-Limit.
+`bash ~/proggs/cowork-git.sh`.** Das Skript fängt alle bekannten Mount-Fallen ab und hat einen
+Datenverlust-Wächter, der einen Commit lieber ABBRICHT als stillen Datenverlust zuzulassen.
 
 ## Nutzung
-- `bash cowork-git.sh setup` — holt den aktuellen Stand von origin/main, prüft den Push-Zugang.
-  Abwarten bis **„Push-Zugang OK"** erscheint.
-- `bash cowork-git.sh push "#NNN - Text"` — `add -A` + commit + push nach origin/main.
-- `bash cowork-git.sh <git-befehl>` — beliebiger git-Befehl mit korrektem git-dir/work-tree
-  (z. B. `status`, `log`, `diff`).
+- `bash cowork-git.sh setup` — holt origin/main, prüft Push-Zugang. Abwarten bis **„Push-Zugang OK"**.
+- `bash cowork-git.sh push "#NNN - Text"` — `add -A` + Wächter + commit + push (nimmt ALLE pending Dateien mit).
+- `bash cowork-git.sh push-files "#NNN - Text" datei1 datei2` — committet **gezielt nur diese Dateien**
+  (Mount-schonend: Index = origin, dann nur die genannten Pfade) + Wächter. **Bevorzugter Weg** für
+  saubere, eng begrenzte Commits — flutet den Commit nicht mit fremden pending Dateien.
+- `bash cowork-git.sh <git-befehl>` — beliebiger git-Befehl mit korrektem git-dir/work-tree.
+
+Umgebungsvariablen:
+- `COWORK_ALLOW_SHRINK=1` — erlaubt bewusstes Schrumpfen/Löschen (Wächter wird übersprungen).
+- `COWORK_SHRINK_MAX_PCT` (Default 30), `COWORK_SHRINK_MIN_BYTES` (Default 200) — Empfindlichkeit des Wächters.
+- `COWORK_WORKTREE=<pfad>` — Arbeitsbaum überschreiben. Nötig, wenn das Skript wegen Mount-Flackern
+  aus einer **stabilen VM-Kopie** ausgeführt wird, aber auf den proggs-Mount zeigen soll.
 
 ## Warum ein eigenes Skript (Grundproblem)
 Der git-Maschinenraum (Index, Locks, Objekte) liegt bewusst auf der **VM-eigenen ext4-Platte**
-(`~/.cowork-gitdir/proggs`), nur der Arbeitsbaum bleibt auf der gemounteten Brücke. Grund: Auf der
-Brücke kann git seine `.lock`-Dateien nicht wieder löschen („Operation not permitted") — dadurch
-hängt sonst jeder commit/push. Das normale `.git` im Windows-Ordner bleibt unberührt; beide Welten
-stören sich nicht. Quelle der Wahrheit ist origin/main; das VM-git-dir wird je Session frisch aus
-GitHub aufgebaut und überlebt VM-Neustarts nicht (gewollt).
+(`~/.cowork-gitdir/proggs`), nur der Arbeitsbaum bleibt auf der gemounteten Brücke. Auf der Brücke
+kann git seine `.lock`-Dateien nicht löschen („Operation not permitted"). Das normale `.git` im
+Windows-Ordner bleibt unberührt. Quelle der Wahrheit ist origin/main; das VM-git-dir wird je Session
+frisch aus GitHub aufgebaut.
 
-## Die 5 Mount-Fallen (alle vom Skript abgefangen)
-1. **Nicht löschbare `.lock`-Dateien** → git-dir liegt auf der VM-ext4-Platte (löschen geht dort).
-   Liegt doch mal ein `index.lock` herum (z. B. nach einem abgebrochenen Lauf): einfach
-   `rm -f ~/.cowork-gitdir/proggs/*.lock` — gefahrlos, weil VM-lokal.
-2. **Datei-Modus immer 0755 gemeldet** → ohne Gegenmaßnahme sähe git bei JEDER Datei einen
-   644→755-Wechsel. Fix: `git config core.fileMode false` (setzt das Skript in `ensure_setup`).
-3. **Unlesbare Symlinks** (`readlink: Input/output error`, z. B. Skill-Verknüpfungen) → `git add -A`
-   bricht sonst mit „unable to index file … updating files failed" ab. Fix: `guard_unreadable_symlinks`
-   nimmt genau die unlesbaren, bereits getrackten Symlinks per `skip-worktree` aus.
-4. **Git-LFS-Dateien erscheinen als Vollinhalt** → in origin liegen `*.onnx`/`*.aar` (siehe
-   `.gitattributes`, `filter=lfs`) nur als ~130-Byte-Zeiger, über die Brücke aber als echte
-   Riesendateien (bis ~262 MB). Ohne Schutz ersetzt `add -A` die Zeiger durch die Riesendateien →
-   GitHub lehnt ab (100-MB-Limit) und das Repository bläht auf. Fix: `guard_lfs_pointers` nimmt alle
-   getrackten LFS-Dateien per `skip-worktree` aus. Echte LFS-Pflege passiert vom Windows-Rechner, nie aus Cowork.
-5. **Nicht ignorierte Build-/Abhängigkeits-Berge** → `**/build/`, `**/.gradle/`, `**/node_modules/`
-   sind in `.gitignore`, sonst zieht `add -A` Zehntausende erzeugte Dateien mit (gemessen: 22.881)
-   und wird unbrauchbar langsam. Bei neuen Projekten/Sprachen: passende Build-Ordner ergänzen.
+## Die Mount-Fallen (alle vom Skript abgefangen)
+1. **Nicht löschbare `.lock`** → git-dir auf VM-ext4. Liegen gebliebener Lock:
+   `rm -f ~/.cowork-gitdir/proggs/*.lock` (VM-lokal, gefahrlos).
+2. **Datei-Modus immer 0755** → `git config core.fileMode false` (sonst 644→755-Diff bei JEDER Datei).
+3. **Unlesbare Symlinks** (`readlink: I/O error`) → `guard_unreadable_symlinks` (skip-worktree).
+4. **Git-LFS-Dateien als Vollinhalt** → in origin nur ~130-Byte-Zeiger, über die Brücke echte
+   Riesendateien (bis ~262 MB). `guard_lfs_pointers` (skip-worktree); sonst >100 MB → GitHub lehnt ab.
+5. **Build-/Abhängigkeits-Berge** → `**/build/`, `**/.gradle/`, `**/node_modules/` in `.gitignore`
+   (sonst zieht `add -A` Zehntausende erzeugte Dateien mit — gemessen: 22.881).
+6. **DATENVERLUST durch Mount-Lesefehler (wichtigster Schutz)** → `guard_data_loss` läuft NACH dem
+   Staging, VOR dem Commit. Für jede gestaged + in origin existierende Datei wird die **Byte-Größe
+   origin vs. Index** verglichen. Verdächtige Schrumpfung (Default: >30 % UND >200 Byte) oder eine
+   **Phantom-Löschung** (als gelöscht gestaged, existiert aber noch im Worktree) → **ABBRUCH, kein
+   Commit/Push**. Der Vergleich geht gegen origin (stabil), fängt also jedes Mount-Lese-Flackern.
+   Bewusst gewollt: `COWORK_ALLOW_SHRINK=1` voranstellen.
+7. **Mount-Schreib-/Lösch-Unzuverlässigkeit** → Schreibvorgänge (Edit/Write-Tool UND teils `cat >`)
+   sind bei größeren Dateien unvollständig/verzögert sichtbar; Dateien lassen sich aus der VM nicht
+   löschen/umbenennen. Deshalb: Commits **git-intern** bauen (siehe unten), Löschungen git-intern aus
+   dem Tree nehmen, und das Skript bei Bedarf aus einer **stabilen VM-Kopie** ausführen.
 
 ## Praktische Hinweise für Cowork
-- **Dateien schreiben: per Shell (`cat >`), NICHT blind aufs Edit/Write-Tool verlassen** — ueber die Mount-Bruecke koennen Edit/Write-Tool-Schreibvorgaenge bei groesseren Dateien UNVOLLSTAENDIG sichtbar sein (Datei wird mittendrin abgeschnitten); wer dann vom Mount staged, pusht die abgeschnittene Version. Daher nach dem Schreiben das DATEIENDE pruefen (`tail -1`, Zeilenzahl) ODER die Aenderung git-intern bauen (`git show <ref>:<datei>` → aendern → `git hash-object -w` → `git update-index --cacheinfo` → `git commit-tree`), was den Mount komplett umgeht. (Genau dieser Fehler ist beim Anlegen dieser Regel passiert.)
-- **Laufzeit-Grenze:** Ein Cowork-Shell-Aufruf läuft max. ~45 s, und Hintergrundprozesse überleben
-  den Wechsel zwischen zwei Shell-Aufrufen NICHT zuverlässig. Der `push` muss daher in EINEM Aufruf
-  durchlaufen. Voraussetzung dafür ist, dass Falle 4 + 5 greifen (sonst dauert `add -A` zu lange).
-- **„fetch first" / Non-Fast-Forward:** Wandert origin/main während der Arbeit weiter, wird der Push
-  abgelehnt. Dann neuen Stand holen und den eigenen Commit sauber oben aufsetzen. Da der gemountete
-  Arbeitsbaum aus git-Sicht „unsauber" ist (CRLF/LFS), funktioniert ein normaler `git rebase` oft
-  nicht. Bewährtes, worktree-schonendes Verfahren (Plumbing):
+- **Datenoperationen git-intern statt über den Mount** — der robusteste Weg, weil er die Brücke
+  komplett umgeht. Datei ändern:
   ```bash
   GITDIR="$HOME/.cowork-gitdir/proggs"; export GIT_DIR="$GITDIR" GIT_WORK_TREE="$HOME/proggs"
-  git config core.fileMode false
   git fetch -q origin main
-  git read-tree origin/main                 # Index = origin-Stand, ohne Worktree-Checkout
-  git add -- <nur die gewollten Dateien>    # genau die beabsichtigten Änderungen stagen
+  git show origin/main:PFAD > /tmp/x            # vollständige, stabile Ausgangsversion
+  # ... /tmp/x in /tmp bearbeiten, DATEIENDE prüfen (tail -1, wc -l) ...
+  BLOB=$(git hash-object -w /tmp/x)
+  git read-tree origin/main
+  git update-index --cacheinfo 100644,$BLOB,PFAD     # Datei ändern/hinzufügen
+  # git update-index --force-remove PFAD             # Datei löschen (Mount erlaubt kein rm)
   TREE=$(git write-tree)
   NEW=$(git commit-tree "$TREE" -p origin/main -m "#NNN - Text")
-  git update-ref refs/heads/main "$NEW"
-  git push origin "$NEW":main
+  git update-ref refs/heads/main "$NEW"; git push origin "$NEW":main
   ```
-- **Scoped statt alles:** `cowork-git.sh push` macht `add -A` und nimmt damit ALLE noch nicht
-  committeten Dateien mit (inkl. liegengebliebener Logs, Temp-DBs, Screenshots). Wenn nur eine
-  gezielte Änderung gepusht werden soll, das Plumbing-Verfahren oben mit den konkret gewünschten
-  Dateien nutzen — keinen „Test"-Commit mit fremden Dateien fluten.
-- **Token:** Der Push-Token liegt persistent in `~/proggs/.git/credentials`
-  (Format `https://Pepsi1978:<TOKEN>@github.com`) — siehe `COWORK-GIT-PUSH-SETUP.md`. Niemals roh ins Log.
+- **Nach JEDEM Schreiben das DATEIENDE prüfen** (`tail -1`, `wc -l`) — nicht nur den Anfang. Der
+  klassische Mount-Fehler schneidet das Dateiende ab (so gingen schon ~420 Zeilen verloren).
+- **Laufzeit-Grenze:** Ein Cowork-Shell-Aufruf läuft max. ~45 s, Hintergrundprozesse überleben den
+  Wechsel zwischen Aufrufen NICHT. Push muss in EINEM Aufruf durchlaufen (Fallen 4 + 5 sind Pflicht,
+  sonst ist `add -A` zu langsam).
+- **„fetch first" / Non-Fast-Forward:** origin/main wandert oft weiter. Neuen Stand holen und den
+  eigenen Commit per Plumbing (oben) sauber oben aufsetzen — `git rebase` scheitert am unsauberen
+  Mount-Arbeitsbaum (CRLF/LFS).
+- **Token:** persistent in `~/proggs/.git/credentials` — niemals roh ins Log.
 
 ## Selbst-Check vor „gepusht"
 - [ ] `setup` lief, „Push-Zugang OK" gesehen?
-- [ ] Push über `cowork-git.sh` (nicht nacktes git)?
+- [ ] Über `cowork-git.sh` gepusht (nicht nacktes git)?
+- [ ] Wächter meldete „keine verdächtigen Schrumpfungen/Löschungen" (oder Schrumpfung war bewusst)?
 - [ ] Commit enthält NUR Gewolltes (keine LFS-Riesendateien, keine Build-Berge, keine fremden Reste)?
-- [ ] Auf GitHub bestätigt (`git ls-remote origin -h refs/heads/main` zeigt den neuen Commit)?
+- [ ] Auf GitHub bestätigt: `git ls-remote origin -h refs/heads/main` + Datei-Zeilenzahl/-ENDE geprüft?

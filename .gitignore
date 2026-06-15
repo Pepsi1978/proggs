@@ -45,3 +45,5 @@ BestJournalFrank/Screenshots/
 **/build/
 **/.gradle/
 **/node_modul
+# Cowork-Robustheits-Testdatei (nur temporaer, nie tracken)
+cowork-robustness-test.txt

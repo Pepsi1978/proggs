@@ -110,28 +110,31 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
 ## Cowork Git-Push (KRITISCH — nur in Claude Cowork)
 
 > In **Cowork** (Desktop-App, Linux-VM ueber eine gemountete Windows-Bruecke) laeuft Git NICHT
-> direkt auf dem Windows-Ordner. Die Bruecke verzerrt, wie Dateien aussehen, und bringt mehrere
-> Fallen mit. Volltext-Regel (beim Setup nach `~/.claude/rules/` synchronisiert):
-> `~/.claude/rules/cowork-git-push.md`. Gesetzt 2026-06-15 nach einem Testpush, der 5 Probleme aufdeckte.
+> direkt auf dem Windows-Ordner. Die Bruecke ist beim Lesen UND Schreiben kuerzlich geaenderter
+> Dateien unzuverlaessig (Truncation, Padding, Versions-Flackern) und erlaubt kein Loeschen aus der
+> VM. Volltext-Regel (beim Setup nach `~/.claude/rules/` synchronisiert):
+> `~/.claude/rules/cowork-git-push.md`. Gesetzt 2026-06-15, gehaertet nach mehreren echten Test-Pushes.
 
 - **IMMER `bash ~/proggs/cowork-git.sh` benutzen, NIE nacktes `git commit`/`git push` aus der VM.**
-  - `bash cowork-git.sh setup` → wartet auf „Push-Zugang OK".
-  - `bash cowork-git.sh push "#NNN - Text"` → add -A + commit + push origin/main.
-- Das Skript faengt **5 Mount-Fallen** ab: (1) nicht loeschbare `.lock` → git-dir auf VM-ext4
-  (`~/.cowork-gitdir/proggs`); (2) Datei-Modus immer 0755 → `core.fileMode false`; (3) unlesbare
-  Symlinks (`readlink: I/O error`) → `skip-worktree`; (4) Git-LFS-Dateien (`*.onnx`/`*.aar`)
-  erscheinen als Vollinhalt (bis ~262 MB) → `skip-worktree`, sonst lehnt GitHub ab (100-MB-Limit);
-  (5) Build-Berge → `**/build/`, `**/.gradle/`, `**/node_modules/` in `.gitignore`.
-- **Ein Cowork-Shell-Aufruf laeuft max ~45 s und Hintergrundprozesse ueberleben Aufruf-Grenzen
-  NICHT** → der Push muss in EINEM Aufruf durchlaufen (deshalb sind Falle 4 + 5 Pflicht, sonst ist
-  `add -A` zu langsam). Liegengebliebener Lock: `rm -f ~/.cowork-gitdir/proggs/*.lock` (VM-lokal, gefahrlos).
-- **„fetch first"/Non-Fast-Forward** oder nur gezielte Dateien pushen → worktree-schonendes
-  Plumbing-Verfahren (`read-tree origin/main` → `add` der gewollten Dateien → `write-tree` →
-  `commit-tree -p origin/main` → `update-ref` → `push`), weil `git rebase` am „unsauberen"
-  Mount-Arbeitsbaum (CRLF/LFS) scheitert. Vollstaendig in der Volltext-Regel.
-- `cowork-git.sh push` macht `add -A` und nimmt ALLE pending Dateien mit (auch Logs/Temp/Screenshots).
-  Fuer einen gezielten Commit das Plumbing-Verfahren mit den konkreten Dateien nutzen.
-- **Achtung Mount-Truncation beim Schreiben:** Edit/Write-Tool-Schreibvorgaenge sind ueber die Bruecke bei groesseren Dateien teils UNVOLLSTAENDIG sichtbar → vor dem Push DATEIENDE verifizieren, besser per Shell (`cat >`) schreiben oder git-intern committen (`git show` → `hash-object -w` → `update-index --cacheinfo` → `commit-tree`).
+  - `setup` → wartet auf „Push-Zugang OK".
+  - `push "#NNN - Text"` → add -A + Waechter + commit + push (nimmt ALLE pending Dateien mit).
+  - `push-files "#NNN - Text" datei...` → committet GEZIELT nur diese Dateien (Mount-schonend) + Waechter.
+    **Bevorzugter Weg** fuer saubere, eng begrenzte Commits.
+- **Datenverlust-Waechter (wichtigster Schutz):** bricht VOR dem Commit ab, wenn eine getrackte Datei
+  verdaechtig stark schrumpft (Default >30 % UND >200 Byte — Mount-Truncation) oder faelschlich als
+  geloescht gestaged wird (Phantom-Loeschung). Vergleich gegen origin (stabil) → faengt jedes
+  Mount-Lese-Flackern. Bewusst gewollte Schrumpfung/Loeschung: `COWORK_ALLOW_SHRINK=1` voranstellen.
+- Weitere abgefangene Mount-Fallen: nicht loeschbare `.lock` (git-dir auf VM-ext4), Datei-Modus 0755
+  (`core.fileMode false`), unlesbare Symlinks + Git-LFS-Vollinhalte (skip-worktree, sonst >100 MB →
+  GitHub lehnt ab), Build-Berge (`**/build/ **/.gradle/ **/node_modules/` in `.gitignore`).
+- **Mount NIE blind vertrauen:** Commits git-intern bauen (`git show <ref>:<datei>` → in /tmp aendern →
+  `git hash-object -w` → `git update-index --cacheinfo` / `--force-remove` → `git commit-tree`); nach
+  jedem Schreiben das DATEIENDE pruefen (`tail -1`, `wc -l`). Loeschen/Umbenennen aus der VM ist
+  gesperrt („Operation not permitted") → git-intern aus dem Tree nehmen. Das Skript selbst kann
+  flackern → bei Bedarf aus stabiler VM-Kopie mit `COWORK_WORKTREE=<proggs>` ausfuehren.
+- **Ein Shell-Aufruf ~45 s, Hintergrundprozesse ueberleben nicht** → Push in EINEM Aufruf.
+- **„fetch first"/Non-Fast-Forward:** Plumbing (read-tree → add → write-tree → commit-tree →
+  update-ref → push), weil `git rebase` am unsauberen Mount-Arbeitsbaum scheitert.
 
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.

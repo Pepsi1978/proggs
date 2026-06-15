@@ -1,3 +1,0 @@
-# Robustheits-Test — bewusst gekuerzt (Override-Test)
-nur drei
-kurze Zeile

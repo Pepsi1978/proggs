@@ -2,39 +2,43 @@
 #
 # cowork-git.sh — zuverlaessiger git commit/push aus der Claude-Cowork-Linux-VM (Windows).
 #
-# PROBLEM (siehe bugs/claude-tooling/cowork.md Paragraf 10a):
-#   Auf dem von Windows in die Cowork-VM gemounteten Ordner kann git seine
-#   .lock-Hilfsdateien nicht wieder loeschen (virtiofs/CBFS: "Operation not permitted").
-#   Dadurch haengt jeder commit/push aus der VM an liegengebliebenen Locks.
+# GRUNDPROBLEM:
+#   Cowork arbeitet nicht direkt auf dem Windows-Ordner, sondern ueber eine gemountete Bruecke
+#   (virtiofs/CBFS) zu einer Linux-VM. Diese Bruecke verzerrt, wie Dateien aussehen UND ist beim
+#   Lesen/Schreiben kuerzlich geaenderter Dateien unzuverlaessig (Truncation, Padding, Versions-
+#   Flackern, Linter-Interferenz). Deshalb liegt der git-Maschinenraum (Index/Locks/Objekte) auf
+#   der VM-ext4-Platte (~/.cowork-gitdir/proggs), nur der Arbeitsbaum bleibt auf der Bruecke.
+#   Quelle der Wahrheit ist origin/main.
 #
-# LOESUNG:
-#   Das GIT-VERZEICHNIS (wo ALLE .lock/refs/index/objects entstehen) liegt auf der
-#   VM-EIGENEN Festplatte (ext4 — loeschen funktioniert). Der Arbeitsbaum (deine echten
-#   Dateien) bleibt im gemounteten Ordner. Das im Ordner liegende .git (das dein normales
-#   Windows-Terminal nutzt) bleibt voellig unberuehrt — beide Welten stoeren sich nicht.
-#   Quelle der Wahrheit ist origin/main; das VM-git-dir ist nur ein Vehikel zum Pushen
-#   und wird bei jeder Session frisch aus GitHub aufgebaut (es ueberlebt VM-Neustarts nicht,
-#   das ist gewollt und unproblematisch).
-#
-# MOUNT-ARTEFAKTE, die dieses Skript abfaengt (sonst wird der Commit unbrauchbar):
-#   1) .lock-Dateien nicht loeschbar         -> git-dir liegt auf der VM-Platte (ext4).
-#   2) Datei-Modus immer 0755 gemeldet       -> core.fileMode=false (keine 644->755-Diffs).
-#   3) Manche Symlinks nicht lesbar (I/O)    -> guard_unreadable_symlinks (skip-worktree).
-#   4) Git-LFS-Dateien als Vollinhalt sichtbar -> guard_lfs_pointers (skip-worktree),
-#      sonst ersetzt 'add -A' die kleinen LFS-Zeiger durch echte Riesendateien und der
-#      Push wird von GitHub (100-MB-Limit) abgelehnt.
+# MOUNT-FALLEN, die dieses Skript abfaengt (sonst wird der Commit unbrauchbar ODER zerstoert Daten):
+#   1) .lock nicht loeschbar              -> git-dir auf VM-ext4.
+#   2) Datei-Modus immer 0755             -> core.fileMode=false.
+#   3) Symlinks nicht lesbar (I/O)        -> guard_unreadable_symlinks (skip-worktree).
+#   4) Git-LFS-Dateien als Vollinhalt     -> guard_lfs_pointers (skip-worktree); sonst >100 MB -> GitHub lehnt ab.
+#   5) Build-/Abhaengigkeits-Berge        -> **/build/ **/.gradle/ **/node_modules/ in .gitignore.
+#   6) DATENVERLUST durch Mount-Lesefehler-> guard_data_loss: bricht VOR dem Commit ab, wenn eine
+#      getrackte Datei verdaechtig stark schrumpft (Truncation) oder faelschlich als geloescht
+#      gestaged wird (Phantom-Loeschung). DAS ist der wichtigste Schutz: aus stillem Datenverlust
+#      wird ein lauter Stopp. Bewusst ueberschreibbar mit COWORK_ALLOW_SHRINK=1.
 #
 # NUTZUNG (in Cowork):
-#   bash cowork-git.sh setup                 # holt aktuellen Stand, prueft Push-Zugang
-#   bash cowork-git.sh push "#NNN - Text"    # add -A + commit + push origin main
-#   bash cowork-git.sh status                # beliebiger git-Befehl (status, log, diff ...)
+#   bash cowork-git.sh setup                          # Stand holen, Push-Zugang pruefen
+#   bash cowork-git.sh push "#NNN - Text"             # add -A + Waechter + commit + push
+#   bash cowork-git.sh push-files "#NNN - Text" a b   # NUR Dateien a,b (gezielt) + Waechter + push
+#   bash cowork-git.sh <git-befehl>                   # beliebiger git-Befehl (status, log, diff ...)
 #
-# VORAUSSETZUNG: Der Push-Token liegt persistent in <repo>/.git/credentials
-#   (Format: https://Pepsi1978:<TOKEN>@github.com) — siehe COWORK-GIT-PUSH-SETUP.md.
+#   COWORK_WORKTREE         -> Arbeitsbaum-Pfad ueberschreiben (Default: Ordner des Skripts).
+#                             Sinnvoll, wenn das Skript wegen Mount-Flackern aus einer stabilen
+#                             VM-Kopie ausgefuehrt wird, aber auf den proggs-Mount zeigen soll.
+#   COWORK_ALLOW_SHRINK=1   -> Waechter erlaubt absichtliches Schrumpfen/Loeschen.
+#   COWORK_SHRINK_MAX_PCT   -> ab wie viel % Schrumpfung verdaechtig (Default 30).
+#   COWORK_SHRINK_MIN_BYTES -> absolute Mindestschrumpfung, sonst egal (Default 200).
+#
+# VORAUSSETZUNG: Push-Token persistent in <repo>/.git/credentials (siehe COWORK-GIT-PUSH-SETUP.md).
 #
 set -euo pipefail
 
-WORKTREE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKTREE="${COWORK_WORKTREE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 GITDIR="${COWORK_GITDIR:-$HOME/.cowork-gitdir/proggs}"
 REMOTE_URL="${COWORK_REMOTE:-https://github.com/Pepsi1978/proggs.git}"
 BRANCH="${COWORK_BRANCH:-main}"
@@ -44,7 +48,6 @@ GIT_USER_NAME="${COWORK_GIT_NAME:-Pepsi1978}"
 GIT_USER_EMAIL="${COWORK_GIT_EMAIL:-barwandt@gmail.com}"
 
 log() { printf '[cowork-git] %s\n' "$1"; }
-# git-Wrapper: erzwingt das VM-git-dir + den gemounteten Arbeitsbaum
 g() { git --git-dir="$GITDIR" --work-tree="$WORKTREE" "$@"; }
 
 ensure_setup() {
@@ -56,13 +59,9 @@ ensure_setup() {
   fi
   g config user.name  "$GIT_USER_NAME"
   g config user.email "$GIT_USER_EMAIL"
-  # Der Windows->VM-Mount meldet ALLE Dateien als ausfuehrbar (0755). Ohne diese Zeile
-  # wuerde git bei JEDER getrackten Datei einen 644->755 Modus-Wechsel als Aenderung
-  # stagen und den Commit mit Tausenden Schein-Aenderungen aufblaehen. false = ignorieren.
   g config core.fileMode false
+  g config core.quotePath false
 
-  # Token aus der persistenten Mount-Datei in eine VM-lokale Kopie uebernehmen
-  # (Mount nur LESEN; alle Schreib-/Loesch-Vorgaenge bleiben auf der VM-Platte).
   if [ -f "$MOUNT_CREDS" ]; then
     cp -f "$MOUNT_CREDS" "$VM_CREDS"
     chmod 600 "$VM_CREDS" 2>/dev/null || true
@@ -75,18 +74,10 @@ ensure_setup() {
   g fetch -q origin "$BRANCH"
   g update-ref "refs/heads/$BRANCH" FETCH_HEAD
   g symbolic-ref HEAD "refs/heads/$BRANCH"
-  # Index auf den origin-Stand setzen, Arbeitsdateien NICHT anfassen:
   g reset --mixed -q "$BRANCH"
   log "Bereit: Arbeitsbaum unveraendert, git-dir auf VM-Platte (Locks loeschbar)."
 }
 
-# Schutz gegen Mount-Lesefehler: Manche getrackten Symlinks sind Windows-Symlinks,
-# die ueber den gemounteten Ordner (virtiofs/CBFS) nicht lesbar sind ("readlink:
-# Input/output error"). 'git add -A' bricht dann mit "unable to index file ...
-# fatal: updating files failed" ab. Da diese Symlinks bereits unveraendert in
-# origin/main liegen, nehmen wir genau die unlesbaren per skip-worktree von der
-# Neu-Indizierung aus. (Muss bei JEDEM push laufen, weil 'git reset --mixed' in
-# ensure_setup die skip-worktree-Flags wieder zuruecksetzt.)
 guard_unreadable_symlinks() {
   local meta path
   g ls-files -s | while IFS="$(printf '\t')" read -r meta path; do
@@ -102,13 +93,6 @@ guard_unreadable_symlinks() {
   return 0
 }
 
-# Schutz gegen LFS-Aufblaehung: Git-LFS-Dateien (in .gitattributes mit filter=lfs)
-# liegen im origin nur als kleine Zeiger (~130 Byte), erscheinen im gemounteten
-# Arbeitsbaum aber als voller Inhalt (z. B. 262-MB-ONNX-Modelle). Ohne Schutz wuerde
-# 'add -A' die Zeiger durch die echten Riesendateien ersetzen -> Push-Ablehnung durch
-# GitHubs 100-MB-Limit und dauerhaftes Aufblaehen des Repos. Daher: alle getrackten
-# LFS-Dateien per skip-worktree von 'add -A' ausnehmen. (Echte Pflege von LFS-Dateien
-# erfolgt vom Windows-Rechner, nicht aus der Cowork-VM.)
 guard_lfs_pointers() {
   [ -f "$WORKTREE/.gitattributes" ] || return 0
   local pat f
@@ -120,6 +104,64 @@ guard_lfs_pointers() {
     done
   done
   return 0
+}
+
+# Falle 6 (WICHTIGSTER SCHUTZ): Datenverlust verhindern. Laeuft NACH dem Staging, VOR dem Commit.
+# Vergleicht je gestaged + in origin existierender Datei die Byte-Groesse origin vs. Index.
+guard_data_loss() {
+  local max_pct="${COWORK_SHRINK_MAX_PCT:-30}"
+  local min_bytes="${COWORK_SHRINK_MIN_BYTES:-200}"
+  local suspicious=0 report="" status path old new drop pct
+  while IFS="$(printf '\t')" read -r status path; do
+    case "$status" in
+      M*)
+        old=$(g cat-file -s "$BRANCH:$path" 2>/dev/null) || continue
+        new=$(g cat-file -s ":0:$path" 2>/dev/null) || continue
+        [ -z "$old" ] && continue
+        [ -z "$new" ] && continue
+        if [ "$new" -lt "$old" ]; then
+          drop=$(( old - new )); pct=$(( drop * 100 / old ))
+          if [ "$drop" -ge "$min_bytes" ] && [ "$pct" -ge "$max_pct" ]; then
+            suspicious=$((suspicious+1))
+            report="${report}
+  - ${path}: ${old} -> ${new} Bytes (-${pct}%, -${drop} Bytes)"
+          fi
+        fi
+        ;;
+      D*)
+        if [ -e "$WORKTREE/$path" ] || readlink "$WORKTREE/$path" >/dev/null 2>&1; then
+          suspicious=$((suspicious+1))
+          report="${report}
+  - ${path}: als GELOESCHT gestaged, existiert aber noch im Worktree (Phantom-Loeschung)"
+        fi
+        ;;
+    esac
+  done < <(g diff --cached --name-status "$BRANCH")
+  if [ "$suspicious" -gt 0 ]; then
+    log "ABBRUCH (Datenverlust-Waechter): $suspicious verdaechtige Aenderung(en) — moegliche Mount-Truncation / Phantom-Loeschung:"
+    printf '%b\n' "$report"
+    log "NICHTS wurde committet/gepusht. Datei(en) pruefen (DATEIENDE!), ggf. per Shell neu schreiben, dann erneut."
+    log "Falls Verkleinerung/Loeschung WIRKLICH gewollt: 'COWORK_ALLOW_SHRINK=1 bash cowork-git.sh ...' voranstellen."
+    return 1
+  fi
+  log "Datenverlust-Waechter: keine verdaechtigen Schrumpfungen/Loeschungen."
+  return 0
+}
+
+do_commit_and_push() {
+  local msg="$1"
+  if [ "${COWORK_ALLOW_SHRINK:-0}" = "1" ]; then
+    log "WARNUNG: COWORK_ALLOW_SHRINK=1 — Datenverlust-Waechter uebersprungen (Schrumpfen/Loeschen erlaubt)."
+  else
+    guard_data_loss || exit 1
+  fi
+  if g diff --cached --quiet; then
+    log "Nichts zu committen (Arbeitsbaum = origin/$BRANCH)."
+    exit 0
+  fi
+  g commit -m "$msg"
+  g push origin "HEAD:$BRANCH"
+  log "Erfolgreich nach origin/$BRANCH gepusht."
 }
 
 cmd="${1:-}"
@@ -139,20 +181,27 @@ case "$cmd" in
     guard_unreadable_symlinks
     guard_lfs_pointers
     g add -A
-    if g diff --cached --quiet; then
-      log "Nichts zu committen (Arbeitsbaum = origin/$BRANCH)."
-      exit 0
+    do_commit_and_push "$msg"
+    ;;
+  push-files)
+    msg="${2:-update from cowork}"
+    shift 2 2>/dev/null || true
+    if [ "$#" -eq 0 ]; then
+      log "FEHLER: push-files braucht mindestens eine Datei. Bsp: push-files \"#NNN - Text\" datei1 datei2"
+      exit 2
     fi
-    g commit -m "$msg"
-    g push origin "HEAD:$BRANCH"
-    log "Erfolgreich nach origin/$BRANCH gepusht."
+    ensure_setup
+    g read-tree "$BRANCH"
+    guard_unreadable_symlinks
+    guard_lfs_pointers
+    g add -- "$@"
+    do_commit_and_push "$msg"
     ;;
   "")
-    log "Nutzung: bash cowork-git.sh {setup | push \"Nachricht\" | <git-befehl>}"
+    log "Nutzung: bash cowork-git.sh {setup | push \"Nachricht\" | push-files \"Nachricht\" datei... | <git-befehl>}"
     exit 2
     ;;
   *)
-    # Jeder andere git-Befehl mit korrektem git-dir/work-tree:
     g "$@"
     ;;
 esac
