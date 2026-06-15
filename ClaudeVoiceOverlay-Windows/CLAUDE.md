@@ -93,6 +93,6 @@ App.xaml.cs, Views/, Models/, NativeMethods/
 ## Requirements
 
 - Windows 10/11, x64
-- .NET 8.0 SDK (`dotnet --version`)
+- .NET 10.0 SDK (`dotnet --version`)
 - NAudio NuGet package (restored automatically)
 - .env file with GROQ_API_KEY (required) and GEMINI_API_KEY (optional)
