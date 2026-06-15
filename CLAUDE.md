@@ -429,4 +429,37 @@ dass und warum semantisch statt Grep gesucht wird.
   2. **Installation**: Plattform-spezifische Anleitungen (macOS + Windows getrennt), fuer Anfaenger geschrieben, Schritt-fuer-Schritt mit Erklaerungen, Download-Links, Fehlerbehebung
 
 ## Claude Code Setup-Pruefung
-- Beim **ersten Start** in diesem Repository: `claude-code-setup/manifest.json` pruefe
+- Beim **ersten Start** in diesem Repository: `claude-code-setup/manifest.json` pruefen
+- Fehlende Plugins/Skills dem Benutzer melden und nach Bestaetigung nachinstallieren
+- Manuell: `bash claude-code-setup/setup.sh` (macOS) oder `powershell claude-code-setup/setup.ps1` (Windows)
+
+## CLAUDE.md Speicherort
+- Die CLAUDE.md existiert NUR im Repository: `~/proggs/CLAUDE.md`
+- Es gibt KEINE Kopie im Home-Verzeichnis (`~/CLAUDE.md`) mehr — das Duplikat wurde am 2026-04-04 entfernt um ~8.700 Tokens Kontext zu sparen.
+
+## Compact Instructions
+
+Bei jeder Kontext-Komprimierung MUSS Folgendes erhalten bleiben (CLAUDE.md wird nach der
+Komprimierung frisch eingelesen — hier steht, was die Zusammenfassung niemals verlieren darf):
+
+- **Die 3 Hauptdirektiven** (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) gelten
+  ununterbrochen weiter — auch nach jeder Komprimierung.
+- **Aktueller Aufgaben-Stand:** Ziel der laufenden Aufgabe, was schon erledigt ist (welche
+  Commit-#Nummern), was noch aussteht. Offene Multi-Task-Listen (Semikolon-Aufgaben) vollstaendig.
+- **Uncommittete Arbeit:** Welche Dateien geaendert, aber noch nicht committed sind.
+- **Letzte Benutzer-Korrekturen/Praeferenzen** dieser Session, die noch nicht persistiert wurden.
+- **Commit+Push-Disziplin** sowie die Cross-Platform- und Status-Meldungs-Pflicht.
+
+Darf in der Zusammenfassung wegfallen: abgeschlossene Tool-Ausgaben im Detail, bereits committete
+Zwischenschritte, lange Datei-Dumps.
+
+## Sprache
+- Kommunikation mit dem Benutzer auf Deutsch.
+- Code-Kommentare und Commit-Messages auf Englisch.
+- **Selbst erstellte Agents, Skills und Commands: Komplett auf Deutsch.**
+  - Frontmatter-`description`: Deutsch ("Nutze diesen Agenten wenn..." statt "Use this agent when...")
+  - `<example>`-Bloecke: Kontext, User, Assistant, Commentary — alles Deutsch
+  - System-Prompt (Markdown-Body): Deutsch
+  - Einzige Ausnahme: Tool-Namen (`nemo_ask`), Code-Variablen und technische Bezeichner bleiben Englisch
+  - Externe/installierte Plugins werden NICHT uebersetzt
+  - Vollstaendige Regel: `~/.claude/rules/german-agents-skills.md`
