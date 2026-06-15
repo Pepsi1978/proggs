@@ -3,8 +3,10 @@
 > Best-Practices für den **Cowork-Modus der Claude-Desktop-App** (macOS/Windows). Cowork bringt die
 > agentische Architektur von Claude Code ohne Terminal in die Desktop-App — für nicht-programmierende
 > Wissensarbeit. Diese Datei ist die "richtige Seite der Medaille": *wie man Cowork von vornherein
-> richtig nutzt*. Ein Gegenstück im Bug-Almanach (`~/proggs/bugs/claude-tooling/cowork.md`) existiert
-> noch NICHT — Vorschlag: per `bug-almanach-recherche` anlegen (Kandidaten siehe unten "Kopplung").
+> richtig nutzt*. Das Gegenstück im Bug-Almanach existiert inzwischen:
+> [`bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (allgemein) und
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md)
+> (geplante/wiederkehrende Aufgaben — Gegenseite zu §5 dieser Datei).
 >
 > **Status:** Cowork startete Januar 2026 als Research Preview; die Produktseite nennt es inzwischen
 > "generally available", einzelne Teilfunktionen (Computer-Use, Handy/Dispatch) bleiben Research Preview.
@@ -142,4 +144,4 @@
 
 ## 7. Grenzen, Datenschutz, Sicherheit
 
-- **Compliance-Blindspot:** Cowork-Aktivität ist NICHT in Compliance API / Audit-Logs / Daten-Exporten erfasst (alle Pläne inkl. Enterprise). Ersatz nur via OpenTelemetry 
+- **Compliance-Blindspot:** Cowor
