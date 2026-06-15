@@ -20,7 +20,7 @@
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
          2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
-    <Version>2.0.3</Version>
+    <Version>2.1.0</Version>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>
@@ -32,6 +32,14 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="$(GoogleApisDriveVersion)" />
     <PackageReference Include="Google.Apis.Auth" Version="$(GoogleApisAuthVersion)" />
+  </ItemGroup>
+
+  <!-- UI Automation (UIA 2.0, System.Windows.Automation) fuer positions-unabhaengiges
+       Finden/Fokussieren des Eingabefelds in Claude Desktop (Electron/Chromium).
+       Die Assemblies (UIAutomationClient/Types) kommen ueber das WindowsDesktop-
+       Framework (UseWPF) — eine explizite <Reference> erzeugt nur MSB3243-Konflikte. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
   </ItemGroup>
 
   <!-- PromptBoard.Core und PromptBoard.Data leben als Subprojekte direkt unter

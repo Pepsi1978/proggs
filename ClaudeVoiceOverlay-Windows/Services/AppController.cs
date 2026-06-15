@@ -1,369 +1,392 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
 using ClaudeVoiceOverlay.NativeMethods;
 
 namespace ClaudeVoiceOverlay.Services
 {
     /// <summary>
-    /// Steuert die Ziel-App (Claude Desktop / Codex) per Win32-Tastatur- und
-    /// Maus-Simulation. Schwester-Klasse zu TerminalVoiceOverlay/TerminalController:
-    /// die oeffentliche API (PasteText[Async], ClearLine[Async], ClearAllInput[Async],
-    /// CopySelection[Async], PasteClipboard[Async], PressReturn[Async], SendReturn)
-    /// ist deckungsgleich, damit das gemeinsame OverlayWindow 1:1 funktioniert.
+    /// Steuert die Ziel-App (Claude Desktop / Codex, Electron/Chromium) per
+    /// UI Automation + echtem Strg+V. Schwester-Klasse zu TerminalVoiceOverlay/
+    /// TerminalController: die oeffentliche API (PasteText[Async], ClearLine[Async],
+    /// ClearAllInput[Async], CopySelection[Async], PasteClipboard[Async],
+    /// PressReturn[Async], SendReturn) ist deckungsgleich, damit das gemeinsame
+    /// OverlayWindow 1:1 funktioniert.
     ///
-    /// Unterschiede zum TerminalController (App-spezifisch):
-    ///   • Eingabefeld-Fokus: Electron braucht FindWindowEx(Chrome_RenderWidgetHostHWND)
-    ///     + Klick ins Eingabefeld; Codex hat eine andere Fensterstruktur (nur Escape).
-    ///   • Loeschen: Ctrl+A + Backspace (Electron-Textfeld) statt Ctrl+U (Terminal-Readline).
+    /// KERN-STRATEGIE (Stand 2026-06-15, nach Bug-Almanach + Best-Practices
+    /// `windows-electron-text-injection`): Das Eingabefeld von Claude Desktop ist
+    /// ein HTML-contenteditable-DIV (ProseMirror/Lexical) in EINER grossen
+    /// Chromium-Render-Flaeche — KEIN Win32-Edit-Control. Deshalb spiegeln wir den
+    /// funktionierenden macOS-Accessibility-Weg:
+    ///   1. Feld per UI Automation FINDEN + FOKUSSIEREN (positions-unabhaengig:
+    ///      FocusedElement -> Baum-Suche Edit/Document -> HWND-Notnagel Render-Widget).
+    ///   2. Text per Zwischenablage + echtem Strg+V mit Hardware-SCANCODES via
+    ///      SendInput EINFUEGEN (Chromium verwirft reine Virtual-Keys / keybd_event).
+    /// Bewusst NICHT mehr: fester Koordinaten-Klick, keybd_event ohne Scancode,
+    /// FindWindowEx-Einzelsuche, WM_PASTE/WM_SETTEXT, ValuePattern.SetValue aufs
+    /// contenteditable — alle vier versagen bei Chromium gleichzeitig.
     ///
-    /// Uebernommen vom TerminalController (Robustheit, plattformneutral):
-    ///   • Async-Wrapper (Win32-Sleeps weg vom UI-Thread)
-    ///   • Clipboard-Generationsschutz (kein Restore-Race bei schnellen Pastes)
-    ///   • TryRunOnUiThread mit Retry (Clipboard-COMException-Wand)
-    ///   • ReleaseNonCtrlModifiers vor Ctrl+V (Hotkey-getriggerte Pastes)
+    /// THREADING: Jede Operation laeuft auf einem dedizierten STA-Thread
+    /// (RunOnStaThread). Damit ist (a) der Clipboard-Zugriff STA-konform,
+    /// (b) UIA NICHT auf dem WPF-UI-Thread (Deadlock-Schutz, Best-Practices §3.1).
     /// </summary>
     public static class AppController
     {
-        private const byte VK_A         = 0x41;
-        private const byte VK_C         = 0x43;
-        private const byte VK_BACKSPACE = 0x08;
-        private const byte VK_RETURN    = 0x0D;
-        private const ushort VK_HOME    = 0x24;
-        private const ushort VK_END     = 0x23;
+        private const ushort VK_A         = 0x41;
+        private const ushort VK_C         = 0x43;
+        private const ushort VK_BACKSPACE = 0x08;
+        private const ushort VK_RETURN    = 0x0D;
 
-        // ── Async-Wrapper (halten die blockierenden Win32-Sleeps vom UI-Thread) ──
+        // ── Oeffentliche API: Async-Wrapper (haelt Win32-Sleeps vom UI-Thread) ──
 
         public static Task PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
             => Task.Run(() => PasteText(text, appHwnd, autoEnter));
 
-        public static Task ClearLineAsync(IntPtr appHwnd)
-            => Task.Run(() => ClearLine(appHwnd));
+        public static Task ClearLineAsync(IntPtr appHwnd)     => Task.Run(() => ClearLine(appHwnd));
+        public static Task ClearAllInputAsync(IntPtr appHwnd) => Task.Run(() => ClearAllInput(appHwnd));
+        public static Task CopySelectionAsync(IntPtr appHwnd) => Task.Run(() => CopySelection(appHwnd));
+        public static Task PasteClipboardAsync(IntPtr appHwnd)=> Task.Run(() => PasteClipboard(appHwnd));
+        public static Task PressReturnAsync(IntPtr appHwnd)   => Task.Run(() => PressReturn(appHwnd));
 
-        public static Task ClearAllInputAsync(IntPtr appHwnd)
-            => Task.Run(() => ClearAllInput(appHwnd));
+        // ── Oeffentliche API: synchrone Einstiegspunkte (laufen auf STA-Worker) ──
 
-        public static Task CopySelectionAsync(IntPtr appHwnd)
-            => Task.Run(() => CopySelection(appHwnd));
+        public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
+            => RunOnStaThread(() => PasteTextCore(text, appHwnd, autoEnter));
 
-        public static Task PasteClipboardAsync(IntPtr appHwnd)
-            => Task.Run(() => PasteClipboard(appHwnd));
+        // Bei Electron-Feldern leeren ClearLine und ClearAllInput identisch das
+        // gesamte contenteditable (Strg+A + Backspace) — es gibt keine Terminal-
+        // "Zeile". API getrennt fuer OverlayWindow-Kompatibilitaet.
+        public static void ClearLine(IntPtr appHwnd)     => RunOnStaThread(() => ClearInputCore(appHwnd));
+        public static void ClearAllInput(IntPtr appHwnd) => RunOnStaThread(() => ClearInputCore(appHwnd));
 
-        public static Task PressReturnAsync(IntPtr appHwnd)
-            => Task.Run(() => PressReturn(appHwnd));
+        public static void CopySelection(IntPtr appHwnd)
+            => RunOnStaThread(() => { ActivateTarget(appHwnd); Thread.Sleep(40); SendComboScancode(Win32.VK_CONTROL, VK_C); });
 
-        // ── Clipboard-Generationsschutz ──
-        // Jeder Paste-Zyklus erhoeht den Zaehler atomar; der geplante Restore-Task
-        // merkt sich seine Generation und fasst das Clipboard NICHT an, wenn
-        // inzwischen ein zweiter Paste lief — sonst wuerde er den frischen Text
-        // mit dem alten Inhalt ueberschreiben und die zweite Aufnahme ginge
-        // verloren. Thread-safe per Interlocked, kein Lock, kein Deadlock.
+        public static void PasteClipboard(IntPtr appHwnd)
+            => RunOnStaThread(() => { FocusTarget(appHwnd); ReleaseHeldModifiers(); SendCtrlVScancode(); });
+
+        public static void PressReturn(IntPtr appHwnd)
+            => RunOnStaThread(() => { FocusTarget(appHwnd); Thread.Sleep(40); SendKeyScancode(VK_RETURN); });
+
+        public static void SendReturn() => RunOnStaThread(() => SendKeyScancode(VK_RETURN));
+
+        // ── Kern-Abläufe ────────────────────────────────────────────────────
+
         private static long _clipboardGen;
 
-        /// <summary>
-        /// Versucht eine Clipboard-Operation auf dem UI-Thread mit kurzem Backoff.
-        /// WPFs Clipboard-API wirft COMException (CLIPBRD_E_CANT_OPEN) wenn ein
-        /// anderer Prozess das Clipboard offen hat (Excel-Copy, Browser-DragDrop,
-        /// Antivirus). Ohne diese Wand fiel die App ueber eine unhandled Exception
-        /// aus dem async-void-Handler und der Watchdog restartete still.
-        /// </summary>
-        private static bool TryRunOnUiThread(Action action, int maxAttempts = 5)
+        private static void PasteTextCore(string text, IntPtr appHwnd, bool autoEnter)
         {
-            var app = Application.Current;
-            if (app is null) return false; // shutting down
+            long myGen = Interlocked.Increment(ref _clipboardGen);
 
-            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            // 1. Zwischenablage setzen (STA-Thread → direkter Clipboard-Zugriff) + verifizieren
+            string? previous = null;
+            if (!SetClipboardText(text, out previous))
+            {
+                Console.WriteLine("[AppController] PasteText: Clipboard.SetText fehlgeschlagen — abgebrochen.");
+                return;
+            }
+
+            // 2. Ziel aktivieren + Eingabefeld per UIA finden/fokussieren (positions-unabhaengig)
+            FocusTarget(appHwnd);
+
+            // 3. Gehaltene Hotkey-Modifier neutralisieren, sonst kommt "Win+Alt+Ctrl+V" an
+            ReleaseHeldModifiers();
+
+            // 4. Echtes Strg+V mit Hardware-Scancodes
+            bool pasted = SendCtrlVScancode();
+            Console.WriteLine($"[AppController] paste sent={pasted} autoEnter={autoEnter} hwnd=0x{appHwnd.ToInt64():X}");
+
+            // 5. Optionales Enter (separat, nach kurzer Verzoegerung)
+            if (autoEnter)
+            {
+                Thread.Sleep(300);
+                SendKeyScancode(VK_RETURN);
+            }
+
+            // 6. Vorherigen Clipboard-Inhalt verzoegert wiederherstellen (Generationsschutz)
+            if (previous != null)
+            {
+                var prev = previous;
+                Task.Delay(600).ContinueWith(_ =>
+                {
+                    if (Interlocked.Read(ref _clipboardGen) != myGen) return; // neuerer Paste aktiv
+                    RunOnStaThread(() => { try { Clipboard.SetText(prev); } catch { /* tolerant */ } });
+                });
+            }
+        }
+
+        private static void ClearInputCore(IntPtr appHwnd)
+        {
+            FocusTarget(appHwnd);
+            ReleaseHeldModifiers();
+            SendComboScancode(Win32.VK_CONTROL, VK_A); // alles markieren
+            Thread.Sleep(40);
+            SendKeyScancode(VK_BACKSPACE);             // loeschen
+        }
+
+        // ── Ziel aktivieren + Eingabefeld fokussieren ───────────────────────
+
+        /// <summary>Aktiviert die Ziel-App und fokussiert ihr aktives Eingabefeld per UIA.</summary>
+        private static void FocusTarget(IntPtr appHwnd)
+        {
+            ActivateTarget(appHwnd);
+            Thread.Sleep(50);              // SetForegroundWindow ist asynchron
+            FocusInputFieldUia(appHwnd);   // positions-unabhaengig (UIA), best effort
+        }
+
+        /// <summary>
+        /// Bringt die Ziel-App legal in den Vordergrund (AllowSetForegroundWindow +
+        /// AttachThreadInput-Leihe). Stellt minimierte Fenster wieder her.
+        /// </summary>
+        private static void ActivateTarget(IntPtr appHwnd)
+        {
+            if (appHwnd == IntPtr.Zero) return;
+
+            if (Win32.IsIconic(appHwnd))
+                Win32.ShowWindow(appHwnd, Win32.SW_RESTORE);
+
+            var currentFg = Win32.GetForegroundWindow();
+            if (IsOwnedByProcess(currentFg, appHwnd))
+                return; // schon vorne
+
+            uint ourThread = Win32.GetCurrentThreadId();
+            uint targetThread = Win32.GetWindowThreadProcessId(appHwnd, out uint targetPid);
+
+            bool attached = false;
+            try
+            {
+                if (ourThread != targetThread)
+                    attached = Win32.AttachThreadInput(ourThread, targetThread, true);
+
+                Win32.AllowSetForegroundWindow(targetPid != 0 ? targetPid : Win32.ASFW_ANY);
+                bool ok = Win32.SetForegroundWindow(appHwnd);
+                Win32.BringWindowToTop(appHwnd);
+                if (!ok)
+                    Console.WriteLine("[AppController] SetForegroundWindow=false (Foreground-Lock?)");
+                Thread.Sleep(120);
+            }
+            finally
+            {
+                if (attached)
+                    Win32.AttachThreadInput(ourThread, targetThread, false);
+            }
+        }
+
+        /// <summary>
+        /// Findet das aktive Eingabefeld der Ziel-App per UI Automation und
+        /// fokussiert es — positions-unabhaengig (Chat unten, Cowork Mitte, Code
+        /// unten). Fallback-Kette §3.8: FocusedElement → Baum-Suche → Render-Widget.
+        /// </summary>
+        private static bool FocusInputFieldUia(IntPtr appHwnd)
+        {
+            try
+            {
+                // 1. Das bereits fokussierte Element (folgt dem Fokus automatisch)
+                AutomationElement? focused = null;
+                try { focused = AutomationElement.FocusedElement; } catch { /* s.u. */ }
+                if (focused != null && IsTextField(focused) && TrySetFocus(focused))
+                {
+                    Console.WriteLine("[AppController] UIA: FocusedElement ist Textfeld → fokussiert");
+                    return true;
+                }
+
+                var cond = new AndCondition(
+                    new OrCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)),
+                    new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true));
+
+                // 2. Im Baum des Top-Level-Fensters suchen (Fokus liegt auf Container)
+                var root = AutomationElement.FromHandle(appHwnd);
+                if (root != null)
+                {
+                    var field = root.FindFirst(TreeScope.Descendants, cond);
+                    if (field != null && TrySetFocus(field))
+                    {
+                        Console.WriteLine("[AppController] UIA: Textfeld im Fensterbaum gefunden → fokussiert");
+                        return true;
+                    }
+                }
+
+                // 3. HWND-Notnagel: Render-Widget suchen, dann erneut UIA darauf
+                IntPtr renderWidget = FindRenderWidget(appHwnd);
+                if (renderWidget != IntPtr.Zero)
+                {
+                    var rwRoot = AutomationElement.FromHandle(renderWidget);
+                    var field2 = rwRoot?.FindFirst(TreeScope.Subtree, cond);
+                    if (field2 != null && TrySetFocus(field2))
+                    {
+                        Console.WriteLine("[AppController] UIA: Textfeld unter Render-Widget gefunden → fokussiert");
+                        return true;
+                    }
+                }
+
+                Console.WriteLine("[AppController] UIA: kein Textfeld gefunden — Paste geht an aktuelles Fokus-Element");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppController] UIA-Fokus fehlgeschlagen: {ex.GetType().Name}: {ex.Message}");
+            }
+            return false;
+        }
+
+        private static bool IsTextField(AutomationElement el)
+        {
+            try
+            {
+                var ct = el.Current.ControlType;
+                return (ct == ControlType.Edit || ct == ControlType.Document)
+                    && el.Current.IsKeyboardFocusable;
+            }
+            catch { return false; }
+        }
+
+        private static bool TrySetFocus(AutomationElement el)
+        {
+            try { el.SetFocus(); return true; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppController] SetFocus warf: {ex.GetType().Name}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Rekursive HWND-Suche nach "Chrome_RenderWidgetHostHWND". EnumChildWindows
+        /// rekursiert selbst — wir filtern im Callback flach per GetClassName und
+        /// verdrahten KEINE Zwischen-Klassennamen (Chrome_WidgetWin_*) fest.
+        /// </summary>
+        private static IntPtr FindRenderWidget(IntPtr appHwnd)
+        {
+            if (appHwnd == IntPtr.Zero) return IntPtr.Zero;
+            IntPtr found = IntPtr.Zero;
+            try
+            {
+                Win32.EnumChildWindows(appHwnd, (hwnd, _) =>
+                {
+                    var sb = new StringBuilder(256);
+                    Win32.GetClassName(hwnd, sb, sb.Capacity);
+                    if (sb.ToString() == "Chrome_RenderWidgetHostHWND")
+                    {
+                        found = hwnd;
+                        return false; // Enumeration stoppen
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppController] FindRenderWidget warf: {ex.Message}");
+            }
+            return found;
+        }
+
+        // ── Tastatur-Injektion via SendInput (Hardware-Scancodes) ───────────
+
+        private static Win32.INPUT KeyInput(ushort vk, bool keyUp)
+        {
+            ushort scan = (ushort)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
+            uint flags = Win32.KEYEVENTF_SCANCODE | (keyUp ? Win32.KEYEVENTF_KEYUP : 0);
+            return new Win32.INPUT
+            {
+                type = Win32.INPUT_KEYBOARD,
+                u = new Win32.INPUTUNION
+                {
+                    ki = new Win32.KEYBDINPUT
+                    {
+                        wVk = 0,            // 0 + Scancode-Flag = echter Hardware-Tastendruck
+                        wScan = scan,
+                        dwFlags = flags,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+        }
+
+        private static bool SendInputs(params Win32.INPUT[] inputs)
+        {
+            uint sent = Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
+            if (sent != inputs.Length)
+                Console.WriteLine($"[AppController] SendInput: nur {sent}/{inputs.Length} (UIPI-Block? err={Marshal.GetLastWin32Error()})");
+            return sent == inputs.Length;
+        }
+
+        /// <summary>Echtes Strg+V als EIN 4-Element-Array (Ctrl↓ V↓ V↑ Ctrl↑).</summary>
+        private static bool SendCtrlVScancode()
+            => SendInputs(
+                KeyInput(Win32.VK_CONTROL, false),
+                KeyInput(Win32.VK_V, false),
+                KeyInput(Win32.VK_V, true),
+                KeyInput(Win32.VK_CONTROL, true));
+
+        /// <summary>Modifier+Taste als 4-Element-Array (z.B. Strg+A, Strg+C).</summary>
+        private static bool SendComboScancode(ushort modifier, ushort key)
+            => SendInputs(
+                KeyInput(modifier, false),
+                KeyInput(key, false),
+                KeyInput(key, true),
+                KeyInput(modifier, true));
+
+        /// <summary>Einzelne Taste (Down/Up), z.B. Enter, Backspace.</summary>
+        private static bool SendKeyScancode(ushort vk)
+            => SendInputs(KeyInput(vk, false), KeyInput(vk, true));
+
+        /// <summary>
+        /// Laesst gehaltene Nicht-Ctrl-Modifier (Win/Alt/Shift, beide Seiten) per
+        /// KEYUP los, bevor Strg+V geht — sonst saehe Windows "Win+Alt+Ctrl+V".
+        /// Nur tatsaechlich gedrueckte Tasten (GetAsyncKeyState) loslassen.
+        /// </summary>
+        private static void ReleaseHeldModifiers()
+        {
+            ushort[] mods = { 0x5B, 0x5C, 0xA4, 0xA5, 0xA0, 0xA1 }; // LWin RWin LAlt RAlt LShift RShift
+            bool any = false;
+            foreach (var vk in mods)
+            {
+                if ((Win32.GetAsyncKeyState(vk) & 0x8000) != 0)
+                {
+                    SendInputs(KeyInput(vk, true)); // nur KEYUP
+                    any = true;
+                }
+            }
+            if (any) Thread.Sleep(20);
+        }
+
+        // ── Zwischenablage (auf STA-Thread, mit Retry gegen CLIPBRD_E_CANT_OPEN) ──
+
+        private static bool SetClipboardText(string text, out string? previous)
+        {
+            previous = null;
+            for (int attempt = 1; attempt <= 6; attempt++)
             {
                 try
                 {
-                    app.Dispatcher.Invoke(action);
+                    if (Clipboard.ContainsText())
+                        previous = Clipboard.GetText();
+                    // copy:true → OLE-Flush, Inhalt bleibt nach Tool-Ende erhalten
+                    Clipboard.SetDataObject(text, true);
                     return true;
                 }
-                catch (System.Runtime.InteropServices.COMException ex)
-                    when (attempt < maxAttempts)
+                catch (Exception ex) when (attempt < 6)
                 {
-                    Thread.Sleep(30 * (1 << (attempt - 1))); // 30,60,120,240 ms
-                    Console.WriteLine($"Clipboard busy (attempt {attempt}/{maxAttempts}): {ex.Message}");
+                    Thread.Sleep(40 * attempt); // 40,80,120,160,200 ms
+                    Console.WriteLine($"[AppController] Clipboard busy ({attempt}/6): {ex.GetType().Name}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Clipboard operation failed: {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine($"[AppController] Clipboard endgueltig fehlgeschlagen: {ex.Message}");
                     return false;
                 }
             }
             return false;
         }
 
-        // ── Paste ──
-
-        /// <summary>
-        /// Fuegt Text in die Ziel-App ein (Clipboard + Ctrl+V). Fokussiert das
-        /// Eingabefeld vorher und stellt das alte Clipboard danach wieder her.
-        /// </summary>
-        public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
-        {
-            long myGen = Interlocked.Increment(ref _clipboardGen);
-
-            string? previousClipboard = null;
-            bool clipboardSet = TryRunOnUiThread(() =>
-            {
-                if (Clipboard.ContainsText())
-                    previousClipboard = Clipboard.GetText();
-                Clipboard.SetText(text);
-            });
-            if (!clipboardSet)
-            {
-                Console.WriteLine("PasteText: Clipboard.SetText fehlgeschlagen — Paste uebersprungen.");
-                return;
-            }
-
-            BringToForeground(appHwnd);
-
-            // Modifier-Release: Bei Hotkey-getriggertem Paste haelt Frank evtl. die
-            // Trigger-Modifier (Win/Alt/Shift) noch physisch — Windows saehe sonst
-            // "Win+Alt+Ctrl+V" statt "Ctrl+V". Ctrl bleibt unten (Strg+1..9-Hotkeys).
-            ReleaseNonCtrlModifiers();
-
-            FocusInputField(appHwnd);
-            SendCtrlV();
-
-            if (autoEnter)
-            {
-                Thread.Sleep(300);
-                SendKey(VK_RETURN);
-            }
-
-            // Clipboard nur restoren, wenn unsere Generation noch aktuell ist.
-            if (previousClipboard != null)
-            {
-                var prev = previousClipboard;
-                Task.Delay(500).ContinueWith(_ =>
-                {
-                    if (Interlocked.Read(ref _clipboardGen) != myGen)
-                    {
-                        Console.WriteLine("Clipboard restore skipped — newer paste in flight.");
-                        return;
-                    }
-                    TryRunOnUiThread(() => Clipboard.SetText(prev));
-                });
-            }
-        }
-
-        /// <summary>
-        /// Fuegt den AKTUELLEN Clipboard-Inhalt ein (ohne ihn zu veraendern).
-        /// </summary>
-        public static void PasteClipboard(IntPtr appHwnd)
-        {
-            BringToForeground(appHwnd);
-            ReleaseNonCtrlModifiers();
-            FocusInputField(appHwnd);
-            SendCtrlV();
-        }
-
-        // ── Loeschen (Electron-Textfeld) ──
-        // ClearLine und ClearAllInput sind bei Electron-Apps funktional identisch:
-        // beide leeren das gesamte Eingabefeld. Anders als ein Terminal (Readline,
-        // Ctrl+U) ist das Eingabefeld ein markierbares Textfeld — Ctrl+A erfasst
-        // auch mehrzeilige Eingaben in einem Rutsch.
-
-        public static void ClearLine(IntPtr appHwnd)    => ClearInputCore(appHwnd);
-        public static void ClearAllInput(IntPtr appHwnd) => ClearInputCore(appHwnd);
-
-        private static void ClearInputCore(IntPtr appHwnd)
-        {
-            BringToForeground(appHwnd);
-
-            if (IsCodexProcess(appHwnd))
-            {
-                // Codex: double-Escape (1. schliesst Popup/Autocomplete, 2. fokussiert
-                // das Eingabefeld), dann Ctrl+Shift+Home-Selektion + Backspace.
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(150);
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendKey(VK_END);
-                Thread.Sleep(30);
-                byte ctrlScan  = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-                byte shiftScan = (byte)Win32.MapVirtualKey(Win32.VK_SHIFT, Win32.MAPVK_VK_TO_VSC);
-                byte homeScan  = (byte)Win32.MapVirtualKey(VK_HOME, Win32.MAPVK_VK_TO_VSC);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
-            }
-            else
-            {
-                // Claude Desktop: ins Eingabefeld klicken, dann Ctrl+A + Backspace.
-                FocusDirectRenderWidget(appHwnd);
-                ClickInputField(appHwnd);
-                SendKeyCombo(Win32.VK_CONTROL, VK_A);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
-            }
-        }
-
-        // ── Return / Copy ──
-
-        public static void SendReturn() => SendKey(VK_RETURN);
-
-        public static void PressReturn(IntPtr appHwnd)
-        {
-            BringToForeground(appHwnd);
-
-            if (IsCodexProcess(appHwnd))
-            {
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(100);
-            }
-            else
-            {
-                FocusDirectRenderWidget(appHwnd);
-                ClickInputField(appHwnd);
-            }
-
-            SendKey(VK_RETURN);
-        }
-
-        /// <summary>
-        /// Kopiert die aktuelle Auswahl in der Ziel-App via Ctrl+C.
-        /// </summary>
-        public static void CopySelection(IntPtr appHwnd)
-        {
-            BringToForeground(appHwnd);
-            SendKeyCombo(Win32.VK_CONTROL, VK_C);
-        }
-
-        // ── Eingabefeld-Fokus ──
-
-        /// <summary>
-        /// Bringt das Eingabefeld der Ziel-App in den Fokus. Codex hat eine
-        /// abweichende Electron-Fensterstruktur (Chrome_RenderWidgetHostHWND ist
-        /// KEIN direktes Kind) — dort wuerde SetFocus auf ein Kind den Tastatur-
-        /// Fokus STEHLEN; deshalb nur Escape (gibt Fokus ans Eingabefeld zurueck).
-        /// Bei Claude Desktop: Render-Widget fokussieren + ins Feld klicken.
-        /// </summary>
-        private static void FocusInputField(IntPtr appHwnd)
-        {
-            if (IsCodexProcess(appHwnd))
-            {
-                Console.WriteLine("AppController: Codex mode — Escape vor Eingabe");
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-            }
-            else
-            {
-                FocusDirectRenderWidget(appHwnd);
-                ClickInputField(appHwnd);
-            }
-        }
-
-        private static void FocusDirectRenderWidget(IntPtr appHwnd)
-        {
-            if (appHwnd == IntPtr.Zero) return;
-
-            IntPtr renderWidget = Win32.FindWindowEx(appHwnd, IntPtr.Zero, "Chrome_RenderWidgetHostHWND", null);
-            if (renderWidget == IntPtr.Zero)
-            {
-                Console.WriteLine("AppController: No Chrome_RenderWidgetHostHWND child — skipping SetFocus");
-                return;
-            }
-
-            uint ourThread = Win32.GetCurrentThreadId();
-            uint targetThread = Win32.GetWindowThreadProcessId(appHwnd, out _);
-
-            bool attached = false;
-            if (ourThread != targetThread)
-                attached = Win32.AttachThreadInput(ourThread, targetThread, true);
-
-            Win32.SetFocus(renderWidget);
-            Console.WriteLine("AppController: Focused Chrome_RenderWidgetHostHWND");
-
-            if (attached)
-                Win32.AttachThreadInput(ourThread, targetThread, false);
-
-            Thread.Sleep(50);
-        }
-
-        private static void ClickInputField(IntPtr appHwnd)
-        {
-            if (appHwnd == IntPtr.Zero) return;
-            if (!Win32.GetWindowRect(appHwnd, out Win32.RECT rect)) return;
-
-            int windowWidth = rect.Right - rect.Left;
-            int windowHeight = rect.Bottom - rect.Top;
-            if (windowWidth < 100 || windowHeight < 100) return;
-
-            // Claude Desktop: Eingabefeld bei ~86% Hoehe, 55% Breite (rechts der Sidebar).
-            int clickX = rect.Left + (int)(windowWidth * 0.55);
-            int clickY = rect.Top + (int)(windowHeight * 0.86);
-
-            clickX = Math.Clamp(clickX, rect.Left + 50, rect.Right - 50);
-            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 50);
-
-            Win32.GetCursorPos(out Win32.POINT savedPos);
-
-            Win32.SetCursorPos(clickX, clickY);
-            Thread.Sleep(15);
-            Win32.mouse_event(Win32.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
-            Thread.Sleep(15);
-            Win32.mouse_event(Win32.MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
-            Thread.Sleep(150);
-
-            Win32.SetCursorPos(savedPos.X, savedPos.Y);
-
-            Console.WriteLine($"AppController: Clicked at ({clickX},{clickY}), window=({rect.Left},{rect.Top},{rect.Right},{rect.Bottom})");
-        }
-
-        // ── Process Detection ──
-
-        private static bool IsCodexProcess(IntPtr appHwnd)
-        {
-            if (appHwnd == IntPtr.Zero) return false;
-            Win32.GetWindowThreadProcessId(appHwnd, out uint pid);
-            try
-            {
-                using var proc = Process.GetProcessById((int)pid);
-                var name = proc.ProcessName;
-                return name.Equals("Codex", StringComparison.OrdinalIgnoreCase)
-                    || name.Equals("Cursor", StringComparison.OrdinalIgnoreCase);
-            }
-            catch { return false; }
-        }
-
-        // ── Window Activation ──
-
-        private static void BringToForeground(IntPtr appHwnd)
-        {
-            if (appHwnd == IntPtr.Zero) return;
-
-            var currentFg = Win32.GetForegroundWindow();
-            if (IsOwnedByProcess(currentFg, appHwnd))
-            {
-                Thread.Sleep(30);
-                return;
-            }
-
-            uint ourThread = Win32.GetCurrentThreadId();
-            uint targetThread = Win32.GetWindowThreadProcessId(appHwnd, out _);
-
-            bool attached = false;
-            if (ourThread != targetThread)
-                attached = Win32.AttachThreadInput(ourThread, targetThread, true);
-
-            Win32.AllowSetForegroundWindow(unchecked((uint)-1));
-            Win32.SetForegroundWindow(appHwnd);
-            Win32.BringWindowToTop(appHwnd);
-            Thread.Sleep(200);
-
-            if (attached)
-                Win32.AttachThreadInput(ourThread, targetThread, false);
-        }
+        // ── Helfer ──────────────────────────────────────────────────────────
 
         private static bool IsOwnedByProcess(IntPtr foregroundHwnd, IntPtr appHwnd)
         {
@@ -373,60 +396,26 @@ namespace ClaudeVoiceOverlay.Services
             return fgPid == appPid && fgPid != 0;
         }
 
-        // ── Low-level key/mouse helpers ──
-
-        private static void SendKeyCombo(ushort modifier, ushort key)
-        {
-            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
-            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
-
-            Win32.keybd_event((byte)modifier, modScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)modifier, modScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
-
-        private static void SendCtrlV()
-        {
-            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-            byte vScan    = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
-
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
-
         /// <summary>
-        /// Synthetische KEYUP-Events fuer Win, Alt und Shift, damit der virtuelle
-        /// Tastatur-State sauber ist bevor SendCtrlV laeuft. Ctrl bleibt unten,
-        /// weil Strg+1..9-Hotkeys den Ctrl-Modifier intentional gedrueckt halten.
+        /// Fuehrt eine Aktion auf einem dedizierten STA-Thread aus und wartet auf
+        /// ihr Ende. STA ist Pflicht fuer Clipboard und entkoppelt UIA vom WPF-UI-
+        /// Thread (Deadlock-Schutz). Aufrufer (Task.Run oder UI) blockiert nur per
+        /// Join — kein Message-Pump-Deadlock.
         /// </summary>
-        private static void ReleaseNonCtrlModifiers()
+        private static void RunOnStaThread(Action action)
         {
-            void Up(ushort vk)
+            Exception? captured = null;
+            var t = new Thread(() =>
             {
-                byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
-                Win32.keybd_event((byte)vk, scan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            }
-
-            Up(0x5B); // VK_LWIN
-            Up(0x5C); // VK_RWIN
-            Up(0xA4); // VK_LMENU (linke Alt)
-            Up(0xA5); // VK_RMENU (rechte Alt / AltGr)
-            Up(0xA0); // VK_LSHIFT
-            Up(0xA1); // VK_RSHIFT
-            Thread.Sleep(20);
-        }
-
-        private static void SendKey(ushort vk)
-        {
-            byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
-            // Home, End, Delete, Insert, Page Up/Down, Arrow keys (0x21–0x2E) sind Extended Keys
-            uint flags = (vk >= 0x21 && vk <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
-
-            Win32.keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
-            Win32.keybd_event((byte)vk, scan, flags | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                try { action(); }
+                catch (Exception ex) { captured = ex; }
+            });
+            t.IsBackground = true;
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            if (captured != null)
+                Console.WriteLine($"[AppController] STA-Thread-Fehler: {captured.GetType().Name}: {captured.Message}");
         }
     }
 }

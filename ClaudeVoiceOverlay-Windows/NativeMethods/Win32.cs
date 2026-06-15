@@ -89,10 +89,26 @@ namespace ClaudeVoiceOverlay.NativeMethods
             public INPUTUNION u;
         }
 
+        // Die Union MUSS die groesste Variante (MOUSEINPUT) enthalten, sonst ist
+        // sizeof(INPUT) zu klein (32 statt 40 Byte x64) und SendInput lehnt das
+        // Array mit cbSize-Mismatch STILL ab (Rueckgabe 0, kein Fehlercode).
+        // Wir benutzen zwar nur ki (Tastatur), aber mi haelt die Groesse korrekt.
         [StructLayout(LayoutKind.Explicit)]
         public struct INPUTUNION
         {
+            [FieldOffset(0)] public MOUSEINPUT mi;
             [FieldOffset(0)] public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -106,7 +122,10 @@ namespace ClaudeVoiceOverlay.NativeMethods
         }
 
         public const uint INPUT_KEYBOARD = 1;
-        public const uint KEYEVENTF_KEYUP = 0x0002;
+        public const uint KEYEVENTF_KEYUP     = 0x0002;
+        // Scancode-Flag: Chromium akzeptiert Strg+V nur mit echtem Hardware-Scancode
+        // (wScan via MapVirtualKey, wVk=0). Reiner Virtual-Key wird je Layout verworfen.
+        public const uint KEYEVENTF_SCANCODE  = 0x0008;
 
         // Virtual key codes
         public const ushort VK_CONTROL = 0x11;
@@ -317,5 +336,18 @@ namespace ClaudeVoiceOverlay.NativeMethods
 
         public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
         public const uint MOUSEEVENTF_LEFTUP   = 0x0004;
+
+        // ── Rekursive Kindfenster-Suche (HWND-Notnagel §3.7) ───────────────
+        // EnumChildWindows rekursiert SELBST in alle Ebenen (Raymond Chen) —
+        // im Callback flach per GetClassName auf "Chrome_RenderWidgetHostHWND"
+        // filtern, NIE Zwischen-Klassennamen (Chrome_WidgetWin_*) fest verdrahten.
+        // Nutzt den oben definierten EnumWindowsProc-Delegate.
+        [DllImport("user32.dll")]
+        public static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        // Clipboard-Verifikation (Logik-Sonde): aendert sich die Sequenznummer,
+        // wurde unser Text wirklich in die Zwischenablage geschrieben.
+        [DllImport("user32.dll")]
+        public static extern uint GetClipboardSequenceNumber();
     }
 }
