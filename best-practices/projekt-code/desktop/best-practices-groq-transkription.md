@@ -193,3 +193,19 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 - [MS Learn — STJ Source-Gen](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation) · [CA1869](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1869) · [CA1068](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1068) · [Coalesce CancellationTokens](https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/coalesce-cancellation-tokens-from-timeouts) `offiziell`
 - [NAudio Resampling](https://github.com/naudio/NAudio/blob/master/Docs/Resampling.md) · [arXiv — When Denoising Hinders](https://arxiv.org/pdf/2603.04710) · [openai/whisper #2125 (kein Denoise)](https://github.com/openai/whisper/discussions/2125) · [#870 (16 kHz)](https://github.com/openai/whisper/discussions/870) `extern`/`offiziell`
 - [arXiv 2501.11378 — Whisper Hallucinations (VAD+BoH)](https://arxiv.org/html/2501.11378v1) · [HF whisper-hallucinations](https://huggingface.co/datasets/sachaarbonel/whisper-hallucinations) · [silero-vad](https://github.com/snakers4/silero-vad) `extern`
+
+---
+
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/groq-transkription.md`](../../../bugs/desktop/groq-transkription.md). Links die *Praevention*, rechts die *Falle*.
+
+| Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/desktop/groq-transkription.md`) |
+|--------------------------------|---------------------------------------------------------------------------|
+| BP 1 Aufnahme/Preprocessing | §1 Stille-Halluzination, §2 Abwehr-Kette (Vorfilter) |
+| BP 2 Request-Konfig | §1.2 temperature, §1.3 prompt, §3 Groq-Parameter/Format/Modell |
+| BP 3 Nachfilter (Confidence + Blocklist) | §1.4 Repetition, §2 Abwehr-Kette (Confidence/Blocklist) |
+| BP 4 Performance | §3 Groq-Parameter/Format/Modell |
+| BP 5 .NET-Resilienz | §4 Rate-Limits/Fehlercodes |
+| BP 7 Kosten | §4 Kosten |
+| BP 8 Integration | §4 Endpoint |

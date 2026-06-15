@@ -199,3 +199,21 @@ Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Fe
 | §6 Deployment | 1, 2, 3, 4, 29, 30, 31 |
 | §7 Testbarkeit | (quer — Qualitätssicherung) |
 | §8 Observability | (quer — Früherkennung) |
+
+---
+
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/wake-word.md`](../../../bugs/desktop/wake-word.md). Links die *Praevention*, rechts die *Falle*.
+
+| Best-Practice-Abschnitt (hier) | Zugehoerige Bug-Almanach-Nummern (`bugs/desktop/wake-word.md`) |
+|--------------------------------|----------------------------------------------------------------|
+| §0 Engine-Entscheidung | 13, 15, 16 (Lizenz/Engine) |
+| §1 KeywordSpotter idiomatisch | 9, 10, 11, 12, 21, 22 (KeywordSpotter-API) |
+| §2 Audio-Pipeline | 5, 6, 8, 14, 17, 23, 24, 25 (Audio) |
+| §3 WPF-Threading & Async | 7, 26, 27 (Threading/Async) |
+| §4 Always-on-Effizienz | CPU/Energie |
+| §5 Voice-Assistant & Privacy/UX | 19, 20, 28 (Design/Privacy) |
+| §6 Modell-Bundling & Deployment | 1, 2, 3, 4, 29, 30, 31 (Deployment) |
+| §7 Testbarkeit | Qualitaetssicherung |
+| §8 Observability | alle (Frueherkennung) |

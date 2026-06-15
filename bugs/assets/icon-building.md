@@ -310,3 +310,18 @@ Konverter-Alpha-Flatten (§8) — Workarounds bleiben aktiv.
 □ macOS: Squircle+Padding eingebacken (klassisch) bzw. Icon Composer (Tahoe), Plist-Key gesetzt?
 □ Konverter-Ergebnis auf Groessen UND Alpha geprueft?
 ```
+
+---
+
+## 🔗 Bezug zur Best-Practices-Gegenseite
+
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/assets/best-practices-icon-building.md`](../../best-practices/projekt-code/assets/best-practices-icon-building.md). Die gespiegelte Tabelle steht auch dort. Links der *Bug*, rechts die *Best-Practice, die ihn verhindert*.
+
+| Bug-Abschnitt (dieser Almanach) | Verhindert durch Best-Practice |
+|---------------------------------|--------------------------------|
+| §2.1 schwarze Ecken | Master-Asset + Alpha-Pflicht |
+| §2.2 Doppelrundung, §6.2 Android, §7.1 macOS | Nie selbst runden wo OS maskiert |
+| §2.3 Anti-Aliasing-Halo | Supersampling-Maske |
+| §3.1, §3.2, §8 | Pillow RGBA+sizes / IM kein flatten |
+| §5.1, §5.2 | WPF ApplicationIcon + Window.Icon als Resource |
+| §4 | Windows-Cache-Reset + .exe,0 |

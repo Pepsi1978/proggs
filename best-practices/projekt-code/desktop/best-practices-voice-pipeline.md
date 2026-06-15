@@ -158,3 +158,18 @@ VoiceAgent **1.2.0**.
 - Picovoice VAD-Guide 2026 · Silero VAD Wiki · MS Learn (AEC/Ducking/Signal-Processing-Modes) ·
   NAudio-Issues (#1168/#539/#1150/#657/#1084/#1203, gh-verifiziert) · markheath.net `offiziell`+`extern`
 - HA Community (background noise, Voice PE, continuous conversation) · Rhasspy-Doku · Willow #18 `extern`
+
+---
+
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/voice-pipeline.md`](../../../bugs/desktop/voice-pipeline.md). Links die *Praevention*, rechts die *Falle*.
+
+| Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/desktop/voice-pipeline.md`) |
+|--------------------------------|-----------------------------------------------------------------------|
+| BP §1 Zustandsautomat & Fenster-Design | §1 Wachfenster/Session |
+| BP §2 Endpointing richtig dimensionieren | §2 VAD/Endpointing |
+| BP §3 Robuste Daueraufnahme | §3 NAudio-Capture |
+| BP §4 Latenz-Budget & Pipeline-Ueberlappung | §4 Latenz/Architektur |
+| BP §5 Echo & Unterbrechbarkeit | §5 Barge-in/Self-Trigger |
+| BP §6 STT-Requests fuer Voice | §6 STT-Anbindung |

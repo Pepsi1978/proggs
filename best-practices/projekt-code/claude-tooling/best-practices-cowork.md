@@ -166,3 +166,18 @@ Wechselseitige Abschnitts-Bezugstabelle:
 | §6 Computer-Steuerung & Browser | §9 Sicherheit/Prompt-Injection (PromptArmor §9.1, Computer-Use §9.4, Chrome §9.5) |
 | §7 Grenzen, Datenschutz, Sicherheit | §9.6 Compliance-Lücken + §10 Per-Design-Grenzen & Usage |
 | Stolpersteine (Windows-Install, Prompt-Injection, Skill-Mount) | §1 (VM service/EXDEV), §9.1 (Injection), §6.1 (Skill-Mount) |
+
+---
+
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (§13). Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
+
+| Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/claude-tooling/cowork.md`) |
+|--------------------------------|----------------------------------------------------------------------|
+| §1 Überblick & Einrichtung / Berechtigungsmodi | §1/§2 VM-Start (Win/macOS), §3 macOS-Permissions/TCC |
+| §2 Skills & Plugins | §6 Skills & Plugins |
+| §3 Connectors & MCP | §5 Connectors & MCP |
+| §4 Datei-Arbeit & Ergebnis-Dokumente | §4 Datei-Arbeit & Datenverlust |
+| §5 Geplante Aufgaben & Live-Artefakte | §7 Scheduled Tasks, §8 Live-Artefakte |
+| §6 Computer-Steuerung & Browser / §7 Grenzen | §9 Sicherheit/Prompt-Injection |

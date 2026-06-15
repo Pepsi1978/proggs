@@ -270,3 +270,20 @@ Verfügung → Issue-Status aus den verlinkten Quellen, nicht per `gh` hart veri
 - [ ] Commit enthält NUR Gewolltes (keine LFS-Riesendateien, keine Build-Berge, keine fremden pending Dateien).
 - [ ] Bei „fetch first": Commit per Plumbing auf frischen `origin/main` aufgesetzt, KEIN Force.
 - [ ] Auf GitHub bestätigt: `git ls-remote origin -h refs/heads/main` + Datei-Zeilenzahl/-ENDE.
+
+---
+
+## 🔗 Bezug zur Best-Practices-Gegenseite
+
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md). Die identische Tabelle steht auch dort. Links der *Bug/die Falle*, rechts die *Regel, die sie verhindert*.
+
+| Bug-Abschnitt (dieser Almanach) | Adressiert durch Best-Practice-Regel |
+|---------------------------------|--------------------------------------|
+| §1, §10, §11, §17, §18, §19 | Regel 2/3 |
+| §10, §11, §12, §14 | Regel 4/5 |
+| §4 | Regel 6 |
+| §8, §9 | Regel 7 |
+| §6, §7 | Regel 8 |
+| §22 | Regel 9 |
+| §15, §16, §17 | Regel 10 |
+| §2, §20, §21 | Regel 11/12 |

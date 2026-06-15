@@ -58,7 +58,9 @@ img.save("out.ico", format="ICO",                  # 4. multi-res, 256 PNG-kompr
 
 ---
 
-## Kopplung zum Bug-Almanach
+## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
+
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/assets/icon-building.md`](../../../bugs/assets/icon-building.md). Die gespiegelte Tabelle steht auch dort.
 
 | Best-Practice (hier) | verhindert Bug in `bugs/assets/icon-building.md` |
 |----------------------|--------------------------------------------------|
