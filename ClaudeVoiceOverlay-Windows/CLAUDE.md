@@ -20,6 +20,21 @@ Place a `.env` file next to the .exe with your API keys.
 
 Note: `publish.ps1` auto-detects .NET SDK in user profile (`~/.dotnet`) or system PATH.
 
+### Auto-Rebuild after commit (CRITICAL)
+
+After EVERY committed + pushed code change to this overlay, Claude Code runs the
+rebuild+deploy ITSELF, automatically (Frank never starts it manually):
+
+```powershell
+pwsh -File ~/proggs/rebuild-overlay.ps1 CVO
+```
+
+This kills watcher + exe (by process NAME), builds `publish`, restarts via `watcher.vbs`,
+and verifies the process count. Order: edit -> version bump -> commit -> push ->
+**rebuild-overlay.ps1** -> status. If the change touches a file SHARED with
+TerminalVoiceOverlay, use `Both` instead of `CVO`.
+(Source: memory `feedback_overlay_auto_rebuild_after_commit`.)
+
 ## Architecture
 
 | File | Purpose |
