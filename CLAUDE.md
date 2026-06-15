@@ -131,6 +131,7 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
   Mount-Arbeitsbaum (CRLF/LFS) scheitert. Vollstaendig in der Volltext-Regel.
 - `cowork-git.sh push` macht `add -A` und nimmt ALLE pending Dateien mit (auch Logs/Temp/Screenshots).
   Fuer einen gezielten Commit das Plumbing-Verfahren mit den konkreten Dateien nutzen.
+- **Achtung Mount-Truncation beim Schreiben:** Edit/Write-Tool-Schreibvorgaenge sind ueber die Bruecke bei groesseren Dateien teils UNVOLLSTAENDIG sichtbar → vor dem Push DATEIENDE verifizieren, besser per Shell (`cat >`) schreiben oder git-intern committen (`git show` → `hash-object -w` → `update-index --cacheinfo` → `commit-tree`).
 
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.

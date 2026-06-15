@@ -46,6 +46,7 @@ GitHub aufgebaut und überlebt VM-Neustarts nicht (gewollt).
    und wird unbrauchbar langsam. Bei neuen Projekten/Sprachen: passende Build-Ordner ergänzen.
 
 ## Praktische Hinweise für Cowork
+- **Dateien schreiben: per Shell (`cat >`), NICHT blind aufs Edit/Write-Tool verlassen** — ueber die Mount-Bruecke koennen Edit/Write-Tool-Schreibvorgaenge bei groesseren Dateien UNVOLLSTAENDIG sichtbar sein (Datei wird mittendrin abgeschnitten); wer dann vom Mount staged, pusht die abgeschnittene Version. Daher nach dem Schreiben das DATEIENDE pruefen (`tail -1`, Zeilenzahl) ODER die Aenderung git-intern bauen (`git show <ref>:<datei>` → aendern → `git hash-object -w` → `git update-index --cacheinfo` → `git commit-tree`), was den Mount komplett umgeht. (Genau dieser Fehler ist beim Anlegen dieser Regel passiert.)
 - **Laufzeit-Grenze:** Ein Cowork-Shell-Aufruf läuft max. ~45 s, und Hintergrundprozesse überleben
   den Wechsel zwischen zwei Shell-Aufrufen NICHT zuverlässig. Der `push` muss daher in EINEM Aufruf
   durchlaufen. Voraussetzung dafür ist, dass Falle 4 + 5 greifen (sonst dauert `add -A` zu lange).
