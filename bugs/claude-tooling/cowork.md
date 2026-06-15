@@ -752,6 +752,8 @@ sensiblen Daten in Excel/PowerPoint-Add-ins bei aktivem Cowork. Lokale Daten in 
 
 ## 10a. Git / GitHub-Push aus Cowork — committen geht, push scheitert ⭐ HÄUFIG
 
+> **➜ Vollständiger, kuratierter Almanach für diesen Bereich:** [`cowork-git-push.md`](cowork-git-push.md) — 22 Einträge (Lock, fileMode, Symlinks, Git-LFS, CRLF, Mount-Truncation/Datenverlust-Wächter, non-fast-forward/Plumbing, GIT_DIR/Work-Tree, Performance) inkl. Fix-Status. Dieser §10a-Block ist die Kurzfassung; Details dort.
+
 > Recherchiert 2026-06-15 (7 Researcher: offizielle Anthropic-/GitHub-Doku, GitHub-Issues,
 > Reverse-Engineering-Analysen). Gegenseite: best-practices-cowork.md §3a. Frank-zugewandte
 > Schritt-Anleitung: `~/proggs/COWORK-GIT-PUSH-SETUP.md`.
