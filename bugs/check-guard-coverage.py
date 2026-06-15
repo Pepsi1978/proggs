@@ -42,8 +42,8 @@ INTENTIONALLY_UNMAPPED = {
     "play-store-release",
     # agents/ — Konzept/Orchestrierung (kein sauberes Datei-Pattern)
     "orchestrator-agent",
-    # claude-tooling/ — Konzept (Desktop-App-Tabs, kein Datei-Pattern)
-    "cowork", "claude-code-desktop-vs-cli",
+    # claude-tooling/ — Konzept (Desktop-App-Tabs / Harness-Selbstverbesserung, kein Datei-Pattern)
+    "cowork", "claude-code-desktop-vs-cli", "agent-knowledge-system",
     # desktop/ — laeuft bewusst ueber die wake-word/groq/dotnet-Zweige
     "voice-pipeline",
     # assets/ — engine-uebergreifendes Konzept (Maps/HDRs, kein eindeutiges Pattern)
