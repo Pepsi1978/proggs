@@ -118,3 +118,16 @@ check-version-anchor, bug-almanac-hint-Pflege (W3-2), `health.py`-Self-Test — 
 best-practices- und research-Cowork-Fassungen. Ergebnis: 3 fertige ZIPs in `~/proggs/Cowork/`.
 HINWEIS: Falls Franks Cowork-Skill-Text im neuen Transkript fehlt (nach /clear weg) — Frank bitten, ihn erneut zu
 posten, ODER aus der CLI-Fassung + diesen Deltas rekonstruieren (beides moeglich).
+
+## VORLAGE 2 (Frank lieferte 2026-06-15 die EXISTIERENDE Cowork-Fassung von best-practices + Scripts)
+Frank postete auch die Cowork-Fassung des `best-practices`-Skills + `scripts/update-changelog.{sh,ps1}`. VORLAGE
+fuer die frische Session. Cowork-DELTAS ggü. CLI-Fassung: relativer Ablage-Ort (best-practices/ im Arbeitsordner,
+NICHT ~/proggs), Ordner-anlegen-Pflicht, 12-Kategorien-Taxonomie (01-hooks..12-neues) + projekt-code/<kategorie>/,
+Changelog-Archiv verbatim, "falls Shell verfuegbar" fuer die Scripts, Bug-Almanach-Rueckkopplung + Bezugstabellen.
+WICHTIGES DELTA ZU FIXEN: `update-changelog.{sh,ps1}` haben noch `DataDir = ~/proggs/best-practices` als Default —
+fuer die Cowork-Fassung muss der Default der COWORK-ARBEITSORDNER sein (relativ), sonst schreibt das Script am
+verbundenen Ordner vorbei. EINZUBAUEN (wie bei bug-almanach-recherche): Anker-Feld W3-1 + check-version-anchor-Hinweis,
+bug-almanac-hint-Pflege W3-2, health.py-Self-Test, cowork-git.sh-Abschluss.
+=> 3 Cowork-ZIPs nach ~/proggs/Cowork/: bug-almanach-recherche, best-practices, research/researcher (jeweils mit
+   diesen Deltas + W3-Mechanismen + Cowork-git). Beide Skill-Vorlagen hat Frank im Chat geliefert (research-Fassung
+   ggf. noch erfragen). Falls Texte nach /clear weg: Frank erneut bitten ODER aus CLI-Fassungen + diesen Deltas rekonstruieren.
