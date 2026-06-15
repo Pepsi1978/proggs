@@ -218,4 +218,18 @@ if ($violations.Count -gt 0) {
     Write-Host "Invariant-Check: Alle Pruefungen bestanden."
 }
 
+# Almanach-/Harness-Self-Tests buendeln (bugs/health.py) — nur Hinweise, keine harte Verletzung
+try {
+    $healthScript = Join-Path $env:USERPROFILE "proggs\bugs\health.py"
+    $py = Get-Command python -ErrorAction SilentlyContinue
+    if ((Test-Path $healthScript) -and $py) {
+        $healthOut = (& $py.Source $healthScript --quiet 2>&1 | Out-String).Trim()
+        if ($healthOut) {
+            Write-Host ""
+            Write-Host "Almanach-Self-Test (bugs/health.py):"
+            foreach ($l in ($healthOut -split "`n")) { Write-Host "  $l" }
+        }
+    }
+} catch { }
+
 exit 0

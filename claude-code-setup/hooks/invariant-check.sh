@@ -164,4 +164,15 @@ else
     echo "Invariant-Check: Alle Pruefungen bestanden."
 fi
 
+# Almanach-/Harness-Self-Tests buendeln (bugs/health.py) — nur Hinweise, keine harte Verletzung
+HEALTH_SCRIPT="$HOME/proggs/bugs/health.py"
+if [ -f "$HEALTH_SCRIPT" ] && command -v python3 >/dev/null 2>&1; then
+    health_out=$(python3 "$HEALTH_SCRIPT" --quiet 2>/dev/null)
+    if [ -n "$health_out" ]; then
+        echo ""
+        echo "Almanach-Self-Test (bugs/health.py):"
+        echo "$health_out" | sed 's/^/  /'
+    fi
+fi
+
 exit 0
