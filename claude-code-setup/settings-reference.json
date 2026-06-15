@@ -124,6 +124,11 @@
           {
             "type": "command",
             "command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-prompt.ps1\""
+          },
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/bug-almanac-hint.ps1\"",
+            "timeout": 8
           }
         ]
       }
