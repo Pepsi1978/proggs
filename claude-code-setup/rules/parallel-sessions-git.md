@@ -119,6 +119,40 @@ können später von ihrer eigenen Session committet werden.
 
 ---
 
+## Atomarer Pfad-Commit gegen Index-Kollision (KRITISCH bei parallelen Sessions)
+
+In einem geteilten Working Tree teilen sich ALLE parallelen Sessions denselben Git-Index
+(`.git/index`). Führt eine andere Session zwischen deinem `git add` und deinem `git commit`
+ein `git add`/`git reset` aus, kann sie deinen Index leeren — dein `git commit` läuft dann
+ins Leere (`nothing to commit`) oder committet die falschen Dateien. Real getroffen
+2026-06-15: mehrere `git add … && git commit`-Versuche scheiterten still, weil eine parallele
+Cowork-Session den Index zwischendurch zurücksetzte.
+
+**Standard-Lösung: atomarer Pfad-Commit.** Statt `git add <pfade>` + `git commit` IMMER
+in EINEM Befehl die Pfade direkt an `git commit` übergeben:
+
+```bash
+# RICHTIG — staged + committet GENAU diese Pfade atomar, unabhängig vom Index-Zustand
+git commit -m "#NNNN - Beschreibung" -- pfad/zu/datei1 pfad/zu/datei2
+
+# FALSCH bei parallelen Sessions — zwei Schritte; dazwischen kann der Index geleert werden
+git add pfad/zu/datei1 pfad/zu/datei2
+git commit -m "#NNNN - Beschreibung"
+```
+
+`git commit -- <pfade>` umgeht den geteilten Staging-Index komplett: Es nimmt genau die
+genannten Pfade mit ihrem Working-Tree-Inhalt und committet sie, egal was eine andere
+Session am Index getan hat. Es bleibt dabei, dass NUR die eigenen Dateien namentlich genannt
+werden (nie `git commit -a`, nie `git add -A`).
+
+**Hintergrund-Befehl-Falle:** Lange/mehrzeilige `git commit`-Befehle können vom Shell-Tool
+in den Hintergrund verschoben werden; ein vermeintlich abgebrochener Hintergrund-Commit kann
+trotzdem durchlaufen und ein Duplikat erzeugen (real 2026-06-15: doppelte Commit-Nummer
+#46812/#46813). Deshalb nach jedem Commit kurz `git log --oneline -1` prüfen, BEVOR erneut
+committet wird.
+
+---
+
 ## Die absoluten Tabus
 
 Diese Aktionen sind in parallelen Session-Setups **verboten**. Sie zerstören
