@@ -99,3 +99,22 @@ nicht nur inhaltlich gekuerzt, sondern Cowork-UMGEBUNGS-korrekt:
   `bash ~/proggs/cowork-git.sh push-files "#NNN - Text" <datei...>` (gezielt, Mount-schonend; NICHT nacktes git;
   Datenverlust-Waechter greift). Vorher `bash ~/proggs/cowork-git.sh setup` ("Push-Zugang OK" abwarten).
 - Ziel bleibt: fertige ZIPs in `~/proggs/Cowork/` (Frank laedt sie per ZIP-Upload in die Desktop-App).
+
+## VORLAGE vorhanden (Frank lieferte 2026-06-15 die EXISTIERENDE Cowork-Fassung von bug-almanach-recherche)
+Frank hat die aktuelle Cowork-Fassung des `bug-almanach-recherche`-Skills + dessen `references/researcher-prompts.md`
+im Chat gepostet. Sie ist die VORLAGE — die frische Session baut darauf auf (nicht bei Null anfangen). Bekannte
+Cowork-DELTAS dieser Fassung ggü. der CLI-Fassung (`~/.claude/skills/bug-almanach-recherche/SKILL.md`):
+- **Ablage-Ort-Abschnitt ganz oben (ZUERST LESEN):** Ergebnisse in den aktuellen COWORK-ARBEITSORDNER (verbundener
+  Ordner/Projekt), NICHT in festen `~/proggs`-Pfad. Struktur RELATIV: `bugs/<kategorie>/<bereich>.md`,
+  `bugs/README.md`, `best-practices/projekt-code/<kategorie>/best-practices-<software>.md`.
+- **Ordner-anlegen ist Pflicht + erlaubt:** fehlt ein Ziel-/Zwischenordner → ERST anlegen (mkdir -p bzw. Datei-Werkzeug),
+  dann Datei schreiben. NIE abbrechen weil Ordner fehlt. Wenn Frank anderen Basis-Ordner nennt → dorthin (gleiche Unterstruktur).
+- **Schritt 3:** "falls eine Shell verfuegbar ist" gh-Pruefung (Cowork-Shell eingeschraenkt); sonst Changelog als Beleg + ehrlich markieren.
+- **Schritt 7 "Sichern":** Git-Repo → committen+pushen; kein Repo → nur speichern.
+- **Kurzcheck (Stufe A)** als Pflicht-Bestandteil ist schon drin; researcher-prompts.md (Phase A/B) ebenfalls.
+WAS NOCH FEHLT (frische Session muss es EINBAUEN): die NEUEN W3-Mechanismen — Anker-Feld (W3-1) + Hinweis auf
+check-version-anchor, bug-almanac-hint-Pflege (W3-2), `health.py`-Self-Test — UND die Cowork-Abschluss-Logik
+(`bash cowork-git.sh push-files ...` statt nacktem git, ~45s-Limit, Mount-Schreibfallen). Gleiches dann fuer die
+best-practices- und research-Cowork-Fassungen. Ergebnis: 3 fertige ZIPs in `~/proggs/Cowork/`.
+HINWEIS: Falls Franks Cowork-Skill-Text im neuen Transkript fehlt (nach /clear weg) — Frank bitten, ihn erneut zu
+posten, ODER aus der CLI-Fassung + diesen Deltas rekonstruieren (beides moeglich).
