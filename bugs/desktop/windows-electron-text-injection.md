@@ -9,16 +9,21 @@
 > dieselbe Funktion (Accessibility / AXUIElement) einwandfrei. Dieser Almanach erklaert, warum — und
 > liefert den funktionserhaltenden Windows-Weg, der das macOS-AXUIElement-Vorgehen spiegelt.
 >
-> Stand: recherchiert am **2026-06-15** mit **7 parallelen Researchern** (Fokus: Microsoft Learn +
-> Chromium-Accessibility-Doku zuerst, dann dotnet/wpf-, dotnet/winforms-, electron/electron-,
-> PowerToys-Issues, AutoHotkey-/FlaUI-Praxis). ~50 Eintraege in 8 Sektionen.
+> Stand: recherchiert am **2026-06-15** in **zwei Durchlaeufen** — (1) breite Bug-Suche mit 7 parallelen
+> Researchern, (2) gezielter Nachzug zu Ziel-App-Version, .NET 10 und Windows 11 24H2 (3 Researcher).
+> Fokus: Microsoft Learn + Chromium-Accessibility-Doku zuerst, dann dotnet/wpf-, dotnet/winforms-,
+> dotnet/runtime-, electron/electron-, PowerToys-Issues, AutoHotkey-/FlaUI-Praxis. ~65 Eintraege in 10 Sektionen.
 >
 > **Versions-Anker:**
-> - Sender: **.NET 8** (`net8.0-windows`), **WPF**, Windows 10/11.
-> - Ziel: **Claude Desktop 1.12603.1** (Build `3df4fd`, 2026-06-11), Electron-App mit gebuendeltem
->   Chromium. 2026er-Electron-Linie ist ~39–42 (Chromium ~134+); **ab Chromium 138 ist der native
->   UI-Automation-Provider standardmaessig AN** (per WebSearch 2026-06-15 bestaetigt) — Franks aktuelle
->   Build unterstuetzt den UIA-Weg also voll, die alte Chrome-117-UIA-Regression ist erledigt.
+> - Sender: **.NET 10** (SDK `10.0.301`, Ziel `net10.0-windows`), **WPF**, **self-contained single-file**.
+> - Plattform: **Windows 11 24H2** (Build 26100/26200).
+> - Ziel: **Claude Desktop 1.12603.1** (Build `3df4fd`, 2026-06-11) = **Electron 41.x → Chromium 146**
+>   (V8 14.6, Node 24; Electron-Major belegt-wahrscheinlich aus aaddrick-Diagnosedaten + Electron-41-Release,
+>   exakte Patch-Version geschaetzt — Verifikation siehe §E4). **Chromium 146 ≫ 138 → der native
+>   Windows-UI-Automation-Provider ist standardmaessig AN** (Default seit Chromium 138, per WebSearch
+>   2026-06-15 bestaetigt): Der UIA-Weg ist voll unterstuetzt, die MSAA→UIA-Emulationsschicht entfaellt,
+>   IAccessible2 laeuft weiter parallel. Die alte Chrome-117-UIA-Regression ist erledigt. Codex und Cursor
+>   teilen die Electron-/Chromium-Basis (andere Fensterstruktur — §E5).
 >
 > **Wichtig:** Dies ist der reine **Bug-Almanach** (bekannte Fehler/Fallen/Workarounds). Die
 > Gegenseite (Best-Practices — "wie macht man es von vornherein richtig") wird in einem **getrennten
@@ -36,7 +41,8 @@
 >
 > Sektionen: **K** Kernursache/Strategie · **F** Fensterfindung/HWND · **A** Fokus/Vordergrund ·
 > **T** Tastatur-Injektion · **M** Maus/DPI/Koordinaten · **C** Zwischenablage · **U** UI Automation ·
-> **E** Electron-Eigenheiten & App-Unterschiede.
+> **E** Electron-Eigenheiten & App-Unterschiede · **N** .NET-10-Deployment (self-contained single-file) ·
+> **W** Windows 11 24H2.
 
 | #  | Signal / Situation | Sofort-Regel | Volltext |
 |----|--------------------|--------------|----------|
@@ -77,6 +83,14 @@
 | 35 | HWND-/Titel-Logik bricht beim App-Update | Electron ist bewegliches Ziel → versionsunabhaengig (Accessibility, Prozessname) | E4 |
 | 36 | Logik fuer Claude trifft Codex/Cursor/VS Code nicht | Gleiche Electron-Basis, andere Struktur → pro App erkennen, Mapping-Tabelle | E5 |
 | 37 | Globaler Hotkey feuert nicht | Claude nutzt `Ctrl+Alt+Space`; globalShortcut first-come → Rueckgabe pruefen, ausweichen | E9 |
+| 38 | Welche Chromium-Version? UIA verlässlich? | Claude 1.12603.1 = Electron 41/Chromium 146 → native UIA an; Version zur Laufzeit auslesen | E4 |
+| 39 | Eigene native Helper-DLL: `DllNotFoundException` im Single-File | .NET 10 sucht nicht mehr im .exe-Ordner → `IncludeNativeLibrariesForSelfExtract` / `AssemblyDirectory` | N1 |
+| 40 | Pfad neben der .exe leer (IL3000) | `Assembly.Location`="" im Single-File → `AppContext.BaseDirectory` / `Environment.ProcessPath` | N2 |
+| 41 | Trimming/AOT → WPF startet nicht | WPF nicht trimmbar; COM-Marshalling bricht → Single-File OHNE Trimming/AOT | N3 |
+| 42 | FlaUI nach Publish: `Interop.UIAutomationClient` fehlt | `EmbedInteropTypes=false` setzen, im Bundle Auffindbarkeit prüfen | N4 |
+| 43 | DPI/Koordinaten im Single-File daneben | eigenes app.manifest (PerMonitorV2 + Win10/11-supportedOS) einbetten | N5 |
+| 44 | Overlay fällt auf 24H2 hinter Paint/Photos | 24H2-Z-Order-Regression → Topmost ereignisgetrieben re-asserten / Overlay vor Paste ausblenden | W1 |
+| 45 | Klappt nur als Nicht-Admin (Zukunft) | 24H2 „Administrator Protection" (aktuell deaktiviert, latent) → Sender nie elevated | W2 |
 
 ---
 
@@ -92,7 +106,7 @@
   5. macOS hat keinen Foreground-Lock und kein UIPI → dort fallen mehrere dieser Huerden komplett weg, was das Plattform-Delta erklaert (A1, T4).
 - **Versionen:** Per Design (Chromium-Architektur + Win32-Eingabemodell).
 - **FIX (funktionserhaltend, der tragende Weg):** Den macOS-AXUIElement-Ansatz spiegeln, statt blind zu klicken:
-  1. **Accessibility scharfschalten** (Chromium-Baum ist lazy/aus — U1): native UIA-Client gegen das Fenster halten bzw. `WM_GETOBJECT` an `Chrome_RenderWidgetHostHWND` senden; bei Franks Build (Chromium ≥138) ist native UIA ohnehin standardmaessig aktiv.
+  1. **Accessibility scharfschalten** (Chromium-Baum ist lazy/aus — U1): native UIA-Client gegen das Fenster halten bzw. `WM_GETOBJECT` an `Chrome_RenderWidgetHostHWND` senden; bei Franks Build (Chromium 146) ist native UIA ohnehin standardmaessig aktiv.
   2. **Feld FINDEN + FOKUSSIEREN** via UIA (`ControlType.Edit`/`Document`, `SetFocus()`) — monitor-, DPI- und HWND-bewusst, immun gegen das Wandern (U8, M1).
   3. **Text per Zwischenablage + echtem Strg+V mit Scancodes** einschleusen (`SendInput` + `KEYEVENTF_SCANCODE`, Clipboard via `SetDataObject(copy:true)`), Modifier vorher freigeben, Restore verzoegert (T1/T2, C2/C3).
   - `ValuePattern.SetValue` bleibt nur der **optionale schnelle Pfad** fuer den seltenen Fall, dass ein Feld es freigibt (U8).
@@ -370,7 +384,7 @@
 ### U1. Chromium-Accessibility ist standardmaessig AUS / lazy → UIA-Baum leer ⭐ HAEUFIG
 - **Symptom:** UIA sieht nur das Top-Window ohne Kinder; `FindFirst(Descendants, …)` auf das Feld = `null`. Inspect.exe zeigt leeren Inhalt, bis man hineinklickt.
 - **Ursache:** Chromium aktiviert Accessibility nur "on demand" und lazy: Chrome feuert `EVENT_SYSTEM_ALERT` (Custom-ID 1); erst wenn ein AT mit `WM_GETOBJECT` antwortet (bzw. UIA/IAccessible2 angefragt wird), baut der Renderer den Baum auf. Vorher leer.
-- **Versionen:** Verhalten versionsunabhaengig. **Bei Franks Build (Chromium ≥138) ist der native UIA-Provider standardmaessig AN** → der Baum wird zuverlaessiger/schneller materialisiert; die alte Chrome-117-Regression (`--force-renderer-accessibility` brach UIA, Workaround `=complete`) ist erledigt.
+- **Versionen:** Verhalten versionsunabhaengig. **Bei Franks Build (Chromium 146) ist der native UIA-Provider standardmaessig AN** → der Baum wird zuverlaessiger/schneller materialisiert; die alte Chrome-117-Regression (`--force-renderer-accessibility` brach UIA, Workaround `=complete`) ist erledigt.
 - **FIX:** Native UIA-Client (`CUIAutomation`/`IUIAutomation` / FlaUI) gegen das Fenster halten — dann sendet Windows `WM_GETOBJECT` automatisch. Optional explizit `SendMessage(hwndRenderWidget, WM_GETOBJECT, 0, OBJID_CLIENT)` und kurz auf den Baum WARTEN (U7). Notfalls Claude mit `--force-renderer-accessibility` starten. AHK/FlaUI-Praxis (`activateChromiumAccessibility`): `ElementFromPoint` aktiviert den Baum, `ElementFromHandle` nicht.
 - **Quelle:** Chromium Accessibility Overview <https://chromium.googlesource.com/chromium/src/+/main/docs/accessibility/overview.md>; Native UIA in Chromium 138 <https://developer.chrome.com/blog/windows-uia-support-update>; Descolada UIAutomation Wiki <https://github.com/Descolada/UIAutomation/wiki/08.-Common-pitfalls;-tips-and-tricks>
 
@@ -448,12 +462,15 @@
 - **FIX:** Keine absoluten Pixel verdrahten. Feld zur Laufzeit per UIA aufloesen (aktuelles `BoundingRectangle`) oder ganz ohne Koordinaten per `SetFocus()` + Paste. Wenn Klick noetig: Position unmittelbar davor neu abfragen. (Siehe M1.)
 - **Quelle:** Electron BrowserWindow-Doku <https://www.electronjs.org/docs/latest/api/browser-window>; aaddrick claude-desktop-debian <https://github.com/aaddrick/claude-desktop-debian>
 
-### E4. Claude Desktop ist Electron; Fensterstruktur variiert mit der Electron-/Chromium-Version
-- **Symptom:** Eine HWND-/Selektor-Logik bricht nach einem App-Update.
-- **Ursache:** Claude Desktop ist Electron (bestaetigt von Anthropic); Electron buendelt eine feste Chromium-Version pro Release, und Claude wird sehr haeufig aktualisiert. Minified-Variablennamen und interne Struktur aendern sich zwischen Releases (aaddrick muss Patches bei fast jedem Release nachziehen). 2026er-Electron-Linie ~39–42 (Chromium ~134+); eine offiziell publizierte Electron-/Chromium-Nummer fuer Claude Desktop gibt es nicht — sie muss zur Laufzeit ausgelesen werden. Franks Build: **1.12603.1 (3df4fd, 2026-06-11)**.
-- **Versionen:** Versionsabhaengig, bewegliches Ziel.
-- **FIX:** Keine konkrete Electron-/Chromium-Version annehmen. Versionsunabhaengig bauen: Accessibility-Baum statt Klassennamen, Feld ueber Rolle/Name statt fester Verschachtelung. Chromium-Version notfalls aus dem Renderer-User-Agent / gebuendelten `.pak`-Dateien ermitteln, nicht raten.
-- **Quelle:** "2026 Audit of Famous Electron Apps" <https://codenote.net/en/posts/famous-electron-apps-2026-research/>; HN "Why is Claude an Electron App?" <https://news.ycombinator.com/item?id=47104973>
+### E4. Genaue Version: Claude Desktop 1.12603.1 = Electron 41 / Chromium 146 — und wie man es verifiziert ⭐ (Zukunftssicherheit)
+- **Symptom:** Eine HWND-/Selektor-Logik bricht nach einem App-Update; man weiss nicht, welche Chromium-Version (und damit welches Accessibility-Verhalten) die installierte Build hat.
+- **Ursache/Bestimmung:** Claude Desktop ist Electron (bestaetigt von Anthropic) und liefert plattformuebergreifend denselben App-Kern. Anthropic publiziert die gebuendelte Electron-/Chromium-Version NICHT pro Build — sie muss bestimmt/ausgelesen werden. **Beste Bestimmung fuer 1.12603.1 (3df4fd, 2026-06-11): Electron 41.x → Chromium 146.0.7680.x** (V8 14.6, Node 24). Beweiskette: aaddrick-Linux-Repackaging extrahiert exakt den offiziellen App-Kern und meldete Claude Desktop **v1.2773.0 → Electron 41.2.0** (Apr 2026) und **Diagnose 13.05.2026 → Electron 41.5.0**; Build 1.12603.1 (11.06.2026) liegt direkt danach → Electron-41-Linie belegt-wahrscheinlich; **Electron 41 → Chromium 146** ist offiziell (electronjs.org). Exakte Patch-Version geschaetzt; ein Sprung auf Electron 42/Chromium 148 bis zum 11.06. ist unwahrscheinlich, aber nicht 100 % ausgeschlossen.
+- **Versionen:** Versionsabhaengig, bewegliches Ziel. **Folge fuer dieses Projekt:** Chromium 146 ≫ 138 → nativer UIA-Provider standardmaessig aktiv (U1/E8), Zugriff ueber UIA UND IAccessible2 direkt moeglich. (Hinweis: die Enterprise-Policy `UiAutomationProviderEnabled` zum Zurueckschalten auf die Emulation wird nur bis Chrome 146 unterstuetzt.)
+- **FIX / VERIFIKATION (so liest man die exakte Version aus):**
+  1. **DevTools/Remote-Debugging (genau):** `claude.exe --remote-debugging-port=9222` starten (Pfad oft `%LOCALAPPDATA%\AnthropicClaude\app-1.12603.1\claude.exe`), im Browser `http://localhost:9222` das Renderer-Target oeffnen, Konsole: `JSON.stringify(process.versions)` → liefert `electron`/`chrome`/`v8`/`node` definitiv. Nur Chromium: `navigator.userAgent` (enthaelt `Chrome/146.0.x`).
+  2. **PowerShell (schnell):** `(Get-Item "$env:LOCALAPPDATA\AnthropicClaude\app-1.12603.1\claude.exe").VersionInfo | Format-List` — ProductVersion entspricht oft der Chromium-Version.
+  3. **Zukunftssicher bauen:** Version zur Laufzeit ermitteln statt fixieren; Accessibility-Baum (UIA/IA2) statt Klassennamen/feste Verschachtelung; `Chrome_WidgetWin_1`/`Chrome_RenderWidgetHostHWND` nur als Heuristik + Prozess-PID/Titel-Fallback; den Render-HWND rekursiv per `EnumChildWindows` finden, nicht ueber feste `GetWindow`-Pfade.
+- **Quelle:** aaddrick/claude-desktop-debian (Electron-Versionsausgaben) <https://github.com/aaddrick/claude-desktop-debian>; Electron 41 Release (Chromium 146.0.7680.65) <https://www.electronjs.org/blog/electron-41-0>; Native UIA seit Chromium 138 / Policy bis Chrome 146 <https://developer.chrome.com/blog/windows-uia-support-update>
 
 ### E5. Strukturunterschiede Claude Desktop vs. Codex vs. Cursor vs. VS Code (gleiche Electron-Basis)
 - **Symptom:** Eine fuer Claude entwickelte HWND-/Fenstersuche findet bei den anderen nichts/das falsche Fenster.
@@ -479,7 +496,7 @@
 ### E8. Belegt funktionierender Weg B: UI Automation — aber A11y aus, ValuePattern/TextPattern setzen keinen Text
 - **Symptom:** UIA findet das Feld nicht (Baum leer) oder findet es, aber `ValuePattern.SetValue`/`TextPattern` schreiben nichts.
 - **Ursache:** (a) Accessibility in Electron/Chromium standardmaessig deaktiviert, lazy aktiviert (U1) — `app.setAccessibilitySupportEnabled(true)` bzw. `--force-renderer-accessibility`. (b) `TextPattern` kann grundsaetzlich keinen Text einfuegen; `ValuePattern` bei contenteditable oft nur lesend (U8).
-- **Versionen:** Per Design (Chromium/UIA-weit). Franks Build (Chromium ≥138): native UIA an → Baum zuverlaessiger.
+- **Versionen:** Per Design (Chromium/UIA-weit). Franks Build (Chromium 146): native UIA an → Baum zuverlaessiger.
 - **FIX:** UIA NUR zum Lokalisieren+Fokussieren (Rolle `edit`/`document` + Name, `BoundingRectangle`, `SetFocus()`); Baum vorab erzwingen; Text per Clipboard-Paste (E7). `webContents.paste()`/`insertText` ist NICHT nutzbar, da man die fremde App nicht kontrolliert.
 - **Quelle:** Electron Accessibility-Doku <https://www.electronjs.org/docs/latest/tutorial/accessibility/>; Chromium UI-Automation-Doku <https://chromium.googlesource.com/chromium/src/+/HEAD/docs/accessibility/browser/uiautomation.md>; Microsoft Learn TextPattern Overview <https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/ui-automation-textpattern-overview>
 
@@ -492,6 +509,93 @@
 
 ---
 
+## N) .NET-10-Deployment (self-contained single-file)
+
+> Anker: .NET 10 (SDK 10.0.301), `net10.0-windows`, WPF, `PublishSingleFile=true` + `SelfContained=true`.
+> **Wichtig vorab:** Die Win32-P/Invokes der Injection (`SendInput`, `keybd_event`, `FindWindowEx`,
+> `EnumChildWindows`, `SetForegroundWindow`) liegen in `user32.dll`/System32 → vom Single-File NICHT
+> betroffen, funktionieren unveraendert. Die folgenden Fallen treffen Helper-DLLs, Pfade, FlaUI/COM,
+> Manifest/DPI und Clipboard.
+
+### N1. Single-File findet eigene native Helper-DLLs nicht mehr (.NET-10-Breaking-Change)
+- **Symptom:** Eine eigene/dritte native DLL (z. B. ein Hook-/Injection-Helper neben der `.exe`) wirft `DllNotFoundException`, obwohl sie im Ordner liegt. Reine `user32`-Imports sind NICHT betroffen.
+- **Ursache:** In .NET 10 wird das Verzeichnis der Single-File-`.exe` nicht mehr automatisch zu `NATIVE_DLL_SEARCH_DIRECTORIES` hinzugefuegt. Setzt man `[DefaultDllImportSearchPaths(...)]` ohne `AssemblyDirectory`, faellt das App-Verzeichnis ganz weg.
+- **Versionen:** Neu in .NET 10 (vorher wurde das App-Verzeichnis immer durchsucht).
+- **FIX:** Eigene native DLLs mit `IncludeNativeLibrariesForSelfExtract=true` ins Bundle packen (Runtime extrahiert + findet sie ueber den Standard-Loader) ODER `[DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory)]` am Import setzen. Fuer `user32`-Imports keine `DefaultDllImportSearchPaths` setzen, die `AssemblyDirectory` ausschliessen. Nicht annehmen, die extrahierten Libs liegen neben der `.exe` (Extraktion landet in einem Bundle-Ordner) — `IncludeAllContentForSelfExtract=true`, wenn man sie ueber `AppContext.BaseDirectory` braucht.
+- **Quelle:** Microsoft Learn — Single-file native library search (.NET 10 Breaking Change) <https://learn.microsoft.com/en-us/dotnet/core/compatibility/interop/10.0/native-library-search>; dotnet/runtime #114717 <https://github.com/dotnet/runtime/issues/114717>
+
+### N2. `Assembly.Location` ist im Single-File leer (IL3000)
+- **Symptom:** Pfadermittlung ueber `Assembly.GetExecutingAssembly().Location` liefert `""`; `Path.Combine("", "helper.dll")` ergibt Unsinn. Analyzer-Warnung IL3000.
+- **Ursache:** Per Design — gebuendelte Assemblies werden aus dem Speicher geladen, haben keinen Dateipfad.
+- **Versionen:** Seit .NET 5 single-file, unveraendert in .NET 10.
+- **FIX:** `AppContext.BaseDirectory` (Verzeichnis der `.exe`) bzw. `Environment.ProcessPath` (voller `.exe`-Pfad) verwenden. IL3000-Warnungen nicht unterdruecken.
+- **Quelle:** Microsoft Learn — IL3000 <https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/warnings/il3000>
+
+### N3. Trimming/NativeAOT bricht WPF und das UIA-COM-Marshalling
+- **Symptom:** Mit `PublishTrimmed=true`/`PublishAot=true` startet die WPF-App nicht oder wirft `XamlParseException`/`TypeLoadException`; UIA-COM-Aufrufe (FlaUI/`CUIAutomation`) schlagen mit `MarshalDirectiveException`/`InvalidCastException` fehl.
+- **Ursache:** WPF nutzt massiv Reflection/XAML → Microsoft hat Trimming fuer WPF im SDK deaktiviert ("almost no WPF apps are runnable after trimming"). Zusaetzlich erzeugt das eingebaute COM-Marshalling IL-Stubs zur Laufzeit → inkompatibel mit Trimming/AOT; der Trimmer kann die noetigen Marshalling-Pfade nicht erhalten.
+- **Versionen:** Gilt in .NET 10 unveraendert (dotnet/wpf #3811 offen, Trimming bewusst deaktiviert).
+- **FIX:** Single-File **ohne** Trimming/AOT bauen: `PublishSingleFile=true`, `SelfContained=true`, `PublishTrimmed=false`, kein `PublishAot`. Das ist der unterstuetzte Weg und genau das gewuenschte Deployment; klassisches COM-Interop ist dann voll funktionsfaehig. (Erst wenn man kuenftig AOT braucht: source-generierte `ComWrappers`/`[GeneratedComInterface]` statt klassisches Interop.)
+- **Quelle:** Microsoft Learn — Trimming incompatibilities (WPF + Built-in COM marshalling) <https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/incompatibilities>; dotnet/wpf #3811 <https://github.com/dotnet/wpf/issues/3811>
+
+### N4. FlaUI: `Interop.UIAutomationClient` fehlt nach Publish (Single-File)
+- **Symptom:** FlaUI laeuft im Debug, aber nach `dotnet publish` (besonders Single-File) wirft der erste UIA-Zugriff `FileNotFoundException: Could not load file or assembly 'Interop.UIAutomationClient'`.
+- **Ursache:** Die COM-Interop-Wrapper-DLL hat oft `Embed Interop Types = true` → wird nicht in den Output kopiert; im Single-File werden COM-Interop-Assemblies nicht wie normale Managed-DLLs behandelt.
+- **Versionen:** FlaUI.UIA3 (alle), publish-/single-file-abhaengig.
+- **FIX:** In den Referenzen `Interop.UIAutomationClient` auf `<EmbedInteropTypes>false</EmbedInteropTypes>` setzen, damit die DLL mitgeliefert wird; bei Single-File Auffindbarkeit verifizieren (ggf. `IncludeAllContentForSelfExtract`). Nach dem Fix smoke-testen.
+- **Quelle:** FlaUI #451 <https://github.com/FlaUI/FlaUI/issues/451>; FlaUI Wiki — Common Issues <https://github.com/Roemer/FlaUI/wiki/Common-Issues>
+
+### N5. Single-File ohne eigenes Manifest → Kompatibilitaets-Shims / falsche DPI
+- **Symptom:** Das Single-File-Overlay verhaelt sich bei High-DPI/Per-Monitor-V2 falsch (unscharf, Klick-/Cursor-Koordinaten daneben), weil Windows es nicht als Win10/11-aware erkennt und Shims anwendet.
+- **Ursache:** Das Default-Manifest enthaelt kein `supportedOS`-Element und keine korrekte DPI-Awareness; im Single-File muss das eigene `app.manifest` eingebettet sein.
+- **Versionen:** Bekanntes SDK-Verhalten (dotnet/sdk #12904), relevant in .NET 10 single-file.
+- **FIX:** Eigenes `app.manifest` mit `<supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />` (Win10/11) und `windowsSettings` `<dpiAwareness>PerMonitorV2</dpiAwareness>`. Einbettung in die `.exe` verifizieren (Process Explorer: DPI Awareness). Fuer pixelgenaue Maus-Injection (M2–M4) ist PerMonitorV2 Pflicht. (Reine Tastatur-/Clipboard-Injection ist DPI-unabhaengig.)
+- **Quelle:** dotnet/sdk #12904 <https://github.com/dotnet/sdk/issues/12904>; Single-file overview <https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview>
+
+### N6. .NET-10-Clipboard: BinaryFormatter raus — reiner Text unbetroffen, Custom-Typen brauchen JSON
+- **Symptom:** `Clipboard.SetData("MyFormat", customObj)` speichert still nichts; eigene `DataObject`-Subklassen landen nicht im Clipboard; `GetData` (in .NET 10 obsolet) liefert ggf. eine `NotSupportedException`-Instanz.
+- **Ursache:** `BinaryFormatter` ist seit .NET 9 entfernt; .NET 10 hat die Clipboard-Implementierung (WinForms/WPF gemeinsam, NRBF-basiert) neu aufgesetzt und den .NET-9-Custom-`DataObject`-Regressionsfall (winforms #12789) adressiert.
+- **Versionen:** Bruch seit .NET 9; in **.NET 10 redesignt/adressiert**. **Fuer dieses Overlay entscheidend:** reiner Text via `Clipboard.SetText` bzw. `SetDataObject(string, copy:true)`/`DataFormats.UnicodeText` ist NICHT betroffen (string ist NRBF-Built-in).
+- **FIX:** Fuer Text-Injection bei `SetText`/Standard-Textformat bleiben (kein Custom-`DataObject`). Braucht man eigene Formate: `Clipboard.SetDataAsJson<T>(format, obj)` + `TryGetData<T>(...)` statt `SetData(customObj)`. Das `CLIPBRD_E_CANT_OPEN`-Race (C1) und die Restore-Race (C2) gelten unabhaengig davon weiter.
+- **Quelle:** Microsoft Learn — Clipboard/DataObject changes in .NET 10 <https://learn.microsoft.com/en-us/dotnet/desktop/winforms/migration/clipboard-dataobject-net10>; dotnet/winforms #12789 <https://github.com/dotnet/winforms/issues/12789>
+
+---
+
+## W) Windows 11 24H2 (Build 26100/26200)
+
+> Quer-Befund (ehrlich): Die offizielle Microsoft-Release-Health-Seite fuer 24H2 listet zum Stand
+> 02.06.2026 KEINES dieser Themen als anerkanntes Known Issue (nur ein ESP-Speicherproblem beim Update).
+> Die folgenden Fallen stammen aus Community-/MS-Q&A-/GitHub-Quellen mit Status OPEN; Microsoft hat sie
+> grossteils nicht als 24H2-Regression anerkannt. Wo 24H2 nichts Neues bringt, steht es ehrlich dabei.
+
+### W1. 24H2-Z-Order-Regression: Overlay faellt hinter Paint/Photos/Clipchamp ⭐ (24H2-spezifisch)
+- **Symptom:** Das Overlay (sogar die Taskleiste) wird von einem NICHT-topmost Fenster verdeckt, obwohl `WS_EX_TOPMOST` per Spy++ noch gesetzt ist — typisch beim Oeffnen/Schliessen von Paint/Photos/Clipchamp. Stoert die Aktivierungs-/Fokus-Kette direkt vor einer Injektion.
+- **Ursache:** Geaenderte interne Z-Order-/„deferred topmost restoration"-Logik in Win11 24H2 (existiert nicht unter Win10). Von Microsoft nicht als Bug anerkannt.
+- **Versionen:** Bestaetigt auf 24H2 Build 26100.6584 (100 % reproduzierbar); mehrere Bestaetigungen Sep 2025–Mai 2026. NICHT unter Win10.
+- **FIX:** Z-Order nicht „einmal setzen und vergessen": unmittelbar vor jeder Injektion `SetWindowPos(hwndOverlay, HWND_TOPMOST, 0,0,0,0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)` re-asserten (ggf. Toggle `HWND_NOTOPMOST`→`HWND_TOPMOST`). Besser noch: das Overlay kurz vor dem Fokuswechsel zum Ziel ausblenden, dann entsteht der Z-Order-Konflikt gar nicht. Bei reiner Hintergrund-Injektion (kein sichtbares Overlay) irrelevant. (Siehe Schwester-Almanach `windows-overlay.md` A1.)
+- **Quelle:** Microsoft Q&A — Topmost windows lose Z-order on 24H2 (OPEN) <https://learn.microsoft.com/en-us/answers/questions/5562457/topmost-windows-temporarily-lose-z-order-priority>
+
+### W2. 24H2 „Administrator Protection" / SMAA — latente UIPI-/Integritaets-Verschiebung
+- **Symptom:** Wenn aktiviert, laufen elevated Prozesse unter einem profilgetrennten, system-managed Admin-Account (eigener SID, eigenes Profil) → `SendInput` per UIPI kann zwischen elevated Overlay und unelevated Claude Desktop still scheitern, Clipboard/HKCU sind nicht mehr geteilt.
+- **Ursache:** Architekturwechsel weg vom geteilten Split-Token-Profil. UIPI selbst unveraendert, aber die Annahme „beide gehoeren demselben User" gilt nicht mehr.
+- **Versionen:** Nur 24H2+. **WICHTIG: Das Feature wurde am 23.01.2026 wegen eines Reliability-Problems aus Retail UND Insider deaktiviert** — auf einem normalen 24H2-System (Stand Juni 2026) ist es AUS, die Verschaerfung greift derzeit NICHT standardmaessig. Latentes Zukunftsrisiko, falls reaktiviert.
+- **FIX:** Overlay und injizierte Eingabe auf GLEICHEM Integritaetslevel wie Claude Desktop laufen lassen — also den Sender NICHT elevated starten (umgeht UIPI komplett, T4). Nicht auf Auto-Elevation verlassen. `SendInput`-Erfolg zusaetzlich verifizieren (UIPI-Blockaden liefern keinen Fehlercode).
+- **Quelle:** Windows Developer Blog — Administrator Protection (inkl. Deaktivierungs-Hinweis 23.01.2026) <https://blogs.windows.com/windowsdeveloper/2025/05/19/enhance-your-application-security-with-administrator-protection/>
+
+### W3. 24H2 verschaerft Clipboard-Race und Eingabe-Latenz (nicht 24H2-exklusiv)
+- **Symptom:** `CLIPBRD_E_CANT_OPEN` (C1) haeuft sich mit aktiver 24H2-Clipboard-History/„Suggested actions"; synthetischer Text kommt bei Chromium-Zielen verstuemmelt/verzoegert an (verstaerkt durch 24H2-Input-Lag-Berichte, u. a. nach KB5058411).
+- **Ursache:** 24H2-Clipboard-Features (History `cbdhsvc`, Cloud-Sync, Suggested actions) verschaerfen das bestehende Clipboard-Promise-/OLE-Flush-Race (C1/C2); 24H2-Input-Latenz verkleinert den ohnehin engen Timing-Spielraum fuer `SendInput` in Electron (T3/T7).
+- **Versionen:** Race belegt auf 23H2 + 24H2; Input-Lag speziell ab 24H2 nach KB5058411 (Build 26100.x) berichtet. Kein offenes MS-Known-Issue.
+- **FIX:** Die bestehenden FIXes greifen unveraendert: Clipboard mit Retry-Backoff (C1), Restore 300–500 ms verzoegern (C2), WinForms-Clipboard bevorzugen (C1); `SendInput` mit kleinen Pausen statt Nullzeit-Burst (T3/T7); nach der Injektion verifizieren (Logik-Sonde erwartet vs. tatsaechlich).
+- **Quelle:** dotnet/wpf #9901 (OPEN) <https://github.com/dotnet/wpf/issues/9901>; 24H2-Input-Lag (MS Q&A) <https://learn.microsoft.com/en-us/answers/questions/3862406/windows-11-update-causes-lagging-with-keyboard>
+
+### W4. Ehrliche Negativ-Notiz: SetForegroundWindow- und DPI-Verhalten in 24H2 UNVERAENDERT
+- **Befund:** Es gibt KEINEN Beleg, dass 24H2 (26100/26200) den Foreground-Lock/`SetForegroundWindow`/`AllowSetForegroundWindow` (A1–A5) oder die DPI-Virtualisierung von `GetWindowRect`/`GetDpiForWindow` (M2–M4) gegenueber 23H2/Win10 verschaerft hat. Die Microsoft-Doku-Bedingungen sind unveraendert, Release-Health listet nichts.
+- **Konsequenz:** Die A- und M-Sektion gelten 1:1 auch unter 24H2 — keine 24H2-spezifischen Zusatzmassnahmen noetig. Was sich aendert, ist der KONTEXT (W1 Z-Order, W2 Admin Protection), nicht die API.
+- **Quelle:** Microsoft Learn SetForegroundWindow <https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow>; High-DPI (Mixed-Mode unveraendert) <https://learn.microsoft.com/en-us/windows/win32/hidpi/high-dpi-improvements-for-desktop-applications>
+
+---
+
 ## 🔧 Fix-Status (Schritt 3 — was ist behoben, was bleibt aktiv?)
 
 > **Methodik & Ehrlichkeit:** `gh` war in dieser Umgebung nicht verfuegbar und die GitHub-API lieferte
@@ -499,15 +603,18 @@
 > der direkten Quellen-Lektuere der Researcher (Stand Juni 2026), NICHT aus eigener gh-Verifikation —
 > entsprechend als "researcher-belegt" markiert. Per-Design-Verhalten ist ueber offizielle
 > Microsoft-Learn-/Chromium-Quellen abgesichert. Die **Chromium-138-native-UIA-Aussage wurde
-> unabhaengig per WebSearch (2026-06-15) bestaetigt**.
+> unabhaengig per WebSearch (2026-06-15) bestaetigt**. Die **Electron-41/Chromium-146-Zuordnung** fuer
+> Claude Desktop 1.12603.1 ist belegt-wahrscheinlich (aaddrick-Diagnosedaten + offizielles Electron-41-Release);
+> die exakte Patch-Version ist geschaetzt — Frank kann sie per §E4 definitiv auslesen.
 
 ### Belegt behoben / positiv fuer Franks aktuelle Build
 
 | Frueherer Bug | Status | Bezug |
 |---------------|--------|-------|
-| Chrome 117 brach UIA mit `--force-renderer-accessibility` (Workaround `=complete`) | **Behoben** — native UIA-Provider **seit Chromium 138 standardmaessig AN** (WebSearch-verifiziert). Franks Build (2026-06, Chromium ≥138 wahrscheinlich) → UIA-Pfad voll unterstuetzt, Proxy-Layer entfaellt | U1, E8 |
-| .NET-9-`DataObject`-Konstruktor-Bug (winforms #12789) | **Behoben** im Feb-2025-Servicing (researcher-belegt). **Betrifft nur Custom-DataObject** — Franks .NET 8 + Klartext ist ohnehin NICHT betroffen | C6 |
+| Chrome 117 brach UIA mit `--force-renderer-accessibility` (Workaround `=complete`) | **Behoben** — native UIA-Provider **seit Chromium 138 standardmaessig AN** (WebSearch-verifiziert). **Claude Desktop 1.12603.1 = Electron 41 / Chromium 146** → UIA-Pfad voll unterstuetzt, Proxy-Layer entfaellt (§E4) | U1, E8, E4 |
+| .NET-9-`DataObject`-/Custom-Clipboard-Regression (winforms #12789) | **Behoben/redesignt in .NET 10** (gemeinsames NRBF-Clipboard, `SetDataAsJson`/`TryGetData`). **Betrifft nur Custom-DataObject** — Franks .NET 10 + Klartext (`SetText`) NICHT betroffen | C6, N6 |
 | PowerToys-Auto-Copy scheitert an Electron/Chromium (PR #46486) | **MERGED** (researcher-belegt) — bestaetigt die 500-ms-Async-Race-Erkenntnis; in Franks Code als Workaround C2 umzusetzen | C2 |
+| 24H2 „Administrator Protection" (verschaerft UIPI/Integritaet) | **Aktuell DEAKTIVIERT** in Retail+Insider (23.01.2026, Reliability-Problem) → greift derzeit NICHT; latentes Zukunftsrisiko → Sender nie elevated | W2, T4 |
 
 ### NICHT gefixt / per Design (Workaround bleibt aktiv)
 
@@ -526,6 +633,11 @@ Diese sind grundlegendes Win32-/Chromium-Verhalten und werden sich nicht "von se
 - **E1/E3/E4/E5** contenteditable statt Edit-Control, ResizeObserver-Layout, Electron als bewegliches Ziel, App-Strukturunterschiede — per Design.
 - **E6** `KEYEVENTF_UNICODE`/`VK_PACKET`-Inkonsistenz (terminal #12977) — offen.
 - **E9** Electron `globalShortcut` unzuverlaessig (electron #27240) — offen.
+- **N1/N2/N5** .NET-10-Single-File: native-DLL-Suche geaendert, `Assembly.Location` leer, Manifest/DPI selbst einbetten — per Design (Deployment-Eigenheit; N1 ist .NET-10-Breaking-Change).
+- **N3/N4** WPF nicht trimmbar + COM-/FlaUI-Interop nicht AOT-/trim-sicher; FlaUI-`EmbedInteropTypes` — per Design / projektabhaengig (Workaround aktiv).
+- **W1** 24H2-Z-Order-Regression (Topmost faellt hinter Paint/Photos) — OPEN, von MS nicht anerkannt.
+- **W3** 24H2 verschaerft Clipboard-Race (C1) + Eingabe-Latenz — OPEN, nicht 24H2-exklusiv.
+- **W4** SetForegroundWindow + DPI in 24H2 **unveraendert** — kein neuer Bug (ehrliche Negativ-Notiz).
 
 ---
 
@@ -540,7 +652,10 @@ Diese sind grundlegendes Win32-/Chromium-Verhalten und werden sich nicht "von se
 - [ ] **Maus (falls noetig):** PerMonitorV2-Awareness setzen; sichtbare Bounds via `DWMWA_EXTENDED_FRAME_BOUNDS`; Position relativ zu UIA-`BoundingRectangle`, nicht fix; `SendInput` mit `ABSOLUTE|VIRTUALDESK` + Normalisierung (M1–M7).
 - [ ] **Clipboard:** `SetDataObject(text, copy:true)` in Retry-Schleife (`CLIPBRD_E_CANT_OPEN`); auf STA-Thread; Restore erst 300–500 ms nach dem Paste oder weglassen; Modifier vor dem Paste freigeben (C1–C5, C7).
 - [ ] **UIA:** native API/**FlaUI (UIA3)**, alle Calls auf Worker-Thread mit Timeout; `FindFirst`+enger Scope+`CacheRequest`; Baum aktivieren + Retry/Backoff (U1, U3–U7).
-- [ ] **A11y aktiv?** Bei Franks Build (Chromium ≥138) native UIA standardmaessig an — sonst per `WM_GETOBJECT`/`--force-renderer-accessibility` scharfschalten (U1, E8).
+- [ ] **A11y aktiv?** Bei Franks Build (Chromium 146) native UIA standardmaessig an — sonst per `WM_GETOBJECT`/`--force-renderer-accessibility` scharfschalten (U1, E8).
 - [ ] **App-spezifisch:** Zielprozess ueber Prozessnamen erkennen, Mapping-Tabelle Claude/Codex/Cursor; nie auf feste Electron-Version verlassen (E4, E5).
 - [ ] **Hotkey:** `RegisterHotKey`-Rueckgabe pruefen, `Ctrl+Alt+Space` (Claude) meiden (E9).
+- [ ] **Ziel-Version:** Claude 1.12603.1 = Electron 41 / Chromium 146 → native UIA an; Version zur Laufzeit auslesen statt fixieren (E4).
+- [ ] **.NET-10-Single-File:** ohne Trimming/AOT bauen; eigenes `app.manifest` (PerMonitorV2 + Win10/11-supportedOS) einbetten; `AppContext.BaseDirectory`/`Environment.ProcessPath` statt `Assembly.Location`; FlaUI `Interop.UIAutomationClient` mit `EmbedInteropTypes=false`; eigene native Helper-DLLs ins Bundle (N1–N6).
+- [ ] **Windows 11 24H2:** Topmost vor jeder Injektion re-asserten oder Overlay kurz ausblenden (W1); Sender nie elevated (W2); A-/M-Sektion gilt unveraendert (W4).
 - [ ] Neuen selbst erlebten Bug → hier als Eintrag + Kurzcheck-Zeile ergaenzen, Stand-Header aktualisieren.
