@@ -53,6 +53,7 @@
 | 19 | Usage überraschend schnell aufgebraucht | Cowork verbraucht viel mehr als Chat → Einfaches im Chat, Verwandtes bündeln | §10.5 |
 | 20 | Datei landet „irgendwo" / „Location not available" | Zielordner explizit verbinden + vollen Pfad angeben (kein temp-Scratchpad) | §4.3 |
 | 21 | `git push` scheitert: „could not read Username for github.com" | Kein Git-Credential-Manager in der VM; Fix nur sitzungsweit → für DAUERHAFT: Token in `.git/credentials` + `credential.helper store --file=.git/credentials` (relativ, Remote NICHT ändern) | §10a ⭐HÄUFIG |
+| 22 | Auth steht, aber `git commit/push` aus der VM hängt an `.lock`-Dateien (Windows) | VM kann `.lock` im gemounteten `.git` anlegen, aber nicht löschen → committen/pushen zuverlässig aus dem Windows-Terminal; `.git/claude-multi-session.lock` NIE löschen | §10a.5 ⭐KRITISCH |
 
 ---
 
@@ -820,6 +821,27 @@ Laufzeit + Rotation. Datei `chmod 600`. In Cowork keine fremden/sensiblen Ordner
 (Prompt-Injection-Risiko, §9) — minimaler Token-Scope begrenzt den Schaden.
 **Quelle:** docs.github.com (PAT-Permissions, Token-Expiration, Secret-Scanning private vs public);
 cloudsecurityalliance.org (Least-Privilege gegen Prompt-Injection).
+
+### 10a.5 ⭐ KRITISCH — Auth steht, aber `git commit`/`push` AUS der VM hängt an nicht-löschbaren `.lock`-Dateien (Windows)
+**Symptom:** Die dauerhafte Push-Anmeldung (10a.2) funktioniert — ein echter Tag-Push lief durch
+(`* [new tag] …`, Rückgabecode 0). ABER: Jede Git-Schreibaktion aus der Cowork-VM hinterlässt eine
+`.lock`-Datei im gemounteten `.git`, die die VM nicht wieder entfernen kann (`rm` und Umbenennen →
+`Operation not permitted`). Die nächste Schreibaktion blockiert daran. Zusätzlich zeigt die VM einen
+**Phantom-`index.lock`** im Mount-Cache, der auf dem Windows-Host gar nicht existiert (`del` →
+„Cannot find path").
+**Ursache:** virtiofs/CBFS-Mount auf Windows — die VM kann auf dem gemounteten Host-`.git` Dateien
+**anlegen, aber nicht zuverlässig löschen/umbenennen**; dazu Cache-Inkohärenz (Phantom-Locks). `git
+commit` braucht `index.lock` (anlegen → atomar umbenennen) → scheitert aus der VM. Gehört zur
+Mount-Bug-Klasse #66006/#54483. Per Design der Cowork-Windows-Einbindung, kein Nutzer-Fehler.
+**Versionen:** Cowork Windows 2026 (live bestätigt 2026-06-15). macOS evtl. nicht betroffen (anderer Mount).
+**FIX (funktionserhaltend):** Die dauerhafte Auth aus 10a.2 bleibt korrekt und gilt — wegen geteilter
+`.git/config` — auch fürs **Windows-Host-Terminal**. Daher: **Commits/Pushes zuverlässig aus dem
+normalen Windows-Terminal** (`C:\Users\barwa\proggs`) machen, die Cowork-VM zum Lesen/Bearbeiten. Push
+aus der VM geht zur Not, erfordert aber ein Lock-Aufräumen vom Host (`rm .git/*.lock`). **NIE
+`.git/claude-multi-session.lock` löschen** (Hook-Lock, kein Git-Lock). Phantom-`index.lock` muss man
+auf Windows nicht anfassen (existiert dort nicht).
+**Quelle:** live bestätigt 2026-06-15 (Schreibtest + Sonde); GitHub anthropics/claude-code #66006
+(Sandbox kann auf CBFS-/Virtual-Drive-Mounts nicht enumerieren/löschen), #54483 (Mount-Pfade/-Verhalten).
 
 ---
 

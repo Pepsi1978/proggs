@@ -85,6 +85,25 @@ git push
 
 ---
 
+## Praktische Realität auf Windows (live bestätigt 2026-06-15)
+
+Die dauerhafte **Anmeldung** funktioniert (Schreibzugang real getestet: Test-Tag gepusht,
+Rückgabecode 0). **Aber:** Auf dem gemounteten Windows-`.git` kann die Cowork-VM ihre eigenen
+`.lock`-Hilfsdateien zwar anlegen, **aber nicht wieder löschen** ("Operation not permitted") —
+eine Eigenschaft der Cowork-Windows-Einbindung, nicht deines Setups. Folge: Ein `git commit`
+oder `git push` **aus der VM** kann an einer liegengebliebenen Lock-Datei hängen bleiben.
+
+**Empfehlung für den Alltag:**
+- **Committen/Pushen** zuverlässig aus deinem **normalen Windows-Terminal** in `C:\Users\barwa\proggs`
+  (dort gibt es das Lock-Problem nicht; die gespeicherte Anmeldung gilt dank geteilter `.git/config`
+  auch dort — du musst dich nie einloggen).
+- **Cowork** zum Lesen/Bearbeiten nutzen. Push aus der VM geht zur Not auch, braucht dann aber ein
+  Aufräumen vom Windows-Terminal aus: `rm .git/*.lock` (NIEMALS `.git/claude-multi-session.lock`
+  löschen — das ist ein Hook-Lock, kein Git-Lock).
+
+Damit ist dein eigentliches Ziel erreicht (dauerhafte Push-Anmeldung steht), und der zuverlässige
+Weg fürs tägliche Pushen ist klar.
+
 ## Alternative ganz ohne Token
 In Cowork committen, und das Pushen aus dem **normalen Claude Code im Terminal** (oder dem
 Code-Tab der Desktop-App) erledigen — dort sind deine Zugangsdaten vorhanden.
