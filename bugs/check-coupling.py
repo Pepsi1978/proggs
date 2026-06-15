@@ -19,17 +19,29 @@ nicht ueber den Exit-Code.
 Aufruf (plattformuebergreifend):  python3 bugs/check-coupling.py
 """
 import os
+import re
 import sys
+
+# Eine Markdown-Ueberschrift, die das Wort 'Bezug' enthaelt (deckt 'Bezugs-Tabelle',
+# 'Bezugstabelle', 'Bezug zum Bug-Almanach', 'Bezug: Best-Practice ↔ Bug-Abschnitt' ab).
+_BEZUG_HEADING = re.compile(r"^#{1,6}\s.*Bezug", re.MULTILINE)
 
 
 def has_table(path):
-    """True wenn die Datei die Bezugs-Tabelle traegt, None wenn unlesbar."""
+    """True wenn die Datei die wechselseitige Bezugs-Tabelle traegt, None wenn unlesbar.
+
+    Erkennung (Fehlalarm-Fix 2026-06-15): eine UEBERSCHRIFT mit 'Bezug' ODER das 🔗-Emoji
+    (Rueckwaerts-Kompat). Frueher war 🔗 ZWINGEND zusaetzlich zu 'Bezug' -> Fehlalarme bei
+    jeder Bezugs-Tabelle ohne Emoji im Titel (~12 Faelle, alle mit echter '↔'-Tabelle).
+    Eine blosse 'Bezug'-Erwaehnung im Fliesstext genuegt BEWUSST nicht (nur Ueberschrift),
+    damit Dateien OHNE echte Bezugs-Tabelle weiterhin korrekt als Drift auffallen.
+    """
     try:
         with open(path, "r", encoding="utf-8") as fh:
             txt = fh.read()
     except Exception:
         return None
-    return ("\U0001f517" in txt) and ("Bezug" in txt)  # 🔗 + 'Bezug'
+    return ("\U0001f517" in txt) or bool(_BEZUG_HEADING.search(txt))
 
 
 def rel(repo, path):
