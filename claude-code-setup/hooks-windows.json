@@ -407,16 +407,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
-            "timeout": 25,
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
             "timeout": 10,
             "async": true

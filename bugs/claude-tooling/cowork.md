@@ -54,6 +54,7 @@
 | 20 | Datei landet „irgendwo" / „Location not available" | Zielordner explizit verbinden + vollen Pfad angeben (kein temp-Scratchpad) | §4.3 |
 | 21 | `git push` scheitert: „could not read Username for github.com" | Kein Git-Credential-Manager in der VM; Fix nur sitzungsweit → für DAUERHAFT: Token in `.git/credentials` + `credential.helper store --file=.git/credentials` (relativ, Remote NICHT ändern) | §10a ⭐HÄUFIG |
 | 22 | Auth steht, aber `git commit/push` aus der VM hängt an `.lock`-Dateien (Windows) | FIX: git-dir auf die VM-Platte legen → Wrapper `cowork-git.sh` (`bash cowork-git.sh push "msg"`); Fallback: aus dem Windows-Terminal pushen; `.git/claude-multi-session.lock` NIE löschen | §10a.5 / §10a.6 ⭐KRITISCH |
+| 23 | `git add -A` aus Cowork bricht ab / bläht Commit auf | 4 Mount-Artefakte: Symlink-I/O-Fehler, 0755-Modus, untrackte Build-Bäume, LFS-Vollinhalt → alle in `cowork-git.sh` abgefangen (skip-worktree, `core.fileMode false`, build-Ignores); langer Push in EINEM VM-Aufruf | §10a.7 ⭐KRITISCH |
 
 ---
 
@@ -870,6 +871,35 @@ lässt den Arbeitsbaum unangetastet; Token-Datei wird vom Mount nur gelesen, Arb
 vorgänge liegen im VM-git-dir.
 **Versionen:** Cowork Windows 2026; git ≥2.28. **Quelle:** git-scm.com (GIT_DIR/GIT_WORK_TREE,
 git-reset, separate-git-dir, git-credential-store, offiziell); lokal verifizierter Mechanismus 2026-06-15.
+
+### 10a.7 ⭐ KRITISCH — `git add -A` aus Cowork: vier weitere Mount-Artefakte (live 2026-06-15)
+Beim ERSTEN echten Push aus Cowork über das VM-git-dir (§10a.6) traten vier weitere, vom Windows-Mount
+verursachte Probleme auf. Alle sind dauerhaft in `~/proggs/cowork-git.sh` abgefangen:
+1. **Unlesbare Symlinks** — getrackte Windows-Symlinks (z. B. die finale-Plugin-Skill-Symlinks) liefern
+   über den Mount `readlink: Input/output error`; `git add -A` bricht mit `unable to index file … fatal:
+   updating files failed` ab. **FIX:** getrackte Symlinks (mode `120000`), die sich nicht lesen lassen,
+   per `git update-index --skip-worktree` ausnehmen (sie liegen unverändert in origin). Muss nach jedem
+   `reset --mixed` erneut laufen (das setzt skip-worktree zurück) → im Skript `guard_unreadable_symlinks`.
+2. **Datei-Modus immer 0755** — der Mount meldet ALLE Dateien als ausführbar → git wertet bei JEDER
+   getrackten Datei einen 644→755-Moduswechsel als Änderung (Commit mit Tausenden Schein-Änderungen).
+   **FIX:** `git config core.fileMode false`.
+3. **22.881 untrackte Build-Artefakte** — projektweite Build-Ordner waren nicht ignoriert
+   (`EntropieReductor/app/build` ~15.294, `BestJournalFrank/app/build` ~4.423, `NEMS/app/build`,
+   `node_modules/`, `.gradle/`) → `add -A` will alle stagen (zu langsam fürs VM-Sandbox-Fenster + bläht
+   den Commit). **FIX:** `**/build/`, `**/.gradle/`, `**/node_modules/` in `.gitignore` (→ 22.881 auf ~91).
+4. **Git-LFS-Dateien als Vollinhalt** — LFS-getrackte Dateien (`.gitattributes`: `whisper/*.onnx`, `*.aar`)
+   erscheinen im Mount als voller Inhalt (bis **262 MB**!) statt als ~130-Byte-Zeiger; `add -A` würde die
+   Zeiger durch echte Riesendateien ersetzen → GitHub lehnt ab (100-MB-Limit) + Repo bläht dauerhaft auf.
+   **FIX:** getrackte LFS-Dateien (Muster aus `.gitattributes` mit `filter=lfs`) per `skip-worktree`
+   ausnehmen → im Skript `guard_lfs_pointers`. LFS-Pflege erfolgt vom Windows-Rechner, nicht aus der VM.
+
+**Zusätzliches Mount-/Sandbox-Verhalten:** (a) Hintergrundprozesse überleben die Grenze zwischen zwei
+VM-Tool-Aufrufen NICHT (jeder Aufruf = frische Sandbox, alter Prozess wird gekillt) → ein langer Push
+muss in EINEM Aufruf (≤ Sandbox-Timeout) durchlaufen; das Ignorieren der Build-Bäume (Punkt 3) macht
+`add -A` schnell genug. (b) Der Mount kann beim Schreiben einer Datei eine **abgeschnittene/veraltete**
+Version zeigen (Sync-Inkohärenz Windows↔VM) — größere Dateien VM-seitig vollständig schreiben und prüfen.
+**Status:** GELÖST — erster echter Push lief durch (`… -> main`, Exit 0). Alle Guards in `cowork-git.sh`.
+**Quelle:** live in Cowork bestätigt 2026-06-15.
 
 ---
 

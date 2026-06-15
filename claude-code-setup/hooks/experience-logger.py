@@ -21,6 +21,7 @@ from datetime import datetime
 
 EXPERIENCE = os.path.expanduser("~/proggs/.claude/agent-memory/shared/experience-store.jsonl")
 TRAJECTORY = os.path.expanduser("~/proggs/.claude/agent-memory/shared/trajectories.jsonl")
+SCORES     = os.path.expanduser("~/.claude/session-scores.jsonl")
 PROJECTS   = os.path.expanduser("~/.claude/projects")
 
 EXPERIENCE_LIMIT = 200
@@ -75,6 +76,8 @@ def parse_transcript(path):
     corrections = 0
     ts_first = ts_last = None
     task_desc = None
+    assistant_turns = 0
+    sid = None
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -90,7 +93,10 @@ def parse_transcript(path):
                 if ts_first is None:
                     ts_first = ts
                 ts_last = ts
+            if sid is None:
+                sid = o.get("sessionId")
             if t == "assistant":
+                assistant_turns += 1
                 for c in (o.get("message", {}) or {}).get("content") or []:
                     if isinstance(c, dict) and c.get("type") == "tool_use":
                         tool_seq.append(c.get("name"))
@@ -128,6 +134,8 @@ def parse_transcript(path):
         "duration_minutes": dur,
         "task_description": task_desc or "session-auto-logged",
         "date": date,
+        "turns": assistant_turns,
+        "session_id": sid,
     }
 
 
@@ -240,7 +248,24 @@ def build_entries(m):
         "utility_score": u,
         "near_miss": near,
     }
-    return experience, trajectory
+    # session-scores.jsonl: ersetzt den toten session-scorer.ts (ein Logger, drei Outputs).
+    # OBJEKTIVE Felder echt aus dem Transcript; quality_score ist eine TRANSPARENTE
+    # Heuristik (success 1-5 -> 0-10). iq_score/meta_intelligence_score bleiben dem
+    # /self-improve-Lauf ueberlassen (das sind keine SessionEnd-Messwerte).
+    session_score = {
+        "date": m["date"],
+        "session_id": m.get("session_id"),
+        "total_turns": m["turns"],
+        "tool_calls": m["tool_count"],
+        "errors": m["error_count"],
+        "corrections": m["corrections"],
+        "duration_min": m["duration_minutes"],
+        "quality_score": round(s * 2.0, 1),
+        "utility_score": u,
+        "near_miss": near,
+        "strategy": "transcript-derived",
+    }
+    return experience, trajectory, session_score
 
 
 def main():
@@ -268,15 +293,17 @@ def main():
             print(json.dumps({"skipped": f"tool_count<{MIN_TOOLS}", "metrics": m}, ensure_ascii=False))
         return 0
 
-    experience, trajectory = build_entries(m)
+    experience, trajectory, session_score = build_entries(m)
     if dry:
         print("TRANSCRIPT: " + tpath)
         print("EXPERIENCE: " + json.dumps(experience, ensure_ascii=False))
         print("TRAJECTORY: " + json.dumps(trajectory, ensure_ascii=False))
+        print("SESSIONSCORE: " + json.dumps(session_score, ensure_ascii=False))
         return 0
 
     append_jsonl(EXPERIENCE, experience)
     append_jsonl(TRAJECTORY, trajectory)
+    append_jsonl(SCORES, session_score)
     prune_near_miss_aware(EXPERIENCE, EXPERIENCE_LIMIT)
     prune_near_miss_aware(TRAJECTORY, TRAJECTORY_LIMIT)
     return 0

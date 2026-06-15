@@ -85,7 +85,12 @@
   auf die **VM-eigene Platte** legen (`GIT_DIR` auf ext4, `GIT_WORK_TREE` = der Mount-Ordner), Quelle der
   Wahrheit bleibt `origin/main`. Im Repo gekapselt als `cowork-git.sh` (`bash cowork-git.sh push "msg"`).
   Verifiziert 2026-06-15 (separates git-dir hält ALLE Locks vom Mount fern; Mount-`.git` + Host-Terminal
-  bleiben unberührt). Bug-Gegenseite: `bugs/claude-tooling/cowork.md` §10a.5/§10a.6.
+  bleiben unberührt). Bug-Gegenseite: `bugs/claude-tooling/cowork.md` §10a.5/§10a.6/§10a.7.
+- **`git add -A` aus Cowork — vier weitere Mount-Artefakte (alle in `cowork-git.sh` gelöst):** unlesbare
+  Symlinks (readlink-I/O → `skip-worktree`), Datei-Modus immer 0755 (`core.fileMode false`), untrackte
+  Build-Bäume (`**/build/`, `**/.gradle/`, `**/node_modules/` in `.gitignore`), LFS-Dateien als Vollinhalt
+  (LFS-Muster per `skip-worktree` ausnehmen, sonst 100-MB-Push-Ablehnung). Langer Push muss in EINEM
+  VM-Aufruf laufen (Hintergrundprozesse überleben den Sandbox-Wechsel nicht). Details: Almanach §10a.7.
 
 - **Ausgangslage:** Cowork hat **keinen** nativen `git push`-Weg, **keinen** Secret-Store und
   **keinen** Startup-Hook. Die VM startet pro Session frisch → VM-Home (`~/.git-credentials`)
