@@ -36,16 +36,20 @@ namespace ClaudeVoiceOverlay.Views
         // Toggles
         private static readonly SolidColorBrush ToggleOn      = Brush("#2E7D32");
         private static readonly SolidColorBrush ToggleOff     = Brush("#2D2D2D");
-        // BTW mic (pair with main mic in Yellow family — joins the warm
-        // upper zone with the gold star, distinct from every cool button
-        // below. Dark icon/text required for contrast on yellow.)
-        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#FBC02D");  // Yellow 700
-        private static readonly SolidColorBrush BtnBtwRecording = Brush("#F57F17");  // Yellow 900
-        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#FFEB3B");  // Yellow 500
+        // Mic-Familie: LILA statt Gelb — damit das CVO (Claude) Overlay sofort
+        // vom TVO (Terminal) Overlay zu unterscheiden ist (TVO behaelt die gelbe
+        // Mic-Familie). Helles Lila, damit der dunkle Icon/Text (#1A1A1A) lesbar
+        // bleibt — kein Icon-Recolor noetig.
+        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#BA68C8");  // Purple 300
+        private static readonly SolidColorBrush BtnBtwRecording = Brush("#9C27B0");  // Purple 500
+        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#CE93D8");  // Purple 200
         // Special
         private static readonly SolidColorBrush BtnX         = Brush("#C62828");
         private static readonly SolidColorBrush BtnXPressed  = Brush("#E53935");
-        private static readonly SolidColorBrush BtnMicIdle   = Brush("#F9A825");  // Yellow 800
+        // BtnMicIdle (gelb) bleibt fuer die aktiven Profil-Tiles; die Mikrofone
+        // selbst nutzen BtnMicIdlePurple (CVO-Erkennung, lila statt gelb).
+        private static readonly SolidColorBrush BtnMicIdle       = Brush("#F9A825");  // Yellow 800 (Profil-Tiles)
+        private static readonly SolidColorBrush BtnMicIdlePurple = Brush("#AB47BC");  // Purple 400 (Mikrofone CVO)
         // Copy/Paste buttons (pair: same blue family so they read as a unit)
         private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
         private static readonly SolidColorBrush BtnPaste     = Brush("#0277BD");  // Light Blue 800
@@ -497,8 +501,8 @@ namespace ClaudeVoiceOverlay.Views
             if (_geminiClient == null) geminiEnabled = false;
             XButton.Background    = BtnX;           // red
             WButton.Background    = geminiEnabled ? ToggleOff : ToggleOn;  // green when Gemini off (Whisper-raw)
-            MicButton.Background  = BtnMicIdle;      // dark blue
-            BtwButton.Background  = BtnBtwIdle;      // light blue
+            MicButton.Background  = BtnMicIdlePurple;  // lila = CVO (Claude), nicht gelb wie TVO
+            BtwButton.Background  = BtnBtwIdle;         // lila
             GButton.Background    = geminiEnabled ? ToggleOn : ToggleOff;  // green when Gemini on
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             CopyButton.Background  = BtnCopy;        // light blue
@@ -4308,7 +4312,7 @@ namespace ClaudeVoiceOverlay.Views
             switch (state)
             {
                 case RecordingState.Idle:
-                    MicButton.Background = BtnMicIdle;
+                    MicButton.Background = BtnMicIdlePurple;
                     break;
                 case RecordingState.Recording:
                     MicButton.Background = BtnRecording;
