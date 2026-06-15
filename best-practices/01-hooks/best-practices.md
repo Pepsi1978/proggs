@@ -1,4 +1,4 @@
-# Hooks — Best Practices (Stand 2026-06-05, Claude Code 2.1.165)
+# Hooks — Best Practices (Stand 2026-06-15, Claude Code 2.1.177)
 
 > Quellen: Offizielle Claude Code Dokumentation (code.claude.com/docs) + Changelog.
 > Alle Einträge ohne "extern"-Label sind offiziell bestätigt.
@@ -345,7 +345,7 @@
       "hookEventName": "PreToolUse",
       "permissionDecision": "allow|deny|ask|defer",
       "permissionDecisionReason": "Warum",
-      "modifiedInput": { "command": "sicherere Version" },
+      "updatedInput": { "command": "sicherere Version" },
       "additionalContext": "Kontext für Claude"
     }
   }
@@ -354,7 +354,7 @@
   - `deny` — blockieren (Claude sieht den Grund)
   - `ask` — Benutzer fragen (überschreibt Auto-Mode)
   - `defer` — normalen Permission-Flow laufen lassen
-- **Best Practice:** Immer `permissionDecisionReason` setzen — Claude nutzt diesen Text um zu verstehen warum eine Aktion blockiert wurde und vermeidet wiederholte Versuche. Beim Modifizieren des Inputs (`modifiedInput`) MUSS `permissionDecision: "allow"` oder `"ask"` mitgegeben werden — sonst wird die Modifikation ignoriert.
+- **Best Practice:** Immer `permissionDecisionReason` setzen — Claude nutzt diesen Text um zu verstehen warum eine Aktion blockiert wurde und vermeidet wiederholte Versuche. Beim Modifizieren des Inputs (`updatedInput`) MUSS `permissionDecision: "allow"` oder `"ask"` mitgegeben werden — sonst wird die Modifikation ignoriert.
 - **Quelle:** [https://code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) (offiziell)
 - **Stand:** 2026-05-25
 
@@ -590,3 +590,56 @@ Alle drei Aenderungen kamen mit **2.1.163** (2026-06-04). Die hooks-Doku ist noc
 - **Quelle:** code.claude.com/docs/en/permissions `[offiziell]`
 
 **Betrifft eigene Werkzeuge:** Ja — `hyperagent-stop`, `writeback-enforcer`, `memory-watchdog` (Stop/SubagentStop) koennen statt blossem `exit 0` jetzt `hookSpecificOutput.additionalContext` fuer Feedback nutzen, ohne `decision:block` zu brauchen.
+
+---
+
+### Update 2026-06-15 (Claude Code 2.1.177) — Re-Recherche-Welle, gh-hart verifiziert
+
+> Quelle: 7-Researcher-Schwarm + harte `gh issue view`-Pruefung. Gegenstueck im Bug-Almanach:
+> `bugs/claude-tooling/claude-hooks.md` §16. Korrektur: Feld heisst **`updatedInput`**, NICHT
+> `modifiedInput` (oben durchgehend korrigiert; gh #39814 + offizielle hooks-Doku).
+
+**1. Hook-Output IMMER strikt spec-konform bauen (sonst CLI-Hard-Crash)**
+- **Was:** Non-spec `hookSpecificOutput` (falscher Typ, fehlendes `hookEventName`, unerwartete Struktur)
+  crasht die GANZE Session mit TypeError, ohne Recovery (#57483, NOT_PLANNED → won't fix).
+- **Best Practice:** Jeder eigene Hook validiert seinen JSON-Output, BEVOR er ihn ausgibt. PS:
+  `ConvertTo-Json -Depth 5` (nie `@{}`-Strings); Bash: nur valides JSON auf stdout, alles andere nach
+  stderr. Direkt relevant fuer `subagent-context.{ps1,sh}` und jeden additionalContext-Hook.
+- **Quelle:** github.com/anthropics/claude-code/issues/57483 `[extern, gh-verifiziert]` · Version: bis 2.1.177
+
+**2. stdin NIE mit `jq` parsen (Security-Bypass durch Control-Chars)**
+- **Was:** stdin-JSON kann literale Control-Chars U+0000–U+001F enthalten (Paste aus PDF, mehrzeilige
+  Prompts) → `jq` lehnt ab → ein Security-PreToolUse-Hook bricht STILL ab → Aktion laeuft ungeprueft
+  durch (#53463, NOT_PLANNED).
+- **Best Practice:** stdin mit `python3 -c "import sys,json; d=json.loads(sys.stdin.read())"` parsen
+  (toleranter); bei Parse-Fehler **fail-closed** (deny / `exit 2`), NIE still durchwinken. Deckt sich
+  mit der bestehenden "jq vermeiden"-Regel und macht sie sicherheitskritisch.
+- **Quelle:** github.com/anthropics/claude-code/issues/53463 `[extern, gh-verifiziert]` · Version: bis 2.1.177
+
+**3. PreToolUse-Block ueber exit 0 + JSON `permissionDecision:"deny"`, NICHT `exit 2`**
+- **Was:** Ein `exit 2`-Block wird vom Modell (ab Opus 4.6) wie ein User-"Deny" behandelt → Claude
+  beendet oft den Turn statt das Feedback zu nutzen. Das Client-Issue #24327 ist zwar COMPLETED, das
+  MODELL-Verhalten bleibt. Ausserdem wird JSON bei `exit 2` ignoriert.
+- **Best Practice:** Block via `exit 0` + `{"hookSpecificOutput":{"hookEventName":"PreToolUse",
+  "permissionDecision":"deny","permissionDecisionReason":"<konkret>"}}`. Claude liest die Felder als
+  Steuersignal und kann nachbessern. `permissionDecisionReason` immer setzen (verhindert Wiederholversuche).
+- **Quelle:** github.com/anthropics/claude-code/issues/24327 + hooks-Doku `[offiziell/extern]` · Version: 2.1.x
+
+**4. Tool-Hooks feuern NICHT fuer Tool-Calls innerhalb von Subagents**
+- **Was:** PreToolUse/PostToolUse greifen nur in der Haupt-Tool-Loop, nicht fuer Tool-Calls, die ein
+  Subagent (Agent-Tool) intern macht (#34692, NOT_PLANNED).
+- **Best Practice:** Hook-abhaengige Policy nicht im Subagent erwarten. Subagent-Kontext via
+  `SubagentStart`/`SubagentStop`; harte Policy zusaetzlich an der Spawn-Stelle verankern.
+- **Quelle:** github.com/anthropics/claude-code/issues/34692 `[extern, gh-verifiziert]` · Version: bis 2.1.177
+
+**5. Versions-Anker fuer Hook-Autoren (Mindestversionen)**
+- Stop/SubagentStop-`additionalContext`-Feedback: **ab v2.1.163**. `if:"Bash(...)"`-False-Positive-Fix
+  (`$()`/`$VAR`): **v2.1.163**. Windows expliziter-bash-Aufruf-Fix: **v2.1.161**. if-Pfad-Matcher
+  (`Edit(src/**)`, `Read(.env)`): erst ab **v2.1.176** zuverlaessig. `--safe-mode`/`CLAUDE_CODE_SAFE_MODE`
+  (deaktiviert auch Hooks, zum Isolieren beim Debuggen): **v2.1.169**. `claude plugin update` erhaelt
+  jetzt `+x` (#40280 COMPLETED) — Cloud-Sync-Verlust des Execute-Bits bleibt aber (`find … -exec chmod +x`).
+- **Quelle:** code.claude.com/docs/en/changelog `[offiziell]` · Version: 2.1.161–2.1.177
+
+---
+
+*Re-Recherche 2026-06-15: Stand auf Claude Code 2.1.177 gehoben. Gegenstueck: bugs/claude-tooling/claude-hooks.md §16.*

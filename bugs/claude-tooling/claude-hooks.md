@@ -6,9 +6,12 @@
 > Community (Medium/dev.to/Blogs) und eigenen Vorfaellen. Loesungen sind
 > funktionserhaltend (nie "Feature weglassen").
 >
-> **Stand:** recherchiert am **2026-06-01** fuer Claude Code **v2.1.159**. Versionsangaben
+> **Stand:** re-recherchiert am **2026-06-15** fuer Claude Code **v2.1.177** (7-Researcher-Schwarm,
+> Issue-Status HART per `gh` verifiziert; Vorgaenger-Stand war 2026-06-01 / v2.1.159). Versionsangaben
 > pro Bug beachten — viele "per Design"-Fallen gelten dauerhaft, einige Bugs sind in
 > neueren Versionen gefixt, einige Regressionen sind in der v2.1.x-Reihe noch offen.
+> NEU 2026-06-15: §16 (CLI-Crash bei non-spec JSON, jq-Control-Char-Bypass, Tool-Hooks im
+> Subagent, systemMessage-Drop, Windows-Pfade-mit-Leerzeichen) + ueberarbeitete Fix-Status (§15).
 
 ---
 
@@ -38,6 +41,10 @@
 | 16 | Bash rundet Float → zeigt 0 | `printf "%.0f"` (bash 3.2) scheitert an `55.00000000000001` → Parameter-Expansion | §13.5 |
 | 17 | Statusline-rate_limit nach Account-Wechsel falsch | `account_fp` aus `~/.claude.json` (accountUuid), NICHT `.credentials.json` (macOS=Keychain → fehlt) | §13.6 |
 | 18 | Dot-sourced `.sh`-Bibliothek (hook-log/whiteboard-insert) | NIE top-level `exit` darin — killt in bash den `source`-Aufrufer (PS harmlos → Bug nur auf macOS) | §13.7 |
+| 19 | Hook gibt `hookSpecificOutput` aus | STRIKT spec-konform bauen — non-spec JSON crasht die ganze Session (TypeError, keine Recovery) | §16.1 |
+| 20 | Hook liest stdin (Security-Guard) | NIE `jq` — Control-Chars im stdin-JSON brechen jq → Guard wird STILL umgangen; `python json.loads` + fail-closed | §16.2 |
+| 21 | Tool-Hook soll im Subagent feuern | PreToolUse/PostToolUse feuern NICHT fuer Tool-Calls IN Subagents — SubagentStart/Stop nutzen | §16.3 |
+| 22 | Windows: `.sh`-Hook-Pfad mit Leerzeichen | Pfad in settings.json `"..."` quoten + Forward-Slashes + voller Interpreter-Pfad (sonst Arg-Splitting) | §16.6 |
 
 ---
 
@@ -611,39 +618,155 @@ oft "not connected").
 
 ---
 
-## 15. Fix-Status — was auf v2.1.159 schon behoben ist
+## 16. Re-Recherche 2026-06-15 (v2.1.177) — neue Bugs & Fallen
+
+> Alle Issue-Status in diesem Abschnitt HART per `gh issue view` gegen anthropics/claude-code
+> verifiziert (2026-06-15). `NOT_PLANNED` = won't fix → der Workaround bleibt DAUERHAFT aktiv
+> (haertere Aussage als das fruehere "Status unklar"). `OPEN` = offen.
+
+### 16.1 CLI-Hard-Crash bei non-spec `hookSpecificOutput`  ⭐ KRITISCH
+**Symptom:** Ein Hook gibt ein `hookSpecificOutput` aus, das nicht spec-konform ist (falscher Typ,
+fehlendes `hookEventName`, unerwartete Struktur) → die ganze Session crasht sofort mit TypeError,
+keine Recovery.
+**Ursache:** Fehlende graceful degradation beim Parsen der Hook-Ausgabe — ein Schema-Verstoss wird
+nicht abgefangen, sondern reisst den Client mit.
+**Versionen:** gemeldet ~v2.1.1xx; Issue #57483 **CLOSED NOT_PLANNED (2026-06-07)** → won't fix, bleibt aktiv.
+**FIX (funktionserhaltend):** Hook-Output IMMER strikt nach Schema bauen:
+`{"hookSpecificOutput":{"hookEventName":"<Event>", ...}}`. Eigene Hooks defensiv validieren BEVOR
+sie JSON ausgeben (betrifft direkt `subagent-context.{ps1,sh}` u.ae.). PS: `ConvertTo-Json -Depth 5`,
+keine `@{}`-Strings; Bash: nur valides JSON auf stdout, alles andere nach stderr.
+**Quelle:** github.com/anthropics/claude-code/issues/57483.
+
+### 16.2 Control-Chars im stdin-JSON brechen `jq` → Security-Guard wird still umgangen  ⭐ SECURITY
+**Symptom:** Hook bekommt stdin-JSON, in dem String-Felder (`.prompt` bei UserPromptSubmit,
+`.tool_input.command` bei Bash) literale Control-Chars U+0000–U+001F statt Escapes enthalten
+(Trigger: Paste aus PDF, bestimmte Terminals, mehrzeilige Prompts). `jq` lehnt mit
+`Invalid string: control characters from U+0000 through U+001F must be escaped` ab → der
+Security-PreToolUse-Hook bricht STILL ab → die Aktion laeuft ungeprueft durch (silent bypass).
+**Ursache:** Claude Code serialisiert die String-Felder nicht sauber durch `JSON.stringify`, bevor
+sie ins stdin-Envelope geschrieben werden. Nicht-deterministisch.
+**Versionen:** ALLE (Win/macOS/Linux); Issue #53463 **CLOSED NOT_PLANNED (2026-05-29)** → won't fix.
+**FIX (funktionserhaltend):** stdin NIE mit `jq` parsen — `python3 -c "import sys,json; json.loads(sys.stdin.read())"`
+(toleranter); bei Parse-Fehler **fail-closed** (deny/`exit 2`), NIE still durchwinken. Deckt sich mit
+§13.2 (jq vermeiden) und verschaerft es: hier ist der jq-Bypass sicherheitskritisch.
+**Quelle:** github.com/anthropics/claude-code/issues/53463.
+
+### 16.3 PreToolUse/PostToolUse feuern NICHT fuer Tool-Calls IN Subagents
+**Symptom:** Ein PreToolUse/PostToolUse-Hook (Guard, Logger) feuert fuer Tool-Calls des Hauptagenten,
+aber NICHT fuer Tool-Calls, die ein Subagent (Agent-Tool) intern ausfuehrt.
+**Ursache:** Tool-Hooks sind an die Haupt-Tool-Loop gebunden; Subagent-interne Tool-Calls laufen
+ausserhalb.
+**Versionen:** Issue #34692 **CLOSED NOT_PLANNED (2026-05-30)** → won't fix.
+**FIX (funktionserhaltend):** Hook-abhaengige Policy NICHT innerhalb von Subagents erwarten. Fuer
+Subagent-Kontext `SubagentStart`/`SubagentStop` nutzen; harte Policy zusaetzlich an der Stelle
+verankern, wo der Subagent gespawnt wird.
+
+### 16.4 `systemMessage` ohne `hookSpecificOutput`-Verschachtelung wird still gedroppt
+**Symptom:** Ein Warn-Hook (PreToolUse/PostToolUse) setzt `systemMessage`, es erscheint aber nichts.
+**Ursache:** Wie bei `additionalContext` (§2.1) muss auch hier die Struktur stimmen — flaches/falsch
+platziertes Feld wird stumm verworfen.
+**Versionen:** Issue #40380 **CLOSED NOT_PLANNED (2026-04-29)** → won't fix.
+**FIX:** `systemMessage` ist ein TOP-LEVEL-Feld des Hook-JSON (neben `hookSpecificOutput`), nicht
+darin verschachteln; `hookEventName` im `hookSpecificOutput` bleibt Pflicht fuer `additionalContext`.
+
+### 16.5 `Cannot find module …cjs` — globale settings.json zeigt auf projekt-lokalen Pfad
+**Symptom:** Bei jedem Pre/PostToolUse/Stop-Event feuert dutzendfach ein Modul-Fehler
+(`Cannot find module session-state.cjs`).
+**Ursache:** Die GLOBALE `settings.json` referenziert einen projekt-lokalen Hook-Pfad, der im
+aktuellen Projekt nicht existiert.
+**Versionen:** Issue #54743 **OPEN**.
+**FIX (funktionserhaltend):** Hook-Pfade in der globalen settings.json absolut + existenz-robust
+halten; projekt-spezifische Hooks via `$CLAUDE_PROJECT_DIR` und in der PROJEKT-settings.json, nicht
+global. Der Hook selbst sollte bei fehlender Datei graceful `exit 0`.
+
+### 16.6 Windows: `.sh`-Hook-Pfade mit Leerzeichen ohne Quotes → Arg-Splitting
+**Symptom:** PreToolUse/Bash-`.sh`-Hook scheitert, wenn der Pfad ein Leerzeichen enthaelt
+(`C:/Users/First Last/...`); Bash interpretiert ihn als mehrere Argumente. Auch Backslash-Pfade
+(`C:\Users\...`) werden von Git-Bash als Escapes gelesen; teils wird nur `bash` (ohne vollen Pfad) aufgerufen.
+**Ursache:** `.sh`-Hook-Commands werden in settings.json ohne Quotes registriert (anders als `.js`-Hooks).
+**Versionen:** Windows 11 + Git Bash; Issues #20551 (DUPLICATE), #22700 / #21878 (**NOT_PLANNED**).
+Der explizite-bash-Aufruf-Bug (`cannot execute binary file`) ist separat in **v2.1.161 gefixt**.
+**FIX (funktionserhaltend):** Hook-Command-Pfad selbst in `"..."` setzen, Forward-Slashes verwenden,
+vollen Interpreter-Pfad angeben; auf Windows bevorzugt native `.ps1` via `pwsh -NoProfile -File "..."`.
+
+### 16.7 Stop-Hook "Failed with non-blocking status code" / exit 2 als "Stop hook error"
+**Symptom:** Stop-Hook meldet `Failed with non-blocking status code: No stderr output` (#59939, **OPEN**)
+bzw. `exit 2` wird als "Stop hook error" angezeigt statt als Feedback (#34600, **NOT_PLANNED 2026-06-01**).
+**Ursache:** Feedback-Pfad-Eigenheiten bei Stop. **Wichtig:** seit **v2.1.163** koennen Stop/SubagentStop
+ueber `hookSpecificOutput.additionalContext` sauber Feedback geben (kein Error-Label) — das ist der
+neue funktionserhaltende Weg.
+**FIX:** Fuer Stop-Feedback `hookSpecificOutput.additionalContext` (v2.1.163+) statt `exit 2`; zum
+echten Stop-Verhindern `decision:"block"`+`reason`. `exit 2` bei Stop NIE fuer reines Feedback.
+
+### 16.8 Neue Events/Felder seit Almanach-Stand (Lueckenschluss, NICHT Bugs)
+Diese kamen mit v2.1.152–v2.1.177 und gehoeren zum aktuellen Wissensstand (Details + Beispiele in
+`best-practices/01-hooks/best-practices.md`):
+- **~30 Events** in v2.1.177 (neu u.a. PostToolBatch, PermissionRequest/Denied, TaskCreated/Completed,
+  FileChanged, CwdChanged, ConfigChange, PostCompact, Elicitation/Result, **MessageDisplay**, WorktreeCreate/Remove).
+- **MessageDisplay** (v2.1.152): rein display-only (`displayContent`), KEINE Matcher, Timeout 10s, `exit 2`
+  ignoriert — Claude sieht WEITER das Original (Falle: "ich habe es vor Claude versteckt" ist falsch).
+- **SessionStart** `reloadSkills:true` (Skills mid-session), `sessionTitle` (nur source startup/resume).
+- **Stop/SubagentStop**: `additionalContext` als Feedback (v2.1.163); Input-Felder `background_tasks`, `session_crons`.
+- **Feldname `updatedInput`** (NICHT `modifiedInput`) fuer Tool-Argument-Rewrite in PreToolUse.
+- **`args: string[]`** Exec-Form (v2.1.139) gegen Quoting/Shell-Injection; **`--safe-mode`** (v2.1.169) schaltet
+  zum Debuggen auch Hooks ab; **if-Pfad-Matcher** `Edit(src/**)`/`Read(.env)` erst ab **v2.1.176** zuverlaessig.
+
+---
+
+## 15. Fix-Status — was auf v2.1.177 schon behoben ist
 
 > Wichtig fuers Versions-Denken: Diese Eintraege waren frueher Bugs, sind aber in der
-> aktuell installierten Version (2.1.159) bereits GEFIXT. Sie gelten nur noch fuer
-> aeltere Versionen — auf 2.1.159 NICHT mehr als aktive Bugs behandeln (Changelog-belegt,
-> Stand 2026-06-01).
+> aktuell installierten Version (**2.1.177**) bereits GEFIXT. Sie gelten nur noch fuer
+> aeltere Versionen — auf 2.1.177 NICHT mehr als aktive Bugs behandeln. Status **HART per
+> `gh issue view` verifiziert (2026-06-15)**: `COMPLETED` = echt gefixt, `NOT_PLANNED` =
+> won't fix (Workaround bleibt), `DUPLICATE` = auf anderes Issue gebuendelt.
 
-| Frueherer Bug | Gefixt ab | Almanach-Bezug |
-|---------------|-----------|----------------|
+| Frueherer Bug | Gefixt ab / Status | Almanach-Bezug |
+|---------------|--------------------|----------------|
 | Hook-Output korrumpiert interaktiven Prompt (Hooks hatten Terminal-Zugriff) | **v2.1.141** | 11.3 |
 | `transcript_path` ungueltig nach EnterWorktree / CWD-Wechsel | **v2.1.141** | — |
 | Stop-Hook-Endlosschleife laeuft ewig (Block-Cap 8 eingefuehrt) | **v2.1.143** | 6.1, 11.2 |
-| Hook-`if`-Conditions (`PowerShell(git push*)` / `Bash(...)`) matchten nie | **v2.1.147** | 9.x (matcher-conditions) |
-| Plugin-`Stop`/`UserPromptSubmit` brechen bei Cache-Cleanup ab | **v2.1.147** | 3.6-nah |
+| Hook-`if`-Conditions (`PowerShell(git push*)`) matchten nie | **v2.1.147** | 9.x |
+| `if:"Bash(...)"` feuerte bei jedem `$()`/`$VAR` (False-Positive) | **v2.1.163** | 9.x, 16.8 |
+| `if`-Pfad-Matcher `Edit(src/**)`/`Read(.env)` matchten nicht | **v2.1.176** | 16.8 |
+| Deny-Rules auf `~/`-Pfade blockten `$HOME`-Bash nicht | **v2.1.163** | — |
+| Windows: Hook mit explizitem bash-Aufruf "cannot execute binary file" | **v2.1.161** | 16.6 |
 | `.claude.json`-Korruption bei parallelen Sessions (Windows) | **v2.1.61** | 12.7 |
-| `/goal` haengt still bei `disableAllHooks` / `allowManagedHooksOnly` | **v2.1.140** | 14.2-nah |
+| `/goal` haengt still bei `disableAllHooks`/`allowManagedHooksOnly` | **v2.1.140** | 14.2 |
 | Symlinkte Settings loesen falsche `ConfigChange`-Hooks aus | **v2.1.140** | — |
+| `additionalContext`-Support fuer PreToolUse (war "parsed, not supported") | **v2.1.… (#15664 COMPLETED 2026-01-16)** | 2.1 |
+| PreToolUse exit code ignoriert / Operationen liefen weiter | **#21988 COMPLETED 2026-01-30** | 1.6 |
+| PreToolUse exit 2 stoppt Claude statt Feedback | **#24327 COMPLETED 2026-02-22** (Modell-Verhalten bleibt → BP) | 1.x, 16.7 |
+| UserPromptSubmit "error" trotz exit 0 + valid JSON | **#44943 COMPLETED 2026-04-08** | 11.1 |
+| disableAllHooks umgeht managed org-Hooks (Security) | **#26637 COMPLETED 2026-02-19** (Managed-Hierarchie) | 14.2 |
+| `claude plugin update` verliert `+x` auf `.sh`-Hooks | **#40280 COMPLETED 2026-04-18** (Cloud-Sync-Verlust bleibt) | 13.1 |
+| Hooks stoppen nach ~2,5h still | **#16047 COMPLETED 2026-01-04** | — |
+| SessionStart stdout silently dropped trotz valid JSON | **#13650 COMPLETED 2025-12-27** (Profil-Verschmutzung bleibt) | 5.1 |
 
-### Noch NICHT gefixt auf v2.1.159 (Workaround bleibt aktiv)
-Per Design oder noch offen — Loesungen oben weiter anwenden:
+### Noch NICHT gefixt auf v2.1.177 (Workaround bleibt aktiv — gh-Status in Klammern)
+Per Design ODER `NOT_PLANNED` (won't fix) ODER `OPEN` — Loesungen oben weiter anwenden:
 - exit 1 blockiert nicht / nur exit 2 (1.1) — per Design.
-- Flaches `additionalContext` ohne `hookSpecificOutput` ignoriert (2.1) — per Design.
+- Flaches `additionalContext`/`systemMessage` ohne `hookSpecificOutput` ignoriert (2.1, 16.4 #40380 NOT_PLANNED) — per Design.
 - `type:"prompt"` nicht bei SessionStart/SessionEnd (8.1) — per Design.
-- stdin dual-read noetig (Console.In vs `$input`) (12.4) — noch offen.
-- UTF-8 BOM in settings.json (12.1, #9906) — noch offen.
-- Falsche "hook error"-Labels trotz exit 0 (11.1, #34859/#34713) — kein Fix belegt, wahrsch. offen.
-- v2.1.123 Bash-Matcher droppt Kontext (2.4, #55889) — wahrsch. offen; betrifft v.a. `Bash`-Matcher, `Edit|Write` evtl. nicht.
-- PreToolUse exit 2 blockt Write/Edit nicht (1.6, #13744 als Duplikat geschlossen, kein eigener Fix belegt).
+- stdin dual-read noetig (Console.In vs `$input`) — Stop kein stdin Windows/pwsh (12.4, #46601 **NOT_PLANNED 2026-05-26**).
+- UTF-8 BOM in settings.json (12.1, **#9906 NOT_PLANNED 2026-01-10**).
+- Falsche "hook error"-Labels trotz exit 0 (11.1): **#34859 / #34713 NOT_PLANNED**, **#17088 noch OPEN** (PreToolUse), #45065 DUPLICATE.
+- v2.1.123 Bash-Matcher droppt Kontext (2.4, **#55889 NOT_PLANNED 2026-06-01**) — won't fix; `Edit|Write` evtl. nicht betroffen, der v2.1.163 if-Bash-Fix ist separat.
+- CLI-Crash bei non-spec hookSpecificOutput (16.1, **#57483 NOT_PLANNED 2026-06-07**).
+- jq-Control-Char-Bypass im stdin (16.2, **#53463 NOT_PLANNED 2026-05-29**) — Security.
+- Tool-Hooks feuern nicht im Subagent (16.3, **#34692 NOT_PLANNED 2026-05-30**).
+- Plugin-command-Hooks Pre/PostToolUse verworfen (3.6): **#34573 / #14410 NOT_PLANNED**, #27398 DUPLICATE.
+- UserPromptSubmit feuert bei Task-Completion (7.3, **#16952 NOT_PLANNED 2026-03-12**).
+- `updatedInput` fuers Agent-Tool ignoriert (11.6, **#39814 NOT_PLANNED 2026-05-21**).
+- PreToolUse + ToolSearch-Deferral Hang (11.5, **#33073 NOT_PLANNED 2026-04-08**).
+- Windows-Hook-Pfade mit Leerzeichen/Backslash (16.6, **#22700 / #21878 NOT_PLANNED**).
+- `session-state.cjs` Modul-Fehler (16.5, **#54743 OPEN**); Stop "non-blocking status code" (16.7, **#59939 OPEN**).
 
-**Methodik-Hinweis:** Der GitHub-Issue-Status liess sich nur eingeschraenkt verifizieren
-(github.com per WebFetch blockiert — nur Such-Snippets). Die "gefixt"-Angaben sind
-Changelog-belegt; die "noch offen"-Angaben sind teils "kein Fix gefunden" und vorsichtig
-zu behandeln. Bei naechster Re-Recherche `gh issue view <nr>` nutzen fuer harten Status.
+**Methodik-Hinweis:** Beim Re-Recherche-Lauf 2026-06-15 wurde JEDER genannte Issue-Status HART per
+`gh issue view <nr> --repo anthropics/claude-code --json state,stateReason,closedAt` geprueft
+(gh installiert + authentifiziert). `NOT_PLANNED` heisst: Anthropic plant KEINEN Fix → der Workaround
+ist dauerhaft korrekt (nicht "vielleicht bald weg"). Das ist die belastbare Aussage; WebFetch-Snippets
+waren teils irrefuehrend (mehrere Researcher meldeten Versionen, die gh widerlegt hat).
 
 ---
 
