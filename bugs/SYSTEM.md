@@ -277,6 +277,27 @@ im Guard ein Signal ergaenzen ODER (bei echtem Querschnitt) in die Allowlist auf
 - Das System wird in Aktion erprobt und nach Direktive #1 (Superintelligenz)
   iterativ verbessert.
 
+- **W3-4 EVALUIERT (2026-06-15): Agent Skills als nativer Digest-Traeger?** Frage: Koennen native
+  Claude *Agent Skills* das Digest-Modell (Kurzcheck/Volltext, §11) tragen statt der
+  `Read`-mit-`limit` + Guard-Hook-Konstruktion?
+  - **Konzeptionell passt es (PRO):** Ein Skill IST progressive disclosure — `SKILL.md` = der immer
+    relevante Kern (≙ Kurzcheck Stufe A), referenzierte Dateien = on-demand Volltext (≙ Stufe B/C);
+    `agent-requested`-Triggering (Claude laedt den Skill anhand der `description`) ≙ semantischer Trigger.
+  - **Warum es das System NICHT ersetzt (CONTRA, entscheidend):** (1) **Keine Erzwingung** — Skills sind
+    advisory (claude-config §1.1: Kontext, nicht enforced), Claude KANN sie ignorieren; der KERN hier ist
+    der `bug-almanac-guard`, der Edits per `permissionDecision:deny` BLOCKIERT bis gelesen (Poka-Yoke
+    Stufe 2) — genau das, was beim Chrome-Bug fehlte. (2) **Description-Budget** — 58 Almanache als 58
+    Skills sprengen das 15000-Zeichen-Skill-/Command-Budget (claude-config §4.3) → Skills fallen still
+    heraus. (3) **Menue-Flut + Session-Start-Discovery** (§4.4). (4) **Kein Versions-Abgleich** (das
+    Datei-System hat Stand-Header + `check-version-anchor.py`, W3-1).
+  - **EMPFEHLUNG: Almanache NICHT zu Skills umbauen.** Das Datei-Digest (§11) + Guard liefert das
+    Skill-Prinzip (progressive disclosure) OHNE die Skill-Nachteile — und vor allem mit ERZWINGUNG
+    statt advisory. Der `agent-requested`-Aspekt (semantisches Triggern VOR dem Datei-Edit) ist seit
+    W3-2 durch den `bug-almanac-hint`-Prompt-Trigger (Schicht 1b) abgedeckt, ohne die Almanache selbst
+    zu Skills zu machen. Einzelne sehr breite Bereiche koennten optional als ergaenzende Meta-Skills
+    angeboten werden — als Zusatzschicht, nicht als Ersatz; derzeit kein Bedarf.
+
+
 ---
 
 ## 11. Das Digest-Modell (Stufe A/B/C — seit 2026-06-10)
