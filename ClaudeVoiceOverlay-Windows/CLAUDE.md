@@ -61,6 +61,25 @@ TerminalVoiceOverlay, use `Both` instead of `CVO`.
 - **Retries**: Task.Delay (never Thread.Sleep on UI thread)
 - **Clipboard restore**: Save clipboard before paste, restore after 500ms Task.Delay
 
+## Debugging text insertion: read the probes FIRST (Observability-First)
+
+When text insertion fails (paste verpufft, wrong field, „only after a mouse click"),
+**read the live probe log BEFORE attempting any fix** — do not guess at focus hypotheses.
+
+- **Probe log:** `%LOCALAPPDATA%\ClaudeVoiceOverlay\diag.log` (JSON-Lines, written by `DiagLog`).
+  Live tail: `Get-Content "$env:LOCALAPPDATA\ClaudeVoiceOverlay\diag.log" -Wait -Tail 30`.
+- **`ctx:"CHECKPOINT"`** is the live-logic probe (`AppController.VerifyFocusCheckpoint`): it logs
+  expected-vs-actual focus right before Ctrl+V. **`ok:false` = the paste will verpuffen** (focus is
+  not on a real input field) — the single most useful line. `ok:true` everywhere = focus logic works.
+- **`ctx:"UIA"`** shows which path found the field (Pfad1 FocusedElement / Pfad2/3
+  `FindProseMirrorField`) and the element (`type=Edit` for Chat/Cowork, `type=Group name='Prompt'`
+  for the Code tab — same `tiptap ProseMirror` field, different ControlType per ARIA role).
+- The probes already proved two real bugs (2026-06-15): Cowork-after-task (focus on 'Fortschritt'
+  button → FindFirst stuck on RootWebArea) and Code-tab (field is a Group, not Edit/Document).
+  Full root-cause + fix: `bugs/desktop/windows-electron-text-injection.md` U10/U11.
+- Workflow: read `diag.log` → form ONE hypothesis from real data → fix → reproduce → confirm the
+  CHECKPOINT flips to `ok:true`. (Mirrors Direktive #3: messen, dann fixen.)
+
 ## Sister Project (CRITICAL)
 
 **TerminalVoiceOverlay-Windows** shares ~80% of the code.
