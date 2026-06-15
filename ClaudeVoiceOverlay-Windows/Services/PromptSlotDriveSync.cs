@@ -26,7 +26,8 @@ namespace ClaudeVoiceOverlay.Services;
 /// </summary>
 public sealed class PromptSlotDriveSync
 {
-    private const string SlotsFileName = "prompt-slots.json";
+    // Gleicher Dateiname wie das macOS-Claude-Overlay → geteilte Slots mit Mac-Claude.
+    private const string SlotsFileName = "prompt-slots-claudecodex.json";
     private const string AppDataFolderSpace = "appDataFolder";
 
     private readonly PromptBoardSecretStore _secrets;

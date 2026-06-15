@@ -34,7 +34,8 @@ namespace ClaudeVoiceOverlay.Services;
 /// </summary>
 public sealed class PromptHistoryDriveSync
 {
-    private const string HistoryFileName = "prompt-history.json";
+    // Gleicher Dateiname wie das macOS-Claude-Overlay → geteilte History mit Mac-Claude.
+    private const string HistoryFileName = "prompt-history-claudecodex.json";
     private const string AppDataFolderSpace = "appDataFolder";
 
     private readonly PromptBoardSecretStore _secrets;

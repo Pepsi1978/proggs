@@ -29,7 +29,10 @@ namespace ClaudeVoiceOverlay.Services;
 /// </summary>
 public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
 {
-    private const string BackupFileName = "promptboard-backup.json";
+    // Gleicher Dateiname wie das macOS-Claude-Overlay (ClaudeCodexVoiceOverlay-macOS),
+    // damit Windows-CVO und Mac-Claude DASSELBE Drive-Backup teilen (Sync der Prompts).
+    // Das Terminal-Overlay nutzt "promptboard-backup.json" (ohne Suffix) → bewusst getrennt.
+    private const string BackupFileName = "promptboard-backup-claudecodex.json";
     private const string AppDataFolderSpace = "appDataFolder";
 
     private readonly PromptBoardSecretStore _secrets;
