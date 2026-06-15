@@ -53,7 +53,7 @@
 | 19 | Usage überraschend schnell aufgebraucht | Cowork verbraucht viel mehr als Chat → Einfaches im Chat, Verwandtes bündeln | §10.5 |
 | 20 | Datei landet „irgendwo" / „Location not available" | Zielordner explizit verbinden + vollen Pfad angeben (kein temp-Scratchpad) | §4.3 |
 | 21 | `git push` scheitert: „could not read Username for github.com" | Kein Git-Credential-Manager in der VM; Fix nur sitzungsweit → für DAUERHAFT: Token in `.git/credentials` + `credential.helper store --file=.git/credentials` (relativ, Remote NICHT ändern) | §10a ⭐HÄUFIG |
-| 22 | Auth steht, aber `git commit/push` aus der VM hängt an `.lock`-Dateien (Windows) | VM kann `.lock` im gemounteten `.git` anlegen, aber nicht löschen → committen/pushen zuverlässig aus dem Windows-Terminal; `.git/claude-multi-session.lock` NIE löschen | §10a.5 ⭐KRITISCH |
+| 22 | Auth steht, aber `git commit/push` aus der VM hängt an `.lock`-Dateien (Windows) | FIX: git-dir auf die VM-Platte legen → Wrapper `cowork-git.sh` (`bash cowork-git.sh push "msg"`); Fallback: aus dem Windows-Terminal pushen; `.git/claude-multi-session.lock` NIE löschen | §10a.5 / §10a.6 ⭐KRITISCH |
 
 ---
 
@@ -834,14 +834,42 @@ cloudsecurityalliance.org (Least-Privilege gegen Prompt-Injection).
 commit` braucht `index.lock` (anlegen → atomar umbenennen) → scheitert aus der VM. Gehört zur
 Mount-Bug-Klasse #66006/#54483. Per Design der Cowork-Windows-Einbindung, kein Nutzer-Fehler.
 **Versionen:** Cowork Windows 2026 (live bestätigt 2026-06-15). macOS evtl. nicht betroffen (anderer Mount).
-**FIX (funktionserhaltend):** Die dauerhafte Auth aus 10a.2 bleibt korrekt und gilt — wegen geteilter
-`.git/config` — auch fürs **Windows-Host-Terminal**. Daher: **Commits/Pushes zuverlässig aus dem
-normalen Windows-Terminal** (`C:\Users\barwa\proggs`) machen, die Cowork-VM zum Lesen/Bearbeiten. Push
-aus der VM geht zur Not, erfordert aber ein Lock-Aufräumen vom Host (`rm .git/*.lock`). **NIE
-`.git/claude-multi-session.lock` löschen** (Hook-Lock, kein Git-Lock). Phantom-`index.lock` muss man
-auf Windows nicht anfassen (existiert dort nicht).
+**FIX (dauerhaft, funktionserhaltend → §10a.6):** Das Lock-Problem wird gelöst, indem das **git-dir auf
+die VM-eigene Platte** gelegt wird (dort funktioniert Löschen), während der Arbeitsbaum im Mount bleibt
+— gekapselt im Wrapper `cowork-git.sh` (siehe §10a.6). Fallback ohne Wrapper: aus dem **Windows-Host-Terminal**
+committen/pushen (die Auth aus 10a.2 gilt dort dank geteilter `.git/config` auch), Lock-Reste per
+`rm .git/*.lock` vom Host wegräumen. **NIE `.git/claude-multi-session.lock` löschen** (Hook-Lock, kein
+Git-Lock). Phantom-`index.lock` auf Windows nicht anfassen (existiert dort nicht).
 **Quelle:** live bestätigt 2026-06-15 (Schreibtest + Sonde); GitHub anthropics/claude-code #66006
 (Sandbox kann auf CBFS-/Virtual-Drive-Mounts nicht enumerieren/löschen), #54483 (Mount-Pfade/-Verhalten).
+
+### 10a.6 ⭐ FIX — zuverlässig aus der VM pushen: git-dir auf die VM-Platte (Wrapper `cowork-git.sh`)
+**Lösung des Lock-Problems aus 10a.5.** Kernidee: Gits Lock-/Schreib-Operationen (Index, refs,
+packed-refs, logs, objects) entstehen ALLE im **git-dir**. Legt man das git-dir auf das VM-eigene ext4
+(wo Löschen funktioniert) und lässt nur den **Arbeitsbaum** im gemounteten Ordner, entstehen auf dem
+Mount keine `.lock`-Dateien mehr → commit/push aus der VM laufen sauber.
+**Mechanismus (verifiziert 2026-06-15 per `git clone --separate-git-dir`-Test):** Arbeitsbaum enthält
+keinen `.git`-Schreibpfad; ref-Update + Index landen im separaten git-dir. Für Cowork via Umgebungs-
+trennung statt gitlink, damit das vorhandene Mount-`.git` (Windows-Terminal) UNBERÜHRT bleibt:
+```bash
+GITDIR=$HOME/.cowork-gitdir/proggs          # VM-ext4 (Locks löschbar)
+git --git-dir="$GITDIR" --work-tree="$REPO" init -q -b main
+git --git-dir="$GITDIR" --work-tree="$REPO" remote add origin https://github.com/Pepsi1978/proggs.git
+cp "$REPO/.git/credentials" "$GITDIR/cowork-credentials"   # Token vom Mount nur LESEN
+git --git-dir="$GITDIR" --work-tree="$REPO" config credential.helper "store --file=$GITDIR/cowork-credentials"
+git --git-dir="$GITDIR" --work-tree="$REPO" fetch -q origin main
+git --git-dir="$GITDIR" --work-tree="$REPO" update-ref refs/heads/main FETCH_HEAD
+git --git-dir="$GITDIR" --work-tree="$REPO" reset --mixed -q main   # Index=origin, Arbeitsdateien unberührt
+# danach: add -A / commit / push origin HEAD:main
+```
+**Im Repo gekapselt:** `~/proggs/cowork-git.sh` (`bash cowork-git.sh push "#NNN - text"` bzw. `setup`).
+Das git-dir ist ephemer (überlebt VM-Neustart nicht) — das Skript baut es bei jedem Lauf frisch aus
+GitHub auf (Quelle der Wahrheit = origin/main). Mount-`.git` und Host-Terminal bleiben getrennt/intakt.
+**Wichtige Punkte:** git ≥2.28 für `init -b` (Cowork-VM = Ubuntu 22.04/git 2.34 ✓); `reset --mixed`
+lässt den Arbeitsbaum unangetastet; Token-Datei wird vom Mount nur gelesen, Arbeitskopie + alle Schreib-
+vorgänge liegen im VM-git-dir.
+**Versionen:** Cowork Windows 2026; git ≥2.28. **Quelle:** git-scm.com (GIT_DIR/GIT_WORK_TREE,
+git-reset, separate-git-dir, git-credential-store, offiziell); lokal verifizierter Mechanismus 2026-06-15.
 
 ---
 

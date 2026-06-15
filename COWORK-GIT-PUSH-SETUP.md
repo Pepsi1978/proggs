@@ -85,24 +85,31 @@ git push
 
 ---
 
-## Praktische Realität auf Windows (live bestätigt 2026-06-15)
+## Der eigentliche Fix: zuverlässig aus Cowork pushen (`cowork-git.sh`)
 
-Die dauerhafte **Anmeldung** funktioniert (Schreibzugang real getestet: Test-Tag gepusht,
-Rückgabecode 0). **Aber:** Auf dem gemounteten Windows-`.git` kann die Cowork-VM ihre eigenen
-`.lock`-Hilfsdateien zwar anlegen, **aber nicht wieder löschen** ("Operation not permitted") —
-eine Eigenschaft der Cowork-Windows-Einbindung, nicht deines Setups. Folge: Ein `git commit`
-oder `git push` **aus der VM** kann an einer liegengebliebenen Lock-Datei hängen bleiben.
+Beim Testen kam ein zweites Problem ans Licht: Die **Anmeldung** steht (Schreibzugang real bestätigt),
+aber Git kann auf dem gemounteten Windows-`.git` seine `.lock`-Hilfsdateien **nicht löschen**
+("Operation not permitted" — eine virtiofs/CBFS-Eigenschaft der Cowork-Windows-Einbindung, nicht dein
+Setup). Darum hängt ein `commit`/`push` **direkt aus der VM** an liegengebliebenen Locks.
 
-**Empfehlung für den Alltag:**
-- **Committen/Pushen** zuverlässig aus deinem **normalen Windows-Terminal** in `C:\Users\barwa\proggs`
-  (dort gibt es das Lock-Problem nicht; die gespeicherte Anmeldung gilt dank geteilter `.git/config`
-  auch dort — du musst dich nie einloggen).
-- **Cowork** zum Lesen/Bearbeiten nutzen. Push aus der VM geht zur Not auch, braucht dann aber ein
-  Aufräumen vom Windows-Terminal aus: `rm .git/*.lock` (NIEMALS `.git/claude-multi-session.lock`
-  löschen — das ist ein Hook-Lock, kein Git-Lock).
+**Gelöst durch das Skript `cowork-git.sh`** (liegt im Repo-Root): Es legt das **Git-Verzeichnis auf die
+VM-eigene Festplatte** (dort funktioniert Löschen einwandfrei), während deine echten Dateien im Ordner
+bleiben. So entstehen die Sperr-Dateien gar nicht mehr auf dem Mount. Dein normales Windows-Terminal
+bleibt völlig unberührt (es nutzt weiter das `.git` im Ordner).
 
-Damit ist dein eigentliches Ziel erreicht (dauerhafte Push-Anmeldung steht), und der zuverlässige
-Weg fürs tägliche Pushen ist klar.
+**So pushst du in Cowork** (gib das dem Claude-in-Cowork):
+
+```text
+Pushe meine Änderungen aus proggs nach GitHub mit:
+bash cowork-git.sh push "#NNN - kurz was geändert wurde"
+```
+
+Das macht in einem Schritt: aktuellen Stand von GitHub holen → deine Änderungen stagen → committen →
+`git push origin main`. Für andere Befehle geht `bash cowork-git.sh status`, `… log`, `… diff`.
+
+**Warum das dauerhaft funktioniert:** Das interne Git-Verzeichnis liegt auf der VM-Platte (überlebt
+einen VM-Neustart nicht) — aber das Skript baut es bei jedem Lauf automatisch frisch aus GitHub auf
+und liest den Token aus der persistenten `.git/credentials`. Du musst dich um nichts kümmern.
 
 ## Alternative ganz ohne Token
 In Cowork committen, und das Pushen aus dem **normalen Claude Code im Terminal** (oder dem

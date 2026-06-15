@@ -80,6 +80,13 @@
 > Recherchiert 2026-06-15 (7 Researcher). Bug-Gegenseite: `bugs/claude-tooling/cowork.md` §10a.
 > Schritt-Anleitung für Frank: `~/proggs/COWORK-GIT-PUSH-SETUP.md`.
 
+- **Zuverlässig aus der VM pushen (Windows-Lock-Problem gelöst):** Auf dem gemounteten `.git` kann die
+  Cowork-VM ihre `.lock`-Dateien nicht löschen → `commit`/`push` aus der VM hängt. Lösung: das git-dir
+  auf die **VM-eigene Platte** legen (`GIT_DIR` auf ext4, `GIT_WORK_TREE` = der Mount-Ordner), Quelle der
+  Wahrheit bleibt `origin/main`. Im Repo gekapselt als `cowork-git.sh` (`bash cowork-git.sh push "msg"`).
+  Verifiziert 2026-06-15 (separates git-dir hält ALLE Locks vom Mount fern; Mount-`.git` + Host-Terminal
+  bleiben unberührt). Bug-Gegenseite: `bugs/claude-tooling/cowork.md` §10a.5/§10a.6.
+
 - **Ausgangslage:** Cowork hat **keinen** nativen `git push`-Weg, **keinen** Secret-Store und
   **keinen** Startup-Hook. Die VM startet pro Session frisch → VM-Home (`~/.git-credentials`)
   ist nie persistent. Persistent ist nur der gemountete Ordner. Quelle: support.claude.com/.../10167454
