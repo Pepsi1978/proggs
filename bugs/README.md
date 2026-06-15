@@ -134,6 +134,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **Python auf Windows** (Encoding & Cross-Platform-Scripting) | [`claude-tooling/python-windows.md`](claude-tooling/python-windows.md) | 2026-06-02 | ~36 | `*.py` · „Python", „Encoding", „cp1252", „BOM", „UnicodeEncodeError", „encoding=utf-8", „os.replace", „venv", „PATH" |
 | **Cowork (Claude Desktop App)** (agentischer Modus macOS/Windows: VM-Workspace, Connectors/MCP, Skills/Plugins, Scheduled Tasks, Live-Artefakte, Computer-Use) | [`claude-tooling/cowork.md`](claude-tooling/cowork.md) | 2026-06-13 | ~70 | Cowork-Tab, verbundene Ordner, Connectors, eigene Skills/Plugins (ZIP-Upload), `/schedule`/Scheduled Tasks, Live-Artefakte, Computer-Use/Chrome · „Cowork", „VM service not running", „EXDEV", „workspace unavailable", „Always allow", „skill not mounted", „validation failed", „Catch-up", „callMcpTool", „Prompt-Injection", „PromptArmor", „iCloud Datenverlust", „Computer Use" · Best-Practices: `best-practices/projekt-code/claude-tooling/best-practices-cowork.md` |
 | **Cowork Git-Push (über Mount-Brücke)** (committen/pushen aus der Cowork-VM: virtiofs/FUSE-Arbeitsbaum, Lock/fileMode/Symlink/LFS/CRLF/Mount-Truncation, non-fast-forward, Plumbing) | [`claude-tooling/cowork-git-push.md`](claude-tooling/cowork-git-push.md) | 2026-06-15 | 22 (inkl. Fix-Status) | `cowork-git.sh`, Git aus Cowork · „index.lock Operation not permitted", „could not read Username", „should have been pointers", „CRLF will be replaced", „fetch first", „cannot rebase unstaged changes", „dubious ownership", „Stale file handle", virtiofs-Truncation · Best-Practices: `best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md` |
+| **Cowork — Geplante & wiederkehrende Aufgaben** (Scheduled Tasks / Routines: System-Wahl lokal vs. Cloud-Routine vs. `/loop`, Catch-up/Missed-runs, High-Freq-Cron-Freeze, Zombie/Skip-Cascade, Cron/Zeitzone/DST, Permissions, MCP-Warm-up, Quota, Mobile/Dispatch) | [`claude-tooling/cowork-scheduled-tasks.md`](claude-tooling/cowork-scheduled-tasks.md) | 2026-06-15 | ~70 (Kurzcheck + 3-System-Tabelle + Fix-Status) | geplante/wiederkehrende Aufgabe anlegen (Routines → New routine → Local/Remote), „Scheduled", „/schedule", `create_scheduled_task`/`update_scheduled_task` · „Failed to create scheduled task", „Cannot create scheduled tasks from within a scheduled task session", `scheduled-tasks.json`, High-Frequency-Cron-Freeze, Catch-up/Missed runs, „Keep computer awake", Cloud-Routine, `/loop`, `fireAt`, `host_not_allowed`, `wakeScheduler`, „Always allow"/bypassPermissions, MCP-Warm-up/Subagent, Dispatch/Mobile · Vertieft `cowork.md` §7 · Best-Practices: `best-practices/projekt-code/claude-tooling/best-practices-cowork.md` §5 |
 | **Claude Code Desktop-App vs. CLI** (Code-Tab macOS/Windows: Installation, PATH/Env, Hooks, Permissions, MCP, Worktrees, Computer-Use, Preview, Cloud/SSH, fehlende Features) | [`claude-tooling/claude-code-desktop-vs-cli.md`](claude-tooling/claude-code-desktop-vs-cli.md) | 2026-06-13 | ~45 | Code-Tab, „Git is required", „Git LFS", PATH/PowerShell-Profil, „bypassPermissions", „PostToolUse feuert nicht", `.claude/worktrees/`, „localhost was blocked", Accessibility/Screen-Recording, „isn't available in this environment", `--print`/Headless, Agent-Teams, `/agents`/`/doctor` · Best-Practices: `best-practices/projekt-code/claude-tooling/best-practices-claude-code-desktop-vs-cli.md` |
 | **Agenten-Wissens-/Lern-System** (Harness-Selbstverbesserung: Almanach/BP-Struktur, Ausloeser/Hooks, Lern-DBs, Direktiven) | [`claude-tooling/agent-knowledge-system.md`](claude-tooling/agent-knowledge-system.md) | 2026-06-15 | ~10 Fallen | **Querschnitt — KEIN Datei-Trigger** (wie `apis/`/`agents/`, in `check-guard-coverage.py`-Allowlist) · greift bei Arbeit an `bug-almanac-*`/`bug-case-auto-writer`/`subagent-context`-Hooks, `experience-store`/`trajectories`/`session-scores`/Pheromon, Almanach-/BP-Struktur, Direktiven-Umsetzung · „Wissenssystem", „Progressive Disclosure", „Memory-Governance", „Staleness", „semantischer Trigger", „Lernschleife", „Compound Intelligence", „Hook-Schema", „Tool-Drift" · Best-Practices: `best-practices/projekt-code/claude-tooling/best-practices-agent-knowledge-system.md` |
 
@@ -178,45 +179,4 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 > `bug-almanac-guard` erzwungen, sondern ueber diesen Index + Stichwort-Trigger gefunden. Vor dem
 > Bau eines Haupt-/Boss-/Orchestrator-Agenten ZUERST den Almanach, DANN die Best-Practices lesen.
 
-| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
-|---------|-------|-------|------|----------------------------------|
-| **Boss-/Orchestrator-Agent** (Multi-Agenten-System, INTERN in Claude Code UND EXTERN selbst gebaut: Intent-Verstehen, Delegation/Routing, Sub-Agent-Spawning, Tool-Calling, menschlicher Dialog, State/Reliability/Security + Sektion 8: from-scratch-Loop, C#/.NET/Semantic Kernel, Voice-Orchestrierung, lokal/Multi-Provider, TS/JS) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~80 | „Boss-Agent", „Orchestrator", „Supervisor-Agent", „Multi-Agent", „Sub-Agent bauen/spawnen", „Agent baut Agenten", „Intent verstehen", „Delegation", „Handoff", „eigener Agent in meiner App", „from scratch Agent-Loop", „VoiceAgent Boss", „Semantic Kernel", „MS Agent Framework", „LangGraph", „CrewAI", „AutoGen", „OpenAI Agents SDK", „Vercel AI SDK", „Mastra", „Claude Agent SDK", „natuerliche Sprache verstehen", „menschlich antworten" · Best-Practices: `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md` |
-
----
-
-## ⬜ Bereiche ohne Almanach (bei erster echter Arbeit: recherchieren — erst Franks OK)
-
-> Diese Liste ist die Landkarte der erwarteten Bereiche. Sobald an einem davon
-> echte Arbeit beginnt und noch kein Almanach existiert, wird er im passenden
-> Kategorie-Ordner angelegt.
-
-| Prio | Bereich | (geplante Datei) | Erkennungs-Trigger (Dateien / Stichworte) |
-|------|---------|------------------|-------------------------------------------|
-
-> **Fertige Recherche-Prompts** fuer alle offenen Bereiche (Almanach + Best-Practices,
-> Copy-Paste fuer parallele Sessions): siehe [`OFFENE-ALMANACHE-PROMPTS.md`](OFFENE-ALMANACHE-PROMPTS.md).
->
-> **Moegliche Vertiefung** als Abschnitt statt eigener Datei: PowerShell-Scripting allgemein
-> → `claude-tooling/claude-hooks.md` (bei genug Eigenleben spaeter ausgliedern).
-
-(Liste waechst mit. Neue Bereiche hier ergaenzen, sobald sie auftauchen. Das Pfad-Mapping
-im `bug-almanac-guard`-Hook ist kategorie-robust — bei einem NEUEN Dateimuster dort einen
-Zweig ergaenzen; ein blosser Kategorie-Wechsel einer bestehenden Datei braucht KEINE
-Hook-Aenderung.)
-
----
-
-## Aufbau jeder Almanach-Datei (Format-Vorlage)
-
-```
-# Bekannte Bugs: <Thema>
-> PFLICHT-LESEN vor Arbeit an <Thema>.
-> Stand: zuletzt recherchiert am <Datum> fuer Version <X>.
-
-## N. <Bug-Titel>   [⭐ HAEUFIG falls oft]
-Symptom:    Was man sieht
-Ursache:    Der wahre Grund
-Versionen:  betrifft V1-V3, gefixt ab V4   (oder „per Design / unabhaengig")
-FIX:        Beste funktionserhaltende Loesung (NIE „Feature weg")
-Quelle:     Link / eigener Vorfall
-```
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichwort

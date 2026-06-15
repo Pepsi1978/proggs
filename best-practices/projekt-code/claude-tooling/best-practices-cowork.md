@@ -120,6 +120,13 @@
 
 ## 5. Geplante Aufgaben & Live-Artefakte
 
+> **Tiefen-Almanach (Gegenseite, Bezugstabelle dort am Ende):**
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md)
+> (Stand 2026-06-15). Kernregeln: System bewusst wählen (Cloud-Routine für Zuverlässigkeit ohne wachen
+> PC, Local Task für lokale Dateien, `/loop` nur in offener Session) · Zeit-Guardrails gegen Catch-up ·
+> keine High-Frequency-Cron (Boot-Loop-Risiko) · nach Anlegen „Run now" + „always allow" · ersten
+> MCP-Call per Subagent absetzen (Warm-up) · keine sensiblen Connectors an unbeaufsichtigte Tasks.
+
 - **Scheduled Tasks** via `/schedule` oder Seitenleiste "Scheduled" > "+ New task". Kadenzen: stündlich, täglich, wöchentlich, werktags, manuell; Sonstiges (z.B. alle 6 h, Monatserster, einmaliger Lauf) per natürlicher Sprache. Cron in **lokaler Zeitzone**. Jeder Lauf startet **frisch ohne Erinnerung** → Prompt muss selbst-enthaltend sein (Connectors, Format, Präferenzen). Quelle: support.claude.com/en/articles/13854387 · 2026-04-09 + code.claude.com/docs/en/desktop-scheduled-tasks · `[offiziell]`
 - **Catch-up-Fallstrick:** Beim Aufwachen/App-Start wird **genau ein** verpasster Lauf nachgeholt (zuletzt verpasster Zeitpunkt der letzten 7 Tage), ältere verworfen → eine 9-Uhr-Aufgabe kann um 23 Uhr laufen. Gegenmittel: Zeit-Guardrails in den Prompt ("nur heutige Daten; nach 17 Uhr überspringen"). Quelle: code.claude.com/docs/en/desktop-scheduled-tasks · `[offiziell]`
 - **Live-Artefakte:** persistente, interaktive HTML-Seiten (Tracker, Dashboard), die sich beim Öffnen mit frischen Connector-/Datei-Daten aktualisieren; eigener "Live artifacts"-Tab mit Versionshistorie. Self-contained HTML, nur Chart.js/Grid.js/Mermaid per CDN erlaubt; Daten über `window.cowork.callMcpTool()`. Quelle: support.claude.com/en/articles/14729249 · 2026-04-24 · `[offiziell]`
@@ -135,49 +142,4 @@
 
 ## 7. Grenzen, Datenschutz, Sicherheit
 
-- **Compliance-Blindspot:** Cowork-Aktivität ist NICHT in Compliance API / Audit-Logs / Daten-Exporten erfasst (alle Pläne inkl. Enterprise). Ersatz nur via OpenTelemetry (Team/Enterprise) — laut Anthropic "kein Ersatz für Audit-Logging". EDR sieht nicht in die VM. Quelle: support.claude.com/en/articles/14479288 + /13455879 · `[offiziell]`
-- **Lokale Datenhaltung:** Verlauf + Projektdaten (Tasks, Memory) liegen lokal, unterliegen NICHT der Standard-Retention und sind von Admins nicht zentral verwalt-/exportierbar. Task-Löschung: sofort aus Verlauf, Backend binnen 30 Tagen. Quelle: support.claude.com/en/articles/13455879 + /13345190 · `[offiziell]`
-- **Admin-Kontrolle grob:** Cowork org-weit an/aus (Organization settings > Capabilities), keine native Pro-Nutzer-Granularität (Enterprise nur über Gruppen/Custom Roles). Geräte-Kontrollen (lokale MCP / Desktop-Extensions abschalten) nur via **MDM** (`isLocalDevMcpEnabled`, `isDesktopExtensionEnabled`). Quelle: support.claude.com/en/articles/13455879 + /14479288 · `[offiziell]`
-- **Mehrschichtige Verteidigung:** RL-Training gegen bösartige Anweisungen, Content-Classifiers gegen Prompt-Injection, Lösch-Bestätigung, Computer-Use-Per-App-Freigabe. Anthropic betont ausdrücklich: "Risiko ist nicht null". Quelle: support.claude.com/en/articles/13364135 · `[offiziell]`
-- **Höherer Verbrauch:** Cowork verbraucht deutlich mehr Usage als Chat (Sub-Agenten, viele Tool-Calls) → einfache Aufgaben im normalen Chat, verwandte Arbeit in einer Session bündeln. Quelle: support.claude.com/en/articles/13345190 · `[offiziell]`
-
-## Stolpersteine / Fallstricke
-
-- **App muss offen + Rechner wach** bleiben, sonst stoppen (auch geplante) Aufgaben. `[offiziell]`
-- **Windows-Installationsfallen:** "VM service not running" (alter .exe/Squirrel-Installer statt MSIX bzw. gestoppter CoworkVMService) und "EXDEV: cross-device link not permitted" (VM-Image kreuzt Laufwerksgrenze → Speicherort auf C:\ zurücksetzen). `[offiziell]`
-- **Prompt-Injection real:** PromptArmor demonstrierte ~48 h nach Launch eine Exfiltration über weißen 1-pt-Text in einem Word-Dokument (Upload von Finanzdaten via Files API). Bestätigt "Risiko nicht null". Quelle: winbuzzer.com / promptarmor.com · `[extern]`
-- **Möglicher Bug (unbestätigt):** GitHub-Issue zu "Personal plugin skills not mounted in Cowork container despite enabled in UI" — relevant für die Frage "sind meine Skills in Cowork installiert". `[extern, nicht verifiziert]`
-
-## Kopplung zum Bug-Almanach
-
-Der Bug-Almanach existiert jetzt: [`bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md)
-(angelegt 2026-06-13 per `bug-almanach-recherche`, 7 parallele Researcher, ~70 Bugs/Fallen). Er ist die
-„was geht schief"-Seite zu dieser „wie man es richtig macht"-Seite.
-
-Wechselseitige Abschnitts-Bezugstabelle:
-
-| Best-Practice-Abschnitt (hier) | Bug-Abschnitt (`bugs/claude-tooling/cowork.md`) |
-|--------------------------------|-------------------------------------------------|
-| §1 Überblick & Einrichtung / Architektur / Berechtigungsmodi | §1/§2 VM-Start (Win/macOS), §2.4 workspace unavailable, §3 macOS-Permissions/TCC |
-| §2 Skills & Plugins | §6 Skills & Plugins (Mount-Bug §6.1, Validation §6.4, 200-Zeichen §6.7) |
-| §3 Connectors & MCP | §5 Connectors & MCP (IP-Allowlist §5.1, OAuth-Scope §5.2, lokale MCPs §5.5) |
-| §4 Datei-Arbeit & Ergebnis-Dokumente | §4 Datei-Arbeit & Datenverlust (iCloud-Stub §4.1, Stale-Mount §4.2, outputs-Pfad §4.3) |
-| §5 Geplante Aufgaben & Live-Artefakte | §7 Scheduled Tasks (Catch-up §7.2, Freeze §7.3) + §8 Live-Artefakte (Response-Shape §8.2) |
-| §6 Computer-Steuerung & Browser | §9 Sicherheit/Prompt-Injection (PromptArmor §9.1, Computer-Use §9.4, Chrome §9.5) |
-| §7 Grenzen, Datenschutz, Sicherheit | §9.6 Compliance-Lücken + §10 Per-Design-Grenzen & Usage |
-| Stolpersteine (Windows-Install, Prompt-Injection, Skill-Mount) | §1 (VM service/EXDEV), §9.1 (Injection), §6.1 (Skill-Mount) |
-
----
-
-## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
-
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (§13). Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
-
-| Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/claude-tooling/cowork.md`) |
-|--------------------------------|----------------------------------------------------------------------|
-| §1 Überblick & Einrichtung / Berechtigungsmodi | §1/§2 VM-Start (Win/macOS), §3 macOS-Permissions/TCC |
-| §2 Skills & Plugins | §6 Skills & Plugins |
-| §3 Connectors & MCP | §5 Connectors & MCP |
-| §4 Datei-Arbeit & Ergebnis-Dokumente | §4 Datei-Arbeit & Datenverlust |
-| §5 Geplante Aufgaben & Live-Artefakte | §7 Scheduled Tasks, §8 Live-Artefakte |
-| §6 Computer-Steuerung & Browser / §7 Grenzen | §9 Sicherheit/Prompt-Injection |
+- **Compliance-Blindspot:** Cowork-Aktivität ist NICHT in Compliance API / Audit-Logs / Daten-Exporten erfasst (alle Pläne inkl. Enterprise). Ersatz nur via OpenTelemetry 
