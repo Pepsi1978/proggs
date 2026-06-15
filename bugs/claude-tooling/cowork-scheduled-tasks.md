@@ -20,7 +20,7 @@
 > anthropic.com) = Grundwahrheit. GitHub-Issues im offiziellen Repo = nahe-offiziell (Anthropic-Tracker,
 > aber Nutzer-Einreichungen). Community/Presse = `extern` (sekundär).
 >
-> **Gegenseite (Best Practices):** [`best-practices/projekt-code/claude-tooling/best-practices-cowork.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork.md) §5 (Bezugstabelle ganz unten).
+> **Gegenseite (Best Practices):** [`best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md) (dedizierte Gegenseite, Bezugstabelle ganz unten; Kurzfassung auch in `best-practices-cowork.md` §5).
 
 ---
 
@@ -423,9 +423,9 @@ per-routine/per-account-Stundencaps. **Ausnahme:** einmalige (One-off-)Cloud-Lä
 
 ## 🔗 Bezug zur Best-Practices-Gegenseite
 
-Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-cowork.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork.md) §5 („Geplante Aufgaben"). Links die *Falle*, rechts die *Regel, die sie verhindert*.
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md) (dedizierte Gegenseite). Links die *Falle*, rechts die *Regel, die sie verhindert*.
 
-| Bug-Abschnitt (dieser Almanach) | Adressiert durch Best-Practice (best-practices-cowork.md §5) |
+| Bug-Abschnitt (dieser Almanach) | Adressiert durch Best-Practice (best-practices-cowork-scheduled-tasks.md) |
 |---------------------------------|--------------------------------------------------------------|
 | §0 System-Wahl · §1 Wach/Fokus · §1.4 Mobile | „Cloud-Routine für Zuverlässigkeit; Local nur für lokale Dateien" |
 | §2.1 Catch-up | „Zeit-Guardrails in den Prompt" |
@@ -433,6 +433,4 @@ Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/clau
 | §5 Cron/Zeit | „5-Feld-Cron, lokale Zeit, fireAt mit Offset" |
 | §7.1 Permissions | „Run now + always allow pro Task" |
 | §8.1 MCP-Warm-up | „ersten MCP-Call per Subagent" |
-| §9.1/§9.2 frische Session/Worktree | „selbst-enthaltender Prompt + Worktree-Toggle" |
-| §9.4 Sicherheit | „keine sensiblen Connectors unbeaufsichtigt; destruktive Guardrails" |
-| §10 Quota | „leichte Tasks bündeln" |
+| §9.1/§9.2 frische Session/Worktree | „selbst-enthaltender Prompt + Worktree-Toggl

@@ -83,8 +83,9 @@ projekt-code/
 └── claude-tooling/
     ├── best-practices-mcp-server.md           ← MCP-Server-Bau (Stand 2026-06-03, MCP TS-SDK 1.27.1/1.29.0, zod v4, Spec 2025-11-25) — Gegenstueck zu bugs/claude-tooling/mcp-server.md
     ├── best-practices-python-windows.md       ← Python auf Windows / Cross-Platform-Scripting (Stand 2026-06-02, CPython 3.13.13)
-    ├── best-practices-cowork.md               ← Cowork-Desktop-App nutzen (Stand 2026-06-13, Research-Preview/GA) — noch ungepaart (kein Bug-Almanach)
+    ├── best-practices-cowork.md               ← Cowork-Desktop-App nutzen (Stand 2026-06-13, Research-Preview/GA) — Gegenstueck zu bugs/claude-tooling/cowork.md
     ├── best-practices-cowork-git-push.md   ← Git committen/pushen aus Cowork (Stand 2026-06-15, Git 2.34.1) — Config/Plumbing/Push/Credentials/.gitattributes/LFS/Mount; Gegenstueck zu bugs/claude-tooling/cowork-git-push.md
+    ├── best-practices-cowork-scheduled-tasks.md  ← Geplante/wiederkehrende Aufgaben in Cowork (Stand 2026-06-15) — System-Wahl/Prompt-Design/Cadence/Sicherheit/Zuverlässigkeit/Verwaltung/Task-Typen; Gegenstueck zu bugs/claude-tooling/cowork-scheduled-tasks.md
     ├── best-practices-claude-code-desktop-vs-cli.md  ← Claude Code Desktop-App vs. CLI: was geht, was nur in der CLI (Stand 2026-06-13, Desktop-Redesign 14.04.2026) — Gegenstück zu bugs/claude-tooling/claude-code-desktop-vs-cli.md
     └── best-practices-agent-knowledge-system.md  ← Agenten-Wissens-/Lern-System bauen & verbessern (Stand 2026-06-15) — Progressive Disclosure, Doppel-Trigger, Memory-Governance, Staleness, echte Lern-Signale; Gegenstueck zu bugs/claude-tooling/agent-knowledge-system.md
 ```
@@ -96,24 +97,4 @@ Vorhandene Kategorien & Dateien:
 **apis** (-api-integration-general, -multi-provider, -openai-api, -anthropic-api, -google-gemini-api, -groq-api, -openrouter-api, -xai-grok-api, -mistral-api, -deepseek-api, -local-openai-compatible, -other-llm-apis, -oauth-device-code, -cli-impersonation-subscription-auth, -tts-provider) ·
 **desktop** (-dotnet-csharp, -windows-overlay, -windows-electron-text-injection, -swift-appkit, -macos-overlay, -whisper-stt-lokal, -3d-metal-scenekit-macos, -3d-dotnet-directx-windows, -3d-rust-wgpu-bevy, -3d-godot) ·
 **web** (-chrome-extensions, -typescript, -3d-threejs-webgpu) ·
-**assets** (-icon-building, -3d-visual-quality) ·
-**peripherie** (-stream-deck) ·
-**claude-tooling** (-mcp-server, -python-windows, -cowork, -cowork-git-push, -claude-code-desktop-vs-cli, -agent-knowledge-system)
-(jede Datei mit Bezugs-Tabelle zum passenden Bug-Almanach in `~/proggs/bugs/<kategorie>/`).
-
-Dateiname-Konvention: `best-practices-<software>.md`. Inhalt beginnt mit
-`# <Software> — Best Practices (Stand JJJJ-MM-TT, Version X)`.
-
-## Unterschied zu den Harness-Kategorien (wichtig)
-
-| | Harness-Kategorien (01–12) | Projekt-Code (diese Sektion) |
-|---|----------------------------|------------------------------|
-| Thema | Claude-Code-Werkzeuge (Hooks, Skills, MCP, Settings …) | Software in den Projekten (Kotlin, Swift, Gradle …) |
-| Changelog-Quelle | offizieller **Claude-Code**-Changelog (`update-changelog.ps1`) | der **eigene** Changelog der Software (Kotlin-Releases, Swift-Releases …) — KEIN Claude-Script |
-| Versions-Anker | installierte Claude-Code-Version | live ermittelte Version der jeweiligen Software |
-
-## Quellen-Rangordnung (wie im Rest des Ordners)
-
-Offizielle Hersteller-Quelle (JetBrains/Kotlin, Apple/Swift, Gradle, Microsoft/.NET …) =
-Grundwahrheit. Community/Blogs = gelabelte `extern`-Alternative, ueberstimmt nie das
-Offizielle. Jeder Eintrag traegt Quelle + Datum + `offiziell`/`extern`-Flag.
+**assets** (-icon-building, -3d-visual-quality
