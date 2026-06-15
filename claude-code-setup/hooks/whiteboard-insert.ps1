@@ -13,6 +13,22 @@ function Invoke-WhiteboardSafePull {
     }
 }
 
+# Get-WhiteboardDedupKey — normalises an entry line for duplicate detection (2026-06-15).
+# Strips leading markdown markers (###, -, *, >) and a leading date/time stamp, then collapses
+# whitespace. Two auto-log entries that differ only in their timestamp produce the SAME key, so
+# the section-duplicate check below skips re-writing them (prevents the auto-log spam that had to
+# be cleaned up in #46799). Returns "" for too-short keys (dedup then skipped — see caller).
+function Get-WhiteboardDedupKey {
+    param([string]$Line)
+    if ($null -eq $Line) { return "" }
+    $s = $Line.Trim()
+    $s = $s -replace '^[#>\-\*\s]+', ''                                                   # leading markdown markers
+    $s = $s -replace '^\[?\d{4}-\d{2}-\d{2}[ T]?\d{0,2}:?\d{0,2}:?\d{0,2}\]?\s*[—:\-]*\s*', ''  # leading date(+time)
+    $s = $s -replace '^\[?\d{1,2}:\d{2}(:\d{2})?\]?\s*[—:\-]*\s*', ''                 # leading time-only
+    $s = $s -replace '\s+', ' '
+    return $s.Trim()
+}
+
 # Replace-WhiteboardEntry — Removes ALL lines matching a pattern within a section, then inserts the new entry.
 # Usage: Replace-WhiteboardEntry -Section "Systemzustand" -MatchPattern "Pending Admin Updates" -Entry "- **Pending Admin Updates (5):** foo,bar"
 # This prevents duplicate accumulation (e.g. pending-admin-updates hook writing a new line every session).
@@ -139,6 +155,19 @@ function Insert-WhiteboardEntry {
         }
 
         if ($sectionIdx -ge 0) {
+            # Dedup (2026-06-15): if an entry with the same normalised key already exists in this
+            # section, do NOT write it again (prevents auto-log spam — cf. #46799). Re-appears only
+            # after the existing line was removed (e.g. problem resolved) → re-log is allowed.
+            $dedupKey = Get-WhiteboardDedupKey (($Entry -split "`r?`n")[0])
+            if ($dedupKey.Length -ge 20) {
+                for ($d = $sectionIdx + 1; $d -lt $lines.Count; $d++) {
+                    if ($lines[$d] -match '^## ' -or $lines[$d].TrimEnd() -eq '---') { break }
+                    if ((Get-WhiteboardDedupKey $lines[$d]) -eq $dedupKey) {
+                        return  # duplicate already present — skip (mutex released in finally)
+                    }
+                }
+            }
+
             # Find placeholder or insertion point within this section
             $insertIdx = $sectionIdx + 1
             $placeholderIdx = -1

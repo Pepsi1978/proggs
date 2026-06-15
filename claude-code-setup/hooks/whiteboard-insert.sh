@@ -147,6 +147,27 @@ for i, line in enumerate(lines):
 if section_idx < 0:
     sys.exit(0)  # Section not found — do nothing
 
+# Dedup (2026-06-15): if an entry with the same normalised key already exists in this section,
+# do NOT write it again (prevents auto-log spam — cf. #46799). Identical to whiteboard-insert.ps1
+# Get-WhiteboardDedupKey. Re-appears only after the existing line was removed (problem resolved).
+import re
+def _norm_key(s):
+    s = s.strip()
+    s = re.sub(r'^[#>\-\*\s]+', '', s)                                                       # leading markers
+    s = re.sub(r'^\[?\d{4}-\d{2}-\d{2}[ T]?\d{0,2}:?\d{0,2}:?\d{0,2}\]?\s*[—:\-]*\s*', '', s)  # leading date(+time)
+    s = re.sub(r'^\[?\d{1,2}:\d{2}(:\d{2})?\]?\s*[—:\-]*\s*', '', s)                # leading time-only
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+_dedup_key = _norm_key(entry.split('\n')[0])
+if len(_dedup_key) >= 20:
+    for j in range(section_idx + 1, len(lines)):
+        stripped = lines[j].rstrip()
+        if stripped.startswith('## ') or stripped == '---':
+            break
+        if _norm_key(lines[j]) == _dedup_key:
+            sys.exit(0)  # duplicate already present — do not re-write
+
 # Scan inside the section to find placeholder or insertion point
 insert_idx = section_idx + 1
 placeholder_idx = -1
