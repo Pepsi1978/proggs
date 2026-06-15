@@ -52,6 +52,7 @@
 | 18 | Aufgabe stoppt mittendrin | App muss offen + Rechner wach bleiben (per Design) | §10.1 |
 | 19 | Usage überraschend schnell aufgebraucht | Cowork verbraucht viel mehr als Chat → Einfaches im Chat, Verwandtes bündeln | §10.5 |
 | 20 | Datei landet „irgendwo" / „Location not available" | Zielordner explizit verbinden + vollen Pfad angeben (kein temp-Scratchpad) | §4.3 |
+| 21 | `git push` scheitert: „could not read Username for github.com" | Kein Git-Credential-Manager in der VM; Fix nur sitzungsweit → für DAUERHAFT: Token in `.git/credentials` + `credential.helper store --file=.git/credentials` (relativ, Remote NICHT ändern) | §10a ⭐HÄUFIG |
 
 ---
 
@@ -744,6 +745,81 @@ sensiblen Daten in Excel/PowerPoint-Add-ins bei aktivem Cowork. Lokale Daten in 
 **Ursache:** Per Design — der Cowork-Toggle ist org-weit; granulare Kontrolle nur Enterprise via Gruppen/Custom Roles; Projects haben keine Admin-Restriktion.
 **FIX:** Enterprise + Gruppen/Custom Roles für selektive Aktivierung; auf Team nur global an/aus.
 **Quelle:** support.claude.com/en/articles/13455879 (offiziell).
+
+---
+
+## 10a. Git / GitHub-Push aus Cowork — committen geht, push scheitert ⭐ HÄUFIG
+
+> Recherchiert 2026-06-15 (7 Researcher: offizielle Anthropic-/GitHub-Doku, GitHub-Issues,
+> Reverse-Engineering-Analysen). Gegenseite: best-practices-cowork.md §3a. Frank-zugewandte
+> Schritt-Anleitung: `~/proggs/COWORK-GIT-PUSH-SETUP.md`.
+
+### 10a.1 `git push` scheitert mit „could not read Username for github.com" ⭐ HÄUFIG — selbst erlebt
+**Symptom:** In Cowork lässt sich committen, aber `git push` bricht ab mit
+`could not read Username for github.com` (bzw. fragt nach Username/Passwort). `git fetch`/`ls-remote`
+auf ein **öffentliches** Repo geht anonym, Push aber nicht.
+**Ursache:** Die Cowork-Linux-VM hat **keinen Git-Credential-Manager, kein `gh` CLI und keinen
+GitHub-Push-Proxy**. Der GitHub-Connector der Desktop-App ist eine reine **API**-Integration
+(Dateien lesen, Issues/PRs) und liefert **keine** Git-Push-Credentials. Der scoped Push-Proxy
+(übersetzt eine Sandbox-Credential in den echten Token) existiert nur in **„Claude Code on the web"**,
+NICHT in der Cowork-Desktop-VM.
+**Versionen:** Cowork Desktop 2026 (macOS+Windows), z. B. App v1.8555.2.0. Offen, kein nativer Fix.
+**FIX (funktionserhaltend, sitzungsweit):** Token-Auth in der VM hinterlegen —
+`git config --global credential.helper store` + `~/.git-credentials` mit
+`https://Pepsi1978:<TOKEN>@github.com`. **Hält aber nur die laufende Session** (siehe 10a.2).
+**Quelle:** support.claude.com/en/articles/10167454 (offiziell, Connector=nur API);
+code.claude.com/docs/en/claude-code-on-the-web (offiziell, Push-Proxy nur Web);
+GitHub anthropics/claude-code #27344/#13212 (Git-Auth-Proxy), #2911 (SSH ohne Prompt unmöglich).
+
+### 10a.2 ⭐ KRITISCH — der Push-Fix hält nur EINE Session (VM-Home ist ephemer)
+**Symptom:** Nach erfolgreichem Setup (10a.1) funktioniert Push — beim nächsten Cowork-Start
+ist die Anmeldung wieder weg, Push scheitert erneut.
+**Ursache:** Die Cowork-VM startet bei jeder Session mit **frischem Dateisystem** (Session-Disk
+wird pro Boot neu ext4-formatiert; „clean VM state" ist offiziell Absicht). `~/.git-credentials`,
+`~/.gitconfig`, `~/.ssh` im **VM-Heimverzeichnis** überleben NICHT. **Persistent ist nur, was im
+gemounteten Host-Ordner liegt** (VirtioFS-Mount = der echte Windows/macOS-Ordner). Zusätzlich sind
+die VM-**Mount-Pfade nicht-deterministisch** zwischen Sessions (Issue #54483) → absolute Pfade brechen.
+**Versionen:** Cowork 2026 (macOS ephemer; Windows `sessiondata.vhdx` teils persistent, aber
+korruptionsanfällig → unzuverlässig).
+**FIX (DAUERHAFT, funktionserhaltend):** Zugangsdaten in `.git/` des gemounteten Repos ablegen —
+überlebt jede Session und wird nie committet:
+```bash
+# im proggs-Repo (Remote bleibt HTTPS, NICHT ändern):
+git config credential.helper 'store --file=.git/credentials'   # LOKAL, nicht --global
+printf 'https://Pepsi1978:%s@github.com\n' '<TOKEN>' > .git/credentials
+chmod 600 .git/credentials
+git ls-remote origin -h refs/heads/main   # Test, verändert nichts
+```
+- **Relativer** Pfad `.git/credentials` (umgeht die wechselnden Mount-Pfade).
+- `credential.helper` **lokal** (nicht `--global` → das läge im flüchtigen VM-Home).
+- `.git/` wird per Definition NIE committet → Token landet nie auf GitHub.
+**Quelle:** git-scm.com/docs/git-credential-store (offiziell); GitHub anthropics/claude-code
+#54483 (Mount-Pfade nicht-deterministisch); blog.pluto.security / pvieito.com (VM ephemer, Reverse-Eng.).
+
+### 10a.3 FALLE — `.git/config` ist mit dem Host-Terminal geteilt
+**Symptom:** Nach `git remote set-url origin git@github.com:...` (SSH) oder `https://<TOKEN>@github.com/...`
+in Cowork funktioniert plötzlich auch das **normale Windows-/macOS-Terminal** nicht mehr wie vorher.
+**Ursache:** Der gemountete Ordner ist physisch derselbe — `.git/config` (inkl. Remote-URL,
+`core.sshCommand`) ist **zwischen Cowork-VM und Host-CLI geteilt**. Eine Remote-/SSH-Umstellung in
+Cowork ändert das Setup auch für das Terminal (das den VM-Key/SSH-Pfad nicht hat).
+**Versionen:** Cowork 2026, jedes Repo in einem gemounteten Ordner.
+**FIX:** Remote-URL NICHT ändern. Den **additiven** `credential.helper store --file=.git/credentials`
+nutzen (10a.2) — der ergänzt nur einen zweiten Auth-Weg und lässt die Host-CLI (Windows Credential
+Manager) unberührt. SSH-Deploy-Key (liefe nie ab) NICHT empfehlen, solange `.git/config` geteilt ist.
+**Quelle:** git-scm.com (credential.helper additiv); Recherche 2026-06-15.
+
+### 10a.4 Token-Hygiene für den Dauer-Token (privates Repo!)
+**Symptom/Risiko:** Dauerhaft gespeicherter Token in `.git/credentials` (Klartext auf der Host-Platte).
+**Ursache/Fakten:** (a) Fine-grained PAT max. **366 Tage** Laufzeit → muss danach erneuert werden
+(kein „nie ablaufen" ohne Policy-Ausnahme). (b) **`proggs` ist PRIVAT** → GitHub-Secret-Scanning
+sperrt ein geleaktes Token **NICHT automatisch** (Auto-Revoke nur bei öffentlichen Repos) → bei Leak
+**manuell** widerrufen. (c) Reines Push braucht **Contents: Read and write** + **Metadata: Read**
+(Metadata wird leicht vergessen → sonst `403`).
+**FIX:** Fine-grained PAT, nur Repo `proggs`, nur Contents:RW (+Metadata:R), kürzeste praktikable
+Laufzeit + Rotation. Datei `chmod 600`. In Cowork keine fremden/sensiblen Ordner verbinden
+(Prompt-Injection-Risiko, §9) — minimaler Token-Scope begrenzt den Schaden.
+**Quelle:** docs.github.com (PAT-Permissions, Token-Expiration, Secret-Scanning private vs public);
+cloudsecurityalliance.org (Least-Privilege gegen Prompt-Injection).
 
 ---
 

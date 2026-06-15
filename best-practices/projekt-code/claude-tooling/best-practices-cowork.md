@@ -42,6 +42,7 @@
 | 13 | Tool-Hierarchie | Connector → Claude in Chrome → Computer Use (in dieser Reihenfolge) | §6 |
 | 14 | Computer Use | Nur Pro/Max, **keine Sandbox**; Links aus Mail/Doku nie per Computer-Use klicken | §6 |
 | 15 | Grenzen | Compliance-Blindspot (nicht in Audit-Logs); deutlich höherer Usage-Verbrauch als Chat | §7 |
+| 16 | Git push aus Cowork (dauerhaft) | Kein nativer Push-Weg/Secret-Store/Startup-Hook → Token in `.git/credentials` (im Mount, nie committet, relativer Pfad) + `credential.helper store` lokal; Remote NICHT auf SSH/Token-URL ändern (geteilte `.git/config`) | §3a |
 
 ---
 
@@ -73,6 +74,29 @@
 - **Gmail/Drive/Calendar Funktionsumfang:** Gmail = lesen/suchen, Entwürfe erstellen (**kein Versand durch Claude**), Labels/Threads; nur Anhang-Metadaten. Calendar = Events sehen/anlegen/ändern/löschen. Drive = Docs/Sheets/Slides/PDFs/Office lesen, Ordner/Upload; nur Textextraktion. Jede Aktion braucht Freigabe. Quelle: support.claude.com/en/articles/10166901 · `[offiziell]`
 - **Auth:** delegiertes Pro-Nutzer-OAuth, keine Service-Accounts; org-weite Aktivierung macht den Connector nur verfügbar, jeder Nutzer authentifiziert sich selbst. Tokens verschlüsselt, pro Nutzer gescoped. Quelle: support.claude.com/en/articles/14503689 · 2026-06 · `[offiziell]`
 - **Admin-Kontrollen (Team/Enterprise):** pro Connector "Always allow / Needs approval / Blocked" je Aktionskategorie, org-weit erzwungen. Bei 10+ aktiven Connectors "On demand"-Tool-Access nutzen, um Kontext zu sparen. Quelle: support.claude.com/en/articles/11176164 · `[offiziell]`
+
+## 3a. Git / GitHub-Push aus Cowork dauerhaft einrichten
+
+> Recherchiert 2026-06-15 (7 Researcher). Bug-Gegenseite: `bugs/claude-tooling/cowork.md` §10a.
+> Schritt-Anleitung für Frank: `~/proggs/COWORK-GIT-PUSH-SETUP.md`.
+
+- **Ausgangslage:** Cowork hat **keinen** nativen `git push`-Weg, **keinen** Secret-Store und
+  **keinen** Startup-Hook. Die VM startet pro Session frisch → VM-Home (`~/.git-credentials`)
+  ist nie persistent. Persistent ist nur der gemountete Ordner. Quelle: support.claude.com/.../10167454
+  + code.claude.com/docs/en/claude-code-on-the-web + Architektur-Doku · 2026 · `[offiziell]`
+- **Richtiger Weg (dauerhaft):** Token in `.git/credentials` ablegen + `git config
+  credential.helper 'store --file=.git/credentials'` **lokal** (nicht `--global`). `.git/` liegt
+  im persistenten Mount und wird nie committet; **relativer** Pfad umgeht die nicht-deterministischen
+  Mount-Pfade. Quelle: git-scm.com/docs/git-credential-store · `[offiziell]`
+- **Remote-URL NICHT ändern:** `.git/config` ist mit dem Host-Terminal **geteilt** — eine
+  Umstellung auf SSH oder Token-in-URL beschädigt das funktionierende Terminal-Setup.
+  `credential.helper store` ist **additiv** und die sichere Wahl. Quelle: Recherche 2026-06-15.
+- **Token-Hygiene:** Fine-grained PAT, nur Ziel-Repo, **Contents: Read and write** + **Metadata: Read**
+  (sonst `403`); kurze Laufzeit + Rotation (max 366 Tage). Bei **privatem** Repo gibt es **kein**
+  Auto-Revoke bei Leak → manuell widerrufen. Quelle: docs.github.com (PAT-Permissions/Expiration/
+  Secret-Scanning) · `[offiziell]`
+- **Alternative SSH-Deploy-Key** (liefe nie ab) bewusst NICHT empfohlen, solange `.git/config`
+  zwischen VM und Host geteilt ist (würde das Terminal-Remote auf SSH zwingen). Quelle: docs.github.com/.../managing-deploy-keys · `[offiziell]`
 
 ## 4. Datei-Arbeit & Ergebnis-Dokumente
 
