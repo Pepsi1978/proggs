@@ -296,7 +296,7 @@ $ti_extra"
         # .cs: Content-Probe -> Groq-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN (trap).
-        groqSignal=0; wakeSignal=0; whisperSignal=0; dxSignal=0; winOverlaySignal=0
+        groqSignal=0; wakeSignal=0; whisperSignal=0; dxSignal=0; winOverlaySignal=0; textInjectSignal=0
         case "$fpl" in
           *.cs)
             probe=""
@@ -330,6 +330,11 @@ $ti_extra"
             case "$probe" in
               *WS_EX_NOACTIVATE*|*WS_EX_TOOLWINDOW*|*WS_EX_TRANSPARENT*|*WS_EX_LAYERED*|*RegisterHotKey*|*WH_KEYBOARD_LL*|*SetWindowPos*|*WindowChrome*|*AllowsTransparency*) winOverlaySignal=1;;
             esac
+            # Text-Injection in fremde Electron/Chromium-Felder (Claude Desktop Chat/Code/Cowork) -> windows-electron-text-injection.md.
+            # Spezifischer als der Overlay-Zweig: Chromium-Render-HWND / UIA-Befuellen / Scancode-Paste / A11y-Aktivierung.
+            case "$probe" in
+              *Chrome_RenderWidgetHostHWND*|*force-renderer-accessibility*|*KEYEVENTF_SCANCODE*|*EnumChildWindows*|*ValuePattern*|*TextPattern*|*FlaUI*|*DWMWA_EXTENDED_FRAME_BOUNDS*) textInjectSignal=1;;
+            esac
             ;;
         esac
         if [ "$groqSignal" -eq 1 ]; then
@@ -340,6 +345,8 @@ $ti_extra"
             slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
         elif [ "$dxSignal" -eq 1 ]; then
             slug="dxwindows"; file="3d-dotnet-directx-windows.md"; name="3D auf Windows (.NET DirectX/Stride/Silk.NET)"
+        elif [ "$textInjectSignal" -eq 1 ]; then
+            slug="wineltextinject"; file="windows-electron-text-injection.md"; name="Text-Injection in Electron/Chromium-Felder (Windows, C#/WPF)"
         elif [ "$winOverlaySignal" -eq 1 ]; then
             slug="winoverlay"; file="windows-overlay.md"; name="Windows-Overlay-Fenster (C#/WPF)"
         else

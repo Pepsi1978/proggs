@@ -252,7 +252,7 @@ try {
         # .cs: Content-Probe -> Groq-Whisper-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN.
-        $groqSignal = $false; $wakeSignal = $false; $whisperSignal = $false; $dxSignal = $false; $winOverlaySignal = $false
+        $groqSignal = $false; $wakeSignal = $false; $whisperSignal = $false; $dxSignal = $false; $winOverlaySignal = $false; $textInjectSignal = $false
         if ($fpl -match '\.cs$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -270,6 +270,9 @@ try {
             if ($probe -match 'Stride\.' -or $probe -match 'Silk\.NET' -or $probe -match 'Vortice' -or $probe -match 'Veldrid' -or $probe -match 'SharpDX' -or $probe -match 'Direct3D' -or $probe -match 'D3D12' -or $probe -match 'MonoGame') { $dxSignal = $true }
             # Windows-Overlay-Fenster (WPF: always-on-top/click-through/global Hotkey) -> windows-overlay.md.
             if ($probe -match 'WS_EX_NOACTIVATE' -or $probe -match 'WS_EX_TOOLWINDOW' -or $probe -match 'WS_EX_TRANSPARENT' -or $probe -match 'WS_EX_LAYERED' -or $probe -match 'RegisterHotKey' -or $probe -match 'WH_KEYBOARD_LL' -or $probe -match 'SetWindowPos' -or $probe -match 'WindowChrome' -or $probe -match 'AllowsTransparency') { $winOverlaySignal = $true }
+            # Text-Injection in fremde Electron/Chromium-Felder (Claude Desktop Chat/Code/Cowork) -> windows-electron-text-injection.md.
+            # Spezifischer als der Overlay-Zweig: Chromium-Render-HWND / UIA-Befuellen / Scancode-Paste / A11y-Aktivierung.
+            if ($probe -match 'Chrome_RenderWidgetHostHWND' -or $probe -match 'force-renderer-accessibility' -or $probe -match 'KEYEVENTF_SCANCODE' -or $probe -match 'EnumChildWindows' -or $probe -match 'ValuePattern' -or $probe -match 'TextPattern' -or $probe -match 'FlaUI' -or $probe -match 'DWMWA_EXTENDED_FRAME_BOUNDS') { $textInjectSignal = $true }
         }
         if ($groqSignal) {
             $slug = 'groq'; $file = 'groq-transkription.md'; $name = 'Groq Whisper Transkription (Audio/STT)'
@@ -279,6 +282,8 @@ try {
             $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
         } elseif ($dxSignal) {
             $slug = 'dxwindows'; $file = '3d-dotnet-directx-windows.md'; $name = '3D auf Windows (.NET DirectX/Stride/Silk.NET)'
+        } elseif ($textInjectSignal) {
+            $slug = 'wineltextinject'; $file = 'windows-electron-text-injection.md'; $name = 'Text-Injection in Electron/Chromium-Felder (Windows, C#/WPF)'
         } elseif ($winOverlaySignal) {
             $slug = 'winoverlay'; $file = 'windows-overlay.md'; $name = 'Windows-Overlay-Fenster (C#/WPF)'
         } else {
