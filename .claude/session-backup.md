@@ -67,3 +67,20 @@ ACHTUNG — Speicherort NICHT eindeutig gefunden: `~/proggs/Cowork/` enthaelt nu
 Cowork-Skills werden per ZIP in die Desktop-App hochgeladen, die Quelle der gekuerzten Skills liegt vermutlich
 woanders. FRISCHE SESSION: ZUERST Frank nach dem genauen Speicherort/Quellordner der gekuerzten Cowork-Skill-
 Varianten fragen, DANN analog zu W3-5 anpassen. Gehoert thematisch zur Update-Skills-/Skill-Konsistenz-Arbeit.
+
+## PRAEZISIERUNG (Frank, 2026-06-15 spaet) — Cowork-Skill-ZIPs in ~/proggs/Cowork/ bauen
+Frank-Wunsch konkret: Die gekuerzten Cowork-Varianten als FERTIGE ZIPs in `~/proggs/Cowork/` ablegen, sodass
+Frank sie direkt von dort in die Cowork-Desktop-App HOCHLADEN/EINFUEGEN kann (Cowork installiert Skills per ZIP-Upload).
+TODO (frische Session, eigener grosser Block):
+1. Fuer JEDEN der 3 Skills eine GEKUERZTE Cowork-Variante des `SKILL.md` erstellen (Quelle = die CLI-Skills
+   `~/.claude/skills/{bug-almanach-recherche,best-practices}` + ein research/researcher-Skill). Kuerzen, weil Cowork
+   engere Limits hat; description einzeilig <=200 Zeichen, `name`-Feld setzen (Cowork-Anforderung, siehe
+   bugs/claude-tooling/cowork.md + best-practices-cowork.md §2 Skills/Plugins).
+2. Die neuen W3-Mechanismen EINBAUEN (soweit in Cowork sinnvoll): Anker-Feld W3-1, check-version-anchor-Hinweis,
+   bug-almanac-hint-Pflege, `python bugs/health.py`-Self-Test; PLUS Cowork-Git-Logik (`bash ~/proggs/cowork-git.sh
+   push-files ...` statt nacktem git; ~45s-Shell-Limit; Mount-Fallen — siehe ~/.claude/rules/cowork-git-push.md).
+3. Jede Variante als eigenes ZIP packen (Ordnerstruktur `<skillname>/SKILL.md` im ZIP) und in `~/proggs/Cowork/`
+   ablegen. README dort aktualisieren (welche ZIPs, wie hochladen).
+4. Committen+pushen (Cowork-Ordner-Inhalt gehoert ins Repo). Frank meldet, sobald hochgeladen/getestet.
+Hinweis: Diese gekuerzten Cowork-Skills existierten bisher NUR in der Desktop-App (nicht im Dateisystem) — sie
+werden also NEU erstellt (basierend auf den CLI-Skills), nicht editiert.
