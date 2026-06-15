@@ -107,6 +107,31 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
 - Grosse Aufgabe (15+ Minuten): Mehrere Commits nach logischen Teilschritten
 - **Faustregel: Lieber 5 kleine Commits als 1 grosser. Jeder Commit ist ein Rettungspunkt.**
 
+## Cowork Git-Push (KRITISCH — nur in Claude Cowork)
+
+> In **Cowork** (Desktop-App, Linux-VM ueber eine gemountete Windows-Bruecke) laeuft Git NICHT
+> direkt auf dem Windows-Ordner. Die Bruecke verzerrt, wie Dateien aussehen, und bringt mehrere
+> Fallen mit. Volltext-Regel (beim Setup nach `~/.claude/rules/` synchronisiert):
+> `~/.claude/rules/cowork-git-push.md`. Gesetzt 2026-06-15 nach einem Testpush, der 5 Probleme aufdeckte.
+
+- **IMMER `bash ~/proggs/cowork-git.sh` benutzen, NIE nacktes `git commit`/`git push` aus der VM.**
+  - `bash cowork-git.sh setup` → wartet auf „Push-Zugang OK".
+  - `bash cowork-git.sh push "#NNN - Text"` → add -A + commit + push origin/main.
+- Das Skript faengt **5 Mount-Fallen** ab: (1) nicht loeschbare `.lock` → git-dir auf VM-ext4
+  (`~/.cowork-gitdir/proggs`); (2) Datei-Modus immer 0755 → `core.fileMode false`; (3) unlesbare
+  Symlinks (`readlink: I/O error`) → `skip-worktree`; (4) Git-LFS-Dateien (`*.onnx`/`*.aar`)
+  erscheinen als Vollinhalt (bis ~262 MB) → `skip-worktree`, sonst lehnt GitHub ab (100-MB-Limit);
+  (5) Build-Berge → `**/build/`, `**/.gradle/`, `**/node_modules/` in `.gitignore`.
+- **Ein Cowork-Shell-Aufruf laeuft max ~45 s und Hintergrundprozesse ueberleben Aufruf-Grenzen
+  NICHT** → der Push muss in EINEM Aufruf durchlaufen (deshalb sind Falle 4 + 5 Pflicht, sonst ist
+  `add -A` zu langsam). Liegengebliebener Lock: `rm -f ~/.cowork-gitdir/proggs/*.lock` (VM-lokal, gefahrlos).
+- **„fetch first"/Non-Fast-Forward** oder nur gezielte Dateien pushen → worktree-schonendes
+  Plumbing-Verfahren (`read-tree origin/main` → `add` der gewollten Dateien → `write-tree` →
+  `commit-tree -p origin/main` → `update-ref` → `push`), weil `git rebase` am „unsauberen"
+  Mount-Arbeitsbaum (CRLF/LFS) scheitert. Vollstaendig in der Volltext-Regel.
+- `cowork-git.sh push` macht `add -A` und nimmt ALLE pending Dateien mit (auch Logs/Temp/Screenshots).
+  Fuer einen gezielten Commit das Plumbing-Verfahren mit den konkreten Dateien nutzen.
+
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
@@ -404,37 +429,4 @@ dass und warum semantisch statt Grep gesucht wird.
   2. **Installation**: Plattform-spezifische Anleitungen (macOS + Windows getrennt), fuer Anfaenger geschrieben, Schritt-fuer-Schritt mit Erklaerungen, Download-Links, Fehlerbehebung
 
 ## Claude Code Setup-Pruefung
-- Beim **ersten Start** in diesem Repository: `claude-code-setup/manifest.json` pruefen
-- Fehlende Plugins/Skills dem Benutzer melden und nach Bestaetigung nachinstallieren
-- Manuell: `bash claude-code-setup/setup.sh` (macOS) oder `powershell claude-code-setup/setup.ps1` (Windows)
-
-## CLAUDE.md Speicherort
-- Die CLAUDE.md existiert NUR im Repository: `~/proggs/CLAUDE.md`
-- Es gibt KEINE Kopie im Home-Verzeichnis (`~/CLAUDE.md`) mehr — das Duplikat wurde am 2026-04-04 entfernt um ~8.700 Tokens Kontext zu sparen.
-
-## Compact Instructions
-
-Bei jeder Kontext-Komprimierung MUSS Folgendes erhalten bleiben (CLAUDE.md wird nach der
-Komprimierung frisch eingelesen — hier steht, was die Zusammenfassung niemals verlieren darf):
-
-- **Die 3 Hauptdirektiven** (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) gelten
-  ununterbrochen weiter — auch nach jeder Komprimierung.
-- **Aktueller Aufgaben-Stand:** Ziel der laufenden Aufgabe, was schon erledigt ist (welche
-  Commit-#Nummern), was noch aussteht. Offene Multi-Task-Listen (Semikolon-Aufgaben) vollstaendig.
-- **Uncommittete Arbeit:** Welche Dateien geaendert, aber noch nicht committed sind.
-- **Letzte Benutzer-Korrekturen/Praeferenzen** dieser Session, die noch nicht persistiert wurden.
-- **Commit+Push-Disziplin** sowie die Cross-Platform- und Status-Meldungs-Pflicht.
-
-Darf in der Zusammenfassung wegfallen: abgeschlossene Tool-Ausgaben im Detail, bereits committete
-Zwischenschritte, lange Datei-Dumps.
-
-## Sprache
-- Kommunikation mit dem Benutzer auf Deutsch.
-- Code-Kommentare und Commit-Messages auf Englisch.
-- **Selbst erstellte Agents, Skills und Commands: Komplett auf Deutsch.**
-  - Frontmatter-`description`: Deutsch ("Nutze diesen Agenten wenn..." statt "Use this agent when...")
-  - `<example>`-Bloecke: Kontext, User, Assistant, Commentary — alles Deutsch
-  - System-Prompt (Markdown-Body): Deutsch
-  - Einzige Ausnahme: Tool-Namen (`nemo_ask`), Code-Variablen und technische Bezeichner bleiben Englisch
-  - Externe/installierte Plugins werden NICHT uebersetzt
-  - Vollstaendige Regel: `~/.claude/rules/german-agents-skills.md`
+- Beim **ersten Start** in diesem Repository: `claude-code-setup/manifest.json` pruefe
