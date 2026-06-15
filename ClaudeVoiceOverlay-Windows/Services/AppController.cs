@@ -97,6 +97,13 @@ namespace ClaudeVoiceOverlay.Services
             // 2. Ziel aktivieren + Eingabefeld per UIA finden/fokussieren (positions-unabhaengig)
             FocusTarget(appHwnd);
 
+            // 2b. LIVE-LOGIK-SONDE (Intent-Verifikation, observability-live-logic-probes):
+            //     Sitzt der Tastaturfokus JETZT wirklich auf einem echten Eingabefeld (erwartet)
+            //     oder noch auf Button/Seiten-Root (tatsaechlich)? CHECKPOINT 'erwartet vs. ist'
+            //     -> ok:false bedeutet, Strg+V wird gleich verpuffen. Live mitlesbar:
+            //     Get-Content "$env:LOCALAPPDATA\ClaudeVoiceOverlay\diag.log" -Wait -Tail 30
+            VerifyFocusCheckpoint("Fokus nach FocusTarget (vor Strg+V)");
+
             // 3. Gehaltene Hotkey-Modifier neutralisieren, sonst kommt "Win+Alt+Ctrl+V" an
             ReleaseHeldModifiers();
 
@@ -206,11 +213,22 @@ namespace ClaudeVoiceOverlay.Services
                     return true;
                 }
 
+                // Bug U9-Variante (Cowork nach beendeter Aufgabe, real getroffen 2026-06-15,
+                // per diag.log belegt): Der Fokus liegt direkt nach einer Cowork-Antwort auf dem
+                // 'Fortschritt N von N'-Button -> Pfad1 verworfen (korrekt). Frueher traf
+                // FindFirst(Edit|Document) als ERSTES die Seiten-Wurzel 'RootWebArea' (Document,
+                // bildschirmfuellend), die der Root-Guard verwarf -> FindFirst gab danach AUF, das
+                // echte ProseMirror-Edit dahinter wurde nie gefunden -> Strg+V verpuffte (Text kam
+                // erst nach manuellem Maus-Klick ins Feld). Fix: RootWebArea direkt aus der Suche
+                // ausschliessen, dann liefert FindFirst sofort das echte Feld. FindFirst + enger
+                // Scope bleibt erhalten (U6: kein teures FindAll/Descendants ueber den ganzen Baum).
                 var cond = new AndCondition(
                     new OrCondition(
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)),
-                    new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true));
+                    new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty, true),
+                    new NotCondition(
+                        new PropertyCondition(AutomationElement.AutomationIdProperty, "RootWebArea")));
 
                 // 2. Im Baum des Top-Level-Fensters suchen (Fokus liegt auf Container)
                 var root = AutomationElement.FromHandle(appHwnd);
@@ -321,6 +339,31 @@ namespace ClaudeVoiceOverlay.Services
         {
             if (string.IsNullOrEmpty(s)) return "";
             return s.Length <= max ? s : s.Substring(0, max) + "...";
+        }
+
+        /// <summary>
+        /// Live-Logik-Sonde (Intent-Verifikation): bestaetigt NACH dem Fokussieren, ob der
+        /// Tastaturfokus tatsaechlich auf einem brauchbaren Eingabefeld liegt (Edit/Document/
+        /// Group, kein RootWebArea). Schreibt einen CHECKPOINT-Eintrag 'erwartet vs. tatsaechlich'
+        /// in den Diagnose-Kanal — getrennt vom Fehler-Log, damit der Logik-Strang live verfolgbar
+        /// bleibt. ok:false heisst: das gleich folgende Strg+V landet im Leeren. Best-effort, werf-frei.
+        /// </summary>
+        private static void VerifyFocusCheckpoint(string step)
+        {
+            try
+            {
+                AutomationElement? focused = AutomationElement.FocusedElement;
+                bool ok = focused != null && IsUsableFocusTarget(focused);
+                DiagLog.Write("CHECKPOINT", step,
+                    ("intent", "Tastaturfokus auf echtem Eingabefeld (Edit/Document/Group, kein RootWebArea)"),
+                    ("expected", "usable input field"),
+                    ("actual", Describe(focused)),
+                    ("ok", ok));
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("CHECKPOINT", step + " — Sonde warf", ("err", ex.GetType().Name));
+            }
         }
 
         private static bool TrySetFocus(AutomationElement el)
