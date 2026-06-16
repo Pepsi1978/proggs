@@ -609,12 +609,18 @@ nur die Default-Wert-Rueckgabe in Room 3.0 (b/438041176).
 
 ## 🔗 Bezug zu Best-Practices (Praevention, „wie macht man es richtig")
 
-Es gibt (noch) keine dedizierte `best-practices-room.md` — Room-Praevention liegt verteilt:
+Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/projekt-code/android/best-practices-room.md`](../../best-practices/projekt-code/android/best-practices-room.md)
+— spiegelgleich abgelegt, damit der `bug-almanac-guard` nach diesem Almanach auch die Best-Practices-Seite
+erzwingt (erst Almanach, dann Best Practices). Ergaenzend fuer den Framework-/Backup-Kontext:
+`best-practices-android-platform.md` §3 (Runtime-Disziplin) + `best-practices-google-drive-backup.md` (WAL/Restore).
 
-| Bug-Abschnitt (diese Datei) | Best-Practice-Abschnitt |
-|-----------------------------|--------------------------|
-| M) Migration & Schema | `best-practices/projekt-code/android/best-practices-android-platform.md` §3 „Saubere Room-Migrationsstrategie & Runtime-Disziplin" |
-| B) Backup/Restore (WAL) | `best-practices/projekt-code/android/best-practices-google-drive-backup.md` (WAL-Checkpoint, Restore-Reihenfolge) |
-| T/R/C/K/X (Runtime/Datenmodell) | `best-practices-android-platform.md` §3 (Runtime-Disziplin) |
-
-(Wird eine eigene `best-practices-room.md` angelegt, hier verlinken und die Tabelle wechselseitig fuehren.)
+| Bug-Abschnitt (diese Datei) | Best-Practice-Abschnitt in `best-practices-room.md` |
+|-----------------------------|------------------------------------------------------|
+| V) Versionen / 2.7-Umstieg / Build | §1 Build-Setup, KSP & Kotlin-Codegen |
+| M) Migration & Schema | §2 Migration & Schema (migrieren statt zerstören) |
+| B) Backup/Restore (WAL) | §3 Backup/Restore mit WAL-Disziplin (+ `best-practices-google-drive-backup.md`) |
+| T) Threading / Coroutines / Flow | §4 Threading, Coroutines & Flow |
+| R) @Relation | §5 @Relation |
+| C) TypeConverter / @Embedded | §6 TypeConverter & @Embedded |
+| K) Keys / Insert / FK | §7 Keys, Insert & Foreign Keys |
+| X) Connection / Locking | §8 Connection, Locking & Singleton |
