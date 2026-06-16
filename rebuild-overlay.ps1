@@ -145,11 +145,28 @@ function Start-Overlay {
     }
 }
 
-# Wartet kurz und zaehlt die laufenden exe-Prozesse (Boot bringt 2 hoch: Overlay + Watchdog).
-function Get-RunningExeCount {
+# Liefert die laufenden exe-Prozesse des Overlays als Process-Objekte (mit StartTime).
+function Get-OverlayProcs {
     param([hashtable]$O)
-    Start-Sleep -Seconds 6
-    return @(Get-CimInstance Win32_Process -Filter "name='$($O.Exe)'" -ErrorAction SilentlyContinue).Count
+    $procName = [IO.Path]::GetFileNameWithoutExtension($O.Exe)
+    return @(Get-Process -Name $procName -ErrorAction SilentlyContinue)
+}
+
+# Verifiziert NACH dem Neustart, dass die LAUFENDE Version die FRISCH GEBAUTE ist.
+# Kernsignal (faelschungssicher): ein Prozess, der VOR dem neuen Build gestartet wurde,
+# kann unmoeglich den neuen Code ausfuehren. MainModule.FileVersionInfo liest die DATEI
+# auf der Platte und wuerde einen alten, ueberlebenden Prozess faelschlich als "neu"
+# melden — deshalb StartTime gegen die Build-Zeit, NICHT die Datei-Version.
+# $true, wenn >=1 Prozess laeuft UND KEINER aelter ist als der Build.
+function Test-FreshVersion {
+    param([hashtable]$O, [datetime]$BuildTime)
+    $procs = Get-OverlayProcs -O $O
+    if ($procs.Count -lt 1) { return @{ Ok = $false; Count = 0; Stale = 0; Version = '<keiner>' } }
+    $threshold = $BuildTime.AddSeconds(-2)
+    $stale = @($procs | Where-Object { $_.StartTime -lt $threshold })
+    $ver = '<unlesbar>'
+    try { $ver = ($procs | Sort-Object StartTime -Descending | Select-Object -First 1).MainModule.FileVersionInfo.ProductVersion } catch {}
+    return @{ Ok = ($stale.Count -eq 0); Count = $procs.Count; Stale = $stale.Count; Version = $ver }
 }
 
 # --- Hauptablauf ---
@@ -184,19 +201,38 @@ foreach ($t in $targets) {
     }
     Write-Ok 'Build erfolgreich.'
 
-    # Schritt 3: neu starten + verifizieren
+    # Build-Zeitpunkt der frischen exe merken — Referenz fuer "laeuft die NEUE Version?".
+    $exePath = Join-Path $O.Folder "publish\$($O.Exe)"
+    $buildTime = (Get-Item $exePath).LastWriteTime
+
+    # Schritt 3: neu starten + VERIFIZIEREN dass die NEUE Version laeuft
     if ($NoStart) {
         Write-Step 'Schritt 3/3: -NoStart gesetzt -> kein Neustart.'
         continue
     }
-    Write-Step 'Schritt 3/3: Overlay neu starten...'
-    Start-Overlay -O $O
-    $running = Get-RunningExeCount -O $O
-    if ($running -ge 1) {
-        Write-Ok "$t laeuft wieder ($running exe-Prozess(e), AutoEnter-Port $($O.Port))."
+    Write-Step 'Schritt 3/3: Overlay neu starten + verifizieren dass die NEUE Version laeuft...'
+    $verified = $false
+    for ($attempt = 1; $attempt -le 2 -and -not $verified; $attempt++) {
+        Start-Overlay -O $O
+        Start-Sleep -Seconds 6
+        $r = Test-FreshVersion -O $O -BuildTime $buildTime
+        if ($r.Count -lt 1) {
+            Write-Warn "$t scheint NICHT gestartet (0 exe). Versuch $attempt/2."
+        }
+        elseif ($r.Ok) {
+            Write-Ok "$t laeuft wieder ($($r.Count) exe, NEUE Version $($r.Version) VERIFIZIERT, Port $($O.Port))."
+            $verified = $true
+        }
+        else {
+            # ALTE EXE laeuft noch (haelt vermutlich den Single-Instance-Mutex, sodass die
+            # neue exe sich sofort wieder beendet). ALLE killen und erneut starten.
+            Write-Err "$t: ALTE VERSION laeuft noch ($($r.Stale) Prozess(e) AELTER als der Build)! Toete ALLE + starte erneut (Versuch $attempt/2)."
+            Stop-Overlay -O $O
+            Start-Sleep -Seconds 2
+        }
     }
-    else {
-        Write-Warn "$t scheint NICHT gestartet ($running exe-Prozesse). publish\watcher.log pruefen."
+    if (-not $verified) {
+        Write-Err "$t: Konnte NICHT verifizieren dass die NEUE Version laeuft — bitte manuell pruefen (Task-Manager, publish\watcher.log)."
         $failed += $t
     }
 }

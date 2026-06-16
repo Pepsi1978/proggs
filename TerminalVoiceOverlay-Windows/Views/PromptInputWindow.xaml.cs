@@ -87,6 +87,17 @@ public partial class PromptInputWindow : Window
 
         // Prompt-Zwischenspeicher-Leiste (1…15) unten aufbauen.
         BuildSlotBar();
+
+        // Sichtbare Versionsanzeige (Frank-Wunsch 2026-06-16): zeigt im Kopf der
+        // Eingabe, welche EXE-Version live ist — damit nie unklar ist, ob ein
+        // Update angekommen ist. Quelle: Assembly-Version (= csproj <Version>).
+        try
+        {
+            var asmV = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            if (asmV is not null) TitleLabel.Text = $"Prompt-Eingabe \u00b7 v{asmV.Major}.{asmV.Minor}.{asmV.Build}";
+        }
+        catch { /* Versionsanzeige ist optional */ }
+        DiagLog.Write("SlotPriority", "input window built", ("slotMenus", PromptSlotService.SlotCount.ToString()));
     }
 
     /// <summary>
@@ -920,7 +931,11 @@ public partial class PromptInputWindow : Window
         cm.Items.Add(PriorityMenuItem(n, 1, "Niedrig", SlotPrioLow));
         cm.Items.Add(new Separator());
         cm.Items.Add(PriorityMenuItem(n, 0, "Keine", SlotGrey));
-        cm.Opened += (_, _) => ForceToolTipTopmost(cm);
+        cm.Opened += (_, _) =>
+        {
+            ForceToolTipTopmost(cm);
+            DiagLog.Write("SlotPriority", "context menu opened", ("slot", n.ToString()));
+        };
         return cm;
     }
 
@@ -954,6 +969,7 @@ public partial class PromptInputWindow : Window
         UpdatePreview(priority == 0
             ? $"Prioritaet von Slot {n} entfernt."
             : $"Slot {n}: Prioritaet {PriorityName(priority)}.");
+        DiagLog.Write("SlotPriority", "priority set", ("slot", n.ToString()), ("priority", priority.ToString()));
         SlotPriorityRequested?.Invoke(n, priority);
     }
 

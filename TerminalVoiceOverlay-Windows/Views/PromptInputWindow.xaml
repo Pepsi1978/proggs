@@ -192,6 +192,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
+                           x:Name="TitleLabel"
                            Text="Prompt-Eingabe"
                            Foreground="#FFCCCCCC"
                            FontWeight="Bold"
