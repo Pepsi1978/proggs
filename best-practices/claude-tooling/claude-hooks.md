@@ -6,7 +6,7 @@
 > `bug-almanac-guard` für den Hochrisiko-Bereich `claude-hooks` auch die Best-Practices-Lektüre erzwingt
 > (erst Almanach, dann Best Practices).
 >
-> **Ausführlicher Harness-Volltext (verlustfrei ausgelagert):** [`best-practices/01-hooks/best-practices.md`](../01-hooks/best-practices.md)
+> **Ausführlicher Harness-Volltext (verlustfrei ausgelagert):** [`best-practices/claude-tooling/hooks.md`](hooks.md)
 > — dort stehen alle 32 Events, das vollständige JSON-Schema, Timeout-/Async-Details und Beispiele.
 > Diese Datei ist der kompakte, Almanach-gekoppelte Digest; der 01-hooks-Volltext bleibt die Tiefe.
 >

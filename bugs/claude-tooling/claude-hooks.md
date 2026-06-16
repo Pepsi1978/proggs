@@ -715,7 +715,7 @@ echten Stop-Verhindern `decision:"block"`+`reason`. `exit 2` bei Stop NIE fuer r
 
 ### 16.8 Neue Events/Felder seit Almanach-Stand (Lueckenschluss, NICHT Bugs)
 Diese kamen mit v2.1.152–v2.1.177 und gehoeren zum aktuellen Wissensstand (Details + Beispiele in
-`best-practices/01-hooks/best-practices.md`):
+`best-practices/claude-tooling/hooks.md`):
 - **~30 Events** in v2.1.177 (neu u.a. PostToolBatch, PermissionRequest/Denied, TaskCreated/Completed,
   FileChanged, CwdChanged, ConfigChange, PostCompact, Elicitation/Result, **MessageDisplay**, WorktreeCreate/Remove).
 - **MessageDisplay** (v2.1.152): rein display-only (`displayContent`), KEINE Matcher, Timeout 10s, `exit 2`
@@ -804,7 +804,7 @@ waren teils irrefuehrend (mehrere Researcher meldeten Versionen, die gh widerleg
 Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/claude-tooling/claude-hooks.md`](../../best-practices/claude-tooling/claude-hooks.md)
 — Almanach-gekoppelter Digest, damit der `bug-almanac-guard` fuer diesen Stufe-C-Bereich auch die
 Best-Practices-Lektuere erzwingt (erst Almanach, dann Best Practices). Ausfuehrlicher Harness-Volltext
-(alle 32 Events, JSON-Schema, Timeouts): [`best-practices/01-hooks/best-practices.md`](../../best-practices/01-hooks/best-practices.md).
+(alle 32 Events, JSON-Schema, Timeouts): [`best-practices/claude-tooling/hooks.md`](../../best-practices/claude-tooling/hooks.md).
 
 | Bug-Abschnitt (diese Datei) | Best-Practice-Abschnitt in `best-practices-claude-hooks.md` |
 |-----------------------------|--------------------------------------------------------------|

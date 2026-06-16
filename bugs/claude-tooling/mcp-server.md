@@ -346,7 +346,7 @@ den `child_process.spawn` ohne Shell nicht aufloest.
 **Eigener Vorfall (#1556, 2026-04-20):** debugbase-MCP hatte `command:"npx"` ohne Windows-Wrapper →
 `/doctor`-Warnung. Fix: absoluter Pfad `C:/Program Files/nodejs/npx.cmd`, konsistent mit dem
 think-tank-Pattern; in `~/proggs/.mcp.json` UND `claude-code-setup/mcp-windows.json` gespiegelt.
-Best-Practice-Seite: `best-practices/05-mcp/best-practices.md` (Scopes, ENV-Expansion).
+Best-Practice-Seite: `best-practices/claude-tooling/mcp.md` (Scopes, ENV-Expansion).
 
 ### 5.2 `env`-Block wird nicht an den Server-Prozess durchgereicht
 **Symptom:** Server crasht beim Init mit leerem/ungueltigem Token; „0 tools".
@@ -382,7 +382,7 @@ JSON ungueltig. Verwandt mit der Hook-BOM-Falle (`claude-hooks.md` 12.1, `python
 **Ursache:** Diverse Scope-Lade-/Listing-Bugs in einzelnen CC-Versionen.
 **Versionen:** [claude-code #5963](https://github.com/anthropics/claude-code/issues/5963) (project-scope nicht gelistet) **CLOSED — NOT_PLANNED**; #35144 (user-scope v2.1.77) CLOSED DUPLICATE; #2156/#15215 (project-scope nicht geladen).
 **FIX:** Funktion ueber die Session pruefen statt ueber `mcp list`; Server-Approval beim Session-Start
-bestaetigen; ggf. Scope wechseln. Konfig-Details: `best-practices/05-mcp/best-practices.md` (Scopes).
+bestaetigen; ggf. Scope wechseln. Konfig-Details: `best-practices/claude-tooling/mcp.md` (Scopes).
 
 ### 5.7 `npx`/`bunx` ohne `-y` haengt / scheitert beim Erst-Download
 **Symptom:** Server haengt am interaktiven Prompt oder scheitert beim ersten Start (leerer Cache).
@@ -617,7 +617,7 @@ Drei Dateien beruehren „MCP", mit klarer Aufgabentrennung:
 | **`bugs/claude-tooling/mcp-server.md`** (diese) | **Server BAUEN — Fallen** | Transport-Impl, Tool-Schema, Error-Handling, Lifecycle, `.mcp.json`-Registrierung, SDK-Versions-Bugs |
 | [`best-practices/claude-tooling/mcp-server.md`](../../best-practices/claude-tooling/mcp-server.md) | **Server BAUEN — richtige Seite** | Positive Gegenseite zu DIESER Datei: empfohlene Arbeitsweise, Do's & Don'ts (Transport-Wahl, Tool-Schema-Design, Fehler-Propagation, Setup, Sicherheit, Testing). Bezugstabelle in Sektion 11 |
 | [`bugs/claude-tooling/claude-hooks.md`](claude-hooks.md) | **Claude-Code-Hooks** | Hooks generell. MCP nur am Rand: MCP-Matcher (`mcp__server__.*`, 9.2), MCP-Tool-als-Hook (14.1), absolute Pfade/BOM in `settings.json`/`.mcp.json` (12.1, 12.5) |
-| `best-practices/05-mcp/best-practices.md` | **Server KONFIGURIEREN/VERBINDEN** (Harness-Seite) | Transport-Wahl in Claude Code, Scopes (local/project/user), `.mcp.json`-ENV-Expansion, OAuth-Setup, Managed MCP, Tool-Search |
+| `best-practices/claude-tooling/mcp.md` | **Server KONFIGURIEREN/VERBINDEN** (Harness-Seite) | Transport-Wahl in Claude Code, Scopes (local/project/user), `.mcp.json`-ENV-Expansion, OAuth-Setup, Managed MCP, Tool-Search |
 
 **Ueberschneidungspunkte (bewusst, mit Querverweis statt Duplikat):**
 - `.mcp.json` BOM/Trailing-Comma/absolute-Pfade: hier aus Server-Bringup-Sicht (5.1, 5.5), in
