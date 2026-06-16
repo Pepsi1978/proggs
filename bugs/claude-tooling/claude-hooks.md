@@ -796,3 +796,23 @@ waren teils irrefuehrend (mehrere Researcher meldeten Versionen, die gh widerleg
       `.sh` mit `+x` und LF?
 - [ ] Kein `type:"prompt"` bei SessionStart/SessionEnd?
 - [ ] Matcher bewusst gesetzt (`Edit|Write`, MCP mit `.*`)?
+
+---
+
+## 🔗 Bezug zu Best-Practices (Praevention, „wie macht man es richtig")
+
+Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/projekt-code/claude-tooling/best-practices-claude-hooks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-claude-hooks.md)
+— Almanach-gekoppelter Digest, damit der `bug-almanac-guard` fuer diesen Stufe-C-Bereich auch die
+Best-Practices-Lektuere erzwingt (erst Almanach, dann Best Practices). Ausfuehrlicher Harness-Volltext
+(alle 32 Events, JSON-Schema, Timeouts): [`best-practices/01-hooks/best-practices.md`](../../best-practices/01-hooks/best-practices.md).
+
+| Bug-Abschnitt (diese Datei) | Best-Practice-Abschnitt in `best-practices-claude-hooks.md` |
+|-----------------------------|--------------------------------------------------------------|
+| §1 Exit-Codes, §13.7 dot-sourced libs | §1 Exit-Codes & FAIL-OPEN |
+| §2 JSON-Output & Kontext-Injection, §16.1/§16.4 | §2 JSON-Output & Kontext-Injection |
+| §5 stdin, §16.2 jq-Bypass, §12.4 stdin-Windows | §3 stdin & Security |
+| §6 Stop-Loop, §7 Phantom-Events, §8 prompt-vs-command, §16.3 | §4 Event-Wahl & Guards |
+| §9 matcher | §5 matcher |
+| §12 Windows / PowerShell | §6 Windows / PowerShell |
+| §13 macOS / Bash | §7 macOS / Bash |
+| §3 Discovery, §4 Settings-Caching | §8 Cross-Platform & Wartung |
