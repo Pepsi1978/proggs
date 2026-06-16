@@ -1,6 +1,6 @@
 # Chrome-Erweiterungen (Manifest V3) — Best Practices (Stand 2026-06-02, Chrome 148.0.7778.217)
 
-> Die **zweite Seite der Medaille** zum Bug-Almanach [`bugs/web/chrome-extensions.md`](../../../bugs/web/chrome-extensions.md):
+> Die **zweite Seite der Medaille** zum Bug-Almanach [`bugs/web/chrome-extensions.md`](../../bugs/web/chrome-extensions.md):
 > dort steht *was schiefgeht und wie man es umgeht* (Sektionen A–P, 73 Eintraege), hier *wie man es von
 > vornherein richtig macht*. Versions-Anker = installierte Browser-Version **Chrome 148** (MV2 seit Juli 2025
 > vollstaendig entfernt). Quellen-Rangordnung: **offiziell** (developer.chrome.com, Chrome for Developers Blog,
@@ -422,7 +422,7 @@ nur auf Linux; Windows/macOS brauchen Enterprise-Policy.
 ## 🔗 12. Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach
 
 Jeder Best-Practice-Abschnitt verweist auf die passende Sektion im Bug-Almanach
-[`bugs/web/chrome-extensions.md`](../../../bugs/web/chrome-extensions.md) (Sektionen A–P, 73 Eintraege).
+[`bugs/web/chrome-extensions.md`](../../bugs/web/chrome-extensions.md) (Sektionen A–P, 73 Eintraege).
 
 | Best-Practice-Abschnitt (hier) | Bug-Almanach-Sektion (dort) |
 |--------------------------------|------------------------------|

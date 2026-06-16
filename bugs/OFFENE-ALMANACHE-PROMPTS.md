@@ -169,7 +169,7 @@ Starte den Best-Practices-Skill fuer TypeScript + Node.js (Projekt-Code-Seite, N
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT TYPESCRIPT/NODE AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": strikte tsconfig, sauberes ESM-Setup, typsichere Patterns (kein any, korrekte Generics/Utility-Types), robuste async-Fehlerbehandlung, Dependency-Hygiene.
 
-Speichere unter best-practices/projekt-code/web/best-practices-typescript.md und koppele wechselseitig mit bugs/web/typescript.md. Am Ende committen und pushen.
+Speichere unter best-practices/web/typescript.md und koppele wechselseitig mit bugs/web/typescript.md. Am Ende committen und pushen.
 ```
 
 ---

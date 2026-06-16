@@ -4,7 +4,7 @@
 > (Three.js, Babylon.js, WebGPU/WebGL2, React Three Fiber) verpackt mit Tauri (Desktop) + Capacitor
 > (Android). Stand recherchiert **2026-06-13** fuer **Three.js r842 / Babylon.js 9.2.1 / Tauri v2.10.1 /
 > WebGPU (Firefox-Holdout)**. Jeder Eintrag mit Symptom, Ursache, Versionen, FIX und Quelle.
-> Gegenseite (Best Practices, das WIE-richtig): `best-practices/projekt-code/web/best-practices-3d-threejs-webgpu.md`.
+> Gegenseite (Best Practices, das WIE-richtig): `best-practices/web/3d-threejs-webgpu.md`.
 
 ---
 

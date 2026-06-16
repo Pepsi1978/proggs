@@ -13,7 +13,7 @@
 > Bei deutlich neuerer Browser-Version: kurz pruefen, ob die Eintraege noch zutreffen.
 >
 > Gegenstueck (Praevention, „so baut man es von vornherein richtig"):
-> `best-practices/projekt-code/web/best-practices-chrome-extensions.md` (Bezugs-Tabelle unten).
+> `best-practices/web/chrome-extensions.md` (Bezugs-Tabelle unten).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -463,7 +463,7 @@ Body-Manipulation gehoert nicht in DNR.
 - **Verschluesselung:** sync ist NICHT Ende-zu-Ende, ausser der Nutzer setzt eine Chrome-Sync-Passphrase.
   API-Keys nur mit Nutzer-OK + Passphrase-Hinweis syncen.
 - **Eine Sync-Quota loescht NIE die Erweiterung** — nur der eine `set()` scheitert.
-**FIX:** siehe oben; fuer Code-Vorlage `best-practices/projekt-code/web/best-practices-chrome-extensions.md`.
+**FIX:** siehe oben; fuer Code-Vorlage `best-practices/web/chrome-extensions.md`.
 **Quelle:** developer.chrome.com — storage API + eigener Vorfall.
 
 ### 38. Manifest-`key` aendern = neue ID = lokale Daten „weg"
@@ -939,7 +939,7 @@ Observer nicht an globale Dauer-Elemente binden wenn vermeidbar; bei SPA-Navi ne
 
 ## 🔗 Bezug zu Best-Practices (beide Seiten der Medaille)
 
-| Bug-Abschnitt (hier) | Best-Practice-Abschnitt (`best-practices/projekt-code/web/best-practices-chrome-extensions.md`) |
+| Bug-Abschnitt (hier) | Best-Practice-Abschnitt (`best-practices/web/chrome-extensions.md`) |
 |----------------------|---------------------------------------------------------------------------------------------|
 | B — Service-Worker-Lebenszyklus | „Service Worker als zustandsloser Mittler" |
 | C — Messaging | „Robustes Message-Passing" |

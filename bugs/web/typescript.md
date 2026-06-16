@@ -4,7 +4,7 @@
 > Stand: zuletzt recherchiert am **2026-06-02**, Abschnitt **J** ergaenzt am **2026-06-03** (aus dem Best-Practices-Lauf), fuer **Node v24.15.0 · TypeScript 6.0.2 · npm 11.12.0 · Bun 1.3.11**.
 > **Anker:** typescript=6.0.2  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > Beispielprojekt im Repo: `~/proggs/mcp-code-search` (ESM + Bun + `better-sqlite3`, `moduleResolution: bundler`, `strict: true`).
-> Fokus dieser Datei: **was in der Praxis schiefgeht** (Bugs/Fallen) + funktionserhaltende Loesung. Die "richtige Seite der Medaille" — *wie man es von vornherein richtig macht* — steht in `~/proggs/best-practices/projekt-code/web/best-practices-typescript.md` (wechselseitige Bezugstabelle unten).
+> Fokus dieser Datei: **was in der Praxis schiefgeht** (Bugs/Fallen) + funktionserhaltende Loesung. Die "richtige Seite der Medaille" — *wie man es von vornherein richtig macht* — steht in `~/proggs/best-practices/web/typescript.md` (wechselseitige Bezugstabelle unten).
 
 ---
 
@@ -823,7 +823,7 @@
 
 ## 🔗 Kopplung zur Best-Practices-Datei (wechselseitige Bezugstabelle)
 
-Bug-Almanach (diese Datei) <-> Best-Practices `~/proggs/best-practices/projekt-code/web/best-practices-typescript.md`.
+Bug-Almanach (diese Datei) <-> Best-Practices `~/proggs/best-practices/web/typescript.md`.
 Die identische Tabelle steht auch dort.
 
 | Best-Practice-Abschnitt (`best-practices/.../typescript/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
