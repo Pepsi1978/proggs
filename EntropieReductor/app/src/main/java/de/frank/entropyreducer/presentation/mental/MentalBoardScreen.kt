@@ -19,21 +19,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.LooksOne
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -208,6 +221,23 @@ fun MentalBoardScreen(
     var dragOrder by remember { mutableStateOf<List<Mental>?>(null) }
     val displayed = dragOrder ?: stored
 
+    // Vorlese-System (Frank-Wunsch 2026-06-16): Lautsprecher + 2 Dropdowns + Endlos-Haekchen oben in
+    // der Top-Bar. Das ViewModel orchestriert die Anker-Sequenz, das Caching, die 2s-Pausen und den
+    // 15-Minuten-Auto-Stop. hiltViewModel() haengt am NavBackStackEntry dieses Screens.
+    val ttsVm: MentalTtsViewModel = hiltViewModel()
+    val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()
+
+    // Fehler (z.B. kein TTS-Schluessel hinterlegt) als Toast zeigen, danach quittieren.
+    LaunchedEffect(ttsState.error) {
+        ttsState.error?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            ttsVm.dismissError()
+        }
+    }
+
+    // Verlaesst Frank den Mental-Reiter, wird ein laufendes Vorlesen sofort gestoppt.
+    DisposableEffect(Unit) { onDispose { ttsVm.stop() } }
+
     // `dragOrder` zuruecksetzen, sobald (a) der gespeicherte Stand die gezogene Reihenfolge
     // erreicht hat (gleiche IDs in gleicher Folge), ODER (b) sich der Eintrags-BESTAND geaendert
     // hat (add/delete) — dann hat `stored` Vorrang und die Aenderung wird sofort sichtbar.
@@ -243,6 +273,15 @@ fun MentalBoardScreen(
 
     CosmosScaffold(
         title = "Mental",
+        actions = {
+            MentalTtsControls(
+                state = ttsState,
+                onToggle = { ttsVm.togglePlayback(displayed) },
+                onAnkerChange = ttsVm::setAnkerCount,
+                onFolgeChange = ttsVm::setFolgeCount,
+                onLoopChange = ttsVm::setLoop,
+            )
+        },
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.TASKS,
@@ -497,4 +536,124 @@ private fun MentalEditDialog(
             }
         },
     )
+}
+
+/* ============================== Vorlese-Steuerung (Top-Bar) ============================== */
+
+/**
+ * Steuerleiste oben neben dem Titel "Mental" (Frank-Wunsch 2026-06-16):
+ * Lautsprecher-Toggle · Dropdown "Erster Satz" (Anker) · Dropdown "Folgesatz" · Endlos-Haekchen.
+ * Reine Darstellung — State runter, Events rauf (UDF); die ganze Logik liegt im MentalTtsViewModel.
+ */
+@Composable
+private fun MentalTtsControls(
+    state: MentalTtsUiState,
+    onToggle: () -> Unit,
+    onAnkerChange: (Int) -> Unit,
+    onFolgeChange: (Int) -> Unit,
+    onLoopChange: (Boolean) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Lautsprecher = Start/Stop-Toggle. Waehrend des Vorlesens als Stop-Symbol.
+        IconButton(onClick = onToggle) {
+            Icon(
+                imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.Outlined.VolumeUp,
+                contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
+                tint = MentalAccent,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        // Dropdown 1 — wie oft der erste Satz (Anker) vor jedem Folgesatz vorgelesen wird.
+        NumberDropdown(
+            value = state.ankerCount,
+            leadingIcon = Icons.Outlined.LooksOne,
+            menuTitle = "Erster Satz – wie oft",
+            onSelect = onAnkerChange,
+        )
+        Spacer(Modifier.size(4.dp))
+        // Dropdown 2 — wie oft jeder Folgesatz vorgelesen wird.
+        NumberDropdown(
+            value = state.folgeCount,
+            leadingIcon = Icons.Outlined.Repeat,
+            menuTitle = "Folgesatz – wie oft",
+            onSelect = onFolgeChange,
+        )
+        // Endlosschleife — gruenes Haekchen, wenn aktiv.
+        Checkbox(
+            checked = state.loop,
+            onCheckedChange = onLoopChange,
+            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
+        )
+    }
+}
+
+/**
+ * Kompaktes Zahlen-Dropdown (1..10) fuer die Top-Bar. Zeigt ein kleines Symbol, den aktuellen Wert
+ * und einen Pfeil; beim Antippen erscheint ein Menue mit erklaerendem Titel und den Zahlen 1–10.
+ */
+@Composable
+private fun NumberDropdown(
+    value: Int,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    menuTitle: String,
+    onSelect: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier =
+                Modifier.clip(RoundedCornerShape(8.dp))
+                    .background(MentalAccent.copy(alpha = 0.12f))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 6.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = MentalAccent,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.size(2.dp))
+            Text(
+                text = "$value",
+                style = MaterialTheme.typography.labelLarge,
+                color = MentalAccent,
+                fontWeight = FontWeight.Bold,
+            )
+            Icon(
+                imageVector = Icons.Outlined.ArrowDropDown,
+                contentDescription = null,
+                tint = MentalAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // Nicht-klickbarer Titel erklaert, worauf sich die Zahl bezieht.
+            Text(
+                text = menuTitle,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            (1..10).forEach { n ->
+                DropdownMenuItem(
+                    text = { Text("$n") },
+                    onClick = {
+                        onSelect(n)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (n == value) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                tint = MentalAccent,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
