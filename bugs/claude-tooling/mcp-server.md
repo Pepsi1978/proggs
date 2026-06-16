@@ -16,7 +16,7 @@
 > auf dem Anker 1.27.1 noch AKTIV.
 >
 > **Abgrenzung:** Dies ist die **Server-Autor-Seite** (einen MCP-Server BAUEN). Das
-> *Konfigurieren/Verbinden* von Servern in Claude Code steht in `best-practices/05-mcp/`,
+> *Konfigurieren/Verbinden* von Servern in Claude Code steht in `best-practices/claude-tooling/mcp.md`,
 > die *Hook*-Seite (MCP-Matcher, MCP-Tool-als-Hook) in [`claude-hooks.md`](claude-hooks.md).
 > Die positive Gegenseite zu DIESEM Almanach (*wie man es richtig baut*) steht in
 > [`best-practices/claude-tooling/mcp-server.md`](../../best-practices/claude-tooling/mcp-server.md)
@@ -131,7 +131,7 @@ M365-Toolkit, Open WebUI.
 **Versionen:** Spec ab 2025-03-26.
 **FIX:** Client-seitig beide Accept-Typen listen. Server-seitig nicht stillschweigend ignorieren
 (das ist ein Client-Bug) — aber für Server-Robustheit siehe 2.3.
-**Quelle:** [claude-agent-sdk-typescript #202](https://github.com/anthropics/claude-agent-sdk-typescript/issues/202), [m365-agents-toolkit #15421](https://github.com/OfficeDev/microsoft-365-agents-toolkit/issues/15421).
+**Quelle:** [claude-agent-sdk-typescript #202](https://github.com/anthropics/claude-agent-sdk-typescript/issues/202), [m3best-practices/claude-tooling/agents.md-toolkit #15421](https://github.com/OfficeDev/microsoft-3best-practices/claude-tooling/agents.md-toolkit/issues/15421).
 
 ### 2.3 TS-SDK: 406 trotz `enableJsonResponse:true` (Server-seitiger SDK-Bug)  🆕 OFFEN
 **Symptom:** Server im reinen JSON-Modus (`enableJsonResponse:true`) antwortet `406`, wenn der
@@ -399,7 +399,7 @@ bestaetigen; ggf. Scope wechseln. Konfig-Details: `best-practices/claude-tooling
 **Versionen:** nur nativ Windows (WSL nicht betroffen). Offiziell dokumentiert.
 **FIX:** `"command":"cmd"`, das Tool hinter `/c`: `"args":["/c","npx","-y","<paket>"]`. `node`/`bun.exe`
 direkt (echte `.exe`) brauchen das NICHT.
-**Quelle:** [code.claude.com Troubleshooting](https://code.claude.com/docs/en/troubleshooting), [fransiscuss.com](https://fransiscuss.com/2025/04/22/fix-spawn-npx-enoent-windows11-mcp-server/).
+**Quelle:** [code.claude.com Troubleshooting](https://code.claude.com/docs/en/troubleshooting), [fransiscuss.com](https://fransiscuss.com/2025/04/22/fix-spawn-npx-enoent-windowsbest-practices/claude-tooling/mcp.md-server/).
 
 ### 6.2 `claude mcp add` zerstoert `/c` zu `C:/` (CLI-Parser, won't-fix)
 **Symptom:** Nach `claude mcp add ... cmd /c npx ...` steht in der Config `C:/` statt `/c` → Verbindung scheitert.
@@ -608,7 +608,7 @@ Tool-Name-Regex, cmd /c, ESM-`.js`) gelten versionsunabhaengig weiter.
 
 ---
 
-## 10. Abgrenzung zu `claude-hooks.md` und `best-practices/05-mcp`
+## 10. Abgrenzung zu `claude-hooks.md` und `best-practices/claude-tooling/mcp.md`
 
 Drei Dateien beruehren „MCP", mit klarer Aufgabentrennung:
 
@@ -621,11 +621,11 @@ Drei Dateien beruehren „MCP", mit klarer Aufgabentrennung:
 
 **Ueberschneidungspunkte (bewusst, mit Querverweis statt Duplikat):**
 - `.mcp.json` BOM/Trailing-Comma/absolute-Pfade: hier aus Server-Bringup-Sicht (5.1, 5.5), in
-  `claude-hooks.md` aus Config-Datei-Sicht (12.1), in `05-mcp` aus Konfigurations-Best-Practice-Sicht.
-- SSE-Deprecation/Streamable HTTP: hier die Server-Impl-Bugs (2.x), in `05-mcp` die Client-/Reconnect-Hinweise (inkl. v2.1.153-Regression-Fix).
+  `claude-hooks.md` aus Config-Datei-Sicht (12.1), in `best-practices/claude-tooling/mcp.md` aus Konfigurations-Best-Practice-Sicht.
+- SSE-Deprecation/Streamable HTTP: hier die Server-Impl-Bugs (2.x), in `best-practices/claude-tooling/mcp.md` die Client-/Reconnect-Hinweise (inkl. v2.1.153-Regression-Fix).
 
 **Faustregel:** Schreibe ich Server-CODE (Transport, Tools, Handler, Lifecycle) → hier. Konfiguriere/
-verbinde ich einen Server in Claude Code → `05-mcp`. Baue ich einen Hook (der evtl. ein MCP-Tool
+verbinde ich einen Server in Claude Code → `best-practices/claude-tooling/mcp.md`. Baue ich einen Hook (der evtl. ein MCP-Tool
 matcht) → `claude-hooks.md`.
 
 ---

@@ -7,7 +7,7 @@
 >
 > **Abgrenzung (drei MCP-Dateien, klar getrennt):**
 > - **Diese Datei** = **Server BAUEN** (Server-Autor-Seite, Projekt-Code) — Gegenstueck zu `bugs/claude-tooling/mcp-server.md`.
-> - `best-practices/05-mcp/` = **Server KONFIGURIEREN/VERBINDEN in Claude Code** (Harness-Seite).
+> - `best-practices/claude-tooling/mcp.md` = **Server KONFIGURIEREN/VERBINDEN in Claude Code** (Harness-Seite).
 > - `bugs/claude-tooling/claude-hooks.md` = **Hooks** (MCP nur am Rand: Matcher, MCP-Tool-als-Hook).
 >
 > **Anker (live ermittelt 2026-06-03):** Projekt `~/proggs/mcp-code-search` nutzt

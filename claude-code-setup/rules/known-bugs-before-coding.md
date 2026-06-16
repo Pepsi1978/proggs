@@ -118,7 +118,7 @@ Web-Lookup mitten im Debuggen einer laufenden Aufgabe bleibt frei.
 ## Zwei Seiten einer Medaille: erst Almanach, dann Best Practices
 
 Zu (fast) jedem Almanach `bugs/<kategorie>/<bereich>.md` gibt es eine Best-Practices-Datei
-`best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`. Der Almanach sagt *was
+`best-practices/<kategorie>/<bereich>.md`. Der Almanach sagt *was
 schiefgeht und wie man es loest*; die Best-Practices sagen *wie man es von vornherein richtig
 macht, damit der Bug gar nicht erst entsteht*. **Beide Kurzchecks werden VOR der Arbeit gelesen —
 in dieser Reihenfolge: erst Almanach, dann Best Practices, dann coden (Stufe A; bei
@@ -175,7 +175,7 @@ oder der Nutzer nennt Erweiterung/Extension/Overlay-Plugin.
 | System | Rolle |
 |--------|-------|
 | `~/proggs/bugs/*.md` + `README.md` + `SYSTEM.md` | Proaktiver Almanach pro Bereich (VOR der Arbeit): was schiefgeht + Loesung |
-| `~/proggs/best-practices/projekt-code/**` | Proaktive Best-Practices pro Bereich (zweite Seite, ebenfalls VOR der Arbeit gelesen): wie man es richtig macht |
+| `~/proggs/best-practices/**` | Proaktive Best-Practices pro Bereich (zweite Seite, ebenfalls VOR der Arbeit gelesen): wie man es richtig macht |
 | `bug-almanac-index` / `bug-almanac-guard` Hooks | Automatik: Liste einblenden / Almanach + Best-Practices erzwingen |
 | `bug-cases.jsonl` | Reaktive Fall-Datenbank mit Auto-Match (NACH einem Fehler) |
 | Direktive #3 (Resilient Bugfixing) | Jeder neue Bug → Almanach-Eintrag + bug-case; Loesungen IMMER funktionserhaltend |

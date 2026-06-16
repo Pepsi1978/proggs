@@ -29,9 +29,9 @@ Gilt für ALLE Recherche-Wege:
 2. **Wenn JA — Best Practices einarbeiten:**
    - Passende bestehende Datei unter `~/proggs/best-practices/` ergänzen, ODER
    - neue Datei in einem **sinnvollen, bestehenden Ordner** anlegen:
-     Projekt-/Technologie-Wissen → `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`
+     Projekt-/Technologie-Wissen → `best-practices/<kategorie>/<bereich>.md`
      (Kategorien: `android`, `android-build`, `apis`, `desktop`, `web`, `claude-tooling`,
-     `agents`, `assets`, `peripherie`, …); Harness-Wissen → `best-practices/01-hooks/` bis `12-neues/`
+     `agents`, `assets`, `peripherie`, …); Harness-Wissen → `best-practices/claude-tooling/`
    - **Beide Ebenen pflegen:** Kurzcheck-Tabelle (Stufe A, innerhalb der ersten 80 Zeilen)
      UND ausführlicher Volltext-Abschnitt — niemals nur eines von beiden
    - Format der bestehenden Dateien übernehmen: Stand-Datum, Versions-Anker,
@@ -55,7 +55,7 @@ muss verstehen, was recherchiert wurde, was gilt, für welche Versionen und wohe
 
 | Recherche-Ergebnis | Tauglich? | Ziel |
 |--------------------|-----------|------|
-| Patterns, APIs, Architektur-Empfehlungen für eine Technologie | **JA** | `best-practices/projekt-code/<kategorie>/` |
+| Patterns, APIs, Architektur-Empfehlungen für eine Technologie | **JA** | `best-practices/<kategorie>/` |
 | Bekannte Bugs, Fallen, Workarounds, Versions-Inkompatibilitäten | **JA** | `bugs/<kategorie>/` + Querverweis in Best Practices |
 | Vergleich von Libraries/Tools mit Empfehlung | **JA** | Best Practices (Empfehlung + Begründung + Datum) |
 | Plattform-/Policy-Wissen (Play Store, OS-Limits, Rechtliches) | **JA** | Best Practices der passenden Kategorie |

@@ -49,14 +49,14 @@
 **Symptom:** Klare Regeln werden missachtet, teils mehrfach pro Session; Claude bestaetigt die Regel und bricht sie trotzdem.
 **Ursache:** CLAUDE.md/Rules werden als **User-Message NACH dem System-Prompt** geliefert, NICHT als erzwungene Config. Doku woertlich: "treats them as context, not enforced configuration. There's no guarantee of strict compliance, especially for vague or conflicting instructions."
 **Versionen:** per Design, alle Versionen.
-**FIX:** Verhalten, das IMMER laufen muss → **Hook** (PreToolUse/Lifecycle, laeuft als Shell-Befehl unabhaengig von Claudes Entscheidung — siehe `claude-hooks.md`). System-Prompt-Ebene → `--append-system-prompt`. Instruktionen **spezifisch + knapp** formulieren, Widersprueche zwischen Regeln entfernen. Siehe `best-practices/10-arbeitsweise/` + `08-kontext/`.
+**FIX:** Verhalten, das IMMER laufen muss → **Hook** (PreToolUse/Lifecycle, laeuft als Shell-Befehl unabhaengig von Claudes Entscheidung — siehe `claude-hooks.md`). System-Prompt-Ebene → `--append-system-prompt`. Instruktionen **spezifisch + knapp** formulieren, Widersprueche zwischen Regeln entfernen. Siehe `best-practices/claude-tooling/arbeitsweise.md` + `best-practices/claude-tooling/kontext.md`.
 **Quelle:** docs/memory · #19635 · #34197 · #60346
 
 ### 1.2 Context-Rot: zu grosse CLAUDE.md senkt Genauigkeit  ⭐ HAEUFIG
 **Symptom:** Je laenger die CLAUDE.md, desto schlechter Befolgung/Genauigkeit — Qualitaet faellt schon ab ~50 % Kontextfuellung, nicht erst bei 100 %.
 **Ursache:** CLAUDE.md wird bei JEDER Session **in voller Laenge** geladen (egal wie lang) → fixer Token-Sockel, sinkendes Signal-Rausch-Verhaeltnis.
 **Versionen:** per Design.
-**FIX:** Ziel **< 200 Zeilen**. Zwei-Schichten-Architektur: kompakter Verweis in CLAUDE.md, Volltext in `~/.claude/rules/<thema>.md` (ebenfalls immer geladen, aber als fokussierte Datei) oder in Skills (laden on-demand). Genau das Muster der 3 Hauptdirektiven + der Observability-First-Regel. Siehe `best-practices/08-kontext/` + `09-token-effizienz/`.
+**FIX:** Ziel **< 200 Zeilen**. Zwei-Schichten-Architektur: kompakter Verweis in CLAUDE.md, Volltext in `~/.claude/rules/<thema>.md` (ebenfalls immer geladen, aber als fokussierte Datei) oder in Skills (laden on-demand). Genau das Muster der 3 Hauptdirektiven + der Observability-First-Regel. Siehe `best-practices/claude-tooling/kontext.md` + `best-practices/claude-tooling/token-effizienz.md`.
 **Quelle:** docs/memory (Size) · #29971 (Context-Bloat-Tracker)
 
 ### 1.3 `@import` reduziert KEINE Tokens (haeufiges Missverstaendnis)
@@ -146,7 +146,7 @@
 ### 3.1 Ein JSON-Syntaxfehler macht die GANZE Datei still ungueltig  ⭐ HAEUFIG / Nr.1
 **Symptom:** Ein trailing comma / eine fehlende Klammer → alle Settings/Permissions/Hooks weg, keine Warnung (auch nicht mit `--debug`). Fallback auf Defaults oder gecachte Version.
 **Versionen:** #2835 / #24823 — per Design / offen.
-**FIX:** `"$schema": "https://json.schemastore.org/claude-code-settings.json"` setzen; nach JEDER Aenderung `python -c "import json;json.load(open(...))"` validieren; `/doctor` laufen lassen. JSON **nie** mit `sed`/`awk`/`echo >>` bearbeiten — Edit-Tool oder Python-`json`-Modul. Siehe `best-practices/07-settings/`.
+**FIX:** `"$schema": "https://json.schemastore.org/claude-code-settings.json"` setzen; nach JEDER Aenderung `python -c "import json;json.load(open(...))"` validieren; `/doctor` laufen lassen. JSON **nie** mit `sed`/`awk`/`echo >>` bearbeiten — Edit-Tool oder Python-`json`-Modul. Siehe `best-practices/claude-tooling/settings.md`.
 **Quelle:** #2835 · #24823
 
 ### 3.2 UTF-8-BOM bricht den JSON-Parse (Windows)  ⭐ HAEUFIG (uns 2x getroffen)
@@ -188,7 +188,7 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 **Ursache:** Eval-Reihenfolge **deny > ask > allow**, first-match; allow erlaubt nur, sperrt nie. `:*` ist nur am Pattern-Ende ein Trailing-Wildcard.
 **Versionen:** per Design.
 **FIX:** Sperren nur via `deny`. Fast immer `Bash(cmd:*)` (mit Wortgrenze). Franks `session-guard`/`config-guard` entfernen die allow-Liste bei bypassPermissions zu Recht.
-**Quelle:** docs/permissions · #18961 · #20254 · `best-practices/07-settings/`
+**Quelle:** docs/permissions · #18961 · #20254 · `best-practices/claude-tooling/settings.md`
 
 ### 3.7 `effortLevel`: `/model` ueberschreibt still + `max` persistiert nicht
 **Symptom:** Der `/model`-Picker schreibt still den effortLevel als globalen Default; `effortLevel: "max"` ueberlebt keine Session; effortLevel beim Start teils ignoriert (faellt auf medium).
@@ -224,7 +224,7 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 **Symptom:** Skill ist gelistet, feuert aber nicht fuer seinen Kernzweck; bei vielen Skills "kennt" Claude manche gar nicht.
 **Ursache:** Trigger-relevante Begriffe nur in den ersten Zeichen wirksam; ab v2.0.70 Gesamt-Budget der Skill-/Command-Descriptions im System-Prompt (Default 15000 Zeichen) → Ueberlauf laesst Skills herausfallen.
 **Versionen:** per Design (2.0.70+).
-**FIX:** Trigger-Woerter + Kernzweck **front-loaden**, direktiv formulieren ("Nutze IMMER wenn …"). Bei vielen Skills `SLASH_COMMAND_TOOL_CHAR_BUDGET=30000` setzen ODER descriptions kuerzen. Siehe `best-practices/02-skills/`.
+**FIX:** Trigger-Woerter + Kernzweck **front-loaden**, direktiv formulieren ("Nutze IMMER wenn …"). Bei vielen Skills `SLASH_COMMAND_TOOL_CHAR_BUDGET=30000` setzen ODER descriptions kuerzen. Siehe `best-practices/claude-tooling/skills.md`.
 **Quelle:** agensi.io · blog.fsck.com · Medium (650-Trials)
 
 ### 4.4 Discovery nur bei Session-Start (+ exakter Dateiname)
@@ -274,7 +274,7 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 - `$ARGUMENTS` bricht bei **mehrzeiligem** Input (#28033); `$1`/`$2` nur in **manuell** aufgerufenen Commands, model-invoked Skills nur `$ARGUMENTS` (seit Skill/Command-Merge v2.1.3, #19355).
 - `$ARGUMENTS` wird fuer `!`-Bash NICHT escaped → **nie** ungefiltert in `!`-Bash interpolieren (Injection, #16163).
 - Plugin-Commands voll-qualifiziert aufrufen (`/plugin:command`); Subdirectory-Namespacing (`frontend/x.md` → `/frontend:x`) in 2.1 wiederhergestellt.
-**FIX:** Argumente einzeilig oder `$1/$2`; Input vor `!`-Bash validieren; voll-qualifizierte Namen. Siehe `best-practices/06-commands/`.
+**FIX:** Argumente einzeilig oder `$1/$2`; Input vor `!`-Bash validieren; voll-qualifizierte Namen. Siehe `best-practices/claude-tooling/commands.md`.
 **Quelle:** #28033 · #16163 · #19355 · #15882
 
 ---
@@ -299,7 +299,7 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 ### 7.1 Externer Plugin-/MCP-Code als Prompt-Injection-Vektor  ⭐ Sicherheit
 **Symptom:** Eingebettete Injections in Plugin-Commands/Marketplace koennen Claude zu Datei-Loeschung/Reverse-Shell verleiten; kompromittierte MCP-Server injizieren am Tool-Layer (unsichtbar im Chat).
 **FIX:** Externen Code VOR Installation komplett lesen, Publisher/Stars/Commits pruefen, Scanner (Parry) laufen lassen, nur vertrauenswuerdige Quellen — exakt die CLAUDE.md-Regel "Sicherheit bei externem Code".
-**Quelle:** promptarmor.com · truefoundry.com · `best-practices/04-plugins/`
+**Quelle:** promptarmor.com · truefoundry.com · `best-practices/claude-tooling/plugins.md`
 
 ### 7.2 Plugin-Hook-Skripte verlieren das Execute-Bit (+x)
 **Symptom:** `Permission denied` fuer `.sh`-Hooks nach git-clone / Cloud-Sync / `claude plugin update`.
@@ -391,8 +391,8 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 auch die Best-Practices-Seite erzwingt (erst Almanach, dann Best Practices). Dort steht "wie macht man
 es von vornherein richtig" inkl. **Entscheidungsbaum** (CLAUDE.md vs. rule vs. Hook vs. Skill vs.
 Output-Style vs. settings), Verbindlichkeits-Spektrum, Befolgungs-Techniken, Defense-in-Depth.
-Ergaenzend komponentenweise: `best-practices/02-skills`, `03-agents`, `06-commands`, `07-settings`,
-`08-kontext`, `09-token-effizienz`, `10-arbeitsweise`.
+Ergaenzend komponentenweise: `best-practices/claude-tooling/skills.md`, `best-practices/claude-tooling/agents.md`, `best-practices/claude-tooling/commands.md`, `best-practices/claude-tooling/settings.md`,
+`best-practices/claude-tooling/kontext.md`, `best-practices/claude-tooling/token-effizienz.md`, `best-practices/claude-tooling/arbeitsweise.md`.
 
 **🔗 Bezugs-Tabelle (Bug-Abschnitt ↔ Best-Practice-Abschnitt):**
 
