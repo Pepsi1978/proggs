@@ -1,46 +1,98 @@
-# Best-Practices — Harness-Wissensbasis
+# ✅ INHALTSVERZEICHNIS BEST-PRACTICES
 
-Laufend gepflegtes Wissen darueber, **wie man die Claude-Code-Werkzeuge am besten benutzt**,
-und was sich mit neuen Versionen geaendert hat. Gepflegt vom `best-practices`-Skill (Teil 1).
+> **Die „richtige Seite der Medaille" zum Bug-Almanach (`~/proggs/bugs/`).**
+> Für jeden Bereich, an dem gearbeitet wird, liegt hier eine `.md`-Datei mit den
+> **bewährten, funktionserhaltenden Best-Practices** — *wie man es von vornherein
+> richtig macht, damit der Bug gar nicht erst entsteht*. Der Almanach sagt *was
+> schiefgeht und wie man es löst*, diese Seite sagt *wie man es richtig macht*.
+> Beide Kurzchecks werden VOR der Arbeit gelesen (Digest-Modell, Stufe A — erst
+> Almanach, dann Best Practices). Das vollständige Systemverhalten steht in
+> [`SYSTEM.md`](SYSTEM.md).
 
-- **Quellen-Rangordnung:** Offiziell (Anthropic) = Grundwahrheit, extern = gelabelte Alternative.
-- **Jeder Eintrag traegt:** Quelle (URL) + Datum + `offiziell`/`extern`-Flag.
-- **Stand:** siehe `_state.json` (`last_version` / `last_checked`).
-- **Master-Zeitleiste aller Aenderungen:** `_changelog-archiv.md`.
+---
 
-## Inhaltsverzeichnis (Kategorien)
+## Struktur (seit 2026-06-16: flach, 1:1 wie `bugs/`)
 
-| # | Kategorie | Datei |
-|---|-----------|-------|
-| 1 | Hooks | [01-hooks/best-practices.md](01-hooks/best-practices.md) |
-| 2 | Skills | [02-skills/best-practices.md](02-skills/best-practices.md) |
-| 3 | Agents | [03-agents/best-practices.md](03-agents/best-practices.md) |
-| 4 | Plugins | [04-plugins/best-practices.md](04-plugins/best-practices.md) |
-| 5 | MCP-Server | [05-mcp/best-practices.md](05-mcp/best-practices.md) |
-| 6 | Slash-Commands | [06-commands/best-practices.md](06-commands/best-practices.md) |
-| 7 | Settings & Konfig | [07-settings/best-practices.md](07-settings/best-practices.md) |
-| 8 | Kontext-Management | [08-kontext/best-practices.md](08-kontext/best-practices.md) |
-| 9 | Token- & Kosten-Effizienz | [09-token-effizienz/best-practices.md](09-token-effizienz/best-practices.md) |
-| 10 | Arbeitsweise / Verhalten | [10-arbeitsweise/best-practices.md](10-arbeitsweise/best-practices.md) |
-| 11 | Researcher & Internet-Recherche | [11-researcher/best-practices.md](11-researcher/best-practices.md) |
-| 12 | Neues / Horizont-Scan | [12-neues/best-practices.md](12-neues/best-practices.md) |
+Die Best-Practices liegen — exakt symmetrisch zum Bug-Almanach — in
+**Kategorie-Unterordnern** mit selbst-identifizierendem Dateinamen:
+`best-practices/<kategorie>/<bereich>.md` (z. B. `android/room.md`,
+`claude-tooling/hooks.md`). Kein `best-practices-`-Präfix, keine
+`projekt-code/`-Zwischenebene mehr — dieselben Kategorien und Dateinamen wie
+`bugs/<kategorie>/<bereich>.md`, damit beide Seiten der Medaille deckungsgleich sind.
 
-> "Neues" (Kategorie 12) ist die Auffangzone und bleibt IMMER die letzte Kategorie. Kommt eine
-> neue definierte Kategorie dazu, wird sie davor eingefuegt und "Neues" rueckt eine Nummer nach
-> hinten (Ordner entsprechend umbenannt).
+> **Historie:** Bis 2026-06-16 lag Projekt-Wissen unter
+> `best-practices/projekt-code/<kat>/best-practices-<bereich>.md` und das generische
+> Harness-Wissen in nummerierten Ordnern `01-hooks` … `12-neues`. Beides wurde auf die
+> flache, präfixlose 1:1-Struktur migriert (Commits #46839–#46848 ff.). `check-coupling.py`
+> paart weiterhin über den Bereichs-Namen (rekursiv gesucht), ein Kategorie-Wechsel ist
+> also unkritisch.
 
-## Projekt-Code (zweite Seite der Medaille zum Bug-Almanach)
+```
+best-practices/
+├── README.md · SYSTEM.md · _state.json · _changelog-archiv.md   (oben, kategorielos)
+├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing, Drive-Backup, WorkManager, Hilt, Retrofit, Media3, Coil3, 3D (Filament), Voice-Trigger
+├── android-build/    Gradle/AGP, R8, Play-Store-Release
+├── desktop/          .NET/WPF (Windows), Swift/AppKit (macOS), Overlays, Whisper-STT, Text-Injection, 3D (Metal/.NET/Rust/Godot)
+├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/WebGPU)
+├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, …)
+├── peripherie/       Elgato Stream-Deck-Plugin
+├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
+├── agents/           Boss-/Orchestrator-Agent im Multi-Agenten-System
+└── claude-tooling/   Claude-Code-Werkzeuge (Harness) — siehe Doppelnatur unten
+```
 
-Neben den Harness-Kategorien oben gibt es die Sektion **[`projekt-code/`](projekt-code/README.md)**
-fuer die Software/Sprachen, die in den Projekten benutzt werden (Kotlin, Swift, Gradle,
-.NET/WPF, TypeScript, Rust …). Seit 2026-06-03 **nach Kategorie gruppiert**, mit
-selbst-identifizierendem Dateinamen direkt im Kategorie-Ordner
-(`projekt-code/<kategorie>/best-practices-<software>.md`, z.B. `android/best-practices-kotlin.md`)
-— dieselben Kategorien wie der Bug-Almanach (`bugs/<kategorie>/`). Entsteht bei Bedarf.
+---
 
-- Quelle hier: der **eigene** Changelog der Software (nicht der Claude-Code-Changelog).
-- Versions-Anker: die live ermittelte installierte Version der Software.
-- Gepflegt vom `bug-almanach-recherche`-Skill (Praevention pro Bug) und vom
-  `best-practices`-Skill (gezielter Lauf "nur fuer <software>").
-- Gegenstueck: `~/proggs/bugs/<bereich>.md` sammelt die Bugs, hier steht, wie man sie
-  von vornherein vermeidet.
+## Kategorie-Übersicht
+
+| Kategorie | Dateien | Inhalt | Bug-Gegenstück |
+|-----------|--------:|--------|----------------|
+| `android/` | 13 | Kotlin/Compose/Android-Stack + Libraries | `bugs/android/` |
+| `android-build/` | 3 | Gradle/AGP, R8, Play-Store-Release | `bugs/android-build/` |
+| `desktop/` | 13 | .NET/WPF, Swift/AppKit, Overlays, STT, 3D nativ | `bugs/desktop/` |
+| `web/` | 3 | Chrome-Erweiterungen, TypeScript, 3D Web | `bugs/web/` |
+| `apis/` | 15 | LLM-/HTTP-APIs + OAuth (14 gepaart + `multi-provider` ungepaart) | `bugs/apis/` |
+| `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
+| `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
+| `agents/` | 1 | Orchestrator-Agent | `bugs/agents/` |
+| `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
+
+---
+
+## Doppelnatur von `claude-tooling/`
+
+`claude-tooling/` enthält zwei Sorten Dateien, die bewusst koexistieren:
+
+1. **Bug-gepaarte Digests** (Gegenstück zu `bugs/claude-tooling/<x>.md`):
+   `claude-hooks.md`, `mcp-server.md`, `claude-config.md`, `cowork.md`,
+   `cowork-git-push.md`, `cowork-scheduled-tasks.md`, `python-windows.md`,
+   `claude-code-desktop-vs-cli.md`, `agent-knowledge-system.md`. Diese tragen die
+   Bezugs-Tabelle zum Almanach und werden von `check-coupling.py` als Paar geführt.
+
+2. **Generisches Harness-Wissen** (früher die nummerierten Ordner `01-hooks`…`12-neues`):
+   `hooks.md`, `skills.md`, `agents.md`, `plugins.md`, `mcp.md`, `commands.md`,
+   `settings.md`, `kontext.md`, `token-effizienz.md`, `arbeitsweise.md`,
+   `researcher.md`, `neues.md`. Das sind die ausführlichen Best-Practices **wie man die
+   Claude-Code-Werkzeuge am besten benutzt**. Sie haben (noch) kein eigenes Bug-Pendant
+   und erscheinen in `check-coupling.py` daher als `[INFO]` (ungepaart). Wo ein
+   spezifischer Digest auf den Volltext zeigt (z. B. `claude-hooks.md` → `hooks.md`),
+   ist die ausführliche Datei die Tiefe.
+
+> `neues.md` ist die Auffangzone für Themen ohne eigene Kategorie und bleibt das
+> generische Sammelbecken des Horizont-Scans.
+
+---
+
+## Quellen & Pflege
+
+- **Quellen-Rangordnung:** Offiziell (Hersteller-Doku/Changelog) = Grundwahrheit,
+  extern = klar gelabelte Alternative. Jeder Eintrag trägt Quelle (URL) + Datum + Version
+  + `offiziell`/`extern`-Flag.
+- **Versions-Anker:** die live ermittelte installierte Version der jeweiligen Software.
+- **Stand des Harness-Wissens:** siehe [`_state.json`](_state.json) (`last_version` / `last_checked`).
+- **Master-Zeitleiste aller Änderungen:** [`_changelog-archiv.md`](_changelog-archiv.md).
+- **Wer schreibt hier rein:**
+  - `bug-almanach-recherche`-Skill — trägt bei jeder Bug-Recherche die Prävention/Best-Practice ein.
+  - `best-practices`-Skill — rollt eine Software/ein Harness-Thema gezielt auf und pflegt die neuesten Empfehlungen.
+- **Kopplung:** `python bugs/check-coupling.py` prüft, dass jede gepaarte Datei wechselseitig
+  mit ihrem Almanach verlinkt ist; `python bugs/health.py` ist der Gesamt-Selbsttest.
