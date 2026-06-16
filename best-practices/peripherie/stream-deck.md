@@ -1,6 +1,6 @@
 # Stream Deck Plugins — Best Practices (Stand 2026-06-03, Stream Deck 7.4.2 / @elgato/streamdeck 2.1.0)
 
-> **Die „richtige Seite der Medaille" zum Bug-Almanach** [`bugs/peripherie/stream-deck.md`](../../../bugs/peripherie/stream-deck.md).
+> **Die „richtige Seite der Medaille" zum Bug-Almanach** [`bugs/peripherie/stream-deck.md`](../../bugs/peripherie/stream-deck.md).
 > Der Almanach sagt *was schiefgeht*; diese Datei sagt *welches Muster den Fehler von vornherein verhindert*.
 > Vor Arbeit an einem Stream-Deck-Plugin BEIDE lesen.
 >
@@ -485,7 +485,7 @@ Quelle: docs.elgato.com/streamdeck/cli/commands/pack/ · .../validate/ — **off
 
 ## 🔗 Wechselseitige Bezugstabelle (Best Practice ↔ Almanach)
 
-> Verknuepft jede Best-Practice mit der konkreten Bug-Loesung in [`bugs/peripherie/stream-deck.md`](../../../bugs/peripherie/stream-deck.md).
+> Verknuepft jede Best-Practice mit der konkreten Bug-Loesung in [`bugs/peripherie/stream-deck.md`](../../bugs/peripherie/stream-deck.md).
 
 | Best-Practice-Abschnitt (hier) | Almanach-Bug-Abschnitt (bugs/peripherie/stream-deck.md) |
 |--------------------------------|----------------------------------------------|

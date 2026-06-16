@@ -15,7 +15,7 @@
 > Claude Agent SDK. Issue-Status wurde am 2026-06-09 hart per `gh` geprueft.
 >
 > Begleitseite (wie man es von vornherein richtig macht): siehe
-> `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md`.
+> `best-practices/agents/orchestrator-agent.md`.
 > Eng verwandte Harness-Regeln (immer geladen): `subagent-crash-proofing.md`,
 > `lossless-context-principle.md`, `metacognitive-monitoring.md`, `agent-and-researcher-rules.md`.
 

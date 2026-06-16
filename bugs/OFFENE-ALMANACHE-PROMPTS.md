@@ -191,7 +191,7 @@ Starte den Best-Practices-Skill fuer Elgato-Stream-Deck-Plugins (Projekt-Code-Se
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN STREAM-DECK-PLUGINS AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sauberer Action-Lifecycle, korrekte bidirektionale Kommunikation Plugin<->Property-Inspector, robuste Settings-Persistenz, empfohlene Projekt-/Manifest-Struktur, offizielle SDK-Konventionen.
 
-Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/projekt-code/peripherie/best-practices-stream-deck.md und koppele wechselseitig mit bugs/peripherie/stream-deck.md. Am Ende committen und pushen.
+Projekt ~/proggs/TVO-StreamDeck-Plugin. Speichere unter best-practices/peripherie/stream-deck.md und koppele wechselseitig mit bugs/peripherie/stream-deck.md. Am Ende committen und pushen.
 ```
 
 ---

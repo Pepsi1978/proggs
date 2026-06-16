@@ -181,4 +181,4 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
 |---------|-------|-------|------|---------------------------------|
-| **Boss-/Orchestrator-Agent** (Multi-Agenten-Systeme, Sub-Agent-Spawning, Intent, Tool-Calling) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~64 | „Orchestrator", „Boss-Agent", „Multi-Agenten", „Sub-Agent", „Worker", „Intent", „Tool-Calling", „LangGraph", „CrewAI", „Semantic Kernel", „Agent SDK", „VoiceAgent" · Best-Practices: `best-practices/projekt-code/agents/best-practices-orchestrator-agent.md` |
+| **Boss-/Orchestrator-Agent** (Multi-Agenten-Systeme, Sub-Agent-Spawning, Intent, Tool-Calling) | [`agents/orchestrator-agent.md`](agents/orchestrator-agent.md) | 2026-06-09 | ~64 | „Orchestrator", „Boss-Agent", „Multi-Agenten", „Sub-Agent", „Worker", „Intent", „Tool-Calling", „LangGraph", „CrewAI", „Semantic Kernel", „Agent SDK", „VoiceAgent" · Best-Practices: `best-practices/agents/orchestrator-agent.md` |
