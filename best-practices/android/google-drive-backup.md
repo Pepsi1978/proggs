@@ -7,7 +7,7 @@
 > **API v3** (neues **Quota-Unit-Modell seit 01.05.2026**) · `play-services-auth 21.3.0`
 > (`GoogleAuthUtil`/`GoogleSignIn` **deprecated**, Entfernung ab **Mai 2026**) ·
 > `androidx.credentials 1.5.0-alpha06` + `googleid 1.1.1` · compileSdk 35, minSdk 26.
-> **Gegenstück (was schiefgeht):** [`bugs/android/google-drive-backup.md`](../../../bugs/android/google-drive-backup.md).
+> **Gegenstück (was schiefgeht):** [`bugs/android/google-drive-backup.md`](../../bugs/android/google-drive-backup.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

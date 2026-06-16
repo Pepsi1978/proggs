@@ -9,7 +9,7 @@
 > **Entfernung ab Mai 2026**) · `androidx.credentials 1.5.0-alpha06` + `googleid 1.1.1` ·
 > compileSdk 35, minSdk 26. Lokale DB ist Source of Truth.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-google-drive-backup.md`](../../best-practices/projekt-code/android/best-practices-google-drive-backup.md).
+> [`best-practices/android/google-drive-backup.md`](../../best-practices/android/google-drive-backup.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

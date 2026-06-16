@@ -14,7 +14,7 @@
 > `@Composable`/Recomposition/Navigation-UI → [`jetpack-compose.md`](jetpack-compose.md). Gradle-Plugin-/
 > AGP-/Wrapper-/Catalog-Themen → [`../android-build/gradle.md`](../android-build/gradle.md). R8-Shrinker
 > allgemein → [`../android-build/r8.md`](../android-build/r8.md). Hier geht es NUR um den DI-Layer (Hilt/Dagger/KSP).
-> Zweite Seite (wie macht man es richtig): `best-practices/projekt-code/android/best-practices-kotlin.md` (Hilt-Zeile).
+> Zweite Seite (wie macht man es richtig): `best-practices/android/kotlin.md` (Hilt-Zeile).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -675,7 +675,7 @@
 ## 🔗 Bezug: Bug-Abschnitt ↔ Best-Practices
 
 > Gegenseite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-hilt-dagger.md`](../../best-practices/projekt-code/android/best-practices-hilt-dagger.md)
+> [`best-practices/android/hilt-dagger.md`](../../best-practices/android/hilt-dagger.md)
 > (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
 
 | Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |

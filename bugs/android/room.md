@@ -20,7 +20,7 @@
 > - **Gradle/AGP/KSP-Plugin allgemein, R8-Keep-Regeln** → [`../android-build/gradle.md`](../android-build/gradle.md) bzw. [`../android-build/r8.md`](../android-build/r8.md). Hier nur Room-spezifische Build-Fallen (Schema-Export, KSP-Pfad-Regex, Kotlin-Codegen).
 > - **DI von DAOs/DB ueber Hilt** → [`hilt-dagger.md`](hilt-dagger.md) (DAO als `@Provides`/`@Singleton`).
 >
-> Zweite Seite (wie macht man es von vornherein richtig): `best-practices/projekt-code/android/best-practices-android-platform.md` §3 „Saubere Room-Migrationsstrategie & Runtime-Disziplin" + `best-practices-google-drive-backup.md` (WAL/Restore).
+> Zweite Seite (wie macht man es von vornherein richtig): `best-practices/android/android-platform.md` §3 „Saubere Room-Migrationsstrategie & Runtime-Disziplin" + `best-practices-google-drive-backup.md` (WAL/Restore).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -609,7 +609,7 @@ nur die Default-Wert-Rueckgabe in Room 3.0 (b/438041176).
 
 ## 🔗 Bezug zu Best-Practices (Praevention, „wie macht man es richtig")
 
-Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/projekt-code/android/best-practices-room.md`](../../best-practices/projekt-code/android/best-practices-room.md)
+Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/android/room.md`](../../best-practices/android/room.md)
 — spiegelgleich abgelegt, damit der `bug-almanac-guard` nach diesem Almanach auch die Best-Practices-Seite
 erzwingt (erst Almanach, dann Best Practices). Ergaenzend fuer den Framework-/Backup-Kontext:
 `best-practices-android-platform.md` §3 (Runtime-Disziplin) + `best-practices-google-drive-backup.md` (WAL/Restore).

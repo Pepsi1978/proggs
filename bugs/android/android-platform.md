@@ -14,7 +14,7 @@
 > `gh` hart geprueft. Quelle des Systems: `~/proggs/bugs/SYSTEM.md`.
 >
 > **Ergaenzung 2026-06-02 (Best-Practices-Lauf):** Die Best-Practices-Seite
-> [`best-practices/projekt-code/android/best-practices-android-platform.md`](../../best-practices/projekt-code/android/best-practices-android-platform.md)
+> [`best-practices/android/android-platform.md`](../../best-practices/android/android-platform.md)
 > ist die „so macht man es richtig"-Seite zu diesem Almanach. Dabei kamen zusaetzliche Bug-Funde
 > dazu: 4.14, 4.15 (WorkManager/Hilt) und 8.10–8.13 (Android-15/16-Plattform-Crashes). Die
 > wechselseitige Bezugs-Tabelle steht direkt unter dem TL;DR.
@@ -72,7 +72,7 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 ## 🔗 Bezug zur Best-Practices-Seite (so vermeidet man diese Bugs von vornherein)
 
 Zwei Seiten derselben Medaille: dieser Almanach sagt *was schiefgeht und wie man es umgeht*,
-[`best-practices/projekt-code/android/best-practices-android-platform.md`](../../best-practices/projekt-code/android/best-practices-android-platform.md)
+[`best-practices/android/android-platform.md`](../../best-practices/android/android-platform.md)
 sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihre Praevention.
 
 | Bug-Sektion (hier) | Praevention in `best-practices/.../android-platform/best-practices.md` |

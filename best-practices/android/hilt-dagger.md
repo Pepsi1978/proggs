@@ -9,7 +9,7 @@
 > **Verfügbares Upgrade (offiziell):** androidx.hilt **1.3.0** ist seit 2025-09-10 stabil (1.4.0-beta01 in
 > Beta); bringt das neue Artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose` (§4.6). Dagger-Hilt-Latest
 > ist 2.59.x — die Patterns hier sind ab 2.55 unverändert; für vollen KSP2-Betrieb ≥ 2.57 (siehe Bug-Almanach V6).
-> **Gegenstück (was schiefgeht):** [`bugs/android/hilt-dagger.md`](../../../bugs/android/hilt-dagger.md).
+> **Gegenstück (was schiefgeht):** [`bugs/android/hilt-dagger.md`](../../bugs/android/hilt-dagger.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -359,7 +359,7 @@
 
 ## 🔗 Bezug: Best-Practice-Abschnitt ↔ Bug-Abschnitt
 
-> Wechselseitig mit [`bugs/android/hilt-dagger.md`](../../../bugs/android/hilt-dagger.md) (dort die Spiegel-Tabelle).
+> Wechselseitig mit [`bugs/android/hilt-dagger.md`](../../bugs/android/hilt-dagger.md) (dort die Spiegel-Tabelle).
 
 | Best-Practice (hier) | Verwandter Bug-Abschnitt (Almanach) |
 |----------------------|-------------------------------------|

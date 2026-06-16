@@ -36,7 +36,7 @@
 
 ---
 
-## 🔗 Bezug zu den Best-Practices ([`best-practices/projekt-code/android/best-practices-kotlin.md`](../../best-practices/projekt-code/android/best-practices-kotlin.md))
+## 🔗 Bezug zu den Best-Practices ([`best-practices/android/kotlin.md`](../../best-practices/android/kotlin.md))
 
 Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest*, die Best-Practices sagen
 *wie man den Bug von vornherein vermeidet*. Pro Bug-Abschnitt der passende Praeventions-Abschnitt —

@@ -81,7 +81,7 @@ Starte den Best-Practices-Skill fuer Jetpack Compose (Projekt-Code-Seite, NICHT 
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT JETPACK COMPOSE AM BESTEN UND RICHTIG ARBEITET — empfohlene, idiomatische Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: unidirektionaler Datenfluss + State-Hoisting, stabile/immutable State-Typen fuer Skippability, korrekte remember-/derivedStateOf-Nutzung, LazyList mit stabilen Keys, richtige Side-Effect-API je Fall, Material3-Theming, Performance-Empfehlungen.
 
-Compose-Version aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/best-practices-jetpack-compose.md und koppele wechselseitig mit bugs/android/jetpack-compose.md. Am Ende committen und pushen.
+Compose-Version aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/android/jetpack-compose.md und koppele wechselseitig mit bugs/android/jetpack-compose.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -103,7 +103,7 @@ Starte den Best-Practices-Skill fuer das Android-Framework/Platform-SDK (Projekt
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT DEM ANDROID-FRAMEWORK AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": lifecycle-sicheres Arbeiten (lifecycleScope, repeatOnLifecycle), saubere Room-Migrationsstrategie, korrekter WorkManager-Einsatz, moderner Runtime-Permission-Flow, sauberer Foreground-Service-/Notification-/Scoped-Storage-Umgang, empfohlene App-Architektur.
 
-compileSdk/targetSdk aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android/best-practices-android-platform.md und koppele wechselseitig mit bugs/android/android-platform.md. Am Ende committen und pushen.
+compileSdk/targetSdk aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/android/android-platform.md und koppele wechselseitig mit bugs/android/android-platform.md. Am Ende committen und pushen.
 ```
 
 ---
@@ -125,7 +125,7 @@ Starte den Best-Practices-Skill fuer Firebase + Google Play Billing (Projekt-Cod
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN FIREBASE UND PLAY BILLING AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": sichere Billing-Flows (Kauf verifizieren + acknowledgen), Abo-Status serverseitig (Cloud Function / Play Developer API) validieren statt nur lokal, korrekter Crashlytics-Mapping-Upload, sauberer FCM-Umgang, sinnvolle Firestore-Security-Rules.
 
-Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/projekt-code/android/best-practices-firebase-billing.md und koppele wechselseitig mit bugs/android/firebase-billing.md. Am Ende committen und pushen.
+Hauptprojekt ~/proggs/BestJournalAndroid. Speichere unter best-practices/android/firebase-billing.md und koppele wechselseitig mit bugs/android/firebase-billing.md. Am Ende committen und pushen.
 ```
 
 ---

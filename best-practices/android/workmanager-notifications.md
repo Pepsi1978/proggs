@@ -6,7 +6,7 @@
 > empfohlen **2.11.x** (SDK-35-kompatibel ab 2.10.0; Projekt nutzt aktuell **keine** WorkManager-Dep,
 > Reminder laufen über **AlarmManager**) · `java.time` ab API 26 **nativ** · `POST_NOTIFICATIONS` +
 > `RECEIVE_BOOT_COMPLETED` deklariert; **kein** Exact-Alarm-Permission.
-> **Gegenstück (was schiefgeht):** [`bugs/android/workmanager-notifications.md`](../../../bugs/android/workmanager-notifications.md).
+> **Gegenstück (was schiefgeht):** [`bugs/android/workmanager-notifications.md`](../../bugs/android/workmanager-notifications.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

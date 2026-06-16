@@ -2,7 +2,7 @@
 
 > **PFLICHT-LESEN vor jeder Arbeit an einer 3D-App (Filament/SceneView/Vulkan/Compose/glTF).**
 > Stand recherchiert **2026-06-13** fuer **Filament 1.71.x / SceneView 4.18.0 / Android 15+ (targetSdk)**.
-> Gegenseite (Best-Practices, was man TUN soll): `best-practices/projekt-code/android/best-practices-3d-filament-android.md`.
+> Gegenseite (Best-Practices, was man TUN soll): `best-practices/android/3d-filament-android.md`.
 > Diese Datei = was SCHIEFGEHT und wie man es vermeidet/fixt. Quellen-Prioritaet: offiziell zuerst
 > (google/filament Issues, sceneview/sceneview, Android Developers), dann Community.
 > **Ehrlichkeits-Hinweis:** gh-CLI war nicht verfuegbar — Issue-Status (open/closed) konnte nicht
@@ -266,7 +266,7 @@ Durchlauf gegen die aktuellen google/filament Issues + RELEASE_NOTES.md verifizi
 
 ## Bezug ↔ Best-Practices
 
-(Gegenseite: `best-practices/projekt-code/android/best-practices-3d-filament-android.md`)
+(Gegenseite: `best-practices/android/3d-filament-android.md`)
 
 | Bug hier | Verhindert man mit Best-Practice |
 |----------|----------------------------------|

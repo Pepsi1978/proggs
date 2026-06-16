@@ -10,7 +10,7 @@
 - **Proaktiv (noch NICHT eingebunden):** Crashlytics, FCM/Cloud Messaging, Firestore — die Teile 3, 4 und 5
   sind Zukunftswissen fuer den spaeteren Einbau und entsprechend markiert.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/firebase-billing.md`](../../../bugs/android/firebase-billing.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/firebase-billing.md`](../../bugs/android/firebase-billing.md)):
 > der Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von vornherein
 > richtig macht, damit der Bug gar nicht erst entsteht*. Quellen-Rangordnung: offizielle Google/Firebase-Quelle
 > (developer.android.com, developers.google.com/android-publisher, firebase.google.com) = Grundwahrheit
@@ -1557,7 +1557,7 @@ Quelle durchgehend: developer.android.com/google/play/billing/lifecycle/subscrip
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/android/firebase-billing.md`](../../../bugs/android/firebase-billing.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/firebase-billing.md`](../../bugs/android/firebase-billing.md))
 
 Zweite Seite der Medaille: Hier stehen die *Praeventions-Regeln* — im Bug-Almanach
 *die konkreten Fehler und ihre Fixes*. Beide Seiten zusammen lesen: Praevention hier, Schadensbehebung dort.

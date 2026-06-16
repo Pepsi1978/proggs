@@ -528,7 +528,7 @@
 ## Bezug: Bug-Abschnitt ↔ Best-Practices
 
 > Gegenseite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-media3-exoplayer.md`](../../best-practices/projekt-code/android/best-practices-media3-exoplayer.md)
+> [`best-practices/android/media3-exoplayer.md`](../../best-practices/android/media3-exoplayer.md)
 > (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
 
 | Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |

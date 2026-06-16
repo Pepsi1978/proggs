@@ -7,7 +7,7 @@
 > Kotlin 2.1.0, Compose, AGP 8.x (R8 full mode). **Achtung:** `coil-network-okhttp` ist aktuell NICHT eingebunden
 > (siehe §2.1). Aktuellste Version: **3.5.0** (Upgrade-Empfehlung §8).
 >
-> **Gegenstück (was schiefgeht):** [`bugs/android/coil3.md`](../../../bugs/android/coil3.md) — dort die Bug-Seite + Fix-Status.
+> **Gegenstück (was schiefgeht):** [`bugs/android/coil3.md`](../../bugs/android/coil3.md) — dort die Bug-Seite + Fix-Status.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -301,7 +301,7 @@
 
 ## Bezug: Best-Practice-Abschnitt ↔ Bug-Abschnitt
 
-> Wechselseitig mit [`bugs/android/coil3.md`](../../../bugs/android/coil3.md) (dort die Spiegel-Tabelle).
+> Wechselseitig mit [`bugs/android/coil3.md`](../../bugs/android/coil3.md) (dort die Spiegel-Tabelle).
 
 | Best-Practice (hier) | Verwandter Bug-Abschnitt (Almanach) |
 |----------------------|-------------------------------------|

@@ -521,7 +521,7 @@
 ## Bezug: Bug-Abschnitt ↔ Best-Practices
 
 > Gegenseite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-coil3.md`](../../best-practices/projekt-code/android/best-practices-coil3.md)
+> [`best-practices/android/coil3.md`](../../best-practices/android/coil3.md)
 > (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
 
 | Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |

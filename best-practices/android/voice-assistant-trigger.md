@@ -7,7 +7,7 @@
 - **ChatGPT-App:** ab **v1.2025.070** als Standard-Assistent setzbar (Assist-Geste startet Advanced Voice Mode direkt).
 - **Wake-Word:** **sherpa-onnx KWS** (Apache-2.0, gleiche Engine wie der Windows-VoiceAgent + BestJournalAndroid native `.so`), Plan B **openWakeWord**.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/voice-assistant-trigger.md`](../../../bugs/android/voice-assistant-trigger.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/android/voice-assistant-trigger.md`](../../bugs/android/voice-assistant-trigger.md)):
 > der Almanach sagt *was schiefgeht und wie man es umgeht*, diese Datei sagt *wie man es von vornherein
 > richtig macht*. Quellen-Rangordnung: offizielle Android/Google-Quelle (developer.android.com, AOSP) =
 > Grundwahrheit (`offiziell`), Community/Blogs = `extern` (sekundaer).
@@ -213,7 +213,7 @@ AudioRecord (16 kHz mono, 100-ms-Chunks)
 
 ---
 
-## 🔗 Bezug zum Bug-Almanach ([`bugs/android/voice-assistant-trigger.md`](../../../bugs/android/voice-assistant-trigger.md))
+## 🔗 Bezug zum Bug-Almanach ([`bugs/android/voice-assistant-trigger.md`](../../bugs/android/voice-assistant-trigger.md))
 
 | Best-Practice (hier) | Verhindert Bug(s) im Almanach |
 |----------------------|-------------------------------|

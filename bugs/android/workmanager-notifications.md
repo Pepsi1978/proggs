@@ -8,7 +8,7 @@
 > **2.11.2** (Projekt aktuell AlarmManager-basiert, keine WorkManager-Dep) · `java.time` ab API 26 nativ ·
 > `POST_NOTIFICATIONS` + `RECEIVE_BOOT_COMPLETED` deklariert, kein Exact-Alarm-Permission.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-workmanager-notifications.md`](../../best-practices/projekt-code/android/best-practices-workmanager-notifications.md).
+> [`best-practices/android/workmanager-notifications.md`](../../best-practices/android/workmanager-notifications.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

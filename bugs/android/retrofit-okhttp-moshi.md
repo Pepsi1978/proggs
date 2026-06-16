@@ -648,7 +648,7 @@
 ## Bezug: Bug-Abschnitt ↔ Best-Practices
 
 > Gegenseite (wie macht man es richtig):
-> [`best-practices/projekt-code/android/best-practices-retrofit-okhttp-moshi.md`](../../best-practices/projekt-code/android/best-practices-retrofit-okhttp-moshi.md)
+> [`best-practices/android/retrofit-okhttp-moshi.md`](../../best-practices/android/retrofit-okhttp-moshi.md)
 > (dort die Spiegel-Tabelle Best-Practice-Abschnitt ↔ Bug-Abschnitt).
 
 | Bug-Abschnitt (hier) | Verwandter Best-Practice-Abschnitt |

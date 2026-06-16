@@ -9,7 +9,7 @@
 > **Zielgeraet-Anker:** Samsung Galaxy S23 Ultra, One UI 6.1.1 / Android 14 (API 34).
 > ChatGPT-App ab v1.2025.070. Wake-Word: sherpa-onnx KWS / openWakeWord.
 >
-> **Zweite Seite (Praevention):** [`best-practices/projekt-code/android/best-practices-voice-assistant-trigger.md`](../../best-practices/projekt-code/android/best-practices-voice-assistant-trigger.md).
+> **Zweite Seite (Praevention):** [`best-practices/android/voice-assistant-trigger.md`](../../best-practices/android/voice-assistant-trigger.md).
 > **Abgrenzung:** Allgemeines Service/Permission/Lifecycle-Verhalten → [`android-platform.md`](android-platform.md).
 > Hier nur das Spezial-Thema „fremden Assistenten per Weckwort ausloesen + Mic-Handoff".
 

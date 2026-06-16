@@ -7,7 +7,7 @@
 > (codegen) · converter-moshi/converter-scalars **2.11.0** · logging-interceptor **4.12.0** · KSP **2.1.0-1.0.29** ·
 > Kotlin **2.1.0** · AGP 8.7.3 (R8 full mode). Neuer (nicht im Projekt): OkHttp 5.x (`okhttp-coroutines`,
 > Happy-Eyeballs), Moshi 2.0.0-alpha (KSP2-only, kotlin-metadata). EntropieReductor nutzt kotlinx-serialization.
-> **Gegenstück (was schiefgeht):** [`bugs/android/retrofit-okhttp-moshi.md`](../../../bugs/android/retrofit-okhttp-moshi.md).
+> **Gegenstück (was schiefgeht):** [`bugs/android/retrofit-okhttp-moshi.md`](../../bugs/android/retrofit-okhttp-moshi.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -321,7 +321,7 @@
 
 ## Bezug: Best-Practice-Abschnitt ↔ Bug-Abschnitt
 
-> Wechselseitig mit [`bugs/android/retrofit-okhttp-moshi.md`](../../../bugs/android/retrofit-okhttp-moshi.md) (dort die Spiegel-Tabelle).
+> Wechselseitig mit [`bugs/android/retrofit-okhttp-moshi.md`](../../bugs/android/retrofit-okhttp-moshi.md) (dort die Spiegel-Tabelle).
 
 | Best-Practice (hier) | Verwandter Bug-Abschnitt (Almanach) |
 |----------------------|-------------------------------------|

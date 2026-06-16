@@ -1,6 +1,6 @@
 # Room-Persistenz (androidx.room) — Best Practices
 
-> **Zweite Seite der Medaille zum Bug-Almanach** [`bugs/android/room.md`](../../../bugs/android/room.md):
+> **Zweite Seite der Medaille zum Bug-Almanach** [`bugs/android/room.md`](../../bugs/android/room.md):
 > dort steht *was schiefgeht und wie man es umgeht*, hier *wie man Room von vornherein richtig
 > aufsetzt, damit der Bug gar nicht erst entsteht*. Vor Arbeit an `@Entity`/`@Dao`/`@Database`/
 > `Migration`/`@TypeConverter`/`@Relation`/DB-Backup ZUERST den Almanach-Kurzcheck, DANN diesen
@@ -115,7 +115,7 @@
   `PRAGMA integrity_check`. App beim Restore möglichst neu starten.
 - **Schema-Konsistenz beim Restore:** nur Backups mit exakt passender `user_version`/identityHash zurückspielen;
   kein `fallbackToDestructiveMigration()` im Restore-Pfad. Drive-Upload-Mechanik (Auth, appDataFolder, Orphans):
-  siehe [`bugs/android/google-drive-backup.md`](../../../bugs/android/google-drive-backup.md) +
+  siehe [`bugs/android/google-drive-backup.md`](../../bugs/android/google-drive-backup.md) +
   `best-practices-google-drive-backup.md`.
 
 ## §4 Threading, Coroutines & Flow
@@ -166,14 +166,14 @@
 
 - **Genau EINE `RoomDatabase`-Instanz prozessweit** (Singleton) — über Hilt als `@Singleton` bereitstellen.
   Mehrere Instanzen → `database is locked`/`SQLITE_BUSY` unter Last. DAOs/DB via Hilt injizieren (siehe
-  [`bugs/android/hilt-dagger.md`](../../../bugs/android/hilt-dagger.md)).
+  [`bugs/android/hilt-dagger.md`](../../bugs/android/hilt-dagger.md)).
 - Multi-Prozess-Zugriff vermeiden (eine DB pro Prozess); wenn unvermeidbar, dedizierte Multi-Prozess-Strategie.
 
 ---
 
 ## Pflicht-Checkliste vor Room-Arbeit
 
-- [ ] Almanach-Kurzcheck ([`bugs/android/room.md`](../../../bugs/android/room.md)) + dieser Kurzcheck gelesen?
+- [ ] Almanach-Kurzcheck ([`bugs/android/room.md`](../../bugs/android/room.md)) + dieser Kurzcheck gelesen?
 - [ ] Schema-Änderung → `version`-Bump + echte Migration + Schema-JSON eingecheckt + Migrationstest?
 - [ ] Kein `fallbackToDestructiveMigration()` im Produktions-/Restore-Pfad?
 - [ ] Backup mit WAL-Checkpoint/`close()`; Restore mit `integrity_check` + Schema-Versions-Prüfung?

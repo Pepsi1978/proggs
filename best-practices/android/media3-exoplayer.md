@@ -8,7 +8,7 @@
 > **Wichtiger Versions-Hinweis:** Die fertigen Compose-State-Holder (`rememberPlayPauseButtonState`) und
 > `PlayerSurface` kamen erst mit **media3 1.6.0** — bei **1.5.1** existiert nur `Player.listen` (seit 1.5.0) als Baustein.
 > `bufferForPlaybackMs`-Default ist in 1.5.1 noch **2500 ms** (auf 1000 gesenkt erst 1.6.0).
-> **Gegenstück (was schiefgeht):** [`bugs/android/media3-exoplayer.md`](../../../bugs/android/media3-exoplayer.md).
+> **Gegenstück (was schiefgeht):** [`bugs/android/media3-exoplayer.md`](../../bugs/android/media3-exoplayer.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -277,7 +277,7 @@
 
 ## Bezug: Best-Practice-Abschnitt ↔ Bug-Abschnitt
 
-> Wechselseitig mit [`bugs/android/media3-exoplayer.md`](../../../bugs/android/media3-exoplayer.md) (dort die Spiegel-Tabelle).
+> Wechselseitig mit [`bugs/android/media3-exoplayer.md`](../../bugs/android/media3-exoplayer.md) (dort die Spiegel-Tabelle).
 
 | Best-Practice (hier) | Verwandter Bug-Abschnitt (Almanach) |
 |----------------------|-------------------------------------|

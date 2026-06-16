@@ -17,7 +17,7 @@
 > eingebunden. Ihre Bug-Sektionen (3, 4 + 12) sind Zukunftswissen fuer den spaeteren Einbau und entsprechend markiert.
 >
 > **Praeventions-Seite (zweite Seite der Medaille):** seit 2026-06-02 existiert die Best-Practices-Seite
-> [`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md)
+> [`best-practices/android/firebase-billing.md`](../../best-practices/android/firebase-billing.md)
 > (7-Researcher-Lauf) — *wie man es von vornherein richtig macht*. Wechselseitige Abschnitts-Kopplung am Dateiende.
 > Teil 11 (Bugs 123–133) + Teil 12 (Firestore 134–138) wurden aus diesem Best-Practices-Lauf zurueckgekoppelt.
 >
@@ -630,7 +630,7 @@
 **Symptom:** Notifications kommen stark verzoegert oder gar nicht, v.a. Xiaomi/Huawei/Samsung/OnePlus.
 **Ursache:** Doze/App-Standby batcht normal-priority Messages; Hersteller-Mechanismen killen den Prozess. (Frank-relevant: Samsung S23 Ultra / Fold 6.)
 **Versionen:** alle; hersteller-abhaengig.
-**FIX:** Fuer user-sichtbare Pushes `priority: high` setzen (umgeht Doze-Batching). User per `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` um Ausnahme bitten. High-priority NICHT fuer reine Background-Syncs missbrauchen (Quota). Siehe `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger: high-priority FCM vorher `remoteMessage.priority == PRIORITY_HIGH` pruefen — System kann downgraden).
+**FIX:** Fuer user-sichtbare Pushes `priority: high` setzen (umgeht Doze-Batching). User per `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` um Ausnahme bitten. High-priority NICHT fuer reine Background-Syncs missbrauchen (Quota). Siehe `best-practices/android/android-platform.md` (FGS-Start-Trigger: high-priority FCM vorher `remoteMessage.priority == PRIORITY_HIGH` pruefen — System kann downgraden).
 **Quelle:** firebase.blog/posts/2025/04/fcm-on-android
 
 ## 81. FCM-Token-Rotation / onNewToken / getToken SERVICE_NOT_AVAILABLE
@@ -939,7 +939,7 @@
 # Teil 11 — Nachträge aus dem Best-Practices-Lauf (2026-06-02)
 
 > Diese Bugs wurden bei der **Best-Practices-Recherche** (Praeventions-Seite,
-> `best-practices/projekt-code/android/best-practices-firebase-billing.md`) als echte, nicht-duplizierte
+> `best-practices/android/firebase-billing.md`) als echte, nicht-duplizierte
 > Stolpersteine gefunden und hierher zurueckgekoppelt. Jeder verweist auf den passenden
 > Best-Practice-Abschnitt.
 
@@ -1122,7 +1122,7 @@
 
 ## Querverweis: Best Practices
 
-**Hauptseite (Praeventions-Seite der Medaille):** [`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md)
+**Hauptseite (Praeventions-Seite der Medaille):** [`best-practices/android/firebase-billing.md`](../../best-practices/android/firebase-billing.md)
 — erstellt 2026-06-02 (7-Researcher-Best-Practices-Lauf). Wechselseitige Abschnitts-Kopplung:
 
 | Bug-Almanach-Abschnitt | Best-Practice-Abschnitt (`firebase-billing/best-practices.md`) |
@@ -1143,14 +1143,14 @@
 | Bug-Almanach-Abschnitt | Best-Practice (Praevention) |
 |------------------------|------------------------------|
 | Teil 9 (R8/Keep 113–119) | `best-practices/android-build/gradle.md §4` (R8/Shrinking/Keep-Regeln) |
-| Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger) |
+| Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/android/android-platform.md` (FGS-Start-Trigger) |
 | Teil 2/10 (google-services.json, config-cache) | `best-practices/android-build/gradle.md` (Build-System) |
-| Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android/best-practices-android-platform.md` |
+| Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/android/android-platform.md` |
 
 
 ---
 
-## 🔗 Bezug zu den Best-Practices ([`best-practices/projekt-code/android/best-practices-firebase-billing.md`](../../best-practices/projekt-code/android/best-practices-firebase-billing.md))
+## 🔗 Bezug zu den Best-Practices ([`best-practices/android/firebase-billing.md`](../../best-practices/android/firebase-billing.md))
 
 Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest* — die
 Best-Practices sagen *wie man den Fehler von vornherein vermeidet*. Nach jedem Fix
