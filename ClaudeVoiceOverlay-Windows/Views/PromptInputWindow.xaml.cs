@@ -1397,22 +1397,31 @@ public partial class PromptInputWindow : Window
         // dem Prompt mitwandert (deckungsgleich zu PromptSlotService.MoveAsync).
         _slotSummaries.TryGetValue(from, out var fromSummary);
         _slotSummaries.TryGetValue(to, out var toSummary);
+        // Prioritaet (rot/gelb/gruen) gehoert — wie die Summary — zum PROMPT und
+        // muss mit ihm wandern. Fehlt das, bleibt die farbige Einfaerbung am alten
+        // Slot haengen (Bug 2026-06-16). 0 = keine Prioritaet (out-Default bei Miss).
+        // Deckungsgleich zu PromptSlotService.MoveAsync (fromPriority/toPriority).
+        _slotPriorities.TryGetValue(from, out var fromPriority);
+        _slotPriorities.TryGetValue(to, out var toPriority);
 
         var now = DateTime.UtcNow;
         _slotContents[to] = fromText;
         _slotTimestamps[to] = now;
         if (!string.IsNullOrWhiteSpace(fromSummary)) _slotSummaries[to] = fromSummary; else _slotSummaries.Remove(to);
+        if (fromPriority != 0) _slotPriorities[to] = fromPriority; else _slotPriorities.Remove(to);
         if (targetOccupied)
         {
             _slotContents[from] = toText!;
             _slotTimestamps[from] = now;
             if (!string.IsNullOrWhiteSpace(toSummary)) _slotSummaries[from] = toSummary; else _slotSummaries.Remove(from);
+            if (toPriority != 0) _slotPriorities[from] = toPriority; else _slotPriorities.Remove(from);
         }
         else
         {
             _slotContents.Remove(from);
             _slotTimestamps.Remove(from);
             _slotSummaries.Remove(from);
+            _slotPriorities.Remove(from);   // Quelle wird leer -> keine Prioritaet
         }
 
         _selectedSlot = to; // Auswahl auf das Ziel ziehen
