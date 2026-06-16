@@ -16,6 +16,57 @@
 . "$PSScriptRoot/hook-log.ps1"
 $ErrorActionPreference = "Stop"
 
+# ── Sonde (Direktive #2 Selbstbeobachtung): schreibt EINE JSON-Zeile pro Block/Pass nach
+# ~/.claude/state/bug-almanac-triggers.jsonl. Rein beobachtend — beeinflusst NIE die
+# Block-Entscheidung. Schreibt NUR in die Datei, NIE auf stdout (sonst Session-Crash, claude-hooks §16.1).
+# FAIL-OPEN: jeder Fehler wird verschluckt. Liest $data/$tool/$fp aus dem Hook-Scope.
+function Add-AlmanacTrigger {
+    param(
+        [string]$EventType,
+        [string]$BlockType,
+        [string]$Slug,
+        [string]$Area,
+        [bool]$HighRisk
+    )
+    try {
+        $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+        if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+        $jsonl = Join-Path $stateDir "bug-almanac-triggers.jsonl"
+        # Rotation: bei >5 MB einmalig nach .1 wegrollen (genau eine Vorgaengerdatei).
+        try { if ((Test-Path $jsonl) -and ((Get-Item $jsonl).Length -gt 5MB)) { Move-Item -Path $jsonl -Destination "$jsonl.1" -Force -ErrorAction SilentlyContinue } } catch {}
+        # change_excerpt aus dem Tool-Input (content / new_string / edits[].new_string), ~300 Zeichen.
+        $excerpt = ""
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)        { $excerpt = [string]$ti.content }
+            elseif ($ti.new_string) { $excerpt = [string]$ti.new_string }
+            elseif ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $excerpt += [string]$e.new_string + "`n" } } }
+        } catch {}
+        if ($excerpt.Length -gt 300) { $excerpt = $excerpt.Substring(0, 300) }
+        # Secret-Maskierung (observability-first §8).
+        $excerpt = $excerpt -replace 'gho_[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'ghp_[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'sk-[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'AIza[A-Za-z0-9_\-]{20,}','[REDACTED]'
+        $excerpt = [regex]::Replace($excerpt, '(?i)(token|key|secret|password)(["'']?\s*[:=]\s*["''])[^"'']+', '$1$2[REDACTED]')
+        $sid = ""
+        try { $sid = [string]$data.session_id } catch {}
+        $obj = [ordered]@{
+            ts             = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+            event          = $EventType
+            block_type     = $BlockType
+            slug           = $Slug
+            area           = $Area
+            tool           = $tool
+            file           = $fp
+            change_excerpt = $excerpt
+            high_risk      = $HighRisk
+            session        = $sid
+        }
+        Add-Content -Path $jsonl -Value ($obj | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8 -ErrorAction SilentlyContinue
+    } catch {}
+}
+
 try {
     # stdin robust lesen (mal Console.In, mal $input je nach Invokation).
     $raw = ""
@@ -445,6 +496,7 @@ try {
             if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
             Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug") -Encoding UTF8 -ErrorAction SilentlyContinue
         } catch {}
+        Add-AlmanacTrigger -EventType "block" -BlockType "almanach-ungelesen" -Slug $slug -Area $name -HighRisk $isHighRisk
         $reason = if ($isHighRisk) {
             "STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
         } else {
@@ -482,6 +534,7 @@ try {
                 if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
                 Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (stufe-c-volltext)") -Encoding UTF8 -ErrorAction SilentlyContinue
             } catch {}
+            Add-AlmanacTrigger -EventType "block" -BlockType "volltext-c" -Slug $slug -Area $name -HighRisk $true
             $reason = "STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '" + $name + "' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von " + $almRel + " ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
             $out = @{
                 hookSpecificOutput = @{
@@ -530,6 +583,7 @@ try {
                     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
                     Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (best-practices)") -Encoding UTF8 -ErrorAction SilentlyContinue
                 } catch {}
+                Add-AlmanacTrigger -EventType "block" -BlockType "best-practices" -Slug $slug -Area $name -HighRisk $isHighRisk
                 $reason = "STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '" + $name + "' ist gelesen - aber die zugehoerige Best-Practices-Datei " + $bpRel + " in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/" + $bpRel + " mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
                 $out = @{
                     hookSpecificOutput = @{
@@ -549,6 +603,7 @@ try {
     if ($almanachExists) {
         if (-not (Test-Path $seenMarker)) {
             New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            Add-AlmanacTrigger -EventType "pass" -BlockType ($(if ($disabled) {"disabled"} else {"already-read"})) -Slug $slug -Area $name -HighRisk $isHighRisk
             $msg = if ($disabled) {
                 "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies " + $almRel + " (+ Best Practices) freiwillig."
             } else {
@@ -570,6 +625,7 @@ try {
         # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
         if (-not (Test-Path $seenMarker)) {
             New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            Add-AlmanacTrigger -EventType "pass" -BlockType ($(if ($disabled) {"disabled"} else {"ack"})) -Slug $slug -Area $name -HighRisk $false
             $msg = if ($disabled) {
                 "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' ohne Almanach (bugs/" + $file + ") - Notaus aktiv, freigegeben."
             } else {
@@ -586,6 +642,7 @@ try {
         if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
         Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (kein-almanach)") -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
+    Add-AlmanacTrigger -EventType "block" -BlockType "kein-almanach" -Slug $slug -Area $name -HighRisk $false
     $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '" + $name + "', aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '" + $ackMarker + "' (z.B. Bash: touch ... / PowerShell: New-Item) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen."
     $out = @{
         hookSpecificOutput = @{
