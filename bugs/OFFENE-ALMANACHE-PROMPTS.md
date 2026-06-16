@@ -147,7 +147,7 @@ Starte den Best-Practices-Skill fuer Swift + AppKit (macOS-Desktop, Projekt-Code
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MIT SWIFT/APPKIT AM BESTEN UND RICHTIG ARBEITET — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": idiomatische Overlay-Fenster-Konfiguration (Level/Collection-Behavior), moderne Swift-Concurrency (async/await, Actors, @MainActor), saubere Accessibility-Integration, korrektes Permission-Handling, empfohlene App-Architektur (MVVM).
 
-Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/projekt-code/desktop/best-practices-swift-appkit.md und koppele wechselseitig mit bugs/desktop/swift-appkit.md. Am Ende committen und pushen.
+Projekte ~/proggs/ClaudeCodexVoiceOverlay-macOS und ~/proggs/TerminalVoiceOverlay-macOS. Speichere unter best-practices/desktop/swift-appkit.md und koppele wechselseitig mit bugs/desktop/swift-appkit.md. Am Ende committen und pushen.
 ```
 
 ---

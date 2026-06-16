@@ -2,7 +2,7 @@
 
 > **PFLICHT-LESEN vor jeder 3D-Arbeit mit Rust.** Stand recherchiert **2026-06-13** fuer **Bevy 0.18 / wgpu 29.x**.
 > Bevy bricht oft pro Version (API-Umbau, gepinnte wgpu-Version) — Versionsangaben unten beachten.
-> Gegenseite (Best Practices, was man von Anfang an richtig macht): `best-practices/projekt-code/desktop/best-practices-3d-rust-wgpu-bevy.md`.
+> Gegenseite (Best Practices, was man von Anfang an richtig macht): `best-practices/desktop/3d-rust-wgpu-bevy.md`.
 
 ---
 

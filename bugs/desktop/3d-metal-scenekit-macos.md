@@ -2,7 +2,7 @@
 
 > **PFLICHT-LESEN vor echter Arbeit.**
 > Stand: recherchiert am 2026-06-13 für Metal 4 / macOS 26 / Xcode 26.
-> Gegenseite (wie man es richtig macht): best-practices/projekt-code/desktop/best-practices-3d-metal-scenekit-macos.md (Bezugstabelle unten).
+> Gegenseite (wie man es richtig macht): best-practices/desktop/3d-metal-scenekit-macos.md (Bezugstabelle unten).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

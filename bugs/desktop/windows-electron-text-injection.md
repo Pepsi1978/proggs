@@ -27,14 +27,14 @@
 >
 > **Wichtig:** Dies ist der reine **Bug-Almanach** (bekannte Fehler/Fallen/Workarounds). Die
 > Gegenseite (Best-Practices — "wie macht man es von vornherein richtig") liegt seit **2026-06-15** in
-> [`best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md`](../../best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md);
+> [`best-practices/desktop/windows-electron-text-injection.md`](../../best-practices/desktop/windows-electron-text-injection.md);
 > dieser Almanach enthaelt bewusst keine allgemeinen Best-Practice-Essays.
 
 ---
 
 ## 🔗 Bezugstabelle: Bug-Sektion ↔ Best-Practice-Abschnitt
 
-> Gegenstück: [`best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md`](../../best-practices/projekt-code/desktop/best-practices-windows-electron-text-injection.md).
+> Gegenstück: [`best-practices/desktop/windows-electron-text-injection.md`](../../best-practices/desktop/windows-electron-text-injection.md).
 > Diese Tabelle in BEIDEN Dateien synchron halten.
 
 | Bug-Sektion (hier) | Thema | Best-Practice-Abschnitt (dort) |

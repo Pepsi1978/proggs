@@ -14,7 +14,7 @@
 
 Vor der ersten Code-Aenderung an C#/WPF MUSS gelesen werden (der `bug-almanac-guard` blockiert sonst Edits):
 1. `bugs/desktop/dotnet-csharp.md`
-2. `best-practices/projekt-code/desktop/best-practices-dotnet-csharp.md` (falls vorhanden)
+2. `best-practices/desktop/dotnet-csharp.md` (falls vorhanden)
 
 Cross-Platform: VoiceAgent ist Windows-only — kein macOS-Gegenstueck noetig.
 

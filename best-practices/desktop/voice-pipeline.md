@@ -6,7 +6,7 @@ Windows-Audio, Groq, Google-TTS). Versions-Anker: **.NET 10.0.204** (net10.0-win
 **NAudio 2.2.1** · **sherpa-onnx 1.13.2** · **Groq Whisper large-v3-turbo** · **Google TTS Chirp 3 HD** ·
 VoiceAgent **1.2.0**.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/voice-pipeline.md`](../../../bugs/desktop/voice-pipeline.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/voice-pipeline.md`](../../bugs/desktop/voice-pipeline.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man eine Sprach-Pipeline von
 > vornherein so baut, dass sie fluessig, schnell und zuverlaessig wirkt*. Nachbar-Seiten:
 > `best-practices-wake-word.md` (KWS-Engine), `best-practices-groq-transkription.md` (STT),
@@ -163,7 +163,7 @@ VoiceAgent **1.2.0**.
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/voice-pipeline.md`](../../../bugs/desktop/voice-pipeline.md). Links die *Praevention*, rechts die *Falle*.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/voice-pipeline.md`](../../bugs/desktop/voice-pipeline.md). Links die *Praevention*, rechts die *Falle*.
 
 | Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/desktop/voice-pipeline.md`) |
 |--------------------------------|-----------------------------------------------------------------------|

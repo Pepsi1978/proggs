@@ -14,7 +14,7 @@
 > **Nachbar-Almanache** (NICHT dupliziert, hier nur Pipeline-uebergreifendes):
 > `wake-word.md` (KWS-Engine/Deployment), `groq-transkription.md` (Whisper-Halluzination/Groq-API),
 > `dotnet-csharp.md` (WPF/async). **Gegenseite (Praevention):**
-> `best-practices/projekt-code/desktop/best-practices-voice-pipeline.md`.
+> `best-practices/desktop/voice-pipeline.md`.
 
 ---
 
@@ -297,7 +297,7 @@ deren Stacks), keine Normen.
 
 ---
 
-## Kopplung zur Best-Practices-Gegenseite (`best-practices/projekt-code/desktop/best-practices-voice-pipeline.md`)
+## Kopplung zur Best-Practices-Gegenseite (`best-practices/desktop/voice-pipeline.md`)
 
 | Almanach-Abschnitt (hier) | Best-Practice-Abschnitt (Praevention) |
 |---------------------------|----------------------------------------|

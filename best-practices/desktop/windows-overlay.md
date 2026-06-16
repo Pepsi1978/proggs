@@ -6,7 +6,7 @@
 > Windows 10/11. .NET 9/10 haben am Fenster-/Z-Order-/DPI-Modell **nichts** geändert — die Mechanik
 > lebt unverändert in Win32 (`SetWindowPos`, `WS_EX_*`, DWM). Quellen: Microsoft Learn zuerst,
 > Community als `extern` markiert.
-> Zweite Seite (was schiefgeht): [`bugs/desktop/windows-overlay.md`](../../../bugs/desktop/windows-overlay.md).
+> Zweite Seite (was schiefgeht): [`bugs/desktop/windows-overlay.md`](../../bugs/desktop/windows-overlay.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

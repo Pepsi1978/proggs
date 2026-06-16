@@ -5,7 +5,7 @@
 > Versions-Anker (live ermittelt): Overlay-Projekte mit deployment target **macOS 13/14**, swift-tools
 > **6.1/6.2** (Swift 6), Xcode 26.x; aktuelles macOS **26 Tahoe**. Apple Developer zuerst, Community als
 > `extern` markiert. Ergänzt die allgemeine `best-practices-swift-appkit.md` um den Overlay-Spezialfall.
-> Zweite Seite (was schiefgeht): [`bugs/desktop/macos-overlay.md`](../../../bugs/desktop/macos-overlay.md).
+> Zweite Seite (was schiefgeht): [`bugs/desktop/macos-overlay.md`](../../bugs/desktop/macos-overlay.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

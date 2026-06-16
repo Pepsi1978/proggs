@@ -19,7 +19,7 @@ Almanachen und Best-Practices um, die wir dafuer erstellt haben.
 ### PFLICHT ZUERST LESEN (in dieser Reihenfolge), bevor du Code anfasst
 1. `~/proggs/bugs/agents/orchestrator-agent.md` (Bug-Almanach Boss-/Orchestrator-Agent, inkl. Sektion 8 „externe/selbst gebaute Agenten")
 2. `~/proggs/best-practices/agents/orchestrator-agent.md` (Best-Practices, inkl. Teil 7)
-3. `~/proggs/bugs/desktop/dotnet-csharp.md` + `~/proggs/best-practices/projekt-code/desktop/best-practices-dotnet-csharp.md` (Guard-Pflicht fuer `.cs`-Edits)
+3. `~/proggs/bugs/desktop/dotnet-csharp.md` + `~/proggs/best-practices/desktop/dotnet-csharp.md` (Guard-Pflicht fuer `.cs`-Edits)
 Diese vier sind die Wissensgrundlage. Halte dich strikt daran (funktionserhaltend, Direktive #3).
 
 ### MEINE VISION (so soll der Boss-Agent arbeiten)

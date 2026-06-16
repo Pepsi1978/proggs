@@ -10,7 +10,7 @@
 > `whisper-large-v3` und `whisper-large-v3-turbo` (Cloud, keine lokale Version). App-Kontext:
 > VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mono PCM). GitHub-Status per `gh` verifiziert.
 >
-> **Zugehoerige Best Practices:** [`best-practices/projekt-code/desktop/best-practices-groq-transkription.md`](../../best-practices/projekt-code/desktop/best-practices-groq-transkription.md)
+> **Zugehoerige Best Practices:** [`best-practices/desktop/groq-transkription.md`](../../best-practices/desktop/groq-transkription.md)
 > (zweite Seite: wie man die Pipeline von vornherein richtig baut).
 
 ---
@@ -38,7 +38,7 @@
 
 ---
 
-## 🔗 Bezug zu den Best Practices ([`best-practices/projekt-code/desktop/best-practices-groq-transkription.md`](../../best-practices/projekt-code/desktop/best-practices-groq-transkription.md))
+## 🔗 Bezug zu den Best Practices ([`best-practices/desktop/groq-transkription.md`](../../best-practices/desktop/groq-transkription.md))
 
 Der Almanach sagt *was schiefgeht*; die Best-Practices-Datei sagt *wie man es von vornherein richtig macht*.
 

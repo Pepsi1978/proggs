@@ -23,7 +23,7 @@
 > (`offiziell`); Community klar als `extern` markiert — überstimmt nie das Offizielle.
 >
 > **Zweite Seite der Medaille (was schiefgeht):**
-> [`bugs/desktop/windows-electron-text-injection.md`](../../../bugs/desktop/windows-electron-text-injection.md).
+> [`bugs/desktop/windows-electron-text-injection.md`](../../bugs/desktop/windows-electron-text-injection.md).
 > Jeder §-Abschnitt unten verweist auf die passenden Bug-Sektionen (K/F/A/T/M/C/U/E/N/W); die
 > Bezugstabelle steht am Dateiende.
 
@@ -418,7 +418,7 @@ ereignisgesteuert re-asserten. Single-File ohne Trimming/AOT, eigenes `app.manif
 
 ## Bezugstabelle: Best-Practice-Abschnitt ↔ Bug-Almanach-Sektion
 
-> Gegenstück: [`bugs/desktop/windows-electron-text-injection.md`](../../../bugs/desktop/windows-electron-text-injection.md).
+> Gegenstück: [`bugs/desktop/windows-electron-text-injection.md`](../../bugs/desktop/windows-electron-text-injection.md).
 > Diese Tabelle in BEIDEN Dateien synchron halten.
 
 | BP-Abschnitt (hier) | Thema | Bug-Almanach-Sektion(en) |

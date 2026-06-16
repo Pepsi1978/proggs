@@ -5,7 +5,7 @@
 > **.NET 10.0.204** (`net10.0-windows`, WPF) · **sherpa-onnx** NuGet `org.k2fsa.sherpa.onnx` **1.13.2** (14.05.2026, Apache-2.0) ·
 > **NAudio 2.2.1** · **Picovoice Porcupine .NET 4.0.2** · **NanoWakeWord** (.NET Standard 2.0).
 > Zielprojekt: **VoiceAgent** (`~/proggs/VoiceAgent`). Gegenseite (Praevention):
-> `best-practices/projekt-code/desktop/best-practices-wake-word.md`.
+> `best-practices/desktop/wake-word.md`.
 
 ---
 
@@ -323,7 +323,7 @@
 
 ---
 
-## Kopplung zur Best-Practices-Gegenseite (`best-practices/projekt-code/desktop/best-practices-wake-word.md`)
+## Kopplung zur Best-Practices-Gegenseite (`best-practices/desktop/wake-word.md`)
 
 | Almanach-Bug | Best-Practice-Abschnitt (Praevention) |
 |--------------|----------------------------------------|

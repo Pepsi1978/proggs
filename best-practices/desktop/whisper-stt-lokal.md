@@ -6,7 +6,7 @@
 > **faster-whisper 1.2.1** (CTranslate2 4.8 / CUDA 12 + cuDNN 9), **Silero VAD v6.2**, Modelle **large-v3-turbo**
 > (809M) + deutsche Finetunes **primeline/whisper-large-v3-turbo-german**, **WhisperKit/argmax-oss-swift v1.0**,
 > **Whisper.net 1.9** (C#). Apple Developer / offizielle Repos zuerst, Community als `extern`.
-> Zweite Seite (was schiefgeht): [`bugs/desktop/whisper-stt-lokal.md`](../../../bugs/desktop/whisper-stt-lokal.md).
+> Zweite Seite (was schiefgeht): [`bugs/desktop/whisper-stt-lokal.md`](../../bugs/desktop/whisper-stt-lokal.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

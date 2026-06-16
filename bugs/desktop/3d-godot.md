@@ -5,7 +5,7 @@
 > Maintenance: 4.6.1 vom 16. Feb 2026, 4.6.2 vom 1. April 2026 mit 122 Fixes).
 > **Empfehlung: immer auf der neuesten Maintenance (>= 4.6.2) arbeiten** — sie behebt einen Grossteil
 > der hier gelisteten Regressionen.
-> Gegenseite (was man richtig macht): `best-practices/projekt-code/desktop/best-practices-3d-godot.md`.
+> Gegenseite (was man richtig macht): `best-practices/desktop/3d-godot.md`.
 > Jeder Eintrag verweist per `§N` auf die passende Best-Practice-Sektion.
 
 ---

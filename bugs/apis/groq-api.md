@@ -4,7 +4,7 @@
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: aktuelle Produktionsmodelle u. a.
 > `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b/-20b`, `whisper-large-v3(-turbo)`.
 > Verwandt: Whisper-Halluzination siehe auch `desktop/groq-transkription.md`. Zweite Seite: noch keine
-> `best-practices-groq-api.md` (Transkriptions-BP existiert: `best-practices/projekt-code/desktop/best-practices-groq-transkription.md`).
+> `best-practices-groq-api.md` (Transkriptions-BP existiert: `best-practices/desktop/groq-transkription.md`).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

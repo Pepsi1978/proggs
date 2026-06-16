@@ -17,7 +17,7 @@
 >
 > Betroffene Projekte: `~/proggs/ClaudeCodexVoiceOverlay-macOS`, `~/proggs/TerminalVoiceOverlay-macOS`.
 >
-> **Zweite Seite der Medaille (Best Practices):** `~/proggs/best-practices/projekt-code/desktop/best-practices-swift-appkit.md`
+> **Zweite Seite der Medaille (Best Practices):** `~/proggs/best-practices/desktop/swift-appkit.md`
 > — *wie man es von vornherein richtig macht*. Wechselseitige Abschnitts-Bezugstabelle unten
 > ("Best-Practices-Kopplung"). Stand der Kopplung: 2026-06-02.
 
@@ -601,7 +601,7 @@ ueber ihren OPEN/CLOSED-Status, ob der zugrundeliegende Mechanismus noch lebt.
 
 ## 🔗 Best-Practices-Kopplung (wechselseitige Bezugstabelle)
 
-Bug-Almanach (diese Datei) ↔ Best-Practices `~/proggs/best-practices/projekt-code/desktop/best-practices-swift-appkit.md`.
+Bug-Almanach (diese Datei) ↔ Best-Practices `~/proggs/best-practices/desktop/swift-appkit.md`.
 Die identische Tabelle steht auch dort — so bleibt jeder Bug mit seiner „so macht man es von vornherein
 richtig"-Regel verlinkt.
 

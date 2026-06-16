@@ -5,7 +5,7 @@
 Software: **Groq Speech-to-Text API** (`whisper-large-v3`, `whisper-large-v3-turbo`), Cloud.
 Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mono, statischer HttpClient).
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/groq-transkription.md`](../../../bugs/desktop/groq-transkription.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/groq-transkription.md`](../../bugs/desktop/groq-transkription.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man die Pipeline von vornherein richtig baut*.
 > Quellen-Flag: `offiziell` (Groq/OpenAI/Microsoft-Learn-Doku, arXiv) vs. `extern` (Community/Praxis).
 
@@ -198,7 +198,7 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/groq-transkription.md`](../../../bugs/desktop/groq-transkription.md). Links die *Praevention*, rechts die *Falle*.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/groq-transkription.md`](../../bugs/desktop/groq-transkription.md). Links die *Praevention*, rechts die *Falle*.
 
 | Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/desktop/groq-transkription.md`) |
 |--------------------------------|---------------------------------------------------------------------------|

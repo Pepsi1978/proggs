@@ -8,7 +8,7 @@
 > Diese Fallen sind beim **Best-Practices-Lauf** mitgefunden worden; eine noch tiefere, dedizierte
 > Bug-Recherche (Issue-Tracker-Fokus + Fix-Status) kann später per `bug-almanach-recherche` ergänzt werden.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/desktop/best-practices-macos-overlay.md`](../../best-practices/projekt-code/desktop/best-practices-macos-overlay.md).
+> [`best-practices/desktop/macos-overlay.md`](../../best-practices/desktop/macos-overlay.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

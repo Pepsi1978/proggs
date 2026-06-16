@@ -204,7 +204,7 @@ Pro Zeile optional `:boost` und `#threshold`, z.B. `OKAY COMPUTER :2.0 #0.3`. Fe
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/wake-word.md`](../../../bugs/desktop/wake-word.md). Links die *Praevention*, rechts die *Falle*.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/wake-word.md`](../../bugs/desktop/wake-word.md). Links die *Praevention*, rechts die *Falle*.
 
 | Best-Practice-Abschnitt (hier) | Zugehoerige Bug-Almanach-Nummern (`bugs/desktop/wake-word.md`) |
 |--------------------------------|----------------------------------------------------------------|

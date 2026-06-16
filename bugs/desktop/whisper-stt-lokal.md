@@ -8,7 +8,7 @@
 > CUDA 12 + cuDNN 9), Silero VAD **v6.2**, Modelle large-v3-turbo + primeline-german, Whisper.net **1.9**,
 > WhisperKit/argmax-oss-swift **v1.0**.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/desktop/best-practices-whisper-stt-lokal.md`](../../best-practices/projekt-code/desktop/best-practices-whisper-stt-lokal.md).
+> [`best-practices/desktop/whisper-stt-lokal.md`](../../best-practices/desktop/whisper-stt-lokal.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

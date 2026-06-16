@@ -1,6 +1,6 @@
 # Bekannte Bugs: 3D auf Windows (C#/.NET — DirectX/Stride/Silk.NET)
 
-> **PFLICHT-LESEN vor jeder 3D-Arbeit auf Windows mit C#/.NET.** Stand recherchiert 2026-06-13 fuer .NET 10 / C# 14 / Stride 4.3 / Silk.NET (Agility SDK 1.618.5) / Vortice 3.8.1 / MonoGame 3.8.4 (D3D11) bzw. 3.8.5-Preview.2 (D3D12) / Helix Toolkit. Die Gegenseite — wie man es von Anfang an richtig macht — steht in `best-practices/projekt-code/desktop/best-practices-3d-dotnet-directx-windows.md`. Dieser Almanach sammelt die konkreten Fallen, die optisch schoene 3D-Apps reihenweise versenken: falscher Farbraum, Trimming/AOT-Crashs, Plattform-Registrierung, Swapchain-Format, Deployment-Fallstricke.
+> **PFLICHT-LESEN vor jeder 3D-Arbeit auf Windows mit C#/.NET.** Stand recherchiert 2026-06-13 fuer .NET 10 / C# 14 / Stride 4.3 / Silk.NET (Agility SDK 1.618.5) / Vortice 3.8.1 / MonoGame 3.8.4 (D3D11) bzw. 3.8.5-Preview.2 (D3D12) / Helix Toolkit. Die Gegenseite — wie man es von Anfang an richtig macht — steht in `best-practices/desktop/3d-dotnet-directx-windows.md`. Dieser Almanach sammelt die konkreten Fallen, die optisch schoene 3D-Apps reihenweise versenken: falscher Farbraum, Trimming/AOT-Crashs, Plattform-Registrierung, Swapchain-Format, Deployment-Fallstricke.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

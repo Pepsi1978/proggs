@@ -8,7 +8,7 @@
 > Versions-Anker: **.NET 10** (`net10.0-windows`), WPF, Windows 10/11. Viele Fenster-/Z-Order-/DPI-Fallen
 > leben unverändert in Win32/DWM; NEU sind .NET-9-Fluent-Theme-Crashes und .NET-9-Clipboard-/Deployment-Bugs.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/desktop/best-practices-windows-overlay.md`](../../best-practices/projekt-code/desktop/best-practices-windows-overlay.md).
+> [`best-practices/desktop/windows-overlay.md`](../../best-practices/desktop/windows-overlay.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
