@@ -704,7 +704,7 @@
 
 ## J. Aus dem Best-Practices-Lauf ergaenzt (2026-06-03)
 
-> Diese Bugs hat der Best-Practices-Lauf (`best-practices/projekt-code/web/typescript/`) zutage gefoerdert
+> Diese Bugs hat der Best-Practices-Lauf (`best-practices/web/typescript.md`) zutage gefoerdert
 > und waren in A-I noch nicht abgedeckt. Quelle pro Eintrag, gegen A-I dedupliziert.
 
 ### 90. `exports`-Condition-Reihenfolge falsch — `types`/`import` werden ueberschattet   ⭐ HAEUFIG

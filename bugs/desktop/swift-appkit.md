@@ -301,7 +301,7 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **Ursache:** Annahme, der Tap koenne nach `engine.stop()` noch feuern. Tatsaechlich kommen nach `removeTap(onBus:)` keine neuen Callbacks mehr — der Sleep ist sowohl unsicher als auch ueberfluessig.
 **Versionen:** Code-Smell / per Design, alle Versionen. (Im aktuellen `AudioRecorder.stop()` beider Projekte vorhanden.)
 **FIX (funktionserhaltend):** Erst `removeTap(onBus: 0)` (danach feuert kein Callback mehr), dann `engine.stop()`, dann den letzten gepufferten Stand ueber eine Serial-Queue/`withCheckedContinuation` finalisieren statt zu schlafen. Geteilten Tap-Zustand ueber Serial-Dispatch-Queue oder Actor schuetzen, nicht ad-hoc `NSLock`. Siehe Best-Practices Abschnitt F.5.
-**Quelle:** [Apple — removeTap](https://developer.apple.com/documentation/avfaudio/avaudionode/removetap(onbus:)) · best-practices/projekt-code/swift-appkit (F.5)
+**Quelle:** [Apple — removeTap](https://developer.apple.com/documentation/avfaudio/avaudionode/removetap(onbus:)) · best-practices/desktop/swift-appkit.md (F.5)
 
 ---
 
@@ -446,7 +446,7 @@ Fuer eine Ziel-Sample-Rate `AVAudioConverter` nutzen, statt das Tap-Format zu er
 **Ursache:** TCC bindet den Grant an die `csreq` (Code Signing Requirement), die aus der Zertifikats-Identitaet abgeleitet wird. Ein neues Zertifikat = neue `csreq` = fuer TCC eine fremde App, ohne Fehlermeldung.
 **Versionen:** per Design, alle. Verschaerft bei kurzlebigen selbst-erzeugten Dev-Zertifikaten.
 **FIX (funktionserhaltend):** Fuer die Verteilung ein laenger gueltiges „Developer ID Application"-Zertifikat nutzen (robuster als ein lokales Dev-Zertifikat). Beim bewussten Zertifikatswechsel Grants einmalig neu erteilen (ggf. `tccutil reset … <bundle-id>`). Stabile Bundle-ID beibehalten (H1).
-**Quelle:** [jano.dev — Accessibility Permission](https://jano.dev/apple/macos/swift/2025/01/08/Accessibility-Permission.html) · best-practices/projekt-code/swift-appkit (G.2)
+**Quelle:** [jano.dev — Accessibility Permission](https://jano.dev/apple/macos/swift/2025/01/08/Accessibility-Permission.html) · best-practices/desktop/swift-appkit.md (G.2)
 
 ---
 

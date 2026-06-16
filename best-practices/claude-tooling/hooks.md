@@ -19,7 +19,7 @@
 | 5 | matcher | exakt `Edit\|Write`, MCP mit `.*`-Suffix | Hook-Events |
 | 6 | Standalone-Hook-Ende | `exit 0`; FAIL-OPEN (interner Fehler → `exit 0`) | Hook-Kategorien |
 | 7 | Windows/Bash/Cross-Platform | `pwsh`, BOM-frei, LF, `+x`; `.ps1`+`.sh` paritaetisch; dot-sourced libs ohne top-level `exit` | Sicherheit / Kategorien |
-| 8 | Tiefen-Praevention | dedizierte Gegenseite: `projekt-code/claude-tooling/best-practices-claude-hooks.md` + Almanach (Stufe C) | — |
+| 8 | Tiefen-Praevention | dedizierte Gegenseite: `claude-hooks.md` + Almanach (Stufe C) | — |
 
 ---
 

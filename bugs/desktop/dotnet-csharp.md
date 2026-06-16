@@ -45,7 +45,7 @@
 Dieser Almanach sagt *was schiefgeht*; die Best-Practices-Datei sagt *wie man es von vornherein
 richtig macht*. Wechselseitig gepflegt:
 
-| Bug-Abschnitt (hier) | Praevention in `best-practices/projekt-code/desktop/dotnet-csharp/` |
+| Bug-Abschnitt (hier) | Praevention in `best-practices/desktop/dotnet-csharp.md` |
 |----------------------|------------------------------------------------------|
 | §1 Single-File/Trimming, §13.1 self-contained | BP 3 Deployment/Publish |
 | §2 WPF-Overlay, §12.7 WinUI kein Overlay | BP 4 UI-Framework-Wahl & Overlays |

@@ -652,7 +652,7 @@ matcht) → `claude-hooks.md`.
 
 Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/claude-tooling/mcp-server.md`](../../best-practices/claude-tooling/mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
 
-| Best-Practice-Abschnitt (`best-practices/projekt-code/claude-tooling/mcp-server/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
+| Best-Practice-Abschnitt (`best-practices/claude-tooling/mcp-server.md`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
 |--------------------------------|------------------------------------------------------------|
 | A1 Transport-Wahl / SSE deprecated | 2.1 SSE-Deprecation / Streamable HTTP |
 | A2 Stateless vs stateful | 2.4 Stateless „Server not initialized", 2.5 Session-Lifecycle |

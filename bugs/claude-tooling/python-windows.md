@@ -56,7 +56,7 @@
 > Zweite Seite der Medaille: `best-practices/claude-tooling/python-windows.md` sagt
 > *wie man es von vornherein richtig macht, damit der Bug gar nicht erst entsteht*.
 
-| Bug-Abschnitt (diese Datei) | Best-Practice-Gegenpart in `best-practices/projekt-code/claude-tooling/python-windows/` |
+| Bug-Abschnitt (diese Datei) | Best-Practice-Gegenpart in `best-practices/claude-tooling/python-windows.md` |
 |---|---|
 | §1 Encoding-Defaults (1.1–1.9: cp1252 / print / json / subprocess / logging / Buffering) | §1 Encoding & Text-/JSON-I/O (1.1–1.9) |
 | §2 UTF-8 BOM (2.1) | §1.2 BOM-behaftete Dateien lesen (`utf-8-sig`) |

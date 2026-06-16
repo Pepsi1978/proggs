@@ -73,7 +73,7 @@ Almanach UND DANN (seit 2026-06-07, falls vorhanden) die zugehoerige Best-Practi
 des Bereichs in dieser Session gelesen wurde. Die Reihenfolge ist automatisch erzwungen: der
 BP-Block wird erst erreicht, wenn der Almanach-Block bereits durchfiel (= Almanach gelesen).
 Die BP-Datei wird per Pfad-Ableitung gesucht (`best-practices-<almKey>.md` rekursiv unter
-`best-practices/projekt-code/`); existiert keine, zaehlt nur der Almanach. FAIL-OPEN: jeder
+`best-practices/`); existiert keine, zaehlt nur der Almanach. FAIL-OPEN: jeder
 interne Hook-Fehler → durchlassen, nie faelschlich blockieren. Notaus via
 `bug-almanac-disable.flag` im TEMP-Verzeichnis. Registriert in `~/.claude/settings.json`,
 gespiegelt in `claude-code-setup/hooks/`.
@@ -96,7 +96,7 @@ gespiegelt in `claude-code-setup/hooks/`.
             │   (3–5 Researcher, gedeckelt, siehe §5) → Almanach anlegen → in README.md eintragen
             └─ NEIN / nur Kleinkram → bewusste Quittung `bug-almanac-ack-<slug>.flag` (TEMP) anlegen
                 → Bereich fuer diese Session frei (NIE reflexhaft, nur nach Franks Entscheidung)
-3b. Zweite Seite: existiert eine `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`?
+3b. Zweite Seite: existiert eine `best-practices/<kategorie>/<bereich>.md`?
     → JA: komplett lesen (wie man es von vornherein richtig macht). Der Guard erzwingt das
       ohnehin in der Reihenfolge erst Almanach, dann Best Practices. → NEIN: nur Almanach zaehlt.
 4. ARBEITEN — mit den bekannten Bugs UND den Best Practices im Kopf, damit Fehler gar nicht erst entstehen.
@@ -192,7 +192,7 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 3. Im `bug-almanac-guard`-Hook NUR dann etwas tun, wenn es ein NEUES Dateimuster gibt
    (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE Kategorie — der Hook findet die
    Datei rekursiv). Ein blosser Kategorie-Wechsel braucht KEINE Hook-Aenderung.
-4. Existiert eine `best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md`: die
+4. Existiert eine `best-practices/<kategorie>/<bereich>.md`: die
    wechselseitige Bezugs-Tabelle in BEIDEN Dateien anlegen (siehe §9) und
    `python3 bugs/check-coupling.py` ausfuehren.
 
@@ -201,7 +201,7 @@ wuerde nur bremsen. Die Schwelle haelt das System schnell.
 ## 9. Kopplung mit den Best-Practices (zwei Seiten einer Medaille)
 
 Der Bug-Almanach sagt *was schiefgeht und wie man es loest*; der Ordner
-`~/proggs/best-practices/projekt-code/<kategorie>/best-practices-<software>.md` sagt *wie man es von
+`~/proggs/best-practices/<kategorie>/<software>.md` sagt *wie man es von
 vornherein richtig macht, damit der Bug nie entsteht*. Beide gehoeren zusammen und werden in
 BEIDE Richtungen gepflegt — keine Einbahnstrasse:
 

@@ -42,7 +42,7 @@ Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest*, die
 *wie man den Bug von vornherein vermeidet*. Pro Bug-Abschnitt der passende Praeventions-Abschnitt —
 nach einem Fix immer auch dort verankern, damit der Fehler nicht wiederkommt:
 
-| Bug-Abschnitt (hier) | Praevention in best-practices/projekt-code/kotlin |
+| Bug-Abschnitt (hier) | Praevention in best-practices/android/kotlin.md |
 |----------------------|---------------------------------------------------|
 | §1 K2-Compiler & Sprach-Migration | §1 Sprache & Idiome (K2) |
 | §2 Coroutines | §2 Coroutines & Flow |
