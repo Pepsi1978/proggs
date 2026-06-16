@@ -434,22 +434,6 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     fi
 fi
 
-# CTX-Verbrauch fuer den session-backup Stop-Hook exportieren (Frank 2026-05-24).
-# Der Stop-Hook bekommt context_window NICHT im stdin — er liest hier den EXAKTEN
-# Wert (genau das was die Statusline anzeigt) aus einer PRO-SESSION-Datei. Pro Session
-# weil Frank 4-5 parallele Sessions faehrt; eine gemeinsame Datei wuerde sich gegenseitig
-# ueberschreiben und der Hook laese den Kontext einer fremden Session. Atomic write.
-if [ -n "$ctx_used" ] && is_valid_sid "$session_id"; then
-    # Export-Wert gegen Mullwerte absichern (gleiche Fehlerklasse wie die rate_limit-Mullwerte
-    # weiter oben): auf 0..100 clampen, damit der Stop-Hook EXAKT den angezeigten Wert liest
-    # (make_bar zeigt out-of-range ebenfalls geclampt). Normalwerte 0..100 bleiben unveraendert.
-    ctx_out="$ctx_used"
-    if [ "$ctx_out" -lt 0 ] 2>/dev/null; then ctx_out=0; fi
-    if [ "$ctx_out" -gt 100 ] 2>/dev/null; then ctx_out=100; fi
-    ctx_file="$state_dir/ctx-$session_id"
-    printf '%s\n' "$ctx_out" > "$ctx_file.tmp" 2>/dev/null && mv -f "$ctx_file.tmp" "$ctx_file" 2>/dev/null
-fi
-
 # 5h Reset-Countdown — mit Plausibilitaetspruefung:
 # Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
 # kaputten Timestamp liefert (z.B. weit in der Zukunft), zeigen wir lieber

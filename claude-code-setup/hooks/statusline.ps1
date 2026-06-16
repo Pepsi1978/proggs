@@ -430,27 +430,6 @@ if ($transcript_path -and (Test-Path -LiteralPath $transcript_path)) {
     } catch { }
 }
 
-# CTX-Verbrauch fuer den session-backup Stop-Hook exportieren (Frank 2026-05-24).
-# Der Stop-Hook bekommt context_window NICHT im stdin — er liest hier den EXAKTEN
-# Wert (genau das was die Statusline anzeigt) aus einer PRO-SESSION-Datei. Pro Session
-# weil Frank 4-5 parallele Sessions faehrt; eine gemeinsame Datei wuerde sich gegenseitig
-# ueberschreiben und der Hook laese den Kontext einer fremden Session. Atomic write.
-if ($ctx_used -ne $null -and $sessionId -and $sessionId -match '^[A-Za-z0-9_-]+$') {
-    try {
-        # Export-Wert gegen Mullwerte absichern: auf 0..100 clampen, damit der Stop-Hook
-        # EXAKT den angezeigten Wert liest (Anzeige clamped ebenfalls). Normalwerte unveraendert.
-        $ctxOut = [int]$ctx_used
-        if ($ctxOut -lt 0) { $ctxOut = 0 }
-        if ($ctxOut -gt 100) { $ctxOut = 100 }
-        $ctxDir = Join-Path $env:USERPROFILE '.claude\state'
-        if (-not (Test-Path $ctxDir)) { New-Item -ItemType Directory -Path $ctxDir -Force | Out-Null }
-        $ctxFile = Join-Path $ctxDir "ctx-$sessionId"
-        $ctxTmp = "$ctxFile.tmp"
-        [string]$ctxOut | Out-File -FilePath $ctxTmp -Encoding ASCII -Force
-        Move-Item -Path $ctxTmp -Destination $ctxFile -Force -ErrorAction SilentlyContinue
-    } catch { }
-}
-
 # 5h Reset-Countdown — mit Plausibilitaetspruefung:
 # Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
 # kaputten Timestamp liefert (z.B. weit in der Zukunft), zeigen wir lieber
