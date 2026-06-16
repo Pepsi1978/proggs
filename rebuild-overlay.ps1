@@ -226,13 +226,13 @@ foreach ($t in $targets) {
         else {
             # ALTE EXE laeuft noch (haelt vermutlich den Single-Instance-Mutex, sodass die
             # neue exe sich sofort wieder beendet). ALLE killen und erneut starten.
-            Write-Err "$t: ALTE VERSION laeuft noch ($($r.Stale) Prozess(e) AELTER als der Build)! Toete ALLE + starte erneut (Versuch $attempt/2)."
+            Write-Err "${t}: ALTE VERSION laeuft noch ($($r.Stale) Prozess(e) AELTER als der Build)! Toete ALLE + starte erneut (Versuch $attempt/2)."
             Stop-Overlay -O $O
             Start-Sleep -Seconds 2
         }
     }
     if (-not $verified) {
-        Write-Err "$t: Konnte NICHT verifizieren dass die NEUE Version laeuft — bitte manuell pruefen (Task-Manager, publish\watcher.log)."
+        Write-Err "${t}: Konnte NICHT verifizieren dass die NEUE Version laeuft — bitte manuell pruefen (Task-Manager, publish\watcher.log)."
         $failed += $t
     }
 }
