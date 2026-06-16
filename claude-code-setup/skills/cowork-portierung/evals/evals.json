@@ -1,0 +1,26 @@
+{
+	"skill_name": "cowork-portierung",
+	"evals": [
+		{
+			"id": 0,
+			"name": "sound-search-basis",
+			"prompt": "portiere sound-search zu cowork",
+			"expected_output": "Cowork-Fassung von sound-search unter skills-src/sound-search/SKILL.md (description einzeilig in Quotes, <=200 Zeichen, kein <...>/URL; Titel mit (Cowork-Fassung); Block 0 + 0a; feste ~/proggs-Pfade relativ; Sichern via cowork-git.sh) + sound-search.zip mit Wurzel sound-search/ und SKILL.md, alle Pfade forward-slash.",
+			"files": []
+		},
+		{
+			"id": 1,
+			"name": "undo-changes-git",
+			"prompt": "mach den undo-changes skill cowork-tauglich",
+			"expected_output": "Cowork-Fassung von undo-changes: Git-Schritte auf cowork-git.sh umgestellt, description <=200 Zeichen einzeilig, Block 0/0a vorhanden, Funktionalitaet (revert-Logik) vollstaendig erhalten, ZIP mit Wurzel undo-changes/.",
+			"files": []
+		},
+		{
+			"id": 2,
+			"name": "hook-forge-references",
+			"prompt": "bau eine Cowork-Version vom hook-forge skill",
+			"expected_output": "Cowork-Fassung von hook-forge inkl. references/ mitkopiert; ZIP enthaelt hook-forge/SKILL.md UND hook-forge/references/...; description <=200 Zeichen; CLI-spezifische Hook-Mechanik sinnvoll verdichtet ohne fachlichen Verlust.",
+			"files": []
+		}
+	]
+}
