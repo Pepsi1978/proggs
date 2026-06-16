@@ -59,10 +59,10 @@ sich nie mehrere Sessions vermischen.
 > ueberschreiben. Das Backup wird genau dafuer gestartet: die Datei zu fuellen. Schreibe die
 > Notiz DIREKT per Bash (single-quoted Heredoc), NICHT mit dem Write-Tool — das Write-Tool
 > erzwingt bei existierenden Dateien ein vorheriges Read und kostet so 2-3 ueberfluessige
-> Tool-Calls. Ziel: Schritt 1-3 in moeglichst wenigen Tool-Calls (idealerweise zwei bis drei
-> Bash-Aufrufe: bei laufender/unterbrochener Aufgabe zuerst einer zum Erfassen des uncommitteten
-> Stands — `git status --short` + `git diff` —, dann einer zum Schreiben beider Dateien, einer zum
-> Committen. Ist beim Backup nichts offen, entfaellt der erste).
+> Tool-Calls. Ziel: die Schreib-Schritte in moeglichst wenigen Tool-Calls (idealerweise: bei
+> laufender/unterbrochener Aufgabe einer zum Erfassen des uncommitteten Stands (`status`/`diff`),
+> bei grossem Diff einer zum Auslagern (Schritt 2b), einer zum Schreiben beider Dateien, einer zum
+> Committen. Ist beim Backup nichts offen, entfaellt das Erfassen/Auslagern).
 
 Fuehre diese Schritte der Reihe nach aus.
 
@@ -84,15 +84,25 @@ denselben Fehler). Schreibe so konkret, dass eine Session OHNE jeden Vorkontext 
 richtigen Stelle weiterarbeiten kann — an exakt dem Schritt, der zuletzt lief, nicht "ungefaehr da".
 
 **Uncommitteten Stand zuerst erfassen (PFLICHT bei laufender/unterbrochener Aufgabe):** Bevor du die
-Notiz schreibst, EINMAL den nicht-committeten Arbeitsstand abfragen — `git status --short` (welche
-Dateien sind geaendert/neu) und `git diff` fuer die Dateien, an denen die laufende Aufgabe gearbeitet
-hat. Dieser Output gehoert in den Wiedereinstiegspunkt (Feld "Uncommitteter Arbeitsstand"), damit die
-frische Session den halbfertigen, noch NICHT gespeicherten/committeten Edit sieht — sonst kennt sie
-nach `/clear` nur den letzten Commit. NUR die eigenen/relevanten Dateien aufnehmen, keine fremden
-Parallel-Session-Dateien. Bei sehr grossem Diff (Richtwert: mehr als ~120 Zeilen oder mehrere
-Dateien): den VOLLEN Diff NICHT inline in die Notiz schreiben, sondern lossless in die separate
-Datei `$HOME/.claude/session-backup.diff` auslagern (siehe Schritt 2b) und im Wiedereinstiegspunkt
-nur den Pfad + die entscheidenden geaenderten Stellen referenzieren. Kleiner Diff: ruhig inline.
+Notiz schreibst, EINMAL den nicht-committeten Arbeitsstand abfragen:
+
+```bash
+git -C "$HOME/proggs" status --short                          # M = geaendert, ?? = NEU (untracked)
+git -C "$HOME/proggs" diff -- <eigene-geaenderte-dateien>     # Diff der GETRACKTEN Aenderungen
+git -C "$HOME/proggs" diff --shortstat -- <eigene-dateien>    # Groesse messen (X files, Y insertions)
+# WICHTIG: `git diff` zeigt NEUE (??) Dateien NICHT — ihren Inhalt je Datei separat erfassen:
+git -C "$HOME/proggs" diff --no-index /dev/null <neue-datei>  # zeigt den vollen Inhalt als Diff
+```
+
+Dieser Output gehoert in den Wiedereinstiegspunkt (Feld "Uncommitteter Arbeitsstand"), damit die
+frische Session den halbfertigen, noch NICHT committeten Edit sieht. **`git diff` allein hat ein
+Loch: neue (untracked) Dateien fehlen** — `status --short` zeigt nur ihren Namen (`??`), deshalb je
+neue Datei `git diff --no-index /dev/null <datei>` (nicht-invasiv, ruehrt den Index nicht an). NUR
+die eigenen/relevanten Dateien, keine fremden Parallel-Session-Dateien. **Keine Secrets** uebernehmen
+(API-Keys/Tokens aus einem halbfertigen Edit rausredaktieren — die Datei kann ins Repo wandern).
+Groesse per `--shortstat` beurteilen: bei grossem Diff (Richtwert ~120+ geaenderte Zeilen oder
+mehrere Dateien) NICHT inline, sondern in `$HOME/.claude/session-backup.diff` auslagern (Schritt 2b)
+und im Wiedereinstiegspunkt nur Pfad + entscheidende Stellen referenzieren. Kleiner Diff: ruhig inline.
 
 ### Schritt 2: An beide Orte schreiben — DIREKT per Bash, kein Read, kein Write-Tool
 
@@ -126,7 +136,12 @@ schreibe ihn lossless in eine SEPARATE, FESTE Datei (immer ueberschrieben, damit
 ansammeln) und referenziere ihn im Wiedereinstiegspunkt nur per Pfad:
 
 ```bash
+# Getrackte Aenderungen in die Diff-Datei schreiben ...
 git -C "$HOME/proggs" diff -- <eigene-dateien-der-aufgabe> > "$HOME/.claude/session-backup.diff"
+# ... und neue (??) Dateien anhaengen (git diff allein erfasst sie nicht):
+for f in <neue-dateien>; do
+  git -C "$HOME/proggs" diff --no-index /dev/null "$f" >> "$HOME/.claude/session-backup.diff"
+done
 cp "$HOME/.claude/session-backup.diff" "$HOME/proggs/.claude/session-backup.diff"
 ```
 
@@ -189,17 +204,25 @@ muss JETZT passieren, solange Backup und Kontext noch uebereinstimmen.
 
 ## RESTORE-Workflow
 
+> **Gleicher PC, direkt nach `/clear` (der Normalfall):** Backup → `/clear` → restore laeuft in der
+> Regel sofort am SELBEN Rechner. Das heisst: der uncommittete Arbeitsstand (halbfertige Edits UND
+> neue Dateien) liegt nach `/clear` UNVERAENDERT noch im Working Tree. Du kannst ihn jederzeit direkt
+> einsehen (`git -C "$HOME/proggs" status --short` + `git diff`) statt dich allein auf die Notiz zu
+> verlassen — der echte Code-Stand ist real auf der Platte. Die Backup-Notiz (+ ggf. ausgelagerte
+> `.diff`) ist die kuratierte Zusammenfassung und Absicherung, NICHT die einzige Quelle.
+
 ### Schritt 1: Beide Orte pruefen, neuere nicht-leere Version waehlen
 
 Lies beide Dateien. Regeln:
 - Datei fehlt oder ist leer (nur Whitespace) → zaehlt als "kein Backup".
-- Beide vorhanden und nicht leer → nimm die mit dem **neueren Timestamp** (deckt den Fall
-  Windows→macOS ab: das frisch gepullte Repo-Backup gewinnt).
+- Beide vorhanden und nicht leer → am selben PC sind sie i.d.R. identisch (die lokale wird beim
+  Backup ins Repo kopiert); nimm die mit dem **neueren Timestamp** (normalerweise die lokale).
 - Nur eine vorhanden → diese nehmen.
 - Keine vorhanden → dem Benutzer sagen, dass es kein Backup gibt, und normal weiterarbeiten.
 
-Vor dem Lesen des Repo-Backups einmal `git pull` (bzw. fetch+rebase), damit ein Backup von einem
-anderen Rechner wirklich aktuell ist.
+(Ein `git fetch origin && git rebase origin/main` ist wegen paralleler Sessions ohnehin sinnvoll,
+bevor in Schritt 4 die Leerung gepusht wird — fuer das Backup-Lesen selbst reicht am selben PC aber
+die lokale Datei.)
 
 Timestamp-Vergleich (Beispiel — Bash-Snippet, auf Windows in Git Bash ausfuehren; `-s`/`-nt` sind POSIX-Test-Operatoren, kein PowerShell):
 
@@ -216,9 +239,9 @@ done
 
 ### Schritt 2: Drift-Pruefung — passt der Stand noch zum Backup?
 
-Bevor du blind weiterarbeitest, kurz pruefen, ob sich seit dem Backup etwas verschoben hat
-(parallele Sessions, anderer Rechner, fremde Pushes). Sonst arbeitest du an einem Stand weiter, den
-es so nicht mehr gibt:
+Backup → `/clear` → restore laeuft meist in Sekunden am selben PC — da ist Drift selten. Aber
+parallele Claude-Sessions am selben Repo koennen zwischendurch gepusht oder Dateien geaendert haben.
+Darum kurz pruefen, ob sich seit dem Backup etwas verschoben hat, bevor du weiterarbeitest:
 
 - **Genannte Dateien noch da?** Existieren die unter "Relevante Dateien" und im Wiedereinstiegspunkt
   genannten Pfade noch? (Fehlt eine, wurde sie evtl. verschoben/geloescht/umbenannt.)
