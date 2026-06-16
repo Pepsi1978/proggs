@@ -654,11 +654,12 @@ public partial class PromptInputWindow : Window
         // koennte der Benutzer kein Kontextmenue mehr nutzen. Wir starten
         // nur wenn das Klick-Ziel das Window oder der Border ist.
         if (e.OriginalSource is System.Windows.Controls.TextBox) return;
-        // Rechtsklick auf Toolbar-Buttons (ButtonBase und abgeleitete Typen)
-        // darf ebenfalls keinen Drag ausloesen — sonst wuerde ein Klick auf
-        // den X-, G- oder ;-Button gleichzeitig den Button-Click und den
-        // Fenster-Drag starten.
-        if (e.OriginalSource is ButtonBase) return;
+        // Rechtsklick auf einen Button (Slot-Zahl, Diskette, X, Toolbar) darf
+        // KEINEN Fenster-Drag ausloesen — sonst kaeme z.B. das Slot-Prioritaets-
+        // Kontextmenue nie zum Vorschein (dieser Tunnel-Handler wuerde den Drag
+        // starten und die Maus capturen). Vom getroffenen (evtl. inneren) Element
+        // nach oben laufen: liegt ein Button im Pfad -> kein Drag.
+        if (e.OriginalSource is DependencyObject src && FindAncestorButton(src) is not null) return;
 
         _isDragging      = true;
         _dragStartScreen = PointToScreen(e.GetPosition(this));
@@ -691,6 +692,20 @@ public partial class PromptInputWindow : Window
         ReleaseMouseCapture();
     }
 
+    /// <summary>Laeuft vom getroffenen Element die Visual-Tree-Eltern hoch und
+    /// liefert den ersten umschliessenden Button (oder null). Damit erkennt der
+    /// Rechtsklick-Drag, ob er auf einem Button (Slot/Toolbar) sitzt — dann wird
+    /// kein Fenster-Drag gestartet und das Kontextmenue kann sich oeffnen.</summary>
+    private static ButtonBase? FindAncestorButton(DependencyObject? d)
+    {
+        while (d is not null)
+        {
+            if (d is ButtonBase b) return b;
+            d = d is System.Windows.Media.Visual ? System.Windows.Media.VisualTreeHelper.GetParent(d) : null;
+        }
+        return null;
+    }
+
     // ── Prompt-Zwischenspeicher-Slots (1…15) ─────────────────────────────
 
     /// <summary>Diskette geklickt: speichere <paramref name="text"/> im Slot
@@ -717,12 +732,23 @@ public partial class PromptInputWindow : Window
     /// </summary>
     public event Action<int, int>? SlotMoveRequested;
 
+    /// <summary>
+    /// Rechtsklick auf einen belegten Slot -> Prioritaet setzen
+    /// (0=keine, 1=niedrig, 2=mittel, 3=hoch). Das PromptBoardPanel persistiert
+    /// via <c>PromptSlotService.SetPriorityAsync</c> und stoesst SOFORT den
+    /// Cloud-Sync an, damit die Prioritaet auch ins Google-Drive-Backup wandert.
+    /// </summary>
+    public event Action<int, int>? SlotPriorityRequested;
+
     private int? _selectedSlot;
     private readonly Dictionary<int, string> _slotContents = new();
     /// <summary>Speicher-Zeitstempel pro belegtem Slot — fuer die Anzeige neben dem X.</summary>
     private readonly Dictionary<int, DateTime> _slotTimestamps = new();
     /// <summary>KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.</summary>
     private readonly Dictionary<int, string> _slotSummaries = new();
+    /// <summary>Prioritaet (1=niedrig, 2=mittel, 3=hoch) pro belegtem Slot — Quelle fuer die
+    /// farbige Hintergrund-Einfaerbung der Zahl. Fehlend/0 = keine Prioritaet.</summary>
+    private readonly Dictionary<int, int> _slotPriorities = new();
     /// <summary>Slots, fuer die gerade eine Summary erzeugt wird — verhindert Doppel-Calls.</summary>
     private readonly HashSet<int> _summaryInFlight = new();
     /// <summary>True solange der Backfill bestehender Slots laeuft (sequentiell, gedrosselt).</summary>
@@ -749,6 +775,15 @@ public partial class PromptInputWindow : Window
     private static readonly Brush SlotGrey  = new SolidColorBrush(Color.FromRgb(0x8C, 0x8C, 0x8C));
     private static readonly Brush SlotRed   = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
     private static readonly Brush SlotClear = new SolidColorBrush(Colors.Transparent);
+    // Prioritaets-Hintergruende (Rechtsklick auf belegten Slot -> Prioritaet):
+    // Hoch=Rot, Mittel=Gelb, Niedrig=Gruen. Die Zahl darauf wird Near-Black
+    // (SlotPrioText) — gut lesbar auf allen drei UND klar verschieden vom Grau
+    // leerer Slots. SlotDefaultBg = Standard-Hintergrund wie im SlotButton-Style.
+    private static readonly Brush SlotPrioHigh   = new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35));
+    private static readonly Brush SlotPrioMedium = new SolidColorBrush(Color.FromRgb(0xFB, 0xC0, 0x2D));
+    private static readonly Brush SlotPrioLow    = new SolidColorBrush(Color.FromRgb(0x43, 0xA0, 0x47));
+    private static readonly Brush SlotPrioText   = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+    private static readonly Brush SlotDefaultBg  = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D));
 
     /// <summary>
     /// Wird vom PromptBoardPanel aufgerufen — uebergibt den aktuellen Stand
@@ -756,7 +791,7 @@ public partial class PromptInputWindow : Window
     /// und laesst die aktuelle Auswahl/Diskette unveraendert.
     /// </summary>
     public void SetSlotContents(Dictionary<int, string> map, Dictionary<int, DateTime>? timestamps = null,
-        Dictionary<int, string>? summaries = null)
+        Dictionary<int, string>? summaries = null, Dictionary<int, int>? priorities = null)
     {
         _slotContents.Clear();
         foreach (var kv in map)
@@ -773,6 +808,12 @@ public partial class PromptInputWindow : Window
         {
             foreach (var kv in summaries)
                 if (!string.IsNullOrWhiteSpace(kv.Value)) _slotSummaries[kv.Key] = kv.Value;
+        }
+        _slotPriorities.Clear();
+        if (priorities != null)
+        {
+            foreach (var kv in priorities)
+                if (kv.Value != 0) _slotPriorities[kv.Key] = kv.Value;
         }
         UpdateSlotVisuals();
         // Bestehende belegte Slots ohne Zusammenfassung nachtraeglich auffuellen.
@@ -807,6 +848,15 @@ public partial class PromptInputWindow : Window
             btn.DragOver += OnSlotDragOver;
             btn.DragLeave += OnSlotDragLeave;
             btn.Drop += OnSlotDrop;
+            // Rechtsklick auf einen belegten Slot -> Prioritaets-Kontextmenue
+            // (Hoch/Mittel/Niedrig/Keine). Bei leerem Slot wird das Oeffnen
+            // unterdrueckt (Prioritaet ohne Prompt ergibt keinen Sinn).
+            btn.ContextMenu = BuildPriorityMenu(n);
+            btn.ContextMenuOpening += (_, ev) =>
+            {
+                if (!(_slotContents.TryGetValue(n, out var cont) && !string.IsNullOrEmpty(cont)))
+                    ev.Handled = true;   // leerer Slot -> kein Menue
+            };
             _slotButtons[n] = btn;
             // 1-15 in die obere Reihe (SlotBarRow1), 16-30 in die untere (SlotBarRow2).
             var targetRow = n <= SlotsPerRow ? SlotBarRow1 : SlotBarRow2;
@@ -857,6 +907,72 @@ public partial class PromptInputWindow : Window
         };
     }
 
+    // ── Prioritaet (Rechtsklick-Kontextmenue) ───────────────────────────────
+
+    /// <summary>Baut das Rechtsklick-Menue eines Slots: Hoch/Mittel/Niedrig + Keine.
+    /// Jeder Eintrag traegt ein farbiges Quadrat. Beim Oeffnen wird das Popup auf
+    /// HWND_TOPMOST gezwungen (sonst liegt es hinter dem Topmost-Overlay).</summary>
+    private ContextMenu BuildPriorityMenu(int n)
+    {
+        var cm = new ContextMenu();
+        cm.Items.Add(PriorityMenuItem(n, 3, "Hoch", SlotPrioHigh));
+        cm.Items.Add(PriorityMenuItem(n, 2, "Mittel", SlotPrioMedium));
+        cm.Items.Add(PriorityMenuItem(n, 1, "Niedrig", SlotPrioLow));
+        cm.Items.Add(new Separator());
+        cm.Items.Add(PriorityMenuItem(n, 0, "Keine", SlotGrey));
+        cm.Opened += (_, _) => ForceToolTipTopmost(cm);
+        return cm;
+    }
+
+    private MenuItem PriorityMenuItem(int n, int level, string label, Brush swatch)
+    {
+        var item = new MenuItem
+        {
+            Header = label,
+            Icon = new System.Windows.Shapes.Rectangle
+            {
+                Width = 12,
+                Height = 12,
+                RadiusX = 3,
+                RadiusY = 3,
+                Fill = swatch,
+            },
+        };
+        item.Click += (_, _) => OnSetPriority(n, level);
+        return item;
+    }
+
+    /// <summary>Setzt die Prioritaet eines belegten Slots, faerbt sofort lokal um
+    /// und meldet die Aenderung zur Persistenz + Cloud-/Drive-Sync.</summary>
+    private void OnSetPriority(int n, int priority)
+    {
+        if (!(_slotContents.TryGetValue(n, out var t) && !string.IsNullOrEmpty(t)))
+            return; // nur belegte Slots bekommen eine Prioritaet
+        if (priority <= 0) { priority = 0; _slotPriorities.Remove(n); }
+        else _slotPriorities[n] = priority;
+        UpdateSlotVisuals();
+        UpdatePreview(priority == 0
+            ? $"Prioritaet von Slot {n} entfernt."
+            : $"Slot {n}: Prioritaet {PriorityName(priority)}.");
+        SlotPriorityRequested?.Invoke(n, priority);
+    }
+
+    private static string PriorityName(int p) => p switch
+    {
+        3 => "hoch",
+        2 => "mittel",
+        1 => "niedrig",
+        _ => "keine",
+    };
+
+    private static Brush PriorityBrush(int p) => p switch
+    {
+        3 => SlotPrioHigh,
+        2 => SlotPrioMedium,
+        1 => SlotPrioLow,
+        _ => SlotDefaultBg,
+    };
+
     /// <summary>
     /// Faerbt die Zahlen-Leiste neu: belegte Zahlen gold, leere grau, die
     /// ausgewaehlte Zahl bekommt einen goldenen Rahmen. Diskette/X sind nur
@@ -870,7 +986,21 @@ public partial class PromptInputWindow : Window
             int n = kv.Key;
             Button btn = kv.Value;
             bool hasContent = _slotContents.TryGetValue(n, out var t) && !string.IsNullOrEmpty(t);
-            btn.Foreground = hasContent ? SlotGold : SlotGrey;
+            int prio = hasContent && _slotPriorities.TryGetValue(n, out var p) ? p : 0;
+            if (prio != 0)
+            {
+                // Belegt MIT Prioritaet: farbiger Hintergrund (rot/gelb/gruen) +
+                // Near-Black-Zahl (auf allen drei lesbar, klar verschieden vom Grau).
+                btn.Background = PriorityBrush(prio);
+                btn.Foreground = SlotPrioText;
+            }
+            else
+            {
+                // Belegt ohne Prioritaet: wie bisher (Gold-Zahl auf dunkel);
+                // leerer Slot: graue Zahl auf dunkel.
+                btn.Background = SlotDefaultBg;
+                btn.Foreground = hasContent ? SlotGold : SlotGrey;
+            }
             bool selected = _selectedSlot == n;
             btn.BorderBrush = selected ? SlotGold : SlotClear;
             btn.BorderThickness = new Thickness(selected ? 2 : 0);
@@ -1107,6 +1237,7 @@ public partial class PromptInputWindow : Window
         _slotContents.Remove(n);
         _slotTimestamps.Remove(n);
         _slotSummaries.Remove(n);
+        _slotPriorities.Remove(n);
         ClearInput();
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");

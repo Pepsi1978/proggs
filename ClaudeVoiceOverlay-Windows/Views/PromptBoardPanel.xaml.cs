@@ -645,6 +645,18 @@ public partial class PromptBoardPanel : Window
                 }
                 catch (Exception ex) { Console.WriteLine($"Slot summary save failed: {ex.Message}"); }
             };
+            // Rechtsklick-Prioritaet (Hoch/Mittel/Niedrig/Keine) persistieren und
+            // SOFORT Cloud-Sync anstossen, damit die farbige Einfaerbung auch ins
+            // Google-Drive-Backup wandert und auf andere Geraete synct.
+            _inputWindow.SlotPriorityRequested += async (number, priority) =>
+            {
+                try
+                {
+                    await VoiceServiceProvider.Slots.SetPriorityAsync(number, priority);
+                    SlotsSyncRequested?.Invoke();
+                }
+                catch (Exception ex) { Console.WriteLine($"Slot priority save failed: {ex.Message}"); }
+            };
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;
@@ -907,8 +919,8 @@ public partial class PromptBoardPanel : Window
     {
         try
         {
-            var (map, times, summaries) = await VoiceServiceProvider.Slots.LoadMapTimesSummariesAsync().ConfigureAwait(false);
-            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times, summaries));
+            var (map, times, summaries, priorities) = await VoiceServiceProvider.Slots.LoadMapTimesSummariesAsync().ConfigureAwait(false);
+            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times, summaries, priorities));
         }
         catch (Exception ex)
         {

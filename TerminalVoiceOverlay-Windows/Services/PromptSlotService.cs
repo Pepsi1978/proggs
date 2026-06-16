@@ -30,6 +30,16 @@ public sealed class PromptSlotEntry
     /// kompatibel zur macOS-Variante (PBSlotEntry.summary).
     /// </summary>
     public string Summary { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Prioritaet dieses Slots fuer die farbige Einfaerbung der Zahlen-Leiste:
+    /// 0 = keine (Standard, auch fuer alte Eintraege ohne dieses Feld),
+    /// 1 = niedrig (gruen), 2 = mittel (gelb), 3 = hoch (rot). Reist im JSON
+    /// (camelCase <c>priority</c>) mit ins Drive-Backup und ist bytegenau
+    /// kompatibel zur macOS-Variante (PBSlotEntry.priority). Bei Tombstones
+    /// (leerer Text) bedeutungslos.
+    /// </summary>
+    public int Priority { get; set; }
 }
 
 /// <summary>
@@ -124,7 +134,7 @@ public sealed class PromptSlotService
     /// Zahlen-Leiste. Nur Slots mit nicht-leerer Summary erscheinen im
     /// Summary-Dictionary.
     /// </summary>
-    public async Task<(Dictionary<int, string> Map, Dictionary<int, DateTime> Times, Dictionary<int, string> Summaries)>
+    public async Task<(Dictionary<int, string> Map, Dictionary<int, DateTime> Times, Dictionary<int, string> Summaries, Dictionary<int, int> Priorities)>
         LoadMapTimesSummariesAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -134,6 +144,7 @@ public sealed class PromptSlotService
             var map = new Dictionary<int, string>();
             var times = new Dictionary<int, DateTime>();
             var summaries = new Dictionary<int, string>();
+            var priorities = new Dictionary<int, int>();
             foreach (var e in entries)
             {
                 if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
@@ -141,9 +152,10 @@ public sealed class PromptSlotService
                     map[e.Number] = e.Text;
                     times[e.Number] = e.UpdatedAt;
                     if (!string.IsNullOrWhiteSpace(e.Summary)) summaries[e.Number] = e.Summary;
+                    if (e.Priority != 0) priorities[e.Number] = e.Priority;
                 }
             }
-            return (map, times, summaries);
+            return (map, times, summaries, priorities);
         }
         finally { _gate.Release(); }
     }
@@ -164,11 +176,14 @@ public sealed class PromptSlotService
         try
         {
             var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            int idx = entries.FindIndex(e => e.Number == number);
             // Neuer Text -> alte Summary ist ungueltig und wird geleert. Die
             // frische 6-8-Wort-Zusammenfassung holt der Aufrufer gleich danach
-            // per Gemini und schreibt sie ueber SetSummaryAsync nach.
-            var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow, Summary = string.Empty };
-            int idx = entries.FindIndex(e => e.Number == number);
+            // per Gemini und schreibt sie ueber SetSummaryAsync nach. Die
+            // Prioritaet (farbige Einfaerbung) gehoert zum SLOT, nicht zum Text,
+            // und bleibt beim Ueberschreiben erhalten (Frank-Wunsch 2026-06-16).
+            int priority = idx >= 0 ? entries[idx].Priority : 0;
+            var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow, Summary = string.Empty, Priority = priority };
             if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
         }
@@ -197,6 +212,34 @@ public sealed class PromptSlotService
             if (string.IsNullOrEmpty(e.Text)) return;                    // Tombstone
             if (!string.Equals(e.Text, forText, StringComparison.Ordinal)) return; // Text inzwischen geaendert
             e.Summary = summary ?? string.Empty;
+            e.UpdatedAt = DateTime.UtcNow;
+            entries[idx] = e;
+            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
+    /// Setzt die Prioritaet eines belegten Slots (0 = keine, 1 = niedrig,
+    /// 2 = mittel, 3 = hoch) — Quelle fuer die farbige Einfaerbung der
+    /// Zahlen-Leiste. Bumpt <c>UpdatedAt</c>, damit die Aenderung per Cloud-Merge
+    /// (Last-Write-Wins) auf andere Geraete wandert UND ins Google-Drive-Backup
+    /// (prompt-slots*.json) kommt. No-op bei leerem/Tombstone-Slot (eine
+    /// Prioritaet ohne Prompt ergibt keinen Sinn).
+    /// </summary>
+    public async Task SetPriorityAsync(int number, int priority, CancellationToken ct = default)
+    {
+        if (number is < 1 or > SlotCount) return;
+        if (priority is < 0 or > 3) return;
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            int idx = entries.FindIndex(e => e.Number == number);
+            if (idx < 0) return;
+            var e = entries[idx];
+            if (string.IsNullOrEmpty(e.Text)) return;   // Tombstone -> keine Prioritaet
+            e.Priority = priority;
             e.UpdatedAt = DateTime.UtcNow;
             entries[idx] = e;
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
@@ -258,6 +301,11 @@ public sealed class PromptSlotService
                 var e = entries.FirstOrDefault(x => x.Number == n);
                 return e?.Summary ?? string.Empty;
             }
+            int PriorityOf(int n)
+            {
+                var e = entries.FirstOrDefault(x => x.Number == n);
+                return e?.Priority ?? 0;
+            }
 
             string fromText = TextOf(from);
             // Nichts zu verschieben, wenn die Quelle leer ist (Tombstone/unbelegt).
@@ -269,17 +317,22 @@ public sealed class PromptSlotService
             string fromSummary = SummaryOf(from);
             string toSummary = SummaryOf(to);
 
+            // Prioritaet reist mit dem Prompt mit (wie die Summary), damit die
+            // farbige Einfaerbung nach Verschieben/Tauschen am richtigen Slot bleibt.
+            int fromPriority = PriorityOf(from);
+            int toPriority = PriorityOf(to);
+
             var now = DateTime.UtcNow;
 
-            void Upsert(int number, string text, string summary)
+            void Upsert(int number, string text, string summary, int priority)
             {
-                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now, Summary = summary ?? string.Empty };
+                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now, Summary = summary ?? string.Empty, Priority = priority };
                 int idx = entries.FindIndex(x => x.Number == number);
                 if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
             }
 
-            Upsert(to, fromText, fromSummary);   // Ziel bekommt den gezogenen Prompt + Summary
-            Upsert(from, toText, toSummary);     // Quelle bekommt den alten Ziel-Text + Summary (leer = Tombstone = Move)
+            Upsert(to, fromText, fromSummary, fromPriority);   // Ziel bekommt den gezogenen Prompt + Summary + Prioritaet
+            Upsert(from, toText, toSummary, toPriority);       // Quelle bekommt den alten Ziel-Text + Summary + Prioritaet (leer = Tombstone = Move)
 
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
             Console.WriteLine(

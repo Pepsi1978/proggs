@@ -93,17 +93,26 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="SlotBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                        <!-- Grid: Hintergrund-Border (Prioritaetsfarbe via TemplateBinding
+                             Background), darueber ein Hover-Overlay als transparenter
+                             Schleier statt Hintergrund-Ersatz — sonst wuerde der Hover
+                             die rote/gelbe/gruene Prioritaetsfarbe ueberdecken. Die Zahl
+                             (ContentPresenter) liegt ganz oben und bleibt immer scharf. -->
+                        <Grid>
+                            <Border x:Name="SlotBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"/>
+                            <Border x:Name="HoverOverlay"
+                                    Background="Transparent"
+                                    CornerRadius="6"/>
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
-                        </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="SlotBorder" Property="Background" Value="#FF3D3D3D"/>
+                                <Setter TargetName="HoverOverlay" Property="Background" Value="#22FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.4"/>
