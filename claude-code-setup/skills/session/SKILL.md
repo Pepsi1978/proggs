@@ -89,8 +89,10 @@ Dateien sind geaendert/neu) und `git diff` fuer die Dateien, an denen die laufen
 hat. Dieser Output gehoert in den Wiedereinstiegspunkt (Feld "Uncommitteter Arbeitsstand"), damit die
 frische Session den halbfertigen, noch NICHT gespeicherten/committeten Edit sieht — sonst kennt sie
 nach `/clear` nur den letzten Commit. NUR die eigenen/relevanten Dateien aufnehmen, keine fremden
-Parallel-Session-Dateien. Bei sehr grossem Diff: die betroffenen Dateien + die entscheidenden
-geaenderten Stellen nennen statt alles zu kopieren.
+Parallel-Session-Dateien. Bei sehr grossem Diff (Richtwert: mehr als ~120 Zeilen oder mehrere
+Dateien): den VOLLEN Diff NICHT inline in die Notiz schreiben, sondern lossless in die separate
+Datei `$HOME/.claude/session-backup.diff` auslagern (siehe Schritt 2b) und im Wiedereinstiegspunkt
+nur den Pfad + die entscheidenden geaenderten Stellen referenzieren. Kleiner Diff: ruhig inline.
 
 ### Schritt 2: An beide Orte schreiben — DIREKT per Bash, kein Read, kein Write-Tool
 
@@ -117,6 +119,20 @@ cp "$HOME/.claude/session-backup.md" "$HOME/proggs/.claude/session-backup.md"
 - **KEIN Write-Tool** → das hat bei existierenden Dateien einen Read-Zwang erzwungen (2-3
   ueberfluessige Tool-Calls). Hier nicht noetig.
 
+### Schritt 2b: Grossen uncommitteten Diff auslagern (NUR wenn der Diff gross ist)
+
+Ist der uncommittete Diff zu gross fuer die Notiz (Richtwert ~120+ Zeilen / mehrere Dateien),
+schreibe ihn lossless in eine SEPARATE, FESTE Datei (immer ueberschrieben, damit sich nie mehrere
+ansammeln) und referenziere ihn im Wiedereinstiegspunkt nur per Pfad:
+
+```bash
+git -C "$HOME/proggs" diff -- <eigene-dateien-der-aufgabe> > "$HOME/.claude/session-backup.diff"
+cp "$HOME/.claude/session-backup.diff" "$HOME/proggs/.claude/session-backup.diff"
+```
+
+Kleiner Diff → diesen Schritt UEBERSPRINGEN, KEINE Diff-Datei anlegen. Die Diff-Datei wird beim
+RESTORE nach dem Einlesen wieder GELOESCHT (nicht nur geleert) — siehe RESTORE Schritt 4.
+
 ### Schritt 3: Repo-Version committen und pushen
 
 Nur die Backup-Datei stagen (namentlich — nie `git add -A`, wegen paralleler Sessions), dann
@@ -125,6 +141,8 @@ fetch + rebase + push:
 ```bash
 cd "$HOME/proggs"
 git add .claude/session-backup.md
+# Falls in Schritt 2b ausgelagert, die Diff-Datei mit-stagen:
+[ -f .claude/session-backup.diff ] && git add .claude/session-backup.diff
 git commit -m "#NNN - session backup: handoff snapshot"
 git fetch origin && git rebase origin/main && git push
 ```
@@ -220,28 +238,36 @@ naechsten Schritt.
 ### Schritt 3: Kontext laden und fortsetzen
 
 Lies die gewaehlte Datei vollstaendig, verinnerliche Ziel, Status, naechste Schritte und
-besonders die fehlgeschlagenen Ansaetze. **Ist der Abschnitt "Laufende/unterbrochene Aufgabe"
+besonders die fehlgeschlagenen Ansaetze. Verweist das Backup auf eine ausgelagerte Diff-Datei
+(`.claude/session-backup.diff`), lies diese ebenfalls vollstaendig — sie enthaelt den uncommitteten
+Zwischenstand des unterbrochenen Schritts. **Ist der Abschnitt "Laufende/unterbrochene Aufgabe"
 gefuellt, hat er VORRANG:** nimm den dort beschriebenen, zuletzt unterbrochenen Schritt sauber neu
 auf und fuehre ihn zu Ende, BEVOR du zu den allgemeinen "Naechsten Schritten" uebergehst. Fasse dem
 Benutzer in 3-4 Saetzen zusammen, wo ihr steht (inkl. an welchem Schritt zuletzt unterbrochen
 wurde), und mach dann genau dort weiter. Ist der Abschnitt leer/nicht vorhanden, beginne mit dem
 ersten "Naechsten Schritt".
 
-### Schritt 4: Beide Backups leeren (und Repo-Leerung pushen)
+### Schritt 4: Backups leeren + ausgelagerte Diff-Datei loeschen (Repo-Leerung pushen)
 
 Damit ein spaeterer Restore nie auf zwei verschiedene volle Versionen trifft, werden nach
-erfolgreichem Einlesen BEIDE Dateien geleert:
+erfolgreichem Einlesen die beiden Backup-Dateien geleert UND die ausgelagerte Diff-Datei (falls
+vorhanden) GANZ geloescht — nur leeren wuerde bei grossen Diffs ueber die Zeit Dateimuell ansammeln:
 
 ```bash
 : > "$HOME/.claude/session-backup.md"
 : > "$HOME/proggs/.claude/session-backup.md"
+# Ausgelagerte Diff-Datei (falls vorhanden) NACH dem Einlesen GANZ loeschen, nicht nur leeren:
+rm -f "$HOME/.claude/session-backup.diff" "$HOME/proggs/.claude/session-backup.diff"
 cd "$HOME/proggs"
 git add .claude/session-backup.md
+# Loeschung der Diff-Datei mit-stagen, falls sie im Repo getrackt war (sonst harmlos):
+git add .claude/session-backup.diff 2>/dev/null || true
 git commit -m "#NNN - session restore: clear handoff backup"
 git fetch origin && git rebase origin/main && git push
 ```
 
-So ist der Zustand nach dem Restore sauber: kein aktives Backup, weder lokal noch im Repo.
+So ist der Zustand nach dem Restore sauber: kein aktives Backup und keine ausgelagerte Diff-Datei,
+weder lokal noch im Repo.
 
 ---
 
@@ -278,7 +304,8 @@ Was soll in dieser Arbeitsphase insgesamt erreicht werden?
 - **Uncommitteter Arbeitsstand (halbfertige Edits):** [Output von `git status --short` der eigenen
   Dateien + fuer die Datei(en) des unterbrochenen Schritts der relevante `git diff`-Ausschnitt — so
   sieht die frische Session den noch nicht gespeicherten/committeten Zwischenstand, nicht nur den
-  letzten Commit. Bei riesigem Diff: betroffene Dateien + entscheidende Stellen nennen]
+  letzten Commit. Bei riesigem Diff: in `.claude/session-backup.diff` ausgelagert (Backup Schritt 2b)
+  — hier dann nur den Pfad + die entscheidenden Stellen nennen]
 - **Danach:** [kurzer Verweis: nach Abschluss dieses Schritts mit "Naechste Schritte" weiter]
 
 (Lief beim Backup KEINE Aufgabe — alles sauber abgeschlossen —, hier nur "Keine laufende Aufgabe,
