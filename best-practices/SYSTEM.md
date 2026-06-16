@@ -107,3 +107,16 @@ wurde (1×/Bereich/Session).
 - ❌ Best-Practices und Almanach in unterschiedliche Kategorien legen (Symmetrie bricht).
 - ❌ Findings nur im Chat lassen statt sie hier zu persistieren (siehe `research-persistence`-Regel).
 - ❌ Quelle, Versions-Anker oder Stand-Datum weglassen (spätere Nachprüfbarkeit).
+
+---
+
+## 8. Änderungs-Historie des Best-Practices-Systems
+
+> Die System-Struktur-Historie steht HIER (persistent). Nicht in `_changelog-archiv.md` —
+> das ist das **wortwörtliche Claude-Code-Changelog** (Recherche-Quelle), das der
+> `best-practices`-Skill bei jedem Lauf neu von GitHub holt und dabei überschreibt.
+
+| Datum | Änderung |
+|-------|----------|
+| **2026-06-16** | **Großer Strukturumbau:** `best-practices/` auf **flach 1:1 wie `bugs/`** umgestellt (Commits #46833–#46852). (1) `projekt-code/<kat>/best-practices-<x>.md` → `best-practices/<kat>/<x>.md` (62 Dateien, präfixlos). (2) Generisches Harness-Wissen `01-hooks`…`12-neues` → `claude-tooling/<thema>.md` (12 Dateien). (3) Neue `README.md` (Kategorie-Index) + diese `SYSTEM.md`; alte Ordner `projekt-code/` + `01-12` entfernt. (4) Alle Pfad-Verweise in Almanachen, Rules (+ Repo-Spiegel) korrigiert. (5) Neuer `bugs/check-dead-paths.py` Validator (Backtick-Pfade + Links) in `health.py` gebündelt. Werkzeuge (`bug-almanac-guard`, `check-coupling.py`) wurden in Phase 1 abwärtskompatibel gemacht und erkennen beide Strukturen — die Straffung (Alt-Pfad-Code raus) folgt nach dem Skill-Umbau. |
+| vor 2026-06-16 | Struktur: `projekt-code/<kat>/best-practices-<software>.md` (Projekt-Code, seit 2026-06-03 nach Kategorie gruppiert) + nummerierte Harness-Ordner `01-hooks`…`12-neues`. |

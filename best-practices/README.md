@@ -90,7 +90,10 @@ best-practices/
   + `offiziell`/`extern`-Flag.
 - **Versions-Anker:** die live ermittelte installierte Version der jeweiligen Software.
 - **Stand des Harness-Wissens:** siehe [`_state.json`](_state.json) (`last_version` / `last_checked`).
-- **Master-Zeitleiste aller Änderungen:** [`_changelog-archiv.md`](_changelog-archiv.md).
+- **Claude-Code-Changelog-Archiv (Recherche-Quelle):** [`_changelog-archiv.md`](_changelog-archiv.md) — das
+  **wortwörtliche** Claude-Code-Changelog von GitHub, vom `best-practices`-Skill bei jedem Lauf neu geholt
+  (NICHT von Hand bearbeiten — wird überschrieben).
+- **Struktur-/System-Historie dieses Ordners:** [`SYSTEM.md`](SYSTEM.md) §8 (persistent).
 - **Wer schreibt hier rein:**
   - `bug-almanach-recherche`-Skill — trägt bei jeder Bug-Recherche die Prävention/Best-Practice ein.
   - `best-practices`-Skill — rollt eine Software/ein Harness-Thema gezielt auf und pflegt die neuesten Empfehlungen.
