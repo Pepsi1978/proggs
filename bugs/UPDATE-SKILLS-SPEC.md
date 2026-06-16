@@ -1,8 +1,9 @@
 # Spec: Zwei Update-Skills (Almanach + Best-Practices) — für regelmäßige Wellen in Claude Cowork
 
-> Festgehalten 2026-06-15 (Frank-Anweisung). Status: **NOCH NICHT BAUEN** — erst Aufgabe B/C/D +
-> weitere offene Wellen, DANN diese 2 Skills (zuletzt). Hier nur die Anforderungen aufheben.
-> Beide Skills NUR via `skill-creator` bauen (CLAUDE.md-Pflicht). Danach in Cowork-Logik umwandeln.
+> Festgehalten 2026-06-15 (Frank-Anweisung). Status: **GEBAUT 2026-06-16** (Frank-OK — der
+> best-practices-Skill ist umgebaut, Vorbedingung erfuellt). Skills: `almanach-update` (Skill 1) +
+> `best-practices-update` (Skill 2), je echt unter `~/.claude/skills/` + Spiegel in
+> `claude-code-setup/skills/` und `Cowork/skills-src/`. Diese Spec bleibt als Anforderungs-Referenz.
 
 ## Warum (Frank, 2026-06-15)
 Das Re-Recherchieren der Almanache/Best-Practices (z.B. "Welle 3" = älteste Kern-Almanache auf
