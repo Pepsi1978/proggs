@@ -90,6 +90,30 @@ Der Ausschluss ist eine separate Aenderung am Guard (bug-almanac-guard.ps1/.sh).
 Sag Bescheid, welche Vorschlaege umgesetzt werden sollen.
 ```
 
+### Schritt 4 — Auswertung vermerken (PFLICHT am Ende)
+
+Nach dem Bericht den Zeitpunkt + die aktuelle Block-Zahl festhalten, damit der Session-Start-Reminder
+(im `bug-almanac-index`-Hook) kuenftig „neue seit letzter Auswertung" statt „seit Beginn" zeigt:
+
+```bash
+python3 - <<'PY'
+import datetime
+from pathlib import Path
+state = Path.home() / ".claude" / "state"
+total = 0
+for fn in ("bug-almanac-triggers.jsonl.1", "bug-almanac-triggers.jsonl"):
+    p = state / fn
+    if p.exists():
+        with open(p, encoding="utf-8") as f:
+            total += sum(1 for line in f if '"event":"block"' in line)
+state.mkdir(parents=True, exist_ok=True)
+# Zeile 1 = Datum (yyyy-mm-dd), Zeile 2 = Block-Zahl zum Auswertungszeitpunkt.
+with open(state / "almanach-last-review.txt", "w", encoding="utf-8", newline="\n") as f:
+    f.write(datetime.date.today().isoformat() + "\n" + str(total) + "\n")
+print(f"Auswertung vermerkt: {datetime.date.today().isoformat()}, {total} Blocks gesamt")
+PY
+```
+
 ## Grenzen (bewusst)
 
 - Der Skill **aendert nie** den Guard — er liefert nur die Entscheidungsgrundlage.

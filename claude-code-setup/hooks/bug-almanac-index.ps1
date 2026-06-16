@@ -39,8 +39,46 @@ try {
         "(das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump). " +
         "Notaus bei Fehlalarm: leere Datei bug-almanac-disable.flag im TEMP-Verzeichnis anlegen."
 
+    # ── Almanach-Trigger-Sonde: Reminder zum woechentlichen Auswerten (Direktive #2) ──
+    # Zaehlt die block-Ereignisse der Sonde (state/bug-almanac-triggers.jsonl + .jsonl.1) per
+    # Textsuche (schnell, kein JSON-Parse pro Zeile). state/almanach-last-review.txt merkt sich
+    # Datum + Block-Zahl der letzten Auswertung (vom Skill almanach-trigger-auswertung gesetzt) ->
+    # so kann "neue seit letzter Auswertung" gezeigt werden. Nur anzeigen, wenn es neue gibt.
+    $reminder = ""
+    try {
+        $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+        $triggerFiles = @((Join-Path $stateDir "bug-almanac-triggers.jsonl.1"),
+                          (Join-Path $stateDir "bug-almanac-triggers.jsonl")) |
+                        Where-Object { Test-Path $_ }
+        if ($triggerFiles) {
+            $totalBlocks = 0
+            foreach ($tf in $triggerFiles) {
+                $totalBlocks += @(Select-String -Path $tf -Pattern '"event":"block"' -ErrorAction SilentlyContinue).Count
+            }
+            $reviewFile = Join-Path $stateDir "almanach-last-review.txt"
+            $prevCount = 0; $reviewDate = $null
+            if (Test-Path $reviewFile) {
+                try {
+                    $rl = @(Get-Content $reviewFile -ErrorAction SilentlyContinue)
+                    if ($rl.Count -ge 1) { $reviewDate = $rl[0].Trim() }
+                    if ($rl.Count -ge 2) { $prevCount = [int]($rl[1].Trim()) }
+                } catch {}
+            }
+            $newBlocks = $totalBlocks - $prevCount
+            if ($newBlocks -lt 0) { $newBlocks = $totalBlocks }  # Rotation/Reset -> auf Gesamt zurueckfallen
+            if ($newBlocks -gt 0) {
+                $since = if ($reviewDate) {
+                    $d = $null
+                    try { $d = ([datetime]::Today - [datetime]::Parse($reviewDate).Date).Days } catch {}
+                    if ($null -ne $d) { " (seit letzter Auswertung vor $d Tagen)" } else { " (seit letzter Auswertung)" }
+                } else { " (noch nie ausgewertet)" }
+                $reminder = " | Almanach-Sonde: $newBlocks Unterbrechung(en)$since - sag 'werte die Almanach-Trigger aus'."
+            }
+        }
+    } catch {}
+
     $out = @{
-        systemMessage = "Bug-Almanach: $count Almanach(e) aktiv."
+        systemMessage = "Bug-Almanach: $count Almanach(e) aktiv.$reminder"
         hookSpecificOutput = @{
             hookEventName = "SessionStart"
             additionalContext = $ctx
