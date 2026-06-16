@@ -35,6 +35,31 @@ Umgebung/
     └── ... (weitere nach Bedarf)
 ```
 
+## Was alles mitgespiegelt werden muss (PFLICHT bei jeder Aenderung)
+
+Verbindliche Regel: `~/.claude/rules/harness-mirror-on-change.md`. **Jede** Neuerstellung
+oder Aktualisierung einer der folgenden Komponenten wird sofort 1:1 in die zustaendigen
+Repo-Ordner uebernommen — sonst hat ein neuer Rechner / eine andere Plattform den Stand nicht.
+
+| Komponente | Aktiv (nicht im Repo) | Spiegel hier (`Umgebung/`) | Auch nach `claude-code-setup/` |
+|------------|------------------------|----------------------------|--------------------------------|
+| **Skills** | `~/.claude/skills/<name>/` | `Umgebung/Skills/<name>/` | `claude-code-setup/skills/` |
+| **Hooks** (`.ps1` + `.sh`) | `~/.claude/hooks/` | `Umgebung/Hooks/` | `claude-code-setup/hooks/` |
+| **Plugins** (eigene) | Plugin-Quelle | `Umgebung/Plugins/<plugin>/` | `claude-code-setup/Plugins/` |
+| **Agents** | `~/.claude/agents/` | — | `claude-code-setup/agents/` |
+| **Commands** | `~/.claude/commands/` | — | `claude-code-setup/commands/` |
+| **Rules** | `~/.claude/rules/` | — | `claude-code-setup/rules/` |
+| **MCP-Server-Config** | `settings.json` / `.mcp.json` | — | `claude-code-setup/mcp-windows.json` + `mcp-macos.json` |
+| **Settings** | `~/.claude/settings*.json` | — | 3-Dateien-Regel im Setup-Repo |
+
+`Umgebung/` fuehrt bewusst das transportable Trio **Skills / Hooks / Plugins**; Agents,
+Commands, Rules, MCP und Settings leben nur in `claude-code-setup/`. Beim Spiegeln IMMER
+`__pycache__`, `*.pyc`, `*.bak`, `*.reset-bak-*` und den leeren Skill-Ordner `learned/`
+ausschliessen. Externe (installierte) Plugins werden NICHT gespiegelt — nur eigene.
+
+**Werkzeug:** `bash claude-code-setup/scripts/harness-mirror.sh check` zeigt, was fehlt /
+veraltet / extra ist; `… sync` zieht den aktiven Stand additiv in beide Spiegel nach.
+
 ## Die zwei Skills-Bereiche — Unterschied
 
 | Ort | Zweck | Wann nutzen |
