@@ -1028,6 +1028,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     self?.onSlotsSyncRequested?()
                 }
             }
+            // Rechtsklick-Prioritaet (Hoch/Mittel/Niedrig/Keine) persistieren und
+            // SOFORT Cloud-Sync — damit die farbige Einfaerbung ins Drive-Backup
+            // wandert und auf andere Geraete synct.
+            panel.onSlotPriority = { [weak self] number, priority in
+                PromptSlotStore.shared.setPriority(number: number, priority: priority) {
+                    self?.onSlotsSyncRequested?()
+                }
+            }
             inputPanel = panel
         }
         inputPanel?.dock(leftOf: self, force: true)
@@ -1035,8 +1043,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         inputPanel?.makeKeyAndOrderFront(nil)
         // Belegte Slots in die Zahlen-Leiste laden — bei jedem Oeffnen, damit
         // ein zwischenzeitlicher Cloud-Merge sofort sichtbar wird.
-        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries in
-            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries)
+        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries, priorities in
+            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries, priorities: priorities)
         }
         inputPanelVisible = true
         updateStarVisual()
@@ -1230,8 +1238,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// nach (falls die Eingabe offen ist). Wird vom AppDelegate nach dem
     /// Cloud-Merge beim Start aufgerufen.
     func reloadSlots() {
-        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries in
-            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries)
+        PromptSlotStore.shared.loadMapTimesSummaries { [weak self] map, times, summaries, priorities in
+            self?.inputPanel?.setSlotContents(map, timestamps: times, summaries: summaries, priorities: priorities)
         }
     }
 

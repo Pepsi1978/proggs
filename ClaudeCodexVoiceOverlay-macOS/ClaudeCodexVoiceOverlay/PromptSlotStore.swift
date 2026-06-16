@@ -15,14 +15,20 @@ struct PBSlotEntry: Codable, Equatable {
     /// Eintraegen aus der Zeit vor diesem Feature. Reist im JSON (Key
     /// `summary`) mit ins Drive-Backup; 1:1 zur Windows-Variante (Summary).
     var summary: String = ""
+    /// Prioritaet fuer die farbige Einfaerbung der Zahlen-Leiste: 0 = keine
+    /// (Standard, auch fuer alte Eintraege ohne dieses Feld), 1 = niedrig
+    /// (gruen), 2 = mittel (gelb), 3 = hoch (rot). Reist im JSON (Key
+    /// `priority`) mit ins Drive-Backup; 1:1 zur Windows-Variante (Priority).
+    var priority: Int = 0
 
-    enum CodingKeys: String, CodingKey { case number, text, updatedAt, summary }
+    enum CodingKeys: String, CodingKey { case number, text, updatedAt, summary, priority }
 
-    init(number: Int, text: String, updatedAt: Date, summary: String = "") {
+    init(number: Int, text: String, updatedAt: Date, summary: String = "", priority: Int = 0) {
         self.number = number
         self.text = text
         self.updatedAt = updatedAt
         self.summary = summary
+        self.priority = priority
     }
 
     /// Toleranter Decoder: aeltere prompt-slots.json OHNE `summary`-Key (vor
@@ -34,6 +40,7 @@ struct PBSlotEntry: Codable, Equatable {
         text = try c.decode(String.self, forKey: .text)
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
         summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
+        priority = try c.decodeIfPresent(Int.self, forKey: .priority) ?? 0
     }
 }
 
@@ -115,20 +122,22 @@ final class PromptSlotStore {
     /// belegtem Slot — fuer die Hover-Tooltips der Zahlen-Leiste. Nur Slots mit
     /// nicht-leerer Summary erscheinen im Summary-Dictionary.
     func loadMapTimesSummaries(
-        completion: @escaping ([Int: String], [Int: Date], [Int: String]) -> Void
+        completion: @escaping ([Int: String], [Int: Date], [Int: String], [Int: Int]) -> Void
     ) {
         queue.async { [weak self] in
-            guard let self = self else { completion([:], [:], [:]); return }
+            guard let self = self else { completion([:], [:], [:], [:]); return }
             let entries = self.loadUnlocked()
             var map: [Int: String] = [:]
             var times: [Int: Date] = [:]
             var summaries: [Int: String] = [:]
+            var priorities: [Int: Int] = [:]
             for e in entries where !e.text.isEmpty && (1...Self.slotCount).contains(e.number) {
                 map[e.number] = e.text
                 times[e.number] = e.updatedAt
                 if !e.summary.isEmpty { summaries[e.number] = e.summary }
+                if e.priority != 0 { priorities[e.number] = e.priority }
             }
-            DispatchQueue.main.async { completion(map, times, summaries) }
+            DispatchQueue.main.async { completion(map, times, summaries, priorities) }
         }
     }
 
@@ -155,7 +164,10 @@ final class PromptSlotStore {
         queue.async { [weak self] in
             guard let self = self else { DispatchQueue.main.async { completion() }; return }
             var entries = self.loadUnlocked()
-            let entry = PBSlotEntry(number: number, text: text, updatedAt: Date())
+            // Prioritaet (farbige Einfaerbung) gehoert zum SLOT, nicht zum Text,
+            // und bleibt beim Ueberschreiben erhalten (Frank-Wunsch 2026-06-16).
+            let keepPriority = entries.first(where: { $0.number == number })?.priority ?? 0
+            let entry = PBSlotEntry(number: number, text: text, updatedAt: Date(), summary: "", priority: keepPriority)
             if let idx = entries.firstIndex(where: { $0.number == number }) {
                 entries[idx] = entry
             } else {
@@ -210,6 +222,30 @@ final class PromptSlotStore {
             } else {
                 entries.append(tombstone)
             }
+            self.saveUnlocked(entries)
+            DispatchQueue.main.async { completion() }
+        }
+    }
+
+    /// Setzt die Prioritaet (0=keine,1=niedrig,2=mittel,3=hoch) eines belegten
+    /// Slots. Bumpt `updatedAt`, damit die Aenderung per Cloud-Merge auf andere
+    /// Geraete wandert UND ins Google-Drive-Backup (prompt-slots.json) kommt.
+    /// No-op bei leerem/Tombstone-Slot.
+    func setPriority(number: Int, priority: Int, completion: @escaping () -> Void) {
+        guard (1...Self.slotCount).contains(number), (0...3).contains(priority) else {
+            DispatchQueue.main.async { completion() }
+            return
+        }
+        queue.async { [weak self] in
+            guard let self = self else { DispatchQueue.main.async { completion() }; return }
+            var entries = self.loadUnlocked()
+            guard let idx = entries.firstIndex(where: { $0.number == number }),
+                  !entries[idx].text.isEmpty else {
+                DispatchQueue.main.async { completion() }
+                return
+            }
+            entries[idx].priority = priority
+            entries[idx].updatedAt = Date()
             self.saveUnlocked(entries)
             DispatchQueue.main.async { completion() }
         }

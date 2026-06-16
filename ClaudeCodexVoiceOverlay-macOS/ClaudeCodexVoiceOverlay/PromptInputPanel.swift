@@ -70,6 +70,11 @@ final class PromptInputPanel: NSPanel {
     /// schreibt sie via `PromptSlotStore.setSummary` + Sofort-Sync.
     var onSlotSummary: ((Int, String, String) -> Void)?
 
+    /// Rechtsklick auf einen belegten Slot -> Prioritaet (0=keine, 1=niedrig,
+    /// 2=mittel, 3=hoch). Das PromptBoardPanel persistiert via
+    /// `PromptSlotStore.setPriority` und stoesst SOFORT den Cloud-/Drive-Sync an.
+    var onSlotPriority: ((Int, Int) -> Void)?
+
     /// Aktuell ausgewaehlte Slot-Nummer (1…30) oder nil. Bestimmt ob
     /// Diskette/X sichtbar sind und welcher Slot gespeichert/geloescht wird.
     private var selectedSlot: Int?
@@ -81,6 +86,9 @@ final class PromptInputPanel: NSPanel {
     private var slotTimestamps: [Int: Date] = [:]
     /// KI-Zusammenfassung (6-8 Woerter) pro belegtem Slot — als Hover-Tooltip.
     private var slotSummaries: [Int: String] = [:]
+    /// Prioritaet (1=niedrig, 2=mittel, 3=hoch) pro belegtem Slot — Quelle fuer
+    /// die farbige Hintergrund-Einfaerbung. Fehlend/0 = keine Prioritaet.
+    private var slotPriorities: [Int: Int] = [:]
     /// Slots, fuer die gerade eine Summary erzeugt wird — verhindert Doppel-Calls.
     private var summaryInFlight: Set<Int> = []
     /// True solange der Backfill bestehender Slots laeuft (sequentiell, gedrosselt).
@@ -102,6 +110,12 @@ final class PromptInputPanel: NSPanel {
     private static let slotGold = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
     private static let slotGrey = NSColor(calibratedWhite: 0.55, alpha: 1)
     private static let slotRed = NSColor(calibratedRed: 1.0, green: 0.27, blue: 0.27, alpha: 1)
+    // Prioritaets-Hintergruende (Rechtsklick -> Prioritaet): Hoch=Rot, Mittel=Gelb,
+    // Niedrig=Gruen. Zahl darauf = Near-Black (slotPrioText), auf allen drei lesbar.
+    private static let slotPrioHigh = NSColor(calibratedRed: 0.898, green: 0.224, blue: 0.208, alpha: 1)
+    private static let slotPrioMedium = NSColor(calibratedRed: 0.984, green: 0.753, blue: 0.176, alpha: 1)
+    private static let slotPrioLow = NSColor(calibratedRed: 0.263, green: 0.627, blue: 0.278, alpha: 1)
+    private static let slotPrioText = NSColor(calibratedWhite: 0.102, alpha: 1)
     /// Wieviele Slots je Reihe — 15 oben (1-15), 15 unten (16-30).
     private static let slotsPerRow = 15
 
@@ -590,10 +604,11 @@ final class PromptInputPanel: NSPanel {
     /// belegten Slots (Nummer → Text). Faerbt die Zahlen-Leiste neu ein und
     /// laesst die aktuelle Auswahl/Diskette unveraendert.
     func setSlotContents(_ map: [Int: String], timestamps: [Int: Date] = [:],
-                         summaries: [Int: String] = [:]) {
+                         summaries: [Int: String] = [:], priorities: [Int: Int] = [:]) {
         slotContents = map.filter { !$0.value.isEmpty }
         slotTimestamps = timestamps
         slotSummaries = summaries.filter { !$0.value.isEmpty }
+        slotPriorities = priorities.filter { $0.value != 0 }
         updateSlotVisuals()
         // Bestehende belegte Slots ohne Zusammenfassung nachtraeglich auffuellen.
         maybeBackfillSummaries()
@@ -616,6 +631,10 @@ final class PromptInputPanel: NSPanel {
                 action: #selector(onSlotNumberClick(_:)))
             btn.tag = n
             btn.onHover = { [weak self] inside in self?.handleSlotHover(n, inside: inside) }
+            // Rechtsklick auf einen belegten Slot -> Prioritaets-Menue. Bei leerem
+            // Slot wird das Menue im Right-Drag-Monitor unterdrueckt (kein Drag,
+            // kein Menue).
+            btn.menu = buildPriorityMenu(for: n)
             slotButtons[n] = btn
             // 1-15 in die obere Reihe, 16-30 in die untere.
             if n <= Self.slotsPerRow { row1Views.append(btn) } else { row2Views.append(btn) }
@@ -704,6 +723,60 @@ final class PromptInputPanel: NSPanel {
         ])
     }
 
+    // ── Prioritaet (Rechtsklick-Menue) ──────────────────────────────────────
+
+    /// Baut das Rechtsklick-Menue eines Slots: Hoch/Mittel/Niedrig + Keine, je
+    /// mit farbigem Quadrat. `representedObject` traegt [slot, level].
+    private func buildPriorityMenu(for n: Int) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        func add(_ level: Int, _ label: String, _ color: NSColor) {
+            let item = NSMenuItem(title: label, action: #selector(onSetPriority(_:)), keyEquivalent: "")
+            item.target = self
+            item.image = Self.prioritySwatch(color)
+            item.representedObject = [n, level]
+            menu.addItem(item)
+        }
+        add(3, "Hoch", Self.slotPrioHigh)
+        add(2, "Mittel", Self.slotPrioMedium)
+        add(1, "Niedrig", Self.slotPrioLow)
+        menu.addItem(.separator())
+        add(0, "Keine", Self.slotGrey)
+        return menu
+    }
+
+    @objc private func onSetPriority(_ sender: NSMenuItem) {
+        guard let arr = sender.representedObject as? [Int], arr.count == 2 else { return }
+        let n = arr[0]
+        let priority = arr[1]
+        guard !(slotContents[n]?.isEmpty ?? true) else { return } // nur belegte Slots
+        if priority <= 0 { slotPriorities.removeValue(forKey: n) }
+        else { slotPriorities[n] = priority }
+        updateSlotVisuals()
+        onSlotPriority?(n, max(0, priority))
+    }
+
+    /// 12x12-Farbquadrat fuer die Menue-Eintraege.
+    private static func prioritySwatch(_ color: NSColor) -> NSImage {
+        let size = NSSize(width: 12, height: 12)
+        let img = NSImage(size: size)
+        img.lockFocus()
+        let path = NSBezierPath(roundedRect: NSRect(origin: .zero, size: size), xRadius: 3, yRadius: 3)
+        color.setFill()
+        path.fill()
+        img.unlockFocus()
+        return img
+    }
+
+    private static func priorityColor(_ p: Int) -> NSColor {
+        switch p {
+        case 3: return slotPrioHigh
+        case 2: return slotPrioMedium
+        case 1: return slotPrioLow
+        default: return NSColor(calibratedWhite: 0.18, alpha: 1)
+        }
+    }
+
     /// Faerbt die Zahlen-Leiste neu: belegte Zahlen gold, leere grau, die
     /// ausgewaehlte Zahl bekommt einen goldenen Rahmen. Diskette/X sind nur
     /// sichtbar wenn eine Zahl ausgewaehlt ist; X ist nur aktiv wenn der Slot
@@ -711,13 +784,22 @@ final class PromptInputPanel: NSPanel {
     private func updateSlotVisuals() {
         for (n, btn) in slotButtons {
             let hasContent = !(slotContents[n]?.isEmpty ?? true)
-            slotLabel(of: btn)?.textColor = hasContent ? Self.slotGold : Self.slotGrey
+            let prio = hasContent ? (slotPriorities[n] ?? 0) : 0
             let isSelected = (selectedSlot == n)
+            if prio != 0 {
+                // Belegt MIT Prioritaet: farbiger Hintergrund + Near-Black-Zahl.
+                slotLabel(of: btn)?.textColor = Self.slotPrioText
+                btn.layer?.backgroundColor = Self.priorityColor(prio).cgColor
+            } else {
+                // Belegt ohne Prioritaet: Gold-Zahl; leer: graue Zahl. Auswahl
+                // hellt den Standard-Hintergrund leicht auf.
+                slotLabel(of: btn)?.textColor = hasContent ? Self.slotGold : Self.slotGrey
+                btn.layer?.backgroundColor = isSelected
+                    ? NSColor(calibratedWhite: 0.26, alpha: 1).cgColor
+                    : NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
+            }
             btn.layer?.borderWidth = isSelected ? 2 : 0
             btn.layer?.borderColor = isSelected ? Self.slotGold.cgColor : NSColor.clear.cgColor
-            btn.layer?.backgroundColor = isSelected
-                ? NSColor(calibratedWhite: 0.26, alpha: 1).cgColor
-                : NSColor(calibratedWhite: 0.18, alpha: 1).cgColor
             // Kein System-Tooltip mehr — die Anzeige uebernimmt das eigene
             // gestylte Tooltip-Fenster ueber die Hover-Erkennung (handleSlotHover).
         }
@@ -963,6 +1045,13 @@ final class PromptInputPanel: NSPanel {
                    hit is NSTextView || hit.isDescendant(of: self.scrollView) {
                     return event
                 }
+                // Rechtsklick auf einen Slot-Button: belegt -> NSMenu (Prioritaet)
+                // zulassen (kein Drag), leer -> nichts (kein Drag, kein Menue).
+                if let hit = self.contentView?.hitTest(event.locationInWindow),
+                   let slotN = self.slotNumber(forHit: hit) {
+                    let occupied = !(self.slotContents[slotN]?.isEmpty ?? true)
+                    return occupied ? event : nil
+                }
                 self.isDragging = true
                 self.dragStartMouseLocation = NSEvent.mouseLocation
                 return nil
@@ -994,6 +1083,22 @@ final class PromptInputPanel: NSPanel {
                 return event
             }
         }
+    }
+
+    /// Laeuft vom getroffenen View die Eltern hoch und liefert die Slot-Nummer,
+    /// falls der Klick auf einem Zahlen-Slot-Button (HoverButton mit tag 1...N)
+    /// sitzt — sonst nil. Damit erkennt der Right-Drag-Monitor Slot-Klicks.
+    private func slotNumber(forHit view: NSView) -> Int? {
+        var v: NSView? = view
+        while let cur = v {
+            if let btn = cur as? HoverButton,
+               (1...PromptSlotStore.slotCount).contains(btn.tag),
+               slotButtons[btn.tag] === btn {
+                return btn.tag
+            }
+            v = cur.superview
+        }
+        return nil
     }
 
     private func clampToScreen() {
