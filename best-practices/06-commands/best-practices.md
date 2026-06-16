@@ -7,6 +7,22 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | Commands = Skills | vereint seit 2.1.3; ein Skill schlaegt gleichnamigen Command | Unified Model |
+| 2 | `$ARGUMENTS` | bricht bei mehrzeiligem Input; NIE ungefiltert in `` !`bash` `` (Injection) | Argument-Handling |
+| 3 | automatische Ausloesung | ueber die `description` (Trigger front-loaden) | description-Feld |
+| 4 | Plugin-Command aufrufen | voll-qualifiziert `/plugin:command` | Namespacing |
+| 5 | Tool-Vorfreigabe | `allowed-tools` (Genehmigungs-Bypass); `disallowed-tools` zum Sperren | allowed-tools |
+| 6 | viele Skills/Commands | `/doctor` (Beschreibungs-Budget) | Beschreibungs-Budget |
+
+---
+
 ## Unified Model: Commands sind jetzt Skills (seit 2.1.3)
 
 - **Was:** Seit Version 2.1.3 (Januar 2026) wurden Custom Slash-Commands und Skills zu einem einheitlichen System zusammengeführt. Eine Datei unter `.claude/commands/deploy.md` und eine Skill-Datei unter `.claude/skills/deploy/SKILL.md` erzeugen beide den Befehl `/deploy` — identisches Verhalten.

@@ -2,6 +2,22 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | parallele Researcher | max ~5–7 gleichzeitig (RPM/429); Continuous-Spawning statt Wellen | Maximale Anzahl paralleler Researcher |
+| 2 | 429 / Rate Limit | Exponential Backoff + `retry-after` respektieren | Exponential Backoff & Retry |
+| 3 | Scope je Researcher | enge Prompts, ~15 Web-Fetches als RPM-Schutz | Scope-Begrenzung |
+| 4 | Ergebnisse sichern | Checkpointing (lossless in Datei auslagern) | Checkpointing |
+| 5 | Findings | NICHT kappen — alle dokumentieren (1M-Kontext) | Scope-Begrenzung |
+| 6 | Uebersetzer ≠ Researcher | Uebersetzungs-Agenten NICHT drosseln (kein Web/RPM) | Warum drosseln |
+
+---
+
 ## Warum Researcher-Subagenten drosseln, Übersetzungs-Agenten aber nicht
 
 - **Was:** Jeder Subagent macht pro Turn EINEN API-Call (`/v1/messages`). Ein Web-Recherche-Agent läuft typisch 15–30 maxTurns mit je einem WebSearch + WebFetch + Analyse — das sind **30–90+ API-Requests in 3–8 Minuten**. 5 parallele Researcher erzeugen so 150–450+ Requests in wenigen Minuten.

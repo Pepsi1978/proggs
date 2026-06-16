@@ -5,6 +5,23 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | `.mcp.json`-Pfade | absolute Pfade/Interpreter; plattformspezifisch (NIE automatisch vereinheitlichen) | .mcp.json |
+| 2 | Transport | HTTP ist Standard, SSE veraltet | Transport-Typen |
+| 3 | viele Server | Tool Search (deferred Schemas) gegen Kontext-Ueberlauf | Tool Search |
+| 4 | Remote-Server | OAuth 2.0; in Cowork Anthropic-IPs allowlisten | OAuth 2.0 |
+| 5 | Subagent-MCP | Frontmatter-MCP ist policy-konform (2.1.153) | Subagent-Frontmatter-MCP |
+| 6 | Scopes | local / project / user (Terminologie geaendert); Dedup ueber Scopes | Scopes |
+| 7 | MCP-Hook fuer Policy | umgehbar bei Disconnect → harte Policy als `command`-Hook | Managed MCP |
+
+---
+
 ## NEU in 2.1.153: Stateful-Server-Reconnect-Loop behoben (Regression-Fix)
 
 - **Was:** Stateful MCP-Server ohne den optionalen GET-SSE-Stream (d.h. Server die nur POST-basiertes Streamable-HTTP implementieren, ohne den GET-Stream für Server-Sent Events) liefen in v2.1.147–v2.1.152 in eine Reconnect-Schleife bei jedem `tools/list`-Aufruf.

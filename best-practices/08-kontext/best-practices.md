@@ -5,6 +5,23 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | CLAUDE.md-Groesse | Ziel < 200 Zeilen; Detail in Rules/Skills (Context-Rot ab ~50 % Fuellung) | CLAUDE.md |
+| 2 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | kann die Schwelle nur SENKEN (Math.min), nie erhoehen | OVERRIDE |
+| 3 | was Compaction ueberlebt | Root-CLAUDE.md via Disk-Reread; reine Chat-Instruktionen gehen verloren | Was Komprimierung ueberlebt |
+| 4 | `MEMORY.md` | nur ~200 Zeilen / 25 KB werden geladen — Index kurz, Detail auslagern | Auto Memory |
+| 5 | grosse Daten | Subagents / File-as-Memory statt Hot-Context (lossless) | Subagents fuer Kontext-Schutz |
+| 6 | MCP/Skills | deferred / on-demand laden statt Session-Start-Aufblaehung | MCP Tool Definitions |
+| 7 | Compact Instructions | in CLAUDE.md pflegen — steuert was die Zusammenfassung behaelt | Compact Instructions |
+
+---
+
 ## Wie der Kontext-Buffer funktioniert
 
 - **Was:** Claude Code reserviert ~33.000 Token (≈16,5 % eines 200K-Fensters) als festen Arbeitsbereich für die Komprimierung. Die restlichen ~167.000 Token stehen für die eigentliche Arbeit zur Verfügung. Vor 2026 war der Buffer größer (~45K Token); er wurde in v2.1.21 auf 33K reduziert — das gibt ca. 12.000 zusätzliche nutzbare Token.

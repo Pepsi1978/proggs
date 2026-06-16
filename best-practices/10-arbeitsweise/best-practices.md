@@ -5,6 +5,23 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | Grund-Workflow | Explore → Plan → Implement → Commit (EPIC) | EPIC-Workflow |
+| 2 | hoechster Hebel | Verifizierung einbauen — kein „fertig“ ohne frischen Beweis | Verifizierung einbauen |
+| 3 | staerkstes Einzelmuster | Test-Driven Development (Test zuerst) | Test-Driven Development |
+| 4 | Kontext-Hygiene | `/clear` gezielt zwischen unabhaengigen Aufgaben | /clear-Hygiene |
+| 5 | Qualitaet | Writer/Reviewer-Trennung (separate Sessions) | Writer/Reviewer-Trennung |
+| 6 | viele Dateien | Fan-out — parallel arbeiten | Fan-out |
+| 7 | Pflicht-Verhalten | Hooks statt CLAUDE.md (deterministisch erzwungen) | Hooks fuer deterministische Regeln |
+
+---
+
 ## Kernprinzip: Kontextfenster ist die wichtigste Ressource
 
 - **Was:** Claudes Kontextfenster füllt sich schnell mit Nachrichten, gelesenen Dateien und Befehlsausgaben. Wenn es voll wird, degradiert die Qualität messbar — Claude „vergisst" frühere Anweisungen oder macht mehr Fehler.

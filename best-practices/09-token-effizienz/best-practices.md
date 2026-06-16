@@ -5,6 +5,22 @@
 
 ---
 
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+> **Digest-Modell** (`bugs/SYSTEM.md` §11): Schnell-Orientierung der Harness-Best-Practices;
+> der Volltext darunter ist die Tiefe. Vor Arbeit am jeweiligen Werkzeug lesen.
+
+| # | Thema / Situation | Kernregel (Kurzform) | Abschnitt |
+|---|-------------------|----------------------|-----------|
+| 1 | Prompt-Caching | 5-Min-TTL; stabile Praefixe nicht unnoetig invalidieren | 1. Prompt-Caching |
+| 2 | Modellwahl | Opus 4.8 fuer Reasoning; je Aufgabe passend waehlen | 2. Modellwahl |
+| 3 | Effort-Level | low/medium/high/xhigh/max je nach Aufgabentiefe | 3. Effort-Levels |
+| 4 | nicht-interaktiv | Batch-API → 50 % Rabatt | 7. Batch-API |
+| 5 | Stale Context | gezielt `/clear`; keinen Ballast mitschleppen | 5. Kontext-Management |
+| 6 | Teams/Workflows | 3–4x teurer — nur bei echtem Kommunikationsbedarf | 6. Kosten-Oekonomie |
+
+---
+
 ## CHANGELOG-DELTA: Claude Code 2.1.154–2.1.158 (Mai 2026)
 
 > Zuletzt geprüft: 2026-05-30 gegen das offizielle Changelog code.claude.com/docs/changelog (offiziell).
