@@ -93,7 +93,7 @@ Findet die Recherche Bugs, aber es gibt KEINEN Almanach → die `bug-almanach-re
 
 ### Schritt 6 — Self-Test + Sichern (Cowork-Git)
 - **Self-Test (falls Shell + Python verfügbar):** Wurde ein Almanach/Best-Practice angefasst →
-  `python bugs/health.py` (alle vier Checks grün). Kein Python in Cowork? → Bezugs-Tabellen + Header manuell prüfen.
+  `python bugs/health.py` (alle fuenf Checks grün). Kein Python in Cowork? → Bezugs-Tabellen + Header manuell prüfen.
 - **Sichern:** Git-Repo verbunden → committen + pushen über das Cowork-Skript (nur eigene Pfade):
   ```bash
   bash ~/proggs/cowork-git.sh setup                 # warten auf "Push-Zugang OK"

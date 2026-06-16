@@ -155,7 +155,7 @@ Echte deutsche Umlaute — AUSSER in Strings, die als Hook-stdout auf Windows au
    Stichwörter spezifisch (Mehrwort) halten, keine Fehlalarme. (Hook-Pflege nur, wenn der Arbeitsordner
    die Hooks enthält; sonst als TODO an Frank melden.)
 4. **Self-Test (PFLICHT vor Commit, falls Shell + Python verfügbar):** `python bugs/health.py` —
-   alle VIER Checks (coupling, guard-coverage, **version-anchor**, Stand-Verfall) müssen grün sein.
+   alle FUENF Checks (coupling, guard-coverage, **version-anchor**, dead-paths, Stand-Verfall) müssen grün sein.
    Ein Almanach ohne Bezugs-Tabelle, ohne Guard-Mapping oder (software-gebunden) ohne Anker-Feld fällt
    hier sofort auf. Kein Python in Cowork? → Anker-Feld + Bezugs-Tabelle manuell gegenprüfen, ehrlich vermerken.
 

@@ -252,8 +252,8 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
    damit der UserPromptSubmit-Trigger auch Konzept-/Planungsarbeit am neuen Bereich faengt (BEVOR
    eine Datei beruehrt wird). Nach `claude-code-setup/hooks/` spiegeln. Stichwoerter spezifisch
    halten (Mehrwort), damit keine Fehlalarme.
-5. **Self-Test (PFLICHT vor Commit):** `python bugs/health.py` laufen lassen — alle vier Checks
-   (coupling, guard-coverage, **version-anchor**, Stand-Verfall) muessen gruen sein. Ein neuer
+5. **Self-Test (PFLICHT vor Commit):** `python bugs/health.py` laufen lassen — alle fuenf Checks
+   (coupling, guard-coverage, **version-anchor**, dead-paths, Stand-Verfall) muessen gruen sein. Ein neuer
    Almanach ohne Bezugs-Tabelle, ohne Guard-Mapping oder (software-gebunden) ohne Anker-Feld
    faellt hier sofort auf.
 

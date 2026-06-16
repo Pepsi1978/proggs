@@ -164,7 +164,7 @@ LIVE ermittelte installierte Version (`kotlinc -version`, `swift --version`, `./
   er das Feld `> **Anker:** <label>=<version>` (unter dem Stand-Header) + ggf. einen
   `bugs/check-version-anchor.py`-Eintrag (Details: Skill `bug-almanach-recherche`, Schritt 6).
 - **Self-Test (PFLICHT vor Commit, falls Shell + Python verfügbar):** `python bugs/health.py` — alle
-  VIER Checks (coupling, guard-coverage, version-anchor, Stand-Verfall) müssen grün sein. Die
+  FUENF Checks (coupling, guard-coverage, version-anchor, dead-paths, Stand-Verfall) müssen grün sein. Die
   coupling-Prüfung fängt fehlende/asymmetrische Bezugs-Tabellen sofort. Kein Python in Cowork? → die
   Bezugs-Tabellen + Header manuell gegenprüfen, ehrlich vermerken.
 
