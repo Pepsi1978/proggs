@@ -59,8 +59,10 @@ sich nie mehrere Sessions vermischen.
 > ueberschreiben. Das Backup wird genau dafuer gestartet: die Datei zu fuellen. Schreibe die
 > Notiz DIREKT per Bash (single-quoted Heredoc), NICHT mit dem Write-Tool — das Write-Tool
 > erzwingt bei existierenden Dateien ein vorheriges Read und kostet so 2-3 ueberfluessige
-> Tool-Calls. Ziel: Schritt 1-3 in moeglichst wenigen Tool-Calls (idealerweise zwei Bash-Aufrufe:
-> einer zum Schreiben beider Dateien, einer zum Committen).
+> Tool-Calls. Ziel: Schritt 1-3 in moeglichst wenigen Tool-Calls (idealerweise zwei bis drei
+> Bash-Aufrufe: bei laufender/unterbrochener Aufgabe zuerst einer zum Erfassen des uncommitteten
+> Stands — `git status --short` + `git diff` —, dann einer zum Schreiben beider Dateien, einer zum
+> Committen. Ist beim Backup nichts offen, entfaellt der erste).
 
 Fuehre diese Schritte der Reihe nach aus.
 
@@ -80,6 +82,15 @@ Abschnitte sind **Laufende/unterbrochene Aufgabe** (der exakte Wiedereinstiegspu
 gearbeitet wurde) und **Fehlgeschlagene Ansaetze** (ohne ihn wiederholt die frische Session
 denselben Fehler). Schreibe so konkret, dass eine Session OHNE jeden Vorkontext sofort an genau der
 richtigen Stelle weiterarbeiten kann — an exakt dem Schritt, der zuletzt lief, nicht "ungefaehr da".
+
+**Uncommitteten Stand zuerst erfassen (PFLICHT bei laufender/unterbrochener Aufgabe):** Bevor du die
+Notiz schreibst, EINMAL den nicht-committeten Arbeitsstand abfragen — `git status --short` (welche
+Dateien sind geaendert/neu) und `git diff` fuer die Dateien, an denen die laufende Aufgabe gearbeitet
+hat. Dieser Output gehoert in den Wiedereinstiegspunkt (Feld "Uncommitteter Arbeitsstand"), damit die
+frische Session den halbfertigen, noch NICHT gespeicherten/committeten Edit sieht — sonst kennt sie
+nach `/clear` nur den letzten Commit. NUR die eigenen/relevanten Dateien aufnehmen, keine fremden
+Parallel-Session-Dateien. Bei sehr grossem Diff: die betroffenen Dateien + die entscheidenden
+geaenderten Stellen nennen statt alles zu kopieren.
 
 ### Schritt 2: An beide Orte schreiben — DIREKT per Bash, kein Read, kein Write-Tool
 
@@ -243,6 +254,10 @@ Was soll in dieser Arbeitsphase insgesamt erreicht werden?
 - **Was dafuer alles vorhanden sein muss:** [Zwischenstaende, Variablenwerte, Pfade, Befehle,
   Build-/Test-Stand, offene Terminal-Ausgaben — alles, was zum nahtlosen Weitermachen gebraucht
   wird. Die neue Session kennt NICHTS davon, also nichts weglassen]
+- **Uncommitteter Arbeitsstand (halbfertige Edits):** [Output von `git status --short` der eigenen
+  Dateien + fuer die Datei(en) des unterbrochenen Schritts der relevante `git diff`-Ausschnitt — so
+  sieht die frische Session den noch nicht gespeicherten/committeten Zwischenstand, nicht nur den
+  letzten Commit. Bei riesigem Diff: betroffene Dateien + entscheidende Stellen nennen]
 - **Danach:** [kurzer Verweis: nach Abschluss dieses Schritts mit "Naechste Schritte" weiter]
 
 (Lief beim Backup KEINE Aufgabe — alles sauber abgeschlossen —, hier nur "Keine laufende Aufgabe,
