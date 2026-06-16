@@ -49,22 +49,34 @@ def rel(repo, path):
     return os.path.relpath(path, repo).replace(os.sep, "/")
 
 
-def find_best_practices(pc_dir):
-    """software-name -> Pfad der best-practices-<software>.md (rekursiv in projekt-code/).
+def find_best_practices(bp_root):
+    """software-name -> Pfad der Best-Practices-Datei (rekursiv in best-practices/).
 
-    Der Software-Name steht selbst-identifizierend im Dateinamen (best-practices-<software>.md),
-    direkt im Kategorie-Ordner — kein generischer 'best-practices.md' mehr, kein Software-Unterordner.
+    Abwaertskompatibel waehrend der Struktur-Migration (Audit 2026-06-16):
+      - NEU:  best-practices/<kategorie>/<software>.md                       (1:1 wie bugs/)
+      - ALT:  best-practices/projekt-code/<kategorie>/best-practices-<software>.md
+    Der 'best-practices-'-Praefix wird (falls vorhanden) gestrippt, der Software-Name ist
+    in beiden Schemata selbst-identifizierend. README/SYSTEM, fuehrende '_'-Dateien und die
+    alte generische 'best-practices.md' (Harness 01-12) zaehlen NICHT als Software.
     """
     result = {}
-    if not os.path.isdir(pc_dir):
+    if not os.path.isdir(bp_root):
         return result
-    prefix, suffix = "best-practices-", ".md"
-    for root, _dirs, files in os.walk(pc_dir):
+    non = {"readme", "system"}
+    for root, _dirs, files in os.walk(bp_root):
         for fn in files:
-            if fn.startswith(prefix) and fn.endswith(suffix):
-                sw = fn[len(prefix):-len(suffix)]
-                if sw:
-                    result[sw] = os.path.join(root, fn)
+            if not fn.endswith(".md") or fn.startswith("_"):
+                continue
+            stem = fn[:-len(".md")]
+            if stem == "best-practices":          # alte Harness-Sammeldatei (01-12) -> kein <software>
+                continue
+            if stem.startswith("best-practices-"):  # alte Struktur
+                sw = stem[len("best-practices-"):]
+            else:                                    # neue Struktur: <software>.md
+                sw = stem
+            if not sw or sw.lower() in non:
+                continue
+            result.setdefault(sw, os.path.join(root, fn))  # erste gewinnt (alt ODER neu)
     return result
 
 
@@ -91,9 +103,9 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     repo = os.path.dirname(here)  # bugs/ -> Repo-Wurzel
     bugs_dir = os.path.join(repo, "bugs")
-    pc_dir = os.path.join(repo, "best-practices", "projekt-code")
+    bp_root = os.path.join(repo, "best-practices")
 
-    bp_map = find_best_practices(pc_dir)
+    bp_map = find_best_practices(bp_root)
     bug_map = find_almanachs(bugs_dir)
 
     ok, drift, info = [], [], []

@@ -42,10 +42,13 @@ try {
                     New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-full-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
                 }
             }
-            # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-            foreach ($m in [regex]::Matches($cl, 'best-practices-([a-z0-9._-]+)\.md')) {
-                $bn = $m.Groups[1].Value
-                New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bn + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+            # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel:
+            # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+            foreach ($m in [regex]::Matches($cl, 'best-practices/(?:[a-z0-9._-]+/)*([a-z0-9._-]+)\.md')) {
+                $bn = $m.Groups[1].Value -replace '^best-practices-', ''
+                if ($bn -ne 'readme' -and $bn -ne 'system' -and $bn -notmatch '^_') {
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bn + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                }
             }
         }
         exit 0
@@ -72,11 +75,15 @@ try {
                 }
             }
         }
-        # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-        if ($fpl -match '/best-practices-([a-z0-9._-]+)\.md$') {
-            $bpName = $Matches[1]
-            $bpm = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bpName + ".flag")
-            New-Item -ItemType File -Path $bpm -Force -ErrorAction SilentlyContinue | Out-Null
+        # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel (Migration 2026-06-16):
+        #   NEU best-practices/<kat>/<bereich>.md  |  ALT .../best-practices-<bereich>.md
+        # Schluessel = <bereich> (best-practices--Praefix gestrippt); README/SYSTEM/_-Dateien ausgenommen.
+        if ($fpl -match '/best-practices/(?:[^/]+/)*([^/]+)\.md$') {
+            $bpName = $Matches[1] -replace '^best-practices-', ''
+            if ($bpName -ne 'readme' -and $bpName -ne 'system' -and $bpName -notmatch '^_') {
+                $bpm = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bpName + ".flag")
+                New-Item -ItemType File -Path $bpm -Force -ErrorAction SilentlyContinue | Out-Null
+            }
         }
         exit 0
     }
@@ -499,9 +506,10 @@ try {
         # einmaligem BP-Lesen + vielen Folge-Edits), entfaellt der Scan komplett — verhaltensneutral,
         # weil sein Ergebnis dann ohnehin nur zu "kein Block" fuehren wuerde.
         if (-not (Test-Path $bpReadMarker)) {
-            $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices/projekt-code"
+            $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices"
             $bpItem = $null
-            try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -Filter ("best-practices-" + $almKey + ".md") -File -ErrorAction SilentlyContinue | Select-Object -First 1 } } catch {}
+            # Abwaertskompatibel: NEU <bereich>.md (best-practices/<kat>/) ODER ALT best-practices-<bereich>.md.
+            try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq ($almKey + ".md") -or $_.Name -eq ("best-practices-" + $almKey + ".md") } | Select-Object -First 1 } } catch {}
             if ($bpItem) {
                 $bpRel = (($bpItem.FullName -replace '\\','/') -replace '.*?/best-practices/', 'best-practices/')
 
@@ -509,7 +517,7 @@ try {
                 try {
                     $tp = [string]$data.transcript_path
                     if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
-                        $pat = 'file_path"\s*:\s*"[^"]*best-practices-' + [regex]::Escape($almKey) + '\.md'
+                        $pat = 'file_path"\s*:\s*"[^"]*best-practices[/-][^"]*' + [regex]::Escape($almKey) + '\.md'
                         if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
                             New-Item -ItemType File -Path $bpReadMarker -Force -ErrorAction SilentlyContinue | Out-Null
                         }

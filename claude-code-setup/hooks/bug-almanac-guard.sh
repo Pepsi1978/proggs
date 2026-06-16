@@ -39,10 +39,12 @@ if [ "$tool" = "Bash" ]; then
                 fi
             done
         fi
-        # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-        bpmatches=$(echo "$cl" | grep -oE 'best-practices-[a-z0-9._-]+\.md' || true)
+        # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel:
+        # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+        bpmatches=$(echo "$cl" | grep -oE 'best-practices/([a-z0-9._-]+/)*[a-z0-9._-]+\.md' || true)
         if [ -n "$bpmatches" ]; then
-            echo "$bpmatches" | sed -E 's#best-practices-([a-z0-9._-]+)\.md#\1#' | while read -r bn; do
+            echo "$bpmatches" | sed -E 's#.*/##; s#^best-practices-##; s#\.md$##' | while read -r bn; do
+                case "$bn" in readme|system|_*) bn="";; esac
                 [ -n "$bn" ] && touch "$TMP/bug-almanac-bp-read-$bn.flag" 2>/dev/null || true
             done
         fi
@@ -71,8 +73,10 @@ except Exception:
             touch "$TMP/bug-almanac-full-$almName.flag" 2>/dev/null || true
         fi
     fi
-    # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-    bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices-([a-z0-9._-]+)\.md$#\1#p')
+    # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel (Migration 2026-06-16):
+    # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+    bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices/(.*/)?([^/]+)\.md$#\2#p' | sed -E 's#^best-practices-##')
+    case "$bpName" in readme|system|_*) bpName="";; esac
     if [ -n "$bpName" ]; then
         touch "$TMP/bug-almanac-bp-read-$bpName.flag" 2>/dev/null || true
     fi
@@ -553,14 +557,15 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
     # vielen Folge-Edits) -> find entfaellt komplett. Verhaltensneutral: das Ergebnis wuerde dann
     # ohnehin nur zu "kein Block" fuehren.
     if [ ! -f "$bpReadMarker" ]; then
-        bpRoot="$HOME/proggs/best-practices/projekt-code"
-        bpPath="$(find "$bpRoot" -name "best-practices-$almKey.md" -type f 2>/dev/null | head -1 || true)"
+        bpRoot="$HOME/proggs/best-practices"
+        # Abwaertskompatibel: NEU <bereich>.md ODER ALT best-practices-<bereich>.md.
+        bpPath="$(find "$bpRoot" \( -name "$almKey.md" -o -name "best-practices-$almKey.md" \) -type f 2>/dev/null | head -1 || true)"
         if [ -n "$bpPath" ]; then
             bpRel="best-practices/${bpPath#*/best-practices/}"
             # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
             tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
             if [ -n "$tpath" ] && [ -f "$tpath" ]; then
-                if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices-'"$almKey"'\.md' "$tpath" 2>/dev/null; then
+                if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices[/-][^"]*'"$almKey"'\.md' "$tpath" 2>/dev/null; then
                     touch "$bpReadMarker" 2>/dev/null || true
                 fi
             fi
