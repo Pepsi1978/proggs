@@ -229,7 +229,7 @@ Starte den Best-Practices-Skill fuer das Android-Build-System (Gradle, AGP, R8, 
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN GRADLE/AGP AM BESTEN UND RICHTIG EINSETZT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs stehen schon in bugs/android-build/gradle.md), sondern "so macht man es richtig": Version-Catalog (libs.versions.toml) konsequent nutzen, Configuration-Cache + Build-Cache aktivieren, saubere Dependency-Deklaration (api vs implementation), korrekte R8/ProGuard-Regel-Pflege, modulare Projektstruktur, schnelle Builds.
 
-Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/projekt-code/android-build/best-practices-gradle.md und koppele wechselseitig mit dem bestehenden Bug-Almanach bugs/android-build/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
+Versionen aus ~/proggs/BestJournalAndroid und ~/proggs/EntropieReductor abgleichen. Speichere unter best-practices/android-build/gradle.md und koppele wechselseitig mit dem bestehenden Bug-Almanach bugs/android-build/gradle.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
 ```
 
 ---

@@ -416,7 +416,7 @@
 **Symptom:** `NoClassDefFoundError` / R8 `Missing class com.google.firebase.messaging.TopicOperation$TopicOperations`; Firebase-Komponente crasht NUR im Release.
 **Ursache:** R8/Minify entfernt Firebase-Klassen ohne passende Keep-Regeln (das SDK liefert nicht fuer alles Consumer-Rules).
 **Versionen:** wiederkehrend (#3740, #5746 CLOSED).
-**FIX:** R8-`missing_rules.txt` (`build/outputs/mapping/<variant>/`) auswerten und Keep-Regeln in `proguard-rules.pro` ergaenzen. NICHT Minify dauerhaft deaktivieren (nur temporaer zum Eingrenzen). Release-Build IMMER testen. Siehe Sektion 9 + `best-practices/projekt-code/android-build/best-practices-gradle.md §4`. (Frank-Memory `feedback_billing_release_only`.)
+**FIX:** R8-`missing_rules.txt` (`build/outputs/mapping/<variant>/`) auswerten und Keep-Regeln in `proguard-rules.pro` ergaenzen. NICHT Minify dauerhaft deaktivieren (nur temporaer zum Eingrenzen). Release-Build IMMER testen. Siehe Sektion 9 + `best-practices/android-build/gradle.md §4`. (Frank-Memory `feedback_billing_release_only`.)
 **Quelle:** github.com/firebase/firebase-android-sdk/issues/3740 · /issues/5746
 
 ## 50. google-services.json im Repo / API-Key-Exposition — was harmlos ist
@@ -860,7 +860,7 @@
 # Teil 9 — R8/ProGuard Keep-Regeln (Release) fuer Firebase + Billing
 
 > BestJournalAndroid hat `isMinifyEnabled=true` + `isShrinkResources=true` im Release. Die folgenden Bugs
-> manifestieren sich NUR im Release-Build (Debug laeuft). Querverweis: `best-practices/projekt-code/android-build/best-practices-gradle.md §4`.
+> manifestieren sich NUR im Release-Build (Debug laeuft). Querverweis: `best-practices/android-build/gradle.md §4`.
 
 ## 113. R8 fullMode ist Default ab AGP 8.0   ⭐ HAEUFIG
 **Symptom:** Release crasht, Debug laeuft (NoClassDefFound, fehlende Reflection-Klassen) — obwohl frueher (AGP 7) ok.
@@ -1142,9 +1142,9 @@
 
 | Bug-Almanach-Abschnitt | Best-Practice (Praevention) |
 |------------------------|------------------------------|
-| Teil 9 (R8/Keep 113–119) | `best-practices/projekt-code/android-build/best-practices-gradle.md §4` (R8/Shrinking/Keep-Regeln) |
+| Teil 9 (R8/Keep 113–119) | `best-practices/android-build/gradle.md §4` (R8/Shrinking/Keep-Regeln) |
 | Teil 4 (FCM, high-priority Start, Bug 80) | `best-practices/projekt-code/android/best-practices-android-platform.md` (FGS-Start-Trigger) |
-| Teil 2/10 (google-services.json, config-cache) | `best-practices/projekt-code/android-build/best-practices-gradle.md` (Build-System) |
+| Teil 2/10 (google-services.json, config-cache) | `best-practices/android-build/gradle.md` (Build-System) |
 | Bug 129 (PendingIntent FLAG_IMMUTABLE) | `bugs/android/android-platform.md` (PendingIntent) + `best-practices/projekt-code/android/best-practices-android-platform.md` |
 
 

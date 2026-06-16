@@ -6,7 +6,7 @@
 > Versions-Anker: Play-Policy/Console **Juni 2026** · BestJournal targetSdk **35**, versionCode **144**,
 > versionName **0.19.11**, AAB, R8; nutzt `RECORD_AUDIO`, Google-Drive-Backup, LLM/TTS-APIs.
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/android-build/best-practices-play-store-release.md`](../../best-practices/projekt-code/android-build/best-practices-play-store-release.md).
+> [`best-practices/android-build/play-store-release.md`](../../best-practices/android-build/play-store-release.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

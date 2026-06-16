@@ -825,10 +825,10 @@ Fingerprints vergleichen — dann ist klar, WELCHER Rechner die installierte App
 
 ## 🔗 Bezug: Best-Practices-Gegenstuecke
 
-> Zweite Seite der Medaille: `~/proggs/best-practices/projekt-code/android-build/best-practices-gradle.md` sammelt
+> Zweite Seite der Medaille: `~/proggs/best-practices/android-build/gradle.md` sammelt
 > *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihr praeventives Gegenstueck.
 
-| Bug-Sektion (diese Datei) | Best-Practice-Gegenstueck (`best-practices/projekt-code/android-build/best-practices-gradle.md`) |
+| Bug-Sektion (diese Datei) | Best-Practice-Gegenstueck (`best-practices/android-build/gradle.md`) |
 |---|---|
 | §1 Versions-Kompatibilitaet | §1 Versions-Strategie & Kompatibilitaet |
 | §2 AGP 9.0 Breaking Changes | §9 Upgrade-Strategie (+ §4 R8-Defaults) |

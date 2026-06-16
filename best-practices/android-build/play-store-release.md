@@ -6,7 +6,7 @@
 > **Versions-Anker:** Play Console / Play-Policy **Stand Juni 2026** · BestJournal targetSdk **35**,
 > versionCode **144**, versionName **0.19.11**, AAB, R8-obfuskiert; nutzt `RECORD_AUDIO` (Sprach-/Vorlese),
 > Google-Drive-Backup, LLM/TTS-APIs.
-> **Gegenstück (Reject-Gründe/Fallen):** [`bugs/android-build/play-store-release.md`](../../../bugs/android-build/play-store-release.md).
+> **Gegenstück (Reject-Gründe/Fallen):** [`bugs/android-build/play-store-release.md`](../../bugs/android-build/play-store-release.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
