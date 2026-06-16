@@ -3,7 +3,7 @@ name: bug-almanach-recherche
 description: >-
   Recherchiert gruendlich die oeffentlich bekannten Bugs, Fallen und Workarounds eines
   technischen Bereichs und erstellt daraus einen kuratierten Bug-Almanach in
-  ~/proggs/bugs/<bereich>.md. Teil des proaktiven Bug-Almanach-Systems (siehe
+  ~/proggs/bugs/<kategorie>/<bereich>.md. Teil des proaktiven Bug-Almanach-Systems (siehe
   ~/proggs/bugs/SYSTEM.md). Nutze diesen Skill IMMER wenn der Benutzer einen neuen
   Bug-Almanach anlegen will oder die bekannten Bugs einer beliebigen Software/Technologie
   recherchieren will — egal welche: Claude-Hooks, Kotlin, Gradle, Jetpack Compose, Swift,
@@ -91,9 +91,19 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 
 ### Schritt 2 — Researcher-Schwarm (breite Bug-Suche, offizielle Quellen zuerst)
 
-3-5 Researcher PARALLEL spawnen (in EINEM Antwortblock), jeder mit eigenem Teilbereich.
+**Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
+Bei genug Teilbereichen IMMER mit **7 auf einmal** beginnen (in EINEM Antwortblock) — NICHT erst 4 und
+danach nochmal 3 (das ist Zeitverschwendung). 7 gleichzeitig funktionieren einwandfrei.
+Gibt es MEHR als 7 Themen, dann gilt Continuous-Spawning: sobald EINER fertig wird (es laufen also nur
+noch 6), SOFORT den naechsten Researcher fuers naechste Thema hinterher starten, damit wieder 7 laufen —
+und so weiter, bis ALLE Themen abgedeckt sind. **NIEMALS** warten, bis die ersten 7 alle fertig sind, und
+dann erst die naechste Welle (z.B. 3) nachschieben (das wuerden in der Spitze 10 → RPM-Risiko und langsamer).
+So bleibt die Parallelitaet konstant bei 7 und der RPM-Strom gleichmaessig (kein Burst). Empirisch:
+5 sicher, 7 laeuft einwandfrei; ab ~12 RPM-Abstuerze. Reicht der Bereich nicht fuer 7 Teilbereiche,
+mehr Researcher mit GLEICHEM Teilbereich aber unterschiedlichem Fokus (verschiedene Quellen-Typen,
+Versionen, Unterthemen) spawnen — Duplikate bestaetigen den Bug, kosten aber nichts.
 Fertige Prompt-Vorlagen: `references/researcher-prompts.md` — `[BEREICH]`/`[VERSION]`
-einsetzen. Standard-Aufteilung:
+einsetzen. Standard-Aufteilung (bei 7 die Liste um Unterthemen erweitern):
 
 1. **Offizielle Doku + Hersteller-Hilfen** — die offizielle Anleitung, das Changelog
    UND gezielt offizielle Empfehlungen/Workarounds/Fixes zum konkreten Bug. Bei
@@ -107,13 +117,20 @@ einsetzen. Standard-Aufteilung:
 
 **Offizielle Quellen haben Vorrang vor Foren-Meinungen**: Wenn der Hersteller eine
 offizielle Loesung/Empfehlung nennt, ist die die erste Wahl im FIX-Feld; Foren-Tipps
-ergaenzen, ersetzen sie aber nicht. Kleine/enge Bereiche: 3 Researcher reichen; breite: 5.
+ergaenzen, ersetzen sie aber nicht. Sei grosszuegig: lieber 7 Researcher mit feineren
+Unterthemen als 3 grobe — die Findings werden vollstaendiger und nichts wird gekappt.
 
-**Pflicht-Limits pro Researcher** (gegen Absturz, siehe `agent-and-researcher-rules.md`
-+ `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min, max ~40 Eintraege,
-KOMPAKTE Rueckgabe (~1500-2000 Token). Subagenten laufen auf dem hoechsten Opus-Modell
-(Modell-Policy) — `opts.model` nicht setzen. Pro Bug zurueckgeben: **Titel · Symptom ·
-Ursache · Loesung (funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
+**Pflicht-Limits pro Researcher** (gegen *Haengen*, siehe `agent-and-researcher-rules.md`
++ `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min. **KEIN kuenstliches
+Eintrags-Cap** — ALLE gefundenen Bugs dokumentieren. (Mit Opus 4.8 / 1M-Kontext gibt es
+kein Absturzrisiko mehr; ein hartes Cap, das echte Funde wegwirft, waere *lossy* und damit
+verboten — siehe `lossless-context-principle.md`. Frank-Korrektur 2026-06-02: "wenn mehr
+Bugs gefunden, dann auch alle dokumentieren".) Findet ein Researcher sehr viele Bugs, bleibt
+er trotzdem vollstaendig: bei Bedarf die Vollliste verlustfrei in eine Datei schreiben
+(File-as-Memory) und dem Hauptagenten eine kompakte Zusammenfassung + Dateipfad zurueckgeben,
+statt zu kappen. Subagenten laufen auf dem hoechsten Opus-Modell (Modell-Policy) —
+`opts.model` nicht setzen. Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
+(funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
 
 ### Schritt 3 — Fix-Status-Recherche (was ist schon gefixt?)
 
@@ -148,7 +165,7 @@ vornherein richtig macht, damit der Bug nie entsteht*. Dieser Schritt verbindet 
 
 **4a — LESEN (bekanntes Wissen wiederverwenden):**
 Jeden gefundenen Bug gegen den lokalen Ordner abgleichen:
-`grep -ri "<stichwort>" ~/proggs/best-practices/` — passende Stelle: Harness-Kategorien
+`grep -ri "<stichwort>" ~/proggs/best-practices/` — passende Stelle: Harness
 `claude-tooling/<thema>.md`, oder Projekt-Code `best-practices/<kategorie>/<software>.md`. Steht dort schon
 eine Loesung/Empfehlung, die den Bug adressiert oder ganz ausschliesst → mit in den
 **FIX-Bereich** des Almanach-Eintrags aufnehmen (Verweis "siehe best-practices/<datei>").
@@ -161,12 +178,12 @@ richtig"), diese AUCH nach best-practices eintragen — nicht nur in den Almanac
 - **Harness-Bug** (Hooks, Skills, MCP, Settings …) → `best-practices/claude-tooling/<thema>.md`
   (z. B. `hooks.md`, `mcp.md`, `settings.md`).
 - **Projekt-Code-Bug** (Kotlin, Swift, Gradle …) → `best-practices/<kategorie>/<software>.md`
-  (Unterordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da).
+  (Datei `<software>.md` direkt im Kategorie-Ordner + Header `# <Software> — Best Practices (Stand DATUM, Version V)` anlegen falls noch nicht da; gleiche Kategorie wie der Almanach, kein `best-practices-`-Praefix, keine `projekt-code/`-Ebene).
 Jeder Eintrag mit Quelle + Datum + `offiziell`/`extern`-Flag (gleiche Regeln wie der
 `best-practices`-Skill). So fuellen sich beide Speicher: Bug+Workaround im Almanach,
 Praevention in best-practices.
 
-**4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<bereich>.md` UND
+**4c — Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (`bugs/<kategorie>/<bereich>.md` UND
 `best-practices/<kategorie>/<software>.md`), in JEDER eine wechselseitige
 Abschnitts-Bezugs-Tabelle „Bug-Abschnitt ↔ Best-Practice-Abschnitt" anlegen/aktuell halten, damit
 jede Loesung auf ihr Gegenstueck zeigt. (Gleiches Vorgehen wie im `best-practices`-Skill, Abschnitt
@@ -179,7 +196,7 @@ ueber die eine Bug-Loesung hinaus). Nur mit OK — kostet eigene Recherche-Zeit.
 
 (Hat ein Bereich noch keine best-practices, findet 4a nichts — dann nur 4b schreiben.)
 
-### Schritt 5 — Kuratieren in `~/proggs/bugs/<bereich>.md`
+### Schritt 5 — Kuratieren in `~/proggs/bugs/<kategorie>/<bereich>.md`
 
 Researcher-Ergebnisse DEDUPLIZIEREN (gleiche Bugs von mehreren Researchern → EIN Eintrag,
 aber das bestaetigt sie) und thematisch gruppieren. Format pro Eintrag (konsistent mit
@@ -211,11 +228,34 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
 
 ### Schritt 6 — Ins System einhaengen
 
-1. **`~/proggs/bugs/README.md`**: Bereich aus "Bereiche ohne Almanach" nach "Vorhandene
-   Almanache" verschieben (Stand, Bug-Anzahl, Erkennungs-Trigger).
-2. **`~/.claude/hooks/bug-almanac-guard.{ps1,sh}`**: Pfad-Mapping pruefen; falls der
-   Bereich fehlt, Dateimuster → `<bereich>.md` in BEIDEN Varianten ergaenzen +
-   `claude-code-setup/hooks/` spiegeln.
+0. **Kategorie waehlen**: Den Almanach in den passenden Kategorie-Ordner legen
+   (`bugs/<kategorie>/<bereich>.md` — android, android-build, desktop, web, peripherie,
+   claude-tooling; passt nichts, neue Kategorie anlegen). Die Best-Practices-Gegenseite in
+   dieselbe Kategorie (`best-practices/<kategorie>/<software>.md`).
+1. **`~/proggs/bugs/README.md`**: Bereich unter der passenden Kategorie aus "Bereiche ohne
+   Almanach" nach "Vorhandene Almanache" verschieben (Stand, Bug-Anzahl, Erkennungs-Trigger).
+2. **`~/.claude/hooks/bug-almanac-guard.{ps1,sh}`**: Das Mapping ist seit 2026-06-03
+   kategorie-robust (es findet den Almanach rekursiv unter `bugs/`). NUR bei einem NEUEN
+   Dateimuster einen Zweig ergaenzen (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE
+   Kategorie) in BEIDEN Varianten + `claude-code-setup/hooks/` spiegeln. Ein blosser
+   Kategorie-Wechsel einer bestehenden Datei braucht KEINE Hook-Aenderung.
+3. **Versions-Anker setzen (seit 2026-06-15, NUR software-gebundene Almanache):** Direkt unter
+   dem `Stand:`-Header ein maschinenlesbares Feld `> **Anker:** <label>=<version>` setzen
+   (SYSTEM.md §7). Wenn die INSTALLIERTE Version == der fuer den Almanach relevanten ist
+   (claude-code, python, node …): zusaetzlich einen Eintrag in `bugs/check-version-anchor.py` →
+   `ANCHORS` mit `live`-Tupel `(cmd, regex)` ergaenzen (Live-Abgleich). Bei PROJEKT-gebundenen
+   Bereichen (Gradle/.csproj/Toolchain pinnt die Version → installiert != relevant) `live: None`
+   (nur Anker-Vollstaendigkeit, kein Live-Abgleich → kein Falschalarm).
+4. **Semantischen Prompt-Trigger ergaenzen (seit 2026-06-15, Schicht 1b):** Falls der Bereich
+   eindeutige Stichwoerter hat, ihn in `~/.claude/hooks/bug-almanac-hint.py` → `AREAS` aufnehmen
+   (`"<kategorie>/<bereich>": ("<Anzeigename>", [eindeutige Mehrwort-Stichwoerter, lowercase])`),
+   damit der UserPromptSubmit-Trigger auch Konzept-/Planungsarbeit am neuen Bereich faengt (BEVOR
+   eine Datei beruehrt wird). Nach `claude-code-setup/hooks/` spiegeln. Stichwoerter spezifisch
+   halten (Mehrwort), damit keine Fehlalarme.
+5. **Self-Test (PFLICHT vor Commit):** `python bugs/health.py` laufen lassen — alle fuenf Checks
+   (coupling, guard-coverage, **version-anchor**, dead-paths, Stand-Verfall) muessen gruen sein. Ein neuer
+   Almanach ohne Bezugs-Tabelle, ohne Guard-Mapping oder (software-gebunden) ohne Anker-Feld
+   faellt hier sofort auf.
 
 ### Schritt 7 — Committen + pushen
 
@@ -239,7 +279,7 @@ zu spiegeln — er liegt schon im Repo unter `bugs/`.
 - Den Fix-Status- oder den Best-Practices-Schritt ueberspringen.
 - Eine Loesung notieren, die Funktionalitaet entfernt (Direktive #3 — funktionserhaltend).
 - Foren-Meinung ueber eine offizielle Hersteller-Loesung stellen.
-- Researcher ohne Limits spawnen oder einen Crash verschweigen.
+- Researcher ohne Fetch-/Zeit-Limits spawnen, einen Crash verschweigen, ODER echte Funde an einem kuenstlichen Eintrags-Cap abschneiden (alle gefundenen Bugs dokumentieren — bei sehr vielen verlustfrei in Datei auslagern, nie kappen).
 - Rohdaten-Dumps 1:1 uebernehmen statt zu deduplizieren und zu kuratieren.
 
 ## Referenzen

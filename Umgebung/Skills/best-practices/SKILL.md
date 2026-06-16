@@ -38,12 +38,19 @@ Werkzeuge — das ist NICHT Aufgabe dieses Skills.
 
 ## Zwei Bereiche, ein Ordner
 
-Der Skill pflegt zwei Arten von Best-Practices im selben `best-practices/`-Ordner:
+Der Ordner ist **flach 1:1 wie `bugs/`** aufgebaut (seit 2026-06-16): `best-practices/<kategorie>/<bereich>.md`,
+gleiche Kategorien und Dateinamen wie `bugs/<kategorie>/<bereich>.md`. Der Skill pflegt zwei Arten von
+Best-Practices im selben Schema:
 
-1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist
-   der offizielle **Claude-Code**-Changelog (via `update-changelog.ps1`-Script).
-2. **Projekt-Code** (Kategorien `best-practices/<kategorie>/<software>.md`): Kotlin, Swift, Gradle, .NET/WPF,
-   TypeScript, Rust … Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
+1. **Harness** (Kategorie `claude-tooling/`): die Claude-Code-Werkzeuge. Themen-Dateien
+   `claude-tooling/hooks.md`, `claude-tooling/skills.md`, `claude-tooling/agents.md`, `…/plugins.md`,
+   `…/mcp.md`, `…/commands.md`, `…/settings.md`, `…/kontext.md`, `…/token-effizienz.md`,
+   `…/arbeitsweise.md`, `…/researcher.md`, `…/neues.md`. Quelle ist der offizielle **Claude-Code**-Changelog
+   (via `update-changelog.ps1`-Script). (Daneben liegen in `claude-tooling/` die Bug-gepaarten Digests wie
+   `claude-hooks.md`, `mcp-server.md`, `claude-config.md` — Gegenstücke zu `bugs/claude-tooling/`.)
+2. **Projekt-Code** (Kategorien `android/`, `android-build/`, `desktop/`, `web/`, `apis/`, `peripherie/`,
+   `assets/`, `agents/`): `best-practices/<kategorie>/<software>.md` (z. B. `android/kotlin.md`,
+   `desktop/swift-appkit.md`). Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
    Claude-Script) — die installierte Software-Version wird live ermittelt und ist der
    Versions-Anker. Das ist die zweite Seite der Medaille zum Bug-Almanach (`~/proggs/bugs/`):
    dort steht *was schiefgeht*, hier *wie man es von vornherein richtig macht*.
@@ -64,19 +71,23 @@ laesst.
 
 ## Erster Lauf: Wissensbasis anlegen (falls noch nicht vorhanden)
 
-Pruefe, ob `~/proggs/best-practices/` existiert. Falls nicht, lege die Struktur an:
+Pruefe, ob `~/proggs/best-practices/` existiert. Falls nicht, lege die Struktur an
+(flach 1:1 wie `bugs/`, gleiche Kategorien):
 
 ```
 best-practices/
-├── README.md              ← Inhaltsverzeichnis, verlinkt jede Kategorie
+├── README.md              ← Kategorie-Index (siehe bestehende README.md)
+├── SYSTEM.md              ← Systembeschreibung + Aenderungs-Historie (§8)
 ├── _state.json            ← {"last_version": null, "last_checked": null}
-├── _changelog-archiv.md   ← VOLLSTAENDIGER offizieller Changelog, verbatim (siehe Abschnitt unten)
-├── claude-tooling/        ← Harness: hooks.md, skills.md, … neues.md (+ Bug-gepaarte Digests)
+├── _changelog-archiv.md   ← VERBATIM Claude-Code-Changelog (Recherche-Quelle, vom Script geholt)
+├── claude-tooling/        ← Harness: hooks.md, skills.md, agents.md, plugins.md, mcp.md,
+│                            commands.md, settings.md, kontext.md, token-effizienz.md,
+│                            arbeitsweise.md, researcher.md, neues.md  (+ Bug-gepaarte Digests)
 ├── android/ · android-build/ · desktop/ · web/ · apis/ · peripherie/ · assets/ · agents/
 │                            ← Projekt-Code: <software>.md je Kategorie (1:1 wie bugs/)
 ```
 
-Der Ordner liegt bewusst **im Repo**, damit er nach macOS mit-synct. Jede Kategorie-Datei
+Der Ordner liegt bewusst **im Repo**, damit er nach macOS mit-synct. Jede Themen-/Software-Datei
 startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren dazu.
 
 ## Ablauf eines Laufs
@@ -95,11 +106,16 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    Was in keine definierte Kategorie passt → Kategorie 12 (Neues, immer die letzte Kategorie).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
-   `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 12 (Neues) bekommen
-   einen eigenen Unterordner — eingefuegt VOR `Neues`, das dabei eine Nummer nach hinten rueckt
-   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie). Bei **Projekt-Code**-
+   `README.md` + `_state.json` aktualisieren. Ein neues Harness-Thema ist einfach eine neue Datei
+   `claude-tooling/<thema>.md` (keine Nummerierung/Reihenfolge mehr); thematisch noch Unsortiertes
+   sammelt `claude-tooling/neues.md`. Bei **Projekt-Code**-
    Laeufen zusaetzlich die **Bug-Almanach-Rueckkopplung** ausfuehren (Abschnitt „Kopplung zum
    Bug-Almanach"): gefundene Bugs nach `bugs/<bereich>.md` zurueckschreiben + Bezugs-Tabellen synchron halten.
+   **Self-Test (seit 2026-06-15):** danach `python ~/proggs/bugs/health.py` laufen lassen — die coupling-Pruefung
+   faengt fehlende/asymmetrische Bezugs-Tabellen sofort (alle fuenf Checks muessen gruen sein). Wird dabei ein
+   SOFTWARE-gebundener Almanach neu angelegt/zurueckgekoppelt, traegt er das strukturierte
+   `> **Anker:** <label>=<version>`-Feld (SYSTEM.md §7) + ggf. einen `check-version-anchor.py`-Eintrag
+   (Details: Skill `bug-almanach-recherche`, Schritt 6, Punkte 3-5).
 6. **Auswertung ausgeben** (siehe Format unten).
 
 ## Changelog-Archiv — vollstaendig & verbatim (KRITISCH)
@@ -156,16 +172,19 @@ Kategorie 12 (Neues) ist wichtig: Nicht nur das suchen, was schon bekannt ist �
 neuen Faehigkeiten bringen den groessten Sprung. Alles Unbekannte landet hier und wird,
 wenn es sich als wichtig erweist, zu einer eigenen Kategorie.
 
-**Regel zur Reihenfolge:** "Neues" ist IMMER die letzte Kategorie (hoechste Nummer). Kommt eine
-neue definierte Kategorie dazu, wird sie VOR "Neues" eingefuegt und "Neues" rueckt eine Nummer
-nach hinten (Ordner entsprechend umbenennen). Beispiel: aus `12-neues` wird `13-neues`, die neue
-Kategorie wird 12.
+**Speicherung (seit 2026-06-16):** Die Harness-Themen liegen flach als `claude-tooling/<thema>.md`
+(`hooks.md`, `skills.md`, …, `neues.md`) — keine nummerierten Ordner, keine Reihenfolge-Pflege mehr.
+Die Tabelle oben ist nur die inhaltliche Orientierung; die `#`-Spalte sind Listennummern, keine
+Ordnernamen. Ein neues Harness-Thema ist einfach eine neue Datei (z. B. `claude-tooling/output-styles.md`).
 
 ### Projekt-Code-Kategorien (`best-practices/<kategorie>/<software>.md`)
 
-Neben `claude-tooling/` (Harness, flach 1:1 wie bugs/) gibt es die Projekt-Code-Kategorien mit je
-einem Unterordner pro Software (kotlin, swift, gradle, wpf-csharp, typescript, rust …),
-die bei Bedarf entstehen (Kategorie-Index: `best-practices/README.md`).
+Neben `claude-tooling/` (Harness) gibt es die Projekt-Code-Kategorien `android/`, `android-build/`,
+`desktop/`, `web/`, `apis/`, `peripherie/`, `assets/`, `agents/` — **dieselben Kategorien wie der
+Bug-Almanach `bugs/<kategorie>/`**, mit je einer selbst-identifizierenden Datei direkt im
+Kategorie-Ordner (`best-practices/<kategorie>/<software>.md`, z. B. `android/kotlin.md`,
+`desktop/swift-appkit.md`; kein `best-practices-`-Praefix, keine `projekt-code/`-Ebene mehr),
+die bei Bedarf entsteht (Kategorie-Index: `best-practices/README.md`).
 
 **Wichtiger Mechanik-Unterschied — beim Recherchieren beachten:**
 - **Harness-Kategorien (01–12):** Changelog-Quelle ist der **Claude-Code**-Changelog,
@@ -192,7 +211,7 @@ ein Harness-Bug-Fund passt analog in den jeweiligen Almanach bzw. `bug-cases.jso
 
 ### A — Bug-Fund in den Almanach zurueckschreiben
 Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + betroffene Versionen):
-- **`bugs/<bereich>.md` existiert** → als Eintrag ergaenzen (Format aus `~/proggs/bugs/SYSTEM.md`:
+- **`bugs/<kategorie>/<bereich>.md` existiert** → als Eintrag ergaenzen (Format aus `~/proggs/bugs/SYSTEM.md`:
   `## N. Titel [⭐ HAEUFIG] / Symptom / Ursache / Versionen / FIX / Quelle`), gegen bestehende Eintraege
   DEDUPLIZIEREN (gleicher Bug → nicht doppelt, hoechstens praezisieren), Stand-Header aktualisieren.
   Im FIX-Feld auf den passenden Best-Practice-Abschnitt verweisen.
@@ -204,7 +223,7 @@ Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + bet
 
 ### B — Bezugs-Tabellen synchron halten
 Existieren BEIDE Dateien (`best-practices/<kategorie>/<software>.md` UND
-`bugs/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
+`bugs/<kategorie>/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
 Bug-Abschnitt" aktuell halten. Fehlt eine, anlegen; kamen Abschnitte dazu, ergaenzen. So bleibt jede
 Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).
 
@@ -214,23 +233,34 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
 - **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
-- **1 Researcher pro Kategorie, aber in BATCHES von 3–5 (KRITISCH, empirisch 2026-05-25):**
-  Web-Researcher sind ANFRAGE-DICHT (2–3 Tool-Runden pro Turn × viele Turns → 100+ RPM bei 5 Stueck).
-  Zu viele gleichzeitig sprengen das Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz
-  ("server is temporarily limiting requests · not your usage limit"). Live-Test: **12 gleichzeitig →
-  11 abgestuerzt; 5 gleichzeitig → alle ok**; offiziell stabil sind ~3–5. Also Researcher in Wellen
-  von 3–5 starten, NICHT alle auf einmal. (Anders als anfrage-SPARSE Agenten wie Uebersetzer, die
-  ueberwiegend lokal arbeiten — die vertragen 15–20 gleichzeitig, weil sie kaum Anfragen/Minute erzeugen.)
-- **Retry mit Backoff bei 429 (PFLICHT):** Stuerzt ein Researcher mit Rate-Limit ab, sofort dem Benutzer
-  melden und mit exponential backoff neu starten (`retry-after`-Header beachten) — nie still aufgeben.
-- **Scope eng halten:** max ~8 Websuchen / ~5 Fetches, ~8–10 Min pro Researcher. Begrenzt Anfrage-Rate
-  UND Kontext. (Beobachtet: ~140–165k Token je Kategorie ist normal und unkritisch — der limitierende
-  Faktor ist die ANFRAGE-RATE, nicht die Token.)
+- **Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING (Frank 2026-06-02 + 2026-06-03):**
+  Bei genug Themen IMMER mit **7 auf einmal** beginnen — NICHT erst 4 und danach nochmal 3 (Zeitverschwendung).
+  7 gleichzeitig funktionieren einwandfrei. Gibt es MEHR als 7 Themen: sobald EINER fertig wird (nur noch 6
+  laufen), SOFORT den naechsten fuers naechste Thema hinterher starten, damit wieder 7 laufen — bis ALLE
+  Themen abgedeckt sind. **NIEMALS** warten, bis die ersten 7 fertig sind, und dann eine zweite Welle (z.B. 3)
+  nachschieben (waere in der Spitze 10 → RPM-Risiko, langsamer). So bleibt die Parallelitaet konstant bei 7
+  und der RPM-Strom gleichmaessig (kein Burst). Empirisch: **5 sicher, 7 laeuft einwandfrei, 12 → 11 abgestuerzt**.
+  Also Obergrenze ~7 gleichzeitig.
+- **Warum die Obergrenze NICHT vom Kontextfenster kommt (wichtig):** Web-Researcher sind
+  ANFRAGE-DICHT (2–3 Tool-Runden/Turn → 100+ RPM bei 5 Stueck). Zu viele gleichzeitig sprengen das
+  Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz ("server is temporarily limiting requests ·
+  not your usage limit"). Das ist UNABHAENGIG vom 1M-Kontextfenster — Opus 4.8 / 1M loest den
+  *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten), aber NICHT den *RPM*-Crash. Darum bleibt
+  ~7 die Obergrenze + 429-Backoff. (Anfrage-SPARSE Agenten wie Uebersetzer vertragen 15–20, weil sie
+  ueberwiegend lokal arbeiten.)
+- **KEIN Findings-/Ergebnis-Cap (Frank-Korrektur 2026-06-02):** ALLE gefundenen Best-Practices/Bugs
+  dokumentieren — kein kuenstliches "max 50". Mit 1M-Kontext ist die Menge kein Absturzrisiko mehr;
+  ein hartes Cap waere *lossy* (siehe `lossless-context-principle.md`). Bei sehr vielen Funden
+  verlustfrei in die Kategorie-Datei schreiben (File-as-Memory) + kompakte Summary, nie kappen.
+- **Retry mit Backoff bei 429 (PFLICHT, bleibt):** Stuerzt ein Researcher mit Rate-Limit ab, sofort dem
+  Benutzer melden und mit exponential backoff neu starten (`retry-after`-Header beachten) — nie still aufgeben.
+- **Scope (gegen RPM/Haengen, NICHT gegen Vollstaendigkeit):** ~15 Websuchen/Fetches, ~10 Min pro
+  Researcher. Begrenzt die ANFRAGE-Rate, nicht die Findings-Zahl. (Beobachtet: ~140–200k Token je
+  Kategorie ist normal und unkritisch — der limitierende Faktor ist die Anfrage-Rate, nicht die Token.)
 - **Checkpoint / Continuation:** Der Researcher schreibt seinen Fortschritt **inkrementell** in
   die Kategorie-Datei und endet mit einem klaren Checkpoint-Marker (was ist fertig, wo weitermachen).
   Ist er nicht fertig, wird ein **Continuation-Researcher am Checkpoint** gestartet. So geht nie
   Fortschritt verloren und nichts stuerzt ab.
-- Zusaetzlich gilt die allgemeine Researcher-Regel: max 50 Ergebnisse / 15 Web-Fetches / 10 Min je Lauf.
 - **Einheitliches Header-Format erzwingen + aufraeumen:** Jede Kategorie-Datei MUSS mit
   `# [Kategorie] — Best Practices (Stand JJJJ-MM-TT, Claude Code X.Y.Z)` beginnen — im Prompt verlangen
   UND nach dem Lauf pruefen (beim Live-Test wich 03-agents vom Format ab). Sentinel-/Writeback-Artefakte
