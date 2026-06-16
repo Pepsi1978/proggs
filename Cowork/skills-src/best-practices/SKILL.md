@@ -47,8 +47,10 @@ weil ein Ordner fehlt. Nennt der Benutzer einen anderen Basis-Ordner, dort hinei
 
 ## Zwei Bereiche, ein Ordner
 
-1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist der
-   offizielle **Claude-Code**-Changelog (via `scripts/update-changelog`).
+1. **Harness** (Kategorie `claude-tooling/`): die Claude-Code-Werkzeuge — flache Themen-Dateien
+   `claude-tooling/hooks.md`, `skills.md`, `agents.md`, `plugins.md`, `mcp.md`, `commands.md`,
+   `settings.md`, `kontext.md`, `token-effizienz.md`, `arbeitsweise.md`, `researcher.md`, `neues.md`.
+   Quelle ist der offizielle **Claude-Code**-Changelog (via `scripts/update-changelog`).
 2. **Projekt-Code** (`best-practices/<kategorie>/<software>.md`): Kotlin, Swift, Gradle,
    .NET/WPF, TypeScript, Rust … Quelle ist der **eigene** Changelog der jeweiligen Software (KEIN
    Claude-Script); die installierte Version wird live ermittelt und ist der Versions-Anker. Das ist
@@ -69,7 +71,7 @@ sie gezielt eine Software aufrollen lässt.
 4. **Delta vorhanden?** → parallele Researcher (Regeln unten). Jeder Researcher recherchiert pro
    Kategorie: **WAS** hat sich geändert (offizielles Changelog), **WIE** wendet man es am besten an
    (Anthropic-Docs/Blog), **Alternativen** von außen (`extern` gelabelt, sekundär). Was in keine
-   Kategorie passt → Kategorie 12 (Neues, bleibt immer die letzte).
+   Kategorie passt → `claude-tooling/neues.md` (Auffangzone für Unsortiertes).
 5. **Speichern:** Kategorie-`best-practices.md` (jeder Eintrag mit Quelle + Datum + `offiziell`/
    `extern`-Flag), `_changelog-archiv.md` inkrementell, `README.md` + `_state.json` aktualisieren.
    Bei **Projekt-Code**-Läufen zusätzlich die **Bug-Almanach-Rückkopplung** (siehe unten).
@@ -104,16 +106,19 @@ deterministischen Script unter `scripts/`. NICHT als Prosa rekonstruieren — au
 - **Mit `--first-run` (sh) / `-FirstRun` (ps1):** kompletter Neu-Aufbau (Erstlauf/Reparatur).
 - Nach dem Lauf das **Dateiende** von `_changelog-archiv.md` prüfen (`tail -1`, `wc -l`) — Mount-Truncation-Schutz.
 
-## Taxonomie (12 Kategorien, selbst-erweiternd)
-1 Hooks · 2 Skills · 3 Agents · 4 Plugins · 5 MCP-Server · 6 Slash-Commands · 7 Settings & Konfig ·
-8 Kontext-Management · 9 Token-/Kosten-Effizienz · 10 Arbeitsweise/Verhalten · 11 Researcher &
-Internet-Recherche · 12 Neues/Horizont-Scan. **"Neues" bleibt IMMER die letzte Kategorie**; kommt eine
-neue definierte Kategorie dazu, wird sie VOR "Neues" eingefügt und "Neues" rückt eine Nummer nach hinten.
+## Taxonomie (Harness-Themen, flach in `claude-tooling/`)
+Themen (nur inhaltliche Orientierung, KEINE Nummerierung mehr): Hooks · Skills · Agents · Plugins ·
+MCP-Server · Slash-Commands · Settings & Konfig · Kontext-Management · Token-/Kosten-Effizienz ·
+Arbeitsweise/Verhalten · Researcher & Internet-Recherche · Neues/Horizont-Scan. **Seit 2026-06-16 flach
+gespeichert:** jedes Thema ist eine eigene Datei `claude-tooling/<thema>.md` (`hooks.md`, `skills.md`, …,
+`neues.md`) — keine nummerierten Ordner, keine Reihenfolge-Pflege. Ein neues Thema ist einfach eine neue
+Datei (z. B. `claude-tooling/output-styles.md`); thematisch noch Unsortiertes sammelt `claude-tooling/neues.md`.
 
 ### Projekt-Code-Kategorien (`best-practices/<kategorie>/<software>.md`)
-Nach **Kategorie** gruppiert (android, android-build, desktop, web, peripherie, claude-tooling …),
-je eine selbst-identifizierende Datei direkt im Kategorie-Ordner (z.B. `android/best-practices-kotlin.md`;
-KEIN Software-Unterordner). Mechanik-Unterschied: Changelog-Quelle ist der **eigene** Changelog der
+Nach **Kategorie** gruppiert (android, android-build, desktop, web, apis, peripherie, assets, agents) —
+**dieselben Kategorien wie der Bug-Almanach `bugs/<kategorie>/`**, je eine Datei direkt im Kategorie-Ordner
+(`best-practices/<kategorie>/<software>.md`, z.B. `android/kotlin.md`, `desktop/swift-appkit.md`; kein
+`best-practices-`-Präfix, keine `projekt-code/`-Ebene). Mechanik-Unterschied: Changelog-Quelle ist der **eigene** Changelog der
 Software (Kotlin bei JetBrains, Swift bei Apple, Gradle …), NICHT das Claude-Script. Versions-Anker =
 LIVE ermittelte installierte Version (`kotlinc -version`, `swift --version`, `./gradlew --version`,
 `dotnet --version` …).
