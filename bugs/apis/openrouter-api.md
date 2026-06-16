@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit an einer OpenRouter-Integration (Aggregator/Gateway, EIN OpenAI-kompatibler
 > Endpunkt für viele Anbieter). Stand: zuletzt recherchiert am 2026-06-08.
-> Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/projekt-code/apis/best-practices-openrouter-api.md`.
+> Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/apis/openrouter-api.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -139,7 +139,7 @@ Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträg
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-openrouter-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/openrouter-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

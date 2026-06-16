@@ -155,7 +155,7 @@
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-groq-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/groq-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor Arbeit an einer xAI-Grok-Integration (api.x.ai). Stand: zuletzt recherchiert am
 > 2026-06-08. Versions-Anker: aktuell `grok-4.3`; 8 ältere Slugs am 15.05.2026 retired (lösen still auf
-> 4.3 um). Zweite Seite: `best-practices/projekt-code/apis/best-practices-xai-grok-api.md`.
+> 4.3 um). Zweite Seite: `best-practices/apis/xai-grok-api.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -140,7 +140,7 @@
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-xai-grok-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/xai-grok-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

@@ -2,7 +2,7 @@
 
 > PFLICHT-LESEN vor dem Versuch, in eigener Software ein KI-ABO (statt API-Key) zu nutzen, indem man
 > sich als die offizielle CLI/App des Anbieters ausgibt. Stand: zuletzt recherchiert am 2026-06-08.
-> Verwandt: OAuth-Mechanik siehe `oauth-device-code.md`. Zweite Seite: `best-practices/projekt-code/apis/best-practices-cli-impersonation-subscription-auth.md`.
+> Verwandt: OAuth-Mechanik siehe `oauth-device-code.md`. Zweite Seite: `best-practices/apis/cli-impersonation-subscription-auth.md`.
 
 > **Grauzone — ehrlich:** Der offizielle Weg (eigene CLI loggt sich per OAuth ins eigene Abo ein) ist
 > erlaubt. Das NACHBAUEN als Drittsoftware (gleiche Client-ID/Header/Endpunkte wie die offizielle CLI),
@@ -132,7 +132,7 @@
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-cli-impersonation-subscription-auth.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/cli-impersonation-subscription-auth.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

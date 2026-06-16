@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor dem Einbau von OAuth-Login in eigene Software/CLIs (Schwerpunkt Device
 > Authorization Grant RFC 8628 + PKCE + Token-Refresh). Stand: zuletzt recherchiert am 2026-06-08.
 > Verwandt: das „als offizielle CLI ausgeben"-Muster siehe `cli-impersonation-subscription-auth.md`.
-> Zweite Seite: `best-practices/projekt-code/apis/best-practices-oauth-device-code.md`.
+> Zweite Seite: `best-practices/apis/oauth-device-code.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -168,7 +168,7 @@ Standards-basiert (RFC 8628/7636/8252) — die Einträge sind dauerhaft gültige
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-oauth-device-code.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/oauth-device-code.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

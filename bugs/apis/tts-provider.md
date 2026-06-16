@@ -8,7 +8,7 @@
 > Chrome MV3 (Offscreen-API ab Chrome 109, WS-Keepalive ab Chrome 116).
 > Fokus deutsche Stimmen, multilingual mitgedacht. **ElevenLabs bewusst ausgelassen (zu teuer).**
 > Zweite Seite (wie macht man es richtig):
-> [`best-practices/projekt-code/apis/best-practices-tts-provider.md`](../../best-practices/projekt-code/apis/best-practices-tts-provider.md).
+> [`best-practices/apis/tts-provider.md`](../../best-practices/apis/tts-provider.md).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

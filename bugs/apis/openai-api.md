@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an einer OpenAI-API-Integration (Client-seitig: eigener Code ruft die API).
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: API-Stand Juni 2026 (Responses API +
 > Chat Completions parallel, GPT-5.x aktuell, GPT-4o/4.1/o4-mini in der API ~16./17.02.2026 retired).
-> Zweite Seite (wie macht man es richtig): `best-practices/projekt-code/apis/best-practices-openai-api.md`.
+> Zweite Seite (wie macht man es richtig): `best-practices/apis/openai-api.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -225,7 +225,7 @@
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-openai-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/openai-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

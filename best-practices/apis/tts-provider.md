@@ -6,7 +6,7 @@
 > **Versions-Anker:** `rany2/edge-tts` **7.2.8** (22.03.2026) · Google Cloud Text-to-Speech
 > **API v1**, **Chirp 3: HD** (de-DE GA), SSML für Chirp3-HD = **Preview** (Doku-Stand 09.06.2026),
 > Quotas-Stand 01.06.2026 · Android `android.speech.tts.TextToSpeech` (Platform-SDK).
-> **Gegenstück (was schiefgeht):** [`bugs/apis/tts-provider.md`](../../../bugs/apis/tts-provider.md).
+> **Gegenstück (was schiefgeht):** [`bugs/apis/tts-provider.md`](../../bugs/apis/tts-provider.md).
 > **Anbieterübergreifende Resilienz** (Retry/Backoff/Timeout/Secrets) gilt zusätzlich:
 > [`best-practices-api-integration-general.md`](best-practices-api-integration-general.md).
 >

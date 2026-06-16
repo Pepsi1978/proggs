@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an einer Gemini-API-Integration (Client-seitig).
 > Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: NEUES einheitliches SDK `google-genai`
 > (altes `google-generativeai`/`@google/generative-ai` deprecated seit 30.11.2025), Modelle Gemini
-> 2.5/3.x. Zweite Seite: `best-practices/projekt-code/apis/best-practices-google-gemini-api.md`.
+> 2.5/3.x. Zweite Seite: `best-practices/apis/google-gemini-api.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -178,7 +178,7 @@
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-google-gemini-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/google-gemini-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---

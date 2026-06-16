@@ -3,7 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an JEDER HTTP-/LLM-API-Integration (Rate-Limiting, Retries, SSE-Streaming,
 > Timeouts, Connection-Pooling, Secret-Handling, Fehlerbehandlung). Stand: zuletzt recherchiert am
 > 2026-06-08. Anbieterspezifika: siehe die jeweilige Datei in `bugs/apis/`.
-> Zweite Seite: `best-practices/projekt-code/apis/best-practices-api-integration-general.md`.
+> Zweite Seite: `best-practices/apis/api-integration-general.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -160,7 +160,7 @@ Anbieterübergreifende Engineering-Patterns — dauerhaft gültige Korrektheitsr
 
 ## 🔗 Bezug zu Best Practices
 
-Zweite Seite der Medaille (wie man es richtig macht): `best-practices/projekt-code/apis/best-practices-api-integration-general.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/api-integration-general.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
 
 
 ---
