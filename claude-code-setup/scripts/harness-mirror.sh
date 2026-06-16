@@ -39,7 +39,7 @@ COMPONENTS=(
   "rules|${CLAUDE_HOME}/rules|${SETUP}/rules|"
 )
 
-EXCLUDES=(-x '__pycache__' -x '*.pyc' -x 'learned')
+EXCLUDES=(-x '__pycache__' -x '*.pyc' -x 'learned' -x '*.bak' -x '*.reset-bak-*')
 total_missing=0
 total_stale=0
 total_extra=0
@@ -81,11 +81,12 @@ sync_dir() {
   [ -d "$active" ] || { printf '   (aktiv fehlt: %s — uebersprungen)\n' "$active"; return; }
   mkdir -p "$mirror"
   if command -v rsync >/dev/null 2>&1; then
-    rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='learned' "$active"/ "$mirror"/
+    rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='learned' \
+      --exclude='*.bak' --exclude='*.reset-bak-*' "$active"/ "$mirror"/
   else
     cp -R "$active"/. "$mirror"/ 2>/dev/null || true
     find "$mirror" -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
-    find "$mirror" -type f -name '*.pyc' -delete 2>/dev/null || true
+    find "$mirror" -type f \( -name '*.pyc' -o -name '*.bak' -o -name '*.reset-bak-*' \) -delete 2>/dev/null || true
   fi
   printf '   \033[32mgespiegelt\033[0m %s -> %s\n' "$active" "$mirror"
 }
