@@ -141,5 +141,4 @@ echo "Neueste Version:        $NEWEST (${NEWEST_DATE:-Datum unbekannt})"
 echo "Neue Versionen:         ${ADDED:-0}"
 echo "Versions-Header gesamt: $HDRS"
 [ "${DUP:-0}" -ne 1 ] && echo "WARNUNG: neueste Version erscheint ${DUP}-mal (Duplikat?)" >&2 || true
-echo "Zielordner:             $DATA_DIR   (Dateiende von _changelog-archiv.md mit 'tail -1' pruefen — Cowork-Mount)"
 exit 0

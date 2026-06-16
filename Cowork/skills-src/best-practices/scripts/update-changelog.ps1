@@ -148,5 +148,4 @@ Write-Output "Modus:                  $mode"
 Write-Output "Neueste Version:        $newest ($(if (Get-VerDate $newest) { Get-VerDate $newest } else { 'Datum unbekannt' }))"
 Write-Output "Neue Versionen:         $added"
 Write-Output "Versions-Header gesamt: $archHeaders"
-Write-Output "Zielordner:             $DataDir"
 if ($dupNewest -ne 1) { Write-Warning "Neueste Version erscheint $dupNewest-mal (Duplikat?) — bitte pruefen." }
