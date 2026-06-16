@@ -11,8 +11,12 @@ try {
     if (-not $stdin) { try { $stdin = $input | Out-String } catch { $stdin = "" } }
 
     $py = Join-Path $PSScriptRoot "bug-almanac-hint.py"
-    if ($stdin -and (Test-Path $py) -and (Get-Command python -ErrorAction SilentlyContinue)) {
-        $out = $stdin | python $py 2>$null
+    # python3 bevorzugen (konsistent mit allen anderen Hooks), python als Fallback —
+    # auf Setups ohne 'python'-Alias (frisches Windows / macOS) blieb der Hint sonst still tot.
+    $pyCmd = Get-Command python3 -ErrorAction SilentlyContinue
+    if (-not $pyCmd) { $pyCmd = Get-Command python -ErrorAction SilentlyContinue }
+    if ($stdin -and (Test-Path $py) -and $pyCmd) {
+        $out = $stdin | & $pyCmd.Source $py 2>$null
         if ($out -and ("$out").Trim()) { Write-Output $out }
     }
 } catch {
