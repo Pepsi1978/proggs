@@ -52,12 +52,10 @@ def rel(repo, path):
 def find_best_practices(bp_root):
     """software-name -> Pfad der Best-Practices-Datei (rekursiv in best-practices/).
 
-    Abwaertskompatibel waehrend der Struktur-Migration (Audit 2026-06-16):
-      - NEU:  best-practices/<kategorie>/<software>.md                       (1:1 wie bugs/)
-      - ALT:  best-practices/projekt-code/<kategorie>/best-practices-<software>.md
-    Der 'best-practices-'-Praefix wird (falls vorhanden) gestrippt, der Software-Name ist
-    in beiden Schemata selbst-identifizierend. README/SYSTEM, fuehrende '_'-Dateien und die
-    alte generische 'best-practices.md' (Harness 01-12) zaehlen NICHT als Software.
+    Flache 1:1-Struktur (seit Umbau 2026-06-16, Migration abgeschlossen):
+      best-practices/<kategorie>/<software>.md  — gleiche Kategorien/Namen wie bugs/.
+    Der Software-Name ist der Dateiname (ohne .md). README/SYSTEM und fuehrende
+    '_'-Dateien zaehlen NICHT als Software.
     """
     result = {}
     if not os.path.isdir(bp_root):
@@ -67,16 +65,10 @@ def find_best_practices(bp_root):
         for fn in files:
             if not fn.endswith(".md") or fn.startswith("_"):
                 continue
-            stem = fn[:-len(".md")]
-            if stem == "best-practices":          # alte Harness-Sammeldatei (01-12) -> kein <software>
-                continue
-            if stem.startswith("best-practices-"):  # alte Struktur
-                sw = stem[len("best-practices-"):]
-            else:                                    # neue Struktur: <software>.md
-                sw = stem
+            sw = fn[:-len(".md")]
             if not sw or sw.lower() in non:
                 continue
-            result.setdefault(sw, os.path.join(root, fn))  # erste gewinnt (alt ODER neu)
+            result.setdefault(sw, os.path.join(root, fn))
     return result
 
 
