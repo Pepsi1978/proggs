@@ -44,7 +44,9 @@ INTENTIONALLY_UNMAPPED = {
     "orchestrator-agent",
     # claude-tooling/ — Konzept (Desktop-App-Tabs / Harness-Selbstverbesserung, kein Datei-Pattern)
     # cowork-git-push: Cowork-Git-Workflow-Querschnitt (kein Datei-Pattern; greift ueber cowork-git.sh-Nutzung)
+    # cowork-scheduled-tasks: Cowork-Aufgabenplanung — Prozess/Workflow-Querschnitt (kein Datei-Pattern)
     "cowork", "claude-code-desktop-vs-cli", "agent-knowledge-system", "cowork-git-push",
+    "cowork-scheduled-tasks",
     # desktop/ — laeuft bewusst ueber die wake-word/groq/dotnet-Zweige
     "voice-pipeline",
     # assets/ — engine-uebergreifendes Konzept (Maps/HDRs, kein eindeutiges Pattern)
