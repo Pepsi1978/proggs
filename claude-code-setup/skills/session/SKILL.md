@@ -62,15 +62,24 @@ sich nie mehrere Sessions vermischen.
 > Tool-Calls. Ziel: Schritt 1-3 in moeglichst wenigen Tool-Calls (idealerweise zwei Bash-Aufrufe:
 > einer zum Schreiben beider Dateien, einer zum Committen).
 
-Fuehre diese Schritte der Reihe nach aus. Pruefe ZUERST, ob die
-aktuelle Aufgabe wirklich abgeschlossen ist (keine offene Rueckfrage / kein Multiple-Choice). Wenn
-nicht — erst fertig machen, dann Backup.
+Fuehre diese Schritte der Reihe nach aus.
+
+> **WICHTIG — Backup MITTEN in einer laufenden Aufgabe ist der Normalfall:** Der Benutzer macht das
+> Backup oft BEWUSST, waehrend eine lange Aufgabe noch laeuft — er drueckt `ESC` (die Aufgabe wird
+> mit "[Request interrupted]" unterbrochen) und sagt dann "session backup". Dann NICHT "erst fertig
+> machen". Stattdessen ist deine WICHTIGSTE Aufgabe, den **exakten Unterbrechungspunkt** im
+> Pflicht-Abschnitt "Laufende/unterbrochene Aufgabe" des Handoff-Templates festzuhalten — so genau,
+> dass die frische Session ohne jeden Kontext exakt diesen einen Schritt wieder aufnimmt. Nur wenn
+> gerade eine echte Rueckfrage an den Benutzer offen ist (Multiple-Choice), diese kurz mitfesthalten
+> statt zu raten.
 
 ### Schritt 1: Handoff-Notiz schreiben
 
-Erstelle den Inhalt nach der Struktur unten (Abschnitt "Handoff-Template"). Der wichtigste
-Abschnitt ist **Fehlgeschlagene Ansaetze** — ohne ihn wiederholt die frische Session denselben
-Fehler. Schreibe so konkret, dass eine Session OHNE jeden Vorkontext sofort weiterarbeiten kann.
+Erstelle den Inhalt nach der Struktur unten (Abschnitt "Handoff-Template"). Die zwei wichtigsten
+Abschnitte sind **Laufende/unterbrochene Aufgabe** (der exakte Wiedereinstiegspunkt — wo zuletzt
+gearbeitet wurde) und **Fehlgeschlagene Ansaetze** (ohne ihn wiederholt die frische Session
+denselben Fehler). Schreibe so konkret, dass eine Session OHNE jeden Vorkontext sofort an genau der
+richtigen Stelle weiterarbeiten kann — an exakt dem Schritt, der zuletzt lief, nicht "ungefaehr da".
 
 ### Schritt 2: An beide Orte schreiben — DIREKT per Bash, kein Read, kein Write-Tool
 
@@ -179,8 +188,12 @@ done
 ### Schritt 2: Kontext laden und fortsetzen
 
 Lies die gewaehlte Datei vollstaendig, verinnerliche Ziel, Status, naechste Schritte und
-besonders die fehlgeschlagenen Ansaetze. Fasse dem Benutzer in 3-4 Saetzen zusammen, wo ihr
-steht, und mach dann mit dem ersten "Naechsten Schritt" weiter.
+besonders die fehlgeschlagenen Ansaetze. **Ist der Abschnitt "Laufende/unterbrochene Aufgabe"
+gefuellt, hat er VORRANG:** nimm den dort beschriebenen, zuletzt unterbrochenen Schritt sauber neu
+auf und fuehre ihn zu Ende, BEVOR du zu den allgemeinen "Naechsten Schritten" uebergehst. Fasse dem
+Benutzer in 3-4 Saetzen zusammen, wo ihr steht (inkl. an welchem Schritt zuletzt unterbrochen
+wurde), und mach dann genau dort weiter. Ist der Abschnitt leer/nicht vorhanden, beginne mit dem
+ersten "Naechsten Schritt".
 
 ### Schritt 3: Beide Backups leeren (und Repo-Leerung pushen)
 
@@ -210,6 +223,30 @@ oben. Halte jeden Abschnitt konkret — keine Floskeln.
 
 ## Ziel (1-3 Saetze)
 Was soll in dieser Arbeitsphase insgesamt erreicht werden?
+
+## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt (WICHTIGSTER ABSCHNITT)
+> IMMER fuellen, wenn beim Backup noch eine Aufgabe lief oder per `ESC` unterbrochen wurde
+> ("[Request interrupted]"). Ziel: Die frische Session mit NULL Vorkontext nimmt exakt diesen
+> einen Schritt wieder auf und macht nahtlos weiter — nicht "ungefaehr da", sondern an genau der
+> Stelle, die zuletzt lief. Lieber zu ausfuehrlich als zu knapp.
+- **Welche Aufgabe lief gerade:** [die konkrete Aufgabe woertlich — was der Benutzer wollte]
+- **Wo genau unterbrochen — der allerletzte Schritt:** [der exakte Schritt, der lief, als `ESC`
+  kam bzw. als gesichert wurde. So konkret wie moeglich: Datei + Zeile/Funktion + was genau dort
+  getan wurde, z.B. "gerade dabei, in `DashboardScreen.kt` ab Zeile 412 den PDF-Export-Button
+  einzufuegen, Edit war noch nicht gespeichert"]
+- **Schon erledigter Teil DIESES Schritts:** [was vom letzten Schritt bereits getan/geschrieben/
+  committed ist — damit es nicht doppelt gemacht wird]
+- **Noch offener Teil DIESES Schritts:** [was an genau diesem Schritt noch fehlt, bis er fertig ist]
+- **So geht es EXAKT weiter (allererste Aktion der neuen Session):** [die konkrete erste Aktion —
+  welche Datei oeffnen, welche Stelle/Zeile, welcher Befehl, welcher Edit. So praezise, dass sie
+  ohne Nachdenken ausfuehrbar ist. Den unterbrochenen Schritt sauber NEU ansetzen und zu Ende fuehren]
+- **Was dafuer alles vorhanden sein muss:** [Zwischenstaende, Variablenwerte, Pfade, Befehle,
+  Build-/Test-Stand, offene Terminal-Ausgaben — alles, was zum nahtlosen Weitermachen gebraucht
+  wird. Die neue Session kennt NICHTS davon, also nichts weglassen]
+- **Danach:** [kurzer Verweis: nach Abschluss dieses Schritts mit "Naechste Schritte" weiter]
+
+(Lief beim Backup KEINE Aufgabe — alles sauber abgeschlossen —, hier nur "Keine laufende Aufgabe,
+letzter Stand sauber abgeschlossen" schreiben.)
 
 ## Aktueller Status
 - Erledigt: [was fertig ist, mit Commit-Nummer falls relevant]
