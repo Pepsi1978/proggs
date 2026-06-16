@@ -48,6 +48,26 @@
 
 ---
 
+## 🔗 Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach
+
+> Zweite Seite der Medaille: Der Bug-Almanach sagt *was schiefgeht und wie man es umgeht*, diese
+> Datei *wie man Cowork von vornherein richtig nutzt*. Gegenstücke:
+> [`bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (allgemein) und
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md) (geplante Aufgaben).
+
+| Best-Practice (diese Datei) | Bug-Gegenpart im Almanach |
+|---|---|
+| §1 Überblick & Einrichtung | `cowork.md` — VM-Architektur, Berechtigungen, Mount-Verhalten |
+| §2 Skills & Plugins | `cowork.md` — Skill-/Plugin-Fallen, 200-Zeichen-Limit |
+| §3 Connectors & MCP | `cowork.md` — Connector-/MCP-Fallen über Anthropics Cloud |
+| §3a Git-Push aus Cowork | `cowork.md` §10a — Mount-Locks, fileMode, LFS, `cowork-git.sh` |
+| §4 Datei-Arbeit & Ergebnis-Dokumente | `cowork.md` — Mount-Modi, Lösch-/Truncation-Fallen |
+| §5 Geplante Aufgaben & Live-Artefakte | `cowork-scheduled-tasks.md` — Catch-up, Cron, Boot-Loop |
+| §6 Computer-Steuerung & Browser | `cowork.md` — Computer-Use-/Chrome-Fallen |
+| §7 Grenzen, Datenschutz, Sicherheit | `cowork.md` — Compliance-Blindspot, Usage |
+
+---
+
 ## 1. Überblick & Einrichtung
 
 - **Was Cowork ist:** Claude plant mehrstufige Aufgaben, zerlegt sie in Sub-Agenten und liefert fertige Outputs direkt ins Dateisystem — kein Terminal nötig. Quelle: support.claude.com/en/articles/13345190 · 2026-06 · `[offiziell]`
