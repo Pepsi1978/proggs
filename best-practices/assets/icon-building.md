@@ -3,7 +3,7 @@
 **Versions-Anker:** Windows 11 Build 26200 / .NET 10 / Pillow 12.1.1 / ImageMagick 7,
 Android 16 (API 36), macOS 15 Sequoia + macOS 26 Tahoe.
 
-> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/assets/icon-building.md`](../../../bugs/assets/icon-building.md)):
+> **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/assets/icon-building.md`](../../bugs/assets/icon-building.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man es von vornherein richtig macht*.
 
 ---
@@ -60,7 +60,7 @@ img.save("out.ico", format="ICO",                  # 4. multi-res, 256 PNG-kompr
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/assets/icon-building.md`](../../../bugs/assets/icon-building.md). Die gespiegelte Tabelle steht auch dort.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/assets/icon-building.md`](../../bugs/assets/icon-building.md). Die gespiegelte Tabelle steht auch dort.
 
 | Best-Practice (hier) | verhindert Bug in `bugs/assets/icon-building.md` |
 |----------------------|--------------------------------------------------|

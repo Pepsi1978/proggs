@@ -2,7 +2,7 @@
 
 > **PFLICHT-LESEN vor jeder 3D-Render-/Asset-Arbeit.** Stand recherchiert 2026-06-13, engine-übergreifend (three.js, Babylon.js, Filament, Unity, Unreal, Godot, model-viewer, SceneKit/RealityKit). Die meisten Einträge sind **„per Design" / zeitlos** (Physik & Color-Science ändern sich nicht mit der Version) — sie sind dann so markiert. Tool-/spec-abhängige Fälle sind getrennt im Abschnitt **Fix-Status** belegt.
 >
-> Dies ist die Bug-/Fallen-Seite. Die Gegenseite (das „Wie macht man es richtig") liegt in `best-practices/projekt-code/assets/best-practices-3d-visual-quality.md`. Querverweise unten unter **Bezug ↔ Best-Practices**.
+> Dies ist die Bug-/Fallen-Seite. Die Gegenseite (das „Wie macht man es richtig") liegt in `best-practices/assets/3d-visual-quality.md`. Querverweise unten unter **Bezug ↔ Best-Practices**.
 
 ---
 
@@ -193,7 +193,7 @@
 
 ## Bezug ↔ Best-Practices
 
-Jeder Bug hat sein „Wie macht man es richtig"-Gegenstück in `best-practices/projekt-code/assets/best-practices-3d-visual-quality.md`:
+Jeder Bug hat sein „Wie macht man es richtig"-Gegenstück in `best-practices/assets/3d-visual-quality.md`:
 
 | Bug-Almanach § | Thema | Best-Practices § |
 |----------------|-------|------------------|

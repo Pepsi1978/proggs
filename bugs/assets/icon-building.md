@@ -315,7 +315,7 @@ Konverter-Alpha-Flatten (§8) — Workarounds bleiben aktiv.
 
 ## 🔗 Bezug zur Best-Practices-Gegenseite
 
-Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/assets/best-practices-icon-building.md`](../../best-practices/projekt-code/assets/best-practices-icon-building.md). Die gespiegelte Tabelle steht auch dort. Links der *Bug*, rechts die *Best-Practice, die ihn verhindert*.
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/assets/icon-building.md`](../../best-practices/assets/icon-building.md). Die gespiegelte Tabelle steht auch dort. Links der *Bug*, rechts die *Best-Practice, die ihn verhindert*.
 
 | Bug-Abschnitt (dieser Almanach) | Verhindert durch Best-Practice |
 |---------------------------------|--------------------------------|
