@@ -659,19 +659,34 @@ public partial class PromptInputWindow : Window
 
     // ── Rechtsklick-Drag ──────────────────────────────────────────────────
 
+    /// <summary>Beim Rechtsklick-Down auf einem belegten Slot vorgemerkter Button —
+    /// sein Prioritaets-Menue wird beim Loslassen (Up) EXPLIZIT geoeffnet. Der
+    /// WPF-Automatismus (btn.ContextMenu oeffnet sich von selbst) feuert auf
+    /// diesem Topmost-/Rechtsklick-Drag-Fenster NICHT zuverlaessig — bewiesen per
+    /// diag.log: "input window built" da, aber nie "context menu opened".</summary>
+    private Button? _pendingPriorityBtn;
+
     private void OnRightDragStart(object sender, MouseButtonEventArgs e)
     {
-        // Rechtsklick auf die TextBox darf NICHT den Drag starten — sonst
-        // koennte der Benutzer kein Kontextmenue mehr nutzen. Wir starten
-        // nur wenn das Klick-Ziel das Window oder der Border ist.
+        // Rechtsklick auf die TextBox darf NICHT den Drag starten.
         if (e.OriginalSource is System.Windows.Controls.TextBox) return;
-        // Rechtsklick auf einen Button (Slot-Zahl, Diskette, X, Toolbar) darf
-        // KEINEN Fenster-Drag ausloesen — sonst kaeme z.B. das Slot-Prioritaets-
-        // Kontextmenue nie zum Vorschein (dieser Tunnel-Handler wuerde den Drag
-        // starten und die Maus capturen). Vom getroffenen (evtl. inneren) Element
-        // nach oben laufen: liegt ein Button im Pfad -> kein Drag.
-        if (e.OriginalSource is DependencyObject src && FindAncestorButton(src) is not null) return;
 
+        // Rechtsklick auf einen Button (Slot/Diskette/X/Toolbar): KEIN Fenster-Drag.
+        // Sitzt der Klick auf einem BELEGTEN Zahlen-Slot, Button vormerken und das
+        // Prioritaets-Menue beim Loslassen (OnRightDragEnd) selbst oeffnen.
+        if (e.OriginalSource is DependencyObject src && FindAncestorButton(src) is Button hitBtn)
+        {
+            int? slotNo = hitBtn.Tag as int?;
+            bool occupied = slotNo is int sn
+                && _slotContents.TryGetValue(sn, out var stxt) && !string.IsNullOrEmpty(stxt);
+            _pendingPriorityBtn = occupied ? hitBtn : null;
+            DiagLog.Write("SlotPriority", "right-click on button",
+                ("slot", slotNo?.ToString() ?? "non-slot"), ("occupied", occupied.ToString()));
+            e.Handled = true;   // verhindert Fenster-Drag UND das unzuverlaessige Auto-Menue
+            return;
+        }
+
+        _pendingPriorityBtn = null;
         _isDragging      = true;
         _dragStartScreen = PointToScreen(e.GetPosition(this));
         CaptureMouse();
@@ -698,6 +713,26 @@ public partial class PromptInputWindow : Window
 
     private void OnRightDragEnd(object sender, MouseButtonEventArgs e)
     {
+        // Vorgemerkter belegter Slot -> Prioritaets-Menue JETZT explizit oeffnen
+        // (Standard-Timing auf dem Up). cm.Opened schiebt das Popup auf
+        // HWND_TOPMOST + loggt "context menu opened".
+        if (_pendingPriorityBtn is Button pb)
+        {
+            _pendingPriorityBtn = null;
+            if (pb.Tag is int n)
+            {
+                _selectedSlot = n;
+                UpdateSlotVisuals();
+            }
+            if (pb.ContextMenu is ContextMenu cm)
+            {
+                cm.PlacementTarget = pb;
+                cm.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                cm.IsOpen = true;
+            }
+            e.Handled = true;
+            return;
+        }
         if (!_isDragging) return;
         _isDragging = false;
         ReleaseMouseCapture();
