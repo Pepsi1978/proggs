@@ -28,6 +28,7 @@ antigen_file = sys.argv[2] if len(sys.argv) > 2 else ''
 if not cmd or not antigen_file:
     sys.exit(0)
 
+warnings = []
 try:
     with open(antigen_file, 'r', encoding='utf-8') as f:
         for line in f:
@@ -41,11 +42,17 @@ try:
                     aid = obj.get('id', '?')
                     sev = obj.get('severity', '?')
                     cm = obj.get('countermeasure', '?')
-                    print(f'IMMUN-CHECK [{aid}] ({sev}): {cm}')
+                    warnings.append(f'IMMUN-CHECK [{aid}] ({sev}): {cm}')
             except (json.JSONDecodeError, re.error):
                 continue
 except FileNotFoundError:
     pass
+
+# Als verschachteltes additionalContext ausgeben (claude-hooks.md §2.1) — plain stdout erreicht Claude
+# bei PreToolUse NICHT (§2.3). Einschraenkung: v2.1.123-Bash-Matcher-Regression (§2.4) kann es droppen.
+if warnings:
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+          "additionalContext": "\n".join(warnings)}}, ensure_ascii=False))
 PYEOF
 
 exit 0

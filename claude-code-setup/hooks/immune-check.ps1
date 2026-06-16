@@ -53,10 +53,14 @@ try {
     exit 0  # Bei Lesefehlern nicht blockieren
 }
 
+# Warnungen als verschachteltes additionalContext ausgeben (claude-hooks.md §2.1) — Write-Host/plain
+# stdout erreicht Claude bei PreToolUse NICHT (§2.3, nur Debug-Log); DAS war der Grund, warum dieser
+# Schutz-Hook bislang faktisch wirkungslos war. Einschraenkung: v2.1.123-Bash-Matcher-Regression (§2.4,
+# #55889) kann auch additionalContext droppen -> best-effort, aber spec-korrekt. error-antigens.jsonl ist
+# eine bewusst KURATIERTE Antigen-Liste (kein Auto-Wachstum noetig; manuell um neue Gefahrmuster erweiterbar).
 if ($warnings.Count -gt 0) {
-    foreach ($w in $warnings) {
-        Write-Host $w
-    }
+    $msg = ($warnings -join "`n")
+    @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; additionalContext = $msg } } | ConvertTo-Json -Depth 5 -Compress
 }
 
 # Nie blockieren — nur warnen
