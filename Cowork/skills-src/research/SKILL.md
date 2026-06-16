@@ -24,7 +24,7 @@ gemountete `proggs`-Ordner) — NICHT in einen fest verdrahteten `~/proggs`-Pfad
 
 | Was | Relativer Pfad |
 |-----|----------------|
-| Best-Practices (wiederverwendbares Wissen) | `best-practices/projekt-code/<kategorie>/best-practices-<thema>.md` bzw. `best-practices/<NN-kategorie>/best-practices.md` (Harness) |
+| Best-Practices (wiederverwendbares Wissen) | `best-practices/<kategorie>/<thema>.md` bzw. `best-practices/claude-tooling/<thema>.md` (Harness) |
 | Bug-Almanach (gefundene Fallen) | `bugs/<kategorie>/<bereich>.md` |
 | Lange Roh-Funde (optional, verlustfrei ausgelagert) | `research/<thema>-<datum>.md` |
 
@@ -80,7 +80,7 @@ klare, zitierte Antwort zusammenstellen. Unsicheres ehrlich als unsicher markier
 
 | Fund | Tauglich? | Ziel |
 |------|-----------|------|
-| Patterns, APIs, Architektur-Empfehlungen, Tool-/Library-Vergleich mit Empfehlung | **JA** | `best-practices/projekt-code/<kategorie>/` bzw. Harness-Kategorie |
+| Patterns, APIs, Architektur-Empfehlungen, Tool-/Library-Vergleich mit Empfehlung | **JA** | `best-practices/<kategorie>/` bzw. Harness-Kategorie `claude-tooling/` |
 | Plattform-/Policy-/Rechts-Wissen mit Dauerwert | **JA** | passende Best-Practices-Kategorie |
 | Bekannte Bugs, Fallen, Workarounds, Versions-Inkompatibilitäten | **JA** | `bugs/<kategorie>/<bereich>.md` (Format: Symptom/Ursache/Versionen/FIX/Quelle) + Querverweis |
 | Einmalige Faktenabfrage ohne Wiederverwendungswert | NEIN | in EINEM Satz begründen, ggf. nur im Chat |

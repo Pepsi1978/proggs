@@ -44,8 +44,8 @@ aber als BATCH/WELLE über viele Almanache, mit Auswahl-Logik.
 7. Committen + pushen pro Almanach (eigene Pfade namentlich).
 
 ## Skill 2 — Best-Practices-Update-Skill
-**Zweck:** Analog für `~/proggs/best-practices/` (Harness-Kategorien 01-hooks … 12-neues UND
-projekt-code/<kategorie>/best-practices-<software>.md). Basiert auf bestehendem Skill `best-practices`.
+**Zweck:** Analog für `~/proggs/best-practices/` (Harness-Themen `claude-tooling/<thema>.md` UND
+best-practices/<kategorie>/<software>.md). Basiert auf bestehendem Skill `best-practices`.
 Gleicht gegen die jeweils passenden offiziellen Changelogs/Docs ab (Claude-Code-Changelog für Harness,
 Software-Changelog für Projekt-Code), hebt Stand-Header, koppelt gefundene Bugs in die Almanache zurück.
 Selbe Researcher-/gh-/Persistenz-Disziplin wie Skill 1. Bezugs-Tabellen synchron halten.

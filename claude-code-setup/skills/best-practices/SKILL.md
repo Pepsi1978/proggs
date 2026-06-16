@@ -38,12 +38,19 @@ Werkzeuge — das ist NICHT Aufgabe dieses Skills.
 
 ## Zwei Bereiche, ein Ordner
 
-Der Skill pflegt zwei Arten von Best-Practices im selben `best-practices/`-Ordner:
+Der Ordner ist **flach 1:1 wie `bugs/`** aufgebaut (seit 2026-06-16): `best-practices/<kategorie>/<bereich>.md`,
+gleiche Kategorien und Dateinamen wie `bugs/<kategorie>/<bereich>.md`. Der Skill pflegt zwei Arten von
+Best-Practices im selben Schema:
 
-1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist
-   der offizielle **Claude-Code**-Changelog (via `update-changelog.ps1`-Script).
-2. **Projekt-Code** (Sektion `projekt-code/<kategorie>/best-practices-<software>.md`): Kotlin, Swift, Gradle, .NET/WPF,
-   TypeScript, Rust … Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
+1. **Harness** (Kategorie `claude-tooling/`): die Claude-Code-Werkzeuge. Themen-Dateien
+   `claude-tooling/hooks.md`, `claude-tooling/skills.md`, `claude-tooling/agents.md`, `…/plugins.md`,
+   `…/mcp.md`, `…/commands.md`, `…/settings.md`, `…/kontext.md`, `…/token-effizienz.md`,
+   `…/arbeitsweise.md`, `…/researcher.md`, `…/neues.md`. Quelle ist der offizielle **Claude-Code**-Changelog
+   (via `update-changelog.ps1`-Script). (Daneben liegen in `claude-tooling/` die Bug-gepaarten Digests wie
+   `claude-hooks.md`, `mcp-server.md`, `claude-config.md` — Gegenstücke zu `bugs/claude-tooling/`.)
+2. **Projekt-Code** (Kategorien `android/`, `android-build/`, `desktop/`, `web/`, `apis/`, `peripherie/`,
+   `assets/`, `agents/`): `best-practices/<kategorie>/<software>.md` (z. B. `android/kotlin.md`,
+   `desktop/swift-appkit.md`). Quelle ist der **eigene Changelog** der jeweiligen Software (KEIN
    Claude-Script) — die installierte Software-Version wird live ermittelt und ist der
    Versions-Anker. Das ist die zweite Seite der Medaille zum Bug-Almanach (`~/proggs/bugs/`):
    dort steht *was schiefgeht*, hier *wie man es von vornherein richtig macht*.
@@ -64,28 +71,23 @@ laesst.
 
 ## Erster Lauf: Wissensbasis anlegen (falls noch nicht vorhanden)
 
-Pruefe, ob `~/proggs/best-practices/` existiert. Falls nicht, lege die Struktur an:
+Pruefe, ob `~/proggs/best-practices/` existiert. Falls nicht, lege die Struktur an
+(flach 1:1 wie `bugs/`, gleiche Kategorien):
 
 ```
 best-practices/
-├── README.md              ← Inhaltsverzeichnis, verlinkt jede Kategorie
+├── README.md              ← Kategorie-Index (siehe bestehende README.md)
+├── SYSTEM.md              ← Systembeschreibung + Aenderungs-Historie (§8)
 ├── _state.json            ← {"last_version": null, "last_checked": null}
-├── _changelog-archiv.md   ← VOLLSTAENDIGER offizieller Changelog, verbatim (siehe Abschnitt unten)
-├── 01-hooks/best-practices.md
-├── 02-skills/best-practices.md
-├── 03-agents/best-practices.md
-├── 04-plugins/best-practices.md
-├── 05-mcp/best-practices.md
-├── 06-commands/best-practices.md
-├── 07-settings/best-practices.md
-├── 08-kontext/best-practices.md
-├── 09-token-effizienz/best-practices.md
-├── 10-arbeitsweise/best-practices.md
-├── 11-researcher/best-practices.md
-└── 12-neues/best-practices.md   ← "Neues" bleibt immer die letzte Kategorie
+├── _changelog-archiv.md   ← VERBATIM Claude-Code-Changelog (Recherche-Quelle, vom Script geholt)
+├── claude-tooling/        ← Harness: hooks.md, skills.md, agents.md, plugins.md, mcp.md,
+│                            commands.md, settings.md, kontext.md, token-effizienz.md,
+│                            arbeitsweise.md, researcher.md, neues.md  (+ Bug-gepaarte Digests)
+├── android/ · android-build/ · desktop/ · web/ · apis/ · peripherie/ · assets/ · agents/
+│                            ← Projekt-Code: <software>.md je Kategorie (1:1 wie bugs/)
 ```
 
-Der Ordner liegt bewusst **im Repo**, damit er nach macOS mit-synct. Jede Kategorie-Datei
+Der Ordner liegt bewusst **im Repo**, damit er nach macOS mit-synct. Jede Themen-/Software-Datei
 startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren dazu.
 
 ## Ablauf eines Laufs
@@ -104,9 +106,9 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    Was in keine definierte Kategorie passt → Kategorie 12 (Neues, immer die letzte Kategorie).
 5. **Speichern:** Kategorie-`best-practices.md` aktualisieren (jeder Eintrag mit Quelle + Datum +
    `offiziell`/`extern`-Flag), `_changelog-archiv.md` inkrementell aktualisieren (siehe Abschnitt unten),
-   `README.md` + `_state.json` aktualisieren. Neue Werkzeug-Klassen aus Kategorie 12 (Neues) bekommen
-   einen eigenen Unterordner — eingefuegt VOR `Neues`, das dabei eine Nummer nach hinten rueckt
-   (die Taxonomie waechst selbst, `Neues` bleibt immer die letzte Kategorie). Bei **Projekt-Code**-
+   `README.md` + `_state.json` aktualisieren. Ein neues Harness-Thema ist einfach eine neue Datei
+   `claude-tooling/<thema>.md` (keine Nummerierung/Reihenfolge mehr); thematisch noch Unsortiertes
+   sammelt `claude-tooling/neues.md`. Bei **Projekt-Code**-
    Laeufen zusaetzlich die **Bug-Almanach-Rueckkopplung** ausfuehren (Abschnitt „Kopplung zum
    Bug-Almanach"): gefundene Bugs nach `bugs/<bereich>.md` zurueckschreiben + Bezugs-Tabellen synchron halten.
    **Self-Test (seit 2026-06-15):** danach `python ~/proggs/bugs/health.py` laufen lassen — die coupling-Pruefung
@@ -170,25 +172,25 @@ Kategorie 12 (Neues) ist wichtig: Nicht nur das suchen, was schon bekannt ist �
 neuen Faehigkeiten bringen den groessten Sprung. Alles Unbekannte landet hier und wird,
 wenn es sich als wichtig erweist, zu einer eigenen Kategorie.
 
-**Regel zur Reihenfolge:** "Neues" ist IMMER die letzte Kategorie (hoechste Nummer). Kommt eine
-neue definierte Kategorie dazu, wird sie VOR "Neues" eingefuegt und "Neues" rueckt eine Nummer
-nach hinten (Ordner entsprechend umbenennen). Beispiel: aus `12-neues` wird `13-neues`, die neue
-Kategorie wird 12.
+**Speicherung (seit 2026-06-16):** Die Harness-Themen liegen flach als `claude-tooling/<thema>.md`
+(`hooks.md`, `skills.md`, …, `neues.md`) — keine nummerierten Ordner, keine Reihenfolge-Pflege mehr.
+Die Tabelle oben ist nur die inhaltliche Orientierung; die `#`-Spalte sind Listennummern, keine
+Ordnernamen. Ein neues Harness-Thema ist einfach eine neue Datei (z. B. `claude-tooling/output-styles.md`).
 
-### Projekt-Code-Sektion (`projekt-code/<kategorie>/best-practices-<software>.md`)
+### Projekt-Code-Kategorien (`best-practices/<kategorie>/<software>.md`)
 
-Neben den 12 nummerierten Harness-Kategorien gibt es die Sektion `projekt-code/`, seit
-2026-06-03 nach **Kategorie** gruppiert (android, android-build, desktop, web, peripherie,
-claude-tooling — dieselben Kategorien wie der Bug-Almanach `bugs/<kategorie>/`), mit je einer
-selbst-identifizierenden Datei direkt im Kategorie-Ordner (`projekt-code/<kategorie>/best-practices-<software>.md`,
-z.B. `android/best-practices-kotlin.md`, `desktop/best-practices-swift-appkit.md`; KEIN Software-Unterordner),
-die bei Bedarf entsteht (Inhaltsverzeichnis: `projekt-code/README.md`).
+Neben `claude-tooling/` (Harness) gibt es die Projekt-Code-Kategorien `android/`, `android-build/`,
+`desktop/`, `web/`, `apis/`, `peripherie/`, `assets/`, `agents/` — **dieselben Kategorien wie der
+Bug-Almanach `bugs/<kategorie>/`**, mit je einer selbst-identifizierenden Datei direkt im
+Kategorie-Ordner (`best-practices/<kategorie>/<software>.md`, z. B. `android/kotlin.md`,
+`desktop/swift-appkit.md`; kein `best-practices-`-Praefix, keine `projekt-code/`-Ebene mehr),
+die bei Bedarf entsteht (Kategorie-Index: `best-practices/README.md`).
 
 **Wichtiger Mechanik-Unterschied — beim Recherchieren beachten:**
 - **Harness-Kategorien (01–12):** Changelog-Quelle ist der **Claude-Code**-Changelog,
   geholt mit dem `update-changelog.ps1`/`.sh`-Script (siehe naechster Abschnitt). Versions-
   Anker = installierte Claude-Code-Version.
-- **Projekt-Code (`projekt-code/<kategorie>/best-practices-<software>.md`):** Changelog-Quelle ist der **eigene**
+- **Projekt-Code (`best-practices/<kategorie>/<software>.md`):** Changelog-Quelle ist der **eigene**
   Changelog/die Release-Notes der jeweiligen Software (Kotlin-Releases bei JetBrains,
   Swift-Releases bei Apple, Gradle-Releases …). Das Claude-Changelog-Script wird hier NICHT
   benutzt. Versions-Anker = die LIVE ermittelte installierte Version dieser Software
@@ -220,7 +222,7 @@ Pro gefundenem echten Bug (Symptom + Ursache + funktionserhaltende Loesung + bet
   kompakt mitliefern, damit nichts verloren geht.
 
 ### B — Bezugs-Tabellen synchron halten
-Existieren BEIDE Dateien (`best-practices/projekt-code/<kategorie>/best-practices-<software>.md` UND
+Existieren BEIDE Dateien (`best-practices/<kategorie>/<software>.md` UND
 `bugs/<kategorie>/<bereich>.md`), in JEDER eine wechselseitige Abschnitts-Bezugs-Tabelle „Best-Practice-Abschnitt ↔
 Bug-Abschnitt" aktuell halten. Fehlt eine, anlegen; kamen Abschnitte dazu, ergaenzen. So bleibt jede
 Best-Practice mit ihrer konkreten Bug-Loesung verlinkt (und umgekehrt).

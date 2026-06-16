@@ -21,9 +21,9 @@ zum Arbeitsordner:
 best-practices/
 ├── README.md              ← Inhaltsverzeichnis
 ├── _state.json            ← {"last_version": null, "last_checked": null}
-├── _changelog-archiv.md   ← VOLLSTAENDIGER Claude-Code-Changelog, verbatim
-├── 01-hooks/ … 12-neues/best-practices.md     ← Harness-Kategorien
-└── projekt-code/<kategorie>/best-practices-<software>.md   ← Projekt-Software
+├── _changelog-archiv.md   ← VERBATIM Claude-Code-Changelog (Recherche-Quelle)
+├── claude-tooling/<thema>.md           ← Harness (hooks, skills, mcp, settings, … neues)
+└── <kategorie>/<software>.md            ← Projekt-Software (android, desktop, web, apis, …)
 ```
 
 **Ordner-anlegen ist Pflicht und erlaubt:** Fehlt die Struktur oder ein Kategorie-Ordner → ERST
@@ -49,7 +49,7 @@ weil ein Ordner fehlt. Nennt der Benutzer einen anderen Basis-Ordner, dort hinei
 
 1. **Harness** (Kategorien `01-hooks` … `12-neues`): die Claude-Code-Werkzeuge. Quelle ist der
    offizielle **Claude-Code**-Changelog (via `scripts/update-changelog`).
-2. **Projekt-Code** (`projekt-code/<kategorie>/best-practices-<software>.md`): Kotlin, Swift, Gradle,
+2. **Projekt-Code** (`best-practices/<kategorie>/<software>.md`): Kotlin, Swift, Gradle,
    .NET/WPF, TypeScript, Rust … Quelle ist der **eigene** Changelog der jeweiligen Software (KEIN
    Claude-Script); die installierte Version wird live ermittelt und ist der Versions-Anker. Das ist
    die zweite Seite der Medaille zum Bug-Almanach (`bugs/`): dort *was schiefgeht*, hier *wie man es
@@ -110,7 +110,7 @@ deterministischen Script unter `scripts/`. NICHT als Prosa rekonstruieren — au
 Internet-Recherche · 12 Neues/Horizont-Scan. **"Neues" bleibt IMMER die letzte Kategorie**; kommt eine
 neue definierte Kategorie dazu, wird sie VOR "Neues" eingefügt und "Neues" rückt eine Nummer nach hinten.
 
-### Projekt-Code-Sektion (`projekt-code/<kategorie>/best-practices-<software>.md`)
+### Projekt-Code-Kategorien (`best-practices/<kategorie>/<software>.md`)
 Nach **Kategorie** gruppiert (android, android-build, desktop, web, peripherie, claude-tooling …),
 je eine selbst-identifizierende Datei direkt im Kategorie-Ordner (z.B. `android/best-practices-kotlin.md`;
 KEIN Software-Unterordner). Mechanik-Unterschied: Changelog-Quelle ist der **eigene** Changelog der
@@ -173,7 +173,7 @@ Git-Repo verbunden → committen + pushen über das Cowork-Skript (nur die eigen
 ```bash
 bash ~/proggs/cowork-git.sh setup                 # warten auf "Push-Zugang OK"
 bash ~/proggs/cowork-git.sh push-files "#NNN - best-practices <bereich>: recherchiert + W3" \
-  best-practices/<...>/best-practices.md best-practices/_changelog-archiv.md best-practices/_state.json
+  best-practices/<kategorie>/<software>.md best-practices/_changelog-archiv.md best-practices/_state.json
 ```
 Kein Git-Repo → nur speichern und dem Benutzer den Ablage-Pfad nennen.
 

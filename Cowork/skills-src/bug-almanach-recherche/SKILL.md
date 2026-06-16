@@ -21,7 +21,7 @@ zum Arbeitsordner:
 |-----|----------------|
 | Bug-Almanach | `bugs/<kategorie>/<bereich>.md` |
 | Almanach-Index | `bugs/README.md` |
-| Best-Practices-Gegenseite | `best-practices/projekt-code/<kategorie>/best-practices-<software>.md` |
+| Best-Practices-Gegenseite | `best-practices/<kategorie>/<software>.md` |
 | Self-Test / Werkzeuge | `bugs/health.py`, `bugs/check-version-anchor.py` |
 
 **Ordner-anlegen ist Pflicht und erlaubt:** Fehlt ein Ziel- oder Zwischenordner (neue Kategorie,
@@ -112,8 +112,8 @@ ohne Beleg — im Zweifel bleibt der Bug "noch offen".
 - **4a LESEN:** Jeden Bug gegen `best-practices/` abgleichen (`grep -ri "<stichwort>" best-practices/`).
   Steht dort schon eine Lösung → in den **FIX**-Bereich des Almanach-Eintrags aufnehmen (Verweis).
 - **4b SCHREIBEN:** Hat ein Bug eine allgemeingültige Prävention, diese AUCH nach best-practices
-  eintragen — Projekt-Code → `best-practices/projekt-code/<kategorie>/best-practices-<software>.md`,
-  Harness → `best-practices/<NN-kategorie>/best-practices.md`. Mit Quelle + Datum + `offiziell`/`extern`.
+  eintragen — Projekt-Code → `best-practices/<kategorie>/<software>.md`,
+  Harness → `best-practices/claude-tooling/<thema>.md`. Mit Quelle + Datum + `offiziell`/`extern`.
 - **4c Bezugs-Tabellen synchron halten:** Existieren BEIDE Dateien (Almanach + Best-Practice), in jeder
   eine wechselseitige Abschnitts-Bezugs-Tabelle „Bug-Abschnitt ↔ Best-Practice-Abschnitt" pflegen.
 
@@ -165,7 +165,7 @@ Git-Repo verbunden → committen + pushen über das Cowork-Skript:
 bash ~/proggs/cowork-git.sh setup                 # warten auf "Push-Zugang OK"
 bash ~/proggs/cowork-git.sh push-files "#NNN - bug-almanach <bereich>: recherchiert + W3" \
   bugs/<kategorie>/<bereich>.md bugs/README.md \
-  best-practices/projekt-code/<kategorie>/best-practices-<software>.md
+  best-practices/<kategorie>/<software>.md
 ```
 `push-files` committet GEZIELT nur diese Pfade (Mount-schonend) + Datenverlust-Wächter (bricht bei
 verdächtiger Schrumpfung/Phantom-Löschung ab). Kein Git-Repo → nur speichern und dem Benutzer den
