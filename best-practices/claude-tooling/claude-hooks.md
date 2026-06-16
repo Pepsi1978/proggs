@@ -1,12 +1,12 @@
 # Claude Code Hooks — Best Practices (Präventions-Seite)
 
-> **Zweite Seite der Medaille zum Bug-Almanach** [`bugs/claude-tooling/claude-hooks.md`](../../../bugs/claude-tooling/claude-hooks.md)
+> **Zweite Seite der Medaille zum Bug-Almanach** [`bugs/claude-tooling/claude-hooks.md`](../../bugs/claude-tooling/claude-hooks.md)
 > (**Stufe-C-Hochrisiko** — vor Hook-Arbeit ist der Almanach-VOLLTEXT Pflicht): dort steht *was schiefgeht*,
 > hier *wie man einen Hook von vornherein richtig baut*. Diese Datei existiert vor allem, damit der
 > `bug-almanac-guard` für den Hochrisiko-Bereich `claude-hooks` auch die Best-Practices-Lektüre erzwingt
 > (erst Almanach, dann Best Practices).
 >
-> **Ausführlicher Harness-Volltext (verlustfrei ausgelagert):** [`best-practices/01-hooks/best-practices.md`](../../01-hooks/best-practices.md)
+> **Ausführlicher Harness-Volltext (verlustfrei ausgelagert):** [`best-practices/01-hooks/best-practices.md`](../01-hooks/best-practices.md)
 > — dort stehen alle 32 Events, das vollständige JSON-Schema, Timeout-/Async-Details und Beispiele.
 > Diese Datei ist der kompakte, Almanach-gekoppelte Digest; der 01-hooks-Volltext bleibt die Tiefe.
 >
@@ -131,7 +131,7 @@
 
 ## Pflicht-Checkliste vor Hook-Arbeit
 
-- [ ] Almanach-VOLLTEXT [`claude-hooks.md`](../../../bugs/claude-tooling/claude-hooks.md) gelesen (Stufe C) + dieser Kurzcheck?
+- [ ] Almanach-VOLLTEXT [`claude-hooks.md`](../../bugs/claude-tooling/claude-hooks.md) gelesen (Stufe C) + dieser Kurzcheck?
 - [ ] `hook-forge`-Skill genutzt (Template mit `exit 0`/try-catch/Guard)?
 - [ ] Blocken via `exit 2` bzw. `permissionDecision:"deny"` (Write/Edit) — nie `exit 1`? FAIL-OPEN sonst?
 - [ ] Kontext via verschachteltes `hookSpecificOutput` (PS `-Depth 5`), strikt spec-konform?

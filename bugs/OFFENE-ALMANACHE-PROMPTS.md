@@ -59,7 +59,7 @@ Starte den Best-Practices-Skill fuer Python auf Windows / Cross-Platform-Scripti
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN PYTHON-SCRIPTING AUF WINDOWS/CROSS-PLATFORM AM BESTEN UND RICHTIG MACHT — die empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs laufen getrennt im Almanach), sondern der "so macht man es richtig"-Leitfaden: immer encoding='utf-8' + ensure_ascii=False, atomares Schreiben (temp + os.replace), plattformneutrale Pfade (pathlib/os.path statt Hardcoding), saubere venv-/Dependency-Verwaltung, robuste CLI-Struktur, Typ-Hints.
 
-Speichere unter best-practices/projekt-code/claude-tooling/best-practices-python-windows.md und koppele wechselseitig mit dem Bug-Almanach bugs/claude-tooling/python-windows.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
+Speichere unter best-practices/claude-tooling/python-windows.md und koppele wechselseitig mit dem Bug-Almanach bugs/claude-tooling/python-windows.md (Bezugs-Tabelle in beiden Dateien). Am Ende committen und pushen.
 ```
 
 ---
@@ -213,7 +213,7 @@ Starte den Best-Practices-Skill fuer den Bau von MCP-Servern (Projekt-Code-Seite
 
 ZIEL = BEST PRACTICES: Recherchiere, WIE MAN MCP-SERVER AM BESTEN UND RICHTIG BAUT — empfohlene Arbeitsweise und Do's & Don'ts. NICHT was schiefgeht (Bugs getrennt), sondern "so macht man es richtig": passende Transport-Wahl (stdio vs SSE), sauberes Tool-Schema-Design (klare Beschreibungen, enge Typen), korrekte Fehler-Propagation, .mcp.json mit absoluten Pfaden, Cross-Platform-tauglicher Start, sinnvolle Tool-Granularitaet.
 
-Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/projekt-code/claude-tooling/best-practices-mcp-server.md und koppele wechselseitig mit bugs/claude-tooling/mcp-server.md. Am Ende committen und pushen.
+Projekt ~/proggs/mcp-code-search. Speichere unter best-practices/claude-tooling/mcp-server.md und koppele wechselseitig mit bugs/claude-tooling/mcp-server.md. Am Ende committen und pushen.
 ```
 
 ---

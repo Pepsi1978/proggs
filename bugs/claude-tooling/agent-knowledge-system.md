@@ -37,7 +37,7 @@
 
 ## 🔗 Bezugs-Tabelle: Bug-Almanach ↔ Best-Practice
 
-> Zweite Seite der Medaille: `best-practices/projekt-code/claude-tooling/best-practices-agent-knowledge-system.md`
+> Zweite Seite der Medaille: `best-practices/claude-tooling/agent-knowledge-system.md`
 > sagt, wie man so ein System von vornherein RICHTIG baut.
 
 | Bug-Abschnitt (diese Datei) | Best-Practice-Gegenpart |

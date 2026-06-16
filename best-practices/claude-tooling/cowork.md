@@ -4,8 +4,8 @@
 > agentische Architektur von Claude Code ohne Terminal in die Desktop-App — für nicht-programmierende
 > Wissensarbeit. Diese Datei ist die "richtige Seite der Medaille": *wie man Cowork von vornherein
 > richtig nutzt*. Das Gegenstück im Bug-Almanach existiert inzwischen:
-> [`bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (allgemein) und
-> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md)
+> [`bugs/claude-tooling/cowork.md`](../../bugs/claude-tooling/cowork.md) (allgemein) und
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../bugs/claude-tooling/cowork-scheduled-tasks.md)
 > (geplante/wiederkehrende Aufgaben — Gegenseite zu §5 dieser Datei).
 >
 > **Status:** Cowork startete Januar 2026 als Research Preview; die Produktseite nennt es inzwischen
@@ -52,8 +52,8 @@
 
 > Zweite Seite der Medaille: Der Bug-Almanach sagt *was schiefgeht und wie man es umgeht*, diese
 > Datei *wie man Cowork von vornherein richtig nutzt*. Gegenstücke:
-> [`bugs/claude-tooling/cowork.md`](../../../bugs/claude-tooling/cowork.md) (allgemein) und
-> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md) (geplante Aufgaben).
+> [`bugs/claude-tooling/cowork.md`](../../bugs/claude-tooling/cowork.md) (allgemein) und
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../bugs/claude-tooling/cowork-scheduled-tasks.md) (geplante Aufgaben).
 
 | Best-Practice (diese Datei) | Bug-Gegenpart im Almanach |
 |---|---|
@@ -143,7 +143,7 @@
 ## 5. Geplante Aufgaben & Live-Artefakte
 
 > **Tiefen-Almanach (Gegenseite, Bezugstabelle dort am Ende):**
-> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md)
+> [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../bugs/claude-tooling/cowork-scheduled-tasks.md)
 > (Stand 2026-06-15). Kernregeln: System bewusst wählen (Cloud-Routine für Zuverlässigkeit ohne wachen
 > PC, Local Task für lokale Dateien, `/loop` nur in offener Session) · Zeit-Guardrails gegen Catch-up ·
 > keine High-Frequency-Cron (Boot-Loop-Risiko) · nach Anlegen „Run now" + „always allow" · ersten

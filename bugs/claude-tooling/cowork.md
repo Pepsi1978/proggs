@@ -19,7 +19,7 @@
 > anthropic.com) = Grundwahrheit. GitHub-Issues im offiziellen Repo zählen als nahe-offiziell
 > (Anthropic-Tracker), sind aber Nutzer-Einreichungen. Community/Presse = `extern` (sekundär).
 >
-> **Gegenseite (Best Practices):** `best-practices/projekt-code/claude-tooling/best-practices-cowork.md`
+> **Gegenseite (Best Practices):** `best-practices/claude-tooling/cowork.md`
 > (wechselseitige Bezugstabelle ganz unten).
 
 ---
@@ -948,7 +948,7 @@ Skill-Mount-/Upload-Bugs (§6.1 KRITISCH, §6.2, §6.4, §6.5, §6.7, §6.8, §6
 
 ## 13. Bezugstabelle ↔ Best Practices
 
-`best-practices/projekt-code/claude-tooling/best-practices-cowork.md` ist die Gegenseite (wie man es von
+`best-practices/claude-tooling/cowork.md` ist die Gegenseite (wie man es von
 vornherein richtig macht). Wechselseitige Zuordnung:
 
 | Bug-Abschnitt (dieser Almanach) | Best-Practice-Abschnitt (best-practices-cowork.md) |

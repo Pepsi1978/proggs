@@ -7,7 +7,7 @@
 >
 > Die generalisierbaren Erkenntnisse sind als Wissen persistiert:
 > `bugs/claude-tooling/agent-knowledge-system.md` (Fallen) +
-> `best-practices/projekt-code/claude-tooling/best-practices-agent-knowledge-system.md` (richtige Bauweise).
+> `best-practices/claude-tooling/agent-knowledge-system.md` (richtige Bauweise).
 > Dieses Dokument haelt den konkreten **Ist-Zustand** + **Maßnahmen-Backlog** fest.
 
 ---
@@ -82,6 +82,6 @@ ganze System für Subagenten unsichtbar macht. Kurz: stark gegen Bugs, schwach b
 
 ## Verweise
 - Wissen (Fallen): `bugs/claude-tooling/agent-knowledge-system.md`
-- Wissen (Bauweise): `best-practices/projekt-code/claude-tooling/best-practices-agent-knowledge-system.md`
+- Wissen (Bauweise): `best-practices/claude-tooling/agent-knowledge-system.md`
 - Coverage-Self-Test: `bugs/check-guard-coverage.py` · Kopplungs-Check: `bugs/check-coupling.py`
 - Systemverhalten: `bugs/SYSTEM.md` · Verhaltensregel: `~/.claude/rules/known-bugs-before-coding.md`

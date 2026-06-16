@@ -801,7 +801,7 @@ waren teils irrefuehrend (mehrere Researcher meldeten Versionen, die gh widerleg
 
 ## 🔗 Bezug zu Best-Practices (Praevention, „wie macht man es richtig")
 
-Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/projekt-code/claude-tooling/best-practices-claude-hooks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-claude-hooks.md)
+Dedizierte Gegenseite (seit 2026-06-15): [`best-practices/claude-tooling/claude-hooks.md`](../../best-practices/claude-tooling/claude-hooks.md)
 — Almanach-gekoppelter Digest, damit der `bug-almanac-guard` fuer diesen Stufe-C-Bereich auch die
 Best-Practices-Lektuere erzwingt (erst Almanach, dann Best Practices). Ausfuehrlicher Harness-Volltext
 (alle 32 Events, JSON-Schema, Timeouts): [`best-practices/01-hooks/best-practices.md`](../../best-practices/01-hooks/best-practices.md).

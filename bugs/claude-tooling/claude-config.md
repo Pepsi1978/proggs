@@ -386,7 +386,7 @@ utf-8 ohne BOM schreiben) — NICHT per Edit/Write-Tool (triggert den Formatter 
 
 ## 10. Kopplung zur Best-Practices-Seite (zwei Seiten einer Medaille)
 
-**Dediziertes Gegenstueck (seit 2026-06-07):** `best-practices/projekt-code/claude-tooling/best-practices-claude-config.md`
+**Dediziertes Gegenstueck (seit 2026-06-07):** `best-practices/claude-tooling/claude-config.md`
 — spiegelgleich abgelegt, damit der `bug-almanac-guard` nach dem Lesen DIESES Almanachs automatisch
 auch die Best-Practices-Seite erzwingt (erst Almanach, dann Best Practices). Dort steht "wie macht man
 es von vornherein richtig" inkl. **Entscheidungsbaum** (CLAUDE.md vs. rule vs. Hook vs. Skill vs.

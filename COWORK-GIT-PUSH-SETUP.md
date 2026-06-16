@@ -5,7 +5,7 @@
 >
 > **Recherche-Stand:** 2026-06-15, 7 parallele Researcher (offizielle Anthropic-/GitHub-Doku +
 > GitHub-Issues + Reverse-Engineering-Analysen). Siehe auch `bugs/claude-tooling/cowork.md`
-> (Volltext) und `best-practices/projekt-code/claude-tooling/best-practices-cowork.md`.
+> (Volltext) und `best-practices/claude-tooling/cowork.md`.
 
 ---
 

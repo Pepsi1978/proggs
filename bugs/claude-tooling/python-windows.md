@@ -53,7 +53,7 @@
 
 ## 🔗 Bezugs-Tabelle: Bug-Almanach ↔ Best-Practice
 
-> Zweite Seite der Medaille: `best-practices/projekt-code/claude-tooling/best-practices-python-windows.md` sagt
+> Zweite Seite der Medaille: `best-practices/claude-tooling/python-windows.md` sagt
 > *wie man es von vornherein richtig macht, damit der Bug gar nicht erst entsteht*.
 
 | Bug-Abschnitt (diese Datei) | Best-Practice-Gegenpart in `best-practices/projekt-code/claude-tooling/python-windows/` |

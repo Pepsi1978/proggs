@@ -20,7 +20,7 @@
 > anthropic.com) = Grundwahrheit. GitHub-Issues im offiziellen Repo = nahe-offiziell (Anthropic-Tracker,
 > aber Nutzer-Einreichungen). Community/Presse = `extern` (sekundär).
 >
-> **Gegenseite (Best Practices):** [`best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md) (dedizierte Gegenseite, Bezugstabelle ganz unten; Kurzfassung auch in `best-practices-cowork.md` §5).
+> **Gegenseite (Best Practices):** [`best-practices/claude-tooling/cowork-scheduled-tasks.md`](../../best-practices/claude-tooling/cowork-scheduled-tasks.md) (dedizierte Gegenseite, Bezugstabelle ganz unten; Kurzfassung auch in `best-practices-cowork.md` §5).
 
 ---
 
@@ -423,7 +423,7 @@ per-routine/per-account-Stundencaps. **Ausnahme:** einmalige (One-off-)Cloud-Lä
 
 ## 🔗 Bezug zur Best-Practices-Gegenseite
 
-Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-scheduled-tasks.md) (dedizierte Gegenseite). Links die *Falle*, rechts die *Regel, die sie verhindert*.
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/claude-tooling/cowork-scheduled-tasks.md`](../../best-practices/claude-tooling/cowork-scheduled-tasks.md) (dedizierte Gegenseite). Links die *Falle*, rechts die *Regel, die sie verhindert*.
 
 | Bug-Abschnitt (dieser Almanach) | Adressiert durch Best-Practice (best-practices-cowork-scheduled-tasks.md) |
 |---------------------------------|--------------------------------------------------------------|

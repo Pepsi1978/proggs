@@ -143,7 +143,7 @@ passenden Almanach lesen und sein Wissen nutzen — nicht aus dem Gedaechtnis ar
 | Ich aendere … | Zuerst lesen |
 |---------------|--------------|
 | Einen Hook (`*.ps1`/`*.sh`) | `bugs/claude-tooling/claude-hooks.md` |
-| CLAUDE.md, Regel, Settings, Skill, Command, Agent | `bugs/claude-tooling/claude-config.md` + `best-practices/projekt-code/claude-tooling/best-practices-claude-config.md` |
+| CLAUDE.md, Regel, Settings, Skill, Command, Agent | `bugs/claude-tooling/claude-config.md` + `best-practices/claude-tooling/claude-config.md` |
 | Einen MCP-Server | `bugs/claude-tooling/mcp-server.md` |
 | Ein Python-Hilfsskript | `bugs/claude-tooling/python-windows.md` |
 

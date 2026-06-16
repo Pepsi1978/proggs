@@ -1,6 +1,6 @@
 # MCP-Server-Bau — Best Practices (Stand 2026-06-03, MCP TS-SDK 1.27.1 im Projekt / 1.29.0 neueste, Spec 2025-11-25)
 
-> **Die "richtige Seite der Medaille" zum Bug-Almanach [`~/proggs/bugs/claude-tooling/mcp-server.md`](../../../bugs/claude-tooling/mcp-server.md).**
+> **Die "richtige Seite der Medaille" zum Bug-Almanach [`~/proggs/bugs/claude-tooling/mcp-server.md`](../../bugs/claude-tooling/mcp-server.md).**
 > Dort steht *was schiefgeht und wie man es umgeht* — hier steht *wie man einen MCP-Server
 > von vornherein RICHTIG baut, damit der Bug gar nicht erst entsteht*. Die wechselseitige
 > Abschnitts-Bezugstabelle steht unten ("Kopplung zum Bug-Almanach").
@@ -479,7 +479,7 @@ Konkrete Anwendung dieser Best-Practices auf den eigenen Server (3 Tools, stdio,
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/claude-tooling/mcp-server.md`](../../../bugs/claude-tooling/mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/claude-tooling/mcp-server.md`](../../bugs/claude-tooling/mcp-server.md). Die identische Tabelle steht auch dort. Links die *richtige Arbeitsweise*, rechts die *Falle, die sie verhindert*.
 
 | Best-Practice-Abschnitt (hier) | Zugehoeriger Bug-Almanach-Abschnitt (`bugs/claude-tooling/mcp-server.md`) |
 |--------------------------------|------------------------------------------------------------|

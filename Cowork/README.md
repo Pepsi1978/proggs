@@ -42,5 +42,5 @@ auf GitHub sichtbar; weitere Dateien (ZIPs, `skills-src/`) werden ganz normal mi
 
 - Push-Setup aus der Sandbox: `../scripts/COWORK-PUSH-SETUP.md` · Wrapper: `../cowork-git.sh`
 - Cowork-Regeln: `../bugs/claude-tooling/cowork.md` · `../bugs/claude-tooling/cowork-git-push.md`
-- Best Practices: `../best-practices/projekt-code/claude-tooling/best-practices-cowork.md`
+- Best Practices: `../best-practices/claude-tooling/cowork.md`
 - CLI-Originale der Skills: `~/.claude/skills/bug-almanach-recherche/`, `~/.claude/skills/best-practices/`

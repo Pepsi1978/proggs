@@ -9,7 +9,7 @@
 > Remote GitHub (HTTPS-Token). Quelle der Wahrheit ist origin/main.
 > **Schwester-Dokumente:** `bugs/claude-tooling/cowork.md` §10a (Git-Abschnitt) ·
 > Regel `~/.claude/rules/cowork-git-push.md` · Best-Practices
-> `best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md`.
+> `best-practices/claude-tooling/cowork-git-push.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -248,7 +248,7 @@ durch eine git-Version behoben, sondern durch das Workaround-Skript `cowork-git.
 VM-Platte + Datenverlust-Wächter + git-internes Commit-Bauen). gh-CLI stand in der VM nicht zur
 Verfügung → Issue-Status aus den verlinkten Quellen, nicht per `gh` hart verifiziert.
 
-## Bezug: Bug-Abschnitt ↔ Best-Practice (`best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md`)
+## Bezug: Bug-Abschnitt ↔ Best-Practice (`best-practices/claude-tooling/cowork-git-push.md`)
 
 | Bug-Abschnitt | Best-Practice |
 |---------------|---------------|
@@ -282,7 +282,7 @@ erhaelt fremde Commits; echter Konflikt bricht sauber ab; Datenverlust-Waechter 
 
 ## 🔗 Bezug zur Best-Practices-Gegenseite
 
-Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md`](../../best-practices/projekt-code/claude-tooling/best-practices-cowork-git-push.md). Die identische Tabelle steht auch dort. Links der *Bug/die Falle*, rechts die *Regel, die sie verhindert*.
+Bug-Almanach (diese Datei) ↔ Best-Practices [`best-practices/claude-tooling/cowork-git-push.md`](../../best-practices/claude-tooling/cowork-git-push.md). Die identische Tabelle steht auch dort. Links der *Bug/die Falle*, rechts die *Regel, die sie verhindert*.
 
 | Bug-Abschnitt (dieser Almanach) | Adressiert durch Best-Practice-Regel |
 |---------------------------------|--------------------------------------|

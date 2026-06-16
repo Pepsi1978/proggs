@@ -8,7 +8,7 @@
 > Desktop-Redesign 14.04.2026; Claude-Code-Engine **2.1.x** (lokal 2.1.170 ermittelt),
 > Desktop-App-Versionsschema **1.x** (Pane-Features ab v1.2581.0). Quelle der
 > Grundwahrheit: offizielle Doku `code.claude.com/docs/en/desktop` + `support.claude.com`;
-> Issues aus `github.com/anthropics/claude-code`. Gegenseite: `best-practices/projekt-code/claude-tooling/best-practices-claude-code-desktop-vs-cli.md`.
+> Issues aus `github.com/anthropics/claude-code`. Gegenseite: `best-practices/claude-tooling/claude-code-desktop-vs-cli.md`.
 
 ---
 
@@ -576,7 +576,7 @@
 
 ## §M — Bezug zur Best-Practices-Gegenseite
 
-Gegenseite: `best-practices/projekt-code/claude-tooling/best-practices-claude-code-desktop-vs-cli.md`.
+Gegenseite: `best-practices/claude-tooling/claude-code-desktop-vs-cli.md`.
 
 | Bug-Abschnitt (hier) | Best-Practice-Abschnitt (dort) |
 |----------------------|-------------------------------|

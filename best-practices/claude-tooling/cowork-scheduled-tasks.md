@@ -1,6 +1,6 @@
 # Cowork — Geplante & wiederkehrende Aufgaben — Best Practices (Stand 2026-06-15)
 
-> Die „richtige Seite der Medaille" zu [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md):
+> Die „richtige Seite der Medaille" zu [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../bugs/claude-tooling/cowork-scheduled-tasks.md):
 > *wie man geplante/wiederkehrende Aufgaben (Scheduled Tasks / Routines / `/loop`) in Cowork von
 > vornherein RICHTIG anlegt und betreibt*. Während der Almanach sagt *was schiefgeht*, sagt diese
 > Datei *wie man es gut macht*.
@@ -242,7 +242,7 @@
 
 ## 🔗 Bezug zur Bug-Almanach-Gegenseite
 
-Best-Practices (diese Datei) ↔ Bug-Almanach [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../../bugs/claude-tooling/cowork-scheduled-tasks.md). Links die *Regel, die es richtig macht*, rechts die *Falle, die sie verhindert*.
+Best-Practices (diese Datei) ↔ Bug-Almanach [`bugs/claude-tooling/cowork-scheduled-tasks.md`](../../bugs/claude-tooling/cowork-scheduled-tasks.md). Links die *Regel, die es richtig macht*, rechts die *Falle, die sie verhindert*.
 
 | Best-Practice-Abschnitt (diese Datei) | Verhindert Bug/Falle (Almanach-Abschnitt) |
 |---------------------------------------|-------------------------------------------|
