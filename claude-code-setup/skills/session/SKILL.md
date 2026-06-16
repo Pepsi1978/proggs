@@ -129,6 +129,23 @@ cp "$HOME/.claude/session-backup.md" "$HOME/proggs/.claude/session-backup.md"
 - **KEIN Write-Tool** → das hat bei existierenden Dateien einen Read-Zwang erzwungen (2-3
   ueberfluessige Tool-Calls). Hier nicht noetig.
 
+**SOFORT nach dem Schreiben verifizieren (PFLICHT — kein stiller Datenverlust):** Ein
+fehlgeschlagenes Heredoc (Delimiter taucht im Text auf, volle Platte, abgebrochener Schreibvorgang)
+wuerde ein LEERES oder abgeschnittenes Backup hinterlassen — und nach `/clear` waere die Arbeit
+unwiederbringlich weg. Darum BEVOR irgendein Erfolgs-Marker kommt kurz pruefen, dass BEIDE Dateien
+plausibel gefuellt sind:
+
+```bash
+for f in "$HOME/.claude/session-backup.md" "$HOME/proggs/.claude/session-backup.md"; do
+  if [ ! -s "$f" ] || ! grep -q "Session Handoff" "$f"; then echo "BACKUP KAPUTT: $f"; fi
+  echo "$f: $(wc -l < "$f") Zeilen"
+done
+```
+
+Schlaegt die Pruefung an (leer / Ueberschrift "Session Handoff" fehlt / verdaechtig wenige Zeilen):
+NICHT den Erstellt-Marker zeigen und NICHT `/clear` empfehlen — dem Benutzer melden und das Schreiben
+wiederholen. Erst wenn beide Dateien plausibel gefuellt sind, weiter.
+
 ### Schritt 2b: Grossen uncommitteten Diff auslagern (NUR wenn der Diff gross ist)
 
 Ist der uncommittete Diff zu gross fuer die Notiz (Richtwert ~120+ Zeilen / mehrere Dateien),
@@ -177,7 +194,9 @@ git rebase --continue && git push
 
 ### Schritt 4: Disketten-Marker zeigen
 
-Gib EXAKT dieses Format aus (Linien sind je 80 Zeichen `━`):
+NUR wenn die Verifikation (Ende Schritt 2) bestanden hat — bei kaputtem/leerem Backup stattdessen
+warnen und das Schreiben wiederholen, NICHT diesen Marker zeigen. Gib EXAKT dieses Format aus
+(Linien sind je 80 Zeichen `━`):
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
