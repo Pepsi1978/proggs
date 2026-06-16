@@ -826,7 +826,7 @@
 Bug-Almanach (diese Datei) <-> Best-Practices `~/proggs/best-practices/web/typescript.md`.
 Die identische Tabelle steht auch dort.
 
-| Best-Practice-Abschnitt (`best-practices/.../typescript/`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
+| Best-Practice-Abschnitt (`best-practices/web/typescript.md`) | Zugehoeriger Bug-Almanach-Abschnitt (hier) |
 |------------------------------------------------------------|--------------------------------------------|
 | **A — Strikte tsconfig & Compiler-Strenge** | **A** (TS-6.0 Defaults), **B** (Deprecations), **D24-D39** (Typ-Fallen / fehlende Strict-Flags / skipLibCheck) |
 | **B — Sauberes ESM-Setup + package.json** | **C** (ESM vs CommonJS #15-23), **G69** (require(esm) default), **J90** (exports-Reihenfolge) |

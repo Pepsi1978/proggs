@@ -75,7 +75,7 @@ Zwei Seiten derselben Medaille: dieser Almanach sagt *was schiefgeht und wie man
 [`best-practices/android/android-platform.md`](../../best-practices/android/android-platform.md)
 sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort ihre Praevention.
 
-| Bug-Sektion (hier) | Praevention in `best-practices/.../android-platform/best-practices.md` |
+| Bug-Sektion (hier) | Praevention in `best-practices/android/android-platform.md` |
 |--------------------|------------------------------------------------------------------------|
 | §1 Lifecycle/Process-Death/Leaks (1.1–1.11) | §2 Lifecycle-sicheres Arbeiten (Grundlage: §1 Architektur) |
 | §2 Runtime-Permissions (2.1–2.10) | §6 Moderner Permission-Flow |

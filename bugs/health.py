@@ -6,7 +6,8 @@ Buendelt die einzelnen Selbsttests in EINEN Lauf:
   1. check-coupling.py        — Almanach <-> Best-Practices-Kopplung (Bezugstabellen)
   2. check-guard-coverage.py  — jeder Almanach vom bug-almanac-guard erzwungen?
   3. check-version-anchor.py  — software-gebundene Almanache: Anker-Feld da + Live-Version passt?
-  4. Stand-Verfall            — Almanache, deren 'Stand:'-Datum zu alt ist (Re-Recherche faellig)
+  4. check-dead-paths.py      — tote Pfad-Erwaehnungen (Links UND Backtick-Pfade) in bugs/+best-practices/
+  5. Stand-Verfall            — Almanache, deren 'Stand:'-Datum zu alt ist (Re-Recherche faellig)
 
 Rein lesend — aendert NICHTS. Endet IMMER mit exit 0 (blockiert nirgends eine Session).
 Aufrufbar manuell (`python bugs/health.py`) ODER aus einem Hook (SessionStart/PreCommit):
@@ -46,7 +47,7 @@ def run_subcheck(script):
         lines = [l for l in out.splitlines() if l.strip()]
         problems = [l for l in lines if re.search(
             r"(LUECKEN|FEHLER|FEHLT|MISMATCH|DRIFT|ANKER)\s*:?\s*[1-9]"
-            r"|\b[1-9]\d*\s+(Drift|Luecke|Fehler|Fall|Faell|Mismatch|Anker-Problem)"
+            r"|\b[1-9]\d*\s+(Drift|Luecke|Fehler|Fall|Faell|Mismatch|Anker-Problem|tote)"
             r"|\[LUECKE\]|\[FEHLT\]|\[!\]|✗", l, re.I)]
         tail = lines[-1] if lines else "(keine Ausgabe)"
         ok = (r.returncode == 0) and not problems
@@ -89,7 +90,7 @@ def main():
     report = []
     problems = 0
 
-    for script in ("check-coupling.py", "check-guard-coverage.py", "check-version-anchor.py"):
+    for script in ("check-coupling.py", "check-guard-coverage.py", "check-version-anchor.py", "check-dead-paths.py"):
         ok, summary = run_subcheck(script)
         report.append(("ok" if ok else ("warn" if ok is False else "skip"), summary))
         if ok is False:

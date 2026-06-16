@@ -707,7 +707,7 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 Zweite Seite der Medaille: [`best-practices/android/jetpack-compose.md`](../../best-practices/android/jetpack-compose.md)
 sagt, wie man jeden dieser Bugs von vornherein vermeidet. Pro Bug-Abschnitt der passende Praeventions-Abschnitt:
 
-| Bug-Abschnitt (DIESE Datei) | Praevention in `best-practices/.../jetpack-compose/best-practices.md` |
+| Bug-Abschnitt (DIESE Datei) | Praevention in `best-practices/android/jetpack-compose.md` |
 |------------------------------|------------------------------------------------------------------------|
 | §1 Recomposition & Stabilitaet (1.1–1.6) | §2 Stabilitaet & Recomposition / Skippability |
 | §2 State & `remember` (2.1–2.13) | §3 State & `remember`/`rememberSaveable`/`derivedStateOf`; §2.12/§2.13 → §1 Architektur & UDF |
