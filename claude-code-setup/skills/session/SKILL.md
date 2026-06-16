@@ -196,7 +196,28 @@ done
 [ -n "$newer" ] && echo "Neuestes Backup: $newer" || echo "Kein Backup vorhanden"
 ```
 
-### Schritt 2: Kontext laden und fortsetzen
+### Schritt 2: Drift-Pruefung — passt der Stand noch zum Backup?
+
+Bevor du blind weiterarbeitest, kurz pruefen, ob sich seit dem Backup etwas verschoben hat
+(parallele Sessions, anderer Rechner, fremde Pushes). Sonst arbeitest du an einem Stand weiter, den
+es so nicht mehr gibt:
+
+- **Genannte Dateien noch da?** Existieren die unter "Relevante Dateien" und im Wiedereinstiegspunkt
+  genannten Pfade noch? (Fehlt eine, wurde sie evtl. verschoben/geloescht/umbenannt.)
+- **git-Stand passt?** `git -C "$HOME/proggs" log --oneline -3` und den aktuellen Branch
+  (`git -C "$HOME/proggs" branch --show-current`) mit dem "Anker"-Block im Backup vergleichen. Sind
+  seither viele fremde Commits dazugekommen oder ist der Branch ein anderer, kann der
+  Wiedereinstiegspunkt veraltet sein.
+- **Uncommitteter Stand noch da?** Falls das Backup einen "Uncommitteter Arbeitsstand" enthielt:
+  ist der beschriebene halbfertige Edit noch im Working Tree (`git -C "$HOME/proggs" status --short`),
+  oder wurde er zwischenzeitlich committed/verworfen?
+
+Bei erkanntem Drift NICHT einfach weitermachen: dem Benutzer in 1-2 Saetzen melden, was abweicht
+(z.B. "Datei X fehlt jetzt" / "12 fremde Commits seit dem Backup" / "der halbfertige Edit ist nicht
+mehr im Working Tree"), und kurz abstimmen, wie fortgesetzt wird. Passt alles, direkt weiter mit dem
+naechsten Schritt.
+
+### Schritt 3: Kontext laden und fortsetzen
 
 Lies die gewaehlte Datei vollstaendig, verinnerliche Ziel, Status, naechste Schritte und
 besonders die fehlgeschlagenen Ansaetze. **Ist der Abschnitt "Laufende/unterbrochene Aufgabe"
@@ -206,7 +227,7 @@ Benutzer in 3-4 Saetzen zusammen, wo ihr steht (inkl. an welchem Schritt zuletzt
 wurde), und mach dann genau dort weiter. Ist der Abschnitt leer/nicht vorhanden, beginne mit dem
 ersten "Naechsten Schritt".
 
-### Schritt 3: Beide Backups leeren (und Repo-Leerung pushen)
+### Schritt 4: Beide Backups leeren (und Repo-Leerung pushen)
 
 Damit ein spaeterer Restore nie auf zwei verschiedene volle Versionen trifft, werden nach
 erfolgreichem Einlesen BEIDE Dateien geleert:
