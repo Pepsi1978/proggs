@@ -18,6 +18,50 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
 trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"; exit 0' ERR
 
+# Sonde (Direktive #2 Selbstbeobachtung): schreibt EINE JSON-Zeile pro Block/Pass nach
+# ~/.claude/state/bug-almanac-triggers.jsonl. Rein beobachtend — beeinflusst NIE die Entscheidung.
+# JSON-Schreiben per python3 (kein jq — claude-hooks §13.2/§16.2). Schreibt NUR in die Datei, NIE
+# auf stdout (sonst Session-Crash, §16.1). FAIL-OPEN via || true (set -e harmlos). Liest $input/$tool/$fp.
+add_almanac_trigger() {
+    # $1=event $2=block_type $3=slug $4=area $5=high_risk(0/1)
+    stateDir="$HOME/.claude/state"
+    mkdir -p "$stateDir" 2>/dev/null || true
+    jsonl="$stateDir/bug-almanac-triggers.jsonl"
+    if [ -f "$jsonl" ]; then
+        sz=$(wc -c < "$jsonl" 2>/dev/null || echo 0)
+        [ "${sz:-0}" -gt 5242880 ] && mv -f "$jsonl" "$jsonl.1" 2>/dev/null || true
+    fi
+    ALM_INPUT="$input" ALM_TOOL="$tool" ALM_FP="$fp" ALM_JSONL="$jsonl" \
+    python3 - "$1" "$2" "$3" "$4" "$5" <<'PYEOF' 2>/dev/null || true
+import json, sys, re, datetime, os
+ev, bt, slug, area, hr = sys.argv[1:6]
+try:
+    d = json.loads(os.environ.get('ALM_INPUT', '') or '{}')
+except Exception:
+    d = {}
+ti = d.get('tool_input') or {}
+ex = ti.get('content') or ti.get('new_string') or ''
+if not ex and ti.get('edits'):
+    ex = '\n'.join((e.get('new_string') or '') for e in ti['edits'])
+ex = ex[:300]
+for p in [r'gho_[A-Za-z0-9]{20,}', r'ghp_[A-Za-z0-9]{20,}', r'sk-[A-Za-z0-9]{20,}', r'AIza[A-Za-z0-9_\-]{20,}']:
+    ex = re.sub(p, '[REDACTED]', ex)
+ex = re.sub(r'''(?i)(token|key|secret|password)(["']?\s*[:=]\s*["'])[^"']+''', r'\1\2[REDACTED]', ex)
+o = {
+    'ts': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+    'event': ev, 'block_type': bt, 'slug': slug, 'area': area,
+    'tool': os.environ.get('ALM_TOOL', ''), 'file': os.environ.get('ALM_FP', ''),
+    'change_excerpt': ex, 'high_risk': (hr == '1'),
+    'session': d.get('session_id', '') or '',
+}
+try:
+    with open(os.environ['ALM_JSONL'], 'a', encoding='utf-8') as f:
+        f.write(json.dumps(o, ensure_ascii=False) + '\n')
+except Exception:
+    pass
+PYEOF
+}
+
 TMP="${TMPDIR:-/tmp}"
 input=$(cat)
 [ -n "$input" ] || exit 0
@@ -505,6 +549,7 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     stateDir="$HOME/.claude/state"
     mkdir -p "$stateDir" 2>/dev/null || true
     echo "$(date '+%Y-%m-%d %H:%M') $slug" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+    add_almanac_trigger block almanach-ungelesen "$slug" "$name" "$isHighRisk"
     if [ "$isHighRisk" -eq 1 ]; then
         reason="STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
     else
@@ -540,6 +585,7 @@ PYEOF
         stateDir="$HOME/.claude/state"
         mkdir -p "$stateDir" 2>/dev/null || true
         echo "$(date '+%Y-%m-%d %H:%M') $slug (stufe-c-volltext)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+        add_almanac_trigger block volltext-c "$slug" "$name" 1
         reason="STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '$name' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von $almRel ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
         python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
         exit 0
@@ -573,6 +619,7 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
                 stateDir="$HOME/.claude/state"
                 mkdir -p "$stateDir" 2>/dev/null || true
                 echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+                add_almanac_trigger block best-practices "$slug" "$name" "$isHighRisk"
                 reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
                 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
                 exit 0
@@ -585,6 +632,8 @@ fi
 if [ -f "$almanachPath" ]; then
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
+        bt="already-read"; [ "$disabled" -eq 1 ] && bt="disabled"
+        add_almanac_trigger pass "$bt" "$slug" "$name" "$isHighRisk"
         if [ "$disabled" -eq 1 ]; then
             msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel (+ Best Practices) freiwillig."
         else
@@ -604,6 +653,8 @@ if [ "$disabled" -eq 1 ] || [ -f "$ackMarker" ]; then
     # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
+        bt="ack"; [ "$disabled" -eq 1 ] && bt="disabled"
+        add_almanac_trigger pass "$bt" "$slug" "$name" 0
         if [ "$disabled" -eq 1 ]; then
             msg="BUG-ALMANACH-HINWEIS: Bereich '$name' ohne Almanach (bugs/$file) - Notaus aktiv, freigegeben."
         else
@@ -617,6 +668,7 @@ fi
 stateDir="$HOME/.claude/state"
 mkdir -p "$stateDir" 2>/dev/null || true
 echo "$(date '+%Y-%m-%d %H:%M') $slug (kein-almanach)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+add_almanac_trigger block kein-almanach "$slug" "$name" 0
 reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '$name', aber es gibt noch KEINEN Almanach (bugs/$file). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '$ackMarker' (touch) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen."
 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
 
