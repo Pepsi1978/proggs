@@ -11,8 +11,10 @@ Quellen unter `skills-src/`.
 | `bug-almanach-recherche.zip` | `bug-almanach-recherche` | Recherchiert bekannte Bugs/Workarounds einer Software (Researcher-Schwarm) und baut einen versionsbewussten Bug-Almanach. Inkl. `references/researcher-prompts.md`. |
 | `best-practices.zip` | `best-practices` | Pflegt Best Practices für Harness-Werkzeuge + Projekt-Software, holt den Claude-Code-Changelog verbatim. Inkl. `scripts/update-changelog.{sh,ps1}`. |
 | `research.zip` | `research` | Allgemeine, mehrquellige Web-Recherche zu einem Thema und persistiert wiederverwendbare Funde in `best-practices/` + Bug-Almanach. |
+| `almanach-update.zip` | `almanach-update` | Aktualisiert BESTEHENDE Bug-Almanache als Batch/Welle per Re-Recherche auf die aktuelle Software-Version (Wrapper um `bug-almanach-recherche`, legt keinen neuen Almanach an). |
+| `best-practices-update.zip` | `best-practices-update` | Aktualisiert BESTEHENDE Best-Practices als Welle (Harness + Projekt-Code gegen die Changelogs) und koppelt Bugs in die Almanache zurück (Wrapper um `best-practices`). |
 
-Alle drei sind **Cowork-tauglich** gebaut: relativer Ablage-Ort im verbundenen Arbeitsordner
+Alle fünf sind **Cowork-tauglich** gebaut: relativer Ablage-Ort im verbundenen Arbeitsordner
 (statt festem `~/proggs`-Pfad), Ordner-anlegen-Pflicht, Mount-Schreibfallen beachtet
 (Dateiende prüfen / git-intern), Abschluss über `bash ~/proggs/cowork-git.sh push-files`
 (Datenverlust-Wächter), und sie enthalten die neue **W3-Logik** (Versions-Anker,

@@ -1,39 +1,55 @@
 ---
 name: almanach-update
-description: >
-  Aktualisiert BESTEHENDE Bug-Almanache unter ~/proggs/bugs/<kategorie>/<bereich>.md als
-  BATCH/WELLE auf die jeweils aktuelle Software-Version (Re-Recherche, kein neuer Almanach).
-  Geht viele Almanache nacheinander durch, hebt jeden mit dem erprobten 7-Schritte-Ablauf
-  des bug-almanach-recherche-Skills auf den neuesten Stand und koppelt gefundene Bugs in die
-  Best-Practices zurueck. Nutze diesen Skill IMMER wenn der Benutzer sagt: "Almanache
-  aktualisieren", "Almanach-Update", "Re-Recherche-Welle", "Welle starten", "hebe die
-  Almanache auf die aktuelle Version", "aktualisiere alle Bugs", "aktualisiere die aeltesten
-  Almanache", "Almanach-Welle", "nur android-Almanache aktualisieren", "Almanach-Refresh",
-  "Bug-Almanache auf neuesten Stand bringen". Auch bei Varianten wie "die alten Almanache sind
-  veraltet, recherchier sie neu" oder "Stand-Verfall beheben". Optional fokussierbar auf eine
-  Kategorie oder Liste ("nur android", "nur kotlin + gradle"). Lege NIE einen neuen Almanach an
-  (dafuer: bug-almanach-recherche) — dieser Skill AKTUALISIERT nur Bestehendes. Primaer fuer
-  regelmaessige Wellen in Claude Cowork gedacht (bessere Limits), laeuft aber auch im CLI.
-invocation: user
+description: "Hebt BESTEHENDE Bug-Almanache als Batch/Welle per Re-Recherche auf die aktuelle Software-Version (7-Schritte-Ablauf, kein neuer Almanach). Trigger: Almanache aktualisieren, Almanach-Update, Welle."
 ---
 
-# Almanach-Update — Bug-Almanache als Welle auf den neuesten Stand heben
+# Almanach-Update (Cowork-Fassung) — Bug-Almanache als Welle auf den neuesten Stand heben
 
-## Zweck
+Diese Cowork-Fassung geht die BESTEHENDEN Bug-Almanache (`bugs/<kategorie>/<bereich>.md` im
+Arbeitsordner) systematisch durch und hebt jeden per Re-Recherche auf die aktuelle Software-Version
+— als wiederholbare **Welle**, nicht als Einzel-Recherche. Sie ist die Batch-Version von
+`bug-almanach-recherche`: pro Almanach derselbe erprobte 7-Schritte-Ablauf, aber über viele Almanache
+mit Auswahl-Logik und Wellen-Disziplin. **Sie legt NIE einen neuen Almanach an** (das macht
+`bug-almanach-recherche` mit Franks OK) — sie aktualisiert nur Bestehendes. Läuft in der
+**Claude-Cowork-Desktop-App** (bessere Limits, schont CLI-Token).
 
-Bug-Almanache veralten: Software entwickelt sich weiter, Fixes erscheinen, neue Fallen kommen
-dazu. Dieser Skill geht die BESTEHENDEN Almanache (`~/proggs/bugs/<kategorie>/<bereich>.md`)
-systematisch durch und hebt jeden per Re-Recherche auf die aktuelle Software-Version — als
-wiederholbare **Welle**, nicht als Einzel-Recherche.
+---
 
-Er ist die Batch-Version von `bug-almanach-recherche`: pro Almanach laeuft derselbe erprobte
-7-Schritte-Ablauf, aber ueber viele Almanache mit Auswahl-Logik und Wellen-Disziplin. **Er legt
-NIE einen neuen Almanach an** (das macht `bug-almanach-recherche` mit Franks OK) — er
-aktualisiert nur, was schon existiert.
+## 0. ZUERST LESEN — Ablage-Ort & Ordner anlegen (Cowork)
 
-> **Warum als eigener Skill / fuer Cowork:** Das regelmaessige Re-Recherchieren soll kuenftig in
-> **Claude Cowork** laufen (bessere Limits, schont Franks CLI-Token). Die Wellen-Logik ist hier
-> gekapselt und Cowork-tauglich (siehe Abschnitt „Cowork").
+**Alle Almanache liegen RELATIV im aktuell verbundenen Arbeitsordner** (üblicherweise der gemountete
+`proggs`-Ordner) — NICHT in einem fest verdrahteten `~/proggs`-Pfad. Struktur relativ zum Arbeitsordner:
+
+```
+bugs/
+├── README.md                         ← Index (Stand-Datum + Bug-Anzahl je Almanach)
+├── SYSTEM.md                         ← Almanach-System (Format, Anker §7, Hook-Mapping)
+├── health.py                         ← Self-Test (coupling, guard-coverage, version-anchor, dead-paths, Stand-Verfall)
+├── check-version-anchor.py           ← ANCHORS bei Live-Software
+└── <kategorie>/<bereich>.md          ← die zu aktualisierenden Almanache (android, web, claude-tooling, …)
+
+best-practices/<kategorie>/<software>.md   ← Rückkopplungs-Ziel (flach 1:1 wie bugs/, seit 2026-06-16)
+```
+
+**Ordner-anlegen ist Pflicht und erlaubt:** Fehlt eine Best-Practices-Datei zum Zurückspeisen → ERST
+anlegen (Datei-Werkzeug bzw. `mkdir -p`, falls Shell verfügbar), DANN schreiben. NIEMALS abbrechen,
+weil ein Ordner/eine Datei fehlt. Nennt der Benutzer einen anderen Basis-Ordner, dort hinein.
+
+## 0a. Cowork-Umgebung — Schreib- & Git-Fallen (PFLICHT beachten)
+
+> Volltext: `bugs/claude-tooling/cowork.md` + `bugs/claude-tooling/cowork-git-push.md` im Arbeitsordner.
+
+- **Mount-Schreibfalle:** Die Cowork-Mount-Brücke kann das **Dateiende abschneiden**. Nach JEDEM
+  Schreiben das Dateiende prüfen (`tail -1`, `wc -l`) ODER git-intern bauen. Besonders kritisch bei
+  langen Almanachen — den Datenverlust-Wächter im `cowork-git.sh` nutzen.
+- **~45s-Shell-Limit:** Ein Cowork-Shell-Aufruf läuft max ~45 Sekunden; Hintergrundprozesse überleben
+  den Wechsel zwischen Aufrufen NICHT. Die Arbeit pro Almanach in tragfähige Häppchen pro Aufruf
+  schneiden; jeder Git-/Script-Schritt muss in EINEM Aufruf durchlaufen. Researcher laufen als
+  **Agenten** (unkritisch, vom ~45s-Limit unberührt).
+- **Git NIEMALS nackt:** Aus Cowork IMMER über `bash ~/proggs/cowork-git.sh` committen/pushen (fängt
+  Mount-Fallen + Datenverlust-Wächter ab). NIE direktes `git commit`/`git push`.
+
+---
 
 ## Schritt 0 — Auswahl: welche Almanache sind dran?
 
@@ -80,7 +96,7 @@ Wellen-spezifische Praezisierungen:
 6. **Ins System einhaengen:** `bugs/README.md` (Stand-Datum + Bug-Anzahl), `check-version-anchor.py`-`ANCHORS`
    bei Live-Software, `bug-almanac-hint.py`-`AREAS` nur bei neuen Stichwoertern, Hook-Mapping nur bei neuem Dateimuster.
 7. **Self-Test + Commit:** `python bugs/health.py` — alle Checks gruen (coupling, guard-coverage, version-anchor,
-   dead-paths, Stand-Verfall) —, DANN committen+pushen pro Almanach (eigene Pfade namentlich).
+   dead-paths, Stand-Verfall) —, DANN committen+pushen pro Almanach (eigene Pfade namentlich, über `cowork-git.sh`).
 
 ## Schritt 2 — Wellen-Disziplin
 
@@ -91,17 +107,6 @@ Wellen-spezifische Praezisierungen:
 - **Continuation bei Crash:** stuerzt ein Researcher ab → 429-Backoff, neu starten; kommt er nicht durch →
   Continuation-Researcher am Checkpoint. Nie still aufgeben.
 
-## Cowork (wenn der Skill in Claude Cowork laeuft)
-
-Siehe `~/.claude/rules/cowork-git-push.md`. Kernpunkte:
-- **Git NIE nackt:** IMMER `bash ~/proggs/cowork-git.sh push-files "#NNN - Text" <datei...>` (gezielt) bzw.
-  zuerst `bash ~/proggs/cowork-git.sh setup` ("Push-Zugang OK" abwarten). Das Skript faengt die Mount-Fallen
-  (Lock/BOM/LFS/Symlink/Build-Berge) + Datenverlust-Waechter ab.
-- **~45s pro Cowork-Shell-Aufruf, Hintergrundprozesse ueberleben den Wechsel NICHT** → die Arbeit pro Almanach
-  in tragfaehige Haeppchen pro Aufruf schneiden. (Researcher laufen als Agenten, nicht als Shell-Hintergrund — das ist ok.)
-- **Mount-Schreiben kann abgeschnitten sein** → nach dem Schreiben Dateiende pruefen (`tail -1`, `wc -l`) ODER
-  git-intern bauen. Den Datenverlust-Waechter im `cowork-git.sh` nutzen.
-
 ## Abgrenzung
 
 - **Neuer Almanach noetig** (Bereich hat noch keinen) → NICHT dieser Skill, sondern `bug-almanach-recherche` (mit Franks OK).
@@ -111,3 +116,29 @@ Siehe `~/.claude/rules/cowork-git-push.md`. Kernpunkte:
 ## Offene Almanache aus Welle 3 (Stand der Spec, falls noch nicht nachgeholt)
 kotlin · jetpack-compose · gradle · firebase-billing (jeweils Stand 2026-06-02) — beim Default-Lauf
 „aelteste zuerst" kommen diese zuerst dran.
+
+## Sichern (Cowork-Git)
+Git-Repo verbunden → committen + pushen über das Cowork-Skript (nur die eigenen Pfade namentlich):
+```bash
+bash ~/proggs/cowork-git.sh setup                 # warten auf "Push-Zugang OK"
+bash ~/proggs/cowork-git.sh push-files "#NNN - almanach-update <bereich>: re-recherchiert auf Stand JJJJ-MM-TT" \
+  bugs/<kategorie>/<bereich>.md bugs/README.md best-practices/<kategorie>/<software>.md
+```
+Kein Git-Repo → nur speichern und dem Benutzer den Ablage-Pfad nennen.
+
+## Was NIEMALS passieren darf
+- Einen NEUEN Almanach anlegen (das ist `bug-almanach-recherche` mit Franks OK) — dieser Skill aktualisiert nur Bestehendes.
+- Den Fix-Status NUR aus Researcher-Web-Snippets übernehmen, statt ihn HART per `gh` zu verifizieren.
+- Die Best-Practices-Rückkopplung oder die Bezugs-Tabellen (🔗) vergessen.
+- Kurzcheck-Tabelle ODER Volltext eines Bugs weglassen — IMMER beide pflegen.
+- Mehr als 7 Researcher gleichzeitig starten (RPM-Absturz ab ~12); Researcher per Workflow statt Agent-Tool laufen lassen.
+- Findings an einem künstlichen Cap abschneiden (lossy) — alle Funde dokumentieren.
+- Aus Cowork mit nacktem `git commit`/`git push` arbeiten (immer `cowork-git.sh`).
+- Nach dem Schreiben das Dateiende NICHT prüfen (Mount-Truncation übersehen).
+
+## Referenzen
+- Skill `bug-almanach-recherche` — der erprobte 7-Schritte-Ablauf pro Almanach (NICHT duplizieren, referenzieren).
+- Schwester-Skill `best-practices-update` — aktualisiert Best-Practices statt Bugs.
+- `bugs/SYSTEM.md`, `bugs/health.py`, `bugs/README.md` — Almanach-System + Self-Test + Index im Arbeitsordner.
+- `best-practices/SYSTEM.md` — flache 1:1-Struktur der Best-Practices (Rückkopplungs-Ziel).
+- Cowork-Regeln: `bugs/claude-tooling/cowork.md`, `bugs/claude-tooling/cowork-git-push.md`.
