@@ -153,7 +153,12 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
 
     # Duplikat-Check: Gleicher Fehler in den letzten 24h schon geschrieben?
     $isDuplicate = $false
-    $errorHash = ($errorText.Substring(0, [math]::Min(100, $errorText.Length))).GetHashCode()
+    # Stabiler MD5-Hash (hex) — GetHashCode() ist in PowerShell pro Prozess randomisiert, womit der
+    # Cross-Session-Dedup ueber error_hash frueher nutzlos war (.sh nutzt md5sum -> jetzt paritaetisch).
+    $hashInput = $errorText.Substring(0, [math]::Min(100, $errorText.Length))
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    $errorHash = ([System.BitConverter]::ToString($md5.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($hashInput))) -replace '-', '').ToLower()
+    $md5.Dispose()
 
     if (Test-Path $bugCasesPath) {
         $recentLines = Get-Content $bugCasesPath -Tail 10 -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -185,8 +190,8 @@ if ($matchedCase -and $matchedScore -ge 0.5) {
             auto_captured = $true
         }
 
-        # Atomar schreiben (Temp-File + Rename-Append)
-        $tempFile = Join-Path (Split-Path $bugCasesPath) "bug-cases-temp-$([guid]::NewGuid().ToString('N').Substring(0,8)).jsonl"
+        # JSONL-Append einer einzelnen Zeile: Add-Content genuegt (kein temp+rename noetig).
+        # Frueher stand hier ein irrefuehrender "Atomar"-Kommentar + eine ungenutzte $tempFile-Variable.
         $jsonLine = $newCase | ConvertTo-Json -Compress
 
         try {
