@@ -265,8 +265,11 @@ fun GewohnheitBoardScreen(
                     items(displayed, key = { it.key }) { item ->
                         when (item) {
                             is DisplayItem.UserMental -> {
+                                val userIndex = displayed.takeWhile { it != item }
+                                    .count { it is DisplayItem.UserMental } + 1
                                 ReorderableItem(reorderState, key = item.key) { isDragging ->
                                     UserRow(
+                                        position = userIndex,
                                         mental = item.mental,
                                         isDragging = isDragging,
                                         onClick = { editTarget = item.mental },
@@ -394,6 +397,7 @@ private sealed class DisplayItem {
 
 @Composable
 private fun UserRow(
+    position: Int,
     mental: Mental,
     isDragging: Boolean,
     onClick: () -> Unit,
@@ -421,7 +425,7 @@ private fun UserRow(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "●",
+                text = "$position",
                 style = MaterialTheme.typography.labelLarge,
                 color = Accent,
                 fontWeight = FontWeight.Bold,
