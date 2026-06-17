@@ -275,8 +275,6 @@ fun GewohnheitBoardScreen(
                                         onClick = { editTarget = item.mental },
                                         dragModifier = Modifier.longPressDraggableHandle(
                                             onDragStopped = {
-                                                // Crossing-Detection: pruefe ob die Gewohnheit
-                                                // nach dem Drag RECHTS vom Separator steht.
                                                 val finalOrder = dragOrder
                                                 if (finalOrder != null) {
                                                     val sepIdx = finalOrder.indexOf(SEPARATOR_KEY)
@@ -286,6 +284,15 @@ fun GewohnheitBoardScreen(
                                                         scope.launch {
                                                             deleteGewohnheit(context, item.mental.id)
                                                             suggestVm.addSuggestion(item.mental.text)
+                                                        }
+                                                    } else {
+                                                        // Innerhalb der Section umsortiert → persistieren.
+                                                        val storedIds = stored.map { it.id }.toSet()
+                                                        val reordered = finalOrder
+                                                            .filter { it in storedIds }
+                                                            .mapNotNull { id -> stored.firstOrNull { it.id == id } }
+                                                        if (reordered.size == stored.size) {
+                                                            scope.launch { reorderGewohnheiten(context, reordered) }
                                                         }
                                                     }
                                                 }
