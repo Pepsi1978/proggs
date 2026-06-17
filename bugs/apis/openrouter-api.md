@@ -3,6 +3,7 @@
 > PFLICHT-LESEN vor Arbeit an einer OpenRouter-Integration (Aggregator/Gateway, EIN OpenAI-kompatibler
 > Endpunkt für viele Anbieter). Stand: zuletzt recherchiert am 2026-06-08.
 > Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/apis/openrouter-api.md`.
+> Stand-Erweiterung 2026-06-17: §G (Claude Code / CLI-Harness-Anbindung) + §H (neuere Features) ergänzt.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -19,6 +20,9 @@
 | 5 | SSE-Parser bricht ⭐ | `:`-Kommentarzeilen überspringen, `[DONE]` + Mid-Stream-`error` (HTTP 200) | §D |
 | 6 | 429 / 402 | `:free`=50 RPD; 402 ≠ 429; `error.metadata.provider_name` auswerten | §E/§F |
 | 7 | Modell-String / 404 | `anbieter/modell`, Liste via `/api/v1/models`, Fallback-`models`-Array | §F |
+| 8 | Claude Code anbinden ⭐ | Base-URL `…/api` (NICHT `/api/v1`!), `ANTHROPIC_API_KEY=""`, Key in `ANTHROPIC_AUTH_TOKEN`; Anthropic 1P als Top-Provider | §G |
+| 9 | CLI-Agent Modell-String | LiteLLM-Tools `openrouter/<v>/<m>`, Eigenbau nacktes `<v>/<m>`; Cursor braucht `/cursor`-Suffix | §G |
+| 10 | Caching/Reasoning/neu | Auto-Caching nur Anthropic 1P; `provider.order` killt Sticky-Routing; `reasoning_details` unverändert zurück; `:nitro`≠Latenz | §H |
 
 ---
 
@@ -120,11 +124,133 @@
 
 ---
 
-## Fix-Status (Stand 2026-06-08)
+## G. Claude Code & andere CLI-Coding-Agenten (Anbindung)
 
-Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträge. `:free`-Slugs und Provider-Set ändern sich laufend → dynamisch beziehen.
+> Recherche 2026-06-17. Quelle für §G überwiegend offiziell: https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration (sowie codex-cli/opencode/cursor-Cookbooks). Gegenstück: `best-practices/apis/openrouter-api.md` §9–§10.
 
-**Ehrlichkeits-Hinweis:** Mehrere GitHub-Issue-Details (Bug 4/8/12) stammen aus Suchsnippets, nicht aus Volltext-Threads — bei Bedarf am Issue verifizieren.
+### 19. Claude Code: falsche Base-URL `/api/v1` statt `/api` ⭐
+- **Symptom:** native „Anthropic Skin" greift nicht; Auth-/Format-Fehler obwohl OpenRouter konfiguriert.
+- **Ursache:** Claude Code spricht das Anthropic-`/v1/messages`-Format. Die native Skin liegt auf `https://openrouter.ai/api` — die OpenAI-kompatible `/api/v1` ist die falsche URL dafür.
+- **FIX:** `ANTHROPIC_BASE_URL="https://openrouter.ai/api"` (OHNE `/v1`). Verifizieren mit `/status`.
+- **Quelle:** https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration · offiziell
+
+### 20. Claude Code: `ANTHROPIC_API_KEY` unset statt Leerstring → Fallback auf Anthropic-Direkt-Auth
+- **Symptom:** Claude Code versucht trotz OpenRouter-Config die Anthropic-Server zu erreichen, Auth-Fehler.
+- **Ursache:** Ist `ANTHROPIC_API_KEY` nur unset (null) statt explizit leer, fällt Claude Code auf Direkt-Auth zurück. OR-Key gehört in `ANTHROPIC_AUTH_TOKEN`.
+- **FIX:** `export ANTHROPIC_API_KEY=""` + `export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"`.
+- **Quelle:** gleiche Cookbook-Seite · offiziell
+
+### 21. Claude Code: Env-Vars in projekt-`.env` werden ignoriert
+- **Ursache:** der native Installer liest keine projekt-lokale `.env`.
+- **FIX:** Variablen ins Shell-Profil (`~/.bashrc`/`~/.zshrc` bzw. Windows-User-Env), Terminal neu starten.
+- **Quelle:** gleiche Cookbook-Seite · offiziell
+
+### 22. Claude Code: `model-not-found` für OpenRouter-Modelle
+- **Ursache:** Auth-Konflikt beim Start — entweder gecachte Anthropic-OAuth-Session ODER ein echter `ANTHROPIC_API_KEY` noch in der Shell.
+- **FIX:** (a) gecachtes OAuth: `/logout`, dann `claude` neu starten; (b) `ANTHROPIC_API_KEY` in Shell: `/logout` hilft NICHT → `ANTHROPIC_API_KEY=""` + Terminal neu. Mit `/status` prüfen.
+- **Quelle:** gleiche Cookbook-Seite · offiziell
+
+### 23. Nicht-Anthropic-Modelle über Claude Code → leere Antworten / Crash / kein Failover ⭐
+- **Symptom:** nach Tool-Call leere Follow-up-Antwort (0 Tokens); CLI-Crash beim ersten Tool-Use; bei Provider-Fehler mitten im Stream kein Failover.
+- **Ursache:** Claude Code ist auf Anthropic-Modelle optimiert; OpenRouter garantiert die Kompatibilität nur über den Anthropic-First-Party-Provider. Sobald das erste Token gestreamt ist, ist der HTTP-Status committed → kein stiller Provider-Failover mehr.
+- **FIX:** Anthropic-Modelle durchreichen + Anthropic 1P als Top-Priority-Provider. Fremdmodelle (GLM/Qwen/DeepSeek/Kimi) nur mit Bewusstsein der Bruchgefahr; ggf. claude-code-router `enhancetool`-Transformer.
+- **Quelle:** https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration (offizielle Kompatibilitätswarnung) · openclaw Issue #1622 (extern)
+
+### 24. Modell-String-Format-Falle bei anderen CLI-Agenten
+- **Symptom:** „model not found" obwohl Key korrekt.
+- **Ursache:** LiteLLM-basierte Tools (aider, OpenHands) erwarten `openrouter/<vendor>/<model>` (doppeltes Präfix); `openai/<model>` gegen OR funktioniert NICHT. Eigenbau-Tools (Codex, Goose, Cline, Roo, Kilo, Continue) wollen das nackte OR-Slug `<vendor>/<model>`.
+- **FIX:** Vor Konfiguration klären, ob das Tool LiteLLM nutzt; Modell-String entsprechend wählen.
+- **Quelle:** https://docs.litellm.ai/docs/providers/openrouter · https://docs.openhands.dev/openhands/usage/llms/openrouter · offiziell
+
+### 25. Cursor: Tool-Calls brechen ohne `/cursor`-Suffix in der Base-URL
+- **Ursache:** Cursor braucht die spezielle Base-URL `https://openrouter.ai/api/v1/cursor`, nicht `/api/v1`.
+- **FIX:** „Override OpenAI Base URL" auf `…/api/v1/cursor` + OR-Key.
+- **Quelle:** https://openrouter.ai/docs/cookbook/coding-agents/cursor-integration · offiziell
+
+### 26. Codex CLI: falsche `wire_api` / Präfix
+- **Ursache:** Codex unterstützt OR nur über manuellen `[model_providers.openrouter]`-Block; braucht `wire_api="chat"` (nicht `responses`) und das nackte Slug OHNE `openrouter/`-Präfix.
+- **FIX:** `~/.codex/config.toml` mit `base_url="https://openrouter.ai/api/v1"`, `env_key="OPENROUTER_API_KEY"`, `wire_api="chat"`; Modell = `<vendor>/<model>`.
+- **Quelle:** https://openrouter.ai/docs/cookbook/coding-agents/codex-cli · offiziell
+
+### 26b. SICHERHEIT: LiteLLM-Versionen 1.82.7 / 1.82.8 mit Credential-Stealing-Malware
+- **FIX:** diese Versionen meiden, saubere Version pinnen, bei Installation Credentials rotieren (Projektregel „Sicherheit bei externem Code").
+- **Quelle:** Anthropic-Warnung via morphllm.com/claude-code-litellm · extern — vor LiteLLM-Einsatz verifizieren.
+
+---
+
+## H. Caching / Reasoning / neuere Plattform-Features
+
+> Recherche 2026-06-17. Quellen überwiegend offiziell (openrouter.ai/docs). Gegenstück: `best-practices/apis/openrouter-api.md` §11–§13.
+
+### 27. `:nitro` ≠ niedrige Latenz (Throughput vs. TTFT)
+- **Symptom:** interaktives Coding-CLI fühlt sich trotz `:nitro` träge an.
+- **Ursache:** `:nitro` == `sort:"throughput"` (Token/s bei voller Generierung), nicht TTFT. Für interaktive Nutzung zählt Time-to-First-Token.
+- **FIX:** `provider.sort:"latency"` bzw. `preferred_max_latency:{p90:…}` statt `:nitro`.
+- **Quelle:** https://openrouter.ai/docs/guides/routing/provider-selection · offiziell
+
+### 28. `max_price` blockiert den Request, `preferred_*` nicht
+- **Symptom:** unerwarteter Request-Fehler statt langsamerer/teurerer Antwort.
+- **Ursache:** `max_price` schließt aus → kein Anbieter im Limit = Fehler. `preferred_min_throughput`/`preferred_max_latency` depriorisieren nur (blockieren nie).
+- **FIX:** harte Kostengrenze = `max_price`; weiche Performance-Präferenz = `preferred_*` (Percentile p50/p75/p90/p99, 5-Min-Fenster).
+- **Quelle:** https://openrouter.ai/docs/guides/routing/provider-selection · offiziell
+
+### 29. Auto-Caching (Top-Level `cache_control`) pinnt unbemerkt nur auf Anthropic 1P
+- **Symptom:** kein Cache-Hit über Bedrock/Vertex; unerwartete Provider-Einschränkung.
+- **Ursache:** Top-Level-`cache_control` bei Claude wird nur von Anthropic 1P unterstützt → OR schließt Bedrock/Vertex aus.
+- **FIX:** für Cross-Provider-Fallback explizite Per-Block-Breakpoints (max. 4) statt Top-Level.
+- **Quelle:** https://openrouter.ai/docs/guides/best-practices/prompt-caching · offiziell
+
+### 30. `provider.order` deaktiviert Sticky-Routing → Cache-Verlust
+- **Ursache:** manuelles Ordering schaltet das automatische Cache-Warm-Sticky-Routing ab.
+- **FIX:** für Cache-Effizienz `session_id` (Body) bzw. Header `x-session-id` (max. 256 Z.) statt `order`.
+- **Quelle:** https://openrouter.ai/docs/guides/best-practices/prompt-caching · offiziell
+
+### 31. Reasoning-Faden bricht beim Tool-Calling
+- **Symptom:** Reasoning-Modell verliert Kontext/Fehler zwischen Tool-Call und Tool-Result.
+- **Ursache:** `reasoning_details`-Array wird verändert/umsortiert/weggelassen zurückgeschickt.
+- **FIX:** `message.reasoning_details` unverändert und in Reihenfolge mitschicken.
+- **Quelle:** https://openrouter.ai/docs/guides/best-practices/reasoning-tokens · offiziell
+
+### 32. `usage.include:true` / `stream_options.include_usage` deprecated & wirkungslos
+- **Ursache:** Usage kommt jetzt immer automatisch (letzter SSE-Chunk).
+- **FIX:** Feld entfernen; `usage.cost`/`prompt_tokens_details.cached_tokens` direkt lesen.
+- **Quelle:** https://openrouter.ai/docs/cookbook/administration/usage-accounting · offiziell
+
+### 33. Response-Caching (Beta) ignoriert `temperature`/`seed`, Body-Reihenfolge ändert Cache-Key
+- **Symptom:** identische verbatim-Antwort trotz geänderter Sampling-Params; oder unerwartete Cache-Misses.
+- **Ursache:** Cache-Key = API-Key + Modell + Endpoint + Stream-Modus + SHA-256(Body); Hit gibt verbatim zurück, ignoriert `temperature`/`seed`. JSON-Property-Reihenfolge/explizite Defaults ändern den Key. Bei Account-ZDR deaktiviert.
+- **FIX:** Response-Caching nur für deterministisch-gewünschte Fälle (Tests, Crash-Resume) via `X-OpenRouter-Cache`; Body stabil halten.
+- **Quelle:** https://openrouter.ai/docs/guides/features/response-caching · offiziell
+
+### 34. BYOK überschreibt `provider.order`
+- **Symptom:** trotz Kosten-`order` landet der Request zuerst auf dem BYOK-Endpoint.
+- **Ursache:** BYOK-Endpoints werden IMMER zuerst versucht (auch wenn in `order` hinten).
+- **FIX:** über BYOK-Key-Sektion/Filter steuern; „Always use" nur bewusst (verhindert Shared-Fallback → Rate-Limit-Risiko). BYOK-Fee 5% (erste 1 Mio Req/Monat frei).
+- **Quelle:** https://openrouter.ai/docs/guides/overview/auth/byok · offiziell
+
+### 35. `:online` / `web`-Plugin deprecated; Server-Tools sind Beta
+- **Ursache:** Web-Suche läuft jetzt über das Server-Tool `openrouter:web_search` (Modell entscheidet selbst, 0–N Suchen); `:online`/`web`-Plugin abgelöst.
+- **FIX:** auf `openrouter:web_search` umstellen, `max_total_results` als Kosten-Cap in Agent-Loops; Beta → API-Änderungen einplanen.
+- **Quelle:** https://openrouter.ai/docs/guides/features/server-tools/web-search · offiziell
+
+### 36. OpenRouter hostet NIE lokale Modelle; LM Studio braucht Dummy-`api_key`
+- **Ursache:** OR ist reiner Cloud-Aggregator. „Lokal + OR mischen" braucht Router-Schicht (claude-code-router/LiteLLM) oder base_url-Umschaltung. Das OpenAI-SDK verlangt einen nicht-leeren `api_key`, auch wenn LM Studio (`localhost:1234/v1`) keinen braucht.
+- **FIX:** Router davor ODER nur `base_url`+`api_key` tauschen (gleicher Code); für LM Studio Dummy-Key (`"lm-studio"`). Ollama v0.14 bietet native Anthropic-API für Claude Code (`ANTHROPIC_BASE_URL=http://localhost:11434`).
+- **Quelle:** https://lmstudio.ai/docs/developer/openai-compat · https://ollama.com/blog/claude · offiziell
+
+### 37. Rate-Limits global pro Account; Management-Key ≠ Inference-Key
+- **Symptom:** mehr Keys/Accounts beheben 429 nicht; 403 bei Analytics mit Inference-Key.
+- **Ursache:** Limits werden global pro Account verwaltet. Management Keys können keine Inference, Inference-Keys keine Verwaltung/Analytics.
+- **FIX:** Last über verschiedene Modelle streuen; korrekten Key-Typ nutzen; pro Key ein `limit` setzen.
+- **Quelle:** https://openrouter.ai/docs/api/reference/limits · https://openrouter.ai/docs/guides/overview/auth/management-api-keys · offiziell
+
+---
+
+## Fix-Status (Stand 2026-06-17)
+
+Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträge. `:free`-Slugs und Provider-Set ändern sich laufend → dynamisch beziehen. §G/§H (2026-06-17) dokumentieren überwiegend Konfigurations- und Plattform-Verhalten der CLI-Harness-Anbindung und neuerer Features.
+
+**Ehrlichkeits-Hinweis:** Mehrere GitHub-Issue-Details (Bug 4/8/12/23) stammen aus Suchsnippets, nicht aus Volltext-Threads — bei Bedarf am Issue verifizieren. Der LiteLLM-Malware-Hinweis (26b) und das 1M-Context-Passthrough sind extern/unsicher und vor produktivem Einsatz zu verifizieren.
 
 ---
 
@@ -140,6 +266,21 @@ Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträg
 ## 🔗 Bezug zu Best Practices
 
 Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/openrouter-api.md`. Die dortige Mapping-Tabelle „🔗 Bezug zum Bug-Almanach“ verlinkt jede Best-Practice zurueck auf die hier dokumentierten Bug-Abschnitte (bidirektional, ohne Duplikation).
+
+| Bug-Abschnitt (hier) | Best-Practice-Abschnitt (`best-practices/apis/openrouter-api.md`) |
+|---|---|
+| A (Header/Attribution) | §1 |
+| B (Routing/Fallbacks) | §2, §3, §4 |
+| C (Tool Calling) | §7 |
+| D (Streaming/SSE) | §6 |
+| E/F (Credits/Limits/Modell-String) | §5, §8, §15 |
+| G19–G23 (Claude Code) | §9 |
+| G24–G26 (andere CLI-Agenten) | §10 |
+| H27–H28 (Speed-Routing) | §11 |
+| H29–H32 (Caching/Reasoning/Usage) | §12 |
+| H33–H35 (neue Features) | §13 |
+| H36 (Cloud vs. lokal) | §14 |
+| H37 (Account/Keys/Limits) | §15 |
 
 
 ---
