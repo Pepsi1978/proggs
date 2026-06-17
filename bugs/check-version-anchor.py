@@ -36,6 +36,7 @@ ANCHORS = [
     {"rel": "claude-tooling/claude-hooks.md",  "label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "claude-tooling/claude-config.md", "label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "claude-tooling/python-windows.md","label": "python",      "live": (["python", "--version"], r"(\d+\.\d+\.\d+)")},
+    {"rel": "claude-tooling/openrouter-claude-code.md","label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "web/typescript.md",               "label": "typescript",  "live": None},  # tsc-Version != node; projekt-gepinnt
     # projekt-gebunden (Gradle/.csproj/Info.plist pinnt die Version) → nur Anker-Vollstaendigkeit
     {"rel": "android/kotlin.md",               "label": "kotlin",      "live": None},
