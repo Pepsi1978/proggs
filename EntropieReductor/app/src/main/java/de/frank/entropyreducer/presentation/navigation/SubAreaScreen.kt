@@ -175,7 +175,7 @@ private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
                 1 ->
                     SubSlotMeta(
                         icon = Icons.Outlined.Flag,
-                        title = "Priorität",
+                        title = "Gewohnheit",
                         teaser =
                             "Deine wichtigsten Aufgaben und Themen — priorisiert auf einen " +
                                 "Blick. Inhalt folgt in einem der nächsten Updates.",

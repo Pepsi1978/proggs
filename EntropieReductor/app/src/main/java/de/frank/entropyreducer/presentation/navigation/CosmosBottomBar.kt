@@ -360,7 +360,7 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
         // vorerst Platzhalter-Screen). Slot 2 = Mental.
         Routes.TASKS ->
             listOf(
-                SubIconMeta(Icons.Outlined.Flag, "Priorität"),
+                SubIconMeta(Icons.Outlined.Flag, "Gewohnheit"),
                 // Frank-Wunsch 2026-06-09: Slot 2 = Mentalboard.
                 SubIconMeta(Icons.Outlined.Psychology, "Mental"),
                 // Frank-Wunsch 2026-06-10: Slot 3 = Ideen (Gluehbirne) — 1:1-Klon des
