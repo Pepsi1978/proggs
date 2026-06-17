@@ -17,14 +17,15 @@
 #>
 $ErrorActionPreference = 'Stop'
 $lean    = Join-Path $HOME '.claude-openrouter'
-$srcRule = Join-Path $HOME '.claude\rules\resilient-bugfixing.md'
+# KOMPAKT-Fassung von Direktive #3 (~2K statt ~8K) — liegt versioniert im Repo:
+$srcRule = Join-Path $HOME 'proggs\claude-openrouter\resilient-bugfixing-kompakt.md'
 $srcSkil = Join-Path $HOME '.claude\skills'
 
 New-Item -ItemType Directory -Force -Path (Join-Path $lean 'rules') | Out-Null
 
 if (Test-Path $srcRule) {
     Copy-Item $srcRule (Join-Path $lean 'rules\resilient-bugfixing.md') -Force
-    Write-Host "rules/: Direktive #3 kopiert."
+    Write-Host "rules/: Direktive #3 (Kompaktfassung) kopiert."
 } else { Write-Host "WARNUNG: $srcRule fehlt — Direktive #3 nicht kopiert." -ForegroundColor Yellow }
 
 # Skills: Junction (kein Admin noetig) auf die eigenen user-Skills
