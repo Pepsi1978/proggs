@@ -377,7 +377,20 @@ function Start-WithModel {
     # Claude Code haengt das "[1m]" sonst an JEDES Modell an -> OpenRouter findet es nicht.
     # Loesung: Session-Override-Settings (ueberschreibt NUR fuer diese Session, nicht global)
     # erzwingt den rohen Slug als Haupt- UND Subagent-Modell -> kein "[1m]".
-    $override = [ordered]@{ model = $Slug; env = [ordered]@{ CLAUDE_CODE_SUBAGENT_MODEL = $Slug } }
+    # ALLE Modell-Stufen hart auf das gewaehlte Modell pinnen, sonst faellt eine Stufe
+    # (z.B. Hintergrund/Compact) auf Claude Codes eingebautes Anthropic-Default (Sonnet/Haiku)
+    # zurueck — das wuerde dann ueber OpenRouter abgerechnet (ungewollte Kosten!).
+    $override = [ordered]@{
+        model = $Slug
+        env   = [ordered]@{
+            ANTHROPIC_MODEL                = $Slug
+            ANTHROPIC_DEFAULT_OPUS_MODEL   = $Slug
+            ANTHROPIC_DEFAULT_SONNET_MODEL = $Slug
+            ANTHROPIC_DEFAULT_HAIKU_MODEL  = $Slug
+            ANTHROPIC_SMALL_FAST_MODEL     = $Slug
+            CLAUDE_CODE_SUBAGENT_MODEL     = $Slug
+        }
+    }
     Save-Json-NoBom -Path $OverrideSettings -Object $override
     Write-Probe 'env_set' 'Native-Skin BASE_URL gesetzt' 'https://openrouter.ai/api' $env:ANTHROPIC_BASE_URL ($env:ANTHROPIC_BASE_URL -eq 'https://openrouter.ai/api')
 
