@@ -173,11 +173,6 @@ fun GewohnheitBoardScreen(
 
     // Drag-Reihenfolge: ALLE IDs inkl. Separator (user + SEPARATOR_KEY + suggestions).
     var dragOrder by remember { mutableStateOf<List<String>?>(null) }
-    // Separator-Position (bleibt waehrend des Drags fix bei stored.size).
-    val separatorPosition = stored.size
-    // Pending Promotion/Demotion — wird in onDragStopped ausgefuehrt.
-    var pendingPromotion by remember { mutableStateOf<String?>(null) }
-    var pendingDemotion by remember { mutableStateOf<String?>(null) }
 
     // displayed = flache Liste: Reihenfolge aus dragOrder oder Default.
     val displayed: List<DisplayItem> = remember(stored, suggestions, dragOrder) {
@@ -203,41 +198,20 @@ fun GewohnheitBoardScreen(
     var micActionsOpen by remember { mutableStateOf(false) }
 
     val lazyListState = rememberLazyListState()
+    // Separator-Swaps SIND erlaubt — der Separator bewegt sich mit. Erst in
+    // onDragStopped wird geprueft ob ein Item den Separator tatsaechlich ueberquert hat.
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
         val fromKey = from.key as? String ?: return@rememberReorderableLazyListState
         val toKey = to.key as? String ?: return@rememberReorderableLazyListState
 
-        // Separator-Swaps blockieren: Separator bleibt an fester Position.
-        if (fromKey == SEPARATOR_KEY || toKey == SEPARATOR_KEY) {
-            // Aber: Crossing-Detection! Wenn ein Item den Separator passiert,
-            // Promotion/Demotion vormerken.
-            val movedKey = if (fromKey == SEPARATOR_KEY) toKey else fromKey
-            val currentIds = dragOrder ?: (stored + suggestions).map { it.id }
-            val movedIndex = currentIds.indexOf(movedKey)
-            val isSuggestion = suggestions.any { it.id == movedKey }
-            if (isSuggestion && movedIndex < separatorPosition) {
-                pendingPromotion = movedKey
-            } else if (!isSuggestion && movedIndex > separatorPosition) {
-                pendingDemotion = movedKey
-            }
-            return@rememberReorderableLazyListState
-        }
-
-        // Normale Items: freie Bewegung innerhalb ihrer Section.
         val currentIds = dragOrder ?: (stored + suggestions).map { it.id }
-        val fromIsUser = stored.any { it.id == fromKey }
-        val toIsUser = stored.any { it.id == toKey }
-
-        if (fromIsUser == toIsUser) {
-            val list = currentIds.toMutableList()
-            val fi = list.indexOf(fromKey)
-            val ti = list.indexOf(toKey)
-            if (fi in list.indices && ti in list.indices) {
-                list.add(ti, list.removeAt(fi))
-                dragOrder = list
-            }
+        val list = currentIds.toMutableList()
+        val fi = list.indexOf(fromKey)
+        val ti = list.indexOf(toKey)
+        if (fi in list.indices && ti in list.indices) {
+            list.add(ti, list.removeAt(fi))
+            dragOrder = list
         }
-        // Cross-section: ignorieren (Promotion/Demotion über Separator-Swap).
     }
 
     CosmosScaffold(
@@ -296,17 +270,20 @@ fun GewohnheitBoardScreen(
                                         onClick = { editTarget = item.mental },
                                         dragModifier = Modifier.longPressDraggableHandle(
                                             onDragStopped = {
-                                                pendingDemotion?.let { id ->
-                                                    val habit = stored.firstOrNull { it.id == id }
-                                                    if (habit != null) {
+                                                // Crossing-Detection: pruefe ob die Gewohnheit
+                                                // nach dem Drag RECHTS vom Separator steht.
+                                                val finalOrder = dragOrder
+                                                if (finalOrder != null) {
+                                                    val sepIdx = finalOrder.indexOf(SEPARATOR_KEY)
+                                                    val itemIdx = finalOrder.indexOf(item.mental.id)
+                                                    if (sepIdx >= 0 && itemIdx > sepIdx) {
+                                                        // Demotion: Gewohnheit → Vorschlag
                                                         scope.launch {
-                                                            deleteGewohnheit(context, id)
-                                                            suggestVm.addSuggestion(habit.text)
+                                                            deleteGewohnheit(context, item.mental.id)
+                                                            suggestVm.addSuggestion(item.mental.text)
                                                         }
                                                     }
                                                 }
-                                                pendingPromotion = null
-                                                pendingDemotion = null
                                                 dragOrder = null
                                             },
                                         ),
@@ -336,17 +313,20 @@ fun GewohnheitBoardScreen(
                                         },
                                         dragModifier = Modifier.longPressDraggableHandle(
                                             onDragStopped = {
-                                                pendingPromotion?.let { id ->
-                                                    val suggestion = suggestions.firstOrNull { it.id == id }
-                                                    if (suggestion != null) {
+                                                // Crossing-Detection: pruefe ob der Vorschlag
+                                                // nach dem Drag LINKS vom Separator steht.
+                                                val finalOrder = dragOrder
+                                                if (finalOrder != null) {
+                                                    val sepIdx = finalOrder.indexOf(SEPARATOR_KEY)
+                                                    val itemIdx = finalOrder.indexOf(item.mental.id)
+                                                    if (sepIdx >= 0 && itemIdx in 0 until sepIdx) {
+                                                        // Promotion: Vorschlag → Gewohnheit
                                                         scope.launch {
-                                                            addGewohnheit(context, suggestion.text)
-                                                            suggestVm.acceptSuggestion(id)
+                                                            addGewohnheit(context, item.mental.text)
+                                                            suggestVm.acceptSuggestion(item.mental.id)
                                                         }
                                                     }
                                                 }
-                                                pendingPromotion = null
-                                                pendingDemotion = null
                                                 dragOrder = null
                                             },
                                         ),
