@@ -208,15 +208,8 @@ fun GewohnheitBoardScreen(
         val toKey = to.key as? String ?: return@rememberReorderableLazyListState
         if (fromKey == SEPARATOR_KEY || toKey == SEPARATOR_KEY) return@rememberReorderableLazyListState
 
+        // Freie Bewegung — auch über den Strich. Promotion/Demotion passiert in onDragStopped.
         val currentIds = dragOrder ?: (stored + suggestions).map { it.id }
-        val sepIdx = stored.size // separator is always at index = userCount
-
-        val fromIsUser = currentIds.indexOf(fromKey) < sepIdx
-        val toIsUser = currentIds.indexOf(toKey) < sepIdx
-
-        // Nur innerhalb derselben Section umsortieren.
-        if (fromIsUser != toIsUser) return@rememberReorderableLazyListState
-
         val list = currentIds.toMutableList()
         val fi = list.indexOf(fromKey)
         val ti = list.indexOf(toKey)
@@ -290,6 +283,7 @@ fun GewohnheitBoardScreen(
                                                     isSuggestion = false,
                                                     separatorIndexBeforeDrag = separatorIndexBeforeDrag,
                                                     lazyListState = lazyListState,
+                                                    dragOrder = dragOrder,
                                                     stored = stored,
                                                     suggestions = suggestions,
                                                     scope = scope,
@@ -330,6 +324,7 @@ fun GewohnheitBoardScreen(
                                                     isSuggestion = true,
                                                     separatorIndexBeforeDrag = separatorIndexBeforeDrag,
                                                     lazyListState = lazyListState,
+                                                    dragOrder = dragOrder,
                                                     stored = stored,
                                                     suggestions = suggestions,
                                                     scope = scope,
@@ -401,6 +396,7 @@ private fun handleDragStopped(
     isSuggestion: Boolean,
     separatorIndexBeforeDrag: Int,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
+    dragOrder: List<String>?,
     stored: List<Mental>,
     suggestions: List<Mental>,
     scope: kotlinx.coroutines.CoroutineScope,
@@ -409,9 +405,12 @@ private fun handleDragStopped(
 ) {
     if (separatorIndexBeforeDrag < 0) return
 
+    // Position des gezogenen Items: zuerst in visibleItemsInfo suchen, dann im dragOrder.
     val draggedItemIndex = lazyListState.layoutInfo.visibleItemsInfo
         .firstOrNull { it.key == draggedId }
-        ?.index ?: return
+        ?.index
+        ?: dragOrder?.indexOf(draggedId)?.takeIf { it >= 0 }
+        ?: return
 
     val crossed = if (isSuggestion) {
         draggedItemIndex < separatorIndexBeforeDrag
@@ -422,14 +421,12 @@ private fun handleDragStopped(
     if (!crossed) return
 
     if (isSuggestion) {
-        // Promotion: Vorschlag → Gewohnheit
         val suggestion = suggestions.firstOrNull { it.id == draggedId } ?: return
         scope.launch {
             addGewohnheit(context, suggestion.text)
             suggestVm.acceptSuggestion(draggedId)
         }
     } else {
-        // Demotion: Gewohnheit → Vorschlag
         val habit = stored.firstOrNull { it.id == draggedId } ?: return
         scope.launch {
             deleteGewohnheit(context, draggedId)
