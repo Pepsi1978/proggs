@@ -176,6 +176,18 @@
 - **FIX:** diese Versionen meiden, saubere Version pinnen, bei Installation Credentials rotieren (Projektregel „Sicherheit bei externem Code").
 - **Quelle:** Anthropic-Warnung via morphllm.com/claude-code-litellm · extern — vor LiteLLM-Einsatz verifizieren.
 
+### 26c. OpenCode: Crash bei Modell-IDs mit `:` (z.B. `:free`-Varianten)
+- **Symptom:** OpenCode bricht bei OpenRouter-Modell-IDs mit `:` im Identifier ab.
+- **Ursache:** Parser-Problem mit dem `:`-Zeichen im Modell-Slug (GitHub Issue #749).
+- **FIX:** bei `:free`/Variant-Slugs prüfen ob gefixt; sonst Voll-Slug ohne Variant nutzen.
+- **Quelle:** github.com/sst/opencode Issue #749 · extern (nicht abschließend verifiziert)
+
+### 26d. aider: leere/abgelehnte Antworten ohne passende OpenRouter-Privacy-Settings
+- **Symptom:** aider bekommt keine Antwort / Fehler obwohl Key korrekt.
+- **Ursache:** manche OR-Routen verlangen unter openrouter.ai/settings/privacy „enable providers that may train on inputs"; ist das aus und kein konformer Provider verfügbar → kein Endpoint → Fehler.
+- **FIX:** bewusst entscheiden — entweder das Privacy-Setting aktivieren ODER `provider.data_collection:"deny"` setzen und Provider wählen, die ohne Training liefern.
+- **Quelle:** aider.chat/docs/llms/openrouter.html · offiziell
+
 ---
 
 ## H. Caching / Reasoning / neuere Plattform-Features
