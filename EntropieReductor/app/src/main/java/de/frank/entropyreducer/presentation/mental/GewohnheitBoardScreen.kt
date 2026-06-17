@@ -204,7 +204,9 @@ fun GewohnheitBoardScreen(
         val fromKey = from.key as? String ?: return@rememberReorderableLazyListState
         val toKey = to.key as? String ?: return@rememberReorderableLazyListState
 
-        val currentIds = dragOrder ?: (stored + suggestions).map { it.id }
+        val currentIds = dragOrder ?: (
+            stored.map { it.id } + listOf(SEPARATOR_KEY) + suggestions.map { it.id }
+        )
         val list = currentIds.toMutableList()
         val fi = list.indexOf(fromKey)
         val ti = list.indexOf(toKey)
