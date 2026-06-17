@@ -147,6 +147,17 @@ class GewohnheitSuggestViewModel @Inject constructor(
         }
     }
 
+    fun addSuggestion(text: String) {
+        val clean = text.trim()
+        if (clean.isEmpty()) return
+        viewModelScope.launch {
+            context.suggestionStore.edit { prefs ->
+                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
+                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + Mental.create(clean))
+            }
+        }
+    }
+
     private suspend fun storeSuggestions(json: String) {
         val arr = runCatching { JSONArray(json) }.getOrNull()
             ?: runCatching { JSONArray("[$json]") }.getOrNull()
