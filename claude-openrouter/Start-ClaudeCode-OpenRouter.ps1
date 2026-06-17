@@ -34,6 +34,7 @@ $LogDir       = Join-Path $ProjectDir 'logs'
 $CacheFile    = Join-Path $LogDir 'models-cache.json'
 $LastModel    = Join-Path $ProjectDir 'last-model.txt'
 $OverrideSettings = Join-Path $LogDir 'session-settings.json'
+$LeanConfigDir = Join-Path $HOME '.claude-openrouter'   # schlankes Claude-Profil: nur Direktive #3 + eigene Skills, kein Plugin-/Memory-Ballast
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 $LogFile = Join-Path $LogDir ("openrouter-launcher-{0}.jsonl" -f (Get-Date -Format 'yyyy-MM-dd'))
@@ -372,6 +373,16 @@ function Start-WithModel {
     $env:API_TIMEOUT_MS                         = '1200000'
     $env:API_FORCE_IDLE_TIMEOUT                 = '0'
     $env:DISABLE_TELEMETRY                      = '1'
+
+    # Schlankes Claude-Profil aktivieren: laedt NUR Direktive #3 + deine eigenen Skills,
+    # KEINE 40 Regeln, kein claude-mem, keine Auto-Memory -> ~5x weniger Token pro Frage.
+    # Dein normales ~/.claude (voller Harness + Opus) bleibt voellig unberuehrt.
+    if (Test-Path $LeanConfigDir) {
+        $env:CLAUDE_CONFIG_DIR = $LeanConfigDir
+        Write-Host "  Schlankes Profil aktiv (Direktive #3 + deine Skills, kein Ballast)." -ForegroundColor DarkGray
+    } else {
+        Write-Host "  Hinweis: schlankes Profil fehlt ($LeanConfigDir) — nutze volles Profil (hoehere Kosten)." -ForegroundColor Yellow
+    }
 
     # KRITISCH gegen das "[1m]"-Suffix: Deine globale settings.json hat model="opus[1m]".
     # Claude Code haengt das "[1m]" sonst an JEDES Modell an -> OpenRouter findet es nicht.

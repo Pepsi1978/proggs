@@ -59,7 +59,25 @@ ist unabhaengig.
 - **Neue Modelle** (z.B. Kimi 3.0) erscheinen automatisch in den Listen, sobald OpenRouter sie listet.
 - **Modell-Anzeige:** Claude Code zeigt in seinem eigenen Banner evtl. "Opus" als internen Namen an —
   das echte Modell steht gruen im Startfenster (und im Log). Das ist normal.
-- **Kosten:** Du zahlst pro Nutzung. Behalte das Activity-Dashboard von OpenRouter im Blick.
+- **Kosten:** Du zahlst pro Nutzung. **Wichtig zu verstehen:** OpenRouter cacht NICHT — bei jeder
+  Frage wird dein gesamter Kontext (Anweisungen + bisheriges Gespraech) neu berechnet. Deshalb laeuft
+  diese Umgebung mit einem **schlanken Profil** (siehe unten), damit der Kontext klein und damit guenstig bleibt.
+
+## Schlankes Profil (warum es guenstig ist)
+
+Diese Umgebung nutzt ein eigenes, schlankes Claude-Profil unter `~/.claude-openrouter/` (via
+`CLAUDE_CONFIG_DIR`). Es laedt absichtlich WENIG:
+
+- ✅ **Deine eigenen Skills** (verlinkt aus `~/.claude/skills/`, bleiben synchron)
+- ✅ **Direktive #3** (Resilient Bugfixing)
+- ✅ Dein Repo + dessen `CLAUDE.md` (normal geladen)
+- ❌ Die 40 grossen Regel-Dateien (~90.000 Token) — der Haupt-Kostentreiber
+- ❌ claude-mem + andere Plugins, Auto-Memory
+
+→ Statt ~200.000 Token pro Frage nur noch grob ~40.000 → ~5x guenstiger und schneller. Dein **normales
+Claude Code** (`~/.claude`, voller Harness + Opus-Abo) bleibt davon **voellig unberuehrt**.
+
+Falls das schlanke Profil mal neu aufgebaut werden muss:  `pwsh -File setup-lean-profile.ps1`
 
 ---
 
