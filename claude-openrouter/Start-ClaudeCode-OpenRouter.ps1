@@ -71,7 +71,7 @@ function Write-Header {
     Write-Host ""
     Write-Host "  ┌────────────────────────────────────────────────────────────┐" -ForegroundColor DarkCyan
     Write-Host "  │   Claude Code  ·  OpenRouter-Modus                          │" -ForegroundColor Cyan
-    Write-Host "  │   Dein kompletter Harness — mit dem Modell deiner Wahl      │" -ForegroundColor DarkCyan
+    Write-Host "  │   Schlank: nur Direktive #3 + deine Skills, dein Modell    │" -ForegroundColor DarkCyan
     Write-Host "  └────────────────────────────────────────────────────────────┘" -ForegroundColor DarkCyan
     Write-Host ""
 }
