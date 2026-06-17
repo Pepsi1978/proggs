@@ -1,0 +1,25 @@
+{
+	"_comment": "VORLAGE/REFERENZ — NICHT die aktive Datei. Die aktive ccr-Config liegt unter ~/.claude-code-router/config.json und wird vom Startmenue (Start-ClaudeCode-OpenRouter.ps1) bei JEDER Modellwahl frisch geschrieben (mit deinem echten Schluessel + passendem Transformer). Diese Vorlage dient nur der Doku. $OPENROUTER_API_KEY = Platzhalter, hier steht NIE ein echter Schluessel.",
+	"LOG": true,
+	"LOG_LEVEL": "info",
+	"API_TIMEOUT_MS": 1200000,
+	"HOST": "127.0.0.1",
+	"Providers": [
+		{
+			"name": "openrouter",
+			"api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+			"api_key": "$OPENROUTER_API_KEY",
+			"models": ["~anthropic/claude-opus-latest"],
+			"transformer": { "use": ["openrouter"] },
+			"_transformer_hinweis": "Fuer Fremdmodelle (nicht anthropic/*) setzt der Wrapper zusaetzlich 'enhancetool' fuer robustere Werkzeug-Aufrufe."
+		}
+	],
+	"Router": {
+		"default": "openrouter,~anthropic/claude-opus-latest",
+		"background": "openrouter,~anthropic/claude-opus-latest",
+		"think": "openrouter,~anthropic/claude-opus-latest",
+		"longContext": "openrouter,~anthropic/claude-opus-latest",
+		"longContextThreshold": 60000,
+		"webSearch": "openrouter,~anthropic/claude-opus-latest"
+	}
+}
