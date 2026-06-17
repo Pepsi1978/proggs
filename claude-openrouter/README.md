@@ -1,9 +1,9 @@
 # Claude Code (OpenRouter)
 
-Startet dein **komplettes Claude Code** (mit allen Regeln, Hooks, Skills, Agenten, MCP-Servern)
-— aber mit einem **Modell deiner Wahl von OpenRouter** statt deinem Opus-Abo.
+Startet dein **komplettes Claude Code** (mit allen Regeln, Hooks, Skills, Agenten, MCP-Servern,
+Werkzeugen) — aber mit einem **Modell deiner Wahl von OpenRouter** statt deinem Opus-Abo.
 
-Dein **normales Claude Code bleibt unberuehrt.** Die OpenRouter-Einstellungen gelten nur im
+Dein **normales Claude Code bleibt unberuehrt.** Die OpenRouter-Einstellungen gelten nur in dem
 Fenster, das ueber die Verknuepfung "Claude Code (OpenRouter)" startet.
 
 ---
@@ -26,9 +26,12 @@ Fenster, das ueber die Verknuepfung "Claude Code (OpenRouter)" startet.
 2. Im Menue ein Modell waehlen:
    - **1** = Programmier-Modelle, nach Staerke sortiert (empfohlen)
    - **2** = alle Modelle nach Kategorie
-   - **E** = eigenen Modell-Slug eintippen (z.B. `deepseek/deepseek-chat-v3.1`)
-   - **Enter** = Standard: Claude Opus (laeuft wie gewohnt, rock-solid)
+   - **E** = eigenen Modell-Slug eintippen (z.B. `deepseek/deepseek-v4-pro`)
+   - **Enter** = Standard: Claude Opus (rock-solid)
 3. Claude Code startet in `~/proggs` mit dem gewaehlten Modell. Fertig.
+
+Du kannst auch **mehrere Fenster** gleichzeitig mit verschiedenen Modellen offen haben — jedes Fenster
+ist unabhaengig.
 
 ---
 
@@ -37,7 +40,7 @@ Fenster, das ueber die Verknuepfung "Claude Code (OpenRouter)" startet.
 | Spalte | Bedeutung |
 |--------|-----------|
 | **Ktx** | Kontext-Groesse (wie viel passt rein), z.B. 200K, 1M |
-| **Tools** | Kann das Modell Werkzeuge nutzen? **Ohne "ja" funktioniert Claude Code kaum.** |
+| **Tools** | Kann das Modell Werkzeuge nutzen? **Ohne "ja" funktioniert Claude Code kaum** — solche Modelle filtere ich aus der Coding-Liste. |
 | **Agt** | Agenten-Benchmark (Tool-/Terminal-Arbeit) — hoeher = besser fuer deinen Stil. Live von OpenRouter. |
 | **Cod** | Coding-Benchmark — hoeher = besser beim Programmieren. Live von OpenRouter. |
 | **Eig** | Eignung fuer Claude Code (A+ = perfekt wie Opus, C = experimentell). Erfahrungswert. |
@@ -47,12 +50,16 @@ Fenster, das ueber die Verknuepfung "Claude Code (OpenRouter)" startet.
 
 ## Wichtig zu wissen
 
+- **Werkzeuge funktionieren voll** — Skills, Agenten, MCP, Hooks, Datei-Edits — mit jedem tool-faehigen
+  Modell ("Tools: ja").
 - **Claude-Modelle** (A+) laufen rock-solid — wie dein Opus-Abo, nur anders abgerechnet.
-- **Fremdmodelle** (GPT, Gemini, DeepSeek, Kimi …) funktionieren mit robustem Werkzeug-Verhalten
-  (`enhancetool` ist aktiv), aber **nie ganz so rund wie Claude** — Claude Code ist fuer Claude gebaut.
+- **Fremdmodelle** (GPT, Gemini, DeepSeek, Kimi …) funktionieren ebenfalls, aber **nie ganz so rund wie
+  Claude** — Claude Code ist fuer Claude gebaut. Starke Modelle (DeepSeek V4, GPT-5, Gemini) liefern
+  sauberes Werkzeug-Format; sehr schwache/alte Modelle koennen beim Werkzeug-Aufruf mal haken.
 - **Neue Modelle** (z.B. Kimi 3.0) erscheinen automatisch in den Listen, sobald OpenRouter sie listet.
-- **Kosten:** Du zahlst pro Nutzung. Bei Fremdmodellen entfaellt ein Spar-Mechanismus (Prompt-Caching) →
-  lange Sessions koennen teurer sein als dein Abo. Behalt das Activity-Dashboard von OpenRouter im Blick.
+- **Modell-Anzeige:** Claude Code zeigt in seinem eigenen Banner evtl. "Opus" als internen Namen an —
+  das echte Modell steht gruen im Startfenster (und im Log). Das ist normal.
+- **Kosten:** Du zahlst pro Nutzung. Behalte das Activity-Dashboard von OpenRouter im Blick.
 
 ---
 
@@ -63,7 +70,7 @@ Fenster, das ueber die Verknuepfung "Claude Code (OpenRouter)" startet.
 | "Schluessel noch nicht eingetragen" | Schluessel in `~/SK/ClaudeCodeOpenRouter/openrouter.key` eintragen (oeffnet sich automatisch). |
 | Modell-Liste laedt nicht | Internet pruefen; das Skript nutzt sonst die letzte gespeicherte Liste. |
 | Modell zeigt "Tools: NEIN" | Dieses Modell taugt nicht fuer Claude Code — ein anderes mit "ja" waehlen. |
-| Fremdmodell bricht bei Werkzeugen ab | Auf ein Claude-Modell (A+) wechseln — das ist die stabilste Wahl. |
+| Fremdmodell hakt bei Werkzeugen | Auf ein Claude-Modell (A+) oder ein starkes Modell (DeepSeek V4, GPT-5) wechseln. |
 | Zurueck zum normalen Claude | Einfach deine gewohnte Claude-Verknuepfung nutzen — die ist voellig getrennt. |
 
 Logs jeder Sitzung liegen in `logs/openrouter-launcher-<datum>.jsonl` (zum Nachschauen/Debuggen).
@@ -72,11 +79,18 @@ Logs jeder Sitzung liegen in `logs/openrouter-launcher-<datum>.jsonl` (zum Nachs
 
 ## Wie es technisch funktioniert (kurz)
 
-Claude Code spricht das Anthropic-Format. OpenRouter hat dafuer einen passenden Eingang, aber
-fuer **robustes Werkzeug-Verhalten bei Fremdmodellen** laeuft alles ueber den lokalen
-**claude-code-router (`ccr`)** mit dem `enhancetool`-Transformer. Das Startmenue
-(`Start-ClaudeCode-OpenRouter.ps1`) schreibt bei jeder Modellwahl die passende `ccr`-Config
-(`~/.claude-code-router/config.json`) und startet `ccr code` in `~/proggs`.
+Claude Code spricht das Anthropic-Format. OpenRouter bietet dafuer eine **native "Anthropic-Skin"**
+(`https://openrouter.ai/api`) — einen Endpunkt, der genau dieses Format direkt versteht.
+**Es ist KEIN Proxy und KEIN Hintergrund-Dienst noetig** — das Startmenue
+(`Start-ClaudeCode-OpenRouter.ps1`) setzt nur ein paar Umgebungsvariablen **in diesem einen Fenster**
+(`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, das gewaehlte Modell als `ANTHROPIC_DEFAULT_*_MODEL` +
+`CLAUDE_CODE_SUBAGENT_MODEL`) und startet dann `claude` direkt in `~/proggs`. Deshalb koennen mehrere
+Fenster unabhaengig laufen, und nichts kann im Hintergrund "absterben".
+
+### Selbsttest (fuer Entwickler)
+
+`pwsh -File Start-ClaudeCode-OpenRouter.ps1 -SelfTest "<modell-slug>"` laeuft das ganze Skript bis
+kurz vor dem `claude`-Start durch (ohne Menue, ohne Claude Code zu oeffnen) — gut zum Pruefen.
 
 ### Dateien
 
@@ -84,6 +98,4 @@ fuer **robustes Werkzeug-Verhalten bei Fremdmodellen** laeuft alles ueber den lo
 |-------|-------|
 | `Start-ClaudeCode-OpenRouter.ps1` | Das Startmenue (Herzstueck). |
 | `coding-models.json` | Eignungs-Einschaetzung + Kategorie-Texte (anpassbar). |
-| `config.example.json` | Referenz-Vorlage der ccr-Config (nicht die aktive Datei). |
 | `~/SK/ClaudeCodeOpenRouter/openrouter.key` | Dein Schluessel (ausserhalb Repo). |
-| `~/.claude-code-router/config.json` | Aktive ccr-Config (vom Startmenue erzeugt). |

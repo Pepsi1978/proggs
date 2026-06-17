@@ -33,6 +33,7 @@ $CcrConfig    = Join-Path $CcrConfigDir 'config.json'
 $LogDir       = Join-Path $ProjectDir 'logs'
 $CacheFile    = Join-Path $LogDir 'models-cache.json'
 $LastModel    = Join-Path $ProjectDir 'last-model.txt'
+$OverrideSettings = Join-Path $LogDir 'session-settings.json'
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 $LogFile = Join-Path $LogDir ("openrouter-launcher-{0}.jsonl" -f (Get-Date -Format 'yyyy-MM-dd'))
@@ -327,40 +328,12 @@ function Start-WithModel {
     param([string]$Slug, [string]$ApiKey, [array]$All)
     $info = $All | Where-Object { $_.Id -eq $Slug } | Select-Object -First 1
     $isAnthropic = $info -and $info.IsAnthropic
-    # Anthropic: voller Stream (beste Erfahrung). Fremdmodell: + enhancetool (robuste Werkzeuge).
-    $transformer = if ($isAnthropic) { @{ use = @('openrouter') } } else { @{ use = @('openrouter','enhancetool') } }
-    if (-not (Test-Path $CcrConfigDir)) { New-Item -ItemType Directory -Force -Path $CcrConfigDir | Out-Null }
-
-    $cfg = [ordered]@{
-        LOG            = $true
-        LOG_LEVEL      = 'info'
-        API_TIMEOUT_MS = 1200000
-        HOST           = '127.0.0.1'
-        Providers      = @(
-            [ordered]@{
-                name         = 'openrouter'
-                api_base_url = 'https://openrouter.ai/api/v1/chat/completions'
-                api_key      = $ApiKey
-                models       = @($Slug)
-                transformer  = $transformer
-            }
-        )
-        Router         = [ordered]@{
-            default              = "openrouter,$Slug"
-            background           = "openrouter,$Slug"
-            think                = "openrouter,$Slug"
-            longContext          = "openrouter,$Slug"
-            longContextThreshold = 60000
-            webSearch            = "openrouter,$Slug"
-        }
-    }
-    Save-Json-NoBom -Path $CcrConfig -Object $cfg
     Set-Content -Path $LastModel -Value $Slug -Encoding utf8
-    Write-Log 'INFO' 'ccr_config_written' @{ model = $Slug; anthropic = $isAnthropic; enhancetool = (-not $isAnthropic) }
-    Write-Probe 'config_written' 'ccr-Config zeigt auf gewaehltes Modell' $Slug ($cfg.Router.default) ($cfg.Router.default -eq "openrouter,$Slug")
+    Write-Log 'INFO' 'model_selected' @{ model = $Slug; anthropic = $isAnthropic }
 
     Write-Header
-    Write-Host "  Gewaehltes Modell:  " -NoNewline -ForegroundColor White; Write-Host $Slug -ForegroundColor Green
+    Write-Host "  Aktives Modell (laeuft ueber OpenRouter):" -ForegroundColor White
+    Write-Host "    $Slug" -ForegroundColor Green
     if ($info) {
         $toolTxt = if ($info.HasTools) { 'ja' } else { 'NEIN' }
         Write-Host ("  Kontext: {0}   ·   Werkzeuge: {1}   ·   Eignung: {2}" -f (Format-Ctx $info.Context), $toolTxt, $info.Rating) -ForegroundColor DarkGray
@@ -372,40 +345,56 @@ function Start-WithModel {
         }
         if (-not $info.IsAnthropic) {
             Write-Host ""
-            Write-Host "  Hinweis: Fremdmodell — robustes Werkzeug-Verhalten ist aktiv (enhancetool)," -ForegroundColor Yellow
-            Write-Host "  aber es laeuft evtl. nicht ganz so rund wie Claude. Bei Problemen Claude-Modell waehlen." -ForegroundColor Yellow
+            Write-Host "  Hinweis: Fremdmodell — laeuft, aber evtl. nicht ganz so rund wie Claude" -ForegroundColor Yellow
+            Write-Host "  (Claude Code ist fuer Claude gebaut). Bei Werkzeug-Problemen ein Claude-Modell waehlen." -ForegroundColor Yellow
         }
     }
     Write-Host ""
-    Write-Host "  Starte claude-code-router + Claude Code ..." -ForegroundColor Cyan
+    Write-Host "  Hinweis: Claude Code zeigt im eigenen Banner evtl. 'Opus' als internen Namen —" -ForegroundColor DarkGray
+    Write-Host "  entscheidend ist das oben gruen genannte Modell, das wirklich antwortet." -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  Starte Claude Code ueber OpenRouter ..." -ForegroundColor Cyan
     Write-Host "  (Log dieser Sitzung: $LogFile)" -ForegroundColor DarkGray
     Write-Host ""
 
-    # ccr nutzt seine eigene Modell-Aufloesung via Router — Anthropic-Aliase neutralisieren,
-    # damit Haupt-, Hintergrund- und Subagent-Anfragen ALLE ueber den Router aufs gewaehlte Modell gehen.
-    $env:CLAUDE_CODE_SUBAGENT_MODEL = ''
-    $env:ANTHROPIC_DEFAULT_OPUS_MODEL = ''
-    $env:ANTHROPIC_DEFAULT_SONNET_MODEL = ''
-    $env:ANTHROPIC_DEFAULT_HAIKU_MODEL = ''
-    $env:ANTHROPIC_MODEL = ''
+    # Native OpenRouter "Anthropic-Skin": NUR Umgebungsvariablen in DIESEM Fenster setzen.
+    # KEIN Hintergrund-Dienst -> nichts kann sterben, kein ConnectionRefused; mehrere Fenster
+    # mit verschiedenen Modellen gleichzeitig moeglich. Dein normales Claude bleibt unberuehrt.
+    $env:ANTHROPIC_BASE_URL                     = 'https://openrouter.ai/api'   # OHNE /v1 (native Skin)
+    $env:ANTHROPIC_AUTH_TOKEN                   = $ApiKey
+    $env:ANTHROPIC_API_KEY                      = ''                            # MUSS leer sein (nicht unset)
+    $env:ANTHROPIC_DEFAULT_OPUS_MODEL           = $Slug
+    $env:ANTHROPIC_DEFAULT_SONNET_MODEL         = $Slug
+    $env:ANTHROPIC_DEFAULT_HAIKU_MODEL          = $Slug
+    $env:CLAUDE_CODE_SUBAGENT_MODEL             = $Slug
+    $env:CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = '1'
+    $env:CLAUDE_CODE_ATTRIBUTION_HEADER         = '0'
+    $env:API_TIMEOUT_MS                         = '1200000'
+    $env:API_FORCE_IDLE_TIMEOUT                 = '0'
+    $env:DISABLE_TELEMETRY                      = '1'
+
+    # KRITISCH gegen das "[1m]"-Suffix: Deine globale settings.json hat model="opus[1m]".
+    # Claude Code haengt das "[1m]" sonst an JEDES Modell an -> OpenRouter findet es nicht.
+    # Loesung: Session-Override-Settings (ueberschreibt NUR fuer diese Session, nicht global)
+    # erzwingt den rohen Slug als Haupt- UND Subagent-Modell -> kein "[1m]".
+    $override = [ordered]@{ model = $Slug; env = [ordered]@{ CLAUDE_CODE_SUBAGENT_MODEL = $Slug } }
+    Save-Json-NoBom -Path $OverrideSettings -Object $override
+    Write-Probe 'env_set' 'Native-Skin BASE_URL gesetzt' 'https://openrouter.ai/api' $env:ANTHROPIC_BASE_URL ($env:ANTHROPIC_BASE_URL -eq 'https://openrouter.ai/api')
 
     if ($script:DryRun) {
-        Write-Host ""
-        Write-Host "  [SELBSTTEST] Alles vorbereitet — wuerde jetzt 'ccr restart' + 'ccr code' starten." -ForegroundColor Magenta
-        Write-Host "  [SELBSTTEST] ccr-Config geschrieben nach: $CcrConfig" -ForegroundColor Magenta
-        Write-Log 'INFO' 'selftest_ok' @{ model = $Slug }
+        Write-Host "  [SELBSTTEST] Env + Override gesetzt. Wuerde starten: claude --model $Slug --settings <override>" -ForegroundColor Magenta
+        Write-Host "  [SELBSTTEST] Override-Datei: $OverrideSettings" -ForegroundColor Magenta
+        Write-Log 'INFO' 'selftest_ok' @{ model = $Slug; baseUrl = $env:ANTHROPIC_BASE_URL }
         return
     }
     Set-Location $WorkDir
+    Write-Log 'INFO' 'launching_claude' @{ model = $Slug; cwd = $WorkDir }
     try {
-        & ccr restart 2>$null | Out-Null
-    } catch { Write-Log 'WARN' 'ccr_restart_failed' @{ error = "$_" } }
-    Start-Sleep -Milliseconds 800
-    Write-Log 'INFO' 'launching_ccr_code' @{ model = $Slug; cwd = $WorkDir }
-    try {
-        & ccr code
+        # --model: roher Slug als Hauptmodell (hoechste Praezedenz, kein "[1m]").
+        # --settings: erzwingt Modell + Subagent-Modell fuer die Session.
+        & claude --model $Slug --settings $OverrideSettings
     } catch {
-        Write-Log 'ERROR' 'ccr_code_failed' @{ error = "$_" }
+        Write-Log 'ERROR' 'claude_failed' @{ error = "$_" }
         Stop-WithMessage "Start fehlgeschlagen: $_"
     }
     Write-Log 'INFO' 'session_ended' @{ model = $Slug }
