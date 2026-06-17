@@ -14,15 +14,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,19 +64,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-
-/**
- * Gewohnheitsboard (Frank-Wunsch 2026-06-17): 1:1-Klon des Mentalboards OHNE Vorlesefunktion
- * (kein Lautsprecher, kein "Erster Satz", kein "Folgesatz", kein Endlos-Haekchen).
- * Liegt im Aufgaben-Bereich auf Sub-Reiter 1 ("Gewohnheit").
- *
- * Bedienung identisch zum Mentalboard:
- * - Mic-Button in der BottomBar oeffnet die Auswahl "Schreiben" / "Aufnehmen".
- * - Tap auf einen Satz oeffnet einen Dialog zum Editieren ODER Loeschen.
- * - Langes Druecken startet Drag & Drop zum Umsortieren.
- *
- * Persistenz: DataStore (Datei "gewohnheit_board"), exakt analog zum Mentalboard.
- */
 
 private val Context.gewohnheitStore by preferencesDataStore(name = "gewohnheit_board")
 private val KEY_GEWOHNHEITEN = stringPreferencesKey("gewohnheiten_json")
@@ -150,9 +141,10 @@ private fun serializeGewohnheiten(mentals: List<Mental>): String {
     return arr.toString()
 }
 
-/* Akzentfarbe — identisch zum Mentalboard (Aufgaben-Orange). */
-internal val GewohnheitAccent: Color
+private val GewohnheitAccent: Color
     @Composable get() = LocalCosmos.current.accentTasks
+
+private const val SEPARATOR_KEY = "__separator__"
 
 /* ============================== UI ============================== */
 
@@ -165,19 +157,27 @@ fun GewohnheitBoardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val suggestVm: GewohnheitSuggestViewModel = hiltViewModel()
+    val suggestions by suggestVm.suggestions.collectAsStateWithLifecycle()
+    val suggestState by suggestVm.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(suggestVm.error.collectAsStateWithLifecycle().value) {
+        suggestVm.error.value?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            suggestVm.dismissError()
+        }
+    }
+
     val gewohnheitenStream = remember(context) { gewohnheitenFlow(context) }
     val stored by gewohnheitenStream.collectAsStateWithLifecycle(initialValue = emptyList())
+    val userCount = stored.size
 
-    var dragOrder by remember { mutableStateOf<List<Mental>?>(null) }
-    val displayed = dragOrder ?: stored
+    var dragOrder by remember { mutableStateOf<List<String>?>(null) }
+    val displayedUser = stored
+    val displayedSuggestions = suggestions
 
-    LaunchedEffect(stored) {
-        val d = dragOrder ?: return@LaunchedEffect
-        val dIds = d.map { it.id }
-        val sIds = stored.map { it.id }
-        if (dIds == sIds || dIds.toSet() != sIds.toSet()) {
-            dragOrder = null
-        }
+    LaunchedEffect(stored, suggestions) {
+        dragOrder = null
     }
 
     var showAddDialog by remember { mutableStateOf(false) }
@@ -187,19 +187,52 @@ fun GewohnheitBoardScreen(
     val lazyListState = rememberLazyListState()
     val reorderState =
         rememberReorderableLazyListState(lazyListState) { from, to ->
-            val fromId = from.key as? String ?: return@rememberReorderableLazyListState
-            val toId = to.key as? String ?: return@rememberReorderableLazyListState
-            val list = (dragOrder ?: stored).toMutableList()
-            val fromIdx = list.indexOfFirst { it.id == fromId }
-            val toIdx = list.indexOfFirst { it.id == toId }
-            if (fromIdx in list.indices && toIdx in list.indices) {
-                list.add(toIdx, list.removeAt(fromIdx))
-                dragOrder = list
+            val fromKey = from.key as? String ?: return@rememberReorderableLazyListState
+            val toKey = to.key as? String ?: return@rememberReorderableLazyListState
+            if (fromKey == SEPARATOR_KEY || toKey == SEPARATOR_KEY) return@rememberReorderableLazyListState
+
+            val fromIsSuggestion = suggestions.any { it.id == fromKey }
+            val toIsSuggestion = suggestions.any { it.id == toKey }
+
+            if (fromIsSuggestion && toIsSuggestion) {
+                val list = suggestions.toMutableList()
+                val fromIdx = list.indexOfFirst { it.id == fromKey }
+                val toIdx = list.indexOfFirst { it.id == toKey }
+                if (fromIdx in list.indices && toIdx in list.indices) {
+                    list.add(toIdx, list.removeAt(fromIdx))
+                    dragOrder = list.map { it.id }
+                }
+            } else if (!fromIsSuggestion && !toIsSuggestion) {
+                val list = stored.toMutableList()
+                val fromIdx = list.indexOfFirst { it.id == fromKey }
+                val toIdx = list.indexOfFirst { it.id == toKey }
+                if (fromIdx in list.indices && toIdx in list.indices) {
+                    list.add(toIdx, list.removeAt(fromIdx))
+                    dragOrder = list.map { it.id }
+                }
             }
         }
 
     CosmosScaffold(
         title = "Gewohnheit",
+        actions = {
+            if (suggestState == SuggestState.LOADING) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = GewohnheitAccent,
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            IconButton(onClick = { suggestVm.generateSuggestions() }) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = "Gewohnheitsvorschläge aus Ideen",
+                    tint = GewohnheitAccent,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        },
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.TASKS,
@@ -218,7 +251,7 @@ fun GewohnheitBoardScreen(
                     .background(if (cosmos.isDark) Color(0xFF12100D) else Color(0xFFFAF7F3))
                     .padding(padding)
         ) {
-            if (displayed.isEmpty()) {
+            if (displayedUser.isEmpty() && displayedSuggestions.isEmpty()) {
                 GewohnheitEmptyState()
             } else {
                 LazyColumn(
@@ -227,23 +260,87 @@ fun GewohnheitBoardScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(displayed, key = { it.id }) { gewohnheit ->
+                    itemsIndexed(
+                        displayedUser,
+                        key = { _, g -> g.id },
+                    ) { index, gewohnheit ->
                         ReorderableItem(reorderState, key = gewohnheit.id) { isDragging ->
-                            val position = displayed.indexOfFirst { it.id == gewohnheit.id } + 1
                             GewohnheitRow(
-                                position = position,
+                                position = index + 1,
                                 text = gewohnheit.text,
                                 isDragging = isDragging,
+                                accent = GewohnheitAccent,
                                 onClick = { editTarget = gewohnheit },
-                                dragModifier =
-                                    Modifier.longPressDraggableHandle(
-                                        onDragStopped = {
-                                            dragOrder?.let { order ->
-                                                scope.launch { reorderGewohnheiten(context, order) }
+                                dragModifier = Modifier.longPressDraggableHandle(
+                                    onDragStopped = {
+                                        val order = dragOrder
+                                        if (order != null) {
+                                            val reordered = order.mapNotNull { id ->
+                                                displayedUser.firstOrNull { it.id == id }
+                                            }
+                                            if (reordered.size == displayedUser.size) {
+                                                scope.launch { reorderGewohnheiten(context, reordered) }
                                             }
                                         }
-                                    ),
+                                        dragOrder = null
+                                    }
+                                ),
                             )
+                        }
+                    }
+
+                    if (displayedSuggestions.isNotEmpty()) {
+                        item(key = SEPARATOR_KEY) {
+                            SuggestionDivider()
+                        }
+
+                        itemsIndexed(
+                            displayedSuggestions,
+                            key = { _, s -> s.id },
+                        ) { index, suggestion ->
+                            ReorderableItem(reorderState, key = suggestion.id) { isDragging ->
+                                SuggestionRow(
+                                    position = index + 1,
+                                    text = suggestion.text,
+                                    isDragging = isDragging,
+                                    accent = GewohnheitAccent,
+                                    onAccept = {
+                                        scope.launch {
+                                            addGewohnheit(context, suggestion.text)
+                                            suggestVm.acceptSuggestion(suggestion.id)
+                                        }
+                                    },
+                                    onDelete = {
+                                        scope.launch { suggestVm.deleteSuggestion(suggestion.id) }
+                                    },
+                                    dragModifier = Modifier.longPressDraggableHandle(
+                                        onDragStopped = {
+                                            val order = dragOrder
+                                            if (order != null) {
+                                                val reordered = order.mapNotNull { id ->
+                                                    displayedSuggestions.firstOrNull { it.id == id }
+                                                }
+                                                if (reordered.size == displayedSuggestions.size) {
+                                                    // Suggestion reorder not persisted, just visual
+                                                }
+                                            }
+
+                                            // Check if suggestion was dragged above separator
+                                            val flatIndex = lazyListState.layoutInfo.visibleItemsInfo
+                                                .firstOrNull { it.key == suggestion.id }
+                                                ?.index ?: -1
+                                            if (flatIndex in 0 until userCount) {
+                                                scope.launch {
+                                                    addGewohnheit(context, suggestion.text)
+                                                    suggestVm.acceptSuggestion(suggestion.id)
+                                                }
+                                            }
+
+                                            dragOrder = null
+                                        }
+                                    ),
+                                )
+                            }
                         }
                     }
                 }
@@ -290,11 +387,30 @@ fun GewohnheitBoardScreen(
     }
 }
 
+/* ============================== Reihenfolge-Helper ============================== */
+
+private fun computeDraggedList(
+    stored: List<Mental>,
+    suggestions: List<Mental>,
+    dragOrder: List<String>?,
+): Pair<List<Mental>, List<Mental>> {
+    if (dragOrder == null) return stored to suggestions
+    val allById = (stored + suggestions).associateBy { it.id }
+    val reordered = dragOrder.mapNotNull { allById[it] }
+    val storedIds = stored.map { it.id }.toSet()
+    val newStored = reordered.filter { it.id in storedIds }
+    val newSuggestions = reordered.filter { it.id !in storedIds }
+    return newStored to newSuggestions
+}
+
+/* ============================== Zeilen ============================== */
+
 @Composable
 private fun GewohnheitRow(
     position: Int,
     text: String,
     isDragging: Boolean,
+    accent: Color,
     onClick: () -> Unit,
     dragModifier: Modifier,
 ) {
@@ -307,10 +423,7 @@ private fun GewohnheitRow(
                 .background(cardBg)
                 .then(
                     if (isDragging) {
-                        Modifier.background(
-                            GewohnheitAccent.copy(alpha = 0.12f),
-                            RoundedCornerShape(14.dp),
-                        )
+                        Modifier.background(accent.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
                     } else {
                         Modifier
                     }
@@ -324,13 +437,13 @@ private fun GewohnheitRow(
             modifier =
                 Modifier.size(30.dp)
                     .clip(RoundedCornerShape(15.dp))
-                    .background(GewohnheitAccent.copy(alpha = 0.16f)),
+                    .background(accent.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "$position",
                 style = MaterialTheme.typography.labelLarge,
-                color = GewohnheitAccent,
+                color = accent,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -341,6 +454,92 @@ private fun GewohnheitRow(
             color = cosmos.textPrimary,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+@Composable
+private fun SuggestionDivider() {
+    val cosmos = LocalCosmos.current
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(1.dp).background(GewohnheitAccent.copy(alpha = 0.35f))
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Gewohnheitsvorschläge — erkannte Vorschläge",
+            style = MaterialTheme.typography.labelMedium,
+            color = GewohnheitAccent,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun SuggestionRow(
+    position: Int,
+    text: String,
+    isDragging: Boolean,
+    accent: Color,
+    onAccept: () -> Unit,
+    onDelete: () -> Unit,
+    dragModifier: Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .then(
+                    if (isDragging) {
+                        Modifier.background(accent.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                    } else {
+                        Modifier
+                    }
+                )
+                .then(dragModifier)
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier.size(30.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(accent.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "$position",
+                style = MaterialTheme.typography.labelLarge,
+                color = accent.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = cosmos.textPrimary.copy(alpha = 0.85f),
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onAccept, modifier = Modifier.size(40.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Flag,
+                contentDescription = "Als Gewohnheit übernehmen",
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Delete,
+                contentDescription = "Vorschlag verwerfen",
+                tint = Color(0xFFE53935).copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
@@ -378,7 +577,7 @@ private fun GewohnheitEmptyState() {
         Text(
             text =
                 "Tippe unten auf das Mikrofon und waehle Schreiben oder Aufnehmen. " +
-                    "Spaeter kannst du Saetze per langem Druecken frei sortieren.",
+                    "Oder tippe oben auf den Funken, um aus deinen Ideen Gewohnheitsvorschläge zu erhalten.",
             style = MaterialTheme.typography.bodyMedium,
             color = cosmos.textSecondary,
             textAlign = TextAlign.Center,
