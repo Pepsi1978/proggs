@@ -16,7 +16,10 @@
 ================================================================================
 #>
 
+param([string]$SelfTest = '')   # Interner Selbsttest: laeuft bis kurz vor 'ccr code' OHNE Menue/Start (z.B. -SelfTest 'minimax/minimax-m3')
+
 $ErrorActionPreference = 'Stop'
+$script:DryRun = [bool]$SelfTest
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 try { $OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 
@@ -62,7 +65,7 @@ function Write-Probe {
 }
 
 function Write-Header {
-    Clear-Host
+    if (-not $script:DryRun) { try { Clear-Host } catch {} }
     Write-Host ""
     Write-Host "  ┌────────────────────────────────────────────────────────────┐" -ForegroundColor DarkCyan
     Write-Host "  │   Claude Code  ·  OpenRouter-Modus                          │" -ForegroundColor Cyan
@@ -359,13 +362,13 @@ function Start-WithModel {
     Write-Header
     Write-Host "  Gewaehltes Modell:  " -NoNewline -ForegroundColor White; Write-Host $Slug -ForegroundColor Green
     if ($info) {
-        Write-Host ("  Kontext: {0}   ·   Werkzeuge: {1}   ·   Eignung: {2}" -f (Format-Ctx $info.Context), (if($info.HasTools){'ja'}else{'NEIN'}), $info.Rating) -ForegroundColor DarkGray
+        $toolTxt = if ($info.HasTools) { 'ja' } else { 'NEIN' }
+        Write-Host ("  Kontext: {0}   ·   Werkzeuge: {1}   ·   Eignung: {2}" -f (Format-Ctx $info.Context), $toolTxt, $info.Rating) -ForegroundColor DarkGray
         if (-not $info.HasTools) {
             Write-Host ""
             Write-Host "  ACHTUNG: Dieses Modell unterstuetzt KEINE Werkzeuge." -ForegroundColor Red
             Write-Host "  Claude Code wird damit kaum funktionieren (keine Datei-Edits, keine Tools)." -ForegroundColor Red
-            $go = Read-Host "  Trotzdem starten? (j/N)"
-            if ($go -notmatch '^[jJyY]') { return }
+            if (-not $script:DryRun) { $go = Read-Host "  Trotzdem starten? (j/N)"; if ($go -notmatch '^[jJyY]') { return } }
         }
         if (-not $info.IsAnthropic) {
             Write-Host ""
@@ -386,6 +389,13 @@ function Start-WithModel {
     $env:ANTHROPIC_DEFAULT_HAIKU_MODEL = ''
     $env:ANTHROPIC_MODEL = ''
 
+    if ($script:DryRun) {
+        Write-Host ""
+        Write-Host "  [SELBSTTEST] Alles vorbereitet — wuerde jetzt 'ccr restart' + 'ccr code' starten." -ForegroundColor Magenta
+        Write-Host "  [SELBSTTEST] ccr-Config geschrieben nach: $CcrConfig" -ForegroundColor Magenta
+        Write-Log 'INFO' 'selftest_ok' @{ model = $Slug }
+        return
+    }
     Set-Location $WorkDir
     try {
         & ccr restart 2>$null | Out-Null
@@ -419,6 +429,7 @@ foreach ($m in $rawModels) { try { $all += (Get-ModelInfo -M $m -Cfg $cfg) } cat
 Write-Log 'INFO' 'models_parsed' @{ total = $all.Count; withTools = (@($all | Where-Object { $_.HasTools })).Count }
 
 $chosen = $null
+if ($SelfTest) { $chosen = $SelfTest; Write-Host "  [SELBSTTEST] Modell vorgegeben: $SelfTest" -ForegroundColor Magenta }
 while (-not $chosen) {
     Write-Header
     Write-Host "  WAS MOECHTEST DU STARTEN?" -ForegroundColor Cyan
