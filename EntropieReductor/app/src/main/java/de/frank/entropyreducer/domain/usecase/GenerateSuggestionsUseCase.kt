@@ -207,58 +207,44 @@ class GenerateSuggestionsUseCase @Inject constructor(
 
     companion object {
         private const val TASK_SYSTEM_PROMPT = """
-Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GEWOHNHEIT oder eine AUFGABE?
+DU ENTSCHEIDEST EXKLUSIV: Aufgabe oder Gewohnheit? NIEMALS BEIDES.
 
-WICHTIGSTE REGEL: Wenn die Idee ein Wiederholungsmuster enthält ("alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter"), dann ist es eine GEWOHNHEIT — antworte mit [] (leeres Array).
+PRÜFE Jede Idee:
+1. Enthält die Idee ein Wiederholungsmuster? → DAS IST EINE GEWOHNHEIT. Antworte mit [].
+2. Enthält die Idee KEIN Wiederholungsmuster? → DAS IST EINE AUFGABE. Erstelle eine Aufgabe.
 
-Wiederholungsmuster erkennen:
-- "alle drei Tage", "alle zwei Tage", "alle X Tage"
-- "regelmäßig", "täglich", "wöchentlich", "monatlich"
-- "jeden Tag", "jeden Morgen", "jeden Abend"
-- "immer wieder", "öfter", "mehrmals"
+Wiederholungsmuster: "alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter", "mehrmals"
 
 BEISPIELE:
-"Ich möchte alle drei Tage Federball spielen" → [] (GEWOHNHEIT, hat "alle drei Tage")
-"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → [] (GEWOHNHEIT)
-"Ich möchte einen Baum pflanzen" → [{"title": "Baum pflanzen", ...}] (AUFGABE, kein Wiederholungsmuster)
-"Ich muss morgen Gassi gehen" → [{"title": "Mit Hund Gassi gehen", ...}] (AUFGABE)
-"Bild malen" → [{"title": "Bild malen", ...}] (AUFGABE)
+"Ich möchte alle drei Tage Federball spielen" → [] (Wiederholungsmuster!)
+"Ich möchte regelmäßig ein Buch lesen" → [] (Wiederholungsmuster!)
+"Ich möchte einen Baum pflanzen" → [{"title": "Baum pflanzen", "description": "..."}] (kein Muster!)
+"Ich muss morgen Gassi gehen" → [{"title": "Mit Hund Gassi gehen", "description": "..."}] (kein Muster!)
 
-NUR wenn KEIN Wiederholungsmuster vorhanden ist, erstelle eine AUFGABE.
+MUSS-BEDINGUNG: Wenn Wiederholungsmuster vorhanden → MUSS du [] antworten. Keine Ausnahme.
 
-Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
-Für jede AUFGABE:
-- title: max. 5 Wörter, prägnant
-- description: NUR die Infos aus der Idee verwenden, nichts dazufügen
-Antworte NUR mit JSON-Array: [{"title": "...", "description": "..."}] oder [].
-Keine Einleitung, keine Erklärung.
+Format: Echte Umlaute (ä, ö, ü, ß). NUR JSON-Array oder [].
 """
 
         private const val HABIT_SYSTEM_PROMPT = """
-Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GEWOHNHEIT oder eine AUFGABE?
+DU ENTSCHEIDEST EXKLUSIV: Gewohnheit oder Aufgabe? NIEMALS BEIDES.
 
-WICHTIGSTE REGEL: Wenn die Idee ein Wiederholungsmuster enthält ("alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter"), dann ist es eine GEWOHNHEIT. Sonst ist es eine AUFGABE und du antwortest mit [].
+PRÜFE Jede Idee:
+1. Enthält die Idee ein Wiederholungsmuster? → DAS IST EINE GEWOHNHEIT. Erstelle Gewohnheit mit ALLEN Infos.
+2. Enthält die Idee KEIN Wiederholungsmuster? → DAS IST EINE AUFGABE. Antworte mit [].
 
-Wiederholungsmuster erkennen:
-- "alle drei Tage", "alle zwei Tage", "alle X Tage"
-- "regelmäßig", "täglich", "wöchentlich", "monatlich"
-- "jeden Tag", "jeden Morgen", "jeden Abend"
-- "immer wieder", "öfter", "mehrmals"
+Wiederholungsmuster: "alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter", "mehrmals"
 
 BEISPIELE:
-"Ich möchte alle drei Tage Federball spielen mit den zwei Mädels" → GEWOHNHEIT
-"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → GEWOHNHEIT
-"Ich möchte einen Baum pflanzen" → [] (AUFGABE, kein Wiederholungsmuster)
-"Ich muss morgen Gassi gehen" → [] (AUFGABE)
+"Ich möchte alle drei Tage Federball spielen mit den Mädels" → "Ich gehe alle drei Tage Federball spielen mit den Mädels."
+"Ich möchte regelmäßig ein Buch lesen" → "Ich lese regelmäßig ein Buch."
+"Ich möchte einen Baum pflanzen" → [] (kein Muster!)
+"Ich muss morgen Gassi gehen" → [] (kein Muster!)
 
-WICHTIG: Nimm ALLE Infos aus der Idee und formuliere sie als Gewohnheit. NICHTS weglassen!
-- "Ich möchte alle drei Tage Federball spielen mit den zwei Mädels, die ich kennengelernt habe"
-→ "Ich gehe alle drei Tage Federball spielen mit den zwei Mädels, die ich kennengelernt habe."
+MUSS-BEDINGUNG: Wenn Wiederholungsmuster vorhanden → MUSS du eine Gewohnheit erstellen. Keine Ausnahme.
+WICHTIG: ALLE Infos aus der Idee übernehmen, nichts weglassen.
 
-Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
-Für jede GEWOHNHEIT: Ein Satz im Ich-Format. ALLE Infos aus der Idee übernehmen, nichts weglassen.
-Antworte NUR mit JSON-Array: ["Gewohnheit 1", "Gewohnheit 2"] oder [].
-Keine Einleitung, keine Erklärung.
+Format: Echte Umlaute (ä, ö, ü, ß). NUR JSON-Array oder [].
 """
     }
 }
