@@ -207,33 +207,35 @@ class GenerateSuggestionsUseCase @Inject constructor(
 
     companion object {
         private const val TASK_SYSTEM_PROMPT = """
-Rolle und Aufgabe: Du verwandelst Ideen in Aufgaben.
+Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GEWOHNHEIT oder eine AUFGABE?
 
-WICHTIGSTE REGEL: Erfinde KEINE neuen Inhalte. Nimm exakt die Information aus der Idee und formuliere sie als Aufgabe. Wenn die Idee wenig Infos enthält, enthält auch die Aufgabe wenig Infos. Erfinde keine zusätzlichen Schritte, keine Begründungen, keine Hintergründe.
+DEFINITIONEN (strikte Trennung):
+- GEWOHNHEIT: Etwas das sich WIEDERHOLT. Die Idee muss EXPLIZIT ein Wiederholungsmuster enthalten (z.B. "regelmäßig", "täglich", "jeden Tag", "alle X Tage", "immer wieder", "öfter").
+- AUFGABE: Alles andere. Auch wenn es einmalig ist, in der Zukunft liegt oder einen Termin hat.
 
-Beispiel 1:
-Ideе: "Ich muss morgen auf jeden Fall noch mit dem neuen Hund Gassi gehen"
-Aufgabe: "Mit dem neuen Hund Gassi gehen"
+WANN IST ES EINE AUFGABE? (ALLES was kein Wiederholungsmuster enthält):
+- "Baum pflanzen" → AUFGABE
+- "Mit Hund Gassi gehen" → AUFGABE
+- "Bild malen" → AUFGABE
+- "Bücherregal sortieren" → AUFGABE
+- "Reinigung machen" → AUFGABE
+- "Einkaufen gehen" → AUFGABE
 
-Beispiel 2:
-Ideе: "Ich möchte ein Bild von Raumschiff Enterprise malen, weil ich das so schön finde"
-Aufgabe: "Bild von Raumschiff Enterprise malen"
-Description: "Ich bin inspiriert von Raumschiff Enterprise und finde es schön."
+BEISPIELE:
+"Ich möchte einen Baum pflanzen" → AUFGABE, title: "Baum pflanzen"
+"Ich muss morgen Gassi gehen" → AUFGABE, title: "Mit Hund Gassi gehen"
+"Bild von Raumschiff Enterprise malen" → AUFGABE, title: "Bild von Raumschiff Enterprise malen"
 
-Beispiel 3:
-Ideе: "Bücherregal sortieren"
-Aufgabe: "Bücherregal sortieren"
+WICHTIGSTE REGEL: Wenn du UNSICHER bist, ist es eine AUFGABE. Erfinde NIEMALS "regelmäßig" wenn es nicht explizit im Text steht.
 
-Context: Android-APP, Ideen zu Aufgaben umwandeln. Keine Gewohnheiten — diese werden woanders behandelt.
+Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
 
-Format: Deutsch, 11. Klasse, echte Umlaute (ä, ö, ü, ß).
-
-Für jede Aufgabe:
+Für jede AUFGABE:
 - title: max. 5 Wörter, prägnant, die Kernaufgabe aus der Idee
 - description: 1–3 Sätze, NUR die Infos aus der Idee verwenden, keine neuen erfinden
 
 Regeln:
-- NUR direkte Tätigkeiten (einmalig abarbeitbar), keine Gewohnheiten
+- NUR direkte Tätigkeiten (einmalig abarbeitbar)
 - KEINE neuen Informationen erfinden — nur die Idee in Aufgaben-Form umwandeln
 - Keine zusätzlichen Tipps, Begründungen oder Hintergründe erfinden
 - Antworte NUR mit JSON-Array: [{"title": "...", "description": "..."}]
@@ -241,38 +243,39 @@ Regeln:
 """
 
         private const val HABIT_SYSTEM_PROMPT = """
-Rolle und Aufgabe: Du verwandelst Ideen in Gewohnheitsvorschläge.
+Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GWOHNHEIT oder eine AUFGABE?
 
-WICHTIGSTE REGEL: Erfinde KEINE neuen Inhalte. Nimm exakt die Information aus der Idee und formuliere sie als Gewohnheit in Ich-Form. Wenn die Idee wenig Infos enthält, enthält auch die Gewohnheit wenig Infos. Erfinde keine zusätzlichen Handlungen, keine Begründungen, keine Hintergründe.
+DEFINITIONEN (strikte Trennung):
+- GWOHNHEIT: Etwas das sich WIEDERHOLT. Die Idee muss EXPLIZIT ein Wiederholungsmuster enthalten.
+- AUFGABE: Etwas das EINMALIG passiert. Auch wenn es in der Zukunft liegt oder ein Termin genannt wird.
 
-Beispiel 1:
-Ideе: "Ich möchte regelmäßig alle zwei Tage ein Buch lesen"
-Gewohnheit: "Ich lese alle zwei Tage ein Buch."
+WANN IST ES EINE GEWOHNHEIT? (NUR wenn mindestens EIN Wort im Text darauf hinweist):
+- "regelmäßig", "täglich", "wöchentlich", "jeden Tag", "jeden Morgen", "jeden Abend"
+- "alle zwei Tage", "alle X Tage", "mehrmals pro Woche"
+- "immer wieder", "öfter", "von Zeit zu Zeit"
+- "jeden Monat", "monatlich", "jährlich"
 
-Beispiel 2:
-Ideе: "Jeden Morgen meditieren"
-Gewohnheit: "Jeden Morgen meditiere ich."
+WANN IST ES EINE AUFGABE? (Alles andere ist eine AUFGABE):
+- "Ich möchte einen Baum pflanzen" → AUFGABE (kein Wiederholungsmuster)
+- "Ich muss morgen Gassi gehen" → AUFGABE (einmalig, auch mit Termin)
+- "Bild malen" → AUFGABE
+- "Bücherregal sortieren" → AUFGABE
+- "Reinigung machen" → AUFGABE
 
-Beispiel 3:
-Ideе: "Ich will öfter aufräumen"
-Gewohnheit: "Ich räume regelmäßig auf."
+BEISPIELE:
+"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → GEWOHNHEIT (Wort "regelmäßig")
+"Ich pflanze einen Baum im Garten meines Vaters" → AUFGABE (kein Wiederholungsmuster!)
+"Jeden Morgen meditieren" → GEWOHNHEIT (Wort "jeden Morgen")
+"Ich muss mit dem Hund Gassi gehen" → AUFGABE (kein Wiederholungsmuster)
+"Ich will öfter aufräumen" → GEWOHNHEIT (Wort "öfter")
 
-Context: Android-APP, Ideen zu Gewohnheiten umwandeln. Keine Aufgaben — diese werden woanders behandelt.
+WICHTIGSTE REGEL: Wenn du UNSICHER bist, ist es eine AUFGABE. Erfinde NIEMALS "regelmäßig" wenn es nicht explizit im Text steht.
 
-Format: Deutsch, 11. Klasse, echte Umlaute (ä, ö, ü, ß).
-
-Für jede Gewohnheit:
-- Ein Satz im Ich-Format, 1–3 Zeilen
-- NUR die Infos aus der Idee verwenden, keine neuen erfinden
-
-Regeln:
-- NUR regelmäßiges, wiederkehrendes Handeln (täglich, wöchentlich usw.)
-- KEINE neuen Informationen erfinden — nur die Idee in Gewohnheits-Form umwandeln
-- Keine zusätzlichen Tipps, Begründungen oder Hintergründe erfinden
-- Maximal 5 Vorschläge
-- Jeder Vorschlag soll einen klaren Auslöser/Zeitpunkt enthalten, wenn in der Idee vorhanden
-- Antworte NUR mit JSON-Array von Strings: ["Gewohnheit 1", "Gewohnheit 2"]
-- Keine Einleitung, keine Erklärung.
+Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
+Für jede GEWOHNHEIT: Ein Satz im Ich-Format, 1–3 Zeilen.
+Antworte NUR mit JSON-Array: ["Gewohnheit 1", "Gewohnheit 2"]
+Wenn keine Gewohnheit erkannt wird: antworte mit [] (leeres Array).
+Keine Einleitung, keine Erklärung.
 """
     }
 }
