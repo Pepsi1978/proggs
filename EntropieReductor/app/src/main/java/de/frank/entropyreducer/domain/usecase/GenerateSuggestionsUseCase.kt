@@ -209,72 +209,55 @@ class GenerateSuggestionsUseCase @Inject constructor(
         private const val TASK_SYSTEM_PROMPT = """
 Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GEWOHNHEIT oder eine AUFGABE?
 
-DEFINITIONEN (strikte Trennung):
-- GEWOHNHEIT: Etwas das sich WIEDERHOLT. Die Idee muss EXPLIZIT ein Wiederholungsmuster enthalten (z.B. "regelmäßig", "täglich", "jeden Tag", "alle X Tage", "immer wieder", "öfter").
-- AUFGABE: Alles andere. Auch wenn es einmalig ist, in der Zukunft liegt oder einen Termin hat.
+WICHTIGSTE REGEL: Wenn die Idee ein Wiederholungsmuster enthält ("alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter"), dann ist es eine GEWOHNHEIT — antworte mit [] (leeres Array).
 
-WANN IST ES EINE AUFGABE? (ALLES was kein Wiederholungsmuster enthält):
-- "Baum pflanzen" → AUFGABE
-- "Mit Hund Gassi gehen" → AUFGABE
-- "Bild malen" → AUFGABE
-- "Bücherregal sortieren" → AUFGABE
-- "Reinigung machen" → AUFGABE
-- "Einkaufen gehen" → AUFGABE
+Wiederholungsmuster erkennen:
+- "alle drei Tage", "alle zwei Tage", "alle X Tage"
+- "regelmäßig", "täglich", "wöchentlich", "monatlich"
+- "jeden Tag", "jeden Morgen", "jeden Abend"
+- "immer wieder", "öfter", "mehrmals"
 
 BEISPIELE:
-"Ich möchte einen Baum pflanzen" → AUFGABE, title: "Baum pflanzen"
-"Ich muss morgen Gassi gehen" → AUFGABE, title: "Mit Hund Gassi gehen"
-"Bild von Raumschiff Enterprise malen" → AUFGABE, title: "Bild von Raumschiff Enterprise malen"
+"Ich möchte alle drei Tage Federball spielen" → [] (GEWOHNHEIT, hat "alle drei Tage")
+"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → [] (GEWOHNHEIT)
+"Ich möchte einen Baum pflanzen" → [{"title": "Baum pflanzen", ...}] (AUFGABE, kein Wiederholungsmuster)
+"Ich muss morgen Gassi gehen" → [{"title": "Mit Hund Gassi gehen", ...}] (AUFGABE)
+"Bild malen" → [{"title": "Bild malen", ...}] (AUFGABE)
 
-WICHTIGSTE REGEL: Wenn du UNSICHER bist, ist es eine AUFGABE. Erfinde NIEMALS "regelmäßig" wenn es nicht explizit im Text steht.
+NUR wenn KEIN Wiederholungsmuster vorhanden ist, erstelle eine AUFGABE.
 
 Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
-
 Für jede AUFGABE:
-- title: max. 5 Wörter, prägnant, die Kernaufgabe aus der Idee
-- description: 1–3 Sätze, NUR die Infos aus der Idee verwenden, keine neuen erfinden
-
-Regeln:
-- NUR direkte Tätigkeiten (einmalig abarbeitbar)
-- KEINE neuen Informationen erfinden — nur die Idee in Aufgaben-Form umwandeln
-- Keine zusätzlichen Tipps, Begründungen oder Hintergründe erfinden
-- Antworte NUR mit JSON-Array: [{"title": "...", "description": "..."}]
-- Keine Einleitung, keine Erklärung.
+- title: max. 5 Wörter, prägnant
+- description: NUR die Infos aus der Idee verwenden, nichts dazufügen
+Antworte NUR mit JSON-Array: [{"title": "...", "description": "..."}] oder [].
+Keine Einleitung, keine Erklärung.
 """
 
         private const val HABIT_SYSTEM_PROMPT = """
-Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GWOHNHEIT oder eine AUFGABE?
+Du bist ein strenger Filter. Deine Aufgabe: Prüfe jede Idee und entscheide: Ist das eine GEWOHNHEIT oder eine AUFGABE?
 
-DEFINITIONEN (strikte Trennung):
-- GWOHNHEIT: Etwas das sich WIEDERHOLT. Die Idee muss EXPLIZIT ein Wiederholungsmuster enthalten.
-- AUFGABE: Etwas das EINMALIG passiert. Auch wenn es in der Zukunft liegt oder ein Termin genannt wird.
+WICHTIGSTE REGEL: Wenn die Idee ein Wiederholungsmuster enthält ("alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter"), dann ist es eine GEWOHNHEIT. Sonst ist es eine AUFGABE und du antwortest mit [].
 
-WANN IST ES EINE GEWOHNHEIT? (NUR wenn mindestens EIN Wort im Text darauf hinweist):
-- "regelmäßig", "täglich", "wöchentlich", "jeden Tag", "jeden Morgen", "jeden Abend"
-- "alle zwei Tage", "alle X Tage", "mehrmals pro Woche"
-- "immer wieder", "öfter", "von Zeit zu Zeit"
-- "jeden Monat", "monatlich", "jährlich"
-
-WANN IST ES EINE AUFGABE? (Alles andere ist eine AUFGABE):
-- "Ich möchte einen Baum pflanzen" → AUFGABE (kein Wiederholungsmuster)
-- "Ich muss morgen Gassi gehen" → AUFGABE (einmalig, auch mit Termin)
-- "Bild malen" → AUFGABE
-- "Bücherregal sortieren" → AUFGABE
-- "Reinigung machen" → AUFGABE
+Wiederholungsmuster erkennen:
+- "alle drei Tage", "alle zwei Tage", "alle X Tage"
+- "regelmäßig", "täglich", "wöchentlich", "monatlich"
+- "jeden Tag", "jeden Morgen", "jeden Abend"
+- "immer wieder", "öfter", "mehrmals"
 
 BEISPIELE:
-"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → GEWOHNHEIT (Wort "regelmäßig")
-"Ich pflanze einen Baum im Garten meines Vaters" → AUFGABE (kein Wiederholungsmuster!)
-"Jeden Morgen meditieren" → GEWOHNHEIT (Wort "jeden Morgen")
-"Ich muss mit dem Hund Gassi gehen" → AUFGABE (kein Wiederholungsmuster)
-"Ich will öfter aufräumen" → GEWOHNHEIT (Wort "öfter")
+"Ich möchte alle drei Tage Federball spielen mit den zwei Mädels" → GEWOHNHEIT
+"Ich möchte regelmäßig alle zwei Tage ein Buch lesen" → GEWOHNHEIT
+"Ich möchte einen Baum pflanzen" → [] (AUFGABE, kein Wiederholungsmuster)
+"Ich muss morgen Gassi gehen" → [] (AUFGABE)
 
-WICHTIGSTE REGEL: Wenn du UNSICHER bist, ist es eine AUFGABE. Erfinde NIEMALS "regelmäßig" wenn es nicht explizit im Text steht.
+WICHTIG: Nimm ALLE Infos aus der Idee und formuliere sie als Gewohnheit. NICHTS weglassen!
+- "Ich möchte alle drei Tage Federball spielen mit den zwei Mädels, die ich kennengelernt habe"
+→ "Ich gehe alle drei Tage Federball spielen mit den zwei Mädels, die ich kennengelernt habe."
 
 Format: ECHTE deutsche Umlaute (ä, ö, ü, ß).
-Für jede GEWOHNHEIT: Ein Satz im Ich-Format, 1–3 Zeilen.
-Antworte NUR mit JSON-Array: ["Gewohnheit 1", "Gewohnheit 2"]
-Wenn keine Gewohnheit erkannt wird: antworte mit [] (leeres Array).
+Für jede GEWOHNHEIT: Ein Satz im Ich-Format. ALLE Infos aus der Idee übernehmen, nichts weglassen.
+Antworte NUR mit JSON-Array: ["Gewohnheit 1", "Gewohnheit 2"] oder [].
 Keine Einleitung, keine Erklärung.
 """
     }
