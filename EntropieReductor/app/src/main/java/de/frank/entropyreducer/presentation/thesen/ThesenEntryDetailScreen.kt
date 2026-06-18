@@ -125,20 +125,20 @@ fun ThesenEntryDetailScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = ThesenAccent,
+                                color = LocalCosmos.current.accent,
                             )
                         ThesenTtsState.SPEAKING ->
                             Icon(
                                 imageVector = Icons.Outlined.Stop,
                                 contentDescription = "Vorlesen stoppen",
-                                tint = ThesenAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                         ThesenTtsState.IDLE ->
                             Icon(
                                     imageVector = Icons.Outlined.VolumeUp,
                                 contentDescription = "Vorlesen",
-                                tint = ThesenAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                     }

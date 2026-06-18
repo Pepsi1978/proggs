@@ -105,20 +105,20 @@ fun JournalEntryDetailScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = JournalAccent,
+                                color = LocalCosmos.current.accent,
                             )
                         JournalTtsState.SPEAKING ->
                             Icon(
                                 imageVector = Icons.Outlined.Stop,
                                 contentDescription = "Vorlesen stoppen",
-                                tint = JournalAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(24.dp),
                             )
                         JournalTtsState.IDLE ->
                             Icon(
                                 imageVector = Icons.Outlined.VolumeUp,
                                 contentDescription = "Vorlesen",
-                                tint = JournalAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(24.dp),
                             )
                     }

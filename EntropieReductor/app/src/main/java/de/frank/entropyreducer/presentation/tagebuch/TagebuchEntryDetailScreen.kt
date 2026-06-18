@@ -125,20 +125,20 @@ fun TagebuchEntryDetailScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = TagebuchAccent,
+                                color = LocalCosmos.current.accent,
                             )
                         TagebuchTtsState.SPEAKING ->
                             Icon(
                                 imageVector = Icons.Outlined.Stop,
                                 contentDescription = "Vorlesen stoppen",
-                                tint = TagebuchAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                         TagebuchTtsState.IDLE ->
                             Icon(
                                     imageVector = Icons.Outlined.VolumeUp,
                                 contentDescription = "Vorlesen",
-                                tint = TagebuchAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                     }

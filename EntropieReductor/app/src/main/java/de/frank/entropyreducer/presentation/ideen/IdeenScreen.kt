@@ -1107,9 +1107,8 @@ internal fun formatIdeenTimestamp(ts: Long): String {
 private fun formatTimestamp(ts: Long): String = formatIdeenTimestamp(ts)
 
 /**
- * Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche Frank-Wunsch 2026-06-09:
- * Farbe wie der Forscher-Tab-Sub-Modus in der BottomBar (Violett #A78BFA) — nach dem Umzug von
- * Aufgaben (orange) in den Forscher-Bereich.
+ * Akzentfarbe — Blau (Frank-Wunsch 2026-06-18): Sub-Tabs unter Aufgaben sind blau.
+ * TTS-Buttons bleiben Orange (cosmos.accent).
  */
 internal val IdeenAccent: Color
-    @Composable get() = LocalCosmos.current.accentTasks
+    @Composable get() = LocalCosmos.current.accentTasksSub

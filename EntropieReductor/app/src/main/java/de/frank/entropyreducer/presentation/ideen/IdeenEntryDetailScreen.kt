@@ -125,20 +125,20 @@ fun IdeenEntryDetailScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = IdeenAccent,
+                                color = LocalCosmos.current.accent,
                             )
                         IdeenTtsState.SPEAKING ->
                             Icon(
                                 imageVector = Icons.Outlined.Stop,
                                 contentDescription = "Vorlesen stoppen",
-                                tint = IdeenAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                         IdeenTtsState.IDLE ->
                             Icon(
                                     imageVector = Icons.Outlined.VolumeUp,
                                 contentDescription = "Vorlesen",
-                                tint = IdeenAccent,
+                                tint = LocalCosmos.current.accent,
                                 modifier = Modifier.size(22.dp),
                             )
                     }

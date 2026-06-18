@@ -158,7 +158,7 @@ private fun serializeGewohnheiten(mentals: List<Mental>): String {
 }
 
 private val Accent: Color
-    @Composable get() = LocalCosmos.current.accentTasks
+    @Composable get() = LocalCosmos.current.accentTasksSub
 
 /* ============================== UI ============================== */
 
@@ -305,7 +305,7 @@ fun GewohnheitBoardScreen(
                 Icon(
                     imageVector = if (ttsState.isPlaying) Icons.Outlined.Stop else Icons.AutoMirrored.Outlined.VolumeUp,
                     contentDescription = if (ttsState.isPlaying) "Vorlesen stoppen" else "Vorlesen",
-                    tint = Accent,
+                    tint = LocalCosmos.current.accent,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -695,7 +695,7 @@ private fun GewohnheitTtsControls(
             Icon(
                 imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.AutoMirrored.Outlined.VolumeUp,
                 contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
-                tint = Accent,
+                tint = LocalCosmos.current.accent,
                 modifier = Modifier.size(24.dp),
             )
         }

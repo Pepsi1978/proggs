@@ -410,7 +410,7 @@ private fun parentMetaFor(tab: String): ParentMeta =
 private fun subModeTint(tab: String): Color {
     val cosmos = LocalCosmos.current
     return when (tab) {
-        Routes.TASKS -> cosmos.accentTasks // Orange — Parent-Button
+        Routes.TASKS -> cosmos.accentTasksSub // Blau — auch der Parent-Button
         Routes.ANALYSIS -> cosmos.accentAnalyse // Smaragd
         Routes.SCIENTIST -> cosmos.accentForscher // Violett
         Routes.BIOMARKER -> cosmos.accentBio // Rosé

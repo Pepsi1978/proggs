@@ -188,9 +188,9 @@ private fun serializeMentals(mentals: List<Mental>): String {
     return arr.toString()
 }
 
-/* Akzentfarbe — Aufgaben-Bereich (Orange #EA580C), weil das Mentalboard dort als Sub-Reiter liegt. */
+/* Akzentfarbe — Blau (Frank-Wunsch 2026-06-18): Sub-Tabs unter Aufgaben sind blau. TTS bleibt Orange. */
 internal val MentalAccent: Color
-    @Composable get() = LocalCosmos.current.accentTasks
+    @Composable get() = LocalCosmos.current.accentTasksSub
 
 /* ============================== UI ============================== */
 
@@ -580,7 +580,7 @@ private fun MentalTtsControls(
             Icon(
                 imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.Outlined.VolumeUp,
                 contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
-                tint = MentalAccent,
+                tint = LocalCosmos.current.accent,
                 modifier = Modifier.size(24.dp),
             )
         }
