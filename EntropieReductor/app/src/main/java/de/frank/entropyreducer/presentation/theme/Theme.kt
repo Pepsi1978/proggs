@@ -36,6 +36,7 @@ data class CosmosThemeExt(
     // Glut: theme-abhaengige Akzente
     val accent: Color, // Orange-Glut (Primaer)
     val accentTasks: Color, // Tab-Klasse Aufgaben (= accent)
+    val accentTasksSub: Color, // Sub-Tabs unter Aufgaben (Blau)
     val accentAnalyse: Color, // Tab-Klasse Analyse (Smaragd)
     val accentForscher: Color, // Tab-Klasse Forscher (Violett)
     val accentBio: Color, // Tab-Klasse Biomarker (Rosé)
@@ -106,6 +107,7 @@ fun EntropieReductorTheme(
                 textSecondary = CosmosColors.TextSecondaryDark,
                 accent = CosmosColors.AccentPrimary,
                 accentTasks = CosmosColors.TabTasks,
+                accentTasksSub = CosmosColors.TabTasksSub,
                 accentAnalyse = CosmosColors.TabAnalyse,
                 accentForscher = CosmosColors.TabForscher,
                 accentBio = CosmosColors.TabBio,
@@ -125,6 +127,7 @@ fun EntropieReductorTheme(
                 textSecondary = CosmosColors.TextSecondaryLight,
                 accent = CosmosColors.AccentPrimaryLight,
                 accentTasks = CosmosColors.TabTasksLight,
+                accentTasksSub = CosmosColors.TabTasksSubLight,
                 accentAnalyse = CosmosColors.TabAnalyseLight,
                 accentForscher = CosmosColors.TabForscherLight,
                 accentBio = CosmosColors.TabBioLight,

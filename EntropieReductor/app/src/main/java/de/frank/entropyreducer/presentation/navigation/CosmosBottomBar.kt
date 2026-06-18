@@ -141,9 +141,11 @@ fun CosmosBottomBar(
                 )
             } else {
                 val tint = subModeTint(activeSubMode)
+                val subTint = subModeSubTint(activeSubMode)
                 SubModeRow(
                     parentTab = activeSubMode,
                     tint = tint,
+                    subTint = subTint,
                     selectedSubIndex = selectedSubIndex,
                     onParentClick = {
                         // Klick auf das Parent-Icon links:
@@ -176,7 +178,7 @@ fun CosmosBottomBar(
                     state = micState,
                     onClick = onMicClick,
                     size = 56.dp,
-                    accentColor = tint,
+                    accentColor = subTint,
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
@@ -232,6 +234,7 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
 private fun SubModeRow(
     parentTab: String,
     tint: Color,
+    subTint: Color,
     selectedSubIndex: Int?,
     onParentClick: () -> Unit,
     onSubAreaClick: (Int) -> Unit,
@@ -284,7 +287,7 @@ private fun SubModeRow(
                     TabItem(
                         label = item.meta.label,
                         icon = item.meta.icon,
-                        tint = tint,
+                        tint = subTint,
                         onClick = { onSubAreaClick(capturedIndex) },
                         selected = capturedIndex == selectedSubIndex,
                     )
@@ -399,15 +402,35 @@ private fun parentMetaFor(tab: String): ParentMeta =
  * Tab-Tint fuer Sub-Mode: gilt fuer Icons, Texte, Mic-Button (Frank-Wunsch 2026-05-17). Glut
  * (2026-06-12): Theme-abhaengige Tab-Farbklassen aus dem Mockup — Dark nutzt die helleren, Light
  * die tieferen Varianten (Orange/Smaragd/Violett/Rosé). Quelle: LocalCosmos.
+ *
+ * Frank-Wunsch 2026-06-18: Sub-Tabs unter Aufgaben sind BLAU (nicht Orange).
+ * Orange ist nur fuer die Hauptreiter.
  */
 @Composable
 private fun subModeTint(tab: String): Color {
     val cosmos = LocalCosmos.current
     return when (tab) {
-        Routes.TASKS -> cosmos.accentTasks // Orange-Glut
+        Routes.TASKS -> cosmos.accentTasks // Orange — Parent-Button
         Routes.ANALYSIS -> cosmos.accentAnalyse // Smaragd
-        Routes.SCIENTIST -> cosmos.accentForscher // Violett — Frank: "Lila ist okay"
-        Routes.BIOMARKER -> cosmos.accentBio // Rosé — Frank: "Rot ist okay"
+        Routes.SCIENTIST -> cosmos.accentForscher // Violett
+        Routes.BIOMARKER -> cosmos.accentBio // Rosé
+        else -> cosmos.accent
+    }
+}
+
+/**
+ * Sub-Tab-Tint: Gibt die Farbe fuer die UNTERMENUES unter dem jeweiligen Parent-Tab.
+ * - Aufgaben: Blau (Frank-Wunsch 2026-06-18)
+ * - Alle anderen: gleich wie Parent (Smaragd/Violett/Rosé)
+ */
+@Composable
+private fun subModeSubTint(tab: String): Color {
+    val cosmos = LocalCosmos.current
+    return when (tab) {
+        Routes.TASKS -> cosmos.accentTasksSub // Blau — Sub-Tabs
+        Routes.ANALYSIS -> cosmos.accentAnalyse
+        Routes.SCIENTIST -> cosmos.accentForscher
+        Routes.BIOMARKER -> cosmos.accentBio
         else -> cosmos.accent
     }
 }

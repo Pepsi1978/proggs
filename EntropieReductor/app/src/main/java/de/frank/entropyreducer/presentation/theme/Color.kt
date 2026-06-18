@@ -47,6 +47,8 @@ object CosmosColors {
     // Tab-Farbklassen (Bottom-Bar Sub-Modi) — Dark / Light
     val TabTasks = Color(0xFFF97316)
     val TabTasksLight = Color(0xFFEA580C)
+    val TabTasksSub = Color(0xFF60A5FA)     // Blau — Sub-Tabs unter Aufgaben
+    val TabTasksSubLight = Color(0xFF3B82F6) // Blau (Light)
     val TabAnalyse = Color(0xFF34C77B)
     val TabAnalyseLight = Color(0xFF0F9D58)
     val TabForscher = Color(0xFFA78BFA)
