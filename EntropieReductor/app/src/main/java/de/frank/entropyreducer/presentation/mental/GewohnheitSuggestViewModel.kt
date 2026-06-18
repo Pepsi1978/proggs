@@ -75,12 +75,14 @@ class GewohnheitSuggestViewModel @Inject constructor(
             _error.value = null
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
-                val newSuggestions = generateSuggestions
-                    .generateHabitSuggestions(ideas)
+                val processedIds = loadProcessedIds()
+                val (newSuggestions, updatedProcessedIds) = generateSuggestions
+                    .generateHabitSuggestions(ideas, processedIds)
                     .getOrThrow()
                 storeSuggestions(newSuggestions)
+                saveProcessedIds(updatedProcessedIds)
                 if (newSuggestions.isEmpty() && ideas.isNotEmpty()) {
-                    _error.value = "Keine Ideen geeignet für Gewohnheitsvorschläge."
+                    _error.value = "Alle Ideen wurden bereits als Gewohnheitsvorschläge verarbeitet."
                 } else if (newSuggestions.isEmpty()) {
                     _error.value = "Keine Ideen vorhanden — zuerst Ideen eingeben."
                 }
@@ -131,7 +133,35 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun resetProcessedIdeas() {
         viewModelScope.launch {
+            store.edit { prefs ->
+                prefs[HABIT_PROCESSED_KEY] = "[]"
+            }
             _error.value = null
+        }
+    }
+
+    private val HABIT_PROCESSED_KEY =
+        androidx.datastore.preferences.core.stringPreferencesKey("habit_processed_idea_ids")
+
+    private suspend fun loadProcessedIds(): Set<String> {
+        return store.data.first().let { prefs ->
+            val raw = prefs[HABIT_PROCESSED_KEY] ?: return@let emptySet()
+            runCatching {
+                val arr = JSONArray(raw)
+                buildSet(arr.length()) {
+                    for (i in 0 until arr.length()) {
+                        arr.optString(i).takeIf { it.isNotBlank() }?.let { add(it) }
+                    }
+                }
+            }.getOrDefault(emptySet())
+        }
+    }
+
+    private suspend fun saveProcessedIds(ids: Set<String>) {
+        store.edit { prefs ->
+            val arr = JSONArray()
+            ids.forEach { arr.put(it) }
+            prefs[HABIT_PROCESSED_KEY] = arr.toString()
         }
     }
 }

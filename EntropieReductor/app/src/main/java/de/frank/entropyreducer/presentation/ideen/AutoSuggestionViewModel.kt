@@ -33,6 +33,7 @@ class AutoSuggestionViewModel @Inject constructor(
     /**
      * Wird nach dem Speichern einer neuen Idee aufgerufen.
      * Generiert im Hintergrund both Aufgaben- als auch Gewohnheitsvorschläge.
+     * Nur Ideen die noch nicht verarbeitet wurden, werden an Gemini geschickt.
      */
     fun triggerSuggestions() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -42,21 +43,25 @@ class AutoSuggestionViewModel @Inject constructor(
 
                 // Task-Vorschläge
                 val kiStore = context.kiTaskSuggestionStore
-                val taskProcessedIds = loadProcessedIds(kiStore)
-                val (newTasks, updatedProcessedIds) = generateSuggestions
+                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
+                val (newTasks, updatedTaskProcessedIds) = generateSuggestions
                     .generateTaskSuggestions(ideas, taskProcessedIds)
                     .getOrThrow()
                 if (newTasks.isNotEmpty()) {
                     storeKiTaskSuggestions(kiStore, newTasks)
-                    saveProcessedIds(kiStore, updatedProcessedIds)
                 }
+                saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedTaskProcessedIds)
 
                 // Gewohnheitsvorschläge
                 val habitStore = context.gewohnheitSuggestionStore
-                val newHabits = generateSuggestions.generateHabitSuggestions(ideas).getOrThrow()
+                val habitProcessedIds = loadProcessedIds(habitStore, HABIT_PROCESSED_KEY)
+                val (newHabits, updatedHabitProcessedIds) = generateSuggestions
+                    .generateHabitSuggestions(ideas, habitProcessedIds)
+                    .getOrThrow()
                 if (newHabits.isNotEmpty()) {
                     storeHabitSuggestions(habitStore, newHabits)
                 }
+                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedHabitProcessedIds)
             }
         }
     }
@@ -65,14 +70,17 @@ class AutoSuggestionViewModel @Inject constructor(
 
     private val TASK_PROCESSED_KEY =
         androidx.datastore.preferences.core.stringPreferencesKey("processed_idea_ids")
+    private val HABIT_PROCESSED_KEY =
+        androidx.datastore.preferences.core.stringPreferencesKey("habit_processed_idea_ids")
     private val SUGGESTIONS_KEY =
         androidx.datastore.preferences.core.stringPreferencesKey("suggestions_json")
 
     private suspend fun loadProcessedIds(
         store: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+        key: androidx.datastore.preferences.core.Preferences.Key<String>,
     ): Set<String> {
         return store.data.first().let { prefs ->
-            val raw = prefs[TASK_PROCESSED_KEY] ?: return@let emptySet()
+            val raw = prefs[key] ?: return@let emptySet()
             runCatching {
                 val arr = JSONArray(raw)
                 buildSet(arr.length()) {
@@ -86,12 +94,13 @@ class AutoSuggestionViewModel @Inject constructor(
 
     private suspend fun saveProcessedIds(
         store: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+        key: androidx.datastore.preferences.core.Preferences.Key<String>,
         ids: Set<String>,
     ) {
         store.edit { prefs ->
             val arr = JSONArray()
             ids.forEach { arr.put(it) }
-            prefs[TASK_PROCESSED_KEY] = arr.toString()
+            prefs[key] = arr.toString()
         }
     }
 

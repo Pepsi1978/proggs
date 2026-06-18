@@ -121,17 +121,22 @@ class GenerateSuggestionsUseCase @Inject constructor(
     /**
      * Generiert Gewohnheitsvorschlaege aus den uebergebenen Ideen.
      * @param ideas Alle Ideen (aus dem DataStore geladen)
-     * @return Liste der Vorschlaege
+     * @param processedIds Bereits verarbeitete Ideen-IDs (werden gefiltert)
+     * @return Pair aus (neue Vorschlaege, aktualisierte processedIds)
      */
     suspend fun generateHabitSuggestions(
         ideas: List<IdeenEntry>,
-    ): Result<List<Mental>> {
+        processedIds: Set<String>,
+    ): Result<Pair<List<Mental>, Set<String>>> {
         val apiKey = secrets.geminiApiKey
             ?: return Result.failure(IllegalArgumentException("Bitte Gemini-API-Key in den Einstellungen hinterlegen."))
 
-        if (ideas.isEmpty()) return Result.success(emptyList())
+        if (ideas.isEmpty()) return Result.success(emptyList<Mental>() to processedIds)
 
-        val ideenText = ideas.joinToString("\n") { "- ${it.text}" }
+        val newIdeas = ideas.filter { it.id !in processedIds }
+        if (newIdeas.isEmpty()) return Result.success(emptyList<Mental>() to processedIds)
+
+        val ideenText = newIdeas.joinToString("\n") { "- ${it.text}" }
         val model = settings.geminiModelFlow.first()
 
         val response = gemini.generateContent(
@@ -158,7 +163,10 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-        return Result.success(parseHabitSuggestionsJson(json))
+        val newSuggestions = parseHabitSuggestionsJson(json)
+        val updatedProcessedIds = processedIds + newIdeas.map { it.id }
+
+        return Result.success(newSuggestions to updatedProcessedIds)
     }
 
     // ========================================================================
@@ -227,21 +235,29 @@ Regeln:
 """
 
         private const val HABIT_SYSTEM_PROMPT = """
-Du bist ein Coach für Gewohnheitsbildung. Analysiere die folgenden Ideen und
-identifiziere jene, die sich eignen, daraus eine tägliche oder regelmäßige
-Gewohnheit zu machen.
+Rolle und Aufgabe: Du bist ein Coach für Gewohnheitsbildung. Analysiere die folgenden Ideen und
+erstelle daraus sinnvolle, regelmäßige Gewohnheiten, die die persönliche Entropie
+(Ordnung, Klarheit, Struktur) langfristig reduzieren.
 
-Für jede geeignete Idee formuliere EINEN Gewohnheitsvorschlag als kurzen,
-präzisen Satz. Format: "Was ich wann am besten mache" — maximal 3 Zeilen.
-Beispiel: "Jeden Morgen nach dem Aufstehen 5 Minuten meditieren, bevor ich
-das Handy checke."
+Context: Es handelt sich um Ideen in einer Android APP, die zu sinnvollen Gewohnheiten umgewandelt werden sollen. Aber es dürfen nur Gewohnheiten erkannt werden, keine Aufgaben. Aufgaben werden aus den Ideen in einem anderen Workflow behandelt.
+
+Format: Schreibe in leicht lesbaren Deutsch auf dem Niveau von 11. Klässlern ohne zu schwierige Fremdwörter zu benutzen. Sollten Fremdwörter nötig sein, diese in Klammern kurz verständlich erklären.
+
+WICHTIG: Verwende IMMER echte deutsche Umlaute (ä, ö, ü, ß) — niemals ASCII-Ersatzschreibweisen wie ae, oe, ue oder ss. Auch in der Antwort muss jedes Wort echte Umlaute enthalten.
+
+Für jede geeignete Idee formuliere EINEN Gewohnheitsvorschlag als kurzen, präzisen Satz im Ich-Format, nach dem Muster "Was ich wann am besten mache" — minimal 3 Zeilen, maximal 5 Zeilen.
+Beispiel: "Jeden Morgen nach dem Aufstehen meditiere ich 5 Minuten, bevor ich das Handy checke."
 
 Regeln:
-- Gib NUR jene Ideen zurück, die wirklich als Gewohnheit umsetzbar sind.
+- Es muss sich um regelmäßiges, wiederkehrendes Handeln handeln, also echte Gewohnheiten, keine Aufgaben. Unterscheide klar, ist das eine sinnvolle Gewohnheit oder eine sinnvolle Aufgabe. Es sollen NUR Gewohnheiten gewählt werden, denn Aufgaben, die einmalig abgearbeitet werden, werden woanders verarbeitet in der APP.
+- Merkmal einer Gewohnheit: Sie wiederholt sich (täglich, mehrmals pro Woche, jeden Morgen/Abend usw.). Eine Aufgabe ist dagegen einmal erledigt und dann abgehakt.
+- Gib nur jene Ideen zurück, die wirklich als wiederkehrende Gewohnheit umsetzbar sind.
 - Maximal 5 Vorschläge.
-- Jeder Vorschlag ist ein einzelner String, maximal 3 Zeilen lang.
+- Jeder Vorschlag soll einen klaren Auslöser oder Zeitpunkt enthalten (z.B. "jeden Morgen", "nach dem Mittagessen", "vor dem Schlafengehen"), damit die Gewohnheit leicht im Alltag verankert werden kann.
+- Fokus auf persönliche Entropie-Reduktion jeglicher Art (mental, emotional, Energie, Umgebung, etc.): Ordnung schaffen, Chaos reduzieren, Strukturen aufbauen, vermeidbare Komplexität eliminieren, alles was die persönliche Entropie von Menschen senkt.
+- Jeder Vorschlag ist ein einzelner String, maximal 5 Zeilen lang.
 - Antworte NUR mit einem JSON-Array von Strings, z.B.:
-  ["Vorschlag 1", "Vorschlag 2", "Vorschlag 3"]
+  ["Jeden Morgen nach dem Aufstehen meditiere ich 5 Minuten, bevor ich das Handy checke.", "Jeden Abend vor dem Schlafengehen räume ich gründlich die Wohnung auf. Ich höre erst auf, wenn wirklich alles aufgeräumt ist."]
 - Keine Einleitung, keine Erklärung, nur das JSON-Array.
 """
     }

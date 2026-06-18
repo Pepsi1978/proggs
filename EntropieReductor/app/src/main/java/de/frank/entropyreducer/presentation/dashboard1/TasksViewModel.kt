@@ -281,10 +281,14 @@ class TasksViewModel @Inject constructor(
 
                 // Gewohnheitsvorschläge: In den DataStore der GewohnheitSuggestViewModel speichern
                 val habitStore = context.gewohnheitSuggestionStore
-                val newHabits = generateSuggestions.generateHabitSuggestions(ideas).getOrThrow()
+                val habitProcessedIds = loadProcessedIds(habitStore, HABIT_PROCESSED_KEY)
+                val (newHabits, updatedHabitProcessedIds) = generateSuggestions
+                    .generateHabitSuggestions(ideas, habitProcessedIds)
+                    .getOrThrow()
                 if (newHabits.isNotEmpty()) {
                     storeHabitSuggestions(habitStore, newHabits)
                 }
+                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedHabitProcessedIds)
             }
         }
     }
@@ -1080,6 +1084,7 @@ class TasksViewModel @Inject constructor(
          */
         private const val RESCORE_DOCTRINE_VERSION = 31
         private val TASK_PROCESSED_KEY = stringPreferencesKey("processed_idea_ids")
+        private val HABIT_PROCESSED_KEY = stringPreferencesKey("habit_processed_idea_ids")
     }
 }
 
