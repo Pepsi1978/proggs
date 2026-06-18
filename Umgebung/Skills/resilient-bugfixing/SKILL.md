@@ -19,6 +19,24 @@ invocation: auto
 
 > **Jeder Bug wird zum permanenten System-Upgrade. Kein Fehler darf zweimal auftreten.**
 
+## PFLICHT bei Aktivierung: ZUERST den vollstaendigen Originaltext laden
+
+Dieser Skill-Body ist nur die **Kurz-Checkliste**. Die massgebliche Quelle ist der
+**vollstaendige Originaltext** der Direktive #3:
+`~/.claude/rules/resilient-bugfixing.md` (617 Zeilen, ~9.000 Token).
+
+**Sobald dieser Skill geladen wird, gilt — IMMER, als allererstes:**
+- Ist der Volltext bereits im Kontext (Claude Code laedt ihn automatisch als Rule)?
+  -> direkt nach dem Volltext arbeiten.
+- Ist der Volltext NICHT im Kontext (z. B. OpenCode / OpenRouter)?
+  -> ZUERST `~/.claude/rules/resilient-bugfixing.md` per Read-Tool **vollstaendig**
+    einlesen, DANN danach arbeiten und ggf. daraus zitieren.
+- Beim Zitieren IMMER den vollstaendigen Originaltext **woertlich** wiedergeben —
+  NIEMALS die folgende Kurzfassung als "vollstaendig"/"woertlich" ausgeben.
+
+Die untenstehende Kurzfassung ist nur ein **Notfall-Fallback**, falls der Volltext
+einmal nicht erreichbar ist.
+
 ## Bug-Case-Match dem Benutzer ANSAGEN (KRITISCH)
 
 Wenn der `bug-case-auto-writer` Hook einen bekannten Fehler matcht und den Fix als
