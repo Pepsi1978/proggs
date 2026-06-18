@@ -93,6 +93,9 @@ fun TagebuchEntryDetailScreen(
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    // showImproved wird fuer den Lautsprecher in der Top-Bar benoetigt.
+    var showImproved by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize().padding(top = topInset)) {
             Row(
@@ -111,7 +114,35 @@ fun TagebuchEntryDetailScreen(
                     style = MaterialTheme.typography.titleLarge,
                     color = cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
                 )
+                IconButton(
+                    onClick = { viewModel.speakAll(showImproved) },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    when (state.ttsState) {
+                        TagebuchTtsState.LOADING ->
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = TagebuchAccent,
+                            )
+                        TagebuchTtsState.SPEAKING ->
+                            Icon(
+                                imageVector = Icons.Outlined.Stop,
+                                contentDescription = "Vorlesen stoppen",
+                                tint = TagebuchAccent,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        TagebuchTtsState.IDLE ->
+                            Icon(
+                                    imageVector = Icons.Outlined.VolumeUp,
+                                contentDescription = "Vorlesen",
+                                tint = TagebuchAccent,
+                                modifier = Modifier.size(22.dp),
+                            )
+                    }
+                }
             }
 
             val entry = state.entry
@@ -174,12 +205,10 @@ fun TagebuchEntryDetailScreen(
 
                 var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
                 var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
-                // Standard ist IMMER die verbesserte Variante, sobald eine existiert
-                // (Frank-Wunsch 2026-06-01) — unabhängig vom isImproved-Flag.
-                var showImproved by
-                    remember(entry.id, entry.improvedText) {
-                        mutableStateOf(entry.improvedText != null)
-                    }
+                // showImproved wird oben in der Column fuer den Lautsprecher benoetigt.
+                LaunchedEffect(entry.id, entry.improvedText) {
+                    showImproved = entry.improvedText != null
+                }
                 var entryImproving by remember(entry.id) { mutableStateOf(false) }
 
                 ImprovableEntryCard(
@@ -252,42 +281,6 @@ fun TagebuchEntryDetailScreen(
                     }
                 }
 
-                // ── Vorlesen-Knopf ──
-                // Frank-Wunsch 2026-05-23: Nur das orange Lautsprecher-Icon, kein
-                // Beschriftungs-Text daneben. Klein und unauffaellig.
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(
-                        onClick = { viewModel.speakAll(showImproved) },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        when (state.ttsState) {
-                            TagebuchTtsState.LOADING ->
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = TagebuchAccent,
-                                )
-                            TagebuchTtsState.SPEAKING ->
-                                Icon(
-                                    imageVector = Icons.Outlined.Stop,
-                                    contentDescription = "Vorlesen stoppen",
-                                    tint = TagebuchAccent,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            TagebuchTtsState.IDLE ->
-                                Icon(
-                                    imageVector = Icons.Outlined.VolumeUp,
-                                    contentDescription = "Vorlesen",
-                                    tint = TagebuchAccent,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                        }
-                    }
-                }
 
                 // ── Löschen ──
                 Button(

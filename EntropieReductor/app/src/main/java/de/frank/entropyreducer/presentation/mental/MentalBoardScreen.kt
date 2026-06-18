@@ -554,15 +554,12 @@ private fun MentalTtsControls(
     onLoopChange: (Boolean) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // Lautsprecher = Start/Stop-Toggle. Waehrend des Vorlesens als Stop-Symbol.
-        IconButton(onClick = onToggle) {
-            Icon(
-                imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.Outlined.VolumeUp,
-                contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
-                tint = MentalAccent,
-                modifier = Modifier.size(24.dp),
-            )
-        }
+        // Neue Anordnung: Häkchen · Dropdown 1 · Dropdown 2 · Lautsprecher
+        Checkbox(
+            checked = state.loop,
+            onCheckedChange = onLoopChange,
+            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
+        )
         // Dropdown 1 — wie oft der erste Satz (Anker) vor jedem Folgesatz vorgelesen wird.
         NumberDropdown(
             value = state.ankerCount,
@@ -578,12 +575,15 @@ private fun MentalTtsControls(
             menuTitle = "Folgesatz – wie oft",
             onSelect = onFolgeChange,
         )
-        // Endlosschleife — gruenes Haekchen, wenn aktiv.
-        Checkbox(
-            checked = state.loop,
-            onCheckedChange = onLoopChange,
-            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
-        )
+        // Lautsprecher = Start/Stop-Toggle. Ganz rechts.
+        IconButton(onClick = onToggle) {
+            Icon(
+                imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.Outlined.VolumeUp,
+                contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
+                tint = MentalAccent,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

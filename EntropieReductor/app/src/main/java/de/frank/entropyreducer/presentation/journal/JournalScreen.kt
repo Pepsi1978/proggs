@@ -337,10 +337,10 @@ private fun sectionLabelFor(timestamp: Long): String {
     }
 }
 
-// Frank-Wunsch 2026-06-10: Journal lebt jetzt im Forscher-Bereich → Akzent
-// von Aufgaben-Orange auf Forscher-Violett umgefaerbt (wie Entropie/Thesen).
+// Frank-Wunsch 2026-06-18: Orange (wie Ideen/Aufgaben), weil Frank
+// alle Lautsprecher in der App in Orange haben moechte.
 internal val JournalAccent: Color
-    @Composable get() = LocalCosmos.current.accentForscher
+    @Composable get() = LocalCosmos.current.accentTasks
 
 internal fun formatJournalTimestamp(ts: Long): String =
     SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.GERMANY).format(Date(ts))

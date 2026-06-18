@@ -2,6 +2,9 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 // Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
 // AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -13,6 +16,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -49,6 +54,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.HourglassEmpty
@@ -88,6 +94,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -141,6 +148,11 @@ fun TasksScreen(
     // im Reiter) kommen unveraendert aus dem RecurringTemplatesViewModel.
     val recurringVm: RecurringTemplatesViewModel = hiltViewModel()
     val recurringTemplates by recurringVm.templates.collectAsStateWithLifecycle()
+    val kiTaskSuggestVm: KiTaskSuggestViewModel = hiltViewModel()
+    val kiTaskSuggestions by kiTaskSuggestVm.suggestions.collectAsStateWithLifecycle()
+    val kiTaskSuggestState by kiTaskSuggestVm.state.collectAsStateWithLifecycle()
+    val kiTaskAcceptingId by kiTaskSuggestVm.acceptingId.collectAsStateWithLifecycle()
+    val kiTaskError by kiTaskSuggestVm.error.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
@@ -314,16 +326,6 @@ fun TasksScreen(
     val themeVm: ThemeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
 
-    // Frank-Wunsch 2026-05-23 (Folge-Iteration):
-    //  - Heute-/Morgen-Schnellzugriff direkt neben dem Titel "Aufgaben",
-    //    nicht mehr im allgemeinen Tool-Bereich rechts.
-    //  - Heute-Icon zeigt einen kleinen orangen Punkt wenn neue HEUTE-Aufgaben
-    //    eingegangen sind seit Frank das letzte Mal aufs Icon getippt hat.
-    val heuteCount =
-        state.entriesByBucket[de.frank.entropyreducer.domain.model.TimeBucket.HEUTE]?.size ?: 0
-    var lastSeenHeuteCount by remember { mutableStateOf(heuteCount) }
-    val hasNewHeute = heuteCount > lastSeenHeuteCount
-
     // Frank-Wunsch 2026-05-24: Mit dem Akkordeon ist die Header-Position eindeutig.
     // Nach dem Aufklappen eines Ziel-Blocks sind alle anderen Bloecke zugeklappt
     // (= je 1 Header-Item). Der Header liegt damit bei: 1 (Briefing) + Position des
@@ -331,86 +333,9 @@ fun TasksScreen(
     fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int =
         1 + ALL_TIME_BUCKETS.indexOf(target)
 
-    // Frank-Wunsch 2026-05-23 (Folge-Iteration #2): sanfter Pulse am Heute-Badge.
-    // Alpha pulsiert zwischen 1.0 und 0.4 mit ~1.2s Periode, Reverse-Mode —
-    // unaufdringlich, aber faengt das Auge wenn neue HEUTE-Aufgaben da sind.
-    val badgeAnim = rememberInfiniteTransition(label = "heute-badge-pulse")
-    val badgeAlpha by
-        badgeAnim.animateFloat(
-            initialValue = 1f,
-            targetValue = 0.4f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "heute-badge-alpha",
-        )
-
     CosmosScaffold(
         title = "Aufgaben",
-        titleEndContent = {
-            // Heute-Icon (gelb) mit orangem Badge wenn neue HEUTE-Eintraege
-            Box {
-                IconButton(
-                    onClick = {
-                        // Frank-Wunsch 2026-05-24: Sprung klappt den HEUTE-Block auf
-                        // (Akkordeon — andere schliessen) und scrollt zu seinem Header.
-                        lastSeenHeuteCount = heuteCount
-                        expandedSection = de.frank.entropyreducer.domain.model.TimeBucket.HEUTE.name
-                        scope.launch {
-                            runCatching {
-                                listState.animateScrollToItem(
-                                    bucketHeaderIndex(
-                                        de.frank.entropyreducer.domain.model.TimeBucket.HEUTE
-                                    )
-                                )
-                            }
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Today,
-                        contentDescription = "Zu Heute springen",
-                        tint = Color(0xFFFBBF24),
-                    )
-                }
-                if (hasNewHeute) {
-                    Box(
-                        modifier =
-                            Modifier.align(Alignment.TopEnd)
-                                .padding(top = 8.dp, end = 8.dp)
-                                .size(8.dp)
-                                .clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(LocalCosmos.current.accent.copy(alpha = badgeAlpha))
-                    )
-                }
-            }
-            // Morgen-Icon (gruen) — kein Badge. Frank-Wunsch 2026-05-23: exakt
-            // dasselbe Icon wie Heute (Icons.Outlined.Today, Kaestchen oben),
-            // nur in Gruen — nicht mehr das abweichende Event-Icon.
-            IconButton(
-                onClick = {
-                    // Frank-Wunsch 2026-05-24: MORGEN-Block aufklappen + zum Header scrollen.
-                    expandedSection = de.frank.entropyreducer.domain.model.TimeBucket.MORGEN.name
-                    scope.launch {
-                        runCatching {
-                            listState.animateScrollToItem(
-                                bucketHeaderIndex(
-                                    de.frank.entropyreducer.domain.model.TimeBucket.MORGEN
-                                )
-                            )
-                        }
-                    }
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Today,
-                    contentDescription = "Zu Morgen springen",
-                    tint = Color(0xFF22C55E),
-                )
-            }
-        },
+        titleEndContent = {},
         actions = {
             // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
             // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
@@ -740,6 +665,76 @@ fun TasksScreen(
                                     }
                                 } else {
                                     item(key = "empty-resolved", contentType = "bucket-empty") {
+                                        EmptyBucketHint()
+                                    }
+                                }
+                            }
+                        }
+                        // KI-Vorschlaege-Sektion (Frank-Wunsch 2026-06-18):
+                        // Aufgaben die aus Ideen per Gemini generiert werden.
+                        // Gelber Akkordeon-Header, Flag-Button zum Uebernehmen.
+                        run {
+                            val kiExpanded = expandedSection == SECTION_KI_VORSCHLAEGE
+                            val kiAccent = Color(0xFFFBBF24)
+                            item(key = "header-ki-vorschlaege", contentType = "ki-vorschlaege-header") {
+                                AccordionHeaderRow(
+                                    label = "Aufgabenvorschläge",
+                                    icon = Icons.Outlined.AutoAwesome,
+                                    accent = kiAccent,
+                                    count = kiTaskSuggestions.size,
+                                    expanded = kiExpanded,
+                                    onToggle = {
+                                        expandedSection = if (kiExpanded) null else SECTION_KI_VORSCHLAEGE
+                                    },
+                                )
+                            }
+                            if (kiExpanded) {
+                                // Generieren-Button
+                                item(key = "ki-gen-button", contentType = "ki-gen-button") {
+                                    KiSuggestGenerateButton(
+                                        state = kiTaskSuggestState,
+                                        onClick = { kiTaskSuggestVm.generateSuggestions() },
+                                        onReset = { kiTaskSuggestVm.resetProcessedIdeas() },
+                                    )
+                                }
+                                // Fehler-Anzeige
+                                kiTaskError?.let { err ->
+                                    item(key = "ki-error", contentType = "ki-error") {
+                                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = err,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = LocalCosmos.current.crit,
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                                IconButton(onClick = { kiTaskSuggestVm.dismissError() }) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.Close,
+                                                        contentDescription = "Fehler schliessen",
+                                                        tint = LocalCosmos.current.crit,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (kiTaskSuggestions.isNotEmpty()) {
+                                    itemsIndexed(
+                                        items = kiTaskSuggestions,
+                                        key = { _, sug -> "ki-sug-${sug.id}" },
+                                        contentType = { _, _ -> "ki-suggestion" },
+                                    ) { index, suggestion ->
+                                        KiSuggestionCard(
+                                            index = index + 1,
+                                            suggestion = suggestion,
+                                            isAccepting = kiTaskAcceptingId == suggestion.id,
+                                            onAccept = { kiTaskSuggestVm.acceptSuggestion(suggestion) },
+                                            onDelete = { kiTaskSuggestVm.deleteSuggestion(suggestion.id) },
+                                        )
+                                    }
+                                } else if (kiTaskSuggestState != KiTaskSuggestState.LOADING) {
+                                    item(key = "empty-ki-vorschlaege", contentType = "bucket-empty") {
                                         EmptyBucketHint()
                                     }
                                 }
@@ -2248,6 +2243,153 @@ private fun RescoreBanner(progress: RescoreProgress) {
     }
 }
 
+// ==================== KI-Vorschlaege Composables ====================
+
+@Composable
+private fun KiSuggestGenerateButton(
+    state: KiTaskSuggestState,
+    onClick: () -> Unit,
+    onReset: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val isLoading = state == KiTaskSuggestState.LOADING
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val longPressJob = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            longPressJob.value = scope.launch {
+                                kotlinx.coroutines.delay(2000L)
+                                try {
+                                    @Suppress("DEPRECATION")
+                                    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                                    vibrator?.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                                } catch (_: Exception) { }
+                                onReset()
+                            }
+                            tryAwaitRelease()
+                            longPressJob.value?.cancel()
+                            longPressJob.value = null
+                        },
+                        onTap = { onClick() },
+                    )
+                },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                tint = Color(0xFFFBBF24),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = if (isLoading) "Generiere Vorschläge …" else "Aufgaben aus Ideen generieren",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isLoading) cosmos.textSecondary else cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            if (isLoading) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = Color(0xFFFBBF24),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KiSuggestionCard(
+    index: Int,
+    suggestion: KiTaskSuggestion,
+    isAccepting: Boolean,
+    onAccept: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val accentBlue = Color(0xFF60A5FA)
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                // Nummerierter Kreis
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(accentBlue),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "$index",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = suggestion.title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (suggestion.description.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = suggestion.description,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                            color = cosmos.textSecondary,
+                            lineHeight = 22.sp,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = onAccept,
+                        enabled = !isAccepting,
+                    ) {
+                        if (isAccepting) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = accentBlue,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.Flag,
+                                contentDescription = "Als Aufgabe übernehmen",
+                                tint = accentBlue,
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Vorschlag löschen",
+                            tint = Color(0xFFEF4444),
+                        )
+                    }
+                }
+            }
+            // Quelle: "Erstellt aus Ideen" in der Reiterfarbe
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Erstellt aus Ideen",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = accentBlue,
+            )
+        }
+    }
+}
+
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array
 // pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
@@ -2256,6 +2398,7 @@ private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
 // Loop liegt zwischen SPAETER und ERLEDIGT (Frank-Wunsch 2026-05-24, Aufgabe 3).
 private const val SECTION_LOOP = "LOOP"
 private const val SECTION_ERLEDIGT = "ERLEDIGT"
+private const val SECTION_KI_VORSCHLAEGE = "KI_VORSCHLAEGE"
 
 // Performance-Audit Loop 5 (2026-05-10): SimpleDateFormat ist nicht thread-safe,
 // aber teuer. ThreadLocal pro Pattern statt Allokation pro Aufruf.

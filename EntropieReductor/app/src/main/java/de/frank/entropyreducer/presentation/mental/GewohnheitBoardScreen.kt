@@ -1,8 +1,11 @@
 package de.frank.entropyreducer.presentation.mental
 
 import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +23,29 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -160,6 +175,20 @@ fun GewohnheitBoardScreen(
     val suggestions by suggestVm.suggestions.collectAsStateWithLifecycle()
     val suggestState by suggestVm.state.collectAsStateWithLifecycle()
 
+    // TTS-System (Vorlesen der Gewohnheiten ueber dem Separator)
+    val ttsVm: GewohnheitTtsViewModel = hiltViewModel()
+    val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(ttsState.error) {
+        ttsState.error?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            ttsVm.dismissError()
+        }
+    }
+
+    // Vorlesen stoppen wenn Screen verlassen wird
+    DisposableEffect(Unit) { onDispose { ttsVm.stop() } }
+
     val error by suggestVm.error.collectAsStateWithLifecycle()
     LaunchedEffect(error) {
         error?.let { msg ->
@@ -227,10 +256,55 @@ fun GewohnheitBoardScreen(
                 )
                 Spacer(Modifier.width(8.dp))
             }
-            IconButton(onClick = { suggestVm.generateSuggestions() }) {
+            // KI-Button: Tap = Vorschläge generieren, Long-Press (2s) = Index zurücksetzen + Vibration
+            val longPressJob = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                // Long-Press-Job starten: nach 2 Sekunden vibrieren + Reset
+                                longPressJob.value = scope.launch {
+                                    kotlinx.coroutines.delay(2000L)
+                                    try {
+                                        @Suppress("DEPRECATION")
+                                        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                                        vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+                                    } catch (_: Exception) { /* Vibration nicht verfuegbar */ }
+                                    suggestVm.resetProcessedIdeas()
+                                }
+                                tryAwaitRelease()
+                                // Finger angehoben -> Job abbrechen (war kein Long-Press)
+                                longPressJob.value?.cancel()
+                                longPressJob.value = null
+                            },
+                            onTap = { suggestVm.generateSuggestions() },
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.AutoAwesome,
                     contentDescription = "Gewohnheitsvorschläge aus Ideen",
+                    tint = Accent,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            // Neue Anordnung: Häkchen · Dropdown · Lautsprecher
+            Checkbox(
+                checked = ttsState.loop,
+                onCheckedChange = { ttsVm.setLoop(it) },
+                colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
+            )
+            GewohnheitNumberDropdown(
+                value = ttsState.repeatCount,
+                onSelect = { ttsVm.setRepeatCount(it) },
+            )
+            IconButton(onClick = { ttsVm.togglePlayback(stored) }) {
+                Icon(
+                    imageVector = if (ttsState.isPlaying) Icons.Outlined.Stop else Icons.AutoMirrored.Outlined.VolumeUp,
+                    contentDescription = if (ttsState.isPlaying) "Vorlesen stoppen" else "Vorlesen",
                     tint = Accent,
                     modifier = Modifier.size(24.dp),
                 )
@@ -259,7 +333,7 @@ fun GewohnheitBoardScreen(
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(displayed, key = { it.key }) { item ->
@@ -605,4 +679,98 @@ private fun EditDialog(
             }
         },
     )
+}
+
+/* ============================== Vorlese-Steuerung (Top-Bar) ============================== */
+
+@Composable
+private fun GewohnheitTtsControls(
+    state: GewohnheitTtsUiState,
+    onToggle: () -> Unit,
+    onRepeatChange: (Int) -> Unit,
+    onLoopChange: (Boolean) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onToggle) {
+            Icon(
+                imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.AutoMirrored.Outlined.VolumeUp,
+                contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
+                tint = Accent,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        GewohnheitNumberDropdown(
+            value = state.repeatCount,
+            onSelect = onRepeatChange,
+        )
+        Checkbox(
+            checked = state.loop,
+            onCheckedChange = onLoopChange,
+            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
+        )
+    }
+}
+
+@Composable
+private fun GewohnheitNumberDropdown(
+    value: Int,
+    onSelect: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Accent.copy(alpha = 0.12f))
+                .clickable { expanded = true }
+                .padding(horizontal = 6.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Repeat,
+                contentDescription = null,
+                tint = Accent,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.size(2.dp))
+            Text(
+                text = "$value",
+                style = MaterialTheme.typography.labelLarge,
+                color = Accent,
+                fontWeight = FontWeight.Bold,
+            )
+            Icon(
+                imageVector = Icons.Outlined.ArrowDropDown,
+                contentDescription = null,
+                tint = Accent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                text = "Jeder Satz — wie oft",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            (1..10).forEach { n ->
+                DropdownMenuItem(
+                    text = { Text("$n") },
+                    onClick = {
+                        onSelect(n)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (n == value) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                tint = Accent,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
