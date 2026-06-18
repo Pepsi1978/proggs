@@ -154,9 +154,12 @@ fun IdeenScreen(
             } else {
                 base
             }
-        scope.launch { addIdeenEntry(context, entry) }
-        // Agentic Auto-Suggestion: Bei jeder neuen Idee automatisch Aufgaben + Gewohnheiten generieren
-        autoSuggestionVm.triggerSuggestions()
+        scope.launch {
+            addIdeenEntry(context, entry)
+            // Agentic Auto-Suggestion: Erst NACH dem Speichern der Idee Vorschläge generieren,
+            // damit die neue Idee im DataStore verfügbar ist (Frank-Wunsch 2026-06-18).
+            autoSuggestionVm.triggerSuggestions()
+        }
         // Titel/Zusammenfassung aus dem primaer angezeigten Text ableiten (bessere Qualitaet).
         val primaryText = if (preferImproved && !improved.isNullOrBlank()) improved else rawText
         titleVm.generateTitle(primaryText) { newTitle ->
