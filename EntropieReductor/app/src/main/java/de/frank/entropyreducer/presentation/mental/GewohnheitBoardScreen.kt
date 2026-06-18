@@ -270,7 +270,7 @@ fun GewohnheitBoardScreen(
                                     try {
                                         @Suppress("DEPRECATION")
                                         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                                        vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+                                        vibrator?.vibrate(VibrationEffect.createOneShot(500, 255))
                                     } catch (_: Exception) { /* Vibration nicht verfuegbar */ }
                                     suggestVm.resetProcessedIdeas()
                                 }

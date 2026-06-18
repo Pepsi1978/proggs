@@ -2268,7 +2268,7 @@ private fun KiSuggestGenerateButton(
                                 try {
                                     @Suppress("DEPRECATION")
                                     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-                                    vibrator?.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                                    vibrator?.vibrate(android.os.VibrationEffect.createOneShot(500, 255))
                                 } catch (_: Exception) { }
                                 onReset()
                             }
