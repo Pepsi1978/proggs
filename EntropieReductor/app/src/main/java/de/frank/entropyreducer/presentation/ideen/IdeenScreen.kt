@@ -114,6 +114,8 @@ fun IdeenScreen(
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
     val voiceError by voiceVm.error.collectAsStateWithLifecycle()
     val improveVm: IdeenImproveViewModel = hiltViewModel()
+    // Agentic Auto-Suggestion: Bei jeder neuen Idee automatisch Aufgaben + Gewohnheiten generieren
+    val autoSuggestionVm: AutoSuggestionViewModel = hiltViewModel()
     val improveState by improveVm.state.collectAsStateWithLifecycle()
     val improvedText by improveVm.improvedText.collectAsStateWithLifecycle()
     val improveError by improveVm.error.collectAsStateWithLifecycle()
@@ -153,6 +155,8 @@ fun IdeenScreen(
                 base
             }
         scope.launch { addIdeenEntry(context, entry) }
+        // Agentic Auto-Suggestion: Bei jeder neuen Idee automatisch Aufgaben + Gewohnheiten generieren
+        autoSuggestionVm.triggerSuggestions()
         // Titel/Zusammenfassung aus dem primaer angezeigten Text ableiten (bessere Qualitaet).
         val primaryText = if (preferImproved && !improved.isNullOrBlank()) improved else rawText
         titleVm.generateTitle(primaryText) { newTitle ->
