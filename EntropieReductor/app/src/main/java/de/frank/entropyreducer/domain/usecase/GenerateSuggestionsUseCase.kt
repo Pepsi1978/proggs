@@ -158,39 +158,40 @@ class GenerateSuggestionsUseCase @Inject constructor(
 
     companion object {
         private const val COMBINED_SYSTEM_PROMPT = """
-Du bist ein exakter Filter. Du empfaengst Ideen und ordnest jede Idee EXKLUSIV einer von drei Kategorien zu:
+Du bist ein exakter Filter. Du bekommst GENAU EINE Idee und ordnest sie EXKLUSIV einer von drei Kategorien zu:
 - AUFGABE (einmalig abarbeitbar)
-- GEWOHNHEIT (wiederkehrend)
+- GEWOHNHEIT (wiederkehrend, mit klarem Wiederholungssignal)
 - NICHTS (weder Aufgabe noch Gewohnheit)
 
-WICHTIGSTE REGEL: Jede Idee ist EXKLUSIV entweder Aufgabe ODER Gewohnheit. NIEMALS BEIDES. Wenn du unsicher bist, ist es NICHTS.
+=== HAUPTREGELN ===
+1. Eine Idee ist EXKLUSIV entweder Aufgabe ODER Gewohnheit. NIEMALS beides.
+2. Eine GEWOHNHEIT muss ein klares Wiederholungssignal enthalten. Ohne dieses Signal ist es NIEMALS eine Gewohnheit.
+3. Wenn du unsicher bist, antworte mit NICHTS.
+4. Du fügst NICHTS hinzu und lässt NICHTS weg. Du erkennst nur und formulierst um.
 
 === ENTSCHEIDUNGSLOGIK ===
+Prüfe die Idee streng in dieser Reihenfolge:
 
-PRÜFE Jede Idee nach dieser Reihenfolge:
-
-SCHRITT 1 — Wiederholungsmuster erkennen:
-Enthält die Idee eines dieser Wörter oder Konzepte?
-- "alle X Tage", "regelmäßig", "täglich", "wöchentlich", "monatlich"
+SCHRITT 1 — Wiederholungssignal erkennen:
+Enthält die Idee ein klares Zeichen für Wiederholung? Beispiele für solche Signale (nicht abschließend, erkenne auch sinngleiche Formulierungen):
+- "täglich", "wöchentlich", "monatlich", "jährlich", "regelmäßig"
 - "jeden Tag", "jeden Morgen", "jeden Abend", "jeden Montag"
-- "immer wieder", "öfter", "mehrmals", "von Zeit zu Zeit"
-- "jedes Jahr", "jährlich"
-
+- "alle X Tage", "alle X Wochen"
+- "jedes Jahr", "immer wieder"
 → JA: Das ist eine GEWOHNHEIT. Gehe zu SCHRITT 2.
 → NEIN: Das ist KEINE Gewohnheit. Gehe zu SCHRITT 3.
 
-SCHRITT 2 — GEWOHNHEIT erstellen:
-Nimm ALLE Infos aus der Idee und formuliere sie als Satz im Ich-Format.
-NICHTS weglassen, NICHTS dazuerfinden.
-Beispiel: "Alle drei Tage Federball spielen mit Mädels" → "Ich gehe alle drei Tage Federball spielen mit den Mädels."
+SCHRITT 2 — GEWOHNHEIT formulieren:
+Formuliere einen Satz, der IMMER mit "Ich" beginnt und ALLE Infos der Idee enthält. Nichts weglassen, nichts dazuerfinden.
 
 SCHRITT 3 — AUFGABE erkennen:
-Enthält die Idee eine konkrete Tätigkeit die einmalig abarbeitbar ist?
-→ JA: Erstelle eine AUFGABE mit title und description.
+Enthält die Idee eine konkrete Tätigkeit, die einmalig abarbeitbar ist?
+→ JA: Erstelle eine AUFGABE mit:
+   - title: maximal 4 Wörter, kurze Bezeichnung
+   - description: der vollständige Inhalt der Idee
 → NEIN: Antworte mit NICHTS (leere Arrays).
 
 === BEISPIELE ===
-
 "Ich möchte alle drei Tage Federball spielen mit den zwei Mädels"
 → GEWOHNHEIT: "Ich gehe alle drei Tage Federball spielen mit den zwei Mädels."
 
@@ -198,7 +199,10 @@ Enthält die Idee eine konkrete Tätigkeit die einmalig abarbeitbar ist?
 → GEWOHNHEIT: "Ich lese alle zwei Tage ein Buch."
 
 "Jeden Morgen meditieren"
-→ GEWOHNHEIT: "Jeden Morgen meditiere ich."
+→ GEWOHNHEIT: "Ich meditiere jeden Morgen."
+
+"Jeden Freitag Lebensmittel einkaufen für Papa"
+→ GEWOHNHEIT: "Ich gehe jeden Freitag Lebensmittel einkaufen für Papa."
 
 "Ich möchte einen Baum im Garten von Papa pflanzen"
 → AUFGABE: title: "Baum pflanzen", description: "Einen Baum im Garten von Papa pflanzen."
@@ -213,18 +217,16 @@ Enthält die Idee eine konkrete Tätigkeit die einmalig abarbeitbar ist?
 → NICHTS (weder Aufgabe noch Gewohnheit klar erkennbar)
 
 === FORMAT ===
-
-Antworte NUR mit diesem JSON:
+Antworte NUR mit diesem JSON. Keine Einleitung, keine Erklärung, keine Code-Klammern (kein ```), nur das reine JSON:
 {
   "tasks": [{"title": "...", "description": "..."}],
-  "habits": ["Gewohnheit 1", "Gewohnheit 2"]
+  "habits": ["Gewohnheit 1"]
 }
-
-Wenn keine Aufgaben: "tasks": []
-Wenn keine Gewohnheiten: "habits": []
+Wenn keine Aufgabe: "tasks": []
+Wenn keine Gewohnheit: "habits": []
 Wenn beides leer: {"tasks": [], "habits": []}
 
-WICHTIG: Echte deutsche Umlaute (ä, ö, ü, ß). Keine Einleitung, keine Erklärung, nur das JSON.
+WICHTIG: Verwende echte deutsche Umlaute (ä, ö, ü, ß).
 """
     }
 }
