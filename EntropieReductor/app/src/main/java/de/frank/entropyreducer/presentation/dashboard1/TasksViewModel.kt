@@ -1,6 +1,10 @@
 package de.frank.entropyreducer.presentation.dashboard1
 
 import android.app.Application
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -8,6 +12,8 @@ import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.gewohnheitSuggestionStore
+import de.frank.entropyreducer.data.kiTaskSuggestionStore
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
@@ -25,6 +31,7 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -37,6 +44,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * State der Aufgaben-Ansicht. @Immutable garantiert Compose dass equals()
@@ -113,6 +122,9 @@ class TasksViewModel @Inject constructor(
     private val syncCoordinator: SyncCoordinator,
     private val secrets: EncryptedSecretsStore,
     private val settings: de.frank.entropyreducer.data.settings.AppSettings,
+    // Agentic Auto-Suggestion: Beim manuellen Refresh auch Aufgaben- und
+    // Gewohnheitsvorschläge aus Ideen neu generieren (Frank-Wunsch 2026-06-18).
+    private val generateSuggestions: de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -248,6 +260,33 @@ class TasksViewModel @Inject constructor(
         autoArchiveOldResolved()
         autoBalanceBuckets()
         rescoreAllOpenEntries()
+        // Agentic Auto-Suggestion: Beim manuellen Refresh auch die KI-Vorschläge
+        // aus Ideen neu generieren — Aufgaben UND Gewohnheiten (Frank-Wunsch 2026-06-18).
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val context = getApplication<Application>()
+                val ideas = de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow(context).first()
+                if (ideas.isEmpty()) return@launch
+
+                // Task-Vorschläge: In den DataStore der KiTaskSuggestViewModel speichern
+                val kiStore = context.kiTaskSuggestionStore
+                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
+                val (newTasks, updatedProcessedIds) = generateSuggestions
+                    .generateTaskSuggestions(ideas, taskProcessedIds)
+                    .getOrThrow()
+                if (newTasks.isNotEmpty()) {
+                    storeKiTaskSuggestions(kiStore, newTasks)
+                    saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
+                }
+
+                // Gewohnheitsvorschläge: In den DataStore der GewohnheitSuggestViewModel speichern
+                val habitStore = context.gewohnheitSuggestionStore
+                val newHabits = generateSuggestions.generateHabitSuggestions(ideas).getOrThrow()
+                if (newHabits.isNotEmpty()) {
+                    storeHabitSuggestions(habitStore, newHabits)
+                }
+            }
+        }
     }
 
     /**
@@ -1040,5 +1079,112 @@ class TasksViewModel @Inject constructor(
          *               pro Stufe, Aufwand-Nutzen-Hebel und 5-10%-Quote fuer Rot.
          */
         private const val RESCORE_DOCTRINE_VERSION = 31
+        private val TASK_PROCESSED_KEY = stringPreferencesKey("processed_idea_ids")
+    }
+}
+
+// ============================================================================
+// Private Helper fuer den Suggestion-Import im refreshAll()
+// ============================================================================
+
+private fun parseTaskJson(raw: String?): List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion> {
+    if (raw.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val arr = JSONArray(raw)
+        buildList(arr.length()) {
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
+                val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+                add(de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion(id = id, title = title, description = o.optString("description")))
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+private fun serializeTaskJson(items: List<KiTaskSuggestion>): String {
+    val arr = JSONArray()
+    for (item in items) {
+        arr.put(JSONObject().put("id", item.id).put("title", item.title).put("description", item.description))
+    }
+    return arr.toString()
+}
+
+private suspend fun storeKiTaskSuggestions(
+    store: DataStore<Preferences>,
+    newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
+) {
+    val key = stringPreferencesKey("suggestions_json")
+    store.edit { prefs ->
+        val raw = prefs[key]
+        val existing = if (raw.isNullOrBlank()) emptyList()
+        else runCatching {
+            val arr = JSONArray(raw)
+            buildList(arr.length()) {
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
+                    add(KiTaskSuggestion(id = id, title = o.optString("title"), description = o.optString("description")))
+                }
+            }
+        }.getOrDefault(emptyList())
+        val mapped = newSuggestions.map { KiTaskSuggestion(id = it.id, title = it.title, description = it.description) }
+        prefs[key] = serializeTaskJson(existing + mapped)
+    }
+}
+
+private suspend fun loadProcessedIds(
+    store: DataStore<Preferences>,
+    key: androidx.datastore.preferences.core.Preferences.Key<String>,
+): Set<String> {
+    return store.data.first().let { prefs ->
+        val raw = prefs[key] ?: return@let emptySet()
+        runCatching {
+            val arr = JSONArray(raw)
+            buildSet(arr.length()) {
+                for (i in 0 until arr.length()) {
+                    arr.optString(i).takeIf { it.isNotBlank() }?.let { add(it) }
+                }
+            }
+        }.getOrDefault(emptySet())
+    }
+}
+
+private suspend fun saveProcessedIds(
+    store: DataStore<Preferences>,
+    key: androidx.datastore.preferences.core.Preferences.Key<String>,
+    ids: Set<String>,
+) {
+    store.edit { prefs ->
+        val arr = JSONArray()
+        ids.forEach { arr.put(it) }
+        prefs[key] = arr.toString()
+    }
+}
+
+private suspend fun storeHabitSuggestions(
+    store: DataStore<Preferences>,
+    newSuggestions: List<Mental>,
+) {
+    val key = stringPreferencesKey("suggestions_json")
+    store.edit { prefs ->
+        val raw = prefs[key]
+        val existing = if (raw.isNullOrBlank()) emptyList()
+        else runCatching {
+            val arr = JSONArray(raw)
+            buildList(arr.length()) {
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
+                    add(Mental(id = id, text = o.optString("text")))
+                }
+            }
+        }.getOrDefault(emptyList())
+        val combined = existing + newSuggestions
+        val arr = JSONArray()
+        for (m in combined) {
+            arr.put(JSONObject().put("id", m.id).put("text", m.text))
+        }
+        prefs[key] = arr.toString()
     }
 }

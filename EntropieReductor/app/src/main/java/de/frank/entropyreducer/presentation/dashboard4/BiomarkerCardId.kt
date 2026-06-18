@@ -79,6 +79,7 @@ object BiomarkerCardId {
     // dem Tiefschlaf-Verlauf platziert.
     const val SLEEP_WAKE_GRAPH = "sleep_wake_graph"
     const val SLEEP_RESTORATIVE = "sleep_restorative"
+    const val SLEEP_RESTORATIVE_GRAPH = "sleep_restorative_graph"
     const val SLEEP_EFFICIENCY = "sleep_efficiency"
     const val SLEEP_CONSISTENCY = "sleep_consistency"
     const val SLEEP_DEBT = "sleep_debt"
@@ -160,6 +161,7 @@ object BiomarkerCardId {
             SLEEP_DEEP_GRAPH,
             SLEEP_REM_GRAPH,
             SLEEP_WAKE_GRAPH,
+            SLEEP_RESTORATIVE_GRAPH,
             SLEEP_RESTORATIVE,
             SLEEP_EFFICIENCY,
             SLEEP_CONSISTENCY,

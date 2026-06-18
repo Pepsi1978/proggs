@@ -1637,6 +1637,12 @@ private fun BiomarkerCardForId(
                     precomputed = state.wakeTimeDerived,
                 )
 
+            BiomarkerCardId.SLEEP_RESTORATIVE_GRAPH ->
+                RestorativeSleepGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                )
+
             BiomarkerCardId.SLEEP_RESTORATIVE ->
                 RestorativeSleepCard(
                     // Performance-Audit E1 (2026-05-10): 30d-Avg jetzt im VM vorberechnet.

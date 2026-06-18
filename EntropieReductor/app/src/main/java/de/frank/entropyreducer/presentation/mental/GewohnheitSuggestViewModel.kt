@@ -3,18 +3,12 @@ package de.frank.entropyreducer.presentation.mental
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.frank.entropyreducer.data.remote.GeminiApi
-import de.frank.entropyreducer.data.remote.GeminiContent
-import de.frank.entropyreducer.data.remote.GeminiGenerationConfig
-import de.frank.entropyreducer.data.remote.GeminiPart
-import de.frank.entropyreducer.data.remote.GeminiRequest
-import de.frank.entropyreducer.data.settings.AppSettings
-import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.data.gewohnheitSuggestionStore
+import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +44,6 @@ private fun serializeSuggestionsJson(mentals: List<Mental>): String {
     return arr.toString()
 }
 
-private val Context.suggestionStore by preferencesDataStore(name = "gewohnheit_suggestions")
 private val KEY_SUGGESTIONS = stringPreferencesKey("suggestions_json")
 
 enum class SuggestState { IDLE, LOADING }
@@ -58,10 +51,10 @@ enum class SuggestState { IDLE, LOADING }
 @HiltViewModel
 class GewohnheitSuggestViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val gemini: GeminiApi,
-    private val secrets: EncryptedSecretsStore,
-    private val settings: AppSettings,
+    private val generateSuggestions: GenerateSuggestionsUseCase,
 ) : ViewModel() {
+
+    private val store = context.gewohnheitSuggestionStore
 
     private val _state = MutableStateFlow(SuggestState.IDLE)
     val state: StateFlow<SuggestState> = _state.asStateFlow()
@@ -70,7 +63,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     val suggestions: StateFlow<List<Mental>> =
-        context.suggestionStore.data.map { prefs -> parseSuggestionsJson(prefs[KEY_SUGGESTIONS]) }
+        store.data.map { prefs -> parseSuggestionsJson(prefs[KEY_SUGGESTIONS]) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun dismissError() { _error.value = null }
@@ -78,50 +71,19 @@ class GewohnheitSuggestViewModel @Inject constructor(
     fun generateSuggestions() {
         if (_state.value == SuggestState.LOADING) return
         viewModelScope.launch {
-            val apiKey = secrets.geminiApiKey
-            if (apiKey.isNullOrBlank()) {
-                _error.value = "Bitte Gemini-API-Key in den Einstellungen hinterlegen."
-                return@launch
-            }
             _state.value = SuggestState.LOADING
             _error.value = null
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
-                if (ideas.isEmpty()) {
+                val newSuggestions = generateSuggestions
+                    .generateHabitSuggestions(ideas)
+                    .getOrThrow()
+                storeSuggestions(newSuggestions)
+                if (newSuggestions.isEmpty() && ideas.isNotEmpty()) {
+                    _error.value = "Keine Ideen geeignet für Gewohnheitsvorschläge."
+                } else if (newSuggestions.isEmpty()) {
                     _error.value = "Keine Ideen vorhanden — zuerst Ideen eingeben."
-                    _state.value = SuggestState.IDLE
-                    return@launch
                 }
-                val ideenText = ideas.joinToString("\n") { "- ${it.text}" }
-                val model = settings.geminiModelFlow.first()
-                val response = gemini.generateContent(
-                    model = model,
-                    apiKey = apiKey,
-                    request = GeminiRequest(
-                        systemInstruction = GeminiContent(
-                            parts = listOf(GeminiPart(SYSTEM_PROMPT)),
-                        ),
-                        contents = listOf(
-                            GeminiContent(
-                                role = "user",
-                                parts = listOf(GeminiPart("Hier sind meine Ideen:\n\n$ideenText")),
-                            ),
-                        ),
-                        generationConfig = GeminiGenerationConfig(
-                            temperature = 0.6,
-                            responseMimeType = "application/json",
-                        ),
-                    ),
-                )
-                val json = response.candidates
-                    ?.firstOrNull()
-                    ?.content
-                    ?.parts
-                    ?.firstOrNull()
-                    ?.text
-                    ?.trim()
-                    ?: throw IllegalStateException("Leere Antwort von Gemini")
-                storeSuggestions(json)
             }.onFailure { ex ->
                 _error.value = ex.message ?: "Vorschlag-Generierung fehlgeschlagen"
             }
@@ -131,7 +93,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun acceptSuggestion(id: String) {
         viewModelScope.launch {
-            context.suggestionStore.edit { prefs ->
+            store.edit { prefs ->
                 val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
                 prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
             }
@@ -140,7 +102,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun deleteSuggestion(id: String) {
         viewModelScope.launch {
-            context.suggestionStore.edit { prefs ->
+            store.edit { prefs ->
                 val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
                 prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
             }
@@ -151,46 +113,25 @@ class GewohnheitSuggestViewModel @Inject constructor(
         val clean = text.trim()
         if (clean.isEmpty()) return
         viewModelScope.launch {
-            context.suggestionStore.edit { prefs ->
+            store.edit { prefs ->
                 val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
                 prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + Mental.create(clean))
             }
         }
     }
 
-    private suspend fun storeSuggestions(json: String) {
-        val arr = runCatching { JSONArray(json) }.getOrNull()
-            ?: runCatching { JSONArray("[$json]") }.getOrNull()
-            ?: return
-        val newSuggestions = buildList {
-            for (i in 0 until arr.length()) {
-                val text = arr.optString(i).trim()
-                if (text.isNotBlank()) add(Mental.create(text))
+    private fun storeSuggestions(newSuggestions: List<Mental>) {
+        viewModelScope.launch {
+            store.edit { prefs ->
+                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
+                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + newSuggestions)
             }
-        }
-        context.suggestionStore.edit { prefs ->
-            prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(newSuggestions)
         }
     }
 
-    companion object {
-        private const val SYSTEM_PROMPT = """
-Du bist ein Coach fuer Gewohnheitsbildung. Analysiere die folgenden Ideen und
-identifiziere jene, die sich eignen, daraus eine taegliche oder regelmaessige
-Gewohnheit zu machen.
-
-Fuer jede geeignete Idee formuliere EINEN Gewohnheitsvorschlag als kurzen,
-praezisen Satz. Format: "Was ich wann am besten mache" — maximal 3 Zeilen.
-Beispiel: "Jeden Morgen nach dem Aufstehen 5 Minuten meditieren, bevor ich
-das Handy checke."
-
-Regeln:
-- Gib NUR jene Ideen zurueck, die wirklich als Gewohnheit umsetzbar sind.
-- Maximal 5 Vorschlaege.
-- Jeder Vorschlag ist ein einzelner String, maximal 3 Zeilen lang.
-- Antworte NUR mit einem JSON-Array von Strings, z.B.:
-  ["Vorschlag 1", "Vorschlag 2", "Vorschlag 3"]
-- Keine Einleitung, keine Erklaerung, nur das JSON-Array.
-"""
+    fun resetProcessedIdeas() {
+        viewModelScope.launch {
+            _error.value = null
+        }
     }
 }
