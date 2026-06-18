@@ -1,9 +1,14 @@
-# OpenRouter API — Best Practices (Stand 2026-06-17)
+# OpenRouter API — Best Practices (Stand 2026-06-18)
 
 > Gegenstueck zu `bugs/apis/openrouter-api.md`. Offiziell empfohlen (Quellen).
 > Basis-Recherche 2026-06-09 (§1–§8, rohe API-Integration). **Erweiterung 2026-06-17**
 > (§9–§15): Schwerpunkt **OpenRouter fuer CLI-/Coding-Harnesses** (Claude Code & Co.),
 > **schnelle/Cloud-Modelle** und **Cloud-vs-lokal** — Researcher-Schwarm-Recherche.
+> **Erweiterung 2026-06-18 (§16–§19):** Schwerpunkt **OpenCode (SST) — Franks tatsaechliche
+> Umgebung** (Voll-Konfiguration, Routing-Durchreichung, Agents/Modell-pro-Aufgabe), eine
+> **Modellwahl-Entscheidungshilfe nach Aufgabentyp**, eine **Account-/Dashboard-Einstellungs-
+> Checkliste** und **Parameter-Korrekturen seit 06-17** (Message-Transforms, `:online`, `usage`,
+> neue Felder) — 5-Researcher-Schwarm.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -28,6 +33,11 @@
 | 13 | Neue Features | Presets (`@preset/slug`), BYOK (5% Fee), ZDR pro Provider, Response-Caching, `openrouter:web_search` | §13 |
 | 14 | Cloud vs. lokal | OR hostet NIE lokal; mischen via claude-code-router/LiteLLM; lokal = nur base_url-Tausch (gleicher Code) | §14 |
 | 15 | Account/Keys/Ops | Inference- vs. Management-Key; per-Key-`limit`; Rate-Limits GLOBAL pro Account | §15 |
+| 16 | **OpenCode anbinden** ⭐ | `/connect`→OpenRouter (Key in `~/.local/share/opencode/auth.json`); Modell `openrouter/<v>/<m>`; **kein `opencode auth login`/`OPENROUTER_API_KEY`** | §16 |
+| 17 | **OpenCode Routing durchreichen** ⭐ | `provider.openrouter.models.<m>.options.provider` = OR-`provider`-Objekt 1:1 (snake_case: `order`,`sort`,`data_collection`…) | §16 |
+| 18 | **Modell pro Aufgabe** ⭐ | Pro `agent` eigenes `model`; teuer (Opus/GPT-5) für Architektur, billig (Flash/Haiku/Grok-Fast) für Recherche/Boilerplate; `small_model` billig | §16/§17 |
+| 19 | **Account-Settings** ⭐ | ≥$10 Guthaben (1000 statt 50 `:free`-RPD) + Auto-Topup; Training-Toggle bewusst; Per-Key-Limit; Preset fürs Default-Routing | §18 |
+| 20 | Param-Updates 06-18 | `transforms`→Plugin `context-compression` (auto ≤8k); `:online` deprecated; `usage.include` wirkungslos (immer an); `max_tokens`→`max_completion_tokens` | §19 |
 
 ## 1. Unified Gateway & Attribution-Header
 - Base-URL `https://openrouter.ai/api/v1`, Auth via `Authorization: Bearer <OPENROUTER_API_KEY>`; als OpenAI-Drop-in den Base-URL umstellen, sonst offizielle SDKs (`@openrouter/sdk`, `openrouter`) fuer Typsicherheit. Quelle: https://openrouter.ai/docs/quickstart · offiziell
@@ -201,3 +211,206 @@ Quellen: https://artificialanalysis.ai · https://openrouter.ai/provider/groq ·
 | 13 Neuere Plattform-Features | H33, H34, H35 |
 | 14 Cloud vs. lokal | G24, H36 |
 | 15 Account / Keys / Ops | E15, F18, H37 |
+| 16 OpenCode-Voll-Konfiguration | G24, I38, I39, I40 |
+| 17 Modellwahl nach Aufgabentyp | C7, H27 |
+| 18 Account-/Dashboard-Einstellungen | E13, E14, E15, F18 |
+| 19 Parameter-Korrekturen 06-18 | D9, H33 |
+
+---
+
+# Teil III — OpenCode (SST), Modellwahl & Account-Settings (Erweiterung 2026-06-18)
+
+> Anlass: Frank nutzt **OpenCode** (sst/opencode, neues Repo `anomalyco/opencode`, Docs `opencode.ai`)
+> mit OpenRouter und will alles optimal einstellen. Teil II war Claude-Code-zentriert; dieser Teil ist
+> die OpenCode-Tiefe + eine Modellwahl-Entscheidungshilfe + die Dashboard-Settings-Checkliste.
+
+## 16. OpenRouter in OpenCode — vollstaendige Konfiguration ⭐ (Franks Kern-Thema)
+
+### 16.1 Anbindung & Auth (zuerst klaeren — haeufigste Fehlerquelle)
+- **Login NICHT per `opencode auth login`** — diesen Befehl gibt es in der OpenCode-Doku NICHT. Der dokumentierte Weg ist der TUI-Befehl **`/connect`** → **OpenRouter** waehlen → Key (`sk-or-…`) einfuegen → dann **`/models`** zum Modell waehlen. Quelle: https://openrouter.ai/docs/cookbook/coding-agents/opencode-integration · https://opencode.ai/docs/providers · offiziell · 2026-06-18
+- **auth.json-Speicherort:** `~/.local/share/opencode/auth.json`. Per `/connect` hinterlegte Keys landen genau hier; manuell eintragbar als `{"openrouter":{"type":"api","key":"sk-or-…"}}`. Pruefen ob Credentials sitzen: **`opencode auth list`** (der einzige dokumentierte `opencode auth …`-Befehl). Quelle: https://opencode.ai/docs/troubleshooting · offiziell · 2026-06-18
+- **`OPENROUTER_API_KEY`-Env existiert in der OpenCode-Doku NICHT** als Standard-Hebel. Wer den Key per Config statt `/connect` setzen will, nutzt die generische `{env:VAR}`-Syntax: `provider.openrouter.options.apiKey: "{env:OPENROUTER_API_KEY}"` (Schluss aus dem Custom-Provider-Schema, nicht woertlich aus einem OR-Beispiel). Quelle: https://opencode.ai/docs/config · offiziell (abgeleitet) · 2026-06-18
+- **Modell-String = `openrouter/<vendor>/<model>`** (z. B. `openrouter/anthropic/claude-sonnet-4.6`). `openrouter` ist hier die OpenCode-Provider-ID, `<vendor>/<model>` der OpenRouter-Slug. **Wichtig:** INNERHALB von `provider.openrouter.models` ist der *Schluessel* nur `<vendor>/<model>` (ohne `openrouter/`-Praefix). Quelle: https://opencode.ai/docs/models · openrouter.ai Cookbook · offiziell · 2026-06-18
+
+### 16.2 Config-Datei, Speicherorte & Praezedenz
+- **Format:** JSON oder JSONC (Kommentare erlaubt). IMMER `"$schema": "https://opencode.ai/config.json"` setzen (Autocomplete + Validierung). Quelle: https://opencode.ai/docs/config · offiziell · 2026-06-18
+- **Speicherorte (spaetere ueberschreiben fruehere, aber gemerged, nicht ersetzt):** (1) Remote `.well-known/opencode` → (2) **Global `~/.config/opencode/opencode.json`** → (3) Custom-Pfad (`OPENCODE_CONFIG`) → (4) **Projekt-lokal `opencode.json`/`opencode.jsonc`** (hoechste Standard-Praezedenz) → (5) `.opencode/`-Verzeichnisse → (6) Inline (`OPENCODE_CONFIG_CONTENT`) → (7) Managed (Admin/MDM). Quelle: https://opencode.ai/docs/config · offiziell · 2026-06-18
+- **OpenRouter-Modelle „vorladen"** (minimal):
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+      "openrouter": {
+        "models": {
+          "anthropic/claude-sonnet-4.6": {},
+          "google/gemini-2.5-flash": {}
+        }
+      }
+    }
+  }
+  ```
+  Ein leeres Objekt als Wert reicht, um ein Modell verfuegbar zu machen. Quelle: https://openrouter.ai/docs/cookbook/coding-agents/opencode-integration · offiziell · 2026-06-18
+- OpenCode nutzt intern das **Vercel AI SDK** + **Models.dev** (75+ Provider). OpenRouter ist eingebaut → fuer den eingebauten Provider sind `npm`/`baseURL`/`apiKey` NICHT noetig (nur fuer selbst definierte Custom-Provider). Quelle: https://opencode.ai/docs/models · offiziell · 2026-06-18
+
+### 16.3 Globale Modellwahl: `model` + `small_model`
+- `model` = Hauptmodell (Format `provider/model`), `small_model` = separates, leichtes Modell fuer Nebenaufgaben (Titel-Generierung, Zusammenfassungen, Compaction). Ohne `small_model` versucht OpenCode automatisch ein guenstigeres Modell desselben Providers, sonst faellt es aufs Hauptmodell zurueck. **Empfehlung:** `small_model` auf ein billiges schnelles Modell setzen (Haiku/Flash/Nano-Tier) — spart spuerbar.
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "model": "openrouter/anthropic/claude-sonnet-4.6",
+    "small_model": "openrouter/google/gemini-2.5-flash-lite"
+  }
+  ```
+  Modell-Lade-Prioritaet beim Start: (1) CLI-Flag `--model`/`-m` → (2) `model`-Key → (3) zuletzt benutzt → (4) interne Default-Prioritaet. Interaktiv wechseln: **`/models`**. Quelle: https://opencode.ai/docs/config · https://opencode.ai/docs/models · offiziell · 2026-06-18
+
+### 16.4 OpenRouter-Routing DURCH OpenCode durchreichen ⭐ (der entscheidende Hebel)
+- OpenCode reicht **alles unter `provider.openrouter.models.<model>.options.provider` 1:1 als OpenRouter-`provider`-Routing-Objekt** durch. Damit funktionieren ALLE OR-Routing-Felder (in **snake_case**) — nicht nur `order`/`allow_fallbacks` (die einzigen, die die OpenCode-Doku woertlich zeigt). Offiziell belegtes Muster:
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+      "openrouter": {
+        "models": {
+          "anthropic/claude-sonnet-4.6": {
+            "options": {
+              "provider": {
+                "order": ["anthropic"],
+                "allow_fallbacks": true,
+                "require_parameters": true,
+                "data_collection": "deny",
+                "sort": "latency",
+                "max_price": { "prompt": 3, "completion": 15 },
+                "preferred_max_latency": { "p90": 3 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  ```
+  Quelle: https://opencode.ai/docs/providers · https://openrouter.ai/docs/guides/routing/provider-selection · offiziell (Felder) + abgeleitet (Kombination) · 2026-06-18
+- **Praktisch fuer Frank:** Damit holt man die ganze §2–§4/§11-Mechanik (Determinismus, Datenschutz, Speed, Preisdeckel) direkt in OpenCode. Beispiel-Rezepte: interaktives Tippgefuehl → `"sort":"latency"`; Determinismus → `"order":[…]`+`"allow_fallbacks":false`; Compliance → `"data_collection":"deny"`+`"require_parameters":true`; Garbage-Schutz → `"quantizations":["fp16","bf16"]`. Die `:nitro`/`:floor`-Suffixe am Modell-Slug entsprechen `sort:"throughput"` bzw. `sort:"price"`.
+- **Nicht belegt:** ein provider-WEITER Options-Block (`provider.openrouter.options.provider`) ist in der OpenCode-Doku nicht dokumentiert — das einzige sichere Muster ist **pro Modell** unter `models.<m>.options.provider`. Quelle: https://opencode.ai/docs/providers · offiziell · 2026-06-18
+
+### 16.5 Reasoning & Modell-Optionen pro Modell
+- Modell-Optionen liegen unter `provider.<id>.models.<model>.options` und werden an den Provider durchgereicht. Zwei Wege fuer OpenRouter-Reasoning:
+  - **(a) OpenCode-normalisiert:** `reasoningEffort`, `textVerbosity`, `maxTokens`, `temperature` direkt im Options-Block.
+  - **(b) rohen OR-`reasoning`-Parameter durchreichen** (zuverlaessigster Weg, wenn das Modell den Effort „nicht respektiert"): `"options": { "reasoning": { "effort": "high" } }`. Werte: `xhigh|high|medium|low|minimal|none` oder exakt `"reasoning": { "max_tokens": 4096 }`.
+  Quelle: https://opencode.ai/docs/models · https://openrouter.ai/docs/guides/best-practices/reasoning-tokens · offiziell + extern (gist.github.com/lkoelman) · 2026-06-18
+- **Variants** = mehrere Einstellungen fuer dasselbe Modell ohne Duplikate; per Keybind `variant_cycle` (TUI ctrl+t) bzw. CLI `--variant` umschaltbar; `"disabled": true` schaltet eine Variante ab. Eingebaute Defaults: Anthropic `high`/`max`; OpenAI `none/minimal/low/medium/high/xhigh`; Google `low/high`. Quelle: https://opencode.ai/docs/models · offiziell · 2026-06-18
+
+### 16.6 Agents & Modell-pro-Aufgabe ⭐ (Kosten/Qualitaet steuern)
+- OpenCode kennt **Primary Agents** (Tab-umschaltbar: `build` = alle Tools, `plan` = `edit`/`bash` auf `deny`/`ask`) und **Subagents** (per `@mention` oder automatisch uebers Task-Tool: eingebaut `general`, `explore` (read-only Suche), `scout` (read-only Doku/Dependencies)). Versteckte System-Agents: `compaction`, `title`, `summary`. Quelle: https://opencode.ai/docs/agents · offiziell · 2026-06-18
+- **Pro Agent ein eigenes `model`** → teures Modell nur fuer schwere Arbeit, billiges fuer Routine:
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "model": "openrouter/anthropic/claude-sonnet-4.6",
+    "small_model": "openrouter/google/gemini-2.5-flash-lite",
+    "agent": {
+      "build": {
+        "mode": "primary",
+        "model": "openrouter/anthropic/claude-opus-4.7",
+        "permission": { "edit": "allow", "bash": "allow" }
+      },
+      "plan": {
+        "mode": "primary",
+        "model": "openrouter/google/gemini-2.5-flash",
+        "permission": { "edit": "deny", "bash": "deny" }
+      },
+      "code-reviewer": {
+        "description": "Reviews code for security, performance, maintainability",
+        "mode": "subagent",
+        "model": "openrouter/anthropic/claude-sonnet-4.6",
+        "temperature": 0.1,
+        "permission": { "edit": "deny" }
+      }
+    }
+  }
+  ```
+  Quelle: https://opencode.ai/docs/agents · offiziell · 2026-06-18
+- **Agent-Felder:** `description` (Pflicht bei eigenen Agents — steuert Auto-Invocation), `mode` (`primary|subagent|all`), `model`, `temperature`/`top_p`, `prompt` (`{file:./…}` oder Inline), `steps` (max. Iterationen = Kostenbremse), `disable`, `hidden`, `permission` (inkl. `permission.task` = welche Subagents per Task aufrufbar), `color`. Jeder **zusaetzliche** Key wird direkt als Modell-Option an den Provider durchgereicht (z. B. `reasoningEffort`/`textVerbosity` auf Agent-Ebene). Ohne `model` erbt ein Subagent das Modell des aufrufenden Primary-Agents. Quelle: https://opencode.ai/docs/agents · offiziell · 2026-06-18
+- **Markdown-Agents** als Alternative: Dateien in `~/.config/opencode/agents/` (global) bzw. `.opencode/agents/` (Projekt), Frontmatter = die gleichen Felder, Dateiname = Agent-Name. Erstellen per `opencode agent create`, auflisten per `opencode agent list`. (Verzeichnisse jetzt **plural**: `agents/`, `commands/`, `plugins/`; Singular bleibt rueckwaertskompatibel.) Quelle: https://opencode.ai/docs/agents · https://opencode.ai/docs/cli · offiziell · 2026-06-18
+- **Orchestrator-Muster (Community-Konsens):** teures Modell (Opus/GPT-5) plant/orchestriert, spawnt per Subagent guenstige/spezialisierte Modelle (Gemini-Flash, Grok-Code-Fast, Kimi) fuer Implementierung/Recherche/Boilerplate. „Stop using one model for everything." Quelle: https://www.glukhov.org/ai-devtools/opencode/oh-my-opencode-agents/ · https://amirteymoori.com/opencode-multi-agent-setup-specialized-ai-coding-agents/ · extern · 2026-06-18
+
+### 16.7 Permissions (gefaehrliche Aktionen einschraenken)
+- `permission` (ersetzt das deprecatete `tools`-Boolean) mit drei Aktionen: `allow` (ohne Rueckfrage), `ask` (Bestaetigung), `deny` (blockiert). Keys u. a.: `read`, `edit` (= write+edit+apply_patch), `bash`, `task`, `webfetch`, `websearch`, `external_directory`, `doom_loop`. Granulare Objekt-Syntax mit **„letzte passende Regel gewinnt"** (Catch-all `"*"` zuerst):
+  ```json
+  { "permission": {
+      "bash": { "*": "ask", "git *": "allow", "npm *": "allow", "rm *": "deny" },
+      "edit": { "*": "deny", "src/**": "allow" }
+  }}
+  ```
+  Sichere Defaults: meiste Permissions `allow`, aber `doom_loop`/`external_directory` = `ask`, und **`.env`-Lesen ist per Default `deny`**. Quelle: https://opencode.ai/docs/permissions · offiziell · 2026-06-18
+
+### 16.8 Kontext-/Token-Management & Caching (Kosten niedrig halten)
+- **Compaction (Autocompact):** `"compaction": { "auto": true, "prune": false, "reserved": 10000 }`. **`prune: true` zum Sparen** (entfernt alte Tool-Outputs). Abschaltbar per `OPENCODE_DISABLE_AUTOCOMPACT=1`, Pruning per `OPENCODE_DISABLE_PRUNE=1`. Quelle: https://opencode.ai/docs/config · offiziell · 2026-06-18
+- **Kosten beobachten:** `opencode stats` (`--days`, `--tools`, `--models`, `--project`). Neue, abgegrenzte Aufgaben in **neuen Sessions** starten (lange Sessions = wachsender Kontext = mehr Tokens). `steps` pro Agent begrenzen. Quelle: https://opencode.ai/docs/cli · offiziell · 2026-06-18
+- **MCP kostet Kontext:** jeder MCP-Server fuegt Tools = Tokens hinzu; manche (GitHub-MCP) „can easily exceed the context limit". → MCP sparsam, ggf. global aus + pro Agent gezielt an: `"tools": { "my-mcp*": false }` global, im Agent `"tools": { "my-mcp*": true }`. Quelle: https://opencode.ai/docs/mcp-servers · offiziell · 2026-06-18
+- **Prompt-Caching:** Provider-Option `"setCacheKey": true` erzwingt Cache-Key; zusaetzlich `timeout`/`chunkTimeout` gegen haengende Streams. OR-seitig: die meisten Provider cachen automatisch, **Anthropic braucht `cache_control` und Auto-Caching nur ueber Anthropic-1P** (nicht Bedrock/Vertex) — siehe §12. **Vorsicht:** offene OpenCode-Issues (#1245, #5416) berichten, dass Anthropic-Caching via OpenRouter nicht immer greift → in der OR-Activity pruefen, ob `cached_tokens` wirklich erscheinen. Quelle: https://opencode.ai/docs/config · https://openrouter.ai/docs/guides/best-practices/prompt-caching · offiziell + extern (GitHub-Issues) · 2026-06-18
+
+### 16.9 MCP-Server, Regeln & dauerhafter Kontext
+- **MCP** im `mcp`-Block (`type:"local"` mit `command`-Array, oder `type:"remote"` mit `url`+`headers`); OAuth automatisch (Token in `~/.local/share/opencode/mcp-auth.json`), manuell `opencode mcp auth/list/logout/debug`. Doku-Beispiele: Context7 (Doku-Suche), Grep by Vercel (GitHub-Code-Suche), Sentry. Quelle: https://opencode.ai/docs/mcp-servers · offiziell · 2026-06-18
+- **Regeln/Instructions:** dauerhafter Projektkontext in **`AGENTS.md`** (Root, per `/init` erzeugen/aktualisieren); global `~/.config/opencode/AGENTS.md`. **Claude-Code-kompatibel:** faellt auf `CLAUDE.md` bzw. `~/.claude/CLAUDE.md` + `~/.claude/skills/` zurueck (abschaltbar `OPENCODE_DISABLE_CLAUDE_CODE=1`) — fuer Frank praktisch, da seine Regeln in `~/proggs/CLAUDE.md` liegen. Mehrere Regeldateien via `instructions`-Array (Globs + Remote-URLs). Quelle: https://opencode.ai/docs/rules · offiziell · 2026-06-18
+
+## 17. Modellwahl nach Aufgabentyp — Entscheidungshilfe ⭐
+
+> **VOLATILITAETS-WARNUNG:** Modellnamen/-versionen drehen sich monatlich (Claude 4.6→4.7→4.8,
+> MiniMax M2.5→M2.7, DeepSeek V3.2→V4 …). Die **Heuristik** (unten je Kategorie zuerst) ist das
+> Stabile; die konkreten Namen sind **Momentaufnahme Juni 2026** und veralten. Slugs vor Nutzung auf
+> `openrouter.ai/models` bzw. per `/models` in OpenCode gegenpruefen. SWE-bench-Zahlen sind grossteils
+> selbstberichtet — mit Vorsicht lesen. Quelle: https://openrouter.ai/collections/programming · https://artificialanalysis.ai · offiziell + extern · 2026-06-18
+
+**Stabile Gesamt-Heuristik (vor jeder Wahl 4 Fragen):** (1) Zaehlt Tool-Call-Zuverlaessigkeit/Instruction-Following mehr als rohe Intelligenz? → Agentic-Schiene. (2) Ist die Aufgabe einfach, Latenz/Preis dominant? → kleines/schnelles Modell. (3) Tiefe Denkkette noetig (Architektur, harter Bug)? → Reasoning-Flaggschiff mit hohem Thinking-Effort. (4) Wie viel Kontext WIRKLICH? → 1M-Fenster lohnt erst ab echten >200K Tokens. **Kernprinzip: nicht ein Modell — Routing.** OpenCode ist genau dafuer gebaut (Modell pro Agent/Modus, §16.6).
+
+| Aufgabentyp | Heuristik (stabil) | Momentaufnahme Juni 2026 (Slug) |
+|---|---|---|
+| **Agentic Coding** (lange Tool-Ketten, autonome Tasks) | Tool-Call-Zuverlaessigkeit + Multi-Turn-Instruction-Following + Stabilitaet > Benchmark-Score; `:exacto` nutzen | `anthropic/claude-sonnet-4.6` (Preis/Leistung), `anthropic/claude-opus-4.7` (haerteste Tasks), `moonshotai/kimi-k2.6` (sehr tool-stabil, guenstig — in OpenCode bewaehrt), `minimax/minimax-m2.7` (sehr guenstig) |
+| **Schnell/guenstig** (Boilerplate, kleine Edits, Commit-Msgs) | Latenz + Output-Preis dominieren; Reasoning AUS (`reasoning.enabled=false`/`minimal`) | `google/gemini-2.5-flash-lite`, `x-ai/grok-4.1-fast` (gutes Tool-Calling, 2M Ctx), `deepseek/deepseek-v3.2` |
+| **Deep Reasoning / Architektur / harte Bugs** | hoechster Reasoning-Index, lange Denkketten, Reasoning AN (`high`/`xhigh`); Preis/Latenz zweitrangig | `anthropic/claude-opus-4.7`, `openai/gpt-5.4` (bzw. `gpt-5.x-codex`), `google/gemini-3-pro`, `deepseek/deepseek-v4-pro` (bestes Preis/Reasoning offen — Slug pruefen) |
+| **Langer Kontext** (grosse Codebasen) | nutzbares Fenster × Input-Preis; auf Long-Context-Aufschlaege achten | `x-ai/grok-4.1-fast` (2M, billig), `google/gemini-3-flash-preview` (1M, billig), `anthropic/claude-*-4.x` (1M ohne Aufschlag, teuer), `qwen/qwen3-coder` (1M, guenstig) |
+| **Vision / Multimodal** (Screenshots, PDFs, Diagramme) | native Bild/PDF-Eingabe; visuelles Reasoning + Kontext fuer UI-Debug, billige VL fuer reine OCR | `google/gemini-3-flash-preview` (Text+Bild+Audio+Video+PDF, gut+billig), `anthropic/claude-sonnet-4.6`, `openai/gpt-5.4`, offen: `z-ai/glm-4.5v` |
+| **Kostenlos (`:free`)** | nur Hobby/Lernen/leichte Edits — harte Limits, keine Uptime-Garantie, ggf. Daten-Training, oft kein Tool-Use → NICHT fuer produktive Agenten | `qwen/qwen3-coder:free` (staerkstes Free-Coding, 1M), `deepseek/…flash:free` als Fallback-Paar |
+
+**Konkrete OpenCode-Empfehlung (Momentaufnahme):** Build/Edit → `claude-sonnet-4.6` oder `kimi-k2.6`; Architekt/`plan` schwer → `claude-opus-4.7`/`gpt-5.4`; schneller Modus/`small_model` → `gemini-2.5-flash-lite`/`grok-4.1-fast`; Riesen-Codebase → `grok-4.1-fast` (2M); Vision → `gemini-3-flash-preview`. **Achtung Modellfamilien-Grenze:** Claude folgt checklisten-/mechanikgetriebenen Prompts, GPT-5.x knappen prinzipiengetriebenen — beim Modellwechsel eines Agents den System-Prompt mitdenken. Quelle: https://www.glukhov.org/ai-devtools/opencode/oh-my-opencode-agents/ · extern · 2026-06-18
+
+## 18. Account-/Dashboard-Einstellungen (openrouter.ai/settings) — Checkliste ⭐
+
+> OpenRouter ist seit 2026 auf **Workspaces** umgestellt (Routing/Privacy/BYOK/Observability pro
+> Workspace; Billing/Credits/Activity/Management-Keys/Org account-global). Quelle: https://openrouter.ai/docs/cookbook/administration/organization-management · offiziell · 2026-06-18
+
+1. **Credits (`/settings/credits`):** **≥ $10 einmalig** kaufen (laeuft nie ab) → schaltet `:free`-Limit von **50 auf 1000 Requests/Tag** frei und senkt Latenz (niedriges Guthaben triggert Extra-DB-Checks + aggressiveres Cache-Verfallen). **Auto-Topup** mit Schwelle ~$5 / Betrag ~$10–20 aktivieren. Negatives Guthaben → `402` (auch bei Free). Mehr Keys/Accounts umgehen Rate-Limits NICHT (global gemessen). Quelle: https://openrouter.ai/docs/api/reference/limits · https://openrouter.ai/docs/guides/best-practices/latency-and-performance · offiziell · 2026-06-18
+2. **Privacy/Training (`/settings/privacy`):** drei getrennte Hebel — (a) **„Use of Inputs/Outputs"** (OR darf Daten zur Produktverbesserung nutzen, gibt **1% Rabatt**; Default AUS), (b) **„Enable providers that may train on inputs"** (getrennt fuer paid/free; AN = mehr Modellauswahl v. a. bei `:free`, AUS = Datenschutz), (c) **Data-Policy-Filter** (account-weites Gegenstueck zu `data_collection:"deny"`). **Empfehlung:** max. Auswahl → Training-Toggle AN; Datenschutz → AUS + ggf. ZDR. OpenRouter selbst hat Zero-Data-Retention (nur Metadaten), ausser man optet ein. Quelle: https://openrouter.ai/docs/guides/privacy/data-collection · https://openrouter.ai/docs/guides/privacy/provider-logging · offiziell · 2026-06-18
+3. **Provider-Praeferenzen (account-weit):** **Allowed/Ignored Providers** (Whitelist/Blacklist) — nur bei echtem Grund setzen (zu viel = weniger Fallback/Uptime). `only`/`ignore` mergen **additiv** mit per-Request; `zdr` per **OR**. Ein festes **Default-Routing** (sort/order) ist NICHT als Dashboard-Setting dokumentiert → ueber einen **Preset** loesen (Punkt 6). Quelle: https://openrouter.ai/docs/guides/routing/provider-selection · offiziell · 2026-06-18
+4. **API-Keys (`/keys` + `/settings/management-keys`):** **Inference-Keys** (Modell-Requests) vs. **Management-Keys** (nur Provisioning/Analytics, koennen keine Inference → 403). Pro Key: `limit` + `limit_reset` (`daily/weekly/monthly`, Reset Mitternacht UTC), `disabled`, `include_byok_in_limit`. **Pro App/Umgebung ein eigener Key mit Limit** (Leak-Isolation + Kostenzuordnung), quartalsweise rotieren (neu anlegen → umstellen → nach Activity-Check alten loeschen). Quelle: https://openrouter.ai/docs/guides/overview/auth/management-api-keys · https://openrouter.ai/docs/cookbook/administration/api-key-rotation · offiziell · 2026-06-18
+5. **Activity/Analytics (`/activity`, `/logs`):** Spend/Tokens/Requests, Filter nach Modell/Provider/Key, CSV/PDF-Export; **„View Raw Metadata" → `provider_responses`** zeigt HTTP-Status je Provider-Versuch (zentral fuers Debugging, v. a. BYOK 401/403/429). Beta-Analytics-API (Management-Key) fuer Drilldowns. Quelle: https://openrouter.ai/docs/cookbook/administration/analytics-cost-control · offiziell · 2026-06-18
+6. **Presets (`/settings/presets`):** server-seitig gespeicherte Config (Modell+Fallbacks+Routing+System-Prompt+Parameter), referenziert via `model:"@preset/slug"`, `preset`-Feld oder `model@preset/slug`. **Trennt LLM-Config vom Code**, versioniert mit Rollback — der saubere Weg, ein Default-Modell/-Routing zentral festzunageln. Request-Params ueberschreiben (shallow-merge). Quelle: https://openrouter.ai/docs/guides/features/presets · offiziell · 2026-06-18
+7. **BYOK (`/settings/integrations`):** eigene Provider-Keys hinterlegen, **5% Fee** (erste 1 Mio Requests/Monat gratis); Sektionen **Prioritized** (vor OR-Endpoints) / **Fallback**; „Always use" = kein OR-Fallback. **BYOK-Endpoints werden immer ZUERST versucht** (ueberstimmt `provider.order`). Nur sinnvoll bei eigenen Provider-Vertraegen/Rabatten/Compliance. Quelle: https://openrouter.ai/docs/guides/overview/auth/byok · offiziell · 2026-06-18
+8. **ZDR (`/settings/privacy`):** vier getrennte Toggles `enforce_zdr_anthropic|_openai|_google|_other` (Legacy `enforce_zdr` deprecated); nur die noetigen setzen, um Frontier-1P-Modelle nutzbar zu halten. EU-Datenresidenz: Base-URL `https://eu.openrouter.ai` (Enterprise). Quelle: https://openrouter.ai/docs/guides/features/zdr · offiziell · 2026-06-18
+9. **Org/Workspaces/Budgets (Teams):** Shared Credit Pool, Rollen (Admin/Member), Workspace- + Guardrail-Budgets (taeglich/woechentlich/monatlich/lifetime) als Spend-Limits. Fuer einen Einzelnutzer wie Frank Overkill — per-Key-`limit` reicht. Quelle: https://openrouter.ai/docs/cookbook/administration/organization-management · offiziell + extern · 2026-06-18
+
+## 19. Parameter-Korrekturen & neue Felder (seit 2026-06-17) — Update zu §11–§13
+
+> Verifikation der API-Parameter-Referenz (Researcher #3, alle Quellen offiziell openrouter.ai).
+> Diese Punkte **aktualisieren/praezisieren** aeltere Aussagen in §11–§13.
+
+- **Message-Transforms umgestellt:** Das alte `transforms: ["middle-out"]`-Top-Level-Feld ist in der aktuellen Doku durch das Plugin **`plugins: [{ "id": "context-compression" }]`** abgeloest. **Auto-aktiv fuer alle Endpoints mit ≤ 8.192 Token Kontext**; abschalten via `{"id":"context-compression","enabled":false}`. Quelle: https://openrouter.ai/docs/guides/features/message-transforms · offiziell · 2026-06-18
+- **`:online` ist DEPRECATED** → stattdessen das Server-Tool **`openrouter:web_search`** (OR „hoistet" ein vorhandenes `web_search`-Tool automatisch; Suffix gefahrlos entfernbar). `:thinking` (Extended Reasoning) und `:extended` (groesseres Kontextfenster) sind weiterhin aktiv. Quelle: https://openrouter.ai/docs/guides/routing/model-variants/online · offiziell · 2026-06-18
+- **`usage: {include:true}` ist wirkungslos/deprecated** — vollstaendige Usage (inkl. `cached_tokens`, Kosten, Upstream-Cost, native Tokenizer) kommt **immer automatisch** (beim Streaming im letzten Chunk). Quelle: https://openrouter.ai/docs/use-cases/usage-accounting · offiziell · 2026-06-18
+- **`max_tokens` ist deprecated → `max_completion_tokens`** nutzen (manche Provider Minimum 16). Quelle: https://openrouter.ai/docs/api/reference/parameters · offiziell · 2026-06-18
+- **Neues Provider-Feld `enforce_distillable_text: true`** — routet nur zu Modellen, deren Autor Text-Distillation erlaubt. Quelle: https://openrouter.ai/docs/guides/routing/provider-selection · offiziell · 2026-06-18
+- **`sort.partition`:** `"model"` (Default, Primaermodell vorn) vs. `"none"` (Endpoints GLOBAL ueber alle Fallback-Modelle sortieren — „nimm das aktuell billigste/schnellste, egal welches Modell"). `max_price` hat zusaetzlich `request` + `image`. Quelle: https://openrouter.ai/docs/guides/routing/provider-selection · offiziell · 2026-06-18
+- **Quantisierungs-Werte (vollstaendig):** `int4, int8, fp4, fp6, fp8, fp16, bf16, fp32, unknown`. Quelle: https://openrouter.ai/docs/guides/routing/provider-selection · offiziell · 2026-06-18
+- **Neuer `verbosity`-Parameter** (`low|medium|high|xhigh|max`, OpenAI-Stil; bei Anthropic → `output_config.effort`). **Reasoning-Effort um `xhigh` und `minimal` erweitert.** Quelle: https://openrouter.ai/docs/api/reference/parameters · offiziell · 2026-06-18
+- **Auto Exacto laeuft jetzt by-default bei JEDEM Request mit `tools`** (reordnet Provider nach Tool-Call-Erfolgsrate/Throughput/Benchmarks statt Preis; Tool-Call-Validierung gegen JSON-Schema Draft 7). Opt-out: explizit `sort:"price"` / `:floor` / Account-Default Preis. **Auto-Router** (`openrouter/auto`) jetzt mit `cost_quality_tradeoff` (0–10, Default 7) + `allowed_models`-Wildcards via `plugins:[{id:"auto-router"}]`. Quelle: https://openrouter.ai/docs/guides/routing/auto-exacto · https://openrouter.ai/docs/guides/routing/routers/auto-router · offiziell · 2026-06-18
+- **Neue Request-Felder:** `session_id` (≤256 Zeichen, Sticky-Routing; Body schlaegt Header `x-session-id`), `service_tier` (`auto|default|flex|priority`; `flex` ~50% billiger gegen Latenz), `cache_control`, `metadata` (max 16 Paare), `trace` (Observability), `stop_server_tools_when`, `image_config`, `modalities`. Quelle: https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request · offiziell · 2026-06-18
+- **Anthropic-Beta-Header-Passthrough** `x-anthropic-beta`: `interleaved-thinking-2025-05-14` (Reasoning interleaved) und `structured-outputs-2025-11-13` (**ohne diesen Header strippt OR `strict:true` bei Tools/Schema**); mehrere kommasepariert. Quelle: https://openrouter.ai/docs/guides/routing/provider-selection · offiziell · 2026-06-18
+
+## 🔗 Bezug zum Bug-Almanach (Erweiterung 2026-06-18)
+| Best-Practice (Teil III) | Bug-Abschnitt (`bugs/apis/openrouter-api.md`) |
+|---|---|
+| 16 OpenCode-Voll-Konfiguration | I38 (`/connect`, kein `auth login`), I39 (`:`-Modell-IDs / `:free`+Tool-Use), I40 (stale Modell-Liste / `openrouter/auto` TUI / Caching) |
+| 17 Modellwahl nach Aufgabentyp | C7 (Modell-String/404), H27 (`:nitro`≠Latenz) |
+| 18 Account-/Dashboard-Einstellungen | E13/E14/E15 (Limits/Credits/402), F18 (Key-Limit) |
+| 19 Parameter-Korrekturen 06-18 | D9 (SSE), H33 (Feature-Drift) |

@@ -4,6 +4,7 @@
 > Endpunkt für viele Anbieter). Stand: zuletzt recherchiert am 2026-06-08.
 > Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/apis/openrouter-api.md`.
 > Stand-Erweiterung 2026-06-17: §G (Claude Code / CLI-Harness-Anbindung) + §H (neuere Features) ergänzt.
+> Stand-Erweiterung 2026-06-18: §I (OpenCode-spezifische Fallen — Franks Umgebung) ergänzt. Gegenstück-BP §16–§19.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -23,6 +24,7 @@
 | 8 | Claude Code anbinden ⭐ | Base-URL `…/api` (NICHT `/api/v1`!), `ANTHROPIC_API_KEY=""`, Key in `ANTHROPIC_AUTH_TOKEN`; Anthropic 1P als Top-Provider | §G |
 | 9 | CLI-Agent Modell-String | LiteLLM-Tools `openrouter/<v>/<m>`, Eigenbau nacktes `<v>/<m>`; Cursor braucht `/cursor`-Suffix | §G |
 | 10 | Caching/Reasoning/neu | Auto-Caching nur Anthropic 1P; `provider.order` killt Sticky-Routing; `reasoning_details` unverändert zurück; `:nitro`≠Latenz | §H |
+| 11 | **OpenCode** ⭐ | Login = `/connect` (kein `opencode auth login`/`OPENROUTER_API_KEY`-Env); `:free`/`:`-IDs crashen + oft kein Tool-Use; Routing pro Modell unter `options.provider` | §I |
 
 ---
 
@@ -258,7 +260,32 @@
 
 ---
 
-## Fix-Status (Stand 2026-06-17)
+## I. OpenCode (SST) — spezifische Fallen (Franks Umgebung)
+
+> Recherche 2026-06-18. OpenCode-Repo jetzt `anomalyco/opencode` (vormals `sst/opencode`, leitet weiter).
+> Gegenstück: `best-practices/apis/openrouter-api.md` §16. GitHub-Issue-Details aus Such-Snippets — bei Bedarf am Issue verifizieren.
+
+### 38. OpenCode-Anbindung: `opencode auth login` und `OPENROUTER_API_KEY`-Env existieren NICHT ⭐
+- **Symptom:** Anleitung mit `opencode auth login` oder gesetztem `OPENROUTER_API_KEY` schlägt fehl / Key wird nicht gefunden.
+- **Ursache:** Beide kommen in der OpenCode-Doku nicht vor. Login läuft über den TUI-Befehl `/connect`; ein Key per Env geht nur über die generische `{env:VAR}`-Syntax im Config-Feld `provider.openrouter.options.apiKey`.
+- **FIX:** `/connect` → OpenRouter → Key einfügen (landet in `~/.local/share/opencode/auth.json`); prüfen mit `opencode auth list`. Modell-String `openrouter/<vendor>/<model>`.
+- **Quelle:** https://openrouter.ai/docs/cookbook/coding-agents/opencode-integration · https://opencode.ai/docs/providers · offiziell
+
+### 39. OpenCode + `:free`/`:`-Varianten: Crash bzw. „No endpoints found that support tool use" ⭐
+- **Symptom:** (a) OpenCode bricht bei OpenRouter-Modell-IDs mit `:` ab (Issue #749, siehe auch §26c); (b) bei `:free`/umbenannten Modellen `AI_APICallError: No endpoints found that support tool use` (Issues #1050, #1002, #10594).
+- **Ursache:** Viele freie/günstige Provider unterstützen kein Tool-Use, das OpenCode aber braucht; Parser-Problem mit `:` im Slug; veraltete/umbenannte Modell-IDs.
+- **FIX:** `provider.require_parameters:true` (routet nur zu tool-fähigen Providern) ODER `provider.order`/`only` auf einen tool-fähigen Provider; in den OpenRouter-Settings „Ignored Providers" leeren / „Allowed Providers" prüfen. `:free` NICHT für produktive Agenten — zahlendes Modell nehmen.
+- **Quelle:** github.com/anomalyco/opencode Issues #749/#1050/#1002/#10594 · extern (nicht abschließend verifiziert) + https://openrouter.ai/docs/guides/routing/provider-selection · offiziell
+
+### 40. OpenCode: stale Modell-Liste, `openrouter/auto` greift nicht in TUI, Anthropic-Caching via OR unsicher
+- **Symptom:** in `/models` wählbares Modell schlägt beim Senden fehl (Modell-Liste nicht neu geladen, #10594); `model:"openrouter/auto"` wird in der TUI ignoriert (#15225); Anthropic-Prompt-Caching erscheint nicht in der Abrechnung (#1245, #5416).
+- **Ursache:** Modell-Cache nicht aktualisiert; Config-Anwendung in TUI fehlerhaft; Caching-Weiterreichung an OpenRouter+Anthropic greift nicht zuverlässig.
+- **FIX:** Modell neu fetchen / `/models`; bei `openrouter/auto`-Problemen explizites Modell setzen; Caching in der OpenRouter-Activity prüfen (`cached_tokens`), `setCacheKey:true` setzen; Reasoning-Effort als rohen `options.reasoning.effort` durchreichen, falls `reasoningEffort` ignoriert wird.
+- **Quelle:** github.com/anomalyco/opencode Issues #10594/#15225/#1245/#5416 · extern (nicht abschließend verifiziert)
+
+---
+
+## Fix-Status (Stand 2026-06-18)
 
 Im Wesentlichen per Design / Plattform-Verhalten — keine „gefixten" Einträge. `:free`-Slugs und Provider-Set ändern sich laufend → dynamisch beziehen. §G/§H (2026-06-17) dokumentieren überwiegend Konfigurations- und Plattform-Verhalten der CLI-Harness-Anbindung und neuerer Features.
 
@@ -293,6 +320,7 @@ Zweite Seite der Medaille (wie man es richtig macht): `best-practices/apis/openr
 | H33–H35 (neue Features) | §13 |
 | H36 (Cloud vs. lokal) | §14 |
 | H37 (Account/Keys/Limits) | §15 |
+| I38–I40 (OpenCode-Fallen) | §16, §17, §18, §19 |
 
 
 ---
