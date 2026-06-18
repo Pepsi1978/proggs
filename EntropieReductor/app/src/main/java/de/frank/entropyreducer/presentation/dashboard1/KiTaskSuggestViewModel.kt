@@ -106,14 +106,14 @@ class KiTaskSuggestViewModel @Inject constructor(
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
                 val processedIds = loadProcessedIdeaIds()
-                val (newSuggestions, updatedProcessedIds) = generateSuggestions
-                    .generateTaskSuggestions(ideas, processedIds)
+                val (result, updatedProcessedIds) = generateSuggestions
+                    .generateSuggestions(ideas, processedIds)
                     .getOrThrow()
-                if (newSuggestions.isNotEmpty()) {
-                    storeSuggestions(newSuggestions.map { KiTaskSuggestion(id = it.id, title = it.title, description = it.description) })
+                if (result.tasks.isNotEmpty()) {
+                    storeSuggestions(result.tasks.map { KiTaskSuggestion(id = it.id, title = it.title, description = it.description) })
                 }
                 saveProcessedIdeaIds(updatedProcessedIds)
-                if (newSuggestions.isEmpty() && ideas.isNotEmpty()) {
+                if (result.tasks.isEmpty() && ideas.isNotEmpty()) {
                     _error.value = "Alle Ideen wurden bereits als Vorschlag verarbeitet."
                 }
             }.onFailure { ex ->

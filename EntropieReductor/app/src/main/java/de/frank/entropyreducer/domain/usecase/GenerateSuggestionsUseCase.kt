@@ -10,12 +10,12 @@ import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.presentation.ideen.IdeenEntry
-import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
 import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
+import org.json.JSONObject
 
 // ============================================================================
 // Datenklassen
@@ -36,6 +36,14 @@ data class AutoTaskSuggestion(
     }
 }
 
+/**
+ * Kombiniertes Ergebnis: Aufgaben UND Gewohnheiten aus EINEM Gemini-Aufruf.
+ */
+data class SuggestionResult(
+    val tasks: List<AutoTaskSuggestion>,
+    val habits: List<Mental>,
+)
+
 // ============================================================================
 // Use Case: Zentrale Generierung von Aufgaben- und Gewohnheitsvorschlaegen
 // ============================================================================
@@ -43,8 +51,8 @@ data class AutoTaskSuggestion(
 /**
  * Agentic Use Case fuer die automatische Vorschlaggenerierung aus Ideen.
  *
- * Rein stateless — liest Ideen, ruft Gemini auf, parsed die Antwort.
- * Kein DataStore-Zugriff (der bleibt in den ViewModels).
+ * Verwendet EINEN kombinierten Prompt fuer Aufgaben UND Gewohnheiten.
+ * Die KI entscheidet pro Idee exklusiv: Aufgabe oder Gewohnheit.
  *
  * Wird aufgerufen:
  *  1. Beim App-Start (via StartupViewModel)
@@ -59,27 +67,25 @@ class GenerateSuggestionsUseCase @Inject constructor(
     private val settings: AppSettings,
 ) {
 
-    // ========================================================================
-    // Task-Vorschlaege generieren
-    // ========================================================================
-
     /**
-     * Generiert Aufgabenvorschlaege aus den uebergebenen Ideen.
+     * Generiert Aufgaben- UND Gewohnheitsvorschlaege aus den uebergebenen Ideen.
+     * EIN Gemini-Aufruf, EIN Prompt, exklusive Entscheidung pro Idee.
+     *
      * @param ideas Alle Ideen (aus dem DataStore geladen)
      * @param processedIds Bereits verarbeitete Ideen-IDs (werden gefiltert)
-     * @return Pair aus (neue Vorschlaege, aktualisierte processedIds)
+     * @return Pair aus (SuggestionResult, aktualisierte processedIds)
      */
-    suspend fun generateTaskSuggestions(
+    suspend fun generateSuggestions(
         ideas: List<IdeenEntry>,
         processedIds: Set<String>,
-    ): Result<Pair<List<AutoTaskSuggestion>, Set<String>>> {
+    ): Result<Pair<SuggestionResult, Set<String>>> {
         val apiKey = secrets.geminiApiKey
             ?: return Result.failure(IllegalArgumentException("Bitte Gemini-API-Key in den Einstellungen hinterlegen."))
 
-        if (ideas.isEmpty()) return Result.success(emptyList<AutoTaskSuggestion>() to processedIds)
+        if (ideas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
         val newIdeas = ideas.filter { it.id !in processedIds }
-        if (newIdeas.isEmpty()) return Result.success(emptyList<AutoTaskSuggestion>() to processedIds)
+        if (newIdeas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
         val ideenText = newIdeas.joinToString("\n") { "- ${it.text}" }
         val model = settings.geminiModelFlow.first()
@@ -89,62 +95,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
             apiKey = apiKey,
             request = GeminiRequest(
                 systemInstruction = GeminiContent(
-                    parts = listOf(GeminiPart(TASK_SYSTEM_PROMPT)),
-                ),
-                contents = listOf(
-                    GeminiContent(
-                        role = "user",
-                        parts = listOf(GeminiPart("Hier sind meine Ideen zur Entropie-Reduktion:\n\n$ideenText")),
-                    ),
-                ),
-                generationConfig = GeminiGenerationConfig(
-                    temperature = 0.6,
-                    responseMimeType = "application/json",
-                ),
-            ),
-        )
-
-        val json = response.candidates
-            ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
-            ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
-
-        val newSuggestions = parseTaskSuggestionsJson(json)
-        val updatedProcessedIds = processedIds + newIdeas.map { it.id }
-
-        return Result.success(newSuggestions to updatedProcessedIds)
-    }
-
-    // ========================================================================
-    // Gewohnheits-Vorschlaege generieren
-    // ========================================================================
-
-    /**
-     * Generiert Gewohnheitsvorschlaege aus den uebergebenen Ideen.
-     * @param ideas Alle Ideen (aus dem DataStore geladen)
-     * @param processedIds Bereits verarbeitete Ideen-IDs (werden gefiltert)
-     * @return Pair aus (neue Vorschlaege, aktualisierte processedIds)
-     */
-    suspend fun generateHabitSuggestions(
-        ideas: List<IdeenEntry>,
-        processedIds: Set<String>,
-    ): Result<Pair<List<Mental>, Set<String>>> {
-        val apiKey = secrets.geminiApiKey
-            ?: return Result.failure(IllegalArgumentException("Bitte Gemini-API-Key in den Einstellungen hinterlegen."))
-
-        if (ideas.isEmpty()) return Result.success(emptyList<Mental>() to processedIds)
-
-        val newIdeas = ideas.filter { it.id !in processedIds }
-        if (newIdeas.isEmpty()) return Result.success(emptyList<Mental>() to processedIds)
-
-        val ideenText = newIdeas.joinToString("\n") { "- ${it.text}" }
-        val model = settings.geminiModelFlow.first()
-
-        val response = gemini.generateContent(
-            model = model,
-            apiKey = apiKey,
-            request = GeminiRequest(
-                systemInstruction = GeminiContent(
-                    parts = listOf(GeminiPart(HABIT_SYSTEM_PROMPT)),
+                    parts = listOf(GeminiPart(COMBINED_SYSTEM_PROMPT)),
                 ),
                 contents = listOf(
                     GeminiContent(
@@ -163,88 +114,117 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-        val newSuggestions = parseHabitSuggestionsJson(json)
+        val result = parseCombinedJson(json)
         val updatedProcessedIds = processedIds + newIdeas.map { it.id }
 
-        return Result.success(newSuggestions to updatedProcessedIds)
+        return Result.success(result to updatedProcessedIds)
     }
 
     // ========================================================================
     // Parsing
     // ========================================================================
 
-    private fun parseTaskSuggestionsJson(raw: String): List<AutoTaskSuggestion> {
-        val arr = runCatching { JSONArray(raw) }.getOrNull()
-            ?: runCatching { JSONArray("[$raw]") }.getOrNull()
-            ?: return emptyList()
-        return buildList {
-            for (i in 0 until arr.length()) {
-                val o = arr.optJSONObject(i) ?: continue
-                val id = o.optString("id").takeIf { it.isNotBlank() }
-                    ?: java.util.UUID.randomUUID().toString()
-                val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
-                val description = o.optString("description")
-                add(AutoTaskSuggestion(id = id, title = title, description = description))
-            }
-        }
-    }
+    private fun parseCombinedJson(raw: String): SuggestionResult {
+        return runCatching {
+            val obj = JSONObject(raw)
 
-    private fun parseHabitSuggestionsJson(raw: String): List<Mental> {
-        val arr = runCatching { JSONArray(raw) }.getOrNull()
-            ?: runCatching { JSONArray("[$raw]") }.getOrNull()
-            ?: return emptyList()
-        return buildList {
-            for (i in 0 until arr.length()) {
-                val text = arr.optString(i).trim()
-                if (text.isNotBlank()) add(Mental.create(text))
+            // Tasks parsen
+            val tasksArr = obj.optJSONArray("tasks") ?: JSONArray()
+            val tasks = buildList {
+                for (i in 0 until tasksArr.length()) {
+                    val o = tasksArr.optJSONObject(i) ?: continue
+                    val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+                    val description = o.optString("description")
+                    add(AutoTaskSuggestion.create(title, description))
+                }
             }
-        }
+
+            // Habits parsen
+            val habitsArr = obj.optJSONArray("habits") ?: JSONArray()
+            val habits = buildList {
+                for (i in 0 until habitsArr.length()) {
+                    val text = habitsArr.optString(i).trim()
+                    if (text.isNotBlank()) add(Mental.create(text))
+                }
+            }
+
+            SuggestionResult(tasks, habits)
+        }.getOrDefault(SuggestionResult(emptyList(), emptyList()))
     }
 
     // ========================================================================
-    // System-Prompts
+    // System-Prompt (KOMBINIERT)
     // ========================================================================
 
     companion object {
-        private const val TASK_SYSTEM_PROMPT = """
-DU ENTSCHEIDEST EXKLUSIV: Aufgabe oder Gewohnheit? NIEMALS BEIDES.
+        private const val COMBINED_SYSTEM_PROMPT = """
+Du bist ein exakter Filter. Du empfaengst Ideen und ordnest jede Idee EXKLUSIV einer von drei Kategorien zu:
+- AUFGABE (einmalig abarbeitbar)
+- GEWOHNHEIT (wiederkehrend)
+- NICHTS (weder Aufgabe noch Gewohnheit)
 
-PRÜFE Jede Idee:
-1. Enthält die Idee ein Wiederholungsmuster? → DAS IST EINE GEWOHNHEIT. Antworte mit [].
-2. Enthält die Idee KEIN Wiederholungsmuster? → DAS IST EINE AUFGABE. Erstelle eine Aufgabe.
+WICHTIGSTE REGEL: Jede Idee ist EXKLUSIV entweder Aufgabe ODER Gewohnheit. NIEMALS BEIDES. Wenn du unsicher bist, ist es NICHTS.
 
-Wiederholungsmuster: "alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter", "mehrmals"
+=== ENTSCHEIDUNGSLOGIK ===
 
-BEISPIELE:
-"Ich möchte alle drei Tage Federball spielen" → [] (Wiederholungsmuster!)
-"Ich möchte regelmäßig ein Buch lesen" → [] (Wiederholungsmuster!)
-"Ich möchte einen Baum pflanzen" → [{"title": "Baum pflanzen", "description": "..."}] (kein Muster!)
-"Ich muss morgen Gassi gehen" → [{"title": "Mit Hund Gassi gehen", "description": "..."}] (kein Muster!)
+PRÜFE Jede Idee nach dieser Reihenfolge:
 
-MUSS-BEDINGUNG: Wenn Wiederholungsmuster vorhanden → MUSS du [] antworten. Keine Ausnahme.
+SCHRITT 1 — Wiederholungsmuster erkennen:
+Enthält die Idee eines dieser Wörter oder Konzepte?
+- "alle X Tage", "regelmäßig", "täglich", "wöchentlich", "monatlich"
+- "jeden Tag", "jeden Morgen", "jeden Abend", "jeden Montag"
+- "immer wieder", "öfter", "mehrmals", "von Zeit zu Zeit"
+- "jedes Jahr", "jährlich"
 
-Format: Echte Umlaute (ä, ö, ü, ß). NUR JSON-Array oder [].
-"""
+→ JA: Das ist eine GEWOHNHEIT. Gehe zu SCHRITT 2.
+→ NEIN: Das ist KEINE Gewohnheit. Gehe zu SCHRITT 3.
 
-        private const val HABIT_SYSTEM_PROMPT = """
-DU ENTSCHEIDEST EXKLUSIV: Gewohnheit oder Aufgabe? NIEMALS BEIDES.
+SCHRITT 2 — GEWOHNHEIT erstellen:
+Nimm ALLE Infos aus der Idee und formuliere sie als Satz im Ich-Format.
+NICHTS weglassen, NICHTS dazuerfinden.
+Beispiel: "Alle drei Tage Federball spielen mit Mädels" → "Ich gehe alle drei Tage Federball spielen mit den Mädels."
 
-PRÜFE Jede Idee:
-1. Enthält die Idee ein Wiederholungsmuster? → DAS IST EINE GEWOHNHEIT. Erstelle Gewohnheit mit ALLEN Infos.
-2. Enthält die Idee KEIN Wiederholungsmuster? → DAS IST EINE AUFGABE. Antworte mit [].
+SCHRITT 3 — AUFGABE erkennen:
+Enthält die Idee eine konkrete Tätigkeit die einmalig abarbeitbar ist?
+→ JA: Erstelle eine AUFGABE mit title und description.
+→ NEIN: Antworte mit NICHTS (leere Arrays).
 
-Wiederholungsmuster: "alle X Tage", "regelmäßig", "täglich", "jeden Tag", "immer wieder", "öfter", "mehrmals"
+=== BEISPIELE ===
 
-BEISPIELE:
-"Ich möchte alle drei Tage Federball spielen mit den Mädels" → "Ich gehe alle drei Tage Federball spielen mit den Mädels."
-"Ich möchte regelmäßig ein Buch lesen" → "Ich lese regelmäßig ein Buch."
-"Ich möchte einen Baum pflanzen" → [] (kein Muster!)
-"Ich muss morgen Gassi gehen" → [] (kein Muster!)
+"Ich möchte alle drei Tage Federball spielen mit den zwei Mädels"
+→ GEWOHNHEIT: "Ich gehe alle drei Tage Federball spielen mit den zwei Mädels."
 
-MUSS-BEDINGUNG: Wenn Wiederholungsmuster vorhanden → MUSS du eine Gewohnheit erstellen. Keine Ausnahme.
-WICHTIG: ALLE Infos aus der Idee übernehmen, nichts weglassen.
+"Ich möchte regelmäßig alle zwei Tage ein Buch lesen"
+→ GEWOHNHEIT: "Ich lese alle zwei Tage ein Buch."
 
-Format: Echte Umlaute (ä, ö, ü, ß). NUR JSON-Array oder [].
+"Jeden Morgen meditieren"
+→ GEWOHNHEIT: "Jeden Morgen meditiere ich."
+
+"Ich möchte einen Baum im Garten von Papa pflanzen"
+→ AUFGABE: title: "Baum pflanzen", description: "Einen Baum im Garten von Papa pflanzen."
+
+"Ich muss morgen mit dem neuen Hund Gassi gehen"
+→ AUFGABE: title: "Mit Hund Gassi gehen", description: "Mit dem neuen Hund Gassi gehen."
+
+"Ich möchte ein Bild von Raumschiff Enterprise malen"
+→ AUFGABE: title: "Bild malen", description: "Ein Bild von Raumschiff Enterprise malen."
+
+"Ich brauche neue Glühbirnen"
+→ NICHTS (weder Aufgabe noch Gewohnheit klar erkennbar)
+
+=== FORMAT ===
+
+Antworte NUR mit diesem JSON:
+{
+  "tasks": [{"title": "...", "description": "..."}],
+  "habits": ["Gewohnheit 1", "Gewohnheit 2"]
+}
+
+Wenn keine Aufgaben: "tasks": []
+Wenn keine Gewohnheiten: "habits": []
+Wenn beides leer: {"tasks": [], "habits": []}
+
+WICHTIG: Echte deutsche Umlaute (ä, ö, ü, ß). Keine Einleitung, keine Erklärung, nur das JSON.
 """
     }
 }

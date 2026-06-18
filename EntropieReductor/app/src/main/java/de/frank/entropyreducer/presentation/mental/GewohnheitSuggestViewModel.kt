@@ -45,6 +45,7 @@ private fun serializeSuggestionsJson(mentals: List<Mental>): String {
 }
 
 private val KEY_SUGGESTIONS = stringPreferencesKey("suggestions_json")
+private val HABIT_PROCESSED_KEY = stringPreferencesKey("habit_processed_idea_ids")
 
 enum class SuggestState { IDLE, LOADING }
 
@@ -76,14 +77,14 @@ class GewohnheitSuggestViewModel @Inject constructor(
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
                 val processedIds = loadProcessedIds()
-                val (newSuggestions, updatedProcessedIds) = generateSuggestions
-                    .generateHabitSuggestions(ideas, processedIds)
+                val (result, updatedProcessedIds) = generateSuggestions
+                    .generateSuggestions(ideas, processedIds)
                     .getOrThrow()
-                storeSuggestions(newSuggestions)
+                storeSuggestions(result.habits)
                 saveProcessedIds(updatedProcessedIds)
-                if (newSuggestions.isEmpty() && ideas.isNotEmpty()) {
-                    _error.value = "Alle Ideen wurden bereits als Gewohnheitsvorschläge verarbeitet."
-                } else if (newSuggestions.isEmpty()) {
+                if (result.habits.isEmpty() && ideas.isNotEmpty()) {
+                    _error.value = "Alle Ideen wurden bereits als Vorschläge verarbeitet."
+                } else if (result.habits.isEmpty()) {
                     _error.value = "Keine Ideen vorhanden — zuerst Ideen eingeben."
                 }
             }.onFailure { ex ->
@@ -139,9 +140,6 @@ class GewohnheitSuggestViewModel @Inject constructor(
             _error.value = null
         }
     }
-
-    private val HABIT_PROCESSED_KEY =
-        androidx.datastore.preferences.core.stringPreferencesKey("habit_processed_idea_ids")
 
     private suspend fun loadProcessedIds(): Set<String> {
         return store.data.first().let { prefs ->

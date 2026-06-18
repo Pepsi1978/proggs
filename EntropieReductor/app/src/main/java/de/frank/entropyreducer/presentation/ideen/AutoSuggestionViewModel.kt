@@ -20,7 +20,7 @@ import org.json.JSONObject
 
 /**
  * Agentic Auto-Suggestion: Wird bei JEDER neuen Idee automatisch aufgerufen.
- * Generiert Aufgaben- UND Gewohnheitsvorschläge ohne Button-Druck.
+ * Generiert Aufgaben- UND Gewohnheitsvorschläge mit EINEM Gemini-Aufruf.
  *
  * Frank-Wunsch 2026-06-18: Agentisches System — Idee speichern → Vorschläge sofort.
  */
@@ -32,8 +32,7 @@ class AutoSuggestionViewModel @Inject constructor(
 
     /**
      * Wird nach dem Speichern einer neuen Idee aufgerufen.
-     * Generiert im Hintergrund both Aufgaben- als auch Gewohnheitsvorschläge.
-     * Nur Ideen die noch nicht verarbeitet wurden, werden an Gemini geschickt.
+     * Ein einziger Gemini-Aufruf generiert Aufgaben UND Gewohnheiten.
      */
     fun triggerSuggestions() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -41,27 +40,32 @@ class AutoSuggestionViewModel @Inject constructor(
                 val ideas = ideenEntriesFlow(context).first()
                 if (ideas.isEmpty()) return@launch
 
-                // Task-Vorschläge
+                // Kombinierter Aufruf: Tasks + Habits in einem
                 val kiStore = context.kiTaskSuggestionStore
-                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
-                val (newTasks, updatedTaskProcessedIds) = generateSuggestions
-                    .generateTaskSuggestions(ideas, taskProcessedIds)
-                    .getOrThrow()
-                if (newTasks.isNotEmpty()) {
-                    storeKiTaskSuggestions(kiStore, newTasks)
-                }
-                saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedTaskProcessedIds)
-
-                // Gewohnheitsvorschläge
                 val habitStore = context.gewohnheitSuggestionStore
+
+                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
                 val habitProcessedIds = loadProcessedIds(habitStore, HABIT_PROCESSED_KEY)
-                val (newHabits, updatedHabitProcessedIds) = generateSuggestions
-                    .generateHabitSuggestions(ideas, habitProcessedIds)
+
+                // Ideen die weder in task noch in habit processed sind
+                val allProcessedIds = taskProcessedIds + habitProcessedIds
+                val (result, updatedProcessedIds) = generateSuggestions
+                    .generateSuggestions(ideas, allProcessedIds)
                     .getOrThrow()
-                if (newHabits.isNotEmpty()) {
-                    storeHabitSuggestions(habitStore, newHabits)
+
+                // Tasks speichern
+                if (result.tasks.isNotEmpty()) {
+                    storeKiTaskSuggestions(kiStore, result.tasks)
                 }
-                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedHabitProcessedIds)
+
+                // Habits speichern
+                if (result.habits.isNotEmpty()) {
+                    storeHabitSuggestions(habitStore, result.habits)
+                }
+
+                // Beide processedIds aktualisieren
+                saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
+                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
             }
         }
     }

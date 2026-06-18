@@ -260,35 +260,32 @@ class TasksViewModel @Inject constructor(
         autoArchiveOldResolved()
         autoBalanceBuckets()
         rescoreAllOpenEntries()
-        // Agentic Auto-Suggestion: Beim manuellen Refresh auch die KI-Vorschläge
-        // aus Ideen neu generieren — Aufgaben UND Gewohnheiten (Frank-Wunsch 2026-06-18).
+        // Agentic Auto-Suggestion: Beim manuellen Refresh — EIN kombinierter Aufruf.
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val context = getApplication<Application>()
                 val ideas = de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow(context).first()
                 if (ideas.isEmpty()) return@launch
 
-                // Task-Vorschläge: In den DataStore der KiTaskSuggestViewModel speichern
                 val kiStore = context.kiTaskSuggestionStore
-                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
-                val (newTasks, updatedProcessedIds) = generateSuggestions
-                    .generateTaskSuggestions(ideas, taskProcessedIds)
-                    .getOrThrow()
-                if (newTasks.isNotEmpty()) {
-                    storeKiTaskSuggestions(kiStore, newTasks)
-                    saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
-                }
-
-                // Gewohnheitsvorschläge: In den DataStore der GewohnheitSuggestViewModel speichern
                 val habitStore = context.gewohnheitSuggestionStore
+
+                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
                 val habitProcessedIds = loadProcessedIds(habitStore, HABIT_PROCESSED_KEY)
-                val (newHabits, updatedHabitProcessedIds) = generateSuggestions
-                    .generateHabitSuggestions(ideas, habitProcessedIds)
+                val allProcessedIds = taskProcessedIds + habitProcessedIds
+
+                val (result, updatedProcessedIds) = generateSuggestions
+                    .generateSuggestions(ideas, allProcessedIds)
                     .getOrThrow()
-                if (newHabits.isNotEmpty()) {
-                    storeHabitSuggestions(habitStore, newHabits)
+
+                if (result.tasks.isNotEmpty()) {
+                    storeKiTaskSuggestions(kiStore, result.tasks)
                 }
-                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedHabitProcessedIds)
+                if (result.habits.isNotEmpty()) {
+                    storeHabitSuggestions(habitStore, result.habits)
+                }
+                saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
+                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
             }
         }
     }
