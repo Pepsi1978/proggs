@@ -152,6 +152,19 @@ constructor(
                     inserted++
                 }
                 incoming.updatedAt > existing.updatedAt -> {
+                    // DIAGNOSE-SONDE (2026-06-19, Bucket-Rollback-Bug): wenn der Restore eine
+                    // Bucket-Zuordnung ueberschreibt, GENAU festhalten was vorher/nachher galt.
+                    if (incoming.manualBucket != existing.manualBucket ||
+                        incoming.timeBucket != existing.timeBucket
+                    ) {
+                        Diag.i(
+                            DiagnosticArea.DRIVE_BACKUP,
+                            "SyncEntries",
+                            "RESTORE ueberschreibt Bucket '${existing.title.take(24)}': " +
+                                "lokal mb=${existing.manualBucket}/tb=${existing.timeBucket}/upd=${existing.updatedAt} " +
+                                "-> Backup mb=${incoming.manualBucket}/tb=${incoming.timeBucket}/upd=${incoming.updatedAt}",
+                        )
+                    }
                     entryRepo.upsert(incoming)
                     updated++
                 }

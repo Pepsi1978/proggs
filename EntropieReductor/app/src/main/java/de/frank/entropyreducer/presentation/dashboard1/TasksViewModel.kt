@@ -314,6 +314,11 @@ class TasksViewModel @Inject constructor(
             if (candidates.isEmpty()) return@launch
             val now = System.currentTimeMillis()
             candidates.forEach { e ->
+                de.frank.entropyreducer.data.diagnostics.Diag.i(
+                    de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
+                    "TasksVM",
+                    "REFILL-HEUTE '${e.title.take(24)}' ${e.timeBucket}->HEUTE (HEUTE war leer)",
+                )
                 entries.update(
                     e.copy(
                         manualBucket = TimeBucket.HEUTE,
@@ -567,6 +572,11 @@ class TasksViewModel @Inject constructor(
             }
             val now = System.currentTimeMillis()
             toRollover.forEach { e ->
+                de.frank.entropyreducer.data.diagnostics.Diag.i(
+                    de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
+                    "TasksVM",
+                    "ROLLOVER '${e.title.take(24)}' MORGEN->HEUTE (setAt=${e.manualBucketSetAt} < midnight=$midnightTodayMs)",
+                )
                 entries.update(
                     e.copy(
                         manualBucket = TimeBucket.HEUTE,
@@ -594,6 +604,11 @@ class TasksViewModel @Inject constructor(
     fun setManualBucket(entryId: String, bucket: TimeBucket) {
         viewModelScope.launch {
             val entry = entries.get(entryId) ?: return@launch
+            de.frank.entropyreducer.data.diagnostics.Diag.i(
+                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
+                "TasksVM",
+                "setManualBucket '${entry.title.take(24)}' alt mb=${entry.manualBucket}/tb=${entry.timeBucket} -> $bucket",
+            )
             val now = System.currentTimeMillis()
             entries.update(
                 entry.copy(
