@@ -335,7 +335,7 @@ Konsequenz: Ein installiertes Plugin ist „geladen", führt aber nur Code aus, 
 | opencode-openai-codex-auth | EMPFOHLEN | Abo statt API-Kosten. |
 | opencode-dynamic-context-pruning | EMPFOHLEN | Token-Pruning, passt zu lossless-context. |
 | supermemory (self-hosted) | EMPFOHLEN (Eigenbau) | siehe Self-hosted-Memory unten. |
-| firecrawl | sinnvoll (Recherche) | Werkzeug (Agent ruft bei Bedarf), `search` liefert Markdown statt Links. Firecrawl-API-Key (Free 1000 Seiten/Mon), Cloud (USA) oder self-host. |
+| firecrawl | sinnvoll (Recherche) | **KEIN npm-Plugin "opencode-firecrawl" (existiert nicht auf npm!) — Integration läuft als offizieller MCP-Server `firecrawl-mcp`** (Firecrawl-Team, MIT, aktiv gepflegt) im `mcp`-Block der opencode.json, NICHT im `plugin`-Array. Werkzeug (Agent ruft bei Bedarf), `search` liefert Markdown statt Links. Firecrawl-API-Key (Free 1000 Seiten/Mon), Cloud (USA) oder self-host. Es gibt zwar ein Community-Plugin `@lyculs/opencode-firecrawl` (v1.0.0, Einzel-Dev, ungepflegt) — für Produktiv lieber der offizielle MCP. |
 | native Skills statt opencode-skillful | nativ nutzen | skillful überholt + wartungsarm; native Skills laden on-demand identisch. |
 | micode | optional | command-getrieben, kein Zwang; native Skills/Brainstorm decken das meist ab; keine Lizenz im Repo. |
 | plannotator | optional | Default greift nur im Plan-Modus; `workflow:"manual"` = nur auf Abruf. |

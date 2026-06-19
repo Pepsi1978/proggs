@@ -468,7 +468,7 @@
 | ocx (npm-Install) | braucht **Bun im PATH** zur Laufzeit; Node allein reicht nicht (Windows) | Auf Windows Binary-Install (install.sh) ODER Bun installieren | ocx.kdco.dev/docs |
 | opencode-skillful | wartungsarm (letzter Commit ~4 Mon.), durch native Skills überholt | native Skills nutzen statt Plugin | sourcepulse.org/projects/27131596 |
 | micode | keine Lizenz im Repo (Rechts-/Adoptions-Blocker) | vor produktiver Nutzung Lizenz klären | sourcepulse.org/projects/25924494 |
-| firecrawl | Default = Firecrawl-Cloud (Inhalte → USA); braucht API-Key | self-host möglich (schwächeres JS-Rendering); Key Free-Tier 1000 Seiten/Mon | firecrawl.dev |
+| firecrawl | **Es gibt KEIN npm-Plugin `opencode-firecrawl`** (404 auf npm) — Integration = offizieller **MCP-Server `firecrawl-mcp`** (Firecrawl-Team, MIT) im `mcp`-Block, NICHT im `plugin`-Array. Default = Firecrawl-Cloud (Inhalte → USA); braucht API-Key | Als MCP eintragen: `"mcp":{"firecrawl":{"type":"local","command":["npx","-y","firecrawl-mcp"],"environment":{"FIRECRAWL_API_KEY":"{file:~/SK/.../key}"}}}`. self-host möglich (schwächeres JS-Rendering); Key Free-Tier 1000 Seiten/Mon. Community-Plugin `@lyculs/opencode-firecrawl` v1.0.0 existiert (Einzel-Dev, ungepflegt) | firecrawl.dev · npm `firecrawl-mcp` |
 | supermemory | Fehlinfo „cloud-only" kursiert — FALSCH | MIT + `npx supermemory local` (Port 6767), voll self-hostbar | github.com/supermemoryai/supermemory |
 | opencode-worktree | erzeugt eigene Branches pro Worktree (git-bedingt) → unvereinbar mit „alles direkt auf main"-Workflows | bei Direkt-auf-main NICHT einsetzen; mehrere Fenster auf einem geteilten Worktree bleiben der Weg | git worktree-Mechanik |
 
