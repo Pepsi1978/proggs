@@ -44,6 +44,17 @@
                              BorderBrush="#FF454545" BorderThickness="1"
                              Padding="8,6" FontSize="13" Margin="0,0,0,16"/>
 
+                    <TextBlock Text="Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,4"/>
+                    <TextBox x:Name="VocabularyBox"
+                             Background="#FF2D2D2D" Foreground="White"
+                             BorderBrush="#FF454545" BorderThickness="1"
+                             Padding="8,6" FontSize="13" Margin="0,0,0,4"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             MinHeight="90" MaxHeight="160"/>
+                    <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Gemini schreibt sie kontextabhängig korrekt; es ersetzt nicht stur. Gilt für alle Profile, wirkt sofort und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
+
                     <TextBlock Text="Separator-Template (zwischen Always-On Prompts)" Foreground="#FFCCCCCC" FontSize="12" Margin="0,0,0,4"/>
                     <TextBox x:Name="SeparatorBox"
                              Background="#FF2D2D2D" Foreground="White"

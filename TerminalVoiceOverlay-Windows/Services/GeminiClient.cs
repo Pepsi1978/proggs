@@ -199,13 +199,55 @@ Der zu verarbeitende Whisper-Text folgt nun:
             catch { return null; }
         }
 
+        // Dateiname der persoenlichen Vokabular-Liste. Liegt im selben SK-Ordner
+        // wie die Korrektur-Prompts, sodass sich auf EINEM Rechner TVO und CVO
+        // automatisch dieselbe Liste teilen. Wird ueber denselben mtime-Cache
+        // gelesen wie die Prompt-Dateien — Aenderungen wirken sofort ohne Neustart.
+        private const string PersonalVocabularyFileName = "personal-vocabulary.txt";
+
+        /// <summary>
+        /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen
+        /// des Sprechers) und baut daraus einen Praeambel-Block, der VOR den
+        /// Korrektur-Prompt gesetzt wird. Bewusst kontextsensitiv formuliert:
+        /// KEIN stures Suchen-und-Ersetzen — Gemini bringt einen Begriff nur dann
+        /// in die korrekte Schreibweise, wenn er phonetisch passt UND der
+        /// Satzkontext es hergibt ("Backen" bleibt "Backen", wird nur im
+        /// Code-Kontext zu "Backend"). Leere/fehlende Datei → leerer String,
+        /// also exakt das bisherige Verhalten.
+        /// </summary>
+        private static string LoadPersonalVocabularyBlock()
+        {
+            try
+            {
+                var path = Path.Combine(GeminiPromptDir, PersonalVocabularyFileName);
+                var vocab = ReadPromptFileCached(path)?.Trim();
+                if (string.IsNullOrWhiteSpace(vocab)) return string.Empty;
+
+                return
+                    "PERSÖNLICHES VOKABULAR (häufige Begriffe des Sprechers):\n" +
+                    "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. " +
+                    "Wenn ein transkribiertes Wort phonetisch einem dieser Begriffe ähnelt " +
+                    "UND es im Satzkontext Sinn ergibt, verwende die hier angegebene korrekte " +
+                    "Schreibweise. Erzwinge eine Ersetzung NICHT, wenn der Kontext eine andere " +
+                    "Bedeutung nahelegt.\n" +
+                    vocab + "\n\n";
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
         public async Task<string> CorrectTextAsync(string text, int profile = 1)
         {
             // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank
             // kann sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-
             // Sammeldatei, dann eingebauter Template.
             var template = LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
-            return await SendWithRetry(template + text + "\nTEXT_END", 0);
+            // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
+            // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
+            var vocab = LoadPersonalVocabularyBlock();
+            return await SendWithRetry(vocab + template + text + "\nTEXT_END", 0);
         }
 
         /// <summary>

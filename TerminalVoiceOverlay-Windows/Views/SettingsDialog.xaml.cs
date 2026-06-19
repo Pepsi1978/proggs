@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -33,6 +34,7 @@ public partial class SettingsDialog : Window
         // Non-secret settings stay in the SQLite DB (they sync via Drive backup).
         GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
+        VocabularyBox.Text = LoadPersonalVocabulary();
         SeparatorBox.Text = current.SeparatorTemplate;
         AutoHideCheck.IsChecked = current.AutoHide;
         HorizontalCheck.IsChecked = string.Equals(current.Orientation, "horizontal",
@@ -49,6 +51,10 @@ public partial class SettingsDialog : Window
         BtnCancel.Click += (_, _) => { Result = null; Close(); };
         BtnOk.Click += (_, _) =>
         {
+            // Persoenliches Vokabular in die SK-Datei schreiben — unabhaengig vom
+            // SettingsEditResult, weil GeminiClient die Datei direkt liest.
+            SavePersonalVocabulary(VocabularyBox.Text);
+
             // Persist Google secrets to the SK file. Caller (PromptBoardPanel)
             // only handles the non-secret half via SettingsEditResult.
             _secretStore.Save(_secretStore.Load() with
@@ -72,6 +78,42 @@ public partial class SettingsDialog : Window
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // Persoenliches Vokabular fuer die Gemini-Korrektur lebt als Datei im
+    // SK-Ordner (gleicher Ort wie die Korrektur-Prompts). Dieses Feld ist nur
+    // die bequeme Editier-Oberflaeche; GeminiClient liest die Datei direkt (mit
+    // mtime-Cache), darum wirkt eine Aenderung sofort und teilt sich auf einem
+    // Rechner automatisch zwischen TVO und CVO.
+    private static string PersonalVocabularyPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "SK", "VoiceOverlays", "personal-vocabulary.txt");
+
+    private static string LoadPersonalVocabulary()
+    {
+        try
+        {
+            var path = PersonalVocabularyPath;
+            return File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+        }
+        catch { return string.Empty; }
+    }
+
+    private static void SavePersonalVocabulary(string? text)
+    {
+        try
+        {
+            var path = PersonalVocabularyPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, (text ?? string.Empty).Trim() + "\n");
+        }
+        catch (Exception ex)
+        {
+            // Best-effort: das Speichern der uebrigen Settings darf nicht an der
+            // Vokabel-Datei scheitern. Fehler zeigen, aber nicht werfen.
+            MessageBox.Show($"Woerterbuch konnte nicht gespeichert werden: {ex.Message}",
+                "Hinweis", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 
     private void UpdateGoogleStatus(string? refreshToken, string? email)
     {
