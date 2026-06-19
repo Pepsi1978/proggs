@@ -345,8 +345,9 @@ Konsequenz: Ein installiertes Plugin ist „geladen", führt aber nur Code aus, 
 | OpenWork | später beobachten | Alpha, Windows schwach; ggf. gegen Cowork-Mount-Probleme in 2-3 Mon. neu bewerten. |
 
 ### Self-hosted Memory für OpenCode UND Claude Code (Eigenbau)
+> **Vollständiger, recherchierter Bauplan (2026-06-19): [`self-hosted-memory-server.md`](self-hosted-memory-server.md)** — Optionen-Vergleich, Server-Setup, Sicherheit, Config für beide CLIs. Korrektur ggü. unten: supermemory self-host ist ein **Single-Binary** (kein Postgres/Docker im Default).
 Ziel „ein Server, beide CLIs": Claude Code spricht MCP nativ, OpenCode via Plugin oder MCP → **ein Memory-Server mit MCP-Endpunkt bedient beide**.
-- **Schnellster Weg — Supermemory self-hosted** (MIT, ~27k Stars): `npx supermemory local` → API auf `localhost:6767`, Postgres+pgvector, Ollama-Embeddings (offline). Bringt fertiges OpenCode-Plugin + MCP für Claude Code mit.
+- **Schnellster Weg — Supermemory self-hosted** (MIT): `npx supermemory local` → API auf `localhost:6767`. **Single-Binary** (eingebettete Graph-Engine + lokale WASM-Embeddings, KEIN Postgres/Docker im Default — Postgres+pgvector ist nur der Enterprise-Skalierungspfad). LLM-Step (Summary/Extraktion) default Cloud (`gpt-5.1`) → für Datenhoheit auf lokales Ollama umbiegen (`OPENAI_BASE_URL`). Anbindung: Claude Code via MCP, OpenCode via remote MCP (Plugin verlangt Pro). Details: `self-hosted-memory-server.md`.
 - **Alternativen:** mem0 (Apache-2.0, Docker, am meisten Claude-Code-erprobt, Knowledge-Graph); Hindsight (MIT, schlank, MCP-first).
 - **Komplett-Eigenbau-Stack:** Postgres+pgvector (Speicher) + Ollama (lokale Embeddings, keine Kosten) + dünner MCP-Server (Tools: add/search/list/forget). Scoping: user-Hash (git-Email) + projekt-Hash (Verzeichnis); Privates `<private>`→`[REDACTED]` vor Speicherung.
 - Trigger im supermemory-Plugin: liest auto bei Session-Start, schreibt bei Keywords ("remember"/"save this") + bei ~80% Kontext (Compaction).

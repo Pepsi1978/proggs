@@ -540,6 +540,23 @@
 **FIX:** MCP-abhängige Arbeit im TUI erledigen, bis die Desktop-App das unterstützt.
 **Quelle:** https://github.com/anomalyco/opencode/issues/16689
 
+### 64a. supermemory als self-hosted Memory-MCP anbinden — Fallen (recherchiert 2026-06-19)
+**Kontext:** EIN self-hosted Memory-Server für Claude Code (MCP nativ) + OpenCode (remote MCP),
+Daten bleiben lokal. Vollständiger Bauplan: `best-practices/opencode/self-hosted-memory-server.md`.
+Generische Remote-MCP-Fallen stehen schon oben: §59 (connected, aber keine Tools → `type:local`/
+streamable-http), §61 (kein Auto-Reconnect/Keepalive; Session-404 nach Server-Neustart → Re-Init),
+§63 (OAuth vs API-Key → `oauth:false`). NEU/supermemory-spezifisch:
+
+| Falle | Symptom/Ursache | Funktionserhaltender Fix | Quelle |
+|-------|-----------------|--------------------------|--------|
+| „supermemory ist cloud-only" | Verwechslung des gehosteten Endpoints/Pro-Plugins mit dem Produkt | Self-Host = **Single-Binary** (`npx supermemory local` / `curl …/install`), Port 6767, lokale WASM-Embeddings — KEIN Docker/Postgres nötig | supermemory.ai/docs/self-hosting |
+| Daten verlassen trotz „self-host" den Server | LLM-Step (Summary/Extraktion) nutzt per Default `gpt-5.1` (Cloud) | Für den LLM-Step auf lokales Ollama umbiegen: `OPENAI_BASE_URL=http://localhost:11434/v1`, `OPENAI_API_KEY=ollama`, `OPENAI_MODEL=<klein, z.B. llama3.2:3b>` | supermemory.ai/docs/self-hosting/configuration |
+| npm-Paket `supermemory` startet keinen Server | Das npm-Paket ist die SDK/CLI-Lib, NICHT der Server-Daemon | Server über `npx supermemory local`/curl; Binary heißt `supermemory-server` | npmjs.com/package/supermemory |
+| OpenCode-Plugin `opencode-supermemory` „verlangt Pro" | Convenience-Plugin braucht laut Doku den Pro-Plan | Beim Self-Host den **remote-MCP-Weg** nehmen (`mcp{type:remote,oauth:false,headers}`) — kein Plugin nötig (Plugin-Name strittig: `opencode-supermemory` vs `@supermemory/opencode`) | supermemory.ai/docs/integrations/opencode |
+| Port 6767 trotz Firewall aus dem Netz erreichbar | Bind `0.0.0.0`; Docker umgeht UFW (schreibt direkt in iptables) | An `127.0.0.1` binden + Caddy (TLS+Bearer) davor + Cloud-Firewall des Hosters (greift VOR Docker) | jeffgeerling.com (Docker exposing ports) |
+
+**Versionen:** Stand 2026-06-19 (supermemory npm 4.24.12, OpenCode v1.17.8).
+
 ---
 
 ## 9. Skills (SKILL.md, nativ) & Custom Commands
