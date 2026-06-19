@@ -77,6 +77,15 @@ fun BiomarkerHostScreen(
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
+    // Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): Bei jedem Sichtbarwerden des Biomarker-Tabs die
+    // teuren Fitness-APIs (Whoop/Oura/Strava/Health Connect/Kalender) aktualisieren — und NUR dann
+    // (nicht bei jedem App-Start). ON_RESUME statt LaunchedEffect(Unit), weil der Tab via
+    // saveState/restoreState wiederhergestellt wird (tabSwitch in AppNavGraph) — ein einmaliger
+    // Effekt liefe nur beim allerersten Betreten. Der API-Sync ist im ForegroundSyncManager gegen
+    // parallele Doppellaeufe abgesichert (apiMutex) und setzt zugleich den 8h-Timer neu.
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        vm.onBiomarkerOpened()
+    }
     // Performance-Audit E2 (2026-05-10): collectAsStateWithLifecycle statt
     // collectAsState — Flow-Subscription pausiert wenn die UI im Hintergrund ist
     // (Lifecycle < STARTED). Spart CPU/Akku bei Tab-Wechseln und Sperrbildschirm.

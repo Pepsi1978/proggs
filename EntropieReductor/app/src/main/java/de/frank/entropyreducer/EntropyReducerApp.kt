@@ -325,7 +325,10 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Frank-Wunsch 2026-06-01: ProcessLifecycleOwner-ON_START-Observer mit 8h-THROTTLE.
+        // Frank-Wunsch 2026-06-01/2026-06-19: ProcessLifecycleOwner-ON_START-Observer.
+        // Seit dem Sync-Synchronitaets-Umbau (Etappe 1.1) trennt syncForeground() Drive
+        // (immer sofort, traegt die 1:1-Multi-Device-Synchronitaet) vom 8h-Throttle, der
+        // jetzt NUR noch fuer die teuren Fitness-APIs gilt.
         //
         // Vorgeschichte: Der fruehere Observer wurde am 2026-05-23 entfernt, weil er bei
         // JEDEM Foreground-Wechsel synchronisierte (Datenverbrauch/Rate-Limit). Danach lief
@@ -342,14 +345,15 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 override fun onStart(owner: LifecycleOwner) {
                     applicationScope.launch {
                         runCatching {
-                                foregroundSync.syncIfStale(
+                                // Drive sofort (1:1-Multi-Device-Sync), Fitness-APIs nur nach 8h.
+                                foregroundSync.syncForeground(
                                     ForegroundSyncManager.FOREGROUND_SYNC_MIN_INTERVAL_MS,
                                 )
                             }
                             .onFailure {
-                                Diag.w(DiagnosticArea.APP, 
+                                Diag.w(DiagnosticArea.APP,
                                     "EntropyReducerApp",
-                                    "Foreground-Sync (8h-Throttle) fehlgeschlagen",
+                                    "Foreground-Sync fehlgeschlagen",
                                     it,
                                 )
                             }

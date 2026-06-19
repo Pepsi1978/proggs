@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.repository.AmazfitRepository
@@ -17,22 +19,29 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 
 /**
- * Zentraler Daten-Sync (Frank-Wunsch 2026-06-01). Eine EINZIGE Quelle der Wahrheit fuer
- * den kompletten Datenabgleich aller Quellen — vorher lag die Logik inline im
- * StartupViewModel und konnte deshalb NUR beim frischen App-Start laufen.
+ * Zentraler Daten-Sync. Trennt bewusst ZWEI Sync-Arten mit unterschiedlichem Takt
+ * (Frank-Wunsch 2026-06-19, Sync-Synchronitaets-Umbau Etappe 1.1):
  *
- * Root Cause des Sync-Bugs: Der Start-Sync lief ausschliesslich in StartupViewModel.init
- * (einmal pro Prozess). Lag die App ueber Nacht nur im Hintergrund/Arbeitsspeicher, wurde
- * beim Zurueckholen WEDER ein neuer Prozess gestartet (StartupViewModel.init feuert nicht)
- * NOCH ein Lifecycle-Sync ausgeloest — der fruehere ProcessLifecycle-Observer war am
- * 2026-05-23 entfernt worden, weil er bei JEDEM Foreground-Wechsel synchronisierte
- * (Datenverbrauch/Rate-Limit). Folge: "Zuletzt synchronisiert" blieb auf dem Stand vom
- * Vorabend, obwohl laengst neue Biomarker-Daten vorlagen.
+ * 1. **Drive-Backup (Restore + Upload)** — klein (JSON), traegt die 1:1-Multi-Device-
+ *    Synchronitaet (Aufgaben, Gewohnheiten, Texte ...). Laeuft bei JEDEM App-Start und
+ *    JEDEM Foreground-Wechsel SOFORT (kein Throttle). Siehe [syncDriveNow].
  *
- * Loesung: [syncIfStale] wird vom ProcessLifecycle-ON_START-Observer bei jedem
- * Foreground-Wechsel aufgerufen, synchronisiert aber NUR wenn seit dem letzten Sync
- * mindestens das uebergebene Intervall (Standard 8 h) vergangen ist. Damit ist der
- * Spam-Fall (haeufiges Wechseln) ausgeschlossen und der Ueber-Nacht-Fall abgedeckt.
+ * 2. **Fitness-APIs (Whoop/Oura/Strava/Health Connect/Kalender)** — teuer (Datenverbrauch +
+ *    Rate-Limit). Laeuft NUR (a) automatisch nach 8 h ODER (b) wenn Frank den Biomarker-Tab
+ *    oeffnet ([syncApisNow]). Jede vollstaendige API-Aktualisierung setzt den 8-h-Timer neu.
+ *    So zahlt Frank den teuren API-Verkehr nur, wenn er die Biomarker-Werte wirklich anschaut.
+ *
+ * Vorgeschichte: Frueher lief BEIDES gemeinsam und nur alle 8 h (`syncIfStale`/`syncAllSources`).
+ * Dadurch konnte eine Aenderung auf Geraet A nicht "3 Minuten spaeter" auf Geraet B ankommen —
+ * der Restore lief schlicht nicht. Der 8-h-Throttle bleibt jetzt NUR fuer die teuren APIs.
+ *
+ * Zwei getrennte Mutexe: Ein laufender (langsamer) API-Sync darf den schnellen Drive-Sync
+ * NICHT blockieren und umgekehrt — ein Biomarker-Tab-Klick soll sofort die APIs ziehen koennen,
+ * auch wenn gerade ein Drive-Sync laeuft.
+ *
+ * Hinweis (bugs/android/kotlin.md §2.1): die `runCatching`-Bloecke um die einzelnen Sync-Calls
+ * sind das bewusst erhaltene Bestandsverhalten (frueher `syncAllSources`). Die Haupt-Aufrufer
+ * laufen im app-weiten Scope (nie gecancelt); die fachlichen Repos behandeln Cancellation selbst.
  */
 @Singleton
 class ForegroundSyncManager
@@ -50,54 +59,77 @@ constructor(
     private val healthConnectRepository: HealthConnectRepository,
     private val appSettings: AppSettings,
 ) {
-    // Verhindert dass zwei Sync-Laeufe gleichzeitig starten (z.B. frischer Start +
-    // Foreground-Event kurz hintereinander). Wer den Lock nicht bekommt, ueberspringt.
-    private val mutex = Mutex()
+    private val driveMutex = Mutex()
+    private val apiMutex = Mutex()
 
     /**
-     * Synchronisiert nur dann, wenn seit dem letzten erfolgreichen Sync mindestens
-     * [minIntervalMs] vergangen sind. Wird beim Foreground-Wechsel aufgerufen.
-     * Wenn noch nie gesynced wurde (Zeitstempel 0), wird synchronisiert.
+     * Vollabgleich beim App-Start / Foreground-Wechsel: Drive IMMER (sofort), Fitness-APIs nur
+     * wenn der 8-h-Timer abgelaufen ist. Reihenfolge: erst Drive (Restore holt fremde
+     * Geraete-Aenderungen + sichert den eigenen Stand), dann ggf. die APIs.
      */
-    suspend fun syncIfStale(minIntervalMs: Long) {
-        val lastMs = appSettings.lastRefreshFooterAtMsFlow.first()
-        val now = System.currentTimeMillis()
-        if (lastMs > 0L && now - lastMs < minIntervalMs) {
-            // Noch frisch genug — kein Sync. Spart Datenverbrauch und Rate-Limit.
-            return
-        }
-        syncAllSources()
+    suspend fun syncForeground(minIntervalMs: Long = FOREGROUND_SYNC_MIN_INTERVAL_MS) {
+        syncDriveNow()
+        syncApisIfStale(minIntervalMs)
     }
 
     /**
-     * Voller Datenabgleich aller Quellen. 1:1 der Ablauf der frueher inline im
-     * StartupViewModel lag — wird jetzt von dort UND vom Foreground-Observer genutzt.
-     *
-     * Reihenfolge bewusst: ZUERST Google Drive komplett (Restore holt die Historie
-     * zurueck, dann Backup sichert neue lokale Aenderungen) — beides wird abgewartet.
-     * ERST DANACH die einzelnen Daten-APIs (parallel, je eigene Fehlerbehandlung).
-     * Am Ende wird der "Zuletzt synchronisiert"-Footer gestempelt.
-     *
+     * Drive-Restore + Backup. Laeuft bei JEDEM Start/Foreground sofort (kein Throttle).
+     * Restore VOR Upload (Frank-Wunsch 2026-06-02): zuerst fremde Geraete-Aenderungen holen,
+     * Loop-Instanzen bereinigen, dann den eigenen Stand hochladen.
      * Bei parallelem Aufruf (Lock belegt) kehrt die Methode sofort zurueck.
      */
-    suspend fun syncAllSources() {
-        if (!mutex.tryLock()) return
+    suspend fun syncDriveNow() {
+        if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
+        if (!driveMutex.tryLock()) {
+            Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync laeuft bereits -> uebersprungen")
+            return
+        }
         try {
-            if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
-                runCatching { syncEntries.restoreFromDrive() }
-                // Frank-Wunsch 2026-06-02 (Bugfix): SOFORT nach dem Backup-Merge die
-                // Loop-Instanzen bereinigen — VOR dem Upload. restoreFromDrive() spielt jede
-                // Backup-Aufgabe per ID wieder ein (auch lokal geheilte Duplikate, da es kein
-                // Deletion-Tracking gibt). Liefe die Heilung nur parallel beim App-Start
-                // (EntropyReducerApp), wuerde der Restore sie ueberholen und verwaiste
-                // Konvertierungs-Duplikate (NUTZER_MIC neben rec-Instanz) wieder auferstehen
-                // lassen. Hier ist die Reihenfolge garantiert sequenziell: Restore -> Heilung
-                // -> Upload. Der folgende syncNowAndWait() laedt den bereinigten Stand hoch,
-                // sodass das Drive-Backup dauerhaft duplikatfrei wird (selbstheilend).
-                runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
-                runCatching { coordinator.syncNowAndWait() }
-            }
+            Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync START (Restore -> Heilung -> Upload)")
+            runCatching { syncEntries.restoreFromDrive() }
+                .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Restore fehlgeschlagen", it) }
+            runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
+            runCatching { coordinator.syncNowAndWait() }
+                .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Upload fehlgeschlagen", it) }
+            Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync FERTIG")
+        } finally {
+            driveMutex.unlock()
+        }
+    }
 
+    /**
+     * Fitness-API-Sync nur, wenn seit der letzten API-Aktualisierung mindestens [minIntervalMs]
+     * vergangen sind (Standard 8 h). Wird beim Start/Foreground aufgerufen. Wenn noch nie
+     * gesynced wurde (Timer 0), wird synchronisiert.
+     */
+    suspend fun syncApisIfStale(minIntervalMs: Long) {
+        val lastMs = appSettings.lastRefreshFooterAtMsFlow.first()
+        val now = System.currentTimeMillis()
+        if (lastMs > 0L && now - lastMs < minIntervalMs) {
+            Diag.i(
+                DiagnosticArea.APP,
+                "ForegroundSync",
+                "API-Sync uebersprungen (noch frisch: ${(now - lastMs) / 60000} min < ${minIntervalMs / 60000} min)",
+            )
+            return
+        }
+        syncApisNow("8h-Automatik")
+    }
+
+    /**
+     * Voller Fitness-API-Abgleich (Whoop/Oura/Strava/Health Connect/Kalender). Wird (a) von
+     * [syncApisIfStale] nach 8 h ODER (b) beim Klick auf den Biomarker-Tab aufgerufen
+     * ([reason] = "Biomarker-Tab"). Stempelt am Ende den "Zuletzt synchronisiert"-Footer —
+     * dieser Zeitstempel ist gleichzeitig der 8-h-Timer (jede API-Aktualisierung setzt ihn neu).
+     * Bei parallelem Aufruf (Lock belegt) kehrt die Methode sofort zurueck.
+     */
+    suspend fun syncApisNow(reason: String = "Biomarker-Tab") {
+        if (!apiMutex.tryLock()) {
+            Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync laeuft bereits ($reason) -> uebersprungen")
+            return
+        }
+        try {
+            Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
             var hcCount = 0
             var whoopCount = 0
             var ouraCount = 0
@@ -142,7 +174,7 @@ constructor(
 
             // "Zuletzt synchronisiert"-Footer setzen (gleiches Format wie der manuelle
             // Aktualisieren-Knopf). Der Zeitstempel dient gleichzeitig als Grundlage
-            // fuer den 8h-Throttle in syncIfStale().
+            // fuer den 8h-Throttle in syncApisIfStale().
             val nowZ = java.time.ZonedDateTime.now()
             val footerTs =
                 "%02d.%02d. %02d:%02d".format(
@@ -155,13 +187,18 @@ constructor(
                 "✓ $footerTs · Whoop $whoopCount · Strava $stravaCount · " +
                     "Oura $ouraCount · Health Connect $hcCount"
             runCatching { appSettings.setLastRefreshFooter(footer, System.currentTimeMillis()) }
+            Diag.i(
+                DiagnosticArea.APP,
+                "ForegroundSync",
+                "API-Sync FERTIG ($reason): Whoop=$whoopCount Strava=$stravaCount Oura=$ouraCount HC=$hcCount -> 8h-Timer neu gesetzt",
+            )
         } finally {
-            mutex.unlock()
+            apiMutex.unlock()
         }
     }
 
     companion object {
-        /** Standard-Throttle fuer den Foreground-Sync: 8 Stunden (Frank-Wunsch 2026-06-01). */
+        /** Standard-Throttle fuer den Fitness-API-Sync: 8 Stunden (Frank-Wunsch 2026-06-01). */
         const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 8L * 60L * 60L * 1000L
     }
 }

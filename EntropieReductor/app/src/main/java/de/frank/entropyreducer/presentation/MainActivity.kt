@@ -208,7 +208,8 @@ class StartupViewModel @Inject constructor(
                 }
             }
             viewModelScope.launch(Dispatchers.IO) {
-                runCatching { foregroundSync.syncAllSources() }
+                // Kaltstart: Drive sofort (1:1-Multi-Device-Sync), Fitness-APIs nur nach 8h.
+                runCatching { foregroundSync.syncForeground() }
                 scheduler.ensureNightlyJobs()
                 scheduler.ensureKiQuestionJob()
                 scheduler.ensureCodexJob()

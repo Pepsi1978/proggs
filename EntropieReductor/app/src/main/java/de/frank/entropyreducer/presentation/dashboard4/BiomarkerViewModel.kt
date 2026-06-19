@@ -256,6 +256,8 @@ constructor(
     private val hcValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
     private val healthConnectRepository:
         de.frank.entropyreducer.data.repository.HealthConnectRepository,
+    // Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): API-Sync beim Oeffnen des Biomarker-Tabs.
+    private val foregroundSync: de.frank.entropyreducer.domain.usecase.ForegroundSyncManager,
 ) : ViewModel() {
 
     private val _refreshing = MutableStateFlow(false)
@@ -305,6 +307,19 @@ constructor(
         // Connect-Live-Read, kein Sync). Gefuellt wird der Cache beim frischen App-Start
         // (HealthConnectRepository.syncToCache) und beim manuellen Aktualisieren-Knopf.
         viewModelScope.launch { loadWeightFromCache() }
+    }
+
+    /**
+     * Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): Beim Sichtbarwerden des Biomarker-Tabs die
+     * teuren Fitness-APIs (Whoop/Oura/Strava/Health Connect/Kalender) aktualisieren — und NUR
+     * dann (nicht bei jedem App-Start). So zahlt Frank den API-Verkehr nur, wenn er die Werte
+     * wirklich anschaut. Setzt zugleich den 8h-Timer neu (siehe [ForegroundSyncManager]); dessen
+     * apiMutex verhindert parallele Doppellaeufe (z.B. mit dem 8h-Automatik-Sync beim Foreground).
+     * Wird vom BiomarkerHostScreen bei jedem ON_RESUME aufgerufen (der Tab nutzt saveState, daher
+     * reicht ein einmaliger LaunchedEffect nicht).
+     */
+    fun onBiomarkerOpened() {
+        viewModelScope.launch { foregroundSync.syncApisNow("Biomarker-Tab") }
     }
 
     /**
