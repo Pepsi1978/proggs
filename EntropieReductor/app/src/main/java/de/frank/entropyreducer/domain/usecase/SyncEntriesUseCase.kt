@@ -497,12 +497,35 @@ constructor(
         // --- Aufgaben-Nachtraege (v6+) ---
         // Existenz-basiert: id ist UUID, Doppelung quasi unmoeglich. Wenn lokal vorhanden,
         // gewinnt der lokale Stand (Inline-Edits seit letztem Backup).
-        if (payload.entropyEntryFollowups.isNotEmpty()) {
+        run {
+            val followupDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.FOLLOWUP }
+                    .associate { it.id to it.deletedAt }
+            // LWW + Tombstone (Sync-Etappe 1.5): frueher Existenz-Strategie -> Nachtrag-Edits/
+            // -Loeschungen propagierten nie. Jetzt per updatedAt + delete-wins-only-if-newer.
             for (b in payload.entropyEntryFollowups) {
+                val incoming = b.toEntity()
+                val ts = followupDeletedAt[b.id]
+                if (ts != null && ts > incoming.updatedAt) continue
                 val existing = entropyEntryFollowupDao.getById(b.id)
-                if (existing == null) {
-                    entropyEntryFollowupDao.upsert(b.toEntity())
-                    inserted++
+                when {
+                    existing == null -> {
+                        entropyEntryFollowupDao.upsert(incoming)
+                        inserted++
+                    }
+                    incoming.updatedAt > existing.updatedAt -> {
+                        entropyEntryFollowupDao.upsert(incoming)
+                        updated++
+                    }
+                    else -> Unit
+                }
+            }
+            for ((id, ts) in followupDeletedAt) {
+                val local = entropyEntryFollowupDao.getById(id) ?: continue
+                if (ts > local.updatedAt) {
+                    entropyEntryFollowupDao.deleteById(id)
+                    deleted++
                 }
             }
         }

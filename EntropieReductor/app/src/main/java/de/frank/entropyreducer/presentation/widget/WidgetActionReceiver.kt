@@ -39,6 +39,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
     @InstallIn(SingletonComponent::class)
     interface ActionEntryPoint {
         fun entryDao(): EntropyEntryDao
+
+        fun entryRepository(): de.frank.entropyreducer.data.repository.EntryRepository
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -83,9 +85,10 @@ class WidgetActionReceiver : BroadcastReceiver() {
      */
     private fun completeTask(appContext: Context, taskId: String) {
         val pending = goAsync()
-        val dao = EntryPointAccessors
+        val entryPoint = EntryPointAccessors
             .fromApplication(appContext, ActionEntryPoint::class.java)
-            .entryDao()
+        val dao = entryPoint.entryDao()
+        val repo = entryPoint.entryRepository()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Phase 1: Haekchen sofort sichtbar machen.
@@ -96,7 +99,9 @@ class WidgetActionReceiver : BroadcastReceiver() {
                 val entry = dao.getActive().first().firstOrNull { it.id == taskId }
                 if (entry != null) {
                     val now = System.currentTimeMillis()
-                    dao.update(
+                    // Sync-Etappe 1.5: ueber das Repository (loest Drive-Backup-Sync aus) statt direkt
+                    // am DAO — sonst synchronisiert ein Abhaken ueber das Home-Widget NICHT.
+                    repo.update(
                         entry.copy(
                             status = EntryStatus.REDUZIERT,
                             resolvedAt = now,

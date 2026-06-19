@@ -310,6 +310,9 @@ constructor(
                         updatedAt = now,
                     )
                 )
+                // Sync-Etappe 1.5: Nachtraege laufen am Repository vorbei (eigener DAO) -> expliziter
+                // Backup-Trigger, damit der Nachtrag auch ohne Gemini-Rescore gesichert wird.
+                entries.triggerBackup("Aufgaben-Nachtrag: hinzugefuegt")
                 rescoreWithCurrentFollowups()
             } catch (e: Exception) {
                 errorFlow.value = "Nachtrag konnte nicht gespeichert werden: ${e.message}"
@@ -404,11 +407,21 @@ constructor(
             followupDao.update(
                 current.copy(rawText = newText, updatedAt = System.currentTimeMillis())
             )
+            entries.triggerBackup("Aufgaben-Nachtrag: bearbeitet")
         }
     }
 
     fun deleteFollowup(id: String) {
-        viewModelScope.launch { followupDao.deleteById(id) }
+        viewModelScope.launch {
+            followupDao.deleteById(id)
+            // Sync-Etappe 1.5: Tombstone, damit die Nachtrag-Loeschung auf andere Geraete propagiert.
+            de.frank.entropyreducer.data.markDeleted(
+                getApplication(),
+                de.frank.entropyreducer.data.TombstoneType.FOLLOWUP,
+                id,
+            )
+            entries.triggerBackup("Aufgaben-Nachtrag: geloescht")
+        }
     }
 
     /**

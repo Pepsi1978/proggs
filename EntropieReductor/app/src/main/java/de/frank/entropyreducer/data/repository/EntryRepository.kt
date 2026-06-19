@@ -102,4 +102,13 @@ constructor(
         val e = dao.getById(id) ?: return
         dao.delete(e)
     }
+
+    /**
+     * Sync-Etappe 1.5: Loest einen Drive-Backup-Sync aus fuer Aufgaben-bezogene Mutationen, die
+     * NICHT ueber dieses Repository laufen (z.B. Nachtraege ueber den Followup-DAO oder das
+     * Abhaken ueber das Home-Widget). Kein eigener DB-Schreibvorgang — nur der Trigger.
+     */
+    fun triggerBackup(reason: String) {
+        coordinatorLazy.get().requestSync(reason)
+    }
 }
