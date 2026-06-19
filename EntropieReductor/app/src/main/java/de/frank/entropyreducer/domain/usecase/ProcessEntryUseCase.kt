@@ -50,6 +50,12 @@ class ProcessEntryUseCase @Inject constructor(
         // Review-Fenster. Wenn gesetzt (nicht leer), hat er Vorrang vor dem
         // KI-Titel und wird NICHT auf 3 Woerter gekappt — Frank bestimmt selbst.
         manualTitle: String? = null,
+        // ID-Architektur Etappe 2d (Frank-Wunsch 2026-06-19): Herkunft, falls diese Aufgabe aus einem
+        // Vorgaenger entsteht (z. B. einem angenommenen Aufgaben-Vorschlag). Default null = direkt
+        // eingesprochene Aufgabe ohne Vorgaenger -> alle bisherigen Aufrufer bleiben unveraendert.
+        originId: String? = null,
+        originType: String? = null,
+        rootId: String? = null,
     ): Result<EntropyEntryEntity> {
         val cleanManualTitle = manualTitle?.trim()?.takeIf { it.isNotBlank() }
         val key = secrets.geminiApiKey
@@ -157,9 +163,12 @@ class ProcessEntryUseCase @Inject constructor(
                     aiNotes = parsed.aiNotes,
                     source = source,
                     biomarkerSnapshotId = null,
+                    originId = originId,
+                    originType = originType,
+                    rootId = rootId,
                 )
             } else {
-                fallbackEntry(rawTranscript, source, cleanManualTitle)
+                fallbackEntry(rawTranscript, source, cleanManualTitle, originId, originType, rootId)
             }
             entries.upsert(entry)
             // Frank-Wunsch 2026-06-19: Live-Logik-Checkpoint (Intent-Verifikation) — erwartet vs.
@@ -181,7 +190,8 @@ class ProcessEntryUseCase @Inject constructor(
         } catch (t: Throwable) {
             // Fallback-Eintrag mit OFFEN-Status speichern, damit der Nutzer ihn
             // später erneut bewerten lassen kann (Spec §19).
-            val fallback = fallbackEntry(rawTranscript, source, cleanManualTitle)
+            val fallback =
+                fallbackEntry(rawTranscript, source, cleanManualTitle, originId, originType, rootId)
             entries.upsert(fallback)
             Result.failure(t)
         }
@@ -191,6 +201,9 @@ class ProcessEntryUseCase @Inject constructor(
         transcript: String,
         source: EntrySource,
         manualTitle: String? = null,
+        originId: String? = null,
+        originType: String? = null,
+        rootId: String? = null,
     ): EntropyEntryEntity {
         val now = System.currentTimeMillis()
         return EntropyEntryEntity(
@@ -212,6 +225,9 @@ class ProcessEntryUseCase @Inject constructor(
             aiNotes = null,
             source = source,
             biomarkerSnapshotId = null,
+            originId = originId,
+            originType = originType,
+            rootId = rootId,
         )
     }
 

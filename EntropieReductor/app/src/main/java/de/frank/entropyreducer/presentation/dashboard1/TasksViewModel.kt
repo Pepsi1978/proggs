@@ -1185,7 +1185,7 @@ private suspend fun storeKiTaskSuggestions(
     newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
 ) {
     // ID-Architektur Etappe 2c (Frank-Wunsch 2026-06-19): Aufgaben-Vorschlaege liegen in Room
-    // (task_suggestions) statt im DataStore-JSON. Herkunft (originId/originType/rootId) kommt in 2d.
+    // (task_suggestions) statt im DataStore-JSON. Etappe 2d: Herkunft der Quell-Idee mitschreiben.
     val nowMs = System.currentTimeMillis()
     de.frank.entropyreducer.data.local
         .taskSuggestionDaoFrom(context)
@@ -1196,6 +1196,9 @@ private suspend fun storeKiTaskSuggestions(
                     title = s.title,
                     description = s.description,
                     createdAt = nowMs + index,
+                    originId = s.originId,
+                    originType = s.originType,
+                    rootId = s.rootId,
                 )
             }
         )

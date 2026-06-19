@@ -9,8 +9,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.kiTaskSuggestionStore
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
+import de.frank.entropyreducer.data.local.entities.OriginType
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
 import de.frank.entropyreducer.domain.model.EntrySource
+import de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
@@ -89,7 +91,7 @@ class KiTaskSuggestViewModel @Inject constructor(
                     .generateSuggestions(ideas, processedIds)
                     .getOrThrow()
                 if (result.tasks.isNotEmpty()) {
-                    storeSuggestions(result.tasks.map { KiTaskSuggestion(id = it.id, title = it.title, description = it.description) })
+                    storeSuggestions(result.tasks)
                 }
                 saveProcessedIdeaIds(updatedProcessedIds)
                 if (result.tasks.isEmpty() && ideas.isNotEmpty()) {
@@ -106,7 +108,16 @@ class KiTaskSuggestViewModel @Inject constructor(
         viewModelScope.launch {
             _acceptingId.value = suggestion.id
             val text = "${suggestion.title}. ${suggestion.description}"
-            process(text, EntrySource.NUTZER_TEXT)
+            // ID-Architektur Etappe 2d: Herkunft Vorschlag -> Aufgabe durchreichen, damit die Kette
+            // Idee -> Vorschlag -> Aufgabe luckenlos ist. rootId erbt die urspruengliche Idee.
+            val sug = taskSuggestionDao.getById(suggestion.id)
+            process(
+                text,
+                EntrySource.NUTZER_TEXT,
+                originId = sug?.id,
+                originType = sug?.let { OriginType.TASK_SUGGESTION },
+                rootId = sug?.rootId ?: sug?.id,
+            )
                 .onSuccess {
                     removeSuggestion(suggestion.id)
                 }
@@ -129,9 +140,9 @@ class KiTaskSuggestViewModel @Inject constructor(
         }
     }
 
-    private fun storeSuggestions(newSuggestions: List<KiTaskSuggestion>) {
+    private fun storeSuggestions(newSuggestions: List<AutoTaskSuggestion>) {
         viewModelScope.launch {
-            // Herkunft (originId/originType/rootId) wird erst in Etappe 2d gesetzt (Idee -> Vorschlag).
+            // ID-Architektur Etappe 2d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
             val nowMs = System.currentTimeMillis()
             taskSuggestionDao.upsertAll(
                 newSuggestions.mapIndexed { index, s ->
@@ -140,6 +151,9 @@ class KiTaskSuggestViewModel @Inject constructor(
                         title = s.title,
                         description = s.description,
                         createdAt = nowMs + index,
+                        originId = s.originId,
+                        originType = s.originType,
+                        rootId = s.rootId,
                     )
                 }
             )

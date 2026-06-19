@@ -113,8 +113,8 @@ class AutoSuggestionViewModel @Inject constructor(
     private suspend fun storeKiTaskSuggestions(
         newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
     ) {
-        // Ab ID-Architektur Etappe 2c in Room (task_suggestions). Herkunft (originId/originType/
-        // rootId) wird erst in Etappe 2d gesetzt (Idee -> Vorschlag).
+        // Ab ID-Architektur Etappe 2c in Room (task_suggestions). Etappe 2d: Herkunft der Quell-Idee
+        // (originId/originType/rootId) mitschreiben.
         val nowMs = System.currentTimeMillis()
         taskSuggestionDao.upsertAll(
             newSuggestions.mapIndexed { index, s ->
@@ -123,6 +123,9 @@ class AutoSuggestionViewModel @Inject constructor(
                     title = s.title,
                     description = s.description,
                     createdAt = nowMs + index,
+                    originId = s.originId,
+                    originType = s.originType,
+                    rootId = s.rootId,
                 )
             }
         )

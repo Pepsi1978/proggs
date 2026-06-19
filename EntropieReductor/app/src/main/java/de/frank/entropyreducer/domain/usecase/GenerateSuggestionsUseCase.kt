@@ -2,6 +2,7 @@ package de.frank.entropyreducer.domain.usecase
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.local.entities.OriginType
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
 import de.frank.entropyreducer.data.remote.GeminiGenerationConfig
@@ -25,6 +26,11 @@ data class AutoTaskSuggestion(
     val id: String,
     val title: String,
     val description: String,
+    // ID-Architektur Etappe 2d (Frank-Wunsch 2026-06-19): Herkunft = die Quell-Idee.
+    // null, wenn die KI keine (gueltige) sourceIndex geliefert hat (Fallback) oder beim Altbestand.
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
 ) {
     companion object {
         fun create(title: String, description: String): AutoTaskSuggestion =
@@ -87,7 +93,9 @@ class GenerateSuggestionsUseCase @Inject constructor(
         val newIdeas = ideas.filter { it.id !in processedIds }
         if (newIdeas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
-        val ideenText = newIdeas.joinToString("\n") { "- ${it.text}" }
+        // ID-Architektur Etappe 2d: Ideen nummeriert (Index in newIdeas), damit die KI pro Vorschlag
+        // die Quell-Idee per sourceIndex zurueckgeben kann -> Herkunft Idee -> Vorschlag.
+        val ideenText = newIdeas.mapIndexed { index, idea -> "$index: ${idea.text}" }.joinToString("\n")
         val model = settings.geminiModelFlow.first()
 
         val response = gemini.generateContent(
@@ -114,7 +122,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-        val result = parseCombinedJson(json)
+        val result = parseCombinedJson(json, newIdeas)
         val updatedProcessedIds = processedIds + newIdeas.map { it.id }
 
         return Result.success(result to updatedProcessedIds)
@@ -124,18 +132,33 @@ class GenerateSuggestionsUseCase @Inject constructor(
     // Parsing
     // ========================================================================
 
-    private fun parseCombinedJson(raw: String): SuggestionResult {
+    private fun parseCombinedJson(raw: String, newIdeas: List<IdeenEntry>): SuggestionResult {
         return runCatching {
             val obj = JSONObject(raw)
 
-            // Tasks parsen
+            // Tasks parsen — Herkunft (Etappe 2d) ueber sourceIndex an die Quell-Idee binden.
             val tasksArr = obj.optJSONArray("tasks") ?: JSONArray()
             val tasks = buildList {
                 for (i in 0 until tasksArr.length()) {
                     val o = tasksArr.optJSONObject(i) ?: continue
                     val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
                     val description = o.optString("description")
-                    add(AutoTaskSuggestion.create(title, description))
+                    // sourceIndex = Nummer der Quell-Idee aus dem nummerierten Prompt. Fehlt sie oder
+                    // ist sie ungueltig (KI-Aussetzer) -> origin bleibt null (Fallback, nichts kaputt).
+                    val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
+                    val sourceIdea = newIdeas.getOrNull(sourceIdx)
+                    add(
+                        AutoTaskSuggestion(
+                            id = java.util.UUID.randomUUID().toString(),
+                            title = title.take(60),
+                            description = description.take(500),
+                            originId = sourceIdea?.id,
+                            originType = sourceIdea?.let { OriginType.IDEA },
+                            // Die Idee ist aktuell immer Ursprung der Kette (Entropie->Idee erst Stufe 5)
+                            // -> rootId = die Idee selbst.
+                            rootId = sourceIdea?.id,
+                        )
+                    )
                 }
             }
 
@@ -158,7 +181,8 @@ class GenerateSuggestionsUseCase @Inject constructor(
 
     companion object {
         private const val COMBINED_SYSTEM_PROMPT = """
-Du bist ein exakter Filter. Du bekommst GENAU EINE Idee und ordnest sie EXKLUSIV einer von drei Kategorien zu:
+Du bist ein exakter Filter. Du bekommst eine LISTE nummerierter Ideen (jede Zeile im Format
+"Nummer: Text"). Ordne JEDE Idee EINZELN und EXKLUSIV einer von drei Kategorien zu:
 - AUFGABE (einmalig abarbeitbar)
 - GEWOHNHEIT (wiederkehrend, mit klarem Wiederholungssignal)
 - NICHTS (weder Aufgabe noch Gewohnheit)
@@ -166,8 +190,9 @@ Du bist ein exakter Filter. Du bekommst GENAU EINE Idee und ordnest sie EXKLUSIV
 === HAUPTREGELN ===
 1. Eine Idee ist EXKLUSIV entweder Aufgabe ODER Gewohnheit. NIEMALS beides.
 2. Eine GEWOHNHEIT muss ein klares Wiederholungssignal enthalten. Ohne dieses Signal ist es NIEMALS eine Gewohnheit.
-3. Wenn du unsicher bist, antworte mit NICHTS.
+3. Wenn du unsicher bist, ordne die Idee NICHTS zu (also weder in tasks noch in habits).
 4. Du fügst NICHTS hinzu und lässt NICHTS weg. Du erkennst nur und formulierst um.
+5. Bei jeder AUFGABE gibst du im Feld "sourceIndex" die Nummer der Idee an, aus der sie stammt.
 
 === ENTSCHEIDUNGSLOGIK ===
 Prüfe die Idee streng in dieser Reihenfolge:
@@ -217,9 +242,10 @@ Enthält die Idee eine konkrete Tätigkeit, die einmalig abarbeitbar ist?
 → NICHTS (weder Aufgabe noch Gewohnheit klar erkennbar)
 
 === FORMAT ===
-Antworte NUR mit diesem JSON. Keine Einleitung, keine Erklärung, keine Code-Klammern (kein ```), nur das reine JSON:
+Antworte NUR mit diesem JSON. Keine Einleitung, keine Erklärung, keine Code-Klammern (kein ```), nur das reine JSON.
+"sourceIndex" ist die Nummer der Idee (aus der Eingabe "Nummer: Text"), aus der die Aufgabe stammt:
 {
-  "tasks": [{"title": "...", "description": "..."}],
+  "tasks": [{"title": "...", "description": "...", "sourceIndex": 0}],
   "habits": ["Gewohnheit 1"]
 }
 Wenn keine Aufgabe: "tasks": []
