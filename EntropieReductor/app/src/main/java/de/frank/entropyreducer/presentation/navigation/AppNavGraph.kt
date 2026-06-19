@@ -513,6 +513,17 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 onOpenDetail = { id -> nav.navigate(Routes.priorityMemoryDetail(id)) },
             )
         }
+        composable(
+            route = Routes.PRIORITY_MEMORY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("memoryId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
+            )
+        }
         composable(Routes.SETTINGS_CODEX) {
             CodexScreen(
                 onBack = {
