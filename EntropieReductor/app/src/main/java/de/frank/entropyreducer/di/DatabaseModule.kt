@@ -50,6 +50,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_28_29,
                 AppDatabase.MIGRATION_29_30,
                 AppDatabase.MIGRATION_30_31,
+                AppDatabase.MIGRATION_31_32,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
@@ -128,6 +129,11 @@ object DatabaseModule {
 
     /** Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19). */
     @Provides fun providePriorityMemoryDao(db: AppDatabase) = db.priorityMemoryDao()
+
+    /** ID-Architektur Etappe 2 (Frank-Wunsch 2026-06-19): Ideen + Aufgaben-Vorschlaege. */
+    @Provides fun provideIdeaDao(db: AppDatabase) = db.ideaDao()
+
+    @Provides fun provideTaskSuggestionDao(db: AppDatabase) = db.taskSuggestionDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.

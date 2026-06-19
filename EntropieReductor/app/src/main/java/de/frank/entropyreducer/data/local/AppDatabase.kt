@@ -100,8 +100,12 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             RecurringTemplateEntity::class,
             // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
             de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity::class,
+            // ID-Architektur Etappe 2 (Frank-Wunsch 2026-06-19): Kern-Kette Aufgaben
+            de.frank.entropyreducer.data.local.entities.IdeaEntity::class,
+            de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity::class,
+            de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity::class,
         ],
-    version = 31,
+    version = 32,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -170,6 +174,12 @@ abstract class AppDatabase : RoomDatabase() {
 
     /** Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19). */
     abstract fun priorityMemoryDao(): de.frank.entropyreducer.data.local.dao.PriorityMemoryDao
+
+    /** Ideen + Nachtraege (ID-Architektur Etappe 2, Frank-Wunsch 2026-06-19). */
+    abstract fun ideaDao(): de.frank.entropyreducer.data.local.dao.IdeaDao
+
+    /** Aufgaben-Vorschlaege (ID-Architektur Etappe 2, Frank-Wunsch 2026-06-19). */
+    abstract fun taskSuggestionDao(): de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -918,6 +928,75 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN originId TEXT")
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN originType TEXT")
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN rootId TEXT")
+                }
+            }
+
+        /**
+         * Schema 31 -> 32 (Frank-Wunsch 2026-06-19, ID-Architektur Etappe 2a): Drei neue Tabellen
+         * fuer die Kern-Kette Aufgaben — ideas, idea_followups, task_suggestions. Rein additiv
+         * (CREATE TABLE), keine bestehenden Daten betroffen. Werden in 2b mit den Bestandsdaten aus
+         * den DataStore-JSONs befuellt.
+         *
+         * WICHTIG: KEINE SQL-DEFAULT-Klauseln — die Kotlin-Defaults (z. B. isImproved = false)
+         * erzeugen KEINEN SQL-Default im Room-Schema. Ein DEFAULT hier wuerde einen Schema-Mismatch
+         * (-> destructive fallback) ausloesen. Spalten-/Index-Namen exakt nach den Entity-Definitionen.
+         */
+        val MIGRATION_31_32: Migration =
+            object : Migration(31, 32) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS ideas (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            timestampMs INTEGER NOT NULL,
+                            title TEXT NOT NULL,
+                            text TEXT NOT NULL,
+                            summary TEXT,
+                            improvedText TEXT,
+                            isImproved INTEGER NOT NULL,
+                            originId TEXT,
+                            originType TEXT,
+                            rootId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_ideas_timestampMs ON ideas(timestampMs)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_ideas_originId ON ideas(originId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_ideas_rootId ON ideas(rootId)")
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS idea_followups (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            ideaId TEXT NOT NULL,
+                            createdAtMs INTEGER NOT NULL,
+                            text TEXT NOT NULL,
+                            improvedText TEXT,
+                            isImproved INTEGER NOT NULL,
+                            FOREIGN KEY(ideaId) REFERENCES ideas(id) ON DELETE CASCADE
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_idea_followups_ideaId ON idea_followups(ideaId)")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_idea_followups_ideaId_createdAtMs " +
+                            "ON idea_followups(ideaId, createdAtMs)"
+                    )
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS task_suggestions (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            createdAt INTEGER NOT NULL,
+                            originId TEXT,
+                            originType TEXT,
+                            rootId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_createdAt ON task_suggestions(createdAt)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_originId ON task_suggestions(originId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_rootId ON task_suggestions(rootId)")
                 }
             }
     }
