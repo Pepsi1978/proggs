@@ -603,6 +603,14 @@ constructor(
             }
         }
 
+        // Diagnose-Sonde (Frank-Wunsch 2026-06-19): Abschluss-Bilanz. Zusammen mit der
+        // "Restore-Payload"-Zeile oben (was im Backup ankam) ist damit sichtbar, was beim Start
+        // tatsaechlich NEU eingespielt wurde — die Differenz war lokal bereits vorhanden.
+        Diag.i(
+            DiagnosticArea.DRIVE_BACKUP,
+            "SyncEntries",
+            "Restore abgeschlossen: $inserted Eintraege NEU eingespielt, $updated aktualisiert",
+        )
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
     }

@@ -527,7 +527,10 @@ constructor(
             // triggern damit das andere Geraet die neuen Werte beim naechsten
             // App-Start sieht.
             if (cacheRows.isNotEmpty()) {
-                syncCoordinator.requestSync()
+                syncCoordinator.requestSync(
+                    "Biomarker: Health-Connect-Werte aktualisiert",
+                    SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
+                )
             }
         }
     }
@@ -572,7 +575,7 @@ constructor(
     fun saveCardOrder(newOrder: List<String>) {
         viewModelScope.launch {
             cardOrderRepo.saveOrder(newOrder)
-            syncCoordinator.requestSync()
+            syncCoordinator.requestSync("Biomarker: Kartenreihenfolge geaendert")
         }
     }
 
@@ -584,7 +587,7 @@ constructor(
     fun resetCardOrder() {
         viewModelScope.launch {
             cardOrderRepo.resetToDefault()
-            syncCoordinator.requestSync()
+            syncCoordinator.requestSync("Biomarker: Kartenreihenfolge zurueckgesetzt")
         }
     }
 
@@ -937,6 +940,13 @@ constructor(
             runCatching {
                 settings.setLastRefreshFooter(finalMessage, System.currentTimeMillis())
             }
+            // Frank-Wunsch 2026-06-19: nach dem Voll-Refresh aller Quellen EINEN Backup-Trigger
+            // mit 5s-Debounce. Erfasst auch Whoop/Oura, die selbst kein requestSync ausloesen;
+            // dirtyDuringUpload sorgt fuer einen zweiten Lauf, falls nach den 5s noch Werte kommen.
+            syncCoordinator.requestSync(
+                "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/Strava/HC)",
+                SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
+            )
         }
     }
 

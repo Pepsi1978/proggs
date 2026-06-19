@@ -136,10 +136,12 @@ constructor(
      * welchem Grund ein Backup ausgeloest hat — so ist im Log der komplette Backup-Fluss
      * (Mutation -> Trigger -> Debounce -> Upload) sichtbar.
      */
-    fun requestSync(reason: String = "unbekannt") {
+    fun requestSync(reason: String = "unbekannt", debounceMs: Long = DEBOUNCE_MS) {
         if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
 
-        // Wenn gerade ein Upload laeuft: nur Flag setzen, kein neuer Job.
+        // Wenn gerade ein Upload laeuft: nur Flag setzen, kein neuer Job. Der dirtyDuringUpload-
+        // Mechanismus startet danach automatisch einen weiteren Upload — das deckt Franks
+        // "falls nach den 5s noch weitere Werte kommen, danach nochmal sichern" ab.
         if (uploadMutex.isLocked) {
             dirtyDuringUpload = true
             diagnostics.info(
@@ -149,15 +151,17 @@ constructor(
             return
         }
 
-        // Vorhandener Pending-Job wird durch neuen ersetzt — Coalescing.
+        // Vorhandener Pending-Job wird durch neuen ersetzt — Coalescing. debounceMs erlaubt einen
+        // laengeren Sammel-Fenster (Frank-Wunsch 2026-06-19: Biomarker 5s, weil viele APIs
+        // ueber mehrere Sekunden nachladen) statt des Standard-1500ms.
         pendingJob?.cancel()
         _status.value = SyncStatus.Pending
         diagnostics.info(
             de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
-            "Backup-Trigger: $reason (Upload in ${DEBOUNCE_MS}ms)",
+            "Backup-Trigger: $reason (Upload in ${debounceMs}ms)",
         )
         pendingJob = scope.launch {
-            delay(DEBOUNCE_MS)
+            delay(debounceMs)
             performUpload()
         }
     }
@@ -528,29 +532,47 @@ constructor(
                     } else {
                         // Nur bei echter Aenderung die vollen Entities (inkl. Streams) laden.
                         val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
-                        val workoutBackups = workoutEntities.map { it.toBackup() }
-                        val workoutsPayload =
-                            WorkoutsBackupPayload(
-                                version = 1,
-                                exportedAt = System.currentTimeMillis(),
-                                workouts = workoutBackups,
+                        // M2-Schutz (Frank-Wunsch 2026-06-19, Almanach M2): Wenn lokal KEINE
+                        // Trainings vorhanden sind (frisch installiert / vor dem ersten Strava-/
+                        // Polar-Sync), aber das Remote-Workouts-Backup welche hat, NICHT mit leer
+                        // ueberschreiben. Trainings sind zwar re-syncbar, aber manuelle Edits +
+                        // Detail-Streams (GPS/Puls/Pace) sollen nicht durch ein leeres Geraet
+                        // verloren gehen. Beim naechsten echten Sync laedt das Geraet die Trainings
+                        // ohnehin neu und ueberschreibt dann mit vollem Stand.
+                        if (workoutEntities.isEmpty() && remoteWorkoutsHasData()) {
+                            diagnostics.info(
+                                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                                "M2-Schutz Workouts: lokal 0 Trainings, Remote-Backup voll -> Upload uebersprungen",
                             )
-                        val workoutsText =
-                            json.encodeToString(WorkoutsBackupPayload.serializer(), workoutsPayload)
-                        backupManager
-                            .uploadWorkouts(workoutsText)
-                            .onSuccess {
-                                // Fingerprint erst NACH erfolgreichem Upload speichern, damit ein
-                                // fehlgeschlagener Upload beim naechsten Mal erneut versucht wird.
-                                appSettingsLazy.get().setWorkoutsBackupFingerprint(fingerprint)
-                                _status.value = SyncStatus.Synced(System.currentTimeMillis())
-                            }
-                            .onFailure { ex ->
-                                _status.value =
-                                    SyncStatus.Failed(
-                                        "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                                    )
-                            }
+                            _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                        } else {
+                            val workoutBackups = workoutEntities.map { it.toBackup() }
+                            val workoutsPayload =
+                                WorkoutsBackupPayload(
+                                    version = 1,
+                                    exportedAt = System.currentTimeMillis(),
+                                    workouts = workoutBackups,
+                                )
+                            val workoutsText =
+                                json.encodeToString(
+                                    WorkoutsBackupPayload.serializer(),
+                                    workoutsPayload,
+                                )
+                            backupManager
+                                .uploadWorkouts(workoutsText)
+                                .onSuccess {
+                                    // Fingerprint erst NACH erfolgreichem Upload speichern, damit ein
+                                    // fehlgeschlagener Upload beim naechsten Mal erneut versucht wird.
+                                    appSettingsLazy.get().setWorkoutsBackupFingerprint(fingerprint)
+                                    _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                                }
+                                .onFailure { ex ->
+                                    _status.value =
+                                        SyncStatus.Failed(
+                                            "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                        )
+                                }
+                        }
                     }
                 } catch (oom: OutOfMemoryError) {
                     System.gc()
@@ -718,7 +740,28 @@ constructor(
     private fun <T> rescueIfLocalEmpty(local: List<T>, remote: List<T>): List<T> =
         if (local.isEmpty() && remote.isNotEmpty()) remote else local
 
+    /**
+     * M2-Schutz fuer das separate Workouts-Backup: true, wenn das Remote-Workouts-Backup mindestens
+     * ein Training enthaelt. Safe-Degradation: nicht lesbar/nicht vorhanden -> false (dann laeuft
+     * der normale Upload, wie vor dem Fix).
+     */
+    private suspend fun remoteWorkoutsHasData(): Boolean {
+        val raw = restoreManagerLazy.get().fetchWorkouts().getOrNull() ?: return false
+        return runCatching {
+                json.decodeFromString(WorkoutsBackupPayload.serializer(), raw).workouts.isNotEmpty()
+            }
+            .getOrDefault(false)
+    }
+
     companion object {
         private const val DEBOUNCE_MS = 1500L
+
+        /**
+         * Frank-Wunsch 2026-06-19: laengeres Debounce-Fenster fuer den Biomarker-Bereich (5 s).
+         * Dort laden mehrere APIs (Whoop/Oura/Strava/Health Connect) ueber mehrere Sekunden nach;
+         * mit 5 s werden sie zu EINEM Upload gesammelt. Kommen nach dem Upload noch weitere Werte,
+         * sorgt dirtyDuringUpload fuer einen zweiten Lauf.
+         */
+        const val BIOMARKER_DEBOUNCE_MS = 5000L
     }
 }
