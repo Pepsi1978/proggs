@@ -4025,6 +4025,10 @@ namespace ClaudeVoiceOverlay.Views
                 var sync = GetOrCreateVocabSync();
                 if (sync is null) return;
                 await sync.UploadAsync();
+                // Sync-Timestamp im Promptboard aktualisieren — sichtbare
+                // Bestaetigung, dass das Vokabular zu Drive hochgeladen wurde
+                // (gleicher Timestamp wie Slots/History; Frank-Wunsch).
+                _promptPanel?.MarkSyncedNow();
             }
             catch (Exception ex)
             {
