@@ -30,11 +30,11 @@ class HypothesisRepository @Inject constructor(
     suspend fun get(id: String): HypothesisEntity? = dao.getById(id)
     suspend fun upsert(h: HypothesisEntity) {
         dao.upsert(h)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Hypothese geaendert")
     }
     suspend fun update(h: HypothesisEntity) {
         dao.update(h)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Hypothese geaendert")
     }
 
     /**
@@ -44,6 +44,6 @@ class HypothesisRepository @Inject constructor(
     suspend fun delete(h: HypothesisEntity) {
         messageDao.deleteForHypothesis(h.id)
         dao.delete(h)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Hypothese geaendert")
     }
 }

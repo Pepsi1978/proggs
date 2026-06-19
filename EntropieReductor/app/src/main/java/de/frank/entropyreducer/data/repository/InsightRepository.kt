@@ -29,16 +29,16 @@ class InsightRepository @Inject constructor(
 
     suspend fun upsert(i: InsightEntity) {
         dao.upsert(i)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Insight geaendert")
     }
 
     suspend fun update(i: InsightEntity) {
         dao.update(i)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Insight geaendert")
     }
 
     suspend fun delete(i: InsightEntity) {
         dao.delete(i)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Insight geaendert")
     }
 }

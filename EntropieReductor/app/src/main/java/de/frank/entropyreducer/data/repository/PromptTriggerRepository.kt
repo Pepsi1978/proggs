@@ -63,22 +63,22 @@ constructor(
 
     suspend fun upsert(trigger: PromptTriggerEntity) {
         dao.upsert(trigger)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 
     suspend fun update(trigger: PromptTriggerEntity) {
         dao.update(trigger)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 
     suspend fun delete(trigger: PromptTriggerEntity) {
         dao.delete(trigger)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 
     suspend fun deleteAllForPrompt(promptId: String) {
         dao.deleteByPrompt(promptId)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 
     /**
@@ -88,7 +88,7 @@ constructor(
      */
     suspend fun deleteOrphanedChainTriggers(sourcePromptId: String) {
         dao.deleteOrphanedChainTriggers(sourcePromptId)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 
     /**
@@ -108,6 +108,6 @@ constructor(
     suspend fun setActive(triggerId: String, isActive: Boolean) {
         val trigger = dao.getById(triggerId) ?: return
         dao.update(trigger.copy(isActive = isActive))
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Auto-Trigger geaendert")
     }
 }

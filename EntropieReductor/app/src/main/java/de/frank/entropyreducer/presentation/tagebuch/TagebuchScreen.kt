@@ -899,7 +899,7 @@ internal suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
         val updated = existing + entry
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 internal suspend fun deleteTagebuchEntry(context: Context, id: String) {
@@ -908,7 +908,7 @@ internal suspend fun deleteTagebuchEntry(context: Context, id: String) {
         val updated = existing.filterNot { it.id == id }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 /**
@@ -953,7 +953,7 @@ internal suspend fun updateTagebuchEntry(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 /**
@@ -981,7 +981,7 @@ internal suspend fun setTagebuchFollowupImproved(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 /**
@@ -1000,7 +1000,7 @@ internal suspend fun addTagebuchFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 internal suspend fun updateTagebuchFollowup(
@@ -1020,7 +1020,7 @@ internal suspend fun updateTagebuchFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 internal suspend fun deleteTagebuchFollowup(context: Context, entryId: String, followupId: String) {
@@ -1032,7 +1032,7 @@ internal suspend fun deleteTagebuchFollowup(context: Context, entryId: String, f
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
 private fun parseEntries(raw: String?): List<TagebuchEntry> {

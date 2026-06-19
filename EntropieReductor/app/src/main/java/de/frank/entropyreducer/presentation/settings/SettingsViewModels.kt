@@ -297,7 +297,7 @@ constructor(
 
     fun save(text: String) = viewModelScope.launch {
         settings.setProfileText(text)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Einstellungen: Profiltext geaendert")
     }
 
     /**

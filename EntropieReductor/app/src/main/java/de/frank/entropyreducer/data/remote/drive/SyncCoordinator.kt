@@ -131,19 +131,31 @@ constructor(
     /**
      * Wird vom Repository nach jeder Mutation aufgerufen. Wenn Backup deaktiviert oder kein Account
      * verbunden, wird der Trigger ignoriert — ohne Fehler.
+     *
+     * Diagnose-Sonde (Frank-Wunsch 2026-06-19): jeder Backup-Trigger loggt mit [reason], WER aus
+     * welchem Grund ein Backup ausgeloest hat — so ist im Log der komplette Backup-Fluss
+     * (Mutation -> Trigger -> Debounce -> Upload) sichtbar.
      */
-    fun requestSync() {
+    fun requestSync(reason: String = "unbekannt") {
         if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
 
         // Wenn gerade ein Upload laeuft: nur Flag setzen, kein neuer Job.
         if (uploadMutex.isLocked) {
             dirtyDuringUpload = true
+            diagnostics.info(
+                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                "Backup-Trigger '$reason' waehrend laufendem Upload -> als dirty markiert (Re-Run danach)",
+            )
             return
         }
 
         // Vorhandener Pending-Job wird durch neuen ersetzt — Coalescing.
         pendingJob?.cancel()
         _status.value = SyncStatus.Pending
+        diagnostics.info(
+            de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+            "Backup-Trigger: $reason (Upload in ${DEBOUNCE_MS}ms)",
+        )
         pendingJob = scope.launch {
             delay(DEBOUNCE_MS)
             performUpload()
@@ -151,8 +163,12 @@ constructor(
     }
 
     /** Sofortiger Upload ohne Debounce (z. B. beim Tippen auf "Jetzt sichern"). */
-    fun requestImmediate() {
+    fun requestImmediate(reason: String = "Sofort-Backup") {
         if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
+        diagnostics.info(
+            de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+            "Sofort-Backup-Trigger: $reason",
+        )
         pendingJob?.cancel()
         scope.launch { performUpload() }
     }
@@ -616,7 +632,7 @@ constructor(
         }
         // Wenn waehrend des Uploads neue Aenderungen kamen: noch einen Run.
         if (dirtyDuringUpload) {
-            requestSync()
+            requestSync("Re-Run: Aenderung kam waehrend laufendem Upload")
         }
     }
 

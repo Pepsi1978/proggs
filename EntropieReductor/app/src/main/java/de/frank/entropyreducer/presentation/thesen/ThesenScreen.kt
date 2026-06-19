@@ -885,7 +885,7 @@ internal suspend fun addThesenEntry(context: Context, entry: ThesenEntry) {
         val updated = existing + entry
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 internal suspend fun deleteThesenEntry(context: Context, id: String) {
@@ -894,7 +894,7 @@ internal suspend fun deleteThesenEntry(context: Context, id: String) {
         val updated = existing.filterNot { it.id == id }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 /**
@@ -939,7 +939,7 @@ internal suspend fun updateThesenEntry(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 /**
@@ -967,7 +967,7 @@ internal suspend fun setThesenFollowupImproved(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 /**
@@ -986,7 +986,7 @@ internal suspend fun addThesenFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 internal suspend fun updateThesenFollowup(
@@ -1006,7 +1006,7 @@ internal suspend fun updateThesenFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 internal suspend fun deleteThesenFollowup(context: Context, entryId: String, followupId: String) {
@@ -1018,7 +1018,7 @@ internal suspend fun deleteThesenFollowup(context: Context, entryId: String, fol
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
 private fun parseEntries(raw: String?): List<ThesenEntry> {

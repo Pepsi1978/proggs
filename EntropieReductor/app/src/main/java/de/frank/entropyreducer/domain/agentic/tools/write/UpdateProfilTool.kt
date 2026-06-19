@@ -97,7 +97,7 @@ constructor(
             val oldLength = oldText.length
 
             appSettings.setProfileText(neuerText)
-            syncCoordinator.get().requestSync()
+            syncCoordinator.get().requestSync("Agentic-AI: Profiltext aktualisiert")
 
             val resultJson = buildJsonObject {
                 put("oldLength", oldLength)

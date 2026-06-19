@@ -111,7 +111,7 @@ constructor(
             )
 
             followupDao.upsert(followup)
-            syncCoordinator.get().requestSync()
+            syncCoordinator.get().requestSync("Agentic-AI: Aufgaben-Nachtrag hinzugefuegt")
 
             val resultJson = buildJsonObject {
                 put("followupId", followupId)

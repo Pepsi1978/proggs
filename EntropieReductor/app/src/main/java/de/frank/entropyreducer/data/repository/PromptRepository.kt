@@ -33,12 +33,12 @@ constructor(
 
     suspend fun upsert(prompt: SavedPromptEntity) {
         dao.upsert(prompt)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Prompt geaendert")
     }
 
     suspend fun delete(prompt: SavedPromptEntity) {
         dao.delete(prompt)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Prompt geaendert")
     }
 
     suspend fun count(): Int = dao.count()
@@ -47,16 +47,16 @@ constructor(
 
     suspend fun updateModel(id: String, model: String) {
         dao.updateModel(id, model, System.currentTimeMillis())
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Prompt geaendert")
     }
 
     suspend fun updateTokenLimit(id: String, limit: Int?) {
         dao.updateTokenLimit(id, limit, System.currentTimeMillis())
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Prompt geaendert")
     }
 
     suspend fun updateTrustMode(id: String, trust: Boolean) {
         dao.updateTrustMode(id, trust, System.currentTimeMillis())
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Prompt geaendert")
     }
 }

@@ -120,7 +120,7 @@ internal suspend fun addMental(context: Context, text: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing + Mental.create(clean))
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 internal suspend fun updateMental(context: Context, id: String, text: String) {
@@ -131,7 +131,7 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
         prefs[KEY_MENTALS] =
             serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 internal suspend fun deleteMental(context: Context, id: String) {
@@ -139,13 +139,13 @@ internal suspend fun deleteMental(context: Context, id: String) {
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] = serializeMentals(existing.filterNot { it.id == id })
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 /** Speichert die per Drag & Drop geaenderte Reihenfolge 1:1. */
 internal suspend fun reorderMentals(context: Context, newOrder: List<Mental>) {
     context.mentalStore.edit { prefs -> prefs[KEY_MENTALS] = serializeMentals(newOrder) }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 /**

@@ -24,11 +24,11 @@ class HypothesisMessageRepository @Inject constructor(
 
     suspend fun insert(message: HypothesisMessageEntity) {
         dao.insert(message)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Hypothese-Nachricht geaendert")
     }
 
     suspend fun deleteForHypothesis(hypothesisId: String) {
         dao.deleteForHypothesis(hypothesisId)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Hypothese-Nachricht geaendert")
     }
 }

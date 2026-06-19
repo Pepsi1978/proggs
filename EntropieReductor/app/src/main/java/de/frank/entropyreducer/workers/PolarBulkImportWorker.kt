@@ -160,7 +160,7 @@ constructor(
             // Cache aufraeumen (nur unsere eigene Datei)
             cacheFileToCleanup?.let { runCatching { it.delete() } }
 
-            syncCoordinator.requestSync()
+            syncCoordinator.requestSync("Training: Polar-Bulk-Import abgeschlossen")
             showCompletionNotification(allEntities.size, totalSkipped)
             Result.success()
         } catch (ce: kotlinx.coroutines.CancellationException) {

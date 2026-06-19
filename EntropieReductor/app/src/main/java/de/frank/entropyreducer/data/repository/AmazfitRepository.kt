@@ -100,7 +100,7 @@ constructor(
             "Workout-Cleanup-Migration: loesche alle amazfit_workouts und triggere Drive-Sync",
         )
         workoutDao.deleteAll()
-        syncCoordinatorLazy.get().requestSync()
+        syncCoordinatorLazy.get().requestSync("Training: Cleanup-Migration")
     }
 
     /**
@@ -120,7 +120,7 @@ constructor(
         val changed = workoutDao.renameSportName(oldName, newName)
         if (changed > 0) {
             Diag.i(DiagnosticArea.AMAZFIT, TAG, "Sport-Rename: $changed Workouts '$oldName' -> '$newName'")
-            syncCoordinatorLazy.get().requestSync()
+            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
         }
         return changed
     }
@@ -259,7 +259,7 @@ constructor(
         // manueller Wert geaendert wird — der Edit darf bei einem Reinstall
         // nicht verloren gehen. Debounce in requestSync() (1500 ms) sorgt fuer
         // Coalescing wenn Frank mehrere Felder kurz hintereinander editiert.
-        syncCoordinatorLazy.get().requestSync()
+        syncCoordinatorLazy.get().requestSync("Training: manuell editiert ($trackId)")
         return true
     }
 
@@ -283,7 +283,7 @@ constructor(
                 "(behalten: startMs zwischen $olderThanMs und $newerThanMs)",
         )
         if (deleted > 0) {
-            syncCoordinatorLazy.get().requestSync()
+            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
         }
         return deleted
     }
@@ -302,7 +302,7 @@ constructor(
     suspend fun deleteWorkoutByTrackId(trackId: String): Int {
         val deleted = workoutDao.deleteByTrackId(trackId)
         if (deleted > 0) {
-            syncCoordinatorLazy.get().requestSync()
+            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
         }
         return deleted
     }
@@ -350,7 +350,7 @@ constructor(
                 val stravaCount = mergeFromStrava(days = days.coerceAtMost(60))
                 if (stravaCount > 0) {
                     Diag.i(DiagnosticArea.AMAZFIT, TAG, "Strava-Merge: $stravaCount Workouts importiert/aktualisiert")
-                    syncCoordinatorLazy.get().requestSync()
+                    syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
                 }
                 return@runCatchingCancellable stravaCount
             }
@@ -704,7 +704,7 @@ constructor(
         // mehrere Merges hintereinander nur EINEN Upload ausloesen.
         val touched = newCount + replaceCount + protectedCount
         if (touched > 0) {
-            syncCoordinatorLazy.get().requestSync()
+            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
         }
         return touched
     }
@@ -869,7 +869,7 @@ constructor(
                 TAG,
                 "Trainings-Retention: $deleted Workouts aelter als $TRAINING_RETENTION_DAYS Tage geloescht ($before -> $after)",
             )
-            syncCoordinatorLazy.get().requestSync()
+            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
         }
         return deleted
     }

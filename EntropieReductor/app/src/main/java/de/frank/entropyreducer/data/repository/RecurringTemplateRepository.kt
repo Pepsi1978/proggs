@@ -30,12 +30,12 @@ class RecurringTemplateRepository @Inject constructor(
 
     suspend fun upsert(template: RecurringTemplateEntity) {
         dao.upsert(template)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Wiederkehrende Aufgaben-Vorlage geaendert")
     }
 
     suspend fun deleteById(id: String) {
         dao.deleteById(id)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Wiederkehrende Aufgaben-Vorlage geaendert")
     }
 
     suspend fun getAllForBackup(): List<RecurringTemplateEntity> = dao.getAllForBackup()

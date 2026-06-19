@@ -34,28 +34,28 @@ class ScientistRepository @Inject constructor(
 
     suspend fun upsertSession(session: ScientistSessionEntity) {
         sessionDao.upsert(session)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
     suspend fun updateSession(session: ScientistSessionEntity) {
         sessionDao.update(session)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
     suspend fun archiveSession(session: ScientistSessionEntity) {
         sessionDao.update(session.copy(isArchived = true))
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
 
     suspend fun insertMessage(message: ScientistMessageEntity) {
         messageDao.insert(message)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
     suspend fun updateMessage(message: ScientistMessageEntity) {
         messageDao.update(message)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
     suspend fun deleteMessageById(id: String) {
         messageDao.deleteById(id)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Session/Nachricht geaendert")
     }
     suspend fun getAllMessages(): List<ScientistMessageEntity> = messageDao.getAll()
 

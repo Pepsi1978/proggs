@@ -60,21 +60,21 @@ constructor(private val dao: EntropyEntryDao, private val coordinatorLazy: Lazy<
 
     suspend fun upsert(entry: EntropyEntryEntity) {
         dao.upsert(entry)
-        coordinatorLazy.get().requestSync()
+        coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: hinzugefuegt/geaendert")
     }
 
     suspend fun update(entry: EntropyEntryEntity) {
         dao.update(entry)
-        coordinatorLazy.get().requestSync()
+        coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: editiert")
     }
 
     suspend fun delete(entry: EntropyEntryEntity) {
         dao.delete(entry)
-        coordinatorLazy.get().requestSync()
+        coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: geloescht")
     }
 
     suspend fun deleteAll() {
         dao.deleteAll()
-        coordinatorLazy.get().requestSync()
+        coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: alle geloescht")
     }
 }

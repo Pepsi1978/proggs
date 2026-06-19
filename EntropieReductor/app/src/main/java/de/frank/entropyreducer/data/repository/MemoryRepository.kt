@@ -25,21 +25,21 @@ constructor(private val dao: MemoryDao, private val syncCoordinator: Lazy<SyncCo
 
     suspend fun upsert(memory: MemoryEntryEntity) {
         dao.upsert(memory)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Memory geaendert")
     }
 
     suspend fun delete(memory: MemoryEntryEntity) {
         dao.delete(memory)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Memory geaendert")
     }
 
     suspend fun deleteAll() {
         dao.deleteAll()
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Memory geaendert")
     }
 
     suspend fun deleteBySource(src: MemorySource) {
         dao.deleteBySource(src)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Forscher: Memory geaendert")
     }
 }

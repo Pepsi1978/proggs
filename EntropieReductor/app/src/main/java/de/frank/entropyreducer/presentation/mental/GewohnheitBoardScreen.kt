@@ -95,7 +95,7 @@ internal suspend fun addGewohnheit(context: Context, text: String) {
         val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
         prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing + Mental.create(clean))
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun updateGewohnheit(context: Context, id: String, text: String) {
@@ -106,7 +106,7 @@ internal suspend fun updateGewohnheit(context: Context, id: String, text: String
         prefs[KEY_GEWOHNHEITEN] =
             serializeGewohnheiten(existing.map { if (it.id == id) it.copy(text = clean) else it })
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun deleteGewohnheit(context: Context, id: String) {
@@ -114,12 +114,12 @@ internal suspend fun deleteGewohnheit(context: Context, id: String) {
         val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
         prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing.filterNot { it.id == id })
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun reorderGewohnheiten(context: Context, newOrder: List<Mental>) {
     context.gewohnheitStore.edit { prefs -> prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(newOrder) }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun restoreGewohnheiten(context: Context, incoming: List<Mental>): Int {

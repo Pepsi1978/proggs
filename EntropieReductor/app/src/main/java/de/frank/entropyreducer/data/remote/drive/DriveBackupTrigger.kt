@@ -23,13 +23,13 @@ interface SyncCoordinatorEntryPoint {
     fun syncCoordinator(): SyncCoordinator
 }
 
-fun triggerDriveBackup(context: Context) {
+fun triggerDriveBackup(context: Context, reason: String = "DataStore-Aenderung") {
     runCatching {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
             SyncCoordinatorEntryPoint::class.java,
         )
             .syncCoordinator()
-            .requestSync()
+            .requestSync(reason)
     }
 }

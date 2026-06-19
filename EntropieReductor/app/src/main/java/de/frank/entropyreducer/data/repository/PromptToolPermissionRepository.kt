@@ -56,28 +56,28 @@ constructor(
 
     suspend fun upsert(permission: PromptToolPermissionEntity) {
         dao.upsert(permission)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Tool-Permission geaendert")
     }
 
     suspend fun update(permission: PromptToolPermissionEntity) {
         dao.update(permission)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Tool-Permission geaendert")
     }
 
     suspend fun delete(permission: PromptToolPermissionEntity) {
         dao.delete(permission)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Tool-Permission geaendert")
     }
 
     suspend fun deleteAllForPrompt(promptId: String) {
         dao.deleteByPrompt(promptId)
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Tool-Permission geaendert")
     }
 
     /** Convenience: alle Permissions eines Prompts auf einmal setzen (vom Permission-Editor-UI). */
     suspend fun setAll(promptId: String, permissions: List<PromptToolPermissionEntity>) {
         permissions.forEach { dao.upsert(it) }
         // Nur EIN Sync-Trigger fuer die ganze Batch (debounce coalesced ohnehin).
-        syncCoordinator.get().requestSync()
+        syncCoordinator.get().requestSync("Agentic-AI: Tool-Permission geaendert")
     }
 }
