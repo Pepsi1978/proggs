@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 13,
+    val version: Int = 14,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -151,6 +151,15 @@ data class BackupPayload(
      * Default emptyList damit aeltere Backups (v1-v12) weiterhin lesbar bleiben.
      */
     val ideenEntries: List<BackupIdeenEntry> = emptyList(),
+    /**
+     * Schema v14 (Frank-Bugfix 2026-06-19): Gewohnheit-Eintraege (Aufgaben-Reiter "Gewohnheit").
+     * Bisher GAR NICHT im Backup — der Reiter wurde hinzugefuegt, aber weder im Upload gesammelt
+     * noch beim Restore eingespielt (obwohl restoreGewohnheiten() bereits existierte). Bei jedem
+     * App-Update/Reinstall gingen die Gewohnheiten verloren. Gleiches Format wie Mentalboard
+     * (nur id + Satz, Reihenfolge = Listen-Position). Default emptyList damit aeltere Backups
+     * (v1-v13) weiterhin lesbar bleiben.
+     */
+    val gewohnheiten: List<BackupMental> = emptyList(),
 )
 
 /**

@@ -346,9 +346,17 @@ constructor(
                     )
                 }
 
+            // Frank-Bugfix 2026-06-19: Gewohnheit-Eintraege (Aufgaben-Reiter "Gewohnheit") ins
+            // Haupt-Backup. Bisher GAR NICHT gesichert — bei jedem Update/Reinstall verloren.
+            // DataStore-basiert wie Mental/Ideen (gewohnheit_board), gleiche id+text-Struktur.
+            val gewohnheitBackups =
+                de.frank.entropyreducer.presentation.mental.gewohnheitenFlow(appContext).first().map {
+                    BackupMental(id = it.id, text = it.text)
+                }
+
             val payload =
                 BackupPayload(
-                    version = 13,
+                    version = 14,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -371,6 +379,7 @@ constructor(
                     amazfitDaily = amazfitDailyBackups,
                     mentals = mentalBackups,
                     ideenEntries = ideenBackups,
+                    gewohnheiten = gewohnheitBackups,
                 )
             // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
             // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per
@@ -381,7 +390,9 @@ constructor(
                 de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
                 "Payload-Aufbau in ${payloadBuildMs}ms " +
                     "(Aufgaben=${entries.size}, Insights=${insights.size}, Memories=${memories.size}, " +
-                    "Prompts=${allPrompts.size}, Amazfit-Daily=${amazfitDailyBackups.size})",
+                    "Prompts=${allPrompts.size}, Amazfit-Daily=${amazfitDailyBackups.size}, " +
+                    "Mental=${mentalBackups.size}, Ideen=${ideenBackups.size}, " +
+                    "Gewohnheit=${gewohnheitBackups.size})",
             )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

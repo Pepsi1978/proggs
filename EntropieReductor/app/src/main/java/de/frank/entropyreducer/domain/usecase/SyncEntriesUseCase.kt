@@ -108,6 +108,19 @@ constructor(
                     return Result.failure(it)
                 }
 
+        // Diagnose-Sonde (Frank-Bugfix 2026-06-19): zeigt im Log GENAU, was das vom Drive
+        // geladene Haupt-Backup an Aufgabenreiter-Daten enthaelt — damit live nachvollziehbar
+        // ist, ob Mental/Ideen/Gewohnheit ueberhaupt im Backup ankommen (Multi-Device-Overwrite
+        // M2 vs. leeres Backup) oder ob der Restore sie nicht einspielt. Reine Messung.
+        Diag.i(
+            DiagnosticArea.DRIVE_BACKUP,
+            "SyncEntries",
+            "Restore-Payload v${payload.version}: entries=${payload.entries.size}, " +
+                "mentals=${payload.mentals.size}, ideen=${payload.ideenEntries.size}, " +
+                "gewohnheiten=${payload.gewohnheiten.size}, tagebuch=${payload.tagebuchEntries.size}, " +
+                "thesen=${payload.thesenEntries.size}",
+        )
+
         var inserted = 0
         var updated = 0
 
@@ -410,6 +423,20 @@ constructor(
                 )
                 inserted++
             }
+        }
+
+        // --- Gewohnheit-Eintraege (v14+, Frank-Bugfix 2026-06-19) ---
+        // DataStore-basiert wie Mental. restoreGewohnheiten ergaenzt nur fehlende IDs —
+        // lokale Reihenfolge/Edits gewinnen (konservativ, exakt wie Mental/Tagebuch).
+        // Bisher GAR NICHT restored, obwohl restoreGewohnheiten() bereits existierte.
+        if (payload.gewohnheiten.isNotEmpty()) {
+            inserted +=
+                de.frank.entropyreducer.presentation.mental.restoreGewohnheiten(
+                    appContext,
+                    payload.gewohnheiten.map {
+                        de.frank.entropyreducer.presentation.mental.Mental(id = it.id, text = it.text)
+                    },
+                )
         }
 
         // --- Aufgaben-Nachtraege (v6+) ---
