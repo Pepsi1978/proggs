@@ -129,6 +129,10 @@ class TasksViewModel @Inject constructor(
     // Frank-Wunsch 2026-06-19: fuer die Rueckwaerts-Propagierung der Prio einer Loop-Instanz
     // ins zugehoerige Loop-Template (Heute-Aenderung -> Loop-Bereich konsistent).
     private val recurringTemplates: RecurringTemplateRepository,
+    // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis (lernt manuell gesetzte Prioritaeten,
+    // damit die KI bei neuen, sehr aehnlichen Aufgaben dieselbe Prio vorschlaegt).
+    private val priorityMemoryRepository:
+        de.frank.entropyreducer.data.repository.PriorityMemoryRepository,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -995,6 +999,16 @@ class TasksViewModel @Inject constructor(
                     updatedAt = now,
                 )
             )
+            // Frank-Wunsch 2026-06-19: Prio ins Prioritaets-Gedaechtnis lernen (nur wenn aktiviert).
+            // Gilt fuer normale UND Loop-Aufgaben. Spaeter gleicht die KI neue Aufgaben dagegen ab.
+            if (settings.priorityMemoryEnabledFlow.first()) {
+                priorityMemoryRepository.learnFromManualPriority(entry, clamped, now)
+                Diag.i(
+                    DiagnosticArea.APP,
+                    "PrioMemory",
+                    "gelernt: '${entry.title.take(32)}' -> ${clamped.toInt()}",
+                )
+            }
             // Frank-Wunsch 2026-06-19 (Bugfix): Ist die geaenderte Aufgabe eine LOOP-INSTANZ, muss
             // die Prio-Aenderung RUECKWAERTS ins Loop-Template (Loop-Bereich) UND in alle offenen
             // Geschwister-Instanzen propagieren — sonst stehen Heute (z.B. 60) und Loop (z.B. 30)
