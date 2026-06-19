@@ -457,6 +457,23 @@
 **FIX:** Im Zweifel immer `opencode.ai` (offizielle Doku) + `github.com/anomalyco/opencode` als Primärquelle; Plugin-Discovery offiziell über `opencode.ai/docs/ecosystem/`.
 **Quelle:** https://opencode.ai/docs/
 
+### 55c. Plugin-spezifische Fallen einzelner Ecosystem-Plugins (recherchiert Juni 2026)
+**Symptom/Ursache + Fix je Plugin** — beim Einsatz des jeweiligen Plugins beachten. Übergreifend gilt: Plugins werden **event-getriggert** (kein Triggerwort, nicht bei jeder Anfrage); „Erst-Plan"-Plugins erzwingen keinen Plan bei trivialen Anfragen.
+
+| Plugin | Falle | Funktionserhaltender Fix | Quelle |
+|--------|-------|--------------------------|--------|
+| notify/notificator/notifier | kdcokenny/notify: auf Windows nur fester System-Toast (eigene WAV nur macOS); panta82/notificator: Per-Projekt- statt Per-Event-Töne | Für „Ton pro Event auf Windows+Mac" mohak34/opencode-notifier nehmen | DeepWiki/OpenCodeDocs |
+| sentry-monitor | `recordInputs`/`recordOutputs` Default **true** → Prompts, Tool-Outputs, ggf. Code/Secrets gehen an DSN-Ziel; kein Secret-Scrubber | `recordInputs:false`+`recordOutputs:false` ODER Self-Hosted-Sentry (eigener DSN) + Data-Scrubbing | github.com/stolinski/opencode-sentry-monitor |
+| plannotator | <0.20.0 unter Node-Host importiert Bun-Server-Code → Inkompatibilität; häufige Breaking-Migrations (0.13.1/0.19.1) | v0.20.0+ nutzen; vor Update Migration-Doku lesen | plannotator.ai/docs |
+| ocx (npm-Install) | braucht **Bun im PATH** zur Laufzeit; Node allein reicht nicht (Windows) | Auf Windows Binary-Install (install.sh) ODER Bun installieren | ocx.kdco.dev/docs |
+| opencode-skillful | wartungsarm (letzter Commit ~4 Mon.), durch native Skills überholt | native Skills nutzen statt Plugin | sourcepulse.org/projects/27131596 |
+| micode | keine Lizenz im Repo (Rechts-/Adoptions-Blocker) | vor produktiver Nutzung Lizenz klären | sourcepulse.org/projects/25924494 |
+| firecrawl | Default = Firecrawl-Cloud (Inhalte → USA); braucht API-Key | self-host möglich (schwächeres JS-Rendering); Key Free-Tier 1000 Seiten/Mon | firecrawl.dev |
+| supermemory | Fehlinfo „cloud-only" kursiert — FALSCH | MIT + `npx supermemory local` (Port 6767), voll self-hostbar | github.com/supermemoryai/supermemory |
+| opencode-worktree | erzeugt eigene Branches pro Worktree (git-bedingt) → unvereinbar mit „alles direkt auf main"-Workflows | bei Direkt-auf-main NICHT einsetzen; mehrere Fenster auf einem geteilten Worktree bleiben der Weg | git worktree-Mechanik |
+
+**Versionen:** Stand Juni 2026 (OpenCode v1.17.8-Ökosystem).
+
 ---
 
 ## 8. MCP-Server

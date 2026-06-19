@@ -314,6 +314,44 @@ OpenCode hat **keine eigene Plugin-Registry** — Plugins sind npm-Pakete. Disco
 **Windows-Empfehlung (offiziell):** OpenCode kann nativ laufen, aber **WSL empfohlen** (FS-Performance,
 Terminal-Support, Tool-Kompatibilität). Für reibungslose MCP-/Plugin-Nutzung Repo ins WSL-Dateisystem legen.
 
+## 8. Plugin-Trigger-Modell & konkrete Plugin-Auswahl (recherchiert 2026-06-19)
+
+### Wie Plugins ausgelöst werden — es gibt KEINE Triggerwörter
+Häufiges Missverständnis: OpenCode-Plugins springen NICHT auf Triggerwörter an und laufen NICHT bei jeder Anfrage störend mit.
+
+| Typ | Auslösung | Bei jeder Anfrage aktiv? |
+|-----|-----------|--------------------------|
+| Plugin / Hook | event-getriggert (`tool.execute.before/after`, `session.idle`, `session.created`, `file.edited`, `permission.asked` …) | Nein — nur wenn sein Event eintritt |
+| Command | Slash-Befehl, manuell | Nein — nur auf Abruf |
+| Skill | on-demand; Modell wählt nach `name`+`description` (kein starres Triggerwort) | Nein — nur bei Bedarf |
+| Agent / Mode | eigene Modus-Schicht (z.B. `plan`) | nur im gewählten Modus |
+
+Konsequenz: Ein installiertes Plugin ist „geladen", führt aber nur Code aus, wenn sein konkretes Event passiert. „Erst-Plan/erst-Frage"-Plugins (micode, plannotator) erzwingen daher KEINEN Plan bei trivialen Anfragen. Skill-Trigger-Zuverlässigkeit hängt an einer klaren `description` (nativ wie per Plugin).
+
+### Konkrete Plugin-Auswahl (recherchiert, mit Eignungs-Urteil)
+| Plugin | Urteil | Begründung / Konfig |
+|--------|--------|---------------------|
+| opencode-notifier (mohak34) | EMPFOHLEN für Ton | Einziges mit echten WAV-Tönen auf **Windows+Mac** UND getrennten Events (`permission`/`complete`/`error`). `"plugin":["@mohak34/opencode-notifier@latest"]`, WAV pro Event in `opencode-notifier.json`. notify(kdcokenny)=Windows nur System-Toast; notificator(panta82)=Per-Projekt statt Per-Event. |
+| opencode-openai-codex-auth | EMPFOHLEN | Abo statt API-Kosten. |
+| opencode-dynamic-context-pruning | EMPFOHLEN | Token-Pruning, passt zu lossless-context. |
+| supermemory (self-hosted) | EMPFOHLEN (Eigenbau) | siehe Self-hosted-Memory unten. |
+| firecrawl | sinnvoll (Recherche) | Werkzeug (Agent ruft bei Bedarf), `search` liefert Markdown statt Links. Firecrawl-API-Key (Free 1000 Seiten/Mon), Cloud (USA) oder self-host. |
+| native Skills statt opencode-skillful | nativ nutzen | skillful überholt + wartungsarm; native Skills laden on-demand identisch. |
+| micode | optional | command-getrieben, kein Zwang; native Skills/Brainstorm decken das meist ab; keine Lizenz im Repo. |
+| plannotator | optional | Default greift nur im Plan-Modus; `workflow:"manual"` = nur auf Abruf. |
+| sentry-monitor | nur mit Self-Host | Default sendet Prompts/Code (siehe Almanach §55c). |
+| ocx | erst ab vielen Plugins/Profilen | sonst direkter opencode.json-Eintrag; braucht Bun auf Windows. |
+| opencode-worktree | NICHT für „alles auf main" | erzwingt eigene Branches pro Worktree — unvereinbar mit Direkt-auf-main-Workflow. |
+| OpenWork | später beobachten | Alpha, Windows schwach; ggf. gegen Cowork-Mount-Probleme in 2-3 Mon. neu bewerten. |
+
+### Self-hosted Memory für OpenCode UND Claude Code (Eigenbau)
+Ziel „ein Server, beide CLIs": Claude Code spricht MCP nativ, OpenCode via Plugin oder MCP → **ein Memory-Server mit MCP-Endpunkt bedient beide**.
+- **Schnellster Weg — Supermemory self-hosted** (MIT, ~27k Stars): `npx supermemory local` → API auf `localhost:6767`, Postgres+pgvector, Ollama-Embeddings (offline). Bringt fertiges OpenCode-Plugin + MCP für Claude Code mit.
+- **Alternativen:** mem0 (Apache-2.0, Docker, am meisten Claude-Code-erprobt, Knowledge-Graph); Hindsight (MIT, schlank, MCP-first).
+- **Komplett-Eigenbau-Stack:** Postgres+pgvector (Speicher) + Ollama (lokale Embeddings, keine Kosten) + dünner MCP-Server (Tools: add/search/list/forget). Scoping: user-Hash (git-Email) + projekt-Hash (Verzeichnis); Privates `<private>`→`[REDACTED]` vor Speicherung.
+- Trigger im supermemory-Plugin: liest auto bei Session-Start, schreibt bei Keywords ("remember"/"save this") + bei ~80% Kontext (Compaction).
+- Quellen: github.com/supermemoryai/supermemory · github.com/elvismdev/mem0-mcp-selfhosted · supermemory.ai/docs/integrations/opencode
+
 ## Quellen
 **Offiziell:** opencode.ai/docs/mcp-servers, /plugins, /custom-tools, /skills, /commands, /config, /ecosystem,
 /windows-wsl; GitHub anomalyco/opencode `packages/plugin/src/index.ts` (Hook-Typdefinition).
