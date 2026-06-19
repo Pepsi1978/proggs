@@ -224,12 +224,14 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 if (string.IsNullOrWhiteSpace(vocab)) return string.Empty;
 
                 return
-                    "PERSÖNLICHES VOKABULAR (häufige Begriffe des Sprechers):\n" +
-                    "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. " +
-                    "Wenn ein transkribiertes Wort phonetisch einem dieser Begriffe ähnelt " +
-                    "UND es im Satzkontext Sinn ergibt, verwende die hier angegebene korrekte " +
-                    "Schreibweise. Erzwinge eine Ersetzung NICHT, wenn der Kontext eine andere " +
-                    "Bedeutung nahelegt.\n" +
+                    "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n" +
+                    "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-" +
+                    "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein " +
+                    "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext " +
+                    "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die " +
+                    "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat " +
+                    "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-" +
+                    "Kontext zu \"Backend\").\n" +
                     vocab + "\n\n";
             }
             catch

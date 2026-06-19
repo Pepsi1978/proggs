@@ -908,6 +908,14 @@ public partial class PromptBoardPanel : Window
     public event Action? SlotsSyncRequested;
 
     /// <summary>
+    /// Wird ausgeloest nachdem der Settings-Dialog gespeichert wurde (das
+    /// persoenliche Vokabular-Woerterbuch koennte geaendert worden sein). Das
+    /// OverlayWindow abonniert dieses Event und stoesst einen Cloud-Upload der
+    /// personal-vocabulary.txt an, damit der Stand auf alle Geraete kommt.
+    /// </summary>
+    public event Action? VocabularySyncRequested;
+
+    /// <summary>
     /// Laedt die belegten Slots aus dem Store und faerbt die Zahlen-Leiste im
     /// offenen Eingabefenster nach. Marshallt auf den UI-Thread, weil der
     /// Store-Zugriff off-thread zurueckkommen kann. Wird beim Oeffnen der
@@ -2617,6 +2625,10 @@ public partial class PromptBoardPanel : Window
 
         var result = SettingsDialog.Ask(this, current);
         if (result is null) return;
+
+        // Vokabular-Woerterbuch wurde im Dialog evtl. geaendert (in die SK-Datei
+        // geschrieben) — Cloud-Upload anstossen, damit es auf alle Geraete kommt.
+        VocabularySyncRequested?.Invoke();
 
         try
         {

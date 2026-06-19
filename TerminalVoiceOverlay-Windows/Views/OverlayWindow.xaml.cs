@@ -136,6 +136,9 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>Drive-Sync der Prompt-Zwischenspeicher-Slots. Lazy wie _historySync.</summary>
         private PromptSlotDriveSync? _slotSync;
 
+        /// <summary>Drive-Sync des persoenlichen Vokabular-Woerterbuchs. Lazy wie _slotSync.</summary>
+        private PromptVocabularyDriveSync? _vocabSync;
+
         /// <summary>
         /// Liefert den AKTIVEN GeminiClient — der Key kommt bevorzugt aus
         /// dem PromptBoard-Settings-Dialog (zentrale Quelle der Wahrheit).
@@ -591,6 +594,9 @@ namespace TerminalVoiceOverlay.Views
 
             // Cloud-Merge der Prompt-Zwischenspeicher-Slots: gleiche Idee.
             _ = TryMergeSlotsFromCloudAsync();
+
+            // Cloud-Merge des persoenlichen Vokabular-Woerterbuchs: gleiche Idee.
+            _ = TryMergeVocabularyFromCloudAsync();
         }
 
         // ── Hover animation helper ──
@@ -3397,6 +3403,8 @@ namespace TerminalVoiceOverlay.Views
             _promptPanel.HistorySyncRequested  += () => _ = TryUploadHistoryAsync();
             // Prompt-Zwischenspeicher: nach Speichern/Loeschen sofort hochladen.
             _promptPanel.SlotsSyncRequested    += () => _ = TryUploadSlotsAsync();
+            // Vokabular-Woerterbuch: nach Speichern im Settings-Dialog hochladen.
+            _promptPanel.VocabularySyncRequested += () => _ = TryUploadVocabularyAsync();
             // Right-click drag on the panel itself moves both the
             // panel (handled inside) and this pillar window — slide
             // the pillar to stay glued to the panel's right edge.
@@ -3998,6 +4006,82 @@ namespace TerminalVoiceOverlay.Views
             catch (Exception ex)
             {
                 Console.WriteLine($"PromptSlotDriveSync init skipped: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Laedt das lokale Vokabular-Woerterbuch SOFORT zu Drive hoch. Wird
+        /// nach jedem Speichern im Settings-Dialog aufgerufen. Fire-and-forget.
+        /// </summary>
+        private async Task TryUploadVocabularyAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateVocabSync();
+                if (sync is null) return;
+                await sync.UploadAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Vocabulary upload failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Holt das Cloud-Vokabular und VEREINIGT es mit dem lokalen Stand
+        /// (kein Wort geht verloren). Einmal beim Start. Aendert sich etwas,
+        /// wird der vereinte Stand zurueck in die Cloud geschrieben, damit alle
+        /// Geraete konvergieren. Erstes Geraet ohne Cloud-Stand saet den lokalen.
+        /// </summary>
+        public async Task TryMergeVocabularyFromCloudAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateVocabSync();
+                if (sync is null) return;
+
+                string? cloud = await sync.DownloadAsync();
+                var path = PromptVocabularyDriveSync.LocalPath;
+                string local = System.IO.File.Exists(path)
+                    ? await System.IO.File.ReadAllTextAsync(path)
+                    : string.Empty;
+
+                if (cloud is null)
+                {
+                    // Noch kein Cloud-Stand vorhanden: lokalen Stand als Saat hochladen.
+                    if (!string.IsNullOrWhiteSpace(local)) _ = TryUploadVocabularyAsync();
+                    return;
+                }
+
+                var merged = PromptVocabularyDriveSync.MergeVocabularies(local, cloud);
+                if (!string.Equals(merged.Trim(), local.Trim(), StringComparison.Ordinal))
+                {
+                    var dir = System.IO.Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+                    await System.IO.File.WriteAllTextAsync(path, merged + "\n");
+                    // Vereinten Stand zurueck in die Cloud, damit alle Geraete konvergieren.
+                    _ = TryUploadVocabularyAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Vocabulary cloud merge skipped: {ex.Message}");
+            }
+        }
+
+        private PromptVocabularyDriveSync? GetOrCreateVocabSync()
+        {
+            if (_vocabSync is not null) return _vocabSync;
+            try
+            {
+                var store = PromptBoardHost.Get<PromptBoardSecretStore>();
+                _vocabSync = new PromptVocabularyDriveSync(store);
+                return _vocabSync;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PromptVocabularyDriveSync init skipped: {ex.Message}");
                 return null;
             }
         }
