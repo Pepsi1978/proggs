@@ -126,6 +126,13 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 |---------|-------|-------|------|-------------------------------------------|
 | **Elgato Stream-Deck-Plugin** (klassisches WebSocket/JS-SDK + Node-SDK) | [`peripherie/stream-deck.md`](peripherie/stream-deck.md) | 2026-06-03 | ~85 | `*.sdPlugin/*`, Stream-Deck-`manifest.json` (mit `SDKVersion`/`Actions`/`States`), `propertyInspector`, `code.js`/`plugin.html`/`inspector.html` im Plugin-Webview, `@elgato/streamdeck` · „Stream Deck", „Elgato", „sdPlugin", „Property Inspector", „willAppear", „keyDown", „setState", „DisableAutomaticStates" · Best-Practices: `best-practices/peripherie/stream-deck.md` |
 
+### 🔐 `server/` — Server-Betrieb & Infrastruktur (VPS, VPN, Hosting)
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **WireGuard** (VPN für sicheren Zugriff auf selbst-gehostete Dienste) | [`server/wireguard.md`](server/wireguard.md) | 2026-06-19 | 7 | `wg0.conf`, `wg`/`wg-quick`/`wg-quick@`, `/etc/wireguard/` · „WireGuard", „VPN", „AllowedIPs", „PersistentKeepalive", „Split-Tunnel", „Full-Tunnel", „ip_forward", „MASQUERADE", „Endpoint", „PresharedKey", „wg genkey", „Dienst nur über VPN" · Best-Practices: `best-practices/server/wireguard.md` |
+| **VPS-Hosting** (Hostinger/Hetzner für selbst-gehostete DB/Dienste) | [`server/vps-hosting.md`](server/vps-hosting.md) | 2026-06-19 | 6 | Anbieter-/Server-Wahl für eine eigene DB/Dienst · „VPS", „Hostinger", „Hetzner", „KVM", „Shared Hosting", „root", „Docker-Manager", „pgvector", „Verlängerungspreis", „vpsbenchmarks", „Memory-Server hosten", „RAM Dimensionierung" · Best-Practices: `best-practices/server/vps-hosting.md` |
+
 ### 🛠️ `claude-tooling/` — Claude-Code-Werkzeuge
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |

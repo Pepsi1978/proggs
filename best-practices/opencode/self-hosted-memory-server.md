@@ -5,6 +5,9 @@
 > Recherchiert am 2026-06-19 (6-Researcher-Schwarm). Quellen je Abschnitt verlinkt.
 > Gegenstück (Fallen): `bugs/opencode/opencode-cli.md` (Abschnitt „Self-hosted Memory-Server").
 > Verwandt: `best-practices/opencode/plugins-mcp-skills.md` §8 (Kurzfassung + Verweis hierher).
+> **Server/Infra (NEU 2026-06-19):** Anbieter-Wahl (Hostinger/Hetzner, Dimensionierung) →
+> `best-practices/server/vps-hosting.md`; sicherer Zugriff per VPN statt öffentlicher Exposition →
+> `best-practices/server/wireguard.md` (Split-Tunnel, Dienst nur über WireGuard).
 
 ---
 
