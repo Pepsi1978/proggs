@@ -306,6 +306,28 @@ class AppSettings @Inject constructor(
     suspend fun isTitleShortenV1Done(): Boolean = ds.data.map { it[KEY_TITLE_SHORTEN_V1] ?: false }.first()
     suspend fun setTitleShortenV1Done(value: Boolean) = ds.edit { it[KEY_TITLE_SHORTEN_V1] = value }
 
+    /**
+     * Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19): An/Aus + einstellbares Limit.
+     * enabled steuert Lernen UND Anwenden (Default an). limit = wie viele neueste Eintraege die KI
+     * beim Abgleich beruecksichtigt (Default 300, eingegrenzt 10..2000 — aelteste darueber werden
+     * beim Abgleich ignoriert, bleiben aber gespeichert).
+     */
+    val priorityMemoryEnabledFlow: Flow<Boolean> = ds.data
+        .map { it[KEY_PRIO_MEMORY_ENABLED] ?: true }
+        .distinctUntilChanged()
+
+    suspend fun setPriorityMemoryEnabled(value: Boolean) = ds.edit {
+        it[KEY_PRIO_MEMORY_ENABLED] = value
+    }
+
+    val priorityMemoryLimitFlow: Flow<Int> = ds.data
+        .map { (it[KEY_PRIO_MEMORY_LIMIT] ?: 300).coerceIn(10, 2000) }
+        .distinctUntilChanged()
+
+    suspend fun setPriorityMemoryLimit(value: Int) = ds.edit {
+        it[KEY_PRIO_MEMORY_LIMIT] = value.coerceIn(10, 2000)
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -343,6 +365,9 @@ class AppSettings @Inject constructor(
         private val KEY_WEEKLY_REVIEW_AT = longPreferencesKey("weekly_review_at_ms")
         private val KEY_MONTHLY_REVIEW_TEXT = stringPreferencesKey("monthly_review_text")
         private val KEY_MONTHLY_REVIEW_AT = longPreferencesKey("monthly_review_at_ms")
+        // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
+        private val KEY_PRIO_MEMORY_ENABLED = booleanPreferencesKey("prio_memory_enabled")
+        private val KEY_PRIO_MEMORY_LIMIT = intPreferencesKey("prio_memory_limit")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift
