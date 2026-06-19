@@ -135,6 +135,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // abholen. Fire-and-forget.
         mergeSlotsFromCloudOnLaunch()
 
+        // Persoenliches Vokabular-Woerterbuch ebenfalls beim Start vom anderen
+        // Geraet abholen (non-destruktive Vereinigung — kein Wort geht verloren).
+        mergeVocabularyFromCloudOnLaunch()
+
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
         }
@@ -870,6 +874,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // ── Persoenliches Vokabular-Woerterbuch (Drive-Sync, non-destruktiv) ──
+    // SK-Datei (gleicher Ordner wie die Korrektur-Prompts); auf einem Geraet
+    // teilen sich beide Overlays dieselbe Datei.
+    private static var personalVocabularyURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("SK/VoiceOverlays/personal-vocabulary.txt")
+    }
+
+    /// Reine VEREINIGUNG zweier Vokabular-Texte (kein Wort geht je verloren).
+    /// Dedupliziert case-insensitiv, lokale Reihenfolge zuerst.
+    private static func mergeVocabularies(_ localText: String, _ cloudText: String) -> String {
+        var seen = Set<String>()
+        var out: [String] = []
+        for text in [localText, cloudText] {
+            let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+            for rawLine in normalized.components(separatedBy: "\n") {
+                let line = rawLine.trimmingCharacters(in: .whitespaces)
+                if line.isEmpty { continue }
+                if seen.insert(line.lowercased()).inserted { out.append(line) }
+            }
+        }
+        return out.joined(separator: "\n")
+    }
+
+    /// Holt das Cloud-Vokabular beim App-Start und VEREINIGT es mit dem lokalen
+    /// Stand. Fire-and-forget. Erstes Geraet ohne Cloud-Stand saet den lokalen.
+    private func mergeVocabularyFromCloudOnLaunch() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] vocab cloud merge skipped: drive not connected")
+            return
+        }
+        GoogleDriveBackupService.shared.downloadVocabulary { [weak self] result in
+            switch result {
+            case .failure(let e):
+                tvoDebug("[App] vocab cloud download failed: \(e.localizedDescription)")
+            case .success(let cloud):
+                let url = AppDelegate.personalVocabularyURL
+                let local = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+                guard let cloud = cloud else {
+                    // Noch kein Cloud-Stand: lokalen Stand als Saat hochladen.
+                    if !local.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        self?.uploadVocabularyToCloud()
+                    }
+                    return
+                }
+                let merged = AppDelegate.mergeVocabularies(local, cloud)
+                if merged.trimmingCharacters(in: .whitespacesAndNewlines)
+                    != local.trimmingCharacters(in: .whitespacesAndNewlines) {
+                    do {
+                        try FileManager.default.createDirectory(
+                            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try (merged + "\n").write(to: url, atomically: true, encoding: .utf8)
+                        tvoDebug("[App] cloud vocabulary merged")
+                        // Vereinten Stand zurueck in die Cloud, damit alle Geraete konvergieren.
+                        self?.uploadVocabularyToCloud()
+                    } catch {
+                        tvoDebug("[App] vocab merge write failed: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+
+    /// Laedt das lokale Vokabular-Woerterbuch SOFORT zu Drive hoch. Wird nach dem
+    /// Speichern im Settings-Dialog aufgerufen. Aktualisiert den sichtbaren
+    /// Sync-Zeitstempel (wie die Slots) — Frank-Wunsch.
+    private func uploadVocabularyToCloud() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] vocab upload skipped: drive not connected")
+            return
+        }
+        let url = AppDelegate.personalVocabularyURL
+        guard let text = try? String(contentsOf: url, encoding: .utf8), !text.isEmpty else { return }
+        GoogleDriveBackupService.shared.uploadVocabulary(text: text) { [weak self] result in
+            switch result {
+            case .success:
+                tvoDebug("[App] vocabulary uploaded to cloud")
+                PromptBoardPanel.recordSyncNow()
+                self?.promptBoardPanel?.markSyncedNow()
+            case .failure(let e):
+                tvoDebug("[App] vocab upload failed: \(e.localizedDescription)")
+            }
+        }
+    }
+
     private func writeHistory(middleText: String) {
         let mid = middleText
         let fallbackTitle = GeminiClient.fallbackTitle(from: mid)
@@ -1584,6 +1673,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                       result.orientation == "vertical" && panel.currentOrientation == .horizontal {
                 panel.beamToOrientation(.vertical)
             }
+            // Persoenliches Vokabular wurde evtl. geaendert (in die SK-Datei
+            // geschrieben) — zu Drive hochladen + Sync-Zeitstempel aktualisieren.
+            uploadVocabularyToCloud()
         }
     }
 

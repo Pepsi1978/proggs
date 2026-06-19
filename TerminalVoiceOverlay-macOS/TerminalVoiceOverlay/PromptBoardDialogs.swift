@@ -982,6 +982,11 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     private let autoHideCheck = NSButton(checkboxWithTitle: "Auto-Hide (Mic-Pille bei Inaktivitaet)", target: nil, action: nil)
     private let horizontalCheck = NSButton(checkboxWithTitle: "Horizontal-Orientierung beim Start", target: nil, action: nil)
     private let persistPositionCheck = NSButton(checkboxWithTitle: "Disketten-Position ueber App-Neustart hinweg merken", target: nil, action: nil)
+    // Persoenliches Vokabular-Woerterbuch (mehrzeilig, scrollbar). Schreibt/liest
+    // die SK-Datei personal-vocabulary.txt; GeminiClient haengt sie als Praeambel
+    // vor den Korrektur-Prompt, AppDelegate synchronisiert sie ueber Drive.
+    private let vocabularyTextView = NSTextView()
+    private let vocabularyScroll = NSScrollView()
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -989,7 +994,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     init(settings: PBAppSettings) {
         self.settings = settings
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 620),
+            contentRect: NSRect(x: 0, y: 0, width: 620, height: 740),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         window.title = "Einstellungen"
@@ -1017,6 +1022,29 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         autoHideCheck.contentTintColor = NSColor.white
         horizontalCheck.contentTintColor = NSColor.white
         persistPositionCheck.contentTintColor = NSColor.white
+
+        // Persoenliches Vokabular aus der SK-Datei vorbefuellen + scrollbares
+        // mehrzeiliges Textfeld (dunkel) konfigurieren.
+        vocabularyTextView.string = PBSettingsDialog.loadPersonalVocabulary()
+        vocabularyScroll.hasVerticalScroller = true
+        vocabularyScroll.borderType = .bezelBorder
+        vocabularyScroll.translatesAutoresizingMaskIntoConstraints = false
+        vocabularyScroll.drawsBackground = true
+        vocabularyScroll.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        vocabularyTextView.minSize = NSSize(width: 0, height: 0)
+        vocabularyTextView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        vocabularyTextView.isVerticallyResizable = true
+        vocabularyTextView.isHorizontallyResizable = false
+        vocabularyTextView.autoresizingMask = [.width]
+        vocabularyTextView.textContainer?.containerSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        vocabularyTextView.textContainer?.widthTracksTextView = true
+        vocabularyTextView.isRichText = false
+        vocabularyTextView.font = .systemFont(ofSize: 13)
+        vocabularyTextView.drawsBackground = true
+        vocabularyTextView.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        vocabularyTextView.textColor = .white
+        vocabularyTextView.insertionPointColor = .white
+        vocabularyScroll.documentView = vocabularyTextView
 
         // Themed buttons kept as instance variables so connectGoogle() can
         // still flip their enabled state / title mid-OAuth flow.
@@ -1048,6 +1076,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             groqField,
             label("Gemini API Key (optional)"),
             geminiField,
+            label("Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)"),
+            vocabularyScroll,
             label("Separator-Template"),
             separatorField,
             autoHideCheck,
@@ -1075,6 +1105,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
             groqField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             geminiField.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            vocabularyScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            vocabularyScroll.heightAnchor.constraint(equalToConstant: 90),
             separatorField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             clientIdField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             clientSecretField.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -1096,6 +1128,30 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         }
     }
 
+    // Persoenliches Vokabular lebt als Datei im SK-Ordner (gleicher Ort wie die
+    // Korrektur-Prompts). Dieses Feld ist nur die Editier-Oberflaeche; GeminiClient
+    // liest die Datei direkt, AppDelegate synchronisiert sie ueber Drive.
+    private static var personalVocabularyURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("SK/VoiceOverlays/personal-vocabulary.txt")
+    }
+
+    static func loadPersonalVocabulary() -> String {
+        (try? String(contentsOf: personalVocabularyURL, encoding: .utf8)) ?? ""
+    }
+
+    static func savePersonalVocabulary(_ text: String) {
+        let url = personalVocabularyURL
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            try (trimmed + "\n").write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            NSLog("Persoenliches Woerterbuch konnte nicht gespeichert werden: \(error.localizedDescription)")
+        }
+    }
+
     @objc private func save() {
         result = PBSettingsResult(
             groqApiKey: nullIfBlank(groqField.stringValue),
@@ -1106,6 +1162,9 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             autoHide: autoHideCheck.state == .on,
             orientation: horizontalCheck.state == .on ? "horizontal" : "vertical",
             persistOverlayPosition: persistPositionCheck.state == .on)
+        // Persoenliches Vokabular zusaetzlich in die SK-Datei schreiben (wird von
+        // GeminiClient direkt gelesen, nicht ueber die DB-Settings).
+        PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
         window?.close()    // windowWillClose handles stopModal (no double-stop)
     }
 

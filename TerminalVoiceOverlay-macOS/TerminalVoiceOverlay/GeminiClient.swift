@@ -77,12 +77,14 @@ final class GeminiClient {
         }
         let vocab = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if vocab.isEmpty { return "" }
-        let header = "PERSÖNLICHES VOKABULAR (häufige Begriffe des Sprechers):\n"
-            + "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. "
-            + "Wenn ein transkribiertes Wort phonetisch einem dieser Begriffe ähnelt "
-            + "UND es im Satzkontext Sinn ergibt, verwende die hier angegebene korrekte "
-            + "Schreibweise. Erzwinge eine Ersetzung NICHT, wenn der Kontext eine andere "
-            + "Bedeutung nahelegt.\n"
+        let header = "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n"
+            + "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-"
+            + "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein "
+            + "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext "
+            + "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die "
+            + "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat "
+            + "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-"
+            + "Kontext zu \"Backend\").\n"
         return header + vocab + "\n\n"
     }
 

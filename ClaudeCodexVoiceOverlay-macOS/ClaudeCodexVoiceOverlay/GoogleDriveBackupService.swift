@@ -525,6 +525,59 @@ final class GoogleDriveBackupService {
         }
     }
 
+    // Persoenliches Vokabular-Woerterbuch (personal-vocabulary.txt) — eigene
+    // Datei im appDataFolder, gleiche Mechanik wie die Slots. BEWUSST GETEILT
+    // (gleicher Dateiname in beiden Overlays), damit ein Wort, das auf einem
+    // Geraet/Overlay gespeichert wird, ueberall erscheint.
+    private static let vocabularyFileName = "personal-vocabulary.txt"
+
+    /// Laedt das persoenliche Vokabular-Woerterbuch zu Drive hoch und raeumt
+    /// Duplikate weg. Wird nach jedem Speichern im Settings-Dialog aufgerufen.
+    func uploadVocabulary(text: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.vocabularyFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        if let keepId = ids.first {
+                            self.replaceFile(id: keepId, token: token, json: text) { replaceResult in
+                                let dups = Array(ids.dropFirst())
+                                if !dups.isEmpty { self.deleteFiles(ids: dups, token: token) }
+                                completion(replaceResult)
+                            }
+                        } else {
+                            self.createFile(name: Self.vocabularyFileName,
+                                            token: token, json: text,
+                                            completion: completion)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Holt das aktuellste Vokabular-Woerterbuch aus Drive. Liefert nil wenn
+    /// noch keins existiert.
+    func downloadVocabulary(completion: @escaping (Result<String?, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.vocabularyFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        guard let id = ids.first else { completion(.success(nil)); return }
+                        self.downloadContent(id: id, token: token, completion: completion)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Generische Helpers (parametrisierbarer Filename)
 
     /// Wie `findAllBackupFileIds`, aber mit konfigurierbarem Filename —

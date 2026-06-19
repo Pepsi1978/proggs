@@ -18,8 +18,6 @@ final class SettingsDialog: NSWindow {
     private let googleClientId   = NSTextField()
     private let googleSecret     = NSSecureTextField()
     private let googleStatusLabel = NSTextField(labelWithString: "")
-    private let vocabularyScroll   = NSScrollView()
-    private let vocabularyTextView = NSTextView()
 
     // MARK: - Callbacks
     /// Wird gerufen wenn der Benutzer "Speichern" klickt. Argumente sind
@@ -42,7 +40,7 @@ final class SettingsDialog: NSWindow {
     // MARK: - Setup
 
     init() {
-        let frame = NSRect(x: 0, y: 0, width: 620, height: 766)
+        let frame = NSRect(x: 0, y: 0, width: 620, height: 640)
         super.init(contentRect: frame,
                    styleMask: [.titled, .closable],
                    backing: .buffered,
@@ -67,7 +65,6 @@ final class SettingsDialog: NSWindow {
         persistPosCheck.state       = d.bool(forKey: "PERSIST_OVERLAY_POSITION") ? .on : .off
         googleClientId.stringValue  = d.string(forKey: "GOOGLE_CLIENT_ID") ?? ""
         googleSecret.stringValue    = d.string(forKey: "GOOGLE_CLIENT_SECRET") ?? ""
-        vocabularyTextView.string   = Self.loadPersonalVocabulary()
     }
 
     /// Status-Anzeige fuer Google-Drive-Verbindung (rot/gruen).
@@ -78,38 +75,12 @@ final class SettingsDialog: NSWindow {
             : NSColor(red: 0.83, green: 0.18, blue: 0.18, alpha: 1)
     }
 
-    // MARK: - Persoenliches Vokabular (SK-Datei)
-    // Das Woerterbuch lebt als Datei im SK-Ordner (gleicher Ort wie die
-    // Korrektur-Prompts). Dieses Feld ist nur die bequeme Editier-Oberflaeche;
-    // GeminiClient liest die Datei direkt, darum wirkt eine Aenderung sofort und
-    // teilt sich auf einem Rechner automatisch zwischen beiden Overlays.
-    private static var personalVocabularyURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("SK/VoiceOverlays/personal-vocabulary.txt")
-    }
-
-    private static func loadPersonalVocabulary() -> String {
-        (try? String(contentsOf: personalVocabularyURL, encoding: .utf8)) ?? ""
-    }
-
-    private static func savePersonalVocabulary(_ text: String) {
-        let url = personalVocabularyURL
-        do {
-            try FileManager.default.createDirectory(
-                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            try (trimmed + "\n").write(to: url, atomically: true, encoding: .utf8)
-        } catch {
-            NSLog("Persoenliches Woerterbuch konnte nicht gespeichert werden: \(error.localizedDescription)")
-        }
-    }
-
     // MARK: - Layout
 
     private func buildLayout() {
         guard let cv = self.contentView else { return }
         let pad: CGFloat = 20
-        var y: CGFloat = 726
+        var y: CGFloat = 600
 
         func addLabel(_ text: String, atY: CGFloat) {
             let lbl = NSTextField(labelWithString: text)
@@ -131,30 +102,6 @@ final class SettingsDialog: NSWindow {
 
         addLabel("Gemini API Key (optional)", atY: y); y -= 24
         addTextField(geminiKeyField, atY: y); y -= 36
-
-        // Persoenliches Woerterbuch (mehrzeilig, scrollbar). Schreibt/liest die
-        // SK-Datei personal-vocabulary.txt; GeminiClient haengt sie als
-        // kontextsensitive Praeambel vor den Korrektur-Prompt.
-        addLabel("Persönliches Wörterbuch (häufige Begriffe für Gemini-Korrektur)", atY: y); y -= 24
-        let vocabHeight: CGFloat = 90
-        y -= vocabHeight
-        vocabularyScroll.frame = NSRect(x: pad, y: y, width: 580, height: vocabHeight)
-        vocabularyScroll.hasVerticalScroller = true
-        vocabularyScroll.borderType = .bezelBorder
-        vocabularyScroll.drawsBackground = true
-        vocabularyTextView.frame = NSRect(x: 0, y: 0, width: 580, height: vocabHeight)
-        vocabularyTextView.minSize = NSSize(width: 0, height: vocabHeight)
-        vocabularyTextView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
-        vocabularyTextView.isVerticallyResizable = true
-        vocabularyTextView.isHorizontallyResizable = false
-        vocabularyTextView.autoresizingMask = [.width]
-        vocabularyTextView.textContainer?.containerSize = NSSize(width: 580, height: .greatestFiniteMagnitude)
-        vocabularyTextView.textContainer?.widthTracksTextView = true
-        vocabularyTextView.font = .systemFont(ofSize: 13)
-        vocabularyTextView.isRichText = false
-        vocabularyScroll.documentView = vocabularyTextView
-        cv.addSubview(vocabularyScroll)
-        y -= 12
 
         addLabel("Trenn-Template (zwischen AlwaysOn-Prompts)", atY: y); y -= 24
         addTextField(separatorField, atY: y); y -= 40
@@ -230,9 +177,6 @@ final class SettingsDialog: NSWindow {
         d.set(values.persistOverlayPosition, forKey: "PERSIST_OVERLAY_POSITION")
         d.set(values.googleClientId,         forKey: "GOOGLE_CLIENT_ID")
         d.set(values.googleClientSecret,     forKey: "GOOGLE_CLIENT_SECRET")
-        // Persoenliches Vokabular zusaetzlich in die SK-Datei schreiben (wird
-        // von GeminiClient direkt gelesen, nicht ueber UserDefaults).
-        Self.savePersonalVocabulary(vocabularyTextView.string)
         onSave?(values)
         self.close()
     }
