@@ -25,6 +25,7 @@ einer **neuen** Aufgabe bekommt Gemini diese Erinnerungen mit und übernimmt —
 | Loop-Aufgaben | Lernen **mit** — jede manuelle Prio-Setzung wird gemerkt, auch bei wiederkehrenden Aufgaben. |
 | An/Aus-Schalter | **Vorhanden, Standard AN.** |
 | Geltungsbereich | Abgleich greift **nur beim Einsprechen/Anlegen neuer Aufgaben**, NICHT beim automatischen Rescore bestehender Aufgaben. |
+| Limit | KI berücksichtigt beim Abgleich nur die **neuesten N Einträge**. N ist **einstellbar** (Eingabefeld + Speichern), **Standard 300**. Bei Erreichen des Limits **blinkende Warnung** oben in der Liste. |
 
 ## 3. Bestehende Architektur (Ist-Zustand, Bezugspunkte)
 
@@ -71,15 +72,17 @@ Ursprungsaufgabe erledigt/archiviert/gelöscht ist.
 | `sourceEntryId` | `String?` | Ursprungsaufgabe (Nachvollziehbarkeit, optional) |
 
 ### 4.2 DAO `PriorityMemoryDao`
-`getAll()` (Flow, sortiert nach `updatedAt DESC`), `getById`, `upsert`, `update`,
-`deleteById`, `getAllForBackup()`, sowie `countAll()` (für Logging/Sonden).
+`getAll()` (Flow, sortiert nach `updatedAt DESC`), `getById`, `getNewest(limit: Int)`
+(neueste N für den Gemini-Kontext), `observeCount()` (Flow<Int> für die Limit-Warnung),
+`upsert`, `update`, `deleteById`, `getAllForBackup()`.
 
 ### 4.3 Repository `PriorityMemoryRepository`
 Kapselt DAO + die Lern-Logik:
 - `learnFromManualPriority(entry: EntropyEntryEntity, score: Double)` — legt an oder
   aktualisiert (siehe 5).
-- `getMemoriesForPrompt(): List<PriorityMemoryEntity>` — liefert die Liste für den
-  Gemini-Kontext (mit großzügiger Obergrenze, siehe 6).
+- `getMemoriesForPrompt(limit: Int): List<PriorityMemoryEntity>` — liefert die
+  **neuesten `limit`** Einträge (sortiert `updatedAt DESC`) für den Gemini-Kontext (siehe 6).
+- `observeCount(): Flow<Int>` — Gesamtzahl der Einträge, für die Limit-Warnung in der UI.
 - CRUD für die Einstellungs-UI.
 
 ## 5. Lern-Logik (automatisch, im Hintergrund)
@@ -119,10 +122,13 @@ In `ProcessEntryUseCase.invoke(...)` (Pfad für neue Aufgaben, **nicht** `rescor
   dann wieder ins Gedächtnis lernt).
 - Kein Treffer → unveränderte bestehende Berechnung.
 
-**Skalierung/Token:** großzügige Obergrenze (Default ~200 neueste Einträge) — Gemini
-hat ein großes Kontextfenster, und für eine private App ist die Menge überschaubar.
-Falls überschritten: neueste zuerst. (Verlustfrei: nichts wird gelöscht, nur der
-Prompt-Ausschnitt begrenzt.)
+**Skalierung/Limit (einstellbar):** Die KI berücksichtigt beim Abgleich nur die
+**neuesten N Einträge** (`updatedAt DESC`). N ist ein in den Einstellungen **frei
+einstellbares Limit**, **Standard 300**. Sind mehr Einträge gespeichert als N, fallen
+die ältesten aus dem Abgleich — **verlustfrei**: sie bleiben gespeichert und in der
+Liste sichtbar, nur der an Gemini geschickte Ausschnitt ist begrenzt. Erreicht oder
+überschreitet die tatsächliche Eintragszahl das Limit, erscheint oben in der Liste eine
+**blinkende Warnung** (siehe 7).
 
 ## 7. Einstellungs-Bereich „Prioritäts-Gedächtnis"
 
@@ -131,6 +137,13 @@ Prompt-Ausschnitt begrenzt.)
 - **Listen-Screen** (`PriorityMemoryScreen` + `PriorityMemoryViewModel`):
   - Oben: **An/Aus-Schalter** „Prioritäts-Gedächtnis nutzen" (Standard AN; persistiert,
     z. B. in den bestehenden Settings/Preferences). Steuert Lernen **und** Anwenden.
+  - **Limit-Eingabefeld:** kleines Zahlenfeld „Von der KI berücksichtigte Einträge"
+    + Speichern (Standard 300). Persistiert wie der Schalter. Bestimmt N aus Abschnitt 6.
+  - **Blinkende Warnung (oben, nur wenn `Eintragszahl >= Limit`):** auffälliger,
+    blinkender Hinweis (Compose `rememberInfiniteTransition`, pulsierende Farbe/Alpha)
+    ganz oben in der Liste, sofort sichtbar beim Öffnen. Text sinngemäß: „Limit erreicht
+    (X von N). Ältere Einträge werden von der KI nicht mehr berücksichtigt — lösche
+    Einträge oder erhöhe das Limit." Verschwindet automatisch, sobald wieder unter dem Limit.
   - Scrollbare `LazyColumn` schlanker Karten: Titel + verkürzte Beschreibung +
     Prio-Farb-Optik + Schieberegler (gleiche Optik wie `EntropyEntryCard`, aber ohne
     Status/Zeitfenster/Erledigt). Regler ändert `priority` direkt.
@@ -184,7 +197,7 @@ Die App hat bereits ein Diagnose-Log (`DiagnosticLogDatabase`). Neue Sonden:
 - `data/remote/drive/BackupPayload.kt` (+ `SyncCoordinator`) (Backup-Schema)
 - DI-Modul (Bereitstellung von `PriorityMemoryDao`/`Repository`, Migration registrieren)
 - App-`build.gradle.kts` (Version-Bump)
-- ggf. Settings/Preferences-Store (An/Aus-Schalter persistieren)
+- Settings/Preferences-Store (An/Aus-Schalter **und** einstellbares Limit persistieren)
 
 ## 11. Bewusst NICHT enthalten (YAGNI)
 
