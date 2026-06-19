@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 /** DAO fuer das Prioritaets-Gedaechtnis (Tabelle priority_memory). */
 @Dao
 interface PriorityMemoryDao {
-    @Query("SELECT * FROM priority_memory ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM priority_memory ORDER BY priority DESC, updatedAt DESC")
     fun getAll(): Flow<List<PriorityMemoryEntity>>
 
     /** Neueste N Eintraege fuer den Gemini-Kontext (einstellbares Limit). */
