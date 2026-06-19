@@ -148,6 +148,8 @@ class KiTaskSuggestViewModel @Inject constructor(
                 val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
                 prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
             }
+            de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
+                context, "Aufgabenvorschlag: entfernt")
         }
     }
 
@@ -157,6 +159,8 @@ class KiTaskSuggestViewModel @Inject constructor(
                 val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
                 prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + newSuggestions)
             }
+            de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
+                context, "Aufgabenvorschlag: generiert")
         }
     }
 

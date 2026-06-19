@@ -373,6 +373,13 @@ constructor(
                     BackupMental(id = it.id, text = it.text)
                 }
 
+            // Frank-Wunsch 2026-06-19 (Schema v15): offene KI-Vorschlaege mitsichern, damit sie bei
+            // Update/Reinstall/Geraetewechsel nicht verloren gehen.
+            val taskSuggestionBackups =
+                de.frank.entropyreducer.data.taskSuggestionsForBackup(appContext).first()
+            val gewohnheitSuggestionBackups =
+                de.frank.entropyreducer.data.gewohnheitSuggestionsForBackup(appContext).first()
+
             val localPayload =
                 BackupPayload(
                     version = 14,
@@ -399,6 +406,8 @@ constructor(
                     mentals = mentalBackups,
                     ideenEntries = ideenBackups,
                     gewohnheiten = gewohnheitBackups,
+                    taskSuggestions = taskSuggestionBackups,
+                    gewohnheitSuggestions = gewohnheitSuggestionBackups,
                 )
             // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
             // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per
@@ -411,7 +420,9 @@ constructor(
                     "(Aufgaben=${entries.size}, Insights=${insights.size}, Memories=${memories.size}, " +
                     "Prompts=${allPrompts.size}, Amazfit-Daily=${amazfitDailyBackups.size}, " +
                     "Mental=${mentalBackups.size}, Ideen=${ideenBackups.size}, " +
-                    "Gewohnheit=${gewohnheitBackups.size})",
+                    "Gewohnheit=${gewohnheitBackups.size}, " +
+                    "Aufgabenvorschlaege=${taskSuggestionBackups.size}, " +
+                    "Gewohnheitsvorschlaege=${gewohnheitSuggestionBackups.size})",
             )
 
             // M2-Schutz (Read-before-write, Frank-Bugfix 2026-06-19 — Almanach M2 /
@@ -674,13 +685,18 @@ constructor(
                 gewohnheiten = rescueIfLocalEmpty(local.gewohnheiten, remote.gewohnheiten),
                 tagebuchEntries = rescueIfLocalEmpty(local.tagebuchEntries, remote.tagebuchEntries),
                 thesenEntries = rescueIfLocalEmpty(local.thesenEntries, remote.thesenEntries),
+                taskSuggestions = rescueIfLocalEmpty(local.taskSuggestions, remote.taskSuggestions),
+                gewohnheitSuggestions =
+                    rescueIfLocalEmpty(local.gewohnheitSuggestions, remote.gewohnheitSuggestions),
             )
         val rescued =
             (merged.mentals.size - local.mentals.size) +
                 (merged.ideenEntries.size - local.ideenEntries.size) +
                 (merged.gewohnheiten.size - local.gewohnheiten.size) +
                 (merged.tagebuchEntries.size - local.tagebuchEntries.size) +
-                (merged.thesenEntries.size - local.thesenEntries.size)
+                (merged.thesenEntries.size - local.thesenEntries.size) +
+                (merged.taskSuggestions.size - local.taskSuggestions.size) +
+                (merged.gewohnheitSuggestions.size - local.gewohnheitSuggestions.size)
         if (rescued > 0) {
             diagnostics.info(
                 de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,

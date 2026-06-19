@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 14,
+    val version: Int = 15,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -160,7 +160,25 @@ data class BackupPayload(
      * (v1-v13) weiterhin lesbar bleiben.
      */
     val gewohnheiten: List<BackupMental> = emptyList(),
+    /**
+     * Schema v15 (Frank-Wunsch 2026-06-19): Offene KI-Aufgabenvorschlaege (Aufgaben-Reiter,
+     * ki_task_suggestions). Damit gehen erkannte, noch nicht angenommene Vorschlaege bei
+     * Update/Reinstall/Geraetewechsel nicht verloren. Default emptyList (v1-v14 lesbar).
+     */
+    val taskSuggestions: List<BackupTaskSuggestion> = emptyList(),
+    /**
+     * Schema v15 (Frank-Wunsch 2026-06-19): Offene Gewohnheitsvorschlaege (gewohnheit_suggestions).
+     * Gleiches id+text-Format wie Mental — BackupMental wiederverwendet.
+     */
+    val gewohnheitSuggestions: List<BackupMental> = emptyList(),
 )
+
+/**
+ * Schema v15: ein KI-Aufgabenvorschlag (id + Titel + Beschreibung). Spiegelt KiTaskSuggestion
+ * aus dem Aufgaben-Reiter.
+ */
+@Serializable
+data class BackupTaskSuggestion(val id: String, val title: String, val description: String)
 
 /**
  * Schema v12 (Frank-Wunsch 2026-06-09): ein Mentalboard-Eintrag. Nur id + Satz; die

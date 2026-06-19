@@ -118,7 +118,9 @@ constructor(
             "Restore-Payload v${payload.version}: entries=${payload.entries.size}, " +
                 "mentals=${payload.mentals.size}, ideen=${payload.ideenEntries.size}, " +
                 "gewohnheiten=${payload.gewohnheiten.size}, tagebuch=${payload.tagebuchEntries.size}, " +
-                "thesen=${payload.thesenEntries.size}",
+                "thesen=${payload.thesenEntries.size}, " +
+                "aufgabenvorschlaege=${payload.taskSuggestions.size}, " +
+                "gewohnheitsvorschlaege=${payload.gewohnheitSuggestions.size}",
         )
 
         var inserted = 0
@@ -436,6 +438,21 @@ constructor(
                     payload.gewohnheiten.map {
                         de.frank.entropyreducer.presentation.mental.Mental(id = it.id, text = it.text)
                     },
+                )
+        }
+
+        // --- KI-Vorschlaege (v15+, Frank-Wunsch 2026-06-19) ---
+        // Offene Aufgaben- und Gewohnheitsvorschlaege wiederherstellen. Existenz-Strategie:
+        // nur fehlende IDs ergaenzen, lokale gewinnen (regenerierbar, aber sollen nicht verloren
+        // gehen). Bei v1-v14-Backups sind die Listen leer -> kein Effekt.
+        if (payload.taskSuggestions.isNotEmpty()) {
+            inserted += de.frank.entropyreducer.data.restoreTaskSuggestions(appContext, payload.taskSuggestions)
+        }
+        if (payload.gewohnheitSuggestions.isNotEmpty()) {
+            inserted +=
+                de.frank.entropyreducer.data.restoreGewohnheitSuggestions(
+                    appContext,
+                    payload.gewohnheitSuggestions,
                 )
         }
 
