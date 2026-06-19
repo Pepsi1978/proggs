@@ -56,6 +56,36 @@ final class GeminiClient {
         return nil
     }
 
+    /// Dateiname der persoenlichen Vokabular-Liste. Liegt im selben SK-Ordner
+    /// wie die Korrektur-Prompts, sodass sich auf EINEM Rechner beide Overlays
+    /// automatisch dieselbe Liste teilen. Wird bei jedem correctText neu
+    /// gelesen — Aenderungen wirken sofort ohne App-Neustart.
+    private static let personalVocabularyFileName = "personal-vocabulary.txt"
+
+    /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen des
+    /// Sprechers) und baut daraus einen Praeambel-Block, der VOR den Korrektur-
+    /// Prompt gesetzt wird. Bewusst kontextsensitiv: KEIN stures Suchen-und-
+    /// Ersetzen — Gemini bringt einen Begriff nur dann in die korrekte
+    /// Schreibweise, wenn er phonetisch passt UND der Satzkontext es hergibt
+    /// ("Backen" bleibt "Backen", wird nur im Code-Kontext zu "Backend").
+    /// Leere/fehlende Datei → leerer String (= bisheriges Verhalten).
+    private static func loadPersonalVocabularyBlock() -> String {
+        let url = geminiPromptDir.appendingPathComponent(personalVocabularyFileName)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return ""
+        }
+        let vocab = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if vocab.isEmpty { return "" }
+        let header = "PERSÖNLICHES VOKABULAR (häufige Begriffe des Sprechers):\n"
+            + "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. "
+            + "Wenn ein transkribiertes Wort phonetisch einem dieser Begriffe ähnelt "
+            + "UND es im Satzkontext Sinn ergibt, verwende die hier angegebene korrekte "
+            + "Schreibweise. Erzwinge eine Ersetzung NICHT, wenn der Kontext eine andere "
+            + "Bedeutung nahelegt.\n"
+        return header + vocab + "\n\n"
+    }
+
     func correctText(_ text: String, profile: Int = 1,
                      completion: @escaping (Result<String, Error>) -> Void) {
         // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank kann
@@ -63,7 +93,10 @@ final class GeminiClient {
         // dann eingebauter Default-Template.
         let template = Self.loadCorrectionPrompt(profile: profile)
             ?? GeminiClient.defaultCorrectionTemplate
-        let prompt = template + "\n" + text + "\nTEXT_END"
+        // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
+        // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
+        let vocab = Self.loadPersonalVocabularyBlock()
+        let prompt = vocab + template + "\n" + text + "\nTEXT_END"
 
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             self.sendRequest(prompt: prompt, attempt: 0, completion: completion)
