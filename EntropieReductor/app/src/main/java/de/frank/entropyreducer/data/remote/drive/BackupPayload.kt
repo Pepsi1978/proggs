@@ -516,6 +516,11 @@ data class BackupEntry(
      * Default null damit alte Backups weiter die KI-Prioritaet nutzen.
      */
     val manualPriorityScore: Double? = null,
+    /**
+     * Frank-Wunsch 2026-06-19: Marker ob die Prio an der Instanz manuell gesetzt wurde
+     * (schlaegt die Loop-Pflege). Default null damit alte Backups als Template/KI gelten.
+     */
+    val manualPriorityScoreSetAt: Long? = null,
 )
 
 @Serializable
@@ -622,6 +627,7 @@ fun EntropyEntryEntity.toBackup(): BackupEntry =
         durationManuallySet = durationManuallySet,
         dueAtMs = dueAtMs,
         manualPriorityScore = manualPriorityScore,
+        manualPriorityScoreSetAt = manualPriorityScoreSetAt,
     )
 
 fun InsightEntity.toBackup(): BackupInsight =
@@ -853,6 +859,7 @@ fun BackupEntry.toEntity(): EntropyEntryEntity =
         durationManuallySet = durationManuallySet,
         dueAtMs = dueAtMs,
         manualPriorityScore = manualPriorityScore?.coerceIn(0.0, 100.0),
+        manualPriorityScoreSetAt = manualPriorityScoreSetAt,
     )
 
 fun BackupInsight.toEntity(): InsightEntity =

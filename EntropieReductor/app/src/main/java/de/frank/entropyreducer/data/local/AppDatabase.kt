@@ -99,7 +99,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22)
             RecurringTemplateEntity::class,
         ],
-    version = 28,
+    version = 29,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -847,6 +847,19 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(27, 28) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE recurring_templates ADD COLUMN intervalDays INTEGER")
+                }
+            }
+
+        /**
+         * Schema 28 -> 29 (Frank-Wunsch 2026-06-19): Marker fuer manuell an der Instanz
+         * gesetzte Prioritaet. Neue Spalte manualPriorityScoreSetAt (INTEGER, nullable) —
+         * null = nicht vom Nutzer gesetzt (Loop/Template/KI). Wenn gesetzt, schlaegt die
+         * manuelle Prio die Loop-Pflege (analog manualBucketSetAt beim Bucket-Rollback-Fix).
+         */
+        val MIGRATION_28_29: Migration =
+            object : Migration(28, 29) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE entropy_entries ADD COLUMN manualPriorityScoreSetAt INTEGER")
                 }
             }
     }

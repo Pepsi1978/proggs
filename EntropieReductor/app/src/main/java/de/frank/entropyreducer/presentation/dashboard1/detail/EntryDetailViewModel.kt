@@ -230,6 +230,9 @@ constructor(
                     source = EntrySource.RECURRING_TEMPLATE,
                     priorityScore = templatePrio,
                     manualPriorityScore = templatePrio,
+                    // Frank-Regel 2026-06-19: wird zur Loop-Instanz -> Template-getriebene Prio,
+                    // kein Instanz-Marker (sonst wuerde die Loop-Pflege sie nicht mehr pflegen).
+                    manualPriorityScoreSetAt = null,
                     updatedAt = now,
                 )
                 // Reihenfolge zwingend (FK entropy_entry_followups.entryId -> entropy_entries.id,

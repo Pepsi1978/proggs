@@ -91,4 +91,14 @@ data class EntropyEntryEntity(
      * Prioritaet (manualPriorityScore ?: priorityScore).
      */
     val manualPriorityScore: Double? = null,
+    /**
+     * Frank-Wunsch 2026-06-19: Marker ob manualPriorityScore vom Benutzer AN DIESER
+     * INSTANZ manuell gesetzt wurde (Schieberegler im Aufgaben-Reiter). null = NICHT
+     * vom Nutzer gesetzt (Loop/Template-Prio oder KI). Wenn gesetzt (!= null), darf die
+     * Loop-Pflege (GenerateRecurringInstancesUseCase) die Prio NICHT mehr mit der
+     * Template-Prio ueberschreiben — manuell schlaegt KI/Template (analog manualBucketSetAt
+     * beim Bucket). Eine Setzung im Loop-Template-Screen setzt diesen Marker bewusst auf
+     * null zurueck (dann ist die Prio wieder Template-getrieben).
+     */
+    val manualPriorityScoreSetAt: Long? = null,
 )

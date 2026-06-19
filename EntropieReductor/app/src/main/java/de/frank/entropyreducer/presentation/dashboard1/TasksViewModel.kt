@@ -979,10 +979,15 @@ class TasksViewModel @Inject constructor(
     fun setManualPriority(entryId: String, score: Double) {
         viewModelScope.launch {
             val entry = entries.get(entryId) ?: return@launch
+            val now = System.currentTimeMillis()
             entries.update(
                 entry.copy(
                     manualPriorityScore = score.coerceIn(0.0, 100.0),
-                    updatedAt = System.currentTimeMillis(),
+                    // Frank-Wunsch 2026-06-19: Marker setzen, dass die Prio AN DIESER INSTANZ
+                    // manuell gesetzt wurde. Die Loop-Pflege (GenerateRecurringInstancesUseCase)
+                    // ueberschreibt sie dann nicht mehr mit der Template-Prio (manuell > KI/Loop).
+                    manualPriorityScoreSetAt = now,
+                    updatedAt = now,
                 )
             )
         }

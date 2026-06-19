@@ -317,22 +317,30 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         val userMovedManually =
                             keep.manualBucket != null &&
                                 (keep.manualBucketSetAt ?: 0L) > template.lastGeneratedAt
+                        // Frank-Regel 2026-06-19 (Loop-Prio-Analogon zum Bucket): Hat der Nutzer die
+                        // Prio AN DIESER INSTANZ manuell gesetzt (manualPriorityScoreSetAt != null,
+                        // gesetzt von TasksViewModel.setManualPriority), darf die Loop-Pflege sie NICHT
+                        // mehr mit der Template-Prio ueberschreiben. Loop-/Template-erzeugte Instanzen
+                        // haben den Marker null -> werden weiter synchronisiert.
+                        val userSetPriorityManually = keep.manualPriorityScoreSetAt != null
                         if (userMovedManually) {
                             // Nur die Loop-Prioritaet weiter synchronisieren — der Bucket bleibt, wo
-                            // der Nutzer ihn manuell hingelegt hat.
+                            // der Nutzer ihn manuell hingelegt hat. Die Prio aber nur, wenn der Nutzer
+                            // sie NICHT selbst manuell gesetzt hat.
                             Diag.i(
                                 DiagnosticArea.TASKS, TAG,
                                 "Loop-Sync '${keep.title.take(24)}': manuell auf ${keep.manualBucket} " +
-                                    "(setAt=${keep.manualBucketSetAt} > lastGen=${template.lastGeneratedAt}) -> Bucket NICHT angetastet",
+                                    "(setAt=${keep.manualBucketSetAt} > lastGen=${template.lastGeneratedAt}) -> Bucket NICHT angetastet" +
+                                    if (userSetPriorityManually) ", Prio manuell -> auch NICHT angetastet" else "",
                             )
-                            if (keep.manualPriorityScore != prio) {
+                            if (!userSetPriorityManually && keep.manualPriorityScore != prio) {
                                 entryRepo.upsert(
                                     keep.copy(priorityScore = prio, manualPriorityScore = prio, updatedAt = now),
                                 )
                             }
                         } else if (keep.timeBucket != dueBucket ||
                             keep.manualBucket != dueBucket ||
-                            keep.manualPriorityScore != prio
+                            (!userSetPriorityManually && keep.manualPriorityScore != prio)
                         ) {
                             entryRepo.upsert(
                                 keep.copy(
@@ -340,7 +348,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                                     manualBucket = dueBucket,
                                     manualBucketSetAt = now,
                                     priorityScore = prio,
-                                    manualPriorityScore = prio,
+                                    // Manuell gesetzte Instanz-Prio bleibt erhalten; sonst Template-Prio.
+                                    manualPriorityScore = if (userSetPriorityManually) keep.manualPriorityScore else prio,
                                     updatedAt = now,
                                 ),
                             )
@@ -386,7 +395,10 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                 // die vor dieser Aenderung ohne manualPriorityScore erzeugt wurden.
                 openForThis.firstOrNull()?.let { keepNormal ->
                     val prio = template.priorityScore.toDouble()
-                    if (keepNormal.manualPriorityScore != prio) {
+                    // Frank-Regel 2026-06-19: manuell an der Instanz gesetzte Prio NICHT
+                    // ueberschreiben (Marker manualPriorityScoreSetAt != null).
+                    val userSetPriorityManually = keepNormal.manualPriorityScoreSetAt != null
+                    if (!userSetPriorityManually && keepNormal.manualPriorityScore != prio) {
                         entryRepo.upsert(
                             keepNormal.copy(
                                 priorityScore = prio,
@@ -527,6 +539,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                             source = EntrySource.RECURRING_TEMPLATE,
                             priorityScore = prio,
                             manualPriorityScore = prio,
+                            // Wird zur Loop-Instanz -> Template-getriebene Prio, kein Instanz-Marker.
+                            manualPriorityScoreSetAt = null,
                             updatedAt = now,
                         ),
                     )

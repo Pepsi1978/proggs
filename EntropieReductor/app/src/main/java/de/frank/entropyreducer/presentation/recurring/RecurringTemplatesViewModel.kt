@@ -125,6 +125,10 @@ class RecurringTemplatesViewModel @Inject constructor(
                         it.copy(
                             priorityScore = clamped.toDouble(),
                             manualPriorityScore = clamped.toDouble(),
+                            // Frank-Regel 2026-06-19: Setzung im Loop-Template-Screen ist
+                            // Template-getrieben -> Instanz-Marker zuruecksetzen, damit die
+                            // Loop-Pflege diese Prio weiter durchsetzt (kein "manuell"-Lock).
+                            manualPriorityScoreSetAt = null,
                             updatedAt = now,
                         ),
                     )
