@@ -19,6 +19,7 @@ import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.KiQuestionRepository
+import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.kiquestion.KiQuestion
 import de.frank.entropyreducer.domain.model.EntropyCategory
@@ -125,6 +126,9 @@ class TasksViewModel @Inject constructor(
     // Agentic Auto-Suggestion: Beim manuellen Refresh auch Aufgaben- und
     // Gewohnheitsvorschläge aus Ideen neu generieren (Frank-Wunsch 2026-06-18).
     private val generateSuggestions: de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase,
+    // Frank-Wunsch 2026-06-19: fuer die Rueckwaerts-Propagierung der Prio einer Loop-Instanz
+    // ins zugehoerige Loop-Template (Heute-Aenderung -> Loop-Bereich konsistent).
+    private val recurringTemplates: RecurringTemplateRepository,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -980,9 +984,10 @@ class TasksViewModel @Inject constructor(
         viewModelScope.launch {
             val entry = entries.get(entryId) ?: return@launch
             val now = System.currentTimeMillis()
+            val clamped = score.coerceIn(0.0, 100.0)
             entries.update(
                 entry.copy(
-                    manualPriorityScore = score.coerceIn(0.0, 100.0),
+                    manualPriorityScore = clamped,
                     // Frank-Wunsch 2026-06-19: Marker setzen, dass die Prio AN DIESER INSTANZ
                     // manuell gesetzt wurde. Die Loop-Pflege (GenerateRecurringInstancesUseCase)
                     // ueberschreibt sie dann nicht mehr mit der Template-Prio (manuell > KI/Loop).
@@ -990,6 +995,45 @@ class TasksViewModel @Inject constructor(
                     updatedAt = now,
                 )
             )
+            // Frank-Wunsch 2026-06-19 (Bugfix): Ist die geaenderte Aufgabe eine LOOP-INSTANZ, muss
+            // die Prio-Aenderung RUECKWAERTS ins Loop-Template (Loop-Bereich) UND in alle offenen
+            // Geschwister-Instanzen propagieren — sonst stehen Heute (z.B. 60) und Loop (z.B. 30)
+            // dauerhaft auseinander. Die Prio einer Loop-Aufgabe ist EIN Wert, egal wo man ihn aendert.
+            val isRec = entry.source == EntrySource.RECURRING_TEMPLATE || entry.id.startsWith("rec-")
+            if (isRec) {
+                // observeAll (statt getActive), damit auch ein inaktives Template noch gefunden wird.
+                // Zuordnung ueber den ID-Praefix (Template-IDs koennen selbst Bindestriche enthalten).
+                val template = recurringTemplates.observeAll().first()
+                    .firstOrNull { entry.id.startsWith("rec-${it.id}-") }
+                if (template != null) {
+                    recurringTemplates.upsert(
+                        template.copy(priorityScore = clamped.toInt(), updatedAt = now),
+                    )
+                    Diag.i(
+                        DiagnosticArea.APP, "TasksVM",
+                        "setManualPriority '${entry.title.take(24)}' = $clamped -> Loop-Template " +
+                            "'${template.id}' rueckwaerts auf ${clamped.toInt()} gesetzt",
+                    )
+                    // Offene Geschwister-Instanzen desselben Templates mitziehen (Konsistenz im Reiter).
+                    entries.getActive().first()
+                        .filter {
+                            it.id != entry.id &&
+                                it.source == EntrySource.RECURRING_TEMPLATE &&
+                                it.id.startsWith("rec-${template.id}-") &&
+                                it.status == EntryStatus.OFFEN
+                        }
+                        .forEach {
+                            entries.update(
+                                it.copy(
+                                    priorityScore = clamped,
+                                    manualPriorityScore = clamped,
+                                    manualPriorityScoreSetAt = now,
+                                    updatedAt = now,
+                                ),
+                            )
+                        }
+                }
+            }
         }
     }
 
