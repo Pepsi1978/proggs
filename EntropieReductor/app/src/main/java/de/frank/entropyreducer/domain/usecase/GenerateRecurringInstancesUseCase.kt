@@ -308,7 +308,29 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         // Frank-Wunsch 2026-06-01: dabei auch die manuelle Loop-Prio synchronisieren.
                         val keep = openForThis.first()
                         val prio = template.priorityScore.toDouble()
-                        if (keep.timeBucket != dueBucket ||
+                        // Frank-Regel 2026-06-19: MANUELL hat IMMER Vorrang vor der Loop/KI-Logik.
+                        // Hat der Nutzer die Instanz NACH der letzten Loop-Synchronisierung manuell in
+                        // einen anderen Bucket geschoben (manualBucketSetAt neuer als lastGeneratedAt),
+                        // wird die Faelligkeits-Zuordnung NICHT mehr aufgezwungen — sonst setzt der
+                        // Loop-Cleanup bei jedem App-Start eine manuelle MORGEN-Verschiebung wieder auf
+                        // den Faelligkeits-Bucket (HEUTE) zurueck (Bucket-Rollback-Bug 2026-06-19).
+                        val userMovedManually =
+                            keep.manualBucket != null &&
+                                (keep.manualBucketSetAt ?: 0L) > template.lastGeneratedAt
+                        if (userMovedManually) {
+                            // Nur die Loop-Prioritaet weiter synchronisieren — der Bucket bleibt, wo
+                            // der Nutzer ihn manuell hingelegt hat.
+                            Diag.i(
+                                DiagnosticArea.TASKS, TAG,
+                                "Loop-Sync '${keep.title.take(24)}': manuell auf ${keep.manualBucket} " +
+                                    "(setAt=${keep.manualBucketSetAt} > lastGen=${template.lastGeneratedAt}) -> Bucket NICHT angetastet",
+                            )
+                            if (keep.manualPriorityScore != prio) {
+                                entryRepo.upsert(
+                                    keep.copy(priorityScore = prio, manualPriorityScore = prio, updatedAt = now),
+                                )
+                            }
+                        } else if (keep.timeBucket != dueBucket ||
                             keep.manualBucket != dueBucket ||
                             keep.manualPriorityScore != prio
                         ) {
@@ -322,6 +344,9 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                                     updatedAt = now,
                                 ),
                             )
+                            // lastGeneratedAt mitziehen, damit diese System-Synchronisierung beim
+                            // naechsten Lauf nicht faelschlich als "manuell verschoben" gilt.
+                            templateRepo.upsert(template.copy(lastGeneratedAt = now))
                         }
                     } else {
                         // Keine offene Instanz -> eine fuer die NAECHSTE Faelligkeit anlegen.
