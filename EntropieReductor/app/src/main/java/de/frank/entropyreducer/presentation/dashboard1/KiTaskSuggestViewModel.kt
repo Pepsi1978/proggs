@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.kiTaskSuggestionStore
+import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
+import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
@@ -22,7 +24,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONArray
-import org.json.JSONObject
 
 data class KiTaskSuggestion(
     val id: String,
@@ -41,36 +42,6 @@ data class KiTaskSuggestion(
 
 enum class KiTaskSuggestState { IDLE, LOADING }
 
-private fun parseSuggestionsJson(raw: String?): List<KiTaskSuggestion> {
-    if (raw.isNullOrBlank()) return emptyList()
-    return runCatching {
-        val arr = JSONArray(raw)
-        buildList(arr.length()) {
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
-                val description = o.optString("description")
-                add(KiTaskSuggestion(id = id, title = title, description = description))
-            }
-        }
-    }.getOrDefault(emptyList())
-}
-
-private fun serializeSuggestionsJson(items: List<KiTaskSuggestion>): String {
-    val arr = JSONArray()
-    for (item in items) {
-        arr.put(
-            JSONObject()
-                .put("id", item.id)
-                .put("title", item.title)
-                .put("description", item.description),
-        )
-    }
-    return arr.toString()
-}
-
-private val KEY_SUGGESTIONS = stringPreferencesKey("suggestions_json")
 private val KEY_PROCESSED_IDEAS = stringPreferencesKey("processed_idea_ids")
 
 @HiltViewModel
@@ -78,8 +49,11 @@ class KiTaskSuggestViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val generateSuggestions: GenerateSuggestionsUseCase,
     private val process: ProcessEntryUseCase,
+    private val taskSuggestionDao: TaskSuggestionDao,
 ) : ViewModel() {
 
+    // DataStore weiterhin NUR fuer processed_idea_ids (wird erst in Etappe 2d durch die ID-Kette
+    // abgeloest). Die Vorschlaege selbst liegen ab Etappe 2c in Room (task_suggestions).
     private val store = context.kiTaskSuggestionStore
 
     private val _state = MutableStateFlow(KiTaskSuggestState.IDLE)
@@ -91,9 +65,14 @@ class KiTaskSuggestViewModel @Inject constructor(
     private val _acceptingId = MutableStateFlow<String?>(null)
     val acceptingId: StateFlow<String?> = _acceptingId.asStateFlow()
 
+    // Ab ID-Architektur Etappe 2c aus Room (task_suggestions) statt DataStore-JSON.
     val suggestions: StateFlow<List<KiTaskSuggestion>> =
-        store.data
-            .map { prefs -> parseSuggestionsJson(prefs[KEY_SUGGESTIONS]) }
+        taskSuggestionDao.getAll()
+            .map { rows ->
+                rows.map {
+                    KiTaskSuggestion(id = it.id, title = it.title, description = it.description)
+                }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun dismissError() { _error.value = null }
@@ -144,10 +123,7 @@ class KiTaskSuggestViewModel @Inject constructor(
 
     private fun removeSuggestion(id: String) {
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
-            }
+            taskSuggestionDao.deleteById(id)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Aufgabenvorschlag: entfernt")
         }
@@ -155,10 +131,18 @@ class KiTaskSuggestViewModel @Inject constructor(
 
     private fun storeSuggestions(newSuggestions: List<KiTaskSuggestion>) {
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + newSuggestions)
-            }
+            // Herkunft (originId/originType/rootId) wird erst in Etappe 2d gesetzt (Idee -> Vorschlag).
+            val nowMs = System.currentTimeMillis()
+            taskSuggestionDao.upsertAll(
+                newSuggestions.mapIndexed { index, s ->
+                    TaskSuggestionEntity(
+                        id = s.id,
+                        title = s.title,
+                        description = s.description,
+                        createdAt = nowMs + index,
+                    )
+                }
+            )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Aufgabenvorschlag: generiert")
         }

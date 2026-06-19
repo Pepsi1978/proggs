@@ -8,8 +8,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
 import de.frank.entropyreducer.data.kiTaskSuggestionStore
+import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
+import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
-import de.frank.entropyreducer.presentation.dashboard1.KiTaskSuggestion
 import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ import org.json.JSONObject
 class AutoSuggestionViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val generateSuggestions: GenerateSuggestionsUseCase,
+    private val taskSuggestionDao: TaskSuggestionDao,
 ) : ViewModel() {
 
     /**
@@ -53,9 +55,9 @@ class AutoSuggestionViewModel @Inject constructor(
                     .generateSuggestions(ideas, allProcessedIds)
                     .getOrThrow()
 
-                // Tasks speichern
+                // Tasks speichern (ab Etappe 2c in Room statt im kiStore-JSON)
                 if (result.tasks.isNotEmpty()) {
-                    storeKiTaskSuggestions(kiStore, result.tasks)
+                    storeKiTaskSuggestions(result.tasks)
                 }
 
                 // Habits speichern
@@ -109,17 +111,21 @@ class AutoSuggestionViewModel @Inject constructor(
     }
 
     private suspend fun storeKiTaskSuggestions(
-        store: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
         newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
     ) {
-        store.edit { prefs ->
-            val raw = prefs[SUGGESTIONS_KEY]
-            val existing = parseKiTaskJson(raw)
-            val mapped = newSuggestions.map {
-                KiTaskSuggestion(id = it.id, title = it.title, description = it.description)
+        // Ab ID-Architektur Etappe 2c in Room (task_suggestions). Herkunft (originId/originType/
+        // rootId) wird erst in Etappe 2d gesetzt (Idee -> Vorschlag).
+        val nowMs = System.currentTimeMillis()
+        taskSuggestionDao.upsertAll(
+            newSuggestions.mapIndexed { index, s ->
+                TaskSuggestionEntity(
+                    id = s.id,
+                    title = s.title,
+                    description = s.description,
+                    createdAt = nowMs + index,
+                )
             }
-            prefs[SUGGESTIONS_KEY] = serializeKiTaskJson(existing + mapped)
-        }
+        )
     }
 
     private suspend fun storeHabitSuggestions(
@@ -131,28 +137,6 @@ class AutoSuggestionViewModel @Inject constructor(
             val existing = parseHabitJson(raw)
             prefs[SUGGESTIONS_KEY] = serializeHabitJson(existing + newSuggestions)
         }
-    }
-
-    private fun parseKiTaskJson(raw: String?): List<KiTaskSuggestion> {
-        if (raw.isNullOrBlank()) return emptyList()
-        return runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                    add(KiTaskSuggestion(id = id, title = o.optString("title"), description = o.optString("description")))
-                }
-            }
-        }.getOrDefault(emptyList())
-    }
-
-    private fun serializeKiTaskJson(items: List<KiTaskSuggestion>): String {
-        val arr = JSONArray()
-        for (item in items) {
-            arr.put(JSONObject().put("id", item.id).put("title", item.title).put("description", item.description))
-        }
-        return arr.toString()
     }
 
     private fun parseHabitJson(raw: String?): List<Mental> {

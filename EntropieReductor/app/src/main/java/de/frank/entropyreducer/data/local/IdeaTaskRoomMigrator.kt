@@ -11,9 +11,9 @@ import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
 import de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
-import de.frank.entropyreducer.data.taskSuggestionsForBackup
+import de.frank.entropyreducer.data.taskSuggestionsFromJson
 import de.frank.entropyreducer.di.ApplicationScope
-import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
+import de.frank.entropyreducer.presentation.ideen.ideenEntriesFromJsonFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -85,9 +85,10 @@ class IdeaTaskRoomMigrator @Inject constructor(
             return
         }
 
-        // JSON lesen (nur lesen, niemals schreiben).
-        val ideas = ideenEntriesFlow(context).first()
-        val taskSugs = taskSuggestionsForBackup(context).first()
+        // JSON lesen (nur lesen, niemals schreiben). Dedizierte JSON-Quelle — NICHT die Room-basierte
+        // ideenEntriesFlow/taskSuggestionsForBackup, sonst laese der Migrator seine eigene Zielquelle.
+        val ideas = ideenEntriesFromJsonFlow(context).first()
+        val taskSugs = taskSuggestionsFromJson(context).first()
 
         // Mappen (Bestandsdaten ohne Herkunft).
         val ideaEntities =

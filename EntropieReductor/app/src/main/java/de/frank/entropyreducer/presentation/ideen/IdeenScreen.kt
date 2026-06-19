@@ -56,6 +56,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.local.dao.IdeaWithFollowups
+import de.frank.entropyreducer.data.local.entities.IdeaEntity
+import de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity
+import de.frank.entropyreducer.data.local.ideaDaoFrom
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
@@ -72,6 +78,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -868,41 +875,99 @@ data class IdeenFollowup(
     val isImproved: Boolean = false,
 )
 
+// -------------------------------------------------------------------------------------------------
+// Persistenz: Ideen liegen ab ID-Architektur Etappe 2c (Frank-Wunsch 2026-06-19) in Room
+// (Tabellen `ideas` + `idea_followups`) statt im DataStore-JSON. Die oeffentlichen Signaturen
+// bleiben 1:1 — ALLE Aufrufer (Compose-UI, Migrator, AutoSuggestion/KiTaskSuggest-ViewModels,
+// SyncCoordinator, SyncEntriesUseCase) laufen unveraendert weiter. Der DAO kommt per Hilt-
+// @EntryPoint (ideaDaoFrom). triggerDriveBackup-Aufrufe bleiben 1:1 erhalten -> Drive-Backup und
+// Sync ziehen automatisch nach (Etappe 2e), weil sie ueber dieselbe ideenEntriesFlow/addIdeenEntry
+// laufen.
+//
+// Der DataStore "ideen_entries" + die JSON-Lesekette (ideenEntriesFromJsonFlow) bleiben als
+// Quelle fuer den einmaligen Room-Migrator (IdeaTaskRoomMigrator, Etappe 2b) erhalten.
+// -------------------------------------------------------------------------------------------------
+
 private val Context.ideenStore by preferencesDataStore(name = "ideen_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
+private const val IDEEN_TAG = "EREIdeenPersist"
 
+/** Room-Zeile (Idee + Nachtraege) -> UI-Modell. Followups nach Zeit (Room sortiert @Relation nicht). */
+private fun IdeaWithFollowups.toIdeenEntry(): IdeenEntry =
+    IdeenEntry(
+        id = idea.id,
+        timestampMs = idea.timestampMs,
+        title = idea.title,
+        text = idea.text,
+        followups =
+            followups
+                .sortedBy { it.createdAtMs }
+                .map {
+                    IdeenFollowup(
+                        id = it.id,
+                        createdAtMs = it.createdAtMs,
+                        text = it.text,
+                        improvedText = it.improvedText,
+                        isImproved = it.isImproved,
+                    )
+                },
+        summary = idea.summary,
+        improvedText = idea.improvedText,
+        isImproved = idea.isImproved,
+    )
+
+/**
+ * UI-Modell -> Room-Idee. Herkunft (originId/originType/rootId) wird hier NICHT gesetzt — sie kommt
+ * in Etappe 2d und wird dort gezielt durchgereicht; ein bestehender Wert darf nicht ueberschrieben
+ * werden. Beim Anlegen einer frisch eingesprochenen Idee ist null korrekt (= Ursprung der Kette).
+ */
+private fun IdeenEntry.toEntity(): IdeaEntity =
+    IdeaEntity(
+        id = id,
+        timestampMs = timestampMs,
+        title = title,
+        text = text,
+        summary = summary,
+        improvedText = improvedText,
+        isImproved = isImproved,
+    )
+
+private fun IdeenFollowup.toEntity(ideaId: String): IdeaFollowupEntity =
+    IdeaFollowupEntity(
+        id = id,
+        ideaId = ideaId,
+        createdAtMs = createdAtMs,
+        text = text,
+        improvedText = improvedText,
+        isImproved = isImproved,
+    )
+
+/** Lesequelle des Ideen-Reiters: reaktiver Flow aus Room (Etappe 2c). */
 internal fun ideenEntriesFlow(context: Context): Flow<List<IdeenEntry>> =
-    context.ideenStore.data.map { prefs ->
-        val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
-        runCatching {
-                val arr = JSONArray(raw)
-                buildList(arr.length()) {
-                    for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
-                }
-            }
-            .getOrDefault(emptyList())
-            .sortedByDescending { it.timestampMs }
-    }
+    ideaDaoFrom(context)
+        .getAllIdeasWithFollowups()
+        .map { rows -> rows.map { it.toIdeenEntry() } }
+        .distinctUntilChanged()
 
 /** Beobachtbarer Flow eines einzelnen Eintrags — für den Vollbild-Detail-Screen. */
 internal fun ideenEntryFlow(context: Context, id: String): Flow<IdeenEntry?> =
     ideenEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
 
 internal suspend fun addIdeenEntry(context: Context, entry: IdeenEntry) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing + entry
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    ideaDaoFrom(context)
+        .upsertIdeaWithFollowups(entry.toEntity(), entry.followups.map { it.toEntity(entry.id) })
+    Diag.d(
+        DiagnosticArea.DATABASE,
+        IDEEN_TAG,
+        "CHECKPOINT step=addIdee id=${entry.id} followups=${entry.followups.size}",
+    )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
 internal suspend fun deleteIdeenEntry(context: Context, id: String) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.filterNot { it.id == id }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    // CASCADE (ForeignKey in IdeaFollowupEntity) loescht zugehoerige idea_followups automatisch.
+    ideaDaoFrom(context).deleteIdeaById(id)
+    Diag.d(DiagnosticArea.DATABASE, IDEEN_TAG, "CHECKPOINT step=deleteIdee id=$id")
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -912,7 +977,8 @@ internal suspend fun deleteIdeenEntry(context: Context, id: String) {
  * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
  *
  * Frank-Wunsch 2026-05-23: Auch improvedText + isImproved werden hier durchgereicht damit die
- * KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat.
+ * KI-Nachbearbeitungs-Funktion einen einheitlichen Update-Pfad hat. Herkunfts-Felder bleiben
+ * unangetastet (copy auf die geladene Entity).
  */
 internal suspend fun updateIdeenEntry(
     context: Context,
@@ -931,23 +997,17 @@ internal suspend fun updateIdeenEntry(
             isImproved == null
     )
         return
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.map { e ->
-            if (e.id == id) {
-                e.copy(
-                    text = text ?: e.text,
-                    title = title ?: e.title,
-                    summary = summary ?: e.summary,
-                    improvedText = improvedText ?: e.improvedText,
-                    isImproved = isImproved ?: e.isImproved,
-                )
-            } else {
-                e
-            }
-        }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    val dao = ideaDaoFrom(context)
+    val current = dao.getIdeaById(id) ?: return
+    dao.updateIdea(
+        current.copy(
+            text = text ?: current.text,
+            title = title ?: current.title,
+            summary = summary ?: current.summary,
+            improvedText = improvedText ?: current.improvedText,
+            isImproved = isImproved ?: current.isImproved,
+        )
+    )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -961,21 +1021,9 @@ internal suspend fun setIdeenFollowupImproved(
     followupId: String,
     improvedText: String,
 ) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.map { e ->
-            if (e.id != entryId) return@map e
-            e.copy(
-                followups =
-                    e.followups.map { f ->
-                        if (f.id == followupId)
-                            f.copy(improvedText = improvedText, isImproved = true)
-                        else f
-                    }
-            )
-        }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    val dao = ideaDaoFrom(context)
+    val followup = dao.getFollowupsForIdea(entryId).firstOrNull { it.id == followupId } ?: return
+    dao.upsertFollowups(listOf(followup.copy(improvedText = improvedText, isImproved = true)))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -984,13 +1032,7 @@ internal suspend fun setIdeenFollowupImproved(
  * Detail-Screen als eigene Karte angezeigt.
  */
 internal suspend fun addIdeenFollowup(context: Context, entryId: String, followup: IdeenFollowup) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.map { e ->
-            if (e.id == entryId) e.copy(followups = e.followups + followup) else e
-        }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    ideaDaoFrom(context).upsertFollowups(listOf(followup.toEntity(entryId)))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -1000,42 +1042,36 @@ internal suspend fun updateIdeenFollowup(
     followupId: String,
     newText: String,
 ) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.map { e ->
-            if (e.id != entryId) return@map e
-            e.copy(
-                followups =
-                    e.followups.map { f -> if (f.id == followupId) f.copy(text = newText) else f }
-            )
-        }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    val dao = ideaDaoFrom(context)
+    val followup = dao.getFollowupsForIdea(entryId).firstOrNull { it.id == followupId } ?: return
+    dao.upsertFollowups(listOf(followup.copy(text = newText)))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
 internal suspend fun deleteIdeenFollowup(context: Context, entryId: String, followupId: String) {
-    context.ideenStore.edit { prefs ->
-        val existing = parseEntries(prefs[KEY_ENTRIES])
-        val updated = existing.map { e ->
-            if (e.id != entryId) e
-            else e.copy(followups = e.followups.filterNot { it.id == followupId })
-        }
-        prefs[KEY_ENTRIES] = serializeEntries(updated)
-    }
+    ideaDaoFrom(context).deleteFollowupById(followupId)
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
-private fun parseEntries(raw: String?): List<IdeenEntry> {
-    if (raw.isNullOrBlank()) return emptyList()
-    return runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
+// --- JSON-Lesekette: NUR noch fuer den einmaligen Room-Migrator (IdeaTaskRoomMigrator, Etappe 2b) ---
+
+/**
+ * Liest die Bestands-Ideen aus dem alten DataStore-JSON ("ideen_entries"). NUR fuer den einmaligen
+ * Umzug nach Room. Der Ideen-Reiter selbst liest ab Etappe 2c aus Room (ideenEntriesFlow). Diese
+ * Funktion NICHT fuer UI/Backup/Sync verwenden — sie spiegelt den eingefrorenen Alt-Stand.
+ */
+internal fun ideenEntriesFromJsonFlow(context: Context): Flow<List<IdeenEntry>> =
+    context.ideenStore.data.map { prefs ->
+        val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
+        runCatching {
+                val arr = JSONArray(raw)
+                buildList(arr.length()) {
+                    for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
+                }
             }
-        }
-        .getOrDefault(emptyList())
-}
+            .getOrDefault(emptyList())
+            .sortedByDescending { it.timestampMs }
+    }
 
 private fun jsonToEntry(o: JSONObject): IdeenEntry =
     IdeenEntry(
@@ -1065,41 +1101,6 @@ private fun jsonToFollowups(arr: JSONArray?): List<IdeenFollowup> {
             )
         }
     }
-}
-
-private fun serializeEntries(entries: List<IdeenEntry>): String {
-    val arr = JSONArray()
-    for (e in entries) {
-        val o = JSONObject()
-        o.put("id", e.id)
-        o.put("ts", e.timestampMs)
-        o.put("title", e.title)
-        o.put("text", e.text)
-        if (e.followups.isNotEmpty()) {
-            val fArr = JSONArray()
-            for (f in e.followups) {
-                val fo = JSONObject()
-                fo.put("id", f.id)
-                fo.put("ts", f.createdAtMs)
-                fo.put("text", f.text)
-                if (!f.improvedText.isNullOrBlank()) {
-                    fo.put("improvedText", f.improvedText)
-                }
-                if (f.isImproved) fo.put("isImproved", true)
-                fArr.put(fo)
-            }
-            o.put("followups", fArr)
-        }
-        if (!e.summary.isNullOrBlank()) {
-            o.put("summary", e.summary)
-        }
-        if (!e.improvedText.isNullOrBlank()) {
-            o.put("improvedText", e.improvedText)
-        }
-        if (e.isImproved) o.put("isImproved", true)
-        arr.put(o)
-    }
-    return arr.toString()
 }
 
 internal fun formatIdeenTimestamp(ts: Long): String {

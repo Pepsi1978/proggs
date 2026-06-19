@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.data.local.taskSuggestionDaoFrom
 import de.frank.entropyreducer.data.remote.drive.BackupMental
 import de.frank.entropyreducer.data.remote.drive.BackupTaskSuggestion
 import kotlinx.coroutines.flow.Flow
@@ -21,13 +23,26 @@ val Context.gewohnheitSuggestionStore by preferencesDataStore(name = "gewohnheit
 
 // Frank-Wunsch 2026-06-19 (Schema v15): offene KI-Vorschlaege ins Drive-Backup. Die Read-/Restore-
 // Helper hier sind die einzige Backup-Schnittstelle zu den Vorschlags-Stores (der SyncCoordinator
-// und der SyncEntriesUseCase rufen sie auf). Das JSON-Format ist 1:1 das der jeweiligen ViewModels
-// (KiTaskSuggestViewModel / GewohnheitSuggestViewModel) — gleicher Key, gleiche Feldnamen, damit
-// gesicherte Vorschlaege ohne Konvertierung wieder vom ViewModel gelesen werden.
+// und der SyncEntriesUseCase rufen sie auf).
+//
+// ID-Architektur Etappe 2c/2e (2026-06-19): Die AUFGABEN-Vorschlaege liegen jetzt in Room (Tabelle
+// task_suggestions) statt im DataStore-JSON. taskSuggestionsForBackup/restoreTaskSuggestions lesen/
+// schreiben deshalb Room -> Drive-Backup und Sync ziehen automatisch nach. Die GEWOHNHEITS-
+// Vorschlaege bleiben vorerst DataStore-JSON (kommen in Etappe 3 nach Room). Der einmalige Migrator
+// nutzt taskSuggestionsFromJson (eingefrorener Alt-Stand), NICHT taskSuggestionsForBackup.
 private val SUGGESTIONS_KEY = stringPreferencesKey("suggestions_json")
 
-/** Aktuelle Aufgabenvorschlaege (ki_task_suggestions) als Backup-DTO-Liste. */
+/** Aktuelle Aufgabenvorschlaege als Backup-DTO-Liste — ab Etappe 2c/2e aus Room (task_suggestions). */
 fun taskSuggestionsForBackup(context: Context): Flow<List<BackupTaskSuggestion>> =
+    taskSuggestionDaoFrom(context).getAll().map { rows ->
+        rows.map { BackupTaskSuggestion(id = it.id, title = it.title, description = it.description) }
+    }
+
+/**
+ * Liest die Bestands-Aufgabenvorschlaege aus dem alten DataStore-JSON ("ki_task_suggestions"). NUR
+ * fuer den einmaligen Room-Migrator (IdeaTaskRoomMigrator, Etappe 2b) — NICHT fuer Backup/Sync/UI.
+ */
+fun taskSuggestionsFromJson(context: Context): Flow<List<BackupTaskSuggestion>> =
     context.kiTaskSuggestionStore.data.map { prefs -> parseTaskSuggestions(prefs[SUGGESTIONS_KEY]) }
 
 /** Aktuelle Gewohnheitsvorschlaege (gewohnheit_suggestions) als id+text-Liste. */
@@ -37,20 +52,30 @@ fun gewohnheitSuggestionsForBackup(context: Context): Flow<List<BackupMental>> =
     }
 
 /**
- * Spielt Aufgabenvorschlaege aus dem Backup ein. Existenz-Strategie wie bei Mental/Ideen: nur
- * fehlende IDs werden ergaenzt, lokale gewinnen. Gibt die Zahl der ergaenzten Vorschlaege zurueck.
+ * Spielt Aufgabenvorschlaege aus dem Backup in Room ein. Existenz-Strategie wie bisher: nur fehlende
+ * IDs werden ergaenzt, lokale gewinnen. Gibt die Zahl der ergaenzten Vorschlaege zurueck. Da nur
+ * NEUE IDs geschrieben werden, ist das REPLACE-Upsert kollisionsfrei (kein Ueberschreiben lokaler).
  */
 suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSuggestion>): Int {
     if (incoming.isEmpty()) return 0
-    var added = 0
-    context.kiTaskSuggestionStore.edit { prefs ->
-        val existing = parseTaskSuggestions(prefs[SUGGESTIONS_KEY])
-        val existingIds = existing.mapTo(HashSet()) { it.id }
-        val toAdd = incoming.filterNot { it.id in existingIds }
-        added = toAdd.size
-        if (toAdd.isNotEmpty()) prefs[SUGGESTIONS_KEY] = serializeTaskSuggestions(existing + toAdd)
-    }
-    return added
+    val dao = taskSuggestionDaoFrom(context)
+    val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
+    val toAdd = incoming.filterNot { it.id in existingIds }
+    if (toAdd.isEmpty()) return 0
+    // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Bestandsdaten
+    // ohne Herkunft (originId/originType/rootId = null) — korrekt fuer eingespielte Alt-Vorschlaege.
+    val nowMs = System.currentTimeMillis()
+    dao.upsertAll(
+        toAdd.mapIndexed { index, s ->
+            TaskSuggestionEntity(
+                id = s.id,
+                title = s.title,
+                description = s.description,
+                createdAt = nowMs + index,
+            )
+        }
+    )
+    return toAdd.size
 }
 
 /** Spielt Gewohnheitsvorschlaege aus dem Backup ein (Existenz-Strategie). */
@@ -81,19 +106,6 @@ private fun parseTaskSuggestions(raw: String?): List<BackupTaskSuggestion> {
             }
         }
         .getOrDefault(emptyList())
-}
-
-private fun serializeTaskSuggestions(items: List<BackupTaskSuggestion>): String {
-    val arr = JSONArray()
-    for (item in items) {
-        arr.put(
-            JSONObject()
-                .put("id", item.id)
-                .put("title", item.title)
-                .put("description", item.description),
-        )
-    }
-    return arr.toString()
 }
 
 private fun parseGewohnheitSuggestions(raw: String?): List<BackupMental> {

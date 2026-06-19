@@ -287,7 +287,8 @@ class TasksViewModel @Inject constructor(
                     .getOrThrow()
 
                 if (result.tasks.isNotEmpty()) {
-                    storeKiTaskSuggestions(kiStore, result.tasks)
+                    // Ab ID-Architektur Etappe 2c in Room (task_suggestions) statt kiStore-JSON.
+                    storeKiTaskSuggestions(context, result.tasks)
                 }
                 if (result.habits.isNotEmpty()) {
                     storeHabitSuggestions(habitStore, result.habits)
@@ -1179,50 +1180,25 @@ class TasksViewModel @Inject constructor(
 // Private Helper fuer den Suggestion-Import im refreshAll()
 // ============================================================================
 
-private fun parseTaskJson(raw: String?): List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion> {
-    if (raw.isNullOrBlank()) return emptyList()
-    return runCatching {
-        val arr = JSONArray(raw)
-        buildList(arr.length()) {
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
-                add(de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion(id = id, title = title, description = o.optString("description")))
-            }
-        }
-    }.getOrDefault(emptyList())
-}
-
-private fun serializeTaskJson(items: List<KiTaskSuggestion>): String {
-    val arr = JSONArray()
-    for (item in items) {
-        arr.put(JSONObject().put("id", item.id).put("title", item.title).put("description", item.description))
-    }
-    return arr.toString()
-}
-
 private suspend fun storeKiTaskSuggestions(
-    store: DataStore<Preferences>,
+    context: android.content.Context,
     newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
 ) {
-    val key = stringPreferencesKey("suggestions_json")
-    store.edit { prefs ->
-        val raw = prefs[key]
-        val existing = if (raw.isNullOrBlank()) emptyList()
-        else runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                    add(KiTaskSuggestion(id = id, title = o.optString("title"), description = o.optString("description")))
-                }
+    // ID-Architektur Etappe 2c (Frank-Wunsch 2026-06-19): Aufgaben-Vorschlaege liegen in Room
+    // (task_suggestions) statt im DataStore-JSON. Herkunft (originId/originType/rootId) kommt in 2d.
+    val nowMs = System.currentTimeMillis()
+    de.frank.entropyreducer.data.local
+        .taskSuggestionDaoFrom(context)
+        .upsertAll(
+            newSuggestions.mapIndexed { index, s ->
+                de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity(
+                    id = s.id,
+                    title = s.title,
+                    description = s.description,
+                    createdAt = nowMs + index,
+                )
             }
-        }.getOrDefault(emptyList())
-        val mapped = newSuggestions.map { KiTaskSuggestion(id = it.id, title = it.title, description = it.description) }
-        prefs[key] = serializeTaskJson(existing + mapped)
-    }
+        )
 }
 
 private suspend fun loadProcessedIds(

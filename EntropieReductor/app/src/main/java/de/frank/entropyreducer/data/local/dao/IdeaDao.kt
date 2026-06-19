@@ -1,20 +1,42 @@
 package de.frank.entropyreducer.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Update
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
 import de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Idee samt ihren Nachtraegen (Room-@Relation). Quelle des reaktiven UI-/Backup-Flows ab Etappe 2c.
+ * Die Followups werden NICHT von Room sortiert (@Relation kann das nicht) — die Reihenfolge stellt
+ * der Mapper nach `createdAtMs` her.
+ */
+data class IdeaWithFollowups(
+    @Embedded val idea: IdeaEntity,
+    @Relation(parentColumn = "id", entityColumn = "ideaId")
+    val followups: List<IdeaFollowupEntity>,
+)
+
 /** DAO fuer Ideen (Tabelle ideas) und ihre Nachtraege (idea_followups). ID-Architektur Etappe 2. */
 @Dao
 interface IdeaDao {
     @Query("SELECT * FROM ideas ORDER BY timestampMs DESC")
     fun getAllIdeas(): Flow<List<IdeaEntity>>
+
+    /**
+     * Reaktiver Flow aller Ideen MIT Nachtraegen — die Lesequelle des Ideen-Reiters ab Etappe 2c
+     * (loest `ideenEntriesFlow` auf DataStore-JSON ab). `@Transaction` ist bei `@Relation` Pflicht
+     * (Room/BP §5: sonst inkonsistente Eltern/Kinder).
+     */
+    @Transaction
+    @Query("SELECT * FROM ideas ORDER BY timestampMs DESC")
+    fun getAllIdeasWithFollowups(): Flow<List<IdeaWithFollowups>>
 
     @Query("SELECT * FROM ideas")
     suspend fun getAllIdeasForBackup(): List<IdeaEntity>
@@ -44,6 +66,9 @@ interface IdeaDao {
 
     @Query("DELETE FROM ideas WHERE id = :id")
     suspend fun deleteIdeaById(id: String)
+
+    @Query("DELETE FROM idea_followups WHERE id = :id")
+    suspend fun deleteFollowupById(id: String)
 
     /** Idee + alle Nachtraege atomar schreiben (Migration/Restore). */
     @Transaction
