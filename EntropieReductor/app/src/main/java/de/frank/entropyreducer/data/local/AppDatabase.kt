@@ -98,8 +98,10 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             PromptTriggerEntity::class,
             // Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22)
             RecurringTemplateEntity::class,
+            // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
+            de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity::class,
         ],
-    version = 29,
+    version = 30,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -165,6 +167,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     /** Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22). */
     abstract fun recurringTemplateDao(): RecurringTemplateDao
+
+    /** Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19). */
+    abstract fun priorityMemoryDao(): de.frank.entropyreducer.data.local.dao.PriorityMemoryDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -860,6 +865,40 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(28, 29) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN manualPriorityScoreSetAt INTEGER")
+                }
+            }
+
+        /**
+         * Schema 29 -> 30 (Frank-Wunsch 2026-06-19): Prioritaets-Gedaechtnis. Neue Tabelle
+         * priority_memory speichert manuell gesetzte Aufgaben-Prioritaeten, damit die KI bei
+         * neuen, sehr aehnlichen Aufgaben dieselbe Prioritaet vorschlagen kann. Keine Fremdschluessel
+         * (eigenstaendig, ueberlebt das Loeschen der Ursprungsaufgabe). Index-Namen folgen der
+         * Room-Konvention index_<table>_<column>, damit der Schema-Abgleich exakt passt.
+         */
+        val MIGRATION_29_30: Migration =
+            object : Migration(29, 30) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS priority_memory (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            priority REAL NOT NULL,
+                            createdAt INTEGER NOT NULL,
+                            updatedAt INTEGER NOT NULL,
+                            sourceEntryId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_priority_memory_updatedAt " +
+                            "ON priority_memory(updatedAt)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_priority_memory_sourceEntryId " +
+                            "ON priority_memory(sourceEntryId)"
+                    )
                 }
             }
     }
