@@ -52,6 +52,16 @@ fun gewohnheitSuggestionsForBackup(context: Context): Flow<List<BackupMental>> =
     }
 
 /**
+ * Liest die Bestands-Gewohnheitsvorschlaege aus dem alten DataStore-JSON ("gewohnheit_suggestions").
+ * NUR fuer den einmaligen Room-Migrator (HabitRoomMigrator, Etappe 3b) — NICHT fuer Backup/Sync/UI.
+ * Bleibt JSON-basiert, auch wenn gewohnheitSuggestionsForBackup in Etappe 3e auf Room umgestellt wird.
+ */
+fun gewohnheitSuggestionsFromJson(context: Context): Flow<List<BackupMental>> =
+    context.gewohnheitSuggestionStore.data.map { prefs ->
+        parseGewohnheitSuggestions(prefs[SUGGESTIONS_KEY])
+    }
+
+/**
  * Spielt Aufgabenvorschlaege aus dem Backup in Room ein. Existenz-Strategie wie bisher: nur fehlende
  * IDs werden ergaenzt, lokale gewinnen. Gibt die Zahl der ergaenzten Vorschlaege zurueck. Da nur
  * NEUE IDs geschrieben werden, ist das REPLACE-Upsert kollisionsfrei (kein Ueberschreiben lokaler).

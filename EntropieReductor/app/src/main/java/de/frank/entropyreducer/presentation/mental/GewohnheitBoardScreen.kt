@@ -88,6 +88,15 @@ private val KEY_GEWOHNHEITEN = stringPreferencesKey("gewohnheiten_json")
 internal fun gewohnheitenFlow(context: Context): Flow<List<Mental>> =
     context.gewohnheitStore.data.map { prefs -> parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) }
 
+/**
+ * Liest die Bestands-Gewohnheiten aus dem alten DataStore-JSON ("gewohnheit_board"). NUR fuer den
+ * einmaligen Room-Migrator (HabitRoomMigrator, Etappe 3b) — NICHT fuer UI/Backup/Sync. Bleibt
+ * JSON-basiert, auch wenn gewohnheitenFlow in Etappe 3c auf Room umgestellt wird (eingefrorener
+ * Alt-Stand, sonst laese der Migrator seine eigene Zielquelle).
+ */
+internal fun gewohnheitenFromJsonFlow(context: Context): Flow<List<Mental>> =
+    context.gewohnheitStore.data.map { prefs -> parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) }
+
 internal suspend fun addGewohnheit(context: Context, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return

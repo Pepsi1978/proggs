@@ -52,6 +52,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
     /** ID-Architektur Etappe 2b (Frank-Wunsch 2026-06-19): JSON -> Room Datenkopier (Ideen/Vorschlaege). */
     @Inject lateinit var ideaTaskRoomMigrator: IdeaTaskRoomMigrator
 
+    /** ID-Architektur Etappe 3b (Frank-Wunsch 2026-06-19): JSON -> Room Datenkopier (Gewohnheiten/Vorschlaege). */
+    @Inject lateinit var habitRoomMigrator: de.frank.entropyreducer.data.local.HabitRoomMigrator
+
     @Inject lateinit var amazfitRepository: AmazfitRepository
 
     /** Sprint 2 (Frank-Wunsch 2026-05-22): wiederkehrende Aufgaben beim App-Start erzeugen. */
@@ -130,6 +133,11 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // Ideen + Aufgaben-Vorschlaege aus den DataStore-JSONs in die neuen Room-Tabellen. JSON
         // bleibt als Fallback erhalten. Async + fehlertolerant (siehe IdeaTaskRoomMigrator).
         ideaTaskRoomMigrator.migrateIfNeeded()
+
+        // ID-Architektur Etappe 3b (Frank-Wunsch 2026-06-19): einmaliger, idempotenter Umzug der
+        // Gewohnheiten + Gewohnheits-Vorschlaege aus den DataStore-JSONs in die neuen Room-Tabellen.
+        // JSON bleibt als Fallback erhalten. Async + fehlertolerant (siehe HabitRoomMigrator).
+        habitRoomMigrator.migrateIfNeeded()
 
         // Frank-Wunsch 2026-05-21: Agentic-AI-Trigger-Worker als PeriodicWork
         // registrieren — pruefen alle 15 Minuten ob ein CRON-Trigger faellig ist.
