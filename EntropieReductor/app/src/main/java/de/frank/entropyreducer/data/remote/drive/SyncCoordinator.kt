@@ -61,6 +61,9 @@ class SyncCoordinator
 constructor(
     private val secrets: EncryptedSecretsStore,
     private val backupManager: DriveBackupManager,
+    // M2-Schutz (Frank-Bugfix 2026-06-19): Read-before-write braucht den aktuellen
+    // Remote-Stand. Lazy gegen mögliche Init-Zyklen (beide @Singleton).
+    private val restoreManagerLazy: Lazy<DriveRestoreManager>,
     private val entryRepoLazy: Lazy<EntryRepository>,
     private val insightDaoLazy: Lazy<InsightDao>,
     private val memoryDaoLazy: Lazy<MemoryDao>,
@@ -354,7 +357,7 @@ constructor(
                     BackupMental(id = it.id, text = it.text)
                 }
 
-            val payload =
+            val localPayload =
                 BackupPayload(
                     version = 14,
                     exportedAt = System.currentTimeMillis(),
@@ -394,6 +397,18 @@ constructor(
                     "Mental=${mentalBackups.size}, Ideen=${ideenBackups.size}, " +
                     "Gewohnheit=${gewohnheitBackups.size})",
             )
+
+            // M2-Schutz (Read-before-write, Frank-Bugfix 2026-06-19 — Almanach M2 /
+            // Best-Practices §4 Multi-Device): Bevor das Haupt-Backup hochgeladen wird, das
+            // aktuelle Remote-Backup lesen und eine additive DataStore-Liste (Mental, Ideen,
+            // Gewohnheit, Tagebuch, Thesen) NUR DANN aus dem Remote retten, wenn sie lokal
+            // KOMPLETT LEER ist. Verhindert, dass ein frisch installiertes / nach Update
+            // geleertes Geraet ein volles Remote-Backup leer ueberschreibt (M2-Datenverlust).
+            // Bewusst kein voller Union (Loeschungen wuerden sonst zurueckkehren — siehe
+            // mergeRemoteAdditiveLists). Safe-Degradation (Direktive #3): Remote nicht
+            // lesbar/leer -> localPayload unveraendert (Verhalten wie vor dem Fix).
+            val payload = mergeRemoteAdditiveLists(localPayload)
+
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird
             // (z.B. nach einem Bulk-Import) fangen wir den OOM ab und melden
@@ -604,6 +619,72 @@ constructor(
             requestSync()
         }
     }
+
+    /**
+     * M2-Schutz (Read-before-write): Liest das aktuelle Remote-Haupt-Backup und rettet die
+     * additiven DataStore-Listen (Mental, Ideen, Gewohnheit, Tagebuch, Thesen) NUR DANN aus dem
+     * Remote, wenn die lokale Liste KOMPLETT LEER ist und das Remote sie hat. So kann ein Geraet
+     * mit lokal leeren Quellen (frisch installiert / Update mit geleertem DataStore) ein volles
+     * Remote-Backup nicht mehr leer ueberschreiben (Almanach M2 / Best-Practices §4).
+     *
+     * WICHTIG — funktionserhaltend (Direktive #3): Bewusst KEIN voller Union per ID. Diese Listen
+     * haben kein Deletion-Tracking (siehe Memory reference_drive_restore_revives_deletions); ein
+     * Union wuerde eine bewusste Loeschung einzelner Eintraege aus dem Remote wieder zurueckholen
+     * und damit das Loeschen kaputtmachen. Eine TEILWEISE Schrumpfung (Nutzer loescht einzelne
+     * Eintraege) bleibt deshalb unangetastet; nur der klare Totalverlust-Fall (lokal == leer) wird
+     * gerettet. Den Multi-Device-Merge (verschiedene Geraete, verschiedene Eintraege) erledigt der
+     * additive Restore beim Start (restoreFromDrive laeuft vor dem Upload).
+     *
+     * Aufgaben/Insights/Memories (updatedAt/Last-Write-Wins) bleiben generell aussen vor.
+     *
+     * Safe-Degradation (Direktive #3): Remote nicht vorhanden/lesbar -> localPayload unveraendert
+     * (Verhalten exakt wie vor dem Fix, kein Datenverlust durch den Schutz selbst).
+     */
+    private suspend fun mergeRemoteAdditiveLists(local: BackupPayload): BackupPayload {
+        val remoteRaw = restoreManagerLazy.get().fetchLatest().getOrNull() ?: return local
+        val remote =
+            runCatching { json.decodeFromString(BackupPayload.serializer(), remoteRaw) }
+                .getOrElse {
+                    diagnostics.info(
+                        de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                        "M2-Schutz: Remote-Backup nicht lesbar -> lokaler Stand bleibt",
+                    )
+                    return local
+                }
+        val merged =
+            local.copy(
+                mentals = rescueIfLocalEmpty(local.mentals, remote.mentals),
+                ideenEntries = rescueIfLocalEmpty(local.ideenEntries, remote.ideenEntries),
+                gewohnheiten = rescueIfLocalEmpty(local.gewohnheiten, remote.gewohnheiten),
+                tagebuchEntries = rescueIfLocalEmpty(local.tagebuchEntries, remote.tagebuchEntries),
+                thesenEntries = rescueIfLocalEmpty(local.thesenEntries, remote.thesenEntries),
+            )
+        val rescued =
+            (merged.mentals.size - local.mentals.size) +
+                (merged.ideenEntries.size - local.ideenEntries.size) +
+                (merged.gewohnheiten.size - local.gewohnheiten.size) +
+                (merged.tagebuchEntries.size - local.tagebuchEntries.size) +
+                (merged.thesenEntries.size - local.thesenEntries.size)
+        if (rescued > 0) {
+            diagnostics.info(
+                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
+                "M2-Schutz: $rescued Remote-Eintraege vor leerem Ueberschreiben gerettet " +
+                    "(Mental ${local.mentals.size}->${merged.mentals.size}, " +
+                    "Ideen ${local.ideenEntries.size}->${merged.ideenEntries.size}, " +
+                    "Gewohnheit ${local.gewohnheiten.size}->${merged.gewohnheiten.size}, " +
+                    "Tagebuch ${local.tagebuchEntries.size}->${merged.tagebuchEntries.size}, " +
+                    "Thesen ${local.thesenEntries.size}->${merged.thesenEntries.size})",
+            )
+        }
+        return merged
+    }
+
+    /**
+     * Uebernimmt das Remote NUR, wenn die lokale Liste leer ist und das Remote nicht — der klare
+     * Totalverlust-Fall. Sonst bleibt die lokale Liste unveraendert (Loeschungen/Edits gewinnen).
+     */
+    private fun <T> rescueIfLocalEmpty(local: List<T>, remote: List<T>): List<T> =
+        if (local.isEmpty() && remote.isNotEmpty()) remote else local
 
     companion object {
         private const val DEBOUNCE_MS = 1500L
