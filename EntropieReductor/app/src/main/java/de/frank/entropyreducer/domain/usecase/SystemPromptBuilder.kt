@@ -39,6 +39,8 @@ class SystemPromptBuilder @Inject constructor() {
         archivedResolutionEntries: List<ArchivedMethodSummary> = emptyList(),
         activeHypotheses: List<HypothesisEntity> = emptyList(),
         confirmedInsights: List<InsightEntity> = emptyList(),
+        priorityMemories: List<de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity> =
+            emptyList(),
     ): String = buildString {
         appendLine(basePrompt.trim())
         appendLine()
@@ -64,6 +66,18 @@ class SystemPromptBuilder @Inject constructor() {
                 val cats = (listOf(i.targetCategory) + i.additionalCategories).joinToString(", ") { it.name }
                 appendLine("- \"${i.title}\" [$cats] (Konfidenz ${i.confidence}%, ${i.successCount}/${i.attemptCount} Erfolge)")
                 if (i.description.isNotBlank()) appendLine("  → ${i.description.trim()}")
+            }
+            appendLine()
+        }
+
+        if (priorityMemories.isNotEmpty()) {
+            appendLine("## Prioritaets-Gedaechtnis (frueher manuell gesetzte Prioritaeten)")
+            appendLine(
+                "Vergleiche die neue Aufgabe SPEZIFISCH mit diesen Eintraegen (genaue Match-Regeln " +
+                    "in der priorityScore-Doktrin unten). Format je Eintrag: Titel | Beschreibung | Prioritaet:",
+            )
+            priorityMemories.forEach { m ->
+                appendLine("- \"${m.title}\" | ${m.description} | Prioritaet ${m.priority.toInt()}")
             }
             appendLine()
         }

@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.domain.usecase
 
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
@@ -36,6 +38,9 @@ class ProcessEntryUseCase @Inject constructor(
     private val insights: InsightRepository,
     private val systemPromptBuilder: SystemPromptBuilder,
     private val json: Json,
+    // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis fuer den Abgleich beim Einsprechen.
+    private val priorityMemoryRepository:
+        de.frank.entropyreducer.data.repository.PriorityMemoryRepository,
 ) {
 
     suspend operator fun invoke(
@@ -58,6 +63,14 @@ class ProcessEntryUseCase @Inject constructor(
         // BDNF/NGF, baut mentale + körperliche + Schmerz-Entropie ab. Eine
         // Aufgabe die durch eine bestätigte Methode lösbar ist bekommt höhere Prio.
         val confirmed = insights.observeConfirmed().first()
+        // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis laden (nur wenn aktiviert) — die neuesten
+        // N Eintraege (einstellbares Limit). Gemini gleicht die neue Aufgabe spezifisch dagegen ab.
+        val priorityMemories =
+            if (settings.priorityMemoryEnabledFlow.first()) {
+                priorityMemoryRepository.getNewest(settings.priorityMemoryLimitFlow.first())
+            } else {
+                emptyList()
+            }
 
         val systemPrompt = systemPromptBuilder.build(
             basePrompt = BASE_PROMPT,
@@ -69,6 +82,7 @@ class ProcessEntryUseCase @Inject constructor(
             userPrompts = activePrompts,
             tail = TAIL_INSTRUCTION,
             confirmedInsights = confirmed,
+            priorityMemories = priorityMemories,
         )
 
         // Frank-Wunsch 2026-05-22 (dritte Iteration): KI lernt aus historischen
@@ -148,6 +162,21 @@ class ProcessEntryUseCase @Inject constructor(
                 fallbackEntry(rawTranscript, source, cleanManualTitle)
             }
             entries.upsert(entry)
+            // Frank-Wunsch 2026-06-19: Live-Logik-Checkpoint (Intent-Verifikation) — erwartet vs.
+            // tatsaechlich: hat die KI eine Prio aus dem Gedaechtnis uebernommen?
+            if (priorityMemories.isNotEmpty()) {
+                val hit = entry.priorityReason.contains(
+                    "aus frueherer aehnlicher Aufgabe",
+                    ignoreCase = true,
+                )
+                Diag.i(
+                    DiagnosticArea.APP,
+                    "PrioMemory",
+                    "CHECKPOINT match: neu='${entry.title.take(32)}' ok=$hit " +
+                        "prio=${entry.priorityScore.toInt()} " +
+                        (if (hit) "(uebernommen)" else "(kein Treffer)"),
+                )
+            }
             Result.success(entry)
         } catch (t: Throwable) {
             // Fallback-Eintrag mit OFFEN-Status speichern, damit der Nutzer ihn
@@ -638,6 +667,17 @@ WICHTIGE REGELN:
   durch diesen Hebel +15 bis +20 Punkte. Begruendung in
   priorityReason explizit erwaehnen ("durch bestaetigte Methode X
   loesbar, mehrfach-kategorial").
+
+- PRIORITAETS-GEDAECHTNIS-ABGLEICH (Frank-Wunsch 2026-06-19): Oben kann ein
+  Abschnitt "Prioritaets-Gedaechtnis" mit frueher manuell gesetzten Prioritaeten
+  stehen. Wenn die neue Aufgabe inhaltlich QUASI DASSELBE Vorhaben beschreibt wie
+  ein Eintrag dort (z.B. "laufen gehen" entspricht "Lauftraining im Wald"),
+  uebernimm dessen Prioritaet als priorityScore und schreibe in priorityReason
+  WORTWOERTLICH den Marker: aus frueherer aehnlicher Aufgabe uebernommen.
+  Vergleiche hauptsaechlich die Beschreibung, auch den Titel. NUR thematisch
+  verwandt reicht NICHT (Laufen ist NICHT Federball; "Sport" ist KEIN gemeinsamer
+  Nenner; "Einkaufen" ist NICHT "Kochen"). Die Aehnlichkeit muss spezifisch und
+  hoch sein. Im Zweifel: KEIN Treffer, normal bewerten.
 """
 
         private const val BASE_PROMPT =
