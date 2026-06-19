@@ -586,14 +586,41 @@ constructor(
             }
         }
 
-        // --- Wiederkehrende Aufgaben-Vorlagen (v10+, Sprint 2.8, Frank-Wunsch 2026-05-22) ---
-        // Existenz-Strategie pro id: nur neue Templates einspielen, lokale Edits gewinnen.
-        if (payload.recurringTemplates.isNotEmpty()) {
-            val existingIds = recurringTemplateRepo.getAllForBackup().map { it.id }.toHashSet()
+        // --- Wiederkehrende Aufgaben-Vorlagen (v10+; Sync-Etappe 1.3: Last-Write-Wins + Tombstone) ---
+        // Frueher reine Existenz-Strategie ("id existiert -> ueberspringen") -> Edits an einer schon
+        // bekannten Vorlage (Intervall, Aktivieren/Deaktivieren, Titel, Prioritaet, Ziel-Bucket)
+        // propagierten NIE auf das Zweitgeraet. Jetzt LWW per updatedAt + Tombstone-Loeschung.
+        run {
+            val loopDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.LOOP_TEMPLATE }
+                    .associate { it.id to it.deletedAt }
+            val existingTemplates = recurringTemplateRepo.getAllForBackup().associateBy { it.id }
             for (b in payload.recurringTemplates) {
-                if (b.id in existingIds) continue
-                recurringTemplateRepo.upsert(b.toEntity())
-                inserted++
+                val incoming = b.toEntity()
+                // delete-wins-only-if-newer: geloeschte Vorlage nicht aus dem Backup wiederbeleben.
+                val tombstoneAt = loopDeletedAt[b.id]
+                if (tombstoneAt != null && tombstoneAt > incoming.updatedAt) continue
+                val existing = existingTemplates[b.id]
+                when {
+                    existing == null -> {
+                        recurringTemplateRepo.upsert(incoming)
+                        inserted++
+                    }
+                    incoming.updatedAt > existing.updatedAt -> {
+                        recurringTemplateRepo.upsert(incoming)
+                        updated++
+                    }
+                    else -> Unit
+                }
+            }
+            // Tombstones auf lokal noch vorhandene Vorlagen anwenden (frischer Stand nach den Upserts).
+            for ((id, deletedAt) in loopDeletedAt) {
+                val local = recurringTemplateRepo.getById(id) ?: continue
+                if (deletedAt > local.updatedAt) {
+                    recurringTemplateRepo.deleteByIdForRestore(id)
+                    deleted++
+                }
             }
         }
 

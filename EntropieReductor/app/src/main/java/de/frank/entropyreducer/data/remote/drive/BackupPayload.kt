@@ -232,6 +232,13 @@ data class BackupRecurringTemplate(
     val updatedAt: Long,
     /** TimeBucket.name oder null (= "KI"/automatisch HEUTE). Frank-Wunsch 2026-05-31. */
     val targetBucket: String? = null,
+    /**
+     * Schema v16 (Sync-Etappe 1.3): festes Wiederkehr-Intervall in Tagen (null = "KI"). Bisher NUR
+     * ueber die rrule (FREQ=DAILY;INTERVAL=N) transportiert und beim Restore nie in die Entity
+     * zurueckgeschrieben -> die "KI/Taeglich/Alle N Tage"-Anzeige sprang nach Restore auf "KI".
+     * Default null damit aeltere Backups (v1-v15) lesbar bleiben.
+     */
+    val intervalDays: Int? = null,
 )
 
 /** Schema v8/v9: gespeicherter Prompt mit Kategorie + Agentic-AI-Felder. */
@@ -1530,6 +1537,7 @@ fun RecurringTemplateEntity.toBackup(): BackupRecurringTemplate =
         createdAt = createdAt,
         updatedAt = updatedAt,
         targetBucket = targetBucket?.name,
+        intervalDays = intervalDays,
     )
 
 fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
@@ -1554,6 +1562,7 @@ fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
         targetBucket = targetBucket?.let {
             runCatching { de.frank.entropyreducer.domain.model.TimeBucket.valueOf(it) }.getOrNull()
         },
+        intervalDays = intervalDays,
     )
 
 // =========================================================================

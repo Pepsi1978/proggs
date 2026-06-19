@@ -1,8 +1,12 @@
 package de.frank.entropyreducer.data.repository
 
+import android.content.Context
 import dagger.Lazy
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.TombstoneType
 import de.frank.entropyreducer.data.local.dao.RecurringTemplateDao
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
+import de.frank.entropyreducer.data.markDeleted
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
 class RecurringTemplateRepository @Inject constructor(
     private val dao: RecurringTemplateDao,
     private val syncCoordinator: Lazy<SyncCoordinator>,
+    @ApplicationContext private val appContext: Context,
 ) {
     fun observeAll(): Flow<List<RecurringTemplateEntity>> = dao.observeAll()
 
@@ -35,7 +40,14 @@ class RecurringTemplateRepository @Inject constructor(
 
     suspend fun deleteById(id: String) {
         dao.deleteById(id)
+        // Sync-Etappe 1.3: Tombstone, damit die Loeschung beim Restore auf andere Geraete propagiert.
+        markDeleted(appContext, TombstoneType.LOOP_TEMPLATE, id)
         syncCoordinator.get().requestSync("Wiederkehrende Aufgaben-Vorlage geaendert")
+    }
+
+    /** Sync-Etappe 1.3: Loescht ohne neuen Tombstone/Sync — fuer den Restore (Tombstone existiert schon). */
+    suspend fun deleteByIdForRestore(id: String) {
+        dao.deleteById(id)
     }
 
     suspend fun getAllForBackup(): List<RecurringTemplateEntity> = dao.getAllForBackup()
