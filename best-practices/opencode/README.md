@@ -15,6 +15,7 @@ OpenRouter einrichtet.
 | Datei | Inhalt |
 |-------|--------|
 | `grundlagen-installation.md` | Was ist OpenCode, Installation (Windows/macOS), CLI/TUI-Bedienung, Sessions, Slash-Befehle, Tastenkürzel, Windows-Stolperfallen, täglicher Workflow |
+| `command-palette.md` | Vollständige Befehlsliste (Strg+P) 1:1: alle englischen Befehle in Anzeige-Reihenfolge mit Gruppen (Suggested·Session·Prompt·Agent·Provider·System·VCS), deutscher Erklärung, Quell-Dateien der Registrierung + Versions-Nuance (reiche `tui`-Route vs. schlanke `run`-Variante) |
 | `konfiguration.md` | Alle Config-Dateien, vollständiges `opencode.json`-Schema, Pfade je OS, Variablen-Substitution, Permissions, Beispielkonfigurationen, Secrets |
 | `agents-md-memory.md` | AGENTS.md-Standard, `/init`, Regeln/Precedence, CLAUDE.md-Migration, `instructions`-Glob, Gedächtnis/Sessions-Persistenz, Kontext-Management |
 | `agents-modes.md` | Primary/Subagents, Plan/Build, Custom Agents (JSON + Markdown), Frontmatter-Felder, Permissions, pro-Agent-Modellwahl |
@@ -39,7 +40,4 @@ OpenRouter einrichtet.
 
 ## Quellen-Rangordnung
 1. **Offiziell** (opencode.ai/docs, openrouter.ai/docs, GitHub anomalyco/opencode, agents.md) = Grundwahrheit.
-2. **Extern** (Community/Blogs/GitHub-Issues) = nur als Alternative/Ergänzung, klar gelabelt.
-
-> Hinweis: OpenRouter-Modell-IDs und Preise ändern sich häufig — vor Übernahme `opencode models openrouter
-> --refresh` ausführen und Preise auf openrouter.ai/models gegenprüfen. Die Mechanik-Hebel selbst sind stabil.
+2. **Extern**
