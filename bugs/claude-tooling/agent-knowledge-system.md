@@ -32,6 +32,8 @@
 | 8 | Wissen veraltet | Kern-/meistgenutztes Wissen veraltet am schnellsten (Risiko-Asymmetrie); ohne Staleness-Markierung wird blind vertraut | §8 |
 | 9 | Bug erlebt | Sowohl Almanach ALS AUCH `bug-cases.jsonl` aktualisieren — auch fuer HARNESS-Bugs (versickern sonst) | §9 |
 | 10 | Whiteboard/MEMORY.md schreiben | Auto-Log-Spam (Speicher/Effort) raten-limitieren/deduplizieren, sonst ertrinkt das echte Signal | §10 |
+| 11 | Web-Recherche per `WebFetch` auf `github.com` | github.com ist fuer WebFetch blockiert (verlangt `gh`-CLI) → auf `npmjs.com`/`sourcepulse.org`/offizielle Doku/`WebSearch` ausweichen, fuer Repo-Daten `gh`-CLI | §11 |
+| 12 | Researcher-Schwarm (parallele Web-Recherche) | Zu viele gleichzeitige Researcher/Fetches → Server-Rate-Limit (429). ~8 Fetches/Researcher, 5-6 gleichzeitig, gestaffelt (Continuous-Spawning); Findings NIE kappen, nur Rate drosseln | §12 |
 
 ---
 
@@ -193,6 +195,38 @@ Bugs sind nicht mehr auffindbar. Pheromon-/Bewaehrte-Muster-Tabelle bleibt dageg
 Erkenntnisse (Pheromon, bewaehrte Loesungen) per Postcondition/Hook aktiv zurueckschreiben, sonst
 bleibt die Lern-Tabelle leer und niemand liest sie.
 **Quelle:** eigener Audit 2026-06-15.
+
+---
+
+## 11. `WebFetch` auf `github.com` wird blockiert (Repo-/Issue-/Release-Recherche)
+**Symptom:** `WebFetch` auf eine `github.com`-URL (Repo-README, Issue, Releases) liefert keinen
+Inhalt bzw. verlangt die `gh`-CLI; ein Researcher-Schwarm, der auf GitHub zielt, läuft ins Leere.
+**Ursache:** github.com ist für das WebFetch-Tool gesperrt — GitHub-Inhalte sollen über die
+`gh`-CLI/API geholt werden, nicht per Scrape.
+**Versionen:** Claude Code, Stand 2026-06.
+**FIX (funktionserhaltend):** Gar nicht erst auf github.com „nachbohren" (kostet nur Fetches).
+Stattdessen alternative Quellen: `npmjs.com` (Paket-Metadaten/READMEs/`npm view`), `sourcepulse.org`
+(Repo-Spiegel/Stats), die offizielle Doku-Domain des Projekts, oder `WebSearch`. Für echte
+Repo-Daten die `gh`-CLI per Bash (`gh repo view`, `gh api …`). Researcher-Prompts entsprechend
+instruieren (GitHub-Quellen über `gh`/Alternativen, nicht WebFetch).
+**Belegt:** OpenCode-Plugin-Recherche 2026-06-19 — Researcher mussten von github.com auf
+npmjs.com / sourcepulse.org / opencode.ai/docs / WebSearch ausweichen.
+
+## 12. Researcher-Schwarm: zu viele parallele Fetches → Server-Rate-Limit (429)
+**Symptom:** Bei einem großen Schwarm (z.B. 7 Researcher gleichzeitig × je ~12 Web-Fetches)
+bricht ein Teil mit „temporarily limiting requests" / HTTP 429 ab; einzelne Researcher müssen neu
+gestartet werden.
+**Ursache:** Ein Burst zu vieler gleichzeitiger HTTP-Anfragen über alle Researcher hinweg
+überschreitet das serverseitige Anfrage-Rate-Limit. Das ist UNABHÄNGIG vom 1M-Kontextfenster
+(ein Anfrage-Raten-Problem, kein Kontext-Problem — daher hilft ein größeres Fenster NICHT).
+**Versionen:** Claude Code, Stand 2026-06 (mehrfach erlebt, zuletzt 2026-06-19).
+**FIX (funktionserhaltend):** Den Anfrage-Strom entzerren — ~8 Web-Fetches pro Researcher (nicht
+12+), 5-6 Researcher gleichzeitig (nicht 7+), und per Continuous-Spawning gestaffelt nachziehen
+statt als großer Burst. Bei 429: Retry mit exponential backoff (`retry-after` beachten). Findings
+NIE an einem künstlichen Cap abschneiden — nur die Anfrage-RATE drosseln (deckt sich mit
+`~/.claude/rules/agent-and-researcher-rules.md` §2).
+**Belegt:** OpenCode-Plugin-Recherche 2026-06-19 — 7×~12 Fetches, 1 Researcher (notify) lief ins
+Limit und musste neu.
 
 ---
 
