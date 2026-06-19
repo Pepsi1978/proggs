@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
 import de.frank.entropyreducer.data.health.HealthConnectManager
+import de.frank.entropyreducer.data.local.IdeaTaskRoomMigrator
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.repository.AmazfitRepository
@@ -47,6 +48,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
     @Inject lateinit var secrets: de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 
     @Inject lateinit var dataMigrator: InitialDataMigrator
+
+    /** ID-Architektur Etappe 2b (Frank-Wunsch 2026-06-19): JSON -> Room Datenkopier (Ideen/Vorschlaege). */
+    @Inject lateinit var ideaTaskRoomMigrator: IdeaTaskRoomMigrator
 
     @Inject lateinit var amazfitRepository: AmazfitRepository
 
@@ -121,6 +125,11 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // dabei laeuft MIGRATION_1_2 und legt die neuen Tabellen an.
         dataMigrator.writeRescuedData(rescuedData)
         rescuedData = null
+
+        // ID-Architektur Etappe 2b (Frank-Wunsch 2026-06-19): einmaliger, idempotenter Umzug der
+        // Ideen + Aufgaben-Vorschlaege aus den DataStore-JSONs in die neuen Room-Tabellen. JSON
+        // bleibt als Fallback erhalten. Async + fehlertolerant (siehe IdeaTaskRoomMigrator).
+        ideaTaskRoomMigrator.migrateIfNeeded()
 
         // Frank-Wunsch 2026-05-21: Agentic-AI-Trigger-Worker als PeriodicWork
         // registrieren — pruefen alle 15 Minuten ob ein CRON-Trigger faellig ist.
