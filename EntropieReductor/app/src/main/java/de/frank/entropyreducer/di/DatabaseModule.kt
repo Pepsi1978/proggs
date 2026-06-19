@@ -51,6 +51,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_29_30,
                 AppDatabase.MIGRATION_30_31,
                 AppDatabase.MIGRATION_31_32,
+                AppDatabase.MIGRATION_32_33,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
@@ -134,6 +135,11 @@ object DatabaseModule {
     @Provides fun provideIdeaDao(db: AppDatabase) = db.ideaDao()
 
     @Provides fun provideTaskSuggestionDao(db: AppDatabase) = db.taskSuggestionDao()
+
+    /** ID-Architektur Etappe 3 (Frank-Wunsch 2026-06-19): Gewohnheiten + Gewohnheits-Vorschlaege. */
+    @Provides fun provideHabitDao(db: AppDatabase) = db.habitDao()
+
+    @Provides fun provideHabitSuggestionDao(db: AppDatabase) = db.habitSuggestionDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.

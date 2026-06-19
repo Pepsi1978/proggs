@@ -104,8 +104,11 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             de.frank.entropyreducer.data.local.entities.IdeaEntity::class,
             de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity::class,
             de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity::class,
+            // ID-Architektur Etappe 3 (Frank-Wunsch 2026-06-19): Kern-Kette Gewohnheiten
+            de.frank.entropyreducer.data.local.entities.HabitEntity::class,
+            de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity::class,
         ],
-    version = 32,
+    version = 33,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -180,6 +183,12 @@ abstract class AppDatabase : RoomDatabase() {
 
     /** Aufgaben-Vorschlaege (ID-Architektur Etappe 2, Frank-Wunsch 2026-06-19). */
     abstract fun taskSuggestionDao(): de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
+
+    /** Gewohnheiten (ID-Architektur Etappe 3, Frank-Wunsch 2026-06-19). */
+    abstract fun habitDao(): de.frank.entropyreducer.data.local.dao.HabitDao
+
+    /** Gewohnheits-Vorschlaege (ID-Architektur Etappe 3, Frank-Wunsch 2026-06-19). */
+    abstract fun habitSuggestionDao(): de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -997,6 +1006,50 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_createdAt ON task_suggestions(createdAt)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_originId ON task_suggestions(originId)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_task_suggestions_rootId ON task_suggestions(rootId)")
+                }
+            }
+
+        /**
+         * Migration 32 -> 33 (ID-Architektur Etappe 3, Frank-Wunsch 2026-06-19): Kern-Kette
+         * Gewohnheiten. Neue Tabellen `habits` (Gewohnheit-Reiter, mit manueller `position`) und
+         * `habit_suggestions` (Gewohnheits-Vorschlaege) — analog ideas/task_suggestions aus 31->32.
+         * KEINE SQL-DEFAULT-Klausel fuer Felder mit Kotlin-Default (updatedAt/position) — das
+         * Room-Schema erwartet NOT NULL ohne DEFAULT (sonst Integrity-Mismatch -> destructive fallback).
+         */
+        val MIGRATION_32_33: Migration =
+            object : Migration(32, 33) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS habits (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            text TEXT NOT NULL,
+                            updatedAt INTEGER NOT NULL,
+                            position INTEGER NOT NULL,
+                            originId TEXT,
+                            originType TEXT,
+                            rootId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habits_position ON habits(position)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habits_originId ON habits(originId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habits_rootId ON habits(rootId)")
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS habit_suggestions (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            text TEXT NOT NULL,
+                            createdAt INTEGER NOT NULL,
+                            originId TEXT,
+                            originType TEXT,
+                            rootId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_createdAt ON habit_suggestions(createdAt)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_originId ON habit_suggestions(originId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_rootId ON habit_suggestions(rootId)")
                 }
             }
     }
