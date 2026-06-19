@@ -165,6 +165,22 @@ mehr automatisch den No-Args-Ctor.
 **FIX:** Auf `androidComponents`-API + neue Property-Namen umstellen (Mapping-Tabelle in den 9.0-Notes).
 **Quelle:** developer.android.com/build/releases/agp-9-0-0-release-notes
 
+### 2.6 Weitere Fallen — kapt, KSP-Versionen, failOnMissingFiles, KMP, gebuendelte Versionen (Recherche-Update 2026-06-19)
+> Verifiziert gegen developer.android.com/build/releases/agp-9-0-0-release-notes + /build/migrate-to-built-in-kotlin.
+- **`kotlin-kapt` inkompatibel mit built-in Kotlin:** das alte `kotlin-kapt`-Plugin bricht. FIX: auf
+  **`com.android.legacy-kapt`** (gleiche Version wie AGP) wechseln ODER ganz auf KSP migrieren.
+- **KSP1→KSP2 Versions-Schwelle:** KSP vor **2.3.1** hat keine AGP-9.0-Unterstuetzung; die deprecated
+  `compilerOptions`-KGP-API wird erst in **KSP 2.3.3** sauber geloest. Built-in Kotlin zieht KSP automatisch
+  auf das gebuendelte Suffix **2.2.10-2.0.2** hoch, wenn niedriger.
+- **`proguard.failOnMissingFiles=true` (neuer Default ab 9.0):** fehlende/ungueltige proguard-Datei-Eintraege
+  brechen jetzt den Build (statt still ignoriert). FIX: ungueltige Eintraege entfernen. Temp-Opt-out:
+  `android.proguard.failOnMissingFiles=false`.
+- **KMP-Projekte:** `org.jetbrains.kotlin.multiplatform` im selben Subprojekt wie `com.android.library` ist
+  inkompatibel → auf das **Android Gradle Library Plugin fuer KMP** umstellen.
+- **Gebuendelte Versionen in AGP 9.0:** KGP **2.2.10**, KSP **2.2.10-2.0.2**, Build-Tools **36.0.0**,
+  NDK **28.2.13676358**, compileSdk max API **36.1**, Gradle min **9.1.0**, JDK min **17**.
+**Quelle:** developer.android.com/build/releases/agp-9-0-0-release-notes · /build/migrate-to-built-in-kotlin
+
 ### 2.6 buildFeatures-Defaults gekippt + entfernte globale Properties
 **Symptom:** `resValues`/`shaders` ploetzlich aus; globale `android.defaults.buildfeatures.aidl/renderscript` wirkungslos.
 **Ursache:** `android.defaults.buildfeatures.aidl/renderscript` entfernt; `resValues`/`shaders` Default `true→false`.

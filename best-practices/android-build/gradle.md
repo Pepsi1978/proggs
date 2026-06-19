@@ -332,6 +332,10 @@ Reihenfolge: Gradle-Wrapper → 9.1.0+ ⇒ AGP → 9.x ⇒ Kotlin → 2.3 (mit K
 `proguard-android-optimize.txt` ✓ (beide ok); `compilerOptions {}` ✓ (beide ok); `useAndroidX`/`enableJetifier`
 aus `gradle.properties` entfernen; Build-Logic auf `androidComponents`-API; `strictFullModeForKeepRules` →
 keep-Ctor praezisieren (§4.3); dynamische Ressourcen per `keep.xml` (§4.5); `targetSdk` explizit setzen.
+`kotlin-kapt` → **`com.android.legacy-kapt`** oder KSP (built-in Kotlin bricht `kotlin-kapt`); ungueltige
+proguard-Eintraege entfernen (`proguard.failOnMissingFiles=true` ab 9.0). Gebuendelte AGP-9.0-Versionen:
+KGP 2.2.10, KSP 2.2.10-2.0.2 (KSP2 min **2.3.1**, deprecated `compilerOptions`-API erst in **2.3.3** geloest),
+Build-Tools 36.0.0, NDK 28.2.x, compileSdk max 36.1. (Recherche-Update 2026-06-19 → Bug §2.6.)
 Quelle: developer.android.com/build/releases/agp-9-0-0-release-notes (2026-01). → Bug §2.1–§2.9.
 
 **9.3 Nur die Store-App upgraden, die private App bewusst zuruecklassen** `[Policy]`
