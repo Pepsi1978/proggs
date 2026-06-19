@@ -171,6 +171,16 @@ data class BackupPayload(
      * Gleiches id+text-Format wie Mental — BackupMental wiederverwendet.
      */
     val gewohnheitSuggestions: List<BackupMental> = emptyList(),
+    /**
+     * Schema v16 (Frank-Wunsch 2026-06-19, Sync-Etappe 1.2): Loesch-Protokoll (Tombstones).
+     * Haelt fuer jede vom Nutzer geloeschte Entitaet (Typ + ID + Loeschzeitpunkt) einen Eintrag,
+     * damit eine Loeschung auf einem Geraet beim Restore auch auf den anderen Geraeten ausgefuehrt
+     * wird (1:1-Synchronitaet inkl. Loeschungen). Ohne dieses Feld ist der Restore rein additiv und
+     * geloeschte Eintraege "auferstehen" auf dem Zweitgeraet. Konflikt-Regel: eine Loeschung greift
+     * nur, wenn ihr Zeitstempel NEUER ist als die lokale Version der Entitaet (sonst gewinnt eine
+     * spaetere Bearbeitung). Default emptyList damit aeltere Backups (v1-v15) lesbar bleiben.
+     */
+    val tombstones: List<BackupTombstone> = emptyList(),
 )
 
 /**
@@ -179,6 +189,15 @@ data class BackupPayload(
  */
 @Serializable
 data class BackupTaskSuggestion(val id: String, val title: String, val description: String)
+
+/**
+ * Schema v16: Ein Tombstone (Loesch-Markierung). [type] = Entitaetstyp (siehe TombstoneType im
+ * data-Paket), [id] = die geloeschte Entitaets-ID, [deletedAt] = epoch ms der Loeschung. Beim
+ * Restore wird eine lokale Entitaet nur geloescht, wenn deletedAt NEUER ist als ihr lokaler
+ * updatedAt-Stand (delete-wins-only-if-newer).
+ */
+@Serializable
+data class BackupTombstone(val type: String, val id: String, val deletedAt: Long)
 
 /**
  * Schema v12 (Frank-Wunsch 2026-06-09): ein Mentalboard-Eintrag. Nur id + Satz; die

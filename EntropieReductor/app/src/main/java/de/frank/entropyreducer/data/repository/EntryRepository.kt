@@ -1,8 +1,13 @@
 package de.frank.entropyreducer.data.repository
 
+import android.content.Context
 import dagger.Lazy
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.TombstoneType
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.markDeleted
+import de.frank.entropyreducer.data.markManyDeleted
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
@@ -19,7 +24,11 @@ import kotlinx.coroutines.flow.Flow
 @Singleton
 class EntryRepository
 @Inject
-constructor(private val dao: EntropyEntryDao, private val coordinatorLazy: Lazy<SyncCoordinator>) {
+constructor(
+    private val dao: EntropyEntryDao,
+    private val coordinatorLazy: Lazy<SyncCoordinator>,
+    @ApplicationContext private val appContext: Context,
+) {
     fun getActive(): Flow<List<EntropyEntryEntity>> = dao.getActive()
 
     fun getByBucket(bucket: TimeBucket): Flow<List<EntropyEntryEntity>> =
@@ -70,11 +79,27 @@ constructor(private val dao: EntropyEntryDao, private val coordinatorLazy: Lazy<
 
     suspend fun delete(entry: EntropyEntryEntity) {
         dao.delete(entry)
+        // Sync-Etappe 1.2: Tombstone, damit die Loeschung beim Restore auch auf andere Geraete
+        // propagiert (sonst wuerde der additive Restore die Aufgabe dort "auferstehen" lassen).
+        markDeleted(appContext, TombstoneType.AUFGABE, entry.id)
         coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: geloescht")
     }
 
     suspend fun deleteAll() {
+        // IDs VOR dem Loeschen einsammeln, damit fuer jede ein Tombstone gesetzt werden kann.
+        val ids = dao.getAllForBackup().map { it.id }
         dao.deleteAll()
+        markManyDeleted(appContext, TombstoneType.AUFGABE, ids)
         coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: alle geloescht")
+    }
+
+    /**
+     * Sync-Etappe 1.2: Loescht eine Aufgabe OHNE neuen Tombstone und OHNE Sync-Trigger — fuer den
+     * Restore, der eine per Tombstone als geloescht markierte Aufgabe lokal entfernt. Der Tombstone
+     * existiert dort bereits; erneutes Markieren/Triggern waere ueberfluessig.
+     */
+    suspend fun deleteByIdForRestore(id: String) {
+        val e = dao.getById(id) ?: return
+        dao.delete(e)
     }
 }

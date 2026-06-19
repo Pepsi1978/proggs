@@ -120,15 +120,31 @@ constructor(
                 "gewohnheiten=${payload.gewohnheiten.size}, tagebuch=${payload.tagebuchEntries.size}, " +
                 "thesen=${payload.thesenEntries.size}, " +
                 "aufgabenvorschlaege=${payload.taskSuggestions.size}, " +
-                "gewohnheitsvorschlaege=${payload.gewohnheitSuggestions.size}",
+                "gewohnheitsvorschlaege=${payload.gewohnheitSuggestions.size}, " +
+                "tombstones=${payload.tombstones.size}",
         )
 
         var inserted = 0
         var updated = 0
+        var deleted = 0
+
+        // --- Loesch-Protokoll (Tombstones, Sync-Etappe 1.2) ---
+        // Remote-Tombstones in den lokalen Store mergen (neuester Loeschzeitpunkt pro Eintrag
+        // gewinnt) und die Gesamtliste fuer das Anwenden je Typ holen.
+        val allTombstones =
+            de.frank.entropyreducer.data.mergeRemoteTombstones(appContext, payload.tombstones)
+        val aufgabeDeletedAt =
+            allTombstones
+                .filter { it.type == de.frank.entropyreducer.data.TombstoneType.AUFGABE }
+                .associate { it.id to it.deletedAt }
 
         // --- Aufgaben (immer dabei, auch bei v1-Backups) ---
         for (backupEntry in payload.entries) {
             val incoming = backupEntry.toEntity()
+            // delete-wins-only-if-newer: eine geloeschte Aufgabe NICHT aus dem Backup wieder
+            // einspielen, wenn der Tombstone neuer ist als die Backup-Version dieser Aufgabe.
+            val tombstoneAt = aufgabeDeletedAt[incoming.id]
+            if (tombstoneAt != null && tombstoneAt > incoming.updatedAt) continue
             val existing = entryRepo.get(incoming.id)
             when {
                 existing == null -> {
@@ -140,6 +156,17 @@ constructor(
                     updated++
                 }
                 else -> Unit
+            }
+        }
+
+        // Tombstones auf LOKAL noch vorhandene Aufgaben anwenden: was ein anderes Geraet geloescht
+        // hat (Tombstone neuer als die lokale Version), hier ebenfalls loeschen. deleteByIdForRestore
+        // schreibt KEINEN neuen Tombstone und loest keinen Sync aus (der Tombstone ist schon da).
+        for ((id, deletedAt) in aufgabeDeletedAt) {
+            val local = entryRepo.get(id) ?: continue
+            if (deletedAt > local.updatedAt) {
+                entryRepo.deleteByIdForRestore(id)
+                deleted++
             }
         }
 
@@ -609,7 +636,8 @@ constructor(
         Diag.i(
             DiagnosticArea.DRIVE_BACKUP,
             "SyncEntries",
-            "Restore abgeschlossen: $inserted Eintraege NEU eingespielt, $updated aktualisiert",
+            "Restore abgeschlossen: $inserted Eintraege NEU eingespielt, $updated aktualisiert, " +
+                "$deleted via Tombstone geloescht (Tombstones gesamt: ${allTombstones.size})",
         )
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))

@@ -383,10 +383,13 @@ constructor(
                 de.frank.entropyreducer.data.taskSuggestionsForBackup(appContext).first()
             val gewohnheitSuggestionBackups =
                 de.frank.entropyreducer.data.gewohnheitSuggestionsForBackup(appContext).first()
+            // Sync-Etappe 1.2 (Frank-Wunsch 2026-06-19): Loesch-Protokoll mitsichern (Tombstones),
+            // damit Loeschungen 1:1 auf andere Geraete propagieren.
+            val tombstoneBackups = de.frank.entropyreducer.data.tombstonesForBackup(appContext)
 
             val localPayload =
                 BackupPayload(
-                    version = 14,
+                    version = 16,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -412,6 +415,7 @@ constructor(
                     gewohnheiten = gewohnheitBackups,
                     taskSuggestions = taskSuggestionBackups,
                     gewohnheitSuggestions = gewohnheitSuggestionBackups,
+                    tombstones = tombstoneBackups,
                 )
             // Performance 2026-05-23 (Vorschlag 5, vom Benutzer freigegeben): Misst wie lange der
             // Aufbau des Haupt-Payloads (alle DAO-Reads + Mapping oben) dauert, damit per
@@ -710,6 +714,12 @@ constructor(
                 taskSuggestions = rescueIfLocalEmpty(local.taskSuggestions, remote.taskSuggestions),
                 gewohnheitSuggestions =
                     rescueIfLocalEmpty(local.gewohnheitSuggestions, remote.gewohnheitSuggestions),
+                // Sync-Etappe 1.2: Tombstones der anderen Geraete NICHT verlieren — echter Union
+                // (neuester Loeschzeitpunkt pro Eintrag), damit das hochgeladene Backup die
+                // Loeschungen ALLER Geraete enthaelt (nicht nur die eigenen). Sonst wuerde ein
+                // Upload ohne vorherigen Restore fremde Loeschungen im Backup ueberschreiben.
+                tombstones =
+                    de.frank.entropyreducer.data.unionTombstones(local.tombstones, remote.tombstones),
             )
         val rescued =
             (merged.mentals.size - local.mentals.size) +
