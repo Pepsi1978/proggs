@@ -7,9 +7,10 @@ Bereich) ist fertig + verifiziert. Danach kam ein Folge-Bug (Loop-Aufgaben sprin
 der gefixt + bestaetigt ist. Zuletzt: Prioritaets-Logik analysiert (nur Bericht, nichts geaendert).
 
 ## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt
-Keine laufende Aufgabe, aber eine OFFENE RUECKFRAGE an Frank wartet auf Antwort (siehe Offene Fragen):
-Ich habe Frank gefragt, ob ich das **Loop-Prio-Analogon** genauso fixen soll wie den Bucket-Bug.
-- Wenn Frank "ja" sagt: In `GenerateRecurringInstancesUseCase.kt` (cleanupAndEnsureSingle) wird bei
+Keine laufende Aufgabe. Frank hat (2026-06-19) BESTAETIGT: das **Loop-Prio-Analogon** soll genauso
+gefixt werden wie der Bucket-Bug — manuelle Prioritaet bei Loop-Aufgaben schlaegt die KI/Template-Prio.
+**DAS IST DIE ERSTE AUFGABE DER NAECHSTEN SESSION** (Backlog, Frank ausdruecklich gewuenscht).
+- Fix-Ort: In `GenerateRecurringInstancesUseCase.kt` (cleanupAndEnsureSingle) wird bei
   Loop-Aufgaben die manuelle PRIORITAET (manualPriorityScore) mit der Template-Prio ueberschrieben —
   genau wie vorher der Bucket. Zwei Stellen: (a) Intervall-Pfad, mein userMovedManually-Zweig (~Z.320,
   "if keep.manualPriorityScore != prio -> upsert") UND der else-Zweig; (b) taeglicher Pfad (~Z.362-373,
@@ -67,9 +68,10 @@ Ich habe Frank gefragt, ob ich das **Loop-Prio-Analogon** genauso fixen soll wie
 - Almanache schon gelesen/freigegeben in dieser Session: kotlin, hilt-dagger, workmanager-notifications, jetpack-compose, android-platform, google-drive-backup, gradle.
 
 ## Naechste Schritte (priorisiert)
-1. Auf Frank-Antwort warten: Loop-Prio-Analogon fixen? (siehe Wiedereinstiegspunkt). Falls ja: Design
-   (manualPriorityScoreSetAt-Feld vs. nur-bei-Neu-Generierung) kurz mit Frank klaeren, dann fixen +
-   v0.16.3 + Build + Install S23 + verifizieren.
+1. **Loop-Prio-Analogon fixen (Frank BESTAETIGT 2026-06-19 — erste Aufgabe).** Design
+   (manualPriorityScoreSetAt-Feld analog manualBucketSetAt vs. nur-bei-Neu-Generierung) kurz mit Frank
+   klaeren, dann fixen + v0.16.3 + Build + Install S23 + verifizieren (manuelle Prio an Loop-Aufgabe
+   bleibt nach Neustart erhalten).
 2. Fold 6 anschliessen -> v0.16.2 installieren -> echter 2-Geraete-Test (Loeschung/Verschiebung auf
    A erscheint 3 Min spaeter auf B; im Fold-6-Log "1 via Tombstone geloescht").
 3. Etappe 2 Sync: Mental/Ideen/Tagebuch/Thesen auf LWW+Tombstone; vorlesen-Haekchen (loop) +
@@ -77,8 +79,8 @@ Ich habe Frank gefragt, ob ich das **Loop-Prio-Analogon** genauso fixen soll wie
    App-Settings (Theme/Widget/Modell/Sprache/Stimme) ins Backup.
 
 ## Offene Fragen
-- Soll ich die manuelle PRIORITAET bei LOOP-Aufgaben genauso schuetzen wie den Bucket (manuell schlaegt
-  KI ueberall konsistent)? Frank wurde gefragt, Antwort steht aus.
+- Keine offenen Fragen mehr. (Die Loop-Prio-Frage ist 2026-06-19 BEANTWORTET: Frank will den Fix
+  -> jetzt Naechste Schritte #1.)
 
 ## Anker
 - Branch: main
