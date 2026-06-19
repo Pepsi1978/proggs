@@ -1001,14 +1001,26 @@ class TasksViewModel @Inject constructor(
             )
             // Frank-Wunsch 2026-06-19: Prio ins Prioritaets-Gedaechtnis lernen (nur wenn aktiviert).
             // Gilt fuer normale UND Loop-Aufgaben. Spaeter gleicht die KI neue Aufgaben dagegen ab.
-            if (settings.priorityMemoryEnabledFlow.first()) {
-                priorityMemoryRepository.learnFromManualPriority(entry, clamped, now)
-                Diag.i(
-                    DiagnosticArea.APP,
-                    "PrioMemory",
-                    "gelernt: '${entry.title.take(32)}' -> ${clamped.toInt()}",
-                )
+            // BUGFIX 2026-06-19: in runCatching gekapselt — ein Fehler im optionalen Gedaechtnis-Lernen
+            // darf NIEMALS die nachgelagerte Loop-Propagierung (isRec-Block) oder das Speichern der
+            // manuellen Prio abbrechen. Fehler wird geloggt (nicht still verschluckt), Kern laeuft weiter.
+            runCatching {
+                if (settings.priorityMemoryEnabledFlow.first()) {
+                    priorityMemoryRepository.learnFromManualPriority(entry, clamped, now)
+                    Diag.i(
+                        DiagnosticArea.APP,
+                        "PrioMemory",
+                        "gelernt: '${entry.title.take(32)}' -> ${clamped.toInt()}",
+                    )
+                }
             }
+                .onFailure { e ->
+                    Diag.i(
+                        DiagnosticArea.APP,
+                        "PrioMemory",
+                        "Gedaechtnis-Lernen fehlgeschlagen (ignoriert, Kern laeuft weiter): ${e.message}",
+                    )
+                }
             // Frank-Wunsch 2026-06-19 (Bugfix): Ist die geaenderte Aufgabe eine LOOP-INSTANZ, muss
             // die Prio-Aenderung RUECKWAERTS ins Loop-Template (Loop-Bereich) UND in alle offenen
             // Geschwister-Instanzen propagieren — sonst stehen Heute (z.B. 60) und Loop (z.B. 30)
