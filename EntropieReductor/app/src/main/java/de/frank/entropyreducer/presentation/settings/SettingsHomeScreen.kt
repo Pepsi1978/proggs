@@ -147,6 +147,13 @@ private fun sectionsFor(): List<SectionDef> =
             route = Routes.SETTINGS_MEMORY,
         ),
         SectionDef(
+            icon = Icons.Outlined.Bolt,
+            accent = LocalCosmos.current.accentTasksSub,
+            title = "Prioritäts-Gedächtnis",
+            subtitle = "Gemerkte Aufgaben-Prioritäten, die die KI für neue, sehr ähnliche Aufgaben nutzt.",
+            route = Routes.SETTINGS_PRIORITY_MEMORY,
+        ),
+        SectionDef(
             icon = Icons.Outlined.AutoAwesome,
             accent = LocalCosmos.current.accentForscher,
             title = "Genie-Codex",

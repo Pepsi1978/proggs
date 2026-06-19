@@ -115,4 +115,10 @@ object Routes {
     const val SETTINGS_ARCHIVE = "settings/archive"
     const val SETTINGS_WIDGET = "settings/widget"
     const val SETTINGS_DIAGNOSTICS = "settings/diagnostics"
+
+    // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
+    const val SETTINGS_PRIORITY_MEMORY = "settings/priority_memory"
+    const val PRIORITY_MEMORY_DETAIL_PATTERN = "settings/priority_memory/{memoryId}"
+
+    fun priorityMemoryDetail(memoryId: String): String = "settings/priority_memory/$memoryId"
 }
