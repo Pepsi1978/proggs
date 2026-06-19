@@ -443,6 +443,20 @@
 **FIX:** Plugin per npm-Paketnamen statt `git+https://`-URL referenzieren; vollen `git.exe`-Pfad sicherstellen.
 **Quelle:** https://github.com/anomalyco/opencode/issues/21099 · https://github.com/anomalyco/opencode/issues/21826
 
+### 55a. Kein `opencode plugin add` / `plugin list`-CLI — Plugin-Installation NUR über Datei/Array
+**Symptom:** Suche nach einem CLI-Befehl zum Hinzufügen/Auflisten von Plugins (`opencode plugin add …`) läuft ins Leere — der Befehl existiert nicht.
+**Ursache:** Plugin-Installation läuft per Design ausschließlich über (a) lokale Datei in `.opencode/plugins/` bzw. `~/.config/opencode/plugins/` oder (b) Eintrag im `plugin`-Array der `opencode.json`. Beides wird beim Start automatisch geladen (npm-Pakete via Bun nach `~/.cache/opencode/node_modules/`). Anders als MCP (`opencode mcp …`) gibt es KEIN Plugin-CLI.
+**Versionen:** per Design, Stand Juni 2026 (v1.17.8).
+**FIX:** Nicht nach `plugin add` suchen — Datei ablegen oder Paketname ins `plugin`-Array, `opencode` neu starten. (`plugin/` Singular wird abwärtskompatibel weiter geladen, `plugins/` Plural ist der empfohlene Standard.)
+**Quelle:** https://opencode.ai/docs/plugins/ · https://opencode.ai/docs/ecosystem/
+
+### 55b. Zwei Doku-Domains: `opencode.ai` offiziell vs. `open-code.ai` gespiegelt (Quellen-Falle)
+**Symptom:** Suchtreffer zeigen `open-code.ai/...` (z.B. `open-code.ai/en/docs/plugins`) — ein separater/gespiegelter Host, nicht die offizielle Quelle.
+**Ursache:** Neben dem offiziellen `opencode.ai` (Projekt `anomalyco/opencode`, früher `sst/opencode`) existiert ein getrennter Spiegel-Host. Veraltete/abweichende Inhalte möglich; Vertrauens-/Supply-Chain-Risiko bei Plugin-Empfehlungen von dort.
+**Versionen:** Stand Juni 2026.
+**FIX:** Im Zweifel immer `opencode.ai` (offizielle Doku) + `github.com/anomalyco/opencode` als Primärquelle; Plugin-Discovery offiziell über `opencode.ai/docs/ecosystem/`.
+**Quelle:** https://opencode.ai/docs/
+
 ---
 
 ## 8. MCP-Server

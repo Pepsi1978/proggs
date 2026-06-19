@@ -270,6 +270,16 @@ Review these changes and suggest improvements.
 - **Playwright** / **Filesystem** — Browser-Automation / Zugriff außerhalb des Workspace. `extern`
 - **Vorsicht GitHub-MCP** — Token-Fresser, nur bei Bedarf + per-Agent.
 
+### Wo gute Plugins/MCP-Server finden (Discovery + Seriosität) `offiziell`/`extern`
+OpenCode hat **keine eigene Plugin-Registry** — Plugins sind npm-Pakete. Discovery-Reihenfolge:
+1. **`opencode.ai/docs/ecosystem`** `offiziell` — kuratiertes Verzeichnis (~35 Plugins + SDKs/Tools/Agents), vom Team gepflegt. **Erste Anlaufstelle, stärkstes Vertrauenssignal.**
+2. **`github.com/awesome-opencode/awesome-opencode`** + **`awesome-opencode.com`** `extern` — aktiv gepflegte Community-Liste (Plugins, Themes, Agents, MCP-Server; durchsuchbares Web-Frontend).
+3. **MCP-Server:** offizielle Registry **`registry.modelcontextprotocol.io`** (Anthropic/GitHub/Microsoft; Reverse-DNS-Namespace bindet Server an verifizierte Accounts → Impersonation-Schutz) + `github.com/modelcontextprotocol/servers`.
+
+**Seriosität vor Install prüfen:** (a) in offizieller Ecosystem-Liste gelistet = stärkstes Signal; (b) letzte Commits < 3 Monate (OpenCode-API ändert sich schnell, alte Plugins brechen); (c) bekannter Maintainer/Org > anonymer Einzel-Account; (d) Quellcode lesen — Plugins haben vollen FS-/Shell-Zugriff und werden als npm-Paket auto-installiert → Typosquatting/Supply-Chain, Paketname EXAKT prüfen. **Quellen-Falle:** nur `opencode.ai` ist offiziell, NICHT `open-code.ai` (gespiegelter Host).
+
+**Bewährte Plugins (Frank-Setup-relevant):** `opencode-openai-codex-auth` (ChatGPT-Abo statt API, vgl. VoiceAgent-Codex-Provider), `opencode-worktree` (git-Worktrees, parallel-sessions), `opencode-vibeguard` (Secrets/PII-Redaction = Poka-Yoke, Direktive #3), `ocx` (Extension-Manager mit isolierten Profilen), `opencode-notify`/`opencode-notificator` (OS-Notification bei Task-Ende).
+
 ### Token-sparsam halten
 - **MCP sparsam aktivieren:** jedes MCP-Tool kostet Tokens in JEDER Anfrage → global aus
   (`"tools": { "server*": false }`), per Agent an. `enabled:false` ohne Entfernen.
@@ -308,4 +318,6 @@ Terminal-Support, Tool-Kompatibilität). Für reibungslose MCP-/Plugin-Nutzung R
 **Offiziell:** opencode.ai/docs/mcp-servers, /plugins, /custom-tools, /skills, /commands, /config, /ecosystem,
 /windows-wsl; GitHub anomalyco/opencode `packages/plugin/src/index.ts` (Hook-Typdefinition).
 **Extern:** johnlindquist Plugins-Guide (Kontext-Objekt-Stolperstein); opencode-agent-skills (Maintenance);
-Playwright-MCP; vicmuchina/opencode-windows-setup; GitHub-Issue #5894 (Subagent-Bypass).
+Playwright-MCP; vicmuchina/opencode-windows-setup; GitHub-Issue #5894 (Subagent-Bypass);
+awesome-opencode (github.com/awesome-opencode/awesome-opencode, awesome-opencode.com);
+MCP-Registry (registry.modelcontextprotocol.io, github.com/modelcontextprotocol/servers).
