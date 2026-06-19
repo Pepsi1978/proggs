@@ -101,4 +101,15 @@ data class EntropyEntryEntity(
      * null zurueck (dann ist die Prio wieder Template-getrieben).
      */
     val manualPriorityScoreSetAt: Long? = null,
+    /**
+     * ID-Architektur (Frank-Wunsch 2026-06-19, Etappe 1): Herkunfts-Kette.
+     * - originId = direkter Vorgaenger (z. B. der Aufgaben-Vorschlag, aus dem diese Aufgabe entstand)
+     * - originType = Art des Vorgaengers (IDEA / TASK_SUGGESTION / HABIT_SUGGESTION / ...)
+     * - rootId = Ur-Eintrag der Kette (die urspruengliche Idee)
+     * Alle null = Ursprung ODER Bestandsdatum vor dem Umbau. Werden ab Etappe 2 an den
+     * Uebergaengen befuellt (siehe docs/specs/2026-06-19-id-architektur-design.md).
+     */
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
 )

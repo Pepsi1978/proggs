@@ -101,7 +101,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
             de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity::class,
         ],
-    version = 30,
+    version = 31,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -899,6 +899,25 @@ abstract class AppDatabase : RoomDatabase() {
                         "CREATE INDEX IF NOT EXISTS index_priority_memory_sourceEntryId " +
                             "ON priority_memory(sourceEntryId)"
                     )
+                }
+            }
+
+        /**
+         * Schema 30 -> 31 (Frank-Wunsch 2026-06-19, ID-Architektur Etappe 1): Herkunfts-Kette.
+         * Drei neue nullable Spalten in entropy_entries:
+         * - originId   = direkter Vorgaenger (z. B. der Aufgaben-Vorschlag, aus dem die Aufgabe entstand)
+         * - originType = Art des Vorgaengers (IDEA / TASK_SUGGESTION / ...)
+         * - rootId     = Ur-Eintrag der Kette
+         * Rein additiv (nullable, kein Default) -> KEIN Datenverlust. Bestandseintraege bleiben NULL
+         * (= Ursprung bzw. vor dem Umbau). Muss exakt zum Entity-Schema passen, sonst greift der
+         * destructive fallback (siehe DatabaseModule).
+         */
+        val MIGRATION_30_31: Migration =
+            object : Migration(30, 31) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE entropy_entries ADD COLUMN originId TEXT")
+                    db.execSQL("ALTER TABLE entropy_entries ADD COLUMN originType TEXT")
+                    db.execSQL("ALTER TABLE entropy_entries ADD COLUMN rootId TEXT")
                 }
             }
     }
