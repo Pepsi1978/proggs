@@ -2,9 +2,10 @@
 
 ## Ziel (1-3 Saetze)
 EntropieReductor (private Android-App, Kotlin/Compose/Room/Hilt/Gemini): Das Feature
-"Prioritaets-Gedaechtnis" ist fertig gebaut und installiert. Jetzt offen: (1) Bug-1-Fix am Handy
-bestaetigen, (2) ein vom Benutzer gewuenschter GROSSER app-weiter Umbau auf eine durchgaengige
-ID-Architektur (jeder Eintrag eine feste ID, die bei jedem Schritt mitwandert).
+"Prioritaets-Gedaechtnis" ist fertig gebaut und installiert. Jetzt offen, in DIESER Reihenfolge:
+(1) Bug-1-Fix am Handy bestaetigen, (2) NEUE AUFGABE: Prioritaets-Gedaechtnis-Liste nach Prioritaet
+sortieren (hoechste oben), (3) DANACH der grosse app-weite ID-Architektur-Umbau. WICHTIG: ERST die
+kleine Sortier-Aufgabe, DANN das grosse ID-Projekt.
 
 ## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt
 Keine laufende Code-Aufgabe unterbrochen — der letzte Code-Stand (Bug-1-Fix) ist sauber committed,
@@ -17,6 +18,18 @@ grosse ID-Architektur-Projekt geplant haben will (er hatte es bereits gross spez
 Abschnitt "ID-Architektur-Vorhaben"). Wenn er "leg los mit dem ID-Projekt" sagt: mit der
 Bestandsaufnahme + Design-Spec starten (brainstorming-Skill, dann writing-plans), NICHT ad hoc das
 Kern-System umbauen.
+
+## NEUE AUFGABE 1 (ZUERST umsetzen, VOR der ID-Architektur) — Prioritaets-Gedaechtnis sortieren
+Im Prioritaets-Gedaechtnis (Einstellungen -> "Prioritaets-Gedaechtnis", PriorityMemoryScreen) die
+Liste nach PRIORITAET sortieren: hoechste Prioritaet GANZ OBEN, niedrigste ganz unten — egal wie
+viele Eintraege. Bei gleicher Prioritaet ist die Reihenfolge der gleichwertigen Eintraege
+untereinander egal (z.B. zwei 60%-Eintraege stehen beieinander, 61% darueber, 59% darunter).
+Zweck: Benutzer sieht auf einen Blick wichtige vs. unwichtige Aufgaben und kann Prioritaeten
+nachtraeglich anpassen.
+UMSETZUNG (klein): Aktuell sortiert die Liste nach `updatedAt DESC` (PriorityMemoryDao.getAll()).
+Auf "ORDER BY priority DESC, updatedAt DESC" umstellen (zweites Kriterium nur fuer stabile Anzeige
+bei Gleichstand). DAO-Weg bevorzugt (statt im ViewModel). Danach: ./gradlew :app:compileDebugKotlin,
+commit+push, installieren (RFCX70KTDFX), am Geraet kurz pruefen. KEIN grosser Umbau noetig.
 
 ## Aktueller Status
 - Erledigt: Prioritaets-Gedaechtnis KOMPLETT (9 Tasks, Commits #46946-#46954). Datenbank
@@ -96,16 +109,31 @@ Der Benutzer will eine app-weite Identitaets-Architektur:
 - Kern-Erkenntnis: Viele Entities HABEN schon UUIDs; sie werden nur beim Uebergang weggeworfen.
   Der Umbau = Herkunfts-/originId-Feld ueberall + ID an jedem Uebergang durchreichen + Dedup auf ID +
   Migration fuer Bestandsdaten.
+- HARTE REGEL: KEINE doppelten IDs im gesamten System. Zwei unterschiedliche Ideen / zwei
+  unterschiedliche Aufgaben duerfen NIE dieselbe ID haben. Gleiche ID gibt es NUR entlang einer KETTE
+  (Idee -> Vorschlag -> Aufgabe, oder Idee -> Vorschlag -> Gewohnheit). ID-Generierung kollisionssicher (UUID).
+- PRIORITAETS-GEDAECHTNIS, ID-Sonderregel (Benutzer-Entscheidung 2026-06-19): Gedaechtnis-Eintraege
+  bekommen eine EIGENE, eigenstaendige Identitaet, damit ein Agent NIE einen Gedaechtnis-Eintrag mit
+  einer echten Aufgabe verwechselt (sie teilen NICHT dieselbe Primaer-ID). Die Herkunft (Aufgabe, aus
+  der der Eintrag stammt) wird per Referenz gehalten. Sobald der Nutzer einen Gedaechtnis-Eintrag
+  editiert (Titel/Beschreibung), ist er nicht mehr deckungsgleich mit der Ursprungsaufgabe -> die
+  Verbindung wird geloest. Das ist die EINZIGE Stelle im System, wo sich eine Zuordnung aendert.
+  CLAUDE-EMPFEHLUNG + AKTUELLER STAND: PriorityMemoryEntity hat HEUTE schon das Richtige — eigene
+  eindeutige `id` (UUID) PLUS `sourceEntryId` (= ID der Ursprungsaufgabe als Referenz/Kette). Damit:
+  keine doppelten Primaer-IDs, volle Rueckverfolgbarkeit, keine Agent-Verwechslung. Umzusetzen bleibt
+  nur: beim Editieren eines Gedaechtnis-Eintrags `sourceEntryId` auf null setzen (Verbindung geloest).
+  Deckt sich exakt mit Franks finaler Intuition ("Gedaechtnis-Aufgaben eigene ID").
 
 ## Naechste Schritte (priorisiert)
-1. Mit dem Benutzer klaeren: Bug 1 am Handy getestet? (Loop-Prio bewegt + bleibt nach Reload?)
-   Bei Problem: "starte den Live-Logik-Check" -> adb logcat -s PrioMemory mitlesen, ob "gelernt:"
-   sauber laeuft oder der Hook intern (jetzt abgefangen) doch einen Fehler wirft.
-2. Wenn Benutzer das ID-Projekt freigibt: brainstorming-Skill starten -> Design-Spec (welche
-   Entities, wie ID durchreichen: vermutlich neues Feld originId/sourceId pro Ziel-Entity, Migration,
-   Dedup-Umstellung), dann writing-plans -> schrittweise Umsetzung, Build pro Schritt, commit+push.
-3. Geraete-ID fuers Installieren: RFCX70KTDFX. Debug-Package hat Suffix: de.frank.entropyreducer.debug
-   (App-Start: adb -s RFCX70KTDFX shell monkey -p de.frank.entropyreducer.debug -c android.intent.category.LAUNCHER 1).
+1. Bug 1 am Handy bestaetigen (Loop-Prio bewegt + bleibt nach Reload?). Bei Problem:
+   "starte den Live-Logik-Check" -> adb logcat -s PrioMemory mitlesen.
+2. NEUE AUFGABE 1 (ZUERST): Prioritaets-Gedaechtnis-Liste nach Prioritaet sortieren — siehe eigener
+   Abschnitt oben. Klein/schnell (DAO ORDER BY priority DESC).
+3. DANACH das grosse ID-Architektur-Projekt: brainstorming-Skill -> Design-Spec (welche Entities,
+   ID durchreichen via originId/sourceId, Migration, Dedup-Umstellung, Gedaechtnis-ID-Sonderregel +
+   keine-doppelten-IDs-Regel siehe ID-Vorhaben), dann writing-plans -> schrittweise, Build pro Schritt.
+4. Geraete-ID: RFCX70KTDFX. Debug-Package: de.frank.entropyreducer.debug
+   (Start: adb -s RFCX70KTDFX shell monkey -p de.frank.entropyreducer.debug -c android.intent.category.LAUNCHER 1).
 
 ## Offene Fragen (worauf der Benutzer antworten muss)
 - Soll JETZT mit der Bestandsaufnahme + Planung des grossen ID-Architektur-Projekts gestartet werden,
