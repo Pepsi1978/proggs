@@ -115,6 +115,9 @@ constructor(
     // adb uninstall verloren.
     private val recurringTemplateRepoLazy:
         Lazy<de.frank.entropyreducer.data.repository.RecurringTemplateRepository>,
+    // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis ins Backup-Payload.
+    private val priorityMemoryRepoLazy:
+        Lazy<de.frank.entropyreducer.data.repository.PriorityMemoryRepository>,
     private val json: Json,
     // Performance 2026-05-23 (Vorschlag 5): nur fuer Timing-Messungen (Payload-Aufbau, Upload).
     private val diagnostics: de.frank.entropyreducer.data.diagnostics.DiagnosticLogger,
@@ -334,6 +337,10 @@ constructor(
             val recurringTemplateBackups =
                 recurringTemplateRepoLazy.get().getAllForBackup().map { it.toBackup() }
 
+            // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis ins Backup.
+            val priorityMemoryBackups =
+                priorityMemoryRepoLazy.get().getAllForBackup().map { it.toBackup() }
+
             // Schema v11 (Frank-Bugfix 2026-05-22): Amazfit-Daily-Werte ins
             // Haupt-Backup. Volumen klein (~ein Eintrag pro Tag, max 730 Tage
             // Retention = ~365 KB). Idempotenter Restore via PrimaryKey=date.
@@ -389,7 +396,7 @@ constructor(
 
             val localPayload =
                 BackupPayload(
-                    version = 16,
+                    version = 17,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -409,6 +416,7 @@ constructor(
                     promptToolPermissions = permissionBackups,
                     promptTriggers = triggerBackups,
                     recurringTemplates = recurringTemplateBackups,
+                    priorityMemories = priorityMemoryBackups,
                     amazfitDaily = amazfitDailyBackups,
                     mentals = mentalBackups,
                     ideenEntries = ideenBackups,

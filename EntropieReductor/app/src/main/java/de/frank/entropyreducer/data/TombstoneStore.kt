@@ -47,6 +47,7 @@ object TombstoneType {
     const val TAGEBUCH = "tagebuch"
     const val THESE = "these"
     const val FOLLOWUP = "followup"
+    const val PRIORITY_MEMORY = "priority_memory"
 }
 
 /** Markiert eine Entitaet als geloescht. Behaelt pro (type,id) den NEUESTEN Loeschzeitpunkt. */

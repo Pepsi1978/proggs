@@ -76,6 +76,9 @@ constructor(
     // Sprint 2.8 (Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben-Vorlagen restorebar.
     private val recurringTemplateRepo:
         de.frank.entropyreducer.data.repository.RecurringTemplateRepository,
+    // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis restorebar.
+    private val priorityMemoryRepo:
+        de.frank.entropyreducer.data.repository.PriorityMemoryRepository,
     private val json: Json,
 ) {
 
@@ -666,6 +669,41 @@ constructor(
                 val local = recurringTemplateRepo.getById(id) ?: continue
                 if (deletedAt > local.updatedAt) {
                     recurringTemplateRepo.deleteByIdForRestore(id)
+                    deleted++
+                }
+            }
+        }
+
+        // --- Prioritaets-Gedaechtnis (v17+; Frank-Wunsch 2026-06-19: LWW + Tombstone) ---
+        run {
+            val memDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.PRIORITY_MEMORY }
+                    .associate { it.id to it.deletedAt }
+            val existingMemories = priorityMemoryRepo.getAllForBackup().associateBy { it.id }
+            for (b in payload.priorityMemories) {
+                val incoming = b.toEntity()
+                // delete-wins-only-if-newer: geloeschten Eintrag nicht aus dem Backup wiederbeleben.
+                val tombstoneAt = memDeletedAt[b.id]
+                if (tombstoneAt != null && tombstoneAt > incoming.updatedAt) continue
+                val existing = existingMemories[b.id]
+                when {
+                    existing == null -> {
+                        priorityMemoryRepo.upsert(incoming)
+                        inserted++
+                    }
+                    incoming.updatedAt > existing.updatedAt -> {
+                        priorityMemoryRepo.upsert(incoming)
+                        updated++
+                    }
+                    else -> Unit
+                }
+            }
+            // Tombstones auf lokal noch vorhandene Eintraege anwenden (frischer Stand nach den Upserts).
+            for ((id, deletedAt) in memDeletedAt) {
+                val local = priorityMemoryRepo.getById(id) ?: continue
+                if (deletedAt > local.updatedAt) {
+                    priorityMemoryRepo.deleteByIdForRestore(id)
                     deleted++
                 }
             }

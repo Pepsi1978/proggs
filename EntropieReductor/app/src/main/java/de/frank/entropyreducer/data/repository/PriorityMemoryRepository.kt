@@ -18,6 +18,8 @@ class PriorityMemoryRepository
 @Inject
 constructor(
     private val dao: PriorityMemoryDao,
+    @dagger.hilt.android.qualifiers.ApplicationContext
+    private val context: android.content.Context,
 ) {
     fun observeAll(): Flow<List<PriorityMemoryEntity>> = dao.getAll()
 
@@ -28,6 +30,12 @@ constructor(
     suspend fun getNewest(limit: Int): List<PriorityMemoryEntity> = dao.getNewest(limit)
 
     suspend fun getAllForBackup(): List<PriorityMemoryEntity> = dao.getAllForBackup()
+
+    /** Restore: Eintrag einspielen (ohne Tombstone). */
+    suspend fun upsert(memory: PriorityMemoryEntity) = dao.upsert(memory)
+
+    /** Restore: Eintrag loeschen OHNE neuen Tombstone (die Loeschung kam von einem anderen Geraet). */
+    suspend fun deleteByIdForRestore(id: String) = dao.deleteById(id)
 
     /**
      * Legt einen Gedaechtnis-Eintrag an oder aktualisiert einen vorhandenen (Dedup, kein Duplikat).
@@ -70,5 +78,14 @@ constructor(
         }
     }
 
-    suspend fun delete(id: String) = dao.deleteById(id)
+    suspend fun delete(id: String) {
+        dao.deleteById(id)
+        // Frank-Wunsch 2026-06-19: Loeschung als Tombstone protokollieren, damit sie beim
+        // Multi-Device-Restore propagiert (delete-wins-only-if-newer) statt zu "auferstehen".
+        de.frank.entropyreducer.data.markDeleted(
+            context,
+            de.frank.entropyreducer.data.TombstoneType.PRIORITY_MEMORY,
+            id,
+        )
+    }
 }

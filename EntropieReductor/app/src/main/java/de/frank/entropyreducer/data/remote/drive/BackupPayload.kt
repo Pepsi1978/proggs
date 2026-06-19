@@ -181,6 +181,11 @@ data class BackupPayload(
      * spaetere Bearbeitung). Default emptyList damit aeltere Backups (v1-v15) lesbar bleiben.
      */
     val tombstones: List<BackupTombstone> = emptyList(),
+    /**
+     * Schema v17 (Frank-Wunsch 2026-06-19): Prioritaets-Gedaechtnis (gemerkte manuelle
+     * Aufgaben-Prioritaeten). Default emptyList damit aeltere Backups (v1-v16) lesbar bleiben.
+     */
+    val priorityMemories: List<BackupPriorityMemory> = emptyList(),
 )
 
 /**
@@ -205,6 +210,21 @@ data class BackupTombstone(val type: String, val id: String, val deletedAt: Long
  */
 @Serializable
 data class BackupMental(val id: String, val text: String, val updatedAt: Long = 0L)
+
+/**
+ * Schema v17 (Frank-Wunsch 2026-06-19): ein Prioritaets-Gedaechtnis-Eintrag (gemerkte manuelle
+ * Aufgaben-Prioritaet). updatedAt traegt delete-wins-only-if-newer beim Multi-Device-Restore.
+ */
+@Serializable
+data class BackupPriorityMemory(
+    val id: String,
+    val title: String,
+    val description: String = "",
+    val priority: Double = 50.0,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L,
+    val sourceEntryId: String? = null,
+)
 
 /**
  * Schema v10: 1:1-Spiegel der RecurringTemplateEntity (Sprint 2.8). nextOccurrenceAt
@@ -1570,6 +1590,34 @@ fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
             runCatching { de.frank.entropyreducer.domain.model.TimeBucket.valueOf(it) }.getOrNull()
         },
         intervalDays = intervalDays,
+    )
+
+// =========================================================================
+// Schema v17 (Frank-Wunsch 2026-06-19): Prioritaets-Gedaechtnis
+// =========================================================================
+
+fun de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity.toBackup():
+    BackupPriorityMemory =
+    BackupPriorityMemory(
+        id = id,
+        title = title,
+        description = description,
+        priority = priority,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        sourceEntryId = sourceEntryId,
+    )
+
+fun BackupPriorityMemory.toEntity():
+    de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity =
+    de.frank.entropyreducer.data.local.entities.PriorityMemoryEntity(
+        id = id,
+        title = title,
+        description = description,
+        priority = priority.coerceIn(0.0, 100.0),
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        sourceEntryId = sourceEntryId,
     )
 
 // =========================================================================
