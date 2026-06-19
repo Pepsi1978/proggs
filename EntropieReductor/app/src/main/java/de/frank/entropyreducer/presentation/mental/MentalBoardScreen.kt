@@ -97,10 +97,22 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /* ============================== Datenmodell ============================== */
 
-/** Ein einzelner Mental-Eintrag: nur ID + Satz. Reihenfolge = Position in der Liste. */
-data class Mental(val id: String, val text: String) {
+/** Ein einzelner Mental-Eintrag: ID + Satz (+ Aenderungs-Zeitstempel). Reihenfolge = Listen-Position. */
+data class Mental(
+    val id: String,
+    val text: String,
+    // Sync-Etappe 1.4: Zeitstempel der letzten Aenderung — fuer Last-Write-Wins beim Multi-Device-
+    // Restore. Default 0L haelt aeltere serialisierte Daten/Backups lesbar (sie gelten als "uralt"
+    // und verlieren damit gegen jede echte Bearbeitung).
+    val updatedAt: Long = 0L,
+) {
     companion object {
-        fun create(text: String): Mental = Mental(id = UUID.randomUUID().toString(), text = text)
+        fun create(text: String): Mental =
+            Mental(
+                id = UUID.randomUUID().toString(),
+                text = text,
+                updatedAt = System.currentTimeMillis(),
+            )
     }
 }
 
@@ -129,7 +141,12 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
     context.mentalStore.edit { prefs ->
         val existing = parseMentals(prefs[KEY_MENTALS])
         prefs[KEY_MENTALS] =
-            serializeMentals(existing.map { if (it.id == id) it.copy(text = clean) else it })
+            serializeMentals(
+                existing.map {
+                    if (it.id == id) it.copy(text = clean, updatedAt = System.currentTimeMillis())
+                    else it
+                }
+            )
     }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
@@ -173,7 +190,7 @@ private fun parseMentals(raw: String?): List<Mental> {
                 for (i in 0 until arr.length()) {
                     val o = arr.getJSONObject(i)
                     val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                    add(Mental(id = id, text = o.optString("text")))
+                    add(Mental(id = id, text = o.optString("text"), updatedAt = o.optLong("updatedAt")))
                 }
             }
         }
@@ -183,7 +200,7 @@ private fun parseMentals(raw: String?): List<Mental> {
 private fun serializeMentals(mentals: List<Mental>): String {
     val arr = JSONArray()
     for (m in mentals) {
-        arr.put(JSONObject().put("id", m.id).put("text", m.text))
+        arr.put(JSONObject().put("id", m.id).put("text", m.text).put("updatedAt", m.updatedAt))
     }
     return arr.toString()
 }

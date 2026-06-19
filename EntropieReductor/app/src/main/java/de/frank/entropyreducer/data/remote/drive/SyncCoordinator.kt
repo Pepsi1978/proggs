@@ -344,7 +344,7 @@ constructor(
             // Haupt-Backup. DataStore-basiert wie Tagebuch/Thesen — Context-Zugriff genuegt.
             val mentalBackups =
                 de.frank.entropyreducer.presentation.mental.mentalsFlow(appContext).first().map {
-                    BackupMental(id = it.id, text = it.text)
+                    BackupMental(id = it.id, text = it.text, updatedAt = it.updatedAt)
                 }
 
             // Frank-Wunsch 2026-06-10: Ideen-Eintraege (Aufgaben-Reiter "Ideen", 1:1-Klon des
@@ -374,7 +374,7 @@ constructor(
             // DataStore-basiert wie Mental/Ideen (gewohnheit_board), gleiche id+text-Struktur.
             val gewohnheitBackups =
                 de.frank.entropyreducer.presentation.mental.gewohnheitenFlow(appContext).first().map {
-                    BackupMental(id = it.id, text = it.text)
+                    BackupMental(id = it.id, text = it.text, updatedAt = it.updatedAt)
                 }
 
             // Frank-Wunsch 2026-06-19 (Schema v15): offene KI-Vorschlaege mitsichern, damit sie bei

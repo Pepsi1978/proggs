@@ -458,14 +458,25 @@ constructor(
         // DataStore-basiert wie Mental. restoreGewohnheiten ergaenzt nur fehlende IDs —
         // lokale Reihenfolge/Edits gewinnen (konservativ, exakt wie Mental/Tagebuch).
         // Bisher GAR NICHT restored, obwohl restoreGewohnheiten() bereits existierte.
-        if (payload.gewohnheiten.isNotEmpty()) {
-            inserted +=
-                de.frank.entropyreducer.presentation.mental.restoreGewohnheiten(
-                    appContext,
-                    payload.gewohnheiten.map {
-                        de.frank.entropyreducer.presentation.mental.Mental(id = it.id, text = it.text)
-                    },
-                )
+        run {
+            val gewohnheitDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.GEWOHNHEIT }
+                    .associate { it.id to it.deletedAt }
+            if (payload.gewohnheiten.isNotEmpty() || gewohnheitDeletedAt.isNotEmpty()) {
+                inserted +=
+                    de.frank.entropyreducer.presentation.mental.restoreGewohnheiten(
+                        appContext,
+                        payload.gewohnheiten.map {
+                            de.frank.entropyreducer.presentation.mental.Mental(
+                                id = it.id,
+                                text = it.text,
+                                updatedAt = it.updatedAt,
+                            )
+                        },
+                        gewohnheitDeletedAt,
+                    )
+            }
         }
 
         // --- KI-Vorschlaege (v15+, Frank-Wunsch 2026-06-19) ---

@@ -104,7 +104,12 @@ internal suspend fun updateGewohnheit(context: Context, id: String, text: String
     context.gewohnheitStore.edit { prefs ->
         val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
         prefs[KEY_GEWOHNHEITEN] =
-            serializeGewohnheiten(existing.map { if (it.id == id) it.copy(text = clean) else it })
+            serializeGewohnheiten(
+                existing.map {
+                    if (it.id == id) it.copy(text = clean, updatedAt = System.currentTimeMillis())
+                    else it
+                }
+            )
     }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
@@ -114,6 +119,13 @@ internal suspend fun deleteGewohnheit(context: Context, id: String) {
         val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
         prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing.filterNot { it.id == id })
     }
+    // Sync-Etappe 1.4: Tombstone, damit die Loeschung beim Restore auf andere Geraete propagiert
+    // (sonst laesst der additive Restore die geloeschte Gewohnheit dort "auferstehen").
+    de.frank.entropyreducer.data.markDeleted(
+        context,
+        de.frank.entropyreducer.data.TombstoneType.GEWOHNHEIT,
+        id,
+    )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
@@ -122,17 +134,51 @@ internal suspend fun reorderGewohnheiten(context: Context, newOrder: List<Mental
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
-internal suspend fun restoreGewohnheiten(context: Context, incoming: List<Mental>): Int {
-    if (incoming.isEmpty()) return 0
-    var added = 0
+/**
+ * Sync-Etappe 1.4: Spielt Gewohnheiten aus dem Drive-Backup ein — jetzt Last-Write-Wins per
+ * updatedAt (frueher reine Existenz-Strategie -> Text-Edits propagierten nie) + Tombstone-Loeschung
+ * ([deletedAt] = Map id->Loeschzeitpunkt der GEWOHNHEIT-Tombstones). Die lokale Reihenfolge bleibt
+ * erhalten (bestehende Eintraege an ihrer Position aktualisiert, neue ans Ende, geloeschte raus).
+ * Gibt die Anzahl der Aenderungen (eingespielt/aktualisiert/geloescht) zurueck.
+ */
+internal suspend fun restoreGewohnheiten(
+    context: Context,
+    incoming: List<Mental>,
+    deletedAt: Map<String, Long> = emptyMap(),
+): Int {
+    if (incoming.isEmpty() && deletedAt.isEmpty()) return 0
+    var changed = 0
     context.gewohnheitStore.edit { prefs ->
-        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
+        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) // Reihenfolge!
+        val incomingById = incoming.associateBy { it.id }
+        val result = mutableListOf<Mental>()
+        // 1. Bestehende in Reihenfolge: per Tombstone loeschen ODER per LWW aktualisieren.
+        for (ex in existing) {
+            val ts = deletedAt[ex.id]
+            if (ts != null && ts > ex.updatedAt) {
+                changed++
+                continue
+            }
+            val inc = incomingById[ex.id]
+            if (inc != null && inc.updatedAt > ex.updatedAt) {
+                result.add(inc)
+                changed++
+            } else {
+                result.add(ex)
+            }
+        }
+        // 2. Neue (im Backup, nicht lokal) ans Ende — ausser frisch getombstonet.
         val existingIds = existing.mapTo(HashSet()) { it.id }
-        val toAdd = incoming.filterNot { it.id in existingIds }
-        added = toAdd.size
-        if (toAdd.isNotEmpty()) prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing + toAdd)
+        for (inc in incoming) {
+            if (inc.id in existingIds) continue
+            val ts = deletedAt[inc.id]
+            if (ts != null && ts > inc.updatedAt) continue
+            result.add(inc)
+            changed++
+        }
+        prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(result)
     }
-    return added
+    return changed
 }
 
 private fun parseGewohnheiten(raw: String?): List<Mental> {
@@ -143,7 +189,7 @@ private fun parseGewohnheiten(raw: String?): List<Mental> {
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                add(Mental(id = id, text = o.optString("text")))
+                add(Mental(id = id, text = o.optString("text"), updatedAt = o.optLong("updatedAt")))
             }
         }
     }.getOrDefault(emptyList())
@@ -152,7 +198,7 @@ private fun parseGewohnheiten(raw: String?): List<Mental> {
 private fun serializeGewohnheiten(mentals: List<Mental>): String {
     val arr = JSONArray()
     for (m in mentals) {
-        arr.put(JSONObject().put("id", m.id).put("text", m.text))
+        arr.put(JSONObject().put("id", m.id).put("text", m.text).put("updatedAt", m.updatedAt))
     }
     return arr.toString()
 }

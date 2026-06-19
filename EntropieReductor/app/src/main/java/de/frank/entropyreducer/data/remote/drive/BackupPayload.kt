@@ -204,7 +204,7 @@ data class BackupTombstone(val type: String, val id: String, val deletedAt: Long
  * Reihenfolge ergibt sich aus der Listen-Position im Backup.
  */
 @Serializable
-data class BackupMental(val id: String, val text: String)
+data class BackupMental(val id: String, val text: String, val updatedAt: Long = 0L)
 
 /**
  * Schema v10: 1:1-Spiegel der RecurringTemplateEntity (Sprint 2.8). nextOccurrenceAt
