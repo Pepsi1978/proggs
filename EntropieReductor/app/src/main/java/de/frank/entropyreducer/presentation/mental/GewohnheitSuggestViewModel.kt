@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
+import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
+import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
 import javax.inject.Inject
@@ -20,31 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONArray
-import org.json.JSONObject
 
-private fun parseSuggestionsJson(raw: String?): List<Mental> {
-    if (raw.isNullOrBlank()) return emptyList()
-    return runCatching {
-        val arr = JSONArray(raw)
-        buildList(arr.length()) {
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                add(Mental(id = id, text = o.optString("text")))
-            }
-        }
-    }.getOrDefault(emptyList())
-}
-
-private fun serializeSuggestionsJson(mentals: List<Mental>): String {
-    val arr = JSONArray()
-    for (m in mentals) {
-        arr.put(JSONObject().put("id", m.id).put("text", m.text))
-    }
-    return arr.toString()
-}
-
-private val KEY_SUGGESTIONS = stringPreferencesKey("suggestions_json")
 private val HABIT_PROCESSED_KEY = stringPreferencesKey("habit_processed_idea_ids")
 
 enum class SuggestState { IDLE, LOADING }
@@ -53,8 +31,11 @@ enum class SuggestState { IDLE, LOADING }
 class GewohnheitSuggestViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val generateSuggestions: GenerateSuggestionsUseCase,
+    private val habitSuggestionDao: HabitSuggestionDao,
 ) : ViewModel() {
 
+    // DataStore weiterhin NUR fuer habit_processed_idea_ids (wird erst mit der Dedup-Ablösung
+    // abgeloest). Die Vorschlaege selbst liegen ab Etappe 3c in Room (habit_suggestions).
     private val store = context.gewohnheitSuggestionStore
 
     private val _state = MutableStateFlow(SuggestState.IDLE)
@@ -63,8 +44,10 @@ class GewohnheitSuggestViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Ab ID-Architektur Etappe 3c aus Room (habit_suggestions) statt DataStore-JSON.
     val suggestions: StateFlow<List<Mental>> =
-        store.data.map { prefs -> parseSuggestionsJson(prefs[KEY_SUGGESTIONS]) }
+        habitSuggestionDao.getAll()
+            .map { rows -> rows.map { Mental(id = it.id, text = it.text) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun dismissError() { _error.value = null }
@@ -96,10 +79,9 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun acceptSuggestion(id: String) {
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
-            }
+            // Entfernt nur den Vorschlag aus Room. Das Anlegen der Gewohnheit (inkl. Herkunft, 3d)
+            // passiert separat ueber addGewohnheit / Drag-Promotion im GewohnheitBoardScreen.
+            habitSuggestionDao.deleteById(id)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: angenommen")
         }
@@ -107,10 +89,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun deleteSuggestion(id: String) {
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing.filterNot { it.id == id })
-            }
+            habitSuggestionDao.deleteById(id)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: verworfen")
         }
@@ -120,10 +99,10 @@ class GewohnheitSuggestViewModel @Inject constructor(
         val clean = text.trim()
         if (clean.isEmpty()) return
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + Mental.create(clean))
-            }
+            val m = Mental.create(clean)
+            habitSuggestionDao.upsert(
+                HabitSuggestionEntity(id = m.id, text = m.text, createdAt = System.currentTimeMillis())
+            )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: hinzugefuegt")
         }
@@ -131,10 +110,13 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     private fun storeSuggestions(newSuggestions: List<Mental>) {
         viewModelScope.launch {
-            store.edit { prefs ->
-                val existing = parseSuggestionsJson(prefs[KEY_SUGGESTIONS])
-                prefs[KEY_SUGGESTIONS] = serializeSuggestionsJson(existing + newSuggestions)
-            }
+            // Herkunft (originId/originType/rootId) wird erst in Etappe 3d gesetzt (Idee -> Vorschlag).
+            val nowMs = System.currentTimeMillis()
+            habitSuggestionDao.upsertAll(
+                newSuggestions.mapIndexed { index, m ->
+                    HabitSuggestionEntity(id = m.id, text = m.text, createdAt = nowMs + index)
+                }
+            )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: generiert")
         }

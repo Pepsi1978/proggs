@@ -73,6 +73,7 @@ import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -85,8 +86,16 @@ private const val SEPARATOR_KEY = "__separator__"
 private val Context.gewohnheitStore by preferencesDataStore(name = "gewohnheit_board")
 private val KEY_GEWOHNHEITEN = stringPreferencesKey("gewohnheiten_json")
 
+// ID-Architektur Etappe 3c (Frank-Wunsch 2026-06-19): Gewohnheiten liegen jetzt in Room (Tabelle
+// habits, sortiert nach `position`) statt im DataStore-JSON. Signaturen bleiben 1:1 — UI, Backup
+// (gewohnheitenFlow) und Sync (restoreGewohnheiten) laufen unveraendert weiter; der DAO kommt per
+// Hilt-@EntryPoint (habitDaoFrom). Der DataStore-JSON bleibt als Fallback fuer den Migrator (3b).
 internal fun gewohnheitenFlow(context: Context): Flow<List<Mental>> =
-    context.gewohnheitStore.data.map { prefs -> parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) }
+    de.frank.entropyreducer.data.local
+        .habitDaoFrom(context)
+        .getAll()
+        .map { rows -> rows.map { Mental(id = it.id, text = it.text, updatedAt = it.updatedAt) } }
+        .distinctUntilChanged()
 
 /**
  * Liest die Bestands-Gewohnheiten aus dem alten DataStore-JSON ("gewohnheit_board"). NUR fuer den
@@ -100,34 +109,31 @@ internal fun gewohnheitenFromJsonFlow(context: Context): Flow<List<Mental>> =
 internal suspend fun addGewohnheit(context: Context, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
-    context.gewohnheitStore.edit { prefs ->
-        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
-        prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing + Mental.create(clean))
-    }
+    val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
+    val m = Mental.create(clean)
+    dao.upsert(
+        de.frank.entropyreducer.data.local.entities.HabitEntity(
+            id = m.id,
+            text = m.text,
+            updatedAt = m.updatedAt,
+            position = dao.maxPosition() + 1, // neue Gewohnheit ans Ende
+        )
+    )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun updateGewohnheit(context: Context, id: String, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
-    context.gewohnheitStore.edit { prefs ->
-        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
-        prefs[KEY_GEWOHNHEITEN] =
-            serializeGewohnheiten(
-                existing.map {
-                    if (it.id == id) it.copy(text = clean, updatedAt = System.currentTimeMillis())
-                    else it
-                }
-            )
-    }
+    val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
+    val current = dao.getById(id) ?: return
+    // copy erhaelt position + Herkunft, aktualisiert nur Text + Zeitstempel.
+    dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
 internal suspend fun deleteGewohnheit(context: Context, id: String) {
-    context.gewohnheitStore.edit { prefs ->
-        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN])
-        prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(existing.filterNot { it.id == id })
-    }
+    de.frank.entropyreducer.data.local.habitDaoFrom(context).deleteById(id)
     // Sync-Etappe 1.4: Tombstone, damit die Loeschung beim Restore auf andere Geraete propagiert
     // (sonst laesst der additive Restore die geloeschte Gewohnheit dort "auferstehen").
     de.frank.entropyreducer.data.markDeleted(
@@ -139,7 +145,14 @@ internal suspend fun deleteGewohnheit(context: Context, id: String) {
 }
 
 internal suspend fun reorderGewohnheiten(context: Context, newOrder: List<Mental>) {
-    context.gewohnheitStore.edit { prefs -> prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(newOrder) }
+    val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
+    // position = neue Listen-Position. Bestehende Entity laden, damit Herkunft + Zeitstempel
+    // erhalten bleiben (nicht aus dem positionslosen Mental-UI-Modell neu bauen).
+    newOrder.forEachIndexed { index, m ->
+        dao.getById(m.id)?.let { current ->
+            if (current.position != index) dao.update(current.copy(position = index))
+        }
+    }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
 }
 
@@ -156,36 +169,41 @@ internal suspend fun restoreGewohnheiten(
     deletedAt: Map<String, Long> = emptyMap(),
 ): Int {
     if (incoming.isEmpty() && deletedAt.isEmpty()) return 0
+    val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
     var changed = 0
-    context.gewohnheitStore.edit { prefs ->
-        val existing = parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) // Reihenfolge!
-        val incomingById = incoming.associateBy { it.id }
-        val result = mutableListOf<Mental>()
-        // 1. Bestehende in Reihenfolge: per Tombstone loeschen ODER per LWW aktualisieren.
-        for (ex in existing) {
-            val ts = deletedAt[ex.id]
-            if (ts != null && ts > ex.updatedAt) {
-                changed++
-                continue
-            }
-            val inc = incomingById[ex.id]
-            if (inc != null && inc.updatedAt > ex.updatedAt) {
-                result.add(inc)
-                changed++
-            } else {
-                result.add(ex)
-            }
+    val existing = dao.getAllForBackup() // ORDER BY position (Reihenfolge!)
+    val existingIds = existing.mapTo(HashSet()) { it.id }
+    val incomingById = incoming.associateBy { it.id }
+    // 1. Bestehende: per Tombstone loeschen ODER per LWW (updatedAt) aktualisieren.
+    for (ex in existing) {
+        val ts = deletedAt[ex.id]
+        if (ts != null && ts > ex.updatedAt) {
+            dao.deleteById(ex.id)
+            changed++
+            continue
         }
-        // 2. Neue (im Backup, nicht lokal) ans Ende — ausser frisch getombstonet.
-        val existingIds = existing.mapTo(HashSet()) { it.id }
-        for (inc in incoming) {
-            if (inc.id in existingIds) continue
-            val ts = deletedAt[inc.id]
-            if (ts != null && ts > inc.updatedAt) continue
-            result.add(inc)
+        val inc = incomingById[ex.id]
+        if (inc != null && inc.updatedAt > ex.updatedAt) {
+            // copy erhaelt position + Herkunft; nur Text + Zeitstempel aktualisieren.
+            dao.update(ex.copy(text = inc.text, updatedAt = inc.updatedAt))
             changed++
         }
-        prefs[KEY_GEWOHNHEITEN] = serializeGewohnheiten(result)
+    }
+    // 2. Neue (im Backup, nicht lokal) ans Ende — ausser frisch getombstonet.
+    var nextPos = (existing.maxOfOrNull { it.position } ?: -1) + 1
+    for (inc in incoming) {
+        if (inc.id in existingIds) continue
+        val ts = deletedAt[inc.id]
+        if (ts != null && ts > inc.updatedAt) continue
+        dao.upsert(
+            de.frank.entropyreducer.data.local.entities.HabitEntity(
+                id = inc.id,
+                text = inc.text,
+                updatedAt = inc.updatedAt,
+                position = nextPos++,
+            )
+        )
+        changed++
     }
     return changed
 }
@@ -202,14 +220,6 @@ private fun parseGewohnheiten(raw: String?): List<Mental> {
             }
         }
     }.getOrDefault(emptyList())
-}
-
-private fun serializeGewohnheiten(mentals: List<Mental>): String {
-    val arr = JSONArray()
-    for (m in mentals) {
-        arr.put(JSONObject().put("id", m.id).put("text", m.text).put("updatedAt", m.updatedAt))
-    }
-    return arr.toString()
 }
 
 private val Accent: Color

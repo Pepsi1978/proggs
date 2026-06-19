@@ -5,6 +5,8 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.data.local.dao.HabitDao
+import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 
@@ -27,6 +29,11 @@ interface IdeaTaskDaoEntryPoint {
     fun ideaDao(): IdeaDao
 
     fun taskSuggestionDao(): TaskSuggestionDao
+
+    // ID-Architektur Etappe 3: Gewohnheiten + Gewohnheits-Vorschlaege.
+    fun habitDao(): HabitDao
+
+    fun habitSuggestionDao(): HabitSuggestionDao
 }
 
 /** Holt den [IdeaDao] aus dem Application-Graphen (fuer freie context-basierte Funktionen). */
@@ -44,3 +51,19 @@ internal fun taskSuggestionDaoFrom(context: Context): TaskSuggestionDao =
             IdeaTaskDaoEntryPoint::class.java,
         )
         .taskSuggestionDao()
+
+/** Holt den [HabitDao] aus dem Application-Graphen (ID-Architektur Etappe 3). */
+internal fun habitDaoFrom(context: Context): HabitDao =
+    EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            IdeaTaskDaoEntryPoint::class.java,
+        )
+        .habitDao()
+
+/** Holt den [HabitSuggestionDao] aus dem Application-Graphen (ID-Architektur Etappe 3). */
+internal fun habitSuggestionDaoFrom(context: Context): HabitSuggestionDao =
+    EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            IdeaTaskDaoEntryPoint::class.java,
+        )
+        .habitSuggestionDao()

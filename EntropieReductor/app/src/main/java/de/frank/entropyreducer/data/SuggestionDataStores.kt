@@ -4,14 +4,15 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.data.local.habitSuggestionDaoFrom
 import de.frank.entropyreducer.data.local.taskSuggestionDaoFrom
 import de.frank.entropyreducer.data.remote.drive.BackupMental
 import de.frank.entropyreducer.data.remote.drive.BackupTaskSuggestion
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * Zentrale DataStore-Delegates fuer die Vorschlag-Speicherung.
@@ -45,10 +46,10 @@ fun taskSuggestionsForBackup(context: Context): Flow<List<BackupTaskSuggestion>>
 fun taskSuggestionsFromJson(context: Context): Flow<List<BackupTaskSuggestion>> =
     context.kiTaskSuggestionStore.data.map { prefs -> parseTaskSuggestions(prefs[SUGGESTIONS_KEY]) }
 
-/** Aktuelle Gewohnheitsvorschlaege (gewohnheit_suggestions) als id+text-Liste. */
+/** Aktuelle Gewohnheitsvorschlaege als Backup-DTO-Liste — ab Etappe 3c/3e aus Room (habit_suggestions). */
 fun gewohnheitSuggestionsForBackup(context: Context): Flow<List<BackupMental>> =
-    context.gewohnheitSuggestionStore.data.map { prefs ->
-        parseGewohnheitSuggestions(prefs[SUGGESTIONS_KEY])
+    habitSuggestionDaoFrom(context).getAll().map { rows ->
+        rows.map { BackupMental(id = it.id, text = it.text) }
     }
 
 /**
@@ -88,18 +89,21 @@ suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSu
     return toAdd.size
 }
 
-/** Spielt Gewohnheitsvorschlaege aus dem Backup ein (Existenz-Strategie). */
+/** Spielt Gewohnheitsvorschlaege aus dem Backup in Room ein (nur fehlende IDs, lokale gewinnen). */
 suspend fun restoreGewohnheitSuggestions(context: Context, incoming: List<BackupMental>): Int {
     if (incoming.isEmpty()) return 0
-    var added = 0
-    context.gewohnheitSuggestionStore.edit { prefs ->
-        val existing = parseGewohnheitSuggestions(prefs[SUGGESTIONS_KEY])
-        val existingIds = existing.mapTo(HashSet()) { it.id }
-        val toAdd = incoming.filterNot { it.id in existingIds }
-        added = toAdd.size
-        if (toAdd.isNotEmpty()) prefs[SUGGESTIONS_KEY] = serializeGewohnheitSuggestions(existing + toAdd)
-    }
-    return added
+    val dao = habitSuggestionDaoFrom(context)
+    val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
+    val toAdd = incoming.filterNot { it.id in existingIds }
+    if (toAdd.isEmpty()) return 0
+    // Backup-DTO hat keinen Zeitstempel/Herkunft — Reihenfolge stabil, origin null (Altbestand).
+    val nowMs = System.currentTimeMillis()
+    dao.upsertAll(
+        toAdd.mapIndexed { index, s ->
+            HabitSuggestionEntity(id = s.id, text = s.text, createdAt = nowMs + index)
+        }
+    )
+    return toAdd.size
 }
 
 private fun parseTaskSuggestions(raw: String?): List<BackupTaskSuggestion> {
@@ -133,10 +137,5 @@ private fun parseGewohnheitSuggestions(raw: String?): List<BackupMental> {
         .getOrDefault(emptyList())
 }
 
-private fun serializeGewohnheitSuggestions(items: List<BackupMental>): String {
-    val arr = JSONArray()
-    for (item in items) {
-        arr.put(JSONObject().put("id", item.id).put("text", item.text))
-    }
-    return arr.toString()
-}
+// serializeGewohnheitSuggestions entfaellt (Etappe 3c/3e): Gewohnheits-Vorschlaege werden nicht mehr
+// als JSON geschrieben — restoreGewohnheitSuggestions schreibt jetzt Room.
