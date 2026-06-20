@@ -36,7 +36,18 @@ private val SUGGESTIONS_KEY = stringPreferencesKey("suggestions_json")
 /** Aktuelle Aufgabenvorschlaege als Backup-DTO-Liste — ab Etappe 2c/2e aus Room (task_suggestions). */
 fun taskSuggestionsForBackup(context: Context): Flow<List<BackupTaskSuggestion>> =
     taskSuggestionDaoFrom(context).getAll().map { rows ->
-        rows.map { BackupTaskSuggestion(id = it.id, title = it.title, description = it.description) }
+        // Schema v18 (2026-06-20): Herkunft (originId/originType/rootId) mitsichern, damit der
+        // Ketten-Dedup (countByOriginId) auch nach Drive-Sync/Restore auf einem 2. Geraet greift.
+        rows.map {
+            BackupTaskSuggestion(
+                id = it.id,
+                title = it.title,
+                description = it.description,
+                originId = it.originId,
+                originType = it.originType,
+                rootId = it.rootId,
+            )
+        }
     }
 
 /**
@@ -49,7 +60,17 @@ fun taskSuggestionsFromJson(context: Context): Flow<List<BackupTaskSuggestion>> 
 /** Aktuelle Gewohnheitsvorschlaege als Backup-DTO-Liste — ab Etappe 3c/3e aus Room (habit_suggestions). */
 fun gewohnheitSuggestionsForBackup(context: Context): Flow<List<BackupMental>> =
     habitSuggestionDaoFrom(context).getAll().map { rows ->
-        rows.map { BackupMental(id = it.id, text = it.text) }
+        // Schema v18 (2026-06-20): Herkunft mitsichern (analog Aufgaben-Vorschlaege) — sonst waere
+        // der Ketten-Dedup fuer Gewohnheits-Vorschlaege nach Drive-Sync/Restore blind.
+        rows.map {
+            BackupMental(
+                id = it.id,
+                text = it.text,
+                originId = it.originId,
+                originType = it.originType,
+                rootId = it.rootId,
+            )
+        }
     }
 
 /**
@@ -73,8 +94,9 @@ suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSu
     val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
     val toAdd = incoming.filterNot { it.id in existingIds }
     if (toAdd.isEmpty()) return 0
-    // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Bestandsdaten
-    // ohne Herkunft (originId/originType/rootId = null) — korrekt fuer eingespielte Alt-Vorschlaege.
+    // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Schema v18
+    // (2026-06-20): Herkunft aus dem Backup wiederherstellen. Aeltere Backups (v15-v17) tragen sie
+    // nicht -> dort bleibt originId=null (Alt-Vorschlaege ohne Herkunft, wie bisher).
     val nowMs = System.currentTimeMillis()
     dao.upsertAll(
         toAdd.mapIndexed { index, s ->
@@ -83,6 +105,9 @@ suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSu
                 title = s.title,
                 description = s.description,
                 createdAt = nowMs + index,
+                originId = s.originId,
+                originType = s.originType,
+                rootId = s.rootId,
             )
         }
     )
@@ -96,11 +121,19 @@ suspend fun restoreGewohnheitSuggestions(context: Context, incoming: List<Backup
     val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
     val toAdd = incoming.filterNot { it.id in existingIds }
     if (toAdd.isEmpty()) return 0
-    // Backup-DTO hat keinen Zeitstempel/Herkunft — Reihenfolge stabil, origin null (Altbestand).
+    // Reihenfolge stabil halten. Schema v18 (2026-06-20): Herkunft aus dem Backup wiederherstellen
+    // (BackupMental traegt sie jetzt). Aeltere Backups (v12-v17) ohne Herkunft -> origin bleibt null.
     val nowMs = System.currentTimeMillis()
     dao.upsertAll(
         toAdd.mapIndexed { index, s ->
-            HabitSuggestionEntity(id = s.id, text = s.text, createdAt = nowMs + index)
+            HabitSuggestionEntity(
+                id = s.id,
+                text = s.text,
+                createdAt = nowMs + index,
+                originId = s.originId,
+                originType = s.originType,
+                rootId = s.rootId,
+            )
         }
     )
     return toAdd.size

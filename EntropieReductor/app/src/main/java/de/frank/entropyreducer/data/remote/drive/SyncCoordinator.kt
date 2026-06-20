@@ -396,7 +396,9 @@ constructor(
 
             val localPayload =
                 BackupPayload(
-                    version = 17,
+                    // v18 (2026-06-20): Vorschlags-Herkunft (originId/originType/rootId) im Backup —
+                    // haelt den Ketten-Dedup nach Drive-Sync/Restore geraeteuebergreifend wirksam.
+                    version = 18,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,

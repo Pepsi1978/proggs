@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 15,
+    val version: Int = 18,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -191,9 +191,23 @@ data class BackupPayload(
 /**
  * Schema v15: ein KI-Aufgabenvorschlag (id + Titel + Beschreibung). Spiegelt KiTaskSuggestion
  * aus dem Aufgaben-Reiter.
+ *
+ * Schema v18 (Frank-Wunsch 2026-06-20, ID-Architektur Backup-Lineage-Fix): originId/originType/
+ * rootId mitsichern. Vorher ging die Herkunft beim Drive-Backup verloren -> auf einem 2. Geraet
+ * hatte der Vorschlag originId=null -> der Ketten-Dedup (countByOriginId) war geraeteuebergreifend
+ * BLIND -> Doppelvorschlag. Mit Herkunft im Backup bleibt der Dedup auch nach Sync/Restore robust.
+ * null-Defaults: aeltere Backups (v15-v17) ohne diese Felder bleiben lesbar (Alt-Vorschlaege ohne
+ * Herkunft, wie bisher).
  */
 @Serializable
-data class BackupTaskSuggestion(val id: String, val title: String, val description: String)
+data class BackupTaskSuggestion(
+    val id: String,
+    val title: String,
+    val description: String,
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
+)
 
 /**
  * Schema v16: Ein Tombstone (Loesch-Markierung). [type] = Entitaetstyp (siehe TombstoneType im
@@ -206,10 +220,23 @@ data class BackupTombstone(val type: String, val id: String, val deletedAt: Long
 
 /**
  * Schema v12 (Frank-Wunsch 2026-06-09): ein Mentalboard-Eintrag. Nur id + Satz; die
- * Reihenfolge ergibt sich aus der Listen-Position im Backup.
+ * Reihenfolge ergibt sich aus der Listen-Position im Backup. Wird auch fuer Gewohnheiten und
+ * Gewohnheits-Vorschlaege wiederverwendet (gleiches id+text-Format).
+ *
+ * Schema v18 (Frank-Wunsch 2026-06-20, ID-Architektur Backup-Lineage-Fix): originId/originType/
+ * rootId mitsichern. Relevant v. a. fuer die GEWOHNHEITS-Vorschlaege (habit_suggestions) — sonst
+ * ginge ihre Herkunft beim Drive-Backup verloren und der Ketten-Dedup (countByOriginId) waere auf
+ * einem 2. Geraet blind (Doppelvorschlag). null-Defaults halten aeltere Backups (v12-v17) lesbar.
  */
 @Serializable
-data class BackupMental(val id: String, val text: String, val updatedAt: Long = 0L)
+data class BackupMental(
+    val id: String,
+    val text: String,
+    val updatedAt: Long = 0L,
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
+)
 
 /**
  * Schema v17 (Frank-Wunsch 2026-06-19): ein Prioritaets-Gedaechtnis-Eintrag (gemerkte manuelle
