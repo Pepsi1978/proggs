@@ -87,6 +87,28 @@ def collect_mapped_files(guard_path: Path) -> set[str]:
     return {m.group(1)[:-3].lower() for m in pat.finditer(text)}
 
 
+def collect_bp_keys(bp_dir: Path) -> dict[str, str]:
+    """Alle Best-Practices-Schluessel in best-practices/<kategorie>/ sammeln.
+
+    Schluessel = Dateiname ohne .md, ohne fuehrendes ``best-practices-`` (Abwaerts-
+    kompatibilitaet zur alten Namensform), lowercase. Nur Dateien in Unterordnern;
+    README/SYSTEM/_-Dateien werden ausgenommen. Rueckgabe: key -> relativer Pfad
+    (fuer eine sprechende Ausgabe).
+    """
+    keys: dict[str, str] = {}
+    for p in bp_dir.rglob("*.md"):
+        rel = p.relative_to(bp_dir).as_posix()
+        if "/" not in rel:           # direkt in best-practices/ (README/SYSTEM) -> kein Paar
+            continue
+        key = p.stem.lower()
+        if key.startswith("best-practices-"):
+            key = key[len("best-practices-"):]
+        if key in NON_ALMANAC or key.startswith("_"):
+            continue
+        keys.setdefault(key, "best-practices/" + rel)
+    return keys
+
+
 def main() -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -144,13 +166,55 @@ def main() -> int:
         for key in stale:
             print(f"  [HINWEIS] Allowlist-Eintrag ohne Almanach: {key} (veraltet?)")
 
+    # ── Best-Practices-Coverage (zweite Seite der Medaille) ──────────────────────
+    # Der Guard erzwingt eine best-practices-<key>.md NUR nach dem Lesen des gleichnamigen
+    # Almanachs (erst Almanach, dann BP). Eine BP wird also automatisch getriggert, wenn ihr
+    # Almanach datei-erzwungen ist (OK). Ist der Almanach eine LUECKE, wird auch die BP nie
+    # ausgeloest. Eine BP ganz ohne gleichnamigen Almanach ist Zusatz-Referenz (kein Paar,
+    # vom Guard bewusst nicht getriggert — kein Fehler).
+    bp_dir = root / "best-practices"
+    bp_luecke: list[tuple[str, str]] = []
+    bp_zusatz: list[tuple[str, str]] = []
+    if bp_dir.is_dir():
+        ok_set, bewusst_set, luecke_set = set(ok), set(bewusst), set(luecke)
+        bp_keys = collect_bp_keys(bp_dir)
+        bp_ok: list[str] = []
+        bp_bewusst: list[str] = []
+        for key, rel in sorted(bp_keys.items()):
+            if key in ok_set:
+                bp_ok.append(key)
+            elif key in bewusst_set:
+                bp_bewusst.append(key)
+            elif key in luecke_set:
+                bp_luecke.append((key, rel))   # Almanach-Luecke -> BP wird nie getriggert
+            else:
+                bp_zusatz.append((key, rel))   # kein gleichnamiger Almanach -> Zusatz-Referenz
+
+        print("")
+        print("--- Best-Practices-Coverage (erst Almanach, dann Best Practices) ---")
+        print(
+            f"BP-Dateien gesamt: {len(bp_keys)}  |  getriggert: {len(bp_ok)}  |  "
+            f"Querschnitt: {len(bp_bewusst)}  |  BP-LUECKEN: {len(bp_luecke)}  |  "
+            f"Zusatz (kein Almanach-Paar): {len(bp_zusatz)}"
+        )
+        for key, rel in bp_luecke:
+            print(f"  [BP-LUECKE]  {rel}  -> Almanach '{key}' wird nicht erzwungen, also wird auch diese BP nie ausgeloest")
+        for key, rel in bp_zusatz:
+            print(f"  [BP-ZUSATZ]  {rel}  -> Referenz ohne gleichnamigen Almanach (vom Guard bewusst nicht getriggert)")
+
+    # ── Gesamt-Ergebnis ──────────────────────────────────────────────────────────
     print("")
-    if luecke:
-        print(f"ERGEBNIS: {len(luecke)} Luecke(n) — diese Almanache werden nie automatisch ausgeloest.")
-        print("          Im bug-almanac-guard ein Dateimuster/Inhalts-Signal ergaenzen")
-        print("          ODER (bei echtem Querschnitt) in INTENTIONALLY_UNMAPPED aufnehmen.")
+    total_luecken = len(luecke) + len(bp_luecke)
+    if total_luecken:
+        if luecke:
+            print(f"ERGEBNIS: {len(luecke)} Almanach-Luecke(n) — werden nie automatisch ausgeloest.")
+            print("          Im bug-almanac-guard ein Dateimuster/Inhalts-Signal ergaenzen")
+            print("          ODER (bei echtem Querschnitt) in INTENTIONALLY_UNMAPPED aufnehmen.")
+        if bp_luecke:
+            print(f"ERGEBNIS: {len(bp_luecke)} Best-Practices-Luecke(n) — meist Folge einer Almanach-Luecke;")
+            print("          sobald der zugehoerige Almanach erzwungen wird, wird auch die BP getriggert.")
     else:
-        print("ERGEBNIS: Keine Luecken — jeder Almanach wird erzwungen oder ist bewusst als Querschnitt gelistet.")
+        print("ERGEBNIS: Keine Luecken — jeder Almanach (und seine Best-Practices) wird erzwungen oder ist bewusst Querschnitt.")
     return 0
 
 

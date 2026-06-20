@@ -22,6 +22,17 @@ Reibung statt Nutzen — es kostet Tokens, unterbricht den Fluss und stumpft die
 fuer die ECHTEN Warnungen ab. Dieser Skill ist das Selbstbeobachtungs-Werkzeug, das genau diese
 Reibung sichtbar macht und Schritt fuer Schritt herausnimmt, damit das System schaerfer wird.
 
+Dieser Skill hat **zwei Aufgaben** fuer dasselbe Intelligenzsystem:
+1. **Reibung herausnehmen** — unnoetige Auslöser (z.B. reiner Version-Bump) finden und abschalten.
+2. **Luecken schliessen** — pruefen, ob WIRKLICH jeder vorhandene Bug-Almanach UND jede zugehoerige
+   Best-Practices-Datei vom Start-Hook (`bug-almanac-guard`) ueberhaupt getriggert wird. Ein Almanach,
+   den der Hook nie ansteuert, ist **totes Wissen**: abgespeichert, aber wirkungslos — es bringt nichts,
+   Bug-Wissen zu pflegen, das nie ausgeloest wird. Reihenfolge im Hook: erst der Almanach, dann seine
+   Best Practices.
+
+Beide Aufgaben dienen demselben Ziel: Das System soll bei den RICHTIGEN Dingen ausloesen und bei den
+falschen schweigen.
+
 **Wichtig:** Dieser Skill liest, wertet aus, fragt und schlaegt vor. Er aendert den Guard NIE
 von selbst — jede Abschaltung ist eine bewusste, in der Fragerunde gemeinsam getroffene
 Entscheidung.
@@ -83,6 +94,29 @@ Die maschinelle Klassifikation kennt fuenf Klassen und ist **konservativ** (im Z
 Gibt es keine Daten, meldet das Script das und der Skill endet mit dem Hinweis, dass die Sonde
 noch nichts aufgezeichnet hat.
 
+### Schritt 1b — Coverage-Check: ist jeder Almanach + jede Best-Practices im Hook registriert? (Direktive #1: Vollstaendigkeit)
+
+Die zweite Aufgabe. Pruefen, ob der Start-Hook (`bug-almanac-guard`) wirklich JEDEN vorhandenen
+Bug-Almanach UND die zugehoerigen Best-Practices ansteuert. Dafuer das autoritative Coverage-Script
+laufen lassen (rein lesend, vergleicht `bugs/**` und `best-practices/**` gegen die Datei-Mappings im Guard):
+
+```bash
+python3 ~/proggs/bugs/check-guard-coverage.py
+```
+
+Es liefert pro Almanach `[OK]` (vom Guard erzwungen), `[BEWUSST]` (Querschnitt, per Design nicht
+datei-getriggert) oder `[LUECKE]` (existiert, wird aber NIE ausgeloest) — und dieselbe Einstufung
+fuer Best-Practices (`[BP-LUECKE]` = Almanach-Luecke zieht die BP mit; `[BP-ZUSATZ]` = Referenz ohne
+Almanach-Paar, kein Fehler). Am Ende stehen die Gesamtzahlen + ERGEBNIS.
+
+**So liest man das Ergebnis:**
+- `[LUECKE]`: Der Almanach ist totes Wissen — er wird gepflegt, aber nie getriggert. Das ist der Kernfall,
+  den dieser Check fangen soll.
+- `[BP-LUECKE]`: Folgt fast immer aus einer Almanach-Luecke — sobald der Almanach erzwungen wird, greift
+  auch die BP automatisch (erst Almanach, dann BP).
+- `[BP-ZUSATZ]`: Eine BP ohne gleichnamigen Almanach (z.B. uebergreifende Referenz). KEIN Fehler — der
+  Guard triggert BP nur als zweite Seite eines Almanachs. Nur erwaehnen, nicht als Luecke behandeln.
+
 ### Schritt 2 — Erkennen & verfeinern (Direktive #2: Muster erkennen)
 
 Die Script-Klassifikation ist die harte Grundlage. Jetzt die Kandidaten-Beispiele kurz mit
@@ -143,10 +177,20 @@ Meist folgt echte Logik → im Zweifel bremsen lassen.
 Was am Auslöse-System selbst besser werden koennte, z.B.: Bereichs-Fehlzuordnungen
 (<Beispiele>), ein zentraler Trivial-Filter, "pass mit Grund" statt stiller Durchwink.
 
-## 6. Unterm Strich
+## 6. Registrierungs-Luecken: totes Wissen aufdecken  (Direktive #1 — Vollstaendigkeit)
+Aus Schritt 1b (check-guard-coverage.py). Almanache/Best-Practices, die existieren, aber vom
+Hook NIE getriggert werden:
+- Almanach-Luecken (<n>): <key>, <key> … -> gepflegt, aber nie ausgeloest (totes Wissen).
+- BP-Luecken (<n>): <pfad> … (meist Folge der Almanach-Luecke; mit dem Almanach behoben).
+Pro Luecke ein konkreter Weg (-> Fragerunde): Trigger-Signal im Guard ergaenzen, ODER bewusst als
+Querschnitt eintragen (`INTENTIONALLY_UNMAPPED`), ODER (falls obsolet) den Almanach entfernen.
+Keine Luecken -> "Alle Almanache + Best Practices sind im Hook registriert."
+
+## 7. Unterm Strich
 - Wenn wir <Vorschlag 1> abschalten: ~<n> Bremsungen (<pct>) weniger — ohne ein Stueck
   Bug-Wissen zu verlieren.
-- Reihenfolge der Empfehlung: von sicher+haeufig (z.B. Version-Bump) zu Grenzfaellen.
+- Registrierungs-Luecken: <n> Almanache werden aktuell nie getriggert — die wichtigsten zuerst schliessen.
+- Reihenfolge der Empfehlung: von sicher+haeufig (z.B. Version-Bump) zu Grenzfaellen, dann Luecken.
 ```
 
 ### Schritt 4 — Gefuehrte Fragerunde / Brainstorming (KEIN Plan-Modus)
@@ -178,10 +222,23 @@ was am System generell besser wird. Ablauf:
    "zentraler Trivial-Filter fuer ALLE Bereiche?", "Transparenz: durchgewunkene Trivial-Edits als
    `pass`/`trivial-uebersprungen` mitloggen, statt still?". Mit Empfehlung.
 
-5. **Abschluss:** Die getroffenen Entscheidungen kurz zusammenfassen (was wird abgeschaltet, wie,
-   was bleibt). Dann — und ERST auf ausdrueckliches OK — die Aenderung am Guard umsetzen
-   (`bug-almanac-guard.ps1` UND `.sh`, Cross-Platform; danach committen+pushen). Ohne OK bleibt
-   es beim Vorschlag.
+5. **Registrierungs-Luecken durchgehen** (Direktive #1, Vollstaendigkeit): Fuer JEDE Almanach-Luecke
+   aus Schritt 1b eine Frage mit Optionen — damit kein gepflegtes Bug-Wissen totes Wissen bleibt:
+   - **(A) Im Guard registrieren** — ein Datei-/Inhalts-Signal im `bug-almanac-guard` (`.ps1` UND `.sh`)
+     ergaenzen, sodass der Almanach (und automatisch seine Best-Practices) kuenftig getriggert wird.
+     *Empfohlen, wenn es ein klares Dateimuster gibt.*
+   - **(B) Bewusst als Querschnitt** — in `INTENTIONALLY_UNMAPPED` (in `check-guard-coverage.py`)
+     aufnehmen, wenn es kein sauberes Dateimuster gibt und das Wissen nur ueber Index/Stichworte
+     gefunden wird (wie die `apis/`-Almanache).
+   - **(C) Almanach entfernen** — falls er obsolet ist.
+   BP-Luecken nicht separat abfragen: sie verschwinden automatisch, sobald ihr Almanach registriert ist
+   (erst Almanach, dann BP). Nur eine BP-ZUSATZ-Datei, die eigentlich ein Almanach-Paar haben sollte,
+   ggf. erwaehnen.
+
+6. **Abschluss:** Die getroffenen Entscheidungen kurz zusammenfassen (was wird abgeschaltet, welche
+   Luecken werden geschlossen, was bleibt). Dann — und ERST auf ausdrueckliches OK — die Aenderungen
+   umsetzen (`bug-almanac-guard.ps1` UND `.sh` bei neuen Triggern; `check-guard-coverage.py` bei
+   Querschnitt-Eintraegen; Cross-Platform; danach committen+pushen). Ohne OK bleibt es beim Vorschlag.
 
 Wenn der Benutzer abwinkt ("nur die Auswertung, keine Fragerunde"), Schritt 4 ueberspringen und
 mit der Empfehlung aus Schritt 3.6 enden.
