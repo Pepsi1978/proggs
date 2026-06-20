@@ -25,6 +25,7 @@
 | 9 | CLI-Agent Modell-String | LiteLLM-Tools `openrouter/<v>/<m>`, Eigenbau nacktes `<v>/<m>`; Cursor braucht `/cursor`-Suffix | §G |
 | 10 | Caching/Reasoning/neu | Auto-Caching nur Anthropic 1P; `provider.order` killt Sticky-Routing; `reasoning_details` unverändert zurück; `:nitro`≠Latenz | §H |
 | 11 | **OpenCode** ⭐ | Login = `/connect` (kein `opencode auth login`/`OPENROUTER_API_KEY`-Env); `:free`/`:`-IDs crashen + oft kein Tool-Use; Routing pro Modell unter `options.provider` | §I |
+| 12 | **Server-Tools / PDF** ⭐ | 6 Server-Tools (web_search/web_fetch/datetime/image_generation/apply_patch[Responses]/fusion); web_fetch-Engine `openrouter`=gratis; `file-parser`-OCR kostet auch bei BYOK, `native` ohne `annotations`; non-streaming web_search → Keep-Alive bricht JSON (§D9) | §35 |
 
 ---
 
@@ -77,10 +78,10 @@
 ## D. Streaming / SSE
 
 ### 9. `: OPENROUTER PROCESSING`-Kommentarzeile bricht Parser ⭐
-- **Symptom:** `unexpected end of JSON input`/Stream-Abbruch.
-- **Ursache:** OpenRouter sendet SSE-Kommentarzeilen (mit `:`) gegen Timeouts.
-- **FIX:** per SSE-Spec alle `:`-Zeilen überspringen; `eventsource-parser`/OpenAI-SDK nutzen.
-- **Quelle:** https://openrouter.ai/docs/api/reference/streaming
+- **Symptom:** `unexpected end of JSON input`/Stream-Abbruch — ODER bei `stream:false` ein `json.JSONDecodeError: Expecting value: line N` mitten in der Antwort.
+- **Ursache:** OpenRouter sendet SSE-Kommentarzeilen (mit `:`) gegen Timeouts. **Tritt AUCH bei non-streaming auf**, wenn die Verarbeitung lange dauert (agentische `web_search`/`web_fetch` mit mehreren Suchen): Keep-Alive-Zeilen `: OPENROUTER PROCESSING` kommen VOR dem JSON-Body, sodass `json.loads(ganze_antwort)` bricht. (Eigener Vorfall 2026-06-20 in `or-research.py` bei 16 agentischen Suchen.)
+- **FIX:** Streaming → per SSE-Spec alle `:`-Zeilen überspringen (`eventsource-parser`/OpenAI-SDK). Non-streaming → erst `json.loads` versuchen, bei `JSONDecodeError` ab dem ersten `{` parsen: `json.JSONDecoder().raw_decode(raw[raw.find('{'):])[0]` (überspringt die führenden Keep-Alive-Kommentare; `raw_decode` ignoriert evtl. Trailing).
+- **Quelle:** https://openrouter.ai/docs/api/reference/streaming · offiziell + eigener Vorfall/Fix 2026-06-20 (`proggs/or-research.py` + `mm-research.py`)
 
 ### 10. `data: [DONE]` als JSON geparst
 - **FIX:** vor JSON-Parse auf `[DONE]` prüfen.
@@ -242,10 +243,14 @@
 - **FIX:** über BYOK-Key-Sektion/Filter steuern; „Always use" nur bewusst (verhindert Shared-Fallback → Rate-Limit-Risiko). BYOK-Fee 5% (erste 1 Mio Req/Monat frei).
 - **Quelle:** https://openrouter.ai/docs/guides/overview/auth/byok · offiziell
 
-### 35. `:online` / `web`-Plugin deprecated; Server-Tools sind Beta
-- **Ursache:** Web-Suche läuft jetzt über das Server-Tool `openrouter:web_search` (Modell entscheidet selbst, 0–N Suchen); `:online`/`web`-Plugin abgelöst.
-- **FIX:** auf `openrouter:web_search` umstellen, `max_total_results` als Kosten-Cap in Agent-Loops; Beta → API-Änderungen einplanen.
-- **Quelle:** https://openrouter.ai/docs/guides/features/server-tools/web-search · offiziell
+### 35. `:online` / `web`-Plugin deprecated; SECHS Server-Tools (Beta); `file-parser`-Plugin-Fallen ⭐
+- **Ursache:** Web-Suche läuft jetzt über das Server-Tool `openrouter:web_search` (Modell entscheidet selbst, 0–N Suchen); `:online`/`web`-Plugin abgelöst (auch der `:online`-Suffix).
+- **Es gibt SECHS Server-Tools** (offizielle Übersichtsseite, verifiziert 2026-06-20), je im `tools`-Array als `{"type":"openrouter:<name>"}`:
+  `web_search` (agentische Suche), `web_fetch` (vollen Seiteninhalt einer URL — Engine **"OpenRouter" = KOSTENLOS**, Exa/Parallel je $0.001/Fetch, `max_content_tokens` gegen Kontext-Überlauf), `datetime`, `image_generation`, `apply_patch` (**nur Responses API**), `fusion`.
+  Kosten `web_search`: Exa/Parallel **$0.005**/Suche (bis 10 Treffer) +$0.001/Treffer; `native`=Provider-Preis; `firecrawl`=BYOK. Steuerung: `max_results` (1–25, Default 5), `max_total_results` (Cap über ALLE Suchen = Kostenbremse in Agent-Loops). **Achtung:** eine ältere Notiz (06-17) nannte zusätzlich `subagent`/`advisor` — die stehen 06-20 NICHT mehr auf der offiziellen server-tools-Seite → vor Nutzung verifizieren. Modell braucht Tool-Calling-Support, sonst nur das alte (deprecatete) `web`-Plugin (genau 1 Suche/Request).
+- **`file-parser`-Plugin (PDF/Doku) — Fallen:** `plugins:[{"id":"file-parser","pdf":{"engine":...}}]`. Engines: `mistral-ocr` ($2/1000 Seiten, **OCR-Kosten fallen AUCH bei BYOK an** — OR nutzt eigenen Mistral-Key; max 8 Bilder/PDF), `cloudflare-ai` (kostenlos, PDF→Markdown), `native` (als Input-Tokens des Modells, produziert **KEINE** `annotations`), `pdf-text` (deprecated → cloudflare-ai). **Re-Parse-Kosten sparen:** die zurückgegebenen `annotations` (stabiler `file.hash`) im Folge-Request an der vorherigen Assistant-Message mitsenden → OR überspringt das erneute Parsen (auch im Error-Pfad unter `error.metadata.file_annotations`). Datei als `{"type":"file","file":{"filename":..,"file_data":"data:application/pdf;base64,.."}}`; Feldname `file_data` (Python) vs `fileData` (TS-SDK) ist in den Docs inkonsistent.
+- **FIX:** auf `openrouter:web_search`/`web_fetch` umstellen, `max_total_results` als Kosten-Cap; web_fetch-Engine `openrouter` (gratis) für Volltext; Beta → API-Änderungen einplanen. PDF-Pipelines: `annotations` cachen, Engine bewusst wählen (cloudflare-ai gratis vs. mistral-ocr $2/1000 S.).
+- **Quelle:** https://openrouter.ai/docs/guides/features/server-tools · …/server-tools/web-search · …/features/plugins (PDF inputs) · offiziell · verifiziert 2026-06-20 (Firecrawl+MiniMax A + or-research B)
 
 ### 36. OpenRouter hostet NIE lokale Modelle; LM Studio braucht Dummy-`api_key`
 - **Ursache:** OR ist reiner Cloud-Aggregator. „Lokal + OR mischen" braucht Router-Schicht (claude-code-router/LiteLLM) oder base_url-Umschaltung. Das OpenAI-SDK verlangt einen nicht-leeren `api_key`, auch wenn LM Studio (`localhost:1234/v1`) keinen braucht.
