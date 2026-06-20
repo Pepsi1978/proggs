@@ -37,6 +37,12 @@ val Context.gewohnheitSuggestionStore by preferencesDataStore(name = "gewohnheit
 // nutzt taskSuggestionsFromJson (eingefrorener Alt-Stand), NICHT taskSuggestionsForBackup.
 private val SUGGESTIONS_KEY = stringPreferencesKey("suggestions_json")
 
+// Live-Sonde (Frank-Wunsch 2026-06-20): jede Heal-Entfernung eines Vorschlags landet mit Grund in
+// logcat -> live mitlesbar via `adb logcat -s EREVorschlagHeal` (Diag schreibt bei aktivem Logger
+// NICHT in logcat, darum hier bewusst android.util.Log direkt). Macht den Verwaist-/Heal-Fall in
+// Sekunden sichtbar statt per DB-Pull.
+private const val SUGGESTION_HEAL_TAG = "EREVorschlagHeal"
+
 /** Aktuelle Aufgabenvorschlaege als Backup-DTO-Liste — ab Etappe 2c/2e aus Room (task_suggestions). */
 fun taskSuggestionsForBackup(context: Context): Flow<List<BackupTaskSuggestion>> =
     taskSuggestionDaoFrom(context).getAll().map { rows ->
@@ -111,12 +117,18 @@ suspend fun restoreTaskSuggestions(
     // Alt-Vorschlaege weg, die ueber ein Remote-Backup zurueckkamen (laeuft auch bei leerem incoming).
     val keptExisting = HashSet<String>()
     for (ex in dao.getAllForBackup()) {
-        if (
-            ex.id in deletedAt ||
-                isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) ||
-                isRootIdeaDeleted(ex.rootId, ideaDeletedAt)
-        ) {
+        val reason = when {
+            ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
+            isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
+            isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
+            else -> null
+        }
+        if (reason != null) {
             dao.deleteById(ex.id)
+            android.util.Log.i(
+                SUGGESTION_HEAL_TAG,
+                "Aufgaben-Vorschlag ${ex.id} entfernt: $reason (rootId=${ex.rootId})",
+            )
         } else {
             keptExisting.add(ex.id)
         }
@@ -190,12 +202,18 @@ suspend fun restoreGewohnheitSuggestions(
     // geloescht) LOKALE Vorschlaege weg.
     val keptExisting = HashSet<String>()
     for (ex in dao.getAllForBackup()) {
-        if (
-            ex.id in deletedAt ||
-                isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) ||
-                isRootIdeaDeleted(ex.rootId, ideaDeletedAt)
-        ) {
+        val reason = when {
+            ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
+            isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
+            isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
+            else -> null
+        }
+        if (reason != null) {
             dao.deleteById(ex.id)
+            android.util.Log.i(
+                SUGGESTION_HEAL_TAG,
+                "Gewohnheits-Vorschlag ${ex.id} entfernt: $reason (rootId=${ex.rootId})",
+            )
         } else {
             keptExisting.add(ex.id)
         }
