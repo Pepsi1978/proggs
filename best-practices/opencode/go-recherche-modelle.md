@@ -4,6 +4,10 @@
 > Hersteller-Blogs) bzw. `offiziell` (opencode.ai/docs/go). **Benchmarks und Preise ändern sich
 > häufig — vor produktivem Einsatz erneut prüfen.**
 >
+> **Quellen-Regel (Lehre 2026-06-20):** Bei Modell-Benchmarks sind die **neutralen OpenRouter/Artificial-Analysis-Werte
+> maßgeblich** — Hersteller-/Blog-Indizes weichen nach oben ab (real erlebt: GLM-5.2 „Faktentreue unbelegt" war belegt;
+> Qwen3.7-Max Hersteller-Index 56.6 vs. OpenRouter 46.0). Immer gegen OpenRouter/AA gegenchecken.
+>
 > **Stand:** recherchiert am **2026-06-20** mit 7 parallelen Researchern (Opus 1M) für das
 > **OpenCode-Go-Abo** (14 Modelle, Stand Juni 2026). Anker: opencode-go=2026-06.
 >
@@ -110,7 +114,7 @@ Stufe 3 — Eskalation (Hard-Cases): Opus / Qwen3.7 Max / GLM-5.2   ← starkes 
 
 **Eskalations-/Zweitmeinungs-Modelle (wenige, schwierige Fälle — Go-Request-Limit dann egal):**
 Hier zählt maximales Reasoning, nicht der Preis. Drei sehr starke Optionen:
-- **Qwen3.7 Max** — höchstes Reasoning der Liga (GPQA 92.4, Index 56.6), niedrigste Frontier-Halluzination (22.9 %). $2.50/$7.50, text-only.
+- **Qwen3.7 Max** — starkes Reasoning (GPQA 92.3, IFBench 80.5, Intelligenz-Index **46.0** lt. OpenRouter), **bestes Eigenwissen** der chinesischen Modelle (AA-Omniscience Acc 30.1 %, Nicht-Hallu 77.1 %). $2.50/$7.50, **text-only, teuerstes Modell** → nur Eskalation, nie Masse. (Hinweis: Hersteller-Index „56.6" ist überhöht; OpenRouter/AA = 46.0.)
 - **GLM-5.2** — Top-Reasoning (GPQA 89.5, Index 51.1, AA-LCR 71.3 %, τ²-Telecom 99.1 %), 1M Kontext. $1.20/$4.10; nur ~4.300 Req/Mo — für Eskalation reicht das locker. Faktentreue (AA-Omniscience Index 4) mittel, bei RAG aber nachrangig.
 - **Opus** — für die subtilsten Korrektheits-Fälle.
 
