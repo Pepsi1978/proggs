@@ -66,6 +66,7 @@ import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -122,64 +123,83 @@ private val KEY_MENTALS = stringPreferencesKey("mentals_json")
 /**
  * Liste in GESPEICHERTER Reihenfolge (NICHT sortiert — das manuelle Sortieren ist die Reihenfolge).
  */
+// ID-Architektur Etappe 4c (Frank-Wunsch 2026-06-19): Mental-Saetze liegen jetzt in Room (Tabelle
+// mental_sentences, sortiert nach `position`) statt im DataStore-JSON. Signaturen bleiben 1:1 — UI,
+// Backup (mentalsFlow) und Sync (restoreMentals) laufen unveraendert weiter; DAO per Hilt-@EntryPoint.
 internal fun mentalsFlow(context: Context): Flow<List<Mental>> =
+    de.frank.entropyreducer.data.local
+        .mentalSentenceDaoFrom(context)
+        .getAll()
+        .map { rows -> rows.map { Mental(id = it.id, text = it.text, updatedAt = it.updatedAt) } }
+        .distinctUntilChanged()
+
+/** JSON-Lesequelle der Bestands-Mentals NUR fuer den einmaligen Migrator (MentalRoomMigrator, 4b). */
+internal fun mentalsFromJsonFlow(context: Context): Flow<List<Mental>> =
     context.mentalStore.data.map { prefs -> parseMentals(prefs[KEY_MENTALS]) }
 
 internal suspend fun addMental(context: Context, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
-    context.mentalStore.edit { prefs ->
-        val existing = parseMentals(prefs[KEY_MENTALS])
-        prefs[KEY_MENTALS] = serializeMentals(existing + Mental.create(clean))
-    }
+    val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
+    val m = Mental.create(clean)
+    dao.upsert(
+        de.frank.entropyreducer.data.local.entities.MentalEntity(
+            id = m.id,
+            text = m.text,
+            updatedAt = m.updatedAt,
+            position = dao.maxPosition() + 1, // neuer Satz ans Ende
+        )
+    )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 internal suspend fun updateMental(context: Context, id: String, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
-    context.mentalStore.edit { prefs ->
-        val existing = parseMentals(prefs[KEY_MENTALS])
-        prefs[KEY_MENTALS] =
-            serializeMentals(
-                existing.map {
-                    if (it.id == id) it.copy(text = clean, updatedAt = System.currentTimeMillis())
-                    else it
-                }
-            )
-    }
+    val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
+    val current = dao.getById(id) ?: return
+    dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 internal suspend fun deleteMental(context: Context, id: String) {
-    context.mentalStore.edit { prefs ->
-        val existing = parseMentals(prefs[KEY_MENTALS])
-        prefs[KEY_MENTALS] = serializeMentals(existing.filterNot { it.id == id })
-    }
+    de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context).deleteById(id)
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
-/** Speichert die per Drag & Drop geaenderte Reihenfolge 1:1. */
+/** Speichert die per Drag & Drop geaenderte Reihenfolge ueber das position-Feld. */
 internal suspend fun reorderMentals(context: Context, newOrder: List<Mental>) {
-    context.mentalStore.edit { prefs -> prefs[KEY_MENTALS] = serializeMentals(newOrder) }
+    val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
+    newOrder.forEachIndexed { index, m ->
+        dao.getById(m.id)?.let { current ->
+            if (current.position != index) dao.update(current.copy(position = index))
+        }
+    }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
 /**
  * Spielt Mentals aus einem Drive-Backup ein (Frank-Wunsch 2026-06-09). Nur fehlende IDs werden
- * ergaenzt — lokale Edits/Reihenfolge gewinnen (konservativ, wie beim Tagebuch-Restore).
+ * ergaenzt — lokale Edits/Reihenfolge gewinnen (konservativ, wie beim Tagebuch-Restore). Neue ans Ende.
  */
 internal suspend fun restoreMentals(context: Context, incoming: List<Mental>): Int {
     if (incoming.isEmpty()) return 0
-    var added = 0
-    context.mentalStore.edit { prefs ->
-        val existing = parseMentals(prefs[KEY_MENTALS])
-        val existingIds = existing.mapTo(HashSet()) { it.id }
-        val toAdd = incoming.filterNot { it.id in existingIds }
-        added = toAdd.size
-        if (toAdd.isNotEmpty()) prefs[KEY_MENTALS] = serializeMentals(existing + toAdd)
-    }
-    return added
+    val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
+    val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
+    val toAdd = incoming.filterNot { it.id in existingIds }
+    if (toAdd.isEmpty()) return 0
+    var nextPos = dao.maxPosition() + 1
+    dao.upsertAll(
+        toAdd.map { m ->
+            de.frank.entropyreducer.data.local.entities.MentalEntity(
+                id = m.id,
+                text = m.text,
+                updatedAt = m.updatedAt,
+                position = nextPos++,
+            )
+        }
+    )
+    return toAdd.size
 }
 
 private fun parseMentals(raw: String?): List<Mental> {
@@ -195,14 +215,6 @@ private fun parseMentals(raw: String?): List<Mental> {
             }
         }
         .getOrDefault(emptyList())
-}
-
-private fun serializeMentals(mentals: List<Mental>): String {
-    val arr = JSONArray()
-    for (m in mentals) {
-        arr.put(JSONObject().put("id", m.id).put("text", m.text).put("updatedAt", m.updatedAt))
-    }
-    return arr.toString()
 }
 
 /* Akzentfarbe — Blau (Frank-Wunsch 2026-06-18): Sub-Tabs unter Aufgaben sind blau. TTS bleibt Orange. */

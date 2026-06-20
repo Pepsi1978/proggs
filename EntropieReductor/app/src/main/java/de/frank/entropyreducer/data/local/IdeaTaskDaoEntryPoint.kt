@@ -8,6 +8,7 @@ import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
+import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 
 /**
@@ -34,6 +35,9 @@ interface IdeaTaskDaoEntryPoint {
     fun habitDao(): HabitDao
 
     fun habitSuggestionDao(): HabitSuggestionDao
+
+    // ID-Architektur Etappe 4: Mental-Board-Saetze.
+    fun mentalSentenceDao(): MentalSentenceDao
 }
 
 /** Holt den [IdeaDao] aus dem Application-Graphen (fuer freie context-basierte Funktionen). */
@@ -67,3 +71,11 @@ internal fun habitSuggestionDaoFrom(context: Context): HabitSuggestionDao =
             IdeaTaskDaoEntryPoint::class.java,
         )
         .habitSuggestionDao()
+
+/** Holt den [MentalSentenceDao] aus dem Application-Graphen (ID-Architektur Etappe 4). */
+internal fun mentalSentenceDaoFrom(context: Context): MentalSentenceDao =
+    EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            IdeaTaskDaoEntryPoint::class.java,
+        )
+        .mentalSentenceDao()
