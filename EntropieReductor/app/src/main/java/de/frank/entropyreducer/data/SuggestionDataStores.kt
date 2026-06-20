@@ -98,26 +98,36 @@ suspend fun restoreTaskSuggestions(
     // Frank-Wunsch 2026-06-20: Vorschlags-Tombstones (angenommene/verworfene Vorschlaege). Eine ID
     // hier -> der Vorschlag ist geloescht und darf NICHT wieder eingespielt werden.
     deletedAt: Map<String, Long> = emptyMap(),
+    // Bugfix 2026-06-20: IDs per Tombstone GELOESCHTER Ideen. Ein Vorschlag, dessen Quell-Idee
+    // (rootId) geloescht wurde, ist VERWAIST -> genau wie ein angenommener Vorschlag verbraucht.
+    ideaDeletedAt: Set<String> = emptySet(),
 ): Int {
     val dao = taskSuggestionDaoFrom(context)
     val entryDao = entropyEntryDaoFrom(context)
     val habitDao = habitDaoFrom(context)
     // Heal (Frank-Wunsch 2026-06-20, Direktive #3): bestehende LOKALE Vorschlaege loeschen, die per
-    // Tombstone als geloescht markiert sind ODER deren Idee schon eine angenommene Aufgabe/Gewohnheit
-    // hat (Kette ist weiter -> Vorschlag verbraucht). Raeumt Alt-Vorschlaege weg, die ueber ein
-    // Remote-Backup zurueckkamen (laeuft auch bei leerem incoming).
+    // Tombstone als geloescht markiert sind, deren Idee schon eine angenommene Aufgabe/Gewohnheit
+    // hat (Kette weiter -> verbraucht) ODER deren Quell-Idee geloescht wurde (verwaist). Raeumt
+    // Alt-Vorschlaege weg, die ueber ein Remote-Backup zurueckkamen (laeuft auch bei leerem incoming).
     val keptExisting = HashSet<String>()
     for (ex in dao.getAllForBackup()) {
-        if (ex.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId)) {
+        if (
+            ex.id in deletedAt ||
+                isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) ||
+                isRootIdeaDeleted(ex.rootId, ideaDeletedAt)
+        ) {
             dao.deleteById(ex.id)
         } else {
             keptExisting.add(ex.id)
         }
     }
     if (incoming.isEmpty()) return 0
-    // Additiv: nur fehlende IDs, NICHT getombstonete, NICHT solche mit schon angenommener Idee.
+    // Additiv: nur fehlende IDs, NICHT getombstonete, NICHT schon-angenommene, NICHT verwaiste.
     val toAdd = incoming.filterNot {
-        it.id in keptExisting || it.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId)
+        it.id in keptExisting ||
+            it.id in deletedAt ||
+            isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
+            isRootIdeaDeleted(it.rootId, ideaDeletedAt)
     }
     if (toAdd.isEmpty()) return 0
     // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Schema v18
@@ -155,19 +165,36 @@ private suspend fun isIdeaAlreadyAccepted(
     return entryDao.countByRootId(rootId) > 0 || habitDao.countByRootId(rootId) > 0
 }
 
+/**
+ * Verwaist-Check (Bugfix 2026-06-20): Wurde die Quell-Idee dieses Vorschlags (rootId) per Tombstone
+ * geloescht? Dann ist der Vorschlag verwaist und darf nicht (wieder) als Vorschlag existieren —
+ * symmetrisch zu [isIdeaAlreadyAccepted]. Deckt den Fall ab, dass die abgeleitete Gewohnheit/Aufgabe
+ * VOR der Idee geloescht wurde (dann ist countByRootId=0 und nur der Idee-Tombstone zeigt es noch an).
+ * rootId==null (Alt-Vorschlag ohne Herkunft) -> nicht filterbar (false), wie bisher.
+ */
+private fun isRootIdeaDeleted(rootId: String?, ideaDeletedAt: Set<String>): Boolean =
+    !rootId.isNullOrBlank() && rootId in ideaDeletedAt
+
 /** Spielt Gewohnheitsvorschlaege aus dem Backup in Room ein (nur fehlende IDs, lokale gewinnen). */
 suspend fun restoreGewohnheitSuggestions(
     context: Context,
     incoming: List<BackupMental>,
     deletedAt: Map<String, Long> = emptyMap(),
+    // Bugfix 2026-06-20: IDs per Tombstone GELOESCHTER Ideen (siehe restoreTaskSuggestions).
+    ideaDeletedAt: Set<String> = emptySet(),
 ): Int {
     val dao = habitSuggestionDaoFrom(context)
     val entryDao = entropyEntryDaoFrom(context)
     val habitDao = habitDaoFrom(context)
-    // Heal (analog restoreTaskSuggestions): getombstonete + ketten-verbrauchte LOKALE Vorschlaege weg.
+    // Heal (analog restoreTaskSuggestions): getombstonete + ketten-verbrauchte + verwaiste (Quell-Idee
+    // geloescht) LOKALE Vorschlaege weg.
     val keptExisting = HashSet<String>()
     for (ex in dao.getAllForBackup()) {
-        if (ex.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId)) {
+        if (
+            ex.id in deletedAt ||
+                isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) ||
+                isRootIdeaDeleted(ex.rootId, ideaDeletedAt)
+        ) {
             dao.deleteById(ex.id)
         } else {
             keptExisting.add(ex.id)
@@ -175,7 +202,10 @@ suspend fun restoreGewohnheitSuggestions(
     }
     if (incoming.isEmpty()) return 0
     val toAdd = incoming.filterNot {
-        it.id in keptExisting || it.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId)
+        it.id in keptExisting ||
+            it.id in deletedAt ||
+            isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
+            isRootIdeaDeleted(it.rootId, ideaDeletedAt)
     }
     if (toAdd.isEmpty()) return 0
     // Reihenfolge stabil halten. Schema v18 (2026-06-20): Herkunft aus dem Backup wiederherstellen

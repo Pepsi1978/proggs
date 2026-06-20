@@ -561,6 +561,15 @@ constructor(
         // damit der Heal lokale Alt-Vorschlaege aufraeumt (per Tombstone geloescht ODER Idee schon
         // angenommen). Tombstones propagieren die Loeschung von einem 2. Geraet (delete-wins).
         run {
+            // Bugfix 2026-06-20: per Tombstone GELOESCHTE Ideen -> ihre abgeleiteten Vorschlaege sind
+            // verwaist und duerfen nicht (wieder) eingespielt werden. Greift auch, wenn die abgeleitete
+            // Gewohnheit/Aufgabe VOR der Idee geloescht wurde (dann ist countByRootId=0 und nur der
+            // Idee-Tombstone zeigt die Loeschung noch an).
+            val ideaDeletedIds =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.IDEE }
+                    .map { it.id }
+                    .toSet()
             val taskSuggestionDeletedAt =
                 allTombstones
                     .filter { it.type == de.frank.entropyreducer.data.TombstoneType.TASK_SUGGESTION }
@@ -570,6 +579,7 @@ constructor(
                     appContext,
                     payload.taskSuggestions,
                     taskSuggestionDeletedAt,
+                    ideaDeletedIds,
                 )
             val habitSuggestionDeletedAt =
                 allTombstones
@@ -580,6 +590,7 @@ constructor(
                     appContext,
                     payload.gewohnheitSuggestions,
                     habitSuggestionDeletedAt,
+                    ideaDeletedIds,
                 )
         }
 

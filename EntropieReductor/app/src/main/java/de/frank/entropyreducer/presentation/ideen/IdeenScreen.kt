@@ -983,6 +983,15 @@ internal suspend fun deleteIdeenEntry(context: Context, id: String, propagate: B
     Diag.d(DiagnosticArea.DATABASE, IDEEN_TAG, "CHECKPOINT step=deleteIdee id=$id")
     // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone). propagate=false: Restore-Cleanup.
     if (propagate) {
+        // Bugfix 2026-06-20: abgeleitete OFFENE Vorschlaege dieser Idee sofort wegraeumen — sonst
+        // bleiben sie im UI sichtbar und der verwaiste Vorschlag taucht nach dem naechsten Restore
+        // wieder auf (Root Cause: Vorschlags-Heal kannte nur "Idee angenommen", nicht "Idee geloescht").
+        // Der IDEE-Tombstone + der Verwaist-Filter (isRootIdeaDeleted) verhindern das Wiederkommen
+        // geraeteuebergreifend; dieses lokale Wegraeumen ist die sofortige UI-Seite.
+        val habitSugDao = de.frank.entropyreducer.data.local.habitSuggestionDaoFrom(context)
+        for (s in habitSugDao.getAllForBackup()) if (s.rootId == id) habitSugDao.deleteById(s.id)
+        val taskSugDao = de.frank.entropyreducer.data.local.taskSuggestionDaoFrom(context)
+        for (s in taskSugDao.getAllForBackup()) if (s.rootId == id) taskSugDao.deleteById(s.id)
         de.frank.entropyreducer.data.markDeleted(
             context, de.frank.entropyreducer.data.TombstoneType.IDEE, id)
         de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
