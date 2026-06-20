@@ -150,6 +150,10 @@ try {
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
         $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+    } elseif ($fpl -match '(^|/)opencode\.json$' -or $fpl -match '/\.opencode/' -or $fpl -match '/\.config/opencode/') {
+        # OpenCode CLI: zentrale Config (opencode.json, strict) ODER projekt-/user-lokaler opencode-Ordner.
+        # Eindeutige Muster, kein Konflikt mit .mcp.json/settings.json. (Coverage-Luecke geschlossen 2026-06-20.)
+        $slug = 'opencode'; $file = 'opencode-cli.md'; $name = 'OpenCode CLI (Config/Agents/Plugins)'
     } elseif ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {
         $slug = 'chrome'; $file = 'chrome-extensions.md'; $name = 'Browser-Erweiterungen (Chrome/Edge MV3)'
     } elseif ($fpl -match 'google-services.*\.json$' -or $fpl -match '(billing|subscription|purchase).*\.kt$') {
@@ -189,6 +193,7 @@ try {
         $workmanagerSignal = $false
         $driveSignal = $false
         $filamentSignal = $false
+        $widgetSignal = $false
         # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
         # spezifischeres Feature-Signal davor zieht).
         $androidPlatformName = ($fpl -match '(service|receiver|worker)\.kt$')
@@ -222,8 +227,13 @@ try {
             if ($probe -match 'appDataFolder' -or $probe -match 'DriveScopes' -or $probe -match 'DRIVE_APPDATA' -or $probe -match 'com\.google\.api\.services\.drive' -or $probe -match 'google-api-services-drive' -or $probe -match 'AuthorizationClient' -or $probe -match 'GoogleAuthUtil') { $driveSignal = $true }
             # 3D auf Android (Filament/SceneView) -> 3d-filament-android.md (vor Compose/Kotlin).
             if ($probe -match 'com\.google\.android\.filament' -or $probe -match 'Filament' -or $probe -match 'ModelViewer' -or $probe -match 'io\.github\.sceneview' -or $probe -match 'SceneView' -or $probe -match 'rememberEngine') { $filamentSignal = $true }
+            # App-Widgets (Glance + klassisch) -> app-widgets.md (Coverage-Luecke geschlossen 2026-06-20).
+            # MUSS vor compose stehen: Glance nutzt @Composable -> wuerde sonst als compose erkannt.
+            if ($probe -match 'GlanceAppWidget' -or $probe -match 'GlanceAppWidgetReceiver' -or $probe -match 'provideGlance' -or $probe -match 'AppWidgetProvider' -or $probe -match 'RemoteViewsService' -or $probe -match 'RemoteViewsFactory' -or $probe -match 'AppWidgetManager' -or $probe -match 'updateAppWidget' -or $probe -match 'appWidgetId') { $widgetSignal = $true }
         }
-        if ($voiceSignal) {
+        if ($widgetSignal) {
+            $slug = 'appwidgets'; $file = 'app-widgets.md'; $name = 'App-Widgets (Glance/RemoteViews/AppWidgetProvider)'
+        } elseif ($voiceSignal) {
             $slug = 'voiceassistant'; $file = 'voice-assistant-trigger.md'; $name = 'Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)'
         } elseif ($workmanagerSignal) {
             $slug = 'workmanager'; $file = 'workmanager-notifications.md'; $name = 'WorkManager & Notifications (Reminder/Hintergrund)'
@@ -377,6 +387,20 @@ try {
     } elseif ($fpl -match '\.(gd|tscn|tres|gdshader)$' -or $fpl -match '(^|/)project\.godot$') {
         # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
         $slug = 'godot'; $file = '3d-godot.md'; $name = '3D mit Godot 4'
+    } elseif ($fpl -match '\.conf$') {
+        # WireGuard-Config (wg0.conf etc.): .conf ist generisch -> NUR per Inhalt erkennen (kein Fehlalarm
+        # bei anderen .conf). Coverage-Luecke geschlossen 2026-06-20. Kein WG-Inhalt -> slug bleibt leer -> durch.
+        $wgProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $wgProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $wgProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $wgProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $wgProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($wgProbe -match '\[Interface\]' -and ($wgProbe -match '\[Peer\]' -or $wgProbe -match 'PrivateKey' -or $wgProbe -match 'ListenPort' -or $wgProbe -match 'AllowedIPs' -or $wgProbe -match 'PersistentKeepalive' -or $wgProbe -match 'wg-quick')) {
+            $slug = 'wireguard'; $file = 'wireguard.md'; $name = 'WireGuard VPN-Konfiguration'
+        }
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
     } elseif (($fpl -notmatch '/(bugs|best-practices)/') -and (

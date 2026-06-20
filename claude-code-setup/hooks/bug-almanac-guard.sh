@@ -139,6 +139,10 @@ case "$fpl" in
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
         slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)";;
+    *opencode.json|*/.opencode/*|*/.config/opencode/*)
+        # OpenCode CLI: zentrale Config (opencode.json, strict) ODER projekt-/user-lokaler opencode-Ordner.
+        # Eindeutige Muster, kein Konflikt mit .mcp.json/settings.json. (Coverage-Luecke geschlossen 2026-06-20.)
+        slug="opencode"; file="opencode-cli.md"; name="OpenCode CLI (Config/Agents/Plugins)";;
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
         slug="chrome"; file="chrome-extensions.md"; name="Browser-Erweiterungen (Chrome/Edge MV3)";;
     *google-services*.json|*billing*.kt|*subscription*.kt|*purchase*.kt)
@@ -178,6 +182,7 @@ case "$fpl" in
         workmanagerSignal=0
         driveSignal=0
         filamentSignal=0
+        widgetSignal=0
         # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
         # spezifischeres Feature-Signal davor zieht).
         androidPlatformName=0
@@ -235,11 +240,18 @@ $ti_extra"
             case "$probe" in
               *com.google.android.filament*|*Filament*|*ModelViewer*|*io.github.sceneview*|*SceneView*|*rememberEngine*) filamentSignal=1;;
             esac
+            # App-Widgets (Glance + klassisch) -> app-widgets.md (Coverage-Luecke 2026-06-20). VOR compose
+            # (Glance nutzt @Composable -> wuerde sonst als compose erkannt).
+            case "$probe" in
+              *GlanceAppWidget*|*GlanceAppWidgetReceiver*|*provideGlance*|*AppWidgetProvider*|*RemoteViewsService*|*RemoteViewsFactory*|*AppWidgetManager*|*updateAppWidget*|*appWidgetId*) widgetSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
         case "$fpl" in *module.kt) hiltSignal=1;; esac
-        if [ "$voiceSignal" -eq 1 ]; then
+        if [ "$widgetSignal" -eq 1 ]; then
+            slug="appwidgets"; file="app-widgets.md"; name="App-Widgets (Glance/RemoteViews/AppWidgetProvider)"
+        elif [ "$voiceSignal" -eq 1 ]; then
             slug="voiceassistant"; file="voice-assistant-trigger.md"; name="Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)"
         elif [ "$workmanagerSignal" -eq 1 ]; then
             slug="workmanager"; file="workmanager-notifications.md"; name="WorkManager & Notifications (Reminder/Hintergrund)"
@@ -443,6 +455,31 @@ $ti_extra"
     *.gd|*.tscn|*.tres|*.gdshader|*project.godot)
         # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
         slug="godot"; file="3d-godot.md"; name="3D mit Godot 4";;
+    *.conf)
+        # WireGuard-Config (wg0.conf etc.): .conf ist generisch -> NUR per Inhalt erkennen (kein Fehlalarm
+        # bei anderen .conf). Coverage-Luecke geschlossen 2026-06-20. Kein WG-Inhalt -> slug bleibt leer -> durch.
+        wgProbe=""
+        [ -f "$fp" ] && wgProbe=$(cat "$fp" 2>/dev/null || true)
+        wg_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        wgProbe="$wgProbe
+$wg_extra"
+        case "$wgProbe" in
+          *'[Interface]'*)
+            case "$wgProbe" in
+              *'[Peer]'*|*PrivateKey*|*ListenPort*|*AllowedIPs*|*PersistentKeepalive*|*wg-quick*)
+                slug="wireguard"; file="wireguard.md"; name="WireGuard VPN-Konfiguration";;
+            esac
+            ;;
+        esac
+        ;;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
     */claude.md|claude.md|*/rules/*.md|*/settings.json|settings.json|*/settings.local.json|*/settings-reference.json|*/skill.md|*/commands/*.md|*/agents/*.md)

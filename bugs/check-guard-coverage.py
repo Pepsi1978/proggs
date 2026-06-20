@@ -47,6 +47,14 @@ INTENTIONALLY_UNMAPPED = {
     # cowork-scheduled-tasks: Cowork-Aufgabenplanung — Prozess/Workflow-Querschnitt (kein Datei-Pattern)
     "cowork", "claude-code-desktop-vs-cli", "agent-knowledge-system", "cowork-git-push",
     "cowork-scheduled-tasks",
+    # openrouter-claude-code: Provider-Setup lebt im settings.json-env-Block (triggert bereits
+    # claudeconfig) bzw. .claude-code-router/config.json — kein eigenes sauberes Datei-Pattern.
+    # Bewusst Querschnitt (Einzelpruefung 2026-06-20).
+    "openrouter-claude-code",
+    # server/ — vps-hosting ist reine Anbieter-/Prozess-Wahl (Hostinger/Hetzner, root, Docker),
+    # kein editierbares Datei-Pattern -> Querschnitt (Einzelpruefung 2026-06-20). wireguard ist
+    # dagegen ueber .conf-Inhalt im Guard registriert (kein Querschnitt).
+    "vps-hosting",
     # desktop/ — laeuft bewusst ueber die wake-word/groq/dotnet-Zweige
     "voice-pipeline",
     # assets/ — engine-uebergreifendes Konzept (Maps/HDRs, kein eindeutiges Pattern)
