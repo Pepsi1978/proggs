@@ -21,6 +21,7 @@ OpenRouter einrichtet.
 | `agents-modes.md` | Primary/Subagents, Plan/Build, Custom Agents (JSON + Markdown), Frontmatter-Felder, Permissions, pro-Agent-Modellwahl |
 | `plugins-mcp-skills.md` | MCP-Server, Plugin-System (Hooks/Events), Custom Tools, native Skills (SKILL.md), Custom Slash-Commands, Sicherheit |
 | `openrouter.md` | OpenRouter-Setup in OpenCode, Modell-ID-Format, Provider-Routing, Prompt-Caching, günstige+gute Coding-Modelle, Limits/Free/BYOK |
+| `go-recherche-modelle.md` | OpenCode-Go-Abo (14 Modelle, Stand Juni 2026): Modell-Auswahl-Matrix für die Firecrawl-Recherche-Pipeline (Docs filtern + kritisch hinterfragen). Empfehlung **DeepSeek V4 Pro** (Faktentreue + 1M), V4 Flash als Vorfilter; Bewertung aller 13 Modelle, zwei API-Schemata, Abstain-Pflicht |
 | `token-effizienz.md` | Token-armer Harness: alle Spar-Hebel priorisiert, Caching, günstige Modellstrategie, Kosten beobachten, vollständige Beispiel-`opencode.json` |
 
 ## Die wichtigsten Kern-Erkenntnisse (Schnellüberblick)

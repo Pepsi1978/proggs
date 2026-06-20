@@ -33,6 +33,7 @@
 | 10 | Subagents: versteckte Kosten / falsches Modell | Subagent erbt Modell des Primary, nicht das globale → explizit `model:` setzen. Subagent-Token zählt der TUI-Counter NICHT. Step-Limit setzen. | §6, §11 |
 | 11 | Agent/Command/Plugin/Skill „wird nicht erkannt" | Verzeichnisse sind **Plural**: `agents/ commands/ plugins/ skills/ tools/`. `agent create` schreibt fälschlich `agent/` (Singular). | §6, §7, §9 |
 | 12 | `opencode upgrade` meldet „unknown" (Windows) | Detection scheitert an `npm.cmd`. Manuell per Paketmanager updaten (`npm i -g opencode-ai@latest` / `scoop update opencode`). | §1 |
+| 13 | ⭐ OpenCode-Go: API-Fehler je Modell / GLM früh „aufgebraucht" / Modell erfindet Fakten | **Zwei Endpunkt-Schemata:** DeepSeek/GLM/Kimi/MiMo = OpenAI (`/zen/go/v1/chat/completions`), Qwen/MiniMax = Anthropic (`/zen/go/v1/messages`). GLM-5.x im Go-Tier nur ~4.300 Req/Mo (nicht für Masse). DeepSeek V4 Pro halluziniert bei Nichtwissen → Abstain-Prompt. | §14 |
 
 ---
 
@@ -870,6 +871,42 @@ streamable-http), §61 (kein Auto-Reconnect/Keepalive; Session-404 nach Server-N
 | §10 Provider/OpenRouter/Auth | `openrouter.md` (Setup, ID-Format, Provider-Routing, Caching, Modelle, Limits) |
 | §11 Token-Effizienz & Kosten | `token-effizienz.md` (Spar-Hebel, Caching, günstige Modellstrategie, Kosten beobachten) |
 | Querschnitt (Index/Kern) | `README.md` (Index + Kern-Erkenntnisse) |
+
+---
+
+## 14. OpenCode-Go-Abo (Modell-Gateway, Stand Juni 2026)
+
+> Das **OpenCode-Go-Abo** ($5 erster Monat, dann $10/Mo) gibt Zugriff auf 14 Modelle über das
+> OpenCode-Zen-Gateway. Recherchiert 2026-06-20. Modell-Auswahl + Pipeline-Empfehlung:
+> `best-practices/opencode/go-recherche-modelle.md`.
+
+### 14.1 ⭐ Zwei verschiedene API-Schemata je Modell (Endpunkt-Verwechslung → Fehler)
+**Symptom:** API-Aufruf an ein Go-Modell schlägt fehl, obwohl Key + Slug stimmen.
+**Ursache:** OpenCode Go bedient **zwei** Schemata gleichzeitig:
+- **OpenAI-kompatibel** `…/zen/go/v1/chat/completions` → `deepseek-v4-pro`, `deepseek-v4-flash`, `glm-5.2`, `glm-5.1`, `kimi-k2.7-code`, `kimi-k2.6`, `mimo-v2.5`, `mimo-v2.5-pro`
+- **Anthropic** `…/zen/go/v1/messages` → `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-plus`, `minimax-m3`, `minimax-m2.7`
+**Versionen:** OpenCode Go, Stand 2026-06.
+**FIX:** Endpunkt zum Modell passend wählen. Für die Recherche-Pipeline → DeepSeek = **OpenAI-Schema**.
+Modell-Discovery: `…/zen/go/v1/models`. Config-Referenz `opencode-go/<slug>`.
+**Quelle:** opencode.ai/docs/go, bitdoze.com/opencode-go-plan
+
+### 14.2 Dollar-Quote über alle Modelle gemeinsam — GLM-5.x früh „aufgebraucht"
+**Symptom:** GLM-5.x reicht nur für sehr wenige Anfragen, dann Quote erschöpft.
+**Ursache:** Quoten sind **dollarbasiert** ($12/5h, $30/Woche, $60/Monat) über ALLE Modelle gemeinsam; teure
+Modelle verbrauchen das Budget viel schneller. Erreichbare Req/Mo: DeepSeek V4 Flash ~158.000 — **GLM-5.1 nur ~4.300**.
+**Versionen:** OpenCode Go, Stand 2026-06.
+**FIX:** GLM-5.x **nicht** als Massen-Auswerter nutzen. Für Recherche-Masse DeepSeek V4 Flash/Pro (günstig + hohe Req-Zahl).
+**Quelle:** bitdoze.com/opencode-go-plan
+
+### 14.3 DeepSeek V4 Pro/Flash halluziniert bei Nichtwissen (trotz Top-Faktenwissen)
+**Symptom:** Modell erfindet plausible Fakten, statt „steht nicht in den Quellen" zu sagen.
+**Ursache:** Trotz bestem Open-Weight-Faktenwissen (SimpleQA-Verified 57.9) hat V4 eine hohe
+„antwortet-trotzdem"-Quote bei Wissenslücken (AA-Omniscience 94 %).
+**Versionen:** DeepSeek V4 Pro/Flash (2026-04-24).
+**FIX (funktionserhaltend):** Im Pipeline-Prompt **Abstain erzwingen** („nur aus den Quellen; bei Unsicherheit
+explizit sagen; nicht erfinden") + **Thinking-Modus an** (senkt SimpleQA-Halluzination 12.7 % → 10.4 %).
+Bei heiklen Fakten zweite Meinung (Kimi K2.6) oder gegen Opus eskalieren.
+**Quelle:** medium.com/@leucopsis/deepseek-v4-review, digitalapplied.com/blog/ai-model-hallucination-rate-benchmarks-2026-study
 
 ---
 
