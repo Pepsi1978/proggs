@@ -155,6 +155,10 @@ class KiTaskSuggestViewModel @Inject constructor(
     private fun removeSuggestion(id: String) {
         viewModelScope.launch {
             taskSuggestionDao.deleteById(id)
+            // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone) — sonst behaelt ein 2. Geraet
+            // seine Kopie und der angenommene/verworfene Vorschlag taucht beim Restore wieder auf.
+            de.frank.entropyreducer.data.markDeleted(
+                context, de.frank.entropyreducer.data.TombstoneType.TASK_SUGGESTION, id)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Aufgabenvorschlag: entfernt")
         }

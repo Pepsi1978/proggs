@@ -494,14 +494,29 @@ constructor(
         // Offene Aufgaben- und Gewohnheitsvorschlaege wiederherstellen. Existenz-Strategie:
         // nur fehlende IDs ergaenzen, lokale gewinnen (regenerierbar, aber sollen nicht verloren
         // gehen). Bei v1-v14-Backups sind die Listen leer -> kein Effekt.
-        if (payload.taskSuggestions.isNotEmpty()) {
-            inserted += de.frank.entropyreducer.data.restoreTaskSuggestions(appContext, payload.taskSuggestions)
-        }
-        if (payload.gewohnheitSuggestions.isNotEmpty()) {
+        // Vorschlags-Restore (Frank-Wunsch 2026-06-20): IMMER aufrufen — auch bei leerem incoming —,
+        // damit der Heal lokale Alt-Vorschlaege aufraeumt (per Tombstone geloescht ODER Idee schon
+        // angenommen). Tombstones propagieren die Loeschung von einem 2. Geraet (delete-wins).
+        run {
+            val taskSuggestionDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.TASK_SUGGESTION }
+                    .associate { it.id to it.deletedAt }
+            inserted +=
+                de.frank.entropyreducer.data.restoreTaskSuggestions(
+                    appContext,
+                    payload.taskSuggestions,
+                    taskSuggestionDeletedAt,
+                )
+            val habitSuggestionDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.HABIT_SUGGESTION }
+                    .associate { it.id to it.deletedAt }
             inserted +=
                 de.frank.entropyreducer.data.restoreGewohnheitSuggestions(
                     appContext,
                     payload.gewohnheitSuggestions,
+                    habitSuggestionDeletedAt,
                 )
         }
 

@@ -48,6 +48,12 @@ object TombstoneType {
     const val THESE = "these"
     const val FOLLOWUP = "followup"
     const val PRIORITY_MEMORY = "priority_memory"
+
+    // Frank-Wunsch 2026-06-20: Auch das Loeschen eines VORSCHLAGS (Annehmen/Verwerfen) muss
+    // propagieren — sonst behaelt ein 2. Geraet seine Kopie und laedt sie wieder hoch, und der
+    // angenommene/verworfene Vorschlag taucht beim Restore erneut auf.
+    const val TASK_SUGGESTION = "task_suggestion"
+    const val HABIT_SUGGESTION = "habit_suggestion"
 }
 
 /** Markiert eine Entitaet als geloescht. Behaelt pro (type,id) den NEUESTEN Loeschzeitpunkt. */

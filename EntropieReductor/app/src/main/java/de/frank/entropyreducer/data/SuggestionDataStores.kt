@@ -6,6 +6,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
+import de.frank.entropyreducer.data.local.dao.HabitDao
+import de.frank.entropyreducer.data.local.entropyEntryDaoFrom
+import de.frank.entropyreducer.data.local.habitDaoFrom
 import de.frank.entropyreducer.data.local.habitSuggestionDaoFrom
 import de.frank.entropyreducer.data.local.taskSuggestionDaoFrom
 import de.frank.entropyreducer.data.remote.drive.BackupMental
@@ -88,11 +92,33 @@ fun gewohnheitSuggestionsFromJson(context: Context): Flow<List<BackupMental>> =
  * IDs werden ergaenzt, lokale gewinnen. Gibt die Zahl der ergaenzten Vorschlaege zurueck. Da nur
  * NEUE IDs geschrieben werden, ist das REPLACE-Upsert kollisionsfrei (kein Ueberschreiben lokaler).
  */
-suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSuggestion>): Int {
-    if (incoming.isEmpty()) return 0
+suspend fun restoreTaskSuggestions(
+    context: Context,
+    incoming: List<BackupTaskSuggestion>,
+    // Frank-Wunsch 2026-06-20: Vorschlags-Tombstones (angenommene/verworfene Vorschlaege). Eine ID
+    // hier -> der Vorschlag ist geloescht und darf NICHT wieder eingespielt werden.
+    deletedAt: Map<String, Long> = emptyMap(),
+): Int {
     val dao = taskSuggestionDaoFrom(context)
-    val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
-    val toAdd = incoming.filterNot { it.id in existingIds }
+    val entryDao = entropyEntryDaoFrom(context)
+    val habitDao = habitDaoFrom(context)
+    // Heal (Frank-Wunsch 2026-06-20, Direktive #3): bestehende LOKALE Vorschlaege loeschen, die per
+    // Tombstone als geloescht markiert sind ODER deren Idee schon eine angenommene Aufgabe/Gewohnheit
+    // hat (Kette ist weiter -> Vorschlag verbraucht). Raeumt Alt-Vorschlaege weg, die ueber ein
+    // Remote-Backup zurueckkamen (laeuft auch bei leerem incoming).
+    val keptExisting = HashSet<String>()
+    for (ex in dao.getAllForBackup()) {
+        if (ex.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId)) {
+            dao.deleteById(ex.id)
+        } else {
+            keptExisting.add(ex.id)
+        }
+    }
+    if (incoming.isEmpty()) return 0
+    // Additiv: nur fehlende IDs, NICHT getombstonete, NICHT solche mit schon angenommener Idee.
+    val toAdd = incoming.filterNot {
+        it.id in keptExisting || it.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId)
+    }
     if (toAdd.isEmpty()) return 0
     // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Schema v18
     // (2026-06-20): Herkunft aus dem Backup wiederherstellen. Aeltere Backups (v15-v17) tragen sie
@@ -114,12 +140,43 @@ suspend fun restoreTaskSuggestions(context: Context, incoming: List<BackupTaskSu
     return toAdd.size
 }
 
+/**
+ * Chain-Check (Frank-Wunsch 2026-06-20): Hat die Quell-Idee dieses Vorschlags (rootId) schon eine
+ * angenommene Aufgabe (entropy_entries) ODER Gewohnheit (habits)? Dann ist die Kette weiter und der
+ * Vorschlag verbraucht — er darf nicht (wieder) als Vorschlag existieren. rootId==null (Alt-Vorschlag
+ * ohne Herkunft) -> nicht filterbar (false), wie bisher.
+ */
+private suspend fun isIdeaAlreadyAccepted(
+    entryDao: EntropyEntryDao,
+    habitDao: HabitDao,
+    rootId: String?,
+): Boolean {
+    if (rootId.isNullOrBlank()) return false
+    return entryDao.countByRootId(rootId) > 0 || habitDao.countByRootId(rootId) > 0
+}
+
 /** Spielt Gewohnheitsvorschlaege aus dem Backup in Room ein (nur fehlende IDs, lokale gewinnen). */
-suspend fun restoreGewohnheitSuggestions(context: Context, incoming: List<BackupMental>): Int {
-    if (incoming.isEmpty()) return 0
+suspend fun restoreGewohnheitSuggestions(
+    context: Context,
+    incoming: List<BackupMental>,
+    deletedAt: Map<String, Long> = emptyMap(),
+): Int {
     val dao = habitSuggestionDaoFrom(context)
-    val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
-    val toAdd = incoming.filterNot { it.id in existingIds }
+    val entryDao = entropyEntryDaoFrom(context)
+    val habitDao = habitDaoFrom(context)
+    // Heal (analog restoreTaskSuggestions): getombstonete + ketten-verbrauchte LOKALE Vorschlaege weg.
+    val keptExisting = HashSet<String>()
+    for (ex in dao.getAllForBackup()) {
+        if (ex.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId)) {
+            dao.deleteById(ex.id)
+        } else {
+            keptExisting.add(ex.id)
+        }
+    }
+    if (incoming.isEmpty()) return 0
+    val toAdd = incoming.filterNot {
+        it.id in keptExisting || it.id in deletedAt || isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId)
+    }
     if (toAdd.isEmpty()) return 0
     // Reihenfolge stabil halten. Schema v18 (2026-06-20): Herkunft aus dem Backup wiederherstellen
     // (BackupMental traegt sie jetzt). Aeltere Backups (v12-v17) ohne Herkunft -> origin bleibt null.

@@ -5,6 +5,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
@@ -38,6 +39,9 @@ interface IdeaTaskDaoEntryPoint {
 
     // ID-Architektur Etappe 4: Mental-Board-Saetze.
     fun mentalSentenceDao(): MentalSentenceDao
+
+    // Frank-Wunsch 2026-06-20: fuer den chain-bewussten Vorschlags-Restore (countByRootId).
+    fun entropyEntryDao(): EntropyEntryDao
 }
 
 /** Holt den [IdeaDao] aus dem Application-Graphen (fuer freie context-basierte Funktionen). */
@@ -79,3 +83,11 @@ internal fun mentalSentenceDaoFrom(context: Context): MentalSentenceDao =
             IdeaTaskDaoEntryPoint::class.java,
         )
         .mentalSentenceDao()
+
+/** Holt den [EntropyEntryDao] aus dem Application-Graphen (fuer den chain-bewussten Vorschlags-Restore). */
+internal fun entropyEntryDaoFrom(context: Context): EntropyEntryDao =
+    EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            IdeaTaskDaoEntryPoint::class.java,
+        )
+        .entropyEntryDao()

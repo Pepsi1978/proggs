@@ -85,6 +85,10 @@ class GewohnheitSuggestViewModel @Inject constructor(
             // Entfernt nur den Vorschlag aus Room. Das Anlegen der Gewohnheit (inkl. Herkunft, 3d)
             // passiert separat ueber addGewohnheit / Drag-Promotion im GewohnheitBoardScreen.
             habitSuggestionDao.deleteById(id)
+            // Loeschung propagieren (Tombstone, Frank-Wunsch 2026-06-20) — sonst kommt der angenommene
+            // Vorschlag ueber ein 2. Geraet beim Restore wieder.
+            de.frank.entropyreducer.data.markDeleted(
+                context, de.frank.entropyreducer.data.TombstoneType.HABIT_SUGGESTION, id)
             // Guertel (Frank-Wunsch 2026-06-20, Symmetrie zum Aufgaben-Pfad): Quell-Idee dauerhaft als
             // verarbeitet markieren, damit sie nach dem Annehmen nicht erneut als Gewohnheits-Vorschlag
             // entsteht — auch wenn die Gewohnheit spaeter geloescht wird (zweite Schicht neben dem
@@ -99,6 +103,9 @@ class GewohnheitSuggestViewModel @Inject constructor(
     fun deleteSuggestion(id: String) {
         viewModelScope.launch {
             habitSuggestionDao.deleteById(id)
+            // Loeschung propagieren (Tombstone, Frank-Wunsch 2026-06-20).
+            de.frank.entropyreducer.data.markDeleted(
+                context, de.frank.entropyreducer.data.TombstoneType.HABIT_SUGGESTION, id)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: verworfen")
         }
