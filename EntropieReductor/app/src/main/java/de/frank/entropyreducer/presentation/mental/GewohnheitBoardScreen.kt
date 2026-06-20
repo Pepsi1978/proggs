@@ -140,13 +140,23 @@ internal suspend fun addGewohnheit(
  */
 internal suspend fun addGewohnheitFromSuggestion(context: Context, suggestionId: String, text: String) {
     val sug = de.frank.entropyreducer.data.local.habitSuggestionDaoFrom(context).getById(suggestionId)
+    val expectedRoot = sug?.rootId ?: sug?.id
     addGewohnheit(
         context,
         text,
         originId = sug?.id,
         originType =
             sug?.let { de.frank.entropyreducer.data.local.entities.OriginType.HABIT_SUGGESTION },
-        rootId = sug?.rootId ?: sug?.id,
+        rootId = expectedRoot,
+    )
+    // Accept-Live-Sonde (Frank-Wunsch 2026-06-20): bestaetigt den Herkunfts-Uebergang
+    // Gewohnheits-Vorschlag -> Gewohnheit live (erwartet vs. tatsaechlich). ok=false faellt im Log auf.
+    de.frank.entropyreducer.data.diagnostics.Diag.i(
+        de.frank.entropyreducer.data.diagnostics.DiagnosticArea.AGENTIC,
+        "AcceptLineage",
+        "CHECKPOINT Annehmen Gewohnheit '${text.take(28)}': erwartet rootId=${expectedRoot ?: "-"} " +
+            "tatsaechlich originId=${sug?.id ?: "NULL!"} originType=HABIT_SUGGESTION " +
+            "rootId=${expectedRoot ?: "NULL!"} ok=${expectedRoot != null}",
     )
 }
 

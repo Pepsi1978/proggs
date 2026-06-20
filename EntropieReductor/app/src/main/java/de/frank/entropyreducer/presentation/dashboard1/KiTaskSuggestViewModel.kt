@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.kiTaskSuggestionStore
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.OriginType
@@ -118,7 +120,7 @@ class KiTaskSuggestViewModel @Inject constructor(
                 originType = sug?.let { OriginType.TASK_SUGGESTION },
                 rootId = sug?.rootId ?: sug?.id,
             )
-                .onSuccess {
+                .onSuccess { entry ->
                     // Direktive #3 robust (Frank-Wunsch 2026-06-20): Annehmen ist das staerkste
                     // "diese Idee ist erledigt"-Signal. Die Quell-Idee dauerhaft als verarbeitet
                     // markieren — zweite Schutzschicht neben dem Endpunkt-Ketten-Dedup (countByRootId),
@@ -127,6 +129,16 @@ class KiTaskSuggestViewModel @Inject constructor(
                     if (ideaId != null) {
                         saveProcessedIdeaIds(loadProcessedIdeaIds() + ideaId)
                     }
+                    // Accept-Live-Sonde (Frank-Wunsch 2026-06-20): bestaetigt den Herkunfts-Uebergang
+                    // Vorschlag -> Aufgabe live (erwartet vs. tatsaechlich). ok=false faellt im Log auf.
+                    val expectedRoot = sug?.rootId ?: sug?.id
+                    Diag.i(
+                        DiagnosticArea.AGENTIC,
+                        "AcceptLineage",
+                        "CHECKPOINT Annehmen Aufgabe '${entry.title.take(28)}': erwartet rootId=${expectedRoot ?: "-"} " +
+                            "tatsaechlich originId=${entry.originId ?: "NULL!"} originType=${entry.originType ?: "-"} " +
+                            "rootId=${entry.rootId ?: "NULL!"} ok=${entry.rootId != null && entry.rootId == expectedRoot}",
+                    )
                     removeSuggestion(suggestion.id)
                 }
                 .onFailure { ex ->
