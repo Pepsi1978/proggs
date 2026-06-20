@@ -80,9 +80,17 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun acceptSuggestion(id: String) {
         viewModelScope.launch {
+            // Herkunft VOR dem Loeschen lesen, damit die Quell-Idee markiert werden kann.
+            val sug = habitSuggestionDao.getById(id)
             // Entfernt nur den Vorschlag aus Room. Das Anlegen der Gewohnheit (inkl. Herkunft, 3d)
             // passiert separat ueber addGewohnheit / Drag-Promotion im GewohnheitBoardScreen.
             habitSuggestionDao.deleteById(id)
+            // Guertel (Frank-Wunsch 2026-06-20, Symmetrie zum Aufgaben-Pfad): Quell-Idee dauerhaft als
+            // verarbeitet markieren, damit sie nach dem Annehmen nicht erneut als Gewohnheits-Vorschlag
+            // entsteht — auch wenn die Gewohnheit spaeter geloescht wird (zweite Schicht neben dem
+            // Endpunkt-Ketten-Dedup countByRootId(habits)).
+            val ideaId = sug?.rootId ?: sug?.originId
+            if (ideaId != null) saveProcessedIds(loadProcessedIds() + ideaId)
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: angenommen")
         }
