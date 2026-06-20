@@ -52,6 +52,11 @@ Stand-Daten schnell sammeln: `python bugs/health.py` zeigt den Stand-Verfall; OD
 
 ## Schritt 1 — Pro Almanach: der erprobte 7-Schritte-Ablauf
 
+> **Recherche-Weg (Regel `research-strategy.md`):** Vor JEDER Web-Recherche zuerst eine kurze Empfehlung
+> geben und per `AskUserQuestion` Frage 1 (A/B/C/D) stellen. **A/B** laufen ueber `mm-research.py`/`or-research.py`
+> (Firecrawl bei A max 2 parallel); der hier beschriebene **7-Opus-Researcher-Schwarm ist Option C** (nur auf
+> explizite Wahl). Bei A nach Abschluss Frage 2 (Eskalation?).
+
 Fuer JEDEN Almanach der Arbeitsliste den Ablauf aus dem Skill **`bug-almanach-recherche`**
 (Schritte 1-7) anwenden — diesen Skill als Referenz lesen, NICHT die Logik hier duplizieren.
 Wellen-spezifische Praezisierungen:

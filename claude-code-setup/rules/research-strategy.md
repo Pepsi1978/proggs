@@ -18,6 +18,26 @@
 **Vor JEDER Web-Recherche MUSS Frank per `AskUserQuestion` (anklickbares Multiple-Choice) gefragt
 werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 
+### Empfehlung (PFLICHT — DIREKT VOR Frage 1)
+
+**Bevor die `AskUserQuestion` kommt, IMMER eine kurze Empfehlung (3-4 Zeilen) geben**, welcher Weg
+fuer GENAU DIESE Recherche-Art am sinnvollsten ist — A, B, C oder eine **Kombination** (z.B. „A, und
+danach B als Eskalation" bei grossem Wissensschatz). Kurz begruenden (1 Satz, woran es liegt). Die
+empfohlene Option dann in der `AskUserQuestion` als **erste** Option mit `(Empfohlen)` im Label.
+
+**Heuristik fuer die Empfehlung:**
+
+| Recherche-Art | Empfehlung |
+|---------------|-----------|
+| Schnelle Einzelfrage / 1 Thema / 1-2 Quellen reichen | **A** (Firecrawl + MiniMax, Free-Credits) |
+| Grosser Wissensschatz / viele Unterthemen / breite Abdeckung | **A → dann B** (Firecrawl-Tiefe + parallele Breit-Eskalation) — oder direkt **B**, wenn Firecrawl-Credits knapp |
+| Aktualitaet ueber viele Quellen, Snippets reichen, kein Monatslimit-Risiko | **B** (or-research, pay-per-use) |
+| Firecrawl-Credits fast leer (Monatslimit nahe) | **B** statt A |
+| Hoechste Korrektheit / subtile Logik / Geld egal | **C** (Opus-Schwarm) — ggf. zusaetzlich zu A/B als Zweitmeinung |
+| Unklar / erst besprechen | **D** (Freitext) |
+
+Die Empfehlung ist ein Vorschlag — Frank entscheidet final ueber die `AskUserQuestion`.
+
 ### Frage 1 (IMMER, via `AskUserQuestion`) — „Wie soll ich '<thema>' recherchieren?"
 
 | Option | Weg | Werkzeug | Kosten |
@@ -145,14 +165,22 @@ Diese Strategie ist **kein neuer Skill**, sondern erweitert die bestehenden:
 
 | Skill/Agent | Wie diese Regel greift |
 |-------------|------------------------|
-| `bug-almanach-recherche` | Pflicht-Frage stellen; bei Firecrawl-Wahl: mm-research.py, max 2 parallel |
-| `best-practices` | dito |
-| `research`-Skill / `researcher`-Agent / `deep-research` | dito |
-| Eigener Web-Rechercheauftrag des Hauptagenten | dito |
+| `bug-almanach-recherche` (Skill) | Empfehlung + Frage 1; bei A: mm-research.py pro Aspekt, Firecrawl max 2 parallel; C=Opus-Schwarm |
+| `best-practices` (Skill) | dito (A/B/C-Gate in Schritt 4; Researcher-Regeln = Option C) |
+| `almanach-update` (Skill) | dito — vor jeder Web-Recherche Empfehlung + Frage 1 |
+| `best-practices-update` (Skill) | dito |
+| `direktiven-recherche` (Skill + Agent) | dito — der 5er-Opus-Schwarm ist Option C |
+| `superintelligenz` (Skill + Agent) | dito — der iterative Wellen-Schwarm ist Option C |
+| `intelligence-researcher` (Agent) | dito — Opus-Web = Option C; Standard A/B ueber den Orchestrator |
+| `forschungsagent` (Agent) | dito |
+| `researcher` (Agent) | Opus-Web-Stufe = Option C; Standard A/B ueber den Orchestrator |
+| `deep-research` (externes Plugin) | Regel gilt trotzdem — Orchestrator stellt Empfehlung + Frage 1, bevor er es startet |
+| Eigener Web-Rechercheauftrag des Hauptagenten | Empfehlung + Frage 1, dann A/B/C |
 
-**Hinweis (Stand 2026-06-20):** Der konkrete Umbau dieser Skills (von Opus-Schwaermen auf die
-MiniMax-Pipeline) ist noch in Planung — erst besprechen, dann umbauen. Diese Regel legt aber schon
-JETZT das Verhalten fest (immer fragen, max 2 parallel, Eskalations-Kette).
+**Stand 2026-06-20 (UMGESETZT):** Der Umbau dieser Skills/Agenten auf die A/B/C-Pipeline ist erfolgt
+(Commits #47009–#47017 + Empfehlungs-/Research-Skill-Erweiterung danach). Jeder oben gelistete Skill/Agent
+verweist an seiner Recherche-Stelle auf diese Regel; A/B nutzen `mm-research.py`/`or-research.py`, C den
+bestehenden Opus-Schwarm. Empfehlung (oben) + Frage 1 + (bei A) Frage 2 sind ueberall Pflicht.
 
 ---
 

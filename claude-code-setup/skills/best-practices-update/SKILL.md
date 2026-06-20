@@ -49,6 +49,11 @@ sortieren und als TaskCreate-Liste sichtbar machen.
 
 ## Schritt 1 — Pro Datei: der Ablauf aus dem `best-practices`-Skill
 
+> **Recherche-Weg (Regel `research-strategy.md`):** Vor JEDER Web-Recherche zuerst eine kurze Empfehlung
+> geben und per `AskUserQuestion` Frage 1 (A/B/C/D) stellen. **A/B** laufen ueber `mm-research.py`/`or-research.py`
+> (Firecrawl bei A max 2 parallel); der hier beschriebene **7-Opus-Researcher-Schwarm ist Option C** (nur auf
+> explizite Wahl). Bei A nach Abschluss Frage 2 (Eskalation?).
+
 Fuer JEDE Datei der Arbeitsliste den Ablauf des Skills **`best-practices`** anwenden (diesen Skill
 als Referenz lesen, NICHT duplizieren). Mechanik-Unterschied beachten:
 

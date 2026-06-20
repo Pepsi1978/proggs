@@ -27,6 +27,10 @@ Dort stehen Findings aus frueheren Laeufen mit Status (UMGESETZT / BLOCKIERT / O
 
 **Bei Fehlern**: Wenn Recherche fehlschlaegt (API-Fehler, Timeout, keine Ergebnisse), Fehler in "Offene Fehler & Probleme" eintragen mit: Quelle (Intelligence-Researcher), Symptom, Ursache, Fix-Vorschlag, Status: OFFEN.
 
+> **Recherche-Weg (Regel `research-strategy.md`):** Token-sparender Standard ist `mm-research.py` (A) /
+> `or-research.py` (B), vom Orchestrator gefahren; der Orchestrator gibt VOR dem Spawn Empfehlung + Frage 1
+> (A/B/C/D). **Dieser Agent = Opus-Web-Stufe (Option C)** — nur bei expliziter Opus-Wahl.
+
 ## Forschungsdimensionen (5 Bereiche)
 
 ### 1. Reasoning-Durchbrueche (akademische Forschung)

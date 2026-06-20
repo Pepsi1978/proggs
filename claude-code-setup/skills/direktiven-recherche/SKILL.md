@@ -15,6 +15,11 @@ invocation: user
 
 # Direktiven-Recherche starten
 
+> **Recherche-Weg (Regel `research-strategy.md`):** VOR dem Spawn zuerst eine kurze Empfehlung geben und
+> per `AskUserQuestion` Frage 1 (A/B/C/D) stellen. **A/B** laufen ueber `mm-research.py`/`or-research.py`;
+> der **5-Opus-Researcher-Schwarm dieses Agenten ist Option C** (nur auf explizite Opus-Wahl). Bei A nach
+> Abschluss Frage 2 (Eskalation?).
+
 Starte den `direktiven-recherche` Agenten mit dem Agent-Tool:
 
 ```

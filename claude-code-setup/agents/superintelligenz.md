@@ -72,6 +72,10 @@ Finde Wege dass KEIN Fehler jemals zweimal auftritt.
 
 ## Phase 0: Vorbereitung (IMMER ZUERST — PFLICHT)
 
+> **Recherche-Weg (Regel `research-strategy.md`):** Token-sparender Standard ist `mm-research.py` (A) /
+> `or-research.py` (B), vom Orchestrator gefahren; der Orchestrator gibt VOR dem Spawn Empfehlung + Frage 1
+> (A/B/C/D). **Dein iterativer Wellen-Schwarm = Opus-Web-Stufe (Option C)** — nur bei expliziter Opus-Wahl.
+
 Bevor du auch nur EINE Suche startest:
 
 1. **Lies `~/proggs/superintelligenz.md`** — die zentrale Implementierungsliste.

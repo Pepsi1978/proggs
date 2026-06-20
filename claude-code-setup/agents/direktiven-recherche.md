@@ -75,6 +75,10 @@ vorschlaegst was bereits existiert. Beispiele:
 
 ## PHASE 2: Parallele Tiefenrecherche (3 Researcher — REDUZIERT fuer Stabilitaet)
 
+> **Recherche-Weg (Regel `research-strategy.md`):** Token-sparender Standard ist `mm-research.py` (A) /
+> `or-research.py` (B), vom Orchestrator gefahren; der Orchestrator gibt VOR dem Spawn Empfehlung + Frage 1
+> (A/B/C/D). **Dieser 3-Researcher-Schwarm = Opus-Web-Stufe (Option C)** — nur bei expliziter Opus-Wahl.
+
 > **WARUM NUR 3 STATT 5:** 5 parallele Researcher fuehrten zu 40-60 Findings die in Phase 3
 > den Kontext sprengten. 3 Researcher mit je 5-8 Funden = 15-24 Findings = stabil.
 > Vorfall 2026-03-28: 5 Researcher mit je 50+ Ergebnissen → alle abgestuerzt.
