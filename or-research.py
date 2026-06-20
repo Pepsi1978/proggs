@@ -54,12 +54,27 @@ def _read_key():
     return m.group(0)
 
 
+def _loads_or(raw):
+    # OpenRouter sendet bei langer Verarbeitung (agentische web_search) SSE-Keep-Alive-Kommentarzeilen
+    # (": OPENROUTER PROCESSING") VOR dem JSON-Body — auch bei non-streaming. Das bricht json.loads.
+    # FIX laut Almanach bugs/apis/openrouter-api.md #9: fuehrende ':'-Kommentarzeilen ueberspringen und
+    # ab dem ersten '{' das eine JSON-Objekt parsen (raw_decode ignoriert evtl. Trailing-Keep-Alives).
+    raw = raw.strip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        i = raw.find("{")
+        if i < 0:
+            raise
+        return json.JSONDecoder().raw_decode(raw[i:])[0]
+
+
 def _post(url, headers, body, timeout):
     data = json.dumps(body).encode("utf-8")
     headers = {"User-Agent": "curl/8.5.0", **headers}
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        return _loads_or(resp.read().decode("utf-8"))
 
 
 def main():

@@ -39,6 +39,22 @@ def _read_key(path):
         return fh.read().strip()
 
 
+def _loads_resilient(raw):
+    # Gateways (OpenRouter, evtl. das opencode.ai/zen-Go-Gateway) senden bei langer Verarbeitung
+    # SSE-Keep-Alive-Kommentarzeilen (": OPENROUTER PROCESSING") VOR dem JSON-Body — auch bei
+    # non-streaming. Das bricht json.loads. FIX (Almanach bugs/apis/openrouter-api.md #9): fuehrende
+    # ':'-Kommentarzeilen ueberspringen und ab dem ersten '{' das JSON-Objekt parsen (raw_decode
+    # ignoriert evtl. Trailing). Schnellster Pfad (sauberes JSON) bleibt unveraendert.
+    raw = raw.strip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        i = raw.find("{")
+        if i < 0:
+            raise
+        return json.JSONDecoder().raw_decode(raw[i:])[0]
+
+
 def _post(url, headers, body, timeout):
     data = json.dumps(body).encode("utf-8")
     # WICHTIG: urllib-Default-UA ("Python-urllib/3.x") wird von Cloudflare vor dem opencode.ai-Gateway
@@ -46,7 +62,7 @@ def _post(url, headers, body, timeout):
     headers = {"User-Agent": "curl/8.5.0", **headers}
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        return _loads_resilient(resp.read().decode("utf-8"))
 
 
 def main():
