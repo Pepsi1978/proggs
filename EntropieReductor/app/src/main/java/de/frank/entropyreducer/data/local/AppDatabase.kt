@@ -107,8 +107,10 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // ID-Architektur Etappe 3 (Frank-Wunsch 2026-06-19): Kern-Kette Gewohnheiten
             de.frank.entropyreducer.data.local.entities.HabitEntity::class,
             de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity::class,
+            // ID-Architektur Etappe 4 (Frank-Wunsch 2026-06-19): Mental-Board-Saetze
+            de.frank.entropyreducer.data.local.entities.MentalEntity::class,
         ],
-    version = 33,
+    version = 34,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -189,6 +191,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     /** Gewohnheits-Vorschlaege (ID-Architektur Etappe 3, Frank-Wunsch 2026-06-19). */
     abstract fun habitSuggestionDao(): de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
+
+    /** Mental-Board-Saetze (ID-Architektur Etappe 4, Frank-Wunsch 2026-06-19). */
+    abstract fun mentalSentenceDao(): de.frank.entropyreducer.data.local.dao.MentalSentenceDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -1050,6 +1055,31 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_createdAt ON habit_suggestions(createdAt)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_originId ON habit_suggestions(originId)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_habit_suggestions_rootId ON habit_suggestions(rootId)")
+                }
+            }
+
+        /**
+         * Migration 33 -> 34 (ID-Architektur Etappe 4, Frank-Wunsch 2026-06-19): Mental-Board-Saetze.
+         * Neue Tabelle `mental_sentences` (mit manueller `position`) — analog habits aus 32->33.
+         * KEINE SQL-DEFAULT-Klausel fuer Felder mit Kotlin-Default (updatedAt/position).
+         */
+        val MIGRATION_33_34: Migration =
+            object : Migration(33, 34) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS mental_sentences (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            text TEXT NOT NULL,
+                            updatedAt INTEGER NOT NULL,
+                            position INTEGER NOT NULL,
+                            originId TEXT,
+                            originType TEXT,
+                            rootId TEXT
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_mental_sentences_position ON mental_sentences(position)")
                 }
             }
     }
