@@ -184,6 +184,9 @@ von OpenCode direkt per HTTP ansprechen (z.B. aus einem Skript/Bash-Tool heraus,
   Thinking kommt nativ als `<think>…</think>` im `content`; `reasoning_split=true` (extra_body) trennt es in `reasoning_details`.
 - Key zentral in `~/SK/OpenCode/go-api-key.txt`. Windows-Falle: Body per **stdin-Pipe** an `curl --data-binary @-`
   und Response per Bash-Redirect (kein `curl -o /tmp/...` — Git-Bash-`/tmp` ≠ native-curl-Pfad); Python-Parsing mit `os.path.expanduser`, NIE `/c/Users/...`.
+- **Cloudflare-UA (Python-`urllib`):** Direkte `urllib`-Calls an dieses Gateway (oder OpenRouter) werden von Cloudflare
+  mit 403/„error code 1010" geblockt, wenn der Default-UA (`Python-urllib/3.x`) gesendet wird → IMMER
+  `User-Agent: curl/8.5.0` setzen (so machen es `mm-research.py`/`or-research.py` in `_post()`). `curl` selbst ist nicht betroffen. Almanach §14.8.
 
 ```bash
 KEY=$(tr -d '[:space:]' < ~/SK/OpenCode/go-api-key.txt)

@@ -27,8 +27,10 @@ werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 | **C** | **Opus-Schwarm** — teuer, nur bewusst | bestehende Researcher | teure Claude-Token |
 | **D** | **[automatisches Freitext-Feld]** — etwas anderes / erst besprechen | — | — |
 
-- **A UND B laufen IMMER mit max Thinking** = `thinking:{type:"adaptive"}` (M3s Maximum;
-  `budget_tokens` wird ignoriert). Das ist Pflicht, nicht optional — beide Optionen explizit so labeln.
+- **A UND B laufen IMMER mit max Thinking** (Pflicht) — der Schalter ist aber ENDPUNKT-abhaengig:
+  **A** (`mm-research.py`, Anthropic-`/messages`) → `thinking:{type:"enabled","budget_tokens":<hoch>}`
+  (live-getestet; M3 denkt adaptiv bis zum Budget, `max_tokens` > Budget). **B** (`or-research.py`, OpenRouter)
+  → `reasoning:{effort:high}`. `{type:"adaptive"}` gilt NUR fuer den OpenAI-`/chat/completions`-Pfad, NICHT fuer `/messages`.
 - **Option C (Opus-Schwarm) wird NUR genommen, wenn Frank sie ausdruecklich waehlt** — nie als Default,
   nie „weil es gruendlicher ist". Sie ist eine gleichwertige 3. Option, aber bewusst teuer.
 - Technik: `AskUserQuestion` liefert A/B/C als Buttons; die automatische „Other"/Freitext-Wahl deckt
@@ -93,8 +95,10 @@ Recherche-Anfrage mit MiniMax M3 (≪ 1 Cent). 7-Researcher-Lauf ≈ $0.12 (vs. 
 **LIVE-Test 2026-06-20 (MiniMax M3 + engine=parallel):** Das Modell suchte **agentisch 10× selbst** (nicht 1×)
 → real **$0.069**, 49 Quellen, korrekte+ehrliche Antwort (korrekter als der Opus-Researcher, der beim
 Schema falsch lag). **Lehre:** agentische Mehrfachsuche treibt die Kosten — `max_total_results`/`max_results`
-als Deckel setzen (or-research.py: env `OR_MAX_TOTAL`, Default 20). **M3-Thinking = `adaptive`** (der dokumentierte
-Schalter; `budget_tokens` wird ignoriert); ueber OpenRouter via `reasoning:{effort:high}` (lief, 3.578 reasoning-Token).
+als Deckel setzen (or-research.py: Default `engine=parallel`, env `OR_MAX_TOTAL` Default 10). **M3-Thinking je
+Endpunkt:** `/messages` (mm-research) = `{type:"enabled","budget_tokens":N}` (live-getestet, M3 denkt adaptiv bis N,
+`max_tokens`>N); `/chat/completions` = `{type:"adaptive"}`; ueber OpenRouter (or-research) = `reasoning:{effort:high}`
+(lief, 3.578 reasoning-Token). Kein numerisches „max"-Level — nur enabled/adaptive vs. disabled.
 
 ---
 

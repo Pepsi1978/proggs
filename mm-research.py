@@ -8,7 +8,9 @@ bei besserer Ehrlichkeit. MiniMax/Firecrawl-Token laufen separat im Go-Abo bzw. 
 
 Verwendung:
     python3 mm-research.py "deine Recherche-Frage" [anzahl_quellen]
-    (max Thinking ist fest "adaptive" = M3s Maximum; ein budget_tokens-Wert wird vom Modell ignoriert.)
+    MM_THINK_BUDGET=24000 (env, optional) — max Thinking auf dem /messages-Endpoint: hohes budget_tokens
+    (M3 denkt adaptiv BIS hierhin; live-getestet 2026-06-20, opencode-cli.md S938). NICHT {type:adaptive}
+    setzen — das gilt nur fuer /chat/completions, das Anthropic-Schema /messages akzeptiert nur enabled.
 
 Keys (zentral in SK, siehe Regel secrets-in-sk-folder):
     ~/SK/OpenCode/go-api-key.txt        (OpenCode-Go Gateway)
@@ -52,6 +54,7 @@ def main():
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
     limit = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    budget = int(os.environ.get("MM_THINK_BUDGET", "24000"))
     os.makedirs(OUTDIR, exist_ok=True)
 
     go_key = _read_key("~/SK/OpenCode/go-api-key.txt")
@@ -77,13 +80,15 @@ def main():
     print(f"      {len(data)} Quellen geholt.", file=sys.stderr)
 
     # 2) MiniMax M3 (max Thinking) — Quellen quellentreu auswerten
-    print("[2/2] MiniMax M3 (max Thinking = adaptive) wertet aus...", file=sys.stderr)
+    print(f"[2/2] MiniMax M3 (max Thinking, budget {budget}) wertet aus...", file=sys.stderr)
     prompt = ("Du bist ein Recherche-Auswerter. Beantworte AUSSCHLIESSLICH auf Basis der folgenden "
               "Quellen die Frage. Wenn etwas NICHT in den Quellen steht oder widerspruechlich ist, "
               "sage das ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle.\n\n"
               f"FRAGE: {query}\n\n=== QUELLEN ===\n{sources}")
     body = {"model": "minimax-m3", "max_tokens": 30000,
-            "thinking": {"type": "adaptive"},  # M3s Maximum (max Thinking); budget_tokens wird ignoriert
+            # /messages (Anthropic-Schema) -> enabled+budget_tokens (live-getestet 2026-06-20, opencode-cli.md S938);
+            # M3 denkt adaptiv bis zum Budget. 'adaptive' gilt nur fuer /chat/completions, nicht hier.
+            "thinking": {"type": "enabled", "budget_tokens": budget},
             "messages": [{"role": "user", "content": prompt}]}
     try:
         d = _post(GO_URL,

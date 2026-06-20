@@ -35,6 +35,7 @@
 | 12 | `opencode upgrade` meldet „unknown" (Windows) | Detection scheitert an `npm.cmd`. Manuell per Paketmanager updaten (`npm i -g opencode-ai@latest` / `scoop update opencode`). | §1 |
 | 13 | ⭐ OpenCode-Go: API-Fehler je Modell / GLM früh „aufgebraucht" / Modell erfindet Fakten | **Zwei Endpunkt-Schemata:** DeepSeek/GLM/Kimi/MiMo = OpenAI (`/zen/go/v1/chat/completions`), Qwen/MiniMax = Anthropic (`/zen/go/v1/messages`). GLM-5.x im Go-Tier nur ~4.300 Req/Mo (nicht für Masse). DeepSeek V4 Pro halluziniert bei Nichtwissen → Abstain-Prompt. | §14 |
 | 14 | ⭐ OpenCode-Go-Modell einrichten / Thinking aktivieren | Go ist **eingebaut** → `/connect`, KEIN Custom-`@ai-sdk/anthropic`-Block (Key-Verlust #21737); nur MERGE-Block für Optionen. Thinking-Keys in `docs/models` (nicht config): Anthropic `options.thinking.budgetTokens`, OpenAI `reasoningEffort`. MiniMax denkt nativ. | §14.4–14.5 |
+| 15 | ⭐ Direkter Python-Call an Go-Gateway/OpenRouter → Cloudflare 403/„1010" | urllib-Default-UA wird geblockt → `User-Agent: curl/8.5.0` setzen (so `mm/or-research _post()`). Erinnerung: `/messages`=`x-api-key`, Thinking `{type:enabled,budget_tokens:N}` (NICHT `adaptive` — das nur bei `/chat/completions`) | §14.6–14.8 |
 
 ---
 
@@ -938,6 +939,18 @@ Bei heiklen Fakten zweite Meinung (Kimi K2.6) oder gegen Opus eskalieren.
 **Thinking-Parameter — zwei belegte Wege:** (a) Anthropic `/messages`: `"thinking":{"type":"enabled","budget_tokens":N}` (live ok; wirkt als Obergrenze, M3 denkt adaptiv nach Aufgaben-Komplexität). (b) OpenAI `/chat/completions`: `"thinking":{"type":"adaptive"}` + `"reasoning_split":true` → Thinking in `choices[0].message.reasoning_details[0].text`. Es gibt KEIN numerisches „max"-Level (nur adaptive/enabled vs. disabled).
 **Claude Code als Backend:** direkter curl-Bash-Call (kein Proxy) ODER Proxy `oc-go-cc` (übersetzt Anthropic↔OpenAI), dann `ANTHROPIC_BASE_URL=http://127.0.0.1:3456` + `claude`. (Proxy-Weg recherchiert, nicht live getestet.)
 **Quelle:** Live-curl-Test 2026-06-20 · deepwiki.com/sst/opencode/4.5-opencode-zen-and-go-services · platform.minimax.io/docs/api-reference/text-openai-api · shravanbhati.com/blog/run-opencode-zen-and-go-models-with-claude-code-cli
+
+### 14.8 ⭐ urllib-Default-User-Agent → Cloudflare 403 / „error code 1010" (Go-Gateway UND OpenRouter)
+**Symptom:** Ein direkter Python-`urllib`-POST an `opencode.ai/zen/...` (Go-Gateway) oder `openrouter.ai/api/...`
+liefert HTTP 403 mit Cloudflare „error code 1010" / „Just a moment", obwohl Key/Body korrekt sind. Derselbe
+Call mit `curl` geht durch.
+**Ursache:** Cloudflare vor den Gateways blockt den urllib-Default-User-Agent (`Python-urllib/3.x`) als Bot;
+`curl` sendet einen akzeptierten UA.
+**Versionen:** beobachtet 2026-06-20 (`mm-research.py`/`or-research.py`); Cloudflare-seitig, dauerhaft.
+**FIX (funktionserhaltend):** Bei JEDEM urllib-Request an diese Gateways `User-Agent: curl/8.5.0` setzen
+(`headers={"User-Agent":"curl/8.5.0", ...}` — genau das tun beide Skripte in `_post()`). Alternativ
+`requests`/`httpx` mit eigenem UA. NIE den urllib-Default-UA gegen Cloudflare-gefrontete APIs lassen.
+**Quelle:** eigener Vorfall 2026-06-20 (research-pipeline).
 
 ---
 
