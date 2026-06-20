@@ -8,6 +8,16 @@ BEARBEITUNGEN per Last-Write-Wins (LWW) zwischen Geraeten propagieren (und der L
 sicher wird). Frank hat "alle 3 jetzt" autorisiert.
 
 ## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt (WICHTIGSTER ABSCHNITT)
+
+> ====================================================================================
+> >>> ALLERERSTE AKTION NACH DEM RESTORE (Frank-Anweisung 2026-06-20, woertlich):
+> >>> "Wir starten direkt nach dem Session Restore mit PHASE B."
+> >>> Also SOFORT mit Phase B beginnen — NICHT nachfragen, NICHT neu planen, NICHT die
+> >>> Entscheidung "jetzt vs frisch" nochmal aufmachen (die ist erledigt: JETZT). Direkt
+> >>> die erste Aktion ausfuehren: in `TagebuchScreen.kt` `data class TagebuchEntry` (~Z.822)
+> >>> um `val updatedAt: Long = 0L` ergaenzen, dann die Phase-B-Liste unten Punkt fuer Punkt.
+> ====================================================================================
+
 - **Welche Aufgabe lief gerade:** "updatedAt-Umbau fuer Tagebuch/Ideen/Thesen" (Task #17). Frank hat
   ausdruecklich "alle 3 jetzt umsetzen" gewaehlt. PHASE A (Room-Migration) ist FERTIG + LIVE BEWIESEN
   SICHER. PHASE B (die updatedAt-Verkabelung, ~30 Stellen) ist NOCH NICHT BEGONNEN — das ist der
