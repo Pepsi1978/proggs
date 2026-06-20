@@ -6,7 +6,8 @@
 >
 > **Quellen-Regel (Lehre 2026-06-20):** Bei Modell-Benchmarks sind die **neutralen OpenRouter/Artificial-Analysis-Werte
 > maßgeblich** — Hersteller-/Blog-Indizes weichen nach oben ab (real erlebt: GLM-5.2 „Faktentreue unbelegt" war belegt;
-> Qwen3.7-Max Hersteller-Index 56.6 vs. OpenRouter 46.0). Immer gegen OpenRouter/AA gegenchecken.
+> Qwen3.7-Max Hersteller-Index 56.6 vs. OpenRouter 46.0; DeepSeek V4 Pro Researcher-Index 52 vs. OpenRouter 44.3).
+> Immer gegen OpenRouter/AA gegenchecken.
 >
 > **Stand:** recherchiert am **2026-06-20** mit 7 parallelen Researchern (Opus 1M) für das
 > **OpenCode-Go-Abo** (14 Modelle, Stand Juni 2026). Anker: opencode-go=2026-06.
@@ -26,7 +27,7 @@
 
 | # | Frage / Situation | Sofort-Regel |
 |---|-------------------|--------------|
-| 1 | ⭐ Welches Go-Modell wertet die gecrawlten Seiten aus? | **Zwei Co-Favoriten, A/B-Test entscheidet:** **DeepSeek V4 Pro** (`deepseek-v4-pro`, OpenAI-Schema) — belegtes Retrieval (MRCR 83.5 %, NIAH 97 %) + Eigenwissen, aber Abstain-Prompt nötig. **MiniMax M3** (`minimax-m3`, **Anthropic-Schema**) — ehrlicher bei Nichtwissen (Nicht-Hallu 83.9 %), GPQA 92.9, IFBench 82.9, ~31 % günstiger. |
+| 1 | ⭐ Welches Go-Modell wertet die gecrawlten Seiten aus? | **MiniMax M3 bevorzugt** (`minimax-m3`, **Anthropic-Schema**) — ehrlich bei Nichtwissen (Nicht-Hallu 83.9 %), GPQA 92.9, IFBench 82.9, günstigster. **DeepSeek V4 Pro** (`deepseek-v4-pro`, OpenAI-Schema) als Alternative — belegtes Retrieval (NIAH 97 %), aber Nicht-Hallu nur 6.0 % 🔴 (erfindet bei Nichtwissen → Abstain-Prompt Pflicht). A/B-Test klärt das Retrieval. |
 | 2 | ⭐ Viele Seiten billig vorsieben? | **DeepSeek V4 Flash** (`deepseek-v4-flash`) als Vorfilter: $0.14/$0.28, 107 tok/s, ~158k Req/Mo. Dann V4 Pro für die kritische Synthese. |
 | 3 | ⭐ Halluziniert V4 Pro? | Ja, **bei Nichtwissen** (AA-Omniscience 94 % „antwortet trotzdem"). **Abstain-Prompting Pflicht:** „nur aus den Quellen, bei Unsicherheit sagen, nicht erfinden" + Thinking-Modus an. |
 | 4 | ⭐ Go-API-Endpunkt? | **Zwei Schemata!** DeepSeek/GLM/Kimi/MiMo = OpenAI (`…/zen/go/v1/chat/completions`); Qwen/MiniMax = Anthropic (`…/zen/go/v1/messages`). DeepSeek → OpenAI-Schema. |
@@ -34,7 +35,7 @@
 | 6 | Günstigste 1M-Long-Context-Alternative? | **MiniMax M3** ($0.30/$1.20, 1M MSA retrieval-treu) — Anthropic-Schema. Zahlen teils unverified. |
 | 7 | NICHT für Massen-Auswertung nehmen | **GLM-5.x** (starkes Modell, aber Go-Tier nur ~4.300 Req/Mo + teuer → top als **Eskalation**, nicht für Masse). **Kimi K2.7-Code** (reines Coding-Modell). **MiMo non-Pro / Qwen3.6 / MiniMax M2.7** (Kontext/Leistung schwächer). |
 
-**Empfohlene Pipeline:** `Firecrawl → V4 Flash (Vorfilter, Masse) → V4 Pro ODER MiniMax M3 (kritische Synthese, A/B) → Opus/Qwen3.7 Max/GLM-5.2 (nur Hard-Cases)`.
+**Empfohlene Pipeline:** `Firecrawl → V4 Flash (Vorfilter, Masse) → MiniMax M3 (bevorzugt) ODER V4 Pro (kritische Synthese, A/B) → Opus/Qwen3.7 Max/GLM-5.2 (nur Hard-Cases)`.
 
 ---
 
@@ -58,8 +59,8 @@ Gewichtung: **Faktentreue/Anti-Halluzination (höchste)** > Long-Context-Retriev
 
 | Rang | Modell | Faktentreue | Long-Context (viele Seiten) | Reasoning | Preis je Mio (in/out) | Eignung |
 |------|--------|-------------|------------------------------|-----------|----------------------|---------|
-| 1 | **DeepSeek V4 Pro** | **SimpleQA-Verified 57.9 (Top Eigenwissen, +~20 P)**, Vectara ~10–11 % — ⚠ erfindet bei *Nichtwissen* (Abstain-Prompt nötig) | **1M echt nutzbar** (KV-Cache 10 % von V3.2), **MRCR-1M 83.5 %, NIAH 97 % (belegt)** | AA-Index 52, GPQA ~90, 3 Think-Modi | ~$0.44/$0.87 (Recherche-Profil ~$0.090) | **Co-Favorit Standard** — Stärke: belegtes Retrieval + Eigenwissen |
-| 2 | **MiniMax M3** | **AA-Omniscience Nicht-Hallu 83.9 % (erfindet bei Nichtwissen kaum — Top!)**; Eigenwissen-Acc nur 15 % (RAG-nachrangig) | 1M **MSA (retrieval-optimiert)**, **AA-LCR 74.0 %**; reines MRCR/Needle nicht direkt belegt | **GPQA 92.9 (höchstes!)**, **IFBench 82.9**, Index 44.4 | **$0.30/$1.20 (günstigster, Recherche-Profil ~$0.062)** | **Co-Favorit Standard** — Stärke: Ehrlichkeit + Instruction-Following + Preis. Anthropic-Schema! |
+| 1 | **MiniMax M3** | **AA-Omniscience Nicht-Hallu 83.9 % (erfindet bei Nichtwissen kaum — Top!)**; Eigenwissen-Acc nur 15 % (RAG-nachrangig) | 1M **MSA (retrieval-optimiert)**, **AA-LCR 74.0 %**; reines MRCR/Needle nicht direkt belegt | **GPQA 92.9 (höchstes!)**, **IFBench 82.9**, Index 44.4 | **$0.30/$1.20 (günstigster, Recherche-Profil ~$0.062)** | **Bevorzugter Standard** — gewinnt Ehrlichkeit + Reasoning + IFBench + Preis. Anthropic-Schema! |
+| 2 | **DeepSeek V4 Pro** | **AA-Omn. Acc 43.3 % (bestes Eigenwissen)** / SimpleQA-Verified 57.9 — aber **AA-Omn. Nicht-Hallu nur 6.0 % 🔴: erfindet bei Nichtwissen fast immer** (Abstain-Prompt Pflicht) | **1M echt nutzbar**, **MRCR-1M 83.5 %, NIAH 97 % (belegt — sein Trumpf)**; AA-LCR nur 66.3 % | GPQA 88.8, IFBench 76.5, Index 44.3 (3 Think-Modi) | ~$0.44/$0.87 (Recherche-Profil ~$0.090) | **Starke Alternative** — Stärke: belegtes reines Retrieval + Eigenwissen |
 | 3 | Qwen3.7 Plus | Familie stark (Max: Hallu 22.9 %), Einzelwert fehlt | **MRCR-128k 91.7 (bestes belegt)**, 1M Kontext | GPQA 90.3, Index ~52 | $0.40/$1.60 (verbose → Output-Kosten) | starke Alternative |
 | 4 | Kimi K2.6 | SimpleQA 43 %, **Vectara-Hallu 10.8 %**, IFEval 89.8 | **nur 256K**, keine Retrieval-Benchmarks belegt | **Index 54 (höchster)**, GPQA 90.5, AIME 96.4 | $0.95/$4.00 | Zweitmeinung (Kontext-Limit!) |
 | 5 | GLM-5.2 | AA-Omniscience Index **4** (Acc 25.1 %, Hallu 28.1 %) — mittel, **für RAG weniger kritisch** | AA-LCR **71.3 %** (Reasoning gut); reines Retrieval (MRCR/Needle) unbelegt | **stark: Index 51.1, GPQA 89.5, HLE 40.1, τ²-Telecom 99.1** | $1.20/$4.10, **~4.300 Req/Mo** | **Top-Modell** → exzellenter **Eskalations-/Zweitmeinungs-Kandidat**; NICHT für Masse (Go-Budget) |
@@ -71,28 +72,29 @@ Gewichtung: **Faktentreue/Anti-Halluzination (höchste)** > Long-Context-Retriev
 
 ---
 
-## 3. Die zwei Co-Favoriten für den Standard-Auswerter — A/B-Test entscheidet
+## 3. Standard-Auswerter: MiniMax M3 bevorzugt, DeepSeek V4 Pro starke Alternative
 
-Nach Auswertung der OpenRouter/Artificial-Analysis-Benchmarks (2026-06-20) sind **zwei** Modelle für den
-Standard-Auswerter quasi gleichauf. Sie haben **komplementäre Stärken** — der finale A/B-Test an einer echten
-Firecrawl-Recherche entscheidet:
+Nach Auswertung **aller vier OpenRouter/Artificial-Analysis-Profile** (GLM-5.2, MiniMax M3, Qwen3.7 Max,
+DeepSeek V4 Pro — Franks Screenshots 2026-06-20) ist das Bild klarer als gedacht: **MiniMax M3 gewinnt fast alle
+aufgabenrelevanten Kategorien.** Der A/B-Test muss nur noch DeepSeeks einen Trumpf (reines Retrieval) prüfen.
 
-**DeepSeek V4 Pro — stark bei belegtem Retrieval + Eigenwissen:**
-- **SimpleQA-Verified 57.9** = bestes Eigen-Faktenwissen aller Open-Weights (für RAG nachrangig, da Fakten in Quellen stehen).
-- **Belegtes reines Retrieval:** MRCR-1M 83.5 %, NIAH 97 % — findet die Nadel im Heuhaufen nachweislich.
-- ⚠ **Schwäche:** erfindet bei *Nichtwissen* (AA-Omniscience „antwortet trotzdem") → **Abstain-Prompt Pflicht**.
-
-**MiniMax M3 — stark bei Ehrlichkeit + Anweisungsbefolgung + Preis (oft besser fürs Profil):**
+**MiniMax M3 — bevorzugter Standard (gewinnt Ehrlichkeit + Reasoning + IFBench + Preis):**
 - **AA-Omniscience Nicht-Halluzinationsrate 83.9 %** = erfindet bei Nichtwissen kaum etwas (von Natur aus „ehrlich
   über Quellenlücken" — genau das Kernkriterium, ohne dass man es erst erzwingen muss).
-- **GPQA 92.9 (höchstes Reasoning der Liga)**, **IFBench 82.9** (befolgt „nur aus den Quellen" sehr gut),
+- **GPQA 92.9 (höchstes der Liga)**, **IFBench 82.9** (befolgt „nur aus den Quellen" sehr gut),
   **AA-LCR 74.0 %** (bestes Denken über langen Kontext), 1M **MSA** (retrieval-optimiert).
 - **Günstigster:** ~$0.062/Recherche vs. ~$0.090 (DeepSeek) im Input-dominierten Recherche-Profil (~31 % billiger).
-- ⚠ **Offen:** reines MRCR/Needle-Retrieval nicht direkt mit Zahl belegt (nur AA-LCR + MSA-Architektur); Eigenwissen niedrig (15 %, RAG-nachrangig). **Anthropic-Schema** im Go.
+- ⚠ **Einziger offener Punkt:** reines MRCR/Needle-Retrieval nicht direkt mit Zahl belegt (nur AA-LCR + MSA-Architektur); Eigenwissen niedrig (15 %, RAG-nachrangig). **Anthropic-Schema** im Go.
 
-**Fazit:** Für RAG (Fakten liegen vor) wiegen **Ehrlichkeit + Instruction-Following + Reasoning + Preis** schwerer
-als Eigenwissen → MiniMax M3 hat hier leichte Vorteile; DeepSeeks belegter reiner-Retrieval-Vorsprung ist sein Trumpf.
-**Beide im A/B-Test fahren, Gewinner als Standard festlegen.** Frühere OpenRouter-Tests (19./20.06.) hatten nur
+**DeepSeek V4 Pro — starke Alternative (Trumpf: belegtes reines Retrieval):**
+- **Belegtes reines Retrieval:** MRCR-1M 83.5 %, NIAH 97 % — findet verstreute Fakten im riesigen Kontext nachweislich (sein echter Vorteil; bei MiniMax unbelegt).
+- **Bestes Eigenwissen:** AA-Omn. Accuracy 43.3 % / SimpleQA-Verified 57.9 (für RAG nachrangig).
+- 🔴 **Gravierende Schwäche für genau diese Aufgabe:** AA-Omniscience Nicht-Hallu nur **6.0 %** — erfindet bei Nichtwissen FAST IMMER (94 %). **Abstain-Prompt Pflicht**, und selbst dann bleibt die Grundtendenz ein Risiko bei Quellenlücken. Außerdem niedrigstes AA-LCR (66.3) + GPQA (88.8) der vier.
+
+**Fazit:** Für RAG (Fakten liegen in den Quellen) wiegen **Ehrlichkeit + Instruction-Following + Reasoning + Preis**
+schwerer als Eigenwissen → **MiniMax M3 ist der Startfavorit.** DeepSeek V4 Pro nur dann vorziehen, wenn der A/B-Test
+zeigt, dass MiniMax beim *Auffinden* verstreuter Fakten in sehr langen Crawls spürbar schlechter ist (DeepSeek NIAH 97 %).
+**A/B-Test fahren, Gewinner als Standard festlegen.** Frühere OpenRouter-Tests (19./20.06.) hatten nur
 deepseek-v4-pro geprüft (Opus-nahe Faktentreue, ~2 Cent/Recherche) — MiniMax M3 war damals nicht im Rennen.
 
 ---
@@ -106,7 +108,7 @@ Firecrawl (scrape/search, Gratis-Kontingent)
 Stufe 1 — Vorfilter (Masse, billig):  DeepSeek V4 Flash
    │  grob relevante Auswahl
    ▼
-Stufe 2 — kritische Synthese:         DeepSeek V4 Pro  ODER  MiniMax M3   ← Arbeitspferd (A/B-Test); MiniMax = ehrlicher+günstiger, DeepSeek = belegtes Retrieval
+Stufe 2 — kritische Synthese:         MiniMax M3 (bevorzugt)  ODER  DeepSeek V4 Pro   ← Arbeitspferd (A/B-Test); MiniMax = ehrlicher+klüger+günstiger, DeepSeek = belegtes reines Retrieval
    │  kurze, quellengestützte Antwort (+ explizite Quellenlücken)
    ▼
 Stufe 3 — Eskalation (Hard-Cases): Opus / Qwen3.7 Max / GLM-5.2   ← starkes Reasoning, Request-Zahl egal
