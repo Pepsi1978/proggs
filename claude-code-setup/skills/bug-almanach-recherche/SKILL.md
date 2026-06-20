@@ -239,6 +239,19 @@ Plattform-Unterschiede (Windows vs. macOS) je eigene Sektion. Echte deutsche Uml
    Dateimuster einen Zweig ergaenzen (Dateimuster → `<bereich>.md`, nur der Dateiname OHNE
    Kategorie) in BEIDEN Varianten + `claude-code-setup/hooks/` spiegeln. Ein blosser
    Kategorie-Wechsel einer bestehenden Datei braucht KEINE Hook-Aenderung.
+
+   **PFLICHT-Coverage-Check (damit kein totes Wissen entsteht):** Direkt nach dem Anlegen
+   `python3 ~/proggs/bugs/check-guard-coverage.py` laufen lassen. Erscheint der neue Almanach
+   als `[LUECKE]` (oder seine Best-Practices als `[BP-LUECKE]`), wird er vom Hook **NIE
+   getriggert** — das gespeicherte Bug-Wissen waere wirkungslos. Dann ZWINGEND, bevor es
+   weitergeht, EINEN der beiden Wege:
+   - **(A) Trigger ergaenzen** — ein Datei-/Inhalts-Signal im Guard (`.ps1` UND `.sh`), sodass
+     der Bereich beim Editieren ausloest (Standard, wenn es ein klares Dateimuster gibt).
+   - **(B) Bewusst Querschnitt** — wenn es KEIN sauberes Dateimuster gibt (Tool-/Prozess-/
+     Konzept-Bereich, der nur ueber Index/Stichworte gefunden wird): den Schluessel in
+     `bugs/check-guard-coverage.py` → `INTENTIONALLY_UNMAPPED` eintragen (mit Begruendungs-Kommentar).
+   Den Check erneut laufen lassen — erst wenn der neue Bereich KEINE Luecke mehr zeigt, weiter.
+   So entsteht totes Wissen gar nicht erst (Poka-Yoke Stufe 3).
 3. **Versions-Anker setzen (seit 2026-06-15, NUR software-gebundene Almanache):** Direkt unter
    dem `Stand:`-Header ein maschinenlesbares Feld `> **Anker:** <label>=<version>` setzen
    (SYSTEM.md §7). Wenn die INSTALLIERTE Version == der fuer den Almanach relevanten ist
