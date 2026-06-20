@@ -28,7 +28,7 @@
 | 4 | ⭐ Go-API-Endpunkt? | **Zwei Schemata!** DeepSeek/GLM/Kimi/MiMo = OpenAI (`…/zen/go/v1/chat/completions`); Qwen/MiniMax = Anthropic (`…/zen/go/v1/messages`). DeepSeek → OpenAI-Schema. |
 | 5 | Zweitmeinung bei strittigen Fakten? | **Kimi K2.6** (höchster Intelligenz-Index 54, Vectara-Hallu 10.8 %) — aber nur 256K Kontext. Oder gegen **Opus** eskalieren. |
 | 6 | Günstigste 1M-Long-Context-Alternative? | **MiniMax M3** ($0.30/$1.20, 1M MSA retrieval-treu) — Anthropic-Schema. Zahlen teils unverified. |
-| 7 | NICHT für Massen-Auswertung nehmen | **GLM-5.x** (im Go-Tier nur ~4.300 Req/Mo, teuer, Faktentreue unbelegt). **Kimi K2.7-Code** (reines Coding-Modell). **MiMo non-Pro / Qwen3.6 / MiniMax M2.7** (Kontext/Leistung schwächer). |
+| 7 | NICHT für Massen-Auswertung nehmen | **GLM-5.x** (starkes Modell, aber Go-Tier nur ~4.300 Req/Mo + teuer → top als **Eskalation**, nicht für Masse). **Kimi K2.7-Code** (reines Coding-Modell). **MiMo non-Pro / Qwen3.6 / MiniMax M2.7** (Kontext/Leistung schwächer). |
 
 **Empfohlene Pipeline:** `Firecrawl → V4 Flash (Vorfilter, Masse) → V4 Pro (kritische Synthese) → Opus (nur Hard-Cases)`.
 
@@ -58,7 +58,7 @@ Gewichtung: **Faktentreue/Anti-Halluzination (höchste)** > Long-Context-Retriev
 | 2 | Qwen3.7 Plus | Familie stark (Max: Hallu 22.9 %), Einzelwert fehlt | **MRCR-128k 91.7 (bestes belegt)**, 1M Kontext | GPQA 90.3, Index ~52 | $0.40/$1.60 (verbose → Output-Kosten) | starke Alternative |
 | 3 | Kimi K2.6 | SimpleQA 43 %, **Vectara-Hallu 10.8 %**, IFEval 89.8 | **nur 256K**, keine Retrieval-Benchmarks belegt | **Index 54 (höchster)**, GPQA 90.5, AIME 96.4 | $0.95/$4.00 | Zweitmeinung (Kontext-Limit!) |
 | 4 | MiniMax M3 | BrowseComp 83.5 (indirekt) | 1M **MSA**, retrieval-treu @128K | Index 44 | **$0.30/$1.20 (günstigster)** | Vorfilter / günstige 1M-Alt. |
-| 5 | GLM-5.2 | ⚠ unbelegt + historisch schwach (GLM-4.5 SimpleQA 26.4) | 1M (Genauigkeit unbelegt) | **Index 51, GPQA 91.2, AIME 99.2** | $1.20/$4.10, **~4.300 Req/Mo** | Reasoning-Star, NICHT für Masse |
+| 5 | GLM-5.2 | AA-Omniscience Index **4** (Acc 25.1 %, Hallu 28.1 %) — mittel, **für RAG weniger kritisch** | AA-LCR **71.3 %** (Reasoning gut); reines Retrieval (MRCR/Needle) unbelegt | **stark: Index 51.1, GPQA 89.5, HLE 40.1, τ²-Telecom 99.1** | $1.20/$4.10, **~4.300 Req/Mo** | **Top-Modell** → exzellenter **Eskalations-/Zweitmeinungs-Kandidat**; NICHT für Masse (Go-Budget) |
 | 6 | MiMo-V2.5-Pro | SimpleQA 45 % (mittel), Non-Hallu ~52 % | 1M (degradiert messbar >512K) | Index ~42–54, ⚠ Thinking-Latenz (Minuten) | ~$0.44/$0.87 | brauchbar, aber langsam |
 
 **Vorfilter-Spezialist:** **DeepSeek V4 Flash** — $0.14/$0.28, **107 tok/s**, ~158k Req/Mo, 5× Concurrency. Zu schwach für die kritische Endsynthese, ideal zum Vorsieben der Masse.
@@ -94,8 +94,14 @@ Stufe 1 — Vorfilter (Masse, billig):  DeepSeek V4 Flash
 Stufe 2 — kritische Synthese:         DeepSeek V4 Pro   ← Arbeitspferd (Bug-Almanach, Best-Practices)
    │  kurze, quellengestützte Antwort (+ explizite Quellenlücken)
    ▼
-Stufe 3 — Eskalation (nur Hard-Cases): Opus            ← subtile Korrektheit, heikle Faktentreue
+Stufe 3 — Eskalation (Hard-Cases): Opus / Qwen3.7 Max / GLM-5.2   ← starkes Reasoning, Request-Zahl egal
 ```
+
+**Eskalations-/Zweitmeinungs-Modelle (wenige, schwierige Fälle — Go-Request-Limit dann egal):**
+Hier zählt maximales Reasoning, nicht der Preis. Drei sehr starke Optionen:
+- **Qwen3.7 Max** — höchstes Reasoning der Liga (GPQA 92.4, Index 56.6), niedrigste Frontier-Halluzination (22.9 %). $2.50/$7.50, text-only.
+- **GLM-5.2** — Top-Reasoning (GPQA 89.5, Index 51.1, AA-LCR 71.3 %, τ²-Telecom 99.1 %), 1M Kontext. $1.20/$4.10; nur ~4.300 Req/Mo — für Eskalation reicht das locker. Faktentreue (AA-Omniscience Index 4) mittel, bei RAG aber nachrangig.
+- **Opus** — für die subtilsten Korrektheits-Fälle.
 
 **Abstain-Prompt-Baustein (Pflicht, gegen die Halluzination-bei-Nichtwissen):**
 > „Beantworte AUSSCHLIESSLICH aus den bereitgestellten Quellen. Wenn die Information in den Quellen fehlt
