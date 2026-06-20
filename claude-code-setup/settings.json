@@ -274,6 +274,15 @@
 						"timeout": 15
 					}
 				]
+			},
+			{
+				"matcher": "Bash|mcp__.*firecrawl.*",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/research-approval.sh\""
+					}
+				]
 			}
 		],
 		"Stop": [

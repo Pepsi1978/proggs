@@ -202,6 +202,15 @@
 						"timeout": 15
 					}
 				]
+			},
+			{
+				"matcher": "Bash|mcp__.*firecrawl.*",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/research-approval.ps1\""
+					}
+				]
 			}
 		],
 		"Notification": [
