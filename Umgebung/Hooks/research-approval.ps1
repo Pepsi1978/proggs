@@ -15,10 +15,16 @@ try {
 
     $rawLower = $raw.ToLower()
 
-    # --- Research-Erkennung (raw-substring; KEIN jq/strict-Parse-Zwang, umgeht §16.2) ---
+    # --- Research-Erkennung: NUR echte AUSFUEHRUNG der Skripte, nicht blosse Erwaehnung ---
+    # (sonst wuerden git add / grep / cat / py_compile auf den Dateinamen faelschlich blockiert).
+    # KEIN jq/strict-Parse-Zwang (umgeht §16.2-Control-Char-Bypass).
     $isResearch = $false
-    if ($rawLower -match 'mm-research\.(py|sh)' -or $rawLower -match 'or-research\.(py|sh)') {
-        $isResearch = $true
+    if ($rawLower -match 'python[0-9.]*\s+(-[a-z]\S*\s+)*\S*(mm|or)-research\.py') {
+        $isResearch = $true   # python ... <pfad>mm/or-research.py  (NICHT 'python -m py_compile datei.py')
+    }
+    elseif ($rawLower -match '(^|\s)(bash|sh)\s+\S*(mm|or)-research\.sh' -or
+            $rawLower -match '(^|\s)\./\S*(mm|or)-research\.sh') {
+        $isResearch = $true   # bash/sh/./ ... mm/or-research.sh
     }
     if (-not $isResearch) {
         # Firecrawl-MCP-Tool? tool_name via JSON (best effort) + raw-Fallback
@@ -39,8 +45,7 @@ try {
     }
 
     # --- Keine Freigabe -> DENY (spec-konform, exit 0 + JSON; §16.1, §1.6) ---
-    $tmp = $env:TEMP
-    $reason = "RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl+MiniMax M3 (max Thinking), B=MiniMax+parallel (max Thinking), C=Opus-Schwarm, D=Freitext. Nach Wahl A oder B die Freigabe setzen (Bash): touch '$tmp/research-approved.flag' (gilt 30 Min), dann den Aufruf erneut starten. Bei C laeuft KEIN mm/or-research (Opus-Researcher stattdessen)."
+    $reason = 'RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl+MiniMax M3 (max Thinking), B=MiniMax+parallel (max Thinking), C=Opus-Schwarm, D=Freitext. Nach Wahl A oder B die Freigabe im Bash-Tool setzen: touch "$TEMP/research-approved.flag" (gilt 30 Min), dann den Aufruf erneut starten. Bei C laeuft KEIN mm/or-research (Opus-Researcher stattdessen).'
     $deny = @{ hookSpecificOutput = @{ hookEventName = "PreToolUse"; permissionDecision = "deny"; permissionDecisionReason = $reason } }
     Write-Output ($deny | ConvertTo-Json -Depth 5 -Compress)
     exit 0

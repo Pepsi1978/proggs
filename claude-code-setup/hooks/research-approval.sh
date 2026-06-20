@@ -16,11 +16,16 @@ if [ -z "$raw" ]; then exit 0; fi   # kein Input -> normaler Flow (FAIL-OPEN)
 
 raw_lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
 
-# --- Research-Erkennung (raw-substring; KEIN jq, umgeht §16.2-Control-Char-Bypass) ---
+# --- Research-Erkennung: NUR echte AUSFUEHRUNG, nicht blosse Erwaehnung ---
+# (sonst wuerden git add / grep / cat / py_compile auf den Dateinamen faelschlich blockiert).
+# KEIN jq (umgeht §16.2-Control-Char-Bypass). POSIX-ERE ohne \b (BSD-libc-portabel).
 is_research=0
-case "$raw_lower" in
-  *mm-research.py*|*or-research.py*|*mm-research.sh*|*or-research.sh*) is_research=1 ;;
-esac
+if [[ "$raw_lower" =~ python[0-9.]*[[:space:]]+(-[a-z][^[:space:]]*[[:space:]]+)*[^[:space:]]*(mm|or)-research\.py ]]; then
+  is_research=1   # python ... <pfad>mm/or-research.py  (NICHT 'python -m py_compile datei.py')
+elif [[ "$raw_lower" =~ (^|[[:space:]])(bash|sh)[[:space:]]+[^[:space:]]*(mm|or)-research\.sh ]] \
+  || [[ "$raw_lower" =~ (^|[[:space:]])\./[^[:space:]]*(mm|or)-research\.sh ]]; then
+  is_research=1   # bash/sh/./ ... mm/or-research.sh
+fi
 if [ "$is_research" -eq 0 ]; then
   # Firecrawl-MCP-Tool? tool_name via python3 (NIE jq, §16.2) + raw-Fallback
   tn="$(printf '%s' "$raw" | python3 -c 'import sys,json
