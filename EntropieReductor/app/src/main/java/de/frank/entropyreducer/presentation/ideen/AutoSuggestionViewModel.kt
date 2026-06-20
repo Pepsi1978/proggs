@@ -8,16 +8,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
 import de.frank.entropyreducer.data.kiTaskSuggestionStore
+import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
+import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
-import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * Agentic Auto-Suggestion: Wird bei JEDER neuen Idee automatisch aufgerufen.
@@ -30,6 +31,7 @@ class AutoSuggestionViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val generateSuggestions: GenerateSuggestionsUseCase,
     private val taskSuggestionDao: TaskSuggestionDao,
+    private val habitSuggestionDao: HabitSuggestionDao,
 ) : ViewModel() {
 
     /**
@@ -60,9 +62,9 @@ class AutoSuggestionViewModel @Inject constructor(
                     storeKiTaskSuggestions(result.tasks)
                 }
 
-                // Habits speichern
+                // Habits speichern (ab Etappe 3c/3d in Room mit Herkunft)
                 if (result.habits.isNotEmpty()) {
-                    storeHabitSuggestions(habitStore, result.habits)
+                    storeHabitSuggestions(result.habits)
                 }
 
                 // Beide processedIds aktualisieren
@@ -78,8 +80,6 @@ class AutoSuggestionViewModel @Inject constructor(
         androidx.datastore.preferences.core.stringPreferencesKey("processed_idea_ids")
     private val HABIT_PROCESSED_KEY =
         androidx.datastore.preferences.core.stringPreferencesKey("habit_processed_idea_ids")
-    private val SUGGESTIONS_KEY =
-        androidx.datastore.preferences.core.stringPreferencesKey("suggestions_json")
 
     private suspend fun loadProcessedIds(
         store: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
@@ -132,35 +132,21 @@ class AutoSuggestionViewModel @Inject constructor(
     }
 
     private suspend fun storeHabitSuggestions(
-        store: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
-        newSuggestions: List<Mental>,
+        newSuggestions: List<AutoHabitSuggestion>,
     ) {
-        store.edit { prefs ->
-            val raw = prefs[SUGGESTIONS_KEY]
-            val existing = parseHabitJson(raw)
-            prefs[SUGGESTIONS_KEY] = serializeHabitJson(existing + newSuggestions)
-        }
-    }
-
-    private fun parseHabitJson(raw: String?): List<Mental> {
-        if (raw.isNullOrBlank()) return emptyList()
-        return runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                    add(Mental(id = id, text = o.optString("text")))
-                }
+        // Ab ID-Architektur Etappe 3c/3d in Room (habit_suggestions) mit Herkunft der Quell-Idee.
+        val nowMs = System.currentTimeMillis()
+        habitSuggestionDao.upsertAll(
+            newSuggestions.mapIndexed { index, s ->
+                HabitSuggestionEntity(
+                    id = s.id,
+                    text = s.text,
+                    createdAt = nowMs + index,
+                    originId = s.originId,
+                    originType = s.originType,
+                    rootId = s.rootId,
+                )
             }
-        }.getOrDefault(emptyList())
-    }
-
-    private fun serializeHabitJson(items: List<Mental>): String {
-        val arr = JSONArray()
-        for (m in items) {
-            arr.put(JSONObject().put("id", m.id).put("text", m.text))
-        }
-        return arr.toString()
+        )
     }
 }

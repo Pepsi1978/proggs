@@ -106,7 +106,15 @@ internal fun gewohnheitenFlow(context: Context): Flow<List<Mental>> =
 internal fun gewohnheitenFromJsonFlow(context: Context): Flow<List<Mental>> =
     context.gewohnheitStore.data.map { prefs -> parseGewohnheiten(prefs[KEY_GEWOHNHEITEN]) }
 
-internal suspend fun addGewohnheit(context: Context, text: String) {
+internal suspend fun addGewohnheit(
+    context: Context,
+    text: String,
+    // ID-Architektur Etappe 3d: Herkunft, falls die Gewohnheit aus einem Vorgaenger entsteht
+    // (angenommener Gewohnheits-Vorschlag). Default null = direkt eingegebene Gewohnheit.
+    originId: String? = null,
+    originType: String? = null,
+    rootId: String? = null,
+) {
     val clean = text.trim()
     if (clean.isEmpty()) return
     val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
@@ -117,9 +125,29 @@ internal suspend fun addGewohnheit(context: Context, text: String) {
             text = m.text,
             updatedAt = m.updatedAt,
             position = dao.maxPosition() + 1, // neue Gewohnheit ans Ende
+            originId = originId,
+            originType = originType,
+            rootId = rootId,
         )
     )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Gewohnheit-Reiter: Aenderung")
+}
+
+/**
+ * Nimmt einen Gewohnheits-Vorschlag an -> legt eine Gewohnheit MIT Herkunft an (Etappe 3d), damit
+ * die Kette Idee -> Gewohnheits-Vorschlag -> Gewohnheit luckenlos ist. rootId erbt die urspruengliche
+ * Idee. Den Vorschlag selbst entfernt der Aufrufer separat (suggestVm.acceptSuggestion).
+ */
+internal suspend fun addGewohnheitFromSuggestion(context: Context, suggestionId: String, text: String) {
+    val sug = de.frank.entropyreducer.data.local.habitSuggestionDaoFrom(context).getById(suggestionId)
+    addGewohnheit(
+        context,
+        text,
+        originId = sug?.id,
+        originType =
+            sug?.let { de.frank.entropyreducer.data.local.entities.OriginType.HABIT_SUGGESTION },
+        rootId = sug?.rootId ?: sug?.id,
+    )
 }
 
 internal suspend fun updateGewohnheit(context: Context, id: String, text: String) {
@@ -455,7 +483,7 @@ fun GewohnheitBoardScreen(
                                         isDragging = isDragging,
                                         onAccept = {
                                             scope.launch {
-                                                addGewohnheit(context, item.mental.text)
+                                                addGewohnheitFromSuggestion(context, item.mental.id, item.mental.text)
                                                 suggestVm.acceptSuggestion(item.mental.id)
                                             }
                                         },
@@ -473,7 +501,7 @@ fun GewohnheitBoardScreen(
                                                     if (sepIdx >= 0 && itemIdx in 0 until sepIdx) {
                                                         // Promotion: Vorschlag → Gewohnheit
                                                         scope.launch {
-                                                            addGewohnheit(context, item.mental.text)
+                                                            addGewohnheitFromSuggestion(context, item.mental.id, item.mental.text)
                                                             suggestVm.acceptSuggestion(item.mental.id)
                                                         }
                                                     }

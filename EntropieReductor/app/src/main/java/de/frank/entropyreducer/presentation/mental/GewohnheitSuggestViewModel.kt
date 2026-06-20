@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
+import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
 import javax.inject.Inject
@@ -108,13 +109,20 @@ class GewohnheitSuggestViewModel @Inject constructor(
         }
     }
 
-    private fun storeSuggestions(newSuggestions: List<Mental>) {
+    private fun storeSuggestions(newSuggestions: List<AutoHabitSuggestion>) {
         viewModelScope.launch {
-            // Herkunft (originId/originType/rootId) wird erst in Etappe 3d gesetzt (Idee -> Vorschlag).
+            // ID-Architektur Etappe 3d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
             val nowMs = System.currentTimeMillis()
             habitSuggestionDao.upsertAll(
-                newSuggestions.mapIndexed { index, m ->
-                    HabitSuggestionEntity(id = m.id, text = m.text, createdAt = nowMs + index)
+                newSuggestions.mapIndexed { index, s ->
+                    HabitSuggestionEntity(
+                        id = s.id,
+                        text = s.text,
+                        createdAt = nowMs + index,
+                        originId = s.originId,
+                        originType = s.originType,
+                        rootId = s.rootId,
+                    )
                 }
             )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(

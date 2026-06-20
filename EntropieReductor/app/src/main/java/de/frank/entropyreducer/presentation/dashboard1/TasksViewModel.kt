@@ -32,7 +32,6 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
-import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -291,7 +290,8 @@ class TasksViewModel @Inject constructor(
                     storeKiTaskSuggestions(context, result.tasks)
                 }
                 if (result.habits.isNotEmpty()) {
-                    storeHabitSuggestions(habitStore, result.habits)
+                    // Ab ID-Architektur Etappe 3c/3d in Room (habit_suggestions) mit Herkunft.
+                    storeHabitSuggestions(context, result.habits)
                 }
                 saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
                 saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
@@ -1234,28 +1234,24 @@ private suspend fun saveProcessedIds(
 }
 
 private suspend fun storeHabitSuggestions(
-    store: DataStore<Preferences>,
-    newSuggestions: List<Mental>,
+    context: android.content.Context,
+    newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion>,
 ) {
-    val key = stringPreferencesKey("suggestions_json")
-    store.edit { prefs ->
-        val raw = prefs[key]
-        val existing = if (raw.isNullOrBlank()) emptyList()
-        else runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val id = o.optString("id").takeIf { it.isNotBlank() } ?: continue
-                    add(Mental(id = id, text = o.optString("text")))
-                }
+    // ID-Architektur Etappe 3c/3d (Frank-Wunsch 2026-06-19): Gewohnheits-Vorschlaege in Room
+    // (habit_suggestions) statt im DataStore-JSON, mit Herkunft der Quell-Idee.
+    val nowMs = System.currentTimeMillis()
+    de.frank.entropyreducer.data.local
+        .habitSuggestionDaoFrom(context)
+        .upsertAll(
+            newSuggestions.mapIndexed { index, s ->
+                de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity(
+                    id = s.id,
+                    text = s.text,
+                    createdAt = nowMs + index,
+                    originId = s.originId,
+                    originType = s.originType,
+                    rootId = s.rootId,
+                )
             }
-        }.getOrDefault(emptyList())
-        val combined = existing + newSuggestions
-        val arr = JSONArray()
-        for (m in combined) {
-            arr.put(JSONObject().put("id", m.id).put("text", m.text))
-        }
-        prefs[key] = arr.toString()
-    }
+        )
 }

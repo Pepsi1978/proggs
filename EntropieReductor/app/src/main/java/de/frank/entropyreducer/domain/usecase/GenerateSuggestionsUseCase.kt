@@ -11,7 +11,6 @@ import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.presentation.ideen.IdeenEntry
-import de.frank.entropyreducer.presentation.mental.Mental
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -43,11 +42,23 @@ data class AutoTaskSuggestion(
 }
 
 /**
+ * Gewohnheits-Vorschlag mit Herkunft (ID-Architektur Etappe 3d, analog [AutoTaskSuggestion]).
+ * originId/originType/rootId = die Quell-Idee; null, wenn die KI keine (gueltige) sourceIndex lieferte.
+ */
+data class AutoHabitSuggestion(
+    val id: String,
+    val text: String,
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
+)
+
+/**
  * Kombiniertes Ergebnis: Aufgaben UND Gewohnheiten aus EINEM Gemini-Aufruf.
  */
 data class SuggestionResult(
     val tasks: List<AutoTaskSuggestion>,
-    val habits: List<Mental>,
+    val habits: List<AutoHabitSuggestion>,
 )
 
 // ============================================================================
@@ -162,12 +173,23 @@ class GenerateSuggestionsUseCase @Inject constructor(
                 }
             }
 
-            // Habits parsen
+            // Habits parsen — Herkunft (Etappe 3d) ueber sourceIndex an die Quell-Idee binden.
             val habitsArr = obj.optJSONArray("habits") ?: JSONArray()
             val habits = buildList {
                 for (i in 0 until habitsArr.length()) {
-                    val text = habitsArr.optString(i).trim()
-                    if (text.isNotBlank()) add(Mental.create(text))
+                    val o = habitsArr.optJSONObject(i) ?: continue
+                    val text = o.optString("text").takeIf { it.isNotBlank() } ?: continue
+                    val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
+                    val sourceIdea = newIdeas.getOrNull(sourceIdx)
+                    add(
+                        AutoHabitSuggestion(
+                            id = java.util.UUID.randomUUID().toString(),
+                            text = text,
+                            originId = sourceIdea?.id,
+                            originType = sourceIdea?.let { OriginType.IDEA },
+                            rootId = sourceIdea?.id,
+                        )
+                    )
                 }
             }
 
@@ -192,7 +214,7 @@ Du bist ein exakter Filter. Du bekommst eine LISTE nummerierter Ideen (jede Zeil
 2. Eine GEWOHNHEIT muss ein klares Wiederholungssignal enthalten. Ohne dieses Signal ist es NIEMALS eine Gewohnheit.
 3. Wenn du unsicher bist, ordne die Idee NICHTS zu (also weder in tasks noch in habits).
 4. Du fügst NICHTS hinzu und lässt NICHTS weg. Du erkennst nur und formulierst um.
-5. Bei jeder AUFGABE gibst du im Feld "sourceIndex" die Nummer der Idee an, aus der sie stammt.
+5. Bei jeder AUFGABE und jeder GEWOHNHEIT gibst du im Feld "sourceIndex" die Nummer der Idee an, aus der sie stammt.
 
 === ENTSCHEIDUNGSLOGIK ===
 Prüfe die Idee streng in dieser Reihenfolge:
@@ -246,7 +268,7 @@ Antworte NUR mit diesem JSON. Keine Einleitung, keine Erklärung, keine Code-Kla
 "sourceIndex" ist die Nummer der Idee (aus der Eingabe "Nummer: Text"), aus der die Aufgabe stammt:
 {
   "tasks": [{"title": "...", "description": "...", "sourceIndex": 0}],
-  "habits": ["Gewohnheit 1"]
+  "habits": [{"text": "Gewohnheit 1", "sourceIndex": 0}]
 }
 Wenn keine Aufgabe: "tasks": []
 Wenn keine Gewohnheit: "habits": []
