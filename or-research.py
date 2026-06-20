@@ -111,10 +111,12 @@ def main():
     if cites:
         print("\n=== Web-Quellen ===\n" + "\n".join(dict.fromkeys(cites)))
     u = d.get("usage", {})
-    searches = (u.get("server_tool_use") or {}).get("web_search_requests")
+    stu = u.get("server_tool_use_details") or u.get("server_tool_use") or {}
+    searches = stu.get("web_search_requests")
+    cost = u.get("cost")
     print(f"\n--- OpenRouter: {searches} Web-Suchen | Token in {u.get('prompt_tokens')} / out "
-          f"{u.get('completion_tokens')} | {model}, engine={engine} | Roh: ~/.or-research/answer.json ---",
-          file=sys.stderr)
+          f"{u.get('completion_tokens')} | Kosten ${cost} | {model}, engine={engine} "
+          f"| Roh: ~/.or-research/answer.json ---", file=sys.stderr)
     return 0
 
 

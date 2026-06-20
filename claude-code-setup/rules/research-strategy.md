@@ -61,6 +61,12 @@ nicht pro 1000!), inkl. bis 10 Treffer; >10 +$0.001/Treffer (max 25). „Treffer
 Modell kann agentisch mehrfach suchen (je $0.005, mit `max_total_results` deckelbar). Grob ~$0.008 pro
 Recherche-Anfrage mit MiniMax M3 (≪ 1 Cent). 7-Researcher-Lauf ≈ $0.12 (vs. Opus-Researcher ≈ $7+).
 
+**LIVE-Test 2026-06-20 (MiniMax M3 + engine=parallel):** Das Modell suchte **agentisch 10× selbst** (nicht 1×)
+→ real **$0.069**, 49 Quellen, korrekte+ehrliche Antwort (korrekter als der Opus-Researcher, der beim
+Schema falsch lag). **Lehre:** agentische Mehrfachsuche treibt die Kosten — `max_total_results`/`max_results`
+als Deckel setzen (or-research.py: env `OR_MAX_TOTAL`, Default 20). **M3-Thinking = `adaptive`** (der dokumentierte
+Schalter; `budget_tokens` wird ignoriert); ueber OpenRouter via `reasoning:{effort:high}` (lief, 3.578 reasoning-Token).
+
 ---
 
 ## 3. Firecrawl Free — max 2 Researcher PARALLEL (nicht 7!)
