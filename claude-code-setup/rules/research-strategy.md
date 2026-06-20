@@ -54,9 +54,9 @@ nicht im Claude-Kontext). Mechanik/Fallen: `best-practices/opencode/go-recherche
 | Werkzeug | Suche | Inhalt | Kosten | Parallelitaet | Wann |
 |----------|-------|--------|--------|---------------|------|
 | `mm-research.py` | Firecrawl | **volle Seiten** (Scrape) | Free **1000/Mon** (knapp) | **max 2** (Free) | tiefe Einzelrecherche, solange Credits da |
-| `or-research.py` | OpenRouter `:online` (Exa) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | hoch (OpenRouter-Limits ≫ 2) | **grosse Schwaerme** (7 Researcher), Eskalation, wenn Firecrawl-Credits knapp |
+| `or-research.py` | OpenRouter `web_search` server-tool (Exa/Parallel) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | hoch (OpenRouter-Limits ≫ 2) | **grosse Schwaerme** (7 Researcher), Eskalation, wenn Firecrawl-Credits knapp |
 
-**Kosten `:online` (verifiziert 2026-06-20, openrouter.ai/docs):** $0.005 PRO Such-Anfrage (nicht pro Seite,
+**Kosten Web-Suche (Server-Tool `openrouter:web_search`; das alte `:online`-Plugin/`plugins:[{id:web}]` ist DEPRECATED) — verifiziert 2026-06-20, openrouter.ai/docs:** $0.005 PRO Such-Anfrage (nicht pro Seite,
 nicht pro 1000!), inkl. bis 10 Treffer; >10 +$0.001/Treffer (max 25). „Treffer" = Snippet, nicht Volltext.
 Modell kann agentisch mehrfach suchen (je $0.005, mit `max_total_results` deckelbar). Grob ~$0.008 pro
 Recherche-Anfrage mit MiniMax M3 (≪ 1 Cent). 7-Researcher-Lauf ≈ $0.12 (vs. Opus-Researcher ≈ $7+).
@@ -87,15 +87,15 @@ Frank ausdruecklich gruendlicher will:
 ```
 Stufe A:  MiniMax M3 (max Thinking) auf Firecrawl-Quellen          ← Standard (mm-research.py); Free-Credits
    ↓ reicht nicht
-Stufe B:  1M-Modell + OpenRouter ":online" (Exa-Websuche)          ← or-research.py; pay-per-use, kein Monatslimit
+Stufe B:  1M-Modell + OpenRouter web_search server-tool           ← or-research.py; pay-per-use, kein Monatslimit
    ↓ reicht nicht
 Stufe C:  Opus-Researcher (mit Web) / Opus direkt                   ← teuerste Stufe, nur Hard-Cases
 ```
 
-**Stufe B = `or-research.py`** (OpenRouter `<modell>:online`): ein **1M-Kontext-Modell** mit eigener
+**Stufe B = `or-research.py`** (OpenRouter Server-Tool `openrouter:web_search`): ein **1M-Kontext-Modell** mit eigener
 Websuche (Exa-Snippets, ANDERE Suchquelle als Firecrawl = Diversitaet). **Perplexity ist RAUS** —
 nur 200k Kontext, bricht bei grossen Recherchen (genau der Grund fuer Opus-1M bei Schwaermen).
-**Modell-Default:** `minimax/minimax-m3:online` (guenstig); **Eskalation:** `z-ai/glm-5.2:online`
+**Modell-Default:** `minimax/minimax-m3` (guenstig); **Eskalation:** `z-ai/glm-5.2`
 (mehr Denkkraft). Welches final, noch per Test zu bestaetigen (Lehre: erst testen, dann verankern).
 
 ---

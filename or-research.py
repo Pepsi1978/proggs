@@ -1,31 +1,38 @@
 #!/usr/bin/env python3
-"""or-research.py — Recherche-Pipeline ueber OpenRouter mit eingebauter Websuche (das ":online"-Plugin
-ins CLI portiert). Ein 1M-Kontext-Modell sucht SELBST im Web (Exa) und wertet aus; Claude/Opus bekommt
-nur die kompakte, quellengestuetzte Antwort.
+"""or-research.py — Recherche-Pipeline ueber OpenRouter mit eingebauter Websuche (Server-Tool
+"openrouter:web_search"). Ein 1M-Kontext-Modell sucht SELBST im Web und wertet aus; Claude/Opus
+bekommt nur die kompakte, quellengestuetzte Antwort.
+
+WICHTIG (Stand 2026-06-20): Das alte ":online"-Plugin / `plugins:[{id:"web"}]` ist DEPRECATED.
+Dieses Skript nutzt den neuen Weg: `tools:[{"type":"openrouter:web_search", "parameters":{...}}]`.
+Das Modell entscheidet selbst, ob/wie oft es sucht (0..N Suchen pro Request, mit max_total_results gedeckelt).
 
 Unterschied zu mm-research.py:
-  - mm-research.py: Firecrawl (Free 1000/Mon, voller Scrape) -> MiniMax M3 (Go-Abo) wertet aus.
-  - or-research.py: OpenRouter <modell>:online (Exa-Suche, pay-per-use, KEIN Monatslimit) -> ein Call,
-    Modell sucht + wertet selbst aus. Ideal als Eskalations-Stufe B (1M + native Websuche) ODER wenn
-    Firecrawl-Credits knapp sind.
+  - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> MiniMax M3 (Go-Abo) wertet aus.
+  - or-research.py: OpenRouter web_search server tool (Snippets) -> ein Call; Modell sucht + wertet
+    selbst aus. Pay-per-use, KEIN Monatslimit. Ideal als Eskalations-Stufe B (1M + Websuche) ODER
+    fuer grosse Schwaerme (kein 2-parallel-Limit wie Firecrawl).
 
 Verwendung:
-    python3 or-research.py "deine Recherche-Frage" [modell] [web_results]
+    python3 or-research.py "deine Recherche-Frage" [modell] [engine]
     Default-Modell: minimax/minimax-m3 (1M, guenstig). Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
-    OR_WEB_RESULTS (env, optional): Anzahl Web-Treffer (Default 5; max 25).
+    Engine (3. Arg oder env OR_ENGINE): auto (default) | exa | parallel | perplexity | native | firecrawl.
+      - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total.
+      - "auto" nutzt native Provider-Suche, falls das Modell sie hat, sonst Exa.
+    OR_MAX_RESULTS (env, Default 5; 1-25) Treffer pro Suche; OR_MAX_TOTAL (env, Default 20) Treffer-Deckel
+    ueber alle Suchen eines Requests (Kostenbremse fuer agentische Mehrfachsuche).
 
-Kosten (offizielle Doku, Stand 2026-06-20): Exa/Parallel = $0.005 PRO SUCH-ANFRAGE (inkl. bis 10 Treffer),
-darueber +$0.001/Treffer. PLUS normale Modell-Token fuer die Treffer-Snippets (je ~2-4k Zeichen, KEINE
-ganzen Seiten). Ein Modell kann agentisch MEHRMALS suchen (je $0.005) — mit max_total_results deckelbar.
-Grobe Hausnummer pro Recherche-Anfrage mit MiniMax M3: ~$0.008 (deutlich unter 1 Cent). KEIN Monatslimit
-(Unterschied zu Firecrawl). Fuer volle Seiten-Scrapes statt Snippets -> mm-research.py (Firecrawl).
+Kosten (offizielle Doku 2026-06-20, openrouter.ai/docs server-tools/web-search):
+    Exa/Parallel = $0.005 PRO Such-Anfrage (inkl. bis 10 Treffer), darueber +$0.001/Treffer (max 25).
+    Perplexity = $0.005/Anfrage. Firecrawl = eigene Credits (BYOK). Native = vom Provider durchgereicht.
+    PLUS normale Modell-Token fuer die Treffer-Snippets. "Treffer" = Snippet (Exa-Highlight ~2-4k Zeichen),
+    KEINE ganze Seite. usage.server_tool_use.web_search_requests zaehlt die tatsaechlichen Suchen.
 
 Key: ~/SK/ClaudeCodeOpenRouter/openrouter.key (sk-or-v1-Zeile wird extrahiert; Datei darf Header haben).
+Ausgabe: kompakte Antwort + Quellen auf stdout; volle Roh-Antwort in ~/.or-research/answer.json.
 
-Ausgabe: kompakte Antwort + Quellen auf stdout; volle Roh-Antwort in ~/.or-research/ (nicht im Claude-Kontext).
-
-Plattformuebergreifend (Windows+macOS), nur Standardbibliothek (urllib). Beachtet die python-windows-
-Regeln (encoding='utf-8', ensure_ascii=False, expanduser, stdout.reconfigure) und setzt einen User-Agent.
+Plattformuebergreifend (Windows+macOS), nur Standardbibliothek (urllib). Beachtet python-windows-Regeln
+(encoding='utf-8', ensure_ascii=False, expanduser, stdout.reconfigure) + User-Agent (Cloudflare).
 """
 import json
 import os
@@ -60,20 +67,25 @@ def main():
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
     model = sys.argv[2] if len(sys.argv) > 2 else "minimax/minimax-m3"
-    web_results = int(sys.argv[3]) if len(sys.argv) > 3 else int(os.environ.get("OR_WEB_RESULTS", "5"))
+    engine = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OR_ENGINE", "auto")
+    max_results = int(os.environ.get("OR_MAX_RESULTS", "5"))
+    max_total = int(os.environ.get("OR_MAX_TOTAL", "20"))
     os.makedirs(OUTDIR, exist_ok=True)
     key = _read_key()
 
-    prompt = ("Recherchiere die folgende Frage im Web und beantworte sie quellentreu. Nutze AUSSCHLIESSLICH "
-              "das, was du in den Webquellen findest; wenn etwas unklar/widerspruechlich ist oder fehlt, "
-              "sage das ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle (URL).\n\nFRAGE: " + query)
+    prompt = ("Recherchiere die folgende Frage im Web (nutze dein Websuche-Tool) und beantworte sie "
+              "quellentreu. Verwende AUSSCHLIESSLICH das, was du in den Webquellen findest; wenn etwas "
+              "unklar/widerspruechlich ist oder fehlt, sage das ausdruecklich — erfinde nichts. Nenne pro "
+              "Aussage die Quelle (URL).\n\nFRAGE: " + query)
+    web_params = {"engine": engine, "max_results": max_results, "max_total_results": max_total}
     body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "plugins": [{"id": "web", "max_results": web_results}],  # = ":online", aber mit Treffer-/Kostenkontrolle
-        "reasoning": {"effort": "high"},                          # max Thinking (vom Modell ignoriert, falls nicht unterstuetzt)
+        "tools": [{"type": "openrouter:web_search", "parameters": web_params}],
+        "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
-    print(f"[or-research] Modell {model}:online, {web_results} Web-Treffer — Frage: {query!r}", file=sys.stderr)
+    print(f"[or-research] {model} | engine={engine} | max_results={max_results} total={max_total} — {query!r}",
+          file=sys.stderr)
     try:
         d = _post(OR_URL,
                   {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
@@ -88,7 +100,6 @@ def main():
         json.dump(d, fh, ensure_ascii=False)
     msg = (d.get("choices") or [{}])[0].get("message", {})
     text = msg.get("content") or ""
-    # Web-Zitate (annotations) einsammeln
     cites = []
     for a in msg.get("annotations", []) or []:
         u = (a.get("url_citation") or {})
@@ -100,8 +111,10 @@ def main():
     if cites:
         print("\n=== Web-Quellen ===\n" + "\n".join(dict.fromkeys(cites)))
     u = d.get("usage", {})
-    print(f"\n--- OpenRouter-Token: prompt {u.get('prompt_tokens')} + completion {u.get('completion_tokens')} "
-          f"| Modell {model}:online | volle Antwort in ~/.or-research/answer.json ---", file=sys.stderr)
+    searches = (u.get("server_tool_use") or {}).get("web_search_requests")
+    print(f"\n--- OpenRouter: {searches} Web-Suchen | Token in {u.get('prompt_tokens')} / out "
+          f"{u.get('completion_tokens')} | {model}, engine={engine} | Roh: ~/.or-research/answer.json ---",
+          file=sys.stderr)
     return 0
 
 
