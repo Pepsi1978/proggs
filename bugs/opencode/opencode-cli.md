@@ -923,6 +923,14 @@ Bei heiklen Fakten zweite Meinung (Kimi K2.6) oder gegen Opus eskalieren.
 **FIX:** Schema des Modells prüfen (Go: MiniMax/Qwen = Anthropic `/messages`; DeepSeek/GLM/Kimi/MiMo = OpenAI `/chat/completions`). MiniMax M3 denkt am Anthropic-Endpunkt **nativ** (kein Pflicht-Parameter); `options.thinking.budgetTokens` setzt nur das Budget. Response: Anthropic → `type:"thinking"`-Blöcke im Content (müssen in der History bleiben); OpenAI-Schema → `reasoning_details` (bei `reasoning_split=true`) bzw. `<think>`-Tags.
 **Quelle:** https://opencode.ai/docs/models/ · https://platform.minimax.io/docs/guides/text-m3-function-call
 
+### 14.6 ⭐ Direkter Go-API-Call: `/messages` braucht `x-api-key` (nicht Bearer) + TUI-Thinking-Anzeige-Bug
+**Symptom A:** Direkter HTTP-POST an `https://opencode.ai/zen/go/v1/messages` (MiniMax/Qwen, Anthropic-Schema) liefert `{"error":{"type":"AuthError","message":"Missing API key"}}`, obwohl `GET /models` mit demselben Key (Bearer) HTTP 200 gibt.
+**Ursache:** Der Anthropic-Endpoint `/messages` akzeptiert **nur** den Header `x-api-key: <key>` (+ `anthropic-version`). `Authorization: Bearer` funktioniert NUR bei `/models` und dem OpenAI-Endpoint `/chat/completions`. (LIVE verifiziert 2026-06-20.)
+**Versionen:** OpenCode Go Gateway, Stand 2026-06.
+**FIX:** Schema-passenden Header nutzen: Anthropic `/messages` → `x-api-key`; OpenAI `/chat/completions` + `/models` → `Authorization: Bearer`. Thinking am `/messages`-Endpoint: `"thinking":{"type":"enabled","budget_tokens":N}` (max_tokens > budget_tokens); Antwort enthält `content`-Blöcke `type:"thinking"` + `type:"text"`.
+**Symptom B (TUI):** In der OpenCode-TUI wird MiniMax-M3-Thinking seit ~09.06.2026 nicht mehr angezeigt (Issue #31569; ähnlich M2.7 #22684, M2.5 #20782). Der **direkte API-Call liefert das Thinking aber weiterhin** — es ist nur die TUI-Anzeige.
+**Quelle:** Live-curl-Test 2026-06-20 · https://github.com/anomalyco/opencode/issues/31569
+
 ---
 
 ## Quellen (Auswahl)

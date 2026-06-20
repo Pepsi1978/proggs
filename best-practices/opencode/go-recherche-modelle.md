@@ -171,6 +171,28 @@ permission:
 ```
 Aufruf: `@researcher <Frage>`. Thinking-Blöcke kommen als `type:"thinking"` zurück (TUI: `/thinking` toggelt die Anzeige). `permission` statt `tools` (letzteres deprecated); Firecrawl-MCP-Tools sind per Default erlaubt.
 
+**4) Direkter Go-API-Aufruf — LIVE verifiziert 2026-06-20 (curl):** Man kann das Go-Gateway auch ausserhalb
+von OpenCode direkt per HTTP ansprechen (z.B. aus einem Skript/Bash-Tool heraus, das ein laufender Agent aufruft).
+- **baseURL:** `https://opencode.ai/zen/go/v1` · Discovery: `GET /models` (Bearer ODER x-api-key, beide OK).
+- **MiniMax M3 = Anthropic-Schema** `POST /messages` — ⚠ **braucht `x-api-key: <go-key>`**; `Authorization: Bearer`
+  wird hier mit „Missing API key" abgelehnt (anders als bei `/models`/`/chat/completions`). Header zusätzlich
+  `anthropic-version: 2023-06-01`, `content-type: application/json`.
+- **Thinking** über die API: `"thinking": {"type":"enabled","budget_tokens":N}` (Anthropic-Stil; max Thinking = hohes
+  `budget_tokens`, `max_tokens` MUSS größer sein). Antwort enthält `content`-Blöcke `type:"thinking"` + `type:"text"`.
+  Live-getestet: budget 24000 → ~2.800–13.600 Zeichen Thinking, sauber zurückgeliefert.
+- **Alternativ OpenAI-Schema** `POST /chat/completions` (`Authorization: Bearer`): minimax-m3 geht auch hier,
+  Thinking kommt nativ als `<think>…</think>` im `content`; `reasoning_split=true` (extra_body) trennt es in `reasoning_details`.
+- Key zentral in `~/SK/OpenCode/go-api-key.txt`. Windows-Falle: Body per **stdin-Pipe** an `curl --data-binary @-`
+  und Response per Bash-Redirect (kein `curl -o /tmp/...` — Git-Bash-`/tmp` ≠ native-curl-Pfad); Python-Parsing mit `os.path.expanduser`, NIE `/c/Users/...`.
+
+```bash
+KEY=$(tr -d '[:space:]' < ~/SK/OpenCode/go-api-key.txt)
+python3 -c 'import json,sys; sys.stdout.write(json.dumps({"model":"minimax-m3","max_tokens":30000,"thinking":{"type":"enabled","budget_tokens":24000},"messages":[{"role":"user","content":"<frage + ggf. firecrawl-quellen>"}]}))' \
+| curl -s https://opencode.ai/zen/go/v1/messages -H "x-api-key: $KEY" -H "content-type: application/json" -H "anthropic-version: 2023-06-01" --data-binary @- > ~/out.json
+```
+
+⚠️ OpenCode-TUI-Bug #31569: in der TUI wird MiniMax-M3-Thinking aktuell evtl. NICHT angezeigt — der **API-Call liefert es trotzdem** (siehe Almanach §14).
+
 ---
 
 ## 6. Quellen (Stand 2026-06-20)
