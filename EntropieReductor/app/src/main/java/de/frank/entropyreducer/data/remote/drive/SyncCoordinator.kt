@@ -246,6 +246,7 @@ constructor(
                 BackupTagebuchEntry(
                     id = e.id,
                     timestampMs = e.timestampMs,
+                    updatedAt = e.updatedAt,
                     title = e.title,
                     text = e.text,
                     summary = e.summary,
@@ -288,6 +289,7 @@ constructor(
                 BackupThesenEntry(
                     id = e.id,
                     timestampMs = e.timestampMs,
+                    updatedAt = e.updatedAt,
                     title = e.title,
                     text = e.text,
                     summary = e.summary,
@@ -372,6 +374,7 @@ constructor(
                     BackupIdeenEntry(
                         id = e.id,
                         timestampMs = e.timestampMs,
+                        updatedAt = e.updatedAt,
                         title = e.title,
                         text = e.text,
                         summary = e.summary,

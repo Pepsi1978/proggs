@@ -350,6 +350,9 @@ data class BackupPromptTrigger(
 data class BackupThesenEntry(
     val id: String,
     val timestampMs: Long,
+    // Edit-Sync (Phase B 2026-06-20): letzter Bearbeitungszeitpunkt fuer Last-Write-Wins. Default 0L
+    // fuer abwaertskompatibles Lesen alter Backups (ignoreUnknownKeys); Baseline-Fallback im Restore.
+    val updatedAt: Long = 0L,
     val title: String,
     val text: String,
     val summary: String? = null,
@@ -365,6 +368,9 @@ data class BackupThesenFollowup(val id: String, val createdAtMs: Long, val text:
 data class BackupTagebuchEntry(
     val id: String,
     val timestampMs: Long,
+    // Edit-Sync (Phase B 2026-06-20): letzter Bearbeitungszeitpunkt fuer Last-Write-Wins. Default 0L
+    // fuer abwaertskompatibles Lesen alter Backups (ignoreUnknownKeys); Baseline-Fallback im Restore.
+    val updatedAt: Long = 0L,
     val title: String,
     val text: String,
     val summary: String? = null,
@@ -384,6 +390,9 @@ data class BackupTagebuchFollowup(val id: String, val createdAtMs: Long, val tex
 data class BackupIdeenEntry(
     val id: String,
     val timestampMs: Long,
+    // Edit-Sync (Phase B 2026-06-20): letzter Bearbeitungszeitpunkt fuer Last-Write-Wins. Nullable
+    // wie die Room-Spalte ideas.updatedAt (Phase A); Baseline-Fallback timestampMs im Restore.
+    val updatedAt: Long? = null,
     val title: String,
     val text: String,
     val summary: String? = null,

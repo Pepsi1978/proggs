@@ -829,6 +829,13 @@ data class ThesenEntry(
      */
     val improvedText: String? = null,
     val isImproved: Boolean = false,
+    /**
+     * Zeitpunkt der letzten Bearbeitung (Edit-Sync, Phase B 2026-06-20). Wird bei jeder Aenderung
+     * am Eintrag (Text/Titel/Summary/Improved + Followup-Aenderungen) auf `now` gesetzt und treibt
+     * den geraeteuebergreifenden Last-Write-Wins im Restore. Bestand (alte Backups ohne Feld)
+     * faellt im Parser auf `timestampMs` als Baseline zurueck.
+     */
+    val updatedAt: Long = 0L,
 ) {
     companion object {
         fun create(text: String): ThesenEntry {
@@ -836,12 +843,14 @@ data class ThesenEntry(
             val firstLine = text.lineSequence().firstOrNull().orEmpty()
             val title =
                 if (firstLine.length <= 40) firstLine.trim() else firstLine.take(40).trim() + "…"
+            val now = System.currentTimeMillis()
             return ThesenEntry(
                 id = UUID.randomUUID().toString(),
-                timestampMs = System.currentTimeMillis(),
+                timestampMs = now,
                 title = title,
                 text = text,
                 followups = emptyList(),
+                updatedAt = now,
             )
         }
     }
@@ -938,6 +947,7 @@ internal suspend fun updateThesenEntry(
                     summary = summary ?: e.summary,
                     improvedText = improvedText ?: e.improvedText,
                     isImproved = isImproved ?: e.isImproved,
+                    updatedAt = System.currentTimeMillis(),
                 )
             } else {
                 e
@@ -968,7 +978,8 @@ internal suspend fun setThesenFollowupImproved(
                         if (f.id == followupId)
                             f.copy(improvedText = improvedText, isImproved = true)
                         else f
-                    }
+                    },
+                updatedAt = System.currentTimeMillis(),
             )
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
@@ -988,7 +999,9 @@ internal suspend fun addThesenFollowup(
     context.thesenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
-            if (e.id == entryId) e.copy(followups = e.followups + followup) else e
+            if (e.id == entryId)
+                e.copy(followups = e.followups + followup, updatedAt = System.currentTimeMillis())
+            else e
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
@@ -1007,7 +1020,8 @@ internal suspend fun updateThesenFollowup(
             if (e.id != entryId) return@map e
             e.copy(
                 followups =
-                    e.followups.map { f -> if (f.id == followupId) f.copy(text = newText) else f }
+                    e.followups.map { f -> if (f.id == followupId) f.copy(text = newText) else f },
+                updatedAt = System.currentTimeMillis(),
             )
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
@@ -1020,7 +1034,11 @@ internal suspend fun deleteThesenFollowup(context: Context, entryId: String, fol
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
             if (e.id != entryId) e
-            else e.copy(followups = e.followups.filterNot { it.id == followupId })
+            else
+                e.copy(
+                    followups = e.followups.filterNot { it.id == followupId },
+                    updatedAt = System.currentTimeMillis(),
+                )
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
@@ -1048,6 +1066,8 @@ private fun jsonToEntry(o: JSONObject): ThesenEntry =
         summary = o.optString("summary").takeIf { it.isNotBlank() },
         improvedText = o.optString("improvedText").takeIf { it.isNotBlank() },
         isImproved = o.optBoolean("isImproved", false),
+        // Edit-Sync: Bestand ohne updatedAt faellt auf ts (Erstellzeit) als Baseline zurueck.
+        updatedAt = o.optLong("updatedAt", o.optLong("ts")),
     )
 
 private fun jsonToFollowups(arr: JSONArray?): List<ThesenFollowup> {
@@ -1074,6 +1094,7 @@ private fun serializeEntries(entries: List<ThesenEntry>): String {
         val o = JSONObject()
         o.put("id", e.id)
         o.put("ts", e.timestampMs)
+        o.put("updatedAt", e.updatedAt)
         o.put("title", e.title)
         o.put("text", e.text)
         if (e.followups.isNotEmpty()) {

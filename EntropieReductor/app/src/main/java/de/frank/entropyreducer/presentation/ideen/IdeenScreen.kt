@@ -845,6 +845,13 @@ data class IdeenEntry(
      */
     val improvedText: String? = null,
     val isImproved: Boolean = false,
+    /**
+     * Zeitpunkt der letzten Bearbeitung (Edit-Sync, Phase B 2026-06-20). Nullable, weil die
+     * Room-Spalte `ideas.updatedAt` in Phase A additiv-nullable kam (Bestand = null). Wird bei jeder
+     * Aenderung (Text/Titel/Summary/Improved + Followup-Aenderungen am Parent) auf `now` gesetzt und
+     * treibt den geraeteuebergreifenden Last-Write-Wins. Baseline bei null = `timestampMs`.
+     */
+    val updatedAt: Long? = null,
 ) {
     companion object {
         fun create(text: String): IdeenEntry {
@@ -852,12 +859,14 @@ data class IdeenEntry(
             val firstLine = text.lineSequence().firstOrNull().orEmpty()
             val title =
                 if (firstLine.length <= 40) firstLine.trim() else firstLine.take(40).trim() + "…"
+            val now = System.currentTimeMillis()
             return IdeenEntry(
                 id = UUID.randomUUID().toString(),
-                timestampMs = System.currentTimeMillis(),
+                timestampMs = now,
                 title = title,
                 text = text,
                 followups = emptyList(),
+                updatedAt = now,
             )
         }
     }
@@ -914,6 +923,7 @@ private fun IdeaWithFollowups.toIdeenEntry(): IdeenEntry =
         summary = idea.summary,
         improvedText = idea.improvedText,
         isImproved = idea.isImproved,
+        updatedAt = idea.updatedAt,
     )
 
 /**
@@ -930,6 +940,9 @@ private fun IdeenEntry.toEntity(): IdeaEntity =
         summary = summary,
         improvedText = improvedText,
         isImproved = isImproved,
+        // Edit-Sync: vorhandenen updatedAt durchtragen; bei null (Bestand/Migrator) Erstellzeit als
+        // Baseline (NICHT now — sonst wuerden migrierte Bestands-Ideen faelschlich als frisch geaendert gelten).
+        updatedAt = updatedAt ?: timestampMs,
     )
 
 private fun IdeenFollowup.toEntity(ideaId: String): IdeaFollowupEntity =
@@ -1011,6 +1024,7 @@ internal suspend fun updateIdeenEntry(
             summary = summary ?: current.summary,
             improvedText = improvedText ?: current.improvedText,
             isImproved = isImproved ?: current.isImproved,
+            updatedAt = System.currentTimeMillis(),
         )
     )
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
@@ -1029,6 +1043,8 @@ internal suspend fun setIdeenFollowupImproved(
     val dao = ideaDaoFrom(context)
     val followup = dao.getFollowupsForIdea(entryId).firstOrNull { it.id == followupId } ?: return
     dao.upsertFollowups(listOf(followup.copy(improvedText = improvedText, isImproved = true)))
+    // Edit-Sync: Parent-Idee als geaendert markieren, sonst propagiert die Followup-Aenderung nicht.
+    dao.getIdeaById(entryId)?.let { dao.updateIdea(it.copy(updatedAt = System.currentTimeMillis())) }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -1037,7 +1053,10 @@ internal suspend fun setIdeenFollowupImproved(
  * Detail-Screen als eigene Karte angezeigt.
  */
 internal suspend fun addIdeenFollowup(context: Context, entryId: String, followup: IdeenFollowup) {
-    ideaDaoFrom(context).upsertFollowups(listOf(followup.toEntity(entryId)))
+    val dao = ideaDaoFrom(context)
+    dao.upsertFollowups(listOf(followup.toEntity(entryId)))
+    // Edit-Sync: Parent-Idee als geaendert markieren, sonst propagiert der neue Nachtrag nicht.
+    dao.getIdeaById(entryId)?.let { dao.updateIdea(it.copy(updatedAt = System.currentTimeMillis())) }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
@@ -1050,11 +1069,47 @@ internal suspend fun updateIdeenFollowup(
     val dao = ideaDaoFrom(context)
     val followup = dao.getFollowupsForIdea(entryId).firstOrNull { it.id == followupId } ?: return
     dao.upsertFollowups(listOf(followup.copy(text = newText)))
+    // Edit-Sync: Parent-Idee als geaendert markieren, sonst propagiert die Nachtrag-Aenderung nicht.
+    dao.getIdeaById(entryId)?.let { dao.updateIdea(it.copy(updatedAt = System.currentTimeMillis())) }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
 internal suspend fun deleteIdeenFollowup(context: Context, entryId: String, followupId: String) {
-    ideaDaoFrom(context).deleteFollowupById(followupId)
+    val dao = ideaDaoFrom(context)
+    dao.deleteFollowupById(followupId)
+    // Edit-Sync: Parent-Idee als geaendert markieren, sonst propagiert die Nachtrag-Loeschung nicht.
+    dao.getIdeaById(entryId)?.let { dao.updateIdea(it.copy(updatedAt = System.currentTimeMillis())) }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
+}
+
+/**
+ * Edit-Sync (Phase B 2026-06-20): ersetzt eine BEREITS LOKAL vorhandene Idee per Last-Write-Wins
+ * mit dem eingehenden Stand aus dem Drive-Backup — OHNE die Herkunft (originId/originType/rootId)
+ * zu verlieren. Die Herkunft lebt nur in Room (IdeaEntity), NICHT im Backup-DTO/UI-Modell; ein
+ * naives addIdeenEntry()/upsert wuerde sie auf null setzen (gleiche Falle wie der v19-Gewohnheits-Fix).
+ * Daher: geladene Entity per copy() aktualisieren (Herkunft bleibt) + Nachtraege komplett ersetzen.
+ * Setzt KEINEN neuen updatedAt (uebernimmt den eingehenden), damit der LWW-Vergleich stabil bleibt.
+ */
+internal suspend fun replaceIdeenEntryFromSync(context: Context, incoming: IdeenEntry) {
+    val dao = ideaDaoFrom(context)
+    val current = dao.getIdeaById(incoming.id) ?: return
+    dao.updateIdea(
+        current.copy(
+            timestampMs = incoming.timestampMs,
+            title = incoming.title,
+            text = incoming.text,
+            summary = incoming.summary,
+            improvedText = incoming.improvedText,
+            isImproved = incoming.isImproved,
+            updatedAt = incoming.updatedAt ?: incoming.timestampMs,
+        )
+    )
+    // Nachtraege komplett ersetzen (Edit-Sync deckt auch Nachtrag-Aenderungen ab). Nur vorhandene
+    // DAO-Methoden — kein Schema-Eingriff.
+    for (f in dao.getFollowupsForIdea(incoming.id)) dao.deleteFollowupById(f.id)
+    if (incoming.followups.isNotEmpty()) {
+        dao.upsertFollowups(incoming.followups.map { it.toEntity(incoming.id) })
+    }
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
