@@ -6,8 +6,8 @@
 >
 > **Quellen-Regel (Lehre 2026-06-20):** Bei Modell-Benchmarks sind die **neutralen OpenRouter/Artificial-Analysis-Werte
 > maßgeblich** — Hersteller-/Blog-Indizes weichen nach oben ab (real erlebt: GLM-5.2 „Faktentreue unbelegt" war belegt;
-> Qwen3.7-Max Hersteller-Index 56.6 vs. OpenRouter 46.0; DeepSeek V4 Pro Researcher-Index 52 vs. OpenRouter 44.3).
-> Immer gegen OpenRouter/AA gegenchecken.
+> Qwen3.7-Max Hersteller-Index 56.6 vs. OpenRouter 46.0; DeepSeek V4 Pro Researcher-Index 52 vs. OpenRouter 44.3;
+> Abweichung auch nach unten: MiMo-V2.5-Pro Non-Hallu 52 % vs. OpenRouter 75.5 %). Immer gegen OpenRouter/AA gegenchecken.
 >
 > **Stand:** recherchiert am **2026-06-20** mit 7 parallelen Researchern (Opus 1M) für das
 > **OpenCode-Go-Abo** (14 Modelle, Stand Juni 2026). Anker: opencode-go=2026-06.
@@ -64,7 +64,7 @@ Gewichtung: **Faktentreue/Anti-Halluzination (höchste)** > Long-Context-Retriev
 | 3 | Qwen3.7 Plus | Familie stark (Max: Hallu 22.9 %), Einzelwert fehlt | **MRCR-128k 91.7 (bestes belegt)**, 1M Kontext | GPQA 90.3, Index ~52 | $0.40/$1.60 (verbose → Output-Kosten) | starke Alternative |
 | 4 | Kimi K2.6 | SimpleQA 43 %, **Vectara-Hallu 10.8 %**, IFEval 89.8 | **nur 256K**, keine Retrieval-Benchmarks belegt | **Index 54 (höchster)**, GPQA 90.5, AIME 96.4 | $0.95/$4.00 | Zweitmeinung (Kontext-Limit!) |
 | 5 | GLM-5.2 | AA-Omniscience Index **4** (Acc 25.1 %, Hallu 28.1 %) — mittel, **für RAG weniger kritisch** | AA-LCR **71.3 %** (Reasoning gut); reines Retrieval (MRCR/Needle) unbelegt | **stark: Index 51.1, GPQA 89.5, HLE 40.1, τ²-Telecom 99.1** | $1.20/$4.10, **~4.300 Req/Mo** | **Top-Modell** → exzellenter **Eskalations-/Zweitmeinungs-Kandidat**; NICHT für Masse (Go-Budget) |
-| 6 | MiMo-V2.5-Pro | SimpleQA 45 % (mittel), Non-Hallu ~52 % | 1M (degradiert messbar >512K) | Index ~42–54, ⚠ Thinking-Latenz (Minuten) | ~$0.44/$0.87 | brauchbar, aber langsam |
+| 6 | MiMo-V2.5-Pro | AA-Omn. Acc 22.6 %, **Nicht-Hallu 75.5 %** (ehrlich, ok) | 1M, **AA-LCR 73.3 %** (gut); degradiert >512K | GPQA **86.6 (niedrigstes)**, IFBench 79.9, **Index 42.2 (niedrigstes)**; ⚠ Thinking-Latenz (Minuten) | ~$0.44/$0.87 | solides Mittelfeld — **in nichts führend + langsam** → kein Vorzug vor MiniMax M3 |
 
 **Vorfilter-Spezialist:** **DeepSeek V4 Flash** — $0.14/$0.28, **107 tok/s**, ~158k Req/Mo, 5× Concurrency. Zu schwach für die kritische Endsynthese, ideal zum Vorsieben der Masse.
 
