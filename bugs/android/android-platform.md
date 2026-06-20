@@ -66,6 +66,7 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 | 12 | Flow-Collection / `registerX` ohne Cleanup | `repeatOnLifecycle(STARTED)`; jedes `registerX` braucht `unregisterX` | §1.4, §1.8 |
 | 13 | State nach Hintergrund-Kill weg | ViewModel ueberlebt nicht Process Death → `SavedStateHandle`/Persistenz | §1.5, §1.6 |
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
+| 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
 
 ---
 
@@ -240,6 +241,14 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **Versionen:** Health Connect SDK (per Design). (EntropieReductor deklariert deshalb prophylaktisch alle Health-READ-Permissions im Manifest.)
 - **FIX:** Jede genutzte Data-Type-Permission + Privacy-Activity im Manifest deklarieren; `READ_HEALTH_DATA_HISTORY` fuer > 30 Tage; `READ_HEALTH_DATA_IN_BACKGROUND` fuer Hintergrund. (Android 16: BODY_SENSORS → granulare `health.*`, siehe 8.9.)
 - **Quelle:** https://developer.android.com/health-and-fitness/health-connect/ui/permissions
+
+### 2.11 Custom-Permission von einer ANDEREN App: `granted=false` durch Installationsreihenfolge ⭐ (Multi-App-Setup)
+- **Symptom:** App B liest einen ContentProvider von App A und bekommt zur Laufzeit `SecurityException: Permission Denial … requires <App-A>.permission.X, or grantUriPermission()`. `adb shell dumpsys package <App-B> | grep <X>` zeigt die Permission zwar **deklariert**, aber `granted=false` — obwohl App A (die sie definiert) installiert ist und der Provider existiert.
+- **Ursache:** Custom-Permissions mit `protectionLevel="normal"` (oder `signature`) werden der NUTZENDEN App nur bei DEREN Installation gewaehrt — und nur, wenn die DEFINIERENDE App zu dem Zeitpunkt bereits installiert ist (mit der Manifest-Version, die die Permission enthaelt). War App B vor App A (bzw. vor der A-Version mit der Permission) installiert, bleibt die Permission **dauerhaft** `granted=false`; eine spaetere Installation/Aktualisierung von App A gewaehrt sie **NICHT rueckwirkend**. (Verwandt, aber anders: §2.4 Package-Visibility — dort fehlt der Provider mangels `<queries>`; hier existiert der Provider, nur die Permission fehlt.)
+- **Versionen:** alle (Android-Custom-Permission-Modell, per Design).
+- **FIX (funktionserhaltend, KEIN Datenverlust):** Reihenfolge herstellen — die DEFINIERENDE App A (mit Provider + Permission) **zuerst** installieren/aktualisieren, DANN die NUTZENDE App B **neu installieren** (`adb install -r <apk>` reicht, App-Daten bleiben erhalten) → danach `granted=true`, Sync laeuft. `adb shell pm grant` hilft NICHT (das gilt nur fuer `dangerous`-Runtime-Permissions, nicht fuer `normal`/`signature`). NIEMALS App B deinstallieren, um die Permission zu „erzwingen" (Datenverlust) — `install -r` genuegt.
+- **Echter Vorfall (2026-06-20):** EntropieReductor (B) spiegelt das Tagebuch der BestJournal-Frank-App (A) read-only ueber `content://com.entropyjournal[.debug].journalexport/entries`, geschuetzt durch `com.entropyjournal.permission.READ_JOURNAL`. Auf einem frisch eingerichteten Geraet (S23 Ultra) war B installiert, als A noch die alte Version OHNE Provider/Permission war → Journal-Reiter zeigte „0 Eintraege". Fix: A auf >= 0.19.11 (mit Provider), dann B neu installiert → `granted=true`. Siehe Memory `reference_entropie_reductor_journal_mirror` + bug-cases 2026-06-20.
+- **Quelle:** https://developer.android.com/guide/topics/permissions/defining ; https://developer.android.com/guide/topics/manifest/permission-element
 
 ---
 
