@@ -244,6 +244,59 @@ suspend fun restoreGewohnheitSuggestions(
     return toAdd.size
 }
 
+/**
+ * Sofort-Heal (Frank-Wunsch 2026-06-20): raeumt verwaiste/verbrauchte Vorschlaege OHNE Drive-Restore
+ * weg — beim Oeffnen des Gewohnheits-/Aufgaben-Reiters aufgerufen. Damit verschwindet ein verwaister
+ * Vorschlag sofort, auch wenn gerade kein Sync laeuft (der Restore-Heal greift sonst erst beim
+ * naechsten ForegroundSync). Nutzt dieselben Kriterien wie der Restore-Heal: eigener Tombstone,
+ * Idee angenommen (countByRootId), Idee geloescht (verwaist). Quelle der Loeschungen: lokaler
+ * TombstoneStore.
+ */
+suspend fun healOrphanedSuggestions(context: Context) {
+    val tombstones = tombstonesForBackup(context)
+    val ideaDeleted = tombstones.filter { it.type == TombstoneType.IDEE }.map { it.id }.toSet()
+    val taskSugDeleted =
+        tombstones.filter { it.type == TombstoneType.TASK_SUGGESTION }.map { it.id }.toSet()
+    val habitSugDeleted =
+        tombstones.filter { it.type == TombstoneType.HABIT_SUGGESTION }.map { it.id }.toSet()
+    val entryDao = entropyEntryDaoFrom(context)
+    val habitDao = habitDaoFrom(context)
+
+    val taskDao = taskSuggestionDaoFrom(context)
+    for (ex in taskDao.getAllForBackup()) {
+        val reason = when {
+            ex.id in taskSugDeleted -> "Tombstone (geloescht/angenommen)"
+            isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
+            isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
+            else -> null
+        }
+        if (reason != null) {
+            taskDao.deleteById(ex.id)
+            android.util.Log.i(
+                SUGGESTION_HEAL_TAG,
+                "Aufgaben-Vorschlag ${ex.id} entfernt (Reiter-Heal): $reason (rootId=${ex.rootId})",
+            )
+        }
+    }
+
+    val habitSugDao = habitSuggestionDaoFrom(context)
+    for (ex in habitSugDao.getAllForBackup()) {
+        val reason = when {
+            ex.id in habitSugDeleted -> "Tombstone (geloescht/angenommen)"
+            isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
+            isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
+            else -> null
+        }
+        if (reason != null) {
+            habitSugDao.deleteById(ex.id)
+            android.util.Log.i(
+                SUGGESTION_HEAL_TAG,
+                "Gewohnheits-Vorschlag ${ex.id} entfernt (Reiter-Heal): $reason (rootId=${ex.rootId})",
+            )
+        }
+    }
+}
+
 private fun parseTaskSuggestions(raw: String?): List<BackupTaskSuggestion> {
     if (raw.isNullOrBlank()) return emptyList()
     return runCatching {

@@ -21,6 +21,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 
+// Live-Sonde (Frank-Wunsch 2026-06-20): jede Restore-Entscheidung fuer Tagebuch/Ideen/Thesen mit
+// Grund in logcat -> `adb logcat -s ERESyncEntry` (analog EREVorschlagHeal). android.util.Log direkt,
+// weil Diag bei aktivem Logger nicht in logcat schreibt.
+private const val SYNC_ENTRY_TAG = "ERESyncEntry"
+
 /**
  * High-Level UseCase für manuelles Backup + Restore. Die "automatische" Variante (jede Änderung
  * triggert ein Backup) laeuft über den [SyncCoordinator]; dieser UseCase ist für explizite Aktionen
@@ -428,6 +433,7 @@ constructor(
                         de.frank.entropyreducer.presentation.tagebuch.deleteTagebuchEntry(
                             appContext, ex.id, propagate = false)
                         deleted++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "Tagebuch ${ex.id} geloescht (Tombstone ts=$ts > updatedAt=${ex.updatedAt})")
                         continue
                     }
                     val b = incomingById[ex.id] ?: continue
@@ -437,6 +443,7 @@ constructor(
                             appContext, ex.id, propagate = false)
                         de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry(appContext, inc)
                         updated++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "Tagebuch ${ex.id} aktualisiert (LWW: inc=${inc.updatedAt} > ex=${ex.updatedAt})")
                     }
                 }
                 // 2. Neue (im Backup, nicht lokal) — ausser frisch getombstonet (Loeschung neuer).
@@ -447,6 +454,7 @@ constructor(
                     if (ts != null && ts > inc.updatedAt) continue
                     de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry(appContext, inc)
                     inserted++
+                    android.util.Log.i(SYNC_ENTRY_TAG, "Tagebuch ${b.id} neu eingespielt")
                 }
             }
         }
@@ -511,6 +519,7 @@ constructor(
                         de.frank.entropyreducer.presentation.ideen.deleteIdeenEntry(
                             appContext, ex.id, propagate = false)
                         deleted++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "Idee ${ex.id} geloescht (Tombstone ts=$ts > updatedAt=$exUpdatedAt)")
                         continue
                     }
                     val b = incomingIdeenById[ex.id] ?: continue
@@ -518,6 +527,7 @@ constructor(
                     if ((inc.updatedAt ?: inc.timestampMs) > exUpdatedAt) {
                         de.frank.entropyreducer.presentation.ideen.replaceIdeenEntryFromSync(appContext, inc)
                         updated++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "Idee ${ex.id} aktualisiert (LWW: inc=${inc.updatedAt ?: inc.timestampMs} > ex=$exUpdatedAt)")
                     }
                 }
                 // 2. Neue (im Backup, nicht lokal) — ausser frisch getombstonet (Loeschung neuer).
@@ -528,6 +538,7 @@ constructor(
                     if (ts != null && ts > (inc.updatedAt ?: inc.timestampMs)) continue
                     de.frank.entropyreducer.presentation.ideen.addIdeenEntry(appContext, inc)
                     inserted++
+                    android.util.Log.i(SYNC_ENTRY_TAG, "Idee ${b.id} neu eingespielt")
                 }
             }
         }
@@ -832,6 +843,7 @@ constructor(
                         de.frank.entropyreducer.presentation.thesen.deleteThesenEntry(
                             appContext, ex.id, propagate = false)
                         deleted++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "These ${ex.id} geloescht (Tombstone ts=$ts > updatedAt=${ex.updatedAt})")
                         continue
                     }
                     val b = incomingThesenById[ex.id] ?: continue
@@ -841,6 +853,7 @@ constructor(
                             appContext, ex.id, propagate = false)
                         de.frank.entropyreducer.presentation.thesen.addThesenEntry(appContext, inc)
                         updated++
+                        android.util.Log.i(SYNC_ENTRY_TAG, "These ${ex.id} aktualisiert (LWW: inc=${inc.updatedAt} > ex=${ex.updatedAt})")
                     }
                 }
                 // 2. Neue (im Backup, nicht lokal) — ausser frisch getombstonet (Loeschung neuer).
@@ -851,6 +864,7 @@ constructor(
                     if (ts != null && ts > inc.updatedAt) continue
                     de.frank.entropyreducer.presentation.thesen.addThesenEntry(appContext, inc)
                     inserted++
+                    android.util.Log.i(SYNC_ENTRY_TAG, "These ${b.id} neu eingespielt")
                 }
             }
         }

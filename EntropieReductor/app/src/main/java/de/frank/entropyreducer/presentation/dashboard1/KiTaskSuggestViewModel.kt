@@ -79,6 +79,14 @@ class KiTaskSuggestViewModel @Inject constructor(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        // Sofort-Heal beim Oeffnen des Reiters (Frank-Wunsch 2026-06-20): verwaiste/verbrauchte
+        // Vorschlaege sofort wegraeumen, ohne auf den naechsten Drive-Restore zu warten.
+        viewModelScope.launch {
+            runCatching { de.frank.entropyreducer.data.healOrphanedSuggestions(context) }
+        }
+    }
+
     fun dismissError() { _error.value = null }
 
     fun generateSuggestions() {
