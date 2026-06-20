@@ -8,7 +8,7 @@ bei besserer Ehrlichkeit. MiniMax/Firecrawl-Token laufen separat im Go-Abo bzw. 
 
 Verwendung:
     python3 mm-research.py "deine Recherche-Frage" [anzahl_quellen]
-    MM_THINK_BUDGET=24000  (env, optional) — max Thinking-Obergrenze; M3 denkt adaptiv bis hierhin.
+    (max Thinking ist fest "adaptive" = M3s Maximum; ein budget_tokens-Wert wird vom Modell ignoriert.)
 
 Keys (zentral in SK, siehe Regel secrets-in-sk-folder):
     ~/SK/OpenCode/go-api-key.txt        (OpenCode-Go Gateway)
@@ -52,7 +52,6 @@ def main():
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
     limit = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    budget = int(os.environ.get("MM_THINK_BUDGET", "24000"))
     os.makedirs(OUTDIR, exist_ok=True)
 
     go_key = _read_key("~/SK/OpenCode/go-api-key.txt")
@@ -78,13 +77,13 @@ def main():
     print(f"      {len(data)} Quellen geholt.", file=sys.stderr)
 
     # 2) MiniMax M3 (max Thinking) — Quellen quellentreu auswerten
-    print(f"[2/2] MiniMax M3 (max Thinking, budget {budget}) wertet aus...", file=sys.stderr)
+    print("[2/2] MiniMax M3 (max Thinking = adaptive) wertet aus...", file=sys.stderr)
     prompt = ("Du bist ein Recherche-Auswerter. Beantworte AUSSCHLIESSLICH auf Basis der folgenden "
               "Quellen die Frage. Wenn etwas NICHT in den Quellen steht oder widerspruechlich ist, "
               "sage das ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle.\n\n"
               f"FRAGE: {query}\n\n=== QUELLEN ===\n{sources}")
     body = {"model": "minimax-m3", "max_tokens": 30000,
-            "thinking": {"type": "enabled", "budget_tokens": budget},
+            "thinking": {"type": "adaptive"},  # M3s Maximum (max Thinking); budget_tokens wird ignoriert
             "messages": [{"role": "user", "content": prompt}]}
     try:
         d = _post(GO_URL,

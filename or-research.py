@@ -16,10 +16,10 @@ Unterschied zu mm-research.py:
 Verwendung:
     python3 or-research.py "deine Recherche-Frage" [modell] [engine]
     Default-Modell: minimax/minimax-m3 (1M, guenstig). Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
-    Engine (3. Arg oder env OR_ENGINE): auto (default) | exa | parallel | perplexity | native | firecrawl.
-      - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total.
+    Engine (3. Arg oder env OR_ENGINE): parallel (DEFAULT) | exa | auto | perplexity | native | firecrawl.
+      - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total. DEFAULT.
       - "auto" nutzt native Provider-Suche, falls das Modell sie hat, sonst Exa.
-    OR_MAX_RESULTS (env, Default 5; 1-25) Treffer pro Suche; OR_MAX_TOTAL (env, Default 20) Treffer-Deckel
+    OR_MAX_RESULTS (env, Default 5; 1-25) Treffer pro Suche; OR_MAX_TOTAL (env, Default 10) Treffer-Deckel
     ueber alle Suchen eines Requests (Kostenbremse fuer agentische Mehrfachsuche).
 
 Kosten (offizielle Doku 2026-06-20, openrouter.ai/docs server-tools/web-search):
@@ -67,9 +67,9 @@ def main():
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
     model = sys.argv[2] if len(sys.argv) > 2 else "minimax/minimax-m3"
-    engine = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OR_ENGINE", "auto")
+    engine = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OR_ENGINE", "parallel")
     max_results = int(os.environ.get("OR_MAX_RESULTS", "5"))
-    max_total = int(os.environ.get("OR_MAX_TOTAL", "20"))
+    max_total = int(os.environ.get("OR_MAX_TOTAL", "10"))
     os.makedirs(OUTDIR, exist_ok=True)
     key = _read_key()
 
