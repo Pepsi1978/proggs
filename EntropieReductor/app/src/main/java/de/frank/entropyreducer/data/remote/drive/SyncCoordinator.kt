@@ -348,10 +348,20 @@ constructor(
                 amazfitDailyDaoLazy.get().getAll().first().map { it.toBackup() }
 
             // Frank-Wunsch 2026-06-09: Mentalboard-Eintraege (Aufgaben-Reiter "Mental") ins
-            // Haupt-Backup. DataStore-basiert wie Tagebuch/Thesen — Context-Zugriff genuegt.
+            // Haupt-Backup. v19 (2026-06-20): zusaetzlich die Herkunft (originId/originType/rootId)
+            // mitsichern — direkt aus der mental_sentences-Tabelle statt ueber das herkunftslose
+            // Mental-UI-Modell (Zukunftssicherung, analog zu den Gewohnheiten; aktuell entsteht Mental
+            // nicht aus Ideen, aber falls doch, bleibt die Kette cross-device intakt).
             val mentalBackups =
-                de.frank.entropyreducer.presentation.mental.mentalsFlow(appContext).first().map {
-                    BackupMental(id = it.id, text = it.text, updatedAt = it.updatedAt)
+                de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(appContext).getAllForBackup().map {
+                    BackupMental(
+                        id = it.id,
+                        text = it.text,
+                        updatedAt = it.updatedAt,
+                        originId = it.originId,
+                        originType = it.originType,
+                        rootId = it.rootId,
+                    )
                 }
 
             // Frank-Wunsch 2026-06-10: Ideen-Eintraege (Aufgaben-Reiter "Ideen", 1:1-Klon des

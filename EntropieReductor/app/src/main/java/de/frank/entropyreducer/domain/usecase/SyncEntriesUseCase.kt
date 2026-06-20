@@ -431,9 +431,8 @@ constructor(
             inserted +=
                 de.frank.entropyreducer.presentation.mental.restoreMentals(
                     appContext,
-                    payload.mentals.map {
-                        de.frank.entropyreducer.presentation.mental.Mental(id = it.id, text = it.text)
-                    },
+                    // v19 (2026-06-20): Backup-DTO MIT Herkunft direkt durchreichen.
+                    payload.mentals,
                 )
         }
 

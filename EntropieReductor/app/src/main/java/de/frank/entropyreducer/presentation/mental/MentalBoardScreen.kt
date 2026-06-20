@@ -182,7 +182,12 @@ internal suspend fun reorderMentals(context: Context, newOrder: List<Mental>) {
  * Spielt Mentals aus einem Drive-Backup ein (Frank-Wunsch 2026-06-09). Nur fehlende IDs werden
  * ergaenzt — lokale Edits/Reihenfolge gewinnen (konservativ, wie beim Tagebuch-Restore). Neue ans Ende.
  */
-internal suspend fun restoreMentals(context: Context, incoming: List<Mental>): Int {
+internal suspend fun restoreMentals(
+    context: Context,
+    // v19 (2026-06-20): Backup-DTO MIT Herkunft direkt (analog restoreGewohnheiten) statt das
+    // herkunftslose Mental-UI-Modell — die Herkunft ueberlebt so den Restore.
+    incoming: List<de.frank.entropyreducer.data.remote.drive.BackupMental>,
+): Int {
     if (incoming.isEmpty()) return 0
     val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
     val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
@@ -196,6 +201,9 @@ internal suspend fun restoreMentals(context: Context, incoming: List<Mental>): I
                 text = m.text,
                 updatedAt = m.updatedAt,
                 position = nextPos++,
+                originId = m.originId,
+                originType = m.originType,
+                rootId = m.rootId,
             )
         }
     )
