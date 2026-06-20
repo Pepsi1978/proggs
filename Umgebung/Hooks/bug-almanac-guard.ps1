@@ -16,6 +16,57 @@
 . "$PSScriptRoot/hook-log.ps1"
 $ErrorActionPreference = "Stop"
 
+# ── Sonde (Direktive #2 Selbstbeobachtung): schreibt EINE JSON-Zeile pro Block/Pass nach
+# ~/.claude/state/bug-almanac-triggers.jsonl. Rein beobachtend — beeinflusst NIE die
+# Block-Entscheidung. Schreibt NUR in die Datei, NIE auf stdout (sonst Session-Crash, claude-hooks §16.1).
+# FAIL-OPEN: jeder Fehler wird verschluckt. Liest $data/$tool/$fp aus dem Hook-Scope.
+function Add-AlmanacTrigger {
+    param(
+        [string]$EventType,
+        [string]$BlockType,
+        [string]$Slug,
+        [string]$Area,
+        [bool]$HighRisk
+    )
+    try {
+        $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+        if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+        $jsonl = Join-Path $stateDir "bug-almanac-triggers.jsonl"
+        # Rotation: bei >5 MB einmalig nach .1 wegrollen (genau eine Vorgaengerdatei).
+        try { if ((Test-Path $jsonl) -and ((Get-Item $jsonl).Length -gt 5MB)) { Move-Item -Path $jsonl -Destination "$jsonl.1" -Force -ErrorAction SilentlyContinue } } catch {}
+        # change_excerpt aus dem Tool-Input (content / new_string / edits[].new_string), ~300 Zeichen.
+        $excerpt = ""
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)        { $excerpt = [string]$ti.content }
+            elseif ($ti.new_string) { $excerpt = [string]$ti.new_string }
+            elseif ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $excerpt += [string]$e.new_string + "`n" } } }
+        } catch {}
+        if ($excerpt.Length -gt 300) { $excerpt = $excerpt.Substring(0, 300) }
+        # Secret-Maskierung (observability-first §8).
+        $excerpt = $excerpt -replace 'gho_[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'ghp_[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'sk-[A-Za-z0-9]{20,}','[REDACTED]' `
+                            -replace 'AIza[A-Za-z0-9_\-]{20,}','[REDACTED]'
+        $excerpt = [regex]::Replace($excerpt, '(?i)(token|key|secret|password)(["'']?\s*[:=]\s*["''])[^"'']+', '$1$2[REDACTED]')
+        $sid = ""
+        try { $sid = [string]$data.session_id } catch {}
+        $obj = [ordered]@{
+            ts             = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+            event          = $EventType
+            block_type     = $BlockType
+            slug           = $Slug
+            area           = $Area
+            tool           = $tool
+            file           = $fp
+            change_excerpt = $excerpt
+            high_risk      = $HighRisk
+            session        = $sid
+        }
+        Add-Content -Path $jsonl -Value ($obj | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8 -ErrorAction SilentlyContinue
+    } catch {}
+}
+
 try {
     # stdin robust lesen (mal Console.In, mal $input je nach Invokation).
     $raw = ""
@@ -38,12 +89,17 @@ try {
                 $an = $m.Groups[1].Value
                 if ($an -ne 'readme' -and $an -ne 'system') {
                     New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-read-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                    # cat/bat/less liest immer den Volltext -> auch den full-Marker setzen (Digest-Modell Stufe C).
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-full-" + $an + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
                 }
             }
-            # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-            foreach ($m in [regex]::Matches($cl, 'best-practices-([a-z0-9._-]+)\.md')) {
-                $bn = $m.Groups[1].Value
-                New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bn + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+            # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel:
+            # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+            foreach ($m in [regex]::Matches($cl, 'best-practices/(?:[a-z0-9._-]+/)*([a-z0-9._-]+)\.md')) {
+                $bn = $m.Groups[1].Value -replace '^best-practices-', ''
+                if ($bn -ne 'readme' -and $bn -ne 'system' -and $bn -notmatch '^_') {
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bn + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                }
             }
         }
         exit 0
@@ -61,13 +117,24 @@ try {
             if ($almName -ne 'readme' -and $almName -ne 'system') {
                 $rm = Join-Path $env:TEMP ("bug-almanac-read-" + $almName + ".flag")
                 New-Item -ItemType File -Path $rm -Force -ErrorAction SilentlyContinue | Out-Null
+                # Digest-Modell: Volltext-Read (kein limit ODER limit >= 500) setzt zusaetzlich den
+                # full-Marker (Stufe C). Kurzcheck-Read (z.B. limit=80) setzt nur den read-Marker.
+                $lim = 0
+                try { if ($data.tool_input.limit) { $lim = [int]$data.tool_input.limit } } catch {}
+                if ($lim -le 0 -or $lim -ge 500) {
+                    New-Item -ItemType File -Path (Join-Path $env:TEMP ("bug-almanac-full-" + $almName + ".flag")) -Force -ErrorAction SilentlyContinue | Out-Null
+                }
             }
         }
-        # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-        if ($fpl -match '/best-practices-([a-z0-9._-]+)\.md$') {
-            $bpName = $Matches[1]
-            $bpm = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bpName + ".flag")
-            New-Item -ItemType File -Path $bpm -Force -ErrorAction SilentlyContinue | Out-Null
+        # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel (Migration 2026-06-16):
+        #   NEU best-practices/<kat>/<bereich>.md  |  ALT .../best-practices-<bereich>.md
+        # Schluessel = <bereich> (best-practices--Praefix gestrippt); README/SYSTEM/_-Dateien ausgenommen.
+        if ($fpl -match '/best-practices/(?:[^/]+/)*([^/]+)\.md$') {
+            $bpName = $Matches[1] -replace '^best-practices-', ''
+            if ($bpName -ne 'readme' -and $bpName -ne 'system' -and $bpName -notmatch '^_') {
+                $bpm = Join-Path $env:TEMP ("bug-almanac-bp-read-" + $bpName + ".flag")
+                New-Item -ItemType File -Path $bpm -Force -ErrorAction SilentlyContinue | Out-Null
+            }
         }
         exit 0
     }
@@ -101,20 +168,30 @@ try {
         # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
         # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
         $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
-    } elseif ($fpl -match 'androidmanifest\.xml$' -or $fpl -match '(service|receiver|worker)\.kt$') {
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
-        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
-        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+    } elseif ($fpl -match 'androidmanifest\.xml$') {
+        # Manifest separat (keine .kt): Platform-SDK (Permissions/Services/Receiver/Edge-to-Edge/targetSdk).
+        # Der frueher hier mitgefangene (service|receiver|worker).kt-Teil wandert in den .kt-Block unten
+        # als Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) —
+        # so verdeckt 'service.kt'/'worker.kt' nicht mehr die feature-spezifischen Android-Almanache.
         $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
     } elseif ($fpl -match '\.kts?$') {
-        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
-        # Inhalt aus der existierenden Datei UND aus dem Tool-Input (neue Datei/neuer Composable) pruefen. FAIL-OPEN.
+        # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben (existierende Datei + Tool-Input),
+        # dann nach Prioritaet routen. FAIL-OPEN (try/catch). Reihenfolge strikt funktionserhaltend: die
+        # spezifischen Feature-Signale (voice/workmanager/drive) stehen VOR dem service/worker-Dateiname-
+        # Fallback, alle bestehenden Signale (hilt/net/media3/coil/room/compose) bleiben unveraendert dahinter.
         $composeSignal = $false
         $hiltSignal = $false
         $netSignal = $false
         $media3Signal = $false
         $coilSignal = $false
         $roomSignal = $false
+        $voiceSignal = $false
+        $workmanagerSignal = $false
+        $driveSignal = $false
+        $filamentSignal = $false
+        # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
+        # spezifischeres Feature-Signal davor zieht).
+        $androidPlatformName = ($fpl -match '(service|receiver|worker)\.kt$')
         if ($fpl -match 'module\.kt$') { $hiltSignal = $true }
         if ($fpl -match '\.kts?$') {
             $probe = ""
@@ -137,8 +214,24 @@ try {
             # Room-Persistenz-Signale (Entity/DAO/Database/TypeConverter ohne *Dao.kt/*Database.kt-Dateinamen)
             # -> room.md (nach Hilt/Net/Media3/Coil, vor Compose/Kotlin). @Query bewusst NICHT (Retrofit-Konflikt).
             if ($probe -match '@Entity' -or $probe -match '@Dao' -or $probe -match '@Database' -or $probe -match '@TypeConverter' -or $probe -match '@ProvidedTypeConverter' -or $probe -match 'RoomDatabase' -or $probe -match 'androidx\.room' -or $probe -match '@PrimaryKey' -or $probe -match '@ColumnInfo' -or $probe -match '@Embedded' -or $probe -match '@AutoMigration' -or $probe -match '@Upsert') { $roomSignal = $true }
+            # Voice-Assistant-Ausloesung / Wake-Word / Mic -> voice-assistant-trigger.md (spezifisch, VOR android-platform).
+            if ($probe -match 'VoiceInteractionService' -or $probe -match 'AccessibilityService' -or $probe -match 'WakeWord' -or $probe -match 'Hotword' -or $probe -match 'KEYCODE_ASSIST' -or $probe -match 'ACTION_ASSIST' -or $probe -match 'sherpa[-_.]?onnx' -or $probe -match 'Porcupine' -or $probe -match 'OpenWakeWord' -or $probe -match 'NanoWakeWord' -or $probe -match 'Shizuku') { $voiceSignal = $true }
+            # WorkManager & Notifications -> workmanager-notifications.md (spezifisch, VOR android-platform).
+            if ($probe -match 'WorkManager' -or $probe -match 'PeriodicWorkRequest' -or $probe -match 'OneTimeWorkRequest' -or $probe -match 'CoroutineWorker' -or $probe -match 'enqueueUnique' -or $probe -match 'setExactAndAllowWhileIdle' -or $probe -match 'setAndAllowWhileIdle' -or $probe -match 'AlarmManager' -or $probe -match 'NotificationChannel' -or $probe -match 'NotificationCompat' -or $probe -match 'NotificationManagerCompat' -or $probe -match 'SCHEDULE_EXACT_ALARM') { $workmanagerSignal = $true }
+            # Google-Drive-Backup & Cloud-Sync -> google-drive-backup.md (spezifisch, VOR android-platform).
+            if ($probe -match 'appDataFolder' -or $probe -match 'DriveScopes' -or $probe -match 'DRIVE_APPDATA' -or $probe -match 'com\.google\.api\.services\.drive' -or $probe -match 'google-api-services-drive' -or $probe -match 'AuthorizationClient' -or $probe -match 'GoogleAuthUtil') { $driveSignal = $true }
+            # 3D auf Android (Filament/SceneView) -> 3d-filament-android.md (vor Compose/Kotlin).
+            if ($probe -match 'com\.google\.android\.filament' -or $probe -match 'Filament' -or $probe -match 'ModelViewer' -or $probe -match 'io\.github\.sceneview' -or $probe -match 'SceneView' -or $probe -match 'rememberEngine') { $filamentSignal = $true }
         }
-        if ($hiltSignal) {
+        if ($voiceSignal) {
+            $slug = 'voiceassistant'; $file = 'voice-assistant-trigger.md'; $name = 'Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)'
+        } elseif ($workmanagerSignal) {
+            $slug = 'workmanager'; $file = 'workmanager-notifications.md'; $name = 'WorkManager & Notifications (Reminder/Hintergrund)'
+        } elseif ($driveSignal) {
+            $slug = 'drivebackup'; $file = 'google-drive-backup.md'; $name = 'Google-Drive-Backup & Cloud-Sync (Android)'
+        } elseif ($androidPlatformName) {
+            $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
+        } elseif ($hiltSignal) {
             $slug = 'hiltdagger'; $file = 'hilt-dagger.md'; $name = 'Hilt/Dagger Dependency Injection (KSP)'
         } elseif ($netSignal) {
             $slug = 'networking'; $file = 'retrofit-okhttp-moshi.md'; $name = 'Android-Networking (Retrofit/OkHttp/Moshi)'
@@ -148,17 +241,48 @@ try {
             $slug = 'coil3'; $file = 'coil3.md'; $name = 'Bild-/Video-Laden (Coil 3)'
         } elseif ($roomSignal) {
             $slug = 'room'; $file = 'room.md'; $name = 'Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)'
+        } elseif ($filamentSignal) {
+            $slug = 'filament'; $file = '3d-filament-android.md'; $name = '3D auf Android (Filament/SceneView)'
         } elseif ($composeSignal) {
             $slug = 'compose'; $file = 'jetpack-compose.md'; $name = 'Jetpack Compose (Android-UI)'
         } else {
             $slug = 'kotlin'; $file = 'kotlin.md'; $name = 'Kotlin (Sprache/K2/Coroutines/Compose-Kontext)'
         }
     } elseif ($fpl -match '\.swift$' -or $fpl -match '\.xcodeproj' -or $fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
-        $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
+        # .swift: Content-Probe -> macOS-Overlay (NSPanel/...) / 3D-Metal-SceneKit (MTKView/SceneKit/RealityKit)
+        #         / On-Device-Whisper (whisper.cpp/WhisperKit) -> sonst swift-appkit.md. Probe nur bei .swift
+        #         (xcodeproj/plist/entitlements enthalten keinen Swift-Code). FAIL-OPEN.
+        $macOverlaySignal = $false; $metalSignal = $false; $whisperSignal = $false
+        if ($fpl -match '\.swift$') {
+            $probe = ""
+            try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            # On-Device-Whisper zuerst (eindeutigste Signale).
+            if ($probe -match 'whisper\.cpp' -or $probe -match 'WhisperKit' -or $probe -match 'whisperkit' -or $probe -match 'ggml' -or $probe -match 'CoreML.*[Ww]hisper') { $whisperSignal = $true }
+            # macOS-Overlay-Fenster (NSPanel/nonactivating/collectionBehavior/click-through).
+            if ($probe -match 'nonactivatingPanel' -or $probe -match 'NSPanel' -or $probe -match 'collectionBehavior' -or $probe -match 'canJoinAllSpaces' -or $probe -match 'orderFrontRegardless' -or $probe -match 'ignoresMouseEvents' -or $probe -match 'LSUIElement' -or $probe -match 'CGEventTap') { $macOverlaySignal = $true }
+            # 3D auf macOS (Metal/SceneKit/RealityKit).
+            if ($probe -match 'MTKView' -or $probe -match 'MTLDevice' -or $probe -match 'MTLCreateSystemDefaultDevice' -or $probe -match 'SceneKit' -or $probe -match 'SCNView' -or $probe -match 'RealityKit' -or $probe -match 'RealityView' -or $probe -match 'MetalFX' -or $probe -match 'MetalKit') { $metalSignal = $true }
+        }
+        if ($whisperSignal) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
+        } elseif ($macOverlaySignal) {
+            $slug = 'macosoverlay'; $file = 'macos-overlay.md'; $name = 'macOS-Overlay-Fenster (Swift/AppKit)'
+        } elseif ($metalSignal) {
+            $slug = 'metalmacos'; $file = '3d-metal-scenekit-macos.md'; $name = '3D auf macOS (Metal/SceneKit/RealityKit)'
+        } else {
+            $slug = 'swift'; $file = 'swift-appkit.md'; $name = 'macOS-Desktop (Swift/AppKit)'
+        }
     } elseif ($fpl -match '\.tsx?$' -or $fpl -match 'tsconfig\.json$') {
         # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum Compose-Probe). FAIL-OPEN.
         $mcpSignal = $false
+        $threejsSignal = $false
         if ($fpl -match '\.tsx?$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -169,9 +293,13 @@ try {
                 if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
             } catch {}
             if ($probe -match '@modelcontextprotocol/sdk' -or $probe -match 'McpServer' -or $probe -match 'StdioServerTransport' -or $probe -match 'StreamableHTTPServerTransport' -or $probe -match 'setRequestHandler') { $mcpSignal = $true }
+            # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
+            if ($probe -match 'THREE\.' -or $probe -match 'three/examples' -or $probe -match '@react-three/fiber' -or $probe -match '@react-three/drei' -or $probe -match '@babylonjs' -or $probe -match 'WebGPURenderer' -or $probe -match 'GLTFLoader' -or $probe -match 'KTX2Loader' -or $probe -match 'PMREMGenerator') { $threejsSignal = $true }
         }
         if ($mcpSignal) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($threejsSignal) {
+            $slug = 'threejs'; $file = '3d-threejs-webgpu.md'; $name = '3D im Web (Three.js/Babylon/WebGPU)'
         } else {
             $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
         }
@@ -182,7 +310,7 @@ try {
         # .cs: Content-Probe -> Groq-Whisper-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN.
-        $groqSignal = $false; $wakeSignal = $false
+        $groqSignal = $false; $wakeSignal = $false; $whisperSignal = $false; $dxSignal = $false; $winOverlaySignal = $false; $textInjectSignal = $false
         if ($fpl -match '\.cs$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -194,11 +322,28 @@ try {
             } catch {}
             if ($probe -match 'GroqWhisperClient' -or $probe -match 'audio/transcriptions' -or $probe -match 'api\.groq\.com') { $groqSignal = $true }
             if ($probe -match 'KeywordSpotter|sherpa[-_.]?onnx|Porcupine|NanoWakeWord|OpenWakeWord|WakeWord|wake[-_]word') { $wakeSignal = $true }
+            # On-Device-Whisper / lokale Transkription -> whisper-stt-lokal.md (nach groq/wake; lokal, NICHT Cloud).
+            if ($probe -match 'Whisper\.net' -or $probe -match 'WhisperFactory' -or $probe -match 'whisper\.cpp' -or $probe -match 'GgmlType' -or $probe -match 'CTranslate2' -or $probe -match 'faster[-_]whisper') { $whisperSignal = $true }
+            # 3D auf Windows (.NET DirectX/Stride/Silk.NET) -> 3d-dotnet-directx-windows.md.
+            if ($probe -match 'Stride\.' -or $probe -match 'Silk\.NET' -or $probe -match 'Vortice' -or $probe -match 'Veldrid' -or $probe -match 'SharpDX' -or $probe -match 'Direct3D' -or $probe -match 'D3D12' -or $probe -match 'MonoGame') { $dxSignal = $true }
+            # Windows-Overlay-Fenster (WPF: always-on-top/click-through/global Hotkey) -> windows-overlay.md.
+            if ($probe -match 'WS_EX_NOACTIVATE' -or $probe -match 'WS_EX_TOOLWINDOW' -or $probe -match 'WS_EX_TRANSPARENT' -or $probe -match 'WS_EX_LAYERED' -or $probe -match 'RegisterHotKey' -or $probe -match 'WH_KEYBOARD_LL' -or $probe -match 'SetWindowPos' -or $probe -match 'WindowChrome' -or $probe -match 'AllowsTransparency') { $winOverlaySignal = $true }
+            # Text-Injection in fremde Electron/Chromium-Felder (Claude Desktop Chat/Code/Cowork) -> windows-electron-text-injection.md.
+            # Spezifischer als der Overlay-Zweig: Chromium-Render-HWND / UIA-Befuellen / Scancode-Paste / A11y-Aktivierung.
+            if ($probe -match 'Chrome_RenderWidgetHostHWND' -or $probe -match 'force-renderer-accessibility' -or $probe -match 'KEYEVENTF_SCANCODE' -or $probe -match 'EnumChildWindows' -or $probe -match 'ValuePattern' -or $probe -match 'TextPattern' -or $probe -match 'FlaUI' -or $probe -match 'DWMWA_EXTENDED_FRAME_BOUNDS') { $textInjectSignal = $true }
         }
         if ($groqSignal) {
             $slug = 'groq'; $file = 'groq-transkription.md'; $name = 'Groq Whisper Transkription (Audio/STT)'
         } elseif ($wakeSignal) {
             $slug = 'wakeword'; $file = 'wake-word.md'; $name = 'Wake-Word / Keyword-Spotting (.NET/C#)'
+        } elseif ($whisperSignal) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
+        } elseif ($dxSignal) {
+            $slug = 'dxwindows'; $file = '3d-dotnet-directx-windows.md'; $name = '3D auf Windows (.NET DirectX/Stride/Silk.NET)'
+        } elseif ($textInjectSignal) {
+            $slug = 'wineltextinject'; $file = 'windows-electron-text-injection.md'; $name = 'Text-Injection in Electron/Chromium-Felder (Windows, C#/WPF)'
+        } elseif ($winOverlaySignal) {
+            $slug = 'winoverlay'; $file = 'windows-overlay.md'; $name = 'Windows-Overlay-Fenster (C#/WPF)'
         } else {
             $slug = 'dotnet'; $file = 'dotnet-csharp.md'; $name = 'C#/.NET (WPF, WinUI, Konsole, Backend)'
         }
@@ -217,13 +362,21 @@ try {
         # Icon-Build-Skript (Pillow-Alpha-Check/iconutil/Android-adaptive/WPF-ApplicationIcon)? -> icon-building.md. Eindeutige Icon-Signale.
         $iconPy = $false
         if ($probe -match 'icns|iconutil|getchannel|ic_launcher|ApplicationIcon') { $iconPy = $true }
+        # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
+        $whisperPy = $false
+        if ($probe -match 'faster_whisper' -or $probe -match 'faster-whisper' -or $probe -match 'whisper\.cpp' -or $probe -match 'WhisperModel' -or $probe -match 'ctranslate2' -or $probe -match 'pywhispercpp') { $whisperPy = $true }
         if ($mcpPy) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
         } elseif ($iconPy) {
             $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
+        } elseif ($whisperPy) {
+            $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
         } else {
             $slug = 'python'; $file = 'python-windows.md'; $name = 'Python (Windows-Encoding/Cross-Platform-Scripting)'
         }
+    } elseif ($fpl -match '\.(gd|tscn|tres|gdshader)$' -or $fpl -match '(^|/)project\.godot$') {
+        # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
+        $slug = 'godot'; $file = '3d-godot.md'; $name = '3D mit Godot 4'
     } elseif ($fpl -match '/hooks/[^/]*\.(ps1|sh)$') {
         $slug = 'claudehooks'; $file = 'claude-hooks.md'; $name = 'Claude-Harness Hooks (PowerShell/Bash)'
     } elseif (($fpl -notmatch '/(bugs|best-practices)/') -and (
@@ -238,6 +391,24 @@ try {
         # SKILL.md, commands/*.md, agents/*.md. AUSGESCHLOSSEN: bugs/** und best-practices/** (sind selbst .md -> kein Selbst-Trigger).
         # Hooks (.ps1/.sh) faengt der claudehooks-Zweig oben ab; MEMORY.md bewusst NICHT (zu haeufig automatisch beschrieben).
         $slug = 'claudeconfig'; $file = 'claude-config.md'; $name = 'Claude-Code Konfiguration und Regeln (CLAUDE.md/Rules/Settings/Skills/Commands/Agents)'
+    }
+
+    # ── Rust-3D (Bevy/wgpu) VOR der generischen Endungs-Erkennung ──
+    # 3d-rust-wgpu-bevy.md existiert, rust.md NICHT. Ohne diesen Check liefe eine .rs-Datei in den
+    # generischen rust.md-Platzhalter -> Fehlalarm "kein Almanach", obwohl 3d-rust-wgpu-bevy.md da ist.
+    # Greift nur bei 3D-Signal; reines Rust faellt unveraendert in den generischen rust.md-Platzhalter.
+    if (-not $slug -and ($fpl -match '\.rs$' -or $fpl -match '(^|/)cargo\.toml$')) {
+        $probe = ""
+        try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $probe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $probe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $probe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($probe -match '\bbevy\b' -or $probe -match '\bwgpu\b' -or $probe -match 'Camera3d' -or $probe -match 'Mesh3d' -or $probe -match 'MeshMaterial3d' -or $probe -match 'PbrBundle' -or $probe -match 'StandardMaterial') {
+            $slug = '3drust'; $file = '3d-rust-wgpu-bevy.md'; $name = '3D mit Rust (wgpu/Bevy)'
+        }
     }
 
     # ── Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. ──
@@ -290,6 +461,11 @@ try {
     $almKey = ($file -replace '\.md$', '').ToLower()
     $readMarker = Join-Path $env:TEMP ("bug-almanac-read-" + $almKey + ".flag")
     $seenMarker = Join-Path $env:TEMP ("bug-almanac-seen-" + $slug + ".flag")
+    # Digest-Modell Stufe C: Hochrisiko-Bereiche (tickende/teure Fehlerklassen: Release, Geld, Harness)
+    # verlangen den VOLLTEXT (full-Marker), nicht nur den Kurzcheck. Liste = almKey (Dateiname ohne .md).
+    $highRiskKeys = @('r8', 'firebase-billing', 'claude-hooks', 'claude-config')
+    $isHighRisk = $highRiskKeys -contains $almKey
+    $fullMarker = Join-Path $env:TEMP ("bug-almanac-full-" + $almKey + ".flag")
 
     # ── Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen ──
     # Der Read-Zweig dieses Hooks setzt den Marker nur, wenn der Read-Hook tatsaechlich feuert.
@@ -312,6 +488,31 @@ try {
         } catch {}
     }
 
+    # ── Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
+    # almanach-trigger-auswertung). Ein Version-Bump (nur versionCode/versionName) aendert KEINE
+    # Logik -> kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram).
+    # NUR gradle, NUR wenn JEDE nicht-leere Zeile des Edits eine Versionszeile ist, NUR wenn sonst
+    # geblockt wuerde (read-Marker fehlt). Funktionserhaltend: jede andere Zeile -> normaler Block
+    # unten. Transparenz (Entscheidung 4): als pass/trivial-uebersprungen in die Sonde (nicht still).
+    if ($slug -eq 'gradle' -and -not $disabled -and -not (Test-Path $readMarker)) {
+        $vb = ""
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)        { $vb = [string]$ti.content }
+            elseif ($ti.new_string) { $vb = [string]$ti.new_string }
+            elseif ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $vb += [string]$e.new_string + "`n" } } }
+        } catch {}
+        $vbLines = @($vb -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+        if ($vbLines.Count -gt 0) {
+            $onlyVersion = $true
+            foreach ($ln in $vbLines) { if ($ln -notmatch '(?i)version(Code|Name)') { $onlyVersion = $false; break } }
+            if ($onlyVersion) {
+                Add-AlmanacTrigger -EventType "pass" -BlockType "trivial-uebersprungen" -Slug $slug -Area $name -HighRisk $isHighRisk
+                exit 0
+            }
+        }
+    }
+
     # ── ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN ──
     if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
         # Block-Logging (persistent ueber Sessions/Tage) — nur Beobachtung, beeinflusst nie die Entscheidung.
@@ -320,7 +521,12 @@ try {
             if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
             Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug") -Encoding UTF8 -ErrorAction SilentlyContinue
         } catch {}
-        $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        Add-AlmanacTrigger -EventType "block" -BlockType "almanach-ungelesen" -Slug $slug -Area $name -HighRisk $isHighRisk
+        $reason = if ($isHighRisk) {
+            "STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '" + $name + "', aber " + $almRel + " wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        } else {
+            "STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe A, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '" + $name + "', aber der Kurzcheck von " + $almRel + " wurde in dieser Session noch NICHT gelesen. Lies JETZT NUR den Kurzcheck: Read auf ~/proggs/" + $almRel + " mit limit=80 (die Kurzcheck-Sektion oben in der Datei; der Volltext ist NICHT noetig - er wird erst beim ERSTEN FEHLER im Bereich Pflicht, Stufe B). DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+        }
         $out = @{
             hookSpecificOutput = @{
                 hookEventName            = "PreToolUse"
@@ -330,6 +536,41 @@ try {
         }
         Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
         exit 0
+    }
+
+    # ── Stufe C (Digest-Modell): Hochrisiko-Bereich verlangt den VOLLTEXT, nicht nur den Kurzcheck ──
+    # Erreicht nur, wenn der read-Marker existiert (Kurzcheck oder mehr gelesen). Fehlt der full-Marker,
+    # wird bei Hochrisiko-Bereichen blockiert, bis ein Volltext-Read (Read ohne limit) erkannt wurde.
+    if ($almanachExists -and -not $disabled -and $isHighRisk -and (Test-Path $readMarker) -and -not (Test-Path $fullMarker)) {
+        # Transcript-Fallback (analog Almanach): ein Volltext-Read (Read OHNE limit-Feld im input-Objekt)
+        # kann vom Read-Zweig verpasst worden sein (Matcher-Cache / Read+Edit-Race).
+        try {
+            $tp = [string]$data.transcript_path
+            if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
+                $pat = 'file_path"\s*:\s*"[^"]*bugs[\\/]+(?:[^"\\/]+[\\/]+)*' + [regex]::Escape($almKey) + '\.md"(?![^}]*"limit"\s*:)'
+                if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
+                    New-Item -ItemType File -Path $fullMarker -Force -ErrorAction SilentlyContinue | Out-Null
+                }
+            }
+        } catch {}
+        if (-not (Test-Path $fullMarker)) {
+            try {
+                $stateDir = Join-Path $env:USERPROFILE ".claude/state"
+                if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
+                Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (stufe-c-volltext)") -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch {}
+            Add-AlmanacTrigger -EventType "block" -BlockType "volltext-c" -Slug $slug -Area $name -HighRisk $true
+            $reason = "STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '" + $name + "' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von " + $almRel + " ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/" + $almRel + " KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+            $out = @{
+                hookSpecificOutput = @{
+                    hookEventName            = "PreToolUse"
+                    permissionDecision       = "deny"
+                    permissionDecisionReason = $reason
+                }
+            }
+            Write-Output ($out | ConvertTo-Json -Depth 5 -Compress)
+            exit 0
+        }
     }
 
     # ── BP-ERZWINGUNG (zweite Seite der Medaille): Almanach gelesen, aber die Best-Practices-Datei noch nicht ──
@@ -343,9 +584,10 @@ try {
         # einmaligem BP-Lesen + vielen Folge-Edits), entfaellt der Scan komplett — verhaltensneutral,
         # weil sein Ergebnis dann ohnehin nur zu "kein Block" fuehren wuerde.
         if (-not (Test-Path $bpReadMarker)) {
-            $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices/projekt-code"
+            $bpRoot = Join-Path $env:USERPROFILE "proggs/best-practices"
             $bpItem = $null
-            try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -Filter ("best-practices-" + $almKey + ".md") -File -ErrorAction SilentlyContinue | Select-Object -First 1 } } catch {}
+            # Abwaertskompatibel: NEU <bereich>.md (best-practices/<kat>/) ODER ALT best-practices-<bereich>.md.
+            try { if (Test-Path $bpRoot) { $bpItem = Get-ChildItem -Path $bpRoot -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq ($almKey + ".md") -or $_.Name -eq ("best-practices-" + $almKey + ".md") } | Select-Object -First 1 } } catch {}
             if ($bpItem) {
                 $bpRel = (($bpItem.FullName -replace '\\','/') -replace '.*?/best-practices/', 'best-practices/')
 
@@ -353,7 +595,7 @@ try {
                 try {
                     $tp = [string]$data.transcript_path
                     if (-not [string]::IsNullOrWhiteSpace($tp) -and (Test-Path $tp)) {
-                        $pat = 'file_path"\s*:\s*"[^"]*best-practices-' + [regex]::Escape($almKey) + '\.md'
+                        $pat = 'file_path"\s*:\s*"[^"]*best-practices[/-][^"]*' + [regex]::Escape($almKey) + '\.md'
                         if (Select-String -LiteralPath $tp -Pattern $pat -Quiet -ErrorAction SilentlyContinue) {
                             New-Item -ItemType File -Path $bpReadMarker -Force -ErrorAction SilentlyContinue | Out-Null
                         }
@@ -366,7 +608,8 @@ try {
                     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
                     Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (best-practices)") -Encoding UTF8 -ErrorAction SilentlyContinue
                 } catch {}
-                $reason = "STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '" + $name + "' ist gelesen - aber die zugehoerige Best-Practices-Datei " + $bpRel + " in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/" + $bpRel + " mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
+                Add-AlmanacTrigger -EventType "block" -BlockType "best-practices" -Slug $slug -Area $name -HighRisk $isHighRisk
+                $reason = "STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '" + $name + "' ist gelesen - aber die zugehoerige Best-Practices-Datei " + $bpRel + " in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/" + $bpRel + " mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen.)"
                 $out = @{
                     hookSpecificOutput = @{
                         hookEventName            = "PreToolUse"
@@ -385,6 +628,7 @@ try {
     if ($almanachExists) {
         if (-not (Test-Path $seenMarker)) {
             New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            Add-AlmanacTrigger -EventType "pass" -BlockType ($(if ($disabled) {"disabled"} else {"already-read"})) -Slug $slug -Area $name -HighRisk $isHighRisk
             $msg = if ($disabled) {
                 "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies " + $almRel + " (+ Best Practices) freiwillig."
             } else {
@@ -406,6 +650,7 @@ try {
         # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
         if (-not (Test-Path $seenMarker)) {
             New-Item -ItemType File -Path $seenMarker -Force -ErrorAction SilentlyContinue | Out-Null
+            Add-AlmanacTrigger -EventType "pass" -BlockType ($(if ($disabled) {"disabled"} else {"ack"})) -Slug $slug -Area $name -HighRisk $false
             $msg = if ($disabled) {
                 "BUG-ALMANACH-HINWEIS: Bereich '" + $name + "' ohne Almanach (bugs/" + $file + ") - Notaus aktiv, freigegeben."
             } else {
@@ -422,6 +667,7 @@ try {
         if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force -ErrorAction SilentlyContinue | Out-Null }
         Add-Content -Path (Join-Path $stateDir "bug-almanac-blocks.log") -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm') $slug (kein-almanach)") -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
+    Add-AlmanacTrigger -EventType "block" -BlockType "kein-almanach" -Slug $slug -Area $name -HighRisk $false
     $reason = "STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '" + $name + "', aber es gibt noch KEINEN Almanach (bugs/" + $file + "). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '" + $ackMarker + "' (z.B. Bash: touch ... / PowerShell: New-Item) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei " + (Join-Path $env:TEMP 'bug-almanac-disable.flag') + " anlegen."
     $out = @{
         hookSpecificOutput = @{

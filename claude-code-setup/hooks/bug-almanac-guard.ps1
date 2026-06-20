@@ -488,6 +488,31 @@ try {
         } catch {}
     }
 
+    # ── Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
+    # almanach-trigger-auswertung). Ein Version-Bump (nur versionCode/versionName) aendert KEINE
+    # Logik -> kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram).
+    # NUR gradle, NUR wenn JEDE nicht-leere Zeile des Edits eine Versionszeile ist, NUR wenn sonst
+    # geblockt wuerde (read-Marker fehlt). Funktionserhaltend: jede andere Zeile -> normaler Block
+    # unten. Transparenz (Entscheidung 4): als pass/trivial-uebersprungen in die Sonde (nicht still).
+    if ($slug -eq 'gradle' -and -not $disabled -and -not (Test-Path $readMarker)) {
+        $vb = ""
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)        { $vb = [string]$ti.content }
+            elseif ($ti.new_string) { $vb = [string]$ti.new_string }
+            elseif ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $vb += [string]$e.new_string + "`n" } } }
+        } catch {}
+        $vbLines = @($vb -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+        if ($vbLines.Count -gt 0) {
+            $onlyVersion = $true
+            foreach ($ln in $vbLines) { if ($ln -notmatch '(?i)version(Code|Name)') { $onlyVersion = $false; break } }
+            if ($onlyVersion) {
+                Add-AlmanacTrigger -EventType "pass" -BlockType "trivial-uebersprungen" -Slug $slug -Area $name -HighRisk $isHighRisk
+                exit 0
+            }
+        }
+    }
+
     # ── ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN ──
     if ($almanachExists -and -not $disabled -and -not (Test-Path $readMarker)) {
         # Block-Logging (persistent ueber Sessions/Tage) — nur Beobachtung, beeinflusst nie die Entscheidung.

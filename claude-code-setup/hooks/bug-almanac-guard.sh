@@ -543,6 +543,31 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     fi
 fi
 
+# -- Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
+# almanach-trigger-auswertung). Version-Bump (nur versionCode/versionName) aendert KEINE Logik ->
+# kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram). NUR gradle,
+# NUR wenn JEDE nicht-leere Edit-Zeile eine Versionszeile ist, NUR wenn sonst geblockt wuerde.
+# Funktionserhaltend: jede andere Zeile -> normaler Block unten. Transparenz: pass/trivial-uebersprungen.
+# JSON per python3 (kein jq - claude-hooks §16.2). FAIL-OPEN via || echo 0.
+if [ "$slug" = "gradle" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
+    onlyVersion=$(printf '%s' "$input" | python3 -c "import json,sys,re
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    ex = ti.get('content') or ti.get('new_string') or ''
+    if not ex and ti.get('edits'):
+        ex = '\n'.join((e.get('new_string') or '') for e in ti['edits'])
+    lines=[l.strip() for l in ex.splitlines() if l.strip()]
+    ok = bool(lines) and all(re.search(r'version(code|name)', l, re.I) for l in lines)
+    print('1' if ok else '0')
+except Exception:
+    print('0')
+" 2>/dev/null || echo 0)
+    if [ "${onlyVersion:-0}" = "1" ]; then
+        add_almanac_trigger pass trivial-uebersprungen "$slug" "$name" "$isHighRisk"
+        exit 0
+    fi
+fi
+
 # -- ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN --
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
     # Block-Logging (persistent) — nur Beobachtung, beeinflusst nie die Entscheidung.

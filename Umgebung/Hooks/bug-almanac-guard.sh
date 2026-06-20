@@ -18,6 +18,50 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
 trap 'hook_log_warn "bug-almanac-guard: Error at line $LINENO"; exit 0' ERR
 
+# Sonde (Direktive #2 Selbstbeobachtung): schreibt EINE JSON-Zeile pro Block/Pass nach
+# ~/.claude/state/bug-almanac-triggers.jsonl. Rein beobachtend — beeinflusst NIE die Entscheidung.
+# JSON-Schreiben per python3 (kein jq — claude-hooks §13.2/§16.2). Schreibt NUR in die Datei, NIE
+# auf stdout (sonst Session-Crash, §16.1). FAIL-OPEN via || true (set -e harmlos). Liest $input/$tool/$fp.
+add_almanac_trigger() {
+    # $1=event $2=block_type $3=slug $4=area $5=high_risk(0/1)
+    stateDir="$HOME/.claude/state"
+    mkdir -p "$stateDir" 2>/dev/null || true
+    jsonl="$stateDir/bug-almanac-triggers.jsonl"
+    if [ -f "$jsonl" ]; then
+        sz=$(wc -c < "$jsonl" 2>/dev/null || echo 0)
+        [ "${sz:-0}" -gt 5242880 ] && mv -f "$jsonl" "$jsonl.1" 2>/dev/null || true
+    fi
+    ALM_INPUT="$input" ALM_TOOL="$tool" ALM_FP="$fp" ALM_JSONL="$jsonl" \
+    python3 - "$1" "$2" "$3" "$4" "$5" <<'PYEOF' 2>/dev/null || true
+import json, sys, re, datetime, os
+ev, bt, slug, area, hr = sys.argv[1:6]
+try:
+    d = json.loads(os.environ.get('ALM_INPUT', '') or '{}')
+except Exception:
+    d = {}
+ti = d.get('tool_input') or {}
+ex = ti.get('content') or ti.get('new_string') or ''
+if not ex and ti.get('edits'):
+    ex = '\n'.join((e.get('new_string') or '') for e in ti['edits'])
+ex = ex[:300]
+for p in [r'gho_[A-Za-z0-9]{20,}', r'ghp_[A-Za-z0-9]{20,}', r'sk-[A-Za-z0-9]{20,}', r'AIza[A-Za-z0-9_\-]{20,}']:
+    ex = re.sub(p, '[REDACTED]', ex)
+ex = re.sub(r'''(?i)(token|key|secret|password)(["']?\s*[:=]\s*["'])[^"']+''', r'\1\2[REDACTED]', ex)
+o = {
+    'ts': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+    'event': ev, 'block_type': bt, 'slug': slug, 'area': area,
+    'tool': os.environ.get('ALM_TOOL', ''), 'file': os.environ.get('ALM_FP', ''),
+    'change_excerpt': ex, 'high_risk': (hr == '1'),
+    'session': d.get('session_id', '') or '',
+}
+try:
+    with open(os.environ['ALM_JSONL'], 'a', encoding='utf-8') as f:
+        f.write(json.dumps(o, ensure_ascii=False) + '\n')
+except Exception:
+    pass
+PYEOF
+}
+
 TMP="${TMPDIR:-/tmp}"
 input=$(cat)
 [ -n "$input" ] || exit 0
@@ -34,13 +78,17 @@ if [ "$tool" = "Bash" ]; then
             echo "$matches" | sed -E 's#.*/([a-z0-9._-]+)\.md#\1#' | while read -r an; do
                 if [ -n "$an" ] && [ "$an" != "readme" ] && [ "$an" != "system" ]; then
                     touch "$TMP/bug-almanac-read-$an.flag" 2>/dev/null || true
+                    # cat/bat/less liest immer den Volltext -> auch den full-Marker setzen (Digest-Modell Stufe C).
+                    touch "$TMP/bug-almanac-full-$an.flag" 2>/dev/null || true
                 fi
             done
         fi
-        # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-        bpmatches=$(echo "$cl" | grep -oE 'best-practices-[a-z0-9._-]+\.md' || true)
+        # Best-Practices-Datei per cat/bat/less gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel:
+        # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+        bpmatches=$(echo "$cl" | grep -oE 'best-practices/([a-z0-9._-]+/)*[a-z0-9._-]+\.md' || true)
         if [ -n "$bpmatches" ]; then
-            echo "$bpmatches" | sed -E 's#best-practices-([a-z0-9._-]+)\.md#\1#' | while read -r bn; do
+            echo "$bpmatches" | sed -E 's#.*/##; s#^best-practices-##; s#\.md$##' | while read -r bn; do
+                case "$bn" in readme|system|_*) bn="";; esac
                 [ -n "$bn" ] && touch "$TMP/bug-almanac-bp-read-$bn.flag" 2>/dev/null || true
             done
         fi
@@ -57,9 +105,22 @@ if [ "$tool" = "Read" ]; then
     almName=$(echo "$fpl" | sed -nE 's#(^|.*/)bugs/(.*/)?([^/]+)\.md$#\3#p')
     if [ -n "$almName" ] && [ "$almName" != "readme" ] && [ "$almName" != "system" ]; then
         touch "$TMP/bug-almanac-read-$almName.flag" 2>/dev/null || true
+        # Digest-Modell: Volltext-Read (kein limit ODER limit >= 500) setzt zusaetzlich den full-Marker
+        # (Stufe C). Kurzcheck-Read (z.B. limit=80) setzt nur den read-Marker.
+        lim=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); print(int((d.get('tool_input') or {}).get('limit') or 0))
+except Exception:
+    print(0)
+" 2>/dev/null || echo 0)
+        if [ "${lim:-0}" -le 0 ] || [ "${lim:-0}" -ge 500 ]; then
+            touch "$TMP/bug-almanac-full-$almName.flag" 2>/dev/null || true
+        fi
     fi
-    # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker (Schluessel = Bereich ohne 'best-practices-'-Praefix).
-    bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices-([a-z0-9._-]+)\.md$#\1#p')
+    # Best-Practices-Datei gelesen -> "bp-gelesen"-Marker. Abwaertskompatibel (Migration 2026-06-16):
+    # NEU best-practices/<kat>/<bereich>.md | ALT .../best-practices-<bereich>.md. Schluessel = <bereich>.
+    bpName=$(echo "$fpl" | sed -nE 's#.*/best-practices/(.*/)?([^/]+)\.md$#\2#p' | sed -E 's#^best-practices-##')
+    case "$bpName" in readme|system|_*) bpName="";; esac
     if [ -n "$bpName" ]; then
         touch "$TMP/bug-almanac-bp-read-$bpName.flag" 2>/dev/null || true
     fi
@@ -96,20 +157,31 @@ case "$fpl" in
         # frueher liefen *Database.kt/*Migration(s).kt faelschlich nach android-platform.md.
         # (@Entity/@Dao/@Database OHNE diese Dateinamen werden im .kt-Zweig per Content-Probe erkannt.)
         slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)";;
-    *androidmanifest.xml|*service.kt|*receiver.kt|*worker.kt)
-        # Framework/Runtime-Dateien: Manifest (Permissions/Services/Receiver) + Service/Receiver/Worker.
-        # Room-DB/Migration/DAO -> room.md (eigener Zweig oben). Diese enthalten kein @Composable -> kein
-        # Konflikt mit dem Compose/Kotlin-Zweig (muss VORHER stehen).
+    *androidmanifest.xml)
+        # Manifest separat (keine .kt): Platform-SDK (Permissions/Services/Receiver/Edge-to-Edge/targetSdk).
+        # Der frueher hier mitgefangene service/receiver/worker.kt-Teil wandert in den .kt-case unten als
+        # Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) — so
+        # verdeckt service.kt/worker.kt nicht mehr die feature-spezifischen Android-Almanache.
         slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)";;
     *.kt|*.kts)
-        # .kt/.kts: Compose-UI-Datei (@Composable/setContent)? -> jetpack-compose.md, sonst kotlin.md.
-        # Inhalt aus existierender Datei UND aus dem Tool-Input pruefen. FAIL-OPEN (trap faengt Fehler).
+        # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben, dann nach Prioritaet routen.
+        # FAIL-OPEN (trap). Reihenfolge strikt funktionserhaltend: die spezifischen Feature-Signale
+        # (voice/workmanager/drive) stehen VOR dem service/worker-Dateiname-Fallback, alle bestehenden
+        # Signale (hilt/net/media3/coil/room/compose) bleiben unveraendert dahinter.
         composeSignal=0
         hiltSignal=0
         netSignal=0
         media3Signal=0
         coilSignal=0
         roomSignal=0
+        voiceSignal=0
+        workmanagerSignal=0
+        driveSignal=0
+        filamentSignal=0
+        # Dateiname-Fallback: Service/Receiver/Worker -> android-platform (wie bisher, NUR wenn kein
+        # spezifischeres Feature-Signal davor zieht).
+        androidPlatformName=0
+        case "$fpl" in *service.kt|*receiver.kt|*worker.kt) androidPlatformName=1;; esac
         case "$fpl" in
           *.kt|*.kts)
             probe=""
@@ -147,11 +219,35 @@ $ti_extra"
             case "$probe" in
               *@Entity*|*@Dao*|*@Database*|*@TypeConverter*|*@ProvidedTypeConverter*|*RoomDatabase*|*androidx.room*|*@PrimaryKey*|*@ColumnInfo*|*@Embedded*|*@AutoMigration*|*@Upsert*) roomSignal=1;;
             esac
+            # Voice-Assistant-Ausloesung / Wake-Word / Mic -> voice-assistant-trigger.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *VoiceInteractionService*|*AccessibilityService*|*WakeWord*|*Hotword*|*KEYCODE_ASSIST*|*ACTION_ASSIST*|*sherpa-onnx*|*sherpa.onnx*|*sherpa_onnx*|*Porcupine*|*OpenWakeWord*|*NanoWakeWord*|*Shizuku*) voiceSignal=1;;
+            esac
+            # WorkManager & Notifications -> workmanager-notifications.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *WorkManager*|*PeriodicWorkRequest*|*OneTimeWorkRequest*|*CoroutineWorker*|*enqueueUnique*|*setExactAndAllowWhileIdle*|*setAndAllowWhileIdle*|*AlarmManager*|*NotificationChannel*|*NotificationCompat*|*NotificationManagerCompat*|*SCHEDULE_EXACT_ALARM*) workmanagerSignal=1;;
+            esac
+            # Google-Drive-Backup & Cloud-Sync -> google-drive-backup.md (spezifisch, VOR android-platform).
+            case "$probe" in
+              *appDataFolder*|*DriveScopes*|*DRIVE_APPDATA*|*com.google.api.services.drive*|*google-api-services-drive*|*AuthorizationClient*|*GoogleAuthUtil*) driveSignal=1;;
+            esac
+            # 3D auf Android (Filament/SceneView) -> 3d-filament-android.md (vor Compose/Kotlin).
+            case "$probe" in
+              *com.google.android.filament*|*Filament*|*ModelViewer*|*io.github.sceneview*|*SceneView*|*rememberEngine*) filamentSignal=1;;
+            esac
             ;;
         esac
         # *Module.kt (Dateiname) ist ein starkes Hilt/Dagger-DI-Signal, auch ohne Annotation im Probe.
         case "$fpl" in *module.kt) hiltSignal=1;; esac
-        if [ "$hiltSignal" -eq 1 ]; then
+        if [ "$voiceSignal" -eq 1 ]; then
+            slug="voiceassistant"; file="voice-assistant-trigger.md"; name="Voice-Assistant-Ausloesung / Wake-Word / Mic (Android)"
+        elif [ "$workmanagerSignal" -eq 1 ]; then
+            slug="workmanager"; file="workmanager-notifications.md"; name="WorkManager & Notifications (Reminder/Hintergrund)"
+        elif [ "$driveSignal" -eq 1 ]; then
+            slug="drivebackup"; file="google-drive-backup.md"; name="Google-Drive-Backup & Cloud-Sync (Android)"
+        elif [ "$androidPlatformName" -eq 1 ]; then
+            slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)"
+        elif [ "$hiltSignal" -eq 1 ]; then
             slug="hiltdagger"; file="hilt-dagger.md"; name="Hilt/Dagger Dependency Injection (KSP)"
         elif [ "$netSignal" -eq 1 ]; then
             slug="networking"; file="retrofit-okhttp-moshi.md"; name="Android-Networking (Retrofit/OkHttp/Moshi)"
@@ -161,6 +257,8 @@ $ti_extra"
             slug="coil3"; file="coil3.md"; name="Bild-/Video-Laden (Coil 3)"
         elif [ "$roomSignal" -eq 1 ]; then
             slug="room"; file="room.md"; name="Room-Persistenz (Entity/DAO/Database/Migration/TypeConverter/@Relation)"
+        elif [ "$filamentSignal" -eq 1 ]; then
+            slug="filament"; file="3d-filament-android.md"; name="3D auf Android (Filament/SceneView)"
         elif [ "$composeSignal" -eq 1 ]; then
             slug="compose"; file="jetpack-compose.md"; name="Jetpack Compose (Android-UI)"
         else
@@ -168,11 +266,45 @@ $ti_extra"
         fi
         ;;
     *.swift|*.xcodeproj*|*/info.plist|info.plist|*.entitlements)
-        slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)";;
+        # .swift: Content-Probe -> macOS-Overlay (NSPanel/...) / 3D-Metal-SceneKit (MTKView/SceneKit/RealityKit)
+        #         / On-Device-Whisper (whisper.cpp/WhisperKit) -> sonst swift-appkit.md. Probe nur bei .swift
+        #         (xcodeproj/plist/entitlements enthalten keinen Swift-Code). FAIL-OPEN (trap).
+        macOverlaySignal=0; metalSignal=0; whisperSignal=0
+        case "$fpl" in
+          *.swift)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in *whisper.cpp*|*WhisperKit*|*whisperkit*|*ggml*) whisperSignal=1;; esac
+            case "$probe" in *nonactivatingPanel*|*NSPanel*|*collectionBehavior*|*canJoinAllSpaces*|*orderFrontRegardless*|*ignoresMouseEvents*|*LSUIElement*|*CGEventTap*) macOverlaySignal=1;; esac
+            case "$probe" in *MTKView*|*MTLDevice*|*MTLCreateSystemDefaultDevice*|*SceneKit*|*SCNView*|*RealityKit*|*RealityView*|*MetalFX*|*MetalKit*) metalSignal=1;; esac
+            ;;
+        esac
+        if [ "$whisperSignal" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
+        elif [ "$macOverlaySignal" -eq 1 ]; then
+            slug="macosoverlay"; file="macos-overlay.md"; name="macOS-Overlay-Fenster (Swift/AppKit)"
+        elif [ "$metalSignal" -eq 1 ]; then
+            slug="metalmacos"; file="3d-metal-scenekit-macos.md"; name="3D auf macOS (Metal/SceneKit/RealityKit)"
+        else
+            slug="swift"; file="swift-appkit.md"; name="macOS-Desktop (Swift/AppKit)"
+        fi
+        ;;
     *.ts|*.tsx|*tsconfig.json)
         # .ts/.tsx: MCP-Server-Quelle (@modelcontextprotocol/sdk etc.)? -> mcp-server.md, sonst typescript.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog Compose-Probe). FAIL-OPEN (trap).
         mcpSignal=0
+        threejsSignal=0
         case "$fpl" in
           *.ts|*.tsx)
             probe=""
@@ -191,10 +323,16 @@ $ti_extra"
             case "$probe" in
               *@modelcontextprotocol/sdk*|*McpServer*|*StdioServerTransport*|*StreamableHTTPServerTransport*|*setRequestHandler*) mcpSignal=1;;
             esac
+            # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
+            case "$probe" in
+              *THREE.*|*three/examples*|*@react-three/fiber*|*@react-three/drei*|*@babylonjs*|*WebGPURenderer*|*GLTFLoader*|*KTX2Loader*|*PMREMGenerator*) threejsSignal=1;;
+            esac
             ;;
         esac
         if [ "$mcpSignal" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$threejsSignal" -eq 1 ]; then
+            slug="threejs"; file="3d-threejs-webgpu.md"; name="3D im Web (Three.js/Babylon/WebGPU)"
         else
             slug="typescript"; file="typescript.md"; name="TypeScript / Node"
         fi
@@ -206,7 +344,7 @@ $ti_extra"
         # .cs: Content-Probe -> Groq-Transkription (GroqWhisperClient/audio/transcriptions/api.groq.com)
         #      ODER Wake-Word/Keyword-Spotting (sherpa-onnx/Porcupine/KeywordSpotter/...) -> sonst dotnet-csharp.md.
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog MCP-/Compose-Probe). Nur .cs (XAML/csproj enthalten keinen STT-/KWS-Code). FAIL-OPEN (trap).
-        groqSignal=0; wakeSignal=0
+        groqSignal=0; wakeSignal=0; whisperSignal=0; dxSignal=0; winOverlaySignal=0; textInjectSignal=0
         case "$fpl" in
           *.cs)
             probe=""
@@ -228,12 +366,37 @@ $ti_extra"
             case "$probe" in
               *KeywordSpotter*|*sherpa-onnx*|*sherpa.onnx*|*sherpa_onnx*|*SherpaOnnx*|*Porcupine*|*NanoWakeWord*|*OpenWakeWord*|*WakeWord*|*wakeword*|*wake-word*|*wake_word*) wakeSignal=1;;
             esac
+            # On-Device-Whisper / lokale Transkription -> whisper-stt-lokal.md (nach groq/wake; lokal, NICHT Cloud).
+            case "$probe" in
+              *Whisper.net*|*WhisperFactory*|*whisper.cpp*|*GgmlType*|*CTranslate2*|*faster-whisper*|*faster_whisper*) whisperSignal=1;;
+            esac
+            # 3D auf Windows (.NET DirectX/Stride/Silk.NET) -> 3d-dotnet-directx-windows.md.
+            case "$probe" in
+              *Stride.*|*Silk.NET*|*Vortice*|*Veldrid*|*SharpDX*|*Direct3D*|*D3D12*|*MonoGame*) dxSignal=1;;
+            esac
+            # Windows-Overlay-Fenster (WPF: always-on-top/click-through/global Hotkey) -> windows-overlay.md.
+            case "$probe" in
+              *WS_EX_NOACTIVATE*|*WS_EX_TOOLWINDOW*|*WS_EX_TRANSPARENT*|*WS_EX_LAYERED*|*RegisterHotKey*|*WH_KEYBOARD_LL*|*SetWindowPos*|*WindowChrome*|*AllowsTransparency*) winOverlaySignal=1;;
+            esac
+            # Text-Injection in fremde Electron/Chromium-Felder (Claude Desktop Chat/Code/Cowork) -> windows-electron-text-injection.md.
+            # Spezifischer als der Overlay-Zweig: Chromium-Render-HWND / UIA-Befuellen / Scancode-Paste / A11y-Aktivierung.
+            case "$probe" in
+              *Chrome_RenderWidgetHostHWND*|*force-renderer-accessibility*|*KEYEVENTF_SCANCODE*|*EnumChildWindows*|*ValuePattern*|*TextPattern*|*FlaUI*|*DWMWA_EXTENDED_FRAME_BOUNDS*) textInjectSignal=1;;
+            esac
             ;;
         esac
         if [ "$groqSignal" -eq 1 ]; then
             slug="groq"; file="groq-transkription.md"; name="Groq Whisper Transkription (Audio/STT)"
         elif [ "$wakeSignal" -eq 1 ]; then
             slug="wakeword"; file="wake-word.md"; name="Wake-Word / Keyword-Spotting (.NET/C#)"
+        elif [ "$whisperSignal" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
+        elif [ "$dxSignal" -eq 1 ]; then
+            slug="dxwindows"; file="3d-dotnet-directx-windows.md"; name="3D auf Windows (.NET DirectX/Stride/Silk.NET)"
+        elif [ "$textInjectSignal" -eq 1 ]; then
+            slug="wineltextinject"; file="windows-electron-text-injection.md"; name="Text-Injection in Electron/Chromium-Felder (Windows, C#/WPF)"
+        elif [ "$winOverlaySignal" -eq 1 ]; then
+            slug="winoverlay"; file="windows-overlay.md"; name="Windows-Overlay-Fenster (C#/WPF)"
         else
             slug="dotnet"; file="dotnet-csharp.md"; name="C#/.NET (WPF, WinUI, Konsole, Backend)"
         fi
@@ -262,14 +425,24 @@ $ti_extra"
         case "$probe" in
           *icns*|*iconutil*|*getchannel*|*ic_launcher*|*ApplicationIcon*) iconPy=1;;
         esac
+        # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
+        whisperPy=0
+        case "$probe" in
+          *faster_whisper*|*faster-whisper*|*whisper.cpp*|*WhisperModel*|*ctranslate2*|*pywhispercpp*) whisperPy=1;;
+        esac
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
         elif [ "$iconPy" -eq 1 ]; then
             slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
+        elif [ "$whisperPy" -eq 1 ]; then
+            slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
         else
             slug="python"; file="python-windows.md"; name="Python (Windows-Encoding/Cross-Platform-Scripting)"
         fi
         ;;
+    *.gd|*.tscn|*.tres|*.gdshader|*project.godot)
+        # Godot 4 (GDScript/Szenen/Shader/Projekt) -> 3d-godot.md. Eindeutige Endungen, kein Konflikt.
+        slug="godot"; file="3d-godot.md"; name="3D mit Godot 4";;
     */hooks/*.ps1|*/hooks/*.sh)
         slug="claudehooks"; file="claude-hooks.md"; name="Claude-Harness Hooks (PowerShell/Bash)";;
     */claude.md|claude.md|*/rules/*.md|*/settings.json|settings.json|*/settings.local.json|*/settings-reference.json|*/skill.md|*/commands/*.md|*/agents/*.md)
@@ -280,6 +453,33 @@ esac
 # Selbst-Ausschluss: Almanach-/Best-Practices-.md duerfen claudeconfig NIE triggern (sind selbst .md).
 if [ "$slug" = "claudeconfig" ]; then
     case "$fpl" in */bugs/*|*/best-practices/*) slug=""; file=""; name="";; esac
+fi
+
+# -- Rust-3D (Bevy/wgpu) VOR der generischen Endungs-Erkennung --
+# 3d-rust-wgpu-bevy.md existiert, rust.md NICHT. Ohne diesen Check liefe eine .rs-Datei in den generischen
+# rust.md-Platzhalter -> Fehlalarm "kein Almanach", obwohl 3d-rust-wgpu-bevy.md da ist. Greift nur bei
+# 3D-Signal; reines Rust faellt unveraendert in den generischen rust.md-Platzhalter.
+if [ -z "$slug" ]; then
+    case "$fpl" in
+        *.rs|*cargo.toml)
+            probe=""
+            [ -f "$fp" ] && probe=$(cat "$fp" 2>/dev/null || true)
+            ti_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            probe="$probe
+$ti_extra"
+            case "$probe" in
+              *bevy*|*wgpu*|*Camera3d*|*Mesh3d*|*MeshMaterial3d*|*PbrBundle*|*StandardMaterial*) slug="3drust"; file="3d-rust-wgpu-bevy.md"; name="3D mit Rust (wgpu/Bevy)";;
+            esac
+            ;;
+    esac
 fi
 
 # -- Generische Code-Erkennung (Luecke B, 2026-06-07): bekannte Programmiersprachen-Endung OHNE eigenes Mapping. --
@@ -321,6 +521,11 @@ if [ -n "$almanachPath" ]; then almRel="bugs/${almanachPath#"$bugsRoot"/}"; else
 almKey=$(echo "$file" | sed 's/\.md$//' | tr '[:upper:]' '[:lower:]')
 readMarker="$TMP/bug-almanac-read-$almKey.flag"
 seenMarker="$TMP/bug-almanac-seen-$slug.flag"
+# Digest-Modell Stufe C: Hochrisiko-Bereiche (tickende/teure Fehlerklassen: Release, Geld, Harness)
+# verlangen den VOLLTEXT (full-Marker), nicht nur den Kurzcheck. Liste = almKey (Dateiname ohne .md).
+isHighRisk=0
+case "$almKey" in r8|firebase-billing|claude-hooks|claude-config) isHighRisk=1;; esac
+fullMarker="$TMP/bug-almanac-full-$almKey.flag"
 disabled=0; [ -f "$TMP/bug-almanac-disable.flag" ] && disabled=1
 
 # -- Robustheits-Fallback (Fix 2026-06-02): Read-Marker via Transkript nachziehen --
@@ -338,15 +543,78 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     fi
 fi
 
+# -- Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
+# almanach-trigger-auswertung). Version-Bump (nur versionCode/versionName) aendert KEINE Logik ->
+# kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram). NUR gradle,
+# NUR wenn JEDE nicht-leere Edit-Zeile eine Versionszeile ist, NUR wenn sonst geblockt wuerde.
+# Funktionserhaltend: jede andere Zeile -> normaler Block unten. Transparenz: pass/trivial-uebersprungen.
+# JSON per python3 (kein jq - claude-hooks §16.2). FAIL-OPEN via || echo 0.
+if [ "$slug" = "gradle" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
+    onlyVersion=$(printf '%s' "$input" | python3 -c "import json,sys,re
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    ex = ti.get('content') or ti.get('new_string') or ''
+    if not ex and ti.get('edits'):
+        ex = '\n'.join((e.get('new_string') or '') for e in ti['edits'])
+    lines=[l.strip() for l in ex.splitlines() if l.strip()]
+    ok = bool(lines) and all(re.search(r'version(code|name)', l, re.I) for l in lines)
+    print('1' if ok else '0')
+except Exception:
+    print('0')
+" 2>/dev/null || echo 0)
+    if [ "${onlyVersion:-0}" = "1" ]; then
+        add_almanac_trigger pass trivial-uebersprungen "$slug" "$name" "$isHighRisk"
+        exit 0
+    fi
+fi
+
 # -- ERZWINGUNG: Almanach existiert, Notaus aus, aber noch nicht gelesen -> BLOCKIEREN --
 if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
     # Block-Logging (persistent) — nur Beobachtung, beeinflusst nie die Entscheidung.
     stateDir="$HOME/.claude/state"
     mkdir -p "$stateDir" 2>/dev/null || true
     echo "$(date '+%Y-%m-%d %H:%M') $slug" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-    reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel mit dem Read-Tool (komplett + Versions-Abgleich), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; das Lesen kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    add_almanac_trigger block almanach-ungelesen "$slug" "$name" "$isHighRisk"
+    if [ "$isHighRisk" -eq 1 ]; then
+        reason="STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem HOCHRISIKO-Bereich '$name', aber $almRel wurde in dieser Session noch NICHT gelesen. Oeffne ZUERST ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit - Hochrisiko verlangt den Volltext, der Kurzcheck reicht hier nicht) + Versions-Abgleich, DANN editiere erneut. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    else
+        reason="STOPP - Bug-Almanach-Pflicht (Digest-Modell Stufe A, Regel: known-bugs-before-coding). Du editierst eine Datei aus dem Bereich '$name', aber der Kurzcheck von $almRel wurde in dieser Session noch NICHT gelesen. Lies JETZT NUR den Kurzcheck: Read auf ~/proggs/$almRel mit limit=80 (die Kurzcheck-Sektion oben in der Datei; der Volltext ist NICHT noetig - er wird erst beim ERSTEN FEHLER im Bereich Pflicht, Stufe B). DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Trivialer Kleinkram wie String/Doku/Versions-Bump ist von der Regel ausgenommen; kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+    fi
     python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
     exit 0
+fi
+
+# -- Stufe C (Digest-Modell): Hochrisiko-Bereich verlangt den VOLLTEXT, nicht nur den Kurzcheck --
+# Erreicht nur, wenn der read-Marker existiert (Kurzcheck oder mehr gelesen). Fehlt der full-Marker,
+# wird bei Hochrisiko-Bereichen blockiert, bis ein Volltext-Read (Read ohne limit) erkannt wurde.
+if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ "$isHighRisk" -eq 1 ] && [ -f "$readMarker" ] && [ ! -f "$fullMarker" ]; then
+    # Transcript-Fallback (analog Almanach): ein Volltext-Read (Read OHNE limit-Feld im input-Objekt)
+    # kann vom Read-Zweig verpasst worden sein (Matcher-Cache / Read+Edit-Race).
+    tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
+    if [ -n "$tpath" ] && [ -f "$tpath" ]; then
+        if python3 - "$tpath" "$almKey" <<'PYEOF' 2>/dev/null
+import re, sys
+path, key = sys.argv[1], sys.argv[2]
+pat = re.compile('file_path"\\s*:\\s*"[^"]*bugs[/\\\\]+(?:[^"/\\\\]+[/\\\\]+)*' + re.escape(key) + '\\.md"(?![^}]*"limit"\\s*:)')
+try:
+    with open(path, encoding='utf-8', errors='ignore') as f:
+        sys.exit(0 if any(pat.search(line) for line in f) else 1)
+except Exception:
+    sys.exit(1)
+PYEOF
+        then
+            touch "$fullMarker" 2>/dev/null || true
+        fi
+    fi
+    if [ ! -f "$fullMarker" ]; then
+        stateDir="$HOME/.claude/state"
+        mkdir -p "$stateDir" 2>/dev/null || true
+        echo "$(date '+%Y-%m-%d %H:%M') $slug (stufe-c-volltext)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+        add_almanac_trigger block volltext-c "$slug" "$name" 1
+        reason="STOPP - Volltext-Pflicht (Digest-Modell Stufe C, Regel: known-bugs-before-coding). '$name' ist ein HOCHRISIKO-Bereich (tickende/teure Fehlerklasse: Release, Geld, Harness). Der Kurzcheck von $almRel ist gelesen, aber der VOLLTEXT noch nicht. Oeffne ~/proggs/$almRel KOMPLETT mit dem Read-Tool (OHNE limit), DANN editiere erneut. (Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+        python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
+        exit 0
+    fi
 fi
 
 # -- BP-ERZWINGUNG (zweite Seite der Medaille): Almanach gelesen, aber best-practices-<bereich>.md noch nicht --
@@ -360,14 +628,15 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
     # vielen Folge-Edits) -> find entfaellt komplett. Verhaltensneutral: das Ergebnis wuerde dann
     # ohnehin nur zu "kein Block" fuehren.
     if [ ! -f "$bpReadMarker" ]; then
-        bpRoot="$HOME/proggs/best-practices/projekt-code"
-        bpPath="$(find "$bpRoot" -name "best-practices-$almKey.md" -type f 2>/dev/null | head -1 || true)"
+        bpRoot="$HOME/proggs/best-practices"
+        # Abwaertskompatibel: NEU <bereich>.md ODER ALT best-practices-<bereich>.md.
+        bpPath="$(find "$bpRoot" \( -name "$almKey.md" -o -name "best-practices-$almKey.md" \) -type f 2>/dev/null | head -1 || true)"
         if [ -n "$bpPath" ]; then
             bpRel="best-practices/${bpPath#*/best-practices/}"
             # Transcript-Fallback (analog Almanach): Read evtl. vom Read-Hook verpasst (Matcher-Cache / Read+Edit-Race).
             tpath=$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') or '')" 2>/dev/null || echo "")
             if [ -n "$tpath" ] && [ -f "$tpath" ]; then
-                if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices-'"$almKey"'\.md' "$tpath" 2>/dev/null; then
+                if grep -qE 'file_path"[[:space:]]*:[[:space:]]*"[^"]*best-practices[/-][^"]*'"$almKey"'\.md' "$tpath" 2>/dev/null; then
                     touch "$bpReadMarker" 2>/dev/null || true
                 fi
             fi
@@ -375,7 +644,8 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ -f "$readMarker" ]; then
                 stateDir="$HOME/.claude/state"
                 mkdir -p "$stateDir" 2>/dev/null || true
                 echo "$(date '+%Y-%m-%d %H:%M') $slug (best-practices)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
-                reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
+                add_almanac_trigger block best-practices "$slug" "$name" "$isHighRisk"
+                reason="STOPP - Best-Practices-Pflicht (Regel: known-bugs-before-coding). Der Bug-Almanach fuer '$name' ist gelesen - aber die zugehoerige Best-Practices-Datei $bpRel in dieser Session noch NICHT. Reihenfolge: erst Almanach (erledigt), dann Best Practices, DANN editieren. Oeffne ZUERST ~/proggs/$bpRel mit dem Read-Tool (Kurzcheck mit limit=80 reicht - Digest-Modell Stufe A; so macht man es von vornherein richtig, damit der Bug gar nicht erst entsteht), DANN editiere erneut - das Lesen wird automatisch erkannt und gibt den Bereich frei. (Kostet pro Bereich nur EINMAL pro Session. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen.)"
                 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
                 exit 0
             fi
@@ -387,6 +657,8 @@ fi
 if [ -f "$almanachPath" ]; then
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
+        bt="already-read"; [ "$disabled" -eq 1 ] && bt="disabled"
+        add_almanac_trigger pass "$bt" "$slug" "$name" "$isHighRisk"
         if [ "$disabled" -eq 1 ]; then
             msg="BUG-ALMANACH-HINWEIS: Bereich '$name' - Notaus aktiv (bug-almanac-disable.flag), kein Lese-Zwang. Lies $almRel (+ Best Practices) freiwillig."
         else
@@ -406,6 +678,8 @@ if [ "$disabled" -eq 1 ] || [ -f "$ackMarker" ]; then
     # Quittung gesetzt oder Notaus aktiv -> frei. Einmalige sanfte Bestaetigung (seenMarker gegen Spam).
     if [ ! -f "$seenMarker" ]; then
         touch "$seenMarker" 2>/dev/null || true
+        bt="ack"; [ "$disabled" -eq 1 ] && bt="disabled"
+        add_almanac_trigger pass "$bt" "$slug" "$name" 0
         if [ "$disabled" -eq 1 ]; then
             msg="BUG-ALMANACH-HINWEIS: Bereich '$name' ohne Almanach (bugs/$file) - Notaus aktiv, freigegeben."
         else
@@ -419,6 +693,7 @@ fi
 stateDir="$HOME/.claude/state"
 mkdir -p "$stateDir" 2>/dev/null || true
 echo "$(date '+%Y-%m-%d %H:%M') $slug (kein-almanach)" >> "$stateDir/bug-almanac-blocks.log" 2>/dev/null || true
+add_almanac_trigger block kein-almanach "$slug" "$name" 0
 reason="STOPP - Bug-Almanach-Pflicht (Regel: known-bugs-before-coding). Du arbeitest an '$name', aber es gibt noch KEINEN Almanach (bugs/$file). Zwei Wege: (1) Frank kurz um OK bitten und dann den Skill 'bug-almanach-recherche' STARTEN (der vorgeschriebene, vollstaendige Weg - NICHT selbst ad hoc recherchieren); ODER (2) wenn das nur trivialer Kleinkram ist (String/Doku/Versions-Bump) bzw. Frank gegen eine Recherche entscheidet: die Quittung anlegen - leere Datei '$ackMarker' (touch) - danach ist der Bereich fuer diese Session frei. Notaus bei Fehlalarm: leere Datei $TMP/bug-almanac-disable.flag anlegen."
 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$reason"
 
