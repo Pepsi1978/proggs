@@ -162,9 +162,15 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
 
-internal suspend fun deleteMental(context: Context, id: String) {
+internal suspend fun deleteMental(context: Context, id: String, propagate: Boolean = true) {
     de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context).deleteById(id)
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
+    // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone), sonst kommt der Mental-Satz ueber
+    // ein 2. Geraet beim Restore wieder. propagate=false: roher Restore-Cleanup ohne neuen Tombstone.
+    if (propagate) {
+        de.frank.entropyreducer.data.markDeleted(
+            context, de.frank.entropyreducer.data.TombstoneType.MENTAL, id)
+        de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
+    }
 }
 
 /** Speichert die per Drag & Drop geaenderte Reihenfolge ueber das position-Feld. */
@@ -187,12 +193,26 @@ internal suspend fun restoreMentals(
     // v19 (2026-06-20): Backup-DTO MIT Herkunft direkt (analog restoreGewohnheiten) statt das
     // herkunftslose Mental-UI-Modell — die Herkunft ueberlebt so den Restore.
     incoming: List<de.frank.entropyreducer.data.remote.drive.BackupMental>,
+    // Frank-Wunsch 2026-06-20: Mental-Tombstones anwenden (delete-wins-only-if-newer; Mental hat updatedAt).
+    deletedAt: Map<String, Long> = emptyMap(),
 ): Int {
-    if (incoming.isEmpty()) return 0
     val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
+    var deleted = 0
+    // Tombstone: lokale getombstonete Mental-Saetze loeschen (nur wenn die Loeschung neuer ist als
+    // der lokale Stand). Laeuft auch bei leerem incoming -> raeumt Alt-Eintraege weg.
+    if (deletedAt.isNotEmpty()) {
+        for (ex in dao.getAllForBackup()) {
+            val ts = deletedAt[ex.id]
+            if (ts != null && ts > ex.updatedAt) {
+                dao.deleteById(ex.id)
+                deleted++
+            }
+        }
+    }
+    if (incoming.isEmpty()) return deleted
     val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
-    val toAdd = incoming.filterNot { it.id in existingIds }
-    if (toAdd.isEmpty()) return 0
+    val toAdd = incoming.filterNot { m -> m.id in existingIds || (deletedAt[m.id]?.let { it > m.updatedAt } == true) }
+    if (toAdd.isEmpty()) return deleted
     var nextPos = dao.maxPosition() + 1
     dao.upsertAll(
         toAdd.map { m ->
@@ -207,7 +227,7 @@ internal suspend fun restoreMentals(
             )
         }
     )
-    return toAdd.size
+    return toAdd.size + deleted
 }
 
 private fun parseMentals(raw: String?): List<Mental> {

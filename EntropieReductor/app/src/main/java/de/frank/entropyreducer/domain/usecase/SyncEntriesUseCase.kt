@@ -386,86 +386,120 @@ constructor(
         }
 
         // --- Tagebuch-Eintraege (v6+) ---
-        // DataStore-basiert, kein DAO. Wir mergen ueber die internen Helper
-        // im TagebuchScreen.kt (internal-Sichtbarkeit).
-        if (payload.tagebuchEntries.isNotEmpty()) {
-            val existingMap =
-                de.frank.entropyreducer.presentation.tagebuch
-                    .tagebuchEntriesFlow(appContext)
-                    .first()
-                    .associateBy { it.id }
-            for (b in payload.tagebuchEntries) {
-                val incoming =
-                    de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry(
-                        id = b.id,
-                        timestampMs = b.timestampMs,
-                        title = b.title,
-                        text = b.text,
-                        summary = b.summary,
-                        followups =
-                            b.followups.map { f ->
-                                de.frank.entropyreducer.presentation.tagebuch.TagebuchFollowup(
-                                    id = f.id,
-                                    createdAtMs = f.createdAtMs,
-                                    text = f.text,
-                                )
-                            },
-                    )
-                val existing = existingMap[incoming.id]
-                if (existing == null) {
-                    de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry(
-                        appContext,
-                        incoming,
-                    )
-                    inserted++
+        // DataStore-basiert. Frank-Wunsch 2026-06-20: Tombstones anwenden, sonst kommt ein auf einem
+        // 2. Geraet geloeschter Tagebuch-Eintrag ueber den additiven Restore wieder.
+        run {
+            val tagebuchDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.TAGEBUCH }
+                    .associate { it.id to it.deletedAt }
+            if (payload.tagebuchEntries.isNotEmpty() || tagebuchDeletedAt.isNotEmpty()) {
+                val existingMap =
+                    de.frank.entropyreducer.presentation.tagebuch
+                        .tagebuchEntriesFlow(appContext)
+                        .first()
+                        .associateBy { it.id }
+                // Tombstone anwenden: lokale getombstonete Eintraege loeschen (Tagebuch hat kein
+                // updatedAt -> Tombstone immer anwenden). propagate=false: kein neuer Tombstone/Backup.
+                for (id in tagebuchDeletedAt.keys) {
+                    if (existingMap.containsKey(id)) {
+                        de.frank.entropyreducer.presentation.tagebuch.deleteTagebuchEntry(
+                            appContext, id, propagate = false)
+                        deleted++
+                    }
                 }
-                // Konservativ: vorhandene Eintraege NICHT ueberschreiben — Tagebuch hat kein
-                // updatedAt-Feld, und lokale Edits sollen nicht durch alte Backups verloren gehen.
+                for (b in payload.tagebuchEntries) {
+                    if (b.id in tagebuchDeletedAt) continue // getombstonet -> nicht wieder einspielen
+                    val incoming =
+                        de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry(
+                            id = b.id,
+                            timestampMs = b.timestampMs,
+                            title = b.title,
+                            text = b.text,
+                            summary = b.summary,
+                            followups =
+                                b.followups.map { f ->
+                                    de.frank.entropyreducer.presentation.tagebuch.TagebuchFollowup(
+                                        id = f.id,
+                                        createdAtMs = f.createdAtMs,
+                                        text = f.text,
+                                    )
+                                },
+                        )
+                    // Konservativ: vorhandene Eintraege NICHT ueberschreiben (kein updatedAt).
+                    if (existingMap[incoming.id] == null) {
+                        de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry(
+                            appContext,
+                            incoming,
+                        )
+                        inserted++
+                    }
+                }
             }
         }
 
         // --- Mentalboard (v12+) ---
-        // DataStore-basiert wie Tagebuch. restoreMentals ergaenzt nur fehlende IDs —
-        // lokale Reihenfolge/Edits gewinnen (konservativ).
-        if (payload.mentals.isNotEmpty()) {
+        // Frank-Wunsch 2026-06-20: IMMER aufrufen + Mental-Tombstones durchreichen (Loeschung
+        // propagiert, restoreMentals raeumt lokal getombstonete weg — auch bei leerem incoming).
+        run {
+            val mentalDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.MENTAL }
+                    .associate { it.id to it.deletedAt }
             inserted +=
                 de.frank.entropyreducer.presentation.mental.restoreMentals(
                     appContext,
                     // v19 (2026-06-20): Backup-DTO MIT Herkunft direkt durchreichen.
                     payload.mentals,
+                    mentalDeletedAt,
                 )
         }
 
         // --- Ideen-Eintraege (v13+, Frank-Wunsch 2026-06-10) ---
-        // DataStore-basiert wie Tagebuch (1:1-Klon). Existenz-Strategie: lokale Edits gewinnen,
-        // vorhandene Eintraege werden NICHT ueberschrieben (konservativ, wie beim Tagebuch).
-        if (payload.ideenEntries.isNotEmpty()) {
-            val existingIdeenMap =
-                de.frank.entropyreducer.presentation.ideen
-                    .ideenEntriesFlow(appContext)
-                    .first()
-                    .associateBy { it.id }
-            for (b in payload.ideenEntries) {
-                if (existingIdeenMap[b.id] != null) continue
-                de.frank.entropyreducer.presentation.ideen.addIdeenEntry(
-                    appContext,
-                    de.frank.entropyreducer.presentation.ideen.IdeenEntry(
-                        id = b.id,
-                        timestampMs = b.timestampMs,
-                        title = b.title,
-                        text = b.text,
-                        summary = b.summary,
-                        followups =
-                            b.followups.map { f ->
-                                de.frank.entropyreducer.presentation.ideen.IdeenFollowup(
-                                    id = f.id,
-                                    createdAtMs = f.createdAtMs,
-                                    text = f.text,
-                                )
-                            },
-                    ),
-                )
-                inserted++
+        // DataStore-basiert wie Tagebuch. Frank-Wunsch 2026-06-20: Tombstones anwenden (Loeschung
+        // propagiert; sonst kommt eine auf einem 2. Geraet geloeschte Idee ueber den Restore wieder).
+        run {
+            val ideeDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.IDEE }
+                    .associate { it.id to it.deletedAt }
+            if (payload.ideenEntries.isNotEmpty() || ideeDeletedAt.isNotEmpty()) {
+                val existingIdeenMap =
+                    de.frank.entropyreducer.presentation.ideen
+                        .ideenEntriesFlow(appContext)
+                        .first()
+                        .associateBy { it.id }
+                // Tombstone: lokale getombstonete Ideen loeschen (kein updatedAt -> immer anwenden).
+                for (id in ideeDeletedAt.keys) {
+                    if (existingIdeenMap.containsKey(id)) {
+                        de.frank.entropyreducer.presentation.ideen.deleteIdeenEntry(
+                            appContext, id, propagate = false)
+                        deleted++
+                    }
+                }
+                for (b in payload.ideenEntries) {
+                    if (b.id in ideeDeletedAt) continue
+                    if (existingIdeenMap[b.id] != null) continue
+                    de.frank.entropyreducer.presentation.ideen.addIdeenEntry(
+                        appContext,
+                        de.frank.entropyreducer.presentation.ideen.IdeenEntry(
+                            id = b.id,
+                            timestampMs = b.timestampMs,
+                            title = b.title,
+                            text = b.text,
+                            summary = b.summary,
+                            followups =
+                                b.followups.map { f ->
+                                    de.frank.entropyreducer.presentation.ideen.IdeenFollowup(
+                                        id = f.id,
+                                        createdAtMs = f.createdAtMs,
+                                        text = f.text,
+                                    )
+                                },
+                        ),
+                    )
+                    inserted++
+                }
             }
         }
 
@@ -720,34 +754,49 @@ constructor(
         }
 
         // --- Thesen-Eintraege (v7+, Frank-Wunsch 2026-05-20) ---
-        // Spiegelt das Tagebuch-Verhalten: Existenz-Strategie, lokale Edits gewinnen.
-        if (payload.thesenEntries.isNotEmpty()) {
-            val existingThesenMap =
-                de.frank.entropyreducer.presentation.thesen
-                    .thesenEntriesFlow(appContext)
-                    .first()
-                    .associateBy { it.id }
-            for (b in payload.thesenEntries) {
-                val incoming =
-                    de.frank.entropyreducer.presentation.thesen.ThesenEntry(
-                        id = b.id,
-                        timestampMs = b.timestampMs,
-                        title = b.title,
-                        text = b.text,
-                        summary = b.summary,
-                        followups =
-                            b.followups.map { f ->
-                                de.frank.entropyreducer.presentation.thesen.ThesenFollowup(
-                                    id = f.id,
-                                    createdAtMs = f.createdAtMs,
-                                    text = f.text,
-                                )
-                            },
-                    )
-                val existing = existingThesenMap[incoming.id]
-                if (existing == null) {
-                    de.frank.entropyreducer.presentation.thesen.addThesenEntry(appContext, incoming)
-                    inserted++
+        // Frank-Wunsch 2026-06-20: Tombstones anwenden (Loeschung propagiert; sonst kommt eine auf
+        // einem 2. Geraet geloeschte These ueber den additiven Restore wieder).
+        run {
+            val theseDeletedAt =
+                allTombstones
+                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.THESE }
+                    .associate { it.id to it.deletedAt }
+            if (payload.thesenEntries.isNotEmpty() || theseDeletedAt.isNotEmpty()) {
+                val existingThesenMap =
+                    de.frank.entropyreducer.presentation.thesen
+                        .thesenEntriesFlow(appContext)
+                        .first()
+                        .associateBy { it.id }
+                // Tombstone: lokale getombstonete Thesen loeschen (kein updatedAt -> immer anwenden).
+                for (id in theseDeletedAt.keys) {
+                    if (existingThesenMap.containsKey(id)) {
+                        de.frank.entropyreducer.presentation.thesen.deleteThesenEntry(
+                            appContext, id, propagate = false)
+                        deleted++
+                    }
+                }
+                for (b in payload.thesenEntries) {
+                    if (b.id in theseDeletedAt) continue
+                    val incoming =
+                        de.frank.entropyreducer.presentation.thesen.ThesenEntry(
+                            id = b.id,
+                            timestampMs = b.timestampMs,
+                            title = b.title,
+                            text = b.text,
+                            summary = b.summary,
+                            followups =
+                                b.followups.map { f ->
+                                    de.frank.entropyreducer.presentation.thesen.ThesenFollowup(
+                                        id = f.id,
+                                        createdAtMs = f.createdAtMs,
+                                        text = f.text,
+                                    )
+                                },
+                        )
+                    if (existingThesenMap[incoming.id] == null) {
+                        de.frank.entropyreducer.presentation.thesen.addThesenEntry(appContext, incoming)
+                        inserted++
+                    }
                 }
             }
         }

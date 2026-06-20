@@ -964,11 +964,16 @@ internal suspend fun addIdeenEntry(context: Context, entry: IdeenEntry) {
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
 }
 
-internal suspend fun deleteIdeenEntry(context: Context, id: String) {
+internal suspend fun deleteIdeenEntry(context: Context, id: String, propagate: Boolean = true) {
     // CASCADE (ForeignKey in IdeaFollowupEntity) loescht zugehoerige idea_followups automatisch.
     ideaDaoFrom(context).deleteIdeaById(id)
     Diag.d(DiagnosticArea.DATABASE, IDEEN_TAG, "CHECKPOINT step=deleteIdee id=$id")
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
+    // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone). propagate=false: Restore-Cleanup.
+    if (propagate) {
+        de.frank.entropyreducer.data.markDeleted(
+            context, de.frank.entropyreducer.data.TombstoneType.IDEE, id)
+        de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Ideen-Reiter: Aenderung")
+    }
 }
 
 /**

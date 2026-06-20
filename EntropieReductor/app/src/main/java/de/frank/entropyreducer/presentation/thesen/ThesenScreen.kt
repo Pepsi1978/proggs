@@ -888,13 +888,19 @@ internal suspend fun addThesenEntry(context: Context, entry: ThesenEntry) {
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
 }
 
-internal suspend fun deleteThesenEntry(context: Context, id: String) {
+internal suspend fun deleteThesenEntry(context: Context, id: String, propagate: Boolean = true) {
     context.thesenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.filterNot { it.id == id }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Thesen-Reiter: Aenderung")
+    // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone). propagate=false: Restore-Cleanup.
+    if (propagate) {
+        de.frank.entropyreducer.data.markDeleted(
+            context, de.frank.entropyreducer.data.TombstoneType.THESE, id)
+        de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
+            context, "Thesen-Reiter: Aenderung")
+    }
 }
 
 /**

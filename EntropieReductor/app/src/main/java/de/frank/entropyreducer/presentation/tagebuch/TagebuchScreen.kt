@@ -902,13 +902,19 @@ internal suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
 }
 
-internal suspend fun deleteTagebuchEntry(context: Context, id: String) {
+internal suspend fun deleteTagebuchEntry(context: Context, id: String, propagate: Boolean = true) {
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.filterNot { it.id == id }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
-    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Tagebuch/Journal: Aenderung")
+    // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone). propagate=false: Restore-Cleanup.
+    if (propagate) {
+        de.frank.entropyreducer.data.markDeleted(
+            context, de.frank.entropyreducer.data.TombstoneType.TAGEBUCH, id)
+        de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
+            context, "Tagebuch/Journal: Aenderung")
+    }
 }
 
 /**
