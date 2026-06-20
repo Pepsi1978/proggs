@@ -91,7 +91,21 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 
 ### Schritt 2 — Researcher-Schwarm (breite Bug-Suche, offizielle Quellen zuerst)
 
-**Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
+**ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen** (Regel `research-strategy.md`,
+Frage 1 A/B/C/D) — NIE automatisch losrecherchieren (der `research-approval`-Hook blockt mm/or-research,
+bis Frank A/B gewaehlt UND `touch "$TEMP/research-approved.flag"` gesetzt hat):
+- **A (Standard): Firecrawl + MiniMax M3 (max Thinking)** → pro Bug-Aspekt
+  `python3 ~/proggs/mm-research.py "<bereich> <aspekt> Bugs/Fallen/Workarounds" [n]`. **Firecrawl Free =
+  max 2 GLEICHZEITIG**: 2 Aspekte starten → auf Ergebnis warten → naechste 2, bis alle Aspekte
+  (Doku/Issues/Community/Plattform/Mechanik …) durch sind. NIE 7 Firecrawl-Calls auf einmal
+  (Rate-Limit/Credit-Verschwendung). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). MiniMax liefert
+  die quellentreue Auswertung; der Hauptagent baut daraus die Almanach-Eintraege (Schritt 4-6) und macht
+  die `gh`-Fix-Status-Pruefung weiterhin selbst.
+- **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
+  (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
+- **C (Opus-Schwarm):** NUR auf explizite Wahl → die folgenden 7-parallel-Regeln.
+
+**[Option C — Opus-Schwarm] Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
 Bei genug Teilbereichen IMMER mit **7 auf einmal** beginnen (in EINEM Antwortblock) — NICHT erst 4 und
 danach nochmal 3 (das ist Zeitverschwendung). 7 gleichzeitig funktionieren einwandfrei.
 Gibt es MEHR als 7 Themen, dann gilt Continuous-Spawning: sobald EINER fertig wird (es laufen also nur
