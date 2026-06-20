@@ -2,6 +2,8 @@ package de.frank.entropyreducer.domain.usecase
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
+import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.OriginType
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
@@ -82,6 +84,9 @@ class GenerateSuggestionsUseCase @Inject constructor(
     private val gemini: GeminiApi,
     private val secrets: EncryptedSecretsStore,
     private val settings: AppSettings,
+    // ID-Architektur Dedup-Ablösung (Frank-Wunsch 2026-06-19): Ketten-Dedup ueber die Herkunft.
+    private val taskSuggestionDao: TaskSuggestionDao,
+    private val habitSuggestionDao: HabitSuggestionDao,
 ) {
 
     /**
@@ -101,7 +106,21 @@ class GenerateSuggestionsUseCase @Inject constructor(
 
         if (ideas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
-        val newIdeas = ideas.filter { it.id !in processedIds }
+        // Dedup-Ablösung (Frank-Wahl "alte Liste als Schutz behalten"): Eine Idee wird NICHT erneut
+        // verarbeitet, wenn aus ihr bereits ein Vorschlag hervorging — erkennbar an der Herkunfts-Kette
+        // (countByOriginId in task_suggestions ODER habit_suggestions). Das ist robust auch nach
+        // Listen-Verlust/Geraetewechsel (der Doppelvorschlag-Bug der Spec). Zusaetzlich greift weiterhin
+        // die alte processed_idea_ids-Liste als Altbestand-Schutz (Bestands-Vorschlaege ohne Herkunft +
+        // Ideen, die zu NICHTS wurden). NIE blockierend: eine neue/aehnliche Idee hat eine neue id ->
+        // countByOriginId == 0 -> wird verarbeitet.
+        val newIdeas = buildList {
+            for (idea in ideas) {
+                if (idea.id in processedIds) continue
+                if (taskSuggestionDao.countByOriginId(idea.id) > 0) continue
+                if (habitSuggestionDao.countByOriginId(idea.id) > 0) continue
+                add(idea)
+            }
+        }
         if (newIdeas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
         // ID-Architektur Etappe 2d: Ideen nummeriert (Index in newIdeas), damit die KI pro Vorschlag
