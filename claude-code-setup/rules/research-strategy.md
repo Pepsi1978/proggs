@@ -13,20 +13,49 @@
 
 ---
 
-## 1. Die Pflicht-Frage VOR jeder Web-Recherche (Credit-Kontrolle)
+## 1. Die Pflicht-Frage VOR jeder Web-Recherche (Credit-Kontrolle via AskUserQuestion)
 
-**Vor JEDER Web-Recherche MUSS Frank gefragt werden, welcher Weg genommen wird:**
+**Vor JEDER Web-Recherche MUSS Frank per `AskUserQuestion` (anklickbares Multiple-Choice) gefragt
+werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 
-> „Soll ich ueber **Firecrawl + MiniMax M3** (guenstig fuer Claude-Token, verbraucht Firecrawl-Credits)
-> oder **Opus-Standard** (teure Claude-Token, keine Firecrawl-Credits) recherchieren?"
+### Frage 1 (IMMER, via `AskUserQuestion`) — „Wie soll ich '<thema>' recherchieren?"
 
-**Warum (KRITISCH):** Firecrawl Free hat nur **1.000 Seiten/Monat**. Bei vielen Recherchen ist das
-Kontingent schnell weg. Frank entscheidet pro Recherche bewusst, womit recherchiert wird — das ist ein
-**Feature, kein Reibungsverlust**. NIEMALS automatisch losrecherchieren ohne diese Frage.
+| Option | Weg | Werkzeug | Kosten |
+|--------|-----|----------|--------|
+| **A** | **Firecrawl + MiniMax M3 (max Thinking)** — Standard, volle Seiten | `mm-research.py` | Firecrawl-Free-Credits (1000/Mon) |
+| **B** | **Eskalation: MiniMax + parallel (max Thinking)** — agentische Websuche | `or-research.py` | pay-per-use (~Cent), kein Monatslimit |
+| **C** | **Opus-Schwarm** — teuer, nur bewusst | bestehende Researcher | teure Claude-Token |
+| **D** | **[automatisches Freitext-Feld]** — etwas anderes / erst besprechen | — | — |
+
+- **A UND B laufen IMMER mit max Thinking** = `thinking:{type:"adaptive"}` (M3s Maximum;
+  `budget_tokens` wird ignoriert). Das ist Pflicht, nicht optional — beide Optionen explizit so labeln.
+- **Option C (Opus-Schwarm) wird NUR genommen, wenn Frank sie ausdruecklich waehlt** — nie als Default,
+  nie „weil es gruendlicher ist". Sie ist eine gleichwertige 3. Option, aber bewusst teuer.
+- Technik: `AskUserQuestion` liefert A/B/C als Buttons; die automatische „Other"/Freitext-Wahl deckt
+  **D** ab (Freitext → etwas anderes machen oder erst besprechen).
+
+### Frage 2 (NUR nach einer abgeschlossenen Firecrawl-Research = Option A; dann IMMER, via `AskUserQuestion`)
+
+Nach Abschluss einer Firecrawl-Research (Stufe A) IMMER nachfragen — „Noch eine zusaetzliche
+Eskalations-Research?":
+
+| Option | Bedeutung |
+|--------|-----------|
+| **A** | Ja — MiniMax + parallel (max Thinking) als zusaetzliche Eskalation (`or-research.py`) |
+| **B** | Nein, fertig |
+| **C** | Ja, mit Opus (teuer, nur bewusst) |
+| **D** | [Freitext] |
+
+Frage 2 entfaellt, wenn schon Stufe B (Option B) oder C gewaehlt wurde — sie haengt spezifisch an der
+guenstigen Firecrawl-Stufe, um bei Bedarf gezielt zu eskalieren.
+
+**Warum die Frage Pflicht ist (KRITISCH):** Firecrawl Free hat nur **1.000 Seiten/Monat**. Bei vielen
+Recherchen ist das Kontingent schnell weg. Frank entscheidet pro Recherche bewusst, womit recherchiert
+wird — das ist ein **Feature, kein Reibungsverlust**. NIEMALS automatisch losrecherchieren ohne Frage 1.
 
 Ausnahme von der Frage: eine **einzelne, billige `WebSearch`** (kein Firecrawl-Crawl) zur schnellen
 Faktenverifikation mitten in einer laufenden Aufgabe ist frei (verbraucht keine Firecrawl-Credits).
-Sobald es ein echter Rechercheauftrag / Crawl / Researcher-Einsatz ist → fragen.
+Sobald es ein echter Rechercheauftrag / Crawl / Researcher-Einsatz ist → Frage 1 stellen.
 
 ---
 
