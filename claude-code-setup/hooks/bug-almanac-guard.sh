@@ -167,6 +167,27 @@ case "$fpl" in
         # Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) — so
         # verdeckt service.kt/worker.kt nicht mehr die feature-spezifischen Android-Almanache.
         slug="androidplatform"; file="android-platform.md"; name="Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)";;
+    *.xml)
+        # App-Widget-Provider-XML (res/xml/*.xml mit <appwidget-provider ...>) -> app-widgets.md.
+        # AndroidManifest ist oben schon abgefangen; sonstiges XML faellt durch (kein Fehlalarm) -
+        # nur per appwidget-provider-Inhalt erkennen. Coverage-Erweiterung 2026-06-20.
+        xmlProbe=""
+        [ -f "$fp" ] && xmlProbe=$(cat "$fp" 2>/dev/null || true)
+        xml_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        xmlProbe="$xmlProbe
+$xml_extra"
+        case "$xmlProbe" in
+          *appwidget-provider*) slug="appwidgets"; file="app-widgets.md"; name="App-Widgets (Glance/RemoteViews/AppWidgetProvider)";;
+        esac
+        ;;
     *.kt|*.kts)
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben, dann nach Prioritaet routen.
         # FAIL-OPEN (trap). Reihenfolge strikt funktionserhaltend: die spezifischen Feature-Signale

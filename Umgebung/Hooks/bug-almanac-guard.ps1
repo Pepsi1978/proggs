@@ -178,6 +178,21 @@ try {
         # als Dateiname-FALLBACK *nach* den spezifischen Inhalts-Signalen (voice/workmanager/drive) —
         # so verdeckt 'service.kt'/'worker.kt' nicht mehr die feature-spezifischen Android-Almanache.
         $slug = 'androidplatform'; $file = 'android-platform.md'; $name = 'Android-Framework / Platform-SDK (Lifecycle/Permissions/Services/WorkManager)'
+    } elseif ($fpl -match '\.xml$') {
+        # App-Widget-Provider-XML (res/xml/*.xml mit <appwidget-provider ...>) -> app-widgets.md.
+        # AndroidManifest ist oben schon abgefangen; sonstiges XML (layout/strings/...) faellt durch
+        # (kein Fehlalarm) — nur per appwidget-provider-Inhalt erkennen. Coverage-Erweiterung 2026-06-20.
+        $xmlProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $xmlProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $xmlProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $xmlProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $xmlProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($xmlProbe -match 'appwidget-provider') {
+            $slug = 'appwidgets'; $file = 'app-widgets.md'; $name = 'App-Widgets (Glance/RemoteViews/AppWidgetProvider)'
+        }
     } elseif ($fpl -match '\.kts?$') {
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben (existierende Datei + Tool-Input),
         # dann nach Prioritaet routen. FAIL-OPEN (try/catch). Reihenfolge strikt funktionserhaltend: die
