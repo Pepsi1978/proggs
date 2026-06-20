@@ -130,7 +130,50 @@ niedrigste Vectara-Halluzination) — Abweichung = Signal, dann Opus.
 
 ---
 
-## 5. Quellen (Stand 2026-06-20)
+## 5. Einrichtung in OpenCode (Go-Provider + MiniMax-M3-Thinking + Researcher-Agent)
+
+**1) Provider aktivieren (einmalig):** OpenCode Go ist ein **eingebauter** Provider — in der TUI
+`/connect` → „OpenCode Go" → Go-Abo-Key einfügen. Key landet in `~/.local/share/opencode/auth.json`
+(`opencode-go`). **Kein** eigener `provider:{...}`-Block mit npm/baseURL/apiKey nötig.
+⚠️ **NICHT** als Custom-`@ai-sdk/anthropic`-Provider mit eigener baseURL anlegen — bekannter Bug
+verliert den Key zur Laufzeit (anomalyco/opencode #21737). Siehe Almanach §14.
+
+**2) Thinking-Budget setzen (optional):** MiniMax M3 läuft im Go über das **Anthropic-Schema**
+(`/zen/go/v1/messages`) und denkt dort **nativ** — Thinking ist automatisch an. Das Budget steuert man
+per reinem **MERGE-Block** in `opencode.jsonc` (kein npm/baseURL/key → Key bleibt aus auth.json):
+```jsonc
+"provider": {
+  "opencode-go": {
+    "models": {
+      "minimax-m3": {
+        "options": { "thinking": { "type": "enabled", "budgetTokens": 16000 } }
+      }
+    }
+  }
+}
+```
+(Thinking-Keys stehen in `opencode.ai/docs/models`, **nicht** `docs/config`. OpenAI-Schema-Modelle
+nutzen stattdessen `reasoningEffort` — für MiniMax **falsch**.)
+
+**3) Als Researcher-Agent einbauen:** Markdown `~/.config/opencode/agents/researcher.md`
+(Dateiname = Agentname `@researcher`), read-only, mit Abstain-Pflicht (passt zu M3s Ehrlichkeit):
+```markdown
+---
+description: Web-Recherche mit MiniMax M3 (Thinking) + Firecrawl; quellentreu, erfindet nichts.
+mode: subagent
+model: opencode-go/minimax-m3
+temperature: 0.2
+permission:
+  edit: deny
+  bash: deny
+---
+... Arbeitsweise + "nur aus den Quellen, sonst sagen, nichts erfinden" ...
+```
+Aufruf: `@researcher <Frage>`. Thinking-Blöcke kommen als `type:"thinking"` zurück (TUI: `/thinking` toggelt die Anzeige). `permission` statt `tools` (letzteres deprecated); Firecrawl-MCP-Tools sind per Default erlaubt.
+
+---
+
+## 6. Quellen (Stand 2026-06-20)
 
 - DeepSeek V4: aistackchoice.com/deepseek-v4-review-2026, medium.com/@leucopsis/deepseek-v4-review, morphllm.com/deepseek-v4, artificialanalysis.ai/models/deepseek-v4-flash
 - Qwen 3.7: codersera.com/blog/qwen-3-7-max-launch-guide-2026, digitalapplied.com/blog/qwen-3-7-plus-…, buildfastwithai.com/blogs/qwen-3-7-max-review-2026

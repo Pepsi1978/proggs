@@ -34,6 +34,7 @@
 | 11 | Agent/Command/Plugin/Skill „wird nicht erkannt" | Verzeichnisse sind **Plural**: `agents/ commands/ plugins/ skills/ tools/`. `agent create` schreibt fälschlich `agent/` (Singular). | §6, §7, §9 |
 | 12 | `opencode upgrade` meldet „unknown" (Windows) | Detection scheitert an `npm.cmd`. Manuell per Paketmanager updaten (`npm i -g opencode-ai@latest` / `scoop update opencode`). | §1 |
 | 13 | ⭐ OpenCode-Go: API-Fehler je Modell / GLM früh „aufgebraucht" / Modell erfindet Fakten | **Zwei Endpunkt-Schemata:** DeepSeek/GLM/Kimi/MiMo = OpenAI (`/zen/go/v1/chat/completions`), Qwen/MiniMax = Anthropic (`/zen/go/v1/messages`). GLM-5.x im Go-Tier nur ~4.300 Req/Mo (nicht für Masse). DeepSeek V4 Pro halluziniert bei Nichtwissen → Abstain-Prompt. | §14 |
+| 14 | ⭐ OpenCode-Go-Modell einrichten / Thinking aktivieren | Go ist **eingebaut** → `/connect`, KEIN Custom-`@ai-sdk/anthropic`-Block (Key-Verlust #21737); nur MERGE-Block für Optionen. Thinking-Keys in `docs/models` (nicht config): Anthropic `options.thinking.budgetTokens`, OpenAI `reasoningEffort`. MiniMax denkt nativ. | §14.4–14.5 |
 
 ---
 
@@ -907,6 +908,20 @@ Modelle verbrauchen das Budget viel schneller. Erreichbare Req/Mo: DeepSeek V4 F
 explizit sagen; nicht erfinden") + **Thinking-Modus an** (senkt SimpleQA-Halluzination 12.7 % → 10.4 %).
 Bei heiklen Fakten zweite Meinung (Kimi K2.6) oder gegen Opus eskalieren.
 **Quelle:** medium.com/@leucopsis/deepseek-v4-review, digitalapplied.com/blog/ai-model-hallucination-rate-benchmarks-2026-study
+
+### 14.4 ⭐ Custom-`@ai-sdk/anthropic`-Provider mit eigener baseURL verliert den API-Key zur Laufzeit
+**Symptom:** Ein selbst angelegter Provider-Block (`provider: { "opencode-go": { npm:"@ai-sdk/anthropic", options:{baseURL,apiKey} } }`) für ein Anthropic-Schema-Modell (z.B. MiniMax über das Go-Gateway) authentifiziert beim ersten Aufruf, schlägt dann aber mit Auth-Fehler fehl.
+**Ursache:** Offener Bug — der Custom-Anthropic-Adapter mit abweichender baseURL hält den Key nicht durch (anomalyco/opencode #21737). Zusätzlich kursiert eine falsche Default-baseURL für OpenCode Zen (`api.opencode-zen.com` statt `opencode.ai/zen/...`).
+**Versionen:** OpenCode aktuell (2026-06).
+**FIX (funktionserhaltend):** OpenCode Go ist **eingebaut** — per TUI `/connect` → „OpenCode Go" aktivieren (Key in `auth.json`), KEINEN Custom-Provider-Block bauen. Wenn man Modell-Optionen (z.B. Thinking-Budget) braucht: nur einen **MERGE-Block** `provider.opencode-go.models.<id>.options` setzen, OHNE npm/baseURL/apiKey — der Key kommt aus `auth.json`.
+**Quelle:** https://github.com/anomalyco/opencode/issues/21737 · https://opencode.ai/docs/go/
+
+### 14.5 Thinking/Reasoning richtig aktivieren — Keys stehen in docs/models, nicht docs/config
+**Symptom:** Thinking-Modus lässt sich „nicht aktivieren"; in `docs/config` findet man keinen Schalter.
+**Ursache:** Die Thinking/Reasoning-Keys sind in `opencode.ai/docs/models` dokumentiert, nicht in `docs/config` (leicht zu übersehen). Zusätzlich ist der Key **schema-abhängig**: Anthropic-Schema-Modelle nutzen `options.thinking.budgetTokens` (Stil `{type:"enabled",budgetTokens:N}`), OpenAI-Schema-Modelle `reasoningEffort`. Verwechslung → wirkungslos.
+**Versionen:** OpenCode aktuell (2026-06).
+**FIX:** Schema des Modells prüfen (Go: MiniMax/Qwen = Anthropic `/messages`; DeepSeek/GLM/Kimi/MiMo = OpenAI `/chat/completions`). MiniMax M3 denkt am Anthropic-Endpunkt **nativ** (kein Pflicht-Parameter); `options.thinking.budgetTokens` setzt nur das Budget. Response: Anthropic → `type:"thinking"`-Blöcke im Content (müssen in der History bleiben); OpenAI-Schema → `reasoning_details` (bei `reasoning_split=true`) bzw. `<think>`-Tags.
+**Quelle:** https://opencode.ai/docs/models/ · https://platform.minimax.io/docs/guides/text-m3-function-call
 
 ---
 
