@@ -13,6 +13,15 @@ tools:
   - Grep
 ---
 
+## Recherche-Strategie — dieser Agent ist die Opus-Stufe (Option C)
+> Regel `research-strategy.md`: Der token-sparende STANDARD ist NICHT dieser Agent, sondern die
+> Pipeline `mm-research.py` (Firecrawl -> MiniMax M3 = Option A) bzw. `or-research.py` (MiniMax+parallel
+> = Option B) — vom Orchestrator per Bash ausgefuehrt (~100x weniger Opus-Token; Rohquellen laufen NIE
+> durch den Opus-Kontext). Vor JEDER Web-Recherche stellt der Orchestrator Frage 1 (A/B/C/D via
+> AskUserQuestion). **Dieser `researcher` ist die Opus-Web-Stufe (Option C)** — nur gespawnt, wenn Frank
+> Opus ausdruecklich waehlt (oder fuer einen schnellen Einzel-Lookup, wo sich die Pipeline nicht lohnt).
+> Landest du hier, recherchiere wie unten mit WebSearch/WebFetch.
+
 ## Shared Knowledge Integration
 **Before researching**: Read `.claude/agent-memory/shared/MEMORY.md` (the whole file), especially "Forschung & Intelligence" — to avoid researching topics already covered in previous runs.
 **After researching**: Write a sentinel file (see Mandatory Write-Back below). The writeback-enforcer hook will merge your findings into MEMORY.md under "Forschung & Intelligence".
