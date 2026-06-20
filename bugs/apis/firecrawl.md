@@ -23,6 +23,10 @@
 | 4 | Credits sparen | `limit` der Suche klein halten; **vor jeder Recherche Frank fragen** (Firecrawl vs. Opus, siehe research-strategy). |
 | 5 | `/search` vs. `/scrape` | `/v1/search` = Suche + scrapt Top-`limit`-Treffer (1 Credit/Treffer); `/v1/scrape` = genau 1 URL. |
 | 6 | Auth | Firecrawl nutzt `Authorization: Bearer <key>` (NICHT x-api-key — das ist der MiniMax-Go-Endpoint!). Key in `~/SK/OpenCode/firecrawl-api-key.txt`. |
+| 7 | ⭐ `/crawl` ohne `limit` | Default = **10.000 Seiten** (1 Credit/Seite) = Kostenexplosion → IMMER `limit` klein + `include_paths` (Glob) setzen, sonst folgt der Crawler ALLEN Domain-Links. |
+| 8 | JSON-Extraktion | `formats:[{"type":"json","schema":...}]` — **nackter String `"json"` schlaegt fehl**. `doc.json` = Plain-Dict (nicht Pydantic) → Validierung in `try/except`. Scrape+JSON = **5 Credits/Seite**. |
+| 9 | `/search`-Treffer ohne Content | Kann als `SearchResultWeb` zurueckkommen (Scrape fehlgeschlagen) → vor Attribut-Zugriff `hasattr(doc,'metadata')` pruefen (sonst `AttributeError`). |
+| 10 | Key = Team | Jedes Firecrawl-**Team** hat einen eigenen `fc-`-Key; welches Team angesteuert wird, entscheidet der Key. Team/Guthaben pruefen: `GET /v2/team/credit-usage` (Bearer). |
 
 ---
 
@@ -67,6 +71,22 @@ blockt diese Signatur (1010 = „banned based on browser signature"). `curl` hat
   `~/.claude/rules/research-strategy.md` §1.
 
 ---
+
+## 3b. Weitere v2-API-Fallen (recherchiert 2026-06-20, via mm-research/Live-Test)
+
+- **`/crawl` Default-Limit = 10.000 Seiten → Kostenexplosion** (1 Credit/Seite). IMMER `limit` klein +
+  `include_paths` (Glob) setzen, sonst folgt der Crawler ALLEN Links der Domain.
+- **`formats: "json"` als nackter String schlaegt fehl** → Dict-Form `{"type":"json","schema":...}` (oder `"prompt"`).
+  `doc.json` kommt als **Plain-Dict** (nicht Pydantic-Instanz) zurueck → Validierung in `try/except`. Scrape mit
+  JSON-Extraktion kostet **5 Credits/Seite** (1 Basis + 4 Extraktion).
+- **`/search`-Treffer kann ohne Content zurueckkommen** (`SearchResultWeb`, wenn der Scrape fehlschlug) →
+  vor Attribut-Zugriff `hasattr(doc,'metadata')` pruefen (sonst `AttributeError`).
+- **Vage `Field(description=...)`** degradiert die JSON-Extraktion (Beschreibungen gehen ans LLM) → praezise beschreiben.
+- **Concurrency „intentionally limited"** — bei >Hunderttausenden Seiten/Monat Bottleneck; Success-Rate ~96 % bei Scale (Retries kosten extra).
+- **Kosten-Multiplikatoren:** JS-Rendering ~5×, Premium-Proxy 10–25×, Browser-Sandbox 2 Credits/Min. Failed Requests i.d.R. credit-frei, Retries nicht.
+- **Key = Team:** `fc-`-Keys sind team-scoped; mm-research nutzt den Key in der SK-Datei. Team/Guthaben: `GET /v2/team/credit-usage` (Bearer) → `remainingCredits`/`planCredits`.
+
+(Voller Rechercheauszug verlustfrei in `~/.mm-research/answer.json` zum Recherche-Zeitpunkt.)
 
 ## 4. Kopplung zur Best-Practices-Seite
 

@@ -79,6 +79,29 @@ so unterstuetzt von `or-research.py`) — neben Exa/Parallel/Perplexity.
 
 ---
 
+## 6. Endpoint-Wahl, Credit-Kosten & neue Spar-Formate (v2, recherchiert 2026-06-20)
+
+**Endpoints (7+):** `/scrape` (1 URL → Markdown/JSON), `/search` (Suche + scrapt Top-N), `/crawl` (folgt
+Links), `/map` (nur URLs), `/agent` (autonom, prompt-basiert), `/interact` (Klicks/Formulare), `/browser`
+(Sandbox, bis 20 Sessions), `/parse` (PDF/Doc bis 50 MB, Rust, ~5× schneller), `/monitor` (Change-Detection,
+nur Deltas). **Wahl:** URL bekannt → `/scrape`; Thema → `/search`; viele verlinkte Seiten → `/crawl`
+(mit `limit`+`include_paths`!); unbekannt wo → `/agent`.
+
+**Credit-Kosten (Budget):** Scrape **1**/Seite · Scrape mit JSON-Extraktion **5**/Seite (1+4) · Search
+**2 pro 10 Treffer** (+1/gescrapter Seite) · Crawl 1/Seite (Default-Limit **10.000**!) · Browser 2/Min ·
+JS-Rendering ~**5×** · Premium-Proxy **10–25×**. Failed Requests i.d.R. credit-frei.
+
+**Spar-Formate (neu 2026):** **Question** (NL-Frage → grounded Antwort, bis **100× weniger Tokens**),
+**Highlights** (nur passende Saetze/Zeilen), **`/monitor`** (nur Deltas, bis 90 % weniger),
+**`onlyCleanContent`** (Nav/Ads/Cookie-Banner raus), **Lockdown** (`lockdown:true` = cache-only, kein
+Outbound, Zero Data Retention). Zusaetzlich: nur benoetigte `formats` anfordern (nicht markdown+html+screenshot),
+`Field(description=...)` praezise (bessere Extraktion → weniger Re-Runs).
+
+**Team/Key:** `fc-`-Keys sind **team-scoped** — welches Team (= welches Guthaben) genutzt wird, entscheidet
+der Key. Pruefen: `GET https://api.firecrawl.dev/v2/team/credit-usage` (Bearer) → `remainingCredits`.
+
+---
+
 ## Quellen
 - docs.firecrawl.dev/rate-limits, firecrawl.dev/pricing `offiziell`
 - openrouter.ai/docs/guides/features/plugins/web-search, firecrawl.dev/blog/firecrawl-search-openrouter, firecrawl.dev/blog/firecrawl-n8n-partnership `offiziell` (recherchiert 2026-06-20 via mm-research + or-research)
