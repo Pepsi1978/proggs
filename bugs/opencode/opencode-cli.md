@@ -931,6 +931,14 @@ Bei heiklen Fakten zweite Meinung (Kimi K2.6) oder gegen Opus eskalieren.
 **Symptom B (TUI):** In der OpenCode-TUI wird MiniMax-M3-Thinking seit ~09.06.2026 nicht mehr angezeigt (Issue #31569; ähnlich M2.7 #22684, M2.5 #20782). Der **direkte API-Call liefert das Thinking aber weiterhin** — es ist nur die TUI-Anzeige.
 **Quelle:** Live-curl-Test 2026-06-20 · https://github.com/anomalyco/opencode/issues/31569
 
+### 14.7 Mythos „MiniMax = nur OpenAI-Schema, /messages gibt 404" — durch Live-Test WIDERLEGT
+**Symptom:** Web-Recherche (auch starke Modelle wie Opus, Quelle DeepWiki o.ä.) behauptet, MiniMax M3 laufe im Go-Gateway **ausschließlich** über OpenAI `/chat/completions`, der Anthropic-Endpunkt `/messages` gäbe 404, und `thinking.budget_tokens` funktioniere nicht.
+**Ursache:** Mehrdeutige/veraltete Sekundärquellen + Übergeneralisierung. **Live-Test 2026-06-20 beweist: BEIDE Schemata funktionieren** — `/messages`+`x-api-key`+`thinking.budget_tokens` liefert HTTP 200 mit Thinking-Blöcken; `/chat/completions`+`Bearer` ebenfalls. Kein 404.
+**Lehre:** Bei API-Fakten **empirisch testen (curl) statt Recherche glauben** — ein 10-Sekunden-Probe-Call schlägt jede Sekundärquelle.
+**Thinking-Parameter — zwei belegte Wege:** (a) Anthropic `/messages`: `"thinking":{"type":"enabled","budget_tokens":N}` (live ok; wirkt als Obergrenze, M3 denkt adaptiv nach Aufgaben-Komplexität). (b) OpenAI `/chat/completions`: `"thinking":{"type":"adaptive"}` + `"reasoning_split":true` → Thinking in `choices[0].message.reasoning_details[0].text`. Es gibt KEIN numerisches „max"-Level (nur adaptive/enabled vs. disabled).
+**Claude Code als Backend:** direkter curl-Bash-Call (kein Proxy) ODER Proxy `oc-go-cc` (übersetzt Anthropic↔OpenAI), dann `ANTHROPIC_BASE_URL=http://127.0.0.1:3456` + `claude`. (Proxy-Weg recherchiert, nicht live getestet.)
+**Quelle:** Live-curl-Test 2026-06-20 · deepwiki.com/sst/opencode/4.5-opencode-zen-and-go-services · platform.minimax.io/docs/api-reference/text-openai-api · shravanbhati.com/blog/run-opencode-zen-and-go-models-with-claude-code-cli
+
 ---
 
 ## Quellen (Auswahl)
