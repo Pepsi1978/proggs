@@ -1375,6 +1375,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Auto-Enter Toggle & Manual Enter
 
     private func handleEnterClick() {
+        // Waehrend einer laufenden Aufnahme/Verarbeitung schaltet der Enter-
+        // Button NUR den Auto-Enter-Toggle um — KEIN Return ans Terminal, kein
+        // Aufnahme-Stopp. So kann der Benutzer mitten beim Sprechen entscheiden,
+        // ob der fertige Text gesendet (orange) oder nur ins Eingabefeld
+        // eingefuegt (dunkel) werden soll, ohne dass etwas Sofortiges passiert.
+        // (Frank-Wunsch 2026-06-20.)
+        if isRecording || isProcessing || isBtwRecording {
+            autoEnterEnabled.toggle()
+            panel.setAutoEnterEnabled(autoEnterEnabled)
+            return
+        }
         if autoEnterEnabled {
             autoEnterEnabled = false
             panel.setAutoEnterEnabled(autoEnterEnabled)

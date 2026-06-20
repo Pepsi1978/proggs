@@ -3262,6 +3262,20 @@ namespace ClaudeVoiceOverlay.Views
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
         private async void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
+            // Waehrend einer laufenden Aufnahme/Verarbeitung schaltet der
+            // Enter-Button NUR den Auto-Enter-Toggle um: KEIN Sofort-Senden
+            // des Prompt-Feld-Inhalts, KEIN Aufnahme-Stopp, KEIN Return ans
+            // Ziel. So kann der Benutzer mitten beim Sprechen entscheiden,
+            // ob der fertige Text gesendet (orange) oder nur ins Prompt-
+            // Eingabefeld eingefuegt (dunkel) werden soll — ohne dass etwas
+            // Sofortiges passiert. (Frank-Wunsch 2026-06-20: mitten beim
+            // Sprechen den Schalter an-/ausmachen, ohne dass etwas passiert.)
+            if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
+            {
+                SetAutoEnter(!autoEnterEnabled, "UI-Click-WhileRecording");
+                return;
+            }
+
             // Wenn das Prompt-Eingabefenster Text enthaelt, wird der Klick
             // als "Send"-Aktion interpretiert: Text einfuegen + Return druecken,
             // unabhaengig vom Toggle-Zustand. Erst wenn keine Eingabe da ist,
