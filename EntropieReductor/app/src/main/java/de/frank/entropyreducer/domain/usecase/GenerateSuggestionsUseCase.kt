@@ -251,9 +251,12 @@ class GenerateSuggestionsUseCase @Inject constructor(
                     val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
                     val description = o.optString("description")
                     // sourceIndex = Nummer der Quell-Idee aus dem nummerierten Prompt. Fehlt sie oder
-                    // ist sie ungueltig (KI-Aussetzer) -> origin bleibt null (Fallback, nichts kaputt).
+                    // ist sie ungueltig (KI-Aussetzer): wurde nur GENAU EINE Idee verarbeitet, ist die
+                    // Herkunft trotzdem eindeutig (singleOrNull) -> Frank-Wunsch 2026-06-20, schliesst
+                    // die origin=NULL-Luecke. Bei mehreren Ideen bleibt sie null (eine falsche Zuordnung
+                    // waere schlimmer als keine).
                     val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val sourceIdea = newIdeas.getOrNull(sourceIdx)
+                    val sourceIdea = newIdeas.getOrNull(sourceIdx) ?: newIdeas.singleOrNull()
                     add(
                         AutoTaskSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
@@ -275,8 +278,9 @@ class GenerateSuggestionsUseCase @Inject constructor(
                 for (i in 0 until habitsArr.length()) {
                     val o = habitsArr.optJSONObject(i) ?: continue
                     val text = o.optString("text").takeIf { it.isNotBlank() } ?: continue
+                    // KI-Aussetzer-Fallback (Frank-Wunsch 2026-06-20): nur 1 Idee verarbeitet -> eindeutig.
                     val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val sourceIdea = newIdeas.getOrNull(sourceIdx)
+                    val sourceIdea = newIdeas.getOrNull(sourceIdx) ?: newIdeas.singleOrNull()
                     add(
                         AutoHabitSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
