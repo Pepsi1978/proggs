@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
-"""Aggregiert die Almanach-Trigger-Sonde (bug-almanac-triggers.jsonl) kompakt.
+"""Aggregiert die Almanach-Trigger-Sonde (bug-almanac-triggers.jsonl) UND klassifiziert
+jeden Block automatisch nach Trivialitaet (Abschalt-Kandidaten-Erkennung).
 
-Liest die JSON-Lines-Aufzeichnung des bug-almanac-guard (inkl. rotierter .jsonl.1) und
-gibt eine kompakte Auswertung aus: Verhaeltnis block/pass, Haeufigkeit pro Bereich+Typ und
-die change_excerpts der Block-Ereignisse je Bereich (Grundlage fuer die KI-Verdachtspruefung).
+Liest die JSON-Lines-Aufzeichnung des bug-almanac-guard (inkl. rotierter .jsonl.1) und gibt aus:
+  1. Verhaeltnis block/pass
+  2. Blocks nach Bereich + Typ
+  3. Passes nach Typ
+  4. ABSCHALT-BILANZ — wie viele Blocks sind sicher/verdaechtig/berechtigt
+  5. ABSCHALT-KANDIDATEN — gruppiert nach Bereich x Art, mit echten Beispielen
+  6. BERECHTIGTE BLOCKS — echte Logik, zur Gegenkontrolle
+
+Die Klassifikation pro Block (version-bump / string-only / comment-whitespace / import-only /
+logic) ist die harte Datengrundlage fuer die Entscheidung, welche Guard-Unterbrechungen man
+kuenftig weglassen kann. Sie ist bewusst KONSERVATIV: im Zweifel "logic" (berechtigt), damit
+nie ein echter Bug-Trigger faelschlich als wegwerfbar erscheint.
 
 Bewusst rein lesend — schreibt nichts, aendert den Guard nicht. Die Rohdatei wird hier
 aggregiert, damit der Skill sie NICHT komplett in den Kontext laden muss (Lossless-Prinzip:
 Details bleiben per Pfad in der .jsonl erreichbar).
 """
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-# Umlaute auch auf Windows-Konsolen (cp1252) sauber ausgeben (python-windows §1.4/§1.7).
+# Umlaute/Emoji auch auf Windows-Konsolen (cp1252) sauber ausgeben (python-windows §1.4/§1.7).
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -23,6 +34,53 @@ except Exception:
 STATE = Path.home() / ".claude" / "state"
 PRIMARY = STATE / "bug-almanac-triggers.jsonl"
 ROTATED = STATE / "bug-almanac-triggers.jsonl.1"
+
+# ── Trivial-Klassifikation ────────────────────────────────────────────────────
+# Jede signifikante (nicht-leere) Zeile des change_excerpt wird geprueft. Nur wenn ALLE
+# Zeilen zu derselben trivialen Klasse passen, gilt der Block als trivial. Sonst -> "logic"
+# (berechtigt). Konservativ: lieber eine Unterbrechung zu viel als ein verpasster Bug.
+VERSION_RE = re.compile(r'(versionCode|versionName|version\s*[=:]|"version"\s*:)', re.IGNORECASE)
+STRING_RE = re.compile(r'(<string\b|</string>|<plurals\b|getString\(|stringResource\(|R\.string\.)', re.IGNORECASE)
+IMPORT_RE = re.compile(r'^\s*(import\s|package\s|using\s|#include|from\s+\S+\s+import\s)')
+COMMENT_RE = re.compile(r'^\s*(//|#|<!--|-->|/\*|\*/|\*)')
+
+# Klasse -> Klartext-Label fuer die Anzeige
+TRIVIAL_LABELS = {
+    "version-bump": "Version hochgezaehlt (versionCode/versionName)",
+    "string-only": "nur Text-/String-Ressource",
+    "comment-whitespace": "nur Kommentar/Leerzeile",
+    "import-only": "nur Import-/Package-Kopf (Grenzfall)",
+}
+# Sicherheits-Stufen des Ausschlusses
+SAFE_TO_DROP = {"version-bump"}                       # vollstaendiger, kurzer Edit -> sehr sicher
+SUSPECT_DROP = {"string-only", "comment-whitespace"}  # wahrscheinlich, aber excerpt-begrenzt
+BORDERLINE = {"import-only"}                           # nur Datei-Kopf sichtbar -> meist folgt Logik
+TAGS = {
+    "version-bump": "[SICHER]",
+    "string-only": "[VERDACHT]",
+    "comment-whitespace": "[VERDACHT]",
+    "import-only": "[GRENZFALL]",
+}
+
+
+def significant_lines(excerpt):
+    return [ln.strip() for ln in excerpt.splitlines() if ln.strip()]
+
+
+def classify(excerpt):
+    """Konservative Trivial-Einstufung eines change_excerpt."""
+    lines = significant_lines(excerpt)
+    if not lines:
+        return "leer"
+    if all(VERSION_RE.search(ln) for ln in lines):
+        return "version-bump"
+    if all(STRING_RE.search(ln) for ln in lines):
+        return "string-only"
+    if all(IMPORT_RE.match(ln) for ln in lines):
+        return "import-only"
+    if all(COMMENT_RE.match(ln) for ln in lines):
+        return "comment-whitespace"
+    return "logic"
 
 
 def load_rows():
@@ -42,6 +100,14 @@ def load_rows():
     return rows
 
 
+def short(excerpt, n=140):
+    return excerpt.replace("\n", " ").strip()[:n]
+
+
+def pct(part, total):
+    return f"{(100.0 * part / total):.0f}%" if total else "0%"
+
+
 def main():
     rows = load_rows()
     if not rows:
@@ -53,42 +119,75 @@ def main():
 
     blocks = [r for r in rows if r.get("event") == "block"]
     passes = [r for r in rows if r.get("event") == "pass"]
+    for r in blocks:
+        r["_class"] = classify(r.get("change_excerpt", "") or "")
+
+    total = len(blocks)
 
     print("=== ALMANACH-TRIGGER: VERHAELTNIS ===")
-    print(f"Gesamt: {len(rows)}  |  Unterbrechungen (block): {len(blocks)}  "
+    print(f"Gesamt: {len(rows)}  |  Unterbrechungen (block): {total}  "
           f"|  Freigaben (pass): {len(passes)}")
 
     print("\n=== BLOCKS nach Bereich + Typ ===")
     by_area = Counter((r.get("slug", "?"), r.get("block_type", "?")) for r in blocks)
-    if by_area:
-        for (slug, bt), n in by_area.most_common():
-            print(f"  {n:4d}  {slug:18s} {bt}")
-    else:
+    for (slug, bt), n in by_area.most_common():
+        print(f"  {n:4d}  {slug:18s} {bt}")
+    if not by_area:
         print("  (keine Blocks)")
 
     print("\n=== PASSES nach Typ ===")
     by_pass = Counter(r.get("block_type", "?") for r in passes)
-    if by_pass:
-        for bt, n in by_pass.most_common():
-            print(f"  {n:4d}  {bt}")
-    else:
+    for bt, n in by_pass.most_common():
+        print(f"  {n:4d}  {bt}")
+    if not by_pass:
         print("  (keine Passes)")
 
-    print("\n=== BLOCK-change_excerpts je Bereich (fuer Verdachtspruefung) ===")
-    ex_by_slug = defaultdict(list)
+    # ── Abschalt-Bilanz ──────────────────────────────────────────────────────
+    cls_count = Counter(r["_class"] for r in blocks)
+    safe = sum(cls_count[c] for c in SAFE_TO_DROP)
+    suspect = sum(cls_count[c] for c in SUSPECT_DROP)
+    borderline = sum(cls_count[c] for c in BORDERLINE)
+    legit = cls_count.get("logic", 0) + cls_count.get("leer", 0)
+
+    print(f"\n=== ABSCHALT-BILANZ (von {total} Blocks) ===")
+    print(f"  SICHER abschaltbar (Version-Bump):   {safe:4d}  ({pct(safe, total)})")
+    print(f"  VERDACHT  (nur String/Kommentar):    {suspect:4d}  ({pct(suspect, total)})")
+    print(f"  GRENZFALL (nur Import-/Datei-Kopf):  {borderline:4d}  ({pct(borderline, total)})")
+    print(f"  BERECHTIGT (echte Logik):            {legit:4d}  ({pct(legit, total)})")
+
+    # ── Abschalt-Kandidaten (Bereich x Klasse) ───────────────────────────────
+    print("\n=== ABSCHALT-KANDIDATEN (gruppiert nach Bereich + Art) ===")
+    cand = defaultdict(list)  # (slug, class) -> [(file, excerpt)]
     for r in blocks:
-        excerpt = (r.get("change_excerpt", "") or "").replace("\n", " ").strip()
-        fname = Path(r.get("file", "")).name
-        ex_by_slug[r.get("slug", "?")].append((fname, excerpt[:120]))
-    if ex_by_slug:
-        for slug, items in sorted(ex_by_slug.items(), key=lambda kv: -len(kv[1])):
-            print(f"\n[{slug}] ({len(items)} Blocks)")
-            for fname, excerpt in items[:25]:  # pro Bereich max 25 Beispiele
-                print(f"  {fname} :: {excerpt}")
-            if len(items) > 25:
-                print(f"  … und {len(items) - 25} weitere (Details in {PRIMARY.name})")
+        if r["_class"] in TRIVIAL_LABELS:
+            cand[(r.get("slug", "?"), r["_class"])].append(
+                (Path(r.get("file", "")).name, short(r.get("change_excerpt", "") or "")))
+    if cand:
+        for (slug, cls), items in sorted(cand.items(), key=lambda kv: -len(kv[1])):
+            print(f"\n{TAGS[cls]} {slug} — {TRIVIAL_LABELS[cls]}: {len(items)} Block(s)")
+            for fname, ex in items[:3]:
+                print(f"    {fname} :: {ex}")
+            if len(items) > 3:
+                print(f"    … und {len(items) - 3} weitere gleicher Art")
     else:
-        print("  (keine Blocks)")
+        print("  (keine trivialen Auslöser gefunden)")
+
+    # ── Berechtigte Blocks (Gegenkontrolle) ──────────────────────────────────
+    print("\n=== BERECHTIGTE BLOCKS (echte Logik — NICHT abschalten) ===")
+    legit_by_slug = defaultdict(list)
+    for r in blocks:
+        if r["_class"] in ("logic", "leer"):
+            legit_by_slug[r.get("slug", "?")].append(
+                (Path(r.get("file", "")).name, short(r.get("change_excerpt", "") or "", 100)))
+    if legit_by_slug:
+        for slug, items in sorted(legit_by_slug.items(), key=lambda kv: -len(kv[1])):
+            print(f"\n[{slug}] {len(items)} Block(s) mit echter Logik")
+            for fname, ex in items[:2]:
+                print(f"    {fname} :: {ex}")
+            if len(items) > 2:
+                print(f"    … und {len(items) - 2} weitere")
+    else:
+        print("  (keine)")
 
     return 0
 
