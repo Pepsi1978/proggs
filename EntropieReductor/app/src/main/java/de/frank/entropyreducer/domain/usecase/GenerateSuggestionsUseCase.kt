@@ -2,6 +2,8 @@ package de.frank.entropyreducer.domain.usecase
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.OriginType
@@ -113,15 +115,38 @@ class GenerateSuggestionsUseCase @Inject constructor(
         // die alte processed_idea_ids-Liste als Altbestand-Schutz (Bestands-Vorschlaege ohne Herkunft +
         // Ideen, die zu NICHTS wurden). NIE blockierend: eine neue/aehnliche Idee hat eine neue id ->
         // countByOriginId == 0 -> wird verarbeitet.
+        // Live-Logik-Sonde (Checkpoint): zaehlt die Dedup-Gruende MIT, ohne die Entscheidung zu
+        // veraendern (die continue-Logik ist identisch). So ist live pruefbar, ob der Ketten-Dedup
+        // (countByOriginId) so greift wie gemeint.
+        var skipProcessedList = 0
+        var skipChain = 0
         val newIdeas = buildList {
             for (idea in ideas) {
-                if (idea.id in processedIds) continue
-                if (taskSuggestionDao.countByOriginId(idea.id) > 0) continue
-                if (habitSuggestionDao.countByOriginId(idea.id) > 0) continue
+                if (idea.id in processedIds) {
+                    skipProcessedList++
+                    continue
+                }
+                if (taskSuggestionDao.countByOriginId(idea.id) > 0) {
+                    skipChain++
+                    continue
+                }
+                if (habitSuggestionDao.countByOriginId(idea.id) > 0) {
+                    skipChain++
+                    continue
+                }
                 add(idea)
             }
         }
-        if (newIdeas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
+        Diag.i(
+            DiagnosticArea.AGENTIC,
+            TAG,
+            "CHECKPOINT Dedup: ideasTotal=${ideas.size} skipProcessedList=$skipProcessedList " +
+                "skipChain=$skipChain toProcess=${newIdeas.size}",
+        )
+        if (newIdeas.isEmpty()) {
+            Diag.i(DiagnosticArea.AGENTIC, TAG, "CHECKPOINT Dedup: nichts Neues -> kein Gemini-Aufruf")
+            return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
+        }
 
         // ID-Architektur Etappe 2d: Ideen nummeriert (Index in newIdeas), damit die KI pro Vorschlag
         // die Quell-Idee per sourceIndex zurueckgeben kann -> Herkunft Idee -> Vorschlag.
@@ -153,6 +178,35 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
         val result = parseCombinedJson(json, newIdeas)
+
+        // Live-Logik-Sonde (Checkpoint): bestaetigt das Origin-Tracking. Erwartet: jeder erzeugte
+        // Vorschlag traegt eine Herkunft (originId = Quell-Idee). originId=NULL! markiert die
+        // Abweichung (KI lieferte keine gueltige sourceIndex -> Fallback), damit das live auffaellt.
+        val tasksMitHerkunft = result.tasks.count { it.originId != null }
+        val habitsMitHerkunft = result.habits.count { it.originId != null }
+        Diag.i(
+            DiagnosticArea.AGENTIC,
+            TAG,
+            "CHECKPOINT Origin: tasks=${result.tasks.size} (mitHerkunft=$tasksMitHerkunft) " +
+                "habits=${result.habits.size} (mitHerkunft=$habitsMitHerkunft)",
+        )
+        result.tasks.forEach { t ->
+            Diag.i(
+                DiagnosticArea.AGENTIC,
+                TAG,
+                "CHECKPOINT Origin task '${t.title}': originId=${t.originId ?: "NULL!"} " +
+                    "originType=${t.originType ?: "-"} rootId=${t.rootId ?: "-"}",
+            )
+        }
+        result.habits.forEach { h ->
+            Diag.i(
+                DiagnosticArea.AGENTIC,
+                TAG,
+                "CHECKPOINT Origin habit '${h.text.take(40)}': originId=${h.originId ?: "NULL!"} " +
+                    "rootId=${h.rootId ?: "-"}",
+            )
+        }
+
         val updatedProcessedIds = processedIds + newIdeas.map { it.id }
 
         return Result.success(result to updatedProcessedIds)
@@ -221,6 +275,8 @@ class GenerateSuggestionsUseCase @Inject constructor(
     // ========================================================================
 
     companion object {
+        private const val TAG = "GenSuggest"
+
         private const val COMBINED_SYSTEM_PROMPT = """
 Du bist ein exakter Filter. Du bekommst eine LISTE nummerierter Ideen (jede Zeile im Format
 "Nummer: Text"). Ordne JEDE Idee EINZELN und EXKLUSIV einer von drei Kategorien zu:
