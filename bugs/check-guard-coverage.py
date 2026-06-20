@@ -36,7 +36,7 @@ INTENTIONALLY_UNMAPPED = {
     "api-integration-general", "openai-api", "anthropic-api", "google-gemini-api",
     "groq-api", "openrouter-api", "xai-grok-api", "mistral-api", "deepseek-api",
     "local-openai-compatible", "other-llm-apis", "oauth-device-code",
-    "cli-impersonation-subscription-auth", "tts-provider",
+    "cli-impersonation-subscription-auth", "tts-provider", "firecrawl",
     # android-build/ — Release-PROZESS (Play Console, kein Datei-Edit; AndroidManifest.xml/build.gradle
     # teilen sich android-platform/gradle — ein eigener Datei-Trigger wuerde diese kapern)
     "play-store-release",
