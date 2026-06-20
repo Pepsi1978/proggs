@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = false // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
+    private var geminiEnabled = true // Default = Gemini-Korrektur AN, Profil 1 aktiv (Frank-Wunsch: Reiter 1 immer an, mit persoenlichem Woerterbuch). Ohne Gemini-API-Key faellt der Init unten auf false zurueck.
     private var autoEnterEnabled = true
     private let autoEnterServer = AutoEnterStatusServer()
     private var autoHide: AutoHideController?

@@ -70,7 +70,7 @@ namespace TerminalVoiceOverlay.Views
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
         private bool isBtwRecording         = false;
-        private bool geminiEnabled          = false; // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
+        private bool geminiEnabled          = true;  // Default = Gemini-Korrektur AN, Profil 1 aktiv (Frank-Wunsch: Reiter 1 immer an, mit persoenlichem Woerterbuch). Ohne Gemini-API-Key faellt der Init unten auf false zurueck.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
         // Wenn true, presst OnInputSubmit beim naechsten Aufruf Return —
