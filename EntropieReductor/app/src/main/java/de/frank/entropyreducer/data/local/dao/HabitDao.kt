@@ -39,6 +39,16 @@ interface HabitDao {
 
     @Update suspend fun update(habit: HabitEntity)
 
+    /**
+     * Backfill (Frank-Wunsch 2026-06-20): Altbestand-Gewohnheiten ohne Herkunft selbst-verwurzeln
+     * (originId/rootId = eigene id, originType=HABIT). Idempotent — trifft nur Zeilen ohne Herkunft.
+     */
+    @Query(
+        "UPDATE habits SET originId = id, originType = 'HABIT', rootId = id " +
+            "WHERE originId IS NULL OR originId = ''"
+    )
+    suspend fun backfillSelfRoot(): Int
+
     @Query("DELETE FROM habits WHERE id = :id")
     suspend fun deleteById(id: String)
 }

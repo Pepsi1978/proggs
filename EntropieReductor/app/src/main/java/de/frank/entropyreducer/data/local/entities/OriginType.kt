@@ -17,4 +17,9 @@ object OriginType {
     const val ENTROPY = "ENTROPY"
     const val THESE = "THESE"
     const val JOURNAL = "JOURNAL"
+
+    // Backfill (Frank-Wunsch 2026-06-20): Mental-Saetze als Self-Root-Typ. Altbestand-Eintraege ohne
+    // echte Herkunft werden „selbst-verwurzelt" (rootId=eigene id) — damit hat jeder Eintrag eine
+    // gueltige ID statt herkunftslos zu sein.
+    const val MENTAL = "MENTAL"
 }

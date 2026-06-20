@@ -39,6 +39,16 @@ interface MentalSentenceDao {
 
     @Update suspend fun update(mental: MentalEntity)
 
+    /**
+     * Backfill (Frank-Wunsch 2026-06-20): Altbestand-Saetze ohne Herkunft selbst-verwurzeln
+     * (originId/rootId = eigene id, originType=MENTAL). Idempotent — trifft nur Zeilen ohne Herkunft.
+     */
+    @Query(
+        "UPDATE mental_sentences SET originId = id, originType = 'MENTAL', rootId = id " +
+            "WHERE originId IS NULL OR originId = ''"
+    )
+    suspend fun backfillSelfRoot(): Int
+
     @Query("DELETE FROM mental_sentences WHERE id = :id")
     suspend fun deleteById(id: String)
 }

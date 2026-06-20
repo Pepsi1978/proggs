@@ -18,6 +18,16 @@ interface EntropyEntryDao {
     @Query("SELECT * FROM entropy_entries WHERE id = :id")
     suspend fun getById(id: String): EntropyEntryEntity?
 
+    /**
+     * Backfill (Frank-Wunsch 2026-06-20): Altbestand-Aufgaben ohne Herkunft selbst-verwurzeln
+     * (originId/rootId = eigene id, originType=TASK). Idempotent — trifft nur Zeilen ohne Herkunft.
+     */
+    @Query(
+        "UPDATE entropy_entries SET originId = id, originType = 'TASK', rootId = id " +
+            "WHERE originId IS NULL OR originId = ''"
+    )
+    suspend fun backfillSelfRoot(): Int
+
     @Query(
         "SELECT * FROM entropy_entries WHERE status != :archived ORDER BY priorityScore DESC, createdAt DESC"
     )
