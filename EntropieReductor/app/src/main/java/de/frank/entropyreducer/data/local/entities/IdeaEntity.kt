@@ -33,4 +33,8 @@ data class IdeaEntity(
     val originId: String? = null,
     val originType: String? = null,
     val rootId: String? = null,
+    // Frank-Wunsch 2026-06-20: Modifikations-Zeitstempel fuer geraeteuebergreifende Edit-Sync (LWW).
+    // Nullable (additive Migration ohne NOT NULL/DEFAULT -> keine identityHash-Falle); Bestand = null,
+    // im Sync wird dann timestampMs (Erstellzeit) als Baseline genutzt.
+    val updatedAt: Long? = null,
 )

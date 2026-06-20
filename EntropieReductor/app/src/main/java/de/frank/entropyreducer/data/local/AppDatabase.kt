@@ -110,7 +110,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // ID-Architektur Etappe 4 (Frank-Wunsch 2026-06-19): Mental-Board-Saetze
             de.frank.entropyreducer.data.local.entities.MentalEntity::class,
         ],
-    version = 34,
+    version = 35,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -1080,6 +1080,19 @@ abstract class AppDatabase : RoomDatabase() {
                         """.trimIndent()
                     )
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_mental_sentences_position ON mental_sentences(position)")
+                }
+            }
+
+        /**
+         * Migration 34 -> 35 (Frank-Wunsch 2026-06-20): Modifikations-Zeitstempel `updatedAt` fuer
+         * die `ideas`-Tabelle (geraeteuebergreifende Edit-Sync per Last-Write-Wins). ADDITIV +
+         * NULLABLE (kein NOT NULL / kein SQL-DEFAULT) -> Bestandszeilen bekommen NULL, kein
+         * identityHash-Mismatch (M3), kein Datenverlust. Im Sync zaehlt `updatedAt ?: timestampMs`.
+         */
+        val MIGRATION_34_35: Migration =
+            object : Migration(34, 35) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE ideas ADD COLUMN updatedAt INTEGER")
                 }
             }
     }
