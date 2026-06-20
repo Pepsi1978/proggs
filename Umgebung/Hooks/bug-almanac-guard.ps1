@@ -519,21 +519,21 @@ try {
     # geblockt wuerde (read-Marker fehlt). Funktionserhaltend: jede andere Zeile -> normaler Block
     # unten. Transparenz (Entscheidung 4): als pass/trivial-uebersprungen in die Sonde (nicht still).
     if ($slug -eq 'gradle' -and -not $disabled -and -not (Test-Path $readMarker)) {
-        $vb = ""
+        # Trivial-Entscheidung aus der GEMEINSAMEN Quelle (bugs/trivial_classify.py is-version-bump-json)
+        # -> Guard und Auswertung (aggregate.py) laufen nie auseinander (DRY, Direktive #1). FAIL-SAFE:
+        # faellt der Aufruf aus (python/Modul fehlt), wird NICHT durchgewunken (normaler Block) -> kein
+        # Funktionsverlust, nur keine Trivial-Optimierung.
+        $tcScript = Join-Path $env:USERPROFILE "proggs/bugs/trivial_classify.py"
+        $isVb = $false
         try {
-            $ti = $data.tool_input
-            if ($ti.content)        { $vb = [string]$ti.content }
-            elseif ($ti.new_string) { $vb = [string]$ti.new_string }
-            elseif ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $vb += [string]$e.new_string + "`n" } } }
-        } catch {}
-        $vbLines = @($vb -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
-        if ($vbLines.Count -gt 0) {
-            $onlyVersion = $true
-            foreach ($ln in $vbLines) { if ($ln -notmatch '(?i)version(Code|Name)') { $onlyVersion = $false; break } }
-            if ($onlyVersion) {
-                Add-AlmanacTrigger -EventType "pass" -BlockType "trivial-uebersprungen" -Slug $slug -Area $name -HighRisk $isHighRisk
-                exit 0
+            if (Test-Path $tcScript) {
+                $raw | & python3 $tcScript "is-version-bump-json" 2>$null | Out-Null
+                if ($LASTEXITCODE -eq 0) { $isVb = $true }
             }
+        } catch {}
+        if ($isVb) {
+            Add-AlmanacTrigger -EventType "pass" -BlockType "trivial-uebersprungen" -Slug $slug -Area $name -HighRisk $isHighRisk
+            exit 0
         }
     }
 

@@ -20,7 +20,6 @@ aggregiert, damit der Skill sie NICHT komplett in den Kontext laden muss (Lossle
 Details bleiben per Pfad in der .jsonl erreichbar).
 """
 import json
-import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -35,14 +34,12 @@ STATE = Path.home() / ".claude" / "state"
 PRIMARY = STATE / "bug-almanac-triggers.jsonl"
 ROTATED = STATE / "bug-almanac-triggers.jsonl.1"
 
-# ── Trivial-Klassifikation ────────────────────────────────────────────────────
-# Jede signifikante (nicht-leere) Zeile des change_excerpt wird geprueft. Nur wenn ALLE
-# Zeilen zu derselben trivialen Klasse passen, gilt der Block als trivial. Sonst -> "logic"
-# (berechtigt). Konservativ: lieber eine Unterbrechung zu viel als ein verpasster Bug.
-VERSION_RE = re.compile(r'(versionCode|versionName|version\s*[=:]|"version"\s*:)', re.IGNORECASE)
-STRING_RE = re.compile(r'(<string\b|</string>|<plurals\b|getString\(|stringResource\(|R\.string\.)', re.IGNORECASE)
-IMPORT_RE = re.compile(r'^\s*(import\s|package\s|using\s|#include|from\s+\S+\s+import\s)')
-COMMENT_RE = re.compile(r'^\s*(//|#|<!--|-->|/\*|\*/|\*)')
+# ── Trivial-Klassifikation aus der GEMEINSAMEN Quelle (DRY, Direktive #1) ──────
+# classify() lebt in bugs/trivial_classify.py — dieselbe Definition nutzt der bug-almanac-guard
+# fuer seinen Version-Bump-Filter. So laufen Auswertung (hier) und Durchsetzung (Guard) NIE
+# auseinander. Pfad-Append, weil dieser Skill ausserhalb des Repos liegt.
+sys.path.insert(0, str(Path.home() / "proggs" / "bugs"))
+from trivial_classify import classify  # noqa: E402
 
 # Klasse -> Klartext-Label fuer die Anzeige
 TRIVIAL_LABELS = {
@@ -61,26 +58,6 @@ TAGS = {
     "comment-whitespace": "[VERDACHT]",
     "import-only": "[GRENZFALL]",
 }
-
-
-def significant_lines(excerpt):
-    return [ln.strip() for ln in excerpt.splitlines() if ln.strip()]
-
-
-def classify(excerpt):
-    """Konservative Trivial-Einstufung eines change_excerpt."""
-    lines = significant_lines(excerpt)
-    if not lines:
-        return "leer"
-    if all(VERSION_RE.search(ln) for ln in lines):
-        return "version-bump"
-    if all(STRING_RE.search(ln) for ln in lines):
-        return "string-only"
-    if all(IMPORT_RE.match(ln) for ln in lines):
-        return "import-only"
-    if all(COMMENT_RE.match(ln) for ln in lines):
-        return "comment-whitespace"
-    return "logic"
 
 
 def load_rows():

@@ -587,19 +587,11 @@ fi
 # Funktionserhaltend: jede andere Zeile -> normaler Block unten. Transparenz: pass/trivial-uebersprungen.
 # JSON per python3 (kein jq - claude-hooks §16.2). FAIL-OPEN via || echo 0.
 if [ "$slug" = "gradle" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
-    onlyVersion=$(printf '%s' "$input" | python3 -c "import json,sys,re
-try:
-    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
-    ex = ti.get('content') or ti.get('new_string') or ''
-    if not ex and ti.get('edits'):
-        ex = '\n'.join((e.get('new_string') or '') for e in ti['edits'])
-    lines=[l.strip() for l in ex.splitlines() if l.strip()]
-    ok = bool(lines) and all(re.search(r'version(code|name)', l, re.I) for l in lines)
-    print('1' if ok else '0')
-except Exception:
-    print('0')
-" 2>/dev/null || echo 0)
-    if [ "${onlyVersion:-0}" = "1" ]; then
+    # Trivial-Entscheidung aus der GEMEINSAMEN Quelle (bugs/trivial_classify.py is-version-bump-json)
+    # -> Guard und Auswertung (aggregate.py) laufen nie auseinander (DRY, Direktive #1). FAIL-SAFE:
+    # scheitert der Aufruf (python/Modul fehlt), greift der normale Block -> kein Funktionsverlust.
+    tcScript="$HOME/proggs/bugs/trivial_classify.py"
+    if [ -f "$tcScript" ] && printf '%s' "$input" | python3 "$tcScript" is-version-bump-json >/dev/null 2>&1; then
         add_almanac_trigger pass trivial-uebersprungen "$slug" "$name" "$isHighRisk"
         exit 0
     fi
