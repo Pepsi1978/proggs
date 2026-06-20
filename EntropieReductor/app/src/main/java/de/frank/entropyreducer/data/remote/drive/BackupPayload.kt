@@ -568,6 +568,16 @@ data class BackupEntry(
      * (schlaegt die Loop-Pflege). Default null damit alte Backups als Template/KI gelten.
      */
     val manualPriorityScoreSetAt: Long? = null,
+    /**
+     * Schema v19 (Frank-Wunsch 2026-06-20, ID-Architektur robust): Herkunft der ANGENOMMENEN Aufgabe
+     * mitsichern. Vorher ging sie beim Drive-Backup verloren -> auf einem 2. Geraet hatte die
+     * angenommene Aufgabe rootId=null -> der Ketten-Dedup ueber die Endpunkte (countByRootId) war
+     * geraeteuebergreifend wirkungslos und ein angenommener Vorschlag wurde erneut vorgeschlagen.
+     * Default null = abwaertskompatibel (alte v18-Backups laden weiter, der Backfill verwurzelt sie).
+     */
+    val originId: String? = null,
+    val originType: String? = null,
+    val rootId: String? = null,
 )
 
 @Serializable
@@ -675,6 +685,10 @@ fun EntropyEntryEntity.toBackup(): BackupEntry =
         dueAtMs = dueAtMs,
         manualPriorityScore = manualPriorityScore,
         manualPriorityScoreSetAt = manualPriorityScoreSetAt,
+        // Schema v19: Herkunft der angenommenen Aufgabe mitsichern (Ketten-Dedup cross-device).
+        originId = originId,
+        originType = originType,
+        rootId = rootId,
     )
 
 fun InsightEntity.toBackup(): BackupInsight =
@@ -907,6 +921,11 @@ fun BackupEntry.toEntity(): EntropyEntryEntity =
         dueAtMs = dueAtMs,
         manualPriorityScore = manualPriorityScore?.coerceIn(0.0, 100.0),
         manualPriorityScoreSetAt = manualPriorityScoreSetAt,
+        // Schema v19: Herkunft der angenommenen Aufgabe aus dem Backup zurueckholen. Alte v18-Backups
+        // liefern null -> der LineageBackfillMigrator verwurzelt sie beim naechsten Start selbst.
+        originId = originId,
+        originType = originType,
+        rootId = rootId,
     )
 
 fun BackupInsight.toEntity(): InsightEntity =

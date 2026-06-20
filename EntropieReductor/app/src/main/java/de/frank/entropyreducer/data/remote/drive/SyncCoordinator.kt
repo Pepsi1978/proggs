@@ -378,10 +378,21 @@ constructor(
 
             // Frank-Bugfix 2026-06-19: Gewohnheit-Eintraege (Aufgaben-Reiter "Gewohnheit") ins
             // Haupt-Backup. Bisher GAR NICHT gesichert — bei jedem Update/Reinstall verloren.
-            // DataStore-basiert wie Mental/Ideen (gewohnheit_board), gleiche id+text-Struktur.
+            // v19 (2026-06-20, Direktive #3 robust): direkt aus der habits-Tabelle MIT Herkunft
+            // (originId/originType/rootId) sichern statt ueber das herkunftslose Mental-UI-Modell.
+            // Sonst geht die Kette Idee -> Gewohnheits-Vorschlag -> Gewohnheit beim Drive-Backup
+            // verloren und eine angenommene Gewohnheit wuerde auf einem 2. Geraet erneut vorgeschlagen
+            // (gleicher Bug wie bei den Aufgaben, nur fuer Gewohnheiten).
             val gewohnheitBackups =
-                de.frank.entropyreducer.presentation.mental.gewohnheitenFlow(appContext).first().map {
-                    BackupMental(id = it.id, text = it.text, updatedAt = it.updatedAt)
+                de.frank.entropyreducer.data.local.habitDaoFrom(appContext).getAllForBackup().map {
+                    BackupMental(
+                        id = it.id,
+                        text = it.text,
+                        updatedAt = it.updatedAt,
+                        originId = it.originId,
+                        originType = it.originType,
+                        rootId = it.rootId,
+                    )
                 }
 
             // Frank-Wunsch 2026-06-19 (Schema v15): offene KI-Vorschlaege mitsichern, damit sie bei
@@ -398,7 +409,9 @@ constructor(
                 BackupPayload(
                     // v18 (2026-06-20): Vorschlags-Herkunft (originId/originType/rootId) im Backup —
                     // haelt den Ketten-Dedup nach Drive-Sync/Restore geraeteuebergreifend wirksam.
-                    version = 18,
+                    // v19 (2026-06-20): zusaetzlich die Herkunft der ANGENOMMENEN Aufgaben (entropy_entries)
+                    // mitsichern -> die Kette bricht beim Annehmen eines Vorschlags auch cross-device nicht.
+                    version = 19,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,

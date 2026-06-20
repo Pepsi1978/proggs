@@ -193,7 +193,9 @@ internal suspend fun reorderGewohnheiten(context: Context, newOrder: List<Mental
  */
 internal suspend fun restoreGewohnheiten(
     context: Context,
-    incoming: List<Mental>,
+    // v19 (2026-06-20, Direktive #3 robust): direkt das Backup-DTO (mit Herkunft) statt das
+    // herkunftslose Mental-UI-Modell — sonst geht die Kette beim Restore auf einem 2. Geraet verloren.
+    incoming: List<de.frank.entropyreducer.data.remote.drive.BackupMental>,
     deletedAt: Map<String, Long> = emptyMap(),
 ): Int {
     if (incoming.isEmpty() && deletedAt.isEmpty()) return 0
@@ -229,6 +231,12 @@ internal suspend fun restoreGewohnheiten(
                 text = inc.text,
                 updatedAt = inc.updatedAt,
                 position = nextPos++,
+                // v19 (Direktive #3 robust): Herkunft aus dem Backup uebernehmen, sonst bricht die
+                // Kette beim Restore und eine angenommene Gewohnheit wird auf diesem Geraet erneut
+                // vorgeschlagen (countByRootId(habits) faende sie ohne rootId nicht).
+                originId = inc.originId,
+                originType = inc.originType,
+                rootId = inc.rootId,
             )
         )
         changed++

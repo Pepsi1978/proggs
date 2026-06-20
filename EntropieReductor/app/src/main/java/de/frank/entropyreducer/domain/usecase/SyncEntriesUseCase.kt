@@ -483,13 +483,9 @@ constructor(
                 inserted +=
                     de.frank.entropyreducer.presentation.mental.restoreGewohnheiten(
                         appContext,
-                        payload.gewohnheiten.map {
-                            de.frank.entropyreducer.presentation.mental.Mental(
-                                id = it.id,
-                                text = it.text,
-                                updatedAt = it.updatedAt,
-                            )
-                        },
+                        // v19 (2026-06-20, Direktive #3 robust): das Backup-DTO MIT Herkunft direkt
+                        // durchreichen statt es ins herkunftslose Mental-UI-Modell zu wandeln.
+                        payload.gewohnheiten,
                         gewohnheitDeletedAt,
                     )
             }

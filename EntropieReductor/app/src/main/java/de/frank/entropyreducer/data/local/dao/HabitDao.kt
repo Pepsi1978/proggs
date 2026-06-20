@@ -27,6 +27,14 @@ interface HabitDao {
     @Query("SELECT COUNT(*) FROM habits")
     suspend fun count(): Int
 
+    /**
+     * Ketten-Dedup ueber die ANGENOMMENEN Endpunkte (Frank-Wunsch 2026-06-20, Direktive #3 robust):
+     * zaehlt Gewohnheiten, deren Wurzel diese Idee ist (rootId = Quell-Idee). So bleibt eine Idee
+     * dedupliziert, auch nachdem ihr Gewohnheits-Vorschlag angenommen (und geloescht) wurde.
+     */
+    @Query("SELECT COUNT(*) FROM habits WHERE rootId = :rootId")
+    suspend fun countByRootId(rootId: String): Int
+
     /** Hoechste vergebene Position (oder -1, wenn leer) — fuer "neue Gewohnheit ans Ende". */
     @Query("SELECT COALESCE(MAX(position), -1) FROM habits")
     suspend fun maxPosition(): Int

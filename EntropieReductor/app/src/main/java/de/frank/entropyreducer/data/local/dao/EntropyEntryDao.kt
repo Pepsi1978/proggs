@@ -77,6 +77,16 @@ interface EntropyEntryDao {
     fun countByStatus(status: EntryStatus): Flow<Int>
 
     /**
+     * Ketten-Dedup ueber die ANGENOMMENEN Endpunkte (Frank-Wunsch 2026-06-20, Direktive #3 robust):
+     * zaehlt Aufgaben, deren Wurzel diese Idee ist (rootId = Quell-Idee). So bleibt eine Idee
+     * dedupliziert, auch nachdem ihr Vorschlag angenommen (und damit geloescht) wurde — die Kette
+     * Idee -> Vorschlag -> Aufgabe bricht nicht. Cross-device robust, weil rootId ab Backup-Schema v19
+     * mitgesichert wird.
+     */
+    @Query("SELECT COUNT(*) FROM entropy_entries WHERE rootId = :rootId")
+    suspend fun countByRootId(rootId: String): Int
+
+    /**
      * Frank-Wunsch 2026-05-19: ALLE Eintraege fuer das Drive-Backup — auch archivierte. getActive()
      * filtert ARCHIVIERT raus damit der Tasks-Screen sauber bleibt, aber das Backup MUSS auch das
      * Archiv (Bereich "Entropie") enthalten, sonst gehen archivierte Eintraege bei Reinstall

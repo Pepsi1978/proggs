@@ -4,6 +4,8 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
+import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.OriginType
@@ -89,6 +91,11 @@ class GenerateSuggestionsUseCase @Inject constructor(
     // ID-Architektur Dedup-Ablösung (Frank-Wunsch 2026-06-19): Ketten-Dedup ueber die Herkunft.
     private val taskSuggestionDao: TaskSuggestionDao,
     private val habitSuggestionDao: HabitSuggestionDao,
+    // Direktive #3 robust (Frank-Wunsch 2026-06-20): Ketten-Dedup auch ueber die ANGENOMMENEN
+    // Endpunkte (entropy_entries/habits mit rootId = Quell-Idee), damit die Kette beim Annehmen
+    // eines Vorschlags nicht bricht.
+    private val entropyEntryDao: EntropyEntryDao,
+    private val habitDao: HabitDao,
 ) {
 
     /**
@@ -120,6 +127,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
         // (countByOriginId) so greift wie gemeint.
         var skipProcessedList = 0
         var skipChain = 0
+        var skipAccepted = 0
         val newIdeas = buildList {
             for (idea in ideas) {
                 if (idea.id in processedIds) {
@@ -134,6 +142,21 @@ class GenerateSuggestionsUseCase @Inject constructor(
                     skipChain++
                     continue
                 }
+                // Direktive #3 robust (Frank-Wunsch 2026-06-20): Die Kette darf beim Annehmen NICHT
+                // brechen. Ein angenommener Vorschlag wird zur Aufgabe (entropy_entries) bzw.
+                // Gewohnheit (habits) mit rootId = Quell-Idee; der Vorschlag selbst ist dann geloescht,
+                // sodass countByOriginId nicht mehr greift. Deshalb hier zusaetzlich die ANGENOMMENEN
+                // Endpunkte pruefen (countByRootId) -> die Idee bleibt dedupliziert, auch nachdem ihr
+                // Vorschlag verbraucht wurde. Cross-device robust, weil entropy_entries ihre rootId ab
+                // Backup-Schema v19 mitnehmen (habits-Backup ist separate Folgeaufgabe).
+                if (entropyEntryDao.countByRootId(idea.id) > 0) {
+                    skipAccepted++
+                    continue
+                }
+                if (habitDao.countByRootId(idea.id) > 0) {
+                    skipAccepted++
+                    continue
+                }
                 add(idea)
             }
         }
@@ -141,7 +164,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
             DiagnosticArea.AGENTIC,
             TAG,
             "CHECKPOINT Dedup: ideasTotal=${ideas.size} skipProcessedList=$skipProcessedList " +
-                "skipChain=$skipChain toProcess=${newIdeas.size}",
+                "skipChain=$skipChain skipAccepted=$skipAccepted toProcess=${newIdeas.size}",
         )
         if (newIdeas.isEmpty()) {
             Diag.i(DiagnosticArea.AGENTIC, TAG, "CHECKPOINT Dedup: nichts Neues -> kein Gemini-Aufruf")

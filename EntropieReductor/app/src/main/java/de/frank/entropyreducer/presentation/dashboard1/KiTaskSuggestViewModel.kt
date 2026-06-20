@@ -119,6 +119,14 @@ class KiTaskSuggestViewModel @Inject constructor(
                 rootId = sug?.rootId ?: sug?.id,
             )
                 .onSuccess {
+                    // Direktive #3 robust (Frank-Wunsch 2026-06-20): Annehmen ist das staerkste
+                    // "diese Idee ist erledigt"-Signal. Die Quell-Idee dauerhaft als verarbeitet
+                    // markieren — zweite Schutzschicht neben dem Endpunkt-Ketten-Dedup (countByRootId),
+                    // greift auch nachdem die angenommene Aufgabe spaeter geloescht wurde.
+                    val ideaId = sug?.rootId ?: sug?.originId
+                    if (ideaId != null) {
+                        saveProcessedIdeaIds(loadProcessedIdeaIds() + ideaId)
+                    }
                     removeSuggestion(suggestion.id)
                 }
                 .onFailure { ex ->
