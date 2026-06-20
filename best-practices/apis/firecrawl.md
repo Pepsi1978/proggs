@@ -56,7 +56,31 @@ weniger Claude-Token als ein Opus-Researcher.
 
 ---
 
+## 5. Firecrawl als OpenRouter-Web-Search-Engine (BYOK) — Promo + Credit-Oekonomie (recherchiert 2026-06-20)
+
+Firecrawl ist auch als **Such-Engine im OpenRouter `web_search`-Server-Tool** waehlbar (`engine=firecrawl`,
+so unterstuetzt von `or-research.py`) — neben Exa/Parallel/Perplexity.
+
+- **Auto-Account:** Firecrawl in OpenRouter aktivieren + ToS akzeptieren → es wird **automatisch ein
+  Firecrawl-Konto, verknuepft mit der E-Mail, angelegt** („no separate Firecrawl account needed"). `offiziell`
+- **Promo (Stand 2026-06, ZEITLICH BEGRENZT):** **10.000 Gratis-Credits, verfallen nach 3 Monaten** fuer
+  „new accounts". Das fruehere Launch-Angebot (Hobby-Plan + 100.000 Credits) ist **abgelaufen**. `offiziell`
+- **Bestehendes Konto (gleiche E-Mail):** Nicht OpenRouter-spezifisch geklaert. Die analoge **n8n**-Integration
+  (gleiches Auto-Provisioning) sagt laut Firecrawl-Blog explizit: „If you already have a Firecrawl account, a
+  new **team** ... will be created on it and the promotional credits will be applied there." → plausibel auch
+  bei OpenRouter (neues Team auf bestehendem Konto + Credits dort), aber nicht hart belegt. **Definitiv:
+  Firecrawl-Dashboard pruefen** (Credit-Stand / neues Team). `extern`/Analogie
+- **Credit-Kosten ueber OpenRouter:** **2 Credits pro 10 Ergebnisse + 5 Credits pro gescraptem Ergebnis**
+  (1 Basis-Scrape + 4 fuer Highlights); OpenRouter erhebt KEINE Zusatzgebuehr — Verbrauch laeuft direkt ueber
+  die Firecrawl-Credits. `offiziell`
+- **Konsequenz fuer die Pipeline:** `or-research.py engine=firecrawl` nutzt diese Credits (BYOK, Volltext-Quellen);
+  `engine=parallel` (Default) nutzt OpenRouter-pay-per-use (~$0.005/Suche) OHNE Firecrawl-Credits. Bei reichlich
+  Firecrawl-Credits (Promo aktiv) ist `engine=firecrawl` eine Volltext-Alternative; sonst `parallel` zur Credit-Schonung.
+
+---
+
 ## Quellen
 - docs.firecrawl.dev/rate-limits, firecrawl.dev/pricing `offiziell`
+- openrouter.ai/docs/guides/features/plugins/web-search, firecrawl.dev/blog/firecrawl-search-openrouter, firecrawl.dev/blog/firecrawl-n8n-partnership `offiziell` (recherchiert 2026-06-20 via mm-research + or-research)
 - eesel.ai/blog/firecrawl-pricing, costbench.com (Free-Plan 2026) `extern`
 - eigener Live-Test 2026-06-20 (`mm-research.py`)
