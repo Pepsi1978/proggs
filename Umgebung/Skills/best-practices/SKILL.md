@@ -98,8 +98,18 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
    und mit `last_version` vergleichen, um die neuen Versionen zu erkennen.
    (Bei explizitem Wunsch nach Volllauf den Delta-Schritt ueberspringen und alle Kategorien neu aufrollen.)
 3. **Nichts Relevantes neu?** → "Nichts Neues seit Version X (Stand: Datum)" melden, fertig.
-4. **Delta vorhanden?** → parallele Researcher starten (siehe Researcher-Regeln). Jeder Researcher
-   bearbeitet einen klar begrenzten Bereich und recherchiert pro Kategorie:
+4. **Delta vorhanden?** → ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen
+   (Regel `research-strategy.md`, Frage 1 A/B/C/D) — NIE automatisch losrecherchieren:
+   - **A (Standard): Firecrawl + MiniMax M3 (max Thinking)** → `python3 ~/proggs/mm-research.py "<kategorie-frage>" [n]`
+     pro Kategorie. **Firecrawl Free = max 2 GLEICHZEITIG** (2 starten → auf Ergebnis warten → naechste 2;
+     NICHT 7). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). MiniMax liefert die quellentreue
+     Auswertung; der Hauptagent arbeitet sie in die Kategorie-Dateien ein (Stufe 3 / `research-persistence`).
+   - **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
+     (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
+   - **C (Opus-Schwarm):** NUR auf explizite Wahl → die **Researcher-Regeln** unten (7 parallel, Continuous-Spawning).
+   - Der `research-approval`-Hook blockt mm/or-research, bis Frank A/B gewaehlt UND die Freigabe gesetzt ist
+     (`touch "$TEMP/research-approved.flag"`).
+   Jeder Researcher/Lauf bearbeitet einen klar begrenzten Bereich und recherchiert pro Kategorie:
    - **WAS** hat sich geaendert (offizielles Changelog)
    - **WIE** wendet man es am besten an (Anthropic-Docs / Engineering-Blog)
    - **Alternativen** von aussen (externe Quellen, klar als `extern` gelabelt, sekundaer)
@@ -231,6 +241,11 @@ Diese Rueckrichtung ist PFLICHT — frueher schrieb nur `bug-almanach-recherche`
 Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive #1).
 
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
+
+> **Gilt fuer Option C (Opus-Schwarm)** aus Schritt 4. Standard ist A/B (Token-sparende
+> `mm-research.py`/`or-research.py`-Skripte, Regel `research-strategy.md`); die folgenden Regeln
+> greifen, wenn Frank den Opus-Schwarm ausdruecklich waehlt — oder fuer den Changelog-Verbatim-Download
+> (der NIE ueber einen Researcher laeuft, siehe Changelog-Archiv-Abschnitt).
 
 - **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
 - **Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING (Frank 2026-06-02 + 2026-06-03):**
