@@ -60,12 +60,22 @@ BUG-KANDIDATEN:
 - Quellen-URL + Software-Version IMMER mitgeben (spaetere Nachpruefbarkeit).
 - Kurz halten — die Bloecke zaehlen zum 100-Zeilen-Antwortlimit.
 
-## Bulk Research Chunking (PFLICHT bei grossen Recherche-Aufgaben)
+## Bulk Research (grosse Recherche-Aufgaben — lossless, KEIN harter Item-Cap)
 
-Wenn du grosse Mengen recherchieren sollst (50+ Fakten, 50+ Fragen validieren, etc.):
-- **NIEMALS mehr als 50 Items in einem Durchgang recherchieren** — das fuehrt zu Kontext-Ueberlauf und Absturz.
-- Aufteilen: Ergebnisse in Bloecken von max 50 zusammenfassen und zurueckgeben.
-- Lieber 3 praezise Recherche-Durchgaenge als 1 riesiger der abstuerzt.
+> **Geaendert 2026-06-21:** Der fruehere harte 50-Item-Cap ist ENTFERNT (1M-Kontext + lossless-Prinzip:
+> echte Findings nie kappen). Stattdessen: bei grossen Mengen die Funde **lossless in eine Datei
+> auslagern** und nur eine kompakte Summary + Pfad zurueckgeben — so geht nichts verloren UND der
+> Kontext bleibt schlank.
+>
+> **BEOBACHTEN (Frank, 2026-06-21):** Wir arbeiten jetzt mit OpenRouter-Modellen (minimax-m3, glm-5.2),
+> deren Praxis-Limits wir noch nicht kennen. Falls Researcher OHNE den Cap bei sehr grossen
+> Ergebnismengen ueber OpenRouter doch scheitern (Kontext-Ueberlauf/Timeout), den Cap gezielt wieder
+> einfuehren. Bis dahin: kein Cap, aber wachsam bleiben (siehe `lossless-context-principle.md`).
+
+Wenn du grosse Mengen recherchieren sollst (viele Fakten/Fragen):
+- Funde NICHT an einer kuenstlichen Zahl abschneiden — **alle** erfassen.
+- Bei Menge: in eine Datei schreiben (Pfad zurueckgeben) statt alles inline — der Orchestrator laedt bei Bedarf nach.
+- Lieber mehrere praezise Durchgaenge mit feineren Unterthemen als 1 riesiger der den Kontext sprengt (Continuous-Spawning).
 
 ## Robustness Protocol (KRITISCH — Absturz-Verhinderung)
 
