@@ -286,12 +286,16 @@ private fun DeepSleepBars(values: List<Double>) {
  * Farbe pro Balken im Tiefschlaf-Graph (Frank-Wunsch 2026-05-13): 0 – 10 % → Rot (kritisch wenig)
  * 10 – 20 % → Gelb (grenzwertig) 20 – 30 % → Gruen (gesund)
  * > > 30 % → Gruen (extra viel)
+ *
+ * Frank-Wunsch 2026-06-21: Gleiche WHOOP-Farbpalette wie im Erholungsverlauf
+ * (RecoveryGraphCard) — vorher dezente CosmosColors.Success/Warning/Critical,
+ * jetzt knallig WhoopRecoveryGreen/Yellow/Red fuer visuelle Konsistenz.
  */
 private fun deepSleepBarColor(pct: Double): Color =
     when {
-        pct < 10.0 -> CosmosColors.Critical
-        pct < 20.0 -> CosmosColors.Warning
-        else -> CosmosColors.Success
+        pct < 10.0 -> CosmosColors.WhoopRecoveryRed
+        pct < 20.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryGreen
     }
 
 @Composable

@@ -272,12 +272,16 @@ private fun RestorativeSleepBars(values: List<Double>) {
  *   unter 40 % → Rot   (kritisch wenig Erholung)
  *   40 – 50 %  → Gelb  (grenzwertig)
  *   ueber 55 % → Gruen (gute Erholung)
+ *
+ * Frank-Wunsch 2026-06-21: Gleiche WHOOP-Farbpalette wie im Erholungsverlauf
+ * (RecoveryGraphCard) — vorher dezente CosmosColors.Success/Warning/Critical,
+ * jetzt knallig WhoopRecoveryGreen/Yellow/Red fuer visuelle Konsistenz.
  */
 private fun restorativeSleepBarColor(pct: Double): Color =
     when {
-        pct < 40.0 -> CosmosColors.Critical
-        pct < 50.0 -> CosmosColors.Warning
-        else -> CosmosColors.Success
+        pct < 40.0 -> CosmosColors.WhoopRecoveryRed
+        pct < 50.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryGreen
     }
 
 @Composable

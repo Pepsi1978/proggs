@@ -291,12 +291,17 @@ private fun WakeTimeBars(values: List<Double>) {
  *   0 – 5 %  → Gruen  (ungestoerter Schlaf)
  *   5 – 10 % → Gelb   (grenzwertig)
  *   > 10 %   → Rot    (haeufiges Aufwachen)
+ *
+ * Frank-Wunsch 2026-06-21: Gleiche WHOOP-Farbpalette wie im Erholungsverlauf
+ * (RecoveryGraphCard) — vorher dezente CosmosColors.Success/Warning/Critical,
+ * jetzt knallig WhoopRecoveryGreen/Yellow/Red fuer visuelle Konsistenz.
+ * Reihenfolge bleibt erhalten (invers): niedriger Wert -> Gruen, hoher -> Rot.
  */
 private fun wakeTimeBarColor(pct: Double): Color =
     when {
-        pct < 5.0 -> CosmosColors.Success
-        pct < 10.0 -> CosmosColors.Warning
-        else -> CosmosColors.Critical
+        pct < 5.0 -> CosmosColors.WhoopRecoveryGreen
+        pct < 10.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryRed
     }
 
 @Composable

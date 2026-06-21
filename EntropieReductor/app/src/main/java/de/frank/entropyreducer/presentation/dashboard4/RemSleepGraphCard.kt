@@ -294,12 +294,16 @@ private fun RemSleepBars(values: List<Double>) {
  *   0 – 17 %  → Rot   (kritisch wenig)
  *   17 – 30 % → Gelb  (grenzwertig)
  *   > 30 %    → Gruen (gesund)
+ *
+ * Frank-Wunsch 2026-06-21: Gleiche WHOOP-Farbpalette wie im Erholungsverlauf
+ * (RecoveryGraphCard) — vorher dezente CosmosColors.Success/Warning/Critical,
+ * jetzt knallig WhoopRecoveryGreen/Yellow/Red fuer visuelle Konsistenz.
  */
 private fun remSleepBarColor(pct: Double): Color =
     when {
-        pct < 17.0 -> CosmosColors.Critical
-        pct < 30.0 -> CosmosColors.Warning
-        else -> CosmosColors.Success
+        pct < 17.0 -> CosmosColors.WhoopRecoveryRed
+        pct < 30.0 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryGreen
     }
 
 @Composable
