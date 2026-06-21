@@ -1,0 +1,32 @@
+# Second Brain — Docker-Compose-Stack (Hostinger VPS, Franks selbst gehostetes Gehirn)
+# Doku/Plan: best-practices/second-brain/UMSETZUNGSPLAN.md
+# Sicherheitsprinzip: ALLE Dienste nur an 127.0.0.1 (kein offener Port ausser SSH;
+# der externe Zugang kommt spaeter ueber Reverse-Proxy/VPN).
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest      # TODO: nach erstem Lauf auf feste Version pinnen (Reproduzierbarkeit/Umzug)
+    container_name: sb-qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"        # REST-API — NUR lokal erreichbar
+      - "127.0.0.1:6334:6334"        # gRPC    — NUR lokal erreichbar
+    volumes:
+      - ./qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}   # aus .env (NICHT im Repo)
+      QDRANT__TELEMETRY_DISABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 2G                 # harte Obergrenze (RAM-Schutz, OOM-Vermeidung)
+          cpus: "1.5"
+        reservations:
+          memory: 512M               # weiche Garantie
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
