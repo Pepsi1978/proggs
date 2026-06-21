@@ -131,6 +131,30 @@ DEIN HOSTINGER-SERVER (eine Maschine, alles lokal)
 
 ---
 
+## Portabilitaet & geplanter Umzug (Anbieter-Wechsel ab ~Mitte 2028)
+
+> Frank-Entscheidung 2026-06-21: Start auf **Hostinger** (KVM 2, **24-Monats-Laufzeit** = niedrigster
+> Preis fuer genau die geplante Nutzungsdauer). **Umzug nach Ablauf der Bindung (~Mitte 2028) ist FEST
+> eingeplant** — voraussichtlich zu Hetzner (konstanter Preis, bessere Leistung, EU-Datenschutz), BEVOR
+> der Renewal-Preis (~14 EUR) greift. Kein Lock-in, weil alles auf Docker + Standard-Bausteinen laeuft.
+
+**Damit der Umzug kinderleicht wird — von Anfang an (ab Phase 1) einbauen:**
+- **Eigene Domain fuer das Gehirn** (z.B. `gehirn.<deinname>.de`) statt der nackten Server-IP. Alle Clients
+  (Apps, CLIs) sprechen NUR den Domainnamen an. Ein Umzug ist dann fuer sie nur eine unsichtbare
+  DNS-Aenderung (Domain auf die neue Server-IP zeigen) — in den Apps muss NICHTS geaendert werden.
+- **Alles als Code/Config in Git** (compose.yaml, Caddyfile, Env-Vorlagen, Agenten) → Stack auf jedem
+  Linux-Server 1:1 reproduzierbar.
+- **Daten-Volumes auf festem Pfad** + regelmaessiges Offsite-Backup (Leitplanke 5). Ein Umzug = ein
+  Backup-Restore auf dem neuen Server.
+
+**Umzug-Vorgang (wenn es soweit ist — ~4 Schritte, Claude macht es per SSH):**
+1. Neuen Server (z.B. Hetzner) mieten, Ubuntu sauber.
+2. Gleichen Docker-Stack hochfahren (aus Git).
+3. Daten-Volume vom alten auf den neuen Server kopieren.
+4. Domain auf neue IP umstellen, alten Server abschalten. Fast keine Ausfallzeit (Parallelbetrieb bis Umschaltung).
+
+---
+
 ## Offene Verifikationen (waehrend der Umsetzung, KEIN Web-Research noetig vorab)
 
 1. **Hostinger Live-Preise + NVMe-Specs** zum Kaufzeitpunkt (schwanken je Region; vor Kauf live pruefen).
