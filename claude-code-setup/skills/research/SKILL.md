@@ -25,7 +25,7 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 | Zweck | Pfad |
 |-------|------|
 | Firecrawl→MiniMax (Engine A) | `~/proggs/mm-research.py` |
-| OpenRouter web_search (Engine B) | `~/proggs/or-research.py` |
+| OpenRouter `:online` (Engine B) | `~/proggs/or-research.py` |
 | Approval-Flag (vom Hook erzwungen) | `$TEMP/research-approved.flag` (Windows) bzw. `$TMPDIR/research-approved.flag` |
 | Firecrawl-Key | `~/SK/OpenCode/firecrawl-api-key.txt` |
 | OpenRouter-Key | `~/SK/ClaudeCodeOpenRouter/openrouter.key` |
@@ -34,9 +34,13 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 
 Aufruf-Konventionen (immer so, nie raten):
 - **Engine A:** `python3 ~/proggs/mm-research.py "<unterthema>" [n]`
-- **Engine B:** `python3 ~/proggs/or-research.py "<unterthema>" minimax/minimax-m3 parallel`
-  — die Such-Engine `parallel` (= parallel.ai) wird IMMER explizit als 3. Argument gesetzt,
-  damit garantiert NICHT `exa` verwendet wird. Eskalations-Modell: `z-ai/glm-5.2`.
+- **Engine B:** `python3 ~/proggs/or-research.py "<unterthema>" minimax/minimax-m3:online`
+  — das Modell-Suffix `:online` laesst OpenRouter selbst eine Websuche dazuschalten (web-Plugin,
+  Such-Engine intern = parallel.ai). **KEINE explizite Engine als 3. Argument** (kein `parallel`/
+  `exa`/`firecrawl`). `:online` ist bei hoher Parallelitaet stabiler als das alte `web_search`-
+  Server-Tool (A/B-getestet 2026-06-21). `reasoning:high` ist im Werkzeug eingebaut. Bei mehreren
+  Parallel-Laeufen pro Lauf ein eigenes `OR_OUTDIR` setzen (sonst ueberschreiben sich die Ausgaben).
+  Eskalations-Modell (mehr Denkkraft): `z-ai/glm-5.2:online`.
 
 ---
 
@@ -53,7 +57,7 @@ aufrufender Skill delegiert, fuellt er diese Felder; fehlt eines, hier ERFRAGEN 
 | `zerlegungs_modus` | `feste_liste` \| `selbst_generierend` \| `iterativ_wellen` | ja |
 | `unterthemen[]` | exakte Teilbereiche, **je 2-3 Saetze praezise** beschrieben (das Herz gegen Verlust). Bei `selbst_generierend`/`iterativ_wellen` ganz/teilweise leer + Generierungs-Auftrag | ja* |
 | `version_anker` | LIVE-Softwareversion(en) + Verweis auf bestehenden Stand | bei bug/best_practice PFLICHT |
-| `engine` | `A` (mm/Firecrawl) · `B` (or/OpenRouter parallel) · `C` (Opus-Schwarm) — aus Frage 1 | ja |
+| `engine` | `A` (mm/Firecrawl) · `B` (or/OpenRouter `:online`) · `C` (Opus-Schwarm) — aus Frage 1 | ja |
 | `anzahl` · `wellen` · `cap` | Researcher-Zahl, Wellen, Eintrags-Cap (Default **kein Cap**) | ja |
 | `rueckgabe_schema` | welches Output-Format (siehe `references/rueckgabe-schemata.md`) | ja |
 | `persistenz_ziel` | Zielpfad(e), wohin der Aufrufer das Ergebnis einarbeitet | ja |
@@ -101,13 +105,15 @@ konstant so viele gleichzeitig, wie die Engine erlaubt. Kein Wellen-Barrier, kei
 | Engine | Max gleichzeitig | Aufruf |
 |--------|------------------|--------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | `mm-research.py` |
-| B — OpenRouter (or), Such-Engine `parallel` | **2** (empirisch: mehr → kaputte Laeufe durch Last/Provider-Routing; or-research.py hat Retry als Sicherheitsnetz) | `or-research.py … parallel` |
+| B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Der intermittente JSON-Tool-Call-Leak §42 wird vom `or-research.py`-Retry gefangen) | `or-research.py … minimax/minimax-m3:online` |
 | C — Opus-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt |
 
 Praktische Umsetzung (Engine A/B = Bash-Skripte, KEIN Opus-Token-Verbrauch fuer die Quellenarbeit):
 - N gleichzeitig per `run_in_background` starten (N = Engine-Limit). Jeder Lauf schreibt seine
   Rohdaten in seine Datei (mm: `~/.mm-research/`, or: `~/.or-research/answer.json`) — die landen
-  NICHT im Hauptkontext.
+  NICHT im Hauptkontext. **Bei Parallel-Laeufen je Lauf ein eigenes Ausgabe-Verzeichnis setzen**
+  (`MM_OUTDIR=~/.mm-research/run-<i>` bzw. `OR_OUTDIR=~/.or-research/run-<i>`), sonst ueberschreiben
+  sich die gleichzeitigen Laeufe gegenseitig.
 - Sobald ein Lauf fertig ist (Notification): sein Zwischenfazit zeigen (Schritt 4) UND sofort den
   naechsten wartenden Researcher starten — bis alle Unterthemen aller Wellen durch sind.
 - Engine C (Opus): genauso — 7 parallele Agent-Tool-Aufrufe; sobald einer zurueck ist, sofort den
@@ -117,15 +123,15 @@ Praktische Umsetzung (Engine A/B = Bash-Skripte, KEIN Opus-Token-Verbrauch fuer 
 **Live-Darstellung — jeder Researcher beschriftet mit Engine/Modus + Thema:**
 
 ```
-🔬 Research: "<thema>"  ·  Engine: OpenRouter/parallel  ·  Modus: Eskalation  ·  Deckel: 10 Treffer/Researcher
-   Researcher 1 [OpenRouter/parallel · Eskalation] — <voller Unterthemen-Satz> … laeuft
-   Researcher 2 [OpenRouter/parallel · Eskalation] — <voller Unterthemen-Satz> … ✓ fertig (8 Quellen)
-   Researcher 3 [OpenRouter/parallel · Eskalation] — <voller Unterthemen-Satz> … laeuft
-   [aktiv: 5 · fertig: 2/12 · ~0,04 $]
+🔬 Research: "<thema>"  ·  Engine: OpenRouter/:online  ·  Modus: Eskalation  ·  Deckel: 10 Treffer/Researcher
+   Researcher 1 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
+   Researcher 2 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … ✓ fertig (8 Quellen)
+   Researcher 3 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
+   [aktiv: 7 · fertig: 2/12 · ~0,07 $]
 ```
 
 Die Engine wird in der Kopfzeile UND an jedem Researcher angezeigt (Soll: sichtbar womit
-recherchiert wird). Bei Engine B steht dort immer `parallel` — nie `exa`.
+recherchiert wird). Bei Engine B steht dort immer `:online` — keine explizite Such-Engine.
 
 ### Schritt 4 — Zwischenfazit pro Researcher (sofort)
 
@@ -158,7 +164,7 @@ Was das konkret fuers Projekt bedeutet (1-3 Punkte).
 ## Noch offen / unsicher
 Was die Quellen NICHT hergaben oder widerspruechlich war.
 
-Quellen: 12 · Engine: OpenRouter/parallel · Kosten: 0,07 $
+Quellen: 12 · Engine: OpenRouter/:online · Kosten: 0,07 $
 ```
 
 Zusaetzlich liefert der Skill das Ergebnis im **`rueckgabe_schema`** des Auftrags (siehe
@@ -175,7 +181,7 @@ Eskalation gemaess Policy-Regel anbieten (Frage 2). Stufen:
 
 ```
 A: MiniMax M3 auf Firecrawl-Quellen (mm)         → Standard, Free-Credits
-B: 1M-Modell + OpenRouter web_search parallel (or) → pay-per-use, max 2 parallel (Last-stabil, Retry)
+B: MiniMax M3 :online (or, OpenRouter Go)          → pay-per-use, bis 7 parallel (last-stabil + Retry)
 C: Opus-Schwarm                                    → teuer, nur bewusst gewaehlt
 ```
 
@@ -208,9 +214,10 @@ zurueckgegebenen Ergebnis.
 ## Engine-Wahl-Spickzettel (Detail in der Policy-Regel)
 
 - **A (Firecrawl+MiniMax):** volle Seiten, tiefe Einzelrecherche; Free-Credits; **nur 2 parallel**.
-- **B (OpenRouter parallel):** Snippets, **max 2 parallel** (Continuous-Spawning mit 2; mehr → kaputte
-  Laeufe durch Last, or-research.py hat Retry), pay-per-use, kein Monatslimit; Such-Engine immer
-  `parallel` (nie `exa`). Modell `minimax/minimax-m3` laeuft bei 2 parallel stabil.
+- **B (OpenRouter `:online`):** Snippets, **bis 7 parallel** (Continuous-Spawning; `:online` verteilt
+  selbst auf mehrere Modell-Provider → last-stabil, A/B-Test 2026-06-21: 10 echt-parallel sauber;
+  `or-research.py`-Retry faengt den intermittenten Leak §42), pay-per-use, kein Monatslimit. Modell
+  `minimax/minimax-m3:online` — KEINE explizite Such-Engine angeben. Eskalation: `z-ai/glm-5.2:online`.
 - **C (Opus-Schwarm):** nur wenn Frank es ausdruecklich waehlt (teuer); 7 parallel, Continuous-Spawning.
 
 ---
@@ -221,7 +228,8 @@ zurueckgegebenen Ergebnis.
 - ❌ Bei bug/best_practice ohne `version_anker` recherchieren (falsche Fix-Stati)
 - ❌ Auf ganze Wellen warten statt Continuous-Spawning (Zeitverlust — die oberste Regel)
 - ❌ Mehr als 2 Firecrawl-Researcher gleichzeitig (Free-Limit → 429)
-- ❌ Such-Engine `exa` statt `parallel` verwenden (parallel immer explizit als 3. Argument)
+- ❌ Bei Engine B eine explizite Such-Engine (`parallel`/`exa`/`firecrawl`) als 3. Argument angeben — `:online` regelt die Suche selbst (Modell-Suffix, kein `tools`-Block)
+- ❌ Mehrere Engine-B-Parallel-Laeufe ohne eigenes `OR_OUTDIR` je Lauf (sie ueberschreiben sich)
 - ❌ Selbsttests "ob das System geht" — die Pipeline ist verifiziert
 - ❌ Nach den Skripten/Keys suchen — die Pfade stehen in Block 0
 - ❌ Funde an einem Cap abschneiden (lossless: in Datei auslagern); `cap` steuert nur Inline-Menge
