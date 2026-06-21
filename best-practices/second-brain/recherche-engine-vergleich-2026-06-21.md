@@ -148,3 +148,65 @@ aus dem Firecrawl-Lauf nehmen** (B-R7 ist leer). (2) **Harte KVM-Specs vor Kauf 
 - **Firecrawl (Engine A)** = gezielt fuer **enge, faktenkritische** Fragen, deren Antwort auf 1–2 bekannten
   Seiten in voller Tiefe steht (offizielle Specs/Preise, kopierbare Configs) — oder als Verifikations-Zweitlauf.
 - **Optimal kombiniert:** `:online` fuer die Breite, Firecrawl gezielt fuer die 2–3 spec-kritischen Themen.
+
+---
+
+## Teil D — DREI-WEGE-Vergleich (mit Opus-Eskalation, Engine C)
+
+Dieselben 10 Themen zusaetzlich von 10 **Opus-4.8-Researchern** (WebSearch+WebFetch, 7 konstant parallel,
+Continuous-Spawning) — die teuerste Eskalationsstufe. Ein separater Agent las ALLE 30 Antworten
+(3 Engines × 10 Themen) und bewertete jedes Thema dreifach.
+
+### Token / Kosten / Output je Engine
+| Engine | Input-Tok | Output-Tok | Direkte Kosten | Output gesamt | Quellen/Researcher |
+|--------|-----------|------------|----------------|---------------|--------------------|
+| B `:online` (Parallel.ai) | 49.696 | 43.102 | **$0.22** (pay-per-use) | 106k Zeichen | 16–20 Snippets |
+| A Firecrawl + MiniMax M3 | 129.171 | 33.862 | ~gratis (Go-Abo + ~50/1000 Credits) | 78k Zeichen | 4–5 volle Seiten |
+| C Opus 4.8 | — (nicht exakt messbar) | — | **~70–100× B** (Claude-Opus-Token) | 146k Zeichen | 8–26 (WebSearch+Fetch) |
+
+### Pro-Thema-Wertung (3 Engines)
+| # | Thema | 1. Platz | 2. | 3. |
+|---|-------|----------|-----|-----|
+| 1 | Produktpalette | **Firecrawl** | Opus | :online |
+| 2 | KVM-Specs/Benchmarks | **Opus** | Firecrawl | :online |
+| 3 | 1-Klick-Templates | **Opus** | :online | Firecrawl |
+| 4 | OS-Auswahl | **Opus** | :online | Firecrawl |
+| 5 | Agent-Frameworks | **Opus** | :online | Firecrawl |
+| 6 | Vektor-DBs | **Opus** | :online | Firecrawl |
+| 7 | Memory-Stacks | **Opus** | :online | Firecrawl |
+| 8 | MCP/API-Security | **Opus** | Firecrawl | :online |
+| 9 | Multi-Service | **Opus** | :online | Firecrawl |
+| 10 | Best-Practices/Fallen | **Opus** | :online | Firecrawl |
+
+**Endstand: Opus 8× Platz 1 · Firecrawl 1× · `:online` 1× (7× Platz 2) · Firecrawl 7× Platz 3.**
+
+### Wo Opus die zwei billigen Engines WIRKLICH schlaegt (rechtfertigt ~70–100× Preis)
+- **Projekt-Synthese statt Themen-Referat:** verknuepft jedes Thema mit dem Second-Brain-Vorhaben
+  (Plan-pro-Use-Case, konkrete Architektur-Vorschlaege). B/Firecrawl referieren nur Quellen.
+- **Tiefere Eigenrecherche + einzigartige harte Zahlen:** Self-Host-QPS/Latenz pro Vektor-DB,
+  Letta-Port/RAM-Detail, MCP-OAuth-2.1-Spec, 47.000-USD-Loop-Mechanik, 93,4 %-Agent-Server-Scan.
+- **Strukturierte Wiederverwertbarkeit:** liefert pro Researcher fertige `BEST-PRACTICES-` +
+  `BUG-KANDIDATEN`-Bloecke — direkt einarbeitbar (Research-Persistenz).
+- **Beste Widerspruchs-Behandlung:** erklaert Konflikte statt sie nur zu listen (skalenabhaengige QPS).
+
+### Wo eine billige Engine Opus einholt/schlaegt
+- **Firecrawl gewinnt Thema 1 + ist bei harten Produkt-Specs aktueller:** volle Seiten fangen die
+  Live-2026-NVMe-Werte (KVM 1 = 30 GB, KVM 8 = 240 GB), die Opus UND `:online` ueber Snippets verpassten.
+- **Firecrawl Thema 8 praktischer:** komplette copy-paste-fertige MCP-Reverse-Proxy-Configs.
+- **`:online` durchgehend zweiter, nie schwach, $0.22:** bei Thema 7 sogar ehrlicher (entlarvt
+  Mem0-Marketing-Benchmark 94,4 % als reale 49 %); bei Thema 6 beste Kosten-/TCO-Zahlen.
+- **Firecrawl-Schwaeche:** nur 4–5 Quellen → bricht bei breiten Themen ein (Thema 9 unbeantwortet).
+
+### Kosten-Nutzen-Urteil
+Opus-Eskalation lohnt **nur fuer die analytisch/sicherheitskritischen Themen** (5–10: Architektur,
+Vektor-DBs, Memory-Stacks, Security, Multi-Service, Fallen) — dort tragen Synthese-Tiefe, Quellenbreite
+und die `KANDIDATEN`-Bloecke den ~70–100×-Preis, gerade weil Fehlentscheidungen teuer werden
+(47k-Loop, TLS-Strip, falsche DB-Wahl). Fuer **reine Faktenabfragen mit aktuellen Produkt-Specs**
+(Themen 1–4) lohnt Opus NICHT — da war Firecrawl aktueller und `:online` fuer $0.22 voellig ausreichend.
+**Faustregel:** Opus zahlt sich aus, wenn das Ergebnis ENTSCHEIDUNGEN traegt, nicht wenn es ZAHLEN nachschlaegt.
+
+### Finale Drei-Stufen-Empfehlung (Second-Brain-Vorhaben)
+1. **`:online` ($0.22) = Standard** fuer den Alltag und breite Recherche (bestes Preis-Leistungs-Verhaeltnis).
+2. **Firecrawl = Verifikations-/Aktualitaets-Schicht** gezielt bei harten, frischen Produkt-Specs/Preisen.
+3. **Opus = Eskalation NUR fuer entscheidungstragende, sicherheits-/architekturkritische Fragen**
+   (Memory-Stack-Wahl, MCP-Security-Hardening, Multi-Service-Dimensionierung, Kosten-Fallen).
