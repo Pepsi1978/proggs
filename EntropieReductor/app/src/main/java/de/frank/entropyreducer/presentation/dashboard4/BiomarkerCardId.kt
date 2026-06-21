@@ -90,6 +90,7 @@ object BiomarkerCardId {
     const val WORKOUTS_FOR_DAY = "workouts_for_day"
 
     // Analyse-Block
+    // Frank-Wunsch 2026-06-21: HRV ↔ Schlafdauer-Korrelation entfernt — wird nicht mehr gebraucht.
     const val CORRELATION = "correlation"
 
     // Amazfit-Block (T-Rex 3)
@@ -171,7 +172,6 @@ object BiomarkerCardId {
             // WORKOUTS_FOR_DAY: Frank-Vorgabe 2026-05-11 entfernt — die Whoop-Workouts
             // an diesem Tag sind im Biomarker-Screen redundant. Wird zusaetzlich in
             // HIDDEN_CARD_IDS gelistet damit es auch fuer bestehende User verschwindet.
-            CORRELATION,
             AMAZFIT_LAST_HERO,
             AMAZFIT_TRAININGS,
             OURA_READINESS,
@@ -196,5 +196,12 @@ object BiomarkerCardId {
      * zuruecksetzen muss.
      */
     val HIDDEN_CARD_IDS: Set<String> =
-        setOf(OURA_ACTIVITY, OURA_SLEEP_DETAIL, MINI_BODY_WATER, MINI_BONE_MASS, WORKOUTS_FOR_DAY)
+        setOf(
+            OURA_ACTIVITY,
+            OURA_SLEEP_DETAIL,
+            MINI_BODY_WATER,
+            MINI_BONE_MASS,
+            WORKOUTS_FOR_DAY,
+            CORRELATION,
+        )
 }

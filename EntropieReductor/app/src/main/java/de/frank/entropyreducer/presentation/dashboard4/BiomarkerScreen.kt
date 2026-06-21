@@ -1134,84 +1134,6 @@ private val SLEEP_HOUR_FORMAT: (Double) -> String = { mins ->
 }
 
 /**
- * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer über die letzten 30
- * Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf mit höherer HRV einhergeht".
- */
-@Composable
-private fun CorrelationCard(state: BiomarkerUiState) {
-    val cosmos = LocalCosmos.current
-    // Performance-Audit Loop 3 (2026-05-10): Pearson-Pairs in remember(state.history)
-    // statt pro Recomposition. Bei 200+ Datenpunkten signifikanter Allokationsschutz.
-    val pairsAndR =
-        remember(state.history) {
-            val pairs =
-                state.history.mapNotNull { snap ->
-                    val hrv = snap.hrvMs ?: return@mapNotNull null
-                    val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
-                    hrv to sleep.toDouble()
-                }
-            pairs to (if (pairs.size >= 3) pearson(pairs) else null)
-        }
-    val pairs = pairsAndR.first
-    val r = pairsAndR.second
-    val (label, color) =
-        when {
-            r == null -> "Nicht genug Daten" to cosmos.textSecondary
-            r >= 0.5 -> "Starke positive Korrelation" to LocalCosmos.current.ok
-            r >= 0.2 -> "Schwache positive Korrelation" to LocalCosmos.current.accent
-            r >= -0.2 -> "Keine klare Korrelation" to cosmos.textSecondary
-            r >= -0.5 -> "Schwache negative Korrelation" to LocalCosmos.current.warn
-            else -> "Starke negative Korrelation" to LocalCosmos.current.crit
-        }
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Text(
-                text = "HRV ↔ Schlafdauer",
-                style = MaterialTheme.typography.titleMedium,
-                color = cosmos.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = label,
-                color = color,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (r != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "Pearson r = ${"%.2f".format(r)} (n=${pairs.size})",
-                    color = cosmos.textSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text =
-                    "Höhere Werte deuten an: mehr Schlaf -> höhere HRV. " +
-                        "Negative Werte heißen: mehr Schlaf -> niedrigere HRV (selten).",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
-    }
-}
-
-private fun pearson(pairs: List<Pair<Double, Double>>): Double {
-    val n = pairs.size
-    val sumX = pairs.sumOf { it.first }
-    val sumY = pairs.sumOf { it.second }
-    val sumXY = pairs.sumOf { it.first * it.second }
-    val sumX2 = pairs.sumOf { it.first * it.first }
-    val sumY2 = pairs.sumOf { it.second * it.second }
-    val numerator = n * sumXY - sumX * sumY
-    val denomSq = (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)
-    if (denomSq <= 0) return 0.0
-    return numerator / kotlin.math.sqrt(denomSq)
-}
-
-/**
  * Gesamterholung-Card im Soll-Design (Bild 15/25). Layout: links Title + Status-Sub-Text +
  * Erlaeuterung; rechts großer Recovery-Ring.
  */
@@ -1498,13 +1420,12 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
                 MiniSleepPerformanceCard(state, onOpenMetricDetail)
 
+            // Frank-Wunsch 2026-06-21: HRV-Verlauf im Erholungsverlauf-Pattern
+            // (Balken-Graph, Durchschnitt ueber alle Werte, Ampel-Faerbung).
             BiomarkerCardId.HRV ->
-                MetricHistoryCard(
-                    title = "HRV-Verlauf",
-                    accent = LocalCosmos.current.accent,
-                    points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
-                    fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
-                    unit = "ms",
+                HrvGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
                     onClick = { onOpenMetricDetail(MetricKey.HRV) },
                 )
 
@@ -1719,7 +1640,10 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.WORKOUTS_FOR_DAY ->
                 WorkoutsForDayCard(workouts = state.workoutsForSelectedDay)
 
-            BiomarkerCardId.CORRELATION -> CorrelationCard(state)
+            // Frank-Wunsch 2026-06-21: HRV ↔ Schlafdauer-Korrelation entfernt.
+            // Die ID wird via HIDDEN_CARD_IDS ausgefiltert, aber wir behalten
+            // den Branch als stille No-Op fuer Backward-Compat.
+            BiomarkerCardId.CORRELATION -> { }
 
             BiomarkerCardId.AMAZFIT_LAST_HERO ->
                 AmazfitLastTrainingHeroCard(
