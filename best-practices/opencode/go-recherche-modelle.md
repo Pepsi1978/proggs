@@ -180,6 +180,13 @@ von OpenCode direkt per HTTP ansprechen (z.B. aus einem Skript/Bash-Tool heraus,
 - **Thinking** über die API: `"thinking": {"type":"enabled","budget_tokens":N}` (Anthropic-Stil; max Thinking = hohes
   `budget_tokens`, `max_tokens` MUSS größer sein). Antwort enthält `content`-Blöcke `type:"thinking"` + `type:"text"`.
   Live-getestet: budget 24000 → ~2.800–13.600 Zeichen Thinking, sauber zurückgeliefert.
+- **A/B-Befund 2026-06-21 (`:online` über OpenRouter):** MiniMax M3 denkt im `:online`-Modus OHNEHIN von
+  sich aus (~900 reasoning-Token), egal ob `reasoning:{effort:high}` / `{max_tokens:N}` gesetzt ist oder GAR
+  NICHT. Beide A/B-Läufe (gleicher Prompt, einmal max Thinking, einmal ohne) lieferten **gleichwertige
+  Qualität** und fast identische reasoning-Token (921 vs. 899). **Konsequenz:** `reasoning:high` schadet
+  nicht (bleibt konsistent mit der „A+B max Thinking"-Policy), ist bei `:online`/M3-Recherche aber **KEIN
+  Qualitäts-Hebel** — anders als bei Vibe-Coding-Modellen (GLM/Kimi), wo Thinking-an der Hebel ist. M3 hat
+  Recherche-Thinking fest eingebaut. (Werkzeug: `or-research.py … :online`; Policy: `research-strategy.md` §4.)
 - **Alternativ OpenAI-Schema** `POST /chat/completions` (`Authorization: Bearer`): minimax-m3 geht auch hier,
   Thinking kommt nativ als `<think>…</think>` im `content`; `reasoning_split=true` (extra_body) trennt es in `reasoning_details`.
 - Key zentral in `~/SK/OpenCode/go-api-key.txt`. Windows-Falle: Body per **stdin-Pipe** an `curl --data-binary @-`
