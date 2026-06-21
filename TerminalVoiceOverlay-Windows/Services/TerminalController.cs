@@ -158,10 +158,21 @@ namespace TerminalVoiceOverlay.Services
                 return;
             }
 
+            // ── Modifier-Release VOR dem Fenster-Wechsel (Fix 2026-06-21) ──
+            // KRITISCH: Erst die Trigger-Modifier (Alt/Win/Shift) freigeben,
+            // DANN das Fenster nach vorn holen. Noch gedrueckte Modifier
+            // (Strg+Alt+P per Stream Deck oder Finger gehalten) blockieren sonst
+            // den Foreground-Wechsel aus FREMDEN Fenstern (Browser etc.) -> das
+            // Terminal blinkt nur in der Taskleiste, der Paste verpufft. Die
+            // G4-Makrotaste lief bisher NUR, weil ihr Makro die Modifier per
+            // 50ms-Timing schon vorher sauber loslaesst — dieser Fix macht das
+            // unabhaengig vom Ausloeser. (Bug-Almanach dotnet-csharp 5.5.)
+            ReleaseNonCtrlModifiers();
+
             // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
             BringToForeground(terminalHwnd);
 
-            // ── Modifier-Release vor Ctrl+V ─────────────────────────────
+            // ── Sicherheitsnetz: Modifier nochmal freigeben vor Ctrl+V ──
             // Wenn der Paste durch einen Hotkey ausgeloest wurde (z.B.
             // Win+Alt+B oder Shift+Alt+M), sind die Trigger-Modifier-Tasten
             // beim SendCtrlV-Aufruf moeglicherweise IMMER NOCH virtuell
