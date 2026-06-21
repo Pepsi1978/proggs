@@ -38,11 +38,16 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 import urllib.error
 
 OR_URL = "https://openrouter.ai/api/v1/chat/completions"
-OUTDIR = os.path.expanduser("~/.or-research")
+# OR_OUTDIR ueberschreibbar, damit PARALLELE Laeufe je eine eigene answer.json haben (sonst ueber-
+# schreiben sie sich gegenseitig — genau das verhinderte bei parallelen Schwaermen die Provider-/Roh-
+# Analyse). Default wie bisher ~/.or-research.
+OUTDIR = os.path.expanduser(os.environ.get("OR_OUTDIR", "~/.or-research"))
+RETRIES = int(os.environ.get("OR_RETRIES", "3"))   # Retry bei Last-Fehlern (leer/Timeout/Leak), Almanach #41
 
 
 def _read_key():
@@ -99,17 +104,51 @@ def main():
         "tools": [{"type": "openrouter:web_search", "parameters": web_params}],
         "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
-    print(f"[or-research] {model} | engine={engine} | max_results={max_results} total={max_total} — {query!r}",
+    print(f"[or-research] {model} | engine={engine} | max_results={max_results} total={max_total} | retries={RETRIES} — {query!r}",
           file=sys.stderr)
-    try:
-        d = _post(OR_URL,
-                  {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
-                   "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-or-research"},
-                  body, timeout=300)
-    except urllib.error.HTTPError as e:
-        return f"OpenRouter-Fehler {e.code}: {e.read().decode('utf-8', 'replace')[:400]}"
-    if d.get("error"):
-        return f"OpenRouter-Fehler: {json.dumps(d['error'])[:400]}"
+    hdr = {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+           "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-or-research"}
+    # Leak-Marker eng gehalten (kein Fehlalarm bei legitimem Code-Beispiel in einer Recherche-Antwort):
+    leak_markers = ("<invoke name=", "]<]", "minimax[>", "<tool_call>", "</tool_call>", "antml:invoke")
+    # Retry mit Backoff (Almanach bugs/apis/openrouter-api.md #41): Unter Last/Parallelitaet liefert
+    # OpenRouter manchmal eine LEERE Response (-> JSONDecodeError), Timeouts/Connection-Fehler ODER
+    # (Provider-Varianz) Tool-Call-Leaks/leeren content. Das ist INTERMITTENT — der naechste Versuch
+    # erwischt fast immer einen guten Slot. Darum ALLE diese Faelle fangen (nicht nur HTTPError) und
+    # bis RETRIES mal neu versuchen, bevor wir aufgeben.
+    d = None
+    last_err = "?"
+    for attempt in range(1, RETRIES + 1):
+        try:
+            d = _post(OR_URL, hdr, body, timeout=300)
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            detail = e.read().decode("utf-8", "replace")[:400]
+            if e.code in (408, 409, 425, 429, 500, 502, 503, 504) and attempt < RETRIES:
+                print(f"[or-research] Versuch {attempt}/{RETRIES}: {last_err} — retry in {2*attempt}s...", file=sys.stderr)
+                time.sleep(2 * attempt); continue
+            return f"OpenRouter-Fehler {e.code}: {detail}"
+        except (urllib.error.URLError, json.JSONDecodeError, ValueError, TimeoutError, ConnectionError, OSError) as e:
+            # leere Response (JSONDecodeError), Timeout, Connection-Reset, DNS etc. — alles unter Last moeglich
+            last_err = f"{type(e).__name__}: {str(e)[:120]}"
+            if attempt < RETRIES:
+                print(f"[or-research] Versuch {attempt}/{RETRIES} fehlgeschlagen ({last_err}) — retry in {2*attempt}s...", file=sys.stderr)
+                time.sleep(2 * attempt); continue
+            return (f"[or-research FEHLER] {model}: leere/kaputte Antwort nach {RETRIES} Versuchen ({last_err}). "
+                    f"Wahrscheinlich Last/Parallelitaet (Almanach bugs/apis/openrouter-api.md #41) — weniger "
+                    f"gleichzeitig laufen lassen oder spaeter erneut.")
+        if d.get("error"):
+            last_err = json.dumps(d['error'])[:200]
+            if attempt < RETRIES:
+                print(f"[or-research] Versuch {attempt}/{RETRIES}: API-Error ({last_err}) — retry in {2*attempt}s...", file=sys.stderr)
+                time.sleep(2 * attempt); continue
+            return f"OpenRouter-Fehler: {last_err}"
+        # content-Qualitaet pruefen — leer/leak ist ebenfalls intermittent -> retrien statt gleich aufgeben
+        _txt = ((d.get("choices") or [{}])[0].get("message", {}).get("content")) or ""
+        if (not _txt.strip() or any(m in _txt for m in leak_markers)) and attempt < RETRIES:
+            last_err = "leerer/leaky content"
+            print(f"[or-research] Versuch {attempt}/{RETRIES}: {last_err} — retry in {2*attempt}s...", file=sys.stderr)
+            time.sleep(2 * attempt); continue
+        break  # Erfolg ODER letzter Versuch (der Detektor unten faengt einen final kaputten Fall ab)
 
     with open(os.path.join(OUTDIR, "answer.json"), "w", encoding="utf-8") as fh:
         json.dump(d, fh, ensure_ascii=False)
@@ -122,24 +161,18 @@ def main():
             cites.append("- " + (u.get("title") or u["url"]) + " — " + u["url"])
 
     sys.stdout.reconfigure(encoding="utf-8")
-    # Leer-/Leak-Detektor (Almanach bugs/apis/openrouter-api.md #41): Nicht tool-stabile Modelle
-    # (z.B. minimax-m3) leaken agentische Tool-Calls als TEXT in content (<invoke …>-Stil) ODER liefern
-    # leer/JSON-kaputt -> der Lauf "gelingt" + kostet, ist aber UNBRAUCHBAR. Solche Laeufe als FEHLER
-    # melden (exit != 0, SystemExit gibt den String aus), die Web-Quellen aber retten (sind brauchbar).
-    # Marker bewusst eng (eindeutige Tool-Call-Leak-Signaturen), damit ein legitimes Code-Beispiel
-    # in einer Recherche-Antwort keinen Fehlalarm ausloest (Fix-Induced-Failure vermeiden):
-    leak_markers = ("<invoke name=", "]<]", "minimax[>", "<tool_call>", "</tool_call>", "antml:invoke")
+    # FINALER Detektor (Almanach bugs/apis/openrouter-api.md #41): greift nur noch, wenn AUCH der letzte
+    # Retry-Versuch oben kaputt war (leerer content oder Tool-Call-Leak). leak_markers ist oben definiert.
     is_leak = any(m in text for m in leak_markers)
     if not text.strip() or is_leak:
         if cites:
             print("=== Web-Quellen (nur Quellen brauchbar; Antworttext defekt) ===\n"
                   + "\n".join(dict.fromkeys(cites)))
-        grund = "LEERER content" if not text.strip() else "TOOL-CALL-LEAK im content (Modell nicht tool-stabil)"
-        return (f"[or-research FEHLER] {model}: {grund} — Lauf unbrauchbar trotz Kosten. "
-                f"FIX (Almanach bugs/apis/openrouter-api.md #41): fuer Engine-B-Websuche ein tool-stabiles "
-                f"Modell nutzen (z.B. moonshotai/kimi-k2.6, x-ai/grok-4.1-fast oder openrouter/auto), "
-                f"NICHT minimax-m3. Pruefe auch das Workspace-Default-Web-Search-Plugin (Kollision mit "
-                f"dem server-tool). Roh: ~/.or-research/answer.json")
+        grund = "LEERER content" if not text.strip() else "TOOL-CALL-LEAK im content"
+        return (f"[or-research FEHLER] {model}: {grund} nach {RETRIES} Versuchen — Lauf unbrauchbar. "
+                f"Ursache meist Last/Parallelitaet (Almanach bugs/apis/openrouter-api.md #41): weniger "
+                f"gleichzeitig laufen lassen, spaeter erneut, oder anderes Modell testen. "
+                f"Roh: {OUTDIR}/answer.json")
     print(text)
     if cites:
         print("\n=== Web-Quellen ===\n" + "\n".join(dict.fromkeys(cites)))
@@ -147,9 +180,10 @@ def main():
     stu = u.get("server_tool_use_details") or u.get("server_tool_use") or {}
     searches = stu.get("web_search_requests")
     cost = u.get("cost")
+    prov = d.get("provider") or "?"   # welcher OpenRouter-Anbieter das Modell bediente (Routing-Varianz)
     print(f"\n--- OpenRouter: {searches} Web-Suchen | Token in {u.get('prompt_tokens')} / out "
-          f"{u.get('completion_tokens')} | Kosten ${cost} | {model}, engine={engine} "
-          f"| Roh: ~/.or-research/answer.json ---", file=sys.stderr)
+          f"{u.get('completion_tokens')} | Kosten ${cost} | {model} @ {prov}, engine={engine} "
+          f"| Roh: {OUTDIR}/answer.json ---", file=sys.stderr)
     return 0
 
 
