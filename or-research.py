@@ -48,6 +48,10 @@ OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Analyse). Default wie bisher ~/.or-research.
 OUTDIR = os.path.expanduser(os.environ.get("OR_OUTDIR", "~/.or-research"))
 RETRIES = int(os.environ.get("OR_RETRIES", "3"))   # Retry bei Last-Fehlern (leer/Timeout/Leak), Almanach #41
+# JSON-Tool-Call-Leak (Almanach #42): Modell leakt agentische FOLGE-Tool-Calls als Text statt sie
+# auszufuehren -> {"name": "web_search", "input": {"query": ...}} und liefert KEINE echte Antwort.
+# Der XML-only-Marker-Satz unten erkennt das nicht; dieser Regex schliesst die Luecke.
+LEAK_RE = re.compile(r'\{"name":\s*"\w+",\s*"(input|arguments)":')
 
 
 def _read_key():
@@ -144,7 +148,7 @@ def main():
             return f"OpenRouter-Fehler: {last_err}"
         # content-Qualitaet pruefen — leer/leak ist ebenfalls intermittent -> retrien statt gleich aufgeben
         _txt = ((d.get("choices") or [{}])[0].get("message", {}).get("content")) or ""
-        if (not _txt.strip() or any(m in _txt for m in leak_markers)) and attempt < RETRIES:
+        if (not _txt.strip() or any(m in _txt for m in leak_markers) or LEAK_RE.search(_txt)) and attempt < RETRIES:
             last_err = "leerer/leaky content"
             print(f"[or-research] Versuch {attempt}/{RETRIES}: {last_err} — retry in {2*attempt}s...", file=sys.stderr)
             time.sleep(2 * attempt); continue
@@ -163,7 +167,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     # FINALER Detektor (Almanach bugs/apis/openrouter-api.md #41): greift nur noch, wenn AUCH der letzte
     # Retry-Versuch oben kaputt war (leerer content oder Tool-Call-Leak). leak_markers ist oben definiert.
-    is_leak = any(m in text for m in leak_markers)
+    is_leak = any(m in text for m in leak_markers) or bool(LEAK_RE.search(text))
     if not text.strip() or is_leak:
         if cites:
             print("=== Web-Quellen (nur Quellen brauchbar; Antworttext defekt) ===\n"

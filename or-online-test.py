@@ -33,6 +33,15 @@ RETRIES = int(os.environ.get("OR_RETRIES", "1"))            # 1 = KEIN Retry (pu
 MODEL = os.environ.get("OR_MODEL", "minimax/minimax-m3:online")
 # MiniMax-typische Tool-Call-Leak-Marker (wie or-research.py), eng gehalten gegen Fehlalarm:
 LEAK_MARKERS = ("<invoke name=", "]<]", "minimax[>", "<tool_call>", "</tool_call>")
+# JSON-Tool-Call-Leak (Almanach #42): im :online-Modus leakt das Modell agentische FOLGE-Suchen als
+# Text statt sie auszufuehren — z.B. {"name": "web_search", "input": {"query": "..."}} — und liefert
+# dann KEINE echte Antwort (genau so fiel Researcher 7 beim Second-Brain-Test aus, vom alten
+# XML-only-Detektor unentdeckt). Regex fuer den verbreiteten OpenAI-/Anthropic-Tool-Call-Shape:
+LEAK_RE = re.compile(r'\{"name":\s*"\w+",\s*"(input|arguments)":')
+
+
+def _looks_leaky(text):
+    return any(m in text for m in LEAK_MARKERS) or bool(LEAK_RE.search(text))
 
 
 def _read_key():
@@ -133,7 +142,7 @@ def main():
         if status == "got_response":
             if not text.strip():
                 status = "empty"
-            elif any(m in text for m in LEAK_MARKERS):
+            elif _looks_leaky(text):
                 status = "leak"
             else:
                 status = "ok"

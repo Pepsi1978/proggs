@@ -59,11 +59,92 @@ In der normalen Chat-Response steht die Such-Engine NICHT (`usage.server_tool_us
 
 ## Teil B — Firecrawl + MiniMax M3 (Engine A) — dieselben 10 Themen
 
-> Wird nach dem Firecrawl-Lauf ergaenzt (max 2 parallel, Continuous-Spawning — Firecrawl-Free-Limit).
+**Methode:** `mm-research.py` — Firecrawl `/v1/search` holt je **5 VOLLE Seiten** (gescraptes Markdown),
+MiniMax M3 (max Thinking, `budget_tokens=24000`, OpenRouter Go) wertet quellentreu aus. **Max 2 parallel**
+(Firecrawl-Free erlaubt nur 2 concurrent), Continuous-Spawning via `firecrawl-test-run.py`. Jeder Lauf
+eigenes `MM_OUTDIR` (kein Ueberschreiben mehr).
+
+**Ergebnis: 10/10 sauber.**
+
+| ID | Quellen (volle Seiten) | MM-Token in | MM-Token out | Thinking (Z.) | Antwort (Z.) |
+|----|------------------------|-------------|--------------|---------------|--------------|
+| 1 | 5 | 16.802 | 3.378 | 4.179 | 6.239 |
+| 2 | 5 | 17.595 | 5.450 | 6.672 | 8.965 |
+| 3 | 4 | 12.367 | 1.965 | 3.283 | 4.015 |
+| 4 | 4 | 11.366 | 3.105 | 3.189 | 8.573 |
+| 5 | 4 | 11.479 | 1.909 | 2.337 | 4.730 |
+| 6 | 4 | 10.237 | 4.185 | 3.311 | 11.382 |
+| 7 | 4 | 11.092 | 3.299 | 5.233 | 6.918 |
+| 8 | 5 | 12.850 | 5.714 | 5.100 | 15.323 |
+| 9 | 4 | 12.627 | 1.611 | 3.267 | 3.404 |
+| 10 | 4 | 12.756 | 3.246 | 3.229 | 8.449 |
+
+**Gesamt:** 10/10 ok · 4–5 Quellen je Researcher · MiniMax-Token ueber das **Go-Abo** (flat, nicht
+pro Call abgerechnet) · ~**50 Firecrawl-Credits** verbraucht (von 1.000/Monat gratis).
+
+### Kosten-/Limit-Gegenueberstellung
+| | Engine B (`:online`) | Engine A (Firecrawl+MiniMax) |
+|---|---|---|
+| Quellen je Researcher | 16–20 Snippets | 4–5 volle Seiten |
+| Parallelitaet | 10+ (echt-parallel ok) | **max 2** (Firecrawl-Free) |
+| Direkte Kosten | **$0.21** (pay-per-use, sichtbar) | Go-Abo-Token (flat) + ~50/1000 Firecrawl-Credits/Mon |
+| Monatslimit-Risiko | keins (pay-per-use) | **ja** (1.000 Firecrawl-Credits/Mon) |
+| Latenz Ø | 67 s | aehnlich (max 2 parallel → laenger gesamt) |
 
 ---
 
-## Teil C — Qualitaetsvergleich der Ergebnisse
+## Teil C — Qualitaetsvergleich der Ergebnisse (adversarisch geprueft)
 
-> Wird nach beiden Laeufen ergaenzt: Quellenzahl, Tiefe, Ehrlichkeit/Quellentreue, Aktualitaet,
-> Token-/Kosten-Effizienz — `:online` (Engine B) vs. Firecrawl+MiniMax (Engine A).
+> Ein separater Agent las BEIDE Roh-Dateien vollstaendig und verglich alle 10 Themenpaare am Material.
+
+### Korrektur zum `:online`-Ergebnis: 9/10 echte Antworten, NICHT 10/10
+Der inhaltliche Vergleich deckte einen Fehler im ersten Test auf: **Researcher 7 (`:online`, Memory-Stacks)
+lieferte KEINE echte Antwort** — nur eine Einleitung + rohe JSON-Tool-Calls (`{"name": "web_search",
+"input": {"query": "..."}}`). Das Modell wollte agentisch weitersuchen; im `:online`-Modus werden
+Folge-Tool-Calls aber nicht ausgefuehrt → sie leakten als Text. Der erste Leak-Detektor
+(`or-online-test.py`) kannte nur XML-Marker (`<tool_call>` etc.) und wertete R7 faelschlich als „ok".
+**Korrigierte Bilanz: 9/10 saubere Antworten + 1 Tool-Call-Leak.** Fix: Detektor um den JSON-Tool-Call-
+Shape erweitert (`or-online-test.py` + `or-research.py`, #47046); neuer Almanach-Eintrag
+`bugs/apis/openrouter-api.md` §42. **Wichtig fuer die Theorie:** `:online` bleibt stabil gegen die
+LAST-Crashes, die das `web_search`-Server-Tool bei 7 parallel zerlegten (3/7 kaputt) — der R7-Leak ist
+ein ANDERER Fehlertyp (agentischer Folge-Tool-Call), kein Last-Crash.
+
+### Pro-Thema-Wertung (Gewinner)
+| # | Thema | Gewinner | Begruendung |
+|---|-------|----------|-------------|
+| 1 | Produktpalette | **B** | B deckt alle 4 Produkttypen + Agent-Eignung ab; A hatte zu Shared/Dedicated keine Quellen |
+| 2 | KVM-Specs | **A** | A genauer/aktueller (CPU-Modell, Benchmark-Note) + erkennt VERALTETE NVMe-Werte, die B uebernahm |
+| 3 | 1-Klick-Templates | Gleichstand | A belegt Coolify (B verneint es falsch); B belegt Open WebUI — je ein blinder Fleck |
+| 4 | OS-Auswahl | **B** | B mit konkretem Hermes-Leitfaden (Ubuntu 24.04 clean, AI-Template meiden); A generischer |
+| 5 | Agent-Frameworks | **B** | B mit Preisen/Auth/mehr Quellen; A widerspricht sich bei der Kernfrage |
+| 6 | Vektor-DBs | **B** | B mit harten Zahlen (qps/Recall/Kosten pro 1M) + 20 Quellen; A qualitativ, 4 Quellen |
+| 7 | Memory-Stacks | **A** | A wertet 4 volle Seiten + markiert befangene supermemory-Quelle; **B-R7 fiel aus (Leak)** |
+| 8 | MCP/API absichern | **A** | A mit kopierbaren Nginx/Caddy-Configs aus echten Doku-Seiten; B breiter, aber flacher |
+| 9 | Mehrere Dienste | **B** | B trifft den KI-Kern (Compose-Beispiele, deploy-Limit-Falle); A verfehlt das Thema |
+| 10 | Best Practices | **B** | B mit weit mehr konkreten Befunden (Zahlen, RLS-Fallen); A duenn + teils off-topic |
+
+**Endstand: `:online` (B) 6 · Firecrawl (A) 3 · Gleichstand 1.**
+
+### Gesamtbild
+- **`:online` (B) gewinnt bei Breite & Long-tail:** konstant 16–20 Quellen, harte Zahlen genau dort, wo
+  die Firecrawl-5-Seiten-Auswahl das Thema verfehlt (Vektor-DB-Kosten, Best-Practices, Multi-Service).
+- **Firecrawl (A) gewinnt bei Praezision auf 1–2 bekannten Seiten:** exakte Specs, Benchmark-Noten,
+  kopierbare Config-Bloecke; erkennt aktiv veraltete Werte. Schwaeche: die schmale 4–5-Seiten-Basis
+  verfehlt bei breiten Fragen 3× das Thema komplett (R1/R9/R10).
+- **Beide aehnlich EHRLICH bei Luecken** — keine systematische Halluzination auf beiden Seiten; beide
+  markieren befangene Marketing-Quellen.
+- **Aktualitaet:** beide 2026er-Daten; A bei harten Preis-/Spec-Werten minimal frischer/sauberer.
+
+### Kernfrage: Wie gut sind die `:online`-Eskalationsdaten?
+**Belastbar genug als Grundlage fuer den Second-Brain-Bauplan — fuer GENAU diesen Zweck sogar leicht
+besser als Firecrawl**, weil die bauplan-relevanten Themen (Vektor-DB-Wahl, Multi-Service, Best-Practices)
+bei `:online` konkreter und breiter abgestuetzt sind. Zwei Einschraenkungen: (1) **Thema 7 (Memory-Stacks)
+aus dem Firecrawl-Lauf nehmen** (B-R7 ist leer). (2) **Harte KVM-Specs vor Kauf live verifizieren**
+(Firecrawl erkannte veraltete Werte, die `:online` uebernahm). Keine Halluzination, keine Schoenfaerberei.
+
+### Empfehlung (welche Engine wofuer)
+- **`:online` (Engine B)** = Standard fuer **breite, mehrdimensionale** Landschafts-/Vergleichs-/
+  Best-Practices-Recherchen (viele Quellen, viele Datenpunkte, hohe Parallelitaet, sichtbare Kosten).
+- **Firecrawl (Engine A)** = gezielt fuer **enge, faktenkritische** Fragen, deren Antwort auf 1–2 bekannten
+  Seiten in voller Tiefe steht (offizielle Specs/Preise, kopierbare Configs) — oder als Verifikations-Zweitlauf.
+- **Optimal kombiniert:** `:online` fuer die Breite, Firecrawl gezielt fuer die 2–3 spec-kritischen Themen.
