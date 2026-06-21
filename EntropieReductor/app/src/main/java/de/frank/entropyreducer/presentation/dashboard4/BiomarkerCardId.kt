@@ -27,6 +27,8 @@ object BiomarkerCardId {
     // die unabhaengig voneinander verschoben werden koennen. Frueher waren sie zu
     // einem festen 2x2-Grid (KEY_VALUE_GRID) zusammengefasst — jetzt sind es vier
     // eigenstaendige Items mit span=1, die in einem LazyVerticalGrid liegen.
+    // Frank-Wunsch 2026-06-21: MINI_HRV ist jetzt eine volle Breite-Karte im
+    // Erholungsverlauf-Pattern (Balken-Graph, Durchschnitt, Ampel-Faerbung).
     const val MINI_HRV = "mini_hrv"
     const val MINI_RHR = "mini_rhr"
     const val MINI_SLEEP_TOTAL = "mini_sleep_total"
@@ -118,7 +120,6 @@ object BiomarkerCardId {
      */
     val MINI_CARD_IDS: Set<String> =
         setOf(
-            MINI_HRV,
             MINI_RHR,
             MINI_SLEEP_TOTAL,
             MINI_SLEEP_PERFORMANCE,
@@ -150,7 +151,8 @@ object BiomarkerCardId {
             // Frank-Vorgabe 2026-05-10: 'Wasser und Knochen interessieren mich ueberhaupt nicht'.
             // Konstanten bleiben erhalten (Backward-Compat) — HIDDEN_CARD_IDS unten filtert
             // sie zusaetzlich aus bereits gespeicherten Drag&Drop-Reihenfolgen heraus.
-            HRV,
+            // Frank-Wunsch 2026-06-21: Die alte volle HRV-Verlauf-Karte ist redundant,
+            // weil MINI_HRV jetzt das Erholungsverlauf-Pattern uebernimmt.
             RHR,
             RESPIRATORY,
             SPO2,
@@ -203,5 +205,8 @@ object BiomarkerCardId {
             MINI_BONE_MASS,
             WORKOUTS_FOR_DAY,
             CORRELATION,
+            // Frank-Wunsch 2026-06-21: alte volle HRV-Verlauf-Karte wird durch
+            // MINI_HRV im Erholungsverlauf-Pattern ersetzt.
+            HRV,
         )
 }

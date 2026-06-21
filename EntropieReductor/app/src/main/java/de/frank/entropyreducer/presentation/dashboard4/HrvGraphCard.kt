@@ -197,9 +197,13 @@ private fun hrvBarColor(
     accentColor: Color,
 ): Color {
     val avgSafe = avg ?: return accentColor
+    // Frank-Wunsch 2026-06-21: Farb-Bereiche relativ zum persoenlichen Durchschnitt.
+    // Gruen = mindestens 3 ms ueber dem Durchschnitt.
+    // Gelb = innerhalb von +/- 3 ms um den Durchschnitt.
+    // Rot = mehr als 3 ms unter dem Durchschnitt.
     return when {
-        value >= avgSafe -> okColor
-        value > avgSafe - 5.0 -> warnColor
-        else -> critColor
+        value >= avgSafe + 3.0 -> okColor
+        value <= avgSafe - 3.0 -> critColor
+        else -> warnColor
     }
 }

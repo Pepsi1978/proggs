@@ -1413,21 +1413,25 @@ private fun BiomarkerCardForId(
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
             // unabhaengig voneinander verschoben werden koennen. Frueher waren sie
             // ein festes 2x2-Grid (KEY_VALUE_GRID).
-            BiomarkerCardId.MINI_HRV -> MiniHrvCard(state, onOpenMetricDetail)
+            // Frank-Wunsch 2026-06-21: MINI_HRV ist jetzt eine volle Breite-Karte
+            // im Erholungsverlauf-Pattern — nicht mehr halb so gross.
+            BiomarkerCardId.MINI_HRV ->
+                HrvGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                    onClick = { onOpenMetricDetail(MetricKey.HRV) },
+                )
             BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_VO2MAX -> MiniVo2MaxCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
                 MiniSleepPerformanceCard(state, onOpenMetricDetail)
 
-            // Frank-Wunsch 2026-06-21: HRV-Verlauf im Erholungsverlauf-Pattern
-            // (Balken-Graph, Durchschnitt ueber alle Werte, Ampel-Faerbung).
-            BiomarkerCardId.HRV ->
-                HrvGraphCard(
-                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
-                    history = state.history,
-                    onClick = { onOpenMetricDetail(MetricKey.HRV) },
-                )
+            // Frank-Wunsch 2026-06-21: Die alte volle HRV-Verlauf-Karte ist durch
+            // MINI_HRV im Erholungsverlauf-Pattern ersetzt. Branch bleibt als
+            // stille No-Op fuer Backward-Compat, wird aber via HIDDEN_CARD_IDS
+            // nie mehr gerendert.
+            BiomarkerCardId.HRV -> { }
 
             BiomarkerCardId.RHR ->
                 MetricHistoryCard(
@@ -1709,36 +1713,15 @@ private fun BiomarkerCardForId(
 }
 
 /**
- * Mini-Karten (Frank-Wunsch 2026-05-10) — die vier kleinen 1-Spalten-Karten oben im
- * Biomarker-Screen mit HRV, Ruhepuls, Schlaf und Schlaf-Performance. Frueher waren sie als festes
- * 2x2-Grid (KeyValueGrid) zusammengebaut, jetzt sind es vier unabhaengige verschiebbare Items im
- * LazyVerticalGrid. Frank wollte HRV nach rechts neben Ruhepuls schieben oder runter zu Performance
- * tauschen — das geht nur wenn jede Mini-Card eine eigene reorderable Identitaet hat.
+ * Mini-Karten (Frank-Wunsch 2026-05-10) — die drei kleinen 1-Spalten-Karten oben im
+ * Biomarker-Screen mit Ruhepuls, Schlaf und Schlaf-Performance. Frueher waren sie als festes
+ * 2x2-Grid (KeyValueGrid) zusammengebaut, jetzt sind es eigenstaendige verschiebbare Items im
+ * LazyVerticalGrid. HRV ist seit 2026-06-21 eine volle Breite-Karte im Erholungsverlauf-Pattern
+ * und gehoert daher nicht mehr hierher.
  *
  * Die Logik (Wert + 30-Tage-Mittel + Delta + Footnote) ist identisch zur bisherigen
  * KeyValueGrid-Implementierung — nur eben pro Karte einzeln.
  */
-@Composable
-private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
-    val latest = state.selectedSnapshot ?: state.latest
-    // Performance-Audit Loop 2 (2026-05-10): mapNotNull+average in
-    // remember(state.history30Days) statt pro Recomposition (z.B. Scroll im
-    // LazyVerticalGrid). 4x in dieser Datei (HRV/RHR/SleepTotal/SleepPerformance).
-    val avgHrv =
-        remember(state.history30Days) {
-            state.history30Days.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
-        }
-    MetricMiniCard(
-        modifier = Modifier.fillMaxWidth(),
-        label = "HRV",
-        value = latest?.hrvMs?.let { "${"%.1f".format(it)} ms" } ?: "—",
-        delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
-        deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
-        footnote = "vs. 30-Tage-Mittel",
-        onClick = { onOpenDetail(MetricKey.HRV) },
-    )
-}
-
 @Composable
 private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
