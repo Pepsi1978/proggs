@@ -17,6 +17,22 @@ description: >
 invocation: user
 ---
 
+<!-- delegation-research-skill -->
+> **Web-Recherche laeuft ueber den zentralen `research`-Skill (Delegation, seit 2026-06-21).**
+> Nach Frage 1 (Policy `research-strategy.md`: Empfehlung + A/B/C/D) die Recherche NICHT selbst
+> orchestrieren — den `research`-Skill laden und ihm diesen Research-Auftrag uebergeben (verlustfreie
+> Bruecke; ALLE Felder ausfuellen, nichts erzaehlen):
+> - **zweck:** bug · **rueckgabe_schema:** `bug` · **zerlegungs_modus:** `feste_liste`
+> - **unterthemen[]:** die 7-Schritte-Aspekte je Almanach-Datei (je 2-3 Saetze praezise — werden 1:1 an die Researcher gereicht)
+> - **version_anker:** PFLICHT — LIVE-Version + bestehender Almanach-Stand
+> - **engine:** A→C · **anzahl/wellen/cap:** 7, Continuous-Spawning, KEIN Eintrags-Cap
+> - **persistenz_ziel:** `die bestehenden bugs/-Almanach-Dateien (Kurzcheck+Volltext)` · **dup_quelle:** bestehender Almanach-Stand
+> - **nacharbeit_aufrufer:** gh OPEN/CLOSED-Pruefung + Fix-Status je Bug; veraltete Eintraege markieren
+> Der research-Skill uebernimmt sichtbare beschriftete Researcher + Continuous-Spawning + Zwischenfazit
+> pro Researcher + ruhige Auswertung und gibt das Ergebnis im `bug`-Schema zurueck; damit
+> hier weiterarbeiten. (Die A/B/C-Engine-Details unten bleiben als Referenz, werden aber vom research-Skill ausgefuehrt.)
+
+
 # Almanach-Update — Bug-Almanache als Welle auf den neuesten Stand heben
 
 ## Zweck

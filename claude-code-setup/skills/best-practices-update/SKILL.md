@@ -17,6 +17,22 @@ description: >
 invocation: user
 ---
 
+<!-- delegation-research-skill -->
+> **Web-Recherche laeuft ueber den zentralen `research`-Skill (Delegation, seit 2026-06-21).**
+> Nach Frage 1 (Policy `research-strategy.md`: Empfehlung + A/B/C/D) die Recherche NICHT selbst
+> orchestrieren — den `research`-Skill laden und ihm diesen Research-Auftrag uebergeben (verlustfreie
+> Bruecke; ALLE Felder ausfuellen, nichts erzaehlen):
+> - **zweck:** best_practice · **rueckgabe_schema:** `best_practice` · **zerlegungs_modus:** `feste_liste`
+> - **unterthemen[]:** pro BP-Datei: was ist seit der letzten Version neu/veraltet (je 2-3 Saetze praezise — werden 1:1 an die Researcher gereicht)
+> - **version_anker:** PFLICHT — LIVE-Version + Stand je Datei
+> - **engine:** A→C · **anzahl/wellen/cap:** 7, Continuous-Spawning, KEIN Eintrags-Cap, Checkpoint je Datei
+> - **persistenz_ziel:** `dieselben best-practices/-Dateien (Kurzcheck+Volltext)` · **dup_quelle:** bestehender BP-Stand je Datei
+> - **nacharbeit_aufrufer:** Bugs in bugs/ zurueckkoppeln
+> Der research-Skill uebernimmt sichtbare beschriftete Researcher + Continuous-Spawning + Zwischenfazit
+> pro Researcher + ruhige Auswertung und gibt das Ergebnis im `best_practice`-Schema zurueck; damit
+> hier weiterarbeiten. (Die A/B/C-Engine-Details unten bleiben als Referenz, werden aber vom research-Skill ausgefuehrt.)
+
+
 # Best-Practices-Update — Best-Practices als Welle auf den neuesten Stand heben
 
 ## Zweck

@@ -23,6 +23,22 @@ description: >-
   vollstaendig in der Almanach-Datei.
 ---
 
+<!-- delegation-research-skill -->
+> **Web-Recherche laeuft ueber den zentralen `research`-Skill (Delegation, seit 2026-06-21).**
+> Nach Frage 1 (Policy `research-strategy.md`: Empfehlung + A/B/C/D) die Recherche NICHT selbst
+> orchestrieren — den `research`-Skill laden und ihm diesen Research-Auftrag uebergeben (verlustfreie
+> Bruecke; ALLE Felder ausfuellen, nichts erzaehlen):
+> - **zweck:** bug · **rueckgabe_schema:** `bug` · **zerlegungs_modus:** `feste_liste`
+> - **unterthemen[]:** die 5-7 Bereichs-Aspekte aus references/researcher-prompts.md (je 2-3 Saetze praezise — werden 1:1 an die Researcher gereicht)
+> - **version_anker:** PFLICHT — LIVE ermittelte Software-Version(en) + Verweis auf bestehenden Almanach-Stand
+> - **engine:** A→C · **anzahl/wellen/cap:** 7, Continuous-Spawning, KEIN Eintrags-Cap, mehrere Wellen moeglich
+> - **persistenz_ziel:** `bugs/<kategorie>/<bereich>.md (Kurzcheck+Volltext) + bugs/README.md-Index` · **dup_quelle:** bestehender Almanach-Stand fuer den Bereich
+> - **nacharbeit_aufrufer:** harte `gh issue view <nr>`-OPEN/CLOSED-Pruefung + separat pruefen ob jeder Bug in neuerer Version gefixt ist (macht der Hauptagent, Researcher haben kein Bash)
+> Der research-Skill uebernimmt sichtbare beschriftete Researcher + Continuous-Spawning + Zwischenfazit
+> pro Researcher + ruhige Auswertung und gibt das Ergebnis im `bug`-Schema zurueck; damit
+> hier weiterarbeiten. (Die A/B/C-Engine-Details unten bleiben als Referenz, werden aber vom research-Skill ausgefuehrt.)
+
+
 # Bug-Almanach-Recherche
 
 Dieser Skill erzeugt einen kuratierten, versionsbewussten Bug-Almanach fuer einen
