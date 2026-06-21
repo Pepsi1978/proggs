@@ -36,6 +36,7 @@ VoiceAgent **1.2.0**.
 | 12 | Barge-in ermoeglichen | Stufe 1 Mute-Trade-off, Stufe 3 echtes Barge-in mit AEC | §5 |
 | 13 | STT-Requests fuer Voice | `language=de` explizit, Timeout 5–10 s, EIN HttpClient | §6 |
 | 14 | Frueherkennung sichern | Jeden FSM-Uebergang + Stufen-Latenz als CHECKPOINT loggen | §7 |
+| 15 | Aufnahme nicht von aussen abwuergen | Busy-Status (Aufnahme/Transkription) ueber lokalen Endpoint exponieren; Deploy/Rebuild/Kill wartet auf Ruhe | §8 |
 
 ---
 
@@ -158,6 +159,37 @@ VoiceAgent **1.2.0**.
 - Picovoice VAD-Guide 2026 · Silero VAD Wiki · MS Learn (AEC/Ducking/Signal-Processing-Modes) ·
   NAudio-Issues (#1168/#539/#1150/#657/#1084/#1203, gh-verifiziert) · markheath.net `offiziell`+`extern`
 - HA Community (background noise, Voice PE, continuous conversation) · Rhasspy-Doku · Willow #18 `extern`
+
+---
+
+## 8. Aufnahme-Lebenszyklus vor externen Eingriffen schuetzen (Deploy/Rebuild/Kill)
+
+Ein Voice-Overlay/-Tool, das per Hot-Reload, Rebuild-Skript oder Watchdog neu gestartet wird, darf
+NIEMALS hart beendet werden, solange aufgenommen, transkribiert ODER der fertige Text gerade
+eingefuegt wird — sonst geht der noch nicht eingefuegte Text still verloren. Besonders kritisch bei
+mehreren parallelen Tool-/Agenten-Sessions: die killende Session weiss nichts von der laufenden
+Aufnahme in einer anderen Session.
+
+**Pattern (verifiziert 2026-06-21, TVO/CVO #47064 — Poka-Yoke St. 3):**
+- Das Tool exponiert seinen **Busy-Status** ueber einen winzigen lokalen Loopback-Endpoint
+  (`GET http://127.0.0.1:<port>/recording/status` → `{"busy":true|false}`). `busy` = Aufnahme laeuft
+  ODER Transkription laeuft ODER **Einfuegen/Paste laeuft** (NICHT nur „Mikro an").
+- Das Deploy-/Rebuild-Skript fragt diesen Status **VOR dem Kill** ab und **wartet** (Poll ~500 ms,
+  Sicherheits-Timeout), solange `busy=true`. Erst im Ruhezustand wird gekillt.
+- **`busy` MUSS bis zum bestaetigten Einfuegen true bleiben** — nicht schon nach der Transkription auf
+  false fallen. Sonst entsteht eine Luecke, in der der Text noch im Tool haengt (noch nicht im Ziel)
+  und ein Kill ihn verliert. Faustregel: `busy=false` erst, NACHDEM der Paste sicher im Zielfenster ist.
+- Optional ein **kleiner Nachlauf-Puffer** (z.B. 500–1000 ms `busy=true` nach dem Paste), damit bei sehr
+  langen Texten / traeger Ziel-App nichts in der Uebergabe abgeschnitten wird.
+- **Wo der Text sicher ist:** Sobald er im Zielfenster (CLI-Zeile, Prompt-Eingabefeld) steht, ist er
+  UNABHAENGIG vom Tool — ein Neustart des Overlays beruehrt ihn nicht mehr. Der Schutz muss also nur
+  die Phasen Aufnahme→Transkription→**Paste abgeschlossen** abdecken, nicht danach.
+- Der Status haengt am **Tool**, nicht an der ausloesenden Session → session-uebergreifender Schutz.
+  Endpoint nicht erreichbar (Tool aus/alt) → nicht blockieren (graceful), damit der Deploy nie haengt.
+- Busy aus dem vorhandenen FSM ableiten (§1: nicht-Idle = busy) — keine separate Zustandshaltung (Drift).
+
+Macht „kein Datenverlust durch Neustart mitten in der Aufnahme/Uebergabe" strukturell erzwungen statt
+von Disziplin abhaengig.
 
 ---
 

@@ -312,6 +312,18 @@ richtig macht*. Wechselseitig gepflegt:
 **FIX:** `AttachThreadInput` an den Vordergrund-Thread + `SetForegroundWindow` + Detach; oder kooperierender Prozess ruft `AllowSetForegroundWindow`. Bei Hotkey-Trigger aus eigenem Prozess meist unnoetig. `SPI_SETFOREGROUNDLOCKTIMEOUT=0` nur Notnagel.
 **Quelle:** https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow
 
+> **Zwei konkrete Fallen beim Cross-Window-Paste aus einem Hotkey (verifiziert 2026-06-21, TVO #47062/#47063):**
+> Szenario: globaler Hotkey (Strg+Alt+P) wird in Fenster A (Browser) gedrueckt, der eigene Prozess soll
+> Zielfenster B (Terminal) nach vorn holen und dort einfuegen. Symptom: B blinkt nur, Paste verpufft.
+> 1. **`AttachThreadInput` an den AKTUELLEN VORDERGRUND-Thread heften, NICHT an den Ziel-Thread.** Nur das
+>    gerade aktive Fenster (A) besitzt das Foreground-Recht, das man sich leiht. `GetWindowThreadProcessId(GetForegroundWindow())`,
+>    nicht `...(targetHwnd)`. An den Ziel-Thread geheftet ist der Trick wirkungslos.
+> 2. **Trigger-Modifier VOR dem Fenster-Wechsel freigeben.** Sind Strg/Alt beim `SetForegroundWindow` noch
+>    gedrueckt (Finger haelt sie / Stream-Deck-„Hotkey"-Aktion haelt sie), blockiert Windows den Wechsel.
+>    Erst synthetische KEYUP fuer Alt/Win/Shift senden, DANN Foreground, DANN Strg+V. Verraeterisches Indiz:
+>    eine **Makro-Taste** (Logitech G Hub, mit 50 ms Press/Release-Sequenz) funktioniert, das direkte
+>    Tastendruecken / die Stream-Deck-„Hotkey"-Aktion aber nicht — weil das Makro die Modifier sauber vorab loslaesst.
+
 ### 5.6 Low-Level-Hook (`WH_KEYBOARD_LL`/`WH_MOUSE_LL`) laggt / wird still entfernt
 **Symptom:** Globaler Hook macht das System traege; manchmal hoert er ohne Fehler auf zu feuern.
 **Ursache:** Callback laeuft im eigenen UI-Thread; bei Blockade > System-Timeout (1000 ms) entfernt Win den Hook lautlos.
