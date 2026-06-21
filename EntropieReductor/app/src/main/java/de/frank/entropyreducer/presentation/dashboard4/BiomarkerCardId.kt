@@ -151,8 +151,7 @@ object BiomarkerCardId {
             // Frank-Vorgabe 2026-05-10: 'Wasser und Knochen interessieren mich ueberhaupt nicht'.
             // Konstanten bleiben erhalten (Backward-Compat) — HIDDEN_CARD_IDS unten filtert
             // sie zusaetzlich aus bereits gespeicherten Drag&Drop-Reihenfolgen heraus.
-            // Frank-Wunsch 2026-06-21: Die alte volle HRV-Verlauf-Karte ist redundant,
-            // weil MINI_HRV jetzt das Erholungsverlauf-Pattern uebernimmt.
+            HRV,
             RHR,
             RESPIRATORY,
             SPO2,
@@ -205,8 +204,5 @@ object BiomarkerCardId {
             MINI_BONE_MASS,
             WORKOUTS_FOR_DAY,
             CORRELATION,
-            // Frank-Wunsch 2026-06-21: alte volle HRV-Verlauf-Karte wird durch
-            // MINI_HRV im Erholungsverlauf-Pattern ersetzt.
-            HRV,
         )
 }

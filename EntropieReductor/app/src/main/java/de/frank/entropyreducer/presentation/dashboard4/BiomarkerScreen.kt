@@ -1427,11 +1427,15 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
                 MiniSleepPerformanceCard(state, onOpenMetricDetail)
 
-            // Frank-Wunsch 2026-06-21: Die alte volle HRV-Verlauf-Karte ist durch
-            // MINI_HRV im Erholungsverlauf-Pattern ersetzt. Branch bleibt als
-            // stille No-Op fuer Backward-Compat, wird aber via HIDDEN_CARD_IDS
-            // nie mehr gerendert.
-            BiomarkerCardId.HRV -> { }
+            BiomarkerCardId.HRV ->
+                MetricHistoryCard(
+                    title = "HRV-Verlauf",
+                    accent = LocalCosmos.current.accent,
+                    points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
+                    unit = "ms",
+                    onClick = { onOpenMetricDetail(MetricKey.HRV) },
+                )
 
             BiomarkerCardId.RHR ->
                 MetricHistoryCard(

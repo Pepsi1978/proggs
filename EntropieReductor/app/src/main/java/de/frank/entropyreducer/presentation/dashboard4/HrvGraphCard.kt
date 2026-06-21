@@ -37,9 +37,11 @@ import java.time.ZoneId
  * ueber ALLE jemals gespeicherten HRV-Werte angezeigt — nicht nur der letzten 30 Tage.
  *
  * Farb-Logik (relativ zum persoenlichen Durchschnitt):
- * - ueber dem Durchschnitt                -> Gruen
- * - bis zu 5 ms unter dem Durchschnitt    -> Gelb
- * - mehr als 5 ms unter dem Durchschnitt  -> Rot
+ * - mindestens 3 ms ueber dem Durchschnitt  -> Gruen
+ * - innerhalb von +/- 3 ms um den Schnitt   -> Gelb
+ * - mehr als 3 ms unter dem Durchschnitt    -> Rot
+ * Der grosse Header-Wert wird ebenfalls nach dieser Logik gefaerbt
+ * (1:1 wie beim aktuellen Recovery-Wert im Erholungsverlauf).
  */
 @Composable
 internal fun HrvGraphCard(
@@ -71,9 +73,20 @@ internal fun HrvGraphCard(
                         color = cosmos.textSecondary,
                     )
                 }
+                val headerColor =
+                    derived.currentMs?.let { current ->
+                        hrvBarColor(
+                            value = current,
+                            avg = derived.avgAllMs,
+                            okColor = cosmos.ok,
+                            warnColor = cosmos.warn,
+                            critColor = cosmos.crit,
+                            accentColor = accent,
+                        )
+                    } ?: accent
                 Text(
                     text = derived.currentMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—",
-                    color = accent,
+                    color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                 )
