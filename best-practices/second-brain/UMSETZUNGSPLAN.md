@@ -21,6 +21,36 @@
 
 ---
 
+## ✅ Aufbau-Stand (2026-06-21, Abend) — Server LAEUFT
+
+**Server:** Hostinger KVM 2, IP `168.231.83.205`, Ubuntu 24.04.4 LTS. SSH key-only (Schluessel in
+`~/.ssh/` + Backup `~/SK/second-brain/`), Root-Passwort in Franks Passwortmanager. Deploy-Configs:
+`second-brain-server/` (Repo) → `/opt/second-brain/` (Server).
+
+| Schritt | Status |
+|---------|--------|
+| VPS bestellt (KVM 2, 24-Mon-Laufzeit, Ubuntu 24.04) | ✅ |
+| Haertung: SSH key-only, UFW (nur SSH offen), Fail2Ban, System-Updates | ✅ |
+| Docker + Compose | ✅ |
+| Qdrant (Such-Schrank) — nur 127.0.0.1, API-Key, getestet (ohne Key → 401) | ✅ |
+| Ollama + BGE-M3 (Embeddings, mehrsprachig DE/EN, lokal) — getestet | ✅ |
+| **Mem0 (Bibliothekar)** | ⏳ als Naechstes — Entscheidungen offen (s.u.) |
+| Direktiven einspeichern · externer Zugang · Backup · Apps · Kosten-Caps | offen |
+
+### Offene Entscheidungen vor Mem0 (aus Doku-Pruefung 2026-06-21)
+1. **Mem0 braucht ein LLM** fuer die Fakten-Extraktion. Optionen: kleines lokales LLM in Ollama
+   (z.B. `llama3.2:3b` — Datenhoheit, +~2 GB, langsamer auf CPU) · ODER `infer=False` (kein LLM,
+   speichert Rohtext direkt) · ODER Cloud-LLM (schnell, aber Datenabfluss + Kosten-Caps noetig).
+2. **`embedding_model_dims = 1024`** fuer BGE-M3 setzen (NICHT 768 wie die nomic-Beispiele der Doku).
+3. **Architektur-Weiche — Referenz-Dokumente vs. persoenliche Memories:** Mem0s Fakten-Extraktion ist
+   fuer "Memories ueber Frank" gedacht (Praeferenzen/Fakten). Lange Regel-Dokumente (wie die 3 Direktiven)
+   sind evtl. besser als reines RAG (Chunking + Embedding direkt in Qdrant) aufgehoben. Moeglich: ZWEI
+   Modi — RAG fuer Wissen/Dokumente + Mem0 fuer persoenliche Memories. VOR dem Einspeichern klaeren.
+4. **Mem0 als REST-Server** (Multi-Client) ist weniger klar dokumentiert als die Python-Lib —
+   genauer pruefen, wenn der Multi-Client-Zugang dran ist.
+
+---
+
 ## Das mentale Modell (3 Schichten)
 
 ```
