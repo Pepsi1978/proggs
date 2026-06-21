@@ -61,15 +61,28 @@ Agent, Aufgabe, Fehler, Neuversuch-Ergebnis.
 | Max Prompt-Laenge | **2000 Woerter** | Kurz und praezise, nur Kernfrage |
 | Gleichzeitige Researcher | **5-7** (Continuous-Spawning) | RPM-Limit: 5 sicher, 7 ok (empirisch), ~12 → Abstuerze |
 
-### Continuous-Spawning statt Wellen (Researcher voll ausnutzen)
+### Continuous-Spawning statt Wellen — OBERSTE Researcher-Regel (ALLE Engines)
+
+**Sobald EIN Researcher fertig ist, wird SOFORT der naechste gestartet — NIE auf eine ganze Welle
+warten.** Kein Zeitverlust durch "warten bis alle N fertig sind". Das ist die haeufigste und
+teuerste Schwarm-Suende. Gilt fuer JEDE Engine (nicht nur Opus):
 
 ```
-Start: 5-7 Researcher gleichzeitig
-→ Wird EINER fertig: SOFORT den naechsten starten (konstant 5-7 laufen lassen)
+Start: so viele gleichzeitig wie die Engine erlaubt
+→ Wird EINER fertig: SOFORT den naechsten starten (konstant die Engine-Zahl laufen lassen)
 → NICHT in Wellen warten bis alle fertig sind
 → Haelt Parallelitaet hoch UND RPM-Strom gleichmaessig (kein Burst)
 → Reicht der Scope nicht: mehr Researcher mit feineren Unterthemen (Duplikate kosten nichts)
 ```
+
+| Engine | Konstant gleichzeitig | Quelle |
+|--------|----------------------|--------|
+| Opus-Schwarm | **7** (5 sicher, 7 ok empirisch, ~12 → Abstuerze) | diese Regel |
+| OpenRouter (`or-research.py`, Such-Engine `parallel`) | **5-7** (Paid = keine harten OR-Limits) | `research-strategy.md` §3a |
+| Firecrawl (`mm-research.py`) | **2** (hartes Free-Limit) | `research-strategy.md` §3 |
+
+Beispiel: laufen 7 und einer kommt zurueck → nur noch 6 → sofort einen neuen starten (wieder 7).
+Ausfuehrung uebernimmt der zentrale `research`-Skill; diese Regel ist die systemweite Verankerung.
 
 ### Fehler-Praevention
 

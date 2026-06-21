@@ -133,8 +133,25 @@ verifiziert 2026-06-20, docs.firecrawl.dev/rate-limits). Das aendert das Schwarm
 | Nachschub | sofort den naechsten starten | erst wenn 2 fertig → naechste 2 (Continuous-Spawning mit **2**) |
 
 **Pflicht bei Firecrawl-Recherchen mit mehreren Unterthemen** (z.B. Bug-Almanach mit 7 Aspekten):
-NIE 7 Firecrawl-Calls auf einmal — **2 starten, auf Ergebnisse warten, 2 neue starten**, bis alle
-Unterthemen durch sind. Sonst Rate-Limit (429) / verschwendete Credits.
+NIE 7 Firecrawl-Calls auf einmal — konstant **2 gleichzeitig** im Continuous-Spawning (siehe §3a),
+bis alle Unterthemen durch sind. Sonst Rate-Limit (429) / verschwendete Credits.
+
+### 3a. Continuous-Spawning ist die OBERSTE Researcher-Regel (ALLE Engines)
+
+**Sobald EIN Researcher fertig ist, wird SOFORT der naechste aus der Warteschlange gestartet —
+NIEMALS auf eine ganze Welle warten.** Es laufen konstant so viele gleichzeitig, wie die Engine
+erlaubt. Kein Wellen-Barrier, kein Leerlauf, kein Zeitverlust durch "warten bis alle N fertig sind".
+Das gilt fuer JEDE Engine, nicht nur Firecrawl:
+
+| Engine | Konstant gleichzeitig | Nachschub-Regel |
+|--------|----------------------|-----------------|
+| A — Firecrawl (mm) | **2** (hartes Free-Limit) | einer fertig → sofort der naechste (nie auf beide warten) |
+| B — OpenRouter (or), Such-Engine `parallel` | **5–7** (Paid = keine harten OR-Limits, nur Cloudflare-DDoS) | einer fertig → sofort der naechste |
+| C — Opus-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
+
+Beispiel Opus: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,
+damit wieder 7 laufen. Genauso bei 5 (OpenRouter) und 2 (Firecrawl). Diese Regel ist tief im
+Gesamtsystem verankert (auch `agent-and-researcher-rules.md`), nicht nur im `research`-Skill.
 
 ---
 
@@ -161,26 +178,37 @@ nur 200k Kontext, bricht bei grossen Recherchen (genau der Grund fuer Opus-1M be
 
 ## 5. Gilt fuer ALLE Recherche-Skills/Agenten
 
-Diese Strategie ist **kein neuer Skill**, sondern erweitert die bestehenden:
+Diese Regel ist die **Policy-Schicht** (das OB/WOMIT). Die AUSFUEHRUNG uebernimmt seit 2026-06-21
+der zentrale **`research`-Skill** (`~/.claude/skills/research/`, das WIE). Alle Recherche-Skills/
+Agenten **delegieren** an ihn ueber den **Uebergabe-Block** (Research-Auftrag-Schema), statt das
+Recherche-"WIE" 8x zu duplizieren. So bleibt jede Einheit genauso gut wie vorher — der research-Skill
+bekommt ihr Profil (Modus, Engine, Anzahl, Rueckgabe-Schema, Persistenz-Ziel) als Parameter.
 
-| Skill/Agent | Wie diese Regel greift |
-|-------------|------------------------|
-| `bug-almanach-recherche` (Skill) | Empfehlung + Frage 1; bei A: mm-research.py pro Aspekt, Firecrawl max 2 parallel; C=Opus-Schwarm |
-| `best-practices` (Skill) | dito (A/B/C-Gate in Schritt 4; Researcher-Regeln = Option C) |
-| `almanach-update` (Skill) | dito — vor jeder Web-Recherche Empfehlung + Frage 1 |
-| `best-practices-update` (Skill) | dito |
-| `direktiven-recherche` (Skill + Agent) | dito — der 5er-Opus-Schwarm ist Option C |
-| `superintelligenz` (Skill + Agent) | dito — der iterative Wellen-Schwarm ist Option C |
-| `intelligence-researcher` (Agent) | dito — Opus-Web = Option C; Standard A/B ueber den Orchestrator |
-| `forschungsagent` (Agent) | dito |
-| `researcher` (Agent) | Opus-Web-Stufe = Option C; Standard A/B ueber den Orchestrator |
-| `deep-research` (externes Plugin) | Regel gilt trotzdem — Orchestrator stellt Empfehlung + Frage 1, bevor er es startet |
-| Eigener Web-Rechercheauftrag des Hauptagenten | Empfehlung + Frage 1, dann A/B/C |
+| Skill/Agent | zerlegungs_modus | engine | rueckgabe_schema |
+|-------------|------------------|--------|------------------|
+| `bug-almanach-recherche` (Skill) | feste_liste (5–7 Aspekte) | A→C | `bug` |
+| `almanach-update` (Skill) | feste_liste | A→C | `bug` |
+| `best-practices` (Skill) | feste_liste | A→C | `best_practice` |
+| `best-practices-update` (Skill) | feste_liste | A→C | `best_practice` |
+| `direktiven-recherche` (Skill + Agent) | feste_liste (5 Researcher) | C | `direktive` |
+| `superintelligenz` (Agent) | iterativ_wellen | C | `superintelligenz` |
+| `intelligence-researcher` (Agent) | selbst_generierend (5 Dim.) | C | `superintelligenz` |
+| `forschungsagent` (Agent) | feste_liste | C | `integrationsplan` |
+| `researcher` (Agent) | (Schwarm-Baustein) | A/B/C | `adhoc` (+ KANDIDATEN-Bloecke) |
+| `deep-research` (externes Plugin) | — | — | Orchestrator stellt Empfehlung + Frage 1, bevor er es startet |
+| Eigener Web-Rechercheauftrag des Hauptagenten | adhoc | A/B/C | `adhoc` |
 
-**Stand 2026-06-20 (UMGESETZT):** Der Umbau dieser Skills/Agenten auf die A/B/C-Pipeline ist erfolgt
-(Commits #47009–#47017 + Empfehlungs-/Research-Skill-Erweiterung danach). Jeder oben gelistete Skill/Agent
-verweist an seiner Recherche-Stelle auf diese Regel; A/B nutzen `mm-research.py`/`or-research.py`, C den
-bestehenden Opus-Schwarm. Empfehlung (oben) + Frage 1 + (bei A) Frage 2 sind ueberall Pflicht.
+> **Falle:** Der `superintelligenz`-**Skill** (≠ Agent) ist NUR Leitbild/Checkliste, KEIN
+> Recherche-Workflow → bekommt KEINEN Uebergabe-Block.
+
+**Der Uebergabe-Block** (steht in jedem delegierenden Skill/Agent): "Fuer ALLE Web-Recherchen den
+`research`-Skill laden und ihm diesen Research-Auftrag uebergeben: [thema, zweck, zerlegungs_modus,
+unterthemen[], version_anker, engine, anzahl/wellen/cap, rueckgabe_schema, persistenz_ziel,
+dup_quelle, nacharbeit_aufrufer]. Mit dem Ergebnis im rueckgabe_schema hier weiterarbeiten."
+
+**Stand 2026-06-21 (UMGESETZT):** Zentraler `research`-Skill gebaut (#47027); §5 auf Delegation
+umgestellt; Continuous-Spawning als oberste Regel (§3a). Empfehlung (oben in §1) + Frage 1 + (bei A)
+Frage 2 bleiben Pflicht und laufen VOR der Delegation (Policy-Schicht).
 
 ---
 
@@ -188,6 +216,7 @@ bestehenden Opus-Schwarm. Empfehlung (oben) + Frage 1 + (bei A) Frage 2 sind ueb
 
 - ❌ Eine Firecrawl-/Crawl-Recherche starten, OHNE Frank vorher zu fragen (Firecrawl/MiniMax vs. Opus)
 - ❌ Mehr als **2** Firecrawl-Researcher gleichzeitig starten (Free-Limit; Rate-Limit/Credit-Verschwendung)
+- ❌ Auf eine ganze Welle warten, statt sofort beim Fertigwerden eines Researchers den naechsten zu spawnen (Continuous-Spawning, §3a — Zeitverlust ist die haeufigste Schwarm-Suende)
 - ❌ Firecrawl-Rohdaten (gecrawlte Seiten) ungefiltert in den teuren Opus-Kontext laden — immer erst MiniMax
 - ❌ Bei einem unsicheren MiniMax-Ergebnis stillschweigend halluzinieren statt zu eskalieren
 - ❌ Test-Crawls „zum Ausprobieren" ohne Franks Freigabe (Credits sind knapp)
