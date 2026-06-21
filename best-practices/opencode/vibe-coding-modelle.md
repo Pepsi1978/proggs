@@ -60,6 +60,13 @@ Reasoning-Modelle **over-editen** (aendern mehr als noetig) im Generic-Setting (
 > **Falle:** Benchmark-Ranking ≠ Praxis-Eignung. Beispiel: Gemini 3 Pro ist offiziell empfohlen,
 > liefert laut User-Bericht aber "very subpar code and would often get stuck". MiMo verweigert
 > live manchmal grundlos ("Sorry, can't work with that"). Immer selbst am eigenen Stack testen.
+>
+> **Praxis-Befund (Frank, 2026-06-21):** Eine **`Kimi K2.7 Code`**-Variante (Code-optimiert, aber
+> OHNE aktiviertes Thinking) brachte beim Vibe-Coding deutlich **schlechtere** Ergebnisse als ein
+> Thinking-Modell — exakt der "Thinking-an"-Hebel aus §1. Lehre: **"Code" im Namen heisst NICHT
+> besser fuers Vibe-Coding.** Bei Kimi auf eine **Thinking-/Reasoning-Variante** achten (Moonshot
+> fuehrt meist eine non-thinking Instruct/Code-Linie UND eine Thinking-Linie) bzw. ein Modell mit
+> aktivierbarem Reasoning waehlen (MiMo-V2.5-Pro / GLM-5.2-mit-`reasoningEffort` / MiniMax M3).
 
 ## 4. OpenCode-Konfiguration (Reasoning einschalten)
 
