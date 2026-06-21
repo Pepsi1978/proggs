@@ -93,6 +93,11 @@ def main():
               "AUSSCHLIESSLICH Webquellen; wenn etwas unklar/widerspruechlich/fehlend ist, sage das "
               "ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle (URL).\n\nFRAGE: " + query)
     body = {"model": MODEL, "messages": [{"role": "user", "content": prompt}]}
+    # OR_REASONING (leer=Default: kein Thinking). Zahl -> max_tokens-Budget (echtes MAXIMUM, z.B. 24000);
+    # Wort ("high"/"medium") -> effort. Testet, ob :online + (max) Thinking durchkommt.
+    _reason = os.environ.get("OR_REASONING", "").strip()
+    if _reason:
+        body["reasoning"] = {"max_tokens": int(_reason)} if _reason.isdigit() else {"effort": _reason}
     hdr = {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
            "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-or-online-test"}
 

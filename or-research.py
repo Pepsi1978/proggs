@@ -101,15 +101,24 @@ def main():
               "quellentreu. Verwende AUSSCHLIESSLICH das, was du in den Webquellen findest; wenn etwas "
               "unklar/widerspruechlich ist oder fehlt, sage das ausdruecklich — erfinde nichts. Nenne pro "
               "Aussage die Quelle (URL).\n\nFRAGE: " + query)
+    # :online-Modus (bevorzugte Eskalationsstufe seit 2026-06-21): das Modell-Suffix ":online" laesst
+    # OpenRouter selbst eine Websuche dazuschalten (web-Plugin, Such-Engine = parallel.ai) — KEIN
+    # tools-Server-Tool, KEINE explizite engine. Empirisch stabiler bei hoher Parallelitaet als das
+    # web_search-Server-Tool (Almanach openrouter-api.md #13/#41), darum vom research-Skill bevorzugt.
+    # reasoning:high bleibt — M3 denkt bei :online ohnehin ~900 Tok (A/B-getestet 2026-06-21: kein
+    # Qualitaetsunterschied mit/ohne, aber konsistent mit "max Thinking"-Policy). Retry faengt den
+    # intermittenten JSON-Tool-Call-Leak (§42), der bei :online vorkommen kann.
+    is_online = model.endswith(":online")
     web_params = {"engine": engine, "max_results": max_results, "max_total_results": max_total}
     body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "tools": [{"type": "openrouter:web_search", "parameters": web_params}],
         "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
-    print(f"[or-research] {model} | engine={engine} | max_results={max_results} total={max_total} | retries={RETRIES} — {query!r}",
-          file=sys.stderr)
+    if not is_online:
+        body["tools"] = [{"type": "openrouter:web_search", "parameters": web_params}]
+    print(f"[or-research] {model} | {'online-Plugin' if is_online else 'engine=' + engine} | "
+          f"max_results={max_results} total={max_total} | retries={RETRIES} — {query!r}", file=sys.stderr)
     hdr = {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
            "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-or-research"}
     # Leak-Marker eng gehalten (kein Fehlalarm bei legitimem Code-Beispiel in einer Recherche-Antwort):
