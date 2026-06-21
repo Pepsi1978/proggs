@@ -32,23 +32,23 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * HRV-Verlauf im Erholungsverlauf-Pattern (Frank-Wunsch 2026-06-21).
+ * Ruhepuls-Verlauf im HRV-Pattern (Frank-Wunsch 2026-06-21).
  *
- * Zeigt den HRV-Wert der letzten ~30 Tage als Balken-Graph. Tap auf die Karte oeffnet den
- * bestehenden HRV-Detail-Screen (1:1 wie bisher). Unter dem Graphen wird der Durchschnitt
- * ueber ALLE jemals gespeicherten HRV-Werte angezeigt — nicht nur der letzten 30 Tage.
+ * Zeigt den Ruhepuls der letzten ~30 Tage als Balken-Graph. Tap auf die Karte oeffnet den
+ * bestehenden RHR-Detail-Screen (1:1 wie bisher). Unter dem Graphen wird der Durchschnitt
+ * ueber ALLE jemals gespeicherten Ruhepuls-Werte angezeigt — nicht nur der letzten 30 Tage.
  *
  * Farb-Logik (relativ zum persoenlichen Durchschnitt):
- * - mindestens 3 ms ueber dem Durchschnitt  -> Gruen
- * - innerhalb von +/- 3 ms um den Schnitt   -> Gelb
- * - mehr als 3 ms unter dem Durchschnitt    -> Rot
+ * - mindestens 2 bpm UNTER dem Durchschnitt  -> Gruen (niedriger ist besser)
+ * - innerhalb von +/- 2 bpm um den Schnitt   -> Gelb
+ * - mehr als 2 bpm UEBER dem Durchschnitt    -> Rot (hoeher ist schlechter)
  *
- * Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel):
+ * Farbtoene 1:1 identisch zum HRV-Pattern:
  * [CosmosColors.WhoopRecoveryGreen] / [CosmosColors.WhoopRecoveryYellow] /
  * [CosmosColors.WhoopRecoveryRed].
  */
 @Composable
-internal fun HrvGraphCard(
+internal fun RhrGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
     onClick: () -> Unit,
@@ -58,7 +58,7 @@ internal fun HrvGraphCard(
 
     val derived =
         remember(selectedSnapshot, history) {
-            hrvDerived(selectedSnapshot = selectedSnapshot, history = history)
+            rhrDerived(selectedSnapshot = selectedSnapshot, history = history)
         }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -66,23 +66,23 @@ internal fun HrvGraphCard(
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "HRV",
+                        text = "Ruhepuls",
                         style = MaterialTheme.typography.titleMedium,
                         color = cosmos.textPrimary,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Herzfrequenzvariabilitaet",
+                        text = "Ruheherzfrequenz",
                         style = MaterialTheme.typography.labelSmall,
                         color = cosmos.textSecondary,
                     )
                 }
                 val headerColor =
-                    derived.currentMs?.let { current ->
-                        hrvBarColor(value = current, avg = derived.avgAllMs, accentColor = accent)
+                    derived.currentBpm?.let { current ->
+                        rhrBarColor(value = current.toDouble(), avg = derived.avgAllBpm, accentColor = accent)
                     } ?: accent
                 Text(
-                    text = derived.currentMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—",
+                    text = derived.currentBpm?.let { "$it bpm" } ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -90,24 +90,20 @@ internal fun HrvGraphCard(
             }
             Spacer(Modifier.height(12.dp))
 
-            HrvBars(values = derived.last30Ms, avg = derived.avgAllMs)
+            RhrBars(values = derived.last30Bpm, avg = derived.avgAllBpm)
 
             Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "Durchschnitt: ${derived.avgAllMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—"}",
+                        "Durchschnitt: ${derived.avgAllBpm?.let { "%.1f".format(it).replace('.', ',') + " bpm" } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
                 )
-                // Frank-Wunsch 2026-06-21: Abweichungs-Badge wie im Erholungsverlauf
-                // (RecoveryGraphCard) — Plus = ueber Schnitt = Gruen, Minus = darunter
-                // = Rot, innerhalb +/- 0.5 ms = Accent (neutral). Gleiche
-                // Hintergrundfarben (ok/crit/accent mit alpha 0.18) wie Erholungsverlauf.
                 if (derived.deltaVsAvg != null) {
-                    HrvTrendBadgeMs(delta = derived.deltaVsAvg)
+                    RhrTrendBadgeBpm(delta = derived.deltaVsAvg)
                 }
             }
             Text(
@@ -121,89 +117,86 @@ internal fun HrvGraphCard(
 
 /* ------------------------- Datenaufbereitung ------------------------- */
 
-private data class HrvDerived(
-    val currentMs: Double?,
-    val avgAllMs: Double?,
+private data class RhrDerived(
+    val currentBpm: Int?,
+    val avgAllBpm: Double?,
     val deltaVsAvg: Double?,
-    val last30Ms: List<Double>,
+    val last30Bpm: List<Double>,
 )
 
-private fun hrvDerived(
+private fun rhrDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
-): HrvDerived {
+): RhrDerived {
     val zone = ZoneId.systemDefault()
     val all =
         history
             .mapNotNull { snap ->
-                val hrv = snap.hrvMs ?: return@mapNotNull null
+                val rhr = snap.restingHeartRate ?: return@mapNotNull null
                 val date = Instant.ofEpochMilli(snap.capturedAt).atZone(zone).toLocalDate()
-                date to hrv
+                date to rhr.toDouble()
             }
             .groupBy({ it.first }, { it.second })
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
-            .map { (_, hrv) -> hrv }
+            .map { (_, rhr) -> rhr }
 
-    val current = selectedSnapshot?.hrvMs ?: all.lastOrNull()
+    val current = selectedSnapshot?.restingHeartRate ?: all.lastOrNull()?.toInt()
     val last30 = all.takeLast(30)
     val avgAll = all.takeIf { it.isNotEmpty() }?.average()
-    // Frank-Wunsch 2026-06-21: Abweichung zum Gesamt-Durchschnitt fuer das
-    // Trend-Badge im Footer (Plus = ueber Schnitt = Gruen, Minus = Rot).
-    val delta = if (current != null && avgAll != null) current - avgAll else null
+    val delta = if (current != null && avgAll != null) current.toDouble() - avgAll else null
 
-    return HrvDerived(
-        currentMs = current,
-        avgAllMs = avgAll,
+    return RhrDerived(
+        currentBpm = current,
+        avgAllBpm = avgAll,
         deltaVsAvg = delta,
-        last30Ms = last30,
+        last30Bpm = last30,
     )
 }
 
 /* ------------------------- UI-Bausteine ------------------------- */
 
 @Composable
-private fun HrvBars(values: List<Double>, avg: Double?) {
+private fun RhrBars(values: List<Double>, avg: Double?) {
     val accent = LocalCosmos.current.accent
     val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 5.0 }
     val yMax = remember(values) { values.maxOrNull() ?: 1.0 }
     MiniBarsCanvas(
         values = values,
-        barColor = { hrvBarColor(it, avg, accent) },
+        barColor = { rhrBarColor(it, avg, accent) },
         yMin = yMin,
         yMax = yMax,
-        emptyText = "Noch keine HRV-Daten",
+        emptyText = "Noch keine Ruhepuls-Daten",
     )
 }
 
-private fun hrvBarColor(
+private fun rhrBarColor(
     value: Double,
     avg: Double?,
     accentColor: Color,
 ): Color {
     val avgSafe = avg ?: return accentColor
     // Frank-Wunsch 2026-06-21: Farb-Bereiche relativ zum persoenlichen Durchschnitt.
-    // Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel).
+    // Bei Ruhepuls ist NIEDRIGER besser — invertierte Logik zu HRV.
     return when {
-        value >= avgSafe + 3.0 -> CosmosColors.WhoopRecoveryGreen
-        value <= avgSafe - 3.0 -> CosmosColors.WhoopRecoveryRed
-        else -> CosmosColors.WhoopRecoveryYellow
+        value <= avgSafe - 2.0 -> CosmosColors.WhoopRecoveryGreen   // Gruen (niedriger = besser)
+        value >= avgSafe + 2.0 -> CosmosColors.WhoopRecoveryRed     // Rot (hoeher = schlechter)
+        else -> CosmosColors.WhoopRecoveryYellow                     // Gelb (neutral)
     }
 }
 
 /**
- * Frank-Wunsch 2026-06-21: Trend-Badge fuer HRV — Plus (ueber Durchschnitt) = Gruen,
- * Minus (darunter) = Rot, innerhalb +/- 0.5 ms = Accent (neutral). 1:1 die gleiche
- * Logik + Hintergrundfarben wie [RecoveryGraphCard.RecoveryTrendBadgePercent], nur
- * Format in ms statt Prozent.
+ * Trend-Badge fuer Ruhepuls — Minus (unter Durchschnitt) = Gruen (besser),
+ * Plus (ueber Durchschnitt) = Rot (schlechter), innerhalb +/- 0.5 bpm = Accent (neutral).
+ * 1:1 die gleiche Logik + Hintergrundfarben wie [HrvTrendBadgeMs], nur invertiert.
  */
 @Composable
-private fun HrvTrendBadgeMs(delta: Double) {
+private fun RhrTrendBadgeBpm(delta: Double) {
     val color =
         when {
-            delta > 0.5 -> LocalCosmos.current.ok
-            delta < -0.5 -> LocalCosmos.current.crit
-            else -> LocalCosmos.current.accent
+            delta < -0.5 -> LocalCosmos.current.ok      // Gruen (niedriger = besser)
+            delta > 0.5 -> LocalCosmos.current.crit      // Rot (hoeher = schlechter)
+            else -> LocalCosmos.current.accent            // Neutral
         }
     Box(
         modifier =
@@ -212,7 +205,7 @@ private fun HrvTrendBadgeMs(delta: Double) {
                 .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = "%+.1f ms".format(delta).replace('.', ','),
+            text = "%+.1f bpm".format(delta).replace('.', ','),
             style = MaterialTheme.typography.labelMedium,
             color = color,
             fontWeight = FontWeight.SemiBold,

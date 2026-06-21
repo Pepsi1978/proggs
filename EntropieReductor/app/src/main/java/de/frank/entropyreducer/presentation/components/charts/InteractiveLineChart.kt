@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -228,40 +229,35 @@ fun InteractiveLineChart(
                     )
                 }
                 // Datenlinie + Punkte
+                // Performance-Audit 2026-06-21: Datenlinie als einzelner Path
+                // statt N einzelner drawLine-Aufrufe (bis zu 70 Segmente).
+                // Bei 11 MetricHistoryCards im Biomarker-Tab reduziert das die
+                // Draw-Aufrufe von ~770 auf ~11 pro Frame.
                 if (safe.size >= 2) {
                     val stepX = w / (safe.size - 1).toFloat()
-                    for (i in 0 until safe.size - 1) {
-                        val x1 = i * stepX
-                        val x2 = (i + 1) * stepX
-                        val y1 = h - ((safe[i].second - minY) / rangeY * h).toFloat()
-                        val y2 = h - ((safe[i + 1].second - minY) / rangeY * h).toFloat()
-                        drawLine(
-                            color = accent,
-                            start = Offset(x1, y1),
-                            end = Offset(x2, y2),
-                            strokeWidth = 4f,
-                        )
+                    val dataPath = Path()
+                    for (i in safe.indices) {
+                        val x = i * stepX
+                        val y = h - ((safe[i].second - minY) / rangeY * h).toFloat()
+                        if (i == 0) dataPath.moveTo(x, y) else dataPath.lineTo(x, y)
                     }
+                    drawPath(path = dataPath, color = accent, style = Stroke(width = 4f))
                 }
                 // Trendlinie 1 (SMA-14) — kurzfristige Glaettung, leicht wellig.
                 // Frank-Wunsch 2026-05-09 Update: SMA bleibt drin, aber etwas duenner
                 // weil sie jetzt der Sekundaer-Indikator ist. Die gerade lineare
                 // Regressionslinie (unten) ist der primaere Gesamttrend.
+                // Performance-Audit 2026-06-21: SMA als Path statt N drawLine.
                 if (sma.size >= 2 && safe.size >= 2) {
                     val stepXSma = w / (safe.size - 1).toFloat()
                     val firstSmaIdx = safe.size - sma.size
-                    for (i in 0 until sma.size - 1) {
-                        val x1 = (firstSmaIdx + i) * stepXSma
-                        val x2 = (firstSmaIdx + i + 1) * stepXSma
-                        val y1 = h - ((sma[i] - minY) / rangeY * h).toFloat()
-                        val y2 = h - ((sma[i + 1] - minY) / rangeY * h).toFloat()
-                        drawLine(
-                            color = trendColor,
-                            start = Offset(x1, y1),
-                            end = Offset(x2, y2),
-                            strokeWidth = 6f,
-                        )
+                    val smaPath = Path()
+                    for (i in sma.indices) {
+                        val x = (firstSmaIdx + i) * stepXSma
+                        val y = h - ((sma[i] - minY) / rangeY * h).toFloat()
+                        if (i == 0) smaPath.moveTo(x, y) else smaPath.lineTo(x, y)
                     }
+                    drawPath(path = smaPath, color = trendColor, style = Stroke(width = 6f))
                 }
                 // Trendlinie 2 (Lineare Regression) — komplett gerade, ueber alle
                 // Roh-Datenpunkte gefittet. Frank-Wunsch 2026-05-09: "wirklich eine

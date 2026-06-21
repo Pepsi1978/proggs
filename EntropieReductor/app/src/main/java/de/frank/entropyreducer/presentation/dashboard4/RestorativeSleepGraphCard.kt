@@ -35,6 +35,7 @@ import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
+import de.frank.entropyreducer.presentation.components.charts.MiniBarsCanvas
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -66,6 +67,7 @@ internal fun RestorativeSleepGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
     precomputed: RestorativeSleepDerived? = null,
+    onClick: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.accent
@@ -80,7 +82,7 @@ internal fun RestorativeSleepGraphCard(
 
     var sheetOpen by remember { mutableStateOf(false) }
 
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -228,43 +230,15 @@ private fun BiomarkerSnapshotEntity.restorativePercent(): Double? {
 
 @Composable
 private fun RestorativeSleepBars(values: List<Double>) {
-    val cosmos = LocalCosmos.current
-    // Y-Achse fest auf 70 % skalieren — Erholungs-Anteile liegen typischerweise 30-60%,
-    // selten ueber 65 %. So sieht man Schwankungen deutlich.
-    val yMax = 70.0
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(80.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(cosmos.glassBg)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            if (values.isEmpty()) {
-                Text(
-                    text = "Noch keine Erholsam-Schlaf-Daten",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                    modifier = Modifier.padding(4.dp),
-                )
-            } else {
-                values.forEach { pct ->
-                    val ratio = (pct / yMax).coerceIn(0.05, 1.0).toFloat()
-                    Box(
-                        modifier =
-                            Modifier.weight(1f)
-                                .fillMaxHeight(ratio)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(restorativeSleepBarColor(pct))
-                    )
-                }
-            }
-        }
-    }
+    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 5.0 }
+    val yMax = remember(values) { values.maxOrNull() ?: 70.0 }
+    MiniBarsCanvas(
+        values = values,
+        barColor = { restorativeSleepBarColor(it) },
+        yMin = yMin,
+        yMax = yMax,
+        emptyText = "Noch keine Erholsam-Schlaf-Daten",
+    )
 }
 
 /**

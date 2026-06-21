@@ -35,6 +35,7 @@ import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
+import de.frank.entropyreducer.presentation.components.charts.MiniBarsCanvas
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -72,9 +73,8 @@ import java.util.Locale
 internal fun RemSleepGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
-    // Performance 2026-05-23: teure Historie-Berechnung im ViewModel vorberechnet
-    // (Default-Dispatcher), hier hereingereicht. Werte identisch. Fallback lokal.
     precomputed: RemSleepDerived? = null,
+    onClick: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Rem
@@ -90,7 +90,7 @@ internal fun RemSleepGraphCard(
 
     var sheetOpen by remember { mutableStateOf(false) }
 
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             // Kopfzeile: Titel + grosser aktueller Prozent-Wert.
             Row(verticalAlignment = Alignment.Bottom) {
@@ -249,44 +249,15 @@ private fun BiomarkerSnapshotEntity.remPercent(): Double? {
 
 @Composable
 private fun RemSleepBars(values: List<Double>) {
-    val cosmos = LocalCosmos.current
-    // Y-Achse fest auf 35 % skalieren — REM-Anteile liegen typischerweise 15-25 %,
-    // selten ueber 30 %. So sieht man Schwankungen deutlich ohne dass die Balken
-    // winzig wirken und die gruene 20-%-Schwelle hat Luft nach oben.
-    val yMax = 35.0
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(80.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(cosmos.glassBg)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            if (values.isEmpty()) {
-                Text(
-                    text = "Noch keine REM-Schlaf-Daten",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                    modifier = Modifier.padding(4.dp),
-                )
-            } else {
-                values.forEach { pct ->
-                    val ratio = (pct / yMax).coerceIn(0.05, 1.0).toFloat()
-                    Box(
-                        modifier =
-                            Modifier.weight(1f)
-                                .fillMaxHeight(ratio)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(remSleepBarColor(pct))
-                    )
-                }
-            }
-        }
-    }
+    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 5.0 }
+    val yMax = remember(values) { values.maxOrNull() ?: 35.0 }
+    MiniBarsCanvas(
+        values = values,
+        barColor = { remSleepBarColor(it) },
+        yMin = yMin,
+        yMax = yMax,
+        emptyText = "Noch keine REM-Schlaf-Daten",
+    )
 }
 
 /**

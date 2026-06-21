@@ -36,6 +36,7 @@ import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
+import de.frank.entropyreducer.presentation.components.charts.MiniBarsCanvas
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -70,9 +71,8 @@ import java.util.Locale
 internal fun WakeTimeGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
-    // Performance 2026-05-23: teure Historie-Berechnung im ViewModel vorberechnet
-    // (Default-Dispatcher), hier hereingereicht. Werte identisch. Fallback lokal.
     precomputed: WakeTimeDerived? = null,
+    onClick: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Awake
@@ -89,7 +89,7 @@ internal fun WakeTimeGraphCard(
 
     var sheetOpen by remember { mutableStateOf(false) }
 
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -245,44 +245,15 @@ private fun BiomarkerSnapshotEntity.wakePercent(): Double? {
 
 @Composable
 private fun WakeTimeBars(values: List<Double>) {
-    val cosmos = LocalCosmos.current
-    // Y-Achse auf 20 % skalieren — Wachzeit-Anteile liegen typischerweise 1-12 %,
-    // selten ueber 15 %. Mit 20 % als Max sind selbst extreme Naechte sichtbar
-    // ohne dass die Norm-Werte zu winzigen Strichen werden.
     val yMax = 20.0
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(80.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(cosmos.glassBg)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            if (values.isEmpty()) {
-                Text(
-                    text = "Noch keine Wachzeit-Daten",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                    modifier = Modifier.padding(4.dp),
-                )
-            } else {
-                values.forEach { pct ->
-                    val ratio = (pct / yMax).coerceIn(0.05, 1.0).toFloat()
-                    Box(
-                        modifier =
-                            Modifier.weight(1f)
-                                .fillMaxHeight(ratio)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(wakeTimeBarColor(pct))
-                    )
-                }
-            }
-        }
-    }
+    val yMin = 0.0
+    MiniBarsCanvas(
+        values = values,
+        barColor = { wakeTimeBarColor(it) },
+        yMin = yMin,
+        yMax = yMax,
+        emptyText = "Noch keine Wachzeit-Daten",
+    )
 }
 
 /**

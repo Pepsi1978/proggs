@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.charts.MiniBarsCanvas
 import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -63,6 +64,7 @@ import java.util.Locale
 internal fun RecoveryGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
+    onClick: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.ok
@@ -74,7 +76,7 @@ internal fun RecoveryGraphCard(
 
     var sheetOpen by remember { mutableStateOf(false) }
 
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -198,43 +200,15 @@ private fun recoveryDerived(
 
 @Composable
 private fun RecoveryBars(values: List<Double>) {
-    val cosmos = LocalCosmos.current
-    // Y-Achse fest auf 100 % skalieren — Recovery-Score reicht definitionsgemaess
-    // von 0 bis 100. So sieht man die Ampel-Bereiche (60/80) klar.
     val yMax = 100.0
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(80.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(cosmos.glassBg)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            if (values.isEmpty()) {
-                Text(
-                    text = "Noch keine Recovery-Daten",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                    modifier = Modifier.padding(4.dp),
-                )
-            } else {
-                values.forEach { pct ->
-                    val ratio = (pct / yMax).coerceIn(0.05, 1.0).toFloat()
-                    Box(
-                        modifier =
-                            Modifier.weight(1f)
-                                .fillMaxHeight(ratio)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(recoveryBarColor(pct))
-                    )
-                }
-            }
-        }
-    }
+    val yMin = 0.0
+    MiniBarsCanvas(
+        values = values,
+        barColor = { recoveryBarColor(it) },
+        yMin = yMin,
+        yMax = yMax,
+        emptyText = "Noch keine Recovery-Daten",
+    )
 }
 
 /**

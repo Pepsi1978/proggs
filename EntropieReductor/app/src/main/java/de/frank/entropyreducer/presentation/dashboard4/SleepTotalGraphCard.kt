@@ -32,23 +32,18 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * HRV-Verlauf im Erholungsverlauf-Pattern (Frank-Wunsch 2026-06-21).
+ * Schlafzeit-Verlaufs-Pattern (Frank-Wunsch 2026-06-21).
  *
- * Zeigt den HRV-Wert der letzten ~30 Tage als Balken-Graph. Tap auf die Karte oeffnet den
- * bestehenden HRV-Detail-Screen (1:1 wie bisher). Unter dem Graphen wird der Durchschnitt
- * ueber ALLE jemals gespeicherten HRV-Werte angezeigt — nicht nur der letzten 30 Tage.
+ * Zeigt die effektive Schlafzeit (ohne Wachzeit) der letzten ~30 Tage als Balken-Graph.
+ * Tap auf die Karte oeffnet den bestehenden Schlafzeit-Detail-Screen.
  *
- * Farb-Logik (relativ zum persoenlichen Durchschnitt):
- * - mindestens 3 ms ueber dem Durchschnitt  -> Gruen
- * - innerhalb von +/- 3 ms um den Schnitt   -> Gelb
- * - mehr als 3 ms unter dem Durchschnitt    -> Rot
- *
- * Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel):
- * [CosmosColors.WhoopRecoveryGreen] / [CosmosColors.WhoopRecoveryYellow] /
- * [CosmosColors.WhoopRecoveryRed].
+ * Farb-Logik (relativ zu festen Schwellen):
+ * - ab 8,5 Stunden (510 min)     -> Gruen (guter Schlaf)
+ * - 7 bis 8,5 Stunden (420-510)  -> Gelb (grenzwertig)
+ * - unter 7 Stunden (420 min)    -> Rot (zu wenig Schlaf)
  */
 @Composable
-internal fun HrvGraphCard(
+internal fun SleepTotalGraphCard(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
     onClick: () -> Unit,
@@ -58,7 +53,7 @@ internal fun HrvGraphCard(
 
     val derived =
         remember(selectedSnapshot, history) {
-            hrvDerived(selectedSnapshot = selectedSnapshot, history = history)
+            sleepTotalDerived(selectedSnapshot = selectedSnapshot, history = history)
         }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -66,23 +61,21 @@ internal fun HrvGraphCard(
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "HRV",
+                        text = "Schlafzeit",
                         style = MaterialTheme.typography.titleMedium,
                         color = cosmos.textPrimary,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Herzfrequenzvariabilitaet",
+                        text = "Effektive Schlafzeit (ohne Wachzeit)",
                         style = MaterialTheme.typography.labelSmall,
                         color = cosmos.textSecondary,
                     )
                 }
                 val headerColor =
-                    derived.currentMs?.let { current ->
-                        hrvBarColor(value = current, avg = derived.avgAllMs, accentColor = accent)
-                    } ?: accent
+                    derived.currentMinutes?.let { sleepTotalBarColor(it) } ?: accent
                 Text(
-                    text = derived.currentMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—",
+                    text = derived.currentMinutes?.let { formatSleepTime(it) } ?: "—",
                     color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
@@ -90,24 +83,20 @@ internal fun HrvGraphCard(
             }
             Spacer(Modifier.height(12.dp))
 
-            HrvBars(values = derived.last30Ms, avg = derived.avgAllMs)
+            SleepTotalBars(values = derived.last30Minutes)
 
             Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text =
-                        "Durchschnitt: ${derived.avgAllMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—"}",
+                        "Durchschnitt: ${derived.avgAllMinutes?.let { formatSleepTime(it) } ?: "—"}",
                     style = MaterialTheme.typography.labelMedium,
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
                 )
-                // Frank-Wunsch 2026-06-21: Abweichungs-Badge wie im Erholungsverlauf
-                // (RecoveryGraphCard) — Plus = ueber Schnitt = Gruen, Minus = darunter
-                // = Rot, innerhalb +/- 0.5 ms = Accent (neutral). Gleiche
-                // Hintergrundfarben (ok/crit/accent mit alpha 0.18) wie Erholungsverlauf.
                 if (derived.deltaVsAvg != null) {
-                    HrvTrendBadgeMs(delta = derived.deltaVsAvg)
+                    SleepTotalTrendBadge(delta = derived.deltaVsAvg)
                 }
             }
             Text(
@@ -121,84 +110,94 @@ internal fun HrvGraphCard(
 
 /* ------------------------- Datenaufbereitung ------------------------- */
 
-private data class HrvDerived(
-    val currentMs: Double?,
-    val avgAllMs: Double?,
+private data class SleepTotalDerived(
+    val currentMinutes: Int?,
+    val avgAllMinutes: Double?,
     val deltaVsAvg: Double?,
-    val last30Ms: List<Double>,
+    val last30Minutes: List<Double>,
 )
 
-private fun hrvDerived(
+private fun sleepTotalDerived(
     selectedSnapshot: BiomarkerSnapshotEntity?,
     history: List<BiomarkerSnapshotEntity>,
-): HrvDerived {
+): SleepTotalDerived {
     val zone = ZoneId.systemDefault()
     val all =
         history
             .mapNotNull { snap ->
-                val hrv = snap.hrvMs ?: return@mapNotNull null
+                val total = snap.sleepTotalMinutes ?: return@mapNotNull null
+                val awake = snap.sleepAwakeMinutes ?: 0
+                val effective = (total - awake).coerceAtLeast(0)
+                if (effective <= 0) return@mapNotNull null
                 val date = Instant.ofEpochMilli(snap.capturedAt).atZone(zone).toLocalDate()
-                date to hrv
+                date to effective.toDouble()
             }
             .groupBy({ it.first }, { it.second })
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
-            .map { (_, hrv) -> hrv }
+            .map { (_, minutes) -> minutes }
 
-    val current = selectedSnapshot?.hrvMs ?: all.lastOrNull()
+    val current = selectedSnapshot?.let { snap ->
+        val total = snap.sleepTotalMinutes ?: return@let null
+        val awake = snap.sleepAwakeMinutes ?: 0
+        (total - awake).coerceAtLeast(0).takeIf { it > 0 }
+    } ?: all.lastOrNull()?.toInt()
     val last30 = all.takeLast(30)
     val avgAll = all.takeIf { it.isNotEmpty() }?.average()
-    // Frank-Wunsch 2026-06-21: Abweichung zum Gesamt-Durchschnitt fuer das
-    // Trend-Badge im Footer (Plus = ueber Schnitt = Gruen, Minus = Rot).
-    val delta = if (current != null && avgAll != null) current - avgAll else null
+    val delta = if (current != null && avgAll != null) current.toDouble() - avgAll else null
 
-    return HrvDerived(
-        currentMs = current,
-        avgAllMs = avgAll,
+    return SleepTotalDerived(
+        currentMinutes = current,
+        avgAllMinutes = avgAll,
         deltaVsAvg = delta,
-        last30Ms = last30,
+        last30Minutes = last30,
     )
 }
 
 /* ------------------------- UI-Bausteine ------------------------- */
 
+private fun formatSleepTime(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return "${h}h ${m.toString().padStart(2, '0')}min"
+}
+
+private fun formatSleepTime(minutes: Double): String {
+    return formatSleepTime(minutes.toInt())
+}
+
 @Composable
-private fun HrvBars(values: List<Double>, avg: Double?) {
-    val accent = LocalCosmos.current.accent
-    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 5.0 }
-    val yMax = remember(values) { values.maxOrNull() ?: 1.0 }
+private fun SleepTotalBars(values: List<Double>) {
+    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 60.0 }
+    val yMax = remember(values) { values.maxOrNull() ?: 510.0 }
     MiniBarsCanvas(
         values = values,
-        barColor = { hrvBarColor(it, avg, accent) },
+        barColor = { sleepTotalBarColor(it.toInt()) },
         yMin = yMin,
         yMax = yMax,
-        emptyText = "Noch keine HRV-Daten",
+        emptyText = "Noch keine Schlafzeit-Daten",
     )
 }
 
-private fun hrvBarColor(
-    value: Double,
-    avg: Double?,
-    accentColor: Color,
-): Color {
-    val avgSafe = avg ?: return accentColor
-    // Frank-Wunsch 2026-06-21: Farb-Bereiche relativ zum persoenlichen Durchschnitt.
-    // Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel).
-    return when {
-        value >= avgSafe + 3.0 -> CosmosColors.WhoopRecoveryGreen
-        value <= avgSafe - 3.0 -> CosmosColors.WhoopRecoveryRed
-        else -> CosmosColors.WhoopRecoveryYellow
+/**
+ * Farbe pro Balken:
+ * - ueber 8h (480 min)   -> Gruen
+ * - 7h-8h (420-480)      -> Gelb
+ * - unter 7h (420)       -> Rot
+ */
+private fun sleepTotalBarColor(minutes: Int): Color =
+    when {
+        minutes >= 480 -> CosmosColors.WhoopRecoveryGreen
+        minutes >= 420 -> CosmosColors.WhoopRecoveryYellow
+        else -> CosmosColors.WhoopRecoveryRed
     }
-}
 
 /**
- * Frank-Wunsch 2026-06-21: Trend-Badge fuer HRV — Plus (ueber Durchschnitt) = Gruen,
- * Minus (darunter) = Rot, innerhalb +/- 0.5 ms = Accent (neutral). 1:1 die gleiche
- * Logik + Hintergrundfarben wie [RecoveryGraphCard.RecoveryTrendBadgePercent], nur
- * Format in ms statt Prozent.
+ * Trend-Badge: Plus (ueber Durchschnitt) = Gruen (besser),
+ * Minus (unter Durchschnitt) = Rot (schlechter).
  */
 @Composable
-private fun HrvTrendBadgeMs(delta: Double) {
+private fun SleepTotalTrendBadge(delta: Double) {
     val color =
         when {
             delta > 0.5 -> LocalCosmos.current.ok
@@ -211,8 +210,12 @@ private fun HrvTrendBadgeMs(delta: Double) {
                 .background(color.copy(alpha = 0.18f))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
+        val totalDelta = delta.toInt()
+        val h = totalDelta / 60
+        val m = kotlin.math.abs(totalDelta % 60)
+        val sign = if (delta >= 0) "+" else "-"
         Text(
-            text = "%+.1f ms".format(delta).replace('.', ','),
+            text = "${sign}${kotlin.math.abs(h)}h ${m.toString().padStart(2, '0')}min",
             style = MaterialTheme.typography.labelMedium,
             color = color,
             fontWeight = FontWeight.SemiBold,

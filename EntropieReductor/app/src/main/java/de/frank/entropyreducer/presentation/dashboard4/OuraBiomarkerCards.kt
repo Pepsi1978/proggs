@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,6 +30,7 @@ import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
 import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.charts.MiniBarsCanvas
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 
@@ -81,43 +83,64 @@ internal fun OuraReadinessCard(
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-13: IMMER den aktuellsten verfuegbaren Wert anzeigen.
-    // Bei "Heute" plus fehlender heutiger Eintrag fallback auf juengsten in
-    // Historie (Oura-Sync-Delay 40-50 Min). "Stand: ..."-Label zeigt von wann.
     val today = java.time.LocalDate.now()
     val effective =
         remember(readiness, history, selectedDate) {
             readiness ?: if (selectedDate == today) history.maxByOrNull { it.day } else null
         }
     val score = effective?.score
-    val color = scoreColor(score)
-    // Performance-Audit Loop 3 (2026-05-10): takeLast/mapNotNull in remember.
-    val historyAggregates =
+
+    val derived =
         remember(history) {
-            val last30 = history.takeLast(30).mapNotNull { it.score }
-            val last7Doubles = history.takeLast(7).mapNotNull { it.score?.toDouble() }
-            last30 to last7Doubles
+            ouraScoreDerived(history.mapNotNull { it.score?.toDouble() })
         }
-    val last30Scores = historyAggregates.first
-    val last7Scores = historyAggregates.second
+
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
-            CardHeader(title = "Readiness", color = cosmos.textPrimary)
-            Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(
-                score = score?.toDouble(),
-                color = color,
-                last30 = last30Scores.map { it.toDouble() },
-            )
-            StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Readiness",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Oura Ring",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                val headerColor = score?.let { scoreBarColor(it.toDouble(), derived.avgAll) } ?: cosmos.accent
+                Text(
+                    text = score?.let { "$it" } ?: "—",
+                    color = headerColor,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            OuraScoreBars(values = derived.last30, avg = derived.avgAll)
+
             Spacer(Modifier.height(10.dp))
-            HistoryMiniChartWithLabels(
-                values = last7Scores,
-                maxValue = 100.0,
-                formatLabel = { "%.0f".format(it) },
-                colorFor = { scoreColor(it.toInt()) },
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Durchschnitt: ${derived.avgAll?.let { "%.1f".format(it) } ?: "—"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                if (derived.deltaVsAvg != null) {
+                    OuraTrendBadge(delta = derived.deltaVsAvg)
+                }
+            }
+            Text(
+                text = "Tippen fuer komplette Historie",
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary.copy(alpha = 0.6f),
             )
-            ThirtyDayAverageLabel(values = last30Scores.map { it.toDouble() })
         }
     }
 }
@@ -131,40 +154,64 @@ internal fun OuraSleepScoreCard(
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-13: IMMER den aktuellsten Wert. Siehe OuraReadinessCard.
     val today = java.time.LocalDate.now()
     val effective =
         remember(sleep, history, selectedDate) {
             sleep ?: if (selectedDate == today) history.maxByOrNull { it.day } else null
         }
     val score = effective?.score
-    val color = scoreColor(score)
-    // Performance-Audit (Frank-Wunsch 2026-05-18): takeLast+mapNotNull pro
-    // Recomposition vermeiden — die Aggregate werden 3x im Composable gebraucht
-    // (Score-Trend + 7-Tage-Mini-Chart + 30-Tage-Avg). Vorher: 3x O(N) pro
-    // Scroll-Frame. Jetzt: 1x pro neue history-Liste.
-    val aggregates =
+
+    val derived =
         remember(history) {
-            val last30AsDouble = history.takeLast(30).mapNotNull { it.score?.toDouble() }
-            val last7AsDouble = history.takeLast(7).mapNotNull { it.score?.toDouble() }
-            last30AsDouble to last7AsDouble
+            ouraScoreDerived(history.mapNotNull { it.score?.toDouble() })
         }
-    val last30Doubles = aggregates.first
-    val last7Doubles = aggregates.second
+
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
-            CardHeader(title = "Schlaf-Score", color = cosmos.textPrimary)
-            Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Doubles)
-            StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Schlaf-Score",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Oura Ring",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                val headerColor = score?.let { scoreBarColor(it.toDouble(), derived.avgAll) } ?: cosmos.accent
+                Text(
+                    text = score?.let { "$it" } ?: "—",
+                    color = headerColor,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            OuraScoreBars(values = derived.last30, avg = derived.avgAll)
+
             Spacer(Modifier.height(10.dp))
-            HistoryMiniChartWithLabels(
-                values = last7Doubles,
-                maxValue = 100.0,
-                formatLabel = { "%.0f".format(it) },
-                colorFor = { scoreColor(it.toInt()) },
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Durchschnitt: ${derived.avgAll?.let { "%.1f".format(it) } ?: "—"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                if (derived.deltaVsAvg != null) {
+                    OuraTrendBadge(delta = derived.deltaVsAvg)
+                }
+            }
+            Text(
+                text = "Tippen fuer komplette Historie",
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary.copy(alpha = 0.6f),
             )
-            ThirtyDayAverageLabel(values = last30Doubles)
         }
     }
 }
@@ -588,3 +635,74 @@ internal fun levelToRank(level: String?): Double? =
         "exceptional" -> 4.0
         else -> null
     }
+
+/* ------------------------- Oura Score Balken-System ------------------------- */
+
+private data class OuraScoreDerived(
+    val last30: List<Double>,
+    val avgAll: Double?,
+    val deltaVsAvg: Double?,
+)
+
+private fun ouraScoreDerived(allScores: List<Double>): OuraScoreDerived {
+    val last7 = allScores.takeLast(7)
+    val avgAll = allScores.takeIf { it.isNotEmpty() }?.average()
+    val current = allScores.lastOrNull()
+    val delta = if (current != null && avgAll != null) current - avgAll else null
+    return OuraScoreDerived(
+        last30 = last7,
+        avgAll = avgAll,
+        deltaVsAvg = delta,
+    )
+}
+
+/**
+ * Farbe relativ zum persoenlichen Durchschnitt:
+ * - ueber Durchschnitt            -> Gruen (Success, wie Resilienz)
+ * - bis 10 unter Durchschnitt     -> Gelb
+ * - mehr als 10 unter Durchschnitt -> Rot
+ */
+private fun scoreBarColor(score: Double, avg: Double?): Color {
+    val avgSafe = avg ?: return CosmosColors.Warning
+    return when {
+        score >= avgSafe -> CosmosColors.Success
+        score >= avgSafe - 10.0 -> CosmosColors.Warning
+        else -> CosmosColors.Critical
+    }
+}
+
+@Composable
+private fun OuraScoreBars(values: List<Double>, avg: Double?) {
+    val yMin = remember(values) { (values.minOrNull() ?: 0.0) - 3.0 }
+    val yMax = remember(values) { values.maxOrNull() ?: 100.0 }
+    MiniBarsCanvas(
+        values = values,
+        barColor = { scoreBarColor(it, avg) },
+        yMin = yMin,
+        yMax = yMax,
+        emptyText = "Noch keine Daten",
+    )
+}
+
+@Composable
+private fun OuraTrendBadge(delta: Double) {
+    val color =
+        when {
+            delta > 0.5 -> LocalCosmos.current.ok
+            delta < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
+        }
+    Box(
+        modifier =
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = "%+.1f".format(delta),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
