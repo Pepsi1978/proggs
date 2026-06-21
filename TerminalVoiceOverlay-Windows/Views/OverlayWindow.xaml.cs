@@ -1992,6 +1992,9 @@ namespace TerminalVoiceOverlay.Views
             // ~5-50ms bis die UI das Toggle durchgefuehrt hat — fuer das
             // Stream-Deck-Plugin praktisch instantan.
             _autoEnterServer = new Services.AutoEnterStatusServer(
+                // Beschaeftigt-Status fuer den Datenverlust-Schutz beim Rebuild:
+                // true solange aufgenommen/transkribiert wird (rebuild-overlay.ps1 wartet darauf).
+                getBusyState: () => _micState == RecordingState.Recording || _isProcessing || isBtwRecording,
                 getCurrentState: () => autoEnterEnabled,
                 toggle: () =>
                 {

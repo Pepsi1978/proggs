@@ -100,6 +100,38 @@ function Stop-Overlay {
     Start-Sleep -Milliseconds 2000
 }
 
+# Datenverlust-Schutz (Frank-Regel 2026-06-21): Wartet VOR dem Kill, solange das Overlay
+# gerade aufnimmt/transkribiert (Frank spricht ein). Fragt GET /recording/status ab
+# ({"busy":true|false}). Der Status haengt am OVERLAY, nicht an einer Claude-Session —
+# deshalb wirkt der Schutz auch session-uebergreifend: egal welche (Hintergrund-)Session
+# den Rebuild ausloest, gekillt wird erst, wenn Frank seinen Text fertig eingefuegt hat.
+# Endpoint nicht erreichbar (altes Overlay ohne Endpoint / nicht gestartet) -> NICHT
+# blockieren, normal weiter (Rueckwaertskompatibilitaet).
+function Wait-OverlayIdle {
+    param([hashtable]$O, [int]$TimeoutSeconds = 600)
+    $url = "http://127.0.0.1:$($O.Port)/recording/status"
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $announced = $false
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $resp = Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction Stop
+        }
+        catch {
+            return   # Endpoint nicht da -> nicht blockieren
+        }
+        if (-not $resp.busy) {
+            if ($announced) { Write-Ok 'Overlay im Ruhezustand — Rebuild wird fortgesetzt.' }
+            return
+        }
+        if (-not $announced) {
+            Write-Warn 'Overlay nimmt gerade auf / transkribiert — warte mit dem Rebuild, bis dein Text fertig eingefuegt ist...'
+            $announced = $true
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    Write-Warn "Timeout ($TimeoutSeconds s) beim Warten auf Ruhezustand — fahre trotzdem fort."
+}
+
 # Prueft, ob die publish/.exe schreibbar (= nicht gelockt) ist.
 function Test-ExeFree {
     param([hashtable]$O)
@@ -182,6 +214,9 @@ foreach ($t in $targets) {
         $failed += $t
         continue
     }
+
+    # Schritt 0: Datenverlust-Schutz — warten, falls gerade aufgenommen/transkribiert wird.
+    Wait-OverlayIdle -O $O
 
     # Schritt 1: alle Prozesse beenden
     Write-Step 'Schritt 1/3: Prozesse beenden (Watcher + exe)...'

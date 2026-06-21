@@ -38,6 +38,10 @@ namespace ClaudeVoiceOverlay.Services
 
         private readonly Func<bool> _getCurrentState;
         private readonly Action _toggle;
+        // Liefert "ist das Overlay gerade beschaeftigt?" (Aufnahme/Transkription/BTW).
+        // Wird von rebuild-overlay.ps1 ueber GET /recording/status abgefragt, damit ein
+        // Rebuild NICHT killt waehrend Frank einspricht (Datenverlust-Schutz).
+        private readonly Func<bool>? _getBusyState;
         private HttpListener? _listener;
         private Thread? _thread;
         private volatile bool _stopRequested;
@@ -60,10 +64,11 @@ namespace ClaudeVoiceOverlay.Services
         /// Nach dem Toggle wird <paramref name="getCurrentState"/> erneut
         /// abgefragt, um den neuen Stand als Antwort zu senden.
         /// </summary>
-        public AutoEnterStatusServer(Func<bool> getCurrentState, Action toggle)
+        public AutoEnterStatusServer(Func<bool> getCurrentState, Action toggle, Func<bool>? getBusyState = null)
         {
             _getCurrentState = getCurrentState ?? throw new ArgumentNullException(nameof(getCurrentState));
             _toggle = toggle ?? throw new ArgumentNullException(nameof(toggle));
+            _getBusyState = getBusyState;
         }
 
         public void Start()
@@ -173,6 +178,16 @@ namespace ClaudeVoiceOverlay.Services
                 return;
             }
 
+            // Aufnahme-/Beschaeftigt-Status fuer den Datenverlust-Schutz beim Rebuild:
+            // rebuild-overlay.ps1 fragt das VOR dem Kill ab und wartet, solange busy=true
+            // (Frank spricht ein / Transkription laeuft). Antwort {"busy":true|false}.
+            if (path.Equals("/recording/status", StringComparison.OrdinalIgnoreCase)
+                && ctx.Request.HttpMethod == "GET")
+            {
+                WriteBusyJson(ctx, _getBusyState?.Invoke() ?? false);
+                return;
+            }
+
             if (path.Equals("/autoenter/toggle", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "POST")
             {
@@ -225,6 +240,17 @@ namespace ClaudeVoiceOverlay.Services
         private static void WriteJsonState(HttpListenerContext ctx, bool on)
         {
             string json = on ? "{\"on\":true}" : "{\"on\":false}";
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            ctx.Response.StatusCode = 200;
+            ctx.Response.ContentType = "application/json; charset=utf-8";
+            ctx.Response.ContentLength64 = bytes.Length;
+            ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
+            ctx.Response.Close();
+        }
+
+        private static void WriteBusyJson(HttpListenerContext ctx, bool busy)
+        {
+            string json = busy ? "{\"busy\":true}" : "{\"busy\":false}";
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             ctx.Response.StatusCode = 200;
             ctx.Response.ContentType = "application/json; charset=utf-8";
