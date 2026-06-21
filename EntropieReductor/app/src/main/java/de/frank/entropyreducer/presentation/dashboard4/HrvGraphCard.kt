@@ -92,6 +92,13 @@ internal fun HrvGraphCard(
                     color = cosmos.textSecondary,
                     modifier = Modifier.weight(1f),
                 )
+                // Frank-Wunsch 2026-06-21: Abweichungs-Badge wie im Erholungsverlauf
+                // (RecoveryGraphCard) — Plus = ueber Schnitt = Gruen, Minus = darunter
+                // = Rot, innerhalb +/- 0.5 ms = Accent (neutral). Gleiche
+                // Hintergrundfarben (ok/crit/accent mit alpha 0.18) wie Erholungsverlauf.
+                if (derived.deltaVsAvg != null) {
+                    HrvTrendBadgeMs(delta = derived.deltaVsAvg)
+                }
             }
             Text(
                 text = "Tippen fuer komplette Historie",
@@ -107,6 +114,7 @@ internal fun HrvGraphCard(
 private data class HrvDerived(
     val currentMs: Double?,
     val avgAllMs: Double?,
+    val deltaVsAvg: Double?,
     val last30Ms: List<Double>,
 )
 
@@ -130,10 +138,14 @@ private fun hrvDerived(
     val current = selectedSnapshot?.hrvMs ?: all.lastOrNull()
     val last30 = all.takeLast(30)
     val avgAll = all.takeIf { it.isNotEmpty() }?.average()
+    // Frank-Wunsch 2026-06-21: Abweichung zum Gesamt-Durchschnitt fuer das
+    // Trend-Badge im Footer (Plus = ueber Schnitt = Gruen, Minus = Rot).
+    val delta = if (current != null && avgAll != null) current - avgAll else null
 
     return HrvDerived(
         currentMs = current,
         avgAllMs = avgAll,
+        deltaVsAvg = delta,
         last30Ms = last30,
     )
 }
@@ -205,5 +217,34 @@ private fun hrvBarColor(
         value >= avgSafe + 3.0 -> okColor
         value <= avgSafe - 3.0 -> critColor
         else -> warnColor
+    }
+}
+
+/**
+ * Frank-Wunsch 2026-06-21: Trend-Badge fuer HRV — Plus (ueber Durchschnitt) = Gruen,
+ * Minus (darunter) = Rot, innerhalb +/- 0.5 ms = Accent (neutral). 1:1 die gleiche
+ * Logik + Hintergrundfarben wie [RecoveryGraphCard.RecoveryTrendBadgePercent], nur
+ * Format in ms statt Prozent.
+ */
+@Composable
+private fun HrvTrendBadgeMs(delta: Double) {
+    val color =
+        when {
+            delta > 0.5 -> LocalCosmos.current.ok
+            delta < -0.5 -> LocalCosmos.current.crit
+            else -> LocalCosmos.current.accent
+        }
+    Box(
+        modifier =
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = "%+.1f ms".format(delta).replace('.', ','),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
