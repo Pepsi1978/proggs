@@ -26,3 +26,21 @@ services:
           cpus: "0.5"
     # Healthcheck bewusst extern (curl vom Host) statt Container-intern —
     # das Qdrant-Image bringt keine garantierte Shell/curl mit.
+
+  ollama:
+    image: ollama/ollama:latest      # lokale Embedding-/LLM-Maschine (Datenhoheit, kein Datenabfluss)
+    container_name: sb-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"      # NUR lokal erreichbar
+    volumes:
+      - ./ollama-data:/root/.ollama  # Modelle persistent auf der Platte
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"       # Modell nach Nutzung 30 Min im RAM halten, dann freigeben
+    deploy:
+      resources:
+        limits:
+          memory: 4G                 # genug fuer BGE-M3-Embeddings auf CPU
+          cpus: "2.0"
+        reservations:
+          memory: 1G
