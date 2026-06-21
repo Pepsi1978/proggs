@@ -188,6 +188,16 @@ Aufnahme in einer anderen Session.
   Endpoint nicht erreichbar (Tool aus/alt) → nicht blockieren (graceful), damit der Deploy nie haengt.
 - Busy aus dem vorhandenen FSM ableiten (§1: nicht-Idle = busy) — keine separate Zustandshaltung (Drift).
 
+**Zwei getrennte Schutzebenen (wichtig — verifiziert 2026-06-22):** Der busy-Lock schuetzt nur die
+*Uebergabe* (Aufnahme→Transkription→Einfuegen). Ein Text, der danach RUHEND im tool-eigenen Fenster
+steht (z.B. ein Prompt-Eingabefeld im selben Prozess, noch nicht abgeschickt), ueberlebt einen Neustart
+NUR mit eigener **Draft-Persistenz**: bei jeder Aenderung sofort atomar in eine kleine Datei spiegeln
+(`input-draft.txt`), beim Start wiederherstellen UND das Fenster bei vorhandenem Draft automatisch
+oeffnen. Text in einem FREMDEN Fenster (CLI/Terminal) braucht das nicht — der lebt in einem anderen
+Prozess und ist nach dem Einfuegen ohnehin sicher. **Merksatz: Lock = Uebergabe schuetzen,
+Draft = ruhenden Text schuetzen.** Plus optionaler 5s-Nachlauf nach `busy=false`, damit Transkription
++ Draft-Schreiben garantiert durch sind, bevor gekillt wird.
+
 Macht „kein Datenverlust durch Neustart mitten in der Aufnahme/Uebergabe" strukturell erzwungen statt
 von Disziplin abhaengig.
 
