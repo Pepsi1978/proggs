@@ -159,8 +159,15 @@ Das gilt fuer JEDE Engine, nicht nur Firecrawl:
 | C — Opus-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
 Beispiel Opus: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,
-damit wieder 7 laufen. Genauso bei 5 (OpenRouter) und 2 (Firecrawl). Diese Regel ist tief im
-Gesamtsystem verankert (auch `agent-and-researcher-rules.md`), nicht nur im `research`-Skill.
+damit wieder 7 laufen. Genauso bei OpenRouter `:online` (**7**) und Firecrawl (**2**). Diese Regel ist tief
+im Gesamtsystem verankert (auch `agent-and-researcher-rules.md`), nicht nur im `research`-Skill.
+
+**Durchsetzung statt Disziplin (Engine A+B):** Eine Regel ist nur advisory — darum laeuft Engine A/B IMMER
+ueber `~/proggs/research-swarm.py`, das per `ThreadPoolExecutor(max_workers=N)` KONSTANT N parallel haelt und
+bei jedem fertigen Researcher SOFORT den naechsten aus der Queue zieht (Continuous-Spawning im CODE erzwungen,
+deterministisch; Limits hart: **A=2, B=7**, Ueberanforderung wird gedeckelt+gewarnt). So ist „nie in Wellen"
+nicht von Claudes Disziplin abhaengig. Nur Engine C (Opus, Agent-Tool) orchestriert der Hauptagent von Hand
+(Pattern im `research`-Skill: erst 7, bei jeder Completion sofort den naechsten).
 
 ---
 

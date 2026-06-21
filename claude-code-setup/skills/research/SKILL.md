@@ -26,6 +26,7 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 |-------|------|
 | Firecrawl→MiniMax (Engine A) | `~/proggs/mm-research.py` |
 | OpenRouter `:online` (Engine B) | `~/proggs/or-research.py` |
+| Continuous-Spawning-Runner (A+B, erzwingt max N parallel) | `~/proggs/research-swarm.py` |
 | Approval-Flag (vom Hook erzwungen) | `$TEMP/research-approved.flag` (Windows) bzw. `$TMPDIR/research-approved.flag` |
 | Firecrawl-Key | `~/SK/OpenCode/firecrawl-api-key.txt` |
 | OpenRouter-Key | `~/SK/ClaudeCodeOpenRouter/openrouter.key` |
@@ -108,17 +109,30 @@ konstant so viele gleichzeitig, wie die Engine erlaubt. Kein Wellen-Barrier, kei
 | B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Der intermittente JSON-Tool-Call-Leak §42 wird vom `or-research.py`-Retry gefangen) | `or-research.py … minimax/minimax-m3:online` |
 | C — Opus-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt |
 
-Praktische Umsetzung (Engine A/B = Bash-Skripte, KEIN Opus-Token-Verbrauch fuer die Quellenarbeit):
-- N gleichzeitig per `run_in_background` starten (N = Engine-Limit). Jeder Lauf schreibt seine
-  Rohdaten in seine Datei (mm: `~/.mm-research/`, or: `~/.or-research/answer.json`) — die landen
-  NICHT im Hauptkontext. **Bei Parallel-Laeufen je Lauf ein eigenes Ausgabe-Verzeichnis setzen**
-  (`MM_OUTDIR=~/.mm-research/run-<i>` bzw. `OR_OUTDIR=~/.or-research/run-<i>`), sonst ueberschreiben
-  sich die gleichzeitigen Laeufe gegenseitig.
-- Sobald ein Lauf fertig ist (Notification): sein Zwischenfazit zeigen (Schritt 4) UND sofort den
-  naechsten wartenden Researcher starten — bis alle Unterthemen aller Wellen durch sind.
-- Engine C (Opus): genauso — 7 parallele Agent-Tool-Aufrufe; sobald einer zurueck ist, sofort den
-  naechsten spawnen (Continuous-Spawning, nicht auf alle 7 warten). Crash-sicher nach
-  `subagent-crash-proofing` (enger Scope, Datei-Auslagerung).
+Praktische Umsetzung — **Continuous-Spawning ist PFLICHT (Zeit nicht verschwenden):** sobald EIN
+Researcher fertig ist, startet SOFORT der naechste, sodass konstant das Engine-Limit gleichzeitig laeuft.
+NIE in Wellen warten. Bei mehr Unterthemen als dem Limit → nur Limit-viele starten, Rest nachziehen.
+
+**Engine A + B (Bash-Skripte) → IMMER ueber `~/proggs/research-swarm.py` (erzwungene Durchsetzung):**
+Eine Skill-Regel allein ist nur advisory; das Skript haelt per `ThreadPoolExecutor(max_workers=N)` KONSTANT
+N parallel und zieht bei jedem fertigen Researcher SOFORT den naechsten aus der Queue — das Continuous-
+Spawning ist im CODE erzwungen (deterministisch), nicht von Hand zu orchestrieren und nicht "in Wellen"
+verschlechterbar. Engine-Limits hart gedeckelt: **A=2, B=7** (Ueberanforderung wird gedeckelt + gewarnt).
+```bash
+# Unterthemen je 1 Zeile in eine Datei, dann der Swarm (im Hintergrund starten):
+python3 ~/proggs/research-swarm.py B ~/.research-swarm/themen.txt   # B = :online, konstant 7 parallel
+python3 ~/proggs/research-swarm.py A ~/.research-swarm/themen.txt   # A = Firecrawl, konstant 2 parallel
+```
+Roh-Antworten je Researcher in `~/.research-swarm/answer-<i>.txt` (+ eigenes `run-<i>/`, kein Ueberschreiben),
+NICHT im Hauptkontext. Wenn `done.flag` da ist, je Researcher ein Zwischenfazit (Schritt 4) zeigen.
+
+**Engine C (Opus) — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
+Continuous-Spawning HIER von Hand, aber genauso strikt: **erst 7 Agent-Tool-Aufrufe gleichzeitig**
+(`subagent_type:general-purpose` + Prompt); **sobald EINE Completion-Notification kommt, im selben Zug den
+naechsten wartenden Researcher spawnen** → wieder 7 laufend. NIE auf alle 7 warten (Wellen-Barrier =
+Zeitverlust). Jeder Researcher schreibt sein Ergebnis in eine eigene Datei + gibt nur eine Kurz-Summary
+zurueck (kontextschonend, crash-sicher nach `subagent-crash-proofing`).
+> laufen 7, einer kommt zurueck → nur noch 6 → SOFORT den 8. spawnen (wieder 7) → … bis alle durch.
 
 **Live-Darstellung — jeder Researcher beschriftet mit Engine/Modus + Thema:**
 
