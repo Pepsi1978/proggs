@@ -312,12 +312,21 @@ namespace TerminalVoiceOverlay.Services
                 return;
             }
 
+            // AttachThreadInput-Trick (Fix 2026-06-21): An den AKTUELLEN VORDERGRUND-
+            // Thread (currentFg — z.B. der Browser, in dem der Hotkey gedrueckt wurde)
+            // heften, NICHT an den Ziel-Thread. Nur das Vordergrund-Fenster besitzt das
+            // Foreground-Recht, das wir uns kurz leihen muessen, damit
+            // SetForegroundWindow(terminalHwnd) das Terminal aus einem FREMDEN Fenster
+            // heraus tatsaechlich nach vorn holt. Vorher wurde faelschlich an den
+            // Terminal-Thread geheftet -> aus Browser/anderen Apps scheiterte der
+            // Wechsel (Foreground-Lock) -> Terminal blinkte nur, Paste verpuffte
+            // (Bug-Almanach dotnet-csharp 5.5).
             uint ourThread = Win32.GetCurrentThreadId();
-            uint targetThread = Win32.GetWindowThreadProcessId(terminalHwnd, out _);
+            uint fgThread  = Win32.GetWindowThreadProcessId(currentFg, out _);
 
             bool attached = false;
-            if (ourThread != targetThread)
-                attached = Win32.AttachThreadInput(ourThread, targetThread, true);
+            if (ourThread != fgThread && fgThread != 0)
+                attached = Win32.AttachThreadInput(ourThread, fgThread, true);
 
             Win32.AllowSetForegroundWindow(unchecked((uint)-1));
             Win32.SetForegroundWindow(terminalHwnd);
@@ -325,7 +334,7 @@ namespace TerminalVoiceOverlay.Services
             Thread.Sleep(200);
 
             if (attached)
-                Win32.AttachThreadInput(ourThread, targetThread, false);
+                Win32.AttachThreadInput(ourThread, fgThread, false);
         }
 
         private static void SendKeyCombo(ushort modifier, ushort key)
