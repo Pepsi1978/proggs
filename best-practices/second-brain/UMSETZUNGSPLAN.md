@@ -49,6 +49,20 @@
 4. **Mem0 als REST-Server** (Multi-Client) ist weniger klar dokumentiert als die Python-Lib —
    genauer pruefen, wenn der Multi-Client-Zugang dran ist.
 
+### ⚠️ ARCHITEKTUR-KORREKTUR (2026-06-21, Abend) — Datenabfluss egal → Cloud-KI
+**Frank-Klarstellung:** Datenhoheit/Datenabfluss ist Frank EGAL ("habe nichts zu verbergen"). Wichtig ist
+ihm NUR die Server-Sicherheit (kein Einbruch). Das aendert die KI-Wahl:
+- **Embeddings + LLM ueber Cloud-API** statt lokal. Grund: Cloud hat GPUs → schneller + bessere Qualitaet;
+  entlastet den kleinen 8GB/2vCPU-Server massiv (RAM/CPU bleibt fuer Qdrant + Daten); einfacheres
+  Mem0-Setup (Standard = OpenAI). Datenabfluss ist kein Hindernis mehr.
+- **Server-Sicherheit ≠ Datenabfluss** (getrennt): Cloud-APIs = AUSGEHENDE Anfragen, oeffnen KEINE Tuer
+  fuer Einbrecher. Die Haertung (Firewall/key-only/Fail2Ban) bleibt voll erhalten.
+- **Konsequenz:** Ollama + BGE-M3 werden wieder ENTFERNT (waren auf Datenhoheit optimiert). Stattdessen
+  Cloud-Embedder + Cloud-LLM in Mem0. Braucht einen Cloud-API-Key (OpenAI fuer Embeddings+LLM am
+  einfachsten; Anthropic hat keine Embeddings). Kosten: Embeddings winzig, LLM mit harten Caps.
+- **Die Stack-Tabelle oben (BGE-M3 lokal) ist damit UEBERHOLT** — Cloud ist die neue Wahl. `embedding_model_dims`
+  richtet sich dann nach dem Cloud-Modell (z.B. OpenAI text-embedding-3-small = 1536).
+
 ---
 
 ## Das mentale Modell (3 Schichten)
