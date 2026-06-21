@@ -322,8 +322,15 @@ namespace ClaudeVoiceOverlay.Views
         // die ERSTE DOWN-Flanke reagieren, nicht auf Tastatur-Auto-Repeat.
         // Werden beim KeyUp wieder zurueckgesetzt damit der naechste Druck
         // wieder feuern kann.
-        private bool _screenshotKeyDown = false;
-        private bool _insertKeyDown     = false;
+        // Cooldown statt KeyUp-Debounce (Fix 2026-06-21): Bei der langen
+        // Screenshot+Insert-Operation (~420 ms) wurde der KeyUp verschluckt, ein
+        // bool-Flag blieb dauerhaft auf true haengen und der Hotkey feuerte nie
+        // wieder. Ein zeitbasierter Cooldown laeuft IMMER von selbst ab — wie
+        // _altF12CooldownUntil. Damit kann der Hotkey nicht mehr "tot" haengen.
+        private DateTime _screenshotCooldownUntil = DateTime.MinValue;
+        private DateTime _insertCooldownUntil     = DateTime.MinValue;
+        private const int ScreenshotCooldownMs = 800;  // > Operationsdauer (Screenshot+Insert ~420 ms)
+        private const int InsertCooldownMs      = 500;  // nur Insert/Paste
 
         // Pfad des zuletzt mit dem ScreenshotButton aufgenommenen Bildes.
         // Wird vom InsertScreenshotButton gelesen — exakt diese eine Datei
@@ -4896,11 +4903,10 @@ namespace ClaudeVoiceOverlay.Views
                 bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
-                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
-
-                if (isDown && ctrl && alt && !_screenshotKeyDown)
+                if (isDown && ctrl && alt)
                 {
-                    _screenshotKeyDown = true;
+                    if (DateTime.UtcNow < _screenshotCooldownUntil) return new IntPtr(1);
+                    _screenshotCooldownUntil = DateTime.UtcNow.AddMilliseconds(ScreenshotCooldownMs);
                     Console.WriteLine("Hotkey: Strg+Alt+P — Screenshot + Insert (one-shot)");
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
@@ -4924,8 +4930,7 @@ namespace ClaudeVoiceOverlay.Views
                     }));
                     return new IntPtr(1);
                 }
-                if (isDown && ctrl && alt) return new IntPtr(1); // Auto-Repeat schlucken
-                if (isUp) _screenshotKeyDown = false;
+                if (isDown && ctrl && alt) return new IntPtr(1); // im Cooldown / Auto-Repeat schlucken
             }
 
             // Insert-Screenshot-Hotkey: Strg+Alt+I
@@ -4934,11 +4939,10 @@ namespace ClaudeVoiceOverlay.Views
                 bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
-                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
-
-                if (isDown && ctrl && alt && !_insertKeyDown)
+                if (isDown && ctrl && alt)
                 {
-                    _insertKeyDown = true;
+                    if (DateTime.UtcNow < _insertCooldownUntil) return new IntPtr(1);
+                    _insertCooldownUntil = DateTime.UtcNow.AddMilliseconds(InsertCooldownMs);
                     Console.WriteLine("Hotkey: Strg+Alt+I — Insert Screenshot");
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
@@ -4947,8 +4951,7 @@ namespace ClaudeVoiceOverlay.Views
                     }));
                     return new IntPtr(1);
                 }
-                if (isDown && ctrl && alt) return new IntPtr(1); // Auto-Repeat schlucken
-                if (isUp) _insertKeyDown = false;
+                if (isDown && ctrl && alt) return new IntPtr(1); // im Cooldown / Auto-Repeat schlucken
             }
 
             // ── Prompt-Hotkeys: Strg+1..Strg+9 ─────────────────────────────
