@@ -43,7 +43,7 @@ Die Empfehlung ist ein Vorschlag — Frank entscheidet final ueber die `AskUserQ
 | Option | Weg | Werkzeug | Kosten |
 |--------|-----|----------|--------|
 | **A** | **Firecrawl + MiniMax M3 (max Thinking)** — Standard, volle Seiten | `mm-research.py` | Firecrawl-Free-Credits (1000/Mon) |
-| **B** | **Eskalation: MiniMax + parallel (max Thinking)** — agentische Websuche | `or-research.py` | pay-per-use (~Cent), kein Monatslimit |
+| **B** | **Eskalation: MiniMax M3 `:online` (max Thinking)** — OpenRouter-Websuche (web-Plugin) | `or-research.py … :online` | pay-per-use (~Cent), kein Monatslimit |
 | **C** | **Opus-Schwarm** — teuer, nur bewusst | bestehende Researcher | teure Claude-Token |
 | **D** | **[automatisches Freitext-Feld]** — etwas anderes / erst besprechen | — | — |
 
@@ -63,7 +63,7 @@ Eskalations-Research?":
 
 | Option | Bedeutung |
 |--------|-----------|
-| **A** | Ja — MiniMax + parallel (max Thinking) als zusaetzliche Eskalation (`or-research.py`) |
+| **A** | Ja — MiniMax M3 `:online` (max Thinking) als zusaetzliche Eskalation (`or-research.py … :online`) |
 | **B** | Nein, fertig |
 | **C** | Ja, mit Opus (teuer, nur bewusst) |
 | **D** | [Freitext] |
@@ -105,9 +105,18 @@ nicht im Claude-Kontext). Mechanik/Fallen: `best-practices/opencode/go-recherche
 | Werkzeug | Suche | Inhalt | Kosten | Parallelitaet | Wann |
 |----------|-------|--------|--------|---------------|------|
 | `mm-research.py` | Firecrawl | **volle Seiten** (Scrape) | Free **1000/Mon** (knapp) | **max 2** (Free) | tiefe Einzelrecherche, solange Credits da |
-| `or-research.py` | OpenRouter `web_search` server-tool (Exa/Parallel) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | **max 2** (empirisch: mehr → kaputte Laeufe durch Last, §3a) | Eskalation, wenn Firecrawl-Credits knapp; Continuous-Spawning mit 2 |
+| `or-research.py … :online` | OpenRouter `:online` (web-Plugin, Such-Engine intern parallel.ai) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | **bis 7** (`:online` last-stabil, A/B-Test 2026-06-21 §3a; Retry faengt Leak §42) | Eskalation, wenn Firecrawl-Credits knapp; Continuous-Spawning bis 7 |
 
-**Kosten Web-Suche (Server-Tool `openrouter:web_search`; das alte `:online`-Plugin/`plugins:[{id:web}]` ist DEPRECATED) — verifiziert 2026-06-20, openrouter.ai/docs:** $0.005 PRO Such-Anfrage (nicht pro Seite,
+**⚡ Update 2026-06-21 — Engine B nutzt jetzt `:online`, NICHT mehr das `web_search`-Server-Tool.**
+Das `:online`-Plugin (`<modell>:online`) gilt laut OpenRouter-Doku zwar als „deprecated", ist im A/B-Test
+aber **empirisch STABILER bei hoher Parallelitaet**: 10 echt-parallele `:online`-Researcher liefen sauber,
+waehrend das `web_search`-Server-Tool bei ~7 parallel 3/7 zerlegte (Almanach `bugs/apis/openrouter-api.md`
+#13/#41). Grund: `:online` verteilt selbst auf mehrere Modell-Provider → kein einzelner Pfad ueberlastet.
+Such-Engine intern weiterhin **parallel.ai** (sichtbar nur ueber Generation-API `web_search_engine`).
+Frank-Entscheidung: Engine B = `:online`, bis 7 parallel (Retry faengt den intermittenten Leak §42).
+Der `web_search`-Server-Tool-Pfad bleibt in `or-research.py` als Fallback erhalten (Modell ohne `:online`-Suffix).
+
+**Kosten Web-Suche — verifiziert 2026-06-20, openrouter.ai/docs:** $0.005 PRO Such-Anfrage (nicht pro Seite,
 nicht pro 1000!), inkl. bis 10 Treffer; >10 +$0.001/Treffer (max 25). „Treffer" = Snippet, nicht Volltext.
 Modell kann agentisch mehrfach suchen (je $0.005, mit `max_total_results` deckelbar). Grob ~$0.008 pro
 Recherche-Anfrage mit MiniMax M3 (≪ 1 Cent). 7-Researcher-Lauf ≈ $0.12 (vs. Opus-Researcher ≈ $7+).
@@ -146,7 +155,7 @@ Das gilt fuer JEDE Engine, nicht nur Firecrawl:
 | Engine | Konstant gleichzeitig | Nachschub-Regel |
 |--------|----------------------|-----------------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | einer fertig → sofort der naechste (nie auf beide warten) |
-| B — OpenRouter (or), Such-Engine `parallel` | **2** (empirisch 2026-06-21: 7 parallel → kaputte Laeufe durch Last/Provider-Routing-Varianz; 2 laeuft stabil) | einer fertig → sofort der naechste |
+| B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Das alte `web_search`-Tool zerlegte bei 7 → darum `:online`. Retry faengt Leak §42) | einer fertig → sofort der naechste |
 | C — Opus-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
 Beispiel Opus: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,
@@ -163,16 +172,18 @@ Frank ausdruecklich gruendlicher will:
 ```
 Stufe A:  MiniMax M3 (max Thinking) auf Firecrawl-Quellen          ← Standard (mm-research.py); Free-Credits
    ↓ reicht nicht
-Stufe B:  1M-Modell + OpenRouter web_search server-tool           ← or-research.py; pay-per-use, kein Monatslimit
+Stufe B:  MiniMax M3 :online (OpenRouter Go, web-Plugin)          ← or-research.py … :online; pay-per-use, bis 7 parallel
    ↓ reicht nicht
 Stufe C:  Opus-Researcher (mit Web) / Opus direkt                   ← teuerste Stufe, nur Hard-Cases
 ```
 
-**Stufe B = `or-research.py`** (OpenRouter Server-Tool `openrouter:web_search`): ein **1M-Kontext-Modell** mit eigener
-Websuche (Exa-Snippets, ANDERE Suchquelle als Firecrawl = Diversitaet). **Perplexity ist RAUS** —
-nur 200k Kontext, bricht bei grossen Recherchen (genau der Grund fuer Opus-1M bei Schwaermen).
-**Modell-Default:** `minimax/minimax-m3` (guenstig); **Eskalation:** `z-ai/glm-5.2`
-(mehr Denkkraft). Welches final, noch per Test zu bestaetigen (Lehre: erst testen, dann verankern).
+**Stufe B = `or-research.py … :online`** (OpenRouter `:online`-Plugin): ein **1M-Kontext-Modell** mit eigener
+Websuche (parallel.ai-Snippets, ANDERE Suchquelle als Firecrawl = Diversitaet), **bis 7 parallel** (last-stabil).
+**Perplexity ist RAUS** — nur 200k Kontext, bricht bei grossen Recherchen (genau der Grund fuer Opus-1M bei
+Schwaermen). **Modell-Default:** `minimax/minimax-m3:online` (guenstig, A/B-getestet 2026-06-21);
+**Eskalation:** `z-ai/glm-5.2:online` (mehr Denkkraft). `reasoning:high` ist im Werkzeug eingebaut — M3 denkt
+bei `:online` ohnehin (~900 Tok), das Setting aendert die Qualitaet kaum (A/B-getestet), bleibt aber konsistent
+mit der „A+B max Thinking"-Policy.
 
 ---
 
