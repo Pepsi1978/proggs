@@ -105,7 +105,7 @@ nicht im Claude-Kontext). Mechanik/Fallen: `best-practices/opencode/go-recherche
 | Werkzeug | Suche | Inhalt | Kosten | Parallelitaet | Wann |
 |----------|-------|--------|--------|---------------|------|
 | `mm-research.py` | Firecrawl | **volle Seiten** (Scrape) | Free **1000/Mon** (knapp) | **max 2** (Free) | tiefe Einzelrecherche, solange Credits da |
-| `or-research.py` | OpenRouter `web_search` server-tool (Exa/Parallel) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | hoch (OpenRouter-Limits ≫ 2) | **grosse Schwaerme** (7 Researcher), Eskalation, wenn Firecrawl-Credits knapp |
+| `or-research.py` | OpenRouter `web_search` server-tool (Exa/Parallel) | **Top-N Snippets** (~2-4k Zeichen je Treffer, KEINE ganzen Seiten) | **$0.005/Suche** (bis 10 Treffer) + Modell-Token; **kein Monatslimit** | **max 2** (empirisch: mehr → kaputte Laeufe durch Last, §3a) | Eskalation, wenn Firecrawl-Credits knapp; Continuous-Spawning mit 2 |
 
 **Kosten Web-Suche (Server-Tool `openrouter:web_search`; das alte `:online`-Plugin/`plugins:[{id:web}]` ist DEPRECATED) — verifiziert 2026-06-20, openrouter.ai/docs:** $0.005 PRO Such-Anfrage (nicht pro Seite,
 nicht pro 1000!), inkl. bis 10 Treffer; >10 +$0.001/Treffer (max 25). „Treffer" = Snippet, nicht Volltext.
@@ -146,7 +146,7 @@ Das gilt fuer JEDE Engine, nicht nur Firecrawl:
 | Engine | Konstant gleichzeitig | Nachschub-Regel |
 |--------|----------------------|-----------------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | einer fertig → sofort der naechste (nie auf beide warten) |
-| B — OpenRouter (or), Such-Engine `parallel` | **5–7** (Paid = keine harten OR-Limits, nur Cloudflare-DDoS) | einer fertig → sofort der naechste |
+| B — OpenRouter (or), Such-Engine `parallel` | **2** (empirisch 2026-06-21: 7 parallel → kaputte Laeufe durch Last/Provider-Routing-Varianz; 2 laeuft stabil) | einer fertig → sofort der naechste |
 | C — Opus-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
 Beispiel Opus: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,

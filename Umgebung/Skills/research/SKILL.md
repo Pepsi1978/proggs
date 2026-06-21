@@ -101,7 +101,7 @@ konstant so viele gleichzeitig, wie die Engine erlaubt. Kein Wellen-Barrier, kei
 | Engine | Max gleichzeitig | Aufruf |
 |--------|------------------|--------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | `mm-research.py` |
-| B — OpenRouter (or), Such-Engine `parallel` | **5-7** (Paid = keine harten OR-Limits) | `or-research.py … parallel` |
+| B — OpenRouter (or), Such-Engine `parallel` | **2** (empirisch: mehr → kaputte Laeufe durch Last/Provider-Routing; or-research.py hat Retry als Sicherheitsnetz) | `or-research.py … parallel` |
 | C — Opus-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt |
 
 Praktische Umsetzung (Engine A/B = Bash-Skripte, KEIN Opus-Token-Verbrauch fuer die Quellenarbeit):
@@ -175,7 +175,7 @@ Eskalation gemaess Policy-Regel anbieten (Frage 2). Stufen:
 
 ```
 A: MiniMax M3 auf Firecrawl-Quellen (mm)         → Standard, Free-Credits
-B: 1M-Modell + OpenRouter web_search parallel (or) → pay-per-use, mehr Parallelitaet
+B: 1M-Modell + OpenRouter web_search parallel (or) → pay-per-use, max 2 parallel (Last-stabil, Retry)
 C: Opus-Schwarm                                    → teuer, nur bewusst gewaehlt
 ```
 
@@ -208,8 +208,9 @@ zurueckgegebenen Ergebnis.
 ## Engine-Wahl-Spickzettel (Detail in der Policy-Regel)
 
 - **A (Firecrawl+MiniMax):** volle Seiten, tiefe Einzelrecherche; Free-Credits; **nur 2 parallel**.
-- **B (OpenRouter parallel):** Snippets, grosse Schwaerme (5-7), pay-per-use, kein Monatslimit;
-  Such-Engine immer `parallel` (nie `exa`). Eskalations-Modell `z-ai/glm-5.2`.
+- **B (OpenRouter parallel):** Snippets, **max 2 parallel** (Continuous-Spawning mit 2; mehr → kaputte
+  Laeufe durch Last, or-research.py hat Retry), pay-per-use, kein Monatslimit; Such-Engine immer
+  `parallel` (nie `exa`). Modell `minimax/minimax-m3` laeuft bei 2 parallel stabil.
 - **C (Opus-Schwarm):** nur wenn Frank es ausdruecklich waehlt (teuer); 7 parallel, Continuous-Spawning.
 
 ---

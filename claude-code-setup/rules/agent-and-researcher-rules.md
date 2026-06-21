@@ -78,7 +78,7 @@ Start: so viele gleichzeitig wie die Engine erlaubt
 | Engine | Konstant gleichzeitig | Quelle |
 |--------|----------------------|--------|
 | Opus-Schwarm | **7** (5 sicher, 7 ok empirisch, ~12 → Abstuerze) | diese Regel |
-| OpenRouter (`or-research.py`, Such-Engine `parallel`) | **5-7** (Paid = keine harten OR-Limits) | `research-strategy.md` §3a |
+| OpenRouter (`or-research.py`, Such-Engine `parallel`) | **2** (empirisch 2026-06-21: mehr → kaputte Laeufe durch Last/Provider-Routing) | `research-strategy.md` §3a |
 | Firecrawl (`mm-research.py`) | **2** (hartes Free-Limit) | `research-strategy.md` §3 |
 
 Beispiel: laufen 7 und einer kommt zurueck → nur noch 6 → sofort einen neuen starten (wieder 7).
