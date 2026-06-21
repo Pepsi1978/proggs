@@ -120,6 +120,18 @@ function Wait-OverlayIdle {
             return   # Endpoint nicht da -> nicht blockieren
         }
         if (-not $resp.busy) {
+            # Sicherheits-Nachlauf (Frank-Wunsch 2026-06-22): nach dem letzten Busy
+            # noch 5s warten, damit Transkription + Einfuegen + Draft-Speichern
+            # garantiert durch sind, BEVOR gekillt wird. Beginnt in den 5s wieder
+            # eine Aufnahme, wird normal weiter gewartet.
+            Write-Step 'Overlay idle — 5s Sicherheits-Nachlauf, dann Kill...'
+            Start-Sleep -Seconds 5
+            try {
+                if ((Invoke-RestMethod -Uri $url -TimeoutSec 2 -ErrorAction Stop).busy) {
+                    $announced = $false
+                    continue
+                }
+            } catch { }
             if ($announced) { Write-Ok 'Overlay im Ruhezustand — Rebuild wird fortgesetzt.' }
             return
         }

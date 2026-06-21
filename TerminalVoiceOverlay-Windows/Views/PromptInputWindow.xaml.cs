@@ -72,6 +72,10 @@ public partial class PromptInputWindow : Window
 
         InputBox.PreviewKeyDown += InputBox_PreviewKeyDown;
 
+        // Noch nicht abgeschickten Eingabe-Text vom letzten Mal wiederherstellen —
+        // ueberlebt einen TVO-Neustart (Datenverlust-Schutz, siehe SaveDraft/RestoreDraft).
+        RestoreDraft();
+
         // Rechtsklick auf das Window selbst startet einen Drag.
         PreviewMouseRightButtonDown += OnRightDragStart;
         PreviewMouseMove            += OnRightDragMove;
@@ -618,6 +622,12 @@ public partial class PromptInputWindow : Window
     private void InputBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
         var text = InputBox.Text ?? string.Empty;
+
+        // Datenverlust-Schutz: jeden Stand sofort in den Draft spiegeln, damit ein
+        // TVO-Neustart den noch nicht abgeschickten Text nicht verliert. Beim Leeren
+        // (nach dem Abschicken) wird hier "" gespeichert -> Draft leert sich automatisch mit.
+        SaveDraft(text);
+
         if (string.IsNullOrWhiteSpace(text))
         {
             // Kein Text — Vorschau leeren, damit kein veralteter Status stehen bleibt.
@@ -634,6 +644,57 @@ public partial class PromptInputWindow : Window
         const int maxLen = 60;
         string snippet = text.Length > maxLen ? text[..maxLen].TrimEnd() + "…" : text.Replace('\n', ' ');
         PreviewLabel.Text = $"[Pre] {snippet} [Post]";
+    }
+
+    // ── Draft-Persistenz (Datenverlust-Schutz beim TVO-Neustart, 2026-06-22) ──
+    // Der noch nicht abgeschickte Eingabe-Text wird bei jeder Aenderung sofort in
+    // eine kleine Datei gespiegelt und beim Fenster-Start wiederhergestellt. So
+    // ueberlebt ein im Eingabefeld stehender Text einen Overlay-Neustart, auch wenn
+    // er nicht abgeschickt wurde. Best-Effort: Fehler nie auf den UI-Thread werfen.
+    private static string DraftPath =>
+        System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PromptBoard", "input-draft.txt");
+
+    /// <summary>Existiert ein nicht-leerer Draft? (Vom OverlayWindow beim Start genutzt,
+    /// um das Eingabefenster automatisch zu oeffnen und den Text sichtbar zu machen.)</summary>
+    public static bool HasPendingDraft()
+    {
+        try
+        {
+            return System.IO.File.Exists(DraftPath)
+                && !string.IsNullOrEmpty(System.IO.File.ReadAllText(DraftPath, System.Text.Encoding.UTF8));
+        }
+        catch { return false; }
+    }
+
+    private void SaveDraft(string text)
+    {
+        try
+        {
+            string dir = System.IO.Path.GetDirectoryName(DraftPath)!;
+            System.IO.Directory.CreateDirectory(dir);
+            // Atomar: temp schreiben, dann ersetzen — nie eine halbe Datei hinterlassen.
+            string tmp = DraftPath + ".tmp";
+            System.IO.File.WriteAllText(tmp, text ?? string.Empty, System.Text.Encoding.UTF8);
+            System.IO.File.Move(tmp, DraftPath, overwrite: true);
+        }
+        catch { /* Best-Effort — Draft darf den UI-Thread nie blockieren/werfen */ }
+    }
+
+    private void RestoreDraft()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(DraftPath)) return;
+            string saved = System.IO.File.ReadAllText(DraftPath, System.Text.Encoding.UTF8);
+            if (!string.IsNullOrEmpty(saved))
+            {
+                InputBox.Text = saved;
+                InputBox.CaretIndex = InputBox.Text.Length;
+            }
+        }
+        catch { /* ignore */ }
     }
 
     // ── Eingabe-Tasten ────────────────────────────────────────────────────

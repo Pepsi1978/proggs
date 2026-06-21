@@ -238,6 +238,21 @@ public partial class PromptBoardPanel : Window
         UpdateFilterButtonVisual();
         RefreshSyncLabel();
 
+        // Datenverlust-Schutz (2026-06-22): Steht aus der letzten Sitzung noch ein
+        // nicht abgeschickter Eingabe-Text im Draft (z.B. weil das TVO neu gestartet
+        // wurde, waehrend Text im Eingabefeld stand), oeffnen wir das Eingabefenster
+        // beim Start automatisch — sein Konstruktor stellt den Text dann wieder her,
+        // sodass er sichtbar bleibt. Greift nur bei vorhandenem Draft, sonst NoOp.
+        Loaded += (_, _) =>
+        {
+            try
+            {
+                if (PromptInputWindow.HasPendingDraft() && !_inputWindowVisible)
+                    OpenInputWindow();
+            }
+            catch { /* nie den Start blockieren */ }
+        };
+
         // Bei jedem Sichtbarwerden des Panels (Stern-Klick im Voice-Overlay)
         // die aktive Kategorienauswahl resetten, damit der Benutzer immer
         // mit einer leeren Auswahl startet und bewusst eine Kategorie
