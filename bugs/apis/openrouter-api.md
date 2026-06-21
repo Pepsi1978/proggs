@@ -5,6 +5,7 @@
 > Endpoint: `https://openrouter.ai/api/v1`. Zweite Seite: `best-practices/apis/openrouter-api.md`.
 > Stand-Erweiterung 2026-06-17: §G (Claude Code / CLI-Harness-Anbindung) + §H (neuere Features) ergänzt.
 > Stand-Erweiterung 2026-06-18: §I (OpenCode-spezifische Fallen — Franks Umgebung) ergänzt. Gegenstück-BP §16–§19.
+> Stand-Erweiterung 2026-06-21: §41 (MiniMax M3 + `web_search` → leere Antwort / Tool-Call-Leak) — eigener Vorfall bei der Second-Brain-Recherche.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -26,6 +27,7 @@
 | 10 | Caching/Reasoning/neu | Auto-Caching nur Anthropic 1P; `provider.order` killt Sticky-Routing; `reasoning_details` unverändert zurück; `:nitro`≠Latenz | §H |
 | 11 | **OpenCode** ⭐ | Login = `/connect` (kein `opencode auth login`/`OPENROUTER_API_KEY`-Env); `:free`/`:`-IDs crashen + oft kein Tool-Use; Routing pro Modell unter `options.provider` | §I |
 | 12 | **Server-Tools / PDF** ⭐ | 6 Server-Tools (web_search/web_fetch/datetime/image_generation/apply_patch[Responses]/fusion); web_fetch-Engine `openrouter`=gratis; `file-parser`-OCR kostet auch bei BYOK, `native` ohne `annotations`; non-streaming web_search → Keep-Alive bricht JSON (§D9) | §35 |
+| 13 | **MiniMax M3 + `web_search` → leer/Leak** ⭐ | MiniMax M3 NICHT mit server-`web_search` (Tool-Calls leaken als Text in `content`, oder leer/JSON-Fehler — kostet, liefert nichts). Für Websuche: Firecrawl-Weg (`mm-research.py`, Modell wertet nur aus) ODER anderes Modell mit nativem Tool-Calling | §41 |
 
 ---
 
@@ -251,6 +253,12 @@
 - **`file-parser`-Plugin (PDF/Doku) — Fallen:** `plugins:[{"id":"file-parser","pdf":{"engine":...}}]`. Engines: `mistral-ocr` ($2/1000 Seiten, **OCR-Kosten fallen AUCH bei BYOK an** — OR nutzt eigenen Mistral-Key; max 8 Bilder/PDF), `cloudflare-ai` (kostenlos, PDF→Markdown), `native` (als Input-Tokens des Modells, produziert **KEINE** `annotations`), `pdf-text` (deprecated → cloudflare-ai). **Re-Parse-Kosten sparen:** die zurückgegebenen `annotations` (stabiler `file.hash`) im Folge-Request an der vorherigen Assistant-Message mitsenden → OR überspringt das erneute Parsen (auch im Error-Pfad unter `error.metadata.file_annotations`). Datei als `{"type":"file","file":{"filename":..,"file_data":"data:application/pdf;base64,.."}}`; Feldname `file_data` (Python) vs `fileData` (TS-SDK) ist in den Docs inkonsistent.
 - **FIX:** auf `openrouter:web_search`/`web_fetch` umstellen, `max_total_results` als Kosten-Cap; web_fetch-Engine `openrouter` (gratis) für Volltext; Beta → API-Änderungen einplanen. PDF-Pipelines: `annotations` cachen, Engine bewusst wählen (cloudflare-ai gratis vs. mistral-ocr $2/1000 S.).
 - **Quelle:** https://openrouter.ai/docs/guides/features/server-tools · …/server-tools/web-search · …/features/plugins (PDF inputs) · offiziell · verifiziert 2026-06-20 (Firecrawl+MiniMax A + or-research B)
+
+### 41. MiniMax M3 + `openrouter:web_search` → leere Antwort / Tool-Call-Leak im `content` ⭐
+- **Symptom:** Request "erfolgreich" und kostet (z.B. 16 agentische Suchen, ~$0.08), aber `choices[0].message.content` ist (a) **leer**, (b) enthält **rohe Tool-Call-Syntax als Text** (`]<]minimax[>[<invoke name="openrouter_web_search">…`) statt einer Synthese, oder (c) der Lauf scheitert ganz (`JSONDecodeError`). Nur die `annotations`/Web-Quellen sind brauchbar. (Eigener Vorfall 2026-06-21: 7 `or-research.py`-Läufe mit `minimax/minimax-m3` + `engine=parallel` für die Second-Brain-Recherche → 4× Leak, 2× leer, 1× JSON-Fehler; ALLE unbrauchbar. Dieselben Themen über Firecrawl (`mm-research.py`) lieferten sauber.)
+- **Ursache:** MiniMax M3 gibt agentische Tool-Calls als **TEXT** im `content` aus (im `<invoke …>`-Stil) statt über das saubere `tool_calls`-Feld. Mit dem server-seitigen `openrouter:web_search` (das Modell ruft das Tool selbst auf) kollidiert das: OpenRouter führt die Suchen zwar aus, aber die finale Assistant-Message bleibt der geleakte Tool-Call-Text bzw. leer. **Modell-spezifisch** (MiniMax-Tool-Use-Format), nicht OpenRouter-seitig — deshalb auch nicht über `require_parameters`/`order` heilbar.
+- **FIX:** MiniMax M3 NICHT mit dem server-seitigen `web_search`-Tool kombinieren. Stattdessen (a) die Quellen **extern holen (Firecrawl)** und MiniMax NUR auswerten lassen — der `mm-research.py`-Weg, bei dem MiniMax kein Tool selbst aufruft, liefert zuverlässig; ODER (b) für `or-research.py`-Websuche ein Modell mit sauberem **nativem Tool-Calling** wählen (z.B. GLM/Gemini — vor Verankerung testen, „erst testen, dann verankern"). Die Web-Quellen-`annotations` sind auch bei kaputtem `content` weiterverwertbar.
+- **Quelle:** eigener Vorfall 2026-06-21 (`or-research.py`, Second-Brain-Recherche) · verwandt: §9 (SSE-Keep-Alive), §35 (Server-Tools/web_search), §7/§8 (Tool-Calling)
 
 ### 36. OpenRouter hostet NIE lokale Modelle; LM Studio braucht Dummy-`api_key`
 - **Ursache:** OR ist reiner Cloud-Aggregator. „Lokal + OR mischen" braucht Router-Schicht (claude-code-router/LiteLLM) oder base_url-Umschaltung. Das OpenAI-SDK verlangt einen nicht-leeren `api_key`, auch wenn LM Studio (`localhost:1234/v1`) keinen braucht.
