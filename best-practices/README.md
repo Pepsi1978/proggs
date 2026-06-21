@@ -38,6 +38,7 @@ best-practices/
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
 ├── agents/           Boss-/Orchestrator-Agent im Multi-Agenten-System
+├── second-brain/     Selbstgehostetes persönliches Memory-System („zweites Gehirn"/PKM): VPS, Memory-Backends, Datenmodell, Orchestrator+Suche, Schreibpfad, Multi-Client, Sicherheit, Qualität, Referenz-Architekturen
 └── claude-tooling/   Claude-Code-Werkzeuge (Harness) — siehe Doppelnatur unten
 ```
 
@@ -55,6 +56,7 @@ best-practices/
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
 | `agents/` | 1 | Orchestrator-Agent | `bugs/agents/` |
+| `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |
 | `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
 
 ---
