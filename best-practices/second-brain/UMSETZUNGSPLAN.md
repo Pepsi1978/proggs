@@ -61,7 +61,20 @@ ihm NUR die Server-Sicherheit (kein Einbruch). Das aendert die KI-Wahl:
   Cloud-Embedder + Cloud-LLM in Mem0. Braucht einen Cloud-API-Key (OpenAI fuer Embeddings+LLM am
   einfachsten; Anthropic hat keine Embeddings). Kosten: Embeddings winzig, LLM mit harten Caps.
 - **Die Stack-Tabelle oben (BGE-M3 lokal) ist damit UEBERHOLT** — Cloud ist die neue Wahl. `embedding_model_dims`
-  richtet sich dann nach dem Cloud-Modell (z.B. OpenAI text-embedding-3-small = 1536).
+  richtet sich dann nach dem Cloud-Modell.
+
+### ✅ FINALE KI-WAHL (2026-06-22, von Frank bestaetigt)
+**Anbieter: Google Gemini** (EIN Konto, EIN API-Schluessel fuer beide Bausteine; Cloud, da Datenabfluss egal).
+- **LLM (Denken / Fakten-Extraktion / Formulierungs-Veredelung): `gemini-3.1-flash-lite`** — leichte, schnelle,
+  guenstige Flash-Variante; ideal, weil die Fakten-Aufgabe simpel ist. **Spaeter frei wechselbar** (z.B.
+  OpenRouter-Modell wie nemotron/gemma/mimo), ohne die Embeddings anzufassen.
+- **Embeddings (semantische Suche): `gemini-embedding-001`** — mehrsprachig (DE/EN), MTEB-Spitze, flexible
+  Dimensionen (768/1536/3072; Vorschlag 1536). **NICHT spaeter wechseln** (Wechsel = gesamter Bestand neu einbetten).
+- **Schluessel:** Free-Tier bevorzugt (Gemini-API-Key aus Google-Projekt OHNE Billing); sonst Cent-Betraege.
+  Ablage: `.env` auf dem Server (600) + Backup `~/SK/second-brain/`, NIE ins Repo. Harte Ausgaben-Caps setzen.
+- **Beim Einrichten verifizieren:** exakte Modellnamen + Dimensionen an der Live-Doku (Google benennt Modelle
+  oft um; Wissensstand aelter). Mem0-Konfig: `embedder.provider=gemini`, `llm.provider=gemini`,
+  `embedding_model_dims` passend zum Embedding-Modell. Server-Sicherheit ≠ Datenabfluss (Key auf Server ist ok).
 
 ---
 
