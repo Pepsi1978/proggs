@@ -1,6 +1,6 @@
 # Hostinger Second-Brain — Recherche-Rohergebnisse 2026-06-21
 
-> Roh-Output von 10 echt-parallelen `minimax/minimax-m3:online`-Researchern (OpenRouter Go, `:online`-Modus, KEIN engine/tools, RETRIES=1). Test: 10/10 sauber beim Erstversuch. Lossless festgehalten (research-persistence). Synthese in `hostinger-second-brain.md`.
+> Roh-Output von 10 `minimax/minimax-m3:online`-Researchern (OpenRouter Go, `:online`, Such-Engine Parallel.ai). Erster 10x-parallel-Lauf: 9/10 sauber; **Researcher 7 leakte zunaechst** agentische Folge-Tool-Calls (kein Last-Crash, Almanach `bugs/apis/openrouter-api.md` §42) und wurde mit demselben Prompt nachgezogen — jetzt alle 10 echt. Synthese: `hostinger-second-brain.md`, Vergleich: `recherche-engine-vergleich-2026-06-21.md`.
 
 ---
 
@@ -816,39 +816,130 @@ Für ein typisches Second-Brain-VPS (≤ 1 M Notizen, Single-User, sub-100 ms La
 - https://xomnia.com/post/an-introduction-to-vector-databases-for-beginners/
 - https://www.mindstudio.ai/blog/open-brain-open-source-ai-memory-system-sql-embeddings-mcp
 
-## Researcher 7 — Self-hosted Memory-Stacks fuer LLM-Agenten (Mem0, Letta MemGPT, Zep, supermemory self-hosted): welche bieten die besten Such- und Retrieval-Werkzeuge und greifen direkt auf den Speicher zu
+## Researcher 7 — Self-hosted Memory-Stacks fuer LLM-Agenten (Mem0, Letta MemGPT, Zep, supermemory self-hosted): welche bieten die besten Such- und Retrieval-Werkzeuge und greifen direkt auf den Speicher zu *(Re-Run: erster Lauf war ein agentischer Tool-Call-Leak, §42)*
 
-Ich recherchiere das Thema systematisch. Lass mich zunaechst weitere spezifische Quellen zu Such-/Retrieval-Werkzeugen und direktem Speicherzugriff der einzelnen Stacks sammeln.
-{"name": "web_search", "input": {"query": "Mem0 self-hosted search retrieval API direct storage access vector"}}
-{"name": "web_search", "input": {"query": "Letta MemGPT archival memory search tools core memory retrieval API"}}
-{"name": "web_search", "input": {"query": "Zep Graphiti self-hosted search API graph traversal retrieval tools"}}
-{"name": "web_search", "input": {"query": "supermemory self-hosted search retrieval direct storage access"}}
-{"name": "web_search", "input": {"query": "Mem0 search API filters categories tags direct database access"}}
-{"name": "web_search", "input": {"query": "Letta archival memory search query tool passages direct access"}}
-{"name": "web_search", "input": {"query": "Zep search memory filters graph search episode node direct database"}}
-{"name": "web_search", "input": {"query": "supermemory self-hosting Docker retrieval API document search"}}
-{"name": "web_search", "input": {"query": "\"Mem0\" self-hosted Qdrant Postgres storage backend direct access"}}
-{"name": "web_search", "input": {"query": "Letta archival memory tool query_text semantic search passages PostgreSQL"}}
-{"name": "web_search", "input": {"query": "Zep graphiti search episodes entities graphiti_search direct Neo4j FalkorDB"}}
-{"name": "web_search", "input": {"query": "supermemory self-host docker compose search retrieval memory types"}}
+# Self-hosted Memory-Stacks für LLM-Agenten: Suche, Retrieval & direkter Speicherzugriff
 
-### Quellen (16)
-- https://supermemory.ai/blog/best-memory-apis-stateful-ai-agents/
-- https://forum.letta.com/t/agent-memory-solutions-letta-vs-mem0-vs-zep-vs-cognee/85
-- https://vectorize.io/articles/mem0-vs-letta
-- https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks
-- https://medium.com/asymptotic-spaghetti-integration/from-beta-to-battle-tested-picking-between-letta-mem0-zep-for-ai-memory-6850ca8703d1
-- https://mem0.ai/compare/mem0-vs-letta
-- https://evermind.ai/blogs/mem0-alternative
-- https://www.reddit.com/r/LocalLLaMA/comments/1mon8it/woah_letta_vs_mem0_for_ai_memory_nerds/
-- https://www.spheron.network/blog/agent-memory-gpu-cloud-mem0-zep-guide/
-- https://evermind.ai/blogs/zep-alternative
-- https://www.deeplearning.ai/courses/llms-as-operating-systems-agent-memory
-- https://particula.tech/blog/agent-memory-frameworks-tested-mem0-zep-letta-cognee-2026
+## ⚠️ Vorbemerkung zur Quellenlage
+
+Die Frage betrifft vier konkrete Produkte. In den vorliegenden Webquellen ist die Datenlage **nicht für alle vier Produkte gleich vollständig**:
+
+- **Mem0**, **Letta (MemGPT)** und **Zep** sind in mehreren Vergleichsartikeln detailliert beschrieben.
+- Für **supermemory self-hosted** findet sich in den durchsuchten Quellen **keine eindeutige Aussage** zu einer offiziellen Self-Hosted-Option; ein Artikel nennt es "Managed memory and RAG API". Ich gehe darauf am Ende explizit ein.
+
+---
+
+## 1. Mem0 (Selbst gehostet)
+
+**Architektur / Speicher:** Mem0 stellt eine hybride Memory-Schicht bereit mit **User-, Session-, Agent- und Organization-Scopes** sowie **Graph Memory** und Fact-Extraction. ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+
+**Such-/Retrieval-Werkzeuge:**
+- Hybrid Recall (semantisch + strukturierte Faktensuche)
+- Graph Memory für relationale Zusammenhänge
+- API-Zugriff, MCP-kompatibel ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+- Direkter Zugriff auf Vektorspeicher ([shaped.ai](https://www.shaped.ai/blog/the-8-best-tools-for-ai-agent-memory-long-term-recall-2026-guide))
+
+**Self-Hosting:**
+- "Self-hosting: ✅ Simple Docker deployment, Python/JS SDKs" ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+- ⚠️ **Aber:** Ein kritischer Artikel stellt fest: "While the core is Apache 2.0 licensed… Documentation for self-hosting is sparse… getting a reliable self-hosted instance running seems challenging." ([medium.com](https://medium.com/asymptotic-spaghetti-integration/from-beta-to-battle-tested-picking-between-letta-mem0-zep-for-ai-memory-6850ca8703d1))
+
+**Benchmarks (als Indikator für Retrieval-Qualität):**
+- LongMemEval: 94.4 / LoCoMo: 92.5 / BEAM 1M: 64.1 ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+
+---
+
+## 2. Letta (vormals MemGPT)
+
+**Architektur / Speicher:** "Stateful agent runtime with editable memory blocks, backed by Postgres or SQLite. Core memory blocks always sit in the prompt. Archival memory lives in a database." ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+
+**Such-/Retrieval-Werkzeuge:**
+- Der **Agent ruft selbst Tools auf**, um aus Archival Memory zu retrieven ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+- **Kein** automatischer Retrieval im Hintergrund — "Memory blocks are edited manually" ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+- Hintergrund-Agenten ("sleeptime") für Konversationssummary & User-Profil ([forum.letta.com](https://forum.letta.com/t/agent-memory-solutions-letta-vs-mem0-vs-zep-vs-cognee/85))
+- Voller DB-Zugriff, weil Postgres/SQLite direkt genutzt werden ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+
+**Self-Hosting:**
+- Vollständig open source, "You own the runtime" ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+- Funktioniert mit lokalen Modellen (vLLM, Ollama) ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+
+**Trade-off explizit genannt:** "Letta has no temporal supersession. Memory blocks are edited manually." ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e))
+
+---
+
+## 3. Zep
+
+**Architektur / Speicher:** Ursprünglich mit Community Edition (CE) verfügbar; basiert auf Graphiti + externer Graph-Datenbank.
+
+**Self-Hosting — kritischer Befund:**
+- "Self-hosting: ⚠️ CE deprecated, self-hosting requires Graphiti plus external graph database" ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+- "Community Edition existed, now deprecated" ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+
+**Such-/Retrieval-Werkzeuge:**
+- Temporale Konversationssuche ([cognee.ai](https://www.cognee.ai/blog/guides/best-open-source-ai-memory-tools-for-llm-agents-and-developers))
+- "Tighter coupling to specific stacks" — weniger framework-agnostisch ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+
+**Benchmarks (deutlich niedriger als Mem0):**
+- LongMemEval: 71.2 (GPT-4o) / LoCoMo: ~80 ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep))
+
+➡️ **Wichtig:** Ein wirklich *einfaches* Self-Hosting wie bei Mem0/Letta ist bei Zep nach diesen Quellen **nicht mehr direkt möglich**, da die CE eingestellt wurde.
+
+---
+
+## 4. supermemory self-hosted
+
+**Was die Quellen sagen:**
+- Graphlit listet: "Supermemory — Managed memory and RAG API — Best fit: AI apps that need learned user context — Graph memory, user profiles, and hybrid memory/RAG" ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks))
+- In den weiteren Listings erscheint supermemory als managed/cloud-Variante.
+
+**⚠️ Was die Quellen NICHT belegen:**
+- Es findet sich **keine** Quelle, die eine offizielle "self-hosted"-Variante von supermemory mit konkreten Retrieval-/Speicher-Details bestätigt.
+- Die Formulierung "Managed memory and RAG API" ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks)) deutet eher auf ein Cloud-Angebot hin.
+
+Ich erfinde hier nichts — wenn supermemory eine Self-Hosted-Edition hat, ist sie in diesen Quellen **nicht dokumentiert**.
+
+---
+
+## Direkter Vergleich: Wer bietet die besten Such-/Retrieval-Tools mit direktem Speicherzugriff?
+
+| Kriterium | Mem0 (self-hosted) | Letta/MemGPT (self-hosted) | Zep (self-hosted) | supermemory |
+|---|---|---|---|---|
+| Vollwertiges Self-Hosting | ✅ Docker, aber spärliche Docs ([medium.com](https://medium.com/asymptotic-spaghetti-integration/from-beta-to-battle-tested-picking-between-letta-mem0-zep-for-ai-memory-6850ca8703d1)) | ✅ Open Source, eigene Runtime ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e)) | ⚠️ CE deprecated ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)) | ❓ in Quellen nicht belegt ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks)) |
+| Direkter Speicherzugriff | Vektor + Graph Memory ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)) | Postgres/SQLite direkt ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e)) | Graphiti + externe Graph-DB ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)) | Graph memory, hybrid memory/RAG ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks)) |
+| Hybrid-Suche / mehrere Strategien | Hybrid Recall ([shaped.ai](https://www.shaped.ai/blog/the-8-best-tools-for-ai-agent-memory-long-term-recall-2026-guide)) | Tool-basiert, agent-gesteuert ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e)) | Temporale Suche ([cognee.ai](https://www.cognee.ai/blog/guides/best-open-source-ai-memory-tools-for-llm-agents-and-developers)) | Graph + hybrid memory/RAG ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks)) |
+| Retrieval-Benchmark (LongMemEval) | **94.4** ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)) | nicht in Quellen | 71.2 ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)) | nicht in Quellen |
+
+---
+
+## Fazit (quellentreu)
+
+**Wenn die Anforderung "bestes Retrieval + direkter Speicherzugriff + self-hosted" lautet:**
+
+1. **Mem0 self-hosted** — in den vorliegenden Benchmarks mit Abstand bestes Retrieval (LongMemEval 94.4), breites Scope-Modell (User/Agent/Session/Org), Graph + Vektor Memory, MCP-kompatibel. **Aber:** Self-Hosting-Dokumentation gilt als spärlich ([medium.com](https://medium.com/asymptotic-spaghetti-integration/from-beta-to-battle-tested-picking-between-letta-mem0-zep-for-ai-memory-6850ca8703d1)).
+2. **Letta (MemGPT) self-hosted** — am besten für volle Kontrolle über Runtime und Speicher (Postgres/SQLite), agent-getriebenes Retrieval statt automatisierter Hintergrund-Indexierung. Trade-off: manuelles Memory-Editing, kein temporal supersession ([dev.to](https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e)).
+3. **Zep self-hosted** — nach den vorliegenden Quellen **nicht mehr trivial**, da die Community Edition deprecated ist und Graphiti + eigene Graph-DB betrieben werden müssen ([mem0.ai](https://mem0.ai/blog/mem0-vs-zep)).
+4. **supermemory self-hosted** — in den vorliegenden Webquellen **nicht dokumentiert**; Hinweise deuten auf Managed/API-Angebot hin ([graphlit.com](https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks)). Hier wäre eine direkte Prüfung auf der Hersteller-Seite nötig.
+
+### Quellen (20)
 - https://techsy.io/en/blog/best-ai-agent-memory-tools
-- https://evermind.ai/blogs/letta-alternative
-- https://github.com/letta-ai/letta
-- https://www.linkedin.com/posts/wooders_letta-often-gets-compared-to-what-i-would-activity-7298783702459850752-cvGw
+- https://vectorize.io/articles/best-ai-agent-memory-systems
+- https://medium.com/asymptotic-spaghetti-integration/from-beta-to-battle-tested-picking-between-letta-mem0-zep-for-ai-memory-6850ca8703d1
+- https://www.youtube.com/watch?v=VcNGjMZEV7k
+- https://dev.to/jonathanfarrow/the-10-best-ai-memory-layers-for-agents-in-2026-448e
+- https://www.reddit.com/r/LocalLLaMA/comments/1mon8it/woah_letta_vs_mem0_for_ai_memory_nerds/
+- https://vectorize.io/articles/mem0-vs-letta
+- https://medium.com/@jununhsu/6-open-source-ai-memory-tools-to-give-your-agents-long-term-memory-39992e6a3dc6
+- https://medium.com/data-science-collective/the-open-source-agent-toolkit-in-2026-da66dda36c9b
+- https://blog.cloudflare.com/introducing-agent-memory/
+- https://machinelearningmastery.com/the-6-best-ai-agent-memory-frameworks-you-should-try-in-2026/
+- https://forum.letta.com/t/agent-memory-solutions-letta-vs-mem0-vs-zep-vs-cognee/85
+- https://www.shaped.ai/blog/the-8-best-tools-for-ai-agent-memory-long-term-recall-2026-guide
+- https://www.cognee.ai/blog/guides/best-open-source-ai-memory-tools-for-llm-agents-and-developers
+- https://blogs.oracle.com/developers/comparing-file-systems-and-databases-for-effective-ai-agent-memory-management
+- https://evermind.ai/blogs/zep-alternative
+- https://www.graphlit.com/blog/survey-of-ai-agent-memory-frameworks
+- https://mem0.ai/blog/mem0-vs-zep
+- https://particula.tech/blog/agent-memory-frameworks-tested-mem0-zep-letta-cognee-2026
+- https://bloom.powerdrill.ai/pt-BR/blog/best-ai-agent-memory-solutions
 
 ## Researcher 8 — Einen MCP-Server und eine API auf einem VPS von aussen sicher erreichbar machen: Reverse Proxy (Nginx, Caddy), TLS, Authentifizierung, Ports und Absicherung gegen Angriffe
 
