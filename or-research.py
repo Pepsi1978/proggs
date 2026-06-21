@@ -122,6 +122,24 @@ def main():
             cites.append("- " + (u.get("title") or u["url"]) + " — " + u["url"])
 
     sys.stdout.reconfigure(encoding="utf-8")
+    # Leer-/Leak-Detektor (Almanach bugs/apis/openrouter-api.md #41): Nicht tool-stabile Modelle
+    # (z.B. minimax-m3) leaken agentische Tool-Calls als TEXT in content (<invoke …>-Stil) ODER liefern
+    # leer/JSON-kaputt -> der Lauf "gelingt" + kostet, ist aber UNBRAUCHBAR. Solche Laeufe als FEHLER
+    # melden (exit != 0, SystemExit gibt den String aus), die Web-Quellen aber retten (sind brauchbar).
+    # Marker bewusst eng (eindeutige Tool-Call-Leak-Signaturen), damit ein legitimes Code-Beispiel
+    # in einer Recherche-Antwort keinen Fehlalarm ausloest (Fix-Induced-Failure vermeiden):
+    leak_markers = ("<invoke name=", "]<]", "minimax[>", "<tool_call>", "</tool_call>", "antml:invoke")
+    is_leak = any(m in text for m in leak_markers)
+    if not text.strip() or is_leak:
+        if cites:
+            print("=== Web-Quellen (nur Quellen brauchbar; Antworttext defekt) ===\n"
+                  + "\n".join(dict.fromkeys(cites)))
+        grund = "LEERER content" if not text.strip() else "TOOL-CALL-LEAK im content (Modell nicht tool-stabil)"
+        return (f"[or-research FEHLER] {model}: {grund} — Lauf unbrauchbar trotz Kosten. "
+                f"FIX (Almanach bugs/apis/openrouter-api.md #41): fuer Engine-B-Websuche ein tool-stabiles "
+                f"Modell nutzen (z.B. moonshotai/kimi-k2.6, x-ai/grok-4.1-fast oder openrouter/auto), "
+                f"NICHT minimax-m3. Pruefe auch das Workspace-Default-Web-Search-Plugin (Kollision mit "
+                f"dem server-tool). Roh: ~/.or-research/answer.json")
     print(text)
     if cites:
         print("\n=== Web-Quellen ===\n" + "\n".join(dict.fromkeys(cites)))
