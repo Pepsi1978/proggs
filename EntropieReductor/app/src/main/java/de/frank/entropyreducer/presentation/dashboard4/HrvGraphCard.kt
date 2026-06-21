@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
 import java.time.ZoneId
@@ -40,8 +41,10 @@ import java.time.ZoneId
  * - mindestens 3 ms ueber dem Durchschnitt  -> Gruen
  * - innerhalb von +/- 3 ms um den Schnitt   -> Gelb
  * - mehr als 3 ms unter dem Durchschnitt    -> Rot
- * Der grosse Header-Wert wird ebenfalls nach dieser Logik gefaerbt
- * (1:1 wie beim aktuellen Recovery-Wert im Erholungsverlauf).
+ *
+ * Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel):
+ * [CosmosColors.WhoopRecoveryGreen] / [CosmosColors.WhoopRecoveryYellow] /
+ * [CosmosColors.WhoopRecoveryRed].
  */
 @Composable
 internal fun HrvGraphCard(
@@ -75,14 +78,7 @@ internal fun HrvGraphCard(
                 }
                 val headerColor =
                     derived.currentMs?.let { current ->
-                        hrvBarColor(
-                            value = current,
-                            avg = derived.avgAllMs,
-                            okColor = cosmos.ok,
-                            warnColor = cosmos.warn,
-                            critColor = cosmos.crit,
-                            accentColor = accent,
-                        )
+                        hrvBarColor(value = current, avg = derived.avgAllMs, accentColor = accent)
                     } ?: accent
                 Text(
                     text = derived.currentMs?.let { "%.1f".format(it).replace('.', ',') + " ms" } ?: "—",
@@ -196,16 +192,7 @@ private fun HrvBars(values: List<Double>, avg: Double?) {
                             Modifier.weight(1f)
                                 .fillMaxHeight(ratio)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    hrvBarColor(
-                                        value = value,
-                                        avg = avg,
-                                        okColor = cosmos.ok,
-                                        warnColor = cosmos.warn,
-                                        critColor = cosmos.crit,
-                                        accentColor = cosmos.accent,
-                                    )
-                                )
+                                .background(hrvBarColor(value = value, avg = avg, accentColor = cosmos.accent))
                     )
                 }
             }
@@ -216,20 +203,15 @@ private fun HrvBars(values: List<Double>, avg: Double?) {
 private fun hrvBarColor(
     value: Double,
     avg: Double?,
-    okColor: Color,
-    warnColor: Color,
-    critColor: Color,
     accentColor: Color,
 ): Color {
     val avgSafe = avg ?: return accentColor
     // Frank-Wunsch 2026-06-21: Farb-Bereiche relativ zum persoenlichen Durchschnitt.
-    // Gruen = mindestens 3 ms ueber dem Durchschnitt.
-    // Gelb = innerhalb von +/- 3 ms um den Durchschnitt.
-    // Rot = mehr als 3 ms unter dem Durchschnitt.
+    // Farbtöne 1:1 identisch zum Erholungsverlauf (WHOOP-Recovery-Ampel).
     return when {
-        value >= avgSafe + 3.0 -> okColor
-        value <= avgSafe - 3.0 -> critColor
-        else -> warnColor
+        value >= avgSafe + 3.0 -> CosmosColors.WhoopRecoveryGreen
+        value <= avgSafe - 3.0 -> CosmosColors.WhoopRecoveryRed
+        else -> CosmosColors.WhoopRecoveryYellow
     }
 }
 
