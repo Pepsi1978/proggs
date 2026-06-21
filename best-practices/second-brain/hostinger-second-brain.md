@@ -1,6 +1,7 @@
 # Hostinger als Second-Brain-/KI-Agenten-Server — Best Practices
 
-> Synthese aus 10-Researcher-Recherche 2026-06-21 (minimax-m3:online). Roh-/Volltext + alle Quellen: `hostinger-rohergebnisse-2026-06-21.md`. Faktenstand muss vor Kauf auf hostinger.com verifiziert werden (Preise/Specs schwanken zwischen Quellen).
+> Synthese aus DREI Recherche-Engines (2026-06-21), konsolidiert: (1) `:online`-Lauf (minimax-m3:online, 10 Researcher), (2) **Firecrawl + MiniMax M3** (10 Researcher, volle Seiten, aktuellste Produkt-Specs), (3) **Opus-Schwarm** (10 Researcher, tiefste Quellenarbeit — gewann 8/10 Themen). Roh-/Volltexte: `hostinger-rohergebnisse-2026-06-21.md` (:online), `hostinger-firecrawl-rohergebnisse-2026-06-21.md`, `hostinger-opus-rohergebnisse-2026-06-21.md`. Engine-Vergleich: `recherche-engine-vergleich-2026-06-21.md`.
+> **Faktenstand vor Kauf auf hostinger.com live verifizieren** — Preise UND NVMe-Specs schwanken zwischen Quellen und Region (siehe §1, Spec-Widerspruch).
 
 ---
 
@@ -8,269 +9,345 @@
 
 | # | Situation | Sofort-Regel/Fakt |
 |---|-----------|-------------------|
-| 1 | Welcher Hosting-Typ taugt ueberhaupt? | NUR **KVM VPS**. Shared = keine Root-Kontrolle, Cloud = keine belegten Specs, **Dedicated bietet Hostinger gar nicht an**. ([crazyegg.com](https://www.crazyegg.com/blog/hostinger-review/)) |
-| 2 | Lokale grosse LLMs auf Hostinger? | **Nein** — Hostinger hat **keine GPU**. CPU-only. Grosse Modell-Inferenz extern (RunPod/HF/AWS) oder per API. ([fast.io](https://fast.io/resources/best-ai-agent-hosting-platforms/)) |
-| 3 | OS-Template waehlen | **Ubuntu 24.04 clean image**. Das **AI-Assistant-Template (Ollama + Open WebUI) MEIDEN** fuer autonome Agenten — das ist ein Chat-UI-Stack, kein Agent-Stack. ([openclawlaunch.com](https://openclawlaunch.com/guides/hermes-agent-hostinger-vps)) |
-| 4 | OS spaeter wechseln | **OS-Wechsel LOESCHT ALLE DATEN.** OS-Wahl ist eine Festlegung, kein Experiment. ([hostinger.com/uk/tutorials](https://www.hostinger.com/uk/tutorials/getting-started-with-vps-hosting)) |
-| 5 | Welcher KVM-Tier? | **KVM 2 (8 GB) Minimum**, **KVM 4 (16 GB) produktiv**, **KVM 8 (32 GB)** fuer mehrere Instanzen + grosse Memory-DB. ([cybernews.com](https://cybernews.com/vps/best-llm-vps-hosting/)) |
-| 6 | Disk-/CPU-Limits beachten | **300 MB/s I/O-Limit** (alle Tiers) + **shared CPU** (kein dedizierter Kern). Kann bei grossen Vektor-Indizes zum Bottleneck werden. ([hostinger.com/support](https://www.hostinger.com/support/6976044-parameters-and-limits-of-hosting-plans-in-hostinger/)) |
-| 7 | SSH absichern | **SSH-Key in hPanel VOR der Provisionierung** hinzufuegen, **Root-Passwort-Login danach deaktivieren**. ([openclawlaunch.com](https://openclawlaunch.com/guides/hermes-agent-hostinger-vps)) |
-| 8 | API/MCP von aussen erreichbar | **Reverse Proxy (Caddy oder Nginx) + TLS** vorne, Backend nur auf `127.0.0.1:PORT`. Nach aussen nur Port 80/443. ([gelembjuk.com](https://gelembjuk.com/blog/post/securing-remote-mcp-server-ssl-nginx/)) |
-| 9 | Mehrere Dienste parallel | **Ja, eine `compose.yaml`** kombiniert Agent + Memory + Vektor-DB + MCP. Man muss sich NICHT auf ein Tool festlegen. ([docker.com](https://www.docker.com/blog/build-ai-agents-with-docker-compose/)) |
-| 10 | Vektor-DB-Wahl (Second Brain ≤1 Mio Notizen) | **pgvector** (wenn Postgres laeuft) ODER **Qdrant** (max Filter/Hybrid, $30–50/Mo Self-Host). Beide bei <10 Mio Vektoren mehr als ausreichend. ([ranksquire.com](https://ranksquire.com/2026/02/27/best-self-hosted-vector-database-2026/)) |
-| 11 | RAM ist der Hauptfaktor | Fuer Vektor-Index/In-Memory-Suche zaehlt **RAM** am meisten. KVM 4/8 fuer mittlere Indizes, KVM 1/2 nur experimentell. ([cybernews.com](https://cybernews.com/vps/best-llm-vps-hosting/)) |
-| 12 | Kosten-Falle Nr. 1 | **Promo- vs. Renewal-Preis**: nach Erstlaufzeit teils 2–3× teurer. Vor Kauf den Renewal-Preis pruefen. ([checkthat.ai](https://checkthat.ai/brands/hostinger/pricing)) |
-| 13 | Backups | **Verschluesselt, dedupliziert, off-host, Key-getrennt** — eine kompromittierte VPS darf ihren eigenen Recovery-Pfad nicht loeschen koennen. ([webnestify.cloud](https://webnestify.cloud/insights/cybersecurity-hardening/hermes-agent-deployment/)) |
-| 14 | Memory-Sicherheit | **Source-/Provenance-Tag** auf jedem Memory-Eintrag + Audit-Logging (OpenTelemetry). Schuetzt gegen Memory-Poisoning und macht Lecks auffindbar. ([micheallanham.substack.com](https://micheallanham.substack.com/p/mitigating-ai-agent-data-leak-risks)) |
+| 1 | Welcher Hosting-Typ taugt ueberhaupt? | NUR **KVM VPS**. Shared = kein Root, Cloud = nur ~1,5–2 GB RAM/vCPU (statt 4 bei KVM), **kein Dedicated im Portfolio**. ([Opus/Firecrawl 2026-06-21]) |
+| 2 | Lokale grosse LLMs auf Hostinger? | **Nein** — **keine GPU**, CPU-only, max. 32 GB RAM. 7B@Q4 ~4–6 GB, 13B ~16 GB, 70B braucht 48 GB+. Architektur: **Memory-Server lokal + LLM via Cloud-API**. ([Opus R1/R5]) |
+| 3 | **NVMe-Specs sind UMSTRITTEN** (NEU) | Alte 50/100/200/400 GB sind **veraltet** (2025). 2026 widerspruechlich: DE-Seite **30/60/120/240 GB**, US/LLM-Seite **40/80/160/320 GB**. **Vor Kauf die Live-Seite der eigenen Region pruefen.** ([Firecrawl R1/R2]) |
+| 4 | OS-Template waehlen | **Ubuntu 24.04 clean image**. AI-Assistant-/Ollama-Template MEIDEN fuer autonome Agenten (Chat-UI, kein Agent-Stack). ([Opus R4]) |
+| 5 | OS spaeter wechseln | **OS-Wechsel LOESCHT ALLE DATEN.** Festlegung, kein Experiment. Vor Wechsel Backup. |
+| 6 | Welcher KVM-Tier? | **KVM 2 (8 GB)** Start (Memory-/MCP-Server, LLM via API), **KVM 4 (16 GB)** produktiv mit Vektor-DB, **KVM 8 (32 GB)** mehrere Instanzen + grosse Memory-DB. ([Opus R1/R2]) |
+| 7 | Vektor-DB-Wahl (≤1 Mio Notizen) | **pgvector** wenn Postgres schon laeuft (ein System, ACID), sonst **Qdrant** (Apache 2.0, ein Container, ACORN-In-Graph-Filter). Self-Host @1M: Qdrant ~850 QPS/p95 8 ms, Weaviate ~380/18 ms, pgvector ~220/48 ms. ([Opus R6]) |
+| 8 | Memory-Stack-Wahl (NEU) | Staerkste Retrieval-Suche: **Zep/Graphiti** (LongMemEval **63,8%** vs Mem0 49,0%). Einfachster Direktzugriff: **Mem0** `search()`. **Letta erlaubt KEINEN direkten externen Such-Zugriff** (nur Agenten-Tool-Calls) — wichtiges Auswahlkriterium. ([Opus R7]) |
+| 9 | self-hosted Embeddings (NEU) | **BGE-M3 / nomic-embed-text-v1.5** matchen OpenAI text-embedding-3-large auf ~1,5 Punkte bei **~1/40 Kosten** + null Datenabfluss. Quantisierung spart **bis 97% RAM** (Qdrant) bzw. 75% (8-bit). ([Opus R6]) |
+| 10 | MCP von aussen erreichbar | MCP-Spec verlangt **OAuth 2.1 + PKCE(S256) + Resource Indicators (RFC 8707)**, TLS 1.3. Nur Port 443 offen, Backend an `127.0.0.1`. **Caddy** (Auto-TLS) empfohlen. ([Opus R8]) |
+| 11 | Cloudflare Tunnel? (NEU) | **NEIN fuer privates Gehirn** — CF strippt TLS in seinem Netz und **sieht Klartext**. Bei persoenlichen Daten: eigener TLS-Proxy (Caddy) ODER **Pangolin/WireGuard**. ([Opus R8]) |
+| 12 | Mehrere Dienste parallel | **Ja, eine `compose.yaml`.** Pro Service `deploy.resources.limits` + `reservations` (gegen OOM-Killer). Mem0 = 3 Container (Ports 8888/8432/8474). RAM-Faustregel: 8 GB API-LLM, 16 GB+ lokales LLM. ([Opus R9]) |
+| 13 | RAM ist der Hauptfaktor | HNSW-Index lebt im **RAM** (nicht Disk). 1M/384-dim float32 ≈ 1,5 GB; 50M/768-dim grob 150 GB+ → dann Quantisierung/pgvectorscale. Bei RAM-Erschoepfung killt der **OOM-Killer** den hungrigsten Prozess (oft die DB). ([Opus R6/R10]) |
+| 14 | Kosten-Falle #1 | **Promo- vs. Renewal-Preis**: Verlaengerung ~+100% (KVM 8 ~22 €/$26 → ~50). Dauerbetrieb mit Renewal rechnen. Nur 12-/24-Monats-Terms. ([Opus R1]) |
+| 15 | Kosten-Falle #2 (NEU) | **Runaway-Agent-Loop** kostete real **47.000 USD** (264 h). Alerts ≠ Enforcement → harte Caps: 50 $/Tag soft, 100 $/Tag hard, 1000 $/Monat Ceiling. ([Opus R10]) |
+| 16 | Backups | **3-2-1-1-0** (verschluesselt, off-host, **immutable/air-gapped**, **monatlicher Restore-Test**). Kompromittierte VPS darf Recovery-Pfad nicht loeschen koennen. ([Opus R10]) |
+| 17 | Memory-Sicherheit | **Source-/Provenance-Tag** + Audit-Logging (OpenTelemetry) je Eintrag → gegen Memory-Poisoning, macht Lecks auffindbar. Multi-Tenant: RLS/`agent_id`. ([Opus R10/online]) |
 
 ---
 
 ## §1 Plattform-Eignung & Plan-Wahl
 
-**Quellen:** [crazyegg.com](https://www.crazyegg.com/blog/hostinger-review/), [hostinger.com/vps-hosting](https://www.hostinger.com/vps-hosting), [hostinger.com/support — Limits](https://www.hostinger.com/support/6976044-parameters-and-limits-of-hosting-plans-in-hostinger/), [cybernews.com — best LLM VPS](https://cybernews.com/vps/best-llm-vps-hosting/)
+**Quellen (3 Engines):** Opus R1/R2 (hostinger.com/vps-hosting, hostinger.com/vps/llm-hosting, vpsbenchmarks.com), Firecrawl R1/R2 (DE- + US-Produktseiten 2026), :online (crazyegg.com, cybernews.com).
 
-Hostinger (litauischer Anbieter, RZ u.a. in DE/FR/NL/UK/USA/SG) bietet 2026: **Shared/Web Hosting, Managed WordPress, Cloud Hosting, KVM VPS, Reseller/Agency, Website Builder**. **Kein Dedicated Server** (laut Crazy Egg ausdruecklich nicht im Portfolio). Cybernews kuert Hostinger zur **„Editor's #1 choice for KVM VPS"** und **„best overall for LLM hosting"**.
+Hostinger (litauischer Anbieter, RZ in Nordamerika/Europa/Asien/Suedamerika) bietet 2026: **Shared/Web Hosting, Managed Cloud Hosting, KVM VPS, Reseller/Agency, Website Builder**. **Kein Dedicated Server.** Cybernews kuert Hostinger zur „Editor's #1 choice for KVM VPS" und „best overall for LLM hosting".
 
 **Warum nur KVM VPS taugt:**
-- **Shared Hosting** ❌ — Ressourcen-Sharing, keine Root-Kontrolle, kein dauerhafter Memory-Server-Betrieb.
-- **Cloud Hosting** ⚠️ — Mittelweg zwischen Shared und VPS, aber in **keiner Quelle** mit konkreten CPU/RAM/Storage-Specs belegt → Eignung nicht beurteilbar.
-- **KVM VPS** ✅ — isolierte Ressourcen (KVM-Virtualisierung), Root-Zugriff fuer eigenen Stack (Agent-Framework + Vektor-DB), dedizierte IP, woechentliche Backups, Docker-Manager.
-- **Grenzen:** keine GPU (→ keine grosse lokale LLM-Inferenz), keine MicroVM/Firecracker-Sandbox auf App-Ebene (Container teilen den Host-Kernel), keine bare-metal-Isolation. Wer das braucht → spezialisierte Anbieter (Northflank, Modal, RunPod, Vertex AI Agent Builder), **nicht** Hostinger.
+- **Shared Hosting** ❌ — kein Root, kein Docker, kein dauerhafter Daemon-Betrieb.
+- **Cloud Hosting** ⚠️ — jetzt teilbelegt (NEU, Firecrawl R1): „Managed VPS", Pläne Cloud Startup/Professional/Enterprise, **~10,83–12,50 $/vCPU**, aber nur **1,5–2,0 GB RAM/vCPU** (KVM hat 4 GB/vCPU) und **Shared CPU** → fuer einen Memory-/Agenten-Server **schlechteres RAM-Verhaeltnis** und kein Root. Konkrete Plan-Specs weiterhin nicht voll beziffert.
+- **KVM VPS** ✅ — isolierte Ressourcen (KVM, eigener Kernel), **voller Root-Zugang** (Firecrawl R2 bestaetigt woertlich), Docker-Compose-Manager, dedizierte IP, Public API, woechentliche Backups, DDoS-Schutz (Wanguard), Kodee AI Web Terminal.
+- **Grenzen:** keine GPU (→ keine grosse lokale LLM-Inferenz), Container teilen den Host-Kernel (keine MicroVM/bare-metal-Isolation). Wer das braucht → spezialisierte Anbieter (Northflank, Modal, RunPod), **nicht** Hostinger.
 
-**KVM-Spezifikationen (offiziell, linear hochskaliert):**
+### KVM-Spezifikationen 2026 — mit **Spec-Widerspruch** (NEU, vor Kauf live verifizieren!)
 
-| Parameter | KVM 1 | KVM 2 | KVM 4 | KVM 8 |
-|---|---|---|---|---|
-| **vCPU** | 1 | 2 | 4 | 8 |
-| **RAM** | 4 GB | 8 GB | 16 GB | 32 GB |
-| **NVMe** | 50 GB | 100 GB | 200 GB | 400 GB |
-| **Bandbreite** | 4 TB | 8 TB | 16 TB | 32 TB |
-| **I/O-Durchsatz** | 300 MB/s | 300 MB/s | 300 MB/s | 300 MB/s |
-| **CPU-Typ** | shared (Intel Xeon / AMD EPYC, gemischt) | shared | shared | shared |
+**RAM/vCPU/Bandbreite sind in ALLEN Engines identisch** (verlaesslich). **NVMe widerspricht sich** — die alten 50/100/200/400 GB (2025, hostings.info) sind laut Firecrawl **veraltet**:
 
-**LLM-Modellgroessen je Tier** (Cybernews): KVM 1 = 3B-Modelle (Prototyp), KVM 2 = 7–9B quantisiert, KVM 4 = 13–24B, KVM 8 = 24B (mit starker Quantisierung einige 70B-Klasse). Hinweis: gilt fuer CPU-Inferenz — langsam, fuer ein API-basiertes Second Brain meist irrelevant.
+| Plan | vCPU | RAM | NVMe (DE-Seite, Firecrawl Q1) | NVMe (US/LLM-Seite, Firecrawl Q3) | NVMe (alt 2025 — VERALTET) | Bandbreite |
+|---|---|---|---|---|---|---|
+| **KVM 1** | 1 | 4 GB | **30 GB** | **40 GB** | ~~50 GB~~ | 4 TB |
+| **KVM 2** (meistgewaehlt) | 2 | 8 GB | **60 GB** | **80 GB** | ~~100 GB~~ | 8 TB |
+| **KVM 4** | 4 | 16 GB | **120 GB** | **160 GB** | ~~200 GB~~ | 16 TB |
+| **KVM 8** (Top) | 8 | 32 GB | **240 GB** | **320 GB** | ~~400 GB~~ | 32 TB |
 
-**Konkrete Tier-Empfehlung:**
-- **KVM 2 (8 GB, 2 vCPU, 100 GB)** — Minimum: Agent-Runtime + leichtgewichtige Memory-DB. Ein OpenClaw-Agent verbraucht idle 200–400 MB, unter Last 0,5–1 GB → ~7 GB „Luft".
-- **KVM 4 (16 GB, 4 vCPU, 200 GB)** — produktiv: Agent + Vektor-DB mit groesserem Index.
-- **KVM 8 (32 GB)** — mehrere Agent-Instanzen + grosse Memory-DB parallel.
+> **Spec-Konflikt (3 Engines uneinig):** Die deutsche Hostinger-Hauptseite zeigt die kleineren NVMe-Werte (30/60/120/240 GB, EUR-Preise), die englische/LLM-Seite + Blog + vpsbenchmarks die groesseren (40/80/160/320 GB, USD-Preise). Das alte Opus-/`:online`-Bild (50/100/200/400 GB) ist die **2025er-Generation und gilt nicht mehr**. **Vor Kauf NVMe auf der Live-Seite der eigenen Region pruefen** — nur vCPU/RAM/Bandbreite sind sicher.
 
-**Preis-Widerspruch zwischen Quellen (vor Kauf verifizieren!):**
-- Hostinger.com selbst: KVM 1 ab ~$6,49/Mo (Promo) → $19,49 (regulaer); KVM 8 ~$25,99 → $73,99.
-- Checkthat.ai/Crazy Egg (Promo): KVM 1 $4,99, KVM 8 $19,99.
-- VPSBenchmarks (vermutlich Renewal): KVM 1 $19,49, KVM 8 $73,99.
-- comparevps.com: regulaer $9,99–50,99/Mo, Schnitt ~$25/Mo.
-→ Unterschiede = Promo- vs. Renewal-Preis. Nur 12-/24-Monats-Tarife, keine 48-Monats-Option.
+- **Hardware:** AMD EPYC (Benchmark KVM 8 Jan 2026: **EPYC 9354P 32-Core**; CPU-Modell aber **nicht garantiert/standortabhaengig** — auch EPYC 7543P / Xeon Silver 4214 gesehen). NVMe ~3.500 MB/s Lese / ~2.100 MB/s Schreib (>3.000 MiB/s im Benchmark). 1 Gbps Netzwerk (KVM-8-Benchmark-Note Netzwerk = **D**, schwaechste Einzelnote — bei viel gleichzeitigem Traffic beachten). Bei Bandbreiten-Ueberschreitung: Drosselung auf 10 Mbps, keine Overage-Gebuehr.
+
+### Plan-Empfehlung (3 Engines einig)
+- **KVM 2 (8 GB, 2 vCPU)** — Start fuer reinen Memory-/MCP-/API-Server, LLM via Cloud-API (Opus nennt das den dokumentierten Sweet-Spot, ~8,99 $ Aktion).
+- **KVM 4 (16 GB)** — produktiver Sweet-Spot fuer Agenten-Backend + Vektor-DB mit mehreren 100k Eintraegen + Container-Stack.
+- **KVM 8 (32 GB)** — komfortabel fuer groessere Vektor-Indexe, parallele Agenten, mehrere Dienste.
+
+**Preis-Widerspruch (vor Kauf verifizieren):** Aktion KVM 1 ~$6,49 (offiziell) bzw. $4,99 (Promo-Reviews); KVM 8 ~$25,99 → Renewal ~$49,99 (smarthostfinder) bzw. $73,99 (vpsbenchmarks Liste). Ursache = Promo- vs. Renewal-Preis × Laufzeit (24/48 Mon.) × Coupon. **Fuer den Dauerbetrieb den Verlaengerungspreis ansetzen** (z.B. KVM 2 real eher ~$13–18/Mo).
+
+**Skalierung:** Vertikales Upgrade „jederzeit auf hoeheren Plan" (laut Firecrawl Q5 „no downtime, no data migration" — Mechanik mit/ohne Reboot in den Opus-Quellen nicht eindeutig belegt). Kein KVM 3/5/6/7, nur vier Stufen. Downgrade nicht beworben. Kein granulares „RAM/vCPU einzeln dazubuchen", Skalierung ueber KVM 8 hinaus (Cluster/Sharding) nicht dokumentiert.
 
 ---
 
 ## §2 OS & Grund-Setup
 
-**Quellen:** [openclawlaunch.com — Hermes-Guide](https://openclawlaunch.com/guides/hermes-agent-hostinger-vps), [hostaccent.com — Distro-Vergleich](https://www.hostaccent.com/blog/best-linux-distro-for-vps-hosting-2026), [hostinger.com — verfuegbare OS](https://www.hostinger.com/support/1583571-what-are-the-available-operating-systems-for-vps-at-hostinger/), [hostinger.com/uk/tutorials](https://www.hostinger.com/uk/tutorials/getting-started-with-vps-hosting)
+**Quellen:** Opus R4 (Distro-Vergleich, Support-Zeitraeume), :online (openclawlaunch.com — Hermes-Guide), Firecrawl R4.
 
-**Empfehlung (belastbarste Quelle, Hermes-Agent-Guide): Ubuntu 24.04 als Clean-OS-Image.**
-- **AI-Assistant-Template MEIDEN** fuer autonome Agenten: Es kommt mit Ollama + Open WebUI vorinstalliert — nuetzlich fuer ein Chat-UI, „aber nicht nuetzlich, wenn man einen plattformuebergreifenden autonomen Agenten will". Fuer einen Agenten braucht man Docker auf einem sauberen System.
-- **Ubuntu-Vorteil:** breiteste Drittanbieter-Kompatibilitaet — Installer und Control Panels „testen typischerweise zuerst auf Ubuntu". Pfad des geringsten Widerstands fuer neue Agent-/Memory-Frameworks.
-- **Debian-Alternative:** geringerer RAM-Footprint (nur bei knappem RAM 1–2 GB messbar), kein Snap, maximale Stabilitaet — sinnvoll, wenn unerwartetes Verhalten inakzeptabel ist.
-- **AlmaLinux/CentOS:** als CentOS-Nachfolger LTS-faehig, aber **kein Quellenbeleg** fuer einen KI-/Agent-Vorteil.
+**Empfehlung (3 Engines einig): Ubuntu 24.04 als Clean-OS-Image.**
+- **AI-Assistant-/Ollama-Template MEIDEN** fuer autonome Agenten: kommt mit Ollama + Open WebUI (Chat-UI), „aber nicht nuetzlich, wenn man einen plattformuebergreifenden autonomen Agenten will". Fuer einen Agenten braucht man Docker auf sauberem System.
+- **Ubuntu-Vorteil:** breiteste Drittanbieter-Kompatibilitaet — Installer/Panels „testen typischerweise zuerst auf Ubuntu". Pfad des geringsten Widerstands fuer neue Agent-/Memory-Frameworks.
+- **Debian-Alternative:** geringerer RAM-Footprint (nur bei knappem RAM 1–2 GB messbar), kein Snap, maximale Stabilitaet.
+- **Alpine:** minimaler Footprint („every megabyte matters") — aber Aktualitaet von KI-Paketen (Ollama/LLM-Versionen) kann eingeschraenkt sein, ggf. manuell nachziehen (Firecrawl R4).
+- **AlmaLinux/Rocky/CentOS:** LTS-faehig, aber **kein Quellenbeleg** fuer KI-/Agent-Vorteil.
 
-**Verfuegbare Distros bei Hostinger** (Support-Liste + externe Reviews, teils widerspruechlich): Alpine (Standard), CentOS 9/10 Stream, CloudLinux, Debian 11/12/13, Fedora Cloud 42, Kali, openSUSE Leap, Rocky 8/9/10 — plus laut externen Reviews Ubuntu, AlmaLinux, Arch (insgesamt „elf Distributionen", 70+ Templates inkl. Panels/Apps). Image-Kategorien: (1) Operating System = minimal, (2) Control Panel, (3) Application (OS + App), (4) Container (Docker).
+**Verfuegbare Distros bei Hostinger** (teils widerspruechlich): Alpine, CentOS 9/10 Stream, CloudLinux, Debian 11/12/13, Fedora Cloud 42, Kali, openSUSE Leap, Rocky 8/9/10, plus Ubuntu, AlmaLinux, Arch („elf Distributionen", 70+ Templates inkl. Panels/Apps). Image-Kategorien: (1) Operating System (minimal), (2) Control Panel, (3) Application (OS + App), (4) Container (Docker).
 
 **Grund-Setup-Pflicht:**
-- **SSH-Key in hPanel VOR der Provisionierung** hinzufuegen; **Passwort-Login fuer Root danach deaktivieren**.
+- **SSH-Key in hPanel VOR der Provisionierung** hinzufuegen; **Passwort-Login fuer Root danach deaktivieren** (PasswordAuthentication no, Root-Login aus).
 - **OS-Wechsel loescht alle Daten** → OS-Wahl ist eine Festlegung. Vor jedem Wechsel Backup.
 - Update-Befehle: Ubuntu/Debian `apt update && apt upgrade`; AlmaLinux/Rocky/CentOS `dnf update -y`.
+- **Non-root-Betrieb:** Agent NIE als root laufen lassen — dedizierter System-User mit minimalen Rechten (Opus R10).
 
 ---
 
 ## §3 1-Klick-Templates
 
-**Quellen:** [hostinger.com/at/vps](https://www.hostinger.com/at/vps), [hostinger.com/applications/open-webui](https://www.hostinger.com/applications/open-webui), [hostinger.com/applications/agent-zero](https://www.hostinger.com/applications/agent-zero), [hostinger.com/tutorials/n8n-ollama-integration](https://www.hostinger.com/tutorials/n8n-ollama-integration)
+**Quellen:** Opus R3/R5 (Hostinger Application-/VPS-Seiten), Firecrawl R3, :online.
 
 | Anwendung | Als 1-Klick-Template belegt? |
 |---|---|
 | **Docker** | ✅ ja (als „Beliebt" markiert) |
-| **n8n** | ✅ ja |
-| **Open WebUI** | ✅ ja (1-Klick-Docker-Template) |
+| **n8n** | ✅ ja (Hostingers Template **Nr. 1**: >50.000 Installs seit 01/2025, ~800/Mo) |
+| **Open WebUI** | ✅ ja |
 | **Claude Code** | ✅ gelistet auf VPS-Seite |
 | **Codex CLI** | ✅ gelistet auf VPS-Seite |
-| **Agent Zero** | ✅ 1-Klick-Docker-Vorlage |
-| **OpenClaw** | ✅ 1-Klick (€5,49/Mo, Integrationen WhatsApp/Telegram/Slack/Discord) |
-| **Hermes Agent** | ✅ 1-Klick via Docker Manager |
-| **Ollama** | ⚠️ NICHT als eigenes 1-Klick-Template — nur ueber Docker-Tutorial |
-| **Coolify** | ❌ nicht belegt (nur in gesponsertem Drittvideo) |
-| **CapRover** | ❌ in keiner Quelle erwaehnt |
-| **eigenes Ollama-Template** | ❌ nicht belegt |
+| **MCP** | ✅ gelistet (Firecrawl R3) |
+| **Agent Zero** | ✅ 1-Klick-Docker-Vorlage (~1 GB RAM Min.) |
+| **OpenClaw** | ✅ 1-Klick (+ „Managed OpenClaw"), Multi-Channel (WhatsApp/Telegram/Slack/Discord/Signal/iMessage/Teams) |
+| **Hermes Agent / Hermes Workspace** | ✅ 1-Klick (Web-UI: Chat, Memory, 100+ Skills, Terminal, Conductor fuer Sub-Agenten) |
+| **AnythingLLM, OpenHuman, Hollama** | ✅ gelistet |
+| **Ollama** | ⚠️ als App-Template gelistet, aber kein eigenstaendiger Agent-Stack |
+| **Coolify / CapRover** | ❌ nicht belegt (Firecrawl: zu CapRover „keine belastbare Aussage") |
 
-**Mehrere gleichzeitig:** Quellen beschreiben **nicht** das parallele Auswaehlen mehrerer Templates bei der Ersteinrichtung, sondern das Muster **„ein Template installieren → weitere Apps manuell ergaenzen"** (z.B. n8n + Ollama im selben Docker-Container).
+**Mehrere gleichzeitig:** Zwei Ebenen (Opus R3) — **Ebene A = OS-Template (genau EINS pro VPS)**, **Ebene B = Docker-Katalog-Apps (VIELE gleichzeitig)**. Man installiert EIN OS-/Container-Template und ergaenzt weitere Apps manuell via Docker (z.B. n8n + Ollama im selben Stack).
 
-**Template wechseln:** Es gibt einen eigenen Support-Artikel dafuer, ist aber im Kern eine **Neuinstallation des OS** → typischerweise destruktiv (Daten weg). Vor Wechsel verifizieren/Backup.
+**Template wechseln:** im Kern eine **Neuinstallation des OS** → typischerweise destruktiv (Daten weg). Vor Wechsel Backup. (Nicht-destruktiver Wechsel in keiner Quelle belegt.)
+
+**1-Klick vs. normaler VPS:** **1-Klick spart Zeit, nicht Geld** — laeuft auf denselben KVM-Plaenen. Normaler VPS = volle Kontrolle (eigenes DB-Tuning, Reverse-Proxy, Backups), Setup/Updates/Sicherheit selbst.
 
 ---
 
 ## §4 KI-Agent-Frameworks
 
-**Quellen:** [hostinger.com/openclaw](https://www.hostinger.com/openclaw), [hostinger.com/tutorials/hermes-agent-vs-openclaw](https://www.hostinger.com/ph/tutorials/hermes-agent-vs-openclaw), [mindstudio.ai](https://www.mindstudio.ai/blog/hermes-agent-vs-openclaw-self-hosted-ai-agent-comparison), [openclawlaunch.com](https://openclawlaunch.com/hermes-alternatives)
+**Quellen:** Opus R5 (Hostinger-App-Seiten, Letta/RamNode-Docs, Canadian Web Hosting), :online, Firecrawl R5.
 
-**1-Klick bei Hostinger verfuegbar:** OpenClaw, Hermes Agent, Agent Zero (alle ueber Docker Application Catalog — App auswaehlen, Umgebungsvariablen/API-Keys eintragen, deployen).
+**Kernbefund (NEU, Opus R5):** Ein **normaler KVM-VPS + Docker reicht fuer ALLE gaengigen Frameworks** (Hermes, OpenClaw, Letta, CrewAI, AutoGPT, Agent Zero). 1-Klick ist reiner Komfort, kein technisches Muss. **Das Framework selbst ist leicht (1–4 GB RAM)** — die 16–32 GB/GPU braucht man NUR bei lokalem LLM, nicht fuers Agenten-Framework.
 
-- **Hermes Agent:** Software frei (MIT-Lizenz), Betrieb $5–80/Mo je nach Modell. Unterstuetzt **OpenAI Codex OAuth** → bestehendes ChatGPT-Abo nutzbar statt separater API-Rechnung. Setup ~30 Min. Pro Agent eigene `.env`, eigene Keys, eigener Speicher (Credentials nicht geteilt); Secrets via `hermes config set GITHUB_TOKEN [token]`.
-- **OpenClaw:** 1-Klick €5,49/Mo, Multi-Channel (Telegram, Discord, WhatsApp, WeChat, Web). Community-Hinweis: Konfigurationsprobleme beim Modellwechsel und bei Telegram-Integration berichtet.
+| Framework | RAM-Min | Praktisch | Hostinger 1-Klick? | Hinweis |
+|-----------|---------|-----------|--------------------|---------|
+| **Hermes Agent** | ~4 GB | 8 GB (KVM 2) | **Ja** | MIT-Lizenz frei; **OpenAI Codex OAuth** → ChatGPT-Abo nutzbar statt API-Rechnung. Pro Agent eigene `.env`/Keys. |
+| **OpenClaw** | 4 GB (Test 2 vCPU/4 GB) | 8 GB / 4 vCPU (Prod) | **Ja** (+Managed) | KVM Pflicht (Docker); Modellwechsel/Telegram-Konfig teils fehleranfaellig (Community). |
+| **Letta** (Second-Brain-relevant) | 2 GB | 4 GB+ (skaliert mit Memory) | Nein (Docker selbst) | **Technisch am besten passend** fuers Memory: gebuendeltes Postgres + pgvector, stateful, Port **8283**, Bearer-Token-Auth, pg_dump-Backups. DB waechst +50–200 MB/Monat/Agent. Erste Alembic-Migration auf 2-GB-VPS dauert 2–3 Min (kein Haenger — abwarten). |
+| **CrewAI** | ~1 GB | 4 GB | Nein | Standard-VPS via Docker/pip. |
+| **AutoGPT** | ~2 GB | 4 GB | Nein | `docker compose up`, externer API-Key noetig. |
+| **Agent Zero** | ~1 GB | 4 GB | **Ja** | — |
 
-**Selbst aufsetzen (kein Hostinger-1-Klick belegt):** Letta, CrewAI, AutoGPT — in den Quellen keine Hostinger-spezifische 1-Klick-Loesung. Plausibel via Docker auf normalem VPS, aber **nicht quellenbelegt**.
-
-**1-Klick vs. normaler VPS:** 1-Klick uebernimmt Infrastruktur, haelt die Instanz auf der aktuellen stabilen Version und fuegt Sicherheits-Layer hinzu. Normaler VPS = volle Kontrolle, aber Setup/Updates/Sicherheit in Eigenverantwortung.
+**Empfehlung:** Fuer ein reines Second Brain (Memory + LLM via Cloud-API) ist **KVM 2 (8 GB)** der Sweet-Spot. Fuer persistente Memory ist **Letta** technisch am passendsten (Postgres+pgvector, stateful), erfordert aber manuelles Docker-Compose. RAM-Reserve fuer Memory-Wachstum einplanen. Agenten immer in Docker isolieren, Netzwerk einschraenken, **nie Root geben**.
 
 ---
 
 ## §5 Second-Brain/Memory selbst bauen (Vektor-DBs)
 
-**Quellen:** [ranksquire.com](https://ranksquire.com/2026/02/27/best-self-hosted-vector-database-2026/), [medium.com/@alxkm](https://medium.com/@alxkm/vector-databases-explained-the-missing-piece-in-your-ai-stack-ddc25be57232), [digitalapplied.com](https://www.digitalapplied.com/blog/vector-databases-for-ai-agents-pinecone-qdrant-2026), [abhid.substack.com](https://abhid.substack.com/p/i-built-an-ai-powered-second-brain)
+**Quellen:** Opus R6 (Encore, Kalvium Labs, Tiger Data, Vectorize, Zylos), Firecrawl R6, :online.
 
-**Anforderungsprofil Second Brain:** typisch 10k–1 Mio. Notizen → <10 Mio. Vektoren, read-heavy, sub-100ms Latenz im Single-User-Betrieb. Bei <10 Mio. Vektoren sind **alle vier Kandidaten ausreichend** — Self-Host schliesst managed SaaS (Pinecone) praktisch aus.
+**Anforderungsprofil Second Brain:** 10k–1 Mio. Notizen → <10 Mio. Vektoren, read-heavy, Single-User, sub-100 ms. Bei <10 Mio. sind **alle vier Kandidaten ausreichend** — Self-Host schliesst managed SaaS (Pinecone) aus.
 
-| DB | Staerken | Schwaechen / Hinweise | Self-Host-Kosten |
-|----|----------|-----------------------|------------------|
-| **pgvector** | Ein System (ein Backup, ein Monitoring), ACID/Transaktionen mit Metadaten, HNSW+IVF, real erprobtes Second-Brain-Beispiel. 470 qps @ 99% Recall auf 50 Mio Vektoren | Bei sehr hoher Concurrency bis 10× weniger QPS als Milvus | $0 (wenn Postgres laeuft) |
-| **Qdrant** | Rust, Latenz-Edge unter OSS, Filter waehrend (nicht nach) der Suche, dense+sparse+Metadaten in einer Query | — | $30–50/Mo (1 Mio Vektoren) |
-| **Weaviate** | Modulare Architektur (Embedding-Module OpenAI/Cohere/HF einsteckbar), natives Hybrid (BM25+Vector), exzellente Doku | „Performance gut, aber nicht die absolut beste fuer reine Vektor-Ops" | RAM-abhaengig (nicht beziffert) |
-| **Milvus** | Skaliert auf >1 Mrd Vektoren, write-heavy stark, breite Index-Unterstuetzung | Praxisstimme: „over complicated"; mehr Ops-Aufwand (Distributed/K8s) | „similar" zu Qdrant, hoeherer Aufwand |
+### Self-Host-Vergleich mit konkreten Zahlen (NEU — Opus R6)
 
-**Eignungs-Baender:** <10 Mio = alle vier; 10 Mio–1 Mrd = Qdrant/Weaviate/Milvus self-host; >1 Mrd = Milvus distributed.
+| DB | Lizenz | RAM @1M | QPS / p95 @1M (768-dim, HNSW) | Filterung | Hybrid | Komplexitaet |
+|----|--------|---------|-------------------------------|-----------|--------|--------------|
+| **pgvector** | Postgres (permissiv) | ~1,4 GB | **~220 QPS / p95 ~48 ms** (4 Worker: ~360/~58 ms) | Post-Filter | via `pg_bm25` | **Niedrig** (in bestehendem Postgres) |
+| **Qdrant** | **Apache 2.0** | ~1,4 GB | **~850 QPS / p95 ~8 ms** | **In-Graph (ACORN)** | **Nativ** (dense+sparse) | **Niedrig** (1 Container) |
+| **Weaviate** | **BSD-3** | ~2,1 GB | **~380 QPS / p95 ~18 ms** | Payload-indiziert | **Nativ** (+ eingebaute Vectorizer OpenAI/Cohere/HF) | Mittel (Schema vorab) |
+| **Milvus** | **Apache 2.0** | hoeher | — (skaliert >1 Mrd) | mehrere Indizes | nativ | **Hoch** (etcd + Object-Store + Queue) |
 
-**Architektur-Schnellauswahl:** Hybrid (Vector+Keyword+Filter) → Weaviate/Qdrant; Write-heavy → Milvus/Qdrant; Read-heavy → pgvector; ACID → pgvector/evtl. Weaviate.
+- **pgvector-Skalierungsfalle:** oberhalb **5–10M Vektoren** spuerbar langsamer (HNSW-Index muss in RAM passen); ab ~2M Index-Build > 20 Min. Abhilfe: **pgvectorscale** (471 QPS @99% Recall auf 50M, 11,4× Qdrants 41 QPS bei dieser Skala). Bei 50M/768-dim grob **150 GB+ RAM**.
+- **Qdrant:** ACORN-Filter laufen IM HNSW-Traversal (gefilterte Queries bleiben schnell, selbst wenn der Filter 99% eliminiert). **Quantisierung reduziert RAM um bis zu 97%** → laeuft mit Millionen Vektoren auf 4-GB-Instanz; 100k Vektoren sogar auf 512 MB–1 GB.
+- **Benchmark-Vorsicht:** QPS-Zahlen verschiedener Blogs sind NICHT 1:1 vergleichbar (1M: Qdrant ~850 vs pgvector ~220; 50M: pgvectorscale 471 vs Qdrant 41) — Skala/Hardware/Index unterschiedlich. Kein echter Widerspruch, sondern skalenabhaengig.
 
-**Embeddings (duenne Quellenlage):** Open-Stack-Empfehlung Qwen (Embeddings/multilingual), Gemma 4 (kleine effiziente Modelle), Llama 4 Scout/Maverick. Distanzmetriken: Cosine/Euclidean/Manhattan. **Luecke:** kein Quellen-Vergleich konkreter Embedding-Modelle (bge-m3, nomic-embed, arctic-embed, mxbai) oder Dimensions-Empfehlungen.
+**Empfehlung (3 Engines einig):** **„pgvector wenn du schon Postgres hast, Qdrant wenn nicht"** (Encore). pgvector = Unified Store (Vektoren + SQL-Metadaten + Volltext, ein Backup, ACID); Qdrant = dediziert, schlank, beste Filtered-Search, ein Container.
 
-**Minimal-Architektur (synthetisiert):** Markdown/Web/PDF → Ingestion-Skript (Cron/manuell, Chunking + Embedding + Metadaten) → Vektor-DB → Query-Pipeline (optional Hybrid-Retrieval, Pre-/Post-Filter, Reranker) → LLM (lokal Ollama/llama.cpp oder API) → Antwort + Quellen → UI. Die einzige in den Quellen **konkret durchgebaute** Variante nutzt **pgvector**.
+### Embeddings (NEU — Opus R6, vorher reine Luecke)
 
-**Empfehlung Second Brain (≤1 Mio Notizen, Single-User):** **pgvector** wenn Postgres ohnehin laeuft (ein System, ACID, kostenlos), sonst **Qdrant** fuer maximale Filter-/Hybrid-Power auf kleinem VPS.
+| Modell | Typ | RAG-Genauigkeit | Dim | Kosten | Besonderheit |
+|--------|-----|-----------------|-----|--------|--------------|
+| OpenAI text-embedding-3-large | API | **80,5%** | bis 3072 (Matryoshka) | $0,13/1M Tok | beste Qualitaet, Daten verlassen den Server |
+| OpenAI text-embedding-3-small | API | 75,8% | bis 1536 | ~$0,02–0,03/1M | bestes API-Preis/Qualitaet |
+| **BGE-large-en-v1.5** | lokal | 71,5% | 1024 | nur Compute | null Datenabfluss |
+| **nomic-embed-text-v1.5** | lokal | 71,0% | bis 768 | nur Compute | **8192-Token-Kontext** (lange Notizen) |
+| **BGE-M3** | lokal | (empfohlen) | — | nur Compute | fuer Datensouveraenitaet |
+
+- **Kern-Fakt:** BGE-large / nomic-embed matchen OpenAI text-embedding-3-large **innerhalb 1,5 Punkten bei ~1/40 der Kosten und null Datenabfluss** → fuer ein privates Gehirn ist self-hosted die Default-Wahl.
+- **Matryoshka-Embeddings** (OpenAI/Nomic): Dimensionen gegen Speicher tauschen OHNE Re-Embedding (z.B. 1536 erzeugen, bei Speichernot auf 768 kuerzen).
+- **Faustregel Dim:** 768–1536 reicht fuer die meisten Faelle.
+- **Quantisierung:** 32→8-bit spart ~75% Speicher bei minimalem Recall-Verlust (Firecrawl R6).
+
+### Retrieval-Architektur (NEU — Opus R6)
+- **Fact-Level-Chunking verdoppelt die Retrieval-Qualitaet** gegenueber Session-Level → einzelne Fakten als eigene Einheiten speichern, nicht ganze Gespraeche. „Chunking + Embedding-Qualitaet sind entscheidender als die DB-Wahl."
+- **Hybrid (BM25 + dense Vektor) schlaegt reine Vektorsuche**, optional + Graph-Layer (Graphiti-Muster), danach **Reranking**. Ziel: **P95 ~300 ms ohne LLM-Call zur Query-Zeit**.
+- **Daten als „chunks + provenance" modellieren** (immutable chunk IDs, Quell-Doc-Version, Offsets, Pipeline-Version) → erleichtert Re-Chunking/Re-Embedding.
+- **Trend Unified Storage:** PostgreSQL + pgvector fuer Vektorsuche + Standard-SQL — eine DB fuer Vektoren, Metadaten, Volltext.
+
+**Minimal-Architektur:** Markdown/Web/PDF → Ingestion (Chunking Fact-Level + Embedding self-hosted + Provenance-Metadaten) → Vektor-DB (pgvector/Qdrant) → Hybrid-Retrieval + Reranking → LLM (Cloud-API) → Antwort + Quellen → UI.
 
 ---
 
 ## §6 Self-hosted Memory-Stacks (fertige Layer)
 
-**Quellen:** [mem0.ai/blog/self-host-mem0-docker](https://mem0.ai/blog/self-host-mem0-docker), [github.com/letta-ai/letta](https://github.com/letta-ai/letta), [valkey.io](https://valkey.io/blog/ai-agent-memory-with-valkey-and-mem0/), [redis.io](https://redis.io/blog/build-smarter-ai-agents-manage-short-term-and-long-term-memory-with-redis/), [supermemory.ai](https://supermemory.ai/blog/best-memory-apis-stateful-ai-agents/)
+**Quellen (NEU, jetzt voll ausgewertet — Opus R7: particula, atlan, vectorize, supermemory-Docs):** Im `:online`-Lauf blieb dieser Researcher unausgewertet — der Opus-Schwarm hat die Substanz geliefert.
 
-> **Wichtige Einschraenkung:** Researcher 7 (gezielt zu Such-/Retrieval-Werkzeugen von Mem0/Letta/Zep/supermemory) lieferte **keine ausgewertete Substanz** — nur eine Liste von 16 Quellen, die Web-Searches blieben unausgewertet. Die folgenden Punkte stammen aus anderen Researchern (6, 9, 10) und sind entsprechend duenn.
+### Vergleichsmatrix Such-/Retrieval-Faehigkeiten (NEU)
 
-- **Mem0:** komplette Self-Host-Compose-Anleitung (API + Postgres+pgvector + Neo4j). Empfiehlt Start mit kleiner Instanz (t3.medium, 4 GB RAM). Memory-Layer kann Token-Kosten „um bis zu 90% senken". Sechs Spar-Techniken mit Kennzahlen (Importance-Based Eviction mit Ebbinghaus-Decay −59%, Token Budgeting −75%, Hierarchical Summarization −59%).
-- **Letta/MemGPT:** Open Source (GitHub), tiered Memory (Core + Archival), als Memory-Framework etabliert — aber **keine ausgewerteten Retrieval-Details** in dieser Recherche.
-- **Zep:** in der Recherche nur als Quellenname (Graphiti/Graph-Memory) — **nicht ausgewertet**.
-- **supermemory:** nur als Quellenname — **nicht ausgewertet**.
-- **Redis / Valkey Agent Memory Server:** Open-Source-Container mit REST + MCP, Vektor-Suche, In-Memory-Storage, flexible Datenstrukturen, Eviction-Policies — laeuft per MCP neben Agents.
-- **Engram:** Memory-Server mit lokalen Embeddings (MiniLM 384-dim, in-process, kein API-Key).
+| Stack | Hybrid-Suche | Graph | Temporal | Reranking | **Direkter externer Such-Zugriff** | OSS | LongMemEval | Lizenz/Sterne |
+|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **Mem0** | ✅ (V+G+KV) | ✅ (Pro) | ❌ | k.A. | ✅ `search()` | ✅ | 49,0 % | Apache 2.0 / ~47–48K |
+| **Letta** | teils | ✅ (Free) | ✅ | k.A. | **❌ nur Agenten-Tool-Calls** | ✅ | n/a | Apache 2.0 / ~13K |
+| **Zep/Graphiti** | ✅ (Embed+BM25+Graph) | ✅ | ✅ | implizit (kein LLM @query) | ✅ Graph-Query | ⚠️ (Feature-Luecke) | **63,8 %** | OSS / ~5K |
+| **supermemory** | ✅ (Sem+BM25+Graph+temporal) | ✅ | ✅ | ✅ Cross-Encoder | ✅ `/v4/search` | ⚠️ widerspruechlich | self-reported | **unklar (s.u.)** |
+| **Cognee** | ✅ | ✅ (Neo4j/Falkor/Kuzu) | teils | k.A. | ✅ `.search()` | ✅ (100% lokal) | k.A. | OSS / ~7K |
 
-**→ Architektur-Entscheidung offen:** fertiger Memory-Layer (Mem0/Letta/Redis) vs. selbst gebaute Vektor-DB-Pipeline (§5). Wegen duenner Quellenlage vor Festlegung gezielt nachrecherchieren (siehe §11).
+**Die wichtigsten Auswahlkriterien (NEU):**
+- **Staerkste Retrieval-Suche:** **Zep/Graphiti** — Hybrid (Embeddings + BM25 + Graph) + temporaler Wissensgraph („was ist jetzt wahr / was war im Maerz wahr?"), **kein LLM zur Query-Zeit**, P95 ~300 ms. **LongMemEval 63,8 % vs Mem0 49,0 %** — also +15 Punkte, NICHT die Marketing-94,4 %. Preis: hoeherer Self-Hosting-Aufwand, Graphiti-OSS ≠ Feature-Paritaet mit Zep Cloud.
+- **Einfachster Direktzugriff:** **Mem0** — `add()`/`search()`, Apache 2.0, voll self-hostbar (3 Container, s. §8). Schwaeche: **kein temporales Fact-Modeling** (Fakten werden ueberschrieben statt versioniert → „Was war wann wahr?" schlaegt fehl).
+- **⚠️ Letta erlaubt KEINEN direkten externen Such-Zugriff** — Retrieval laeuft NUR ueber Tool-Calls des Agenten (Core/Recall/Archival). **Wichtiges Auswahlkriterium:** Wenn mehrere Clients (CLIs, Auto-Sprach-App) direkt suchend zugreifen sollen, ist Letta die falsche Wahl. Letta ist stark, wenn der **Agent selbst** seinen Speicher steuert.
+- **supermemory:** fertige `/v4/search` (Hybrid + Cross-Encoder-Reranking, lokale Embeddings, MCP fuer Claude Code/OpenCode, `localhost:6767`), sub-300 ms. **ABER kritischer Lizenz-Widerspruch:** offizielle Docs/atlan nennen es „open source"; ein Such-Snippet behauptet, das **Backend sei closed-source** (oeffentliches Repo nur Frontend+SDK, offizielles Self-Hosting enterprise-only) — es gibt eine MIT-Dritt-Reimplementierung (`s11ngh/supermemory-selfhosted`, Postgres+pgvector). **Vor produktiver Nutzung am offiziellen Repo verifizieren** — nicht abschliessend geklaert.
+- **Cognee:** Poly-Store (Vektor + austauschbare Graph-DBs), 100% lokal, OSS. Schwaeche: kein Managed Cloud, keine SOC2/HIPAA.
+
+**Empfehlung:** Fuer einen Second-Brain-Server mit **direktem Such-Zugriff mehrerer Clients** und sauber OSS: **Mem0** (einfachster Direktzugriff, Apache 2.0) oder **Zep/Graphiti** (staerkste Suche, dafuer mehr Ops). **supermemory nur**, wenn der OSS-/Self-Hosting-Status am offiziellen Repo bestaetigt ist. **Letta** nur, wenn der Agent selbst sein Memory verwaltet.
 
 ---
 
 ## §7 MCP-Server & API von aussen sicher erreichbar
 
-**Quellen:** [gelembjuk.com](https://gelembjuk.com/blog/post/securing-remote-mcp-server-ssl-nginx/), [fast.io/resources/mcp-server-proxy](https://fast.io/resources/mcp-server-proxy/), [medium.com/@richardhightower](https://medium.com/@richardhightower/securing-mcp-from-vulnerable-to-fortified-building-secure-http-based-ai-integrations-b706b0281e73), [insightfinder.com](https://insightfinder.com/blog/mcp-server-security-guide/)
+**Quellen (NEU, tief — Opus R8):** modelcontextprotocol.io, systemprompt.io, Obsidian Security, mangohost/onidel (Caddy vs Nginx), vps.do (UFW/Fail2Ban). Plus :online (gelembjuk.com).
 
-**Grundarchitektur:** Reverse Proxy vorne, MCP-Server/API hinten auf lokalem Port, **TLS-Termination am Proxy**. TLS NICHT direkt im FastMCP/Uvicorn-Server implementieren. „Front-Door"-Schichten: outer firewall → auth/rate-limiting → HTTPS → Reverse Proxy → Monitoring.
+**Grundarchitektur:** App-Prozesse (MCP-Server, API) lauschen NUR auf `127.0.0.1`; davor ein Reverse Proxy als einziger offener Port **443 (HTTPS, TLS-Termination am Proxy)**.
+```
+Internet ──443/TLS──> Reverse Proxy (Caddy/Nginx) ──localhost──> MCP-Server (:3000)
+                                                  └─localhost──> API (:8080)
+```
 
-**Caddy vs. Nginx:**
+**MCP-Spec-Pflichten (NEU — verbindlich):**
+- **TLS 1.3** fuer alles ausser Localhost; Forward-Secrecy-Ciphers (`TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256`); HSTS auf allen Responses.
+- **OAuth 2.1 + PKCE (RFC 7636, S256 Pflicht ab MCP-Spec 11/2025)** fuer HTTP-Transports. MCP-Server = OAuth Resource Server.
+- **Resource Indicators (RFC 8707):** Client gibt Ziel-MCP-URL als `resource`-Parameter → **audience-gebundenes** Token, das nicht gegen einen anderen MCP-Server abgespielt werden kann.
+- **`.well-known`-Endpoints:** `/.well-known/oauth-protected-resource` + `/.well-known/oauth-authorization-server`, Pflichtfeld `code_challenge_methods_supported: ["S256"]`.
+- **Token-Lifecycle:** kurze Expiry (~1 h), Refresh-Rotation mit Reuse-Detection, `/oauth/revoke`.
+
+**Reverse Proxy — Caddy vs Nginx (NEU, mit Zahlen):**
 
 | Kriterium | Caddy | Nginx |
 |---|---|---|
-| TLS automatisch | ✅ Standard (ACME + Rotation) | ❌ Certbot noetig |
-| Konfiguration | sehr kompakt | granular |
-| Streaming/MCP | Defaults passen | mehr Kontrolle |
+| Auto-TLS / Renewal | **Ja, eingebaut** (Let's Encrypt, OCSP, Wildcards) | Nein — Certbot + Cron noetig |
+| Config-Aufwand | 1–2 Zeilen/Site | mehrzeilig |
+| Idle-RAM | 15–25 MB | **2–8 MB** |
+| grosse Files/Streaming | langsamer | **17% schneller, 38% weniger RAM** |
+| HTTP/3 (QUIC) | nativ, Caddy vorne | vorhanden |
 
-→ **Caddy fuer Einfachheit** (TLS out-of-the-box), **Nginx fuer bestehende Infrastruktur / feines Traffic-Management**.
-
-Caddy-Minimalbeispiel:
+→ **Caddy als Default** (Second-Brain-Last ist gering, Auto-TLS spart Wartung). Caddyfile-Minimal:
+```caddyfile
+api.second-brain.example { reverse_proxy 127.0.0.1:8080 }
 ```
-example.com {
-    reverse_proxy localhost:8000
-}
-```
+> **Falle:** Caddy `rate_limit` ist KEIN Core-Modul → braucht Community-Plugin via `xcaddy` (leicht zu uebersehen).
 
-**Authentifizierung:**
-- Caddy `basic_auth` direkt im Caddyfile (einfach).
-- OAuth/JWT-Pattern (typisch fuer MCP): OAuth-Server stellt JWT aus, Proxy terminiert TLS, MCP-Server verifiziert JWT-Signatur + prueft Session-Cache (Redis).
-- Mutual TLS / Client-Certs moeglich.
-- **Cloud Security Alliance Best Practice:** jeder Tool-Aufruf zusaetzlich vom Agenten signiert (Public Key beim MCP-Server registriert) — Message-Level-Signing gegen MITM **nach** TLS-Termination.
+**Firewall & Haertung (NEU — Opus R8):**
+- **UFW:** `default deny incoming`, `allow 443/tcp`, SSH (22) **key-only + auf eigene IP beschraenkt**.
+- **Fail2Ban:** log-basierter Brute-Force-Bann (ergaenzt Webserver-`limit_req`).
+- **Rate-Limiting doppelt:** im Proxy UND in der App.
+- **MCP-Haertung:** Least-Privilege-Scopes (`tools/list` nach Auth filtern), parametrisierte Queries (nie Raw-SQL vom Modell), **Read- und Write-Tools auf getrennten Servern** (Prompt-Injection), Audit-Logging je Tool-Call (Identity/Args/Ergebnis/Client-IP).
 
-**Ports:** nach aussen NUR 80 (→443-Redirect) und 443. Backend NUR auf `127.0.0.1:PORT` binden, **niemals public**. Subdomain-Pattern: `example.com` Hauptapp, `api.example.com` API.
+**⚠️ Cloudflare Tunnel — NEIN fuer ein privates Gehirn (NEU, wichtig):** `cloudflared` braucht keinen offenen Port und liefert DDoS-Schutz, ABER **terminiert TLS bei Cloudflare → CF kann den Klartext sehen** (keine E2E-Verschluesselung). Plus 100-MB-Limit/Item, ToS-Limits. **Bei persoenlichen Daten → eigener TLS-Reverse-Proxy (Caddy) auf dem VPS ODER Pangolin/WireGuard** (self-hosted Tunnel ohne CF-Privacy-Nachteil). CF-Tunnel nur, wenn DDoS-Komfort > Vertraulichkeit.
 
-**Absicherung:** Rate-Limiting (Caddy `rate_limit / 100 1m`); Intrusion Prevention (CrowdSec modern / Fail2Ban klassisch); JSON-Access-Logging.
+**Haeufige MCP-OAuth-Fehler:** OAuth-State nicht an User-Session gebunden → CSRF / **One-Click Account Takeover**; CORS `Access-Control-Allow-Origin: "*"` (nie Wildcard); `invalid_grant` (Code abgelaufen ~60 s / PKCE-Mismatch).
 
 ---
 
 ## §8 Mehrere Dienste gleichzeitig (Docker Compose)
 
-**Quellen:** [docker.com/blog/build-ai-agents-with-docker-compose](https://www.docker.com/blog/build-ai-agents-with-docker-compose/), [mem0.ai/blog/self-host-mem0-docker](https://mem0.ai/blog/self-host-mem0-docker), [deployhq.com](https://www.deployhq.com/blog/deploy-first-ai-agent-vps-docker), [stackoverflow.com (deploy-Limits)](https://stackoverflow.com/questions/42345235/how-to-specify-memory-cpu-limit-in-docker-compose-version-3)
+**Quellen (NEU, tief — Opus R9):** docker.com/blog, Docker Deploy-Spec, mem0.ai, DeployHQ, DEV (4 Patterns). Plus :online.
 
-**Man muss sich NICHT festlegen.** Agent-Server + Memory-Server + LLM-Inference + MCP-Tools lassen sich in **einer `compose.yaml`** kombinieren (`docker compose up`). Praxisbeispiel: Agent + Memory + Postgres + Redis + Minio + Traefik + Ollama + Frontend auf einem 32-GB/8-vCPU-VPS.
+**Man muss sich NICHT festlegen — kombinieren ist der dokumentierte Standard.** Agent-Server + Memory-Server + (optional LLM) + MCP-Tools in **einer `compose.yaml`**, jeder Dienst eigener Container.
 
-**Zwei kritische Engpaesse:**
+**Konkrete Multi-Service-Belege (NEU):**
+- **Mem0 = 3 Container** mit verschobenen Host-Ports (damit Standard-Ports frei bleiben): `mem0` 8888→8000 (FastAPI), `postgres`(pgvector) 8432→5432, `neo4j` 8474→7474 + 8687→7687. Interner Verkehr ueber Bridge-Netz, **Host-Ports an `127.0.0.1` binden**.
+- **Reverse-Proxy fuer mehrere Web-Dienste:** Traefik (dynamisch via Container-Labels, Routing nach Host/Pfad) oder Caddy/Nginx — nur 443 nach aussen.
 
-1. **Port-Trennung** — jeder Container braucht einen eindeutigen Host-Port. Fuer mehrere Web-Dienste hinter 443 → Reverse Proxy (Traefik/Nginx/Caddy) mit Let's Encrypt. Backend nur lokal binden: `ports: "127.0.0.1:8000:8000"`.
+**Ressourcen-Limits (NEU — die zentrale Stolperfalle):**
+```yaml
+services:
+  memory-server:
+    deploy:
+      resources:
+        limits:        { cpus: "1.0", memory: 512M }   # harte Obergrenze
+        reservations:  { cpus: "0.5", memory: 256M }   # weiche Garantie (darf bursten)
+```
+- **`reservations` NEBEN `limits` setzen** → ein Inference-/Memory-Dienst frisst beim Modell-Laden nicht den ganzen Host-RAM und killt nicht per **OOM-Kill** die anderen Container (oft trifft es PostgreSQL = DB weg mitten im Lauf).
+- **Healthchecks + `depends_on: condition: service_healthy`** (`start_period: 120s` fuers Modell-Laden) gegen Race-Conditions beim Start.
 
-2. **Ressourcen-Limits (Stolperfalle!)** — der moderne `deploy.resources.limits`-Key greift **nur bei `docker stack deploy` (Swarm/K8s), NICHT bei plain `docker compose up`**. Compose zeigt dann nur eine Warnung und ignoriert die Limits. Legacy-Felder (`mem_limit`, `cpuset`) funktionieren bei plain Compose, werden aber bei v3 teils ignoriert — ein verbindlicher Workaround ist in den Quellen **nicht eindeutig** dokumentiert. **Reale Doku-Luecke.** Praxis-Regel: bei lokalen Inference-Services zusaetzlich Memory-Reservierungen setzen, damit ein Modell-Ladevorgang nicht den ganzen Host-RAM frisst.
+> **Hinweis (frueher als Luecke notiert, jetzt geklaert):** `deploy.resources.limits` greift bei `docker compose up` (nicht nur Swarm) — die DEV/Docker-Docs zeigen es als Standard-Pattern fuer Compose-Stacks. (Aeltere SO-Quelle bezog sich auf v3-Verhalten; aktuelle Compose-Spec respektiert `deploy.resources`.)
 
-**Compose-Bausteine:** Agent-Runtime (Ollama / API-Container) · Memory-Server (Redis `agent-memory-server`, REST+MCP) · Memory-Stack (Mem0: API + Postgres+pgvector + Neo4j) · MCP-Tools (mehrere MCP-Server nebeneinander, Volume-Mounts + Docker Secrets) · lokale Embeddings ohne API-Key (Engram, MiniLM 384-dim).
+**Typische Limit-Werte (aus Quellen):** Mem0-API 512M/1.0 CPU; Neo4j (schwerster Container) ~2 GB; einfacher Agent 512M/1.0; Agent Zero Limit 2G/1.5 + Reservation 1G/1.0; lokales LLM Limit 16G/Reservation 8G; Basis-PostgreSQL ~300–500 MB.
 
-**Dimensionierung:** Mem0 nennt 4 GB RAM Untergrenze (Neo4j + pgvector + API); andere Quellen gehen erst ab 32 GB/8 vCPU produktiv. Eine verbindliche Untergrenze pro Service-Paarung (Agent + Memory) ist **nicht belegt**.
+**RAM-Faustregel (NEU — der einzige echte Engpass):**
+
+| Szenario | RAM |
+|----------|-----|
+| Agent, externe LLM-API, ohne Vektor-DB | ab **4 GB** |
+| Agent + Vektor-DB + Redis + PostgreSQL, externe LLM-API | **8 GB** (solide) |
+| zusaetzlich **lokales LLM** auf demselben Host | **16 GB+** |
+
+Mem0-Memory-Server allein: t3.medium (2 vCPU, 4 GB) Minimum, t3.large (8 GB) empfohlen. Quantisiertes 7B-Modell (Q4_K_M) ~4–6 GB.
 
 ---
 
 ## §9 Best Practices & Sicherheit
 
-**Quellen:** [digitalapplied.com — AI Agent Security 2025](https://www.digitalapplied.com/blog/ai-agent-security-best-practices-2025), [webnestify.cloud](https://webnestify.cloud/insights/cybersecurity-hardening/hermes-agent-deployment/), [micheallanham.substack.com](https://micheallanham.substack.com/p/mitigating-ai-agent-data-leak-risks), [dev.to/bobrenze](https://dev.to/bobrenze/why-ai-agent-memory-systems-fail-in-production-and-how-i-fixed-mine-141d), [github.com/supabase](https://github.com/orgs/supabase/discussions/39820)
+**Quellen:** Opus R10 (virtua.cloud, bluehost, ranksquire), :online (digitalapplied, webnestify, micheallanham).
 
-- **Schlanker Host:** minimaler OS-Footprint (clean image, headless) → kleinere Angriffsflaeche, weniger Patch-Last, mehr CPU/RAM fuer die Dienste.
-- **Produktion in Produktion:** ein Produktiv-Agent gehoert auf einen VPS, **nicht auf den Entwickler-Laptop**.
-- **Memory-Layer von Anfang an:** verwandelt ein stateless LLM in einen Assistenten mit Gedaechtnis — kann Token-Kosten bis 90% senken, Antworten <2s.
-- **Audit-Logging & Observability:** OpenTelemetry-konform — Prompts (sanitisiert), Responses, Tool-Calls, Entscheidungspfade loggen; mit SIEM verbinden. Ohne Logging keine Forensik bei Memory-Poisoning/Exfiltration.
-- **Tiered Memory mit Provenance:** jeder Memory-Eintrag bekommt ein **`source`-Feld** → Memory wird vom Black-Box zum durchsuchbaren Log. Groesse/Alter/Qualitaet monitoren.
-- **Checkpointing:** vor jeder Kontext-Kompaktierung checkpointen; **proaktiv** zusammenfassen, nicht reaktiv; kritische Constraints in **System-Instructions**, nicht in den Kontext (Context ueberlebt Compaction nicht).
-- **Multi-Tenant-Isolation auf DB-Ebene:** jeder Agent sieht nur eigene Daten (z.B. Supabase RLS + JWT mit `agent_id`). **Vergessene RLS-Policies sind unsichtbare Fehler.**
-- **Backups im Security-Modell:** verschluesselt, dedupliziert, off-host, Key-getrennt (Borg-Disziplin) — eine kompromittierte VPS darf ihren Recovery-Pfad nicht loeschen koennen.
-- **Sicherheitsfeatures aktiv lassen:** bei blockierten Tasks Prompts verfeinern/whitelisten statt Schutz global abzuschalten (Deaktivieren entfernt die Schicht, die 73% der Angriffe faengt).
-- **Budget-VPS-Falle:** Budget-Hoster liefern keine WAF/IDS — die muss man selbst schichten.
+- **Schlanker Host:** minimaler OS-Footprint (clean image, headless) → kleinere Angriffsflaeche, mehr CPU/RAM fuer die Dienste.
+- **Produktion gehoert auf den VPS, nicht auf den Entwickler-Laptop** (haeufige Key-Leak-Quelle).
+- **Memory-Layer von Anfang an:** verwandelt stateless LLM in einen Assistenten mit Gedaechtnis, senkt Token-Kosten bis ~90% (sechs Spar-Techniken: Importance-Based Eviction mit Ebbinghaus-Decay −59%, Token Budgeting −75%, Hierarchical Summarization −59%).
+- **Sandbox-Hierarchie (NEU):** **MicroVM (Firecracker/Kata) > gVisor > gehaerteter Container** (`--read-only`, `--no-new-privileges`, Capability-Dropping). **Standard-Docker ist KEINE Sicherheitsgrenze** (Container teilen den Host-Kernel).
+- **Lethal Trifecta (NEU):** private Daten + untrusted Inhalt + externe Kommunikation + persistentes Memory = die gefaehrliche Kombination fuer Datenabfluss. Agent-Eingaben grundsaetzlich als untrusted behandeln.
+- **Secrets:** API-Keys nie im Code/Klartext — geschuetzte Env-Datei mit **600-Permissions** ueber systemd `EnvironmentFile`.
+- **Audit-Logging & Provenance:** OpenTelemetry-konform (Prompts sanitisiert, Responses, Tool-Calls, Entscheidungspfade); **`source`-Feld auf jedem Memory-Eintrag** → Memory wird vom Black-Box zum durchsuchbaren Log; schuetzt gegen Memory-Poisoning.
+- **Multi-Tenant-Isolation auf DB-Ebene:** jeder Agent sieht nur eigene Daten (Supabase RLS + JWT mit `agent_id`). Vergessene RLS-Policies sind unsichtbare Fehler.
+- **Day-1-Monitoring (NEU):** Alarme ab Tag 1 — Query-Latenz >100 ms für >60 s, RAM >85%, fehlgeschlagene Index-Snapshots; CPU-`steal`-Wert beobachten (CPU-Steal/„Ghost Load" durch Overselling).
+- **Backups im Security-Modell:** verschluesselt, dedupliziert, off-host, Key-getrennt — kompromittierte VPS darf ihren Recovery-Pfad nicht loeschen koennen.
+- **Sicherheitsfeatures aktiv lassen:** bei blockierten Tasks Prompts verfeinern/whitelisten statt Schutz global abzuschalten (entfernt die Schicht, die 73% der Angriffe faengt).
+- **Skill-Supply-Chain (NEU):** Anfang 2026 war grob **jedes achte Paket** in einem Agent-Skill-Marktplatz boesartig (341/2.857) — nie ungeprueafte Skills/Plugins installieren.
 
 ---
 
 ## §10 Fallen & was man NICHT tun sollte (Bug-Teil)
 
-| # | Falle | Quelle |
+| # | Falle | Engine |
 |---|-------|--------|
-| 1 | **OS-Wechsel loescht ALLE Daten** — OS-Wahl als Experiment behandeln | [hostinger.com/uk/tutorials](https://www.hostinger.com/uk/tutorials/getting-started-with-vps-hosting) |
-| 2 | **AI-Assistant-Template (Ollama + Open WebUI)** fuer autonome Agenten nutzen — das ist ein Chat-UI-Stack, kein Agent-Stack | [openclawlaunch.com](https://openclawlaunch.com/guides/hermes-agent-hostinger-vps) |
-| 3 | **Grosse lokale LLMs erwarten** — Hostinger hat **keine GPU**, nur CPU; grosse Modelle extern/per API | [fast.io](https://fast.io/resources/best-ai-agent-hosting-platforms/) |
-| 4 | **300 MB/s I/O-Limit** ignorieren — kann bei sehr grossen Vektor-Indizes zum Bottleneck werden (nicht gemessen, aber plausibel) | [hostinger.com/support](https://www.hostinger.com/support/6976044-parameters-and-limits-of-hosting-plans-in-hostinger/) |
-| 5 | **Shared CPU** vergessen — kein dedizierter Kern, rechenintensive Embedding-Generierung stark eingeschraenkt | [vpsbenchmarks.com](https://www.vpsbenchmarks.com/hosters/hostinger/plans/kvm-2) |
-| 6 | **Promo- vs. Renewal-Preisfalle** — nach Erstlaufzeit teils 2–3× teurer; nur 12-/24-Monats-Tarife | [checkthat.ai](https://checkthat.ai/brands/hostinger/pricing) |
-| 7 | **`deploy.resources.limits` bei plain `docker compose up`** — wird ignoriert (nur Swarm/K8s), RAM-Limits greifen nicht wie erwartet | [stackoverflow.com](https://stackoverflow.com/questions/42345235/how-to-specify-memory-cpu-limit-in-docker-compose-version-3) |
-| 8 | **Memory-Poisoning** — injizierte Instruktionen persistieren im Session-Memory und exfiltrieren spaeter (Unit-42-Demo auf Bedrock Agents). Gegenmittel: Provenance + Audit-Logging | [medium.com](https://medium.com/data-unlocked/the-memory-problem-in-ai-agents-is-half-solved-heres-the-other-half-ebbf218ae4d5) |
-| 9 | **Shared Memory ueber Tenant-Grenzen** — Agents lesen still fremde Daten (Asana-„Oops"-Fall) | [towardsdatascience.com](https://towardsdatascience.com/the-mcp-security-survival-guide-best-practices-pitfalls-and-real-world-lessons/) |
-| 10 | **Sicherheitsfeatures global deaktivieren** — entfernt die Schicht, die 73% der Angriffe faengt | [digitalapplied.com](https://www.digitalapplied.com/blog/ai-agent-security-best-practices-2025) |
-| 11 | **Kein Audit-Logging** — keine Forensik bei Incidents, keine Erkennung von Poisoning/Exfiltration | [digitalapplied.com](https://www.digitalapplied.com/blog/ai-agent-security-best-practices-2025) |
-| 12 | **AI-generierten Code/Tool-Calls ungeprueft uebernehmen** | [digitalapplied.com](https://www.digitalapplied.com/blog/ai-agent-security-best-practices-2025) |
-| 13 | **Over-Provisioning** — ~28% Cloud-Spend gehen an idle/ueberdimensionierte Ressourcen; Agents laufen in Bursts | [branch8.com](https://branch8.com/posts/ai-agent-vps-deployment-cost-optimization-guide) |
-| 14 | **Backups on-host/unverschluesselt** — kompromittierte VPS loescht ihren eigenen Recovery-Pfad | [webnestify.cloud](https://webnestify.cloud/insights/cybersecurity-hardening/hermes-agent-deployment/) |
-| 15 | **„Infinite Memory" als Feature** — in Enterprise-Kontext ein Bug; gutes Memory weiss, wann es loslassen muss | [micheallanham.substack.com](https://micheallanham.substack.com/p/mitigating-ai-agent-data-leak-risks) |
-| 16 | **Kritische Constraints in den Kontext statt System-Instructions** — Context ueberlebt Compaction nicht | [dev.to/bobrenze](https://dev.to/bobrenze/why-ai-agent-memory-systems-fail-in-production-and-how-i-fixed-mine-141d) |
-| 17 | **Agent auf dem Laptop** + **API-Keys auf dem Laptop** — haeufige Key-Leak-Quelle | [lobsterfarm.ai](https://www.lobsterfarm.ai/guides/5-mistakes-self-hosting-ai/) |
+| 1 | **OS-Wechsel loescht ALLE Daten** — OS-Wahl als Experiment behandeln | online/Opus |
+| 2 | **AI-Assistant-/Ollama-Template** fuer autonome Agenten — Chat-UI, kein Agent-Stack | Opus R4 |
+| 3 | **Grosse lokale LLMs erwarten** — keine GPU, max 32 GB; 70B braucht 48 GB+ → extern/API | Opus R1/R5 |
+| 4 | **Veraltete NVMe-Specs glauben** (50/100/200/400 GB sind 2025) — aktuell 30/60/120/240 (DE) bzw. 40/80/160/320 (US); vor Kauf live pruefen | **Firecrawl R1/R2** |
+| 5 | **Cloud-Hosting fuer Memory-Server** — nur ~1,5–2 GB RAM/vCPU + Shared CPU + kein Root | **Firecrawl R1** |
+| 6 | **Promo- vs. Renewal-Preisfalle** — Verlaengerung ~+100%; nur 12-/24-Mon.-Terms | Opus R1 |
+| 7 | **OOM-Killer ohne `reservations`** — ein Dienst frisst Host-RAM, OOM killt die DB; immer `limits`+`reservations` + Healthchecks | **Opus R9** |
+| 8 | **Runaway-Agent-Loop ohne Budget-Ceiling** — real 47.000 USD (264 h, zwei Agenten ping-pongen); Alerts ≠ Enforcement → harte Caps | **Opus R10** |
+| 9 | **Auth-Bypass bei exponierten Agent-Servern** — Scan Feb 2026: 93,4% von 42.665 Instanzen verwundbar (offene Ports, Auth aus) | **Opus R10** |
+| 10 | **Vector-DB „Persistenz = Disk" glauben** — Suche laeuft im RAM nach Voll-Hydratisierung → Swapping/OOM bei RAM-Erschoepfung | **Opus R10** |
+| 11 | **Cloudflare Tunnel fuer persoenliche Daten** — strippt TLS in seinem Netz (sieht Klartext) + 100 MB/Item; stattdessen Caddy-TLS / Pangolin | **Opus R8** |
+| 12 | **MCP+OAuth: State nicht an Session gebunden** → CSRF / One-Click Account Takeover; CORS nie `"*"` | **Opus R8** |
+| 13 | **Letta fuer direkten externen Such-Zugriff** — geht nicht, nur Agenten-Tool-Calls | **Opus R7** |
+| 14 | **Mem0 fuer „Was war wann wahr?"** — kein temporales Fact-Modeling (Fakten ueberschrieben statt versioniert) | **Opus R7** |
+| 15 | **supermemory blind als OSS annehmen** — Lizenz/Self-Host-Status widerspruechlich (evtl. closed Backend / enterprise-only) | **Opus R7** |
+| 16 | **Standard-Docker als Sicherheitsgrenze** — teilt Host-Kernel; untrusted Agent-Code braucht MicroVM/gVisor | **Opus R10** |
+| 17 | **Bandbreiten-Overage stuendlich** — ein Spike (Traffic/DDoS/Sync) loest sofort Overage aus (175 $ bei 2 TB) | **Opus R10** |
+| 18 | **CPU-Steal „Ghost Load"** — 20–30% CPU angezeigt, dennoch Timeouts durch Overselling; `steal`-Wert beobachten | **Opus R10** |
+| 19 | **Memory-Poisoning** — injizierte Instruktionen persistieren und exfiltrieren spaeter; Provenance + Audit-Logging | online |
+| 20 | **Shared Memory ueber Tenant-Grenzen** — Agents lesen still fremde Daten; RLS + `agent_id` | online |
+| 21 | **Backup nie per Restore getestet** — „Backup vorhanden" ≠ „wiederherstellbar"; monatlicher Restore-Test (3-2-1-1-0) | **Opus R10** |
+| 22 | **Sicherheitsfeatures global deaktivieren** — entfernt die Schicht, die 73% der Angriffe faengt | online |
+| 23 | **Ungeprueafte Agent-Skills** — ~jedes 8. Marktplatz-Paket boesartig (Supply-Chain) | **Opus R10** |
+| 24 | **Kritische Constraints in den Kontext statt System-Instructions** — Context ueberlebt Compaction nicht | online |
+| 25 | **Letta-Migration auf 2-GB-VPS haengt scheinbar** — erste Alembic-Migration dauert 2–3 Min (abwarten) | **Opus R5** |
 
 ---
 
-## §11 Offene Fragen / Luecken in den Quellen (vor dem Bauen klaeren)
+## §11 Offene Fragen / Luecken (vor dem Bauen klaeren)
 
-Diese Punkte konnte die Recherche **nicht belastbar** beantworten — vor der Architektur-Festlegung gezielt nachrecherchieren oder live testen:
+Durch den Opus-/Firecrawl-Lauf wurden mehrere fruehere Luecken **geschlossen** (Embeddings, Memory-Stack-Retrieval, Cloud-Specs, Docker-Limits) — diese Restpunkte bleiben:
 
-1. **Cloud-Hosting-Specs** (RAM/CPU/Storage pro Tier) — von Hostinger nicht oeffentlich beziffert; Eignung nicht beurteilbar.
-2. **Vektor-DB-Performance auf Hostinger KVM** — in keiner Quelle gemessen. Ob das 300-MB/s-I/O-Limit bei realen Indizes bremst, ist offen.
-3. **Live-Upgrade des KVM-Tiers ohne Neuinstallation** (KVM 2 → KVM 4 zur Laufzeit?) — in keiner Quelle behandelt. Horizontale Skalierung (Cluster) ebenfalls nicht.
-4. **Root-Zugang woertlich bestaetigt** — nur „self-managed/unmanaged Linux" impliziert ihn; keine direkte Quelle (bei unmanaged KVM aber branchenueblich).
-5. **VPS-Sizing-Rezepte** (CPU/RAM/Swap/Disk pro Agent + Session) — kein Artikel liefert ein konkretes Modell.
-6. **Backup-Frequenz / RPO / RTO / Tool-Vergleich** (Borg vs. Restic vs. rsnapshot) — nur generische Borg-Empfehlung.
-7. **Storage-IOPS/Throughput** fuer Memory-Backends (Redis/Valkey AOF/RDB) — keine Disk-Benchmarks.
-8. **Embedding-Modell-Empfehlung** je Sprachraum/Hardware (bge-m3, nomic-embed, arctic-embed, mxbai) + Dimensions-Wahl (384/768/1024/1536) — keine Quelle.
-9. **Memory-Stack-Retrieval-Details** (Mem0/Letta/Zep/supermemory) — Researcher 7 blieb unausgewertet; gezielter Re-Run noetig.
-10. **RAM-/Disk-Footprint pro 1 Mio Vektoren** @768/1536-dim fuer alle vier DBs — einzige belegte Zahl: pgvector 470 qps @99% Recall auf 50 Mio Vektoren.
-11. **Hard-Memory-Limits unter plain `docker compose up`** — kein verbindlicher Workaround dokumentiert (reale Doku-Luecke).
+1. **NVMe-Spec-Konflikt** (NEU als oberste Luecke): DE-Seite 30/60/120/240 GB vs. US/LLM-Seite 40/80/160/320 GB. **Vor Kauf auf der Live-Seite der eigenen Region verifizieren.**
+2. **Vektor-DB-Performance auf Hostinger KVM** — in keiner Quelle direkt auf Hostinger-Hardware gemessen (die QPS-Zahlen stammen von anderen Setups). Ob NVMe-Throughput bei realen Indizes bremst, ist offen (NVMe ~3.500 MB/s spricht eher dagegen).
+3. **Live-Upgrade-Mechanik** (KVM 2 → 4 zur Laufzeit, mit/ohne Reboot, Datenerhalt) — Firecrawl Q5 sagt „no downtime/no data migration", Opus-Quellen bestaetigen die genaue Mechanik nicht. Vor Upgrade Support fragen + Backup.
+4. **Cloud-Hosting-Plan-Details** — Produkttyp + grobes RAM-Verhaeltnis jetzt belegt (1,5–2 GB/vCPU), aber Plannamen mit exakten vCPU/RAM/Storage/Preis je Stufe weiterhin nicht beziffert. (Fuer das Projekt ohnehin irrelevant, da kein Root.)
+5. **supermemory-Lizenz/Self-Host-Status** — widerspruechlich, am offiziellen Repo verifizieren, bevor man darauf baut.
+6. **Milvus minimale RAM-Anforderung** (verteilte Variante) — exakte Minimal-Specs in den Quellen abgeschnitten; offizielle Milvus-Doku pruefen. (Fuer ein Single-User-Gehirn ohnehin Overkill.)
+7. **Backup-Tool-Vergleich** (Borg vs. restic vs. rsnapshot) — generische Empfehlung (restic + Backblaze B2), kein Detailvergleich.
+8. **API-Auth-Feinheiten** (API-Keys vs. JWT vs. mTLS) — gaengige Branchenpraxis, aber nicht jede Einzelaussage 1:1 belegt; Framework-Doku konsultieren.
