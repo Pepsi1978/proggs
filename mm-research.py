@@ -31,7 +31,10 @@ import urllib.error
 
 GO_URL = "https://opencode.ai/zen/go/v1/messages"          # MiniMax = Anthropic-Schema
 FC_URL = "https://api.firecrawl.dev/v1/search"
-OUTDIR = os.path.expanduser("~/.mm-research")
+# MM_OUTDIR ueberschreibbar, damit PARALLELE Laeufe (Continuous-Spawning mit 2, Firecrawl-Free-Limit)
+# je eine eigene sources.json/answer.json/thinking.txt haben (sonst ueberschreiben sie sich — der
+# Grund, warum bei der Second-Brain-Recherche R5 abgeschnitten zurueckkam). Default wie bisher.
+OUTDIR = os.path.expanduser(os.environ.get("MM_OUTDIR", "~/.mm-research"))
 
 
 def _read_key(path):
