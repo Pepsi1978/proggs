@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -190,6 +191,13 @@ private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
             }
         Routes.ANALYSIS ->
             when (index) {
+                // Frank-Wunsch 2026-06-21: Das Parent-Icon "Analyse" wurde durch ein
+                // Sub-Icon "2" ersetzt. Index 2 ist der NEUE Platzhalter-Slot — ein
+                // bewusst generischer "Punkt 2 — bald verfügbar" ohne inhaltliche
+                // Vorschau (kein Wochenrückblick/Monatsrückblick). Die bisherigen
+                // Vorschauen rutschen durch das eingefuegte Index-2 um eins auf:
+                // Wochenrückblick bleibt Index 1, Monatsrückblick wandert 2→3,
+                // Korrelations-Matrix wandert 3→4.
                 1 ->
                     SubSlotMeta(
                         icon = Icons.Outlined.CalendarViewWeek,
@@ -199,6 +207,13 @@ private fun subSlotMeta(parent: String, index: Int): SubSlotMeta {
                                 "die wichtigsten Erfolge und was diese Woche besonders Energie gekostet hat.",
                     )
                 2 ->
+                    SubSlotMeta(
+                        icon = Icons.Outlined.Tune,
+                        title = "Punkt 2",
+                        teaser =
+                            "Dieser Bereich ist noch in Arbeit. Inhalt folgt in einem der nächsten Updates.",
+                    )
+                3 ->
                     SubSlotMeta(
                         icon = Icons.Outlined.CalendarMonth,
                         title = "Monatsrückblick",

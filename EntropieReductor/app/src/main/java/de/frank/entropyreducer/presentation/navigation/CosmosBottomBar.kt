@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -249,11 +250,14 @@ private fun SubModeRow(
     val slots = listOf(Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER)
     val subIcons = subIconsFor(parentTab)
 
-    // Pre-compute: pro Slot entweder Parent oder Sub-Icon (mit Index 1..3).
+    // Pre-compute: pro Slot entweder Parent oder Sub-Icon (mit Index 1..3 bzw. 1..4).
+    // Frank-Wunsch 2026-06-21: Fuer den Analyse-Tab wird das Parent-Icon durch ein
+    // Sub-Icon "2" ersetzt — die Sub-Bar zeigt dann 1, 2, 3, 4 (kein Parent mehr).
+    val parentIsReplaced = parentTab == Routes.ANALYSIS
     val items: List<SlotItem> = buildList {
         var subCounter = 0
         for (slotTab in slots) {
-            if (slotTab == parentTab) {
+            if (slotTab == parentTab && !parentIsReplaced) {
                 add(SlotItem.Parent)
             } else {
                 subCounter++
@@ -369,6 +373,17 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
                 // Frank-Wunsch 2026-06-10: Slot 3 = Ideen (Gluehbirne) — 1:1-Klon des
                 // Entropie-Bereichs.
                 SubIconMeta(Icons.Outlined.AutoAwesome, "Ideen"),
+            )
+        // Frank-Wunsch 2026-06-21: Analyse-Tab hat kein Parent-Icon mehr in der
+        // Sub-Bar — alle 4 Slots sind Sub-Icons mit Labels 1, 2, 3, 4. Sub-Icon "2"
+        // (an der ehem. Parent-Position) fuehrt zum Platzhalter "Punkt 2 — bald
+        // verfuegbar".
+        Routes.ANALYSIS ->
+            listOf(
+                SubIconMeta(Icons.Outlined.Inbox, "1"),
+                SubIconMeta(Icons.Outlined.Tune, "2"),
+                SubIconMeta(Icons.Outlined.Insights, "3"),
+                SubIconMeta(Icons.Outlined.Hub, "4"),
             )
         // Frank-Wunsch 2026-06-09: Forscher bekommt Entropie (Slot 1, Warndreieck mit
         // Ausrufezeichen) und Thesen (Slot 2, Gluehbirne). Frank-Wunsch 2026-06-10:
