@@ -37,6 +37,7 @@
 | 13 | `dotnet publish` self-contained | `--self-contained true` explizit (RID impliziert es nicht) | §13.1 |
 | 14 | Memory-Leak bei Events/Timern | Im `Dispose`/`Unloaded` immer `-=` und `Stop()` | §9.1 |
 | 15 | `Process.Start(url)` wirft | `new ProcessStartInfo(url){ UseShellExecute = true }` | §13.8 |
+| 16 | One-Shot-Hotkey haengt nach mehrfacher Nutzung | KeyUp-Debounce-Flag durch zeitbasierten Cooldown ersetzen | §5.8 |
 
 ---
 
@@ -324,6 +325,13 @@ richtig macht*. Wechselseitig gepflegt:
 **Versionen:** WPF alle.
 **FIX:** Dediziertes verstecktes Message-Window (`HwndSource` 0×0) + `AddHook(WndProc)` — nicht das verborgene WPF-Owner-Fenster missbrauchen.
 **Quelle:** https://tyrrrz.me/blog/wndproc-in-wpf
+
+### 5.8 Hotkey mit KeyUp-Debounce-Flag haengt nach langer Operation dauerhaft  ⭐ HAEUFIG bei One-Shot-Hotkeys
+**Symptom:** Ein globaler Hotkey, der eine LANGE Aktion ausloest (z.B. Strg+Alt+P = Screenshot ~160 ms + sofortiges Paste ~260 ms), funktioniert anfangs, feuert aber nach einigen Benutzungen GAR NICHT mehr — bis der Prozess neu startet. Ein zweiter Hotkey mit kuerzerer Aktion (z.B. nur Paste) ueberlebt laenger.
+**Ursache:** Klassisches Anti-Pattern — ein bool-Debounce-Flag (`_keyDown`) wird beim KeyDown gesetzt und NUR beim KeyUp zurueckgesetzt. Bei der langen Aktion blockiert der UI-Thread und/oder synthetische Tastatureingaben (Strg+V via `keybd_event`/`SendInput`) stoeren die Hook-Verarbeitung, sodass der physische KeyUp verschluckt wird (verwandt mit §5.6 LowLevelHooksTimeout). Das Flag bleibt dauerhaft `true` → die `!_keyDown`-Bedingung ist nie wieder erfuellt → der Hotkey ist „tot". Makro-Tasten (Logitech G Hub, Stream Deck) verschaerfen das, weil sie KeyDown/KeyUp synthetisch und teils unvollstaendig senden.
+**Versionen:** per Design, alle (`WH_KEYBOARD_LL`-basierte Hotkeys).
+**FIX (funktionserhaltend, Poka-Yoke Stufe 3):** Debounce NICHT vom (unzuverlaessigen) KeyUp abhaengig machen, sondern **zeitbasierter Cooldown** — Trigger nur wenn `DateTime.UtcNow >= _cooldownUntil`, danach `_cooldownUntil = UtcNow.AddMilliseconds(N)` mit N > Operationsdauer. Der Cooldown laeuft IMMER von selbst ab, also kann nichts haengen bleiben. Genau dieses Muster ist fuer Toggle-Hotkeys oft schon vorhanden (`_altF12CooldownUntil`) — auf alle One-Shot-Hotkeys uebertragen. Behoben in TVO 1.4.15 / CVO 2.1.14 (#47060).
+**Quelle:** eigener Fix 2026-06-21; verwandt §5.6 (Hook-Timeout), §5.1/§5.5 (Foreground beim Paste — separates Symptom).
 
 ---
 
