@@ -70,8 +70,12 @@ ihm NUR die Server-Sicherheit (kein Einbruch). Das aendert die KI-Wahl:
   OpenRouter-Modell wie nemotron/gemma/mimo), ohne die Embeddings anzufassen.
 - **Embeddings (semantische Suche): `gemini-embedding-001`** — mehrsprachig (DE/EN), MTEB-Spitze, flexible
   Dimensionen (768/1536/3072; Vorschlag 1536). **NICHT spaeter wechseln** (Wechsel = gesamter Bestand neu einbetten).
-- **Schluessel:** Free-Tier bevorzugt (Gemini-API-Key aus Google-Projekt OHNE Billing); sonst Cent-Betraege.
-  Ablage: `.env` auf dem Server (600) + Backup `~/SK/second-brain/`, NIE ins Repo. Harte Ausgaben-Caps setzen.
+- **Schluessel-Strategie (Frank 2026-06-22): Kosten egal → Bezahl-Tier bevorzugt** (hoehere Limits, keine
+  Drosselung, volle Prioritaet; bei Franks Nutzung trotzdem nur Cent/Monat). EIGENER Key fuers Gehirn (NICHT
+  der TVO-Key `AIzaSy...`; TVO bleibt getrennt). Kostenloser Default-Projekt-Key (`AQ.Ab8...`, automatisch von
+  Google AI Studio/Gemini-CLI angelegt) als Fallback. **Harte Ausgaben-Caps PFLICHT** als Sicherheitsnetz.
+  Ablage: `.env` auf dem Server (600) + Backup `~/SK/second-brain/`, NIE ins Repo.
+  Free-Tier-Limits grob ~15 Anfragen/Min, ~1000+/Tag (reicht im Alltag; nur Erst-Import koennte bremsen → dann Bezahl).
 - **Beim Einrichten verifizieren:** exakte Modellnamen + Dimensionen an der Live-Doku (Google benennt Modelle
   oft um; Wissensstand aelter). Mem0-Konfig: `embedder.provider=gemini`, `llm.provider=gemini`,
   `embedding_model_dims` passend zum Embedding-Modell. Server-Sicherheit ≠ Datenabfluss (Key auf Server ist ok).
