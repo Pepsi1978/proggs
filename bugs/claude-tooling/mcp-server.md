@@ -47,7 +47,8 @@
 | 13 | Windows: Umlaute/Emoji im Output kaputt | UTF-8 explizit (`setEncoding('utf8')`/`PYTHONIOENCODING`) | §6.4 |
 | 14 | `ERR_MODULE_NOT_FOUND` (ESM) | `"type":"module"`, lokale Imports mit `.js`-Endung | §8.7 |
 | 15 | `npm audit` HIGH (UriTemplate-ReDoS) | SDK ≥1.25.2 — 1.27.1 sicher, NICHT downgraden | §8.1 |
-| 16 | Python-FastMCP: `TypeError: issubclass()` beim ersten `@mcp.tool()` | KEIN `from __future__ import annotations` (macht Annotationen zu Strings → FastMCP-Introspektion bricht) | §3.11 |
+| 16 | Python-FastMCP: `TypeError: issubclass()` beim ersten `@mcp.tool()` | KEIN `from __future__ import annotations` (macht Annotationen zu Strings → FastMCP-Introspektion bricht). Issue #1129 | §3.11 |
+| 17 | Python-FastMCP: `lifespan`-Init laeuft mehrfach | FastMCP-`lifespan` ist PRO Client-Session, nicht pro Server. App-weite Init via ASGI-Lifespan (#1115) | §3.12 |
 
 ---
 
@@ -274,7 +275,33 @@ Trifft JEDES Tool mit annotierten Parametern.
 **FIX (funktionserhaltend):** Die Zeile `from __future__ import annotations` **entfernen**. In Python 3.10+
 funktionieren `X | None`, `list[...]`, `dict | None` ohnehin nativ als Laufzeit-Annotationen — der Future-Import
 ist unnoetig. Verifikation: nach dem Entfernen `initialize`+`tools/list` gegen den Server fahren (alle Tools sichtbar).
-**Quelle:** eigener Vorfall (second-brain MCP-Wrapper); FastMCP `Tool.from_function`-Signatur-Introspektion.
+**Bestaetigt extern (Recherche 2026-06-22):** GitHub Issue **#1129** — Fix **PR #1336** ersetzt `param.annotation`
+durch `typing.get_type_hints(fn)` (loest String-Annotationen korrekt auf). Belegt fuer SDK 1.7.1/1.11.0 + Py 3.11/3.13;
+wir erlebten es auf **1.12.4** (dort also NICHT gefixt). Gleicher Bug in der eigenstaendigen FastMCP-v2-Lib
+(PrefectHQ/fastmcp #905). **Besonders tueckisch wenn ein Tool einen `Context`-Param hat:** dann kein Crash beim
+Registrieren, sondern erst zur Laufzeit mit kryptischer Meldung („cannot access context outside of a request").
+**Quelle:** eigener Vorfall (second-brain MCP-Wrapper) + GitHub mcp/python-sdk #1129/#1336.
+
+### 3.12 Python-FastMCP: `lifespan` laeuft PRO Client-Session, nicht pro Server  🆕 (Recherche 2026-06-22)
+**Symptom:** Setup-/Teardown-Code im `lifespan`-Context-Manager laeuft mehrfach — bei JEDER neuen Client-Session
+erneut (Startup + Shutdown), nicht einmalig beim Server-Start. Teure Init (DB-Pool, Modell-Load) wird pro Verbindung wiederholt.
+**Ursache:** Anders als FastAPI/Starlette (lifespan = App-Lebensdauer) bindet das MCP-Python-SDK den `lifespan` an die
+**Server-Session pro Client**. Maintainer (jlowin): „lifespan is executed when the server session starts/stops on a
+client basis, not the server application as a whole."
+**Versionen:** MCP Python-SDK / FastMCP (Issue #1115). Doku erwaehnt das kaum.
+**FIX (funktionserhaltend):** Fuer **app-weite** (einmalige) Initialisierung das **ASGI-Lifespan-Protokoll** der
+Starlette/FastAPI-App nutzen, in die der MCP-Server gemountet ist — NICHT den FastMCP-`lifespan`-Parameter. Reinen
+Pro-Session-State weiter ueber FastMCP-`lifespan`.
+**Quelle:** GitHub PrefectHQ/fastmcp #1115 (jlowin) · Recherche 2026-06-22.
+
+> **Zwei FastMCP-Welten — nicht verwechseln (Recherche 2026-06-22):** (1) Das **offizielle** `mcp`-SDK mit
+> `from mcp.server.fastmcp import FastMCP` (FastMCP 1.0 wurde ins offizielle Python-SDK eingegliedert; das nutzt
+> second-brain auf `mcp==1.12.4`). (2) Die **eigenstaendige** `fastmcp`-Lib (PrefectHQ, „FastMCP 2.x/3.x",
+> gofastmcp.com) — ein eigenes Framework DARUEBER mit eigenen Breaking Changes (3.0: `ui=`→`app=`, 16 Constructor-
+> kwargs entfernt; 3.2.4: Background-Tasks auth- statt session-scoped). Beide teilen den `__future__`-Annotations-Bug
+> (§3.11) und das Pro-Session-`lifespan`-Verhalten (§3.12). Beim Recherchieren/Pinnen immer klarstellen, WELCHE der
+> beiden gemeint ist — die APIs driften auseinander. (Die in der eigenen `requirements.txt` notierte „2.x benennt
+> FastMCP→MCPServer um" stammt aus dem offiziellen-SDK-`main` und ist nicht breit belegt — vorsichtig behandeln.)
 
 ## 4. Fehlerbehandlung & Protokoll-Fehler
 

@@ -55,6 +55,10 @@ INTENTIONALLY_UNMAPPED = {
     # kein editierbares Datei-Pattern -> Querschnitt (Einzelpruefung 2026-06-20). wireguard ist
     # dagegen ueber .conf-Inhalt im Guard registriert (kein Querschnitt).
     "vps-hosting",
+    # server/ (Second-Brain-Stack, 2026-06-22): Betriebs-/Lib-Bereiche OHNE lokales Datei-Pattern.
+    # Arbeit laeuft per SSH am Server bzw. im second-brain-server/-Code (compose.yaml/app.py triggern
+    # andere Bereiche, nicht diese). Auffindung ueber Index + Stichworte. Bewusster Querschnitt.
+    "self-hosted-ai-agent-server", "mem0", "qdrant", "samba-wireguard",
     # desktop/ — laeuft bewusst ueber die wake-word/groq/dotnet-Zweige
     "voice-pipeline",
     # assets/ — engine-uebergreifendes Konzept (Maps/HDRs, kein eindeutiges Pattern)
