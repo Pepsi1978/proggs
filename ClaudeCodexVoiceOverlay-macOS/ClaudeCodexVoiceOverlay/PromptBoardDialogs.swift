@@ -1003,7 +1003,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     init(settings: PBAppSettings) {
         self.settings = settings
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 740),
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 860),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         window.title = "Einstellungen"
@@ -1108,35 +1108,64 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         PBDarkTheme.styleLabel(statusLabel)
         updateStatus()
 
-        let stack = NSStackView(views: [
-            label("Groq API Key (Whisper-Transkription)"),
-            groqField,
-            label("Gemini API Key (optional)"),
-            geminiField,
-            label("Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)"),
-            vocabularyEnabledCheck,
-            vocabularyScroll,
+        // Karten-Look (Frank-Wunsch 2026-06-22, analog Windows): zusammengehoerige Felder in
+        // betitelte NSBox-Karten gruppieren. fullWidth-Views (Felder/Scrollviews) spannen ueber
+        // die ganze Kartenbreite; Labels/Checkboxen bleiben linksbuendig. NSBox rendert im
+        // Dark-Appearance des Fensters automatisch dunkel.
+        func card(_ title: String, _ rows: [NSView], fullWidth: [NSView] = []) -> NSBox {
+            let inner = NSStackView(views: rows)
+            inner.orientation = .vertical
+            inner.alignment = .leading
+            inner.spacing = 6
+            inner.translatesAutoresizingMaskIntoConstraints = false
+            let box = NSBox()
+            box.title = title
+            box.titlePosition = .atTop
+            box.translatesAutoresizingMaskIntoConstraints = false
+            box.contentView?.addSubview(inner)
+            if let cv = box.contentView {
+                NSLayoutConstraint.activate([
+                    inner.leadingAnchor.constraint(equalTo: cv.leadingAnchor, constant: 10),
+                    inner.trailingAnchor.constraint(equalTo: cv.trailingAnchor, constant: -10),
+                    inner.topAnchor.constraint(equalTo: cv.topAnchor, constant: 8),
+                    inner.bottomAnchor.constraint(equalTo: cv.bottomAnchor, constant: -8),
+                ])
+            }
+            for v in fullWidth {
+                v.widthAnchor.constraint(equalTo: inner.widthAnchor).isActive = true
+            }
+            return box
+        }
+
+        let apiCard = card("API-Schlüssel", [
+            label("Groq API Key (Whisper-Transkription)"), groqField,
+            label("Gemini API Key (optional)"), geminiField,
+        ], fullWidth: [groqField, geminiField])
+
+        let vocabCard = card("Persönliches Wörterbuch", [
+            label("Häufige Begriffe für die Gemini-Korrektur"),
+            vocabularyEnabledCheck, vocabularyScroll,
             label("Einleitungstext (Präambel) – wird der Wörterbuch-Liste vorangestellt"),
             preambleScroll,
-            label("Gemini-Korrektur-Prompts (Profil 1–10)"),
-            editPromptsButton,
-            label("Separator-Template"),
-            separatorField,
-            autoHideCheck,
-            horizontalCheck,
-            persistPositionCheck,
-            label("Google Drive Backup"),
-            label("Client ID"),
-            clientIdField,
-            label("Client Secret"),
-            clientSecretField,
-            statusLabel,
-            connectRow,
-            buttonRow,
-        ])
+        ], fullWidth: [vocabularyScroll, preambleScroll])
+
+        let promptsCard = card("Gemini-Korrektur-Prompts (Profil 1–10)", [editPromptsButton])
+
+        let behaviorCard = card("Darstellung & Verhalten", [
+            label("Separator-Template"), separatorField,
+            autoHideCheck, horizontalCheck, persistPositionCheck,
+        ], fullWidth: [separatorField])
+
+        let driveCard = card("Google Drive Backup", [
+            label("Client ID"), clientIdField,
+            label("Client Secret"), clientSecretField,
+            statusLabel, connectRow,
+        ], fullWidth: [clientIdField, clientSecretField])
+
+        let stack = NSStackView(views: [apiCard, vocabCard, promptsCard, behaviorCard, driveCard, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
+        stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
         window.contentView?.addSubview(stack)
 
@@ -1145,15 +1174,13 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -16),
             stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 16),
             stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
-            groqField.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            geminiField.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            vocabularyScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            apiCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            vocabCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            promptsCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            behaviorCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            driveCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             vocabularyScroll.heightAnchor.constraint(equalToConstant: 90),
-            preambleScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
             preambleScroll.heightAnchor.constraint(equalToConstant: 90),
-            separatorField.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            clientIdField.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            clientSecretField.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
 
         window.delegate = self
