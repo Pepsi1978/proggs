@@ -151,7 +151,47 @@ Backend-Wechsel, sondern ein Quality-Gate VOR dem Speichern** — entweder selbs
 inhaerent in Cognee (Weg 2). Frank entscheidet zwischen „mem0 + eigenes Gate" (wenig Aufwand) und „Cognee" (mehr
 Umbau, aber Quality strukturell eingebaut).
 
+## 7. Quality-Gate-Bausteine — gibt es fertige Teile zum Davorsetzen? (Recherche 2026-06-22, Firecrawl + OpenRouter-Eskalation)
+
+> Franks Folgefrage: „Gibt es schon sehr gute Open-Source-Quality-Gates, die wir einfach davorsetzen können, oder
+> muss man das selbst bauen?" Antwort: **teils-teils — das schwere Stueck (Halluzinations-/Grounding-Pruefmodell)
+> gibt es fertig; ein komplettes Memory-Gate-Drop-in gibt es NICHT.**
+
+**(a) Fertige Pruef-Bausteine (man nimmt sie, baut sie NICHT selbst):**
+
+| Tool | Lizenz | Score | Lokal/Latenz | Eignung als Pre-Storage-Gate |
+|------|--------|-------|--------------|------------------------------|
+| **Vectara HHEM-2.1-Open** ⭐ | **Apache 2.0** (frei, auch kommerziell) | kalibriert 0–1 (`0.8` = 80 % faktentreu) | klein, **<1,5 s @2k Tokens** (CPU/RTX 3080); DE/EN/FR | **bester Fit**: Paar-Input (`premise`=Quelle, `hypothesis`=Fakt) → Score → Reject. Spezialisierter Factual-Consistency-Detector. ⚠️ niedriger Recall → laesst manche Halluzination durch |
+| **Patronus Lynx 8B** | ⚠️ **CC BY-NC 4.0 (NICHT-kommerziell!)** | JSON `SCORE`+`REASONING`, PASS/FAIL | via **Ollama** (GGUF Q4); genauer, schwerer/langsamer | gut als 2. Stufe fuer Grenzfaelle; fuer Franks **privates** Gehirn lizenz-ok, fuer kommerziell NICHT nutzbar |
+| **RAGAS** | OSS (Lizenztext n. belegt) | `faithfulness`/context-precision/recall 0–1 | lokal | nutzbar, aber primaer RAG-Eval-Framework (schwerer als ein reines Gate) |
+| **DeepEval** | OSS (Lizenztext n. belegt) | `hallucination`/answer-relevancy 0–1; Ollama-Support | lokal, pytest/code-first | gut fuer Inline-Gate auf Python-Single-Host |
+| Bespoke MiniCheck / Guardrails AI | n. belegt | n. belegt | n. belegt | in den Quellen nicht abgedeckt → bei Bedarf GitHub direkt pruefen |
+
+**(b) Komplettes Memory-Gate-Drop-in (extract→verify→REJECT/ADD in einem Paket): NEIN.** Zwei unabhaengige
+Researcher: existiert 2026 nicht als fertiges OSS-Teil. **LangMem** = nur Extract-Tool, ausdruecklich „no built-in
+evaluation" (kein Verify/Reject). **Blockify** (iternal.ai) = kommerziell + nur Dedup/Distillation/IdeaBlocks, kein
+belegter Reject. **Cognee cognify** strukturiert implizit, aber kein expliziter Grounding-Reject belegt.
+
+**(c) Was man also selbst verdrahtet (wenig Code, ~50 Zeilen — KEIN Eigenbau des Pruefmodells):**
+```
+LLM extrahiert Fakt(en)  →  HHEM(premise=Quell-Chunk, hypothesis=Fakt) → Score
+   Score < Schwelle   → verwerfen (NICHT in mem0)
+   Score >= Schwelle  → Dedup (Cosine vs. vorhandene) → mem0.add()
+   (Grenzband optional an Lynx 8B via Ollama)
+```
+- **Schwellen sind nirgends dokumentiert** → selbst auf einem kleinen Hold-out (RAGTruth/HaluBench) kalibrieren;
+  Start z. B. `reject < 0.5`, `borderline 0.5–0.7`, `accept >= 0.7` (HHEM-Score ist kalibriert interpretierbar).
+- **Kein End-to-End-Cookbook** „HHEM/Lynx als Memory-Write-Gate vor Vektor-DB" existiert — selbst komponieren.
+- Zusatz gegen mem0s Haupt-Junk (Boot-File-Restating 52,7 %): ein simpler Vorfilter, der System-Prompt-/Tool-Config-
+  Text gar nicht erst extrahieren laesst, faengt den Loewenanteil schon VOR dem HHEM-Check.
+
+**Konsequenz fuer Weg 1 („mem0 + eigenes Gate"):** ist damit klar der pragmatischste Weg — **HHEM-2.1-Open
+(Apache 2.0)** als fertiges Pruefmodell + ~50 Zeilen Verdrahtung im `mem0-api` vor `add()`. Kein Stack-Wechsel,
+volle Datenhoheit, geringer Aufwand.
+
 ## Nacharbeit (offene Verifikation)
+- **(Gate-Recherche 2026-06-22)** HHEM-Reject-Schwelle auf einem kleinen eigenen Hold-out kalibrieren (kein Default belegt).
+- **(Gate-Recherche 2026-06-22)** Bespoke MiniCheck + Guardrails AI Lizenz/Score direkt am GitHub-Repo pruefen (Quellen deckten sie nicht ab).
 - **(Junk-Recherche 2026-06-22)** Cognee-Quellcode/Doku auf einen ECHTEN Pre-Storage-Filter (`filter`/`score`/
   `confidence`/`quality` in der Cognify-Pipeline) pruefen — die Sekundaerquellen belegen ihn NICHT explizit.
 - **(Junk-Recherche 2026-06-22)** Falls Weg 1 (mem0 + eigenes Gate): Confidence-Gate-Pattern als kleinen Reject-Filter
