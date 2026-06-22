@@ -2,6 +2,11 @@
 # Doku/Plan: best-practices/second-brain/UMSETZUNGSPLAN.md
 # Sicherheitsprinzip: ALLE Dienste nur an 127.0.0.1 (kein offener Port ausser SSH;
 # der externe Zugang kommt spaeter ueber Reverse-Proxy/VPN).
+#
+# Stack:  mem0-api (REST-Bibliothekar)  ->  Qdrant (Such-Schrank)
+#         KI (Denken + Embeddings) laeuft ueber Google Gemini (Cloud) — kein lokales Modell.
+#         (Ollama/BGE-M3 wurde am 2026-06-22 entfernt: Datenabfluss ist egal -> Cloud-KI
+#          ist schneller/besser und entlastet den kleinen 8-GB-Server.)
 
 services:
   qdrant:
@@ -27,20 +32,35 @@ services:
     # Healthcheck bewusst extern (curl vom Host) statt Container-intern —
     # das Qdrant-Image bringt keine garantierte Shell/curl mit.
 
-  ollama:
-    image: ollama/ollama:latest      # lokale Embedding-/LLM-Maschine (Datenhoheit, kein Datenabfluss)
-    container_name: sb-ollama
+  mem0-api:
+    build: ./mem0-api               # schlanker FastAPI-Wrapper um die Mem0-Bibliothek
+    container_name: sb-mem0-api
     restart: unless-stopped
+    depends_on:
+      - qdrant
     ports:
-      - "127.0.0.1:11434:11434"      # NUR lokal erreichbar
-    volumes:
-      - ./ollama-data:/root/.ollama  # Modelle persistent auf der Platte
+      - "127.0.0.1:8000:8000"        # REST-API — NUR lokal erreichbar (extern spaeter via Proxy/VPN)
+    env_file:
+      - .env                          # GEMINI_API_KEY / QDRANT_API_KEY / SB_API_KEY (NICHT im Repo)
     environment:
-      OLLAMA_KEEP_ALIVE: "30m"       # Modell nach Nutzung 30 Min im RAM halten, dann freigeben
+      QDRANT_HOST: qdrant             # Service-Name im Compose-Netz (DNS-aufloesbar)
+      QDRANT_PORT: "6333"
+      SB_EMBED_DIMS: "1536"           # gemini-embedding-001 @ 1536 (MUSS zur Qdrant-Collection passen)
+      GEMINI_LLM_MODEL: gemini-3.1-flash-lite
+      GEMINI_EMBED_MODEL: models/gemini-embedding-001
+      SB_LOG_PATH: /app/logs/mem0-api.jsonl
+    volumes:
+      - ./mem0-logs:/app/logs         # Logs persistent + vom Host tailbar (Observability-First)
     deploy:
       resources:
         limits:
-          memory: 4G                 # genug fuer BGE-M3-Embeddings auf CPU
-          cpus: "2.0"
+          memory: 1G                 # schlank: keine lokalen Modelle (Embeddings/LLM in der Cloud)
+          cpus: "1.0"
         reservations:
-          memory: 1G
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

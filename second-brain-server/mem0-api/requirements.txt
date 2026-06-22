@@ -1,0 +1,9 @@
+# mem0-api — Abhaengigkeiten (Stand 2026-06-22, PyPI-verifiziert)
+# Web-Schicht exakt gepinnt (unabhaengig von mem0). google-genai + qdrant-client
+# werden bewusst von mem0ai's Resolver mitgezogen (vermeidet Versions-Konflikte) —
+# mem0 bringt sie als eigene Deps mit; wir geben nur eine Untergrenze an.
+mem0ai==2.0.7
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+google-genai>=2.9.0
+qdrant-client>=1.18.0

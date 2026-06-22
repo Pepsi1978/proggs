@@ -4,3 +4,7 @@
 qdrant-data/
 *-data/
 *-storage/
+*-logs/
+mem0-logs/
+__pycache__/
+*.pyc
