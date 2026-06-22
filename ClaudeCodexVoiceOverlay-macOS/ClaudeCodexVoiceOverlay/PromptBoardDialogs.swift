@@ -990,6 +990,12 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     // vor den Korrektur-Prompt, AppDelegate synchronisiert sie ueber Drive.
     private let vocabularyTextView = NSTextView()
     private let vocabularyScroll = NSScrollView()
+    // Editierbarer Einleitungstext (Praeambel) fuer den Woerterbuch-Block
+    // (Frank-Wunsch 2026-06-22): liegt als vocabulary-preamble.txt im SK-Ordner.
+    // Mac las sie bisher nur (GeminiClient.effectiveVocabularyPreamble); jetzt auch
+    // hier editierbar wie auf Windows, Aenderung geht sofort ins Drive-Backup.
+    private let preambleTextView = NSTextView()
+    private let preambleScroll = NSScrollView()
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -1051,6 +1057,29 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         vocabularyTextView.insertionPointColor = .white
         vocabularyScroll.documentView = vocabularyTextView
 
+        // Praeambel-Editierfeld analog zum Vokabular-Feld (dunkel, mehrzeilig, scrollbar),
+        // vorbefuellt mit dem aktuell wirksamen Einleitungstext (Datei oder Default).
+        preambleTextView.string = GeminiClient.effectiveVocabularyPreamble()
+        preambleScroll.hasVerticalScroller = true
+        preambleScroll.borderType = .bezelBorder
+        preambleScroll.translatesAutoresizingMaskIntoConstraints = false
+        preambleScroll.drawsBackground = true
+        preambleScroll.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        preambleTextView.minSize = NSSize(width: 0, height: 0)
+        preambleTextView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        preambleTextView.isVerticallyResizable = true
+        preambleTextView.isHorizontallyResizable = false
+        preambleTextView.autoresizingMask = [.width]
+        preambleTextView.textContainer?.containerSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        preambleTextView.textContainer?.widthTracksTextView = true
+        preambleTextView.isRichText = false
+        preambleTextView.font = .systemFont(ofSize: 13)
+        preambleTextView.drawsBackground = true
+        preambleTextView.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        preambleTextView.textColor = .white
+        preambleTextView.insertionPointColor = .white
+        preambleScroll.documentView = preambleTextView
+
         // Themed buttons kept as instance variables so connectGoogle() can
         // still flip their enabled state / title mid-OAuth flow.
         connectButton = PBDarkTheme.makeSecondaryButton(title: "Verbinden", target: self, action: #selector(connectGoogle))
@@ -1087,6 +1116,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             label("Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)"),
             vocabularyEnabledCheck,
             vocabularyScroll,
+            label("Einleitungstext (Präambel) – wird der Wörterbuch-Liste vorangestellt"),
+            preambleScroll,
             label("Gemini-Korrektur-Prompts (Profil 1–10)"),
             editPromptsButton,
             label("Separator-Template"),
@@ -1118,6 +1149,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             geminiField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             vocabularyScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
             vocabularyScroll.heightAnchor.constraint(equalToConstant: 90),
+            preambleScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            preambleScroll.heightAnchor.constraint(equalToConstant: 90),
             separatorField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             clientIdField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             clientSecretField.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -1200,7 +1233,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         // GeminiClient direkt gelesen, nicht ueber die DB-Settings).
         PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
         PBSettingsDialog.saveVocabularyEnabled(vocabularyEnabledCheck.state == .on)
-        GeminiPromptSync.tryUpload()   // Schalter-Aenderung sofort ins Backup
+        GeminiClient.saveVocabularyPreamble(preambleTextView.string)   // editierbare Praeambel (wie Windows)
+        GeminiPromptSync.tryUpload()   // Schalter-/Praeambel-Aenderung sofort ins Backup
         window?.close()    // windowWillClose handles stopModal (no double-stop)
     }
 

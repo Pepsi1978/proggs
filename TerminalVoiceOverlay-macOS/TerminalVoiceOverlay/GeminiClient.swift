@@ -121,6 +121,21 @@ final class GeminiClient {
         return defaultVocabularyPreamble
     }
 
+    /// Speichert den editierbaren Woerterbuch-Einleitungstext (Praeambel) in
+    /// vocabulary-preamble.txt (wirkt sofort, wird ueber Drive gesynct). Spiegelt
+    /// Windows SaveVocabularyPreamble; effectiveVocabularyPreamble() faellt bei
+    /// leerem/fehlendem Inhalt auf defaultVocabularyPreamble zurueck.
+    static func saveVocabularyPreamble(_ text: String) {
+        let url = geminiPromptDir.appendingPathComponent(vocabularyPreambleFileName)
+        do {
+            try FileManager.default.createDirectory(at: geminiPromptDir, withIntermediateDirectories: true)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            try (trimmed + "\n").write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            NSLog("Vokabular-Praeambel konnte nicht gespeichert werden: \(error.localizedDescription)")
+        }
+    }
+
     /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen des
     /// Sprechers) und baut daraus einen Praeambel-Block, der VOR den Korrektur-
     /// Prompt gesetzt wird. Bewusst kontextsensitiv: KEIN stures Suchen-und-
