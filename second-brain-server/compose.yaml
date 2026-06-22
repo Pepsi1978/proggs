@@ -55,7 +55,7 @@ services:
       SB_LOG_PATH: /app/logs/mem0-api.jsonl
       # Quality-Gate (HHEM-2.1-Open) gegen Junk/Halluzinationen — abschaltbar, Schwelle kalibrierbar (app.py)
       SB_GATE_ENABLED: "true"
-      SB_GATE_THRESHOLD: "0.4"   # kalibriert 2026-06-22: Halluzinationen scoren <0.1, korrekte (auch umformulierte) Fakten >0.4; 0.5+ verwirft korrekte mit
+      SB_GATE_THRESHOLD: "0.3"   # kalibriert 2026-06-22 (datenbasiert): echte Halluzinationen scoren <0.1, plausible/angereicherte Fakten >0.38 -> Schwelle in die Mitte der Score-Luecke (0.3) mit Puffer. 0.4-0.5 verwirft plausible Fakten mit.
     volumes:
       - ./mem0-logs:/app/logs         # Logs persistent + vom Host tailbar (Observability-First)
       - ./hf-cache:/app/.cache/huggingface   # HHEM-Modell-Cache: nur einmal laden, ueberlebt Container-Restart
