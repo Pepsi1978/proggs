@@ -23,7 +23,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.3.0"  # 0.3.0: HHEM-Quality-Gate vor/nach add() (Junk/Halluzinations-Schutz). 0.2.1: fastembed hybride Suche. 0.2.0: strenge custom_instructions
+VERSION = "0.4.0"  # 0.4.0: HHEM-Gate wieder entfernt — Speicher ist wortwoertlich 1:1, keine KI-Bearbeitung beim Speichern (schlank halten). 0.2.1: fastembed hybride Suche. 0.2.0: strenge custom_instructions
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -59,16 +59,6 @@ DEFAULT_CUSTOM_INSTRUCTIONS = (
     "Erinnerungen, sowie alles Spekulative oder Unbestaetigte. Im Zweifel NICHT speichern."
 )
 CUSTOM_INSTRUCTIONS = os.getenv("SB_CUSTOM_INSTRUCTIONS", DEFAULT_CUSTOM_INSTRUCTIONS)
-
-# Quality-Gate (HHEM-2.1-Open, Apache-2.0) — die zweite Verteidigungslinie gegen Junk:
-# mem0 extrahiert Fakten, aber hat KEIN Pre-Storage-Gate (bugs/server/mem0.md §1). Wir setzen eins davor/dahinter:
-#   1) Vorfilter: offensichtlicher Nicht-Memory-Input (System-Prompt/Boot-File) wird gar nicht erst an mem0 gegeben.
-#   2) Grounding-Gate: jeder NEU extrahierte Fakt wird mit HHEM gegen den Quelltext gescort; Score < Schwelle
-#      = nicht im Input gegroundet (Halluzination) -> der Fakt wird wieder geloescht.
-# Robust: laedt HHEM lazy; faellt das Laden aus, degradiert das Gate zu pass-through (kein Funktionsverlust).
-GATE_ENABLED = os.getenv("SB_GATE_ENABLED", "true").lower() in ("1", "true", "yes", "on")
-GATE_THRESHOLD = float(os.getenv("SB_GATE_THRESHOLD", "0.5"))  # HHEM-Score < Schwelle -> verwerfen; kalibrierbar
-HHEM_MODEL = os.getenv("SB_HHEM_MODEL", "vectara/hallucination_evaluation_model")
 
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging (stdout + rotierende Datei, beide UTF-8)
@@ -121,105 +111,6 @@ def checkpoint(step: str, intent: str, ok: bool, **ctx: Any) -> None:
         f"CHECKPOINT {step}",
         extra={"ctx": {"kind": "CHECKPOINT", "step": step, "intent": intent, "ok": ok, **ctx}},
     )
-
-
-# ---------------------------------------------------------------------------
-# Quality-Gate gegen Junk/Halluzinationen (HHEM-2.1-Open) — lazy + robust
-# ---------------------------------------------------------------------------
-_hhem: dict[str, Any] = {"model": None, "loaded": False, "failed": False}
-
-# Konservative Marker fuer offensichtlichen Nicht-Memory-Input (Boot-File-Restating = mem0s
-# groesste Junk-Quelle, 52,7 %). Bewusst eng gehalten, um false positives zu vermeiden.
-_JUNK_MARKERS = (
-    "you are an ai", "you are a helpful", "you are claude", "du bist eine ki",
-    "du bist ein hilfreicher", "system prompt", "<system>", "your instructions are",
-    "deine anweisungen", "you have access to the following tools",
-)
-
-
-def _prefilter_junk(text: str | None) -> str | None:
-    """Offensichtlichen Nicht-Memory-Input VOR add() erkennen (spart sogar den LLM-Call).
-    Gibt den Ablehnungsgrund zurueck oder None (= durchlassen). Konservativ gehalten."""
-    if not text:
-        return None
-    low = text.strip().lower()
-    if len(low) < 3:
-        return "zu_kurz"
-    for mk in _JUNK_MARKERS:
-        if mk in low:
-            return "system_prompt_marker"
-    return None
-
-
-def _load_hhem():
-    """HHEM lazy laden (erst beim ersten Gate-Call). Faellt das Laden aus, bleibt failed=True und
-    das Gate degradiert zu pass-through (kein Funktionsverlust, nur eine Warnung im Log)."""
-    if _hhem["loaded"] or _hhem["failed"]:
-        return _hhem["model"]
-    try:
-        from transformers import AutoModelForSequenceClassification
-
-        t0 = time.time()
-        _hhem["model"] = AutoModelForSequenceClassification.from_pretrained(
-            HHEM_MODEL, trust_remote_code=True
-        )
-        _hhem["loaded"] = True
-        _log(logging.INFO, "HHEM geladen", model=HHEM_MODEL, ms=int((time.time() - t0) * 1000))
-    except Exception as e:  # noqa: BLE001 — Gate darf den Dienst NIE lahmlegen
-        _hhem["failed"] = True
-        # err in den ctx (nicht exc_info=True — _log reicht das nicht an den Logger durch)
-        _log(logging.ERROR, "HHEM-Laden fehlgeschlagen -> Gate degradiert zu pass-through",
-             err=f"{type(e).__name__}: {e}")
-    return _hhem["model"]
-
-
-def _hhem_score(premise: str, hypothesis: str) -> float | None:
-    """Faktentreue-Score 0-1 (1 = durch premise gestuetzt, 0 = halluziniert). None = Gate inaktiv."""
-    model = _load_hhem()
-    if model is None:
-        return None
-    try:
-        scores = model.predict([(premise, hypothesis)])
-        val = scores[0]  # tensor-/listenartig -> robust in float wandeln
-        return float(val.item() if hasattr(val, "item") else val)
-    except Exception:  # noqa: BLE001
-        _log(logging.WARNING, "HHEM-Score fehlgeschlagen -> Fakt wird durchgelassen", exc_info=True)
-        return None
-
-
-def _apply_gate(source_text: str, result: Any, m: Any) -> dict:
-    """Post-Add-Grounding-Gate: jeden NEU gespeicherten Fakt gegen den Quelltext scoren; liegt der
-    HHEM-Score unter der Schwelle (nicht im Input gegroundet = Halluzination), den Fakt wieder loeschen.
-    Robust: bei jedem Fehler wird NICHT geloescht (lieber ein Fakt zu viel als Datenverlust)."""
-    rejected: list[dict] = []
-    if not GATE_ENABLED:
-        return {"kept": None, "rejected": rejected, "gate": "disabled"}
-    items = (result or {}).get("results", []) if isinstance(result, dict) else (result or [])
-    added = [it for it in items if isinstance(it, dict) and str(it.get("event", "ADD")).upper() == "ADD"]
-    for it in added:
-        fact = str(it.get("memory", "")).strip()
-        mem_id = it.get("id")
-        if not fact or not mem_id:
-            continue
-        score = _hhem_score(source_text, fact)
-        if score is None:
-            continue  # Gate inaktiv/Fehler -> Fakt behalten (kein Funktionsverlust)
-        if score < GATE_THRESHOLD:
-            try:
-                m.delete(memory_id=mem_id)
-                rejected.append({"id": mem_id, "memory": fact, "score": round(score, 3)})
-                _log(logging.INFO, "Gate verwirft ungegroundeten Fakt", score=round(score, 3),
-                     threshold=GATE_THRESHOLD, memory_id=mem_id)
-            except Exception:  # noqa: BLE001
-                _log(logging.WARNING, "Gate-delete fehlgeschlagen -> Fakt bleibt", memory_id=mem_id, exc_info=True)
-    # result bereinigen: verworfene Fakten raus, damit der Aufrufer nur die behaltenen sieht
-    if rejected and isinstance(result, dict) and isinstance(result.get("results"), list):
-        rej_ids = {r["id"] for r in rejected}
-        result["results"] = [it for it in result["results"] if it.get("id") not in rej_ids]
-    kept = len(added) - len(rejected)
-    checkpoint("quality_gate", "ungegroundete Fakten werden vor dem Speichern verworfen",
-               ok=True, added=len(added), kept=kept, rejected=len(rejected), threshold=GATE_THRESHOLD)
-    return {"kept": kept, "rejected": rejected, "gate": "active"}
 
 
 # ---------------------------------------------------------------------------
@@ -360,12 +251,6 @@ def health() -> dict:
         "embed_model": EMBED_MODEL,
         "embed_dims": EMBED_DIMS,
         "llm_calls_today": _llm_calls["count"],
-        "gate": {
-            "enabled": GATE_ENABLED,
-            "threshold": GATE_THRESHOLD,
-            "hhem_loaded": _hhem["loaded"],
-            "hhem_failed": _hhem["failed"],
-        },
     }
 
 
@@ -380,35 +265,15 @@ def store(req: StoreReq) -> dict:
     m = _require_memory()
     if not req.text and not req.messages:
         raise HTTPException(status_code=400, detail="text oder messages erforderlich")
-
-    # Quality-Gate Stufe 1 — Vorfilter: offensichtlichen Nicht-Memory-Input (System-Prompt/Boot-File)
-    # gar nicht erst an mem0 geben (spart sogar den LLM-Call). Nur bei Text + Extraktion.
-    if GATE_ENABLED and req.infer and req.text:
-        reason = _prefilter_junk(req.text)
-        if reason:
-            checkpoint("prefilter", "offensichtlicher Nicht-Memory-Input wird abgelehnt", ok=True,
-                       reason=reason, user_id=req.user_id)
-            return {"ok": True, "result": {"results": []}, "gate": {"prefiltered": reason}}
-
     if req.infer:
         _guard_llm_budget()  # nur bei LLM-Extraktion faellt ein Modell-Call an
     payload = req.messages if req.messages else req.text
     t0 = time.time()
     result = m.add(payload, user_id=req.user_id, metadata=req.metadata or {}, infer=req.infer)
-
-    # Quality-Gate Stufe 2 — Grounding: ungegroundete (halluzinierte) Fakten wieder verwerfen.
-    # Nur bei infer=True (Rohtext-Pfad hat keine Extraktion -> nichts zu pruefen).
-    gate_info = None
-    if req.infer:
-        source = req.text or json.dumps(req.messages, ensure_ascii=False)
-        gate_info = _apply_gate(source, result, m)
-
     added = len((result or {}).get("results", []) if isinstance(result, dict) else result or [])
-    rejected = len((gate_info or {}).get("rejected", []))
     checkpoint("store", "Eingabe wird als Erinnerung persistiert", ok=added >= 0,
-               user_id=req.user_id, infer=req.infer, added=added, rejected=rejected,
-               ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "result": result, "gate": gate_info}
+               user_id=req.user_id, infer=req.infer, added=added, ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "result": result}
 
 
 @app.post("/recall", dependencies=[Depends(require_auth)])
