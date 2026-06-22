@@ -278,8 +278,10 @@ DEIN HOSTINGER-SERVER (eine Maschine, alles lokal)
 Server + Qdrant + **Mem0 + Gemini (REST) sind LIVE und getestet**. Naechste sinnvolle Bausteine
 (Reihenfolge offen, mit Frank abstimmen):
 1. **Harte Gemini-Kosten-Caps** in Google AI Studio / Cloud-Console (Budget-Stopp, nicht nur Alert).
-2. **Externer Zugang**: WireGuard (Frank-Tendenz, Server unsichtbar) ODER Caddy+TLS+eigene Domain;
-   danach **MCP-Endpunkt**, damit Claude Code / OpenCode das Gehirn als Memory nutzen.
+2. ✅ **Externer Zugang via WireGuard LIVE** (2026-06-22, #47073): Server `wg0` 10.8.0.1, nur UDP 51820
+   oeffentlich, `mem0-api` an `10.8.0.1:8000` (oeffentlich unsichtbar). Clients: Handy+PC (Configs in
+   `~/SK/second-brain/wireguard/`). **Offen:** **MCP-Endpunkt**, damit Claude Code / OpenCode das Gehirn
+   als Memory nutzen (HTTP-Transport gegen `http://10.8.0.1:8000`), + ggf. weitere Geraete als Peers.
 3. **Zweiter Speicher-Weg (RAG)** fuer Dokumente (Chunking+Embedding direkt in Qdrant) neben Mem0-Fakten —
    dann die **3 Direktiven** als ersten echten Inhalt einspeichern (Kategorie "programmieren").
 4. **Offsite-Backup** von `qdrant-data/` + monatlicher Restore-Test; Images auf feste Versionen pinnen.

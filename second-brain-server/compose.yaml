@@ -39,7 +39,11 @@ services:
     depends_on:
       - qdrant
     ports:
-      - "127.0.0.1:8000:8000"        # REST-API — NUR lokal erreichbar (extern spaeter via Proxy/VPN)
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar, NIE oeffentlich.
+      # Bewusst NICHT 0.0.0.0 (Docker-UFW-Falle: published 0.0.0.0-Ports umgehen UFW).
+      # Boot-Reihenfolge: docker.service startet nach wg-quick@wg0 (systemd-drop-in auf dem Server),
+      # zusaetzlich restart:unless-stopped als Selbstheilung, falls wg0 spaeter kommt.
+      - "10.8.0.1:8000:8000"
     env_file:
       - .env                          # GEMINI_API_KEY / QDRANT_API_KEY / SB_API_KEY (NICHT im Repo)
     environment:

@@ -45,6 +45,26 @@ Alle ausser `/health` brauchen den Header `Authorization: Bearer $SB_API_KEY`.
   SB_API_KEY=...            # REST-Bearer-Token: python -c "import secrets;print(secrets.token_urlsafe(48))"
   ```
 
+## Zugang von außen (WireGuard-VPN)
+Das Gehirn ist **öffentlich unsichtbar** — kein HTTP-Port ist im Internet offen. Der Zugriff
+läuft ausschließlich über einen WireGuard-Tunnel (Split-Tunnel). Nur **UDP 51820** ist öffentlich.
+
+- Server-Interface `wg0` = **10.8.0.1/24**. `mem0-api` ist an `10.8.0.1:8000` gebunden → nur über
+  den Tunnel erreichbar (nicht via `eth0`/öffentlich; bewusst NICHT `0.0.0.0` wegen Docker-UFW-Falle).
+- Clients erreichen das Gehirn dann unter **`http://10.8.0.1:8000`** (z.B. `…/health`, `…/store`).
+- Boot-Reihenfolge abgesichert: `docker.service` startet nach `wg-quick@wg0` (systemd-drop-in
+  `/etc/systemd/system/docker.service.d/wait-for-wireguard.conf`).
+- **Kein** IP-Forwarding/MASQUERADE nötig (Dienst läuft AUF dem Host = Split-Tunnel; siehe
+  `bugs/server/wireguard.md` #1). Server-Config: `/etc/wireguard/wg0.conf` (chmod 600).
+- Secrets (Server- + Client-Keys, `.conf`, QR) liegen NUR auf dem Server + Backup
+  `~/SK/second-brain/wireguard/` — niemals im Repo.
+
+**Neues Gerät hinzufügen** (auf dem Server): Client-Keypair mit `umask 077; wg genkey | tee priv | wg
+pubkey > pub` erzeugen, in `/etc/wireguard/wg0.conf` einen `[Peer]` mit `PublicKey` + freier
+`AllowedIPs = 10.8.0.X/32` ergänzen, `wg syncconf wg0 <(wg-quick strip wg0)` (oder `systemctl restart
+wg-quick@wg0`), Client-`.conf` (Address `10.8.0.X/24`, `Endpoint 168.231.83.205:51820`,
+`AllowedIPs = 10.8.0.0/24`, `PersistentKeepalive = 25`) erzeugen und ans Gerät geben.
+
 ## Observability
 mem0-api schreibt strukturierte JSON-Lines nach `/app/logs/mem0-api.jsonl` (Host: `./mem0-logs/`,
 rotierend) und spiegelt sie nach stdout. Live mitlesen auf dem Server:
@@ -66,11 +86,11 @@ docker compose down            # stoppen
 ## Schnelltest (auf dem Server)
 ```bash
 SB=$(grep '^SB_API_KEY=' .env | cut -d= -f2-)
-curl -s localhost:8000/health | python3 -m json.tool
-curl -s -X POST localhost:8000/store -H "Authorization: Bearer $SB" \
+curl -s 10.8.0.1:8000/health | python3 -m json.tool
+curl -s -X POST 10.8.0.1:8000/store -H "Authorization: Bearer $SB" \
   -H 'Content-Type: application/json' \
   -d '{"text":"Frank trinkt morgens gerne gruenen Tee","user_id":"frank","metadata":{"category":"praeferenz"}}'
-curl -s -X POST localhost:8000/recall -H "Authorization: Bearer $SB" \
+curl -s -X POST 10.8.0.1:8000/recall -H "Authorization: Bearer $SB" \
   -H 'Content-Type: application/json' -d '{"query":"Was trinkt Frank?","user_id":"frank"}'
 ```
 
