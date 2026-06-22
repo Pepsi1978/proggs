@@ -98,6 +98,29 @@ final class GeminiClient {
     /// Inhalt "true" = Woerterbuch wird mitgeschickt; sonst (auch fehlend) aus.
     private static let vocabularyEnabledFileName = "vocabulary-enabled.txt"
 
+    /// Editierbarer Einleitungstext fuer den Woerterbuch-Block (Frank-Wunsch
+    /// 2026-06-22): Datei vocabulary-preamble.txt, sonst Default. Wird vom
+    /// Backup-Sync mitgenommen; auf Windows editierbar.
+    private static let vocabularyPreambleFileName = "vocabulary-preamble.txt"
+    static let defaultVocabularyPreamble =
+        "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n"
+        + "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-"
+        + "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein "
+        + "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext "
+        + "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die "
+        + "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat "
+        + "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-"
+        + "Kontext zu \"Backend\")."
+
+    static func effectiveVocabularyPreamble() -> String {
+        let url = geminiPromptDir.appendingPathComponent(vocabularyPreambleFileName)
+        if let text = try? String(contentsOf: url, encoding: .utf8) {
+            let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !t.isEmpty { return t }
+        }
+        return defaultVocabularyPreamble
+    }
+
     /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen des
     /// Sprechers) und baut daraus einen Praeambel-Block, der VOR den Korrektur-
     /// Prompt gesetzt wird. Bewusst kontextsensitiv: KEIN stures Suchen-und-
@@ -120,15 +143,8 @@ final class GeminiClient {
         }
         let vocab = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if vocab.isEmpty { return "" }
-        let header = "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n"
-            + "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-"
-            + "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein "
-            + "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext "
-            + "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die "
-            + "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat "
-            + "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-"
-            + "Kontext zu \"Backend\").\n"
-        return header + vocab + "\n\n"
+        // Einleitungstext (Praeambel) aus der editierbaren Datei, sonst Default.
+        return effectiveVocabularyPreamble() + "\n" + vocab + "\n\n"
     }
 
     func correctText(_ text: String, profile: Int = 1,

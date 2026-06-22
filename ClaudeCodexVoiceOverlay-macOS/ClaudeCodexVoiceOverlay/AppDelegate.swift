@@ -140,6 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Geraet abholen (non-destruktive Vereinigung — kein Wort geht verloren).
         mergeVocabularyFromCloudOnLaunch()
 
+        // Gemini-Prompts + Woerterbuch-Schalter/Praeambel beim Start vom Backup
+        // holen (LWW per Timestamp). Fire-and-forget.
+        GeminiPromptSync.trySyncFromCloud()
+
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
         }

@@ -93,7 +93,9 @@ public sealed class GeminiPromptDriveSync
     /// <summary>Laedt den aktuellen lokalen Stand SOFORT zu Drive hoch (savedAt = jetzt).</summary>
     public async Task UploadAsync(CancellationToken ct = default)
     {
-        var savedAt = DateTime.UtcNow.ToString("o");
+        // Sekunden-genaues ISO-8601-UTC — IDENTISCHES Format auf Windows UND Mac,
+        // damit der lexikographische LWW-Vergleich cross-platform korrekt ist.
+        var savedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss'Z'");
         var bundle = BuildLocalBundle(savedAt);
         if (bundle.files.Count == 0) return; // lokal nichts vorhanden — nichts zu sichern
 

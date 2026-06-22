@@ -1200,6 +1200,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         // GeminiClient direkt gelesen, nicht ueber die DB-Settings).
         PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
         PBSettingsDialog.saveVocabularyEnabled(vocabularyEnabledCheck.state == .on)
+        GeminiPromptSync.tryUpload()   // Schalter-Aenderung sofort ins Backup
         window?.close()    // windowWillClose handles stopModal (no double-stop)
     }
 
@@ -1399,6 +1400,7 @@ final class GeminiPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     @objc private func saveDlg() {
         GeminiClient.saveProfilePrompt(profile: profile, text: textView.string)
+        GeminiPromptSync.tryUpload()   // sofort ins Google-Drive-Backup
         window?.close()
     }
     @objc private func cancelDlg() {

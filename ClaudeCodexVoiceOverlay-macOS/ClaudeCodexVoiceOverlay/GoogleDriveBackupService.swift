@@ -578,6 +578,53 @@ final class GoogleDriveBackupService {
         }
     }
 
+    // ── Gemini-Prompt-Backup-Bundle (Etappe 2d Mac) — eine Datei im appDataFolder ──
+    private static let geminiPromptsFileName = "gemini-prompts-bundle.json"
+
+    /// Laedt das Gemini-Prompt-Bundle (10 Prompts + Schalter + Praeambel) zu Drive hoch.
+    func uploadGeminiPrompts(json: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.geminiPromptsFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        if let keepId = ids.first {
+                            self.replaceFile(id: keepId, token: token, json: json) { replaceResult in
+                                let dups = Array(ids.dropFirst())
+                                if !dups.isEmpty { self.deleteFiles(ids: dups, token: token) }
+                                completion(replaceResult)
+                            }
+                        } else {
+                            self.createFile(name: Self.geminiPromptsFileName,
+                                            token: token, json: json, completion: completion)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Holt das aktuellste Gemini-Prompt-Bundle aus Drive (nil wenn keins existiert).
+    func downloadGeminiPrompts(completion: @escaping (Result<String?, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.geminiPromptsFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        guard let id = ids.first else { completion(.success(nil)); return }
+                        self.downloadContent(id: id, token: token, completion: completion)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Generische Helpers (parametrisierbarer Filename)
 
     /// Wie `findAllBackupFileIds`, aber mit konfigurierbarem Filename —
@@ -655,4 +702,96 @@ final class GoogleDriveBackupService {
 
 fileprivate extension Array {
     subscript(safe idx: Int) -> Element? { indices.contains(idx) ? self[idx] : nil }
+}
+
+// MARK: - Gemini-Prompt-Backup-Sync (Etappe 2d Mac, Frank-Wunsch 2026-06-22)
+
+/// Pendant zum Windows GeminiPromptDriveSync: buendelt die 10 Prompt-Dateien +
+/// Woerterbuch-Schalter + Praeambel als EINE Drive-Datei (gemini-prompts-bundle.json),
+/// LWW per savedAt-Timestamp (lokaler Marker .gemini-prompts-synced; sekundengenaues
+/// ISO-8601-UTC, IDENTISCH zum Windows-Format). personal-vocabulary.txt ist NICHT
+/// dabei (eigener Vereinigungs-Sync). Nutzt die Drive-Mechanik von GoogleDriveBackupService.
+enum GeminiPromptSync {
+    private static let markerName = ".gemini-prompts-synced"
+
+    private static var skDir: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("SK/VoiceOverlays")
+    }
+
+    private static var syncedFileNames: [String] {
+        var names = [
+            "gemini-correction-prompt-standard.txt",
+            "gemini-correction-prompt-programmierung.txt",
+            "gemini-correction-prompt-meta.txt",
+        ]
+        for i in 4...10 { names.append(String(format: "gemini-correction-prompt-%02d.txt", i)) }
+        names.append("gemini-correction-prompt.txt")  // Legacy-Sammeldatei
+        names.append("vocabulary-enabled.txt")        // Woerterbuch-Schalter
+        names.append("vocabulary-preamble.txt")       // Woerterbuch-Einleitungstext
+        return names
+    }
+
+    private static var markerURL: URL { skDir.appendingPathComponent(markerName) }
+
+    private static func readMarker() -> String {
+        (try? String(contentsOf: markerURL, encoding: .utf8))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+    private static func writeMarker(_ s: String) {
+        try? FileManager.default.createDirectory(at: skDir, withIntermediateDirectories: true)
+        try? s.write(to: markerURL, atomically: true, encoding: .utf8)
+    }
+
+    private static func nowStamp() -> String {
+        ISO8601DateFormatter().string(from: Date())  // "2026-06-22T19:30:00Z" — wie Windows
+    }
+
+    private static func buildLocalBundleJSON(savedAt: String) -> String? {
+        var files: [String: String] = [:]
+        for name in syncedFileNames {
+            let url = skDir.appendingPathComponent(name)
+            if let content = try? String(contentsOf: url, encoding: .utf8) {
+                files[name] = content
+            }
+        }
+        if files.isEmpty { return nil }
+        let obj: [String: Any] = ["savedAt": savedAt, "files": files]
+        guard let data = try? JSONSerialization.data(withJSONObject: obj),
+              let json = String(data: data, encoding: .utf8) else { return nil }
+        return json
+    }
+
+    /// Nach jedem Speichern (Editor/Schalter/Praeambel) aufrufen. Fire-and-forget.
+    static func tryUpload() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
+        let savedAt = nowStamp()
+        guard let json = buildLocalBundleJSON(savedAt: savedAt) else { return }
+        GoogleDriveBackupService.shared.uploadGeminiPrompts(json: json) { result in
+            if case .success = result { writeMarker(savedAt) }
+        }
+    }
+
+    /// Einmal beim App-Start. LWW: nur ein neueres Cloud-Bundle ueberschreibt lokal.
+    static func trySyncFromCloud() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
+        GoogleDriveBackupService.shared.downloadGeminiPrompts { result in
+            guard case .success(let maybeJson) = result else { return }
+            guard let json = maybeJson,
+                  let data = json.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let savedAt = obj["savedAt"] as? String,
+                  let files = obj["files"] as? [String: String] else {
+                tryUpload()  // kein gueltiges Cloud-Bundle -> lokalen Stand saeen
+                return
+            }
+            if savedAt <= readMarker() { return }  // lokal aktuell/neuer
+            try? FileManager.default.createDirectory(at: skDir, withIntermediateDirectories: true)
+            for (name, content) in files {
+                let safe = (name as NSString).lastPathComponent  // kein Pfad-Trick
+                if safe.isEmpty { continue }
+                try? content.write(to: skDir.appendingPathComponent(safe), atomically: true, encoding: .utf8)
+            }
+            writeMarker(savedAt)
+        }
+    }
 }
