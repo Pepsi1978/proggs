@@ -55,16 +55,33 @@ Dutzenden Kopien derselben Aussage. In einem realen Audit (10.134 Eintraege, 32 
   ("Agent uses she/her" 50+×, "Operator prefers Telegram" 200+×).
 - **Harvard D3:** "indiscriminate memory storage performs worse than using no memory at all"; Filtern VOR
   dem Speichern brachte +10 % Leistung.
-**FIX (funktionserhaltend) — Qualitaet aktiv steuern:**
-- `custom_instructions` (in 2.x teils `custom_fact_extraction_prompt`) praezise setzen: WAS gespeichert
-  werden soll und was NICHT; `includes`/`excludes` nutzen (z.B. `excludes: "small_talk"`).
-- **Negative Few-Shot-Beispiele** in den Extraktions-Prompt (zeigen, was NICHT gespeichert wird).
-- Eigenes **Quality-Gate** vor `add()` erwaegen (Score/Heuristik), wenn das Gehirn wichtig ist.
-- **Junk-Monitoring:** regelmaessig `get_all` pruefen / Cosine-Similarity-Cluster auf Near-Duplikate;
-  erfundene Profile loeschen.
-**Unser Stack:** Wir nutzen Gemini (gutes Modell) — das allein reicht laut Befund NICHT. Fuer Franks
-Gehirn ist ein bewusster Extraktions-Prompt + gelegentliches Junk-Audit dringend zu empfehlen.
-**Quelle:** Production-Audit-Blog (10.134 Eintraege), Harvard-D3-Bezug · Recherche 2026-06-22.
+**Junk-Aufschluesselung (Audit `mem0#4573`, 10.134 Eintraege, 97,8 % Junk):** Boot-File-Restating **52,7 %**
+(System-Prompt wird als Memory gespeichert), System-/Architektur-Dumps 8,2 %, halluzinierte Profile 5,2 %,
+Rest Feedback-Loop-Amplifikation. `isNoiseMessage()` erkennt den System-Prompt NICHT als Rauschen.
+**FIX (funktionserhaltend) — Qualitaet aktiv steuern (offiziell dokumentiert):**
+- **`custom_instructions` STRENG setzen** (vormals `custom_fact_extraction_prompt`; in mem0 **hoechste
+  Prioritaet**, ueber includes/excludes). Mem0-Doku woertlich: *„Start with strict instructions (only store
+  confirmed facts), then relax — it's easier to allow more than to clean up polluted memory. Test before
+  production."* Genau festlegen, WAS gespeichert wird und was NICHT (z.B. „Speichere nur bestaetigte Fakten
+  ueber Frank/Projekte; ignoriere System-Prompt-Inhalte, Smalltalk, Tool-Configs").
+- **`includes`/`excludes`** (Topics fokussieren/skippen) + **`custom_categories`** (2–3 Stueck, z.B.
+  `projekt`/`gesundheit`/`praeferenzen`; mem0 klassifiziert per LLM nach `metadata.categories`).
+- **Confidence-Gate:** Extraktionen unter **Score 0.7** verwerfen (Cookbook-Pattern). Such-`threshold`
+  (v3-Default 0.1) filtert niedrig-relevante Treffer.
+- **Self-Contained-Regel** (mem0 Prompt-Guideline): jede Memory fuer sich verstaendlich, Pronomen durch
+  Namen ersetzen, 15–80 Woerter; relative Zeit an Datum heften („letzte Woche" → konkretes Datum).
+- **Negative Few-Shot-Beispiele** im Extraktions-Prompt (zeigt, was NICHT gespeichert wird — fehlt in mem0 default).
+- **Feedback-API** (POSITIVE/NEGATIVE/VERY_NEGATIVE pro `memory_id`) + periodisches **Junk-Audit** (mem0 hat
+  KEIN offizielles Audit-Tool — manuell `get_all` + erfundene Profile/Near-Duplikate loeschen).
+- **Was mem0 NICHT hat (Issue #4573 — bewusst sein):** kein hartes Quality-Gate vor Storage, keine
+  **REJECT-Action** (nur ADD/UPDATE/DELETE/NONE), kein Feedback-Loop-Marking abgerufener Memories. Die
+  Sauberkeit kommt also v.a. aus `custom_instructions` + Schreib-Disziplin (§5), nicht aus der Pipeline.
+**Unser Stack:** Gemini (gutes Modell) reicht laut Befund NICHT allein. Fuer Franks Gehirn: strenge
+`custom_instructions` von Anfang an + 2–3 `custom_categories` + gelegentliches Junk-Audit. **TODO pruefen:**
+Bug `mem0#4999` (in 2.0.0 gab `search()` fuer ALLE Treffer Score 1.0 → Confidence-Gate ausgehebelt) — ob das
+auf unserer **2.0.7** noch greift, vor produktivem Confidence-Gating verifizieren.
+**Quelle:** GitHub mem0#4573 (Audit 97,8 %), docs.mem0.ai (custom-instructions, controlling-memory-ingestion,
+custom-categories, oss-v2-to-v3), mem0#4999 · Recherche + Eskalation 2026-06-22.
 
 ## 2. ⭐ embedding_model_dims — der haeufigste Hard-Error (Gemini & Co.)
 **Symptom:** `ValueError: shapes (0,1536) and (768,) not aligned: 1536 (dim 1) != 768 (dim 0)` beim ersten `add`.

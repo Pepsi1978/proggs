@@ -303,6 +303,17 @@ Pro-Session-State weiter ueber FastMCP-`lifespan`.
 > beiden gemeint ist — die APIs driften auseinander. (Die in der eigenen `requirements.txt` notierte „2.x benennt
 > FastMCP→MCPServer um" stammt aus dem offiziellen-SDK-`main` und ist nicht breit belegt — vorsichtig behandeln.)
 
+### 3.13 Python-FastMCP: DNS-Rebinding sauber via `TransportSecuritySettings` (statt `host=0.0.0.0`-Trick)  🆕 (Recherche 2026-06-22)
+**Kontext:** Bei Streamable-HTTP prueft das offizielle SDK den `Host`-Header (DNS-Rebinding-Schutz) und lehnt fremde
+Hosts ab. Der schnelle Trick „an `0.0.0.0` binden deaktiviert den Schutz" funktioniert (so loest es second-brains
+`server.py`), ist aber die grobe Variante.
+**Best Practice (sauberer):** `TransportSecuritySettings` des offiziellen SDK nutzen — Felder
+`enable_dns_rebinding_protection`, **`allowed_hosts`**, `allowed_origins`. Statt den Schutz abzuschalten, den
+erlaubten Host explizit erlauben, z.B. `allowed_hosts=["10.8.0.1:8001","10.8.0.1"]` — dann bleibt der Schutz aktiv
+UND der VPN-Zugriff geht. (Hinter dem WireGuard-Tunnel ist das Risiko klein; fuer ein oeffentliches Deployment waere
+`allowed_hosts` aber Pflicht.)
+**Versionen:** offizielles MCP Python-SDK (Issue #1798). **Quelle:** GitHub modelcontextprotocol/python-sdk #1798 · Recherche 2026-06-22.
+
 ## 4. Fehlerbehandlung & Protokoll-Fehler
 
 ### 4.1 Leeres `try/catch` verschluckt Fehler — Client sieht „Erfolg"  ⭐ HAEUFIG
