@@ -4,6 +4,9 @@
 > (v.a. Junk/Halluzinationen), hier *wie man mem0 von vornherein so konfiguriert, dass das Gehirn
 > hochwertig bleibt*. Quellen: docs.mem0.ai + GitHub + Recherche/Eskalation 2026-06-22.
 > **Anker:** mem0ai 2.0.7 · Gemini-Embedder @1536 · Qdrant 1.18.2.
+> **Changelog-Abgleich 2026-06-22:** Kein Quality-Gate/REJECT hinzugekommen — die Architektur ist explizit
+> „single-pass ADD-only" (kein UPDATE/DELETE, alles akkumuliert). Issue #4573 ist CLOSED, aber NICHT geloest →
+> strenge `custom_instructions` + Junk-Audit bleiben das einzige wirksame Mittel (§1, §3).
 
 ---
 
@@ -64,6 +67,9 @@ Python 3.10–3.12.
 - **Feedback-API** (POSITIVE/NEGATIVE/VERY_NEGATIVE pro `memory_id`) nutzen, um die Extraktion nachzujustieren.
 - **Periodisches Junk-Audit** (mem0 hat KEIN offizielles Tool): `get_all` durchsehen, erfundene Profile +
   Near-Duplikate loeschen. Eine eigene kleine Hygiene-Routine (Cosine-Cluster) lohnt sich fuer ein dauerhaftes Gehirn.
+  **Umso wichtiger seit der „single-pass ADD-only"-Architektur (Changelog-Abgleich 2026-06-22):** `add()` macht nur noch
+  ADD, KEIN UPDATE/DELETE — einmal gespeicherter Junk wird nie automatisch ueberschrieben/korrigiert. Ohne aktives Audit
+  waechst die Verschmutzung monoton. Das Audit ist damit keine Kuer, sondern Betriebspflicht fuer ein Dauer-Gehirn.
 - **Vor produktivem Confidence-Gating:** Bug `mem0#4999` pruefen (in 2.0.0 gab `search()` fuer alle Treffer
   Score 1.0 → Gate wirkungslos; auf 2.0.7 verifizieren).
 - **Grundsatz:** mem0-Memories sind LLM-synthetisiert, NICHT autoritativ — fuer kritische Fakten nicht blind vertrauen.

@@ -4,6 +4,7 @@
 > hier *wie man Qdrant von vornherein richtig dimensioniert, absichert und tunt* — als Vektor-Store hinter
 > mem0 im "zweiten Gehirn". Quellen: qdrant.tech-Docs + Recherche 2026-06-22.
 > **Anker:** Qdrant 1.18.2 · Docker · im Stack mit mem0 2.0.7 @1536.
+> **Changelog-Abgleich 2026-06-22:** v1.18.2 ist weiterhin neueste Version (kein 1.19+). Sicherheits-Grund fuers Pinnen: 1.18.2 fixt REST-Auth-Bypass (#9254) + Snapshot-OOB (#9268) — §3.
 
 ---
 
@@ -49,9 +50,14 @@ Insert auf Status `green` warten (sonst Brute-Force-Fallback).
 
 ## §3 Betrieb, Sicherheit, Backup
 - **Auth Pflicht:** `QDRANT__SERVICE__API_KEY=<secret>` (Default ist OFFEN!). An `127.0.0.1`/VPN-IP binden,
-  TLS oder WireGuard-Tunnel davor. Key-Rotation ohne Downtime: `alt_api_key` (v1.17.0).
+  WireGuard-Tunnel davor. Key-Rotation ohne Downtime: `alt_api_key` (v1.17.0). TLS optional direkt im Container:
+  `QDRANT__SERVICE__ENABLE_TLS=true` + `QDRANT__TLS__CERT=./tls/cert.pem` (+ `TLS__KEY`) — ein TLS-terminierender
+  Proxy ist damit nicht zwingend (im reinen WireGuard-Setup auch verzichtbar).
 - **Persistenz:** Volume `:/qdrant/storage` auf SSD/NVMe (kein NFS/S3 — block-level POSIX noetig).
-- **Image pinnen:** feste Version (`qdrant/qdrant:1.18.2`), nicht `:latest`.
+- **Image pinnen (Sicherheit, nicht nur Reproduzierbarkeit):** feste Version `qdrant/qdrant:v1.18.2`, NIE `:latest`.
+  1.18.2 fixt einen REST-Auth-Whitelist-Bypass (PR #9254) + Heap-OOB-Read via boesartigem Snapshot (#9268) — Versionen
+  davor sind verwundbar, `:latest` kann beim Pull unbemerkt eine andere Version ziehen. (Unser `compose.yaml` nutzt noch
+  `:latest` → auf `v1.18.2` pinnen.)
 - **Backup:** Snapshots einrichten + Restore testen; beim Restore `Content-Type` NICHT explizit setzen
   (sonst extrem langsam, siehe Almanach §3c).
 
@@ -63,8 +69,8 @@ einen Server setzen (das ist der lokale Test-Modus).
 
 ## §5 Tuning
 HNSW `m` (8–64) und `ef_construct` (100–500) bei Bedarf erhoehen (genauer, mehr RAM). Zur Suche `hnsw_ef`
-senken = schneller. Quantisierung: Scalar int8 (−75 %), Binary (40× schneller), **TurboQuant** (Qdrant 1.18,
-~2× Kompression). Das **Memory-Monitoring** (1.18, Web-UI + API) nutzen, um RAM/Disk pro Collection-Komponente
+senken = schneller. Quantisierung: Scalar int8 (−75 %), Binary (40× schneller), **TurboQuant** (Qdrant 1.18.0,
+laut Release-Notes bis **8× Kompression ggue. float32** „without the recall tax" ≈ 2× ggue. Scalar int8). Das **Memory-Monitoring** (1.18, Web-UI + API) nutzen, um RAM/Disk pro Collection-Komponente
 zu beobachten; `max_resident_memory_percent` (Strict-Mode-Guardrail) als Schutz. **Monitoring:** Qdrant
 liefert Prometheus-/OpenMetrics-Metriken unter `GET /metrics` (mit `?per_collection=true` je Collection) —
 fuer RAM/Disk-Alarme anbinden. **Payload-Index:** fuer gefilterte Suchen ein `field_index` auf die

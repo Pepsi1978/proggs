@@ -3,7 +3,8 @@
 > **Zweite Seite der Medaille zum Bug-Almanach** `~/proggs/bugs/server/samba-wireguard.md`: dort steht
 > *was schiefgeht*, hier *wie man eine Samba-Freigabe (Linux-Server → Windows-Netzlaufwerk) ueber
 > WireGuard von vornherein richtig aufsetzt*. Quellen: offizielle Samba/UFW-Doku + Recherche 2026-06-22.
-> **Anker:** Samba 4.19.5 (Ubuntu 24.04) · Windows 11 (SMB 3.1.1) · WireGuard wg0.
+> **Anker:** Samba 4.19.5 (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows 11 (SMB 3.1.1) · WireGuard wg0.
+> **Changelog-/Security-Abgleich 2026-06-22:** Upstream-4.19.x ist EOL → auf Ubuntu kommen Fixes nur per `apt`/USN (§6).
 
 ---
 
@@ -16,6 +17,7 @@
 | 3 | Win11-Kompatibilitaet | `protocol = SMB3` server-seitig; echter User (`smbpasswd -a`) statt Gast | §3 |
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
 | 5 | Performance | bei Langsamkeit WireGuard-MTU 1350 + MSS-Clamping testen | §5 |
+| 6 | Patch-Stand | 4.19.x ist upstream EOL → `unattended-upgrades`/`apt upgrade` (Ubuntu backportet Fixes ins Paket) | §6 |
 
 ---
 
@@ -27,6 +29,7 @@
 | §3 Win11 | §4 SMB3 · §6 Guest/Signing |
 | §4 Mount | §5 persistente Mappings |
 | §5 Performance | §3 MTU/MSS |
+| §6 Patch-Stand/EOL | §8 4.19.x EOL → apt/USN-Patching |
 
 ---
 
@@ -77,6 +80,16 @@ WireGuard-Tunnel beim Login schon steht (sonst rotes X bis Klick). Test: `Test-N
 ## §5 Performance ueber den Tunnel
 Bei langsamen Transfers WireGuard-MTU senken (`MTU = 1350` im `[Interface]` der wg0.conf) + TCP-MSS-Clamping.
 Mehrere Werte testen (1380/1350/1280) — MTU-Tuning ist nicht immer eine 100%-Loesung (siehe Almanach §3).
+
+## §6 Patch-Stand sicherstellen (4.19.x ist upstream EOL)
+Der Upstream-**4.19-Zweig ist End-of-Life** (letzter Upstream-Security-Release 4.19.1). Neuere Samba-CVEs (2025/2026)
+werden nur fuer 4.21–4.24 gepatcht. Ubuntu 24.04 liefert bewusst 4.19.5 und **backportet** die Fixes in sein eigenes
+Paket (`2:4.19.5+dfsg-4ubuntuX.Y`). Darum:
+- **`unattended-upgrades` aktivieren** (oder regelmaessig `sudo apt update && sudo apt upgrade`) — so kommen die
+  Ubuntu-Backports automatisch ins `samba`-Paket. Fuer einen ueber WireGuard exponierten Server ist das Pflicht.
+- Patch-Stand am **`ubuntuX.Y`-Suffix** ablesen (`apt-cache policy samba`), NICHT am nackten `4.19.5`-Upstream-String.
+- Nicht selbst auf 4.21+ kompilieren, nur um eine hoehere Nummer zu sehen — das Ubuntu-Paket ist der gepatchte Pfad.
+- Die WireGuard-Isolierung (445 nie oeffentlich, `smb encrypt = required`) ist Defense-in-Depth, ersetzt das Patchen aber NICHT.
 
 ---
 
