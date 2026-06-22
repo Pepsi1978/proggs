@@ -33,8 +33,8 @@
 | Haertung: SSH key-only, UFW (nur SSH offen), Fail2Ban, System-Updates | ✅ |
 | Docker + Compose | ✅ |
 | Qdrant (Such-Schrank) — nur 127.0.0.1, API-Key, getestet (ohne Key → 401) | ✅ |
-| Ollama + BGE-M3 (Embeddings, mehrsprachig DE/EN, lokal) — getestet | ✅ |
-| **Mem0 (Bibliothekar)** | ⏳ als Naechstes — Entscheidungen offen (s.u.) |
+| Ollama + BGE-M3 (lokale Embeddings) | ❌ am 2026-06-22 ENTFERNT (Cloud-KI statt lokal) |
+| **Mem0 (Bibliothekar) + Gemini** | ✅ **LIVE** (2026-06-22) — REST `mem0-api`, end-to-end getestet |
 | Direktiven einspeichern · externer Zugang · Backup · Apps · Kosten-Caps | offen |
 
 ### Offene Entscheidungen vor Mem0 (aus Doku-Pruefung 2026-06-21)
@@ -79,6 +79,35 @@ ihm NUR die Server-Sicherheit (kein Einbruch). Das aendert die KI-Wahl:
 - **Beim Einrichten verifizieren:** exakte Modellnamen + Dimensionen an der Live-Doku (Google benennt Modelle
   oft um; Wissensstand aelter). Mem0-Konfig: `embedder.provider=gemini`, `llm.provider=gemini`,
   `embedding_model_dims` passend zum Embedding-Modell. Server-Sicherheit ≠ Datenabfluss (Key auf Server ist ok).
+
+---
+
+## ✅✅ MEM0 + GEMINI LIVE (2026-06-22) — Gehirn-Backend funktioniert end-to-end
+
+**Was laeuft (auf `168.231.83.205`, `/opt/second-brain/`):**
+- **`sb-mem0-api`** (neuer Container, `second-brain-server/mem0-api/`): schlanker FastAPI-Wrapper um die
+  Mem0-Bibliothek. Nur `127.0.0.1:8000`, Bearer-Token-Auth (`SB_API_KEY`), nicht-root-User, RAM-Limit 1G.
+  Endpunkte: `GET /health`, `POST /store`, `POST /recall`, `GET /memories`.
+- **Mem0 2.0.7** mit **Gemini** (LLM `gemini-3.1-flash-lite`, Embedder `models/gemini-embedding-001` @ **1536**)
+  + **Qdrant** (Collection `second_brain`, Vektorgroesse 1536 verifiziert).
+- **Ollama/BGE-M3 entfernt** (Orphan-Container weg, `ollama-data` bleibt vorerst auf der Platte).
+- **Observability-First:** strukturiertes JSON-Log (`mem0-logs/mem0-api.jsonl`, rotierend + stdout),
+  globaler Fehler-Faenger, Logik-Sonden (DIM-Invariante embedder==qdrant), Intent-Checkpoints (store/recall).
+- **Kosten:** clientseitiger Tages-Cap (`SB_MAX_LLM_CALLS_PER_DAY`, Default 5000) als Defense-in-Depth;
+  der HARTE Cap fehlt noch (Google AI Studio / Cloud-Console Budget — siehe offene TODOs).
+- **Verifiziert (end-to-end):** Auth 401 ohne Token; `store infer=false` (Embeddings+Qdrant);
+  `store infer=true` (Gemini-Faktenextraktion: "gruener Tee statt Kaffee" sauber extrahiert);
+  `recall` rankt korrekt (Tee-Frage→Tee 0.84, Sprach-Frage→Kotlin 0.76). Commits #47069–#47071.
+
+**Schluessel-Hinweis:** Der eingebaute Gemini-Key ist AKTUELL derselbe wie der TVO-Key (`AIzaSy…`) —
+der Plan sah einen GETRENNTEN Key vor. Geteiltes Quota/Limit Gehirn↔TVO; bei Bedarf auf eigenen
+Bezahl-Key umstellen (nur `.env` GEMINI_API_KEY/GOOGLE_API_KEY + `~/SK/second-brain/brain.env` aendern).
+
+**Zwei geloeste Integrations-Fallen (Direktive #3, dokumentiert in `second-brain/memory-backends.md`):**
+1. `qdrant-client` mit gesetztem `api_key` nimmt automatisch `https=True` an → TLS gegen Klartext-HTTP-Qdrant
+   → `[SSL: WRONG_VERSION_NUMBER]`. **Fix:** explizite `url="http://host:6333"` statt `host`/`port`.
+2. **Mem0 2.x API-Wechsel:** `search()`/`get_all()` brauchen `filters={"user_id": …}` + `top_k=`
+   (NICHT mehr `user_id=`/`limit=`). `add()` nimmt weiterhin `user_id=`.
 
 ---
 
@@ -244,7 +273,14 @@ DEIN HOSTINGER-SERVER (eine Maschine, alles lokal)
 
 ---
 
-## Naechster konkreter Schritt
+## Naechster konkreter Schritt (Stand 2026-06-22)
 
-**Frank:** Hostinger-VPS bestellen — **KVM 2** (2 vCPU / 8 GB), OS **Ubuntu 24.04 (sauber)**.
-Danach Zugangsdaten bereitstellen; ab dann uebernimmt Claude die komplette Einrichtung per SSH (sichtbar, Schritt fuer Schritt).
+Server + Qdrant + **Mem0 + Gemini (REST) sind LIVE und getestet**. Naechste sinnvolle Bausteine
+(Reihenfolge offen, mit Frank abstimmen):
+1. **Harte Gemini-Kosten-Caps** in Google AI Studio / Cloud-Console (Budget-Stopp, nicht nur Alert).
+2. **Externer Zugang**: WireGuard (Frank-Tendenz, Server unsichtbar) ODER Caddy+TLS+eigene Domain;
+   danach **MCP-Endpunkt**, damit Claude Code / OpenCode das Gehirn als Memory nutzen.
+3. **Zweiter Speicher-Weg (RAG)** fuer Dokumente (Chunking+Embedding direkt in Qdrant) neben Mem0-Fakten —
+   dann die **3 Direktiven** als ersten echten Inhalt einspeichern (Kategorie "programmieren").
+4. **Offsite-Backup** von `qdrant-data/` + monatlicher Restore-Test; Images auf feste Versionen pinnen.
+5. **Eigener Bezahl-Key** fuers Gehirn (statt des aktuell geteilten TVO-Keys), falls gewuenscht.

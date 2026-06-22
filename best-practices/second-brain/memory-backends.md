@@ -21,6 +21,24 @@
 
 ---
 
+## 0. Praxis-Fallen aus dem echten Aufbau (2026-06-22, Mem0 2.0.7 + Gemini + Qdrant LIVE)
+
+> Beim tatsaechlichen Aufbau des Gehirns aufgetreten und geloest (funktionserhaltend). Quelle: eigener
+> Vorfall. Gegenstueck-Almanach fuer die Server-Ebene: `bugs/server/self-hosted-ai-agent-server.md`.
+
+| # | Falle | Symptom | Fix (so von vornherein richtig) |
+|---|-------|---------|----------------------------------|
+| 1 | **Qdrant `api_key` erzwingt TLS** | `[SSL: WRONG_VERSION_NUMBER]` beim ersten Qdrant-Call | `qdrant-client` setzt bei gesetztem `api_key` automatisch `https=True`. Gegen ein Klartext-HTTP-Qdrant (Standard self-hosted) deshalb **explizite `url="http://host:6333"`** an Mem0s `vector_store.config` geben statt `host`/`port` — dann kein TLS. |
+| 2 | **Mem0 2.x Such-API** | `ValueError: Top-level entity parameters {'user_id'} are not supported in search()` | In Mem0 2.x brauchen `search()` und `get_all()` **`filters={"user_id": "…"}`** + **`top_k=`** (nicht mehr `user_id=`/`limit=`). `add()` nimmt weiterhin `user_id=`/`metadata=`/`infer=`. |
+| 3 | **Gemini-Embedding-Dimension** | Dimensions-Mismatch / falsche Collection-Groesse | Mem0s Gemini-Embedder defaultet auf **768** dims (`embedding_dims or output_dimensionality or 768`). Gewuenschte Groesse explizit setzen: `embedder.config.embedding_dims = N` **UND** `vector_store.config.embedding_model_dims = N` (gleicher Wert!). Bei `gemini-embedding-001`: 768/1536/3072 — wir nutzen **1536**. |
+| 4 | **Bind-Mount + nicht-root-Container** | `Permission denied` beim Log-Schreiben in gemountetes Verzeichnis | Laeuft der Container als nicht-root (uid 10001), gehoert das per Bind-Mount eingehaengte Host-Verzeichnis trotzdem root → `chown -R 10001:10001 <hostdir>`. (Graceful Fallback auf stdout, aber Datei-Log will man fuer `tail -f`.) |
+
+**Verifizierte Modellnamen (Live-Liste des Keys, 2026-06-22):** `gemini-3.1-flash-lite` (stabil, ohne
+`-preview`) und `gemini-embedding-001` existieren beide. IDs pinnen, nicht `-latest`/`-preview` raten
+(Gemini-404-Falle, `bugs/apis/google-gemini-api.md` #5).
+
+---
+
 ## 1. Anforderungs-Matrix (`extern`, A2-Lauf)
 Für Franks Fall (1 Server, viele Clients, heterogene Personendaten, self-host):
 
