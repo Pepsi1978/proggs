@@ -1062,6 +1062,9 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 8
 
+        let editPromptsButton = PBDarkTheme.makeSecondaryButton(
+            title: "Gemini-Prompts bearbeiten…", target: self, action: #selector(editGeminiPrompts))
+
         func label(_ text: String) -> NSTextField {
             let l = NSTextField(labelWithString: text)
             PBDarkTheme.styleLabel(l)
@@ -1078,6 +1081,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             geminiField,
             label("Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)"),
             vocabularyScroll,
+            label("Gemini-Korrektur-Prompts (Profil 1–10)"),
+            editPromptsButton,
             label("Separator-Template"),
             separatorField,
             autoHideCheck,
@@ -1214,6 +1219,10 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         updateStatus()
     }
 
+    @objc private func editGeminiPrompts() {
+        GeminiPromptListDialog.show()
+    }
+
     func windowWillClose(_ notification: Notification) {
         NSApp.stopModal(withCode: result != nil ? .OK : .cancel)
     }
@@ -1255,5 +1264,208 @@ extension NSAlert {
         a.informativeText = message
         PBDarkTheme.apply(to: a)
         _ = PBModalPresenter.runModal(on: a)
+    }
+}
+
+// MARK: - Gemini-Prompt-Editor (Etappe 2c, Frank-Wunsch 2026-06-22)
+
+/// Editor fuer EINE Gemini-Korrektur-Prompt-Vorlage (Profil 1-10). Pendant zum
+/// Windows GeminiPromptEditDialog. Laedt die wirksame Vorlage, speichert sie
+/// zurueck in die SK-Datei. Die zwei Knoepfe fuegen {{TEXT}} und {{WOERTERBUCH}}
+/// an der Cursor-Position ein. Wird nested im (modalen) Settings-Dialog gezeigt,
+/// daher KEIN runHidingFloatingPanels — die floating panels sind schon versteckt.
+final class GeminiPromptEditDialog: NSWindowController, NSWindowDelegate {
+    private let profile: Int
+    private let textView = NSTextView()
+    private let scroll = NSScrollView()
+
+    init(profile: Int) {
+        self.profile = profile
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 560),
+            styleMask: [.titled, .closable],
+            backing: .buffered, defer: false)
+        window.title = GeminiClient.profileLabel(profile)
+        window.isReleasedWhenClosed = false
+        window.level = .modalPanel
+        PBDarkTheme.apply(to: window)
+        super.init(window: window)
+
+        let header = NSTextField(labelWithString: GeminiClient.profileLabel(profile))
+        header.font = .systemFont(ofSize: 14, weight: .bold)
+        header.textColor = .white
+        header.drawsBackground = false
+
+        let hint = NSTextField(wrappingLabelWithString:
+            "Das ist die Vorlage, die an Gemini geschickt wird. Mit den Knöpfen unten fügst du an der Cursor-Stelle die Platzhalter ein: einen für deinen gesprochenen Text und einen für das Wörterbuch. Fehlt der Text-Platzhalter, wird dein Text hinten angehängt; fehlt der Wörterbuch-Platzhalter, kommt das Wörterbuch (wenn eingeschaltet) an den Anfang.")
+        hint.font = .systemFont(ofSize: 11)
+        hint.textColor = PBDarkTheme.textSecondary
+        hint.drawsBackground = false
+
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.drawsBackground = true
+        scroll.backgroundColor = PBDarkTheme.fieldBackground
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.containerSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = true
+        textView.isRichText = false
+        textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.drawsBackground = true
+        textView.backgroundColor = PBDarkTheme.fieldBackground
+        textView.textColor = .white
+        textView.insertionPointColor = .white
+        textView.string = GeminiClient.effectivePrompt(profile: profile)
+        scroll.documentView = textView
+
+        let insertText = PBDarkTheme.makeSecondaryButton(title: "Platzhalter für gesprochenen Text", target: self, action: #selector(insertTextMarker))
+        let insertVocab = PBDarkTheme.makeSecondaryButton(title: "Wörterbuch-Platzhalter", target: self, action: #selector(insertVocabMarker))
+        let insertRow = NSStackView(views: [insertText, insertVocab])
+        insertRow.orientation = .horizontal
+        insertRow.spacing = 8
+
+        let save = PBDarkTheme.makePrimaryButton(title: "Speichern", target: self, action: #selector(saveDlg))
+        save.keyEquivalent = "\r"
+        let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(cancelDlg))
+        let buttonRow = NSStackView(views: [cancel, save])
+        buttonRow.orientation = .horizontal
+        buttonRow.spacing = 8
+
+        let stack = NSStackView(views: [header, hint, scroll, insertRow, buttonRow])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView?.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
+            hint.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            scroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 360),
+        ])
+        window.delegate = self
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func insert(_ marker: String) {
+        let range = textView.selectedRange()
+        textView.textStorage?.replaceCharacters(in: range, with: marker)
+        let newLoc = range.location + (marker as NSString).length
+        textView.setSelectedRange(NSRange(location: newLoc, length: 0))
+        window?.makeFirstResponder(textView)
+    }
+    @objc private func insertTextMarker() { insert("{{TEXT}}") }
+    @objc private func insertVocabMarker() { insert("{{WOERTERBUCH}}") }
+
+    @objc private func saveDlg() {
+        GeminiClient.saveProfilePrompt(profile: profile, text: textView.string)
+        window?.close()
+    }
+    @objc private func cancelDlg() {
+        window?.close()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.stopModal()
+    }
+
+    static func show(profile: Int) {
+        let dlg = GeminiPromptEditDialog(profile: profile)
+        guard let w = dlg.window else { return }
+        w.center()
+        w.makeKeyAndOrderFront(nil)
+        w.orderFrontRegardless()
+        NSApp.runModal(for: w)
+    }
+}
+
+/// Liste der 10 Gemini-Profile. Pendant zum Windows GeminiPromptListDialog.
+/// Pro Profil ein Knopf, der den Editor fuer dieses Profil oeffnet.
+final class GeminiPromptListDialog: NSWindowController, NSWindowDelegate {
+    init() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
+            styleMask: [.titled, .closable],
+            backing: .buffered, defer: false)
+        window.title = "Gemini-Prompts"
+        window.isReleasedWhenClosed = false
+        window.level = .modalPanel
+        PBDarkTheme.apply(to: window)
+        super.init(window: window)
+
+        let header = NSTextField(labelWithString: "Gemini-Prompts bearbeiten")
+        header.font = .systemFont(ofSize: 14, weight: .bold)
+        header.textColor = .white
+        header.drawsBackground = false
+
+        let hint = NSTextField(wrappingLabelWithString:
+            "Wähle ein Profil zum Bearbeiten. Jedes Profil hat seine eigene Vorlage, die an Gemini geschickt wird. Die Prompts gelten für alle Overlays auf diesem Rechner.")
+        hint.font = .systemFont(ofSize: 11)
+        hint.textColor = PBDarkTheme.textSecondary
+        hint.drawsBackground = false
+
+        var profileButtons: [NSButton] = []
+        var rows: [NSView] = [header, hint]
+        for profile in 1...10 {
+            let btn = PBDarkTheme.makeSecondaryButton(title: GeminiClient.profileLabel(profile), target: self, action: #selector(openProfile(_:)))
+            btn.tag = profile
+            btn.alignment = .left
+            profileButtons.append(btn)
+            rows.append(btn)
+        }
+        let close = PBDarkTheme.makeSecondaryButton(title: "Schließen", target: self, action: #selector(closeDlg))
+        rows.append(close)
+
+        let stack = NSStackView(views: rows)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView?.addSubview(stack)
+
+        var constraints: [NSLayoutConstraint] = [
+            stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
+            hint.widthAnchor.constraint(equalTo: stack.widthAnchor),
+        ]
+        for btn in profileButtons {
+            constraints.append(btn.widthAnchor.constraint(equalTo: stack.widthAnchor))
+        }
+        NSLayoutConstraint.activate(constraints)
+        window.delegate = self
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    @objc private func openProfile(_ sender: NSButton) {
+        GeminiPromptEditDialog.show(profile: sender.tag)
+    }
+    @objc private func closeDlg() {
+        window?.close()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.stopModal()
+    }
+
+    static func show() {
+        let dlg = GeminiPromptListDialog()
+        guard let w = dlg.window else { return }
+        w.center()
+        w.makeKeyAndOrderFront(nil)
+        w.orderFrontRegardless()
+        NSApp.runModal(for: w)
     }
 }

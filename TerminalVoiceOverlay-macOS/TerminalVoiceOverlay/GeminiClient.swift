@@ -56,6 +56,38 @@ final class GeminiClient {
         return nil
     }
 
+    // ── Public API fuer den Prompt-Editor (Etappe 2c, Frank-Wunsch 2026-06-22) ──
+
+    /// Anzeige-Name eines Profils fuer die Editor-Liste.
+    static func profileLabel(_ profile: Int) -> String {
+        switch profile {
+        case 1: return "Profil 1 — Standard (alltaegliche Texte)"
+        case 2: return "Profil 2 — Programmierung (Code, CLI, Frameworks)"
+        case 3: return "Profil 3 — Meta-Intelligenz (strukturiertes Denken)"
+        default: return "Profil \(profile) — Slot \(profile)"
+        }
+    }
+
+    /// Voller Pfad der Prompt-Datei eines Profils (zum Speichern aus dem Editor).
+    static func profilePromptURL(_ profile: Int) -> URL {
+        geminiPromptDir.appendingPathComponent(profilePromptFileName(profile))
+    }
+
+    /// Die aktuell WIRKSAME Vorlage eines Profils: profilspezifische Datei,
+    /// sonst Legacy-Sammeldatei, sonst eingebauter Default. So sieht der Editor
+    /// immer genau das, was Gemini fuer dieses Profil gerade bekommt.
+    static func effectivePrompt(profile: Int) -> String {
+        loadCorrectionPrompt(profile: profile) ?? defaultCorrectionTemplate
+    }
+
+    /// Speichert die bearbeitete Vorlage eines Profils in seine SK-Datei.
+    /// Aenderung wirkt sofort (correctText liest die Datei neu).
+    static func saveProfilePrompt(profile: Int, text: String) {
+        let url = profilePromptURL(profile)
+        try? FileManager.default.createDirectory(at: geminiPromptDir, withIntermediateDirectories: true)
+        try? text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
     /// Dateiname der persoenlichen Vokabular-Liste. Liegt im selben SK-Ordner
     /// wie die Korrektur-Prompts, sodass sich auf EINEM Rechner beide Overlays
     /// automatisch dieselbe Liste teilen. Wird bei jedem correctText neu
