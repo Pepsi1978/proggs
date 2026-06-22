@@ -34,6 +34,7 @@ public partial class GeminiPromptEditDialog : Window
             try
             {
                 GeminiClient.SaveProfilePrompt(_profile, PromptBox.Text);
+                GeminiPromptDriveSync.TryUpload();   // sofort ins Google-Drive-Backup
                 Saved = true;
                 Close();
             }

@@ -56,6 +56,7 @@ public partial class SettingsDialog : Window
             // SettingsEditResult, weil GeminiClient die Datei direkt liest.
             SavePersonalVocabulary(VocabularyBox.Text);
             SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
+            GeminiPromptDriveSync.TryUpload();   // Schalter-Aenderung sofort ins Backup
 
             // Persist Google secrets to the SK file. Caller (PromptBoardPanel)
             // only handles the non-secret half via SettingsEditResult.

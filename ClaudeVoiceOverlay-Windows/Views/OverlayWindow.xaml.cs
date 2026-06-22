@@ -608,6 +608,7 @@ namespace ClaudeVoiceOverlay.Views
 
             // Cloud-Merge des persoenlichen Vokabular-Woerterbuchs: gleiche Idee.
             _ = TryMergeVocabularyFromCloudAsync();
+            GeminiPromptDriveSync.TrySyncFromCloud();   // Prompts + Schalter per Timestamp vom Backup holen
         }
 
         // ── Hover animation helper ──
