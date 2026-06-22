@@ -262,7 +262,30 @@ Der zu verarbeitende Whisper-Text folgt nun:
             // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
             // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
             var vocab = LoadPersonalVocabularyBlock();
-            return await SendWithRetry(vocab + template + text + "\nTEXT_END", 0);
+            return await SendWithRetry(BuildPrompt(template, vocab, text) + "\nTEXT_END", 0);
+        }
+
+        // Baut den finalen Prompt aus Vorlage + Woerterbuch-Block + gesprochenem
+        // Text. Die Platzhalter {{TEXT}} und {{WOERTERBUCH}} koennen frei in der
+        // Vorlage positioniert werden (Frank-Wunsch 2026-06-22). Abwaertskompatibel:
+        // fehlt {{WOERTERBUCH}} -> Woerterbuch-Block an den Anfang (wie bisher);
+        // fehlt {{TEXT}} -> gesprochener Text ans Ende (wie bisher). vocab ist
+        // bereits leer, wenn der Woerterbuch-Schalter aus ist (LoadPersonalVocabularyBlock).
+        private static string BuildPrompt(string template, string vocab, string text)
+        {
+            const string vocabMarker = "{{WOERTERBUCH}}";
+            const string textMarker = "{{TEXT}}";
+            var result = template;
+
+            result = result.Contains(vocabMarker)
+                ? result.Replace(vocabMarker, vocab)
+                : vocab + result;
+
+            result = result.Contains(textMarker)
+                ? result.Replace(textMarker, text)
+                : result + text;
+
+            return result;
         }
 
         /// <summary>

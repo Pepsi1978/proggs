@@ -20,7 +20,7 @@
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
          2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
-    <Version>2.1.17</Version>
+    <Version>2.1.18</Version>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>

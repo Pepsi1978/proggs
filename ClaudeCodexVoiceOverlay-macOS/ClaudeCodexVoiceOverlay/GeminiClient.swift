@@ -109,11 +109,29 @@ final class GeminiClient {
         // Persoenliches Vokabular als Praeambel VORANSTELLEN (Gemini-BP §7:
         // wiederkehrende Inhalte an den Prompt-Anfang → bessere Cache-Trefferquote).
         let vocab = Self.loadPersonalVocabularyBlock()
-        let prompt = vocab + template + "\n" + text + "\nTEXT_END"
+        let prompt = Self.buildPrompt(template: template, vocab: vocab, text: text) + "\nTEXT_END"
 
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             self.sendRequest(prompt: prompt, attempt: 0, completion: completion)
         }
+    }
+
+    /// Baut den finalen Prompt aus Vorlage + Woerterbuch-Block + gesprochenem Text.
+    /// {{TEXT}} und {{WOERTERBUCH}} frei positionierbar (Frank-Wunsch 2026-06-22).
+    /// Abwaertskompatibel: fehlt {{WOERTERBUCH}} -> Block an den Anfang (wie bisher);
+    /// fehlt {{TEXT}} -> Text ans Ende mit fuehrendem \n (wie bisher). vocab ist
+    /// bereits leer, wenn der Woerterbuch-Schalter aus ist.
+    private static func buildPrompt(template: String, vocab: String, text: String) -> String {
+        let vocabMarker = "{{WOERTERBUCH}}"
+        let textMarker = "{{TEXT}}"
+        var result = template
+        result = result.contains(vocabMarker)
+            ? result.replacingOccurrences(of: vocabMarker, with: vocab)
+            : vocab + result
+        result = result.contains(textMarker)
+            ? result.replacingOccurrences(of: textMarker, with: text)
+            : result + "\n" + text
+        return result
     }
 
     private static let defaultCorrectionTemplate = """
