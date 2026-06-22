@@ -33,6 +33,9 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "sb-qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+# Explizite http-URL: mit gesetztem api_key wuerde qdrant-client sonst https=True annehmen
+# und TLS gegen das Klartext-HTTP-Qdrant sprechen -> [SSL: WRONG_VERSION_NUMBER].
+QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
 COLLECTION = os.getenv("SB_COLLECTION", "second_brain")
 LLM_MODEL = os.getenv("GEMINI_LLM_MODEL", "gemini-3.1-flash-lite")
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "models/gemini-embedding-001")
@@ -120,8 +123,7 @@ MEM0_CONFIG = {
         "provider": "qdrant",
         "config": {
             "collection_name": COLLECTION,
-            "host": QDRANT_HOST,
-            "port": QDRANT_PORT,
+            "url": QDRANT_URL,  # http://... -> kein TLS (api_key wuerde sonst https=True erzwingen)
             "api_key": QDRANT_API_KEY,
             "embedding_model_dims": EMBED_DIMS,  # MUSS == embedder embedding_dims
         },
