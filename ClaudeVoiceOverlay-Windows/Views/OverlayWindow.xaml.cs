@@ -3434,6 +3434,11 @@ namespace ClaudeVoiceOverlay.Views
             _promptPanel.SlotsSyncRequested    += () => _ = TryUploadSlotsAsync();
             // Vokabular-Woerterbuch: nach Speichern im Settings-Dialog hochladen.
             _promptPanel.VocabularySyncRequested += () => _ = TryUploadVocabularyAsync();
+            // Gemini-Prompt-Backup: nach erfolgreichem Upload den sichtbaren Sync-
+            // Zeitstempel setzen (wie beim Vokabular). Event feuert vom Background-
+            // Thread -> auf den UI-Thread marshallen. Singleton-Window, kein Unsubscribe noetig.
+            GeminiPromptDriveSync.UploadSucceeded += () =>
+                Dispatcher.BeginInvoke(new Action(() => _promptPanel?.MarkSyncedNow()));
             // Right-click drag on the panel itself moves both the
             // panel (handled inside) and this pillar window — slide
             // the pillar to stay glued to the panel's right edge.

@@ -120,7 +120,12 @@ public sealed class GeminiPromptDriveSync
             }
         }
         WriteMarker(savedAt);
+        UploadSucceeded?.Invoke();
     }
+
+    /// <summary>Wird nach erfolgreichem Backup-Upload gefeuert (vom Background-Thread)
+    /// — der Abonnent setzt damit die sichtbare Sync-Bestaetigung im PromptBoard.</summary>
+    public static event Action? UploadSucceeded;
 
     /// <summary>
     /// Holt das Cloud-Bundle und wendet es lokal an, WENN sein savedAt neuer ist
