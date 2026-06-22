@@ -45,6 +45,9 @@
                              Padding="8,6" FontSize="13" Margin="0,0,0,16"/>
 
                     <TextBlock Text="Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,4"/>
+                    <CheckBox x:Name="UseVocabularyCheck"
+                              Content="Wörterbuch verwenden (an Gemini mitschicken)"
+                              Foreground="#FFCCCCCC" FontSize="12" Margin="0,0,0,6"/>
                     <TextBox x:Name="VocabularyBox"
                              Background="#FF2D2D2D" Foreground="White"
                              BorderBrush="#FF454545" BorderThickness="1"

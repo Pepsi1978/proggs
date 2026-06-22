@@ -62,6 +62,10 @@ final class GeminiClient {
     /// gelesen — Aenderungen wirken sofort ohne App-Neustart.
     private static let personalVocabularyFileName = "personal-vocabulary.txt"
 
+    /// Woerterbuch-Schalter (Frank-Wunsch 2026-06-22): geteilte SK-Datei.
+    /// Inhalt "true" = Woerterbuch wird mitgeschickt; sonst (auch fehlend) aus.
+    private static let vocabularyEnabledFileName = "vocabulary-enabled.txt"
+
     /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen des
     /// Sprechers) und baut daraus einen Praeambel-Block, der VOR den Korrektur-
     /// Prompt gesetzt wird. Bewusst kontextsensitiv: KEIN stures Suchen-und-
@@ -70,6 +74,13 @@ final class GeminiClient {
     /// ("Backen" bleibt "Backen", wird nur im Code-Kontext zu "Backend").
     /// Leere/fehlende Datei → leerer String (= bisheriges Verhalten).
     private static func loadPersonalVocabularyBlock() -> String {
+        // Woerterbuch-Schalter zuerst: nur laden wenn aktiviert ("true").
+        // Fehlende Datei / anderer Inhalt = aus (Frank-Wunsch 2026-06-22, Default aus).
+        let toggleURL = geminiPromptDir.appendingPathComponent(vocabularyEnabledFileName)
+        let toggle = (try? String(contentsOf: toggleURL, encoding: .utf8))?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard toggle == "true" else { return "" }
+
         let url = geminiPromptDir.appendingPathComponent(personalVocabularyFileName)
         guard FileManager.default.fileExists(atPath: url.path),
               let text = try? String(contentsOf: url, encoding: .utf8) else {

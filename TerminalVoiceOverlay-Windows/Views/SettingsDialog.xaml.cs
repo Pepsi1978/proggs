@@ -35,6 +35,7 @@ public partial class SettingsDialog : Window
         GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
         VocabularyBox.Text = LoadPersonalVocabulary();
+        UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
         SeparatorBox.Text = current.SeparatorTemplate;
         AutoHideCheck.IsChecked = current.AutoHide;
         HorizontalCheck.IsChecked = string.Equals(current.Orientation, "horizontal",
@@ -54,6 +55,7 @@ public partial class SettingsDialog : Window
             // Persoenliches Vokabular in die SK-Datei schreiben — unabhaengig vom
             // SettingsEditResult, weil GeminiClient die Datei direkt liest.
             SavePersonalVocabulary(VocabularyBox.Text);
+            SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
 
             // Persist Google secrets to the SK file. Caller (PromptBoardPanel)
             // only handles the non-secret half via SettingsEditResult.
@@ -113,6 +115,37 @@ public partial class SettingsDialog : Window
             MessageBox.Show($"Woerterbuch konnte nicht gespeichert werden: {ex.Message}",
                 "Hinweis", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    // Woerterbuch-Schalter (Frank-Wunsch 2026-06-22): geteilte SK-Datei
+    // vocabulary-enabled.txt, gleiche Stelle wie das Woerterbuch selbst. "true"
+    // = Woerterbuch wird an Gemini mitgeschickt; alles andere (auch fehlende
+    // Datei) = aus. GeminiClient liest dieselbe Datei direkt (mtime-Cache),
+    // darum wirkt das Umschalten sofort und teilt sich TVO/CVO auf einem Rechner.
+    private static string VocabularyEnabledPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "SK", "VoiceOverlays", "vocabulary-enabled.txt");
+
+    private static bool LoadVocabularyEnabled()
+    {
+        try
+        {
+            var path = VocabularyEnabledPath;
+            return File.Exists(path) &&
+                   string.Equals(File.ReadAllText(path).Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    }
+
+    private static void SaveVocabularyEnabled(bool enabled)
+    {
+        try
+        {
+            var path = VocabularyEnabledPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, enabled ? "true\n" : "false\n");
+        }
+        catch { /* best-effort: Schalter darf das Speichern nicht blockieren */ }
     }
 
     private void UpdateGoogleStatus(string? refreshToken, string? email)

@@ -205,6 +205,11 @@ Der zu verarbeitende Whisper-Text folgt nun:
         // gelesen wie die Prompt-Dateien — Aenderungen wirken sofort ohne Neustart.
         private const string PersonalVocabularyFileName = "personal-vocabulary.txt";
 
+        // Woerterbuch-Schalter (Frank-Wunsch 2026-06-22): geteilte Datei im SK-Ordner.
+        // Inhalt "true" = Woerterbuch wird an Gemini mitgeschickt; alles andere
+        // (auch fehlende Datei) = aus. Default aus.
+        private const string VocabularyEnabledFileName = "vocabulary-enabled.txt";
+
         /// <summary>
         /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen
         /// des Sprechers) und baut daraus einen Praeambel-Block, der VOR den
@@ -219,6 +224,14 @@ Der zu verarbeitende Whisper-Text folgt nun:
         {
             try
             {
+                // Woerterbuch-Schalter zuerst pruefen: nur laden wenn ausdruecklich
+                // aktiviert ("true"). Fehlt die Datei oder steht etwas anderes drin,
+                // bleibt das Woerterbuch aus (Frank-Wunsch 2026-06-22, Default aus).
+                var togglePath = Path.Combine(GeminiPromptDir, VocabularyEnabledFileName);
+                var toggle = ReadPromptFileCached(togglePath)?.Trim();
+                if (!string.Equals(toggle, "true", StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+
                 var path = Path.Combine(GeminiPromptDir, PersonalVocabularyFileName);
                 var vocab = ReadPromptFileCached(path)?.Trim();
                 if (string.IsNullOrWhiteSpace(vocab)) return string.Empty;
