@@ -23,7 +23,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.2.0"  # 0.2.0: strenge custom_instructions gegen Junk/Halluzinationen (bugs/server/mem0.md)
+VERSION = "0.2.1"  # 0.2.1: fastembed -> mem0 hybride Suche (BM25+semantisch). 0.2.0: strenge custom_instructions
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)

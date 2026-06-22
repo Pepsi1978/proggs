@@ -7,3 +7,6 @@ fastapi==0.138.0
 uvicorn[standard]==0.49.0
 google-genai>=2.9.0
 qdrant-client>=1.18.0
+# fastembed: aktiviert mem0's hybride Suche (BM25-Sparse + semantisch) bei Qdrant.
+# Ohne fastembed faellt mem0 STILL auf semantik-only zurueck (nur Log-Warning). Siehe bugs/server/mem0.md §4.
+fastembed>=0.4
