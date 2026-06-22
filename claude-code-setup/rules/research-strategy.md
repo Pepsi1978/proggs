@@ -30,6 +30,11 @@ werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 > 3. Der **`research`-Skill** wird gestartet — mit beschrifteten, mitlesbaren Researchern
 >    (Continuous-Spawning, Live-Zwischenfazit). **Egal welcher Skill die Recherche braucht — der
 >    `research`-Skill wird IMMER mitgestartet, nie umgangen.**
+> 4. **Frage 2 (Eskalation) kommt NACH JEDER abgeschlossenen Firecrawl-Recherche (Engine A) — IMMER,
+>    automatisch.** Anklickbar fragen, ob noch ein Eskalations-Lauf gewuenscht ist (B = OpenRouter
+>    `:online`, C = Opus-Schwarm, „nein, fertig", Freitext). **Diese Eskalations-Frage NIE weglassen.**
+>    (Frank, 2026-06-22, **2. Vorfall**: nach der Bug-Almanach-Firecrawl-Recherche fehlte Frage 2 —
+>    Frank haette gerne einen Eskalationslauf gehabt. Darf nie wieder fehlen.)
 >
 > **NIEMALS** `mm-research.py`/`or-research.py` direkt/ad-hoc (z.B. im Hintergrund) starten, **NIEMALS**
 > die 4 Fragen überspringen — **auch nicht**, wenn Frank vorher beiläufig eine Engine genannt hat
