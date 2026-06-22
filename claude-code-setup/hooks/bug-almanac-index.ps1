@@ -9,11 +9,28 @@
 $ErrorActionPreference = "Stop"
 
 try {
-    # Alle Guard-Marker zuruecksetzen -> frische Erinnerung + frischer Lese-Zwang pro Session.
-    # Deckt seen-* (Spam-Schutz), read-* (Stufe-2-"gelesen"-Marker) und disable (Notaus) ab.
+    # SessionStart-source ermitteln (startup/clear/resume/compact). Bewaehrtes Muster aus session-guard.
+    # Marker-Cleanup wird NUR bei einem KONTEXT-ERHALTENDEN Reset (compact/resume) UEBERSPRUNGEN, sonst
+    # (startup/clear/unbekannt) wie bisher geloescht. Grund (Frank-Wunsch 2026-06-22): SessionStart feuert
+    # auch bei Auto-Compact/Resume (gleiche Arbeitsphase, nur Kontext komprimiert) - dort die "gelesen"-
+    # Marker zu loeschen liess den Guard mitten im Arbeitsfluss erneut blocken (nervte mehrfach).
+    $sessionSource = ""
+    try {
+        $stdinRaw = [Console]::In.ReadToEnd()
+        if ([string]::IsNullOrWhiteSpace($stdinRaw)) { try { $stdinRaw = $input | Out-String } catch {} }
+        if (-not [string]::IsNullOrWhiteSpace($stdinRaw)) {
+            $sj = $stdinRaw | ConvertFrom-Json -ErrorAction Stop
+            if ($sj.source) { $sessionSource = [string]$sj.source }
+        }
+    } catch {}
+
+    # Alle Guard-Marker zuruecksetzen -> frische Erinnerung + frischer Lese-Zwang pro echter Session.
+    # Deckt seen-* (Spam-Schutz), read-*/full-*/bp-read-* ("gelesen"-Marker) und disable (Notaus) ab.
     # Der Notaus gilt damit nur fuer die Session in der er gesetzt wurde (Schutz ist danach wieder an).
-    Get-ChildItem -Path $env:TEMP -Filter "bug-almanac-*.flag" -ErrorAction SilentlyContinue |
-        Remove-Item -Force -ErrorAction SilentlyContinue
+    if ($sessionSource -ne "compact" -and $sessionSource -ne "resume") {
+        Get-ChildItem -Path $env:TEMP -Filter "bug-almanac-*.flag" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    }
 
     $bugsDir = Join-Path $env:USERPROFILE "proggs/bugs"
     if (-not (Test-Path $bugsDir)) { exit 0 }

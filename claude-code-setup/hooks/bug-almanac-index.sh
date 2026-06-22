@@ -11,10 +11,28 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
 trap 'hook_log_warn "bug-almanac-index: Error at line $LINENO"; exit 0' ERR
 
-# Alle Guard-Marker zuruecksetzen -> frische Erinnerung + frischer Lese-Zwang pro Session.
-# Deckt seen-* (Spam-Schutz), read-* (Stufe-2-"gelesen"-Marker) und disable (Notaus) ab.
+# SessionStart-source ermitteln (startup/clear/resume/compact). Bewaehrtes Muster aus session-guard.
+# Marker-Cleanup wird NUR bei einem KONTEXT-ERHALTENDEN Reset (compact/resume) UEBERSPRUNGEN, sonst
+# (startup/clear/unbekannt) wie bisher geloescht. Grund (Frank-Wunsch 2026-06-22): SessionStart feuert
+# auch bei Auto-Compact/Resume (gleiche Arbeitsphase, nur Kontext komprimiert) - dort die "gelesen"-
+# Marker zu loeschen liess den Guard mitten im Arbeitsfluss erneut blocken (nervte mehrfach). FAIL-OPEN.
+session_source=""
+stdin_input=$(cat 2>/dev/null || echo "")
+if [ -n "$stdin_input" ]; then
+    session_source=$(echo "$stdin_input" | python3 -c "import sys,json
+try:
+    d=json.load(sys.stdin); print(d.get('source','') or '')
+except Exception:
+    print('')" 2>/dev/null || echo "")
+fi
+
+# Alle Guard-Marker zuruecksetzen -> frische Erinnerung + frischer Lese-Zwang pro echter Session.
+# Deckt seen-* (Spam-Schutz), read-*/full-*/bp-read-* ("gelesen"-Marker) und disable (Notaus) ab.
 # Der Notaus gilt damit nur fuer die Session in der er gesetzt wurde (Schutz ist danach wieder an).
-rm -f "${TMPDIR:-/tmp}"/bug-almanac-*.flag 2>/dev/null || true
+case "$session_source" in
+    compact|resume) : ;;  # Kontext-Erhalt -> "gelesen"-Marker behalten (Frank-Wunsch 2026-06-22)
+    *) rm -f "${TMPDIR:-/tmp}"/bug-almanac-*.flag 2>/dev/null || true ;;
+esac
 
 BUGS_DIR="$HOME/proggs/bugs"
 if [ -d "$BUGS_DIR" ]; then
