@@ -273,16 +273,39 @@ DEIN HOSTINGER-SERVER (eine Maschine, alles lokal)
 
 ---
 
-## Naechster konkreter Schritt (Stand 2026-06-22)
+## 🧭 Roadmap & Franks Wunschliste (Stand 2026-06-22, vor Franks Laufrunde)
 
-Server + Qdrant + **Mem0 + Gemini (REST) sind LIVE und getestet**. Naechste sinnvolle Bausteine
-(Reihenfolge offen, mit Frank abstimmen):
-1. **Harte Gemini-Kosten-Caps** in Google AI Studio / Cloud-Console (Budget-Stopp, nicht nur Alert).
-2. ✅ **Externer Zugang via WireGuard LIVE** (2026-06-22, #47073): Server `wg0` 10.8.0.1, nur UDP 51820
-   oeffentlich, `mem0-api` an `10.8.0.1:8000` (oeffentlich unsichtbar). Clients: Handy+PC (Configs in
-   `~/SK/second-brain/wireguard/`). **Offen:** **MCP-Endpunkt**, damit Claude Code / OpenCode das Gehirn
-   als Memory nutzen (HTTP-Transport gegen `http://10.8.0.1:8000`), + ggf. weitere Geraete als Peers.
-3. **Zweiter Speicher-Weg (RAG)** fuer Dokumente (Chunking+Embedding direkt in Qdrant) neben Mem0-Fakten —
-   dann die **3 Direktiven** als ersten echten Inhalt einspeichern (Kategorie "programmieren").
-4. **Offsite-Backup** von `qdrant-data/` + monatlicher Restore-Test; Images auf feste Versionen pinnen.
-5. **Eigener Bezahl-Key** fuers Gehirn (statt des aktuell geteilten TVO-Keys), falls gewuenscht.
+✅ **FERTIG & getestet:** Server (gehaertet) · Qdrant · **Mem0 + Gemini** (LLM `gemini-3.1-flash-lite`,
+Embeddings `gemini-embedding-001` @1536) · REST-API (`mem0-api`, Auth + Observability) ·
+**WireGuard-Zugang** (Handy 10.8.0.2 + PC 10.8.0.3, beide verbunden+getestet; Gehirn unter
+`http://10.8.0.1:8000`, oeffentlich unsichtbar).
+
+**Franks ausdrueckliche Wuensche (2026-06-22, beim Weggehen genannt) — das wollen wir noch bauen:**
+1. ⭐ **Sprach-Anbindung (STT + TTS): sich NATUERLICH mit dem Server unterhalten.** Reinsprechen
+   (Speech-to-Text) + das Gehirn antwortet per Stimme (Text-to-Speech). **Hohe Prioritaet fuer Frank.**
+2. ⭐ **Oberflaeche zum Reinschauen (Dashboard):** Inhalte sehen / kontrollieren / verwalten. Will Frank fix.
+3. **Dirigent** (lokaler Router-Agent): versteht die Anfrage, waehlt die Such-Art, schreibt/liest.
+4. **MCP-Anbindung:** Claude Code / OpenCode nutzen das Gehirn automatisch als Gedaechtnis.
+5. **Inhalte einspeichern:** 3 Direktiven (RAG-Pfad fuer Dokumente) als erster echter Inhalt.
+6. **Backup** (Offsite, taeglich) + Docker-Images auf feste Versionen pinnen.
+
+**Kostenbremse:** Frank sagt, die ist ueber den **Gemini-Key gesetzt** (Google-Seite). → Beim
+Wiederaufnehmen nur kurz **verifizieren** (harter Budget-Stopp in der Google-Console); zusaetzlich laeuft
+der clientseitige Tages-Cap im `mem0-api` (`SB_MAX_LLM_CALLS_PER_DAY`). Kein dringender Bau-Schritt mehr.
+
+**Design-Skizze fuer den gemeinsamen Brainstorm/Recherche, wenn Frank zurueck ist (NICHT vorab umgesetzt):**
+- *Sprach-Anbindung:* nutzt Franks bestehende Bausteine (Groq-STT, Gemini-TTS aus TVO/VoiceAgent).
+  Flow: sprechen → STT → Text an `/recall`+`/store` → Antwort → TTS → vorlesen. **Offene Fragen:** eigene
+  kleine App (Auto/Handy) ODER an TVO/VoiceAgent andocken? STT/TTS lokal vs. Cloud? Wake-Word noetig?
+- *Dashboard:* schlanke Web-Oberflaeche, liest das Gehirn ueber denselben REST-Weg (`10.8.0.1:8000`), nur
+  ueber WireGuard erreichbar. **Offene Frage:** erst read-only Inspektion, Editieren spaeter?
+- *MCP:* duenner MCP-Server vor `mem0-api` (HTTP-Transport gegen `http://10.8.0.1:8000`). **Offene Frage:**
+  eigener MCP-Adapter vs. fertiger mem0-MCP; Scoping pro Client (user/projekt).
+- *Dirigent:* Regel/Semantik-Router (LLM nur im Zweifel) — entscheidet store vs. recall vs. Suchart.
+- *Reihenfolge-Vorschlag (Claude, mit Frank final abstimmen):* erst **MCP** (sofortiger Alltagsnutzen in
+  den CLIs) → dann **Sprach-Anbindung** (Franks Top-Wunsch) → **Dashboard** → **Dirigent** → **Inhalte** →
+  **Backup**. (Frank kann anders priorisieren — Sprach-Anbindung + Dashboard sind ihm besonders wichtig.)
+
+**WICHTIG vor jeder Server-Arbeit:** **Windscribe AUS lassen** ODER `168.231.83.205` + Groq vom
+Windscribe-VPN ausschliessen — Windscribe ist Full-Tunnel und blockierte sonst SSH UND Groq/TVO
+(erlebt 2026-06-22). Unser eigener WireGuard-Tunnel ist Split-Tunnel und stoert nichts (darf anbleiben).
