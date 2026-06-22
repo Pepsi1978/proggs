@@ -144,6 +144,40 @@ Der zu verarbeitende Whisper-Text folgt nun:
             _ => "gemini-correction-prompt-standard.txt"
         };
 
+        // ── Public API fuer den Prompt-Editor (Etappe 2b, Frank-Wunsch 2026-06-22) ──
+
+        /// <summary>Anzeige-Name eines Profils fuer die Editor-Liste.</summary>
+        public static string ProfileLabel(int profile) => profile switch
+        {
+            1 => "Profil 1 — Standard (alltaegliche Texte)",
+            2 => "Profil 2 — Programmierung (Code, CLI, Frameworks)",
+            3 => "Profil 3 — Meta-Intelligenz (strukturiertes Denken)",
+            _ => $"Profil {profile} — Slot {profile}"
+        };
+
+        /// <summary>Voller Pfad der Prompt-Datei eines Profils (zum Speichern).</summary>
+        public static string ProfilePromptPath(int profile) =>
+            Path.Combine(GeminiPromptDir, ProfilePromptFileName(profile));
+
+        /// <summary>
+        /// Die aktuell WIRKSAME Vorlage eines Profils: profilspezifische Datei,
+        /// sonst Legacy-Sammeldatei, sonst eingebauter Default. So sieht der Editor
+        /// immer genau das, was Gemini fuer dieses Profil gerade bekommt.
+        /// </summary>
+        public static string EffectivePrompt(int profile) =>
+            LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
+
+        /// <summary>
+        /// Speichert die bearbeitete Vorlage eines Profils in seine SK-Datei.
+        /// Aenderung wirkt sofort (GeminiClient liest per mtime-Cache neu).
+        /// </summary>
+        public static void SaveProfilePrompt(int profile, string text)
+        {
+            var path = ProfilePromptPath(profile);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, text ?? string.Empty);
+        }
+
         // Mtime-getriebener Cache fuer die Korrektur-Prompt-Dateien. Frueher
         // las jeder Voice-Submit die Datei neu von Disk — bei OneDrive-
         // Materialisierung oder Antivirus-Hooks kostete das messbar 5-50 ms

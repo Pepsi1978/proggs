@@ -58,6 +58,16 @@
                     <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"
                                Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Gemini schreibt sie kontextabhängig korrekt; es ersetzt nicht stur. Gilt für alle Profile, wirkt sofort und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
 
+                    <TextBlock Text="Gemini-Korrektur-Prompts" Foreground="#FFFFD700" FontWeight="SemiBold" FontSize="13" Margin="0,8,0,4"/>
+                    <TextBlock Foreground="#FF9A9A9A" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="Bearbeite die Vorlagen (Profil 1–10), die an Gemini geschickt werden — inklusive der Position deines gesprochenen Texts ({{TEXT}}) und des Wörterbuchs ({{WOERTERBUCH}})."/>
+                    <Button x:Name="BtnEditPrompts"
+                            Content="Gemini-Prompts bearbeiten…"
+                            HorizontalAlignment="Left"
+                            Background="#FF2D2D2D" Foreground="#FFCCCCCC"
+                            BorderBrush="#FF454545" BorderThickness="1"
+                            Padding="12,6" Margin="0,0,0,16" Cursor="Hand"/>
+
                     <TextBlock Text="Separator-Template (zwischen Always-On Prompts)" Foreground="#FFCCCCCC" FontSize="12" Margin="0,0,0,4"/>
                     <TextBox x:Name="SeparatorBox"
                              Background="#FF2D2D2D" Foreground="White"

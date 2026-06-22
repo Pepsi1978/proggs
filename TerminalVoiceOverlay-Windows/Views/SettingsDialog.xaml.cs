@@ -74,6 +74,7 @@ public partial class SettingsDialog : Window
                 PersistPositionCheck.IsChecked == true);
             Close();
         };
+        BtnEditPrompts.Click += (_, _) => GeminiPromptListDialog.Show(this);
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();
         BtnGoogleDisconnect.Click += async (_, _) => await DisconnectGoogleAsync();
     }
