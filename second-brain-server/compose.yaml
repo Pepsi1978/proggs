@@ -10,7 +10,7 @@
 
 services:
   qdrant:
-    image: qdrant/qdrant:latest      # TODO: nach erstem Lauf auf feste Version pinnen (Reproduzierbarkeit/Umzug)
+    image: qdrant/qdrant:v1.18.2     # gepinnt: Reproduzierbarkeit + Security (1.18.1/1.18.2 buendelt Snapshot-Upload-Auth #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). Siehe bugs/server/qdrant.md §6.
     container_name: sb-qdrant
     restart: unless-stopped
     ports:
