@@ -49,6 +49,7 @@
 | 15 | `npm audit` HIGH (UriTemplate-ReDoS) | SDK ≥1.25.2 — 1.27.1 sicher, NICHT downgraden | §8.1 |
 | 16 | Python-FastMCP: `TypeError: issubclass()` beim ersten `@mcp.tool()` | KEIN `from __future__ import annotations` (macht Annotationen zu Strings → FastMCP-Introspektion bricht). Issue #1129 | §3.11 |
 | 17 | Python-FastMCP: `lifespan`-Init laeuft mehrfach | FastMCP-`lifespan` ist PRO Client-Session, nicht pro Server. App-weite Init via ASGI-Lifespan (#1115) | §3.12 |
+| 18 | Python-FastMCP: HTTP 421 / DNS-Rebinding | `host` IM Konstruktor setzen (nachtraegliches `settings.host` greift nicht → 421). Auto-Schutz erst ab SDK v1.23.0+ (CVE-2025-66416); Anker 1.12.4 davor → `transport_security`+`allowed_hosts` explizit | §3.13 |
 
 ---
 
@@ -312,7 +313,17 @@ Hosts ab. Der schnelle Trick „an `0.0.0.0` binden deaktiviert den Schutz" funk
 erlaubten Host explizit erlauben, z.B. `allowed_hosts=["10.8.0.1:8001","10.8.0.1"]` — dann bleibt der Schutz aktiv
 UND der VPN-Zugriff geht. (Hinter dem WireGuard-Tunnel ist das Risiko klein; fuer ein oeffentliches Deployment waere
 `allowed_hosts` aber Pflicht.)
-**Versionen:** offizielles MCP Python-SDK (Issue #1798). **Quelle:** GitHub modelcontextprotocol/python-sdk #1798 · Recherche 2026-06-22.
+**Zwei Praezisierungen (Changelog-Abgleich 2026-06-22):**
+- **Der automatische DNS-Rebinding-Schutz greift erst ab SDK v1.23.0+** (Advisory **CVE-2025-66416** empfiehlt das
+  Update). Unser Anker **`mcp==1.12.4` liegt DAVOR** → auf 1.12.4 wird der Schutz NICHT automatisch gesetzt; man muss
+  `transport_security` explizit konfigurieren (oder bewusst `0.0.0.0`+WireGuard wie jetzt). Beim spaeteren Hochziehen
+  des SDK pruefen, ob der dann aktive Auto-Schutz den `0.0.0.0`-Pfad blockt.
+- **`host` MUSS im Konstruktor stehen, nicht nachtraeglich gesetzt werden:** Der Schutz wird **bei der Konstruktion**
+  anhand von `host` entschieden. Eine spaetere Zuweisung `mcp.settings.host = "0.0.0.0"` (oder via Env nach `__init__`)
+  aktualisiert `TransportSecuritySettings` NICHT mehr → Symptom **HTTP 421 „Misdirected Request - Invalid Host header"**.
+  Loesung: `host`/`transport_security` direkt im `FastMCP(...)`-Konstruktor uebergeben.
+**Versionen:** offizielles MCP Python-SDK (Issue #1798; CVE-2025-66416 → Fix-Empfehlung ab v1.23.0+; Anker `mcp==1.12.4` davor).
+**Quelle:** GitHub modelcontextprotocol/python-sdk #1798, GitLab-Advisory CVE-2025-66416 · Recherche 2026-06-22.
 
 ## 4. Fehlerbehandlung & Protokoll-Fehler
 

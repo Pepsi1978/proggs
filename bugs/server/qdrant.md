@@ -6,7 +6,8 @@
 > `best-practices/server/qdrant.md`.
 >
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu; offizielle qdrant.tech-
-> Docs/Blog + GitHub-Issues). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
+> Docs/Blog + GitHub-Issues). **Changelog-Abgleich 2026-06-22:** v1.18.2 (4. Juni 2026) ist weiterhin die
+> **neueste stabile Version** — kein 1.19+. **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
 > 1.18.2), Docker-Image `qdrant/qdrant:latest`, im Stack mit mem0 2.0.7 (Embeddings @1536).
 > Verwandt: [`self-hosted-ai-agent-server.md`](self-hosted-ai-agent-server.md), [`mem0.md`](mem0.md), [`wireguard.md`](wireguard.md).
 
@@ -24,7 +25,7 @@
 | 6 | Original-Vektoren weichen vom Upload ab | `Cosine` **pre-normalisiert** die Vektoren. Wer die Originale braucht → `Dot`. Metrik-Wechsel aendert Rankings (ausser unit-normalisiert). | §2 |
 | 7 | Snapshot-Restore extrem langsam (Minuten statt Sek.) | `Content-Type: multipart/form-data` NICHT explizit setzen (zerstoert die boundary-Berechnung) — `requests`/Client selbst generieren lassen. | §3 |
 | 8 | Suche langsam | `hnsw_ef` zur Suche senken (schneller, weniger Recall); Quantisierung (Scalar int8 −75%, Binary 40× schneller); 1.18 TurboQuant. | §5 |
-| 9 | `:latest`-Image im Compose | Auf feste Version (1.18.2) pinnen — reproduzierbar, kein stilles Major-Upgrade beim Pull. | §3 |
+| 9 | ⭐ `:latest`-Image / Version < 1.18.2 | Auf **`v1.18.2` pinnen** — nicht nur Reproduzierbarkeit, sondern **Sicherheit**: 1.18.2 fixt einen REST-Auth-Whitelist-Bypass (PR #9254) + Heap-OOB-Read via boesartigem Snapshot (#9268). `:latest` kann unbemerkt auf eine andere Version springen. | §3, §6 |
 
 ---
 
@@ -91,8 +92,12 @@ explizit setzen, vom Client generieren lassen (`files={'snapshot': open(...)}`, 
 ohne Downtime: `alt_api_key` (ab v1.17.0) + Rolling Restart. Key-Typen: Admin / Read-Only (v1.7.0) / JWT-RBAC (v1.9.0).
 **3e Local vs Server Mode (Python-Client):** `QdrantClient(path=…)` schaltet in den Local Mode (Single-Instance, kein
 concurrent access, nur Tests). Gegen einen Docker-Server `path` NIE setzen — `url`/`host` verwenden.
-**3f `:latest`-Tag:** auf feste Version (1.18.2) pinnen → reproduzierbar, kein ueberraschendes Major beim naechsten Pull.
-**Quelle:** qdrant.tech (security, administration, docker), GitHub-Issue (Snapshot-Restore) · Recherche 2026-06-22.
+**3f `:latest`-Tag (Sicherheits-Relevanz, nicht nur Reproduzierbarkeit):** auf **`v1.18.2`** pinnen. v1.18.2 enthaelt
+zwei sicherheitskritische Fixes, die fuer einen (auch hinter VPN) exponierten Server zaehlen: **REST-Auth-Whitelist-Bypass
+auf speziell konstruierten Pfaden** (PR #9254, „resolve route before authorizing") und **Heap-OOB-Read via boesartigem
+Snapshot** (PR #9268, Reject bei inkorrekter Laenge); in 1.18.1 zusaetzlich „Authorize before snapshot upload" (#9031).
+`:latest` kann beim naechsten Pull unbemerkt eine andere (auch aeltere/verwundbare) Version ziehen — feste Version pinnen.
+**Quelle:** qdrant.tech (security, administration, docker), GitHub qdrant releases (1.18.1/1.18.2 security), GitHub-Issue (Snapshot-Restore) · Recherche 2026-06-22.
 
 ## 4. Client-Anbindung & `WRONG_VERSION_NUMBER`
 **Symptom:** `SSL routines … WRONG_VERSION_NUMBER` beim Verbinden.
@@ -109,8 +114,8 @@ uebergeben (`url="http://host:6333"` statt `host=`+`api_key`). Das ist exakt der
 - **HNSW `m`** (8–64): hoeher = genauer, mehr RAM/Build-Zeit. **`ef_construct`** (100–500): hoeher = genauerer Build,
   langsamer. Zur **Suche** `hnsw_ef` senken = schneller (weniger Recall).
 - **Quantisierung:** Scalar int8 = −75 % Speicher, <1 % Fehler, `always_ram` haelt sie im RAM (schnell). Binary = bis
-  40× schneller / 32× kleiner. **Qdrant 1.18: TurboQuant** (Google Research) — ~doppelte Kompression ggue. Scalar bei
-  aehnlichem Recall, mit SIMD; unterstuetzt Cosine/Dot/L2.
+  40× schneller / 32× kleiner. **Qdrant 1.18.0: TurboQuant** (Google Research) — laut Release-Notes **bis 8× Kompression
+  ggue. float32 „without the recall tax"** (≈ 2× ggue. Scalar int8, da int8 bereits 4× spart), mit SIMD; unterstuetzt Cosine/Dot/L2.
 - `full_scan_threshold`/`indexing_threshold`: kleine Segmente werden per Brute-Force durchsucht, bis Indizierung lohnt.
 **Quelle:** qdrant.tech (resource-optimization, HNSW, blog 1.18) · Recherche 2026-06-22.
 
@@ -123,6 +128,15 @@ Per-Collection-Metriken (`/metrics?per_collection=true`) · **Strict-Mode-Guardr
 abhaengiger Code-Bug mit „gefixt ab"). Der `WRONG_VERSION_NUMBER`-Fall (#770) ist ein Port/Protokoll-Konfig-Thema, kein
 Server-Bug. Versions-spezifische 1.18-„pitfalls/breaking changes" waren in den Quellen NICHT belegt (mehrere Quellen-
 Auszuege endeten abgeschnitten) — daher hier KEINE 1.18-Breaking-Changes behauptet.
+
+**Security-Fixes in der 1.18.x-Linie (Changelog-Abgleich 2026-06-22) — DAS ist versionsabhaengig:**
+- **1.18.2 (4. Juni 2026):** REST-Auth-Whitelist-Bypass auf speziell konstruierten Pfaden (PR #9254) + Heap-OOB-Read via
+  boesartigem Snapshot (PR #9268) gefixt. Zusatz: Timeout fuer Shard-Snapshot-Streaming (#9239), `on_disk`-Flag-Wechsel
+  ohne Payload-Index-Rebuild (#9138 — relevant fuer on_disk-Umstellung im Betrieb).
+- **1.18.1 (22. Mai 2026):** „Authorize request before we accept snapshot file upload" (#9031), TurboQuant-Heap-Memory-
+  Under-Reporting-Fix (#9099), Leervektor-Panic-Fix (#9070).
+→ Konsequenz: **Versionen < 1.18.2 sind verwundbar** (Auth-Bypass/OOB). `v1.18.2` ist die Mindest-Version zum Pinnen.
+Nach v1.18.2 existiert (Stand 2026-06-22) noch kein Release — Anker bleibt aktuell.
 
 ---
 

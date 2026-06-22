@@ -9,7 +9,10 @@
 > vornherein richtig macht). Verwandt: [`wireguard.md`](wireguard.md) (das VPN selbst),
 > [`vps-hosting.md`](vps-hosting.md).
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu).
-> **Anker:** Samba **4.19.5** (Ubuntu 24.04 Candidate) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
+> **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
+> **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
+> 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
+> Auf Ubuntu 24.04 kommen Fixes daher NUR ueber die Ubuntu-Paketpflege (USN/`apt`) — siehe **§8** (Patching-Pflicht).
 
 ---
 
@@ -24,6 +27,7 @@
 | 5 | Port-Freigabe fuer SMB im Tunnel | SMB-Ports (445/tcp, 139/tcp) NUR ueber `wg0` zulassen: `ufw allow in on wg0 to any port 445` (NICHT oeffentlich!). Einziger oeffentlicher Port bleibt UDP 51820. | §2 |
 | 6 | Netzlaufwerk verschwindet/rotes X nach Reboot/Login | Persistentes Mapping per `New-SmbMapping -Persistent` (nicht `New-PSDrive`); Credential-Manager-Eintrag pro Servername UND IP; "auf Netzwerk warten"-GPO; PIN-Login kann stoeren. | §5 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
+| 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
 
 ---
 
@@ -138,6 +142,29 @@ zugestellt, nicht weitergeleitet. IP-Forwarding nur, wenn der VPS Clients ins In
 (Full-Tunnel). Siehe [`wireguard.md`](wireguard.md) §1.
 **Quelle:** `bugs/server/wireguard.md` · eigene Recherche 2026-06-22.
 
+## 8. ⭐ Samba 4.19.x ist upstream EOL — Patches kommen nur ueber die Ubuntu-Paketpflege
+**Symptom:** Man fuehrt Samba **4.19.5** und prueft die Upstream-Security-Seite (samba.org) — fuer den 4.19-Zweig
+ist dort seit **4.19.1** (Okt 2023) KEIN Security-Release mehr gelistet. Es entsteht der falsche Eindruck, 4.19.5
+sei „aktuell genug" oder es gaebe keine relevanten CVEs.
+**Ursache:** Der Upstream-**4.19-Zweig ist End-of-Life**. Samba pflegt nur noch neuere Zweige — die in 2025/2026
+veroeffentlichten CVEs wurden ausschliesslich fuer **4.21–4.24** gepatcht (z.B. CVE-2025-10230, CVE-2025-9640 vom
+15.10.2025; CVE-2026-4408/4480/2340/3012/3238/1933 vom 26.05.2026). Ubuntu 24.04 liefert aber bewusst 4.19.5 und
+**backportet** Security-Fixes in sein eigenes Paket (`2:4.19.5+dfsg-4ubuntu9.6` — das `ubuntuX.Y`-Suffix steigt mit
+jedem USN). Der nackte Upstream-Versionsstring `4.19.5` sagt daher NICHTS ueber den Patch-Stand aus.
+**Versionen:** Samba 4.19.x auf Ubuntu 24.04 (Noble).
+**FIX (funktionserhaltend) — Patch-Stand ueber die Distro sicherstellen, gerade fuer einen exponierten Server:**
+- **`unattended-upgrades` aktivieren** (`sudo apt install unattended-upgrades && sudo dpkg-reconfigure -plow unattended-upgrades`)
+  ODER regelmaessig `sudo apt update && sudo apt upgrade` — so kommen die Ubuntu-Backport-Fixes ins `samba`-Paket.
+- Installierten Patch-Stand pruefen: `apt-cache policy samba` / `dpkg -l | grep samba` (auf das `ubuntuX.Y`-Suffix achten,
+  nicht auf `4.19.5`). Offene USNs: `pro security-status` bzw. ubuntu.com/security/notices?package=samba.
+- **NICHT** auf einen Upstream-Zweig wechseln/selbst kompilieren, nur um eine hoehere Versionsnummer zu sehen — das Ubuntu-
+  Paket ist der gepatchte Pfad. Wer wirklich 4.21+ braucht, geht ueber ein gepflegtes PPA/Backport, nicht per Hand-Build.
+- **Mildernd in unserem Setup:** SMB ist nur ueber WireGuard erreichbar (445 nie oeffentlich, §2) + `smb encrypt = required` →
+  die Angriffsflaeche ist klein. Das ersetzt das Patchen aber NICHT (Defense in Depth).
+- **AD-DC/Kerberos-CVEs aus 4.24** (z.B. CVE-2026-20833, KDC-Enctypes/PAC) betreffen NUR Samba als Domain Controller —
+  fuer einen **reinen SMB-File-Server** (unser Fall) NICHT relevant.
+**Quelle:** samba.org/samba/history/security.html, cybersecurity-help.cz (Samba 4.19.5), Ubuntu-Paket Noble · Recherche 2026-06-22.
+
 ---
 
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
@@ -149,6 +176,7 @@ zugestellt, nicht weitergeleitet. IP-Forwarding nur, wenn der VPS Clients ins In
 - [ ] Win-Mount persistent via `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag?
 - [ ] Bei Langsamkeit: WireGuard-MTU 1350 + MSS getestet?
 - [ ] Kein unnoetiges `ip_forward`/MASQUERADE (Split-Tunnel-Dienst braucht es nicht)?
+- [ ] **`unattended-upgrades` aktiv / `apt upgrade` regelmaessig** (4.19.x ist upstream EOL — Fixes nur ueber Ubuntu-Paket, §8)?
 
 ---
 

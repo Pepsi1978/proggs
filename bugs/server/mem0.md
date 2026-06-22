@@ -13,6 +13,12 @@
 > **Versions-Hinweis:** Die Quellen beschreiben v2.x oft im Kontext der Migration auf "v3". Unsere
 > installierte **2.0.7** nutzt bereits die `filters={...}`-API (live verifiziert) — Versions-Labels in
 > den Quellen ("v2 alt / v3 neu") nicht 1:1 auf die PyPI-Nummer uebertragen; im Zweifel live testen.
+>
+> **Changelog-Abgleich 2026-06-22:** mem0 hat **weiterhin KEIN** Quality-Gate / REJECT / Confidence-Scoring eingefuehrt —
+> im Gegenteil: die neue Architektur ist explizit **„single-pass ADD-only"** (ein LLM-Call, KEIN UPDATE/DELETE; Memories
+> akkumulieren, nichts wird ueberschrieben). Issue #4573 ist inzwischen **CLOSED** (Resolution unbekannt — NICHT „gefixt",
+> die fuenf vorgeschlagenen Anti-Junk-Mechanismen sind laut Migrations-Doku/PyPI nicht umgesetzt). Konsequenz: Junk bleibt
+> dauerhaft → strenge `custom_instructions` + periodisches Junk-Audit bleiben das einzige wirksame Mittel (§1).
 
 ---
 
@@ -73,9 +79,14 @@ Rest Feedback-Loop-Amplifikation. `isNoiseMessage()` erkennt den System-Prompt N
 - **Negative Few-Shot-Beispiele** im Extraktions-Prompt (zeigt, was NICHT gespeichert wird — fehlt in mem0 default).
 - **Feedback-API** (POSITIVE/NEGATIVE/VERY_NEGATIVE pro `memory_id`) + periodisches **Junk-Audit** (mem0 hat
   KEIN offizielles Audit-Tool — manuell `get_all` + erfundene Profile/Near-Duplikate loeschen).
-- **Was mem0 NICHT hat (Issue #4573 — bewusst sein):** kein hartes Quality-Gate vor Storage, keine
-  **REJECT-Action** (nur ADD/UPDATE/DELETE/NONE), kein Feedback-Loop-Marking abgerufener Memories. Die
-  Sauberkeit kommt also v.a. aus `custom_instructions` + Schreib-Disziplin (§5), nicht aus der Pipeline.
+- **Was mem0 NICHT hat (Issue #4573 — bewusst sein; Status 2026-06-22: CLOSED, aber NICHT geloest):** kein hartes
+  Quality-Gate vor Storage, keine **REJECT-Action**, kein Feedback-Loop-Marking abgerufener Memories. Die fuenf in
+  #4573 geforderten Mechanismen (Feedback-Loop-Prevention, Quality-Gate, Negative-Few-Shot, REJECT-Action,
+  Identity-aware Extraction) sind laut Migrations-Doku/PyPI **nicht** umgesetzt. **Verschaerfend (Changelog-Abgleich
+  2026-06-22):** Die neue Architektur ist **„single-pass ADD-only"** — KEIN UPDATE/DELETE mehr, alles akkumuliert,
+  nichts wird je ueberschrieben. `add()` liefert nur noch `ADD`. PR #4302 fuegte zwar `DEFAULT_CUSTOM_INSTRUCTIONS` +
+  Message-Level-Filtering hinzu, adressiert aber NICHT die dominanten Junk-Kategorien (Boot-File-Restating 52,7 %).
+  Die Sauberkeit kommt also v.a. aus `custom_instructions` + Schreib-Disziplin (§5) + Audit, nicht aus der Pipeline.
 **Unser Stack:** Gemini (gutes Modell) reicht laut Befund NICHT allein. Fuer Franks Gehirn: strenge
 `custom_instructions` von Anfang an + 2–3 `custom_categories` + gelegentliches Junk-Audit. **TODO pruefen:**
 Bug `mem0#4999` (in 2.0.0 gab `search()` fuer ALLE Treffer Score 1.0 → Confidence-Gate ausgehebelt) — ob das
