@@ -47,6 +47,7 @@
 | 13 | Windows: Umlaute/Emoji im Output kaputt | UTF-8 explizit (`setEncoding('utf8')`/`PYTHONIOENCODING`) | §6.4 |
 | 14 | `ERR_MODULE_NOT_FOUND` (ESM) | `"type":"module"`, lokale Imports mit `.js`-Endung | §8.7 |
 | 15 | `npm audit` HIGH (UriTemplate-ReDoS) | SDK ≥1.25.2 — 1.27.1 sicher, NICHT downgraden | §8.1 |
+| 16 | Python-FastMCP: `TypeError: issubclass()` beim ersten `@mcp.tool()` | KEIN `from __future__ import annotations` (macht Annotationen zu Strings → FastMCP-Introspektion bricht) | §3.11 |
 
 ---
 
@@ -260,6 +261,20 @@ schon korrekt — verifizieren was real advertised wird.
 **FIX:** SDK ≥ Fix-Version; pruefen ob Descriptions im advertisten Schema ankommen.
 
 ---
+
+### 3.11 Python-FastMCP: `from __future__ import annotations` bricht die Tool-Registrierung  🆕 (eigener Vorfall 2026-06-22)
+**Symptom:** Der Server-Prozess/Container crasht beim Start, sobald der erste `@mcp.tool()`-Decorator
+ausgewertet wird: `TypeError: issubclass() arg 1 must be a class` (in `mcp/server/fastmcp/tools/base.py`,
+`Tool.from_function`). Der Container landet in einer Restart-Schleife, `tools/list` zeigt nie Werkzeuge.
+**Ursache:** `from __future__ import annotations` (PEP 563) macht ALLE Funktions-Annotationen zu **Strings**.
+FastMCP introspiziert die Tool-Signatur und ruft je Parameter `issubclass(param.annotation, Context)` auf —
+`param.annotation` ist dann der String `"str"` statt der Klasse `str` → `issubclass("str", …)` wirft den TypeError.
+Trifft JEDES Tool mit annotierten Parametern.
+**Versionen:** MCP Python-SDK `mcp==1.12.4` (FastMCP), Python 3.10+; verifiziert 2026-06-22 (Projekt `second-brain`, Container `sb-mcp`).
+**FIX (funktionserhaltend):** Die Zeile `from __future__ import annotations` **entfernen**. In Python 3.10+
+funktionieren `X | None`, `list[...]`, `dict | None` ohnehin nativ als Laufzeit-Annotationen — der Future-Import
+ist unnoetig. Verifikation: nach dem Entfernen `initialize`+`tools/list` gegen den Server fahren (alle Tools sichtbar).
+**Quelle:** eigener Vorfall (second-brain MCP-Wrapper); FastMCP `Tool.from_function`-Signatur-Introspektion.
 
 ## 4. Fehlerbehandlung & Protokoll-Fehler
 
