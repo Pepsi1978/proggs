@@ -26,9 +26,16 @@ import sys
 #   - gradle:        versionCode / versionName
 #   - package.json:  "version":
 #   - Cargo/TOML:    version = ... (am Zeilenanfang, NICHT minSdkVersion/compileSdkVersion etc.)
+#   - MSBuild/.csproj: <Version>1.2.3</Version> (+ Assembly/File/Package/AssemblyInformational),
+#                    NUR mit reiner Versionsnummer als Inhalt -> <TargetFramework>net8.0</...> faellt NICHT darunter.
 _VERSION_NAMED = re.compile(r'version(Code|Name)', re.IGNORECASE)
 _VERSION_JSON = re.compile(r'"version"\s*:', re.IGNORECASE)
 _VERSION_TOML = re.compile(r'^\s*version\s*=', re.IGNORECASE)
+_VERSION_MSBUILD = re.compile(
+    r'<\s*(?:Assembly|File|Package|AssemblyInformational)?Version\s*>\s*[\d.]+\s*'
+    r'<\s*/\s*(?:Assembly|File|Package|AssemblyInformational)?Version\s*>',
+    re.IGNORECASE,
+)
 
 _STRING_RE = re.compile(r'(<string\b|</string>|<plurals\b|getString\(|stringResource\(|R\.string\.)', re.IGNORECASE)
 _IMPORT_RE = re.compile(r'^\s*(import\s|package\s|using\s|#include|from\s+\S+\s+import\s)')
@@ -40,7 +47,12 @@ def _sig_lines(excerpt):
 
 
 def _is_version_line(ln):
-    return bool(_VERSION_NAMED.search(ln) or _VERSION_JSON.search(ln) or _VERSION_TOML.match(ln))
+    return bool(
+        _VERSION_NAMED.search(ln)
+        or _VERSION_JSON.search(ln)
+        or _VERSION_TOML.match(ln)
+        or _VERSION_MSBUILD.search(ln)
+    )
 
 
 def is_version_bump(excerpt):

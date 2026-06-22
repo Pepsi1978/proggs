@@ -127,6 +127,13 @@ except Exception:
     exit 0
 fi
 
+# -- Test-Artefakt-Ausschluss (Frank-Entscheidung 2026-06-22 via almanach-trigger-auswertung):
+# Selbsttest-Dateien des Almanach-/Guard-Systems (Dateiname enthaelt 'almtest', z.B. almtest-manifest.json)
+# loesen den ECHTEN Guard NICHT aus und verschmutzen die Sonde nicht. ENG (nur 'almtest'), damit echte
+# Unit-Tests (FooTest.kt/*.test.ts/_test.py) mit Logik nicht durchrutschen (Direktive #3). Nur Edit/Write/
+# MultiEdit (Read/Bash sind oben schon mit exit 0 raus).
+case "$fpl" in *almtest*) exit 0 ;; esac
+
 # -- Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
 slug=""; file=""; name=""
 case "$fpl" in
@@ -601,13 +608,15 @@ if [ -f "$almanachPath" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; th
     fi
 fi
 
-# -- Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
-# almanach-trigger-auswertung). Version-Bump (nur versionCode/versionName) aendert KEINE Logik ->
-# kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram). NUR gradle,
+# -- Trivial-Filter: reiner Version-Bump in JEDEM Bereich (Frank-Entscheidung 2026-06-20 +
+# bereichsuebergreifend erweitert 2026-06-22, beide via almanach-trigger-auswertung). Version-Bump
+# (nur versionCode/versionName, "version":, version=, <Version>... bei .csproj) aendert KEINE Logik ->
+# kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram). Definition aus
+# der GEMEINSAMEN Quelle (trivial_classify.py) -> gilt fuer gradle/npm/Cargo/.csproj gleichermassen.
 # NUR wenn JEDE nicht-leere Edit-Zeile eine Versionszeile ist, NUR wenn sonst geblockt wuerde.
 # Funktionserhaltend: jede andere Zeile -> normaler Block unten. Transparenz: pass/trivial-uebersprungen.
 # JSON per python3 (kein jq - claude-hooks §16.2). FAIL-OPEN via || echo 0.
-if [ "$slug" = "gradle" ] && [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
+if [ "$disabled" -eq 0 ] && [ ! -f "$readMarker" ]; then
     # Trivial-Entscheidung aus der GEMEINSAMEN Quelle (bugs/trivial_classify.py is-version-bump-json)
     # -> Guard und Auswertung (aggregate.py) laufen nie auseinander (DRY, Direktive #1). FAIL-SAFE:
     # scheitert der Aufruf (python/Modul fehlt), greift der normale Block -> kein Funktionsverlust.

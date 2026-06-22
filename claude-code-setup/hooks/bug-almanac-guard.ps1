@@ -139,6 +139,14 @@ try {
         exit 0
     }
 
+    # ── Test-Artefakt-Ausschluss (Frank-Entscheidung 2026-06-22 via almanach-trigger-auswertung):
+    # Selbsttest-Dateien des Almanach-/Guard-Systems (Dateiname enthaelt 'almtest', z.B.
+    # almtest-manifest.json) sollen den ECHTEN Guard NICHT ausloesen und die Sonde nicht verschmutzen.
+    # ENG gefasst (nur 'almtest'), damit echte Unit-Tests (FooTest.kt/*.test.ts/_test.py) mit echter
+    # Logik NICHT durchrutschen (Direktive #3, funktionserhaltend). Betrifft nur Edit/Write/MultiEdit
+    # (Read/Bash sind oben schon mit exit 0 raus).
+    if ($fpl -match 'almtest') { exit 0 }
+
     # ── Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). ──
     $slug = $null; $file = $null; $name = $null
     if ($fpl -match '\.sdplugin/' -or $fpl -match 'propertyinspector') {
@@ -527,13 +535,15 @@ try {
         } catch {}
     }
 
-    # ── Trivial-Filter: reiner Version-Bump in build.gradle* (Frank-Entscheidung 2026-06-20 via
-    # almanach-trigger-auswertung). Ein Version-Bump (nur versionCode/versionName) aendert KEINE
-    # Logik -> kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als Kleinkram).
-    # NUR gradle, NUR wenn JEDE nicht-leere Zeile des Edits eine Versionszeile ist, NUR wenn sonst
-    # geblockt wuerde (read-Marker fehlt). Funktionserhaltend: jede andere Zeile -> normaler Block
-    # unten. Transparenz (Entscheidung 4): als pass/trivial-uebersprungen in die Sonde (nicht still).
-    if ($slug -eq 'gradle' -and -not $disabled -and -not (Test-Path $readMarker)) {
+    # ── Trivial-Filter: reiner Version-Bump in JEDEM Bereich (Frank-Entscheidung 2026-06-20 +
+    # bereichsuebergreifend erweitert 2026-06-22, beide via almanach-trigger-auswertung). Ein
+    # Version-Bump (nur versionCode/versionName, "version":, version=, <Version>... bei .csproj)
+    # aendert KEINE Logik -> kein Bug-Wissen noetig (known-bugs-before-coding nennt Versions-Bump als
+    # Kleinkram). Die Definition kommt aus der GEMEINSAMEN Quelle (trivial_classify.py) -> gilt fuer
+    # gradle/npm/Cargo/.csproj gleichermassen. NUR wenn JEDE nicht-leere Edit-Zeile eine Versionszeile
+    # ist, NUR wenn sonst geblockt wuerde (read-Marker fehlt). Funktionserhaltend: jede andere Zeile ->
+    # normaler Block unten. Transparenz: als pass/trivial-uebersprungen in die Sonde (nicht still).
+    if (-not $disabled -and -not (Test-Path $readMarker)) {
         # Trivial-Entscheidung aus der GEMEINSAMEN Quelle (bugs/trivial_classify.py is-version-bump-json)
         # -> Guard und Auswertung (aggregate.py) laufen nie auseinander (DRY, Direktive #1). FAIL-SAFE:
         # faellt der Aufruf aus (python/Modul fehlt), wird NICHT durchgewunken (normaler Block) -> kein
