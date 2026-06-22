@@ -16,8 +16,8 @@ Observability-First: strukturiertes JSON-Logging auf stderr (docker logs sb-mcp)
 
 Plan/Doku: best-practices/second-brain/UMSETZUNGSPLAN.md
 """
-from __future__ import annotations
-
+# WICHTIG: KEIN "from __future__ import annotations" — das macht Annotationen zu Strings (PEP 563),
+# woran FastMCP 1.12.4 beim Tool-Registrieren scheitert (issubclass(str, Context) -> TypeError).
 import json
 import logging
 import os
