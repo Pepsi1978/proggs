@@ -263,7 +263,7 @@ def recall(req: RecallReq) -> dict:
     m = _require_memory()
     _guard_llm_budget()  # Suche embeddet die Query (Embedding-Call)
     t0 = time.time()
-    result = m.search(req.query, user_id=req.user_id, limit=req.limit)
+    result = m.search(req.query, filters={"user_id": req.user_id}, top_k=req.limit)
     hits = (result or {}).get("results", []) if isinstance(result, dict) else (result or [])
     checkpoint("recall", "Anfrage liefert relevante Erinnerungen zurueck", ok=isinstance(hits, list),
                user_id=req.user_id, query_len=len(req.query), hits=len(hits), ms=int((time.time() - t0) * 1000))
@@ -273,7 +273,7 @@ def recall(req: RecallReq) -> dict:
 @app.get("/memories", dependencies=[Depends(require_auth)])
 def memories(user_id: str = "frank") -> dict:
     m = _require_memory()
-    result = m.get_all(user_id=user_id)
+    result = m.get_all(filters={"user_id": user_id})
     items = (result or {}).get("results", []) if isinstance(result, dict) else (result or [])
     return {"ok": True, "count": len(items), "result": result}
 
