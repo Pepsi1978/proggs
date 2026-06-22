@@ -178,6 +178,22 @@ Der zu verarbeitende Whisper-Text folgt nun:
             File.WriteAllText(path, text ?? string.Empty);
         }
 
+        /// <summary>Der aktuell WIRKSAME Woerterbuch-Einleitungstext: editierbare Datei oder Default.</summary>
+        public static string EffectiveVocabularyPreamble()
+        {
+            var p = Path.Combine(GeminiPromptDir, VocabularyPreambleFileName);
+            var text = ReadPromptFileCached(p)?.Trim();
+            return string.IsNullOrWhiteSpace(text) ? DefaultVocabularyPreamble : text;
+        }
+
+        /// <summary>Speichert den Woerterbuch-Einleitungstext in seine SK-Datei (wirkt sofort).</summary>
+        public static void SaveVocabularyPreamble(string text)
+        {
+            var p = Path.Combine(GeminiPromptDir, VocabularyPreambleFileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(p)!);
+            File.WriteAllText(p, text ?? string.Empty);
+        }
+
         // Mtime-getriebener Cache fuer die Korrektur-Prompt-Dateien. Frueher
         // las jeder Voice-Submit die Datei neu von Disk — bei OneDrive-
         // Materialisierung oder Antivirus-Hooks kostete das messbar 5-50 ms
@@ -244,6 +260,20 @@ Der zu verarbeitende Whisper-Text folgt nun:
         // (auch fehlende Datei) = aus. Default aus.
         private const string VocabularyEnabledFileName = "vocabulary-enabled.txt";
 
+        // Editierbarer Einleitungstext fuer den Woerterbuch-Block (Frank-Wunsch
+        // 2026-06-22): liegt als Datei vocabulary-preamble.txt im SK-Ordner vor,
+        // faellt sonst auf DefaultVocabularyPreamble zurueck.
+        private const string VocabularyPreambleFileName = "vocabulary-preamble.txt";
+        public const string DefaultVocabularyPreamble =
+            "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n" +
+            "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-" +
+            "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein " +
+            "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext " +
+            "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die " +
+            "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat " +
+            "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-" +
+            "Kontext zu \"Backend\").";
+
         /// <summary>
         /// Laedt die persoenliche Vokabular-Liste (haeufige Begriffe/Eigennamen
         /// des Sprechers) und baut daraus einen Praeambel-Block, der VOR den
@@ -270,16 +300,8 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 var vocab = ReadPromptFileCached(path)?.Trim();
                 if (string.IsNullOrWhiteSpace(vocab)) return string.Empty;
 
-                return
-                    "PERSÖNLICHES VOKABULAR (Begriffe, die die Spracherkennung oft falsch schreibt):\n" +
-                    "Die folgenden Wörter/Eigennamen benutzt der Sprecher regelmäßig. Die Groq/Whisper-" +
-                    "Spracherkennung transkribiert sie oft falsch, weil sie nur ÄHNLICH KLINGEN. Wenn ein " +
-                    "transkribiertes Wort phonetisch einem dieser Begriffe ähnelt UND es im Satzkontext " +
-                    "Sinn ergibt, ersetze es durch die hier angegebene korrekte Schreibweise. Erzwinge die " +
-                    "Ersetzung NICHT, wenn der Kontext eindeutig eine andere, normale Bedeutung hat " +
-                    "(z.B. bleibt \"Backen\" beim Thema Kuchen \"Backen\", wird aber im Programmier-" +
-                    "Kontext zu \"Backend\").\n" +
-                    vocab + "\n\n";
+                // Einleitungstext (Praeambel) aus der editierbaren Datei, sonst Default.
+                return EffectiveVocabularyPreamble() + "\n" + vocab + "\n\n";
             }
             catch
             {

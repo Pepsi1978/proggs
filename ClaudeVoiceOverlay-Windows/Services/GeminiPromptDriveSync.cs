@@ -53,6 +53,7 @@ public sealed class GeminiPromptDriveSync
         for (int i = 4; i <= 10; i++) yield return $"gemini-correction-prompt-{i:D2}.txt";
         yield return "gemini-correction-prompt.txt"; // Legacy-Sammeldatei
         yield return "vocabulary-enabled.txt";       // Woerterbuch-Schalter
+        yield return "vocabulary-preamble.txt";      // Woerterbuch-Einleitungstext
     }
 
     private sealed class Bundle
