@@ -163,7 +163,16 @@ jedem USN). Der nackte Upstream-Versionsstring `4.19.5` sagt daher NICHTS ueber 
   die Angriffsflaeche ist klein. Das ersetzt das Patchen aber NICHT (Defense in Depth).
 - **AD-DC/Kerberos-CVEs aus 4.24** (z.B. CVE-2026-20833, KDC-Enctypes/PAC) betreffen NUR Samba als Domain Controller —
   fuer einen **reinen SMB-File-Server** (unser Fall) NICHT relevant.
-**Quelle:** samba.org/samba/history/security.html, cybersecurity-help.cz (Samba 4.19.5), Ubuntu-Paket Noble · Recherche 2026-06-22.
+
+**Belegte Ubuntu-USNs/CVEs fuer das noble-Paket (Eskalations-Recherche 2026-06-22):**
+| USN | Paketversion nach Update | CVEs |
+|-----|--------------------------|------|
+| **USN-7826-1** | `2:4.19.5+dfsg-4ubuntu9.4` | CVE-2025-9640, CVE-2025-10230 (*critical*) |
+| **USN-8306-1** | `2:4.19.5+dfsg-4ubuntu9.6` | CVE-2026-2340, CVE-2026-3012, CVE-2026-3238, CVE-2026-4408, CVE-2026-4480 |
+Die **aktuell gepatchte noble-Version ist `2:4.19.5+dfsg-4ubuntu9.6`** (USN-8306-1) — das ist der Soll-Stand; mit
+`apt-cache policy samba` gegen das eigene System abgleichen. (Eine vollstaendige USN-Liste seit 2024 war nicht
+ermittelbar — es koennen aeltere USNs existieren; `unattended-upgrades` deckt sie automatisch ab.)
+**Quelle:** ubuntu.com/security/notices USN-7826-1 + USN-8306-1, samba.org/samba/history (4.19 nicht mehr in Upstream-Security-Releases), vulners.com (USN-8306-1) · Recherche 2026-06-22 (Firecrawl + OpenRouter-Eskalation).
 
 ---
 

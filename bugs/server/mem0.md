@@ -14,11 +14,16 @@
 > installierte **2.0.7** nutzt bereits die `filters={...}`-API (live verifiziert) — Versions-Labels in
 > den Quellen ("v2 alt / v3 neu") nicht 1:1 auf die PyPI-Nummer uebertragen; im Zweifel live testen.
 >
-> **Changelog-Abgleich 2026-06-22:** mem0 hat **weiterhin KEIN** Quality-Gate / REJECT / Confidence-Scoring eingefuehrt —
-> im Gegenteil: die neue Architektur ist explizit **„single-pass ADD-only"** (ein LLM-Call, KEIN UPDATE/DELETE; Memories
-> akkumulieren, nichts wird ueberschrieben). Issue #4573 ist inzwischen **CLOSED** (Resolution unbekannt — NICHT „gefixt",
-> die fuenf vorgeschlagenen Anti-Junk-Mechanismen sind laut Migrations-Doku/PyPI nicht umgesetzt). Konsequenz: Junk bleibt
-> dauerhaft → strenge `custom_instructions` + periodisches Junk-Audit bleiben das einzige wirksame Mittel (§1).
+> **Changelog-Abgleich 2026-06-22 (2 unabh. Recherchen):** mem0 hat **weiterhin KEIN hartes Pre-Storage-Quality-Gate /
+> REJECT / Confidence-Scoring** eingefuehrt — im Gegenteil: die neue Architektur ist explizit **„single-pass ADD-only"**
+> (ein LLM-Call, KEIN UPDATE/DELETE; Memories akkumulieren, nichts wird ueberschrieben; `add()` liefert nur noch `ADD`).
+> Damit ist die in #4573 geforderte REJECT-Action **strukturell sogar weniger moeglich** als zuvor (das Update-Decision-
+> Stage, der einzige Pre-Write-Filter, ist weg). **Bewegung (aber kein Pre-Storage-Gate):** mem0 bewirbt „domain-aware
+> memory triage" + „batched extraction" (Richtung Triage, aber kein dokumentierter Schwellenwert/Score vor dem Schreiben)
+> und „Auto-dream"/„Dream-gate" (Konsolidierung in Idle-Phasen — wirkt NACH dem Schreiben). Issue #4573-Status **uneindeutig**
+> (Recherche A: closed; Recherche B: kein closed-Marker sichtbar) — jedenfalls NICHT inhaltlich geloest. PyPI-neueste laut
+> Quellen: **mem0ai 2.0.6** (13.06.2026); unsere **2.0.7** ist der Live-Container-Wert (in den Web-Quellen nicht sichtbar).
+> Konsequenz: Junk bleibt dauerhaft → strenge `custom_instructions` + periodisches Junk-Audit bleiben das einzige wirksame Mittel (§1).
 
 ---
 
@@ -79,7 +84,7 @@ Rest Feedback-Loop-Amplifikation. `isNoiseMessage()` erkennt den System-Prompt N
 - **Negative Few-Shot-Beispiele** im Extraktions-Prompt (zeigt, was NICHT gespeichert wird — fehlt in mem0 default).
 - **Feedback-API** (POSITIVE/NEGATIVE/VERY_NEGATIVE pro `memory_id`) + periodisches **Junk-Audit** (mem0 hat
   KEIN offizielles Audit-Tool — manuell `get_all` + erfundene Profile/Near-Duplikate loeschen).
-- **Was mem0 NICHT hat (Issue #4573 — bewusst sein; Status 2026-06-22: CLOSED, aber NICHT geloest):** kein hartes
+- **Was mem0 NICHT hat (Issue #4573 — bewusst sein; Status 2026-06-22: uneindeutig [Quelle A: closed, Quelle B: offen], jedenfalls NICHT geloest):** kein hartes
   Quality-Gate vor Storage, keine **REJECT-Action**, kein Feedback-Loop-Marking abgerufener Memories. Die fuenf in
   #4573 geforderten Mechanismen (Feedback-Loop-Prevention, Quality-Gate, Negative-Few-Shot, REJECT-Action,
   Identity-aware Extraction) sind laut Migrations-Doku/PyPI **nicht** umgesetzt. **Verschaerfend (Changelog-Abgleich

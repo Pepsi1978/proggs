@@ -25,7 +25,7 @@
 | 6 | Original-Vektoren weichen vom Upload ab | `Cosine` **pre-normalisiert** die Vektoren. Wer die Originale braucht → `Dot`. Metrik-Wechsel aendert Rankings (ausser unit-normalisiert). | §2 |
 | 7 | Snapshot-Restore extrem langsam (Minuten statt Sek.) | `Content-Type: multipart/form-data` NICHT explizit setzen (zerstoert die boundary-Berechnung) — `requests`/Client selbst generieren lassen. | §3 |
 | 8 | Suche langsam | `hnsw_ef` zur Suche senken (schneller, weniger Recall); Quantisierung (Scalar int8 −75%, Binary 40× schneller); 1.18 TurboQuant. | §5 |
-| 9 | ⭐ `:latest`-Image / Version < 1.18.2 | Auf **`v1.18.2` pinnen** — nicht nur Reproduzierbarkeit, sondern **Sicherheit**: 1.18.2 fixt einen REST-Auth-Whitelist-Bypass (PR #9254) + Heap-OOB-Read via boesartigem Snapshot (#9268). `:latest` kann unbemerkt auf eine andere Version springen. | §3, §6 |
+| 9 | ⭐ `:latest`-Image / Version < 1.18.2 | Auf **`v1.18.2` pinnen** — nicht nur Reproduzierbarkeit, sondern **Sicherheit**: die 1.18.1/1.18.2-Linie buendelt mehrere Security-Fixes (Auth-vor-Snapshot-Upload #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). `:latest` kann unbemerkt eine andere Version ziehen. | §3, §6 |
 
 ---
 
@@ -92,12 +92,16 @@ explizit setzen, vom Client generieren lassen (`files={'snapshot': open(...)}`, 
 ohne Downtime: `alt_api_key` (ab v1.17.0) + Rolling Restart. Key-Typen: Admin / Read-Only (v1.7.0) / JWT-RBAC (v1.9.0).
 **3e Local vs Server Mode (Python-Client):** `QdrantClient(path=…)` schaltet in den Local Mode (Single-Instance, kein
 concurrent access, nur Tests). Gegen einen Docker-Server `path` NIE setzen — `url`/`host` verwenden.
-**3f `:latest`-Tag (Sicherheits-Relevanz, nicht nur Reproduzierbarkeit):** auf **`v1.18.2`** pinnen. v1.18.2 enthaelt
-zwei sicherheitskritische Fixes, die fuer einen (auch hinter VPN) exponierten Server zaehlen: **REST-Auth-Whitelist-Bypass
-auf speziell konstruierten Pfaden** (PR #9254, „resolve route before authorizing") und **Heap-OOB-Read via boesartigem
-Snapshot** (PR #9268, Reject bei inkorrekter Laenge); in 1.18.1 zusaetzlich „Authorize before snapshot upload" (#9031).
-`:latest` kann beim naechsten Pull unbemerkt eine andere (auch aeltere/verwundbare) Version ziehen — feste Version pinnen.
-**Quelle:** qdrant.tech (security, administration, docker), GitHub qdrant releases (1.18.1/1.18.2 security), GitHub-Issue (Snapshot-Restore) · Recherche 2026-06-22.
+**3f `:latest`-Tag (Sicherheits-Relevanz, nicht nur Reproduzierbarkeit):** auf **`v1.18.2`** pinnen (optional zusaetzlich
+Digest-Pin `@sha256:…`). Die 1.18.2-Release-Notes buendeln mehrere fuer einen exponierten Server relevante Security-/
+Hardening-Fixes: **Authorize-before-Snapshot-Upload** (#9031), **API-Key/JWT-Enforcement auf internen gRPC-Endpoints**
+(#8676), **Snapshot-Restore-von-URL abschaltbar** (#8628, Default-Haertung), **TLS-Dependencies gebumpt** (#8619).
+⚠️ **Quellen-Diskrepanz (ehrlich):** Eine erste Recherche (Firecrawl) nannte zusaetzlich einen **REST-Auth-Whitelist-Bypass
+(#9254)** + **Heap-OOB-Read via Snapshot (#9268)**; eine zweite, unabhaengige Recherche (OpenRouter) konnte genau diese
+beiden PR-Nummern NICHT verifizieren (nennt stattdessen #9031/#8676/#8628/#8619). Vor einer harten Aussage zu #9254/#9268
+direkt `github.com/qdrant/qdrant/releases` (v1.18.2) pruefen. Unabhaengig von den exakten PR-Nummern gilt: **`:latest` kann
+beim naechsten Pull unbemerkt eine andere (ggf. aeltere/verwundbare) Version ziehen — auf v1.18.2 pinnen.**
+**Quelle:** qdrant.tech (security, administration, docker), GitHub qdrant releases v1.18.2 (zwei unabhaengige Recherchen 2026-06-22), GitHub-Issue (Snapshot-Restore).
 
 ## 4. Client-Anbindung & `WRONG_VERSION_NUMBER`
 **Symptom:** `SSL routines … WRONG_VERSION_NUMBER` beim Verbinden.
@@ -129,14 +133,17 @@ abhaengiger Code-Bug mit „gefixt ab"). Der `WRONG_VERSION_NUMBER`-Fall (#770) 
 Server-Bug. Versions-spezifische 1.18-„pitfalls/breaking changes" waren in den Quellen NICHT belegt (mehrere Quellen-
 Auszuege endeten abgeschnitten) — daher hier KEINE 1.18-Breaking-Changes behauptet.
 
-**Security-Fixes in der 1.18.x-Linie (Changelog-Abgleich 2026-06-22) — DAS ist versionsabhaengig:**
-- **1.18.2 (4. Juni 2026):** REST-Auth-Whitelist-Bypass auf speziell konstruierten Pfaden (PR #9254) + Heap-OOB-Read via
-  boesartigem Snapshot (PR #9268) gefixt. Zusatz: Timeout fuer Shard-Snapshot-Streaming (#9239), `on_disk`-Flag-Wechsel
-  ohne Payload-Index-Rebuild (#9138 — relevant fuer on_disk-Umstellung im Betrieb).
-- **1.18.1 (22. Mai 2026):** „Authorize request before we accept snapshot file upload" (#9031), TurboQuant-Heap-Memory-
-  Under-Reporting-Fix (#9099), Leervektor-Panic-Fix (#9070).
-→ Konsequenz: **Versionen < 1.18.2 sind verwundbar** (Auth-Bypass/OOB). `v1.18.2` ist die Mindest-Version zum Pinnen.
-Nach v1.18.2 existiert (Stand 2026-06-22) noch kein Release — Anker bleibt aktuell.
+**Security-Fixes in der 1.18.x-Linie (Changelog-Abgleich 2026-06-22, ZWEI unabhaengige Recherchen):**
+In BEIDEN Recherchen belegt (1.18.1/1.18.2-Linie) — fuer einen exponierten Server relevant:
+- **Authorize-before-Snapshot-Upload** (#9031) — exakt der Pfad, den ein Docker-Container exponiert.
+- **API-Key/JWT-Enforcement auf internen gRPC-Endpoints** (#8676).
+- **Snapshot-Restore-von-URL per Config abschaltbar** (#8628, Default-Haertung).
+- **TLS-Dependencies gebumpt** (#8619), Leervektor-Panic-Fix (#9070), TurboQuant-Heap-Under-Reporting (#9099).
+- Betriebs-relevant: `on_disk`-Flag-Wechsel ohne Payload-Index-Rebuild (#9138), Timeout fuer Shard-Snapshot-Streaming (#9239).
+⚠️ **Nur in EINER Recherche (Firecrawl), in der zweiten NICHT verifiziert:** REST-Auth-Whitelist-Bypass (#9254) +
+Heap-OOB-Read via Snapshot (#9268). Vor harter Aussage `github.com/qdrant/qdrant/releases` (v1.18.2) pruefen.
+→ Konsequenz (robust, quellenunabhaengig): **`v1.18.2` ist die Mindest-Version zum Pinnen** (mehrere Security-Fixes
+gebuendelt). Nach v1.18.2 existiert (Stand 2026-06-22) noch kein Release — Anker bleibt aktuell.
 
 ---
 

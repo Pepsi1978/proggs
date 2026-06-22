@@ -322,8 +322,14 @@ UND der VPN-Zugriff geht. (Hinter dem WireGuard-Tunnel ist das Risiko klein; fue
   anhand von `host` entschieden. Eine spaetere Zuweisung `mcp.settings.host = "0.0.0.0"` (oder via Env nach `__init__`)
   aktualisiert `TransportSecuritySettings` NICHT mehr → Symptom **HTTP 421 „Misdirected Request - Invalid Host header"**.
   Loesung: `host`/`transport_security` direkt im `FastMCP(...)`-Konstruktor uebergeben.
-**Versionen:** offizielles MCP Python-SDK (Issue #1798; CVE-2025-66416 → Fix-Empfehlung ab v1.23.0+; Anker `mcp==1.12.4` davor).
-**Quelle:** GitHub modelcontextprotocol/python-sdk #1798, GitLab-Advisory CVE-2025-66416 · Recherche 2026-06-22.
+**Konkrete Empfehlung (Eskalations-Recherche 2026-06-22):** CVE-2025-66416 ist **High**, veroeffentlicht 02.12.2025, betrifft
+**alle Versionen < 1.23.0** (stdio NICHT betroffen, nur HTTP/streamable-http/SSE). Fix in **1.23.0**. Neueste v1-Linie:
+**1.28.0**; v1.x ist Maintenance-Mode (kritische Fixes), v2 in Alpha (`2.0.0aN`) — offizielle Pin-Empfehlung `mcp>=1.27,<2`.
+→ Fuer second-brain: **`mcp==1.12.4` auf 1.27.x/1.28.x hochziehen** (CVE gefixt + Auto-DNS-Schutz + RFC-8707-OAuth-Resource-
+Validation/Idle-Timeout aus 1.27.0). Beim Hochziehen pruefen, ob der dann aktive Auto-Schutz den `0.0.0.0`-Pfad blockt
+(dann `allowed_hosts` explizit setzen). FastMCP→MCPServer-Rename auch in der Eskalation NICHT belegt (Klasse heisst weiter FastMCP).
+**Versionen:** offizielles MCP Python-SDK (Issue #1798; CVE-2025-66416 Fix ab v1.23.0, Anker `mcp==1.12.4` davor; neueste v1 1.28.0).
+**Quelle:** GitHub modelcontextprotocol/python-sdk #1798, NVD/GitHub-Advisory GHSA-9h52-p55h-vw2f (CVE-2025-66416), PyPI mcp, dev.to MCP-Dev-Summit-2026 · Recherche 2026-06-22 (Firecrawl + OpenRouter-Eskalation).
 
 ## 4. Fehlerbehandlung & Protokoll-Fehler
 
