@@ -179,7 +179,7 @@ public sealed class GeminiPromptDriveSync
                 var store = PromptBoardHost.Get<PromptBoardSecretStore>();
                 await new GeminiPromptDriveSync(store).UploadAsync().ConfigureAwait(false);
             }
-            catch (Exception ex) { Console.WriteLine($"Gemini prompt upload skipped: {ex.Message}"); }
+            catch (Exception ex) { DiagLog.Write("GeminiPromptSync", "backup upload failed", ("err", ex.Message), ("type", ex.GetType().Name)); }
         });
     }
 
@@ -193,7 +193,7 @@ public sealed class GeminiPromptDriveSync
                 var store = PromptBoardHost.Get<PromptBoardSecretStore>();
                 await new GeminiPromptDriveSync(store).SyncFromCloudAsync().ConfigureAwait(false);
             }
-            catch (Exception ex) { Console.WriteLine($"Gemini prompt cloud sync skipped: {ex.Message}"); }
+            catch (Exception ex) { DiagLog.Write("GeminiPromptSync", "cloud sync failed", ("err", ex.Message), ("type", ex.GetType().Name)); }
         });
     }
 
