@@ -18,6 +18,31 @@
 **Vor JEDER Web-Recherche MUSS Frank per `AskUserQuestion` (anklickbares Multiple-Choice) gefragt
 werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 
+> ## 🛑 ABSOLUT — DAS PROTOKOLL WIRD NIE ÜBERSPRUNGEN (Frank, 2026-06-22, nach Vorfall)
+> Frank-Wortlaut: *„Bei der Research, beim Recherchieren, bitte IMMER das Protokoll einhalten.
+> Das ist mir sehr wichtig."* Das Protokoll gilt **ausnahmslos bei JEDER Recherche**, egal über
+> welchen übergeordneten Skill sie ausgelöst wird (`bug-almanach-recherche`, `best-practices`,
+> `almanach-update`, `best-practices-update`, `direktiven-recherche`, `superintelligenz`, eigener
+> Rechercheauftrag …). Die drei Schritte sind **Pflicht UND sichtbar**, in dieser Reihenfolge:
+> 1. **Empfehlung** (welcher Weg, 1 Satz Begründung).
+> 2. Die **4-Fragen-`AskUserQuestion`** — anklickbar: **A** Firecrawl+MiniMax · **B** Eskalation
+>    OpenRouter `:online` · **C** Opus-Schwarm · **D** Freitext. **Diese 4 Fragen kommen IMMER, jedes Mal.**
+> 3. Der **`research`-Skill** wird gestartet — mit beschrifteten, mitlesbaren Researchern
+>    (Continuous-Spawning, Live-Zwischenfazit). **Egal welcher Skill die Recherche braucht — der
+>    `research`-Skill wird IMMER mitgestartet, nie umgangen.**
+>
+> **NIEMALS** `mm-research.py`/`or-research.py` direkt/ad-hoc (z.B. im Hintergrund) starten, **NIEMALS**
+> die 4 Fragen überspringen — **auch nicht**, wenn Frank vorher beiläufig eine Engine genannt hat
+> (eine beiläufige Nennung wie „nimm Firecrawl" ersetzt das **anklickbare** Protokoll NICHT, und die
+> `research-approved.flag` wird NIE eigenmächtig ohne Franks Klick gesetzt). Der Standard ist bewusst
+> optisch auf Franks Mitlesbarkeit + Credit-Kontrolle ausgelegt.
+> **Vorfall 2026-06-22:** Bei der Samba/mem0-Bug-Almanach-Recherche wurde `mm-research.py` ad-hoc im
+> Hintergrund gestartet und sowohl die 4-Fragen-`AskUserQuestion` als auch der `research`-Skill
+> übersprungen — Frank war zu Recht verärgert. Das darf **nie wieder** passieren.
+> (Abgrenzung: Bei NICHT-Recherche-Arbeiten gilt diese Strenge nicht; eine einzelne billige
+> `WebSearch` zur schnellen Faktenprüfung mitten in einer Aufgabe bleibt frei. Sobald es ein echter
+> Rechercheauftrag/Crawl/Researcher-Einsatz ist → volles Protokoll.) Memory: `feedback_research_always_via_protocol`.
+
 ### Empfehlung (PFLICHT — DIREKT VOR Frage 1)
 
 **Bevor die `AskUserQuestion` kommt, IMMER eine kurze Empfehlung (3-4 Zeilen) geben**, welcher Weg
