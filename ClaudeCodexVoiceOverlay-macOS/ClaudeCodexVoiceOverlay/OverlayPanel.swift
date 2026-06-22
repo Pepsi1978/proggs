@@ -362,8 +362,8 @@ final class OverlayPanel: NSPanel {
     /// Internal record of which profile is "active". Becomes visible
     /// (goldenrod) only when geminiOn=true. When geminiOn=false all tiles
     /// are dim — just like Windows commit #1961.
-    private var activeProfile: Int = 1
-    private var geminiOn: Bool = true
+    private var activeProfile: Int = 0
+    private var geminiOn: Bool = false
 
     // Right-click drag state
     private var isDragging = false

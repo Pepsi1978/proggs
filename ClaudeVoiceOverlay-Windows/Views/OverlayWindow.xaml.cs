@@ -74,7 +74,7 @@ namespace ClaudeVoiceOverlay.Views
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
         private bool isBtwRecording         = false;
-        private bool geminiEnabled          = true;  // Default = Gemini-Korrektur AN, Profil 1 aktiv (Frank-Wunsch: Reiter 1 immer an, mit persoenlichem Woerterbuch). Ohne Gemini-API-Key faellt der Init unten auf false zurueck.
+        private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
         // Wenn true, presst OnInputSubmit beim naechsten Aufruf Return —
@@ -92,10 +92,10 @@ namespace ClaudeVoiceOverlay.Views
 
         // Aktives Gemini-Korrektur-Profil. 1 = Standard (alltaegliche Texte
         // und Ideen), 2 = Programmierung (Code-Begriffe, CLI, Frameworks),
-        // 3 = Meta-Intelligenz (strukturiertes Denken). Default = 1, weil das
-        // alltaegliche Profil der haeufigste Anwendungsfall ist; spezifische
-        // Profile schaltet der Benutzer aktiv ein.
-        private int _activeProfile = 1;
+        // 3 = Meta-Intelligenz (strukturiertes Denken). Default = 0 = KEIN
+        // Profil voreingestellt (Frank-Wunsch 2026-06-22): beim Start leuchtet
+        // kein Tile; der Benutzer waehlt ein Profil aktiv per Klick.
+        private int _activeProfile = 0;
 
         // Letzte Re-Correct-Sicherheits-Nutzlast. Solange der Sprecher den
         // eingefuegten Text nicht ueberschrieben oder abgeschickt hat, kann

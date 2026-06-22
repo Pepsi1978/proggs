@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = true // Default = Gemini-Korrektur AN, Profil 1 aktiv (Frank-Wunsch: Reiter 1 immer an, mit persoenlichem Woerterbuch). Ohne Gemini-API-Key faellt der Init unten auf false zurueck.
+    private var geminiEnabled = false // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
     private var autoEnterEnabled = true
     private let autoEnterServer = AutoEnterStatusServer()
     private var autoHide: AutoHideController?
@@ -81,8 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // ── Profile-Korrektur (Windows-Port #1957..#1964) ──
     // 1 = Standard, 2 = Programmierung, 3 = Meta-Intelligenz,
-    // 4-10 = numerische Slots (frei belegbar). Default = 1.
-    private var activeProfile: Int = 1
+    // 4-10 = numerische Slots (frei belegbar). Default = 0 = KEIN Profil
+    // voreingestellt (Frank-Wunsch 2026-06-22): beim Start kein Tile aktiv.
+    private var activeProfile: Int = 0
     // Letzte Whisper-Roh-Transkription. Bleibt unbegrenzt im Cache,
     // wird nur durch eine NEUE Aufnahme ueberschrieben — kein Zeitlimit.
     // Frank steuert das Verhalten ueber Maustaste:
