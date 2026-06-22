@@ -982,6 +982,9 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     private let autoHideCheck = NSButton(checkboxWithTitle: "Auto-Hide (Mic-Pille bei Inaktivitaet)", target: nil, action: nil)
     private let horizontalCheck = NSButton(checkboxWithTitle: "Horizontal-Orientierung beim Start", target: nil, action: nil)
     private let persistPositionCheck = NSButton(checkboxWithTitle: "Disketten-Position ueber App-Neustart hinweg merken", target: nil, action: nil)
+    // Woerterbuch-Schalter (Frank-Wunsch 2026-06-22): steuert die geteilte SK-Datei
+    // vocabulary-enabled.txt; GeminiClient prueft sie vor dem Laden des Vokabulars.
+    private let vocabularyEnabledCheck = NSButton(checkboxWithTitle: "Wörterbuch verwenden (an Gemini mitschicken)", target: nil, action: nil)
     // Persoenliches Vokabular-Woerterbuch (mehrzeilig, scrollbar). Schreibt/liest
     // die SK-Datei personal-vocabulary.txt; GeminiClient haengt sie als Praeambel
     // vor den Korrektur-Prompt, AppDelegate synchronisiert sie ueber Drive.
@@ -1022,6 +1025,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         autoHideCheck.contentTintColor = NSColor.white
         horizontalCheck.contentTintColor = NSColor.white
         persistPositionCheck.contentTintColor = NSColor.white
+        vocabularyEnabledCheck.state = PBSettingsDialog.loadVocabularyEnabled() ? .on : .off
+        vocabularyEnabledCheck.contentTintColor = NSColor.white
 
         // Persoenliches Vokabular aus der SK-Datei vorbefuellen + scrollbares
         // mehrzeiliges Textfeld (dunkel) konfigurieren.
@@ -1080,6 +1085,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             label("Gemini API Key (optional)"),
             geminiField,
             label("Persönliches Wörterbuch (häufige Begriffe für die Gemini-Korrektur)"),
+            vocabularyEnabledCheck,
             vocabularyScroll,
             label("Gemini-Korrektur-Prompts (Profil 1–10)"),
             editPromptsButton,
@@ -1157,6 +1163,29 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         }
     }
 
+    // Woerterbuch-Schalter (Frank-Wunsch 2026-06-22): geteilte SK-Datei
+    // vocabulary-enabled.txt. "true" = Woerterbuch wird mitgeschickt; sonst aus.
+    private static var vocabularyEnabledURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("SK/VoiceOverlays/vocabulary-enabled.txt")
+    }
+
+    static func loadVocabularyEnabled() -> Bool {
+        guard let s = try? String(contentsOf: vocabularyEnabledURL, encoding: .utf8) else { return false }
+        return s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "true"
+    }
+
+    static func saveVocabularyEnabled(_ enabled: Bool) {
+        let url = vocabularyEnabledURL
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try (enabled ? "true\n" : "false\n").write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            NSLog("Woerterbuch-Schalter konnte nicht gespeichert werden: \(error.localizedDescription)")
+        }
+    }
+
     @objc private func save() {
         result = PBSettingsResult(
             groqApiKey: nullIfBlank(groqField.stringValue),
@@ -1170,6 +1199,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         // Persoenliches Vokabular zusaetzlich in die SK-Datei schreiben (wird von
         // GeminiClient direkt gelesen, nicht ueber die DB-Settings).
         PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
+        PBSettingsDialog.saveVocabularyEnabled(vocabularyEnabledCheck.state == .on)
         window?.close()    // windowWillClose handles stopModal (no double-stop)
     }
 
