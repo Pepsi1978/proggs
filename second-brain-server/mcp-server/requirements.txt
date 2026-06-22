@@ -1,0 +1,6 @@
+# MCP Python SDK (FastMCP) — auf 1.12.4 gepinnt: stabile FastMCP-API mit
+# Streamable-HTTP-Transport (host/port im Konstruktor). Spaetere 2.x benennt
+# FastMCP -> MCPServer um und verschiebt host/port nach run() — bewusst NICHT
+# automatisch mitziehen (Reproduzierbarkeit/Umzug).
+mcp==1.12.4
+httpx>=0.27,<0.29

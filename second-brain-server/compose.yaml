@@ -68,3 +68,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  mcp:
+    build: ./mcp-server             # MCP-Server: macht das Gehirn als MCP-Werkzeuge verfuegbar
+    container_name: sb-mcp          # (remember / recall / list_memories / brain_health)
+    restart: unless-stopped
+    depends_on:
+      - mem0-api
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie mem0-api).
+      # Bewusst NICHT 0.0.0.0 auf dem HOST (Docker-UFW-Falle). host=0.0.0.0 gilt nur INNERHALB
+      # des Containers; Docker published den Port ausschliesslich an 10.8.0.1.
+      - "10.8.0.1:8001:8001"
+    env_file:
+      - .env                        # SB_API_KEY (Bearer fuer die mem0-api)
+    environment:
+      BRAIN_URL: http://mem0-api:8000   # interner Compose-DNS-Name des Gehirns
+      SB_USER_ID: frank
+      MCP_HOST: "0.0.0.0"               # im Container; deaktiviert DNS-Rebinding-Schutz -> 10.8.0.1 erreichbar
+      MCP_PORT: "8001"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+    healthcheck:
+      # Schlanker TCP-Port-Check (der /mcp-Endpoint braucht einen MCP-Handshake — kein simpler GET).
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.socket(); s.settimeout(3); sys.exit(s.connect_ex(('127.0.0.1',8001)))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
