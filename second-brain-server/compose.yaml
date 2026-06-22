@@ -53,15 +53,19 @@ services:
       GEMINI_LLM_MODEL: gemini-3.1-flash-lite
       GEMINI_EMBED_MODEL: models/gemini-embedding-001
       SB_LOG_PATH: /app/logs/mem0-api.jsonl
+      # Quality-Gate (HHEM-2.1-Open) gegen Junk/Halluzinationen — abschaltbar, Schwelle kalibrierbar (app.py)
+      SB_GATE_ENABLED: "true"
+      SB_GATE_THRESHOLD: "0.5"
     volumes:
       - ./mem0-logs:/app/logs         # Logs persistent + vom Host tailbar (Observability-First)
+      - ./hf-cache:/app/.cache/huggingface   # HHEM-Modell-Cache: nur einmal laden, ueberlebt Container-Restart
     deploy:
       resources:
         limits:
-          memory: 1G                 # schlank: keine lokalen Modelle (Embeddings/LLM in der Cloud)
-          cpus: "1.0"
+          memory: 2.5G               # HHEM-Quality-Gate laeuft lokal (torch CPU + Modell ~1-1.5G); Server hat 8G frei
+          cpus: "1.5"
         reservations:
-          memory: 256M
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
       interval: 30s

@@ -10,3 +10,7 @@ qdrant-client>=1.18.0
 # fastembed: aktiviert mem0's hybride Suche (BM25-Sparse + semantisch) bei Qdrant.
 # Ohne fastembed faellt mem0 STILL auf semantik-only zurueck (nur Log-Warning). Siehe bugs/server/mem0.md §4.
 fastembed>=0.4
+# HHEM-2.1-Open (Apache-2.0) fuer das Quality-Gate (Junk/Halluzinations-Schutz, app.py _apply_gate).
+# torch (CPU-only) wird im Dockerfile ueber den PyTorch-CPU-Index installiert (kein CUDA -> kleines Image).
+# Faellt das Laden aus, degradiert das Gate robust zu pass-through (kein Funktionsverlust).
+transformers>=4.40
