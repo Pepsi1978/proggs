@@ -49,7 +49,8 @@
 | §3 API/filters | §3 API richtig aufrufen |
 | §4 fastembed | §2 Hybrid-Suche aktivieren |
 | §5 Dedup/Feedback-Loop | §1 |
-| §6 Betrieb | §4 |
+| §6 Betrieb | §3 Pflege/Betrieb |
+| §7 HHEM-Quality-Gate | §4 Eigenes Quality-Gate (HHEM) |
 
 ---
 
@@ -151,6 +152,29 @@ ersetzt aber kein bewusstes Vorgehen.
 - **qdrant-client:** neuere mem0-Versionen verlangen `qdrant-client >=1.12.0`.
 - **Concurrent Writes:** betrifft v.a. ChromaDB ("database is locked") — wir nutzen Qdrant, weniger relevant.
 **Quelle:** mem0-/CrewAI-Doku, Migrations-Notizen · Recherche 2026-06-22.
+
+## 7. Quality-Gate (HHEM-2.1-Open vor/nach add()) — Fallen beim Eigenbau (NEU 2026-06-22, eigener Vorfall)
+mem0 hat KEIN Pre-Storage-Gate (§1). Wir haben in `mem0-api/app.py` (v0.3.0) eins davorgesetzt: Vorfilter (System-Prompt
+raus vor `add()`) + HHEM-Grounding (jeder neue Fakt wird gegen den Quelltext gescort, Score < Schwelle -> `m.delete()`).
+Beim Bau real aufgetretene Fallen:
+- ⭐ **`transformers` 5.x bricht das HHEM-`trust_remote_code`-Modell:** `AttributeError: 'HHEMv2ForSequenceClassification'
+  object has no attribute 'all_tied_weights_keys'` beim `from_pretrained(...)`. Der HHEM-custom-Code erwartet die
+  4.x-API. **FIX:** `transformers>=4.40,<5` pinnen (verifiziert 2026-06-22). Symptom im Betrieb: `/health` zeigt
+  `gate.hhem_failed=true` -> Gate degradiert (robust) zu pass-through (blockt nichts).
+- ⭐ **`torch` zieht ohne CPU-Index die CUDA-Variante (~7 GB):** im Dockerfile `pip install --index-url
+  https://download.pytorch.org/whl/cpu torch` VOR `requirements.txt` (CPU-only, kein CUDA auf dem Server).
+- **HHEM ist bei DEUTSCH weniger trennscharf + bestraft mem0s Anreicherung:** mem0 schmueckt Fakten aus (fuegt Kontext
+  hinzu, der nicht im Input steht) -> HHEM scort solche korrekten-aber-angereicherten Fakten niedrig. Gemessen: echte
+  Halluzination 0.01-0.094, fast-woertlich-korrekt 0.249, angereichert-korrekt 0.38-0.45, einfach-woertlich >0.5.
+  **FIX/Kalibrierung:** Schwelle **konservativ 0.2** (`SB_GATE_THRESHOLD`, per Env ohne Rebuild justierbar) — blockt grobe
+  Halluzination, toleriert leichte Umformulierung. Eine scharfe Trennung ist bei Deutsch NICHT moeglich (Scores verrauscht).
+- **HHEM lazy laden + HF-Cache-Volume:** Modell (~440 MB) erst beim ersten Gate-Call laden (schneller Container-Start) und
+  in ein Volume cachen (`HF_HOME=/app/.cache/huggingface` + `./hf-cache:`), sonst Download bei jedem Restart.
+- **mem0 gibt beim `add()` manchmal fremde/bestehende Fakten als ADD-Event zurueck** — das Gate scort sie dann gegen den
+  AKTUELLEN Input (niedriger Score -> Loeschung). Selten + meist harmlos; bei Bedarf nur Events mit zum Input passender
+  Aehnlichkeit scoren. **Robustheit:** das Gate loescht bei JEDEM HHEM-Fehler NICHT (lieber ein Fakt zu viel als Datenverlust).
+**Quelle:** eigener Vorfall 2026-06-22 (Aufbau des HHEM-Gates), HF `vectara/hallucination_evaluation_model` (Apache-2.0).
+Best-Practice-Gegenstueck: `best-practices/server/mem0.md` §4.
 
 ---
 
