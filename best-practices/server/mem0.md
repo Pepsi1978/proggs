@@ -32,6 +32,7 @@
 | §1 Qualitaet steuern | §1 Junk/Halluzination · §5 Feedback-Loop |
 | §2 Embedder/Vector-Store | §2 embedding_dims · §4 fastembed |
 | §3 Pflege/Betrieb | §3 API · §6 Betrieb |
+| §4 Quality-Gate (HHEM) | §7 HHEM-Quality-Gate-Fallen |
 
 ---
 
@@ -75,6 +76,23 @@ Python 3.10–3.12.
 - **Vor produktivem Confidence-Gating:** Bug `mem0#4999` pruefen (in 2.0.0 gab `search()` fuer alle Treffer
   Score 1.0 → Gate wirkungslos; auf 2.0.7 verifizieren).
 - **Grundsatz:** mem0-Memories sind LLM-synthetisiert, NICHT autoritativ — fuer kritische Fakten nicht blind vertrauen.
+
+## §4 Eigenes Quality-Gate vor mem0 (HHEM-2.1-Open) — so baut man es richtig
+mem0 hat kein Pre-Storage-Gate; man setzt eins selbst davor (umgesetzt in `second-brain-server/mem0-api/app.py` v0.3.0).
+Bewaehrtes Muster (Recherche + eigener Bau 2026-06-22):
+- **Zwei Stufen:** (1) **Vorfilter** VOR `add()` — offensichtlichen Nicht-Memory-Input (System-Prompt/Boot-File-Marker)
+  gar nicht erst speichern (faengt mem0s groesste Junk-Quelle, Boot-File-Restating 52,7 %, spart sogar den LLM-Call).
+  (2) **HHEM-Grounding** NACH `add()` — jeden neuen Fakt mit HHEM gegen den Quelltext scoren; Score < Schwelle (nicht
+  gegroundet = Halluzination) -> `m.delete(memory_id)`. result bereinigen, damit der Aufrufer nur Behaltenes sieht.
+- **HHEM-2.1-Open = Apache-2.0** (frei, auch kommerziell), kalibrierter Score 0-1, klein/schnell (<1,5 s CPU). Laden via
+  `transformers` — aber **`transformers>=4.40,<5`** (5.x bricht das `trust_remote_code`-Modell, siehe Almanach §7); torch
+  **CPU-only** ueber den PyTorch-CPU-Index (kein CUDA). Lazy laden + HF-Cache-Volume.
+- **Robust degradieren:** laedt HHEM nicht, Gate -> pass-through (kein Funktionsverlust); bei JEDEM Score-Fehler Fakt
+  BEHALTEN (lieber ein Fakt zu viel als Datenverlust). `/health` zeigt `gate.hhem_loaded/hhem_failed/threshold`.
+- **Schwelle kalibrieren (PFLICHT, kein Default belegt):** an echten Beispielen messen. Bei DEUTSCH ist HHEM weniger
+  trennscharf und bestraft mem0s Anreicherung -> konservativ **0.2** (per Env `SB_GATE_THRESHOLD` ohne Rebuild justierbar).
+  Gemessene Verteilung: Halluzination <0.1, korrekt 0.25-0.9. Patronus Lynx (genauer) ist Alternative, aber **CC BY-NC**
+  (nicht kommerziell) — fuer ein privates Gehirn ok. Details: `best-practices/second-brain/memory-backends.md` §7.
 
 ---
 
