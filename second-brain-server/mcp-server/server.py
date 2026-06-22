@@ -6,11 +6,12 @@ UND OpenCode das Gehirn automatisch nutzen koennen.
 
 Transport:  Streamable HTTP (Best Practice fuer Remote; NIE SSE), gebunden an die
             WireGuard-IP -> nur ueber den VPN-Tunnel erreichbar.
-Sicherheit: kein oeffentlicher Port. host=0.0.0.0 INNERHALB des Containers ist unkritisch,
-            weil Docker den Port nur an 10.8.0.1 published. host=0.0.0.0 deaktiviert zudem den
-            DNS-Rebinding-Schutz des MCP-SDK, der sonst den Zugriff ueber die VPN-IP 10.8.0.1
-            (Host-Header != localhost) ablehnen wuerde. OAuth ist hier unnoetig: der
-            WireGuard-Tunnel ist der private Kanal (siehe bugs/server/wireguard.md §2).
+Sicherheit: kein oeffentlicher Port (Docker published nur an 10.8.0.1). DNS-Rebinding-Schutz
+            SAUBER via TransportSecuritySettings(allowed_hosts=[10.8.0.1...]) statt per host=0.0.0.0
+            abzuschalten (ab mcp 1.23 greift der Auto-Schutz; Almanach mcp-server.md §3.13). So bleibt
+            der Schutz AKTIV und der VPN-Zugriff ueber 10.8.0.1 funktioniert. Defensiv: faellt die
+            SDK-API anders aus, Fallback auf das bisherige host=0.0.0.0-Verhalten (Container crasht nie).
+            OAuth unnoetig: der WireGuard-Tunnel ist der private Kanal (siehe bugs/server/wireguard.md §2).
 Observability-First: strukturiertes JSON-Logging auf stderr (docker logs sb-mcp), globaler
             Fehler-Faenger pro Werkzeug (nichts stirbt still), Start-Banner, Logik-Sonde.
 
@@ -81,7 +82,27 @@ probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
 
-mcp = FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT)
+def _build_mcp() -> FastMCP:
+    """DNS-Rebinding-Schutz sauber via allowed_hosts (Almanach mcp-server.md §3.13): ab mcp 1.23 greift
+    der Auto-Schutz; statt ihn per host=0.0.0.0 abzuschalten, erlauben wir die WireGuard-IP explizit ->
+    Schutz AKTIV + VPN-Zugriff ok. Defensiv: faellt die SDK-API anders aus, Fallback auf host=0.0.0.0
+    (Security-Config darf den Container NIE crashen, Best-Practice D5/D1)."""
+    try:
+        from mcp.server.transport_security import TransportSecuritySettings
+        ts = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=[f"10.8.0.1:{MCP_PORT}", "10.8.0.1", f"127.0.0.1:{MCP_PORT}", f"localhost:{MCP_PORT}"],
+        )
+        m = FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT, transport_security=ts)
+        _log(logging.INFO, "MCP mit TransportSecuritySettings gestartet", allowed_host=f"10.8.0.1:{MCP_PORT}")
+        return m
+    except Exception as e:  # noqa: BLE001 — Security-Config darf den Container NIE crashen
+        _log(logging.WARNING, "TransportSecuritySettings nicht gesetzt -> Fallback host=0.0.0.0",
+             err=f"{type(e).__name__}: {e}")
+        return FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT)
+
+
+mcp = _build_mcp()
 
 
 # ---------------------------------------------------------------------------
