@@ -165,9 +165,11 @@ def _load_hhem():
         )
         _hhem["loaded"] = True
         _log(logging.INFO, "HHEM geladen", model=HHEM_MODEL, ms=int((time.time() - t0) * 1000))
-    except Exception:  # noqa: BLE001 — Gate darf den Dienst NIE lahmlegen
+    except Exception as e:  # noqa: BLE001 — Gate darf den Dienst NIE lahmlegen
         _hhem["failed"] = True
-        _log(logging.ERROR, "HHEM-Laden fehlgeschlagen -> Gate degradiert zu pass-through", exc_info=True)
+        # err in den ctx (nicht exc_info=True — _log reicht das nicht an den Logger durch)
+        _log(logging.ERROR, "HHEM-Laden fehlgeschlagen -> Gate degradiert zu pass-through",
+             err=f"{type(e).__name__}: {e}")
     return _hhem["model"]
 
 
