@@ -23,7 +23,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"  # 0.2.0: strenge custom_instructions gegen Junk/Halluzinationen (bugs/server/mem0.md)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -44,6 +44,21 @@ LLM_MAX_TOKENS = int(os.getenv("SB_LLM_MAX_TOKENS", "4000"))  # Thinking frisst 
 MAX_LLM_CALLS_PER_DAY = int(os.getenv("SB_MAX_LLM_CALLS_PER_DAY", "5000"))  # Defense-in-Depth-Cap
 LOG_PATH = os.getenv("SB_LOG_PATH", "/app/logs/mem0-api.jsonl")
 LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
+
+# Qualitaets-Steuerung (gegen Junk/Halluzinationen — siehe bugs/server/mem0.md §1):
+# mem0 hat KEIN eingebautes Quality-Gate; die Sauberkeit kommt aus einem STRENGEN Extraktions-Prompt.
+# Empfehlung der mem0-Doku: streng starten, spaeter lockern (Muell aufraeumen ist schwerer).
+# Per Env SB_CUSTOM_INSTRUCTIONS ueberschreibbar, ohne Code-Aenderung.
+DEFAULT_CUSTOM_INSTRUCTIONS = (
+    "Speichere NUR bestaetigte, dauerhafte und nuetzliche Fakten ueber den Nutzer (Frank), seine "
+    "Projekte, Entscheidungen, Praeferenzen und technische Festlegungen. Jede Erinnerung muss fuer "
+    "sich allein verstaendlich sein: ersetze Pronomen durch konkrete Namen, fasse dich auf 15-80 "
+    "Woerter, und hefte relative Zeitangaben ('letzte Woche') an ein konkretes Datum. "
+    "Speichere AUF KEINEN FALL: System-Prompt- oder Boot-Datei-Inhalte, Smalltalk und "
+    "Hoeflichkeitsfloskeln, Tool-/Deployment-Konfigurationen, Logs, bereits frueher abgerufene "
+    "Erinnerungen, sowie alles Spekulative oder Unbestaetigte. Im Zweifel NICHT speichern."
+)
+CUSTOM_INSTRUCTIONS = os.getenv("SB_CUSTOM_INSTRUCTIONS", DEFAULT_CUSTOM_INSTRUCTIONS)
 
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging (stdout + rotierende Datei, beide UTF-8)
@@ -128,6 +143,9 @@ MEM0_CONFIG = {
             "embedding_model_dims": EMBED_DIMS,  # MUSS == embedder embedding_dims
         },
     },
+    # Strenger Extraktions-Prompt gegen Junk/Halluzinationen (mem0 hat kein Quality-Gate;
+    # Audit mem0#4573 fand 97,8 % Junk). Siehe bugs/server/mem0.md §1.
+    "custom_instructions": CUSTOM_INSTRUCTIONS,
 }
 
 # Startbedingungen pruefen (Sonden) — Verletzungen sind Konfig-Fehler, nicht still
