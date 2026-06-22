@@ -4,7 +4,7 @@
 > hier *wie man Qdrant von vornherein richtig dimensioniert, absichert und tunt* — als Vektor-Store hinter
 > mem0 im "zweiten Gehirn". Quellen: qdrant.tech-Docs + Recherche 2026-06-22.
 > **Anker:** Qdrant 1.18.2 · Docker · im Stack mit mem0 2.0.7 @1536.
-> **Changelog-Abgleich 2026-06-22:** v1.18.2 ist weiterhin neueste Version (kein 1.19+). Sicherheits-Grund fuers Pinnen: 1.18.2 fixt REST-Auth-Bypass (#9254) + Snapshot-OOB (#9268) — §3.
+> **Changelog-Abgleich 2026-06-22 (2 unabh. Recherchen):** v1.18.2 ist weiterhin neueste Version (kein 1.19+). Sicherheits-Grund fuers Pinnen: 1.18.1/1.18.2 buendelt Security-Fixes (#9031 Snapshot-Upload-Auth, #8676 gRPC-Auth, #8628, #8619) — §3.
 
 ---
 
@@ -54,10 +54,12 @@ Insert auf Status `green` warten (sonst Brute-Force-Fallback).
   `QDRANT__SERVICE__ENABLE_TLS=true` + `QDRANT__TLS__CERT=./tls/cert.pem` (+ `TLS__KEY`) — ein TLS-terminierender
   Proxy ist damit nicht zwingend (im reinen WireGuard-Setup auch verzichtbar).
 - **Persistenz:** Volume `:/qdrant/storage` auf SSD/NVMe (kein NFS/S3 — block-level POSIX noetig).
-- **Image pinnen (Sicherheit, nicht nur Reproduzierbarkeit):** feste Version `qdrant/qdrant:v1.18.2`, NIE `:latest`.
-  1.18.2 fixt einen REST-Auth-Whitelist-Bypass (PR #9254) + Heap-OOB-Read via boesartigem Snapshot (#9268) — Versionen
-  davor sind verwundbar, `:latest` kann beim Pull unbemerkt eine andere Version ziehen. (Unser `compose.yaml` nutzt noch
-  `:latest` → auf `v1.18.2` pinnen.)
+- **Image pinnen (Sicherheit, nicht nur Reproduzierbarkeit):** feste Version `qdrant/qdrant:v1.18.2`, NIE `:latest`
+  (optional zusaetzlich Digest-Pin `@sha256:…`). Die 1.18.1/1.18.2-Linie buendelt mehrere Security-Fixes (Auth-vor-
+  Snapshot-Upload #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). `:latest` kann
+  beim Pull unbemerkt eine andere/aeltere Version ziehen. (Unser `compose.yaml` nutzt noch `:latest` → auf `v1.18.2`
+  pinnen.) Hinweis: zwei einzelne PRs (#9254 Auth-Bypass / #9268 Snapshot-OOB) nannte nur eine von zwei Recherchen —
+  vor Zitat in den Release-Notes pruefen; das Pinnen-Argument steht unabhaengig davon.
 - **Backup:** Snapshots einrichten + Restore testen; beim Restore `Content-Type` NICHT explizit setzen
   (sonst extrem langsam, siehe Almanach §3c).
 

@@ -4,9 +4,11 @@
 > (v.a. Junk/Halluzinationen), hier *wie man mem0 von vornherein so konfiguriert, dass das Gehirn
 > hochwertig bleibt*. Quellen: docs.mem0.ai + GitHub + Recherche/Eskalation 2026-06-22.
 > **Anker:** mem0ai 2.0.7 · Gemini-Embedder @1536 · Qdrant 1.18.2.
-> **Changelog-Abgleich 2026-06-22:** Kein Quality-Gate/REJECT hinzugekommen — die Architektur ist explizit
-> „single-pass ADD-only" (kein UPDATE/DELETE, alles akkumuliert). Issue #4573 ist CLOSED, aber NICHT geloest →
-> strenge `custom_instructions` + Junk-Audit bleiben das einzige wirksame Mittel (§1, §3).
+> **Changelog-Abgleich 2026-06-22 (2 unabh. Recherchen):** Kein hartes Pre-Storage-Quality-Gate/REJECT hinzugekommen —
+> die Architektur ist explizit „single-pass ADD-only" (kein UPDATE/DELETE, alles akkumuliert). Bewegung, aber kein
+> Gate: „domain-aware memory triage" + „Auto-dream" (Idle-Konsolidierung NACH dem Schreiben). Issue #4573-Status
+> uneindeutig (Quelle A closed / B offen), jedenfalls NICHT geloest → strenge `custom_instructions` + Junk-Audit
+> bleiben das einzige wirksame Mittel (§1, §3).
 
 ---
 

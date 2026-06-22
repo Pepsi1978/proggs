@@ -1,9 +1,15 @@
-# Memory-Backends (self-hosted) im Vergleich — Best Practices (Stand 2026-06-21)
+# Memory-Backends (self-hosted) im Vergleich — Best Practices (Stand 2026-06-21, Junk-Nachtrag 2026-06-22)
 
 > Teil des Second-Brain-Wissens. Welches self-hostbare Memory-Backend für "ein Server, viele Clients
 > (Claude Code/OpenCode via MCP + eigene Apps via REST) + heterogene persönliche Daten"? Quellen: `extern`
 > (Backend-Vergleiche, Mem0/Letta/Zep-Doku 2026). **Löst einen Widerspruch zum bestehenden
 > [[../opencode/self-hosted-memory-server]] auf (supermemory-Status).** Schwester: [[referenz-architekturen]], [[datenmodell]].
+>
+> **NACHTRAG 2026-06-22 (Junk-/Quality-Gate-Fokus, Frank-Anliegen):** Eine vertiefte Eskalations-Recherche
+> (OpenRouter `:online`, 4 Deep-Dives) zur Frage „gibt es eine Alternative, die WENIGER MUELL produziert" —
+> Ergebnis in **§6**. Kurz: mem0 bleibt für Multi-Client/MCP die einfachste Wahl, hat aber bestaetigt **KEIN
+> Quality-Gate** (Junk-Problem strukturell). Wer Junk-Vermeidung priorisiert: **Cognee** (nutzt Qdrant nativ +
+> ECL/Ontologie) oder ein **eigener schlanker Layer mit Reject-Gate** sind die ernsthaften Kandidaten.
 
 ---
 
@@ -91,7 +97,9 @@ supermemory die npm-/Repo-Lizenz UND den MCP-Self-Host-Pfad LIVE verifizieren (N
 2. **Zep/Graphiti dazunehmen**, falls temporale Tiefe wichtig wird (Fakten, die sich über Zeit ändern).
 3. **supermemory** nur, wenn das einfachere Single-Binary-Self-Hosting den Ausschlag gibt UND §3 vorher
    verifiziert ist.
-4. **Letta/Cognee** eher nicht für diesen Multi-Client-Fall (kein MCP / Runtime-Lock-in).
+4. **Letta** eher nicht für diesen Multi-Client-Fall (Runtime-Lock-in, Memory-SDK braucht Cloud). **Cognee** ist —
+   anders als hier 2026-06-21 notiert — **doch MCP-fähig und Qdrant-nativ** (siehe Korrektur in §6) und damit ein
+   ernsthafter Junk-ärmerer Kandidat, wenn ein Backend-Wechsel in Frage kommt.
 
 ## 5. Embeddings & Ollama-Frage (`extern`)
 - **Lokale Embeddings:** FastEmbed (on-device, kein API-Call) für Privacy; BGE-M3 für DE/EN (siehe
@@ -101,7 +109,53 @@ supermemory die npm-/Repo-Lizenz UND den MCP-Self-Host-Pfad LIVE verifizieren (N
   lokales Ollama) — analog bei Mem0 prüfen, wenn die Extraktion lokal laufen soll (sonst läuft sie per Default
   über eine externe LLM-API).
 
+## 6. Junk-/Quality-Gate-Perspektive (Vertiefung 2026-06-22, Firecrawl + OpenRouter-Eskalation)
+
+> Andere Frage als §1-§4 (dort: Multi-Client/MCP). Hier: **Welches Backend produziert am wenigsten Muell/
+> Halluzinationen, ist kostenlos+self-hostbar und passt zu unserem Qdrant-Stack?**
+
+**Ehrliche Meta-Erkenntnis zuerst:** Es gibt **2026 KEINE oeffentliche, von allen Seiten akzeptierte Junk-/
+Halluzinations-Quote** fuer diese Frameworks. Alle Vergleiche sind **Retrieval-Benchmarks** (LongMemEval, LoCoMo,
+HotPotQA) oder **strukturelle/qualitative** Argumente — nicht „% Junk". „X macht weniger Muell als mem0" ist also
+nirgends quantitativ belegt; man kann nur ueber die **Architektur** argumentieren (hat ein System einen Mechanismus,
+der Junk strukturell verhindert?). Der mem0-Junk-Befund selbst (Audit #4573, 97,8 %) bleibt der einzige harte Wert.
+
+| Kandidat | Anti-Junk-Mechanismus (strukturell) | Qdrant? | Kostenlos self-host | Aufwand single-user | MCP |
+|----------|--------------------------------------|---------|---------------------|---------------------|-----|
+| **mem0** (Ist-Zustand) | ❌ KEIN Quality-Gate; v3 single-pass ADD-only (REJECT strukturell unmoeglich); „domain-aware triage"+„Auto-dream" beworben aber kein Pre-Storage-Gate | ✅ nativ (unser Stack) | ✅ Apache-2.0 (Self-Host-Doku duenn) | laeuft schon | ✅ (unser sb-mcp) |
+| **Cognee** | ⚠️ ECL-Pipeline (Extract→Cognify→Load) + RDF-Ontologie → strukturiert/dedupliziert **implizit**; expliziter Confidence-Filter NICHT dokumentiert | ✅ **nativ** (sogar TurboQuant-Integration „8× weniger Vektor-RAM") | ✅ Apache-2.0-Kern (**Open-Core**: manche Features Cloud), pip-install, lokal (SQLite+LanceDB+Kuzu) | mittel (Python-only SDK; Ops selbst) | ✅ MCP-Server (Cursor/Claude Desktop/Cline) |
+| **Zep/Graphiti** | ✅ **staerkster**: bi-temporal (`valid-at`/`invalid-at`) → veraltete Fakten werden automatisch invalidiert statt re-used | ❌ braucht **Neo4j** (primary)/FalkorDB/Neptune — NICHT Qdrant | ⚠️ nur **Graphiti**-Engine Apache-2.0; FalkorDB ist source-available (SSPL-nah) | hoch (Graph-DB-Overhead, DB-Wechsel) | ✅ |
+| **Letta/MemGPT** | ⚠️ Sleep-Time-Compute (async Aufraeum-Agent, `rethink_memory`-Loop → „cleaner memories") ABER „unpredictability of self-editing memory" kritisiert; eventually-consistent | ❓ unklar (Archival = „Vector DB", Qdrant nicht belegt) | ⚠️ Platform Apache-2.0 self-host; das schlanke **AI-Memory-SDK braucht Letta Cloud** | hoch (eigener Agent-Server + Postgres) | (Platform) |
+| **Eigener Layer auf Qdrant** | ✅ **echtes Reject-Gate moeglich** (Extraction-Agent → Confidence-Score → REJECT vor Write + Dedup) — genau das, was mem0 fehlt | ✅ direkt | ✅ voll (nur Eigenbau) | **Tage** (Atlan: 1-5 Tage), dann Wartung | selbst zu bauen (haben wir schon: sb-mcp) |
+
+**Zwei Korrekturen zur §1-§4-Tabelle (heutige Recherche):** (1) **Cognee HAT einen MCP-Server** (§2 sagte „kein MCP" —
+das ist ueberholt). (2) **Cognee nutzt Qdrant nativ** (alter GitHub-Issue #1865 „kein Qdrant" ist erledigt; es gibt
+sogar eine TurboQuant-Integration). Damit ist Cognee der einzige der „graph-artigen" Kandidaten, der **auf unserem
+bestehenden Qdrant** laeuft.
+
+**Empfehlung fuer Franks Kriterien (weniger Junk, kostenlos, zuverlaessig, auf Qdrant):**
+1. **Pragmatisch (kleinster Schritt):** Bei **mem0 bleiben**, aber den fehlenden Quality-Gate **selbst davorsetzen** —
+   ein schlanker Reject/Confidence-Filter im `sb-mcp`/`mem0-api` VOR `add()` (Cognify-Light). Loest das Junk-Problem
+   an der Wurzel, ohne Stack-Wechsel. Geringster Aufwand, volle Kontrolle.
+2. **Wenn Backend-Wechsel ok (bester Junk-Fit auf Qdrant):** **Cognee** — ECL+Ontologie strukturiert Fakten vor dem
+   Graph, nutzt unser Qdrant nativ, Apache-2.0-Kern, hat MCP. Tradeoff: Open-Core (Cloud-Features), Python-only, kein
+   belegter expliziter Confidence-Filter, kein UI.
+3. **Wenn maximale strukturelle Korrektheit ueber Zeit zaehlt:** **Zep/Graphiti** (bi-temporal) — aber Neo4j statt
+   Qdrant = schwererer Stack, DB-Wechsel.
+4. **Eigener Layer** ist die einzige Option mit einem ECHTEN Reject-Gate und voller Datenhoheit — fuer einen
+   Single-User in Tagen baubar; lohnt, wenn Junk-Qualitaet das oberste Ziel ist und mem0/Cognee nicht ueberzeugen.
+5. **Letta** eher nicht (Cloud-Abhaengigkeit beim Memory-SDK, Qdrant unklar, „unpredictable").
+
+**Fazit:** Es gibt kein „klar besseres, kostenloses, müll-freies" Drop-in. Der groesste Hebel ist **nicht der
+Backend-Wechsel, sondern ein Quality-Gate VOR dem Speichern** — entweder selbst vor mem0 gesetzt (Weg 1) oder
+inhaerent in Cognee (Weg 2). Frank entscheidet zwischen „mem0 + eigenes Gate" (wenig Aufwand) und „Cognee" (mehr
+Umbau, aber Quality strukturell eingebaut).
+
 ## Nacharbeit (offene Verifikation)
+- **(Junk-Recherche 2026-06-22)** Cognee-Quellcode/Doku auf einen ECHTEN Pre-Storage-Filter (`filter`/`score`/
+  `confidence`/`quality` in der Cognify-Pipeline) pruefen — die Sekundaerquellen belegen ihn NICHT explizit.
+- **(Junk-Recherche 2026-06-22)** Falls Weg 1 (mem0 + eigenes Gate): Confidence-Gate-Pattern als kleinen Reject-Filter
+  vor `add()` im `mem0-api` prototypen (Extraction → Score < Schwelle → verwerfen + Boot-File/System-Prompt-Filter).
 - supermemory Lizenz + MCP-Self-Host LIVE prüfen (npm `supermemory`, GitHub-Repo, Doku) → §3 auflösen.
 - Mem0 lokale Ollama-Extraktion + OSS-Graph-Fähigkeit (vs. Pro-Tier) verifizieren.
 - Ollama-Embedding-/Extraktions-Pfad pro Tool testen (Datenhoheit).
