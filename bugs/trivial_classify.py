@@ -36,6 +36,12 @@ _VERSION_MSBUILD = re.compile(
     r'<\s*/\s*(?:Assembly|File|Package|AssemblyInformational)?Version\s*>',
     re.IGNORECASE,
 )
+# Info.plist (macOS/iOS): zweizeiliger Aufbau — <key>CFBundleVersion</key> bzw.
+# <key>CFBundleShortVersionString</key> gefolgt von <string>1.15</string>. Beide Zeilenarten zaehlen
+# als Versionszeile, damit ein reiner Bundle-Version-Bump (auch nur die <string>-Wertzeile) trivial ist.
+# Der String-Wert MUSS rein numerisch (Ziffern+Punkte) sein -> ein <string>Foo</string> faellt NICHT darunter.
+_VERSION_PLIST_KEY = re.compile(r'<\s*key\s*>\s*CFBundle(?:Short)?Version(?:String)?\s*<\s*/\s*key\s*>', re.IGNORECASE)
+_VERSION_PLIST_VAL = re.compile(r'^\s*<\s*string\s*>\s*[\d.]+\s*<\s*/\s*string\s*>\s*$', re.IGNORECASE)
 
 _STRING_RE = re.compile(r'(<string\b|</string>|<plurals\b|getString\(|stringResource\(|R\.string\.)', re.IGNORECASE)
 _IMPORT_RE = re.compile(r'^\s*(import\s|package\s|using\s|#include|from\s+\S+\s+import\s)')
@@ -52,6 +58,8 @@ def _is_version_line(ln):
         or _VERSION_JSON.search(ln)
         or _VERSION_TOML.match(ln)
         or _VERSION_MSBUILD.search(ln)
+        or _VERSION_PLIST_KEY.search(ln)
+        or _VERSION_PLIST_VAL.match(ln)
     )
 
 
