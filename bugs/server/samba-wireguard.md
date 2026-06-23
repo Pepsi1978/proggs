@@ -20,7 +20,7 @@
 
 | # | Signal / Situation | Sofort-Regel | Volltext |
 |---|--------------------|--------------|----------|
-| 1 | ⭐ SSH/Ping ueber WireGuard geht, SMB **nicht** erreichbar | Samba bindet sich NICHT automatisch an `wg0` (kein BROADCAST). In `smb.conf`: `interfaces = lo eth0 10.8.0.0/24` (mit **Subnetzmaske/IP**, nicht nur Interface-Name) + `bind interfaces only = yes`. ODER `bind interfaces only = no`. | §1 |
+| 1 | ⭐ SSH/Ping ueber WireGuard geht, SMB **nicht** erreichbar | Samba bindet sich NICHT automatisch an `wg0` (kein BROADCAST). In `smb.conf` die **konkrete Host-IP mit Maske**: `interfaces = lo 10.8.0.1/24` + `bind interfaces only = yes` — die **Netz-Adresse** `10.8.0.0/24` reicht NICHT (lauscht dann nur auf `lo`; live verifiziert 2026-06-23). ODER `bind interfaces only = no`. | §1 |
 | 2 | Windows 11: "Benutzername oder Passwort ist falsch" trotz korrekter Daten | In `smb.conf` **`protocol = SMB3`** (server-seitig) erzwingen — `client max protocol = SMB3` allein reicht oft NICHT. Credential-Manager-Altlasten loeschen (§5). | §4, §5 |
 | 3 | Windows: "Zugriff durch Sicherheitsrichtlinie blockiert (Gastzugriff)" | Registry `HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters` → DWORD `AllowInsecureGuestAuth=1` (nur fuer privaten PC; lockert Sicherheit). | §6 |
 | 4 | SMB ueber WireGuard sehr langsam (wenige Mbit/s) | MTU-Problem: WireGuard-MTU auf **1350** senken (`ip link set mtu 1350 dev wg0`) + MSS-Clamping fuer TCP. | §3 |
@@ -50,17 +50,25 @@ zeigt keine Verbindungen. `netstat -tulpen | grep smbd` zeigt `smbd` NICHT auf d
 (`<POINTOPOINT,NOARP,UP,LOWER_UP>` statt `<BROADCAST,MULTICAST,…>`) und hat **kein Broadcast** — Samba
 kann es ueber den blossen Interface-Namen `wg0` nicht korrekt binden und ignoriert es still.
 **Versionen:** Samba-uebergreifend, per Design der Interface-Bindung (verifiziert Ubuntu/Samba 4.x).
-**FIX (funktionserhaltend):** In `/etc/samba/smb.conf` im `[global]`-Block das WireGuard-**Subnetz mit
-Maske** (nicht den Namen) angeben:
+**FIX (funktionserhaltend):** In `/etc/samba/smb.conf` im `[global]`-Block die **konkrete Host-IP des
+Tunnels mit Maske** angeben (NICHT die Netz-Adresse `…0/24`, NICHT nur den Interface-Namen):
 ```ini
 [global]
-   interfaces = lo eth0 10.8.0.0/24
+   interfaces = lo 10.8.0.1/24
    bind interfaces only = yes
 ```
+**⭐ Live verifiziert 2026-06-23 (eigener Vorfall beim Gehirn-Server):** Mit der **Netz-Adresse**
+`interfaces = lo 10.8.0.0/24` lauschte `smbd` NUR auf `127.0.0.1:445` — NICHT auf `10.8.0.1`
+(`ss -tlnp | grep :445` zeigte nur lo). Erst die **konkrete Host-IP** `interfaces = lo 10.8.0.1/24`
+brachte `smbd` dazu, auf `10.8.0.1:445` zu lauschen. Grund: Bei einem POINTOPOINT/NOARP-Interface
+(`ip link show wg0` → `<POINTOPOINT,NOARP,…>`) matcht Samba die Netz-CIDR nicht zuverlaessig gegen die
+lokale Interface-IP. Also IMMER die **exakte `10.8.0.1/24`** statt `10.8.0.0/24`. `eth0` kann man hier
+sogar weglassen (SMB soll ohnehin nur im Tunnel + lokal lauschen → strenger + sicherer, smbd lauscht dann
+gar nicht erst auf der oeffentlichen IP).
 Alternative (wenn die Bindung weiter zickt): `bind interfaces only = no` — dann lauscht Samba auf allen
 Interfaces, und die Zugriffs-Beschraenkung kommt allein ueber die Firewall (§2). Pruefen mit
-`ip link` (Interface-Flags) und `netstat -tulpen | grep smbd` (lauscht es auf 10.8.0.1?).
-**Quelle:** Unix StackExchange (Samba over WireGuard) · eigene Recherche 2026-06-22.
+`ip link` (Interface-Flags) und `ss -tlnp | grep :445` bzw. `netstat -tulpen | grep smbd` (lauscht es auf 10.8.0.1?).
+**Quelle:** Unix StackExchange (Samba over WireGuard) · eigene Recherche 2026-06-22 · **live verifiziert 2026-06-23**.
 
 ## 2. SMB-Ports NUR ueber WireGuard freigeben (nicht oeffentlich)
 **Ziel:** SMB (445/tcp, optional 139/tcp) darf NICHT oeffentlich erreichbar sein — nur im Tunnel.
@@ -108,10 +116,18 @@ verbindet erst nach manuellem Klick.
   `\\NAS.local`, `\\10.8.0.1`) — Windows behandelt sie getrennt. Alte loeschen, sauber neu anlegen
   (Anmeldeinformationsverwaltung → Windows-Anmeldeinformationen), oder `cmdkey /add:10.8.0.1
   /user:sambauser /pass:…`.
-- **Persistentes Mapping:** `net use Z: \\10.8.0.1\share /user:sambauser PASS /persistent:yes`
-  ODER PowerShell **`New-SmbMapping -RemotePath \\10.8.0.1\share -Persistent:$true -SaveCredentials`**
-  (NICHT `New-PSDrive -Persist` — laut MS-Doku nicht fuer SMB gedacht). Vorher alte Sessions:
-  `net use \\10.8.0.1 /delete`.
+- **Persistentes Mapping:** **`net use Z: \\10.8.0.1\share "PASS" /user:sambauser /persistent:yes`** ist der
+  **zuverlaessige** Weg. ⭐ **Live verifiziert 2026-06-23:** `New-SmbMapping -LocalPath Z: -RemotePath … -UserName …
+  -Password … -Persistent $true -SaveCredentials` warf **„Falscher Parameter"** (die Kombination
+  `-UserName/-Password` + `-Persistent $true` wird abgelehnt) → auf `net use` zurueckgefallen, das klappte sofort.
+  Wer `New-SmbMapping` nutzen will: vorher `cmdkey /add:10.8.0.1 /user:sambauser /pass:…` setzen und OHNE
+  `-Password`/`-UserName` mappen. NICHT `New-PSDrive -Persist` (laut MS-Doku nicht fuer SMB gedacht). Vorher alte
+  Sessions: `net use \\10.8.0.1 /delete`.
+- **Freien Laufwerksbuchstaben pruefen (sonst Systemfehler 85):** `net use Y: …` scheitert mit
+  **„Systemfehler 85 — der lokale Geraetename wird bereits verwendet"**, wenn `Y:` schon belegt ist (echte
+  Partition/USB/anderes Netzlaufwerk). Vor dem Mappen mit `Get-PSDrive -PSProvider FileSystem` bzw.
+  `Get-Volume | ? DriveLetter` die freien Buchstaben pruefen — NICHT annehmen, ein „sprechender" Buchstabe sei frei
+  (live 2026-06-23: `G:` war Franks Steam-Platte). Test schrieb sonst still auf das FALSCHE lokale Laufwerk.
 - **Netzwerk beim Login noch nicht bereit:** rotes X bis Klick. GPO „Computer immer auf das Netzwerk
   warten lassen" aktivieren; sicherstellen, dass der WireGuard-Tunnel beim Login schon steht.
 - **PIN-Login (Win 11 Pro)** kann gespeicherte Mappings stoeren → mit Microsoft-Konto-Passwort anmelden.

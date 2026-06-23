@@ -12,7 +12,7 @@
 
 | # | Situation | Best Practice (Kurzform) | Volltext |
 |---|-----------|--------------------------|----------|
-| 1 | Bind an den Tunnel | `interfaces = lo eth0 10.8.0.0/24` (mit Maske!) + `bind interfaces only = yes` | §1 |
+| 1 | Bind an den Tunnel | konkrete Host-IP: `interfaces = lo 10.8.0.1/24` (NICHT die Netz-Adresse `…0/24`!) + `bind interfaces only = yes` | §1 |
 | 2 | Nur im VPN erreichbar | UFW `allow in on wg0 to any port 445`; 445 NIE oeffentlich; nur UDP 51820 offen | §2 |
 | 3 | Win11-Kompatibilitaet | `protocol = SMB3` server-seitig; echter User (`smbpasswd -a`) statt Gast | §3 |
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
@@ -34,25 +34,37 @@
 ---
 
 ## §1 smb.conf-Grundgeruest (an die VPN-IP binden)
-Im `[global]`-Block IMMER das WireGuard-**Subnetz mit Maske** angeben (nicht nur den Interface-Namen `wg0`,
-den Samba mangels Broadcast nicht bindet):
+Im `[global]`-Block IMMER die **konkrete Host-IP des Tunnels mit Maske** angeben (`10.8.0.1/24`), NICHT die
+Netz-Adresse `10.8.0.0/24` und NICHT den Interface-Namen `wg0` — beide bindet Samba bei einem
+POINTOPOINT/NOARP-Interface nicht zuverlaessig (live verifiziert 2026-06-23, siehe Almanach §1). `eth0`
+weglassen → smbd lauscht gar nicht erst auf der oeffentlichen IP (strenger):
 ```ini
 [global]
-   interfaces = lo eth0 10.8.0.0/24
+   interfaces = lo 10.8.0.1/24
    bind interfaces only = yes
    protocol = SMB3
    server min protocol = SMB3
    map to guest = never        # echter User-Login, kein Gast
    smb encrypt = required      # SMB ist sonst UNVERSCHLUESSELT (abhoerbar) — im Tunnel doppelt sicher
-[gehirn-docs]
-   path = /srv/samba/docs
-   valid users = sambauser
+   server role = standalone server
+[dateien]
+   comment = Allgemeine Dateien
+   path = /srv/samba/dateien
+   valid users = frank
+   read only = no
+   create mask = 0664
+   directory mask = 0775
+[gehirn]
+   comment = Gehirn-Material
+   path = /srv/samba/gehirn
+   valid users = frank
    read only = no
    create mask = 0664
    directory mask = 0775
 ```
-Echten Samba-User anlegen: `sudo smbpasswd -a sambauser`. Pruefen, dass `smbd` auf der VPN-IP lauscht:
-`netstat -tulpen | grep smbd` → `10.8.0.1:445`.
+Echten Samba-User anlegen (nologin, nur fuer Samba): `sudo useradd -M -s /usr/sbin/nologin frank` dann
+`sudo smbpasswd -a frank && sudo smbpasswd -e frank`. Pruefen, dass `smbd` auf der VPN-IP lauscht:
+`ss -tlnp | grep :445` → muss `10.8.0.1:445` enthalten (nicht nur `127.0.0.1`).
 
 ## §2 Firewall — nur ueber den Tunnel
 SMB-Ports ausschliesslich ueber `wg0` zulassen, oeffentlich verweigern:
@@ -69,12 +81,17 @@ Echten User statt Gastzugriff nutzen → dann ist KEIN `AllowInsecureGuestAuth`-
 lockert nur die Sicherheit). SMB1 bleibt aus (unsicher, loest die Probleme ohnehin nicht).
 
 ## §4 Windows-Netzlaufwerk dauerhaft einbinden
-PowerShell (empfohlen):
+**`net use` ist der zuverlaessige Weg** (live 2026-06-23: `New-SmbMapping … -UserName … -Password … -Persistent $true`
+warf „Falscher Parameter"):
 ```powershell
-New-SmbMapping -LocalPath 'Z:' -RemotePath '\\10.8.0.1\gehirn-docs' -Persistent:$true -SaveCredentials
+cmdkey /add:10.8.0.1 /user:frank /pass:DEINPASS
+net use Z: \\10.8.0.1\dateien "DEINPASS" /user:frank /persistent:yes
+net use Y: \\10.8.0.1\gehirn  "DEINPASS" /user:frank /persistent:yes
 ```
-ODER `net use Z: \\10.8.0.1\gehirn-docs /user:sambauser /persistent:yes`. Credential-Manager-Eintrag pro
-Servername UND IP sauber halten (`cmdkey /add:10.8.0.1 /user:sambauser /pass:…`). Sicherstellen, dass der
+**Vorher freien Laufwerksbuchstaben pruefen** (`Get-PSDrive -PSProvider FileSystem`) — ein belegter Buchstabe
+gibt „Systemfehler 85" und der Schreibtest landet still auf dem falschen lokalen Laufwerk (live 2026-06-23: `G:`
+war eine echte Platte → ausgewichen auf `Y:`). Wer `New-SmbMapping` nutzen will: erst `cmdkey` setzen, dann OHNE
+`-UserName/-Password` mappen. Credential-Manager pro Servername UND IP sauber halten. Sicherstellen, dass der
 WireGuard-Tunnel beim Login schon steht (sonst rotes X bis Klick). Test: `Test-NetConnection 10.8.0.1 -Port 445`.
 
 ## §5 Performance ueber den Tunnel
