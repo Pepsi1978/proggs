@@ -10,6 +10,11 @@ Dashboard v1 LIVE**. Naechster Schritt: Dashboard Phase 5 Schritt 2 (Einstellung
 **Keine laufende Aufgabe, letzter Stand sauber abgeschlossen** (alle Commits durch bis #47121, alles
 deployed + getestet). Ich hatte Frank gerade gefragt, womit wir weitermachen: (a) Dashboard Schritt 2
 (Einstellungen + Prompt-Editor), (b) Optik-Feedback zum Dashboard, oder (c) 4b/Backup.
+**>> FRANK-UPDATE beim Backup (2026-06-23, kurz vor /clear): Die Seite gefaellt ihm noch NICHT zu
+100%. Der NAECHSTE FOKUS ist die Dashboard-OPTIK verbessern/iterieren. Konkret nachfragen, was er
+anders haben will (Farben, Layout, Typo, Komponenten, Abstaende), aendern und per Playwright-
+Screenshot (10.8.0.1:8003) pruefen, bis es ihm gefaellt. ERST DANACH Schritt 2 (Einstellungen +
+Prompt-Editor). <<**
 - **So geht es weiter:** Bei "weiter" ZUERST die Memorys lesen: `project_second_brain_flugplan` +
   `project_second_brain_memory_server` + `best-practices/second-brain/agent-bibliothekar-plan.md` +
   `speicher-schema-1zu1.md`. Dann Frank fragen, was er will (a/b/c), ODER falls er es schon sagt:
