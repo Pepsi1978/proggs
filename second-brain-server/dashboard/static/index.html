@@ -592,7 +592,10 @@ button{font-family:inherit;cursor:pointer}
               <option>gemini-2.5-flash</option>
             </select>
           </div>
-          <span class="muted-note">⚙︎ Vorschau — Speichern wird in einem nächsten Schritt aktiviert.</span>
+          <div class="row-end">
+            <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
+            <button class="btn btn-primary" id="saveModelBtn">Speichern</button>
+          </div>
         </div>
 
         <div class="card set-section">
@@ -609,10 +612,11 @@ Leitsätze:
 • Erfinde niemals Inhalte, die nicht im Gedächtnis stehen.</textarea>
           </div>
           <div class="row-end">
-            <button class="btn">Zurücksetzen</button>
-            <button class="btn btn-primary">Speichern</button>
+            <span class="muted-note" id="promptStatus" style="margin-right:auto"></span>
+            <button class="btn" id="resetPromptBtn">Zurücksetzen</button>
+            <button class="btn btn-primary" id="savePromptBtn">Speichern</button>
           </div>
-          <div style="margin-top:8px"><span class="muted-note">⚙︎ Vorschau — Bearbeiten ist möglich, Speichern folgt.</span></div>
+          <div style="margin-top:8px"><span class="muted-note">🔒 Antwort-Format (JSON-Schema) und Kategorienliste werden automatisch ergänzt und sind geschützt.</span></div>
         </div>
 
         <div class="card set-section">
@@ -699,7 +703,7 @@ Leitsätze:
     brain:{title:"Gehirn",sub:"Durchsuche und stöbere deine Einträge"},
     settings:{title:"Einstellungen",sub:"Agent & Server konfigurieren"}
   };
-  let activeTab = "overview", brainLoaded = false;
+  let activeTab = "overview", brainLoaded = false, settingsLoaded = false;
   function setTab(tab){
     if(!TABS[tab]) return;
     activeTab = tab;
@@ -709,6 +713,7 @@ Leitsätze:
     document.getElementById("pageTitle").textContent = TABS[tab].title;
     document.getElementById("pageSub").textContent = TABS[tab].sub;
     if(tab==="brain" && !brainLoaded){ brainLoaded = true; loadEntries(); }
+    if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
   }
   document.querySelectorAll("[data-tab]").forEach(b=> b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
@@ -986,6 +991,59 @@ Leitsätze:
     function entry(title){ return E.find(e=>e.title===title); }
     return {overview,entries,entry};
   })();
+
+  /* ── Einstellungen: Modell + System-Prompt laden / speichern / zurücksetzen ── */
+  let promptDefault = "";
+  async function apiSend(path, method, body){
+    const r = await fetch(path,{method, headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify(body)});
+    if(!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+  function flash(elId, text, ok=true){
+    const e = document.getElementById(elId); if(!e) return;
+    e.textContent = (ok?"✓ ":"⚠ ")+text;
+    e.style.color = ok ? "var(--good)" : "var(--bad)";
+    clearTimeout(e._t); e._t = setTimeout(()=>{ e.textContent=""; e.style.color=""; }, 3400);
+  }
+  async function loadSettings(){
+    /* Modell-Dropdown aus dem Agenten füllen + aktives markieren */
+    try{
+      const c = await api("/api/config");
+      const sel = document.getElementById("modelSel");
+      const avail = (c.available && c.available.length) ? c.available : [...sel.options].map(o=>o.value);
+      sel.innerHTML = avail.map(m=>`<option${m===c.model?" selected":""}>${m}</option>`).join("");
+    }catch(e){ /* Dropdown-Defaults aus dem HTML bleiben stehen */ }
+    /* System-Prompt (echten, bearbeitbaren Teil) laden */
+    try{
+      const p = await api("/api/prompt");
+      promptDefault = p.default || "";
+      document.getElementById("promptArea").value = p.instructions || "";
+    }catch(e){
+      flash("promptStatus","Agent nicht erreichbar — Demo-Text",false);
+    }
+  }
+  async function saveModel(){
+    const btn = document.getElementById("saveModelBtn"), sel = document.getElementById("modelSel");
+    btn.disabled = true;
+    try{ const r = await apiSend("/api/config","PUT",{model:sel.value}); flash("modelStatus","Modell gespeichert: "+(r.model||sel.value)); }
+    catch(e){ flash("modelStatus","Speichern fehlgeschlagen",false); }
+    finally{ btn.disabled = false; }
+  }
+  async function savePrompt(){
+    const btn = document.getElementById("savePromptBtn"), ta = document.getElementById("promptArea");
+    btn.disabled = true;
+    try{ await apiSend("/api/prompt","PUT",{instructions:ta.value}); flash("promptStatus","System-Prompt gespeichert"); }
+    catch(e){ flash("promptStatus","Speichern fehlgeschlagen",false); }
+    finally{ btn.disabled = false; }
+  }
+  function resetPrompt(){
+    if(!promptDefault){ flash("promptStatus","Original noch nicht geladen",false); return; }
+    document.getElementById("promptArea").value = promptDefault;
+    flash("promptStatus","Auf Original zurückgesetzt — zum Übernehmen Speichern");
+  }
+  document.getElementById("saveModelBtn") && document.getElementById("saveModelBtn").addEventListener("click", saveModel);
+  document.getElementById("savePromptBtn") && document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
+  document.getElementById("resetPromptBtn") && document.getElementById("resetPromptBtn").addEventListener("click", resetPrompt);
 
   /* ── Start ────────────────────────────────────────────────────────────── */
   loadOverview();

@@ -19,7 +19,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -50,6 +50,18 @@ def _bget(path: str, **params):
 
 def _bpost(path: str, payload: dict):
     r = httpx.post(f"{BRAIN_URL}{path}", json=payload, headers=HEADERS, timeout=40.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def _aget(path: str):
+    r = httpx.get(f"{AGENT_URL}{path}", headers=HEADERS, timeout=15.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def _aput(path: str, payload: dict):
+    r = httpx.put(f"{AGENT_URL}{path}", json=payload, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
@@ -132,6 +144,29 @@ def logbook() -> dict:
         return {"items": d.get("items", [])}
     except Exception as e:  # noqa: BLE001
         return {"items": [], "detail": str(e)}
+
+
+# --- Einstellungen: Proxy an den Agenten (System-Prompt + Modell-Wahl) ------
+@app.get("/api/prompt")
+def api_get_prompt() -> dict:
+    return _aget("/prompt")
+
+
+@app.put("/api/prompt")
+async def api_put_prompt(request: Request) -> dict:
+    body = await request.json()
+    return _aput("/prompt", {"instructions": body.get("instructions", "")})
+
+
+@app.get("/api/config")
+def api_get_config() -> dict:
+    return _aget("/config")
+
+
+@app.put("/api/config")
+async def api_put_config(request: Request) -> dict:
+    body = await request.json()
+    return _aput("/config", {"model": body.get("model", "")})
 
 
 @app.get("/", response_class=HTMLResponse)

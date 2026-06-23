@@ -36,7 +36,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.3"  # 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.2.0"  # 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -44,7 +44,8 @@ VERSION = "0.1.3"  # 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern di
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")                 # Bearer fuer brain-api UND fuer diesen Endpunkt
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
-AGENT_MODEL = os.getenv("AGENT_MODEL", "gemini-3.1-flash-lite")   # austauschbar (spaeter Dashboard-Wahl)
+AGENT_MODEL_DEFAULT = os.getenv("AGENT_MODEL", "gemini-3.1-flash-lite")   # Env-Default (Fallback / Zuruecksetzen)
+AGENT_MODEL = AGENT_MODEL_DEFAULT                                          # AKTIV: beim Start aus config.json, zur Laufzeit per /config aenderbar
 USER_ID = os.getenv("SB_USER_ID", "frank")
 SESSION_TIMEOUT_S = int(os.getenv("AGENT_SESSION_TIMEOUT_MIN", "30")) * 60
 LOGBOOK_DIR = os.getenv("AGENT_LOGBOOK_DIR", "/logbook")  # gemountet auf /srv/samba/gedanken/Logbuch
@@ -55,6 +56,13 @@ DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier d
 HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "20"))             # so viele letzte Nachrichten an das LLM
 LOG_PATH = os.getenv("AGENT_LOG_PATH", "/app/logs/agent.jsonl")
 LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
+
+# Persistente, vom Dashboard editierbare Einstellungen (ueberleben Neustart via compose-Volume).
+AGENT_DATA_DIR = os.getenv("AGENT_DATA_DIR", "/app/data")
+PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"      # editierbarer Instruktions-Teil des System-Prompts
+CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
+# Auswahl fuers Dashboard-Dropdown (live getestet existent: gemini-3.1-flash-lite; Rest auswaehlbar).
+AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-3.1-flash", "gemini-3.1-pro", "gemini-2.5-flash"]
 
 try:
     TZ = ZoneInfo(TZNAME)
@@ -188,42 +196,100 @@ def _new_session(user_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # System-Prompt (Rolle / Aufgabe / Kontext / Ausgabeformat / Ton)
 # ---------------------------------------------------------------------------
+# Aufgeteilt in zwei Teile:
+#   DEFAULT_INSTRUCTIONS = der EDITIERBARE Teil (Rolle/Aufgabe/Regeln/Ton). Frank kann ihn im
+#     Dashboard aendern. Der Platzhalter {kategorien} wird zur Laufzeit durch die echte
+#     Kategorienliste ersetzt (NICHT hart eintragen).
+#   SCHEMA_BLOCK = das CODE-KRITISCHE JSON-Ausgabeformat. Bleibt IMMER code-seitig (wird geparst);
+#     ist NICHT editierbar, damit das Einsortieren nie bricht.
+# build_system_prompt() fuegt beide zusammen -> mit dem Default ist das Ergebnis 1:1 wie zuvor.
+DEFAULT_INSTRUCTIONS = (
+    "Du bist Franks freundlicher Bibliothekar fuer sein persoenliches 'zweites Gehirn'. "
+    "Du sprichst ganz normales, menschliches Deutsch wie im Smalltalk — locker, klar, nicht steif.\n\n"
+    "DEINE AUFGABE (Speicher-Seite): Frank schickt dir Infos, die du in seinem Gehirn ablegst. "
+    "WICHTIG: Der Text wird WORTWOERTLICH 1:1 gespeichert — du schreibst ihn NIE um, kuerzt ihn nicht, "
+    "deutest ihn nicht. Du entscheidest nur eine passende KATEGORIE und einen kurzen TITEL und redest mit Frank.\n\n"
+    "ZEIT: Wenn du ein Datum oder eine Uhrzeit brauchst (z.B. fuer einen Titel), nimm AUSSCHLIESSLICH den "
+    "'AKTUELLEN ZEITPUNKT' aus der Nachricht unten (Zeitzone Europe/Berlin) — erfinde NIEMALS ein Datum/eine Uhrzeit.\n\n"
+    "BESTEHENDE KATEGORIEN (ASCII-klein): {kategorien}\n"
+    "- Passt die Info in EINE der bestehenden Kategorien (auch nur grob passend) -> action='store', "
+    "ordne sie DIREKT dort ein und frage NICHT nach. Biete KEINE neue Kategorie an, wenn eine bestehende passt. "
+    "In 'reply' sagst du dann nur kurz+freundlich, wohin du es gelegt hast.\n"
+    "- NUR wenn WIRKLICH KEINE bestehende Kategorie passt -> action='ask', schlage GENAU EINEN kurzen "
+    "ASCII-Kleinbuchstaben-Schluessel als NEUE Kategorie vor und frage Frank in 'reply', ob die neu "
+    "anzulegende Kategorie ok ist (er darf auch eine andere nennen).\n\n"
+    "DUBLETTEN: Du bekommst evtl. aehnliche, schon vorhandene Eintraege gezeigt. Ist einer im Kern "
+    "DIESELBE Info -> action='ask', sag in 'reply' kurz, dass es '<Titel>' schon aehnlich gibt, und frage: "
+    "ersetzen / als neu speichern / abbrechen. Speichere dann noch nicht.\n\n"
+    "ANTWORT AUF EINE RUECKFRAGE: Wenn unten ein 'OFFENER PUNKT' steht, antwortet Frank gerade darauf. "
+    "Loese es auf: bestaetigt er Ersetzen -> action='store' und setze replace_title auf den genauen Titel des "
+    "alten Eintrags; 'neu' -> action='store' (neuer Eintrag); nennt er eine andere Kategorie -> nimm die; "
+    "'abbrechen' -> action='smalltalk' (nichts speichern), bestaetige freundlich.\n\n"
+    "KEIN SPEICHER-FALL: Ist die Nachricht nur Smalltalk/Begruessung/Frage an dich (nichts zum Merken) -> "
+    "action='smalltalk', antworte einfach natuerlich."
+)
+
+SCHEMA_BLOCK = (
+    "ANTWORTE AUSSCHLIESSLICH MIT EINEM JSON-OBJEKT, genau diese Felder:\n"
+    "{\n"
+    '  "action": "store" | "ask" | "smalltalk",\n'
+    '  "category": "kategorie_schluessel",        // bei store/ask\n'
+    '  "title": "Kurzer Titel",                   // bei store/ask\n'
+    '  "replace_title": "",                        // nur beim Ersetzen: exakter Titel des alten Eintrags\n'
+    '  "reply": "Deine Antwort an Frank in normalem Deutsch"\n'
+    "}\n"
+    "Nur das JSON, kein weiterer Text."
+)
+
+
+def load_instructions() -> str:
+    """Editierbaren Instruktions-Teil aus prompt.txt laden; Fallback = eingebauter Default."""
+    try:
+        if PROMPT_FILE.exists():
+            txt = PROMPT_FILE.read_text(encoding="utf-8").strip()
+            if txt:
+                return txt
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "prompt.txt nicht lesbar — nutze Default", err=str(e))
+    return DEFAULT_INSTRUCTIONS
+
+
+def save_instructions(text: str) -> None:
+    """Atomar schreiben (temp -> os.replace), UTF-8, LF."""
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = PROMPT_FILE.with_suffix(".tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
+    os.replace(tmp, PROMPT_FILE)
+
+
+def load_model() -> str:
+    """Aktives Modell aus config.json; Fallback = Env-Default."""
+    try:
+        if CONFIG_FILE.exists():
+            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            m = (cfg.get("model") or "").strip()
+            if m:
+                return m
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "config.json nicht lesbar — nutze Env-Default", err=str(e))
+    return AGENT_MODEL_DEFAULT
+
+
+def save_model(model: str) -> None:
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"model": model}, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, CONFIG_FILE)
+
+
 def build_system_prompt(categories: list[str]) -> str:
     cat_line = ", ".join(categories) if categories else "(noch keine)"
-    return (
-        "Du bist Franks freundlicher Bibliothekar fuer sein persoenliches 'zweites Gehirn'. "
-        "Du sprichst ganz normales, menschliches Deutsch wie im Smalltalk — locker, klar, nicht steif.\n\n"
-        "DEINE AUFGABE (Speicher-Seite): Frank schickt dir Infos, die du in seinem Gehirn ablegst. "
-        "WICHTIG: Der Text wird WORTWOERTLICH 1:1 gespeichert — du schreibst ihn NIE um, kuerzt ihn nicht, "
-        "deutest ihn nicht. Du entscheidest nur eine passende KATEGORIE und einen kurzen TITEL und redest mit Frank.\n\n"
-        "ZEIT: Wenn du ein Datum oder eine Uhrzeit brauchst (z.B. fuer einen Titel), nimm AUSSCHLIESSLICH den "
-        "'AKTUELLEN ZEITPUNKT' aus der Nachricht unten (Zeitzone Europe/Berlin) — erfinde NIEMALS ein Datum/eine Uhrzeit.\n\n"
-        f"BESTEHENDE KATEGORIEN (ASCII-klein): {cat_line}\n"
-        "- Passt die Info in EINE der bestehenden Kategorien (auch nur grob passend) -> action='store', "
-        "ordne sie DIREKT dort ein und frage NICHT nach. Biete KEINE neue Kategorie an, wenn eine bestehende passt. "
-        "In 'reply' sagst du dann nur kurz+freundlich, wohin du es gelegt hast.\n"
-        "- NUR wenn WIRKLICH KEINE bestehende Kategorie passt -> action='ask', schlage GENAU EINEN kurzen "
-        "ASCII-Kleinbuchstaben-Schluessel als NEUE Kategorie vor und frage Frank in 'reply', ob die neu "
-        "anzulegende Kategorie ok ist (er darf auch eine andere nennen).\n\n"
-        "DUBLETTEN: Du bekommst evtl. aehnliche, schon vorhandene Eintraege gezeigt. Ist einer im Kern "
-        "DIESELBE Info -> action='ask', sag in 'reply' kurz, dass es '<Titel>' schon aehnlich gibt, und frage: "
-        "ersetzen / als neu speichern / abbrechen. Speichere dann noch nicht.\n\n"
-        "ANTWORT AUF EINE RUECKFRAGE: Wenn unten ein 'OFFENER PUNKT' steht, antwortet Frank gerade darauf. "
-        "Loese es auf: bestaetigt er Ersetzen -> action='store' und setze replace_title auf den genauen Titel des "
-        "alten Eintrags; 'neu' -> action='store' (neuer Eintrag); nennt er eine andere Kategorie -> nimm die; "
-        "'abbrechen' -> action='smalltalk' (nichts speichern), bestaetige freundlich.\n\n"
-        "KEIN SPEICHER-FALL: Ist die Nachricht nur Smalltalk/Begruessung/Frage an dich (nichts zum Merken) -> "
-        "action='smalltalk', antworte einfach natuerlich.\n\n"
-        "ANTWORTE AUSSCHLIESSLICH MIT EINEM JSON-OBJEKT, genau diese Felder:\n"
-        "{\n"
-        '  "action": "store" | "ask" | "smalltalk",\n'
-        '  "category": "kategorie_schluessel",        // bei store/ask\n'
-        '  "title": "Kurzer Titel",                   // bei store/ask\n'
-        '  "replace_title": "",                        // nur beim Ersetzen: exakter Titel des alten Eintrags\n'
-        '  "reply": "Deine Antwort an Frank in normalem Deutsch"\n'
-        "}\n"
-        "Nur das JSON, kein weiterer Text."
-    )
+    instr = load_instructions().replace("{kategorien}", cat_line)
+    # Sicherheitsnetz (Funktionserhalt): falls Frank den {kategorien}-Marker entfernt hat,
+    # die Kategorien dennoch nennen — sonst weiss das LLM die Schubladen nicht.
+    if cat_line not in instr:
+        instr = instr.rstrip() + f"\n\nBESTEHENDE KATEGORIEN (ASCII-klein): {cat_line}"
+    return instr + "\n\n" + SCHEMA_BLOCK
 
 
 def _history_text(session: dict) -> str:
@@ -365,6 +431,10 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global AGENT_MODEL
+    AGENT_MODEL = load_model()   # gespeicherte Modell-Wahl uebernehmen (sonst Env-Default)
+    _log(logging.INFO, "sb-agent gestartet", version=VERSION, model=AGENT_MODEL,
+         prompt_quelle=("datei" if PROMPT_FILE.exists() else "default"), data_dir=AGENT_DATA_DIR)
     task = asyncio.create_task(_flush_loop())
     _log(logging.INFO, "Flush-Loop gestartet")
     try:
@@ -393,6 +463,14 @@ class EndReq(BaseModel):
     user_id: str = Field(default="frank")
 
 
+class PromptReq(BaseModel):
+    instructions: str = Field(..., min_length=1, description="Editierbarer Instruktions-Teil des System-Prompts")
+
+
+class ConfigReq(BaseModel):
+    model: str = Field(..., min_length=1, description="Aktives Sprachmodell des Agenten")
+
+
 @app.get("/health")
 def health() -> dict:
     brain = "unreachable"
@@ -404,6 +482,38 @@ def health() -> dict:
     return {"status": "ok" if (gclient is not None and init_error is None) else "degraded",
             "version": VERSION, "model": AGENT_MODEL, "init_error": init_error,
             "brain": brain, "aktive_sitzungen": len(_sessions), "session_timeout_s": SESSION_TIMEOUT_S}
+
+
+# --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
+@app.get("/prompt", dependencies=[Depends(require_auth)])
+def get_prompt() -> dict:
+    """Liefert den aktuell aktiven Instruktions-Teil, den Default (fuer 'Zuruecksetzen')
+    und — nur zur Anzeige — den geschuetzten Schema-Teil."""
+    return {"instructions": load_instructions(), "default": DEFAULT_INSTRUCTIONS,
+            "schema_preview": SCHEMA_BLOCK, "is_default": not PROMPT_FILE.exists()}
+
+
+@app.put("/prompt", dependencies=[Depends(require_auth)])
+def put_prompt(req: PromptReq) -> dict:
+    text = req.instructions.strip()
+    save_instructions(text)
+    _log(logging.INFO, "System-Prompt gespeichert", laenge=len(text))
+    return {"status": "ok", "instructions": load_instructions()}
+
+
+@app.get("/config", dependencies=[Depends(require_auth)])
+def get_config() -> dict:
+    return {"model": AGENT_MODEL, "default": AGENT_MODEL_DEFAULT, "available": AVAILABLE_MODELS}
+
+
+@app.put("/config", dependencies=[Depends(require_auth)])
+def put_config(req: ConfigReq) -> dict:
+    global AGENT_MODEL
+    m = req.model.strip()
+    save_model(m)
+    AGENT_MODEL = m                       # sofort aktiv, kein Neustart noetig
+    _log(logging.INFO, "Agent-Modell gewechselt", model=m)
+    return {"status": "ok", "model": AGENT_MODEL}
 
 
 @app.post("/chat", dependencies=[Depends(require_auth)])

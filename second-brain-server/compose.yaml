@@ -121,10 +121,14 @@ services:
       AGENT_LOGBOOK_DIR: /logbook
       AGENT_TZ: Europe/Berlin
       AGENT_LOG_PATH: /app/logs/agent.jsonl
+      AGENT_DATA_DIR: /app/data            # persistente, vom Dashboard editierbare Einstellungen
     volumes:
       # Logbuch-.txt landet auf der Samba-Platte Gedanken (= Franks Z:). Ordner gehoert frank (uid 1000),
       # der Container laeuft als uid 1000 -> Dateien gehoeren frank, sauber ueber Samba verwaltbar.
       - /srv/samba/gedanken/Logbuch:/logbook
+      # System-Prompt (prompt.txt) + Modell-Wahl (config.json) — ueberleben Neustart/Rebuild.
+      # Host-Ordner muss uid 1000 gehoeren (chown beim Deploy), da der Container als uid 1000 schreibt.
+      - ./agent-data:/app/data
     deploy:
       resources:
         limits:
