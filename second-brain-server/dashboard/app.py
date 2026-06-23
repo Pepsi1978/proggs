@@ -19,7 +19,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -55,6 +55,7 @@ def _bpost(path: str, payload: dict):
 
 
 app = FastAPI(title="Second Brain — Dashboard", version=VERSION)
+_log(logging.INFO, "sb-dashboard gestartet", version=VERSION, brain_url=BRAIN_URL, agent_url=AGENT_URL)
 
 
 @app.exception_handler(Exception)
@@ -96,9 +97,11 @@ def overview() -> dict:
         root = HOSTFS if os.path.exists(HOSTFS) else "/"
         du = psutil.disk_usage(root)
         vm = psutil.virtual_memory()
+        # Frontend (Cortex) erwartet Speicher/Disk in MB (fmtBytes rechnet MB->GB).
+        MB = 1024 * 1024
         out["server"] = {"cpu_pct": psutil.cpu_percent(interval=0.25),
-                         "mem_used": vm.used, "mem_total": vm.total, "mem_pct": vm.percent,
-                         "disk_used": du.used, "disk_total": du.total, "disk_pct": du.percent}
+                         "mem_used": vm.used // MB, "mem_total": vm.total // MB, "mem_pct": vm.percent,
+                         "disk_used": du.used // MB, "disk_total": du.total // MB, "disk_pct": du.percent}
     except Exception as e:  # noqa: BLE001
         out["server"] = {"detail": str(e)}
     return out
