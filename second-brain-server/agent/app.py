@@ -36,7 +36,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.0"  # 0.1.0: Speicher-Seite (Phase 4a) - einordnen + Dubletten + 1:1-Speichern + Logbuch.
+VERSION = "0.1.1"  # 0.1.1: /end-Bugfix (eigenes EndReq-Modell) + Kategorie-Prompt geschaerft (bestehende -> direkt, nur neue -> Rueckfrage). 0.1.0: Speicher-Seite Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -197,9 +197,12 @@ def build_system_prompt(categories: list[str]) -> str:
         "WICHTIG: Der Text wird WORTWOERTLICH 1:1 gespeichert — du schreibst ihn NIE um, kuerzt ihn nicht, "
         "deutest ihn nicht. Du entscheidest nur eine passende KATEGORIE und einen kurzen TITEL und redest mit Frank.\n\n"
         f"BESTEHENDE KATEGORIEN (ASCII-klein): {cat_line}\n"
-        "- Passt die Info eindeutig in eine BESTEHENDE Kategorie -> nimm sie, action='store'.\n"
-        "- Braucht es eine NEUE Kategorie -> schlage GENAU EINEN kurzen ASCII-Kleinbuchstaben-Schluessel vor, "
-        "setze action='ask' und frage Frank in 'reply', ob die neue Kategorie ok ist (er darf auch eine andere nennen).\n\n"
+        "- Passt die Info in EINE der bestehenden Kategorien (auch nur grob passend) -> action='store', "
+        "ordne sie DIREKT dort ein und frage NICHT nach. Biete KEINE neue Kategorie an, wenn eine bestehende passt. "
+        "In 'reply' sagst du dann nur kurz+freundlich, wohin du es gelegt hast.\n"
+        "- NUR wenn WIRKLICH KEINE bestehende Kategorie passt -> action='ask', schlage GENAU EINEN kurzen "
+        "ASCII-Kleinbuchstaben-Schluessel als NEUE Kategorie vor und frage Frank in 'reply', ob die neu "
+        "anzulegende Kategorie ok ist (er darf auch eine andere nennen).\n\n"
         "DUBLETTEN: Du bekommst evtl. aehnliche, schon vorhandene Eintraege gezeigt. Ist einer im Kern "
         "DIESELBE Info -> action='ask', sag in 'reply' kurz, dass es '<Titel>' schon aehnlich gibt, und frage: "
         "ersetzen / als neu speichern / abbrechen. Speichere dann noch nicht.\n\n"
@@ -378,6 +381,11 @@ class ChatReq(BaseModel):
     user_id: str = Field(default="frank")
 
 
+class EndReq(BaseModel):
+    session_id: str | None = Field(default=None, description="Gespraechs-ID (sonst pro Nutzer)")
+    user_id: str = Field(default="frank")
+
+
 @app.get("/health")
 def health() -> dict:
     brain = "unreachable"
@@ -473,7 +481,7 @@ async def chat(req: ChatReq) -> dict:
 
 
 @app.post("/end", dependencies=[Depends(require_auth)])
-async def end_session(req: ChatReq) -> dict:
+async def end_session(req: EndReq) -> dict:
     """Gespraech bewusst beenden + sofort ins Logbuch sichern (statt auf den 30-min-Timeout zu warten)."""
     sid = (req.session_id or req.user_id).strip()
     async with _lock:
