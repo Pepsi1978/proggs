@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.0.0"  # 1.0.0: neues 1:1-Schema (mem0 raus). Werkzeuge: remember/recall/get_by_title/get_by_category/list_memories/forget.
+VERSION = "1.1.0"  # 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -156,12 +156,24 @@ def remember(text: str, title: str = "", category: str = "") -> str:
 
 
 @mcp.tool()
-def recall(query: str, limit: int = 5) -> str:
+def recall(query: str, limit: int = 5, category: str = "", date: str = "",
+           date_from: str = "", date_to: str = "") -> str:
     """Finde per Themensuche relevante Eintraege im zweiten Gehirn. Zeigt die passendsten Treffer
-    mit Titel, Relevanz und dem Treffer-Abschnitt. Das GANZE Dokument holst du mit get_by_title."""
+    mit Titel, Relevanz und dem Treffer-Abschnitt. Das GANZE Dokument holst du mit get_by_title.
+    Optional erst eingrenzen, dann suchen: category (nur diese Kategorie), date (nur dieser Tag,
+    YYYY-MM-DD) ODER date_from/date_to (Zeitraum, YYYY-MM-DD)."""
     limit = max(1, min(limit, 50))
+    payload: dict[str, Any] = {"query": query, "user_id": USER_ID, "limit": limit}
+    if category.strip():
+        payload["category"] = category.strip()
+    if date.strip():
+        payload["date"] = date.strip()
+    if date_from.strip():
+        payload["date_from"] = date_from.strip()
+    if date_to.strip():
+        payload["date_to"] = date_to.strip()
     try:
-        data = _post("/search", {"query": query, "user_id": USER_ID, "limit": limit})
+        data = _post("/search", payload)
     except Exception as e:  # noqa: BLE001
         _log(logging.ERROR, "recall fehlgeschlagen", exc_info=True)
         return f"Fehler beim Suchen: {type(e).__name__}: {e}"

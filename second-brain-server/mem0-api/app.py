@@ -49,7 +49,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.0.0"  # 1.0.0: mem0 KOMPLETT raus -> direkter 1:1-Speicher (qdrant-client + Gemini-Embedding). Text geht 1:1 rein/raus, keine KI im Speicher.
+VERSION = "1.1.0"  # 1.1.0: /search um Payload-Filter erweitert (Kategorie + Datum/Datums-Bereich; erst eingrenzen, DANN semantisch). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -143,6 +143,15 @@ probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 probe(bool(QDRANT_API_KEY), "QDRANT_API_KEY fehlt")
 probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-001: 768/1536/3072)", dims=EMBED_DIMS)
 
+# Optionaler Datetime-Range-Filter (qdrant-client >= ~1.8). Fehlt er -> Datum-Filter in /search
+# degradiert sauber auf einen Python-Nachfilter (Funktionserhalt, Direktive #3).
+try:
+    from qdrant_client.models import DatetimeRange
+    HAS_DATETIME_RANGE = True
+except Exception:  # noqa: BLE001
+    DatetimeRange = None  # type: ignore
+    HAS_DATETIME_RANGE = False
+
 try:
     from google import genai
     from google.genai import types as genai_types
@@ -172,6 +181,13 @@ try:
     for _field in ("doc_id", "title", "category", "user_id"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
+        except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
+            pass
+    # Datetime-Index auf created_at -> native, schnelle Datums-Filter in /search ("letzten Monat").
+    # Idempotent; arbeitet auf den bestehenden RFC3339-Werten (kein Backfill noetig).
+    if HAS_DATETIME_RANGE:
+        try:
+            qc.create_payload_index(collection_name=COLLECTION, field_name="created_at", field_schema="datetime")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
             pass
     _log(logging.INFO, "Speicher initialisiert", embed_model=EMBED_MODEL, dims=EMBED_DIMS,
@@ -281,6 +297,11 @@ class SearchReq(BaseModel):
     query: str = Field(..., min_length=1)
     user_id: str = Field(default="frank")
     limit: int = Field(default=5, ge=1, le=50)
+    # Optionale Payload-Filter: erst eingrenzen, DANN semantisch suchen (Franks "war letzten Monat angeln").
+    category: str | None = Field(default=None, description="Nur in dieser Kategorie suchen")
+    date: str | None = Field(default=None, description="Nur Eintraege dieses Tages (YYYY-MM-DD)")
+    date_from: str | None = Field(default=None, description="Ab diesem Tag (YYYY-MM-DD, inklusive)")
+    date_to: str | None = Field(default=None, description="Bis zu diesem Tag (YYYY-MM-DD, inklusive)")
 
 
 # ---------------------------------------------------------------------------
@@ -423,20 +444,54 @@ def by_date(date: str, user_id: str = "frank") -> dict:
     return {"ok": True, "date": date, "count": len(items), "items": items}
 
 
+def _date_bounds(req: SearchReq) -> tuple[str | None, str | None]:
+    """Leitet (gte, lte) als RFC3339-Tagesgrenzen aus date / date_from / date_to ab (oder None, None).
+    'date' (einzelner Tag) hat Vorrang; sonst date_from..date_to als Bereich."""
+    if req.date and req.date.strip():
+        d = req.date.strip()
+        return f"{d}T00:00:00Z", f"{d}T23:59:59Z"
+    gte = f"{req.date_from.strip()}T00:00:00Z" if req.date_from and req.date_from.strip() else None
+    lte = f"{req.date_to.strip()}T23:59:59Z" if req.date_to and req.date_to.strip() else None
+    return gte, lte
+
+
 @app.post("/search", dependencies=[Depends(require_auth)])
 def search(req: SearchReq) -> dict:
-    """Semantische Suche -> Top-N (auf Dokument-Ebene dedupliziert), je voller 1:1-Text + Treffer-Abschnitt."""
+    """Semantische Suche -> Top-N (auf Dokument-Ebene dedupliziert), je voller 1:1-Text + Treffer-Abschnitt.
+    Optional erst per Payload-Filter eingrenzen (Kategorie / Speicherdatum), DANN semantisch darin suchen
+    (Franks "war ich letzten Monat angeln"): der Filter schraenkt den Suchraum ein, BEVOR der Vektor-
+    Vergleich laeuft — nicht hinterher. Ohne Filter exakt wie bisher."""
     _require_store()
     _guard_embed_budget(1)
     t0 = time.time()
     qvec = embed(req.query, "RETRIEVAL_QUERY")
+
+    # Payload-Filter aufbauen (immer user_id; optional Kategorie + Datum)
+    must = [FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]
+    if req.category and req.category.strip():
+        must.append(FieldCondition(key="category", match=MatchValue(value=req.category.strip())))
+    gte, lte = _date_bounds(req)
+    py_date_filter = False  # Fallback, falls DatetimeRange in der Client-Version fehlt (Funktionserhalt)
+    if gte or lte:
+        if HAS_DATETIME_RANGE:
+            must.append(FieldCondition(key="created_at", range=DatetimeRange(gte=gte, lte=lte)))
+        else:
+            py_date_filter = True
+
+    # Bei Python-Datums-Nachfilter mehr Kandidaten holen, damit datumspassende Treffer nicht durchrutschen.
+    overfetch = req.limit * (20 if py_date_filter else 4)
     raw = qc.query_points(
         collection_name=COLLECTION, query=qvec,
-        query_filter=Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]),
-        limit=req.limit * 4, with_payload=True,
+        query_filter=Filter(must=must),
+        limit=overfetch, with_payload=True,
     ).points
+
     best: dict[str, dict] = {}
     for h in raw:
+        if py_date_filter:
+            created = (h.payload.get("created_at") or "")[:10]  # ISO sortiert lexikalisch = chronologisch
+            if (gte and created < gte[:10]) or (lte and created > lte[:10]):
+                continue
         did = h.payload.get("doc_id")
         if did not in best or h.score > best[did]["score"]:
             best[did] = {"title": h.payload.get("title") or None,
@@ -444,9 +499,15 @@ def search(req: SearchReq) -> dict:
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
                          "text": h.payload.get("full_text", "")}
     items = sorted(best.values(), key=lambda x: x["score"], reverse=True)[:req.limit]
-    checkpoint("search", "Suche liefert relevante 1:1-Dokumente", ok=isinstance(items, list),
-               query_len=len(req.query), hits=len(items), ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "count": len(items), "items": items}
+
+    applied = {"category": req.category or None, "date": req.date or None,
+               "date_from": req.date_from or None, "date_to": req.date_to or None}
+    has_filter = any(applied.values())
+    checkpoint("search", "Erst Payload-Filter (Kategorie/Datum) eingrenzen, DANN semantisch suchen",
+               ok=isinstance(items, list), query_len=len(req.query), hits=len(items),
+               filters=applied if has_filter else None,
+               native_date=bool((gte or lte) and not py_date_filter), ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "count": len(items), "items": items, "filters": applied if has_filter else None}
 
 
 @app.get("/list", dependencies=[Depends(require_auth)])
