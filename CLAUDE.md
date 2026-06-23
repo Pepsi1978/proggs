@@ -145,6 +145,11 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
 - Nach jeder Aktion das Ergebnis zeigen, damit der Benutzer den Fortschritt verfolgen kann.
 - **Parallele Agenten sind ausdruecklich erwuenscht** — mehrere sichtbare Agent-Tool-Aufrufe gleichzeitig sind das Ziel, nicht die Ausnahme. Nur versteckte/unsichtbare Arbeit ist verboten.
 
+## Session-Backup & Session-Restore: IMMER manuell (KRITISCH)
+- Session-Backup UND Session-Restore werden AUSSCHLIESSLICH von Frank manuell angestossen — NIEMALS automatisch.
+- Wenn Frank sagt "wir machen ein Session-Backup" / "starte session backup" (bzw. "...restore"), bedeutet das: ER initiiert es, und Claude fuehrt es dann ueber den `session`-Skill aus. Claude startet ein Backup/Restore NIE von selbst.
+- KEINE automatischen Backup-Trigger, keine Schwellwert-Hooks (z.B. bei Kontext-Fuelle), kein Auto-Backup vor Compaction. Frank allein entscheidet, WANN gesichert wird. (Deckt sich mit Memory `feedback_session_backup_manual_only`.)
+
 ## Einziges Repository (KRITISCH)
 - **ALLE Dateien gehoeren in `Pepsi1978/proggs`** — es gibt kein anderes Repo.
 - NIEMALS neue GitHub-Repos erstellen. Egal welches Projekt, welche Sprache, welcher Zweck.
