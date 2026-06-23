@@ -326,16 +326,18 @@ def store(req: StoreReq) -> dict:
     """Speichert Text WORTWOERTLICH 1:1. Mit Titel: ersetzt einen vorhandenen Eintrag gleichen Titels."""
     _require_store()
     doc_id = make_doc_id(req.user_id, req.title)
+    now = iso_now()
+    created_at = now
     replaced = False
     if req.title and req.title.strip():
         existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
         replaced = bool(existing)
         if replaced:
+            created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
             _delete_doc(doc_id)  # gleicher Titel -> alte Version komplett raus, dann neu
 
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
-    now = iso_now()
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
@@ -349,7 +351,7 @@ def store(req: StoreReq) -> dict:
             "chunk_count": len(chunks),
             "chunk_text": ch,
             "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
-            "created_at": now,
+            "created_at": created_at,
             "updated_at": now,
         }))
     qc.upsert(collection_name=COLLECTION, points=points)
@@ -397,6 +399,28 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                          "updated_at": p.payload.get("updated_at")}
     items = list(seen.values())
     return {"ok": True, "category": category, "count": len(items), "items": items}
+
+
+@app.get("/by-date", dependencies=[Depends(require_auth)])
+def by_date(date: str, user_id: str = "frank") -> dict:
+    """Alle Eintraege, die an einem bestimmten Tag gespeichert wurden (Datum YYYY-MM-DD,
+    Praefix-Filter auf created_at). Auf Dokument-Ebene dedupliziert."""
+    _require_store()
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    seen: dict[str, dict] = {}
+    for p in points:
+        created = p.payload.get("created_at", "")
+        if not created.startswith(date):
+            continue
+        did = p.payload.get("doc_id")
+        if did not in seen:
+            seen[did] = {"title": p.payload.get("title") or None,
+                         "category": p.payload.get("category") or None,
+                         "created_at": created, "updated_at": p.payload.get("updated_at"),
+                         "text": p.payload.get("full_text", "")}
+    items = list(seen.values())
+    checkpoint("by_date", "Abruf nach Speicherdatum", ok=True, date=date, hits=len(items))
+    return {"ok": True, "date": date, "count": len(items), "items": items}
 
 
 @app.post("/search", dependencies=[Depends(require_auth)])
@@ -458,4 +482,4 @@ def forget(title: str, user_id: str = "frank") -> dict:
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/search", "/list", "/forget"]}
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/forget"]}

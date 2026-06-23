@@ -213,6 +213,26 @@ def get_by_category(category: str) -> str:
 
 
 @mcp.tool()
+def get_by_date(date: str) -> str:
+    """Liste alle Eintraege, die an einem bestimmten Tag gespeichert wurden. Datum als JJJJ-MM-TT
+    (z.B. 2026-06-23). Zeigt Titel + Kategorie der an dem Tag abgelegten Eintraege."""
+    try:
+        data = _get("/by-date", {"date": date, "user_id": USER_ID})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "get_by_date fehlgeschlagen", exc_info=True)
+        return f"Fehler beim Abrufen: {type(e).__name__}: {e}"
+    items = data.get("items", [])
+    if not items:
+        return f"Keine Eintraege am {date} gespeichert."
+    lines = []
+    for i, it in enumerate(items, 1):
+        title = it.get("title") or "(ohne Titel)"
+        cat = f" [{it['category']}]" if it.get("category") else ""
+        lines.append(f"{i}. {title}{cat}")
+    return f"{len(items)} Eintrag(e) am {date} gespeichert:\n" + "\n".join(lines)
+
+
+@mcp.tool()
 def list_memories(limit: int = 200) -> str:
     """Liste die gespeicherten Eintraege (Titel, Kategorie, Groesse) — ohne die Volltexte (kompakt)."""
     limit = max(1, min(limit, 1000))
