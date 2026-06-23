@@ -138,3 +138,34 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  dashboard:
+    build: ./dashboard              # privates Web-Cockpit: Uebersicht (Gedaechtnis-Spektrum + Server-Stats), Gehirn-Browser; Dark/Light
+    container_name: sb-dashboard
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      - "10.8.0.1:8003:8003"        # nur ueber WireGuard erreichbar (privat)
+    env_file:
+      - .env                        # SB_API_KEY (intern fuer brain-api/agent)
+    environment:
+      BRAIN_URL: http://brain-api:8000
+      AGENT_URL: http://agent:8002
+      SB_USER_ID: frank
+      DASH_HOSTFS: /hostfs
+    volumes:
+      - /opt/second-brain:/hostfs:ro   # NUR fuer die Speicherplatz-Anzeige (read-only; kein Host-Root)
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8003/api/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25s
