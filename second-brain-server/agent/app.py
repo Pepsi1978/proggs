@@ -36,7 +36,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.1"  # 0.1.1: /end-Bugfix (eigenes EndReq-Modell) + Kategorie-Prompt geschaerft (bestehende -> direkt, nur neue -> Rueckfrage). 0.1.0: Speicher-Seite Phase 4a.
+VERSION = "0.1.2"  # 0.1.2: aktuellen Zeitpunkt (Wochentag/Datum/Uhrzeit, Europe/Berlin) zuverlaessig in jeden Prompt (keine erfundenen Datums-Titel) + Zeitstempel JE Nachricht im Logbuch. 0.1.1: /end-Bugfix + Kategorie-Prompt. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -196,6 +196,8 @@ def build_system_prompt(categories: list[str]) -> str:
         "DEINE AUFGABE (Speicher-Seite): Frank schickt dir Infos, die du in seinem Gehirn ablegst. "
         "WICHTIG: Der Text wird WORTWOERTLICH 1:1 gespeichert — du schreibst ihn NIE um, kuerzt ihn nicht, "
         "deutest ihn nicht. Du entscheidest nur eine passende KATEGORIE und einen kurzen TITEL und redest mit Frank.\n\n"
+        "ZEIT: Wenn du ein Datum oder eine Uhrzeit brauchst (z.B. fuer einen Titel), nimm AUSSCHLIESSLICH den "
+        "'AKTUELLEN ZEITPUNKT' aus der Nachricht unten (Zeitzone Europe/Berlin) — erfinde NIEMALS ein Datum/eine Uhrzeit.\n\n"
         f"BESTEHENDE KATEGORIEN (ASCII-klein): {cat_line}\n"
         "- Passt die Info in EINE der bestehenden Kategorien (auch nur grob passend) -> action='store', "
         "ordne sie DIREKT dort ein und frage NICHT nach. Biete KEINE neue Kategorie an, wenn eine bestehende passt. "
@@ -228,7 +230,8 @@ def _history_text(session: dict) -> str:
     msgs = session["messages"][-HISTORY_MAX:]
     if not msgs:
         return "(noch nichts)"
-    return "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"] for m in msgs)
+    return "\n".join(f"[{m.get('ts', '')}] " + ("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
+                     for m in msgs)
 
 
 def llm_decide(session: dict, user_text: str, candidates: list[dict], categories: list[str]) -> dict:
@@ -249,7 +252,12 @@ def llm_decide(session: dict, user_text: str, candidates: list[dict], categories
                        f"(Vorschlag Kategorie '{pending.get('category','')}', Titel '{pending.get('title','')}', "
                        f"moegliche Dublette: '{pending.get('dup_title','')}'). Seine aktuelle Nachricht ist die Antwort darauf.")
 
+    now = _now_local()
+    _wd = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"][now.weekday()]
+    now_line = (f"AKTUELLER ZEITPUNKT: {_wd}, {now.strftime('%d.%m.%Y')}, {now.strftime('%H:%M')} Uhr "
+                "(Zeitzone Europe/Berlin).")
     user_block = (
+        f"{now_line}\n\n"
         f"BISHERIGES GESPRAECH:\n{_history_text(session)}\n\n"
         f"OFFENER PUNKT (Rueckfrage):\n{pending_txt}\n\n"
         f"AEHNLICHE VORHANDENE EINTRAEGE:\n{cand_txt}\n\n"
@@ -300,7 +308,7 @@ def flush_session_to_logbook(session: dict) -> None:
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
     header = f"Kategorie: Gespraeche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
-    body = "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
+    body = "\n".join(f"[{m.get('ts', '--:--')}] " + ("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
                      for m in session["messages"])
     content = header + body + "\n"
 
@@ -412,7 +420,7 @@ async def chat(req: ChatReq) -> dict:
         if session is None:
             session = _new_session(req.user_id)
             _sessions[sid] = session
-        session["messages"].append({"role": "frank", "text": req.text})
+        session["messages"].append({"role": "frank", "text": req.text, "ts": _now_local().strftime("%H:%M")})
         resolving = session.get("pending") is not None
         pending = session.get("pending")
 
@@ -468,7 +476,7 @@ async def chat(req: ChatReq) -> dict:
                 session["pending"] = None
 
     async with _lock:
-        session["messages"].append({"role": "agent", "text": reply})
+        session["messages"].append({"role": "agent", "text": reply, "ts": _now_local().strftime("%H:%M")})
         session["last_activity"] = time.monotonic()
 
     checkpoint("chat", "Text 1:1 einordnen+speichern bzw. natuerlich antworten",
