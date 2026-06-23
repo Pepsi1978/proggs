@@ -7,6 +7,13 @@
 > 3 Server-Almanache `bugs/server/`. Projekt-Memory: `project_second_brain_memory_server`.
 > Trigger kuenftig: **"wir bauen am zweiten Gehirn weiter"**.
 
+> **⚠️ GROSSE ARCHITEKTUR-WENDE (2026-06-23): mem0 ist RAUS.** Die Entscheidungen unten (Mem0 als
+> Memory-Kern + LLM-Extraktion) sind ÜBERHOLT. Das Gehirn ist jetzt ein **wortwoertlicher 1:1-Speicher**
+> (`brain-api` v1.1.0: qdrant-client + Gemini-Embedding direkt, kein mem0/LLM im Speicher). Titel/Kategorie/
+> Datum getrennt im Payload, 4 Abruf-Wege + gefilterte Suche. As-built-Schema: [[speicher-schema-1zu1]];
+> Flugplan der naechsten Schritte: Projekt-Memory `project_second_brain_flugplan`. Die Mem0-Abschnitte
+> unten bleiben als Historie stehen.
+
 ---
 
 ## ⚡ Die getroffenen Entscheidungen (Stand 2026-06-21)

@@ -11,6 +11,12 @@
 > Quality-Gate** (Junk-Problem strukturell). Wer Junk-Vermeidung priorisiert: **Cognee** (nutzt Qdrant nativ +
 > ECL/Ontologie) oder ein **eigener schlanker Layer mit Reject-Gate** sind die ernsthaften Kandidaten.
 
+> **⚠️ ÜBERHOLT (2026-06-23): mem0 wurde KOMPLETT VERWORFEN.** Es extrahierte/dichtete beim Speichern
+> (Gemini-Halluzinationen, kein Quality-Gate). Das Gehirn ist jetzt ein **wortwoertlicher 1:1-Dokument-
+> Speicher** (`brain-api`: qdrant-client + Gemini-Embedding direkt, KEIN mem0, KEIN LLM im Speicher).
+> Diese Datei bleibt als **Backend-Vergleich/Research** wertvoll — die **as-built**-Wahrheit steht in
+> [[speicher-schema-1zu1]]. Der in §6 genannte "eigene schlanke Layer" ist genau das, was gebaut wurde.
+
 ---
 
 ## ⚡ Kurzcheck (das Wichtigste zuerst)
