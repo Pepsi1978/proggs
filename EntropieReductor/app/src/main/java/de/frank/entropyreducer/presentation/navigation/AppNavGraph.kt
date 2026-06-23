@@ -1,12 +1,21 @@
 package de.frank.entropyreducer.presentation.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -16,6 +25,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
+import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.components.LocalBelowSubTabRow
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
 import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
@@ -27,6 +38,8 @@ import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalenda
 import de.frank.entropyreducer.presentation.ideen.IdeenScreen
 import de.frank.entropyreducer.presentation.insights.InsightBoardScreen
 import de.frank.entropyreducer.presentation.insights.RepertoireScreen
+import de.frank.entropyreducer.presentation.mental.GewohnheitBoardScreen
+import de.frank.entropyreducer.presentation.mental.MentalBoardScreen
 import de.frank.entropyreducer.presentation.settings.SettingsHomeScreen
 import de.frank.entropyreducer.presentation.settings.api.ApiKeysScreen
 import de.frank.entropyreducer.presentation.settings.codex.CodexScreen
@@ -36,15 +49,11 @@ import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
 import de.frank.entropyreducer.presentation.settings.profile.ProfileScreen
 import de.frank.entropyreducer.presentation.settings.prompts.PromptsScreen
 import de.frank.entropyreducer.presentation.tagebuch.TagebuchScreen
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import kotlinx.coroutines.launch
 
 /**
- * Tab-Switch mit State-Erhaltung (Frank-Wunsch 2026-05-09 Performance):
- * - popUpTo(start) { saveState = true } speichert den State des Tabs den wir verlassen
- * - launchSingleTop verhindert mehrfache Composable-Instanzen des Ziel-Tabs
- * - restoreState = true holt den gespeicherten State des Ziel-Tabs zurueck
- *
- * Effekt: ViewModels, Scroll-Position, Filter, Suchanfragen ueberleben Tab-Switches. Vorher wurde
- * bei jedem Tab-Switch alles neu initialisiert — das hat geruckelt.
+ * Tab-Switch mit State-Erhaltung.
  */
 private fun NavController.tabSwitch(route: String) {
     navigate(route) {
@@ -57,32 +66,28 @@ private fun NavController.tabSwitch(route: String) {
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
-
-    // Frank-Wunsch 2026-05-17: Beim Erststart der App soll die 5-Tab-Uebersicht
-    // sichtbar sein (nicht direkt die Sub-Bar des Aufgaben-Tabs). Der Zustand
-    // muss Tab-Wechsel ueberleben, damit ein Tap auf einen Tab im Switcher die
-    // Sub-Bar sofort und ohne Flackern zeigt.
-    val switcherState = remember { BottomBarSwitcherState() }
-    AppNavHost(nav = nav, switcherState = switcherState, modifier = modifier)
+    AppNavHost(nav = nav, modifier = modifier)
 }
 
 @Composable
 private fun AppNavHost(
     nav: androidx.navigation.NavHostController,
-    switcherState: BottomBarSwitcherState,
     modifier: Modifier,
 ) {
-    CompositionLocalProvider(LocalBottomBarSwitcher provides switcherState) {
-        AppNavHostInner(nav = nav, modifier = modifier)
-    }
+    AppNavHostInner(nav = nav, modifier = modifier)
 }
 
 @Composable
 private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier: Modifier) {
+    val cosmos = LocalCosmos.current
 
-    // Frank-Wunsch 2026-05-11: Settings-Icon im Widget oeffnet direkt den
-    // Widget-Settings-Screen. ACTION_FOCUS / ACTION_RESCHEDULE werden in
-    // TasksScreen behandelt — hier nur ACTION_SETTINGS + ACTION_OPEN.
+    // Mic-State fuer die BottomBar
+    var micState by remember { mutableStateOf(MicState.IDLE) }
+    var micActionsOpen by remember { mutableStateOf(false) }
+
+    // Aktueller Tab fuer die BottomBar
+    var currentTab by remember { mutableStateOf(Routes.TASKS) }
+
     val widgetLink by
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsStateWithLifecycle()
     LaunchedEffect(widgetLink) {
@@ -93,484 +98,436 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
             }
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_OPEN -> {
-                // Sicherstellen dass Tasks-Tab vorne ist (Header-Tap)
                 nav.tabSwitch(Routes.TASKS)
                 de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
             }
-            // ACTION_FOCUS / ACTION_RESCHEDULE → TasksScreen-LaunchedEffect kuemmert sich
             else -> Unit
         }
     }
 
-    NavHost(navController = nav, startDestination = Routes.TASKS, modifier = modifier) {
-        // Sub-Area-Navigation (Frank-Wunsch 2026-05-17): Klick auf ein Sub-Icon
-        // im Sub-Mode der Bottom-Bar navigiert zum jeweiligen weissen Platzhalter.
-        val onOpenSubArea: (String, Int) -> Unit = { parent, index ->
-            nav.navigate(Routes.subRouteFor(parent, index))
-        }
-
-        composable(Routes.TASKS) {
-            TasksScreen(
-                onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.tabSwitch(route) },
-                currentTab = Routes.TASKS,
-                onOpenSubArea = onOpenSubArea,
-                onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
-                onOpenLoopDetail = { templateId ->
-                    nav.navigate(Routes.loopTemplateDetail(templateId))
-                },
-            )
-        }
-        composable(
-            route = Routes.LOOP_TEMPLATE_DETAIL_PATTERN,
-            arguments = listOf(navArgument("templateId") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            de.frank.entropyreducer.presentation.recurring.LoopTemplateDetailScreen(
-                templateId = backStackEntry.arguments?.getString("templateId").orEmpty(),
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-            )
-        }
-        composable(
-            route = Routes.ENTROPY_ENTRY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.dashboard1.detail.EntryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(
-            route = Routes.TAGEBUCH_ENTRY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.tagebuch.TagebuchEntryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(
-            route = Routes.IDEE_ENTRY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.ideen.IdeenEntryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(
-            route = Routes.JOURNAL_ENTRY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("sourceId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.journal.JournalEntryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(
-            route = Routes.THESEN_ENTRY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.thesen.ThesenEntryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.ANALYSIS) {
-            AnalysisScreen(
-                onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.tabSwitch(route) },
-                currentTab = Routes.ANALYSIS,
-                onOpenSubArea = onOpenSubArea,
-            )
-        }
-        composable(Routes.SCIENTIST) {
-            ScientistScreen(
-                onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.tabSwitch(route) },
-                currentTab = Routes.SCIENTIST,
-                onOpenSubArea = onOpenSubArea,
-            )
-        }
-        composable(Routes.BIOMARKER) {
-            BiomarkerHostScreen(
-                onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.tabSwitch(route) },
-                onOpenMetricDetail = { metricKey ->
-                    nav.navigate(Routes.biomarkerDetail(metricKey))
-                },
-                onOpenTrainingDetail = { trackId ->
-                    nav.navigate(Routes.amazfitTrainingDetail(trackId))
-                },
-                onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
-                onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
-                onOpenHealthConnectDetail = { metricKey ->
-                    nav.navigate(Routes.healthConnectDetail(metricKey))
-                },
-                onOpenSubArea = onOpenSubArea,
-            )
-        }
-
-        // Sub-Bereich-Platzhalter (4 Tabs × 3 Indizes = 12 Targets, hier ueber 4
-        // Pattern-Routen mit {index}-Argument).
-        val subAreaComposables =
-            listOf(
-                Routes.TASKS_SUB_PATTERN to Routes.TASKS,
-                Routes.ANALYSIS_SUB_PATTERN to Routes.ANALYSIS,
-                Routes.SCIENTIST_SUB_PATTERN to Routes.SCIENTIST,
-                Routes.BIOMARKER_SUB_PATTERN to Routes.BIOMARKER,
-            )
-        subAreaComposables.forEach { (pattern, parent) ->
-            composable(
-                route = pattern,
-                arguments = listOf(navArgument("index") { type = NavType.IntType }),
-            ) { backStackEntry ->
-                val index = backStackEntry.arguments?.getInt("index") ?: 1
-                // Bugfix 2026-05-19: Klick auf das Parent-Tab-Icon vom Sub-Screen
-                // aus muss VERLAESSLICH den Parent-Screen zeigen — nicht den Sub
-                // wieder einblenden. Vorher: tabSwitch mit restoreState=true hat
-                // bei popUpTo den gespeicherten Sub-State faelschlich wieder
-                // angewendet, sodass die Entropie-Liste sichtbar blieb obwohl
-                // der Benutzer auf "Aufgaben" geklickt hat. Jetzt: wenn das
-                // Tab-Ziel der eigene Parent ist, einfach popBackStack zum
-                // Parent — sonst regulaerer Tab-Wechsel mit State-Erhaltung.
-                val onSwitchTabFromSub: (String) -> Unit = { route ->
-                    if (route == parent) {
-                        nav.popBackStack(parent, inclusive = false)
-                    } else {
-                        nav.tabSwitch(route)
-                    }
-                }
-                // Frank-Wunsch 2026-06-10: "Journal" (read-only Spiegel der BestJournal-
-                // Frank-Eintraege, eigener Screen) ist vom Aufgaben- in den Forscher-
-                // Bereich umgezogen — Forscher-Slot 1 = Tagebuch ("Entropie"),
-                // Forscher-Slot 2 = Thesen, Forscher-Slot 3 = Journal. Aufgaben-Slot 1
-                // und Slot 3 sind leere Platzhalter (else-Zweig unten via SubAreaScreen).
-                val isJournal = parent == Routes.SCIENTIST && index == 3
-                // Frank-Wunsch 2026-06-09: Aufgaben-Slot 2 = Mentalboard.
-                val isGewohnheit = parent == Routes.TASKS && index == 1
-                val isMental = parent == Routes.TASKS && index == 2
-                // Frank-Wunsch 2026-06-10: Aufgaben-Slot 3 = Ideen (1:1-Klon des Entropie-Bereichs).
-                val isIdeen = parent == Routes.TASKS && index == 3
-                val isTagebuch = parent == Routes.SCIENTIST && index == 1
-                val isThesen = parent == Routes.SCIENTIST && index == 2
-                if (isJournal) {
-                    de.frank.entropyreducer.presentation.journal.JournalScreen(
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                        onOpenEntry = { sourceId ->
-                            nav.navigate(Routes.journalEntryDetail(sourceId))
-                        },
-                    )
-                } else if (isTagebuch) {
-                    TagebuchScreen(
-                        onBack = {
-                            nav.popBackStack()
-                            Unit
-                        },
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                        onOpenEntry = { entryId ->
-                            nav.navigate(Routes.tagebuchEntryDetail(entryId))
-                        },
-                    )
-                } else if (isThesen) {
-                    de.frank.entropyreducer.presentation.thesen.ThesenScreen(
-                        onBack = {
-                            nav.popBackStack()
-                            Unit
-                        },
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                        onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
-                    )
-                } else if (isGewohnheit) {
-                    de.frank.entropyreducer.presentation.mental.GewohnheitBoardScreen(
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                    )
-                } else if (isMental) {
-                    de.frank.entropyreducer.presentation.mental.MentalBoardScreen(
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                    )
-                } else if (isIdeen) {
-                    IdeenScreen(
-                        onBack = {
-                            nav.popBackStack()
-                            Unit
-                        },
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                        onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
-                    )
-                } else {
-                    SubAreaScreen(
-                        parentTab = parent,
-                        subIndex = index,
-                        onBack = {
-                            nav.popBackStack()
-                            Unit
-                        },
-                        onSwitchSub = { p, i ->
-                            nav.navigate(Routes.subRouteFor(p, i)) {
-                                // Sub-zu-Sub-Wechsel ersetzt den aktuellen Sub-Eintrag
-                                // im Back-Stack, damit "Zurueck" zuverlaessig zum Parent
-                                // fuehrt — nicht durch eine Kette von Sub-Bereichen.
-                                popUpTo(pattern) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onSwitchTab = onSwitchTabFromSub,
-                    )
+    // Aktuellen Tab aus der Navigation ableiten
+    LaunchedEffect(nav.currentBackStackEntry) {
+        nav.currentBackStackEntry?.destination?.route?.let { route ->
+            when (route) {
+                Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER -> {
+                    currentTab = route
                 }
             }
         }
-        composable(Routes.AMAZFIT_TRAININGS) {
-            AmazfitTrainingsScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-                onOpenDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
-            )
-        }
-        composable(
-            route = Routes.AMAZFIT_TRAINING_DETAIL_PATTERN,
-            arguments = listOf(navArgument("trackId") { type = NavType.StringType }),
-        ) {
-            AmazfitTrainingDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        NavHost(navController = nav, startDestination = Routes.TASKS, modifier = Modifier.fillMaxSize()) {
+            // ============================================================
+            // AUFGABEN-HOST mit SubTabRow + HorizontalPager
+            // ============================================================
+            composable(Routes.TASKS) {
+                val tabs = remember { subTabsFor(Routes.TASKS) }
+                val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+                val coroutineScope = rememberCoroutineScope()
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    SubTabRow(
+                        tabs = tabs,
+                        selectedIndex = pagerState.currentPage,
+                        tabColor = cosmos.accentTasksSub,
+                        onTabSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f),
+                            beyondViewportPageCount = tabs.size - 1,
+                        ) { page ->
+                            when (page) {
+                                0 -> TasksScreen(
+                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    currentTab = Routes.TASKS,
+                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
+                                    onOpenLoopDetail = { templateId -> nav.navigate(Routes.loopTemplateDetail(templateId)) },
+                                    showBottomBar = false,
+                                )
+                                1 -> GewohnheitBoardScreen(
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    showBottomBar = false,
+                                )
+                                2 -> MentalBoardScreen(
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    showBottomBar = false,
+                                )
+                                3 -> IdeenScreen(
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
+                                    showBottomBar = false,
+                                )
+                            }
+                        }
+                    }
                 }
-            )
-        }
-        composable(
-            route = Routes.BIOMARKER_DETAIL_PATTERN,
-            arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
-            BiomarkerDetailScreen(
-                metricKey = metricKey,
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-            )
-        }
-        composable(
-            route = Routes.OURA_DETAIL_PATTERN,
-            arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
-            OuraDetailScreen(
-                metricKey = metricKey,
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-            )
-        }
-        composable(
-            route = Routes.HC_DETAIL_PATTERN,
-            arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
-            HealthConnectDetailScreen(
-                metricKey = metricKey,
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-            )
+            }
+
+            // ============================================================
+            // ANALYSE-HOST mit SubTabRow + HorizontalPager
+            // ============================================================
+            composable(Routes.ANALYSIS) {
+                val tabs = remember { subTabsFor(Routes.ANALYSIS) }
+                val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+                val coroutineScope = rememberCoroutineScope()
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    SubTabRow(
+                        tabs = tabs,
+                        selectedIndex = pagerState.currentPage,
+                        tabColor = cosmos.accentAnalyse,
+                        onTabSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f),
+                            beyondViewportPageCount = tabs.size - 1,
+                        ) { page ->
+                            when (page) {
+                                0 -> AnalysisScreen(
+                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    currentTab = Routes.ANALYSIS,
+                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    showBottomBar = false,
+                                )
+                                else -> SubAreaScreen(
+                                    parentTab = Routes.ANALYSIS,
+                                    subIndex = page + 1,
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    showBottomBar = false,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ============================================================
+            // FORSCHER-HOST mit SubTabRow + HorizontalPager
+            // ============================================================
+            composable(Routes.SCIENTIST) {
+                val tabs = remember { subTabsFor(Routes.SCIENTIST) }
+                val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+                val coroutineScope = rememberCoroutineScope()
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    SubTabRow(
+                        tabs = tabs,
+                        selectedIndex = pagerState.currentPage,
+                        tabColor = cosmos.accentForscher,
+                        onTabSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f),
+                            beyondViewportPageCount = tabs.size - 1,
+                        ) { page ->
+                            when (page) {
+                                0 -> TagebuchScreen(
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
+                                    showBottomBar = false,
+                                )
+                                1 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
+                                    showBottomBar = false,
+                                )
+                                2 -> ScientistScreen(
+                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    currentTab = Routes.SCIENTIST,
+                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    showBottomBar = false,
+                                )
+                                3 -> de.frank.entropyreducer.presentation.journal.JournalScreen(
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    onOpenEntry = { sourceId -> nav.navigate(Routes.journalEntryDetail(sourceId)) },
+                                    showBottomBar = false,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ============================================================
+            // BIOMARKER-HOST mit SubTabRow + HorizontalPager
+            // ============================================================
+            composable(Routes.BIOMARKER) {
+                val tabs = remember { subTabsFor(Routes.BIOMARKER) }
+                val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+                val coroutineScope = rememberCoroutineScope()
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    SubTabRow(
+                        tabs = tabs,
+                        selectedIndex = pagerState.currentPage,
+                        tabColor = cosmos.accentBio,
+                        onTabSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f),
+                            beyondViewportPageCount = tabs.size - 1,
+                        ) { page ->
+                            when (page) {
+                                0, 1, 2 -> SubAreaScreen(
+                                    parentTab = Routes.BIOMARKER,
+                                    subIndex = page + 1,
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    showBottomBar = false,
+                                )
+                                3 -> BiomarkerHostScreen(
+                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    onOpenMetricDetail = { metricKey -> nav.navigate(Routes.biomarkerDetail(metricKey)) },
+                                    onOpenTrainingDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
+                                    onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
+                                    onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
+                                    onOpenHealthConnectDetail = { metricKey -> nav.navigate(Routes.healthConnectDetail(metricKey)) },
+                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    showBottomBar = false,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ============================================================
+            // DETAIL-SCREENS (bleiben unverändert)
+            // ============================================================
+            composable(
+                route = Routes.LOOP_TEMPLATE_DETAIL_PATTERN,
+                arguments = listOf(navArgument("templateId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                de.frank.entropyreducer.presentation.recurring.LoopTemplateDetailScreen(
+                    templateId = backStackEntry.arguments?.getString("templateId").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable(
+                route = Routes.ENTROPY_ENTRY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.dashboard1.detail.EntryDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.TAGEBUCH_ENTRY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.tagebuch.TagebuchEntryDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.IDEE_ENTRY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.ideen.IdeenEntryDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.JOURNAL_ENTRY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("sourceId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.journal.JournalEntryDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.THESEN_ENTRY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.thesen.ThesenEntryDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.AMAZFIT_TRAININGS) {
+                AmazfitTrainingsScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
+                )
+            }
+            composable(
+                route = Routes.AMAZFIT_TRAINING_DETAIL_PATTERN,
+                arguments = listOf(navArgument("trackId") { type = NavType.StringType }),
+            ) {
+                AmazfitTrainingDetailScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.BIOMARKER_DETAIL_PATTERN,
+                arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
+                BiomarkerDetailScreen(
+                    metricKey = metricKey,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable(
+                route = Routes.OURA_DETAIL_PATTERN,
+                arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
+                OuraDetailScreen(
+                    metricKey = metricKey,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable(
+                route = Routes.HC_DETAIL_PATTERN,
+                arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
+                HealthConnectDetailScreen(
+                    metricKey = metricKey,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+
+            // Stage-3-Spezialansichten
+            composable(Routes.EXPERIMENT_CALENDAR) {
+                ExperimentCalendarScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.INSIGHT_BOARD) {
+                InsightBoardScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.REPERTOIRE) {
+                RepertoireScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenInsight = { nav.navigate(Routes.INSIGHT_BOARD) },
+                )
+            }
+
+            composable(Routes.SETTINGS_HOME) {
+                SettingsHomeScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpen = { route -> nav.navigate(route) },
+                )
+            }
+            composable(Routes.SETTINGS_API) {
+                ApiKeysScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_MODELS) {
+                ModelsScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_PROFILE) {
+                ProfileScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_MEMORY) {
+                MemoryScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_PRIORITY_MEMORY) {
+                de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenDetail = { id -> nav.navigate(Routes.priorityMemoryDetail(id)) },
+                )
+            }
+            composable(
+                route = Routes.PRIORITY_MEMORY_DETAIL_PATTERN,
+                arguments = listOf(navArgument("memoryId") { type = NavType.StringType }),
+            ) {
+                de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryDetailScreen(
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable(Routes.SETTINGS_EXPORT) {
+                ExportScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_ARCHIVE) {
+                de.frank.entropyreducer.presentation.settings.archive.ArchiveScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_WIDGET) {
+                de.frank.entropyreducer.presentation.settings.WidgetSettingsScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_DIAGNOSTICS) {
+                de.frank.entropyreducer.presentation.settings.diagnostics.DiagnosticLogScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
         }
 
-        // Stage-3-Spezialansichten
-        composable(Routes.EXPERIMENT_CALENDAR) {
-            ExperimentCalendarScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.INSIGHT_BOARD) {
-            InsightBoardScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.REPERTOIRE) {
-            RepertoireScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-                onOpenInsight = { nav.navigate(Routes.INSIGHT_BOARD) },
-            )
-        }
-
-        composable(Routes.SETTINGS_HOME) {
-            SettingsHomeScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-                onOpen = { route -> nav.navigate(route) },
-            )
-        }
-        composable(Routes.SETTINGS_API) {
-            ApiKeysScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_MODELS) {
-            ModelsScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_PROFILE) {
-            ProfileScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_PROMPTS) {
-            PromptsScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_MEMORY) {
-            MemoryScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_PRIORITY_MEMORY) {
-            de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-                onOpenDetail = { id -> nav.navigate(Routes.priorityMemoryDetail(id)) },
-            )
-        }
-        composable(
-            route = Routes.PRIORITY_MEMORY_DETAIL_PATTERN,
-            arguments = listOf(navArgument("memoryId") { type = NavType.StringType }),
-        ) {
-            de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryDetailScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                },
-            )
-        }
-        composable(Routes.SETTINGS_CODEX) {
-            CodexScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_EXPORT) {
-            ExportScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_TRIGGERS) {
-            de.frank.entropyreducer.presentation.settings.triggers.KiTriggersScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_ARCHIVE) {
-            de.frank.entropyreducer.presentation.settings.archive.ArchiveScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_WIDGET) {
-            de.frank.entropyreducer.presentation.settings.WidgetSettingsScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
-        composable(Routes.SETTINGS_DIAGNOSTICS) {
-            de.frank.entropyreducer.presentation.settings.diagnostics.DiagnosticLogScreen(
-                onBack = {
-                    nav.popBackStack()
-                    Unit
-                }
-            )
-        }
+        // Fixierte BottomBar unten
+        CosmosBottomBar(
+            currentTab = currentTab,
+            micState = micState,
+            onTabSelected = { route ->
+                currentTab = route
+                nav.tabSwitch(route)
+            },
+            onMicClick = { micActionsOpen = !micActionsOpen },
+            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
+        )
     }
 }
