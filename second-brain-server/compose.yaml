@@ -3,8 +3,8 @@
 # Sicherheitsprinzip: ALLE Dienste nur an 127.0.0.1 (kein offener Port ausser SSH;
 # der externe Zugang kommt spaeter ueber Reverse-Proxy/VPN).
 #
-# Stack:  mem0-api (REST-Bibliothekar)  ->  Qdrant (Such-Schrank)
-#         KI (Denken + Embeddings) laeuft ueber Google Gemini (Cloud) — kein lokales Modell.
+# Stack:  brain-api (1:1-Speicher, Ordner mem0-api)  ->  Qdrant (Such-Schrank)
+#         Nur Gemini-Embeddings (Cloud) zum Wiederfinden — KEIN LLM/mem0 mehr (Text 1:1 rein/raus).
 #         (Ollama/BGE-M3 wurde am 2026-06-22 entfernt: Datenabfluss ist egal -> Cloud-KI
 #          ist schneller/besser und entlastet den kleinen 8-GB-Server.)
 
@@ -33,7 +33,7 @@ services:
     # das Qdrant-Image bringt keine garantierte Shell/curl mit.
 
   mem0-api:
-    build: ./mem0-api               # schlanker FastAPI-Wrapper um die Mem0-Bibliothek
+    build: ./mem0-api               # schlanker FastAPI-1:1-Speicher (Ordnername mem0-api = Legacy, kein mem0 mehr drin)
     container_name: sb-mem0-api
     restart: unless-stopped
     depends_on:
@@ -49,10 +49,10 @@ services:
     environment:
       QDRANT_HOST: qdrant             # Service-Name im Compose-Netz (DNS-aufloesbar)
       QDRANT_PORT: "6333"
+      SB_COLLECTION: brain            # frische Collection fuer den 1:1-Speicher (alt: second_brain unter mem0)
       SB_EMBED_DIMS: "1536"           # gemini-embedding-001 @ 1536 (MUSS zur Qdrant-Collection passen)
-      GEMINI_LLM_MODEL: gemini-3.1-flash-lite
-      GEMINI_EMBED_MODEL: models/gemini-embedding-001
-      SB_LOG_PATH: /app/logs/mem0-api.jsonl
+      GEMINI_EMBED_MODEL: gemini-embedding-001   # nur Embeddings; KEIN LLM mehr beim Speichern (1:1)
+      SB_LOG_PATH: /app/logs/brain-api.jsonl
     volumes:
       - ./mem0-logs:/app/logs         # Logs persistent + vom Host tailbar (Observability-First)
     deploy:

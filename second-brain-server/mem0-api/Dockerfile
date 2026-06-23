@@ -1,5 +1,5 @@
-# mem0-api — schlanker FastAPI-Wrapper um die Mem0-Bibliothek (Gemini + Qdrant)
-# Sicherheitsprinzip: Container bindet 0.0.0.0:8000 NUR intern; compose mappt nach 127.0.0.1.
+# brain-api — schlanker FastAPI-1:1-Speicher (qdrant-client + Gemini-Embedding, mem0-frei seit 2026-06-23)
+# Sicherheitsprinzip: Container bindet 0.0.0.0:8000 NUR intern; compose mappt an die WireGuard-IP.
 FROM python:3.12-slim
 
 # Nicht als root laufen (Almanach self-hosted-ai-agent-server #1.3: Agent NIE als root)

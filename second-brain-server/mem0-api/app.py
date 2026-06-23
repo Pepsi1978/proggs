@@ -1,21 +1,47 @@
 """
-mem0-api — Franks "zweites Gehirn": schlanker REST-Wrapper um die Mem0-Bibliothek.
+brain-api — Franks "zweites Gehirn": wortwoertlicher 1:1-Dokument-Speicher (Schicht 1, "stummer Speicher").
 
-Bausteine:  Gemini (LLM + Embeddings)  →  Mem0 (Bibliothekar)  →  Qdrant (Such-Schrank)
-Sicherheit: laeuft nur intern (compose mappt auf 127.0.0.1), Bearer-Token-Auth, nicht als root.
-Observability-First: strukturiertes JSON-Logging (stdout + rotierende Datei), globaler
-                     Fehler-Faenger, Logik-Sonden (probe) + Intent-Checkpoints (checkpoint).
+Ablauf:  Text 1:1 rein -> Gemini-Embedding (NUR zum Wiederfinden) -> Qdrant (Vektor + voller Text als Payload)
+         Text 1:1 raus. KEINE KI-Bearbeitung, kein Faktenextrahieren, kein Vergleichen beim Speichern.
+         (Das war mem0 -> es dichtete/halluzinierte -> komplett entfernt 2026-06-23.) Das "Verstehen/
+         Zusammenfassen/Vergleichen" kommt SPAETER in einer separaten Agenten-Schicht, die nur liest und
+         nie eigenmaechtig schreibt.
+
+Datenmodell:
+  Eintrag = Text (1:1, PFLICHT) + Titel (optional, = Schluessel) + Kategorie (optional).
+  - Titel ist eindeutig je Nutzer: gleicher Titel -> alter Eintrag wird ERSETZT ("aktualisiere Direktive 1").
+  - Ohne Titel -> neuer Eintrag mit eigener ID (nichts wird ueberschrieben).
+  - Lange Texte werden fuer die SUCHE in Chunks zerlegt (Gemini-Embedding-Limit), aber der VOLLE Text
+    liegt 1:1 im Payload JEDES Chunks -> exakter Abruf liefert immer das ganze Dokument unveraendert.
+
+Drei Abruf-Wege (alle liefern 1:1):
+  GET  /by-title?title=...        exakt per Titel -> ganzes Dokument
+  GET  /by-category?category=...  alle Eintraege einer Kategorie
+  POST /search   {query,limit}    semantische Suche -> Top-N (dedupliziert auf Dokument-Ebene)
+  GET  /list                      alle Eintraege auflisten (Titel/Kategorie/Groesse)
+  DELETE /by-title?title=...      Eintrag loeschen
+
+Sicherheit: laeuft nur intern (compose bindet an die WireGuard-IP), Bearer-Token-Auth, nicht als root.
+Observability-First: strukturiertes JSON-Logging (stdout + rotierende Datei), globaler Fehler-Faenger,
+                     Logik-Sonden (probe) + Intent-Checkpoints (checkpoint, beweisen das 1:1-Prinzip live).
+
+Bekannte Fallen beachtet (Almanach): Qdrant api_key erzwingt sonst TLS -> explizite http://-URL
+(bugs/server/qdrant.md §4); Gemini-Embedding defaultet auf 768 -> output_dimensionality EXPLIZIT 1536
+(bugs/server/mem0.md §2, best-practices/second-brain/memory-backends.md §0); JSON-Log ensure_ascii=False
++ FileHandler encoding=utf-8 (bugs/claude-tooling/python-windows.md §1.1/§1.5).
 
 Plan/Doku: best-practices/second-brain/UMSETZUNGSPLAN.md
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import time
 import traceback
-from datetime import date
+import uuid
+from datetime import date, datetime, timezone
 from logging.handlers import RotatingFileHandler
 from typing import Any
 
@@ -23,7 +49,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.4.0"  # 0.4.0: HHEM-Gate wieder entfernt — Speicher ist wortwoertlich 1:1, keine KI-Bearbeitung beim Speichern (schlank halten). 0.2.1: fastembed hybride Suche. 0.2.0: strenge custom_instructions
+VERSION = "1.0.0"  # 1.0.0: mem0 KOMPLETT raus -> direkter 1:1-Speicher (qdrant-client + Gemini-Embedding). Text geht 1:1 rein/raus, keine KI im Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -33,32 +59,18 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "sb-qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
-# Explizite http-URL: mit gesetztem api_key wuerde qdrant-client sonst https=True annehmen
-# und TLS gegen das Klartext-HTTP-Qdrant sprechen -> [SSL: WRONG_VERSION_NUMBER].
+# Explizite http-URL: mit gesetztem api_key wuerde qdrant-client sonst https=True annehmen und TLS
+# gegen das Klartext-HTTP-Qdrant sprechen -> [SSL: WRONG_VERSION_NUMBER]. (bugs/server/qdrant.md §4)
 QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
-COLLECTION = os.getenv("SB_COLLECTION", "second_brain")
-LLM_MODEL = os.getenv("GEMINI_LLM_MODEL", "gemini-3.1-flash-lite")
-EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "models/gemini-embedding-001")
+COLLECTION = os.getenv("SB_COLLECTION", "brain")
+EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
-LLM_MAX_TOKENS = int(os.getenv("SB_LLM_MAX_TOKENS", "4000"))  # Thinking frisst Budget -> grosszuegig
-MAX_LLM_CALLS_PER_DAY = int(os.getenv("SB_MAX_LLM_CALLS_PER_DAY", "5000"))  # Defense-in-Depth-Cap
-LOG_PATH = os.getenv("SB_LOG_PATH", "/app/logs/mem0-api.jsonl")
+# Chunking fuer die SUCHE (gemini-embedding-001: ~2048 Token Input-Limit). Konservativ in Zeichen.
+CHUNK_CHARS = int(os.getenv("SB_CHUNK_CHARS", "4000"))
+CHUNK_OVERLAP = int(os.getenv("SB_CHUNK_OVERLAP", "200"))
+MAX_EMBED_CALLS_PER_DAY = int(os.getenv("SB_MAX_EMBED_CALLS_PER_DAY", "20000"))  # Defense-in-Depth-Cap
+LOG_PATH = os.getenv("SB_LOG_PATH", "/app/logs/brain-api.jsonl")
 LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
-
-# Qualitaets-Steuerung (gegen Junk/Halluzinationen — siehe bugs/server/mem0.md §1):
-# mem0 hat KEIN eingebautes Quality-Gate; die Sauberkeit kommt aus einem STRENGEN Extraktions-Prompt.
-# Empfehlung der mem0-Doku: streng starten, spaeter lockern (Muell aufraeumen ist schwerer).
-# Per Env SB_CUSTOM_INSTRUCTIONS ueberschreibbar, ohne Code-Aenderung.
-DEFAULT_CUSTOM_INSTRUCTIONS = (
-    "Speichere NUR bestaetigte, dauerhafte und nuetzliche Fakten ueber den Nutzer (Frank), seine "
-    "Projekte, Entscheidungen, Praeferenzen und technische Festlegungen. Jede Erinnerung muss fuer "
-    "sich allein verstaendlich sein: ersetze Pronomen durch konkrete Namen, fasse dich auf 15-80 "
-    "Woerter, und hefte relative Zeitangaben ('letzte Woche') an ein konkretes Datum. "
-    "Speichere AUF KEINEN FALL: System-Prompt- oder Boot-Datei-Inhalte, Smalltalk und "
-    "Hoeflichkeitsfloskeln, Tool-/Deployment-Konfigurationen, Logs, bereits frueher abgerufene "
-    "Erinnerungen, sowie alles Spekulative oder Unbestaetigte. Im Zweifel NICHT speichern."
-)
-CUSTOM_INSTRUCTIONS = os.getenv("SB_CUSTOM_INSTRUCTIONS", DEFAULT_CUSTOM_INSTRUCTIONS)
 
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging (stdout + rotierende Datei, beide UTF-8)
@@ -68,7 +80,7 @@ class JsonFormatter(logging.Formatter):
         entry = {
             "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created)),
             "level": record.levelname,
-            "module": "mem0-api",
+            "module": "brain-api",
             "fn": record.funcName,
             "msg": record.getMessage(),
         }
@@ -79,7 +91,7 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(entry, ensure_ascii=False)
 
 
-log = logging.getLogger("mem0-api")
+log = logging.getLogger("brain-api")
 log.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
 _stdout = logging.StreamHandler()
 _stdout.setFormatter(JsonFormatter())
@@ -105,7 +117,8 @@ def probe(condition: bool, msg: str, **ctx: Any) -> bool:
 
 
 def checkpoint(step: str, intent: str, ok: bool, **ctx: Any) -> None:
-    """Intent-Checkpoint (erwartet vs. tatsaechlich) — eigener Kanal kind=CHECKPOINT."""
+    """Intent-Checkpoint (erwartet vs. tatsaechlich) — eigener Kanal kind=CHECKPOINT.
+    Beweist live, dass die Logik so umgesetzt ist wie gemeint (hier v.a. das 1:1-Prinzip)."""
     log.log(
         logging.INFO if ok else logging.WARNING,
         f"CHECKPOINT {step}",
@@ -113,80 +126,131 @@ def checkpoint(step: str, intent: str, ok: bool, **ctx: Any) -> None:
     )
 
 
+def iso_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 # ---------------------------------------------------------------------------
-# Mem0 initialisieren (Gemini + Qdrant) — Fehler verschlucken wir NICHT
+# Clients: Qdrant + Gemini-Embedding (Init-Fehler verschlucken wir NICHT)
 # ---------------------------------------------------------------------------
-MEM0_CONFIG = {
-    "llm": {
-        "provider": "gemini",
-        "config": {
-            "model": LLM_MODEL,
-            "api_key": GEMINI_API_KEY,
-            "temperature": 0.1,
-            "max_tokens": LLM_MAX_TOKENS,
-        },
-    },
-    "embedder": {
-        "provider": "gemini",
-        "config": {
-            "model": EMBED_MODEL,
-            "api_key": GEMINI_API_KEY,
-            "embedding_dims": EMBED_DIMS,
-        },
-    },
-    "vector_store": {
-        "provider": "qdrant",
-        "config": {
-            "collection_name": COLLECTION,
-            "url": QDRANT_URL,  # http://... -> kein TLS (api_key wuerde sonst https=True erzwingen)
-            "api_key": QDRANT_API_KEY,
-            "embedding_model_dims": EMBED_DIMS,  # MUSS == embedder embedding_dims
-        },
-    },
-    # Strenger Extraktions-Prompt gegen Junk/Halluzinationen (mem0 hat kein Quality-Gate;
-    # Audit mem0#4573 fand 97,8 % Junk). Siehe bugs/server/mem0.md §1.
-    "custom_instructions": CUSTOM_INSTRUCTIONS,
-}
+qc = None            # Qdrant-Client
+gclient = None       # Gemini-Client
+init_error: str | None = None
 
 # Startbedingungen pruefen (Sonden) — Verletzungen sind Konfig-Fehler, nicht still
 probe(bool(GEMINI_API_KEY), "GEMINI_API_KEY fehlt")
 probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 probe(bool(QDRANT_API_KEY), "QDRANT_API_KEY fehlt")
 probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-001: 768/1536/3072)", dims=EMBED_DIMS)
-probe(
-    MEM0_CONFIG["embedder"]["config"]["embedding_dims"]
-    == MEM0_CONFIG["vector_store"]["config"]["embedding_model_dims"],
-    "DIM-INVARIANTE verletzt: embedder != qdrant",
-)
 
-memory = None
-init_error: str | None = None
 try:
-    from mem0 import Memory
+    from google import genai
+    from google.genai import types as genai_types
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import (
+        Distance,
+        FieldCondition,
+        Filter,
+        MatchValue,
+        PointStruct,
+        VectorParams,
+    )
 
-    memory = Memory.from_config(MEM0_CONFIG)
-    _log(logging.INFO, "Mem0 initialisiert", llm=LLM_MODEL, embedder=EMBED_MODEL, dims=EMBED_DIMS, collection=COLLECTION)
-except Exception as e:  # noqa: BLE001 — bewusst breit: Init-Fehler vollstaendig festhalten
+    gclient = genai.Client(api_key=GEMINI_API_KEY)
+    # url=http://... -> kein TLS (api_key wuerde sonst https=True erzwingen). Almanach qdrant.md §4.
+    qc = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None, timeout=30.0)
+
+    # Collection sicherstellen (Cosine: Qdrant normalisiert intern -> keine Eigen-Normalisierung noetig)
+    _existing = [c.name for c in qc.get_collections().collections]
+    if COLLECTION not in _existing:
+        qc.create_collection(
+            collection_name=COLLECTION,
+            vectors_config=VectorParams(size=EMBED_DIMS, distance=Distance.COSINE),
+        )
+        _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
+    # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
+    for _field in ("doc_id", "title", "category", "user_id"):
+        try:
+            qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
+        except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
+            pass
+    _log(logging.INFO, "Speicher initialisiert", embed_model=EMBED_MODEL, dims=EMBED_DIMS,
+         collection=COLLECTION, qdrant_url=QDRANT_URL)
+except Exception as e:  # noqa: BLE001 — Init-Fehler vollstaendig festhalten, nicht still
     init_error = f"{type(e).__name__}: {e}"
-    log.error("Mem0-Init fehlgeschlagen", exc_info=True)
+    log.error("Speicher-Init fehlgeschlagen", exc_info=True)
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
-_log(logging.INFO, "mem0-api startet", version=VERSION, log_path=LOG_PATH)
+_log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
 
 # ---------------------------------------------------------------------------
-# Defense-in-Depth-Kostenbremse (harter Cap liegt bei Google AI Studio Budget)
+# Defense-in-Depth-Kostenbremse (harter Cap liegt beim Google-AI-Studio-Budget)
 # ---------------------------------------------------------------------------
-_llm_calls = {"day": str(date.today()), "count": 0}
+_embed_calls = {"day": str(date.today()), "count": 0}
 
 
-def _guard_llm_budget() -> None:
+def _guard_embed_budget(n: int = 1) -> None:
     today = str(date.today())
-    if _llm_calls["day"] != today:
-        _llm_calls["day"], _llm_calls["count"] = today, 0
-    _llm_calls["count"] += 1
-    if _llm_calls["count"] > MAX_LLM_CALLS_PER_DAY:
-        _log(logging.ERROR, "LLM-Tages-Cap erreicht", count=_llm_calls["count"], cap=MAX_LLM_CALLS_PER_DAY)
-        raise HTTPException(status_code=429, detail="Taegliches LLM-Limit erreicht (Sicherheits-Cap)")
+    if _embed_calls["day"] != today:
+        _embed_calls["day"], _embed_calls["count"] = today, 0
+    _embed_calls["count"] += n
+    if _embed_calls["count"] > MAX_EMBED_CALLS_PER_DAY:
+        _log(logging.ERROR, "Embedding-Tages-Cap erreicht", count=_embed_calls["count"], cap=MAX_EMBED_CALLS_PER_DAY)
+        raise HTTPException(status_code=429, detail="Taegliches Embedding-Limit erreicht (Sicherheits-Cap)")
+
+
+# ---------------------------------------------------------------------------
+# Kern-Helfer: Chunking, Embedding, IDs
+# ---------------------------------------------------------------------------
+def chunk_text(text: str) -> list[str]:
+    """Zerlegt langen Text fuer die SUCHE in ueberlappende Stuecke. Beruehrt den
+    1:1-Volltext NICHT — der wird separat im Payload gehalten."""
+    if len(text) <= CHUNK_CHARS:
+        return [text]
+    out: list[str] = []
+    start = 0
+    step = max(1, CHUNK_CHARS - CHUNK_OVERLAP)
+    while start < len(text):
+        out.append(text[start:start + CHUNK_CHARS])
+        start += step
+    return out
+
+
+def embed(text: str, task_type: str) -> list[float]:
+    """Text -> Vektor via Gemini. task_type='RETRIEVAL_DOCUMENT' beim Speichern,
+    'RETRIEVAL_QUERY' beim Suchen (asymmetrische Suche = bessere Treffer)."""
+    resp = gclient.models.embed_content(
+        model=EMBED_MODEL,
+        contents=text,
+        config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
+    )
+    vec = list(resp.embeddings[0].values)
+    probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
+    return vec
+
+
+def make_doc_id(user_id: str, title: str | None) -> str:
+    """Titel -> deterministische doc_id (gleicher Titel = gleiche ID = ueberschreiben).
+    Ohne Titel -> frische UUID (neuer Eintrag)."""
+    if title and title.strip():
+        h = hashlib.sha1(f"{user_id}::{title.strip().lower()}".encode("utf-8")).hexdigest()[:24]
+        return f"t_{h}"
+    return f"d_{uuid.uuid4().hex}"
+
+
+def point_id(doc_id: str, idx: int) -> str:
+    """Deterministische Qdrant-Point-ID (UUID) je Chunk."""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"sb/{doc_id}/{idx}"))
+
+
+def _delete_doc(doc_id: str) -> None:
+    qc.delete(collection_name=COLLECTION,
+              points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]))
+
+
+def _scroll(flt: "Filter | None", limit: int = 10000) -> list:
+    points, _next = qc.scroll(collection_name=COLLECTION, scroll_filter=flt, limit=limit, with_payload=True)
+    return points
 
 
 # ---------------------------------------------------------------------------
@@ -198,19 +262,23 @@ def require_auth(authorization: str = Header(default="")) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def _require_store() -> None:
+    if qc is None or gclient is None:
+        raise HTTPException(status_code=503, detail=f"Speicher nicht initialisiert: {init_error}")
+
+
 # ---------------------------------------------------------------------------
-# Request-/Response-Modelle
+# Request-Modelle
 # ---------------------------------------------------------------------------
 class StoreReq(BaseModel):
-    text: str | None = Field(default=None, description="Roher Text, der gespeichert wird")
-    messages: list[dict] | None = Field(default=None, description="Alternativ: Chat-Nachrichten")
-    user_id: str = Field(default="frank", description="Besitzer der Erinnerung")
-    metadata: dict | None = Field(default=None, description="Freie Metadaten (z.B. category)")
-    infer: bool = Field(default=True, description="True = Mem0 extrahiert Fakten via LLM; False = Rohtext")
+    text: str = Field(..., min_length=1, description="Der Text, der WORTWOERTLICH 1:1 gespeichert wird")
+    title: str | None = Field(default=None, description="Optionaler Titel = Schluessel (gleicher Titel ersetzt)")
+    category: str | None = Field(default=None, description="Optionale Kategorie (z.B. 'mentals', 'direktiven')")
+    user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
-class RecallReq(BaseModel):
-    query: str
+class SearchReq(BaseModel):
+    query: str = Field(..., min_length=1)
     user_id: str = Field(default="frank")
     limit: int = Field(default=5, ge=1, le=50)
 
@@ -218,7 +286,7 @@ class RecallReq(BaseModel):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Second Brain — mem0-api", version=VERSION)
+app = FastAPI(title="Second Brain — brain-api (1:1-Speicher)", version=VERSION)
 
 
 @app.exception_handler(Exception)
@@ -230,72 +298,164 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 @app.get("/health")
 def health() -> dict:
-    qdrant_ok = False
-    detail = None
+    qdrant_ok, count, detail = False, None, None
     try:
-        if memory is not None:
-            # leichter Lebenscheck gegen Qdrant ueber den Mem0-Client
-            memory.vector_store.client.get_collections()
+        if qc is not None:
+            info = qc.get_collection(COLLECTION)
             qdrant_ok = True
+            count = info.points_count
     except Exception as e:  # noqa: BLE001
         detail = f"{type(e).__name__}: {e}"
-    status = "ok" if (memory is not None and qdrant_ok) else "degraded"
+    status = "ok" if (qc is not None and gclient is not None and qdrant_ok) else "degraded"
     return {
         "status": status,
         "version": VERSION,
-        "mem0": "ok" if memory is not None else "init_failed",
         "init_error": init_error,
         "qdrant": "reachable" if qdrant_ok else "unreachable",
         "qdrant_detail": detail,
-        "llm_model": LLM_MODEL,
+        "collection": COLLECTION,
+        "points": count,
         "embed_model": EMBED_MODEL,
         "embed_dims": EMBED_DIMS,
-        "llm_calls_today": _llm_calls["count"],
+        "embed_calls_today": _embed_calls["count"],
     }
-
-
-def _require_memory():
-    if memory is None:
-        raise HTTPException(status_code=503, detail=f"Mem0 nicht initialisiert: {init_error}")
-    return memory
 
 
 @app.post("/store", dependencies=[Depends(require_auth)])
 def store(req: StoreReq) -> dict:
-    m = _require_memory()
-    if not req.text and not req.messages:
-        raise HTTPException(status_code=400, detail="text oder messages erforderlich")
-    if req.infer:
-        _guard_llm_budget()  # nur bei LLM-Extraktion faellt ein Modell-Call an
-    payload = req.messages if req.messages else req.text
+    """Speichert Text WORTWOERTLICH 1:1. Mit Titel: ersetzt einen vorhandenen Eintrag gleichen Titels."""
+    _require_store()
+    doc_id = make_doc_id(req.user_id, req.title)
+    replaced = False
+    if req.title and req.title.strip():
+        existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+        replaced = bool(existing)
+        if replaced:
+            _delete_doc(doc_id)  # gleicher Titel -> alte Version komplett raus, dann neu
+
+    chunks = chunk_text(req.text)
+    _guard_embed_budget(len(chunks))
+    now = iso_now()
     t0 = time.time()
-    result = m.add(payload, user_id=req.user_id, metadata=req.metadata or {}, infer=req.infer)
-    added = len((result or {}).get("results", []) if isinstance(result, dict) else result or [])
-    checkpoint("store", "Eingabe wird als Erinnerung persistiert", ok=added >= 0,
-               user_id=req.user_id, infer=req.infer, added=added, ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "result": result}
+    points = []
+    for i, ch in enumerate(chunks):
+        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
+            "doc_id": doc_id,
+            "user_id": req.user_id,
+            "title": (req.title or "").strip(),
+            "category": (req.category or "").strip(),
+            "chunk_index": i,
+            "chunk_count": len(chunks),
+            "chunk_text": ch,
+            "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
+            "created_at": now,
+            "updated_at": now,
+        }))
+    qc.upsert(collection_name=COLLECTION, points=points)
+
+    # Intent-Checkpoint: beweist, dass der gespeicherte Volltext EXAKT die Eingabe ist (1:1)
+    stored_ok = bool(points) and points[0].payload["full_text"] == req.text
+    checkpoint("store", "Text wird WORTWOERTLICH 1:1 gespeichert (keine KI-Bearbeitung)", ok=stored_ok,
+               title=req.title or None, category=req.category or None, chunks=len(chunks),
+               chars=len(req.text), replaced=replaced, ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "doc_id": doc_id, "title": req.title or None,
+            "category": req.category or None, "chunks": len(chunks), "chars": len(req.text),
+            "replaced": replaced}
 
 
-@app.post("/recall", dependencies=[Depends(require_auth)])
-def recall(req: RecallReq) -> dict:
-    m = _require_memory()
-    _guard_llm_budget()  # Suche embeddet die Query (Embedding-Call)
+@app.get("/by-title", dependencies=[Depends(require_auth)])
+def by_title(title: str, user_id: str = "frank") -> dict:
+    """Exakter Abruf per Titel -> liefert das GANZE Dokument 1:1."""
+    _require_store()
+    doc_id = make_doc_id(user_id, title)
+    points = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1000)
+    if not points:
+        checkpoint("by_title", "Abruf per Titel", ok=False, found=False, title=title)
+        return {"ok": True, "found": False, "title": title, "text": None}
+    full = points[0].payload.get("full_text", "")
+    checkpoint("by_title", "Abruf per Titel gibt das GANZE Dokument 1:1 zurueck", ok=bool(full),
+               title=title, chars=len(full))
+    return {"ok": True, "found": True, "title": title,
+            "category": points[0].payload.get("category") or None,
+            "updated_at": points[0].payload.get("updated_at"), "text": full}
+
+
+@app.get("/by-category", dependencies=[Depends(require_auth)])
+def by_category(category: str, user_id: str = "frank") -> dict:
+    """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1."""
+    _require_store()
+    points = _scroll(Filter(must=[
+        FieldCondition(key="category", match=MatchValue(value=category.strip())),
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+    ]))
+    seen: dict[str, dict] = {}
+    for p in points:
+        did = p.payload.get("doc_id")
+        if did not in seen:
+            seen[did] = {"title": p.payload.get("title") or None, "text": p.payload.get("full_text", ""),
+                         "updated_at": p.payload.get("updated_at")}
+    items = list(seen.values())
+    return {"ok": True, "category": category, "count": len(items), "items": items}
+
+
+@app.post("/search", dependencies=[Depends(require_auth)])
+def search(req: SearchReq) -> dict:
+    """Semantische Suche -> Top-N (auf Dokument-Ebene dedupliziert), je voller 1:1-Text + Treffer-Abschnitt."""
+    _require_store()
+    _guard_embed_budget(1)
     t0 = time.time()
-    result = m.search(req.query, filters={"user_id": req.user_id}, top_k=req.limit)
-    hits = (result or {}).get("results", []) if isinstance(result, dict) else (result or [])
-    checkpoint("recall", "Anfrage liefert relevante Erinnerungen zurueck", ok=isinstance(hits, list),
-               user_id=req.user_id, query_len=len(req.query), hits=len(hits), ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "count": len(hits), "result": result}
+    qvec = embed(req.query, "RETRIEVAL_QUERY")
+    raw = qc.query_points(
+        collection_name=COLLECTION, query=qvec,
+        query_filter=Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]),
+        limit=req.limit * 4, with_payload=True,
+    ).points
+    best: dict[str, dict] = {}
+    for h in raw:
+        did = h.payload.get("doc_id")
+        if did not in best or h.score > best[did]["score"]:
+            best[did] = {"title": h.payload.get("title") or None,
+                         "category": h.payload.get("category") or None,
+                         "score": float(h.score), "match": h.payload.get("chunk_text", ""),
+                         "text": h.payload.get("full_text", "")}
+    items = sorted(best.values(), key=lambda x: x["score"], reverse=True)[:req.limit]
+    checkpoint("search", "Suche liefert relevante 1:1-Dokumente", ok=isinstance(items, list),
+               query_len=len(req.query), hits=len(items), ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "count": len(items), "items": items}
 
 
-@app.get("/memories", dependencies=[Depends(require_auth)])
-def memories(user_id: str = "frank") -> dict:
-    m = _require_memory()
-    result = m.get_all(filters={"user_id": user_id})
-    items = (result or {}).get("results", []) if isinstance(result, dict) else (result or [])
-    return {"ok": True, "count": len(items), "result": result}
+@app.get("/list", dependencies=[Depends(require_auth)])
+def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
+    """Listet die gespeicherten Eintraege (Titel/Kategorie/Groesse) — ohne die Volltexte (kompakt)."""
+    _require_store()
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    seen: dict[str, dict] = {}
+    for p in points:
+        did = p.payload.get("doc_id")
+        if did not in seen:
+            seen[did] = {"title": p.payload.get("title") or None,
+                         "category": p.payload.get("category") or None,
+                         "chars": len(p.payload.get("full_text", "")),
+                         "updated_at": p.payload.get("updated_at")}
+    items = list(seen.values())[:limit]
+    return {"ok": True, "count": len(seen), "items": items}
+
+
+@app.delete("/by-title", dependencies=[Depends(require_auth)])
+def forget(title: str, user_id: str = "frank") -> dict:
+    """Loescht den Eintrag mit diesem Titel komplett."""
+    _require_store()
+    doc_id = make_doc_id(user_id, title)
+    existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+    if not existing:
+        return {"ok": True, "deleted": False, "title": title}
+    _delete_doc(doc_id)
+    checkpoint("forget", "Eintrag per Titel geloescht", ok=True, title=title)
+    return {"ok": True, "deleted": True, "title": title}
 
 
 @app.get("/")
 def root() -> dict:
-    return {"service": "Second Brain — mem0-api", "version": VERSION, "endpoints": ["/health", "/store", "/recall", "/memories"]}
+    return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/search", "/list", "/forget"]}
