@@ -3,7 +3,7 @@
 # Sicherheitsprinzip: ALLE Dienste nur an 127.0.0.1 (kein offener Port ausser SSH;
 # der externe Zugang kommt spaeter ueber Reverse-Proxy/VPN).
 #
-# Stack:  brain-api (1:1-Speicher, Ordner mem0-api)  ->  Qdrant (Such-Schrank)
+# Stack:  brain-api (1:1-Speicher, Ordner brain-api)  ->  Qdrant (Such-Schrank)
 #         Nur Gemini-Embeddings (Cloud) zum Wiederfinden — KEIN LLM/mem0 mehr (Text 1:1 rein/raus).
 #         (Ollama/BGE-M3 wurde am 2026-06-22 entfernt: Datenabfluss ist egal -> Cloud-KI
 #          ist schneller/besser und entlastet den kleinen 8-GB-Server.)
@@ -32,9 +32,9 @@ services:
     # Healthcheck bewusst extern (curl vom Host) statt Container-intern —
     # das Qdrant-Image bringt keine garantierte Shell/curl mit.
 
-  mem0-api:
-    build: ./mem0-api               # schlanker FastAPI-1:1-Speicher (Ordnername mem0-api = Legacy, kein mem0 mehr drin)
-    container_name: sb-mem0-api
+  brain-api:
+    build: ./brain-api              # schlanker FastAPI-1:1-Speicher (Text 1:1 rein/raus, keine KI im Speicher)
+    container_name: sb-brain-api
     restart: unless-stopped
     depends_on:
       - qdrant
@@ -54,7 +54,7 @@ services:
       GEMINI_EMBED_MODEL: gemini-embedding-001   # nur Embeddings; KEIN LLM mehr beim Speichern (1:1)
       SB_LOG_PATH: /app/logs/brain-api.jsonl
     volumes:
-      - ./mem0-logs:/app/logs         # Logs persistent + vom Host tailbar (Observability-First)
+      - ./brain-logs:/app/logs        # Logs persistent + vom Host tailbar (Observability-First)
     deploy:
       resources:
         limits:
@@ -74,16 +74,16 @@ services:
     container_name: sb-mcp          # (remember / recall / list_memories / brain_health)
     restart: unless-stopped
     depends_on:
-      - mem0-api
+      - brain-api
     ports:
-      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie mem0-api).
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api).
       # Bewusst NICHT 0.0.0.0 auf dem HOST (Docker-UFW-Falle). host=0.0.0.0 gilt nur INNERHALB
       # des Containers; Docker published den Port ausschliesslich an 10.8.0.1.
       - "10.8.0.1:8001:8001"
     env_file:
-      - .env                        # SB_API_KEY (Bearer fuer die mem0-api)
+      - .env                        # SB_API_KEY (Bearer fuer die brain-api)
     environment:
-      BRAIN_URL: http://mem0-api:8000   # interner Compose-DNS-Name des Gehirns
+      BRAIN_URL: http://brain-api:8000  # interner Compose-DNS-Name des Gehirns
       SB_USER_ID: frank
       MCP_HOST: "0.0.0.0"               # im Container; deaktiviert DNS-Rebinding-Schutz -> 10.8.0.1 erreichbar
       MCP_PORT: "8001"

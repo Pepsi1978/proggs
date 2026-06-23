@@ -32,7 +32,7 @@ VERSION = "1.1.0"  # 1.1.0: recall um Payload-Filter (category/date/date_from/da
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
 # ---------------------------------------------------------------------------
-BRAIN_URL = os.getenv("BRAIN_URL", "http://mem0-api:8000").rstrip("/")  # interner Compose-DNS (Service heisst weiter mem0-api)
+BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")  # interner Compose-DNS (Service heisst brain-api)
 SB_API_KEY = os.getenv("SB_API_KEY", "")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
