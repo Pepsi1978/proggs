@@ -36,7 +36,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.2"  # 0.1.2: aktuellen Zeitpunkt (Wochentag/Datum/Uhrzeit, Europe/Berlin) zuverlaessig in jeden Prompt (keine erfundenen Datums-Titel) + Zeitstempel JE Nachricht im Logbuch. 0.1.1: /end-Bugfix + Kategorie-Prompt. 0.1.0: Phase 4a.
+VERSION = "0.1.3"  # 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -230,8 +230,7 @@ def _history_text(session: dict) -> str:
     msgs = session["messages"][-HISTORY_MAX:]
     if not msgs:
         return "(noch nichts)"
-    return "\n".join(f"[{m.get('ts', '')}] " + ("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
-                     for m in msgs)
+    return "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"] for m in msgs)
 
 
 def llm_decide(session: dict, user_text: str, candidates: list[dict], categories: list[str]) -> dict:
@@ -308,7 +307,7 @@ def flush_session_to_logbook(session: dict) -> None:
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
     header = f"Kategorie: Gespraeche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
-    body = "\n".join(f"[{m.get('ts', '--:--')}] " + ("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
+    body = "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
                      for m in session["messages"])
     content = header + body + "\n"
 
@@ -420,7 +419,7 @@ async def chat(req: ChatReq) -> dict:
         if session is None:
             session = _new_session(req.user_id)
             _sessions[sid] = session
-        session["messages"].append({"role": "frank", "text": req.text, "ts": _now_local().strftime("%H:%M")})
+        session["messages"].append({"role": "frank", "text": req.text})
         resolving = session.get("pending") is not None
         pending = session.get("pending")
 
@@ -476,7 +475,7 @@ async def chat(req: ChatReq) -> dict:
                 session["pending"] = None
 
     async with _lock:
-        session["messages"].append({"role": "agent", "text": reply, "ts": _now_local().strftime("%H:%M")})
+        session["messages"].append({"role": "agent", "text": reply})
         session["last_activity"] = time.monotonic()
 
     checkpoint("chat", "Text 1:1 einordnen+speichern bzw. natuerlich antworten",
