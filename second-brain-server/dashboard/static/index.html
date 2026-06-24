@@ -475,6 +475,7 @@ button{font-family:inherit;cursor:pointer}
 .chat-mic.recording{background:linear-gradient(135deg,#F2495A,#F2698E);animation:btnpulse 1s var(--ease-soft) infinite}
 /* G-Button: gruenlich mit Glow statt Orange-Rosa */
 .chat-improve{background:linear-gradient(135deg,#34D399,#10B981);color:#04130C;box-shadow:0 0 42px -10px rgba(52,211,153,.6);font-family:'Space Grotesk';font-weight:700;font-size:18px;line-height:1}
+.chat-clear{background:linear-gradient(135deg,#F2495A,#FB7185);color:#fff;box-shadow:0 0 42px -10px rgba(242,73,90,.6)}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
@@ -636,6 +637,9 @@ button{font-family:inherit;cursor:pointer}
           <div class="chat-input">
             <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
             <div class="chat-actions">
+              <button class="chat-btn chat-clear" id="chatClear" aria-label="Eingabe löschen" title="Eingabe löschen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
               <button class="chat-btn chat-mic" id="chatMic" aria-label="Sprechen" title="Sprechen — Speech-to-Text (Groq Whisper)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/></svg>
               </button>
@@ -1327,6 +1331,7 @@ Leitsätze:
     ta.addEventListener("input", ()=> autoGrow(ta));
     const mic = document.getElementById("chatMic"); if(mic) mic.addEventListener("click", toggleMic);
     const imp = document.getElementById("chatImprove"); if(imp) imp.addEventListener("click", improveText);
+    const clr = document.getElementById("chatClear"); if(clr) clr.addEventListener("click", ()=>{ ta.value=""; autoGrow(ta); ta.focus(); });
   })();
 
   /* ── Start ────────────────────────────────────────────────────────────── */
