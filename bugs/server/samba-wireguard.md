@@ -26,6 +26,7 @@
 | 4 | SMB ueber WireGuard sehr langsam (wenige Mbit/s) | MTU-Problem: WireGuard-MTU auf **1350** senken (`ip link set mtu 1350 dev wg0`) + MSS-Clamping fuer TCP. | §3 |
 | 5 | Port-Freigabe fuer SMB im Tunnel | SMB-Ports (445/tcp, 139/tcp) NUR ueber `wg0` zulassen: `ufw allow in on wg0 to any port 445` (NICHT oeffentlich!). Einziger oeffentlicher Port bleibt UDP 51820. | §2 |
 | 6 | Netzlaufwerk verschwindet/rotes X nach Reboot/Login | Persistentes Mapping per `New-SmbMapping -Persistent` (nicht `New-PSDrive`); Credential-Manager-Eintrag pro Servername UND IP; "auf Netzwerk warten"-GPO; PIN-Login kann stoeren. | §5 |
+| 9 | ⭐ Laufwerke fehlen ganz, aber Ping+Port 445 OK & manuelles `net use` klappt | Auto-Reconnect-Gate prueft falschen Port (fremder Dienst statt SMB **445**) → kommt nie bis zum Mapping. Gate IMMER auf 445; Skript-Log lesen (Fehler sonst geschluckt). | §5 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
 
@@ -134,6 +135,17 @@ verbindet erst nach manuellem Klick.
 - **VPN-Credentials ueberschreiben SMB-Credentials** (wenn VPN-User == AD-User mit anderem Passwort):
   in der VPN-`.pbk` `UseRasCredentials=1` → `0` setzen, oder GPO „Speicherung von Passwoertern für
   Netzwerkauthentifizierung nicht zulassen".
+- ⭐ **Auto-Reconnect-Gate prueft den FALSCHEN Port (live 2026-06-24):** Ein Reconnect-Skript (geplante
+  Aufgabe, mappt Z:/Y: nach Login/Standby) hatte einen TCP-Gate-Check „ist der Tunnel oben?" gegen Port
+  **8000 (brain-api)** statt gegen den **SMB-Port 445**. Folge: Beim Neustart von brain-api (Deploy) war 8000
+  kurz weg → der Gate schlug an → das Skript kam NIE bis zur Mapping-Schleife (Log endete jedes Mal bei
+  „Status: Running", KEIN „reconnect"/„ist OK") → Z:/Y: fehlten komplett im Explorer, obwohl `ping 10.8.0.1`
+  UND `Test-NetConnection -Port 445` erfolgreich waren und ein manuelles `net use Z: \\10.8.0.1\gedanken
+  /persistent:yes` SOFORT klappte. **Regel:** Der Gate-Check eines Laufwerks-Reconnects MUSS genau den Port
+  testen, von dem die Laufwerke abhaengen (SMB **445**) — NIE einen fremden Dienst (brain-api, Web-App), dessen
+  Neustart sonst das Mapping blockiert. Zusaetzlich robust: `$c.Connected` pruefen (nicht nur `.Wait()`-Rueckgabe)
+  und den Socket im `finally` disposen. Diagnose-Schluessel war das Log des Skripts (Fehler werden sonst mit
+  `2>$null`/`SilentlyContinue` geschluckt). **FIX:** `wg-drive-reconnect.ps1` `WgUp()` → Port 445 (#47132).
 - **Test:** `Test-NetConnection -ComputerName 10.8.0.1 -Port 445` (→ `TcpTestSucceeded: True`),
   `Get-SmbConnection`, `Get-SmbMapping`.
 **Versionen:** Win 10/11.
