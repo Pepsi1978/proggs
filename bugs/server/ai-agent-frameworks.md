@@ -9,6 +9,7 @@
 >
 > **Stand:** recherchiert am 2026-06-24 (OpenRouter `:online` + Firecrawl-Schwarm, 2 Wellen;
 > Issue-Status am 2026-06-24 hart per `gh` geprueft). **Anker:** Python=3.12, FastAPI=0.138.0,
+> **Gegenseite (Best Practices, wie man es richtig macht):** [`best-practices/server/ai-agent-frameworks.md`](../../best-practices/server/ai-agent-frameworks.md) — mit wechselseitiger Bug↔Best-Practice-Bezugs-Tabelle.
 > google-genai>=2.9.0, httpx>=0.27.0 (aktuelle eigene Loop) · Pydantic-AI ~1.x (V2-Merge Juni 2026) ·
 > LangGraph ~1.0/1.2 (projekt-gebunden — Version pinnt das Projekt, kein Live-Abgleich).
 >

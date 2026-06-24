@@ -9,6 +9,7 @@
 > geprueft). **Anker:** Android `minSdk 26-29`/`targetSdk 36`/`compileSdk 36-37` (Cleartext-Block ab API 28) ·
 > iOS 14+/18 (ATS + Local Network Privacy) · macOS 15 Sequoia (Local Network Privacy) · .NET (HttpClient) ·
 > WireGuard-Client → `10.8.0.1:8000`. Multi-Plattform/Theme-gebunden — kein Live-Anker.
+> **Gegenseite (Best Practices, wie man es richtig macht):** [`best-practices/server/client-anbindung.md`](../../best-practices/server/client-anbindung.md) — mit wechselseitiger Bug↔Best-Practice-Bezugs-Tabelle.
 >
 > **Abgrenzung (wichtig — nicht verwechseln):**
 > - `bugs/server/wireguard.md` = **Server-/Tunnel-Seite** (wg0.conf auf dem VPS, AllowedIPs/Keepalive/DNS/Autostart serverseitig).
