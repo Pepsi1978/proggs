@@ -229,7 +229,9 @@ button{font-family:inherit;cursor:pointer}
 .big-num{display:flex;align-items:baseline;gap:14px}
 .big-num .n{
   font-family:'Space Grotesk';font-weight:700;font-size:clamp(64px,9vw,108px);line-height:.9;
-  letter-spacing:-.04em;
+  /* letter-spacing nur leicht negativ + padding-right: sonst schneidet background-clip:text die
+     letzte Ziffer rechts ab (Bild #5). nowrap, damit grosse Zahlen wie 500.000 nicht umbrechen. */
+  letter-spacing:-.02em;white-space:nowrap;padding-right:.08em;
   background:linear-gradient(160deg,var(--text),var(--accent));
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
@@ -842,7 +844,7 @@ Leitsätze:
     const from = lastTotal, dur = 900, t0 = performance.now();
     (function step(now){
       const p = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-p,3);
-      el.textContent = Math.round(from+(to-from)*e);
+      el.textContent = Math.round(from+(to-from)*e).toLocaleString("de-DE");  // Tausenderpunkte: 500.000
       if(p<1) requestAnimationFrame(step);
     })(t0);
     lastTotal = to;
