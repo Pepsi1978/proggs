@@ -137,6 +137,11 @@ case "$fpl" in *almtest*) exit 0 ;; esac
 # -- Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
 slug=""; file=""; name=""
 case "$fpl" in
+    *compose.yaml|*compose.yml|*docker-compose.yml|*docker-compose.yaml|*dockerfile|*dockerfile.*|*.dockerfile)
+        # Docker & Docker-Compose (Self-Hosting-Betrieb): compose.yaml/.yml, docker-compose.*,
+        # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
+        # Abgrenzung: Qdrant-/Agent-spezifisches faengt der jeweilige Almanach separat ab.
+        slug="docker"; file="docker.md"; name="Docker & Docker-Compose (Self-Hosting-Betrieb)";;
     *.sdplugin/*|*propertyinspector*)
         # Stream-Deck-Plugin: Dateien im *.sdPlugin-Ordner ODER ein Property Inspector.
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom

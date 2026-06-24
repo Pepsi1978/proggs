@@ -39,6 +39,7 @@ ANCHORS = [
     {"rel": "claude-tooling/openrouter-claude-code.md","label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "opencode/opencode-cli.md",        "label": "opencode",    "live": (["opencode", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "web/typescript.md",               "label": "typescript",  "live": None},  # tsc-Version != node; projekt-gepinnt
+    {"rel": "server/docker.md",                "label": "docker",       "live": None},  # server-gebunden (VPS), lokal kein docker -> kein Live-Abgleich
     # projekt-gebunden (Gradle/.csproj/Info.plist pinnt die Version) → nur Anker-Vollstaendigkeit
     {"rel": "android/kotlin.md",               "label": "kotlin",      "live": None},
     {"rel": "android-build/gradle.md",         "label": "gradle",      "live": None},

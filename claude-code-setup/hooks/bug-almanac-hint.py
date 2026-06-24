@@ -33,6 +33,7 @@ AREAS = {
     "claude-tooling/claude-hooks":  ("Claude Hooks",         ["posttooluse", "pretooluse", "sessionstart hook", "claude hook", "hookspecificoutput"]),
     "web/typescript":               ("TypeScript",           ["tsconfig", "moduleresolution", "ts-node", "strictnullchecks"]),
     "android/retrofit-okhttp-moshi":("Retrofit/OkHttp",      ["retrofit", "okhttp", "moshi", "interceptor"]),
+    "server/docker":                ("Docker/Compose",       ["docker compose", "docker-compose", "compose.yaml", "compose.yml", "dockerfile", "depends_on", "mem_limit", "healthcheck", "restart: unless-stopped", "ufw docker", "named volume", "json-file log"]),
 }
 
 

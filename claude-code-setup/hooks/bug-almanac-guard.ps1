@@ -154,6 +154,10 @@ try {
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
         # generischen 'manifest.json$'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
         $slug = 'streamdeck'; $file = 'stream-deck.md'; $name = 'Elgato Stream Deck Plugin-Entwicklung'
+    } elseif ($fpl -match '(^|/)(docker-)?compose\.ya?ml$' -or $fpl -match '(^|/)dockerfile(\.[^/]+)?$' -or $fpl -match '\.dockerfile$') {
+        # Docker & Docker-Compose (Self-Hosting-Betrieb): compose.yaml/.yml, docker-compose.*,
+        # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
+        $slug = 'docker'; $file = 'docker.md'; $name = 'Docker & Docker-Compose (Self-Hosting-Betrieb)'
     } elseif ($fpl -match '\.mcp\.json$') {
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
