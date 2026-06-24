@@ -21,6 +21,7 @@ ARCHIVE="${1:-}"
 APP_DIR="${SB_APP_DIR:-/opt/second-brain}"
 QDRANT_URL="${SB_QDRANT_URL:-http://127.0.0.1:6333}"
 COLLECTION="${SB_COLLECTION:-brain}"
+SAMBA_DIR="${SB_SAMBA_DIR:-/srv/samba}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cortex-restore.XXXXXX")"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 cleanup() { rm -rf "$WORK" 2>/dev/null || true; }
@@ -58,6 +59,13 @@ fi
 # qdrant-data-Fallback (nur falls KEIN API-Snapshot im Archiv war)
 if [ -f "$WORK/qdrant-data-fallback.tar.gz" ] && [ ! -f "$WORK/qdrant-brain.snapshot" ]; then
   log "Spiele qdrant-data-Fallback ein…"; tar xzf "$WORK/qdrant-data-fallback.tar.gz" -C "$APP_DIR"
+fi
+
+# 2b) Samba-Platten (Logbuch + daten) wiederherstellen
+if [ -f "$WORK/samba.tar.gz" ]; then
+  log "Stelle Samba-Platten (Logbuch + daten) wieder her…"
+  mkdir -p "$SAMBA_DIR"
+  tar xzf "$WORK/samba.tar.gz" -C "$SAMBA_DIR" && log "Samba wiederhergestellt"
 fi
 
 # 3) Caddy named volumes wiederherstellen

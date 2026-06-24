@@ -26,6 +26,7 @@ QDRANT_URL="${SB_QDRANT_URL:-http://127.0.0.1:6333}"
 COLLECTION="${SB_COLLECTION:-brain}"
 OUT_DIR="${SB_BACKUP_OUT:-$APP_DIR/backups}"
 WG_CONF="${SB_WG_CONF:-/etc/wireguard/wg0.conf}"
+SAMBA_DIR="${SB_SAMBA_DIR:-/srv/samba}"   # Z=gedanken (Logbuch) + Y=daten (Franks Netzlaufwerke)
 KEEP="${SB_BACKUP_KEEP:-7}"                 # so viele Voll-Backups serverseitig behalten (Platz sparen)
 STAMP="$(date '+%Y-%m-%d_%H%M%S')"
 HOST="$(hostname 2>/dev/null || echo unknown)"
@@ -73,6 +74,17 @@ if tar czf "$WORK/opt-second-brain.tar.gz" -C "$APP_DIR" \
   log "opt-second-brain.tar.gz OK"
 else
   log "WARN: opt-second-brain-Archiv unvollstaendig"
+fi
+
+# ── 2b) Samba-Platten (Z=gedanken inkl. Logbuch, Y=daten) — ohne den redundanten qdrant-snapshot ──
+if [ -d "$SAMBA_DIR" ]; then
+  if tar czf "$WORK/samba.tar.gz" -C "$SAMBA_DIR" --exclude='./gedanken/qdrant-snapshot' . 2>/dev/null; then
+    log "samba.tar.gz OK (Logbuch + daten)"
+  else
+    log "WARN: samba-Archiv unvollstaendig"
+  fi
+else
+  log "Info: $SAMBA_DIR nicht vorhanden (uebersprungen)"
 fi
 
 # ── 3) Caddy named volumes (interne CA/Zertifikate) ─────────────────────────────────────────────
