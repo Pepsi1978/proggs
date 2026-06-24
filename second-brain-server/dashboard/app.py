@@ -6,6 +6,7 @@ liefert die Oberflaeche (static/index.html). Observability-First: schlankes JSON
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -19,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.2.1"
+VERSION = "0.3.0"  # 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1); api_put_prompt/_config ebenfalls nicht-blockierend. 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -62,6 +63,13 @@ def _aget(path: str):
 
 def _aput(path: str, payload: dict):
     r = httpx.put(f"{AGENT_URL}{path}", json=payload, headers=HEADERS, timeout=20.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def _apost(path: str, payload: dict):
+    # 60s: ein recall macht ZWEI LLM-Aufrufe (entscheiden + antworten) — grosszuegig timen.
+    r = httpx.post(f"{AGENT_URL}{path}", json=payload, headers=HEADERS, timeout=60.0)
     r.raise_for_status()
     return r.json()
 
@@ -155,7 +163,8 @@ def api_get_prompt() -> dict:
 @app.put("/api/prompt")
 async def api_put_prompt(request: Request) -> dict:
     body = await request.json()
-    return _aput("/prompt", {"instructions": body.get("instructions", "")})
+    # sync httpx via to_thread -> blockiert den Event-Loop nicht (bugs/server/fastapi.md §1)
+    return await asyncio.to_thread(_aput, "/prompt", {"instructions": body.get("instructions", "")})
 
 
 @app.get("/api/config")
@@ -166,7 +175,30 @@ def api_get_config() -> dict:
 @app.put("/api/config")
 async def api_put_config(request: Request) -> dict:
     body = await request.json()
-    return _aput("/config", {"model": body.get("model", "")})
+    return await asyncio.to_thread(_aput, "/config", {"model": body.get("model", "")})
+
+
+# --- Chat: Proxy an den Agenten (ablegen ODER nachschlagen) ------------------
+@app.post("/api/chat")
+async def api_chat(request: Request) -> dict:
+    """Ein Eingang zum Bibliothekar-Agenten: store/ask/recall/smalltalk entscheidet der Agent.
+    Der synchrone httpx-Call laeuft via asyncio.to_thread, damit ein langer recall (zwei
+    LLM-Aufrufe, bis ~60s) den Event-Loop NICHT blockiert (bugs/server/fastapi.md §1)."""
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        return {"ok": False, "reply": "Leere Nachricht — schreib mir was zum Ablegen oder eine Frage."}
+    if len(text) > 8000:   # Eingabe-Limit (fastapi §8) — eine Chat-Nachricht ist nie so lang
+        text = text[:8000]
+    payload = {"text": text, "user_id": USER_ID}
+    sid = (body.get("session_id") or "").strip()
+    if sid:
+        payload["session_id"] = sid
+    try:
+        return await asyncio.to_thread(_apost, "/chat", payload)
+    except Exception as e:  # noqa: BLE001 — Agent offline/Fehler: sauberer Fehler statt 500
+        _log(logging.WARNING, "Chat-Proxy fehlgeschlagen", err=str(e))
+        return {"ok": False, "reply": "Der Agent ist gerade nicht erreichbar — versuch es bitte gleich nochmal."}
 
 
 @app.get("/", response_class=HTMLResponse)
