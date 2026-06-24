@@ -7,6 +7,10 @@
 {
 	admin off
 	# interne CA -> Root-Cert liegt persistent im caddy_data-Volume (sonst neue CA bei jedem Restart, §1.2)
+	# default_sni: Bei einer IP-Adresse als Site sendet der Browser/Client KEIN SNI (SNI ist nur fuer
+	# Hostnamen, RFC 6066) -> Caddy kann sein IP-Cert sonst nicht zuordnen -> TLS "internal error"
+	# (alert 80). default_sni erzwingt 10.8.0.1 als virtuellen Host bei fehlendem SNI.
+	default_sni 10.8.0.1
 }
 
 https://10.8.0.1 {
