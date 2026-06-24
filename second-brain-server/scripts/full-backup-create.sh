@@ -68,7 +68,8 @@ fi
 # ── 2) /opt/second-brain ohne regenerierbare/grosse Teile ───────────────────────────────────────
 if tar czf "$WORK/opt-second-brain.tar.gz" -C "$APP_DIR" \
       --exclude='./qdrant-data' --exclude='./backups' --exclude='./.git' \
-      --exclude='./brain-logs' --exclude='./agent-logs' --exclude='*/__pycache__' . 2>/dev/null; then
+      --exclude='./brain-logs' --exclude='./agent-logs' --exclude='./ollama-data' \
+      --exclude='*/__pycache__' . 2>/dev/null; then
   log "opt-second-brain.tar.gz OK"
 else
   log "WARN: opt-second-brain-Archiv unvollstaendig"
