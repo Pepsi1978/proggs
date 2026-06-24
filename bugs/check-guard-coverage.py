@@ -51,6 +51,12 @@ INTENTIONALLY_UNMAPPED = {
     # claudeconfig) bzw. .claude-code-router/config.json — kein eigenes sauberes Datei-Pattern.
     # Bewusst Querschnitt (Einzelpruefung 2026-06-20).
     "openrouter-claude-code",
+    # opencode/ — server-agent-remote-mcp: CLIENT-/Operator-Konzept (eigenes Gehirn als Remote-MCP +
+    # server-only-Agent) ueber OpenCode UND Claude Code. Die betroffenen Dateien (opencode.json/.jsonc,
+    # .mcp.json, settings.json) triggern bereits opencode-cli.md bzw. claudeconfig — ein eigener Trigger
+    # wuerde die kapern. Auffindung ueber Index + Stichworte + Querverweis aus opencode-cli.md. Querschnitt
+    # (Einzelpruefung 2026-06-24).
+    "server-agent-remote-mcp",
     # server/ — vps-hosting ist reine Anbieter-/Prozess-Wahl (Hostinger/Hetzner, root, Docker),
     # kein editierbares Datei-Pattern -> Querschnitt (Einzelpruefung 2026-06-20). wireguard ist
     # dagegen ueber .conf-Inhalt im Guard registriert (kein Querschnitt).
