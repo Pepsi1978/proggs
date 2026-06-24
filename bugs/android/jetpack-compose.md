@@ -10,7 +10,8 @@
 > [`best-practices/android/jetpack-compose.md`](../../best-practices/android/jetpack-compose.md)
 > — Bezugstabelle „Bug-Abschnitt ↔ Best-Practice" ganz unten.
 >
-> **Stand:** recherchiert am **2026-06-02** (7-Researcher-Schwarm) fuer die real genutzten Versionen:
+> **Stand:** recherchiert am **2026-06-02** (7-Researcher-Schwarm), **re-recherchiert am 2026-06-24**
+> (Engine A: Firecrawl+MiniMax) fuer die real genutzten Versionen:
 > **Anker:** compose-bom=2025.01.01  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > - **BestJournalAndroid:** Compose **BOM 2025.01.01** (UI ~1.7.6, Material3 1.3.1), Kotlin 2.1.0,
 >   Compose-Compiler-Plugin 2.1.0, navigation-compose 2.8.7, lifecycle 2.8.7, AGP 8.7.3.
@@ -18,6 +19,11 @@
 >   Compose-Compiler-Plugin 2.1.0, navigation-compose 2.8.7, AGP 8.10.0.
 > - Abgedeckte Spanne: **Compose 1.6 → 1.10**, Material3 1.2 → 1.4. **Strong Skipping** ist seit
 >   Compose-Compiler 2.0.20 / Compose 1.7 default aktiv (gilt fuer beide Projekte).
+>
+> **Versions-Horizont (Re-Recherche 2026-06-24):** BOM ist inzwischen bei **2026.06.00** (2026-06-17):
+> Compose UI/foundation/animation/runtime **1.11.3**, **Material3 1.4.0** (stabil), **1.12.0-beta01** in
+> Arbeit; **Material3 1.5.x noch Alpha** (1.5.0-alpha22). **navigation-compose 2.9.x** ist verfuegbar.
+> EntropieReductor (Material3 1.4.0) ist von den 1.4.0-Breaking-Changes in §8.7 direkt betroffen.
 
 ---
 
@@ -504,7 +510,7 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 
 ---
 
-## 8. Material3, Theming & Insets (Material3 1.2 → 1.4)
+## 8. Material3, Theming & Insets (Material3 1.2 → 1.4, Ausblick 1.5-alpha)
 
 ### 8.1 Scaffold `innerPadding` ignoriert → Content unter TopBar/hinter NavBar   ⭐ HAEUFIG
 **Symptom:** Inhalt liegt unter der TopAppBar oder hinter der System-NavBar — verschaerft seit Android 15 (SDK 35, edge-to-edge erzwungen).
@@ -547,6 +553,25 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 **Versionen:** Material3 alle.
 **FIX:** Content von Dialog/Sheet erneut in `MaterialTheme{}` (App-Theme) wrappen; Previews ins Theme einpacken.
 **Quelle:** developer.android.com/develop/ui/compose/designsystems/material3
+
+### 8.7 Material3 1.4.0 Breaking Changes (Icons nicht mehr transitiv, NavBar-Label-Farbe)  ⭐ (Re-Recherche 2026-06-24, trifft EntropieReductor)
+**Symptom (a):** Nach Upgrade auf **Material3 1.4.0** brechen Icon-Referenzen mit "unresolved reference"
+(`Icons.Filled.*` / `Icons.Default.*` nicht gefunden), obwohl vorher alles baute.
+**Ursache (a):** Material3 1.4.0 zieht **`material-icons-core` nicht mehr transitiv** mit — die Icon-Packs
+muessen explizit als Dependency deklariert werden.
+**FIX (a, funktionserhaltend):** `androidx.compose.material:material-icons-core` (bzw. `-extended`)
+explizit in den Dependencies/Version-Catalog aufnehmen. Icons NICHT entfernen.
+**Symptom (b):** Aktives Label in `NavigationBar`/`NavigationRail` hat ploetzlich eine andere Farbe.
+**Ursache (b):** In 1.4.0 ist die Default-Farbe des aktiven Labels von `NavigationBarItem`/
+`NavigationRailItem` **`secondary` statt `onSurface`**. Auch ein neues `MotionScheme` wirkt auf alle Komponenten.
+**FIX (b):** Gewollte Farbe explizit per `NavigationBarItemDefaults.colors(...)` setzen, falls das alte
+Aussehen erwuenscht ist.
+**Weiteres:** In 1.4.0-beta01 wurden alle `@ExperimentalMaterial3ExpressiveApi`/`…ComponentOverrideApi`-
+APIs aus der stabilen Linie entfernt (Expressive nur in der Alpha-Linie). Neue 1.4.0-Komponenten:
+`SecureTextField`/`OutlinedSecureTextField`, Text-Auto-Size, unified `TimePickerDialog`, neues
+SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
+**Versionen:** Material3 1.4.0 (released 2025-09-24). EntropieReductor ist bereits auf 1.4.0.
+**Quelle:** developer.android.com/jetpack/androidx/releases/compose-material3 (1.4.0 Release-Notes)
 
 ---
 
