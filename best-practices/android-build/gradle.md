@@ -188,8 +188,12 @@ consumer-Rules — trotzdem bewusst pruefen. Quelle: developer.android.com/topic
 **4.5 Dynamisch (per Name/`getIdentifier()`) geladene Ressourcen per `res/raw/keep.xml` schuetzen** `[offiziell]` ⭐
 Optimized Resource Shrinking (Default ab AGP 9.0) entfernt sonst dynamisch referenzierte Ressourcen.
 `<resources tools:keep="@drawable/foo,@layout/dyn_*"/>` statt das Feature abzuschalten. **Vor dem AGP-9-Upgrade
-pruefen, ob die Apps Ressourcen per Name laden.** Quelle:
-developer.android.com/topic/performance/app-optimization/customize-which-resources-to-keep. → Bug §7.5.
+pruefen, ob die Apps Ressourcen per Name laden.** ⚠️ Im `tools:keep`-Eintrag den Namen OHNE Dateiendung
+nennen (`@raw/foo`, nicht `@raw/foo.json`) — die Endung war die Falle im AboutLibraries-Fall (#1239).
+`tools:shrinkMode="safe"` (Default) versucht `getIdentifier()`-Referenzen zu erhalten; was fehlt, zeigt
+`build/outputs/mapping/release/resources.txt`. Quelle:
+developer.android.com/topic/performance/app-optimization/customize-which-resources-to-keep ·
+github.com/mikepenz/AboutLibraries/issues/1239. → Bug §7.5.
 
 **4.6 `missing_rules.txt` gezielt uebernehmen — kein `-dontwarn`-Flood** `[offiziell]`
 Die in `build/outputs/mapping/<variant>/missing_rules.txt` empfohlenen Regeln nach `proguard-rules.pro`

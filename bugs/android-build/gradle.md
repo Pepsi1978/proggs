@@ -4,7 +4,8 @@
 > `gradle.properties`, `gradle/*`, `gradle-wrapper.properties`, Version-Catalog `libs.versions.toml`).
 > Es geht hier um die **Build-Infrastruktur** — NICHT um die Kotlin-Sprache.
 >
-> **Stand:** recherchiert am 2026-06-02 fuer den real benutzten Stand der beiden Android-Projekte
+> **Stand:** recherchiert am 2026-06-02, **re-recherchiert am 2026-06-24** (Engine A: Firecrawl+MiniMax)
+> fuer den real benutzten Stand der beiden Android-Projekte
 > **Anker:** gradle=8.11.1  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (live ermittelt):
 >
@@ -21,6 +22,12 @@
 > **Upgrade-Pfad im Blick behalten:** AGP 9.0/9.1 + Gradle 9.x + Kotlin 2.3 (Memory
 > `project_agp9_kotlin23_upgrade`). Viele Eintraege unten sind genau fuer diesen Sprung relevant.
 > Bei einem Versionssprung der benutzten Tools: kurzer Re-Check (mit Franks OK).
+>
+> **Versions-Horizont (Stand 2026-06-24, Re-Recherche):** Die Toolchain ist inzwischen weit ueber
+> euren gepinnten Stand hinaus: **Gradle 9.6.0** (released 2026-06-20), **AGP 9.2.0** (April 2026),
+> **KSP 2.3.9** (2026-05-26, 2.3.10 in Vorbereitung), Kotlin-Linie bei 2.3/2.4. Euer Pin (Gradle
+> 8.11.1, AGP 8.7.3/8.10.0, Kotlin/KSP 2.1.0) bleibt gueltig — der Anker ist projekt-gepinnt,
+> kein Live-Abgleich. Die §2/§4/§7/§8-Eintraege zum 9er-Sprung sind damit voll aktuell relevant.
 
 ---
 
@@ -275,6 +282,25 @@ damit Tests die erwartete Version nutzen.
 `--gradle-version 9.0.0` exakt angeben.
 **Quelle:** github.com/gradle/gradle/issues/34968
 
+### 4.6 Inkrementelle Breaking-Changes/Deprecations 8.13 → 9.6  (Re-Recherche 2026-06-24)
+Auf dem Weg zu Gradle 9/10 kommen pro Minor-Release weitere kleine Brueche dazu — beim Wrapper-Sprung mitnehmen:
+- **8.13:** `JvmTestSuite` aendert sich — Property `testType` entfernt, durch `testSuiteName` ersetzt
+  (auch in Test-Report-/JaCoCo-Aggregation). `BuildLauncher.addJvmArguments` ueberschreibt nicht mehr Flags
+  aus `org.gradle.jvmargs` (Tooling-API; bei Bedarf `setJvmArguments`).
+- **8.14:** Der **Gradle-Wrapper ist jetzt ein ausfuehrbares JAR** (`Main-Class`-Attribut) — relevant fuer
+  Security-Scanner/Reproduzierbarkeits-Pruefungen, die `gradle-wrapper.jar` inspizieren. Inkubierende
+  `Settings.getDefaults()` entfernt → `Settings.defaults(Action<SharedModelDefaults>)`. Groovy-String→Enum-
+  Coercion fuer `Property`-Typen deprecated (Fehler in Gradle 10).
+- **9.0:** Config Cache wird **"preferred mode"** (CLI weist darauf hin, `gradle init` aktiviert es fuer neue
+  Projekte; Default erst in Gradle 10), 3-stelliges SemVer-Schema (§4.5), Kotlin 2 + Groovy 4 intern.
+- **9.1/9.4/9.6:** Config-Cache **precise tracking** wird ausgebaut → hoehere Cache-Hit-Raten: 9.1 fuer `-P`-
+  Properties, 9.4 fuer `gradle.properties`, 9.6 fuer `org.gradle.project.*`-System-Properties + `ORG_GRADLE_PROJECT_*`-Env.
+- **9.6.0 (released 2026-06-20):** impliziter Property-/Method-Lookup in Parent-Projekten **deprecated**
+  (Entfernung in Gradle 10) — betrifft alte `allprojects {}`/Cross-Projekt-Konfiguration.
+**FIX (funktionserhaltend):** Diese Aenderungen NICHT einzeln, sondern als Teil des geplanten 9er-Sprungs
+abarbeiten (zusammen mit §2 AGP 9.0 + §4.1-4.5). Vorher das Build-Log auf die genannten Deprecation-Warnungen scannen.
+**Quelle:** docs.gradle.org/current/userguide/upgrading_version_8.html · docs.gradle.org/9.6/release-notes.html
+
 ---
 
 ## 5. Configuration Cache
@@ -425,7 +451,17 @@ gebraucht, crasht die App beim Start.
 **FIX (funktionserhaltend):** Keep-File `res/raw/keep.xml` mit `tools:keep="@drawable/foo,@layout/dyn_*"`
 (Wildcards moeglich) — dynamische Ressourcen explizit schuetzen, nicht das Feature abschalten. **Vor dem
 AGP-9-Upgrade pruefen, ob die Apps Ressourcen per `getIdentifier()`/Name laden.**
-**Quelle:** developer.android.com/topic/performance/app-optimization/customize-which-resources-to-keep
+`tools:shrinkMode="safe"` (Default) versucht, per `getIdentifier()` referenzierte Ressourcen zu erhalten;
+`strict` behaelt nur statisch referenzierte → dann sind die keep-Regeln zwingend korrekt. Diagnose:
+`build/outputs/mapping/release/resources.txt` listet entfernte Ressourcen ("`raw:foo:… is not reachable`").
+⚠️ **Endungs-Falle:** Im `tools:keep`-Eintrag steht der Ressourcen-Name OHNE Dateiendung —
+`tools:keep="@raw/aboutlibraries"`, NICHT `@raw/aboutlibraries.json`.
+**Beleg (konkreter Fall, gh-verifiziert 2026-06-24):** AboutLibraries laedt `res/raw/aboutlibraries.json`
+per String-Name → `IllegalStateException` aus `Libs$Builder.build()` im Release, sobald optimized resource
+shrinking aktiv ist. Unter AGP 9.0 (Default) am 2026-01-22 erneut bestaetigt; erster `tools:keep`-Versuch
+MIT `.json` schlug fehl, ohne Endung wirkt er.
+**Quelle:** developer.android.com/topic/performance/app-optimization/customize-which-resources-to-keep ·
+github.com/mikepenz/AboutLibraries/issues/1239 (CLOSED COMPLETED 2025-10-10)
 
 ### 7.6 `shrinkResources` ohne `minifyEnabled`
 **Symptom:** Build-Fehler / Resource-Shrinker laeuft nicht.
@@ -493,6 +529,25 @@ betroffen** (Fix erst in der naechsten Patchversion). EntropieReductor mit `ksp.
 **FIX (funktionserhaltend):** KSP-Patchversion heben (naechste `2.1.x-1.0.30+`) ODER bei "stale generated
 code"-Symptomen reflexartig `clean` ausfuehren; alternativ projektweit `ksp.incremental=false`.
 **Quelle:** github.com/google/ksp/issues/2252
+
+### 8.2a `NoSuchMethodError: KspTaskJvm.getChangedFiles(...)` — KSP/Kotlin-Versions-Mismatch  (Re-Recherche 2026-06-24)
+**Symptom:** Build bricht ab mit `NoSuchMethodError` auf `KspTaskJvm.getChangedFiles(...)`.
+**Ursache:** Das KSP-Gradle-Plugin und die Kotlin-Build-Tools-API passen nicht zusammen — das KSP-Suffix
+ist NICHT exakt an die Kotlin-Version gekoppelt (Cross-ref `kotlin.md` §10.1). Eine "irgendeine" KSP-Version
+zu einer anderen Kotlin-Version fuehrt zu fehlenden internen Methoden.
+**Versionen:** versionsuebergreifend; tritt bei jeder Suffix-Fehlpaarung auf.
+**FIX (funktionserhaltend):** KSP-Version exakt zum Kotlin-Suffix waehlen (`2.1.0-1.0.29` zu Kotlin 2.1.0).
+Beim Kotlin-Upgrade KSP im selben Schnitt mitziehen — nie einzeln bumpen.
+**Quelle:** Stack-Overflow-Faelle 2026; google/ksp Versionierungs-Doku.
+
+### 8.2b KSP2 schlaegt Modul-Recompilation auf Windows fehl — GEFIXT in 2.3.6  (Re-Recherche 2026-06-24)
+**Symptom:** Mit `ksp.useKSP2=true` scheitert auf **Windows** die inkrementelle Modul-Recompilation.
+**Ursache:** KSP2-Pfad-/Recompile-Handling unter Windows (Frank-relevant: Windows-Hauptmaschine).
+**Versionen:** ksp#2774 (**CLOSED COMPLETED 2026-02-17**) — gefixt in **KSP 2.3.6**. Eure KSP1-Linie
+(2.1.0-1.0.29, `useKSP2` nicht gesetzt) ist NICHT betroffen; relevant erst, wenn beim Kotlin-2.3/AGP-9-Sprung
+`useKSP2=true` aktiviert wird (§8.1) — dann mindestens KSP 2.3.6 verwenden.
+**FIX (funktionserhaltend):** Beim KSP2-Wechsel auf KSP ≥ 2.3.6 gehen.
+**Quelle:** github.com/google/ksp/issues/2774
 
 ### 8.3 Generierte Sources fehlen nach inkrementellem Build
 **Symptom:** Clean-Build OK, aber inkrementeller Build → KSP-Komponenten nicht verarbeitet, generierte
@@ -749,7 +804,7 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 
 ---
 
-## 12. Fix-Status (per `gh` hart geprueft am 2026-06-02)
+## 12. Fix-Status (per `gh` hart geprueft am 2026-06-02, ergaenzt 2026-06-24)
 
 > Ehrlichkeits-Hinweis: GitHub-Issues wurden per `gh issue view` (echter OPEN/CLOSED-Status) verifiziert.
 > Google-IssueTracker-Eintraege (R8/AGP intern) sind ueber `gh` nicht pruefbar — fuer die gilt der
@@ -771,6 +826,12 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 | jcenter() in 9.0 entfernt (§4.2) | CLOSED COMPLETED 2025-08-12 | gradle#34504 |
 | Retrofit R8-fullMode keep-Rules (§7.1) | CLOSED COMPLETED (Libs liefern eigene Rules) | retrofit#3005/#3751 |
 | `Task.project` Execution-Zeit (§5.1) | CLOSED COMPLETED 2023-03-22 (Plugin-seitig) | spotbugs#670 |
+| R8 optimizedResourceShrinking-Crash, konkret (§7.5) | CLOSED COMPLETED 2025-10-10 | mikepenz/AboutLibraries#1239 |
+| KSP2 Modul-Recompile auf Windows (§8.2b) | CLOSED COMPLETED 2026-02-17 — Fix in KSP 2.3.6 | ksp#2774 |
+| KSP Kotlin-Target auf 2.3 angehoben | CLOSED COMPLETED 2026-03-18 — in KSP 2.3.7 | ksp#2821 |
+| KSP `ksp.project.isolation` Default bei Isolated Projects | CLOSED COMPLETED 2026-04-23 | ksp#2866 |
+| AGP 9.0: kein `onVariant`-Aequivalent fuer `mergeAssetsProvider` | **gefixt in AGP 9.2.0** (Google-Tracker, NICHT per gh pruefbar) | issuetracker#477562205 |
+| AGP 9.0: `androidDeviceTest` + Manifest-Placeholders in KMP-Library | **gefixt in AGP 9.2.0** (Google-Tracker, NICHT per gh pruefbar) | issuetracker#482293927 |
 
 ### Noch NICHT gefixt — Workaround bleibt aktiv
 
@@ -788,6 +849,7 @@ altes Encoding). Das vorhandene `-Dfile.encoding` schadet nicht, ersetzt aber `o
 | Hilt KSP2 PSI lifetime token | **OPEN** | ksp#2545 |
 | R8 strippt @HiltViewModel-Ctor (§7.8) | **OPEN** | dagger#4739 |
 | Hilt + `com.android.legacy-kapt` (§8.10) | **OPEN** | dagger#4756 |
+| KSP Perf-Regression `PsiResolutionStrategy` (in 2.3.8 eingefuehrt; 2.3.x-Linie) | **OPEN** (gh-geprueft 2026-06-24) | ksp#2948 |
 
 ### "won't fix" / per Design (Workaround dauerhaft)
 
