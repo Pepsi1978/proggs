@@ -434,6 +434,17 @@ async def api_trash_restore(request: Request) -> dict:
     return res
 
 
+@app.delete("/api/trash/all")
+async def api_trash_empty() -> dict:
+    """Leert den Papierkorb komplett (unwiderruflich). Proxy an brain DELETE /trash/all.
+    Sync httpx via asyncio.to_thread (kein Event-Loop-Block, fastapi §1)."""
+    try:
+        return await asyncio.to_thread(_bdelete, "/trash/all", user_id=USER_ID)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Papierkorb-Leeren fehlgeschlagen", err=str(e))
+        return JSONResponse(status_code=502, content={"ok": False, "detail": f"Leeren fehlgeschlagen: {type(e).__name__}"})
+
+
 # --- Prompt verbessern (G-Button): Text sprachlich verbessern (Proxy an agent /improve) ------------
 @app.post("/api/improve")
 async def api_improve(request: Request) -> dict:

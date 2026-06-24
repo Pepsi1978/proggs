@@ -463,6 +463,12 @@ button{font-family:inherit;cursor:pointer}
 .btn-restore{display:inline-flex;align-items:center;gap:6px;color:var(--good);border-color:rgba(90,208,160,.45)}
 .btn-restore:hover{border-color:var(--good);background:rgba(90,208,160,.12)}
 .btn-restore svg{width:15px;height:15px;stroke-width:2}
+/* "Papierkorb leeren"-Button (oben rechts in der Papierkorb-Kachel) — rot getoent, destruktiv */
+.trash-empty-btn{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:var(--bad);
+  border-color:rgba(242,105,142,.45);font-weight:600}
+.trash-empty-btn:hover{border-color:var(--bad);background:rgba(242,105,142,.12)}
+.trash-empty-btn svg{width:15px;height:15px;stroke-width:2}
+.trash-empty-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ── Untere Tab-Leiste (mobil) ─────────────────────────────────────────── */
 .tabbar{display:none}
@@ -815,7 +821,12 @@ button{font-family:inherit;cursor:pointer}
         </div>
 
         <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></span>Papierkorb</h3>
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></span>Papierkorb
+            <button class="btn btn-sm trash-empty-btn" id="emptyTrashBtn" type="button" title="Alle Einträge unwiderruflich aus dem Papierkorb löschen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+              <span>Papierkorb leeren</span>
+            </button>
+          </h3>
           <p class="set-desc">Gelöschte Einträge — nach Lösch-Monat. Wähle einen Monat; dort kannst du Einträge bearbeiten, speichern und wiederherstellen.</p>
           <div class="ym-nav" id="trashNav"><span class="log-empty">Lädt…</span></div>
           <div class="trash-list" id="trashList" style="margin-top:10px"></div>
@@ -886,6 +897,18 @@ button{font-family:inherit;cursor:pointer}
     <div class="confirm-actions">
       <button class="btn" id="restoreNo">Nein</button>
       <button class="btn btn-primary" id="restoreYes">Ja, wiederherstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestaetigungs-Dialog: Papierkorb komplett leeren ────────────────────── -->
+<div class="confirm-overlay" id="emptyTrashOverlay">
+  <div class="confirm-box">
+    <h4>Papierkorb leeren?</h4>
+    <p>Möchtest du wirklich ALLE Einträge unwiderruflich aus dem Papierkorb löschen? Das kann nicht rückgängig gemacht werden.</p>
+    <div class="confirm-actions">
+      <button class="btn" id="emptyTrashNo">Nein</button>
+      <button class="btn btn-danger" id="emptyTrashYes">Ja, alles löschen</button>
     </div>
   </div>
 </div>
@@ -1307,7 +1330,24 @@ button{font-family:inherit;cursor:pointer}
     }catch(e){ /* still — Liste bleibt, nächster Versuch möglich */ }
   });
 
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(restoreOverlay.classList.contains("open")) closeRestore(); else if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
+  /* Papierkorb leeren: Button -> Bestaetigung (Ja/Nein) -> ALLE Eintraege unwiderruflich loeschen */
+  const emptyTrashOverlay = document.getElementById("emptyTrashOverlay");
+  function openEmptyTrash(){ emptyTrashOverlay.classList.add("open"); }
+  function closeEmptyTrash(){ emptyTrashOverlay.classList.remove("open"); }
+  document.getElementById("emptyTrashBtn").addEventListener("click", openEmptyTrash);
+  document.getElementById("emptyTrashNo").addEventListener("click", closeEmptyTrash);
+  emptyTrashOverlay.addEventListener("click", e=>{ if(e.target===emptyTrashOverlay) closeEmptyTrash(); });
+  document.getElementById("emptyTrashYes").addEventListener("click", async ()=>{
+    closeEmptyTrash();
+    const yes = document.getElementById("emptyTrashYes"); yes.disabled = true;
+    try{
+      const r = await apiSend("/api/trash/all","DELETE");
+      if(r && r.ok!==false){ loadTrash(); }   // Papierkorb neu laden (jetzt leer)
+    }catch(e){ /* still */ }
+    finally{ yes.disabled = false; }
+  });
+
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(emptyTrashOverlay.classList.contains("open")) closeEmptyTrash(); else if(restoreOverlay.classList.contains("open")) closeRestore(); else if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
 
   /* ── Demo-Daten (Fallback, wenn Backend nicht erreichbar) ─────────────── */
   let USING_DEMO = false;

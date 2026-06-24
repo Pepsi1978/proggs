@@ -699,6 +699,21 @@ def trash_edit(req: TrashEditReq) -> dict:
     return {"ok": True, "doc_id": req.doc_id, "chars": len(req.text)}
 
 
+@app.delete("/trash/all", dependencies=[Depends(require_auth)])
+def trash_empty(user_id: str = "frank") -> dict:
+    """Leert den Papierkorb dieses Nutzers KOMPLETT und UNWIDERRUFLICH (Frank-Wunsch: 'Papierkorb leeren').
+    Reiner Textspeicher — es gibt keine Vektoren mehr zu loeschen (die wurden beim Soft-Delete entfernt).
+    Atomar + thread-sicher. Sync def -> Threadpool (fastapi §1)."""
+    with _trash_lock:
+        items = _trash_load()
+        before = len(items)
+        remaining = [t for t in items if (t.get("user_id") or "frank") != user_id]
+        _trash_save(remaining)
+    removed = before - len(remaining)
+    checkpoint("trash_empty", "Papierkorb komplett geleert (unwiderruflich)", ok=True, removed=removed)
+    return {"ok": True, "removed": removed}
+
+
 @app.post("/trash/restore", dependencies=[Depends(require_auth)])
 def trash_restore(req: RestoreReq) -> dict:
     """Stellt einen Papierkorb-Eintrag wieder her: der (ggf. editierte) Text wird frisch embedded und
