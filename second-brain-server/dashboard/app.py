@@ -20,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.4.2"  # 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.5.0"  # 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -115,13 +115,13 @@ def overview() -> dict:
         out["brain"] = {"status": "error", "detail": str(e)}
     try:
         lst = _bget("/list", user_id=USER_ID, limit=2000)
-        # Logbuch-Gespraeche (Kategorie CONV_CATEGORY) bleiben im Gehirn als Vektoren (durchsuchbar +
-        # per Agent abrufbar/recall), zaehlen aber NICHT als persoenliche Wissens-Eintraege in der
-        # Uebersicht und erscheinen nicht als Kategorie-Balken (Frank-Wunsch 2026-06-24).
-        items = [it for it in lst.get("items", []) if (it.get("category") or "") != CONV_CATEGORY]
-        c = Counter((it.get("category") or "(ohne)") for it in items)
+        # Logbuch-Gespraeche (Kategorie CONV_CATEGORY) ERSCHEINEN als eigene Kategorie (Balken + Legende
+        # + Chip, anklickbar und bearbeitbar), zaehlen aber NICHT in die Gesamtsumme "Einträge gesamt"
+        # (Frank-Korrektur 2026-06-24: alle Kategorien sichtbar, nur die Summe ohne Gespraeche).
+        all_items = lst.get("items", [])
+        c = Counter((it.get("category") or "(ohne)") for it in all_items)
         out["categories"] = sorted(({"name": k, "count": v} for k, v in c.items()), key=lambda x: -x["count"])
-        out["total"] = len(items)
+        out["total"] = sum(1 for it in all_items if (it.get("category") or "") != CONV_CATEGORY)
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", err=str(e))
     try:
@@ -141,6 +141,7 @@ def overview() -> dict:
                          "disk_used": du.used // MB, "disk_total": du.total // MB, "disk_pct": du.percent}
     except Exception as e:  # noqa: BLE001
         out["server"] = {"detail": str(e)}
+    out["dash_version"] = VERSION   # sichtbare Dashboard-Version im Cockpit (Update-Kontrolle)
     return out
 
 

@@ -544,6 +544,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="rail-foot">
       <span class="dot" id="rail-dot"></span>
       <span>10.8.0.1 · privat</span>
+      <span id="dashVer" style="margin-left:auto;opacity:.75"></span>
     </div>
   </aside>
 
@@ -877,6 +878,7 @@ Leitsätze:
 
     document.getElementById("metaPoints").textContent = d.brain?.points ?? total;
     document.getElementById("metaEmbed").textContent = d.brain?.embed_model || "–";
+    const dv = document.getElementById("dashVer"); if(dv) dv.textContent = d.dash_version ? "v"+d.dash_version : "";
 
     /* Stapelbalken */
     const bar = document.getElementById("bar");
