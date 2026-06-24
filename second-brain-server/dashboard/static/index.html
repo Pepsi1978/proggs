@@ -551,6 +551,9 @@ button{font-family:inherit;cursor:pointer}
 .cs-panel::-webkit-scrollbar{display:none}
 .cs-panel.up{bottom:calc(100% + 6px)}
 .cs-panel.down{top:calc(100% + 6px)}
+/* Kategorie-Dropdown (Gespräch): Blase breiter — von der Trigger-Linkkante bis zur Mikrofon-Rechtkante
+   (= +100px: X-Button 42 + Mikrofon 42 + 2x gap 8). Und 30% hoeher (340 -> 442) fuer besseren Ueberblick. */
+.cs-compact .cs-panel{right:auto;width:calc(100% + 100px);max-height:442px}
 .cs.open .cs-panel{display:block;animation:rise .18s var(--ease) both}
 .cs-opt{padding:9px 12px;border-radius:10px;font-size:13.5px;color:var(--text-dim);cursor:pointer;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
