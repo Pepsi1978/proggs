@@ -138,7 +138,8 @@ public partial class MainWindow : Window
         {
             var user = Get("SSH_USER", "root");
             var port = Get("SSH_PORT", "22");
-            var key = Get("SSH_KEY");
+            var key = ResolveKey(Get("SSH_KEY"));   // Feld leer? -> bekannte Schlüssel automatisch finden
+            if (!string.IsNullOrWhiteSpace(key)) FixKeyPermissions(key);  // Windows-„bad permissions" vorbeugen
             var appDir = Get("REMOTE_APP_DIR", "/opt/second-brain");
             var target = $"{user}@{server}";
 
@@ -152,16 +153,19 @@ public partial class MainWindow : Window
 
             var sshBase = new List<string> { "-p", port, "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=15" };
             var scpBase = new List<string> { "-P", port, "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=15" };
-            if (!string.IsNullOrWhiteSpace(key) && File.Exists(key)) { sshBase.AddRange(new[] { "-i", key }); scpBase.AddRange(new[] { "-i", key }); }
-            else Log("Hinweis: kein SSH-Schlüssel gesetzt — evtl. Passwort-Abfrage im Hintergrund (besser Einrichtung nutzen).");
+            if (!string.IsNullOrWhiteSpace(key) && File.Exists(key)) { sshBase.AddRange(new[] { "-i", key }); scpBase.AddRange(new[] { "-i", key }); Log("SSH-Schlüssel: " + key); }
+            else Log("Hinweis: kein SSH-Schlüssel gefunden — der Server fragt evtl. nach Passwort. Tipp: in Einrichtung einen erzeugen.");
 
             Log("Stoße Server-Backup an (kann 1-2 Min dauern)…");
             var sshArgs = new List<string>(sshBase) { target, $"bash {appDir}/scripts/full-backup-create.sh" };
             var (code, outp) = await RunProcess("ssh.exe", sshArgs);
             if (code != 0 && string.IsNullOrEmpty(outp)) { Log("FEHLER: SSH-Aufruf fehlgeschlagen. Server/Verbindung prüfen."); return; }
 
-            var archive = Regex.Matches(outp, @"^/.+\.tar\.gz$", RegexOptions.Multiline)
-                .Select(m => m.Value.Trim()).LastOrDefault();
+            // Letzte stdout-Zeile, die wie ein absoluter .tar.gz-Pfad aussieht. Robust gegen das
+            // \r, das Windows-ssh.exe anhaengt (deshalb pro Zeile Trim statt Regex-Multiline-$).
+            var archive = outp.Replace("\r", "").Split('\n')
+                .Select(l => l.Trim())
+                .LastOrDefault(l => l.StartsWith('/') && l.EndsWith(".tar.gz", StringComparison.Ordinal));
             if (string.IsNullOrWhiteSpace(archive))
             { Log("FEHLER: Server lieferte keinen Archiv-Pfad. Liegen die Skripte auf dem Server (git pull + chmod +x)?"); return; }
             Log("Server-Archiv: " + archive);
@@ -237,6 +241,44 @@ public partial class MainWindow : Window
     }
 
     // ── Helfer ──────────────────────────────────────────────────────────────────────────────────
+    // Konfigurierten Schlüssel nehmen — oder, falls leer/ungültig, bekannte Orte automatisch durchsuchen.
+    private static string ResolveKey(string configured)
+    {
+        if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured)) return configured;
+        var up = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        foreach (var c in new[]
+        {
+            Path.Combine(up, "SK", "second-brain", "id_ed25519"),
+            Path.Combine(up, "SK", "second-brain", "id_cortex"),
+            Path.Combine(up, ".ssh", "id_ed25519"),
+        })
+            if (File.Exists(c)) return c;
+        return "";
+    }
+
+    // Windows-SSH verlangt strenge Datei-Rechte am privaten Schlüssel. Verwaiste/zu offene ACLs lösen
+    // „UNPROTECTED PRIVATE KEY" aus -> hier praeventiv auf „nur aktueller Benutzer" setzen.
+    private static void FixKeyPermissions(string key)
+    {
+        try
+        {
+            var user = $"{Environment.UserDomainName}\\{Environment.UserName}";
+            foreach (var argset in new[]
+            {
+                new[] { key, "/inheritance:r" },
+                new[] { key, "/grant:r", $"{user}:F" },
+            })
+            {
+                var psi = new ProcessStartInfo("icacls.exe")
+                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                foreach (var a in argset) psi.ArgumentList.Add(a);
+                using var p = Process.Start(psi);
+                p?.WaitForExit(8000);
+            }
+        }
+        catch { /* Reparatur ist Best-Effort; schlimmstenfalls greift die alte Fehlermeldung */ }
+    }
+
     private static async Task<bool> TcpReachable(string host, int port, int timeoutMs)
     {
         try
