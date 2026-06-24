@@ -1086,7 +1086,9 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById(id+"Meter").style.width = (pct==null?0:Math.min(100,pct))+"%";
     if(sub!=null){ const e=document.getElementById(id+"Sub"); if(e) e.textContent = sub; }
   }
-  const cap = s => (s||"").replace(/[-_]/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+  // Unicode-bewusst: nur der erste Buchstabe JEDES Wortes gross (Umlaute ä/ö/ü zaehlen als Buchstabe,
+  // nicht als Wortgrenze) — sonst entsteht "PersöNlich"/"GeräTe" weil \w keine Umlaute kennt.
+  const cap = s => (s||"").replace(/[-_]/g," ").replace(/(^|\s)(\p{L})/gu,(m,p,c)=>p+c.toUpperCase());
 
   async function loadOverview(){
     try{
