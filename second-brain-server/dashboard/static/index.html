@@ -530,6 +530,32 @@ button{font-family:inherit;cursor:pointer}
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
 .chat-cat:hover{border-color:var(--accent)}
 
+/* ── Eigene Dropdowns (custom select): native <select> versteckt, schoenes UI im Seiten-Stil ──── */
+.cs-native{display:none!important}
+.cs{position:relative}
+.cs.cs-compact{display:inline-block;align-self:flex-start}
+.cs-trigger{display:flex;align-items:center;gap:8px;width:100%;height:42px;padding:0 12px;border-radius:12px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;
+  cursor:pointer;transition:border-color .2s,box-shadow .25s}
+.cs-compact .cs-trigger{min-width:150px;max-width:200px}
+.cs-trigger:hover{border-color:var(--accent)}
+.cs-value{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-chev{width:16px;height:16px;flex:none;opacity:.7;transition:transform .25s}
+/* offen = "aktiv": Amber-Umrandung + weiches Leuchten (Signatur der Seite) */
+.cs.open .cs-trigger{border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.16),0 0 26px -6px var(--accent)}
+.cs.open .cs-chev{transform:rotate(180deg)}
+.cs-panel{position:absolute;left:0;right:0;z-index:60;max-height:340px;overflow-y:auto;background:var(--surface);
+  border:1px solid var(--accent);border-radius:14px;padding:6px;display:none;
+  box-shadow:0 0 0 3px rgba(244,166,90,.13),var(--shadow-pop)}
+.cs-panel.up{bottom:calc(100% + 6px)}
+.cs-panel.down{top:calc(100% + 6px)}
+.cs.open .cs-panel{display:block;animation:rise .18s var(--ease) both}
+.cs-opt{padding:9px 12px;border-radius:10px;font-size:13.5px;color:var(--text-dim);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
+.cs-opt:hover{background:var(--surface-2);color:var(--text)}
+.cs-opt.sel{color:var(--accent)}
+.cs-opt.special{color:var(--accent)}
+
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
 .drawer-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
@@ -1361,7 +1387,9 @@ button{font-family:inherit;cursor:pointer}
       const c = await api("/api/config");
       const avail = (c.available && c.available.length) ? c.available : ["gemini-3.1-flash-lite","gemini-2.5-flash","minimax/minimax-m3"];
       const m = c.models || {};
-      const fill = (id, cur)=>{ const sel=document.getElementById(id); if(sel) sel.innerHTML = avail.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join(""); };
+      const fill = (id, cur)=>{ const sel=document.getElementById(id); if(!sel) return;
+        sel.innerHTML = avail.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join("");
+        enhanceSelect(sel); };   // schönes Dropdown (klappt nach unten)
       fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
     }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
     /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
@@ -1384,8 +1412,53 @@ button{font-family:inherit;cursor:pointer}
     el.style.color = ok ? "var(--good)" : "var(--bad)";
     clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=""; el.style.color=""; }, 3400);
   }
-  /* tree = { "2026": {"06": 12, "05": 3}, ... }  (Jahr -> Monat -> Anzahl). onPick(jahr, monat). */
-  function renderYmNav(host, tree, onPick){
+  /* ── Eigene Dropdowns: native <select> bleibt die Wert-Quelle (versteckt), schoenes UI darueber ── */
+  function enhanceSelect(sel, opts){
+    opts = opts || {};
+    if(!sel) return;
+    if(sel._cs){ syncCS(sel); return; }              // schon vorhanden -> nur Inhalt auffrischen
+    sel.classList.add("cs-native");
+    const cs = document.createElement("div");
+    cs.className = "cs" + (opts.compact ? " cs-compact" : "");
+    const trigger = document.createElement("button");
+    trigger.type = "button"; trigger.className = "cs-trigger";
+    trigger.innerHTML = `<span class="cs-value"></span><svg class="cs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg>`;
+    const panel = document.createElement("div");
+    panel.className = "cs-panel " + (opts.up ? "up" : "down");
+    cs.appendChild(trigger); cs.appendChild(panel);
+    sel.parentNode.insertBefore(cs, sel.nextSibling);
+    sel._cs = {cs, trigger, panel, valueEl: trigger.querySelector(".cs-value")};
+    trigger.addEventListener("click", e=>{
+      e.stopPropagation();
+      const isOpen = cs.classList.contains("open");
+      closeAllCS();
+      if(!isOpen) cs.classList.add("open");
+    });
+    syncCS(sel);
+  }
+  function syncCS(sel){
+    const ref = sel && sel._cs; if(!ref) return;
+    const selOpt = sel.options[sel.selectedIndex];
+    ref.valueEl.textContent = selOpt ? selOpt.textContent : "";
+    ref.panel.innerHTML = "";
+    Array.from(sel.options).forEach((opt,i)=>{
+      const o = document.createElement("div");
+      o.className = "cs-opt" + (i===sel.selectedIndex ? " sel" : "") + (opt.value==="__new__" ? " special" : "");
+      o.textContent = opt.textContent;
+      o.addEventListener("click", e=>{
+        e.stopPropagation();
+        sel.value = opt.value; syncCS(sel); ref.cs.classList.remove("open");
+        sel.dispatchEvent(new Event("change", {bubbles:true}));
+      });
+      ref.panel.appendChild(o);
+    });
+  }
+  function closeAllCS(){ document.querySelectorAll(".cs.open").forEach(c=>c.classList.remove("open")); }
+  document.addEventListener("click", closeAllCS);
+
+  /* tree = { "2026": {"06": 12, "05": 3}, ... }  (Jahr -> Monat -> Anzahl).
+     onPick(jahr, monat) lädt einen Monat; onClear() blendet die Einträge wieder aus (Toggle/Zuklappen). */
+  function renderYmNav(host, tree, onPick, onClear){
     host.innerHTML = "";
     const years = Object.keys(tree).sort((a,b)=>b.localeCompare(a));   // neueste zuerst
     if(!years.length){ host.innerHTML = `<span class="log-empty">Noch nichts vorhanden.</span>`; return; }
@@ -1409,13 +1482,25 @@ button{font-family:inherit;cursor:pointer}
         btn.title = (y===curY && m===curM) ? "Aktueller Monat" : "";
         btn.innerHTML = `${MONTHS_DE[idx]||m}<span class="mc">${tree[y][m]}</span>`;
         btn.addEventListener("click", ()=>{
+          if(btn.classList.contains("active")){   // zweiter Klick auf denselben Monat -> wieder einklappen
+            btn.classList.remove("active");
+            if(onClear) onClear();
+            return;
+          }
           host.querySelectorAll(".ym-month.active").forEach(e=>e.classList.remove("active"));
           btn.classList.add("active");
           onPick(y, m);
         });
         mWrap.appendChild(btn);
       });
-      yEl.addEventListener("click", ()=>{ yEl.classList.toggle("open"); mWrap.classList.toggle("open"); });
+      yEl.addEventListener("click", ()=>{
+        const willClose = yEl.classList.contains("open");
+        yEl.classList.toggle("open"); mWrap.classList.toggle("open");
+        if(willClose){   // Jahr zuklappen -> aktiven Monat zuruecksetzen + Einträge ausblenden
+          mWrap.querySelectorAll(".ym-month.active").forEach(e=>e.classList.remove("active"));
+          if(onClear) onClear();
+        }
+      });
       host.appendChild(yEl); host.appendChild(mWrap);
     });
   }
@@ -1453,7 +1538,7 @@ button{font-family:inherit;cursor:pointer}
         try{ const r = await api(`/api/logbook?year=${encodeURIComponent(y)}&month=${encodeURIComponent(m)}`);
              renderLogRows(box, (r&&r.items)||[]); }
         catch(_){ box.innerHTML = `<span class="log-empty">Konnte den Monat nicht laden.</span>`; }
-      });
+      }, ()=>{ box.innerHTML = ""; });
     }catch(e){
       nav.innerHTML = `<span class="log-empty">Logbuch nicht erreichbar.</span>`;
     }
@@ -1478,7 +1563,7 @@ button{font-family:inherit;cursor:pointer}
     const tree = {};
     trashItems.forEach(t=>{ const ym = trashYM(t); if(!ym) return;
       const [y,m]=ym; tree[y]=tree[y]||{}; tree[y][m]=(tree[y][m]||0)+1; });
-    renderYmNav(nav, tree, (y,m)=> renderTrashMonth(list, y, m));
+    renderYmNav(nav, tree, (y,m)=> renderTrashMonth(list, y, m), ()=>{ list.innerHTML = ""; });
   }
   function renderTrashMonth(list, y, m){
     const items = trashItems.filter(t=>{ const ym=trashYM(t); return ym && ym[0]===y && ym[1]===m; })
@@ -1814,6 +1899,7 @@ button{font-family:inherit;cursor:pointer}
     sel.innerHTML = '<option value="">Auto-Kategorie</option><option value="__new__">➕ Neue Kategorie…</option>'
       + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     sel.value = (prev && prev!=="__new__" && cats.includes(prev)) ? prev : "";
+    enhanceSelect(sel, {compact:true, up:true});   // schönes Dropdown (klappt nach oben, da unten am Eingabefeld)
   }
   async function onCategoryChange(){
     const sel = document.getElementById("chatCategory");
