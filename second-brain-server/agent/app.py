@@ -1,10 +1,16 @@
 """
-sb-agent — Bibliothekar-Agent (Schicht 3) des zweiten Gehirns, SPEICHER-SEITE (Phase 4a).
+sb-agent — Bibliothekar-Agent (Schicht 3) des zweiten Gehirns. EIN Gespraechs-Eingang (/chat),
+intern zwei Koepfe: Speicher-Seite (Phase 4a) UND Abruf-Seite (Phase 4b).
 
-Aufgabe: Frank schickt Text -> der Agent ordnet ein (Kategorie + Titel), prueft Dubletten,
-fragt bei Bedarf zurueck, speichert den Text WORTWOERTLICH 1:1 ueber die brain-api und antwortet
-in normalem, menschlichem Deutsch (Smalltalk-Ton). Der Agent VERAENDERT NIE den gespeicherten
-Inhalt — das LLM entscheidet nur Kategorie/Titel/Antwort, der Text geht 1:1 in den Speicher.
+Ein Eingang, ein editierbarer Prompt — pro Nachricht entscheidet der Agent selbst (action):
+  - store/ask: Frank schickt eine Info -> Kategorie + Titel, Dubletten-Pruefung, Rueckfrage bei
+    Bedarf, dann WORTWOERTLICH 1:1 ueber die brain-api ablegen. Der Inhalt wird NIE veraendert.
+  - recall (Phase 4b): Frank stellt eine Wissensfrage -> read-only Vektorsuche im Gehirn
+    (brain-api /search), dann ZWEITER LLM-Aufruf (llm_answer), der NUR aus den gefundenen
+    Treffern antwortet — erfindet nichts; passt nichts, sagt er es ehrlich.
+  - smalltalk: nur reden, nichts speichern/abrufen.
+Beide Koepfe nutzen DENSELBEN editierbaren System-Prompt (ein Fenster im Dashboard); nur der
+geschuetzte JSON-SCHEMA_BLOCK gilt fuer die Entscheidung (Aufruf 1), nicht fuer die Antwort (Aufruf 2).
 
 Gespraech: Kurzzeit-Gedaechtnis pro Sitzung (30 min Inaktivitaet). Danach Logbuch ZWEIFACH:
   (1) 1:1 ins Gehirn (Kategorie 'gespraeche')
@@ -12,7 +18,6 @@ Gespraech: Kurzzeit-Gedaechtnis pro Sitzung (30 min Inaktivitaet). Danach Logbuc
       Dateiname "TT.MM.JJJJ - H.MM Uhr.txt", Inhalt: Kategorie-Zeile + Datum/Uhrzeit + Verlauf
       (klar getrennt Frank: / Agent:).
 
-Bewusst NICHT hier: Abfrage-Seite (4b), STT/TTS (Frontends), Dashboard. Text rein, Text raus.
 Plan: best-practices/second-brain/agent-bibliothekar-plan.md
 Observability-First: JSON-Log (stdout + Datei), Fehler-Faenger, Logik-Sonden + Intent-Checkpoints.
 """
@@ -36,7 +41,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.2.1"  # 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.3.0"  # 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -54,6 +59,8 @@ CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespraeche")
 DEDUP_CANDIDATES = int(os.getenv("AGENT_DEDUP_CANDIDATES", "3"))
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
 HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "20"))             # so viele letzte Nachrichten an das LLM
+RECALL_LIMIT = int(os.getenv("AGENT_RECALL_LIMIT", "5"))            # so viele Gehirn-Treffer fuers Nachschlagen (Phase 4b)
+ANSWER_MAX_TOKENS = int(os.getenv("AGENT_ANSWER_MAX_TOKENS", "4096"))  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
 LOG_PATH = os.getenv("AGENT_LOG_PATH", "/app/logs/agent.jsonl")
 LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
 
@@ -222,38 +229,45 @@ DUBLETTEN: Unten unter 'ÄHNLICHE VORHANDENE EINTRÄGE' bekommst du die ähnlich
 
 ANTWORT AUF EINE RÜCKFRAGE: Wenn unten ein 'OFFENER PUNKT' steht, antwortet Frank gerade darauf. Löse es auf: bestätigt er Ersetzen -> action='store' und setze replace_title auf den genauen Titel des alten Eintrags; 'neu' -> action='store' (neuer Eintrag, replace_title bleibt leer); nennt er eine andere Kategorie -> nimm die; 'abbrechen' -> action='smalltalk' (nichts speichern), bestätige freundlich.
 
+NACHSCHLAGEN / ABRUFEN: Fragt Frank nach GESPEICHERTEN INHALTEN ('Was habe ich über X notiert?', 'Was weisst du über Y?', 'Wann habe ich Z gemacht?', 'Erinnerst du dich an …?') -> action='recall' und setze 'query' auf den inhaltlichen Suchbegriff (die Stichworte, worum es geht — nicht die ganze Frage wortwörtlich). Speichere dabei NICHTS. Die eigentliche Antwort formulierst du erst danach, NUR aus den gefundenen Treffern (siehe Abschnitt 'ANTWORTEN AUS DEM GEDÄCHTNIS').
+
 KEIN SPEICHER-FALL: Ist die Nachricht nur Smalltalk oder Begrüssung -> action='smalltalk', antworte einfach natürlich.
-- Fragt Frank nach GESPEICHERTEN INHALTEN ('Was habe ich über X notiert?', 'Was weisst du über Y?'), dann action='smalltalk', aber sag EHRLICH, dass du gerade die Speicher-Seite bist und die Einträge nicht vor dir hast — abrufen kannst du sie (noch) nicht. RATE NICHTS, erfinde KEINE Erinnerung. (Einzige Ausnahme: die unten gezeigten ähnlichen Einträge — auf die darfst du dich beziehen.)
-- Ist die Eingabe leer oder unbrauchbar (kein sinnvoller Inhalt) -> action='ask' und frag kurz, was du ablegen sollst."""
+- Ist die Eingabe leer oder unbrauchbar (kein sinnvoller Inhalt) -> action='ask' und frag kurz, was du ablegen sollst.
+
+ANTWORTEN AUS DEM GEDÄCHTNIS (beim Nachschlagen): Wenn du eine Frage aus dem Gehirn beantwortest, bekommst du unten die GEFUNDENEN EINTRÄGE gezeigt. Antworte Frank dann in normalem, freundlichem Deutsch — aber AUSSCHLIESSLICH auf Basis dieser Einträge. Erfinde NICHTS dazu, was nicht drinsteht, und vermische nichts. Passt kein Eintrag wirklich zur Frage, sag ehrlich, dass du dazu nichts gespeichert findest. Wenn es hilft, nenne kurz, woher die Info stammt (Titel/Kategorie). Fasse zusammen, wenn es mehrere passende Einträge gibt."""
 
 SCHEMA_BLOCK = """ANTWORTE AUSSCHLIESSLICH MIT EINEM EINZIGEN, NACKTEN JSON-OBJEKT — kein Markdown, KEINE Code-Zäune (```), kein Text davor oder danach. Genau diese Felder:
 {
-  "action": "store" | "ask" | "smalltalk",   // genau EINE dieser drei Auswahlen
-  "category": "kategorie_schluessel",         // bei store und ask gefüllt; bei smalltalk leer ""
-  "title": "Kurzer Titel",                    // bei store und ask gefüllt (höchstens ~60 Zeichen, keine Anführungszeichen); bei smalltalk leer ""
+  "action": "store" | "ask" | "recall" | "smalltalk",   // genau EINE dieser vier Auswahlen
+  "category": "kategorie_schluessel",         // bei store und ask gefüllt; sonst leer ""
+  "title": "Kurzer Titel",                    // bei store und ask gefüllt (höchstens ~60 Zeichen, keine Anführungszeichen); sonst leer ""
   "replace_title": "",                        // NUR beim Ersetzen einer Dublette: exakter Titel des alten Eintrags; sonst immer ""
-  "reply": "Antwort an Frank, normales Deutsch mit echten Umlauten"
+  "query": "",                                // NUR bei recall: die Suchanfrage fürs Gehirn (worum es inhaltlich geht); sonst immer ""
+  "reply": "Antwort an Frank, normales Deutsch mit echten Umlauten"   // bei recall leer lassen "" (die echte Antwort kommt aus den Treffern)
 }
 
 BEISPIELE (so sehen korrekte Antworten aus — gib genauso NUR das Objekt aus):
 
 Frank: "Ich nehme ab jetzt morgens 5000 IE Vitamin D."
-{"action":"store","category":"nem-stack","title":"Vitamin D 5000 IE morgens","replace_title":"","reply":"Hab ich dir unter nem-stack abgelegt — 5000 IE Vitamin D morgens."}
+{"action":"store","category":"nem-stack","title":"Vitamin D 5000 IE morgens","replace_title":"","query":"","reply":"Hab ich dir unter nem-stack abgelegt — 5000 IE Vitamin D morgens."}
 
 Frank: "Mein Lieblingstauchspot ist die Steilwand bei Capo Galera."
-{"action":"ask","category":"tauchen","title":"Lieblingstauchspot Capo Galera","replace_title":"","reply":"Dafür hätte ich noch keine passende Schublade. Soll ich die Kategorie 'tauchen' neu anlegen?"}
+{"action":"ask","category":"tauchen","title":"Lieblingstauchspot Capo Galera","replace_title":"","query":"","reply":"Dafür hätte ich noch keine passende Schublade. Soll ich die Kategorie 'tauchen' neu anlegen?"}
 
 Frank: "Ziel: dieses Jahr 10 kg abnehmen."   (ähnlich vorhanden: 'Ziel Gewicht 2026')
-{"action":"ask","category":"ziele-2026","title":"10 kg abnehmen 2026","replace_title":"","reply":"Es gibt schon 'Ziel Gewicht 2026' — klingt sehr ähnlich. Soll ich das ersetzen, als neuen Eintrag speichern oder abbrechen?"}
+{"action":"ask","category":"ziele-2026","title":"10 kg abnehmen 2026","replace_title":"","query":"","reply":"Es gibt schon 'Ziel Gewicht 2026' — klingt sehr ähnlich. Soll ich das ersetzen, als neuen Eintrag speichern oder abbrechen?"}
 
 Frank (Antwort auf die Rückfrage): "ersetzen"
-{"action":"store","category":"ziele-2026","title":"10 kg abnehmen 2026","replace_title":"Ziel Gewicht 2026","reply":"Erledigt — ich hab den alten Eintrag 'Ziel Gewicht 2026' damit ersetzt."}
-
-Frank: "Hey, wie läuft's bei dir?"
-{"action":"smalltalk","category":"","title":"","replace_title":"","reply":"Alles ruhig hier im Archiv — was möchtest du ablegen?"}
+{"action":"store","category":"ziele-2026","title":"10 kg abnehmen 2026","replace_title":"Ziel Gewicht 2026","query":"","reply":"Erledigt — ich hab den alten Eintrag 'Ziel Gewicht 2026' damit ersetzt."}
 
 Frank: "Was habe ich eigentlich über meinen Vater gespeichert?"
-{"action":"smalltalk","category":"","title":"","replace_title":"","reply":"Das kann ich dir gerade nicht sagen — ich bin die Speicher-Seite und habe deine Einträge nicht vor mir, abrufen kann ich sie noch nicht. Ich möchte dir nichts Falsches erzählen."}
+{"action":"recall","category":"","title":"","replace_title":"","query":"Vater","reply":""}
+
+Frank: "Welche Nahrungsergänzungsmittel nehme ich morgens?"
+{"action":"recall","category":"","title":"","replace_title":"","query":"Nahrungsergänzungsmittel morgens Einnahme","reply":""}
+
+Frank: "Hey, wie läuft's bei dir?"
+{"action":"smalltalk","category":"","title":"","replace_title":"","query":"","reply":"Alles ruhig hier im Archiv — was möchtest du ablegen oder nachschlagen?"}
 
 Gib NUR das JSON-Objekt aus, sonst nichts."""
 
@@ -365,8 +379,61 @@ def llm_decide(session: dict, user_text: str, candidates: list[dict], categories
     data.setdefault("category", "")
     data.setdefault("title", "")
     data.setdefault("replace_title", "")
+    data.setdefault("query", "")
     data.setdefault("reply", "")
     return data
+
+
+def llm_answer(session: dict, question: str, hits: list[dict], categories: list[str]) -> str:
+    """Phase 4b — ZWEITER LLM-Aufruf (Antwort-Seite): formuliert eine Antwort NUR aus den
+    gefundenen Gehirn-Treffern. Nutzt DENSELBEN editierbaren Prompt wie die Speicher-Seite
+    (ein Fenster, ein Prompt) — aber OHNE den geschuetzten SCHEMA_BLOCK (hier kein JSON noetig,
+    sondern Freitext). Read-only: speichert/aendert nichts."""
+    if gclient is None:
+        raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
+    if hits:
+        hits_txt = "\n\n".join(
+            f"[{i + 1}] Titel: {h.get('title') or '(ohne Titel)'} | Kategorie: {h.get('category') or '-'} "
+            f"| Aehnlichkeit: {h.get('score', 0):.2f}\n{(h.get('text') or h.get('match') or '').strip()}"
+            for i, h in enumerate(hits)
+        )
+    else:
+        hits_txt = "(keine Treffer gefunden)"
+
+    # Ein Prompt: der editierbare Instruktions-Teil (mit {kategorien} ersetzt), OHNE SCHEMA_BLOCK.
+    cat_line = ", ".join(categories) if categories else "(noch keine)"
+    instr = load_instructions().replace("{kategorien}", cat_line)
+    user_block = (
+        f"BISHERIGES GESPRAECH:\n{_history_text(session)}\n\n"
+        f"GEFUNDENE EINTRAEGE (aus Franks Gehirn — NUR diese als Quelle nutzen, nichts erfinden):\n{hits_txt}\n\n"
+        f"FRAGE VON FRANK:\n{question}\n\n"
+        "Beantworte Franks Frage AUSSCHLIESSLICH auf Basis der gefundenen Eintraege oben. "
+        "Erfinde nichts dazu. Passt kein Eintrag wirklich, sag ehrlich, dass du dazu nichts "
+        "gespeichert findest. Antworte in normalem, freundlichem Deutsch mit echten Umlauten."
+    )
+    resp = gclient.models.generate_content(
+        model=AGENT_MODEL,
+        contents=user_block,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=instr,
+            temperature=0.4,
+            max_output_tokens=ANSWER_MAX_TOKENS,  # grosszuegig: Thinking zaehlt dagegen (Gemini-Almanach B4)
+        ),
+    )
+    # Robuste Antwortpruefung (Gemini-Almanach D10/B5): 200 OK != Text — finishReason zuerst.
+    finish = None
+    try:
+        cand = (resp.candidates or [None])[0]
+        finish = getattr(cand, "finish_reason", None)
+    except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
+        pass
+    text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
+    probe(bool(text), "Antwort-LLM lieferte leeren Text", finish=str(finish), treffer=len(hits))
+    if not text:
+        text = ("Ich finde dazu gerade nichts in deinem Gehirn — magst du es anders formulieren?"
+                if not hits else
+                "Ich habe etwas gefunden, konnte aber gerade keine Antwort formulieren. Versuch es bitte gleich nochmal.")
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +526,7 @@ async def lifespan(app: FastAPI):
         task.cancel()
 
 
-app = FastAPI(title="Second Brain — sb-agent (Bibliothekar, Speicher-Seite)", version=VERSION, lifespan=lifespan)
+app = FastAPI(title="Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", version=VERSION, lifespan=lifespan)
 
 
 @app.exception_handler(Exception)
@@ -534,7 +601,8 @@ def put_config(req: ConfigReq) -> dict:
 
 @app.post("/chat", dependencies=[Depends(require_auth)])
 async def chat(req: ChatReq) -> dict:
-    """Speicher-Seite: Text rein -> einordnen/Dublette/Rueckfrage -> 1:1 speichern -> Text raus."""
+    """Ein Eingang, zwei Koepfe: einordnen/Dublette/Rueckfrage -> 1:1 speichern (store/ask),
+    ODER Wissensfrage -> Gehirn durchsuchen + NUR aus Treffern antworten (recall), ODER smalltalk."""
     if gclient is None:
         raise HTTPException(status_code=503, detail=f"Agent nicht bereit: {init_error}")
     sid = (req.session_id or req.user_id).strip()
@@ -565,8 +633,10 @@ async def chat(req: ChatReq) -> dict:
     cat = (decision.get("category") or "").strip().lower()
     title = (decision.get("title") or "").strip()
     replace_title = (decision.get("replace_title") or "").strip()
+    rquery = (decision.get("query") or "").strip()
     reply = (decision.get("reply") or "").strip()
     is_new_cat = bool(cat) and cat not in categories
+    recall_hits: list[dict] = []
 
     # Sicherheits-Gitter: eine NEUE Kategorie wird NIE still angelegt — nur nach Rueckfrage/Bestaetigung.
     if action == "store" and is_new_cat and not resolving:
@@ -595,6 +665,29 @@ async def chat(req: ChatReq) -> dict:
         async with _lock:
             session["pending"] = {"fact_text": req.text, "category": cat, "title": title,
                                   "dup_title": (candidates[0]["title"] if candidates else "")}
+
+    elif action == "recall":
+        # Phase 4b — Nachschlagen: read-only Vektorsuche im Gehirn, dann Antwort NUR aus den Treffern.
+        rq = rquery or req.text
+        try:
+            recall_hits = brain_search(rq, RECALL_LIMIT)
+        except Exception as e:  # noqa: BLE001 — Suche kann fehlschlagen, nie crashen
+            _log(logging.ERROR, "Recall-Suche fehlgeschlagen", exc_info=True)
+            reply = f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal."
+            action = "error"
+        else:
+            try:
+                reply = llm_answer(session, req.text, recall_hits, categories)
+            except Exception as e:  # noqa: BLE001 — Antwort-LLM darf den Endpunkt nie killen
+                _log(logging.ERROR, "Antwort-Formulierung fehlgeschlagen", exc_info=True)
+                reply = f"Beim Beantworten ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal."
+                action = "error"
+        if action != "error":
+            async with _lock:
+                session["pending"] = None
+        checkpoint("recall", "Frage NUR aus echten Gehirn-Treffern beantworten (nichts erfinden)",
+                   ok=(action == "recall"), query=rq, treffer=len(recall_hits))
+
     else:  # smalltalk / error
         if action != "error":
             async with _lock:
@@ -604,13 +697,15 @@ async def chat(req: ChatReq) -> dict:
         session["messages"].append({"role": "agent", "text": reply})
         session["last_activity"] = time.monotonic()
 
-    checkpoint("chat", "Text 1:1 einordnen+speichern bzw. natuerlich antworten",
-               ok=(action in ("store", "ask", "smalltalk")), action=action, category=cat or None,
+    checkpoint("chat", "Text 1:1 einordnen+speichern, nachschlagen oder natuerlich antworten",
+               ok=(action in ("store", "ask", "recall", "smalltalk")), action=action, category=cat or None,
                new_category=is_new_cat, replaced=bool(stored and stored.get("replaced")),
-               resolving=resolving, candidates=len(candidates), ms=int((time.time() - t0) * 1000))
+               resolving=resolving, candidates=len(candidates), recall_hits=len(recall_hits),
+               ms=int((time.time() - t0) * 1000))
     return {"ok": True, "reply": reply, "action": action, "session_id": sid,
             "category": cat or None, "title": (replace_title or title) or None,
-            "stored": bool(stored), "replaced": bool(stored and stored.get("replaced"))}
+            "stored": bool(stored), "replaced": bool(stored and stored.get("replaced")),
+            "recall_hits": (len(recall_hits) if action == "recall" else None)}
 
 
 @app.post("/end", dependencies=[Depends(require_auth)])
@@ -627,5 +722,5 @@ async def end_session(req: EndReq) -> dict:
 
 @app.get("/")
 def root() -> dict:
-    return {"service": "Second Brain — sb-agent (Bibliothekar, Speicher-Seite)", "version": VERSION,
-            "endpoints": ["/health", "/chat", "/end"]}
+    return {"service": "Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", "version": VERSION,
+            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config"]}
