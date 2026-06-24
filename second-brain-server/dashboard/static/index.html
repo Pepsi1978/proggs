@@ -239,6 +239,10 @@ button{font-family:inherit;cursor:pointer}
 
 .spectrum-meta{text-align:right;font-size:13px;color:var(--text-dim)}
 .spectrum-meta .v{font-family:'JetBrains Mono';color:var(--text)}
+/* GEDÄCHTNIS-SPEKTRUM rechtsbündig: gleiche rechte Kante wie „Vektor-Index · N Punkte" und „Modell · …".
+   Das trailing letter-spacing (.22em) der Eyebrow wird kompensiert, damit das letzte „M" exakt auf der Linie sitzt. */
+.spectrum-side{text-align:right}
+.spectrum-side .eyebrow{display:block;margin-right:-.22em;margin-bottom:6px}
 
 /* der glänzende Stapelbalken */
 .bar{
@@ -562,7 +566,7 @@ button{font-family:inherit;cursor:pointer}
               <span class="n" id="totalNum">0</span>
               <span class="cap"><b>Einträge</b>gesamt</span>
             </div>
-            <div>
+            <div class="spectrum-side">
               <div class="eyebrow">Gedächtnis-Spektrum</div>
               <div class="spectrum-meta" id="brainMeta">
                 <div>Vektor-Index · <span class="v" id="metaPoints">–</span> Punkte</div>
