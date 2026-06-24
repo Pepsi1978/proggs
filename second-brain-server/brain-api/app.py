@@ -49,7 +49,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.1.0"  # 1.1.0: /search um Payload-Filter erweitert (Kategorie + Datum/Datums-Bereich; erst eingrenzen, DANN semantisch). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.2.0"  # 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -304,6 +304,12 @@ class SearchReq(BaseModel):
     date_to: str | None = Field(default=None, description="Bis zu diesem Tag (YYYY-MM-DD, inklusive)")
 
 
+class UpdateReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des zu ersetzenden Eintrags (aus /list, /by-category, /search)")
+    text: str = Field(..., min_length=1, max_length=200_000, description="Neuer 1:1-Text — ersetzt den alten Vektor komplett (max_length gegen OOM, fastapi §8)")
+    user_id: str = Field(default="frank")
+
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -399,7 +405,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
     full = points[0].payload.get("full_text", "")
     checkpoint("by_title", "Abruf per Titel gibt das GANZE Dokument 1:1 zurueck", ok=bool(full),
                title=title, chars=len(full))
-    return {"ok": True, "found": True, "title": title,
+    return {"ok": True, "found": True, "title": title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
@@ -416,7 +422,8 @@ def by_category(category: str, user_id: str = "frank") -> dict:
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
-            seen[did] = {"title": p.payload.get("title") or None, "text": p.payload.get("full_text", ""),
+            seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
+                         "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
                          "updated_at": p.payload.get("updated_at")}
     items = list(seen.values())
     return {"ok": True, "category": category, "count": len(items), "items": items}
@@ -435,7 +442,7 @@ def by_date(date: str, user_id: str = "frank") -> dict:
             continue
         did = p.payload.get("doc_id")
         if did not in seen:
-            seen[did] = {"title": p.payload.get("title") or None,
+            seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "category": p.payload.get("category") or None,
                          "created_at": created, "updated_at": p.payload.get("updated_at"),
                          "text": p.payload.get("full_text", "")}
@@ -494,7 +501,7 @@ def search(req: SearchReq) -> dict:
                 continue
         did = h.payload.get("doc_id")
         if did not in best or h.score > best[did]["score"]:
-            best[did] = {"title": h.payload.get("title") or None,
+            best[did] = {"doc_id": did, "title": h.payload.get("title") or None,
                          "category": h.payload.get("category") or None,
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
                          "text": h.payload.get("full_text", "")}
@@ -519,7 +526,7 @@ def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
-            seen[did] = {"title": p.payload.get("title") or None,
+            seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "category": p.payload.get("category") or None,
                          "chars": len(p.payload.get("full_text", "")),
                          "updated_at": p.payload.get("updated_at")}
@@ -540,7 +547,45 @@ def forget(title: str, user_id: str = "frank") -> dict:
     return {"ok": True, "deleted": True, "title": title}
 
 
+@app.put("/entry", dependencies=[Depends(require_auth)])
+def update_entry(req: UpdateReq) -> dict:
+    """Ersetzt einen bestehenden Eintrag (per doc_id) 1:1 durch neuen Text: die alten Vektoren/Chunks
+    werden GELOESCHT, der neue Text frisch embedded und unter DERSELBEN doc_id gespeichert. Titel,
+    Kategorie und Erstellungsdatum bleiben erhalten (nur updated_at neu). Genau Franks 'alten Vektor
+    durch den neuen ersetzen — wortwoertlich der Text aus dem Feld'. Sync def -> Threadpool (fastapi §1)."""
+    _require_store()
+    old = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+    if not old:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    pl = old[0].payload
+    title = (pl.get("title") or "").strip()
+    category = (pl.get("category") or "").strip()
+    created_at = pl.get("created_at", iso_now())
+    now = iso_now()
+    _delete_doc(req.doc_id)  # alte Vektoren komplett raus (alle Chunks dieser doc_id)
+
+    chunks = chunk_text(req.text)
+    _guard_embed_budget(len(chunks))
+    t0 = time.time()
+    points = []
+    for i, ch in enumerate(chunks):
+        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
+            "doc_id": req.doc_id, "user_id": req.user_id, "title": title, "category": category,
+            "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
+            "full_text": req.text, "created_at": created_at, "updated_at": now,
+        }))
+    qc.upsert(collection_name=COLLECTION, points=points)
+
+    replaced_ok = bool(points) and points[0].payload["full_text"] == req.text
+    checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 unter derselben doc_id speichern",
+               ok=replaced_ok, doc_id=req.doc_id, title=title or None, chunks=len(chunks),
+               chars=len(req.text), ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "doc_id": req.doc_id, "title": title or None, "category": category or None,
+            "chunks": len(chunks), "chars": len(req.text), "replaced": True}
+
+
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/forget"]}
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/entry", "/forget"]}

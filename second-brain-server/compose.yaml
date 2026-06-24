@@ -154,14 +154,17 @@ services:
     ports:
       - "10.8.0.1:8003:8003"        # nur ueber WireGuard erreichbar (privat)
     env_file:
-      - .env                        # SB_API_KEY (intern fuer brain-api/agent)
+      - .env                        # SB_API_KEY (intern) + GROQ_API_KEY (Mikrofon-STT, NICHT im Repo)
     environment:
       BRAIN_URL: http://brain-api:8000
       AGENT_URL: http://agent:8002
       SB_USER_ID: frank
       DASH_HOSTFS: /hostfs
+      DASH_LOGBOOK_DIR: /logbook        # Logbuch-.txt-Protokolle anzeigen (gleicher Ordner wie der agent schreibt)
+      # GROQ_API_KEY kommt aus .env via env_file (Groq whisper-large-v3-turbo fuer den Mikrofon-Button).
     volumes:
       - /opt/second-brain:/hostfs:ro   # NUR fuer die Speicherplatz-Anzeige (read-only; kein Host-Root)
+      - /srv/samba/gedanken/Logbuch:/logbook:ro   # Logbuch-Protokolle nur LESEN (Anzeige im Einstellungen-Tab)
     deploy:
       resources:
         limits:
