@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.8.0"  # 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.9.0"  # 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -596,9 +596,11 @@ def speicheragent_decide(quote: str, candidates: list[dict], categories: list[st
     return data
 
 
-def _do_store(quote: str, categories: list[str]) -> dict:
-    """Bestaetigten Text 1:1 ablegen: Speicheragent bestimmt Kategorie/Titel, dann brain_store.
-    Gibt ein /chat-Ergebnis-Dict zurueck. Funktionserhaltend: bei Fehler sauberer Text statt Crash."""
+def _do_store(quote: str, categories: list[str], override_category: str = "") -> dict:
+    """Bestaetigten Text 1:1 ablegen: Speicheragent bestimmt Titel (+ normalerweise Kategorie/Dublette),
+    dann brain_store. Hat Frank im Dashboard eine Kategorie GEWAEHLT (override_category), gilt GENAU
+    diese — keine Auto-Kategorie, kein Dubletten-Ersatz (bewusste Wahl). Funktionserhaltend: bei Fehler
+    sauberer Text statt Crash."""
     candidates: list[dict] = []
     try:
         hits = brain_search(quote, DEDUP_CANDIDATES)
@@ -606,9 +608,15 @@ def _do_store(quote: str, categories: list[str]) -> dict:
     except Exception:  # noqa: BLE001 — Dedup ist Hilfe, kein harter Fehler
         _log(logging.WARNING, "Dubletten-Suche fehlgeschlagen", exc_info=True)
     plan = speicheragent_decide(quote, candidates, categories)
-    cat = (plan.get("category") or "").strip().lower() or "(ohne)"
+    override_key = _cat_key(override_category) if override_category else ""
+    if override_key:
+        cat = override_key                              # Franks bewusste Wahl
+        replace_title = ""                              # kein Dubletten-Ersatz bei manueller Kategorie
+        add_registry_category(override_key)             # gewaehlte Kategorie bleibt bekannt
+    else:
+        cat = (plan.get("category") or "").strip().lower() or "(ohne)"
+        replace_title = (plan.get("replace_title") or "").strip()
     title = (plan.get("title") or "").strip() or quote[:60]
-    replace_title = (plan.get("replace_title") or "").strip()
     use_title = replace_title or title
     try:
         stored = brain_store(text=quote, title=use_title, category=cat)
@@ -767,9 +775,10 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 
 class ChatReq(BaseModel):
-    text: str = Field(..., min_length=1, description="Franks Textnachricht")
+    text: str = Field(..., min_length=1, max_length=8000, description="Franks Textnachricht")
     session_id: str | None = Field(default=None, description="Gespraechs-ID (sonst pro Nutzer eine laufende Sitzung)")
     user_id: str = Field(default="frank")
+    category: str | None = Field(default=None, max_length=60, description="Im Dashboard gewaehlte Kategorie (Override); leer = Agent entscheidet")
 
 
 class EndReq(BaseModel):
@@ -916,11 +925,12 @@ def improve(req: ImproveReq) -> dict:
     return {"ok": True, "text": better}
 
 
-def _process_turn(session: dict, user_text: str, pending: dict | None) -> dict:
+def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "") -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
-    Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save."""
+    Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save.
+    'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
     categories = all_categories()   # inkl. manuell angelegter (auch leerer) Kategorien
     route = hauptagent_route(session, user_text, pending)
     intent = (route.get("intent") or "smalltalk").strip()
@@ -928,19 +938,25 @@ def _process_turn(session: dict, user_text: str, pending: dict | None) -> dict:
     # 1) Antwort auf eine offene Speicher-Rueckfrage?
     if pending and pending.get("mode") == "save_confirm":
         if intent == "confirm_yes":
-            return _do_store(pending.get("quote", ""), categories)
+            return _do_store(pending.get("quote", ""), categories, pending.get("category", ""))
         if intent == "confirm_no":
             return {"reply": route.get("reply") or "Alles klar, ich speichere es nicht.",
                     "action": "cancel", "pending": None}
         # sonst (etwas Neues): faellt in die normale Behandlung; altes pending wird ersetzt
 
-    # 2) Neue Speicher-Absicht -> NICHT speichern, sondern mit wortwoertlichem Zitat zurueckfragen
+    # 2) Neue Speicher-Absicht -> NICHT speichern, sondern mit wortwoertlichem Zitat zurueckfragen.
+    #    Hat Frank eine Kategorie gewaehlt, wird sie im pending gemerkt UND in der Rueckfrage genannt.
     if intent == "save":
         quote = (route.get("quote") or "").strip() or user_text.strip()
-        reply = route.get("reply") or f"Soll ich das fuer dich ablegen: „{quote}“?"
+        cat_key = _cat_key(category) if category else ""
+        if cat_key:
+            reply = route.get("reply") or f"Soll ich das unter „{cat_key}“ ablegen: „{quote}“?"
+        else:
+            reply = route.get("reply") or f"Soll ich das fuer dich ablegen: „{quote}“?"
         checkpoint("save_confirm", "Vor dem Speichern wortwoertlich zurueckfragen (Hauptagent)",
-                   ok=bool(quote), quote=quote[:120])
-        return {"reply": reply, "action": "save_confirm", "pending": {"mode": "save_confirm", "quote": quote}}
+                   ok=bool(quote), quote=quote[:120], category=cat_key or "(auto)")
+        return {"reply": reply, "action": "save_confirm",
+                "pending": {"mode": "save_confirm", "quote": quote, "category": cat_key}}
 
     # 3) Wissensfrage -> Abfrageagent (Vektorsuche + Antwort NUR aus Treffern)
     if intent == "query":
@@ -984,7 +1000,7 @@ async def chat(req: ChatReq) -> dict:
         session["messages"].append({"role": "frank", "text": req.text})
         pending = session.get("pending")
 
-    outcome = await asyncio.to_thread(_process_turn, session, req.text, pending)
+    outcome = await asyncio.to_thread(_process_turn, session, req.text, pending, (req.category or "").strip())
 
     async with _lock:
         session["pending"] = outcome.get("pending")

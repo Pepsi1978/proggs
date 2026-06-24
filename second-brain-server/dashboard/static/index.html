@@ -488,6 +488,9 @@ button{font-family:inherit;cursor:pointer}
 .chat-improve{background:linear-gradient(135deg,#34D399,#10B981);color:#04130C;box-shadow:0 0 42px -10px rgba(52,211,153,.6);font-family:'Space Grotesk';font-weight:700;font-size:18px;line-height:1}
 .chat-clear{background:linear-gradient(135deg,#F2495A,#FB7185);color:#fff;box-shadow:0 0 42px -10px rgba(242,73,90,.6)}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
+/* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
+.chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
+.chat-cat:hover{border-color:var(--accent)}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
@@ -649,6 +652,10 @@ button{font-family:inherit;cursor:pointer}
           <div class="chat-input">
             <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
             <div class="chat-actions">
+              <select class="chat-cat" id="chatCategory" title="Kategorie zum Ablegen wählen — ohne Auswahl entscheidet der Agent selbst">
+                <option value="">Auto-Kategorie</option>
+                <option value="__new__">➕ Neue Kategorie…</option>
+              </select>
               <button class="chat-btn chat-clear" id="chatClear" aria-label="Eingabe löschen" title="Eingabe löschen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
@@ -863,7 +870,7 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("pageSub").textContent = TABS[tab].sub;
     if(tab==="brain" && !brainLoaded){ brainLoaded = true; loadEntries(); }
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
-    if(tab==="chat"){ setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
+    if(tab==="chat"){ if(typeof loadChatCategories==="function") loadChatCategories(); setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
   /* ── Browser-Navigation (Zurueck/Vor): jeder Tab-Wechsel = ein History-Eintrag (#tab); die
      Zurueck-Taste/Maustaste wechselt zwischen den Menues wie auf einer echten Webseite, statt die
@@ -1426,12 +1433,15 @@ button{font-family:inherit;cursor:pointer}
     ta.value = ""; ta.style.height = "auto";
     const typing = chatAppend("agent", "denkt nach…"); typing.classList.add("typing");
     try{
-      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession});
+      const catSel = document.getElementById("chatCategory");
+      const cat = (catSel && catSel.value && catSel.value!=="__new__") ? catSel.value : "";
+      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat});
       typing.remove();
       let meta = "";
       if(r.action==="recall") meta = "↳ nachgeschlagen" + (r.recall_hits!=null ? " · "+r.recall_hits+" Treffer" : "");
       else if(r.action==="store") meta = "↳ abgelegt" + (r.category ? " in „"+r.category+"“" : "");
-      else if(r.action==="ask") meta = "↳ Rückfrage";
+      else if(r.action==="save_confirm") meta = "↳ Rückfrage vor dem Speichern";
+      else if(r.action==="cancel") meta = "↳ nicht gespeichert";
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
     }catch(e){
       typing.remove();
@@ -1543,6 +1553,32 @@ button{font-family:inherit;cursor:pointer}
     finally{ btn.disabled = false; btn.classList.remove("busy"); }
   }
 
+  /* ── Kategorie-Dropdown (Gespräch): füllen + "➕ Neue Kategorie" anlegen ──────────────────────── */
+  async function loadChatCategories(keepSelected){
+    const sel = document.getElementById("chatCategory");
+    if(!sel) return;
+    const prev = keepSelected || sel.value;
+    let cats = [];
+    try{ const d = await api("/api/categories"); cats = (d && d.categories) || []; }
+    catch(e){ /* Agent offline — nur Auto + Neu anbieten */ }
+    sel.innerHTML = '<option value="">Auto-Kategorie</option><option value="__new__">➕ Neue Kategorie…</option>'
+      + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    sel.value = (prev && prev!=="__new__" && cats.includes(prev)) ? prev : "";
+  }
+  async function onCategoryChange(){
+    const sel = document.getElementById("chatCategory");
+    if(!sel || sel.value!=="__new__") return;
+    const name = (window.prompt("Name der neuen Kategorie:") || "").trim();
+    if(!name){ sel.value=""; return; }
+    try{
+      const r = await apiSend("/api/categories","POST",{name});
+      if(r && r.ok && r.key){
+        await loadChatCategories(r.key);            // neue Kategorie laden + auswählen
+        if(activeTab==="overview") loadOverview();  // Übersicht zeigt die neue (noch leere) Kategorie
+      }else{ sel.value=""; window.alert((r && r.detail) || "Konnte Kategorie nicht anlegen."); }
+    }catch(e){ sel.value=""; window.alert("Konnte Kategorie nicht anlegen."); }
+  }
+
   (function initChat(){
     const ta = document.getElementById("chatText"), send = document.getElementById("chatSend");
     if(!ta || !send) return;
@@ -1552,6 +1588,8 @@ button{font-family:inherit;cursor:pointer}
     const mic = document.getElementById("chatMic"); if(mic) mic.addEventListener("click", toggleMic);
     const imp = document.getElementById("chatImprove"); if(imp) imp.addEventListener("click", improveText);
     const clr = document.getElementById("chatClear"); if(clr) clr.addEventListener("click", ()=>{ ta.value=""; autoGrow(ta); ta.focus(); });
+    const cat = document.getElementById("chatCategory"); if(cat) cat.addEventListener("change", onCategoryChange);
+    loadChatCategories();   // initial füllen
   })();
 
   /* ── Start ────────────────────────────────────────────────────────────── */
