@@ -402,8 +402,14 @@ try {
         # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
         $whisperPy = $false
         if ($probe -match 'faster_whisper' -or $probe -match 'faster-whisper' -or $probe -match 'whisper\.cpp' -or $probe -match 'WhisperModel' -or $probe -match 'ctranslate2' -or $probe -match 'pywhispercpp') { $whisperPy = $true }
+        # Serverseitiger autonomer KI-Agent: Framework (pydantic-ai/langgraph) ODER eigene Tool-Loop im agent/-Ordner -> ai-agent-frameworks.md.
+        $agentPy = $false
+        if ($probe -match 'pydantic_ai' -or $probe -match 'pydantic-ai' -or $probe -match 'from langgraph' -or $probe -match 'import langgraph' -or $probe -match 'langchain\.agents' -or $probe -match 'create_react_agent' -or $probe -match 'StateGraph') { $agentPy = $true }
+        if (-not $agentPy -and $fpl -match '(^|/)agent/[^/]+\.py$' -and ($probe -match 'generate_content' -or $probe -match 'tool_use' -or $probe -match 'system_instruction' -or $probe -match 'llm_decide' -or $probe -match 'brain_store' -or $probe -match 'brain_search')) { $agentPy = $true }
         if ($mcpPy) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($agentPy) {
+            $slug = 'aiagentframeworks'; $file = 'ai-agent-frameworks.md'; $name = 'Serverseitige autonome KI-Agenten (Loop/Tools/State/Kosten)'
         } elseif ($iconPy) {
             $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
         } elseif ($whisperPy) {

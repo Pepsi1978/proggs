@@ -34,6 +34,7 @@ AREAS = {
     "web/typescript":               ("TypeScript",           ["tsconfig", "moduleresolution", "ts-node", "strictnullchecks"]),
     "android/retrofit-okhttp-moshi":("Retrofit/OkHttp",      ["retrofit", "okhttp", "moshi", "interceptor"]),
     "server/docker":                ("Docker/Compose",       ["docker compose", "docker-compose", "compose.yaml", "compose.yml", "dockerfile", "depends_on", "mem_limit", "healthcheck", "restart: unless-stopped", "ufw docker", "named volume", "json-file log"]),
+    "server/ai-agent-frameworks":   ("KI-Agent (Loop/Tools)", ["autonomer agent", "agent loop", "tool loop", "tool-loop", "bibliothekar-agent", "dirigent-agent", "pydantic-ai", "pydantic_ai", "langgraph", "create_react_agent", "graphrecursionerror", "max iterations", "tool_use", "tool_result", "idempotency key", "memory poisoning", "exponential backoff", "run_in_threadpool"]),
 }
 
 

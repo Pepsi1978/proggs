@@ -475,8 +475,24 @@ $ti_extra"
         case "$probe" in
           *faster_whisper*|*faster-whisper*|*whisper.cpp*|*WhisperModel*|*ctranslate2*|*pywhispercpp*) whisperPy=1;;
         esac
+        # Serverseitiger autonomer KI-Agent: Framework (pydantic-ai/langgraph) ODER eigene Tool-Loop im agent/-Ordner -> ai-agent-frameworks.md.
+        agentPy=0
+        case "$probe" in
+          *pydantic_ai*|*pydantic-ai*|*"from langgraph"*|*"import langgraph"*|*langchain.agents*|*create_react_agent*|*StateGraph*) agentPy=1;;
+        esac
+        if [ "$agentPy" -eq 0 ]; then
+          case "$fpl" in
+            */agent/*.py|agent/*.py)
+              case "$probe" in
+                *generate_content*|*tool_use*|*system_instruction*|*llm_decide*|*brain_store*|*brain_search*) agentPy=1;;
+              esac
+              ;;
+          esac
+        fi
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$agentPy" -eq 1 ]; then
+            slug="aiagentframeworks"; file="ai-agent-frameworks.md"; name="Serverseitige autonome KI-Agenten (Loop/Tools/State/Kosten)"
         elif [ "$iconPy" -eq 1 ]; then
             slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
         elif [ "$whisperPy" -eq 1 ]; then
