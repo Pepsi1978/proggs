@@ -1,6 +1,6 @@
 ---
 name: research
-description: "Zentraler Recherche-Orchestrator fuer JEDE Web-Recherche: nimmt einen strukturierten Research-Auftrag entgegen und fuehrt ihn mit sichtbaren beschrifteten parallelen Researchern (Continuous-Spawning), gepinnter Engine, Live-Zwischenfazit pro Researcher und ruhiger Auswertung aus. Nutze IMMER wenn der Benutzer 'recherchiere', 'such im Web', 'Web-Recherche', 'finde heraus', 'recherchier das' sagt ODER wenn ein anderer Skill (best-practices, bug-almanach-recherche, almanach-update, best-practices-update, direktiven-recherche, superintelligenz) bzw. Agent (researcher, forschungsagent, intelligence-researcher) Web-Recherche braucht und an diesen Skill delegiert. Erfuellt die Research-Strategie-Regel (Empfehlung + Frage 1 A/B/C/D)."
+description: "Zentraler Recherche-Orchestrator fuer JEDE Web-Recherche: nimmt einen strukturierten Research-Auftrag entgegen und fuehrt ihn mit sichtbaren beschrifteten parallelen Researchern (Continuous-Spawning), gepinnter Engine, Live-Zwischenfazit pro Researcher und ruhiger Auswertung aus. Nutze IMMER wenn der Benutzer 'recherchiere', 'such im Web', 'Web-Recherche', 'finde heraus', 'recherchier das' sagt ODER wenn ein anderer Skill (best-practices, bug-almanach-recherche, almanach-update, best-practices-update, direktiven-recherche, superintelligenz) bzw. Agent (researcher, forschungsagent, intelligence-researcher) Web-Recherche braucht und an diesen Skill delegiert. Erfuellt die Research-Strategie-Regel (Empfehlung + Frage 1 A/B/C/D). Registriert als verbindlichen LETZTEN Schritt jeden neu angelegten oder erweiterten Almanach + Best-Practices-Bereich in allen drei Almanach-Hooks (index/hint/guard)."
 ---
 
 # research — Zentraler Recherche-Orchestrator
@@ -223,6 +223,36 @@ Taugen die Ergebnisse als Best Practices / enthalten sie Bugs/Fallen, werden sie
 (`~/.claude/rules/research-persistence.md`). Bei Delegation macht das der aufrufende Skill mit dem
 zurueckgegebenen Ergebnis.
 
+### Schritt 9 — Hook-Registrierung (PFLICHT, der allerletzte Schritt) ⭐
+
+**Immer wenn Schritt 8 einen Almanach-Bereich (`bugs/<kategorie>/<bereich>.md`) und/oder seine
+Best-Practices-Gegenseite NEU angelegt oder erweitert hat, wird als ALLERLETZTER Schritt der neue
+Bereich in allen DREI Almanach-Hooks registriert.** Das ist nicht optional — ohne diesen Schritt
+ist die Recherche-Pipeline unvollstaendig: der Almanach laege als totes Wissen im Repo, ohne dass
+ein Hook ihn einblendet, im Prompt erkennt oder passende Edits absichert (kein Compound-Effekt).
+
+Kurz die drei Hooks (volle Anleitung + Tests + Spiegelung: **`references/hook-registrierung.md`**):
+
+1. **`bug-almanac-index`** (SessionStart) — listet **rekursiv** alle Almanache → **automatisch**,
+   nur verifizieren, dass die Datei in `bugs/<kategorie>/` liegt. Keine Code-Aenderung.
+2. **`bug-almanac-hint.py`** (UserPromptSubmit) — kuratiertes `AREAS`-Dict: **Eintrag ergaenzen**
+   mit Synonym-Stichwoertern, je in **Leerzeichen- UND Bindestrich-Variante** (Substring-Matching;
+   deutsche Eingaben nutzen oft Bindestriche). `py_compile` + Positiv-Tests (beide Schreibweisen) +
+   ein leerer Negativ-Test. Kollidierende Stichwoerter fremder Bereiche vermeiden.
+3. **`bug-almanac-guard`** (PreToolUse) — nur erweitern, wenn der Bereich ein **klares Datei-Muster**
+   hat; Konzept-/Querschnitts-Bereiche (wie `agents/…`) bewusst NICHT erzwingen, nur dokumentieren.
+
+Danach JEDE geaenderte Hook-Datei in **beide** Spiegel-Orte (`claude-code-setup/hooks` UND
+`Umgebung/Hooks`) 1:1 spiegeln (harness-mirror-Pflicht; bei `.ps1`/`.sh` beide Varianten; kein
+`__pycache__`), nur eigene Dateien namentlich stagen, committen, fetch+rebase, pushen.
+
+**Wer registriert:** wer in Schritt 8 persistiert hat. Bei `adhoc`/Direkt-Aufruf macht es dieser
+Skill selbst; bei Delegation der aufrufende Skill mit dem zurueckgegebenen Ergebnis. So oder so ist
+die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persistenz-Pipeline.
+
+> Hinweis: Hooks editieren ist Harness-Arbeit — der `bug-almanac-guard` verlangt vorher den
+> Hooks-Almanach (Stufe C, Volltext) + Best-Practices. Details in `references/hook-registrierung.md`.
+
 ---
 
 ## Engine-Wahl-Spickzettel (Detail in der Policy-Regel)
@@ -249,3 +279,5 @@ zurueckgegebenen Ergebnis.
 - ❌ Funde an einem Cap abschneiden (lossless: in Datei auslagern); `cap` steuert nur Inline-Menge
 - ❌ Auswertung mit Linien-Wirrwarr statt ruhiger Bloecke
 - ❌ Das Rueckgabe-Schema des Aufrufers ignorieren und "generische Bullets" liefern
+- ❌ Einen neu angelegten/erweiterten Almanach-Bereich persistieren, ohne ihn in den drei Almanach-Hooks zu registrieren (Schritt 9) — totes Wissen im Repo, kein Compound-Effekt
+- ❌ Beim `hint`-Eintrag nur Leerzeichen-Schreibweisen aufnehmen (Bindestrich-Varianten fehlen → deutsche Eingaben triggern nicht) oder die Hook-Aenderung nicht in beide Spiegel-Orte spiegeln
