@@ -162,18 +162,23 @@ fun SubTabRow(
 
 /**
  * Liefert die Unterreiter-Labels fuer einen Hauptreiter.
+ *
+ * Frank-Wunsch 2026-06-24: Der Hauptreiter-Name steht IMMER ganz vorne (Index 0).
+ * Beim Klick auf einen Hauptreiter in der Bottom-Bar oeffnet sich somit sofort der
+ * passende Haupt-Sub-Screen und der zugehoerige Label ist der erste in der Sub-Leiste.
+ * Die restlichen Sub-Slots folgen in ihrer logischen Reihenfolge.
  */
 fun subTabsFor(parentTab: String): List<String> =
     when (parentTab) {
         Routes.TASKS -> listOf("Aufgaben", "Gewohnheit", "Mental", "Ideen")
-        Routes.ANALYSIS -> listOf("1", "Analyse", "3", "4")
-        Routes.SCIENTIST -> listOf("Entropie", "Thesen", "Forscher", "Journal")
-        Routes.BIOMARKER -> listOf("1", "2", "3", "Biomarker")
+        Routes.ANALYSIS -> listOf("Analyse", "2", "3", "4")
+        Routes.SCIENTIST -> listOf("Forscher", "Entropie", "Thesen", "Journal")
+        Routes.BIOMARKER -> listOf("Biomarker", "2", "3", "4")
         else -> emptyList()
     }
 
 /**
  * Liefert den Index des Hauptreiters als ersten Unterreiter.
- * (Der Hauptreiter ist immer der erste Unterreiter)
+ * (Der Hauptreiter ist immer der erste Unterreiter — Index 0.)
  */
 fun initialSubIndex(parentTab: String): Int = 0

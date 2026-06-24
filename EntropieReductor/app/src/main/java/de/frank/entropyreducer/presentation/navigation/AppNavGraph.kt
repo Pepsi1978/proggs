@@ -254,26 +254,29 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             modifier = Modifier.weight(1f),
                             beyondViewportPageCount = tabs.size - 1,
                         ) { page ->
+                            // Frank-Wunsch 2026-06-24: Hauptreiter "Forscher" steht ganz
+                            // vorne (page 0 = ScientistScreen). Danach Entropie (Tagebuch),
+                            // Thesen und Journal in ihrer logischen Reihenfolge.
                             when (page) {
-                                0 -> TagebuchScreen(
+                                0 -> ScientistScreen(
+                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                                    currentTab = Routes.SCIENTIST,
+                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    showBottomBar = false,
+                                )
+                                1 -> TagebuchScreen(
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
                                     showBottomBar = false,
                                 )
-                                1 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
+                                2 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
-                                    showBottomBar = false,
-                                )
-                                2 -> ScientistScreen(
-                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    currentTab = Routes.SCIENTIST,
-                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
                                     showBottomBar = false,
                                 )
                                 3 -> de.frank.entropyreducer.presentation.journal.JournalScreen(
@@ -315,16 +318,12 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             modifier = Modifier.weight(1f),
                             beyondViewportPageCount = tabs.size - 1,
                         ) { page ->
+                            // Frank-Wunsch 2026-06-24: Hauptreiter "Biomarker" steht ganz
+                            // vorne (page 0 = BiomarkerHostScreen). Danach die drei SubArea-
+                            // Platzhalter (Schlafdetails, Trainings-Uebersicht, Bestleistungen)
+                            // in ihrer logischen Reihenfolge mit subIndex 1..3.
                             when (page) {
-                                0, 1, 2 -> SubAreaScreen(
-                                    parentTab = Routes.BIOMARKER,
-                                    subIndex = page + 1,
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = false,
-                                )
-                                3 -> BiomarkerHostScreen(
+                                0 -> BiomarkerHostScreen(
                                     onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenMetricDetail = { metricKey -> nav.navigate(Routes.biomarkerDetail(metricKey)) },
@@ -333,6 +332,14 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
                                     onOpenHealthConnectDetail = { metricKey -> nav.navigate(Routes.healthConnectDetail(metricKey)) },
                                     onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                    showBottomBar = false,
+                                )
+                                1, 2, 3 -> SubAreaScreen(
+                                    parentTab = Routes.BIOMARKER,
+                                    subIndex = page,
+                                    onBack = { nav.popBackStack() },
+                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                    onSwitchTab = { route -> nav.tabSwitch(route) },
                                     showBottomBar = false,
                                 )
                             }
