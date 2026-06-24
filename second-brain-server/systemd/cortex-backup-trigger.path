@@ -2,7 +2,7 @@
 Description=Cortex: Dashboard-Button "Jetzt sichern" -> Backup ausloesen
 
 [Path]
-PathModified=/srv/samba/gedanken/.backup-trigger
+PathModified=/opt/second-brain/backup-control/.backup-trigger
 Unit=cortex-backup.service
 
 [Install]

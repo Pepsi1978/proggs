@@ -2,7 +2,7 @@
 Description=Cortex: Dashboard-Button "Wiederherstellen" -> Restore ausloesen
 
 [Path]
-PathModified=/srv/samba/gedanken/.restore-trigger
+PathModified=/opt/second-brain/backup-control/.restore-trigger
 Unit=cortex-restore.service
 
 [Install]

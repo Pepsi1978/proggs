@@ -392,10 +392,14 @@ button{font-family:inherit;cursor:pointer}
 }
 
 /* ════ EINSTELLUNGEN ════════════════════════════════════════════════════ */
-.settings{max-width:760px}
+.settings{max-width:1560px}
+/* Allein stehende Einstellungs-Kacheln (System-Prompt, Logbuch) behalten ihre Originalbreite;
+   nur die obere Reihe (Bibliothekar-Agent + Google-Drive-Backup) nutzt die volle Breite. */
+#view-settings > .set-section{max-width:760px}
 .set-section{padding:28px 30px;margin-bottom:20px}
 /* Zwei gleich grosse Kacheln nebeneinander (Bibliothekar-Agent + Google-Drive-Backup); stapelt schmal */
-.set-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.set-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;align-items:stretch}
+.set-row .set-section{margin-bottom:0;height:100%}
 .backup-state{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
 .bk-dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex:none;box-shadow:0 0 8px transparent}
 .set-section h3{font-size:18px;font-weight:600;display:flex;align-items:center;gap:11px}
@@ -691,8 +695,9 @@ button{font-family:inherit;cursor:pointer}
               <div class="muted-note" id="backupWhen" style="margin-top:8px"></div>
               <div class="muted-note" id="backupDetail" style="margin-top:4px"></div>
             </div>
-            <div class="row-end">
+            <div class="row-end" style="flex-wrap:wrap">
               <span class="muted-note" id="backupStatus" style="margin-right:auto"></span>
+              <button class="btn" id="connectBtn" title="Google Drive einmalig verbinden">Mit Google verbinden</button>
               <button class="btn" id="restoreBtn" title="Nur im Notfall: holt das Backup aus Google Drive zurück (löscht lokal nichts)">Wiederherstellen</button>
               <button class="btn btn-primary" id="backupBtn">Jetzt sichern</button>
             </div>
@@ -763,6 +768,26 @@ Leitsätze:
     <div class="confirm-actions">
       <button class="btn" id="confirmNo">Nein</button>
       <button class="btn btn-primary" id="confirmYes">Ja, ersetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mit Google Drive verbinden (rclone-Token einfügen) ──────────────────── -->
+<div class="confirm-overlay" id="connectOverlay">
+  <div class="confirm-box" style="width:min(580px,94vw)">
+    <h4>Mit Google Drive verbinden</h4>
+    <p>Einmalig nötig. Erzeuge auf deinem PC ein Zugangs-Token und füge es hier ein — danach läuft das Backup automatisch.</p>
+    <ol style="color:var(--text-dim);font-size:13.5px;line-height:1.7;margin:0 0 14px;padding-left:20px">
+      <li>Auf deinem PC in PowerShell ausführen:<br>
+        <code style="font-family:'JetBrains Mono';background:var(--surface-2);padding:2px 7px;border-radius:6px;display:inline-block;margin-top:4px">rclone authorize "drive"</code></li>
+      <li>Im Browser mit deinem Google-Konto anmelden und den Zugriff erlauben.</li>
+      <li>Die komplette Ausgabe (das JSON mit <code>access_token</code>) kopieren und hier einfügen:</li>
+    </ol>
+    <textarea id="connectToken" class="textarea" style="min-height:110px;height:110px" spellcheck="false" placeholder='{"access_token":"ya29...","token_type":"Bearer","refresh_token":"1//...","expiry":"..."}'></textarea>
+    <div class="confirm-actions" style="margin-top:14px">
+      <span class="muted-note" id="connectStatus" style="margin-right:auto"></span>
+      <button class="btn" id="connectCancel">Abbrechen</button>
+      <button class="btn btn-primary" id="connectSubmit">Verbinden</button>
     </div>
   </div>
 </div>
@@ -1320,6 +1345,29 @@ Leitsätze:
   }
   document.getElementById("backupBtn") && document.getElementById("backupBtn").addEventListener("click", runBackup);
   document.getElementById("restoreBtn") && document.getElementById("restoreBtn").addEventListener("click", restoreBackup);
+
+  /* Mit Google Drive verbinden: rclone-Token (von 'rclone authorize "drive"' auf dem PC) einfügen */
+  function openConnect(){
+    const t = document.getElementById("connectToken"); if(t) t.value = "";
+    const s = document.getElementById("connectStatus"); if(s){ s.textContent=""; s.style.color=""; }
+    document.getElementById("connectOverlay").classList.add("open");
+    setTimeout(()=>{ const x=document.getElementById("connectToken"); if(x) x.focus(); }, 80);
+  }
+  function closeConnect(){ document.getElementById("connectOverlay").classList.remove("open"); }
+  document.getElementById("connectBtn") && document.getElementById("connectBtn").addEventListener("click", openConnect);
+  document.getElementById("connectCancel") && document.getElementById("connectCancel").addEventListener("click", closeConnect);
+  (function(){ const ov=document.getElementById("connectOverlay"); if(ov) ov.addEventListener("click", e=>{ if(e.target===ov) closeConnect(); }); })();
+  document.getElementById("connectSubmit") && document.getElementById("connectSubmit").addEventListener("click", async ()=>{
+    const token = (document.getElementById("connectToken").value||"").trim();
+    if(token.indexOf("access_token") < 0){ flash("connectStatus","Bitte die komplette rclone-Ausgabe (JSON) einfügen",false); return; }
+    const btn = document.getElementById("connectSubmit"); btn.disabled = true;
+    try{
+      const r = await apiSend("/api/backup/connect","POST",{token});
+      if(r && r.ok!==false){ flash("connectStatus","Token gesendet — verbinde…"); setTimeout(()=>{ closeConnect(); loadBackup(); },1600); setTimeout(loadBackup,6000); }
+      else flash("connectStatus",(r&&r.detail)||"Fehlgeschlagen",false);
+    }catch(e){ flash("connectStatus","Senden fehlgeschlagen",false); }
+    finally{ btn.disabled = false; }
+  });
 
   /* ── Gespräch (Chat): an den Agenten senden ─────────────────────────────── */
   // Eine Sitzungs-ID pro Browser-Sitzung (Agent haelt damit den Gespraechskontext).

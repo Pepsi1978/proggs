@@ -1,0 +1,9 @@
+[Unit]
+Description=Cortex: Dashboard legt rclone-Token ab -> Google-Drive-Verbindung herstellen
+
+[Path]
+PathModified=/opt/second-brain/backup-control/.rclone-token
+Unit=cortex-connect.service
+
+[Install]
+WantedBy=multi-user.target

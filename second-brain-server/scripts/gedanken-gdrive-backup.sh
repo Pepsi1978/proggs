@@ -18,7 +18,8 @@
 SRC="/srv/samba/gedanken"
 REMOTE="${GDRIVE_REMOTE:-gdrive:CortexBackup}"
 RCLONE_CONF="${RCLONE_CONF:-/root/.config/rclone/rclone.conf}"
-STATUS="$SRC/.gdrive-backup-status.json"
+CONTROL="${BACKUP_CONTROL_DIR:-/opt/second-brain/backup-control}"   # vom Dashboard beschreibbar (Trigger) + lesbar (Status); NICHT auf Z
+STATUS="$CONTROL/.gdrive-backup-status.json"
 LOCK="/run/gedanken-gdrive-backup.lock"
 LOG="/opt/second-brain/brain-logs/gedanken-gdrive-backup.jsonl"
 MAX_DELETE="${GDRIVE_MAX_DELETE:-25}"     # Schicht 2: nie mehr als so viele Dateien pro Lauf loeschen
@@ -26,7 +27,7 @@ OWNER_UID="${BACKUP_OWNER_UID:-1000}"     # frank (Samba) — Status-Datei ueber
 # Dateien, die NICHT mitgespiegelt werden (eigene Steuer-/Status-Dateien)
 EXCLUDES=(--exclude ".gdrive-backup-status.json" --exclude ".backup-trigger" --exclude ".restore-trigger")
 
-mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
+mkdir -p "$(dirname "$LOG")" "$CONTROL" 2>/dev/null || true
 
 logj() { printf '{"ts":"%s","module":"gedanken-gdrive-backup","msg":"%s"}\n' \
          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$LOG" 2>/dev/null || true; }

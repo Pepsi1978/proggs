@@ -20,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.6.0"  # 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.6.1"  # 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -355,6 +355,24 @@ def backup_restore() -> dict:
     """'Wiederherstellen' (Notfall) — holt das Drive-Backup additiv zurueck auf Z (loescht lokal nichts)."""
     ok = _touch_trigger(".restore-trigger")
     return {"ok": ok, "detail": "Wiederherstellung angestossen." if ok else "Konnte Wiederherstellung nicht anstossen (Schreibrecht?)."}
+
+
+@app.post("/api/backup/connect")
+async def backup_connect(request: Request) -> dict:
+    """'Mit Google verbinden' — nimmt das rclone-OAuth-Token (Frank erzeugt es einmalig per
+    `rclone authorize "drive"` auf seinem PC) und legt es im Steuer-Verzeichnis ab; die Host-systemd-
+    Unit baut daraus die rclone-Verbindung. Das Token wird NICHT geloggt (Secret)."""
+    body = await request.json()
+    token = (body.get("token") or "").strip()
+    if "access_token" not in token:
+        return JSONResponse(status_code=400, content={"ok": False,
+            "detail": "Bitte die komplette Ausgabe von 'rclone authorize \"drive\"' einfuegen (ein JSON mit access_token)."})
+    try:
+        (Path(BACKUP_DIR) / ".rclone-token").write_text(token, encoding="utf-8")
+        return {"ok": True, "detail": "Token erhalten — Verbindung wird hergestellt..."}
+    except Exception as e:  # noqa: BLE001 — Token NIE loggen, nur Fehlertyp
+        _log(logging.WARNING, "Token ablegen fehlgeschlagen", err=type(e).__name__)
+        return JSONResponse(status_code=500, content={"ok": False, "detail": "Konnte Token nicht ablegen (Schreibrecht?)."})
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -161,12 +161,12 @@ services:
       SB_USER_ID: frank
       DASH_HOSTFS: /hostfs
       DASH_LOGBOOK_DIR: /logbook        # Logbuch-.txt-Protokolle anzeigen (gleicher Ordner wie der agent schreibt)
-      DASH_BACKUP_DIR: /gedanken        # Z-Wurzel: Backup-Status lesen + Trigger-Flags schreiben (Google-Drive-Backup-Kachel)
+      DASH_BACKUP_DIR: /control         # Steuer-Verzeichnis (dashboard-schreibbar): Backup-Status lesen + Trigger-/Login-Flags schreiben
       # GROQ_API_KEY kommt aus .env via env_file (Groq whisper-large-v3-turbo fuer den Mikrofon-Button).
     volumes:
       - /opt/second-brain:/hostfs:ro   # NUR fuer die Speicherplatz-Anzeige (read-only; kein Host-Root)
       - /srv/samba/gedanken/Logbuch:/logbook:ro   # Logbuch-Protokolle nur LESEN (Anzeige im Einstellungen-Tab)
-      - /srv/samba/gedanken:/gedanken             # Z-Wurzel: Backup-Status lesen + Trigger-Flags fuer "Jetzt sichern"/"Wiederherstellen" schreiben
+      - /opt/second-brain/backup-control:/control # Steuer-Verzeichnis (dashboard-uid beschreibbar): Status lesen + Trigger-/Login-Flags schreiben; Host-systemd fuehrt aus
     deploy:
       resources:
         limits:

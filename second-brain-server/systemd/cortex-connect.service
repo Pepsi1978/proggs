@@ -1,0 +1,8 @@
+[Unit]
+Description=Cortex: rclone mit Google Drive verbinden (Token aus dem Dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/second-brain/scripts/gedanken-gdrive-connect.sh

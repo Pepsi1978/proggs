@@ -9,12 +9,13 @@
 SRC="/srv/samba/gedanken"
 REMOTE="${GDRIVE_REMOTE:-gdrive:CortexBackup}"
 RCLONE_CONF="${RCLONE_CONF:-/root/.config/rclone/rclone.conf}"
-STATUS="$SRC/.gdrive-backup-status.json"
+CONTROL="${BACKUP_CONTROL_DIR:-/opt/second-brain/backup-control}"
+STATUS="$CONTROL/.gdrive-backup-status.json"
 LOCK="/run/gedanken-gdrive-backup.lock"
 LOG="/opt/second-brain/brain-logs/gedanken-gdrive-backup.jsonl"
 OWNER_UID="${BACKUP_OWNER_UID:-1000}"
 
-mkdir -p "$(dirname "$LOG")" "$SRC" 2>/dev/null || true
+mkdir -p "$(dirname "$LOG")" "$CONTROL" "$SRC" 2>/dev/null || true
 
 logj() { printf '{"ts":"%s","module":"gedanken-gdrive-restore","msg":"%s"}\n' \
          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$LOG" 2>/dev/null || true; }
