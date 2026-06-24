@@ -119,6 +119,35 @@ if [ -r "$WG_CONF" ]; then cp "$WG_CONF" "$WORK/wg0.conf" && log "wg0.conf gesic
   ( cd "$WORK" && ls -la )
 } > "$WORK/manifest.txt"
 
+# Klartext-Wiederherstellungs-Anleitung mit ins Archiv (fuer den Ernstfall, auch in Monaten verstaendlich).
+cat > "$WORK/ZUERST-LESEN-Wiederherstellung.txt" <<'ANLEITUNG'
+CORTEX (zweites Gehirn) — so stellst du den ganzen Server wieder her
+====================================================================
+Du musst NICHTS von Hand installieren. Die compose.yaml in diesem Backup ist der
+komplette Bauplan: docker compose zieht/baut alles automatisch (Qdrant-Vektor-DB,
+brain-api mit Gemini-Embedding-001, agent, dashboard, mcp, caddy). Die API-Keys
+stehen in der mitgesicherten .env -> die Cloud-APIs laufen sofort wieder.
+
+WAS IN DIESEM BACKUP STECKT:
+  - qdrant-brain.snapshot ... dein Gehirn (alle Eintraege + Vektoren)
+  - opt-second-brain.tar.gz . compose.yaml, .env (Secrets!), agent-data (3 Prompts +
+                              config + Kategorien), dashboard (dein Frontend), Code
+  - samba.tar.gz ............ Logbuch (.txt-Gespraeche) + daten-Laufwerk
+  - caddy_data/-config ...... HTTPS-Zertifikate
+  - wg0.conf ................ WireGuard-Tunnel
+
+WIEDERHERSTELLEN (auf einem frischen Ubuntu-Server):
+  1. Docker installieren:      curl -fsSL https://get.docker.com | sh
+  2. Dieses .tar.gz hochladen (z.B. nach /root/)
+  3. Restore-Skript holen + starten:
+       git clone https://github.com/Pepsi1978/proggs.git
+       sudo bash proggs/second-brain-server/scripts/full-restore.sh /root/<dieses-archiv>.tar.gz
+     (mit JA bestaetigen) -> spielt alles ein, startet den Stack, laedt das Gehirn.
+  4. WireGuard aus wg0.conf einrichten -> Dashboard/Agent wieder ueber den Tunnel erreichbar.
+
+Danach ist alles wie vorher: Gehirn, Dashboard, Prompts, Kategorien, Logbuch.
+ANLEITUNG
+
 # ── Alles in EIN Archiv ─────────────────────────────────────────────────────────────────────────
 tar czf "$ARCHIVE" -C "$WORK" . 2>/dev/null || { log "FEHLER: konnte Gesamt-Archiv nicht schreiben"; exit 1; }
 asz=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
