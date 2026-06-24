@@ -70,7 +70,7 @@ import kotlinx.coroutines.launch
 private fun NavController.tabSwitch(route: String) {
     navigate(route) {
         popUpTo(graph.findStartDestination().id) { saveState = false }
-        launchSingleTop = true
+        launchSingleTop = false
         restoreState = false
     }
 }
