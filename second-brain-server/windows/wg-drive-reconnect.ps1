@@ -8,14 +8,20 @@ $ErrorActionPreference = 'SilentlyContinue'
 $log = Join-Path $env:LOCALAPPDATA 'wg-drive-reconnect.log'
 function Log($m) { try { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" | Out-File -FilePath $log -Append -Encoding utf8 } catch {} }
 
-# Ist der WireGuard-Tunnel oben? (schneller TCP-Test auf das Gehirn, max 1,5 s)
+# Ist der Tunnel oben UND der SMB-Server da? Schneller TCP-Test auf den SMB-Port 445 von 10.8.0.1.
+# WICHTIG (Root-Cause-Fix 2026-06-24): Frueher wurde Port 8000 (brain-api) getestet — das machte den
+# Laufwerks-Reconnect von einem FREMDEN Dienst abhaengig. Bei einem brain-api-Neustart (z.B. Deploy)
+# war 8000 kurz weg -> dieser Gate-Check schlug an -> Z:/Y: wurden NIE gemappt, obwohl SMB (445) lief.
+# Jetzt testen wir genau den Port, von dem Z:/Y: tatsaechlich abhaengen: 445 (SMB). $c.Connected statt
+# nur Wait()-Rueckgabe (faulted/timeout sauber als "nicht oben" werten), Socket immer disposen.
 function WgUp {
+    $c = $null
     try {
         $c = New-Object System.Net.Sockets.TcpClient
-        $ok = $c.ConnectAsync('10.8.0.1', 8000).Wait(1500)
-        $c.Close()
-        return $ok
+        $done = $c.ConnectAsync('10.8.0.1', 445).Wait(2000)
+        return ($done -and $c.Connected)
     } catch { return $false }
+    finally { if ($c) { $c.Close(); $c.Dispose() } }
 }
 
 # 0) WireGuard-Dienst SICHERSTELLEN — HAUPTFIX: der Tunnel-Dienst startet beim Booten oft NICHT von
