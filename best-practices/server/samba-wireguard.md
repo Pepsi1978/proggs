@@ -18,6 +18,7 @@
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
 | 5 | Performance | bei Langsamkeit WireGuard-MTU 1350 + MSS-Clamping testen | §5 |
 | 6 | Patch-Stand | 4.19.x ist upstream EOL → `unattended-upgrades`/`apt upgrade` (Ubuntu backportet Fixes ins Paket) | §6 |
+| 7 | Auto-Reconnect-Task (nach Reboot) | In einem ELEVATED/hidden Task NIE `net use` ohne Credentials (haengt am Prompt) → `WNetAddConnection2` mit expliziten Credentials; `EnableLinkedConnections=1` macht das Mapping im Explorer sichtbar; `.ps1` als UTF-8-BOM, ASCII-only | §7 |
 
 ---
 
@@ -115,7 +116,33 @@ Paket (`2:4.19.5+dfsg-4ubuntuX.Y`). Darum:
 - Nicht selbst auf 4.21+ kompilieren, nur um eine hoehere Nummer zu sehen — das Ubuntu-Paket ist der gepatchte Pfad.
 - Die WireGuard-Isolierung (445 nie oeffentlich, `smb encrypt = required`) ist Defense-in-Depth, ersetzt das Patchen aber NICHT.
 
+## §7 Auto-Reconnect-Task nach Neustart (richtig gebaut) — der haeufigste Reboot-Stolperstein
+Ein Skript, das die Laufwerke nach Login/Standby automatisch wiederverbindet, ist sinnvoll — aber im
+**unsichtbaren, erhoehten** Kontext einer geplanten Aufgabe gelten andere Regeln als im normalen Fenster
+(siehe Bug-Almanach §9/§10). Damit es nach JEDEM Neustart zuverlaessig klappt:
+
+1. **Mappen per `WNetAddConnection2` (mpr.dll) mit EXPLIZITEN Credentials — nicht per nacktem `net use`.**
+   Ein erhoehter Task hat einen eigenen, leeren Blick auf den Credential-Tresor (UAC-Token-Isolation). `net use`
+   ohne Credentials promptet dann interaktiv → im hidden-Kontext kein Eingeber → **Endlos-Hang + Prozess-Leak**.
+   `WNetAddConnection2` OHNE `CONNECT_INTERACTIVE` kann nie prompten (gibt einen Fehlercode zurueck). Credentials
+   aus einer Datei AUSSERHALB des Repos lesen (`~/SK/<projekt>/samba.env`), nie hardcoden. Code: Almanach §9.
+2. **`EnableLinkedConnections=1`** (HKLM\…\Policies\System, DWORD) setzen, wenn der Task **erhoeht** laeuft —
+   sonst sind die im erhoehten Token gemappten Laufwerke im normalen Explorer **unsichtbar**. Wirksam ab naechstem
+   Login. Alternative ohne Registry-Tweak: das Mapping in einem **nicht-erhoehten** Task machen (erhoeht nur den
+   WireGuard-Dienst sicherstellen). Details: Almanach §10.
+3. **Tunnel-Gate auf den richtigen Port:** Vor dem Mappen pruefen, ob **SMB-Port 445** von `10.8.0.1` erreichbar ist
+   (nicht ein fremder Dienst-Port wie eine Web-API — dessen Neustart wuerde sonst das Mapping blockieren). TCP-Connect
+   mit kurzem Timeout, `$client.Connected` pruefen, Socket disposen.
+4. **Nur kranke Laufwerke anfassen:** `Get-SmbMapping -LocalPath Z:` → wenn `Status -eq 'OK'` in Ruhe lassen (kein
+   unnoetiges Trennen/Neuverbinden = kein Blinken).
+5. **`.ps1` als UTF-8 MIT BOM speichern und ASCII-only schreiben.** Geplante Aufgaben starten oft **Windows PowerShell 5.1**
+   (`powershell.exe`), das `.ps1` ohne BOM als cp1252 liest → ein Em-Dash/Smart-Quote im Code zerschiesst das Parsing,
+   das Skript startet gar nicht (kein Log, schwer zu finden). Keine typografischen Zeichen im Code.
+6. **Observability:** Jeden Mapping-Versuch mit Ergebnis (lesbarer Win32-Fehlercode) in eine Log-Datei schreiben —
+   sonst sind Fehlschlaege unsichtbar. Ein fester Log-Pfad, den man bei Problemen gezielt auslesen kann.
+
 ---
 
 ## Quellen
 Offizielle Samba-Doku (smb.conf, interfaces/bind interfaces only), UFW-Doku, MS-Mount-Doku · Recherche 2026-06-22 (Firecrawl+MiniMax).
+WNetAddConnection2/EnableLinkedConnections: Microsoft-Doku (mpr.dll, KB EnableLinkedConnections) · eigener Vorfall + Live-Diagnose 2026-06-24.

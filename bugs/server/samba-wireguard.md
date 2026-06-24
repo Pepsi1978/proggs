@@ -8,7 +8,8 @@
 > **Zweite Seite der Medaille:** `best-practices/server/samba-wireguard.md` (wie man es von
 > vornherein richtig macht). Verwandt: [`wireguard.md`](wireguard.md) (das VPN selbst),
 > [`vps-hosting.md`](vps-hosting.md).
-> **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu).
+> **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
+> zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -27,6 +28,9 @@
 | 5 | Port-Freigabe fuer SMB im Tunnel | SMB-Ports (445/tcp, 139/tcp) NUR ueber `wg0` zulassen: `ufw allow in on wg0 to any port 445` (NICHT oeffentlich!). Einziger oeffentlicher Port bleibt UDP 51820. | §2 |
 | 6 | Netzlaufwerk verschwindet/rotes X nach Reboot/Login | Persistentes Mapping per `New-SmbMapping -Persistent` (nicht `New-PSDrive`); Credential-Manager-Eintrag pro Servername UND IP; "auf Netzwerk warten"-GPO; PIN-Login kann stoeren. | §5 |
 | 9 | ⭐ Laufwerke fehlen ganz, aber Ping+Port 445 OK & manuelles `net use` klappt | Auto-Reconnect-Gate prueft falschen Port (fremder Dienst statt SMB **445**) → kommt nie bis zum Mapping. Gate IMMER auf 445; Skript-Log lesen (Fehler sonst geschluckt). | §5 |
+| 10 | ⭐⭐ Reconnect-Skript laeuft als geplante Aufgabe (elevated/hidden) → `net use` HAENGT ewig, Laufwerke nie da | `net use ... /persistent:yes` OHNE explizite Credentials promptet im **elevated** Token (Tresor token-getrennt!) interaktiv nach dem Benutzernamen → im hidden/wscript-Kontext kein Eingeber → Endlos-Hang + net.exe-Prozess-Leak. FIX: per **WNetAddConnection2 (mpr.dll) mit EXPLIZITEN Credentials** mappen (ohne `CONNECT_INTERACTIVE` → nie ein Prompt). | §9 |
+| 11 | ⭐⭐ Geplante Aufgabe (RunLevel Highest) mappt erfolgreich, aber Explorer zeigt nichts | UAC-Token-Isolation: im **elevated** Token gemappte Netzlaufwerke sind im **nicht-elevated** Explorer unsichtbar. FIX: `EnableLinkedConnections=1` (HKLM\…\Policies\System, DWORD) → wirksam ab naechstem Login. | §10 |
+| 12 | `.ps1` startet nicht / Parse-Fehler "schliessende } fehlt", nur via geplanter Aufgabe | **Windows PowerShell 5.1** liest `.ps1` OHNE BOM als **cp1252** → ein Em-Dash (—) in einem String wird zu `â€"` und zerschiesst Quotes/Klammern. FIX: `.ps1` als **UTF-8 mit BOM** speichern UND keine typografischen Zeichen (Em-Dash/Smart-Quotes) im Code. | §9 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
 
@@ -39,6 +43,8 @@
 | §2 UFW/Ports | §2 Firewall nur ueber wg0 |
 | §3 MTU/Performance | §3 Performance-Tuning |
 | §4–§6 Windows-Client | §4 Windows-Mount (persistent, Credentials) |
+| §9 net use haengt (elevated/hidden) | §7 Auto-Reconnect-Task robust (WNetAddConnection2 + explizite Credentials) |
+| §10 EnableLinkedConnections | §7 Auto-Reconnect-Task robust (elevated Mappings sichtbar machen) |
 
 ---
 
@@ -201,6 +207,71 @@ Die **aktuell gepatchte noble-Version ist `2:4.19.5+dfsg-4ubuntu9.6`** (USN-8306
 `apt-cache policy samba` gegen das eigene System abgleichen. (Eine vollstaendige USN-Liste seit 2024 war nicht
 ermittelbar — es koennen aeltere USNs existieren; `unattended-upgrades` deckt sie automatisch ab.)
 **Quelle:** ubuntu.com/security/notices USN-7826-1 + USN-8306-1, samba.org/samba/history (4.19 nicht mehr in Upstream-Security-Releases), vulners.com (USN-8306-1) · Recherche 2026-06-22 (Firecrawl + OpenRouter-Eskalation).
+
+## 9. ⭐⭐ `net use` haengt EWIG im elevated/hidden Reconnect-Task (DER Reboot-Bug, live 2026-06-24)
+**Symptom:** Ein Reconnect-Skript als **geplante Aufgabe** (RunLevel Highest, unsichtbar via `wscript`/`powershell -WindowStyle Hidden`)
+mappt die Laufwerke nach Neustart NIE. Im Skript-Log steht nur "WireGuard-Dienst Status: Running", danach nichts mehr.
+`ping 10.8.0.1` UND `Test-NetConnection -Port 445` sind erfolgreich, der Tresor hat sogar einen Eintrag fuer `10.8.0.1`,
+und ein **manuelles** `net use` im normalen Fenster klappt sofort. Es sammeln sich mit jedem Trigger haengende `net.exe`-Prozesse
+an (Prozess-Leak; 11 Stueck gemessen). Erst `Stop-Process` auf die `net.exe` loest den Hang auf und das Log zeigt dann:
+`Z: reconnect FEHLGESCHLAGEN: Geben Sie den Benutzernamen fuer "10.8.0.1" ein:`.
+**Ursache (zwei Schichten):**
+1. **Token-getrennter Credential-Tresor:** Die Aufgabe laeuft **elevated** (Highest). Ein im normalen (nicht-elevated) Kontext
+   gespeicherter Credential `Domain:target=10.8.0.1` ist im **elevated** Token NICHT sichtbar (UAC-Token-Isolation gilt auch fuer
+   den Credential-Manager). `net use ... /persistent:yes` ohne explizite Credentials findet also keinen Tresor-Eintrag.
+2. **Prompt im fensterlosen Kontext = Endlos-Hang:** Ohne Credential will `net use` INTERAKTIV nach dem Benutzernamen fragen.
+   Im `wscript`/Hidden-Kontext gibt es kein Eingabefenster und kein Konsolen-Stdin → der Prompt wird nie beantwortet → der
+   `net.exe`-Prozess haengt unbegrenzt (der `/net use /delete` davor laeuft durch, weil er keine Credentials braucht).
+   Interaktiv (nicht-elevated) trat der Bug NICHT auf (Tresor sichtbar) → er war im normalen Test unsichtbar.
+**Versionen:** Windows 10/11, jede geplante Aufgabe mit RunLevel Highest, die `net use` ohne explizite Credentials nutzt.
+**FIX (funktionserhaltend, Poka-Yoke Stufe 3 — Prompt KONZEPTIONELL unmoeglich):** Mappen NICHT per `net use`, sondern per
+**`WNetAddConnection2` (mpr.dll)** mit **explizit uebergebenen** Credentials (User + Passwort aus einer Datei AUSSERHALB des Repos,
+hier `~/SK/second-brain/samba.env`). Ohne das Flag `CONNECT_INTERACTIVE` kann diese API NIEMALS einen Dialog oeffnen — sie liefert
+stattdessen einen Win32-Fehlercode (z.B. 1326 = falsche Credentials). Kein Prompt, kein Hang, kein Prozess-Leak — unabhaengig von
+Token/Tresor. `CONNECT_UPDATE_PROFILE` (0x1) macht das Mapping persistent. Kurzform in PowerShell:
+```powershell
+Add-Type @'
+using System;using System.Runtime.InteropServices;
+public class Mpr{
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct NETRESOURCE{
+  public int dwScope;public int dwType;public int dwDisplayType;public int dwUsage;
+  public string lpLocalName;public string lpRemoteName;public string lpComment;public string lpProvider;}
+ [DllImport("mpr.dll",CharSet=CharSet.Unicode)] public static extern int WNetAddConnection2(ref NETRESOURCE r,string pw,string usr,int f);
+ [DllImport("mpr.dll",CharSet=CharSet.Unicode)] public static extern int WNetCancelConnection2(string n,int f,bool force);}
+'@
+[Mpr]::WNetCancelConnection2('Z:',0,$true) | Out-Null
+$nr = New-Object Mpr+NETRESOURCE; $nr.dwType=1; $nr.lpLocalName='Z:'; $nr.lpRemoteName='\\10.8.0.1\gedanken'
+$code = [Mpr]::WNetAddConnection2([ref]$nr, $pass, $user, 0x1)   # 0x1 = CONNECT_UPDATE_PROFILE (persistent)
+```
+**Falls man doch `net use` nehmen will (weniger robust):** IMMER mit explizitem Passwort + `/user:` aufrufen
+(`net use Z: \\10.8.0.1\gedanken "$pass" /user:frank /persistent:yes`) — dann promptet es nicht. Trotzdem kann ein
+falsch konfiguriertes net use haengen; ein harter Timeout-Guard ist Pflicht. WNetAddConnection2 ist vorzuziehen.
+**Encoding-Falle (gleicher Vorfall):** Das per geplanter Aufgabe gestartete Skript lief mit **Windows PowerShell 5.1**
+(`powershell.exe`), das `.ps1` OHNE BOM als **cp1252** liest. Ein **Em-Dash (—)** in einem String wurde zu `â€"` und zerschoss
+die Quote-/Klammer-Logik → Parse-Fehler "schliessende } fehlt" → das Skript startete GAR NICHT (kein Log). Der PowerShell-7-Parser
+(`PSParser`) meldete "Syntax OK" — die Falle. **Regel:** `.ps1`-Skripte als **UTF-8 mit BOM** speichern und **keine typografischen
+Zeichen** (Em-Dash, Smart-Quotes) im Code verwenden (ASCII-only ist am sichersten).
+**Quelle:** Eigener Vorfall + Live-Diagnose 2026-06-24 (Trace-Sonden zeigten Hang exakt bei `net use ... /persistent:yes`).
+
+## 10. ⭐⭐ Im elevated Task gemappte Laufwerke sind im Explorer UNSICHTBAR (EnableLinkedConnections)
+**Symptom:** Die geplante Aufgabe (RunLevel Highest) mappt Z:/Y: erfolgreich (`Get-SmbMapping` im elevated Kontext zeigt Status OK),
+aber Franks **Explorer** (laeuft nicht-elevated) zeigt die Laufwerke NICHT. `Get-SmbMapping` im normalen Fenster ist leer.
+**Ursache:** **UAC-Token-Isolation fuer Netzlaufwerke.** Ein elevated und ein nicht-elevated Prozess desselben Benutzers haben
+GETRENNTE Laufwerks-Namespaces. Was die elevated Aufgabe mappt, existiert nur im elevated Token; der nicht-elevated Explorer
+sieht es nicht (und umgekehrt). Das ist by-design, nicht behebbar durch besseres Mapping.
+**Versionen:** Windows 10/11 mit aktivem UAC (Standard).
+**FIX (Microsoft-dokumentiert):** Registry-Wert setzen, der die beiden Token verknuepft:
+```
+HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+  EnableLinkedConnections = 1   (DWORD)
+```
+Setzen braucht Admin-Rechte (die elevated Aufgabe kann es selbst idempotent tun). **Wirksam erst ab dem naechsten Login/Reboot.**
+Danach sehen elevated- und nicht-elevated-Prozesse dieselben Mappings. **Achtung:** Verknuepft bewusst die Token — auf einem
+privaten Single-User-PC unkritisch, in Hochsicherheitsumgebungen abwaegen.
+**Alternative (ohne Registry-Tweak):** Das Mapping im **nicht-elevated** Kontext durchfuehren (z.B. eine zweite, nicht-erhoehte
+Aufgabe nur furs Mapping; die erhoehte nur fuer den Dienst-Start). Mehr Aufwand, dafuer ohne token-uebergreifende Verknuepfung.
+**Quelle:** Microsoft KB (EnableLinkedConnections) + eigener Vorfall 2026-06-24 (live verifiziert: ohne den Wert 0 Laufwerke im
+nicht-elevated Get-SmbMapping trotz "OK" im elevated Task).
 
 ---
 
