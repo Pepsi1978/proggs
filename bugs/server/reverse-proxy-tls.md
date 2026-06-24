@@ -461,3 +461,22 @@
 - [ ] **VPS-Ops:** Swap eingerichtet (Server hat 0 B!)? needrestart/Auto-Reboot gezaehmt? NTP/chrony? `/boot`/inodes/`df -i` im Blick?
 - [ ] **Security:** `ufw allow OpenSSH` vor `enable`? zweite SSH-Session offen? fail2ban `backend=systemd` + (hinter Caddy/Docker) Real-IP + `DOCKER-USER`-Chain? `sshd -T` autoritativ (cloud-init-Drop-in)?
 - [ ] **Nach Fehler:** VOLLTEXT dieses Almanachs lesen (Stufe B); neuen Bug hier ergaenzen.
+
+---
+
+## 🔗 Bezug zu Best-Practices (Praevention — "wie macht man es richtig")
+
+Gegenseite: [`best-practices/server/reverse-proxy-tls.md`](../../best-practices/server/reverse-proxy-tls.md)
+— dort steht, wie man Proxy/TLS + den laufenden Server-Betrieb von vornherein richtig aufsetzt,
+damit diese Bugs gar nicht entstehen (erst Almanach lesen, dann Best Practices).
+
+| Bug-Abschnitt (diese Datei) | Best-Practice-Abschnitt in `best-practices/server/reverse-proxy-tls.md` |
+|-----------------------------|------------------------------------------------------------------------|
+| §1 Caddy Auto-TLS / Let's Encrypt | §1 Caddy Auto-TLS richtig aufsetzen |
+| §2 reverse_proxy-Mechanik | §2 reverse_proxy sauber konfigurieren |
+| §3 Streaming/SSE/WebSocket | §3 Streaming/SSE/MCP richtig durchreichen |
+| §4 Header/Host/IP-Weiterleitung | §4 Header/Proxy-Vertrauen |
+| §5 systemd-Unit-Betrieb | §5 systemd-Units richtig |
+| §6 Linux-VPS-Ops (Updates/Swap/Disk/NTP) | §7 Auto-Updates/Logs/NTP/Swap |
+| §7 Ops-Sicherheit (fail2ban/UFW/SSH) | §6 SSH-Hardening/UFW/fail2ban |
+| (praeventiv, kein direkter Bug-Gegenpart) | §8 Monitoring/Uptime-Alarm · §9 Backup 3-2-1 + Restore-Test |
