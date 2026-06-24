@@ -1,0 +1,4 @@
+# Build-Artefakte (nicht ins Repo — werden per publish.ps1 lokal erzeugt)
+bin/
+obj/
+publish/

@@ -1,0 +1,86 @@
+<Window x:Class="CortexBackup.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cortex Backup — Einrichtung" Height="500" Width="540"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="#13111C" FontFamily="Segoe UI">
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#1C1830"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+        <Style x:Key="Lbl" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9B93B5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,12,0,4"/>
+        </Style>
+        <Style x:Key="Btn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Background" Value="#2A2440"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" CornerRadius="10" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Opacity" Value="0.85"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Einrichtung" Foreground="White" FontSize="18" FontWeight="Bold"/>
+            <TextBlock Text="Einmalig deine Server-Zugangsdaten eintragen. Wird sicher in SK\second-brain\backup.env gespeichert (nicht im Projekt)."
+                       Foreground="#9B93B5" FontSize="11.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,8,0,0">
+            <TextBlock Style="{StaticResource Lbl}" Text="Server-Adresse (öffentliche VPS-IP oder 10.8.0.1 über WireGuard)"/>
+            <TextBox x:Name="TbHost"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Style="{StaticResource Lbl}" Text="Benutzer"/>
+                    <TextBox x:Name="TbUser"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Style="{StaticResource Lbl}" Text="SSH-Port"/>
+                    <TextBox x:Name="TbPort"/>
+                </StackPanel>
+            </Grid>
+            <TextBlock Style="{StaticResource Lbl}" Text="Server-Ordner"/>
+            <TextBox x:Name="TbAppDir"/>
+            <TextBlock Style="{StaticResource Lbl}" Text="SSH-Schlüssel (optional — ohne fragt der Server nach Passwort)"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="TbKey"/>
+                <Button Grid.Column="2" Style="{StaticResource Btn}" Content="Erzeugen…" Click="OnGenKey"/>
+            </Grid>
+            <TextBlock x:Name="Hint" Foreground="#7C8BFF" FontSize="11.5" TextWrapping="Wrap" Margin="0,12,0,0" Text=""/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Style="{StaticResource Btn}" Content="Abbrechen" Click="OnCancel" Margin="0,0,10,0"/>
+            <Button Style="{StaticResource Btn}" Background="#7C3AED" Content="Speichern" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>
