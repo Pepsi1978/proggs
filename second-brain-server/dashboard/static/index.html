@@ -495,9 +495,9 @@ button{font-family:inherit;cursor:pointer}
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
 .drawer-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-.drawer-edit-btn{margin-left:auto}
-/* Papierkorb-Button (Eintrag dauerhaft loeschen) — rot getoent, links neben Bearbeiten */
-.drawer-del-btn{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(242,105,142,.45)}
+/* Loeschen + Bearbeiten als Gruppe rechts (justify-content:flex-end), direkt nebeneinander mit gap */
+/* Papierkorb-Button (Eintrag loeschen) — rot getoent, direkt links neben Bearbeiten */
+.drawer-del-btn{display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(242,105,142,.45)}
 .drawer-del-btn:hover{border-color:var(--bad);background:rgba(242,105,142,.12)}
 .drawer-del-btn svg{width:16px;height:16px;stroke-width:2}
 /* Roter Bestaetigungs-Button (Ja, loeschen) */
