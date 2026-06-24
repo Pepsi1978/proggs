@@ -1306,8 +1306,44 @@ Leitsätze:
     autoGrow(ta); ta.focus();
   }
 
-  /* ── Mikrofon: Sprache -> Text (Groq whisper-large-v3-turbo ueber /api/transcribe) ───────── */
+  /* ── Mikrofon: Hybrid-Diktat ──────────────────────────────────────────────
+     WAEHREND des Sprechens: Live-Vorschau via Web Speech API (interim results).
+     BEIM Stopp: die finale, hochwertige Groq-Transkription (whisper-large-v3-turbo,
+     mit Satzzeichen) ERSETZT die Vorschau — das ist die maszgebliche Fassung.
+     previewActive sperrt nach dem Stopp jedes spaete Web-Speech-Event, damit die
+     rohe Vorschau Groqs Endfassung NICHT mehr ueberschreiben kann (Race-Schutz).
+     Faellt Groq aus, bleibt die Vorschau nur als Notnagel — mit sichtbarem Hinweis. */
   let mediaRec = null, audioChunks = [], recording = false;
+  let speechRec = null, micBaseText = "", liveTranscript = "", previewActive = false;
+
+  /* Setzt den Diktat-Text relativ zum Basis-Text (was vor dem Diktat schon im Feld stand). */
+  function setMicText(ta, text){
+    ta.value = micBaseText ? (micBaseText + " " + text) : text;
+    autoGrow(ta);
+  }
+
+  /* Live-Vorschau ueber die browser-eigene Spracherkennung. */
+  function startSpeechPreview(ta){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ console.debug("[mic] Web Speech API nicht verfuegbar — nur Groq am Ende"); return; }
+    try{
+      speechRec = new SR();
+      speechRec.lang = "de-DE";
+      speechRec.continuous = true;
+      speechRec.interimResults = true;
+      speechRec.onresult = e=>{
+        if(!previewActive) return;                 // nach dem Stopp NICHT mehr schreiben (Groq gewinnt)
+        let txt = "";
+        for(let i=0;i<e.results.length;i++){ txt += e.results[i][0].transcript; }
+        liveTranscript = txt.trim();
+        setMicText(ta, liveTranscript);            // Live-Vorschau ins Feld
+      };
+      speechRec.onerror = ev=>{ console.debug("[mic] Web-Speech-Fehler:", ev.error); };  // still — Groq faengt am Ende auf
+      speechRec.start();
+      console.debug("[mic] Live-Vorschau (Web Speech) gestartet");
+    }catch(e){ console.debug("[mic] Live-Vorschau konnte nicht starten:", e); speechRec = null; }
+  }
+
   async function toggleMic(){
     const micBtn = document.getElementById("chatMic");
     if(recording){ if(mediaRec && mediaRec.state!=="inactive") mediaRec.stop(); return; }
@@ -1315,22 +1351,32 @@ Leitsätze:
     let stream;
     try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
     catch(e){ chatAppend("agent","Kein Mikrofon-Zugriff — bitte im Browser erlauben."); return; }
+    const ta = document.getElementById("chatText");
+    micBaseText = ta.value.trim();                  // merken, was vor dem Diktat schon da war
+    liveTranscript = ""; previewActive = true;
+    startSpeechPreview(ta);                          // Live-Vorschau starten (parallel zur Aufnahme)
     audioChunks = [];
     mediaRec = new MediaRecorder(stream);
     mediaRec.ondataavailable = e=>{ if(e.data && e.data.size) audioChunks.push(e.data); };
     mediaRec.onstop = async ()=>{
       recording = false; micBtn.classList.remove("recording");
+      previewActive = false;                         // ab jetzt darf die Vorschau das Feld NICHT mehr veraendern
       stream.getTracks().forEach(t=>t.stop());
+      if(speechRec){ try{ speechRec.stop(); }catch(e){} speechRec = null; }
       const type = (audioChunks[0] && audioChunks[0].type) || "audio/webm";
       const blob = new Blob(audioChunks, {type});
-      if(!blob.size) return;
+      if(!blob.size){ return; }
       micBtn.disabled = true; micBtn.classList.add("busy");
       try{
         const r = await fetch("/api/transcribe",{method:"POST",headers:{"Content-Type":blob.type||"audio/webm"},body:blob});
         const d = await r.json();
-        if(d && d.ok && d.text) insertIntoChat(d.text);
+        if(d && d.ok && d.text){ setMicText(ta, d.text); ta.focus(); console.debug("[mic] Groq-Endfassung ersetzt Vorschau"); }
+        else if(liveTranscript){ ta.focus(); chatAppend("agent","Groq nicht erreichbar — im Feld steht nur die unkorrigierte Live-Vorschau (ohne Satzzeichen)."); console.debug("[mic] Groq leer — Fallback auf Vorschau"); }
         else chatAppend("agent",(d && d.detail) || "Transkription fehlgeschlagen.");
-      }catch(e){ chatAppend("agent","Transkription fehlgeschlagen."); }
+      }catch(e){
+        if(liveTranscript){ ta.focus(); chatAppend("agent","Groq nicht erreichbar — im Feld steht nur die unkorrigierte Live-Vorschau (ohne Satzzeichen)."); console.debug("[mic] Groq-Fehler — Fallback auf Vorschau"); }
+        else chatAppend("agent","Transkription fehlgeschlagen.");
+      }
       finally{ micBtn.disabled = false; micBtn.classList.remove("busy"); }
     };
     mediaRec.start();
