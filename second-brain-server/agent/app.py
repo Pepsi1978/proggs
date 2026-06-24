@@ -27,6 +27,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import traceback
 from contextlib import asynccontextmanager
@@ -41,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.7.0"  # 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.8.0"  # 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -79,6 +80,7 @@ ROLES = ("haupt", "speicher", "abfrage")
 PROMPT_FILES = {r: Path(AGENT_DATA_DIR) / f"{r}-prompt.txt" for r in ROLES}
 LEGACY_PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"  # alter GEMEINSAMER Prompt -> wird zum Haupt-Prompt migriert
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
+CATEGORIES_FILE = Path(AGENT_DATA_DIR) / "categories.json"  # manuell angelegte Kategorien (auch LEERE, ohne Eintrag)
 # Auswahl fuers Dashboard-Dropdown. gemini-3.1-pro + gemini-3.1-flash bewusst entfernt (Frank, #NNN);
 # es bleiben gemini-3.1-flash-lite + gemini-2.5-flash. minimax/minimax-m3 laeuft ueber OpenCode Zen Go
 # (Anthropic /messages-Schema, siehe opencode_generate). "provider/modell"-Schreibweise = Routing-Hinweis.
@@ -271,6 +273,61 @@ def brain_categories() -> list[str]:
     except Exception:  # noqa: BLE001 — Kategorien sind Hilfskontext, kein harter Fehler
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", exc_info=True)
         return []
+
+
+# --- Kategorie-Registry: haelt auch LEERE (noch eintragslose) Kategorien persistent -----------
+# Qdrant kennt eine Kategorie nur, solange ein Eintrag drin liegt. Frank kann aber Kategorien
+# VORAB anlegen (Dashboard "Kategorie +") — die leben hier in categories.json, ueberleben Neustart
+# (agent-data-Volume) und werden dem Speicheragenten + Dashboard mitgegeben.
+def _cat_key(name: str) -> str:
+    """Anzeigename -> Kategorie-Schluessel: ASCII-klein, Umlaute aufgeloest, nur a-z0-9 + Bindestriche."""
+    s = (name or "").strip().lower()
+    for a, b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
+        s = s.replace(a, b)
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:40]
+
+
+def load_registry() -> list[str]:
+    """Manuell angelegte Kategorie-Schluessel (auch leere) aus categories.json."""
+    try:
+        if CATEGORIES_FILE.exists():
+            data = json.loads(CATEGORIES_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return [str(c).strip() for c in data if str(c).strip()]
+    except Exception as e:  # noqa: BLE001 — Registry ist Hilfskontext, nie crashen
+        _log(logging.WARNING, "categories.json nicht lesbar", err=str(e))
+    return []
+
+
+def save_registry(cats: list[str]) -> None:
+    """Atomar (temp -> os.replace), sortiert + dedupliziert, UTF-8/LF."""
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = CATEGORIES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(sorted(set(cats)), ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, CATEGORIES_FILE)
+
+
+def add_registry_category(name: str) -> str:
+    """Neue Kategorie registrieren (auch ohne Eintrag). Gibt den normierten Schluessel zurueck ('' = ungueltig)."""
+    key = _cat_key(name)
+    if not key or key == CONV_CATEGORY:
+        return ""
+    cats = load_registry()
+    if key not in cats:
+        cats.append(key)
+        save_registry(cats)
+    return key
+
+
+def all_categories() -> list[str]:
+    """Die VOLLE Kategorienliste fuers Dashboard + den Speicheragenten:
+    Vereinigung aus Kategorien MIT Eintraegen (aus dem Gehirn) UND manuell registrierten (auch leeren).
+    Ohne die Gespraechs-Spur (CONV_CATEGORY)."""
+    s = set(brain_categories())
+    s.update(load_registry())
+    s.discard(CONV_CATEGORY)
+    return sorted(s)
 
 
 # ---------------------------------------------------------------------------
@@ -737,6 +794,10 @@ class ImproveReq(BaseModel):
     text: str = Field(..., min_length=1, max_length=8000, description="Eingesprochener Roh-Text, der sprachlich verbessert werden soll")
 
 
+class CategoryReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60, description="Anzeigename der neuen Kategorie (wird zum ASCII-Schluessel normiert)")
+
+
 # Lektor-Auftrag fuer den G-Button: NUR umformulieren, Inhalt 1:1 erhalten (keine Halluzination).
 IMPROVE_SYSTEM = (
     "Du bist ein praeziser Lektor. Formuliere den folgenden eingesprochenen Text in klarem, gutem "
@@ -816,6 +877,26 @@ def put_config(req: ConfigReq) -> dict:
     return {"status": "ok", "models": ROLE_MODELS}
 
 
+# --- Kategorien: volle Liste (mit Eintraegen + manuell angelegte/leere) + neue anlegen ----------
+@app.get("/categories", dependencies=[Depends(require_auth)])
+def get_categories() -> dict:
+    """Volle Kategorienliste fuers Dashboard-Dropdown (inkl. leerer, vorab angelegter Kategorien).
+    Sync def -> Threadpool (brain_categories macht sync httpx, fastapi §1)."""
+    return {"categories": all_categories()}
+
+
+@app.post("/categories", dependencies=[Depends(require_auth)])
+def post_category(req: CategoryReq) -> dict:
+    """Eine Kategorie VORAB anlegen (auch ohne Eintrag) — der Speicheragent kennt sie ab sofort."""
+    key = add_registry_category(req.name)
+    if not key:
+        raise HTTPException(status_code=400, detail="Ungueltiger Kategoriename (nach Normierung leer oder reserviert)")
+    _log(logging.INFO, "Kategorie angelegt", key=key, eingabe=req.name[:60])
+    checkpoint("kategorie_anlegen", "Neue (auch leere) Kategorie registrieren -> Speicheragent kennt sie",
+               ok=True, key=key)
+    return {"ok": True, "key": key, "categories": all_categories()}
+
+
 @app.post("/improve", dependencies=[Depends(require_auth)])
 def improve(req: ImproveReq) -> dict:
     """G-Button: einen eingesprochenen Roh-Text grammatikalisch/sprachlich verbessern, OHNE den
@@ -840,7 +921,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None) -> dict:
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
     Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save."""
-    categories = brain_categories()
+    categories = all_categories()   # inkl. manuell angelegter (auch leerer) Kategorien
     route = hauptagent_route(session, user_text, pending)
     intent = (route.get("intent") or "smalltalk").strip()
 
@@ -936,4 +1017,4 @@ async def end_session(req: EndReq) -> dict:
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", "version": VERSION,
-            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config", "/improve"]}
+            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config", "/categories", "/improve"]}
