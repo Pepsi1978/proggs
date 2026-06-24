@@ -489,10 +489,18 @@ $ti_extra"
               ;;
           esac
         fi
+        # FastAPI/uvicorn-Web-Schicht (Endpoints/Middleware/lifespan/Body-Handling) -> fastapi.md. NACH mcp/agent
+        # (agent/*.py bleibt ai-agent-frameworks), faengt brain-api/dashboard und andere FastAPI-Services.
+        fastapiPy=0
+        case "$probe" in
+          *"from fastapi"*|*"import fastapi"*|*"FastAPI("*|*APIRouter*|*"@app.get"*|*"@app.post"*|*"@app.put"*|*"@app.delete"*|*"@app.patch"*|*uvicorn*) fastapiPy=1;;
+        esac
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
         elif [ "$agentPy" -eq 1 ]; then
             slug="aiagentframeworks"; file="ai-agent-frameworks.md"; name="Serverseitige autonome KI-Agenten (Loop/Tools/State/Kosten)"
+        elif [ "$fastapiPy" -eq 1 ]; then
+            slug="fastapi"; file="fastapi.md"; name="FastAPI & async-Python-Server (uvicorn-Web-Schicht)"
         elif [ "$iconPy" -eq 1 ]; then
             slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
         elif [ "$whisperPy" -eq 1 ]; then

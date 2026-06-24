@@ -35,6 +35,7 @@ AREAS = {
     "android/retrofit-okhttp-moshi":("Retrofit/OkHttp",      ["retrofit", "okhttp", "moshi", "interceptor"]),
     "server/docker":                ("Docker/Compose",       ["docker compose", "docker-compose", "compose.yaml", "compose.yml", "dockerfile", "depends_on", "mem_limit", "healthcheck", "restart: unless-stopped", "ufw docker", "named volume", "json-file log"]),
     "server/ai-agent-frameworks":   ("KI-Agent (Loop/Tools)", ["autonomer agent", "agent loop", "tool loop", "tool-loop", "bibliothekar-agent", "dirigent-agent", "pydantic-ai", "pydantic_ai", "langgraph", "create_react_agent", "graphrecursionerror", "max iterations", "tool_use", "tool_result", "idempotency key", "memory poisoning", "exponential backoff", "run_in_threadpool"]),
+    "server/fastapi":               ("FastAPI/uvicorn",      ["fastapi", "uvicorn", "async def endpoint", "blockiert den event loop", "event-loop blockiert", "run_in_threadpool", "asyncio.to_thread", "corsmiddleware", "allow_credentials", "@app.exception_handler", "app.add_middleware", "uvicorn --workers", "lifespan event", "on_event startup", "backgroundtasks", "request.body() limit", "pydantic v2 fastapi", "starlette"]),
 }
 
 
