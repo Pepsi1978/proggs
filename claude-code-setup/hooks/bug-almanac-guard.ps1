@@ -204,6 +204,9 @@ try {
         } catch {}
         if ($xmlProbe -match 'appwidget-provider') {
             $slug = 'appwidgets'; $file = 'app-widgets.md'; $name = 'App-Widgets (Glance/RemoteViews/AppWidgetProvider)'
+        } elseif ($fpl -match 'network_security_config' -or $xmlProbe -match 'network-security-config' -or $xmlProbe -match 'cleartextTrafficPermitted') {
+            # Network Security Config (Cleartext fuer private IP / interne-CA-trust-anchors) -> client-anbindung.md.
+            $slug = 'clientanbindung'; $file = 'client-anbindung.md'; $name = 'Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)'
         }
     } elseif ($fpl -match '\.kts?$') {
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben (existierende Datei + Tool-Input),
@@ -306,7 +309,22 @@ try {
             # 3D auf macOS (Metal/SceneKit/RealityKit).
             if ($probe -match 'MTKView' -or $probe -match 'MTLDevice' -or $probe -match 'MTLCreateSystemDefaultDevice' -or $probe -match 'SceneKit' -or $probe -match 'SCNView' -or $probe -match 'RealityKit' -or $probe -match 'RealityView' -or $probe -match 'MetalFX' -or $probe -match 'MetalKit') { $metalSignal = $true }
         }
-        if ($whisperSignal) {
+        # Info.plist/entitlements mit ATS/Local-Network/network.client -> Client-Anbindung (VPN/REST ans eigene Backend).
+        $clientAnbindungSignal = $false
+        if ($fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
+            $plistProbe = ""
+            try { if (Test-Path -LiteralPath $fp) { $plistProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $plistProbe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $plistProbe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $plistProbe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            if ($plistProbe -match 'NSAppTransportSecurity' -or $plistProbe -match 'NSAllowsLocalNetworking' -or $plistProbe -match 'NSLocalNetworkUsageDescription' -or $plistProbe -match 'NSExceptionAllowsInsecureHTTPLoads' -or $plistProbe -match 'com\.apple\.security\.network\.client') { $clientAnbindungSignal = $true }
+        }
+        if ($clientAnbindungSignal) {
+            $slug = 'clientanbindung'; $file = 'client-anbindung.md'; $name = 'Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)'
+        } elseif ($whisperSignal) {
             $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
         } elseif ($macOverlaySignal) {
             $slug = 'macosoverlay'; $file = 'macos-overlay.md'; $name = 'macOS-Overlay-Fenster (Swift/AppKit)'

@@ -199,6 +199,13 @@ $xml_extra"
         case "$xmlProbe" in
           *appwidget-provider*) slug="appwidgets"; file="app-widgets.md"; name="App-Widgets (Glance/RemoteViews/AppWidgetProvider)";;
         esac
+        # Network Security Config (Cleartext fuer private IP / interne-CA-trust-anchors) -> client-anbindung.md.
+        if [ -z "$file" ]; then
+          case "$fpl" in *network_security_config*) slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)";; esac
+        fi
+        if [ -z "$file" ]; then
+          case "$xmlProbe" in *network-security-config*|*cleartextTrafficPermitted*) slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)";; esac
+        fi
         ;;
     *.kt|*.kts)
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben, dann nach Prioritaet routen.
@@ -335,7 +342,29 @@ $ti_extra"
             case "$probe" in *MTKView*|*MTLDevice*|*MTLCreateSystemDefaultDevice*|*SceneKit*|*SCNView*|*RealityKit*|*RealityView*|*MetalFX*|*MetalKit*) metalSignal=1;; esac
             ;;
         esac
-        if [ "$whisperSignal" -eq 1 ]; then
+        # Info.plist/entitlements mit ATS/Local-Network/network.client -> Client-Anbindung (VPN/REST ans eigene Backend).
+        clientAnbindungSignal=0
+        case "$fpl" in
+          */info.plist|info.plist|*.entitlements)
+            plistProbe=""
+            [ -f "$fp" ] && plistProbe=$(cat "$fp" 2>/dev/null || true)
+            plist_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            plistProbe="$plistProbe
+$plist_extra"
+            case "$plistProbe" in *NSAppTransportSecurity*|*NSAllowsLocalNetworking*|*NSLocalNetworkUsageDescription*|*NSExceptionAllowsInsecureHTTPLoads*|*com.apple.security.network.client*) clientAnbindungSignal=1;; esac
+            ;;
+        esac
+        if [ "$clientAnbindungSignal" -eq 1 ]; then
+            slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)"
+        elif [ "$whisperSignal" -eq 1 ]; then
             slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
         elif [ "$macOverlaySignal" -eq 1 ]; then
             slug="macosoverlay"; file="macos-overlay.md"; name="macOS-Overlay-Fenster (Swift/AppKit)"
