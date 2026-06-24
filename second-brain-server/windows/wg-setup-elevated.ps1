@@ -1,4 +1,4 @@
-# wg-setup-elevated.ps1 — EINMALIGE erhoehte Einrichtung (UAC einmal bestaetigen). Danach laeuft alles unsichtbar.
+﻿# wg-setup-elevated.ps1 - EINMALIGE erhoehte Einrichtung (UAC einmal bestaetigen). Danach laeuft alles unsichtbar.
 #  1) Aufgabe "WG-Drive-Reconnect" ERHOEHT (Highest) registrieren -> darf WireGuard starten + Z:/Y: verbinden.
 #  2) WireGuard-Tunnel-Dienst Auto-Wiederherstellung setzen (Neustart bei Boot-Fehler nach 5s/30s/60s).
 # Schreibt das Ergebnis nach %LOCALAPPDATA%\wg-setup-result.txt (zur Kontrolle, kein Fenster noetig).
@@ -20,4 +20,12 @@ try {
 
 & sc.exe failure 'WireGuardTunnel$pc' reset= 86400 actions= restart/5000/restart/30000/restart/60000 | Out-Null
 R ("WireGuard-Recovery gesetzt (sc.exe exit " + $LASTEXITCODE + ")")
+
+# EnableLinkedConnections=1: macht im ERHOEHTEN Task gemappte Netzlaufwerke im normalen (nicht-elevated)
+# Explorer sichtbar. Ohne diesen Wert sind erhoehte/normale Mappings durch UAC getrennt -> Z:/Y: erscheinen
+# nicht im Explorer, obwohl der Task sie erfolgreich verbindet. Wirksam ab naechstem Login/Reboot. (MS KB)
+try {
+    New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'EnableLinkedConnections' -Value 1 -PropertyType DWord -Force -ErrorAction Stop | Out-Null
+    R "EnableLinkedConnections=1 gesetzt (erhoehte Mappings im Explorer sichtbar ab naechstem Login)"
+} catch { R ("EnableLinkedConnections-FEHLER: " + $_.Exception.Message) }
 R "FERTIG"
