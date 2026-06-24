@@ -5,11 +5,18 @@
 > funktionserhaltend (nie "Feature weglassen"). Quellen: offizielle Kotlin-Doku (JetBrains),
 > YouTrack/GitHub-Issues, Community + harter gh-Issue-Status.
 >
-> **Stand:** recherchiert am **2026-06-02** fuer **Kotlin 2.1.0** (Projekt-Plugin) bis **2.3.20**
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-06-24** (Engine A: Firecrawl+MiniMax)
+> fuer **Kotlin 2.1.0** (Projekt-Plugin) bis **2.4.0**
 > **Anker:** kotlin=2.1.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (CLI), Compose BOM 2026.03, AGP 8.10, compileSdk 35–37. Versionsangaben pro Bug beachten —
 > viele K2-Punkte sind "per Design" (gewollte Breaking Changes), viele Coroutine/Compose-Fallen
 > sind versionsunabhaengig. Was schon gefixt ist: siehe Fix-Status-Sektion am Ende.
+>
+> **Versions-Horizont (Re-Recherche 2026-06-24):** Inzwischen released: **Kotlin 2.3.20** (2026-03-16,
+> Kotlin/JVM nutzt **Build Tools API** als Default, Gradle-9.3-Kompat) und **Kotlin 2.4.0** (2026-06-03:
+> **stabile Context Parameters**, stabile Explicit Backing Fields, stabile common-UUIDs, Java-26-Support,
+> Gradle-9.5-Kompat). `kotlinx.coroutines` ist bei **1.11.0**. Euer Pin (Kotlin 2.1.0) bleibt gueltig —
+> der Anker ist projekt-gepinnt. Beim geplanten Kotlin-2.3/2.4-Sprung §1.10 beachten.
 
 ---
 
@@ -57,7 +64,7 @@ nach einem Fix immer auch dort verankern, damit der Fehler nicht wiederkommt:
 
 ---
 
-## 1. K2-Compiler & Sprach-Migration (Kotlin 2.0 → 2.3)
+## 1. K2-Compiler & Sprach-Migration (Kotlin 2.0 → 2.4)
 
 ### 1.1 K2 ist default und nicht abschaltbar (2.0.0)  ⭐
 **Symptom:** Code der unter 1.9 baute, bricht unter 2.0 (Inferenz/Smart-Cast/Nullability strenger).
@@ -104,6 +111,17 @@ oder entfernen, ggf. `-jvm-default=disable`.
 **Symptom:** `buildList { }` ohne erkennbaren Elementtyp → Inferenz-Fehler.
 **Versionen:** KT-58149.
 **FIX:** explizites Typ-Argument `buildList<T> { }`.
+
+### 1.10 Context-Parameter-Overload-Resolution geaendert (2.3.20) → mehrdeutige Aufrufe  ⭐ (Re-Recherche 2026-06-24, Upgrade-relevant)
+**Symptom:** Nach dem Upgrade auf **Kotlin 2.3.20** brechen Aufrufe von Funktions-Overloads, die sich
+NUR durch Context-Parameter unterscheiden, mit `OVERLOAD_RESOLUTION_AMBIGUITY`.
+**Ursache:** Kotlin 2.3.20 hat die Overload-Resolution fuer Context-Parameter geaendert; vorher eindeutige
+Aufrufe werden mehrdeutig. Context Parameters sind in **2.4.0 stabil** geworden.
+**Versionen:** Verhaltensaenderung ab Kotlin 2.3.20; betrifft Code, der Context-Parameter nutzt.
+**FIX (funktionserhaltend):** In 2.4.0 die **expliziten Context-Argumente** verwenden
+(`-Xexplicit-context-arguments`, experimentell) — den Aufruf eindeutig machen, NICHT einen Overload loeschen.
+Euer Pin (2.1.0) nutzt noch keine Context-Parameter → erst beim 2.3/2.4-Sprung relevant.
+**Quelle:** kotlinlang.org/docs/whatsnew-eap.html (What's new in Kotlin 2.4.0) · blog.jetbrains.com/kotlin/2026/06/kotlin-2-4-0-released/
 
 ---
 
@@ -326,7 +344,7 @@ DTO/`@SerializedName`-Felder pro Modell. So eng wie moeglich, nie pauschal `-kee
 ## 11. Fix-Status — was auf dem aktuellen Stack schon behoben ist
 
 > Versions-Denken: Diese frueheren Bugs sind in den genutzten Versionen (Kotlin 2.1+/aktuelle Libs)
-> bereits GEFIXT — nicht mehr als aktiv behandeln. Changelog-/gh-belegt, Stand 2026-06-02.
+> bereits GEFIXT — nicht mehr als aktiv behandeln. Changelog-/gh-belegt, Stand 2026-06-02 (ergaenzt 2026-06-24).
 
 | Frueherer Bug | Status / gefixt | Beleg |
 |---------------|-----------------|-------|
@@ -334,6 +352,7 @@ DTO/`@SerializedName`-Felder pro Modell. So eng wie moeglich, nie pauschal `-kee
 | Compose Endlos-Recomposition durch falsche Stability-Inferenz | **gefixt ab Compose-Compiler 2.0.10/2.0.20** | whatsnew2020 |
 | Dagger/Hilt inkompatibel mit KSP2 | **gefixt — dagger #4303 CLOSED/COMPLETED 2024-12** | gh |
 | Compose-Compiler-Version-Matching (manuelle Map noetig) | **entfaellt ab Kotlin 2.0** (Plugin synchron) | developer.android.com |
+| Lib-interner Kotlin-Compiler ≠ Projekt-Kotlin → Incremental Compilation bricht (Paparazzi, Android) | **CLOSED/COMPLETED 2026-01-26** — Ursache Versions-Mismatch (Projekt 2.1.0, Lib brauchte 2.1.21) | gh cashapp/paparazzi#2061 |
 
 ### Noch NICHT gefixt (Workaround bleibt aktiv)
 - K2 Breaking Changes (Abschnitt 1) — **per Design** (gewollt), kein "Fix".
