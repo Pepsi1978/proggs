@@ -393,12 +393,9 @@ button{font-family:inherit;cursor:pointer}
 
 /* ════ EINSTELLUNGEN ════════════════════════════════════════════════════ */
 .settings{max-width:1560px}
-/* Allein stehende Einstellungs-Kacheln (System-Prompt, Logbuch) behalten ihre Originalbreite;
-   nur die obere Reihe (Bibliothekar-Agent + Google-Drive-Backup) nutzt die volle Breite. */
-#view-settings > .set-section{max-width:760px}
 .set-section{padding:28px 30px;margin-bottom:20px}
 /* Zwei gleich grosse Kacheln nebeneinander (Bibliothekar-Agent + Google-Drive-Backup); stapelt schmal */
-.set-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;align-items:stretch}
+.set-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;align-items:stretch;margin-bottom:20px}
 .set-row .set-section{margin-bottom:0;height:100%}
 .backup-state{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
 .bk-dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex:none;box-shadow:0 0 8px transparent}
@@ -672,14 +669,18 @@ button{font-family:inherit;cursor:pointer}
         <div class="set-row">
           <div class="card set-section">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Bibliothekar-Agent</h3>
-            <p class="set-desc">Wähle das Sprachmodell, mit dem dein Agent denkt und Einträge einordnet.</p>
+            <p class="set-desc">Drei Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn.</p>
             <div class="field">
-              <label for="modelSel">Modell</label>
-              <select class="select" id="modelSel">
-                <option>gemini-3.1-flash-lite</option>
-                <option>gemini-2.5-flash</option>
-                <option>minimax/minimax-m3</option>
-              </select>
+              <label for="modelHaupt">Hauptagent · Gespräch &amp; Steuerung</label>
+              <select class="select" id="modelHaupt"></select>
+            </div>
+            <div class="field">
+              <label for="modelSpeicher">Speicheragent · ablegen</label>
+              <select class="select" id="modelSpeicher"></select>
+            </div>
+            <div class="field">
+              <label for="modelAbfrage">Abfrageagent · suchen</label>
+              <select class="select" id="modelAbfrage"></select>
             </div>
             <div class="row-end">
               <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
@@ -1234,13 +1235,14 @@ Leitsätze:
     clearTimeout(e._t); e._t = setTimeout(()=>{ e.textContent=""; e.style.color=""; }, 3400);
   }
   async function loadSettings(){
-    /* Modell-Dropdown aus dem Agenten füllen + aktives markieren */
+    /* Drei Modell-Dropdowns (Hauptagent/Speicheragent/Abfrageagent) aus dem Agenten füllen + aktives markieren */
     try{
       const c = await api("/api/config");
-      const sel = document.getElementById("modelSel");
-      const avail = (c.available && c.available.length) ? c.available : [...sel.options].map(o=>o.value);
-      sel.innerHTML = avail.map(m=>`<option${m===c.model?" selected":""}>${m}</option>`).join("");
-    }catch(e){ /* Dropdown-Defaults aus dem HTML bleiben stehen */ }
+      const avail = (c.available && c.available.length) ? c.available : ["gemini-3.1-flash-lite","gemini-2.5-flash","minimax/minimax-m3"];
+      const m = c.models || {};
+      const fill = (id, cur)=>{ const sel=document.getElementById(id); if(sel) sel.innerHTML = avail.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join(""); };
+      fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
+    }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
     /* System-Prompt (echten, bearbeitbaren Teil) laden */
     try{
       const p = await api("/api/prompt");
@@ -1276,9 +1278,10 @@ Leitsätze:
     }
   }
   async function saveModel(){
-    const btn = document.getElementById("saveModelBtn"), sel = document.getElementById("modelSel");
+    const btn = document.getElementById("saveModelBtn");
+    const val = id => { const s = document.getElementById(id); return s ? s.value : ""; };
     btn.disabled = true;
-    try{ const r = await apiSend("/api/config","PUT",{model:sel.value}); flash("modelStatus","Modell gespeichert: "+(r.model||sel.value)); }
+    try{ await apiSend("/api/config","PUT",{haupt_model:val("modelHaupt"), speicher_model:val("modelSpeicher"), abfrage_model:val("modelAbfrage")}); flash("modelStatus","Modelle gespeichert"); }
     catch(e){ flash("modelStatus","Speichern fehlgeschlagen",false); }
     finally{ btn.disabled = false; }
   }

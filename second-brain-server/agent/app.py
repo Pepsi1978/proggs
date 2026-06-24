@@ -41,7 +41,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.5.0"  # 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.6.0"  # 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -50,7 +50,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")                 # Bearer fuer brain-api UND fuer diesen Endpunkt
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_MODEL_DEFAULT = os.getenv("AGENT_MODEL", "gemini-3.1-flash-lite")   # Env-Default (Fallback / Zuruecksetzen)
-AGENT_MODEL = AGENT_MODEL_DEFAULT                                          # AKTIV: beim Start aus config.json, zur Laufzeit per /config aenderbar
+# Drei Agenten-Rollen, je EIGENES Modell (Frank-Wunsch 2026-06-24, "Modell-pro-Rolle", BP §11).
+# Start aus config.json (load_models), zur Laufzeit per /config aenderbar.
+ROLE_MODELS = {"haupt": AGENT_MODEL_DEFAULT, "speicher": AGENT_MODEL_DEFAULT, "abfrage": AGENT_MODEL_DEFAULT}
 # OpenCode Zen Go — zweiter Modell-Provider (z.B. minimax/minimax-m3). MiniMax/Qwen laufen im
 # Go-Gateway ueber das ANTHROPIC-Schema /zen/go/v1/messages (Header x-api-key, NICHT Bearer;
 # curl-User-Agent gegen Cloudflare-1010). Quelle: bugs/opencode/opencode-cli.md §14.1/§14.6/§14.8.
@@ -152,7 +154,7 @@ except Exception as e:  # noqa: BLE001
     init_error = f"{type(e).__name__}: {e}"
     log.error("Gemini-Init fehlgeschlagen", exc_info=True)
 
-_log(logging.INFO, "sb-agent startet", version=VERSION, model=AGENT_MODEL, brain_url=BRAIN_URL,
+_log(logging.INFO, "sb-agent startet", version=VERSION, models=ROLE_MODELS, brain_url=BRAIN_URL,
      log_path=LOG_PATH, logbook_dir=LOGBOOK_DIR, tz=str(TZ), session_timeout_s=SESSION_TIMEOUT_S)
 
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
@@ -173,7 +175,7 @@ def _opencode_slug(model: str) -> str:
     return model.split("/")[-1].strip()
 
 
-def opencode_generate(system: str, user: str, max_tokens: int, temperature: float) -> str:
+def opencode_generate(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
     """OpenCode Zen Go (Anthropic /messages-Schema) fuer MiniMax/Qwen.
     PFLICHT-Header laut Almanach (opencode-cli.md §14.6/§14.8): x-api-key (NICHT Bearer),
     anthropic-version, curl-User-Agent (sonst Cloudflare 1010/403). max_tokens > evtl. Thinking-Budget.
@@ -181,7 +183,7 @@ def opencode_generate(system: str, user: str, max_tokens: int, temperature: floa
     if not OPENCODE_API_KEY:
         raise RuntimeError("OPENCODE_API_KEY fehlt — minimax/minimax-m3 nicht nutzbar")
     body = {
-        "model": _opencode_slug(AGENT_MODEL),
+        "model": _opencode_slug(model),
         "max_tokens": max_tokens,
         "temperature": temperature,
         "system": system,
@@ -208,19 +210,20 @@ def _extract_json(s: str) -> str:
     return s[i:j + 1] if (i != -1 and j > i) else s
 
 
-def llm_generate(system: str, user: str, *, json_mode: bool, max_tokens: int, temperature: float) -> str:
-    """Provider-neutraler Einstieg: Gemini ODER OpenCode-Go (je nach AGENT_MODEL). Gibt reinen Text.
-    Bei json_mode nutzt Gemini response_mime_type=application/json; OpenCode/minimax erzwingt das
-    JSON ueber den SCHEMA_BLOCK im System-Prompt (der Aufrufer parst per _extract_json)."""
-    if _is_opencode(AGENT_MODEL):
-        return opencode_generate(system, user, max_tokens=max_tokens, temperature=temperature)
+def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tokens: int, temperature: float) -> str:
+    """Provider-neutraler Einstieg: Gemini ODER OpenCode-Go (je nach uebergebenem 'model'). Gibt reinen
+    Text. Jede Agenten-Rolle (Haupt/Speicher/Abfrage) ruft mit IHREM Modell auf (Modell-pro-Rolle).
+    Bei json_mode nutzt Gemini response_mime_type=application/json; OpenCode/minimax erzwingt das JSON
+    ueber das Schema im System-Prompt (der Aufrufer parst per _extract_json)."""
+    if _is_opencode(model):
+        return opencode_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
     if gclient is None:
         raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
     kwargs: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
     if json_mode:
         kwargs["response_mime_type"] = "application/json"
     resp = gclient.models.generate_content(
-        model=AGENT_MODEL, contents=user, config=genai_types.GenerateContentConfig(**kwargs))
+        model=model, contents=user, config=genai_types.GenerateContentConfig(**kwargs))
     text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
     if not text:  # Diagnose erhalten (Gemini-Almanach B4/D10): finishReason bei leerem Text loggen
         finish = None
@@ -228,7 +231,7 @@ def llm_generate(system: str, user: str, *, json_mode: bool, max_tokens: int, te
             finish = getattr((resp.candidates or [None])[0], "finish_reason", None)
         except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
             pass
-        probe(False, "LLM lieferte leeren Text", model=AGENT_MODEL, finish=str(finish))
+        probe(False, "LLM lieferte leeren Text", model=model, finish=str(finish))
     return text
 
 
@@ -376,23 +379,29 @@ def save_instructions(text: str) -> None:
     os.replace(tmp, PROMPT_FILE)
 
 
-def load_model() -> str:
-    """Aktives Modell aus config.json; Fallback = Env-Default."""
+def load_models() -> dict:
+    """Aktive Modelle je Rolle (haupt/speicher/abfrage) aus config.json. Migration vom alten
+    Einzel-Feld {"model": ..} (dann fuer alle drei). Fallback = Env-Default."""
+    out = {"haupt": AGENT_MODEL_DEFAULT, "speicher": AGENT_MODEL_DEFAULT, "abfrage": AGENT_MODEL_DEFAULT}
     try:
         if CONFIG_FILE.exists():
             cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            m = (cfg.get("model") or "").strip()
-            if m:
-                return m
+            legacy = (cfg.get("model") or "").strip()   # alte Einzel-Modell-Konfiguration
+            for r in out:
+                m = (cfg.get(r + "_model") or "").strip() or legacy
+                if m:
+                    out[r] = m
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "config.json nicht lesbar — nutze Env-Default", err=str(e))
-    return AGENT_MODEL_DEFAULT
+    return out
 
 
-def save_model(model: str) -> None:
+def save_models(models: dict) -> None:
+    """Atomar je-Rolle-Modelle speichern (haupt_model/speicher_model/abfrage_model)."""
     Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    data = {f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")}
     tmp = CONFIG_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"model": model}, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     os.replace(tmp, CONFIG_FILE)
 
 
@@ -437,7 +446,8 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None) -> dic
         f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
     )
     raw = _extract_json(llm_generate(
-        build_hauptagent_prompt(), user_block, json_mode=True, max_tokens=2048, temperature=0.3))
+        build_hauptagent_prompt(), user_block, model=ROLE_MODELS["haupt"],
+        json_mode=True, max_tokens=2048, temperature=0.3))
     try:
         data = json.loads(raw)
         if not isinstance(data, dict):
@@ -468,7 +478,8 @@ def speicheragent_decide(quote: str, candidates: list[dict], categories: list[st
     user_block = (f"ZU SPEICHERNDER TEXT (wird 1:1 abgelegt, NICHT aendern):\n{quote}\n\n"
                   f"AEHNLICHE VORHANDENE EINTRAEGE:\n{cand_txt}")
     raw = _extract_json(llm_generate(
-        build_speicher_prompt(categories), user_block, json_mode=True, max_tokens=512, temperature=0.2))
+        build_speicher_prompt(categories), user_block, model=ROLE_MODELS["speicher"],
+        json_mode=True, max_tokens=512, temperature=0.2))
     try:
         data = json.loads(raw)
         if not isinstance(data, dict):
@@ -539,7 +550,7 @@ def llm_answer(session: dict, question: str, hits: list[dict], categories: list[
     )
     # Provider-neutral (Gemini ODER minimax/OpenCode-Go); grosszuegiges max_tokens (Thinking zaehlt
     # bei beiden dagegen). llm_generate behaelt die finishReason-Diagnose bei leerem Text (Almanach B4/D10).
-    text = llm_generate(instr, user_block, json_mode=False,
+    text = llm_generate(instr, user_block, model=ROLE_MODELS["abfrage"], json_mode=False,
                         max_tokens=ANSWER_MAX_TOKENS, temperature=0.4)
     if not text:
         text = ("Ich finde dazu gerade nichts in deinem Gehirn — magst du es anders formulieren?"
@@ -626,13 +637,12 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global AGENT_MODEL
-    AGENT_MODEL = load_model()   # gespeicherte Modell-Wahl uebernehmen (sonst Env-Default)
-    # Diagnose: laeuft ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein (sonst /chat-Fehler).
-    if _is_opencode(AGENT_MODEL):
-        probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", model=AGENT_MODEL)
-    _log(logging.INFO, "sb-agent gestartet", version=VERSION, model=AGENT_MODEL,
-         provider=("opencode-go" if _is_opencode(AGENT_MODEL) else "gemini"),
+    global ROLE_MODELS
+    ROLE_MODELS = load_models()   # gespeicherte Modell-Wahl JE ROLLE uebernehmen (sonst Env-Default)
+    # Diagnose: nutzt EINE Rolle ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein.
+    if any(_is_opencode(m) for m in ROLE_MODELS.values()):
+        probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
+    _log(logging.INFO, "sb-agent gestartet", version=VERSION, models=ROLE_MODELS,
          prompt_quelle=("datei" if PROMPT_FILE.exists() else "default"), data_dir=AGENT_DATA_DIR)
     task = asyncio.create_task(_flush_loop())
     _log(logging.INFO, "Flush-Loop gestartet")
@@ -667,7 +677,11 @@ class PromptReq(BaseModel):
 
 
 class ConfigReq(BaseModel):
-    model: str = Field(..., min_length=1, description="Aktives Sprachmodell des Agenten")
+    # Modell-pro-Rolle (alle optional). Abwaertskompat: 'model' setzt alle drei Rollen.
+    haupt_model: str | None = Field(default=None, description="Modell des Hauptagenten (Gespraech/Routing)")
+    speicher_model: str | None = Field(default=None, description="Modell des Speicheragenten (ablegen)")
+    abfrage_model: str | None = Field(default=None, description="Modell des Abfrageagenten (suchen)")
+    model: str | None = Field(default=None, description="Abwaertskompat: setzt alle drei Rollen")
 
 
 class ImproveReq(BaseModel):
@@ -695,7 +709,7 @@ def health() -> dict:
     except Exception as e:  # noqa: BLE001
         brain = f"{type(e).__name__}"
     return {"status": "ok" if (gclient is not None and init_error is None) else "degraded",
-            "version": VERSION, "model": AGENT_MODEL, "init_error": init_error,
+            "version": VERSION, "model": ROLE_MODELS["haupt"], "models": ROLE_MODELS, "init_error": init_error,
             "brain": brain, "aktive_sitzungen": len(_sessions), "session_timeout_s": SESSION_TIMEOUT_S}
 
 
@@ -718,17 +732,24 @@ def put_prompt(req: PromptReq) -> dict:
 
 @app.get("/config", dependencies=[Depends(require_auth)])
 def get_config() -> dict:
-    return {"model": AGENT_MODEL, "default": AGENT_MODEL_DEFAULT, "available": AVAILABLE_MODELS}
+    return {"models": ROLE_MODELS, "model": ROLE_MODELS["haupt"],
+            "default": AGENT_MODEL_DEFAULT, "available": AVAILABLE_MODELS}
 
 
 @app.put("/config", dependencies=[Depends(require_auth)])
 def put_config(req: ConfigReq) -> dict:
-    global AGENT_MODEL
-    m = req.model.strip()
-    save_model(m)
-    AGENT_MODEL = m                       # sofort aktiv, kein Neustart noetig
-    _log(logging.INFO, "Agent-Modell gewechselt", model=m)
-    return {"status": "ok", "model": AGENT_MODEL}
+    global ROLE_MODELS
+    new = dict(ROLE_MODELS)
+    if req.model and req.model.strip():          # Abwaertskompat: EIN Modell -> alle drei Rollen
+        m = req.model.strip()
+        new = {"haupt": m, "speicher": m, "abfrage": m}
+    for role, val in (("haupt", req.haupt_model), ("speicher", req.speicher_model), ("abfrage", req.abfrage_model)):
+        if val and val.strip():
+            new[role] = val.strip()
+    ROLE_MODELS = new
+    save_models(ROLE_MODELS)                      # sofort aktiv, kein Neustart noetig
+    _log(logging.INFO, "Agent-Modelle gewechselt", models=ROLE_MODELS)
+    return {"status": "ok", "models": ROLE_MODELS}
 
 
 @app.post("/improve", dependencies=[Depends(require_auth)])
@@ -739,14 +760,14 @@ def improve(req: ImproveReq) -> dict:
     Almanach ai-agent-frameworks §3.1)."""
     src = req.text.strip()
     try:
-        better = llm_generate(IMPROVE_SYSTEM, src, json_mode=False, max_tokens=2048, temperature=0.3).strip()
+        better = llm_generate(IMPROVE_SYSTEM, src, model=ROLE_MODELS["haupt"], json_mode=False, max_tokens=2048, temperature=0.3).strip()
     except Exception as e:  # noqa: BLE001 — Tool-Fehler sauber zurueckgeben statt crashen (§3.2)
         _log(logging.ERROR, "Textverbesserung fehlgeschlagen", exc_info=True)
         raise HTTPException(status_code=502, detail=f"Verbesserung fehlgeschlagen: {type(e).__name__}")
     if not better:
         better = src  # Funktionserhalt: nie leeren Text zurueckgeben
     checkpoint("improve", "Text sprachlich verbessern OHNE Informationsgehalt zu aendern",
-               ok=bool(better), model=AGENT_MODEL, in_chars=len(src), out_chars=len(better))
+               ok=bool(better), model=ROLE_MODELS["haupt"], in_chars=len(src), out_chars=len(better))
     return {"ok": True, "text": better}
 
 
@@ -805,7 +826,7 @@ async def chat(req: ChatReq) -> dict:
     """Ein Eingang — Frank redet NUR mit dem Hauptagenten. Drei Koepfe dahinter: Hauptagent (Routing/
     Gespraech) -> Speicheragent (legt 1:1 ab, NUR nach Bestaetigung) bzw. Abfrageagent (Vektorsuche +
     Antwort). Die schwere synchrone Arbeit laeuft in asyncio.to_thread -> Event-Loop bleibt frei (fastapi §1)."""
-    if gclient is None and not _is_opencode(AGENT_MODEL):
+    if gclient is None and not any(_is_opencode(m) for m in ROLE_MODELS.values()):
         raise HTTPException(status_code=503, detail=f"Agent nicht bereit: {init_error}")
     sid = (req.session_id or req.user_id).strip()
     t0 = time.time()
