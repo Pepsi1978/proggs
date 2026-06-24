@@ -4,7 +4,8 @@
 > Proaktives Bug-Wissen (Poka-Yoke Stufe 3): bekannte Fehler VOR der Arbeit nachschlagen,
 > statt sie hinterher teuer zu debuggen.
 >
-> **Stand:** recherchiert am **2026-06-02** fuer die LIVE-Versionen aus
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-06-24** (Engine A: Firecrawl+MiniMax)
+> fuer die LIVE-Versionen aus
 > **Anker:** billing=7.1.1  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > `~/proggs/BestJournalAndroid/gradle/libs.versions.toml`:
 > - **Google Play Billing Library 7.1.1** (`com.android.billingclient:billing-ktx`)
@@ -24,6 +25,17 @@
 > **Versions-Anker:** Billing 7.1.1 ist NICHT die neueste Version (Billing 8.x existiert seit 2025-06-30).
 > Das ist relevant — siehe Sektion 1 (v8-Migration) und die **Play-Store-Deadline 31.08.2026** (Bug 41).
 > Beim naechsten Major-Sprung (Billing 8, Firebase-BOM-Bump): Re-Check dieses Almanachs.
+>
+> **Versions-Horizont (Re-Recherche 2026-06-24):**
+> - **Play Billing Library:** 8.0.0 (2025-06-30), 8.1.0 (2025-11-06), 8.2.0 (2025-12-09), 8.2.1 (2025-12-15),
+>   8.3.0 (2025-12-23) — und **PBL 9.0.0** (2026-05-19, kleinere API-Oberflaeche als v8, intern targetSdk 35).
+>   Euer 7.1.1 muss bis zur Deadline auf **>= v8** (Bug 41).
+> - **Firebase BOM:** 34.11.0 → 34.12.0 (2026-04-09) → 34.13.0 (2026-05-07) → 34.14.0 (2026-05-28) →
+>   34.14.1 (2026-06-08) → **34.15.0 (2026-06-16)**; Firebase AI Logic 17.11.0 → **17.13.0**, App Check 19.2.0.
+> - **Play-Gebuehren/Policy-Umbruch ("A new era for choice and openness", Maerz 2026):** eigene
+>   Billing-Systeme + externes Web-Checkout in US/UK/EWR erlaubt; **neue Gebuehrenstruktur ab 2026-06-30**
+>   (5% Billing-Fee + Service-Fees, 10% fuer wiederkehrende Subs; Rollout US/UK/EWR 06-30, AU 09-30,
+>   KR/JP 12-31, Rest 2027). Awareness fuer Monetarisierung — kein Code-Bug, aber relevant.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -110,6 +122,11 @@
 **Ursache:** SKU→Product-Migration abgeschlossen; in 8.0.0 endgueltig entfernt (`queryPurchaseHistory` schon ab 7.0 deprecated).
 **Versionen:** deprecated 7.0.0, entfernt 8.0.0.
 **FIX:** `querySkuDetailsAsync`→`queryProductDetailsAsync`; sync `queryPurchases`→`queryPurchasesAsync` mit `QueryPurchasesParams`. Statt History: aktive Kaeufe per `queryPurchasesAsync`, abgelaufene/konsumierte/stornierte serverseitig bzw. ueber Voided-Purchases-API tracken.
+**Weitere v8-Entfernungen (Re-Recherche 2026-06-24, fuer Vollstaendigkeit):** `setOldSkuPurchaseToken`→`setOldPurchaseToken`,
+`setReplaceProrationMode`/`setReplaceSkusProrationMode`→`setSubscriptionReplacementMode` (vgl. Bug 24/25);
+Alternative-Billing umbenannt: `enableAlternativeBilling`→`enableUserChoiceBilling`, `AlternativeBillingListener`→`UserChoiceBillingListener`,
+`AlternativeChoiceDetails`→`UserChoiceDetails`. Neu in v8: APIs fuer One-Time-Products, pending purchases bei Prepaid-Plans,
+virtual installment subscriptions. Auch die Signatur von `ProductDetailsResponseListener.onProductDetailsResponse` aendert sich.
 **Quelle:** developer.android.com/google/play/billing/migrate-gpblv8
 
 ## 9. endConnection() vergessen → Memory Leak
@@ -355,6 +372,7 @@
   - v6: 31.08.2025 · 01.11.2025 (abgelaufen)
   - **v7: 31.08.2026 · 01.11.2026** ← 7.1.1 ist bis dahin OK
   - v8: 31.08.2027 · 01.11.2027
+  - v9: 31.08.2028 (PBL 9.0.0 erschien 2026-05-19) — bestaetigt Re-Recherche 2026-06-24
 **Versionen:** 7.1.1 betroffen ab 31.08.2026.
 **FIX:** Vor dem **31.08.2026** auf Billing 8 heben (oder Extension bis 01.11.2026 beantragen). Bereits veroeffentlichte v7-Binaries laufen weiter, aber JEDES Update (auch Security-Patch) erfordert dann v8. `com.google.android.play.billingclient.version` im Manifest setzen, um Warnungen zu vermeiden. v8-Migration: Bugs 7, 8, 24, 25 beachten.
 **Quelle:** developer.android.com/google/play/billing/deprecation-faq
@@ -695,6 +713,21 @@
 **FIX (funktionserhaltend):** SHA-256 des **Play-App-Signing-Keys** (nicht nur Upload-Key) in der Firebase-Konsole hinterlegen, Play Integrity API aktivieren; transiente Fehler abfangen statt hart zu blockieren (Retry/Fallback, kein Crash).
 **Quelle:** github.com/firebase/firebase-android-sdk/issues/7110 · firebase.google.com/docs/app-check/android/play-integrity-provider
 
+## 88a. App-Check-`getToken()`-Fehlerkatalog (Play Integrity, transient & haeufig)  (Re-Recherche 2026-06-24)
+**Symptom:** `getToken()` schlaegt bei einem messbaren Anteil echter Nutzer fehl (im gemeldeten Fall ~8 %
+von 100.000 im Mai 2026) mit wechselnden Codes — kein dauerhafter Defekt, sondern transiente Realitaet.
+**Ursache:** Play-Integrity-/App-Check-Infrastruktur ist netz-/Play-Store-/Server-abhaengig. Typische Codes:
+`IntegrityServiceException -1` (API not available), `-2` (Play Store fehlt/inoffiziell), `-3` (Network error),
+`-8` (Throttling, zu viele Requests), `-9` (Binding to Play Store service failed), `-12` (internal Google
+server error); dazu `RemoteException "Binder has died"`, `FirebaseException 403 "App attestation failed"`
+(siehe Bug 88), `UnknownHostException firebaseappcheck.googleapis.com`.
+**Versionen:** firebase #8246 (**CLOSED COMPLETED 2026-06-16** — als *Frage* geschlossen, KEIN bestaetigter
+SDK-Bug; die Codes sind erwartbares transientes Verhalten).
+**FIX (funktionserhaltend):** Diese Fehler NIE hart blockieren/crashen — Exponential Backoff + Retry,
+graceful Degradation (Feature kurz sperren statt App-Abbruch), `-8`-Throttling respektieren (Token cachen,
+TTL ~1h, Refresh bei halber TTL). Bei `-2`/`-9` ggf. Hinweis "Play Store aktualisieren".
+**Quelle:** github.com/firebase/firebase-android-sdk/issues/8246 · developer.android.com/google/play/integrity/error-codes
+
 ## 89. Debug-Build blockiert — Debug-Provider-Token nicht in der Konsole   ⭐ HAEUFIG
 **Symptom:** Emulator/CI/Debug-Build wird von App Check abgelehnt ("does not pass basic integrity").
 **Ursache:** `DebugAppCheckProviderFactory` erzeugt ein Debug-Token, das in der Firebase-Konsole unter "Manage debug tokens" hinterlegt sein muss; jedes Geraet erzeugt ein eigenes.
@@ -830,6 +863,16 @@
 **Versionen:** per Design.
 **FIX:** App Check mit Play-Integrity-Provider integrieren (in BestJournalAndroid vorhanden); App Check VOR den AI-Calls initialisieren (Bug 91). Enforcement-Rollout: Bug 90.
 **Quelle:** firebase.google.com/docs/ai-logic/app-check
+
+## 108a. Live API: `LiveGenerativeModel.connect()` haengt App-Check-Header NICHT an → 403  (Re-Recherche 2026-06-24)
+**Symptom:** Gemini **Live API**-WebSocket-Requests werden bei aktivem App Check abgelehnt (Attestation/403),
+obwohl normale `generateContent`-Calls durchgehen.
+**Ursache:** Der WebSocket-`connect()` der Live API haengte den `X-Firebase-AppCheck`-Header NICHT an (SDK-Bug
+in firebase-ai). Betraf u.a. BoM 34.8.0.
+**Versionen:** firebase #8060 (**CLOSED COMPLETED 2026-04-27**) — gefixt in **Firebase AI Logic ab BoM 34.13.0**.
+**FIX (funktionserhaltend):** Firebase-BOM auf **>= 34.13.0** heben (euer Stand war 34.11.0). Nur relevant, wenn
+die Live API genutzt wird; normale Calls sind nicht betroffen.
+**Quelle:** github.com/firebase/firebase-android-sdk/issues/8060
 
 ## 109. Developer-API vs. Vertex-Backend — inkonsistentes Verhalten
 **Symptom:** Feature laeuft mit einem Backend, scheitert mit dem anderen.
