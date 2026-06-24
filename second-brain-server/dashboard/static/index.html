@@ -426,6 +426,44 @@ button{font-family:inherit;cursor:pointer}
 .log-row .when{font-family:'JetBrains Mono';font-size:11.5px;color:var(--text-faint);margin-left:auto}
 .log-empty{font-size:13px;color:var(--text-faint);font-family:'JetBrains Mono'}
 
+/* ── Jahr/Monat-Navigation (Logbuch + Papierkorb teilen sie) ───────────────── */
+.ym-nav{display:flex;flex-direction:column;gap:8px}
+.ym-year{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;background:var(--surface-2);
+  border:1px solid var(--border-soft);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Space Grotesk'}
+.ym-year:hover{border-color:var(--accent)}
+.ym-year .chev{margin-left:auto;transition:transform .25s}
+.ym-year.open .chev{transform:rotate(90deg)}
+.ym-year .ym-count{font-family:'JetBrains Mono';font-size:11.5px;color:var(--text-faint);font-weight:400}
+.ym-year svg{width:16px;height:16px;flex:none;opacity:.8}
+.ym-months{display:none;flex-wrap:wrap;gap:8px;padding:4px 2px 8px 30px}
+.ym-months.open{display:flex}
+.ym-month{padding:7px 13px;border-radius:10px;border:1px solid var(--border-soft);background:var(--surface-2);
+  color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Space Grotesk'}
+.ym-month:hover{border-color:var(--accent);color:var(--text)}
+.ym-month .mc{font-family:'JetBrains Mono';font-size:10.5px;color:var(--text-faint);margin-left:5px;font-weight:400}
+/* aktueller Monat: farblich umrandet (Amber-Signatur) */
+.ym-month.current{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,0 0 18px -8px var(--accent)}
+.ym-month.active{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.ym-month.active .mc{color:var(--accent-ink);opacity:.8}
+
+/* ── Papierkorb-Eintraege (im gleichen Karten-Stil) ───────────────────────── */
+.trash-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.trash-item{border:1px solid var(--border-soft);border-radius:12px;background:var(--surface-2);padding:14px 16px}
+.trash-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.trash-title{font-family:'Space Grotesk';font-weight:600;font-size:14.5px}
+.trash-tag{font-size:11px;padding:2px 9px;border-radius:8px}
+.trash-when{font-family:'JetBrains Mono';font-size:11px;color:var(--text-faint);margin-left:auto;white-space:nowrap}
+.trash-text{font-size:13px;line-height:1.55;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:11px 13px;max-height:200px;overflow-y:auto;outline:none}
+.trash-text.editing{border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text;color:var(--text)}
+.trash-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
+.trash-actions .muted-note{margin-right:auto}
+.trash-empty{font-size:13px;color:var(--text-faint);font-family:'JetBrains Mono'}
+.btn-sm{padding:8px 14px;font-size:13px}
+.btn-restore{display:inline-flex;align-items:center;gap:6px;color:var(--good);border-color:rgba(90,208,160,.45)}
+.btn-restore:hover{border-color:var(--good);background:rgba(90,208,160,.12)}
+.btn-restore svg{width:15px;height:15px;stroke-width:2}
+
 /* ── Untere Tab-Leiste (mobil) ─────────────────────────────────────────── */
 .tabbar{display:none}
 
@@ -740,8 +778,16 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Logbuch</h3>
-          <p class="set-desc">Die letzten Gespräche deines Agenten.</p>
-          <div class="logbook" id="logbook"><span class="log-empty">Noch keine Logbücher.</span></div>
+          <p class="set-desc">Die Gespräche deines Agenten — nach Jahr und Monat. Wähle einen Monat, um die Einträge zu sehen.</p>
+          <div class="ym-nav" id="logbookNav"><span class="log-empty">Lädt…</span></div>
+          <div class="logbook" id="logbook" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></span>Papierkorb</h3>
+          <p class="set-desc">Gelöschte Einträge — nach Lösch-Monat. Wähle einen Monat; dort kannst du Einträge bearbeiten, speichern und wiederherstellen.</p>
+          <div class="ym-nav" id="trashNav"><span class="log-empty">Lädt…</span></div>
+          <div class="trash-list" id="trashList" style="margin-top:10px"></div>
         </div>
       </section>
 
@@ -797,6 +843,18 @@ button{font-family:inherit;cursor:pointer}
     <div class="confirm-actions">
       <button class="btn" id="deleteNo">Nein</button>
       <button class="btn btn-danger" id="deleteYes">Ja, löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestaetigungs-Dialog: Eintrag aus dem Papierkorb wiederherstellen ───── -->
+<div class="confirm-overlay" id="restoreOverlay">
+  <div class="confirm-box">
+    <h4>Eintrag wiederherstellen?</h4>
+    <p>Möchtest du diesen Eintrag wiederherstellen? Er wird — mit deinen Änderungen — zurück in dein Gedächtnis gelegt und aus dem Papierkorb entfernt.</p>
+    <div class="confirm-actions">
+      <button class="btn" id="restoreNo">Nein</button>
+      <button class="btn btn-primary" id="restoreYes">Ja, wiederherstellen</button>
     </div>
   </div>
 </div>
@@ -1200,7 +1258,23 @@ button{font-family:inherit;cursor:pointer}
     finally{ yes.disabled = false; }
   });
 
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
+  /* Wiederherstellen: Button im Papierkorb -> Bestaetigung (Ja/Nein) -> zurueck ins Gehirn */
+  let restoreTarget = null;
+  const restoreOverlay = document.getElementById("restoreOverlay");
+  function openRestore(t){ restoreTarget = t; restoreOverlay.classList.add("open"); }
+  function closeRestore(){ restoreOverlay.classList.remove("open"); restoreTarget = null; }
+  document.getElementById("restoreNo").addEventListener("click", closeRestore);
+  restoreOverlay.addEventListener("click", e=>{ if(e.target===restoreOverlay) closeRestore(); });
+  document.getElementById("restoreYes").addEventListener("click", async ()=>{
+    const t = restoreTarget; closeRestore();
+    if(!t || !t.doc_id) return;
+    try{
+      const r = await apiSend("/api/trash/restore","POST",{doc_id:t.doc_id});
+      if(r && r.ok!==false){ loadTrash(); loadOverview(); }   // Papierkorb + Übersicht/Zähler aktualisieren
+    }catch(e){ /* still — Liste bleibt, nächster Versuch möglich */ }
+  });
+
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(restoreOverlay.classList.contains("open")) closeRestore(); else if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
 
   /* ── Demo-Daten (Fallback, wenn Backend nicht erreichbar) ─────────────── */
   let USING_DEMO = false;
@@ -1292,31 +1366,165 @@ button{font-family:inherit;cursor:pointer}
     }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
     /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
     await loadPrompt(promptRole);
-    loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) anzeigen
+    loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) — nach Jahr/Monat
+    loadTrash();     // Papierkorb — gelöschte Einträge nach Lösch-Monat
     loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
   }
 
+  /* ── Jahr/Monat-Navigation (Logbuch + Papierkorb teilen sie) ─────────────── */
+  const MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  function fmtDateTime(s){
+    const d = new Date(s); if(isNaN(d)) return s||"";
+    return d.toLocaleDateString("de-DE",{day:"2-digit",month:"short",year:"numeric"})+", "
+         + d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+  }
+  function flashEl(el, text, ok=true){
+    if(!el) return;
+    el.textContent = (ok?"✓ ":"⚠ ")+text;
+    el.style.color = ok ? "var(--good)" : "var(--bad)";
+    clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=""; el.style.color=""; }, 3400);
+  }
+  /* tree = { "2026": {"06": 12, "05": 3}, ... }  (Jahr -> Monat -> Anzahl). onPick(jahr, monat). */
+  function renderYmNav(host, tree, onPick){
+    host.innerHTML = "";
+    const years = Object.keys(tree).sort((a,b)=>b.localeCompare(a));   // neueste zuerst
+    if(!years.length){ host.innerHTML = `<span class="log-empty">Noch nichts vorhanden.</span>`; return; }
+    const now = new Date();
+    const curY = String(now.getFullYear()), curM = String(now.getMonth()+1).padStart(2,"0");
+    years.forEach((y, yi)=>{
+      const months = Object.keys(tree[y]).sort((a,b)=>b.localeCompare(a));
+      const total = months.reduce((s,m)=>s+tree[y][m],0);
+      const yEl = document.createElement("div");
+      yEl.className = "ym-year" + (yi===0 ? " open" : "");
+      yEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span>${y}</span><span class="ym-count">${total} Einträge</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg>`;
+      const mWrap = document.createElement("div");
+      mWrap.className = "ym-months" + (yi===0 ? " open" : "");
+      months.forEach(m=>{
+        const idx = parseInt(m,10)-1;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ym-month" + (y===curY && m===curM ? " current" : "");
+        btn.title = (y===curY && m===curM) ? "Aktueller Monat" : "";
+        btn.innerHTML = `${MONTHS_DE[idx]||m}<span class="mc">${tree[y][m]}</span>`;
+        btn.addEventListener("click", ()=>{
+          host.querySelectorAll(".ym-month.active").forEach(e=>e.classList.remove("active"));
+          btn.classList.add("active");
+          onPick(y, m);
+        });
+        mWrap.appendChild(btn);
+      });
+      yEl.addEventListener("click", ()=>{ yEl.classList.toggle("open"); mWrap.classList.toggle("open"); });
+      host.appendChild(yEl); host.appendChild(mWrap);
+    });
+  }
+
+  /* ── Logbuch: Jahr/Monat-Baum -> bei Monatsklick die Einträge dieses Monats (Lazy-Load) ── */
+  function renderLogRows(box, items){
+    box.innerHTML = "";
+    if(!items.length){ box.innerHTML = `<span class="log-empty">Keine Einträge in diesem Monat.</span>`; return; }
+    items.forEach(it=>{
+      const title = it.title || "Gespräch", when = it.when || "";
+      const row = document.createElement("div");
+      row.className = "log-row"; row.style.cursor = "pointer";
+      row.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" style="opacity:.7;flex:none"><path d="M4 4h16v12H4z"/><path d="m8 20 4-4 4 4"/></svg>
+        <span>${escapeHtml(title)}</span><span class="when">${escapeHtml(when)}</span>`;
+      row.addEventListener("click", ()=> openEntry({title, category:"gespraeche", text:it.text||"", when}, false));
+      box.appendChild(row);
+    });
+  }
   async function loadLogbook(){
-    const box = document.getElementById("logbook");
-    if(!box) return;
+    const nav = document.getElementById("logbookNav"), box = document.getElementById("logbook");
+    if(!nav || !box) return;
+    box.innerHTML = "";
     try{
-      const d = await api("/api/logbook");
-      const items = (d && d.items) || [];
-      if(!items.length){ box.innerHTML = `<span class="log-empty">Noch keine Logbücher.</span>`; return; }
-      box.innerHTML = "";
-      items.forEach(it=>{
-        const title = it.title || "Gespräch", when = it.when || "";
-        const row = document.createElement("div");
-        row.className = "log-row"; row.style.cursor = "pointer";
-        row.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" style="opacity:.7;flex:none"><path d="M4 4h16v12H4z"/><path d="m8 20 4-4 4 4"/></svg>
-          <span>${escapeHtml(title)}</span><span class="when">${escapeHtml(when)}</span>`;
-        // Logbuch-Protokoll im Drawer LESEN (nicht editierbar)
-        row.addEventListener("click", ()=> openEntry({title, category:"gespraeche", text:it.text||"", when}, false));
-        box.appendChild(row);
+      const d = await api("/api/logbook/tree");
+      const tree = (d && d.tree) || {};
+      if(!Object.keys(tree).length){
+        // Fallback: Gehirn-Gespräche ohne Datei-Datum -> direkt anzeigen (kein Baum möglich)
+        nav.innerHTML = "";
+        try{ const f = await api("/api/logbook"); renderLogRows(box, (f&&f.items)||[]); }
+        catch(_){ nav.innerHTML = `<span class="log-empty">Noch keine Logbücher.</span>`; }
+        return;
+      }
+      renderYmNav(nav, tree, async (y,m)=>{
+        box.innerHTML = `<div class="state-msg"><div class="spin"></div>lädt…</div>`;
+        try{ const r = await api(`/api/logbook?year=${encodeURIComponent(y)}&month=${encodeURIComponent(m)}`);
+             renderLogRows(box, (r&&r.items)||[]); }
+        catch(_){ box.innerHTML = `<span class="log-empty">Konnte den Monat nicht laden.</span>`; }
       });
     }catch(e){
-      box.innerHTML = `<span class="log-empty">Logbuch nicht erreichbar.</span>`;
+      nav.innerHTML = `<span class="log-empty">Logbuch nicht erreichbar.</span>`;
     }
+  }
+
+  /* ── Papierkorb: gelöschte Einträge nach Lösch-Monat, editieren/speichern/wiederherstellen ── */
+  let trashItems = [];
+  function trashYM(t){
+    const d = new Date(t.deleted_at||"");
+    if(isNaN(d)) return null;
+    return [String(d.getFullYear()), String(d.getMonth()+1).padStart(2,"0")];
+  }
+  async function loadTrash(){
+    const nav = document.getElementById("trashNav"), list = document.getElementById("trashList");
+    if(!nav || !list) return;
+    list.innerHTML = "";
+    try{
+      const d = await api("/api/trash");
+      trashItems = (d && d.items) || [];
+    }catch(e){ nav.innerHTML = `<span class="trash-empty">Papierkorb nicht erreichbar.</span>`; return; }
+    if(!trashItems.length){ nav.innerHTML = `<span class="trash-empty">Der Papierkorb ist leer.</span>`; return; }
+    const tree = {};
+    trashItems.forEach(t=>{ const ym = trashYM(t); if(!ym) return;
+      const [y,m]=ym; tree[y]=tree[y]||{}; tree[y][m]=(tree[y][m]||0)+1; });
+    renderYmNav(nav, tree, (y,m)=> renderTrashMonth(list, y, m));
+  }
+  function renderTrashMonth(list, y, m){
+    const items = trashItems.filter(t=>{ const ym=trashYM(t); return ym && ym[0]===y && ym[1]===m; })
+      .sort((a,b)=> (b.deleted_at||"").localeCompare(a.deleted_at||""));   // neueste Löschung zuerst
+    list.innerHTML = "";
+    if(!items.length){ list.innerHTML = `<span class="trash-empty">Keine gelöschten Einträge in diesem Monat.</span>`; return; }
+    items.forEach(t=> list.appendChild(buildTrashItem(t)));
+  }
+  function buildTrashItem(t){
+    const color = colorFor(t.category||"");
+    const el = document.createElement("div");
+    el.className = "trash-item";
+    el.innerHTML = `
+      <div class="trash-top">
+        <span class="trash-title">${escapeHtml(t.title||"Ohne Titel")}</span>
+        ${t.category?`<span class="trash-tag" style="color:${color};background:${color}22">${escapeHtml(t.category)}</span>`:``}
+        <span class="trash-when">gelöscht ${escapeHtml(fmtDateTime(t.deleted_at))}</span>
+      </div>
+      <div class="trash-text">${escapeHtml(t.text||"")}</div>
+      <div class="trash-actions">
+        <span class="muted-note trash-status"></span>
+        <button class="btn btn-sm t-edit" type="button">Bearbeiten</button>
+        <button class="btn btn-sm btn-primary t-save" type="button" style="display:none">Speichern</button>
+        <button class="btn btn-sm btn-restore t-restore" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Wiederherstellen</button>
+      </div>`;
+    const txt = el.querySelector(".trash-text"), editBtn = el.querySelector(".t-edit"),
+          saveBtn = el.querySelector(".t-save"), restoreBtn = el.querySelector(".t-restore"),
+          status = el.querySelector(".trash-status");
+    editBtn.addEventListener("click", ()=>{
+      txt.setAttribute("contenteditable","true"); txt.classList.add("editing"); txt.focus();
+      editBtn.style.display="none"; saveBtn.style.display="";
+    });
+    saveBtn.addEventListener("click", async ()=>{
+      const newText = txt.textContent.trim();
+      if(!newText){ flashEl(status,"Text ist leer",false); return; }
+      saveBtn.disabled=true;
+      try{
+        const r = await apiSend("/api/trash","PUT",{doc_id:t.doc_id, text:newText});
+        if(r && r.ok!==false){ t.text=newText; txt.setAttribute("contenteditable","false"); txt.classList.remove("editing");
+          saveBtn.style.display="none"; editBtn.style.display=""; flashEl(status,"Im Papierkorb gespeichert"); }
+        else flashEl(status,(r&&r.detail)||"Speichern fehlgeschlagen",false);
+      }catch(e){ flashEl(status,"Speichern fehlgeschlagen",false); }
+      finally{ saveBtn.disabled=false; }
+    });
+    restoreBtn.addEventListener("click", ()=> openRestore(t));
+    return el;
   }
   async function saveModel(){
     const btn = document.getElementById("saveModelBtn");

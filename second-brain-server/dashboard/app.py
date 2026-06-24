@@ -20,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.10.0"  # 0.10.0: Papierkorb-Button im Eintrags-Drawer (Frank-Wunsch) — DELETE /api/entry (Proxy an brain DELETE /entry per doc_id) loescht einen Eintrag dauerhaft aus dem Gedaechtnis, mit eigenem Ja/Nein-Bestaetigungsdialog im Frontend. 0.9.0: Kategorie-Dropdown beim Senden (Frank-Wunsch) — Dropdown neben dem X-Button (Gespraech-Tab) mit allen Kategorien + 'Kategorie +' zum Anlegen; /api/chat reicht die gewaehlte 'category' an den Agenten weiter (Override). 0.8.0: Kategorie-Registry (Frank-Wunsch) — /api/categories GET/POST (Proxy an Agent); Uebersicht zeigt manuell angelegte (noch leere) Kategorien mit count 0. 0.7.0: Drei umschaltbare System-Prompts (Frank-Wunsch) — /api/prompt reicht role (haupt/speicher/abfrage) an den Agenten weiter; UI bekommt drei Umschalt-Buttons ueber dem Prompt-Textfeld. 0.6.2: Modell-pro-Rolle — drei Dropdowns (Hauptagent/Speicheragent/Abfrageagent), /api/config reicht haupt_model/speicher_model/abfrage_model weiter; System-Prompt/Logbuch-Kacheln wieder volle Breite + sauberer Abstand unter der oberen Reihe. 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.11.0"  # 0.11.0: Papierkorb-Bereich + Logbuch nach Monaten (Frank-Wunsch) — /api/trash (GET Liste, PUT editieren, POST /api/trash/restore wiederherstellen) als Proxy an brain; Logbuch /api/logbook/tree (Jahr/Monat-Baum) + /api/logbook?year=&month= (Lazy-Load eines Monats). Papierkorb + Logbuch teilen die Jahr/Monat-Navigation (aktueller Monat umrandet). 0.10.0: Papierkorb-Button im Eintrags-Drawer (Frank-Wunsch) — DELETE /api/entry (Proxy an brain DELETE /entry per doc_id) loescht einen Eintrag dauerhaft aus dem Gedaechtnis, mit eigenem Ja/Nein-Bestaetigungsdialog im Frontend. 0.9.0: Kategorie-Dropdown beim Senden (Frank-Wunsch) — Dropdown neben dem X-Button (Gespraech-Tab) mit allen Kategorien + 'Kategorie +' zum Anlegen; /api/chat reicht die gewaehlte 'category' an den Agenten weiter (Override). 0.8.0: Kategorie-Registry (Frank-Wunsch) — /api/categories GET/POST (Proxy an Agent); Uebersicht zeigt manuell angelegte (noch leere) Kategorien mit count 0. 0.7.0: Drei umschaltbare System-Prompts (Frank-Wunsch) — /api/prompt reicht role (haupt/speicher/abfrage) an den Agenten weiter; UI bekommt drei Umschalt-Buttons ueber dem Prompt-Textfeld. 0.6.2: Modell-pro-Rolle — drei Dropdowns (Hauptagent/Speicheragent/Abfrageagent), /api/config reicht haupt_model/speicher_model/abfrage_model weiter; System-Prompt/Logbuch-Kacheln wieder volle Breite + sauberer Abstand unter der oberen Reihe. 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -189,27 +189,67 @@ def _logbook_when(stem: str, txt: str) -> str:
     return stem
 
 
-@app.get("/api/logbook")
-def logbook() -> dict:
-    """Logbuch = die .txt-Gespraechsprotokolle auf der Samba-Platte (Franks Z:), gemountet unter
-    LOGBOOK_DIR (JJJJ/MM/*.txt) — das ist die Quelle, die Frank tatsaechlich sieht. Neueste zuerst.
-    Fallback auf die Gehirn-Kategorie 'gespraeche', falls kein Ordner/keine .txt vorliegt. Sync def
-    (Datei-I/O) -> Threadpool (fastapi §1)."""
-    items: list[dict] = []
+def _logbook_files() -> list:
+    """Alle Logbuch-.txt-Dateien (rekursiv), ohne sie zu lesen."""
+    base = Path(LOGBOOK_DIR)
+    if not base.is_dir():
+        return []
     try:
-        base = Path(LOGBOOK_DIR)
-        if base.is_dir():
-            files = sorted((p for p in base.rglob("*.txt") if p.is_file()),
-                           key=lambda p: p.stat().st_mtime, reverse=True)[:80]
-            for p in files:
-                try:
-                    txt = p.read_text(encoding="utf-8")
-                except Exception:  # noqa: BLE001 — eine kaputte Datei darf das Logbuch nicht killen
-                    txt = ""
-                items.append({"title": p.stem, "when": _logbook_when(p.stem, txt), "text": txt})
+        return [p for p in base.rglob("*.txt") if p.is_file()]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _ym_of(p) -> tuple[str, str]:
+    """Jahr/Monat eines Logbuch-Files — bevorzugt aus dem Ordnerpfad JJJJ/MM, sonst aus der mtime.
+    Kein datetime-Import noetig (time.localtime)."""
+    parent, gp = p.parent.name, p.parent.parent.name
+    if gp.isdigit() and len(gp) == 4 and parent.isdigit() and len(parent) in (1, 2):
+        return gp, parent.zfill(2)
+    tm = time.localtime(p.stat().st_mtime)
+    return f"{tm.tm_year:04d}", f"{tm.tm_mon:02d}"
+
+
+@app.get("/api/logbook/tree")
+def logbook_tree() -> dict:
+    """Verfuegbare Jahre/Monate des Logbuchs (nur Zaehlung, KEINE Texte gelesen) — fuer die
+    Jahr/Monat-Navigation, damit nicht alle Eintraege auf einmal geladen werden. Sync def -> Threadpool."""
+    tree: dict[str, dict[str, int]] = {}
+    for p in _logbook_files():
+        try:
+            y, m = _ym_of(p)
+        except Exception:  # noqa: BLE001
+            continue
+        tree.setdefault(y, {}).setdefault(m, 0)
+        tree[y][m] += 1
+    return {"ok": True, "tree": tree}
+
+
+@app.get("/api/logbook")
+def logbook(year: str = "", month: str = "") -> dict:
+    """Logbuch = die .txt-Gespraechsprotokolle auf der Samba-Platte (Franks Z:), gemountet unter
+    LOGBOOK_DIR (JJJJ/MM/*.txt). Mit year+month: NUR die Eintraege dieses Monats (Lazy-Load, damit die
+    Seite nicht endlos lang wird). Ohne Filter: die neuesten 80 (+ Gehirn-Fallback). Neueste zuerst.
+    Sync def (Datei-I/O) -> Threadpool (fastapi §1)."""
+    items: list[dict] = []
+    filtered = bool(year and month)
+    mm = month.zfill(2) if month else ""
+    try:
+        files = _logbook_files()
+        if filtered:
+            files = [p for p in files if _ym_of(p) == (year, mm)]
+        files = sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+        if not filtered:
+            files = files[:80]
+        for p in files:
+            try:
+                txt = p.read_text(encoding="utf-8")
+            except Exception:  # noqa: BLE001 — eine kaputte Datei darf das Logbuch nicht killen
+                txt = ""
+            items.append({"title": p.stem, "when": _logbook_when(p.stem, txt), "text": txt})
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Logbuch-Ordner nicht lesbar", err=str(e), dir=LOGBOOK_DIR)
-    if not items:  # Fallback: aus dem Gehirn (Kategorie gespraeche)
+    if not items and not filtered:  # Fallback NUR ohne Monatsfilter: aus dem Gehirn (Kategorie gespraeche)
         try:
             d = _bget("/by-category", category=CONV_CATEGORY, user_id=USER_ID)
             for it in d.get("items", []):
@@ -217,7 +257,7 @@ def logbook() -> dict:
                               "when": it.get("updated_at") or "", "text": it.get("text") or ""})
         except Exception as e:  # noqa: BLE001
             _log(logging.WARNING, "Logbuch-Gehirn-Fallback fehlgeschlagen", err=str(e))
-    _log(logging.INFO, "Logbuch geladen", count=len(items), quelle=("datei" if items else "leer"))
+    _log(logging.INFO, "Logbuch geladen", count=len(items), year=year or None, month=mm or None)
     return {"items": items}
 
 
@@ -330,6 +370,47 @@ async def api_delete_entry(doc_id: str = "") -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Eintrag-Loeschen fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Loeschen fehlgeschlagen: {type(e).__name__}"})
+
+
+# --- Papierkorb (Soft-Delete): Liste / im Papierkorb editieren / wiederherstellen (Proxy an brain) ---
+@app.get("/api/trash")
+def api_trash() -> dict:
+    """Papierkorb-Liste (neueste Loeschung zuerst). Sync def -> Threadpool (fastapi §1)."""
+    try:
+        return _bget("/trash", user_id=USER_ID)
+    except Exception as e:  # noqa: BLE001 — brain offline: leerer Papierkorb statt 500
+        _log(logging.WARNING, "Papierkorb-Abruf fehlgeschlagen", err=str(e))
+        return {"ok": False, "items": [], "count": 0}
+
+
+@app.put("/api/trash")
+async def api_trash_edit(request: Request) -> dict:
+    """Aendert den Text eines Eintrags IM Papierkorb (kein Re-Embed). Proxy an brain PUT /trash."""
+    body = await request.json()
+    doc_id = (body.get("doc_id") or "").strip()
+    text = (body.get("text") or "").strip()
+    if not doc_id or not text:
+        return JSONResponse(status_code=400, content={"ok": False, "detail": "doc_id und text erforderlich"})
+    try:
+        return await asyncio.to_thread(_bput, "/trash", {"doc_id": doc_id, "text": text, "user_id": USER_ID})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Papierkorb-Edit fehlgeschlagen", err=str(e))
+        return JSONResponse(status_code=502, content={"ok": False, "detail": f"Speichern fehlgeschlagen: {type(e).__name__}"})
+
+
+@app.post("/api/trash/restore")
+async def api_trash_restore(request: Request) -> dict:
+    """Stellt einen Papierkorb-Eintrag wieder her (re-embed + zurueck ins Gehirn). Proxy an brain
+    POST /trash/restore. Sync httpx via asyncio.to_thread (kein Event-Loop-Block, fastapi §1)."""
+    body = await request.json()
+    doc_id = (body.get("doc_id") or "").strip()
+    if not doc_id:
+        return JSONResponse(status_code=400, content={"ok": False, "detail": "doc_id erforderlich"})
+    try:
+        return await asyncio.to_thread(_bpost, "/trash/restore", {"doc_id": doc_id, "user_id": USER_ID})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Wiederherstellen fehlgeschlagen", err=str(e))
+        return JSONResponse(status_code=502, content={"ok": False, "detail": f"Wiederherstellen fehlgeschlagen: {type(e).__name__}"})
 
 
 # --- Prompt verbessern (G-Button): Text sprachlich verbessern (Proxy an agent /improve) ------------

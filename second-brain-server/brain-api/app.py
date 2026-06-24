@@ -38,6 +38,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 import time
 import traceback
 import uuid
@@ -49,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.3.0"  # 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.5.0"  # 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -71,6 +72,10 @@ CHUNK_OVERLAP = int(os.getenv("SB_CHUNK_OVERLAP", "200"))
 MAX_EMBED_CALLS_PER_DAY = int(os.getenv("SB_MAX_EMBED_CALLS_PER_DAY", "20000"))  # Defense-in-Depth-Cap
 LOG_PATH = os.getenv("SB_LOG_PATH", "/app/logs/brain-api.jsonl")
 LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
+# Papierkorb (Soft-Delete): geloeschte Eintraege landen als JSON 1:1 hier (persistentes Volume),
+# damit sie im Dashboard wiederhergestellt/editiert werden koennen. KEINE Vektoren — reiner Textspeicher.
+DATA_DIR = os.getenv("SB_DATA_DIR", "/app/data")
+TRASH_PATH = os.getenv("SB_TRASH_PATH", os.path.join(DATA_DIR, "trash.json"))
 
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging (stdout + rotierende Datei, beide UTF-8)
@@ -264,6 +269,32 @@ def _delete_doc(doc_id: str) -> None:
               points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]))
 
 
+# --- Papierkorb (Soft-Delete): thread-sicher + atomar (Handler laufen im Threadpool, fastapi §1) -----
+_trash_lock = threading.Lock()
+
+
+def _trash_load() -> list[dict]:
+    """Liest die Papierkorb-Liste. Fehlt die Datei/ist kaputt -> leere Liste (nie crashen)."""
+    try:
+        with open(TRASH_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except FileNotFoundError:
+        return []
+    except Exception as e:  # noqa: BLE001 — kaputter Papierkorb darf das Gehirn nicht lahmlegen
+        log.warning("Papierkorb nicht lesbar: %s", e)
+        return []
+
+
+def _trash_save(items: list[dict]) -> None:
+    """Atomar schreiben (temp + os.replace) mit UTF-8 — kein abgeschnittener Papierkorb bei Crash."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    tmp = f"{TRASH_PATH}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, TRASH_PATH)
+
+
 def _scroll(flt: "Filter | None", limit: int = 10000) -> list:
     points, _next = qc.scroll(collection_name=COLLECTION, scroll_filter=flt, limit=limit, with_payload=True)
     return points
@@ -307,6 +338,17 @@ class SearchReq(BaseModel):
 class UpdateReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des zu ersetzenden Eintrags (aus /list, /by-category, /search)")
     text: str = Field(..., min_length=1, max_length=200_000, description="Neuer 1:1-Text — ersetzt den alten Vektor komplett (max_length gegen OOM, fastapi §8)")
+    user_id: str = Field(default="frank")
+
+
+class TrashEditReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des Papierkorb-Eintrags")
+    text: str = Field(..., min_length=1, max_length=200_000, description="Neuer Text IM Papierkorb (kein Re-Embed; gilt erst bei Wiederherstellung)")
+    user_id: str = Field(default="frank")
+
+
+class RestoreReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des wiederherzustellenden Papierkorb-Eintrags")
     user_id: str = Field(default="frank")
 
 
@@ -393,6 +435,13 @@ def store(req: StoreReq) -> dict:
             "replaced": replaced}
 
 
+def _sort_recent(items) -> list[dict]:
+    """Eintraege nach Aktualitaet sortieren — das NEUESTE zuerst (Frank-Wunsch 2026-06-24).
+    Schluessel: updated_at, sonst created_at. ISO-8601-Strings sortieren lexikalisch = chronologisch;
+    fehlende Daten ('') landen hinten."""
+    return sorted(items, key=lambda it: (it.get("updated_at") or it.get("created_at") or ""), reverse=True)
+
+
 @app.get("/by-title", dependencies=[Depends(require_auth)])
 def by_title(title: str, user_id: str = "frank") -> dict:
     """Exakter Abruf per Titel -> liefert das GANZE Dokument 1:1."""
@@ -424,8 +473,9 @@ def by_category(category: str, user_id: str = "frank") -> dict:
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
+                         "created_at": p.payload.get("created_at"),
                          "updated_at": p.payload.get("updated_at")}
-    items = list(seen.values())
+    items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "category": category, "count": len(items), "items": items}
 
 
@@ -529,8 +579,9 @@ def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "category": p.payload.get("category") or None,
                          "chars": len(p.payload.get("full_text", "")),
+                         "created_at": p.payload.get("created_at"),
                          "updated_at": p.payload.get("updated_at")}
-    items = list(seen.values())[:limit]
+    items = _sort_recent(seen.values())[:limit]   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "count": len(seen), "items": items}
 
 
@@ -549,17 +600,32 @@ def forget(title: str, user_id: str = "frank") -> dict:
 
 @app.delete("/entry", dependencies=[Depends(require_auth)])
 def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
-    """Loescht einen Eintrag dauerhaft per doc_id (alle Chunks dieser doc_id). Frank-Wunsch: der
-    Papierkorb-Button im Dashboard-Drawer. Sync def -> laeuft im Threadpool (fastapi §1). Idempotent:
-    nicht vorhanden -> deleted:false (kein 404, damit der Button nie ins Leere laeuft)."""
+    """Soft-Delete: verschiebt den Eintrag in den Papierkorb (trash.json — 1:1-Text + Metadaten +
+    deleted_at) und entfernt ihn aus dem aktiven Gehirn (Qdrant). So bleibt er im Dashboard
+    wiederherstellbar/editierbar. Sync def -> Threadpool (fastapi §1). Idempotent: nicht vorhanden
+    -> deleted:false (kein 404, damit der Button nie ins Leere laeuft)."""
     _require_store()
     existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
     if not existing:
         return {"ok": True, "deleted": False, "doc_id": doc_id}
-    title = (existing[0].payload.get("title") or "").strip()
-    _delete_doc(doc_id)
-    checkpoint("delete_entry", "Eintrag dauerhaft per doc_id geloescht", ok=True, doc_id=doc_id, title=title or None)
-    return {"ok": True, "deleted": True, "doc_id": doc_id, "title": title or None}
+    pl = existing[0].payload
+    entry = {
+        "doc_id": doc_id,
+        "user_id": pl.get("user_id") or user_id,
+        "title": (pl.get("title") or "").strip(),
+        "category": (pl.get("category") or "").strip(),
+        "text": pl.get("full_text", ""),
+        "created_at": pl.get("created_at") or iso_now(),
+        "deleted_at": iso_now(),
+    }
+    with _trash_lock:
+        items = [t for t in _trash_load() if t.get("doc_id") != doc_id]  # alten Trash gleicher doc_id ersetzen
+        items.append(entry)
+        _trash_save(items)        # ERST sichern ...
+        _delete_doc(doc_id)       # ... DANN aus dem aktiven Gehirn entfernen (kein Datenverlust)
+    checkpoint("delete_entry", "Eintrag in den Papierkorb verschoben (Soft-Delete) + aus Qdrant entfernt",
+               ok=True, doc_id=doc_id, title=entry["title"] or None)
+    return {"ok": True, "deleted": True, "doc_id": doc_id, "title": entry["title"] or None}
 
 
 @app.put("/entry", dependencies=[Depends(require_auth)])
@@ -598,6 +664,81 @@ def update_entry(req: UpdateReq) -> dict:
                chars=len(req.text), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": req.doc_id, "title": title or None, "category": category or None,
             "chunks": len(chunks), "chars": len(req.text), "replaced": True}
+
+
+@app.get("/trash", dependencies=[Depends(require_auth)])
+def trash_list(user_id: str = "frank") -> dict:
+    """Papierkorb-Liste fuer das Dashboard — neueste Loeschung zuerst. Reiner 1:1-Text (keine Vektoren)."""
+    with _trash_lock:
+        items = _trash_load()
+    items = [t for t in items if (t.get("user_id") or "frank") == user_id]
+    items.sort(key=lambda t: t.get("deleted_at") or "", reverse=True)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+@app.put("/trash", dependencies=[Depends(require_auth)])
+def trash_edit(req: TrashEditReq) -> dict:
+    """Aendert den Text eines Eintrags IM Papierkorb (vor der Wiederherstellung). Kein Embedding —
+    der Papierkorb ist nicht durchsuchbar; das Re-Embed passiert erst beim Wiederherstellen."""
+    found = False
+    with _trash_lock:
+        items = _trash_load()
+        for t in items:
+            if t.get("doc_id") == req.doc_id:
+                t["text"] = req.text
+                t["edited_at"] = iso_now()
+                found = True
+                break
+        if found:
+            _trash_save(items)
+    if not found:
+        raise HTTPException(status_code=404, detail="Eintrag nicht im Papierkorb")
+    checkpoint("trash_edit", "Text eines Papierkorb-Eintrags geaendert (ohne Re-Embed)",
+               ok=True, doc_id=req.doc_id, chars=len(req.text))
+    return {"ok": True, "doc_id": req.doc_id, "chars": len(req.text)}
+
+
+@app.post("/trash/restore", dependencies=[Depends(require_auth)])
+def trash_restore(req: RestoreReq) -> dict:
+    """Stellt einen Papierkorb-Eintrag wieder her: der (ggf. editierte) Text wird frisch embedded und
+    unter der URSPRUENGLICHEN doc_id ins Gehirn gespeichert (created_at erhalten), dann aus dem
+    Papierkorb entfernt. Embed/Upsert laufen AUSSERHALB des Locks (langsame Calls nicht serialisieren,
+    fastapi §2); der Trash-Eintrag wird erst NACH erfolgreichem Upsert entfernt (kein Datenverlust)."""
+    _require_store()
+    with _trash_lock:
+        entry = next((t for t in _trash_load() if t.get("doc_id") == req.doc_id), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Eintrag nicht im Papierkorb")
+    text = entry.get("text") or ""
+    title = (entry.get("title") or "").strip()
+    category = (entry.get("category") or "").strip()
+    created_at = entry.get("created_at") or iso_now()
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
+
+    _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
+    chunks = chunk_text(text)
+    _guard_embed_budget(len(chunks))
+    now = iso_now()
+    points = []
+    for i, ch in enumerate(chunks):
+        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
+            "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
+            "title": title, "category": category, "chunk_index": i, "chunk_count": len(chunks),
+            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
+        }))
+    qc.upsert(collection_name=COLLECTION, points=points)
+
+    with _trash_lock:  # erst NACH erfolgreichem Upsert aus dem Papierkorb nehmen
+        items = [t for t in _trash_load() if t.get("doc_id") != req.doc_id]
+        _trash_save(items)
+
+    restored_ok = bool(points) and points[0].payload["full_text"] == text
+    checkpoint("trash_restore", "Papierkorb-Eintrag wiederhergestellt (frisch embedded, doc_id/created_at erhalten)",
+               ok=restored_ok, doc_id=req.doc_id, title=title or None, chunks=len(chunks))
+    return {"ok": True, "doc_id": req.doc_id, "title": title or None, "category": category or None,
+            "chunks": len(chunks), "chars": len(text)}
 
 
 @app.get("/")

@@ -55,6 +55,7 @@ services:
       SB_LOG_PATH: /app/logs/brain-api.jsonl
     volumes:
       - ./brain-logs:/app/logs        # Logs persistent + vom Host tailbar (Observability-First)
+      - ./brain-data:/app/data        # Papierkorb (trash.json) persistent — Host-Ordner muss uid 10001 gehoeren (bugs/server/docker.md §4)
     deploy:
       resources:
         limits:

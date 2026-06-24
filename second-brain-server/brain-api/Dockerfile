@@ -14,8 +14,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY app.py .
 
-# Log-Verzeichnis (wird per Volume gemountet, fuer Live-Tail vom Host)
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+# Log- + Daten-Verzeichnis (per Volume gemountet): logs fuer Live-Tail, data fuer den Papierkorb (trash.json)
+RUN mkdir -p /app/logs /app/data && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
