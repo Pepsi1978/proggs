@@ -19,6 +19,22 @@
 | Qdrant-**spezifischer** Docker-Betrieb (on_disk, Snapshot, Collection-Tuning) | `server/qdrant.md` |
 | **Allgemeine Docker/Compose-Betriebsfehler (jeder Dienst)** | **DIESE Datei** |
 
+## 🔗 Best-Practices-Gegenseite (so macht man es von vornherein richtig)
+
+> Zweite Seite der Medaille: `best-practices/server/docker.md` (Stand 2026-06-24). Der Almanach sagt
+> *was schiefgeht und wie man es loest*; die Best-Practices sagen *wie man es von vornherein richtig
+> baut*. Beide Kurzchecks VOR der Arbeit lesen (erst Almanach, dann Best Practices).
+
+| Bug-Abschnitt (hier) | Best-Practice (`best-practices/server/docker.md`) |
+|----------------------|---------------------------------------------------|
+| §1 Firewall/Netzwerk (UFW-Bypass, Binding) | §7 Netze & Port-Binding |
+| §2 Memory/OOM/Limits | §8 Memory & Resource-Limits |
+| §3 healthcheck & depends_on | §5 Healthchecks · §6 depends_on/restart/Boot |
+| §4 Volume-/Bind-Mount-Permissions | §9 Volumes/Logging/Pinning/TZ |
+| §5 restart-Policy & Boot-Reihenfolge | §6 depends_on/restart/Boot |
+| §6 Logs/Disk + .env-Fallen | §4 Secrets & ENV · §9 Logging |
+| §7 Zeitzone/Locale · Pinning · Build-Cache | §1 Image-Bau · §2 BuildKit · §3 .dockerignore · §9 Pinning/TZ |
+
 ---
 
 ## KURZCHECK (Erkennungssignale + Sofort-Regeln)
