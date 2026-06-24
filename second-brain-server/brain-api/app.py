@@ -625,7 +625,8 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         _delete_doc(doc_id)       # ... DANN aus dem aktiven Gehirn entfernen (kein Datenverlust)
     checkpoint("delete_entry", "Eintrag in den Papierkorb verschoben (Soft-Delete) + aus Qdrant entfernt",
                ok=True, doc_id=doc_id, title=entry["title"] or None)
-    return {"ok": True, "deleted": True, "doc_id": doc_id, "title": entry["title"] or None}
+    return {"ok": True, "deleted": True, "doc_id": doc_id, "title": entry["title"] or None,
+            "category": entry["category"] or None}
 
 
 @app.put("/entry", dependencies=[Depends(require_auth)])
@@ -738,7 +739,7 @@ def trash_restore(req: RestoreReq) -> dict:
     checkpoint("trash_restore", "Papierkorb-Eintrag wiederhergestellt (frisch embedded, doc_id/created_at erhalten)",
                ok=restored_ok, doc_id=req.doc_id, title=title or None, chunks=len(chunks))
     return {"ok": True, "doc_id": req.doc_id, "title": title or None, "category": category or None,
-            "chunks": len(chunks), "chars": len(text)}
+            "chunks": len(chunks), "chars": len(text), "text": text}
 
 
 @app.get("/")

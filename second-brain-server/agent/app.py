@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.9.0"  # 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.10.0"  # 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1030,7 +1030,85 @@ async def end_session(req: EndReq) -> dict:
     return {"ok": True, "gesichert": True, "nachrichten": len(session["messages"])}
 
 
+def _logbook_path_from_title(title: str):
+    """Vektor-Titel 'Gespraech 24.06.2026 - 22.05 Uhr' -> die zugehoerige .txt in LOGBOOK_DIR/JJJJ/MM.
+    Deterministisch (Datei-stem = Titel ohne 'Gespraech '-Praefix; Ordner aus dem Datum); glob faengt
+    _unique_path-Suffixe ab. Gibt einen resolved Path INNERHALB LOGBOOK_DIR oder None."""
+    stem = (title or "").strip()
+    if stem.lower().startswith("gespraech"):
+        stem = stem[len("gespraech"):].strip()
+    m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})\b", stem)
+    if not m:
+        return None
+    base = Path(LOGBOOK_DIR).resolve()
+    folder = base / m.group(3) / m.group(2)
+    if not folder.is_dir():
+        return None
+    exact = (folder / f"{stem}.txt").resolve()
+    if exact.is_file() and base in exact.parents:
+        return exact
+    matches = sorted(p for p in folder.glob(f"{stem}*.txt") if p.is_file())
+    cand = matches[0].resolve() if matches else None
+    return cand if (cand and base in cand.parents) else None
+
+
+@app.delete("/logbook", dependencies=[Depends(require_auth)])
+def delete_logbook(title: str = "", path: str = "") -> dict:
+    """Loescht die zu einem geloeschten Gehirn-Gespraech gehoerende .txt-Kopie von Platte Z, damit
+    Logbuch (.txt) und Gehirn (Kategorie 'gespraeche') synchron bleiben. agent=uid 1000 (Schreibrecht);
+    das Dashboard hat /logbook nur read-only. Identifikation per Vektor-Titel ODER direktem rel. Pfad.
+    STRENG auf .txt INNERHALB LOGBOOK_DIR begrenzt. Sync def -> Threadpool (fastapi §1)."""
+    base = Path(LOGBOOK_DIR).resolve()
+    target = None
+    if path:
+        rel = path.strip().replace("\\", "/").lstrip("/")
+        cand = (base / rel).resolve()
+        if rel and base in cand.parents and cand.suffix.lower() == ".txt":
+            target = cand
+    elif title:
+        target = _logbook_path_from_title(title)
+    if target is None:
+        return {"ok": True, "deleted": False}
+    if not target.is_file():
+        return {"ok": True, "deleted": False}
+    target.unlink()
+    checkpoint("logbuch_loeschen", "Logbuch-.txt von Platte Z geloescht (Sync mit Gehirn-Loeschung)",
+               ok=True, file=target.name)
+    _log(logging.INFO, "Logbuch-.txt geloescht", file=target.name)
+    return {"ok": True, "deleted": True, "file": target.name}
+
+
+class LogbookWriteReq(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200, description="Vektor-Titel des Gespraechs ('Gespraech <datum> - <zeit>')")
+    content: str = Field(..., min_length=1, max_length=500_000, description="Voller .txt-Inhalt (1:1, max_length gegen OOM)")
+
+
+@app.post("/logbook", dependencies=[Depends(require_auth)])
+def write_logbook(req: LogbookWriteReq) -> dict:
+    """Schreibt eine Logbuch-.txt ZURUECK, wenn ein Gespraech aus dem Papierkorb wiederhergestellt wird —
+    damit Logbuch (.txt) und Gehirn synchron bleiben. Pfad aus dem Vektor-Titel abgeleitet. Ueberschreibt
+    keine bestehende Datei (idempotent). Sync def -> Threadpool (fastapi §1)."""
+    stem = req.title.strip()
+    if stem.lower().startswith("gespraech"):
+        stem = stem[len("gespraech"):].strip()
+    m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})\b", stem)
+    if not m:
+        return {"ok": False, "written": False, "detail": "Kein Datum im Titel"}
+    base = Path(LOGBOOK_DIR).resolve()
+    folder = base / m.group(3) / m.group(2)
+    folder.mkdir(parents=True, exist_ok=True)
+    target = (folder / f"{stem}.txt").resolve()
+    if base not in target.parents:
+        raise HTTPException(status_code=400, detail="Ungueltiger Logbuch-Pfad")
+    if not target.exists():
+        target.write_text(req.content, encoding="utf-8")
+    checkpoint("logbuch_schreiben", "Logbuch-.txt wiederhergestellt (Sync mit Gehirn-Restore)",
+               ok=True, file=target.name)
+    _log(logging.INFO, "Logbuch-.txt wiederhergestellt", file=target.name)
+    return {"ok": True, "written": True, "file": target.name}
+
+
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", "version": VERSION,
-            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config", "/categories", "/improve"]}
+            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config", "/categories", "/improve", "/logbook"]}
