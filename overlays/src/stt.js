@@ -39,6 +39,7 @@
 	let _micPending = false;
 	let speechRecognition = null;
 	let livePreviewEl = null;
+	let previewActive = false; // true = Live-Vorschau darf das Kaestchen aktualisieren
 	let textBeforeSpeech = "";
 
 	const ED = () => OV.editable;
@@ -135,6 +136,7 @@
 			);
 	}
 	function removeLivePreview() {
+		previewActive = false; // Riegel: ab jetzt keine Vorschau-Updates mehr
 		if (livePreviewEl) {
 			livePreviewEl.remove();
 			livePreviewEl = null;
@@ -149,6 +151,7 @@
 			'<div class="stt-pv-label">🎤 Live-Vorschau</div><div class="stt-pv-text">…</div>',
 		);
 		document.body.appendChild(livePreviewEl);
+		previewActive = true; // Vorschau ist jetzt aktiv
 	}
 
 	function startWebSpeech() {
@@ -161,6 +164,7 @@
 			speechRecognition.maxAlternatives = 1;
 			let _liveDebounce = null;
 			speechRecognition.onresult = (event) => {
+				if (!previewActive) return; // nach dem Stopp NICHT mehr (Groq gewinnt)
 				let finalT = "";
 				let interimT = "";
 				for (let i = 0; i < event.results.length; i++) {
@@ -170,17 +174,27 @@
 				}
 				clearTimeout(_liveDebounce);
 				_liveDebounce = setTimeout(() => {
-					const el = ED().getUserTargetEditable();
-					if (el) {
-						const preview = finalT + interimT;
-						const spacer =
-							textBeforeSpeech &&
-							!textBeforeSpeech.endsWith(" ") &&
-							!textBeforeSpeech.endsWith("\n")
-								? " "
-								: "";
-						ED().setViaPaste(el, textBeforeSpeech + spacer + preview);
-					}
+					// Live-Untertitel NUR ins schwebende Vorschau-Kaestchen schreiben — NIE ins
+					// echte Eingabefeld. Das verhindert das Springen/Flackern im contenteditable
+					// und stellt sicher, dass spaeter ausschliesslich die finale Groq-Whisper-
+					// Fassung (mit Satzzeichen) ins Feld gelangt — die rohe Vorschau kann nie
+					// versehentlich abgeschickt werden.
+					if (!previewActive || !livePreviewEl) return;
+					const box = livePreviewEl.querySelector(".stt-pv-text");
+					if (!box) return;
+					const esc = (s) =>
+						s
+							.replace(/&/g, "&amp;")
+							.replace(/</g, "&lt;")
+							.replace(/>/g, "&gt;");
+					const html =
+						'<span class="stt-pv-final">' +
+						esc(finalT) +
+						"</span>" +
+						(interimT
+							? '<span class="stt-pv-interim">' + esc(interimT) + "</span>"
+							: "");
+					setSafeInner(box, finalT || interimT ? html : "…");
 				}, 120);
 			};
 			speechRecognition.onerror = (event) => {
@@ -491,6 +505,7 @@
 
 	function stopListening() {
 		wantsRecording = false;
+		previewActive = false; // Riegel: ab jetzt darf die Vorschau nichts mehr schreiben — nur noch Groq
 		stopWebSpeech();
 		if (mediaRecorder && mediaRecorder.state !== "inactive") {
 			setMicState("working", "Aufnahme beendet…");
