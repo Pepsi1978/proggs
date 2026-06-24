@@ -1,4 +1,4 @@
-# Loop Engineering — Best Practices (Stand 2026-06-24)
+# Loop Engineering — Best Practices (Stand 2026-06-24, Runde 1+2)
 
 > Die **Praeventions-Seite** zum Bug-Almanach `bugs/agents/loop-engineering.md`. Der Almanach
 > sagt *was in autonomen Agenten-Loops schiefgeht und wie man es umgeht*; diese Datei sagt
@@ -12,7 +12,9 @@
 > `best-practices/server/ai-agent-frameworks.md` (Frameworks). Diese Datei fokussiert auf den
 > **Loop selbst** (das WIE-laeuft-die-Schleife), nicht auf Multi-Agent-Routing.
 >
-> Aufgebaut per Firecrawl+MiniMax-Recherche (5 Researcher, Runde 1) am 2026-06-24.
+> Aufgebaut per Firecrawl+MiniMax-Recherche am 2026-06-24: Runde 1 (5 Researcher) + Runde 2
+> (5 Researcher, Luecken/Folgefragen): Reflexion-Mechanik, MemGPT/Letta, Rate-Limit-Resilienz,
+> Container-Hardening/Sandboxing, Eval-Harness/Definitions-of-done.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -36,6 +38,11 @@
 | 13 | System-Prompt im Loop | Dynamisch pro Iteration zusammensetzen: Basis-Prompt + akkumulierte „lessons" aus dem State | §4 |
 | 14 | 24/7 auf VPS | „Container uptime ≠ Agent uptime": Persistent Workspace, Restart-Semantik, Logs+Replay, Resource-Limits, Human-Override | §7 |
 | 15 | Kosten kontrollieren | Reasoning-Effort runter wo moeglich, Tool-Allowlist pro Task-Typ, Cost-per-successful-Outcome messen | §6,§7 |
+| 16 | Iteratives Selbst-Lernen | Reflexion: Actor/Evaluator/Self-Reflection; verbale Reflexion als „semantic gradient" in episodic memory der naechsten Episode | §5 |
+| 17 | Memory ueber Context-Limit | MemGPT/Letta: Core/Recall/Archival (RAM/Disk), recursive summarization, Sleep-Time-Compute (async Memory-Veredelung) | §5 |
+| 18 | API-Rate-Limits / 429 | `Retry-After`-Header bevorzugen; Full-Jitter-Backoff; Retry-Budget ≤10 %; Retry nur 1 Schicht; `max_tokens` setzen | §8 |
+| 19 | Agent laeuft fremden Code aus | Sandbox: Non-Root + `cap-drop ALL`, read-only FS + tmpfs, Default-Deny-Egress, Secrets NIE in der Sandbox, MicroVM (Firecracker/gVisor) | §9 |
+| 20 | „Wann ist fertig?" definieren | 3 Akzeptanz-Dimensionen (Response/Trajectory/**State-Changes**); Capability- vs. Regression-Evals trennen; State wirklich pruefen | §10 |
 
 ---
 
@@ -227,8 +234,47 @@ Die aeusserste der Four Nested Loops: ueber viele Laeufe hinweg die **Vorgehensw
 verbessern (`extern`, Medium). Voraussetzung sind die Disziplinen aus §6 (Maker/Judge, Outcomes
 statt Completions, Train/Test-Split: „16 training applications, 4 held-out test").
 
-> Detail-Luecken aus Runde 1 (Reflexion-Mechanik, Generative Agents Memory Stream, Voyager
-> Skill-Library, MemGPT, Experience-Replay, Self-Distillation) werden in Runde 2 nachrecherchiert.
+### Reflexion — verbale Selbstkritik als „semantic gradient" (Runde 2)
+**Reflexion** (`offiziell`, Shinn et al. 2023, arXiv 2303.11366, NeurIPS 2023) ist „verbal
+reinforcement learning": der Agent verbessert sich **nicht durch Weight-Updates**, sondern durch
+sprachliche Selbstkritik. Drei Modelle:
+- **Actor** — generiert Aktionen (CoT/ReAct als Basis), erzeugt eine Trajektorie.
+- **Evaluator** — bewertet die Trajektorie, gibt einen Reward (LLM-Judge, Heuristik oder
+  Exact-Match je nach Task; bei Programming: selbstgeschriebene Unit-Tests).
+- **Self-Reflection** — wandelt Reward + Trajektorie + persistenten Memory in **verbalen
+  Reflexionstext** um, der im **episodic memory buffer** (Sliding-Window) landet.
+
+> Mechanismus exakt wie von Frank beschrieben: **Reward → verbale Reflexion → in Memory anhaengen
+> → naechste Episode nutzt die akkumulierten Lessons als Zusatzkontext**. Reflexion wirkt als
+> „semantic gradient signal" — eine konkrete Verbesserungsrichtung statt nur einer Zahl
+> (HumanEval 91 % pass@1, +20 % HotPotQA). **Bekannte Grenze:** der Sliding-Window-Memory
+> skaliert nicht beliebig → fuer 30-40+ Loops Vektor-/DB-gestuetzten Speicher ergaenzen (genau
+> da setzt ACE/MemGPT an).
+
+### MemGPT / Letta — Memory ueber das Context-Limit hinaus (Runde 2)
+**MemGPT/Letta** (`extern`, Letta-Blog 2025) behandelt das Context-Window wie RAM und baut eine
+**OS-artige Speicherhierarchie**:
+- **Core Memory (≈ RAM)** — im Kontext gepinnte, editierbare **Memory-Blocks** (Label/Description/
+  Value/Limit). Der Agent kann sie via Tools **selbst umschreiben** → „context rewriting",
+  konsolidiert wichtige Infos ueber die Zeit.
+- **Recall Memory (≈ Disk)** — vollstaendige, auf Disk persistierte Konversationshistorie (durchsuchbar).
+- **Archival Memory (≈ Disk)** — externes Wissen in Vector-/Graph-DBs, per Tool-Call abrufbar.
+
+Konsolidierung: **Recursive Summarization** beim Evicten (alte Nachrichten werden mit bestehenden
+Summaries zusammengefasst; nur ~70 % evicten fuer Kontinuitaet) und **Sleep-Time-Compute** —
+spezialisierte Agenten veredeln den Memory **asynchron in Leerlaufphasen** (proaktiv statt lazy,
+ohne die Live-Konversation zu verlangsamen). Merksatz aus der Quelle: **„Retrieval (RAG) ist ein
+Werkzeug fuer Memory, aber nicht selbst Memory."**
+
+> Die fuenf Memory-Mechanismus-Familien (`offiziell`, arXiv-Survey): context-resident compression,
+> retrieval-augmented stores, reflective self-improvement, hierarchical virtual context,
+> policy-learned management. ACE = reflective self-improvement; MemGPT = hierarchical virtual context.
+
+> Noch offen (auch in Runde 2 nicht belegt): **Generative Agents Memory-Stream**
+> (recency/importance/relevance-Scoring, Reflection-Trees) und **Voyager Skill-Library**
+> (Automatic Curriculum, Code-as-Skills) wurden nur historisch erwaehnt; **Experience-Replay**
+> und **Self-Distillation** fuer LLM-Agenten waren in keiner Quelle ausgefuehrt. Bei Bedarf
+> gezielt die Originalpapers (Park et al. 2023; Wang et al. 2023) heranziehen.
 
 ---
 
@@ -296,6 +342,105 @@ Memory-/Resource-Spikes, Upgrade-Drift.
 
 ---
 
+## 8. Rate-Limit-Resilienz fuer langlaufende Agenten (Runde 2)
+
+Langlaufende Agenten feuern viele API-Calls — ohne Resilienz-Schicht killen Rate-Limits den
+Loop. Die bewaehrte **3-Schichten-Architektur** (`extern`, mehrere Produktions-Quellen):
+
+| Schicht | Funktion |
+|---|---|
+| **1. Token-Bucket pro Identity** | Volumen-Throttling pro `(user, repo, model)`; eigener Bucket; bei leer sofort lokales 429 statt Provider-Call. Tokens **vor** dem Call schaetzen (Tiktoken / `chars/4`) → proaktiv statt reaktiv |
+| **2. Circuit Breaker** | closed→open→half-open; nach N Failures (z.B. 5) oeffnen, nach 60s ein Test-Request. LLM-spezifische Trigger: Cost/Request, Turn-Count >20, Quality-Score-Drop |
+| **3. Deklarative Fallback-Chain** | primary → cheaper model → semantic cache → 503; Multi-Provider-Failover (sequenziell oder Parallel-Hedging) |
+
+**Die wichtigsten Einzelregeln:**
+- **`Retry-After`-Header bevorzugen** — zuverlaessiger als jede selbst berechnete Backoff-Formel.
+- **Full-Jitter-Backoff** statt nacktem Exponential: `sleep = random(0, min(cap, base·2^attempt))`
+  (verhindert „Thundering Herd"). Startwerte ~1/2/4s, Cap 32-60s, max 3-5 Versuche.
+- **Retry-Budget**: globale Retries ≤ **10 %** aller Requests; darueber **fail-fast**.
+- **Retry nur auf EINER Schicht** (aeusserste) — sonst Multiplikation (3 Retries × 5 Layer =
+  243 Backend-Calls). ~40 % der Cascading-Failures kommen aus Retry-Logik.
+- **Retryable:** 429, 408, 500-504. **Nie retryen:** 400, 401, 403, 404.
+- **TPM und RPM getrennt behandeln**; **immer `max_tokens` setzen** (eine Antwort kann sonst das
+  TPM-Budget leerfressen).
+
+## 9. Hardening & Sandboxing fuer 24/7-Agenten (Runde 2)
+
+Ein autonom laufender Agent, der Code ausfuehrt oder ins Netz greift, gehoert isoliert. Die
+**Vier-Schichten-Sandbox** (`extern`, Sandbox-Produktions-Guides):
+
+| Schicht | Massnahme |
+|---|---|
+| **Container-Haertung** | Non-Root-User, `--cap-drop ALL`, `--security-opt no-new-privileges`, seccomp- + AppArmor-Profile |
+| **Filesystem** | `--read-only` Root + `--tmpfs /tmp` (Workspace verschwindet bei Sandbox-Zerstoerung) |
+| **Netzwerk** | **Default-Deny-Egress** — alles ausgehende blockieren, nur noetige Endpunkte allowlisten |
+| **Resource-Limits** | cgroup v2: CPU, Memory (Hard-Cap), Disk-Quota/IO, **Wall-Clock pro Tool-Call** (z.B. 30s) |
+
+**Secrets verlassen NIE die Sandbox:** der Agent laeuft mit **zero secrets**; ein Control-Plane
+haelt die Credentials und injiziert sie (z.B. ueber einen MITM-/Egress-Proxy). Sonst kann ein
+kompromittierter Agent Tokens exfiltrieren. **Kurzlebige Credentials pro Session**, keine
+langlebigen Secrets in die Umgebung.
+
+**Staerkere Isolation als Container — MicroVMs** (Container-Escapes existieren real, z.B. runc
+CVE-2024-21626): **Firecracker** (KVM-basiert, Boot ≤125 ms, ~5 MiB Overhead — Basis von E2B),
+**gVisor** (User-Space-Kernel „Sentry", Escape braucht zwei Bugs; GPU via nvproxy), **E2B**
+(Firecracker-Cloud, ~150 ms Cold-Start). Hinweis: Firecracker hat kein offizielles GPU-Passthrough.
+
+**Update/Rollback fuer langlaufende Agenten — Checkpoint/Restore:** Disk-Snapshot in ~300 ms,
+**vor destruktiven Aktionen** snapshotten, bei Fehler auf den letzten Known-Good-Punkt
+zuruecksetzen (statt alles neu zu laufen). **Idle-Warm-Pools** (vorgewaermte Sandboxes) druecken
+den Cold-Start gegen null. Session-Lifecycle: provision → execute → optional snapshot → on
+completion destroy → on error rollback. Deckt sich mit `secrets-in-sk-folder.md` + `observability-first.md`.
+
+## 10. Definitions-of-done & Eval-Harness fuer Loops (Runde 2)
+
+Die nuetzlichsten Agenten sind nicht die autonomsten, sondern die mit den **klarsten Zielen,
+staerksten Feedback-Signalen und striktesten „Definitions of done"**. Wie man das baut (`extern`,
+LangChain/OpenAI/Confident-AI Eval-Guides):
+
+### „Done" eindeutig definieren
+- **Test der Eindeutigkeit:** „If two experts can't agree on pass/fail, the task needs refinement."
+  Schlecht: „Summarize this well." Gut: „Extract the 3 main action items, each < 20 words, with owner."
+- **Reference-Solution** je Task — beweist Loesbarkeit + liefert Grade-Baseline.
+- **Drei Akzeptanz-Dimensionen** pro Agent-Turn: **Final-Response** (korrekt/nuetzlich?),
+  **Trajectory** (vernuenftiger Pfad — nicht zwingend der exakt erwartete) und vor allem
+  **State-Changes** (sind die Artefakte wirklich da?). „The final response can say 'Done!' while
+  the actual state is wrong" → bei „Meeting scheduled" den Kalendereintrag pruefen, bei Code den
+  Code laufen lassen, bei DB-Update die Zeilen abfragen.
+- Typspezifisch: Coding → deterministische Test-Suites + Quality-Rubrik; Conversational →
+  Completion + Interaktionsqualitaet; Research → Groundedness + Coverage.
+
+### Eval-Harness als Diagnose-Stack
+- **Einfachste Eval zuerst** (ein paar E2E-Tests = sofort Baseline), Komplexitaet nur bei Bedarf.
+- **Drei Ebenen:** End-to-End (Outcome) → Trajectory (Pfad/Tool-Calls/Retries) → Component
+  (einzelne Retriever/Tools/Sub-Agenten). „Outcome first, then path, then failing component."
+- **Positive UND negative Faelle** testen (sonst optimiert man einen Agenten, der alles sucht).
+- **N-1-Testing** fuer Multi-Turn: echte Prefixe der ersten N-1 Turns aus Produktion, Agent
+  generiert nur den letzten Turn (vermeidet Compounding-Error synthetischer Dialoge).
+
+### LLM-as-Judge — gezielt, nicht ueberall
+- **Deterministische Checks fuer Exaktes** (Tool-Correctness), **LLM-Judge nur fuer output-
+  abhaengiges** (Task-Completion, Plan-Quality, Argument-Correctness).
+- Vorsicht: „sed quis custodiet ipsos custodes?" — der Judge braucht Threshold + Kalibrierung via
+  Tracing + periodisches Human-Review (ist selbst angreifbar). **Eval-Ownership:** ein Domain-Experte
+  als Quality-Arbiter fuer mehrdeutige Faelle (nicht „design by committee").
+
+### Regression-Gates trennen
+- **Capability-Evals** (niedrige Pass-Rate, „Hill to climb" — treiben Fortschritt) vs.
+  **Regression-Evals** (~100 % Pass-Rate — schuetzen, was schon funktioniert). Beide noetig.
+- **Pre-Deployment-Quality-Gate** vor Merge; erst „reviewed loop" (Mensch genehmigt Diff), mit
+  wachsendem Vertrauen tiefere Automatisierung.
+- **Infra-Probleme zuerst ausschliessen** — Timeouts/malformte Responses/stale Caches maskieren
+  sich oft als Reasoning-Fehler.
+- **Failure-Analyse = 60-80 % des Eval-Aufwands:** Traces sammeln → Open-Coding (Domain-Experte)
+  → Failure-Taxonomie → iterieren, bis keine neuen Kategorien; dann **Fix nach Root-Cause routen**
+  (Prompt-/Tool-Design-/Modell-Problem). Verwandt: Strukturelles Testing via OpenTelemetry-Traces +
+  Mocking fuer reproduzierbares LLM-Verhalten.
+
+> Auch in Runde 2 NICHT belegt: **Claude-Agent-SDK-Loop-Primitive** (`maxTurns`, `maxBudgetUsd`,
+> Context-Editing, Memory-Tool) und konkrete **Multi-Agent-Reconciliation** paralleler Arbeit —
+> bei Bedarf direkt aus der Anthropic-Doku / `orchestrator-agent.md` ziehen.
+
 ## Zusammenspiel mit dem eigenen Harness
 
 | Konzept aus der Recherche | Entspricht im eigenen System |
@@ -318,6 +463,9 @@ Memory-/Resource-Spikes, Upgrade-Drift.
 | §5 Lerneffekt ueber Loops (ACE) | §4 Learning Degradation / Forgetting |
 | §6 Selbstbetrug verhindern | §3 Cost Explosion · §5 Reward Hacking · §6 Goal Drift · §7 Termination |
 | §7 24/7-Betrieb auf VPS | §8 „Container uptime ≠ Agent uptime" |
+| §8 Rate-Limit-Resilienz | §3 Cost Explosion (Cascading Retries) |
+| §9 Hardening & Sandboxing | §8 VPS-Dauerbetrieb (Secret-Exfiltration, Container-Escape) |
+| §10 Definitions-of-done & Eval-Harness | §7 Premature/Wrong Termination (State-Changes pruefen) |
 
 ## Quellen (Runde 1, 2026-06-24)
 - Data Science Dojo — „10 Loop Engineering Design Patterns Every AI Developer Should Know (2026)" (`extern`)
@@ -327,3 +475,10 @@ Memory-/Resource-Spikes, Upgrade-Drift.
 - Manus — Context-Engineering-Lessons (`extern`)
 - Hostinger / OMC Cloud — VPS-Deployment fuer autonome Agenten (`extern`)
 - Produktions-Checkliste „deploying AI agents in production" + Failure-Mode-Quellen (`extern`)
+
+## Quellen (Runde 2, 2026-06-24 — Luecken/Folgefragen)
+- arXiv 2303.11366 — Reflexion: Language Agents with Verbal Reinforcement Learning (Shinn et al., NeurIPS 2023) (`offiziell`)
+- Letta-Blog + DeepLearning.AI + arXiv-Memory-Survey — MemGPT/Letta (Core/Recall/Archival, Sleep-Time-Compute) (`extern`/`offiziell`)
+- Portkey / Truefoundry / tianpan.co / dev.to / Maxim AI — LLM-Rate-Limit-Resilienz (Backoff+Jitter, Token-Bucket, Failover, Circuit Breaker) (`extern`)
+- Sandbox-Hardening-Guides (Firecracker/gVisor/E2B, seccomp/AppArmor, Default-Deny-Egress, Checkpoint/Restore) (`extern`)
+- LangChain / OpenAI-Cookbook / Confident-AI — Agent-Evals, Definitions-of-done, LLM-as-Judge, Regression-Gates (`extern`)

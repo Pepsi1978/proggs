@@ -5,7 +5,8 @@
 > LLM-APIs, oder als 24/7-Dauerlaeufer auf einem VPS (Hostinger u.a.).
 > **Geltungsbereich:** die SCHLEIFE selbst — Termination, Context-Wachstum, Kosten, Lernen,
 > Selbstbetrug, Dauerbetrieb. Multi-Agent-Routing/Spawning: siehe `bugs/agents/orchestrator-agent.md`.
-> **Stand:** recherchiert am 2026-06-24 (Firecrawl+MiniMax, 5 Researcher, Runde 1).
+> **Stand:** recherchiert am 2026-06-24 (Firecrawl+MiniMax). Runde 1 (5 Researcher) + Runde 2
+> (5 Researcher): Rate-Limit-Fehler, Sandbox-/Hardening-Fehler, Eval-Fallen ergaenzt.
 >
 > Begleitseite (wie man es von vornherein richtig macht): `best-practices/agents/loop-engineering.md`.
 > Eng verwandte Harness-Regeln (immer geladen): `subagent-crash-proofing.md`,
@@ -36,6 +37,10 @@
 | 13 | Agent behauptet Side-Effect (Ticket/Mail erstellt) | „no receipt, no claim": Beleg-ID/URL Pflicht, sonst gilt es nicht | §7 |
 | 14 | Agent benotet eigene Arbeit lobend | Self-Review-Softness: separater Judge (Maker ≠ Judge) | §5,§7 |
 | 15 | VPS-Container laeuft, Agent haengt | „Container uptime ≠ Agent uptime": Logs+Replay, Restart-Semantik, Resource-Limits | §8 |
+| 16 | Retry-Storm / Kosten explodieren bei 429 | `Retry-After` parsen, Full-Jitter, Retry-Budget ≤10 %, Retry nur 1 Schicht (sonst 3×5=243 Calls) | §9 |
+| 17 | Agent ignoriert Retry-After, hammert weiter | Circuit Breaker bei „consecutive 429s > N": 60s open mit exponential reopen | §9 |
+| 18 | Secrets in der Sandbox / Container-Escape | Zero-Secrets-Sandbox (Control-Plane injiziert), Default-Deny-Egress, MicroVM statt nacktem Container (runc-CVEs) | §10 |
+| 19 | „Done!" gemeldet, State ist falsch | State-Changes wirklich pruefen (Kalender/Code/DB); LLM-Judge ist angreifbar → deterministisch wo moeglich | §11 |
 
 ---
 
@@ -201,6 +206,64 @@ visible"): Success-Rate (echt, nicht „completed"), Avg-Steps/Run, Tool-Calls/R
 **Unverified-Claim-Rate**, Policy-Violation-Attempts, **Cost-per-Successful-Outcome**,
 Time-to-Resolution (Median + p95).
 
+## 9. Rate-Limit-Fehler: Retry-Storm & Thundering Herd (Runde 2)
+
+**Symptom:** Bei 429/Provider-Fehlern explodieren Kosten und Latenz; „it's slow" fuer den Nutzer,
+„it's expensive" auf der Rechnung. Ursachen: (a) **kein Jitter** → alle Clients retryen synchron
+(„Thundering Herd"); (b) **Retry auf mehreren Schichten** → 3 Retries × 5 Service-Layer = **243
+Backend-Calls** pro Request (~40 % der Cascading-Failures kommen daher); (c) **`Retry-After`-Header
+ignoriert** → der Agent hammert weiter, statt die vorgegebene Wartezeit einzuhalten; (d) blindes
+Retryen von 4xx (400/401/403 schlagen IMMER fehl).
+
+**Fix (funktionserhaltend):**
+- **`Retry-After`-Header parsen und einhalten** — zuverlaessiger als jede eigene Formel.
+- **Full-Jitter-Backoff:** `sleep = random(0, min(cap, base·2^attempt))` (Cap 32-60s, max 3-5).
+- **Retry-Budget:** globale Retries ≤ **10 %** aller Requests, sonst **fail-fast**.
+- **Retry nur auf der aeussersten Schicht**; innere Layer propagieren Fehler sauber.
+- **Nur 429/408/500-504 retryen**, nie 400/401/403/404.
+- **Circuit Breaker** bei „consecutive 429s > N": 60s open mit exponential reopen (faengt Frameworks,
+  die `Retry-After` ignorieren).
+- **TPM ≠ RPM** getrennt deckeln; **immer `max_tokens`** setzen (eine Antwort kann das TPM-Budget leerfressen).
+
+## 10. Sandbox-/Hardening-Fehler: Secret-Exfiltration & Container-Escape (Runde 2)
+
+**Symptom:** Ein autonom laufender Agent fuehrt Code/Tool-Calls aus; bei Kompromittierung kann er
+**API-Tokens exfiltrieren** (wenn sie in der Sandbox liegen und Egress offen ist) oder per
+**Container-Escape** auf den Host ausbrechen (reale runc-CVEs: CVE-2019-5736, CVE-2024-21626).
+Ohne Resource-Limits kann eine Agent-Session den **Host aushungern**, auch ohne Escape.
+
+**Fix (funktionserhaltend):**
+- **Zero-Secrets-Sandbox:** Credentials bleiben im **Control-Plane**, werden per Proxy injiziert —
+  der Agent sieht nur Session-Token + Control-Plane-URL. Kurzlebige Credentials pro Session.
+- **Default-Deny-Egress** (alles ausgehende blocken, nur noetige Endpunkte allowlisten) — schliesst
+  den Exfiltrations-Pfad.
+- **Container-Haertung:** Non-Root, `--cap-drop ALL`, `no-new-privileges`, seccomp + AppArmor,
+  read-only Root + tmpfs.
+- **Bei nicht-vertrautem Code: MicroVM statt Container** (Firecracker/gVisor/E2B) — Hardened-
+  Container „work only when agents execute code you've reviewed and trust".
+- **Resource-Limits (cgroup v2):** CPU/Memory-Hard-Cap, Disk-Quota, **Wall-Clock pro Tool-Call**.
+- **Checkpoint vor destruktiven Aktionen** (~300 ms Snapshot) → Rollback statt Totalausfall.
+> Hinweis Widerspruch in den Quellen: Egress „default-deny" vs. „opt-in" — bewusst entscheiden,
+> sichere Wahl ist **default-deny**.
+
+## 11. Eval-/Done-Fallen: „Done!" bei falschem State (Runde 2)
+
+**Symptom:** Der Agent meldet Erfolg, aber das tatsaechliche Ergebnis stimmt nicht — die finale
+Nachricht sagt „Meeting scheduled!", der Kalendereintrag fehlt aber (oder hat falsche Zeit). Eng
+verwandt mit §7 (Premature/Wrong Termination), hier aus Eval-Sicht.
+**Weitere Fallen:** LLM-as-Judge wird blind vertraut, obwohl er **angreifbar** ist („One token to
+fool LLM-as-a-judge") und einen Threshold + Kalibrierung braucht; **Infra-Probleme**
+(Timeouts/malformte Responses/stale Caches) werden als Reasoning-Fehler fehlinterpretiert.
+
+**Fix (funktionserhaltend):**
+- **State-Changes wirklich verifizieren:** bei „scheduled" den Kalender abfragen, bei Code den Code
+  laufen lassen, bei DB-Update die Zeilen lesen. Drei Akzeptanz-Dimensionen: Response/Trajectory/State.
+- **Deterministische Checks fuer Exaktes**, LLM-Judge nur fuer output-abhaengiges; Judge via Tracing
+  + Human-Review kalibrieren.
+- **Capability- von Regression-Evals trennen** (~100 % Regression-Gate schuetzt vor Backsliding).
+- **Infra-Probleme zuerst ausschliessen**, bevor ein „Reasoning-Fehler" debuggt wird.
+- **Eindeutiges „done":** „If two experts can't agree on pass/fail, the task needs refinement."
+
 ## 🔗 Bezugs-Tabelle: Bug-Almanach ↔ Best-Practice-Abschnitt
 
 | Bug-Almanach (hier) | Best-Practice-Abschnitt (`best-practices/agents/loop-engineering.md`) |
@@ -213,6 +276,9 @@ Time-to-Resolution (Median + p95).
 | §6 Goal Drift | §6 Goal-Restatement / Progress-Contract |
 | §7 Premature/Wrong Termination | §3 Termination (Terminal-Message ≠ Ziel; no receipt, no claim) |
 | §8 VPS „Container uptime ≠ Agent uptime" | §7 24/7-Betrieb (Pflicht-Runtime-Eigenschaften) |
+| §9 Rate-Limit / Retry-Storm | §8 Rate-Limit-Resilienz (3-Schichten, Retry-After, Jitter) |
+| §10 Sandbox / Secret-Exfiltration / Escape | §9 Hardening & Sandboxing (Zero-Secrets, MicroVM, cgroup) |
+| §11 Eval-/Done-Fallen | §10 Definitions-of-done & Eval-Harness |
 
 ## Quellen (Runde 1, 2026-06-24)
 - Data Science Dojo — „10 Loop Engineering Design Patterns" (Infinite Loops, Terminal-States)
@@ -221,3 +287,8 @@ Time-to-Resolution (Median + p95).
 - Random Labs Slate (Working-Memory-Rot, Lossy-Compaction)
 - IBM Research (Memory-Pointer: 20M→1.234 Tokens)
 - VPS-Produktions-Checkliste (Container-uptime-≠-Agent-uptime)
+
+## Quellen (Runde 2, 2026-06-24)
+- Portkey / Truefoundry / tianpan.co / dev.to / Maxim AI — Rate-Limit-Resilienz (Retry-Storm, Thundering Herd, Circuit Breaker)
+- Sandbox-Hardening-Guides (runc-CVEs, Zero-Secrets-Sandbox, Default-Deny-Egress, Firecracker/gVisor/E2B)
+- LangChain / OpenAI-Cookbook / Confident-AI — Agent-Evals (State-Changes pruefen, LLM-Judge-Caveats, Regression-Gates)
