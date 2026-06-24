@@ -41,7 +41,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.3.0"  # 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.4.0"  # 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -51,6 +51,12 @@ SB_API_KEY = os.getenv("SB_API_KEY", "")                 # Bearer fuer brain-api
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_MODEL_DEFAULT = os.getenv("AGENT_MODEL", "gemini-3.1-flash-lite")   # Env-Default (Fallback / Zuruecksetzen)
 AGENT_MODEL = AGENT_MODEL_DEFAULT                                          # AKTIV: beim Start aus config.json, zur Laufzeit per /config aenderbar
+# OpenCode Zen Go — zweiter Modell-Provider (z.B. minimax/minimax-m3). MiniMax/Qwen laufen im
+# Go-Gateway ueber das ANTHROPIC-Schema /zen/go/v1/messages (Header x-api-key, NICHT Bearer;
+# curl-User-Agent gegen Cloudflare-1010). Quelle: bugs/opencode/opencode-cli.md §14.1/§14.6/§14.8.
+OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
+OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").rstrip("/")
+OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 SESSION_TIMEOUT_S = int(os.getenv("AGENT_SESSION_TIMEOUT_MIN", "30")) * 60
 LOGBOOK_DIR = os.getenv("AGENT_LOGBOOK_DIR", "/logbook")  # gemountet auf /srv/samba/gedanken/Logbuch
@@ -68,8 +74,10 @@ LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
 AGENT_DATA_DIR = os.getenv("AGENT_DATA_DIR", "/app/data")
 PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"      # editierbarer Instruktions-Teil des System-Prompts
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
-# Auswahl fuers Dashboard-Dropdown (live getestet existent: gemini-3.1-flash-lite; Rest auswaehlbar).
-AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-3.1-flash", "gemini-3.1-pro", "gemini-2.5-flash"]
+# Auswahl fuers Dashboard-Dropdown. gemini-3.1-pro + gemini-3.1-flash bewusst entfernt (Frank, #NNN);
+# es bleiben gemini-3.1-flash-lite + gemini-2.5-flash. minimax/minimax-m3 laeuft ueber OpenCode Zen Go
+# (Anthropic /messages-Schema, siehe opencode_generate). "provider/modell"-Schreibweise = Routing-Hinweis.
+AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "minimax/minimax-m3"]
 
 try:
     TZ = ZoneInfo(TZNAME)
@@ -148,6 +156,81 @@ _log(logging.INFO, "sb-agent startet", version=VERSION, model=AGENT_MODEL, brain
      log_path=LOG_PATH, logbook_dir=LOGBOOK_DIR, tz=str(TZ), session_timeout_s=SESSION_TIMEOUT_S)
 
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
+
+# ---------------------------------------------------------------------------
+# Modell-Provider-Weiche: Gemini (google.genai) ODER OpenCode Zen Go (minimax, Anthropic /messages)
+# Ein gemeinsamer Einstieg llm_generate(system, user) -> reiner Text. Der Aufrufer entscheidet,
+# ob er den Text als JSON parst (decide) oder als Freitext nimmt (answer/improve).
+# ---------------------------------------------------------------------------
+def _is_opencode(model: str) -> bool:
+    """True, wenn das aktive Modell ueber OpenCode Zen Go statt Gemini laeuft (z.B. minimax/minimax-m3)."""
+    m = (model or "").lower()
+    return m.startswith("minimax") or m.startswith("opencode/") or m.startswith("qwen") or "/" in m and not m.startswith("gemini")
+
+
+def _opencode_slug(model: str) -> str:
+    """Dropdown-Anzeige -> Go-Gateway-Slug: 'minimax/minimax-m3' -> 'minimax-m3'."""
+    return model.split("/")[-1].strip()
+
+
+def opencode_generate(system: str, user: str, max_tokens: int, temperature: float) -> str:
+    """OpenCode Zen Go (Anthropic /messages-Schema) fuer MiniMax/Qwen.
+    PFLICHT-Header laut Almanach (opencode-cli.md §14.6/§14.8): x-api-key (NICHT Bearer),
+    anthropic-version, curl-User-Agent (sonst Cloudflare 1010/403). max_tokens > evtl. Thinking-Budget.
+    Antwort sind Anthropic-content-Bloecke -> nur die type:'text'-Bloecke zusammenfuegen."""
+    if not OPENCODE_API_KEY:
+        raise RuntimeError("OPENCODE_API_KEY fehlt — minimax/minimax-m3 nicht nutzbar")
+    body = {
+        "model": _opencode_slug(AGENT_MODEL),
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    headers = {
+        "x-api-key": OPENCODE_API_KEY,
+        "anthropic-version": OPENCODE_ANTHROPIC_VERSION,
+        "content-type": "application/json",
+        "User-Agent": "curl/8.5.0",   # Cloudflare-Bypass (Almanach §14.8) — Default-UA wird geblockt
+    }
+    r = httpx.post(f"{OPENCODE_GO_URL}/messages", json=body, headers=headers, timeout=90.0)
+    r.raise_for_status()
+    data = r.json()
+    parts = [b.get("text", "") for b in (data.get("content") or []) if b.get("type") == "text"]
+    return "".join(parts).strip()
+
+
+def _extract_json(s: str) -> str:
+    """Robust das JSON-Objekt aus einer Modellantwort schaelen (minimax setzt evtl. Code-Zaeune/Prosa
+    trotz Anweisung). Erstes '{' bis letztes '}' — defensiv, Funktionserhalt bei strengeren Modellen."""
+    s = (s or "").strip()
+    i, j = s.find("{"), s.rfind("}")
+    return s[i:j + 1] if (i != -1 and j > i) else s
+
+
+def llm_generate(system: str, user: str, *, json_mode: bool, max_tokens: int, temperature: float) -> str:
+    """Provider-neutraler Einstieg: Gemini ODER OpenCode-Go (je nach AGENT_MODEL). Gibt reinen Text.
+    Bei json_mode nutzt Gemini response_mime_type=application/json; OpenCode/minimax erzwingt das
+    JSON ueber den SCHEMA_BLOCK im System-Prompt (der Aufrufer parst per _extract_json)."""
+    if _is_opencode(AGENT_MODEL):
+        return opencode_generate(system, user, max_tokens=max_tokens, temperature=temperature)
+    if gclient is None:
+        raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
+    kwargs: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
+    if json_mode:
+        kwargs["response_mime_type"] = "application/json"
+    resp = gclient.models.generate_content(
+        model=AGENT_MODEL, contents=user, config=genai_types.GenerateContentConfig(**kwargs))
+    text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
+    if not text:  # Diagnose erhalten (Gemini-Almanach B4/D10): finishReason bei leerem Text loggen
+        finish = None
+        try:
+            finish = getattr((resp.candidates or [None])[0], "finish_reason", None)
+        except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
+            pass
+        probe(False, "LLM lieferte leeren Text", model=AGENT_MODEL, finish=str(finish))
+    return text
+
 
 # ---------------------------------------------------------------------------
 # brain-api-Helfer (der Agent NUTZT den 1:1-Speicher, ersetzt ihn nicht)
@@ -330,9 +413,8 @@ def _history_text(session: dict) -> str:
 
 
 def llm_decide(session: dict, user_text: str, candidates: list[dict], categories: list[str]) -> dict:
-    """Fragt Gemini um eine strukturierte Entscheidung (JSON). Veraendert NIE den 1:1-Inhalt."""
-    if gclient is None:
-        raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
+    """Fragt das aktive Modell (Gemini ODER minimax/OpenCode-Go) um eine strukturierte
+    Entscheidung (JSON). Veraendert NIE den 1:1-Inhalt."""
     cand_txt = "(keine)"
     if candidates:
         cand_txt = "\n".join(
@@ -358,16 +440,9 @@ def llm_decide(session: dict, user_text: str, candidates: list[dict], categories
         f"AEHNLICHE VORHANDENE EINTRAEGE:\n{cand_txt}\n\n"
         f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
     )
-    resp = gclient.models.generate_content(
-        model=AGENT_MODEL,
-        contents=user_block,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=build_system_prompt(categories),
-            response_mime_type="application/json",
-            temperature=0.3,
-        ),
-    )
-    raw = (resp.text or "").strip()
+    raw = _extract_json(llm_generate(
+        build_system_prompt(categories), user_block,
+        json_mode=True, max_tokens=2048, temperature=0.3))
     try:
         data = json.loads(raw)
         if not isinstance(data, dict):
@@ -389,8 +464,6 @@ def llm_answer(session: dict, question: str, hits: list[dict], categories: list[
     gefundenen Gehirn-Treffern. Nutzt DENSELBEN editierbaren Prompt wie die Speicher-Seite
     (ein Fenster, ein Prompt) — aber OHNE den geschuetzten SCHEMA_BLOCK (hier kein JSON noetig,
     sondern Freitext). Read-only: speichert/aendert nichts."""
-    if gclient is None:
-        raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
     if hits:
         hits_txt = "\n\n".join(
             f"[{i + 1}] Titel: {h.get('title') or '(ohne Titel)'} | Kategorie: {h.get('category') or '-'} "
@@ -411,24 +484,10 @@ def llm_answer(session: dict, question: str, hits: list[dict], categories: list[
         "Erfinde nichts dazu. Passt kein Eintrag wirklich, sag ehrlich, dass du dazu nichts "
         "gespeichert findest. Antworte in normalem, freundlichem Deutsch mit echten Umlauten."
     )
-    resp = gclient.models.generate_content(
-        model=AGENT_MODEL,
-        contents=user_block,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=instr,
-            temperature=0.4,
-            max_output_tokens=ANSWER_MAX_TOKENS,  # grosszuegig: Thinking zaehlt dagegen (Gemini-Almanach B4)
-        ),
-    )
-    # Robuste Antwortpruefung (Gemini-Almanach D10/B5): 200 OK != Text — finishReason zuerst.
-    finish = None
-    try:
-        cand = (resp.candidates or [None])[0]
-        finish = getattr(cand, "finish_reason", None)
-    except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
-        pass
-    text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
-    probe(bool(text), "Antwort-LLM lieferte leeren Text", finish=str(finish), treffer=len(hits))
+    # Provider-neutral (Gemini ODER minimax/OpenCode-Go); grosszuegiges max_tokens (Thinking zaehlt
+    # bei beiden dagegen). llm_generate behaelt die finishReason-Diagnose bei leerem Text (Almanach B4/D10).
+    text = llm_generate(instr, user_block, json_mode=False,
+                        max_tokens=ANSWER_MAX_TOKENS, temperature=0.4)
     if not text:
         text = ("Ich finde dazu gerade nichts in deinem Gehirn — magst du es anders formulieren?"
                 if not hits else
@@ -516,7 +575,11 @@ def require_auth(authorization: str = Header(default="")) -> None:
 async def lifespan(app: FastAPI):
     global AGENT_MODEL
     AGENT_MODEL = load_model()   # gespeicherte Modell-Wahl uebernehmen (sonst Env-Default)
+    # Diagnose: laeuft ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein (sonst /chat-Fehler).
+    if _is_opencode(AGENT_MODEL):
+        probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", model=AGENT_MODEL)
     _log(logging.INFO, "sb-agent gestartet", version=VERSION, model=AGENT_MODEL,
+         provider=("opencode-go" if _is_opencode(AGENT_MODEL) else "gemini"),
          prompt_quelle=("datei" if PROMPT_FILE.exists() else "default"), data_dir=AGENT_DATA_DIR)
     task = asyncio.create_task(_flush_loop())
     _log(logging.INFO, "Flush-Loop gestartet")
@@ -552,6 +615,22 @@ class PromptReq(BaseModel):
 
 class ConfigReq(BaseModel):
     model: str = Field(..., min_length=1, description="Aktives Sprachmodell des Agenten")
+
+
+class ImproveReq(BaseModel):
+    text: str = Field(..., min_length=1, max_length=8000, description="Eingesprochener Roh-Text, der sprachlich verbessert werden soll")
+
+
+# Lektor-Auftrag fuer den G-Button: NUR umformulieren, Inhalt 1:1 erhalten (keine Halluzination).
+IMPROVE_SYSTEM = (
+    "Du bist ein praeziser Lektor. Formuliere den folgenden eingesprochenen Text in klarem, gutem "
+    "Deutsch neu: korrigiere Grammatik, Rechtschreibung, Zeichensetzung und Satzbau, erkenne die "
+    "Absicht und schreibe sie sauber und natuerlich nieder. ABSOLUT WICHTIG: Aendere den "
+    "Informationsgehalt NICHT — fuege nichts hinzu, lasse nichts weg, erfinde nichts, deute nichts "
+    "hinein. Gleiche Aussage, gleiche Fakten, nur besser formuliert. Schreibe mit echten deutschen "
+    "Umlauten (ae/oe/ue/ss sind verboten). Gib AUSSCHLIESSLICH den verbesserten Text zurueck — ohne "
+    "Anfuehrungszeichen, ohne Vorrede, ohne Kommentar, ohne Erklaerung."
+)
 
 
 @app.get("/health")
@@ -597,6 +676,25 @@ def put_config(req: ConfigReq) -> dict:
     AGENT_MODEL = m                       # sofort aktiv, kein Neustart noetig
     _log(logging.INFO, "Agent-Modell gewechselt", model=m)
     return {"status": "ok", "model": AGENT_MODEL}
+
+
+@app.post("/improve", dependencies=[Depends(require_auth)])
+def improve(req: ImproveReq) -> dict:
+    """G-Button: einen eingesprochenen Roh-Text grammatikalisch/sprachlich verbessern, OHNE den
+    Informationsgehalt zu aendern. Read-only — speichert nichts. Nutzt das AKTIVE Modell (Gemini
+    ODER minimax/OpenCode-Go). Sync def -> FastAPI fuehrt es im Threadpool aus (kein async-Block,
+    Almanach ai-agent-frameworks §3.1)."""
+    src = req.text.strip()
+    try:
+        better = llm_generate(IMPROVE_SYSTEM, src, json_mode=False, max_tokens=2048, temperature=0.3).strip()
+    except Exception as e:  # noqa: BLE001 — Tool-Fehler sauber zurueckgeben statt crashen (§3.2)
+        _log(logging.ERROR, "Textverbesserung fehlgeschlagen", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Verbesserung fehlgeschlagen: {type(e).__name__}")
+    if not better:
+        better = src  # Funktionserhalt: nie leeren Text zurueckgeben
+    checkpoint("improve", "Text sprachlich verbessern OHNE Informationsgehalt zu aendern",
+               ok=bool(better), model=AGENT_MODEL, in_chars=len(src), out_chars=len(better))
+    return {"ok": True, "text": better}
 
 
 @app.post("/chat", dependencies=[Depends(require_auth)])
@@ -723,4 +821,4 @@ async def end_session(req: EndReq) -> dict:
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", "version": VERSION,
-            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config"]}
+            "endpoints": ["/health", "/chat", "/end", "/prompt", "/config", "/improve"]}

@@ -112,11 +112,13 @@ services:
       # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/mcp).
       - "10.8.0.1:8002:8002"
     env_file:
-      - .env                        # GEMINI_API_KEY / SB_API_KEY
+      - .env                        # GEMINI_API_KEY / SB_API_KEY / OPENCODE_API_KEY (NICHT im Repo)
     environment:
       BRAIN_URL: http://brain-api:8000     # interner Compose-DNS-Name des Gehirns
       SB_USER_ID: frank
-      AGENT_MODEL: gemini-3.1-flash-lite   # austauschbar (spaeter Dashboard-Wahl)
+      AGENT_MODEL: gemini-3.1-flash-lite   # Env-Default; aktive Wahl per Dashboard (auch minimax/minimax-m3)
+      # OPENCODE_API_KEY kommt aus .env via env_file (OpenCode Zen Go fuer minimax/minimax-m3, Anthropic
+      # /messages-Schema). OPENCODE_GO_URL/OPENCODE_ANTHROPIC_VERSION haben Code-Defaults — nur bei Bedarf setzen.
       AGENT_SESSION_TIMEOUT_MIN: "30"      # 30 min Inaktivitaet -> Logbuch
       AGENT_LOGBOOK_DIR: /logbook
       AGENT_TZ: Europe/Berlin
