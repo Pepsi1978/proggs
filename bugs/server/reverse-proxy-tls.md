@@ -28,6 +28,7 @@
 | `acme: error: rateLimited` beim Testen | IMMER zuerst mit Staging `acme_ca https://acme-staging-v02.api.letsencrypt.org/directory` testen | 1.1 |
 | Caddy holt bei JEDEM (Docker-)Start neue Zerts → Rate-Limit | Storage persistent: `/data`-Volume mounten; Storage ist KEIN Cache | 1.2 |
 | Zert in Prod abgelaufen, kein Fehler im Blick | Renewal scheitert STILL (Port 80/DNS/Permissions) → extern per Cron ueberwachen | 1.3 |
+| ⭐ TLS `internal error`/alert 80 bei HTTPS ueber eine **IP** (kein DNS-Name) | Client sendet kein SNI fuer IPs (RFC 6066) → Caddy matcht IP-Cert nicht → global `default_sni <ip>`; geaenderte bind-Caddyfile braucht `restart` (nicht nur `up -d`) | 1.10 |
 | on-demand-TLS exponiert → Rate-Limit-DoS | NIE ohne schnellen `ask`-Endpoint betreiben | 1.7 |
 | 502 / `connection refused 127.0.0.1:PORT` | Upstream laeuft (noch) nicht; Caddy prueft Upstreams nicht beim Start → systemd `After=` + `fail_duration` | 2.1 |
 | Sporadische 502 unter Last (`connection reset`) | Keepalive-Mismatch → `transport http { keepalive 3s }` (< Upstream-Timeout) | 2.2 |
@@ -111,6 +112,27 @@
 ### 1.9 Cert-Cache-Flush bei Config-Reload
 - **Symptom:** Nach `caddy reload` kurze Downtime; `reload --force` re-cached Zerts nicht zuverlaessig.
 - **FIX:** Reloads bewusst; Version aktuell halten; Storage nie loeschen. **gh:** caddy#5589 (Cache-Flush) CLOSED/COMPLETED, caddy#6789 (`reload --force` recache) OPEN. **Quelle:** github.com/caddyserver/caddy/issues/5589, /6789
+
+### 1.10 ⭐ HTTPS ueber eine IP-Adresse als Site → TLS `internal error` (alert 80), weil kein SNI
+- **Symptom:** Caddy-Site `https://10.8.0.1 { tls internal }` startet sauber, Cert wird ausgestellt
+  (`certificate obtained successfully`, `issuer:"local"`), aber JEDER Client (curl `-k`, Browser, wget)
+  bekommt `HTTP 000` / `tlsv1 alert internal error` (SSL alert number 80). Der TLS-Handshake bricht ab.
+- **Ursache:** SNI (Server Name Indication, RFC 6066) wird vom Client **nur fuer Hostnamen** gesendet,
+  **nicht fuer IP-Adressen**. Caddy bekommt also einen ClientHello ohne SNI und kann das auf die IP
+  ausgestellte interne Cert nicht zuordnen → es bricht den Handshake mit `internal_error` ab. Betrifft
+  jedes IP-only-HTTPS (typisch: privates Dashboard hinter WireGuard, kein DNS-Name).
+- **FIX (funktionserhaltend):** Im globalen Optionsblock `default_sni <ip>` setzen — Caddy nimmt dann bei
+  fehlendem SNI diesen virtuellen Host und serviert das passende Cert:
+  ```
+  { admin off
+    default_sni 10.8.0.1 }
+  https://10.8.0.1 { tls internal
+    reverse_proxy dashboard:8003 }
+  ```
+  Danach `docker compose restart caddy` (ein blosses `up -d` laedt eine geaenderte **bind-gemountete**
+  Caddyfile NICHT neu — nur Image-/compose-Aenderungen triggern Recreate; Config-Mount braucht restart
+  oder `caddy reload`). Alternative: einen echten Hostnamen statt der IP verwenden (dann sendet der
+  Client SNI). **Verifiziert 2026-06-24** (second-brain-Cockpit, Mikrofon-secure-context-Setup).
 
 ---
 
