@@ -49,7 +49,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.2.0"  # 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.3.0"  # 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -545,6 +545,21 @@ def forget(title: str, user_id: str = "frank") -> dict:
     _delete_doc(doc_id)
     checkpoint("forget", "Eintrag per Titel geloescht", ok=True, title=title)
     return {"ok": True, "deleted": True, "title": title}
+
+
+@app.delete("/entry", dependencies=[Depends(require_auth)])
+def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
+    """Loescht einen Eintrag dauerhaft per doc_id (alle Chunks dieser doc_id). Frank-Wunsch: der
+    Papierkorb-Button im Dashboard-Drawer. Sync def -> laeuft im Threadpool (fastapi §1). Idempotent:
+    nicht vorhanden -> deleted:false (kein 404, damit der Button nie ins Leere laeuft)."""
+    _require_store()
+    existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+    if not existing:
+        return {"ok": True, "deleted": False, "doc_id": doc_id}
+    title = (existing[0].payload.get("title") or "").strip()
+    _delete_doc(doc_id)
+    checkpoint("delete_entry", "Eintrag dauerhaft per doc_id geloescht", ok=True, doc_id=doc_id, title=title or None)
+    return {"ok": True, "deleted": True, "doc_id": doc_id, "title": title or None}
 
 
 @app.put("/entry", dependencies=[Depends(require_auth)])

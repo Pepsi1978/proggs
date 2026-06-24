@@ -496,6 +496,13 @@ button{font-family:inherit;cursor:pointer}
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
 .drawer-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 .drawer-edit-btn{margin-left:auto}
+/* Papierkorb-Button (Eintrag dauerhaft loeschen) — rot getoent, links neben Bearbeiten */
+.drawer-del-btn{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(242,105,142,.45)}
+.drawer-del-btn:hover{border-color:var(--bad);background:rgba(242,105,142,.12)}
+.drawer-del-btn svg{width:16px;height:16px;stroke-width:2}
+/* Roter Bestaetigungs-Button (Ja, loeschen) */
+.btn-danger{background:linear-gradient(145deg,#F2698E,#C0436A);color:#fff;border-color:transparent}
+.btn-danger:hover{filter:brightness(1.08)}
 
 /* ── Bestaetigungs-Dialog (mittig) ────────────────────────────────────────── */
 .confirm-overlay{position:fixed;inset:0;background:rgba(8,6,11,.66);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
@@ -756,6 +763,10 @@ button{font-family:inherit;cursor:pointer}
   <div class="drawer-body">
     <div class="read-box" id="drawerText"></div>
     <div class="drawer-actions" id="drawerViewActions">
+      <button class="btn drawer-del-btn" id="drawerDeleteBtn" title="Eintrag löschen" aria-label="Eintrag löschen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        <span>Löschen</span>
+      </button>
       <button class="btn drawer-edit-btn" id="drawerEditBtn">Bearbeiten</button>
     </div>
     <div class="drawer-actions" id="drawerEditActions" style="display:none">
@@ -774,6 +785,18 @@ button{font-family:inherit;cursor:pointer}
     <div class="confirm-actions">
       <button class="btn" id="confirmNo">Nein</button>
       <button class="btn btn-primary" id="confirmYes">Ja, ersetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestaetigungs-Dialog: Eintrag dauerhaft loeschen ────────────────────── -->
+<div class="confirm-overlay" id="deleteOverlay">
+  <div class="confirm-box">
+    <h4>Eintrag dauerhaft löschen?</h4>
+    <p>Möchtest du diesen Eintrag aus deinem Gedächtnis dauerhaft löschen? Das kann nicht rückgängig gemacht werden.</p>
+    <div class="confirm-actions">
+      <button class="btn" id="deleteNo">Nein</button>
+      <button class="btn btn-danger" id="deleteYes">Ja, löschen</button>
     </div>
   </div>
 </div>
@@ -1158,7 +1181,26 @@ button{font-family:inherit;cursor:pointer}
     finally{ saveBtn.disabled = false; }
   });
 
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
+  /* Loeschen: Papierkorb -> Bestaetigung (Ja/Nein) -> Eintrag dauerhaft aus dem Gedaechtnis loeschen */
+  const deleteOverlay = document.getElementById("deleteOverlay");
+  function openDelete(){ deleteOverlay.classList.add("open"); }
+  function closeDelete(){ deleteOverlay.classList.remove("open"); }
+  document.getElementById("drawerDeleteBtn").addEventListener("click", openDelete);
+  document.getElementById("deleteNo").addEventListener("click", closeDelete);
+  deleteOverlay.addEventListener("click", e=>{ if(e.target===deleteOverlay) closeDelete(); });
+  document.getElementById("deleteYes").addEventListener("click", async ()=>{
+    closeDelete();
+    if(!curEntry || !curEntry.doc_id){ flash("drawerStatus","Kein löschbarer Eintrag",false); return; }
+    const yes = document.getElementById("deleteYes"); yes.disabled = true;
+    try{
+      const r = await apiSend("/api/entry?doc_id="+encodeURIComponent(curEntry.doc_id),"DELETE");
+      if(r && r.ok!==false){ closeDrawer(); loadEntries(); loadOverview(); }
+      else { flash("drawerStatus",(r&&r.detail)||"Löschen fehlgeschlagen",false); }
+    }catch(e){ flash("drawerStatus","Löschen fehlgeschlagen",false); }
+    finally{ yes.disabled = false; }
+  });
+
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
 
   /* ── Demo-Daten (Fallback, wenn Backend nicht erreichbar) ─────────────── */
   let USING_DEMO = false;
