@@ -546,7 +546,9 @@ button{font-family:inherit;cursor:pointer}
 .cs.open .cs-chev{transform:rotate(180deg)}
 .cs-panel{position:absolute;left:0;right:0;z-index:60;max-height:340px;overflow-y:auto;background:var(--surface);
   border:1px solid var(--accent);border-radius:14px;padding:6px;display:none;
-  box-shadow:0 0 0 3px rgba(244,166,90,.13),var(--shadow-pop)}
+  box-shadow:0 0 0 3px rgba(244,166,90,.13),var(--shadow-pop);
+  scrollbar-width:none;-ms-overflow-style:none}   /* Scrollbalken ausblenden — Mausrad/Touch scrollt weiter */
+.cs-panel::-webkit-scrollbar{display:none}
 .cs-panel.up{bottom:calc(100% + 6px)}
 .cs-panel.down{top:calc(100% + 6px)}
 .cs.open .cs-panel{display:block;animation:rise .18s var(--ease) both}
@@ -1586,24 +1588,30 @@ button{font-family:inherit;cursor:pointer}
       <div class="trash-actions">
         <span class="muted-note trash-status"></span>
         <button class="btn btn-sm t-edit" type="button">Bearbeiten</button>
+        <button class="btn btn-sm t-cancel" type="button" style="display:none">Abbrechen</button>
         <button class="btn btn-sm btn-primary t-save" type="button" style="display:none">Speichern</button>
         <button class="btn btn-sm btn-restore t-restore" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Wiederherstellen</button>
       </div>`;
     const txt = el.querySelector(".trash-text"), editBtn = el.querySelector(".t-edit"),
-          saveBtn = el.querySelector(".t-save"), restoreBtn = el.querySelector(".t-restore"),
-          status = el.querySelector(".trash-status");
-    editBtn.addEventListener("click", ()=>{
-      txt.setAttribute("contenteditable","true"); txt.classList.add("editing"); txt.focus();
-      editBtn.style.display="none"; saveBtn.style.display="";
-    });
+          cancelBtn = el.querySelector(".t-cancel"), saveBtn = el.querySelector(".t-save"),
+          restoreBtn = el.querySelector(".t-restore"), status = el.querySelector(".trash-status");
+    function setEdit(on){
+      txt.setAttribute("contenteditable", on?"true":"false");
+      txt.classList.toggle("editing", on);
+      editBtn.style.display = on?"none":"";
+      saveBtn.style.display = on?"":"none";
+      cancelBtn.style.display = on?"":"none";
+      if(on) txt.focus();
+    }
+    editBtn.addEventListener("click", ()=> setEdit(true));
+    cancelBtn.addEventListener("click", ()=>{ txt.textContent = t.text||""; setEdit(false); });  // Änderung verwerfen
     saveBtn.addEventListener("click", async ()=>{
       const newText = txt.textContent.trim();
       if(!newText){ flashEl(status,"Text ist leer",false); return; }
       saveBtn.disabled=true;
       try{
         const r = await apiSend("/api/trash","PUT",{doc_id:t.doc_id, text:newText});
-        if(r && r.ok!==false){ t.text=newText; txt.setAttribute("contenteditable","false"); txt.classList.remove("editing");
-          saveBtn.style.display="none"; editBtn.style.display=""; flashEl(status,"Im Papierkorb gespeichert"); }
+        if(r && r.ok!==false){ t.text=newText; setEdit(false); flashEl(status,"Im Papierkorb gespeichert"); }
         else flashEl(status,(r&&r.detail)||"Speichern fehlgeschlagen",false);
       }catch(e){ flashEl(status,"Speichern fehlgeschlagen",false); }
       finally{ saveBtn.disabled=false; }
