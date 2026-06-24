@@ -158,6 +158,10 @@ try {
         # Docker & Docker-Compose (Self-Hosting-Betrieb): compose.yaml/.yml, docker-compose.*,
         # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
         $slug = 'docker'; $file = 'docker.md'; $name = 'Docker & Docker-Compose (Self-Hosting-Betrieb)'
+    } elseif ($fpl -match '(^|/)caddyfile$' -or $fpl -match '\.caddyfile$' -or $fpl -match '\.service$' -or $fpl -match '(^|/)nginx\.conf$' -or $fpl -match '/sites-(available|enabled)/') {
+        # Reverse-Proxy/TLS (Caddy) + systemd-Units + nginx-Configs -> reverse-proxy-tls.md.
+        # Caddyfile (kein Suffix), *.service (systemd-Unit), nginx.conf/sites-*. Eindeutige Dateimuster.
+        $slug = 'reverseproxytls'; $file = 'reverse-proxy-tls.md'; $name = 'Reverse-Proxy/TLS (Caddy) & Linux-VPS-Betrieb'
     } elseif ($fpl -match '\.mcp\.json$') {
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.

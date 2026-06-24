@@ -142,6 +142,11 @@ case "$fpl" in
         # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
         # Abgrenzung: Qdrant-/Agent-spezifisches faengt der jeweilige Almanach separat ab.
         slug="docker"; file="docker.md"; name="Docker & Docker-Compose (Self-Hosting-Betrieb)";;
+    *caddyfile|*.caddyfile|*.service|*nginx.conf|*/sites-available/*|*/sites-enabled/*)
+        # Reverse-Proxy/TLS (Caddy) + systemd-Units + nginx-Configs -> reverse-proxy-tls.md.
+        # Caddyfile (kein Suffix), *.service (systemd-Unit), nginx.conf/sites-*. Eindeutige Dateimuster.
+        # Abgrenzung: VPN -> wireguard.md, Docker-Betrieb -> docker.md, Security-Architektur -> self-hosted-ai-agent-server.md.
+        slug="reverseproxytls"; file="reverse-proxy-tls.md"; name="Reverse-Proxy/TLS (Caddy) & Linux-VPS-Betrieb";;
     *.sdplugin/*|*propertyinspector*)
         # Stream-Deck-Plugin: Dateien im *.sdPlugin-Ordner ODER ein Property Inspector.
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
