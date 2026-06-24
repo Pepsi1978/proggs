@@ -819,7 +819,22 @@ Leitsätze:
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
     if(tab==="chat"){ setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
-  document.querySelectorAll("[data-tab]").forEach(b=> b.addEventListener("click",()=>setTab(b.dataset.tab)));
+  /* ── Browser-Navigation (Zurueck/Vor): jeder Tab-Wechsel = ein History-Eintrag (#tab); die
+     Zurueck-Taste/Maustaste wechselt zwischen den Menues wie auf einer echten Webseite, statt die
+     Seite zu verlassen. Offene Drawer/Dialoge schliesst Zurueck zuerst. Frank-Wunsch (Bild #9). */
+  function navTo(tab, push){
+    if(!TABS[tab] || tab===activeTab) return;
+    if(push!==false){ try{ history.pushState({tab:tab}, "", "#"+tab); }catch(_){ } }
+    setTab(tab);
+  }
+  document.querySelectorAll("[data-tab]").forEach(b=> b.addEventListener("click",()=>navTo(b.dataset.tab)));
+  window.addEventListener("popstate", function(e){
+    // Wie eine echte Webseite: Zurueck schliesst zuerst offene Overlays, danach erst den Tab-Wechsel.
+    if(confirmOverlay.classList.contains("open")){ closeConfirm(); return; }
+    if(drawer.classList.contains("open")){ closeDrawerNow(); return; }
+    const tab = (e.state && e.state.tab) || (location.hash||"").replace(/^#/,"") || "overview";
+    setTab(TABS[tab] ? tab : "overview");
+  });
 
   /* ── API mit Demo-Fallback ────────────────────────────────────────────── */
   async function api(path){
@@ -948,7 +963,7 @@ Leitsätze:
 
   function goToCategory(name){            // V1: Legende/Segment -> Gehirn gefiltert
     curCategory = name; curQuery = "";
-    setTab("brain");
+    navTo("brain");
     const inp = document.getElementById("search"); if(inp) inp.value="";
     updateChips(); loadEntries();
   }
@@ -1011,6 +1026,7 @@ Leitsätze:
   const overlay = document.getElementById("overlay"), drawer = document.getElementById("drawer");
   let curEntry = null;          // aktuell offener Eintrag (fuer den Editor)
   let editing = false;
+  let drawerHist = false;       // liegt ein History-Eintrag fuer den offenen Drawer auf dem Stack? (Zurueck schliesst ihn)
 
   async function openEntry(it, editable){
     curEntry = it ? {...it} : null;
@@ -1024,6 +1040,8 @@ Leitsätze:
     document.getElementById("drawerStatus").textContent = "";
     setDrawerEditMode(false);
     overlay.classList.add("open"); drawer.classList.add("open");
+    // History-Eintrag fuer den offenen Drawer, damit die Zurueck-Taste ihn schliesst (statt die Seite zu verlassen)
+    if(!drawerHist){ drawerHist = true; try{ history.pushState({tab:activeTab, drawer:true}, "", location.hash||("#"+activeTab)); }catch(_){ } }
     /* Volltext + doc_id nachladen (nur fuer editierbare Gehirn-Eintraege mit Titel) */
     if(editable !== false && it.title){
       try{
@@ -1051,7 +1069,10 @@ Leitsätze:
     document.getElementById("drawerEditActions").style.display = on ? "flex" : "none";
     if(on) box.focus();
   }
-  function closeDrawer(){ overlay.classList.remove("open"); drawer.classList.remove("open"); setDrawerEditMode(false); }
+  function closeDrawerNow(){ overlay.classList.remove("open"); drawer.classList.remove("open"); setDrawerEditMode(false); drawerHist = false; }
+  /* Schliessen ueber die History: liegt ein Drawer-Eintrag auf dem Stack, via history.back() ausloesen
+     (popstate ruft dann closeDrawerNow) — so schliesst die Zurueck-Taste den Drawer, statt die Seite zu verlassen. */
+  function closeDrawer(){ if(drawerHist){ history.back(); } else { closeDrawerNow(); } }
   overlay.addEventListener("click",closeDrawer);
   document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 
@@ -1341,6 +1362,13 @@ Leitsätze:
   })();
 
   /* ── Start ────────────────────────────────────────────────────────────── */
+  (function initHistory(){
+    // Basis-State setzen (damit Zurueck einen Zustand hat) und Tab aus #hash wiederherstellen (Reload bleibt im Menue).
+    const start = (location.hash||"").replace(/^#/,"");
+    const tab = TABS[start] ? start : "overview";
+    try{ history.replaceState({tab:tab}, "", "#"+tab); }catch(_){ }
+    if(tab!==activeTab) setTab(tab);
+  })();
   loadOverview();
   setInterval(()=>{ if(activeTab==="overview" || true) loadOverview(); }, 20000);  // V5: alle 20s
 
