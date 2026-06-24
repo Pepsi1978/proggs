@@ -20,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.5.1"  # 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.6.0"  # 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -30,6 +30,8 @@ HOSTFS = os.getenv("DASH_HOSTFS", "/hostfs")
 CONV_CATEGORY = os.getenv("DASH_CONV_CATEGORY", "gespraeche")
 # Logbuch-.txt-Protokolle (Samba-Platte = Franks Z:), read-only ins dashboard gemountet.
 LOGBOOK_DIR = os.getenv("DASH_LOGBOOK_DIR", os.getenv("AGENT_LOGBOOK_DIR", "/logbook"))
+# Z-Wurzel (Samba "gedanken") fuer das Google-Drive-Backup: Status-Datei lesen + Trigger-Flags schreiben.
+BACKUP_DIR = os.getenv("DASH_BACKUP_DIR", "/gedanken")
 # Groq Whisper (Sprache->Text) — Key fest im Server (.env). whisper-large-v3-turbo wie im Voice-Overlay.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_STT_URL = os.getenv("GROQ_STT_URL", "https://api.groq.com/openai/v1/audio/transcriptions")
@@ -314,6 +316,45 @@ async def api_transcribe(request: Request) -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Transkription fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Transkription fehlgeschlagen: {type(e).__name__}"})
+
+
+# --- Google-Drive-Backup (Z -> Drive): Status lesen + Buttons. Das eigentliche Backup laeuft auf dem
+#     HOST (rclone + systemd, crash-sicher). Das Dashboard liest nur die Status-Datei und schreibt
+#     Trigger-Flags in die Z-Wurzel, die von Host-systemd-.path-Units ausgefuehrt werden. -----------
+@app.get("/api/backup/status")
+def backup_status() -> dict:
+    """Liest die Status-Datei, die das Host-Backup-Skript in die Z-Wurzel schreibt. Fehlt sie -> 'unbekannt'."""
+    p = Path(BACKUP_DIR) / ".gdrive-backup-status.json"
+    try:
+        if p.is_file():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Backup-Status nicht lesbar", err=str(e))
+    return {"state": "unbekannt", "detail": "Noch kein Backup gelaufen oder Status nicht verfuegbar."}
+
+
+def _touch_trigger(name: str) -> bool:
+    """Schreibt eine Trigger-Flag-Datei in die Z-Wurzel; die Host-systemd-.path-Unit fuehrt die Aktion aus."""
+    try:
+        (Path(BACKUP_DIR) / name).write_text(time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), encoding="utf-8")
+        return True
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Trigger schreiben fehlgeschlagen", name=name, err=str(e))
+        return False
+
+
+@app.post("/api/backup/run")
+def backup_run() -> dict:
+    """'Jetzt sichern' — stoesst das Host-Backup an (Spiegel Z -> Drive, crash-sicher)."""
+    ok = _touch_trigger(".backup-trigger")
+    return {"ok": ok, "detail": "Sicherung angestossen." if ok else "Konnte Sicherung nicht anstossen (Schreibrecht?)."}
+
+
+@app.post("/api/backup/restore")
+def backup_restore() -> dict:
+    """'Wiederherstellen' (Notfall) — holt das Drive-Backup additiv zurueck auf Z (loescht lokal nichts)."""
+    ok = _touch_trigger(".restore-trigger")
+    return {"ok": ok, "detail": "Wiederherstellung angestossen." if ok else "Konnte Wiederherstellung nicht anstossen (Schreibrecht?)."}
 
 
 @app.get("/", response_class=HTMLResponse)

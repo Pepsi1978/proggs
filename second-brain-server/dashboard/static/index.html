@@ -394,6 +394,10 @@ button{font-family:inherit;cursor:pointer}
 /* ════ EINSTELLUNGEN ════════════════════════════════════════════════════ */
 .settings{max-width:760px}
 .set-section{padding:28px 30px;margin-bottom:20px}
+/* Zwei gleich grosse Kacheln nebeneinander (Bibliothekar-Agent + Google-Drive-Backup); stapelt schmal */
+.set-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.backup-state{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
+.bk-dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex:none;box-shadow:0 0 8px transparent}
 .set-section h3{font-size:18px;font-weight:600;display:flex;align-items:center;gap:11px}
 .set-section h3 .ico{width:30px;height:30px;border-radius:9px;background:var(--surface-2);color:var(--accent);
   display:grid;place-items:center}
@@ -661,20 +665,37 @@ button{font-family:inherit;cursor:pointer}
 
       <!-- ════ EINSTELLUNGEN ════ -->
       <section class="view settings" id="view-settings">
-        <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Bibliothekar-Agent</h3>
-          <p class="set-desc">Wähle das Sprachmodell, mit dem dein Agent denkt und Einträge einordnet.</p>
-          <div class="field">
-            <label for="modelSel">Modell</label>
-            <select class="select" id="modelSel">
-              <option>gemini-3.1-flash-lite</option>
-              <option>gemini-2.5-flash</option>
-              <option>minimax/minimax-m3</option>
-            </select>
+        <div class="set-row">
+          <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Bibliothekar-Agent</h3>
+            <p class="set-desc">Wähle das Sprachmodell, mit dem dein Agent denkt und Einträge einordnet.</p>
+            <div class="field">
+              <label for="modelSel">Modell</label>
+              <select class="select" id="modelSel">
+                <option>gemini-3.1-flash-lite</option>
+                <option>gemini-2.5-flash</option>
+                <option>minimax/minimax-m3</option>
+              </select>
+            </div>
+            <div class="row-end">
+              <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
+              <button class="btn btn-primary" id="saveModelBtn">Speichern</button>
+            </div>
           </div>
-          <div class="row-end">
-            <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
-            <button class="btn btn-primary" id="saveModelBtn">Speichern</button>
+
+          <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 17.6A5 5 0 0 0 18 8h-1.3A7 7 0 1 0 5 15"/><path d="M12 12v9M8.5 17.5 12 21l3.5-3.5"/></svg></span>Google-Drive-Backup</h3>
+            <p class="set-desc">Spiegelt dein Z-Laufwerk (Logbuch + Snapshots) crash-sicher in dein Google Drive. Ein leeres oder abgestürztes Z löscht das Backup nicht.</p>
+            <div class="field">
+              <div class="backup-state"><span class="bk-dot" id="backupDot"></span><span id="backupStateText">lädt…</span></div>
+              <div class="muted-note" id="backupWhen" style="margin-top:8px"></div>
+              <div class="muted-note" id="backupDetail" style="margin-top:4px"></div>
+            </div>
+            <div class="row-end">
+              <span class="muted-note" id="backupStatus" style="margin-right:auto"></span>
+              <button class="btn" id="restoreBtn" title="Nur im Notfall: holt das Backup aus Google Drive zurück (löscht lokal nichts)">Wiederherstellen</button>
+              <button class="btn btn-primary" id="backupBtn">Jetzt sichern</button>
+            </div>
           </div>
         </div>
 
@@ -1204,6 +1225,7 @@ Leitsätze:
       flash("promptStatus","Agent nicht erreichbar — Demo-Text",false);
     }
     loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) anzeigen
+    loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
   }
 
   async function loadLogbook(){
@@ -1250,6 +1272,54 @@ Leitsätze:
   document.getElementById("saveModelBtn") && document.getElementById("saveModelBtn").addEventListener("click", saveModel);
   document.getElementById("savePromptBtn") && document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
   document.getElementById("resetPromptBtn") && document.getElementById("resetPromptBtn").addEventListener("click", resetPrompt);
+
+  /* ── Google-Drive-Backup-Kachel: Status anzeigen + Buttons (Sichern / Wiederherstellen) ───────── */
+  const BK_STATE = {
+    ok:                {t:"Aktuell gesichert",                              c:"var(--good)"},
+    restore_ok:        {t:"Wiederhergestellt",                             c:"var(--good)"},
+    laeuft:            {t:"Sicherung läuft…",                              c:"var(--accent)"},
+    restore_laeuft:    {t:"Wiederherstellung läuft…",                      c:"var(--accent)"},
+    nicht_eingerichtet:{t:"Noch nicht verbunden — einmaliger Google-Login nötig", c:"var(--accent-2)"},
+    uebersprungen:     {t:"Übersprungen — Quelle nicht bereit (Schutz)",   c:"var(--accent)"},
+    fehler:            {t:"Fehler",                                        c:"var(--bad)"},
+    unbekannt:         {t:"Noch kein Backup gelaufen",                     c:"var(--text-faint)"}
+  };
+  function fmtWhen(ts){
+    if(!ts) return "";
+    const d = new Date(ts); if(isNaN(d)) return ts;
+    return d.toLocaleString("de-DE",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  }
+  async function loadBackup(){
+    const dot = document.getElementById("backupDot"), txt = document.getElementById("backupStateText");
+    if(!txt) return;
+    try{
+      const d = await api("/api/backup/status");
+      const s = BK_STATE[d.state] || BK_STATE.unbekannt;
+      txt.textContent = s.t;
+      if(dot){ dot.style.background = s.c; dot.style.boxShadow = "0 0 8px "+s.c; }
+      document.getElementById("backupWhen").textContent =
+        d.ts ? ("zuletzt: "+fmtWhen(d.ts)+(d.files?(" · "+d.files+" Dateien"):"")) : "";
+      document.getElementById("backupDetail").textContent = d.detail || "";
+    }catch(e){
+      txt.textContent = "Status nicht erreichbar";
+      if(dot){ dot.style.background = "var(--bad)"; dot.style.boxShadow = "none"; }
+    }
+  }
+  async function runBackup(){
+    const btn = document.getElementById("backupBtn"); if(!btn) return; btn.disabled = true;
+    try{ const r = await apiSend("/api/backup/run","POST",{}); flash("backupStatus", (r&&r.detail)||"Angestoßen", !(r&&r.ok===false)); }
+    catch(e){ flash("backupStatus","Anstoßen fehlgeschlagen",false); }
+    finally{ btn.disabled = false; setTimeout(loadBackup,2500); setTimeout(loadBackup,8000); }
+  }
+  async function restoreBackup(){
+    if(!confirm("Backup aus Google Drive wiederherstellen?\n\nNur im Notfall (Server neu oder leer). Es wird NICHTS lokal gelöscht — fehlende Dateien werden aus dem Backup ergänzt.")) return;
+    const btn = document.getElementById("restoreBtn"); if(!btn) return; btn.disabled = true;
+    try{ const r = await apiSend("/api/backup/restore","POST",{}); flash("backupStatus", (r&&r.detail)||"Wiederherstellung angestoßen", !(r&&r.ok===false)); }
+    catch(e){ flash("backupStatus","Wiederherstellen fehlgeschlagen",false); }
+    finally{ btn.disabled = false; setTimeout(loadBackup,2500); setTimeout(loadBackup,8000); }
+  }
+  document.getElementById("backupBtn") && document.getElementById("backupBtn").addEventListener("click", runBackup);
+  document.getElementById("restoreBtn") && document.getElementById("restoreBtn").addEventListener("click", restoreBackup);
 
   /* ── Gespräch (Chat): an den Agenten senden ─────────────────────────────── */
   // Eine Sitzungs-ID pro Browser-Sitzung (Agent haelt damit den Gespraechskontext).

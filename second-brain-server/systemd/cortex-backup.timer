@@ -1,0 +1,11 @@
+[Unit]
+Description=Cortex: regelmaessiges Google-Drive-Backup (Sicherheitsnetz neben dem Watcher)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=cortex-backup.service
+
+[Install]
+WantedBy=timers.target

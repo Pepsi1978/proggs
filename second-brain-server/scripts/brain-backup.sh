@@ -66,6 +66,10 @@ done < <(ls -1t "$DEST"/brain-*.snapshot 2>/dev/null | tail -n +$((KEEP+1)))
 
 count=$(ls -1 "$DEST"/brain-*.snapshot 2>/dev/null | wc -l)
 log "OK: $(basename "$out") ($dl bytes, API meldete $apisize) gesichert; $count Snapshot(s) im Ordner (KEEP=$KEEP, $removed rotiert)"
+
+# Frisch erstellten Snapshot sofort ins Google-Drive-Backup spiegeln (best effort; eigenes Logging/Status)
+/opt/second-brain/scripts/gedanken-gdrive-backup.sh >/dev/null 2>&1 || true
+
 exit 0
 
 # ── Installation (einmalig, als root auf dem VPS) ───────────────────────────
