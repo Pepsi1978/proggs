@@ -1,0 +1,17 @@
+# Caddy — HTTPS-Reverse-Proxy NUR fuer das private Cockpit (Mikrofon braucht "secure context").
+# Sicherheit: Caddy wird in compose an 10.8.0.1:443 gebunden (WireGuard-IP) — NICHT 0.0.0.0.
+# Damit ist https://10.8.0.1 GENAUSO nur ueber den VPN-Tunnel erreichbar wie http://10.8.0.1:8003.
+# TLS: interne Caddy-CA (KEIN Let's Encrypt) — kein oeffentlicher DNS, keine offenen Ports 80/443
+# nach aussen, keine ACME-/Rate-Limit-Fallen (bugs/server/reverse-proxy-tls.md §1). Das Cert wird
+# fuer die IP 10.8.0.1 ausgestellt; Frank importiert die Root-CA einmal (oder akzeptiert die Warnung).
+{
+	admin off
+	# interne CA -> Root-Cert liegt persistent im caddy_data-Volume (sonst neue CA bei jedem Restart, §1.2)
+}
+
+https://10.8.0.1 {
+	tls internal
+	# Upstream ist der Dashboard-Container im Compose-Netz (interner DNS-Name). Caddy prueft Upstreams
+	# nicht beim Start -> depends_on + restart:unless-stopped als Selbstheilung (§2.1).
+	reverse_proxy dashboard:8003
+}
