@@ -53,8 +53,17 @@ foreach ($d in $map.Keys) {
         if ($ln -match [regex]::Escape($map[$d]) -and $ln.TrimStart().StartsWith('OK')) { $okState = $true; break }
     }
     if ($okState) { Log "$d ist OK"; continue }
-    cmd /c "net use $d /delete /y" 2>$null | Out-Null
-    cmd /c "net use $d $($map[$d]) /persistent:yes" 2>$null | Out-Null
-    Log "$d war nicht verbunden -> reconnect"
+    # Alte (ggf. tote) Verbindung loesen — ein Fehlschlag hier ist normal (war nicht verbunden), nicht loggen.
+    cmd /c "net use $d /delete /y" 2>&1 | Out-Null
+    # Neu mappen — Ergebnis NICHT verschlucken: Exit-Code + Meldung ins Log (Observability-First).
+    # Ohne dieses Logging war der eigentliche Mapping-Fehlschlag unsichtbar (nur "Status: Running" stand im Log).
+    $out = cmd /c "net use $d $($map[$d]) /persistent:yes" 2>&1
+    $code = $LASTEXITCODE
+    $msg = ($out | Where-Object { $_ -and $_.ToString().Trim() } | Select-Object -Last 1)
+    if ($code -eq 0) {
+        Log "$d war nicht verbunden -> reconnect OK ($($map[$d]))"
+    } else {
+        Log "$d reconnect FEHLGESCHLAGEN (Exit $code): $msg"
+    }
 }
 exit 0
