@@ -41,6 +41,7 @@
 | 13 | Klicks/Luecken zwischen Saetzen | EIN offener Output, BufferedWaveProvider, PCM statt MP3 | §4.3 |
 | 14 | Einzelwort ("ja") in falscher Sprache | `language=de` IMMER explizit, nie Auto-Detect | §6.1 |
 | 15 | Haengender STT friert Turn 60 s ein | Groq-Timeout auf 5–10 s, EIN statischer HttpClient | §6.2 |
+| 16 | Diktat-Live-Vorschau ueberschreibt finale Fassung / springt im Feld ⭐⭐ | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt NUR die finale Engine | §7 |
 
 ---
 
@@ -269,6 +270,36 @@ EU-Latenz-Hebel (TLS-Handshake nur einmal); `x-groq-region`-Header zur Diagnose.
 **Quelle:** Groq Errors/SDK-Doku · Groq Optimizing-Latency-Doku.
 
 ---
+
+## 7. Hybrid-Diktat: Live-Vorschau + finale Transkription
+
+### 7.1 Live-Vorschau ueberschreibt die finale Fassung / wird versehentlich gesendet   [⭐⭐ EIGENER VORFALL 2026-06-24]
+**Symptom:** Beim Diktat mit ZWEI STT-Quellen (schnelle Live-Engine wie Web Speech API fuer die
+Sofort-Vorschau + Qualitaets-Engine wie Whisper/Groq fuer die finale Fassung MIT Satzzeichen) landet am
+Ende die ROHE Live-Vorschau im Feld (ohne Satzzeichen) statt der finalen Transkription. Manchmal wird die
+Vorschau sogar abgeschickt, bevor die finale Engine fertig ist.
+**Ursache:** Die Live-Engine (`SpeechRecognition`) feuert nach `stop()`/`abort()` oft noch ein spaetes
+`onresult`/`onend`. Schreibt dieser Handler weiterhin ins Zielfeld, ueberschreibt die rohe Vorschau die
+schon gesetzte finale Fassung (Race); ein automatischer Auto-Send greift dann die Vorschau ab.
+**FIX (zeitlicher Riegel):** Ein Flag `previewActive` — `true` beim Start der Vorschau, **`false` SOFORT
+beim Stopp** (vor der finalen Transkription) UND beim Entfernen der Vorschau. Der Vorschau-Handler beginnt
+mit `if (!previewActive) return;`. Ab dem Stopp schreibt AUSSCHLIESSLICH die finale Engine ins Zielfeld —
+die rohe Vorschau kann es nie mehr veraendern und nie versehentlich gesendet werden.
+**Fallback (funktionserhaltend):** Faellt die finale Engine aus, bleibt die Vorschau als Notnagel im Feld —
+aber MIT sichtbarem Hinweis ("unkorrigierte Vorschau ohne Satzzeichen"), nie stillschweigend als echte Fassung.
+**Quelle:** eigener Vorfall 2026-06-24 (second-brain Dashboard 0.5.1, overlays 0.6.4). Verifiziert.
+
+### 7.2 Live-Vorschau "springt"/flackert im Eingabefeld   [⭐ EIGENER VORFALL 2026-06-24]
+**Symptom:** Waehrend des Sprechens springt/flackert der Text, Woerter zappeln hin und her, Cursor/Scroll
+springen — statt ruhig Wort fuer Wort zu erscheinen.
+**Ursache:** Die interim results revidieren sich staendig; wird jede Revision ins Zielfeld geschrieben,
+flackert es. Besonders schlimm bei fremden `contenteditable`-Feldern (Paste-Simulation selektiert+ersetzt →
+Cursor/Scroll springen, siehe `bugs/web/chrome-extensions.md` #74).
+**FIX:** Die Live-Vorschau NICHT roh ins Zielfeld schreiben. Eigenes `<textarea>`: `value` relativ zum
+Basis-Text setzen (still genug, EINE Quelle). Fremdes Feld: Vorschau in ein SEPARATES schwebendes Element,
+Zielfeld bleibt bis zur finalen Fassung unberuehrt. Glaetten: kleiner Debounce (~120 ms), finale Woerter
+deckend, interim gedimmt/kursiv optisch trennen.
+**Quelle:** eigener Vorfall 2026-06-24. Gegenseite: `best-practices/desktop/voice-pipeline.md` §9.
 
 ## Fix-Status (Stand 2026-06-10, per gh verifiziert)
 

@@ -37,6 +37,7 @@ VoiceAgent **1.2.0**.
 | 13 | STT-Requests fuer Voice | `language=de` explizit, Timeout 5–10 s, EIN HttpClient | §6 |
 | 14 | Frueherkennung sichern | Jeden FSM-Uebergang + Stufen-Latenz als CHECKPOINT loggen | §7 |
 | 15 | Aufnahme nicht von aussen abwuergen | Busy-Status (Aufnahme/Transkription) ueber lokalen Endpoint exponieren; Deploy/Rebuild/Kill wartet auf Ruhe | §8 |
+| 16 | Hybrid-Diktat (Live-Vorschau + finale Engine) | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt nur die finale Engine; Fallback mit Hinweis | §9 |
 
 ---
 
@@ -202,6 +203,32 @@ Macht „kein Datenverlust durch Neustart mitten in der Aufnahme/Uebergabe" stru
 von Disziplin abhaengig.
 
 ---
+
+## 9. Hybrid-Diktat: Live-Vorschau + finale Transkription (so baut man es richtig)
+
+Viele Diktat-UIs kombinieren zwei STT-Quellen: eine **schnelle Live-Engine** (Web Speech API,
+`interimResults`) fuer die Sofort-Vorschau WAEHREND des Sprechens und eine **Qualitaets-Engine**
+(Whisper/Groq) fuer die finale Fassung MIT Satzzeichen beim Stopp. Damit das fluessig wirkt UND die finale
+Fassung immer gewinnt:
+
+- **Vorschau strikt vom Zielfeld trennen.** Rohe interim results NIE direkt ins finale Zielfeld schreiben.
+  Eigenes `<textarea>`: `value` relativ zum Basis-Text setzen (still). Fremdes `contenteditable`
+  (ChatGPT/Claude): Vorschau in ein SEPARATES schwebendes Element — Zielfeld bleibt bis zur finalen Fassung
+  unberuehrt (kein Flackern/Springen, siehe `best-practices/web/chrome-extensions.md` §7). `extern`
+- **Zeitlicher Riegel `previewActive`** (DER Kernschutz): `true` bei Vorschau-Start, **`false` sofort beim
+  Stopp** (vor der finalen Transkription) und beim Entfernen der Vorschau. Der Vorschau-Handler beginnt mit
+  `if (!previewActive) return;`. So kann ein spaetes `onresult`/`onend` der Live-Engine die finale Fassung
+  nicht mehr ueberschreiben — ab dem Stopp schreibt nur die finale Engine ins Feld. `extern`
+- **Finale Engine ist die EINZIGE Quelle fuers Zielfeld.** Erst ihr Ergebnis (mit Satzzeichen) wird
+  eingefuegt; Auto-Send erst NACH der finalen Fassung.
+- **Glaetten:** kleiner Debounce (~120 ms) auf die Vorschau-Updates; finale Woerter deckend, interim
+  gedimmt/kursiv — ruhiges Live-Untertitel-Gefuehl.
+- **Fallback funktionserhaltend:** Faellt die finale Engine aus, Vorschau als Notnagel behalten, aber MIT
+  sichtbarem Hinweis ("unkorrigiert, ohne Satzzeichen") — nie stillschweigend als echte Fassung nutzen.
+- **Sprache explizit** setzen (`lang=de`), nicht Auto-Detect (siehe §6).
+
+Belegt: eigener Vorfall 2026-06-24 (second-brain Dashboard 0.5.1, overlays 0.6.4) — von Frank bestaetigt
+("funktioniert wirklich super"). Bug-Gegenseite: `bugs/desktop/voice-pipeline.md` §7.
 
 ## 🔗 Kopplung zum Bug-Almanach (wechselseitige Bezugstabelle)
 

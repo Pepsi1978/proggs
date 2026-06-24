@@ -38,6 +38,7 @@
 | 13 | `storage.sync.set` QUOTA-Fehler | 8 KB/Item: pro Datensatz EIN Key | #28, #37 |
 | 14 | Erweiterung nach Update deaktiviert | Neue Permission als `optional_permissions` | #40 |
 | 15 | Sicherheit / Store | `sender` validieren, keine Secrets im Bundle; MV2 ist tot (≥139) | #55, #58, #64 |
+| 16 | STT-Live-Vorschau springt im Feld / wird statt finaler Fassung gesendet | Vorschau ins schwebende Overlay (NICHT ins `contenteditable`); `previewActive`-Riegel: nur finale Whisper-Fassung ins Feld | #74 |
 
 ---
 
@@ -877,6 +878,24 @@ Observer nicht an globale Dauer-Elemente binden wenn vermeidbar; bei SPA-Navi ne
 **Quelle:** Common causes of memory leaks in extensions; makandra.
 
 ---
+
+### 74. STT-Diktat: Live-Vorschau springt im contenteditable / ueberschreibt die finale Transkription   [⭐ EIGENER VORFALL 2026-06-24]
+**Symptom:** Beim Mikrofon-Diktat im Overlay (Web Speech Live-Vorschau + Groq Whisper finale Fassung)
+springt/flackert der Text im Seiten-Eingabefeld (ChatGPT/Claude/Grok), Woerter zappeln hin und her; oft
+wird am Ende die ROHE Vorschau (ohne Satzzeichen) abgeschickt statt der finalen Whisper-Fassung.
+**Ursache:** (1) Die rohen interim results wurden per Paste-Simulation ins fremde `contenteditable`
+geschrieben — jeder Paste selektiert+ersetzt → Cursor/Scroll springen, es flackert. (2) Web Speech feuert
+nach `abort()` noch ein spaetes `onresult` → ohne Riegel ueberschreibt die Vorschau die finale Fassung bzw.
+ein Auto-Send greift sie ab.
+**Versionen:** alle Chrome/Edge MV3 (per Design der Web Speech API + contenteditable).
+**FIX:** Live-Vorschau in ein SEPARATES schwebendes Overlay-Element schreiben (z.B. `#stt-live-preview`),
+NICHT ins Seiten-Feld — kein Flackern/Springen mehr. Zeitlicher Riegel `previewActive` (true bei
+Vorschau-Start, false SOFORT beim Stopp + beim Entfernen): der `onresult`-Handler beginnt mit
+`if (!previewActive) return;`. So gelangt AUSSCHLIESSLICH die finale Whisper-Fassung (mit Satzzeichen) ins
+Feld und wird gesendet — die rohe Vorschau nie. Fallback bei Groq-Ausfall: Vorschau behalten, aber mit
+sichtbarem Hinweis (funktionserhaltend). Generisches, technologie-neutrales Muster:
+`bugs/desktop/voice-pipeline.md` §7 + `best-practices/desktop/voice-pipeline.md` §9.
+**Quelle:** eigener Vorfall 2026-06-24 (overlays 0.6.4). Verifiziert — von Frank bestaetigt.
 
 ## Fix-Status: was ist (belegt) gefixt vs. noch offen
 

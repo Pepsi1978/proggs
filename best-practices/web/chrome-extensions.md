@@ -29,6 +29,7 @@
 | 12 | Native Messaging | Host-`name` exakt; `.bat`-Wrapper; bei Disconnect reconnecten | §8 |
 | 13 | Debugging | Idle-Bugs OHNE offene DevTools reproduzieren; gepackte Version testen | §9, §10 |
 | 14 | Store-Publish | Single Purpose, jede Permission begruenden, Privacy-Tab | §10 |
+| 15 | STT-Diktat mit Live-Vorschau | Vorschau ins schwebende Overlay (nie ins `contenteditable`); `previewActive`-Riegel → nur finale Whisper-Fassung ins Feld | §7 |
 
 ## Inhalt
 1. [Service Worker / Background](#1-service-worker--background)
@@ -303,6 +304,24 @@ Fuer Overlays/Voice/TTS zentral — der SW kann KEIN Audio/Media. (offiziell, Qu
     via declarativeNetRequest `modifyHeaders` `set` (nicht `append`), nicht ueber webRequest. (offiziell: DNR)
 
 ---
+
+### 7.x STT-Diktat mit Live-Vorschau (Hybrid: Web Speech live + Whisper final)
+
+Die rohen interim results der Web Speech API **NIE ins Seiten-`contenteditable` schreiben** —
+Paste-Simulation selektiert+ersetzt staendig → Springen/Flackern, und die rohe Vorschau kann versehentlich
+gesendet werden. Stattdessen:
+
+- **Live-Vorschau in ein SEPARATES schwebendes Overlay-Element** (eigenes `#stt-live-preview`, final deckend
+  / interim gedimmt-kursiv); das Seiten-Feld bleibt unberuehrt → kein Springen.
+- **Zeitlicher Riegel `previewActive`** (true bei Start, false sofort beim Stopp + beim Entfernen): der
+  `onresult`-Handler beginnt mit `if (!previewActive) return;`. Nach dem Stopp schreibt AUSSCHLIESSLICH die
+  finale Whisper-Fassung (mit Satzzeichen) ins Feld, die rohe Vorschau nie — und der Auto-Send greift nur die
+  finale Fassung ab.
+- **Fallback bei STT-Ausfall:** Vorschau behalten + sichtbarer Hinweis ("unkorrigiert, ohne Satzzeichen") —
+  funktionserhaltend, nie stillschweigend als echte Fassung.
+
+Generisches, technologie-neutrales Muster: `best-practices/desktop/voice-pipeline.md` §9. Bug-Gegenseite:
+`bugs/web/chrome-extensions.md` #74. (eigener Vorfall 2026-06-24, overlays 0.6.4 — von Frank bestaetigt)
 
 ## 8. Native Messaging & Plattform-Integration
 
