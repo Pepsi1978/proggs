@@ -707,23 +707,21 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v12H4z"/><path d="m8 20 4-4 4 4"/><path d="M8 9h8M8 12h5"/></svg></span>System-Prompt</h3>
-          <p class="set-desc">Die Grundinstruktion deines Agenten — wie er denkt, ordnet und antwortet.</p>
+          <p class="set-desc" id="promptDesc">Drei Agenten — jeder hat seinen eigenen Prompt. Wähle einen aus und bearbeite ihn.</p>
+          <div id="promptRoles" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn prole-btn" data-role="haupt" type="button">Hauptagent</button>
+            <button class="btn prole-btn" data-role="speicher" type="button">Speicheragent</button>
+            <button class="btn prole-btn" data-role="abfrage" type="button">Abfrageagent</button>
+          </div>
           <div class="field">
-            <textarea class="textarea" id="promptArea" spellcheck="false">Du bist der Bibliothekar von Cortex, einem privaten zweiten Gehirn.
-Deine Aufgabe: neue Notizen verstehen, in die passende Kategorie einordnen
-und auf Nachfrage präzise, ruhige Antworten aus dem Gedächtnis liefern.
-
-Leitsätze:
-• Weniger ist mehr — antworte knapp und auf den Punkt.
-• Zitiere Einträge wörtlich, wenn sie relevant sind.
-• Erfinde niemals Inhalte, die nicht im Gedächtnis stehen.</textarea>
+            <textarea class="textarea" id="promptArea" spellcheck="false" placeholder="Prompt lädt…"></textarea>
           </div>
           <div class="row-end">
             <span class="muted-note" id="promptStatus" style="margin-right:auto"></span>
             <button class="btn" id="resetPromptBtn">Zurücksetzen</button>
             <button class="btn btn-primary" id="savePromptBtn">Speichern</button>
           </div>
-          <div style="margin-top:8px"><span class="muted-note">🔒 Antwort-Format (JSON-Schema) und Kategorienliste werden automatisch ergänzt und sind geschützt.</span></div>
+          <div style="margin-top:8px"><span class="muted-note" id="promptSchemaNote">🔒 Antwort-Format (JSON-Schema) und Kategorienliste werden automatisch ergänzt und sind geschützt.</span></div>
         </div>
 
         <div class="card set-section">
@@ -1222,7 +1220,7 @@ Leitsätze:
   })();
 
   /* ── Einstellungen: Modell + System-Prompt laden / speichern / zurücksetzen ── */
-  let promptDefault = "";
+  let promptDefault = "", promptRole = "haupt";
   async function apiSend(path, method, body){
     const r = await fetch(path,{method, headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify(body)});
     if(!r.ok) throw new Error(r.status);
@@ -1243,14 +1241,8 @@ Leitsätze:
       const fill = (id, cur)=>{ const sel=document.getElementById(id); if(sel) sel.innerHTML = avail.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join(""); };
       fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
     }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
-    /* System-Prompt (echten, bearbeitbaren Teil) laden */
-    try{
-      const p = await api("/api/prompt");
-      promptDefault = p.default || "";
-      document.getElementById("promptArea").value = p.instructions || "";
-    }catch(e){
-      flash("promptStatus","Agent nicht erreichbar — Demo-Text",false);
-    }
+    /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
+    await loadPrompt(promptRole);
     loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) anzeigen
     loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
   }
@@ -1285,10 +1277,38 @@ Leitsätze:
     catch(e){ flash("modelStatus","Speichern fehlgeschlagen",false); }
     finally{ btn.disabled = false; }
   }
+  /* Prompt EINER Rolle laden + Button-Markierung/Hinweise aktualisieren */
+  const ROLE_LABELS = {haupt:"Hauptagent", speicher:"Speicheragent", abfrage:"Abfrageagent"};
+  const ROLE_DESC = {
+    haupt:    "Redet mit dir und steuert die anderen beiden. Sein Routing-Format (JSON) ist geschützt.",
+    speicher: "Legt bestätigte Infos 1:1 ab und bestimmt Kategorie + Titel. Sein Antwort-Format (JSON) ist geschützt.",
+    abfrage:  "Sucht im Gehirn und antwortet — nur aus echten Treffern (das ist fest geschützt)."
+  };
+  function markRole(role){
+    document.querySelectorAll("#promptRoles .prole-btn").forEach(b=>{
+      const on = b.dataset.role === role;
+      b.classList.toggle("btn-primary", on);
+    });
+    const desc = document.getElementById("promptDesc"); if(desc) desc.textContent = ROLE_DESC[role] || "";
+  }
+  async function loadPrompt(role){
+    promptRole = role; markRole(role);
+    const ta = document.getElementById("promptArea");
+    ta.value = "";
+    try{
+      const p = await api("/api/prompt?role="+encodeURIComponent(role));
+      promptDefault = p.default || "";
+      ta.value = p.instructions || "";
+      const note = document.getElementById("promptSchemaNote");
+      if(note) note.textContent = "🔒 Geschützt (wird automatisch ergänzt): " + (p.schema_preview ? p.schema_preview.slice(0,160).replace(/\s+/g," ") + "…" : "—");
+    }catch(e){
+      flash("promptStatus","Agent nicht erreichbar",false);
+    }
+  }
   async function savePrompt(){
     const btn = document.getElementById("savePromptBtn"), ta = document.getElementById("promptArea");
     btn.disabled = true;
-    try{ await apiSend("/api/prompt","PUT",{instructions:ta.value}); flash("promptStatus","System-Prompt gespeichert"); }
+    try{ await apiSend("/api/prompt","PUT",{instructions:ta.value, role:promptRole}); flash("promptStatus",ROLE_LABELS[promptRole]+"-Prompt gespeichert"); }
     catch(e){ flash("promptStatus","Speichern fehlgeschlagen",false); }
     finally{ btn.disabled = false; }
   }
@@ -1300,6 +1320,10 @@ Leitsätze:
   document.getElementById("saveModelBtn") && document.getElementById("saveModelBtn").addEventListener("click", saveModel);
   document.getElementById("savePromptBtn") && document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
   document.getElementById("resetPromptBtn") && document.getElementById("resetPromptBtn").addEventListener("click", resetPrompt);
+  /* Umschalt-Buttons: Prompt der gewählten Rolle laden */
+  document.querySelectorAll("#promptRoles .prole-btn").forEach(b=>{
+    b.addEventListener("click", ()=> loadPrompt(b.dataset.role));
+  });
 
   /* ── Google-Drive-Backup-Kachel: Status anzeigen + Buttons (Sichern / Wiederherstellen) ───────── */
   const BK_STATE = {

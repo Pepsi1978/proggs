@@ -41,7 +41,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.6.0"  # 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.7.0"  # 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -74,7 +74,10 @@ LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
 
 # Persistente, vom Dashboard editierbare Einstellungen (ueberleben Neustart via compose-Volume).
 AGENT_DATA_DIR = os.getenv("AGENT_DATA_DIR", "/app/data")
-PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"      # editierbarer Instruktions-Teil des System-Prompts
+# DREI editierbare Prompts (Frank-Wunsch 2026-06-24) — je Rolle eine eigene Datei.
+ROLES = ("haupt", "speicher", "abfrage")
+PROMPT_FILES = {r: Path(AGENT_DATA_DIR) / f"{r}-prompt.txt" for r in ROLES}
+LEGACY_PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"  # alter GEMEINSAMER Prompt -> wird zum Haupt-Prompt migriert
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
 # Auswahl fuers Dashboard-Dropdown. gemini-3.1-pro + gemini-3.1-flash bewusst entfernt (Frank, #NNN);
 # es bleiben gemini-3.1-flash-lite + gemini-2.5-flash. minimax/minimax-m3 laeuft ueber OpenCode Zen Go
@@ -289,11 +292,12 @@ def _new_session(user_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # System-Prompts — DREI Koepfe (Agenten-Dreiteilung, Frank-Wunsch 2026-06-24)
 # ---------------------------------------------------------------------------
-#   DEFAULT_INSTRUCTIONS = Persona/Ton des HAUPTAGENTEN (editierbar im Dashboard). Er redet mit Frank,
-#     erkennt die Absicht und ROUTET intern an Speicher-/Abfrageagent. Frank merkt von den Helfern nichts.
-#   ROUTER_SCHEMA = das CODE-KRITISCHE JSON-Routing-Format des Hauptagenten (nicht editierbar).
-#   SPEICHER_SYSTEM = fester Prompt des SPEICHERAGENTEN (Kategorie/Titel; Text wird 1:1 abgelegt).
-#   Der ABFRAGEAGENT nutzt load_instructions()+llm_answer (Antwort NUR aus echten Treffern).
+#   ALLE DREI Rollen haben einen EIGENEN editierbaren Prompt (Dashboard, je eigene Datei). Pro Rolle
+#   wird der CODE-kritische Teil GESCHUETZT automatisch angehaengt — ein veraenderter Text kann ihn nie aushebeln:
+#   DEFAULT_INSTRUCTIONS = Persona/Ton des HAUPTAGENTEN (Rolle 'haupt') + geschuetztes ROUTER_SCHEMA.
+#     Er redet mit Frank, erkennt die Absicht und ROUTET intern an Speicher-/Abfrageagent.
+#   DEFAULT_SPEICHER = Anweisung des SPEICHERAGENTEN (Rolle 'speicher', Kategorie/Titel) + geschuetztes SPEICHER_SCHEMA.
+#   DEFAULT_ABFRAGE = Stil des ABFRAGEAGENTEN (Rolle 'abfrage'); Anti-Halluzinations-Constraint bleibt fest in llm_answer.
 # WICHTIG: "Erst zurueckfragen, dann speichern" wird im CODE erzwungen (Zustandsautomat in /chat),
 # NICHT nur ueber den Prompt — auch ein veraenderter Persona-Text kann es daher nie aushebeln.
 DEFAULT_INSTRUCTIONS = """Du bist der Hauptagent von Cortex, Franks zweitem Gehirn — sein direkter Gespraechspartner. Du sprichst ganz normales, freundliches Deutsch und kannst ueber alles reden (Smalltalk, Wetter, Alltag, Gedanken).
@@ -345,38 +349,78 @@ Frank: "Hey, wie laeuft's bei dir?"
 
 Gib NUR das JSON-Objekt aus, sonst nichts."""
 
-# Fester Prompt des SPEICHERAGENTEN: bekommt einen bereits BESTAETIGTEN Text und legt ihn 1:1 ab —
-# bestimmt nur Kategorie + Titel (+ optional Dubletten-Ersatz). {kategorien} wird zur Laufzeit ersetzt.
-SPEICHER_SYSTEM = """Du bist der Speicheragent von Cortex. Du bekommst einen Text, der WORTWOERTLICH 1:1 ins Gehirn gelegt wird — du aenderst, kuerzt oder deutest ihn NIEMALS. Deine einzige Aufgabe: die passende KATEGORIE und einen kurzen TITEL bestimmen.
+# Editierbarer Persona-/Anweisungs-Teil des SPEICHERAGENTEN (Dashboard). {kategorien} wird zur
+# Laufzeit ersetzt. Das JSON-Format (SPEICHER_SCHEMA) wird geschuetzt angehaengt — auch ein
+# veraenderter Persona-Text kann das Speicher-Format daher nie aushebeln.
+DEFAULT_SPEICHER = """Du bist der Speicheragent von Cortex. Du bekommst einen Text, der WORTWOERTLICH 1:1 ins Gehirn gelegt wird — du aenderst, kuerzt oder deutest ihn NIEMALS. Deine einzige Aufgabe: die passende KATEGORIE und einen kurzen TITEL bestimmen.
 
 BESTEHENDE KATEGORIEN (ASCII-klein): {kategorien}
 - Waehle wenn moeglich EINE bestehende Kategorie (auch nur grob passend).
 - Nur wenn WIRKLICH keine passt, schlage GENAU EINEN neuen Kategorie-Schluessel vor: nur ASCII-Kleinbuchstaben, Ziffern, Bindestriche (z.B. 'reise-ideen') — keine Umlaute, keine Leerzeichen, keine Sonderzeichen.
 - Gibt es unter 'AEHNLICHE VORHANDENE EINTRAEGE' einen, der im Kern DIESELBE Info ist, setze 'replace_title' auf dessen EXAKTEN Titel (dann wird er ersetzt); sonst 'replace_title' leer "".
-- Titel: hoechstens ~60 Zeichen, mit echten Umlauten, keine Anfuehrungszeichen.
+- Titel: hoechstens ~60 Zeichen, mit echten Umlauten, keine Anfuehrungszeichen."""
 
-ANTWORTE AUSSCHLIESSLICH MIT EINEM EINZIGEN, NACKTEN JSON-OBJEKT:
+# Geschuetztes Antwort-Format des Speicheragenten (nicht editierbar — Code-kritisch, wird in
+# build_speicher_prompt automatisch angehaengt).
+SPEICHER_SCHEMA = """ANTWORTE AUSSCHLIESSLICH MIT EINEM EINZIGEN, NACKTEN JSON-OBJEKT:
 {"category":"kategorie_schluessel","title":"Kurzer Titel","replace_title":""}"""
 
+# Editierbarer Persona-/Stil-Teil des ABFRAGEAGENTEN (Dashboard). Bestimmt Ton/Stil der Antwort.
+# Die Anti-Halluzinations-Constraints (NUR aus den Treffern, nichts erfinden) bleiben geschuetzt
+# und werden in llm_answer fest im Auftrag mitgegeben — ein veraenderter Stil-Text hebelt sie nie aus.
+DEFAULT_ABFRAGE = """Du bist der Abfrageagent von Cortex, Franks zweitem Gehirn. Du bekommst eine Frage und die dazu im Gehirn gefundenen Eintraege und formulierst daraus eine klare, freundliche Antwort.
 
-def load_instructions() -> str:
-    """Editierbaren Instruktions-Teil aus prompt.txt laden; Fallback = eingebauter Default."""
+SPRACHE: normales, freundliches Deutsch mit echten Umlauten (ä, ö, ü, ß), niemals ae/oe/ue/ss.
+TON: ruhig und auf den Punkt; passe dich Franks Frage an. Beginne mit einem kurzen Hinweis, dass du in seinem Gedaechtnis nachgeschaut hast (z.B. 'Ich hab in deinem Gedaechtnis nachgeschaut — ')."""
+
+
+# Eingebaute Defaults je Rolle (fuer 'Zuruecksetzen' und Erst-Start).
+DEFAULTS = {"haupt": DEFAULT_INSTRUCTIONS, "speicher": DEFAULT_SPEICHER, "abfrage": DEFAULT_ABFRAGE}
+
+
+def _norm_role(role: str | None) -> str:
+    r = (role or "haupt").strip().lower()
+    return r if r in ROLES else "haupt"
+
+
+def load_instructions(role: str = "haupt") -> str:
+    """Editierbaren Prompt-Teil EINER Rolle laden; Fallback = eingebauter Default.
+    Migration (Funktionserhalt): existiert fuer 'haupt' noch keine eigene Datei, aber der alte
+    GEMEINSAME prompt.txt, gilt dessen Inhalt als Haupt-Prompt — Franks bisheriger Prompt bleibt erhalten."""
+    role = _norm_role(role)
+    f = PROMPT_FILES[role]
     try:
-        if PROMPT_FILE.exists():
-            txt = PROMPT_FILE.read_text(encoding="utf-8").strip()
+        if f.exists():
+            txt = f.read_text(encoding="utf-8").strip()
+            if txt:
+                return txt
+        if role == "haupt" and LEGACY_PROMPT_FILE.exists():
+            txt = LEGACY_PROMPT_FILE.read_text(encoding="utf-8").strip()
             if txt:
                 return txt
     except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "prompt.txt nicht lesbar — nutze Default", err=str(e))
-    return DEFAULT_INSTRUCTIONS
+        _log(logging.WARNING, "Prompt-Datei nicht lesbar — nutze Default", role=role, err=str(e))
+    return DEFAULTS.get(role, DEFAULT_INSTRUCTIONS)
 
 
-def save_instructions(text: str) -> None:
-    """Atomar schreiben (temp -> os.replace), UTF-8, LF."""
+def is_prompt_default(role: str = "haupt") -> bool:
+    """True, wenn fuer die Rolle (noch) keine eigene Datei existiert (und kein Legacy-Fallback greift)."""
+    role = _norm_role(role)
+    if PROMPT_FILES[role].exists():
+        return False
+    if role == "haupt" and LEGACY_PROMPT_FILE.exists():
+        return False
+    return True
+
+
+def save_instructions(text: str, role: str = "haupt") -> None:
+    """Atomar schreiben (temp -> os.replace), UTF-8, LF — pro Rolle eigene Datei."""
+    role = _norm_role(role)
+    f = PROMPT_FILES[role]
     Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
-    tmp = PROMPT_FILE.with_suffix(".tmp")
+    tmp = f.with_suffix(".tmp")
     tmp.write_text(text, encoding="utf-8", newline="\n")
-    os.replace(tmp, PROMPT_FILE)
+    os.replace(tmp, f)
 
 
 def load_models() -> dict:
@@ -406,17 +450,19 @@ def save_models(models: dict) -> None:
 
 
 def build_hauptagent_prompt() -> str:
-    """System-Prompt des HAUPTAGENTEN: editierbare Persona (load_instructions) + festes Routing-Schema.
+    """System-Prompt des HAUPTAGENTEN: editierbare Persona (Rolle 'haupt') + festes Routing-Schema.
     Der Hauptagent kategorisiert NICHT (das macht der Speicheragent) — ein evtl. alter {kategorien}-Marker
     aus einem gespeicherten Persona-Text wird daher neutralisiert."""
-    instr = load_instructions().replace("{kategorien}", "(waehlt der Speicheragent)")
+    instr = load_instructions("haupt").replace("{kategorien}", "(waehlt der Speicheragent)")
     return instr + "\n\n" + ROUTER_SCHEMA
 
 
 def build_speicher_prompt(categories: list[str]) -> str:
-    """System-Prompt des SPEICHERAGENTEN: fester Prompt mit der aktuellen Kategorienliste."""
+    """System-Prompt des SPEICHERAGENTEN: editierbare Anweisung (Rolle 'speicher', {kategorien}
+    ersetzt) + geschuetztes JSON-Schema. Das Format bleibt fest, auch wenn Frank den Text aendert."""
     cat_line = ", ".join(categories) if categories else "(noch keine)"
-    return SPEICHER_SYSTEM.replace("{kategorien}", cat_line)
+    instr = load_instructions("speicher").replace("{kategorien}", cat_line)
+    return instr + "\n\n" + SPEICHER_SCHEMA
 
 
 def _history_text(session: dict) -> str:
@@ -535,9 +581,11 @@ def llm_answer(session: dict, question: str, hits: list[dict], categories: list[
     else:
         hits_txt = "(keine Treffer gefunden)"
 
-    # Ein Prompt: der editierbare Instruktions-Teil (mit {kategorien} ersetzt), OHNE SCHEMA_BLOCK.
+    # Editierbarer Stil-Prompt des ABFRAGEAGENTEN (Rolle 'abfrage'); {kategorien} optional ersetzt.
+    # KEIN JSON-Schema (Freitext-Antwort). Die Anti-Halluzinations-Constraints stehen unten im
+    # Auftrag (geschuetzt) — ein veraenderter Stil-Text kann sie nicht aushebeln.
     cat_line = ", ".join(categories) if categories else "(noch keine)"
-    instr = load_instructions().replace("{kategorien}", cat_line)
+    instr = load_instructions("abfrage").replace("{kategorien}", cat_line)
     user_block = (
         f"BISHERIGES GESPRAECH:\n{_history_text(session)}\n\n"
         f"GEFUNDENE EINTRAEGE (aus Franks Gehirn — NUR diese als Quelle nutzen, nichts erfinden):\n{hits_txt}\n\n"
@@ -643,7 +691,7 @@ async def lifespan(app: FastAPI):
     if any(_is_opencode(m) for m in ROLE_MODELS.values()):
         probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
     _log(logging.INFO, "sb-agent gestartet", version=VERSION, models=ROLE_MODELS,
-         prompt_quelle=("datei" if PROMPT_FILE.exists() else "default"), data_dir=AGENT_DATA_DIR)
+         prompts=[r for r in ROLES if not is_prompt_default(r)] or ["alle default"], data_dir=AGENT_DATA_DIR)
     task = asyncio.create_task(_flush_loop())
     _log(logging.INFO, "Flush-Loop gestartet")
     try:
@@ -673,7 +721,8 @@ class EndReq(BaseModel):
 
 
 class PromptReq(BaseModel):
-    instructions: str = Field(..., min_length=1, description="Editierbarer Instruktions-Teil des System-Prompts")
+    instructions: str = Field(..., min_length=1, max_length=20000, description="Editierbarer Instruktions-Teil des System-Prompts")
+    role: str | None = Field(default="haupt", description="Welcher Agent: haupt | speicher | abfrage (Default haupt)")
 
 
 class ConfigReq(BaseModel):
@@ -714,20 +763,35 @@ def health() -> dict:
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
+# Nur zur Anzeige im Dashboard: was pro Rolle geschuetzt automatisch angehaengt wird.
+SCHEMA_PREVIEWS = {
+    "haupt": ROUTER_SCHEMA,
+    "speicher": SPEICHER_SCHEMA,
+    "abfrage": "(Kein JSON-Schema — Freitext-Antwort. Fest geschuetzt: antwortet NUR aus den "
+               "gefundenen Gehirn-Eintraegen, erfindet nichts, sagt ehrlich Bescheid, wenn nichts passt.)",
+}
+# Menschliche Bezeichnung der Rollen (Dashboard-Buttons).
+ROLE_LABELS = {"haupt": "Hauptagent", "speicher": "Speicheragent", "abfrage": "Abfrageagent"}
+
+
 @app.get("/prompt", dependencies=[Depends(require_auth)])
-def get_prompt() -> dict:
-    """Liefert den aktuell aktiven Instruktions-Teil, den Default (fuer 'Zuruecksetzen')
-    und — nur zur Anzeige — den geschuetzten Schema-Teil."""
-    return {"instructions": load_instructions(), "default": DEFAULT_INSTRUCTIONS,
-            "schema_preview": ROUTER_SCHEMA, "is_default": not PROMPT_FILE.exists()}
+def get_prompt(role: str = "haupt") -> dict:
+    """Liefert den aktuell aktiven Prompt EINER Rolle (haupt|speicher|abfrage), ihren Default
+    (fuer 'Zuruecksetzen') und — nur zur Anzeige — den geschuetzten Schema-/Constraint-Teil."""
+    role = _norm_role(role)
+    return {"role": role, "label": ROLE_LABELS.get(role, role),
+            "instructions": load_instructions(role), "default": DEFAULTS.get(role, DEFAULT_INSTRUCTIONS),
+            "schema_preview": SCHEMA_PREVIEWS.get(role, ""), "is_default": is_prompt_default(role),
+            "roles": [{"key": r, "label": ROLE_LABELS[r]} for r in ROLES]}
 
 
 @app.put("/prompt", dependencies=[Depends(require_auth)])
 def put_prompt(req: PromptReq) -> dict:
+    role = _norm_role(req.role)
     text = req.instructions.strip()
-    save_instructions(text)
-    _log(logging.INFO, "System-Prompt gespeichert", laenge=len(text))
-    return {"status": "ok", "instructions": load_instructions()}
+    save_instructions(text, role)
+    _log(logging.INFO, "System-Prompt gespeichert", role=role, laenge=len(text))
+    return {"status": "ok", "role": role, "instructions": load_instructions(role)}
 
 
 @app.get("/config", dependencies=[Depends(require_auth)])
