@@ -8,12 +8,18 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.foundation.pager.PagerState
+import kotlinx.coroutines.CoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -125,6 +131,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.TASKS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                ResetPagerOnResume(pagerState, coroutineScope)
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     SubTabRow(
@@ -185,6 +192,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.ANALYSIS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                ResetPagerOnResume(pagerState, coroutineScope)
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     SubTabRow(
@@ -234,6 +242,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.SCIENTIST) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                ResetPagerOnResume(pagerState, coroutineScope)
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     SubTabRow(
@@ -298,6 +307,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.BIOMARKER) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                ResetPagerOnResume(pagerState, coroutineScope)
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     SubTabRow(
@@ -536,5 +546,36 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             onMicClick = { micActionsOpen = !micActionsOpen },
             modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
         )
+    }
+}
+
+/**
+ * Frank-Wunsch 2026-06-24: Beim Wechsel zwischen Hauptreitern (Bottom-Bar) soll immer
+ * der erste Sub-Tab (Page 0 = Hauptreiter-Name) aktiv sein — nicht der zuletzt gewählte.
+ *
+ * Da `tabSwitch` mit `restoreState = true` arbeitet, würde der Pager seine letzte Page
+ * wiederherstellen. Dieser Observer resettet den Pager bei jedem ON_RESUME des Hosts
+ * (also genau dann, wenn der Tab via Bottom-Bar angewählt wird) auf Page 0. Andere
+ * State-Erhaltung (Scroll-Positionen innerhalb der Screens) bleibt davon unberührt,
+ * weil nur der Pager-State gezielt resettet wird.
+ *
+ * ACHTUNG: ON_RESUME feuert auch beim PopBack aus einem Detail-Screen zurück zum Host.
+ * In diesem Fall resettet der Pager ebenfalls auf 0 — das ist ein bewusst akzeptierter
+ * Trade-off: Tab-Wechsel-Verhalten ist priorisiert, Detail-PopBack ist seltener Flow.
+ */
+@Composable
+private fun ResetPagerOnResume(
+    pagerState: PagerState,
+    coroutineScope: CoroutineScope,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                coroutineScope.launch { pagerState.scrollToPage(0) }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
