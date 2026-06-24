@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.10.0"  # 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.11.0"  # 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -64,7 +64,7 @@ USER_ID = os.getenv("SB_USER_ID", "frank")
 SESSION_TIMEOUT_S = int(os.getenv("AGENT_SESSION_TIMEOUT_MIN", "30")) * 60
 LOGBOOK_DIR = os.getenv("AGENT_LOGBOOK_DIR", "/logbook")  # gemountet auf /srv/samba/gedanken/Logbuch
 TZNAME = os.getenv("AGENT_TZ", "Europe/Berlin")
-CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespraeche")
+CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespräche")  # deutsche Umlaute (Frank 2026-06-24); Altbestand wird migriert
 DEDUP_CANDIDATES = int(os.getenv("AGENT_DEDUP_CANDIDATES", "3"))
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
 HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "20"))             # so viele letzte Nachrichten an das LLM
@@ -280,11 +280,11 @@ def brain_categories() -> list[str]:
 # VORAB anlegen (Dashboard "Kategorie +") — die leben hier in categories.json, ueberleben Neustart
 # (agent-data-Volume) und werden dem Speicheragenten + Dashboard mitgegeben.
 def _cat_key(name: str) -> str:
-    """Anzeigename -> Kategorie-Schluessel: ASCII-klein, Umlaute aufgeloest, nur a-z0-9 + Bindestriche."""
+    """Anzeigename -> Kategorie-Schluessel: klein, deutsche Umlaute ERHALTEN (Frank-Wunsch 2026-06-24 —
+    UTF-8 ueberall, kein ASCII-ae/oe/ue mehr), nur Buchstaben (inkl. äöüß) + Ziffern, Rest -> Bindestrich.
+    Lowercase bleibt als Schluessel-Normierung (verhindert 'Geräte' vs 'geräte'-Duplikate)."""
     s = (name or "").strip().lower()
-    for a, b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
-        s = s.replace(a, b)
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    s = re.sub(r"[^a-z0-9äöüß]+", "-", s).strip("-")
     return s[:40]
 
 
@@ -411,9 +411,9 @@ Gib NUR das JSON-Objekt aus, sonst nichts."""
 # veraenderter Persona-Text kann das Speicher-Format daher nie aushebeln.
 DEFAULT_SPEICHER = """Du bist der Speicheragent von Cortex. Du bekommst einen Text, der WORTWOERTLICH 1:1 ins Gehirn gelegt wird — du aenderst, kuerzt oder deutest ihn NIEMALS. Deine einzige Aufgabe: die passende KATEGORIE und einen kurzen TITEL bestimmen.
 
-BESTEHENDE KATEGORIEN (ASCII-klein): {kategorien}
+BESTEHENDE KATEGORIEN (klein, mit echten deutschen Umlauten): {kategorien}
 - Waehle wenn moeglich EINE bestehende Kategorie (auch nur grob passend).
-- Nur wenn WIRKLICH keine passt, schlage GENAU EINEN neuen Kategorie-Schluessel vor: nur ASCII-Kleinbuchstaben, Ziffern, Bindestriche (z.B. 'reise-ideen') — keine Umlaute, keine Leerzeichen, keine Sonderzeichen.
+- Nur wenn WIRKLICH keine passt, schlage GENAU EINEN neuen Kategorie-Schluessel vor: Kleinbuchstaben mit echten deutschen Umlauten (ä, ö, ü, ß), Ziffern und Bindestriche (z.B. 'reise-ideen', 'gespräche', 'geräte') — KEINE ae/oe/ue-Umschreibung, keine Leerzeichen, keine sonstigen Sonderzeichen.
 - Gibt es unter 'AEHNLICHE VORHANDENE EINTRAEGE' einen, der im Kern DIESELBE Info ist, setze 'replace_title' auf dessen EXAKTEN Titel (dann wird er ersetzt); sonst 'replace_title' leer "".
 - Titel: hoechstens ~60 Zeichen, mit echten Umlauten, keine Anfuehrungszeichen."""
 
@@ -691,7 +691,7 @@ def flush_session_to_logbook(session: dict) -> None:
     start = session["start_local"]
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
-    header = f"Kategorie: Gespraeche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
+    header = f"Kategorie: Gespräche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
     body = "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
                      for m in session["messages"])
     content = header + body + "\n"
@@ -709,7 +709,7 @@ def flush_session_to_logbook(session: dict) -> None:
 
     brain_ok = False
     try:
-        brain_store(text=content, title=f"Gespraech {date_str} - {time_str}", category=CONV_CATEGORY)
+        brain_store(text=content, title=f"Gespräch {date_str} - {time_str}", category=CONV_CATEGORY)
         brain_ok = True
     except Exception:  # noqa: BLE001
         _log(logging.ERROR, "Logbuch ins Gehirn fehlgeschlagen", exc_info=True)
@@ -804,7 +804,7 @@ class ImproveReq(BaseModel):
 
 
 class CategoryReq(BaseModel):
-    name: str = Field(..., min_length=1, max_length=60, description="Anzeigename der neuen Kategorie (wird zum ASCII-Schluessel normiert)")
+    name: str = Field(..., min_length=1, max_length=60, description="Anzeigename der neuen Kategorie (wird zum Schluessel normiert, deutsche Umlaute bleiben erhalten)")
 
 
 # Lektor-Auftrag fuer den G-Button: NUR umformulieren, Inhalt 1:1 erhalten (keine Halluzination).
@@ -1035,8 +1035,10 @@ def _logbook_path_from_title(title: str):
     Deterministisch (Datei-stem = Titel ohne 'Gespraech '-Praefix; Ordner aus dem Datum); glob faengt
     _unique_path-Suffixe ab. Gibt einen resolved Path INNERHALB LOGBOOK_DIR oder None."""
     stem = (title or "").strip()
-    if stem.lower().startswith("gespraech"):
-        stem = stem[len("gespraech"):].strip()
+    for _pref in ("gespräch", "gespraech"):   # neue Titel mit Umlaut UND alte ASCII-Titel erkennen
+        if stem.lower().startswith(_pref):
+            stem = stem[len(_pref):].strip()
+            break
     m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})\b", stem)
     if not m:
         return None
@@ -1089,8 +1091,10 @@ def write_logbook(req: LogbookWriteReq) -> dict:
     damit Logbuch (.txt) und Gehirn synchron bleiben. Pfad aus dem Vektor-Titel abgeleitet. Ueberschreibt
     keine bestehende Datei (idempotent). Sync def -> Threadpool (fastapi §1)."""
     stem = req.title.strip()
-    if stem.lower().startswith("gespraech"):
-        stem = stem[len("gespraech"):].strip()
+    for _pref in ("gespräch", "gespraech"):   # neue Titel mit Umlaut UND alte ASCII-Titel erkennen
+        if stem.lower().startswith(_pref):
+            stem = stem[len(_pref):].strip()
+            break
     m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})\b", stem)
     if not m:
         return {"ok": False, "written": False, "detail": "Kein Datum im Titel"}

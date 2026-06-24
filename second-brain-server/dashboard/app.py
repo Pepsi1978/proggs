@@ -27,7 +27,7 @@ AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 HOSTFS = os.getenv("DASH_HOSTFS", "/hostfs")
-CONV_CATEGORY = os.getenv("DASH_CONV_CATEGORY", "gespraeche")
+CONV_CATEGORY = os.getenv("DASH_CONV_CATEGORY", "gespräche")  # deutsche Umlaute (Frank 2026-06-24); Altbestand migriert
 # Logbuch-.txt-Protokolle (Samba-Platte = Franks Z:), read-only ins dashboard gemountet.
 LOGBOOK_DIR = os.getenv("DASH_LOGBOOK_DIR", os.getenv("AGENT_LOGBOOK_DIR", "/logbook"))
 # Z-Wurzel (Samba "gedanken") fuer das Google-Drive-Backup: Status-Datei lesen + Trigger-Flags schreiben.
