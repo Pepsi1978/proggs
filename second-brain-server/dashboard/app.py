@@ -20,7 +20,7 @@ import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-VERSION = "0.4.0"  # 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.4.1"  # 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -115,10 +115,13 @@ def overview() -> dict:
         out["brain"] = {"status": "error", "detail": str(e)}
     try:
         lst = _bget("/list", user_id=USER_ID, limit=2000)
-        items = lst.get("items", [])
+        # Logbuch-Gespraeche (Kategorie CONV_CATEGORY) bleiben im Gehirn als Vektoren (durchsuchbar +
+        # per Agent abrufbar/recall), zaehlen aber NICHT als persoenliche Wissens-Eintraege in der
+        # Uebersicht und erscheinen nicht als Kategorie-Balken (Frank-Wunsch 2026-06-24).
+        items = [it for it in lst.get("items", []) if (it.get("category") or "") != CONV_CATEGORY]
         c = Counter((it.get("category") or "(ohne)") for it in items)
         out["categories"] = sorted(({"name": k, "count": v} for k, v in c.items()), key=lambda x: -x["count"])
-        out["total"] = lst.get("count", len(items))
+        out["total"] = len(items)
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", err=str(e))
     try:
