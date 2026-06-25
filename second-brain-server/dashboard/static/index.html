@@ -560,6 +560,11 @@ button{font-family:inherit;cursor:pointer}
 /* G-Button: gruenlich mit Glow statt Orange-Rosa */
 .chat-improve{background:linear-gradient(135deg,#34D399,#10B981);color:#04130C;box-shadow:0 0 42px -10px rgba(52,211,153,.6);font-family:'Space Grotesk';font-weight:700;font-size:18px;line-height:1}
 .chat-clear{background:linear-gradient(135deg,#F2495A,#FB7185);color:#fff;box-shadow:0 0 42px -10px rgba(242,73,90,.6)}
+/* Lautsprecher (Vorlesen an/aus): an = orange (Frank-Konvention Audio=Orange), aus = gedimmt + durchgestrichen */
+.chat-speak{background:linear-gradient(135deg,#F97316,#FB923C);color:#fff;box-shadow:0 0 42px -10px rgba(249,115,22,.6)}
+.chat-speak.off{background:var(--surface-2);color:var(--text-faint);box-shadow:none}
+.chat-speak .sl{opacity:0;transition:opacity .15s}
+.chat-speak.off .sl{opacity:1}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
@@ -826,6 +831,9 @@ button{font-family:inherit;cursor:pointer}
               <button class="chat-btn chat-clear" id="chatClear" aria-label="Eingabe löschen" title="Eingabe löschen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
+              <button class="chat-btn chat-speak" id="chatSpeak" aria-label="Vorlesen an/aus" title="Vorlesen der Antworten an/aus">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/><line class="sl" x1="3" y1="21" x2="21" y2="3" stroke-width="2.4"/></svg>
+              </button>
               <button class="chat-btn chat-mic" id="chatMic" aria-label="Sprechen" title="Sprechen — Speech-to-Text (Groq Whisper)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/></svg>
               </button>
@@ -913,6 +921,27 @@ button{font-family:inherit;cursor:pointer}
           </div>
         </div>
 
+        <div class="set-row">
+          <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Logbuch</h3>
+            <p class="set-desc">Die Gespräche deines Agenten — nach Jahr und Monat. Wähle einen Monat, um die Einträge zu sehen.</p>
+            <div class="ym-nav" id="logbookNav"><span class="log-empty">Lädt…</span></div>
+            <div class="logbook" id="logbook" style="margin-top:10px"></div>
+          </div>
+
+          <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></span>Papierkorb
+              <button class="btn btn-sm trash-empty-btn" id="emptyTrashBtn" type="button" title="Alle Einträge unwiderruflich aus dem Papierkorb löschen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+                <span>Papierkorb leeren</span>
+              </button>
+            </h3>
+            <p class="set-desc">Gelöschte Einträge — nach Lösch-Monat. Wähle einen Monat; dort kannst du Einträge bearbeiten, speichern und wiederherstellen.</p>
+            <div class="ym-nav" id="trashNav"><span class="log-empty">Lädt…</span></div>
+            <div class="trash-list" id="trashList" style="margin-top:10px"></div>
+          </div>
+        </div>
+
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7V5a1 1 0 0 1 1-1h4l2 2"/></svg></span>Kategorien</h3>
           <p class="set-desc">Deine Kategorien als Baum — eine Hauptkategorie anklicken klappt ihre Unterkategorien auf. Wähle eine Zeile, um sie umzubenennen, zusammenzuführen oder zu löschen; mit <b>+ Unter</b> legst du Unterkategorien an (z.B. Programmieren › Best-Practices). <b>Löschen entfernt nur das Etikett — deine Einträge bleiben immer erhalten.</b></p>
@@ -941,22 +970,16 @@ button{font-family:inherit;cursor:pointer}
         </div>
 
         <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Logbuch</h3>
-          <p class="set-desc">Die Gespräche deines Agenten — nach Jahr und Monat. Wähle einen Monat, um die Einträge zu sehen.</p>
-          <div class="ym-nav" id="logbookNav"><span class="log-empty">Lädt…</span></div>
-          <div class="logbook" id="logbook" style="margin-top:10px"></div>
-        </div>
-
-        <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></span>Papierkorb
-            <button class="btn btn-sm trash-empty-btn" id="emptyTrashBtn" type="button" title="Alle Einträge unwiderruflich aus dem Papierkorb löschen">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
-              <span>Papierkorb leeren</span>
-            </button>
-          </h3>
-          <p class="set-desc">Gelöschte Einträge — nach Lösch-Monat. Wähle einen Monat; dort kannst du Einträge bearbeiten, speichern und wiederherstellen.</p>
-          <div class="ym-nav" id="trashNav"><span class="log-empty">Lädt…</span></div>
-          <div class="trash-list" id="trashList" style="margin-top:10px"></div>
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>Vorlesen</h3>
+          <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Mit dem orangen Lautsprecher-Knopf neben dem Mikrofon schaltest du das Vorlesen an oder aus. Hier wählst du die Stimme.</p>
+          <div class="field">
+            <label for="ttsVoice">Stimme</label>
+            <select class="select" id="ttsVoice"></select>
+          </div>
+          <div class="row-end">
+            <span class="muted-note" id="ttsStatus" style="margin-right:auto"></span>
+            <button class="btn" id="ttsTestBtn" type="button">▶ Stimme testen</button>
+          </div>
         </div>
       </section>
 
@@ -2380,6 +2403,65 @@ button{font-family:inherit;cursor:pointer}
     finally{ btn.disabled = false; }
   });
 
+  /* ── Vorlesen (Text -> Sprache): Lautsprecher-Toggle im Chat + Stimmenauswahl in Einstellungen ──
+     Lautsprecher default AN (Hauptagent-Antworten werden vorgelesen). Klick -> durchgestrichen = aus.
+     Audio kommt als WAV von POST /api/tts (Gemini-TTS), Wiedergabe eine zur Zeit. Präferenzen lokal. */
+  (function initTTS(){
+    const LS_ON = "cortexTtsOn", LS_VOICE = "cortexTtsVoice";
+    let voices = [], defaultVoice = "", available = false, audio = null;
+    const speakBtn = document.getElementById("chatSpeak");
+    const voiceSel = document.getElementById("ttsVoice");
+    const testBtn  = document.getElementById("ttsTestBtn");
+    const isOn = ()=> localStorage.getItem(LS_ON) !== "0";              // default AN
+    const chosenVoice = ()=> localStorage.getItem(LS_VOICE) || defaultVoice;
+    const paintBtn = ()=>{ if(speakBtn) speakBtn.classList.toggle("off", !isOn()); };
+    paintBtn();
+    if(speakBtn) speakBtn.addEventListener("click", ()=>{
+      localStorage.setItem(LS_ON, isOn() ? "0" : "1"); paintBtn();
+      if(!isOn() && audio){ try{ audio.pause(); }catch(_){ } audio = null; }   // laufendes Vorlesen sofort stoppen
+    });
+    (async function loadVoices(){
+      try{ const d = await api("/api/tts/voices"); voices=(d&&d.voices)||[]; defaultVoice=(d&&d.default)||""; available=!!(d&&d.enabled); }
+      catch(_){ available = false; }
+      if(!available && speakBtn){ speakBtn.classList.add("off"); speakBtn.title = "Vorlesen nicht verfügbar (kein TTS-Schlüssel im Server)"; }
+      if(voiceSel){
+        if(!voices.length){ voiceSel.innerHTML = '<option value="">— keine Stimmen verfügbar —</option>'; }
+        else{
+          const cur = chosenVoice();
+          voiceSel.innerHTML = voices.map(v=>`<option value="${v.name}"${v.name===cur?" selected":""}>${v.name} — ${v.desc}</option>`).join("");
+        }
+        voiceSel.addEventListener("change", ()=> localStorage.setItem(LS_VOICE, voiceSel.value));
+      }
+    })();
+    async function speak(text){
+      if(!isOn() || !available) return;
+      const clean = (text||"").trim(); if(!clean) return;
+      try{
+        if(audio){ try{ audio.pause(); }catch(_){ } }                   // vorherige Wiedergabe stoppen
+        const res = await fetch("/api/tts", {method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({text: clean.slice(0,5000), voice: chosenVoice()})});
+        if(!res.ok) return;
+        const url = URL.createObjectURL(await res.blob());
+        audio = new Audio(url);
+        audio.onended = audio.onerror = ()=> URL.revokeObjectURL(url);
+        audio.play().catch(()=>{});
+      }catch(_){ /* Vorlesen ist Komfort — Fehler nie hart melden */ }
+    }
+    window.speakTTS = speak;                                            // sendChat ruft das nach jeder Antwort
+    if(testBtn) testBtn.addEventListener("click", async ()=>{
+      const v = (voiceSel && voiceSel.value) || chosenVoice();
+      if(voiceSel && voiceSel.value) localStorage.setItem(LS_VOICE, voiceSel.value);
+      const st = document.getElementById("ttsStatus");
+      if(st){ st.textContent = "spielt ab…"; st.style.color = "var(--text-dim)"; }
+      try{   // Test ignoriert den An/Aus-Schalter bewusst — man will die Stimme hören
+        const res = await fetch("/api/tts", {method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({text:"Hallo Frank, so klinge ich.", voice:v})});
+        if(res.ok){ const u=URL.createObjectURL(await res.blob()); const a=new Audio(u); a.onended=()=>URL.revokeObjectURL(u); a.play().catch(()=>{}); if(st) st.textContent=""; }
+        else if(st){ st.textContent="Vorlesen fehlgeschlagen"; st.style.color="var(--bad)"; }
+      }catch(_){ if(st){ st.textContent="Vorlesen fehlgeschlagen"; st.style.color="var(--bad)"; } }
+    });
+  })();
+
   /* ── Gespräch (Chat): an den Agenten senden ─────────────────────────────── */
   // Eine Sitzungs-ID pro Browser-Sitzung (Agent haelt damit den Gespraechskontext).
   // crypto.randomUUID braucht einen secure context (HTTPS/localhost) — ueber http://10.8.0.1
@@ -2437,6 +2519,7 @@ button{font-family:inherit;cursor:pointer}
       else if(r.action==="store_clarify") meta = "↳ Kategorie-Rückfrage — Knopf wählen oder antworten";
       else if(r.action==="cancel") meta = "↳ nicht gespeichert";
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
+      if(window.speakTTS && r.reply) window.speakTTS(r.reply);    // Antwort vorlesen (wenn Lautsprecher an)
       if(r.options && r.options.length) chatOptions(r.options);   // anklickbare Ja/Nein-Knöpfe
     }catch(e){
       typing.remove();
