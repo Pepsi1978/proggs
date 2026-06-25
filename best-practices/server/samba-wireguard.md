@@ -147,6 +147,19 @@ Ein Skript, das die Laufwerke nach Login/Standby automatisch wiederverbindet, is
    **0** (nicht `CONNECT_UPDATE_PROFILE 0x1`) mappen → das Skript ist die EINZIGE, tunnel-bewusste Mapping-Quelle, kein
    Boot-Race. Fehler 1219 zusaetzlich abfangen: alle Sitzungen zum Server (`WNetCancelConnection2` auf jeden Buchstaben +
    `\\server` + `\\server\IPC$`) hart abraeumen, dann neu mappen.
+8. **Offizielle Microsoft-Linie + Alternativen (Recherche 2026-06-25, KB/MapDrives):** Microsoft **raet von `net use`
+   in geplanten Aufgaben ausdruecklich ab** ("results in issues that are hard to troubleshoot", "antiquated") und
+   liefert ein offizielles Muster `MapDrives.ps1`/`MapDrives.cmd` mit `New-SmbMapping -Persistent`, das **bewusst im
+   NICHT-elevated Kontext** laeuft — denn elevated gemappte Laufwerke sind im Standard-User-Explorer unsichtbar (§10
+   im Almanach). Das ist die **saubere Alternative zu `EnableLinkedConnections`**: statt ein elevated Mapping sichtbar
+   zu machen, gleich nicht-elevated mappen. Praxiserprobte weitere Methode laut Quellen: das COM-Objekt
+   `WScript.Network` (`.MapNetworkDrive` / `.RemoveNetworkDrive`) in einem nicht-elevated Task. **`WNetAddConnection2`
+   (unser Weg) bleibt geeignet** (promptet nie); entscheidend ist die Kombination **nicht-persistent + tunnel-bewusst**
+   und — wo moeglich — **nicht-elevated** mappen (sonst `EnableLinkedConnections=1`, mit der "Prompt-for-credentials"-Falle aus §10).
+9. **SMB ueber WireGuard — Reconnect/Stabilitaet (Recherche 2026-06-25):** Bei korrektem Tunnel ist SMB stabil (grosse
+   Transfers laufen durch). Reisst eine Sitzung nach ~1 Min ab, liegt es oft an **asymmetrischem Routing** (eine
+   Firewall verwirft Pakete nach State-Ablauf), NICHT zwingend an der MTU — `PersistentKeepalive = 25` allein
+   verhindert das nicht. Zuerst Routing-Symmetrie/direkte Route zum WG-Host pruefen, MTU (1280–1420) erst danach (vgl. §3).
 
 ---
 

@@ -31,7 +31,7 @@
 | 6 | Netzlaufwerk verschwindet/rotes X nach Reboot/Login | Persistentes Mapping per `New-SmbMapping -Persistent` (nicht `New-PSDrive`); Credential-Manager-Eintrag pro Servername UND IP; "auf Netzwerk warten"-GPO; PIN-Login kann stoeren. | §5 |
 | 9 | ⭐ Laufwerke fehlen ganz, aber Ping+Port 445 OK & manuelles `net use` klappt | Auto-Reconnect-Gate prueft falschen Port (fremder Dienst statt SMB **445**) → kommt nie bis zum Mapping. Gate IMMER auf 445; Skript-Log lesen (Fehler sonst geschluckt). | §5 |
 | 10 | ⭐⭐ Reconnect-Skript laeuft als geplante Aufgabe (elevated/hidden) → `net use` HAENGT ewig, Laufwerke nie da | `net use ... /persistent:yes` OHNE explizite Credentials promptet im **elevated** Token (Tresor token-getrennt!) interaktiv nach dem Benutzernamen → im hidden/wscript-Kontext kein Eingeber → Endlos-Hang + net.exe-Prozess-Leak. FIX: per **WNetAddConnection2 (mpr.dll) mit EXPLIZITEN Credentials** mappen (ohne `CONNECT_INTERACTIVE` → nie ein Prompt). | §9 |
-| 11 | ⭐⭐ Geplante Aufgabe (RunLevel Highest) mappt erfolgreich, aber Explorer zeigt nichts | UAC-Token-Isolation: im **elevated** Token gemappte Netzlaufwerke sind im **nicht-elevated** Explorer unsichtbar. FIX: `EnableLinkedConnections=1` (HKLM\…\Policies\System, DWORD) → wirksam ab naechstem Login. | §10 |
+| 11 | ⭐⭐ Geplante Aufgabe (RunLevel Highest) mappt erfolgreich, aber Explorer zeigt nichts | UAC-Token-Isolation: im **elevated** Token gemappte Netzlaufwerke sind im **nicht-elevated** Explorer unsichtbar. FIX: `EnableLinkedConnections=1` (HKLM\…\Policies\System, DWORD) → wirksam ab naechstem Login. Wirkt NICHT bei UAC "Prompt for credentials" (→ "Prompt for consent") und NICHT fuer Dienste (UNC nutzen). **Sauberer:** gleich NICHT-elevated mappen (Microsoft `MapDrives.ps1`-Linie). | §10 |
 | 13 | ⭐⭐ Nach Reboot hat EIN Laufwerk (von mehreren vom selben VPS) ein rotes X; Klick → "mehrere Benutzernamen nicht zulaessig" (**1219**), Skript-Log sagt aber "reconnect OK" | **Persistent-Login-Race:** persistente `HKCU:\Network`-Mappings → Windows reconnectet beim Login VOR dem Tunnel → totes Mapping im nicht-elevated Token, kollidiert mit dem (elevated) Skript-Mapping. FIX: persistente `HKCU:\Network`-Eintraege ENTFERNEN; Reconnect-Skript mappt **NICHT-persistent** (Flag 0) als einzige tunnel-bewusste Quelle; bei 1219 alle `10.8.0.1`-Sitzungen abraeumen + neu. Sofort von Hand: `net use Z: /delete /yes` + neu verbinden. | §11 |
 | 12 | `.ps1` startet nicht / Parse-Fehler "schliessende } fehlt", nur via geplanter Aufgabe | **Windows PowerShell 5.1** liest `.ps1` OHNE BOM als **cp1252** → ein Em-Dash (—) in einem String wird zu `â€"` und zerschiesst Quotes/Klammern. FIX: `.ps1` als **UTF-8 mit BOM** speichern UND keine typografischen Zeichen (Em-Dash/Smart-Quotes) im Code. | §9 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
@@ -274,8 +274,15 @@ Danach sehen elevated- und nicht-elevated-Prozesse dieselben Mappings. **Achtung
 privaten Single-User-PC unkritisch, in Hochsicherheitsumgebungen abwaegen.
 **Alternative (ohne Registry-Tweak):** Das Mapping im **nicht-elevated** Kontext durchfuehren (z.B. eine zweite, nicht-erhoehte
 Aufgabe nur furs Mapping; die erhoehte nur fuer den Dienst-Start). Mehr Aufwand, dafuer ohne token-uebergreifende Verknuepfung.
-**Quelle:** Microsoft KB (EnableLinkedConnections) + eigener Vorfall 2026-06-24 (live verifiziert: ohne den Wert 0 Laufwerke im
-nicht-elevated Get-SmbMapping trotz "OK" im elevated Task).
+**⭐ Ergaenzung (Recherche 2026-06-25, Microsoft KB 3035277) - wann `EnableLinkedConnections=1` TROTZDEM nicht wirkt:**
+Steht die UAC-Richtlinie *"Behavior of the elevation prompt for administrators in Admin Approval Mode"* auf
+**"Prompt for credentials"** (Passwort-Abfrage) statt "Prompt for consent", erzeugt eine Erhoehung eine **DRITTE**
+Logon-Session, in der die symbolischen Laufwerks-Links NICHT vorhanden sind → die Mappings bleiben im erhoehten
+Kontext unsichtbar, obwohl `EnableLinkedConnections=1`. **FIX:** UAC auf **"Prompt for consent"** stellen. Zudem:
+`EnableLinkedConnections` gilt **NICHT fuer Windows-Dienste** — die muessen Netzwerkressourcen ueber **UNC-Pfade**
+(`\\server\share`) ansprechen, nicht ueber Laufwerksbuchstaben. `gpupdate /force` macht den Wert ohne Neustart wirksam.
+**Quelle:** Microsoft KB (EnableLinkedConnections / KB 3035277) + ServerFault + eigener Vorfall 2026-06-24 (live verifiziert: ohne den Wert 0 Laufwerke im
+nicht-elevated Get-SmbMapping trotz "OK" im elevated Task) + Recherche 2026-06-25 (Firecrawl+MiniMax).
 
 ## 11. ⭐⭐ "Mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom SELBEN VPS - der Persistent-Login-Race (live 2026-06-25)
 **Symptom:** Mehrere Netzlaufwerke zeigen auf denselben Server (`\\10.8.0.1\daten` = Y:, `\\10.8.0.1\gedanken` = Z:). Nach
