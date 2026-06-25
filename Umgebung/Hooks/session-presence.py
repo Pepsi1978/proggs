@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""session-presence.py — Verhindert, dass parallele Claude-Code-Sessions im selben
-Working-Tree sich gegenseitig die Arbeit ueberschreiben.
+"""session-presence.py — Awareness fuer parallele Claude-Code-Sessions im selben
+Working-Tree. Gibt einen unverbindlichen HINWEIS, wenn eine andere Session gerade hier
+arbeitet — KEINE Sperre.
 
 Datenbasis: das gemeinsame Session-Register
 ~/proggs/.claude/agent-memory/shared/active-tasks.jsonl (von den task-ledger-*-Hooks
@@ -8,12 +9,15 @@ gepflegt: session_id, cwd, files_changed, status, timestamp_last_update, pushed)
 
 Modi (1. Argument):
   warn   -> UserPromptSubmit: Awareness. Warnt (additionalContext), wenn eine andere
-            LEBENDE Session im SELBEN Projekt (cwd) arbeitet. Kein Block.
-  guard  -> PreToolUse (Edit|Write): Datei-Waechter. Wenn die Zieldatei GERADE von einer
-            anderen lebenden Session bearbeitet wird (file_path in deren files_changed),
-            -> permissionDecision:deny + Begruendung (kein Warten -> kein Deadlock;
-            Best-Practice claude-sessions-board, siehe best-practices/claude-tooling/
-            multi-session-koordination.md).
+            LEBENDE Session im SELBEN Projekt (cwd) arbeitet. Reiner Hinweis, kein Block.
+  guard  -> NO-OP (deaktiviert am 2026-06-25 auf Frank-Wunsch). Frueher ein PreToolUse-
+            Datei-Waechter, der Edit/Write per permissionDecision:deny BLOCKIERTE, sobald
+            zwei Sessions dieselbe Datei beruehrten. Das fuehrte zum Deadlock: zwei Sessions
+            sperrten sich GEGENSEITIG aus -> beide arbeiteten nicht weiter, kein Ergebnis
+            wurde gespeichert. Es darf nur noch der Hinweis kommen, NIE eine Sperre. Dieser
+            Modus tut jetzt bewusst NICHTS (damit auch noch nicht neu gestartete Sessions,
+            deren gecachte settings.json den Hook noch aufruft, sofort entsperrt sind).
+            Regel: ~/.claude/rules/session-presence.md.
 
 Robust (bugs/best-practices claude-tooling/python-windows.md): open() mit encoding='utf-8',
 JSON ensure_ascii=False, stdout.reconfigure(utf-8) gegen cp1252-Crash, Pfade via expanduser.
@@ -30,7 +34,6 @@ from datetime import datetime, timezone
 
 LEDGER = os.path.expanduser("~/proggs/.claude/agent-memory/shared/active-tasks.jsonl")
 WARN_TTL = 8 * 60      # warn: Session gilt als "lebendig", wenn letztes Update < 8 Min her
-GUARD_TTL = 6 * 60     # guard: nur bei FRISCH aktiver anderer Session blockieren (konservativ)
 INACTIVE_STATES = {"done", "completed", "abandoned", "paused"}
 DISABLE_FLAG = os.path.join(tempfile.gettempdir(), "session-presence-disable.flag")
 
@@ -119,14 +122,6 @@ def _norm(p):
         return p
 
 
-def _other_files(entry):
-    out = set()
-    for f in (entry.get("files_changed") or []):
-        if isinstance(f, str) and f:
-            out.add(_norm(f))
-    return out
-
-
 def mode_warn(data):
     my_sid = data.get("session_id", "")
     my_cwd = data.get("cwd", "") or ""
@@ -147,51 +142,30 @@ def mode_warn(data):
                         if isinstance(f, str) and f})
         flist = (", ".join(files[:6]) + (" …" if len(files) > 6 else "")) if files else "noch keine Datei editiert"
         lines.append(f"  - Session {_short(e.get('session_id'))} (aktiv vor {e.get('_age_s', 0)}s): {flist}")
-    text = (f"PARALLELE SESSION(S) IM SELBEN PROJEKT '{proj}': {len(same_project)} andere "
+    text = (f"HINWEIS — PARALLELE SESSION(S) IM SELBEN PROJEKT '{proj}': {len(same_project)} andere "
             f"Claude-Code-Session(en) arbeiten gerade hier:\n" + "\n".join(lines) +
-            "\nVorsicht beim Speichern: nicht dieselbe Datei gleichzeitig editieren. Nur eigene "
-            "Dateien committen, fetch+rebase vor Push. Beruehrt ihr dieselbe Datei, blockiert der "
-            "Datei-Waechter den Edit (Regel session-presence).")
+            "\nDas ist nur ein Hinweis, KEINE Sperre — du darfst normal weiterarbeiten. Achte beim "
+            "Speichern darauf, moeglichst nicht exakt dieselbe Datei gleichzeitig zu editieren "
+            "(sonst kann die spaetere Speicherung die fruehere ueberschreiben). Nur eigene Dateien "
+            "committen, fetch+rebase vor Push. Wuerdest du genau eine dieser Dateien aendern: "
+            "kurz schauen, ob du erst woanders weitermachen oder die Datei vorher neu lesen kannst. "
+            "Regel session-presence.")
     _emit({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": text}})
-
-
-def mode_guard(data):
-    my_sid = data.get("session_id", "")
-    ti = data.get("tool_input") or {}
-    fp = ti.get("file_path", "") or ""
-    if not fp:
-        return
-    fp_n = _norm(fp)
-    conflicts = [e for e in _live_other_sessions(my_sid, GUARD_TTL) if fp_n in _other_files(e)]
-    if not conflicts:
-        return
-    who = ", ".join(f"Session {_short(e.get('session_id'))} (aktiv vor {e.get('_age_s', 0)}s)"
-                    for e in conflicts)
-    base = os.path.basename(fp)
-    reason = (f"UEBERSCHREIB-SCHUTZ: Die Datei '{base}' wird GERADE von einer anderen laufenden "
-              f"Claude-Code-Session bearbeitet ({who}). Wuerdest du jetzt speichern, koenntest du "
-              f"deren Arbeit ueberschreiben. Optionen: (1) kurz an einer ANDEREN Datei "
-              f"weiterarbeiten und es spaeter erneut versuchen — der Block faellt automatisch weg, "
-              f"sobald die andere Session fertig/inaktiv ist; (2) wenn du sicher bist, dass kein "
-              f"Konflikt besteht, die Datei zuerst NEU lesen (Read) und gezielt aendern. "
-              f"Nicht blind ueberschreiben. (Notaus bei Fehlalarm: leere Datei "
-              f"'session-presence-disable.flag' im TEMP-Verzeichnis anlegen.)")
-    _emit({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                                  "permissionDecision": "deny",
-                                  "permissionDecisionReason": reason}})
 
 
 def main():
     if os.path.exists(DISABLE_FLAG):
         return
     mode = sys.argv[1] if len(sys.argv) > 1 else "warn"
+    # 'guard' wurde am 2026-06-25 auf Frank-Wunsch ENTFERNT (Deadlock durch gegenseitiges
+    # Aussperren). Es bleibt NUR der unverbindliche Hinweis. 'guard' ist ein No-Op -> sofort
+    # wirksam auch fuer Sessions, deren gecachte settings.json den Hook noch aufruft.
+    if mode == "guard":
+        return
     data = _read_input()
     if not data:
         return
-    if mode == "guard":
-        mode_guard(data)
-    else:
-        mode_warn(data)
+    mode_warn(data)
 
 
 if __name__ == "__main__":
