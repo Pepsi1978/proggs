@@ -2580,7 +2580,7 @@ button{font-family:inherit;cursor:pointer}
       const titV = titEl ? titEl.value.trim() : "";
       const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV});
       typing.remove();
-      if(titEl) titEl.value = "";   // Titel nach erfolgreichem Senden leeren (Server haelt ihn im pending bis zur Bestaetigung)
+      if(titEl && (r.action==="save_confirm" || r.action==="store_clarify" || r.action==="store")) titEl.value = "";   // Titel nur leeren, wenn der Server den Speicher-Vorgang erkannt hat (Server haelt ihn im pending) — sonst fuer den naechsten Versuch behalten
       let meta = "";
       if(r.action==="recall") meta = "↳ nachgeschlagen" + (r.recall_hits!=null ? " · "+r.recall_hits+" Treffer" : "");
       else if(r.action==="store") meta = "↳ abgelegt" + (r.category ? " in „"+r.category+"“" : "");
