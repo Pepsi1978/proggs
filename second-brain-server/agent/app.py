@@ -626,7 +626,7 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None) -> dic
     if (data.get("intent") or "").strip() not in {"save", "confirm_yes", "confirm_no", "query", "smalltalk"}:
         _log(logging.WARNING, "Hauptagent: ungueltiger intent -> smalltalk", got=str(data.get("intent"))[:40])
         data["intent"] = "smalltalk"
-    checkpoint("route", "Hauptagent-Routing klassifiziert Franks Nachricht", ok=True, intent=data["intent"])
+    checkpoint("route", "Hauptagent-Routing klassifiziert Franks Nachricht", ok=True, route=data["intent"])
     return data
 
 
