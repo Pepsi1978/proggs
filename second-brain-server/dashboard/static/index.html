@@ -580,6 +580,13 @@ button{font-family:inherit;cursor:pointer}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
+  /* Titel im Bearbeiten-Modus editierbar (Frank-Wunsch): wird zum Eingabefeld im Seiten-Stil */
+  .drawer-title.editing{outline:none;cursor:text;background:var(--surface-2);border:1px solid var(--accent);
+    box-shadow:0 0 0 3px rgba(244,166,90,.14);border-radius:10px;padding:6px 12px}
+  /* Kategorie-Verschieben im Drawer (Aufgabe 2): Dropdown links neben Loeschen, Speicher-Zeile darunter.
+     enhanceSelect versteckt das native <select> und baut ein .cs daneben -> dieses nach links schieben. */
+  .drawer-cat-row{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  #drawerViewActions .cs{margin-right:auto}
 .drawer-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 /* Loeschen + Bearbeiten als Gruppe rechts (justify-content:flex-end), direkt nebeneinander mit gap */
 /* Papierkorb-Button (Eintrag loeschen) — rot getoent, direkt links neben Bearbeiten */
@@ -822,6 +829,17 @@ button{font-family:inherit;cursor:pointer}
             <button class="btn btn-primary" id="savePromptBtn">Speichern</button>
           </div>
           <div style="margin-top:8px"><span class="muted-note" id="promptSchemaNote">🔒 Antwort-Format (JSON-Schema) und Kategorienliste werden automatisch ergänzt und sind geschützt.</span></div>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-primary" id="evalRunBtn" type="button">🛡️ Eval-Check durchführen</button>
+              <button class="btn" id="evalLogsBtn" type="button">Logs</button>
+              <span class="muted-note" id="evalStatus" style="margin-left:auto"></span>
+            </div>
+            <p class="set-desc" style="margin-top:8px">Selbsttest aller drei Agenten gegen 50 feste Sätze (rein + raus). Läuft unsichtbar unter einem Test-Nutzer und räumt danach komplett auf — dein echtes Gehirn bleibt unberührt. Dauert 1–3 Minuten.</p>
+            <div id="evalResult" class="eval-box" style="display:none"></div>
+            <div id="evalLogList" class="eval-box" style="display:none"></div>
+            <div id="evalLogView" class="eval-box" style="display:none"></div>
+          </div>
         </div>
 
         <div class="card set-section">
@@ -884,11 +902,16 @@ button{font-family:inherit;cursor:pointer}
   <div class="drawer-body">
     <div class="read-box" id="drawerText"></div>
     <div class="drawer-actions" id="drawerViewActions">
+      <select class="drawer-cat cs-native" id="drawerCategory" title="Kategorie dieses Eintrags ändern — Auswahl, dann „In Kategorie speichern“"></select>
       <button class="btn drawer-del-btn" id="drawerDeleteBtn" title="Eintrag löschen" aria-label="Eintrag löschen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
         <span>Löschen</span>
       </button>
       <button class="btn drawer-edit-btn" id="drawerEditBtn">Bearbeiten</button>
+    </div>
+    <!-- Kategorie verschieben: erscheint, sobald im Dropdown eine ANDERE Kategorie gewählt wurde (Frank-Wunsch) -->
+    <div class="drawer-cat-row" id="drawerCatSaveRow" style="display:none">
+      <button class="btn btn-primary" id="drawerCatSaveBtn">In Kategorie speichern</button>
     </div>
     <div class="drawer-actions" id="drawerEditActions" style="display:none">
       <button class="btn" id="drawerCancelBtn">Abbrechen</button>
@@ -1293,6 +1316,9 @@ button{font-family:inherit;cursor:pointer}
     /* Bearbeiten nur anbieten, wenn der Eintrag eine doc_id hat (Logbuch-.txt -> nicht editierbar) */
     const canEdit = editable !== false && !!(curEntry && curEntry.doc_id);
     document.getElementById("drawerViewActions").style.display = canEdit ? "flex" : "none";
+    /* Kategorie-Dropdown des Eintrags füllen (Aufgabe 2) — nur für editierbare Gehirn-Einträge sinnvoll */
+    document.getElementById("drawerCatSaveRow").style.display = "none";
+    if(canEdit) loadDrawerCategories(curEntry.category || "");
   }
 
   function setDrawerEditMode(on){
@@ -1300,9 +1326,14 @@ button{font-family:inherit;cursor:pointer}
     const box = document.getElementById("drawerText");
     box.setAttribute("contenteditable", on ? "true" : "false");
     box.classList.toggle("editing", on);
+    /* Titel im Bearbeiten-Modus ebenfalls editierbar (Aufgabe 1) */
+    const titleEl = document.getElementById("drawerTitle");
+    titleEl.setAttribute("contenteditable", on ? "true" : "false");
+    titleEl.classList.toggle("editing", on);
     const canEdit = !!(curEntry && curEntry.doc_id);
     document.getElementById("drawerViewActions").style.display = (!on && canEdit) ? "flex" : "none";
     document.getElementById("drawerEditActions").style.display = on ? "flex" : "none";
+    if(on) document.getElementById("drawerCatSaveRow").style.display = "none";  // im Edit-Modus keine Kategorie-Verschiebung
     if(on) box.focus();
   }
   function closeDrawerNow(){ overlay.classList.remove("open"); drawer.classList.remove("open"); setDrawerEditMode(false); drawerHist = false; }
@@ -1316,6 +1347,7 @@ button{font-family:inherit;cursor:pointer}
   document.getElementById("drawerEditBtn").addEventListener("click", ()=> setDrawerEditMode(true));
   document.getElementById("drawerCancelBtn").addEventListener("click", ()=>{
     document.getElementById("drawerText").textContent = (curEntry && curEntry.text) || "";
+    document.getElementById("drawerTitle").textContent = (curEntry && curEntry.title) || "Ohne Titel";  // Titel-Änderung verwerfen
     setDrawerEditMode(false);
   });
   document.getElementById("drawerSaveBtn").addEventListener("click", ()=> openConfirm());
@@ -1330,15 +1362,91 @@ button{font-family:inherit;cursor:pointer}
     if(!curEntry || !curEntry.doc_id){ flash("drawerStatus","Kein editierbarer Eintrag",false); return; }
     const newText = document.getElementById("drawerText").textContent.trim();
     if(!newText){ flash("drawerStatus","Text ist leer",false); return; }
+    const newTitle = document.getElementById("drawerTitle").textContent.trim();   // Aufgabe 1: Titel mitspeichern
+    if(!newTitle){ flash("drawerStatus","Titel darf nicht leer sein",false); return; }
     const saveBtn = document.getElementById("drawerSaveBtn"); saveBtn.disabled = true;
     try{
-      const r = await apiSend("/api/entry","PUT",{doc_id:curEntry.doc_id, text:newText});
-      if(r && r.ok!==false){ curEntry.text = newText; setDrawerEditMode(false);
-        flash("drawerStatus","Gespeichert — alter Vektor durch neuen ersetzt"); }
+      const r = await apiSend("/api/entry","PUT",{doc_id:curEntry.doc_id, text:newText, title:newTitle});
+      if(r && r.ok!==false){
+        curEntry.text = newText; curEntry.title = newTitle;
+        if(r.doc_id) curEntry.doc_id = r.doc_id;   // bei Titel-Änderung neue (titel-basierte) doc_id übernehmen
+        document.getElementById("drawerTitle").textContent = newTitle;
+        setDrawerEditMode(false);
+        flash("drawerStatus", r.title_changed ? "Gespeichert — Titel & Text aktualisiert" : "Gespeichert — alter Vektor durch neuen ersetzt");
+        loadEntries();   // Liste mit neuem Titel auffrischen
+      }
       else { flash("drawerStatus",(r&&r.detail)||"Speichern fehlgeschlagen",false); }
     }catch(e){ flash("drawerStatus","Speichern fehlgeschlagen",false); }
     finally{ saveBtn.disabled = false; }
   });
+
+  /* ── Kategorie-Verschieben im Drawer (Aufgabe 2): Dropdown (Gespräch-Stil) neben Löschen ─────────
+     Dieselbe Quelle (/api/categories/detail) wie Verwaltung + Gespräch-Dropdown -> immer synchron.
+     Auswahl einer ANDEREN Kategorie zeigt den Speicherbutton; "➕ Neue Kategorie" legt sie an
+     (landet via Agent kanonisch in der Registry -> erscheint sofort auch in Einstellungen). */
+  let drawerCatCurrent = "";
+  async function loadDrawerCategories(currentCat){
+    const sel = document.getElementById("drawerCategory");
+    if(!sel) return;
+    drawerCatCurrent = (currentCat || "").trim();
+    let cats = [];
+    try{ const d = await api("/api/categories/detail"); cats = (d && d.categories) || []; }
+    catch(e){ /* Agent offline — nur die aktuelle + Neu anbieten */ }
+    const names = cats.map(c=>c.name);
+    // aktuelle Kategorie immer als Option sicherstellen (falls leer/unbekannt)
+    let opts = '<option value="__new__">➕ Neue Kategorie…</option>';
+    if(!drawerCatCurrent) opts = '<option value="">— ohne Kategorie —</option>' + opts;
+    opts += cats.map(c=>`<option value="${escapeHtml(c.name)}"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(c.name))}${c.empty?' — leer':''}</option>`).join("");
+    if(drawerCatCurrent && !names.some(n=>n.toLowerCase()===drawerCatCurrent.toLowerCase()))
+      opts += `<option value="${escapeHtml(drawerCatCurrent)}">${escapeHtml(cap(drawerCatCurrent))}</option>`;
+    sel.innerHTML = opts;
+    sel.value = drawerCatCurrent || "";
+    enhanceSelect(sel, {compact:true});   // schönes Dropdown, klappt nach UNTEN (Frank-Wunsch)
+    document.getElementById("drawerCatSaveRow").style.display = "none";
+  }
+  async function onDrawerCatChange(){
+    const sel = document.getElementById("drawerCategory");
+    const row = document.getElementById("drawerCatSaveRow");
+    if(!sel) return;
+    if(sel.value==="__new__"){
+      const name = (window.prompt("Name der neuen Kategorie:") || "").trim();
+      if(!name){ sel.value = drawerCatCurrent || ""; syncCS(sel); row.style.display="none"; return; }
+      try{
+        const r = await apiSend("/api/categories","POST",{name});
+        if(r && r.ok && r.key){
+          await loadDrawerCategories(drawerCatCurrent);   // Liste neu (enthält jetzt die neue) …
+          sel.value = r.key; syncCS(sel);                 // … und die neue auswählen
+          if(typeof loadChatCategories==="function") loadChatCategories();   // Gespräch-Dropdown synchron
+        }else{ sel.value = drawerCatCurrent || ""; syncCS(sel); window.alert((r&&r.detail)||"Konnte Kategorie nicht anlegen."); }
+      }catch(e){ sel.value = drawerCatCurrent || ""; syncCS(sel); window.alert("Konnte Kategorie nicht anlegen."); }
+    }
+    // Speicherbutton nur zeigen, wenn sich die Kategorie wirklich geändert hat
+    const changed = (sel.value || "").toLowerCase() !== (drawerCatCurrent || "").toLowerCase();
+    row.style.display = changed ? "flex" : "none";
+  }
+  async function saveDrawerCategory(){
+    const sel = document.getElementById("drawerCategory");
+    if(!curEntry || !curEntry.doc_id || !sel){ flash("drawerStatus","Kein Eintrag",false); return; }
+    const newCat = (sel.value || "").trim();
+    if(!newCat || newCat==="__new__"){ flash("drawerStatus","Bitte eine Kategorie wählen",false); return; }
+    const btn = document.getElementById("drawerCatSaveBtn"); btn.disabled = true;
+    try{
+      const r = await apiSend("/api/entry/category","POST",{doc_id:curEntry.doc_id, category:newCat});
+      if(r && r.ok!==false){
+        curEntry.category = r.category || newCat;
+        drawerCatCurrent = curEntry.category;
+        const color = colorFor(curEntry.category);
+        const tag = document.getElementById("drawerTag");
+        tag.textContent = curEntry.category; tag.style.color = color; tag.style.background = color+"22";
+        document.getElementById("drawerCatSaveRow").style.display = "none";
+        flash("drawerStatus","In Kategorie „"+cap(curEntry.category)+"“ verschoben");
+        loadEntries(); loadOverview();   // Liste + Übersicht/Spektrum auffrischen
+      }else{ flash("drawerStatus",(r&&r.detail)||"Verschieben fehlgeschlagen",false); }
+    }catch(e){ flash("drawerStatus","Verschieben fehlgeschlagen",false); }
+    finally{ btn.disabled = false; }
+  }
+  document.getElementById("drawerCategory").addEventListener("change", onDrawerCatChange);
+  document.getElementById("drawerCatSaveBtn").addEventListener("click", saveDrawerCategory);
 
   /* Loeschen: Papierkorb -> Bestaetigung (Ja/Nein) -> Eintrag dauerhaft aus dem Gedaechtnis loeschen */
   const deleteOverlay = document.getElementById("deleteOverlay");

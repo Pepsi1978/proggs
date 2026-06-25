@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.7.0"  # 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.8.0"  # 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -338,6 +338,7 @@ class SearchReq(BaseModel):
 class UpdateReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des zu ersetzenden Eintrags (aus /list, /by-category, /search)")
     text: str = Field(..., min_length=1, max_length=200_000, description="Neuer 1:1-Text — ersetzt den alten Vektor komplett (max_length gegen OOM, fastapi §8)")
+    title: str | None = Field(default=None, max_length=200, description="Optionaler NEUER Titel. None -> alter Titel bleibt. Aendert sich der Titel, wandert der Eintrag auf die neue (titel-basierte) doc_id (Frank-Wunsch: Titel im Drawer bearbeiten).")
     user_id: str = Field(default="frank")
 
 
@@ -360,6 +361,12 @@ class RenameCategoryReq(BaseModel):
 
 class DetachCategoryReq(BaseModel):
     name: str = Field(..., min_length=1, max_length=60, description="Kategorie, deren Etikett von allen Eintraegen entfernt wird (Eintraege bleiben)")
+    user_id: str = Field(default="frank")
+
+
+class EntryCategoryReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des Eintrags, dessen Kategorie geaendert wird")
+    category: str = Field(default="", max_length=60, description="Neue Kategorie (1:1, deutsche Rechtschreibung). Leer = Etikett entfernen.")
     user_id: str = Field(default="frank")
 
 
@@ -558,6 +565,32 @@ def detach_category(req: DetachCategoryReq) -> dict:
     return {"ok": True, "name": name, "points": len(pts), "entries": len(docs)}
 
 
+@app.post("/entry/category", dependencies=[Depends(require_auth)])
+def set_entry_category(req: EntryCategoryReq) -> dict:
+    """Aendert die Kategorie EINES Eintrags (per doc_id) — via set_payload auf ALLEN seinen Chunks.
+    Der Vektor/Volltext bleibt unangetastet, KEIN Re-Embedding (kostet kein Embedding-Budget). Genau
+    Franks 'nur die Payloads -> Kategoriezuordnung komplett geaendert'. Sync def -> Threadpool (fastapi §1)."""
+    _require_store()
+    flt = Filter(must=[
+        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ])
+    pts = _scroll(flt, limit=1)
+    if not pts:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    new_cat = (req.category or "").strip()
+    old_cat = (pts[0].payload.get("category") or "").strip()
+    # wait=True: abgeschlossen bevor das Dashboard neu laedt (sonst alte Kategorie sichtbar). Vektor bleibt.
+    qc.set_payload(collection_name=COLLECTION, payload={"category": new_cat}, points=flt, wait=True)
+    # Sonde: die Kategorie MUSS jetzt wirklich umgesetzt sein (Intent-Verifikation)
+    after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+    applied = bool(after) and (after[0].payload.get("category") or "").strip() == new_cat
+    probe(applied, "Kategorie-Verschiebung nicht angekommen", doc_id=req.doc_id, want=new_cat)
+    checkpoint("set_entry_category", "Kategorie EINES Eintrags geaendert (set_payload, Vektor unangetastet, kein Re-Embed)",
+               ok=applied, doc_id=req.doc_id, old=old_cat or None, new=new_cat or None)
+    return {"ok": True, "doc_id": req.doc_id, "old": old_cat or None, "new": new_cat or None}
+
+
 @app.post("/purge", dependencies=[Depends(require_auth)])
 def purge_user(req: PurgeReq) -> dict:
     """HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, KEIN Papierkorb) — fuer die
@@ -738,11 +771,23 @@ def update_entry(req: UpdateReq) -> dict:
     if not old:
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
     pl = old[0].payload
-    title = (pl.get("title") or "").strip()
+    old_title = (pl.get("title") or "").strip()
     category = (pl.get("category") or "").strip()
     created_at = pl.get("created_at", iso_now())
     now = iso_now()
-    _delete_doc(req.doc_id)  # alte Vektoren komplett raus (alle Chunks dieser doc_id)
+
+    # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
+    # Die doc_id eines betitelten Eintrags HAENGT vom Titel ab (make_doc_id) -> bei echter Titel-
+    # aenderung MUSS der Eintrag auf die neue doc_id wandern (sonst findet /by-title ihn nicht mehr).
+    title = old_title if req.title is None else req.title.strip()
+    title_changed = req.title is not None and title != old_title
+    target_doc_id = req.doc_id
+    if title_changed and title:
+        target_doc_id = make_doc_id(req.user_id, title)
+
+    _delete_doc(req.doc_id)  # alte Vektoren komplett raus (alle Chunks der bisherigen doc_id)
+    if target_doc_id != req.doc_id:
+        _delete_doc(target_doc_id)  # Ziel-Titel evtl. schon belegt -> dessen Chunks ersetzen (wie /store)
 
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
@@ -750,19 +795,24 @@ def update_entry(req: UpdateReq) -> dict:
     points = []
     for i, ch in enumerate(chunks):
         vec = embed(ch, "RETRIEVAL_DOCUMENT")
-        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
-            "doc_id": req.doc_id, "user_id": req.user_id, "title": title, "category": category,
+        points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
+            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": req.text, "created_at": created_at, "updated_at": now,
         }))
     qc.upsert(collection_name=COLLECTION, points=points)
 
     replaced_ok = bool(points) and points[0].payload["full_text"] == req.text
-    checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 unter derselben doc_id speichern",
-               ok=replaced_ok, doc_id=req.doc_id, title=title or None, chunks=len(chunks),
+    # Sonde: nach einer Titel-Migration darf die alte doc_id NICHT mehr existieren (kein Geist-Duplikat)
+    if title_changed and target_doc_id != req.doc_id:
+        leftover = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+        probe(not leftover, "Alte doc_id nach Titel-Migration noch vorhanden", old_doc_id=req.doc_id, new_doc_id=target_doc_id)
+    checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 speichern (Titel-Aenderung -> neue doc_id)",
+               ok=replaced_ok, doc_id=target_doc_id, old_doc_id=req.doc_id if title_changed else None,
+               title=title or None, title_changed=title_changed, chunks=len(chunks),
                chars=len(req.text), ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "doc_id": req.doc_id, "title": title or None, "category": category or None,
-            "chunks": len(chunks), "chars": len(req.text), "replaced": True}
+    return {"ok": True, "doc_id": target_doc_id, "title": title or None, "category": category or None,
+            "title_changed": title_changed, "chunks": len(chunks), "chars": len(req.text), "replaced": True}
 
 
 @app.get("/trash", dependencies=[Depends(require_auth)])
