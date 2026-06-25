@@ -350,7 +350,7 @@ button{font-family:inherit;cursor:pointer}
 .result-title{font-family:'Space Grotesk';font-weight:600;font-size:17px;color:var(--text)}
 .tag{
   font-size:11px;font-family:'JetBrains Mono';letter-spacing:.04em;padding:3px 9px;border-radius:7px;
-  text-transform:lowercase;font-weight:500;white-space:nowrap;
+  font-weight:500;white-space:nowrap;
 }
 .result-snippet{color:var(--text-dim);font-size:14px;line-height:1.55;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1189,7 +1189,10 @@ button{font-family:inherit;cursor:pointer}
   }
   // Unicode-bewusst: nur der erste Buchstabe JEDES Wortes gross (Umlaute ä/ö/ü zaehlen als Buchstabe,
   // nicht als Wortgrenze) — sonst entsteht "PersöNlich"/"GeräTe" weil \w keine Umlaute kennt.
-  const cap = s => (s||"").replace(/[-_]/g," ").replace(/(^|\s)(\p{L})/gu,(m,p,c)=>p+c.toUpperCase());
+  // Kategorie-Anzeige: NUR den ersten Buchstaben gross machen — die echte Schreibweise (Bindestriche,
+  // bestehende Grossbuchstaben wie "KI-Arbeitsweise", "NEM-Stack") bleibt 1:1 erhalten. Rettet auch die
+  // klein gespeicherte Logbuch-Kategorie "gespräche" -> "Gespräche". (Frank-Wunsch 2026-06-25)
+  const cap = s => (s||"").replace(/^(\p{L})/u,(m,c)=>c.toUpperCase());
 
   async function loadOverview(){
     try{
@@ -1271,7 +1274,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="result-body">
           <div class="result-top">
             <span class="result-title">${escapeHtml(it.title||"Ohne Titel")}</span>
-            <span class="tag" style="color:${color};background:${color}22">${escapeHtml(it.category||"")}</span>
+            <span class="tag" style="color:${color};background:${color}22">${escapeHtml(cap(it.category||""))}</span>
           </div>
           <div class="result-snippet">${snippet}</div>
         </div>
@@ -1298,7 +1301,7 @@ button{font-family:inherit;cursor:pointer}
     curEntry = it ? {...it} : null;
     const color = colorFor(it.category);
     const tag = document.getElementById("drawerTag");
-    tag.textContent = it.category||""; tag.style.color = color; tag.style.background = color+"22";
+    tag.textContent = cap(it.category||""); tag.style.color = color; tag.style.background = color+"22";
     document.getElementById("drawerTitle").textContent = it.title||"Ohne Titel";
     document.getElementById("drawerDate").textContent = it.when || (it.updated_at ? fmtDate(it.updated_at) : "");
     const box = document.getElementById("drawerText");
