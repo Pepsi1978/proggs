@@ -125,10 +125,14 @@ services:
       AGENT_TZ: Europe/Berlin
       AGENT_LOG_PATH: /app/logs/agent.jsonl
       AGENT_DATA_DIR: /app/data            # persistente, vom Dashboard editierbare Einstellungen
+      AGENT_EVAL_LOGS_DIR: /eval-logs      # Eval-Check-Logs auf Z (Backup + 14-Tage-Retention)
     volumes:
       # Logbuch-.txt landet auf der Samba-Platte Gedanken (= Franks Z:). Ordner gehoert frank (uid 1000),
       # der Container laeuft als uid 1000 -> Dateien gehoeren frank, sauber ueber Samba verwaltbar.
       - /srv/samba/gedanken/Logbuch:/logbook
+      # Eval-Check-Logs (Markdown) auf der Samba-Platte Z -> automatisch im Backup, 14 Tage Retention.
+      # Bind-Mount-uid == Container-uid 1000 (docker.md §4): Host-Ordner muss frank (1000) gehoeren -> chown beim Deploy.
+      - /srv/samba/gedanken/Eval-Logs:/eval-logs
       # System-Prompt (prompt.txt) + Modell-Wahl (config.json) — ueberleben Neustart/Rebuild.
       # Host-Ordner muss uid 1000 gehoeren (chown beim Deploy), da der Container als uid 1000 schreibt.
       - ./agent-data:/app/data

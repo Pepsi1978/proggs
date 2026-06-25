@@ -577,6 +577,13 @@ button{font-family:inherit;cursor:pointer}
   background:rgba(244,166,90,.10);color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;
   cursor:pointer;transition:background .2s,transform .1s}
 .chat-opt-btn:hover{background:rgba(244,166,90,.20);transform:translateY(-1px)}
+.eval-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px;font-size:13.5px;color:var(--text-dim);max-height:540px;overflow-y:auto}
+.eval-box pre{white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:var(--text);margin:0}
+.eval-sum{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px}
+.eval-fail{color:var(--bad)}
+.eval-okk{color:var(--good)}
+.eval-log-item{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--text-dim)}
+.eval-log-item:hover{background:var(--surface);color:var(--text)}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
@@ -1695,6 +1702,65 @@ button{font-family:inherit;cursor:pointer}
       if(e.key==="Enter"){ e.preventDefault(); document.getElementById("catSaveBtn").click(); }
       if(e.key==="Escape"){ catRenameMode(false); }
     });
+  })();
+
+  /* ── Eval-Check: Selbsttest aller 3 Agenten (Knopf im System-Prompt-Bereich) ── */
+  (function initEval(){
+    const runBtn = document.getElementById("evalRunBtn");
+    const logsBtn = document.getElementById("evalLogsBtn");
+    if(!runBtn) return;
+    const resBox = document.getElementById("evalResult");
+    const listBox = document.getElementById("evalLogList");
+    const viewBox = document.getElementById("evalLogView");
+    const esc = s => escapeHtml(String(s==null?"":s));
+    function renderResult(r){
+      listBox.style.display="none"; viewBox.style.display="none";
+      if(!r || r.ok===false){ resBox.style.display="block"; resBox.innerHTML = `<div class="eval-fail">Eval-Lauf fehlgeschlagen: ${esc(r&&r.detail||"unbekannt")}</div>`; return; }
+      const fails = (r.results||[]).filter(x=>!x.pass);
+      const cls = (r.passed===r.total) ? "eval-okk" : (r.passed>=r.total*0.8 ? "" : "eval-fail");
+      let html = `<div class="eval-sum ${cls}">Ergebnis: ${r.passed}/${r.total} bestanden</div>`;
+      if(fails.length){
+        html += `<div style="margin-bottom:6px">Nicht bestanden (${fails.length}):</div><ul style="margin:0 0 8px 18px;padding:0">`;
+        fails.forEach(f=>{ html += `<li><b>#${f.id}</b> [${esc(f.kind)}] ${esc((f.text||"").slice(0,70))}${(f.error?` — <span class="eval-fail">${esc(f.error)}</span>`:"")}</li>`; });
+        html += `</ul>`;
+      } else { html += `<div class="eval-okk">Alle Tests bestanden 🎉</div>`; }
+      if(r.log){ html += `<button class="btn" id="evalOpenLogBtn" type="button" style="margin-top:6px">Volles Log öffnen</button>`; }
+      resBox.style.display="block"; resBox.innerHTML = html;
+      const ob = document.getElementById("evalOpenLogBtn");
+      if(ob) ob.addEventListener("click", ()=> showLog(r.log));
+    }
+    async function showLog(name){
+      try{
+        const d = await api("/api/eval/log?name="+encodeURIComponent(name));
+        viewBox.style.display="block"; viewBox.innerHTML = `<pre>${esc(d&&d.text||"(leer)")}</pre>`; viewBox.scrollTop = 0;
+      }catch(e){ viewBox.style.display="block"; viewBox.innerHTML = `<div class="eval-fail">Log konnte nicht geladen werden.</div>`; }
+    }
+    async function showLogs(){
+      resBox.style.display="none"; viewBox.style.display="none";
+      try{
+        const d = await api("/api/eval/logs");
+        const logs = (d&&d.logs)||[];
+        listBox.style.display="block";
+        if(!logs.length){ listBox.innerHTML = "<div>Noch keine Eval-Logs vorhanden.</div>"; return; }
+        listBox.innerHTML = `<div class="eval-sum" style="font-size:13.5px">Gespeicherte Logs (${logs.length})</div>`
+          + logs.map(l=>`<div class="eval-log-item" data-name="${esc(l.name)}"><span>${esc(l.name)}</span><span class="cat-count">${Math.round((l.size||0)/1024)} KB</span></div>`).join("");
+        listBox.querySelectorAll(".eval-log-item").forEach(it=> it.addEventListener("click", ()=> showLog(it.dataset.name)));
+      }catch(e){ listBox.style.display="block"; listBox.innerHTML = `<div class="eval-fail">Logs konnten nicht geladen werden.</div>`; }
+    }
+    runBtn.addEventListener("click", async ()=>{
+      runBtn.disabled = true; logsBtn.disabled = true;
+      resBox.style.display="none"; listBox.style.display="none"; viewBox.style.display="none";
+      const st = document.getElementById("evalStatus");
+      if(st){ st.textContent = "läuft… das dauert 1–3 Minuten"; st.style.color = "var(--text-dim)"; }
+      try{
+        const r = await apiSend("/api/eval/run","POST",{});
+        renderResult(r);
+        if(r && r.ok!==false) flash("evalStatus", `fertig: ${r.passed}/${r.total} bestanden`);
+        else flash("evalStatus","fehlgeschlagen",false);
+      }catch(e){ flash("evalStatus","fehlgeschlagen — Agent erreichbar?",false); }
+      finally{ runBtn.disabled=false; logsBtn.disabled=false; }
+    });
+    logsBtn.addEventListener("click", showLogs);
   })();
 
   /* ── Jahr/Monat-Navigation (Logbuch + Papierkorb teilen sie) ─────────────── */
