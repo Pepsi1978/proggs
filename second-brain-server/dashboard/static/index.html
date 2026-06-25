@@ -1782,7 +1782,15 @@ button{font-family:inherit;cursor:pointer}
       }catch(e){ flash("evalStatus","fehlgeschlagen — Agent erreichbar?",false); }
       finally{ runBtn.disabled=false; logsBtn.disabled=false; }
     });
-    logsBtn.addEventListener("click", showLogs);
+    // Toggle: ist die Logs-Liste (oder eine geoeffnete Log-Ansicht) schon offen -> wieder zuklappen,
+    // sonst oeffnen. So muss man nicht durch eine riesige Liste scrollen, sondern klappt sie per Klick weg.
+    logsBtn.addEventListener("click", ()=>{
+      if(listBox.style.display==="block" || viewBox.style.display==="block"){
+        listBox.style.display="none"; viewBox.style.display="none";
+        return;
+      }
+      showLogs();
+    });
   })();
 
   /* ── Jahr/Monat-Navigation (Logbuch + Papierkorb teilen sie) ─────────────── */
