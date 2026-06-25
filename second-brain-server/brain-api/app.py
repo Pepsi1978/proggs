@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.10.0"  # 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.11.0"  # 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -183,7 +183,7 @@ try:
         )
         _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
     # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
-    for _field in ("doc_id", "title", "category", "parent", "user_id"):
+    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
@@ -270,23 +270,61 @@ def category_parent(category: str | None) -> str:
     return c.split("/", 1)[0].strip()
 
 
-def embed_input(title: str | None, category: str | None, text: str) -> str:
-    """Eingabe fuer das EMBEDDING (nicht der gespeicherte Text!): Titel UND Kategorie/Unterkategorie
-    werden dem Text als kurzes Praefix vorangestellt, damit BEIDE das Bedeutungssignal mitpraegen
+def _dedup(seq: list[str]) -> list[str]:
+    """Reihenfolge erhalten, case-insensitiv deduplizieren (erste Schreibweise gewinnt)."""
+    seen: set = set(); out: list[str] = []
+    for x in seq:
+        k = x.casefold()
+        if k not in seen:
+            seen.add(k); out.append(x)
+    return out
+
+
+def category_parents(categories: list[str]) -> list[str]:
+    """Haupt-Teile (vor dem ersten '/') ALLER Kategorien, dedupliziert. Fuer den 'parents'-Filter
+    der Uebersicht (alles UNTER einer Hauptkategorie), wenn ein Eintrag mehreren Kategorien angehoert."""
+    return _dedup([p for c in categories if (p := category_parent(c))])
+
+
+def cats_from_payload(pl: dict) -> list[str]:
+    """Kategorie-Liste aus einem gespeicherten Payload ableiten — abwaertskompatibel: bevorzugt das
+    neue Listen-Feld 'categories', faellt sonst auf das alte Einzel-Feld 'category' zurueck."""
+    raw = pl.get("categories")
+    if isinstance(raw, list):
+        out = _dedup([c.strip() for c in raw if isinstance(c, str) and c.strip()])
+        if out:
+            return out
+    one = (pl.get("category") or "").strip()
+    return [one] if one else []
+
+
+def norm_cats(categories: list[str] | None, category: str | None) -> list[str]:
+    """Eingehende Kategorien (Liste ODER einzelner String, beide Request-Formen) -> saubere,
+    deduplizierte Liste; Reihenfolge erhalten, erste = primaer."""
+    if categories:
+        return _dedup([c.strip() for c in categories if isinstance(c, str) and c.strip()])
+    if category and category.strip():
+        return [category.strip()]
+    return []
+
+
+def embed_input(title: str | None, categories: list[str], text: str) -> str:
+    """Eingabe fuer das EMBEDDING (nicht der gespeicherte Text!): Titel UND ALLE Kategorien des Eintrags
+    werden dem Text als kurzes Praefix vorangestellt, damit alle das Bedeutungssignal mitpraegen
     (metadata-enriched embeddings, best-practices/server/rag-retrieval.md §4 — identifizierende Felder
-    wie Franks Titel sind starke Diskriminatoren, generische Titel waeren es nicht). Der 1:1-Volltext
+    wie Titel/Kategorie sind starke Diskriminatoren). Hierarchische Kategorien 'A/B/C' werden zu
+    'A > B > C' expandiert, damit JEDE Ebene mitzaehlt (Frank-Wunsch: Haupt- + Unterkategorie(n) in den
+    Vektor). Mehrere Kategorien -> der Eintrag ist semantisch in ALLEN auffindbar. Der 1:1-Volltext
     (full_text) und der angezeigte chunk_text bleiben UNVERAENDERT — nur der Vektor wird angereichert.
-    Ohne Titel/Kategorie: unveraendert (reines 1:1-Verhalten). Jede Titel-/Kategorie-Aenderung erzwingt
-    Re-Embed (rag-retrieval.md §4) — genau Franks Wunsch 'jede Aenderung fuehrt zum neuen Vektor'."""
+    Jede Kategorie-/Titel-Aenderung erzwingt Re-Embed (§4) — 'jede Aenderung fuehrt zum neuen Vektor'."""
     t = (title or "").strip()
-    c = (category or "").strip()
-    if t and c:
-        return f"[Titel: {t} | Kategorie: {c}]\n\n{text}"
+    exp = [" > ".join(s.strip() for s in c.split("/") if s.strip()) for c in categories if c and c.strip()]
+    parts: list[str] = []
     if t:
-        return f"[Titel: {t}]\n\n{text}"
-    if c:
-        return f"[Kategorie: {c}]\n\n{text}"
-    return text
+        parts.append(f"Titel: {t}")
+    if exp:
+        parts.append("Kategorien: " + ", ".join(exp))
+    return f"[{' | '.join(parts)}]\n\n{text}" if parts else text
 
 
 def point_id(doc_id: str, idx: int) -> str:
@@ -350,7 +388,8 @@ def _require_store() -> None:
 class StoreReq(BaseModel):
     text: str = Field(..., min_length=1, description="Der Text, der WORTWOERTLICH 1:1 gespeichert wird")
     title: str | None = Field(default=None, description="Optionaler Titel = Schluessel (gleicher Titel ersetzt)")
-    category: str | None = Field(default=None, description="Optionale Kategorie (z.B. 'mentals', 'direktiven')")
+    category: str | None = Field(default=None, description="Optionale Kategorie (Abwaertskompat: einzelne Kategorie)")
+    categories: list[str] | None = Field(default=None, max_length=12, description="Optional MEHRERE Kategorien (Multi-Category); hat Vorrang vor 'category'. Erste = primaer.")
     user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
@@ -370,6 +409,13 @@ class UpdateReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des zu ersetzenden Eintrags (aus /list, /by-category, /search)")
     text: str = Field(..., min_length=1, max_length=200_000, description="Neuer 1:1-Text — ersetzt den alten Vektor komplett (max_length gegen OOM, fastapi §8)")
     title: str | None = Field(default=None, max_length=200, description="Optionaler NEUER Titel. None -> alter Titel bleibt. Aendert sich der Titel, wandert der Eintrag auf die neue (titel-basierte) doc_id (Frank-Wunsch: Titel im Drawer bearbeiten).")
+    categories: list[str] | None = Field(default=None, max_length=12, description="Optional NEUE Kategorie-Liste (Multi-Category). None -> bisherige Kategorien bleiben.")
+    user_id: str = Field(default="frank")
+
+
+class EntryCategoriesReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des Eintrags, dessen Kategorie-Liste gesetzt wird")
+    categories: list[str] = Field(..., min_length=1, max_length=12, description="Vollstaendige neue Kategorie-Liste (Multi-Category, 1:1 deutsche Rechtschreibung). Re-Embed, da die Kategorien den Vektor mitpraegen.")
     user_id: str = Field(default="frank")
 
 
@@ -458,20 +504,24 @@ def store(req: StoreReq) -> dict:
             created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
             _delete_doc(doc_id)  # gleicher Titel -> alte Version komplett raus, dann neu
 
-    category = (req.category or "").strip()
-    parent = category_parent(category)   # Hauptkategorie (vor dem '/') als eigenes Filterfeld
+    cats = norm_cats(req.categories, req.category)
+    category = cats[0] if cats else ""        # primaere Kategorie (Abwaertskompat)
+    parents = category_parents(cats)
+    parent = parents[0] if parents else ""    # primaerer Haupt-Teil (Abwaertskompat)
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(req.title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit (chunk_text bleibt 1:1)
+        vec = embed(embed_input(req.title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit (chunk_text bleibt 1:1)
         points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
             "doc_id": doc_id,
             "user_id": req.user_id,
             "title": (req.title or "").strip(),
             "category": category,
+            "categories": cats,
             "parent": parent,
+            "parents": parents,
             "chunk_index": i,
             "chunk_count": len(chunks),
             "chunk_text": ch,
@@ -512,6 +562,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
                title=title, chars=len(full))
     return {"ok": True, "found": True, "title": title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
+            "categories": cats_from_payload(points[0].payload),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
 
@@ -519,9 +570,12 @@ def by_title(title: str, user_id: str = "frank") -> dict:
 def by_category(category: str, user_id: str = "frank") -> dict:
     """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1."""
     _require_store()
+    cat = category.strip()
     points = _scroll(Filter(must=[
-        FieldCondition(key="category", match=MatchValue(value=category.strip())),
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+        # Multi-Category: matcht das neue Array 'categories' ODER (Abwaertskompat) das alte 'category'
+        Filter(should=[FieldCondition(key="categories", match=MatchValue(value=cat)),
+                       FieldCondition(key="category", match=MatchValue(value=cat))]),
     ]))
     seen: dict[str, dict] = {}
     for p in points:
@@ -529,6 +583,7 @@ def by_category(category: str, user_id: str = "frank") -> dict:
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
+                         "categories": cats_from_payload(p.payload),
                          "created_at": p.payload.get("created_at"),
                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
@@ -540,9 +595,12 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
     """Alle Eintraege UNTER einer Hauptkategorie (= 'Haupt' und alle 'Haupt/Unter'), via parent-Feld
     (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1."""
     _require_store()
+    par = parent.strip()
     points = _scroll(Filter(must=[
-        FieldCondition(key="parent", match=MatchValue(value=parent.strip())),
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+        # Multi-Category: matcht das neue Array 'parents' ODER (Abwaertskompat) das alte 'parent'
+        Filter(should=[FieldCondition(key="parents", match=MatchValue(value=par)),
+                       FieldCondition(key="parent", match=MatchValue(value=par))]),
     ]))
     seen: dict[str, dict] = {}
     for p in points:
@@ -586,15 +644,18 @@ def category_counts(user_id: str = "frank") -> dict:
     _require_store()
     points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
     seen: dict[str, set] = {}
+    all_docs: set = set()
     for p in points:
-        cat = (p.payload.get("category") or "").strip()
-        if not cat:
-            continue
-        seen.setdefault(cat, set()).add(p.payload.get("doc_id"))
-    counts = {cat: len(dids) for cat, dids in seen.items()}
-    checkpoint("category_counts", "Payload-Kategorien mit Eintragszahl (doc_id-dedupliziert)",
-               ok=True, categories=len(counts))
-    return {"ok": True, "counts": counts}
+        did = p.payload.get("doc_id")
+        all_docs.add(did)
+        for c in cats_from_payload(p.payload):   # Multi-Category: Eintrag zaehlt in JEDER seiner Kategorien
+            seen.setdefault(c, set()).add(did)
+    counts = {c: len(dids) for c, dids in seen.items()}
+    # total_distinct = Anzahl EINTRAEGE (jeder doc_id 1x) -> 'Eintraege Gesamt' bleibt korrekt,
+    # auch wenn die Summe der Kategorie-Balken groesser ist (Mehrfachzuordnung, Frank-Wunsch).
+    checkpoint("category_counts", "Kategorien mit Eintragszahl (Multi-Category, doc_id-dedupliziert) + total_distinct",
+               ok=True, categories=len(counts), total=len(all_docs))
+    return {"ok": True, "counts": counts, "total_distinct": len(all_docs)}
 
 
 @app.post("/rename-category", dependencies=[Depends(require_auth)])
@@ -659,7 +720,9 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     pl = pts[0].payload
     old_cat = (pl.get("category") or "").strip()
     new_cat = (req.category or "").strip()
-    new_parent = category_parent(new_cat)
+    new_cats = [new_cat] if new_cat else []   # /entry/category setzt GENAU eine Kategorie (Einzel-Wechsel); Multi -> /entry/categories
+    new_parents = category_parents(new_cats)
+    new_parent = new_parents[0] if new_parents else ""
     title = (pl.get("title") or "").strip()
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
@@ -671,10 +734,10 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, new_cat, ch), "RETRIEVAL_DOCUMENT")  # Titel + neue Kategorie praegen den Vektor mit
+        vec = embed(embed_input(title, new_cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + neue Kategorie praegen den Vektor mit
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
-            "category": new_cat, "parent": new_parent, "chunk_index": i, "chunk_count": len(chunks),
+            "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now,
         }))
     qc.upsert(collection_name=COLLECTION, points=points, wait=True)
@@ -685,6 +748,52 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
                ok=applied, doc_id=req.doc_id, old=old_cat or None, new=new_cat or None,
                parent=new_parent or None, chunks=len(chunks), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": req.doc_id, "old": old_cat or None, "new": new_cat or None}
+
+
+@app.post("/entry/categories", dependencies=[Depends(require_auth)])
+def set_entry_categories(req: EntryCategoriesReq) -> dict:
+    """Setzt die VOLLSTAENDIGE Kategorie-Liste EINES Eintrags (Multi-Category, hinter dem Drawer-Plus).
+    Da die Kategorien das EMBEDDING mitpraegen, wird FRISCH neu eingebettet (full_text/Titel/created_at
+    bleiben 1:1). Sync def -> Threadpool (fastapi §1)."""
+    _require_store()
+    pts = _scroll(Filter(must=[
+        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ]), limit=1000)
+    if not pts:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    cats = norm_cats(req.categories, None)
+    if not cats:
+        raise HTTPException(status_code=400, detail="Mindestens eine gueltige Kategorie noetig")
+    parents = category_parents(cats)
+    pl = pts[0].payload
+    title = (pl.get("title") or "").strip()
+    full_text = pl.get("full_text", "")
+    created_at = pl.get("created_at", iso_now())
+    now = iso_now()
+
+    _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
+    chunks = chunk_text(full_text)
+    _guard_embed_budget(len(chunks))
+    t0 = time.time()
+    points = []
+    for i, ch in enumerate(chunks):
+        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
+        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
+            "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
+            "category": cats[0], "categories": cats,
+            "parent": (parents[0] if parents else ""), "parents": parents,
+            "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
+            "full_text": full_text, "created_at": created_at, "updated_at": now,
+        }))
+    qc.upsert(collection_name=COLLECTION, points=points, wait=True)
+    after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+    applied = bool(after) and set(cats_from_payload(after[0].payload)) == set(cats)
+    probe(applied, "Kategorie-Liste nicht angekommen", doc_id=req.doc_id, want=cats)
+    checkpoint("set_entry_categories", "Kategorie-LISTE eines Eintrags gesetzt (Multi-Category, frisch eingebettet)",
+               ok=applied, doc_id=req.doc_id, categories=cats, parents=parents, chunks=len(chunks),
+               ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "doc_id": req.doc_id, "categories": cats, "parents": parents}
 
 
 @app.post("/purge", dependencies=[Depends(require_auth)])
@@ -753,9 +862,13 @@ def search(req: SearchReq) -> dict:
     # Payload-Filter aufbauen (immer user_id; optional Kategorie + Datum)
     must = [FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]
     if req.category and req.category.strip():
-        must.append(FieldCondition(key="category", match=MatchValue(value=req.category.strip())))
+        _c = req.category.strip()   # Multi-Category: neues Array 'categories' ODER altes 'category'
+        must.append(Filter(should=[FieldCondition(key="categories", match=MatchValue(value=_c)),
+                                   FieldCondition(key="category", match=MatchValue(value=_c))]))
     elif req.parent and req.parent.strip():   # 'alles unter Haupt' (nur wenn keine exakte Kategorie gesetzt)
-        must.append(FieldCondition(key="parent", match=MatchValue(value=req.parent.strip())))
+        _p = req.parent.strip()
+        must.append(Filter(should=[FieldCondition(key="parents", match=MatchValue(value=_p)),
+                                   FieldCondition(key="parent", match=MatchValue(value=_p))]))
     gte, lte = _date_bounds(req)
     py_date_filter = False  # Fallback, falls DatetimeRange in der Client-Version fehlt (Funktionserhalt)
     if gte or lte:
@@ -870,7 +983,8 @@ def update_entry(req: UpdateReq) -> dict:
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
     pl = old[0].payload
     old_title = (pl.get("title") or "").strip()
-    category = (pl.get("category") or "").strip()
+    cats = norm_cats(req.categories, None) or cats_from_payload(pl)   # req.categories ueberschreibt; sonst bisherige Kategorien behalten
+    category = cats[0] if cats else ""
     created_at = pl.get("created_at", iso_now())
     now = iso_now()
 
@@ -887,15 +1001,16 @@ def update_entry(req: UpdateReq) -> dict:
     if target_doc_id != req.doc_id:
         _delete_doc(target_doc_id)  # Ziel-Titel evtl. schon belegt -> dessen Chunks ersetzen (wie /store)
 
-    parent = category_parent(category)
+    parents = category_parents(cats)
+    parent = parents[0] if parents else ""
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
+        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
-            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "parent": parent,
+            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": req.text, "created_at": created_at, "updated_at": now,
         }))
@@ -974,22 +1089,24 @@ def trash_restore(req: RestoreReq) -> dict:
         raise HTTPException(status_code=404, detail="Eintrag nicht im Papierkorb")
     text = entry.get("text") or ""
     title = (entry.get("title") or "").strip()
-    category = (entry.get("category") or "").strip()
+    cats = cats_from_payload(entry)   # Trash-Eintrag kann 'categories' ODER altes 'category' haben
+    category = cats[0] if cats else ""
     created_at = entry.get("created_at") or iso_now()
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
-    parent = category_parent(category)
+    parents = category_parents(cats)
+    parent = parents[0] if parents else ""
     _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
     chunks = chunk_text(text)
     _guard_embed_budget(len(chunks))
     now = iso_now()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
+        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
-            "title": title, "category": category, "parent": parent, "chunk_index": i, "chunk_count": len(chunks),
+            "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
         }))
     qc.upsert(collection_name=COLLECTION, points=points)
@@ -1032,10 +1149,16 @@ def reembed_all(req: ReembedReq) -> dict:
         for p in batch:
             pl = dict(p.payload or {})
             title = (pl.get("title") or "").strip()
-            category = (pl.get("category") or "").strip()
+            cats = cats_from_payload(pl)                 # Migration mit: aus 'categories' ODER altem 'category'
+            pl["categories"] = cats                      # Multi-Category-Felder im Payload sicherstellen (Backfill)
+            pl["parents"] = category_parents(cats)
+            if cats and not (pl.get("category") or "").strip():
+                pl["category"] = cats[0]
+            if pl["parents"] and not (pl.get("parent") or "").strip():
+                pl["parent"] = pl["parents"][0]
             ch = pl.get("chunk_text", pl.get("full_text", ""))
-            vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
-            points.append(PointStruct(id=p.id, vector=vec, payload=pl))   # Payload 1:1 unveraendert
+            vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
+            points.append(PointStruct(id=p.id, vector=vec, payload=pl))   # Payload inkl. categories/parents
         qc.upsert(collection_name=COLLECTION, points=points, wait=True)
         done += len(points)
     checkpoint("reembed_all", "Bestand mit aktuellem Titel+Kategorie-Schema neu eingebettet (Vektor neu, Payload 1:1)",
@@ -1046,4 +1169,4 @@ def reembed_all(req: ReembedReq) -> dict:
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/entry", "/reembed-all", "/forget"]}
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-parent", "/by-date", "/search", "/list", "/entry", "/entry/categories", "/reembed-all", "/forget"]}
