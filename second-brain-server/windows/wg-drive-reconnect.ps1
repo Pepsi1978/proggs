@@ -119,10 +119,45 @@ if (-not $up) { Log 'WireGuard nach Start-Versuch nicht erreichbar - abgebrochen
 # findet und nicht ins Leere greift. Schadet nicht, wenn schon vorhanden.
 if ($smbUser -and $smbPass) { & cmdkey.exe /add:10.8.0.1 /user:$smbUser /pass:$smbPass 2>$null | Out-Null }
 
+# 2c) ROOT-CAUSE-FIX 2026-06-25 (#3) - das WINDOWS-EIGENE persistente Login-Reconnect ABSCHALTEN.
+# WARUM es trotz #1/#2 nach Neustart IMMER WIEDER ein rotes X (und "mehrere Benutzernamen"/1219) gab:
+# Y/Z standen als PERSISTENTE Mappings in HKCU:\Network. Windows verbindet persistente Netzlaufwerke
+# SOFORT beim Login - da ist der WireGuard-Tunnel aber noch NICHT oben (Race). Ergebnis: ein TOTES
+# "Nicht verfuegbar"-Mapping (rotes X) im NORMALEN (nicht-elevated) Token. Dieses Skript mappt zwar
+# danach im ELEVATED Token frisch + korrekt (Log: "reconnect OK"), aber das tote NORMALE Mapping bleibt
+# im Explorer als X stehen und KOLLIDIERT beim Anklicken (Fehler 1219: zwei Sitzungen zum selben Server
+# 10.8.0.1 mit verschiedenen Credentials). Beweis im Log 2026-06-25: 10:35:21 beide "reconnect OK",
+# trotzdem sah Frank Z mit X -> Token-getrennte Sicht. FIX (Poka-Yoke Stufe 3 - Race KONZEPTIONELL
+# unmoeglich): die persistenten HKCU:\Network-Eintraege entfernen, sodass Windows beim Login GAR NICHT
+# mehr voreilig (vor dem Tunnel) verbindet. Dieses Skript ist ab jetzt die EINZIGE Mapping-Quelle - es
+# laeuft bei Login + alle 5 Min und mappt erst, wenn der Tunnel (445) oben ist.
+foreach ($drv in 'Y', 'Z') {
+    $rp = "HKCU:\Network\$drv"
+    if (Test-Path $rp) {
+        Remove-Item -Path $rp -Recurse -Force -ErrorAction SilentlyContinue
+        Log "${drv}: persistenten HKCU-Login-Eintrag entfernt (verhindert Boot-Race vor dem Tunnel)"
+    }
+}
+
 # 3) Laufwerke pruefen + bei Bedarf neu verbinden - gesunde NICHT anfassen (kein Blinken).
+# Reihenfolge bewusst Z: ZUERST, dann Y: - falls Z einen 1219-Konflikt wirft und dabei alle Sitzungen
+# abgeraeumt werden, wird das danach folgende Y: ohnehin frisch neu gemappt.
 $map = [ordered]@{ 'Z:' = '\\10.8.0.1\gedanken'; 'Y:' = '\\10.8.0.1\daten' }
-$CONNECT_UPDATE_PROFILE = 0x1   # persistent (ueberlebt Reboot), KEIN CONNECT_INTERACTIVE -> nie ein Prompt
 $RESOURCETYPE_DISK = 0x1
+# Flag 0: NICHT CONNECT_UPDATE_PROFILE (0x1) -> nicht-persistent, also KEIN neuer HKCU:\Network-Eintrag,
+# den Windows beim naechsten Login wieder voreilig (vor dem Tunnel) verbinden wuerde. KEIN
+# CONNECT_INTERACTIVE -> die API kann NIEMALS einen Passwort-/Benutzer-Dialog oeffnen (kein Hang).
+$FLAGS = 0
+
+function Map-Drive($d, $remote) {
+    $nr = New-Object Mpr+NETRESOURCE
+    $nr.dwType = $RESOURCETYPE_DISK
+    $nr.lpLocalName = $d
+    $nr.lpRemoteName = $remote
+    if ($smbUser -and $smbPass) { return [Mpr]::WNetAddConnection2([ref]$nr, $smbPass, $smbUser, $FLAGS) }
+    else { return [Mpr]::WNetAddConnection2([ref]$nr, $null, $null, $FLAGS) }   # Fallback: Tresor
+}
+
 foreach ($d in $map.Keys) {
     $remote = $map[$d]
     # Ist das Laufwerk bereits gesund verbunden? Dann in Ruhe lassen.
@@ -130,15 +165,19 @@ foreach ($d in $map.Keys) {
     if ($m -and $m.RemotePath -eq $remote -and $m.Status -eq 'OK') { Log "$d ist OK"; continue }
     # Alte (ggf. tote) Verbindung loesen - Fehler hier ist normal (war nicht verbunden).
     [Mpr]::WNetCancelConnection2($d, 0, $true) | Out-Null
-    # Neu verbinden - EXPLIZITE Credentials, kein Prompt moeglich.
-    $nr = New-Object Mpr+NETRESOURCE
-    $nr.dwType = $RESOURCETYPE_DISK
-    $nr.lpLocalName = $d
-    $nr.lpRemoteName = $remote
-    $code = if ($smbUser -and $smbPass) {
-        [Mpr]::WNetAddConnection2([ref]$nr, $smbPass, $smbUser, $CONNECT_UPDATE_PROFILE)
-    } else {
-        [Mpr]::WNetAddConnection2([ref]$nr, $null, $null, $CONNECT_UPDATE_PROFILE)  # Fallback: Tresor
+    $code = Map-Drive $d $remote
+    # Fehler 1219 = "Mehrfache Verbindungen ... mit mehreren Benutzernamen sind nicht zulaessig":
+    # Es existiert noch eine Sitzung zum SELBEN Server 10.8.0.1 mit anderen/impliziten Credentials.
+    # Windows erlaubt pro Server nur EINEN Credential-Satz. Loesung: ALLE Sitzungen zu 10.8.0.1 hart
+    # abraeumen (beide Buchstaben + der nackte Server-UNC + IPC$), dann mit unseren expliziten
+    # Credentials neu mappen. Genau das, was Frank manuell mit `net use ... /delete` gemacht hat.
+    if ($code -eq 1219) {
+        Log "$d Konflikt 1219 (mehrere Benutzernamen) -> raeume alle Sitzungen zu 10.8.0.1 ab + Neuversuch"
+        foreach ($k in $map.Keys) { [Mpr]::WNetCancelConnection2($k, 0, $true) | Out-Null }
+        [Mpr]::WNetCancelConnection2('\\10.8.0.1', 0, $true) | Out-Null
+        [Mpr]::WNetCancelConnection2('\\10.8.0.1\IPC$', 0, $true) | Out-Null
+        Start-Sleep -Milliseconds 500
+        $code = Map-Drive $d $remote
     }
     if ($code -eq 0) { Log "$d war nicht verbunden -> reconnect OK ($remote)" }
     else { Log "$d reconnect FEHLGESCHLAGEN: $(ErrText $code) [$remote]" }
