@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.6.0"  # 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.7.0"  # 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -363,6 +363,10 @@ class DetachCategoryReq(BaseModel):
     user_id: str = Field(default="frank")
 
 
+class PurgeReq(BaseModel):
+    user_id: str = Field(..., min_length=1, max_length=40, description="TEST-Nutzer (MUSS mit 'eval' beginnen) — ALLE seine Eintraege werden HART geloescht (kein Papierkorb)")
+
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -552,6 +556,25 @@ def detach_category(req: DetachCategoryReq) -> dict:
     checkpoint("detach_category", "Kategorie-Etikett entfernt — Eintraege bleiben 1:1 erhalten",
                ok=True, name=name, points=len(pts), entries=len(docs))
     return {"ok": True, "name": name, "points": len(pts), "entries": len(docs)}
+
+
+@app.post("/purge", dependencies=[Depends(require_auth)])
+def purge_user(req: PurgeReq) -> dict:
+    """HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, KEIN Papierkorb) — fuer die
+    Eval-Aufraeumung. SCHUTZ: nur user_ids die mit 'eval' beginnen; 'frank' und alles andere ist
+    gesperrt (verhindert versehentliches Loeschen des echten Gehirns)."""
+    _require_store()
+    uid = req.user_id.strip()
+    if not uid.startswith("eval") or uid == "frank":
+        raise HTTPException(status_code=403, detail="purge ist NUR fuer eval-Test-Nutzer erlaubt (Schutz des echten Gehirns)")
+    flt = Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=uid))])
+    pts = _scroll(flt)
+    docs = {p.payload.get("doc_id") for p in pts}
+    if pts:
+        qc.delete(collection_name=COLLECTION, points_selector=flt, wait=True)
+    checkpoint("purge", "Test-Nutzer HART geloescht (kein Papierkorb)", ok=True, user_id=uid, points=len(pts), entries=len(docs))
+    _log(logging.INFO, "Eval-Test-Nutzer gepurged", user_id=uid, points=len(pts), entries=len(docs))
+    return {"ok": True, "user_id": uid, "points": len(pts), "entries": len(docs)}
 
 
 @app.get("/by-date", dependencies=[Depends(require_auth)])
