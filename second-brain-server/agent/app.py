@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.12.0"  # 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
+VERSION = "0.13.0"  # 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -275,17 +275,58 @@ def brain_categories() -> list[str]:
         return []
 
 
+def brain_category_counts() -> dict:
+    """{Kategorie: Anzahl Eintraege} aus den Payloads (doc_id-dedupliziert). Hilfskontext — nie crashen."""
+    try:
+        r = httpx.get(f"{BRAIN_URL}/category-counts", params={"user_id": USER_ID}, headers=HEADERS, timeout=30.0)
+        r.raise_for_status()
+        return r.json().get("counts", {}) or {}
+    except Exception:  # noqa: BLE001
+        _log(logging.WARNING, "category-counts-Abruf fehlgeschlagen", exc_info=True)
+        return {}
+
+
+def brain_rename_category(old: str, new: str) -> dict:
+    """Benennt eine Kategorie in ALLEN Payloads um (brain set_payload; existiert 'new' -> Merge)."""
+    r = httpx.post(f"{BRAIN_URL}/rename-category", json={"old": old, "new": new, "user_id": USER_ID},
+                   headers=HEADERS, timeout=60.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def brain_detach_category(name: str) -> dict:
+    """Entfernt das Kategorie-Etikett von allen Eintraegen (Eintraege BLEIBEN). brain detach."""
+    r = httpx.post(f"{BRAIN_URL}/detach-category", json={"name": name, "user_id": USER_ID},
+                   headers=HEADERS, timeout=60.0)
+    r.raise_for_status()
+    return r.json()
+
+
 # --- Kategorie-Registry: haelt auch LEERE (noch eintragslose) Kategorien persistent -----------
 # Qdrant kennt eine Kategorie nur, solange ein Eintrag drin liegt. Frank kann aber Kategorien
 # VORAB anlegen (Dashboard "Kategorie +") — die leben hier in categories.json, ueberleben Neustart
 # (agent-data-Volume) und werden dem Speicheragenten + Dashboard mitgegeben.
 def _cat_key(name: str) -> str:
-    """Anzeigename -> Kategorie-Schluessel: klein, deutsche Umlaute ERHALTEN (Frank-Wunsch 2026-06-24 —
-    UTF-8 ueberall, kein ASCII-ae/oe/ue mehr), nur Buchstaben (inkl. äöüß) + Ziffern, Rest -> Bindestrich.
-    Lowercase bleibt als Schluessel-Normierung (verhindert 'Geräte' vs 'geräte'-Duplikate)."""
-    s = (name or "").strip().lower()
-    s = re.sub(r"[^a-z0-9äöüß]+", "-", s).strip("-")
-    return s[:40]
+    """Anzeigename -> gespeicherter Kategorie-Name: KLARTEXT nach deutscher Rechtschreibung, so wie
+    Frank/Gemini ihn schreibt (Frank-Wunsch 2026-06-25 — Substantive gross, Leerzeichen erlaubt).
+    NUR trimmen + Mehrfach-Whitespace zusammenfassen + Laenge cappen. KEINE Klein-/Slug-Normierung
+    mehr (die zerstoerte die deutsche Rechtschreibung) — der Dubletten-Schutz laeuft jetzt
+    case-insensitiv ueber _canonical_category()."""
+    return re.sub(r"\s+", " ", (name or "").strip())[:60]
+
+
+def _canonical_category(name: str, existing: list[str]) -> str:
+    """Kanonische Schreibweise (Dubletten-Schutz): existiert 'name' case-insensitiv schon in
+    'existing', gewinnt die BESTEHENDE Schreibweise (verhindert 'Fitness'+'fitness'-Duplikate);
+    sonst die deutsch-korrekte Klartext-Form. Die Gross-/Kleinschreibung wird NIE verstuemmelt."""
+    disp = _cat_key(name)
+    if not disp:
+        return ""
+    norm = disp.casefold()
+    for e in existing:
+        if (e or "").casefold() == norm:
+            return e
+    return disp
 
 
 def load_registry() -> list[str]:
@@ -309,14 +350,18 @@ def save_registry(cats: list[str]) -> None:
 
 
 def add_registry_category(name: str) -> str:
-    """Neue Kategorie registrieren (auch ohne Eintrag). Gibt den normierten Schluessel zurueck ('' = ungueltig)."""
-    key = _cat_key(name)
-    if not key or key == CONV_CATEGORY:
+    """Neue (auch leere) Kategorie registrieren. Gibt die kanonische Schreibweise zurueck ('' = ungueltig).
+    Existiert sie (case-insensitiv) schon als Payload- ODER Registry-Kategorie, wird KEINE Dublette
+    angelegt — die bestehende Schreibweise gewinnt (kanonisch)."""
+    existing = all_categories()
+    key = _canonical_category(name, existing)
+    if not key or key.casefold() == CONV_CATEGORY.casefold():
         return ""
+    if key in existing:            # schon als Payload- oder Registry-Kategorie da -> nichts tun
+        return key
     cats = load_registry()
-    if key not in cats:
-        cats.append(key)
-        save_registry(cats)
+    cats.append(key)
+    save_registry(cats)
     return key
 
 
@@ -411,16 +456,17 @@ Gib NUR das JSON-Objekt aus, sonst nichts."""
 # veraenderter Persona-Text kann das Speicher-Format daher nie aushebeln.
 DEFAULT_SPEICHER = """Du bist der Speicheragent von Cortex. Du bekommst einen Text, der WORTWÖRTLICH 1:1 ins Gehirn gelegt wird — du änderst, kürzt oder deutest ihn NIEMALS. Deine einzige Aufgabe: die passende KATEGORIE und einen kurzen TITEL bestimmen.
 
-BESTEHENDE KATEGORIEN (klein, mit echten deutschen Umlauten): {kategorien}
-- Wähle wenn möglich EINE bestehende Kategorie (auch nur grob passend).
-- Nur wenn WIRKLICH keine passt, schlage GENAU EINEN neuen Kategorie-Schlüssel vor: Kleinbuchstaben mit echten deutschen Umlauten (ä, ö, ü, ß), Ziffern und Bindestriche (z.B. 'reise-ideen', 'gespräche', 'geräte') — KEINE ae/oe/ue-Umschreibung, keine Leerzeichen, keine sonstigen Sonderzeichen.
+BESTEHENDE KATEGORIEN: {kategorien}
+- Wähle wenn möglich EINE bestehende Kategorie aus der Liste und übernimm sie ZEICHENGENAU so, wie sie dort steht (gleiche Groß-/Kleinschreibung).
+- Nur wenn WIRKLICH keine passt, vergib GENAU EINEN neuen Kategorie-Namen nach normaler deutscher Rechtschreibung (Substantive groß, echte Umlaute ä/ö/ü/ß), z.B. 'Geräte', 'Reise-Ideen', 'Persönlich'. Kurz und treffend, Leerzeichen erlaubt.
 - Gibt es unter 'ÄHNLICHE VORHANDENE EINTRÄGE' einen, der im Kern DIESELBE Info ist, setze 'replace_title' auf dessen EXAKTEN Titel (dann wird er ersetzt); sonst 'replace_title' leer "".
 - Titel: höchstens ~60 Zeichen, mit echten Umlauten, keine Anführungszeichen."""
 
 # Geschuetztes Antwort-Format des Speicheragenten (nicht editierbar — Code-kritisch, wird in
 # build_speicher_prompt automatisch angehaengt).
 SPEICHER_SCHEMA = """ANTWORTE AUSSCHLIESSLICH MIT EINEM EINZIGEN, NACKTEN JSON-OBJEKT:
-{"category":"kategorie_schluessel","title":"Kurzer Titel","replace_title":""}"""
+{"category":"Kategorie","title":"Kurzer Titel","replace_title":""}
+Die Kategorie nach normaler deutscher Rechtschreibung (Substantive groß, echte Umlaute) — eine bereits bestehende Kategorie aus der Liste IMMER zeichengenau wiederverwenden statt eine neue Schreibweise zu erfinden."""
 
 # Editierbarer Persona-/Stil-Teil des ABFRAGEAGENTEN (Dashboard). Bestimmt Ton/Stil der Antwort.
 # Die Anti-Halluzinations-Constraints (NUR aus den Treffern, nichts erfinden) bleiben geschuetzt
@@ -608,13 +654,13 @@ def _do_store(quote: str, categories: list[str], override_category: str = "") ->
     except Exception:  # noqa: BLE001 — Dedup ist Hilfe, kein harter Fehler
         _log(logging.WARNING, "Dubletten-Suche fehlgeschlagen", exc_info=True)
     plan = speicheragent_decide(quote, candidates, categories)
-    override_key = _cat_key(override_category) if override_category else ""
+    override_key = _canonical_category(override_category, categories) if override_category else ""
     if override_key:
         cat = override_key                              # Franks bewusste Wahl
         replace_title = ""                              # kein Dubletten-Ersatz bei manueller Kategorie
         add_registry_category(override_key)             # gewaehlte Kategorie bleibt bekannt
     else:
-        cat = (plan.get("category") or "").strip().lower() or "(ohne)"
+        cat = _canonical_category(plan.get("category") or "", categories) or "(ohne)"
         replace_title = (plan.get("replace_title") or "").strip()
     title = (plan.get("title") or "").strip() or quote[:60]
     use_title = replace_title or title
@@ -804,7 +850,16 @@ class ImproveReq(BaseModel):
 
 
 class CategoryReq(BaseModel):
-    name: str = Field(..., min_length=1, max_length=60, description="Anzeigename der neuen Kategorie (wird zum Schluessel normiert, deutsche Umlaute bleiben erhalten)")
+    name: str = Field(..., min_length=1, max_length=60, description="Name der neuen Kategorie — 1:1 nach deutscher Rechtschreibung (kanonisch dedupliziert, keine Verstuemmelung)")
+
+
+class RenameCategoryReq(BaseModel):
+    old: str = Field(..., min_length=1, max_length=60, description="Bisheriger Kategorie-Name")
+    new: str = Field(..., min_length=1, max_length=60, description="Neuer Name (deutsche Rechtschreibung, 1:1). Existiert er schon -> Merge")
+
+
+class DeleteCategoryReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60, description="Zu loeschende Kategorie — Eintraege BLEIBEN (nur das Etikett wird entfernt)")
 
 
 # Lektor-Auftrag fuer den G-Button: NUR umformulieren, Inhalt 1:1 erhalten (keine Halluzination).
@@ -906,6 +961,70 @@ def post_category(req: CategoryReq) -> dict:
     return {"ok": True, "key": key, "categories": all_categories()}
 
 
+@app.get("/categories/detail", dependencies=[Depends(require_auth)])
+def get_categories_detail() -> dict:
+    """Kategorien fuer die Verwaltung UND das Gespraech-Dropdown: jede mit Eintragszahl + leer-Flag.
+    Quelle der Wahrheit: Payload-Kategorien (mit count) UNION leere Registry-Kategorien (count 0).
+    Payload-Schreibweise gewinnt bei case-insensitiven Dubletten. Sync def -> Threadpool (fastapi §1)."""
+    counts = {k: v for k, v in brain_category_counts().items() if k.casefold() != CONV_CATEGORY.casefold()}
+    names: dict[str, str] = {}                       # casefold -> Anzeige-Schreibweise
+    for n in load_registry():                        # leere zuerst (Registry)
+        if n.casefold() != CONV_CATEGORY.casefold():
+            names.setdefault(n.casefold(), n)
+    for n in counts:                                 # Payload-Schreibweise ist die Wahrheit -> ueberschreibt
+        names[n.casefold()] = n
+    out = [{"name": names[k], "count": counts.get(names[k], 0), "empty": counts.get(names[k], 0) == 0}
+           for k in sorted(names, key=lambda s: s)]
+    return {"ok": True, "categories": out}
+
+
+@app.post("/categories/rename", dependencies=[Depends(require_auth)])
+def rename_category_ep(req: RenameCategoryReq) -> dict:
+    """Kategorie umbenennen: Payloads via brain set_payload (Vektor bleibt) + Registry mitziehen.
+    Existiert 'new' bereits, ist es ein Merge. Loescht NIE einen Eintrag. Sync def -> Threadpool."""
+    old, new = _cat_key(req.old), _cat_key(req.new)
+    if not old or not new:
+        raise HTTPException(status_code=400, detail="old/new duerfen nicht leer sein")
+    if new.casefold() == CONV_CATEGORY.casefold():
+        raise HTTPException(status_code=400, detail="reservierter Name (Gespraechs-Spur)")
+    res: dict = {}
+    if old.casefold() != new.casefold():
+        try:
+            res = brain_rename_category(old, new)
+        except Exception as e:  # noqa: BLE001
+            _log(logging.ERROR, "Kategorie-Umbenennen (brain) fehlgeschlagen", exc_info=True)
+            raise HTTPException(status_code=502, detail=f"Umbenennen fehlgeschlagen: {type(e).__name__}")
+    # Registry mitziehen: alte raus, neue rein (case-insensitiv, keine Dublette)
+    cats = [c for c in load_registry() if c.casefold() != old.casefold()]
+    if not any(c.casefold() == new.casefold() for c in cats):
+        cats.append(new)
+    save_registry(cats)
+    checkpoint("kategorie_umbenennen", "Kategorie umbenannt — Payloads + Registry, Vektoren unangetastet",
+               ok=True, old=old, new=new, entries=res.get("entries", 0))
+    _log(logging.INFO, "Kategorie umbenannt", old=old, new=new, entries=res.get("entries", 0))
+    return {"ok": True, "old": old, "new": new, "entries": res.get("entries", 0)}
+
+
+@app.post("/categories/delete", dependencies=[Depends(require_auth)])
+def delete_category_ep(req: DeleteCategoryReq) -> dict:
+    """Kategorie loeschen: Etikett von allen Eintraegen entfernen (Eintraege BLEIBEN 1:1) + aus
+    Registry. Loescht NIEMALS einen Eintrag. Sync def -> Threadpool."""
+    name = _cat_key(req.name)
+    if not name:
+        raise HTTPException(status_code=400, detail="name darf nicht leer sein")
+    try:
+        res = brain_detach_category(name)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Kategorie-Loeschen (detach) fehlgeschlagen", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Loeschen fehlgeschlagen: {type(e).__name__}")
+    cats = [c for c in load_registry() if c.casefold() != name.casefold()]
+    save_registry(cats)
+    checkpoint("kategorie_loeschen", "Kategorie entfernt — Eintraege behalten (nur Etikett weg)",
+               ok=True, name=name, entries=res.get("entries", 0))
+    _log(logging.INFO, "Kategorie geloescht", name=name, entries=res.get("entries", 0))
+    return {"ok": True, "name": name, "entries": res.get("entries", 0)}
+
+
 @app.post("/improve", dependencies=[Depends(require_auth)])
 def improve(req: ImproveReq) -> dict:
     """G-Button: einen eingesprochenen Roh-Text grammatikalisch/sprachlich verbessern, OHNE den
@@ -931,7 +1050,8 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
     Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save.
     'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
-    categories = all_categories()   # inkl. manuell angelegter (auch leerer) Kategorien
+    payload_cats = brain_categories()                                                  # NUR Kategorien MIT Eintraegen -> Leseagent (leere bringen ihm nichts)
+    categories = sorted((set(payload_cats) | set(load_registry())) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
     route = hauptagent_route(session, user_text, pending)
     intent = (route.get("intent") or "smalltalk").strip()
 
@@ -968,7 +1088,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             return {"reply": f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
                     "action": "error", "pending": None}
         try:
-            answer = llm_answer(session, user_text, hits, categories)
+            answer = llm_answer(session, user_text, hits, payload_cats)   # Leseagent: nur befuellte Kategorien
         except Exception as e:  # noqa: BLE001 — Antwort-LLM darf den Endpunkt nie killen
             _log(logging.ERROR, "Antwort-Formulierung fehlgeschlagen", exc_info=True)
             return {"reply": f"Beim Beantworten ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
