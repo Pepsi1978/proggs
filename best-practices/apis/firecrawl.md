@@ -19,6 +19,8 @@
 | 4 | Credits budgetieren | `/search` `limit` klein (Default 5; Checks 2-3); 1 Credit ≈ 1 gescrapte Seite |
 | 5 | Suche vs. einzelne Seite | Thema offen → `/v1/search`; bekannte URL → `/v1/scrape` (spart Credits) |
 | 6 | Aus Python aufrufen | `Authorization: Bearer`, **User-Agent setzen** (sonst Cloudflare 403/1010), `encoding='utf-8'` |
+| 7 | Paper-/arXiv-Recherche | **Research Index** (`/v2/search/research/papers`,`/github`) — SOTA arXiv-Recall, 2 Credits/10 Treffer. Fuer Direktiven-/Paper-Recherche besser als normale Websuche (v2.11.0). |
+| 8 | Wiederholtes Struktur-Scraping | **`deterministicJson`** statt `json` — kein LLM pro Request, pro-Site gecachter Extractor → guenstiger + konsistent (v2.11.0). |
 
 ---
 
@@ -102,8 +104,32 @@ der Key. Pruefen: `GET https://api.firecrawl.dev/v2/team/credit-usage` (Bearer) 
 
 ---
 
+## 7. Neu in v2.11.0 (gemeldet 2026-06-25) — zwei nutzbare Spar-/Qualitaets-Hebel
+
+**Research Index** (`offiziell`, v2.11.0) — spezialisierter Index ueber **3 Mio+ arXiv-Papers + den
+zugehoerigen GitHub-Code** (Issues, gemergte PRs, READMEs, taeglich aktualisiert). Endpunkte:
+`GET /v2/search/research/papers`, `/papers/:id`, `/papers/:id/similar`, `/github`. Laut Firecrawl
+**SOTA-Recall auf arXivQA (+18 % ggue. naechstbestem Anbieter)**, **2 Credits / 10 Treffer**
+(ZDR-Teams 10/10). → **Fuer Paper-lastige Recherchen** (Direktiven-Recherche, Superintelligenz,
+Paper-Auswertung) die treffsicherere + guenstigere Wahl als normale Websuche. Der alte
+`/v2/research/*`-Mount bleibt als deprecated Alias.
+
+**`deterministicJson`-Format** (`offiziell`, v2.11.0) — strukturiertes JSON **ohne LLM pro Request**:
+Firecrawl baut einen wiederverwendbaren Extractor fuer das Schema und cacht ihn pro Site → wiederholte
+Scrapes sind **guenstiger und konsistent** (kein Modell-Jitter). Nutzung: `formats:[{"type":"deterministicJson","schema":...}]`
+(NICHT mit `json` kombinierbar). → Fuer **wiederkehrendes** Struktur-Scraping derselben Seiten dem
+LLM-`json` (5 Credits/Seite) vorziehen.
+
+**Wichtig fuer unsere Pipeline:** `mm-research.py` nutzt weiter den stabilen **`/v1/search`**-Endpoint
+(`fc.get("data")`). v2.11.0 strukturiert `/v2/search`-Ergebnisse in `.web/.news/.images` um — ein
+v2-Umstieg waere ein **Breaking Change** (siehe Almanach Kurzcheck #11). Guthaben-Stand 2026-06-25:
+**9.827 Credits** (OpenRouter-Promo aktiv).
+
+---
+
 ## Quellen
 - docs.firecrawl.dev/rate-limits, firecrawl.dev/pricing `offiziell`
+- Firecrawl v2.11.0-Changelog (von Frank gemeldet 2026-06-25) `offiziell`; Live-Test 2026-06-25 (v1 aktiv, 9.827 Credits)
 - openrouter.ai/docs/guides/features/plugins/web-search, firecrawl.dev/blog/firecrawl-search-openrouter, firecrawl.dev/blog/firecrawl-n8n-partnership `offiziell` (recherchiert 2026-06-20 via mm-research + or-research)
 - eesel.ai/blog/firecrawl-pricing, costbench.com (Free-Plan 2026) `extern`
 - eigener Live-Test 2026-06-20 (`mm-research.py`)

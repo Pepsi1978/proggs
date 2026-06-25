@@ -5,8 +5,9 @@
 > Live-Test). Bewusst NICHT erschoepfend — eine vollstaendige `bug-almanach-recherche` zu Firecrawl
 > kann spaeter folgen (mit Franks OK). Loesungen funktionserhaltend.
 >
-> **Stand:** 2026-06-20. Quellen: docs.firecrawl.dev/rate-limits, firecrawl.dev/pricing, eigener
-> Live-curl/urllib-Test 2026-06-20. **Anker:** firecrawl-free=1000-credits/mo.
+> **Stand:** 2026-06-20, v2.11.0-Abgleich 2026-06-25. Quellen: docs.firecrawl.dev/rate-limits,
+> firecrawl.dev/pricing, eigener Live-curl/urllib-Test 2026-06-20 + 2026-06-25 (V1 noch aktiv,
+> Guthaben 9.827 Credits). **Anker:** firecrawl-free=1000-credits/mo; **API-Version unserer Pipeline = v1**.
 >
 > Gegenstueck (richtige Nutzung): `best-practices/apis/firecrawl.md`.
 > Recherche-Strategie (wann/wie): `~/.claude/rules/research-strategy.md`.
@@ -27,6 +28,8 @@
 | 8 | JSON-Extraktion | `formats:[{"type":"json","schema":...}]` — **nackter String `"json"` schlaegt fehl**. `doc.json` = Plain-Dict (nicht Pydantic) → Validierung in `try/except`. Scrape+JSON = **5 Credits/Seite**. |
 | 9 | `/search`-Treffer ohne Content | Kann als `SearchResultWeb` zurueckkommen (Scrape fehlgeschlagen) → vor Attribut-Zugriff `hasattr(doc,'metadata')` pruefen (sonst `AttributeError`). |
 | 10 | Key = Team | Jedes Firecrawl-**Team** hat einen eigenen `fc-`-Key; welches Team angesteuert wird, entscheidet der Key. Team/Guthaben pruefen: `GET /v2/team/credit-usage` (Bearer). |
+| 11 | ⭐ V1→V2-Migrationsfalle (`/search`) | Unsere Pipeline nutzt `/v1/search` → flaches `data`-Array (`fc.get("data")`). **In `/v2/search` ist `data` in `.web`/`.news`/`.images` aufgeteilt** → `fc.get("data")` waere dort **leer, ohne Fehler** (stille 0-Quellen). Endpoint NIE blind von v1 auf v2 heben. (v2.11.0, 2026-06-25.) |
+| 12 | `pii`-Format entfernt | v2 lehnt `"pii"` in `formats` jetzt **aktiv ab** (HTTP-Fehler); ersetzt durch `redactPII` (bool/Objekt). Unsere Pipeline nutzt nur `["markdown"]` → **nicht betroffen**. Nur relevant, falls jemand `pii` einbaut. |
 
 ---
 
@@ -88,6 +91,32 @@ blockt diese Signatur (1010 = „banned based on browser signature"). `curl` hat
 
 (Voller Rechercheauszug verlustfrei in `~/.mm-research/answer.json` zum Recherche-Zeitpunkt.)
 
+## 3c. Firecrawl v2.11.0 (gemeldet 2026-06-25) — was uns betrifft, was nicht
+
+Frank meldete das v2.11.0-Changelog mit der Frage, ob es die gehaeuften Such-Fehlschlaege erklaert.
+**Ergebnis des Abgleichs gegen unsere Pipeline (`mm-research.py` → `/v1/search`, `formats:["markdown"]`):**
+
+| Changelog-Punkt | Betrifft uns? | Detail |
+|-----------------|---------------|--------|
+| **`pii`-Format → `redactPII`** (alte `pii` jetzt *rejected*) | **Nein** | Wir senden nur `["markdown"]`. Falle nur, wenn jemand `pii` einbaut. |
+| **`/search` `.data` → `.web/.news/.images`** (SDK + v2) | **Latent (Migrationsfalle)** | Gilt fuer **v2**. Unsere v1-`fc.get("data")` laeuft weiter; bei v2-Umstieg waere `data` leer → 0 Quellen ohne Fehler. Siehe Kurzcheck #11. |
+| **Keyless access** fuer `/scrape`,`/search`,`/interact`,`/parse` (offizielle MCP/CLI/SDK) | Nein (neutral) | Wir nutzen weiter unseren Bearer-Key (team-scoped, Guthaben zaehlt). |
+| **Scrape-Worker stalls bei grossen LLM-Extractor-Inputs gefixt** (vorher dropped jobs / worker restarts) | Nein | Betrifft nur `json`/Extractor-Scrapes. Wir scrapen Markdown ohne Extractor. |
+| **`deterministicJson`-Format** (JSON ohne LLM/Request, pro Site gecacht) | Chance | Guenstigeres wiederholtes Struktur-Scraping — Best-Practices §7. |
+| **Research Index** (`/v2/search/research/papers`, `/github`) | Chance | arXiv/Paper-Recherche, SOTA arXiv-Recall — Best-Practices §7. |
+| **PDF-Cap 30→50 MB**, Monitor-Verbesserungen, Security-Bumps (axios/esbuild/ws/openssl) | Nein | Keine Pipeline-Relevanz. |
+
+**Warum die Suchen NICHT am Update lagen (live verifiziert 2026-06-25):**
+- `/v1/search` und `/v1/team/credit-usage` antworten beide normal → **V1 ist nicht abgeschaltet**.
+- Guthaben **9.827 Credits** (OpenRouter-Promo) → **keine Credit-Erschoepfung**.
+- Wahrscheinliche echte Ursache frueherer Fehlschlaege: der dokumentierte *research-contamination*-Bug
+  (parallele Laeufe ueberschrieben sich `sources.json`/`answer.json` → abgeschnittene/leere Ergebnisse),
+  bereits per `MM_OUTDIR`-Trennung in `mm-research.py` (Z. 34-36) gefixt. NICHT Firecrawl.
+
+**Lehre:** Bei Such-Fehlschlaegen zuerst lokal pruefen (OUTDIR-Kollision, Free-Limit 2 concurrent,
+Guthaben via `GET /v2/team/credit-usage`) — ein Anbieter-Changelog ist selten die Ursache, solange
+wir auf dem stabilen **v1**-Endpoint bleiben. **Quelle:** Franks v2.11.0-Changelog + Live-Test 2026-06-25.
+
 ## 4. Kopplung zur Best-Practices-Seite
 
 `best-practices/apis/firecrawl.md` — wie man Firecrawl von vornherein richtig + sparsam nutzt
@@ -100,3 +129,4 @@ blockt diese Signatur (1010 = „banned based on browser signature"). `curl` hat
 - firecrawl.dev/pricing (Free: 1000 Credits/Monat)
 - eesel.ai/blog/firecrawl-pricing, costbench.com/software/web-scraping/firecrawl/free-plan (2026)
 - eigener Live-Test 2026-06-20 (urllib-UA / Cloudflare 1010)
+- Firecrawl v2.11.0-Changelog (von Frank gemeldet 2026-06-25) + Live-Test 2026-06-25 (v1 aktiv, 9.827 Credits)
