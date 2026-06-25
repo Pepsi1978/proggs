@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.5.0"  # 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.6.0"  # 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -352,6 +352,17 @@ class RestoreReq(BaseModel):
     user_id: str = Field(default="frank")
 
 
+class RenameCategoryReq(BaseModel):
+    old: str = Field(..., min_length=1, max_length=60, description="Bisheriger Kategorie-Name (exakter Payload-Wert)")
+    new: str = Field(..., min_length=1, max_length=60, description="Neuer Kategorie-Name (1:1, deutsche Rechtschreibung)")
+    user_id: str = Field(default="frank")
+
+
+class DetachCategoryReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60, description="Kategorie, deren Etikett von allen Eintraegen entfernt wird (Eintraege bleiben)")
+    user_id: str = Field(default="frank")
+
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -477,6 +488,70 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "category": category, "count": len(items), "items": items}
+
+
+@app.get("/category-counts", dependencies=[Depends(require_auth)])
+def category_counts(user_id: str = "frank") -> dict:
+    """Alle BEFUELLTEN Kategorien mit Anzahl EINTRAEGE (auf doc_id dedupliziert, nicht Chunks).
+    Quelle der Payload-Kategorien; leere (eintragslose) Kategorien kennt nur die Agent-Registry."""
+    _require_store()
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    seen: dict[str, set] = {}
+    for p in points:
+        cat = (p.payload.get("category") or "").strip()
+        if not cat:
+            continue
+        seen.setdefault(cat, set()).add(p.payload.get("doc_id"))
+    counts = {cat: len(dids) for cat, dids in seen.items()}
+    checkpoint("category_counts", "Payload-Kategorien mit Eintragszahl (doc_id-dedupliziert)",
+               ok=True, categories=len(counts))
+    return {"ok": True, "counts": counts}
+
+
+@app.post("/rename-category", dependencies=[Depends(require_auth)])
+def rename_category(req: RenameCategoryReq) -> dict:
+    """Benennt eine Kategorie in ALLEN Payloads um (set_payload — der Vektor bleibt unangetastet,
+    KEIN Re-Embedding). Existiert 'new' bereits, ist das Ergebnis ein Merge (alle 'old'-Eintraege
+    wandern nach 'new'). Loescht NIE einen Eintrag."""
+    _require_store()
+    old, new = req.old.strip(), req.new.strip()
+    if not old or not new:
+        raise HTTPException(status_code=400, detail="old/new duerfen nicht leer sein")
+    flt = Filter(must=[
+        FieldCondition(key="category", match=MatchValue(value=old)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ])
+    pts = _scroll(flt)
+    docs = {p.payload.get("doc_id") for p in pts}
+    if old != new and pts:
+        # wait=True: Operation abgeschlossen bevor das Dashboard neu laedt (sonst alte Werte sichtbar)
+        qc.set_payload(collection_name=COLLECTION, payload={"category": new}, points=flt, wait=True)
+    merged = old != new and pts  # informativ: war 'new' schon belegt -> de facto Merge (Aufrufer weiss es)
+    checkpoint("rename_category", "Kategorie in allen Payloads umbenannt (Vektor unangetastet, kein Re-Embed)",
+               ok=True, old=old, new=new, points=len(pts), entries=len(docs))
+    return {"ok": True, "old": old, "new": new, "points": len(pts), "entries": len(docs)}
+
+
+@app.post("/detach-category", dependencies=[Depends(require_auth)])
+def detach_category(req: DetachCategoryReq) -> dict:
+    """Loescht die KATEGORIE, nicht die Eintraege: setzt category auf '' bei allen Eintraegen
+    dieser Kategorie. Die Eintraege (Vektoren + Volltext) bleiben vollstaendig erhalten — nur das
+    Kategorie-Etikett faellt weg. NIEMALS ein Eintrag geloescht."""
+    _require_store()
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name darf nicht leer sein")
+    flt = Filter(must=[
+        FieldCondition(key="category", match=MatchValue(value=name)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ])
+    pts = _scroll(flt)
+    docs = {p.payload.get("doc_id") for p in pts}
+    if pts:
+        qc.set_payload(collection_name=COLLECTION, payload={"category": ""}, points=flt, wait=True)
+    checkpoint("detach_category", "Kategorie-Etikett entfernt — Eintraege bleiben 1:1 erhalten",
+               ok=True, name=name, points=len(pts), entries=len(docs))
+    return {"ok": True, "name": name, "points": len(pts), "entries": len(docs)}
 
 
 @app.get("/by-date", dependencies=[Depends(require_auth)])
