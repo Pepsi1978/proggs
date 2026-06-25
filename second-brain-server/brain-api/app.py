@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.8.0"  # 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.9.0"  # 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -183,7 +183,7 @@ try:
         )
         _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
     # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
-    for _field in ("doc_id", "title", "category", "user_id"):
+    for _field in ("doc_id", "title", "category", "parent", "user_id"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
@@ -259,6 +259,27 @@ def make_doc_id(user_id: str, title: str | None) -> str:
     return f"d_{uuid.uuid4().hex}"
 
 
+def category_parent(category: str | None) -> str:
+    """Hauptkategorie aus einer 2-Ebenen-Kategorie 'Haupt/Unter' -> 'Haupt' (Teil vor dem ersten '/').
+    Ohne '/' ist die Kategorie selbst die Hauptkategorie. Leer -> ''. Wird als eigenes Payload-Feld
+    'parent' gespeichert, damit 'alles unter Haupt' ein exakter MatchValue-Filter ist (Qdrant hat
+    KEINEN Praefix-Operator, bugs/server/qdrant.md §7)."""
+    c = (category or "").strip()
+    if not c:
+        return ""
+    return c.split("/", 1)[0].strip()
+
+
+def embed_input(category: str | None, text: str) -> str:
+    """Eingabe fuer das EMBEDDING (nicht der gespeicherte Text!): die Kategorie/Unterkategorie wird dem
+    Text als kurzes Praefix vorangestellt, damit sie das Bedeutungssignal mitpraegt (metadata-enriched
+    embeddings, best-practices/server/rag-retrieval.md §4). Der 1:1-Volltext (full_text) und der
+    angezeigte chunk_text bleiben UNVERAENDERT — nur der Vektor wird angereichert. Ohne Kategorie:
+    unveraendert (reines 1:1-Verhalten wie bisher)."""
+    c = (category or "").strip()
+    return f"[Kategorie: {c}]\n\n{text}" if c else text
+
+
 def point_id(doc_id: str, idx: int) -> str:
     """Deterministische Qdrant-Point-ID (UUID) je Chunk."""
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"sb/{doc_id}/{idx}"))
@@ -329,7 +350,8 @@ class SearchReq(BaseModel):
     user_id: str = Field(default="frank")
     limit: int = Field(default=5, ge=1, le=50)
     # Optionale Payload-Filter: erst eingrenzen, DANN semantisch suchen (Franks "war letzten Monat angeln").
-    category: str | None = Field(default=None, description="Nur in dieser Kategorie suchen")
+    category: str | None = Field(default=None, description="Nur in dieser exakten (Unter-)Kategorie suchen ('Haupt/Unter')")
+    parent: str | None = Field(default=None, description="Nur unter dieser Hauptkategorie suchen (= alles in 'Haupt/...'), via parent-Feld")
     date: str | None = Field(default=None, description="Nur Eintraege dieses Tages (YYYY-MM-DD)")
     date_from: str | None = Field(default=None, description="Ab diesem Tag (YYYY-MM-DD, inklusive)")
     date_to: str | None = Field(default=None, description="Bis zu diesem Tag (YYYY-MM-DD, inklusive)")
@@ -427,17 +449,20 @@ def store(req: StoreReq) -> dict:
             created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
             _delete_doc(doc_id)  # gleicher Titel -> alte Version komplett raus, dann neu
 
+    category = (req.category or "").strip()
+    parent = category_parent(category)   # Hauptkategorie (vor dem '/') als eigenes Filterfeld
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit (chunk_text bleibt 1:1)
         points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
             "doc_id": doc_id,
             "user_id": req.user_id,
             "title": (req.title or "").strip(),
-            "category": (req.category or "").strip(),
+            "category": category,
+            "parent": parent,
             "chunk_index": i,
             "chunk_count": len(chunks),
             "chunk_text": ch,
@@ -499,6 +524,50 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "category": category, "count": len(items), "items": items}
+
+
+@app.get("/by-parent", dependencies=[Depends(require_auth)])
+def by_parent(parent: str, user_id: str = "frank") -> dict:
+    """Alle Eintraege UNTER einer Hauptkategorie (= 'Haupt' und alle 'Haupt/Unter'), via parent-Feld
+    (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1."""
+    _require_store()
+    points = _scroll(Filter(must=[
+        FieldCondition(key="parent", match=MatchValue(value=parent.strip())),
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+    ]))
+    seen: dict[str, dict] = {}
+    for p in points:
+        did = p.payload.get("doc_id")
+        if did not in seen:
+            seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
+                         "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
+                         "parent": p.payload.get("parent") or None,
+                         "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
+    items = _sort_recent(seen.values())
+    return {"ok": True, "parent": parent, "count": len(items), "items": items}
+
+
+@app.post("/backfill-parent", dependencies=[Depends(require_auth)])
+def backfill_parent(user_id: str = "frank") -> dict:
+    """Einmal-Migration: setzt das 'parent'-Feld (Hauptkategorie vor dem '/') auf ALLEN bestehenden
+    Eintraegen per set_payload (KEIN Re-Embed — billig). Macht 'alles unter Haupt' auch fuer den
+    Altbestand filterbar. Idempotent: kann gefahrlos mehrfach laufen. Sync def -> Threadpool (fastapi §1)."""
+    _require_store()
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    # je Hauptkategorie die zugehoerigen Point-IDs sammeln, dann gebuendelt set_payload
+    by_par: dict[str, list] = {}
+    for p in points:
+        par = category_parent(p.payload.get("category"))
+        if (p.payload.get("parent") or "") == par:
+            continue  # schon korrekt -> ueberspringen
+        by_par.setdefault(par, []).append(p.id)
+    updated = 0
+    for par, ids in by_par.items():
+        qc.set_payload(collection_name=COLLECTION, payload={"parent": par}, points=ids, wait=True)
+        updated += len(ids)
+    checkpoint("backfill_parent", "parent-Feld auf Altbestand gesetzt (set_payload, kein Re-Embed)",
+               ok=True, chunks_updated=updated, groups=len(by_par))
+    return {"ok": True, "chunks_updated": updated, "groups": len(by_par)}
 
 
 @app.get("/category-counts", dependencies=[Depends(require_auth)])
@@ -567,27 +636,45 @@ def detach_category(req: DetachCategoryReq) -> dict:
 
 @app.post("/entry/category", dependencies=[Depends(require_auth)])
 def set_entry_category(req: EntryCategoryReq) -> dict:
-    """Aendert die Kategorie EINES Eintrags (per doc_id) — via set_payload auf ALLEN seinen Chunks.
-    Der Vektor/Volltext bleibt unangetastet, KEIN Re-Embedding (kostet kein Embedding-Budget). Genau
-    Franks 'nur die Payloads -> Kategoriezuordnung komplett geaendert'. Sync def -> Threadpool (fastapi §1)."""
+    """Aendert die Kategorie EINES Eintrags (per doc_id). Da die Kategorie das EMBEDDING mitpraegt
+    (metadata-enriched, best-practices/server/rag-retrieval.md §4), reicht set_payload NICHT mehr —
+    der Eintrag wird mit dem neuen Kategorie-Praefix FRISCH eingebettet (full_text/Titel/created_at
+    bleiben 1:1). Setzt zugleich das abgeleitete 'parent'-Feld. Sync def -> Threadpool (fastapi §1)."""
     _require_store()
-    flt = Filter(must=[
+    pts = _scroll(Filter(must=[
         FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
         FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
-    ])
-    pts = _scroll(flt, limit=1)
+    ]), limit=1000)
     if not pts:
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    pl = pts[0].payload
+    old_cat = (pl.get("category") or "").strip()
     new_cat = (req.category or "").strip()
-    old_cat = (pts[0].payload.get("category") or "").strip()
-    # wait=True: abgeschlossen bevor das Dashboard neu laedt (sonst alte Kategorie sichtbar). Vektor bleibt.
-    qc.set_payload(collection_name=COLLECTION, payload={"category": new_cat}, points=flt, wait=True)
-    # Sonde: die Kategorie MUSS jetzt wirklich umgesetzt sein (Intent-Verifikation)
+    new_parent = category_parent(new_cat)
+    title = (pl.get("title") or "").strip()
+    full_text = pl.get("full_text", "")
+    created_at = pl.get("created_at", iso_now())
+    now = iso_now()
+
+    _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
+    chunks = chunk_text(full_text)
+    _guard_embed_budget(len(chunks))
+    t0 = time.time()
+    points = []
+    for i, ch in enumerate(chunks):
+        vec = embed(embed_input(new_cat, ch), "RETRIEVAL_DOCUMENT")
+        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
+            "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
+            "category": new_cat, "parent": new_parent, "chunk_index": i, "chunk_count": len(chunks),
+            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now,
+        }))
+    qc.upsert(collection_name=COLLECTION, points=points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and (after[0].payload.get("category") or "").strip() == new_cat
     probe(applied, "Kategorie-Verschiebung nicht angekommen", doc_id=req.doc_id, want=new_cat)
-    checkpoint("set_entry_category", "Kategorie EINES Eintrags geaendert (set_payload, Vektor unangetastet, kein Re-Embed)",
-               ok=applied, doc_id=req.doc_id, old=old_cat or None, new=new_cat or None)
+    checkpoint("set_entry_category", "Kategorie EINES Eintrags geaendert (frisch eingebettet mit neuem Kategorie-Praefix + parent)",
+               ok=applied, doc_id=req.doc_id, old=old_cat or None, new=new_cat or None,
+               parent=new_parent or None, chunks=len(chunks), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": req.doc_id, "old": old_cat or None, "new": new_cat or None}
 
 
@@ -658,6 +745,8 @@ def search(req: SearchReq) -> dict:
     must = [FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]
     if req.category and req.category.strip():
         must.append(FieldCondition(key="category", match=MatchValue(value=req.category.strip())))
+    elif req.parent and req.parent.strip():   # 'alles unter Haupt' (nur wenn keine exakte Kategorie gesetzt)
+        must.append(FieldCondition(key="parent", match=MatchValue(value=req.parent.strip())))
     gte, lte = _date_bounds(req)
     py_date_filter = False  # Fallback, falls DatetimeRange in der Client-Version fehlt (Funktionserhalt)
     if gte or lte:
@@ -688,7 +777,7 @@ def search(req: SearchReq) -> dict:
                          "text": h.payload.get("full_text", "")}
     items = sorted(best.values(), key=lambda x: x["score"], reverse=True)[:req.limit]
 
-    applied = {"category": req.category or None, "date": req.date or None,
+    applied = {"category": req.category or None, "parent": req.parent or None, "date": req.date or None,
                "date_from": req.date_from or None, "date_to": req.date_to or None}
     has_filter = any(applied.values())
     checkpoint("search", "Erst Payload-Filter (Kategorie/Datum) eingrenzen, DANN semantisch suchen",
@@ -789,14 +878,15 @@ def update_entry(req: UpdateReq) -> dict:
     if target_doc_id != req.doc_id:
         _delete_doc(target_doc_id)  # Ziel-Titel evtl. schon belegt -> dessen Chunks ersetzen (wie /store)
 
+    parent = category_parent(category)
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
-            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category,
+            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "parent": parent,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": req.text, "created_at": created_at, "updated_at": now,
         }))
@@ -880,16 +970,17 @@ def trash_restore(req: RestoreReq) -> dict:
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
+    parent = category_parent(category)
     _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
     chunks = chunk_text(text)
     _guard_embed_budget(len(chunks))
     now = iso_now()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(ch, "RETRIEVAL_DOCUMENT")
+        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
-            "title": title, "category": category, "chunk_index": i, "chunk_count": len(chunks),
+            "title": title, "category": category, "parent": parent, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
         }))
     qc.upsert(collection_name=COLLECTION, points=points)
