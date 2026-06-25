@@ -988,17 +988,20 @@ def rename_category_ep(req: RenameCategoryReq) -> dict:
     if new.casefold() == CONV_CATEGORY.casefold():
         raise HTTPException(status_code=400, detail="reservierter Name (Gespraechs-Spur)")
     res: dict = {}
-    if old.casefold() != new.casefold():
+    if old != new:   # EXAKTER Vergleich: reine Gross-/Kleinschreibung ('fitness'->'Fitness') ist eine echte Aenderung
         try:
             res = brain_rename_category(old, new)
         except Exception as e:  # noqa: BLE001
             _log(logging.ERROR, "Kategorie-Umbenennen (brain) fehlgeschlagen", exc_info=True)
             raise HTTPException(status_code=502, detail=f"Umbenennen fehlgeschlagen: {type(e).__name__}")
-    # Registry mitziehen: alte raus, neue rein (case-insensitiv, keine Dublette)
-    cats = [c for c in load_registry() if c.casefold() != old.casefold()]
-    if not any(c.casefold() == new.casefold() for c in cats):
-        cats.append(new)
-    save_registry(cats)
+    # Registry mitziehen: war 'old' eine LEERE (Registry-)Kategorie, wandert der Eintrag auf 'new'.
+    # Payload-Kategorien bleiben aus der Registry draussen (die haelt nur leere).
+    reg = load_registry()
+    was_in_reg = any(c.casefold() == old.casefold() for c in reg)
+    reg = [c for c in reg if c.casefold() != old.casefold()]
+    if was_in_reg and not any(c.casefold() == new.casefold() for c in reg):
+        reg.append(new)
+    save_registry(reg)
     checkpoint("kategorie_umbenennen", "Kategorie umbenannt — Payloads + Registry, Vektoren unangetastet",
                ok=True, old=old, new=new, entries=res.get("entries", 0))
     _log(logging.INFO, "Kategorie umbenannt", old=old, new=new, entries=res.get("entries", 0))
