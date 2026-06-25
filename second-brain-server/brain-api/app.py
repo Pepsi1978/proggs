@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.12.0"  # 1.12.0: SEHR grosse Dokumente zuverlaessig (Frank-Wunsch 2026-06-25, Direktive-#3-Debugging). Edit-/Papierkorb-Text-Cap 200_000 -> 1_000_000 (deckt Franks 20-30x-Almanache); StoreReq.text bleibt bewusst UNGECAPPT (= der eigentliche Speicherpfad, chunkt selbst). Diese Caps sind reine OOM-Backstops (fastapi §8), nie stille Kuerzung. Hintergrund: der urspruengliche 'halbe Datei'-Bug sass NICHT hier — full_text wird in jedem Chunk 1:1 gespeichert (Z. 528, Sonde Z. 535) und by_title/by_category/by_parent/search geben full_text 1:1 zurueck; die Kuerzung war ein STILLER text[:8000]-Slice im dashboard VOR der Speicherung (#47233). Regressionstest: tests/large_doc_roundtrip.py. 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.13.0"  # 1.13.0: SEHR grosse Dokumente speichern OHNE Qdrant-32MB-Crash (Frank-Bug 2026-06-25, vom Regressionstest gefunden). Root Cause 2: full_text haengt 1:1 in JEDEM Chunk -> ein 600k-Zeichen-Doc (~150 Chunks) ergab ~102 MB in EINEM Upsert -> Qdrant lehnt > 32 MB ab (400). Fix: _upsert_batched() splittet jeden Upsert in Batches unter UPSERT_MAX_BYTES (Default 24 MB) — funktionserhaltend (dieselben Punkte/Payloads, nur mehrere Requests), kein Lesepfad veraendert. Gilt fuer ALLE Schreibwege (store/entry-category/entry-categories/update/trash_restore/reembed-all). 1.12.0: SEHR grosse Dokumente zuverlaessig (Frank-Wunsch 2026-06-25, Direktive-#3-Debugging). Edit-/Papierkorb-Text-Cap 200_000 -> 1_000_000 (deckt Franks 20-30x-Almanache); StoreReq.text bleibt bewusst UNGECAPPT (= der eigentliche Speicherpfad, chunkt selbst). Diese Caps sind reine OOM-Backstops (fastapi §8), nie stille Kuerzung. Hintergrund: der urspruengliche 'halbe Datei'-Bug sass NICHT hier — full_text wird in jedem Chunk 1:1 gespeichert (Z. 528, Sonde Z. 535) und by_title/by_category/by_parent/search geben full_text 1:1 zurueck; die Kuerzung war ein STILLER text[:8000]-Slice im dashboard VOR der Speicherung (#47233). Regressionstest: tests/large_doc_roundtrip.py. 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -70,6 +70,10 @@ EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
 CHUNK_CHARS = int(os.getenv("SB_CHUNK_CHARS", "4000"))
 CHUNK_OVERLAP = int(os.getenv("SB_CHUNK_OVERLAP", "200"))
 MAX_EMBED_CALLS_PER_DAY = int(os.getenv("SB_MAX_EMBED_CALLS_PER_DAY", "20000"))  # Defense-in-Depth-Cap
+# Qdrant lehnt einen Upsert-Request > ~32 MB mit 400 ab. Da der 1:1-Volltext (full_text) in JEDEM
+# Chunk haengt, kann EIN grosses Dokument (viele Chunks) ein einzelnes Upsert ueber 32 MB treiben.
+# -> Upserts werden in Batches unter dieser Grenze gesplittet (24 MB lassen Headroom fuer Vektoren).
+UPSERT_MAX_BYTES = int(os.getenv("SB_UPSERT_MAX_BYTES", str(24 * 1024 * 1024)))
 LOG_PATH = os.getenv("SB_LOG_PATH", "/app/logs/brain-api.jsonl")
 LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
 # Papierkorb (Soft-Delete): geloeschte Eintraege landen als JSON 1:1 hier (persistentes Volume),
@@ -248,6 +252,26 @@ def embed(text: str, task_type: str) -> list[float]:
     vec = list(resp.embeddings[0].values)
     probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
     return vec
+
+
+def _upsert_batched(points: list, wait: bool = True) -> None:
+    """Upsert, der das Qdrant-Request-Limit (~32 MB) NICHT sprengt. Weil der 1:1-Volltext
+    (full_text) in JEDEM Chunk haengt, kann ein grosses Dokument (viele Chunks) ein einzelnes
+    Upsert ueber 32 MB treiben -> Qdrant lehnt mit 400 ab (Frank-Bug 2026-06-25: 600k-Zeichen-
+    Dokument ≈ 102 MB Payload). Wir splitten in Batches unter UPSERT_MAX_BYTES. Funktionserhaltend:
+    es werden DIESELBEN Punkte mit DENSELBEN Payloads gespeichert, nur ueber mehrere Requests."""
+    batch: list = []
+    size = 0
+    for p in points:
+        pl = p.payload or {}
+        est = len((pl.get("full_text") or "").encode("utf-8")) + len(pl.get("chunk_text") or "") + 8192
+        if batch and size + est > UPSERT_MAX_BYTES:
+            qc.upsert(collection_name=COLLECTION, points=batch, wait=wait)
+            batch, size = [], 0
+        batch.append(p)
+        size += est
+    if batch:
+        qc.upsert(collection_name=COLLECTION, points=batch, wait=wait)
 
 
 def make_doc_id(user_id: str, title: str | None) -> str:
@@ -529,7 +553,7 @@ def store(req: StoreReq) -> dict:
             "created_at": created_at,
             "updated_at": now,
         }))
-    qc.upsert(collection_name=COLLECTION, points=points)
+    _upsert_batched(points)
 
     # Intent-Checkpoint: beweist, dass der gespeicherte Volltext EXAKT die Eingabe ist (1:1)
     stored_ok = bool(points) and points[0].payload["full_text"] == req.text
@@ -740,7 +764,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now,
         }))
-    qc.upsert(collection_name=COLLECTION, points=points, wait=True)
+    _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and (after[0].payload.get("category") or "").strip() == new_cat
     probe(applied, "Kategorie-Verschiebung nicht angekommen", doc_id=req.doc_id, want=new_cat)
@@ -786,7 +810,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": full_text, "created_at": created_at, "updated_at": now,
         }))
-    qc.upsert(collection_name=COLLECTION, points=points, wait=True)
+    _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and set(cats_from_payload(after[0].payload)) == set(cats)
     probe(applied, "Kategorie-Liste nicht angekommen", doc_id=req.doc_id, want=cats)
@@ -1014,7 +1038,7 @@ def update_entry(req: UpdateReq) -> dict:
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": req.text, "created_at": created_at, "updated_at": now,
         }))
-    qc.upsert(collection_name=COLLECTION, points=points)
+    _upsert_batched(points)
 
     replaced_ok = bool(points) and points[0].payload["full_text"] == req.text
     # Sonde: nach einer Titel-Migration darf die alte doc_id NICHT mehr existieren (kein Geist-Duplikat)
@@ -1109,7 +1133,7 @@ def trash_restore(req: RestoreReq) -> dict:
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
         }))
-    qc.upsert(collection_name=COLLECTION, points=points)
+    _upsert_batched(points)
 
     with _trash_lock:  # erst NACH erfolgreichem Upsert aus dem Papierkorb nehmen
         items = [t for t in _trash_load() if t.get("doc_id") != req.doc_id]
@@ -1159,7 +1183,7 @@ def reembed_all(req: ReembedReq) -> dict:
             ch = pl.get("chunk_text", pl.get("full_text", ""))
             vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
             points.append(PointStruct(id=p.id, vector=vec, payload=pl))   # Payload inkl. categories/parents
-        qc.upsert(collection_name=COLLECTION, points=points, wait=True)
+        _upsert_batched(points, wait=True)
         done += len(points)
     checkpoint("reembed_all", "Bestand mit aktuellem Titel+Kategorie-Schema neu eingebettet (Vektor neu, Payload 1:1)",
                ok=(done == len(pts)), reembedded=done, total=len(pts), ms=int((time.time() - t0) * 1000))
