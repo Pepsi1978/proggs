@@ -399,6 +399,17 @@ button{font-family:inherit;cursor:pointer}
 .set-row .set-section{margin-bottom:0;height:100%}
 .backup-state{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
 .bk-dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex:none;box-shadow:0 0 8px transparent}
+/* Inhalts-Liste des Drive-Backups: scrollbares Feld mit abgerundeten Ecken, gleicher Stil */
+.backup-contents{margin-top:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+  padding:6px;max-height:240px;overflow-y:auto}
+.bc-head{padding:8px 12px 6px;font-size:12px;letter-spacing:.02em;color:var(--text-faint)}
+.bc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:9px}
+.bc-row+.bc-row{border-top:1px solid var(--border)}
+.bc-name{font-weight:600;font-size:13.5px;color:var(--text)}
+.bc-meta{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--text-dim);
+  white-space:nowrap;flex-wrap:wrap;justify-content:flex-end}
+.bc-count{font-family:'JetBrains Mono';color:var(--text);font-weight:600}
+.bc-empty{padding:14px 12px;text-align:center;color:var(--text-faint);font-size:13px}
 .set-section h3{font-size:18px;font-weight:600;display:flex;align-items:center;gap:11px}
 .set-section h3 .ico{width:30px;height:30px;border-radius:9px;background:var(--surface-2);color:var(--accent);
   display:grid;place-items:center}
@@ -815,6 +826,10 @@ button{font-family:inherit;cursor:pointer}
               <button class="btn" id="connectBtn" title="Google Drive einmalig verbinden">Mit Google verbinden</button>
               <button class="btn" id="restoreBtn" title="Nur im Notfall: holt das Backup aus Google Drive zurück (löscht lokal nichts)">Wiederherstellen</button>
               <button class="btn btn-primary" id="backupBtn">Jetzt sichern</button>
+            </div>
+            <!-- Inhalts-Liste: komplettes Abbild dessen, was aktuell im Drive-Backup liegt (immer aktueller Stand) -->
+            <div class="backup-contents" id="backupContents" aria-live="polite">
+              <div class="bc-empty">lädt…</div>
             </div>
           </div>
         </div>
@@ -2071,6 +2086,24 @@ button{font-family:inherit;cursor:pointer}
       txt.textContent = "Status nicht erreichbar";
       if(dot){ dot.style.background = "var(--bad)"; dot.style.boxShadow = "none"; }
     }
+    loadBackupContents();   // Inhalts-Liste immer mit aktualisieren (aktueller Stand)
+  }
+  // Komplettes Abbild des Drive-Backups: pro Komponente Anzahl + Groesse + Datum des letzten Stands.
+  // Generisch — neue Backup-Ordner (auch kuenftige) erscheinen automatisch.
+  async function loadBackupContents(){
+    const box = document.getElementById("backupContents"); if(!box) return;
+    try{
+      const d = await api("/api/backup/contents");
+      const items = (d && d.items) || [];
+      if(!items.length){ box.innerHTML = `<div class="bc-empty">${(d&&d.ok===false)?"Backup-Inhalt nicht lesbar.":"Noch nichts im Backup."}</div>`; return; }
+      const head = `<div class="bc-head">Im Google Drive gespiegelt — ${d.total_files||0} Dateien · ${fmtBytes(d.total_mb||0)}</div>`;
+      box.innerHTML = head + items.map(it=>{
+        const when = it.last ? fmtWhen(it.last) : "–";
+        return `<div class="bc-row"><span class="bc-name">${escapeHtml(it.label)}</span>`
+          + `<span class="bc-meta"><span><span class="bc-count">${it.count}</span> ${escapeHtml(it.unit)}</span>`
+          + `<span>${fmtBytes(it.size_mb)}</span><span>zuletzt ${when}</span></span></div>`;
+      }).join("");
+    }catch(e){ box.innerHTML = `<div class="bc-empty">Backup-Inhalt nicht ladbar.</div>`; }
   }
   async function runBackup(){
     const btn = document.getElementById("backupBtn"); if(!btn) return; btn.disabled = true;
