@@ -288,8 +288,22 @@ button{font-family:inherit;cursor:pointer}
 }
 .leg-row:hover{background:var(--surface-2);border-color:var(--border);transform:translateX(2px)}
 .swatch{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
-.leg-name{flex:1;font-size:13.5px;text-transform:capitalize}
-.leg-count{font-family:'JetBrains Mono';font-size:13px;color:var(--text-dim)}
+.leg-name{flex:1;font-size:13.5px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg-count{font-family:'JetBrains Mono';font-size:13px;color:var(--text-dim);flex:none}
+/* Übersicht-Legende als Gruppenbaum: Hauptkategorie pro Grid-Zelle, Unterkategorien darin eingerückt */
+.leg-group{display:flex;flex-direction:column;border-radius:11px;border:1px solid transparent;transition:border-color .25s}
+.leg-main{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;cursor:pointer;transition:background .2s,transform .2s}
+.leg-main:hover{background:var(--surface-2);transform:translateX(2px)}
+.leg-sub{display:flex;align-items:center;gap:9px;padding:6px 12px 6px 30px;border-radius:9px;cursor:pointer;transition:background .2s}
+.leg-sub:hover{background:var(--surface-2)}
+.leg-sub .leg-name{font-size:12.5px;color:var(--text-dim)}
+.leg-sub:hover .leg-name{color:var(--text)}
+.leg-submark{color:var(--text-faint);flex:none}
+.leg-twist{width:18px;height:18px;flex:none;display:grid;place-items:center;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-radius:5px;padding:0}
+.leg-twist:hover{color:var(--text)}
+.leg-twist svg{width:12px;height:12px;transition:transform .2s}
+.leg-twist.open svg{transform:rotate(90deg)}
+.leg-twist.leaf{visibility:hidden}
 
 /* Vital-Karten */
 .vitals{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
@@ -1187,8 +1201,10 @@ button{font-family:inherit;cursor:pointer}
     return mb>=1024 ? (mb/1024).toFixed(1)+" GB" : Math.round(mb)+" MB";
   }
   function renderOverview(d){
+    LAST_OVERVIEW = d;
     const cats = (d.categories||[]).slice().sort((a,b)=>b.count-a.count);
     buildColors(cats);
+    const groups = groupByParent(cats);   // [{name, self, subs, total}] nach Gesamtzahl absteigend
     const total = d.total ?? cats.reduce((s,c)=>s+c.count,0);
     animateNum(document.getElementById("totalNum"), total);
     renderChips(cats);   // Kategorie-Chips fürs Gehirn aus denselben Daten
@@ -1197,31 +1213,56 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("metaEmbed").textContent = d.brain?.embed_model || "–";
     const dv = document.getElementById("dashVer"); if(dv) dv.textContent = d.dash_version ? "v"+d.dash_version : "";
 
-    /* Stapelbalken */
+    /* Stapelbalken — nach Hauptkategorie aggregiert (Unterkategorien zählen in ihre Hauptkategorie) */
     const bar = document.getElementById("bar");
     bar.innerHTML = "";
-    cats.forEach((c,i)=>{
+    groups.forEach((g,i)=>{
       const seg = document.createElement("div");
       seg.className = "seg";
-      seg.style.background = colorFor(c.name);
-      seg.style.flex = c.count + " 0 0";
-      seg.dataset.cat = c.name;
-      seg.innerHTML = `<div class="seg-tip"><span class="c">${cap(c.name)}</span> · <b>${c.count}</b></div>`;
-      seg.addEventListener("click",()=> goToCategory(c.name));
+      seg.style.background = colorFor(g.name);
+      seg.style.flex = g.total + " 0 0";
+      seg.dataset.cat = g.name;
+      const subTip = g.subs.length ? ` · ${g.subs.length} Unter` : "";
+      seg.innerHTML = `<div class="seg-tip"><span class="c">${cap(g.name)}</span> · <b>${g.total}</b>${subTip}</div>`;
+      seg.addEventListener("click",()=> goToParent(g.name));
       bar.appendChild(seg);
-      requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (total?(c.count/total*100):0)+"%", 30+i*40); });
+      requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (total?(g.total/total*100):0)+"%", 30+i*40); });
     });
 
-    /* Legende */
+    /* Legende — aufklappbarer Gruppenbaum: erst Hauptkategorien, Twist zeigt die Unterkategorien */
     const leg = document.getElementById("legend");
     leg.innerHTML = "";
-    cats.forEach(c=>{
-      const row = document.createElement("div");
-      row.className = "leg-row";
-      row.innerHTML = `<span class="swatch" style="background:${colorFor(c.name)}"></span>
-        <span class="leg-name">${cap(c.name)}</span><span class="leg-count">${c.count}</span>`;
-      row.addEventListener("click",()=> goToCategory(c.name));   // V1
-      leg.appendChild(row);
+    groups.forEach(g=>{
+      const open = ovExpanded.has(g.name), hasSubs = g.subs.length>0;
+      const grp = document.createElement("div");
+      grp.className = "leg-group";
+      const main = document.createElement("div");
+      main.className = "leg-main";
+      main.innerHTML =
+        `<button class="leg-twist${open?' open':''}${hasSubs?'':' leaf'}" type="button" title="Unterkategorien zeigen">`
+        + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
+        + `<span class="swatch" style="background:${colorFor(g.name)}"></span>`
+        + `<span class="leg-name">${cap(g.name)}</span><span class="leg-count">${g.total}</span>`;
+      main.querySelector(".leg-twist").addEventListener("click", e=>{
+        e.stopPropagation();
+        if(!hasSubs) return;
+        if(ovExpanded.has(g.name)) ovExpanded.delete(g.name); else ovExpanded.add(g.name);
+        renderOverview(LAST_OVERVIEW);   // neu zeichnen (Aufklapp-Zustand bleibt im Set)
+      });
+      main.addEventListener("click",()=> goToParent(g.name));   // ganze Zeile -> alles UNTER der Hauptkategorie
+      grp.appendChild(main);
+      if(open && hasSubs){
+        g.subs.forEach(s=>{
+          const sub = document.createElement("div");
+          sub.className = "leg-sub";
+          sub.innerHTML = `<span class="leg-submark">└</span>`
+            + `<span class="swatch" style="background:${colorFor(s.name)}"></span>`
+            + `<span class="leg-name">${cap(catSubName(s.name))}</span><span class="leg-count">${s.count}</span>`;
+          sub.addEventListener("click",()=> goToCategory(s.name));   // exakte Unterkategorie
+          grp.appendChild(sub);
+        });
+      }
+      leg.appendChild(grp);
     });
 
     /* Vitals */
@@ -1260,6 +1301,29 @@ button{font-family:inherit;cursor:pointer}
 
   /* ── Gehirn: Suche / Chips / Liste ────────────────────────────────────── */
   let curCategory = null, curQuery = "", searchTimer = null;
+  let curParent = null;          // Übersicht-Filter: alle Einträge UNTER einer Hauptkategorie (brain /by-parent)
+  let LAST_OVERVIEW = null;       // letzter Overview-Datensatz (für Re-Render beim Auf-/Zuklappen)
+  const ovExpanded = new Set();   // aufgeklappte Hauptkategorien in der Übersicht-Legende
+  /* Flache Kategorienliste -> nach Hauptkategorie gruppiert, größte zuerst (für Balken + Legende). */
+  function groupByParent(cats){
+    const m = new Map();
+    for(const c of (cats||[])){
+      const p = catParentOf(c.name), sub = catSubName(c.name);
+      if(!m.has(p)) m.set(p, {name:p, self:null, subs:[], total:0});
+      const g = m.get(p);
+      if(sub === "") g.self = c; else g.subs.push(c);
+      g.total += (c.count||0);
+    }
+    const arr = [...m.values()].sort((a,b)=> b.total-a.total || a.name.localeCompare(b.name,"de"));
+    arr.forEach(g=> g.subs.sort((a,b)=> (b.count||0)-(a.count||0) || catSubName(a.name).localeCompare(catSubName(b.name),"de")));
+    return arr;
+  }
+  function goToParent(name){            // Übersicht: Hauptkategorie -> Gehirn, gefiltert auf alles UNTER der Hauptkategorie
+    curParent = name; curCategory = null; curQuery = "";
+    navTo("brain");
+    const inp = document.getElementById("search"); if(inp) inp.value="";
+    updateChips(); loadEntries();
+  }
 
   function renderChips(cats){
     const wrap = document.getElementById("chips");
@@ -1274,7 +1338,7 @@ button{font-family:inherit;cursor:pointer}
     b.className = "chip"; b.dataset.cat = cat||"";
     if(color) b.dataset.color = color;
     b.innerHTML = `<span class="cdot"></span>${label}`;
-    b.addEventListener("click",()=>{ curCategory = cat; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
+    b.addEventListener("click",()=>{ curCategory = cat; curParent=null; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
     return b;
   }
   function updateChips(){
@@ -1285,8 +1349,8 @@ button{font-family:inherit;cursor:pointer}
     });
   }
 
-  function goToCategory(name){            // V1: Legende/Segment -> Gehirn gefiltert
-    curCategory = name; curQuery = "";
+  function goToCategory(name){            // exakte Kategorie -> Gehirn gefiltert
+    curCategory = name; curParent = null; curQuery = "";
     navTo("brain");
     const inp = document.getElementById("search"); if(inp) inp.value="";
     updateChips(); loadEntries();
@@ -1294,7 +1358,7 @@ button{font-family:inherit;cursor:pointer}
 
   document.getElementById("search").addEventListener("input", e=>{
     curQuery = e.target.value.trim();
-    if(curQuery) curCategory = null;
+    if(curQuery){ curCategory = null; curParent = null; }
     clearTimeout(searchTimer);
     searchTimer = setTimeout(()=>{ updateChips(); loadEntries(); }, 300);   // Debounce
   });
@@ -1304,13 +1368,17 @@ button{font-family:inherit;cursor:pointer}
   async function loadEntries(){
     const box = document.getElementById("results");
     box.innerHTML = `<div class="state-msg"><div class="spin"></div>lädt…</div>`;
-    const params = new URLSearchParams();
-    if(curCategory) params.set("category",curCategory);
-    else if(curQuery) params.set("q",curQuery);
-    params.set("limit","50");
     let data;
     try{
-      data = await api("/api/entries?"+params.toString());
+      if(curParent){
+        data = await api("/api/by-parent?parent="+encodeURIComponent(curParent)+"&limit=200");
+      }else{
+        const params = new URLSearchParams();
+        if(curCategory) params.set("category",curCategory);
+        else if(curQuery) params.set("q",curQuery);
+        params.set("limit","50");
+        data = await api("/api/entries?"+params.toString());
+      }
     }catch(e){
       try{ data = DEMO.entries(curQuery,curCategory); }
       catch(_){ box.innerHTML = `<div class="state-msg">Fehler beim Laden.</div>`; return; }
