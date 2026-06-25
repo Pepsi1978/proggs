@@ -572,6 +572,11 @@ button{font-family:inherit;cursor:pointer}
   transition:border-color .3s,box-shadow .3s}
 .cat-input::placeholder{color:var(--text-faint)}
 .cat-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14)}
+.chat-opts{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px 0}            /* anklickbare Ja/Nein-Knöpfe unter einer Rückfrage */
+.chat-opt-btn{padding:7px 15px;border-radius:11px;border:1px solid var(--accent);
+  background:rgba(244,166,90,.10);color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:background .2s,transform .1s}
+.chat-opt-btn:hover{background:rgba(244,166,90,.20);transform:translateY(-1px)}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
@@ -1948,11 +1953,27 @@ button{font-family:inherit;cursor:pointer}
     logEl.scrollTop = logEl.scrollHeight;
     return el;
   }
+  /* Anklickbare Antwort-Knöpfe unter einer Agent-Rückfrage (Speicher- oder Kategorie-Rückfrage).
+     Klick schickt den hinterlegten Text als nächste Nachricht — Frank muss nicht „ja/nein" tippen. */
+  function chatOptions(options){
+    const logEl = document.getElementById("chatLog");
+    const wrap = document.createElement("div");
+    wrap.className = "chat-opts";
+    options.forEach(o=>{
+      const b = document.createElement("button");
+      b.className = "chat-opt-btn"; b.type = "button"; b.textContent = o.label;
+      b.addEventListener("click", ()=>{ wrap.remove(); const ta=document.getElementById("chatText"); ta.value = o.send; sendChat(); });
+      wrap.appendChild(b);
+    });
+    logEl.appendChild(wrap);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
   async function sendChat(){
     if(chatBusy) return;
     const ta = document.getElementById("chatText");
     const text = ta.value.trim();
     if(!text) return;
+    document.querySelectorAll(".chat-opts").forEach(e=>e.remove());   // alte Antwort-Knöpfe weg
     chatBusy = true;
     document.getElementById("chatSend").disabled = true;
     chatAppend("frank", text);
@@ -1966,9 +1987,11 @@ button{font-family:inherit;cursor:pointer}
       let meta = "";
       if(r.action==="recall") meta = "↳ nachgeschlagen" + (r.recall_hits!=null ? " · "+r.recall_hits+" Treffer" : "");
       else if(r.action==="store") meta = "↳ abgelegt" + (r.category ? " in „"+r.category+"“" : "");
-      else if(r.action==="save_confirm") meta = "↳ Rückfrage vor dem Speichern";
+      else if(r.action==="save_confirm") meta = "↳ Rückfrage — Knopf wählen oder antworten";
+      else if(r.action==="store_clarify") meta = "↳ Kategorie-Rückfrage — Knopf wählen oder antworten";
       else if(r.action==="cancel") meta = "↳ nicht gespeichert";
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
+      if(r.options && r.options.length) chatOptions(r.options);   // anklickbare Ja/Nein-Knöpfe
     }catch(e){
       typing.remove();
       chatAppend("agent", "Der Agent ist gerade nicht erreichbar — versuch es bitte gleich nochmal.");
