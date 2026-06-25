@@ -156,6 +156,12 @@ Ein Skript, das die Laufwerke nach Login/Standby automatisch wiederverbindet, is
    `WScript.Network` (`.MapNetworkDrive` / `.RemoveNetworkDrive`) in einem nicht-elevated Task. **`WNetAddConnection2`
    (unser Weg) bleibt geeignet** (promptet nie); entscheidend ist die Kombination **nicht-persistent + tunnel-bewusst**
    und — wo moeglich — **nicht-elevated** mappen (sonst `EnableLinkedConnections=1`, mit der "Prompt-for-credentials"-Falle aus §10).
+   **Robusteste Form (Direktive #3, Defense in Depth, umgesetzt 2026-06-25):** ZWEI getrennte geplante Aufgaben —
+   (a) eine **nicht-erhoehte** fuer das eigentliche **Mapping** (primaerer, sofort im Explorer sichtbarer Weg, ohne
+   EnableLinkedConnections-Abhaengigkeit), (b) eine **erhoehte** nur fuer das, was Admin braucht (VPN-Dienst sicherstellen +
+   `EnableLinkedConnections` setzen), die dieselbe Mapping-Logik zusaetzlich als **Backup** aufruft. So kommen die Laufwerke
+   ueber zwei unabhaengige Wege — selbst wenn EnableLinkedConnections mal versagt. Referenz-Implementierung:
+   `second-brain-server/windows/wg-drive-mount.ps1` (nicht-erhoeht) + `wg-drive-reconnect.ps1` (erhoeht) + `wg-setup-elevated.ps1`.
 9. **SMB ueber WireGuard — Reconnect/Stabilitaet (Recherche 2026-06-25):** Bei korrektem Tunnel ist SMB stabil (grosse
    Transfers laufen durch). Reisst eine Sitzung nach ~1 Min ab, liegt es oft an **asymmetrischem Routing** (eine
    Firewall verwirft Pakete nach State-Ablauf), NICHT zwingend an der MTU — `PersistentKeepalive = 25` allein
