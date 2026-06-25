@@ -1244,7 +1244,8 @@ button{font-family:inherit;cursor:pointer}
     LAST_OVERVIEW = d;
     const cats = (d.categories||[]).slice().sort((a,b)=>b.count-a.count);
     buildColors(cats);
-    const groups = groupByParent(cats);   // [{name, self, subs, total}] nach Gesamtzahl absteigend
+    const ovRoot = buildPathTree(cats);   // Pfadbaum beliebiger Tiefe
+    const tops = catSortedKids(ovRoot).map(n=>({n, total:catNodeTotal(n)})).sort((a,b)=> b.total-a.total || a.n.seg.localeCompare(b.n.seg,"de"));
     const total = d.total ?? cats.reduce((s,c)=>s+c.count,0);
     animateNum(document.getElementById("totalNum"), total);
     renderChips(cats);   // Kategorie-Chips fürs Gehirn aus denselben Daten
@@ -1253,55 +1254,48 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("metaEmbed").textContent = d.brain?.embed_model || "–";
     const dv = document.getElementById("dashVer"); if(dv) dv.textContent = d.dash_version ? "v"+d.dash_version : "";
 
-    /* Stapelbalken — nach Hauptkategorie aggregiert (Unterkategorien zählen in ihre Hauptkategorie) */
+    /* Stapelbalken — nach oberster Kategorie-Ebene aggregiert (tiefere zählen mit hinein) */
     const bar = document.getElementById("bar");
     bar.innerHTML = "";
-    groups.forEach((g,i)=>{
+    tops.forEach((g,i)=>{
       const seg = document.createElement("div");
       seg.className = "seg";
-      seg.style.background = colorFor(g.name);
+      seg.style.background = colorFor(g.n.path);
       seg.style.flex = g.total + " 0 0";
-      seg.dataset.cat = g.name;
-      const subTip = g.subs.length ? ` · ${g.subs.length} Unter` : "";
-      seg.innerHTML = `<div class="seg-tip"><span class="c">${cap(g.name)}</span> · <b>${g.total}</b>${subTip}</div>`;
-      seg.addEventListener("click",()=> goToParent(g.name));
+      seg.dataset.cat = g.n.path;
+      const kids = g.n.children.size, subTip = kids ? ` · ${kids} Unter` : "";
+      seg.innerHTML = `<div class="seg-tip"><span class="c">${cap(g.n.seg)}</span> · <b>${g.total}</b>${subTip}</div>`;
+      seg.addEventListener("click",()=> goToParent(g.n.path));
       bar.appendChild(seg);
       requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (total?(g.total/total*100):0)+"%", 30+i*40); });
     });
 
-    /* Legende — aufklappbarer Gruppenbaum: erst Hauptkategorien, Twist zeigt die Unterkategorien */
+    /* Legende — aufklappbarer Baum BELIEBIGER Tiefe; je oberster Kategorie eine Grid-Zelle */
     const leg = document.getElementById("legend");
     leg.innerHTML = "";
-    groups.forEach(g=>{
-      const open = ovExpanded.has(g.name), hasSubs = g.subs.length>0;
+    const renderLegNode = (node, depth, container)=>{
+      const open = ovExpanded.has(node.path), hasKids = node.children.size>0, ntotal = catNodeTotal(node);
+      const row = document.createElement("div");
+      row.className = depth===0 ? "leg-main" : "leg-sub";
+      if(depth>0) row.style.paddingLeft = (10 + depth*16) + "px";
+      row.innerHTML =
+        (hasKids ? `<button class="leg-twist${open?' open':''}" type="button" title="Unterkategorien zeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
+                 : (depth>0 ? `<span class="leg-submark">└</span>` : `<button class="leg-twist leaf" type="button"></button>`))
+        + `<span class="swatch" style="background:${colorFor(node.path)}"></span>`
+        + `<span class="leg-name">${cap(node.seg)}</span><span class="leg-count">${ntotal}</span>`;
+      const tw = row.querySelector(".leg-twist");
+      if(tw && hasKids) tw.addEventListener("click", e=>{ e.stopPropagation();
+        if(ovExpanded.has(node.path)) ovExpanded.delete(node.path); else ovExpanded.add(node.path);
+        renderOverview(LAST_OVERVIEW);
+      });
+      row.addEventListener("click",()=> depth===0 ? goToParent(node.path) : goToCategory(node.path));
+      container.appendChild(row);
+      if(open && hasKids) catSortedKids(node).forEach(ch=> renderLegNode(ch, depth+1, container));
+    };
+    tops.forEach(({n})=>{
       const grp = document.createElement("div");
       grp.className = "leg-group";
-      const main = document.createElement("div");
-      main.className = "leg-main";
-      main.innerHTML =
-        `<button class="leg-twist${open?' open':''}${hasSubs?'':' leaf'}" type="button" title="Unterkategorien zeigen">`
-        + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
-        + `<span class="swatch" style="background:${colorFor(g.name)}"></span>`
-        + `<span class="leg-name">${cap(g.name)}</span><span class="leg-count">${g.total}</span>`;
-      main.querySelector(".leg-twist").addEventListener("click", e=>{
-        e.stopPropagation();
-        if(!hasSubs) return;
-        if(ovExpanded.has(g.name)) ovExpanded.delete(g.name); else ovExpanded.add(g.name);
-        renderOverview(LAST_OVERVIEW);   // neu zeichnen (Aufklapp-Zustand bleibt im Set)
-      });
-      main.addEventListener("click",()=> goToParent(g.name));   // ganze Zeile -> alles UNTER der Hauptkategorie
-      grp.appendChild(main);
-      if(open && hasSubs){
-        g.subs.forEach(s=>{
-          const sub = document.createElement("div");
-          sub.className = "leg-sub";
-          sub.innerHTML = `<span class="leg-submark">└</span>`
-            + `<span class="swatch" style="background:${colorFor(s.name)}"></span>`
-            + `<span class="leg-name">${cap(catSubName(s.name))}</span><span class="leg-count">${s.count}</span>`;
-          sub.addEventListener("click",()=> goToCategory(s.name));   // exakte Unterkategorie
-          grp.appendChild(sub);
-        });
-      }
+      renderLegNode(n, 0, grp);
       leg.appendChild(grp);
     });
 
@@ -1798,6 +1792,24 @@ button{font-family:inherit;cursor:pointer}
   /* Hierarchie steckt im Namen: "Haupt/Unter". Parent = vor dem ersten "/", Sub = danach. */
   function catParentOf(name){ const i=(name||"").indexOf("/"); return i<0 ? (name||"").trim() : name.slice(0,i).trim(); }
   function catSubName(name){ const i=(name||"").indexOf("/"); return i<0 ? "" : name.slice(i+1).trim(); }
+  function catSegments(name){ return (name||"").split("/").map(s=>s.trim()).filter(Boolean); }
+  /* Flache Kategorienliste -> Pfadbaum BELIEBIGER Tiefe. Knoten: {seg, path, cat|null, children:Map}. */
+  function buildPathTree(cats){
+    const root = { children:new Map() };
+    for(const c of (cats||[])){
+      const segs = catSegments(c.name);
+      let node = root, path = "";
+      segs.forEach((seg, i)=>{
+        path = path ? path + "/" + seg : seg;
+        if(!node.children.has(seg)) node.children.set(seg, { seg, path, cat:null, children:new Map() });
+        node = node.children.get(seg);
+        if(i === segs.length-1) node.cat = c;   // dieser exakte Pfad ist eine echte Kategorie
+      });
+    }
+    return root;
+  }
+  function catNodeTotal(node){ let t = node.cat ? (node.cat.count||0) : 0; for(const ch of node.children.values()) t += catNodeTotal(ch); return t; }
+  function catSortedKids(node){ return [...node.children.values()].sort((a,b)=> a.seg.localeCompare(b.seg,"de")); }
   function catRenameMode(on){
     document.getElementById("catRenameWrap").style.display = on ? "" : "none";
     document.getElementById("catRenameBtn").style.display = on ? "none" : "";
@@ -1812,47 +1824,30 @@ button{font-family:inherit;cursor:pointer}
     wrap.style.display = on ? "flex" : "none";
     if(on){
       catRenameMode(false);
-      document.getElementById("catSubPrefix").textContent = cap(catParentOf(catSelected)) + " ›";
+      document.getElementById("catSubPrefix").textContent = catSegments(catSelected).map(cap).join(" › ") + " ›";
       const i = document.getElementById("catSubInput"); i.value=""; i.focus();
     }
   }
-  /* catList -> gruppierter Baum: Map parent -> {name, self, subs[], total}. */
-  function buildCatTree(){
-    const groups = new Map();
-    for(const c of catList){
-      const parent = catParentOf(c.name), sub = catSubName(c.name);
-      if(!groups.has(parent)) groups.set(parent, {name:parent, self:null, subs:[], total:0});
-      const g = groups.get(parent);
-      if(sub === "") g.self = c; else g.subs.push(c);
-      g.total += (c.count||0);
-    }
-    const arr = [...groups.values()].sort((a,b)=> a.name.localeCompare(b.name,"de"));
-    arr.forEach(g=> g.subs.sort((a,b)=> catSubName(a.name).localeCompare(catSubName(b.name),"de")));
-    return arr;
-  }
+  /* Einstellungen-Baum REKURSIV (beliebig tief): jede Ebene aufklappbar, eingerückt nach Tiefe. */
   function renderCatTree(){
     const tree = document.getElementById("catMgrTree"); if(!tree) return;
-    const groups = buildCatTree();
-    if(!groups.length){ tree.innerHTML = '<div class="cat-empty-note">Noch keine Kategorien — leg unten eine Hauptkategorie an.</div>'; return; }
+    const root = buildPathTree(catList);
+    if(!root.children.size){ tree.innerHTML = '<div class="cat-empty-note">Noch keine Kategorien — leg unten eine Hauptkategorie an.</div>'; return; }
     let html = "";
-    for(const g of groups){
-      const open = catExpanded.has(g.name), hasSubs = g.subs.length>0;
-      const ghost = g.self===null;              // Hauptebene existiert nur als Gruppen-Header (keine eigene Kategorie)
-      const cnt = g.total>0 ? g.total : "leer";
-      const twistCls = "cat-twist" + (open?" open":"") + (hasSubs?"":" leaf");
-      html += `<div class="cat-row cat-main${catSelected===g.name?" sel":""}${ghost?" ghost":""}" data-name="${escapeHtml(g.name)}" data-ghost="${ghost?1:0}">`
-            + `<button class="${twistCls}" data-twist="${escapeHtml(g.name)}" type="button" title="Auf-/Zuklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
-            + `<span class="cat-name">${escapeHtml(cap(g.name))}</span>`
-            + `<span class="cat-count">${cnt}</span></div>`;
-      if(open && hasSubs){
-        for(const s of g.subs){
-          html += `<div class="cat-row cat-sub${catSelected===s.name?" sel":""}" data-name="${escapeHtml(s.name)}" data-ghost="0">`
-                + `<span class="cat-sub-mark">└</span>`
-                + `<span class="cat-name">${escapeHtml(cap(catSubName(s.name)))}</span>`
-                + `<span class="cat-count">${s.empty?"leer":(s.count||0)}</span></div>`;
-        }
+    const walk = (node, depth)=>{
+      for(const child of catSortedKids(node)){
+        const open = catExpanded.has(child.path), hasKids = child.children.size>0, ghost = child.cat===null;
+        const total = catNodeTotal(child), cnt = total>0 ? total : "leer";
+        const twistCls = "cat-twist" + (open?" open":"") + (hasKids?"":" leaf");
+        html += `<div class="cat-row${depth===0?" cat-main":""}${catSelected===child.path?" sel":""}${ghost?" ghost":""}" data-name="${escapeHtml(child.path)}" data-ghost="${ghost?1:0}" style="padding-left:${8+depth*18}px">`
+              + `<button class="${twistCls}" data-twist="${escapeHtml(child.path)}" type="button" title="Auf-/Zuklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
+              + (depth>0 ? `<span class="cat-sub-mark">└</span>` : "")
+              + `<span class="cat-name">${escapeHtml(cap(child.seg))}</span>`
+              + `<span class="cat-count">${cnt}</span></div>`;
+        if(open && hasKids) walk(child, depth+1);
       }
-    }
+    };
+    walk(root, 0);
     tree.innerHTML = html;
   }
   function selectCat(name){
@@ -1871,7 +1866,7 @@ button{font-family:inherit;cursor:pointer}
     try{ const d = await api("/api/categories/detail"); catList = (d && d.categories) || []; }
     catch(e){ catList = []; }
     // gewählte Kategorie nur behalten, wenn es sie noch gibt (Haupt ODER als Gruppen-Header eines Subs)
-    const stillThere = catSelected && catList.some(c => c.name===catSelected || catParentOf(c.name)===catSelected);
+    const stillThere = catSelected && catList.some(c => c.name===catSelected || (c.name+"/").startsWith(catSelected+"/"));
     if(!stillThere) catSelected = "";
     renderCatTree();
     catRenameMode(false); catSubMode(false);
@@ -1890,9 +1885,9 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("catSubBtn").addEventListener("click", ()=>{ if(catSelected) catSubMode(true); });
     document.getElementById("catSubCancel").addEventListener("click", ()=> catSubMode(false));
     async function addSub(){
-      const parent = catParentOf(catSelected), sub = document.getElementById("catSubInput").value.trim();
+      const parent = catSelected, sub = document.getElementById("catSubInput").value.trim();
       if(!parent || !sub) return;
-      if(sub.includes("/")){ flash("catMgrStatus","Bitte ohne weiteren Schrägstrich",false); return; }
+      if(sub.includes("/")){ flash("catMgrStatus","Bitte ohne weiteren Schrägstrich — eine Ebene pro Schritt",false); return; }
       const full = parent + "/" + sub;
       if(catFind(full)){ flash("catMgrStatus","Gibt es schon",false); return; }
       try{
@@ -2039,30 +2034,14 @@ button{font-family:inherit;cursor:pointer}
   /* ── Eigene Dropdowns: native <select> bleibt die Wert-Quelle (versteckt), schoenes UI darueber ── */
   /* Baut <option>-HTML in Baum-Reihenfolge: Hauptkategorie, dann ihre eingerückten Unterkategorien.
      data-depth/data-main steuern die Optik in syncCS; data-trigger zeigt im Auswahlfeld den vollen Pfad. */
+  /* Eine <option> je Kategorie (voller Pfad als value); der aufklappbare Baum wird in renderCSTree
+     aus den Pfaden rekursiv gebaut. data-trigger = "A › B › C" fuers Auswahlfeld. */
   function catOptionsHtml(cats){
-    const groups = new Map();
-    for(const c of (cats||[])){
-      const parent = catParentOf(c.name), sub = catSubName(c.name);
-      if(!groups.has(parent)) groups.set(parent, {name:parent, self:null, subs:[]});
-      const g = groups.get(parent);
-      if(sub === "") g.self = c; else g.subs.push(c);
-    }
-    const arr = [...groups.values()].sort((a,b)=> a.name.localeCompare(b.name,"de"));
-    arr.forEach(g=> g.subs.sort((a,b)=> catSubName(a.name).localeCompare(catSubName(b.name),"de")));
-    let html = "";
-    for(const g of arr){
-      if(g.self){
-        const c = g.self;
-        html += `<option value="${escapeHtml(c.name)}" data-depth="0" data-main="1" data-parent="${escapeHtml(g.name)}"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(g.name))}${c.empty?' — leer':''}</option>`;
-      } else if(g.subs.length){
-        html += `<option value="" disabled data-depth="0" data-main="1" data-parent="${escapeHtml(g.name)}">${escapeHtml(cap(g.name))}</option>`;
-      }
-      for(const s of g.subs){
-        const trig = cap(g.name) + " › " + cap(catSubName(s.name));
-        html += `<option value="${escapeHtml(s.name)}" data-depth="1" data-trigger="${escapeHtml(trig)}"${s.empty?' data-empty="1"':''}>${escapeHtml(cap(catSubName(s.name)))}${s.empty?' — leer':''}</option>`;
-      }
-    }
-    return html;
+    const arr = [...(cats||[])].sort((a,b)=> a.name.localeCompare(b.name,"de"));
+    return arr.map(c=>{
+      const trig = catSegments(c.name).map(cap).join(" › ");
+      return `<option value="${escapeHtml(c.name)}" data-cat="1" data-trigger="${escapeHtml(trig)}"${c.empty?' data-empty="1"':''}>${escapeHtml(c.name)}</option>`;
+    }).join("");
   }
   function enhanceSelect(sel, opts){
     opts = opts || {};
@@ -2116,79 +2095,68 @@ button{font-family:inherit;cursor:pointer}
       ref.panel.appendChild(o);
     });
   }
-  /* Drilldown-Panel fuer Kategorie-Dropdowns: Specials flach; Hauptkategorie -> Klick klappt
-     ihr Mini-Menue auf (Hauptkategorie selbst + vorhandene Unterkategorien + ＋Unterkategorie). */
+  /* Drilldown-Panel REKURSIV (beliebig tief): Specials flach; jeder Kategorie-Knoten klappt auf
+     -> "diesen Knoten wählen" + Kinder (rekursiv) + ＋Unterkategorie (eine Ebene tiefer). */
   function renderCSTree(sel, ref){
     ref.panel.innerHTML = "";
     const pick = value => { sel.value = value; syncCS(sel); ref.cs.classList.remove("open"); sel.dispatchEvent(new Event("change",{bubbles:true})); };
-    // Optionen gruppieren: specials (flach) | mains (aufklappbar) + ihre Subs
-    const groups = []; let cur = null;
-    Array.from(sel.options).forEach(opt=>{
-      const depth = parseInt(opt.dataset.depth || "0", 10);
-      const isMain = opt.dataset.main==="1" && depth===0;
-      if(depth>0 && cur && cur.type==="main"){ cur.subs.push(opt); return; }
-      if(isMain){ cur = {type:"main", opt, subs:[]}; groups.push(cur); return; }
-      cur = {type:"special", opt, subs:[]}; groups.push(cur);
+    const opts = Array.from(sel.options);
+    // Specials (ohne data-cat) flach zuerst (Auto-Kategorie, + Neue Kategorie…, — ohne —)
+    opts.filter(o=> o.dataset.cat!=="1").forEach(opt=>{
+      const o = document.createElement("div");
+      o.className = "cs-opt" + (opt.value==="__new__"?" special":"") + (sel.value===opt.value?" sel":"") + (opt.disabled?" cs-disabled":"");
+      o.textContent = opt.textContent;
+      if(!opt.disabled) o.addEventListener("click", e=>{ e.stopPropagation(); pick(opt.value); });
+      ref.panel.appendChild(o);
     });
-    groups.forEach(g=>{
-      if(g.type==="special"){
-        const opt = g.opt;
-        const o = document.createElement("div");
-        o.className = "cs-opt" + (opt.value==="__new__"?" special":"") + (sel.value===opt.value?" sel":"") + (opt.disabled?" cs-disabled":"");
-        o.textContent = opt.textContent;
-        if(!opt.disabled) o.addEventListener("click", e=>{ e.stopPropagation(); pick(opt.value); });
-        ref.panel.appendChild(o);
-        return;
-      }
-      const main = g.opt, mainName = main.dataset.parent || main.value;
-      const realMain = !!main.value && !main.disabled;   // existiert die Hauptkategorie selbst als Kategorie?
-      const expanded = sel._csExp.has(mainName);
-      const row = document.createElement("div");
-      row.className = "cs-opt cs-main cs-mainrow" + (expanded?" cs-exp":"") + (realMain && sel.value===main.value?" sel":"");
-      row.innerHTML = `<span class="cs-twi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m9 6 6 6-6 6"/></svg></span>`
-        + `<span class="cs-mainname">${escapeHtml(main.textContent)}</span>`
-        + `<span class="cs-cnt">${g.subs.length ? ('▾ '+g.subs.length) : ''}</span>`;
-      row.addEventListener("click", e=>{ e.stopPropagation();
-        if(sel._csExp.has(mainName)) sel._csExp.delete(mainName); else sel._csExp.add(mainName);
-        renderCSTree(sel, ref);   // Panel offen lassen, nur neu zeichnen
-      });
-      ref.panel.appendChild(row);
-      if(expanded){
-        if(realMain){
-          const um = document.createElement("div");
-          um.className = "cs-opt cs-sub cs-usemain" + (sel.value===main.value?" sel":"");
-          um.textContent = "„" + main.textContent + "“ (Hauptkategorie)";
-          um.addEventListener("click", e=>{ e.stopPropagation(); pick(main.value); });
-          ref.panel.appendChild(um);
+    // Kategorien -> Pfadbaum (beliebig tief)
+    const cats = opts.filter(o=> o.dataset.cat==="1").map(o=>({name:o.value, empty:o.dataset.empty==="1"}));
+    const root = buildPathTree(cats);
+    const walk = (node, depth)=>{
+      for(const child of catSortedKids(node)){
+        const real = child.cat!==null, hasKids = child.children.size>0, expanded = sel._csExp.has(child.path);
+        const row = document.createElement("div");
+        row.className = "cs-opt cs-mainrow" + (depth===0?" cs-main":"") + (expanded?" cs-exp":"") + (real && sel.value===child.path?" sel":"");
+        row.style.paddingLeft = (12 + depth*15) + "px";
+        row.innerHTML = `<span class="cs-twi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m9 6 6 6-6 6"/></svg></span>`
+          + `<span class="cs-mainname">${escapeHtml(cap(child.seg))}</span>`
+          + `<span class="cs-cnt">${hasKids ? ('▾ '+child.children.size) : ''}</span>`;
+        row.addEventListener("click", e=>{ e.stopPropagation();
+          if(sel._csExp.has(child.path)) sel._csExp.delete(child.path); else sel._csExp.add(child.path);
+          renderCSTree(sel, ref);
+        });
+        ref.panel.appendChild(row);
+        if(expanded){
+          if(real){
+            const um = document.createElement("div");
+            um.className = "cs-opt cs-usemain" + (sel.value===child.path?" sel":"");
+            um.style.paddingLeft = (12 + (depth+1)*15) + "px";
+            um.textContent = "„" + cap(child.seg) + "“ wählen";
+            um.addEventListener("click", e=>{ e.stopPropagation(); pick(child.path); });
+            ref.panel.appendChild(um);
+          }
+          walk(child, depth+1);
+          const add = document.createElement("div");
+          add.className = "cs-opt cs-subadd";
+          add.style.paddingLeft = (12 + (depth+1)*15) + "px";
+          add.textContent = "＋ Unterkategorie…";
+          add.addEventListener("click", async e=>{
+            e.stopPropagation();
+            const name = (window.prompt("Neue Unterkategorie unter „"+cap(child.seg)+"“:")||"").trim();
+            if(!name) return;
+            if(name.includes("/")){ window.alert("Bitte ohne Schrägstrich — eine Ebene pro Schritt."); return; }
+            const full = child.path + "/" + name;
+            try{
+              const r = await apiSend("/api/categories","POST",{name:full});
+              if(r && r.ok && r.key){ sel._csExp.add(child.path); if(typeof sel._reload==="function") await sel._reload(); pick(r.key); }
+              else window.alert((r&&r.detail)||"Konnte Unterkategorie nicht anlegen.");
+            }catch(_){ window.alert("Konnte Unterkategorie nicht anlegen."); }
+          });
+          ref.panel.appendChild(add);
         }
-        g.subs.forEach(sub=>{
-          const s = document.createElement("div");
-          s.className = "cs-opt cs-sub" + (sel.value===sub.value?" sel":"") + (sub.dataset.empty==="1"?" empty":"");
-          s.textContent = sub.textContent;
-          s.addEventListener("click", e=>{ e.stopPropagation(); pick(sub.value); });
-          ref.panel.appendChild(s);
-        });
-        const add = document.createElement("div");
-        add.className = "cs-opt cs-sub cs-subadd";
-        add.textContent = "＋ Unterkategorie…";
-        add.addEventListener("click", async e=>{
-          e.stopPropagation();
-          const name = (window.prompt("Neue Unterkategorie unter „"+main.textContent+"“:")||"").trim();
-          if(!name) return;
-          if(name.includes("/")){ window.alert("Bitte ohne Schrägstrich — das ist schon die Unterkategorie."); return; }
-          const full = mainName + "/" + name;
-          try{
-            const r = await apiSend("/api/categories","POST",{name:full});
-            if(r && r.ok && r.key){
-              sel._csExp.add(mainName);
-              if(typeof sel._reload === "function") await sel._reload();
-              pick(r.key);
-            } else { window.alert((r&&r.detail)||"Konnte Unterkategorie nicht anlegen."); }
-          }catch(_){ window.alert("Konnte Unterkategorie nicht anlegen."); }
-        });
-        ref.panel.appendChild(add);
       }
-    });
+    };
+    walk(root, 0);
   }
   function closeAllCS(){ document.querySelectorAll(".cs.open").forEach(c=>c.classList.remove("open")); }
   document.addEventListener("click", closeAllCS);
