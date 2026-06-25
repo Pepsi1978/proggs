@@ -26,6 +26,9 @@
 | 7 | Snapshot-Restore extrem langsam (Minuten statt Sek.) | `Content-Type: multipart/form-data` NICHT explizit setzen (zerstoert die boundary-Berechnung) — `requests`/Client selbst generieren lassen. | §3 |
 | 8 | Suche langsam | `hnsw_ef` zur Suche senken (schneller, weniger Recall); Quantisierung (Scalar int8 −75%, Binary 40× schneller); 1.18 TurboQuant. | §5 |
 | 9 | ⭐ `:latest`-Image / Version < 1.18.2 | Auf **`v1.18.2` pinnen** — nicht nur Reproduzierbarkeit, sondern **Sicherheit**: die 1.18.1/1.18.2-Linie buendelt mehrere Security-Fixes (Auth-vor-Snapshot-Upload #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). `:latest` kann unbemerkt eine andere Version ziehen. | §3, §6 |
+| 10 | ⭐ Hierarchie/„alles unter X" per **Praefix-Filter** gewollt | **KEIN nativer `startsWith`/Praefix-Operator** auf Keyword-Feldern (offener Feature-Request #5300). Loesungen: (a) separates `parent`-Payload-Feld (Keyword-Index) → exakter `MatchValue`; (b) `MatchAny` ueber die bekannten Unterpfade (App kennt die Liste); (c) `MatchText` + **Text-Index** (Substring, nicht fuer Hierarchie gedacht). | §7 |
+| 11 | Payload-Index NACH dem Ingest angelegt | Der **filterable HNSW** zieht nur Filter-Kanten, wenn der Payload-Index **VOR** den Daten existiert. Nachtraeglich angelegt → HNSW muss neu gebaut werden. Neues Filterfeld (z.B. `parent`) auf Bestand → Index anlegen + Reindex einplanen. | §7 |
+| 12 | `nested`-Filter auf Array-von-Objekten | `nested` ist noetig, damit mehrere Bedingungen **dasselbe** Array-Element treffen (sonst array-uebergreifend). Aber: Community berichtet **unzuverlaessige/langsamere Index-Nutzung** bei `nested` (#2256); „alle diese Werte gleichzeitig"-Subset-Match ist offener Feature-Request (#4679). Fuer einfache Kategorien lieber flache Felder. | §7 |
 
 ---
 
@@ -37,6 +40,7 @@
 | §3 Docker/Betrieb/Backup/Auth | §3 Betrieb + Sicherung |
 | §4 Client/TLS | §4 Client-Anbindung |
 | §5 Performance | §5 Tuning |
+| §7 Filter/Hierarchie | §6 Hierarchische Kategorien filtern |
 
 ---
 
@@ -144,6 +148,30 @@ In BEIDEN Recherchen belegt (1.18.1/1.18.2-Linie) — fuer einen exponierten Ser
 Heap-OOB-Read via Snapshot (#9268). Vor harter Aussage `github.com/qdrant/qdrant/releases` (v1.18.2) pruefen.
 → Konsequenz (robust, quellenunabhaengig): **`v1.18.2` ist die Mindest-Version zum Pinnen** (mehrere Security-Fixes
 gebuendelt). Nach v1.18.2 existiert (Stand 2026-06-22) noch kein Release — Anker bleibt aktuell.
+
+## 7. Filter, Hierarchische Kategorien & Metadaten (recherchiert 2026-06-25)
+**Symptom/Frage:** Man will Unterkategorien (`Programmieren/Best-Practices`) modellieren und „alles unter
+Programmieren" filtern — und sucht einen Praefix-Filter.
+**Fakten (offizielle Doku + GitHub):**
+- ❌ **Kein nativer Praefix/`startsWith`-Operator** auf Keyword-Feldern. Nur Feature-Request
+  [#5300](https://github.com/qdrant/qdrant/issues/5300) (offen). Ein Pfad-String allein laesst sich also NICHT
+  effizient praefix-filtern.
+- ✅ **Exakte Werte:** `keyword`-Index + `MatchValue` (ein Wert) / `MatchAny` (Wertliste). Schnell, indexgestuetzt.
+- ✅ **„Alles unter X" – die zwei sauberen Wege:**
+  (a) **Separates Feld** `parent`/`category_main` (Keyword-Index) → exakter `MatchValue(parent="Programmieren")`.
+  Klarste, schnellste Loesung. (b) `MatchAny` ueber die bekannten Unterpfade — geht, wenn die App die
+  Kategorienliste kennt (z.B. aus einer Registry).
+- ⚠️ **Substring:** `MatchText` braucht einen **Text-Index** (nicht denselben wie keyword); fuer Hierarchie-Traversal
+  nur Notloesung, nicht als Best Practice ausgewiesen.
+- ⚠️ **`nested`-Objekte** (Array von `{parent,child}`): noetig fuer „dasselbe Array-Element", aber Community
+  meldet unzuverlaessige Index-Nutzung ([#2256](https://github.com/orgs/qdrant/discussions/2256)); Subset-Match
+  („alle diese gleichzeitig") ist offen ([#4679](https://github.com/qdrant/qdrant/issues/4679)). Fuer einfache
+  Kategorien daher **flache Felder + separates parent-Feld** bevorzugen.
+- ⭐ **Index-Reihenfolge:** Payload-Index **VOR** dem Ingest anlegen, sonst muss der filterable HNSW neu gebaut
+  werden, um Filter-Kanten zu erhalten. Neues Filterfeld auf Bestand → Index anlegen + Reindex einplanen.
+**Versionen:** Qdrant 1.18.2, qdrant-client>=1.18 (strukturell, alle 1.x).
+**Quelle:** qdrant.tech (filtering, text-search, indexing, vector-search-filtering), GitHub #5300/#4679/#2256,
+StackOverflow (nested) · OpenRouter-`:online`-Recherche 2026-06-25.
 
 ---
 

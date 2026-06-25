@@ -17,6 +17,7 @@
 | 3 | Absichern | `QDRANT__SERVICE__API_KEY` + an 127.0.0.1/VPN-IP binden + Volume; Image-Version pinnen | §3 |
 | 4 | Client anbinden | korrekter Port (REST 6333), ohne TLS explizite `http://`-URL | §4 |
 | 5 | Tunen | Quantisierung (Scalar int8/TurboQuant 1.18); `hnsw_ef` zur Suche steuern; Memory-Monitoring | §5 |
+| 6 | Hierarchische Kategorien (Haupt/Unter) filtern | Pfad-String `Haupt/Unter` fuer den Anzeige-Wert + **separates `parent`-Feld** (Keyword-Index) fuer „alles unter Haupt" (`MatchValue`) — KEIN Praefix-Operator in Qdrant. Index VOR Ingest. | §6 |
 
 ---
 
@@ -28,6 +29,7 @@
 | §3 Betrieb | §3 Docker/Auth/Backup |
 | §4 Client | §4 WRONG_VERSION_NUMBER |
 | §5 Tuning | §5 + §6 (1.18-Features) |
+| §6 Hierarchie filtern | §7 Filter/Hierarchie (kein startsWith) |
 
 ---
 
@@ -80,5 +82,19 @@ Filter-Felder anlegen (`keyword`/`integer`/`bool` …), sonst wird langsam gesca
 
 ---
 
+## §6 Hierarchische Kategorien (Haupt/Unter) richtig filtern (Stand 2026-06-25)
+Qdrant hat **keinen** Praefix-/`startsWith`-Operator (Feature-Request #5300 offen). Fuer 2-Ebenen-Kategorien
+daher das robuste Muster:
+- **Anzeige-Wert:** ein Keyword-Feld `category = "Haupt/Unter"` (z.B. `Programmieren/Best-Practices`). Exakter
+  Filter auf eine Unterkategorie = `MatchValue(category="Programmieren/Best-Practices")`, mehrere = `MatchAny`.
+- **„Alles unter Haupt":** ein **zweites** Keyword-Feld `parent = "Haupt"` (= Teil vor dem `/`) mitschreiben →
+  `MatchValue(parent="Programmieren")`. Indexgestuetzt, schnell, keine Substring-Tricks. (Alternative ohne
+  Zusatzfeld: `MatchAny` ueber alle bekannten `Haupt/*`-Werte aus der App-Registry.)
+- **Index VOR Ingest:** `parent` als `keyword`-`field_index` anlegen, bevor Daten geschrieben werden; auf
+  Bestand nachgezogen → Reindex einplanen (sonst nutzt der filterable HNSW die Filter-Kanten nicht).
+- **NICHT** `nested`-Objekte fuer simple Kategorien (Community-Index-Probleme #2256); flache Felder sind hier
+  einfacher und schneller. Vollstaendige Fallen-Liste: `bugs/server/qdrant.md` §7.
+
 ## Quellen
-qdrant.tech (resource-optimization, storage, security, HNSW, blog 1.18 TurboQuant), GitHub qdrant-client · Recherche 2026-06-22 (Firecrawl+MiniMax).
+qdrant.tech (resource-optimization, storage, security, HNSW, blog 1.18 TurboQuant, filtering, text-search, indexing),
+GitHub qdrant-client + #5300/#4679/#2256 · Recherche 2026-06-22 (Firecrawl+MiniMax) + 2026-06-25 (OpenRouter `:online`).
