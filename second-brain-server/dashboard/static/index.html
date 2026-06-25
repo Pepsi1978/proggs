@@ -2499,18 +2499,48 @@ button{font-family:inherit;cursor:pointer}
         voiceSel.addEventListener("change", ()=> localStorage.setItem(LS_VOICE, voiceSel.value));
       }
     })();
+    function ttsChunks(text){
+      // Antwort in vorlesbare Haeppchen schneiden: an Satzgrenzen (. ! ? ; Zeilenende), dann zu
+      // ~220-Zeichen-Gruppen buendeln. Kurze Haeppchen = schnelle Generierung des ERSTEN Tons,
+      // gebuendelt = nicht unnoetig viele Mini-Calls. Unveraenderter Text-Inhalt (nur Schnitt).
+      const sent = text.match(/[^.!?;\n]+[.!?;\n]*\s*/g) || [text];
+      const out = []; let cur = "";
+      for(const s of sent){
+        if(cur && (cur + s).length > 220){ out.push(cur.trim()); cur = s; }
+        else cur += s;
+      }
+      if(cur.trim()) out.push(cur.trim());
+      return out.length ? out : [text];
+    }
+    let ttsSeq = 0;   // Sequenz-Token: eine neue Antwort bricht die laufende Vorlese-Pipeline sauber ab
     async function speak(text){
       if(!isOn() || !available) return;
       const clean = (text||"").trim(); if(!clean) return;
+      const myseq = ++ttsSeq;
+      if(audio){ try{ audio.pause(); }catch(_){ } }                     // vorherige Wiedergabe stoppen
+      // PERFORMANCE: NICHT auf das komplette Audio des ganzen Textes warten (~11s bei langer Antwort).
+      // Satz fuer Satz: der ERSTE Satz wird sofort generiert + abgespielt (~2s), der naechste wird
+      // WAEHRENDDESSEN vorausgeladen (Pipelining) -> Vorlesen startet sofort, laeuft nahtlos weiter.
+      const chunks = ttsChunks(clean.slice(0, 5000));
+      const gen = (t)=> fetch("/api/tts", {method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({text: t, voice: chosenVoice()})}).then(r=> r.ok ? r.blob() : null).catch(()=>null);
+      let nextBlobP = gen(chunks[0]);                                   // ersten Satz SOFORT anstossen
       try{
-        if(audio){ try{ audio.pause(); }catch(_){ } }                   // vorherige Wiedergabe stoppen
-        const res = await fetch("/api/tts", {method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({text: clean.slice(0,5000), voice: chosenVoice()})});
-        if(!res.ok) return;
-        const url = URL.createObjectURL(await res.blob());
-        audio = new Audio(url);
-        audio.onended = audio.onerror = ()=> URL.revokeObjectURL(url);
-        audio.play().catch(()=>{});
+        for(let i=0; i<chunks.length; i++){
+          const blobP = nextBlobP;
+          nextBlobP = (i + 1 < chunks.length) ? gen(chunks[i + 1]) : null;   // naechsten Satz VORAUSLADEN
+          const blob = await blobP;
+          if(myseq !== ttsSeq) return;                                  // neue Antwort -> diese Pipeline abbrechen
+          if(!blob) continue;
+          const url = URL.createObjectURL(blob);
+          await new Promise((resolve)=>{
+            audio = new Audio(url);
+            audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(); };
+            audio.play().catch(()=> resolve());
+          });
+          if(myseq !== ttsSeq) return;                                  // waehrend des Abspielens neue Antwort -> stop
+        }
       }catch(_){ /* Vorlesen ist Komfort — Fehler nie hart melden */ }
     }
     window.speakTTS = speak;                                            // sendChat ruft das nach jeder Antwort
