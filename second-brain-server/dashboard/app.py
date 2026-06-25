@@ -7,9 +7,12 @@ liefert die Oberflaeche (static/index.html). Observability-First: schlankes JSON
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import os
+import re
+import struct
 import time
 import traceback
 from collections import Counter
@@ -18,9 +21,9 @@ from pathlib import Path
 import httpx
 import psutil
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-VERSION = "0.17.1"  # 0.17.1: Eval-Logs-Button ist jetzt ein Toggle (Frank-Wunsch 2026-06-25) — Root Cause: der "Logs"-Knopf rief stur showLogs() auf, lud die Liste neu und liess sie offen; ein zweiter Klick tat sichtbar nichts. Jetzt klappt der zweite Klick die offene Logs-Liste (bzw. eine geoeffnete Log-Ansicht) wieder zu, statt endlos scrollen zu muessen. Reiner Frontend-Fix in index.html. 0.17.0: Favicon im Browser-Tab (Frank-Wunsch 2026-06-25) — Cortex-Signet (Gehirn auf orange->rotem Marken-Verlauf) als Inline-SVG-Data-URI im <head> der index.html; vorher zeigte der Tab nur das Browser-Standard-Globus-Symbol. 0.16.0: Backup-Inhalts-Liste + Anzeige-Fixes (Frank-Wunsch 2026-06-25). (a) Neuer Endpoint GET /api/backup/contents listet GENERISCH alle Top-Level-Ordner des Z->Drive-Backups (Qdrant-Snapshots, Logbuch, Eval-Logs + kuenftige) mit Anzahl/Datum-des-letzten/Groesse -> scrollbare Box unter der Backup-Kachel im Einstellungen-Tab (immer aktueller Stand). compose: read-only Mount /srv/samba/gedanken:/gedanken:ro + DASH_BACKUP_ROOT. (b) Eval-Beschreibung 50->90 Saetze. (c) Kategorie-Tags an Eintraegen zeigen echte Schreibweise (CSS text-transform:lowercase entfernt; cap() macht nur ersten Buchstaben gross, erhaelt Bindestriche). 0.15.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /api/entry reicht jetzt auch 'title' durch -> Titel im Drawer bearbeitbar (brain migriert die doc_id bei Titel-Aenderung). (b) POST /api/entry/category (Proxy an agent /categories/move-entry) verschiebt EINEN Eintrag in eine andere Kategorie fuers Drawer-Kategorie-Dropdown (neue Kategorie landet kanonisch in der Registry -> synchron mit Einstellungen+Gespraech). Frontend: Drawer-Titel im Bearbeiten-Modus editierbar; Kategorie-Dropdown (Gespraech-Stil, nach unten) neben Loeschen + 'In Kategorie speichern'-Button. 0.14.0: Anklickbare Antwort-Knoepfe im Chat (Frank-Wunsch 2026-06-25) — bei einer Speicher- ODER Kategorie-Rueckfrage (save_confirm/store_clarify) zeigt der Chat jetzt Ja/Nein-Knoepfe (chatOptions), Klick schickt die Antwort; Frank muss nicht tippen. 0.13.0: Kategorie-Verwaltung (Frank-Wunsch 2026-06-25) — Proxys /api/categories/detail (Liste mit Eintragszahl+leer-Flag), /api/categories/rename (umbenennen/mergen), /api/categories/delete (Etikett entfernen, Eintraege bleiben) an den Agenten; Frontend: Einstellungen-Abschnitt 'Kategorien' (Dropdown, Umbenennen+Speichern, Loeschen mit Warnung, Merge, Dublettenwarnung, leere anlegen); Gespraech-Dropdown synchron + deutsche Grossschreibung + leere ausgegraut. 0.12.0: Logbuch<->Gehirn-Sync (Frank-Wunsch) — wird ein 'gespraeche'-Eintrag im Gehirn geloescht, loescht das dashboard via agent auch die zugehoerige .txt auf Platte Z; beim Wiederherstellen aus dem Papierkorb wird die .txt zurueckgeschrieben. Eigene Dropdowns im Seiten-Stil; Dropdown-Scrollbalken ausgeblendet; Papierkorb-Bearbeiten mit Abbrechen-Button; Monats-Toggle. 0.11.0: Papierkorb-Bereich + Logbuch nach Monaten (Frank-Wunsch) — /api/trash (GET Liste, PUT editieren, POST /api/trash/restore wiederherstellen) als Proxy an brain; Logbuch /api/logbook/tree (Jahr/Monat-Baum) + /api/logbook?year=&month= (Lazy-Load eines Monats). Papierkorb + Logbuch teilen die Jahr/Monat-Navigation (aktueller Monat umrandet). 0.10.0: Papierkorb-Button im Eintrags-Drawer (Frank-Wunsch) — DELETE /api/entry (Proxy an brain DELETE /entry per doc_id) loescht einen Eintrag dauerhaft aus dem Gedaechtnis, mit eigenem Ja/Nein-Bestaetigungsdialog im Frontend. 0.9.0: Kategorie-Dropdown beim Senden (Frank-Wunsch) — Dropdown neben dem X-Button (Gespraech-Tab) mit allen Kategorien + 'Kategorie +' zum Anlegen; /api/chat reicht die gewaehlte 'category' an den Agenten weiter (Override). 0.8.0: Kategorie-Registry (Frank-Wunsch) — /api/categories GET/POST (Proxy an Agent); Uebersicht zeigt manuell angelegte (noch leere) Kategorien mit count 0. 0.7.0: Drei umschaltbare System-Prompts (Frank-Wunsch) — /api/prompt reicht role (haupt/speicher/abfrage) an den Agenten weiter; UI bekommt drei Umschalt-Buttons ueber dem Prompt-Textfeld. 0.6.2: Modell-pro-Rolle — drei Dropdowns (Hauptagent/Speicheragent/Abfrageagent), /api/config reicht haupt_model/speicher_model/abfrage_model weiter; System-Prompt/Logbuch-Kacheln wieder volle Breite + sauberer Abstand unter der oberen Reihe. 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
+VERSION = "0.18.0"  # 0.18.0: Vorlesen (Text->Sprache) im Gespraech (Frank-Wunsch 2026-06-25) — Lautsprecher-Toggle im Chat (default AN) liest Hauptagent-Antworten vor; neue Endpoints GET /api/tts/voices (30 Gemini-HD-Stimmen + Default) + POST /api/tts (Text+Stimme -> WAV, Gemini-native-TTS via GEMINI_API_KEY, PCM->WAV, x-goog-api-key-Header, to_thread). Stimmenauswahl ganz unten in Einstellungen, Praeferenz im localStorage. Hinweis: 'Chirp 3 HD' (Cloud-TTS) ist fuer das Projekt aktuell 403-gesperrt -> Gemini-native-TTS (gleichwertig) genutzt, Umstellung trivial nach Cloud-TTS-Freischaltung. Plus Einstellungen-Layout: Logbuch+Papierkorb nebeneinander (halbe Breite) unter System-Prompt. 0.17.1: Eval-Logs-Button ist jetzt ein Toggle (Frank-Wunsch 2026-06-25) — Root Cause: der "Logs"-Knopf rief stur showLogs() auf, lud die Liste neu und liess sie offen; ein zweiter Klick tat sichtbar nichts. Jetzt klappt der zweite Klick die offene Logs-Liste (bzw. eine geoeffnete Log-Ansicht) wieder zu, statt endlos scrollen zu muessen. Reiner Frontend-Fix in index.html. 0.17.0: Favicon im Browser-Tab (Frank-Wunsch 2026-06-25) — Cortex-Signet (Gehirn auf orange->rotem Marken-Verlauf) als Inline-SVG-Data-URI im <head> der index.html; vorher zeigte der Tab nur das Browser-Standard-Globus-Symbol. 0.16.0: Backup-Inhalts-Liste + Anzeige-Fixes (Frank-Wunsch 2026-06-25). (a) Neuer Endpoint GET /api/backup/contents listet GENERISCH alle Top-Level-Ordner des Z->Drive-Backups (Qdrant-Snapshots, Logbuch, Eval-Logs + kuenftige) mit Anzahl/Datum-des-letzten/Groesse -> scrollbare Box unter der Backup-Kachel im Einstellungen-Tab (immer aktueller Stand). compose: read-only Mount /srv/samba/gedanken:/gedanken:ro + DASH_BACKUP_ROOT. (b) Eval-Beschreibung 50->90 Saetze. (c) Kategorie-Tags an Eintraegen zeigen echte Schreibweise (CSS text-transform:lowercase entfernt; cap() macht nur ersten Buchstaben gross, erhaelt Bindestriche). 0.15.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /api/entry reicht jetzt auch 'title' durch -> Titel im Drawer bearbeitbar (brain migriert die doc_id bei Titel-Aenderung). (b) POST /api/entry/category (Proxy an agent /categories/move-entry) verschiebt EINEN Eintrag in eine andere Kategorie fuers Drawer-Kategorie-Dropdown (neue Kategorie landet kanonisch in der Registry -> synchron mit Einstellungen+Gespraech). Frontend: Drawer-Titel im Bearbeiten-Modus editierbar; Kategorie-Dropdown (Gespraech-Stil, nach unten) neben Loeschen + 'In Kategorie speichern'-Button. 0.14.0: Anklickbare Antwort-Knoepfe im Chat (Frank-Wunsch 2026-06-25) — bei einer Speicher- ODER Kategorie-Rueckfrage (save_confirm/store_clarify) zeigt der Chat jetzt Ja/Nein-Knoepfe (chatOptions), Klick schickt die Antwort; Frank muss nicht tippen. 0.13.0: Kategorie-Verwaltung (Frank-Wunsch 2026-06-25) — Proxys /api/categories/detail (Liste mit Eintragszahl+leer-Flag), /api/categories/rename (umbenennen/mergen), /api/categories/delete (Etikett entfernen, Eintraege bleiben) an den Agenten; Frontend: Einstellungen-Abschnitt 'Kategorien' (Dropdown, Umbenennen+Speichern, Loeschen mit Warnung, Merge, Dublettenwarnung, leere anlegen); Gespraech-Dropdown synchron + deutsche Grossschreibung + leere ausgegraut. 0.12.0: Logbuch<->Gehirn-Sync (Frank-Wunsch) — wird ein 'gespraeche'-Eintrag im Gehirn geloescht, loescht das dashboard via agent auch die zugehoerige .txt auf Platte Z; beim Wiederherstellen aus dem Papierkorb wird die .txt zurueckgeschrieben. Eigene Dropdowns im Seiten-Stil; Dropdown-Scrollbalken ausgeblendet; Papierkorb-Bearbeiten mit Abbrechen-Button; Monats-Toggle. 0.11.0: Papierkorb-Bereich + Logbuch nach Monaten (Frank-Wunsch) — /api/trash (GET Liste, PUT editieren, POST /api/trash/restore wiederherstellen) als Proxy an brain; Logbuch /api/logbook/tree (Jahr/Monat-Baum) + /api/logbook?year=&month= (Lazy-Load eines Monats). Papierkorb + Logbuch teilen die Jahr/Monat-Navigation (aktueller Monat umrandet). 0.10.0: Papierkorb-Button im Eintrags-Drawer (Frank-Wunsch) — DELETE /api/entry (Proxy an brain DELETE /entry per doc_id) loescht einen Eintrag dauerhaft aus dem Gedaechtnis, mit eigenem Ja/Nein-Bestaetigungsdialog im Frontend. 0.9.0: Kategorie-Dropdown beim Senden (Frank-Wunsch) — Dropdown neben dem X-Button (Gespraech-Tab) mit allen Kategorien + 'Kategorie +' zum Anlegen; /api/chat reicht die gewaehlte 'category' an den Agenten weiter (Override). 0.8.0: Kategorie-Registry (Frank-Wunsch) — /api/categories GET/POST (Proxy an Agent); Uebersicht zeigt manuell angelegte (noch leere) Kategorien mit count 0. 0.7.0: Drei umschaltbare System-Prompts (Frank-Wunsch) — /api/prompt reicht role (haupt/speicher/abfrage) an den Agenten weiter; UI bekommt drei Umschalt-Buttons ueber dem Prompt-Textfeld. 0.6.2: Modell-pro-Rolle — drei Dropdowns (Hauptagent/Speicheragent/Abfrageagent), /api/config reicht haupt_model/speicher_model/abfrage_model weiter; System-Prompt/Logbuch-Kacheln wieder volle Breite + sauberer Abstand unter der oberen Reihe. 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -39,6 +42,51 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_STT_URL = os.getenv("GROQ_STT_URL", "https://api.groq.com/openai/v1/audio/transcriptions")
 GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
 MAX_AUDIO_BYTES = int(os.getenv("DASH_MAX_AUDIO_BYTES", str(24 * 1024 * 1024)))  # Groq-Limit ~24 MB (Almanach §4)
+# --- Vorlesen (Text->Sprache): Gemini-TTS, Key fest im Server (.env). Die "Chirp 3 HD"-Stimmen
+#     gehoeren zur Google-Cloud-TTS-API (texttospeech.googleapis.com), die fuer dieses Projekt
+#     aktuell gesperrt ist (403). Gemini-native-TTS (generativelanguage) laeuft mit demselben
+#     GEMINI_API_KEY sofort und liefert 30 gleichwertige HD-Stimmen. Umstellung auf Chirp3-HD ist
+#     trivial, sobald die Cloud-TTS-API aktiviert ist (anderer Endpoint + Voice-Namen de-DE-Chirp3-HD-*).
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_TTS_MODEL = os.getenv("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
+GEMINI_TTS_BASE = os.getenv("GEMINI_TTS_BASE", "https://generativelanguage.googleapis.com/v1beta/models")
+TTS_MAX_CHARS = int(os.getenv("DASH_TTS_MAX_CHARS", "5000"))   # Eingabe-Limit (fastapi §8/§12) — eine Antwort ist nie so lang
+TTS_DEFAULT_VOICE = os.getenv("DASH_TTS_VOICE", "Sulafat")
+# Die 30 prebuilt Gemini-TTS-Stimmen mit deutscher Klang-Charakteristik. Sprachunabhaengig — sie sprechen
+# Deutsch, wenn der Text Deutsch ist. Quelle: Gemini-API Speech-Generation-Doku (ai.google.dev).
+TTS_VOICES = [
+    {"name": "Sulafat", "desc": "Warm"},
+    {"name": "Achird", "desc": "Freundlich"},
+    {"name": "Charon", "desc": "Informativ"},
+    {"name": "Kore", "desc": "Bestimmt"},
+    {"name": "Sadachbia", "desc": "Lebhaft"},
+    {"name": "Zephyr", "desc": "Hell"},
+    {"name": "Puck", "desc": "Aufgeweckt"},
+    {"name": "Fenrir", "desc": "Lebhaft"},
+    {"name": "Leda", "desc": "Jugendlich"},
+    {"name": "Orus", "desc": "Bestimmt"},
+    {"name": "Aoede", "desc": "Beschwingt"},
+    {"name": "Callirrhoe", "desc": "Locker"},
+    {"name": "Autonoe", "desc": "Hell"},
+    {"name": "Enceladus", "desc": "Behaucht"},
+    {"name": "Iapetus", "desc": "Klar"},
+    {"name": "Umbriel", "desc": "Locker"},
+    {"name": "Algieba", "desc": "Sanft"},
+    {"name": "Despina", "desc": "Sanft"},
+    {"name": "Erinome", "desc": "Klar"},
+    {"name": "Algenib", "desc": "Rau"},
+    {"name": "Rasalgethi", "desc": "Informativ"},
+    {"name": "Laomedeia", "desc": "Aufgeweckt"},
+    {"name": "Achernar", "desc": "Weich"},
+    {"name": "Alnilam", "desc": "Bestimmt"},
+    {"name": "Schedar", "desc": "Ausgeglichen"},
+    {"name": "Gacrux", "desc": "Reif"},
+    {"name": "Pulcherrima", "desc": "Vorwärtstreibend"},
+    {"name": "Zubenelgenubi", "desc": "Leger"},
+    {"name": "Vindemiatrix", "desc": "Sanft"},
+    {"name": "Sadaltager", "desc": "Sachkundig"},
+]
+TTS_VOICE_NAMES = {v["name"] for v in TTS_VOICES}
 STATIC = Path(__file__).parent / "static"
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
 
@@ -592,6 +640,75 @@ async def api_transcribe(request: Request) -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Transkription fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Transkription fehlgeschlagen: {type(e).__name__}"})
+
+
+# --- Text -> Sprache (Vorlesen): Hauptagent-Antwort -> Gemini-TTS -> WAV. Key fest im Server. ------
+def _pcm_to_wav(pcm: bytes, rate: int = 24000, channels: int = 1, bits: int = 16) -> bytes:
+    """Roh-PCM (Gemini liefert L16/PCM mono) in eine abspielbare WAV-Datei verpacken (44-Byte-Header).
+    Der Browser kann rohes PCM nicht via <audio> abspielen, WAV dagegen direkt."""
+    byte_rate = rate * channels * bits // 8
+    block_align = channels * bits // 8
+    header = (b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVE"
+              + b"fmt " + struct.pack("<IHHIIHH", 16, 1, channels, rate, byte_rate, block_align, bits)
+              + b"data" + struct.pack("<I", len(pcm)))
+    return header + pcm
+
+
+def _gemini_tts(text: str, voice: str) -> bytes:
+    """Synchroner Gemini-TTS-Call (im Threadpool via to_thread aufgerufen -> blockiert den Loop nicht,
+    fastapi §1). Key per x-goog-api-key-Header (nicht ?key=, Almanach google-gemini-api §C8).
+    Rueckgabe: WAV-Bytes. Wirft bei fehlenden Audio-Daten (mit finishReason fuers Log, §B4/§D10)."""
+    payload = {
+        "contents": [{"parts": [{"text": text}]}],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}},
+        },
+    }
+    url = f"{GEMINI_TTS_BASE}/{GEMINI_TTS_MODEL}:generateContent"
+    r = httpx.post(url, json=payload,
+                   headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
+                   timeout=60.0)   # expliziter Timeout (fastapi §3); nie None
+    r.raise_for_status()
+    data = r.json()
+    cand = (data.get("candidates") or [{}])[0]
+    parts = ((cand.get("content") or {}).get("parts") or [])
+    inline = next((p["inlineData"] for p in parts if p.get("inlineData") and p["inlineData"].get("data")), None)
+    if not inline:
+        raise RuntimeError(f"keine Audio-Daten (finishReason={cand.get('finishReason')})")
+    pcm = base64.b64decode(inline["data"])
+    m = re.search(r"rate=(\d+)", inline.get("mimeType", ""))   # Sample-Rate aus mimeType (Default 24000)
+    return _pcm_to_wav(pcm, rate=int(m.group(1)) if m else 24000)
+
+
+@app.get("/api/tts/voices")
+def api_tts_voices() -> dict:
+    """Liste der waehlbaren Stimmen + Default + ob TTS ueberhaupt verfuegbar ist (Key vorhanden)."""
+    return {"ok": True, "voices": TTS_VOICES, "default": TTS_DEFAULT_VOICE, "enabled": bool(GEMINI_API_KEY)}
+
+
+@app.post("/api/tts")
+async def api_tts(request: Request):
+    """Text (Hauptagent-Antwort) + Stimme -> WAV-Audio. GEMINI_API_KEY fest im Server (.env).
+    Eingabe-Limit gegen OOM (fastapi §8); sync httpx via to_thread (kein Event-Loop-Block, §1)."""
+    if not GEMINI_API_KEY:
+        return JSONResponse(status_code=503, content={"ok": False, "detail": "GEMINI_API_KEY fehlt im Server"})
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        return JSONResponse(status_code=400, content={"ok": False, "detail": "Kein Text"})
+    if len(text) > TTS_MAX_CHARS:
+        text = text[:TTS_MAX_CHARS]
+    voice = (body.get("voice") or TTS_DEFAULT_VOICE).strip()
+    if voice not in TTS_VOICE_NAMES:   # nur bekannte Stimmen -> sonst Default (verhindert API-Fehler)
+        voice = TTS_DEFAULT_VOICE
+    try:
+        wav = await asyncio.to_thread(_gemini_tts, text, voice)
+        _log(logging.INFO, "TTS erzeugt", voice=voice, chars=len(text), bytes=len(wav))
+        return Response(content=wav, media_type="audio/wav")
+    except Exception as e:  # noqa: BLE001 — sauberer Fehler statt 500; nie str(exc) roh an den Client (§7)
+        _log(logging.WARNING, "TTS fehlgeschlagen", err=str(e), voice=voice)
+        return JSONResponse(status_code=502, content={"ok": False, "detail": f"Vorlesen fehlgeschlagen: {type(e).__name__}"})
 
 
 # --- Google-Drive-Backup (Z -> Drive): Status lesen + Buttons. Das eigentliche Backup laeuft auf dem
