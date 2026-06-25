@@ -122,6 +122,32 @@ Bei JEDEM neuen Projekt das Keys braucht:
 
 ---
 
+## Secrets, die im Chat auftauchen (Frank gibt einen Key direkt) — KRITISCH
+
+> Hinzugefuegt 2026-06-25 nach einem realen Vorfall: Frank fuegte einen Tavily-API-Key direkt in
+> den Chat ein. Der Task-Ledger-Hook protokollierte den Prompt (inkl. Key) automatisch in
+> `~/proggs/.claude/agent-memory/shared/active-tasks.jsonl` — einer **Repo-Datei**. Beinahe-Leak.
+
+Sobald in einer Nachricht ein Secret auftaucht (API-Key, Token, Passwort, Signing-Key), gilt SOFORT:
+
+1. **In den SK-Ordner ablegen** — der Key gehoert nach `$HOME/SK/<projekt>/.env` (bzw. die passende
+   Key-Datei). Das ist die Heimat JEDES Secrets, ausnahmslos (siehe Grundprinzip oben).
+2. **In das Ziel-System eintragen** — z.B. das VPS-`.env` des Dienstes (per `env_file` geladen),
+   NIE in eine Repo-Datei, NIE in `compose.yaml`/Code (nur `os.getenv(...)`-Verweise dort).
+3. **Aus allen Repo-Dateien redaktieren**, falls er doch irgendwo (Ledger, Memory, Notiz) gelandet
+   ist: den Key-String durch `[REDACTED-...]` ersetzen, bevor committed wird.
+
+### Automatische Absicherung (Poka-Yoke Stufe 3 — der Ledger-Hook redaktiert selbst)
+
+Damit ein Chat-Secret gar nicht erst in die Repo-Ledger-Datei gelangt, maskiert
+`~/.claude/hooks/task-ledger-helper.py` (`_redact_secrets`) bekannte Schluessel-Muster
+(`tvly-`, `sk-`, `gh[pousr]_`, `github_pat_`, `AIza`, `glpat-`, `xox[baprs]-`, `fc-`, `nvapi-`,
+`gsk_`, `r8_`) im `prompt_text` BEVOR er geschrieben wird. Konservativ (nur eindeutige Praefixe →
+keine False-Positives). Neue Key-Formate gehoeren in `_SECRET_PATTERNS` ergaenzt. Gespiegelt nach
+`claude-code-setup/hooks/` + `Umgebung/Hooks/`.
+
+---
+
 ## Was NIEMALS passieren darf
 
 - ❌ `.gitignore` mit Ausnahme `!app/src/debug/google-services.json` oder aehnlich — das war die Root Cause des Leaks
