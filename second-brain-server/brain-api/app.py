@@ -50,7 +50,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.9.0"  # 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.10.0"  # 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -270,14 +270,23 @@ def category_parent(category: str | None) -> str:
     return c.split("/", 1)[0].strip()
 
 
-def embed_input(category: str | None, text: str) -> str:
-    """Eingabe fuer das EMBEDDING (nicht der gespeicherte Text!): die Kategorie/Unterkategorie wird dem
-    Text als kurzes Praefix vorangestellt, damit sie das Bedeutungssignal mitpraegt (metadata-enriched
-    embeddings, best-practices/server/rag-retrieval.md §4). Der 1:1-Volltext (full_text) und der
-    angezeigte chunk_text bleiben UNVERAENDERT — nur der Vektor wird angereichert. Ohne Kategorie:
-    unveraendert (reines 1:1-Verhalten wie bisher)."""
+def embed_input(title: str | None, category: str | None, text: str) -> str:
+    """Eingabe fuer das EMBEDDING (nicht der gespeicherte Text!): Titel UND Kategorie/Unterkategorie
+    werden dem Text als kurzes Praefix vorangestellt, damit BEIDE das Bedeutungssignal mitpraegen
+    (metadata-enriched embeddings, best-practices/server/rag-retrieval.md §4 — identifizierende Felder
+    wie Franks Titel sind starke Diskriminatoren, generische Titel waeren es nicht). Der 1:1-Volltext
+    (full_text) und der angezeigte chunk_text bleiben UNVERAENDERT — nur der Vektor wird angereichert.
+    Ohne Titel/Kategorie: unveraendert (reines 1:1-Verhalten). Jede Titel-/Kategorie-Aenderung erzwingt
+    Re-Embed (rag-retrieval.md §4) — genau Franks Wunsch 'jede Aenderung fuehrt zum neuen Vektor'."""
+    t = (title or "").strip()
     c = (category or "").strip()
-    return f"[Kategorie: {c}]\n\n{text}" if c else text
+    if t and c:
+        return f"[Titel: {t} | Kategorie: {c}]\n\n{text}"
+    if t:
+        return f"[Titel: {t}]\n\n{text}"
+    if c:
+        return f"[Kategorie: {c}]\n\n{text}"
+    return text
 
 
 def point_id(doc_id: str, idx: int) -> str:
@@ -456,7 +465,7 @@ def store(req: StoreReq) -> dict:
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit (chunk_text bleibt 1:1)
+        vec = embed(embed_input(req.title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit (chunk_text bleibt 1:1)
         points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
             "doc_id": doc_id,
             "user_id": req.user_id,
@@ -662,7 +671,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(new_cat, ch), "RETRIEVAL_DOCUMENT")
+        vec = embed(embed_input(title, new_cat, ch), "RETRIEVAL_DOCUMENT")  # Titel + neue Kategorie praegen den Vektor mit
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "parent": new_parent, "chunk_index": i, "chunk_count": len(chunks),
@@ -884,7 +893,7 @@ def update_entry(req: UpdateReq) -> dict:
     t0 = time.time()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit
+        vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "parent": parent,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
@@ -977,7 +986,7 @@ def trash_restore(req: RestoreReq) -> dict:
     now = iso_now()
     points = []
     for i, ch in enumerate(chunks):
-        vec = embed(embed_input(category, ch), "RETRIEVAL_DOCUMENT")  # Kategorie praegt den Vektor mit
+        vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "parent": parent, "chunk_index": i, "chunk_count": len(chunks),
@@ -996,7 +1005,45 @@ def trash_restore(req: RestoreReq) -> dict:
             "chunks": len(chunks), "chars": len(text), "text": text}
 
 
+class ReembedReq(BaseModel):
+    user_id: str = Field(default="frank", description="Nur Punkte dieses Besitzers neu einbetten (leer = alle)")
+    limit: int = Field(default=100000, ge=1, le=1000000, description="Sicherheitsdeckel fuer die Anzahl Punkte")
+
+
+@app.post("/reembed-all", dependencies=[Depends(require_auth)])
+def reembed_all(req: ReembedReq) -> dict:
+    """Einmaliger Wartungslauf: bettet ALLE bestehenden Punkte mit dem AKTUELLEN embed_input-Schema
+    (Titel + Kategorie im Praefix) NEU ein. full_text, Titel, Kategorie, parent, doc_id, created_at und
+    der angezeigte chunk_text bleiben 1:1 — NUR der Vektor wird neu berechnet (gleiche Point-ID -> Upsert
+    ueberschreibt). Idempotent (nochmal laufen = gleiches Ergebnis). Sync def -> Threadpool (fastapi §1).
+    Auth-Pflicht. 100er-Batches -> beherrschbarer Speicher + Teil-Fortschritt bei vielen Punkten."""
+    _require_store()
+    flt = (Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id))])
+           if req.user_id.strip() else None)
+    pts = _scroll(flt, limit=req.limit)
+    if not pts:
+        return {"ok": True, "reembedded": 0, "total": 0, "note": "keine Punkte"}
+    _guard_embed_budget(len(pts))
+    t0 = time.time()
+    done = 0
+    for start in range(0, len(pts), 100):
+        batch = pts[start:start + 100]
+        points = []
+        for p in batch:
+            pl = dict(p.payload or {})
+            title = (pl.get("title") or "").strip()
+            category = (pl.get("category") or "").strip()
+            ch = pl.get("chunk_text", pl.get("full_text", ""))
+            vec = embed(embed_input(title, category, ch), "RETRIEVAL_DOCUMENT")  # Titel + Kategorie praegen den Vektor mit
+            points.append(PointStruct(id=p.id, vector=vec, payload=pl))   # Payload 1:1 unveraendert
+        qc.upsert(collection_name=COLLECTION, points=points, wait=True)
+        done += len(points)
+    checkpoint("reembed_all", "Bestand mit aktuellem Titel+Kategorie-Schema neu eingebettet (Vektor neu, Payload 1:1)",
+               ok=(done == len(pts)), reembedded=done, total=len(pts), ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "reembedded": done, "total": len(pts)}
+
+
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/entry", "/forget"]}
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-date", "/search", "/list", "/entry", "/reembed-all", "/forget"]}
