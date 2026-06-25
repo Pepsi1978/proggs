@@ -2428,8 +2428,10 @@ button{font-family:inherit;cursor:pointer}
         if(!voices.length){ voiceSel.innerHTML = '<option value="">— keine Stimmen verfügbar —</option>'; }
         else{
           const cur = chosenVoice();
-          voiceSel.innerHTML = voices.map(v=>`<option value="${v.name}"${v.name===cur?" selected":""}>${v.name} — ${v.desc}</option>`).join("");
+          const sym = g => g==="f" ? "♀" : "♂";   // weiblich oben, männlich darunter (Backend liefert so sortiert)
+          voiceSel.innerHTML = voices.map(v=>`<option value="${v.name}"${v.name===cur?" selected":""}>${sym(v.gender)}  ${v.name} — ${v.desc}</option>`).join("");
         }
+        if(typeof enhanceSelect==="function") enhanceSelect(voiceSel);   // schönes Custom-Dropdown (abgerundet, Leuchten, Mausrad-Scroll, kein Scrollbalken)
         voiceSel.addEventListener("change", ()=> localStorage.setItem(LS_VOICE, voiceSel.value));
       }
     })();
