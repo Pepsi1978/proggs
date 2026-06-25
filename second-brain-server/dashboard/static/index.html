@@ -637,6 +637,15 @@ button{font-family:inherit;cursor:pointer}
 .cs-opt.cs-sub{padding-left:30px;position:relative;font-weight:500}
 .cs-opt.cs-sub::before{content:"└";position:absolute;left:15px;color:var(--text-faint)}
 .cs-opt.cs-disabled{opacity:.55;cursor:default;font-weight:600;pointer-events:none}
+/* Drilldown-Modus (Kategorie-Dropdowns): Klick auf Hauptkategorie klappt Subs + ＋Unterkategorie auf */
+.cs-opt.cs-mainrow{display:flex;align-items:center;gap:8px}
+.cs-twi{width:16px;height:16px;flex:none;display:grid;place-items:center;color:var(--text-dim);transition:transform .18s}
+.cs-twi svg{width:11px;height:11px}
+.cs-opt.cs-exp .cs-twi{transform:rotate(90deg)}
+.cs-mainname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-cnt{font-family:'JetBrains Mono';font-size:11px;color:var(--text-faint);flex:none}
+.cs-opt.cs-usemain{font-weight:600}
+.cs-opt.cs-subadd{color:var(--accent);font-weight:600}
 .chat-opts{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px 0}            /* anklickbare Ja/Nein-Knöpfe unter einer Rückfrage */
 .chat-opt-btn{padding:7px 15px;border-radius:11px;border:1px solid var(--accent);
   background:rgba(244,166,90,.10);color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;
@@ -1557,7 +1566,7 @@ button{font-family:inherit;cursor:pointer}
       opts += `<option value="${escapeHtml(drawerCatCurrent)}">${escapeHtml(cap(drawerCatCurrent))}</option>`;
     sel.innerHTML = opts;
     sel.value = drawerCatCurrent || "";
-    enhanceSelect(sel, {compact:true});   // schönes Dropdown, klappt nach UNTEN (Frank-Wunsch)
+    enhanceSelect(sel, {compact:true, tree:true, reload:()=>loadDrawerCategories(drawerCatCurrent)});   // Drilldown, klappt nach UNTEN (Frank-Wunsch)
     document.getElementById("drawerCatSaveRow").style.display = "none";
   }
   async function onDrawerCatChange(){
@@ -2036,9 +2045,9 @@ button{font-family:inherit;cursor:pointer}
     for(const g of arr){
       if(g.self){
         const c = g.self;
-        html += `<option value="${escapeHtml(c.name)}" data-depth="0" data-main="1"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(g.name))}${c.empty?' — leer':''}</option>`;
+        html += `<option value="${escapeHtml(c.name)}" data-depth="0" data-main="1" data-parent="${escapeHtml(g.name)}"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(g.name))}${c.empty?' — leer':''}</option>`;
       } else if(g.subs.length){
-        html += `<option value="" disabled data-depth="0" data-main="1">${escapeHtml(cap(g.name))}</option>`;
+        html += `<option value="" disabled data-depth="0" data-main="1" data-parent="${escapeHtml(g.name)}">${escapeHtml(cap(g.name))}</option>`;
       }
       for(const s of g.subs){
         const trig = cap(g.name) + " › " + cap(catSubName(s.name));
@@ -2050,6 +2059,9 @@ button{font-family:inherit;cursor:pointer}
   function enhanceSelect(sel, opts){
     opts = opts || {};
     if(!sel) return;
+    sel._csTree = !!opts.tree;                        // Drilldown-Modus (Kategorie-Dropdowns)
+    if(opts.reload) sel._reload = opts.reload;        // Loader zum Auffrischen nach Unterkategorie-Anlegen
+    if(!sel._csExp) sel._csExp = new Set();           // aufgeklappte Hauptkategorien im Panel
     if(sel._cs){ syncCS(sel); return; }              // schon vorhanden -> nur Inhalt auffrischen
     sel.classList.add("cs-native");
     const cs = document.createElement("div");
@@ -2074,6 +2086,7 @@ button{font-family:inherit;cursor:pointer}
     const ref = sel && sel._cs; if(!ref) return;
     const selOpt = sel.options[sel.selectedIndex];
     ref.valueEl.textContent = selOpt ? (selOpt.dataset.trigger || selOpt.textContent) : "";
+    if(sel._csTree){ renderCSTree(sel, ref); return; }   // Drilldown-Panel statt flacher Liste
     ref.panel.innerHTML = "";
     Array.from(sel.options).forEach((opt,i)=>{
       const depth = parseInt(opt.dataset.depth || "0", 10);
@@ -2092,6 +2105,80 @@ button{font-family:inherit;cursor:pointer}
         });
       }
       ref.panel.appendChild(o);
+    });
+  }
+  /* Drilldown-Panel fuer Kategorie-Dropdowns: Specials flach; Hauptkategorie -> Klick klappt
+     ihr Mini-Menue auf (Hauptkategorie selbst + vorhandene Unterkategorien + ＋Unterkategorie). */
+  function renderCSTree(sel, ref){
+    ref.panel.innerHTML = "";
+    const pick = value => { sel.value = value; syncCS(sel); ref.cs.classList.remove("open"); sel.dispatchEvent(new Event("change",{bubbles:true})); };
+    // Optionen gruppieren: specials (flach) | mains (aufklappbar) + ihre Subs
+    const groups = []; let cur = null;
+    Array.from(sel.options).forEach(opt=>{
+      const depth = parseInt(opt.dataset.depth || "0", 10);
+      const isMain = opt.dataset.main==="1" && depth===0;
+      if(depth>0 && cur && cur.type==="main"){ cur.subs.push(opt); return; }
+      if(isMain){ cur = {type:"main", opt, subs:[]}; groups.push(cur); return; }
+      cur = {type:"special", opt, subs:[]}; groups.push(cur);
+    });
+    groups.forEach(g=>{
+      if(g.type==="special"){
+        const opt = g.opt;
+        const o = document.createElement("div");
+        o.className = "cs-opt" + (opt.value==="__new__"?" special":"") + (sel.value===opt.value?" sel":"") + (opt.disabled?" cs-disabled":"");
+        o.textContent = opt.textContent;
+        if(!opt.disabled) o.addEventListener("click", e=>{ e.stopPropagation(); pick(opt.value); });
+        ref.panel.appendChild(o);
+        return;
+      }
+      const main = g.opt, mainName = main.dataset.parent || main.value;
+      const realMain = !!main.value && !main.disabled;   // existiert die Hauptkategorie selbst als Kategorie?
+      const expanded = sel._csExp.has(mainName);
+      const row = document.createElement("div");
+      row.className = "cs-opt cs-main cs-mainrow" + (expanded?" cs-exp":"") + (realMain && sel.value===main.value?" sel":"");
+      row.innerHTML = `<span class="cs-twi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m9 6 6 6-6 6"/></svg></span>`
+        + `<span class="cs-mainname">${escapeHtml(main.textContent)}</span>`
+        + `<span class="cs-cnt">${g.subs.length ? ('▾ '+g.subs.length) : ''}</span>`;
+      row.addEventListener("click", e=>{ e.stopPropagation();
+        if(sel._csExp.has(mainName)) sel._csExp.delete(mainName); else sel._csExp.add(mainName);
+        renderCSTree(sel, ref);   // Panel offen lassen, nur neu zeichnen
+      });
+      ref.panel.appendChild(row);
+      if(expanded){
+        if(realMain){
+          const um = document.createElement("div");
+          um.className = "cs-opt cs-sub cs-usemain" + (sel.value===main.value?" sel":"");
+          um.textContent = "„" + main.textContent + "“ (Hauptkategorie)";
+          um.addEventListener("click", e=>{ e.stopPropagation(); pick(main.value); });
+          ref.panel.appendChild(um);
+        }
+        g.subs.forEach(sub=>{
+          const s = document.createElement("div");
+          s.className = "cs-opt cs-sub" + (sel.value===sub.value?" sel":"") + (sub.dataset.empty==="1"?" empty":"");
+          s.textContent = sub.textContent;
+          s.addEventListener("click", e=>{ e.stopPropagation(); pick(sub.value); });
+          ref.panel.appendChild(s);
+        });
+        const add = document.createElement("div");
+        add.className = "cs-opt cs-sub cs-subadd";
+        add.textContent = "＋ Unterkategorie…";
+        add.addEventListener("click", async e=>{
+          e.stopPropagation();
+          const name = (window.prompt("Neue Unterkategorie unter „"+main.textContent+"“:")||"").trim();
+          if(!name) return;
+          if(name.includes("/")){ window.alert("Bitte ohne Schrägstrich — das ist schon die Unterkategorie."); return; }
+          const full = mainName + "/" + name;
+          try{
+            const r = await apiSend("/api/categories","POST",{name:full});
+            if(r && r.ok && r.key){
+              sel._csExp.add(mainName);
+              if(typeof sel._reload === "function") await sel._reload();
+              pick(r.key);
+            } else { window.alert((r&&r.detail)||"Konnte Unterkategorie nicht anlegen."); }
+          }catch(_){ window.alert("Konnte Unterkategorie nicht anlegen."); }
+        });
+        ref.panel.appendChild(add);
+      }
     });
   }
   function closeAllCS(){ document.querySelectorAll(".cs.open").forEach(c=>c.classList.remove("open")); }
@@ -2645,7 +2732,7 @@ button{font-family:inherit;cursor:pointer}
     sel.innerHTML = '<option value="">Auto-Kategorie</option><option value="__new__">➕ Neue Kategorie…</option>'
       + catOptionsHtml(cats);
     sel.value = (prev && prev!=="__new__" && names.includes(prev)) ? prev : "";
-    enhanceSelect(sel, {compact:true, up:true});   // schönes Dropdown (klappt nach oben, da unten am Eingabefeld)
+    enhanceSelect(sel, {compact:true, up:true, tree:true, reload:()=>loadChatCategories()});   // Drilldown nach oben (Eingabefeld unten)
   }
   async function onCategoryChange(){
     const sel = document.getElementById("chatCategory");
