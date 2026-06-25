@@ -569,6 +569,11 @@ button{font-family:inherit;cursor:pointer}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
 .chat-cat:hover{border-color:var(--accent)}
+/* Titel-Feld in der Eingabezeile (vor dem Kategorie-Dropdown) — bis 3x so breit wie das Kategoriefeld (Frank-Wunsch); fuer NEUE Eintraege, fliesst mit ins Embedding (brain-api 1.10.0). */
+.chat-title{flex:none;align-self:flex-start;height:42px;width:clamp(160px,22vw,480px);border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 12px;outline:none;transition:border-color .2s,box-shadow .25s}
+.chat-title:hover{border-color:var(--accent)}
+.chat-title:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.16)}
+.chat-title::placeholder{color:var(--text-faint)}
 
 /* ── Eigene Dropdowns (custom select): native <select> versteckt, schoenes UI im Seiten-Stil ──── */
 .cs-native{display:none!important}
@@ -835,6 +840,7 @@ button{font-family:inherit;cursor:pointer}
           <div class="chat-input">
             <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
             <div class="chat-actions">
+              <input class="chat-title" id="chatTitle" type="text" maxlength="200" placeholder="Titel" autocomplete="off" title="Titel für einen neuen Eintrag — fließt mit in die Vektorsuche ein. Leer = der Agent vergibt den Titel." />
               <select class="chat-cat" id="chatCategory" title="Kategorie zum Ablegen wählen — ohne Auswahl entscheidet der Agent selbst">
                 <option value="">Auto-Kategorie</option>
                 <option value="__new__">➕ Neue Kategorie…</option>
@@ -2602,8 +2608,11 @@ button{font-family:inherit;cursor:pointer}
     try{
       const catSel = document.getElementById("chatCategory");
       const cat = (catSel && catSel.value && catSel.value!=="__new__") ? catSel.value : "";
-      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat});
+      const titEl = document.getElementById("chatTitle");
+      const titV = titEl ? titEl.value.trim() : "";
+      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV});
       typing.remove();
+      if(titEl) titEl.value = "";   // Titel nach erfolgreichem Senden leeren (Server haelt ihn im pending bis zur Bestaetigung)
       let meta = "";
       if(r.action==="recall") meta = "↳ nachgeschlagen" + (r.recall_hits!=null ? " · "+r.recall_hits+" Treffer" : "");
       else if(r.action==="store") meta = "↳ abgelegt" + (r.category ? " in „"+r.category+"“" : "");
