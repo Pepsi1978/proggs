@@ -9,7 +9,9 @@
 > vornherein richtig macht). Verwandt: [`wireguard.md`](wireguard.md) (das VPN selbst),
 > [`vps-hosting.md`](vps-hosting.md).
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu); erweitert **2026-06-24** um
-> zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections).
+> zwei live diagnostizierte Windows-Client-Bugs (§9: net use haengt im elevated/hidden Task; §10: EnableLinkedConnections);
+> erweitert **2026-06-25** um den Persistent-Login-Race / "mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom
+> SELBEN VPS (§11).
 > **Anker:** Samba **4.19.5** (Ubuntu 24.04, Paket `2:4.19.5+dfsg-4ubuntu9.6`) · Windows **11** (SMB 3.1.1) · WireGuard (wg0).
 > **Changelog-/Security-Abgleich 2026-06-22:** Der **Upstream-4.19.x-Zweig ist EOL** — letzter Upstream-Security-Release war
 > 4.19.1 (Okt 2023); neuere CVEs (CVE-2025-10230/9640 Okt 2025; mehrere im Mai 2026) wurden nur fuer 4.21–4.24 gepatcht.
@@ -30,6 +32,7 @@
 | 9 | ⭐ Laufwerke fehlen ganz, aber Ping+Port 445 OK & manuelles `net use` klappt | Auto-Reconnect-Gate prueft falschen Port (fremder Dienst statt SMB **445**) → kommt nie bis zum Mapping. Gate IMMER auf 445; Skript-Log lesen (Fehler sonst geschluckt). | §5 |
 | 10 | ⭐⭐ Reconnect-Skript laeuft als geplante Aufgabe (elevated/hidden) → `net use` HAENGT ewig, Laufwerke nie da | `net use ... /persistent:yes` OHNE explizite Credentials promptet im **elevated** Token (Tresor token-getrennt!) interaktiv nach dem Benutzernamen → im hidden/wscript-Kontext kein Eingeber → Endlos-Hang + net.exe-Prozess-Leak. FIX: per **WNetAddConnection2 (mpr.dll) mit EXPLIZITEN Credentials** mappen (ohne `CONNECT_INTERACTIVE` → nie ein Prompt). | §9 |
 | 11 | ⭐⭐ Geplante Aufgabe (RunLevel Highest) mappt erfolgreich, aber Explorer zeigt nichts | UAC-Token-Isolation: im **elevated** Token gemappte Netzlaufwerke sind im **nicht-elevated** Explorer unsichtbar. FIX: `EnableLinkedConnections=1` (HKLM\…\Policies\System, DWORD) → wirksam ab naechstem Login. | §10 |
+| 13 | ⭐⭐ Nach Reboot hat EIN Laufwerk (von mehreren vom selben VPS) ein rotes X; Klick → "mehrere Benutzernamen nicht zulaessig" (**1219**), Skript-Log sagt aber "reconnect OK" | **Persistent-Login-Race:** persistente `HKCU:\Network`-Mappings → Windows reconnectet beim Login VOR dem Tunnel → totes Mapping im nicht-elevated Token, kollidiert mit dem (elevated) Skript-Mapping. FIX: persistente `HKCU:\Network`-Eintraege ENTFERNEN; Reconnect-Skript mappt **NICHT-persistent** (Flag 0) als einzige tunnel-bewusste Quelle; bei 1219 alle `10.8.0.1`-Sitzungen abraeumen + neu. Sofort von Hand: `net use Z: /delete /yes` + neu verbinden. | §11 |
 | 12 | `.ps1` startet nicht / Parse-Fehler "schliessende } fehlt", nur via geplanter Aufgabe | **Windows PowerShell 5.1** liest `.ps1` OHNE BOM als **cp1252** → ein Em-Dash (—) in einem String wird zu `â€"` und zerschiesst Quotes/Klammern. FIX: `.ps1` als **UTF-8 mit BOM** speichern UND keine typografischen Zeichen (Em-Dash/Smart-Quotes) im Code. | §9 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
@@ -45,6 +48,7 @@
 | §4–§6 Windows-Client | §4 Windows-Mount (persistent, Credentials) |
 | §9 net use haengt (elevated/hidden) | §7 Auto-Reconnect-Task robust (WNetAddConnection2 + explizite Credentials) |
 | §10 EnableLinkedConnections | §7 Auto-Reconnect-Task robust (elevated Mappings sichtbar machen) |
+| §11 Persistent-Login-Race / 1219 | §7 Auto-Reconnect-Task robust (nicht-persistent mappen, Skript als einzige Quelle) |
 
 ---
 
@@ -272,6 +276,41 @@ privaten Single-User-PC unkritisch, in Hochsicherheitsumgebungen abwaegen.
 Aufgabe nur furs Mapping; die erhoehte nur fuer den Dienst-Start). Mehr Aufwand, dafuer ohne token-uebergreifende Verknuepfung.
 **Quelle:** Microsoft KB (EnableLinkedConnections) + eigener Vorfall 2026-06-24 (live verifiziert: ohne den Wert 0 Laufwerke im
 nicht-elevated Get-SmbMapping trotz "OK" im elevated Task).
+
+## 11. ⭐⭐ "Mehrere Benutzernamen" (Fehler 1219) bei mehreren Shares vom SELBEN VPS - der Persistent-Login-Race (live 2026-06-25)
+**Symptom:** Mehrere Netzlaufwerke zeigen auf denselben Server (`\\10.8.0.1\daten` = Y:, `\\10.8.0.1\gedanken` = Z:). Nach
+**jedem Neustart** ist EINES verbunden (Y: OK), das andere hat ein **rotes X** ("Nicht verfuegbar"). Klick darauf:
+*"Mehrfache Verbindungen zu einem Server oder einer freigegebenen Ressource von demselben Benutzer unter Verwendung
+mehrerer Benutzernamen sind nicht zulaessig"* (Win32 **1219**, ERROR_SESSION_CREDENTIAL_CONFLICT). Das Reconnect-Skript-Log
+zeigt aber **"reconnect OK" fuer BEIDE** - laut Skript sind also beide verbunden, im Explorer trotzdem das X. Manuelles
+`net use Z: /delete` + neu verbinden klappt sofort (war der wiederkehrende Symptom-Fix ueber "mehrere Sessions" hinweg).
+**Ursache (zwei Schichten):**
+1. **Persistent-Login-Race:** Y:/Z: stehen als PERSISTENTE Mappings in `HKCU:\Network`. Windows verbindet persistente
+   Netzlaufwerke SOFORT beim Login - der WireGuard-Tunnel ist da aber noch nicht oben -> die Verbindung scheitert -> ein
+   TOTES "Nicht verfuegbar"-Mapping bleibt im **nicht-elevated** Token (Franks Explorer) zurueck.
+2. **Ein-Credential-pro-Server-Regel + Token-Trennung:** Windows erlaubt pro Server nur EINE Sitzung/EINEN Credential-Satz.
+   Das Reconnect-Skript (elevated Task) mappt danach korrekt im **elevated** Token - aber das tote nicht-elevated Mapping
+   bleibt bestehen. Beim Anklicken kollidieren die zwei Sitzungen zum selben Server `10.8.0.1` -> 1219. `EnableLinkedConnections=1`
+   (§10) verknuepft zwar die Token, raeumt aber das bereits entstandene TOTE Login-Mapping NICHT ab.
+**Beweis (live 2026-06-25):** Skript-Log `10:35:21 Z: reconnect OK` UND `Y: reconnect OK`, trotzdem sah Frank Z: mit rotem X;
+ein nicht-elevatetes `net use` zeigte Z: als "Nicht verfuegbar" - also Token-getrennte Sicht auf dasselbe Laufwerk.
+**Versionen:** Windows 10/11, jedes Setup mit >=2 persistenten Shares vom selben Server (typisch ueber VPN/WireGuard).
+**FIX (funktionserhaltend, Poka-Yoke Stufe 3 - Race konzeptionell unmoeglich):**
+1. **Persistente `HKCU:\Network`-Eintraege der betroffenen Laufwerke ENTFERNEN** (`Remove-Item HKCU:\Network\Z -Recurse -Force`),
+   damit Windows beim Login GAR NICHT mehr voreilig (vor dem Tunnel) verbindet -> kein totes Mapping mehr.
+2. Das tunnel-bewusste Reconnect-Skript wird die **EINZIGE** Mapping-Quelle und mappt **NICHT-persistent**
+   (`WNetAddConnection2` mit Flag **0** statt `CONNECT_UPDATE_PROFILE 0x1`) - so entsteht kein neuer HKCU-Eintrag, der das
+   Race beim naechsten Login reproduzieren wuerde. Das Skript laeuft bei Login + alle 5 Min und mappt erst, wenn Port 445 oben ist.
+3. **1219 explizit abfangen:** Tritt der Konflikt doch auf, ALLE Sitzungen zum Server hart abraeumen
+   (`WNetCancelConnection2` auf jeden Laufwerksbuchstaben + den nackten Server-UNC `\\10.8.0.1` + `\\10.8.0.1\IPC$`),
+   dann mit den expliziten Credentials neu mappen. Das ist exakt der manuelle `net use \\10.8.0.1 /delete`-Fix in Skriptform.
+**Soforthilfe von Hand (akutes rotes X):** `net use Z: /delete /yes` dann `net use Z: \\10.8.0.1\gedanken /persistent:yes`
+(nutzt den Credential-Manager-Eintrag, baut die Sitzung sauber neu auf). ACHTUNG: das `/persistent:yes` legt wieder einen
+HKCU-Eintrag an -> fuer die DAUERHAFTE Loesung das Skript laufen lassen (raeumt ihn beim naechsten Lauf weg).
+**Abgrenzung zu §9/§10:** §9 = `net use` haengt (Prompt im hidden Task); §10 = elevated Mapping im Explorer unsichtbar
+(EnableLinkedConnections); §11 = das Mapping klappt, aber ein TOTES persistentes Login-Mapping kollidiert (1219). Die drei
+zusammen ergeben den robusten Reconnect (`second-brain-server/windows/wg-drive-reconnect.ps1`).
+**Quelle:** Eigener Vorfall + Live-Diagnose 2026-06-25 (Skript-Log bewies "reconnect OK" trotz rotem X -> Token-getrennte Sicht; Fix #47187).
 
 ---
 

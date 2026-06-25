@@ -18,7 +18,7 @@
 | 4 | Windows-Mount stabil | `New-SmbMapping -Persistent` + sauberer Credential-Manager-Eintrag | §4 |
 | 5 | Performance | bei Langsamkeit WireGuard-MTU 1350 + MSS-Clamping testen | §5 |
 | 6 | Patch-Stand | 4.19.x ist upstream EOL → `unattended-upgrades`/`apt upgrade` (Ubuntu backportet Fixes ins Paket) | §6 |
-| 7 | Auto-Reconnect-Task (nach Reboot) | In einem ELEVATED/hidden Task NIE `net use` ohne Credentials (haengt am Prompt) → `WNetAddConnection2` mit expliziten Credentials; `EnableLinkedConnections=1` macht das Mapping im Explorer sichtbar; `.ps1` als UTF-8-BOM, ASCII-only | §7 |
+| 7 | Auto-Reconnect-Task (nach Reboot) | In einem ELEVATED/hidden Task NIE `net use` ohne Credentials (haengt am Prompt) → `WNetAddConnection2` mit expliziten Credentials; `EnableLinkedConnections=1` macht das Mapping im Explorer sichtbar; `.ps1` als UTF-8-BOM, ASCII-only; bei MEHREREN Shares vom selben VPS **nicht-persistent** mappen (Flag 0) + persistente `HKCU:\Network`-Eintraege entfernen (sonst Boot-Race → Fehler 1219), 1219 abfangen | §7 |
 
 ---
 
@@ -140,6 +140,13 @@ Ein Skript, das die Laufwerke nach Login/Standby automatisch wiederverbindet, is
    das Skript startet gar nicht (kein Log, schwer zu finden). Keine typografischen Zeichen im Code.
 6. **Observability:** Jeden Mapping-Versuch mit Ergebnis (lesbarer Win32-Fehlercode) in eine Log-Datei schreiben —
    sonst sind Fehlschlaege unsichtbar. Ein fester Log-Pfad, den man bei Problemen gezielt auslesen kann.
+7. **Bei MEHREREN Shares vom selben Server: NICHT-persistent mappen + keine persistenten Login-Eintraege.** Stehen Y:/Z:
+   als persistente Mappings in `HKCU:\Network`, versucht Windows sie beim Login SOFORT zu verbinden — vor dem Tunnel →
+   totes "Nicht verfuegbar"-Mapping, das spaeter mit dem Skript-Mapping kollidiert (Fehler **1219** "mehrere Benutzernamen",
+   Almanach §11). Deshalb: die persistenten `HKCU:\Network`-Eintraege ENTFERNEN und im Skript mit `WNetAddConnection2`-Flag
+   **0** (nicht `CONNECT_UPDATE_PROFILE 0x1`) mappen → das Skript ist die EINZIGE, tunnel-bewusste Mapping-Quelle, kein
+   Boot-Race. Fehler 1219 zusaetzlich abfangen: alle Sitzungen zum Server (`WNetCancelConnection2` auf jeden Buchstaben +
+   `\\server` + `\\server\IPC$`) hart abraeumen, dann neu mappen.
 
 ---
 
