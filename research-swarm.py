@@ -26,7 +26,9 @@ eigenes OUTDIR je Lauf -> kein gegenseitiges Ueberschreiben). Wiederaufnahme-sic
 -> SKIP). done.flag am Ende. Nur stdlib; Pfade via expanduser (NIE /c/... an Windows-Python).
 """
 import concurrent.futures
+import glob
 import os
+import shutil
 import subprocess
 import sys
 
@@ -61,6 +63,35 @@ def run(engine, model, it):
         return f"[{n}] ERR {type(e).__name__}: {str(e)[:120]}"
 
 
+def cleanup_previous():
+    """Reste eigener FRUEHERER Laeufe entfernen, BEVOR ein neuer Lauf startet (Poka-Yoke Stufe 3).
+    WARUM PFLICHT (Vorfall 2026-06-25): run() legt run-<i>/ mit exist_ok=True an. Schlaegt ein
+    Researcher fehl, schreibt mm-/or-research.py KEINE neue answer.json -> die ALTE run-<i>/answer.json
+    eines frueheren Laufs (mit voellig FREMDEM Thema) bleibt stehen und schlaegt beim Auslesen als
+    falsches Ergebnis durch (real: 2 von 5 Slots lieferten LLM-Rate-Limit-/Agent-Eval-Reste statt der
+    angefragten Windows-SMB-Themen). Darum vor JEDEM Lauf die eigenen Output-Muster hart loeschen.
+    Loescht NUR die eigenen Output-Muster (answer-*.txt, log-*.txt, run-*/, done.flag) - NIEMALS die
+    Input-Datei themen.txt oder fremde Reste anderer Tools/Skills (bp/, esc/, qdrant/ ...).
+    Resume nach Crash bleibt per RESEARCH_SWARM_RESUME=1 moeglich (dann NICHT aufraeumen -> SKIP-Logik greift)."""
+    if os.environ.get("RESEARCH_SWARM_RESUME") == "1":
+        print("[research-swarm] RESUME-Modus (RESEARCH_SWARM_RESUME=1): KEIN Aufraeumen, SKIP-Logik aktiv.",
+              file=sys.stderr)
+        return
+    removed = 0
+    for pat in ("answer-*.txt", "log-*.txt", "run-*", "done.flag"):
+        for p in glob.glob(os.path.join(OUT, pat)):
+            try:
+                if os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+                else:
+                    os.remove(p)
+                removed += 1
+            except OSError:
+                pass
+    print(f"[research-swarm] Aufgeraeumt: {removed} alte Output-Reste entfernt (frischer Lauf, "
+          f"keine Fremd-Themen-Reste). RESEARCH_SWARM_RESUME=1 fuer Crash-Resume.", file=sys.stderr)
+
+
 def main():
     if len(sys.argv) < 3:
         return "Aufruf: research-swarm.py <A|B> <themes_file> [max_parallel] [model]"
@@ -81,6 +112,7 @@ def main():
         themes = [l for l in fh.read().splitlines() if l.strip()]
     if not themes:
         return f"Keine Themen in {themes_file}."
+    cleanup_previous()   # PFLICHT: alte Output-Reste weg, BEVOR gestartet wird (sonst Fremd-Themen-Leak, s.o.)
     print(f"[research-swarm] Engine {engine} | {len(themes)} Themen | KONSTANT {n_par} parallel "
           f"(Continuous-Spawning: einer fertig -> sofort der naechste)", file=sys.stderr)
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_par) as ex:

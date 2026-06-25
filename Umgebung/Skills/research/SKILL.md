@@ -126,6 +126,15 @@ python3 ~/proggs/research-swarm.py A ~/.research-swarm/themen.txt   # A = Firecr
 Roh-Antworten je Researcher in `~/.research-swarm/answer-<i>.txt` (+ eigenes `run-<i>/`, kein Ueberschreiben),
 NICHT im Hauptkontext. Wenn `done.flag` da ist, je Researcher ein Zwischenfazit (Schritt 4) zeigen.
 
+**PFLICHT — Vor jedem Lauf raeumt `research-swarm.py` automatisch alte Output-Reste weg** (Poka-Yoke Stufe 3,
+Vorfall 2026-06-25): es loescht beim Start seine eigenen `answer-*.txt`/`log-*.txt`/`run-*/`/`done.flag` im
+Arbeitsverzeichnis, BEVOR es startet. Grund: `run-<i>/` wird mit `exist_ok=True` angelegt — schlaegt ein
+Researcher fehl, bleibt sonst die **alte `run-<i>/answer.json` eines FRUEHEREN Laufs (mit fremdem Thema)**
+stehen und schlaegt beim Auslesen als falsches Ergebnis durch (real getroffen: 2 von 5 Slots lieferten
+LLM-/Agent-Reste statt der Windows-SMB-Themen). Der Cleanup fasst NUR die eigenen Muster an — nie die
+Input-Datei `themen.txt` oder fremde Reste anderer Skills (`bp/`, `esc/`, `qdrant/` …). Kein manuelles
+Aufraeumen noetig; fuer Crash-Resume einmalig `RESEARCH_SWARM_RESUME=1` setzen (dann KEIN Cleanup, SKIP-Logik aktiv).
+
 **Engine C (Opus) — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
 Continuous-Spawning HIER von Hand, aber genauso strikt: **erst 7 Agent-Tool-Aufrufe gleichzeitig**
 (`subagent_type:general-purpose` + Prompt); **sobald EINE Completion-Notification kommt, im selben Zug den
@@ -274,6 +283,7 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
 - ❌ Mehr als 2 Firecrawl-Researcher gleichzeitig (Free-Limit → 429)
 - ❌ Bei Engine B eine explizite Such-Engine (`parallel`/`exa`/`firecrawl`) als 3. Argument angeben — `:online` regelt die Suche selbst (Modell-Suffix, kein `tools`-Block)
 - ❌ Mehrere Engine-B-Parallel-Laeufe ohne eigenes `OR_OUTDIR` je Lauf (sie ueberschreiben sich)
+- ❌ Den Auto-Cleanup in `research-swarm.py` entfernen/umgehen — ohne ihn schlagen alte `run-<i>/answer.json` fehlgeschlagener Researcher als FREMDE Themen durch (Vorfall 2026-06-25)
 - ❌ Selbsttests "ob das System geht" — die Pipeline ist verifiziert
 - ❌ Nach den Skripten/Keys suchen — die Pfade stehen in Block 0
 - ❌ Funde an einem Cap abschneiden (lossless: in Datei auslagern); `cap` steuert nur Inline-Menge
