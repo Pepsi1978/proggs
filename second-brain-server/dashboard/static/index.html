@@ -566,6 +566,12 @@ button{font-family:inherit;cursor:pointer}
 .cs-opt:hover{background:var(--surface-2);color:var(--text)}
 .cs-opt.sel{color:var(--accent)}
 .cs-opt.special{color:var(--accent)}
+.cs-opt.empty{opacity:.5;font-style:italic}                      /* leere (eintragslose) Kategorie ausgegraut */
+.cat-input{width:100%;height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;
+  transition:border-color .3s,box-shadow .3s}
+.cat-input::placeholder{color:var(--text-faint)}
+.cat-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14)}
 
 /* ── Eintrags-Editor im Drawer (Bearbeiten -> Speichern -> Bestaetigung -> Vektor ersetzen) ───── */
 .read-box.editing{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14);cursor:text}
@@ -814,6 +820,28 @@ button{font-family:inherit;cursor:pointer}
         </div>
 
         <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7V5a1 1 0 0 1 1-1h4l2 2"/></svg></span>Kategorien</h3>
+          <p class="set-desc">Deine Kategorien verwalten — umbenennen, zusammenführen oder löschen. Du kannst auch leere Kategorien anlegen, in die der Agent später einsortiert. <b>Löschen entfernt nur das Etikett — deine Einträge bleiben immer erhalten.</b></p>
+          <div class="field">
+            <select id="catMgrSel" class="cs-native"></select>
+          </div>
+          <div id="catRenameWrap" style="display:none;margin-top:10px">
+            <input id="catRenameInput" class="cat-input" type="text" maxlength="60" placeholder="Neuer Name…" />
+          </div>
+          <div class="row-end" style="margin-top:10px">
+            <span class="muted-note" id="catMgrStatus" style="margin-right:auto"></span>
+            <button class="btn" id="catRenameBtn" type="button">Umbenennen</button>
+            <button class="btn btn-primary" id="catSaveBtn" type="button" style="display:none">Speichern</button>
+            <button class="btn" id="catCancelBtn" type="button" style="display:none">Abbrechen</button>
+            <button class="btn btn-danger" id="catDeleteBtn" type="button">Löschen</button>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+            <input id="catNewInput" class="cat-input" type="text" maxlength="60" placeholder="Neue (leere) Kategorie, z.B. Geräte…" style="flex:1" />
+            <button class="btn" id="catNewBtn" type="button">Anlegen</button>
+          </div>
+        </div>
+
+        <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Logbuch</h3>
           <p class="set-desc">Die Gespräche deines Agenten — nach Jahr und Monat. Wähle einen Monat, um die Einträge zu sehen.</p>
           <div class="ym-nav" id="logbookNav"><span class="log-empty">Lädt…</span></div>
@@ -885,6 +913,18 @@ button{font-family:inherit;cursor:pointer}
     <div class="confirm-actions">
       <button class="btn" id="deleteNo">Nein</button>
       <button class="btn btn-danger" id="deleteYes">Ja, löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestaetigungs-Dialog (generisch): Kategorie loeschen / zusammenfuehren ─ -->
+<div class="confirm-overlay" id="catConfirmOverlay">
+  <div class="confirm-box">
+    <h4 id="catConfirmTitle">Sicher?</h4>
+    <p id="catConfirmText"></p>
+    <div class="confirm-actions">
+      <button class="btn" id="catConfirmNo">Nein</button>
+      <button class="btn btn-danger" id="catConfirmYes">Ja</button>
     </div>
   </div>
 </div>
@@ -1441,10 +1481,108 @@ button{font-family:inherit;cursor:pointer}
     }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
     /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
     await loadPrompt(promptRole);
+    loadCatManager(); // Kategorie-Verwaltung (umbenennen/löschen/anlegen) — Quelle für das Gespräch-Dropdown
     loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) — nach Jahr/Monat
     loadTrash();     // Papierkorb — gelöschte Einträge nach Lösch-Monat
     loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
   }
+
+  /* ── Kategorie-Verwaltung: umbenennen / zusammenführen / löschen / leere anlegen ──
+     Quelle der Wahrheit (/api/categories/detail) ist DIESELBE wie fürs Gespräch-Dropdown
+     -> nach jeder Änderung wird beides neu geladen, also immer synchron. Löschen entfernt nur
+     das Etikett (Einträge bleiben). Umbenennen auf einen existierenden Namen = Zusammenführen. */
+  let catList = [];   // [{name, count, empty}]
+  function catConfirm(title, text, yesLabel){
+    return new Promise(res=>{
+      const ov = document.getElementById("catConfirmOverlay");
+      document.getElementById("catConfirmTitle").textContent = title;
+      document.getElementById("catConfirmText").textContent = text;
+      const yes = document.getElementById("catConfirmYes"), no = document.getElementById("catConfirmNo");
+      yes.textContent = yesLabel || "Ja";
+      const close = v=>{ ov.classList.remove("open"); yes.onclick=null; no.onclick=null; ov.onclick=null; res(v); };
+      yes.onclick = ()=>close(true); no.onclick = ()=>close(false);
+      ov.onclick = e=>{ if(e.target===ov) close(false); };
+      ov.classList.add("open");
+    });
+  }
+  function catCurrent(){ const s=document.getElementById("catMgrSel"); return s ? s.value : ""; }
+  function catFind(name){ return catList.find(c=>c.name.toLowerCase()===(name||"").toLowerCase()); }
+  function catRenameMode(on){
+    document.getElementById("catRenameWrap").style.display = on ? "" : "none";
+    document.getElementById("catRenameBtn").style.display = on ? "none" : "";
+    document.getElementById("catDeleteBtn").style.display = on ? "none" : "";
+    document.getElementById("catSaveBtn").style.display = on ? "" : "none";
+    document.getElementById("catCancelBtn").style.display = on ? "" : "none";
+    if(on){ const i=document.getElementById("catRenameInput"); i.value=catCurrent(); i.focus(); i.select(); }
+  }
+  async function loadCatManager(){
+    const sel = document.getElementById("catMgrSel"); if(!sel) return;
+    const prev = sel.value;
+    try{ const d = await api("/api/categories/detail"); catList = (d && d.categories) || []; }
+    catch(e){ catList = []; }
+    if(!catList.length){
+      sel.innerHTML = '<option value="">— noch keine Kategorien —</option>';
+    } else {
+      sel.innerHTML = catList.map(c=>`<option value="${escapeHtml(c.name)}"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(c.name))} ${c.empty?'(leer)':'('+c.count+')'}</option>`).join("");
+      if(prev && catList.some(c=>c.name===prev)) sel.value = prev;
+    }
+    enhanceSelect(sel);
+    catRenameMode(false);
+  }
+  (function initCatManager(){
+    const sel = document.getElementById("catMgrSel"); if(!sel) return;
+    document.getElementById("catRenameBtn").addEventListener("click", ()=>{ if(catCurrent()) catRenameMode(true); });
+    document.getElementById("catCancelBtn").addEventListener("click", ()=> catRenameMode(false));
+    document.getElementById("catSaveBtn").addEventListener("click", async ()=>{
+      const old = catCurrent();
+      const neu = document.getElementById("catRenameInput").value.trim();
+      if(!old || !neu) return;
+      if(neu.toLowerCase()===old.toLowerCase()){   // nur Schreibweise korrigiert (gleiche Kategorie) -> trotzdem speichern
+        if(neu===old){ catRenameMode(false); return; }
+      } else if(catFind(neu)){   // Ziel existiert (anderer Name) -> Dublettenwarnung + Zusammenführen
+        const dup = catFind(neu);
+        const ok = await catConfirm("Kategorien zusammenführen?",
+          `„${cap(neu)}" gibt es schon. Sollen die Einträge von „${cap(old)}" nach „${cap(dup.name)}" verschoben (zusammengeführt) werden?`, "Ja, zusammenführen");
+        if(!ok) return;
+      }
+      const merged = (neu.toLowerCase()!==old.toLowerCase()) && !!catFind(neu);
+      try{
+        const r = await apiSend("/api/categories/rename","POST",{old, new:neu});
+        if(r && r.ok!==false){ flash("catMgrStatus", merged?"Zusammengeführt":"Umbenannt"); await loadCatManager(); loadChatCategories(); if(typeof activeTab!=="undefined" && activeTab==="overview") loadOverview(); }
+        else flash("catMgrStatus",(r&&r.detail)||"Fehlgeschlagen",false);
+      }catch(e){ flash("catMgrStatus","Fehlgeschlagen",false); }
+    });
+    document.getElementById("catDeleteBtn").addEventListener("click", async ()=>{
+      const name = catCurrent(); if(!name) return;
+      const c = catFind(name), cnt = c ? c.count : 0;
+      const warn = cnt>0
+        ? `In „${cap(name)}" liegen ${cnt} Einträge. Beim Löschen bleiben die Einträge erhalten — sie verlieren nur diese Kategorie. Kategorie „${cap(name)}" wirklich löschen?`
+        : `Leere Kategorie „${cap(name)}" wirklich löschen?`;
+      const ok = await catConfirm("Kategorie löschen?", warn, "Ja, löschen");
+      if(!ok) return;
+      try{
+        const r = await apiSend("/api/categories/delete","POST",{name});
+        if(r && r.ok!==false){ flash("catMgrStatus","Gelöscht"); await loadCatManager(); loadChatCategories(); if(typeof activeTab!=="undefined" && activeTab==="overview") loadOverview(); }
+        else flash("catMgrStatus",(r&&r.detail)||"Fehlgeschlagen",false);
+      }catch(e){ flash("catMgrStatus","Fehlgeschlagen",false); }
+    });
+    const newBtn = document.getElementById("catNewBtn"), newInp = document.getElementById("catNewInput");
+    async function addNew(){
+      const name = newInp.value.trim(); if(!name) return;
+      if(catFind(name)){ flash("catMgrStatus","Gibt es schon",false); return; }
+      try{
+        const r = await apiSend("/api/categories","POST",{name});
+        if(r && r.ok!==false){ newInp.value=""; flash("catMgrStatus","Angelegt"); await loadCatManager(); loadChatCategories(); if(typeof activeTab!=="undefined" && activeTab==="overview") loadOverview(); }
+        else flash("catMgrStatus",(r&&r.detail)||"Anlegen fehlgeschlagen",false);
+      }catch(e){ flash("catMgrStatus","Anlegen fehlgeschlagen",false); }
+    }
+    newBtn.addEventListener("click", addNew);
+    newInp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addNew(); } });
+    document.getElementById("catRenameInput").addEventListener("keydown", e=>{
+      if(e.key==="Enter"){ e.preventDefault(); document.getElementById("catSaveBtn").click(); }
+      if(e.key==="Escape"){ catRenameMode(false); }
+    });
+  })();
 
   /* ── Jahr/Monat-Navigation (Logbuch + Papierkorb teilen sie) ─────────────── */
   const MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -1490,7 +1628,7 @@ button{font-family:inherit;cursor:pointer}
     ref.panel.innerHTML = "";
     Array.from(sel.options).forEach((opt,i)=>{
       const o = document.createElement("div");
-      o.className = "cs-opt" + (i===sel.selectedIndex ? " sel" : "") + (opt.value==="__new__" ? " special" : "");
+      o.className = "cs-opt" + (i===sel.selectedIndex ? " sel" : "") + (opt.value==="__new__" ? " special" : "") + (opt.dataset.empty==="1" ? " empty" : "");
       o.textContent = opt.textContent;
       o.addEventListener("click", e=>{
         e.stopPropagation();
@@ -1946,12 +2084,13 @@ button{font-family:inherit;cursor:pointer}
     const sel = document.getElementById("chatCategory");
     if(!sel) return;
     const prev = keepSelected || sel.value;
-    let cats = [];
-    try{ const d = await api("/api/categories"); cats = (d && d.categories) || []; }
+    let cats = [];   // [{name, count, empty}] — gleiche Quelle wie die Kategorie-Verwaltung (immer synchron)
+    try{ const d = await api("/api/categories/detail"); cats = (d && d.categories) || []; }
     catch(e){ /* Agent offline — nur Auto + Neu anbieten */ }
+    const names = cats.map(c=>c.name);
     sel.innerHTML = '<option value="">Auto-Kategorie</option><option value="__new__">➕ Neue Kategorie…</option>'
-      + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-    sel.value = (prev && prev!=="__new__" && cats.includes(prev)) ? prev : "";
+      + cats.map(c=>`<option value="${escapeHtml(c.name)}"${c.empty?' data-empty="1"':''}>${escapeHtml(cap(c.name))}${c.empty?' — leer':''}</option>`).join("");
+    sel.value = (prev && prev!=="__new__" && names.includes(prev)) ? prev : "";
     enhanceSelect(sel, {compact:true, up:true});   // schönes Dropdown (klappt nach oben, da unten am Eingabefeld)
   }
   async function onCategoryChange(){
