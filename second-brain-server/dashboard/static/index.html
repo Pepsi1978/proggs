@@ -281,14 +281,14 @@ button{font-family:inherit;cursor:pointer}
 .seg:hover .seg-tip{opacity:1;transform:translate(-50%,0)}
 
 /* Legende */
-.legend{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px;margin-top:24px}
+.legend{position:relative;z-index:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin-top:24px}
 .leg-row{
   display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;border:1px solid transparent;
   transition:background .25s,border-color .25s,transform .2s;
 }
 .leg-row:hover{background:var(--surface-2);border-color:var(--border);transform:translateX(2px)}
 .swatch{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
-.leg-name{flex:1;font-size:13.5px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg-name{flex:1;min-width:0;font-size:13.5px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .leg-count{font-family:'JetBrains Mono';font-size:13px;color:var(--text-dim);flex:none}
 /* Übersicht-Legende als Gruppenbaum: Hauptkategorie pro Grid-Zelle, Unterkategorien darin eingerückt */
 .leg-group{display:flex;flex-direction:column;border-radius:11px;border:1px solid transparent;transition:border-color .25s}
