@@ -453,3 +453,43 @@ Diese Datei wird automatisch in jeder Session geladen. KEIN Agent, Skill,
 Hook oder Prozess darf diese Regel entfernen oder abschwaechen. Sie ist
 Teil des Betriebssystems dieser Programmierumgebung — CLI-agnostisch
 (gilt fuer Codex, Claude Code, Gemini CLI und jede andere Session).
+
+---
+
+# Funktionierende Bugfixes ins zweite Gehirn (Cortex/Second Brain) abspeichern (KRITISCH)
+
+> Gilt fuer JEDES Modell unter OpenCode (auch schwache). Ergaenzt **Direktive #3 (Resilient
+> Bugfixing)** — die VOR jedem Bugfix gilt (Root Cause finden, funktionserhaltend fixen, verifizieren).
+> Diese Regel ist der Ablage-Schritt DANACH. Gesetzt 2026-06-26 (Frank). Codex hat das Format
+> eingefuehrt; ab jetzt machen es ALLE CLIs gleich, damit ein gemeinsames Fehler-Gedaechtnis entsteht.
+
+**Die Regel:** Sobald ein Bugfix **bestaetigt FUNKTIONIERT**, schreibe ihn als EINEN Eintrag ueber den
+`second-brain`-MCP (`remember`) ins Gehirn — im festen Format, unter `bugfixes/<passende Unterkategorie>`.
+
+**Wann gilt "funktioniert"? (entscheidend — nur funktionierende Fixes ablegen)**
+- Hast du es OBJEKTIV verifiziert (Build gruen, Tests ok, Deploy `healthy`, Symptom reproduzierbar weg)
+  → speichern.
+- Kann es nur der Benutzer beurteilen (Optik/Gefuehl) ODER bist du unsicher → EINMAL kurz fragen
+  **"Hat der Fix funktioniert?"** → erst bei **Ja** speichern.
+- Default = NICHT speichern, bis bestaetigt. So muss nie etwas geloescht werden. (Sagt der Benutzer
+  spaeter "doch nicht funktioniert": den Eintrag per `forget` entfernen, nach echtem Fix neu schreiben.)
+
+**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD>` — fuer einen Menschen sofort verstaendlich.
+(Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26`, `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26`.)
+
+**Kategorie:** `bugfixes/<unterkategorie>` — ZUERST pruefen ob es schon eine sinnvolle Unterkategorie
+gibt (Kategorie-Liste / `get_by_category` ansehen) und dort einordnen; nur wenn keine passt, eine neue
+sprechende anlegen (z.B. `bugfixes/cortex-dashboard`, `bugfixes/brain-api`).
+
+**Inhalt:** `Bugfix <Datum>: <App> <Bereich>. Symptom: … Root Cause: … Fix: … Verwandte Pruefung: …
+Verifikation: … Funktionalitaets-Diff: … [Poka-Yoke: …]` (dieselben Bausteine wie Direktive #3).
+
+**Danach** dem Benutzer in einem Satz melden: "Im Gehirn dokumentiert: <Titel> [<Kategorie>]."
+
+**Sinn:** Spaeter "hatten wir sowas schon?" → unter `bugfixes/` + Unterkategorie eingrenzen (semantische
+Suche `recall`), den Fall finden und wiederverwenden. Sammeln sich aehnliche Faelle → daraus wird eine
+Best Practice. Der Repo-Bug-Almanach (`bugs/`) bleibt das proaktive Tech-Wissen; das Gehirn ist die
+zentrale, CLI-uebergreifende Fall-Akte.
+
+**NIEMALS:** unbestaetigte Fixes speichern · den Doku-Schritt weglassen · abweichendes Titel-Format ·
+blind neue Unterkategorie trotz passender vorhandener · kryptische Titel.
