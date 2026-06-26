@@ -10,7 +10,9 @@
 **BEVOR du in dieser Session mit IRGENDEINER Arbeit beginnst, lade EINMALIG alle Arbeitsregeln aus dem
 zweiten Gehirn (Cortex / Second Brain) ueber den `second-brain`-MCP-Server:**
 
-1. Rufe das `second-brain`-Werkzeug **`get_by_category`** mit der Kategorie **`Programmierung/Rules`** auf.
+1. Rufe das `second-brain`-Werkzeug **`get_by_category`** mit der EXAKTEN Kategorie **`Programmierung/Rules`** auf.
+   → Hauptkategorie `Programmierung`, Unterkategorie **`Rules`** — englisch geschrieben, **NICHT `Regeln`**.
+   Genau unter `Programmierung/Rules` liegen die Arbeitsregeln; eine andere Schreibweise findet nichts.
 2. Lies ALLE zurueckgegebenen Regeln vollstaendig — sie gelten ab jetzt fuer die GANZE Session als
    verbindliche Regeln, so als staenden sie hier fest verdrahtet.
 3. Bestaetige dem Benutzer in EINER Zeile: **"N Regeln aus dem zweiten Gehirn eingelesen."**
