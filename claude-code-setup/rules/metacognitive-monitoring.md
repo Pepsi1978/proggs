@@ -147,6 +147,5 @@ Der Hyperagent kann jederzeit manuell fuer eine tiefe 5-Stufen-Analyse gespawnt 
 | `self-observation.md` | Diese Datei ERGAENZT (konkrete Tracker/Schwellen) — nicht ersetzen |
 | `hyperagent.md` | Fuer tiefe Analyse wenn Tracker Alarm schlagen |
 | `session-scores.jsonl` | Datenquelle fuer Trend-Analyse und Selbstverbesserung |
-| `sica-utility-metric.md` | Ergaenzende Metrik (utility_score) — liest session-scores als Input |
 | `intelligence-system.md` | Pheromon-Tabelle wird mit Erkenntnissen bestaetigt/erganzt |
 | `/self-improve` Skill | Konsumiert Session-Score-Trend als Diagnose-Grundlage |
