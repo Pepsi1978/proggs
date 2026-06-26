@@ -13,6 +13,7 @@
 |-------|-------|----------|-----------------|
 | 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** |
+| 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md` — laedt Firecrawl) |
 | 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) |
 
@@ -30,9 +31,10 @@ zentral auf dem Server — auf jedem Rechner identisch, ohne dass man sie kopier
 
 2. **Globale Dateien an ihren Platz kopieren:**
    ```sh
-   mkdir -p ~/.config/opencode
+   mkdir -p ~/.config/opencode/agents
    cp ~/proggs/opencode-setup/opencode.jsonc   ~/.config/opencode/opencode.jsonc
    cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
+   cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
    ```
 
 3. **Die EINE plattformspezifische Zeile anpassen** — in `~/.config/opencode/opencode.jsonc`:

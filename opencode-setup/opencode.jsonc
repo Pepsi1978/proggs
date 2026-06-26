@@ -76,6 +76,18 @@
     }
   },
 
+  // Punkt 9 — Token-Effizienz: Firecrawl-MCP global AUS dem Tool-Schema nehmen.
+  // ROOT CAUSE der grossen Startkontext-Last (~50k): jeder MCP laedt sein Tool-Schema in JEDEN
+  // Prompt; firecrawl-mcp (~8 Tools, grosse Schemas) frisst ~15-25k Tokens (Almanach §8/§11,
+  // best-practices/opencode/token-effizienz.md Hebel A). Glob "firecrawl*" deaktiviert ALLE
+  // firecrawl-Tools global -> sie verschwinden aus jedem normalen Prompt. Im researcher-Agent
+  // werden sie wieder freigeschaltet (agents/researcher.md: tools: { "firecrawl*": true }) ->
+  // Web-Recherche bleibt voll nutzbar, nur ueber den Agent statt im Hauptkontext. Verlustfrei.
+  // second-brain bleibt global an (klein + bei jedem Start fuer den Regel-Abruf gebraucht).
+  "tools": {
+    "firecrawl*": false
+  },
+
   // Punkt 3 — Stealth-Modell "Owl Alpha" sichtbar machen.
   // ROOT CAUSE: owl-alpha hat in models.dev status:"alpha". OpenCode blendet
   // alpha/deprecated-Modelle aus dem Picker aus. Ein Eintrag unter
