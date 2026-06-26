@@ -346,12 +346,14 @@ button{font-family:inherit;cursor:pointer}
 .chip{
   padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);
   font-size:13px;color:var(--text-dim);font-weight:500;transition:all .25s var(--ease);
-  text-transform:capitalize;display:flex;align-items:center;gap:7px;
+  display:flex;align-items:center;gap:7px;
 }
 .chip .cdot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.0;transition:opacity .2s}
 .chip:hover{color:var(--text);border-color:var(--text-faint);transform:translateY(-1px)}
 .chip.active{color:var(--accent-ink);border-color:transparent}
 .chip.active .cdot{opacity:0;display:none}
+.chip.back{border-style:dashed;color:var(--text-faint)}
+.chip.child::after{content:"›";font-weight:700;opacity:.65}
 
 .results{display:flex;flex-direction:column;gap:12px}
 .result{
@@ -565,11 +567,13 @@ button{font-family:inherit;cursor:pointer}
 .chat-speak.off{background:var(--surface-2);color:var(--text-faint);box-shadow:none}
 .chat-speak .sl{opacity:0;transition:opacity .15s}
 .chat-speak.off .sl{opacity:1}
-/* Vorlesen An/Aus-Schalter (Einstellungen): umrandete Box, an = orange (Frank-Konvention Audio=Orange) */
-.vl-box{display:flex;align-items:center;justify-content:space-between;gap:20px;flex:1;padding:13px 20px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
-.vl-box:has(input:checked){border-color:rgba(249,115,22,.55);box-shadow:0 0 0 1px rgba(249,115,22,.18) inset}
-.vl-box-label{font-weight:600;color:var(--text)}
-.vl-toggle{display:inline-flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+/* Vorlesen An/Aus-Schalter (Einstellungen): kompakte Blase, an = orange (Frank-Konvention Audio=Orange) */
+.vl-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.vl-box{display:flex;align-items:center;justify-content:space-between;gap:18px;flex:1 1 520px;max-width:720px;min-width:min(100%,360px);padding:13px 16px 13px 20px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+.vl-box:has(input:checked){border-color:rgba(249,115,22,.65);box-shadow:0 0 0 1px rgba(249,115,22,.18) inset,0 12px 34px -30px rgba(249,115,22,.85)}
+.vl-box-label{font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field .vl-toggle{display:inline-flex;align-items:center;gap:10px;flex:0 0 auto;margin-bottom:0;color:inherit;font-size:14px;cursor:pointer;user-select:none;padding:5px 6px 5px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border-soft);transition:border-color .2s,background .2s,box-shadow .2s}
+.vl-toggle:has(input:checked){border-color:rgba(249,115,22,.45);background:rgba(249,115,22,.08);box-shadow:0 0 24px -12px rgba(249,115,22,.9)}
 .vl-toggle input{position:absolute;opacity:0;width:0;height:0}
 .vl-track{position:relative;width:52px;height:28px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);transition:background .2s,border-color .2s;flex:0 0 auto}
 .vl-track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -1001,7 +1005,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>Vorlesen</h3>
           <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Ist das Vorlesen <b>aus</b>, wird gar kein Text an Gemini geschickt — es werden also keine Tokens verbraucht. Schalte hier an oder aus und bestätige mit „Speichern" (oder unterwegs über den orangen Lautsprecher-Knopf neben dem Mikrofon). Darunter wählst du die Stimme.</p>
-          <div class="field" style="display:flex;align-items:center;gap:16px">
+          <div class="field vl-row">
             <div class="vl-box">
               <span class="vl-box-label">Antworten vorlesen</span>
               <label class="vl-toggle">
@@ -1360,7 +1364,8 @@ button{font-family:inherit;cursor:pointer}
 
   /* ── Gehirn: Suche / Chips / Liste ────────────────────────────────────── */
   let curCategory = null, curQuery = "", searchTimer = null;
-  let curParent = null;          // Übersicht-Filter: alle Einträge UNTER einer Hauptkategorie (brain /by-parent)
+  let curParent = null;          // Gehirn-Drilldown: alle Einträge UNTER diesem Kategoriepfad (inkl. Unterpfade)
+  let brainCatRoot = { children:new Map() };
   let LAST_OVERVIEW = null;       // letzter Overview-Datensatz (für Re-Render beim Auf-/Zuklappen)
   const ovExpanded = new Set();   // aufgeklappte Hauptkategorien in der Übersicht-Legende
   /* Flache Kategorienliste -> nach Hauptkategorie gruppiert, größte zuerst (für Balken + Legende). */
@@ -1377,7 +1382,7 @@ button{font-family:inherit;cursor:pointer}
     arr.forEach(g=> g.subs.sort((a,b)=> (b.count||0)-(a.count||0) || catSubName(a.name).localeCompare(catSubName(b.name),"de")));
     return arr;
   }
-  function goToParent(name){            // Übersicht: Hauptkategorie -> Gehirn, gefiltert auf alles UNTER der Hauptkategorie
+  function goToParent(name){            // Übersicht/Gehirn: Kategoriepfad -> alles darunter anzeigen
     curParent = name; curCategory = null; curQuery = "";
     navTo("brain");
     const inp = document.getElementById("search"); if(inp) inp.value="";
@@ -1385,35 +1390,59 @@ button{font-family:inherit;cursor:pointer}
   }
 
   function renderChips(cats){
-    const wrap = document.getElementById("chips");
-    wrap.innerHTML = "";
-    const all = chip("Alle", null, null);
-    wrap.appendChild(all);
-    cats.forEach(c=> wrap.appendChild(chip(cap(c.name), c.name, colorFor(c.name))));
+    brainCatRoot = buildPathTree(cats);
     updateChips();
   }
-  function chip(label, cat, color){
+  function catNodeByPath(root, path){
+    let node = root;
+    for(const seg of catSegments(path)){
+      if(!node.children || !node.children.has(seg)) return null;
+      node = node.children.get(seg);
+    }
+    return node;
+  }
+  function parentPathOf(path){
+    const segs = catSegments(path);
+    segs.pop();
+    return segs.join("/");
+  }
+  function chipLabel(node){
+    const total = catNodeTotal(node);
+    return `${cap(node.seg)}${total ? ` (${total})` : ""}`;
+  }
+  function renderBrainChips(){
+    const wrap = document.getElementById("chips");
+    wrap.innerHTML = "";
+    wrap.appendChild(chip("Alle", "", null, "all"));
+    let node = curParent ? catNodeByPath(brainCatRoot, curParent) : brainCatRoot;
+    if(curParent && !node){ curParent = null; node = brainCatRoot; }
+    if(curParent){
+      const parent = parentPathOf(curParent);
+      wrap.appendChild(chip(parent ? "‹ " + cap(catSegments(parent).at(-1)) : "‹ Hauptkategorien", parent, null, "back"));
+      const current = catNodeByPath(brainCatRoot, curParent);
+      if(current) wrap.appendChild(chip(chipLabel(current), curParent, colorFor(curParent), "current"));
+    }
+    catSortedKids(node).forEach(child=> wrap.appendChild(chip(chipLabel(child), child.path, colorFor(child.path), child.children.size ? "child" : "")));
+  }
+  function chip(label, path, color, kind){
     const b = document.createElement("button");
-    b.className = "chip"; b.dataset.cat = cat||"";
+    b.className = "chip" + (kind ? " " + kind : ""); b.dataset.path = path||"";
     if(color) b.dataset.color = color;
     b.innerHTML = `<span class="cdot"></span>${label}`;
-    b.addEventListener("click",()=>{ curCategory = cat; curParent=null; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
+    b.addEventListener("click",()=>{ curParent = path || null; curCategory = null; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
     return b;
   }
   function updateChips(){
+    renderBrainChips();
     document.querySelectorAll("#chips .chip").forEach(c=>{
-      const on = (c.dataset.cat||null) === curCategory;
+      const path = c.dataset.path || "";
+      const on = path ? path === (curParent||"") : (!curParent && !curCategory && !curQuery);
       c.classList.toggle("active",on);
       c.style.background = on && c.dataset.color ? c.dataset.color : "";
     });
   }
 
-  function goToCategory(name){            // exakte Kategorie -> Gehirn gefiltert
-    curCategory = name; curParent = null; curQuery = "";
-    navTo("brain");
-    const inp = document.getElementById("search"); if(inp) inp.value="";
-    updateChips(); loadEntries();
-  }
+  function goToCategory(name){ goToParent(name); }
 
   document.getElementById("search").addEventListener("input", e=>{
     curQuery = e.target.value.trim();
@@ -1430,7 +1459,7 @@ button{font-family:inherit;cursor:pointer}
     let data;
     try{
       if(curParent){
-        data = await api("/api/by-parent?parent="+encodeURIComponent(curParent)+"&limit=200");
+        data = await api("/api/by-parent?parent="+encodeURIComponent(curParent)+"&limit=500");
       }else{
         const params = new URLSearchParams();
         if(curCategory) params.set("category",curCategory);
