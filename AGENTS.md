@@ -10,12 +10,14 @@
 Es gelten die globalen OpenCode-Kern-Regeln: @~/.config/opencode/AGENTS.md
 (Deutsch+Umlaute inkl. Denkvorgang, Multi-Task ` ; `, Git-Disziplin/Parallele-Sessions, Secrets,
 Komprimierung, Direktive #3). Sie werden bei JEDEM Turn frisch geladen und gelten auch nach
-Komprimierung. Dort steht auch die **PFLICHT, beim Session-Start einmalig die vollen Arbeitsregeln
-aus dem zweiten Gehirn zu laden** (`second-brain`-MCP `get_by_category('Programmierung/Rules')`,
-Unterkategorie `Rules` englisch, NICHT `Regeln`) und in EINER Zeile "N Regeln aus dem zweiten Gehirn
-eingelesen" zu bestaetigen. Klappt der Abruf nicht (MCP weg / Modell ruft nicht ab), gelten die
-fest verdrahteten Kern-Regeln der globalen Datei OHNEHIN. Diese Projekt-Datei ergaenzt nur das
-**proggs-Spezifische** (unten).
+Komprimierung. Dort steht auch die **PFLICHT-Startaufgabe, die vollen Arbeitsregeln aus dem zweiten Gehirn zu
+laden — EINZELN, eine nach der anderen** (`second-brain`-MCP: erst `list_memories`, dann jede Regel
+der Kategorie `[Programmierung/Rules]` per `get_by_title`; **NIEMALS** `get_by_category` — das wird
+bei ~125 KB truncated/abgelehnt) und in EINER Zeile "N Regeln aus dem zweiten Gehirn einzeln
+eingelesen" zu bestaetigen. **Generelle Muss-Regel:** jeder Second-Brain-Abruf laeuft einzeln, nie
+eine ganze grosse Kategorie auf einmal. Klappt der Abruf nicht (MCP weg / Modell ruft nicht ab),
+gelten die fest verdrahteten Kern-Regeln der globalen Datei OHNEHIN. Diese Projekt-Datei ergaenzt
+nur das **proggs-Spezifische** (unten).
 
 ## Repository Structure
 

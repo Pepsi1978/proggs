@@ -8,13 +8,32 @@
 
 ---
 
-## ⚡ ZUERST beim Start: volle Arbeitsregeln aus dem zweiten Gehirn laden (PFLICHT)
+## ⚡ ZUERST beim Start: Arbeitsregeln aus dem zweiten Gehirn laden — EINZELN (PFLICHT)
 
-**ERSTE Handlung jeder Session, VOR jeder Arbeit:** Rufe das `second-brain`-Werkzeug
-**`get_by_category`** mit der EXAKTEN Kategorie **`Programmierung/Rules`** auf (Hauptkategorie
-`Programmierung`, Unterkategorie **`Rules`** — englisch, **NICHT `Regeln`**). Lies ALLE
-zurueckgegebenen Regeln vollstaendig — sie gelten ab dann fuer die ganze Session als verbindlich.
-Bestaetige in EINER Zeile: **"N Regeln aus dem zweiten Gehirn eingelesen."** (N = Anzahl).
+**ERSTE Handlung jeder Session, VOR jeder Arbeit — die Regeln EINZELN laden, eine nach der anderen:**
+
+1. Rufe das `second-brain`-Werkzeug **`list_memories`** auf (liefert nur Titel + Kategorie + Groesse,
+   kompakt — KEIN Volltext, also klein und sicher ladbar).
+2. Nimm aus der Liste ALLE Eintraege der Kategorie **`[Programmierung/Rules]`** (~14 Arbeitsregeln).
+3. Lade JEDE dieser Regeln **EINZELN per `get_by_title`** (exakter Titel aus der Liste) — eine nach
+   der anderen, bis alle durch sind. Jede einzelne Regel ist klein genug und wird so WIRKLICH
+   vollstaendig gelesen.
+4. Bestaetige in EINER Zeile: **"N Regeln aus dem zweiten Gehirn einzeln eingelesen."** (N = die
+   tatsaechlich geladene Anzahl — NICHT behaupten, wenn ein Abruf leer/abgeschnitten zurueckkam).
+
+> ❌ **NIEMALS `get_by_category('Programmierung/Rules')`** zum Laden nutzen: das gibt alle ~14 Regeln
+> auf einmal zurueck (~125 KB / ~32k Token) und wird vom System **abgeschnitten (truncated) bzw.
+> abgelehnt** — die Regeln waeren dann NICHT gelesen, obwohl der Aufruf "erfolgreich" aussieht.
+> Einzeln laden (`get_by_title`) ist der einzige verlaessliche Weg.
+
+**Diese beiden Punkte sind PFLICHT, nicht optional:**
+- **(P1) Der Start-Abruf ist eine Muss-Aufgabe** — die ALLERERSTE Handlung jeder Session, bevor auf
+  irgendetwas anderes reagiert wird. Kein "vielleicht schaue ich rein": die Regeln werden wirklich
+  geladen, sonst gilt die Session als nicht arbeitsbereit.
+- **(P2) MUSS-Regel fuer JEDEN Second-Brain-Abruf (nicht nur die Regeln):** Daten vom Second-Brain
+  werden **immer EINZELN** geholt — eine nach der anderen per `get_by_title` — und **niemals als ganze
+  grosse Kategorie zusammengeschmissen**. Bei mehreren Eintraegen: erst `list_memories` (nur Titel),
+  dann gezielt Eintrag fuer Eintrag. So kann nichts truncaten und jeder Eintrag wird wirklich gelesen.
 
 > Warum: Die ausfuehrlichen Arbeitsregeln (Git-Workflow, Observability, Known-Bugs-zuerst,
 > Debugging, Versionierung u.a.) liegen zentral im Gehirn — EINE Quelle, von allen CLIs nutzbar.
