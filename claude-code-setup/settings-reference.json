@@ -189,16 +189,6 @@
 				]
 			},
 			{
-				"matcher": "Bash",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/git-multi-session-lock.ps1\"",
-						"timeout": 130
-					}
-				]
-			},
-			{
 				"matcher": "Read|Edit|Write|MultiEdit|Bash",
 				"hooks": [
 					{

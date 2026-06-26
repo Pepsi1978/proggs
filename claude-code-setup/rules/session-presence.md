@@ -98,7 +98,7 @@ Leere Datei `session-presence-disable.flag` im TEMP-Verzeichnis anlegen → der 
 | Regel/System | Bezug |
 |--------------|-------|
 | `parallel-sessions-git.md` | Die git-seitige Hälfte (Commit/Push); diese Regel ist der datei-seitige **Hinweis** |
-| `git-multi-session-lock` (Hook) | Sperrt den Git-Index nur kurz beim parallelen Commit (kein Arbeits-Block) |
+| `git-multi-session-lock` (Hook) | **Deaktiviert (No-Op) seit 2026-06-26.** Die Lock-Sperre liess parallele Sessions bei git add/commit/push bis zu 120s warten (kein PostToolUse-Release → Lock nur per TTL/PID-Tod frei) → das Bash-Tool timete nach 2 Min aus („Commit ausgetimt"). Aus settings.json deregistriert; nur noch Hinweise, kein Git-Lock mehr. Schutz bleibt git-seitig (`parallel-sessions-git.md`). |
 | `best-practices/claude-tooling/multi-session-koordination.md` | Recherche-Grundlage + Worktree-Alternative |
 
 ## Autorität

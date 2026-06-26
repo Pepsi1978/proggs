@@ -251,16 +251,6 @@
 				"matcher": "Bash"
 			},
 			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "bash ~/.claude/hooks/git-multi-session-lock.sh",
-						"timeout": 130
-					}
-				],
-				"matcher": "Bash"
-			},
-			{
 				"matcher": "Bash",
 				"hooks": [
 					{
