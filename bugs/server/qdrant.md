@@ -29,6 +29,7 @@
 | 10 | ⭐ Hierarchie/„alles unter X" per **Praefix-Filter** gewollt | **KEIN nativer `startsWith`/Praefix-Operator** auf Keyword-Feldern (offener Feature-Request #5300). Loesungen: (a) separates `parent`-Payload-Feld (Keyword-Index) → exakter `MatchValue`; (b) `MatchAny` ueber die bekannten Unterpfade (App kennt die Liste); (c) `MatchText` + **Text-Index** (Substring, nicht fuer Hierarchie gedacht). | §7 |
 | 11 | Payload-Index NACH dem Ingest angelegt | Der **filterable HNSW** zieht nur Filter-Kanten, wenn der Payload-Index **VOR** den Daten existiert. Nachtraeglich angelegt → HNSW muss neu gebaut werden. Neues Filterfeld (z.B. `parent`) auf Bestand → Index anlegen + Reindex einplanen. | §7 |
 | 12 | `nested`-Filter auf Array-von-Objekten | `nested` ist noetig, damit mehrere Bedingungen **dasselbe** Array-Element treffen (sonst array-uebergreifend). Aber: Community berichtet **unzuverlaessige/langsamere Index-Nutzung** bei `nested` (#2256); „alle diese Werte gleichzeitig"-Subset-Match ist offener Feature-Request (#4679). Fuer einfache Kategorien lieber flache Felder. | §7 |
+| 13 | ⭐ `client.scroll(..., with_payload=True)` ueber viele/grosse Payloads | Laedt ALLE Payload-Felder ALLER Punkte gleichzeitig in den **Client**-RAM (nicht Qdrant-RAM!). Bei grossen Feldern (z.B. Volltext 1:1 pro Chunk) + periodischem Aufruf → Client-Container-OOM-Loop. Fuer Zaehl-/Listen-Operationen NUR die noetigen Felder laden: `with_payload=["feld1","feld2"]` statt `True`. Container-Memory-Limit hochsetzen hilft NICHT (Last waechst unbeschraenkt). | §8 |
 
 ---
 
@@ -41,6 +42,7 @@
 | §4 Client/TLS | §4 Client-Anbindung |
 | §5 Performance | §5 Tuning |
 | §7 Filter/Hierarchie | §6 Hierarchische Kategorien filtern |
+| §8 Client-scroll-OOM (with_payload) | §5 Tuning / §1 Speicher-Dimensionierung |
 
 ---
 
@@ -174,6 +176,33 @@ Programmieren" filtern — und sucht einen Praefix-Filter.
 StackOverflow (nested) · OpenRouter-`:online`-Recherche 2026-06-25.
 
 ---
+
+## 8. ⭐ Client-seitiger OOM: `scroll(with_payload=True)` zieht ALLE Payloads in den RAM (live 2026-06-26)
+**Symptom:** Der **Client**-Container (FastAPI/brain-api), nicht Qdrant, geht in einen OOM-Neustart-Loop —
+hier alle ~20s (`docker events`: `oom → die → start`; Kernel: `cgroup out of memory: Killed process
+(uvicorn) anon-rss ~1 GB+`). Nach aussen: „0 Eintraege" / „Server momentan nicht erreichbar", weil der
+Dienst staendig kurz weg ist. Tritt erst auf, wenn die Daten **gross** werden (hier: 60-70 grosse Almanache).
+**Ursache:** `qdrant_client.scroll(collection, scroll_filter=…, limit=N, with_payload=True)` laedt **ALLE
+Payload-Felder ALLER N Punkte gleichzeitig** in den Client-RAM. Liegt ein grosses Feld redundant in jedem
+Punkt (hier: `full_text` 1:1 in JEDEM Chunk — ein 600k-Doc = ~150 Chunks × 600k), summiert sich das auf
+Gigabytes — obwohl die Operation nur ein paar Metadaten braucht (z.B. Kategorien zaehlen, Titel listen).
+Verschaerfend: ein **periodischer** Aufruf (Dashboard-Übersicht pollte `/api/overview` → `/list` alle 20s)
+macht daraus einen Dauer-Loop. **Container-Memory-Limit hochsetzen hilft NICHT** (live getestet: 1G→2G,
+Loop lief weiter — die geladene Datenmenge waechst unbeschraenkt mit dem Bestand).
+**Versionen:** strukturell (qdrant-client alle 1.x; analog `query_points`/`retrieve` mit `with_payload=True`).
+**FIX (funktionserhaltend):** Fuer Zaehl-/Listen-Operationen NUR die benoetigten Felder laden —
+`with_payload` nimmt eine **Feldliste** statt `True`:
+```python
+# vorher: laedt full_text aller Chunks -> RAM-Explosion
+points, _ = qc.scroll(collection_name=COL, scroll_filter=flt, limit=10000, with_payload=True)
+# nachher: nur die Zaehl-/Listen-Felder -> winziger RAM
+points, _ = qc.scroll(collection_name=COL, scroll_filter=flt, limit=10000,
+                      with_payload=["doc_id", "title", "category"])
+```
+Endpoints, die den Volltext WIRKLICH anzeigen (Einzel-Abruf/Drawer/Suche), laden ihn weiterhin gezielt.
+Brauchst du eine abgeleitete Groesse (z.B. Zeichenzahl) in einer Liste: ein kleines `text_len`-Payload-Feld
+beim Schreiben mitspeichern, statt den Volltext zum Zaehlen zu laden. **Belegt:** second-brain brain-api
+1.13.1/1.13.2 (`category-counts` + `/list` → Metadaten-only); RAM-Spitze von >2 GB auf ~240 MB, Loop weg.
 
 ## Pflicht-Checkliste vor Qdrant-Betrieb
 - [ ] Volume `:/qdrant/storage` gemountet, SSD/NVMe (kein NFS/S3)?
