@@ -1,6 +1,9 @@
-# Token-Effizienz & Kostenoptimierung — Best Practices (Stand 2026-06-18, OpenCode CLI)
+# Token-Effizienz & Kostenoptimierung — Best Practices (Stand 2026-06-18, erweitert 2026-06-26, OpenCode CLI)
 
 > Ein **token-armer, gut funktionierender Harness** — besonders mit günstigen OpenRouter-Modellen.
+> **Anker:** opencode=1.17.11 (Recherche 2026-06-26; Erst-Stand 1.17.8). Kern-Update 2026-06-26:
+> Abschnitt 8 (MCP-Lazy-Loading-Stand + manuelle Methode als EINZIGER Hebel — OpenCode hat anders
+> als Claude Code KEIN natives MCP-Tool-Lazy-Loading).
 > Quellen: `offiziell` (opencode.ai/docs, openrouter.ai/docs) bzw. `extern`. Plattformneutral (Config ist
 > JSON); einziger plattformrelevanter Punkt ist `shell` (`pwsh`/`cmd.exe` vs. `/bin/zsh`).
 
@@ -31,6 +34,9 @@ OpenCode kompaktiert bei Überlauf automatisch (Safety-Buffer 20.000 Tokens). `e
 - **Nur einschalten, was man braucht:** `"enabled": false` ohne Entfernen aus der Config. `offiziell`
 - **Per-Agent-MCP statt global:** global aus (`"tools": {"mymcp*": false}`), nur im benötigenden Agent an
   (`"tools": {"mymcp*": true}`). Glob `mymcpservername_*` deaktiviert alle Tools eines Servers. `offiziell`
+- ⚠️ **Das ist der EINZIGE Hebel:** OpenCode hat (Stand 1.17.11) **KEIN natives MCP-Lazy-Loading**
+  (anders als Claude Code seit v2.1.7). Es injiziert ALLE MCP-Tool-Schemas in JEDEN Prompt — die
+  manuelle Per-Agent-Auslagerung ist die einzige Gegenmaßnahme. Details + Belege: **Abschnitt 8**.
 
 ### Hebel B — Context-Disziplin: gezielte `@datei`-Mentions statt ganze Ordner
 - **Datei-/Funktions-Ebene statt Verzeichnis-Ebene.** „if a file is not required to reason about the change,
@@ -76,6 +82,61 @@ Weniger aktive Tools = kleinere Tool-Schema-Payload pro Anfrage. Read-only-Agent
 Reasoning-Tokens zählen als Output. OpenAI-Reasoning: `reasoningEffort: "low"` + `textVerbosity: "low"`;
 Anthropic: `thinking.budgetTokens` klein; Google-Variants `low`. Über Agent-Additional-Options oder Variants.
 Output deckeln via `OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`. `offiziell`
+
+---
+
+## 8. MCP-Lazy-Loading-Stand + Harness-Token-Befunde (Recherche 2026-06-26, opencode 1.17.11) `extern`/`offiziell`
+
+> Firecrawl+MiniMax-Recherche zu MCP/Skills/Plugins/Agenten. Kern: **OpenCode hat KEIN natives
+> MCP-Lazy-Loading** — die manuelle Per-Agent-Auslagerung (Hebel A) ist der einzige Hebel.
+
+### 8.1 MCP — kein natives Lazy-Loading (der zentrale Befund)
+- **Default-Verhalten:** OpenCode injiziert das komplette `input_schema` **aller** verbundenen
+  MCP-Tools bei **jedem** Session-Start („Token Tax"). Gemessenes Extrem: ein einzelner MCP-Server
+  (lark-mcp-docx) fraß **147k Token** (21k → 168k). `extern` (GitHub Issue #17482)
+- **Lazy-Loading ist offen/ungelöst:** Feature-Requests **#8277** („Lazy/dynamic loading for mcp
+  tools"), **#8625** („mcp search tool, reduce mcp tool context"), **#9350** („MCP Tool Search —
+  Lazy Loading for 85% Token Reduction"), **#16206** („Two-Step MCP Tool Discovery"). #17482 wurde
+  als Duplikat von #8625 geschlossen; Maintainer rekram1-node zugewiesen (März 2026), aber **keine
+  Implementierung in 1.17.x belegt**. `extern`
+- **Kontrast Claude Code:** hat seit **v2.1.7** einen „MCP Tool Search", der automatisch greift, wenn
+  MCP-Tool-Descriptions >10 % des Kontexts verbrauchen (~85 % Tokenreduktion). OpenCode **nicht**. `extern`
+- **Konsequenz / Best Practice:** Die manuelle Methode aus Hebel A (global `"tools":{"server*":false}`,
+  pro Agent `true`) ist aktuell die EINZIGE wirksame Gegenmaßnahme — kein Warten auf ein natives Feature.
+  Quelle/Beispiel: genau so für Firecrawl umgesetzt (`opencode.jsonc` Punkt 9 + `agents/researcher.md`).
+
+### 8.2 Skills — bereits lazy/on-demand (gute Nachricht, kein Handlungsbedarf)
+- Nur **Skill-Name + Kurzbeschreibung** stehen konstant in der nativen Skill-Tool-Description; die
+  volle `SKILL.md` wird **erst bei Referenz/Match** geladen. `extern` (Composio; YouTube baGKgnbQUq8)
+- **Minimierung = Disziplin, kein nativer Filter:** Es gibt **keinen** dokumentierten
+  `skill disable`/Allow-Denylist-Befehl. Hebel: nur installieren was gebraucht wird; projekt- vs.
+  globale Skill-Pfade bewusst nutzen (`.opencode/skills/`, `~/.config/opencode/skills/`, kompatibel
+  `.claude/skills/`, `.agents/skills/`); Skill-`description` kurz halten (zählt zum Dauer-Overhead).
+
+### 8.3 Plugins — Liste knapp halten + Compaction-Hook
+- Nur die in `opencode.json` `"plugin":[...]` **gelisteten** Plugins werden geladen → Liste minimal
+  halten; jedes von einem Plugin via `tool()` registrierte **Custom-Tool** vergrößert das Tool-Schema.
+- **Compaction-Hook** `experimental.session.compacting` (Plugin): hält den bei Komprimierung
+  erhaltenen Kontext gezielt klein (`output.context.push(...)` ergänzt, `output.prompt="..."` ersetzt
+  den Default-Compaction-Prompt komplett). `offiziell` (opencode.ai/docs/plugins)
+- Sichtbarkeit: Community-Plugin `/context` (IgorWarzocha/Opencode-Context-Analysis-Plugin) zeigt die
+  Token-Verteilung — misst nur, reduziert nicht. `extern`
+
+### 8.4 Agenten — per-Agent `tools`-Whitelist bestätigt
+- Per-Agent `tools`-Whitelist (`tools: [Read, Write, Bash, Task]` bzw. Glob `"firecrawl*": true`) und
+  `mode`/`model` pro Agent sind der Weg, Subagenten schlank zu halten. `extern` (Medium, Hightower)
+- **Tool-Vererbung Primary→Subagent ist NICHT offiziell dokumentiert** — im Zweifel pro Agent explizit
+  eine `tools`-Whitelist setzen, statt auf Vererbung zu vertrauen.
+
+### 8.5 Changelog-Splitter 1.17.10/1.17.11 (token-/kontext-relevant)
+- **v1.17.10 (24.06.2026):** „Added MCP server instructions to session context"; **`--mini` CLI mode**
+  (klingt token-relevant — Quellen sagen NICHT genau was er tut → **noch prüfen**); V2-Plugin-API. `extern`
+- **v1.17.11 (25.06.2026):** Session-Snapshots + Revert-Controls; MCP-OAuth-URL immer ausgeben. `extern`
+- **Keine** expliziten Compaction-/Pruning-/Tool-Schema-Token-Optimierungen in 1.17.10/1.17.11 belegt.
+
+### 8.6 Offen / noch zu prüfen
+- Was `--mini` (v1.17.10) genau bewirkt (möglicher Token-Hebel).
+- Ob ein späteres 1.17.x doch MCP-Lazy-Loading bringt (Issues #8277/#8625/#9350/#16206 beobachten).
 
 ---
 

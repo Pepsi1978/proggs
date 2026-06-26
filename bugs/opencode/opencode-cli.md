@@ -7,7 +7,7 @@
 > früher `sst/opencode`; Doku `opencode.ai`). Recherche: 7 parallele Researcher (offizielle Doku +
 > Changelog v1.1.64→v1.17.8, GitHub-Issues, Community, Plattform-Fallen, Config/AGENTS.md,
 > Agents/Plugins/MCP/Skills, Token/Provider/OpenRouter). Quellen je Eintrag verlinkt.
-> **Anker:** opencode=1.17.8
+> **Anker:** opencode=1.17.8 (Erst-Recherche); MCP-Lazy-Loading-Stand bestätigt für **1.17.11** (2026-06-26, #56 — weiterhin kein natives Lazy-Loading)
 >
 > Gegenstück (wie man es von vornherein richtig macht): `best-practices/opencode/` (8 Dateien).
 > Digest-Modell (Stufe A/B/C) siehe `bugs/SYSTEM.md` §11.
@@ -22,7 +22,7 @@
 | # | Signal / Situation | Sofort-Regel | Volltext |
 |---|--------------------|--------------|----------|
 | 1 | ⭐ Windows nativ: npm-Wrapper, kaputte Umlaute, Paste tot, Bun-Segfault | Offiziell **WSL nutzen** (`opencode.ai/docs/windows-wsl`). Nativ ist Fallback. | §1, §2, §12 |
-| 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok). MCP minimieren, global `"servername_*": false`, **pro Agent** freischalten. | §8, §11 |
+| 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok; Extrem 147k). **KEIN natives Lazy-Loading** (Stand 1.17.11, anders als Claude Code) → manuelle Per-Agent-Auslagerung ist der EINZIGE Hebel: global `"tools":{"servername*":false}`, im Agent `true`. | §8 (#56) |
 | 3 | ⭐ Agent ändert/committet ungefragt | Defaults sind permissiv (`edit`/`bash` = allow). `permission: {edit:"ask", bash:"ask"}`. Permission-Keys **nur lowercase** — PascalCase (`"Bash"`) wird STILL ignoriert! | §6 |
 | 4 | ⭐ OpenCode startet nicht: `ConfigInvalidError unrecognized keys` | Top-Level-Config ist **strict** → nur dokumentierte Keys. Anweisungen via `instructions`/`AGENTS.md`, nicht erfundene Keys. `opencode debug config`. | §3 |
 | 5 | „Model not found" erst beim ersten Request | ID-Format ist `provider/model`; OpenRouter **doppelt**: `openrouter/<author>/<model>`. `opencode models` listet gültige IDs. | §10 |
@@ -481,12 +481,12 @@
 
 ## 8. MCP-Server
 
-### 56. ⭐ MCP-Tool-Schemas fluten Kontext/Token (besonders GitHub-MCP)
-**Symptom:** Session startet mit zehntausenden Tokens, Kontext früh voll. 4-Server-Setup ≈ 51.000 Tok (~47 % von 200K); GitHub-MCP allein 15–20k+ nur für Schemas.
-**Ursache:** OpenCode lädt die vollständigen Tool-Schemas ALLER aktiven MCP-Server eager in jeden Systemprompt (kein Lazy-Loading; Feature-Wünsche #9350, #17482).
-**Versionen:** per Design.
-**FIX:** Nur benötigte Server aktiv lassen (`"enabled":false` deaktiviert ohne zu entfernen); global per Glob abschalten und **pro Agent** freischalten — global `"tools":{"servername_*":false}`, im Agent `true` (heute über `permission:`); MCP-Gateway, der nur gebrauchte Tools durchreicht.
-**Quelle:** https://github.com/anomalyco/opencode/issues/9350 · https://opencode.ai/docs/mcp-servers#caveats
+### 56. ⭐ MCP-Tool-Schemas fluten Kontext/Token — KEIN natives Lazy-Loading (anders als Claude Code)
+**Symptom:** Session startet mit zehntausenden Tokens, Kontext früh voll. 4-Server-Setup ≈ 51.000 Tok (~47 % von 200K); GitHub-MCP allein 15–20k+ nur für Schemas. Extremfall: ein einzelner MCP-Server (lark-mcp-docx) **147k Token** (21k → 168k).
+**Ursache:** OpenCode injiziert das vollständige `input_schema` ALLER aktiven MCP-Server eager in jeden Systemprompt — **kein** Lazy-Loading. Bestätigt für Stand **1.17.11 (Recherche 2026-06-26)**: weiterhin nicht implementiert. Offene/ungelöste Feature-Requests: **#8277** (lazy/dynamic loading), **#8625** (mcp search tool), **#9350** (MCP Tool Search, 85 % Reduktion), **#16206** (Two-Step Discovery), #17482 (closed als Duplikat von #8625). **Kontrast:** Claude Code hat seit **v2.1.7** einen automatischen „MCP Tool Search" (greift bei >10 % Kontext) — OpenCode nicht.
+**Versionen:** per Design, bestätigt bis 1.17.11.
+**FIX (einziger Hebel, da kein natives Lazy-Loading):** Nur benötigte Server aktiv lassen (`"enabled":false` deaktiviert ohne zu entfernen); global per Glob abschalten und **pro Agent** freischalten — global Top-Level `"tools":{"servername*":false}`, im Agent-Frontmatter `tools: {"servername*": true}`. So für Firecrawl umgesetzt (`~/.config/opencode/opencode.jsonc` Punkt 9 + `agents/researcher.md`). Vollständige Hebel: `best-practices/opencode/token-effizienz.md` §8.
+**Quelle:** https://github.com/anomalyco/opencode/issues/9350 · https://github.com/anomalyco/opencode/issues/17482 · https://opencode.ai/docs/mcp-servers#caveats
 
 ### 57. MCP-Tool-Discovery-Timeout (Default 5000 ms)
 **Symptom:** Langsam startende Server (z.B. `npx`-Kaltstart) liefern keine Tools / gelten als „failed".
