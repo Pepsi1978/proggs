@@ -33,7 +33,7 @@ best-practices/
 ├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing, Drive-Backup, WorkManager, Hilt, Retrofit, Media3, Coil3, 3D (Filament), Voice-Trigger
 ├── android-build/    Gradle/AGP, R8, Play-Store-Release
 ├── desktop/          .NET/WPF (Windows), Swift/AppKit (macOS), Overlays, Whisper-STT, Text-Injection, 3D (Metal/.NET/Rust/Godot), Windows-Tastenkombinationen
-├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/WebGPU)
+├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/WebGPU), Webseitenbau/Webdesign/Effekte
 ├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, …)
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
@@ -51,7 +51,7 @@ best-practices/
 | `android/` | 13 | Kotlin/Compose/Android-Stack + Libraries | `bugs/android/` |
 | `android-build/` | 3 | Gradle/AGP, R8, Play-Store-Release | `bugs/android-build/` |
 | `desktop/` | 14 | .NET/WPF, Swift/AppKit, Overlays, STT, 3D nativ, Windows-Tastenkombinationen | `bugs/desktop/` |
-| `web/` | 3 | Chrome-Erweiterungen, TypeScript, 3D Web | `bugs/web/` |
+| `web/` | 4 | Chrome-Erweiterungen, TypeScript, 3D Web, Webseitenbau/Webdesign/Effekte | `bugs/web/` |
 | `apis/` | 15 | LLM-/HTTP-APIs + OAuth (14 gepaart + `multi-provider` ungepaart) | `bugs/apis/` |
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
