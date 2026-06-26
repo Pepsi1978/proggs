@@ -204,6 +204,19 @@ Brauchst du eine abgeleitete Groesse (z.B. Zeichenzahl) in einer Liste: ein klei
 beim Schreiben mitspeichern, statt den Volltext zum Zaehlen zu laden. **Belegt:** second-brain brain-api
 1.13.1/1.13.2 (`category-counts` + `/list` → Metadaten-only); RAM-Spitze von >2 GB auf ~240 MB, Loop weg.
 
+**Zwei verwandte Fallen derselben Klasse (live 2026-06-26, brain-api 1.14.0):**
+- **Auch der EINZEL-Abruf eines grossen Docs sprengt den RAM.** Ein Endpoint, der EIN Dokument liefert
+  (`by-title`), aber ALLE seine Chunks laedt (`limit=1000`), zieht bei einem 1,4-Mio-Zeichen-Doc N Kopien
+  des `full_text` (jeder Chunk traegt ihn 1:1) → OOM **beim Abruf** (Doc liess sich nicht abrufen, Container
+  stuerzte ab). Fix: **`limit=1`** — ein Chunk genuegt, weil `full_text` in jedem Chunk identisch ist.
+  Gilt analog fuer Listen-Endpoints, die je Doc den Volltext zeigen: nur **Chunk 0** filtern
+  (`FieldCondition(key="chunk_index", match=MatchValue(value=0))`) statt alle Chunks.
+- **`scroll` ohne Paginierung schneidet still ab.** `qc.scroll(..., limit=N)` liefert nur die ERSTE Seite
+  (bis N) und ein `next_page_offset` — wer das offset ignoriert, bekommt bei >N Punkten **unbemerkt
+  unvollstaendige** Ergebnisse. Fuer „alles laden" eine Schleife: `while: pts,off = scroll(..., offset=off);
+  if off is None: break`. (Tipp: eine **abgeleitete Groesse** wie Zeichenzahl als kleines Payload-Feld
+  `text_len` beim Schreiben mitspeichern — dann muss man sie nie durch Laden des Volltexts berechnen.)
+
 ## Pflicht-Checkliste vor Qdrant-Betrieb
 - [ ] Volume `:/qdrant/storage` gemountet, SSD/NVMe (kein NFS/S3)?
 - [ ] `QDRANT__SERVICE__API_KEY` gesetzt + an 127.0.0.1/VPN-IP gebunden (nicht offen)?
