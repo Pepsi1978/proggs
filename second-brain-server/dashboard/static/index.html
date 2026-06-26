@@ -565,6 +565,14 @@ button{font-family:inherit;cursor:pointer}
 .chat-speak.off{background:var(--surface-2);color:var(--text-faint);box-shadow:none}
 .chat-speak .sl{opacity:0;transition:opacity .15s}
 .chat-speak.off .sl{opacity:1}
+/* Vorlesen An/Aus-Schalter (Einstellungen): an = orange (Frank-Konvention Audio=Orange) */
+.vl-toggle{display:inline-flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.vl-toggle input{position:absolute;opacity:0;width:0;height:0}
+.vl-track{position:relative;width:52px;height:28px;border-radius:999px;background:var(--surface-2);transition:background .2s;flex:0 0 auto}
+.vl-track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.vl-toggle input:checked + .vl-track{background:linear-gradient(135deg,#F97316,#FB923C);box-shadow:0 0 22px -6px rgba(249,115,22,.7)}
+.vl-toggle input:checked + .vl-track::after{transform:translateX(24px)}
+.vl-state{font-weight:600;min-width:30px}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
@@ -988,7 +996,19 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>Vorlesen</h3>
-          <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Mit dem orangen Lautsprecher-Knopf neben dem Mikrofon schaltest du das Vorlesen an oder aus. Hier wählst du die Stimme.</p>
+          <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Du kannst das Vorlesen hier an- oder ausschalten und mit „Speichern" festlegen — oder unterwegs jederzeit über den orangen Lautsprecher-Knopf neben dem Mikrofon umschalten. Darunter wählst du die Stimme.</p>
+          <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <span style="font-weight:600">Antworten vorlesen</span>
+            <label class="vl-toggle">
+              <input type="checkbox" id="ttsOnToggle">
+              <span class="vl-track"></span>
+              <span class="vl-state" id="ttsOnLabel">An</span>
+            </label>
+          </div>
+          <div class="row-end">
+            <span class="muted-note" id="ttsOnStatus" style="margin-right:auto"></span>
+            <button class="btn btn-primary" id="saveTtsOnBtn" type="button">Speichern</button>
+          </div>
           <div class="field">
             <label for="ttsVoice">Stimme</label>
             <select class="select" id="ttsVoice"></select>
@@ -1189,6 +1209,7 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("pageSub").textContent = TABS[tab].sub;
     if(tab==="brain" && !brainLoaded){ brainLoaded = true; loadEntries(); }
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
+    if(tab==="settings" && window.syncTtsToggle){ window.syncTtsToggle(); }   // Vorlesen-Schalter auf echten Stand
     if(tab==="chat"){ if(typeof loadChatCategories==="function") loadChatCategories(); setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
   /* ── Browser-Navigation (Zurueck/Vor): jeder Tab-Wechsel = ein History-Eintrag (#tab); die
@@ -2479,9 +2500,27 @@ button{font-family:inherit;cursor:pointer}
     const isOn = ()=> localStorage.getItem(LS_ON) !== "0";              // default AN
     const chosenVoice = ()=> localStorage.getItem(LS_VOICE) || defaultVoice;
     const paintBtn = ()=>{ if(speakBtn) speakBtn.classList.toggle("off", !isOn()); };
-    paintBtn();
+    // An/Aus auch in den Einstellungen schaltbar + separat SPEICHERBAR (Frank-Wunsch 2026-06-26):
+    // Der Schalter zeigt einen "pending" Stand; erst "Speichern" schreibt ihn dauerhaft (gleicher
+    // localStorage-Schluessel wie der Chat-Lautsprecher) und zieht den Lautsprecher-Knopf mit.
+    const onToggle = document.getElementById("ttsOnToggle");
+    const onLabel  = document.getElementById("ttsOnLabel");
+    const onSaveBtn= document.getElementById("saveTtsOnBtn");
+    const paintLabel = ()=>{ if(onLabel && onToggle) onLabel.textContent = onToggle.checked ? "An" : "Aus"; };
+    const syncToggle = ()=>{ if(onToggle){ onToggle.checked = isOn(); paintLabel(); } };   // echten Stand zeigen (verwirft pending)
+    paintBtn(); syncToggle();
+    window.syncTtsToggle = syncToggle;                                  // Tab-Wechsel -> Schalter auf echten Stand setzen
+    if(onToggle) onToggle.addEventListener("change", paintLabel);       // Umlegen aendert nur die Anzeige (pending)
+    if(onSaveBtn) onSaveBtn.addEventListener("click", ()=>{
+      const want = !!(onToggle && onToggle.checked);
+      localStorage.setItem(LS_ON, want ? "1" : "0");                    // dauerhaft speichern
+      paintBtn();                                                       // Chat-Lautsprecher mitziehen
+      if(!want && audio){ try{ audio.pause(); }catch(_){ } audio = null; }  // laufendes Vorlesen sofort stoppen
+      console.debug("[TTS] Vorlesen-Schalter gespeichert:", want ? "AN" : "AUS");   // Logik-Sonde (Entscheidungs-Logging)
+      flash("ttsOnStatus", want ? "Vorlesen eingeschaltet — gespeichert" : "Vorlesen ausgeschaltet — gespeichert");
+    });
     if(speakBtn) speakBtn.addEventListener("click", ()=>{
-      localStorage.setItem(LS_ON, isOn() ? "0" : "1"); paintBtn();
+      localStorage.setItem(LS_ON, isOn() ? "0" : "1"); paintBtn(); syncToggle();
       if(!isOn() && audio){ try{ audio.pause(); }catch(_){ } audio = null; }   // laufendes Vorlesen sofort stoppen
     });
     (async function loadVoices(){
