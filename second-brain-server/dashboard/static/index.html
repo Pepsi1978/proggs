@@ -576,7 +576,7 @@ button{font-family:inherit;cursor:pointer}
 .vl-toggle input:checked + .vl-track{background:linear-gradient(135deg,#F97316,#FB923C);border-color:transparent;box-shadow:0 0 22px -6px rgba(249,115,22,.7)}
 .vl-toggle input:checked + .vl-track::after{transform:translateX(24px)}
 .vl-state{font-weight:700;min-width:34px;text-align:right;color:var(--text-faint);transition:color .2s}
-.vl-toggle input:checked ~ .vl-state{color:#F97316}
+.vl-toggle:has(input:checked) .vl-state{color:#F97316}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
@@ -1005,9 +1005,9 @@ button{font-family:inherit;cursor:pointer}
             <div class="vl-box">
               <span class="vl-box-label">Antworten vorlesen</span>
               <label class="vl-toggle">
+                <span class="vl-state" id="ttsOnLabel">An</span>
                 <input type="checkbox" id="ttsOnToggle">
                 <span class="vl-track"></span>
-                <span class="vl-state" id="ttsOnLabel">An</span>
               </label>
             </div>
             <button class="btn btn-primary" id="saveTtsOnBtn" type="button">Speichern</button>
