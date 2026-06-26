@@ -23,7 +23,7 @@ bugs/
 ├── android/          Kotlin, Jetpack Compose, Android-Platform/SDK, Firebase/Billing, 3D (Filament/SceneView)
 ├── android-build/    Gradle/AGP, R8/ProGuard
 ├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS), 3D (Metal/RealityKit, .NET/Stride, Rust wgpu/Bevy, Godot)
-├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/Babylon/WebGPU)
+├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/Babylon/WebGPU), Webdesign, Lottie/Rive/SVG
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
 ├── opencode/         OpenCode CLI (quelloffener Terminal-KI-Coding-Agent: Install/WSL, Config, AGENTS.md, Agents/Plugins/MCP/Skills, OpenRouter, Token)
@@ -119,6 +119,8 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **Browser-Erweiterungen** (Chrome/Edge, MV3) | [`web/chrome-extensions.md`](web/chrome-extensions.md) | 2026-06-02 | 73 | `manifest.json` (mit `manifest_version`), `background.js`, `service-worker.js`, `*/overlays/*`, `chrome.*`-APIs, `getUserMedia`/Mikrofon · „Erweiterung", „Extension", „Overlay", „Mikrofon" |
 | **Web — TypeScript / Node** (+ npm, Bun) | [`web/typescript.md`](web/typescript.md) | 2026-06-02 | 89 | `*.ts`, `*.tsx`, `tsconfig.json`, `package.json` · „TypeScript", „Node", „npm", „ESM", „CommonJS", „require(esm)", „Bun", „tsconfig", „strict", „moduleResolution", „peer dependency", „ERESOLVE", „unhandled rejection", „@types", „better-sqlite3" |
 | **3D im Web/TS — Three.js / Babylon / WebGPU** (schöne 3D-Apps, verpackt mit Tauri/Capacitor) | [`web/3d-threejs-webgpu.md`](web/3d-threejs-webgpu.md) | 2026-06-13 | 14 | `*.ts`/`*.tsx`/`*.js` mit `three`/`@babylonjs`/`@react-three/fiber`/`WebGPURenderer`/`GLTFLoader`/`KTX2Loader`, Tauri/Capacitor-Config · „Three.js", „Babylon.js", „WebGPU", „WebGL2", „R3F", „PMREMGenerator", „outputColorSpace", „ACESFilmic", „DRACOLoader", „KTX2", „Tauri", „Capacitor", „convertFileSrc", „TSL" · Best-Practices: `best-practices/web/3d-threejs-webgpu.md` |
+| **Webseitenbau / Webdesign / visuelle Effekte** (responsive Layouts, UI-States, Scroll-/Motion-/CSS-Effekte, Core Web Vitals) | [`web/webseitenbau-webdesign.md`](web/webseitenbau-webdesign.md) | 2026-06-26 | 15 | `*.html`, `*.css`, `*.scss`, `*.sass` · „Webdesign", „Responsive", „Viewport", „Container Query", „Focus", „Hover", „Scroll-Driven Animation", „GSAP", „backdrop-filter", „mix-blend-mode", „Core Web Vitals", „LCP", „INP", „CLS" · Best-Practices: `best-practices/web/webseitenbau-webdesign.md` |
+| **Lottie / Rive / SVG-Animationen** (animierte Web-Assets, Canvas/WASM, SMIL/CSS-SVG, Reduced Motion) | [`web/lottie-rive-svg-animationen.md`](web/lottie-rive-svg-animationen.md) | 2026-06-26 | 15 | `*.riv`, `*.lottie`, animierte `*.svg`, Lottie-JSON, TS/TSX mit `lottie`, `bodymovin`, `@rive-app`, `useRive`, `RiveComponent` · „Lottie", „Bodymovin", „Rive", „SMIL", „animateTransform", „SVG mask", „prefers-reduced-motion", „rive.wasm", „vite-plugin-svgr" · Best-Practices: `best-practices/web/lottie-rive-svg-animationen.md` |
 
 ### 🎛️ `peripherie/` — Hardware-Peripherie
 

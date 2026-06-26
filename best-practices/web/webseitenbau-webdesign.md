@@ -230,10 +230,12 @@ Portfolio, Produktvisualisierung oder emotionale Brand-Momente, nicht für Basis
 
 ### Lottie, Rive, SVG
 
-Die Engine-A-Recherche fand keine belastbaren Primärquellen zu Lottie/Rive im untersuchten Set.
-Praxisregel: Lottie für After-Effects-artige Vektor-/Illustrationsanimationen, Rive für interaktive
-State-Machines, SVG/CSS für kleine Icons/Logos/Stroke-Animationen. Für diese Unterthemen lohnt ein
-eigener späterer Detail-Lauf.
+Für Lottie/Rive/SVG gibt es nach dem Detail-Lauf ein eigenes Gegenstück:
+`best-practices/web/lottie-rive-svg-animationen.md` und
+`bugs/web/lottie-rive-svg-animationen.md`. Kurzregel: Lottie für After-Effects-artige
+Illustrationsanimationen, Rive für interaktive State-Machines, SVG/SMIL/CSS für kleine Icons,
+Logos und Stroke-/Morph-Animationen. Jede dieser Animationen braucht einen statischen Fallback,
+Reduced-Motion-Verhalten und einen Browser-/Accessibility-Test.
 
 ---
 
@@ -353,11 +355,10 @@ budgetieren, auf Mobilgeräten degradieren.
 
 ---
 
-## §11 — Typische Fallen (Bug-Almanach-Kandidaten, noch kein eigener Almanach)
+## §11 — Typische Fallen (Gegenstück zum Bug-Almanach)
 
-Für diesen neuen Querschnittsbereich existiert noch kein eigenes Bug-Almanach-Pendant.
-Die Recherche fand aber wiederverwendbare Fallen, die bei einem späteren Bug-Almanach-Lauf vertieft
-werden sollten:
+Für diesen Querschnittsbereich existiert jetzt ein eigenes Bug-Almanach-Pendant:
+`bugs/web/webseitenbau-webdesign.md`. Die wichtigsten wiederverwendbaren Fallen aus der Recherche:
 
 | Falle | Ursache | Funktionserhaltende Sofortregel |
 |-------|---------|----------------------------------|
@@ -372,6 +373,14 @@ werden sollten:
 
 ---
 
+## Bezug zum Bug-Almanach
+
+| Best-Practice | Bug-Almanach |
+|---------------|--------------|
+| `best-practices/web/webseitenbau-webdesign.md` | `bugs/web/webseitenbau-webdesign.md` |
+
+---
+
 ## §12 — Quellen
 
 - web.dev: `How to create high-performance CSS animations`, `[offiziell]`, abgerufen 2026-06-26.
@@ -382,4 +391,5 @@ werden sollten:
 - USWDS: Design Principles, `[offiziell/Design-System]`, aktualisiert 2025-02-21, abgerufen 2026-06-26.
 - USWDS: Form Component, `[offiziell/Design-System]`, veröffentlicht/aktualisiert 2026-06-22, abgerufen 2026-06-26.
 - Engine-A-Researcher-Lauf 2026-06-26: 6 Teilbereiche zu Layout/Trends, Interaction States,
-  Animation/Microinteraction, Scroll Effects, High-End Visual Effects und Performance/Architecture.
+  Animation/Microinteraction, Scroll Effects, High-End Visual Effects und Performance/Architecture;
+  danach Bug-Almanach-Rückkopplung in `bugs/web/webseitenbau-webdesign.md`.

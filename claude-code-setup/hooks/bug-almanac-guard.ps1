@@ -342,6 +342,7 @@ try {
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum Compose-Probe). FAIL-OPEN.
         $mcpSignal = $false
         $threejsSignal = $false
+        $motionAssetSignal = $false
         if ($fpl -match '\.tsx?$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -354,14 +355,47 @@ try {
             if ($probe -match '@modelcontextprotocol/sdk' -or $probe -match 'McpServer' -or $probe -match 'StdioServerTransport' -or $probe -match 'StreamableHTTPServerTransport' -or $probe -match 'setRequestHandler') { $mcpSignal = $true }
             # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
             if ($probe -match 'THREE\.' -or $probe -match 'three/examples' -or $probe -match '@react-three/fiber' -or $probe -match '@react-three/drei' -or $probe -match '@babylonjs' -or $probe -match 'WebGPURenderer' -or $probe -match 'GLTFLoader' -or $probe -match 'KTX2Loader' -or $probe -match 'PMREMGenerator') { $threejsSignal = $true }
+            # Lottie/Rive/SVG-Animationen -> lottie-rive-svg-animationen.md (nach MCP, vor generischem TypeScript).
+            if ($probe -match 'lottie|bodymovin|@lottiefiles|@rive-app|useRive|RiveComponent|rive\.wasm|RuntimeLoader|loadAnimation') { $motionAssetSignal = $true }
         }
         if ($mcpSignal) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($motionAssetSignal) {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
         } elseif ($threejsSignal) {
             $slug = 'threejs'; $file = '3d-threejs-webgpu.md'; $name = '3D im Web (Three.js/Babylon/WebGPU)'
         } else {
             $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
         }
+    } elseif ($fpl -match '\.(riv|lottie)$' -or $fpl -match '(lottie|bodymovin|rive)[^/]*\.json$') {
+        $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+    } elseif ($fpl -match '\.json$') {
+        # Lottie-JSON ohne sprechenden Dateinamen nur per Inhalt erkennen, damit package.json/Configs nicht gekapert werden.
+        $jsonProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $jsonProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $jsonProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $jsonProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $jsonProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($jsonProbe -match '"fr"\s*:' -and $jsonProbe -match '"layers"\s*:') {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+        }
+    } elseif ($fpl -match '\.svg$') {
+        $svgProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $svgProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $svgProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $svgProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $svgProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($svgProbe -match '<animate|<animateTransform|<animateMotion|<set|<mask|<clipPath|pathLength|stroke-dasharray') {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+        }
+    } elseif ($fpl -match '\.(html|css|scss|sass)$') {
+        $slug = 'webdesign'; $file = 'webseitenbau-webdesign.md'; $name = 'Webseitenbau / Webdesign / visuelle Effekte'
     } elseif ($fpl -match '\.ic(o|ns)$') {
         # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung, kein Konflikt. Icon-Build-Skripte werden zusaetzlich im .py-Zweig per Content-Probe erkannt.
         $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'

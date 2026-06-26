@@ -384,6 +384,7 @@ $plist_extra"
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog Compose-Probe). FAIL-OPEN (trap).
         mcpSignal=0
         threejsSignal=0
+        motionAssetSignal=0
         case "$fpl" in
           *.ts|*.tsx)
             probe=""
@@ -406,16 +407,63 @@ $ti_extra"
             case "$probe" in
               *THREE.*|*three/examples*|*@react-three/fiber*|*@react-three/drei*|*@babylonjs*|*WebGPURenderer*|*GLTFLoader*|*KTX2Loader*|*PMREMGenerator*) threejsSignal=1;;
             esac
+            # Lottie/Rive/SVG-Animationen -> lottie-rive-svg-animationen.md (nach MCP, vor generischem TypeScript).
+            case "$probe" in
+              *lottie*|*bodymovin*|*@lottiefiles*|*@rive-app*|*useRive*|*RiveComponent*|*rive.wasm*|*RuntimeLoader*|*loadAnimation*) motionAssetSignal=1;;
+            esac
             ;;
         esac
         if [ "$mcpSignal" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$motionAssetSignal" -eq 1 ]; then
+            slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web"
         elif [ "$threejsSignal" -eq 1 ]; then
             slug="threejs"; file="3d-threejs-webgpu.md"; name="3D im Web (Three.js/Babylon/WebGPU)"
         else
             slug="typescript"; file="typescript.md"; name="TypeScript / Node"
         fi
         ;;
+    *.riv|*.lottie|*lottie*.json|*bodymovin*.json|*rive*.json)
+        slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+    *.json)
+        # Lottie-JSON ohne sprechenden Dateinamen nur per Inhalt erkennen, damit package.json/Configs nicht gekapert werden.
+        jsonProbe=""
+        [ -f "$fp" ] && jsonProbe=$(cat "$fp" 2>/dev/null || true)
+        json_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        jsonProbe="$jsonProbe
+$json_extra"
+        case "$jsonProbe" in
+          *\"fr\"*:*\"layers\"*:*) slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+        esac
+        ;;
+    *.svg)
+        svgProbe=""
+        [ -f "$fp" ] && svgProbe=$(cat "$fp" 2>/dev/null || true)
+        svg_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        svgProbe="$svgProbe
+$svg_extra"
+        case "$svgProbe" in
+          *'<animate'*|*'<animateTransform'*|*'<animateMotion'*|*'<set'*|*'<mask'*|*'<clipPath'*|*pathLength*|*stroke-dasharray*) slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+        esac
+        ;;
+    *.html|*.css|*.scss|*.sass)
+        slug="webdesign"; file="webseitenbau-webdesign.md"; name="Webseitenbau / Webdesign / visuelle Effekte";;
     *.ico|*.icns)
         # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung. Icon-Build-Skripte zusaetzlich per .py-Content-Probe.
         slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)";;
