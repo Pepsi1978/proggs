@@ -5,27 +5,17 @@
 > Kurz halten: OpenCode befolgt AGENTS.md < ~150 Zeilen deutlich zuverlaessiger;
 > ab ~200-400 Zeilen degradiert die Befolgung (best-practices/opencode/agents-md-memory.md).
 
-## ⚡ ZUERST: Arbeitsregeln aus dem zweiten Gehirn laden (PFLICHT — einmalig pro Session)
+## ⚡ Globale Kern-Regeln + Arbeitsregeln aus dem Gehirn
 
-**BEVOR du in dieser Session mit IRGENDEINER Arbeit beginnst, lade EINMALIG alle Arbeitsregeln aus dem
-zweiten Gehirn (Cortex / Second Brain) ueber den `second-brain`-MCP-Server:**
-
-1. Rufe das `second-brain`-Werkzeug **`get_by_category`** mit der EXAKTEN Kategorie **`Programmierung/Rules`** auf.
-   → Hauptkategorie `Programmierung`, Unterkategorie **`Rules`** — englisch geschrieben, **NICHT `Regeln`**.
-   Genau unter `Programmierung/Rules` liegen die Arbeitsregeln; eine andere Schreibweise findet nichts.
-2. Lies ALLE zurueckgegebenen Regeln vollstaendig — sie gelten ab jetzt fuer die GANZE Session als
-   verbindliche Regeln, so als staenden sie hier fest verdrahtet.
-3. Bestaetige dem Benutzer in EINER Zeile: **"N Regeln aus dem zweiten Gehirn eingelesen."**
-   (N = Anzahl der zurueckgegebenen Eintraege.)
-4. Erst DANACH mit der eigentlichen Aufgabe beginnen — und nach diesen Regeln arbeiten.
-
-Warum hier nur der Verweis steht: Diese Regeln (Git-Workflow & Parallele-Sessions-Disziplin,
-Secrets-Ablage, Semikolon-Multi-Task, Observability, Known-Bugs-zuerst, Debugging, Versionierung u.a.)
-liegen bewusst NICHT mehr in dieser Datei. EINE zentrale Quelle, von allen CLIs nutzbar und zentral
-aktualisierbar — und diese Datei bleibt kurz (s.o.). **Falls der `second-brain`-MCP NICHT erreichbar
-ist:** dem Benutzer melden und vorsichtig arbeiten — Git-Grunddisziplin zwingend einhalten: nur EIGENE
-Dateien namentlich stagen (nie `git add -A`), `git fetch origin && git rebase origin/main` vor JEDEM
-Push, nie force-pushen, keine Secrets ins Repo.
+Es gelten die globalen OpenCode-Kern-Regeln: @~/.config/opencode/AGENTS.md
+(Deutsch+Umlaute inkl. Denkvorgang, Multi-Task ` ; `, Git-Disziplin/Parallele-Sessions, Secrets,
+Komprimierung, Direktive #3). Sie werden bei JEDEM Turn frisch geladen und gelten auch nach
+Komprimierung. Dort steht auch die **PFLICHT, beim Session-Start einmalig die vollen Arbeitsregeln
+aus dem zweiten Gehirn zu laden** (`second-brain`-MCP `get_by_category('Programmierung/Rules')`,
+Unterkategorie `Rules` englisch, NICHT `Regeln`) und in EINER Zeile "N Regeln aus dem zweiten Gehirn
+eingelesen" zu bestaetigen. Klappt der Abruf nicht (MCP weg / Modell ruft nicht ab), gelten die
+fest verdrahteten Kern-Regeln der globalen Datei OHNEHIN. Diese Projekt-Datei ergaenzt nur das
+**proggs-Spezifische** (unten).
 
 ## Repository Structure
 
