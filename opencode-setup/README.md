@@ -13,7 +13,7 @@
 |-------|-------|----------|-----------------|
 | 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** |
-| 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md` — laedt Firecrawl) |
+| 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md` — Web-Recherche ueber die API-Pipeline) |
 | 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) |
 
@@ -43,8 +43,10 @@ zentral auf dem Server — auf jedem Rechner identisch, ohne dass man sie kopier
    Alles andere (MCP-Server, Plugins, Permissions, Provider) ist 1:1 identisch.
 
 4. **Voraussetzungen schaffen** (sonst laufen Teile ins Leere):
-   - **SK-Ordner:** `~/SK/OpenCode/firecrawl-api-key.txt` muss existieren (Firecrawl-MCP liest ihn
-     per `{file:}`). Secrets kommen NIE aus dem Repo — siehe Regel `secrets-in-sk-folder`.
+   - **SK-Ordner:** Die API-Recherche-Skripte (`mm-research.py` / `or-research.py`) lesen ihre Keys
+     aus `~/SK/OpenCode/firecrawl-api-key.txt` + `~/SK/OpenCode/go-api-key.txt` +
+     `~/SK/ClaudeCodeOpenRouter/openrouter.key`. Secrets kommen NIE aus dem Repo — siehe Regel `secrets-in-sk-folder`.
+     (Firecrawl-MCP wurde am 2026-06-26 entfernt — Web-Recherche laeuft jetzt komplett ueber die API.)
    - **WireGuard aktiv:** Der `second-brain`-MCP laeuft auf `http://10.8.0.1:8001/mcp` und ist NUR
      ueber den WireGuard-Tunnel erreichbar. Ohne Tunnel kein Gehirn-Abruf (-> Regeln werden nicht
      geladen). WireGuard auf dem neuen Rechner einrichten (Almanach `bugs/server/wireguard.md`).

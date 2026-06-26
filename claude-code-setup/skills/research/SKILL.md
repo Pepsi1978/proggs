@@ -43,6 +43,15 @@ Aufruf-Konventionen (immer so, nie raten):
   Parallel-Laeufen pro Lauf ein eigenes `OR_OUTDIR` setzen (sonst ueberschreiben sich die Ausgaben).
   Eskalations-Modell (mehr Denkkraft): `z-ai/glm-5.2:online`.
 
+**Gezielte Einzel-Nachsuche (Luecken fuellen) — IMMER ueber die Skripte, NIE ueber ein MCP-Tool:**
+Auch eine einzelne, gezielte Such-/Scrape-Nachsuche (z.B. eine `site:developer.mozilla.org …`-Query,
+um eine Primaerquelle nachzuladen) laeuft ueber Engine A mit einer engen Query —
+`python3 ~/proggs/mm-research.py "site:… <gezielte query>" 3` — bzw. zur Eskalation ueber Engine B.
+**NIEMALS zu einem `firecrawl_*`-Tool greifen** (`firecrawl_firecrawl_search`/`_scrape`): In
+OpenCode gibt es seit 2026-06-26 KEINEN Firecrawl-MCP mehr (alles ueber API), in Claude Code gab es
+nie einen. Wer instinktiv ein Firecrawl-Tool aufruft, laeuft ins Leere — die API-Skripte sind der
+einzige Web-Weg, fuer Haupt- UND Nachsuche.
+
 ---
 
 ## Der Research-Auftrag (die verlustfreie Bruecke)
