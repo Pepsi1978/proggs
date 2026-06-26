@@ -565,14 +565,18 @@ button{font-family:inherit;cursor:pointer}
 .chat-speak.off{background:var(--surface-2);color:var(--text-faint);box-shadow:none}
 .chat-speak .sl{opacity:0;transition:opacity .15s}
 .chat-speak.off .sl{opacity:1}
-/* Vorlesen An/Aus-Schalter (Einstellungen): an = orange (Frank-Konvention Audio=Orange) */
+/* Vorlesen An/Aus-Schalter (Einstellungen): umrandete Box, an = orange (Frank-Konvention Audio=Orange) */
+.vl-box{display:flex;align-items:center;justify-content:space-between;gap:20px;flex:1;padding:13px 20px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+.vl-box:has(input:checked){border-color:rgba(249,115,22,.55);box-shadow:0 0 0 1px rgba(249,115,22,.18) inset}
+.vl-box-label{font-weight:600;color:var(--text)}
 .vl-toggle{display:inline-flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
 .vl-toggle input{position:absolute;opacity:0;width:0;height:0}
-.vl-track{position:relative;width:52px;height:28px;border-radius:999px;background:var(--surface-2);transition:background .2s;flex:0 0 auto}
+.vl-track{position:relative;width:52px;height:28px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);transition:background .2s,border-color .2s;flex:0 0 auto}
 .vl-track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.vl-toggle input:checked + .vl-track{background:linear-gradient(135deg,#F97316,#FB923C);box-shadow:0 0 22px -6px rgba(249,115,22,.7)}
+.vl-toggle input:checked + .vl-track{background:linear-gradient(135deg,#F97316,#FB923C);border-color:transparent;box-shadow:0 0 22px -6px rgba(249,115,22,.7)}
 .vl-toggle input:checked + .vl-track::after{transform:translateX(24px)}
-.vl-state{font-weight:600;min-width:30px}
+.vl-state{font-weight:700;min-width:34px;text-align:right;color:var(--text-faint);transition:color .2s}
+.vl-toggle input:checked ~ .vl-state{color:#F97316}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
 .chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
@@ -996,19 +1000,19 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>Vorlesen</h3>
-          <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Du kannst das Vorlesen hier an- oder ausschalten und mit „Speichern" festlegen — oder unterwegs jederzeit über den orangen Lautsprecher-Knopf neben dem Mikrofon umschalten. Darunter wählst du die Stimme.</p>
-          <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-            <span style="font-weight:600">Antworten vorlesen</span>
-            <label class="vl-toggle">
-              <input type="checkbox" id="ttsOnToggle">
-              <span class="vl-track"></span>
-              <span class="vl-state" id="ttsOnLabel">An</span>
-            </label>
-          </div>
-          <div class="row-end">
-            <span class="muted-note" id="ttsOnStatus" style="margin-right:auto"></span>
+          <p class="set-desc">Der Hauptagent liest seine Antworten im Gespräch laut vor (hochwertige Google-Gemini-Stimmen). Ist das Vorlesen <b>aus</b>, wird gar kein Text an Gemini geschickt — es werden also keine Tokens verbraucht. Schalte hier an oder aus und bestätige mit „Speichern" (oder unterwegs über den orangen Lautsprecher-Knopf neben dem Mikrofon). Darunter wählst du die Stimme.</p>
+          <div class="field" style="display:flex;align-items:center;gap:16px">
+            <div class="vl-box">
+              <span class="vl-box-label">Antworten vorlesen</span>
+              <label class="vl-toggle">
+                <input type="checkbox" id="ttsOnToggle">
+                <span class="vl-track"></span>
+                <span class="vl-state" id="ttsOnLabel">An</span>
+              </label>
+            </div>
             <button class="btn btn-primary" id="saveTtsOnBtn" type="button">Speichern</button>
           </div>
+          <div style="margin-top:8px;min-height:18px"><span class="muted-note" id="ttsOnStatus"></span></div>
           <div class="field">
             <label for="ttsVoice">Stimme</label>
             <select class="select" id="ttsVoice"></select>
@@ -2553,7 +2557,7 @@ button{font-family:inherit;cursor:pointer}
     }
     let ttsSeq = 0;   // Sequenz-Token: eine neue Antwort bricht die laufende Vorlese-Pipeline sauber ab
     async function speak(text){
-      if(!isOn() || !available) return;
+      if(!isOn() || !available){ if(!isOn()) console.debug("[TTS] Vorlesen AUS -> kein Text an Gemini-TTS gesendet (keine Tokens verbraucht)"); return; }   // Logik-Sonde: bei AUS geht NICHTS an Gemini
       const clean = (text||"").trim(); if(!clean) return;
       const myseq = ++ttsSeq;
       if(audio){ try{ audio.pause(); }catch(_){ } }                     // vorherige Wiedergabe stoppen
