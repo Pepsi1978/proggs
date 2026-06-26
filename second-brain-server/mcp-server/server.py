@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.1.0"  # 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
+VERSION = "1.2.0"  # 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -257,13 +257,21 @@ def list_memories(limit: int = 200) -> str:
     if not items:
         return "Das zweite Gehirn ist noch leer."
     total = data.get("count", len(items))
+    # Ladefenster-Hinweis (Frank 2026-06-26): direkt nach einem brain-api/Qdrant-Neustart kann die
+    # Liste UNVOLLSTAENDIG sein, ohne dass ein Fehler auftritt. brain-api meldet das via 'ready'.
+    # NUR bei explizitem False warnen (aeltere brain-api ohne Feld -> None -> keine Warnung; abwaertskompat).
+    warn = ""
+    if data.get("ready") is False:
+        warn = ("⚠️ Das zweite Gehirn laedt gerade noch (Qdrant-Status nicht 'green') — diese Liste ist "
+                "moeglicherweise UNVOLLSTAENDIG. Bitte in ein paar Sekunden erneut abrufen.\n\n")
+        _log(logging.WARNING, "list_memories bei nicht-bereitem Gehirn", count=total)
     lines = []
     for i, it in enumerate(items, 1):
         title = it.get("title") or "(ohne Titel)"
         cat = f" [{it['category']}]" if it.get("category") else ""
         lines.append(f"{i}. {title}{cat} — {it.get('chars', '?')} Zeichen")
     head = f"{total} Eintrag(e)" + (f" (zeige {len(items)})" if total > len(items) else "") + ":"
-    return head + "\n" + "\n".join(lines)
+    return warn + head + "\n" + "\n".join(lines)
 
 
 @mcp.tool()
