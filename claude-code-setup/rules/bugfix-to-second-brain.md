@@ -17,7 +17,7 @@
 ## Die eine Regel
 
 **Sobald ein Bugfix als FUNKTIONIEREND gilt, wird er als ein Eintrag ins Second Brain geschrieben —
-im festen Format, unter `bugfixes/<passende Unterkategorie>`, mit Titel inkl. Datum.** Nur
+im festen Format, unter `bugfixes/<passende Unterkategorie>`, mit Titel inkl. Datum UND Uhrzeit.** Nur
 funktionierende Fixes. Niemals ein unbestaetigter/kaputter Fix.
 
 Diese Regel ERSETZT die lokale Bug-Doku NICHT, sie ergaenzt sie: Der Repo-Bug-Almanach
@@ -47,12 +47,14 @@ Technologie-Wissen**; das Second Brain `bugfixes/` ist die **reaktiv abrufbare F
 
 ## Format (genau so, wie es Codex eingefuehrt hat — bewaehrt)
 
-**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD>`
-- Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26`,
-  `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26`.
+**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD HH:MM>`
+- Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26 14:23`,
+  `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26 15:07`.
 - `<App>` = der Marken-/Projektname (z.B. Cortex = das Second-Brain-Dashboard, BestJournal, …).
-- Datum macht mehrere Fixes am selben Bereich unterscheidbar. Titel muss fuer einen Menschen
-  SOFORT verstaendlich sein ("was war das fuer ein Bug?").
+- `<HH:MM>` = aktuelle LOKALE Uhrzeit (Europe/Berlin, 24h) im Moment des Speicherns — so ist sofort
+  sichtbar, WANN genau der Fix ins Gehirn kam (nicht nur an welchem Tag). Datum + Uhrzeit machen
+  mehrere Fixes am selben Bereich eindeutig unterscheidbar. Titel muss fuer einen Menschen SOFORT
+  verstaendlich sein ("was war das fuer ein Bug?").
 
 **Kategorie:** `bugfixes/<unterkategorie>`
 - ZUERST pruefen, ob es schon eine **sinnvolle** Unterkategorie gibt (MCP `list_memories` /
@@ -62,7 +64,7 @@ Technologie-Wissen**; das Second Brain `bugfixes/` ist die **reaktiv abrufbare F
 
 **Inhalt (Klartext, dieselben Bausteine wie Direktive #3):**
 ```
-Bugfix <YYYY-MM-DD>: <App> <Bereich>. Symptom: <was war sichtbar falsch>. Root Cause: <die
+Bugfix <YYYY-MM-DD HH:MM>: <App> <Bereich>. Symptom: <was war sichtbar falsch>. Root Cause: <die
 tiefste Ursache, konkret — Datei/Funktion/CSS-Klasse>. Fix: <was genau geaendert wurde, mit
 Datei/Stelle>. Verwandte Pruefung: <gibt es weitere gleichartige Stellen?>. Verifikation: <wie
 bestaetigt — Build/Test/Deploy/Symptom weg/Benutzer-Ja>. Funktionalitaets-Diff: <was bleibt

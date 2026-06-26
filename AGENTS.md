@@ -474,14 +474,16 @@ Teil des Betriebssystems dieser Programmierumgebung — CLI-agnostisch
 - Default = NICHT speichern, bis bestaetigt. So muss nie etwas geloescht werden. (Sagt der Benutzer
   spaeter "doch nicht funktioniert": den Eintrag per `forget` entfernen, nach echtem Fix neu schreiben.)
 
-**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD>` — fuer einen Menschen sofort verstaendlich.
-(Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26`, `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26`.)
+**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD HH:MM>` — fuer einen Menschen sofort verstaendlich.
+`<HH:MM>` = aktuelle LOKALE Uhrzeit (Europe/Berlin, 24h) im Moment des Speicherns -> sofort sichtbar,
+WANN genau der Fix ins Gehirn kam (nicht nur an welchem Tag); macht Fixes am selben Bereich eindeutig.
+(Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26 14:23`, `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26 15:07`.)
 
 **Kategorie:** `bugfixes/<unterkategorie>` — ZUERST pruefen ob es schon eine sinnvolle Unterkategorie
 gibt (Kategorie-Liste / `get_by_category` ansehen) und dort einordnen; nur wenn keine passt, eine neue
 sprechende anlegen (z.B. `bugfixes/cortex-dashboard`, `bugfixes/brain-api`).
 
-**Inhalt:** `Bugfix <Datum>: <App> <Bereich>. Symptom: … Root Cause: … Fix: … Verwandte Pruefung: …
+**Inhalt:** `Bugfix <YYYY-MM-DD HH:MM>: <App> <Bereich>. Symptom: … Root Cause: … Fix: … Verwandte Pruefung: …
 Verifikation: … Funktionalitaets-Diff: … [Poka-Yoke: …]` (dieselben Bausteine wie Direktive #3).
 
 **Danach** dem Benutzer in einem Satz melden: "Im Gehirn dokumentiert: <Titel> [<Kategorie>]."
