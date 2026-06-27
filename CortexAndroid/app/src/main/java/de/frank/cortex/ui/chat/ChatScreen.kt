@@ -378,7 +378,6 @@ private fun ChatInputBlock(
     onImprove: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
-    var catMenuOpen by remember { mutableStateOf(false) }
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -412,60 +411,14 @@ private fun ChatInputBlock(
                     }
                 )
 
-                // Category pill
-                Box {
-                    val catColor = if (selectedCategory == null) MaterialTheme.colorScheme.onSurfaceVariant
-                    else categoryColor(selectedCategory!!)
-                    val catBorder = if (selectedCategory == null) if (isDark) DarkChipBorder else LightChipBorder
-                    else catColor.copy(alpha = 0.45f)
-
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = if (isDark) DarkChip else LightChip,
-                        border = BorderStroke(1.dp, catBorder),
-                        modifier = Modifier.clickable { catMenuOpen = !catMenuOpen }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(catColor))
-                            Text(
-                                text = selectedCategory ?: "Auto",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Icon(Icons.Default.ExpandMore, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp))
-                        }
-                    }
-
-                    DropdownMenu(expanded = catMenuOpen, onDismissRequest = { catMenuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Auto-Kategorie") },
-                            onClick = { onCategoryChange(null); catMenuOpen = false }
-                        )
-                        categories.forEach { cat ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        Box(Modifier.size(9.dp).clip(CircleShape)
-                                            .background(categoryColor(cat.name)))
-                                        Text(cat.name, modifier = Modifier.weight(1f))
-                                        Text("${cat.count}", fontFamily = JetBrainsMono,
-                                            fontSize = 10.5.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                },
-                                onClick = { onCategoryChange(cat.name); catMenuOpen = false }
-                            )
-                        }
-                    }
-                }
+                // Category pill — hierarchischer Drilldown wie im Web-Cortex
+                CategoryPickerPill(
+                    categories = categories,
+                    selectedCategory = selectedCategory,
+                    onCategoryChange = onCategoryChange,
+                    onCreateCategory = onCreateCategory,
+                    isDark = isDark
+                )
             }
 
             Spacer(Modifier.height(8.dp))
