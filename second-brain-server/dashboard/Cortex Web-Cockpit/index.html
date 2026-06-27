@@ -378,6 +378,20 @@ button{font-family:inherit;cursor:pointer}
 .drawer-close svg{width:18px;height:18px;stroke-width:2}
 .drawer-title{font-family:'Space Grotesk';font-weight:600;font-size:23px;margin-top:14px;line-height:1.2}
 .drawer-date{font-family:'JetBrains Mono';font-size:12px;color:var(--text-faint);margin-top:8px}
+.drawer-actions{
+  display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;
+}
+.drawer-action-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-dim);
+  font-size:12.5px;font-weight:500;
+  transition:all .25s var(--ease);cursor:pointer;
+}
+.drawer-action-btn svg{width:15px;height:15px;stroke-width:1.8;flex:none}
+.drawer-action-btn:hover{color:var(--text);border-color:var(--text-faint);transform:translateY(-1px)}
+.drawer-action-danger{border-color:rgba(242,105,142,.3)}
+.drawer-action-danger:hover{color:var(--bad);border-color:var(--bad);background:rgba(242,105,142,.08)}
 .drawer-body{padding:24px 30px 40px;overflow-y:auto;flex:1}
 .read-box{
   font-family:'JetBrains Mono';font-size:13.5px;line-height:1.85;color:var(--text);
@@ -636,6 +650,20 @@ Leitsätze:
     </div>
     <div class="drawer-title" id="drawerTitle">—</div>
     <div class="drawer-date" id="drawerDate"></div>
+    <div class="drawer-actions">
+      <button class="drawer-action-btn" id="btnAddCategory" title="Neue Kategorie erstellen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Neue Kategorie</span>
+      </button>
+      <button class="drawer-action-btn" id="btnMoveCategory" title="In andere Kategorie verschieben">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span>Verschieben</span>
+      </button>
+      <button class="drawer-action-btn drawer-action-danger" id="btnDeleteEntry" title="Eintrag löschen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        <span>Löschen</span>
+      </button>
+    </div>
   </div>
   <div class="drawer-body"><div class="read-box" id="drawerText"></div></div>
 </aside>
@@ -713,8 +741,8 @@ Leitsätze:
   document.querySelectorAll("[data-tab]").forEach(b=> b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
   /* ── API mit Demo-Fallback ────────────────────────────────────────────── */
-  async function api(path){
-    const r = await fetch(path,{headers:{Accept:"application/json"}});
+  async function api(path, opts={}){
+    const r = await fetch(path, {headers:{Accept:"application/json"}, ...opts});
     if(!r.ok) throw new Error(r.status);
     return r.json();
   }
@@ -901,6 +929,7 @@ Leitsätze:
   /* ── Drawer (V2) ──────────────────────────────────────────────────────── */
   const overlay = document.getElementById("overlay"), drawer = document.getElementById("drawer");
   async function openEntry(it){
+    currentEntry = it;
     const color = colorFor(it.category);
     const tag = document.getElementById("drawerTag");
     tag.textContent = it.category||""; tag.style.color = color; tag.style.background = color+"22";
@@ -916,10 +945,48 @@ Leitsätze:
       try{ const f = DEMO.entry(it.title); if(f) document.getElementById("drawerText").textContent = f.text; }catch(_){}
     }
   }
-  function closeDrawer(){ overlay.classList.remove("open"); drawer.classList.remove("open"); }
+  function closeDrawer(){ overlay.classList.remove("open"); drawer.classList.remove("open"); currentEntry = null; }
   overlay.addEventListener("click",closeDrawer);
   document.getElementById("drawerClose").addEventListener("click",closeDrawer);
   document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDrawer(); });
+
+  /* ── Drawer-Buttons: Neue Kategorie / Verschieben / Löschen ──────────── */
+  let currentEntry = null;
+
+  /* Neue Kategorie erstellen */
+  document.getElementById("btnAddCategory").addEventListener("click", async ()=>{
+    const name = prompt("Name der neuen Kategorie:");
+    if(!name || !name.trim()) return;
+    try{
+      await api("/api/categories", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name:name.trim()})});
+      alert("Kategorie '" + name.trim() + "' erstellt.");
+    }catch(e){ alert("Fehler: " + e.message); }
+  });
+
+  /* Eintrag verschieben */
+  document.getElementById("btnMoveCategory").addEventListener("click", async ()=>{
+    if(!currentEntry || !currentEntry.doc_id){ alert("Kein Eintrag geladen."); return; }
+    try{
+      const data = await api("/api/categories");
+      const cats = (data.categories||[]).map(c=>typeof c==="string"?c:c.name).filter(Boolean);
+      const choice = prompt("Kategorie wählen:\n" + cats.join("\n") + "\n\nNeue Kategorie eingeben oder oben auswählen:");
+      if(!choice || !choice.trim()) return;
+      await api("/api/entry/category", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({doc_id:currentEntry.doc_id, category:choice.trim()})});
+      alert("Verschoben nach '" + choice.trim() + "'.");
+      closeDrawer(); loadEntries();
+    }catch(e){ alert("Fehler: " + e.message); }
+  });
+
+  /* Eintrag löschen */
+  document.getElementById("btnDeleteEntry").addEventListener("click", async ()=>{
+    if(!currentEntry || !currentEntry.doc_id){ alert("Kein Eintrag geladen."); return; }
+    if(!confirm("Eintrag '" + (currentEntry.title||"") + "' wirklich löschen?")) return;
+    try{
+      await api("/api/entry?doc_id="+encodeURIComponent(currentEntry.doc_id), {method:"DELETE"});
+      alert("Gelöscht.");
+      closeDrawer(); loadEntries();
+    }catch(e){ alert("Fehler: " + e.message); }
+  });
 
   /* ── Demo-Daten (Fallback, wenn Backend nicht erreichbar) ─────────────── */
   let USING_DEMO = false;
