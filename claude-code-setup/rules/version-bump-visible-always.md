@@ -12,17 +12,22 @@
 ## Grundprinzip
 
 **Jedes Mal, wenn eine Software aktualisiert, veraendert oder verbessert wird, wird die
-Versionsnummer hochgezaehlt — und die Version MUSS im laufenden Programm SICHTBAR sein.**
+Versionsnummer hochgezaehlt — und die Version MUSS im laufenden Programm SICHTBAR sein.
+Direkt hinter der Version MUSS sichtbar Datum + Uhrzeit stehen, wann diese Version erhoeht wurde.**
 
 Der Zweck (Franks Wortlaut sinngemaess): Er will beim Benutzen der Software sofort erkennen,
-**dass ein Update auch angekommen ist**. Eine intern erhoehte Version, die man im Programm
-nicht sieht, erfuellt diesen Zweck NICHT.
+**dass ein Update auch angekommen ist**. Eine intern erhoehte Version oder ein intern gespeicherter
+Erhoehungszeitpunkt, die man im Programm nicht sieht, erfuellen diesen Zweck NICHT.
 
 Zwei untrennbare Teile:
 
 1. **Hochzaehlen** — bei jeder Code-Aenderung an einer Software die Version erhoehen.
-2. **Sichtbar machen** — die Version an einer Stelle anzeigen, die der Benutzer beim normalen
+2. **Zeitpunkt speichern** — Datum + Uhrzeit der Versionserhoehung speichern.
+3. **Sichtbar machen** — die Version plus Erhoehungszeitpunkt an einer Stelle anzeigen, die der Benutzer beim normalen
    Benutzen sieht oder leicht findet. Gibt es noch KEINE sichtbare Versionsanzeige → eine einbauen.
+
+Pflichtformat: `Version 1.2.3 (27.06.2026, 14.35 Uhr)`. Wichtig ist die Reihenfolge:
+Versionsnummer, Leerzeichen, dann direkt dahinter Datum + Uhrzeit der Versionserhoehung in Klammern.
 
 ---
 
@@ -61,7 +66,8 @@ Store den Upload ab. `versionName` folgt SemVer.
 
 Die "Quelle der Wahrheit" (links) muss mit der sichtbaren Anzeige (rechts) uebereinstimmen —
 am besten die Anzeige aus der Quelle ableiten (BuildConfig/Assembly/Manifest), nicht doppelt
-hardcoden.
+hardcoden. Der Zeitpunkt der Versionserhoehung muss zusammen mit der Version gespeichert und
+direkt hinter der Version sichtbar gemacht werden.
 
 | Plattform | Quelle der Versionsnummer | Sichtbar machen (mind. eine Stelle) |
 |-----------|---------------------------|-------------------------------------|
@@ -74,7 +80,8 @@ hardcoden.
 | Chrome-Erweiterung | `manifest.json` → `version` | Popup-Fuss oder Optionsseite; aus `chrome.runtime.getManifest().version` |
 
 **Bevorzugt dauerhaft sichtbar** (Titelleiste, Fusszeile, CLI-Banner) statt nur in einem tief
-versteckten Dialog — so sieht Frank die Version, ohne suchen zu muessen.
+versteckten Dialog — so sieht Frank die Version, ohne suchen zu muessen. Anzeige immer als
+Version + Erhoehungszeitpunkt direkt dahinter in Klammern, z.B. `Version 1.2.3 (27.06.2026, 14.35 Uhr)`.
 
 ---
 
@@ -82,9 +89,10 @@ versteckten Dialog — so sieht Frank die Version, ohne suchen zu muessen.
 
 1. Code-Aenderung fertig.
 2. **Version-Bump** in der Quelle (Schritt 2 in `commit-before-build.md`).
-3. Sichtbare Anzeige pruefen/ergaenzen (zeigt sie die NEUE Version?).
-4. `git add` (eigene Dateien) → `git commit` (`#NNN`) → fetch+rebase → `git push`.
-5. ERST DANN bauen → installieren/deployen.
+3. **Datum + Uhrzeit der Versionserhoehung speichern**.
+4. Sichtbare Anzeige pruefen/ergaenzen (zeigt sie die NEUE Version UND den Erhoehungszeitpunkt?).
+5. `git add` (eigene Dateien) → `git commit` (`#NNN`) → fetch+rebase → `git push`.
+6. ERST DANN bauen → installieren/deployen.
 
 Bei Multi-Task-Sessions (mehrere Aufgaben an einer App): **ein** Version-Bump pro
 ausgeliefertem Build reicht — am Ende vor dem einen gemeinsamen Build (siehe
@@ -104,6 +112,7 @@ Stand lief — die zweite Sichtbarkeits-Ebene neben der UI.
 
 - ❌ Eine Software aendern/verbessern und die Version NICHT hochzaehlen
 - ❌ Version intern erhoehen, aber im Programm NICHT sichtbar machen (verfehlt den Zweck)
+- ❌ Datum/Uhrzeit der Versionserhoehung weglassen, nicht direkt hinter der sichtbaren Version anzeigen oder nicht im Format `(27.06.2026, 14.35 Uhr)` schreiben
 - ❌ Eine App ohne JEDE sichtbare Versionsanzeige lassen — dann eine einbauen
 - ❌ Android-`versionCode` beim Release vergessen (+1 ist Pflicht, sonst Play-Store-Reject)
 - ❌ Sichtbare Version hardcoden, die von der echten Quelle abweicht (immer ableiten)
