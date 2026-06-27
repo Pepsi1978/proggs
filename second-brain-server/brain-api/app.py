@@ -212,7 +212,7 @@ except Exception as e:  # noqa: BLE001 — Init-Fehler vollstaendig festhalten, 
     log.error("Speicher-Init fehlgeschlagen", exc_info=True)
 
 # Sichtbarer Patch-Stand: Detail-/Such-APIs liefern den ursprünglichen Speicherzeitpunkt fuer das Dashboard aus.
-VERSION = "1.18.0"
+VERSION = "1.18.1 (27.06.2026, 21.16 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1250,7 +1250,8 @@ def update_entry(req: UpdateReq) -> dict:
                title=title or None, title_changed=title_changed, chunks=len(chunks),
                chars=len(req.text), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": target_doc_id, "title": title or None, "category": category or None,
-            "title_changed": title_changed, "chunks": len(chunks), "chars": len(req.text), "replaced": True}
+            "updated_at": now, "title_changed": title_changed, "chunks": len(chunks),
+            "chars": len(req.text), "replaced": True}
 
 
 @app.get("/trash", dependencies=[Depends(require_auth)])
