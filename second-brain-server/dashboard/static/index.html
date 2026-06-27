@@ -705,6 +705,8 @@ button{font-family:inherit;cursor:pointer}
 .drawer-del-btn{display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(242,105,142,.45)}
 .drawer-del-btn:hover{border-color:var(--bad);background:rgba(242,105,142,.12)}
 .drawer-del-btn svg{width:16px;height:16px;stroke-width:2}
+.drawer-logbook-del{color:var(--bad);margin-left:auto;margin-right:8px;display:none}
+.drawer-logbook-del:hover{color:var(--bad);border-color:var(--bad);background:rgba(242,105,142,.12);transform:none}
 /* Roter Bestaetigungs-Button (Ja, loeschen) */
 .btn-danger{background:linear-gradient(145deg,#F2698E,#C0436A);color:#fff;border-color:transparent}
 .btn-danger:hover{filter:brightness(1.08)}
@@ -1047,6 +1049,7 @@ button{font-family:inherit;cursor:pointer}
   <div class="drawer-head">
     <div class="drawer-top">
       <span class="tag" id="drawerTag">—</span>
+      <button class="drawer-close drawer-logbook-del" id="drawerLogbookDeleteBtn" aria-label="Logbuch löschen" title="Logbuch aus Cortex und von der Festplatte löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></button>
       <button class="drawer-close" id="drawerClose" aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="drawer-title" id="drawerTitle">—</div>
@@ -1094,6 +1097,18 @@ button{font-family:inherit;cursor:pointer}
     <div class="confirm-actions">
       <button class="btn" id="deleteNo">Nein</button>
       <button class="btn btn-danger" id="deleteYes">Ja, löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestaetigungs-Dialog: Logbuch aus Cortex + Festplatte loeschen ─────── -->
+<div class="confirm-overlay" id="logbookDeleteOverlay">
+  <div class="confirm-box">
+    <h4>Logbuch-Eintrag löschen?</h4>
+    <p>Soll dieser Eintrag von Cortex und der Festplatte gelöscht werden?</p>
+    <div class="confirm-actions">
+      <button class="btn" id="logbookDeleteNo">Nein</button>
+      <button class="btn btn-danger" id="logbookDeleteYes">Ja, löschen</button>
     </div>
   </div>
 </div>
@@ -1547,6 +1562,7 @@ button{font-family:inherit;cursor:pointer}
     box.textContent = it.text || it.match || "lädt…";
     document.getElementById("drawerStatus").textContent = "";
     setDrawerEditMode(false);
+    document.getElementById("drawerLogbookDeleteBtn").style.display = curEntry && curEntry.logbook ? "grid" : "none";
     overlay.classList.add("open"); drawer.classList.add("open");
     // History-Eintrag fuer den offenen Drawer, damit die Zurueck-Taste ihn schliesst (statt die Seite zu verlassen)
     if(!drawerHist){ drawerHist = true; try{ history.pushState({tab:activeTab, drawer:true}, "", location.hash||("#"+activeTab)); }catch(_){ } }
@@ -1719,6 +1735,28 @@ button{font-family:inherit;cursor:pointer}
     finally{ yes.disabled = false; }
   });
 
+  /* Logbuch loeschen: nur fuer Logbuch-Dateien sichtbar; entfernt Datei und Cortex-Eintrag. */
+  const logbookDeleteOverlay = document.getElementById("logbookDeleteOverlay");
+  function openLogbookDelete(){ logbookDeleteOverlay.classList.add("open"); }
+  function closeLogbookDelete(){ logbookDeleteOverlay.classList.remove("open"); }
+  document.getElementById("drawerLogbookDeleteBtn").addEventListener("click", e=>{ e.stopPropagation(); openLogbookDelete(); });
+  document.getElementById("logbookDeleteNo").addEventListener("click", closeLogbookDelete);
+  logbookDeleteOverlay.addEventListener("click", e=>{ if(e.target===logbookDeleteOverlay) closeLogbookDelete(); });
+  document.getElementById("logbookDeleteYes").addEventListener("click", async ()=>{
+    closeLogbookDelete();
+    if(!curEntry || !curEntry.logbook){ flash("drawerStatus","Kein Logbuch-Eintrag",false); return; }
+    const yes = document.getElementById("logbookDeleteYes"); yes.disabled = true;
+    try{
+      const qs = new URLSearchParams();
+      if(curEntry.path) qs.set("path", curEntry.path);
+      if(curEntry.brain_title) qs.set("title", curEntry.brain_title);
+      const r = await apiSend("/api/logbook?"+qs.toString(), "DELETE");
+      if(r && r.ok!==false){ closeDrawer(); loadLogbook(); loadOverview(); }
+      else { flash("drawerStatus",(r&&r.detail)||"Logbuch löschen fehlgeschlagen",false); }
+    }catch(e){ flash("drawerStatus","Logbuch löschen fehlgeschlagen",false); }
+    finally{ yes.disabled = false; }
+  });
+
   /* Wiederherstellen: Button im Papierkorb -> Bestaetigung (Ja/Nein) -> zurueck ins Gehirn */
   let restoreTarget = null;
   const restoreOverlay = document.getElementById("restoreOverlay");
@@ -1752,7 +1790,7 @@ button{font-family:inherit;cursor:pointer}
     finally{ yes.disabled = false; }
   });
 
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(emptyTrashOverlay.classList.contains("open")) closeEmptyTrash(); else if(restoreOverlay.classList.contains("open")) closeRestore(); else if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(emptyTrashOverlay.classList.contains("open")) closeEmptyTrash(); else if(logbookDeleteOverlay.classList.contains("open")) closeLogbookDelete(); else if(restoreOverlay.classList.contains("open")) closeRestore(); else if(deleteOverlay.classList.contains("open")) closeDelete(); else if(confirmOverlay.classList.contains("open")) closeConfirm(); else closeDrawer(); } });
 
   /* ── Demo-Daten (Fallback, wenn Backend nicht erreichbar) ─────────────── */
   let USING_DEMO = false;
@@ -2301,11 +2339,13 @@ button{font-family:inherit;cursor:pointer}
     if(!items.length){ box.innerHTML = `<span class="log-empty">Keine Einträge in diesem Monat.</span>`; return; }
     items.forEach(it=>{
       const title = it.title || "Gespräch", when = it.when || "";
+      const brainTitle = it.brain_title || (/^gespr(ä|ae)ch\b/i.test(title) ? title : ("Gespräch "+title));
       const row = document.createElement("div");
       row.className = "log-row"; row.style.cursor = "pointer";
       row.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" style="opacity:.7;flex:none"><path d="M4 4h16v12H4z"/><path d="m8 20 4-4 4 4"/></svg>
         <span>${escapeHtml(title)}</span><span class="when">${escapeHtml(when)}</span>`;
-      row.addEventListener("click", ()=> openEntry({title, category:"gespraeche", text:it.text||"", when}, false));
+      row.addEventListener("click", ()=> openEntry({title, category:"gespraeche", text:it.text||"", when,
+        logbook:true, path:it.path||"", brain_title:brainTitle}, false));
       box.appendChild(row);
     });
   }
