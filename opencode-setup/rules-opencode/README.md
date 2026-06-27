@@ -1,9 +1,11 @@
 # rules-opencode — verkleinerte Regeln fuer OpenCode (Qdrant / zweites Gehirn)
 
-Dieser Ordner enthaelt **kompakte Fassungen** der 14 Arbeitsregeln aus der Gehirn-Kategorie
-`Programmierung/Rules`. Zweck: OpenCode (auf dem Qdrant-Server) laedt diese kleinen Versionen
-statt der grossen Originale — das spart Token. **Claude Code nutzt weiterhin die VOLLEN Regeln
-aus `~/.claude/rules/`** (diese hier ersetzen die nicht).
+Dieser Ordner enthaelt **kompakte Fassungen** der Arbeitsregeln aus der Gehirn-Kategorie
+`Programmierung/Rules` (aktuell 15). Zweck: OpenCode (auf dem Qdrant-Server) laedt diese kleinen
+Versionen statt der grossen Originale — das spart Token. **Claude Code nutzt weiterhin die VOLLEN
+Regeln aus `~/.claude/rules/`** (diese hier ersetzen die nicht). Ausnahme: `anti-halluzination.md`
+ist eine NEUE, OpenCode-spezifische Regel ohne `~/.claude/rules/`-Original — ihre Vollfassung/Belege
+liegen in `best-practices/agents/anti-halluzination-regeln.md`.
 
 ## Wie zurueckspeichern
 Jede Datei beginnt in der **ersten Zeile mit dem exakten Gehirn-Titel** (reiner Text, ohne `#`,
@@ -28,8 +30,9 @@ einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
 | semicolon-task-separator.md | Semikolon-Trenner für mehrere Aufgaben in einem Prompt |
 | task-completion-summary.md | Pflicht-Schema am Ende jeder Aufgabe |
 | version-bump-visible-always.md | Versionszähler immer hochzählen — und SICHTBAR |
+| anti-halluzination.md | Anti-Halluzination: erst pruefen, dann behaupten — nichts erfinden |
 
-Kategorie fuer alle 14: `Programmierung/Rules`.
+Kategorie fuer alle 15: `Programmierung/Rules`.
 
 ## Grundsatz der Verkleinerung
 Verkleinert heisst: alle Handlungsregeln, MUSS-/NIEMALS-Punkte und konkreten Befehle/Formate
