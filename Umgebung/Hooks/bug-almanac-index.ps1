@@ -40,7 +40,7 @@ try {
     # '/' im Relativpfad und faellt damit automatisch raus (robust gegen Slash-Normalisierung).
     $almanachs = Get-ChildItem -Path $bugsDir -Recurse -Filter "*.md" -File -ErrorAction SilentlyContinue |
         ForEach-Object { ($_.FullName -replace '\\','/') -replace '.*?/bugs/', '' } |
-        Where-Object { $_ -match '/' } |
+        Where-Object { $_ -match '/' -and $_ -notmatch '-kurzcheck\.md$' } |
         Sort-Object
     $list = if ($almanachs) { ($almanachs -join ", ") } else { "(noch keine)" }
     $count = if ($almanachs) { @($almanachs).Count } else { 0 }

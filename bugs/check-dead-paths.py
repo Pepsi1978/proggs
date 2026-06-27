@@ -59,7 +59,7 @@ def main():
     for root in ROOTS:
         for dp, _dirs, files in os.walk(os.path.join(REPO, root)):
             for fn in files:
-                if not fn.endswith(".md"):
+                if not fn.endswith(".md") or fn.endswith("-kurzcheck.md"):
                     continue
                 full = os.path.join(dp, fn)
                 filedir = os.path.dirname(full)

@@ -87,6 +87,8 @@ def collect_almanacs(bugs_dir: Path) -> list[str]:
         rel = p.relative_to(bugs_dir).as_posix()
         if "/" not in rel:           # direkt in bugs/ (README/SYSTEM/...) -> kein Almanach
             continue
+        if rel.endswith("-kurzcheck.md"):   # abgeleitete Kurzcheck-Datei, kein eigener Almanach
+            continue
         key = p.stem.lower()
         if key in NON_ALMANAC:
             continue

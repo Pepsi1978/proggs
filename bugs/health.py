@@ -64,7 +64,7 @@ def check_stand_verfall():
     today = date.today()
     for md in glob.glob(os.path.join(BUGS, "**", "*.md"), recursive=True):
         base = os.path.basename(md).lower()
-        if base in ("readme.md", "system.md") or "audit" in base:
+        if base in ("readme.md", "system.md") or "audit" in base or base.endswith("-kurzcheck.md"):
             continue
         try:
             with open(md, encoding="utf-8") as f:

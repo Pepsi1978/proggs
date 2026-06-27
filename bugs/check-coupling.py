@@ -63,7 +63,7 @@ def find_best_practices(bp_root):
     non = {"readme", "system"}
     for root, _dirs, files in os.walk(bp_root):
         for fn in files:
-            if not fn.endswith(".md") or fn.startswith("_"):
+            if not fn.endswith(".md") or fn.startswith("_") or fn.endswith("-kurzcheck.md"):
                 continue
             sw = fn[:-len(".md")]
             if not sw or sw.lower() in non:
@@ -86,7 +86,7 @@ def find_almanachs(bugs_dir):
         if os.path.abspath(root) == bugs_abs:
             continue  # Root-Dateien ueberspringen (nur Unterordner = Almanache)
         for fn in files:
-            if fn.endswith(".md"):
+            if fn.endswith(".md") and not fn.endswith("-kurzcheck.md"):
                 result[fn[:-3]] = os.path.join(root, fn)
     return result
 

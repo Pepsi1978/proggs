@@ -47,7 +47,7 @@ if [ -d "$BUGS_DIR" ]; then
         case "$rel" in
             */*) list="${list:+$list, }$rel"; count=$((count + 1));;
         esac
-    done < <(find "$BUGS_DIR" -name '*.md' -type f 2>/dev/null | sort)
+    done < <(find "$BUGS_DIR" -name '*.md' -type f ! -name '*-kurzcheck.md' 2>/dev/null | sort)
     [ -n "$list" ] || list="(noch keine)"
 
     ctx="BUG-ALMANACH-SYSTEM aktiv (Digest-Modell, 3 Stufen - siehe bugs/SYSTEM.md Paragraf 11). Vorhandene Almanache in bugs/: $list. STUFE A (vor der Arbeit): Vor echter Arbeit an einem technischen Bereich (Chrome, Android, WPF, Swift, TS, Hooks, Gradle ...) NUR den Kurzcheck lesen: Read auf bugs/<kategorie>/<bereich>.md mit limit=80 (die Kurzcheck-Sektion oben in der Datei), DANACH ebenso die zugehoerige best-practices/projekt-code/<kategorie>/best-practices-<bereich>.md mit limit=80. Der bug-almanac-guard BLOCKIERT Edit/Write bis beides gelesen ist (Reihenfolge erst Almanach, dann Best Practices; 1x pro Bereich/Session). STUFE B (bei JEDEM Fehler im Bereich): SOFORT den VOLLTEXT des Almanachs lesen (Read ohne limit) - ab dem ersten Fehler reicht der Kurzcheck nicht mehr. STUFE C (Hochrisiko-Bereiche r8, firebase-billing, claude-hooks, claude-config): schon VOR der Arbeit den VOLLTEXT lesen - der Guard erzwingt das. Kein Almanach fuer den Bereich? Frank fragen (sein OK abwarten), dann den Skill 'bug-almanach-recherche' STARTEN (das ist der vorgeschriebene Weg, NICHT selbst ad hoc recherchieren). Gilt nicht fuer trivialen Kleinkram (String, Doku, Versions-Bump). Notaus bei Fehlalarm: leere Datei bug-almanac-disable.flag im TEMP-Verzeichnis anlegen."
