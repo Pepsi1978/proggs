@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +29,8 @@ import de.frank.cortex.vpn.TunnelState
 @Composable
 fun CortexTopBar(
     isDark: Boolean,
-    onToggleTheme: () -> Unit,
+    themeMode: String,
+    onSetThemeMode: (String) -> Unit,
     vpnState: TunnelState,
     onVpnToggle: (Boolean) -> Unit
 ) {
@@ -97,11 +99,22 @@ fun CortexTopBar(
                 .clip(CircleShape)
                 .background(if (isDark) DarkChip else LightChip)
                 .border(1.dp, if (isDark) DarkChipBorder else LightChipBorder, CircleShape)
-                .clickable(onClick = onToggleTheme),
+                .clickable {
+                    val next = when (themeMode) {
+                        "dark" -> "light"
+                        "light" -> "system"
+                        else -> "dark"
+                    }
+                    onSetThemeMode(next)
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                imageVector = when (themeMode) {
+                    "dark" -> Icons.Default.DarkMode
+                    "light" -> Icons.Default.LightMode
+                    else -> Icons.Default.BrightnessAuto
+                },
                 contentDescription = "Theme",
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(19.dp)

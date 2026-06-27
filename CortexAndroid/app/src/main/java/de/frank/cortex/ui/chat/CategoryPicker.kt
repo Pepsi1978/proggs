@@ -89,6 +89,7 @@ fun CategoryPickerPill(
     selectedCategory: String?,
     onCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
+    onOpen: () -> Unit = {},
     isDark: Boolean
 ) {
     var open by remember { mutableStateOf(false) }
@@ -114,7 +115,7 @@ fun CategoryPickerPill(
             shape = RoundedCornerShape(999.dp),
             color = if (isDark) DarkChip else LightChip,
             border = BorderStroke(1.dp, catBorder),
-            modifier = Modifier.clickable { open = !open }
+            modifier = Modifier.clickable { if (!open) onOpen(); open = !open }
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

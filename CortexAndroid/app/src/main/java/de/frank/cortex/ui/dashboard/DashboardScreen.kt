@@ -73,7 +73,12 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
                 totalEntries = uiState.totalEntries,
                 categoryCounts = uiState.categoryCounts,
                 selectedCategory = uiState.selectedCategory,
-                onCategoryClick = vm::selectCategory
+                categoryPath = uiState.categoryPath,
+                subcategories = uiState.subcategories,
+                onCategoryClick = vm::selectCategory,
+                onDrillInto = vm::drillIntoCategory,
+                onDrillBack = vm::drillBack,
+                onDrillToRoot = vm::drillToRoot
             )
         }
 
@@ -91,17 +96,6 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
                 onQueryChange = { vm.updateSearchQuery(it); vm.search(it) },
                 onClear = { vm.updateSearchQuery(""); vm.search("") }
             )
-        }
-
-        // Category Chips
-        if (uiState.categoryCounts.isNotEmpty()) {
-            item {
-                CategoryChips(
-                    counts = uiState.categoryCounts,
-                    selected = uiState.selectedCategory,
-                    onSelect = vm::selectCategory
-                )
-            }
         }
 
         // Results
@@ -136,10 +130,17 @@ private fun SpectrumCard(
     totalEntries: Int,
     categoryCounts: Map<String, Int>,
     selectedCategory: String?,
-    onCategoryClick: (String?) -> Unit
+    categoryPath: List<String>,
+    subcategories: Map<String, Int>,
+    onCategoryClick: (String?) -> Unit,
+    onDrillInto: (String) -> Unit,
+    onDrillBack: (Int) -> Unit,
+    onDrillToRoot: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
-    val total = categoryCounts.values.sum().toFloat().coerceAtLeast(1f)
+    val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
+    val spectrumItems = spectrumCounts.entries.sortedByDescending { it.value }
+    val total = spectrumCounts.values.sum().toFloat().coerceAtLeast(1f)
 
     // Animated count
     val animatedCount = remember { Animatable(0f) }
@@ -213,8 +214,10 @@ private fun SpectrumCard(
                         .background(if (isDark) DarkField else LightField),
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    categoryCounts.forEach { (name, count) ->
+                    spectrumItems.forEachIndexed { index, entry ->
+                        val (name, count) = entry
                         val fraction = count / total
+                        val color = spectrumColor(index)
                         Box(
                             modifier = Modifier
                                 .weight(fraction)
@@ -222,24 +225,72 @@ private fun SpectrumCard(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(categoryColor(name), categoryColor(name).copy(alpha = 0.75f))
+                                        listOf(color, color.copy(alpha = 0.72f))
                                     )
                                 )
-                                .clickable { onCategoryClick(if (selectedCategory == name) null else name) }
+                                .clickable {
+                                    if (categoryPath.isEmpty()) {
+                                        onDrillInto(name)
+                                    } else {
+                                        onCategoryClick(if (selectedCategory == name) null else name)
+                                    }
+                                }
                         )
                     }
                 }
 
-                // Legend
+                // Breadcrumb (wenn drilldown aktiv)
+                if (categoryPath.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Root",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Iris,
+                            modifier = Modifier.clickable { onDrillToRoot() }
+                        )
+                        categoryPath.forEachIndexed { index, segment ->
+                            Text("›", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = segment,
+                                fontSize = 11.sp,
+                                fontWeight = if (index == categoryPath.lastIndex) FontWeight.Bold else FontWeight.Normal,
+                                color = if (index == categoryPath.lastIndex) MaterialTheme.colorScheme.onSurface else Iris,
+                                modifier = Modifier.clickable { onDrillBack(index + 1) }
+                            )
+                        }
+                    }
+                }
+
+                // Legend: entweder Hauptkategorien (Root) oder Subcategories (Drilldown)
+                val legendItems = if (categoryPath.isEmpty()) {
+                    categoryCounts.entries.sortedByDescending { it.value }
+                } else {
+                    subcategories.entries.sortedByDescending { it.value }
+                }
+
                 Column(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    categoryCounts.entries.sortedByDescending { it.value }.forEach { (name, count) ->
+                    legendItems.forEachIndexed { index, entry ->
+                        val (name, count) = entry
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onCategoryClick(if (selectedCategory == name) null else name) }
+                                .clickable {
+                                    if (categoryPath.isEmpty()) {
+                                        onDrillInto(name)
+                                    } else {
+                                        onDrillInto(name)
+                                    }
+                                }
                                 .padding(vertical = 7.dp, horizontal = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -247,7 +298,7 @@ private fun SpectrumCard(
                                 modifier = Modifier
                                     .size(11.dp)
                                     .clip(RoundedCornerShape(3.dp))
-                                    .background(categoryColor(name))
+                                    .background(spectrumColor(index))
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
@@ -269,6 +320,24 @@ private fun SpectrumCard(
         }
     }
 }
+
+private val SpectrumColors = listOf(
+    Color(0xFF7B7BF5), // Iris
+    Color(0xFFF97316), // Orange
+    Color(0xFF4FD1B0), // Mint
+    Color(0xFFF2698E), // Rose
+    Color(0xFF5AB0F2), // Sky
+    Color(0xFFF2B65A), // Amber
+    Color(0xFFB68CF5), // Lavender
+    Color(0xFF3FD0D6), // Teal
+    Color(0xFFE25555), // Red
+    Color(0xFF9BD05A), // Lime
+    Color(0xFF5A7BF2), // Blue
+    Color(0xFFF25AC0), // Pink
+    Color(0xFFD0C45A)  // Gold
+)
+
+private fun spectrumColor(index: Int): Color = SpectrumColors[index % SpectrumColors.size]
 
 @Composable
 private fun VitalsGrid(overview: de.frank.cortex.data.model.OverviewResponse) {
@@ -327,7 +396,6 @@ private fun VitalsGrid(overview: de.frank.cortex.data.model.OverviewResponse) {
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                Text(v.icon, fontSize = 17.sp) // Material icon placeholder
                                 Text(v.label.uppercase(), fontFamily = JetBrainsMono,
                                     fontSize = 9.5.sp, letterSpacing = 1.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)

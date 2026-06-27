@@ -13,7 +13,8 @@ import de.frank.cortex.ui.settings.SettingsScreen
 fun AppNavGraph(
     navController: NavHostController,
     isDark: Boolean,
-    onToggleTheme: () -> Unit,
+    themeMode: String,
+    onSetThemeMode: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -23,6 +24,12 @@ fun AppNavGraph(
     ) {
         composable(Screen.Chat.route) { ChatScreen() }
         composable(Screen.Dashboard.route) { DashboardScreen() }
-        composable(Screen.Settings.route) { SettingsScreen(isDark = isDark, onToggleTheme = onToggleTheme) }
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                isDark = isDark,
+                themeMode = themeMode,
+                onSetThemeMode = onSetThemeMode
+            )
+        }
     }
 }

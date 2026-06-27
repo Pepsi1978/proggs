@@ -2,6 +2,9 @@ package de.frank.cortex.ui.chat
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -50,18 +53,39 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     var inputText by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    val recordingTone = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80) }
+
+    DisposableEffect(Unit) {
+        onDispose { recordingTone.release() }
+    }
 
     // Berechtigung für Mikrofon
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) vm.toggleRecording()
+        if (granted) {
+            recordingTone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+            vm.toggleRecording()
+        }
     }
 
     // Transkribierten Text ins Eingabefeld übernehmen
     LaunchedEffect(Unit) {
         vm.transcribedText.collect { text ->
             inputText = if (inputText.isBlank()) text else "$inputText $text"
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        vm.improvedText.collect { text ->
+            inputText = text
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            vm.clearError()
         }
     }
 
@@ -171,18 +195,23 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             selectedCategory = uiState.selectedCategory,
             onCategoryChange = vm::updateSelectedCategory,
             onCreateCategory = vm::createCategory,
+            onOpenCategories = vm::loadCategories,
             titleOverride = uiState.titleOverride,
             onTitleChange = vm::updateTitleOverride,
             ttsEnabled = uiState.ttsEnabled,
             onToggleTts = vm::toggleTts,
             isRecording = uiState.isRecording,
             isTranscribing = uiState.isTranscribing,
+            isImproving = uiState.isImproving,
             onMicToggle = {
                 CortexLog.info("ChatScreen", "micClick", "Mikrofon angeklickt")
                 val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
                 CortexLog.info("ChatScreen", "micClick", "Permission: $hasPermission")
                 if (hasPermission) {
+                    if (!uiState.isRecording && !uiState.isTranscribing) {
+                        recordingTone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+                    }
                     vm.toggleRecording()
                 } else {
                     micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -193,7 +222,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 inputText = ""
             },
             onClear = { inputText = "" },
-            onImprove = { /* TODO: Gemini improve */ }
+            onImprove = { vm.improveText(inputText) }
         )
     }
 }
@@ -366,18 +395,23 @@ private fun ChatInputBlock(
     selectedCategory: String?,
     onCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
+    onOpenCategories: () -> Unit,
     titleOverride: String,
     onTitleChange: (String) -> Unit,
     ttsEnabled: Boolean,
     onToggleTts: () -> Unit,
     isRecording: Boolean,
     isTranscribing: Boolean,
+    isImproving: Boolean,
     onMicToggle: () -> Unit,
     onSend: () -> Unit,
     onClear: () -> Unit,
     onImprove: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
+    val actionOrangeBg = Orange.copy(alpha = 0.20f)
+    val actionOrangeBorder = Orange.copy(alpha = 0.42f)
+    val recordingRed = Color(0xFFFF3B30)
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -417,6 +451,7 @@ private fun ChatInputBlock(
                     selectedCategory = selectedCategory,
                     onCategoryChange = onCategoryChange,
                     onCreateCategory = onCreateCategory,
+                    onOpen = onOpenCategories,
                     isDark = isDark
                 )
             }
@@ -461,12 +496,12 @@ private fun ChatInputBlock(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
-                // Clear (rose, 38x38, radius 11)
+                // Clear (dunkles Orange wie Lautsprecher/Mikro)
                 ActionButton(
                     icon = { Icon(Icons.AutoMirrored.Filled.Backspace, null, Modifier.size(20.dp)) },
-                    bg = Rose.copy(alpha = 0.13f),
-                    border = Rose.copy(alpha = 0.28f),
-                    tint = Rose,
+                    bg = actionOrangeBg,
+                    border = actionOrangeBorder,
+                    tint = Orange,
                     onClick = onClear
                 )
 
@@ -477,11 +512,19 @@ private fun ChatInputBlock(
                         .clip(RoundedCornerShape(11.dp))
                         .background(Mint.copy(alpha = 0.13f))
                         .border(1.dp, Mint.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
-                        .clickable(onClick = onImprove),
+                        .clickable(enabled = text.isNotBlank() && !isImproving, onClick = onImprove),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("G", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp, color = Mint)
+                    if (isImproving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Mint
+                        )
+                    } else {
+                        Text("G", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp, color = Mint)
+                    }
                 }
 
                 Spacer(Modifier.weight(1f))
@@ -495,10 +538,8 @@ private fun ChatInputBlock(
                             null, Modifier.size(21.dp)
                         )
                     },
-                    bg = if (ttsEnabled) Orange.copy(alpha = 0.18f)
-                    else if (isDark) DarkChip else LightChip,
-                    border = if (ttsEnabled) Orange.copy(alpha = 0.35f)
-                    else if (isDark) DarkChipBorder else LightChipBorder,
+                    bg = actionOrangeBg,
+                    border = actionOrangeBorder,
                     tint = Orange,
                     onClick = onToggleTts
                 )
@@ -510,17 +551,15 @@ private fun ChatInputBlock(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(21.dp),
                                 strokeWidth = 2.dp,
-                                color = Orange
+                                color = Amber
                             )
                         } else {
                             Icon(Icons.Default.Mic, null, Modifier.size(21.dp))
                         }
                     },
-                    bg = if (isRecording) Orange.copy(alpha = 0.35f)
-                    else Orange.copy(alpha = 0.13f),
-                    border = if (isRecording) Orange
-                    else Orange.copy(alpha = 0.28f),
-                    tint = Orange,
+                    bg = if (isRecording) recordingRed.copy(alpha = 0.28f) else actionOrangeBg,
+                    border = if (isRecording) recordingRed else actionOrangeBorder,
+                    tint = if (isRecording) recordingRed else Orange,
                     onClick = onMicToggle
                 )
 
@@ -562,8 +601,10 @@ private fun ActionButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        ProvideTextStyle(LocalTextStyle.current.copy(color = tint)) {
-            icon()
+        CompositionLocalProvider(LocalContentColor provides tint) {
+            ProvideTextStyle(LocalTextStyle.current.copy(color = tint)) {
+                icon()
+            }
         }
     }
 }

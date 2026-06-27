@@ -11,12 +11,14 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.ui.common.CortexTopBar
 import de.frank.cortex.ui.navigation.AppNavGraph
 import de.frank.cortex.ui.navigation.Screen
@@ -61,7 +64,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var isDark by rememberSaveable { mutableStateOf(true) }
+            var themeMode by rememberSaveable { mutableStateOf(SettingsStore.themeMode) }
+            val systemDark = isSystemInDarkTheme()
+            val isDark = when (themeMode) {
+                "light" -> false
+                "system" -> systemDark
+                else -> true
+            }
             val vpnState by WireGuardManager.state.collectAsState()
 
             CortexTheme(darkTheme = isDark) {
@@ -75,7 +84,11 @@ class MainActivity : ComponentActivity() {
                     topBar = {
                         CortexTopBar(
                             isDark = isDark,
-                            onToggleTheme = { isDark = !isDark },
+                            themeMode = themeMode,
+                            onSetThemeMode = { mode ->
+                                themeMode = mode
+                                SettingsStore.themeMode = mode
+                            },
                             vpnState = vpnState,
                             onVpnToggle = { enabled ->
                                 if (enabled) startVpn()
@@ -150,7 +163,11 @@ class MainActivity : ComponentActivity() {
                     AppNavGraph(
                         navController = navController,
                         isDark = isDark,
-                        onToggleTheme = { isDark = !isDark },
+                        themeMode = themeMode,
+                        onSetThemeMode = { mode ->
+                            themeMode = mode
+                            SettingsStore.themeMode = mode
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

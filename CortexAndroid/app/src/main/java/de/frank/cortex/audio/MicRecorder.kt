@@ -22,20 +22,25 @@ class MicRecorder {
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
 
-    fun start(scope: CoroutineScope) {
-        if (isRecording) return
+    fun start(scope: CoroutineScope): Boolean {
+        if (isRecording) return true
 
         val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
+        if (bufferSize <= 0) {
+            CortexLog.error("MicRecorder", "start", "getMinBufferSize fehlgeschlagen: $bufferSize")
+            return false
+        }
+
         recorder = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            SAMPLE_RATE, CHANNEL, ENCODING, bufferSize
+            MediaRecorder.AudioSource.VOICE_RECOGNITION, // Samsung-kompatibel (statt MIC)
+            SAMPLE_RATE, CHANNEL, ENCODING, bufferSize * 2
         )
 
         if (recorder?.state != AudioRecord.STATE_INITIALIZED) {
-            CortexLog.error("MicRecorder", "start", "AudioRecord konnte nicht initialisiert werden")
+            CortexLog.error("MicRecorder", "start", "AudioRecord konnte nicht initialisiert werden (state=${recorder?.state})")
             recorder?.release()
             recorder = null
-            return
+            return false
         }
 
         buffer.reset()
@@ -52,7 +57,8 @@ class MicRecorder {
             }
         }
 
-        CortexLog.info("MicRecorder", "start", "Aufnahme gestartet")
+        CortexLog.info("MicRecorder", "start", "Aufnahme gestartet", mapOf("bufferSize" to bufferSize))
+        return true
     }
 
     fun stop(): ByteArray? {

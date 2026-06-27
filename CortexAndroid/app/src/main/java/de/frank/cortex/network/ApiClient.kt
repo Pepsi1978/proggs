@@ -212,7 +212,14 @@ object ApiClient {
 
     suspend fun geminiImprove(text: String): String {
         val key = SettingsStore.geminiApiKey
-        val prompt = "Verbessere Grammatik und Zeichensetzung des folgenden deutschen Textes. Inhalt und Bedeutung 1:1 lassen, nichts hinzufuegen/weglassen. Gib NUR den verbesserten Text zurueck."
+        if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
+        val prompt = """
+            Formuliere den folgenden deutschen Text in sehr gutes, natürliches Deutsch um.
+            Korrigiere Grammatik, Rechtschreibung, Zeichensetzung, Satzbau und holprige Diktierstellen.
+            Erkenne die gemeinte Intention aus dem vorhandenen Text, aber füge KEINE neuen Fakten, Aufgaben oder Aussagen hinzu.
+            Lasse KEINE vorhandenen Informationen, Einschränkungen oder Absichten weg.
+            Gib ausschließlich den verbesserten Text zurück, ohne Erklärung, Markdown oder Anführungszeichen.
+        """.trimIndent()
         val body = """
         {
             "contents": [{"parts": [
@@ -242,8 +249,8 @@ object ApiClient {
         val json = JSONObject(responseBody)
         val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
         val finishReason = candidate?.optString("finishReason")
-        val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason")
-        if (blockReason != null) throw Exception("Gemini blockiert: $blockReason")
+        val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason").orEmpty()
+        if (blockReason.isNotBlank()) throw Exception("Gemini blockiert: $blockReason")
         if (finishReason == "MAX_TOKENS") {
             CortexLog.warn("Gemini", "improve", "MAX_TOKENS erreicht — Antwort evtl. unvollstaendig")
         }

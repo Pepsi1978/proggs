@@ -27,7 +27,10 @@ data class DashboardUiState(
     val selectedEntry: BrainEntry? = null,
     val isEditing: Boolean = false,
     val editText: String = "",
-    val editTitle: String = ""
+    val editTitle: String = "",
+    // Drilldown
+    val categoryPath: List<String> = emptyList(),
+    val subcategories: Map<String, Int> = emptyMap()
 )
 
 class DashboardViewModel : ViewModel() {
@@ -140,11 +143,63 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
+    fun drillIntoCategory(category: String) {
+        val path = _uiState.value.categoryPath + category
+        val fullCategory = path.joinToString("/")
+        _uiState.update { it.copy(categoryPath = path, selectedCategory = fullCategory) }
+        loadSubcategories(fullCategory)
+        browseCategory(fullCategory)
+    }
+
+    fun drillBack(toIndex: Int) {
+        val path = _uiState.value.categoryPath.take(toIndex)
+        _uiState.update { it.copy(categoryPath = path) }
+        if (path.isEmpty()) {
+            _uiState.update { it.copy(subcategories = emptyMap(), selectedCategory = null, browseResults = emptyList()) }
+        } else {
+            val fullCategory = path.joinToString("/")
+            _uiState.update { it.copy(selectedCategory = fullCategory) }
+            loadSubcategories(fullCategory)
+            browseCategory(fullCategory)
+        }
+    }
+
+    fun drillToRoot() {
+        _uiState.update {
+            it.copy(
+                categoryPath = emptyList(),
+                subcategories = emptyMap(),
+                selectedCategory = null,
+                browseResults = emptyList()
+            )
+        }
+    }
+
+    private fun loadSubcategories(parentCategory: String) {
+        viewModelScope.launch {
+            try {
+                val counts = ApiClient.brainApi().categoryCounts()
+                val subs = mutableMapOf<String, Int>()
+                val prefix = "$parentCategory/"
+                counts.counts.forEach { (name, count) ->
+                    if (name.startsWith(prefix)) {
+                        val remainder = name.removePrefix(prefix)
+                        val sub = remainder.substringBefore("/")
+                        val fullSub = "$parentCategory/$sub"
+                        subs[sub] = (subs[sub] ?: 0) + count
+                    }
+                }
+                _uiState.update { it.copy(subcategories = subs) }
+            } catch (e: Exception) {
+                CortexLog.error("DashboardVM", "loadSubcategories", "Fehler: ${e.message}")
+            }
+        }
+    }
+
     private fun browseCategory(category: String) {
         viewModelScope.launch {
             try {
-                // byParent liefert alle Einträge der Hauptkategorie + aller Unterkategorien
-                val response = ApiClient.brainApi().byParent(category)
+                val response = ApiClient.brainApi().byCategory(category)
                 _uiState.update { it.copy(browseResults = response.items) }
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "browseCategory", "Fehler: ${e.message}")

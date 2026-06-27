@@ -45,7 +45,8 @@ data class ChatUiState(
     val sessionId: String = "android-${UUID.randomUUID()}",
     val isRecording: Boolean = false,
     val isTranscribing: Boolean = false,
-    val isSpeaking: Boolean = false
+    val isSpeaking: Boolean = false,
+    val isImproving: Boolean = false
 )
 
 class ChatViewModel : ViewModel() {
@@ -123,6 +124,9 @@ class ChatViewModel : ViewModel() {
     // Flow für transkribierten Text → UI setzt ihn ins Eingabefeld
     private val _transcribedText = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val transcribedText: SharedFlow<String> = _transcribedText
+
+    private val _improvedText = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val improvedText: SharedFlow<String> = _improvedText
 
     private fun filterSilence(result: de.frank.cortex.data.model.GroqTranscriptionResponse): String {
         val segments = result.segments
@@ -251,6 +255,51 @@ class ChatViewModel : ViewModel() {
 
     fun sendOption(option: ChatOption) {
         sendMessage(option.send)
+    }
+
+    fun improveText(text: String) {
+        val original = text.trim()
+        if (original.isBlank()) {
+            _uiState.update { it.copy(error = "Kein Text zum Verbessern") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isImproving = true, error = null) }
+            try {
+                CortexLog.checkpoint(
+                    step = "gemini_improve",
+                    intent = "Eingabetext sprachlich verbessern",
+                    expected = "verbesserter Text ersetzt Eingabefeld",
+                    actual = "warte…",
+                    ok = false,
+                    ctx = mapOf("input_len" to original.length)
+                )
+                val improved = withContext(Dispatchers.IO) { ApiClient.geminiImprove(original) }.trim()
+                if (improved.isBlank()) {
+                    throw IllegalStateException("Gemini hat leeren Text zurückgegeben")
+                }
+                _improvedText.emit(improved)
+                _uiState.update { it.copy(isImproving = false) }
+                CortexLog.checkpoint(
+                    step = "gemini_improve",
+                    intent = "Eingabetext sprachlich verbessern",
+                    expected = "verbesserter Text ersetzt Eingabefeld",
+                    actual = "output_len=${improved.length}",
+                    ok = true,
+                    ctx = mapOf("input_len" to original.length, "output_len" to improved.length)
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "improveText", "Gemini-Verbesserung fehlgeschlagen: ${e.message}")
+                _uiState.update {
+                    it.copy(
+                        isImproving = false,
+                        error = "Gemini konnte den Text nicht verbessern: ${e.message}"
+                    )
+                }
+            }
+        }
     }
 
     fun clearText() {
