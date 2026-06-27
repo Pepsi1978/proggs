@@ -31,8 +31,9 @@ einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
 | task-completion-summary.md | Pflicht-Schema am Ende jeder Aufgabe |
 | version-bump-visible-always.md | Versionszähler immer hochzählen — und SICHTBAR |
 | anti-halluzination.md | Anti-Halluzination: erst pruefen, dann behaupten — nichts erfinden |
+| projekt-wissen-aus-gehirn.md | Projekt-Wissen aus dem Gehirn zuerst lesen (Kategorie Projekte) |
 
-Kategorie fuer alle 15: `Programmierung/Rules`.
+Kategorie fuer alle 16: `Programmierung/Rules`.
 
 ## Grundsatz der Verkleinerung
 Verkleinert heisst: alle Handlungsregeln, MUSS-/NIEMALS-Punkte und konkreten Befehle/Formate
