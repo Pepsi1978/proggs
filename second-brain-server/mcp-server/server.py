@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.3.0"  # 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
+VERSION = "1.3.1"  # 1.3.1: get_by_title zeigt den ECHTEN aufgeloesten Titel an (data['title']) statt des Roh-Parameters -> kein doppeltes ' [Kategorie]' mehr bei toleranter Aufloesung. 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -202,8 +202,11 @@ def get_by_title(title: str) -> str:
         return f"Fehler beim Abrufen: {type(e).__name__}: {e}"
     if not data.get("found"):
         return f"Kein Eintrag mit Titel '{title}'."
+    # Den ECHTEN (vom Server aufgeloesten) Titel anzeigen, nicht den evtl. verschmutzten Roh-Parameter
+    # — sonst erscheint bei toleranter Aufloesung das angehaengte ' [Kategorie]' doppelt (1.16.0-Resolver).
+    shown = data.get("title") or title
     cat = f" [{data['category']}]" if data.get("category") else ""
-    return f"{title}{cat}:\n\n{data.get('text', '')}"
+    return f"{shown}{cat}:\n\n{data.get('text', '')}"
 
 
 @mcp.tool()
