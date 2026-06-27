@@ -49,11 +49,20 @@ STATE_DIR = os.path.expanduser("~/.cortex-sync")
 #   title_suffix    : fester Zusatz, der IMMER an den Titel gehaengt wird (Frank-Regel 2026-06-27),
 #                     damit Almanach und Best-Practice zum SELBEN Thema nie dieselbe doc_id (=Titel)
 #                     bekommen. Idempotent: wird nur angehaengt, wenn nicht schon vorhanden.
+#   file_kind       : "normal" = nur Inhalts-Dateien OHNE Check-Suffix; "check" = NUR die Check-
+#                     Versionen ("<thema>-codecheck.md" bzw. "-kurzcheck.md", liegen im selben
+#                     Bereichs-Ordner). So landen die Check-Versionen in eigenen Unterkategorien.
 SOURCES = [
-    {"name": "Almanache",      "root": "bugs",                          "category_tmpl": "Programmierung/Almanache/{label}",      "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Almanach)"},
-    {"name": "Best Practices", "root": "best-practices",                "category_tmpl": "Programmierung/Best Practices/{label}", "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Best Practices)"},
-    {"name": "Rules",          "root": "opencode-setup/rules-opencode", "category_tmpl": "Programmierung/Rules",                  "title_mode": "first_line", "layout": "flach",   "title_suffix": ""},
+    {"name": "Almanache",           "root": "bugs",                          "category_tmpl": "Programmierung/Almanache/{label}",       "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Almanach)",                 "file_kind": "normal"},
+    {"name": "Almanach-Kurzchecks", "root": "bugs",                          "category_tmpl": "Programmierung/Almanache/Kurzchecks",    "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Almanach Kurzcheck)",       "file_kind": "check"},
+    {"name": "Best Practices",      "root": "best-practices",                "category_tmpl": "Programmierung/Best Practices/{label}",  "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Best Practices)",           "file_kind": "normal"},
+    {"name": "BP-Kurzchecks",       "root": "best-practices",                "category_tmpl": "Programmierung/Best Practices/Kurzchecks","title_mode": "h1_clean",  "layout": "bereich", "title_suffix": " (Best Practices Kurzcheck)", "file_kind": "check"},
+    {"name": "Rules",               "root": "opencode-setup/rules-opencode", "category_tmpl": "Programmierung/Rules",                   "title_mode": "first_line", "layout": "flach",   "title_suffix": "",                            "file_kind": "normal"},
 ]
+
+# Check-Versionen einer Inhalts-Datei: "<thema>-codecheck.md" ODER "<thema>-kurzcheck.md" (beide
+# Schreibweisen werden erkannt, damit der Skill robust ist, egal wie das Build-Tool sie benennt).
+CHECK_RE = re.compile(r"-(codecheck|kurzcheck)\.md$", re.IGNORECASE)
 
 # Ordnername -> exaktes Bereichs-Label im Brain (Sonderschreibweisen). Fallback: Title-Case.
 LABELS = {
@@ -164,6 +173,11 @@ def collect_files(focus):
         for f in sorted(glob.glob(pattern)):
             name = os.path.basename(f).lower()
             if name in SKIP_NAMES or name.startswith("_"):
+                continue
+            # Check-Versionen (-codecheck/-kurzcheck) gehoeren NUR zur "check"-Quelle, nie zur normalen.
+            is_check = bool(CHECK_RE.search(name))
+            kind = src.get("file_kind", "normal")
+            if (kind == "check") != is_check:
                 continue
             if src["layout"] == "bereich":
                 subdir = os.path.basename(os.path.dirname(f))

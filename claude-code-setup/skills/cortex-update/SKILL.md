@@ -29,11 +29,20 @@ CLIs und Apps per semantischer Suche darauf zugreifen koennen. Dieser Skill find
 **Drei Quellen — bewusst ERWEITERBAR** (in `scripts/cortex_sync.py` → `SOURCES`; eine neue Datenart
 ist ein neuer Eintrag, mehr nicht):
 
-| Quelle | Ordner | Brain-Kategorie | Titel |
-|--------|--------|-----------------|-------|
-| **Almanache** | `bugs/<bereich>/` | `Programmierung/Almanache/<Label>` | aus der Ueberschrift abgeleitet **+ fester Zusatz `" (Almanach)"`** (Vorschlag — Benutzer bestaetigt) |
-| **Best Practices** | `best-practices/<bereich>/` | `Programmierung/Best Practices/<Label>` | aus der Ueberschrift abgeleitet **+ fester Zusatz `" (Best Practices)"`** |
-| **Regeln** | `opencode-setup/rules-opencode/` | `Programmierung/Rules` | **erste Zeile der Datei, 1:1** (kein Zusatz — Titel sind ohnehin eindeutig) |
+| Quelle | Ordner / Datei | Brain-Kategorie | Titel |
+|--------|----------------|-----------------|-------|
+| **Almanache** | `bugs/<bereich>/<thema>.md` | `Programmierung/Almanache/<Label>` | Ueberschrift **+ `" (Almanach)"`** |
+| **Almanach-Kurzchecks** | `bugs/<bereich>/<thema>-codecheck.md` (auch `-kurzcheck.md`) | `Programmierung/Almanache/Kurzchecks` | Ueberschrift **+ `" (Almanach Kurzcheck)"`** |
+| **Best Practices** | `best-practices/<bereich>/<thema>.md` | `Programmierung/Best Practices/<Label>` | Ueberschrift **+ `" (Best Practices)"`** |
+| **BP-Kurzchecks** | `best-practices/<bereich>/<thema>-codecheck.md` (auch `-kurzcheck.md`) | `Programmierung/Best Practices/Kurzchecks` | Ueberschrift **+ `" (Best Practices Kurzcheck)"`** |
+| **Regeln** | `opencode-setup/rules-opencode/` | `Programmierung/Rules` | **erste Zeile der Datei, 1:1** (kein Zusatz) |
+
+**Check-Versionen (Frank, 2026-06-27):** Zu jedem Almanach/jeder Best-Practice gibt es kuenftig eine
+Check-Datei im SELBEN Bereichs-Ordner, erkennbar am Suffix `-codecheck` ODER `-kurzcheck` vor `.md`
+(beide Schreibweisen werden erkannt). Diese landen in einer EIGENEN Unterkategorie `…/Kurzchecks`
+(nicht nach Bereich getrennt) und bekommen ihren eigenen Titel-Zusatz, damit sie nie mit dem
+Voll-Almanach/der Voll-Best-Practice kollidieren. Eine neue Datenart = ein neuer `SOURCES`-Eintrag
+(`file_kind: "check"`, `category_tmpl` ohne `{label}`).
 
 **Titel-Zusatz-Regel (Frank, 2026-06-27):** Weil die `doc_id` global nur aus dem Titel gebildet wird
 (Kategorie zaehlt nicht), bekommt JEDER Almanach den festen Zusatz `" (Almanach)"` und JEDE
