@@ -53,4 +53,31 @@ document.getElementById("reload").addEventListener("click", () => {
 	});
 });
 
+// ── Fehlerprotokoll ──
+const LOG_KEY = "ov_error_log";
+async function refreshLog() {
+	const box = document.getElementById("logBox");
+	const data = await chrome.storage.local.get(LOG_KEY);
+	const log = Array.isArray(data[LOG_KEY]) ? data[LOG_KEY] : [];
+	if (!log.length) {
+		box.textContent = "Keine Fehler gespeichert.";
+		return;
+	}
+	box.textContent = log
+		.slice()
+		.reverse()
+		.map((e) => {
+			const url = e.url ? `\n  ${e.url}` : "";
+			return `[${e.ts || "ohne Zeit"}] ${e.level || "warn"}: ${e.msg || ""}${url}`;
+		})
+		.join("\n\n");
+}
+
+document.getElementById("refreshLog").addEventListener("click", refreshLog);
+document.getElementById("clearLog").addEventListener("click", async () => {
+	await chrome.storage.local.set({ [LOG_KEY]: [] });
+	refreshLog();
+});
+
 load();
+refreshLog();

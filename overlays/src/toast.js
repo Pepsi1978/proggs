@@ -1,54 +1,45 @@
 // ============================================================
-// toast.js — geteilte Toast-Anzeige (robust gegen DOM-Rebuild der SPA)
+// toast.js — stille Ereignisprotokollierung für Content-Scripts
 // ============================================================
 (() => {
 	window.__chromeOverlays__ = window.__chromeOverlays__ || {};
 	const OV = window.__chromeOverlays__;
 
-	const TOAST_ID = "ov-toast";
-	let toast = null;
-	let toastTimer = null;
+	const LOG_KEY = "ov_error_log";
+	const MAX_LOG_ENTRIES = 200;
 
-	function ensureToast() {
-		let t = document.getElementById(TOAST_ID);
-		if (!t) {
-			t = document.createElement("div");
-			t.id = TOAST_ID;
-			if (document.body) document.body.appendChild(t);
-		}
-		toast = t;
-		Object.assign(t.style, {
-			position: "fixed",
-			bottom: "14px",
-			left: "14px",
-			zIndex: "2147483647",
-			maxWidth: "760px",
-			padding: "10px 12px",
-			borderRadius: "10px",
-			font: "12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial",
-			boxShadow: "0 6px 24px rgba(0,0,0,0.18)",
-			background: "rgba(20,20,20,0.92)",
-			color: "white",
-			display: "none",
-			whiteSpace: "pre-wrap",
-			pointerEvents: "none",
-		});
-		return t;
+	function isProblemMessage(msg) {
+		return /(^|\s)(❌|⚠️)|fehler|fehlgeschlagen|nicht gefunden|nicht uebernommen|nicht übernommen|kein zugriff|http\s*\d{3}|timeout/i.test(
+			String(msg || ""),
+		);
 	}
 
-	OV.toast = function showToast(msg, ms = 5500) {
+	async function appendLog(level, msg, ctx = {}) {
 		try {
-			if (!document.body) return;
-			ensureToast();
-			clearTimeout(toastTimer);
-			toast.textContent = msg;
-			toast.style.display = "block";
-			toastTimer = setTimeout(() => {
-				if (toast) toast.style.display = "none";
-			}, ms);
+			if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+			const entry = {
+				ts: new Date().toISOString(),
+				level,
+				msg: String(msg || ""),
+				url: location.href,
+				ctx,
+			};
+			const data = await chrome.storage.local.get(LOG_KEY);
+			const log = Array.isArray(data[LOG_KEY]) ? data[LOG_KEY] : [];
+			log.push(entry);
+			await chrome.storage.local.set({
+				[LOG_KEY]: log.slice(-MAX_LOG_ENTRIES),
+			});
 		} catch (e) {
-			console.debug("[Overlays] toast:", e);
+			console.debug("[Overlays] log:", e);
 		}
+	}
+
+	OV.logEvent = appendLog;
+
+	OV.toast = function showToast(msg, ms = 5500) {
+		void ms;
+		if (isProblemMessage(msg)) void appendLog("warn", msg, { source: "toast" });
 	};
 
 	OV.sleep = (ms) => new Promise((r) => setTimeout(r, ms));

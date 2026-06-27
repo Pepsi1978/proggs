@@ -53,6 +53,18 @@
 			#updstatus { font-weight: 600; }
 			.toggle { display: flex; align-items: center; gap: 10px; }
 			#status { margin-top: 12px; min-height: 18px; color: #4ade80; font-weight: 600; }
+			#logBox {
+				margin-top: 8px;
+				max-height: 220px;
+				overflow: auto;
+				white-space: pre-wrap;
+				font: 11px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+				color: #cbd5e1;
+				background: #0f172a;
+				border: 1px solid #334155;
+				border-radius: 8px;
+				padding: 8px;
+			}
 			a { color: #60a5fa; }
 		</style>
 	</head>
@@ -96,6 +108,16 @@
 					<button id="reload">Erweiterung neu laden</button>
 				</div>
 				<div class="hint" style="margin-top:8px">Startet die Erweiterung mit dem neuesten lokalen Code (ersetzt das ↻ in chrome://extensions) und laedt die offene Seite automatisch neu — kein F5 noetig.</div>
+			</div>
+
+			<div class="card">
+				<label>Fehlerprotokoll</label>
+				<div class="hint">Nur Warnungen und Fehler werden intern gespeichert. Normale Bestätigungen bleiben unsichtbar.</div>
+				<div class="row">
+					<button id="refreshLog" class="secondary">Log anzeigen</button>
+					<button id="clearLog" class="secondary">Log leeren</button>
+				</div>
+				<pre id="logBox">Noch nicht geladen.</pre>
 			</div>
 		</div>
 		<script src="options.js"></script>
