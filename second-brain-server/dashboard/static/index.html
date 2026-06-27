@@ -548,11 +548,13 @@ button{font-family:inherit;cursor:pointer}
 .msg-meta{display:block;margin-top:7px;font-size:11.5px;color:var(--text-dim);font-family:'JetBrains Mono'}
 .msg.typing{color:var(--text-dim);font-style:italic}
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-/* Eingabezeile: Buttons OBEN RECHTS fix (align-items:flex-start), das Textfeld waechst nach unten */
-.chat-input{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:8px 8px 8px 16px}
-.chat-input textarea{flex:1;align-self:stretch;background:transparent;border:none;outline:none;resize:none;color:var(--text);font:inherit;font-size:15px;line-height:1.5;max-height:420px;padding:9px 0}
+/* Eingabe-Blase: oben feste Werkzeugleiste, darunter Trennlinie + wachsender Textbereich. */
+.chat-input{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:10px 12px 12px;box-shadow:var(--shadow-card)}
+.chat-tools{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.chat-divider{height:1px;background:var(--border-soft);margin:10px -2px 2px}
+.chat-input textarea{width:100%;min-height:42px;background:transparent;border:none;outline:none;resize:none;color:var(--text);font:inherit;font-size:15px;line-height:1.55;max-height:420px;padding:9px 2px 0}
 .chat-input textarea::placeholder{color:var(--text-faint)}
-.chat-actions{flex:none;align-self:flex-start;display:flex;gap:8px}   /* bleibt oben — verschiebt sich NICHT mit dem wachsenden Feld */
+.chat-actions{flex:none;display:flex;gap:8px;margin-left:auto}
 .chat-btn{flex:none;width:42px;height:42px;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,opacity .15s,filter .15s}
 .chat-btn svg{width:19px;height:19px;stroke-width:2}
 .chat-btn:hover{transform:scale(1.06)}
@@ -584,13 +586,18 @@ button{font-family:inherit;cursor:pointer}
 .vl-toggle:has(input:checked) .vl-state{color:#F97316}
 .chat-improve.busy{animation:btnpulse 1s var(--ease-soft) infinite}
 /* Kategorie-Dropdown in der Eingabezeile (neben dem X) — kompakt, bleibt oben wie die Buttons */
-.chat-cat{flex:none;align-self:flex-start;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
+.chat-cat{flex:none;height:42px;max-width:160px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none}
 .chat-cat:hover{border-color:var(--accent)}
 /* Titel-Feld in der Eingabezeile (vor dem Kategorie-Dropdown) — bis 3x so breit wie das Kategoriefeld (Frank-Wunsch); fuer NEUE Eintraege, fliesst mit ins Embedding (brain-api 1.10.0). */
-.chat-title{flex:none;align-self:flex-start;height:42px;width:clamp(160px,22vw,480px);border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 12px;outline:none;transition:border-color .2s,box-shadow .25s}
+.chat-title{flex:1 1 220px;min-width:150px;height:42px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 12px;outline:none;transition:border-color .2s,box-shadow .25s}
 .chat-title:hover{border-color:var(--accent)}
 .chat-title:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.16)}
 .chat-title::placeholder{color:var(--text-faint)}
+@media(max-width:520px){
+  .chat-tools{flex-wrap:wrap}
+  .chat-actions{margin-left:0}
+  .chat-title{flex-basis:100%}
+}
 
 /* ── Eigene Dropdowns (custom select): native <select> versteckt, schoenes UI im Seiten-Stil ──── */
 .cs-native{display:none!important}
@@ -855,8 +862,7 @@ button{font-family:inherit;cursor:pointer}
             </div>
           </div>
           <div class="chat-input">
-            <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
-            <div class="chat-actions">
+            <div class="chat-tools" aria-label="Werkzeuge für Gespräch und Ablage">
               <input class="chat-title" id="chatTitle" type="text" maxlength="200" placeholder="Titel" autocomplete="off" title="Titel für einen neuen Eintrag — fließt mit in die Vektorsuche ein. Leer = der Agent vergibt den Titel." />
               <select class="chat-cat" id="chatCategory" title="Kategorie zum Ablegen wählen — ohne Auswahl entscheidet der Agent selbst">
                 <option value="">Auto-Kategorie</option>
@@ -876,6 +882,8 @@ button{font-family:inherit;cursor:pointer}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
               </button>
             </div>
+            <div class="chat-divider" aria-hidden="true"></div>
+            <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
           </div>
         </div>
       </section>
