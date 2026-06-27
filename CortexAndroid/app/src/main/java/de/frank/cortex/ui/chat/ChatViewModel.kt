@@ -58,6 +58,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun toggleRecording() {
+        CortexLog.info("ChatVM", "toggleRecording", "toggleRecording aufgerufen, isRecording=${micRecorder.isRecording()}")
         if (micRecorder.isRecording()) {
             // Stoppen + transkribieren
             _uiState.update { it.copy(isRecording = false, isTranscribing = true) }
@@ -89,7 +90,12 @@ class ChatViewModel : ViewModel() {
         } else {
             // Aufnahme starten
             _uiState.update { it.copy(isRecording = true) }
-            micRecorder.start(viewModelScope)
+            val started = micRecorder.start(viewModelScope)
+            if (!started) {
+                CortexLog.error("ChatVM", "toggleRecording", "AudioRecord konnte nicht initialisiert werden")
+                _uiState.update { it.copy(isRecording = false, error = "Mikrofon nicht verfügbar") }
+                return
+            }
             CortexLog.checkpoint(
                 step = "stt_start",
                 intent = "Mikrofon-Aufnahme starten",

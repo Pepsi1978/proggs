@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.cortex.data.model.ChatOption
+import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
@@ -177,8 +178,10 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
             isRecording = uiState.isRecording,
             isTranscribing = uiState.isTranscribing,
             onMicToggle = {
+                CortexLog.info("ChatScreen", "micClick", "Mikrofon angeklickt")
                 val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
+                CortexLog.info("ChatScreen", "micClick", "Permission: $hasPermission")
                 if (hasPermission) {
                     vm.toggleRecording()
                 } else {
@@ -376,45 +379,6 @@ private fun ChatInputBlock(
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     var catMenuOpen by remember { mutableStateOf(false) }
-    var showNewCategoryDialog by remember { mutableStateOf(false) }
-    var newCategoryName by rememberSaveable { mutableStateOf("") }
-
-    // Anlege-Dialog fuer neue Kategorien (wie im Dashboard-Gespraech)
-    if (showNewCategoryDialog) {
-        AlertDialog(
-            onDismissRequest = { showNewCategoryDialog = false },
-            title = { Text("Neue Kategorie") },
-            text = {
-                Column {
-                    Text(
-                        "Tipp: „Haupt/Unter“ legt eine Unterkategorie an.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = newCategoryName,
-                        onValueChange = { newCategoryName = it },
-                        singleLine = true,
-                        placeholder = { Text("Name der Kategorie") }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = newCategoryName.isNotBlank(),
-                    onClick = {
-                        val name = newCategoryName.trim()
-                        showNewCategoryDialog = false
-                        onCreateCategory(name)
-                    }
-                ) { Text("Anlegen") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showNewCategoryDialog = false }) { Text("Abbrechen") }
-            }
-        )
-    }
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -500,20 +464,6 @@ private fun ChatInputBlock(
                                 onClick = { onCategoryChange(cat.name); catMenuOpen = false }
                             )
                         }
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    "➕ Neue Kategorie…",
-                                    color = Iris,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            },
-                            onClick = {
-                                catMenuOpen = false
-                                newCategoryName = ""
-                                showNewCategoryDialog = true
-                            }
-                        )
                     }
                 }
             }
