@@ -58,6 +58,10 @@ class ChatViewModel : ViewModel() {
     private var speakJob: Job? = null
 
     init {
+        // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
+        // denselben Stand zeigen wie der "Antwort vorlesen"-Schalter in den Einstellungen.
+        _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled) }
+
         // Kategorien vom Server laden, SOBALD das VPN verbunden ist. Vorher (beim App-Start) ist
         // der Tunnel noch aus, der Aufruf liefe ins Leere — deshalb blieb das Dropdown leer.
         viewModelScope.launch {
@@ -228,7 +232,8 @@ class ChatViewModel : ViewModel() {
                 )
 
                 // Auto-TTS: Antwort vorlesen falls aktiviert
-                if (_uiState.value.ttsEnabled && response.reply.isNotBlank()) {
+                // Auto-Vorlesen folgt dem Schalter aus den Einstellungen (Single Source of Truth).
+                if (SettingsStore.ttsEnabled && response.reply.isNotBlank()) {
                     speakResponse(response.reply)
                 }
 
@@ -292,24 +297,13 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(isSpeaking = true) }
             try {
                 val voice = SettingsStore.ttsVoice
-                val chunks = chunkText(text, 220)
-                if (chunks.isEmpty()) return@launch
-
-                // Pipeline: das NAECHSTE Haeppchen schon erzeugen, waehrend das aktuelle KOMPLETT
-                // abgespielt wird. playAndAwait wartet bis zum echten Ende -> kein Abschneiden, kein
-                // Hin- und Herspringen mehr (das war der Bug). Naht-Luecken bleiben minimal.
-                coroutineScope {
-                    var nextPcm = async(Dispatchers.IO) { ApiClient.geminiTts(chunks[0], voice) }
-                    for (i in chunks.indices) {
-                        val pcm = nextPcm.await()
-                        if (i + 1 < chunks.size) {
-                            nextPcm = async(Dispatchers.IO) { ApiClient.geminiTts(chunks[i + 1], voice) }
-                        }
-                        CortexLog.info("ChatVM", "speakResponse", "Haeppchen abspielen",
-                            mapOf("i" to i, "von" to chunks.size, "len" to chunks[i].length))
-                        pcmPlayer.playAndAwait(pcm)
-                    }
-                }
+                // Die GANZE Agenten-Antwort in EINEM Gemini-TTS-Aufruf erzeugen -> EINE durchgehende
+                // Stimme, kein Stueckeln, kein Stimmenwechsel, kein Hin-und-Herspringen.
+                // (Frueher in 220-Zeichen-Haeppchen je eigenem Aufruf zerlegt -> klang je Haeppchen anders.)
+                CortexLog.info("ChatVM", "speakResponse", "TTS ganze Antwort (1 Stueck)",
+                    mapOf("len" to text.length, "voice" to voice))
+                val pcm = withContext(Dispatchers.IO) { ApiClient.geminiTts(text, voice) }
+                pcmPlayer.playAndAwait(pcm)
                 CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen")
             } catch (e: CancellationException) {
                 throw e
