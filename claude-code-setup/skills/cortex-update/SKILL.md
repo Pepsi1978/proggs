@@ -31,9 +31,20 @@ ist ein neuer Eintrag, mehr nicht):
 
 | Quelle | Ordner | Brain-Kategorie | Titel |
 |--------|--------|-----------------|-------|
-| **Almanache** | `bugs/<bereich>/` | `Programmierung/Almanache/<Label>` | aus der Ueberschrift abgeleitet (Vorschlag — Benutzer bestaetigt) |
-| **Best Practices** | `best-practices/<bereich>/` | `Programmierung/Best Practices/<Label>` | aus der Ueberschrift abgeleitet (Vorschlag) |
-| **Regeln** | `opencode-setup/rules-opencode/` | `Programmierung/Rules` | **erste Zeile der Datei, 1:1** (exakter Gehirn-Titel) |
+| **Almanache** | `bugs/<bereich>/` | `Programmierung/Almanache/<Label>` | aus der Ueberschrift abgeleitet **+ fester Zusatz `" (Almanach)"`** (Vorschlag — Benutzer bestaetigt) |
+| **Best Practices** | `best-practices/<bereich>/` | `Programmierung/Best Practices/<Label>` | aus der Ueberschrift abgeleitet **+ fester Zusatz `" (Best Practices)"`** |
+| **Regeln** | `opencode-setup/rules-opencode/` | `Programmierung/Rules` | **erste Zeile der Datei, 1:1** (kein Zusatz — Titel sind ohnehin eindeutig) |
+
+**Titel-Zusatz-Regel (Frank, 2026-06-27):** Weil die `doc_id` global nur aus dem Titel gebildet wird
+(Kategorie zaehlt nicht), bekommt JEDER Almanach den festen Zusatz `" (Almanach)"` und JEDE
+Best-Practice `" (Best Practices)"` an den Titel. So koennen Almanach UND Best-Practice zum selben
+Thema (z.B. „Room") nie dieselbe ID bekommen und sich nie gegenseitig ueberschreiben — ohne
+Server-Umbau. Der Zusatz wird idempotent gesetzt (nie doppelt). Regeln bleiben ohne Zusatz.
+
+> **Einmalige Bestand-Umstellung:** Die bereits im Gehirn liegenden Almanach-/BP-Eintraege haben den
+> Zusatz noch nicht (z.B. „Room" statt „Room (Almanach)"). Beim ersten Sync nach dieser Regel werden
+> sie als NEU (mit Zusatz) erkannt; die alten (ohne Zusatz) erscheinen als **verwaist** und muessen
+> einmalig geloescht werden (`forget` per Titel). Danach ist alles konsistent.
 
 `<Label>` = Bereichs-Ordner in der Brain-Schreibweise (android → Android, apis → API, agents →
 Agenten, android-build → Android Build, claude-tooling → Claude Tooling, second-brain → Second
@@ -147,6 +158,34 @@ fangen, weil sie die Eingabe-Laenge spiegelt). Prueft zusaetzlich Kategorie und 
 Auffindbarkeit (`/search`). Bei vielen grossen Dateien `--sample 3` oder mehr. Ergebnis als Tabelle
 („ALLE STICHPROBEN VOLLSTAENDIG" oder PRUEFEN-Zeilen). Bei Abweichung: betroffene Datei erneut
 `upload`-en und erneut verifizieren.
+
+## Schritt 4 — Verwaiste alte Eintraege aufraeumen (prune)
+
+Nach der Titel-Zusatz-Regel liegen die alten Eintraege (ohne Zusatz) nach dem Upload als **verwaist**
+im Gehirn. Nach einem frischen `scan` (der die Verwaisten neu bestimmt) koennen sie aufgeraeumt werden:
+
+```bash
+python ~/.claude/skills/cortex-update/scripts/cortex_sync.py prune            # Dry-Run: nur anzeigen
+python ~/.claude/skills/cortex-update/scripts/cortex_sync.py prune --confirm  # in den Papierkorb verschieben
+```
+
+**Soft-Delete:** `prune` verschiebt die Verwaisten in den Papierkorb (`DELETE /entry`, im Dashboard
+wiederherstellbar) — es loescht NICHT hart. Reihenfolge ist wichtig: **erst** `upload` (neue Titel
+ablegen), **dann** frisch `scan`, **dann** `prune` — sonst wuerde Inhalt kurz fehlen. Nur Eintraege
+aus der `orphans`-Liste des letzten Scans werden angefasst.
+
+## Erster Lauf = Komplett-Umzug (einmalig)
+
+Weil die Titel-Zusatz-Regel neu ist, ist der erste vollstaendige Lauf ein **einmaliger Umzug** des
+Bestands. Empfohlene Reihenfolge:
+
+1. `scan` — zeigt „neu" (echt neu + Umstellung) und „verwaist" (alte ohne Zusatz).
+2. **Backup pruefen** (Cortex Backup / taeglicher Snapshot) — vor dem Massen-Schreiben.
+3. `plan` → Uebersicht freigeben → `upload` → `verify` (die neuen Titel mit Zusatz ablegen).
+4. `scan` erneut → `prune --confirm` (die alten ohne Zusatz in den Papierkorb).
+5. `scan` zur Kontrolle: „neu"/„verwaist" sollten jetzt nur noch echte Neuzugaenge/Reste sein.
+
+Danach sind alle Eintraege im Zusatz-Schema; Folge-Laeufe sind klein (nur echte Aenderungen).
 
 ## Statusmeldung am Ende
 

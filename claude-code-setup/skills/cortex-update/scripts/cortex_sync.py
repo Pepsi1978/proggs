@@ -22,7 +22,7 @@ Drei Subcommands (kontext-schonend: Volltexte laufen NIE durch den LLM-Kontext, 
 
 Die Quellen stehen in SOURCES und sind bewusst ERWEITERBAR: eine neue Datenart = ein neuer Eintrag.
 """
-import os, re, sys, json, glob, argparse, urllib.request, urllib.parse
+import os, re, sys, json, glob, hashlib, argparse, urllib.request, urllib.parse
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")  # Windows cp1252-Print-Crash bei Umlauten/Pfeilen vermeiden
@@ -46,10 +46,13 @@ STATE_DIR = os.path.expanduser("~/.cortex-sync")
 #                     (aus dem Unterordner). Ohne "{label}" = feste Kategorie (alle Dateien gleich).
 #   title_mode      : "h1_clean" (bereinigte erste #-Ueberschrift) | "first_line" (erste Zeile 1:1)
 #   layout          : "bereich" (root/<bereich>/<datei>.md) | "flach" (root/<datei>.md)
+#   title_suffix    : fester Zusatz, der IMMER an den Titel gehaengt wird (Frank-Regel 2026-06-27),
+#                     damit Almanach und Best-Practice zum SELBEN Thema nie dieselbe doc_id (=Titel)
+#                     bekommen. Idempotent: wird nur angehaengt, wenn nicht schon vorhanden.
 SOURCES = [
-    {"name": "Almanache",      "root": "bugs",                          "category_tmpl": "Programmierung/Almanache/{label}",      "title_mode": "h1_clean",   "layout": "bereich"},
-    {"name": "Best Practices", "root": "best-practices",                "category_tmpl": "Programmierung/Best Practices/{label}", "title_mode": "h1_clean",   "layout": "bereich"},
-    {"name": "Rules",          "root": "opencode-setup/rules-opencode", "category_tmpl": "Programmierung/Rules",                  "title_mode": "first_line", "layout": "flach"},
+    {"name": "Almanache",      "root": "bugs",                          "category_tmpl": "Programmierung/Almanache/{label}",      "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Almanach)"},
+    {"name": "Best Practices", "root": "best-practices",                "category_tmpl": "Programmierung/Best Practices/{label}", "title_mode": "h1_clean",   "layout": "bereich", "title_suffix": " (Best Practices)"},
+    {"name": "Rules",          "root": "opencode-setup/rules-opencode", "category_tmpl": "Programmierung/Rules",                  "title_mode": "first_line", "layout": "flach",   "title_suffix": ""},
 ]
 
 # Ordnername -> exaktes Bereichs-Label im Brain (Sonderschreibweisen). Fallback: Title-Case.
@@ -101,6 +104,11 @@ def write_json(path, obj):
     with open(path, "w", encoding="utf-8", newline="\n") as fh:   # newline='\n' -> kein CRLF auf Windows
         json.dump(obj, fh, ensure_ascii=False, indent=2)
         fh.write("\n")
+
+
+def make_doc_id(title):
+    """Gleiche Formel wie der Server (brain-api make_doc_id) — fuer gezieltes Soft-Delete per doc_id."""
+    return "t_" + hashlib.sha1(f"{USER_ID}::{title.strip().lower()}".encode("utf-8")).hexdigest()[:24]
 
 
 def label_for(subdir):
@@ -171,6 +179,9 @@ def collect_files(focus):
             with open(f, encoding="utf-8") as fh:
                 text = fh.read()
             title = derive_title(text, src["title_mode"])
+            suffix = src.get("title_suffix", "")            # fester Typ-Zusatz (idempotent)
+            if suffix and not title.endswith(suffix):
+                title += suffix
             out.append({
                 "rel": os.path.relpath(f, REPO).replace("\\", "/"),
                 "source": src["name"], "category": category,
@@ -183,20 +194,25 @@ def collect_files(focus):
 
 
 def fetch_brain(key):
-    """Holt /list und gruppiert die fuer uns relevanten Eintraege nach Kategorie."""
-    res = http("GET", f"/list?{urllib.parse.urlencode({'user_id': USER_ID, 'limit': 2000})}", key)
+    """Holt /list, gruppiert die relevanten Eintraege nach Kategorie UND baut einen GLOBALEN
+    Titel-Index (title.lower() -> Kategorie) ueber ALLE Eintraege — fuer die Kollisionspruefung,
+    weil die doc_id global aus dem Titel gebildet wird (gleicher Titel ueberschreibt kategorie-uebergreifend)."""
+    res = http("GET", f"/list?{urllib.parse.urlencode({'user_id': USER_ID, 'limit': 5000})}", key)
     items = res.get("items") or res.get("memories") or []
     by_cat = {}
+    global_titles = {}
     for it in items:
         cat = it.get("category") or ""
+        title = it.get("title") or ""
+        if title:
+            global_titles.setdefault(title.strip().lower(), cat)
         if not (cat.startswith(("Programmierung/Almanache/", "Programmierung/Best Practices/")) or cat == "Programmierung/Rules"):
             continue
         chars = it.get("chars")
         if chars is None:
             chars = it.get("text_len") or 0
-        title = it.get("title") or ""
         by_cat.setdefault(cat, []).append({"title": title, "chars": chars, "tokens": tokenize(title)})
-    return by_cat
+    return by_cat, global_titles
 
 
 def classify(fi, by_cat):
@@ -208,24 +224,21 @@ def classify(fi, by_cat):
     inkl. finaler Newline (chars = +1) -- diese 1-Zeichen-Differenz ist KEINE echte Aenderung.
     """
     cands = by_cat.get(fi["category"], [])
-    dtl = fi["title"].strip().lower()
-    # 1. exakter Titel-Match (zuverlaessig v.a. fuer Rules: erste Zeile == Brain-Titel)
-    exact = [b for b in cands if dtl and b["title"].strip().lower() == dtl]
+    target = fi["title"]                    # Ziel-Titel INKL. Typ-Zusatz (deterministisch ableitbar)
+    tl = target.strip().lower()
+    # 1. exakter Match des ZIEL-Titels (mit Zusatz) -> Eintrag ist im Soll-Schema
+    exact = [b for b in cands if tl and b["title"].strip().lower() == tl]
     if exact:
         b = exact[0]
         return {"status": "aktuell" if abs(b["chars"] - fi["size"]) <= 1 else "geaendert", "brain_title": b["title"]}
-    # 2. eindeutige Groessen-Uebereinstimmung (+-1) -> unveraendert (kuratierter/abweichender Titel)
+    # 2. Ziel-Titel (mit Zusatz) NICHT vorhanden. Liegt der Inhalt schon unter einem ALTEN Titel
+    #    (ohne/falschem Zusatz)? -> Titel-Umstellung: neu unter Ziel-Titel ablegen, alten verwaisen lassen.
     near = [b for b in cands if abs(b["chars"] - fi["size"]) <= 1]
-    if len(near) == 1:
-        return {"status": "aktuell", "brain_title": near[0]["title"], "note": "per Groesse zugeordnet (Titel weicht ab)"}
-    if len(near) > 1:
-        b = best_fuzzy(fi["tokens"], near) or near[0]
-        return {"status": "aktuell", "brain_title": b["title"], "note": "mehrere gleich gross — geprueft"}
-    # 3. nichts Eindeutiges -> NEU (sicher). Fuzzy nur als Hinweis, falls es doch ein Update ist.
-    res = {"status": "neu", "suggested_title": fi["title"]}
-    hint = best_fuzzy(fi["tokens"], cands)
-    if hint:
-        res["note"] = f"aehnelt bestehendem '{hint['title']}' — falls Update, Titel darauf setzen"
+    cand = near[0] if len(near) == 1 else best_fuzzy(fi["tokens"], near or cands)
+    res = {"status": "neu", "suggested_title": target}
+    if cand:
+        res["note"] = f"Umstellung: Inhalt liegt schon unter altem Titel '{cand['title']}' — der wird nach dem Ablegen verwaist (loeschen)"
+        res["old_title"] = cand["title"]
     return res
 
 
@@ -236,19 +249,27 @@ def cmd_scan(args):
     os.makedirs(STATE_DIR, exist_ok=True)
     key = load_key()
     files = collect_files(args.focus)
-    by_cat = fetch_brain(key)
+    by_cat, global_titles = fetch_brain(key)
     matched = set()
     rows = []
+    collisions = []
     for fi in files:
         c = classify(fi, by_cat)
         bt = c.get("brain_title")
         if bt:
             matched.add((fi["category"], bt.strip().lower()))
+        title = bt or c.get("suggested_title") or fi["title"]
+        note = c.get("note", "")
+        # GLOBALE Kollisionspruefung: ein 'neu'-Titel, der schon irgendwo existiert, wuerde
+        # diesen Eintrag beim Upload ueberschreiben (doc_id ist global titel-basiert).
+        if c["status"] == "neu":
+            hit = global_titles.get(title.strip().lower())
+            if hit:
+                note = f"KOLLISION: Titel existiert bereits in [{hit}] — Titel anpassen ODER (falls Update) status=geaendert setzen"
+                collisions.append({"rel": fi["rel"], "title": title, "exists_in": hit})
         rows.append({
             "rel": fi["rel"], "source": fi["source"], "category": fi["category"],
-            "size": fi["size"], "status": c["status"],
-            "title": bt or c.get("suggested_title") or fi["title"],
-            "note": c.get("note", ""),
+            "size": fi["size"], "status": c["status"], "title": title, "note": note,
         })
     orphans = []
     for cat, entries in by_cat.items():
@@ -257,17 +278,24 @@ def cmd_scan(args):
                 orphans.append({"category": cat, "title": e["title"], "chars": e["chars"]})
 
     report = {
-        "neu":       [r for r in rows if r["status"] == "neu"],
-        "geaendert": [r for r in rows if r["status"] == "geaendert"],
-        "aktuell":   [r for r in rows if r["status"] == "aktuell"],
-        "orphans":   orphans,
+        "neu":        [r for r in rows if r["status"] == "neu"],
+        "geaendert":  [r for r in rows if r["status"] == "geaendert"],
+        "aktuell":    [r for r in rows if r["status"] == "aktuell"],
+        "orphans":    orphans,
+        "collisions": collisions,
         "total_files": len(files),
     }
     write_json(os.path.join(STATE_DIR, "scan.json"), report)
 
     print(f"Cortex-Scan: {len(files)} Dateien geprueft "
           f"(neu={len(report['neu'])}, geaendert={len(report['geaendert'])}, "
-          f"aktuell={len(report['aktuell'])}, verwaist im Brain={len(orphans)})\n")
+          f"aktuell={len(report['aktuell'])}, verwaist im Brain={len(orphans)}, "
+          f"Titel-Kollisionen={len(collisions)})\n")
+    if collisions:
+        print(f"=== !! TITEL-KOLLISIONEN ({len(collisions)}) — vor Upload anpassen ===")
+        for c in collisions:
+            print(f"  {c['rel']}  -> Titel '{c['title']}' existiert schon in [{c['exists_in']}]")
+        print()
     for label in ("neu", "geaendert"):
         if report[label]:
             print(f"=== {label.upper()} ({len(report[label])}) ===")
@@ -310,6 +338,40 @@ def cmd_plan(args):
     if len(entries) > 60:
         print(f"  ... (+{len(entries) - 60} weitere)")
     return 0
+
+
+def cmd_prune(args):
+    """Loescht die im letzten Scan als VERWAIST erkannten Brain-Eintraege (z.B. alte Titel ohne
+    Zusatz nach der Umstellung). SOFT-DELETE: verschiebt in den Papierkorb (Dashboard-wiederherstellbar),
+    loescht nicht hart. Nur mit --confirm; ohne Flag nur Anzeige (Dry-Run)."""
+    key = load_key()
+    with open(os.path.join(STATE_DIR, "scan.json"), encoding="utf-8") as fh:
+        r = json.load(fh)
+    orphans = r.get("orphans", [])
+    if not orphans:
+        print("Keine verwaisten Eintraege — nichts zu loeschen.")
+        return 0
+    print(f"{len(orphans)} verwaiste Eintraege (im Gehirn, KEINER Datei zugeordnet):\n")
+    for o in orphans:
+        print(f"  {o['title']}  [{o['category']}]")
+    if not args.confirm:
+        print(f"\nDRY-RUN — nichts geloescht. Zum Verschieben in den Papierkorb: prune --confirm")
+        return 0
+    deleted = skipped = fail = 0
+    for o in orphans:
+        try:
+            res = http("DELETE", "/entry?" + urllib.parse.urlencode({"doc_id": make_doc_id(o["title"]), "user_id": USER_ID}), key)
+            if res.get("deleted"):
+                deleted += 1
+                print(f"Papierkorb: {o['title']}")
+            else:
+                skipped += 1
+                print(f"nicht gefunden (uebersprungen): {o['title']}")
+        except Exception as ex:
+            fail += 1
+            print(f"FEHLER bei {o['title']}: {type(ex).__name__}: {ex}")
+    print(f"\n{deleted} in den Papierkorb verschoben, {skipped} uebersprungen, {fail} Fehler.")
+    return 0 if fail == 0 else 1
 
 
 def cmd_upload(args):
@@ -396,8 +458,9 @@ def main():
     pl = sub.add_parser("plan");  pl.add_argument("--status", default="neu,geaendert"); pl.add_argument("--only", default=None); pl.add_argument("--exclude", default=None)
     u = sub.add_parser("upload"); u.add_argument("--plan", required=True)
     v = sub.add_parser("verify"); v.add_argument("--plan", default=None); v.add_argument("--sample", type=int, default=2)
+    pr = sub.add_parser("prune"); pr.add_argument("--confirm", action="store_true")
     args = p.parse_args()
-    return {"scan": cmd_scan, "plan": cmd_plan, "upload": cmd_upload, "verify": cmd_verify}[args.cmd](args)
+    return {"scan": cmd_scan, "plan": cmd_plan, "upload": cmd_upload, "verify": cmd_verify, "prune": cmd_prune}[args.cmd](args)
 
 
 if __name__ == "__main__":
