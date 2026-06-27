@@ -49,8 +49,9 @@
 **Symptom:** Klare Regeln werden missachtet, teils mehrfach pro Session; Claude bestaetigt die Regel und bricht sie trotzdem.
 **Ursache:** CLAUDE.md/Rules werden als **User-Message NACH dem System-Prompt** geliefert, NICHT als erzwungene Config. Doku woertlich: "treats them as context, not enforced configuration. There's no guarantee of strict compliance, especially for vague or conflicting instructions."
 **Versionen:** per Design, alle Versionen.
-**FIX:** Verhalten, das IMMER laufen muss → **Hook** (PreToolUse/Lifecycle, laeuft als Shell-Befehl unabhaengig von Claudes Entscheidung — siehe `claude-hooks.md`). System-Prompt-Ebene → `--append-system-prompt`. Instruktionen **spezifisch + knapp** formulieren, Widersprueche zwischen Regeln entfernen. Siehe `best-practices/claude-tooling/arbeitsweise.md` + `best-practices/claude-tooling/kontext.md`.
-**Quelle:** docs/memory · #19635 · #34197 · #60346
+**Beleg (quantitativ, Recherche 2026-06-27):** Instruction-Compliance sinkt **linear mit der Regel-Anzahl** ("double the instructions, halve the compliance"); selbst beste Modelle befolgen **< 30 %** der Instructions in Agent-Szenarien perfekt, Frontier-Thinking-Modelle saettigen bei **~150-200** Instructions (Jaroslawicz et al. 2025). Praxistest: eine `AGENTS.md` mit nur **2** simplen Regeln → **4 von 5 Modellen ignorierten sie**. Kernsatz: *"Rules in prompts are requests. Hooks in code are laws."* → bestaetigt die FIX-Richtung. Vertiefung: `best-practices/agents/anti-halluzination-regeln.md` §7.
+**FIX:** Verhalten, das IMMER laufen muss → **Hook** (PreToolUse/Lifecycle, laeuft als Shell-Befehl unabhaengig von Claudes Entscheidung — siehe `claude-hooks.md`). System-Prompt-Ebene → `--append-system-prompt`. Instruktionen **spezifisch + knapp** formulieren, **wenige statt viele** (lineare Degradation), Widersprueche zwischen Regeln entfernen. Siehe `best-practices/claude-tooling/arbeitsweise.md` + `best-practices/claude-tooling/kontext.md`.
+**Quelle:** docs/memory · #19635 · #34197 · #60346 · Jaroslawicz et al. 2025 · #15443/#6120/#18660
 
 ### 1.2 Context-Rot: zu grosse CLAUDE.md senkt Genauigkeit  ⭐ HAEUFIG
 **Symptom:** Je laenger die CLAUDE.md, desto schlechter Befolgung/Genauigkeit — Qualitaet faellt schon ab ~50 % Kontextfuellung, nicht erst bei 100 %.

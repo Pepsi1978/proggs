@@ -37,7 +37,7 @@ best-practices/
 ├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, …)
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
-├── agents/           Boss-/Orchestrator-Agent im Multi-Agenten-System + Loop Engineering (autonome Agenten-Schleifen)
+├── agents/           Boss-/Orchestrator-Agent im Multi-Agenten-System + Loop Engineering (autonome Agenten-Schleifen) + Anti-Halluzinations-Regeln (Modelle/Agenten zum Nicht-Erfinden bewegen)
 ├── second-brain/     Selbstgehostetes persönliches Memory-System („zweites Gehirn"/PKM): VPS, Memory-Backends, Datenmodell, Orchestrator+Suche, Schreibpfad, Multi-Client, Sicherheit, Qualität, Referenz-Architekturen
 └── claude-tooling/   Claude-Code-Werkzeuge (Harness) — siehe Doppelnatur unten
 ```
@@ -55,7 +55,7 @@ best-practices/
 | `apis/` | 15 | LLM-/HTTP-APIs + OAuth (14 gepaart + `multi-provider` ungepaart) | `bugs/apis/` |
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
-| `agents/` | 2 | Orchestrator-Agent, Loop Engineering | `bugs/agents/` |
+| `agents/` | 3 | Orchestrator-Agent, Loop Engineering, Anti-Halluzinations-Regeln (konzeptionell, ungepaart) | `bugs/agents/` |
 | `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |
 | `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
 
