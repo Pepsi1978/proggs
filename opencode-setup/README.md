@@ -1,80 +1,150 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung**
-> einliest. Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter
-> `~/.config/opencode/` (NICHT im Repo) — dieser Ordner haelt sie versioniert fest,
-> sodass ein neuer Rechner exakt nachgezogen werden kann. Gesetzt 2026-06-26 (Frank).
+> Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
+> Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
+> (NICHT im Repo) — dieser Ordner haelt sie versioniert fest, sodass ein neuer Rechner mit **einem
+> Befehl** exakt nachgezogen werden kann. Gesetzt 2026-06-26, Installer 2026-06-27 (Frank).
+>
+> **Das Ziel in einem Satz:** OpenCode-CLI frisch installieren → `install`-Skript laufen lassen →
+> Voraussetzungen (Keys/Tunnel) setzen → fertig, identische Umgebung wie auf dem Hauptrechner.
 
 ---
 
-## Was OpenCode beim Start einliest (4 Ebenen)
+## Was OpenCode beim Start einliest (und was das Setup mitbringt)
 
-| Ebene | Datei | Im Repo? | Spiegelung hier |
-|-------|-------|----------|-----------------|
-| 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** |
-| 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** |
-| 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md` — Web-Recherche ueber die API-Pipeline) |
-| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js` — Anti-Halluzinations-Durchsetzung) |
-| 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) |
-| 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) |
+| Ebene | Datei (Betrieb) | Im Repo? | Spiegelung hier | Vom Installer kopiert? |
+|-------|-----------------|----------|-----------------|------------------------|
+| 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** | ja |
+| 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** | ja (shell angepasst) |
+| 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
+| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`) | ja |
+| 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
+| 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
+| 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
+| 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) | — |
 
-**Zusaetzlich (nicht in einer Datei):** Die `~/proggs/AGENTS.md` enthaelt die Anweisung, zu
-Session-Beginn EINMALIG alle Arbeitsregeln aus dem zweiten Gehirn zu laden
-(`second-brain`-MCP, `get_by_category('Programmierung/Rules')`). Diese Regeln liegen also
-zentral auf dem Server — auf jedem Rechner identisch, ohne dass man sie kopieren muss.
+**Nicht in einer Datei (kommt zentral vom Server):** Die globale `AGENTS.md` weist OpenCode an, zu
+Session-Beginn alle Arbeitsregeln aus dem **zweiten Gehirn** zu laden (`second-brain`-MCP, Kategorie
+`Programmierung/Rules`, per Nummer iteriert). Diese Regeln liegen also zentral — auf jedem Rechner
+identisch, ohne Kopieren. Dafuer muss der WireGuard-Tunnel stehen (siehe Voraussetzungen).
+
+> **NICHT versioniert** (von OpenCode/Bun selbst erzeugt, in `~/.config/opencode/.gitignore`):
+> `node_modules/`, `package.json`, `package-lock.json`, `bun.lock`, `opencode-notifier-state.json`
+> (Laufzeit-Zaehler). Diese werden weder gespiegelt noch vom Installer angefasst.
 
 ---
 
-## Einrichtung auf einem NEUEN Rechner (macOS oder Windows)
+## Schnellstart: identische Umgebung auf einem neuen Rechner
 
-1. **Repo klonen** (falls noch nicht): `git clone … ~/proggs` — damit sind Ebene 3+4
-   (Projekt-AGENTS.md, CLAUDE.md) automatisch da.
+### Schritt 1 — OpenCode-CLI installieren (frische Installation)
 
-2. **Globale Dateien an ihren Platz kopieren:**
-   ```sh
-   mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins
-   cp ~/proggs/opencode-setup/opencode.jsonc   ~/.config/opencode/opencode.jsonc
-   cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
-   cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
-   cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
-   ```
+Das macht der Installer NICHT (Paketmanager/interaktiv) — einmal von Hand:
 
-3. **Die EINE plattformspezifische Zeile anpassen** — in `~/.config/opencode/opencode.jsonc`:
-   - **Windows:** `"shell": "pwsh"` (so wie gespiegelt — nichts tun).
-   - **macOS/Linux:** `"shell"` auf `"bash"` setzen ODER die Zeile entfernen (Login-Shell).
-   Alles andere (MCP-Server, Plugins, Permissions, Provider) ist 1:1 identisch.
+**macOS:**
+```bash
+brew install anomalyco/tap/opencode     # empfohlen (immer aktuell)
+# oder universell:  curl -fsSL https://opencode.ai/install | bash
+opencode --version                      # verifizieren
+```
 
-4. **Voraussetzungen schaffen** (sonst laufen Teile ins Leere):
-   - **SK-Ordner:** Die API-Recherche-Skripte (`mm-research.py` / `or-research.py`) lesen ihre Keys
-     aus `~/SK/OpenCode/firecrawl-api-key.txt` + `~/SK/OpenCode/go-api-key.txt` +
-     `~/SK/ClaudeCodeOpenRouter/openrouter.key`. Secrets kommen NIE aus dem Repo — siehe Regel `secrets-in-sk-folder`.
-     (Firecrawl-MCP wurde am 2026-06-26 entfernt — Web-Recherche laeuft jetzt komplett ueber die API.)
-   - **WireGuard aktiv:** Der `second-brain`-MCP laeuft auf `http://10.8.0.1:8001/mcp` und ist NUR
-     ueber den WireGuard-Tunnel erreichbar. Ohne Tunnel kein Gehirn-Abruf (-> Regeln werden nicht
-     geladen). WireGuard auf dem neuen Rechner einrichten (Almanach `bugs/server/wireguard.md`).
-   - **`OPENROUTER_API_KEY`** als User-Umgebungsvariable (fuer den Owl/OpenRouter-Provider; aus auth.json).
+**Windows:**
+```powershell
+scoop install opencode                  # empfohlen (setzt PATH automatisch)
+# oder:  choco install opencode
+opencode --version
+```
+> Offizielle Empfehlung fuer Windows ist eigentlich **WSL** (bester Support). Nativ geht auch — dann
+> bleibt `"shell": "pwsh"` in der Config richtig. Details: `best-practices/opencode/grundlagen-installation.md`.
 
-5. **Plugins:**
-   - **npm-Plugins** (`@mohak34/opencode-notifier`, `@plannotator/opencode`) installiert OpenCode beim
-     ersten Start automatisch aus der `plugin`-Liste — nichts manuell zu tun.
-   - **Lokale Plugins** (`plugins/*.js`) werden in Schritt 2 mitkopiert und beim Start automatisch
-     geladen (kein Eintrag in `opencode.jsonc` noetig). Aktuell: **`tool-first-guard.js`** — setzt die
-     Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im Code durch: warnt (Log), wenn eine
-     bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie vorher mit `read` gelesen zu haben.
-     Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt nur zu warnen ("Laws"-Ebene). Hintergrund:
-     `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
+### Schritt 2 — Repo klonen (falls noch nicht da)
+```sh
+git clone https://github.com/Pepsi1978/proggs ~/proggs
+```
+Damit sind Projekt-`AGENTS.md` + `CLAUDE.md` (Ebene 3+4) automatisch da.
 
-6. **Start & Selbst-Check:** OpenCode oeffnen, in `~/proggs` arbeiten. Beim ersten Prompt MUSS OpenCode
-   melden: **"N Regeln aus dem zweiten Gehirn eingelesen."** — dann ist die Umgebung komplett.
+### Schritt 3 — Das Installer-Skript ausfuehren (DER eine Befehl)
+
+Kopiert Config, Regeln, Agents, Plugins und Sounds an ihren Platz, passt die plattformspezifische
+`shell`-Zeile an, erzeugt die Notifier-Config mit korrekten lokalen Pfaden und prueft am Ende die
+Voraussetzungen:
+
+**macOS / Linux:**
+```bash
+bash ~/proggs/opencode-setup/install.sh
+```
+
+**Windows:**
+```powershell
+pwsh ~/proggs/opencode-setup/install.ps1
+```
+
+Vorhandene Dateien werden vorher nach `~/.config/opencode/.backup-<zeit>/` gesichert (idempotent,
+beliebig oft wiederholbar — auch zum Aktualisieren nach einem `git pull`).
+
+### Schritt 4 — Voraussetzungen setzen (was der Installer NUR meldet, nicht selbst kann)
+
+Der Installer zeigt am Ende eine `OK`/`FEHLT`-Liste. Diese Dinge sind manuell zu erledigen:
+
+- **SK-Keys** (Secrets liegen NIE im Repo, siehe Regel `secrets-in-sk-folder`) — fuer die Recherche-Pipeline:
+  - `~/SK/OpenCode/firecrawl-api-key.txt` (Engine A)
+  - `~/SK/OpenCode/go-api-key.txt` (OpenCode-Go / MiniMax)
+  - `~/SK/ClaudeCodeOpenRouter/openrouter.key` (Engine B)
+- **`OPENROUTER_API_KEY`** als User-Umgebungsvariable (fuer den Owl/OpenRouter-Provider).
+- **WireGuard-Tunnel aktiv** — der `second-brain`-MCP laeuft auf `http://10.8.0.1:8001/mcp` und ist
+  NUR ueber den Tunnel erreichbar. Ohne ihn werden die Gehirn-Regeln nicht geladen. Einrichtung:
+  Almanach `bugs/server/wireguard.md`.
+- **`opencode auth login`** (bzw. `/connect` in der TUI) — fuer das Go-Abo (opencode-go/MiniMax + Plan).
+
+### Schritt 5 — Start & Selbst-Check
+```sh
+cd ~/proggs && opencode
+```
+Beim ersten Prompt MUSS OpenCode melden: **"N Regeln aus dem zweiten Gehirn eingelesen."** — dann ist
+die Umgebung komplett. Die npm-Plugins (`@mohak34/opencode-notifier`, `@plannotator/opencode`)
+installiert OpenCode beim Start selbst aus der `plugin`-Liste.
+
+---
+
+## Was der Installer Schritt fuer Schritt tut (Transparenz)
+
+1. Prueft, ob `opencode` im PATH ist (nur Hinweis, kein Abbruch).
+2. Legt `~/.config/opencode/{agents,plugins,sounds}` an und sichert vorhandene Dateien nach `.backup-<zeit>/`.
+3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`.
+4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, alle `sounds/*.wav`.
+5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei) —
+   die Repo-Variante haette feste Windows-Pfade, die auf macOS brechen.
+6. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
+
+## Lokale Plugins (Detail)
+
+`plugins/*.js` werden vom Installer kopiert und beim Start automatisch geladen (kein Eintrag in
+`opencode.jsonc` noetig). Aktuell:
+- **`tool-first-guard.js`** — setzt die Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im
+  Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
+  vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu
+  warnen ("Laws"-Ebene). Hintergrund: `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
+
+## Manueller Weg (Fallback, falls das Skript nicht passt)
+```sh
+mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins ~/.config/opencode/sounds
+cp ~/proggs/opencode-setup/opencode.jsonc   ~/.config/opencode/opencode.jsonc   # macOS: shell auf "bash" aendern
+cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
+cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
+cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
+cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
+# opencode-notifier.json mit lokalen Pfaden von Hand anlegen (siehe install-Skript als Vorlage)
+```
 
 ---
 
 ## Pflege (wichtig — sonst laeuft es auseinander)
 
-- Aenderst du `~/.config/opencode/opencode.jsonc` oder `~/.config/opencode/AGENTS.md`, **spiegle die
+- Aenderst du `~/.config/opencode/` (Config, AGENTS.md, agents, plugins, sounds), **spiegle die
   Aenderung sofort hierher** (`opencode-setup/`) und committe — sonst hat der andere Rechner den
   alten Stand. (Gleiche Idee wie `claude-code-setup/` fuer Claude Code, nur fuer OpenCode.)
 - Die eigentlichen **Arbeitsregeln** aenderst du NICHT hier, sondern zentral im **zweiten Gehirn**
   (Kategorie `Programmierung/Rules`) — von dort holt sie jeder Rechner automatisch.
 - `opencode.jsonc` enthaelt **keine** Klartext-Secrets (nur `{file:}`/`{env:}`-Referenzen) — daher
   unbedenklich im Repo.
+- `rules-opencode/` sind kompakte Regel-Fassungen fuer das Gehirn (Token-Sparen) — sie werden NICHT
+  nach `~/.config/opencode/` kopiert, sondern dienen dem Zurueckspeichern in `Programmierung/Rules`.
