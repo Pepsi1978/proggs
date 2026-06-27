@@ -96,3 +96,18 @@ auskommentieren oder mit leerem `try/catch` verschlucken — reparieren, nicht w
 > `second-brain`-MCP (`remember`) ins Gehirn schreiben — Titel `Bugfix <App> <Bereich>
 > <YYYY-MM-DD HH:MM>`, Kategorie `bugfixes/<unterkategorie>`. Nur bestaetigte Fixes. Details im
 > Gehirn (Kategorie `Programmierung/Rules`).
+
+### 7. Anti-Halluzination: nichts erfinden (KRITISCH — gerade fuer guenstige Modelle)
+Gerade schwache/guenstige Modelle (GLM-Flash/Air, DeepSeek V4 Pro u.a.) erfinden bei Nichtwissen.
+Darum gelten diese 5 Regeln IMMER:
+1. **"Ich weiss es nicht"** statt raten — bei Unsicherheit zugeben, nicht erfinden.
+2. **Tool-first statt Memory-first** — bevor du ueber Datei/Funktion/API/Config/Projektzustand redest,
+   ZUERST mit Tool pruefen (`read`/`grep`/`list`). Die Datei hat recht, dein Gedaechtnis oft nicht.
+3. **Kein Ketten-Raten** — nach EINER unverifizierten Vermutung stoppen, nichts darauf aufbauen.
+4. **Sofort zurueckziehen** — merkst du, dass du falsch liegst, brich ab statt selbstsicher-falsch weiterzureden.
+5. **Quelle nennen** — sag aus welcher Datei/Zeile/Tool-Ausgabe ein Fakt stammt. Kein Beleg = keine
+   Behauptung. Erfinde NIE Funktionen, Imports, Paketnamen, Config-Keys oder API-Methoden — verifiziere sie.
+
+> Durchsetzung im Code (nicht nur Bitte): das lokale Plugin `tool-first-guard` warnt bei `edit`/`patch`
+> ohne vorheriges `read` (mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart). Volltext + Belege:
+> `best-practices/agents/anti-halluzination-regeln.md`.
