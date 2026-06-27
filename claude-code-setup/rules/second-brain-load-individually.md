@@ -18,19 +18,24 @@
 ## Die eine Regel
 
 **Daten aus dem zweiten Gehirn (Second Brain, `second-brain`-MCP) werden IMMER EINZELN geladen —
-eine nach der anderen per `get_by_title` — und NIEMALS als ganze grosse Kategorie auf einmal
-(`get_by_category`) in den Kontext geschmissen.**
+ein Eintrag pro Abruf — und NIEMALS als ganze grosse Kategorie auf einmal (`get_by_category`) in den
+Kontext geschmissen.**
 
-Pflicht-Ablauf bei jedem Abruf mehrerer Eintraege:
-1. **`list_memories`** aufrufen — liefert nur Titel + Kategorie + Groesse (kompakt, kein Volltext,
-   sicher ladbar).
-2. Die gewuenschten Eintraege herausfiltern (z.B. alle der Kategorie `[Programmierung/Rules]`).
-3. **JEDEN Eintrag EINZELN per `get_by_title`** (exakter Titel) laden — eine nach der anderen, bis
-   alle durch sind. Jeder Einzeleintrag ist klein genug und wird so WIRKLICH vollstaendig gelesen.
+Eine ganze Kategorie durchlesen (z.B. die Arbeitsregeln) → **per Nummer iterieren mit
+`get_category_item`** (seit 2026-06-27, brain-api 1.17.0 / MCP 1.3.0):
+1. **`get_category_item('<Kategorie>', 1)`** aufrufen. Die Antwort liefert EINEN Eintrag 1:1 und nennt
+   `total` (Gesamtzahl) sowie den naechsten Aufruf.
+2. Mit **2, 3, 4 …** weiter, bis `total` erreicht ist. Jeder Aufruf = genau ein Eintrag (klein, nie
+   truncated). **Kein Titel raten, keine Liste parsen** — eine Zahl kann kein Modell falsch tippen
+   (Poka-Yoke Stufe 3, fuer JEDES Modell — auch ganz schwache).
 
-`get_by_category` ist nur fuer KLEINE Kategorien (wenige kurze Eintraege) bzw. zum Ueberblick
-gedacht — niemals zum Laden einer grossen Kategorie wie `Programmierung/Rules` oder
-`Programmierung/Almanache/*` (deren Eintraege sind teils 50-100 KB einzeln).
+Einen EINZELNEN, namentlich bekannten Eintrag holen → weiterhin **`get_by_title`** (der Abruf ist
+seit brain-api 1.16.0 zusaetzlich TOLERANT: ein faelschlich angehaengtes ` [Kategorie]` / ` — N
+Zeichen` / fuehrende `92.` wird automatisch abgestreift; Sicherheitsnetz, falls doch per Titel geladen wird).
+
+`get_by_category` (alle auf einmal) ist nur fuer KLEINE Kategorien (wenige kurze Eintraege) bzw. zum
+Ueberblick gedacht — **niemals** zum Laden einer grossen Kategorie wie `Programmierung/Rules` oder
+`Programmierung/Almanache/*` (deren Eintraege sind teils 50-100 KB einzeln → truncated/abgelehnt).
 
 ---
 
@@ -39,9 +44,12 @@ gedacht — niemals zum Laden einer grossen Kategorie wie `Programmierung/Rules`
 Wo eine CLI ihre Arbeitsregeln aus dem Gehirn bezieht (OpenCode via AGENTS.md-Anweisung), ist das
 **Laden der Regeln eine MUSS-Aufgabe am Session-Start** — die allererste Handlung, bevor auf
 irgendetwas reagiert wird. Kein "vielleicht schaue ich rein". Die Regeln der Kategorie
-`[Programmierung/Rules]` werden EINZELN (`list_memories` → `get_by_title` je Regel) wirklich
-geladen, dann wird "N Regeln aus dem zweiten Gehirn einzeln eingelesen" bestaetigt (N = tatsaechlich
-geladene Anzahl — niemals behaupten, wenn ein Abruf leer/abgeschnitten kam).
+`Programmierung/Rules` werden per Nummer durchiteriert (`get_category_item('Programmierung/Rules', 1)`,
+dann 2, 3 … bis `total`) wirklich geladen, dann wird "N Regeln aus dem zweiten Gehirn eingelesen"
+bestaetigt (N = `total` aus dem ersten Aufruf, und nur so viele, wie wirklich abgerufen wurden —
+niemals behaupten, wenn ein Abruf leer/abgeschnitten kam). Der Index-Weg ersetzt das fruehere
+`list_memories` → `get_by_title`-Verfahren als Hauptweg, weil schwache Modelle am exakten
+Titel-Tippen scheiterten (Frank-Bug 2026-06-27); per Zahl kann nichts mehr falsch geraten werden.
 
 > Claude Code laedt seine Regeln lokal aus `~/.claude/rules/` (immer da, kein Gehirn-Start-Abruf
 > noetig). Diese Regel gilt fuer Claude trotzdem: sobald Claude SELBST Second-Brain-Daten abruft

@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.2.0"  # 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
+VERSION = "1.3.0"  # 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -222,6 +222,38 @@ def get_by_category(category: str) -> str:
         title = it.get("title") or "(ohne Titel)"
         blocks.append(f"### {title}\n{it.get('text', '')}")
     return f"{len(items)} Eintrag(e) in '{category}':\n\n" + "\n\n".join(blocks)
+
+
+@mcp.tool()
+def get_category_item(category: str, index: int = 1) -> str:
+    """Hole EINEN Eintrag einer Kategorie per Nummer (1, 2, 3, ...) — der GANZE Text 1:1, plus die
+    Gesamtzahl. So liest du eine ganze Kategorie SICHER Stueck fuer Stueck ein, OHNE einen Titel
+    tippen zu muessen: rufe index=1 auf, lies in der Antwort 'X von TOTAL', dann index=2, 3, ... bis
+    TOTAL. Jeder Aufruf liefert genau EINEN Eintrag (klein, nie abgeschnitten). Das ist der sichere
+    Weg, eine ganze Kategorie einzulesen — z.B. die Arbeitsregeln:
+    get_category_item('Programmierung/Rules', 1), dann 2, 3, ... bis total. Funktioniert fuer jedes
+    Modell (eine Zahl kann man nicht falsch raten); KEIN get_by_category (das wird abgeschnitten)."""
+    try:
+        data = _get("/category-item", {"category": category, "index": index, "user_id": USER_ID})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "get_category_item fehlgeschlagen", exc_info=True)
+        return f"Fehler beim Abrufen: {type(e).__name__}: {e}"
+    total = data.get("total", 0)
+    if total == 0:
+        return f"Kategorie '{category}' ist leer (keine Eintraege)."
+    if not data.get("found"):
+        return (f"Index {index} ausserhalb des Bereichs: '{category}' hat {total} Eintraege "
+                f"(gueltig: 1 bis {total}).")
+    idx = data.get("index", index)
+    title = data.get("title") or "(ohne Titel)"
+    text = data.get("text", "")
+    if idx < total:
+        nxt = (f"\n\n→ NAECHSTER Eintrag: get_category_item('{category}', {idx + 1})  "
+               f"(noch {total - idx} von {total} offen).")
+    else:
+        nxt = f"\n\n✓ LETZTER Eintrag ({total} von {total}) — Kategorie '{category}' vollstaendig eingelesen."
+    _log(logging.INFO, "get_category_item ok", category=category, index=idx, total=total)
+    return f"Eintrag {idx} von {total} — '{title}' [{category}]:\n\n{text}{nxt}"
 
 
 @mcp.tool()

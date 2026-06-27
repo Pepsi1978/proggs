@@ -38,6 +38,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import threading
 import time
 import traceback
@@ -50,7 +51,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "1.15.0"  # 1.15.0: LADEFENSTER-SCHUTZ (Frank-Wunsch 2026-06-26, Direktive #3). Direkt nach Container-Neustart laedt Qdrant die Collection -> points_count/scroll liefern kurz UNVOLLSTAENDIG OHNE Fehler (Vorfall: brain_health zeigte 193 statt 1224, /list 175 statt 264 -> 'nur die Haelfte angezeigt'). Fix: /health + /list geben jetzt 'collection_status' (Qdrant green/yellow/grey/red) + 'ready' (green/yellow = Daten geladen+abfragbar) zurueck. REIN ADDITIV - kein bestehendes Feld, kein 'status', kein Lese-/Schreibpfad veraendert (0 Regressionsrisiko). MCP list_memories warnt bei ready=false ('Gehirn laedt noch') statt eine halbe Liste als vollstaendig auszugeben. qdrant.md §2c (Status green abwarten). 1.14.0: VOLLSTAENDIGER + SICHERER ABRUF, auch SEHR grosser Dokumente (Frank-Wunsch 2026-06-26, Direktive #3 — 'MCP perfekt, Daten vollstaendig abrufen, auch sehr grosse Dateien'). (a) by-title (= get_by_title im MCP) lud ALLE Chunks eines Docs mit je voller full_text-Kopie -> ein 1,4-Mio-Zeichen-Doc stuerzte brain-api beim Abruf per OOM ab (reproduziert). Jetzt limit=1 (1 Chunk genuegt, full_text 1:1 in jedem Chunk) -> grosse Docs abrufbar. (b) _scroll PAGINIERT jetzt (next_page_offset) -> laedt wirklich ALLE Punkte, auch >10.000 (vorher still abgeschnitten). limit=None=alle, limit=N=hoechstens N. (c) text_len ZENTRAL in _upsert_batched: Dokumentgroesse als kleines Feld -> /list (= list_memories 'X Zeichen') zeigt wieder die echte Groesse OHNE full_text zu laden (behebt die '0 Zeichen'-Regression aus 1.13.2). (d) by-category/by-parent laden nur chunk_index=0 je Doc -> kein N-Chunks-OOM bei grossen Docs. Backfill setzt text_len auf den Bestand. search/recall (begrenzte overfetch) folgt separat. 1.13.2: OOM-LOOP-FIX Teil 2 (Frank-Bug 2026-06-26) — der eigentliche PERIODISCHE Trigger war /list: das Dashboard pollt /api/overview ALLE 20s (index.html setInterval), das brain-api /list ruft; /list lud per _scroll(with_payload=True) ALLE Volltexte in den RAM, nur fuer die im Frontend UNGENUTZTE 'chars'-Laenge. Jetzt /list metadaten-only (with_payload=['doc_id','title','category','created_at','updated_at'], chars=0). Zusammen mit dem category-counts-Fix (1.13.1) ist der OOM-Loop an der WURZEL behoben (Direktive #3). by_category/by_parent geben weiter full_text (Drawer-Anzeige) -> on-demand-Absicherung folgt separat. 1.13.1: OOM-LOOP-FIX (Frank-Bug 2026-06-26) — category-counts lud per _scroll(with_payload=True) ALLE Punkte MIT full_text (1:1 in JEDEM Chunk) in den RAM, nur um Kategorien zu ZAEHLEN. Bei 60-70 grossen Almanachen >2 GB -> Container-OOM -> Neustart-Loop alle ~20s (brain-api war staendig kurz nicht erreichbar -> Dashboard zeigte '0 Eintraege'/'Server nicht erreichbar'). Fix: _scroll bekommt with_payload-Parameter; category-counts laedt NUR ['doc_id','categories','category'] (Zaehl-Felder, KEIN full_text) -> Speicher winzig, funktionserhaltend (zaehlt identisch). fastapi §8/§9 (nicht alles gleichzeitig in den RAM). Daten unberuehrt (990 points). 1.13.0: SEHR grosse Dokumente speichern OHNE Qdrant-32MB-Crash (Frank-Bug 2026-06-25, vom Regressionstest gefunden). Root Cause 2: full_text haengt 1:1 in JEDEM Chunk -> ein 600k-Zeichen-Doc (~150 Chunks) ergab ~102 MB in EINEM Upsert -> Qdrant lehnt > 32 MB ab (400). Fix: _upsert_batched() splittet jeden Upsert in Batches unter UPSERT_MAX_BYTES (Default 24 MB) — funktionserhaltend (dieselben Punkte/Payloads, nur mehrere Requests), kein Lesepfad veraendert. Gilt fuer ALLE Schreibwege (store/entry-category/entry-categories/update/trash_restore/reembed-all). 1.12.0: SEHR grosse Dokumente zuverlaessig (Frank-Wunsch 2026-06-25, Direktive-#3-Debugging). Edit-/Papierkorb-Text-Cap 200_000 -> 1_000_000 (deckt Franks 20-30x-Almanache); StoreReq.text bleibt bewusst UNGECAPPT (= der eigentliche Speicherpfad, chunkt selbst). Diese Caps sind reine OOM-Backstops (fastapi §8), nie stille Kuerzung. Hintergrund: der urspruengliche 'halbe Datei'-Bug sass NICHT hier — full_text wird in jedem Chunk 1:1 gespeichert (Z. 528, Sonde Z. 535) und by_title/by_category/by_parent/search geben full_text 1:1 zurueck; die Kuerzung war ein STILLER text[:8000]-Slice im dashboard VOR der Speicherung (#47233). Regressionstest: tests/large_doc_roundtrip.py. 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+VERSION = "1.17.0"  # 1.17.0: NARRENSICHERES SEQUENTIELLES KATEGORIE-EINLESEN (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). NEU: GET /category-item?category=&index=N -> EIN Eintrag per 1-basiertem Index + 'total'. Der Client iteriert index=1..total, OHNE einen Titel raten oder die Liste parsen zu muessen (eine Zahl kann kein Modell vermasseln). Stabile Titel-Sortierung (konsistent ueber Aufrufe), OOM-sicher (Metadaten fuer die Liste, Volltext nur fuer den einen Eintrag). Loest den OpenCode/DeepSeek-Fehler an der Wurzel (Poka-Yoke Stufe 3), ohne eine Namensstruktur/einen Titel zu aendern. Rein additiv. 1.16.0: TOLERANTER TITEL-ABRUF (Frank-Bug 2026-06-27, OpenCode/DeepSeek). /by-title hasht den Titel exakt -> schwache LLMs klebten dem Titel die Listen-Dekoration ' [Kategorie]' (auch ' — N Zeichen' / fuehrende '92.') aus der list_memories-Zeile an -> Eintrag wurde NIE gefunden (reproduziert: 'Versionszaehler... [Programmierung/Rules]' -> Miss). Fix: resolve_title() macht /by-title UND DELETE /by-title tolerant in 3 Stufen (exakter Hash unveraendert -> Dekoration abstreifen+exakt -> Scroll-Fallback nur 'title'-Feld, eindeutiger normalisierter Vergleich). Rein additiv (schneller Hauptpfad unveraendert), funktionserhaltend, Eindeutigkeits-Pflicht (lieber 'nicht gefunden' als falscher Eintrag). 1.15.0: LADEFENSTER-SCHUTZ (Frank-Wunsch 2026-06-26, Direktive #3). Direkt nach Container-Neustart laedt Qdrant die Collection -> points_count/scroll liefern kurz UNVOLLSTAENDIG OHNE Fehler (Vorfall: brain_health zeigte 193 statt 1224, /list 175 statt 264 -> 'nur die Haelfte angezeigt'). Fix: /health + /list geben jetzt 'collection_status' (Qdrant green/yellow/grey/red) + 'ready' (green/yellow = Daten geladen+abfragbar) zurueck. REIN ADDITIV - kein bestehendes Feld, kein 'status', kein Lese-/Schreibpfad veraendert (0 Regressionsrisiko). MCP list_memories warnt bei ready=false ('Gehirn laedt noch') statt eine halbe Liste als vollstaendig auszugeben. qdrant.md §2c (Status green abwarten). 1.14.0: VOLLSTAENDIGER + SICHERER ABRUF, auch SEHR grosser Dokumente (Frank-Wunsch 2026-06-26, Direktive #3 — 'MCP perfekt, Daten vollstaendig abrufen, auch sehr grosse Dateien'). (a) by-title (= get_by_title im MCP) lud ALLE Chunks eines Docs mit je voller full_text-Kopie -> ein 1,4-Mio-Zeichen-Doc stuerzte brain-api beim Abruf per OOM ab (reproduziert). Jetzt limit=1 (1 Chunk genuegt, full_text 1:1 in jedem Chunk) -> grosse Docs abrufbar. (b) _scroll PAGINIERT jetzt (next_page_offset) -> laedt wirklich ALLE Punkte, auch >10.000 (vorher still abgeschnitten). limit=None=alle, limit=N=hoechstens N. (c) text_len ZENTRAL in _upsert_batched: Dokumentgroesse als kleines Feld -> /list (= list_memories 'X Zeichen') zeigt wieder die echte Groesse OHNE full_text zu laden (behebt die '0 Zeichen'-Regression aus 1.13.2). (d) by-category/by-parent laden nur chunk_index=0 je Doc -> kein N-Chunks-OOM bei grossen Docs. Backfill setzt text_len auf den Bestand. search/recall (begrenzte overfetch) folgt separat. 1.13.2: OOM-LOOP-FIX Teil 2 (Frank-Bug 2026-06-26) — der eigentliche PERIODISCHE Trigger war /list: das Dashboard pollt /api/overview ALLE 20s (index.html setInterval), das brain-api /list ruft; /list lud per _scroll(with_payload=True) ALLE Volltexte in den RAM, nur fuer die im Frontend UNGENUTZTE 'chars'-Laenge. Jetzt /list metadaten-only (with_payload=['doc_id','title','category','created_at','updated_at'], chars=0). Zusammen mit dem category-counts-Fix (1.13.1) ist der OOM-Loop an der WURZEL behoben (Direktive #3). by_category/by_parent geben weiter full_text (Drawer-Anzeige) -> on-demand-Absicherung folgt separat. 1.13.1: OOM-LOOP-FIX (Frank-Bug 2026-06-26) — category-counts lud per _scroll(with_payload=True) ALLE Punkte MIT full_text (1:1 in JEDEM Chunk) in den RAM, nur um Kategorien zu ZAEHLEN. Bei 60-70 grossen Almanachen >2 GB -> Container-OOM -> Neustart-Loop alle ~20s (brain-api war staendig kurz nicht erreichbar -> Dashboard zeigte '0 Eintraege'/'Server nicht erreichbar'). Fix: _scroll bekommt with_payload-Parameter; category-counts laedt NUR ['doc_id','categories','category'] (Zaehl-Felder, KEIN full_text) -> Speicher winzig, funktionserhaltend (zaehlt identisch). fastapi §8/§9 (nicht alles gleichzeitig in den RAM). Daten unberuehrt (990 points). 1.13.0: SEHR grosse Dokumente speichern OHNE Qdrant-32MB-Crash (Frank-Bug 2026-06-25, vom Regressionstest gefunden). Root Cause 2: full_text haengt 1:1 in JEDEM Chunk -> ein 600k-Zeichen-Doc (~150 Chunks) ergab ~102 MB in EINEM Upsert -> Qdrant lehnt > 32 MB ab (400). Fix: _upsert_batched() splittet jeden Upsert in Batches unter UPSERT_MAX_BYTES (Default 24 MB) — funktionserhaltend (dieselben Punkte/Payloads, nur mehrere Requests), kein Lesepfad veraendert. Gilt fuer ALLE Schreibwege (store/entry-category/entry-categories/update/trash_restore/reembed-all). 1.12.0: SEHR grosse Dokumente zuverlaessig (Frank-Wunsch 2026-06-25, Direktive-#3-Debugging). Edit-/Papierkorb-Text-Cap 200_000 -> 1_000_000 (deckt Franks 20-30x-Almanache); StoreReq.text bleibt bewusst UNGECAPPT (= der eigentliche Speicherpfad, chunkt selbst). Diese Caps sind reine OOM-Backstops (fastapi §8), nie stille Kuerzung. Hintergrund: der urspruengliche 'halbe Datei'-Bug sass NICHT hier — full_text wird in jedem Chunk 1:1 gespeichert (Z. 528, Sonde Z. 535) und by_title/by_category/by_parent/search geben full_text 1:1 zurueck; die Kuerzung war ein STILLER text[:8000]-Slice im dashboard VOR der Speicherung (#47233). Regressionstest: tests/large_doc_roundtrip.py. 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -287,6 +288,74 @@ def make_doc_id(user_id: str, title: str | None) -> str:
         h = hashlib.sha1(f"{user_id}::{title.strip().lower()}".encode("utf-8")).hexdigest()[:24]
         return f"t_{h}"
     return f"d_{uuid.uuid4().hex}"
+
+
+# ---------------------------------------------------------------------------
+# Toleranter Titel-Resolver (Frank-Bug 2026-06-27, OpenCode/DeepSeek)
+# ---------------------------------------------------------------------------
+# make_doc_id hasht den Titel EXAKT (lower+strip) -> jeder Fremdzusatz = Miss. Schwache LLMs
+# rekonstruieren den Titel aus der /list- bzw. MCP-list_memories-Zeile "{Titel} [{Kategorie}] —
+# {N} Zeichen" und haengen dabei das " [Kategorie]"-Suffix (oder " — N Zeichen" / die fuehrende
+# Listennummer "92.") faelschlich AN den Titel -> /by-title fand den Eintrag nie. resolve_title
+# macht den Abruf tolerant, OHNE den schnellen exakten Hauptpfad zu aendern (rein additiv,
+# funktionserhaltend; Direktive #3). Eindeutigkeits-Pflicht: lieber "nicht gefunden" als der
+# falsche Eintrag.
+_LIST_NUM_PREFIX = re.compile(r"^\s*\d+\.\s+")                                 # "92. " am Anfang
+_SIZE_SUFFIX = re.compile(r"\s*[—–-]\s*\d[\d.,]*\s*Zeichen\s*$", re.IGNORECASE)  # " — 2121 Zeichen" am Ende
+_CAT_SUFFIX = re.compile(r"\s*\[[^\[\]]*\]\s*$")                               # " [Programmierung/Rules]" am Ende
+
+
+def strip_list_decorations(title: str) -> str:
+    """Entfernt Listen-Dekorationen, die LLMs faelschlich an den Titel kleben: fuehrende
+    Listennummer, abschliessendes ' — N Zeichen' und abschliessendes ' [Kategorie]'. In einer
+    Schleife, weil sie kombiniert auftreten ('92. Titel [Kat] — N Zeichen')."""
+    prev, out = None, title
+    while out != prev:
+        prev = out
+        out = _SIZE_SUFFIX.sub("", out)
+        out = _CAT_SUFFIX.sub("", out)
+        out = _LIST_NUM_PREFIX.sub("", out)
+        out = out.strip()
+    return out
+
+
+def _norm_cmp(s: str) -> str:
+    """Vergleichsnormalform: Dekorationen abstreifen, Whitespace kollabieren, lowercase."""
+    return re.sub(r"\s+", " ", strip_list_decorations(s)).strip().lower()
+
+
+def _doc_id_exists(doc_id: str) -> bool:
+    return bool(_scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1))
+
+
+def resolve_title(user_id: str, title: str) -> "tuple[str, str] | None":
+    """Findet den ECHTEN gespeicherten Titel + doc_id zu einem (evtl. LLM-'verschmutzten') Titel.
+    Gibt (echter_titel, doc_id) zurueck oder None. Drei Stufen, schnellster Pfad zuerst:
+      1. exakter Hash (unveraenderter Hauptpfad).
+      2. Listen-Dekorationen abstreifen -> erneut exakt hashen (deckt '[Kategorie]' / '— N Zeichen' / '92.').
+      3. Scroll-Fallback: alle Titel des Nutzers (NUR 'title'-Feld, KEIN full_text -> kein OOM, fastapi §8)
+         normalisiert case-insensitiv vergleichen; nur bei EINDEUTIGEM Treffer uebernehmen."""
+    did = make_doc_id(user_id, title)
+    if _doc_id_exists(did):
+        return title, did
+    stripped = strip_list_decorations(title)
+    if stripped and stripped != title:
+        did2 = make_doc_id(user_id, stripped)
+        if _doc_id_exists(did2):
+            return stripped, did2
+    needle = _norm_cmp(title)
+    if not needle:
+        return None
+    matches: dict[str, str] = {}   # doc_id -> echter gespeicherter Titel
+    for p in _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                     with_payload=["doc_id", "title"]):
+        t = (p.payload.get("title") or "").strip()
+        if t and _norm_cmp(t) == needle:
+            matches[p.payload.get("doc_id")] = t
+    if len(matches) == 1:
+        did3, real = next(iter(matches.items()))
+        return real, did3
+    return None
 
 
 def category_parent(category: str | None) -> str:
@@ -610,18 +679,28 @@ def by_title(title: str, user_id: str = "frank") -> dict:
     """Exakter Abruf per Titel -> liefert das GANZE Dokument 1:1."""
     _require_store()
     doc_id = make_doc_id(user_id, title)
+    real_title = title
     # NUR 1 Chunk laden: full_text ist 1:1 in JEDEM Chunk -> ein Chunk genuegt fuer das GANZE Dokument.
     # limit=1000 lud bei einem sehr grossen Doc (z.B. 1,4 Mio Zeichen, viele Chunks) ALLE Chunks mit je
     # einer vollen full_text-Kopie -> hunderte MB gleichzeitig im RAM -> OOM BEIM ABRUF (Frank-Bug
     # 2026-06-26: 1,4M-Doc liess sich nicht abrufen, brain-api stuerzte ab). limit=1 = sicher + vollstaendig.
     points = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
     if not points:
+        # Toleranter Fallback: LLM hat dem Titel Listen-Dekorationen angeklebt ('[Kategorie]',
+        # '— N Zeichen', '92.'). resolve_title liefert den ECHTEN Titel + doc_id (Frank-Bug 2026-06-27).
+        resolved = resolve_title(user_id, title)
+        if resolved:
+            real_title, doc_id = resolved
+            points = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+            checkpoint("by_title", "Toleranter Fallback hat verschmutzten Titel aufgeloest", ok=True,
+                       angefragt=title, aufgeloest=real_title)
+    if not points:
         checkpoint("by_title", "Abruf per Titel", ok=False, found=False, title=title)
         return {"ok": True, "found": False, "title": title, "text": None}
     full = points[0].payload.get("full_text", "")
     checkpoint("by_title", "Abruf per Titel gibt das GANZE Dokument 1:1 zurueck", ok=bool(full),
-               title=title, chars=len(full))
-    return {"ok": True, "found": True, "title": title, "doc_id": doc_id,
+               title=real_title, chars=len(full))
+    return {"ok": True, "found": True, "title": real_title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
             "categories": cats_from_payload(points[0].payload),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
@@ -653,6 +732,48 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "category": category, "count": len(items), "items": items}
+
+
+@app.get("/category-item", dependencies=[Depends(require_auth)])
+def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict:
+    """EINEN Eintrag einer Kategorie per 1-basiertem Index -> der GANZE Text 1:1, plus 'total'.
+    Zweck (Frank-Wunsch 2026-06-27): narrensicheres, sequentielles Einlesen einer ganzen Kategorie
+    (z.B. der Arbeitsregeln) fuer JEDES Modell — auch ganz schwache. Der Client iteriert index=1..total,
+    OHNE einen Titel raten oder eine Liste parsen zu muessen (eine simple Zahl kann kein Modell vermasseln).
+    STABILE Reihenfolge (nach Titel sortiert), damit die Iteration ueber mehrere Aufrufe konsistent bleibt
+    (unabhaengig von updated_at). OOM-sicher: fuer die Liste NUR Metadaten, den Volltext NUR fuer den
+    EINEN gewuenschten Eintrag (fastapi §8, wie /by-title)."""
+    _require_store()
+    cat = category.strip()
+    # 1) NUR Metadaten aller Eintraege der Kategorie (KEIN full_text -> kein OOM auch bei grossen Kategorien)
+    points = _scroll(Filter(must=[
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+        FieldCondition(key="chunk_index", match=MatchValue(value=0)),   # 1 Chunk je Doc -> 1 Zeile je Eintrag
+        Filter(should=[FieldCondition(key="categories", match=MatchValue(value=cat)),
+                       FieldCondition(key="category", match=MatchValue(value=cat))]),
+    ]), with_payload=["doc_id", "title"])
+    seen: dict[str, str] = {}   # doc_id -> Titel (dedupliziert)
+    for p in points:
+        did = p.payload.get("doc_id")
+        if did and did not in seen:
+            seen[did] = (p.payload.get("title") or "").strip()
+    # Stabile, deterministische Reihenfolge ueber alle Aufrufe (nach Titel, dann doc_id)
+    ordered = sorted(seen.items(), key=lambda kv: (kv[1].lower(), kv[0]))
+    total = len(ordered)
+    if total == 0:
+        return {"ok": True, "found": False, "category": category, "index": index, "total": 0, "text": None}
+    if index < 1 or index > total:
+        return {"ok": True, "found": False, "category": category, "index": index, "total": total,
+                "text": None, "error": f"index {index} ausserhalb 1..{total}"}
+    doc_id, title = ordered[index - 1]
+    # 2) Volltext NUR fuer diesen einen Eintrag (limit=1; full_text liegt 1:1 in jedem Chunk)
+    pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+    full = pts[0].payload.get("full_text", "") if pts else ""
+    checkpoint("category_item", "Sequentieller Kategorie-Abruf per Index (1:1)", ok=bool(full),
+               category=cat, index=index, total=total, title=title, chars=len(full))
+    return {"ok": True, "found": True, "category": category, "index": index, "total": total,
+            "title": title, "doc_id": doc_id,
+            "categories": cats_from_payload(pts[0].payload) if pts else [], "text": full}
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
@@ -1018,13 +1139,15 @@ def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
 def forget(title: str, user_id: str = "frank") -> dict:
     """Loescht den Eintrag mit diesem Titel komplett."""
     _require_store()
-    doc_id = make_doc_id(user_id, title)
-    existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
-    if not existing:
+    # Toleranter Resolver: gleicher '[Kategorie]'/'— N Zeichen'/'92.'-Schutz wie bei /by-title, damit
+    # 'forget' nicht still ins Leere laeuft, wenn das LLM den Titel aus der Liste verschmutzt hat.
+    resolved = resolve_title(user_id, title)
+    if not resolved:
         return {"ok": True, "deleted": False, "title": title}
+    real_title, doc_id = resolved
     _delete_doc(doc_id)
-    checkpoint("forget", "Eintrag per Titel geloescht", ok=True, title=title)
-    return {"ok": True, "deleted": True, "title": title}
+    checkpoint("forget", "Eintrag per Titel geloescht", ok=True, title=real_title, angefragt=title)
+    return {"ok": True, "deleted": True, "title": real_title}
 
 
 @app.delete("/entry", dependencies=[Depends(require_auth)])
