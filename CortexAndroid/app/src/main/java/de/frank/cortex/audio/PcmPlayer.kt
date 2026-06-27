@@ -29,7 +29,7 @@ class PcmPlayer {
         const val BYTES_PER_FRAME = 2 // 16-bit mono
     }
 
-    suspend fun playAndAwait(pcmData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun playAndAwait(pcmData: ByteArray, speed: Float = 1.0f) = withContext(Dispatchers.IO) {
         stop() // evtl. Reste sicher beenden
         if (pcmData.isEmpty()) return@withContext
 
@@ -54,6 +54,14 @@ class PcmPlayer {
 
         player = track
         playing = true
+        // Sprechtempo: zeitdehnend, ohne Tonhoehen-Aenderung (setSpeed laesst pitch bei 1.0).
+        if (speed != 1.0f) {
+            try {
+                track.playbackParams = android.media.PlaybackParams().setSpeed(speed.coerceIn(0.5f, 2.0f))
+            } catch (e: Exception) {
+                CortexLog.warn("PcmPlayer", "playAndAwait", "Tempo nicht setzbar: ${e.message}")
+            }
+        }
         track.play()
 
         try {

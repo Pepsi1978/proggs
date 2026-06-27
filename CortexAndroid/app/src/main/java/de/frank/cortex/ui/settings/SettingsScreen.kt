@@ -46,7 +46,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     isDark: Boolean = true,
-    onToggleTheme: () -> Unit = {}
+    themeMode: String = "dark",
+    onSetThemeMode: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -294,7 +295,7 @@ fun SettingsScreen(
                                             "Hallo, ich bin $label. Willkommen bei Cortex, deinem zweiten Gehirn.",
                                             voice
                                         )
-                                        pcmPlayer.playAndAwait(pcm)
+                                        pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
                                     } catch (e: Exception) {
                                         CortexLog.error("Settings", "testVoice", "TTS-Test fehlgeschlagen: ${e.message}")
                                         Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -303,6 +304,33 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+
+                // Sprechtempo (Design: 0.7–1.4, Schritt 0.05, Standard 1.0)
+                Column(modifier = Modifier.padding(14.dp)) {
+                    var ttsRate by remember { mutableStateOf(SettingsStore.ttsRate) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Sprechtempo", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(
+                            String.format(java.util.Locale.US, "%.2f×", ttsRate),
+                            fontFamily = JetBrainsMono,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Slider(
+                        value = ttsRate,
+                        onValueChange = { ttsRate = it },
+                        onValueChangeFinished = { SettingsStore.ttsRate = ttsRate },
+                        valueRange = 0.7f..1.4f,
+                        steps = 13,
+                        colors = SliderDefaults.colors(thumbColor = Orange, activeTrackColor = Orange)
+                    )
                 }
             }
         }
@@ -319,13 +347,14 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().padding(13.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                data class ThemeOpt(val id: String, val name: String, val icon: String)
+                data class ThemeOpt(val id: String, val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
                 val opts = listOf(
-                    ThemeOpt("dark", "Dunkel", "dark_mode"),
-                    ThemeOpt("light", "Hell", "light_mode")
+                    ThemeOpt("dark", "Dunkel", Icons.Default.DarkMode),
+                    ThemeOpt("light", "Hell", Icons.Default.LightMode),
+                    ThemeOpt("system", "System", Icons.Default.PhoneAndroid)
                 )
                 opts.forEach { opt ->
-                    val active = (opt.id == "dark" && isDark) || (opt.id == "light" && !isDark)
+                    val active = themeMode == opt.id
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (active) Iris.copy(alpha = 0.14f)
@@ -335,8 +364,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                // Nur toggeln wenn der aktive Modus nicht schon gewählt ist
-                                if (!active) onToggleTheme()
+                                if (!active) onSetThemeMode(opt.id)
                             }
                     ) {
                         Column(
@@ -345,7 +373,7 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                if (opt.id == "dark") Icons.Default.DarkMode else Icons.Default.LightMode,
+                                opt.icon,
                                 null, modifier = Modifier.size(22.dp),
                                 tint = if (active) Iris else MaterialTheme.colorScheme.onSurface
                             )

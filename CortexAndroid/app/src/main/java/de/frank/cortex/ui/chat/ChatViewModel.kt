@@ -303,7 +303,7 @@ class ChatViewModel : ViewModel() {
                 CortexLog.info("ChatVM", "speakResponse", "TTS ganze Antwort (1 Stueck)",
                     mapOf("len" to text.length, "voice" to voice))
                 val pcm = withContext(Dispatchers.IO) { ApiClient.geminiTts(text, voice) }
-                pcmPlayer.playAndAwait(pcm)
+                pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
                 CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen")
             } catch (e: CancellationException) {
                 throw e

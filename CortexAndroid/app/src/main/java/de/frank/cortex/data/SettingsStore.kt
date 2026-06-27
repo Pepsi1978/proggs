@@ -83,17 +83,22 @@ object SettingsStore {
 
     // --- UI-Präferenzen (klartext ok) ---
 
-    var isDarkTheme: Boolean
-        get() = plain.getBoolean("dark_theme", true)
-        set(value) = plain.edit().putBoolean("dark_theme", value).apply()
+    var themeMode: String
+        get() = plain.getString("theme_mode", "dark") ?: "dark"
+        set(value) = plain.edit().putString("theme_mode", value).apply()
 
     var ttsEnabled: Boolean
         get() = plain.getBoolean("tts_enabled", true)
         set(value) = plain.edit().putBoolean("tts_enabled", value).apply()
 
     var ttsVoice: String
-        get() = plain.getString("tts_voice", "Aoede") ?: "Aoede"
+        get() = plain.getString("tts_voice", "Kore") ?: "Kore"
         set(value) = plain.edit().putString("tts_voice", value).apply()
+
+    // Sprechtempo (Design: 0.7–1.4, Schritt 0.05, Standard 1.0). Wird auf die Wiedergabe angewandt.
+    var ttsRate: Float
+        get() = plain.getFloat("tts_rate", 1.0f)
+        set(value) = plain.edit().putFloat("tts_rate", value).apply()
 
     // --- Hilfsmethoden ---
 
