@@ -82,6 +82,11 @@ LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
 DATA_DIR = os.getenv("SB_DATA_DIR", "/app/data")
 TRASH_PATH = os.getenv("SB_TRASH_PATH", os.path.join(DATA_DIR, "trash.json"))
 
+
+def is_overview_total_excluded(category: str | None) -> bool:
+    c = (category or "").strip().casefold()
+    return c in {"gespräche", "gespraeche"} or c == "bugfixes" or c.startswith("bugfixes/")
+
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging (stdout + rotierende Datei, beide UTF-8)
 # ---------------------------------------------------------------------------
@@ -841,18 +846,20 @@ def category_counts(user_id: str = "frank") -> dict:
     points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
                      with_payload=["doc_id", "categories", "category"])
     seen: dict[str, set] = {}
-    all_docs: set = set()
+    countable_docs: set = set()
     for p in points:
         did = p.payload.get("doc_id")
-        all_docs.add(did)
-        for c in cats_from_payload(p.payload):   # Multi-Category: Eintrag zaehlt in JEDER seiner Kategorien
+        cats = cats_from_payload(p.payload)
+        if any(not is_overview_total_excluded(c) for c in cats):
+            countable_docs.add(did)
+        for c in cats:   # Multi-Category: Eintrag zaehlt in JEDER seiner Kategorien
             seen.setdefault(c, set()).add(did)
     counts = {c: len(dids) for c, dids in seen.items()}
-    # total_distinct = Anzahl EINTRAEGE (jeder doc_id 1x) -> 'Eintraege Gesamt' bleibt korrekt,
-    # auch wenn die Summe der Kategorie-Balken groesser ist (Mehrfachzuordnung, Frank-Wunsch).
+    # total_distinct = Anzahl sichtbarer Nutz-Eintraege (jeder doc_id 1x). Gespraeche und bugfixes/*
+    # bleiben als Kategorien sichtbar, zaehlen aber nicht in 'Eintraege gesamt'.
     checkpoint("category_counts", "Kategorien mit Eintragszahl (Multi-Category, doc_id-dedupliziert) + total_distinct",
-               ok=True, categories=len(counts), total=len(all_docs))
-    return {"ok": True, "counts": counts, "total_distinct": len(all_docs)}
+               ok=True, categories=len(counts), total=len(countable_docs))
+    return {"ok": True, "counts": counts, "total_distinct": len(countable_docs)}
 
 
 @app.post("/rename-category", dependencies=[Depends(require_auth)])
