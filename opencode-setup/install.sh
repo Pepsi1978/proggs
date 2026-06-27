@@ -17,7 +17,7 @@
 set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # opencode-setup/
-DST="$HOME/.config/opencode"
+DST="${OPENCODE_SETUP_DST:-$HOME/.config/opencode}"   # Zielort (per Env ueberschreibbar, z.B. zum Testen)
 
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$1"; }

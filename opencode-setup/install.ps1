@@ -15,7 +15,8 @@
 $ErrorActionPreference = 'Stop'
 
 $Src = $PSScriptRoot                                  # opencode-setup\
-$Dst = Join-Path $env:USERPROFILE '.config\opencode'
+# Zielort (per Env OPENCODE_SETUP_DST ueberschreibbar, z.B. zum Testen):
+$Dst = if ($env:OPENCODE_SETUP_DST) { $env:OPENCODE_SETUP_DST } else { Join-Path $env:USERPROFILE '.config\opencode' }
 
 function Ok($m)   { Write-Host "OK  $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "--  $m" -ForegroundColor Yellow }
