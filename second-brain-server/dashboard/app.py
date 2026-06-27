@@ -111,52 +111,52 @@ def _log(level: int, msg: str, **ctx) -> None:
         pass
 
 
-def _bget(path: str, **params):
-    r = httpx.get(f"{BRAIN_URL}{path}", params=params or None, headers=HEADERS, timeout=20.0)
+def _bget(endpoint: str, **params):
+    r = httpx.get(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
 
-def _bpost(path: str, payload: dict):
-    r = httpx.post(f"{BRAIN_URL}{path}", json=payload, headers=HEADERS, timeout=40.0)
+def _bpost(endpoint: str, payload: dict):
+    r = httpx.post(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=40.0)
     r.raise_for_status()
     return r.json()
 
 
-def _bput(path: str, payload: dict):
+def _bput(endpoint: str, payload: dict):
     # 60s: ein Eintrags-Ersatz re-embedded den ganzen Text (mehrere Chunks moeglich).
-    r = httpx.put(f"{BRAIN_URL}{path}", json=payload, headers=HEADERS, timeout=60.0)
+    r = httpx.put(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
     r.raise_for_status()
     return r.json()
 
 
-def _bdelete(path: str, **params):
-    r = httpx.delete(f"{BRAIN_URL}{path}", params=params or None, headers=HEADERS, timeout=30.0)
+def _bdelete(endpoint: str, **params):
+    r = httpx.delete(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
 
-def _aget(path: str):
-    r = httpx.get(f"{AGENT_URL}{path}", headers=HEADERS, timeout=15.0)
+def _aget(endpoint: str):
+    r = httpx.get(f"{AGENT_URL}{endpoint}", headers=HEADERS, timeout=15.0)
     r.raise_for_status()
     return r.json()
 
 
-def _aput(path: str, payload: dict):
-    r = httpx.put(f"{AGENT_URL}{path}", json=payload, headers=HEADERS, timeout=20.0)
+def _aput(endpoint: str, payload: dict):
+    r = httpx.put(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
 
-def _apost(path: str, payload: dict):
+def _apost(endpoint: str, payload: dict):
     # 60s: ein recall macht ZWEI LLM-Aufrufe (entscheiden + antworten) — grosszuegig timen.
-    r = httpx.post(f"{AGENT_URL}{path}", json=payload, headers=HEADERS, timeout=60.0)
+    r = httpx.post(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
     r.raise_for_status()
     return r.json()
 
 
-def _adelete(path: str, **params):
-    r = httpx.delete(f"{AGENT_URL}{path}", params=params or None, headers=HEADERS, timeout=20.0)
+def _adelete(endpoint: str, **params):
+    r = httpx.delete(f"{AGENT_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
