@@ -377,7 +377,8 @@ button{font-family:inherit;cursor:pointer}
 .result-meta{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
 .score{font-family:'Space Grotesk';font-weight:600;font-size:17px;color:var(--accent)}
 .score small{font-size:10px;color:var(--text-faint);font-family:'JetBrains Mono';display:block;text-align:right;letter-spacing:.1em}
-.result-date{font-family:'JetBrains Mono';font-size:11px;color:var(--text-faint)}
+.result-date{font-family:'JetBrains Mono';font-size:11px;color:var(--text-faint);text-align:right;line-height:1.35}
+.result-date small{display:block;font-size:11px;color:var(--text-dim);margin-top:2px}
 
 .state-msg{padding:60px 20px;text-align:center;color:var(--text-dim);font-size:15px}
 .state-msg .spin{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--border);
@@ -1491,15 +1492,34 @@ button{font-family:inherit;cursor:pointer}
         </div>
         <div class="result-meta">
           ${isSearch && it.score!=null ? `<span class="score">${Math.round(it.score*100)}<small>%&nbsp;Relevanz</small></span>` : ``}
-          ${it.updated_at ? `<span class="result-date">${fmtDate(it.updated_at)}</span>` : ``}
+          ${resultDateHtml(entryStamp(it))}
         </div>`;
       el.addEventListener("click",()=> openEntry(it));
       box.appendChild(el);
     });
   }
+  function entryStamp(it){ return (it && (it.created_at || it.updated_at || it.when)) || ""; }
+  function hasClock(s){ return /T\d{2}:\d{2}/.test(s||"") || /\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(s||""); }
   function fmtDate(s){
     const d = new Date(s); if(isNaN(d)) return s;
     return d.toLocaleDateString("de-DE",{day:"2-digit",month:"short",year:"numeric"});
+  }
+  function fmtTimeOnly(s){
+    if(!hasClock(s)) return "";
+    const d = new Date(s);
+    if(!isNaN(d)) return d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) + " Uhr";
+    const m = String(s||"").match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+    return m ? m[1] + " Uhr" : "";
+  }
+  function fmtStamp(s){
+    if(!s) return "";
+    const t = fmtTimeOnly(s);
+    return t ? `${fmtDate(s)} · ${t}` : fmtDate(s);
+  }
+  function resultDateHtml(s){
+    if(!s) return "";
+    const t = fmtTimeOnly(s);
+    return `<span class="result-date">${escapeHtml(fmtDate(s))}${t ? `<small>${escapeHtml(t)}</small>` : ""}</span>`;
   }
 
   /* ── Drawer (V2) ──────────────────────────────────────────────────────── */
@@ -1514,7 +1534,7 @@ button{font-family:inherit;cursor:pointer}
     const tag = document.getElementById("drawerTag");
     tag.textContent = cap(it.category||""); tag.style.color = color; tag.style.background = color+"22";
     document.getElementById("drawerTitle").textContent = it.title||"Ohne Titel";
-    document.getElementById("drawerDate").textContent = it.when || (it.updated_at ? fmtDate(it.updated_at) : "");
+    document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(it));
     const box = document.getElementById("drawerText");
     box.textContent = it.text || it.match || "lädt…";
     document.getElementById("drawerStatus").textContent = "";
@@ -1529,6 +1549,9 @@ button{font-family:inherit;cursor:pointer}
         if(full){
           if(full.text){ box.textContent = full.text; curEntry.text = full.text; }
           if(full.doc_id) curEntry.doc_id = full.doc_id;
+          if(full.created_at) curEntry.created_at = full.created_at;
+          if(full.updated_at) curEntry.updated_at = full.updated_at;
+          document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(curEntry));
         }
       }catch(e){
         try{ const f = DEMO.entry(it.title); if(f){ box.textContent = f.text; curEntry.text = f.text; } }catch(_){}
@@ -1761,7 +1784,7 @@ button{font-family:inherit;cursor:pointer}
       ["Wallbox-Code","fahrzeug-strom","Freischaltung über die App, PIN liegt im Passwortmanager. Lastmanagement so eingestellt, dass nicht gleichzeitig mit dem Herd Spitzen entstehen."],
       ["Flugorte","drohnen","Das Feld hinter dem Wäldchen, früh morgens windstill. Sperrzonen vorher in der App prüfen. Nie über Menschen."],
       ["Akku-Pflege","drohnen","Bei ~50% lagern, nicht voll und nicht leer. Vor dem Flug auf Lagertemperatur bringen. Aufgeblähte Akkus sofort entsorgen."]
-    ].map(e=>({title:e[0],category:e[1],text:e[2],updated_at:randDate()}));
+    ].map(e=>({title:e[0],category:e[1],text:e[2],created_at:randDate(),updated_at:randDate()}));
     function randDate(){ const d=new Date(Date.now()-Math.random()*300*864e5); return d.toISOString(); }
     function overview(){
       return {

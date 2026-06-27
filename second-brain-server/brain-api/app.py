@@ -206,6 +206,9 @@ except Exception as e:  # noqa: BLE001 — Init-Fehler vollstaendig festhalten, 
     init_error = f"{type(e).__name__}: {e}"
     log.error("Speicher-Init fehlgeschlagen", exc_info=True)
 
+# Sichtbarer Patch-Stand: Detail-/Such-APIs liefern den ursprünglichen Speicherzeitpunkt fuer das Dashboard aus.
+VERSION = "1.18.0"
+
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
 
@@ -703,6 +706,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
     return {"ok": True, "found": True, "title": real_title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
             "categories": cats_from_payload(points[0].payload),
+            "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
 
@@ -796,6 +800,7 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
+                         "categories": cats_from_payload(p.payload),
                          "parent": p.payload.get("parent") or None,
                          "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
@@ -1088,6 +1093,8 @@ def search(req: SearchReq) -> dict:
             best[did] = {"doc_id": did, "title": h.payload.get("title") or None,
                          "category": h.payload.get("category") or None,
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
+                         "created_at": h.payload.get("created_at"),
+                         "updated_at": h.payload.get("updated_at"),
                          "text": h.payload.get("full_text", "")}
     items = sorted(best.values(), key=lambda x: x["score"], reverse=True)[:req.limit]
 
