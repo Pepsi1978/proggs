@@ -111,3 +111,21 @@ Darum gelten diese 5 Regeln IMMER:
 > Durchsetzung im Code (nicht nur Bitte): das lokale Plugin `tool-first-guard` warnt bei `edit`/`patch`
 > ohne vorheriges `read` (mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart). Volltext + Belege:
 > `best-practices/agents/anti-halluzination-regeln.md`.
+
+### 8. Bekannte Bugs & Best Practices ZUERST — per recall aus dem Gehirn (KRITISCH)
+Bevor du an einem technischen Bereich (Kotlin, Gradle, Swift, TypeScript, Chrome-Erweiterung, Hooks,
+OpenCode-Config …) wirklich ARBEITEST — also Code/Config aenderst, nicht beim blossen Planen/Denken —,
+hol ZUERST das passende Bereichs-Wissen aus dem Gehirn. Nur DIESEN einen Bereich (just-in-time),
+nicht alles:
+1. **Kurzcheck (Stufe A) lesen:** `second-brain`-Werkzeug **`recall`** mit Bereich + "Kurzcheck"
+   aufrufen (z.B. `recall("Gradle Kurzcheck")`). Der Kurzcheck ist die kompakte Erkennungs- +
+   Sofort-Regel-Tabelle — damit machst du bekannte Fehler gar nicht erst.
+2. **Zwei Seiten:** zu den meisten Bereichen gibt es einen **Almanach** (was schiefgeht + Loesung) UND
+   **Best Practices** (wie man es von vornherein richtig macht). Beide Kurzchecks lesen — erst Almanach,
+   dann Best Practices, dann arbeiten.
+3. **Volltext (Stufe B) bei FEHLER:** tritt im Bereich ein Fehler auf, reicht der Kurzcheck nicht mehr —
+   lies den VOLLTEXT (derselbe Eintrag ohne "Kurzcheck" im Titel) per `get_by_title` bzw. `recall`.
+
+> Greift bei echter Bereichsarbeit, NICHT bei Kleinkram (einzelner String, Doku, Versions-Bump) und
+> NICHT beim blossen Nachdenken/Planen. Einzeln abrufen (`recall`/`get_by_title`), nie `get_by_category`
+> (s. P2 oben). Kein passender Eintrag im Gehirn? Frank kurz melden. Hintergrund: `bugs/SYSTEM.md` + `best-practices/`.
